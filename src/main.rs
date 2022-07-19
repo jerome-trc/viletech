@@ -17,23 +17,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod console;
 mod data;
+mod ecs;
 mod engine;
+mod game;
 mod gfx;
+mod level;
 mod lua;
 mod teal;
 mod utils;
 mod vfs;
 
 use crate::{
-	console::{Console, ConsoleCommand, ConsoleRequest, ConsoleWriter},
+	console::{Console, ConsoleWriter},
 	data::*,
-	engine::EngineScene,
+	engine::Engine,
 	gfx::GfxCore,
 	lua::LuaImpure,
 	utils::exe_dir,
 	vfs::ImpureVfs,
 };
-use log::{error, info, warn};
+use log::{error, info};
 use mlua::prelude::*;
 use parking_lot::RwLock;
 use physfs_rs::*;
@@ -117,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
 
 	let (cons_sender, cons_receiver) = crossbeam::channel::unbounded();
-	let mut console = Console::new(cons_receiver);
+	let console = Console::new(cons_receiver);
 
 	// Logging initialisation
 
@@ -205,9 +208,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	// Mount contents of '/exe_dir/gamedata'
 
-	let gdata_path: PathBuf = [exe_dir(), PathBuf::from("gamedata")]
-		.iter()
-		.collect();
+	let gdata_path: PathBuf = [exe_dir(), PathBuf::from("gamedata")].iter().collect();
 
 	mount_gamedata(&mut vfs.write(), &lua, gdata_path);
 
@@ -268,160 +269,47 @@ fn main() -> Result<(), Box<dyn Error>> {
 			.read_string(Path::new("/impure/shaders/hello-tri.wgsl"))?,
 	);
 
-	// Register console commands
-
-	console.register_command(ConsoleCommand::new(
-		"version",
-		|_, _| {
-			println!(
-				"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
-				env!("CARGO_PKG_VERSION_MAJOR"),
-				env!("CARGO_PKG_VERSION_MINOR"),
-				env!("CARGO_PKG_VERSION_PATCH"),
-				env!("GIT_HASH"),
-				env!("COMPILE_DATETIME")
-			);
-
-			ConsoleRequest::None
-		},
-		|_, _| {
-			println!("Prints the engine version.");
-		},
-	));
-
-	console.register_command(ConsoleCommand::new(
-		"home",
-		|_, _| {
-			match get_userdata_path() {
-				Some(p) => info!("{}", p.display()),
-				None => {
-					info!(
-						"Home directory path is malformed, 
-						or this platform is unsupported."
-					);
-				}
-			}
-
-			ConsoleRequest::None
-		},
-		|_, _| {
-			info!("Prints the directory used to store userdata.");
-		},
-	));
-
-	console.register_command(ConsoleCommand::new(
-		"file",
-		|_, args| {
-			let path = if args.is_empty() { "/" } else { args[0] };
-			ConsoleRequest::File(PathBuf::from(path))
-		},
-		|_, _| {
-			info!("Prints the contents of a virtual file system directory.");
-		},
-	));
-
-	let _scene = EngineScene::Frontend;
-
-	let stc = start_time;
-
-	let on_close = move || {
-		info!("Runtime duration (s): {}", stc.elapsed().as_secs());
-	};
+	let mut engine = Engine::new(start_time, vfs, lua, gfx, console);
 
 	event_loop.run(move |event, _, control_flow| match event {
-		WinitEvent::RedrawRequested(window_id) if window_id == gfx.window.id() => {
-			let output = match gfx.render_start() {
-				Ok(o) => o,
-				Err(wgpu::SurfaceError::Lost) => {
-					gfx.resize(gfx.window_size);
-					return;
-				}
-				Err(wgpu::SurfaceError::OutOfMemory) => {
-					error!("Insufficient memory to allocate a new WGPU frame.");
-					*control_flow = ControlFlow::Exit;
-					return;
-				}
-				Err(err) => {
-					error!("${:?}", err);
-					return;
-				}
-			};
-
-			gfx.egui_start();
-			console.draw(&gfx.egui.context);
-			gfx.render_finish(output.0, output.1);
+		WinitEvent::RedrawRequested(window_id) => {
+			engine.redraw_requested(window_id, control_flow);
 		}
 		WinitEvent::MainEventsCleared => {
-			let cons_reqs = console.requests.drain(..);
-
-			for req in cons_reqs {
-				match req {
-					ConsoleRequest::File(p) => {
-						let vfsg = vfs.read();
-
-						if !vfsg.is_directory(p.as_os_str().to_string_lossy()) {
-							info!("{} is not a directory.", p.display());
-							continue;
-						}
-
-						let files = match vfsg.enumerate_files(p.as_os_str().to_string_lossy()) {
-							Some(f) => f,
-							None => {
-								warn!("{} can not be enumerated.", p.display());
-								continue;
-							}
-						};
-
-						let mut output = String::with_capacity(files.len() * 32);
-
-						for f in files {
-							output.push('\r');
-							output.push('\n');
-							output.push('\t');
-							output = output + &f;
-
-							let fullpath: PathBuf = [p.clone(), PathBuf::from(f)].iter().collect();
-
-							if vfsg.is_directory(fullpath.to_str().unwrap_or_default()) {
-								output.push('/');
-							}
-						}
-
-						info!("Files under '{}': {}", p.display(), output);
-					}
-					_ => {}
-				}
-			}
-
-			gfx.window.request_redraw();
+			engine.process_console_requests();
+			engine.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {
 			ref event,
 			window_id,
-		} if window_id == gfx.window.id() => {
-			gfx.egui.state.on_event(&gfx.egui.context, event);
+		} if window_id == engine.gfx.window.id() => {
+			engine
+				.gfx
+				.egui
+				.state
+				.on_event(&engine.gfx.egui.context, event);
 
 			match event {
 				WindowEvent::KeyboardInput { input, .. } => {
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						on_close();
+						engine.on_close();
 						*control_flow = ControlFlow::Exit;
 						return;
 					}
 
-					console.on_key_event(input);
+					engine.on_key_event(input);
 				}
 				WindowEvent::CloseRequested => {
-					on_close();
+					engine.on_close();
 					*control_flow = ControlFlow::Exit;
 				}
 				WindowEvent::Resized(psize) => {
-					gfx.resize(*psize);
+					engine.gfx.resize(*psize);
 				}
 				WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-					gfx.resize(**new_inner_size);
+					engine.gfx.resize(**new_inner_size);
 				}
 				_ => {}
 			}

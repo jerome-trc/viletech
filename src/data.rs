@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use super::lua::LuaImpure;
-use crate::vfs::ImpureVfs;
+use crate::{vfs::ImpureVfs, ecs::Blueprint, game::{Species, DamageType}};
 use core::fmt;
 use log::{error, warn};
 use mlua::prelude::*;
@@ -25,7 +25,7 @@ use std::{
 	env,
 	error::Error,
 	fs, io,
-	path::{Path, PathBuf},
+	path::{Path, PathBuf}, collections::HashMap,
 };
 
 /// General-purpose semantic versioning triplet.
@@ -372,4 +372,27 @@ pub fn mount_userdata(vfs: &mut PhysFs) -> Result<(), io::Error> {
 	};
 
 	Ok(())
+}
+
+pub type AssetId = usize;
+
+#[derive(Default)]
+pub struct DataCore {
+	/// Key structure:
+	/// "package_uuid.domain.asset_key"
+	/// Package UUID will either come from an Impure package metadata file,
+	/// or from the archive/directory name minus the extension if it's not 
+	/// Impure data (e.g. "DOOM2" from "DOOM2.WAD", "gzdoom" from "gzdoom.pk3").
+	/// Domain will be something like "textures" or "blueprints".
+	/// Asset key is derived from the file name
+	/// Each value maps to an index in one of the asset vectors.
+	asset_map: HashMap<String, AssetId>,
+	/// e.g. if DOOM2 defines MAP01 and then my_house.wad is loaded after it and
+	/// also defines a MAP01, the key "MAP01" will point to my_house.wad:MAP01.
+	end_map: HashMap<String, AssetId>,
+
+	language: Vec<String>,
+	blueprints: Vec<Blueprint>,
+	damage_types: Vec<DamageType>,
+	species: Vec<Species>
 }
