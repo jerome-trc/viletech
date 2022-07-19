@@ -1,0 +1,122 @@
+# Credits, Attributions, and Licensing Details
+
+Note that this is a living document. Completeness is not guaranteed. If no author is listed, the intent is to spread attribution across a larger organisation.
+
+If you're aware of any attribution which is evidently missing from this list, or of a misattribution, let me know so I can resolve it.
+
+## Technologies
+
+- bitflags
+	- By Ashley "KodrAus" Mannix et. al. 
+	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
+	- https://docs.rs/bitflags/latest/bitflags/
+- chrono
+	- By Kang "lifthrasiir" Seonghoon, Brandon W. "quodlibetor" Maister, et. al.
+	- Provided under the [Apache 2.0 License and MIT License](https://github.com/chronotope/chrono/blob/main/LICENSE.txt).
+	- https://docs.rs/chrono/latest/chrono/
+- crossbeam
+	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
+	- https://docs.rs/crossbeam/latest/crossbeam/
+- egui, egui-wgpu, egui-winit 
+	- By Emil "emilk" Ernerfeldt et. al.
+	- Provided under the [MIT License](https://github.com/emilk/egui/blob/master/LICENSE-MIT) and [Apache 2.0 License](https://github.com/emilk/egui/blob/master/LICENSE-APACHE).
+	- https://docs.rs/egui/latest/egui/
+	- https://docs.rs/egui-wgpu/latest/egui_wgpu/
+	- https://docs.rs/egui-winit/latest/egui_winit/
+- fern
+	- By David "daboross" Ross et. al.
+	- Provided under the [MIT License](https://github.com/daboross/fern/blob/main/LICENSE).
+	- https://docs.rs/fern/latest/fern/ 
+- glam
+    - By Cameron "bitshifter" Hart et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-MIT).
+	- https://docs.rs/glam/latest/glam/
+- home
+	- By tesuji et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/brson/home/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/brson/home/blob/master/LICENSE-MIT).
+	- https://docs.rs/home/latest/home/
+- image
+    - By the [image-rs](https://github.com/image-rs) organisation et. al.
+    - Provided under the [MIT License](https://github.com/image-rs/image/blob/master/LICENSE).
+    - https://docs.rs/image/latest/image/
+- lazy_static
+	- By the [rust-lang-nursery](https://github.com/rust-lang-nursery) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/brson/home/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/brson/home/blob/master/LICENSE-MIT).
+	- https://docs.rs/lazy_static/latest/lazy_static/
+- log
+	- By Ashley "KodrAus" Mannix et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/log/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/log/blob/master/LICENSE-MIT).
+	- https://docs.rs/log/latest/log/
+- Lua
+	- By Roberto Ierusalimschy, Waldemar Celes, Luiz Henrique de Figueiredo, et. al.
+	- Provided under the [MIT License](https://www.lua.org/license.html).
+	- https://www.lua.org/
+- LuaJIT
+	- By Mike Pall et. al.
+	- Provided under the [MIT License](https://github.com/LuaJIT/LuaJIT/blob/v2.1/COPYRIGHT).
+	- https://luajit.org/
+- md5
+	- By the [Stainless Steel](https://github.com/stainless-steel) organisation et. al.
+	- [Apache 2.0 License and MIT License](https://github.com/stainless-steel/md5/blob/master/LICENSE.md).
+	- https://docs.rs/md5/latest/md5/
+- mlua
+	- By Alex "khvzak" Orlenko et. al.
+	- Provided under the [MIT License](https://github.com/khvzak/mlua/blob/master/LICENSE).
+	- https://docs.rs/mlua/latest/mlua/
+- naga
+	- By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/naga/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/gfx-rs/naga/blob/master/LICENSE-MIT).
+	- https://docs.rs/naga/latest/naga/
+- nanorand
+	- By Absolucy et. al.
+	- Provided under the [zlib/libpng License](https://github.com/Absolucy/nanorand-rs/blob/main/LICENSE.md).
+	- https://docs.rs/nanorand/latest/nanorand/
+- parking_lot
+	- By Amanieu "Amanieu" d'Antras et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
+	- https://docs.rs/parking_lot/latest/parking_lot/
+- physfs-rs
+	- By Antonino Maniscalco.
+	- Provided under the zlib License [(see the crates.io page)](https://crates.io/crates/physfs-rs).
+	- https://docs.rs/physfs-rs/latest/physfs_rs/
+- PhysicsFS
+	- By Ryan "icculus" C. Gordon et. al.
+	- Used under the [zlib License](https://hg.icculus.org/icculus/physfs/raw-file/tip/LICENSE.txt).
+	- https://icculus.org/physfs/
+- pollster
+	- Joshua "zesterer" Barretto et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
+	- https://docs.rs/pollster/latest/pollster/
+- regex
+	- By Andrew "BurntSushi" Gallant et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
+	- https://docs.rs/regex/latest/regex/
+- Serpent
+	- By Paul "pkulchenko" Kulchenko et. al.
+	- Provided under the [MIT License](https://github.com/pkulchenko/serpent/blob/master/LICENSE).
+	- https://github.com/pkulchenko/serpent
+- shipyard
+	- Dylan "leudz" Ancel et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).
+	- https://docs.rs/shipyard/latest/shipyard/
+- wgpu
+    - By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.APACHE) and [MIT License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.MIT).
+	- https://docs.rs/wgpu/latest/wgpu/
+- winit
+	- By the [Rust Windowing](https://github.com/rust-windowing) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/rust-windowing/winit/blob/master/LICENSE).
+	- https://docs.rs/winit/latest/winit/
+- zscript_parser
+	- By Jessica "Gutawer" Russell.
+	- Provided under the [MIT License](https://gitlab.com/Gutawer/zscript_parser/-/blob/master/LICENSE).
+	- https://gitlab.com/Gutawer/zscript_parser
+
+## Special Thanks
+
+- Alison "Marrub" Watson
+- Jessica "Russell" Gutawer
+- Marisa "the Magician"
+- Marisa "Randi" Heit
+- Yholl
