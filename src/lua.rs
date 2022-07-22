@@ -205,16 +205,16 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			},
 			name: table
 				.get::<_, String>("name")
-				.unwrap_or_else(|_| "belltower.lang.pkgmeta_noname".to_string()),
+				.unwrap_or_else(|_| "impure.lang.pkgmeta_noname".to_string()),
 			desc: table
 				.get::<_, String>("description")
-				.unwrap_or_else(|_| "belltower.lang.pkgmeta_nodesc".to_string()),
+				.unwrap_or_else(|_| "impure.lang.pkgmeta_nodesc".to_string()),
 			author: table
 				.get::<_, String>("author")
-				.unwrap_or_else(|_| "belltower.lang.pkgmeta_noauthor".to_string()),
+				.unwrap_or_else(|_| "impure.lang.pkgmeta_noauthor".to_string()),
 			copyright: table
 				.get::<_, String>("copyright")
-				.unwrap_or_else(|_| "belltower.lang.pkgmeta_nocopyright".to_string()),
+				.unwrap_or_else(|_| "impure.lang.pkgmeta_nocopyright".to_string()),
 			link: table.get::<_, String>("link").unwrap_or_default(),
 			directory: PathBuf::from("data"),
 			mount_point: table.get::<_, String>("uuid").unwrap_or_default(),
