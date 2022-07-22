@@ -26,7 +26,7 @@ use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{path::PathBuf, sync::Arc, thread::Thread};
+use std::{path::PathBuf, sync::Arc, thread::Thread, env};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 pub struct Playsim {
@@ -134,6 +134,37 @@ impl Engine {
 			|_, _| {
 				info!("Prints the contents of a virtual file system directory.");
 			},
+		));
+
+		ret.console.register_command(ConsoleCommand::new(
+			"args",
+			|_, _| {
+				let mut args = env::args();
+
+				let argv0 = match args.next() {
+					Some(a) => a,
+					None => {
+						error!("This runtime did not receive `argv[0]`.");
+						return ConsoleRequest::None;
+					}
+				};
+
+				let mut output = String::from(argv0);
+
+				for arg in args {
+					output.push('\r');
+					output.push('\n');
+					output.push('\t');
+					output += &arg;
+				}
+
+				info!("{}", output);
+
+				ConsoleRequest::None
+			},
+			|_, _| {
+				info!("Prints out all of the program's launch arguments.")
+			}
 		));
 
 		ret
