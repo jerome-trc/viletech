@@ -1,7 +1,9 @@
-/*
+--[[
+
 Heavily-modified version of the compiler for the Teal dialect of Lua.
 Has been cleaned of usage of the `os` and `package` standard libraries,
-to allow safe usage in Impure's sandboxed environments.
+to allow safe usage in Impure's sandboxed environments. Gets included into the
+source via `include_str!()`.
 
 https://github.com/teal-language/tl/tree/473fef59f21e836e1337a0e3da3c759a1e3556bd
 
@@ -26,10 +28,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-*/
 
-pub const TEAL: &str =
-r##"
+]]
+
 local _tl_compat; if (tonumber((_VERSION or ''):match('[%d.]*$')) or 0) < 5.3 then local p, m = pcall(require, 'compat53.module'); if p then _tl_compat = m end end; local assert = _tl_compat and _tl_compat.assert or assert; local io = _tl_compat and _tl_compat.io or io; local ipairs = _tl_compat and _tl_compat.ipairs or ipairs; local load = _tl_compat and _tl_compat.load or load; local math = _tl_compat and _tl_compat.math or math; local os = _tl_compat and _tl_compat.os or os; local package = _tl_compat and _tl_compat.package or package; local pairs = _tl_compat and _tl_compat.pairs or pairs; local string = _tl_compat and _tl_compat.string or string; local table = _tl_compat and _tl_compat.table or table; local _tl_table_unpack = unpack or table.unpack
 local VERSION = "0.13.2"
 
@@ -8856,4 +8857,3 @@ tl.load = function(input, chunkname, mode, ...)
 end
 
 return tl
-"##;

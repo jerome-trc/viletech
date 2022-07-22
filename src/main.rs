@@ -23,7 +23,6 @@ mod game;
 mod gfx;
 mod level;
 mod lua;
-mod teal;
 mod utils;
 mod vfs;
 

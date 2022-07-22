@@ -72,7 +72,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		// Load the Teal compiler into the registry
 
-		let teal: LuaTable = match ret.load(super::teal::TEAL).eval() {
+		let teal: LuaTable = match ret.load(include_str!("./teal.lua")).eval() {
 			Ok(t) => t,
 			Err(err) => {
 				return Err(err);
