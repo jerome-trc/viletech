@@ -103,6 +103,7 @@ impl Engine {
 			|_, _| {
 				println!("Prints the engine version.");
 			},
+			true
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -123,6 +124,7 @@ impl Engine {
 			|_, _| {
 				info!("Prints the directory used to store userdata.");
 			},
+			false
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -134,6 +136,7 @@ impl Engine {
 			|_, _| {
 				info!("Prints the contents of a virtual file system directory.");
 			},
+			true
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -164,7 +167,8 @@ impl Engine {
 			},
 			|_, _| {
 				info!("Prints out all of the program's launch arguments.")
-			}
+			},
+			false
 		));
 
 		ret
