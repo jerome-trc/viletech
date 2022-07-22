@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use super::lua::LuaImpure;
+use super::lua::ImpureLua;
 use crate::{vfs::{ImpureVfs, VirtualFs}, ecs::Blueprint, game::{Species, DamageType}};
 use core::fmt;
 use log::{error, warn};

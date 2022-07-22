@@ -27,12 +27,12 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 
-pub trait LuaImpure<'p> {
+pub trait ImpureLua<'p> {
 	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
 	fn parse_package_meta(&self, path: &'p Path) -> Result<PkgMeta, PkgMetaParseError<'p>>;
 }
 
-impl<'p> LuaImpure<'p> for mlua::Lua {
+impl<'p> ImpureLua<'p> for mlua::Lua {
 	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error> {
 		let ret = if let true = safe {
 			Lua::new_with(

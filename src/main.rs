@@ -32,7 +32,7 @@ use crate::{
 	data::*,
 	engine::Engine,
 	gfx::GfxCore,
-	lua::LuaImpure,
+	lua::ImpureLua,
 	utils::exe_dir,
 	vfs::{ImpureVfs, VirtualFs},
 };
