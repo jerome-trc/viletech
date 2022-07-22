@@ -19,12 +19,12 @@ use crate::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
 	data::{get_userdata_path, DataCore},
 	gfx::GfxCore,
+	vfs::VirtualFs,
 };
-use log::{error, info, warn};
+use log::{error, info};
 use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
-use physfs_rs::PhysFs;
 use shipyard::World;
 use std::{path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
@@ -60,7 +60,7 @@ pub enum EngineScene {
 
 pub struct Engine {
 	pub start_time: std::time::Instant,
-	pub vfs: Arc<RwLock<PhysFs>>,
+	pub nvfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
 	pub data: DataCore,
 	pub gfx: GfxCore,
@@ -71,14 +71,14 @@ pub struct Engine {
 impl Engine {
 	pub fn new(
 		start_time: std::time::Instant,
-		vfs: Arc<RwLock<PhysFs>>,
+		nvfs: Arc<RwLock<VirtualFs>>,
 		lua: Lua,
 		gfx: GfxCore,
 		console: Console,
 	) -> Self {
 		let mut ret = Engine {
 			start_time,
-			vfs,
+			nvfs,
 			lua,
 			data: DataCore::default(),
 			gfx,
@@ -179,37 +179,37 @@ impl Engine {
 		for req in cons_reqs {
 			match req {
 				ConsoleRequest::File(p) => {
-					let vfsg = self.vfs.read();
+					let vfsg = self.nvfs.read();
 
-					if !vfsg.is_directory(p.as_os_str().to_string_lossy()) {
-						info!("{} is not a directory.", p.display());
+					if !vfsg.is_dir(&p) {
+						info!("\"{}\" is not a directory.", p.display());
 						continue;
 					}
 
-					let files = match vfsg.enumerate_files(p.as_os_str().to_string_lossy()) {
-						Some(f) => f,
-						None => {
-							warn!("{} can not be enumerated.", p.display());
-							continue;
-						}
-					};
+					let files = vfsg.file_names(&p);
 
 					let mut output = String::with_capacity(files.len() * 32);
 
-					for f in files {
+					for f in &files {
 						output.push('\r');
 						output.push('\n');
 						output.push('\t');
-						output = output + &f;
+						output = output + f;
 
+						// TODO: Bespoke VFS may allow this to be optimised
 						let fullpath: PathBuf = [p.clone(), PathBuf::from(f)].iter().collect();
 
-						if vfsg.is_directory(fullpath.to_str().unwrap_or_default()) {
+						if vfsg.is_dir(fullpath.to_str().unwrap_or_default()) {
 							output.push('/');
 						}
 					}
 
-					info!("Files under '{}': {}", p.display(), output);
+					info!(
+						"Files under \"{}\" ({}): {}",
+						p.display(),
+						files.len(),
+						output
+					);
 				}
 				_ => {}
 			}

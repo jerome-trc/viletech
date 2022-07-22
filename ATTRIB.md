@@ -10,6 +10,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Ashley "KodrAus" Mannix et. al. 
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
 	- https://docs.rs/bitflags/latest/bitflags/
+- byteorder
+	- By Andrew "BurntSushi" Gallant et. al.
+	- Provided under the [MIT License](https://github.com/BurntSushi/byteorder/blob/master/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/byteorder/blob/master/UNLICENSE).
+	- https://docs.rs/byteorder/latest/byteorder/
 - chrono
 	- By Kang "lifthrasiir" Seonghoon, Brandon W. "quodlibetor" Maister, et. al.
 	- Provided under the [Apache 2.0 License and MIT License](https://github.com/chronotope/chrono/blob/main/LICENSE.txt).
@@ -76,14 +80,6 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Amanieu "Amanieu" d'Antras et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
 	- https://docs.rs/parking_lot/latest/parking_lot/
-- physfs-rs
-	- By Antonino Maniscalco.
-	- Provided under the zlib License [(see the crates.io page)](https://crates.io/crates/physfs-rs).
-	- https://docs.rs/physfs-rs/latest/physfs_rs/
-- PhysicsFS
-	- By Ryan "icculus" C. Gordon et. al.
-	- Used under the [zlib License](https://hg.icculus.org/icculus/physfs/raw-file/tip/LICENSE.txt).
-	- https://icculus.org/physfs/
 - pollster
 	- Joshua "zesterer" Barretto et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
@@ -100,6 +96,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- Dylan "leudz" Ancel et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).
 	- https://docs.rs/shipyard/latest/shipyard/
+- wad
+	- By Magnus "maghoff" Hoff.
+	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).
+	- https://docs.rs/wad/latest/wad/
 - wgpu
     - By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.APACHE) and [MIT License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.MIT).
@@ -108,6 +108,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By the [Rust Windowing](https://github.com/rust-windowing) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-windowing/winit/blob/master/LICENSE).
 	- https://docs.rs/winit/latest/winit/
+- zip
+	- By Mathijs "mvdnes" van de Nes, Plecra, et. al.
+	- Provided under the [MIT License](https://github.com/zip-rs/zip/blob/master/LICENSE).
+	- https://docs.rs/zip/latest/zip/
 - zscript_parser
 	- By Jessica "Gutawer" Russell.
 	- Provided under the [MIT License](https://gitlab.com/Gutawer/zscript_parser/-/blob/master/LICENSE).

@@ -34,12 +34,11 @@ use crate::{
 	gfx::GfxCore,
 	lua::LuaImpure,
 	utils::exe_dir,
-	vfs::ImpureVfs,
+	vfs::{ImpureVfs, VirtualFs},
 };
 use log::{error, info};
 use mlua::prelude::*;
 use parking_lot::RwLock;
-use physfs_rs::*;
 use std::{
 	boxed::Box,
 	env,
@@ -194,11 +193,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let vfs = Arc::new(RwLock::new(
-		PhysFs::get().expect("PhysicsFS was unexpectedly re-initialised."),
-	));
+	let nvfs = Arc::new(RwLock::new(VirtualFs::new()));
 
-	let lua = match Lua::new_ex(true, vfs.clone()) {
+	let lua = match Lua::new_ex(true, nvfs.clone()) {
 		Ok(l) => l,
 		Err(err) => {
 			error!("Failed to initialise client Lua state: {}", err);
@@ -210,7 +207,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let gdata_path: PathBuf = [exe_dir(), PathBuf::from("gamedata")].iter().collect();
 
-	mount_gamedata(&mut vfs.write(), &lua, gdata_path);
+	mount_gamedata(&mut nvfs.write(), &lua, gdata_path);
 
 	// If neither '/exe_dir/gamedata/impure' nor '/exe_dir/gamedata/impure.zip'
 	// were found in the previous step, check the PWD (but only on the dev build)
@@ -221,21 +218,21 @@ fn main() -> Result<(), Box<dyn Error>> {
 			.iter()
 			.collect();
 
-		mount_gamedata(&mut vfs.write(), &lua, p);
+		mount_gamedata(&mut nvfs.write(), &lua, p);
 	}
 
 	// If there still isn't a valid '/impure' directory in the VFS search path,
 	// the engine's data is missing or malformed, and we can't continue
 
-	if !vfs.read().is_directory("/impure") {
+	if !nvfs.read().is_dir("/impure") {
 		return Err(Box::<io::Error>::new(io::ErrorKind::NotFound.into()));
 	}
 
 	// Mount userdata directory
 
-	mount_userdata(&mut vfs.write())?;
+	mount_userdata(&mut nvfs.write())?;
 
-	let icon = vfs
+	let icon = nvfs
 		.read()
 		.window_icon_from_file(Path::new("/impure/impure.png"));
 	let event_loop = EventLoop::new();
@@ -265,11 +262,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 	};
 
 	gfx.pipeline_from_shader(
-		vfs.read()
+		nvfs.read()
 			.read_string(Path::new("/impure/shaders/hello-tri.wgsl"))?,
 	);
 
-	let mut engine = Engine::new(start_time, vfs, lua, gfx, console);
+	let mut engine = Engine::new(start_time, nvfs, lua, gfx, console);
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {

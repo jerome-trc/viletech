@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use super::data::*;
+use crate::vfs::VirtualFs;
 use log::{debug, error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
-use physfs_rs::PhysFs;
 use std::{
 	fs,
 	path::{Path, PathBuf},
@@ -28,12 +28,12 @@ use std::{
 };
 
 pub trait LuaImpure<'p> {
-	fn new_ex(safe: bool, vfs: Arc<RwLock<PhysFs>>) -> Result<Lua, mlua::Error>;
+	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
 	fn parse_package_meta(&self, path: &'p Path) -> Result<PkgMeta, PkgMetaParseError<'p>>;
 }
 
 impl<'p> LuaImpure<'p> for mlua::Lua {
-	fn new_ex(safe: bool, vfs: Arc<RwLock<PhysFs>>) -> Result<Lua, mlua::Error> {
+	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error> {
 		let ret = if let true = safe {
 			Lua::new_with(
 				LuaStdLib::JIT
@@ -132,16 +132,9 @@ impl<'p> LuaImpure<'p> for mlua::Lua {
 
 		{
 			let import = ret.create_function(move |l, path: String| -> LuaResult<LuaValue> {
-				let v = vfs.read();
+				let vfsg = vfs.read();
 
-				let mut file = match v.open_read(path) {
-					Ok(f) => f,
-					Err(err) => {
-						return Err(LuaError::ExternalError(Arc::new(err)));
-					}
-				};
-
-				let bytes = match file.read_to_vec() {
+				let bytes = match vfsg.read_bytes(path) {
 					Ok(b) => b,
 					Err(err) => {
 						return Err(LuaError::ExternalError(Arc::new(err)));

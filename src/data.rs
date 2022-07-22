@@ -16,11 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use super::lua::LuaImpure;
-use crate::{vfs::ImpureVfs, ecs::Blueprint, game::{Species, DamageType}};
+use crate::{vfs::{ImpureVfs, VirtualFs}, ecs::Blueprint, game::{Species, DamageType}};
 use core::fmt;
 use log::{error, warn};
 use mlua::prelude::*;
-use physfs_rs::PhysFs;
 use std::{
 	env,
 	error::Error,
@@ -172,7 +171,7 @@ pub fn parse_incompatibilities(pkgmeta: &LuaTable, path: &str) -> Vec<VersionedI
 	ret
 }
 
-pub fn mount_gamedata(vfs: &mut PhysFs, lua: &Lua, path: PathBuf) {
+pub fn mount_gamedata(vfs: &mut VirtualFs, lua: &Lua, path: PathBuf) {
 	let entries = match fs::read_dir(path.as_path()) {
 		Ok(entries) => entries,
 		// On the dev build, this is a valid state for the dir. structure to
@@ -271,7 +270,7 @@ pub fn mount_gamedata(vfs: &mut PhysFs, lua: &Lua, path: PathBuf) {
 			.to_owned()
 		};
 
-		match vfs.mount_ex(pstr, &mount_point) {
+		match vfs.mount(pstr, &mount_point) {
 			Ok(_) => {}
 			Err(err) => {
 				warn!(
@@ -311,7 +310,7 @@ pub fn get_userdata_path() -> Option<PathBuf> {
 	Some(ret)
 }
 
-pub fn mount_userdata(vfs: &mut PhysFs) -> Result<(), io::Error> {
+pub fn mount_userdata(vfs: &mut VirtualFs) -> Result<(), io::Error> {
 	let udata_path = match get_userdata_path() {
 		Some(up) => up,
 		None => {
@@ -364,7 +363,7 @@ pub fn mount_userdata(vfs: &mut PhysFs) -> Result<(), io::Error> {
 		}
 	};
 
-	match vfs.mount_ex(udata_pstr, "userdata") {
+	match vfs.mount(udata_pstr, "/userdata") {
 		Ok(_) => {}
 		Err(err) => {
 			return Err(io::Error::new(io::ErrorKind::Other, err));
