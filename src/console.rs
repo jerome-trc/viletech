@@ -105,7 +105,7 @@ impl Console {
 
 		if help {
 			if !args.is_empty() {
-				match self.find_command(args[1]) {
+				match self.find_command(args[0]) {
 					Some(cmd) => {
 						cmd_found = true;
 						(cmd.help)(cmd, args);
