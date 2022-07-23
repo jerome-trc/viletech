@@ -15,21 +15,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use super::data::*;
 use crate::vfs::VirtualFs;
 use log::{debug, error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
 use std::{
-	fs,
-	path::{Path, PathBuf},
 	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},
 };
 
 pub trait ImpureLua<'p> {
 	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
-	fn parse_package_meta(&self, path: &'p Path) -> Result<PkgMeta, PkgMetaParseError<'p>>;
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
@@ -170,56 +166,5 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		ret.globals().set("impure", impure)?;
 		Ok(ret)
-	}
-
-	fn parse_package_meta(&self, path: &'p Path) -> Result<PkgMeta, PkgMetaParseError<'p>> {
-		let bytes = match fs::read(path) {
-			Ok(b) => b,
-			Err(err) => {
-				return Err(PkgMetaParseError::FileReadError(path, err));
-			}
-		};
-
-		let table: LuaTable = match self.load(&bytes).eval() {
-			Ok(t) => t,
-			Err(err) => {
-				return Err(PkgMetaParseError::LuaEvalError(path, err));
-			}
-		};
-
-		let verstable: LuaTable = match table.get("version") {
-			Ok(t) => t,
-			Err(err) => {
-				return Err(PkgMetaParseError::LuaEvalError(path, err));
-			}
-		};
-
-		let bmpstr = path.to_str().unwrap_or("<invalid path>");
-
-		Ok(PkgMeta {
-			uuid: table.get::<_, String>("uuid").unwrap_or_default(),
-			version: SemVer {
-				major: verstable.get::<_, u16>("major").unwrap_or_default(),
-				minor: verstable.get::<_, u16>("minor").unwrap_or_default(),
-				patch: verstable.get::<_, u16>("patch").unwrap_or_default(),
-			},
-			name: table
-				.get::<_, String>("name")
-				.unwrap_or_else(|_| "impure.lang.pkgmeta_noname".to_string()),
-			desc: table
-				.get::<_, String>("description")
-				.unwrap_or_else(|_| "impure.lang.pkgmeta_nodesc".to_string()),
-			author: table
-				.get::<_, String>("author")
-				.unwrap_or_else(|_| "impure.lang.pkgmeta_noauthor".to_string()),
-			copyright: table
-				.get::<_, String>("copyright")
-				.unwrap_or_else(|_| "impure.lang.pkgmeta_nocopyright".to_string()),
-			link: table.get::<_, String>("link").unwrap_or_default(),
-			directory: PathBuf::from("data"),
-			mount_point: table.get::<_, String>("uuid").unwrap_or_default(),
-			dependencies: parse_dependencies(&table, bmpstr),
-			incompatibilities: parse_incompatibilities(&table, bmpstr),
-		})
 	}
 }

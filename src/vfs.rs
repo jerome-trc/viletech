@@ -15,7 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{data::PackageType, utils::*};
+use crate::{
+	data::{GamedataKind, GamedataMeta},
+	utils::*,
+};
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use regex::Regex;
@@ -36,6 +39,7 @@ pub enum Error {
 	InvalidMountPoint,
 	/// A path argument did not pass a UTF-8 validity check.
 	InvalidUtf8,
+	IoError(io::Error),
 	/// The caller attempted to lookup/read/write/unmount a non-existent file.
 	NonExistentEntry,
 	/// The caller attempted to lookup/read/write/mount a non-existent file.
@@ -61,12 +65,15 @@ impl fmt::Display for Error {
 			Self::InvalidMountPoint => {
 				write!(
 					f,
-					"Mount point can only contain letters, numbers, underscores,
+					"Mount point can only contain letters, numbers, underscores, \
 					periods, dashes, and forward slashes."
 				)
 			}
 			Self::InvalidUtf8 => {
 				write!(f, "Given path failed to pass a UTF-8 validity check.")
+			}
+			Self::IoError(err) => {
+				write!(f, "{}", err)
 			}
 			Self::NonExistentEntry => {
 				write!(f, "Attempted to operate on a non-existent entry.")
@@ -99,6 +106,8 @@ struct Entry {
 }
 
 enum EntryKind {
+	/// Any loose file that isn't otherwise some kind of archive.
+	/// For instance, a DEHACKED lump, or a custom lump for a mod.
 	File {
 		real_path: PathBuf,
 	},
@@ -166,6 +175,11 @@ pub struct VirtualFs {
 	root: Entry,
 }
 
+lazy_static! {
+	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
+		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
+}
+
 // Public interface.
 impl VirtualFs {
 	pub fn new() -> Self {
@@ -190,18 +204,13 @@ impl VirtualFs {
 		// Ensure file to mount is even supported
 
 		match Self::mount_supported(p) {
-			Ok(_) => {}
+			Ok(()) => {}
 			Err(err) => {
 				return Err(err);
 			}
 		};
 
 		// Ensure mount point is only alphanumerics, underscores, dashes, slashes
-
-		lazy_static! {
-			static ref RGX_ALPHANUM: Regex = Regex::new(r"[^A-Za-z0-9-_/.]")
-				.expect("Failed to evaluate `VirtualFs::mount::RGX_ALPHANUM`.");
-		};
 
 		{
 			let mpstr = match mpoint.to_str() {
@@ -211,7 +220,7 @@ impl VirtualFs {
 				}
 			};
 
-			if RGX_ALPHANUM.is_match(mpstr) {
+			if RGX_INVALIDMOUNTPATH.is_match(mpstr) {
 				return Err(Error::InvalidMountPoint);
 			}
 		}
@@ -239,39 +248,40 @@ impl VirtualFs {
 
 		// Create fake directories to get to mount point if necessary
 
-		let mut mpbase = mpoint.to_path_buf();
-		mpbase.pop();
+		let mp_base = mpoint.parent().ok_or(Error::InvalidMountPoint)?;
 
-		{
-			let empty_path: &'static Path = Path::new("");
+		if !mp_base.is_empty() {
+			let iter = mp_base.ancestors().fuse();
 
-			if mpbase != empty_path {
-				let iter = mpbase.ancestors();
-
-				for ppath in iter {
-					if self.lookup(ppath).is_err() {
-						Self::build_mount_point(&mut self.root, str_iter_from_path(&mpbase))?;
-						break;
-					}
+			for ppath in iter {
+				if self.lookup(ppath).is_err() {
+					Self::build_mount_point(&mut self.root, str_iter_from_path(mp_base))?;
+					break;
 				}
 			}
 		}
 
 		let mpe = self
-			.lookup_mut(&mpbase)
+			.lookup_mut(mp_base)
 			.expect("`VirtualFs::build_mount_point()` failed.");
 
+		let mount_name = mpoint
+			.file_name()
+			.ok_or(Error::NonExistentEntry)?
+			.to_str()
+			.ok_or(Error::InvalidUtf8)?;
+
 		let res = if canon.is_dir() {
-			Self::mount_dir(&canon, mpe)
+			Self::mount_dir(&canon, mount_name, mpe)
 		} else {
-			Self::mount_file(&canon, mpe)
+			Self::mount_file(&canon, mount_name, mpe)
 		};
 
 		if res.is_ok() {
 			info!(
 				"VFS mounted: \"{}\" as \"{}\".",
 				canon.display(),
-				mount_point.as_ref().display()
+				mpoint.display()
 			);
 		}
 
@@ -472,20 +482,23 @@ impl VirtualFs {
 	}
 
 	/// Forwards files of an as-yet unknown kind to the right mounting function.
-	fn mount_file(path: &Path, parent: &mut Entry) -> Result<(), Error> {
+	/// `parent` should be the pre-existing entry that the new entry will be
+	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
+	/// should be `Self::root`.
+	fn mount_file(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
 		if path.is_symlink() {
 			return Err(Error::SymlinkMount);
 		}
 
 		if has_gzdoom_extension(path) || has_zip_extension(path) || has_eternity_extension(path) {
-			return Self::mount_zip(path, parent);
+			return Self::mount_zip(path, mount_name, parent);
 		}
 
 		if has_wad_extension(path) {
 			match is_valid_wad(path) {
 				Ok(b) => {
 					if b {
-						return Self::mount_wad(path, parent);
+						return Self::mount_wad(path, mount_name, parent);
 					} else {
 						return Err(Error::Other(format!(
 							"Attempted to mount malformed WAD file: {}",
@@ -511,12 +524,7 @@ impl VirtualFs {
 			.expect("`VirtualFs::mount_file()` illegally received a leaf entry.");
 
 		subs.push(Entry {
-			name: path
-				.file_name()
-				.ok_or(Error::NonExistentFile)?
-				.to_str()
-				.ok_or(Error::InvalidUtf8)?
-				.to_owned(),
+			name: mount_name.to_owned(),
 			kind: EntryKind::File {
 				real_path: path.to_owned(),
 			},
@@ -525,7 +533,10 @@ impl VirtualFs {
 		Ok(())
 	}
 
-	fn mount_zip(path: &Path, parent: &mut Entry) -> Result<(), Error> {
+	/// `parent` should be the pre-existing entry that the new entry will be
+	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
+	/// should be `Self::root`.
+	fn mount_zip(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
 		let file = match File::open(path) {
 			Ok(f) => f,
 			Err(err) => {
@@ -541,12 +552,7 @@ impl VirtualFs {
 		};
 
 		let new = Entry {
-			name: path
-				.file_stem()
-				.ok_or(Error::NonExistentFile)?
-				.to_str()
-				.ok_or(Error::InvalidUtf8)?
-				.to_owned(),
+			name: mount_name.to_owned(),
 			kind: EntryKind::Zip {
 				real_path: path.to_owned(),
 				sub_entries: Vec::<Entry>::default(),
@@ -606,6 +612,9 @@ impl VirtualFs {
 		Ok(())
 	}
 
+	/// `parent` should be the pre-existing entry that the new entry will be
+	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
+	/// should be `Self::root`.
 	fn mount_zip_recur<'a>(
 		parent: &mut Entry,
 		mut iter: impl Iterator<Item = &'a str>,
@@ -663,25 +672,16 @@ impl VirtualFs {
 		}
 	}
 
-	fn mount_dir(path: &Path, parent: &mut Entry) -> Result<(), Error> {
+	/// `parent` should be the pre-existing entry that the new entry will be
+	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
+	/// should be `Self::root`.
+	fn mount_dir(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
 		let subs = parent
 			.sub_entries_mut()
 			.expect("`VirtualFs::mount_dir()` expected a non-leaf node.");
 
-		let name = path
-			.file_name()
-			.ok_or_else(|| {
-				Error::Other(format!(
-					"Path is illegally terminated with \"..\": {}",
-					path.display()
-				))
-			})?
-			.to_str()
-			.ok_or(Error::InvalidUtf8)?
-			.to_string();
-
 		subs.push(Entry {
-			name,
+			name: mount_name.to_owned(),
 			kind: EntryKind::Directory {
 				sub_entries: Vec::<Entry>::default(),
 			},
@@ -720,7 +720,7 @@ impl VirtualFs {
 
 					if fnamestr.is_none() {
 						warn!(
-							"Dir. entry with invalid UTF-8 in file name will
+							"Dir. entry with invalid UTF-8 in file name will \
 							not be mounted: {}",
 							dentry.path().display()
 						);
@@ -730,13 +730,13 @@ impl VirtualFs {
 					let dp = dentry.path();
 
 					let res = if ft.is_dir() {
-						Self::mount_dir(&dp, new)
+						Self::mount_dir(&dp, fnamestr.unwrap(), new)
 					} else {
-						Self::mount_file(&dp, new)
+						Self::mount_file(&dp, fnamestr.unwrap(), new)
 					};
 
 					match res {
-						Ok(_) => {}
+						Ok(()) => {}
 						Err(err) => {
 							warn!("Failed to mount: {}\nError: {}", dp.display(), err);
 						}
@@ -757,7 +757,10 @@ impl VirtualFs {
 		Ok(())
 	}
 
-	fn mount_wad(path: &Path, parent: &mut Entry) -> Result<(), Error> {
+	/// `parent` should be the pre-existing entry that the new entry will be
+	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
+	/// should be `Self::root`.
+	fn mount_wad(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
 		let wad = match wad::load_wad_file(path) {
 			Ok(w) => w,
 			Err(err) => {
@@ -779,12 +782,7 @@ impl VirtualFs {
 		}
 
 		subs.push(Entry {
-			name: path
-				.file_stem()
-				.ok_or(Error::NonExistentFile)?
-				.to_str()
-				.ok_or(Error::InvalidUtf8)?
-				.to_owned(),
+			name: mount_name.to_owned(),
 			kind: EntryKind::Wad {
 				wad,
 				sub_entries: subsubs,
@@ -798,12 +796,9 @@ impl VirtualFs {
 // Internal implementation details: lookup functions.
 impl VirtualFs {
 	fn lookup(&self, path: impl AsRef<Path>) -> Result<&Entry, Error> {
-		let empty_path: &'static Path = Path::new("");
-		let root_path: &'static Path = Path::new("/");
-
 		let p = path.as_ref();
 
-		if p == empty_path || p == root_path {
+		if p.is_empty() || p.is_root() {
 			return Ok(&self.root);
 		}
 
@@ -865,10 +860,7 @@ impl VirtualFs {
 	}
 
 	fn lookup_mut<'a>(&'a mut self, path: &'a Path) -> Result<&mut Entry, Error> {
-		let empty_path: &'static Path = Path::new("");
-		let root_path: &'static Path = Path::new("/");
-
-		if path == empty_path || path == root_path {
+		if path.is_empty() || path.is_root() {
 			return Ok(&mut self.root);
 		}
 
@@ -975,44 +967,109 @@ impl VirtualFs {
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
 pub trait ImpureVfs {
-	fn package_type(&self, path: impl AsRef<Path>) -> PackageType;
+	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<GamedataKind, Error>;
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
+
+	fn mount_gamedata(&mut self, path: impl AsRef<Path>) -> Vec<GamedataMeta>;
+	fn mount_userdata(&mut self) -> io::Result<()>;
+	fn parse_gamedata_meta(
+		&self,
+		path: impl AsRef<Path>,
+	) -> Result<GamedataMeta, Box<dyn std::error::Error>>;
+}
+
+lazy_static! {
+	static ref RGX_DECORATE: Regex =
+		Regex::new(r"^(?i)decorate").expect("Failed to evaluate `vfs::RGX_DECORATE`.");
+	static ref RGX_ZSCRIPT: Regex =
+		Regex::new(r"^(?i)zscript").expect("Failed to evaluate `vfs::RGX_ZSCRIPT`.");
+	static ref RGX_CVARINFO: Regex =
+		Regex::new(r"^(?i)cvarinfo").expect("Failed to evaluate `vfs::RGX_CVARINFO`.");
+	static ref RGX_EDFROOT: Regex =
+		Regex::new(r"^(?i)edfroot").expect("Failed to evaluate `vfs::RGX_EDFROOT`.");
+	static ref RGX_EMAPINFO: Regex =
+		Regex::new(r"^(?i)emapinfo").expect("Failed to evaluate `vfs::RGX_EMAPINFO`.");
+	static ref RGX_VERSION: Regex = Regex::new(
+		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
+	)
+	.expect("Failed to evaluate `vfs::RGX_VERSION`.");
 }
 
 impl ImpureVfs for VirtualFs {
-	fn package_type(&self, path: impl AsRef<Path>) -> PackageType {
-		let p = path.as_ref();
+	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<GamedataKind, Error> {
+		let entry = self.lookup(path)?;
 
-		if p.extension_is(Path::new("pk3"))
-			|| p.extension_is(Path::new("pk7"))
-			|| p.extension_is(Path::new("ipk3"))
-			|| p.extension_is(Path::new("ipk7"))
-		{
-			return PackageType::GzDoom;
-		}
+		let check_subentries = |sub_entries: &Vec<Entry>| {
+			for sub in sub_entries {
+				if sub.name == "meta.toml" {
+					return Some(GamedataKind::Impure);
+				}
 
-		if p.extension_is(Path::new("wad"))
-			|| p.extension_is(Path::new("iwad"))
-			|| p.extension_is(Path::new("pwad"))
-		{
-			return PackageType::Wad;
-		}
+				if RGX_DECORATE.is_match(&sub.name)
+					|| RGX_ZSCRIPT.is_match(&sub.name)
+					|| RGX_CVARINFO.is_match(&sub.name)
+				{
+					return Some(GamedataKind::GzDoom);
+				}
 
-		let mut mtdp = PathBuf::from(p);
-		mtdp.push("meta.lua");
-		if self.exists(&mtdp) {
-			return PackageType::Impure;
-		}
+				if RGX_EDFROOT.is_match(&sub.name) || RGX_EMAPINFO.is_match(&sub.name) {
+					return Some(GamedataKind::Eternity);
+				}
+			}
 
-		if p.extension_is(Path::new("pke")) {
-			return PackageType::Eternity;
-		}
+			None
+		};
 
-		// TODO: According to the Eternity Engine wiki,
-		// Eternity packages may be extended with pk3;
-		// this will require further disambiguation
+		let check_path = |path: &Path| {
+			if has_gzdoom_extension(path) {
+				return Some(GamedataKind::GzDoom);
+			}
 
-		PackageType::None
+			if has_eternity_extension(path) {
+				return Some(GamedataKind::Eternity);
+			}
+
+			None
+		};
+
+		match &entry.kind {
+			EntryKind::Wad { .. } => {
+				return Ok(GamedataKind::Wad);
+			}
+			EntryKind::File { real_path, .. } => {
+				if is_binary(real_path).map_err(Error::IoError)? {
+					return Ok(GamedataKind::Text);
+				}
+			}
+			EntryKind::Directory { sub_entries, .. } => {
+				match check_subentries(sub_entries) {
+					Some(kind) => return Ok(kind),
+					None => {}
+				};
+			}
+			EntryKind::Zip {
+				sub_entries,
+				real_path,
+				..
+			} => {
+				match check_subentries(sub_entries) {
+					Some(kind) => return Ok(kind),
+					None => {}
+				};
+
+				match check_path(real_path) {
+					Some(kind) => return Ok(kind),
+					None => {}
+				};
+			}
+			_ => {
+				// No other kind of entry from the types above should
+				// get mounted onto root, under any circumstances
+				unreachable!();
+			}
+		};
+
+		Ok(GamedataKind::None)
 	}
 
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon> {
@@ -1043,5 +1100,249 @@ impl ImpureVfs for VirtualFs {
 				None
 			}
 		}
+	}
+
+	fn mount_gamedata(&mut self, path: impl AsRef<Path>) -> Vec<GamedataMeta> {
+		let mut ret = Vec::<GamedataMeta>::default();
+
+		let entries = match fs::read_dir(path) {
+			Ok(entries) => entries,
+			// On the dev build, this is a valid state for the dir. structure to
+			// be in. If the requisite gamedata isn't found in the PWD instead,
+			// *that* represents an engine failure state
+			Err(err) => {
+				if err.kind() != io::ErrorKind::NotFound {
+					error!("Failed to read gamedata directory: {}", err);
+				}
+
+				return ret;
+			}
+		};
+
+		for entry in entries.filter_map(|e| match e {
+			Ok(de) => Some(de),
+			Err(err) => {
+				error!(
+					"Error encountered while reading gamedata directory: {}",
+					err
+				);
+				None
+			}
+		}) {
+			match entry.metadata() {
+				Ok(metadata) => {
+					if metadata.is_symlink() {
+						continue;
+					}
+				}
+				Err(err) => {
+					error!(
+						"Failed to retrieve metadata for gamedata directory entry: {:?}
+						Error: {}",
+						entry.file_name(),
+						err
+					);
+					continue;
+				}
+			};
+
+			let real_path = entry.path();
+
+			let mount_point =
+				if real_path.is_dir() || is_supported_archive(&real_path).unwrap_or_default() {
+					let osfstem = real_path.file_stem();
+
+					if osfstem.is_none() {
+						warn!(
+							"Skipping gamedata entry (invalid file stem): {}",
+							real_path.display()
+						);
+						continue;
+					}
+
+					let fstem = osfstem.unwrap().to_str();
+
+					if fstem.is_none() {
+						warn!(
+							"Skipping gamedata entry (invalid Unicode in name): {}",
+							real_path.display()
+						);
+						continue;
+					}
+
+					fstem.unwrap().to_string()
+				} else if !is_binary(&real_path).unwrap_or(true) {
+					let fname = entry.file_name();
+					let fname = fname.into_string();
+
+					if fname.is_err() {
+						warn!(
+							"Skipping gamedata entry (invalid Unicode in name): {}",
+							real_path.display()
+						);
+						continue;
+					}
+
+					fname.unwrap()
+				} else {
+					warn!(
+						"Skipping unsupported gamedata entry: {}",
+						real_path.display()
+					);
+					continue;
+				}
+				.replace(' ', "_");
+
+			let mut mount_point = RGX_INVALIDMOUNTPATH.replace_all(&mount_point, "").to_string();
+
+			let mut vers_str = Option::<String>::default();
+
+			if let Some(vers_match) = RGX_VERSION.find(&mount_point) {
+				const TO_TRIM: [char; 3] = [' ', '_', '-'];
+
+				vers_str = Some(vers_match.as_str().trim_matches(&TO_TRIM[..]).to_string());
+
+				mount_point.replace_range(vers_match.range(), "");
+			};
+
+			match self.mount(&real_path, &mount_point) {
+				Ok(()) => {
+					let gdk = match self.gamedata_kind(&mount_point) {
+						Ok(k) => k,
+						Err(err) => {
+							error!(
+								"Failed to determine gamedata type of: {}
+								Error: {}",
+								mount_point, err
+							);
+							continue;
+						}
+					};
+
+					let meta = if gdk == GamedataKind::Impure {
+						let metapath: PathBuf =
+							[PathBuf::from(&mount_point), PathBuf::from("meta.toml")]
+								.iter()
+								.collect();
+
+						match self.parse_gamedata_meta(&metapath) {
+							Ok(m) => m,
+							Err(err) => {
+								error!(
+									"Failed to parse gamedata meta file for package: {}
+									Error: {}",
+									real_path.display(),
+									err
+								);
+								continue;
+							}
+						}
+					} else {
+						let mut m = GamedataMeta::from_uuid(mount_point, gdk);
+						m.version = vers_str.unwrap_or_default();
+						m
+					};
+
+					ret.push(meta);
+				}
+				Err(err) => {
+					warn!(
+						"Failed to mount gamedata entry to virtual file system: {:?}
+						Error: {}",
+						real_path.as_path(),
+						err
+					);
+				}
+			};
+		}
+
+		ret
+	}
+
+	fn mount_userdata(&mut self) -> io::Result<()> {
+		let user_path = match get_user_dir() {
+			Some(up) => up,
+			None => {
+				error!(
+					"Failed to retrieve userdata path. \
+					Home directory path is malformed, \
+					or this platform is currently unsupported."
+				);
+				return Err(io::ErrorKind::Other.into());
+			}
+		};
+
+		let create_dir = |path: &Path| {
+			let mut rm_existing = false;
+			let mut mkdir = false;
+
+			match fs::metadata(path) {
+				Ok(m) => {
+					if !m.is_dir() {
+						rm_existing = true;
+						mkdir = true;
+					}
+				}
+				Err(err) => {
+					if err.kind() == std::io::ErrorKind::NotFound {
+						mkdir = true;
+					} else {
+						return Err(err);
+					}
+				}
+			};
+
+			if rm_existing {
+				match fs::remove_file(path) {
+					Ok(()) => {}
+					Err(err) => {
+						return Err(err);
+					}
+				};
+			}
+
+			if mkdir {
+				match fs::create_dir(path) {
+					Ok(()) => {}
+					Err(err) => {
+						return Err(err);
+					}
+				}
+			}
+
+			Ok(())
+		};
+
+		create_dir(&user_path)?;
+		create_dir(&user_path.join("saves"))?;
+
+		let udata_path = user_path.join("userdata");
+		create_dir(&udata_path)?;
+
+		let udata_pstr = match udata_path.to_str() {
+			Some(s) => s,
+			None => {
+				error!("Failed to convert userdata path into a valid string.");
+				return Err(io::ErrorKind::Other.into());
+			}
+		};
+
+		match self.mount(udata_pstr, "/userdata") {
+			Ok(()) => {}
+			Err(err) => {
+				return Err(io::Error::new(io::ErrorKind::Other, err));
+			}
+		};
+
+		Ok(())
+	}
+
+	fn parse_gamedata_meta(
+		&self,
+		path: impl AsRef<Path>,
+	) -> Result<GamedataMeta, Box<dyn std::error::Error>> {
+		let text = self.read_string(path.as_ref())?;
+		let ret: GamedataMeta = toml::from_str(&text)?;
+		Ok(ret)
 	}
 }

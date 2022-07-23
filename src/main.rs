@@ -17,10 +17,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod console;
 mod data;
+#[allow(dead_code)]
 mod ecs;
+#[allow(dead_code)]
 mod engine;
+#[allow(dead_code)]
 mod game;
 mod gfx;
+#[allow(dead_code)]
 mod level;
 mod lua;
 mod utils;
@@ -28,12 +32,11 @@ mod vfs;
 
 use crate::{
 	console::{Console, ConsoleWriter},
-	data::*,
 	engine::Engine,
 	gfx::GfxCore,
 	lua::ImpureLua,
 	utils::exe_dir,
-	vfs::{ImpureVfs, VirtualFs},
+	vfs::{ImpureVfs, VirtualFs}, data::DataCore,
 };
 use log::{error, info};
 use mlua::prelude::*;
@@ -192,9 +195,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let nvfs = Arc::new(RwLock::new(VirtualFs::new()));
+	let vfs = Arc::new(RwLock::new(VirtualFs::new()));
 
-	let lua = match Lua::new_ex(true, nvfs.clone()) {
+	let lua = match Lua::new_ex(true, vfs.clone()) {
 		Ok(l) => l,
 		Err(err) => {
 			error!("Failed to initialise client Lua state: {}", err);
@@ -202,36 +205,39 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
+	let mut data = DataCore::default();
+
 	// Mount contents of '/exe_dir/gamedata'
 
 	let gdata_path: PathBuf = [exe_dir(), PathBuf::from("gamedata")].iter().collect();
-
-	mount_gamedata(&mut nvfs.write(), &lua, gdata_path);
+	let mut gdo_metas = vfs.write().mount_gamedata(gdata_path);
+	data.metadata.append(&mut gdo_metas);
 
 	// If neither '/exe_dir/gamedata/impure' nor '/exe_dir/gamedata/impure.zip'
 	// were found in the previous step, check the PWD (but only on the dev build)
 
 	#[cfg(debug_assertions)]
 	{
-		let p: PathBuf = [env::current_dir()?, PathBuf::from("gamedata")]
+		let pwd_gd: PathBuf = [env::current_dir()?, PathBuf::from("gamedata")]
 			.iter()
 			.collect();
 
-		mount_gamedata(&mut nvfs.write(), &lua, p);
+		let mut gdo_metas = vfs.write().mount_gamedata(pwd_gd);
+		data.metadata.append(&mut gdo_metas);
 	}
 
 	// If there still isn't a valid '/impure' directory in the VFS search path,
 	// the engine's data is missing or malformed, and we can't continue
 
-	if !nvfs.read().is_dir("/impure") {
+	if !vfs.read().is_dir("/impure") {
 		return Err(Box::<io::Error>::new(io::ErrorKind::NotFound.into()));
 	}
 
 	// Mount userdata directory
 
-	mount_userdata(&mut nvfs.write())?;
+	vfs.write().mount_userdata()?;
 
-	let icon = nvfs
+	let icon = vfs
 		.read()
 		.window_icon_from_file(Path::new("/impure/impure.png"));
 	let event_loop = EventLoop::new();
@@ -261,11 +267,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 	};
 
 	gfx.pipeline_from_shader(
-		nvfs.read()
+		vfs.read()
 			.read_string(Path::new("/impure/shaders/hello-tri.wgsl"))?,
 	);
 
-	let mut engine = Engine::new(start_time, nvfs, lua, gfx, console);
+	let mut engine = Engine::new(start_time, vfs, lua, data, gfx, console);
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {

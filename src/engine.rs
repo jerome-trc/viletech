@@ -17,8 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
-	data::{get_userdata_path, DataCore},
+	data::DataCore,
 	gfx::GfxCore,
+	utils::*,
 	vfs::VirtualFs,
 };
 use log::{error, info};
@@ -26,7 +27,7 @@ use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{path::PathBuf, sync::Arc, thread::Thread, env};
+use std::{env, path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 pub struct Playsim {
@@ -60,7 +61,7 @@ pub enum EngineScene {
 
 pub struct Engine {
 	pub start_time: std::time::Instant,
-	pub nvfs: Arc<RwLock<VirtualFs>>,
+	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
 	pub data: DataCore,
 	pub gfx: GfxCore,
@@ -71,16 +72,17 @@ pub struct Engine {
 impl Engine {
 	pub fn new(
 		start_time: std::time::Instant,
-		nvfs: Arc<RwLock<VirtualFs>>,
+		vfs: Arc<RwLock<VirtualFs>>,
 		lua: Lua,
+		data: DataCore,
 		gfx: GfxCore,
 		console: Console,
 	) -> Self {
 		let mut ret = Engine {
 			start_time,
-			nvfs,
+			vfs,
 			lua,
-			data: DataCore::default(),
+			data,
 			gfx,
 			console,
 			scene: EngineScene::Frontend,
@@ -103,13 +105,13 @@ impl Engine {
 			|_, _| {
 				println!("Prints the engine version.");
 			},
-			true
+			true,
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
 			"home",
 			|_, _| {
-				match get_userdata_path() {
+				match get_user_dir() {
 					Some(p) => info!("{}", p.display()),
 					None => {
 						info!(
@@ -124,7 +126,7 @@ impl Engine {
 			|_, _| {
 				info!("Prints the directory used to store userdata.");
 			},
-			false
+			false,
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -136,7 +138,7 @@ impl Engine {
 			|_, _| {
 				info!("Prints the contents of a virtual file system directory.");
 			},
-			true
+			true,
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -152,7 +154,7 @@ impl Engine {
 					}
 				};
 
-				let mut output = String::from(argv0);
+				let mut output = argv0;
 
 				for arg in args {
 					output.push('\r');
@@ -165,10 +167,8 @@ impl Engine {
 
 				ConsoleRequest::None
 			},
-			|_, _| {
-				info!("Prints out all of the program's launch arguments.")
-			},
-			false
+			|_, _| info!("Prints out all of the program's launch arguments."),
+			false,
 		));
 
 		ret
@@ -214,7 +214,7 @@ impl Engine {
 		for req in cons_reqs {
 			match req {
 				ConsoleRequest::File(p) => {
-					let vfsg = self.nvfs.read();
+					let vfsg = self.vfs.read();
 
 					if !vfsg.is_dir(&p) {
 						info!("\"{}\" is not a directory.", p.display());

@@ -33,11 +33,18 @@ pub fn exe_dir() -> PathBuf {
 }
 
 pub trait PathEx {
-	fn extension_is(&self, path: &Path) -> bool;
+	fn extension_is(&self, test: &str) -> bool;
+	fn is_empty(&self) -> bool;
+	fn is_root(&self) -> bool;
+}
+
+lazy_static! {
+	static ref EMPTY_PATH: &'static Path = Path::new("");
+	static ref ROOT_PATH: &'static Path = Path::new("/");
 }
 
 impl PathEx for Path {
-	fn extension_is(&self, path: &Path) -> bool {
+	fn extension_is(&self, test: &str) -> bool {
 		let ext = match self.extension() {
 			Some(e) => e,
 			None => {
@@ -45,17 +52,47 @@ impl PathEx for Path {
 			}
 		};
 
-		return ext.eq_ignore_ascii_case(path.as_os_str());
+		ext.eq_ignore_ascii_case(test)
+	}
+
+	fn is_empty(&self) -> bool {
+		self == *EMPTY_PATH
+	}
+
+	fn is_root(&self) -> bool {
+		self == *ROOT_PATH
 	}
 }
 
+impl PathEx for PathBuf {
+	fn extension_is(&self, test: &str) -> bool {
+		let ext = match self.extension() {
+			Some(e) => e,
+			None => {
+				return false;
+			}
+		};
+
+		ext.eq_ignore_ascii_case(test)
+	}
+
+	fn is_empty(&self) -> bool {
+		self == *EMPTY_PATH
+	}
+
+	fn is_root(&self) -> bool {
+		self == *ROOT_PATH
+	}
+}
+
+/// Check if an archive is a .wad, .pwad, or .iwad.
 pub fn has_wad_extension(path: impl AsRef<Path>) -> bool {
 	let p = path.as_ref();
 	let ext = p.extension().unwrap_or_default();
 	let extstr = ext.to_str().unwrap_or_default();
 
 	lazy_static! {
-		static ref RGX_WADEXT: Regex = Regex::new(r"[PpIi]*[Ww][Aa][Dd]")
+		static ref RGX_WADEXT: Regex = Regex::new(r"^(?i)[pi]*wad$")
 			.expect("Failed to evaluate `has_wad_extension::RGX_WADEXT`.");
 	};
 
@@ -68,33 +105,35 @@ pub fn has_zip_extension(path: impl AsRef<Path>) -> bool {
 	let extstr = ext.to_str().unwrap_or_default();
 
 	lazy_static! {
-		static ref RGX_ZIPEXT: Regex = Regex::new(r"[Zz][Ii][Pp]")
-			.expect("Failed to evaluate `has_zip_extension::RGX_ZIPEXT`.");
+		static ref RGX_ZIPEXT: Regex =
+			Regex::new(r"^(?i)zip$").expect("Failed to evaluate `has_zip_extension::RGX_ZIPEXT`.");
 	};
 
 	RGX_ZIPEXT.is_match(extstr)
 }
 
+/// Check if an archive is a .pk3, .pk7, .ipk3, or .ipk7.
 pub fn has_gzdoom_extension(path: impl AsRef<Path>) -> bool {
 	let p = path.as_ref();
 	let ext = p.extension().unwrap_or_default();
 	let extstr = ext.to_str().unwrap_or_default();
 
 	lazy_static! {
-		static ref RGX_GZDEXT: Regex = Regex::new(r"[Ii]*[Pp][Kk][37]")
+		static ref RGX_GZDEXT: Regex = Regex::new(r"^(?i)i*pk[37]$")
 			.expect("Failed to evaluate `has_zip_extension::RGX_GZDEXT`.");
 	};
 
 	RGX_GZDEXT.is_match(extstr)
 }
 
+/// Check if an archive is a .pk3 or .pke.
 pub fn has_eternity_extension(path: impl AsRef<Path>) -> bool {
 	let p = path.as_ref();
 	let ext = p.extension().unwrap_or_default();
 	let extstr = ext.to_str().unwrap_or_default();
 
 	lazy_static! {
-		static ref RGX_ETERNEXT: Regex = Regex::new(r"[Pp][Kk][Ee3]")
+		static ref RGX_ETERNEXT: Regex = Regex::new(r"^(?i)pk[e3]$")
 			.expect("Failed to evaluate `has_zip_extension::RGX_ETERNEXT`.");
 	};
 
@@ -114,7 +153,9 @@ pub fn str_iter_from_path(path: &Path) -> impl Iterator<Item = &str> {
 	})
 }
 
-pub fn is_valid_wad(path: impl AsRef<Path>) -> Result<bool, io::Error> {
+/// Checks for the 4-byte magic number, directory info, and that the
+/// file size is as expected given the number of entries.
+pub fn is_valid_wad(path: impl AsRef<Path>) -> io::Result<bool> {
 	let p = path.as_ref();
 
 	if !p.exists() {
@@ -160,4 +201,118 @@ pub fn is_valid_wad(path: impl AsRef<Path>) -> Result<bool, io::Error> {
 	};
 
 	Ok(metadata.len() >= expected_bin_len as u64)
+}
+
+/// Returns `None` if this platform is unsupported
+/// or the home directory path is malformed.
+pub fn get_user_dir() -> Option<PathBuf> {
+	let mut ret = match home::home_dir() {
+		Some(hdir) => hdir,
+		None => {
+			return None;
+		}
+	};
+
+	match env::consts::OS {
+		"linux" => {
+			ret.push(".config");
+			ret.push("impure");
+		}
+		"windows" => {
+			ret.push("impure");
+		}
+		_ => {
+			return None;
+		}
+	}
+
+	Some(ret)
+}
+
+/// Checks for a 4-byte magic number at the very beginning of the file.
+pub fn is_zip(path: impl AsRef<Path>) -> io::Result<bool> {
+	let p = path.as_ref();
+
+	if !p.exists() {
+		return Err(io::ErrorKind::NotFound.into());
+	}
+
+	let mut buffer: [u8; 4] = [0; 4];
+	let mut file = File::open(path)?;
+
+	let bytes_read = file.read(&mut buffer)?;
+
+	if bytes_read < buffer.len() {
+		return Ok(false);
+	}
+
+	match &buffer[0..4] {
+		&[0x50, 0x4b, 0x03, 0x04] => Ok(true),
+		_ => Ok(false),
+	}
+}
+
+/// Check if the given file is a zip or WAD.
+pub fn is_supported_archive(path: impl AsRef<Path>) -> io::Result<bool> {
+	match is_zip(path.as_ref()) {
+		Ok(b) => {
+			if b {
+				return Ok(b);
+			}
+		}
+		Err(err) => {
+			return Err(err);
+		}
+	}
+
+	match is_valid_wad(path.as_ref()) {
+		Ok(b) => {
+			if b {
+				return Ok(b);
+			}
+		}
+		Err(err) => {
+			return Err(err);
+		}
+	}
+
+	Ok(false)
+}
+
+/// Check if the given file is not ASCII-encoded, UTF-8 encoded, or UTF-16 encoded.
+pub fn is_binary(path: impl AsRef<Path>) -> io::Result<bool> {
+	let p = path.as_ref();
+
+	if !p.exists() {
+		return Err(io::ErrorKind::NotFound.into());
+	}
+
+	const BUF_SIZE: usize = 1024;
+
+	let mut buffer: [u8; BUF_SIZE] = [0; BUF_SIZE];
+	let mut file = File::open(path)?;
+
+	let bytes_read = file.read(&mut buffer)?;
+
+	if bytes_read == 0 {
+		return Ok(false);
+	}
+
+	if std::str::from_utf8(&buffer).is_ok() || buffer.is_ascii() {
+		return Ok(false);
+	}
+
+	// (Safety: unverified)
+	unsafe {
+		let buffer16: [u16; BUF_SIZE / 2] = std::mem::transmute(buffer);
+		let iter = std::char::decode_utf16(buffer16);
+
+		for cpoint in iter {
+			if cpoint.is_err() {
+				return Ok(true);
+			}
+		}
+	}
+
+	Ok(false)
 }

@@ -15,368 +15,95 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use super::lua::ImpureLua;
-use crate::{vfs::{ImpureVfs, VirtualFs}, ecs::Blueprint, game::{Species, DamageType}};
-use core::fmt;
-use log::{error, warn};
-use mlua::prelude::*;
-use std::{
-	env,
-	error::Error,
-	fs, io,
-	path::{Path, PathBuf}, collections::HashMap,
-};
+use crate::{ecs::Blueprint, game::{Species, DamageType}};
+use regex::Regex;
+use serde::Deserialize;
+use std::collections::HashMap;
 
-/// General-purpose semantic versioning triplet.
-pub struct SemVer {
-	pub major: u16,
-	pub minor: u16,
-	pub patch: u16,
-}
-
+#[derive(Deserialize)]
 pub struct VersionedId {
 	// Note to reader: probably not going to go to the same extent as npm
 	// semantic versioning but there should be some versioning tied to this
 	pub uuid: String,
 }
 
-#[derive(PartialEq)]
-pub enum PackageType {
+#[derive(Default, Deserialize, PartialEq)]
+pub enum GamedataKind {
+	/// Unidentifiable, or an executable, or something else.
+	#[default]
 	None,
+	/// e.g. a DEHACKED lump.
+	Text,
+	/// Self-explanatory.
 	Wad,
+	/// This is an archive (compressed under a supported format) or directory,
+	/// with a top-level meta.toml file conforming to a specification.
 	Impure,
+	/// This is an archive (compressed under a supported format) or directory,
+	/// with structure/lumps that identify it as being for ZDoom/GZDoom.
 	GzDoom,
+	/// This is an archive (compressed under a supported format) or directory,
+	/// with structure/lumps that identify it as being for the Eternity Engine.
 	Eternity,
 }
 
-pub struct PkgMeta {
+#[derive(Deserialize)]
+/// Every game data object (GDO) mounted to the VFS (i.e. placed by the user in
+/// their gamedata dir. or given via a path in a launch arg.) gets one of these.
+pub struct GamedataMeta {
+	/// If this isn't given by an Impure metadata table, it's the name of the
+	/// mounted file stem (e.g. gzdoom.pk3 becomes gzdoom, DOOM2.WAD becomes DOOM2).
 	pub uuid: String,
-	pub version: SemVer,
+	pub version: String,
+	/// Display name presented to users.
 	pub name: String,
+	#[serde(alias = "description")]
 	pub desc: String,
-	pub author: String,
+	#[serde(default)]
+	pub authors: Vec<String>,
+	#[serde(default)]
 	pub copyright: String,
-	pub link: String,
-	pub directory: PathBuf,
-	pub mount_point: String,
+	/// e.g., for if the author wants a link to a mod/WAD's homepage/forum post.
+	#[serde(default)]
+	pub links: Vec<String>,
+	#[serde(skip)]
+	pub kind: GamedataKind,
+	#[serde(default)]
 	pub dependencies: Vec<VersionedId>,
-	/// Incompatibilities are "soft";
-	/// the user is warned when trying to mingle incompatible packages
-	/// but can still proceed as normal.
+	/// Incompatibilities are "soft"; the user is warned when trying to mingle 
+	/// incompatible game data objects but can still proceed as normal.
+	#[serde(default)]
 	pub incompatibilities: Vec<VersionedId>,
 }
 
-#[derive(Debug)]
-pub enum PkgMetaParseError<'p> {
-	FileReadError(&'p Path, io::Error),
-	LuaEvalError(&'p Path, mlua::Error),
-}
-
-impl<'p> Error for PkgMetaParseError<'p> {}
-
-impl<'p> fmt::Display for PkgMetaParseError<'p> {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		return match self {
-			Self::FileReadError(path, err) => {
-				write!(f, "Failed to read path: {}\nError: {}", path.display(), err)
-			}
-			Self::LuaEvalError(path, err) => {
-				write!(
-					f,
-					"Failed to evaluate package metadata at path: {}\nError: {}",
-					path.display(),
-					err
-				)
-			}
-		};
-	}
-}
-
-pub fn parse_dependencies(pkgmeta: &LuaTable, path: &str) -> Vec<VersionedId> {
-	let depends: LuaTable = match pkgmeta.get::<_, LuaTable>("depends") {
-		Ok(tbl) => tbl,
-		Err(_) => {
-			return Vec::default();
-		}
-	};
-
-	let mut ret = Vec::<VersionedId>::default();
-
-	for kvp in depends.pairs::<i32, String>() {
-		if kvp.is_err() {
-			warn!("Skipping invalid dependency entry in: {}", path);
-			continue;
-		}
-
-		let (key, val) = kvp.expect("Failed to destructure a Lua key-value pair.");
-
-		let pair: Vec<&str> = val.split('@').collect();
-
-		match pair.len() {
-			1 => {
-				ret.push(VersionedId {
-					uuid: pair[0].to_string(),
-				});
-			}
-			_ => {
-				warn!("Skipping invalid dependency entry {} in: {}", key, path);
-				continue;
-			}
+impl GamedataMeta {
+	pub fn from_uuid(uuid: String, kind: GamedataKind) -> Self {
+		GamedataMeta {
+			uuid,
+			version: String::default(),
+			name: String::default(),
+			desc: String::default(),
+			authors: Vec::<String>::default(),
+			copyright: String::default(),
+			links: Vec::<String>::default(),
+			kind,
+			dependencies: Vec::<VersionedId>::default(),
+			incompatibilities: Vec::<VersionedId>::default()
 		}
 	}
-
-	// TODO: Versioning of dependency specifications
-
-	ret
-}
-
-pub fn parse_incompatibilities(pkgmeta: &LuaTable, path: &str) -> Vec<VersionedId> {
-	let incompats: LuaTable = match pkgmeta.get::<_, LuaTable>("incompat") {
-		Ok(tbl) => tbl,
-		Err(_) => {
-			return Vec::default();
-		}
-	};
-
-	let mut ret = Vec::<VersionedId>::default();
-
-	for kvp in incompats.pairs::<i32, String>() {
-		if kvp.is_err() {
-			warn!("Skipping invalid incompatibility entry in: {}", path);
-			continue;
-		}
-
-		let (key, val) = kvp.expect("Failed to destructure a Lua key-value pair.");
-
-		let pair: Vec<&str> = val.split('@').collect();
-
-		match pair.len() {
-			1 => {
-				ret.push(VersionedId {
-					uuid: pair[0].to_string(),
-				});
-			}
-			_ => {
-				warn!(
-					"Skipping invalid incompatibility entry {} in: {}",
-					key, path
-				);
-				continue;
-			}
-		}
-	}
-
-	// TODO: Versioning of incompatibility specifications
-
-	ret
-}
-
-pub fn mount_gamedata(vfs: &mut VirtualFs, lua: &Lua, path: PathBuf) {
-	let entries = match fs::read_dir(path.as_path()) {
-		Ok(entries) => entries,
-		// On the dev build, this is a valid state for the dir. structure to
-		// be in. If the requisite gamedata isn't found in the PWD instead,
-		// *that* represents an engine failure state
-		Err(err) => {
-			if err.kind() != io::ErrorKind::NotFound {
-				error!("Failed to read gamedata directory: {}", err);
-			}
-
-			return;
-		}
-	};
-
-	for entry in entries.filter_map(|e| match e {
-		Ok(de) => Some(de),
-		Err(err) => {
-			error!(
-				"Error encountered while reading gamedata directory: {}",
-				err
-			);
-			None
-		}
-	}) {
-		match entry.metadata() {
-			Ok(metadata) => {
-				if metadata.is_symlink() {
-					continue;
-				}
-			}
-			Err(err) => {
-				error!(
-					"Failed to retrieve metadata for gamedata directory entry: {:?}\nError: {}",
-					entry.file_name(),
-					err
-				);
-				continue;
-			}
-		};
-
-		let pathbuf = entry.path();
-
-		let pstr = if let Some(p) = pathbuf.as_path().to_str() {
-			p
-		} else {
-			warn!(
-				"Gamedata entry path is invalid, and will be skipped: {:?}",
-				pathbuf.as_path()
-			);
-			continue;
-		};
-
-		let is_impure = vfs.package_type(pathbuf.as_path()) == PackageType::Impure;
-
-		let mount_point = if let true = is_impure {
-			let pmeta_path: PathBuf = [pathbuf.clone(), PathBuf::from("meta.lua")]
-				.iter()
-				.collect();
-
-			let meta = match lua.parse_package_meta(pmeta_path.as_path()) {
-				Ok(m) => m,
-				Err(err) => {
-					warn!(
-						"Failed to parse metadata for package at path: {:?}\nError: {}",
-						pathbuf, err
-					);
-					continue;
-				}
-			};
-
-			meta.mount_point
-		} else {
-			let stem = match pathbuf.as_path().file_stem() {
-				Some(s) => s,
-				None => {
-					warn!(
-						"Gamedata entry path {:?} has no file name, 
-						and will not be mounted.",
-						pathbuf
-					);
-					continue;
-				}
-			};
-
-			match stem.to_str() {
-				Some(s) => s,
-				None => {
-					warn!(
-						"Gamedata entry path {:?} contains invalid unicode,
-						and will not be mounted.",
-						pathbuf
-					);
-					continue;
-				}
-			}
-			.to_owned()
-		};
-
-		match vfs.mount(pstr, &mount_point) {
-			Ok(_) => {}
-			Err(err) => {
-				warn!(
-					"Failed to mount gamedata entry to virtual file system: 
-					{:?}\nError: {}",
-					pathbuf.as_path(),
-					err
-				);
-			}
-		};
-	}
-}
-
-/// Returns `None` if this platform is unsupported
-/// or the home directory path is malformed.
-pub fn get_userdata_path() -> Option<PathBuf> {
-	let mut ret = match home::home_dir() {
-		Some(hdir) => hdir,
-		None => {
-			return None;
-		}
-	};
-
-	match env::consts::OS {
-		"linux" => {
-			ret.push(".config");
-			ret.push("impure");
-		}
-		"windows" => {
-			ret.push("impure");
-		}
-		_ => {
-			return None;
-		}
-	}
-
-	Some(ret)
-}
-
-pub fn mount_userdata(vfs: &mut VirtualFs) -> Result<(), io::Error> {
-	let udata_path = match get_userdata_path() {
-		Some(up) => up,
-		None => {
-			error!(
-				"Failed to retrieve userdata path. 
-				Home directory path is malformed, 
-				or this platform is currently unsupported."
-			);
-			return Err(io::ErrorKind::Other.into());
-		}
-	};
-
-	match fs::metadata(udata_path.as_path()) {
-		Ok(metadata) => {
-			if !metadata.is_dir() {
-				match fs::remove_file(udata_path.as_path()) {
-					Ok(_) => {}
-					Err(rmerr) => {
-						return Err(rmerr);
-					}
-				}
-
-				match fs::create_dir(udata_path.as_path()) {
-					Ok(_) => {}
-					Err(cderr) => {
-						return Err(cderr);
-					}
-				}
-			}
-		}
-		Err(mtderr) => {
-			if let std::io::ErrorKind::NotFound = mtderr.kind() {
-				match fs::create_dir(udata_path.as_path()) {
-					Ok(_) => {}
-					Err(cderr) => {
-						return Err(cderr);
-					}
-				}
-			} else {
-				return Err(mtderr);
-			}
-		}
-	}
-
-	let udata_pstr = match udata_path.to_str() {
-		Some(s) => s,
-		None => {
-			error!("Failed to convert userdata path into a valid string.");
-			return Err(io::ErrorKind::Other.into());
-		}
-	};
-
-	match vfs.mount(udata_pstr, "/userdata") {
-		Ok(_) => {}
-		Err(err) => {
-			return Err(io::Error::new(io::ErrorKind::Other, err));
-		}
-	};
-
-	Ok(())
 }
 
 pub type AssetId = usize;
 
 #[derive(Default)]
 pub struct DataCore {
+	/// Represents all game data objects that have been mounted; 
+	/// `[0]` should *always* be the engine's own game data.
+	pub metadata: Vec<GamedataMeta>,
+	/// Each element corresponds to an index in `metadata`.
+	/// Again, `[0]` should *always* be the engine's own game data.
+	pub load_order: Vec<usize>,
+
 	/// Key structure:
 	/// "package_uuid.domain.asset_key"
 	/// Package UUID will either come from an Impure package metadata file,
@@ -385,13 +112,41 @@ pub struct DataCore {
 	/// Domain will be something like "textures" or "blueprints".
 	/// Asset key is derived from the file name
 	/// Each value maps to an index in one of the asset vectors.
-	asset_map: HashMap<String, AssetId>,
+	pub asset_map: HashMap<String, AssetId>,
 	/// e.g. if DOOM2 defines MAP01 and then my_house.wad is loaded after it and
 	/// also defines a MAP01, the key "MAP01" will point to my_house.wad:MAP01.
-	end_map: HashMap<String, AssetId>,
+	pub end_map: HashMap<String, AssetId>,
 
-	language: Vec<String>,
-	blueprints: Vec<Blueprint>,
-	damage_types: Vec<DamageType>,
-	species: Vec<Species>
+	pub language: Vec<String>,
+	pub blueprints: Vec<Blueprint>,
+	pub damage_types: Vec<DamageType>,
+	pub species: Vec<Species>
+}
+
+impl DataCore {
+	pub fn is_mounted(&self, pattern: &str) -> Result<bool, regex::Error> {
+		let regex = Regex::new(pattern)?;
+
+		for meta in &self.metadata {
+			if regex.is_match(&meta.uuid) {
+				return Ok(true);
+			}
+		}
+
+		Ok(false)
+	}
+
+	pub fn is_loaded(&self, pattern: &str) -> Result<bool, regex::Error> {
+		let regex = Regex::new(pattern)?;
+
+		for index in &self.load_order {
+			let meta = &self.metadata[*index];
+
+			if regex.is_match(&meta.uuid) {
+				return Ok(true);
+			}
+		}
+
+		Ok(false)
+	}
 }

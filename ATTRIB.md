@@ -81,21 +81,29 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
 	- https://docs.rs/parking_lot/latest/parking_lot/
 - pollster
-	- Joshua "zesterer" Barretto et. al.
+	- By Joshua "zesterer" Barretto et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
 	- https://docs.rs/pollster/latest/pollster/
 - regex
 	- By Andrew "BurntSushi" Gallant et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
 	- https://docs.rs/regex/latest/regex/
+- serde
+	- By the [serde-rs](https://github.com/serde-rs) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT).
+	- https://docs.rs/serde/latest/serde/
 - Serpent
 	- By Paul "pkulchenko" Kulchenko et. al.
 	- Provided under the [MIT License](https://github.com/pkulchenko/serpent/blob/master/LICENSE).
 	- https://github.com/pkulchenko/serpent
 - shipyard
-	- Dylan "leudz" Ancel et. al.
+	- By Dylan "leudz" Ancel et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).
 	- https://docs.rs/shipyard/latest/shipyard/
+- toml
+	- By Alex "alexcrichton" Crichton et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).
+	- https://docs.rs/toml/latest/toml/
 - wad
 	- By Magnus "maghoff" Hoff.
 	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).
