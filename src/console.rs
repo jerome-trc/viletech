@@ -38,6 +38,7 @@ pub struct Console {
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
 
+	history_pos: usize,
 	defocus_textedit: bool,
 	scroll_to_bottom: bool,
 
@@ -57,6 +58,7 @@ impl Console {
 			aliases: Vec::<ConsoleAlias>::default(),
 			commands: Vec::<ConsoleCommand>::default(),
 			input: String::with_capacity(512),
+			history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			requests: VecDeque::<ConsoleRequest>::default(),
@@ -82,7 +84,17 @@ impl Console {
 			return;
 		}
 
-		self.history.push(self.input.clone());
+		match self.history.last() {
+			Some(last_cmd) => if last_cmd != &self.input[..] {
+				self.history.push(self.input.clone());
+				self.history_pos = self.history.len();
+			},
+			None => {
+				self.history.push(self.input.clone());
+				self.history_pos = self.history.len();
+			}
+		};
+
 		let mut tokens = self.input.split(' ');
 
 		let key = if let Some(k) = tokens.next() {
@@ -94,6 +106,12 @@ impl Console {
 		if key.eq_ignore_ascii_case("clear") {
 			self.input.clear();
 			self.log.clear();
+			return;
+		} else if key.eq_ignore_ascii_case("clearhist") {
+			info!("History of submitted commands cleared.");
+			self.input.clear();
+			self.history.clear();
+			self.history_pos = 0;
 			return;
 		}
 
@@ -273,11 +291,10 @@ impl Console {
 			return;
 		}
 
-		if input.virtual_keycode.is_none() {
-			return;
-		}
-
-		let vkc = input.virtual_keycode.unwrap();
+		let vkc = match input.virtual_keycode {
+			Some(kc) => kc,
+			None => { return; }
+		};
 
 		if !self.open.get() {
 			if vkc == VirtualKeyCode::Grave {
@@ -295,6 +312,27 @@ impl Console {
 				self.defocus_textedit = true;
 			}
 			VirtualKeyCode::Return => self.try_submit(),
+			VirtualKeyCode::Up => {
+				if self.history_pos < 1 {
+					return;
+				}
+
+				self.history_pos -= 1;
+				self.input.clear();
+				self.input.push_str(&self.history[self.history_pos]);
+			}
+			VirtualKeyCode::Down => {
+				if self.history_pos >= self.history.len() {
+					return;
+				}
+
+				self.history_pos += 1;
+				self.input.clear();
+
+				if self.history_pos < self.history.len() {
+					self.input.push_str(&self.history[self.history_pos]);
+				}
+			}
 			_ => {}
 		}
 	}
@@ -304,7 +342,8 @@ pub enum ConsoleRequest {
 	None,
 	// Client-fulfilled requests
 	Uptime,
-	File(PathBuf), // Requests transmitted to the playsim thread
+	File(PathBuf),
+	Sound(String),
 }
 
 pub struct ConsoleCommand {

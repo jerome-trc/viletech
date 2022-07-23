@@ -110,13 +110,11 @@ impl Engine {
 
 		ret.console.register_command(ConsoleCommand::new(
 			"uptime",
-			|_, _| {
-				ConsoleRequest::Uptime
-			},
+			|_, _| ConsoleRequest::Uptime,
 			|_, _| {
 				info!("Prints the length of the time the engine has been running.");
 			},
-			true
+			true,
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
