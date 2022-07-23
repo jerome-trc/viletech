@@ -61,7 +61,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 				.expect("Failed to retrieve system time.")
 				.as_millis() as u32;
 			match rseed.call::<u32, ()>(seed) {
-				Ok(_) => {}
+				Ok(()) => {}
 				Err(err) => warn!("Failed to seed a Lua state's RNG: {}", err),
 			};
 		}
@@ -76,7 +76,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		};
 
 		match ret.set_named_registry_value("teal", teal) {
-			Ok(_) => {}
+			Ok(()) => {}
 			Err(err) => {
 				return Err(err);
 			}

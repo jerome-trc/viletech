@@ -350,7 +350,7 @@ impl io::Write for ConsoleWriter {
 			let s = String::from_utf8_lossy(drain.as_slice());
 
 			match self.sender.try_send(s.to_string()) {
-				Ok(_) => {}
+				Ok(()) => {}
 				Err(err) => {
 					error!(
 						"Console message channel was disconnected unexpectedly: {}",
@@ -370,7 +370,7 @@ impl io::Write for ConsoleWriter {
 		let s = String::from_utf8_lossy(drain.as_slice());
 
 		match self.sender.try_send(s.to_string()) {
-			Ok(_) => {}
+			Ok(()) => {}
 			Err(err) => {
 				error!(
 					"Console message channel was disconnected unexpectedly: {}",
