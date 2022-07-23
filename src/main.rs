@@ -296,7 +296,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						engine.on_close();
+						engine.print_uptime();
 						*control_flow = ControlFlow::Exit;
 						return;
 					}
@@ -304,7 +304,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 					engine.on_key_event(input);
 				}
 				WindowEvent::CloseRequested => {
-					engine.on_close();
+					engine.print_uptime();
 					*control_flow = ControlFlow::Exit;
 				}
 				WindowEvent::Resized(psize) => {

@@ -303,6 +303,7 @@ impl Console {
 pub enum ConsoleRequest {
 	None,
 	// Client-fulfilled requests
+	Uptime,
 	File(PathBuf), // Requests transmitted to the playsim thread
 }
 
@@ -313,7 +314,7 @@ pub struct ConsoleCommand {
 	func: fn(&Self, Vec<&str>) -> ConsoleRequest,
 	help: fn(&Self, Vec<&str>),
 	/// If false, this command absolutely cannot be executed via script.
-	script_legal: bool
+	script_legal: bool,
 }
 
 impl ConsoleCommand {
@@ -321,9 +322,14 @@ impl ConsoleCommand {
 		key: &'static str,
 		func: fn(&Self, Vec<&str>) -> ConsoleRequest,
 		help: fn(&Self, Vec<&str>),
-		script_legal: bool
+		script_legal: bool,
 	) -> Self {
-		ConsoleCommand { key, func, help, script_legal }
+		ConsoleCommand {
+			key,
+			func,
+			help,
+			script_legal,
+		}
 	}
 }
 

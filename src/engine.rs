@@ -103,9 +103,20 @@ impl Engine {
 				ConsoleRequest::None
 			},
 			|_, _| {
-				println!("Prints the engine version.");
+				info!("Prints the engine version.");
 			},
 			true,
+		));
+
+		ret.console.register_command(ConsoleCommand::new(
+			"uptime",
+			|_, _| {
+				ConsoleRequest::Uptime
+			},
+			|_, _| {
+				info!("Prints the length of the time the engine has been running.");
+			},
+			true
 		));
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -174,11 +185,13 @@ impl Engine {
 		ret
 	}
 
-	pub fn on_close(&self) {
-		info!(
-			"Runtime duration (s): {}",
-			self.start_time.elapsed().as_secs()
-		);
+	pub fn print_uptime(&self) {
+		let elapsed = self.start_time.elapsed();
+		let dur = chrono::Duration::from_std(elapsed).unwrap();
+		let secs = dur.num_seconds();
+		let mins = secs / 60;
+		let hours = mins / 60;
+		info!("Uptime: {:02}:{:02}:{:02}", hours, mins % 60, secs % 60);
 	}
 
 	pub fn redraw_requested(&mut self, window_id: WindowId, control_flow: &mut ControlFlow) {
@@ -209,7 +222,7 @@ impl Engine {
 	}
 
 	pub fn process_console_requests(&mut self) {
-		let cons_reqs = self.console.requests.drain(..);
+		let cons_reqs: Vec<_> = self.console.requests.drain(..).collect();
 
 		for req in cons_reqs {
 			match req {
@@ -245,6 +258,9 @@ impl Engine {
 						files.len(),
 						output
 					);
+				}
+				ConsoleRequest::Uptime => {
+					self.print_uptime();
 				}
 				_ => {}
 			}
