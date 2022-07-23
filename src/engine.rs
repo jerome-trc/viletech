@@ -91,7 +91,7 @@ impl Engine {
 		ret.console.register_command(ConsoleCommand::new(
 			"version",
 			|_, _| {
-				println!(
+				info!(
 					"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
 					env!("CARGO_PKG_VERSION_MAJOR"),
 					env!("CARGO_PKG_VERSION_MINOR"),
