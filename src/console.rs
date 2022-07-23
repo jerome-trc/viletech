@@ -37,7 +37,10 @@ pub struct Console {
 	commands: Vec<ConsoleCommand>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
+
 	defocus_textedit: bool,
+	scroll_to_bottom: bool,
+
 	pub requests: VecDeque<ConsoleRequest>,
 }
 
@@ -55,6 +58,7 @@ impl Console {
 			commands: Vec::<ConsoleCommand>::default(),
 			input: String::with_capacity(512),
 			defocus_textedit: false,
+			scroll_to_bottom: false,
 			requests: VecDeque::<ConsoleRequest>::default(),
 		}
 	}
@@ -74,6 +78,7 @@ impl Console {
 	fn try_submit(&mut self) {
 		if self.input.is_empty() {
 			info!("$");
+			self.scroll_to_bottom = true;
 			return;
 		}
 
@@ -144,6 +149,7 @@ impl Console {
 			info!("Unknown command: {}", key);
 		}
 
+		self.scroll_to_bottom = true;
 		self.input.clear();
 	}
 
@@ -199,6 +205,11 @@ impl Console {
 					}
 				}
 			});
+
+			if self.scroll_to_bottom {
+				self.scroll_to_bottom = false;
+				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+			}
 		});
 
 		ui.separator();
