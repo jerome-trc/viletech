@@ -85,18 +85,24 @@ impl Console {
 		}
 
 		match self.history.last() {
-			Some(last_cmd) => if last_cmd != &self.input[..] {
-				self.history.push(self.input.clone());
-				self.history_pos = self.history.len();
-			},
+			Some(last_cmd) => {
+				if last_cmd != &self.input[..] {
+					self.history.push(self.input.clone());
+					self.history_pos = self.history.len();
+				}
+			}
 			None => {
 				self.history.push(self.input.clone());
 				self.history_pos = self.history.len();
 			}
 		};
 
-		let mut tokens = self.input.split(' ');
+		lazy_static! {
+			static ref RGX_ARGSPLIT: Regex = Regex::new(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#)
+				.expect("Failed to evaluate `Console::try_submit::RGX_ARGSPLIT`.");
+		};
 
+		let mut tokens = self.input.splitn(2, ' ');
 		let key = if let Some(k) = tokens.next() {
 			k
 		} else {
@@ -115,10 +121,24 @@ impl Console {
 			return;
 		}
 
+		let args = if let Some(a) = tokens.next() { a } else { "" };
+		let args_iter = RGX_ARGSPLIT.captures_iter(args);
+		let mut args = Vec::<&str>::default();
+
+		for arg in args_iter {
+			let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
+				Some(a) => a,
+				None => {
+					continue;
+				}
+			};
+
+			args.push(arg_match.as_str());
+		}
+
 		info!("$ {}", self.input);
 
 		let help = key.eq_ignore_ascii_case("help") || key == "?";
-		let args: Vec<&str> = tokens.collect();
 		let mut cmd_found = false;
 
 		if help {
@@ -293,7 +313,9 @@ impl Console {
 
 		let vkc = match input.virtual_keycode {
 			Some(kc) => kc,
-			None => { return; }
+			None => {
+				return;
+			}
 		};
 
 		if !self.open.get() {
@@ -368,6 +390,19 @@ impl ConsoleCommand {
 			func,
 			help,
 			script_legal,
+		}
+	}
+
+	pub fn get_key(&self) -> &'static str {
+		self.key
+	}
+
+	/// Allows contexts outside this module to register `func` callbacks
+	///  which print out help without increasing visibility any further.
+	pub fn call_help(&self, args: Option<Vec<&str>>) {
+		match args {
+			Some(a) => ((self.help)(self, a)),
+			None => ((self.help)(self, Vec::<&str>::default())),
 		}
 	}
 }
