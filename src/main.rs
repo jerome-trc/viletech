@@ -15,22 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-mod console;
-mod data;
-#[allow(dead_code)]
-mod ecs;
-#[allow(dead_code)]
-mod engine;
-#[allow(dead_code)]
-mod game;
-mod gfx;
-#[allow(dead_code)]
-mod level;
-mod lua;
-mod utils;
-mod vfs;
-
-use crate::{
+use impure::{
 	console::{Console, ConsoleWriter},
 	engine::Engine,
 	gfx::GfxCore,
@@ -195,7 +180,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let vfs = Arc::new(RwLock::new(VirtualFs::new()));
+	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
 
 	let lua = match Lua::new_ex(true, vfs.clone()) {
 		Ok(l) => l,
