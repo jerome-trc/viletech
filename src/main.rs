@@ -230,7 +230,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 	// the engine's data is missing or malformed, and we can't continue
 
 	if !vfs.read().is_dir("/impure") {
-		return Err(Box::<io::Error>::new(io::ErrorKind::NotFound.into()));
+		let err = io::Error::new(
+			io::ErrorKind::NotFound,
+			"Failed to find engine gamedata \
+			(tried '/gamedata/impure' and '/gamedata/impure.zip')."
+		);
+		return Err(Box::<io::Error>::new(err));
 	}
 
 	// Mount userdata directory
