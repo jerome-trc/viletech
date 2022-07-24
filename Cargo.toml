@@ -29,6 +29,7 @@ fern = { version = "0.6.1", features = ["colored"] }
 glam = { version = "0.21.2", features = ["approx", "bytemuck", "serde"] }
 home = "0.5.3"
 image = { version = "0.24.2", default-features = false, features = ["png"] }
+kira = "0.6.0"
 lazy_static = "1.4.0"
 log = "0.4.16"
 luajit-src = "210.3.4"
@@ -59,3 +60,7 @@ zscript_parser = { version = "0.2.0", features = [
 
 [build-dependencies]
 chrono = "0.4.19"
+
+# https://github.com/tesselode/kira/issues/24
+[profile.dev.package.symphonia-bundle-mp3]
+opt-level = 3

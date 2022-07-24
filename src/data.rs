@@ -15,7 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{ecs::Blueprint, game::{Species, DamageType}};
+use crate::{
+	ecs::Blueprint,
+	game::{DamageType, Species},
+};
+use kira::sound::static_sound::StaticSoundData;
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -70,7 +74,7 @@ pub struct GamedataMeta {
 	pub kind: GamedataKind,
 	#[serde(default)]
 	pub dependencies: Vec<VersionedId>,
-	/// Incompatibilities are "soft"; the user is warned when trying to mingle 
+	/// Incompatibilities are "soft"; the user is warned when trying to mingle
 	/// incompatible game data objects but can still proceed as normal.
 	#[serde(default)]
 	pub incompatibilities: Vec<VersionedId>,
@@ -88,7 +92,7 @@ impl GamedataMeta {
 			links: Vec::<String>::default(),
 			kind,
 			dependencies: Vec::<VersionedId>::default(),
-			incompatibilities: Vec::<VersionedId>::default()
+			incompatibilities: Vec::<VersionedId>::default(),
 		}
 	}
 }
@@ -97,7 +101,7 @@ pub type AssetId = usize;
 
 #[derive(Default)]
 pub struct DataCore {
-	/// Represents all game data objects that have been mounted; 
+	/// Represents all game data objects that have been mounted;
 	/// `[0]` should *always* be the engine's own game data.
 	pub metadata: Vec<GamedataMeta>,
 	/// Each element corresponds to an index in `metadata`.
@@ -107,10 +111,10 @@ pub struct DataCore {
 	/// Key structure:
 	/// "package_uuid.domain.asset_key"
 	/// Package UUID will either come from an Impure package metadata file,
-	/// or from the archive/directory name minus the extension if it's not 
+	/// or from the archive/directory name minus the extension if it's not
 	/// Impure data (e.g. "DOOM2" from "DOOM2.WAD", "gzdoom" from "gzdoom.pk3").
 	/// Domain will be something like "textures" or "blueprints".
-	/// Asset key is derived from the file name
+	/// Asset key is derived from the file name.
 	/// Each value maps to an index in one of the asset vectors.
 	pub asset_map: HashMap<String, AssetId>,
 	/// e.g. if DOOM2 defines MAP01 and then my_house.wad is loaded after it and
@@ -120,7 +124,9 @@ pub struct DataCore {
 	pub language: Vec<String>,
 	pub blueprints: Vec<Blueprint>,
 	pub damage_types: Vec<DamageType>,
-	pub species: Vec<Species>
+	pub species: Vec<Species>,
+	pub music: Vec<StaticSoundData>,
+	pub sounds: Vec<StaticSoundData>,
 }
 
 impl DataCore {

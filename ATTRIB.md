@@ -44,6 +44,10 @@ If you're aware of any attribution which is evidently missing from this list, or
     - By the [image-rs](https://github.com/image-rs) organisation et. al.
     - Provided under the [MIT License](https://github.com/image-rs/image/blob/master/LICENSE).
     - https://docs.rs/image/latest/image/
+- kira
+	- By tesselode et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).
+	- https://docs.rs/kira/latest/kira/
 - lazy_static
 	- By the [rust-lang-nursery](https://github.com/rust-lang-nursery) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/brson/home/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/brson/home/blob/master/LICENSE-MIT).

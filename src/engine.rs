@@ -20,14 +20,18 @@ use crate::{
 	data::DataCore,
 	gfx::GfxCore,
 	utils::*,
-	vfs::VirtualFs,
+	vfs::{self, VirtualFs},
+};
+use kira::{
+	manager::{AudioManager, AudioManagerSettings},
+	sound::static_sound::{PlaybackState, StaticSoundData, StaticSoundHandle, StaticSoundSettings},
 };
 use log::{error, info};
 use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{env, path::PathBuf, sync::Arc, thread::Thread};
+use std::{env, error::Error, io, path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 pub struct Playsim {
@@ -59,12 +63,18 @@ pub enum EngineScene {
 	Cutscene,
 }
 
+pub struct AudioCore {
+	manager: AudioManager,
+	handles: Vec<StaticSoundHandle>,
+}
+
 pub struct Engine {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
 	pub data: DataCore,
 	pub gfx: GfxCore,
+	pub audio: AudioCore,
 	pub console: Console,
 	pub scene: EngineScene,
 }
@@ -77,13 +87,22 @@ impl Engine {
 		data: DataCore,
 		gfx: GfxCore,
 		console: Console,
-	) -> Self {
+	) -> Result<Self, Box<dyn Error>> {
+		let audio_mgr_settings = AudioManagerSettings::default();
+		let sound_cap = audio_mgr_settings.capacities.sound_capacity;
+
+		let audio = AudioCore {
+			manager: AudioManager::new(audio_mgr_settings)?,
+			handles: Vec::<_>::with_capacity(sound_cap),
+		};
+
 		let mut ret = Engine {
 			start_time,
 			vfs,
 			lua,
 			data,
 			gfx,
+			audio,
 			console,
 			scene: EngineScene::Frontend,
 		};
@@ -180,7 +199,27 @@ impl Engine {
 			false,
 		));
 
-		ret
+		ret.console.register_command(ConsoleCommand::new(
+			"sound",
+			|this, args| {
+				if args.is_empty() {
+					this.call_help(None);
+					return ConsoleRequest::None;
+				}
+
+				ConsoleRequest::Sound(args[0].to_string())
+			},
+			|this, _| {
+				info!(
+					"Starts a sound at default settings from the virtual file system.
+					Usage: {} <virtual file path/asset ID/asset key>",
+					this.get_key()
+				);
+			},
+			true
+		));
+
+		Ok(ret)
 	}
 
 	pub fn print_uptime(&self) {
@@ -260,7 +299,58 @@ impl Engine {
 				ConsoleRequest::Uptime => {
 					self.print_uptime();
 				}
+				ConsoleRequest::Sound(arg) => {
+					let vfsg = self.vfs.read();
+
+					let bytes = match vfsg.read_bytes(&arg) {
+						Ok(b) => b,
+						Err(err) => {
+							if let vfs::Error::NonExistentEntry = err {
+								info!("No sound file under virtual path: {}", arg);
+							} else {
+								info!("{}", err);
+							}
+
+							continue;
+						}
+					};
+
+					let cursor = io::Cursor::new(bytes);
+
+					let sdata = match StaticSoundData::from_cursor(
+						cursor,
+						StaticSoundSettings::default(),
+					) {
+						Ok(ssd) => ssd,
+						Err(err) => {
+							info!("Failed to create sound from file: {}", err);
+							continue;
+						}
+					};
+
+					let snd = match self.audio.manager.play(sdata) {
+						Ok(s) => s,
+						Err(err) => {
+							info!("Failed to play sound: {}", err);
+							continue;
+						}
+					};
+
+					self.audio.handles.push(snd);
+				}
 				_ => {}
+			}
+		}
+	}
+
+	pub fn clear_stopped_sounds(&mut self) {
+		let mut i = 0;
+
+		while i < self.audio.handles.len() {
+			if self.audio.handles[i].state() == PlaybackState::Stopped {
+				self.audio.handles.swap_remove(i);
+			} else {
+				i += 1;
 			}
 		}
 	}

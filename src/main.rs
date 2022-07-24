@@ -271,7 +271,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 			.read_string(Path::new("/impure/shaders/hello-tri.wgsl"))?,
 	);
 
-	let mut engine = Engine::new(start_time, vfs, lua, data, gfx, console);
+	let mut engine = Engine::new(start_time, vfs, lua, data, gfx, console)?;
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {
@@ -279,6 +279,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 		WinitEvent::MainEventsCleared => {
 			engine.process_console_requests();
+			engine.clear_stopped_sounds();
 			engine.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {
