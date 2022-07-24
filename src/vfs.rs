@@ -175,6 +175,19 @@ pub struct VirtualFs {
 	root: Entry,
 }
 
+impl Default for VirtualFs {
+	fn default() -> Self {
+		VirtualFs {
+			root: Entry {
+				name: String::from("/"),
+				kind: EntryKind::FakeDirectory {
+					sub_entries: Vec::<Entry>::default()
+				}
+			}
+		}
+	}
+}
+
 lazy_static! {
 	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
 		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
@@ -182,17 +195,6 @@ lazy_static! {
 
 // Public interface.
 impl VirtualFs {
-	pub fn new() -> Self {
-		VirtualFs {
-			root: Entry {
-				name: String::from("/"),
-				kind: EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default(),
-				},
-			},
-		}
-	}
-
 	pub fn mount(
 		&mut self,
 		path: impl AsRef<Path>,
