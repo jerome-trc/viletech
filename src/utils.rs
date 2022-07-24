@@ -316,3 +316,49 @@ pub fn is_binary(path: impl AsRef<Path>) -> io::Result<bool> {
 
 	Ok(false)
 }
+
+/// Expands `~` on Unix and performs environment variable substitution.
+/// Deliberately designed to mimic `NicePath` in
+/// <https://github.com/ZDoom-Official/gzdoom/blob/master/src/common/utility/cmdlib.cpp>.
+pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
+	let p = path.as_ref();
+
+	if p.is_empty() {
+		return Ok(PathBuf::from("."));
+	}
+
+	#[cfg(not(target_os = "windows"))]
+	if p.is_root() {
+		return Ok(PathBuf::from("/"));
+	}
+
+	let mut string = p.to_string_lossy().to_string();
+
+	#[cfg(not(target_os = "windows"))]
+	{
+		let home = home::home_dir().unwrap_or_default();
+		let home = home.to_string_lossy();
+		string = string.replace('~', &home);
+	}
+
+	lazy_static! {
+		static ref RGX_ENVVAR: Regex =
+			Regex::new(r"\$[[:word:]]+").expect("Failed to evaluate `nice_path::RGX_ENVVAR`.");
+	};
+
+	let matches = RGX_ENVVAR.find_iter(&string);
+	let mut ret = string.clone();
+
+	for m in matches {
+		match env::var(m.as_str()) {
+			Ok(v) => {
+				ret.replace_range(m.range(), &v);
+			}
+			Err(_) => {
+				ret.replace_range(m.range(), "");
+			}
+		}
+	}
+
+	Ok(PathBuf::from(string))
+}
