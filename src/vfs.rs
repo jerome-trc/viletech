@@ -21,7 +21,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use log::{error, info, warn};
-use regex::Regex;
+use regex::{Regex, RegexSet};
 use std::{
 	fmt,
 	fs::{self, File},
@@ -979,16 +979,25 @@ pub trait ImpureVfs {
 }
 
 lazy_static! {
-	static ref RGX_DECORATE: Regex =
-		Regex::new(r"^(?i)decorate").expect("Failed to evaluate `vfs::RGX_DECORATE`.");
-	static ref RGX_ZSCRIPT: Regex =
-		Regex::new(r"^(?i)zscript").expect("Failed to evaluate `vfs::RGX_ZSCRIPT`.");
-	static ref RGX_CVARINFO: Regex =
-		Regex::new(r"^(?i)cvarinfo").expect("Failed to evaluate `vfs::RGX_CVARINFO`.");
-	static ref RGX_EDFROOT: Regex =
-		Regex::new(r"^(?i)edfroot").expect("Failed to evaluate `vfs::RGX_EDFROOT`.");
-	static ref RGX_EMAPINFO: Regex =
-		Regex::new(r"^(?i)emapinfo").expect("Failed to evaluate `vfs::RGX_EMAPINFO`.");
+	static ref RGXSET_GZD: RegexSet = RegexSet::new(&[
+		r"^(?i)decorate",
+		r"^(?i)zscript",
+		r"^(?i)cvarinfo",
+		r"^(?i)menudef",
+		r"^(?i)sbarinfo",
+		r"^(?i)zmapinfo"
+	]).expect(
+		"Failed to evaluate `vfs::RGXSET_GZD`."
+	);
+
+	static ref RGXSET_ETERN: RegexSet = RegexSet::new(&[
+		r"^(?i)edfroot",
+		r"^(?i)emapinfo",
+		r"(?i)\.edf$"
+	]).expect(
+		"Failed to evaluate `vfs::RGXSET_ETERN`."
+	);
+
 	static ref RGX_VERSION: Regex = Regex::new(
 		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
 	)
@@ -1005,14 +1014,11 @@ impl ImpureVfs for VirtualFs {
 					return Some(GamedataKind::Impure);
 				}
 
-				if RGX_DECORATE.is_match(&sub.name)
-					|| RGX_ZSCRIPT.is_match(&sub.name)
-					|| RGX_CVARINFO.is_match(&sub.name)
-				{
+				if RGXSET_GZD.is_match(&sub.name) {
 					return Some(GamedataKind::GzDoom);
 				}
 
-				if RGX_EDFROOT.is_match(&sub.name) || RGX_EMAPINFO.is_match(&sub.name) {
+				if RGXSET_ETERN.is_match(&sub.name) {
 					return Some(GamedataKind::Eternity);
 				}
 			}
