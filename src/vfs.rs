@@ -986,18 +986,11 @@ lazy_static! {
 		r"^(?i)menudef",
 		r"^(?i)sbarinfo",
 		r"^(?i)zmapinfo"
-	]).expect(
-		"Failed to evaluate `vfs::RGXSET_GZD`."
-	);
-
-	static ref RGXSET_ETERN: RegexSet = RegexSet::new(&[
-		r"^(?i)edfroot",
-		r"^(?i)emapinfo",
-		r"(?i)\.edf$"
-	]).expect(
-		"Failed to evaluate `vfs::RGXSET_ETERN`."
-	);
-
+	])
+	.expect("Failed to evaluate `vfs::RGXSET_GZD`.");
+	static ref RGXSET_ETERN: RegexSet =
+		RegexSet::new(&[r"^(?i)edfroot", r"^(?i)emapinfo", r"(?i)\.edf$"])
+			.expect("Failed to evaluate `vfs::RGXSET_ETERN`.");
 	static ref RGX_VERSION: Regex = Regex::new(
 		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
 	)
@@ -1109,6 +1102,8 @@ impl ImpureVfs for VirtualFs {
 	}
 
 	fn mount_gamedata(&mut self, path: impl AsRef<Path>) -> Vec<GamedataMeta> {
+		let call_time = std::time::Instant::now();
+		let mut mounted_count = 0;
 		let mut ret = Vec::<GamedataMeta>::default();
 
 		let entries = match fs::read_dir(path) {
@@ -1199,7 +1194,9 @@ impl ImpureVfs for VirtualFs {
 				}
 				.replace(' ', "_");
 
-			let mut mount_point = RGX_INVALIDMOUNTPATH.replace_all(&mount_point, "").to_string();
+			let mut mount_point = RGX_INVALIDMOUNTPATH
+				.replace_all(&mount_point, "")
+				.to_string();
 
 			let mut vers_str = Option::<String>::default();
 
@@ -1213,6 +1210,8 @@ impl ImpureVfs for VirtualFs {
 
 			match self.mount(&real_path, &mount_point) {
 				Ok(()) => {
+					mounted_count += 1;
+
 					let gdk = match self.gamedata_kind(&mount_point) {
 						Ok(k) => k,
 						Err(err) => {
@@ -1262,6 +1261,11 @@ impl ImpureVfs for VirtualFs {
 			};
 		}
 
+		info!(
+			"Mounted {} gamedata objects in {} ms.",
+			mounted_count,
+			call_time.elapsed().as_millis()
+		);
 		ret
 	}
 
