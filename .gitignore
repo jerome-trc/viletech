@@ -36,10 +36,13 @@ doc
 # Debug info for MSVC Windows builds of rustc
 *.pdb
 
+**/*perf.data*
+
+/temp
+
 *.[Ii][Ww][Aa][Dd]
 *.[Pp][Ww][Aa][Dd]
 *.[Ww][Aa][Dd]
 *.[Pp][Kk][37Ee]
 *.[Zz][Ii][Pp]
 *.7[Zz]
-/temp
