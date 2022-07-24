@@ -4,9 +4,19 @@
 
 # Explicitly declare text files you want to always be normalized and converted
 # to native line endings on checkout.
+/Cargo.lock text eol=lf
+*.lua text eol=lf
+*.md text eol=lf
 *.rs text eol=lf
 *.svg text eol=lf
-*.lua text eol=lf
-*.tl text eol=lf
-*.wgsl text eol=lf
 *.toml text eol=lf
+*.tl text eol=lf
+*.txt text eol=lf
+*.wgsl text eol=lf
+
+# Denote all files that are truly binary and should not be modified.
+*.flac binary
+*.ogg binary
+*.png binary
+*.wav binary
+*.xcf binary
