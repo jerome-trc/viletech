@@ -61,6 +61,13 @@ zscript_parser = { version = "0.2.0", features = [
 [build-dependencies]
 chrono = "0.4.19"
 
+[dev-dependencies]
+criterion = "0.3.6"
+
 # https://github.com/tesselode/kira/issues/24
 [profile.dev.package.symphonia-bundle-mp3]
 opt-level = 3
+
+[[bench]]
+name = "bench"
+harness = false
