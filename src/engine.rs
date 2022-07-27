@@ -18,9 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use crate::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
 	data::DataCore,
+	frontend::{FrontendAction, FrontendMenu},
 	gfx::GfxCore,
+	rng::RngCore,
 	utils::*,
-	vfs::{self, VirtualFs}, frontend::{FrontendAction, FrontendMenu},
+	vfs::{self, VirtualFs},
 };
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
@@ -35,13 +37,13 @@ use std::{env, error::Error, io, path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 pub struct Playsim {
-	rng: WyRand,
+	rng: RngCore<WyRand>,
 	world: World,
 }
 
 pub enum Scene {
 	Frontend {
-		menu: FrontendMenu
+		menu: FrontendMenu,
 	},
 	Title {
 		gui: World,
@@ -75,6 +77,7 @@ pub struct Engine {
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
 	pub data: DataCore,
+	pub rng: RngCore<WyRand>,
 	pub gfx: GfxCore,
 	pub audio: AudioCore,
 	pub console: Console,
@@ -104,10 +107,11 @@ impl Engine {
 			lua,
 			data,
 			gfx,
+			rng: RngCore::default(),
 			audio,
 			console,
 			scene: Scene::Frontend {
-				menu: FrontendMenu::default()
+				menu: FrontendMenu::default(),
 			},
 		};
 
@@ -220,7 +224,7 @@ impl Engine {
 					this.get_key()
 				);
 			},
-			true
+			true,
 		));
 
 		Ok(ret)

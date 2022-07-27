@@ -36,5 +36,7 @@ pub mod gfx;
 #[allow(dead_code)]
 pub mod level;
 pub mod lua;
+#[allow(dead_code)]
+pub mod rng;
 pub mod utils;
 pub mod vfs;
