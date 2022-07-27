@@ -17,13 +17,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	console::{Console, ConsoleWriter},
+	data::DataCore,
 	engine::Engine,
 	gfx::GfxCore,
 	lua::ImpureLua,
 	utils::exe_dir,
-	vfs::{ImpureVfs, VirtualFs}, data::DataCore,
+	vfs::{ImpureVfs, VirtualFs},
 };
-use log::{error, info};
+use log::{error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
 use std::{
@@ -104,6 +105,7 @@ fn print_os_info() {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
+	let exe_dir = exe_dir();
 
 	let (cons_sender, cons_receiver) = crossbeam::channel::unbounded();
 	let console = Console::new(cons_receiver);
@@ -117,6 +119,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 			.error(fern::colors::Color::Red)
 			.debug(fern::colors::Color::Cyan)
 			.trace(fern::colors::Color::Magenta);
+
+		let fpath: PathBuf = [&exe_dir, Path::new("impure.log")].iter().collect();
+
+		if fpath.exists() {
+			let oldpath: PathBuf = [&exe_dir, Path::new("impure.log.old")].iter().collect();
+
+			match fs::rename(&fpath, oldpath) {
+				Ok(()) => {},
+				Err(err) => {
+					warn!("Failed to rotate previous log file: {}", err);
+				}
+			};
+		}
 
 		let file_cfg = fern::Dispatch::new()
 			.format(|out, message, record| {
@@ -133,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 					.write(true)
 					.create(true)
 					.truncate(true)
-					.open("impure.log")?,
+					.open(fpath)?,
 			);
 
 		// Stdout logging has console colouring and less date-time elaboration
@@ -194,7 +209,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	// Mount contents of '/exe_dir/gamedata'
 
-	let gdata_path: PathBuf = [exe_dir(), PathBuf::from("gamedata")].iter().collect();
+	let gdata_path: PathBuf = [exe_dir, PathBuf::from("gamedata")].iter().collect();
 	let mut gdo_metas = vfs.write().mount_gamedata(gdata_path);
 	data.metadata.append(&mut gdo_metas);
 
@@ -218,7 +233,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		let err = io::Error::new(
 			io::ErrorKind::NotFound,
 			"Failed to find engine gamedata \
-			(tried '/gamedata/impure' and '/gamedata/impure.zip')."
+			(tried '/gamedata/impure' and '/gamedata/impure.zip').",
 		);
 		return Err(Box::<io::Error>::new(err));
 	}
