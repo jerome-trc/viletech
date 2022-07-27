@@ -89,7 +89,7 @@ fn print_os_info() {
 				Ok(s) => s,
 				Err(err) => {
 					error!(
-						"Failed to convert `systeminfo | findstr /C:\"OS\"`
+						"Failed to convert `systeminfo | findstr /C:\"OS\"` \
 						 output to UTF-8: {}",
 						err
 					);

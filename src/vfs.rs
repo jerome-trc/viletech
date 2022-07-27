@@ -747,7 +747,7 @@ impl VirtualFs {
 				Err(err) => {
 					warn!(
 						"Failed to determine type of dir. entry; skipping: {:?}
-						\nError: {}",
+						Error: {}",
 						dentry.file_name(),
 						err
 					);

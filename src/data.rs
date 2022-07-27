@@ -108,7 +108,7 @@ pub struct DataCore {
 	/// Again, `[0]` should *always* be the engine's own game data.
 	pub load_order: Vec<usize>,
 
-	/// Represents all mounted game data objects. `[0]` should *always* be the 
+	/// Represents all mounted game data objects. `[0]` should *always* be the
 	/// engine's own game data. Everything afterwards is in a user-decided order.
 	pub objects: Vec<GamedataMeta>,
 

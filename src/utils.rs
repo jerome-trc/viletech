@@ -144,10 +144,7 @@ pub fn str_iter_from_path(path: &Path) -> impl Iterator<Item = &str> {
 	path.iter().filter_map(|c| match c.to_str() {
 		Some(c) => Some(c),
 		None => {
-			warn!(
-				"`str_iter_from_path()` 
-				failed to convert a path component to UTF-8."
-			);
+			warn!("`str_iter_from_path()` failed to convert a path component to UTF-8.");
 			None
 		}
 	})
@@ -363,7 +360,7 @@ pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 	Ok(PathBuf::from(string))
 }
 
-lazy_static!{
+lazy_static! {
 	static ref RGX_VERSION: Regex = Regex::new(
 		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
 	)
@@ -381,6 +378,6 @@ pub fn version_from_filestem(string: &mut String) -> Option<String> {
 			string.replace_range(m.range(), "");
 			Some(ret)
 		}
-		None => None
+		None => None,
 	}
 }
