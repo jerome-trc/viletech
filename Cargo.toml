@@ -34,7 +34,7 @@ lazy_static = "1.4.0"
 log = "0.4.16"
 luajit-src = "210.3.4"
 md5 = "0.7.0"
-mlua = { version = "0.7.4", features = [
+mlua = { version = "0.8.2", features = [
 	"luajit52",
 	"vendored",
 	"async",
