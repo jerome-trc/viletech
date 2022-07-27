@@ -362,3 +362,25 @@ pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 
 	Ok(PathBuf::from(string))
 }
+
+lazy_static!{
+	static ref RGX_VERSION: Regex = Regex::new(
+		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
+	)
+	.expect("Failed to evaluate `utils::RGX_VERSION`.");
+}
+
+/// Locates a version string at the end of a file stem, using a search pattern
+/// based off the most common versioning conventions used in ZDoom modding.
+/// If the returned option is `None`, the given string is unmodified.
+pub fn version_from_filestem(string: &mut String) -> Option<String> {
+	match RGX_VERSION.find(string) {
+		Some(m) => {
+			const TO_TRIM: [char; 3] = [' ', '_', '-'];
+			let ret = m.as_str().trim_matches(&TO_TRIM[..]).to_string();
+			string.replace_range(m.range(), "");
+			Some(ret)
+		}
+		None => None
+	}
+}

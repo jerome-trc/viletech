@@ -993,10 +993,6 @@ lazy_static! {
 	static ref RGXSET_ETERN: RegexSet =
 		RegexSet::new(&[r"^(?i)edfroot", r"^(?i)emapinfo", r"(?i)\.edf$"])
 			.expect("Failed to evaluate `vfs::RGXSET_ETERN`.");
-	static ref RGX_VERSION: Regex = Regex::new(
-		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
-	)
-	.expect("Failed to evaluate `vfs::RGX_VERSION`.");
 }
 
 impl ImpureVfs for VirtualFs {
@@ -1200,15 +1196,7 @@ impl ImpureVfs for VirtualFs {
 				.replace_all(&mount_point, "")
 				.to_string();
 
-			let mut vers_str = Option::<String>::default();
-
-			if let Some(vers_match) = RGX_VERSION.find(&mount_point) {
-				const TO_TRIM: [char; 3] = [' ', '_', '-'];
-
-				vers_str = Some(vers_match.as_str().trim_matches(&TO_TRIM[..]).to_string());
-
-				mount_point.replace_range(vers_match.range(), "");
-			};
+			let vers_str = version_from_filestem(&mut mount_point);
 
 			match self.mount(&real_path, &mount_point) {
 				Ok(()) => {

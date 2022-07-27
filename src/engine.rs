@@ -20,7 +20,7 @@ use crate::{
 	data::DataCore,
 	gfx::GfxCore,
 	utils::*,
-	vfs::{self, VirtualFs},
+	vfs::{self, VirtualFs}, frontend::{FrontendAction, FrontendMenu},
 };
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
@@ -39,8 +39,10 @@ pub struct Playsim {
 	world: World,
 }
 
-pub enum EngineScene {
-	Frontend,
+pub enum Scene {
+	Frontend {
+		menu: FrontendMenu
+	},
 	Title {
 		gui: World,
 	},
@@ -76,7 +78,7 @@ pub struct Engine {
 	pub gfx: GfxCore,
 	pub audio: AudioCore,
 	pub console: Console,
-	pub scene: EngineScene,
+	pub scene: Scene,
 }
 
 impl Engine {
@@ -104,7 +106,9 @@ impl Engine {
 			gfx,
 			audio,
 			console,
-			scene: EngineScene::Frontend,
+			scene: Scene::Frontend {
+				menu: FrontendMenu::default()
+			},
 		};
 
 		ret.console.register_command(ConsoleCommand::new(
@@ -254,6 +258,22 @@ impl Engine {
 		};
 
 		self.gfx.egui_start();
+
+		match &mut self.scene {
+			Scene::Frontend { menu } => {
+				let action = menu.ui(&self.gfx.egui.context);
+
+				match action {
+					FrontendAction::None => {}
+					FrontendAction::Quit => {
+						*control_flow = ControlFlow::Exit;
+					}
+					FrontendAction::Start => {}
+				}
+			}
+			_ => {}
+		};
+
 		self.console.draw(&self.gfx.egui.context);
 		self.gfx.render_finish(output.0, output.1);
 	}
