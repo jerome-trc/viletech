@@ -1,3 +1,8 @@
+//! Impure is a pet project, meant as an experiment in creating a modern,
+//! feature-oriented Doom source port in Rust which can successfully interpret 
+//! user-generated content for GZDoom and the Eternity Engine with zero end-user
+//! overhead and minimal runtime overhead.
+
 /*
 Copyright (C) 2022 ***REMOVED***
 
