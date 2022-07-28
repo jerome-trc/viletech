@@ -57,18 +57,19 @@ impl FileBrowser {
 	pub fn ui(&mut self, ctx: &egui::Context) -> bool {
 		let mut open = self.open;
 		let mut done = false;
+		let modifiers = ctx.input().modifiers;
 
 		egui::Window::new("File Browser")
 			.open(&mut open)
 			.show(ctx, |ui| {
-				done = self.ui_impl(ui, &ctx.input().modifiers);
+				done = self.ui_impl(ui, modifiers);
 			});
 
 		self.open = open;
 		done
 	}
 
-	fn ui_impl(&mut self, ui: &mut egui::Ui, modifiers: &egui::Modifiers) -> bool {
+	fn ui_impl(&mut self, ui: &mut egui::Ui, modifiers: egui::Modifiers) -> bool {
 		let mut ret = false;
 
 		ui.horizontal(|ui| {
