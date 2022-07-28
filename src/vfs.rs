@@ -26,7 +26,7 @@ use std::{
 	fmt,
 	fs::{self, File},
 	io::{self, Read},
-	path::{Path, PathBuf},
+	path::{Path, PathBuf}, env,
 };
 use zip::ZipArchive;
 
@@ -972,8 +972,11 @@ pub trait ImpureVfs {
 	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<GamedataKind, Error>;
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
 
-	fn mount_gamedata(&mut self, path: impl AsRef<Path>) -> Vec<GamedataMeta>;
-	fn mount_userdata(&mut self) -> io::Result<()>;
+	/// On the debug build, attempt to mount `/env::current_dir()/data`.
+	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
+	fn mount_enginedata(&mut self) -> Result<(), Error>;
+	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<GamedataMeta>;
+
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
@@ -1099,36 +1102,33 @@ impl ImpureVfs for VirtualFs {
 		}
 	}
 
-	fn mount_gamedata(&mut self, path: impl AsRef<Path>) -> Vec<GamedataMeta> {
+	fn mount_enginedata(&mut self) -> Result<(), Error> {
+		#[cfg(not(debug_assertions))]
+		{
+			let path: PathBuf = [
+				exe_dir(), PathBuf::from("impure.zip")
+			].iter().collect();
+
+			self.mount(path, "/impure")
+		}
+		#[cfg(debug_assertions)]
+		{
+			let path: PathBuf = [
+				env::current_dir().or(Err(Error::NonExistentFile))?,
+				PathBuf::from("data")
+			].iter().collect();
+
+			self.mount(path, "/impure")
+		}
+	}
+
+	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<GamedataMeta> {
 		let call_time = std::time::Instant::now();
 		let mut mounted_count = 0;
 		let mut ret = Vec::<GamedataMeta>::default();
 
-		let entries = match fs::read_dir(path) {
-			Ok(entries) => entries,
-			// On the dev build, this is a valid state for the dir. structure to
-			// be in. If the requisite gamedata isn't found in the PWD instead,
-			// *that* represents an engine failure state
-			Err(err) => {
-				if err.kind() != io::ErrorKind::NotFound {
-					error!("Failed to read gamedata directory: {}", err);
-				}
-
-				return ret;
-			}
-		};
-
-		for entry in entries.filter_map(|e| match e {
-			Ok(de) => Some(de),
-			Err(err) => {
-				error!(
-					"Error encountered while reading gamedata directory: {}",
-					err
-				);
-				None
-			}
-		}) {
-			match entry.metadata() {
+		for real_path in paths {
+			match real_path.metadata() {
 				Ok(metadata) => {
 					if metadata.is_symlink() {
 						continue;
@@ -1138,14 +1138,12 @@ impl ImpureVfs for VirtualFs {
 					error!(
 						"Failed to retrieve metadata for gamedata directory entry: {:?}
 						Error: {}",
-						entry.file_name(),
+						real_path,
 						err
 					);
 					continue;
 				}
 			};
-
-			let real_path = entry.path();
 
 			let mount_point =
 				if real_path.is_dir() || is_supported_archive(&real_path).unwrap_or_default() {
@@ -1169,12 +1167,12 @@ impl ImpureVfs for VirtualFs {
 						continue;
 					}
 
-					fstem.unwrap().to_string()
+					fstem.unwrap()
 				} else if !is_binary(&real_path).unwrap_or(true) {
-					let fname = entry.file_name();
-					let fname = fname.into_string();
+					let fname = real_path.file_name();
+					let fname = fname.unwrap_or_default().to_str();
 
-					if fname.is_err() {
+					if fname.is_none() {
 						warn!(
 							"Skipping gamedata entry (invalid Unicode in name): {}",
 							real_path.display()
@@ -1244,7 +1242,7 @@ impl ImpureVfs for VirtualFs {
 					warn!(
 						"Failed to mount gamedata entry to virtual file system: {:?}
 						Error: {}",
-						real_path.as_path(),
+						real_path,
 						err
 					);
 				}
@@ -1257,84 +1255,6 @@ impl ImpureVfs for VirtualFs {
 			call_time.elapsed().as_millis()
 		);
 		ret
-	}
-
-	fn mount_userdata(&mut self) -> io::Result<()> {
-		let user_path = match get_user_dir() {
-			Some(up) => up,
-			None => {
-				error!(
-					"Failed to retrieve userdata path. \
-					Home directory path is malformed, \
-					or this platform is currently unsupported."
-				);
-				return Err(io::ErrorKind::Other.into());
-			}
-		};
-
-		let create_dir = |path: &Path| {
-			let mut rm_existing = false;
-			let mut mkdir = false;
-
-			match fs::metadata(path) {
-				Ok(m) => {
-					if !m.is_dir() {
-						rm_existing = true;
-						mkdir = true;
-					}
-				}
-				Err(err) => {
-					if err.kind() == std::io::ErrorKind::NotFound {
-						mkdir = true;
-					} else {
-						return Err(err);
-					}
-				}
-			};
-
-			if rm_existing {
-				match fs::remove_file(path) {
-					Ok(()) => {}
-					Err(err) => {
-						return Err(err);
-					}
-				};
-			}
-
-			if mkdir {
-				match fs::create_dir(path) {
-					Ok(()) => {}
-					Err(err) => {
-						return Err(err);
-					}
-				}
-			}
-
-			Ok(())
-		};
-
-		create_dir(&user_path)?;
-		create_dir(&user_path.join("saves"))?;
-
-		let udata_path = user_path.join("userdata");
-		create_dir(&udata_path)?;
-
-		let udata_pstr = match udata_path.to_str() {
-			Some(s) => s,
-			None => {
-				error!("Failed to convert userdata path into a valid string.");
-				return Err(io::ErrorKind::Other.into());
-			}
-		};
-
-		match self.mount(udata_pstr, "/userdata") {
-			Ok(()) => {}
-			Err(err) => {
-				return Err(io::Error::new(io::ErrorKind::Other, err));
-			}
-		};
-
-		Ok(())
 	}
 
 	fn parse_gamedata_meta(

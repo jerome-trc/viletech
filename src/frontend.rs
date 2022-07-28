@@ -1,4 +1,7 @@
-use std::{collections::VecDeque, path::PathBuf};
+use std::{
+	collections::VecDeque,
+	path::{Path, PathBuf},
+};
 
 use crate::{file_browser::FileBrowser, utils::version_from_filestem};
 
@@ -9,16 +12,66 @@ pub enum FrontendAction {
 	Start,
 }
 
+pub enum LoadOrderEntryKind {
+	Item {
+		path: PathBuf,
+		enabled: bool,
+	},
+	Group {
+		name: String,
+		children: VecDeque<LoadOrderEntry>,
+	},
+}
+
+pub struct LoadOrderEntry {
+	selected: bool,
+	kind: LoadOrderEntryKind,
+}
+
+impl LoadOrderEntry {
+	fn get_paths<'a>(&'a self, paths: &mut Vec<&'a Path>) {
+		match &self.kind {
+			LoadOrderEntryKind::Item { path, enabled } => {
+				if *enabled {
+					paths.push(path);
+				}
+			}
+			LoadOrderEntryKind::Group { children, .. } => {
+				for child in children {
+					child.get_paths(paths);
+				}
+			}
+		}
+	}
+
+	fn remove_selected(&mut self) {
+		match &mut self.kind {
+			LoadOrderEntryKind::Item { .. } => {},
+			LoadOrderEntryKind::Group { children, .. } => {
+				for child in children.iter_mut() {
+					child.remove_selected();
+				}
+
+				children.retain(|child| !child.selected);
+			}
+		};
+	}
+}
+
+struct LoadOrderPreset {
+	entries: VecDeque<LoadOrderEntry>,
+}
+
 /// First thing shown to the user when they start the engine, assuming they
 /// haven't passed in launch arguments which bypass it to the sim.
 #[derive(Default)]
 pub struct FrontendMenu {
-	/// `::1` indicates if the item has been disabled, and won't be loaded.
-	/// `::2` indicates if the item has been highlighted by clicking on it.
-	load_order: VecDeque<(PathBuf, bool, bool)>,
+	presets: Vec<LoadOrderPreset>,
+	load_order: VecDeque<LoadOrderEntry>,
 	file_browser: FileBrowser,
 }
 
+// Public interface.
 impl FrontendMenu {
 	pub fn ui(&mut self, ctx: &egui::Context) -> FrontendAction {
 		let mut ret = FrontendAction::None;
@@ -31,6 +84,10 @@ impl FrontendMenu {
 
 				ui.separator();
 
+				if ui.button("Profiles").clicked() {}
+
+				ui.separator();
+
 				if ui.button("Exit").clicked() {
 					ret = FrontendAction::Quit;
 				}
@@ -38,28 +95,31 @@ impl FrontendMenu {
 		});
 
 		egui::Window::new("Load Order").show(ctx, |ui| {
-			let highlighted = self.load_order.iter().filter(|gdo| gdo.2).count();
+			let mut selected = self.load_order.iter().filter(|loe| loe.selected).count();
 
 			egui::menu::bar(ui, |ui| {
+				// Let the user add a file/directory to their load order
 				if ui.button("\u{2B}").clicked() {
 					self.file_browser.toggle();
 				}
 
-				ui.add_enabled_ui(highlighted > 1, |ui| {
+				ui.add_enabled_ui(selected > 0, |ui| {
+					if ui.button("\u{2796}").clicked() {
+						self.remove_selected();
+						selected = 0;
+					}
+
 					if ui.button("\u{2B06}").clicked() {
 						// TODO: Shift all highlighted load order items up once
-						for i in 1..self.load_order.len() {
-							if !self.load_order[i].2 {
-								continue;
-							}
-
-							self.load_order.swap(i, i - 1);
-						}
 					}
 
 					if ui.button("\u{2B07}").clicked() {
 						// TODO: Shift all highlighted load order items down once
 					}
+
+					if ui.button("To Top").clicked() {}
+
+					if ui.button("To Bottom").clicked() {}
 				});
 			});
 
@@ -72,49 +132,136 @@ impl FrontendMenu {
 							.num_columns(self.load_order.len())
 							.striped(true)
 							.show(ui, |ui| {
-								for gdo in &mut self.load_order {
-									let fname = match gdo.0.file_name() {
-										Some(f) => f,
-										None => {
-											continue;
-										}
-									};
-	
-									let fname = fname.to_string_lossy();
-									ui.checkbox(&mut gdo.1, fname.as_ref());
-									ui.end_row();
-								}
+								self.ui_load_order(ui);
 							});
 					});
 				});
 
-				// Information panel on highlighted item
+				// Information panel on first selected item, if it's not a group
 
-				if highlighted == 1 {
-					ui.separator();
+				if selected == 1 {
+					let entry = self.load_order.iter().find(|loe| loe.selected).unwrap();
 
-					let info_item = self.load_order.iter().find(|gdo| gdo.2).unwrap();
-					let fstem = info_item.0.file_stem();
-					let mut fstem = fstem.unwrap_or_default().to_string_lossy().to_string();
-					let vers_opt = version_from_filestem(&mut fstem);
+					match &entry.kind {
+						LoadOrderEntryKind::Group { .. } => {}
+						LoadOrderEntryKind::Item { path, .. } => {
+							ui.separator();
 
-					ui.label(&fstem);
+							let fstem = path.file_stem();
+							let mut fstem = fstem.unwrap_or_default().to_string_lossy().to_string();
+							let vers_opt = version_from_filestem(&mut fstem);
 
-					if let Some(vers) = vers_opt {
-						ui.label(vers);
-					}
+							ui.label(&fstem);
+
+							if let Some(vers) = vers_opt {
+								ui.label(vers);
+							}
+						}
+					};
 				}
 			});
 		});
 
 		if self.file_browser.ui(ctx) {
 			for pb in self.file_browser.drain() {
-				self.load_order.push_front((pb, true, false));
+				self.load_order.push_front(LoadOrderEntry {
+					selected: false,
+					kind: LoadOrderEntryKind::Item {
+						path: pb,
+						enabled: true,
+					},
+				})
 			}
 
 			self.file_browser.toggle();
 		}
 
 		ret
+	}
+
+	pub fn to_mount(&mut self) -> Vec<&Path> {
+		let mut ret = Vec::<&Path>::default();
+
+		for entry in &self.load_order {
+			entry.get_paths(&mut ret);
+		}
+
+		ret
+	}
+}
+
+// State-mutating helpers.
+impl FrontendMenu {
+	fn remove_selected(&mut self) {
+		let mut i = 0;
+
+		while i < self.load_order.len() {
+			self.load_order[i].remove_selected();
+
+			if self.load_order[i].selected {
+				self.load_order.remove(i);
+			} else {
+				i += 1;
+			}
+		}
+	}
+
+	fn clear_selection(&mut self) {
+		for entry in &mut self.load_order {
+			entry.selected = false;
+		}
+	}
+}
+
+// UI drawing helpers.
+impl FrontendMenu {
+	fn ui_load_order(&mut self, ui: &mut egui::Ui) {
+		let mut to_select: usize = self.load_order.len();
+
+		for (i, loe) in self.load_order.iter_mut().enumerate() {
+			let draggable = egui::Label::new("=").sense(egui::Sense::click());
+			if ui.add(draggable).clicked() {
+				to_select = i;
+			}
+
+			match &mut loe.kind {
+				LoadOrderEntryKind::Group { name, .. } => {
+					let mut enable_grp = false;
+
+					ui.checkbox(&mut enable_grp, "");
+					ui.text_edit_multiline(name);
+
+					if enable_grp {}
+				}
+				LoadOrderEntryKind::Item { path, enabled } => {
+					let fname = match path.file_name() {
+						Some(f) => f,
+						None => {
+							continue;
+						}
+					};
+
+					ui.checkbox(enabled, "");
+
+					let fname = fname.to_string_lossy();
+					let name_label = egui::Label::new(fname.as_ref()).sense(egui::Sense::click());
+
+					if ui.add(name_label).clicked() {
+						to_select = i;
+					}
+				}
+			};
+
+			ui.end_row();
+		}
+
+		if to_select != self.load_order.len() {
+			if ui.input().modifiers.ctrl {
+				self.load_order[to_select].selected = !self.load_order[to_select].selected;
+			} else {
+				self.clear_selection();
+				self.load_order[to_select].selected = true;
+			}
+		}
 	}
 }

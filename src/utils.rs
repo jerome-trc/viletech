@@ -21,7 +21,7 @@ use log::warn;
 use regex::Regex;
 use std::{
 	env,
-	fs::File,
+	fs::{File, self},
 	io::{self, Read},
 	path::{Path, PathBuf},
 };
@@ -380,4 +380,106 @@ pub fn version_from_filestem(string: &mut String) -> Option<String> {
 		}
 		None => None,
 	}
+}
+
+/// Returns the number of entries under a directory.
+pub fn dir_count(path: impl AsRef<Path>) -> usize {
+	match fs::read_dir(path) {
+		Ok(read_dir) => {
+			read_dir.count()
+		}
+		Err(_) => {
+			0
+		}
+	}
+}
+
+pub fn create_default_user_dir() -> io::Result<()> {
+	let user_path = match get_user_dir() {
+		Some(up) => up,
+		None => {
+			return Err(io::Error::new(
+				io::ErrorKind::Other,
+				"Failed to retrieve user info path. \
+				Home directory path is malformed, \
+				or this platform is currently unsupported.",
+			));
+		}
+	};
+
+	if !user_path.exists() {
+		return Err(io::Error::new(
+			io::ErrorKind::Other,
+			"Attempted to create a default user directory, \
+			but user info directory is missing."
+		));
+	}
+
+	let profiles_path = user_path.join("profiles");
+
+	if !profiles_path.exists() {
+		return Err(io::Error::new(
+			io::ErrorKind::Other,
+			"Attempted to create a default user directory, \
+			but user profiles directory is missing."
+		));
+	}
+
+	let defuser_path = profiles_path.join("Player");				
+
+	match fs::create_dir(&defuser_path) {
+		Ok(()) => {},
+		Err(err) => {
+			return Err(io::Error::new(
+				err.kind(),
+				format!(
+				"Failed to create a default user directory: {}\
+				Error: {}", defuser_path.display(), err)
+			));
+		}
+	};
+
+	let defuser_saves_path = defuser_path.join("saves");
+
+	match fs::create_dir(&defuser_saves_path) {
+		Ok(()) => {},
+		Err(err) => {
+			return Err(io::Error::new(
+				err.kind(),
+				format!(
+				"Failed to create default user saves directory: {}\
+				Error: {}", defuser_saves_path.display(), err)
+			));
+		}
+	};
+
+	let defuser_prefs_path = defuser_path.join("prefs");
+
+	match fs::create_dir(&defuser_prefs_path) {
+		Ok(()) => {},
+		Err(err) => {
+			return Err(io::Error::new(
+				err.kind(),
+				format!(
+				"Failed to create default user preferences directory: {}\
+				Error: {}", defuser_prefs_path.display(), err)
+			));
+		}
+	};
+
+	let defuser_storage_path = defuser_path.join("storage");
+
+	match fs::create_dir(&defuser_storage_path) {
+		Ok(()) => {},
+		Err(err) => {
+			return Err(io::Error::new(
+				err.kind(),
+				format!(
+				"Failed to create default user storage directory: {}\
+				Error: {}", defuser_storage_path.display(), err)
+			));
+		}
+	};
+
+	Ok(())
 }

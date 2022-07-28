@@ -22,7 +22,7 @@ use crate::{
 	gfx::GfxCore,
 	rng::RngCore,
 	utils::*,
-	vfs::{self, VirtualFs},
+	vfs::{self, ImpureVfs, VirtualFs},
 };
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
@@ -33,7 +33,7 @@ use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{env, error::Error, io, path::PathBuf, sync::Arc, thread::Thread};
+use std::{env, error::Error, fs, io, path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 pub struct Playsim {
@@ -82,8 +82,10 @@ pub struct Engine {
 	pub audio: AudioCore,
 	pub console: Console,
 	pub scene: Scene,
+	next_scene: Option<Scene>,
 }
 
+// Public interface.
 impl Engine {
 	pub fn new(
 		start_time: std::time::Instant,
@@ -113,119 +115,11 @@ impl Engine {
 			scene: Scene::Frontend {
 				menu: FrontendMenu::default(),
 			},
+			next_scene: None,
 		};
 
-		ret.console.register_command(ConsoleCommand::new(
-			"version",
-			|_, _| {
-				info!(
-					"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
-					env!("CARGO_PKG_VERSION_MAJOR"),
-					env!("CARGO_PKG_VERSION_MINOR"),
-					env!("CARGO_PKG_VERSION_PATCH"),
-					env!("GIT_HASH"),
-					env!("COMPILE_DATETIME")
-				);
-
-				ConsoleRequest::None
-			},
-			|_, _| {
-				info!("Prints the engine version.");
-			},
-			true,
-		));
-
-		ret.console.register_command(ConsoleCommand::new(
-			"uptime",
-			|_, _| ConsoleRequest::Uptime,
-			|_, _| {
-				info!("Prints the length of the time the engine has been running.");
-			},
-			true,
-		));
-
-		ret.console.register_command(ConsoleCommand::new(
-			"home",
-			|_, _| {
-				match get_user_dir() {
-					Some(p) => info!("{}", p.display()),
-					None => {
-						info!(
-							"Home directory path is malformed, \
-							or this platform is unsupported."
-						);
-					}
-				}
-
-				ConsoleRequest::None
-			},
-			|_, _| {
-				info!("Prints the directory used to store userdata.");
-			},
-			false,
-		));
-
-		ret.console.register_command(ConsoleCommand::new(
-			"file",
-			|_, args| {
-				let path = if args.is_empty() { "/" } else { args[0] };
-				ConsoleRequest::File(PathBuf::from(path))
-			},
-			|_, _| {
-				info!("Prints the contents of a virtual file system directory.");
-			},
-			true,
-		));
-
-		ret.console.register_command(ConsoleCommand::new(
-			"args",
-			|_, _| {
-				let mut args = env::args();
-
-				let argv0 = match args.next() {
-					Some(a) => a,
-					None => {
-						error!("This runtime did not receive `argv[0]`.");
-						return ConsoleRequest::None;
-					}
-				};
-
-				let mut output = argv0;
-
-				for arg in args {
-					output.push('\r');
-					output.push('\n');
-					output.push('\t');
-					output += &arg;
-				}
-
-				info!("{}", output);
-
-				ConsoleRequest::None
-			},
-			|_, _| info!("Prints out all of the program's launch arguments."),
-			false,
-		));
-
-		ret.console.register_command(ConsoleCommand::new(
-			"sound",
-			|this, args| {
-				if args.is_empty() {
-					this.call_help(None);
-					return ConsoleRequest::None;
-				}
-
-				ConsoleRequest::Sound(args[0].to_string())
-			},
-			|this, _| {
-				info!(
-					"Starts a sound at default settings from the virtual file system.
-					Usage: {} <virtual file path/asset ID/asset key>",
-					this.get_key()
-				);
-			},
-			true,
-		));
+		ret.register_console_commands();
+		ret.build_user_dirs()?;
 
 		Ok(ret)
 	}
@@ -272,7 +166,10 @@ impl Engine {
 					FrontendAction::Quit => {
 						*control_flow = ControlFlow::Exit;
 					}
-					FrontendAction::Start => {}
+					FrontendAction::Start => {
+						let mut metas = self.vfs.write().mount_gamedata(menu.to_mount());
+						self.data.objects.append(&mut metas);
+					}
 				}
 			}
 			_ => {}
@@ -381,5 +278,185 @@ impl Engine {
 
 	pub fn on_key_event(&mut self, input: &KeyboardInput) {
 		self.console.on_key_event(input);
+	}
+}
+
+// Internal implementation details.
+impl Engine {
+	fn register_console_commands(&mut self) {
+		self.console.register_command(ConsoleCommand::new(
+			"version",
+			|_, _| {
+				info!(
+					"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
+					env!("CARGO_PKG_VERSION_MAJOR"),
+					env!("CARGO_PKG_VERSION_MINOR"),
+					env!("CARGO_PKG_VERSION_PATCH"),
+					env!("GIT_HASH"),
+					env!("COMPILE_DATETIME")
+				);
+
+				ConsoleRequest::None
+			},
+			|_, _| {
+				info!("Prints the engine version.");
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"uptime",
+			|_, _| ConsoleRequest::Uptime,
+			|_, _| {
+				info!("Prints the length of the time the engine has been running.");
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"home",
+			|_, _| {
+				match get_user_dir() {
+					Some(p) => info!("{}", p.display()),
+					None => {
+						info!(
+							"Home directory path is malformed, \
+							or this platform is unsupported."
+						);
+					}
+				}
+
+				ConsoleRequest::None
+			},
+			|_, _| {
+				info!("Prints the directory used to store user info.");
+			},
+			false,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"file",
+			|_, args| {
+				let path = if args.is_empty() { "/" } else { args[0] };
+				ConsoleRequest::File(PathBuf::from(path))
+			},
+			|_, _| {
+				info!("Prints the contents of a virtual file system directory.");
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"args",
+			|_, _| {
+				let mut args = env::args();
+
+				let argv0 = match args.next() {
+					Some(a) => a,
+					None => {
+						error!("This runtime did not receive `argv[0]`.");
+						return ConsoleRequest::None;
+					}
+				};
+
+				let mut output = argv0;
+
+				for arg in args {
+					output.push('\r');
+					output.push('\n');
+					output.push('\t');
+					output += &arg;
+				}
+
+				info!("{}", output);
+
+				ConsoleRequest::None
+			},
+			|_, _| info!("Prints out all of the program's launch arguments."),
+			false,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"sound",
+			|this, args| {
+				if args.is_empty() {
+					this.call_help(None);
+					return ConsoleRequest::None;
+				}
+
+				ConsoleRequest::Sound(args[0].to_string())
+			},
+			|this, _| {
+				info!(
+					"Starts a sound at default settings from the virtual file system.
+					Usage: {} <virtual file path/asset ID/asset key>",
+					this.get_key()
+				);
+			},
+			true,
+		));
+	}
+
+	fn build_user_dirs(&self) -> io::Result<()> {
+		let user_path = match get_user_dir() {
+			Some(up) => up,
+			None => {
+				return Err(io::Error::new(
+					io::ErrorKind::Other,
+					"Failed to retrieve user info path. \
+					Home directory path is malformed, \
+					or this platform is currently unsupported.",
+				));
+			}
+		};
+
+		if !user_path.exists() {
+			match fs::create_dir_all(&user_path) {
+				Ok(()) => {}
+				Err(err) => {
+					return Err(io::Error::new(
+						err.kind(),
+						format!("Failed to create a part of the user info path: {}", err),
+					));
+				}
+			};
+		}
+
+		let profiles_path = user_path.join("profiles");
+
+		// End execution with an error if this directory has anything else in it,
+		// so as not to clobber any other software's config files
+
+		if !profiles_path.exists() {
+			if dir_count(&user_path) > 0 {
+				return Err(io::Error::new(
+					io::ErrorKind::Other,
+					format!(
+						"User info folder has unexpected contents; \
+						is another program named \"Impure\" using it?
+						({})", user_path.display()
+					)
+				));
+			} else {
+				match fs::create_dir(&profiles_path) {
+					Ok(()) => {},
+					Err(err) => {
+						return Err(io::Error::new(
+							io::ErrorKind::Other,
+							format!(
+								"Failed to create directory: {} \
+								Error: {}", profiles_path.display(), err
+							)
+						))
+					}
+				};
+			}
+		}
+
+		if dir_count(profiles_path) < 1 {
+			create_default_user_dir()?;
+		}
+
+		Ok(())
 	}
 }

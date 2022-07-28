@@ -195,7 +195,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
+	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
+
+	match vfs.write().mount_enginedata() {
+		Ok(()) => {},
+		Err(err) => {
+			error!("Failed to find engine gamedata. Is impure.zip missing?");
+			return Err(Box::new(err));
+		}
+	};
 
 	let lua = match Lua::new_ex(true, vfs.clone()) {
 		Ok(l) => l,
@@ -205,47 +214,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
-	let mut data = DataCore::default();
-
-	// Mount contents of '/exe_dir/gamedata'
-
-	let gdata_path: PathBuf = [exe_dir, PathBuf::from("gamedata")].iter().collect();
-	let mut gdo_metas = vfs.write().mount_gamedata(gdata_path);
-	data.metadata.append(&mut gdo_metas);
-
-	// If neither '/exe_dir/gamedata/impure' nor '/exe_dir/gamedata/impure.zip'
-	// were found in the previous step, check the PWD (but only on the dev build)
-
-	#[cfg(debug_assertions)]
-	{
-		let pwd_gd: PathBuf = [env::current_dir()?, PathBuf::from("gamedata")]
-			.iter()
-			.collect();
-
-		let mut gdo_metas = vfs.write().mount_gamedata(pwd_gd);
-		data.metadata.append(&mut gdo_metas);
-	}
-
-	// If there still isn't a valid '/impure' directory in the VFS search path,
-	// the engine's data is missing or malformed, and we can't continue
-
-	if !vfs.read().is_dir("/impure") {
-		let err = io::Error::new(
-			io::ErrorKind::NotFound,
-			"Failed to find engine gamedata \
-			(tried '/gamedata/impure' and '/gamedata/impure.zip').",
-		);
-		return Err(Box::<io::Error>::new(err));
-	}
-
-	// Mount userdata directory
-
-	vfs.write().mount_userdata()?;
-
-	let icon = vfs
-		.read()
-		.window_icon_from_file(Path::new("/impure/impure.png"));
 	let event_loop = EventLoop::new();
+
 	let mut gfx = match GfxCore::new(
 		match winit::window::WindowBuilder::new()
 			.with_title("Impure")
@@ -255,7 +225,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 			.with_decorations(true)
 			.with_resizable(true)
 			.with_transparent(false)
-			.with_window_icon(icon)
+			.with_window_icon(vfs
+				.read()
+				.window_icon_from_file(Path::new("/impure/impure.png")))
 			.build(&event_loop)
 		{
 			Ok(w) => w,

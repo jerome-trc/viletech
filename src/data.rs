@@ -19,6 +19,8 @@ use crate::{
 	ecs::Blueprint,
 	game::{DamageType, Species},
 };
+use bitflags::bitflags;
+use egui::Color32;
 use kira::sound::static_sound::StaticSoundData;
 use regex::Regex;
 use serde::Deserialize;
@@ -101,13 +103,6 @@ pub type AssetId = usize;
 
 #[derive(Default)]
 pub struct DataCore {
-	/// Represents all game data objects that have been mounted;
-	/// `[0]` should *always* be the engine's own game data.
-	pub metadata: Vec<GamedataMeta>,
-	/// Each element corresponds to an index in `metadata`.
-	/// Again, `[0]` should *always* be the engine's own game data.
-	pub load_order: Vec<usize>,
-
 	/// Represents all mounted game data objects. `[0]` should *always* be the
 	/// engine's own game data. Everything afterwards is in a user-decided order.
 	pub objects: Vec<GamedataMeta>,
@@ -137,26 +132,46 @@ impl DataCore {
 	pub fn is_mounted(&self, pattern: &str) -> Result<bool, regex::Error> {
 		let regex = Regex::new(pattern)?;
 
-		for meta in &self.metadata {
-			if regex.is_match(&meta.uuid) {
+		for obj in &self.objects {
+			if regex.is_match(&obj.uuid) {
 				return Ok(true);
 			}
 		}
 
 		Ok(false)
 	}
+}
 
-	pub fn is_loaded(&self, pattern: &str) -> Result<bool, regex::Error> {
-		let regex = Regex::new(pattern)?;
-
-		for index in &self.load_order {
-			let meta = &self.metadata[*index];
-
-			if regex.is_match(&meta.uuid) {
-				return Ok(true);
-			}
-		}
-
-		Ok(false)
+bitflags!(
+	pub struct PrefFlags: u8 {
+		const NONE = 0;
+		/// If unset, this pref only applies client-side.
+		const SIM = 1 << 0;
 	}
+);
+
+/// The second value holds the default.
+pub enum PrefKind {
+	Bool(bool, bool),
+	Int(i32, i32),
+	Float(f32, f32),
+	Color(Color32, Color32),
+	String(String, String),
+}
+
+pub enum UserGender {
+	Female = 0,
+	Male = 1,
+	Neutral = 2,
+	Object = 3
+}
+
+pub struct UserPref {
+	kind: PrefKind,
+	flags: PrefFlags
+}
+
+pub struct UserProfile {
+	name: String,
+	prefs: HashMap<String, UserPref>,
 }

@@ -13,13 +13,13 @@ pub fn vfs(crit: &mut Criterion) {
 			b.iter(|| {
 				let pwd_gd: PathBuf = [
 					env::current_dir().expect("Failed to retrieve PWD."),
-					PathBuf::from("gamedata"),
+					PathBuf::from("data"),
 				]
 				.iter()
 				.collect();
 
 				let mut vfs = VirtualFs::default();
-				vfs.mount_gamedata(pwd_gd);
+				vfs.mount_gamedata(vec!(&pwd_gd));
 			});
 		});
 
