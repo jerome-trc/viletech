@@ -105,6 +105,14 @@ fn print_os_info() {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
+
+	for arg in env::args() {
+		if arg == "--version" || arg == "-v" {
+			println!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"));
+			return Ok(());
+		}
+	}
+
 	let exe_dir = exe_dir();
 
 	let (cons_sender, cons_receiver) = crossbeam::channel::unbounded();
@@ -188,12 +196,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 	info!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"));
 
 	print_os_info();
-
-	for arg in env::args() {
-		if arg == "--version" || arg == "-v" {
-			return Ok(());
-		}
-	}
 
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
