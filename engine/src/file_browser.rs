@@ -49,7 +49,7 @@ impl FileBrowser {
 			open: false,
 			show_hidden: Default::default(),
 			current_path: starting_path,
-			selected: Default::default()
+			selected: Default::default(),
 		}
 	}
 
@@ -139,7 +139,11 @@ impl FileBrowser {
 							let text = format!(
 								"{}{}{}",
 								if is_selected { "\u{2705} " } else { " " },
-								if ftype.is_dir() { "\u{1F5C1} " } else { "\u{1F5CB} " },
+								if ftype.is_dir() {
+									"\u{1F5C1} "
+								} else {
+									"\u{1F5CB} "
+								},
 								fnamestr
 							);
 

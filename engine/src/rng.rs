@@ -17,23 +17,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{collections::HashMap, fmt};
 
-use nanorand::{WyRand, Rng};
+use nanorand::{Rng, WyRand};
 
 #[derive(Debug)]
 pub enum Error {
-	KeyOverlap
+	KeyOverlap,
 }
 
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
 			Self::KeyOverlap => {
 				write!(f, "Tried to insert an RNG under an already-registered key.")
 			}
 		}
-    }
+	}
 }
 
 pub trait ImpureRng {
@@ -58,13 +58,13 @@ impl ImpureRng for WyRand {
 
 /// Contains maps of named random number generators.
 pub struct RngCore<B: ImpureRng + Default> {
-	prngs: HashMap<String, B>
+	prngs: HashMap<String, B>,
 }
 
 impl<B: ImpureRng + Default> Default for RngCore<B> {
 	fn default() -> Self {
 		let mut ret = RngCore {
-			prngs: Default::default()
+			prngs: Default::default(),
 		};
 
 		ret.prngs.insert("".to_string(), B::default());
@@ -95,11 +95,17 @@ impl<B: ImpureRng + Default> RngCore<B> {
 	}
 
 	pub fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32 {
-		self.prngs.get_mut("").unwrap().range_i32(min_incl, max_incl)
+		self.prngs
+			.get_mut("")
+			.unwrap()
+			.range_i32(min_incl, max_incl)
 	}
 
 	pub fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32 {
-		self.prngs.get_mut("").unwrap().range_f32(min_incl, max_incl)
+		self.prngs
+			.get_mut("")
+			.unwrap()
+			.range_f32(min_incl, max_incl)
 	}
 
 	pub fn coinflip(&mut self) -> bool {

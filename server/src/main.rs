@@ -1,8 +1,3 @@
-//! Impure is a pet project, meant as an experiment in creating a modern,
-//! feature-oriented Doom source port in Rust which can successfully interpret 
-//! user-generated content for GZDoom and the Eternity Engine with zero end-user
-//! overhead and minimal runtime overhead.
-
 /*
 Copyright (C) 2022 ***REMOVED***
 
@@ -20,23 +15,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-pub mod console;
-pub mod data;
-#[allow(dead_code)]
-pub mod ecs;
-#[allow(dead_code)]
-pub mod engine;
-#[allow(dead_code)]
-pub mod file_browser;
-#[allow(dead_code)]
-pub mod frontend;
-#[allow(dead_code)]
-pub mod game;
-pub mod gfx;
-#[allow(dead_code)]
-pub mod level;
-pub mod lua;
-#[allow(dead_code)]
-pub mod rng;
-pub mod utils;
-pub mod vfs;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(version, about, long_about = None)]
+struct Args {
+	// ???
+}
+
+fn main() {
+	let _args = Args::parse();
+}

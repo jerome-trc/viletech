@@ -1,0 +1,17 @@
+[package]
+name = "impure-client"
+description = "Client for Impure Engine"
+authors = ["***REMOVED***"]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+homepage = "https://github.com/***REMOVED***/impure/"
+repository = "https://github.com/***REMOVED***/impure/"
+categories = ["games", "game-engines", "game-development"]
+keywords = ["game", "engine", "gamedev", "graphics", "doom"]
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+impure = { path = "../engine" }

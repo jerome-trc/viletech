@@ -22,7 +22,7 @@ use crate::data::AssetId;
 
 pub struct Vertex {
 	x: f64,
-	y: f64
+	y: f64,
 }
 
 pub struct LineDef {
@@ -33,7 +33,7 @@ pub struct LineDef {
 	special: i32,
 	args: [i32; 5],
 	side_front: i32,
-	side_back: i32
+	side_back: i32,
 }
 
 bitflags! {
@@ -91,7 +91,7 @@ pub struct SideDef {
 	tex_top: AssetId,
 	tex_bottom: AssetId,
 	tex_mid: AssetId,
-	sector: i32
+	sector: i32,
 }
 
 pub struct Sector {
@@ -101,10 +101,10 @@ pub struct Sector {
 	tex_ceiling: AssetId,
 	light_level: i32,
 	special: i32,
-	id: i32
+	id: i32,
 }
 
 pub struct Level {
 	name: String,
-	author_name: String
+	author_name: String,
 }

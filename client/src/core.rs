@@ -15,12 +15,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{
+use impure::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
 	data::DataCore,
+	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::GfxCore,
 	rng::RngCore,
+	sim::Playsim,
 	utils::*,
 	vfs::{self, ImpureVfs, VirtualFs},
 };
@@ -35,11 +37,6 @@ use parking_lot::RwLock;
 use shipyard::World;
 use std::{env, error::Error, fs, io, path::PathBuf, sync::Arc, thread::Thread};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
-
-pub struct Playsim {
-	rng: RngCore<WyRand>,
-	world: World,
-}
 
 pub enum Scene {
 	Frontend {
@@ -72,7 +69,7 @@ pub struct AudioCore {
 	handles: Vec<StaticSoundHandle>,
 }
 
-pub struct Engine {
+pub struct ClientCore {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
@@ -86,7 +83,7 @@ pub struct Engine {
 }
 
 // Public interface.
-impl Engine {
+impl ClientCore {
 	pub fn new(
 		start_time: std::time::Instant,
 		vfs: Arc<RwLock<VirtualFs>>,
@@ -103,7 +100,7 @@ impl Engine {
 			handles: Vec::<_>::with_capacity(sound_cap),
 		};
 
-		let mut ret = Engine {
+		let mut ret = ClientCore {
 			start_time,
 			vfs,
 			lua,
@@ -282,20 +279,12 @@ impl Engine {
 }
 
 // Internal implementation details.
-impl Engine {
+impl ClientCore {
 	fn register_console_commands(&mut self) {
 		self.console.register_command(ConsoleCommand::new(
 			"version",
 			|_, _| {
-				info!(
-					"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
-					env!("CARGO_PKG_VERSION_MAJOR"),
-					env!("CARGO_PKG_VERSION_MINOR"),
-					env!("CARGO_PKG_VERSION_PATCH"),
-					env!("GIT_HASH"),
-					env!("COMPILE_DATETIME")
-				);
-
+				info!("{}", impure::full_version_string());
 				ConsoleRequest::None
 			},
 			|_, _| {
@@ -434,19 +423,22 @@ impl Engine {
 					format!(
 						"User info folder has unexpected contents; \
 						is another program named \"Impure\" using it?
-						({})", user_path.display()
-					)
+						({})",
+						user_path.display()
+					),
 				));
 			} else {
 				match fs::create_dir(&profiles_path) {
-					Ok(()) => {},
+					Ok(()) => {}
 					Err(err) => {
 						return Err(io::Error::new(
 							io::ErrorKind::Other,
 							format!(
 								"Failed to create directory: {} \
-								Error: {}", profiles_path.display(), err
-							)
+								Error: {}",
+								profiles_path.display(),
+								err
+							),
 						))
 					}
 				};

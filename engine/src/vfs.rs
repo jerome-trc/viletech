@@ -23,10 +23,10 @@ use lazy_static::lazy_static;
 use log::{error, info, warn};
 use regex::{Regex, RegexSet};
 use std::{
-	fmt,
+	env, fmt,
 	fs::{self, File},
 	io::{self, Read},
-	path::{Path, PathBuf}, env,
+	path::{Path, PathBuf},
 };
 use zip::ZipArchive;
 
@@ -181,9 +181,9 @@ impl Default for VirtualFs {
 			root: Entry {
 				name: String::from("/"),
 				kind: EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default()
-				}
-			}
+					sub_entries: Vec::<Entry>::default(),
+				},
+			},
 		}
 	}
 }
@@ -1105,9 +1105,7 @@ impl ImpureVfs for VirtualFs {
 	fn mount_enginedata(&mut self) -> Result<(), Error> {
 		#[cfg(not(debug_assertions))]
 		{
-			let path: PathBuf = [
-				exe_dir(), PathBuf::from("impure.zip")
-			].iter().collect();
+			let path: PathBuf = [exe_dir(), PathBuf::from("impure.zip")].iter().collect();
 
 			self.mount(path, "/impure")
 		}
@@ -1115,8 +1113,10 @@ impl ImpureVfs for VirtualFs {
 		{
 			let path: PathBuf = [
 				env::current_dir().or(Err(Error::NonExistentFile))?,
-				PathBuf::from("data")
-			].iter().collect();
+				PathBuf::from("data"),
+			]
+			.iter()
+			.collect();
 
 			self.mount(path, "/impure")
 		}
@@ -1138,8 +1138,7 @@ impl ImpureVfs for VirtualFs {
 					error!(
 						"Failed to retrieve metadata for gamedata directory entry: {:?}
 						Error: {}",
-						real_path,
-						err
+						real_path, err
 					);
 					continue;
 				}
@@ -1242,8 +1241,7 @@ impl ImpureVfs for VirtualFs {
 					warn!(
 						"Failed to mount gamedata entry to virtual file system: {:?}
 						Error: {}",
-						real_path,
-						err
+						real_path, err
 					);
 				}
 			};

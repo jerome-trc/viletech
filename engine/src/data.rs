@@ -54,8 +54,7 @@ pub enum GamedataKind {
 }
 
 #[derive(Deserialize)]
-/// Every game data object (GDO) mounted to the VFS (i.e. placed by the user in
-/// their gamedata dir. or given via a path in a launch arg.) gets one of these.
+/// Every game data object (GDO) mounted to the VFS gets one of these.
 pub struct GamedataMeta {
 	/// If this isn't given by an Impure metadata table, it's the name of the
 	/// mounted file stem (e.g. gzdoom.pk3 becomes gzdoom, DOOM2.WAD becomes DOOM2).
@@ -163,12 +162,12 @@ pub enum UserGender {
 	Female = 0,
 	Male = 1,
 	Neutral = 2,
-	Object = 3
+	Object = 3,
 }
 
 pub struct UserPref {
 	kind: PrefKind,
-	flags: PrefFlags
+	flags: PrefFlags,
 }
 
 pub struct UserProfile {
