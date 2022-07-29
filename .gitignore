@@ -36,7 +36,10 @@ doc
 # Debug info for MSVC Windows builds of rustc
 *.pdb
 
+# perf output
 **/*perf.data*
+# flamegraph-rs output
+**/flamegraph.svg
 
 /temp
 
