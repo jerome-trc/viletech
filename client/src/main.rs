@@ -20,7 +20,7 @@ mod core;
 
 use impure::{
 	console::Console,
-	data::DataCore,
+	data::game::DataCore,
 	depends::*,
 	gfx::GfxCore,
 	lua::ImpureLua,
@@ -38,81 +38,19 @@ use winit::{
 
 use crate::core::ClientCore;
 
-fn print_os_info() {
-	type Command = std::process::Command;
-
-	match env::consts::OS {
-		"linux" => {
-			let uname = Command::new("uname").args(&["-s", "-r", "-v"]).output();
-
-			let output = match uname {
-				Ok(o) => o,
-				Err(err) => {
-					error!("Failed to execute `uname -s -r -v`: {}", err);
-					return;
-				}
-			};
-
-			let osinfo = match String::from_utf8(output.stdout) {
-				Ok(s) => s.replace('\n', ""),
-				Err(err) => {
-					error!(
-						"Failed to convert `uname -s -r -v` output to UTF-8: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			info!("{}", osinfo);
-		}
-		"windows" => {
-			let systeminfo = Command::new("systeminfo | findstr")
-				.args(&["/C:\"OS\""])
-				.output();
-
-			let output = match systeminfo {
-				Ok(o) => o,
-				Err(err) => {
-					error!(
-						"Failed to execute `systeminfo | findstr /C:\"OS\"`: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			let osinfo = match String::from_utf8(output.stdout) {
-				Ok(s) => s,
-				Err(err) => {
-					error!(
-						"Failed to convert `systeminfo | findstr /C:\"OS\"` \
-						 output to UTF-8: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			info!("{}", osinfo);
-		}
-		_ => {}
-	}
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
 
 	for arg in env::args() {
 		if arg == "--version" || arg == "-v" {
-			println!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"));
+			println!("{}", impure::short_version_string());
 			return Ok(());
 		}
 	}
 
 	let (cons_sender, cons_receiver) = crossbeam::channel::unbounded();
 
-	match impure::log_init(cons_sender) {
+	match impure::log_init(Some(cons_sender)) {
 		Ok(()) => {}
 		Err(err) => {
 			eprintln!("Failed to initialise logging backend: {}", err);
@@ -122,9 +60,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let console = Console::new(cons_receiver);
 
-	info!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"));
-
-	print_os_info();
+	info!("{}", impure::short_version_string());
+	impure::print_os_info();
 
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));

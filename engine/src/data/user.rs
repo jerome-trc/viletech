@@ -15,32 +15,41 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use clap::Parser;
-use impure::{depends::*, data::game::DataCore};
-use log::info;
-use std::error::Error;
+use std::collections::HashMap;
 
-#[derive(Parser, Debug)]
-#[clap(version, about, long_about = None)]
-struct Args {
-	// ???
+use bitflags::bitflags;
+use egui::Color32;
+
+bitflags!(
+	pub struct PrefFlags: u8 {
+		const NONE = 0;
+		/// If unset, this pref only applies client-side.
+		const SIM = 1 << 0;
+	}
+);
+
+/// The second value holds the default.
+pub enum PrefKind {
+	Bool(bool, bool),
+	Int(i32, i32),
+	Float(f32, f32),
+	Color(Color32, Color32),
+	String(String, String),
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-	let _args = Args::parse();
+pub enum UserGender {
+	Female = 0,
+	Male = 1,
+	Neutral = 2,
+	Object = 3,
+}
 
-	match impure::log_init(None) {
-		Ok(()) => {}
-		Err(err) => {
-			eprintln!("Failed to initialise logging backend: {}", err);
-			return Err(err);
-		}
-	}
+pub struct UserPref {
+	kind: PrefKind,
+	flags: PrefFlags,
+}
 
-	info!("{}", impure::short_version_string());
-	impure::print_os_info();
-
-	let _data = DataCore::default();
-
-	Ok(())
+pub struct UserProfile {
+	name: String,
+	prefs: HashMap<String, UserPref>,
 }

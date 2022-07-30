@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{data::AssetId, game::DamageOverTime};
+use crate::{data::game::AssetId, game::DamageOverTime};
 use bitflags::bitflags;
 use glam::{Vec2, Vec3};
 use shipyard::EntityId;

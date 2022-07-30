@@ -19,8 +19,6 @@ use crate::{
 	ecs::Blueprint,
 	game::{DamageType, Species},
 };
-use bitflags::bitflags;
-use egui::Color32;
 use kira::sound::static_sound::StaticSoundData;
 use regex::Regex;
 use serde::Deserialize;
@@ -34,7 +32,7 @@ pub struct VersionedId {
 }
 
 #[derive(Default, Deserialize, PartialEq)]
-pub enum GamedataKind {
+pub enum DataKind {
 	/// Unidentifiable, or an executable, or something else.
 	#[default]
 	None,
@@ -55,7 +53,7 @@ pub enum GamedataKind {
 
 #[derive(Deserialize)]
 /// Every game data object (GDO) mounted to the VFS gets one of these.
-pub struct GamedataMeta {
+pub struct Metadata {
 	/// If this isn't given by an Impure metadata table, it's the name of the
 	/// mounted file stem (e.g. gzdoom.pk3 becomes gzdoom, DOOM2.WAD becomes DOOM2).
 	pub uuid: String,
@@ -72,7 +70,7 @@ pub struct GamedataMeta {
 	#[serde(default)]
 	pub links: Vec<String>,
 	#[serde(skip)]
-	pub kind: GamedataKind,
+	pub kind: DataKind,
 	#[serde(default)]
 	pub dependencies: Vec<VersionedId>,
 	/// Incompatibilities are "soft"; the user is warned when trying to mingle
@@ -81,9 +79,9 @@ pub struct GamedataMeta {
 	pub incompatibilities: Vec<VersionedId>,
 }
 
-impl GamedataMeta {
-	pub fn from_uuid(uuid: String, kind: GamedataKind) -> Self {
-		GamedataMeta {
+impl Metadata {
+	pub fn from_uuid(uuid: String, kind: DataKind) -> Self {
+		Metadata {
 			uuid,
 			version: String::default(),
 			name: String::default(),
@@ -104,8 +102,7 @@ pub type AssetId = usize;
 pub struct DataCore {
 	/// Represents all mounted game data objects. `[0]` should *always* be the
 	/// engine's own game data. Everything afterwards is in a user-decided order.
-	pub objects: Vec<GamedataMeta>,
-
+	pub objects: Vec<Metadata>,
 	/// Key structure:
 	/// "package_uuid.domain.asset_key"
 	/// Package UUID will either come from an Impure package metadata file,
@@ -115,14 +112,17 @@ pub struct DataCore {
 	/// Asset key is derived from the file name.
 	/// Each value maps to an index in one of the asset vectors.
 	pub asset_map: HashMap<String, AssetId>,
-	/// e.g. if DOOM2 defines MAP01 and then my_house.wad is loaded after it and
-	/// also defines a MAP01, the key "MAP01" will point to my_house.wad:MAP01.
-	pub end_map: HashMap<String, AssetId>,
+	/// Like `asset_map`, but without any namespacing. If a key such as "MAP01"
+	/// appears twice (e.g. once from DOOM2.WAD and again from my_house.wad) it
+	/// will clobber whatever came before it.
+	pub lump_map: HashMap<String, AssetId>,
 
+	// Needed for the sim
 	pub language: Vec<String>,
 	pub blueprints: Vec<Blueprint>,
 	pub damage_types: Vec<DamageType>,
 	pub species: Vec<Species>,
+	// Client-only
 	pub music: Vec<StaticSoundData>,
 	pub sounds: Vec<StaticSoundData>,
 }
@@ -139,38 +139,4 @@ impl DataCore {
 
 		Ok(false)
 	}
-}
-
-bitflags!(
-	pub struct PrefFlags: u8 {
-		const NONE = 0;
-		/// If unset, this pref only applies client-side.
-		const SIM = 1 << 0;
-	}
-);
-
-/// The second value holds the default.
-pub enum PrefKind {
-	Bool(bool, bool),
-	Int(i32, i32),
-	Float(f32, f32),
-	Color(Color32, Color32),
-	String(String, String),
-}
-
-pub enum UserGender {
-	Female = 0,
-	Male = 1,
-	Neutral = 2,
-	Object = 3,
-}
-
-pub struct UserPref {
-	kind: PrefKind,
-	flags: PrefFlags,
-}
-
-pub struct UserProfile {
-	name: String,
-	prefs: HashMap<String, UserPref>,
 }

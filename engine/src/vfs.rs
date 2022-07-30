@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use crate::{
-	data::{GamedataKind, GamedataMeta},
+	data::{game::DataKind, game::Metadata},
 	utils::*,
 };
 use lazy_static::lazy_static;
@@ -969,18 +969,18 @@ impl VirtualFs {
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
 pub trait ImpureVfs {
-	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<GamedataKind, Error>;
+	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<DataKind, Error>;
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
 
 	/// On the debug build, attempt to mount `/env::current_dir()/data`.
 	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
-	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<GamedataMeta>;
+	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<Metadata>;
 
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GamedataMeta, Box<dyn std::error::Error>>;
+	) -> Result<Metadata, Box<dyn std::error::Error>>;
 }
 
 lazy_static! {
@@ -999,21 +999,21 @@ lazy_static! {
 }
 
 impl ImpureVfs for VirtualFs {
-	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<GamedataKind, Error> {
+	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<DataKind, Error> {
 		let entry = self.lookup(path)?;
 
 		let check_subentries = |sub_entries: &Vec<Entry>| {
 			for sub in sub_entries {
 				if sub.name == "meta.toml" {
-					return Some(GamedataKind::Impure);
+					return Some(DataKind::Impure);
 				}
 
 				if RGXSET_GZD.is_match(&sub.name) {
-					return Some(GamedataKind::GzDoom);
+					return Some(DataKind::GzDoom);
 				}
 
 				if RGXSET_ETERN.is_match(&sub.name) {
-					return Some(GamedataKind::Eternity);
+					return Some(DataKind::Eternity);
 				}
 			}
 
@@ -1022,11 +1022,11 @@ impl ImpureVfs for VirtualFs {
 
 		let check_path = |path: &Path| {
 			if has_gzdoom_extension(path) {
-				return Some(GamedataKind::GzDoom);
+				return Some(DataKind::GzDoom);
 			}
 
 			if has_eternity_extension(path) {
-				return Some(GamedataKind::Eternity);
+				return Some(DataKind::Eternity);
 			}
 
 			None
@@ -1034,11 +1034,11 @@ impl ImpureVfs for VirtualFs {
 
 		match &entry.kind {
 			EntryKind::Wad { .. } => {
-				return Ok(GamedataKind::Wad);
+				return Ok(DataKind::Wad);
 			}
 			EntryKind::File { real_path, .. } => {
 				if is_binary(real_path).map_err(Error::IoError)? {
-					return Ok(GamedataKind::Text);
+					return Ok(DataKind::Text);
 				}
 			}
 			EntryKind::Directory { sub_entries, .. } => {
@@ -1069,7 +1069,7 @@ impl ImpureVfs for VirtualFs {
 			}
 		};
 
-		Ok(GamedataKind::None)
+		Ok(DataKind::None)
 	}
 
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon> {
@@ -1122,10 +1122,10 @@ impl ImpureVfs for VirtualFs {
 		}
 	}
 
-	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<GamedataMeta> {
+	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<Metadata> {
 		let call_time = std::time::Instant::now();
 		let mut mounted_count = 0;
-		let mut ret = Vec::<GamedataMeta>::default();
+		let mut ret = Vec::<Metadata>::default();
 
 		for real_path in paths {
 			match real_path.metadata() {
@@ -1211,7 +1211,7 @@ impl ImpureVfs for VirtualFs {
 						}
 					};
 
-					let meta = if gdk == GamedataKind::Impure {
+					let meta = if gdk == DataKind::Impure {
 						let metapath: PathBuf =
 							[PathBuf::from(&mount_point), PathBuf::from("meta.toml")]
 								.iter()
@@ -1230,7 +1230,7 @@ impl ImpureVfs for VirtualFs {
 							}
 						}
 					} else {
-						let mut m = GamedataMeta::from_uuid(mount_point, gdk);
+						let mut m = Metadata::from_uuid(mount_point, gdk);
 						m.version = vers_str.unwrap_or_default();
 						m
 					};
@@ -1258,9 +1258,9 @@ impl ImpureVfs for VirtualFs {
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GamedataMeta, Box<dyn std::error::Error>> {
+	) -> Result<Metadata, Box<dyn std::error::Error>> {
 		let text = self.read_string(path.as_ref())?;
-		let ret: GamedataMeta = toml::from_str(&text)?;
+		let ret: Metadata = toml::from_str(&text)?;
 		Ok(ret)
 	}
 }

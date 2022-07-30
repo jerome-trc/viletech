@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
-	data::DataCore,
+	data::game::DataCore,
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::GfxCore,

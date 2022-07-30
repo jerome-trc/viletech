@@ -22,10 +22,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{
 	fs, io,
-	path::{Path, PathBuf},
+	path::{Path, PathBuf}, env,
 };
 
 use console::ConsoleWriter;
+use log::{error, info};
 use utils::exe_dir;
 
 pub mod console;
@@ -49,6 +50,10 @@ pub mod sim;
 pub mod utils;
 pub mod vfs;
 
+pub fn short_version_string() -> String {
+	format!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"))
+}
+
 pub fn full_version_string() -> String {
 	format!(
 		"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
@@ -62,7 +67,7 @@ pub fn full_version_string() -> String {
 
 /// Prepares the fern logging backend.
 pub fn log_init(
-	sender: crossbeam::channel::Sender<String>,
+	sender: Option<crossbeam::channel::Sender<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let exe_dir = exe_dir();
 
@@ -117,27 +122,93 @@ pub fn log_init(
 		})
 		.chain(io::stdout());
 
-	let console_cfg = fern::Dispatch::new()
-		.format(move |out, message, record| {
-			out.finish(format_args!("[{}] {}", record.level(), message))
-		})
-		.chain(Box::new(ConsoleWriter::new(sender)) as Box<dyn io::Write + Send>);
-
-	let logres = fern::Dispatch::new()
+	let dispatch = fern::Dispatch::new()
 		.level(log::LevelFilter::Trace)
 		.level_for("naga", log::LevelFilter::Warn)
 		.level_for("wgpu_hal", log::LevelFilter::Error)
 		.level_for("wgpu_core", log::LevelFilter::Error)
-		.chain(console_cfg)
 		.chain(file_cfg)
-		.chain(stdout_cfg)
-		.apply();
+		.chain(stdout_cfg);
 
-	if let Err(err) = logres {
+	let res = if sender.is_some() {
+		let console_cfg = fern::Dispatch::new()
+			.format(move |out, message, record| {
+				out.finish(format_args!("[{}] {}", record.level(), message))
+			})
+			.chain(Box::new(ConsoleWriter::new(sender.unwrap())) as Box<dyn io::Write + Send>);
+
+		dispatch.chain(console_cfg).apply()
+	} else {
+		dispatch.apply()
+	};
+
+	if let Err(err) = res {
 		return Err(Box::new(err));
 	}
 
 	Ok(())
+}
+
+pub fn print_os_info() {
+	type Command = std::process::Command;
+
+	match env::consts::OS {
+		"linux" => {
+			let uname = Command::new("uname").args(&["-s", "-r", "-v"]).output();
+
+			let output = match uname {
+				Ok(o) => o,
+				Err(err) => {
+					error!("Failed to execute `uname -s -r -v`: {}", err);
+					return;
+				}
+			};
+
+			let osinfo = match String::from_utf8(output.stdout) {
+				Ok(s) => s.replace('\n', ""),
+				Err(err) => {
+					error!(
+						"Failed to convert `uname -s -r -v` output to UTF-8: {}",
+						err
+					);
+					return;
+				}
+			};
+
+			info!("{}", osinfo);
+		}
+		"windows" => {
+			let systeminfo = Command::new("systeminfo | findstr")
+				.args(&["/C:\"OS\""])
+				.output();
+
+			let output = match systeminfo {
+				Ok(o) => o,
+				Err(err) => {
+					error!(
+						"Failed to execute `systeminfo | findstr /C:\"OS\"`: {}",
+						err
+					);
+					return;
+				}
+			};
+
+			let osinfo = match String::from_utf8(output.stdout) {
+				Ok(s) => s,
+				Err(err) => {
+					error!(
+						"Failed to convert `systeminfo | findstr /C:\"OS\"` \
+						 output to UTF-8: {}",
+						err
+					);
+					return;
+				}
+			};
+
+			info!("{}", osinfo);
+		}
+		_ => {}
+	}
 }
 
 pub mod depends {

@@ -15,32 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use clap::Parser;
-use impure::{depends::*, data::game::DataCore};
-use log::info;
-use std::error::Error;
-
-#[derive(Parser, Debug)]
-#[clap(version, about, long_about = None)]
-struct Args {
-	// ???
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-	let _args = Args::parse();
-
-	match impure::log_init(None) {
-		Ok(()) => {}
-		Err(err) => {
-			eprintln!("Failed to initialise logging backend: {}", err);
-			return Err(err);
-		}
-	}
-
-	info!("{}", impure::short_version_string());
-	impure::print_os_info();
-
-	let _data = DataCore::default();
-
-	Ok(())
-}
+#[allow(dead_code)]
+pub mod game;
+#[allow(dead_code)]
+pub mod user;

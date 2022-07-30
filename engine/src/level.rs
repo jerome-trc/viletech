@@ -15,10 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+use crate::data::game::AssetId;
 use bitflags::bitflags;
 use glam::IVec2;
-
-use crate::data::AssetId;
 
 pub struct Vertex {
 	x: f64,
