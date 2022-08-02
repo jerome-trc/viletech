@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let console = Console::new(cons_receiver);
 
 	info!("{}", impure::short_version_string());
-	impure::print_os_info();
+	info!("{}", impure::utils::env::os_info()?);
 
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));

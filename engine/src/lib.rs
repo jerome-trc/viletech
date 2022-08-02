@@ -20,15 +20,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use std::{
-	fs, io,
-	path::{Path, PathBuf}, env,
-};
-
-use console::ConsoleWriter;
-use log::{error, info};
-use utils::exe_dir;
-
 pub mod console;
 pub mod data;
 #[allow(dead_code)]
@@ -51,6 +42,23 @@ pub mod utils;
 pub mod vfs;
 pub mod wad;
 
+
+pub mod depends {
+	pub extern crate chrono;
+	pub extern crate crossbeam;
+	pub extern crate kira;
+	pub extern crate lazy_static;
+	pub extern crate log;
+	pub extern crate mlua;
+	pub extern crate nanorand;
+	pub extern crate parking_lot;
+	pub extern crate regex;
+	pub extern crate shipyard;
+	pub extern crate wgpu;
+	pub extern crate winit;
+	pub extern crate zip;
+}
+
 pub fn short_version_string() -> String {
 	format!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"))
 }
@@ -70,7 +78,10 @@ pub fn full_version_string() -> String {
 pub fn log_init(
 	sender: Option<crossbeam::channel::Sender<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	let exe_dir = exe_dir();
+	use std::{fs, io, path::{Path, PathBuf}};
+	use console::ConsoleWriter;
+
+	let exe_dir = utils::path::exe_dir();
 
 	let colors = fern::colors::ColoredLevelConfig::new()
 		.info(fern::colors::Color::Green)
@@ -148,82 +159,4 @@ pub fn log_init(
 	}
 
 	Ok(())
-}
-
-pub fn print_os_info() {
-	type Command = std::process::Command;
-
-	match env::consts::OS {
-		"linux" => {
-			let uname = Command::new("uname").args(&["-s", "-r", "-v"]).output();
-
-			let output = match uname {
-				Ok(o) => o,
-				Err(err) => {
-					error!("Failed to execute `uname -s -r -v`: {}", err);
-					return;
-				}
-			};
-
-			let osinfo = match String::from_utf8(output.stdout) {
-				Ok(s) => s.replace('\n', ""),
-				Err(err) => {
-					error!(
-						"Failed to convert `uname -s -r -v` output to UTF-8: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			info!("{}", osinfo);
-		}
-		"windows" => {
-			let systeminfo = Command::new("systeminfo | findstr")
-				.args(&["/C:\"OS\""])
-				.output();
-
-			let output = match systeminfo {
-				Ok(o) => o,
-				Err(err) => {
-					error!(
-						"Failed to execute `systeminfo | findstr /C:\"OS\"`: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			let osinfo = match String::from_utf8(output.stdout) {
-				Ok(s) => s,
-				Err(err) => {
-					error!(
-						"Failed to convert `systeminfo | findstr /C:\"OS\"` \
-						 output to UTF-8: {}",
-						err
-					);
-					return;
-				}
-			};
-
-			info!("{}", osinfo);
-		}
-		_ => {}
-	}
-}
-
-pub mod depends {
-	pub extern crate chrono;
-	pub extern crate crossbeam;
-	pub extern crate kira;
-	pub extern crate lazy_static;
-	pub extern crate log;
-	pub extern crate mlua;
-	pub extern crate nanorand;
-	pub extern crate parking_lot;
-	pub extern crate regex;
-	pub extern crate shipyard;
-	pub extern crate wgpu;
-	pub extern crate winit;
-	pub extern crate zip;
 }

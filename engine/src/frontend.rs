@@ -20,7 +20,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use crate::{file_browser::FileBrowser, utils::version_from_filestem};
+use crate::{file_browser::FileBrowser, utils::string::*};
 
 #[derive(PartialEq)]
 pub enum FrontendAction {
@@ -166,7 +166,7 @@ impl FrontendMenu {
 
 							let fstem = path.file_stem();
 							let mut fstem = fstem.unwrap_or_default().to_string_lossy().to_string();
-							let vers_opt = version_from_filestem(&mut fstem);
+							let vers_opt = version_from_string(&mut fstem);
 
 							ui.label(&fstem);
 

@@ -23,8 +23,8 @@ use impure::{
 	gfx::GfxCore,
 	rng::RngCore,
 	sim::Playsim,
-	utils::*,
-	vfs::{self, VirtualFs, ImpureVfs, ImpureVfsEntry}
+	utils::path::*,
+	vfs::{self, VirtualFs, ImpureVfs}
 };
 
 use kira::{
@@ -473,7 +473,7 @@ impl ClientCore {
 		// so as not to clobber any other software's config files
 
 		if !profiles_path.exists() {
-			if dir_count(&user_path) > 0 {
+			if !user_path.dir_empty() {
 				return Err(io::Error::new(
 					io::ErrorKind::Other,
 					format!(
@@ -501,8 +501,8 @@ impl ClientCore {
 			}
 		}
 
-		if dir_count(profiles_path) < 1 {
-			create_default_user_dir()?;
+		if profiles_path.dir_empty() {
+			impure::utils::env::create_default_user_dir()?;
 		}
 
 		Ok(())

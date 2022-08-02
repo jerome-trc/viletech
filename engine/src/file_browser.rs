@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{fs, path::PathBuf};
 
-use crate::utils::*;
+use crate::utils::path::*;
 
 pub struct FileBrowser {
 	open: bool,

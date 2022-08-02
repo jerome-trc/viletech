@@ -31,7 +31,7 @@ use std::{
 };
 use zip::{result::ZipError, ZipArchive};
 
-use crate::{data::GameDataMeta, utils::*, wad};
+use crate::{data::GameDataMeta, utils::{io::*, path::*, string::*}, wad};
 
 pub struct VirtualFs {
 	root: Entry,
@@ -289,7 +289,7 @@ impl VirtualFs {
 			return Some(&self.root);
 		}
 
-		let mut iter = str_iter_from_path(path.as_ref());
+		let mut iter = str_iter_from_path(p);
 
 		let p = match iter.next() {
 			Some(n) => {
@@ -1018,7 +1018,7 @@ impl ImpureVfs for VirtualFs {
 			}
 
 			let mount_point =
-				if real_path.is_dir() || is_supported_archive(&real_path).unwrap_or_default() {
+				if real_path.is_dir() || real_path.is_supported_archive().unwrap_or_default() {
 					let osfstem = real_path.file_stem();
 
 					if osfstem.is_none() {
@@ -1040,7 +1040,7 @@ impl ImpureVfs for VirtualFs {
 					}
 
 					fstem.unwrap()
-				} else if !is_binary(&real_path).unwrap_or(true) {
+				} else if !real_path.is_binary().unwrap_or(true) {
 					let fname = real_path.file_name();
 					let fname = fname.unwrap_or_default().to_str();
 
@@ -1066,7 +1066,7 @@ impl ImpureVfs for VirtualFs {
 				.replace_all(&mount_point, "")
 				.to_string();
 
-			let vers = version_from_filestem(&mut mount_point);
+			let vers = version_from_string(&mut mount_point);
 			vers_strings.push(vers.unwrap_or_default());
 			to_mount.push((real_path, PathBuf::from(&mount_point)));
 		}
