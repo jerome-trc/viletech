@@ -360,9 +360,7 @@ pub fn version_from_filestem(string: &mut String) -> Option<String> {
 	lazy_static! {
 		static ref RGX_VERSION: Regex = Regex::new(
 			r"(?x)
-			(?:[VR]|[\s\-_][VvRr]|[\s\-_])*
-			[\._\-]*
-			\d{1,}
+			(?:[VR]|[\s\-_][VvRr]|[\s\-_\.])\d{1,}
 			(?:[\._\-]\d{1,})*
 			(?:[\._\-]\d{1,})*
 			[A-Za-z]*[\._\-]*
@@ -498,6 +496,8 @@ mod test {
 	#[test]
 	fn version_from_filestem() {
 		let mut input = [
+			"DOOM".to_string(),
+			"DOOM2".to_string(),
 			"weighmedown_1.2.0".to_string(),
 			"none an island V1.0".to_string(),
 			"bitter_arcsV0.9.3".to_string(),
@@ -507,10 +507,14 @@ mod test {
 			"i-am_a dagger_1.3".to_string(),
 			"BROKEN_MANTRA_R3.1c".to_string(),
 			"There Is Still Time 0.3tf1".to_string(),
-			"setmefree-4.7.1c".to_string()
+			"setmefree-4.7.1c".to_string(),
+			"Outoftheframe_1_7_0b".to_string(),
+			"a c i d r a i n_716".to_string()
 		];
 
 		let expected = [
+			("DOOM", ""),
+			("DOOM2", ""),
 			("weighmedown", "1.2.0"),
 			("none an island", "V1.0"),
 			("bitter_arcs", "V0.9.3"),
@@ -520,18 +524,20 @@ mod test {
 			("i-am_a dagger", "1.3"),
 			("BROKEN_MANTRA", "R3.1c"),
 			("There Is Still Time", "0.3tf1"),
-			("setmefree", "4.7.1c")
+			("setmefree", "4.7.1c"),
+			("Outoftheframe", "1_7_0b"),
+			("a c i d r a i n", "716")
 		];
 
 		for (i, string) in input.iter_mut().enumerate() {
 			let res = super::version_from_filestem(string);
 
 			if expected[i].1.is_empty() {
-				assert!(res.is_none(), "Expected nothing; returned: {}", res.unwrap());
+				assert!(res.is_none(), "[{i}] - Expected nothing; returned: {}", res.unwrap());
 			} else {
 				assert!(
 					string == expected[i].0,
-					"Expected modified string: {}
+					"[{i}] Expected modified string: {}
 					Actual output: {}", expected[i].0, string
 				);
 
@@ -539,7 +545,7 @@ mod test {
 
 				assert!(
 					vers == expected[i].1,
-					"Expected return value: {}
+					"[{i}] Expected return value: {}
 					Actual return value: {}", expected[i].1, vers 
 				);
 			}
