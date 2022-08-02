@@ -82,6 +82,22 @@ pub struct Object {
 	pub endoom: Option<Endoom>,
 }
 
+impl Object {
+	pub fn new(metadata: Metadata) -> Self {
+		Object {
+			meta: metadata,
+			blueprints: Default::default(),
+			damage_types: Default::default(),
+			species: Default::default(),
+			language: Default::default(),
+			palettes: Default::default(),
+			music: Default::default(),
+			sounds: Default::default(),
+			endoom: None
+		}
+	}
+}
+
 #[derive(Default)]
 pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".

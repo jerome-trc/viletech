@@ -245,24 +245,24 @@ impl VirtualFs {
 	}
 
 	pub fn exists(&self, path: impl AsRef<Path>) -> bool {
-		self.lookup(path).is_ok()
+		self.lookup(path).is_some()
 	}
 
 	/// Returns `false` if nothing is at the given path.
 	pub fn is_dir(&self, path: impl AsRef<Path>) -> bool {
 		match self.lookup(path) {
-			Ok(entry) => entry.is_dir(),
-			Err(_) => false,
+			Some(entry) => entry.is_dir(),
+			None => false,
 		}
 	}
 
-	/// Note: the only error variant this can return is `NonExistentEntry`.
+	/// Returns [`Error::NonExistentEntry`] if there's nothing at the supplied path,
+	/// or [`Error::Unreadable`] if attempting to read a directory.
 	pub fn read(&self, path: impl AsRef<Path>) -> Result<&[u8], Error> {
-		let entry = self.lookup(path)?;
-
-		if entry.is_dir() {
-			return Err(Error::Unreadable);
-		}
+		let entry = match self.lookup(path) {
+			Some(e) => e,
+			None => { return Err(Error::NonExistentEntry); }
+		};
 
 		match &entry.kind {
 			EntryKind::Directory { .. } => Err(Error::Unreadable),
@@ -270,8 +270,8 @@ impl VirtualFs {
 		}
 	}
 
-	/// Returns `Error::InvalidUtf8` if the contents at the path are not valid UTF-8.
-	/// Otherwise acts like `read()`.
+	/// Returns [`Error::InvalidUtf8`] if the contents at the path are not valid UTF-8.
+	/// Otherwise acts like [`VirtualFs::read`].
 	pub fn read_str(&self, path: impl AsRef<Path>) -> Result<&str, Error> {
 		let bytes = self.read(path)?;
 
@@ -281,36 +281,12 @@ impl VirtualFs {
 		}
 	}
 
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	pub fn lookup(&self, path: impl AsRef<Path>) -> Result<&Entry, Error> {
-		fn lookup_recur<'a>(
-			parent: &Entry,
-			mut iter: impl Iterator<Item = &'a str>,
-		) -> Result<&Entry, Error> {
-			let p = match iter.next() {
-				Some(p) => p,
-				None => {
-					return Ok(parent);
-				}
-			};
-
-			let children = parent.children();
-
-			for e in children {
-				if p != e.name {
-					continue;
-				}
-
-				return lookup_recur(e, iter);
-			}
-
-			Err(Error::NonExistentEntry)
-		}
-
+	/// Returns `None` if and only if nothing exists at the given path.
+	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<&Entry> {
 		let p = path.as_ref();
 
 		if p.is_empty() || p.is_root() {
-			return Ok(&self.root);
+			return Some(&self.root);
 		}
 
 		let mut iter = str_iter_from_path(path.as_ref());
@@ -318,13 +294,16 @@ impl VirtualFs {
 		let p = match iter.next() {
 			Some(n) => {
 				if n == "/" {
-					iter.next().ok_or(Error::NonExistentEntry)?
+					match iter.next() {
+						Some(next) => next,
+						None => { return None; }
+					}
 				} else {
 					n
 				}
 			}
 			None => {
-				return Err(Error::NonExistentEntry);
+				return None;
 			}
 		};
 
@@ -335,66 +314,71 @@ impl VirtualFs {
 				continue;
 			}
 
-			return lookup_recur(entry, iter);
+			return entry.lookup(iter);
 		}
 
-		Err(Error::NonExistentEntry)
+		None
 	}
 
+	/// Returns `Some(0)` if the given path is a leaf node.
+	/// Returns `None` if and only if nothing exists at the given path.
+	pub fn count(&self, path: impl AsRef<Path>) -> Option<usize> {
+		let entry = self.lookup(path)?;
+
+		if entry.is_leaf() {
+			Some(0)
+		} else {
+			Some(entry.children().len())
+		}
+	}
+
+	/// Returns `None` if and only if nothing exists at the given path.
 	pub fn file_names<'s>(
 		&'s self,
 		path: impl AsRef<Path>,
-	) -> Result<impl Iterator<Item = &'s String>, Error> {
-		let entry: &'s Entry = match self.lookup(path) {
-			Ok(e) => e,
-			Err(err) => {
-				return Err(err);
-			}
-		};
-
+	) -> Option<impl Iterator<Item = &'s String>> {
+		let entry: &'s Entry = self.lookup(path)?;
 		let closure = |c: &'s Entry| -> &'s String { &c.name };
 
 		if entry.is_leaf() {
 			let slice: &[Entry] = &[];
-			return Ok(slice.iter().map(closure));
+			return Some(slice.iter().map(closure));
 		}
 
 		let children = entry.children();
-		Ok(children.iter().map(closure))
+		Some(children.iter().map(closure))
 	}
 
 	/// Get the entries underneath a directory, as well as the number of entries.
 	/// Precludes the need for 2 lookups to get both the iterator and count.
-	/// Only returns an error if the given path is non-existent. If this operation
-	/// is requested for a leaf node, an empty iterator is returned.
+	/// If a path to a leaf node is given, an empty iterator is returned.
+	/// Returns `None` if and only if nothing exists at the given path.
 	pub fn itemize<'s>(
 		&'s self,
 		path: impl AsRef<Path>,
-	) -> Result<(impl Iterator<Item = &'s Entry>, usize), Error> {
+	) -> Option<(impl Iterator<Item = &'s Entry>, usize)> {
 		let entry: &'s Entry = match self.lookup(path) {
-			Ok(e) => e,
-			Err(err) => {
-				return Err(err);
+			Some(e) => e,
+			None => {
+				return None;
 			}
 		};
 
 		if entry.is_leaf() {
 			let slice: &[Entry] = &[];
-			return Ok((slice.iter(), 0));
+			return Some((slice.iter(), 0));
 		}
 
 		let children = entry.children();
-		Ok((children.iter(), children.len()))
+		Some((children.iter(), children.len()))
 	}
 }
 
-#[derive(Clone)]
 pub struct Entry {
 	name: String,
 	kind: EntryKind,
 }
 
-#[derive(Clone)]
 pub enum EntryKind {
 	Leaf { bytes: Vec<u8> },
 	Directory { children: Vec<Entry> },
@@ -478,6 +462,49 @@ impl Entry {
 				}
 			}
 		}
+	}
+
+	fn lookup<'s>(&self, mut iter: impl Iterator<Item = &'s str>) -> Option<&Entry> {
+		let p = match iter.next() {
+			Some(p) => p,
+			None => {
+				return Some(self);
+			}
+		};
+
+		let children = self.children();
+
+		for e in children {
+			if p != e.name {
+				continue;
+			}
+
+			return Self::lookup(e, iter);
+		}
+
+		None
+	}
+
+	/// Case-insensitive counterpart to [`Entry::lookup`].
+	fn lookup_nocase<'s>(&self, mut iter: impl Iterator<Item = &'s str>) -> Option<&Entry> {
+		let p = match iter.next() {
+			Some(p) => p,
+			None => {
+				return Some(self);
+			}
+		};
+
+		let children = self.children();
+
+		for e in children {
+			if !p.eq_ignore_ascii_case(&e.name) {
+				continue;
+			}
+
+			return Self::lookup_nocase(e, iter);
+		}
+
+		None
 	}
 }
 
@@ -688,7 +715,7 @@ impl VirtualFs {
 				r"SSECTORS",
 				r"NODES",
 				r"SECTORS",
-				r"REJECTS",
+				r"REJECT",
 				r"BLOCKMAP",
 				r"BEHAVIOR",
 				// UDMF
@@ -714,6 +741,13 @@ impl VirtualFs {
 			}
 
 			if RGXSET_MAPMARKER.is_match(&name) {
+				match mapfold.take() {
+					Some(entry) => {
+						children.push(entry);
+					}
+					None => {}
+				};
+
 				mapfold = Some(Entry {
 					name,
 					kind: EntryKind::Directory {
@@ -904,7 +938,7 @@ impl Default for VirtualFs {
 
 lazy_static! {
 	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
-		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
+		.expect("Failed to evaluate `VirtualFs::RGX_INVALIDMOUNTPATH`.");
 }
 
 // Traits for Impure-specific functionality ////////////////////////////////////
@@ -918,24 +952,24 @@ pub trait ImpureVfs {
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
 
 	/// See [`ImpureVfsEntry::is_impure_package`].
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	/// Returns `None` if and only if nothing exists at the given path.
+	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsEntry::is_udmf_map`].
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	/// Returns `None` if and only if nothing exists at the given path.
+	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsEntry::has_zscript`].
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	fn has_zscript(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	/// Returns `None` if and only if nothing exists at the given path.
+	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsEntry::has_edfroot`].
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	fn has_edfroot(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	/// Returns `None` if and only if nothing exists at the given path.
+	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsEntry::has_decorate`].
-	/// Note: the only error variant this can return is `NonExistentEntry`.
-	fn has_decorate(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	/// Returns `None` if and only if nothing exists at the given path.
+	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	fn parse_gamedata_meta(
 		&self,
@@ -1047,18 +1081,10 @@ impl ImpureVfs for VirtualFs {
 				continue;
 			}
 
-			let is_impure_package = match self.is_impure_package(&to_mount[i].1) {
-				Ok(b) => b,
-				Err(err) => {
-					warn!(
-						"Failed to determine if mounted item is an Impure package: {}
-						Error: {}",
-						to_mount[i].1.display(),
-						err
-					);
-					continue;
-				}
-			};
+			// If we mount `foo` and then can't find `foo`, things are REALLY bad
+			let is_impure_package = self.is_impure_package(&to_mount[i].1).expect(
+				"Failed to lookup a newly-mounted item."
+			);
 
 			let meta = if is_impure_package {
 				let metapath: PathBuf = [PathBuf::from(&to_mount[i].1), PathBuf::from("meta.toml")]
@@ -1095,24 +1121,24 @@ impl ImpureVfs for VirtualFs {
 		ret
 	}
 
-	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		Ok(self.lookup(path)?.is_impure_package())
+	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|entry| entry.is_impure_package())
 	}
 
-	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		Ok(self.lookup(path)?.is_udmf_map())
+	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|entry| entry.is_udmf_map())
 	}
 
-	fn has_zscript(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		Ok(self.lookup(path)?.has_zscript())
+	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|entry| entry.has_zscript())
 	}
 
-	fn has_edfroot(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		Ok(self.lookup(path)?.has_edfroot())
+	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|entry| entry.has_edfroot())
 	}
 
-	fn has_decorate(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		Ok(self.lookup(path)?.has_decorate())
+	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|entry| entry.has_decorate())
 	}
 
 	fn parse_gamedata_meta(

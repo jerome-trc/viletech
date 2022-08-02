@@ -17,14 +17,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
-	data::game::DataCore,
+	data::{game::DataCore, GameDataObject},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::GfxCore,
 	rng::RngCore,
 	sim::Playsim,
 	utils::*,
-	vfs::{self, VirtualFs, ImpureVfs},
+	vfs::{self, VirtualFs, ImpureVfs, ImpureVfsEntry}
 };
 
 use kira::{
@@ -202,8 +202,8 @@ impl ClientCore {
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
 					let entry = match vfsg.lookup(&p) {
-						Ok(e) => e,
-						Err(_) => {
+						Some(e) => e,
+						None => {
 							info!("Nothing exists at that path.");
 							continue;
 						}
@@ -310,7 +310,12 @@ impl ClientCore {
 			}
 			Some(scene) => match scene {
 				SceneChange::PlaysimSingle { to_mount } => {
-					self.vfs.write().mount_gamedata(&to_mount);
+					let metas = self.vfs.write().mount_gamedata(&to_mount);
+
+					for meta in metas {
+						self.data.objects.push(GameDataObject::new(meta));
+					}
+
 					self.start_game();
 				}
 			},
