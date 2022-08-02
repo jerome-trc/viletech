@@ -50,7 +50,7 @@ toml = "0.5.9"
 wgpu = "0.12"
 winit = "0.26.1"
 zip = "0.6.2"
-zscript_parser = { version = "0.2.0", features = [
+zsparse = { version = "0.2.0", package = "zscript_parser", features = [
 	"multithreaded",
 	"gzd_folder_filesystem",
 ] }
