@@ -18,6 +18,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Kang "lifthrasiir" Seonghoon, Brandon W. "quodlibetor" Maister, et. al.
 	- Provided under the [Apache 2.0 License and MIT License](https://github.com/chronotope/chrono/blob/main/LICENSE.txt).
 	- https://docs.rs/chrono/latest/chrono/
+- clap
+	- By Kevin "kbknapp" K., Ed "epage" Page, et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/clap-rs/clap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/clap-rs/clap/blob/master/LICENSE-MIT).
+	- https://docs.rs/clap/latest/clap/
 - crossbeam
 	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
