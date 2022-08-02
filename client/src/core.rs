@@ -198,6 +198,7 @@ impl ClientCore {
 
 		for req in cons_reqs {
 			match req {
+				ConsoleRequest::None => {},
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
 					let entry = match vfsg.lookup(&p) {
@@ -234,8 +235,8 @@ impl ClientCore {
 
 					info!("Files under \"{}\" ({}): {}", p.display(), children.len(), output);
 				}
-				ConsoleRequest::Uptime => {
-					self.print_uptime();
+				ConsoleRequest::LuaMem => {
+					info!("Client Lua state heap usage (bytes): {}", self.lua.used_memory());
 				}
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
@@ -277,7 +278,9 @@ impl ClientCore {
 
 					self.audio.handles.push(snd);
 				}
-				_ => {}
+				ConsoleRequest::Uptime => {
+					self.print_uptime();
+				}
 			}
 		}
 	}
@@ -319,60 +322,6 @@ impl ClientCore {
 impl ClientCore {
 	fn register_console_commands(&mut self) {
 		self.console.register_command(ConsoleCommand::new(
-			"version",
-			|_, _| {
-				info!("{}", impure::full_version_string());
-				ConsoleRequest::None
-			},
-			|_, _| {
-				info!("Prints the engine version.");
-			},
-			true,
-		));
-
-		self.console.register_command(ConsoleCommand::new(
-			"uptime",
-			|_, _| ConsoleRequest::Uptime,
-			|_, _| {
-				info!("Prints the length of the time the engine has been running.");
-			},
-			true,
-		));
-
-		self.console.register_command(ConsoleCommand::new(
-			"home",
-			|_, _| {
-				match get_user_dir() {
-					Some(p) => info!("{}", p.display()),
-					None => {
-						info!(
-							"Home directory path is malformed, \
-							or this platform is unsupported."
-						);
-					}
-				}
-
-				ConsoleRequest::None
-			},
-			|_, _| {
-				info!("Prints the directory used to store user info.");
-			},
-			false,
-		));
-
-		self.console.register_command(ConsoleCommand::new(
-			"file",
-			|_, args| {
-				let path = if args.is_empty() { "/" } else { args[0] };
-				ConsoleRequest::File(PathBuf::from(path))
-			},
-			|_, _| {
-				info!("Prints the contents of a virtual file system directory.");
-			},
-			true,
-		));
-
-		self.console.register_command(ConsoleCommand::new(
 			"args",
 			|_, _| {
 				let mut args = env::args();
@@ -403,6 +352,50 @@ impl ClientCore {
 		));
 
 		self.console.register_command(ConsoleCommand::new(
+			"file",
+			|_, args| {
+				let path = if args.is_empty() { "/" } else { args[0] };
+				ConsoleRequest::File(PathBuf::from(path))
+			},
+			|_, _| {
+				info!("Prints the contents of a virtual file system directory.");
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"home",
+			|_, _| {
+				match get_user_dir() {
+					Some(p) => info!("{}", p.display()),
+					None => {
+						info!(
+							"Home directory path is malformed, \
+							or this platform is unsupported."
+						);
+					}
+				}
+
+				ConsoleRequest::None
+			},
+			|_, _| {
+				info!("Prints the directory used to store user info.");
+			},
+			false,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"luamem",
+			|_, _| {
+				ConsoleRequest::LuaMem
+			},
+			|_, _| {
+				info!("Prints the current heap memory used by the client-side Lua state.");
+			},
+			true
+		));
+
+		self.console.register_command(ConsoleCommand::new(
 			"sound",
 			|this, args| {
 				if args.is_empty() {
@@ -418,6 +411,27 @@ impl ClientCore {
 					Usage: {} <virtual file path/asset ID/asset key>",
 					this.get_key()
 				);
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"uptime",
+			|_, _| ConsoleRequest::Uptime,
+			|_, _| {
+				info!("Prints the length of the time the engine has been running.");
+			},
+			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"version",
+			|_, _| {
+				info!("{}", impure::full_version_string());
+				ConsoleRequest::None
+			},
+			|_, _| {
+				info!("Prints the engine version.");
 			},
 			true,
 		));

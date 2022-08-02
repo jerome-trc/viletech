@@ -363,9 +363,10 @@ impl Console {
 pub enum ConsoleRequest {
 	None,
 	// Client-fulfilled requests
-	Uptime,
+	LuaMem,
 	File(PathBuf),
 	Sound(String),
+	Uptime,
 }
 
 pub struct ConsoleCommand {
