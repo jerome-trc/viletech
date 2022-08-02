@@ -26,6 +26,9 @@ use std::{
 
 pub trait ImpureLua<'p> {
 	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
+	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str) -> LuaChunk<'lua, 'a>
+	where
+		S: mlua::AsChunk<'lua> + ?Sized;
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
@@ -68,7 +71,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		// Load the Teal compiler into the registry
 
-		let teal: LuaTable = match ret.load(include_str!("./teal.lua")).eval() {
+		let teal: LuaTable = match ret.safeload(include_str!("./teal.lua"), "teal").eval() {
 			Ok(t) => t,
 			Err(err) => {
 				return Err(err);
@@ -130,14 +133,14 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			let import = ret.create_function(move |l, path: String| -> LuaResult<LuaValue> {
 				let vfsg = vfs.read();
 
-				let bytes = match vfsg.read(path) {
+				let bytes = match vfsg.read(&path) {
 					Ok(b) => b,
 					Err(err) => {
 						return Err(LuaError::ExternalError(Arc::new(err)));
 					}
 				};
 
-				return l.load(bytes).eval();
+				return l.safeload(bytes, path.as_str()).eval();
 			});
 
 			match import {
@@ -166,5 +169,15 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		ret.globals().set("impure", impure)?;
 		Ok(ret)
+	}
+
+	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str) -> LuaChunk<'lua, 'a>
+	where
+		S: mlua::AsChunk<'lua> + ?Sized,
+	{
+		self.load(chunk)
+			.set_mode(mlua::ChunkMode::Text)
+			.set_name(name)
+			.expect("A name was not sanitised before being passed to `ImpureLua::safeload()`.")
 	}
 }
