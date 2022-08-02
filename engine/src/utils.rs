@@ -353,17 +353,25 @@ pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 	Ok(PathBuf::from(string))
 }
 
-lazy_static! {
-	static ref RGX_VERSION: Regex = Regex::new(
-		r"[ \-_][VvRr]*[\._\-]*\d{1,}([\._\-]\d{1,})*([\._\-]\d{1,})*[A-Za-z]*[\._\-]*[A-Za-z0-9]*$"
-	)
-	.expect("Failed to evaluate `utils::RGX_VERSION`.");
-}
-
 /// Locates a version string at the end of a file stem, using a search pattern
 /// based off the most common versioning conventions used in ZDoom modding.
 /// If the returned option is `None`, the given string is unmodified.
 pub fn version_from_filestem(string: &mut String) -> Option<String> {
+	lazy_static! {
+		static ref RGX_VERSION: Regex = Regex::new(
+			r"(?x)
+			(?:[VR]|[\s\-_][VvRr]|[\s\-_])*
+			[\._\-]*
+			\d{1,}
+			(?:[\._\-]\d{1,})*
+			(?:[\._\-]\d{1,})*
+			[A-Za-z]*[\._\-]*
+			[A-Za-z0-9]*
+			$"
+		)
+		.expect("Failed to evaluate `utils::version_from_filestem::RGX_VERSION`.");
+	}
+
 	match RGX_VERSION.find(string) {
 		Some(m) => {
 			const TO_TRIM: [char; 3] = [' ', '_', '-'];
@@ -483,4 +491,58 @@ pub fn create_default_user_dir() -> io::Result<()> {
 	};
 
 	Ok(())
+}
+
+#[cfg(test)]
+mod test {
+	#[test]
+	fn version_from_filestem() {
+		let mut input = [
+			"weighmedown_1.2.0".to_string(),
+			"none an island V1.0".to_string(),
+			"bitter_arcsV0.9.3".to_string(),
+			"stuck-in-the-system_v3.1".to_string(),
+			"555-5555 v5a".to_string(),
+			"yesterdays_pain_6-19-2022".to_string(),
+			"i-am_a dagger_1.3".to_string(),
+			"BROKEN_MANTRA_R3.1c".to_string(),
+			"There Is Still Time 0.3tf1".to_string(),
+			"setmefree-4.7.1c".to_string()
+		];
+
+		let expected = [
+			("weighmedown", "1.2.0"),
+			("none an island", "V1.0"),
+			("bitter_arcs", "V0.9.3"),
+			("stuck-in-the-system", "v3.1"),
+			("555-5555", "v5a"),
+			("yesterdays_pain", "6-19-2022"),
+			("i-am_a dagger", "1.3"),
+			("BROKEN_MANTRA", "R3.1c"),
+			("There Is Still Time", "0.3tf1"),
+			("setmefree", "4.7.1c")
+		];
+
+		for (i, string) in input.iter_mut().enumerate() {
+			let res = super::version_from_filestem(string);
+
+			if expected[i].1.is_empty() {
+				assert!(res.is_none(), "Expected nothing; returned: {}", res.unwrap());
+			} else {
+				assert!(
+					string == expected[i].0,
+					"Expected modified string: {}
+					Actual output: {}", expected[i].0, string
+				);
+
+				let vers = res.unwrap();
+
+				assert!(
+					vers == expected[i].1,
+					"Expected return value: {}
+					Actual return value: {}", expected[i].1, vers 
+				);
+			}
+		}
+	}
 }
