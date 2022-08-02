@@ -31,7 +31,7 @@ use std::{
 };
 use zip::{result::ZipError, ZipArchive};
 
-use crate::{data::GameDataMeta, utils::{io::*, path::*, string::*}, wad};
+use crate::{data::GameDataMeta, utils::{io::*, path::*, string::*}, wad, zsparse::*};
 
 pub struct VirtualFs {
 	root: Entry,
@@ -1240,6 +1240,74 @@ impl ImpureVfsEntry for Entry {
 		};
 
 		self.is_dir() && self.contains_regex(&RGX_EDFROOT)
+	}
+}
+
+struct ZsProxyFs<'v> {
+	vfs: &'v VirtualFs,
+	root: &'v str
+}
+
+impl<'v> ZsFileSystem for ZsProxyFs<'v> {
+	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
+		let rel_root = self.vfs.lookup(self.root).expect(
+			"`ZsProxyFs::get_file` failed to find its relative root."
+		);
+
+		let path = Path::new(filename);
+		let iter = str_iter_from_path(path);
+		let target = match rel_root.lookup_nocase(iter) {
+			Some(e) => e,
+			None => {
+				warn!("Failed to find ZScript file: {}", filename);
+				return None;
+			}
+		};
+
+		match &target.kind {
+			EntryKind::Directory { .. } => {
+				warn!("Expected ZScript file, found directory: {}", filename);
+				None
+			}
+			EntryKind::Leaf { bytes } => {
+				Some(ZsFile::new(
+					filename.to_string(),
+					bytes.clone()
+				))
+			}
+		}
+	}
+
+	fn get_files_no_ext(&mut self, filename: &str) -> Vec<ZsFile> {
+		let mut ret = Vec::<ZsFile>::default();
+
+		let rel_root = self.vfs.lookup(self.root).expect(
+			"`ZsProxyFs::get_files_no_ext` failed to find its relative root."
+		);
+
+		for child in rel_root.children() {
+			let mut noext = child.name.splitn(2, '.');
+
+			let bytes = if let EntryKind::Leaf { bytes } = &child.kind {
+				bytes
+			} else {
+				continue;
+			};
+
+			let stem = match noext.next() {
+				Some(s) => s,
+				None => { continue; }
+			};
+
+			if stem.eq_ignore_ascii_case(filename) {
+				ret.push(ZsFile::new(
+					filename.to_string(),
+					bytes.clone()
+				));
+			}
+		}
+
+		ret
 	}
 }
 

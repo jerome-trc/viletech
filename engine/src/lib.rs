@@ -42,6 +42,14 @@ pub mod utils;
 pub mod vfs;
 pub mod wad;
 
+pub mod zsparse {
+	pub use ::zsparse::filesystem::FileSystem as ZsFileSystem;
+	pub use ::zsparse::filesystem::File as ZsFile;
+	pub use ::zsparse::filesystem::Files as ZsFiles;
+	pub use zsparse::err::ParsingError as ZsParsingError;
+	pub use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
+	pub use zsparse::parser_manager::parse_filesystem as zs_parse_filesystem;
+}
 
 pub mod depends {
 	pub extern crate chrono;
