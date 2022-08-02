@@ -131,12 +131,12 @@ pub fn log_init(
 		.chain(file_cfg)
 		.chain(stdout_cfg);
 
-	let res = if sender.is_some() {
+	let res = if let Some(s) = sender {
 		let console_cfg = fern::Dispatch::new()
 			.format(move |out, message, record| {
 				out.finish(format_args!("[{}] {}", record.level(), message))
 			})
-			.chain(Box::new(ConsoleWriter::new(sender.unwrap())) as Box<dyn io::Write + Send>);
+			.chain(Box::new(ConsoleWriter::new(s)) as Box<dyn io::Write + Send>);
 
 		dispatch.chain(console_cfg).apply()
 	} else {
