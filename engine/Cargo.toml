@@ -23,6 +23,7 @@ egui-wgpu = "0.18"
 egui-winit = "0.18"
 fern = { version = "0.6.1", features = ["colored"] }
 glam = { version = "0.21.2", features = ["approx", "bytemuck", "serde"] }
+globset = "0.4.9"
 home = "0.5.3"
 image = { version = "0.24.2", default-features = false, features = ["png"] }
 kira = "0.6.0"
@@ -41,11 +42,11 @@ naga = "0.9.0"
 nanorand = "0.7.0"
 parking_lot = "0.12.1"
 pollster = "0.2"
+rayon = "1.5.3"
 regex = "1.6.0"
 serde = "1.0.140"
 shipyard = { version = "0.5.0", features = ["serde1"] }
 toml = "0.5.9"
-wad = "0.3.2"
 wgpu = "0.12"
 winit = "0.26.1"
 zip = "0.6.2"

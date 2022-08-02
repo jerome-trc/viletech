@@ -69,7 +69,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 	match vfs.write().mount_enginedata() {
 		Ok(()) => {}
 		Err(err) => {
-			error!("Failed to find engine gamedata. Is impure.zip missing?");
+			error!(
+				"Failed to find and mount engine gamedata.
+				Is 'impure.zip' missing?
+				Error: {}", err
+			);
 			return Err(Box::new(err));
 		}
 	};
@@ -114,7 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	gfx.pipeline_from_shader(
 		vfs.read()
-			.read_string(Path::new("/impure/shaders/hello-tri.wgsl"))?,
+			.read_str(Path::new("/impure/shaders/hello-tri.wgsl"))?.to_string(),
 	);
 
 	let mut core = ClientCore::new(start_time, vfs, lua, data, gfx, console)?;
@@ -126,6 +130,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		WinitEvent::MainEventsCleared => {
 			core.process_console_requests();
 			core.clear_stopped_sounds();
+			core.scene_change();
 			core.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {

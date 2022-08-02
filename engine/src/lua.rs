@@ -130,14 +130,14 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			let import = ret.create_function(move |l, path: String| -> LuaResult<LuaValue> {
 				let vfsg = vfs.read();
 
-				let bytes = match vfsg.read_bytes(path) {
+				let bytes = match vfsg.read(path) {
 					Ok(b) => b,
 					Err(err) => {
 						return Err(LuaError::ExternalError(Arc::new(err)));
 					}
 				};
 
-				return l.load(&bytes).eval();
+				return l.load(bytes).eval();
 			});
 
 			match import {

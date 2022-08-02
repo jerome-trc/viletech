@@ -33,56 +33,78 @@ pub fn exe_dir() -> PathBuf {
 }
 
 pub trait PathEx {
+	/// Returns the number of components in the path.
+	fn size(&self) -> usize;
 	fn extension_is(&self, test: &str) -> bool;
 	fn is_empty(&self) -> bool;
 	fn is_root(&self) -> bool;
+	fn is_zip(&self) -> io::Result<bool>;
+	fn is_valid_wad(&self) -> io::Result<bool>;
+}
+
+impl <T: AsRef<Path>> PathEx for T {
+	fn size(&self) -> usize {
+		self.as_ref().components().count()
+	}
+
+	fn extension_is(&self, test: &str) -> bool {
+		let ext = match self.as_ref().extension() {
+			Some(e) => e,
+			None => {
+				return false;
+			}
+		};
+
+		ext.eq_ignore_ascii_case(test)
+	}
+
+	fn is_empty(&self) -> bool {
+		self.as_ref() == *EMPTY_PATH
+	}
+
+	fn is_root(&self) -> bool {
+		self.as_ref() == *ROOT_PATH
+	}
+
+	fn is_zip(&self) -> io::Result<bool> {
+		if !self.as_ref().exists() {
+			return Err(io::ErrorKind::NotFound.into());
+		}
+	
+		let mut buffer: [u8; 4] = [0; 4];
+		let mut file = File::open(self)?;
+	
+		let bytes_read = file.read(&mut buffer)?;
+	
+		if bytes_read < buffer.len() {
+			return Ok(false);
+		}
+
+		Ok(is_zip(&buffer[..]))
+	}
+
+	fn is_valid_wad(&self) -> io::Result<bool> {
+		if !self.as_ref().exists() {
+			return Err(io::ErrorKind::NotFound.into());
+		}
+
+		let mut buffer: [u8; 12] = [0; 12];
+		let mut file = File::open(self)?;
+		let metadata = file.metadata()?;
+
+		let bytes_read = file.read(&mut buffer)?;
+
+		if bytes_read < buffer.len() {
+			return Ok(false);
+		}
+
+		is_valid_wad(&buffer[..], metadata.len())
+	}
 }
 
 lazy_static! {
 	static ref EMPTY_PATH: &'static Path = Path::new("");
 	static ref ROOT_PATH: &'static Path = Path::new("/");
-}
-
-impl PathEx for Path {
-	fn extension_is(&self, test: &str) -> bool {
-		let ext = match self.extension() {
-			Some(e) => e,
-			None => {
-				return false;
-			}
-		};
-
-		ext.eq_ignore_ascii_case(test)
-	}
-
-	fn is_empty(&self) -> bool {
-		self == *EMPTY_PATH
-	}
-
-	fn is_root(&self) -> bool {
-		self == *ROOT_PATH
-	}
-}
-
-impl PathEx for PathBuf {
-	fn extension_is(&self, test: &str) -> bool {
-		let ext = match self.extension() {
-			Some(e) => e,
-			None => {
-				return false;
-			}
-		};
-
-		ext.eq_ignore_ascii_case(test)
-	}
-
-	fn is_empty(&self) -> bool {
-		self == *EMPTY_PATH
-	}
-
-	fn is_root(&self) -> bool {
-		self == *ROOT_PATH
-	}
 }
 
 /// Check if an archive is a .wad, .pwad, or .iwad.
@@ -151,33 +173,22 @@ pub fn str_iter_from_path(path: &Path) -> impl Iterator<Item = &str> {
 }
 
 /// Checks for the 4-byte magic number, directory info, and that the
-/// file size is as expected given the number of entries.
-pub fn is_valid_wad(path: impl AsRef<Path>) -> io::Result<bool> {
-	let p = path.as_ref();
-
-	if !p.exists() {
-		return Err(io::ErrorKind::NotFound.into());
-	}
-
-	let mut buffer: [u8; 12] = [0; 12];
-	let mut file = File::open(path)?;
-	let metadata = file.metadata()?;
-
-	let bytes_read = file.read(&mut buffer)?;
-
-	if bytes_read < buffer.len() {
+/// file size is as expected given the number of entries. `len` should be the
+/// length of the entire WAD's file length, regardless of the length of `bytes`.
+pub fn is_valid_wad(bytes: &[u8], len: u64) -> io::Result<bool> {
+	if len < 12 {
 		return Ok(false);
 	}
 
-	match &buffer[0..4] {
+	match &bytes[0..4] {
 		b"IWAD" | b"PWAD" => {}
 		_ => {
 			return Ok(false);
 		}
 	};
 
-	let num_entries = LittleEndian::read_i32(&buffer[4..8]);
-	let dir_offs = LittleEndian::read_i32(&buffer[8..12]);
+	let num_entries = LittleEndian::read_i32(&bytes[4..8]);
+	let dir_offs = LittleEndian::read_i32(&bytes[8..12]);
 
 	if num_entries < 0 || dir_offs < 0 {
 		return Ok(false);
@@ -197,7 +208,7 @@ pub fn is_valid_wad(path: impl AsRef<Path>) -> io::Result<bool> {
 		}
 	};
 
-	Ok(metadata.len() >= expected_bin_len as u64)
+	Ok(len >= expected_bin_len as u64)
 }
 
 /// Returns `None` if this platform is unsupported
@@ -227,31 +238,13 @@ pub fn get_user_dir() -> Option<PathBuf> {
 }
 
 /// Checks for a 4-byte magic number at the very beginning of the file.
-pub fn is_zip(path: impl AsRef<Path>) -> io::Result<bool> {
-	let p = path.as_ref();
-
-	if !p.exists() {
-		return Err(io::ErrorKind::NotFound.into());
-	}
-
-	let mut buffer: [u8; 4] = [0; 4];
-	let mut file = File::open(path)?;
-
-	let bytes_read = file.read(&mut buffer)?;
-
-	if bytes_read < buffer.len() {
-		return Ok(false);
-	}
-
-	match &buffer[0..4] {
-		&[0x50, 0x4b, 0x03, 0x04] => Ok(true),
-		_ => Ok(false),
-	}
+pub fn is_zip(bytes: &[u8]) -> bool {
+	bytes.len() >= 4 && matches!(&bytes[0..4], &[0x50, 0x4b, 0x03, 0x04])
 }
 
 /// Check if the given file is a zip or WAD.
 pub fn is_supported_archive(path: impl AsRef<Path>) -> io::Result<bool> {
-	match is_zip(path.as_ref()) {
+	match path.as_ref().is_zip() {
 		Ok(b) => {
 			if b {
 				return Ok(b);
@@ -262,7 +255,7 @@ pub fn is_supported_archive(path: impl AsRef<Path>) -> io::Result<bool> {
 		}
 	}
 
-	match is_valid_wad(path.as_ref()) {
+	match path.as_ref().is_valid_wad() {
 		Ok(b) => {
 			if b {
 				return Ok(b);

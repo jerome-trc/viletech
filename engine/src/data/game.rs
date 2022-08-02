@@ -15,53 +15,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+use std::collections::HashMap;
+
+use globset::Glob;
+use kira::sound::static_sound::StaticSoundData;
+use serde::Deserialize;
+
 use crate::{
 	ecs::Blueprint,
 	game::{DamageType, Species},
+	gfx::{Endoom, Palette},
 };
-use kira::sound::static_sound::StaticSoundData;
-use regex::Regex;
-use serde::Deserialize;
-use std::collections::HashMap;
+
+pub type AssetId = usize;
+
+pub struct Music(StaticSoundData);
+pub struct Sound(StaticSoundData);
 
 #[derive(Deserialize)]
-pub struct VersionedId {
-	// Note to reader: probably not going to go to the same extent as npm
-	// semantic versioning but there should be some versioning tied to this
-	pub uuid: String,
-}
-
-#[derive(Default, Deserialize, PartialEq)]
-pub enum DataKind {
-	/// Unidentifiable, or an executable, or something else.
-	#[default]
-	None,
-	/// e.g. a DEHACKED lump.
-	Text,
-	/// Self-explanatory.
-	Wad,
-	/// This is an archive (compressed under a supported format) or directory,
-	/// with a top-level meta.toml file conforming to a specification.
-	Impure,
-	/// This is an archive (compressed under a supported format) or directory,
-	/// with structure/lumps that identify it as being for ZDoom/GZDoom.
-	GzDoom,
-	/// This is an archive (compressed under a supported format) or directory,
-	/// with structure/lumps that identify it as being for the Eternity Engine.
-	Eternity,
-}
-
-#[derive(Deserialize)]
-/// Every game data object (GDO) mounted to the VFS gets one of these.
 pub struct Metadata {
-	/// If this isn't given by an Impure metadata table, it's the name of the
-	/// mounted file stem (e.g. gzdoom.pk3 becomes gzdoom, DOOM2.WAD becomes DOOM2).
 	pub uuid: String,
+	#[serde(default)]
 	pub version: String,
 	/// Display name presented to users.
+	#[serde(default)]
 	pub name: String,
-	#[serde(alias = "description")]
-	pub desc: String,
+	#[serde(default)]
+	pub description: String,
 	#[serde(default)]
 	pub authors: Vec<String>,
 	#[serde(default)]
@@ -69,70 +49,77 @@ pub struct Metadata {
 	/// e.g., for if the author wants a link to a mod/WAD's homepage/forum post.
 	#[serde(default)]
 	pub links: Vec<String>,
-	#[serde(skip)]
-	pub kind: DataKind,
-	#[serde(default)]
-	pub dependencies: Vec<VersionedId>,
-	/// Incompatibilities are "soft"; the user is warned when trying to mingle
-	/// incompatible game data objects but can still proceed as normal.
-	#[serde(default)]
-	pub incompatibilities: Vec<VersionedId>,
 }
 
 impl Metadata {
-	pub fn from_uuid(uuid: String, kind: DataKind) -> Self {
+	pub fn new(uuid: String, version: String) -> Self {
 		Metadata {
 			uuid,
-			version: String::default(),
+			version,
 			name: String::default(),
-			desc: String::default(),
+			description: String::default(),
 			authors: Vec::<String>::default(),
 			copyright: String::default(),
 			links: Vec::<String>::default(),
-			kind,
-			dependencies: Vec::<VersionedId>::default(),
-			incompatibilities: Vec::<VersionedId>::default(),
 		}
 	}
 }
 
-pub type AssetId = usize;
-
-#[derive(Default)]
-pub struct DataCore {
-	/// Represents all mounted game data objects. `[0]` should *always* be the
-	/// engine's own game data. Everything afterwards is in a user-decided order.
-	pub objects: Vec<Metadata>,
-	/// Key structure:
-	/// "package_uuid.domain.asset_key"
-	/// Package UUID will either come from an Impure package metadata file,
-	/// or from the archive/directory name minus the extension if it's not
-	/// Impure data (e.g. "DOOM2" from "DOOM2.WAD", "gzdoom" from "gzdoom.pk3").
-	/// Domain will be something like "textures" or "blueprints".
-	/// Asset key is derived from the file name.
-	/// Each value maps to an index in one of the asset vectors.
-	pub asset_map: HashMap<String, AssetId>,
-	/// Like `asset_map`, but without any namespacing. If a key such as "MAP01"
-	/// appears twice (e.g. once from DOOM2.WAD and again from my_house.wad) it
-	/// will clobber whatever came before it.
-	pub lump_map: HashMap<String, AssetId>,
-
+/// Represents anything that the user added to their load order.
+/// Acts as a namespace of sorts; for example, MAPINFO loaded as part of
+/// a WAD will only apply to maps in that WAD.
+pub struct Object {
+	pub meta: Metadata,
 	// Needed for the sim
-	pub language: Vec<String>,
 	pub blueprints: Vec<Blueprint>,
 	pub damage_types: Vec<DamageType>,
 	pub species: Vec<Species>,
 	// Client-only
-	pub music: Vec<StaticSoundData>,
-	pub sounds: Vec<StaticSoundData>,
+	pub language: Vec<String>,
+	pub palettes: Vec<Palette>,
+	pub music: Vec<Music>,
+	pub sounds: Vec<Sound>,
+	pub endoom: Option<Endoom>,
+}
+
+#[derive(Default)]
+pub struct DataCore {
+	/// Element 0 should _always_ be the engine's own data, UUID "impure".
+	/// Everything afterwards is ordered as per the user's specification.
+	pub objects: Vec<Object>,
+	pub asset_map: HashMap<String, (usize, AssetId)>,
+	pub lump_map: HashMap<String, (usize, AssetId)>,
 }
 
 impl DataCore {
-	pub fn is_mounted(&self, pattern: &str) -> Result<bool, regex::Error> {
-		let regex = Regex::new(pattern)?;
+	/// Note: UUIDs are checked for an exact match.
+	pub fn get_obj(&self, uuid: &str) -> Option<&Object> {
+		for obj in &self.objects {
+			if obj.meta.uuid == uuid {
+				return Some(obj);
+			}
+		}
+
+		None
+	}
+
+	/// Note: UUIDs are checked for an exact match.
+	pub fn get_obj_mut(&mut self, uuid: &str) -> Option<&mut Object> {
+		for obj in &mut self.objects {
+			if obj.meta.uuid == uuid {
+				return Some(obj);
+			}
+		}
+
+		None
+	}
+
+	// Takes a glob pattern.
+	pub fn obj_exists(&self, pattern: &str) -> Result<bool, globset::Error> {
+		let glob = Glob::new(pattern)?.compile_matcher();
 
 		for obj in &self.objects {
-			if regex.is_match(&obj.uuid) {
+			if glob.is_match(&obj.meta.uuid) {
 				return Ok(true);
 			}
 		}

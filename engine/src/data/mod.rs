@@ -19,3 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 pub mod game;
 #[allow(dead_code)]
 pub mod user;
+
+pub use game::Object as GameDataObject;
+pub use game::Metadata as GameDataMeta;

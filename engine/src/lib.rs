@@ -49,6 +49,7 @@ pub mod rng;
 pub mod sim;
 pub mod utils;
 pub mod vfs;
+pub mod wad;
 
 pub fn short_version_string() -> String {
 	format!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"))
@@ -215,11 +216,14 @@ pub mod depends {
 	pub extern crate chrono;
 	pub extern crate crossbeam;
 	pub extern crate kira;
+	pub extern crate lazy_static;
 	pub extern crate log;
 	pub extern crate mlua;
 	pub extern crate nanorand;
 	pub extern crate parking_lot;
+	pub extern crate regex;
 	pub extern crate shipyard;
 	pub extern crate wgpu;
 	pub extern crate winit;
+	pub extern crate zip;
 }

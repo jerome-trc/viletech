@@ -1,3 +1,7 @@
+//! Abstraction over the OS file system for security and ease.
+//! Inspired by PhysicsFS, but differs in that it owns every byte mounted,
+//! for maximum-speed reading when organizing assets afterwards.
+
 /*
 Copyright (C) 2022 ***REMOVED***
 
@@ -15,294 +19,221 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{
-	data::{game::DataKind, game::Metadata},
-	utils::*,
-};
 use lazy_static::lazy_static;
 use log::{error, info, warn};
+use parking_lot::Mutex;
+use rayon::prelude::*;
 use regex::{Regex, RegexSet};
 use std::{
-	env, fmt,
-	fs::{self, File},
-	io::{self, Read},
-	path::{Path, PathBuf},
+	fmt, fs,
+	io::{self, Cursor},
+	path::{Path, PathBuf}
 };
-use zip::ZipArchive;
+use zip::{result::ZipError, ZipArchive};
 
-#[derive(Debug)]
-pub enum Error {
-	/// A path argument failed to canonicalize somehow.
-	Canonicalization(io::Error),
-	/// The caller provided a mount point that isn't comprised solely of
-	/// alphanumeric characters, underscores, dashes, periods, and forward slashes.
-	InvalidMountPoint,
-	/// A path argument did not pass a UTF-8 validity check.
-	InvalidUtf8,
-	IoError(io::Error),
-	/// The caller attempted to lookup/read/write/unmount a non-existent file.
-	NonExistentEntry,
-	/// The caller attempted to lookup/read/write/mount a non-existent file.
-	NonExistentFile,
-	/// The caller attempted to read a directory, archive, or WAD.
-	Unreadable,
-	/// The caller attempted to mount something to a point which
-	/// already had something mounted onto it.
-	Remount,
-	/// The caller attempted to illegally mount a symbolic link.
-	SymlinkMount,
-	Other(String),
-}
-
-impl std::error::Error for Error {}
-
-impl fmt::Display for Error {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Canonicalization(err) => {
-				write!(f, "Failed to canonicalize given path: {}", err)
-			}
-			Self::InvalidMountPoint => {
-				write!(
-					f,
-					"Mount point can only contain letters, numbers, underscores, \
-					periods, dashes, and forward slashes."
-				)
-			}
-			Self::InvalidUtf8 => {
-				write!(f, "Given path failed to pass a UTF-8 validity check.")
-			}
-			Self::IoError(err) => {
-				write!(f, "{}", err)
-			}
-			Self::NonExistentEntry => {
-				write!(f, "Attempted to operate on a non-existent entry.")
-			}
-			Self::NonExistentFile => {
-				write!(f, "Attempted to operate on a non-existent file.")
-			}
-			Self::Unreadable => {
-				write!(
-					f,
-					"Directories, archives, and WADs are ineligible for reading."
-				)
-			}
-			Self::Remount => {
-				write!(f, "Something is already mounted to the given path.")
-			}
-			Self::SymlinkMount => {
-				write!(f, "Symbolic links can not be mounted.")
-			}
-			Self::Other(s) => {
-				write!(f, "{}", s)
-			}
-		}
-	}
-}
-
-struct Entry {
-	name: String,
-	kind: EntryKind,
-}
-
-enum EntryKind {
-	/// Any loose file that isn't otherwise some kind of archive.
-	/// For instance, a DEHACKED lump, or a custom lump for a mod.
-	File {
-		real_path: PathBuf,
-	},
-	Directory {
-		sub_entries: Vec<Entry>,
-	},
-	/// Used to implement the directory tree root,
-	/// as well as the directories in archives.
-	FakeDirectory {
-		sub_entries: Vec<Entry>,
-	},
-	Wad {
-		wad: wad::Wad,
-		sub_entries: Vec<Entry>,
-	},
-	WadEntry {
-		id: wad::EntryId,
-	},
-	Zip {
-		real_path: PathBuf,
-		sub_entries: Vec<Entry>,
-	},
-	ZipEntry {
-		index: usize,
-	},
-}
-
-impl Entry {
-	fn is_leaf(&self) -> bool {
-		matches!(
-			self.kind,
-			EntryKind::File { .. } | EntryKind::WadEntry { .. } | EntryKind::ZipEntry { .. }
-		)
-	}
-
-	fn is_readable(&self) -> bool {
-		matches!(
-			self.kind,
-			EntryKind::File { .. } | EntryKind::Wad { .. } | EntryKind::Zip { .. }
-		)
-	}
-
-	fn sub_entries(&self) -> Option<&Vec<Entry>> {
-		match &self.kind {
-			EntryKind::Directory { sub_entries, .. }
-			| EntryKind::Wad { sub_entries, .. }
-			| EntryKind::Zip { sub_entries, .. }
-			| EntryKind::FakeDirectory { sub_entries, .. } => Some(sub_entries),
-			_ => None,
-		}
-	}
-
-	fn sub_entries_mut(&mut self) -> Option<&mut Vec<Entry>> {
-		match &mut self.kind {
-			EntryKind::Directory { sub_entries, .. }
-			| EntryKind::Wad { sub_entries, .. }
-			| EntryKind::Zip { sub_entries, .. }
-			| EntryKind::FakeDirectory { sub_entries, .. } => Some(sub_entries),
-			_ => None,
-		}
-	}
-}
+use crate::{data::GameDataMeta, utils::*, wad};
 
 pub struct VirtualFs {
 	root: Entry,
 }
 
-impl Default for VirtualFs {
-	fn default() -> Self {
-		VirtualFs {
-			root: Entry {
-				name: String::from("/"),
-				kind: EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default(),
-				},
-			},
-		}
-	}
-}
-
-lazy_static! {
-	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
-		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
-}
-
 // Public interface.
 impl VirtualFs {
+	/// For each tuple of the given slice, `::0` should be the path to the real
+	/// file/directory, and `::1` should be the desired "mount point".
+	/// Returns a `Vec` parallel to `mounts` which contains `true` for each
+	/// successful mount and `false` otherwise.
 	pub fn mount(
 		&mut self,
-		path: impl AsRef<Path>,
-		mount_point: impl AsRef<Path>,
-	) -> Result<(), Error> {
-		let p = path.as_ref();
-		let mpoint = mount_point.as_ref();
+		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
+	) -> Vec<Result<(), Error>> {
+		let results = Vec::<(usize, Result<(), Error>)>::with_capacity(mounts.len());
+		let results = Mutex::new(results);
 
-		// Ensure file to mount is even supported
+		let mounts: Vec<(usize, (&Path, &Path))> = mounts
+			.iter()
+			.map(|pair| (pair.0.as_ref(), pair.1.as_ref()))
+			.enumerate()
+			.collect();
 
-		match Self::mount_supported(p) {
-			Ok(()) => {}
-			Err(err) => {
-				return Err(err);
-			}
-		};
+		let output = Mutex::new(Vec::<Entry>::default());
 
-		// Ensure mount point is only alphanumerics, underscores, dashes, slashes
+		mounts.par_iter().for_each(|tuple| {
+			let pair = &tuple.1;
 
-		{
-			let mpstr = match mpoint.to_str() {
-				Some(s) => s,
-				None => {
-					return Err(Error::InvalidMountPoint);
+			let real_path = match pair.0.canonicalize() {
+				Ok(c) => c,
+				Err(err) => {
+					warn!(
+						"Failed to canonicalize real path: {}
+						Error: {}",
+						pair.0.display(),
+						err
+					);
+					results.lock().push((tuple.0, Err(Error::Canonicalization(err))));
+					return;
 				}
 			};
 
-			if RGX_INVALIDMOUNTPATH.is_match(mpstr) {
-				return Err(Error::InvalidMountPoint);
+			let mount_point = pair.1;
+
+			// Don't let the caller mount symbolic links, etc.
+
+			match Self::mount_supported(&real_path) {
+				Ok(()) => {}
+				Err(err) => {
+					warn!(
+						"Attempted to mount an unsupported file: {}
+						Reason: {}",
+						real_path.display(),
+						err
+					);
+					results.lock().push((tuple.0, Err(err)));
+					return;
+				}
+			};
+
+			let mpoint_str = match mount_point.to_str() {
+				Some(s) => s,
+				None => {
+					warn!(
+						"Attempted to use a mount point that isn't valid Unicode ({})",
+						mount_point.display()
+					);
+					results.lock().push((tuple.0, Err(Error::InvalidUtf8)));
+					return;
+				}
+			};
+
+			if RGX_INVALIDMOUNTPATH.is_match(mpoint_str) {
+				warn!(
+					"Attempted to use a mount point that isn't comprised \
+					solely of alphanumerics, underscores, dashes, periods, \
+					and forward slashes. ({})",
+					mount_point.display()
+				);
+				results.lock().push((tuple.0, Err(Error::InvalidMountPoint)));
+				return;
 			}
-		}
 
-		// Ensure something exists at real path
+			// Ensure nothing already exists at end of mount point
 
-		if !p.exists() {
-			return Err(Error::NonExistentFile);
-		}
-
-		// Ensure nothing already exists at end of mount point
-
-		if self.lookup(mpoint).is_ok() {
-			return Err(Error::Remount);
-		}
-
-		// Convert real path to its canonical form
-
-		let canon = match p.canonicalize() {
-			Ok(c) => c,
-			Err(err) => {
-				return Err(Error::Canonicalization(err));
+			if self.exists(mount_point) {
+				results.lock().push((tuple.0, Err(Error::Remount)));
+				return;
 			}
-		};
 
-		// Create fake directories to get to mount point if necessary
+			// All checks passed. Start recurring down real path
 
-		let mp_base = mpoint.parent().ok_or(Error::InvalidMountPoint)?;
+			let mount_name = match mount_point.file_name().ok_or(Error::NonExistentEntry) {
+				Ok(mn) => mn,
+				Err(err) => {
+					warn!(
+						"Failed to get mount name from mount point: {}
+						Error: {}",
+						mount_point.display(),
+						err
+					);
+					results.lock().push((tuple.0, Err(err)));
+					return;
+				}
+			};
 
-		if !mp_base.is_empty() {
-			let iter = mp_base.ancestors().fuse();
+			let mount_name = match mount_name.to_str().ok_or(Error::InvalidUtf8) {
+				Ok(mn) => mn,
+				Err(err) => {
+					warn!(
+						"Failed to get mount name from mount point: {}
+							Error: {}",
+						mount_point.display(),
+						err
+					);
+					results.lock().push((tuple.0, Err(err)));
+					return;
+				}
+			};
 
-			for ppath in iter {
-				if self.lookup(ppath).is_err() {
-					Self::build_mount_point(&mut self.root, str_iter_from_path(mp_base))?;
-					break;
+			let res = if real_path.is_dir() {
+				Self::mount_dir(&real_path, mount_name)
+			} else {
+				let bytes = match fs::read(&real_path) {
+					Ok(b) => b,
+					Err(err) => {
+						warn!(
+							"Failed to read object for mounting: {}
+							Error: {}",
+							real_path.display(),
+							err
+						);
+
+						results.lock().push((tuple.0, Err(Error::IoError(err))));
+						return;
+					}
+				};
+
+				Self::mount_file(bytes, mount_name)
+			};
+
+			let new_entry = match res {
+				Ok(e) => e,
+				Err(err) => {
+					warn!(
+						"Failed to mount object: {}
+						Error: {}",
+						real_path.display(),
+						err
+					);
+					return;
+				}
+			};
+
+			output.lock().push(new_entry);
+			results.lock().push((tuple.0, Ok(())));
+
+			info!(
+				"Mounted: \"{}\" -> \"{}\".",
+				real_path.display(),
+				mount_point.display()
+			);
+		});
+
+		let mut output = output.into_inner();
+
+		for entry in output.drain(..) {
+			self.root.children_mut().push(entry);
+		}
+
+		let mut results = results.into_inner();
+		let mut ret = Vec::<Result<(), Error>>::with_capacity(results.len());
+
+		while !results.is_empty() {
+			let mut i = 0;
+
+			while i < results.len() {
+				if results[i].0 == ret.len() {
+					ret.push(results.swap_remove(i).1);
+				} else {
+					i += 1;
 				}
 			}
 		}
 
-		let mpe = self
-			.lookup_mut(mp_base)
-			.expect("`VirtualFs::build_mount_point()` failed.");
-
-		let mount_name = mpoint
-			.file_name()
-			.ok_or(Error::NonExistentEntry)?
-			.to_str()
-			.ok_or(Error::InvalidUtf8)?;
-
-		let res = if canon.is_dir() {
-			Self::mount_dir(&canon, mount_name, mpe)
-		} else {
-			Self::mount_file(&canon, mount_name, mpe)
-		};
-
-		if res.is_ok() {
-			info!(
-				"VFS mounted: \"{}\" as \"{}\".",
-				canon.display(),
-				mpoint.display()
-			);
-		}
-
-		res
+		ret
 	}
 
 	pub fn mount_supported(path: impl AsRef<Path>) -> Result<(), Error> {
-		let p = path.as_ref();
+		let path = path.as_ref();
 
-		if !p.exists() {
+		if !path.exists() {
 			return Err(Error::NonExistentFile);
 		}
 
-		if p.is_dir() {
-			return Ok(());
+		if path.is_symlink() {
+			return Err(Error::SymlinkMount);
 		}
 
-		if p.is_symlink() {
-			return Err(Error::SymlinkMount);
+		if path.is_dir() {
+			return Ok(());
 		}
 
 		Ok(())
@@ -312,492 +243,41 @@ impl VirtualFs {
 		self.lookup(path).is_ok()
 	}
 
+	/// Returns `false` if nothing is at the given path.
 	pub fn is_dir(&self, path: impl AsRef<Path>) -> bool {
 		match self.lookup(path) {
-			Ok(entry) => !entry.is_leaf(),
+			Ok(entry) => entry.is_dir(),
 			Err(_) => false,
 		}
 	}
 
-	pub fn file_names(&self, path: impl AsRef<Path>) -> Vec<String> {
-		let mut ret = Vec::<String>::default();
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	pub fn read(&self, path: impl AsRef<Path>) -> Result<&[u8], Error> {
+		let entry = self.lookup(path)?;
 
-		let entry = match self.lookup(path) {
-			Ok(e) => e,
-			Err(_) => {
-				return ret;
-			}
-		};
-
-		if entry.is_leaf() {
-			return ret;
+		if entry.is_dir() {
+			return Err(Error::Unreadable);
 		}
 
-		let subs = entry.sub_entries().unwrap();
-
-		for sub in subs {
-			ret.push(sub.name.clone());
-		}
-
-		ret
-	}
-
-	/// An error will be returned if the given path is invalid, or the requested
-	/// entry is non-existent.
-	pub fn read_bytes(&self, path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
-		let p = path.as_ref();
-		let iter = str_iter_from_path(p);
-		let to_read = Self::lookup_to_read(&self.root, iter)?;
-
-		match &to_read.kind {
-			EntryKind::File { real_path, .. } => fs::read(&real_path)
-				.map_err(|_| Error::Other(format!("Malformed file: {}", real_path.display()))),
-			EntryKind::Wad { wad, .. } => {
-				let entry = self.lookup(p)?;
-
-				if let EntryKind::WadEntry { id } = &entry.kind {
-					let idb = id.as_bytes();
-					let idc = wad::EntryId::from_bytes(idb);
-
-					match wad.by_id(idc) {
-						Some(lump) => Ok(lump.to_owned()),
-						None => {
-							panic!("An illegal WAD entry ID was stored.");
-						}
-					}
-				} else {
-					Err(Error::Other(
-						"Mismatch between readable and leaf entry.".to_string(),
-					))
-				}
-			}
-			EntryKind::Zip { real_path, .. } => {
-				let file = match File::open(&real_path) {
-					Ok(f) => f,
-					Err(err) => {
-						return Err(Error::Other(format!("{}", err)));
-					}
-				};
-
-				let mut zip = match ZipArchive::new(file) {
-					Ok(z) => z,
-					Err(err) => {
-						return Err(Error::Other(format!("{}", err)));
-					}
-				};
-
-				let entry = self.lookup(p)?;
-
-				if let EntryKind::ZipEntry { index } = &entry.kind {
-					let mut zfile = match zip.by_index(*index) {
-						Ok(zf) => zf,
-						Err(err) => {
-							return Err(Error::Other(format!("Zip file read failure: {}", err)));
-						}
-					};
-
-					let mut ret = Vec::<u8>::with_capacity(zfile.size() as usize);
-
-					match zfile.read_to_end(&mut ret) {
-						Ok(bytes_read) => {
-							if bytes_read != ret.capacity() {
-								return Err(Error::Other(format!(
-									"Incomplete file read of zip entry; 
-										expected {}, got {}.",
-									ret.capacity(),
-									bytes_read
-								)));
-							}
-						}
-						Err(err) => return Err(Error::Other(format!("Zip read failed: {}", err))),
-					};
-
-					Ok(ret)
-				} else {
-					Err(Error::Other(
-						"Mismatch between readable and leaf entry.".to_string(),
-					))
-				}
-			}
-			_ => Err(Error::Unreadable),
+		match &entry.kind {
+			EntryKind::Directory { .. } => Err(Error::Unreadable),
+			EntryKind::Leaf { bytes } => Ok(&bytes[..]),
 		}
 	}
 
-	pub fn read_string(&self, path: impl AsRef<Path>) -> Result<String, Error> {
-		let bytes = self.read_bytes(path)?;
-		Ok(String::from_utf8_lossy(&bytes[..]).to_string())
-	}
-}
+	/// Returns `Error::InvalidUtf8` if the contents at the path are not valid UTF-8.
+	/// Otherwise acts like `read()`.
+	pub fn read_str(&self, path: impl AsRef<Path>) -> Result<&str, Error> {
+		let bytes = self.read(path)?;
 
-// Internal implementation details: anything related to mounting.
-impl VirtualFs {
-	fn build_mount_point<'s>(
-		parent: &mut Entry,
-		mut iter: impl Iterator<Item = &'s str>,
-	) -> Result<(), Error> {
-		let p = match iter.next() {
-			Some(p) => p,
-			None => {
-				return Ok(());
-			}
-		};
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::build_mount_point()` expected a fake directory.");
-
-		for e in subs.iter_mut() {
-			if e.name != p {
-				continue;
-			}
-
-			if e.is_leaf() {
-				return Err(Error::Other(
-					"Attempted to build mount point onto a leaf entry.".to_string(),
-				));
-			}
-
-			// As per the above check, this should never fail
-			let subs = e.sub_entries_mut().unwrap();
-
-			subs.push(Entry {
-				name: String::from(p),
-				kind: EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default(),
-				},
-			});
-
-			return Self::build_mount_point(subs.last_mut().unwrap(), iter);
-		}
-
-		// If we made it here, the given entry has no sub-entry corresponding
-		// to the intended component in the mount point, and it needs to be pushed
-
-		subs.push(Entry {
-			name: String::from(p),
-			kind: EntryKind::FakeDirectory {
-				sub_entries: Vec::<Entry>::default(),
-			},
-		});
-
-		return Self::build_mount_point(subs.last_mut().unwrap(), iter);
-	}
-
-	/// Forwards files of an as-yet unknown kind to the right mounting function.
-	/// `parent` should be the pre-existing entry that the new entry will be
-	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
-	/// should be `Self::root`.
-	fn mount_file(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
-		if path.is_symlink() {
-			return Err(Error::SymlinkMount);
-		}
-
-		if has_gzdoom_extension(path) || has_zip_extension(path) || has_eternity_extension(path) {
-			return Self::mount_zip(path, mount_name, parent);
-		}
-
-		if has_wad_extension(path) {
-			match is_valid_wad(path) {
-				Ok(b) => {
-					if b {
-						return Self::mount_wad(path, mount_name, parent);
-					} else {
-						return Err(Error::Other(format!(
-							"Attempted to mount malformed WAD file: {}",
-							path.display()
-						)));
-					}
-				}
-				Err(err) => {
-					return Err(Error::Other(format!(
-						"Failed to determine if file is valid WAD: {}
-						\n\tError: {}",
-						path.display(),
-						err
-					)));
-				}
-			}
-		}
-
-		// Neither zip, nor WAD. Mount whatever this is
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::mount_file()` illegally received a leaf entry.");
-
-		subs.push(Entry {
-			name: mount_name.to_owned(),
-			kind: EntryKind::File {
-				real_path: path.to_owned(),
-			},
-		});
-
-		Ok(())
-	}
-
-	/// `parent` should be the pre-existing entry that the new entry will be
-	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
-	/// should be `Self::root`.
-	fn mount_zip(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
-		let file = match File::open(path) {
-			Ok(f) => f,
-			Err(err) => {
-				return Err(Error::Other(format!("{}", err)));
-			}
-		};
-
-		let mut zip = match ZipArchive::new(file) {
-			Ok(z) => z,
-			Err(err) => {
-				return Err(Error::Other(format!("{}", err)));
-			}
-		};
-
-		let new = Entry {
-			name: mount_name.to_owned(),
-			kind: EntryKind::Zip {
-				real_path: path.to_owned(),
-				sub_entries: Vec::<Entry>::default(),
-			},
-		};
-
-		// Grody workaround for loop mutability
-		let new = Some(new);
-		let new = std::cell::RefCell::new(new);
-
-		for i in 0..zip.len() {
-			let zfile = match zip.by_index(i) {
-				Ok(zf) => zf,
-				Err(err) => {
-					warn!(
-						"Zip file contains bad index {}: {}\nError: {}",
-						path.display(),
-						i,
-						err
-					);
-					continue;
-				}
-			};
-
-			let fpath = match zfile.enclosed_name() {
-				Some(fp) => fp,
-				None => {
-					warn!(
-						"Zip file contains unsafe path at index {}: {}",
-						i,
-						path.display()
-					);
-					continue;
-				}
-			};
-
-			let iter = str_iter_from_path(fpath).fuse();
-			let counter = str_iter_from_path(fpath).fuse().count();
-
-			let kind: EntryKind = if zfile.is_dir() {
-				EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default(),
-				}
-			} else {
-				EntryKind::ZipEntry { index: i }
-			};
-
-			Self::mount_zip_recur(new.borrow_mut().as_mut().unwrap(), iter, counter, kind);
-		}
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::mount_zip()` expected a non-leaf parent.");
-
-		subs.push(new.take().unwrap());
-
-		Ok(())
-	}
-
-	/// `parent` should be the pre-existing entry that the new entry will be
-	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
-	/// should be `Self::root`.
-	fn mount_zip_recur<'a>(
-		parent: &mut Entry,
-		mut iter: impl Iterator<Item = &'a str>,
-		mut counter: usize,
-		kind: EntryKind,
-	) {
-		let comp = match iter.next() {
-			Some(c) => c,
-			None => {
-				return;
-			}
-		};
-
-		counter -= 1;
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::mount_zip_recur()` expected a non-leaf parent.");
-
-		if counter == 0 {
-			subs.push(Entry {
-				name: comp.to_owned(),
-				kind,
-			});
-
-			return;
-		}
-
-		// Not at the path's end yet. A directory may exist at this path component;
-		// if so, push the new entry on to it. Otherwise, create that new dir.,
-		// and then recur into it
-
-		let mut recur_into = subs.len();
-
-		for (i, sub) in subs.iter().enumerate() {
-			if sub.name != comp {
-				continue;
-			}
-
-			recur_into = i;
-			break;
-		}
-
-		if recur_into != subs.len() {
-			Self::mount_zip_recur(subs.get_mut(recur_into).unwrap(), iter, counter, kind);
-		} else {
-			subs.push(Entry {
-				name: comp.to_owned(),
-				kind: EntryKind::FakeDirectory {
-					sub_entries: Vec::<Entry>::default(),
-				},
-			});
-
-			Self::mount_zip_recur(subs.last_mut().unwrap(), iter, counter, kind);
+		match std::str::from_utf8(bytes) {
+			Ok(ret) => Ok(ret),
+			Err(_) => Err(Error::InvalidUtf8),
 		}
 	}
 
-	/// `parent` should be the pre-existing entry that the new entry will be
-	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
-	/// should be `Self::root`.
-	fn mount_dir(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::mount_dir()` expected a non-leaf node.");
-
-		subs.push(Entry {
-			name: mount_name.to_owned(),
-			kind: EntryKind::Directory {
-				sub_entries: Vec::<Entry>::default(),
-			},
-		});
-
-		// Now, check under this directory for other files/dirs/zips/WADs
-
-		let new = subs.last_mut().unwrap();
-
-		let reader = match fs::read_dir(path) {
-			Ok(r) => r,
-			Err(err) => {
-				return Err(Error::Other(format!("{}", err)));
-			}
-		};
-
-		for deres in reader {
-			if deres.is_err() {
-				warn!(
-					"Skipping malformed directory entry under: {}",
-					path.display()
-				);
-				continue;
-			}
-
-			let dentry = deres.unwrap();
-
-			match dentry.file_type() {
-				Ok(ft) => {
-					if ft.is_symlink() {
-						continue;
-					}
-
-					let fname = dentry.file_name();
-					let fnamestr = fname.to_str();
-
-					if fnamestr.is_none() {
-						warn!(
-							"Dir. entry with invalid UTF-8 in file name will \
-							not be mounted: {}",
-							dentry.path().display()
-						);
-						continue;
-					}
-
-					let dp = dentry.path();
-
-					let res = if ft.is_dir() {
-						Self::mount_dir(&dp, fnamestr.unwrap(), new)
-					} else {
-						Self::mount_file(&dp, fnamestr.unwrap(), new)
-					};
-
-					match res {
-						Ok(()) => {}
-						Err(err) => {
-							warn!("Failed to mount: {}\nError: {}", dp.display(), err);
-						}
-					};
-				}
-				Err(err) => {
-					warn!(
-						"Failed to determine type of dir. entry; skipping: {:?}
-						Error: {}",
-						dentry.file_name(),
-						err
-					);
-					continue;
-				}
-			};
-		}
-
-		Ok(())
-	}
-
-	/// `parent` should be the pre-existing entry that the new entry will be
-	/// pushed onto. Thus, if the given mount point is "/DOOM2", the given parent
-	/// should be `Self::root`.
-	fn mount_wad(path: &Path, mount_name: &str, parent: &mut Entry) -> Result<(), Error> {
-		let wad = match wad::load_wad_file(path) {
-			Ok(w) => w,
-			Err(err) => {
-				return Err(Error::Other(format!("{}", err)));
-			}
-		};
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("`VirtualFs::mount_wad()` expected a non-leaf parent.");
-
-		let mut subsubs = Vec::<Entry>::default();
-
-		for went in wad.entry_iter() {
-			subsubs.push(Entry {
-				name: went.display_name().to_owned(),
-				kind: EntryKind::WadEntry { id: went.id },
-			})
-		}
-
-		subs.push(Entry {
-			name: mount_name.to_owned(),
-			kind: EntryKind::Wad {
-				wad,
-				sub_entries: subsubs,
-			},
-		});
-
-		Ok(())
-	}
-}
-
-// Internal implementation details: lookup functions.
-impl VirtualFs {
-	fn lookup(&self, path: impl AsRef<Path>) -> Result<&Entry, Error> {
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	pub fn lookup(&self, path: impl AsRef<Path>) -> Result<&Entry, Error> {
 		let p = path.as_ref();
 
 		if p.is_empty() || p.is_root() {
@@ -819,12 +299,9 @@ impl VirtualFs {
 			}
 		};
 
-		let subs = self
-			.root
-			.sub_entries()
-			.expect("Lookup miss on a VFS leaf entry.");
+		let children = self.root.children();
 
-		for entry in subs {
+		for entry in children {
 			if p != entry.name {
 				continue;
 			}
@@ -835,6 +312,521 @@ impl VirtualFs {
 		Err(Error::NonExistentEntry)
 	}
 
+	pub fn file_names<'s>(
+		&'s self,
+		path: impl AsRef<Path>,
+	) -> Result<impl Iterator<Item = &'s String>, Error> {
+		let entry: &'s Entry = match self.lookup(path) {
+			Ok(e) => e,
+			Err(err) => {
+				return Err(err);
+			}
+		};
+
+		let closure = |c: &'s Entry| -> &'s String { &c.name };
+
+		if entry.is_leaf() {
+			let slice: &[Entry] = &[];
+			return Ok(slice.iter().map(closure));
+		}
+
+		let children = entry.children();
+		Ok(children.iter().map(closure))
+	}
+
+	/// Get the entries underneath a directory, as well as the number of entries.
+	/// Precludes the need for 2 lookups to get both the iterator and count.
+	/// Only returns an error if the given path is non-existent. If this operation
+	/// is requested for a leaf node, an empty iterator is returned.
+	pub fn itemize<'s>(
+		&'s self,
+		path: impl AsRef<Path>,
+	) -> Result<(impl Iterator<Item = &'s Entry>, usize), Error> {
+		let entry: &'s Entry = match self.lookup(path) {
+			Ok(e) => e,
+			Err(err) => {
+				return Err(err);
+			}
+		};
+
+		if entry.is_leaf() {
+			let slice: &[Entry] = &[];
+			return Ok((slice.iter(), 0));
+		}
+
+		let children = entry.children();
+		Ok((children.iter(), children.len()))
+	}
+}
+
+pub struct Entry {
+	name: String,
+	kind: EntryKind,
+}
+
+pub enum EntryKind {
+	Leaf { bytes: Vec<u8> },
+	Directory { children: Vec<Entry> },
+}
+
+impl Entry {
+	pub fn get_name(&self) -> &str {
+		&self.name
+	}
+
+	pub fn is_leaf(&self) -> bool {
+		matches!(self.kind, EntryKind::Leaf { .. })
+	}
+
+	pub fn is_dir(&self) -> bool {
+		matches!(self.kind, EntryKind::Directory { .. })
+	}
+
+	/// Note: non-recursive.
+	pub fn has_child(&self, name: &str) -> bool {
+		match &self.kind {
+			EntryKind::Directory { children } => {
+				for child in children {
+					if child.name == name {
+						return true;
+					}
+				}
+			}
+			_ => {
+				// Should pre-verify first, and thus never reach this point
+				panic!("Attempted to retrieve children of a VFS leaf node.");
+			}
+		}
+
+		false
+	}
+
+	/// Panics if used on a leaf node. Check to ensure it's a directory beforehand.
+	pub fn children(&self) -> &Vec<Entry> {
+		match &self.kind {
+			EntryKind::Directory { children } => children,
+			_ => {
+				// Should pre-verify first, and thus never reach this point
+				panic!("Attempted to retrieve children of a VFS leaf node.");
+			}
+		}
+	}
+
+	/// Panics if used on a leaf node. Check to ensure it's a directory beforehand.
+	pub fn children_mut(&mut self) -> &mut Vec<Entry> {
+		match &mut self.kind {
+			EntryKind::Directory { children } => children,
+			_ => {
+				// Should pre-verify first, and thus never reach this point
+				panic!("Attempted to mutably retrieve children of a VFS leaf node.");
+			}
+		}
+	}
+}
+
+// Internal implementation details: anything related to mounting.
+impl VirtualFs {
+	/// Forwards files of an as-yet unknown kind to the right mounting function.
+	fn mount_file(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
+		match is_valid_wad(&bytes[..], bytes.len().try_into().unwrap()) {
+			Ok(b) => {
+				if b {
+					// If this WAD was nested in another archive,
+					// it will need to have its extension taken off
+					return Self::mount_wad(bytes, mount_name.split('.').next().unwrap());
+				}
+			}
+			Err(err) => {
+				warn!(
+					"Failed to determine if file is a WAD: {}
+					Error: {}",
+					mount_name, err
+				);
+				return Err(Error::IoError(err));
+			}
+		};
+
+		if is_zip(&bytes) {
+			// If this zip file was nested in another archive,
+			// it will need to have its extension taken off
+			return Self::mount_zip(bytes, mount_name.split('.').next().unwrap());
+		}
+
+		// This isn't any kind of archive. Mount whatever it may be
+
+		Ok(Entry {
+			name: mount_name.to_owned(),
+			kind: EntryKind::Leaf { bytes },
+		})
+	}
+
+	fn mount_zip(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
+		let cursor = Cursor::new(&bytes);
+		let mut zip = ZipArchive::new(cursor).map_err(Error::ZipError)?;
+
+		let mut ret = Entry {
+			name: mount_name.to_string(),
+			kind: EntryKind::Directory {
+				children: Vec::<Entry>::default(),
+			},
+		};
+
+		for i in 0..zip.len() {
+			let mut zfile = match zip.by_index(i) {
+				// Zip directories get constructed when mounting
+				// leaf files that rely on them
+				Ok(z) => {
+					if z.is_dir() {
+						continue;
+					} else {
+						z
+					}
+				}
+				Err(err) => {
+					warn!(
+						"Skipping malformed entry in zip archive: {}
+						Error: {}",
+						mount_name, err
+					);
+					continue;
+				}
+			};
+
+			let zfsize = zfile.size();
+			let mut bytes = Vec::<u8>::with_capacity(zfsize.try_into().unwrap());
+
+			match zfile.enclosed_name() {
+				Some(_) => {}
+				None => {
+					warn!(
+						"A zip file entry contains an unsafe path at index: {}
+						Zip file mount name: {}",
+						i, mount_name
+					);
+					continue;
+				}
+			}
+
+			match io::copy(&mut zfile, &mut bytes) {
+				Ok(count) => {
+					if count != zfsize {
+						warn!(
+							"Failed to read all bytes of zip file entry: {}
+							Zip file mount name: {}",
+							zfile.enclosed_name().unwrap().display(),
+							mount_name
+						);
+						continue;
+					}
+				}
+				Err(err) => {
+					warn!(
+						"Failed to read zip file entry: {}
+						Zip file mount name: {}
+						Error: {}",
+						zfile.enclosed_name().unwrap().display(),
+						mount_name,
+						err
+					);
+					continue;
+				}
+			};
+
+			let zfpath = match zfile.enclosed_name() {
+				Some(en) => en,
+				None => {
+					warn!(
+						"Zip file contains unsafe path at index {}: {}",
+						i, mount_name
+					);
+					continue;
+				}
+			};
+
+			let iter = str_iter_from_path(zfpath);
+			let counter = zfpath.size();
+			Self::mount_zip_recur(&mut ret, iter, counter, bytes);
+		}
+
+		Ok(ret)
+	}
+
+	fn mount_zip_recur<'a>(
+		parent: &mut Entry,
+		mut iter: impl Iterator<Item = &'a str>,
+		mut counter: usize,
+		bytes: Vec<u8>,
+	) {
+		let comp = match iter.next() {
+			Some(c) => c,
+			None => {
+				return;
+			}
+		};
+
+		counter -= 1;
+
+		let children = parent.children_mut();
+
+		if counter == 0 {
+			// Time to push a leaf node. This could be a zip, a WAD, or neither
+			match Self::mount_file(bytes, comp) {
+				Ok(entry) => {
+					children.push(entry);
+					return;
+				}
+				Err(err) => {
+					warn!(
+						"Failed to mount zip file: {}\nError: {}",
+						iter.collect::<PathBuf>().join(comp).display(),
+						err
+					);
+					return;
+				}
+			};
+		}
+
+		// Not at the path's end yet. A directory may exist at this path component;
+		// if so, push the new entry on to it. Otherwise, create that new dir.,
+		// and then recur into it
+
+		let mut recur_into = children.len();
+
+		for (i, sub) in children.iter().enumerate() {
+			if sub.name != comp {
+				continue;
+			}
+
+			recur_into = i;
+			break;
+		}
+
+		if recur_into != children.len() {
+			Self::mount_zip_recur(children.get_mut(recur_into).unwrap(), iter, counter, bytes);
+		} else {
+			children.push(Entry {
+				name: comp.to_owned(),
+				kind: EntryKind::Directory {
+					children: Vec::<Entry>::default(),
+				},
+			});
+
+			Self::mount_zip_recur(children.last_mut().unwrap(), iter, counter, bytes);
+		}
+	}
+
+	fn mount_wad(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
+		lazy_static! {
+			static ref RGXSET_MAPMARKER: RegexSet =
+				RegexSet::new(&[r"MAP[0-9]{2}", r"E[0-9]M[0-9]", r"HUBMAP"])
+					.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPMARKER`.");
+			static ref RGXSET_MAPPART: RegexSet = RegexSet::new(&[
+				r"THINGS",
+				r"LINEDEFS",
+				r"SIDEDEFS",
+				r"VERTEXES",
+				r"SEGS",
+				r"SSECTORS",
+				r"NODES",
+				r"SECTORS",
+				r"REJECTS",
+				r"BLOCKMAP",
+				r"BEHAVIOR",
+				// UDMF
+				r"TEXTMAP",
+				r"DIALOGUE",
+				r"ZNODES",
+				r"SCRIPTS",
+				// Note: ENDMAP gets filtered out, since there's no need to keep it
+			])
+			.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPLUMP`.");
+		};
+
+		let wad = wad::parse_wad(bytes).map_err(Error::WadError)?;
+		let mut dissolution = wad.dissolve();
+
+		let mut children = Vec::<Entry>::default();
+		let mut mapfold: Option<Entry> = None;
+
+		for (ebytes, name) in dissolution.drain(..) {
+			if RGXSET_MAPMARKER.is_match(&name) {
+				mapfold = Some(Entry {
+					name,
+					kind: EntryKind::Directory {
+						children: Default::default(),
+					},
+				});
+				continue;
+			}
+
+			let dup_pos = children.iter().position(|entry| entry.name == name);
+
+			match dup_pos {
+				None => {}
+				Some(pos) => {
+					let mut entry = children.swap_remove(pos);
+
+					match entry.kind {
+						EntryKind::Leaf { .. } => {
+							let mut sub_children = Vec::<Entry>::default();
+							entry.name = "000".to_string();
+
+							sub_children.push(entry);
+							sub_children.push(Entry {
+								name: "001".to_string(),
+								kind: EntryKind::Leaf { bytes: ebytes },
+							});
+
+							let new_folder = Entry {
+								name,
+								kind: EntryKind::Directory {
+									children: sub_children,
+								},
+							};
+
+							children.push(new_folder);
+						}
+						EntryKind::Directory { mut children } => {
+							children.push(Entry {
+								name: format!("{:03}", children.len()),
+								kind: EntryKind::Leaf { bytes: ebytes },
+							});
+						}
+					}
+
+					continue;
+				}
+			}
+
+			let pop_map = match &mut mapfold {
+				Some(entry) => {
+					if RGXSET_MAPPART.is_match(&name) {
+						entry.children_mut().push(Entry {
+							name,
+							kind: EntryKind::Leaf { bytes: ebytes },
+						});
+						continue;
+					} else {
+						true
+					}
+				}
+				None => {
+					children.push(Entry {
+						name,
+						kind: EntryKind::Leaf { bytes: ebytes },
+					});
+					continue;
+				}
+			};
+
+			if pop_map {
+				children.push(mapfold.take().unwrap());
+			}
+		}
+
+		if mapfold.is_some() {
+			children.push(mapfold.take().unwrap());
+		}
+
+		Ok(Entry {
+			name: mount_name.to_string(),
+			kind: EntryKind::Directory { children },
+		})
+	}
+
+	fn mount_dir(real_path: &Path, mount_name: &str) -> Result<Entry, Error> {
+		let mut children = Vec::<Entry>::default();
+
+		// Check under this directory for other files/directories/archives
+
+		let read_dir = match fs::read_dir(real_path) {
+			Ok(r) => r.filter_map(|res| match res {
+				Ok(r) => Some(r),
+				Err(_) => None,
+			}),
+			Err(err) => {
+				return Err(Error::DirectoryRead(err));
+			}
+		};
+
+		for entry in read_dir {
+			let ftype = match entry.file_type() {
+				Ok(ft) => ft,
+				Err(err) => {
+					warn!(
+						"Skipping mounting dir. entry of unknown type: {}
+						File type acquiry error: {}",
+						entry.path().display(),
+						err
+					);
+					continue;
+				}
+			};
+
+			if ftype.is_symlink() {
+				continue;
+			}
+
+			let entry_path = entry.path();
+
+			let fname = entry.file_name();
+			let fname = match fname.to_str() {
+				Some(f) => f,
+				None => {
+					warn!(
+						"Directory entry with invalid UTF-8 in file name will \
+						not be mounted: {}",
+						entry_path.display()
+					);
+					continue;
+				}
+			};
+
+			let res = if ftype.is_dir() {
+				Self::mount_dir(&entry_path, fname)
+			} else {
+				let bytes = match fs::read(&entry_path) {
+					Ok(b) => b,
+					Err(err) => {
+						warn!(
+							"Failed to read object for mounting: {}
+							Error: {}",
+							entry_path.display(),
+							err
+						);
+
+						return Err(Error::IoError(err));
+					}
+				};
+
+				Self::mount_file(bytes, fname)
+			};
+
+			match res {
+				Ok(e) => {
+					children.push(e);
+				}
+				Err(err) => {
+					warn!(
+						"Failed to mount directory entry: {}
+						Error: {}",
+						entry_path.display(),
+						err
+					);
+					continue;
+				}
+			}
+		}
+
+		Ok(Entry {
+			name: mount_name.to_owned(),
+			kind: EntryKind::Directory { children },
+		})
+	}
+}
+
+// Internal implementation details: lookup functions.
+impl VirtualFs {
 	fn lookup_recur<'a>(
 		parent: &Entry,
 		mut iter: impl Iterator<Item = &'a str>,
@@ -846,11 +838,9 @@ impl VirtualFs {
 			}
 		};
 
-		let subs = parent
-			.sub_entries()
-			.expect("Lookup miss on a VFS leaf entry.");
+		let children = parent.children();
 
-		for e in subs {
+		for e in children {
 			if p != e.name {
 				continue;
 			}
@@ -860,289 +850,84 @@ impl VirtualFs {
 
 		Err(Error::NonExistentEntry)
 	}
+}
 
-	fn lookup_mut<'a>(&'a mut self, path: &'a Path) -> Result<&mut Entry, Error> {
-		if path.is_empty() || path.is_root() {
-			return Ok(&mut self.root);
+impl Default for VirtualFs {
+	fn default() -> Self {
+		VirtualFs {
+			root: Entry {
+				name: String::from("/"),
+				kind: EntryKind::Directory {
+					children: Default::default(),
+				},
+			},
 		}
-
-		let mut iter = str_iter_from_path(path);
-
-		let p = match iter.next() {
-			Some(n) => {
-				if n == "/" {
-					iter.next().ok_or(Error::NonExistentEntry)?
-				} else {
-					n
-				}
-			}
-			None => {
-				return Err(Error::NonExistentEntry);
-			}
-		};
-
-		let subs = self
-			.root
-			.sub_entries_mut()
-			.expect("Lookup miss on a VFS leaf entry.");
-
-		for entry in subs {
-			if p != entry.name {
-				continue;
-			}
-
-			return Self::lookup_recur_mut(entry, iter);
-		}
-
-		Err(Error::NonExistentEntry)
-	}
-
-	fn lookup_recur_mut<'a>(
-		parent: &'a mut Entry,
-		mut iter: impl Iterator<Item = &'a str>,
-	) -> Result<&'a mut Entry, Error> {
-		let p = match iter.next() {
-			Some(p) => p,
-			None => {
-				return Ok(parent);
-			}
-		};
-
-		let subs = parent
-			.sub_entries_mut()
-			.expect("Lookup miss on a VFS leaf entry.");
-
-		for e in subs {
-			if p != e.name {
-				continue;
-			}
-
-			return Self::lookup_recur_mut(e, iter);
-		}
-
-		Err(Error::NonExistentEntry)
-	}
-
-	/// If attempting to read a file in an archive or a WAD entry, one needs
-	/// the full chain of entries in addition to the entry with the real path to
-	/// the archive or WAD itself. This retrieves the latter.
-	fn lookup_to_read<'a>(
-		parent: &'a Entry,
-		mut iter: impl Iterator<Item = &'a str>,
-	) -> Result<&'a Entry, Error> {
-		let p = match iter.next() {
-			Some(n) => {
-				if n == "/" {
-					iter.next().ok_or(Error::NonExistentEntry)?
-				} else {
-					n
-				}
-			}
-			None => {
-				"" // Next check may pass, so maybe nothing wrong here
-			}
-		};
-
-		if parent.is_readable() {
-			return Ok(parent);
-		}
-
-		let subs = match parent.sub_entries() {
-			Some(s) => s,
-			None => {
-				return Err(Error::NonExistentEntry);
-			}
-		};
-
-		for sub in subs {
-			if sub.name != p {
-				continue;
-			}
-
-			return Self::lookup_to_read(sub, iter);
-		}
-
-		Err(Error::Unreadable)
 	}
 }
+
+lazy_static! {
+	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
+		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
+}
+
+// Trait for Impure-specific functionality /////////////////////////////////////
 
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
 pub trait ImpureVfs {
-	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<DataKind, Error>;
-	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
-
 	/// On the debug build, attempt to mount `/env::current_dir()/data`.
 	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
-	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<Metadata>;
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
+
+	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+	fn is_udmf(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
 
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<Metadata, Box<dyn std::error::Error>>;
-}
+	) -> Result<GameDataMeta, Box<dyn std::error::Error>>;
 
-lazy_static! {
-	static ref RGXSET_GZD: RegexSet = RegexSet::new(&[
-		r"^(?i)decorate",
-		r"^(?i)zscript",
-		r"^(?i)cvarinfo",
-		r"^(?i)menudef",
-		r"^(?i)sbarinfo",
-		r"^(?i)zmapinfo"
-	])
-	.expect("Failed to evaluate `vfs::RGXSET_GZD`.");
-	static ref RGXSET_ETERN: RegexSet =
-		RegexSet::new(&[r"^(?i)edfroot", r"^(?i)emapinfo", r"(?i)\.edf$"])
-			.expect("Failed to evaluate `vfs::RGXSET_ETERN`.");
+	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
 }
 
 impl ImpureVfs for VirtualFs {
-	fn gamedata_kind(&self, path: impl AsRef<Path>) -> Result<DataKind, Error> {
-		let entry = self.lookup(path)?;
-
-		let check_subentries = |sub_entries: &Vec<Entry>| {
-			for sub in sub_entries {
-				if sub.name == "meta.toml" {
-					return Some(DataKind::Impure);
-				}
-
-				if RGXSET_GZD.is_match(&sub.name) {
-					return Some(DataKind::GzDoom);
-				}
-
-				if RGXSET_ETERN.is_match(&sub.name) {
-					return Some(DataKind::Eternity);
-				}
-			}
-
-			None
-		};
-
-		let check_path = |path: &Path| {
-			if has_gzdoom_extension(path) {
-				return Some(DataKind::GzDoom);
-			}
-
-			if has_eternity_extension(path) {
-				return Some(DataKind::Eternity);
-			}
-
-			None
-		};
-
-		match &entry.kind {
-			EntryKind::Wad { .. } => {
-				return Ok(DataKind::Wad);
-			}
-			EntryKind::File { real_path, .. } => {
-				if is_binary(real_path).map_err(Error::IoError)? {
-					return Ok(DataKind::Text);
-				}
-			}
-			EntryKind::Directory { sub_entries, .. } => {
-				match check_subentries(sub_entries) {
-					Some(kind) => return Ok(kind),
-					None => {}
-				};
-			}
-			EntryKind::Zip {
-				sub_entries,
-				real_path,
-				..
-			} => {
-				match check_subentries(sub_entries) {
-					Some(kind) => return Ok(kind),
-					None => {}
-				};
-
-				match check_path(real_path) {
-					Some(kind) => return Ok(kind),
-					None => {}
-				};
-			}
-			_ => {
-				// No other kind of entry from the types above should
-				// get mounted onto root, under any circumstances
-				unreachable!();
-			}
-		};
-
-		Ok(DataKind::None)
-	}
-
-	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon> {
-		let bytes = match self.read_bytes(path) {
-			Ok(b) => b,
-			Err(err) => {
-				error!("Failed to read engine icon image bytes: {}", err);
-				return None;
-			}
-		};
-
-		let icon = match image::load_from_memory(&bytes[..]) {
-			Ok(i) => i,
-			Err(err) => {
-				error!("Failed to load engine icon: {}", err);
-				return None;
-			}
-		}
-		.into_rgba8();
-
-		let (width, height) = icon.dimensions();
-		let rgba = icon.into_raw();
-
-		match winit::window::Icon::from_rgba(rgba, width, height) {
-			Ok(r) => Some(r),
-			Err(err) => {
-				error!("Failed to create winit icon from image data: {}", err);
-				None
-			}
-		}
-	}
-
 	fn mount_enginedata(&mut self) -> Result<(), Error> {
 		#[cfg(not(debug_assertions))]
 		{
 			let path: PathBuf = [exe_dir(), PathBuf::from("impure.zip")].iter().collect();
-
-			self.mount(path, "/impure")
+			self.mount(&[(path, "/impure")]).pop().unwrap()
 		}
 		#[cfg(debug_assertions)]
 		{
+			use std::env;
+
 			let path: PathBuf = [
-				env::current_dir().or(Err(Error::NonExistentFile))?,
+				env::current_dir().map_err(Error::IoError)?,
 				PathBuf::from("data"),
 			]
 			.iter()
 			.collect();
 
-			self.mount(path, "/impure")
+			self.mount(&[(path, "/impure")]).pop().unwrap()
 		}
 	}
 
-	fn mount_gamedata(&mut self, paths: Vec<&Path>) -> Vec<Metadata> {
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta> {
 		let call_time = std::time::Instant::now();
-		let mut mounted_count = 0;
-		let mut ret = Vec::<Metadata>::default();
+		let mut to_mount = Vec::<(&Path, PathBuf)>::with_capacity(paths.len());
+		let mut vers_strings = Vec::<String>::with_capacity(paths.len());
+		let mut ret = Vec::<GameDataMeta>::with_capacity(paths.len());
 
 		for real_path in paths {
-			match real_path.metadata() {
-				Ok(metadata) => {
-					if metadata.is_symlink() {
-						continue;
-					}
-				}
-				Err(err) => {
-					error!(
-						"Failed to retrieve metadata for gamedata directory entry: {:?}
-						Error: {}",
-						real_path, err
-					);
-					continue;
-				}
-			};
+			if real_path.is_symlink() {
+				info!(
+					"Skipping game data object for mount: {}
+					Reason: mounting symbolic links is forbidden",
+					real_path.display()
+				);
+				continue;
+			}
 
 			let mount_point =
 				if real_path.is_dir() || is_supported_archive(&real_path).unwrap_or_default() {
@@ -1193,74 +978,216 @@ impl ImpureVfs for VirtualFs {
 				.replace_all(&mount_point, "")
 				.to_string();
 
-			let vers_str = version_from_filestem(&mut mount_point);
+			let vers = version_from_filestem(&mut mount_point);
+			vers_strings.push(vers.unwrap_or_default());
+			to_mount.push((real_path, PathBuf::from(&mount_point)));
+		}
 
-			match self.mount(&real_path, &mount_point) {
-				Ok(()) => {
-					mounted_count += 1;
+		let results = self.mount(&to_mount[..]);
+		debug_assert!(results.len() == to_mount.len() && to_mount.len() == vers_strings.len());
 
-					let gdk = match self.gamedata_kind(&mount_point) {
-						Ok(k) => k,
-						Err(err) => {
-							error!(
-								"Failed to determine gamedata type of: {}
-								Error: {}",
-								mount_point, err
-							);
-							continue;
-						}
-					};
+		for (i, res) in results.iter().enumerate() {
+			if res.is_err() {
+				// No error messaging here:
+				// should already have been reported by `mount()`
+				continue;
+			}
 
-					let meta = if gdk == DataKind::Impure {
-						let metapath: PathBuf =
-							[PathBuf::from(&mount_point), PathBuf::from("meta.toml")]
-								.iter()
-								.collect();
-
-						match self.parse_gamedata_meta(&metapath) {
-							Ok(m) => m,
-							Err(err) => {
-								error!(
-									"Failed to parse gamedata meta file for package: {}
-									Error: {}",
-									real_path.display(),
-									err
-								);
-								continue;
-							}
-						}
-					} else {
-						let mut m = Metadata::from_uuid(mount_point, gdk);
-						m.version = vers_str.unwrap_or_default();
-						m
-					};
-
-					ret.push(meta);
-				}
+			let is_impure_package = match self.is_impure_package(&to_mount[i].1) {
+				Ok(b) => b,
 				Err(err) => {
 					warn!(
-						"Failed to mount gamedata entry to virtual file system: {:?}
+						"Failed to determine if mounted item is an Impure package: {}
 						Error: {}",
-						real_path, err
+						to_mount[i].1.display(),
+						err
 					);
+					continue;
 				}
 			};
+
+			let meta = if is_impure_package {
+				let metapath: PathBuf = [PathBuf::from(&to_mount[i].1), PathBuf::from("meta.toml")]
+					.iter()
+					.collect();
+
+				match self.parse_gamedata_meta(&metapath) {
+					Ok(m) => m,
+					Err(err) => {
+						error!(
+							"Failed to parse gamedata meta file for package: {}
+							Error: {}",
+							to_mount[i].0.display(),
+							err
+						);
+						continue;
+					}
+				}
+			} else {
+				let uuid = to_mount[i].1.to_string_lossy().to_string();
+				let vers = vers_strings.remove(0);
+				GameDataMeta::new(uuid, vers)
+			};
+
+			ret.push(meta);
 		}
 
 		info!(
-			"Mounted {} gamedata objects in {} ms.",
-			mounted_count,
+			"Mounted {} game data object(s) in {} ms.",
+			results.len(),
 			call_time.elapsed().as_millis()
 		);
+
 		ret
+	}
+
+	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		let entry = self.lookup(path)?;
+
+		if entry.is_leaf() {
+			return Ok(false);
+		}
+
+		for child in entry.children() {
+			if child.name == "meta.toml" {
+				return Ok(true);
+			}
+		}
+
+		Ok(false)
+	}
+
+	fn is_udmf(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		let entry = self.lookup(path)?;
+		Ok(entry.has_child("TEXTMAP"))
 	}
 
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<Metadata, Box<dyn std::error::Error>> {
-		let text = self.read_string(path.as_ref())?;
-		let ret: Metadata = toml::from_str(&text)?;
+	) -> Result<GameDataMeta, Box<dyn std::error::Error>> {
+		let text = self.read_str(path.as_ref())?;
+		let ret: GameDataMeta = toml::from_str(text)?;
 		Ok(ret)
+	}
+
+	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon> {
+		let bytes = match self.read(path) {
+			Ok(b) => b,
+			Err(err) => {
+				error!("Failed to read engine icon image bytes: {}", err);
+				return None;
+			}
+		};
+
+		let icon = match image::load_from_memory(bytes) {
+			Ok(i) => i,
+			Err(err) => {
+				error!("Failed to load engine icon: {}", err);
+				return None;
+			}
+		}
+		.into_rgba8();
+
+		let (width, height) = icon.dimensions();
+		let rgba = icon.into_raw();
+
+		match winit::window::Icon::from_rgba(rgba, width, height) {
+			Ok(r) => Some(r),
+			Err(err) => {
+				error!("Failed to create winit icon from image data: {}", err);
+				None
+			}
+		}
+	}
+}
+
+// Error type //////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub enum Error {
+	/// A path argument failed to canonicalize somehow.
+	Canonicalization(io::Error),
+	/// Failure to read the entries of a directory the caller wanted to mount.
+	DirectoryRead(io::Error),
+	/// The caller provided a mount point that isn't comprised solely of
+	/// alphanumeric characters, underscores, dashes, periods, and forward slashes.
+	InvalidMountPoint,
+	/// A path argument did not pass a UTF-8 validity check.
+	InvalidUtf8,
+	IoError(io::Error),
+	/// Trying to mount something onto `DOOM2/PLAYPAL`, for example, is illegal.
+	MountToLeaf,
+	/// The caller attempted to lookup/read/write/unmount a non-existent file.
+	NonExistentEntry,
+	/// The caller attempted to lookup/read/write/mount a non-existent file.
+	NonExistentFile,
+	/// The caller attempted to read a directory, archive, or WAD.
+	Unreadable,
+	/// The caller attempted to mount something to a point which
+	/// already had something mounted onto it.
+	Remount,
+	/// The caller attempted to illegally mount a symbolic link.
+	SymlinkMount,
+	WadError(wad::Error),
+	ZipError(ZipError),
+}
+
+impl std::error::Error for Error {}
+
+impl fmt::Display for Error {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::Canonicalization(err) => {
+				write!(f, "Failed to canonicalize given path: {}", err)
+			}
+			Self::DirectoryRead(err) => {
+				write!(f, "Failed to read a directory: {}", err)
+			}
+			Self::InvalidMountPoint => {
+				write!(
+					f,
+					"Mount point can only contain letters, numbers, underscores, \
+					periods, dashes, and forward slashes."
+				)
+			}
+			Self::InvalidUtf8 => {
+				write!(f, "Given path failed to pass a UTF-8 validity check.")
+			}
+			Self::IoError(err) => {
+				write!(f, "{}", err)
+			}
+			Self::MountToLeaf => {
+				write!(
+					f,
+					"Attempted to mount something using an existing leaf node \
+					as part of the mount point."
+				)
+			}
+			Self::NonExistentEntry => {
+				write!(f, "Attempted to operate on a non-existent entry.")
+			}
+			Self::NonExistentFile => {
+				write!(f, "Attempted to operate on a non-existent file.")
+			}
+			Self::Unreadable => {
+				write!(
+					f,
+					"Directories, archives, and WADs are ineligible for reading."
+				)
+			}
+			Self::Remount => {
+				write!(f, "Something is already mounted to the given path.")
+			}
+			Self::SymlinkMount => {
+				write!(f, "Symbolic links can not be mounted.")
+			}
+			Self::WadError(err) => {
+				write!(f, "{}", err)
+			}
+			Self::ZipError(err) => {
+				write!(f, "{}", err)
+			}
+		}
 	}
 }

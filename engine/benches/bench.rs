@@ -35,7 +35,8 @@ pub fn vfs(crit: &mut Criterion) {
 			.collect();
 
 			let mut vfs = VirtualFs::default();
-			vfs.mount_gamedata(vec![&pwd_gd]);
+			let paths = vec![pwd_gd];
+			vfs.mount_gamedata(&paths);
 		});
 	});
 

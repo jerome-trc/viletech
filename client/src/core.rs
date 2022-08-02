@@ -24,21 +24,30 @@ use impure::{
 	rng::RngCore,
 	sim::Playsim,
 	utils::*,
-	vfs::{self, ImpureVfs, VirtualFs},
+	vfs::{self, VirtualFs, ImpureVfs},
 };
+
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
 	sound::static_sound::{PlaybackState, StaticSoundData, StaticSoundHandle, StaticSoundSettings},
 };
-use log::{error, info};
+use log::{error, info, warn};
 use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{env, error::Error, fs, io, path::PathBuf, sync::Arc, thread::Thread};
+use std::{
+	env,
+	error::Error,
+	fs,
+	io,
+	path::PathBuf,
+	sync::Arc,
+	thread::Thread, fmt::Write,
+};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
-pub enum Scene {
+enum Scene {
 	Frontend {
 		menu: FrontendMenu,
 	},
@@ -64,6 +73,10 @@ pub enum Scene {
 	Cutscene,
 }
 
+enum SceneChange {
+	PlaysimSingle { to_mount: Vec<PathBuf> },
+}
+
 pub struct AudioCore {
 	manager: AudioManager,
 	handles: Vec<StaticSoundHandle>,
@@ -78,8 +91,8 @@ pub struct ClientCore {
 	pub gfx: GfxCore,
 	pub audio: AudioCore,
 	pub console: Console,
-	pub scene: Scene,
-	next_scene: Option<Scene>,
+	scene: Scene,
+	next_scene: Option<SceneChange>,
 }
 
 // Public interface.
@@ -164,10 +177,14 @@ impl ClientCore {
 						*control_flow = ControlFlow::Exit;
 					}
 					FrontendAction::Start => {
-						let mut metas = self.vfs.write().mount_gamedata(menu.to_mount());
-						self.data.objects.append(&mut metas);
+						let to_mount = menu.to_mount();
+						let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
+						self.next_scene = Some(SceneChange::PlaysimSingle { to_mount });
 					}
 				}
+			}
+			Scene::Title { .. } => {
+				// ???
 			}
 			_ => {}
 		};
@@ -183,36 +200,39 @@ impl ClientCore {
 			match req {
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
+					let entry = match vfsg.lookup(&p) {
+						Ok(e) => e,
+						Err(_) => {
+							info!("Nothing exists at that path.");
+							continue;
+						}
+					};
 
-					if !vfsg.is_dir(&p) {
-						info!("\"{}\" is not a directory.", p.display());
+					if !entry.is_dir() {
+						info!("This entry is not a directory.");
 						continue;
 					}
 
-					let files = vfsg.file_names(&p);
+					let children = entry.children();
+					let mut output = String::with_capacity(children.len() * 32);
 
-					let mut output = String::with_capacity(files.len() * 32);
+					for child in children {
+						match write!(output, "\r\n\t{}", child.get_name()) {
+							Ok(()) => {},
+							Err(err) => {
+								warn!(
+									"Failed to write an output line for ccmd.: `file`
+									Error: {}", err
+								);
+							}
+						}
 
-					for f in &files {
-						output.push('\r');
-						output.push('\n');
-						output.push('\t');
-						output = output + f;
-
-						// TODO: Bespoke VFS may allow this to be optimised
-						let fullpath: PathBuf = [p.clone(), PathBuf::from(f)].iter().collect();
-
-						if vfsg.is_dir(fullpath.to_str().unwrap_or_default()) {
+						if child.is_dir() {
 							output.push('/');
 						}
 					}
 
-					info!(
-						"Files under \"{}\" ({}): {}",
-						p.display(),
-						files.len(),
-						output
-					);
+					info!("Files under \"{}\" ({}): {}", p.display(), children.len(), output);
 				}
 				ConsoleRequest::Uptime => {
 					self.print_uptime();
@@ -220,7 +240,7 @@ impl ClientCore {
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
 
-					let bytes = match vfsg.read_bytes(&arg) {
+					let bytes = match vfsg.read(&arg) {
 						Ok(b) => b,
 						Err(err) => {
 							if let vfs::Error::NonExistentEntry = err {
@@ -233,6 +253,7 @@ impl ClientCore {
 						}
 					};
 
+					let bytes = bytes.to_owned();
 					let cursor = io::Cursor::new(bytes);
 
 					let sdata = match StaticSoundData::from_cursor(
@@ -276,9 +297,25 @@ impl ClientCore {
 	pub fn on_key_event(&mut self, input: &KeyboardInput) {
 		self.console.on_key_event(input);
 	}
+
+	pub fn scene_change(&mut self) {
+		let next_scene = self.next_scene.take();
+
+		match next_scene {
+			None => {
+				// TODO: Mark as likely with intrinsics...?
+			}
+			Some(scene) => match scene {
+				SceneChange::PlaysimSingle { to_mount } => {
+					self.vfs.write().mount_gamedata(&to_mount);
+					self.start_game();
+				}
+			},
+		};
+	}
 }
 
-// Internal implementation details.
+// Internal implementation details: general.
 impl ClientCore {
 	fn register_console_commands(&mut self) {
 		self.console.register_command(ConsoleCommand::new(
@@ -450,5 +487,9 @@ impl ClientCore {
 		}
 
 		Ok(())
+	}
+
+	fn start_game(&mut self) {
+		// ???
 	}
 }

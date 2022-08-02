@@ -40,6 +40,10 @@ If you're aware of any attribution which is evidently missing from this list, or
     - By Cameron "bitshifter" Hart et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-MIT).
 	- https://docs.rs/glam/latest/glam/
+- globset
+	- By Andrew "BurntSushi" Gallant et. al.
+	- Provided under the [MIT License](https://github.com/BurntSushi/ripgrep/blob/master/crates/globset/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/ripgrep/blob/master/crates/globset/UNLICENSE).
+	- https://docs.rs/globset/latest/globset/
 - home
 	- By tesuji et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/brson/home/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/brson/home/blob/master/LICENSE-MIT).
@@ -92,6 +96,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Joshua "zesterer" Barretto et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
 	- https://docs.rs/pollster/latest/pollster/
+- rayon
+	- By Josh "cuviper" Stone, Niko "nikomatsakis" Matsakis, et. al. 
+	- Provided under the [Apache 2.0 License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT).
+	- https://docs.rs/rayon/latest/rayon/
 - regex
 	- By Andrew "BurntSushi" Gallant et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
