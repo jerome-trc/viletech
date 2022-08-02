@@ -27,7 +27,7 @@ use regex::{Regex, RegexSet};
 use std::{
 	fmt, fs,
 	io::{self, Cursor},
-	path::{Path, PathBuf}
+	path::{Path, PathBuf},
 };
 use zip::{result::ZipError, ZipArchive};
 
@@ -70,7 +70,9 @@ impl VirtualFs {
 						pair.0.display(),
 						err
 					);
-					results.lock().push((tuple.0, Err(Error::Canonicalization(err))));
+					results
+						.lock()
+						.push((tuple.0, Err(Error::Canonicalization(err))));
 					return;
 				}
 			};
@@ -112,7 +114,9 @@ impl VirtualFs {
 					and forward slashes. ({})",
 					mount_point.display()
 				);
-				results.lock().push((tuple.0, Err(Error::InvalidMountPoint)));
+				results
+					.lock()
+					.push((tuple.0, Err(Error::InvalidMountPoint)));
 				return;
 			}
 
@@ -174,7 +178,7 @@ impl VirtualFs {
 				Self::mount_file(bytes, mount_name)
 			};
 
-			let new_entry = match res {
+			let mut new_entry = match res {
 				Ok(e) => e,
 				Err(err) => {
 					warn!(
@@ -187,6 +191,7 @@ impl VirtualFs {
 				}
 			};
 
+			new_entry.sort();
 			output.lock().push(new_entry);
 			results.lock().push((tuple.0, Ok(())));
 
@@ -278,6 +283,30 @@ impl VirtualFs {
 
 	/// Note: the only error variant this can return is `NonExistentEntry`.
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Result<&Entry, Error> {
+		fn lookup_recur<'a>(
+			parent: &Entry,
+			mut iter: impl Iterator<Item = &'a str>,
+		) -> Result<&Entry, Error> {
+			let p = match iter.next() {
+				Some(p) => p,
+				None => {
+					return Ok(parent);
+				}
+			};
+
+			let children = parent.children();
+
+			for e in children {
+				if p != e.name {
+					continue;
+				}
+
+				return lookup_recur(e, iter);
+			}
+
+			Err(Error::NonExistentEntry)
+		}
+
 		let p = path.as_ref();
 
 		if p.is_empty() || p.is_root() {
@@ -306,7 +335,7 @@ impl VirtualFs {
 				continue;
 			}
 
-			return Self::lookup_recur(entry, iter);
+			return lookup_recur(entry, iter);
 		}
 
 		Err(Error::NonExistentEntry)
@@ -359,11 +388,13 @@ impl VirtualFs {
 	}
 }
 
+#[derive(Clone)]
 pub struct Entry {
 	name: String,
 	kind: EntryKind,
 }
 
+#[derive(Clone)]
 pub enum EntryKind {
 	Leaf { bytes: Vec<u8> },
 	Directory { children: Vec<Entry> },
@@ -383,18 +414,23 @@ impl Entry {
 	}
 
 	/// Note: non-recursive.
-	pub fn has_child(&self, name: &str) -> bool {
-		match &self.kind {
-			EntryKind::Directory { children } => {
-				for child in children {
-					if child.name == name {
-						return true;
-					}
-				}
+	/// Panics if used on a leaf node. Check to ensure it's a directory beforehand.
+	pub fn contains(&self, name: &str) -> bool {
+		for child in self.children() {
+			if child.name == name {
+				return true;
 			}
-			_ => {
-				// Should pre-verify first, and thus never reach this point
-				panic!("Attempted to retrieve children of a VFS leaf node.");
+		}
+
+		false
+	}
+
+	/// Note: non-recursive.
+	/// Panics if used on a leaf node. Check to ensure it's a directory beforehand.
+	pub fn contains_regex(&self, regex: &Regex) -> bool {
+		for child in self.children() {
+			if regex.is_match(&child.name) {
+				return true;
 			}
 		}
 
@@ -419,6 +455,27 @@ impl Entry {
 			_ => {
 				// Should pre-verify first, and thus never reach this point
 				panic!("Attempted to mutably retrieve children of a VFS leaf node.");
+			}
+		}
+	}
+
+	fn sort(&mut self) {
+		match &mut self.kind {
+			EntryKind::Leaf { .. } => {}
+			EntryKind::Directory { children } => {
+				children.sort_by(|a, b| {
+					if a.is_leaf() && b.is_dir() {
+						std::cmp::Ordering::Greater
+					} else if a.is_dir() && b.is_leaf() {
+						std::cmp::Ordering::Less
+					} else {
+						a.name.partial_cmp(&b.name).unwrap()
+					}
+				});
+
+				for child in children {
+					child.sort();
+				}
 			}
 		}
 	}
@@ -617,6 +674,8 @@ impl VirtualFs {
 
 	fn mount_wad(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
 		lazy_static! {
+			static ref RGX_NOMOUNT: Regex = Regex::new(r"[SPF][12]*_(?:START|END)")
+				.expect("Failed to evaluate `VirtualFs::mount_wad::RGX_NOMOUNT`.");
 			static ref RGXSET_MAPMARKER: RegexSet =
 				RegexSet::new(&[r"MAP[0-9]{2}", r"E[0-9]M[0-9]", r"HUBMAP"])
 					.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPMARKER`.");
@@ -639,7 +698,7 @@ impl VirtualFs {
 				r"SCRIPTS",
 				// Note: ENDMAP gets filtered out, since there's no need to keep it
 			])
-			.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPLUMP`.");
+			.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPPART`.");
 		};
 
 		let wad = wad::parse_wad(bytes).map_err(Error::WadError)?;
@@ -649,6 +708,11 @@ impl VirtualFs {
 		let mut mapfold: Option<Entry> = None;
 
 		for (ebytes, name) in dissolution.drain(..) {
+			// No need to keep markers delimiting graphics sections
+			if RGX_NOMOUNT.is_match(&name) {
+				continue;
+			}
+
 			if RGXSET_MAPMARKER.is_match(&name) {
 				mapfold = Some(Entry {
 					name,
@@ -825,33 +889,6 @@ impl VirtualFs {
 	}
 }
 
-// Internal implementation details: lookup functions.
-impl VirtualFs {
-	fn lookup_recur<'a>(
-		parent: &Entry,
-		mut iter: impl Iterator<Item = &'a str>,
-	) -> Result<&Entry, Error> {
-		let p = match iter.next() {
-			Some(p) => p,
-			None => {
-				return Ok(parent);
-			}
-		};
-
-		let children = parent.children();
-
-		for e in children {
-			if p != e.name {
-				continue;
-			}
-
-			return Self::lookup_recur(e, iter);
-		}
-
-		Err(Error::NonExistentEntry)
-	}
-}
-
 impl Default for VirtualFs {
 	fn default() -> Self {
 		VirtualFs {
@@ -870,7 +907,7 @@ lazy_static! {
 		.expect("Failed to evaluate `VirtualFs::mount::RGX_INVALIDMOUNTPATH`.");
 }
 
-// Trait for Impure-specific functionality /////////////////////////////////////
+// Traits for Impure-specific functionality ////////////////////////////////////
 
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
@@ -880,8 +917,25 @@ pub trait ImpureVfs {
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
 
+	/// See [`ImpureVfsEntry::is_impure_package`].
+	/// Note: the only error variant this can return is `NonExistentEntry`.
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
-	fn is_udmf(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+
+	/// See [`ImpureVfsEntry::is_udmf_map`].
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+
+	/// See [`ImpureVfsEntry::has_zscript`].
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	fn has_zscript(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+
+	/// See [`ImpureVfsEntry::has_edfroot`].
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	fn has_edfroot(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
+
+	/// See [`ImpureVfsEntry::has_decorate`].
+	/// Note: the only error variant this can return is `NonExistentEntry`.
+	fn has_decorate(&self, path: impl AsRef<Path>) -> Result<bool, Error>;
 
 	fn parse_gamedata_meta(
 		&self,
@@ -1042,24 +1096,23 @@ impl ImpureVfs for VirtualFs {
 	}
 
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		let entry = self.lookup(path)?;
-
-		if entry.is_leaf() {
-			return Ok(false);
-		}
-
-		for child in entry.children() {
-			if child.name == "meta.toml" {
-				return Ok(true);
-			}
-		}
-
-		Ok(false)
+		Ok(self.lookup(path)?.is_impure_package())
 	}
 
-	fn is_udmf(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
-		let entry = self.lookup(path)?;
-		Ok(entry.has_child("TEXTMAP"))
+	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		Ok(self.lookup(path)?.is_udmf_map())
+	}
+
+	fn has_zscript(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		Ok(self.lookup(path)?.has_zscript())
+	}
+
+	fn has_edfroot(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		Ok(self.lookup(path)?.has_edfroot())
+	}
+
+	fn has_decorate(&self, path: impl AsRef<Path>) -> Result<bool, Error> {
+		Ok(self.lookup(path)?.has_decorate())
 	}
 
 	fn parse_gamedata_meta(
@@ -1099,6 +1152,68 @@ impl ImpureVfs for VirtualFs {
 				None
 			}
 		}
+	}
+}
+
+/// A separate trait provides functions that are specific to Impure, so that the
+/// VFS itself can later be more easily made into a standalone library.
+pub trait ImpureVfsEntry {
+	/// Check if a directory node has a `meta.toml` leaf (case-insensitive) in it.
+	/// Unconditionally returns false if this entry is, itself, a leaf node.
+	fn is_impure_package(&self) -> bool;
+	/// Check if this is a directory with a leaf node named `TEXTMAP`.
+	/// Unconditionally returns false if this entry is, itself, a leaf node.
+	fn is_udmf_map(&self) -> bool;
+	/// Check if a directory node has a `decorate` file (case-insensitive) in it.
+	/// Unconditionally returns false if this entry is, itself, a leaf node.
+	fn has_decorate(&self) -> bool;
+	/// Check if a directory node has a `zscript` file (case-insensitive) in it.
+	/// Unconditionally returns false if this entry is, itself, a leaf node.
+	fn has_zscript(&self) -> bool;
+	/// Check if a directory node has an `edfroot` file (case-insensitive) in it.
+	/// Unconditionally returns false if this entry is, itself, a leaf node.
+	fn has_edfroot(&self) -> bool;
+}
+
+impl ImpureVfsEntry for Entry {
+	fn is_impure_package(&self) -> bool {
+		lazy_static! {
+			static ref RGX_METATOML: Regex = Regex::new(r"^(?i)meta\.toml")
+				.expect("Failed to evaluate `ImpureVfs::is_impure_package::RGX_METATOML`.");
+		};
+
+		self.is_dir() && self.contains_regex(&RGX_METATOML)
+	}
+
+	fn is_udmf_map(&self) -> bool {
+		self.contains("TEXTMAP")
+	}
+
+	fn has_decorate(&self) -> bool {
+		lazy_static! {
+			static ref RGX_DECORATE: Regex = Regex::new(r"^(?i)decorate")
+				.expect("Failed to evaluate `ImpureVfs::has_decorate::RGX_DECORATE`.");
+		};
+
+		self.is_dir() && self.contains_regex(&RGX_DECORATE)
+	}
+
+	fn has_zscript(&self) -> bool {
+		lazy_static! {
+			static ref RGX_ZSCRIPT: Regex = Regex::new(r"^(?i)zscript")
+				.expect("Failed to evaluate `ImpureVfs::has_zscript::RGX_ZSCRIPT`.");
+		};
+
+		self.is_dir() && self.contains_regex(&RGX_ZSCRIPT)
+	}
+
+	fn has_edfroot(&self) -> bool {
+		lazy_static! {
+			static ref RGX_EDFROOT: Regex = Regex::new(r"^(?i)edfroot")
+				.expect("Failed to evaluate `ImpureVfs::has_edfroot::RGX_EDFROOT`.");
+		};
+
+		self.is_dir() && self.contains_regex(&RGX_EDFROOT)
 	}
 }
 
