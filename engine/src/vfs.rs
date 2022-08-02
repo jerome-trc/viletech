@@ -208,6 +208,8 @@ impl VirtualFs {
 			self.root.children_mut().push(entry);
 		}
 
+		self.root.children_mut().sort_by(Entry::cmp_name);
+
 		let mut results = results.into_inner();
 		let mut ret = Vec::<Result<(), Error>>::with_capacity(results.len());
 
@@ -443,19 +445,21 @@ impl Entry {
 		}
 	}
 
+	fn cmp_name(a: &Entry, b: &Entry) -> std::cmp::Ordering {
+		if a.is_leaf() && b.is_dir() {
+			std::cmp::Ordering::Greater
+		} else if a.is_dir() && b.is_leaf() {
+			std::cmp::Ordering::Less
+		} else {
+			a.name.partial_cmp(&b.name).unwrap()
+		}
+	}
+
 	fn sort(&mut self) {
 		match &mut self.kind {
 			EntryKind::Leaf { .. } => {}
 			EntryKind::Directory { children } => {
-				children.sort_by(|a, b| {
-					if a.is_leaf() && b.is_dir() {
-						std::cmp::Ordering::Greater
-					} else if a.is_dir() && b.is_leaf() {
-						std::cmp::Ordering::Less
-					} else {
-						a.name.partial_cmp(&b.name).unwrap()
-					}
-				});
+				children.sort_by(Self::cmp_name);
 
 				for child in children {
 					child.sort();
