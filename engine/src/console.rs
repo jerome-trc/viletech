@@ -16,7 +16,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use crossbeam::channel::{Receiver, Sender};
-use egui::{text::LayoutJob, Color32, TextFormat};
+use egui::{
+	text::{CCursor, LayoutJob},
+	text_edit::{CCursorRange, TextEditState},
+	Color32, TextFormat,
+};
 use lazy_static::lazy_static;
 use log::{error, info};
 use regex::Regex;
@@ -41,6 +45,7 @@ pub struct Console {
 	history_pos: usize,
 	defocus_textedit: bool,
 	scroll_to_bottom: bool,
+	cursor_to_end: bool,
 
 	pub requests: VecDeque<ConsoleRequest>,
 }
@@ -61,6 +66,7 @@ impl Console {
 			history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
+			cursor_to_end: false,
 			requests: VecDeque::<ConsoleRequest>::default(),
 		}
 	}
@@ -230,7 +236,7 @@ impl Console {
 		ui.label(galley);
 	}
 
-	fn draw_impl(&mut self, ui: &mut egui::Ui) {
+	fn draw_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
 		let scroll_area = egui::ScrollArea::vertical()
 			.max_height(200.0)
 			.auto_shrink([false; 2]);
@@ -253,10 +259,21 @@ impl Console {
 		ui.separator();
 
 		ui.horizontal(|ui| {
+			let input_len = self.input.len();
+			let edit_id = egui::Id::new("console_text_edit");
+			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
+			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+
+			if self.cursor_to_end {
+				self.cursor_to_end = false;
+				let range = CCursorRange::one(CCursor::new(input_len));
+				tes.set_ccursor_range(Some(range));
+				TextEditState::store(tes, ctx, edit_id);
+			}
+
 			if self.defocus_textedit {
-				ui.text_edit_singleline(&mut self.input).surrender_focus();
-			} else {
-				ui.text_edit_singleline(&mut self.input);
+				self.defocus_textedit = false;
+				resp_edit.surrender_focus();
 			}
 
 			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
@@ -300,7 +317,7 @@ impl Console {
 			.open(&mut o)
 			.resizable(true)
 			.show(ctx, |ui| {
-				self.draw_impl(ui);
+				self.draw_impl(ui, ctx);
 			});
 
 		self.open.set(o);
@@ -339,6 +356,7 @@ impl Console {
 					return;
 				}
 
+				self.cursor_to_end = true;
 				self.history_pos -= 1;
 				self.input.clear();
 				self.input.push_str(&self.history[self.history_pos]);
@@ -348,6 +366,7 @@ impl Console {
 					return;
 				}
 
+				self.cursor_to_end = true;
 				self.history_pos += 1;
 				self.input.clear();
 
