@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	for arg in env::args() {
 		if arg == "--version" || arg == "-v" {
 			println!("{}", impure::short_version_string());
+			println!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
 			return Ok(());
 		}
 	}
@@ -61,6 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let console = Console::new(cons_receiver);
 
 	info!("{}", impure::short_version_string());
+	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
 	info!("{}", impure::utils::env::os_info()?);
 
 	let data = DataCore::default();
