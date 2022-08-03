@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 		WinitEvent::MainEventsCleared => {
 			core.process_console_requests();
-			core.clear_stopped_sounds();
+			core.audio.update();
 			core.scene_change();
 			core.gfx.window.request_redraw();
 		}

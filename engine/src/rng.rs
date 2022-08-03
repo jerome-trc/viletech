@@ -56,7 +56,7 @@ impl ImpureRng for WyRand {
 	}
 }
 
-/// Contains maps of named random number generators.
+/// Contains a map of named random number generators.
 pub struct RngCore<B: ImpureRng + Default> {
 	prngs: HashMap<String, B>,
 }

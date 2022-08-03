@@ -24,12 +24,12 @@ use impure::{
 	rng::RngCore,
 	sim::Playsim,
 	utils::path::*,
-	vfs::{self, VirtualFs, ImpureVfs}
+	vfs::{self, VirtualFs, ImpureVfs}, audio::AudioCore
 };
 
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
-	sound::static_sound::{PlaybackState, StaticSoundData, StaticSoundHandle, StaticSoundSettings},
+	sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
 use log::{error, info, warn};
 use mlua::Lua;
@@ -77,11 +77,6 @@ enum SceneChange {
 	PlaysimSingle { to_mount: Vec<PathBuf> },
 }
 
-pub struct AudioCore {
-	manager: AudioManager,
-	handles: Vec<StaticSoundHandle>,
-}
-
 pub struct ClientCore {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
@@ -110,6 +105,8 @@ impl ClientCore {
 
 		let audio = AudioCore {
 			manager: AudioManager::new(audio_mgr_settings)?,
+			music1: None,
+			music2: None,
 			handles: Vec::<_>::with_capacity(sound_cap),
 		};
 
@@ -281,18 +278,6 @@ impl ClientCore {
 				ConsoleRequest::Uptime => {
 					self.print_uptime();
 				}
-			}
-		}
-	}
-
-	pub fn clear_stopped_sounds(&mut self) {
-		let mut i = 0;
-
-		while i < self.audio.handles.len() {
-			if self.audio.handles[i].state() == PlaybackState::Stopped {
-				self.audio.handles.swap_remove(i);
-			} else {
-				i += 1;
 			}
 		}
 	}

@@ -20,6 +20,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+pub mod audio;
 pub mod console;
 pub mod data;
 #[allow(dead_code)]
@@ -147,6 +148,10 @@ pub fn log_init(
 		.level_for("naga", log::LevelFilter::Warn)
 		.level_for("wgpu_hal", log::LevelFilter::Error)
 		.level_for("wgpu_core", log::LevelFilter::Error)
+		.level_for("symphonia_core", log::LevelFilter::Warn)
+		.level_for("symphonia_format_ogg", log::LevelFilter::Warn)
+		.level_for("symphonia_codec_vorbis", log::LevelFilter::Warn)
+		.level_for("symphonia_bundle_mp3", log::LevelFilter::Warn)
 		.chain(file_cfg)
 		.chain(stdout_cfg);
 
