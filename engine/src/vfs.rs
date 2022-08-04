@@ -1,6 +1,4 @@
 //! Abstraction over the OS file system for security and ease.
-//! Inspired by PhysicsFS, but differs in that it owns every byte mounted,
-//! for maximum-speed reading when organizing assets afterwards.
 
 /*
 Copyright (C) 2022 ***REMOVED***
@@ -27,14 +25,20 @@ use regex::{Regex, RegexSet};
 use std::{
 	fmt, fs,
 	io::{self, Cursor},
-	path::{Path, PathBuf},
+	path::{Path, PathBuf}, collections::HashMap,
 };
 use zip::{result::ZipError, ZipArchive};
 
-use crate::{data::GameDataMeta, utils::{io::*, path::*, string::*}, wad, zsparse::*};
+use crate::{data::{GameDataMeta, game::GameDataKind}, utils::{io::*, path::*, string::*}, wad, zsparse::*};
 
+/// Abstraction over the OS file system for security and ease.
+/// Inspired by PhysicsFS, but differs in that it owns every byte mounted.
+/// Just the mounting process requires large amounts of time spent on file I/O,
+/// so clustering a complete read along with it grants a time savings.
 pub struct VirtualFs {
 	root: Entry,
+	/// Mounted game data object UUIDs are used as keys.
+	real_paths: HashMap<String, PathBuf>
 }
 
 // Public interface.
@@ -56,7 +60,7 @@ impl VirtualFs {
 			.enumerate()
 			.collect();
 
-		let output = Mutex::new(Vec::<Entry>::default());
+		let output = Mutex::new(Vec::<(Entry, String, PathBuf)>::default());
 
 		mounts.par_iter().for_each(|tuple| {
 			let pair = &tuple.1;
@@ -191,21 +195,22 @@ impl VirtualFs {
 				}
 			};
 
-			new_entry.sort();
-			output.lock().push(new_entry);
-			results.lock().push((tuple.0, Ok(())));
-
 			info!(
 				"Mounted: \"{}\" -> \"{}\".",
 				real_path.display(),
 				mount_point.display()
 			);
+
+			new_entry.sort();
+			output.lock().push((new_entry, mount_name.to_string(), real_path));
+			results.lock().push((tuple.0, Ok(())));
 		});
 
 		let mut output = output.into_inner();
 
-		for entry in output.drain(..) {
-			self.root.children_mut().push(entry);
+		for troika in output.drain(..) {
+			self.root.children_mut().push(troika.0);
+			self.real_paths.insert(troika.1, troika.2);
 		}
 
 		self.root.children_mut().sort_by(Entry::cmp_name);
@@ -933,9 +938,10 @@ impl Default for VirtualFs {
 			root: Entry {
 				name: String::from("/"),
 				kind: EntryKind::Directory {
-					children: Default::default(),
+					children: Vec::<Entry>::default(),
 				},
 			},
+			real_paths: HashMap::<String, PathBuf>::default()
 		}
 	}
 }
