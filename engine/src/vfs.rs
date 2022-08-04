@@ -554,6 +554,70 @@ impl VirtualFs {
 	}
 
 	fn mount_zip(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
+		fn recur<'a>(
+			parent: &mut Entry,
+			mut iter: impl Iterator<Item = &'a str>,
+			mut counter: usize,
+			bytes: Vec<u8>,
+		) {
+			let comp = match iter.next() {
+				Some(c) => c,
+				None => {
+					return;
+				}
+			};
+	
+			counter -= 1;
+	
+			let children = parent.children_mut();
+	
+			if counter == 0 {
+				// Time to push a leaf node. This could be a zip, a WAD, or neither
+				match VirtualFs::mount_file(bytes, comp) {
+					Ok(entry) => {
+						children.push(entry);
+						return;
+					}
+					Err(err) => {
+						warn!(
+							"Failed to mount zip file: {}\nError: {}",
+							iter.collect::<PathBuf>().join(comp).display(),
+							err
+						);
+						return;
+					}
+				};
+			}
+	
+			// Not at the path's end yet. A directory may exist at this path component;
+			// if so, push the new entry on to it. Otherwise, create that new dir.,
+			// and then recur into it
+	
+			let mut recur_into = children.len();
+	
+			for (i, sub) in children.iter().enumerate() {
+				if sub.name != comp {
+					continue;
+				}
+	
+				recur_into = i;
+				break;
+			}
+	
+			if recur_into != children.len() {
+				recur(children.get_mut(recur_into).unwrap(), iter, counter, bytes);
+			} else {
+				children.push(Entry {
+					name: comp.to_owned(),
+					kind: EntryKind::Directory {
+						children: Vec::<Entry>::default(),
+					},
+				});
+	
+				recur(children.last_mut().unwrap(), iter, counter, bytes);
+			}
+		}
+
 		let cursor = Cursor::new(&bytes);
 		let mut zip = ZipArchive::new(cursor).map_err(Error::ZipError)?;
 
@@ -638,74 +702,10 @@ impl VirtualFs {
 
 			let iter = str_iter_from_path(zfpath);
 			let counter = zfpath.size();
-			Self::mount_zip_recur(&mut ret, iter, counter, bytes);
+			recur(&mut ret, iter, counter, bytes);
 		}
 
 		Ok(ret)
-	}
-
-	fn mount_zip_recur<'a>(
-		parent: &mut Entry,
-		mut iter: impl Iterator<Item = &'a str>,
-		mut counter: usize,
-		bytes: Vec<u8>,
-	) {
-		let comp = match iter.next() {
-			Some(c) => c,
-			None => {
-				return;
-			}
-		};
-
-		counter -= 1;
-
-		let children = parent.children_mut();
-
-		if counter == 0 {
-			// Time to push a leaf node. This could be a zip, a WAD, or neither
-			match Self::mount_file(bytes, comp) {
-				Ok(entry) => {
-					children.push(entry);
-					return;
-				}
-				Err(err) => {
-					warn!(
-						"Failed to mount zip file: {}\nError: {}",
-						iter.collect::<PathBuf>().join(comp).display(),
-						err
-					);
-					return;
-				}
-			};
-		}
-
-		// Not at the path's end yet. A directory may exist at this path component;
-		// if so, push the new entry on to it. Otherwise, create that new dir.,
-		// and then recur into it
-
-		let mut recur_into = children.len();
-
-		for (i, sub) in children.iter().enumerate() {
-			if sub.name != comp {
-				continue;
-			}
-
-			recur_into = i;
-			break;
-		}
-
-		if recur_into != children.len() {
-			Self::mount_zip_recur(children.get_mut(recur_into).unwrap(), iter, counter, bytes);
-		} else {
-			children.push(Entry {
-				name: comp.to_owned(),
-				kind: EntryKind::Directory {
-					children: Vec::<Entry>::default(),
-				},
-			});
-
-			Self::mount_zip_recur(children.last_mut().unwrap(), iter, counter, bytes);
-		}
 	}
 
 	fn mount_wad(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
