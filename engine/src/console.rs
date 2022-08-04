@@ -73,7 +73,7 @@ impl Console {
 
 	fn find_command(&self, key: &str) -> Option<&ConsoleCommand> {
 		for cmd in &self.commands {
-			if !key.eq_ignore_ascii_case(cmd.key) {
+			if !key.eq_ignore_ascii_case(cmd.id) {
 				continue;
 			}
 
@@ -160,7 +160,7 @@ impl Console {
 				self.log.push("All available commands:".to_string());
 
 				for cmd in &self.commands {
-					self.log.push(cmd.key.to_string());
+					self.log.push(cmd.id.to_string());
 				}
 
 				cmd_found = true;
@@ -389,7 +389,7 @@ pub enum ConsoleRequest {
 }
 
 pub struct ConsoleCommand {
-	key: &'static str,
+	id: &'static str,
 	/// The vector of arguments never contains the name of the command itself,
 	/// whether aliased or not.
 	func: fn(&Self, Vec<&str>) -> ConsoleRequest,
@@ -400,21 +400,21 @@ pub struct ConsoleCommand {
 
 impl ConsoleCommand {
 	pub fn new(
-		key: &'static str,
+		id: &'static str,
 		func: fn(&Self, Vec<&str>) -> ConsoleRequest,
 		help: fn(&Self, Vec<&str>),
 		script_legal: bool,
 	) -> Self {
 		ConsoleCommand {
-			key,
+			id,
 			func,
 			help,
 			script_legal,
 		}
 	}
 
-	pub fn get_key(&self) -> &'static str {
-		self.key
+	pub fn get_id(&self) -> &'static str {
+		self.id
 	}
 
 	/// Allows contexts outside this module to register `func` callbacks
