@@ -10,6 +10,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Ashley "KodrAus" Mannix et. al. 
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
 	- https://docs.rs/bitflags/latest/bitflags/
+- bytemuck
+	- By Lokathor et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-APACHE), [MIT License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-MIT), and [zlib License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-ZLIB).
+	- https://docs.rs/bytemuck/latest/bytemuck/
 - byteorder
 	- By Andrew "BurntSushi" Gallant et. al.
 	- Provided under the [MIT License](https://github.com/BurntSushi/byteorder/blob/master/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/byteorder/blob/master/UNLICENSE).

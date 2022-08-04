@@ -19,27 +19,38 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::io;
 
-use byteorder::{LittleEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 
 /// Check if the given byte slice is not ASCII-encoded, UTF-8 encoded, or UTF-16 encoded.
-pub fn is_binary(bytes: &[u8; 1024]) -> bool {
+pub fn is_binary(bytes: &[u8]) -> bool {
 	if std::str::from_utf8(bytes).is_ok() || bytes.is_ascii() {
 		return false;
 	}
 
-	// (Safety: unverified)
-	unsafe {
-		let buffer16: &[u16; 1024 / 2] = std::mem::transmute(bytes);
-		let iter = std::char::decode_utf16(*buffer16);
+	let slice16 = match bytemuck::try_cast_slice::<u8, u16>(bytes) {
+		Ok(s) => s,
+		Err(_) => {
+			return true;
+		}
+	};
 
-		for cpoint in iter {
-			if cpoint.is_err() {
-				return true;
+	// Check for two consecutive NUL characters
+	let mut nul = false;
+	let end = std::cmp::min(slice16.len(), 512);
+
+	for c16 in &slice16[0..end] {
+		if nul {
+			if *c16 == 0 {
+				return false;
+			} else {
+				nul = false;
 			}
+		} else if *c16 == 0 {
+			nul = true;
 		}
 	}
 
-	false
+	true
 }
 
 /// Checks for a 4-byte magic number at the very beginning of the file.

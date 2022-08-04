@@ -46,11 +46,11 @@ pub trait PathEx {
 	/// Check if an archive is a .pk3 or .pke.
 	fn has_eternity_extension(&self) -> bool;
 
-	/// See [`utils::io::is_binary`].
+	/// See [`super::io::is_binary`].
 	fn is_binary(&self) -> io::Result<bool>;
-	/// See [`utils::io::is_zip`].
+	/// See [`super::io::is_zip`].
 	fn is_zip(&self) -> io::Result<bool>;
-	/// See [`utils::io::is_valid_wad`].
+	/// See [`super::io::is_valid_wad`].
 	fn is_valid_wad(&self) -> io::Result<bool>;
 	/// Check if this file is a zip or WAD.
 	fn is_supported_archive(&self) -> io::Result<bool>;
@@ -146,9 +146,7 @@ impl <T: AsRef<Path>> PathEx for T {
 			return Err(io::ErrorKind::NotFound.into());
 		}
 
-		const BUF_SIZE: usize = 1024;
-
-		let mut buffer: [u8; BUF_SIZE] = [0; BUF_SIZE];
+		let mut buffer = [0u8; 512];
 		let mut file = File::open(p)?;
 
 		let bytes_read = file.read(&mut buffer)?;
