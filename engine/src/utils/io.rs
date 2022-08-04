@@ -96,3 +96,67 @@ pub fn is_valid_wad(bytes: &[u8], len: u64) -> io::Result<bool> {
 
 	Ok(len >= expected_bin_len as u64)
 }
+
+/// Checks for an 8-byte signature.
+pub fn is_png(bytes: &[u8]) -> bool {
+	bytes.len() > 8
+		&& matches!(
+			&bytes[0..8],
+			&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+		)
+}
+
+/// Checks the header and total size. Ensure a slice over the entire lump is given.
+pub fn is_doom_gfx(bytes: &[u8]) -> bool {
+	const HEADER_SIZE: usize = 8;
+
+	if bytes.len() < HEADER_SIZE {
+		return false;
+	}
+
+	let width = LittleEndian::read_i16(&bytes[0..2]);
+	let height = LittleEndian::read_i16(&bytes[2..4]);
+	let left = LittleEndian::read_i16(&bytes[4..6]);
+	let top = LittleEndian::read_i16(&bytes[6..8]);
+
+	// Sanity check on dimensions
+	if !(0..=4096).contains(&width) {
+		return false;
+	}
+
+	if !(0..=4096).contains(&height) {
+		return false;
+	}
+
+	if top < -2000 || top > 2000 {
+		return false;
+	}
+
+	if left < -2000 || left > 2000 {
+		return false;
+	}
+
+	if bytes.len() < (HEADER_SIZE + ((width as usize) * 4)) {
+		return false;
+	}
+
+	for col in 0..width {
+		let i = col as usize;
+		let start = HEADER_SIZE + i;
+		let end = start + 4;
+		let col_offs = LittleEndian::read_u32(&bytes[start..end]) as usize;
+
+		if col_offs > bytes.len() || col_offs < HEADER_SIZE {
+			return false;
+		}
+	}
+
+	let n_pix = ((height + 2) + (height % 2)) / 2;
+	let max_col_size = (4 + (n_pix * 5) + 1) as usize;
+
+	if bytes.len() > (HEADER_SIZE + (width as usize) * max_col_size) {
+		return false;
+	}
+
+	true
+}
