@@ -182,7 +182,7 @@ impl VirtualFs {
 				Self::mount_file(bytes, mount_name)
 			};
 
-			let mut new_entry = match res {
+			let new_entry = match res {
 				Ok(e) => e,
 				Err(err) => {
 					warn!(
@@ -201,7 +201,6 @@ impl VirtualFs {
 				mount_point.display()
 			);
 
-			new_entry.sort();
 			output.lock().push((new_entry, mount_name.to_string(), real_path));
 			results.lock().push((tuple.0, Ok(())));
 		});
@@ -705,6 +704,8 @@ impl VirtualFs {
 			recur(&mut ret, iter, counter, bytes);
 		}
 
+		ret.sort();
+
 		Ok(ret)
 	}
 
@@ -927,10 +928,14 @@ impl VirtualFs {
 			}
 		}
 
-		Ok(Entry {
+		let mut ret = Entry {
 			name: mount_name.to_owned(),
 			kind: EntryKind::Directory { children },
-		})
+		};
+
+		ret.sort();
+
+		Ok(ret)
 	}
 }
 
