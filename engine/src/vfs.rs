@@ -23,7 +23,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use regex::{Regex, RegexSet};
 use std::{
-	fmt, fs,
+	fmt::{self, Write}, fs,
 	io::{self, Cursor},
 	path::{Path, PathBuf}, collections::HashMap,
 };
@@ -442,6 +442,17 @@ impl Entry {
 	pub fn children_mut(&mut self) -> &mut Vec<Entry> {
 		match &mut self.kind {
 			EntryKind::Directory { children } => children,
+			_ => {
+				// Should pre-verify first, and thus never reach this point
+				panic!("Attempted to mutably retrieve children of a VFS leaf node.");
+			}
+		}
+	}
+
+	/// Panics if used on a non-leaf node. Check to ensure it's a leaf beforehand.
+	pub fn read(&self) -> &[u8] {
+		match &self.kind {
+			EntryKind::Leaf { bytes, .. } => bytes,
 			_ => {
 				// Should pre-verify first, and thus never reach this point
 				panic!("Attempted to mutably retrieve children of a VFS leaf node.");
@@ -994,6 +1005,8 @@ pub trait ImpureVfs {
 	) -> Result<GameDataMeta, Box<dyn std::error::Error>>;
 
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
+
+	fn ccmd_file(&self, path: PathBuf) -> String;
 }
 
 impl ImpureVfs for VirtualFs {
@@ -1195,6 +1208,40 @@ impl ImpureVfs for VirtualFs {
 				None
 			}
 		}
+	}
+
+	fn ccmd_file(&self, path: PathBuf) -> String {
+		let entry = match self.lookup(&path) {
+			Some(e) => e,
+			None => {
+				return "Nothing exists at that path.".to_string();
+			}
+		};
+
+		if !entry.is_dir() {
+			return format!("{}\r\n\tSize: {}B", entry.name, entry.read().len());
+		}
+
+		let children = entry.children();
+		let mut ret = String::with_capacity(children.len() * 32);
+
+		for child in children {
+			match write!(ret, "\r\n\t{}", child.get_name()) {
+				Ok(()) => {},
+				Err(err) => {
+					warn!(
+						"Failed to write an output line for ccmd.: `file`
+						Error: {}", err
+					);
+				}
+			}
+
+			if child.is_dir() {
+				ret.push('/');
+			}
+		}
+
+		format!("Files under \"{}\" ({}): {}", path.display(), children.len(), ret)
 	}
 }
 

@@ -31,7 +31,7 @@ use kira::{
 	manager::{AudioManager, AudioManagerSettings},
 	sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
-use log::{error, info, warn};
+use log::{error, info};
 use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
@@ -43,7 +43,7 @@ use std::{
 	io,
 	path::PathBuf,
 	sync::Arc,
-	thread::Thread, fmt::Write,
+	thread::Thread
 };
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
@@ -198,39 +198,7 @@ impl ClientCore {
 				ConsoleRequest::None => {},
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
-					let entry = match vfsg.lookup(&p) {
-						Some(e) => e,
-						None => {
-							info!("Nothing exists at that path.");
-							continue;
-						}
-					};
-
-					if !entry.is_dir() {
-						info!("This entry is not a directory.");
-						continue;
-					}
-
-					let children = entry.children();
-					let mut output = String::with_capacity(children.len() * 32);
-
-					for child in children {
-						match write!(output, "\r\n\t{}", child.get_name()) {
-							Ok(()) => {},
-							Err(err) => {
-								warn!(
-									"Failed to write an output line for ccmd.: `file`
-									Error: {}", err
-								);
-							}
-						}
-
-						if child.is_dir() {
-							output.push('/');
-						}
-					}
-
-					info!("Files under \"{}\" ({}): {}", p.display(), children.len(), output);
+					info!("{}", vfsg.ccmd_file(p));
 				}
 				ConsoleRequest::LuaMem => {
 					info!("Client Lua state heap usage (bytes): {}", self.lua.used_memory());
@@ -348,7 +316,10 @@ impl ClientCore {
 				ConsoleRequest::File(PathBuf::from(path))
 			},
 			|_, _| {
-				info!("Prints the contents of a virtual file system directory.");
+				info!(
+					"Prints the contents of a virtual file system directory, \
+					or information about a file."
+				);
 			},
 			true,
 		));
