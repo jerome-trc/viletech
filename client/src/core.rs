@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	console::{Console, ConsoleCommand, ConsoleRequest},
-	data::{game::DataCore, GameDataObject},
+	data::{game::{DataCore, GameDataKind}, GameDataObject},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::GfxCore,
@@ -264,11 +264,14 @@ impl ClientCore {
 			Some(scene) => match scene {
 				SceneChange::PlaysimSingle { to_mount } => {
 					let metas = self.vfs.write().mount_gamedata(&to_mount);
+					let vfsg = self.vfs.read();
 
 					for meta in metas {
-						self.data.objects.push(GameDataObject::new(meta));
+						let kind = vfsg.gamedata_kind(&meta.uuid);
+						self.data.objects.push(GameDataObject::new(meta, kind));
 					}
 
+					drop(vfsg);
 					self.start_game();
 				}
 			},
@@ -369,8 +372,8 @@ impl ClientCore {
 			|this, _| {
 				info!(
 					"Starts a sound at default settings from the virtual file system.
-					Usage: {} <virtual file path/asset ID/asset key>",
-					this.get_key()
+					Usage: {} <virtual file path/asset number/asset ID>",
+					this.get_id()
 				);
 			},
 			true,
@@ -465,6 +468,17 @@ impl ClientCore {
 	}
 
 	fn start_game(&mut self) {
+		let vfsg = self.vfs.read();
+
+		for obj in &mut self.data.objects {
+			Self::load_assets(&vfsg, obj);
+		}
+	}
+}
+
+// Internal implementation details: on-game-start asset loading.
+impl ClientCore {
+	fn load_assets(vfs: &VirtualFs, obj: &mut impure::data::game::Object) {
 		// ???
 	}
 }

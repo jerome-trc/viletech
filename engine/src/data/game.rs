@@ -23,15 +23,28 @@ use serde::Deserialize;
 
 use crate::{
 	ecs::Blueprint,
-	game::{DamageType, Species},
-	gfx::{Endoom, Palette},
+	game::{DamageType, Species, SkillInfo},
+	gfx::{Endoom, Palette, ColorMap},
+	LevelCluster, level::Episode,
+	LevelMetadata,
 };
 
-pub type AssetId = usize;
+use super::asset::Asset;
+
+/// `obj` corresponds to one of the elements in [`DataCore::objects`].
+/// `elem` corresponds to an element in the relevant sub-vector of
+/// the game data object. For "singleton" assets like palettes,
+/// `elem` will always be 0.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AssetIndex {
+	obj: usize,
+	elem: usize
+}
 
 pub struct Music(StaticSoundData);
 pub struct Sound(StaticSoundData);
 
+/// Note that all user-facing string fields within may be IDs or expanded.
 #[derive(Deserialize)]
 pub struct Metadata {
 	pub uuid: String,
@@ -46,7 +59,7 @@ pub struct Metadata {
 	pub authors: Vec<String>,
 	#[serde(default)]
 	pub copyright: String,
-	/// e.g., for if the author wants a link to a mod/WAD's homepage/forum post.
+	/// Allow a package to link to its forum post/homepage/Discord server/etc.
 	#[serde(default)]
 	pub links: Vec<String>,
 }
@@ -65,36 +78,93 @@ impl Metadata {
 	}
 }
 
+/// Allows GDOs to define high-level, all-encompassing information
+/// relevant to making games as opposed to mods.
+pub struct GameInfo {
+	steam_app_id: Option<u32>,
+	discord_app_id: Option<String>
+}
+
+/// Determines the system used for loading assets from a mounted object.
+pub enum GameDataKind {
+	/// The file is read to determine what kind of assets are in it,
+	/// and loading is handled accordingly.
+	File,
+	/// Every file in this WAD is loaded into an asset based on
+	/// the kind of file it is.
+	Wad,
+	/// Assets are loaded from this archive/directory based on the
+	/// manifests specified by the meta.toml file.
+	Impure,
+	/// Assets are loaded from this archive/directory based on the
+	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
+	/// for example, don't get loaded at all.
+	ZDoom,
+	/// Assets are loaded from this archive/directory based on the
+	/// Eternity Engine sub-directory namespacing system. Sounds outside of
+	/// `sounds/`, for example, don't get loaded at all.
+	Eternity
+}
+
 /// Represents anything that the user added to their load order.
 /// Acts as a namespace of sorts; for example, MAPINFO loaded as part of
 /// a WAD will only apply to maps in that WAD.
 pub struct Object {
 	pub meta: Metadata,
+	pub kind: GameDataKind,
 	// Needed for the sim
 	pub blueprints: Vec<Blueprint>,
+	pub clusters: Vec<LevelCluster>,
 	pub damage_types: Vec<DamageType>,
+	pub episodes: Vec<Episode>,
+	pub levels: Vec<LevelMetadata>,
+	pub skills: Vec<SkillInfo>,
 	pub species: Vec<Species>,
 	// Client-only
 	pub language: Vec<String>,
-	pub palettes: Vec<Palette>,
 	pub music: Vec<Music>,
 	pub sounds: Vec<Sound>,
+	pub colormap: Option<ColorMap>,
 	pub endoom: Option<Endoom>,
+	pub palette: Option<Palette>,
 }
 
 impl Object {
-	pub fn new(metadata: Metadata) -> Self {
+	pub fn new(metadata: Metadata, kind: GameDataKind) -> Self {
 		Object {
 			meta: metadata,
+			kind,
 			blueprints: Default::default(),
 			damage_types: Default::default(),
+			clusters: Default::default(),
+			episodes: Default::default(),
+			levels: Default::default(),
+			skills: Default::default(),
 			species: Default::default(),
 			language: Default::default(),
-			palettes: Default::default(),
 			music: Default::default(),
 			sounds: Default::default(),
-			endoom: None
+			endoom: None,
+			colormap: None,
+			palette: None,
 		}
+	}
+
+	pub fn clear(&mut self) {
+		self.blueprints.clear();
+		self.damage_types.clear();
+		self.clusters.clear();
+		self.episodes.clear();
+		self.levels.clear();
+		self.skills.clear();
+		self.species.clear();
+		self.language.clear();
+		self.music.clear();
+		self.sounds.clear();
+
+		self.colormap.take();
+		self.endoom.take();
+		self.palette.take();
 	}
 }
 
@@ -103,8 +173,17 @@ pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
 	pub objects: Vec<Object>,
-	pub asset_map: HashMap<String, (usize, AssetId)>,
-	pub lump_map: HashMap<String, (usize, AssetId)>,
+	/// Key structure: `gdo_uuid:domain.asset_id`.
+	/// `gdo_uuid` will correspond to the mount point, and be something like
+	/// `DOOM2`. `domain` will be something like `bp` or `mus`.
+	pub asset_map: HashMap<String, AssetIndex>,
+	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
+	/// under any given UUID in the load order. For use in interop, since, for
+	/// example, GZDoom mods will expect that port's overlay/replacement system.
+	pub lump_map: HashMap<String, AssetIndex>,
+
+	pub editor_numbers: HashMap<u16, AssetIndex>,
+	pub spawn_numbers: HashMap<u16, AssetIndex>,
 }
 
 impl DataCore {
@@ -141,5 +220,35 @@ impl DataCore {
 		}
 
 		Ok(false)
+	}
+
+	pub fn add<T: Asset>(&mut self, asset: T, obj_id: &str, asset_id: &str) {
+		let obj_ndx = match self.objects.iter_mut().position(|o| o.meta.uuid == obj_id) {
+			Some(o) => o,
+			None => {
+				// Caller should always pre-validate here
+				panic!("Attempted to add asset under invalid UUID: {}", obj_id);
+			}
+		};
+
+		let obj = &mut self.objects[obj_ndx];
+
+		let asset_ndx = T::add_impl(obj, asset);
+	
+		let full_id = if T::DOMAIN_STRING.is_empty() {
+			format!("{}:{}", obj_id, asset_id)
+		} else {
+			format!("{}:{}.{}", obj_id, T::DOMAIN_STRING, asset_id)
+		};
+
+		let ndx_pair = AssetIndex { obj: obj_ndx, elem: asset_ndx };
+
+		self.asset_map.insert(full_id, ndx_pair.clone());
+		self.lump_map.insert(asset_ndx.to_string(), ndx_pair);
+	}
+
+	pub fn get<T: Asset>(&self, id: &str) -> Option<&T> {
+		let ndx_pair = &self.asset_map[id];
+		T::get_impl(&self.objects[ndx_pair.obj], ndx_pair.elem)
 	}
 }

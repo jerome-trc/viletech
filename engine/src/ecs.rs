@@ -15,17 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{data::game::AssetId, game::DamageOverTime};
+use crate::{data::game::AssetIndex, game::DamageOverTime};
 use bitflags::bitflags;
 use glam::{Vec2, Vec3};
 use shipyard::EntityId;
 use std::collections::LinkedList;
 use wgpu::Color;
 
+#[derive(Default)]
 pub struct Blueprint {
-	id: AssetId,
-	key: String,
-
 	core: Core,
 	bleed: Option<Bleed>,
 	bounce: Option<Bounce>,
@@ -44,9 +42,9 @@ pub struct Blueprint {
 
 pub struct Bleed {
 	color: Color,
-	type1: AssetId,
-	type2: AssetId,
-	type3: AssetId,
+	type1: AssetIndex,
+	type2: AssetIndex,
+	type3: AssetIndex,
 }
 
 pub struct Bounce {
@@ -85,13 +83,14 @@ pub struct BoxCollider {
 
 pub struct Cheat {}
 
+#[derive(Default)]
 pub struct Core {
 	name: String,
 	lived: u32,
 }
 
 pub struct Defense {
-	damage_factors: Vec<(AssetId, f32)>,
+	damage_factors: Vec<(AssetIndex, f32)>,
 }
 
 pub struct Health {
@@ -127,7 +126,7 @@ pub struct Item {
 
 pub struct Monster {
 	flags: MonsterFlags,
-	species: AssetId,
+	species: AssetIndex,
 	/// In game-tics.
 	reaction_time: u32,
 	/// ::0 is the key for the level on which the trigger should fire when this
@@ -192,7 +191,7 @@ pub struct Weapon {
 	bob_range: Vec2,
 	slot_priority: i16,
 	fallback_priority: i16,
-	crosshair: AssetId,
+	crosshair: AssetIndex,
 }
 
 #[repr(u8)]

@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::data::game::AssetId;
+use crate::data::game::AssetIndex;
 use bitflags::bitflags;
 use glam::IVec2;
 
@@ -24,6 +24,7 @@ pub struct Vertex {
 	y: f64,
 }
 
+#[derive(Default)]
 pub struct LineDef {
 	id: i32,
 	v1: i32,
@@ -36,7 +37,8 @@ pub struct LineDef {
 }
 
 bitflags! {
-	pub struct LineDefFlags : u32 {
+	#[derive(Default)]
+	pub struct LineDefFlags: u32 {
 		const NONE = 0;
 		/// If set, line blocks things.
 		const BLOCK_THINGS = 1 << 0;
@@ -87,23 +89,83 @@ bitflags! {
 
 pub struct SideDef {
 	offset: IVec2,
-	tex_top: AssetId,
-	tex_bottom: AssetId,
-	tex_mid: AssetId,
+	tex_top: AssetIndex,
+	tex_bottom: AssetIndex,
+	tex_mid: AssetIndex,
 	sector: i32,
 }
 
 pub struct Sector {
 	height_floor: i32,
 	height_ceiling: i32,
-	tex_floor: AssetId,
-	tex_ceiling: AssetId,
+	tex_floor: AssetIndex,
+	tex_ceiling: AssetIndex,
 	light_level: i32,
 	special: i32,
 	id: i32,
 }
 
-pub struct Level {
-	name: String,
-	author_name: String,
+pub struct Metadata {
+	/// Displayed to the user. May be a string ID.
+	pub name: String,
+	/// Prepended to the level name on the automap. May be a string ID.
+	pub label: String,
+	/// May be a string ID.
+	pub author_name: String,
+	pub music: Option<AssetIndex>,
+	/// The map that players are taken to upon passing through the normal exit.
+	pub next: Option<AssetIndex>,
+	/// The map to which the secret exit leads, if any.
+	pub next_secret: Option<AssetIndex>,
+	/// In seconds.
+	pub par_time: u32,
+	/// Only used by ACS.
+	pub special_num: i32,
+	pub flags: Flags,
+}
+
+bitflags! {
+	#[derive(Default)]
+	pub struct Flags: u8 {
+		const NONE = 0;
+		/// Switch lines must be vertically reachable to allow interaction.
+		const CHECK_SWITCH_RANGE = 1 << 0;
+	}
+}
+
+pub struct Episode {
+	/// Displayed to the user. May be a string ID.
+	pub name: String,
+	pub start_map: AssetIndex,
+	pub background: AssetIndex,
+	pub flags: EpisodeFlags
+}
+
+bitflags! {
+	#[derive(Default)]
+	pub struct EpisodeFlags: u8 {
+		const NONE = 0;
+		const NO_SKILL_MENU = 1 << 0;
+		const OPTIONAL = 1 << 1;
+		const EXTENDED = 1 << 2;
+	}
+}
+
+pub struct Cluster {
+	/// Displayed to the user. May be a string ID.
+	text_enter: String,
+	/// Displayed to the user. May be a string ID.
+	text_exit: String,
+	flags: ClusterFlags,
+	music: AssetIndex,
+	background: AssetIndex
+}
+
+bitflags! {
+	#[derive(Default)]
+	pub struct ClusterFlags: u8 {
+		const NONE = 0;
+		const IS_HUB = 1 << 0;
+		const ALLOW_INTERMISSION = 1 << 1;
+	}
 }

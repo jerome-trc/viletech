@@ -271,7 +271,7 @@ impl Default for Palette {
 	}
 }
 
-pub struct Colormap(pub [u8; 256]);
+pub struct ColorMap(pub [u8; 256]);
 
 pub struct Endoom {
 	colors: [u8; 2000],

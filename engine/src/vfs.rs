@@ -999,6 +999,8 @@ pub trait ImpureVfs {
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
+	fn gamedata_kind(&self, uuid: &str) -> GameDataKind;
+
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
@@ -1169,6 +1171,54 @@ impl ImpureVfs for VirtualFs {
 
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool> {
 		self.lookup(path).map(|entry| entry.has_decorate())
+	}
+
+	fn gamedata_kind(&self, uuid: &str) -> GameDataKind {
+		let entry = &self.root.children().iter().find(|c| c.name == uuid).expect(
+			"Invalid UUID passed to `ImpureVfs::gamedata_kind`."
+		);
+
+		let check_path = |path: &Path| {
+			if path.has_gzdoom_extension() {
+				return Some(GameDataKind::ZDoom);
+			}
+
+			if path.has_eternity_extension() {
+				return Some(GameDataKind::Eternity);
+			}
+
+			if path.has_wad_extension() {
+				return Some(GameDataKind::Wad);
+			}
+
+			None
+		};
+
+		match &entry.kind {
+			EntryKind::Leaf { .. } => {
+				return GameDataKind::File;
+			}
+			EntryKind::Directory { children } => {	
+				let real_path = self.real_paths.get(uuid).expect(
+					"Invalid UUID passed to `ImpureVfs::gamedata_kind`."
+				);
+
+				for child in children {
+					if child.name.eq_ignore_ascii_case("meta.toml") {
+						return GameDataKind::Impure;
+					}
+				}
+
+				match check_path(real_path) {
+					Some(kind) => return kind,
+					None => {}
+				};
+			}
+		};
+
+		// Either the user has done something unexpected
+		// or we just need more heuristics I haven't come up with yet
+		unreachable!();
 	}
 
 	fn parse_gamedata_meta(

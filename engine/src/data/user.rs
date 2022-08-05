@@ -20,13 +20,13 @@ use std::collections::HashMap;
 use bitflags::bitflags;
 use egui::Color32;
 
-bitflags!(
+bitflags! {
 	pub struct PrefFlags: u8 {
 		const NONE = 0;
 		/// If unset, this pref only applies client-side.
 		const SIM = 1 << 0;
 	}
-);
+}
 
 /// The second value holds the default.
 pub enum PrefKind {

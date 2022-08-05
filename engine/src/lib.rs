@@ -43,6 +43,15 @@ pub mod utils;
 pub mod vfs;
 pub mod wad;
 
+// Type aliases
+
+pub use data::game::Object as GameDataObject;
+pub use level::Cluster as LevelCluster;
+pub use level::Flags as LevelFlags;
+pub use level::Metadata as LevelMetadata;
+pub use vfs::Entry as VfsEntry;
+pub use vfs::Error as VfsError;
+
 pub mod zsparse {
 	pub use ::zsparse::filesystem::FileSystem as ZsFileSystem;
 	pub use ::zsparse::filesystem::File as ZsFile;
@@ -51,6 +60,8 @@ pub mod zsparse {
 	pub use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
 	pub use zsparse::parser_manager::parse_filesystem as zs_parse_filesystem;
 }
+
+// Re-export transitive dependencies
 
 pub mod depends {
 	pub extern crate chrono;
@@ -67,6 +78,8 @@ pub mod depends {
 	pub extern crate winit;
 	pub extern crate zip;
 }
+
+// Symbols that don't belong in any other module
 
 pub fn short_version_string() -> String {
 	format!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"))
