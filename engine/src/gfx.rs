@@ -17,9 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
 use log::info;
+use palette::{rgb::Rgb, encoding::Srgb};
 use std::{error::Error, fmt, iter};
 use wgpu::{RenderPipeline, SurfaceConfiguration, SurfaceTexture, TextureView};
 use winit::window::Window;
+
+pub type Rgb32 = palette::rgb::Rgb<Srgb, u8>;
 
 /// Holds all state common to rendering between scenes.
 pub struct GfxCore {
@@ -263,11 +266,11 @@ impl GfxCore {
 	}
 }
 
-pub struct Palette(pub [(u8, u8, u8); 256]);
+pub struct Palette(pub [Rgb32; 256]);
 
 impl Default for Palette {
 	fn default() -> Self {
-		Palette([(0, 0, 0); 256])
+		Palette([Rgb::default(); 256])
 	}
 }
 

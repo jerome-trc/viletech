@@ -15,12 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::{data::game::AssetIndex, game::DamageOverTime};
+use crate::{data::game::AssetIndex, game::DamageOverTime, gfx::Rgb32};
 use bitflags::bitflags;
 use glam::{Vec2, Vec3};
 use shipyard::EntityId;
 use std::collections::LinkedList;
-use wgpu::Color;
 
 #[derive(Default)]
 pub struct Blueprint {
@@ -41,7 +40,7 @@ pub struct Blueprint {
 }
 
 pub struct Bleed {
-	color: Color,
+	color: Rgb32,
 	type1: AssetIndex,
 	type2: AssetIndex,
 	type3: AssetIndex,

@@ -92,6 +92,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Absolucy et. al.
 	- Provided under the [zlib/libpng License](https://github.com/Absolucy/nanorand-rs/blob/main/LICENSE.md).
 	- https://docs.rs/nanorand/latest/nanorand/
+- palette
+	- By Erik "Ogeon" Hedvall et. al. 
+	- Provided under the [Apache 2.0 License](https://github.com/Ogeon/palette/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Ogeon/palette/blob/master/LICENSE-MIT).
+	- https://docs.rs/palette/latest/palette/
 - parking_lot
 	- By Amanieu "Amanieu" d'Antras et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).

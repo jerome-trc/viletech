@@ -18,7 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::collections::HashMap;
 
 use bitflags::bitflags;
-use egui::Color32;
+
+use crate::gfx::Rgb32;
 
 bitflags! {
 	pub struct PrefFlags: u8 {
@@ -33,7 +34,7 @@ pub enum PrefKind {
 	Bool(bool, bool),
 	Int(i32, i32),
 	Float(f32, f32),
-	Color(Color32, Color32),
+	Color(Rgb32, Rgb32),
 	String(String, String),
 }
 
