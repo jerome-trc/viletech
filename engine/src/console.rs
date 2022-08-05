@@ -418,7 +418,7 @@ impl ConsoleCommand {
 	}
 
 	/// Allows contexts outside this module to register `func` callbacks
-	///  which print out help without increasing visibility any further.
+	/// which print out help without increasing visibility any further.
 	pub fn call_help(&self, args: Option<Vec<&str>>) {
 		match args {
 			Some(a) => ((self.help)(self, a)),

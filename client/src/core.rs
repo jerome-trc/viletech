@@ -131,15 +131,6 @@ impl ClientCore {
 		Ok(ret)
 	}
 
-	pub fn print_uptime(&self) {
-		let elapsed = self.start_time.elapsed();
-		let dur = chrono::Duration::from_std(elapsed).unwrap();
-		let secs = dur.num_seconds();
-		let mins = secs / 60;
-		let hours = mins / 60;
-		info!("Uptime: {:02}:{:02}:{:02}", hours, mins % 60, secs % 60);
-	}
-
 	pub fn redraw_requested(&mut self, window_id: WindowId, control_flow: &mut ControlFlow) {
 		if window_id != self.gfx.window.id() {
 			return;
@@ -244,7 +235,7 @@ impl ClientCore {
 					self.audio.handles.push(snd);
 				}
 				ConsoleRequest::Uptime => {
-					self.print_uptime();
+					info!("{}", impure::uptime_string(self.start_time))
 				}
 			}
 		}

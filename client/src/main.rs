@@ -146,7 +146,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						core.print_uptime();
+						info!("{}", impure::uptime_string(core.start_time));
 						*control_flow = ControlFlow::Exit;
 						return;
 					}
@@ -154,7 +154,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 					core.on_key_event(input);
 				}
 				WindowEvent::CloseRequested => {
-					core.print_uptime();
+					info!("{}", impure::uptime_string(core.start_time));
 					*control_flow = ControlFlow::Exit;
 				}
 				WindowEvent::Resized(psize) => {

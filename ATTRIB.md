@@ -36,6 +36,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- https://docs.rs/egui/latest/egui/
 	- https://docs.rs/egui-wgpu/latest/egui_wgpu/
 	- https://docs.rs/egui-winit/latest/egui_winit/
+- fasthash
+	- By Flier Lu et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/flier/rust-fasthash/blob/master/LICENSE).
+	- https://docs.rs/fasthash/latest/fasthash/
 - fern
 	- By David "daboross" Ross et. al.
 	- Provided under the [MIT License](https://github.com/daboross/fern/blob/main/LICENSE).
@@ -112,6 +116,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Andrew "BurntSushi" Gallant et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
 	- https://docs.rs/regex/latest/regex/
+- renet
+	- By lucaspoffo et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-MIT).
+	- https://docs.rs/renet/latest/renet/
 - serde
 	- By the [serde-rs](https://github.com/serde-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT).
@@ -120,6 +128,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Paul "pkulchenko" Kulchenko et. al.
 	- Provided under the [MIT License](https://github.com/pkulchenko/serpent/blob/master/LICENSE).
 	- https://github.com/pkulchenko/serpent
+- sha3
+	- By the [Rust Crypto](https://github.com/RustCrypto) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-APACHE) and [MIT License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-MIT).
+	- https://docs.rs/sha3/latest/sha3/
 - shipyard
 	- By Dylan "leudz" Ancel et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).

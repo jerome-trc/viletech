@@ -64,8 +64,10 @@ pub mod zsparse {
 // Re-export transitive dependencies
 
 pub mod depends {
+	pub extern crate bytemuck;
 	pub extern crate chrono;
 	pub extern crate crossbeam;
+	pub extern crate fasthash;
 	pub extern crate kira;
 	pub extern crate lazy_static;
 	pub extern crate log;
@@ -73,6 +75,8 @@ pub mod depends {
 	pub extern crate nanorand;
 	pub extern crate parking_lot;
 	pub extern crate regex;
+	pub extern crate renet;
+	pub extern crate sha3;
 	pub extern crate shipyard;
 	pub extern crate wgpu;
 	pub extern crate winit;
@@ -185,4 +189,13 @@ pub fn log_init(
 	}
 
 	Ok(())
+}
+
+pub fn uptime_string(start_time: std::time::Instant) -> String {
+	let elapsed = start_time.elapsed();
+	let dur = chrono::Duration::from_std(elapsed).unwrap();
+	let secs = dur.num_seconds();
+	let mins = secs / 60;
+	let hours = mins / 60;
+	format!("Uptime: {:02}:{:02}:{:02}", hours, mins % 60, secs % 60)
 }
