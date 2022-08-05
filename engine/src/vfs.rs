@@ -710,32 +710,30 @@ impl VirtualFs {
 
 	fn mount_wad(bytes: Vec<u8>, mount_name: &str) -> Result<Entry, Error> {
 		lazy_static! {
-			static ref RGX_NOMOUNT: Regex = Regex::new(r"[SPF][12]*_(?:START|END)")
-				.expect("Failed to evaluate `VirtualFs::mount_wad::RGX_NOMOUNT`.");
 			static ref RGXSET_MAPMARKER: RegexSet =
-				RegexSet::new(&[r"MAP[0-9]{2}", r"E[0-9]M[0-9]", r"HUBMAP"])
+				RegexSet::new(&[r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$"])
 					.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPMARKER`.");
-			static ref RGXSET_MAPPART: RegexSet = RegexSet::new(&[
-				r"THINGS",
-				r"LINEDEFS",
-				r"SIDEDEFS",
-				r"VERTEXES",
-				r"SEGS",
-				r"SSECTORS",
-				r"NODES",
-				r"SECTORS",
-				r"REJECT",
-				r"BLOCKMAP",
-				r"BEHAVIOR",
-				// UDMF
-				r"TEXTMAP",
-				r"DIALOGUE",
-				r"ZNODES",
-				r"SCRIPTS",
-				// Note: ENDMAP gets filtered out, since there's no need to keep it
-			])
-			.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPPART`.");
 		};
+
+		const MAP_COMPONENTS: &[&str] = &[
+			"blockmap",
+			"linedefs",
+			"nodes",
+			"reject",
+			"sectors",
+			"segs",
+			"sidedefs",
+			"ssectors",
+			"things",
+			"vertexes",
+			// UDMF
+			"behavior",
+			"dialogue",
+			"scripts",
+			"textmap",
+			"znodes",
+			// Note: ENDMAP gets filtered out, since there's no need to keep it
+		];
 
 		let wad = wad::parse_wad(bytes).map_err(Error::WadError)?;
 		let mut dissolution = wad.dissolve();
@@ -744,11 +742,6 @@ impl VirtualFs {
 		let mut mapfold: Option<Entry> = None;
 
 		for (ebytes, name) in dissolution.drain(..) {
-			// No need to keep markers delimiting graphics sections
-			if RGX_NOMOUNT.is_match(&name) {
-				continue;
-			}
-
 			if RGXSET_MAPMARKER.is_match(&name) {
 				match mapfold.take() {
 					Some(entry) => {
@@ -806,9 +799,18 @@ impl VirtualFs {
 			}
 
 			let pop_map = match &mut mapfold {
-				Some(entry) => {
-					if RGXSET_MAPPART.is_match(&name) {
-						entry.children_mut().push(Entry {
+				Some(folder) => {
+					let mut is_map_part = false;
+
+					for lmpname in MAP_COMPONENTS {
+						if name.eq_ignore_ascii_case(lmpname) {
+							is_map_part = true;
+							break;
+						}
+					}
+
+					if is_map_part {
+						folder.children_mut().push(Entry {
 							name,
 							kind: EntryKind::Leaf { bytes: ebytes },
 						});
@@ -948,7 +950,7 @@ impl Default for VirtualFs {
 
 lazy_static! {
 	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
-		.expect("Failed to evaluate `VirtualFs::RGX_INVALIDMOUNTPATH`.");
+		.expect("Failed to evaluate `vfs::RGX_INVALIDMOUNTPATH`.");
 }
 
 // Traits for Impure-specific functionality ////////////////////////////////////
