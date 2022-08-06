@@ -73,7 +73,7 @@ impl GfxCore {
 
 		let (device, queue) = match pollster::block_on(adapter.request_device(
 			&wgpu::DeviceDescriptor {
-				features: wgpu::Features::default(),
+				features: wgpu::Features::PUSH_CONSTANTS,
 				limits: wgpu::Limits::default(),
 				label: None,
 			},
