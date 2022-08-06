@@ -35,7 +35,7 @@ use super::asset::Asset;
 /// `elem` corresponds to an element in the relevant sub-vector of
 /// the game data object. For "singleton" assets like palettes,
 /// `elem` will always be 0.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AssetIndex {
 	obj: usize,
 	elem: usize
@@ -243,7 +243,7 @@ impl DataCore {
 
 		let ndx_pair = AssetIndex { obj: obj_ndx, elem: asset_ndx };
 
-		self.asset_map.insert(full_id, ndx_pair.clone());
+		self.asset_map.insert(full_id, ndx_pair);
 		self.lump_map.insert(asset_ndx.to_string(), ndx_pair);
 	}
 
