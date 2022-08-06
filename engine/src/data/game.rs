@@ -23,10 +23,10 @@ use serde::Deserialize;
 
 use crate::{
 	ecs::Blueprint,
-	game::{DamageType, Species, SkillInfo},
-	gfx::{Endoom, Palette, ColorMap},
-	LevelCluster, level::Episode,
-	LevelMetadata,
+	game::{DamageType, SkillInfo, Species},
+	gfx::doom::{ColorMap, Endoom, Palette},
+	level::Episode,
+	LevelCluster, LevelMetadata,
 };
 
 use super::asset::Asset;
@@ -38,7 +38,7 @@ use super::asset::Asset;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AssetIndex {
 	obj: usize,
-	elem: usize
+	elem: usize,
 }
 
 pub struct Music(StaticSoundData);
@@ -82,7 +82,7 @@ impl Metadata {
 /// relevant to making games as opposed to mods.
 pub struct GameInfo {
 	steam_app_id: Option<u32>,
-	discord_app_id: Option<String>
+	discord_app_id: Option<String>,
 }
 
 /// Determines the system used for loading assets from a mounted object.
@@ -103,7 +103,7 @@ pub enum GameDataKind {
 	/// Assets are loaded from this archive/directory based on the
 	/// Eternity Engine sub-directory namespacing system. Sounds outside of
 	/// `sounds/`, for example, don't get loaded at all.
-	Eternity
+	Eternity,
 }
 
 /// Represents anything that the user added to their load order.
@@ -234,14 +234,17 @@ impl DataCore {
 		let obj = &mut self.objects[obj_ndx];
 
 		let asset_ndx = T::add_impl(obj, asset);
-	
+
 		let full_id = if T::DOMAIN_STRING.is_empty() {
 			format!("{}:{}", obj_id, asset_id)
 		} else {
 			format!("{}:{}.{}", obj_id, T::DOMAIN_STRING, asset_id)
 		};
 
-		let ndx_pair = AssetIndex { obj: obj_ndx, elem: asset_ndx };
+		let ndx_pair = AssetIndex {
+			obj: obj_ndx,
+			elem: asset_ndx,
+		};
 
 		self.asset_map.insert(full_id, ndx_pair);
 		self.lump_map.insert(asset_ndx.to_string(), ndx_pair);

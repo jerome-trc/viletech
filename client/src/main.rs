@@ -22,7 +22,7 @@ use impure::{
 	console::Console,
 	data::game::DataCore,
 	depends::*,
-	gfx::GfxCore,
+	gfx::{core::GraphicsCore, render},
 	lua::ImpureLua,
 	vfs::{ImpureVfs, VirtualFs},
 };
@@ -74,7 +74,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 			error!(
 				"Failed to find and mount engine gamedata.
 				Is 'impure.zip' missing?
-				Error: {}", err
+				Error: {}",
+				err
 			);
 			return Err(Box::new(err));
 		}
@@ -90,7 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let event_loop = EventLoop::new();
 
-	let mut gfx = match GfxCore::new(
+	let mut gfx = match GraphicsCore::new(
 		match winit::window::WindowBuilder::new()
 			.with_title("Impure")
 			.with_min_inner_size(PhysicalSize::new(320, 200))
@@ -118,10 +119,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
-	gfx.pipeline_from_shader(
-		vfs.read()
-			.read_str(Path::new("/impure/shaders/hello-tri.wgsl"))?.to_string(),
+	let shader = impure::gfx::create_shader_module(
+		&gfx.device,
+		"hello-tri",
+		vfs.read().read_str("/impure/shaders/hello-tri.wgsl")?,
 	);
+
+	let pipeline = render::pipeline_builder("Hello Triangle", &gfx.device)
+		.shader_states(impure::gfx::create_shader_states(
+			&shader,
+			"vs_main",
+			&[],
+			"fs_main",
+			&[wgpu::ColorTargetState {
+				format: gfx.surface_config.format,
+				blend: Some(wgpu::BlendState::REPLACE),
+				write_mask: wgpu::ColorWrites::ALL,
+			}],
+		))
+		// Remaining defaults are acceptable
+		.build();
+
+	gfx.pipelines.push(pipeline);
 
 	let mut core = ClientCore::new(start_time, vfs, lua, data, gfx, console)?;
 
@@ -158,10 +177,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 					*control_flow = ControlFlow::Exit;
 				}
 				WindowEvent::Resized(psize) => {
-					core.gfx.resize(*psize);
+					core.on_window_resize(*psize);
 				}
 				WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-					core.gfx.resize(**new_inner_size);
+					core.on_window_resize(**new_inner_size);
 				}
 				_ => {}
 			}

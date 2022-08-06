@@ -30,6 +30,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
 	- https://docs.rs/crossbeam/latest/crossbeam/
+- dolly
+	- By Tomasz "h3r2tic" Stachowiak et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-MIT).
+	- https://docs.rs/dolly/latest/dolly/
 - egui, egui-wgpu, egui-winit 
 	- By Emil "emilk" Ernerfeldt et. al.
 	- Provided under the [MIT License](https://github.com/emilk/egui/blob/master/LICENSE-MIT) and [Apache 2.0 License](https://github.com/emilk/egui/blob/master/LICENSE-APACHE).

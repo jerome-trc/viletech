@@ -16,15 +16,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use impure::{
+	audio::AudioCore,
 	console::{Console, ConsoleCommand, ConsoleRequest},
-	data::{game::{DataCore, GameDataKind}, GameDataObject},
+	data::{game::DataCore, GameDataObject},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
-	gfx::GfxCore,
+	gfx::{camera::Camera, core::GraphicsCore},
 	rng::RngCore,
-	sim::Playsim,
+	sim::{Message as SimMessage, PlaySim, ThreadContext as SimThreadContext},
 	utils::path::*,
-	vfs::{self, VirtualFs, ImpureVfs}, audio::AudioCore
+	vfs::{self, ImpureVfs, VirtualFs},
 };
 
 use kira::{
@@ -39,42 +40,33 @@ use shipyard::World;
 use std::{
 	env,
 	error::Error,
-	fs,
-	io,
+	fs, io,
 	path::PathBuf,
-	sync::Arc,
-	thread::Thread
+	sync::{atomic::AtomicBool, Arc},
+	thread::JoinHandle,
 };
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 enum Scene {
+	/// The user hasn't entered the game yet. From here they can select a user
+	/// profile and engine-global/cross-game preferences, assemble a load order,
+	/// and begin the game launch process.
 	Frontend {
 		menu: FrontendMenu,
 	},
-	Title {
-		gui: World,
-	},
-	Intermission {
-		gui: World,
-	},
-	Text {
-		gui: World,
-	},
-	PlaysimSingle {
-		thread: Thread,
-		gui: World,
-		playsim: RwLock<Playsim>,
-	},
-	Demo {
-		gui: World,
-		playsim: RwLock<Playsim>,
+	/// Where the user is taken after leaving the frontend, unless they have
+	/// specified to be taken directly to a playsim.
+	Title,
+	Playsim {
+		running: Arc<AtomicBool>,
+		messenger: crossbeam::channel::Sender<SimMessage>,
+		thread: JoinHandle<()>,
 	},
 	CastCall,
-	Cutscene,
 }
 
 enum SceneChange {
-	PlaysimSingle { to_mount: Vec<PathBuf> },
+	Title { to_mount: Vec<PathBuf> },
 }
 
 pub struct ClientCore {
@@ -83,9 +75,12 @@ pub struct ClientCore {
 	pub lua: Lua,
 	pub data: DataCore,
 	pub rng: RngCore<WyRand>,
-	pub gfx: GfxCore,
+	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
 	pub console: Console,
+	pub gui: World,
+	pub camera: Camera,
+	pub playsim: Arc<RwLock<PlaySim>>,
 	scene: Scene,
 	next_scene: Option<SceneChange>,
 }
@@ -97,7 +92,7 @@ impl ClientCore {
 		vfs: Arc<RwLock<VirtualFs>>,
 		lua: Lua,
 		data: DataCore,
-		gfx: GfxCore,
+		gfx: GraphicsCore,
 		console: Console,
 	) -> Result<Self, Box<dyn Error>> {
 		let audio_mgr_settings = AudioManagerSettings::default();
@@ -110,6 +105,11 @@ impl ClientCore {
 			handles: Vec::<_>::with_capacity(sound_cap),
 		};
 
+		let camera = Camera::new(
+			gfx.surface_config.width as f32,
+			gfx.surface_config.height as f32,
+		);
+
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
@@ -119,6 +119,9 @@ impl ClientCore {
 			rng: RngCore::default(),
 			audio,
 			console,
+			gui: World::default(),
+			camera,
+			playsim: Arc::new(RwLock::new(PlaySim::default())),
 			scene: Scene::Frontend {
 				menu: FrontendMenu::default(),
 			},
@@ -136,8 +139,8 @@ impl ClientCore {
 			return;
 		}
 
-		let output = match self.gfx.render_start() {
-			Ok(o) => o,
+		let mut frame = match self.gfx.render_start() {
+			Ok(f) => f,
 			Err(wgpu::SurfaceError::Lost) => {
 				self.gfx.resize(self.gfx.window_size);
 				return;
@@ -153,6 +156,7 @@ impl ClientCore {
 			}
 		};
 
+		self.camera.update(frame.delta_time_secs_f32());
 		self.gfx.egui_start();
 
 		match &mut self.scene {
@@ -167,18 +171,24 @@ impl ClientCore {
 					FrontendAction::Start => {
 						let to_mount = menu.to_mount();
 						let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
-						self.next_scene = Some(SceneChange::PlaysimSingle { to_mount });
+						self.next_scene = Some(SceneChange::Title { to_mount });
 					}
 				}
+
+				let mut rpass = frame.render_pass();
+
+				rpass.set_pipeline(&self.gfx.pipelines[0]);
+				rpass.draw(0..3, 0..1);
 			}
 			Scene::Title { .. } => {
 				// ???
 			}
+			Scene::Playsim { .. } => {}
 			_ => {}
 		};
 
 		self.console.draw(&self.gfx.egui.context);
-		self.gfx.render_finish(output.0, output.1);
+		self.gfx.render_finish(frame);
 	}
 
 	pub fn process_console_requests(&mut self) {
@@ -247,6 +257,12 @@ impl ClientCore {
 		}
 	}
 
+	pub fn on_window_resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+		self.gfx.resize(new_size);
+		self.camera
+			.resize(new_size.width as f32, new_size.height as f32);
+	}
+
 	pub fn on_key_event(&mut self, input: &KeyboardInput) {
 		self.console.on_key_event(input);
 	}
@@ -259,7 +275,7 @@ impl ClientCore {
 				// TODO: Mark as likely with intrinsics...?
 			}
 			Some(scene) => match scene {
-				SceneChange::PlaysimSingle { to_mount } => {
+				SceneChange::Title { to_mount } => {
 					let metas = self.vfs.write().mount_gamedata(&to_mount);
 					let vfsg = self.vfs.read();
 
@@ -397,13 +413,11 @@ impl ClientCore {
 
 		self.console.register_command(ConsoleCommand::new(
 			"wgpudiag",
-			|_, _| {
-				ConsoleRequest::WgpuDiag
-			},
+			|_, _| ConsoleRequest::WgpuDiag,
 			|_, _| {
 				info!("Prints information about the graphics device and WGPU backend.");
 			},
-			false
+			false,
 		));
 	}
 

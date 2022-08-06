@@ -1,3 +1,5 @@
+//! A structure for holding all state common to rendering between scenes.
+
 /*
 Copyright (C) 2022 ***REMOVED***
 
@@ -15,17 +17,22 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+use super::error::Error;
+
 use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
 use log::info;
-use palette::{encoding::Srgb, rgb::Rgb};
-use std::{error::Error, fmt, iter};
-use wgpu::{RenderPipeline, SurfaceConfiguration, SurfaceTexture, TextureView};
+use std::{
+	iter,
+	time::{Duration, Instant},
+};
+use wgpu::{
+	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, RenderPass, RenderPipeline,
+	SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
+};
 use winit::window::Window;
 
-pub type Rgb32 = palette::rgb::Rgb<Srgb, u8>;
-
 /// Holds all state common to rendering between scenes.
-pub struct GfxCore {
+pub struct GraphicsCore {
 	pub window: Window,
 	pub window_size: winit::dpi::PhysicalSize<u32>,
 	pub instance: wgpu::Instance,
@@ -35,6 +42,8 @@ pub struct GfxCore {
 	pub queue: wgpu::Queue,
 	pub surface_config: SurfaceConfiguration,
 	pub pipelines: Vec<RenderPipeline>,
+	pub staging: StagingBelt,
+	pub last_frame_time: Instant,
 	pub egui: EguiCore,
 }
 
@@ -44,17 +53,8 @@ pub struct EguiCore {
 	pub render_pass: EguiRenderPass,
 }
 
-#[derive(Debug)]
-struct RequestAdapterError {}
-impl Error for RequestAdapterError {}
-impl fmt::Display for RequestAdapterError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "Failed to retrieve an adapter.")
-	}
-}
-
-impl GfxCore {
-	pub fn new(window: Window) -> Result<GfxCore, Box<dyn Error>> {
+impl GraphicsCore {
+	pub fn new(window: Window) -> Result<GraphicsCore, Box<dyn std::error::Error>> {
 		let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 		let surface = unsafe { instance.create_surface(&window) };
 
@@ -67,7 +67,7 @@ impl GfxCore {
 		let adapter = match pollster::block_on(adpreq) {
 			Some(a) => a,
 			None => {
-				return Err(Box::new(RequestAdapterError {}));
+				return Err(Box::new(Error::AdapterRequest {}));
 			}
 		};
 
@@ -75,7 +75,7 @@ impl GfxCore {
 			&wgpu::DeviceDescriptor {
 				features: wgpu::Features::PUSH_CONSTANTS,
 				limits: wgpu::Limits::default(),
-				label: None,
+				label: Some("IMPURE: Device"),
 			},
 			None,
 		)) {
@@ -86,10 +86,10 @@ impl GfxCore {
 		};
 
 		{
-			let dinfo = adapter.get_info();
+			let adpinfo = adapter.get_info();
 
-			info!("WGPU backend: {:?}", dinfo.backend);
-			info!("GPU: {} ({:?})", dinfo.name, dinfo.device_type);
+			info!("WGPU backend: {:?}", adpinfo.backend);
+			info!("GPU: {} ({:?})", adpinfo.name, adpinfo.device_type);
 		}
 
 		let window_size = window.inner_size();
@@ -109,7 +109,7 @@ impl GfxCore {
 			render_pass: EguiRenderPass::new(&device, srf_format, 1),
 		};
 
-		Ok(GfxCore {
+		Ok(GraphicsCore {
 			window,
 			window_size,
 			instance,
@@ -119,66 +119,10 @@ impl GfxCore {
 			queue,
 			surface_config: srf_cfg,
 			pipelines: Vec::<wgpu::RenderPipeline>::default(),
+			staging: StagingBelt::new(0x100),
+			last_frame_time: Instant::now(),
 			egui,
 		})
-	}
-
-	pub fn pipeline_from_shader(&mut self, string: String) {
-		let ssrc = wgpu::ShaderSource::Wgsl(std::borrow::Cow::Owned(string));
-
-		let sdesc = wgpu::ShaderModuleDescriptor {
-			label: Some("hello-tri"),
-			source: ssrc,
-		};
-
-		let shader = self.device.create_shader_module(&sdesc);
-
-		let layout = self
-			.device
-			.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-				label: Some("hello-tri"),
-				bind_group_layouts: &[],
-				push_constant_ranges: &[],
-			});
-
-		let pipeline = self
-			.device
-			.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-				label: Some("hello-tri"),
-				layout: Some(&layout),
-				vertex: wgpu::VertexState {
-					module: &shader,
-					entry_point: "vs_main",
-					buffers: &[],
-				},
-				fragment: Some(wgpu::FragmentState {
-					module: &shader,
-					entry_point: "fs_main",
-					targets: &[wgpu::ColorTargetState {
-						format: self.surface_config.format,
-						blend: Some(wgpu::BlendState::REPLACE),
-						write_mask: wgpu::ColorWrites::ALL,
-					}],
-				}),
-				primitive: wgpu::PrimitiveState {
-					topology: wgpu::PrimitiveTopology::TriangleList,
-					strip_index_format: None,
-					front_face: wgpu::FrontFace::Ccw,
-					cull_mode: Some(wgpu::Face::Back),
-					polygon_mode: wgpu::PolygonMode::Fill,
-					unclipped_depth: false,
-					conservative: false,
-				},
-				depth_stencil: None,
-				multisample: wgpu::MultisampleState {
-					count: 1,
-					mask: !0,
-					alpha_to_coverage_enabled: false,
-				},
-				multiview: None,
-			});
-
-		self.pipelines.push(pipeline);
 	}
 
 	pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -190,14 +134,29 @@ impl GfxCore {
 		}
 	}
 
-	pub fn render_start(&self) -> Result<(SurfaceTexture, TextureView), wgpu::SurfaceError> {
-		let ret1 = self.surface.get_current_texture()?;
+	pub fn render_start(&mut self) -> Result<Frame, wgpu::SurfaceError> {
+		let now = Instant::now();
+		let delta_time = now - self.last_frame_time;
+		self.last_frame_time = now;
 
-		let ret2 = ret1
+		let srftex = self.surface.get_current_texture()?;
+
+		let view = srftex
 			.texture
-			.create_view(&wgpu::TextureViewDescriptor::default());
+			.create_view(&TextureViewDescriptor::default());
 
-		Ok((ret1, ret2))
+		let encoder = self
+			.device
+			.create_command_encoder(&CommandEncoderDescriptor {
+				label: Some("IMPURE: Render Encoder"),
+			});
+
+		Ok(Frame {
+			delta_time,
+			texture: srftex,
+			view,
+			encoder,
+		})
 	}
 
 	pub fn egui_start(&mut self) {
@@ -205,43 +164,21 @@ impl GfxCore {
 		self.egui.context.begin_frame(input);
 	}
 
-	pub fn render_finish(&mut self, outframe: SurfaceTexture, outview: TextureView) {
+	pub fn render_finish(&mut self, frame: Frame) {
 		let output = self.egui.context.end_frame();
 		let paint_jobs = self.egui.context.tessellate(output.shapes);
 
-		let mut encoder = self
-			.device
-			.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-				label: Some("Render Encoder"),
-			});
+		let Frame {
+			delta_time: _,
+			texture: outframe,
+			view: outview,
+			mut encoder,
+		} = frame;
 
-		let scr_desc = ScreenDescriptor {
+		let screen_desc = ScreenDescriptor {
 			size_in_pixels: [self.surface_config.width, self.surface_config.height],
 			pixels_per_point: self.window.scale_factor() as f32,
 		};
-
-		{
-			let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-				label: Some("Render Pass"),
-				color_attachments: &[wgpu::RenderPassColorAttachment {
-					view: &outview,
-					resolve_target: None,
-					ops: wgpu::Operations {
-						load: wgpu::LoadOp::Clear(wgpu::Color {
-							r: 0.0,
-							g: 0.0,
-							b: 0.0,
-							a: 1.0,
-						}),
-						store: true,
-					},
-				}],
-				depth_stencil_attachment: None,
-			});
-
-			rpass.set_pipeline(&self.pipelines[0]);
-			rpass.draw(0..3, 0..1);
-		}
 
 		for (id, image_delta) in &output.textures_delta.set {
 			self.egui
@@ -255,11 +192,11 @@ impl GfxCore {
 
 		self.egui
 			.render_pass
-			.update_buffers(&self.device, &self.queue, &paint_jobs, &scr_desc);
+			.update_buffers(&self.device, &self.queue, &paint_jobs, &screen_desc);
 
 		self.egui
 			.render_pass
-			.execute(&mut encoder, &outview, &paint_jobs, &scr_desc, None);
+			.execute(&mut encoder, &outview, &paint_jobs, &screen_desc, None);
 
 		self.queue.submit(iter::once(encoder.finish()));
 		outframe.present();
@@ -272,7 +209,7 @@ impl GfxCore {
 		let limits = self.device.limits();
 
 		format!(
-			"WGPU diagnosis: \
+			"WGPU diagnostics: \
 			\r\nBackend: {:?} \
 			\r\nGPU: {} ({:?}) \
 			\r\nRelevant features: \
@@ -321,41 +258,35 @@ impl GfxCore {
 	}
 }
 
-pub struct Palette(pub [Rgb32; 256]);
-
-impl Default for Palette {
-	fn default() -> Self {
-		Palette([Rgb::default(); 256])
-	}
+pub struct Frame {
+	delta_time: Duration,
+	texture: SurfaceTexture,
+	view: TextureView,
+	encoder: CommandEncoder,
 }
 
-pub struct ColorMap(pub [u8; 256]);
-
-pub struct Endoom {
-	colors: [u8; 2000],
-	text: [u8; 2000],
-}
-
-impl Endoom {
-	pub fn new(lump: &[u8]) -> Self {
-		let mut ret = Self {
-			colors: [0; 2000],
-			text: [0; 2000],
-		};
-
-		let mut i = 0;
-
-		while i < 4000 {
-			ret.colors[i] = lump[i];
-			ret.text[i] = lump[i + 1];
-			i += 2;
-		}
-
-		ret
+impl Frame {
+	pub fn render_pass(&mut self) -> RenderPass {
+		self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("IMPURE: Render Pass"),
+			color_attachments: &[wgpu::RenderPassColorAttachment {
+				view: &self.view,
+				resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Clear(wgpu::Color {
+						r: 0.0,
+						g: 0.0,
+						b: 0.0,
+						a: 1.0,
+					}),
+					store: true,
+				},
+			}],
+			depth_stencil_attachment: None,
+		})
 	}
 
-	pub fn is_blinking(&self, index: usize) -> bool {
-		debug_assert!(index < 2000);
-		self.colors[index] & (1 << 7) == (1 << 7)
+	pub fn delta_time_secs_f32(&self) -> f32 {
+		self.delta_time.as_secs_f32()
 	}
 }

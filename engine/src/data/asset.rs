@@ -20,10 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use crate::{
 	ecs::Blueprint,
 	game::DamageType,
-	gfx::{ColorMap, Endoom, Palette},
-	GameDataObject,
-	LevelMetadata,
-	game::{SkillInfo, Species}, level::Episode, LevelCluster, 
+	game::{SkillInfo, Species},
+	gfx::doom::{ColorMap, Endoom, Palette},
+	level::Episode,
+	GameDataObject, LevelCluster, LevelMetadata,
 };
 
 use super::game::{Music, Sound};

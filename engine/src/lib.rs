@@ -53,8 +53,8 @@ pub use vfs::Entry as VfsEntry;
 pub use vfs::Error as VfsError;
 
 pub mod zsparse {
-	pub use ::zsparse::filesystem::FileSystem as ZsFileSystem;
 	pub use ::zsparse::filesystem::File as ZsFile;
+	pub use ::zsparse::filesystem::FileSystem as ZsFileSystem;
 	pub use ::zsparse::filesystem::Files as ZsFiles;
 	pub use zsparse::err::ParsingError as ZsParsingError;
 	pub use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
@@ -67,6 +67,7 @@ pub mod depends {
 	pub extern crate bytemuck;
 	pub extern crate chrono;
 	pub extern crate crossbeam;
+	pub extern crate dolly;
 	pub extern crate fasthash;
 	pub extern crate kira;
 	pub extern crate lazy_static;
@@ -104,8 +105,11 @@ pub fn full_version_string() -> String {
 pub fn log_init(
 	sender: Option<crossbeam::channel::Sender<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	use std::{fs, io, path::{Path, PathBuf}};
 	use console::ConsoleWriter;
+	use std::{
+		fs, io,
+		path::{Path, PathBuf},
+	};
 
 	let exe_dir = utils::path::exe_dir();
 
