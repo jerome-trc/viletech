@@ -386,6 +386,7 @@ pub enum ConsoleRequest {
 	File(PathBuf),
 	Sound(String),
 	Uptime,
+	WgpuDiag,
 }
 
 pub struct ConsoleCommand {

@@ -186,13 +186,16 @@ impl ClientCore {
 
 		for req in cons_reqs {
 			match req {
-				ConsoleRequest::None => {},
+				ConsoleRequest::None => {}
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
 					info!("{}", vfsg.ccmd_file(p));
 				}
 				ConsoleRequest::LuaMem => {
-					info!("Client Lua state heap usage (bytes): {}", self.lua.used_memory());
+					info!(
+						"Client Lua state heap usage (bytes): {}",
+						self.lua.used_memory()
+					);
 				}
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
@@ -236,6 +239,9 @@ impl ClientCore {
 				}
 				ConsoleRequest::Uptime => {
 					info!("{}", impure::uptime_string(self.start_time))
+				}
+				ConsoleRequest::WgpuDiag => {
+					info!("{}", self.gfx.diag());
 				}
 			}
 		}
@@ -341,13 +347,11 @@ impl ClientCore {
 
 		self.console.register_command(ConsoleCommand::new(
 			"luamem",
-			|_, _| {
-				ConsoleRequest::LuaMem
-			},
+			|_, _| ConsoleRequest::LuaMem,
 			|_, _| {
 				info!("Prints the current heap memory used by the client-side Lua state.");
 			},
-			true
+			true,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -389,6 +393,17 @@ impl ClientCore {
 				info!("Prints the engine version.");
 			},
 			true,
+		));
+
+		self.console.register_command(ConsoleCommand::new(
+			"wgpudiag",
+			|_, _| {
+				ConsoleRequest::WgpuDiag
+			},
+			|_, _| {
+				info!("Prints information about the graphics device and WGPU backend.");
+			},
+			false
 		));
 	}
 

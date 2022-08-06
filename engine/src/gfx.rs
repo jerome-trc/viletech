@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
 use log::info;
-use palette::{rgb::Rgb, encoding::Srgb};
+use palette::{encoding::Srgb, rgb::Rgb};
 use std::{error::Error, fmt, iter};
 use wgpu::{RenderPipeline, SurfaceConfiguration, SurfaceTexture, TextureView};
 use winit::window::Window;
@@ -264,6 +264,61 @@ impl GfxCore {
 		self.queue.submit(iter::once(encoder.finish()));
 		outframe.present();
 	}
+
+	/// Output for the `wgpudiag` console command.
+	pub fn diag(&self) -> String {
+		let adpinfo = self.adapter.get_info();
+		let feats = self.device.features();
+		let limits = self.device.limits();
+
+		format!(
+			"WGPU diagnosis: \
+			\r\nBackend: {:?} \
+			\r\nGPU: {} ({:?}) \
+			\r\nRelevant features: \
+			\r\n\tPush constants: {} \
+			\r\n\tTexture binding arrays: {} \
+			\r\n\tBuffer binding arrays: {} \
+			\r\n\tStorage resource binding arrays: {} \
+			\r\nRelevant limits: \
+			\r\n\tMax. 2D texture width/height: {} \
+			\r\n\tMax. texture array layers: {} \
+			\r\n\tMax. bind groups: {} \
+			\r\n\tMax. samplers per shader stage: {} \
+			\r\n\tMax. sampled textures per shader stage: {} \
+			\r\n\tMax. UBOs per shader stage: {} \
+			\r\n\tMax. UBO binding size: {} \
+			\r\n\tMax. storage buffers per shader stage: {} \
+			\r\n\tMax. storage buf. binding size: {} \
+			\r\n\tMax. VBOs: {} \
+			\r\n\tMax. vertex attributes: {} \
+			\r\n\tMax. VBO array stride: {} \
+			\r\n\tMax. push constant size: {} \
+			\r\n\tMax. inter-stage shader components: {}",
+			adpinfo.backend,
+			adpinfo.name,
+			adpinfo.device_type,
+			feats.contains(wgpu::Features::PUSH_CONSTANTS),
+			feats.contains(wgpu::Features::TEXTURE_BINDING_ARRAY),
+			feats.contains(wgpu::Features::BUFFER_BINDING_ARRAY),
+			feats.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY),
+			// TODO: max_buffer_size in wgpu 0.13
+			limits.max_texture_dimension_2d,
+			limits.max_texture_array_layers,
+			limits.max_bind_groups,
+			limits.max_samplers_per_shader_stage,
+			limits.max_sampled_textures_per_shader_stage,
+			limits.max_uniform_buffers_per_shader_stage,
+			limits.max_uniform_buffer_binding_size,
+			limits.max_storage_buffers_per_shader_stage,
+			limits.max_storage_buffer_binding_size,
+			limits.max_vertex_buffers,
+			limits.max_vertex_attributes,
+			limits.max_vertex_buffer_array_stride,
+			limits.max_push_constant_size,
+			limits.max_inter_stage_shader_components
+		)
+	}
 }
 
 pub struct Palette(pub [Rgb32; 256]);
@@ -278,14 +333,14 @@ pub struct ColorMap(pub [u8; 256]);
 
 pub struct Endoom {
 	colors: [u8; 2000],
-	text: [u8; 2000]
+	text: [u8; 2000],
 }
 
 impl Endoom {
 	pub fn new(lump: &[u8]) -> Self {
 		let mut ret = Self {
 			colors: [0; 2000],
-			text: [0; 2000]
+			text: [0; 2000],
 		};
 
 		let mut i = 0;
