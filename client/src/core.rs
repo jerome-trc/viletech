@@ -490,15 +490,40 @@ impl ClientCore {
 	fn start_game(&mut self) {
 		let vfsg = self.vfs.read();
 
-		for obj in &mut self.data.objects {
-			Self::load_assets(&vfsg, obj);
+		for i in 0..self.data.objects.len() {
+			Self::load_assets(&vfsg, i, &mut self.data);
 		}
+	}
+
+	fn start_sim(&mut self) {
+		let (sender, receiver) = crossbeam::channel::unbounded();
+		let playsim = self.playsim.clone();
+		let running = Arc::new(AtomicBool::new(true));
+
+		self.scene = Scene::Playsim {
+			running: running.clone(),
+			messenger: sender,
+			thread: std::thread::Builder::new()
+				.name("Impure: Playsim".to_string())
+				.spawn(move || {
+					impure::sim::run(SimThreadContext {
+						playsim,
+						receiver,
+						running,
+					});
+				})
+				.expect("Failed to spawn OS thread for playsim."),
+		};
 	}
 }
 
 // Internal implementation details: on-game-start asset loading.
 impl ClientCore {
-	fn load_assets(vfs: &VirtualFs, obj: &mut impure::data::game::Object) {
-		// ???
+	fn load_assets(vfs: &VirtualFs, obj_index: usize, data: &mut DataCore) {
+		let uuid = &data.objects[obj_index].meta.uuid.clone();
+
+		let _entry = vfs
+			.lookup(&uuid)
+			.expect("`ClientCore::load_assets` failed to find a game data object by UUID.");
 	}
 }
