@@ -41,9 +41,7 @@ pub struct Blueprint {
 
 pub struct Bleed {
 	color: Rgb32,
-	type1: AssetIndex,
-	type2: AssetIndex,
-	type3: AssetIndex,
+	blueprints: [Option<AssetIndex>; 3]
 }
 
 pub struct Bounce {
