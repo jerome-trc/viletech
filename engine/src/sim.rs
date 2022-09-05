@@ -32,13 +32,13 @@ pub struct PlaySim {
 	world: World,
 }
 
-pub enum Message {
+pub enum InMessage {
 	// ???
 }
 
 pub struct ThreadContext {
 	pub playsim: Arc<RwLock<PlaySim>>,
-	pub receiver: crossbeam::channel::Receiver<Message>,
+	pub receiver: crossbeam::channel::Receiver<InMessage>,
 	pub running: Arc<AtomicBool>,
 }
 
