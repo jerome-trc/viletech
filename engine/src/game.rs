@@ -94,6 +94,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct DamageOverTime {
 	damage_type: AssetIndex,
 	/// Applied per tic.
