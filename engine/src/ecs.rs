@@ -94,6 +94,7 @@ pub struct Defense {
 
 pub struct Health {
 	current: i32,
+	starting: i32,
 	max: i32,
 	dmg_over_time: Vec<DamageOverTime>,
 	gib_health: i32,
