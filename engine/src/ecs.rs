@@ -85,7 +85,8 @@ pub struct Cheat {}
 #[derive(Default)]
 pub struct Core {
 	name: String,
-	lived: u32,
+	/// Game tics since this entity was spawned.
+	lifetime: u32,
 }
 
 pub struct Defense {
