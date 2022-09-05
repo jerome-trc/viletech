@@ -19,7 +19,7 @@ use crate::{data::game::AssetIndex, game::DamageOverTime, gfx::Rgb32};
 use bitflags::bitflags;
 use glam::{Vec2, Vec3};
 use shipyard::EntityId;
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 
 #[derive(Default)]
 pub struct Blueprint {
@@ -101,7 +101,7 @@ pub struct Health {
 
 /// Allows the entity to carry `Item` entities.
 pub struct Inventory {
-	list: LinkedList<EntityId>,
+	items: VecDeque<EntityId>,
 }
 
 bitflags! {
