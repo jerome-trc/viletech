@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use crate::{data::game::AssetIndex, game::DamageOverTime, gfx::Rgb32};
 use bitflags::bitflags;
 use glam::{Vec2, Vec3};
-use shipyard::EntityId;
+use shipyard::{Component, EntityId};
 use std::collections::VecDeque;
 
 #[derive(Default)]
@@ -39,11 +39,13 @@ pub struct Blueprint {
 	special_args: Option<SpecialArgs>,
 }
 
+#[derive(Component)]
 pub struct Bleed {
 	color: Rgb32,
 	blueprints: [Option<AssetIndex>; 3]
 }
 
+#[derive(Component)]
 pub struct Bounce {
 	flags: BounceFlags,
 	/// How many times can this entity bounce before expiring?
@@ -72,15 +74,17 @@ bitflags! {
 	}
 }
 
+#[derive(Component)]
 pub struct BoxCollider {
 	/// Applies on both axes.
 	width: f32,
 	height: f32,
 }
 
+#[derive(Component)]
 pub struct Cheat {}
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct Common {
 	/// Known in GZDoom as a "tag".
 	name: String,
@@ -93,6 +97,7 @@ pub struct DamageFactor {
 	factor: f32
 }
 
+#[derive(Component)]
 pub struct Defense {
 	flags: DefenseFlags,
 	damage_factors: Vec<DamageFactor>,
@@ -116,6 +121,7 @@ bitflags! {
 	}
 }
 
+#[derive(Component)]
 pub struct Health {
 	current: i32,
 	starting: i32,
@@ -125,11 +131,13 @@ pub struct Health {
 }
 
 /// Allows the entity to carry `Item` entities.
+#[derive(Component)]
 pub struct Inventory {
 	items: VecDeque<EntityId>,
 }
 
 /// Marks the entity as an inventory item.
+#[derive(Component)]
 pub struct Item {
 	flags: ItemFlags,
 	amount: u32,
@@ -149,6 +157,7 @@ bitflags! {
 	}
 }
 
+#[derive(Component)]
 pub struct Monster {
 	flags: MonsterFlags,
 	species: AssetIndex,
@@ -171,6 +180,7 @@ bitflags! {
 	}
 }
 
+#[derive(Component)]
 pub struct Motion {
 	flags: MotionFlags,
 	mass: u32,
@@ -192,16 +202,20 @@ bitflags! {
 }
 
 /// This entity is currently under the control of a player.
+#[derive(Component)]
 pub struct Player {
 	index: u8,
 }
 
+#[derive(Component)]
 pub struct Projectile {}
 
+#[derive(Component)]
 pub struct SpecialArgs {
 	args: [i32; 5],
 }
 
+#[derive(Component)]
 pub struct Transform {
 	pos: Vec3,
 	angle: f32,
@@ -210,6 +224,7 @@ pub struct Transform {
 }
 
 /// Allows an `Item` entity to be wielded as a weapon.
+#[derive(Component)]
 pub struct Weapon {
 	flags: WeaponFlags,
 	bob_style: WeaponBobStyle,
