@@ -1,3 +1,5 @@
+//! Trait extending `mlua::Lua` with Impure-specific behaviour.
+
 /*
 Copyright (C) 2022 ***REMOVED***
 
@@ -24,11 +26,26 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 
-pub trait ImpureLua<'p> {
+/// Only exists to extends `mlua::Lua` with new methods.
+pub trait ImpureLua<'p> {	
+	/// Seeds the RNG, loads Teal into the registry; defines logging functions,
+	/// `import` as a substitute for `require`, and functions required by all
+	/// contexts that require no other state to be captured.
+	/// If `safe` is `false`, [`mlua::prelude::LuaStdLib::DEBUG`]
+	/// will be loaded into the constructed state.
 	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
-	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str) -> LuaChunk<'lua, 'a>
+
+	/// For guaranteeing that loaded chunks are text.
+	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str, env: LuaTable<'lua>) -> LuaChunk<'lua, 'a>
 	where
 		S: mlua::AsChunk<'lua> + ?Sized;
+
+	/// Retrieve `envs.std` from the registry.
+	fn env_std(&self) -> LuaTable;
+
+	/// Adds `math`, `string`, and `table` standard libraries to an environment,
+	/// as well as several standard free functions and `_VERSION`.
+	fn env_init_std(&self, env: &LuaTable);
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
@@ -69,9 +86,41 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			};
 		}
 
+		let envs = ret.create_table().expect(
+			"`ImpureLua::new_ex`: failed to create `envs` table."
+		);
+
+		// Standard-only environment, used as a basis for other environments
+
+		let stdenv = ret.create_table().expect(
+			"`ImpureLua::new_ex`: failed to create standard environment table."
+		);
+
+		ret.env_init_std(&stdenv);
+
+		match envs.set("std", stdenv) {
+			Ok(()) => {},
+			Err(err) => {
+				error!("`ImpureLua::new_ex`: Failed to set registry `envs.std`.");
+				return Err(err);
+			}
+		}
+
+		match ret.set_named_registry_value("envs", envs) {
+			Ok(()) => {},
+			Err(err) => {
+				error!("`ImpureLua::new_ex`: Failed to put `envs` table into registry.");
+				return Err(err);
+			}
+		};
+
 		// Load the Teal compiler into the registry
 
-		let teal: LuaTable = match ret.safeload(include_str!("./teal.lua"), "teal").eval() {
+		let teal: LuaTable = match ret.safeload(
+			include_str!("./teal.lua"),
+			"teal",
+			ret.env_std()
+		).eval() {
 			Ok(t) => t,
 			Err(err) => {
 				return Err(err);
@@ -127,7 +176,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			})?,
 		)?;
 
-		// Common functions: `import()`
+		// Common functions: `import`
 
 		{
 			let import = ret.create_function(move |l, path: String| -> LuaResult<LuaValue> {
@@ -140,7 +189,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 					}
 				};
 
-				return l.safeload(bytes, path.as_str()).eval();
+				return l.safeload(bytes, path.as_str(), l.env_std()).eval();
 			});
 
 			match import {
@@ -171,13 +220,73 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		Ok(ret)
 	}
 
-	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str) -> LuaChunk<'lua, 'a>
+	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str, env: LuaTable<'lua>) -> LuaChunk<'lua, 'a>
 	where
 		S: mlua::AsChunk<'lua> + ?Sized,
 	{
 		self.load(chunk)
 			.set_mode(mlua::ChunkMode::Text)
+			.set_environment(env)
+			.expect("`ImpureLua::safeload()`: Got malformed environment.")
 			.set_name(name)
-			.expect("A name was not sanitised before being passed to `ImpureLua::safeload()`.")
+			.expect("`ImpureLua::safeload()`: Got unsanitised name.")
+	}
+
+	fn env_std(&self) -> LuaTable { 
+		let envs: LuaTable = self.named_registry_value("envs").expect(
+			"`ImpureLua::env_std`: Failed to get registry value `envs`."
+		);
+
+		envs.get("std").expect(
+			"`ImpureLua::env_std`: Failed to get `envs.std`."
+		)
+	}
+
+	fn env_init_std(&self, env: &LuaTable) {
+		debug_assert!(
+			env.raw_len() <= 0,
+			"`ImpureLua::env_init_std`: Called on a non-empty table."
+		);
+
+		let globals = self.globals();
+
+		const GLOBAL_KEYS: [&str; 16] = [
+			"_VERSION",
+			// Tables
+			"math",
+			"string",
+			"table",
+			// Free functions
+			"error",
+			"getmetatable",
+			"ipairs",
+			"next",
+			"pairs",
+			"pcall",
+			"select",
+			"tonumber",
+			"tostring",
+			"type",
+			"unpack",
+			"xpcall"
+		];
+
+		for key in GLOBAL_KEYS {
+			let func = globals.get::<&str, LuaValue>(key).expect(
+				"`ImpureLua::env_init_std`: global `{}` is missing."
+			);
+
+			env.set(key, func).unwrap_or_else(|err|
+				panic!("`ImpureLua::env_init_std`: failed to set `{}` ({}).", key, err)
+			);
+		}
+
+		let debug: LuaResult<LuaTable> = globals.get("debug");
+
+		if let Ok(d) = debug {
+			env.set("debug", d).expect(
+				"`ImpureLua::env_init_std`: Failed to set `debug`."
+			);
+		}
 	}
 }
