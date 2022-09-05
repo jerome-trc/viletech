@@ -88,8 +88,32 @@ pub struct Common {
 	lifetime: u32,
 }
 
+pub struct DamageFactor {
+	damage_type: AssetIndex,
+	factor: f32
+}
+
 pub struct Defense {
-	damage_factors: Vec<(AssetIndex, f32)>,
+	flags: DefenseFlags,
+	damage_factors: Vec<DamageFactor>,
+}
+
+bitflags! {
+	pub struct DefenseFlags: u8 {
+		const NONE = 0;
+		/// No incoming damage, no flincing, no target changes.
+		const INVULNERABLE = 1 << 0;
+		/// Entity has one indestructible hit point.
+		const BUDDHA = 1 << 1;
+		const NO_RADIUS_DAMAGE = 1 << 2;
+		/// Piercing projectiles are destroyed upon hitting this entity.
+		const NO_PIERCE = 1 << 3;
+		const NO_MORPH = 1 << 4;
+		const NO_TELEFRAG = 1 << 5;
+		/// Force telefrag damage to be passed through damage factors.
+		const TELEFRAG_FACTORS = 1 << 6;
+		const NO_LIFESTEAL = 1 << 7;
+	}
 }
 
 pub struct Health {
