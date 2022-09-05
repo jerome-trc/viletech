@@ -23,7 +23,7 @@ use std::collections::LinkedList;
 
 #[derive(Default)]
 pub struct Blueprint {
-	core: Core,
+	common: Common,
 	bleed: Option<Bleed>,
 	bounce: Option<Bounce>,
 	box_collider: Option<BoxCollider>,
@@ -83,7 +83,8 @@ pub struct BoxCollider {
 pub struct Cheat {}
 
 #[derive(Default)]
-pub struct Core {
+pub struct Common {
+	/// Known in GZDoom as a "tag".
 	name: String,
 	/// Game tics since this entity was spawned.
 	lifetime: u32,
