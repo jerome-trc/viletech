@@ -104,23 +104,24 @@ pub struct Inventory {
 	items: VecDeque<EntityId>,
 }
 
+/// Marks the entity as an inventory item.
+pub struct Item {
+	flags: ItemFlags,
+	amount: u32,
+	max_amount: u32,
+	interhub_amount: u32,
+}
+
 bitflags! {
-	pub struct InventoryFlags : u8 {
+	pub struct ItemFlags : u8 {
 		const NONE = 0;
 		const INVBAR = 1 << 0;
 		const KEEP_DEPLETED = 1 << 1;
 		const AUTO_ACTIVATE = 1 << 2;
-		const UNDROPPABLE = 1 << 3;
-		const UNCLEARABLE = 1 << 4;
+		const NO_DROP = 1 << 3;
+		const NO_CLEAR = 1 << 4;
 		const NO_RESPAWN = 1 << 5;
 	}
-}
-
-/// Marks the entity as an inventory item.
-pub struct Item {
-	amount: u32,
-	max_amount: u32,
-	interhub_amount: u32,
 }
 
 pub struct Monster {
