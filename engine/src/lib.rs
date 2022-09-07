@@ -49,7 +49,7 @@ pub use data::game::Object as GameDataObject;
 pub use level::Cluster as LevelCluster;
 pub use level::Flags as LevelFlags;
 pub use level::Metadata as LevelMetadata;
-pub use vfs::Entry as VfsEntry;
+pub use vfs::Handle as VfsHandle;
 pub use vfs::Error as VfsError;
 
 pub mod zsparse {
