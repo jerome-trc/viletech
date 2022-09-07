@@ -394,9 +394,7 @@ pub struct ConsoleCommand {
 	/// The vector of arguments never contains the name of the command itself,
 	/// whether aliased or not.
 	func: fn(&Self, Vec<&str>) -> ConsoleRequest,
-	help: fn(&Self, Vec<&str>),
-	/// If false, this command absolutely cannot be executed via script.
-	script_legal: bool,
+	help: fn(&Self, Vec<&str>)
 }
 
 impl ConsoleCommand {
@@ -404,13 +402,11 @@ impl ConsoleCommand {
 		id: &'static str,
 		func: fn(&Self, Vec<&str>) -> ConsoleRequest,
 		help: fn(&Self, Vec<&str>),
-		script_legal: bool,
 	) -> Self {
 		ConsoleCommand {
 			id,
 			func,
-			help,
-			script_legal,
+			help
 		}
 	}
 

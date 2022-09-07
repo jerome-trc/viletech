@@ -1,4 +1,4 @@
-//! Trait extending `mlua::Lua` with Impure-specific behaviour.
+//! Trait extending `mlua::Lua` with Impure-specific behavior.
 
 /*
 Copyright (C) 2022 ***REMOVED***

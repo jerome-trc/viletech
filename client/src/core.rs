@@ -23,7 +23,7 @@ use impure::{
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	rng::RngCore,
-	sim::{Message as SimMessage, PlaySim, ThreadContext as SimThreadContext},
+	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
 	utils::path::*,
 	vfs::{self, ImpureVfs, VirtualFs},
 };
@@ -322,7 +322,6 @@ impl ClientCore {
 				ConsoleRequest::None
 			},
 			|_, _| info!("Prints out all of the program's launch arguments."),
-			false,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -336,8 +335,7 @@ impl ClientCore {
 					"Prints the contents of a virtual file system directory, \
 					or information about a file."
 				);
-			},
-			true,
+			}
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -358,7 +356,6 @@ impl ClientCore {
 			|_, _| {
 				info!("Prints the directory used to store user info.");
 			},
-			false,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -367,7 +364,6 @@ impl ClientCore {
 			|_, _| {
 				info!("Prints the current heap memory used by the client-side Lua state.");
 			},
-			true,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -387,7 +383,6 @@ impl ClientCore {
 					this.get_id()
 				);
 			},
-			true,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -396,7 +391,6 @@ impl ClientCore {
 			|_, _| {
 				info!("Prints the length of the time the engine has been running.");
 			},
-			true,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -408,7 +402,6 @@ impl ClientCore {
 			|_, _| {
 				info!("Prints the engine version.");
 			},
-			true,
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -417,7 +410,6 @@ impl ClientCore {
 			|_, _| {
 				info!("Prints information about the graphics device and WGPU backend.");
 			},
-			false,
 		));
 	}
 
