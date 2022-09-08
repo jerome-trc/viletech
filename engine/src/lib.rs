@@ -105,7 +105,7 @@ pub fn full_version_string() -> String {
 pub fn log_init(
 	sender: Option<crossbeam::channel::Sender<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	use console::ConsoleWriter;
+	use console::Writer;
 	use std::{
 		fs, io,
 		path::{Path, PathBuf},
@@ -181,7 +181,7 @@ pub fn log_init(
 			.format(move |out, message, record| {
 				out.finish(format_args!("[{}] {}", record.level(), message))
 			})
-			.chain(Box::new(ConsoleWriter::new(s)) as Box<dyn io::Write + Send>);
+			.chain(Box::new(Writer::new(s)) as Box<dyn io::Write + Send>);
 
 		dispatch.chain(console_cfg).apply()
 	} else {

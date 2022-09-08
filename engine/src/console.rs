@@ -37,8 +37,8 @@ pub struct Console {
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
 	history: Vec<String>,
-	aliases: Vec<ConsoleAlias>,
-	commands: Vec<ConsoleCommand>,
+	aliases: Vec<Alias>,
+	commands: Vec<Command>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
 
@@ -47,7 +47,7 @@ pub struct Console {
 	scroll_to_bottom: bool,
 	cursor_to_end: bool,
 
-	pub requests: VecDeque<ConsoleRequest>,
+	pub requests: VecDeque<Request>,
 }
 
 impl Console {
@@ -60,18 +60,18 @@ impl Console {
 			receiver: msg_receiver,
 			log: Vec::<String>::default(),
 			history: Vec::<String>::default(),
-			aliases: Vec::<ConsoleAlias>::default(),
-			commands: Vec::<ConsoleCommand>::default(),
+			aliases: Vec::<Alias>::default(),
+			commands: Vec::<Command>::default(),
 			input: String::with_capacity(512),
 			history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			cursor_to_end: false,
-			requests: VecDeque::<ConsoleRequest>::default(),
+			requests: VecDeque::<Request>::default(),
 		}
 	}
 
-	fn find_command(&self, key: &str) -> Option<&ConsoleCommand> {
+	fn find_command(&self, key: &str) -> Option<&Command> {
 		for cmd in &self.commands {
 			if !key.eq_ignore_ascii_case(cmd.id) {
 				continue;
@@ -171,7 +171,7 @@ impl Console {
 					cmd_found = true;
 
 					match (cmd.func)(cmd, args) {
-						ConsoleRequest::None => {}
+						Request::None => {}
 						req => {
 							self.requests.push_front(req);
 						}
@@ -236,7 +236,7 @@ impl Console {
 		ui.label(galley);
 	}
 
-	fn draw_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
 		let scroll_area = egui::ScrollArea::vertical()
 			.max_height(200.0)
 			.auto_shrink([false; 2]);
@@ -282,11 +282,11 @@ impl Console {
 		});
 	}
 
-	pub fn register_command(&mut self, cmd: ConsoleCommand) {
+	pub fn register_command(&mut self, cmd: Command) {
 		self.commands.push(cmd);
 	}
 
-	pub fn draw(&mut self, ctx: &egui::Context) {
+	pub fn ui(&mut self, ctx: &egui::Context) {
 		let mut recvtries: u8 = 0;
 
 		while !self.receiver.is_empty() && recvtries < 100 {
@@ -317,7 +317,7 @@ impl Console {
 			.open(&mut o)
 			.resizable(true)
 			.show(ctx, |ui| {
-				self.draw_impl(ui, ctx);
+				self.ui_impl(ui, ctx);
 			});
 
 		self.open.set(o);
@@ -379,7 +379,7 @@ impl Console {
 	}
 }
 
-pub enum ConsoleRequest {
+pub enum Request {
 	None,
 	// Client-fulfilled requests
 	LuaMem,
@@ -389,21 +389,21 @@ pub enum ConsoleRequest {
 	WgpuDiag,
 }
 
-pub struct ConsoleCommand {
+pub struct Command {
 	id: &'static str,
 	/// The vector of arguments never contains the name of the command itself,
 	/// whether aliased or not.
-	func: fn(&Self, Vec<&str>) -> ConsoleRequest,
+	func: fn(&Self, Vec<&str>) -> Request,
 	help: fn(&Self, Vec<&str>)
 }
 
-impl ConsoleCommand {
+impl Command {
 	pub fn new(
 		id: &'static str,
-		func: fn(&Self, Vec<&str>) -> ConsoleRequest,
+		func: fn(&Self, Vec<&str>) -> Request,
 		help: fn(&Self, Vec<&str>),
 	) -> Self {
-		ConsoleCommand {
+		Command {
 			id,
 			func,
 			help
@@ -424,23 +424,23 @@ impl ConsoleCommand {
 	}
 }
 
-type ConsoleAlias = (String, &'static str);
+type Alias = (String, &'static str);
 
-pub struct ConsoleWriter {
+pub struct Writer {
 	buffer: Vec<u8>,
 	sender: Sender<String>,
 }
 
-impl ConsoleWriter {
+impl Writer {
 	pub fn new(sender: Sender<String>) -> Self {
-		ConsoleWriter {
+		Writer {
 			buffer: Vec::<u8>::with_capacity(512),
 			sender,
 		}
 	}
 }
 
-impl io::Write for ConsoleWriter {
+impl io::Write for Writer {
 	fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
 		if buf[0] == 10 {
 			let drain = self.buffer.drain(..);

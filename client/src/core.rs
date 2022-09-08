@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	audio::AudioCore,
-	console::{Console, ConsoleCommand, ConsoleRequest},
+	console::{Console, Command as ConsoleCommand, Request as ConsoleRequest},
 	data::{game::DataCore, GameDataObject},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
@@ -187,7 +187,7 @@ impl ClientCore {
 			_ => {}
 		};
 
-		self.console.draw(&self.gfx.egui.context);
+		self.console.ui(&self.gfx.egui.context);
 		self.gfx.render_finish(frame);
 	}
 
