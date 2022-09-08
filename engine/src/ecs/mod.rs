@@ -42,7 +42,7 @@ pub struct Blueprint {
 	motion: Option<Motion>,
 	player: Option<Player>,
 	projectile: Option<Projectile>,
-	special_args: Option<SpecialArgs>,
+	special_args: Option<SpecialVars>,
 	weapon: Option<Weapon>,
 }
 
@@ -87,7 +87,7 @@ mod proj;
 pub use proj::Projectile;
 
 mod spec;
-pub use spec::SpecialArgs;
+pub use spec::SpecialVars;
 
 mod transform;
 pub use transform::Transform;

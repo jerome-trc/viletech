@@ -17,6 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /// Primarily for use by ACS behaviours.
 #[derive(Debug, shipyard::Component)]
-pub struct SpecialArgs {
+pub struct SpecialVars {
+	tid: i32,
+	special: i32,
+	special_i: [i32; 2],
+	special_f: [f64; 2],	
 	args: [i32; 5],
 }
