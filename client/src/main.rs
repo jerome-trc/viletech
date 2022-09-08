@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
-	let lua = match Lua::new_ex(true, vfs.clone()) {
+	let lua = match Lua::new_ex(true, true, vfs.clone()) {
 		Ok(l) => l,
 		Err(err) => {
 			error!("Failed to initialise client Lua state: {}", err);

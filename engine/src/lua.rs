@@ -27,16 +27,27 @@ use std::{
 };
 
 /// Only exists to extends `mlua::Lua` with new methods.
-pub trait ImpureLua<'p> {	
+pub trait ImpureLua<'p> {
 	/// Seeds the RNG, loads Teal into the registry; defines logging functions,
 	/// `import` as a substitute for `require`, and functions required by all
 	/// contexts that require no other state to be captured.
 	/// If `safe` is `false`, [`mlua::prelude::LuaStdLib::DEBUG`]
 	/// will be loaded into the constructed state.
-	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error>;
+	/// If `clientside` is `true`, the state's registry will contain the key-value
+	/// pair `['clientside'] = true`. Otherwise, this key will be left nil.
+	fn new_ex(
+		safe: bool,
+		clientside: bool,
+		vfs: Arc<RwLock<VirtualFs>>,
+	) -> Result<Lua, mlua::Error>;
 
 	/// For guaranteeing that loaded chunks are text.
-	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str, env: LuaTable<'lua>) -> LuaChunk<'lua, 'a>
+	fn safeload<'lua, 'a, S>(
+		&'lua self,
+		chunk: &'a S,
+		name: &str,
+		env: LuaTable<'lua>,
+	) -> LuaChunk<'lua, 'a>
 	where
 		S: mlua::AsChunk<'lua> + ?Sized;
 
@@ -49,7 +60,11 @@ pub trait ImpureLua<'p> {
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
-	fn new_ex(safe: bool, vfs: Arc<RwLock<VirtualFs>>) -> Result<Lua, mlua::Error> {
+	fn new_ex(
+		safe: bool,
+		clientside: bool,
+		vfs: Arc<RwLock<VirtualFs>>,
+	) -> Result<Lua, mlua::Error> {
 		let ret = if let true = safe {
 			Lua::new_with(
 				LuaStdLib::JIT
@@ -69,6 +84,11 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			}
 		};
 
+		if clientside {
+			ret.set_named_registry_value("clientside", true)
+				.expect("`ImpureLua::new_ex` failed to set state ID in registry.");
+		}
+
 		// Seed the Lua's random state for trivial (i.e. client-side) purposes
 
 		{
@@ -86,20 +106,20 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			};
 		}
 
-		let envs = ret.create_table().expect(
-			"`ImpureLua::new_ex`: failed to create `envs` table."
-		);
+		let envs = ret
+			.create_table()
+			.expect("`ImpureLua::new_ex`: failed to create `envs` table.");
 
 		// Standard-only environment, used as a basis for other environments
 
-		let stdenv = ret.create_table().expect(
-			"`ImpureLua::new_ex`: failed to create standard environment table."
-		);
+		let stdenv = ret
+			.create_table()
+			.expect("`ImpureLua::new_ex`: failed to create standard environment table.");
 
 		ret.env_init_std(&stdenv);
 
 		match envs.set("std", stdenv) {
-			Ok(()) => {},
+			Ok(()) => {}
 			Err(err) => {
 				error!("`ImpureLua::new_ex`: Failed to set registry `envs.std`.");
 				return Err(err);
@@ -107,7 +127,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		}
 
 		match ret.set_named_registry_value("envs", envs) {
-			Ok(()) => {},
+			Ok(()) => {}
 			Err(err) => {
 				error!("`ImpureLua::new_ex`: Failed to put `envs` table into registry.");
 				return Err(err);
@@ -116,11 +136,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		// Load the Teal compiler into the registry
 
-		let teal: LuaTable = match ret.safeload(
-			include_str!("./teal.lua"),
-			"teal",
-			ret.env_std()
-		).eval() {
+		let teal: LuaTable = match ret
+			.safeload(include_str!("./teal.lua"), "teal", ret.env_std())
+			.eval()
+		{
 			Ok(t) => t,
 			Err(err) => {
 				return Err(err);
@@ -220,7 +239,12 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		Ok(ret)
 	}
 
-	fn safeload<'lua, 'a, S>(&'lua self, chunk: &'a S, name: &str, env: LuaTable<'lua>) -> LuaChunk<'lua, 'a>
+	fn safeload<'lua, 'a, S>(
+		&'lua self,
+		chunk: &'a S,
+		name: &str,
+		env: LuaTable<'lua>,
+	) -> LuaChunk<'lua, 'a>
 	where
 		S: mlua::AsChunk<'lua> + ?Sized,
 	{
@@ -232,14 +256,13 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.expect("`ImpureLua::safeload()`: Got unsanitised name.")
 	}
 
-	fn env_std(&self) -> LuaTable { 
-		let envs: LuaTable = self.named_registry_value("envs").expect(
-			"`ImpureLua::env_std`: Failed to get registry value `envs`."
-		);
+	fn env_std(&self) -> LuaTable {
+		let envs: LuaTable = self
+			.named_registry_value("envs")
+			.expect("`ImpureLua::env_std`: Failed to get registry value `envs`.");
 
-		envs.get("std").expect(
-			"`ImpureLua::env_std`: Failed to get `envs.std`."
-		)
+		envs.get("std")
+			.expect("`ImpureLua::env_std`: Failed to get `envs.std`.")
 	}
 
 	fn env_init_std(&self, env: &LuaTable) {
@@ -268,25 +291,27 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			"tostring",
 			"type",
 			"unpack",
-			"xpcall"
+			"xpcall",
 		];
 
 		for key in GLOBAL_KEYS {
-			let func = globals.get::<&str, LuaValue>(key).expect(
-				"`ImpureLua::env_init_std`: global `{}` is missing."
-			);
+			let func = globals
+				.get::<&str, LuaValue>(key)
+				.expect("`ImpureLua::env_init_std`: global `{}` is missing.");
 
-			env.set(key, func).unwrap_or_else(|err|
-				panic!("`ImpureLua::env_init_std`: failed to set `{}` ({}).", key, err)
-			);
+			env.set(key, func).unwrap_or_else(|err| {
+				panic!(
+					"`ImpureLua::env_init_std`: failed to set `{}` ({}).",
+					key, err
+				)
+			});
 		}
 
 		let debug: LuaResult<LuaTable> = globals.get("debug");
 
 		if let Ok(d) = debug {
-			env.set("debug", d).expect(
-				"`ImpureLua::env_init_std`: Failed to set `debug`."
-			);
+			env.set("debug", d)
+				.expect("`ImpureLua::env_init_std`: Failed to set `debug`.");
 		}
 	}
 }
