@@ -66,13 +66,16 @@ const WAIT_TIMES: [u64; 21] = [
 	28_571 / 11, // +10
 ];
 
+const BASE_SIM_SPEED_INDEX: usize = 10;
+
 pub fn run(context: ThreadContext) {
 	let ThreadContext {
 		playsim,
 		receiver,
 		running,
 	} = context;
-	let mut speed_index = 10;
+
+	let mut speed_index = BASE_SIM_SPEED_INDEX;
 
 	loop {
 		if !running.load(std::sync::atomic::Ordering::Relaxed) {

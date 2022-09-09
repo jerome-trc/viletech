@@ -31,6 +31,7 @@ pub struct Common {
 pub struct Blueprint {
 	common: Common,
 
+	actor: Option<Actor>,
 	bleed: Option<Bleed>,
 	bounce: Option<Bounce>,
 	box_collider: Option<BoxCollider>,
@@ -42,9 +43,12 @@ pub struct Blueprint {
 	motion: Option<Motion>,
 	player: Option<Player>,
 	projectile: Option<Projectile>,
-	special_args: Option<SpecialVars>,
+	special_vars: Option<SpecialVars>,
 	weapon: Option<Weapon>,
 }
+
+mod actor;
+pub use actor::Actor;
 
 mod bleed;
 pub use bleed::Bleed;

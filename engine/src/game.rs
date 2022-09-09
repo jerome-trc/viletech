@@ -16,7 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use crate::data::game::AssetIndex;
+
 use bitflags::bitflags;
+use mlua::prelude::*;
 
 /// i.e., a difficulty setting.
 pub struct SkillInfo {
@@ -108,10 +110,28 @@ pub struct Species {
 	id: AssetIndex,
 }
 
-pub struct ActorState {
+pub enum ActorStateVisual {
+	None,
+	Sprite(AssetIndex),
+	Voxel(AssetIndex),
+	Model(AssetIndex)
+}
+
+pub struct ActorStateAction<'l> {
+	function: LuaFunction<'l>,
+	args: LuaMultiValue<'l>
+}
+
+pub struct ActorState<'l> {
+	visual: ActorStateVisual,
 	duration: i16,
 	tic_range: u16,
 	flags: ActorStateFlags,
+	action: Option<ActorStateAction<'l>>,
+}
+
+impl<'l> ActorState<'l> {
+	const INFINITE_DURATION: i16 = -1;
 }
 
 bitflags! {
@@ -126,4 +146,10 @@ bitflags! {
 		const USER_2 = 1 << 6;
 		const USER_3 = 1 << 7;
 	}
+}
+
+pub struct ActorStateMachine<'l> {
+	/// Each element's field `::1` indexes into `states`.
+	labels: Vec<(String, usize)>,
+	states: Vec<ActorState<'l>>,
 }
