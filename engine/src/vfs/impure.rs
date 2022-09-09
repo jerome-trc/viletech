@@ -42,23 +42,23 @@ pub trait ImpureVfs {
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
 
-	/// See [`ImpureVfsEntry::is_impure_package`].
+	/// See [`ImpureVfsHandle::is_impure_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsEntry::is_udmf_map`].
+	/// See [`ImpureVfsHandle::is_udmf_map`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsEntry::has_zscript`].
+	/// See [`ImpureVfsHandle::has_zscript`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsEntry::has_edfroot`].
+	/// See [`ImpureVfsHandle::has_edfroot`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsEntry::has_decorate`].
+	/// See [`ImpureVfsHandle::has_decorate`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
