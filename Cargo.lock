@@ -1755,6 +1755,7 @@ dependencies = [
  "luajit-src",
  "num-traits",
  "once_cell",
+ "parking_lot 0.12.1",
  "pkg-config",
  "rustc-hash",
  "serde",
