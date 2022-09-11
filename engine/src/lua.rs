@@ -28,18 +28,15 @@ use std::{
 
 /// Only exists to extends `mlua::Lua` with new methods.
 pub trait ImpureLua<'p> {
-	/// Seeds the RNG, loads Teal into the registry; defines logging functions,
-	/// `import` as a substitute for `require`, and functions required by all
-	/// contexts that require no other state to be captured.
-	/// If `safe` is `false`, [`mlua::prelude::LuaStdLib::DEBUG`]
-	/// will be loaded into the constructed state.
+	/// Seeds the RNG, defines some dependency-free global functions (logging, etc.).
+	/// If `safe` is `false`, the debug and FFI libraries are loaded.
 	/// If `clientside` is `true`, the state's registry will contain the key-value
 	/// pair `['clientside'] = true`. Otherwise, this key will be left nil.
-	fn new_ex(
-		safe: bool,
-		clientside: bool,
-		vfs: Arc<RwLock<VirtualFs>>,
-	) -> Result<Lua, mlua::Error>;
+	fn new_ex(safe: bool, clientside: bool) -> LuaResult<Lua>;
+
+	/// Modifies the Lua global environment to be more conducive to a safe,
+	/// Impure-suitable sandbox, and adds numerous Impure-specific symbols.
+	fn global_init(&self, vfs: Option<Arc<RwLock<VirtualFs>>>) -> LuaResult<()>;
 
 	/// For guaranteeing that loaded chunks are text.
 	fn safeload<'lua, 'a, S>(
@@ -51,34 +48,34 @@ pub trait ImpureLua<'p> {
 	where
 		S: mlua::AsChunk<'lua> + ?Sized;
 
-	/// Retrieve `envs.std` from the registry.
-	fn env_std(&self) -> LuaTable;
-
 	/// Adds `math`, `string`, and `table` standard libraries to an environment,
 	/// as well as several standard free functions and `_VERSION`.
-	fn env_init_std(&self, env: &LuaTable);
+	fn envbuild_std(&self, env: &LuaTable);
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
-	fn new_ex(
-		safe: bool,
-		clientside: bool,
-		vfs: Arc<RwLock<VirtualFs>>,
-	) -> Result<Lua, mlua::Error> {
+	fn new_ex(safe: bool, clientside: bool) -> LuaResult<Lua> {
+		// Note: `io`, `os`, and `package` aren't sandbox-safe by themselves.
+		// They either get pruned of dangerous functions by `global_init` or
+		// are deleted now and may get returned in reduced form in the future.
+
+		#[rustfmt::skip]
+		let safe_libs =
+			LuaStdLib::BIT |
+			LuaStdLib::IO |
+			LuaStdLib::JIT |
+			LuaStdLib::MATH |
+			LuaStdLib::OS |
+			LuaStdLib::PACKAGE |
+			LuaStdLib::STRING |
+			LuaStdLib::TABLE;
+
 		let ret = if let true = safe {
-			Lua::new_with(
-				LuaStdLib::JIT
-					| LuaStdLib::STRING | LuaStdLib::BIT
-					| LuaStdLib::MATH | LuaStdLib::TABLE,
-				LuaOptions::default(),
-			)?
+			Lua::new_with(safe_libs, LuaOptions::default())?
 		} else {
 			unsafe {
 				Lua::unsafe_new_with(
-					LuaStdLib::JIT
-						| LuaStdLib::STRING | LuaStdLib::BIT
-						| LuaStdLib::MATH | LuaStdLib::TABLE
-						| LuaStdLib::DEBUG,
+					safe_libs | LuaStdLib::DEBUG | LuaStdLib::FFI,
 					LuaOptions::default(),
 				)
 			}
@@ -106,53 +103,6 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			};
 		}
 
-		let envs = ret
-			.create_table()
-			.expect("`ImpureLua::new_ex`: failed to create `envs` table.");
-
-		// Standard-only environment, used as a basis for other environments
-
-		let stdenv = ret
-			.create_table()
-			.expect("`ImpureLua::new_ex`: failed to create standard environment table.");
-
-		ret.env_init_std(&stdenv);
-
-		match envs.set("std", stdenv) {
-			Ok(()) => {}
-			Err(err) => {
-				error!("`ImpureLua::new_ex`: Failed to set registry `envs.std`.");
-				return Err(err);
-			}
-		}
-
-		match ret.set_named_registry_value("envs", envs) {
-			Ok(()) => {}
-			Err(err) => {
-				error!("`ImpureLua::new_ex`: Failed to put `envs` table into registry.");
-				return Err(err);
-			}
-		};
-
-		// Load the Teal compiler into the registry
-
-		let teal: LuaTable = match ret
-			.safeload(include_str!("./teal.lua"), "teal", ret.env_std())
-			.eval()
-		{
-			Ok(t) => t,
-			Err(err) => {
-				return Err(err);
-			}
-		};
-
-		match ret.set_named_registry_value("teal", teal) {
-			Ok(()) => {}
-			Err(err) => {
-				return Err(err);
-			}
-		};
-
 		let impure = match ret.create_table() {
 			Ok(t) => t,
 			Err(err) => {
@@ -160,8 +110,6 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 				return Err(err);
 			}
 		};
-
-		// Common functions: logging
 
 		impure.set(
 			"log",
@@ -195,35 +143,6 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			})?,
 		)?;
 
-		// Common functions: `import`
-
-		{
-			let import = ret.create_function(move |l, path: String| -> LuaResult<LuaValue> {
-				let vfsg = vfs.read();
-
-				let bytes = match vfsg.read(&path) {
-					Ok(b) => b,
-					Err(err) => {
-						return Err(LuaError::ExternalError(Arc::new(err)));
-					}
-				};
-
-				return l.safeload(bytes, path.as_str(), l.env_std()).eval();
-			});
-
-			match import {
-				Ok(i) => {
-					ret.globals().set("import", i)?;
-				}
-				Err(err) => {
-					error!("Failed to initialise Lua function: `import()`.");
-					return Err(err);
-				}
-			}
-		}
-
-		// Common functions: engine information
-
 		impure.set(
 			"version",
 			ret.create_function(|_, _: ()| {
@@ -236,6 +155,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		)?;
 
 		ret.globals().set("impure", impure)?;
+
 		Ok(ret)
 	}
 
@@ -256,16 +176,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.expect("`ImpureLua::safeload()`: Got unsanitised name.")
 	}
 
-	fn env_std(&self) -> LuaTable {
-		let envs: LuaTable = self
-			.named_registry_value("envs")
-			.expect("`ImpureLua::env_std`: Failed to get registry value `envs`.");
-
-		envs.get("std")
-			.expect("`ImpureLua::env_std`: Failed to get `envs.std`.")
-	}
-
-	fn env_init_std(&self, env: &LuaTable) {
+	fn envbuild_std(&self, env: &LuaTable) {
 		debug_assert!(
 			env.raw_len() <= 0,
 			"`ImpureLua::env_init_std`: Called on a non-empty table."
@@ -313,5 +224,144 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			env.set("debug", d)
 				.expect("`ImpureLua::env_init_std`: Failed to set `debug`.");
 		}
+	}
+
+	fn global_init(&self, vfs: Option<Arc<RwLock<VirtualFs>>>) -> LuaResult<()> {
+		let globals = self.globals();
+
+		// Many functions (e.g. `jit`, `setfenv`) aren't deleted here,
+		// but aren't included in any user-facing environment
+
+		const KEYS_STD_GLOBAL: [&str; 5] = [
+			"io",
+			"package",
+			// Free functions
+			"collectgarbage",
+			"module",
+			"print",
+		];
+
+		for key in KEYS_STD_GLOBAL {
+			globals.set(key, LuaValue::Nil)?;
+		}
+
+		// Delete unsafe OS standard library functions /////////////////////////
+
+		const KEYS_STD_OS: [&str; 7] = [
+			"execute",
+			"exit",
+			"getenv",
+			"remove",
+			"rename",
+			"setlocale",
+			"tmpname",
+		];
+
+		let g_os: LuaTable = globals.get("os")?;
+
+		for key in KEYS_STD_OS {
+			g_os.set(key, LuaValue::Nil)?;
+		}
+
+		// Teal compiler ///////////////////////////////////////////////////////
+
+		let teal: LuaTable = self
+			.load(include_str!("./teal.lua"))
+			.set_mode(mlua::ChunkMode::Text)
+			.set_name("teal")?
+			.eval()?;
+
+		globals.set("teal", teal)?;
+
+		// Add virtual FS API, if applicable ///////////////////////////////////
+
+		if let Some(vfs) = vfs {
+			let v = vfs.clone();
+
+			let import = self.create_function(move |l, path: String| -> LuaResult<LuaValue> {
+				let vfsg = v.read();
+
+				let bytes = match vfsg.read(&path) {
+					Ok(b) => b,
+					Err(err) => {
+						return Err(LuaError::ExternalError(Arc::new(err)));
+					}
+				};
+
+				let string = match std::str::from_utf8(bytes) {
+					Ok(s) => s,
+					Err(err) => {
+						return Err(LuaError::ExternalError(Arc::new(err)));
+					}
+				};
+
+				let teal: LuaTable = l
+					.named_registry_value("teal")
+					.expect("Teal compiler wasn't loaded into this state.");
+				let teal: LuaFunction = teal.get("gen").expect("Teal compiler is malformed.");
+
+				let chunk = match teal.call::<&str, String>(string) {
+					Ok(s) => s,
+					Err(err) => {
+						return Err(LuaError::ExternalError(Arc::new(err)));
+					}
+				};
+
+				let env = l
+					.globals()
+					.call_function("getenv", 0)
+					.expect("`import` failed to retrieve the current environment.");
+
+				return l.safeload(&chunk, path.as_str(), env).eval();
+			});
+
+			match import {
+				Ok(i) => {
+					self.globals().set("import", i)?;
+				}
+				Err(err) => {
+					return Err(err);
+				}
+			}
+
+			let g_vfs = self.create_table()?;
+
+			let g_vfs_read = self.create_function(move |l, path: String| {
+				let guard = vfs.read();
+
+				let handle = match guard.lookup(&path) {
+					Some(h) => h,
+					None => {
+						return Ok(LuaValue::Nil);
+					}
+				};
+
+				let content = match handle.read_str() {
+					Ok(s) => s,
+					Err(err) => {
+						error!(
+							"File contents are invalid UTF-8: {}
+							Error: {}",
+							path, err
+						);
+						return Ok(LuaValue::Nil);
+					}
+				};
+
+				let string = match l.create_string(content) {
+					Ok(s) => s,
+					Err(err) => {
+						return Err(err);
+					}
+				};
+
+				Ok(LuaValue::String(string))
+			})?;
+
+			g_vfs.set("read", g_vfs_read)?;
+			globals.set("vfs", g_vfs)?;
+		}
+
+		Ok(())
 	}
 }

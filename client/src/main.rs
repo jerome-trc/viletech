@@ -65,8 +65,24 @@ fn main() -> Result<(), Box<dyn Error>> {
 	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
 	info!("{}", impure::utils::env::os_info()?);
 
+	let lua = match Lua::new_ex(true, true) {
+		Ok(l) => l,
+		Err(err) => {
+			error!("Failed to initialise client Lua state: {}", err);
+			return Err(Box::new(err));
+		}
+	};
+
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
+
+	match lua.global_init(Some(vfs.clone())) {
+		Ok(()) => {},
+		Err(err) => {
+			error!("Failed to initialise Lua global state: {}", err);
+			return Err(Box::new(err));
+		}
+	};
 
 	match vfs.write().mount_enginedata() {
 		Ok(()) => {}
@@ -77,14 +93,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 				Error: {}",
 				err
 			);
-			return Err(Box::new(err));
-		}
-	};
-
-	let lua = match Lua::new_ex(true, true, vfs.clone()) {
-		Ok(l) => l,
-		Err(err) => {
-			error!("Failed to initialise client Lua state: {}", err);
 			return Err(Box::new(err));
 		}
 	};
