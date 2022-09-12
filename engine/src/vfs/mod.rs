@@ -218,7 +218,7 @@ impl VirtualFs {
 		let path = path.as_ref();
 
 		if !path.exists() {
-			return Err(Error::NonExistentFile);
+			return Err(Error::NonExistentFile(path.to_owned()));
 		}
 
 		if path.is_symlink() {
@@ -270,10 +270,12 @@ impl VirtualFs {
 	/// Returns [`Error::NonExistentEntry`] if there's nothing at the supplied path,
 	/// or [`Error::Unreadable`] if attempting to read a directory.
 	pub fn read(&self, path: impl AsRef<Path>) -> Result<&[u8], Error> {
+		let path = path.as_ref();
+
 		let entry = match self.lookup_hash(Self::hash_path(path)) {
 			Some(e) => e,
 			None => {
-				return Err(Error::NonExistentEntry);
+				return Err(Error::NonExistentEntry(path.to_owned()));
 			}
 		};
 

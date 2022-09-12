@@ -213,7 +213,7 @@ impl ClientCore {
 					let bytes = match vfsg.read(&arg) {
 						Ok(b) => b,
 						Err(err) => {
-							if let vfs::Error::NonExistentEntry = err {
+							if let vfs::Error::NonExistentEntry(_) = err {
 								info!("No sound file under virtual path: {}", arg);
 							} else {
 								info!("{}", err);

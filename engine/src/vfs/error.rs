@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use std::{io, fmt};
+use std::{io, fmt, path::PathBuf};
 
 use zip::result::ZipError;
 
@@ -36,9 +36,9 @@ pub enum Error {
 	/// Trying to mount something onto `DOOM2/PLAYPAL`, for example, is illegal.
 	MountToLeaf,
 	/// The caller attempted to lookup/read/write/unmount a non-existent file.
-	NonExistentEntry,
+	NonExistentEntry(PathBuf),
 	/// The caller attempted to lookup/read/write/mount a non-existent file.
-	NonExistentFile,
+	NonExistentFile(PathBuf),
 	/// The caller attempted to read a directory, archive, or WAD.
 	Unreadable,
 	/// The caller attempted to mount something to a point which
@@ -81,11 +81,19 @@ impl fmt::Display for Error {
 					as part of the mount point."
 				)
 			}
-			Self::NonExistentEntry => {
-				write!(f, "Attempted to operate on a non-existent entry.")
+			Self::NonExistentEntry(path) => {
+				write!(
+					f,
+					"Attempted to operate on non-existent entry: {}",
+					path.display()
+				)
 			}
-			Self::NonExistentFile => {
-				write!(f, "Attempted to operate on a non-existent file.")
+			Self::NonExistentFile(path) => {
+				write!(
+					f,
+					"Attempted to operate on non-existent file: {}",
+					path.display()
+				)
 			}
 			Self::Unreadable => {
 				write!(
