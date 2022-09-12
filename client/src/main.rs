@@ -76,14 +76,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
 
-	match lua.global_init(Some(vfs.clone())) {
-		Ok(()) => {},
-		Err(err) => {
-			error!("Failed to initialise Lua global state: {}", err);
-			return Err(Box::new(err));
-		}
-	};
-
 	match vfs.write().mount_enginedata() {
 		Ok(()) => {}
 		Err(err) => {
@@ -93,6 +85,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 				Error: {}",
 				err
 			);
+			return Err(Box::new(err));
+		}
+	};
+
+	match lua.global_init(vfs.clone()) {
+		Ok(()) => {},
+		Err(err) => {
+			error!("Failed to initialise Lua global state: {}", err);
 			return Err(Box::new(err));
 		}
 	};

@@ -33,10 +33,34 @@ SOFTWARE.
 
 ]]
 
-local _tl_compat; if (tonumber((_VERSION or ''):match('[%d.]*$')) or 0) < 5.3 then local p, m = pcall(require, 'compat53.module'); if p then _tl_compat = m end end; local assert = _tl_compat and _tl_compat.assert or assert; local debug = _tl_compat and _tl_compat.debug or debug; local io = _tl_compat and _tl_compat.io or io; local ipairs = _tl_compat and _tl_compat.ipairs or ipairs; local load = _tl_compat and _tl_compat.load or load; local math = _tl_compat and _tl_compat.math or math; local os = _tl_compat and _tl_compat.os or os; local package = _tl_compat and _tl_compat.package or package; local pairs = _tl_compat and _tl_compat.pairs or pairs; local string = _tl_compat and _tl_compat.string or string; local table = _tl_compat and _tl_compat.table or table; local _tl_table_unpack = unpack or table.unpack
+-- (Impure): 'compat53.module' embedded in source since we know we need it.
+-- It's loaded as part of a special privileged environment exclusive to Teal.
+local _tl_compat = compat53;
+
+local assert = _tl_compat and _tl_compat.assert or assert
+-- local debug = _tl_compat and _tl_compat.debug or debug
+-- local io = _tl_compat and _tl_compat.io or io
+local ipairs = _tl_compat and _tl_compat.ipairs or ipairs
+local load = _tl_compat and _tl_compat.load or load
+local math = _tl_compat and _tl_compat.math or math
+-- local os = _tl_compat and _tl_compat.os or os
+-- local package = _tl_compat and _tl_compat.package or package
+local pairs = _tl_compat and _tl_compat.pairs or pairs
+local string = _tl_compat and _tl_compat.string or string
+local table = _tl_compat and _tl_compat.table or table
+local _tl_table_unpack = unpack or table.unpack
 local VERSION = "0.14.1"
 
-local tl = {TypeCheckOptions = {}, Env = {}, Symbol = {}, Result = {}, Error = {}, TypeInfo = {}, TypeReport = {}, TypeReportEnv = {}, }
+local tl = {
+   TypeCheckOptions = {},
+   Env = {},
+   Symbol = {},
+   Result = {},
+   Error = {},
+   TypeInfo = {},
+   TypeReport = {},
+   TypeReportEnv = {},
+}
 
 tl.version = function()
    return VERSION
@@ -3953,7 +3977,7 @@ show_type = function(t, short, seen)
 end
 
 function tl.search_module(module_name, search_dtl)
-   -- (Rat): Replace `package.path`-based search with `import`
+   -- (Impure): Replace `package.path`-based search with `import`
    local path = string.gsub(module_name, "%.", "/")
    local fd = import(path)
    local found = fd ~= nil
@@ -4052,7 +4076,7 @@ local function add_compat_entries(program, used_set, gen_compat)
          load_code(name, "local _tl_math_mininteger = math.mininteger or -math.pow(2,53) - 1")
       else
          if not compat_loaded then
-            load_code("compat", "local _tl_compat; if (tonumber((_VERSION or ''):match('[%d.]*$')) or 0) < 5.3 then local p, m = " .. req("compat53.module") .. "; if p then _tl_compat = m end")
+            load_code("compat", "local _tl_compat = compat53")
             compat_loaded = true
          end
          load_code(name, (("local $NAME = _tl_compat and _tl_compat.$NAME or $NAME"):gsub("$NAME", name)))
@@ -9088,7 +9112,7 @@ tl.process = function(filename, env)
       return env.loaded[filename]
    end
 
-   -- (Rat): Replaced `io` call with `vfs` counterpart
+   -- (Impure): Replaced `io` call with `vfs` counterpart
    local input = vfs.read(filename)
 
    if not input then
