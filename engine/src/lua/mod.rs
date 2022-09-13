@@ -42,6 +42,8 @@ pub trait ImpureLua<'p> {
 	/// as well as several standard free functions and `_VERSION`.
 	fn envbuild_std(&self, env: &LuaTable);
 
+	fn getfenv(&self) -> LuaTable;
+
 	/// For guaranteeing that loaded chunks are text.
 	fn safeload<'lua, 'a, S>(
 		&'lua self,
@@ -87,6 +89,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			ret.set_named_registry_value("clientside", true)
 				.expect("`ImpureLua::new_ex` failed to set state ID in registry.");
 		}
+
+		// Table for memoizing imported modules
+
+		ret.set_named_registry_value("modules", ret.create_table()?)?;
 
 		// Seed the Lua's random state for trivial (i.e. client-side) purposes
 
@@ -206,6 +212,24 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			globals.set(
 				"import",
 				lua.create_function(move |l, path: String| -> LuaResult<LuaValue> {
+					let loaded: LuaTable = l.named_registry_value("modules").expect(
+						"Registry sub-table `modules` wasn't pre-initialised."
+					);
+
+					match loaded.get::<&str, LuaValue>(&path) {
+						Ok(module) => {
+							if let LuaValue::Nil = module {
+								// It wasn't found. Proceed with VFS read
+							} else {
+								return Ok(module);
+							}
+						}
+						Err(err) => {
+							error!("Failed to import Lua module from path: {}", path);
+							return Err(err);
+						}
+					}
+
 					let vfs = vfs.read();
 
 					let bytes = match vfs.read(&path) {
@@ -229,12 +253,16 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 						}
 					};
 
-					let env = l
-						.globals()
-						.call_function("getenv", 0)
-						.expect("`import` failed to retrieve the current environment.");
-
-					return l.safeload(&chunk, path.as_str(), env).eval();
+					match l.safeload(&chunk, path.as_str(), l.getfenv()).eval::<LuaValue>() {
+						Ok(ret) => {
+							loaded.set::<&str, LuaValue>(&path, ret.clone())?;
+							return Ok(ret);
+						},
+						Err(err) => {
+							error!("{}", err);
+							return Ok(LuaValue::Nil);
+						}
+					};
 				})?,
 			)
 		}
@@ -381,6 +409,13 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			env.set("debug", d)
 				.expect("`ImpureLua::env_init_std`: Failed to set `debug`.");
 		}
+	}
+
+	fn getfenv(&self) -> LuaTable {
+		self
+			.globals()
+			.call_function("getfenv", ())
+			.expect("Failed to retrieve the current environment.")
 	}
 
 	fn safeload<'lua, 'a, S>(
