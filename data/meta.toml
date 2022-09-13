@@ -5,6 +5,4 @@ authors = ["***REMOVED***"]
 copyright = "© 2022 ***REMOVED***"
 links = ['https://github.com/***REMOVED***/impure']
 version = "0.0.0"
-manifests = [
-	'manifest.lua'
-]
+manifest = 'manifest/main.lua'
