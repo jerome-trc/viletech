@@ -55,6 +55,10 @@ pub trait ImpureLua<'p> {
 		S: mlua::AsChunk<'lua> + ?Sized;
 
 	fn teal_compile(&self, source: &str) -> LuaResult<String>;
+
+	/// Generate a human-friendly string representation of
+	/// any kind of Lua value via the Serpent library.
+	fn repr(&self, val: LuaValue) -> LuaResult<String>;
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
@@ -119,34 +123,118 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			}
 		};
 
+		fn log(lua: &Lua, args: LuaMultiValue, func_name: &'static str) -> Result<String, String> {
+			let mut args = args.iter();
+
+			let template = match args.next() {
+				Some(val) => {
+					if let LuaValue::String(s) = val {
+						s
+					} else {
+						return Err(
+							format!(
+								"`{}` expected a format string for argument 1, but got: {:#?}",
+								func_name, val
+							)
+						);
+					}
+				}
+				None => {
+					return Err(
+						format!(
+							"`{}` expected at least 1 argument, but got 0.",
+							func_name
+						)
+					);
+				}
+			};
+
+			let mut template = match formatx::Template::new(template.to_string_lossy()) {
+				Ok(t) => t,
+				Err(err) => {
+					return Err(
+						format!(
+							"Invalid template string given to `{}`.
+							Error: {}",
+							func_name, err
+						)
+					);
+				}
+			};
+
+			for arg in args {
+				match lua.repr(arg.clone()) {
+					Ok(s) => template.replace_positional(s),
+					Err(err) => {
+						return Err(
+							format!(
+								"Formatting error in `{}` arguments: {}",
+								func_name, err
+							)	
+						);
+					}
+				};
+			}
+
+			let output = match template.text() {
+				Ok(s) => s,
+				Err(err) => {
+ 					return Err(
+						format!(
+							"Formatting error in `{}` arguments: {}",
+							func_name, err
+						)
+					);
+				}
+			};
+
+			Ok(output)
+		}
+
 		impure.set(
 			"log",
-			ret.create_function(|_, msg: String| {
-				info!("{}", msg);
+			ret.create_function(|lua, args: LuaMultiValue| {
+				match log(lua, args, "log") {
+					Ok(s) => info!("{}", s),
+					Err(s) => error!("{}", s)
+				};
+
 				Ok(())
 			})?,
 		)?;
 
 		impure.set(
 			"warn",
-			ret.create_function(|_, msg: String| {
-				warn!("{}", msg);
+			ret.create_function(|lua, args: LuaMultiValue| {
+				match log(lua, args, "warn") {
+					Ok(s) => warn!("{}", s),
+					Err(s) => error!("{}", s)
+				};
+
 				Ok(())
 			})?,
 		)?;
 
 		impure.set(
 			"err",
-			ret.create_function(|_, msg: String| {
-				error!("{}", msg);
+			ret.create_function(|lua, args: LuaMultiValue| {
+				match log(lua, args, "err") {
+					Ok(s) => error!("{}", s),
+					Err(s) => error!("{}", s)
+				};
+
 				Ok(())
 			})?,
 		)?;
 
 		impure.set(
 			"debug",
-			ret.create_function(|_, msg: String| {
-				debug!("{}", msg);
+			ret.create_function(|lua, args: LuaMultiValue| {
+				match log(lua, args, "debug") {
+					Ok(s) => debug!("{}", s),
+					Err(s) => error!("{}", s)
+				};
+
 				Ok(())
 			})?,
 		)?;
@@ -256,13 +344,13 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 					match l.safeload(&chunk, path.as_str(), l.getfenv()).eval::<LuaValue>() {
 						Ok(ret) => {
 							loaded.set::<&str, LuaValue>(&path, ret.clone())?;
-							return Ok(ret);
+							Ok(ret)
 						},
 						Err(err) => {
 							error!("{}", err);
-							return Ok(LuaValue::Nil);
+							Ok(LuaValue::Nil)
 						}
-					};
+					}
 				})?,
 			)
 		}
@@ -336,13 +424,19 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		globals.set("vfs", g_vfs)?;
 
-		// Teal "prelude": container utilities (map/array) /////////////////////
+		// Script "prelude" ////////////////////////////////////////////////////
 
 		let vfsg = vfs.read();
 
+		let utils = vfsg.read_str("/impure/lua/utils.tl")
+			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
+		let utils = self.teal_compile(utils)?;
+		let utils = self.safeload(&utils, "utils", globals.clone());
+		utils.eval()?;
+
 		let array = vfsg
 			.read_str("/impure/lua/array.tl")
-			.or_else(|err| Err(LuaError::ExternalError(Arc::new(err))))?;
+			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 		let array = self.teal_compile(array)?;
 		let array = self.safeload(&array, "array", globals.clone());
 		let array: LuaTable = array.eval()?;
@@ -350,7 +444,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		let map = vfsg
 			.read_str("/impure/lua/map.tl")
-			.or_else(|err| Err(LuaError::ExternalError(Arc::new(err))))?;
+			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 		let map = self.teal_compile(map)?;
 		let map = self.safeload(&map, "map", globals.clone());
 		let map: LuaTable = map.eval()?;
@@ -442,5 +536,9 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.get::<&str, LuaFunction>("gen")
 			.expect("Teal compiler is missing function: `gen`.")
 			.call::<&str, String>(source)
+	}
+
+	fn repr(&self, val: LuaValue) -> LuaResult<String> {
+		self.globals().call_function::<_, _, String>("repr", val)
 	}
 }

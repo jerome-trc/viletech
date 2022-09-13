@@ -47,7 +47,11 @@ If you're aware of any attribution which is evidently missing from this list, or
 - fern
 	- By David "daboross" Ross et. al.
 	- Provided under the [MIT License](https://github.com/daboross/fern/blob/main/LICENSE).
-	- https://docs.rs/fern/latest/fern/ 
+	- https://docs.rs/fern/latest/fern/
+- formatx
+	- By Apoorv "clitic" Sachan.
+	- Provided under the [Apache 2.0 License](https://github.com/clitic/formatx/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/clitic/formatx/blob/main/LICENSE-MIT).
+	- https://docs.rs/formatx/latest/formatx/
 - glam
     - By Cameron "bitshifter" Hart et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-MIT).

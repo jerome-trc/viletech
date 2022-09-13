@@ -1,4 +1,5 @@
 --[[
+
 https://github.com/pkulchenko/serpent/blob/d78683597606c6e13a1fed039bc91d86eb8f600f/src/serpent.lua	
 
 Serpent source is released under the MIT License
@@ -22,6 +23,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
 --]]
 
 local n, v = "serpent", "0.30" -- (C) 2012-17 Paul Kulchenko; MIT License

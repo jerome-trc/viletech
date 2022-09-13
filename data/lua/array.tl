@@ -1,4 +1,5 @@
 -- Array utilities.
+-- Pre-exported globally in all Lua contexts.
 
 local record array
 	contains: function<T>(arr: {T}, elem: T): boolean

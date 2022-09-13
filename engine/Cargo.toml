@@ -25,6 +25,7 @@ egui-wgpu = "0.18"
 egui-winit = "0.18"
 fasthash = "0.4.0"
 fern = { version = "0.6.1", features = ["colored"] }
+formatx = "0.1.4"
 glam = { version = "0.21.2", features = ["approx", "bytemuck", "serde"] }
 globset = "0.4.9"
 home = "0.5.3"

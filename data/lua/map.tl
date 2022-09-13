@@ -1,4 +1,5 @@
 -- Map utilities.
+-- Pre-exported globally in all Lua contexts.
 
 local record map
 	size: function<K, V>(m: {K:V}): integer

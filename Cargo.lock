@@ -1140,6 +1140,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "formatx"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e94c620058a2b0d38357c78968094788d66016c4cc24bb0efd2e246d9781391c"
+
+[[package]]
 name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1421,6 +1427,7 @@ dependencies = [
  "egui-winit",
  "fasthash",
  "fern",
+ "formatx",
  "glam",
  "globset",
  "home",
