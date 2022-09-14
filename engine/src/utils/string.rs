@@ -20,6 +20,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use lazy_static::lazy_static;
 use regex::Regex;
 
+/// For use with a parser span (i.e. ZScript), so returns not only a line
+/// but also which line in the text it is out of each line (starting at 0).
+pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)> {
+	debug_assert!(index < string.chars().count());
+
+	let lines = string.split_inclusive(&['\n', '\r']);
+	let mut c = index;
+	let mut i = 0;
+
+	for line in lines {
+		let count = line.chars().count();
+
+		if c < count {
+			return Some((line, i));
+		} else {
+			c -= count;
+			i += 1;
+		}
+	}
+
+	None
+}
+
 /// Extracts a version string from what will almost always be a file stem,
 /// using a search pattern based off the most common versioning conventions used
 /// in ZDoom modding. If the returned option is `None`, the given string is unmodified.

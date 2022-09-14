@@ -26,8 +26,8 @@ use impure::{
 	gfx::{camera::Camera, core::GraphicsCore},
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
-	utils::path::*,
-	vfs::{self, ImpureVfs, VirtualFs},
+	utils::{path::*, string::line_from_char_index},
+	vfs::{self, ImpureVfs, VirtualFs, ImpureVfsHandle, ZsProxyFs}, zscript,
 };
 
 use kira::{
@@ -515,10 +515,53 @@ impl ClientCore {
 // Internal implementation details: on-game-start asset loading.
 impl ClientCore {
 	fn load_assets(vfs: &VirtualFs, obj_index: usize, data: &mut DataCore) {
-		let uuid = &data.objects[obj_index].meta.uuid.clone();
+		let uuid = &data.objects[obj_index].meta.uuid;
 
-		let _entry = vfs
-			.lookup(&uuid)
+		let entry = vfs
+			.lookup(uuid)
 			.expect("`ClientCore::load_assets` failed to find a game data object by UUID.");
+	
+		if entry.has_zscript() {
+			let pvfs = ZsProxyFs::new(vfs, uuid);
+			let parse_out = zscript::parse(pvfs);
+
+			if !parse_out.errors.is_empty() {
+				error!(
+					"{} errors during ZScript transpile: {}",
+					parse_out.errors.len(),
+					uuid
+				);
+			}
+
+			for err in parse_out.errors {
+				let file = &parse_out.files[err.main_spans[0].get_file()];
+				let start = err.main_spans[0].get_start();
+				let end = err.main_spans[0].get_end();
+				let (line, line_index) = line_from_char_index(file.text(), start).unwrap();
+				let line = line.trim();
+				let line_start = file.text().find(line).unwrap();
+
+				let mut indicators = String::with_capacity(line.len());
+				indicators.push('\t');
+
+				for _ in line_start..start {
+					indicators.push(' ');
+				}
+
+				for _ in 0..(end - start) {
+					indicators.push('^');
+				}
+
+				error!(
+					"{}:{}:{}\r\n\r\n\t{}\r\n{}\r\n\tDetails: {}.\r\n",
+					format!("/{}/{}", uuid, file.filename()),
+					line_index + 1,
+					start - line_start,
+					line,
+					indicators,
+					err.msg
+				);
+			}
+		}
 	}
 }

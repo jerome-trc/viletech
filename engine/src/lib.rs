@@ -44,6 +44,7 @@ pub mod sim;
 pub mod utils;
 pub mod vfs;
 pub mod wad;
+pub mod zscript;
 
 // Type aliases
 
