@@ -278,15 +278,16 @@ impl ClientCore {
 			}
 			Some(scene) => match scene {
 				SceneChange::Title { to_mount } => {
-					let metas = self.vfs.write().mount_gamedata(&to_mount);
-					let vfsg = self.vfs.read();
-
-					for meta in metas {
-						let kind = vfsg.gamedata_kind(&meta.uuid);
-						self.data.objects.push(GameDataObject::new(meta, kind));
+					if !to_mount.is_empty() {
+						let metas = self.vfs.write().mount_gamedata(&to_mount);
+						let vfsg = self.vfs.read();
+	
+						for meta in metas {
+							let kind = vfsg.gamedata_kind(&meta.uuid);
+							self.data.objects.push(GameDataObject::new(meta, kind));
+						}
 					}
 
-					drop(vfsg);
 					self.start_game();
 				}
 			},
