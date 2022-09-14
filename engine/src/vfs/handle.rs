@@ -17,13 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::path::Path;
+use std::{path::Path, borrow::Borrow};
 
+use fasthash::metro;
 use regex::Regex;
 
-use crate::utils::path::str_iter_from_path;
-
-use super::{entry::{Entry, EntryKind}, error::Error, VirtualFs};
+use super::{
+	entry::{Entry, EntryKind},
+	error::Error,
+	VirtualFs,
+};
 
 #[derive(Clone)]
 pub struct Handle<'v, 'e> {
@@ -33,11 +36,39 @@ pub struct Handle<'v, 'e> {
 
 impl<'v, 'e> Handle<'v, 'e> {
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<Handle> {
-		self.lookup_recur(str_iter_from_path(path.as_ref()))
+		debug_assert!(self.entry.path.starts_with("/"));
+
+		let mut hash = 0u64;
+
+		for comp in self.entry.path.components() {
+			hash ^= metro::hash64(comp.as_os_str().to_str().unwrap());
+		}
+
+		for comp in path.as_ref().components() {
+			hash ^= metro::hash64(comp.as_os_str().to_str().unwrap());
+		}
+
+		self.vfs.lookup_hash(hash).map(|e| Handle {
+			vfs: self.vfs,
+			entry: e
+		})
 	}
 
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
-		self.lookup_recur_nocase(str_iter_from_path(path.as_ref()))
+		let full_path = self.entry.path.join(path);
+
+		for entry in &self.vfs.entries {
+			if entry.path.to_string_lossy().eq_ignore_ascii_case(
+				full_path.to_string_lossy().borrow()
+			) {
+				return Some(Handle {
+					vfs: self.vfs,
+					entry
+				})
+			}
+		}
+
+		None
 	}
 
 	pub fn read(&self) -> Result<&[u8], Error> {
@@ -75,9 +106,9 @@ impl<'v, 'e> Handle<'v, 'e> {
 
 	pub fn children(&'e self) -> impl Iterator<Item = Handle> {
 		self.child_entries().map(|e| Handle {
-				vfs: self.vfs,
-				entry: e,
-			})
+			vfs: self.vfs,
+			entry: e,
+		})
 	}
 
 	/// Note: non-recursive. Panics if used on a leaf node.
@@ -95,7 +126,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 	pub fn count(&self) -> usize {
 		match &self.entry.kind {
 			EntryKind::Leaf { .. } => 0,
-			EntryKind::Directory { .. } => self.child_entries().count()
+			EntryKind::Directory { .. } => self.child_entries().count(),
 		}
 	}
 
@@ -127,39 +158,5 @@ impl<'v, 'e> Handle<'v, 'e> {
 			.entries
 			.iter()
 			.filter(|e| e.parent_hash == self.entry.hash)
-	}
-
-	fn lookup_recur<'s>(&self, mut iter: impl Iterator<Item = &'s str>) -> Option<Handle> {
-		let comp = match iter.next() {
-			Some(c) => c,
-			None => { return Some(self.clone()); }
-		};
-
-		for entry in self.child_entries() {
-			if entry.file_name() != comp {
-				continue;
-			}
-
-			return self.lookup_recur(iter);
-		}
-
-		None
-	}
-
-	fn lookup_recur_nocase<'s>(&self, mut iter: impl Iterator<Item = &'s str>) -> Option<Handle> {
-		let comp = match iter.next() {
-			Some(c) => c,
-			None => { return Some(self.clone()); }
-		};
-
-		for entry in self.child_entries() {
-			if !entry.file_name().eq_ignore_ascii_case(comp)  {
-				continue;
-			}
-
-			return self.lookup_recur_nocase(iter);
-		}
-
-		None
 	}
 }

@@ -398,4 +398,5 @@ use entry::EntryKind;
 pub use handle::Handle;
 pub use self::impure::ImpureVfs;
 pub use self::impure::ImpureVfsHandle;
+pub use self::impure::ZsProxyFs;
 pub use error::Error;

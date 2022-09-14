@@ -54,15 +54,6 @@ pub use level::Metadata as LevelMetadata;
 pub use vfs::Handle as VfsHandle;
 pub use vfs::Error as VfsError;
 
-pub mod zsparse {
-	pub use ::zsparse::filesystem::File as ZsFile;
-	pub use ::zsparse::filesystem::FileSystem as ZsFileSystem;
-	pub use ::zsparse::filesystem::Files as ZsFiles;
-	pub use zsparse::err::ParsingError as ZsParsingError;
-	pub use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
-	pub use zsparse::parser_manager::parse_filesystem as zs_parse_filesystem;
-}
-
 // Re-export transitive dependencies
 
 pub mod depends {

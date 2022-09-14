@@ -29,11 +29,13 @@ use regex::Regex;
 
 use super::{Error, Handle, VirtualFs};
 
+use zsparse::filesystem::FileSystem as ZsFileSystem;
+use zsparse::filesystem::File as ZsFile;
+
 use crate::{
 	data::{game::GameDataKind, GameDataMeta},
 	utils::{path::*, string::*},
 	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
-	zsparse::*,
 };
 
 /// A separate trait provides functions that are specific to Impure, so that the
@@ -453,30 +455,36 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 	}
 }
 
-struct ZsProxyFs<'v> {
-	vfs: &'v VirtualFs,
-	root: &'v str,
+pub struct ZsProxyFs<'vfs> {
+	vfs: &'vfs VirtualFs,
+	root: &'vfs str
 }
 
-impl<'v> ZsFileSystem for ZsProxyFs<'v> {
+impl<'vfs> ZsProxyFs<'vfs> {
+	pub fn new(vfs: &'vfs VirtualFs, root: &'vfs str) -> Self {
+		Self { vfs, root }
+	}
+}
+
+impl<'vfs> ZsFileSystem for ZsProxyFs<'vfs> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
 		let rel_root = self
 			.vfs
 			.lookup(self.root)
-			.expect("`ZsProxyFs::get_file` failed to find its relative root.");
+			.expect("`ZsProxyFs::get_files` failed to find its relative root.");
 
-		// TODO: Needs correctness verified;
-		// Can't do so until I start writing ZScript transpiler
-		let target = match rel_root.lookup(Path::new(filename)) {
+		let target = match rel_root.lookup_nocase(filename) {
 			Some(h) => h,
 			None => {
-				warn!("Failed to find ZScript file: {}", filename);
+				let full_path = rel_root.virtual_path().join(filename);
+				warn!("Failed to find ZScript file: {}", full_path.display());
 				return None;
 			}
 		};
 
 		if target.is_dir() {
-			warn!("Expected ZScript file, found directory: {}", filename);
+			let full_path = rel_root.virtual_path().join(filename);
+			warn!("Expected ZScript file, found directory: {}", full_path.display());
 			return None;
 		}
 
