@@ -21,7 +21,7 @@ use crossbeam::channel::{Receiver, Sender};
 use egui::{
 	text::{CCursor, LayoutJob},
 	text_edit::{CCursorRange, TextEditState},
-	Color32, TextFormat,
+	Color32, ScrollArea, TextFormat, TextStyle,
 };
 use lazy_static::lazy_static;
 use log::{error, info};
@@ -205,8 +205,12 @@ impl Console {
 				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
 		};
 
+		let font_id = TextStyle::Monospace.resolve(ui.style());
+
 		if !RGX_LOGOUTPUT.is_match(line) {
-			ui.label(line);
+			let job = LayoutJob::simple_singleline(line.to_string(), font_id, Color32::GRAY);
+			let galley = ui.fonts().layout_job(job);
+			ui.label(galley);
 			return;
 		}
 
@@ -222,24 +226,23 @@ impl Console {
 			_ => Color32::LIGHT_BLUE,
 		};
 
-		job.append("[", 0.0, TextFormat::default());
+		let tfmt = TextFormat::simple(font_id.clone(), Color32::GRAY);
+
+		job.append("[", 0.0, tfmt.clone());
 		job.append(
 			&loglvl[1..],
 			0.0,
-			TextFormat {
-				color,
-				..Default::default()
-			},
+			TextFormat::simple(font_id, color),
 		);
-		job.append("] ", 0.0, TextFormat::default());
-		job.append(s.next().unwrap_or_default(), 0.0, TextFormat::default());
+		job.append("] ", 0.0, tfmt.clone());
+		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
 
 		let galley = ui.fonts().layout_job(job);
 		ui.label(galley);
 	}
 
 	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-		let scroll_area = egui::ScrollArea::vertical()
+		let scroll_area = ScrollArea::vertical()
 			.max_height(200.0)
 			.auto_shrink([false; 2]);
 
@@ -396,7 +399,7 @@ pub struct Command {
 	/// The vector of arguments never contains the name of the command itself,
 	/// whether aliased or not.
 	func: fn(&Self, Vec<&str>) -> Request,
-	help: fn(&Self, Vec<&str>)
+	help: fn(&Self, Vec<&str>),
 }
 
 impl Command {
@@ -405,11 +408,7 @@ impl Command {
 		func: fn(&Self, Vec<&str>) -> Request,
 		help: fn(&Self, Vec<&str>),
 	) -> Self {
-		Command {
-			id,
-			func,
-			help
-		}
+		Command { id, func, help }
 	}
 
 	pub fn get_id(&self) -> &'static str {
