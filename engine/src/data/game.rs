@@ -17,8 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt, hash::Hash};
 
+use fasthash::metro;
 use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
 use serde::Deserialize;
@@ -40,6 +41,57 @@ use super::asset::Asset;
 pub struct AssetIndex {
 	namespace: usize,
 	element: usize,
+}
+
+/// Wraps a hash, generated from an asset ID string, used as a key in [`DataCore::asset_map`].
+/// Scripts call asset-domain-specific functions and pass in strings like
+/// `"namespace:sound_id"`, so mixing in the domain's string (e.g. "snd") ensures
+/// uniqueness in one hash map amongst other assets.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AssetHash(pub(crate) u64);
+
+impl AssetHash {
+	fn from_id_pair<A: Asset>(namespace_id: &str, asset_id: &str) -> Self {
+		let mut ret = metro::hash64(namespace_id);
+		ret ^= metro::hash64(A::DOMAIN_STRING);
+		ret ^= metro::hash64(asset_id);
+
+		Self(ret)
+	}
+
+	fn from_id<A: Asset>(string: &str) -> Result<Self, AssetIdError> {
+		let mut split = string.split(':');
+
+		let nsid = split.next().ok_or(AssetIdError::EmptyString)?;
+		let aid = split.next().ok_or(AssetIdError::MissingPostfix)?;
+
+		Ok(Self::from_id_pair::<A>(nsid, aid))
+	}
+}
+
+#[derive(Debug)]
+pub enum AssetIdError {
+	EmptyString,
+	MissingPostfix,
+	NotFound,
+}
+
+impl std::error::Error for AssetIdError {}
+
+impl fmt::Display for AssetIdError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::EmptyString => {
+				write!(f, "Cannot form an asset hash from an empty ID string.")
+			}
+			Self::MissingPostfix => {
+				write!(f, "Asset ID is malformed, and lacks a postfix.")
+			}
+			Self::NotFound => {
+				write!(f, "The given asset ID did not match any existing asset.")
+			}
+		}
+	}
 }
 
 pub struct Music(StaticSoundData);
@@ -175,10 +227,10 @@ pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
 	pub namespaces: Vec<Namespace>,
-	/// Key structure: `namespace:domain.asset_id`.
+	/// Keys are derived from hashing an [`AssetId`].
 	/// `namespace` will correspond to the mount point, and be something like
 	/// `DOOM2`. `domain` will be something like `bp` or `mus`.
-	pub asset_map: HashMap<String, AssetIndex>,
+	pub asset_map: HashMap<AssetHash, AssetIndex>,
 	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
 	/// under any given UUID in the load order. For use in interop, since, for
 	/// example, GZDoom mods will expect that port's overlay/replacement system.
@@ -188,6 +240,7 @@ pub struct DataCore {
 	pub spawn_numbers: HashMap<u16, AssetIndex>,
 }
 
+// Public interface.
 impl DataCore {
 	/// Note: UUIDs are checked for an exact match.
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
@@ -224,36 +277,42 @@ impl DataCore {
 		Ok(false)
 	}
 
-	pub fn add<T: Asset>(&mut self, asset: T, namespace_id: &str, asset_id: &str) {
-		let ns_index = match self.namespaces.iter_mut().position(|o| o.meta.uuid == namespace_id) {
+	pub fn add<'s, T: Asset>(&mut self, asset: T, namespace_id: &'s str, asset_id: &'s str) {
+		let ns_index = match self
+			.namespaces
+			.iter_mut()
+			.position(|o| o.meta.uuid == namespace_id)
+		{
 			Some(o) => o,
 			None => {
 				// Caller should always pre-validate here
-				panic!("Attempted to add asset under invalid UUID: {}", namespace_id);
+				panic!(
+					"Attempted to add asset under invalid UUID: {}",
+					namespace_id
+				);
 			}
 		};
 
 		let namespace = &mut self.namespaces[ns_index];
-
-		let asset_ndx = T::add_impl(namespace, asset);
-
-		let full_id = if T::DOMAIN_STRING.is_empty() {
-			format!("{}:{}", namespace_id, asset_id)
-		} else {
-			format!("{}:{}.{}", namespace_id, T::DOMAIN_STRING, asset_id)
-		};
+		let asset_index = T::add_impl(namespace, asset);
+		let hash = AssetHash::from_id_pair::<T>(namespace_id, asset_id);
 
 		let ndx_pair = AssetIndex {
 			namespace: ns_index,
-			element: asset_ndx,
+			element: asset_index,
 		};
 
-		self.asset_map.insert(full_id, ndx_pair);
-		self.lump_map.insert(asset_ndx.to_string(), ndx_pair);
+		self.asset_map.insert(hash, ndx_pair);
+		self.lump_map.insert(asset_index.to_string(), ndx_pair);
 	}
 
-	pub fn get<T: Asset>(&self, id: &str) -> Option<&T> {
-		let ndx_pair = &self.asset_map[id];
-		T::get_impl(&self.namespaces[ndx_pair.namespace], ndx_pair.element)
+	pub fn get<T: Asset>(&self, index: AssetIndex) -> Option<&T> {
+		T::get_impl(&self.namespaces[index.namespace], index.element)
+	}
+
+	pub fn lookup<T: Asset>(&self, id: &str) -> Result<&T, AssetIdError> {
+		let hash = AssetHash::from_id::<T>(id)?;
+		let ipair = self.asset_map.get(&hash).ok_or(AssetIdError::NotFound)?;
+		Ok(T::get_impl(&self.namespaces[ipair.namespace], ipair.element).unwrap())
 	}
 }
