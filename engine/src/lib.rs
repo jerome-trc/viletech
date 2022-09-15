@@ -80,10 +80,12 @@ pub mod depends {
 
 // Symbols that don't belong in any other module
 
+#[must_use]
 pub fn short_version_string() -> String {
 	format!("Impure Engine version {}.", env!("CARGO_PKG_VERSION"))
 }
 
+#[must_use]
 pub fn full_version_string() -> String {
 	format!(
 		"Impure engine version: {}.{}.{} (commit {}). Compiled on: {}",
@@ -189,6 +191,7 @@ pub fn log_init(
 	Ok(())
 }
 
+#[must_use]
 pub fn uptime_string(start_time: std::time::Instant) -> String {
 	let elapsed = start_time.elapsed();
 	let dur = chrono::Duration::from_std(elapsed).unwrap();

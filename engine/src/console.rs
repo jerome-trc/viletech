@@ -53,6 +53,7 @@ pub struct Console {
 }
 
 impl Console {
+	#[must_use]
 	pub fn new(msg_receiver: Receiver<String>) -> Self {
 		Console {
 			#[cfg(debug_assertions)]
@@ -73,6 +74,7 @@ impl Console {
 		}
 	}
 
+	#[must_use]
 	fn find_command(&self, key: &str) -> Option<&Command> {
 		for cmd in &self.commands {
 			if !key.eq_ignore_ascii_case(cmd.id) {
@@ -399,6 +401,7 @@ pub struct Command {
 }
 
 impl Command {
+	#[must_use]
 	pub fn new(
 		id: &'static str,
 		func: fn(&Self, Vec<&str>) -> Request,
@@ -407,6 +410,7 @@ impl Command {
 		Command { id, func, help }
 	}
 
+	#[must_use]
 	pub fn get_id(&self) -> &'static str {
 		self.id
 	}
@@ -429,6 +433,7 @@ pub struct Writer {
 }
 
 impl Writer {
+	#[must_use]
 	pub fn new(sender: Sender<String>) -> Self {
 		Writer {
 			buffer: Vec::<u8>::with_capacity(512),

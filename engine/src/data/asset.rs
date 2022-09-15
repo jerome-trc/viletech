@@ -36,7 +36,9 @@ pub trait Asset {
 
 	/// Returns the index of the asset in the vector that newly holds it.
 	/// If the asset doesn't go into a vector, return 0.
+	#[must_use]
 	fn add_impl(namespace: &mut Namespace, asset: Self) -> usize;
+	#[must_use]
 	fn get_impl<'lua>(namespace: &'lua Namespace, index: usize) -> Option<&'lua Self>;
 }
 

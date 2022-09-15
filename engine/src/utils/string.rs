@@ -22,6 +22,7 @@ use regex::Regex;
 
 /// For use with a parser span (i.e. ZScript), so returns not only a line
 /// but also which line in the text it is out of each line (starting at 0).
+#[must_use]
 pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)> {
 	debug_assert!(index < string.chars().count());
 
@@ -46,6 +47,7 @@ pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)>
 /// Extracts a version string from what will almost always be a file stem,
 /// using a search pattern based off the most common versioning conventions used
 /// in ZDoom modding. If the returned option is `None`, the given string is unmodified.
+#[must_use]
 pub fn version_from_string(string: &mut String) -> Option<String> {
 	lazy_static! {
 		static ref RGX_VERSION: Regex = Regex::new(

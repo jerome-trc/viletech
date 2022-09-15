@@ -33,6 +33,7 @@ pub struct ParseOutput {
 	pub asts: Vec<FileIndexAndAst>,
 }
 
+#[must_use]
 pub fn parse(vfs: ZsProxyFs) -> ParseOutput {
 	let mut errors = Default::default();
 	let mut files = Default::default();

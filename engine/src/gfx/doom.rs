@@ -26,6 +26,7 @@ use super::Rgb32;
 pub struct Palette(pub [Rgb32; 256]);
 
 impl Default for Palette {
+	#[must_use]
 	fn default() -> Self {
 		Palette([Rgb::default(); 256])
 	}

@@ -35,22 +35,32 @@ lazy_static! {
 }
 
 pub trait PathEx {
+	#[must_use]
 	fn dir_count(&self) -> usize;
+	#[must_use]
 	fn dir_empty(&self) -> bool {
 		self.dir_count() < 1
 	}
-	/// Returns the number of components in the path.
+	#[must_use]
 	fn extension_is(&self, test: &str) -> bool;
+	#[must_use]
 	fn is_empty(&self) -> bool;
+	#[must_use]
 	fn is_root(&self) -> bool;
+	/// Returns the number of components in the path.
+	#[must_use]
 	fn size(&self) -> usize;
 
+	#[must_use]
 	fn has_zip_extension(&self) -> bool;
 	/// Check if an archive is a .wad, .pwad, or .iwad.
+	#[must_use]
 	fn has_wad_extension(&self) -> bool;
 	/// Check if an archive is a .pk3, .pk7, .ipk3, or .ipk7.
+	#[must_use]
 	fn has_gzdoom_extension(&self) -> bool;
 	/// Check if an archive is a .pk3 or .pke.
+	#[must_use]
 	fn has_eternity_extension(&self) -> bool;
 
 	/// See [`super::io::is_binary`].

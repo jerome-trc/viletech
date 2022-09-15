@@ -35,6 +35,7 @@ pub struct Handle<'v, 'e> {
 }
 
 impl<'v, 'e> Handle<'v, 'e> {
+	#[must_use]
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<Handle> {
 		debug_assert!(self.entry.path.starts_with("/"));
 
@@ -54,6 +55,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 		})
 	}
 
+	#[must_use]
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
 		let full_path = self.entry.path.join(path);
 
@@ -115,16 +117,19 @@ impl<'v, 'e> Handle<'v, 'e> {
 
 	/// Note: non-recursive. Panics if used on a leaf node.
 	/// Check to ensure it's a directory beforehand.
+	#[must_use]
 	pub fn contains(&self, name: &str) -> bool {
 		self.child_entries().any(|e| e.file_name() == name)
 	}
 
 	/// Note: non-recursive. Panics if used on a leaf node.
 	/// Check to ensure it's a directory beforehand.
+	#[must_use]
 	pub fn contains_regex(&self, regex: &Regex) -> bool {
 		self.children().any(|h| regex.is_match(h.file_name()))
 	}
 
+	#[must_use]
 	pub fn count(&self) -> usize {
 		match &self.entry.kind {
 			EntryKind::Leaf { .. } => 0,
@@ -132,22 +137,27 @@ impl<'v, 'e> Handle<'v, 'e> {
 		}
 	}
 
+	#[must_use]
 	pub fn virtual_path(&self) -> &'e Path {
 		&self.entry.path
 	}
 
+	#[must_use]
 	pub fn path_str(&self) -> &'e str {
 		self.entry.path_str()
 	}
 
+	#[must_use]
 	pub fn file_name(&self) -> &str {
 		self.entry.file_name()
 	}
 
+	#[must_use]
 	pub fn is_dir(&self) -> bool {
 		self.entry.is_dir()
 	}
 
+	#[must_use]
 	pub fn is_leaf(&self) -> bool {
 		self.entry.is_leaf()
 	}

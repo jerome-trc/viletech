@@ -39,8 +39,11 @@ impl fmt::Display for Error {
 }
 
 pub trait ImpureRng {
+	#[must_use]
 	fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32;
+	#[must_use]
 	fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32;
+	#[must_use]
 	fn coin_flip(&mut self) -> bool;
 }
 
@@ -96,6 +99,7 @@ impl<B: ImpureRng + Default> RngCore<B> {
 		Ok(())
 	}
 
+	#[must_use]
 	pub fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32 {
 		self.prngs
 			.get_mut("")
@@ -103,6 +107,7 @@ impl<B: ImpureRng + Default> RngCore<B> {
 			.range_i32(min_incl, max_incl)
 	}
 
+	#[must_use]
 	pub fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32 {
 		self.prngs
 			.get_mut("")
@@ -110,6 +115,7 @@ impl<B: ImpureRng + Default> RngCore<B> {
 			.range_f32(min_incl, max_incl)
 	}
 
+	#[must_use]
 	pub fn coinflip(&mut self) -> bool {
 		self.prngs.get_mut("").unwrap().coin_flip()
 	}

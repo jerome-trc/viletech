@@ -31,7 +31,7 @@ fn vfs(crit: &mut Criterion) {
 
 		grp_mount.bench_function("Gamedata", |bencher| {
 			bencher.iter(|| {
-				vfs.mount(&mount_paths);
+				let _ = vfs.mount(&mount_paths);
 			});
 		});
 
@@ -40,7 +40,7 @@ fn vfs(crit: &mut Criterion) {
 
 	fn lookup(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
 		let mut vfs = VirtualFs::default();
-		vfs.mount(&mount_paths);
+		let _ = vfs.mount(&mount_paths);
 
 		let mut grp_lookup = crit.benchmark_group("Lookup");
 		grp_lookup.sample_size(10_000);

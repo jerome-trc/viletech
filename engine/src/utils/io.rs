@@ -24,6 +24,7 @@ use std::io;
 use byteorder::{ByteOrder, LittleEndian};
 
 /// Check if the given byte slice is not ASCII-encoded, UTF-8 encoded, or UTF-16 encoded.
+#[must_use]
 pub fn is_binary(bytes: &[u8]) -> bool {
 	if std::str::from_utf8(bytes).is_ok() || bytes.is_ascii() {
 		return false;
@@ -56,6 +57,7 @@ pub fn is_binary(bytes: &[u8]) -> bool {
 }
 
 /// Checks for a 4-byte magic number at the very beginning of the file.
+#[must_use]
 pub fn is_zip(bytes: &[u8]) -> bool {
 	bytes.len() >= 4 && matches!(&bytes[0..4], &[0x50, 0x4b, 0x03, 0x04])
 }
@@ -100,6 +102,7 @@ pub fn is_valid_wad(bytes: &[u8], len: u64) -> io::Result<bool> {
 }
 
 /// Checks for an 8-byte signature.
+#[must_use]
 pub fn is_png(bytes: &[u8]) -> bool {
 	bytes.len() > 8
 		&& matches!(
@@ -109,6 +112,7 @@ pub fn is_png(bytes: &[u8]) -> bool {
 }
 
 /// Checks the header and total size. Ensure a slice over the entire lump is given.
+#[must_use]
 pub fn is_doom_gfx(bytes: &[u8]) -> bool {
 	const HEADER_SIZE: usize = 8;
 

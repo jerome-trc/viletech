@@ -40,6 +40,7 @@ pub(super) enum EntryKind {
 }
 
 impl Entry {
+	#[must_use]
 	pub(super) fn new_leaf(virt_path: PathBuf, parent_hash: u64, bytes: Vec<u8>) -> Self {
 		let mut hash = 0u64;
 		let comps = virt_path.as_path().components();
@@ -60,6 +61,7 @@ impl Entry {
 		}
 	}
 
+	#[must_use]
 	pub(super) fn new_dir(virt_path: PathBuf, parent_hash: u64) -> Self {
 		let mut hash = 0u64;
 		let comps = virt_path.as_path().components();
@@ -80,6 +82,7 @@ impl Entry {
 		}
 	}
 
+	#[must_use]
 	pub(super) fn file_name(&self) -> &str {
 		if self.path.is_root() {
 			return "/";
@@ -92,20 +95,24 @@ impl Entry {
 			.expect("A VFS virtual path wasn't sanitised (UTF-8).")
 	}
 
+	#[must_use]
 	pub(super) fn path_str(&self) -> &str {
 		self.path
 			.to_str()
 			.expect("A VFS virtual path wasn't UTF-8 sanitised.")
 	}
 
+	#[must_use]
 	pub(super) fn is_leaf(&self) -> bool {
 		matches!(self.kind, EntryKind::Leaf { .. })
 	}
 
+	#[must_use]
 	pub(super) fn is_dir(&self) -> bool {
 		matches!(self.kind, EntryKind::Directory { .. })
 	}
 
+	#[must_use]
 	pub(super) fn cmp_name(a: &Entry, b: &Entry) -> std::cmp::Ordering {
 		if a.is_leaf() && b.is_dir() {
 			std::cmp::Ordering::Greater

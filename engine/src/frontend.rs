@@ -92,6 +92,7 @@ pub struct FrontendMenu {
 
 // Public interface.
 impl FrontendMenu {
+	#[must_use]
 	pub fn ui(&mut self, ctx: &egui::Context) -> FrontendAction {
 		let mut ret = FrontendAction::None;
 
@@ -198,6 +199,7 @@ impl FrontendMenu {
 		ret
 	}
 
+	#[must_use]
 	pub fn to_mount(&mut self) -> Vec<&Path> {
 		let mut ret = Vec::<&Path>::default();
 

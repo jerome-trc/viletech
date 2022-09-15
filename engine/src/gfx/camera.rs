@@ -28,6 +28,7 @@ pub struct Camera {
 }
 
 impl Camera {
+	#[must_use]
 	pub fn new(surface_width: f32, surface_height: f32) -> Self {
 		Camera {
 			rig: CameraRig::builder()
@@ -43,6 +44,7 @@ impl Camera {
 	}
 
 	/// Returns a view-projection matrix.
+	#[must_use]
 	pub fn update(&mut self, delta_t: f32) -> glam::Mat4 {
 		let xform = self.rig.update(delta_t);
 		let view = glam::Mat4::look_at_rh(

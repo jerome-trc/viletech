@@ -44,28 +44,35 @@ pub trait ImpureVfs {
 	/// On the debug build, attempt to mount `/env::current_dir()/data`.
 	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
+	#[must_use]
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
 
 	/// See [`ImpureVfsHandle::is_impure_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsHandle::is_udmf_map`].
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsHandle::has_zscript`].
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsHandle::has_edfroot`].
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	/// See [`ImpureVfsHandle::has_decorate`].
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
+	#[must_use]
 	fn gamedata_kind(&self, uuid: &str) -> GameDataKind;
 
 	fn parse_gamedata_meta(
@@ -73,8 +80,10 @@ pub trait ImpureVfs {
 		path: impl AsRef<Path>,
 	) -> Result<GameDataMeta, Box<dyn std::error::Error>>;
 
+	#[must_use]
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
 
+	#[must_use]
 	fn ccmd_file(&self, path: PathBuf) -> String;
 }
 
@@ -399,18 +408,23 @@ impl ImpureVfs for VirtualFs {
 pub trait ImpureVfsHandle {
 	/// Check if a directory node has a `meta.toml` leaf (case-insensitive) in it.
 	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	#[must_use]
 	fn is_impure_package(&self) -> bool;
 	/// Check if this is a directory with a leaf node named `TEXTMAP`.
 	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	#[must_use]
 	fn is_udmf_map(&self) -> bool;
 	/// Check if a directory node has a `decorate` file (case-insensitive) in it.
 	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	#[must_use]
 	fn has_decorate(&self) -> bool;
 	/// Check if a directory node has a `zscript` file (case-insensitive) in it.
 	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	#[must_use]
 	fn has_zscript(&self) -> bool;
 	/// Check if a directory node has an `edfroot` file (case-insensitive) in it.
 	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	#[must_use]
 	fn has_edfroot(&self) -> bool;
 }
 
@@ -462,6 +476,7 @@ pub struct ZsProxyFs<'vfs> {
 }
 
 impl<'vfs> ZsProxyFs<'vfs> {
+	#[must_use]
 	pub fn new(vfs: &'vfs VirtualFs, root: &'vfs str) -> Self {
 		Self { vfs, root }
 	}

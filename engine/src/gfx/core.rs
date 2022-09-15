@@ -205,6 +205,7 @@ impl GraphicsCore {
 	}
 
 	/// Output for the `wgpudiag` console command.
+	#[must_use]
 	pub fn diag(&self) -> String {
 		let adpinfo = self.adapter.get_info();
 		let feats = self.device.features();
@@ -268,6 +269,7 @@ pub struct Frame {
 }
 
 impl Frame {
+	#[must_use]
 	pub fn render_pass(&mut self) -> RenderPass {
 		self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("IMPURE: Render Pass"),
@@ -288,6 +290,7 @@ impl Frame {
 		})
 	}
 
+	#[must_use]
 	pub fn delta_time_secs_f32(&self) -> f32 {
 		self.delta_time.as_secs_f32()
 	}

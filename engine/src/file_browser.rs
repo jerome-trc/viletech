@@ -31,6 +31,7 @@ pub struct FileBrowser {
 }
 
 impl Default for FileBrowser {
+	#[must_use]
 	fn default() -> Self {
 		FileBrowser {
 			open: false,
@@ -42,6 +43,7 @@ impl Default for FileBrowser {
 }
 
 impl FileBrowser {
+	#[must_use]
 	pub fn new(mut starting_path: PathBuf) -> Self {
 		if starting_path.is_empty() {
 			starting_path = exe_dir();
@@ -56,6 +58,7 @@ impl FileBrowser {
 	}
 
 	/// Returns true if the caller should call `drain()` and then `toggle()`.
+	#[must_use]
 	pub fn ui(&mut self, ctx: &egui::Context) -> bool {
 		let mut open = self.open;
 		let mut done = false;
@@ -71,6 +74,7 @@ impl FileBrowser {
 		done
 	}
 
+	#[must_use]
 	fn ui_impl(&mut self, ui: &mut egui::Ui, modifiers: egui::Modifiers) -> bool {
 		let mut ret = false;
 
@@ -203,6 +207,7 @@ impl FileBrowser {
 		ret
 	}
 
+	#[must_use]
 	pub fn is_open(&self) -> bool {
 		self.open
 	}
@@ -212,6 +217,7 @@ impl FileBrowser {
 		self.open = !self.open;
 	}
 
+	#[must_use]
 	pub fn drain(&mut self) -> std::vec::Drain<PathBuf> {
 		self.selected.drain(..)
 	}

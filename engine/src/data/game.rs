@@ -51,6 +51,7 @@ pub struct AssetIndex {
 pub struct AssetHash(pub(crate) u64);
 
 impl AssetHash {
+	#[must_use]
 	fn from_id_pair<A: Asset>(namespace_id: &str, asset_id: &str) -> Self {
 		let mut ret = metro::hash64(namespace_id);
 		ret ^= metro::hash64(A::DOMAIN_STRING);
@@ -188,6 +189,7 @@ pub struct Namespace<'lua> {
 }
 
 impl<'lua> Namespace<'lua> {
+	#[must_use]
 	pub fn new(metadata: Metadata) -> Self {
 		Namespace {
 			meta: metadata,
@@ -246,6 +248,7 @@ pub struct DataCore<'lua> {
 // Public interface.
 impl<'lua> DataCore<'lua> {
 	/// Note: UUIDs are checked for an exact match.
+	#[must_use]
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
 		for namespace in &self.namespaces {
 			if namespace.meta.uuid == uuid {
@@ -257,6 +260,7 @@ impl<'lua> DataCore<'lua> {
 	}
 
 	/// Note: UUIDs are checked for an exact match.
+	#[must_use]
 	pub fn get_namespace_mut(&'lua mut self, uuid: &str) -> Option<&mut Namespace> {
 		for namespace in &mut self.namespaces {
 			if namespace.meta.uuid == uuid {
@@ -309,6 +313,7 @@ impl<'lua> DataCore<'lua> {
 		self.lump_map.insert(asset_index.to_string(), ndx_pair);
 	}
 
+	#[must_use]
 	pub fn get<A: Asset>(&self, index: AssetIndex) -> Option<&A> {
 		A::get_impl(&self.namespaces[index.namespace], index.element)
 	}

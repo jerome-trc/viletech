@@ -48,6 +48,7 @@ impl VirtualFs {
 	/// file/directory, and `::1` should be the desired "mount point".
 	/// Returns a `Vec` parallel to `mounts` which contains `true` for each
 	/// successful mount and `false` otherwise.
+	#[must_use]
 	pub fn mount(
 		&mut self,
 		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
@@ -231,6 +232,7 @@ impl VirtualFs {
 	}
 
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<Handle> {
 		let entry = match self.lookup_hash(Self::hash_path(path)) {
 			Some(e) => e,
@@ -244,6 +246,7 @@ impl VirtualFs {
 
 	/// Returns `None` if and only if nothing exists at the given path.
 	/// Note that that `path` must be exact, including the root path separator.
+	#[must_use]
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
 		self.entries
 			.iter()
@@ -265,6 +268,7 @@ impl VirtualFs {
 	}
 
 	/// Returns `false` if nothing is at the given path.
+	#[must_use]
 	pub fn is_dir(&self, path: impl AsRef<Path>) -> bool {
 		match self.lookup(path) {
 			Some(entry) => entry.is_dir(),
@@ -303,6 +307,7 @@ impl VirtualFs {
 
 	/// Returns `Some(0)` if the given path is a leaf node.
 	/// Returns `None` if and only if nothing exists at the given path.
+	#[must_use]
 	pub fn count(&self, path: impl AsRef<Path>) -> Option<usize> {
 		let entry = self.lookup_hash(Self::hash_path(path))?;
 
@@ -314,14 +319,17 @@ impl VirtualFs {
 	}
 
 	/// The total number of mounted entries, excluding the root.
+	#[must_use]
 	pub fn total_count(&self) -> usize {
 		self.entries.len() - 1
 	}
 
+	#[must_use]
 	pub fn mount_count(&self) -> usize {
 		self.real_paths.len()
 	}
 
+	#[must_use]
 	pub fn glob(&self, pattern: Glob) -> Option<impl Iterator<Item = Handle>> {
 		let glob = pattern.compile_matcher();
 
@@ -338,6 +346,7 @@ impl VirtualFs {
 }
 
 impl Default for VirtualFs {
+	#[must_use]
 	fn default() -> Self {
 		VirtualFs {
 			entries: vec![Entry::new_dir(PathBuf::from("/"), 0)],
@@ -352,6 +361,7 @@ impl VirtualFs {
 	/// separator (the VFS never deals in relative paths), the path is hashed
 	/// by its components (with a preceding path separator hashed beforehand if
 	/// necessary) one at a time, rather than as a whole string.
+	#[must_use]
 	fn hash_path(path: impl AsRef<Path>) -> u64 {
 		let path = path.as_ref();
 		let mut hash = 0u64;
@@ -377,6 +387,7 @@ impl VirtualFs {
 		self.entries.iter().filter(|e| e.parent_hash == dir.hash)
 	}
 
+	#[must_use]
 	fn lookup_hash(&self, hash: u64) -> Option<&Entry> {
 		self.entries.iter().find(|e| e.hash == hash)
 	}

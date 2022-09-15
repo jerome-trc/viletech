@@ -159,7 +159,8 @@ impl<'lua> ClientCore<'lua> {
 			}
 		};
 
-		self.camera.update(frame.delta_time_secs_f32());
+		// Temporary discard
+		let _ = self.camera.update(frame.delta_time_secs_f32());
 		self.gfx.egui_start();
 
 		match &mut self.scene {

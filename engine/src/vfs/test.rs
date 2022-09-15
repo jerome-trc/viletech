@@ -21,6 +21,7 @@ use std::path::PathBuf;
 
 use super::VirtualFs;
 
+#[must_use]
 fn sample_paths() -> [(PathBuf, &'static str); 2] {
 	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 		.join("..")
@@ -54,7 +55,7 @@ fn mount() {
 #[test]
 fn lookup() {
 	let mut vfs = VirtualFs::default();
-	vfs.mount(&sample_paths());
+	let _ = vfs.mount(&sample_paths());
 	assert!(vfs.lookup("freedoom2/FCGRATE2").is_some());
 	assert!(vfs.lookup("/freedoom2/FCGRATE2").is_some());
 }
@@ -62,7 +63,7 @@ fn lookup() {
 #[test]
 fn glob() {
 	let mut vfs = VirtualFs::default();
-	vfs.mount(&sample_paths());
+	let _ = vfs.mount(&sample_paths());
 	let glob = globset::Glob::new("/freedoom2/FCGRATE*").unwrap();
 	let opt = vfs.glob(glob);
 	assert!(opt.is_some());
