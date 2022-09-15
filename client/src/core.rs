@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use impure::{
 	audio::AudioCore,
 	console::{Console, Command as ConsoleCommand, Request as ConsoleRequest},
-	data::{game::DataCore, GameDataObject},
+	data::{game::DataCore, Namespace},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
@@ -284,7 +284,7 @@ impl ClientCore {
 	
 						for meta in metas {
 							let kind = vfsg.gamedata_kind(&meta.uuid);
-							self.data.objects.push(GameDataObject::new(meta, kind));
+							self.data.namespaces.push(Namespace::new(meta, kind));
 						}
 					}
 
@@ -485,7 +485,7 @@ impl ClientCore {
 	fn start_game(&mut self) {
 		let vfsg = self.vfs.read();
 
-		for i in 0..self.data.objects.len() {
+		for i in 0..self.data.namespaces.len() {
 			Self::load_assets(&vfsg, i, &mut self.data);
 		}
 	}
@@ -514,12 +514,12 @@ impl ClientCore {
 
 // Internal implementation details: on-game-start asset loading.
 impl ClientCore {
-	fn load_assets(vfs: &VirtualFs, obj_index: usize, data: &mut DataCore) {
-		let uuid = &data.objects[obj_index].meta.uuid;
+	fn load_assets(vfs: &VirtualFs, namespace: usize, data: &mut DataCore) {
+		let uuid = &data.namespaces[namespace].meta.uuid;
 
 		let entry = vfs
 			.lookup(uuid)
-			.expect("`ClientCore::load_assets` failed to find a game data object by UUID.");
+			.expect("`ClientCore::load_assets` failed to find a namespace by UUID.");
 	
 		if entry.has_zscript() {
 			let pvfs = ZsProxyFs::new(vfs, uuid);

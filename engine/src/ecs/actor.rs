@@ -22,7 +22,7 @@ use crate::data::game::AssetIndex;
 /// An entity's tie to a state machine, and all supporting data.
 #[derive(Debug, shipyard::Component)]
 pub struct Actor {
-	/// Indexes into [`data::game::Object::state_machines`].
+	/// Indexes into [`data::game::Namespace::state_machines`].
 	state_machine: AssetIndex,
 	/// Indexes into [`ActorStateMachine::states`].
 	state: usize,

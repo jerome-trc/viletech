@@ -25,7 +25,7 @@ use crate::{
 	game::{SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
-	GameDataObject, LevelCluster, LevelMetadata,
+	Namespace, LevelCluster, LevelMetadata,
 };
 
 use super::game::{Music, Sound};
@@ -36,8 +36,8 @@ pub trait Asset {
 
 	/// Returns the index of the asset in the vector that newly holds it.
 	/// If the asset doesn't go into a vector, return 0.
-	fn add_impl(obj: &mut GameDataObject, asset: Self) -> usize;
-	fn get_impl(obj: &GameDataObject, index: usize) -> Option<&Self>;
+	fn add_impl(namespace: &mut Namespace, asset: Self) -> usize;
+	fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self>;
 }
 
 macro_rules! asset_vec {
@@ -45,13 +45,13 @@ macro_rules! asset_vec {
 		impl Asset for $asset_t {
 			const DOMAIN_STRING: &'static str = $dom;
 
-			fn add_impl(obj: &mut GameDataObject, asset: Self) -> usize {
-				obj.$vecname.push(asset);
-				obj.$vecname.len() - 1
+			fn add_impl(namespace: &mut Namespace, asset: Self) -> usize {
+				namespace.$vecname.push(asset);
+				namespace.$vecname.len() - 1
 			}
 
-			fn get_impl(obj: &GameDataObject, index: usize) -> Option<&Self> {
-				obj.$vecname.get(index)
+			fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self> {
+				namespace.$vecname.get(index)
 			}
 		}
 	};
@@ -62,13 +62,13 @@ macro_rules! asset_opt {
 		impl Asset for $asset_t {
 			const DOMAIN_STRING: &'static str = "";
 
-			fn add_impl(obj: &mut GameDataObject, asset: Self) -> usize {
-				obj.$optname = Some(asset);
+			fn add_impl(namespace: &mut Namespace, asset: Self) -> usize {
+				namespace.$optname = Some(asset);
 				0
 			}
 
-			fn get_impl(obj: &GameDataObject, _index: usize) -> Option<&Self> {
-				obj.$optname.as_ref()
+			fn get_impl(namespace: &Namespace, _index: usize) -> Option<&Self> {
+				namespace.$optname.as_ref()
 			}
 		}
 	};

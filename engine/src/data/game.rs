@@ -33,14 +33,13 @@ use crate::{
 
 use super::asset::Asset;
 
-/// `obj` corresponds to one of the elements in [`DataCore::objects`].
-/// `elem` corresponds to an element in the relevant sub-vector of
-/// the game data object. For "singleton" assets like palettes,
-/// `elem` will always be 0.
+/// `namespace` corresponds to one of the elements in [`DataCore::namespaces`].
+/// `elem` corresponds to an element in the relevant sub-vector of the namespace.
+/// For "singleton" assets like palettes, `elem` will always be 0.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AssetIndex {
-	obj: usize,
-	elem: usize,
+	namespace: usize,
+	element: usize,
 }
 
 pub struct Music(StaticSoundData);
@@ -80,14 +79,14 @@ impl Metadata {
 	}
 }
 
-/// Allows GDOs to define high-level, all-encompassing information
+/// Allows game data objects to define high-level, all-encompassing information
 /// relevant to making games as opposed to mods.
 pub struct GameInfo {
 	steam_app_id: Option<u32>,
 	discord_app_id: Option<String>,
 }
 
-/// Determines the system used for loading assets from a mounted object.
+/// Determines the system used for loading assets from a mounted game data object.
 pub enum GameDataKind {
 	/// The file is read to determine what kind of assets are in it,
 	/// and loading is handled accordingly.
@@ -109,9 +108,10 @@ pub enum GameDataKind {
 }
 
 /// Represents anything that the user added to their load order.
-/// Acts as a namespace of sorts; for example, MAPINFO loaded as part of
-/// a WAD will only apply to maps in that WAD.
-pub struct Object {
+/// Comes with a certain degree of compartmentalization:
+/// for example,  Acts as a namespace of sorts; for example,
+/// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
+pub struct Namespace {
 	pub meta: Metadata,
 	pub kind: GameDataKind,
 	// Needed for the sim
@@ -131,9 +131,9 @@ pub struct Object {
 	pub palette: Option<Palette>,
 }
 
-impl Object {
+impl Namespace {
 	pub fn new(metadata: Metadata, kind: GameDataKind) -> Self {
-		Object {
+		Namespace {
 			meta: metadata,
 			kind,
 			blueprints: Default::default(),
@@ -174,9 +174,9 @@ impl Object {
 pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
-	pub objects: Vec<Object>,
-	/// Key structure: `gdo_uuid:domain.asset_id`.
-	/// `gdo_uuid` will correspond to the mount point, and be something like
+	pub namespaces: Vec<Namespace>,
+	/// Key structure: `namespace:domain.asset_id`.
+	/// `namespace` will correspond to the mount point, and be something like
 	/// `DOOM2`. `domain` will be something like `bp` or `mus`.
 	pub asset_map: HashMap<String, AssetIndex>,
 	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
@@ -190,10 +190,10 @@ pub struct DataCore {
 
 impl DataCore {
 	/// Note: UUIDs are checked for an exact match.
-	pub fn get_obj(&self, uuid: &str) -> Option<&Object> {
-		for obj in &self.objects {
-			if obj.meta.uuid == uuid {
-				return Some(obj);
+	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
+		for namespace in &self.namespaces {
+			if namespace.meta.uuid == uuid {
+				return Some(namespace);
 			}
 		}
 
@@ -201,10 +201,10 @@ impl DataCore {
 	}
 
 	/// Note: UUIDs are checked for an exact match.
-	pub fn get_obj_mut(&mut self, uuid: &str) -> Option<&mut Object> {
-		for obj in &mut self.objects {
-			if obj.meta.uuid == uuid {
-				return Some(obj);
+	pub fn get_namespace_mut(&mut self, uuid: &str) -> Option<&mut Namespace> {
+		for namespace in &mut self.namespaces {
+			if namespace.meta.uuid == uuid {
+				return Some(namespace);
 			}
 		}
 
@@ -212,11 +212,11 @@ impl DataCore {
 	}
 
 	// Takes a glob pattern.
-	pub fn obj_exists(&self, pattern: &str) -> Result<bool, globset::Error> {
+	pub fn namespace_exists(&self, pattern: &str) -> Result<bool, globset::Error> {
 		let glob = Glob::new(pattern)?.compile_matcher();
 
-		for obj in &self.objects {
-			if glob.is_match(&obj.meta.uuid) {
+		for namespace in &self.namespaces {
+			if glob.is_match(&namespace.meta.uuid) {
 				return Ok(true);
 			}
 		}
@@ -224,28 +224,28 @@ impl DataCore {
 		Ok(false)
 	}
 
-	pub fn add<T: Asset>(&mut self, asset: T, obj_id: &str, asset_id: &str) {
-		let obj_ndx = match self.objects.iter_mut().position(|o| o.meta.uuid == obj_id) {
+	pub fn add<T: Asset>(&mut self, asset: T, namespace_id: &str, asset_id: &str) {
+		let ns_index = match self.namespaces.iter_mut().position(|o| o.meta.uuid == namespace_id) {
 			Some(o) => o,
 			None => {
 				// Caller should always pre-validate here
-				panic!("Attempted to add asset under invalid UUID: {}", obj_id);
+				panic!("Attempted to add asset under invalid UUID: {}", namespace_id);
 			}
 		};
 
-		let obj = &mut self.objects[obj_ndx];
+		let namespace = &mut self.namespaces[ns_index];
 
-		let asset_ndx = T::add_impl(obj, asset);
+		let asset_ndx = T::add_impl(namespace, asset);
 
 		let full_id = if T::DOMAIN_STRING.is_empty() {
-			format!("{}:{}", obj_id, asset_id)
+			format!("{}:{}", namespace_id, asset_id)
 		} else {
-			format!("{}:{}.{}", obj_id, T::DOMAIN_STRING, asset_id)
+			format!("{}:{}.{}", namespace_id, T::DOMAIN_STRING, asset_id)
 		};
 
 		let ndx_pair = AssetIndex {
-			obj: obj_ndx,
-			elem: asset_ndx,
+			namespace: ns_index,
+			element: asset_ndx,
 		};
 
 		self.asset_map.insert(full_id, ndx_pair);
@@ -254,6 +254,6 @@ impl DataCore {
 
 	pub fn get<T: Asset>(&self, id: &str) -> Option<&T> {
 		let ndx_pair = &self.asset_map[id];
-		T::get_impl(&self.objects[ndx_pair.obj], ndx_pair.elem)
+		T::get_impl(&self.namespaces[ndx_pair.namespace], ndx_pair.element)
 	}
 }

@@ -48,7 +48,7 @@ pub mod zscript;
 
 // Type aliases
 
-pub use data::game::Object as GameDataObject;
+pub use data::game::Namespace as Namespace;
 pub use level::Cluster as LevelCluster;
 pub use level::Flags as LevelFlags;
 pub use level::Metadata as LevelMetadata;
