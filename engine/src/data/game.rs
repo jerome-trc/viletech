@@ -277,7 +277,7 @@ impl DataCore {
 		Ok(false)
 	}
 
-	pub fn add<'s, T: Asset>(&mut self, asset: T, namespace_id: &'s str, asset_id: &'s str) {
+	pub fn add<'s, A: Asset>(&mut self, asset: A, namespace_id: &'s str, asset_id: &'s str) {
 		let ns_index = match self
 			.namespaces
 			.iter_mut()
@@ -294,8 +294,8 @@ impl DataCore {
 		};
 
 		let namespace = &mut self.namespaces[ns_index];
-		let asset_index = T::add_impl(namespace, asset);
-		let hash = AssetHash::from_id_pair::<T>(namespace_id, asset_id);
+		let asset_index = A::add_impl(namespace, asset);
+		let hash = AssetHash::from_id_pair::<A>(namespace_id, asset_id);
 
 		let ndx_pair = AssetIndex {
 			namespace: ns_index,
@@ -306,13 +306,13 @@ impl DataCore {
 		self.lump_map.insert(asset_index.to_string(), ndx_pair);
 	}
 
-	pub fn get<T: Asset>(&self, index: AssetIndex) -> Option<&T> {
-		T::get_impl(&self.namespaces[index.namespace], index.element)
+	pub fn get<A: Asset>(&self, index: AssetIndex) -> Option<&A> {
+		A::get_impl(&self.namespaces[index.namespace], index.element)
 	}
 
-	pub fn lookup<T: Asset>(&self, id: &str) -> Result<&T, AssetIdError> {
-		let hash = AssetHash::from_id::<T>(id)?;
+	pub fn lookup<A: Asset>(&self, id: &str) -> Result<&A, AssetIdError> {
+		let hash = AssetHash::from_id::<A>(id)?;
 		let ipair = self.asset_map.get(&hash).ok_or(AssetIdError::NotFound)?;
-		Ok(T::get_impl(&self.namespaces[ipair.namespace], ipair.element).unwrap())
+		Ok(A::get_impl(&self.namespaces[ipair.namespace], ipair.element).unwrap())
 	}
 }
