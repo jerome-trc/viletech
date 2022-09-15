@@ -22,12 +22,12 @@ use crate::data::game::AssetIndex;
 /// An entity's tie to a state machine, and all supporting data.
 #[derive(Debug, shipyard::Component)]
 pub struct Actor {
-	/// Indexes into [`data::game::Namespace::state_machines`].
+	/// Indexes into [`crate::data::game::Namespace::state_machines`].
 	state_machine: AssetIndex,
-	/// Indexes into [`ActorStateMachine::states`].
+	/// Indexes into [`crate::game::ActorStateMachine::states`].
 	state: usize,
 	/// Tics remaining until state index is advanced.
-	/// See also [`ActorState::INFINITE_DURATION`].
+	/// See also [`crate::game::ActorState::INFINITE_DURATION`].
 	state_clock: i32,
 	/// Movement, state advances are suspended for this many tics.
 	/// Script calls to `tick` still go through.

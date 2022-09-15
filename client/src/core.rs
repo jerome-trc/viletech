@@ -71,11 +71,11 @@ enum SceneChange {
 	Title { to_mount: Vec<PathBuf> },
 }
 
-pub struct ClientCore {
+pub struct ClientCore<'lua> {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
-	pub data: DataCore,
+	pub data: DataCore<'lua>,
 	pub rng: RngCore<WyRand>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
@@ -88,12 +88,12 @@ pub struct ClientCore {
 }
 
 // Public interface.
-impl ClientCore {
+impl<'lua> ClientCore<'lua> {
 	pub fn new(
 		start_time: std::time::Instant,
 		vfs: Arc<RwLock<VirtualFs>>,
 		lua: Lua,
-		data: DataCore,
+		data: DataCore<'lua>,
 		gfx: GraphicsCore,
 		console: Console,
 	) -> Result<Self, Box<dyn Error>> {
@@ -296,7 +296,7 @@ impl ClientCore {
 }
 
 // Internal implementation details: general.
-impl ClientCore {
+impl<'lua> ClientCore<'lua> {
 	fn register_console_commands(&mut self) {
 		self.console.register_command(ConsoleCommand::new(
 			"args",
@@ -513,7 +513,7 @@ impl ClientCore {
 }
 
 // Internal implementation details: on-game-start asset loading.
-impl ClientCore {
+impl<'lua> ClientCore<'lua> {
 	fn load_assets(vfs: &VirtualFs, namespace: usize, data: &mut DataCore) {
 		let uuid = &data.namespaces[namespace].meta.uuid;
 

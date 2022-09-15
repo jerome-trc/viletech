@@ -26,7 +26,7 @@ use serde::Deserialize;
 
 use crate::{
 	ecs::Blueprint,
-	game::{DamageType, SkillInfo, Species},
+	game::{DamageType, SkillInfo, Species, ActorStateMachine},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
 	LevelCluster, LevelMetadata,
@@ -163,7 +163,7 @@ pub enum GameDataKind {
 /// Comes with a certain degree of compartmentalization:
 /// for example,  Acts as a namespace of sorts; for example,
 /// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
-pub struct Namespace {
+pub struct Namespace<'lua> {
 	pub meta: Metadata,
 	pub kind: GameDataKind,
 	// Needed for the sim
@@ -174,6 +174,7 @@ pub struct Namespace {
 	pub levels: Vec<LevelMetadata>,
 	pub skills: Vec<SkillInfo>,
 	pub species: Vec<Species>,
+	pub state_machines: Vec<ActorStateMachine<'lua>>,
 	// Client-only
 	pub language: Vec<String>,
 	pub music: Vec<Music>,
@@ -183,23 +184,26 @@ pub struct Namespace {
 	pub palette: Option<Palette>,
 }
 
-impl Namespace {
+impl<'lua> Namespace<'lua> {
 	pub fn new(metadata: Metadata, kind: GameDataKind) -> Self {
 		Namespace {
 			meta: metadata,
 			kind,
+
 			blueprints: Default::default(),
-			damage_types: Default::default(),
 			clusters: Default::default(),
+			damage_types: Default::default(),
 			episodes: Default::default(),
 			levels: Default::default(),
 			skills: Default::default(),
 			species: Default::default(),
+			state_machines: Default::default(),
+
 			language: Default::default(),
 			music: Default::default(),
 			sounds: Default::default(),
-			endoom: None,
 			colormap: None,
+			endoom: None,
 			palette: None,
 		}
 	}
@@ -223,13 +227,10 @@ impl Namespace {
 }
 
 #[derive(Default)]
-pub struct DataCore {
+pub struct DataCore<'lua> {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
-	pub namespaces: Vec<Namespace>,
-	/// Keys are derived from hashing an [`AssetId`].
-	/// `namespace` will correspond to the mount point, and be something like
-	/// `DOOM2`. `domain` will be something like `bp` or `mus`.
+	pub namespaces: Vec<Namespace<'lua>>,
 	pub asset_map: HashMap<AssetHash, AssetIndex>,
 	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
 	/// under any given UUID in the load order. For use in interop, since, for
@@ -241,7 +242,7 @@ pub struct DataCore {
 }
 
 // Public interface.
-impl DataCore {
+impl<'lua> DataCore<'lua> {
 	/// Note: UUIDs are checked for an exact match.
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
 		for namespace in &self.namespaces {
@@ -254,7 +255,7 @@ impl DataCore {
 	}
 
 	/// Note: UUIDs are checked for an exact match.
-	pub fn get_namespace_mut(&mut self, uuid: &str) -> Option<&mut Namespace> {
+	pub fn get_namespace_mut(&'lua mut self, uuid: &str) -> Option<&mut Namespace> {
 		for namespace in &mut self.namespaces {
 			if namespace.meta.uuid == uuid {
 				return Some(namespace);
