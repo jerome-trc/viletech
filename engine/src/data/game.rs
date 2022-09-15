@@ -101,6 +101,8 @@ pub struct Sound(StaticSoundData);
 #[derive(Deserialize)]
 pub struct Metadata {
 	pub uuid: String,
+	#[serde(skip)]
+	pub kind: GameDataKind,
 	#[serde(default)]
 	pub version: String,
 	/// Display name presented to users.
@@ -118,10 +120,11 @@ pub struct Metadata {
 }
 
 impl Metadata {
-	pub fn new(uuid: String, version: String) -> Self {
+	pub fn new(uuid: String, version: String, kind: GameDataKind) -> Self {
 		Metadata {
 			uuid,
 			version,
+			kind,
 			name: String::default(),
 			description: String::default(),
 			authors: Vec::<String>::default(),
@@ -139,6 +142,7 @@ pub struct GameInfo {
 }
 
 /// Determines the system used for loading assets from a mounted game data object.
+#[derive(Default)]
 pub enum GameDataKind {
 	/// The file is read to determine what kind of assets are in it,
 	/// and loading is handled accordingly.
@@ -148,6 +152,7 @@ pub enum GameDataKind {
 	Wad,
 	/// Assets are loaded from this archive/directory based on the
 	/// manifests specified by the meta.toml file.
+	#[default]
 	Impure,
 	/// Assets are loaded from this archive/directory based on the
 	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
@@ -160,12 +165,10 @@ pub enum GameDataKind {
 }
 
 /// Represents anything that the user added to their load order.
-/// Comes with a certain degree of compartmentalization:
-/// for example,  Acts as a namespace of sorts; for example,
+/// Comes with a certain degree of compartmentalization: for example,
 /// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
 pub struct Namespace<'lua> {
 	pub meta: Metadata,
-	pub kind: GameDataKind,
 	// Needed for the sim
 	pub blueprints: Vec<Blueprint>,
 	pub clusters: Vec<LevelCluster>,
@@ -185,10 +188,9 @@ pub struct Namespace<'lua> {
 }
 
 impl<'lua> Namespace<'lua> {
-	pub fn new(metadata: Metadata, kind: GameDataKind) -> Self {
+	pub fn new(metadata: Metadata) -> Self {
 		Namespace {
 			meta: metadata,
-			kind,
 
 			blueprints: Default::default(),
 			clusters: Default::default(),

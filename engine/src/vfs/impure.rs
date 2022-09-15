@@ -205,7 +205,8 @@ impl ImpureVfs for VirtualFs {
 			} else {
 				let uuid = to_mount[i].1.to_string_lossy().to_string();
 				let vers = vers_strings.remove(0);
-				GameDataMeta::new(uuid, vers)
+				let kind = self.gamedata_kind(&uuid);
+				GameDataMeta::new(uuid, vers, kind)
 			};
 
 			ret.push(meta);
