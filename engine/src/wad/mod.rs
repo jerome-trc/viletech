@@ -156,7 +156,7 @@ impl Wad {
 	pub fn dissolve(mut self) -> Vec<(Vec<u8>, String)> {
 		let mut ret = Vec::<(Vec<u8>, String)>::with_capacity(self.len());
 		let mut sizes = Vec::<usize>::with_capacity(self.len());
-		
+
 		for i in (0..self.len()).rev() {
 			let entry = unsafe { self.entry_unchecked(i).unwrap() };
 			sizes.push(entry.lump.len());

@@ -38,7 +38,7 @@ pub struct SkillInfo {
 	/// Minimum 0.0, maximum 1.0.
 	mons_aggression: f32,
 	heal_factor: f32,
-	knockback_factor: f32
+	knockback_factor: f32,
 }
 
 pub enum SpawnFilter {
@@ -116,12 +116,12 @@ pub enum ActorStateVisual {
 	None,
 	Sprite(AssetIndex),
 	Voxel(AssetIndex),
-	Model(AssetIndex)
+	Model(AssetIndex),
 }
 
 pub struct ActorStateAction<'l> {
 	function: LuaFunction<'l>,
-	args: LuaMultiValue<'l>
+	args: LuaMultiValue<'l>,
 }
 
 pub struct ActorState<'l> {

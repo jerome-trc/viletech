@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	audio::AudioCore,
-	console::{Console, Command as ConsoleCommand, Request as ConsoleRequest},
+	console::{Command as ConsoleCommand, Console, Request as ConsoleRequest},
 	data::{game::DataCore, Namespace},
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
@@ -27,7 +27,8 @@ use impure::{
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
 	utils::{path::*, string::line_from_char_index},
-	vfs::{self, ImpureVfs, VirtualFs, ImpureVfsHandle, ZsProxyFs}, zscript,
+	vfs::{self, ImpureVfs, ImpureVfsHandle, VirtualFs, ZsProxyFs},
+	zscript,
 };
 
 use kira::{
@@ -281,7 +282,7 @@ impl<'lua> ClientCore<'lua> {
 					if !to_mount.is_empty() {
 						let metas = self.vfs.write().mount_gamedata(&to_mount);
 						let vfsg = self.vfs.read();
-	
+
 						for meta in metas {
 							let kind = vfsg.gamedata_kind(&meta.uuid);
 							self.data.namespaces.push(Namespace::new(meta, kind));
@@ -338,7 +339,7 @@ impl<'lua> ClientCore<'lua> {
 					"Prints the contents of a virtual file system directory, \
 					or information about a file."
 				);
-			}
+			},
 		));
 
 		self.console.register_command(ConsoleCommand::new(
@@ -520,7 +521,7 @@ impl<'lua> ClientCore<'lua> {
 		let entry = vfs
 			.lookup(uuid)
 			.expect("`ClientCore::load_assets` failed to find a namespace by UUID.");
-	
+
 		if entry.has_zscript() {
 			let pvfs = ZsProxyFs::new(vfs, uuid);
 			let parse_out = zscript::parse(pvfs);

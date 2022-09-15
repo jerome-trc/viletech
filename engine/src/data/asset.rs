@@ -25,7 +25,7 @@ use crate::{
 	game::{SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
-	Namespace, LevelCluster, LevelMetadata,
+	LevelCluster, LevelMetadata, Namespace,
 };
 
 use super::game::{Music, Sound};

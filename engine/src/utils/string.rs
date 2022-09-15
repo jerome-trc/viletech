@@ -89,7 +89,7 @@ mod test {
 			"There Is Still Time 0.3tf1".to_string(),
 			"setmefree-4.7.1c".to_string(),
 			"Outoftheframe_1_7_0b".to_string(),
-			"a c i d r a i n_716".to_string()
+			"a c i d r a i n_716".to_string(),
 		];
 
 		let expected = [
@@ -106,19 +106,25 @@ mod test {
 			("There Is Still Time", "0.3tf1"),
 			("setmefree", "4.7.1c"),
 			("Outoftheframe", "1_7_0b"),
-			("a c i d r a i n", "716")
+			("a c i d r a i n", "716"),
 		];
 
 		for (i, string) in input.iter_mut().enumerate() {
 			let res = super::version_from_string(string);
 
 			if expected[i].1.is_empty() {
-				assert!(res.is_none(), "[{i}] - Expected nothing; returned: {}", res.unwrap());
+				assert!(
+					res.is_none(),
+					"[{i}] - Expected nothing; returned: {}",
+					res.unwrap()
+				);
 			} else {
 				assert!(
 					string == expected[i].0,
 					"[{i}] Expected modified string: {}
-					Actual output: {}", expected[i].0, string
+					Actual output: {}",
+					expected[i].0,
+					string
 				);
 
 				let vers = res.unwrap();
@@ -126,7 +132,9 @@ mod test {
 				assert!(
 					vers == expected[i].1,
 					"[{i}] Expected return value: {}
-					Actual return value: {}", expected[i].1, vers 
+					Actual return value: {}",
+					expected[i].1,
+					vers
 				);
 			}
 		}

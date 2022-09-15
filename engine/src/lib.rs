@@ -48,12 +48,12 @@ pub mod zscript;
 
 // Type aliases
 
-pub use data::game::Namespace as Namespace;
+pub use data::game::Namespace;
 pub use level::Cluster as LevelCluster;
 pub use level::Flags as LevelFlags;
 pub use level::Metadata as LevelMetadata;
-pub use vfs::Handle as VfsHandle;
 pub use vfs::Error as VfsError;
+pub use vfs::Handle as VfsHandle;
 
 // Re-export transitive dependencies
 

@@ -23,6 +23,6 @@ pub struct SpecialVars {
 	tid: i32,
 	special: i32,
 	special_i: [i32; 2],
-	special_f: [f64; 2],	
+	special_f: [f64; 2],
 	args: [i32; 5],
 }

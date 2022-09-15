@@ -24,5 +24,5 @@ pub mod game;
 #[allow(dead_code)]
 pub mod user;
 
-pub use game::Namespace as Namespace;
 pub use game::Metadata as GameDataMeta;
+pub use game::Namespace;

@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	};
 
 	match lua.global_init(vfs.clone()) {
-		Ok(()) => {},
+		Ok(()) => {}
 		Err(err) => {
 			error!("Failed to initialise Lua global state: {}", err);
 			return Err(Box::new(err));

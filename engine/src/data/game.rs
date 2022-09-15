@@ -26,7 +26,7 @@ use serde::Deserialize;
 
 use crate::{
 	ecs::Blueprint,
-	game::{DamageType, SkillInfo, Species, ActorStateMachine},
+	game::{ActorStateMachine, DamageType, SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
 	LevelCluster, LevelMetadata,

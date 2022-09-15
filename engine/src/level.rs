@@ -140,7 +140,7 @@ pub struct Episode {
 	pub name: String,
 	pub start_map: AssetIndex,
 	pub background: AssetIndex,
-	pub flags: EpisodeFlags
+	pub flags: EpisodeFlags,
 }
 
 bitflags! {
@@ -160,7 +160,7 @@ pub struct Cluster {
 	text_exit: String,
 	flags: ClusterFlags,
 	music: AssetIndex,
-	background: AssetIndex
+	background: AssetIndex,
 }
 
 bitflags! {

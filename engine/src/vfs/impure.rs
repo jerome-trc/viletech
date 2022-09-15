@@ -29,8 +29,8 @@ use regex::Regex;
 
 use super::{Error, Handle, VirtualFs};
 
-use zsparse::filesystem::FileSystem as ZsFileSystem;
 use zsparse::filesystem::File as ZsFile;
+use zsparse::filesystem::FileSystem as ZsFileSystem;
 
 use crate::{
 	data::{game::GameDataKind, GameDataMeta},
@@ -457,7 +457,7 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 
 pub struct ZsProxyFs<'vfs> {
 	vfs: &'vfs VirtualFs,
-	root: &'vfs str
+	root: &'vfs str,
 }
 
 impl<'vfs> ZsProxyFs<'vfs> {
@@ -484,7 +484,10 @@ impl<'vfs> ZsFileSystem for ZsProxyFs<'vfs> {
 
 		if target.is_dir() {
 			let full_path = rel_root.virtual_path().join(filename);
-			warn!("Expected ZScript file, found directory: {}", full_path.display());
+			warn!(
+				"Expected ZScript file, found directory: {}",
+				full_path.display()
+			);
 			return None;
 		}
 

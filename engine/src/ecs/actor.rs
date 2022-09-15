@@ -31,5 +31,5 @@ pub struct Actor {
 	state_clock: i32,
 	/// Movement, state advances are suspended for this many tics.
 	/// Script calls to `tick` still go through.
-	freeze_tics: u32
+	freeze_tics: u32,
 }

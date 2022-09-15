@@ -133,34 +133,28 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 					if let LuaValue::String(s) = val {
 						s
 					} else {
-						return Err(
-							format!(
-								"`{}` expected a format string for argument 1, but got: {:#?}",
-								func_name, val
-							)
-						);
+						return Err(format!(
+							"`{}` expected a format string for argument 1, but got: {:#?}",
+							func_name, val
+						));
 					}
 				}
 				None => {
-					return Err(
-						format!(
-							"`{}` expected at least 1 argument, but got 0.",
-							func_name
-						)
-					);
+					return Err(format!(
+						"`{}` expected at least 1 argument, but got 0.",
+						func_name
+					));
 				}
 			};
 
 			let mut template = match formatx::Template::new(template.to_string_lossy()) {
 				Ok(t) => t,
 				Err(err) => {
-					return Err(
-						format!(
-							"Invalid template string given to `{}`.
+					return Err(format!(
+						"Invalid template string given to `{}`.
 							Error: {}",
-							func_name, err
-						)
-					);
+						func_name, err
+					));
 				}
 			};
 
@@ -168,12 +162,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 				match lua.repr(arg.clone()) {
 					Ok(s) => template.replace_positional(s),
 					Err(err) => {
-						return Err(
-							format!(
-								"Formatting error in `{}` arguments: {}",
-								func_name, err
-							)	
-						);
+						return Err(format!(
+							"Formatting error in `{}` arguments: {}",
+							func_name, err
+						));
 					}
 				};
 			}
@@ -181,12 +173,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			let output = match template.text() {
 				Ok(s) => s,
 				Err(err) => {
- 					return Err(
-						format!(
-							"Formatting error in `{}` arguments: {}",
-							func_name, err
-						)
-					);
+					return Err(format!(
+						"Formatting error in `{}` arguments: {}",
+						func_name, err
+					));
 				}
 			};
 
@@ -198,7 +188,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			ret.create_function(|lua, args: LuaMultiValue| {
 				match log(lua, args, "log") {
 					Ok(s) => info!("{}", s),
-					Err(s) => error!("{}", s)
+					Err(s) => error!("{}", s),
 				};
 
 				Ok(())
@@ -210,7 +200,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			ret.create_function(|lua, args: LuaMultiValue| {
 				match log(lua, args, "warn") {
 					Ok(s) => warn!("{}", s),
-					Err(s) => error!("{}", s)
+					Err(s) => error!("{}", s),
 				};
 
 				Ok(())
@@ -222,7 +212,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			ret.create_function(|lua, args: LuaMultiValue| {
 				match log(lua, args, "err") {
 					Ok(s) => error!("{}", s),
-					Err(s) => error!("{}", s)
+					Err(s) => error!("{}", s),
 				};
 
 				Ok(())
@@ -234,7 +224,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			ret.create_function(|lua, args: LuaMultiValue| {
 				match log(lua, args, "debug") {
 					Ok(s) => debug!("{}", s),
-					Err(s) => error!("{}", s)
+					Err(s) => error!("{}", s),
 				};
 
 				Ok(())
@@ -302,9 +292,9 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			globals.set(
 				"import",
 				lua.create_function(move |l, path: String| -> LuaResult<LuaValue> {
-					let loaded: LuaTable = l.named_registry_value("modules").expect(
-						"Registry sub-table `modules` wasn't pre-initialised."
-					);
+					let loaded: LuaTable = l
+						.named_registry_value("modules")
+						.expect("Registry sub-table `modules` wasn't pre-initialised.");
 
 					match loaded.get::<&str, LuaValue>(&path) {
 						Ok(module) => {
@@ -343,11 +333,14 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 						}
 					};
 
-					match l.safeload(&chunk, path.as_str(), l.getfenv()).eval::<LuaValue>() {
+					match l
+						.safeload(&chunk, path.as_str(), l.getfenv())
+						.eval::<LuaValue>()
+					{
 						Ok(ret) => {
 							loaded.set::<&str, LuaValue>(&path, ret.clone())?;
 							Ok(ret)
-						},
+						}
 						Err(err) => {
 							error!("{}", err);
 							Ok(LuaValue::Nil)
@@ -430,7 +423,8 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		let vfsg = vfs.read();
 
-		let utils = vfsg.read_str("/impure/lua/utils.tl")
+		let utils = vfsg
+			.read_str("/impure/lua/utils.tl")
 			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 		let utils = self.teal_compile(utils)?;
 		let utils = self.safeload(&utils, "utils", globals.clone());
@@ -508,8 +502,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 	}
 
 	fn getfenv(&self) -> LuaTable {
-		self
-			.globals()
+		self.globals()
 			.call_function("getfenv", ())
 			.expect("Failed to retrieve the current environment.")
 	}

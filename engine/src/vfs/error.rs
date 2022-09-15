@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{io, fmt, path::PathBuf};
+use std::{fmt, io, path::PathBuf};
 
 use zip::result::ZipError;
 

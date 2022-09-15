@@ -40,46 +40,43 @@ pub(super) enum EntryKind {
 }
 
 impl Entry {
-	pub(super) fn new_leaf(
-		virt_path: PathBuf,
-		parent_hash: u64,
-		bytes: Vec<u8>
-	) -> Self {
+	pub(super) fn new_leaf(virt_path: PathBuf, parent_hash: u64, bytes: Vec<u8>) -> Self {
 		let mut hash = 0u64;
 		let comps = virt_path.as_path().components();
 
 		for comp in comps {
-			hash ^= metro::hash64(comp.as_os_str().to_str().expect(
-				"A VFS virtual path wasn't sanitised (UTF-8)."
-			));
+			hash ^= metro::hash64(
+				comp.as_os_str()
+					.to_str()
+					.expect("A VFS virtual path wasn't sanitised (UTF-8)."),
+			);
 		}
 
 		Self {
 			path: virt_path,
 			kind: EntryKind::Leaf { bytes },
 			hash,
-			parent_hash
+			parent_hash,
 		}
 	}
 
-	pub(super) fn new_dir(
-		virt_path: PathBuf,
-		parent_hash: u64
-	) -> Self {
+	pub(super) fn new_dir(virt_path: PathBuf, parent_hash: u64) -> Self {
 		let mut hash = 0u64;
 		let comps = virt_path.as_path().components();
 
 		for comp in comps {
-			hash ^= metro::hash64(comp.as_os_str().to_str().expect(
-				"A VFS virtual path wasn't sanitised (UTF-8)."
-			));
+			hash ^= metro::hash64(
+				comp.as_os_str()
+					.to_str()
+					.expect("A VFS virtual path wasn't sanitised (UTF-8)."),
+			);
 		}
 
 		Self {
 			path: virt_path,
 			kind: EntryKind::Directory,
 			hash,
-			parent_hash
+			parent_hash,
 		}
 	}
 
@@ -88,17 +85,17 @@ impl Entry {
 			return "/";
 		}
 
-		self.path.file_name().expect(
-			"A VFS virtual path wasn't sanitised (OS)."
-		).to_str().expect(
-			"A VFS virtual path wasn't sanitised (UTF-8)."
-		)
+		self.path
+			.file_name()
+			.expect("A VFS virtual path wasn't sanitised (OS).")
+			.to_str()
+			.expect("A VFS virtual path wasn't sanitised (UTF-8).")
 	}
 
 	pub(super) fn path_str(&self) -> &str {
-		self.path.to_str().expect(
-			"A VFS virtual path wasn't UTF-8 sanitised."
-		)
+		self.path
+			.to_str()
+			.expect("A VFS virtual path wasn't UTF-8 sanitised.")
 	}
 
 	pub(super) fn is_leaf(&self) -> bool {

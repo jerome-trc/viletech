@@ -22,7 +22,9 @@ use std::path::PathBuf;
 use super::VirtualFs;
 
 fn sample_paths() -> [(PathBuf, &'static str); 2] {
-	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("sample");
+	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+		.join("..")
+		.join("sample");
 	let ret = [
 		(base.join("freedoom1.wad"), "freedoom1"),
 		(base.join("freedoom2.wad"), "freedoom2"),

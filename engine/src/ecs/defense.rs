@@ -22,7 +22,7 @@ use crate::data::game::AssetIndex;
 #[derive(Debug)]
 pub struct DamageFactor {
 	damage_type: AssetIndex,
-	factor: f32
+	factor: f32,
 }
 
 #[derive(Debug, shipyard::Component)]

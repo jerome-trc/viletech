@@ -18,18 +18,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use clap::Parser;
-use impure::{
-	depends::{
-		renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent},
-		*, log::error, sha3::{Digest, Sha3_256},
-	},
+use impure::depends::{
+	log::error,
+	renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent},
+	sha3::{Digest, Sha3_256},
+	*,
 };
 use log::info;
 use std::{
 	error::Error,
 	io::{self, Write},
 	net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
-	time::{Duration, SystemTime}, sync::atomic::AtomicBool
+	sync::atomic::AtomicBool,
+	time::{Duration, SystemTime},
 };
 
 #[derive(Parser, Debug)]
@@ -62,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		env!("CARGO_PKG_VERSION")
 	);
 	info!("{}", impure::utils::env::os_info()?);
-	
+
 	let passhash = if !args.password.is_empty() {
 		let mut hasher = Sha3_256::new();
 		hasher.update(args.password);
@@ -80,7 +81,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 		let mut hasher = Sha3_256::new();
 		hasher.update(env!("CARGO_PKG_VERSION"));
 		bytemuck::try_cast_slice::<u8, u64>(&hasher.finalize()[0..16])
-	}.expect("Failed to hash protocol ID from package version.")[0];
+	}
+	.expect("Failed to hash protocol ID from package version.")[0];
 
 	let mut server = RenetServer::new(
 		SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?,
@@ -107,13 +109,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 				}
 
 				match server.update(LOBBY_WAIT) {
-					Ok(()) => {},
+					Ok(()) => {}
 					Err(err) => {
 						error!("Lobby update tick failed: {}", err);
 						panic!();
 					}
 				};
-	
+
 				// Check for client connections/disconnections
 				while let Some(event) = server.get_event() {
 					match event {
@@ -128,12 +130,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 							} else {
 								true
 							};
-	
+
 							if allowed {
 								let usrname = std::str::from_utf8(&user_data[0..64]).expect(
-									"A client illegally sent invalid UTF-8 as a user profile name."
+									"A client illegally sent invalid UTF-8 as a user profile name.",
 								);
-	
+
 								info!(
 									"Connection established.
 									Client ID: {}
@@ -157,7 +159,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 			print!("$ ");
 
 			match io::stdout().flush() {
-				Ok(()) => {},
+				Ok(()) => {}
 				Err(err) => {
 					error!("Failed to flush stdout: {}", err);
 					return Err(Box::new(err));
@@ -176,14 +178,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 			if cmd.eq_ignore_ascii_case("quit") || cmd.eq_ignore_ascii_case("exit") {
 				lobby_running.store(false, std::sync::atomic::Ordering::Release);
-	
+
 				match lobby_thread.join() {
-					Ok(_) => {},
+					Ok(_) => {}
 					Err(err) => {
 						println!("{:?}", err);
 					}
 				};
-	
+
 				break;
 			}
 
@@ -191,15 +193,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 
 		Ok(())
-	}).expect(
-		"Failed to open scope for lobby listening thread."
-	);
+	})
+	.expect("Failed to open scope for lobby listening thread.");
 
 	match res {
 		Ok(()) => {
 			info!("{}", impure::uptime_string(start_time));
 			Ok(())
-		},
-		Err(err) => Err(Box::new(err))
+		}
+		Err(err) => Err(Box::new(err)),
 	}
 }

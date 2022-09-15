@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{env, io, fs, error::Error};
+use std::{env, error::Error, fs, io};
 
 use log::error;
 
@@ -83,12 +83,9 @@ pub fn os_info() -> Result<String, Box<dyn Error>> {
 
 			Ok(osinfo)
 		}
-		_ => {
-			Err(Box::<io::Error>::new(io::ErrorKind::Unsupported.into()))
-		}
+		_ => Err(Box::<io::Error>::new(io::ErrorKind::Unsupported.into())),
 	}
 }
-
 
 pub fn create_default_user_dir() -> io::Result<()> {
 	let user_path = match get_user_dir() {

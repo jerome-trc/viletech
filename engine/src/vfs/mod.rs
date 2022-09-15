@@ -239,22 +239,25 @@ impl VirtualFs {
 			}
 		};
 
-		Some(Handle {
-			vfs: self,
-			entry,
-		})
+		Some(Handle { vfs: self, entry })
 	}
 
 	/// Returns `None` if and only if nothing exists at the given path.
 	/// Note that that `path` must be exact, including the root path separator.
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
-		self.entries.iter().find(|e| {
-			e.path_str().eq_ignore_ascii_case(
-				path.as_ref()
-					.to_str()
-					.expect("`lookup_nocase` received a path with invalid UTF-8."),
-			)
-		}).map(|e| Handle { vfs: self, entry: e })
+		self.entries
+			.iter()
+			.find(|e| {
+				e.path_str().eq_ignore_ascii_case(
+					path.as_ref()
+						.to_str()
+						.expect("`lookup_nocase` received a path with invalid UTF-8."),
+				)
+			})
+			.map(|e| Handle {
+				vfs: self,
+				entry: e,
+			})
 	}
 
 	pub fn exists(&self, path: impl AsRef<Path>) -> bool {
@@ -395,8 +398,8 @@ mod test;
 use entry::Entry;
 use entry::EntryKind;
 
-pub use handle::Handle;
 pub use self::impure::ImpureVfs;
 pub use self::impure::ImpureVfsHandle;
 pub use self::impure::ZsProxyFs;
 pub use error::Error;
+pub use handle::Handle;

@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{path::Path, borrow::Borrow};
+use std::{borrow::Borrow, path::Path};
 
 use fasthash::metro;
 use regex::Regex;
@@ -50,7 +50,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 
 		self.vfs.lookup_hash(hash).map(|e| Handle {
 			vfs: self.vfs,
-			entry: e
+			entry: e,
 		})
 	}
 
@@ -58,13 +58,15 @@ impl<'v, 'e> Handle<'v, 'e> {
 		let full_path = self.entry.path.join(path);
 
 		for entry in &self.vfs.entries {
-			if entry.path.to_string_lossy().eq_ignore_ascii_case(
-				full_path.to_string_lossy().borrow()
-			) {
+			if entry
+				.path
+				.to_string_lossy()
+				.eq_ignore_ascii_case(full_path.to_string_lossy().borrow())
+			{
 				return Some(Handle {
 					vfs: self.vfs,
-					entry
-				})
+					entry,
+				});
 			}
 		}
 

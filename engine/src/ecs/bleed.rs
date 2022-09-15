@@ -24,5 +24,5 @@ use crate::{data::game::AssetIndex, gfx::Rgb32};
 #[derive(Debug, Component)]
 pub struct Bleed {
 	color: Rgb32,
-	blueprints: [Option<AssetIndex>; 3]
+	blueprints: [Option<AssetIndex>; 3],
 }

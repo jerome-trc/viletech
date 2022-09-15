@@ -54,7 +54,9 @@ fn vfs(crit: &mut Criterion) {
 		grp_lookup.finish();
 	}
 
-	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("sample");
+	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+		.join("..")
+		.join("sample");
 	let mount_paths = [
 		(base.join("freedoom1.wad"), "freedoom1"),
 		(base.join("freedoom2.wad"), "freedoom2"),

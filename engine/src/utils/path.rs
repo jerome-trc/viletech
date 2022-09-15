@@ -22,7 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use lazy_static::lazy_static;
 use log::warn;
 use regex::Regex;
-use std::{path::{PathBuf, Path}, fs::{File, self}, io::{self, Read}, env};
+use std::{
+	env,
+	fs::{self, File},
+	io::{self, Read},
+	path::{Path, PathBuf},
+};
 
 lazy_static! {
 	static ref EMPTY_PATH: &'static Path = Path::new("");
@@ -32,7 +37,7 @@ lazy_static! {
 pub trait PathEx {
 	fn dir_count(&self) -> usize;
 	fn dir_empty(&self) -> bool {
-		self.dir_count() < 1	
+		self.dir_count() < 1
 	}
 	/// Returns the number of components in the path.
 	fn extension_is(&self, test: &str) -> bool;
@@ -58,7 +63,7 @@ pub trait PathEx {
 	fn is_supported_archive(&self) -> io::Result<bool>;
 }
 
-impl <T: AsRef<Path>> PathEx for T {
+impl<T: AsRef<Path>> PathEx for T {
 	fn dir_count(&self) -> usize {
 		match fs::read_dir(self.as_ref()) {
 			Ok(read_dir) => read_dir.count(),
@@ -95,8 +100,8 @@ impl <T: AsRef<Path>> PathEx for T {
 		let extstr = ext.to_str().unwrap_or_default();
 
 		lazy_static! {
-			static ref RGX_ZIPEXT: Regex =
-				Regex::new(r"^(?i)zip$").expect("Failed to evaluate `has_zip_extension::RGX_ZIPEXT`.");
+			static ref RGX_ZIPEXT: Regex = Regex::new(r"^(?i)zip$")
+				.expect("Failed to evaluate `has_zip_extension::RGX_ZIPEXT`.");
 		};
 
 		RGX_ZIPEXT.is_match(extstr)
@@ -164,12 +169,12 @@ impl <T: AsRef<Path>> PathEx for T {
 		if !self.as_ref().exists() {
 			return Err(io::ErrorKind::NotFound.into());
 		}
-	
+
 		let mut buffer: [u8; 4] = [0; 4];
 		let mut file = File::open(self)?;
-	
+
 		let bytes_read = file.read(&mut buffer)?;
-	
+
 		if bytes_read < buffer.len() {
 			return Ok(false);
 		}
@@ -219,7 +224,7 @@ impl <T: AsRef<Path>> PathEx for T {
 				return Err(err);
 			}
 		}
-	
+
 		Ok(false)
 	}
 }

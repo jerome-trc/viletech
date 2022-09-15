@@ -229,11 +229,7 @@ impl Console {
 		let tfmt = TextFormat::simple(font_id.clone(), Color32::GRAY);
 
 		job.append("[", 0.0, tfmt.clone());
-		job.append(
-			&loglvl[1..],
-			0.0,
-			TextFormat::simple(font_id, color),
-		);
+		job.append(&loglvl[1..], 0.0, TextFormat::simple(font_id, color));
 		job.append("] ", 0.0, tfmt.clone());
 		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
 
