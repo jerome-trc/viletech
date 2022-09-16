@@ -89,24 +89,23 @@ pub trait ImpureVfs {
 
 impl ImpureVfs for VirtualFs {
 	fn mount_enginedata(&mut self) -> Result<(), Error> {
+		let path: PathBuf;
+
 		#[cfg(not(debug_assertions))]
 		{
-			let path: PathBuf = [exe_dir(), PathBuf::from("impure.zip")].iter().collect();
-			self.mount(&[(path, "/impure")]).pop().unwrap()
+			path = [exe_dir(), PathBuf::from("impure.zip")].iter().collect();
 		}
 		#[cfg(debug_assertions)]
 		{
-			use std::env;
-
-			let path: PathBuf = [
-				env::current_dir().map_err(Error::IoError)?,
+			path = [
+				std::env::current_dir().map_err(Error::IoError)?,
 				PathBuf::from("data"),
 			]
 			.iter()
 			.collect();
-
-			self.mount(&[(path, "/impure")]).pop().unwrap()
 		}
+
+		self.mount(&[(path, "/impure")]).pop().unwrap()
 	}
 
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta> {
