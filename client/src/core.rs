@@ -26,9 +26,8 @@ use impure::{
 	gfx::{camera::Camera, core::GraphicsCore},
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
-	utils::{path::*, string::line_from_char_index},
-	vfs::{self, ImpureVfs, ImpureVfsHandle, VirtualFs, ZsProxyFs},
-	zscript,
+	utils::path::*,
+	vfs::{self, ImpureVfs, VirtualFs},
 };
 
 use kira::{
@@ -482,13 +481,7 @@ impl<'lua> ClientCore<'lua> {
 		Ok(())
 	}
 
-	fn start_game(&mut self) {
-		let vfsg = self.vfs.read();
-
-		for i in 0..self.data.namespaces.len() {
-			Self::load_assets(&vfsg, i, &mut self.data);
-		}
-	}
+	fn start_game(&mut self) {}
 
 	fn start_sim(&mut self) {
 		let (sender, receiver) = crossbeam::channel::unbounded();
@@ -509,59 +502,5 @@ impl<'lua> ClientCore<'lua> {
 				})
 				.expect("Failed to spawn OS thread for playsim."),
 		};
-	}
-}
-
-// Internal implementation details: on-game-start asset loading.
-impl<'lua> ClientCore<'lua> {
-	fn load_assets(vfs: &VirtualFs, namespace: usize, data: &mut DataCore) {
-		let uuid = &data.namespaces[namespace].meta.uuid;
-
-		let entry = vfs
-			.lookup(uuid)
-			.expect("`ClientCore::load_assets` failed to find a namespace by UUID.");
-
-		if entry.has_zscript() {
-			let pvfs = ZsProxyFs::new(vfs, uuid);
-			let parse_out = zscript::parse(pvfs);
-
-			if !parse_out.errors.is_empty() {
-				error!(
-					"{} errors during ZScript transpile: {}",
-					parse_out.errors.len(),
-					uuid
-				);
-			}
-
-			for err in parse_out.errors {
-				let file = &parse_out.files[err.main_spans[0].get_file()];
-				let start = err.main_spans[0].get_start();
-				let end = err.main_spans[0].get_end();
-				let (line, line_index) = line_from_char_index(file.text(), start).unwrap();
-				let line = line.trim();
-				let line_start = file.text().find(line).unwrap();
-
-				let mut indicators = String::with_capacity(line.len());
-				indicators.push('\t');
-
-				for _ in line_start..start {
-					indicators.push(' ');
-				}
-
-				for _ in 0..(end - start) {
-					indicators.push('^');
-				}
-
-				error!(
-					"{}:{}:{}\r\n\r\n\t{}\r\n{}\r\n\tDetails: {}.\r\n",
-					format!("/{}/{}", uuid, file.filename()),
-					line_index + 1,
-					start - line_start,
-					line,
-					indicators,
-					err.msg
-				);
-			}
-		}
 	}
 }

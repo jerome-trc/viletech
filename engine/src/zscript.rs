@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::vfs::ZsProxyFs;
-
 use zsparse::{
 	err::ParsingError,
-	filesystem::Files,
+	filesystem::{File, FileSystem, Files},
 	parser_manager::{parse_filesystem, FileIndexAndAst},
 };
+
+use crate::utils::string::line_from_char_index;
 
 pub struct ParseOutput {
 	pub files: Files,
@@ -34,14 +34,43 @@ pub struct ParseOutput {
 }
 
 #[must_use]
-pub fn parse(vfs: ZsProxyFs) -> ParseOutput {
+pub fn parse(fs: impl FileSystem) -> ParseOutput {
 	let mut errors = Default::default();
 	let mut files = Default::default();
-	let asts = parse_filesystem(vfs, &mut files, &mut errors).asts;
+	let asts = parse_filesystem(fs, &mut files, &mut errors).asts;
 
 	ParseOutput {
 		files,
 		errors,
 		asts,
 	}
+}
+
+pub fn prettify_error(namespace: &str, file: &File, error: &ParsingError) -> String {
+	let start = error.main_spans[0].get_start();
+	let end = error.main_spans[0].get_end();
+	let (line, line_index) = line_from_char_index(file.text(), start).unwrap();
+	let line = line.trim();
+	let line_start = file.text().find(line).unwrap();
+
+	let mut indicators = String::with_capacity(line.len());
+	indicators.push('\t');
+
+	for _ in line_start..start {
+		indicators.push(' ');
+	}
+
+	for _ in 0..(end - start) {
+		indicators.push('^');
+	}
+
+	format!(
+		"{}:{}:{}\r\n\r\n\t{}\r\n{}\r\n\tDetails: {}.\r\n",
+		format!("/{}/{}", namespace, file.filename()),
+		line_index + 1,
+		start - line_start,
+		line,
+		indicators,
+		error.msg
+	)
 }

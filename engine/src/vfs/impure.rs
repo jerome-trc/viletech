@@ -509,36 +509,19 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 	}
 }
 
-pub struct ZsProxyFs<'vfs> {
-	vfs: &'vfs VirtualFs,
-	root: &'vfs str,
-}
-
-impl<'vfs> ZsProxyFs<'vfs> {
-	#[must_use]
-	pub fn new(vfs: &'vfs VirtualFs, root: &'vfs str) -> Self {
-		Self { vfs, root }
-	}
-}
-
-impl<'vfs> ZsFileSystem for ZsProxyFs<'vfs> {
+impl<'v, 'e> ZsFileSystem for Handle<'_, '_> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
-		let rel_root = self
-			.vfs
-			.lookup(self.root)
-			.expect("`ZsProxyFs::get_files` failed to find its relative root.");
-
-		let target = match rel_root.lookup_nocase(filename) {
+		let target = match self.lookup_nocase(filename) {
 			Some(h) => h,
 			None => {
-				let full_path = rel_root.virtual_path().join(filename);
+				let full_path = self.virtual_path().join(filename);
 				warn!("Failed to find ZScript file: {}", full_path.display());
 				return None;
 			}
 		};
 
 		if target.is_dir() {
-			let full_path = rel_root.virtual_path().join(filename);
+			let full_path = self.virtual_path().join(filename);
 			warn!(
 				"Expected ZScript file, found directory: {}",
 				full_path.display()
@@ -552,12 +535,7 @@ impl<'vfs> ZsFileSystem for ZsProxyFs<'vfs> {
 	fn get_files_no_ext(&mut self, filename: &str) -> Vec<ZsFile> {
 		let mut ret = Vec::<ZsFile>::default();
 
-		let rel_root = self
-			.vfs
-			.lookup(self.root)
-			.expect("`ZsProxyFs::get_files_no_ext` failed to find its relative root.");
-
-		for child in rel_root.children() {
+		for child in self.children() {
 			let mut noext = child.file_name().splitn(2, '.');
 
 			let bytes = if child.is_leaf() {
