@@ -60,36 +60,47 @@ impl AssetHash {
 		Self(ret)
 	}
 
-	fn from_id<A: Asset>(string: &str) -> Result<Self, AssetIdError> {
+	fn from_id<A: Asset>(string: &str) -> Result<Self, AssetError> {
 		let mut split = string.split(':');
 
-		let nsid = split.next().ok_or(AssetIdError::EmptyString)?;
-		let aid = split.next().ok_or(AssetIdError::MissingPostfix)?;
+		let nsid = split.next().ok_or(AssetError::HashEmptyString)?;
+		let aid = split.next().ok_or(AssetError::IdMissingPostfix)?;
 
 		Ok(Self::from_id_pair::<A>(nsid, aid))
 	}
 }
 
 #[derive(Debug)]
-pub enum AssetIdError {
-	EmptyString,
-	MissingPostfix,
-	NotFound,
+pub enum AssetError {
+	HashEmptyString,
+	IdMissingPostfix,
+	IdNotFound,
+	IdClobber,
+	NamespaceNotFound,
 }
 
-impl std::error::Error for AssetIdError {}
+impl std::error::Error for AssetError {}
 
-impl fmt::Display for AssetIdError {
+impl fmt::Display for AssetError {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Self::EmptyString => {
+			Self::HashEmptyString => {
 				write!(f, "Cannot form an asset hash from an empty ID string.")
 			}
-			Self::MissingPostfix => {
+			Self::IdMissingPostfix => {
 				write!(f, "Asset ID is malformed, and lacks a postfix.")
 			}
-			Self::NotFound => {
+			Self::IdNotFound => {
 				write!(f, "The given asset ID did not match any existing asset.")
+			}
+			Self::IdClobber => {
+				write!(f, "Attempted to overwrite an existing asset ID map key.")
+			}
+			Self::NamespaceNotFound => {
+				write!(
+					f,
+					"The given namespace ID did not match any existing game data object's UUID."
+				)
 			}
 		}
 	}
@@ -284,21 +295,17 @@ impl<'lua> DataCore<'lua> {
 		Ok(false)
 	}
 
-	pub fn add<'s, A: Asset>(&mut self, asset: A, namespace_id: &'s str, asset_id: &'s str) {
-		let ns_index = match self
+	pub fn add<'s, A: Asset>(
+		&mut self,
+		asset: A,
+		namespace_id: &'s str,
+		asset_id: &'s str,
+	) -> Result<(), AssetError> {
+		let ns_index = self
 			.namespaces
 			.iter_mut()
 			.position(|o| o.meta.uuid == namespace_id)
-		{
-			Some(o) => o,
-			None => {
-				// Caller should always pre-validate here
-				panic!(
-					"Attempted to add asset under invalid UUID: {}",
-					namespace_id
-				);
-			}
-		};
+			.ok_or(AssetError::NamespaceNotFound)?;
 
 		let namespace = &mut self.namespaces[ns_index];
 		let asset_index = A::add_impl(namespace, asset);
@@ -309,8 +316,16 @@ impl<'lua> DataCore<'lua> {
 			element: asset_index,
 		};
 
+		if self.asset_map.contains_key(&hash) {
+			return Err(AssetError::IdClobber);
+		}
+
 		self.asset_map.insert(hash, ndx_pair);
-		self.lump_map.insert(asset_index.to_string(), ndx_pair);
+		let lump_name = asset_id.split('.').next().unwrap();
+		let strlen = lump_name.chars().count().min(8);
+		self.lump_map.insert(lump_name[..strlen].to_string(), ndx_pair);
+
+		Ok(())
 	}
 
 	#[must_use]
@@ -318,9 +333,9 @@ impl<'lua> DataCore<'lua> {
 		A::get_impl(&self.namespaces[index.namespace], index.element)
 	}
 
-	pub fn lookup<A: Asset>(&self, id: &str) -> Result<&A, AssetIdError> {
+	pub fn lookup<A: Asset>(&self, id: &str) -> Result<&A, AssetError> {
 		let hash = AssetHash::from_id::<A>(id)?;
-		let ipair = self.asset_map.get(&hash).ok_or(AssetIdError::NotFound)?;
+		let ipair = self.asset_map.get(&hash).ok_or(AssetError::IdNotFound)?;
 		Ok(A::get_impl(&self.namespaces[ipair.namespace], ipair.element).unwrap())
 	}
 }
