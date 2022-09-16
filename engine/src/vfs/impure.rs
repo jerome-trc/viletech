@@ -509,7 +509,7 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 	}
 }
 
-impl<'v, 'e> ZsFileSystem for Handle<'_, '_> {
+impl ZsFileSystem for Handle<'_, '_> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
 		let target = match self.lookup_nocase(filename) {
 			Some(h) => h,

@@ -65,8 +65,9 @@ pub fn prettify_error(namespace: &str, file: &File, error: &ParsingError) -> Str
 	}
 
 	format!(
-		"{}:{}:{}\r\n\r\n\t{}\r\n{}\r\n\tDetails: {}.\r\n",
-		format!("/{}/{}", namespace, file.filename()),
+		"/{}/{}:{}:{}\r\n\r\n\t{}\r\n{}\r\n\tDetails: {}.\r\n",
+		namespace,
+		file.filename(),
 		line_index + 1,
 		start - line_start,
 		line,
