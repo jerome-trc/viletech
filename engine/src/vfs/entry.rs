@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use fasthash::metro;
 
-use crate::utils::path::PathEx;
+use crate::{utils::path::PathEx, vfs::Error};
 
 pub(super) struct Entry {
 	/// Absolute virtual, not real.
@@ -120,6 +120,20 @@ impl Entry {
 			std::cmp::Ordering::Less
 		} else {
 			a.file_name().partial_cmp(b.file_name()).unwrap()
+		}
+	}
+
+	pub(super) fn read(&self) -> &[u8] {
+		match &self.kind {
+			EntryKind::Directory { .. } => unreachable!(),
+			EntryKind::Leaf { bytes } => &bytes[..],
+		}
+	}
+
+	pub(super) fn read_str(&self) -> Result<&str, Error> {
+		match std::str::from_utf8(self.read()) {
+			Ok(ret) => Ok(ret),
+			Err(_) => Err(Error::InvalidUtf8),
 		}
 	}
 }
