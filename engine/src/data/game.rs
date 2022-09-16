@@ -17,7 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{collections::HashMap, fmt, hash::Hash};
+use std::{
+	collections::HashMap,
+	fmt,
+	hash::Hash,
+	path::PathBuf,
+};
 
 use fasthash::metro;
 use globset::Glob;
@@ -27,9 +32,11 @@ use serde::Deserialize;
 use crate::{
 	ecs::Blueprint,
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
-	gfx::doom::{ColorMap, Endoom, Palette},
+	gfx::{
+		doom::{ColorMap, Endoom, Palette},
+	},
 	level::Episode,
-	LevelCluster, LevelMetadata,
+	LevelCluster, LevelMetadata
 };
 
 use super::asset::Asset;
@@ -154,7 +161,6 @@ pub struct GameInfo {
 }
 
 /// Determines the system used for loading assets from a mounted game data object.
-#[derive(Default)]
 pub enum GameDataKind {
 	/// The file is read to determine what kind of assets are in it,
 	/// and loading is handled accordingly.
@@ -163,9 +169,8 @@ pub enum GameDataKind {
 	/// the kind of file it is.
 	Wad,
 	/// Assets are loaded from this archive/directory based on the
-	/// manifests specified by the meta.toml file.
-	#[default]
-	Impure,
+	/// manifest specified by the meta.toml file.
+	Impure { manifest: PathBuf },
 	/// Assets are loaded from this archive/directory based on the
 	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
 	/// for example, don't get loaded at all.
@@ -174,6 +179,14 @@ pub enum GameDataKind {
 	/// Eternity Engine sub-directory namespacing system. Sounds outside of
 	/// `sounds/`, for example, don't get loaded at all.
 	Eternity,
+}
+
+impl Default for GameDataKind {
+	fn default() -> Self {
+		Self::Impure {
+			manifest: PathBuf::default(),
+		}
+	}
 }
 
 /// Represents anything that the user added to their load order.

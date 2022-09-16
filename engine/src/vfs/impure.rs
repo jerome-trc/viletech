@@ -308,9 +308,49 @@ impl ImpureVfs for VirtualFs {
 					.expect("Invalid UUID passed to `ImpureVfs::gamedata_kind`.");
 
 				for child in self.children_of(entry) {
-					if child.file_name().eq_ignore_ascii_case("meta.toml") {
-						return GameDataKind::Impure;
+					if !child.file_name().eq_ignore_ascii_case("meta.toml") {
+						continue;
 					}
+
+					if child.is_dir() {
+						continue;
+					}
+
+					let string = match child.read_str() {
+						Ok(s) => s,
+						Err(err) => {
+							warn!(
+								"Invalid meta.toml file under '{}': {}",
+								entry.path_str(),
+								err
+							);
+							continue;
+						}
+					};
+
+					let mline = match string.lines().find(|l| l.starts_with("manifest = ")) {
+						Some(l) => l,
+						None => {
+							warn!("Impure package '{}' defines no manifest.", entry.path_str());
+							continue;
+						}
+					};
+
+					let pb: PathBuf = match toml::from_str(mline) {
+						Ok(p) => p,
+						Err(err) => {
+							warn!(
+								"Failed to convert manifest string to path: '{}' ('{}')
+								Error: {}",
+								mline,
+								entry.path_str(),
+								err
+							);
+							continue;
+						}
+					};
+
+					return GameDataKind::Impure { manifest: pb };
 				}
 
 				match check_path(real_path) {
