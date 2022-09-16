@@ -22,14 +22,17 @@ use std::{collections::HashMap, fmt, hash::Hash, path::PathBuf};
 use fasthash::metro;
 use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
+use log::{error, warn};
 use serde::Deserialize;
+use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
 
 use crate::{
 	ecs::Blueprint,
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
-	LevelCluster, LevelMetadata,
+	vfs::VirtualFs,
+	zscript, LevelCluster, LevelMetadata, VfsHandle,
 };
 
 use super::asset::Asset;
@@ -327,5 +330,92 @@ impl<'lua> DataCore<'lua> {
 		let hash = AssetHash::from_id::<A>(id)?;
 		let ipair = self.asset_map.get(&hash).ok_or(AssetError::IdNotFound)?;
 		Ok(A::get_impl(&self.namespaces[ipair.namespace], ipair.element).unwrap())
+	}
+
+	pub fn populate(&mut self, mut metas: Vec<Metadata>, vfs: &VirtualFs) {
+		debug_assert!(self.namespaces.is_empty());
+		debug_assert!(!metas.is_empty());
+		debug_assert!(metas[0].uuid == "impure");
+
+		for (_index, meta) in metas.drain(..).enumerate() {
+			let _handle = vfs
+				.lookup(&meta.uuid)
+				.expect("Failed to find a namespace's VFS handle for data core population.");
+
+			match meta.kind {
+				GameDataKind::ZDoom => {
+					// ???
+				}
+				GameDataKind::Wad => {
+					// ???
+				}
+				GameDataKind::Impure { manifest: _ } => {
+					// ???
+				}
+				GameDataKind::File => {
+					// ???
+				}
+				GameDataKind::Eternity => {
+					// ???
+				}
+			};
+		}
+	}
+}
+
+impl DataCore<'_> {
+	fn try_load_zscript(namespace: &mut Namespace, handle: &VfsHandle) {
+		let parse_out = zscript::parse(handle.clone());
+		let nsid = &namespace.meta.uuid;
+
+		let any_parse_errors = parse_out
+			.errors
+			.iter()
+			.any(|e| e.level == ZsParsingErrorLevel::Error);
+
+		if any_parse_errors {
+			error!(
+				"{} errors during ZScript transpile, parse phase: {}",
+				parse_out.errors.len(),
+				nsid
+			);
+		}
+
+		for err in parse_out
+			.errors
+			.iter()
+			.filter(|e| e.level == ZsParsingErrorLevel::Error)
+		{
+			let file = &parse_out.files[err.main_spans[0].get_file()];
+			error!("{}", zscript::prettify_error(nsid, file, err));
+		}
+
+		let any_parse_warnings = parse_out
+			.errors
+			.iter()
+			.any(|e| e.level == ZsParsingErrorLevel::Warning);
+
+		if any_parse_warnings {
+			warn!(
+				"{} warnings during ZScript transpile, parse phase: {}",
+				parse_out.errors.len(),
+				nsid
+			);
+		}
+
+		for warn in parse_out
+			.errors
+			.iter()
+			.filter(|e| e.level == ZsParsingErrorLevel::Warning)
+		{
+			let file = &parse_out.files[warn.main_spans[0].get_file()];
+			warn!("{}", zscript::prettify_error(nsid, file, warn));
+		}
+
+		if any_parse_errors {
+			return;
+		}
+
+		todo!()
 	}
 }

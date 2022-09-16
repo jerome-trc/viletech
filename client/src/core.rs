@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use impure::{
 	audio::AudioCore,
 	console::{Command as ConsoleCommand, Console, Request as ConsoleRequest},
-	data::{game::DataCore, Namespace},
+	data::game::DataCore,
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
@@ -279,14 +279,18 @@ impl<'lua> ClientCore<'lua> {
 			}
 			Some(scene) => match scene {
 				SceneChange::Title { to_mount } => {
-					if !to_mount.is_empty() {
-						let metas = self.vfs.write().mount_gamedata(&to_mount);
+					let mut metas = vec![self
+						.vfs
+						.read()
+						.parse_gamedata_meta("/impure/meta.toml")
+						.expect("Engine data package manifest is malformed.")];
 
-						for meta in metas {
-							self.data.namespaces.push(Namespace::new(meta));
-						}
+					if !to_mount.is_empty() {
+						let mut m = self.vfs.write().mount_gamedata(&to_mount);
+						metas.append(&mut m);
 					}
 
+					self.data.populate(metas, &self.vfs.read());
 					self.start_game();
 				}
 			},
