@@ -17,12 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{
-	collections::HashMap,
-	fmt,
-	hash::Hash,
-	path::PathBuf,
-};
+use std::{collections::HashMap, fmt, hash::Hash, path::PathBuf};
 
 use fasthash::metro;
 use globset::Glob;
@@ -32,11 +27,9 @@ use serde::Deserialize;
 use crate::{
 	ecs::Blueprint,
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
-	gfx::{
-		doom::{ColorMap, Endoom, Palette},
-	},
+	gfx::doom::{ColorMap, Endoom, Palette},
 	level::Episode,
-	LevelCluster, LevelMetadata
+	LevelCluster, LevelMetadata,
 };
 
 use super::asset::Asset;
@@ -235,23 +228,6 @@ impl<'lua> Namespace<'lua> {
 			palette: None,
 		}
 	}
-
-	pub fn clear(&mut self) {
-		self.blueprints.clear();
-		self.damage_types.clear();
-		self.clusters.clear();
-		self.episodes.clear();
-		self.levels.clear();
-		self.skills.clear();
-		self.species.clear();
-		self.language.clear();
-		self.music.clear();
-		self.sounds.clear();
-
-		self.colormap.take();
-		self.endoom.take();
-		self.palette.take();
-	}
 }
 
 #[derive(Default)]
@@ -336,7 +312,8 @@ impl<'lua> DataCore<'lua> {
 		self.asset_map.insert(hash, ndx_pair);
 		let lump_name = asset_id.split('.').next().unwrap();
 		let strlen = lump_name.chars().count().min(8);
-		self.lump_map.insert(lump_name[..strlen].to_string(), ndx_pair);
+		self.lump_map
+			.insert(lump_name[..strlen].to_string(), ndx_pair);
 
 		Ok(())
 	}
