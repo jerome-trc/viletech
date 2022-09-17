@@ -42,7 +42,7 @@ use shipyard::World;
 use std::{
 	env,
 	error::Error,
-	fs, io,
+	io,
 	path::PathBuf,
 	sync::{atomic::AtomicBool, Arc},
 	thread::JoinHandle,
@@ -131,7 +131,7 @@ impl<'lua> ClientCore<'lua> {
 		};
 
 		ret.register_console_commands();
-		ret.build_user_dirs()?;
+		impure::user::build_user_dirs()?;
 
 		Ok(ret)
 	}
@@ -417,72 +417,6 @@ impl<'lua> ClientCore<'lua> {
 				info!("Prints information about the graphics device and WGPU backend.");
 			},
 		));
-	}
-
-	fn build_user_dirs(&self) -> io::Result<()> {
-		let user_path = match get_user_dir() {
-			Some(up) => up,
-			None => {
-				return Err(io::Error::new(
-					io::ErrorKind::Other,
-					"Failed to retrieve user info path. \
-					Home directory path is malformed, \
-					or this platform is currently unsupported.",
-				));
-			}
-		};
-
-		if !user_path.exists() {
-			match fs::create_dir_all(&user_path) {
-				Ok(()) => {}
-				Err(err) => {
-					return Err(io::Error::new(
-						err.kind(),
-						format!("Failed to create a part of the user info path: {}", err),
-					));
-				}
-			};
-		}
-
-		let profiles_path = user_path.join("profiles");
-
-		// End execution with an error if this directory has anything else in it,
-		// so as not to clobber any other software's config files
-
-		if !profiles_path.exists() {
-			if !user_path.dir_empty() {
-				return Err(io::Error::new(
-					io::ErrorKind::Other,
-					format!(
-						"User info folder has unexpected contents; \
-						is another program named \"Impure\" using it?
-						({})",
-						user_path.display()
-					),
-				));
-			} else {
-				match fs::create_dir(&profiles_path) {
-					Ok(()) => {}
-					Err(err) => {
-						return Err(io::Error::new(
-							io::ErrorKind::Other,
-							format!(
-								"Failed to create directory: {} \
-								Error: {}",
-								profiles_path.display(),
-								err
-							),
-						))
-					}
-				};
-			}
-		}
-
-		if profiles_path.dir_empty() {
-			impure::utils::env::create_default_user_dir()?;
-		}
-
-		Ok(())
 	}
 
 	fn start_game(&mut self) {}
