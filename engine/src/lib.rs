@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#[allow(dead_code)]
+pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod data;
