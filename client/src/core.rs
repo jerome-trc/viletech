@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use impure::{
-	audio::AudioCore,
+	audio::{self, AudioCore},
 	console::{Command as ConsoleCommand, Console, Request as ConsoleRequest},
 	data::game::DataCore,
 	depends::*,
@@ -27,12 +27,12 @@ use impure::{
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
 	utils::path::*,
-	vfs::{self, ImpureVfs, VirtualFs},
+	vfs::{ImpureVfs, VirtualFs},
 };
 
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
-	sound::static_sound::{StaticSoundData, StaticSoundSettings},
+	sound::static_sound::StaticSoundSettings,
 };
 use log::{error, info};
 use mlua::Lua;
@@ -42,7 +42,6 @@ use shipyard::World;
 use std::{
 	env,
 	error::Error,
-	io,
 	path::PathBuf,
 	sync::{atomic::AtomicBool, Arc},
 	thread::JoinHandle,
@@ -104,7 +103,7 @@ impl<'lua> ClientCore<'lua> {
 			manager: AudioManager::new(audio_mgr_settings)?,
 			music1: None,
 			music2: None,
-			handles: Vec::<_>::with_capacity(sound_cap),
+			sounds: Vec::<_>::with_capacity(sound_cap),
 		};
 
 		let camera = Camera::new(
@@ -229,26 +228,16 @@ impl<'lua> ClientCore<'lua> {
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
 
-					let bytes = match vfsg.read(&arg) {
-						Ok(b) => b,
-						Err(err) => {
-							if let vfs::Error::NonExistentEntry(_) = err {
-								info!("No sound file under virtual path: {}", arg);
-							} else {
-								info!("{}", err);
-							}
-
+					let handle = match vfsg.lookup(&arg) {
+						Some(h) => h,
+						None => {
+							info!("No file under virtual path: {}", arg);
 							continue;
 						}
 					};
 
-					let bytes = bytes.to_owned();
-					let cursor = io::Cursor::new(bytes);
-
-					let sdata = match StaticSoundData::from_cursor(
-						cursor,
-						StaticSoundSettings::default(),
-					) {
+					let sdat = match audio::sound_from_file(handle, StaticSoundSettings::default())
+					{
 						Ok(ssd) => ssd,
 						Err(err) => {
 							info!("Failed to create sound from file: {}", err);
@@ -256,15 +245,13 @@ impl<'lua> ClientCore<'lua> {
 						}
 					};
 
-					let snd = match self.audio.manager.play(sdata) {
-						Ok(s) => s,
+					match self.audio.play_global(sdat) {
+						Ok(()) => {}
 						Err(err) => {
 							info!("Failed to play sound: {}", err);
 							continue;
 						}
 					};
-
-					self.audio.handles.push(snd);
 				}
 				ConsoleRequest::Uptime => {
 					info!("{}", impure::uptime_string(self.start_time))

@@ -182,6 +182,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 					core.on_key_event(input);
 				}
+				WindowEvent::Focused(gained) => {
+					if *gained {
+						core.audio.resume_all();
+					} else {
+						core.audio.pause_all();
+					}
+				}
 				WindowEvent::CloseRequested => {
 					info!("{}", impure::uptime_string(core.start_time));
 					*control_flow = ControlFlow::Exit;
