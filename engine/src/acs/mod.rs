@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod pcodes;
+
 pub struct TickContext {}
 
 pub struct Controller {}
