@@ -178,7 +178,23 @@ impl<'lua> ClientCore<'lua> {
 					}
 				}
 
-				let mut rpass = frame.render_pass();
+				let clear_color = if self.gfx.egui.context.style().visuals.dark_mode {
+					wgpu::Color {
+						r: 0.0,
+						g: 0.0,
+						b: 0.0,
+						a: 1.0,
+					}
+				} else {
+					wgpu::Color {
+						r: 0.9,
+						g: 0.9,
+						b: 0.9,
+						a: 1.0,
+					}
+				};
+
+				let mut rpass = frame.render_pass(clear_color);
 
 				rpass.set_pipeline(&self.gfx.pipelines[0]);
 				rpass.draw(0..3, 0..1);

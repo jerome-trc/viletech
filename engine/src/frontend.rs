@@ -111,6 +111,10 @@ impl FrontendMenu {
 				if ui.button("Exit").clicked() {
 					ret = FrontendAction::Quit;
 				}
+
+				ui.separator();
+
+				egui::widgets::global_dark_light_mode_buttons(ui);
 			});
 		});
 

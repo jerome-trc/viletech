@@ -270,19 +270,14 @@ pub struct Frame {
 
 impl Frame {
 	#[must_use]
-	pub fn render_pass(&mut self) -> RenderPass {
+	pub fn render_pass(&mut self, clear_color: wgpu::Color) -> RenderPass {
 		self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("IMPURE: Render Pass"),
 			color_attachments: &[wgpu::RenderPassColorAttachment {
 				view: &self.view,
 				resolve_target: None,
 				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(wgpu::Color {
-						r: 0.0,
-						g: 0.0,
-						b: 0.0,
-						a: 1.0,
-					}),
+					load: wgpu::LoadOp::Clear(clear_color),
 					store: true,
 				},
 			}],
