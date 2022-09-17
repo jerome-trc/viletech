@@ -41,6 +41,8 @@ pub mod lua;
 pub mod rng;
 #[allow(dead_code)]
 pub mod sim;
+#[allow(dead_code)]
+pub mod user;
 pub mod utils;
 pub mod vfs;
 pub mod wad;

@@ -1,3 +1,5 @@
+//! User information (preferences, storage) structures and functions.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
