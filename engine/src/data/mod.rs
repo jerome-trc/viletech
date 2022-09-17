@@ -1,3 +1,6 @@
+//! "Game data" means audio, graphics, levels, ECS definitions, localization
+//! strings, and structures for representing the packages they come in.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
