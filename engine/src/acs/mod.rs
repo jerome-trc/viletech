@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 mod constants;
 mod funcs;
 mod pcodes;
+mod strpool;
 
 pub struct TickContext {}
 
