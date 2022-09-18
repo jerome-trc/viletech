@@ -152,6 +152,14 @@ impl<'v, 'e> Handle<'v, 'e> {
 		self.entry.file_name()
 	}
 
+	/// For dealing in files in terms of "lumps" and their 8-ASCII-character name limit.
+	/// Truncates output of [`Self::file_name`] to 8 characters maximum.
+	#[must_use]
+	pub fn file_name_short(&self) -> &str {
+		let strlen = self.file_name().chars().count().min(8);
+		&self.file_name()[..strlen]
+	}
+
 	#[must_use]
 	pub fn is_dir(&self) -> bool {
 		self.entry.is_dir()
@@ -160,6 +168,11 @@ impl<'v, 'e> Handle<'v, 'e> {
 	#[must_use]
 	pub fn is_leaf(&self) -> bool {
 		self.entry.is_leaf()
+	}
+
+	#[must_use]
+	pub fn hash(&self) -> u64 {
+		self.entry.hash
 	}
 }
 
