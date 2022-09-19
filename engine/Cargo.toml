@@ -25,6 +25,7 @@ egui-wgpu = "0.18"
 egui-winit = "0.18"
 fasthash = "0.4.0"
 fern = { version = "0.6.1", features = ["colored"] }
+fixed = "1.19.0"
 formatx = "0.1.4"
 glam = { version = "0.21.2", features = ["approx", "bytemuck", "serde"] }
 globset = "0.4.9"
@@ -45,6 +46,9 @@ mlua = { version = "0.8.2", features = [
 ] }
 naga = "0.9.0"
 nanorand = "0.7.0"
+num = "0.4.0"
+num-traits = "0.2.15"
+num-derive = "0.3.3"
 palette = "0.6.1"
 parking_lot = "0.12.1"
 pollster = "0.2"

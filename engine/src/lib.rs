@@ -61,6 +61,9 @@ pub use vfs::Handle as VfsHandle;
 
 // Re-export transitive dependencies
 
+pub extern crate num_traits;
+pub extern crate num_derive;
+
 pub mod depends {
 	pub extern crate bytemuck;
 	pub extern crate chrono;

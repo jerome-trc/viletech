@@ -48,6 +48,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By David "daboross" Ross et. al.
 	- Provided under the [MIT License](https://github.com/daboross/fern/blob/main/LICENSE).
 	- https://docs.rs/fern/latest/fern/
+- fixed
+	- By Trevor "tspiteri" Spiteri et. al.
+	- Provided under the [Apache 2.0 License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-APACHE) and [MIT License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-MIT).
+	- https://docs.rs/fixed/latest/fixed/
 - formatx
 	- By Apoorv "clitic" Sachan.
 	- Provided under the [Apache 2.0 License](https://github.com/clitic/formatx/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/clitic/formatx/blob/main/LICENSE-MIT).
@@ -104,6 +108,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Absolucy et. al.
 	- Provided under the [zlib/libpng License](https://github.com/Absolucy/nanorand-rs/blob/main/LICENSE.md).
 	- https://docs.rs/nanorand/latest/nanorand/
+- num/num-derive/num-traits
+	- By the [rust-num](https://github.com/rust-num) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/rust-num/num/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-num/num/blob/master/LICENSE-MIT).
+	- https://docs.rs/num/latest/num/
 - palette
 	- By Erik "Ogeon" Hedvall et. al. 
 	- Provided under the [Apache 2.0 License](https://github.com/Ogeon/palette/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Ogeon/palette/blob/master/LICENSE-MIT).
