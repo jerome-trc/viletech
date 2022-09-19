@@ -78,12 +78,14 @@ pub(super) struct ScriptFunction {
 	local_array: LocalArray,
 }
 
-/// TODO: This should be `const` but it causes an ICE. See:
-/// https://github.com/rust-lang/rust/issues/100878
+/*
+https://github.com/rust-lang/rust/issues/100878
+
 #[must_use]
 pub(super) fn ascii_id(bytes: [u8; 4]) -> u32 {
 	(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24)) as u32
 }
+*/
 
 const STACK_SIZE: usize = 4096;
 
