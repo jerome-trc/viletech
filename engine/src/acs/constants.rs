@@ -76,7 +76,7 @@ pub(super) enum ArmorInfo {
 	SavePercent,
 	MaxAbsorb,
 	MaxFullAbsorb,
-	ActualSaveAmount
+	ActualSaveAmount,
 }
 
 #[repr(i32)]

@@ -20,11 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 mod constants;
+mod detail;
 mod funcs;
 mod pcodes;
 mod strpool;
 
-pub struct TickContext {}
+/// ACS demands sweeping access to information at several levels of the engine.
+/// This gets constructed per-tic from the playsim loop and passed down to run
+/// scripts with.
+pub struct Context {}
 
 pub struct Controller {}
 
@@ -41,4 +45,4 @@ pub enum Format {
 	Unknown,
 }
 
-const STACK_SIZE: usize = 4096;
+type Array = Vec<i32>;
