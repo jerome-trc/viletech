@@ -23,6 +23,7 @@ mod constants;
 mod detail;
 mod funcs;
 mod pcodes;
+mod script;
 mod strpool;
 
 /// ACS demands sweeping access to information at several levels of the engine.

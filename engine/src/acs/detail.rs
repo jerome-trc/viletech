@@ -23,50 +23,16 @@ const HUDMSG_LAYER_MASK: i32 = 0x0000F000;
 const HUDMSG_VIS_SHIFT: i32 = 16;
 const HUDMSG_VIS_MASK: i32 = 0x00070000;
 
-struct LocalVars(Vec<i32>);
+pub(super) struct LocalVars(Vec<i32>);
 
-struct LocalArrayEntry {
-	size: u32,
-	offset: i32,
+pub(super) struct LocalArrayEntry {
+	pub(super) size: u32,
+	pub(super) offset: i32,
 }
 
 #[derive(Default)]
-struct LocalArray {
-	entries: Vec<LocalArrayEntry>,
-}
-
-#[derive(Default)]
-pub(super) struct ScriptPointer {
-	number: i32,
-	address: u32,
-	kind: u8,
-	arg_count: u8,
-	var_count: u16,
-	flags: u16,
-	local_arrays: LocalArray,
-}
-
-impl ScriptPointer {
-	pub(super) fn from_hexen(&mut self, ptrh: &ScriptPointerH) {
-		self.number = (ptrh.number & 1000) as i32;
-		self.kind = (ptrh.number / 1000) as u8;
-		self.arg_count = (ptrh.arg_count) as u8;
-		self.address = ptrh.address;
-	}
-
-	pub(super) fn from_zdoom(&mut self, ptrz: &ScriptPointerZD) {
-		self.number = ptrz.number as i32;
-		self.kind = ptrz.kind as u8;
-		self.arg_count = ptrz.arg_count as u8;
-		self.address = ptrz.address;
-	}
-
-	pub(super) fn from_intermediate(&mut self, ptri: &ScriptPointerI) {
-		self.number = ptri.number as i32;
-		self.kind = ptri.kind;
-		self.arg_count = ptri.arg_count;
-		self.address = ptri.address;
-	}
+pub(super) struct LocalArray {
+	pub(super) entries: Vec<LocalArrayEntry>,
 }
 
 pub(super) struct ScriptFunction {
@@ -109,10 +75,10 @@ impl Default for Stack {
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 pub(super) struct ScriptPointerZD {
-	number: i16,
-	kind: u16,
-	arg_count: u32,
-	address: u32,
+	pub(super) number: i16,
+	pub(super) kind: u16,
+	pub(super) arg_count: u32,
+	pub(super) address: u32,
 }
 
 /// Hexen's original script representation.
@@ -120,27 +86,27 @@ pub(super) struct ScriptPointerZD {
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 pub(super) struct ScriptPointerH {
 	// This script's kind is `number / 1000`.
-	number: u32,
-	address: u32,
-	arg_count: u32,
+	pub(super) number: u32,
+	pub(super) address: u32,
+	pub(super) arg_count: u32,
 }
 
 /// ZDoom's current in-file script representation.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 pub(super) struct ScriptPointerI {
-	number: i16,
-	kind: u8,
-	arg_count: u8,
-	address: u32,
+	pub(super) number: i16,
+	pub(super) kind: u8,
+	pub(super) arg_count: u8,
+	pub(super) address: u32,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 pub(super) struct ScriptFunctionFileRepr {
-	arg_count: u8,
-	local_count: u8,
-	has_retval: u8,
-	import_num: u8,
-	address: u32,
+	pub(super) arg_count: u8,
+	pub(super) local_count: u8,
+	pub(super) has_retval: u8,
+	pub(super) import_num: u8,
+	pub(super) address: u32,
 }
