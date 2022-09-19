@@ -39,6 +39,7 @@ pub mod gfx;
 #[allow(dead_code)]
 pub mod level;
 pub mod lua;
+pub mod math;
 #[allow(dead_code)]
 pub mod rng;
 #[allow(dead_code)]
