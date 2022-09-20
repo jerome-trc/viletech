@@ -39,7 +39,7 @@ pub struct Console {
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
 	history: Vec<String>,
-	aliases: Vec<Alias>,
+	_aliases: Vec<Alias>,
 	commands: Vec<Command>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
@@ -63,7 +63,7 @@ impl Console {
 			receiver: msg_receiver,
 			log: Vec::<String>::default(),
 			history: Vec::<String>::default(),
-			aliases: Vec::<Alias>::default(),
+			_aliases: Vec::<Alias>::default(),
 			commands: Vec::<Command>::default(),
 			input: String::with_capacity(512),
 			history_pos: 0,
@@ -112,89 +112,97 @@ impl Console {
 				.expect("Failed to evaluate `Console::try_submit::RGX_ARGSPLIT`.");
 		};
 
-		let mut tokens = self.input.splitn(2, ' ');
-		let key = if let Some(k) = tokens.next() {
-			k
-		} else {
-			return;
-		};
+		let string = self.input.clone();
+		info!("$ {}", string);
+		let inputs = string.split(';');
 
-		if key.eq_ignore_ascii_case("clear") {
-			self.input.clear();
-			self.log.clear();
-			return;
-		} else if key.eq_ignore_ascii_case("clearhist") {
-			info!("History of submitted commands cleared.");
-			self.input.clear();
-			self.history.clear();
-			self.history_pos = 0;
-			return;
-		}
+		for input in inputs {
+			let mut tokens = input.splitn(2, ' ');
 
-		let args = if let Some(a) = tokens.next() { a } else { "" };
-		let args_iter = RGX_ARGSPLIT.captures_iter(args);
-		let mut args = Vec::<&str>::default();
-
-		for arg in args_iter {
-			let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
-				Some(a) => a,
-				None => {
-					continue;
-				}
+			let key = if let Some(k) = tokens.next() {
+				k.trim()
+			} else {
+				continue;
 			};
 
-			args.push(arg_match.as_str());
-		}
-
-		info!("$ {}", self.input);
-
-		let help = key.eq_ignore_ascii_case("help") || key == "?";
-		let mut cmd_found = false;
-
-		if help {
-			if !args.is_empty() {
-				match self.find_command(args[0]) {
-					Some(cmd) => {
-						cmd_found = true;
-						(cmd.help)(cmd, args);
+			// If the user submitted "cmd ; cmd", then `key` is currently empty
+			// at `inputs[1]`. Peek again just in case
+			let key = if key.is_empty() {
+				match tokens.next() {
+					Some(k) => k.trim(),
+					None => {
+						continue;
 					}
-					None => {}
-				};
+				}
 			} else {
-				self.log.push("All available commands:".to_string());
+				key
+			};
 
-				for cmd in &self.commands {
-					self.log.push(cmd.id.to_string());
-				}
-
-				cmd_found = true;
-			}
-		} else {
-			match self.find_command(key) {
-				Some(cmd) => {
-					cmd_found = true;
-
-					match (cmd.func)(cmd, args) {
-						Request::None => {}
-						req => {
-							self.requests.push_front(req);
-						}
-					};
-				}
-				None => {}
-			}
-		}
-
-		for alias in &self.aliases {
-			if !key.eq_ignore_ascii_case(&alias.0) {
+			if key.eq_ignore_ascii_case("clear") {
+				self.log.clear();
+				continue;
+			} else if key.eq_ignore_ascii_case("clearhist") {
+				info!("History of submitted commands cleared.");
+				self.history.clear();
+				self.history_pos = 0;
 				continue;
 			}
 
-			// TODO
-		}
+			let args = if let Some(a) = tokens.next() { a } else { "" };
+			let args_iter = RGX_ARGSPLIT.captures_iter(args);
+			let mut args = Vec::<&str>::default();
 
-		if !cmd_found {
-			info!("Unknown command: {}", key);
+			for arg in args_iter {
+				let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
+					Some(a) => a,
+					None => {
+						continue;
+					}
+				};
+
+				args.push(arg_match.as_str());
+			}
+
+			let help = key.eq_ignore_ascii_case("help") || key == "?";
+			let mut cmd_found = false;
+
+			if help {
+				if !args.is_empty() {
+					match self.find_command(args[0]) {
+						Some(cmd) => {
+							cmd_found = true;
+							(cmd.help)(cmd, args);
+						}
+						None => {}
+					};
+				} else {
+					self.log.push("All available commands:".to_string());
+
+					for cmd in &self.commands {
+						self.log.push(cmd.id.to_string());
+					}
+
+					cmd_found = true;
+				}
+			} else {
+				match self.find_command(key) {
+					Some(cmd) => {
+						cmd_found = true;
+
+						match (cmd.func)(cmd, args) {
+							Request::None => {}
+							req => {
+								self.requests.push_front(req);
+							}
+						};
+					}
+					None => {}
+				}
+			}
+
+			if !cmd_found {
+				info!("Unknown command: {}", key);
+			}
 		}
 
 		self.scroll_to_bottom = true;
