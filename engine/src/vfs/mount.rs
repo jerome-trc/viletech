@@ -243,12 +243,9 @@ impl VirtualFs {
 			vpath.push(&name);
 
 			if RGXSET_MAPMARKER.is_match(&name) {
-				match mapfold.take() {
-					Some(entry) => {
-						ret.push(entry);
-					}
-					None => {}
-				};
+				if let Some(entry) = mapfold.take() {
+					ret.push(entry);
+				}
 
 				mapfold = Some(Entry::new_dir(vpath, this_hash));
 				continue;

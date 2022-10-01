@@ -353,10 +353,9 @@ impl ImpureVfs for VirtualFs {
 					return GameDataKind::Impure { manifest: pb };
 				}
 
-				match check_path(real_path) {
-					Some(kind) => return kind,
-					None => {}
-				};
+				if let Some(kind) = check_path(real_path) {
+					return kind;
+				}
 			}
 		};
 

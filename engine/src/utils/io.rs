@@ -134,11 +134,11 @@ pub fn is_doom_gfx(bytes: &[u8]) -> bool {
 		return false;
 	}
 
-	if top < -2000 || top > 2000 {
+	if !(-2000..=2000).contains(&top) {
 		return false;
 	}
 
-	if left < -2000 || left > 2000 {
+	if !(-2000..=2000).contains(&left) {
 		return false;
 	}
 

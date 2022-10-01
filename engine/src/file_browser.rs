@@ -95,14 +95,11 @@ impl FileBrowser {
 				up.clicked()
 			});
 
-			match parent {
-				Some(p) => {
-					if resp.inner {
-						self.current_path = p.to_path_buf();
-					}
+			if let Some(p) = parent {
+				if resp.inner {
+					self.current_path = p.to_path_buf();
 				}
-				None => {}
-			};
+			}
 		});
 
 		let entries = match fs::read_dir(&self.current_path) {

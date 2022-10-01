@@ -253,25 +253,13 @@ impl<'lua> DataCore<'lua> {
 	/// Note: UUIDs are checked for an exact match.
 	#[must_use]
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
-		for namespace in &self.namespaces {
-			if namespace.meta.uuid == uuid {
-				return Some(namespace);
-			}
-		}
-
-		None
+		self.namespaces.iter().find(|ns| ns.meta.uuid == uuid)
 	}
 
 	/// Note: UUIDs are checked for an exact match.
 	#[must_use]
 	pub fn get_namespace_mut(&'lua mut self, uuid: &str) -> Option<&mut Namespace> {
-		for namespace in &mut self.namespaces {
-			if namespace.meta.uuid == uuid {
-				return Some(namespace);
-			}
-		}
-
-		None
+		self.namespaces.iter_mut().find(|ns| ns.meta.uuid == uuid)
 	}
 
 	// Takes a glob pattern.

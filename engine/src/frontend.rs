@@ -24,7 +24,7 @@ use std::{
 
 use crate::{file_browser::FileBrowser, utils::string::*};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum FrontendAction {
 	None,
 	Quit,

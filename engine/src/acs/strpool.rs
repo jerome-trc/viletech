@@ -80,11 +80,8 @@ impl Entry {
 	}
 
 	fn unlock(&mut self, level_num: u16) {
-		match self.locks.iter().position(|l| *l == level_num) {
-			Some(pos) => {
-				self.locks.swap_remove(pos);
-			}
-			None => {}
+		if let Some(pos) = self.locks.iter().position(|l| *l == level_num) {
+			self.locks.swap_remove(pos);
 		}
 	}
 }
