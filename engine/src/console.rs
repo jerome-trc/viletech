@@ -26,10 +26,12 @@ use egui::{
 use lazy_static::lazy_static;
 use log::{error, info};
 use regex::Regex;
-use std::{cell::Cell, collections::VecDeque, io, path::PathBuf, thread, time::Duration};
+use std::{cell::Cell, collections::VecDeque, io, thread, time::Duration};
 use winit::event::{KeyboardInput, VirtualKeyCode};
 
-pub struct Console {
+use crate::terminal::{self, Alias, Terminal};
+
+pub struct Console<C: terminal::Command> {
 	open: Cell<bool>,
 	/// Takes messages written by logging to fill `log`.
 	receiver: Receiver<String>,
@@ -39,8 +41,7 @@ pub struct Console {
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
 	history: Vec<String>,
-	_aliases: Vec<Alias>,
-	commands: Vec<Command>,
+	terminal: Terminal<C>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
 
@@ -49,10 +50,11 @@ pub struct Console {
 	scroll_to_bottom: bool,
 	cursor_to_end: bool,
 
-	pub requests: VecDeque<Request>,
+	pub requests: VecDeque<C::Output>,
 }
 
-impl Console {
+// Public interface.
+impl<C: terminal::Command> Console<C> {
 	#[must_use]
 	pub fn new(msg_receiver: Receiver<String>) -> Self {
 		Console {
@@ -63,238 +65,16 @@ impl Console {
 			receiver: msg_receiver,
 			log: Vec::<String>::default(),
 			history: Vec::<String>::default(),
-			_aliases: Vec::<Alias>::default(),
-			commands: Vec::<Command>::default(),
+			terminal: Terminal::<C>::new(|key| {
+				info!("Unknown command: {}", key);
+			}),
 			input: String::with_capacity(512),
 			history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			cursor_to_end: false,
-			requests: VecDeque::<Request>::default(),
+			requests: VecDeque::<C::Output>::default(),
 		}
-	}
-
-	#[must_use]
-	fn find_command(&self, key: &str) -> Option<&Command> {
-		for cmd in &self.commands {
-			if !key.eq_ignore_ascii_case(cmd.id) {
-				continue;
-			}
-
-			return Some(cmd);
-		}
-
-		None
-	}
-
-	fn try_submit(&mut self) {
-		if self.input.is_empty() {
-			info!("$");
-			self.scroll_to_bottom = true;
-			return;
-		}
-
-		match self.history.last() {
-			Some(last_cmd) => {
-				if last_cmd != &self.input[..] {
-					self.history.push(self.input.clone());
-					self.history_pos = self.history.len();
-				}
-			}
-			None => {
-				self.history.push(self.input.clone());
-				self.history_pos = self.history.len();
-			}
-		};
-
-		lazy_static! {
-			static ref RGX_ARGSPLIT: Regex = Regex::new(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#)
-				.expect("Failed to evaluate `Console::try_submit::RGX_ARGSPLIT`.");
-		};
-
-		let string = self.input.clone();
-		info!("$ {}", string);
-		let inputs = string.split(';');
-
-		for input in inputs {
-			let mut tokens = input.splitn(2, ' ');
-
-			let key = if let Some(k) = tokens.next() {
-				k.trim()
-			} else {
-				continue;
-			};
-
-			// If the user submitted "cmd ; cmd", then `key` is currently empty
-			// at `inputs[1]`. Peek again just in case
-			let key = if key.is_empty() {
-				match tokens.next() {
-					Some(k) => k.trim(),
-					None => {
-						continue;
-					}
-				}
-			} else {
-				key
-			};
-
-			if key.eq_ignore_ascii_case("clear") {
-				self.log.clear();
-				continue;
-			} else if key.eq_ignore_ascii_case("clearhist") {
-				info!("History of submitted commands cleared.");
-				self.history.clear();
-				self.history_pos = 0;
-				continue;
-			}
-
-			let args = if let Some(a) = tokens.next() { a } else { "" };
-			let args_iter = RGX_ARGSPLIT.captures_iter(args);
-			let mut args = Vec::<&str>::default();
-
-			for arg in args_iter {
-				let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
-					Some(a) => a,
-					None => {
-						continue;
-					}
-				};
-
-				args.push(arg_match.as_str());
-			}
-
-			let help = key.eq_ignore_ascii_case("help") || key == "?";
-			let mut cmd_found = false;
-
-			if help {
-				if !args.is_empty() {
-					match self.find_command(args[0]) {
-						Some(cmd) => {
-							cmd_found = true;
-							(cmd.help)(cmd, args);
-						}
-						None => {}
-					};
-				} else {
-					self.log.push("All available commands:".to_string());
-
-					for cmd in &self.commands {
-						self.log.push(cmd.id.to_string());
-					}
-
-					cmd_found = true;
-				}
-			} else {
-				match self.find_command(key) {
-					Some(cmd) => {
-						cmd_found = true;
-
-						match (cmd.func)(cmd, args) {
-							Request::None => {}
-							req => {
-								self.requests.push_front(req);
-							}
-						};
-					}
-					None => {}
-				}
-			}
-
-			if !cmd_found {
-				info!("Unknown command: {}", key);
-			}
-		}
-
-		self.scroll_to_bottom = true;
-		self.input.clear();
-	}
-
-	fn draw_log_line(&self, ui: &mut egui::Ui, line: &str) {
-		lazy_static! {
-			static ref RGX_LOGOUTPUT: Regex =
-				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
-		};
-
-		let font_id = TextStyle::Monospace.resolve(ui.style());
-
-		if !RGX_LOGOUTPUT.is_match(line) {
-			let job = LayoutJob::simple_singleline(line.to_string(), font_id, Color32::GRAY);
-			let galley = ui.fonts().layout_job(job);
-			ui.label(galley);
-			return;
-		}
-
-		let mut job = LayoutJob::default();
-		let mut s = line.splitn(2, "] ");
-
-		let loglvl = s.next().unwrap_or_default();
-
-		let color = match &loglvl[1..] {
-			"INFO" => Color32::GREEN,
-			"WARN" => Color32::YELLOW,
-			"ERROR" => Color32::RED,
-			_ => Color32::LIGHT_BLUE,
-		};
-
-		let tfmt = TextFormat::simple(font_id.clone(), Color32::GRAY);
-
-		job.append("[", 0.0, tfmt.clone());
-		job.append(&loglvl[1..], 0.0, TextFormat::simple(font_id, color));
-		job.append("] ", 0.0, tfmt.clone());
-		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
-
-		let galley = ui.fonts().layout_job(job);
-		ui.label(galley);
-	}
-
-	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-		let scroll_area = ScrollArea::vertical()
-			.max_height(200.0)
-			.auto_shrink([false; 2]);
-
-		scroll_area.show(ui, |ui| {
-			ui.vertical(|ui| {
-				for item in &self.log {
-					for line in item.lines() {
-						self.draw_log_line(ui, line);
-					}
-				}
-			});
-
-			if self.scroll_to_bottom {
-				self.scroll_to_bottom = false;
-				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
-			}
-		});
-
-		ui.separator();
-
-		ui.horizontal(|ui| {
-			let input_len = self.input.len();
-			let edit_id = egui::Id::new("console_text_edit");
-			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
-			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
-
-			if self.cursor_to_end {
-				self.cursor_to_end = false;
-				let range = CCursorRange::one(CCursor::new(input_len));
-				tes.set_ccursor_range(Some(range));
-				TextEditState::store(tes, ctx, edit_id);
-			}
-
-			if self.defocus_textedit {
-				self.defocus_textedit = false;
-				resp_edit.surrender_focus();
-			}
-
-			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
-				self.try_submit();
-			}
-		});
-	}
-
-	pub fn register_command(&mut self, cmd: Command) {
-		self.commands.push(cmd);
 	}
 
 	pub fn ui(&mut self, ctx: &egui::Context) {
@@ -388,52 +168,176 @@ impl Console {
 			_ => {}
 		}
 	}
-}
 
-pub enum Request {
-	None,
-	// Client-fulfilled requests
-	LuaMem,
-	File(PathBuf),
-	Sound(String),
-	Uptime,
-	WgpuDiag,
-}
+	pub fn register_command(&mut self, id: &'static str, cmd: C, enabled: bool) {
+		self.terminal.register_command(id, cmd, enabled);
+	}
 
-pub struct Command {
-	id: &'static str,
-	/// The vector of arguments never contains the name of the command itself,
-	/// whether aliased or not.
-	func: fn(&Self, Vec<&str>) -> Request,
-	help: fn(&Self, Vec<&str>),
-}
+	pub fn register_alias(&mut self, alias: String, string: String) {
+		self.terminal.register_alias(alias, string);
+	}
 
-impl Command {
-	#[must_use]
-	pub fn new(
-		id: &'static str,
-		func: fn(&Self, Vec<&str>) -> Request,
-		help: fn(&Self, Vec<&str>),
-	) -> Self {
-		Command { id, func, help }
+	pub fn enable_commands(&mut self, predicate: fn(&C) -> bool) {
+		self.terminal.enable_commands(predicate);
+	}
+
+	pub fn disable_commands(&mut self, predicate: fn(&C) -> bool) {
+		self.terminal.disable_commands(predicate);
+	}
+
+	pub fn enable_all_commands(&mut self) {
+		self.terminal.enable_all_commands();
+	}
+
+	pub fn disable_all_commands(&mut self) {
+		self.terminal.disable_all_commands();
+	}
+
+	pub fn all_commands(&self) -> impl Iterator<Item = (&'static str, &C)> {
+		self.terminal.all_commands()
+	}
+
+	pub fn all_aliases(&self) -> impl Iterator<Item = &Alias> {
+		self.terminal.all_aliases()
 	}
 
 	#[must_use]
-	pub fn get_id(&self) -> &'static str {
-		self.id
+	pub fn find_command(&self, key: &str) -> Option<&C> {
+		self.terminal.find_command(key)
 	}
 
-	/// Allows contexts outside this module to register `func` callbacks
-	/// which print out help without increasing visibility any further.
-	pub fn call_help(&self, args: Option<Vec<&str>>) {
-		match args {
-			Some(a) => ((self.help)(self, a)),
-			None => ((self.help)(self, Vec::<&str>::default())),
+	#[must_use]
+	pub fn find_alias(&self, key: &str) -> Option<&Alias> {
+		self.terminal.find_alias(key)
+	}
+
+	pub fn clear_log(&mut self) {
+		self.log.clear();
+	}
+
+	pub fn clear_input_history(&mut self) {
+		self.history.clear();
+		self.history_pos = 0;
+	}
+}
+
+// Internal implementation details.
+impl<C: terminal::Command> Console<C> {
+	fn try_submit(&mut self) {
+		if self.input.is_empty() {
+			info!("$");
+			self.scroll_to_bottom = true;
+			return;
 		}
+
+		match self.history.last() {
+			Some(last_cmd) => {
+				if last_cmd != &self.input[..] {
+					self.history.push(self.input.clone());
+					self.history_pos = self.history.len();
+				}
+			}
+			None => {
+				self.history.push(self.input.clone());
+				self.history_pos = self.history.len();
+			}
+		};
+
+		info!("$ {}", &self.input);
+		let mut ret = self.terminal.submit(&self.input);
+
+		for output in ret.drain(..) {
+			self.requests.push_back(output);
+		}
+
+		self.scroll_to_bottom = true;
+		self.input.clear();
+	}
+
+	fn draw_log_line(&self, ui: &mut egui::Ui, line: &str) {
+		lazy_static! {
+			static ref RGX_LOGOUTPUT: Regex =
+				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
+		};
+
+		let font_id = TextStyle::Monospace.resolve(ui.style());
+
+		if !RGX_LOGOUTPUT.is_match(line) {
+			let job = LayoutJob::simple_singleline(line.to_string(), font_id, Color32::GRAY);
+			let galley = ui.fonts().layout_job(job);
+			ui.label(galley);
+			return;
+		}
+
+		let mut job = LayoutJob::default();
+		let mut s = line.splitn(2, "] ");
+
+		let loglvl = s.next().unwrap_or_default();
+
+		let color = match &loglvl[1..] {
+			"INFO" => Color32::GREEN,
+			"WARN" => Color32::YELLOW,
+			"ERROR" => Color32::RED,
+			_ => Color32::LIGHT_BLUE,
+		};
+
+		let tfmt = TextFormat::simple(font_id.clone(), Color32::GRAY);
+
+		job.append("[", 0.0, tfmt.clone());
+		job.append(&loglvl[1..], 0.0, TextFormat::simple(font_id, color));
+		job.append("] ", 0.0, tfmt.clone());
+		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
+
+		let galley = ui.fonts().layout_job(job);
+		ui.label(galley);
+	}
+
+	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+		let scroll_area = ScrollArea::vertical()
+			.max_height(200.0)
+			.auto_shrink([false; 2]);
+
+		scroll_area.show(ui, |ui| {
+			ui.vertical(|ui| {
+				for item in &self.log {
+					for line in item.lines() {
+						self.draw_log_line(ui, line);
+					}
+				}
+			});
+
+			if self.scroll_to_bottom {
+				self.scroll_to_bottom = false;
+				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+			}
+		});
+
+		ui.separator();
+
+		ui.horizontal(|ui| {
+			let input_len = self.input.len();
+			let edit_id = egui::Id::new("console_text_edit");
+			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
+			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+
+			if self.cursor_to_end {
+				self.cursor_to_end = false;
+				let range = CCursorRange::one(CCursor::new(input_len));
+				tes.set_ccursor_range(Some(range));
+				TextEditState::store(tes, ctx, edit_id);
+			}
+
+			if self.defocus_textedit {
+				self.defocus_textedit = false;
+				resp_edit.surrender_focus();
+			}
+
+			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
+				self.try_submit();
+			}
+		});
 	}
 }
-
-type Alias = (String, &'static str);
 
 pub struct Writer {
 	buffer: Vec<u8>,

@@ -18,11 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use clap::Parser;
-use impure::depends::{
-	log::error,
-	renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent},
-	sha3::{Digest, Sha3_256},
-	*,
+use impure::{
+	depends::{
+		log::error,
+		renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent},
+		sha3::{Digest, Sha3_256},
+		*,
+	},
+	terminal::{self, Terminal},
 };
 use log::info;
 use std::{
@@ -30,8 +33,17 @@ use std::{
 	io::{self, Write},
 	net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
 	sync::atomic::AtomicBool,
-	time::{Duration, SystemTime},
+	time::{Duration, Instant, SystemTime},
 };
+
+mod commands;
+
+use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
+
+pub struct ServerCore {
+	start_time: Instant,
+	terminal: Terminal<Command>,
+}
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
@@ -46,7 +58,7 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let start_time = std::time::Instant::now();
+	let start_time = Instant::now();
 	let args = Args::parse();
 
 	match impure::log_init(None) {
@@ -100,6 +112,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let lobby_running = AtomicBool::new(true);
 	let mut cmd_buffer = String::with_capacity(64);
+
+	let mut core = ServerCore {
+		start_time,
+		terminal: Terminal::<Command>::new(|key| {
+			info!("Unknown command: {}", key);
+		}),
+	};
 
 	let res = crossbeam::thread::scope(|scope| {
 		let lobby_thread = scope.spawn(|_| {
@@ -155,7 +174,72 @@ fn main() -> Result<(), Box<dyn Error>> {
 			}
 		});
 
-		loop {
+		core.terminal.register_command(
+			"alias",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_alias,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"args",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_args,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"exit",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_quit,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"help",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_help,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"home",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_home,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"quit",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_quit,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"uptime",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_uptime,
+			},
+			true,
+		);
+		core.terminal.register_command(
+			"version",
+			Command {
+				flags: CommandFlags::all(),
+				func: commands::cmd_version,
+			},
+			true,
+		);
+
+		'term: loop {
 			print!("$ ");
 
 			match io::stdout().flush() {
@@ -176,17 +260,55 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 			let cmd = cmd_buffer.trim();
 
-			if cmd.eq_ignore_ascii_case("quit") || cmd.eq_ignore_ascii_case("exit") {
-				lobby_running.store(false, std::sync::atomic::Ordering::Release);
-
-				match lobby_thread.join() {
-					Ok(_) => {}
-					Err(err) => {
-						println!("{:?}", err);
+			for output in core.terminal.submit(cmd) {
+				match output {
+					CommandRequest::None => {}
+					CommandRequest::Callback(func) => {
+						(func)(&mut core);
 					}
-				};
+					CommandRequest::Exit => {
+						lobby_running.store(false, std::sync::atomic::Ordering::Release);
 
-				break;
+						match lobby_thread.join() {
+							Ok(_) => {}
+							Err(err) => {
+								println!("Failed to join lobby thread: {:?}", err);
+							}
+						};
+
+						break 'term;
+					}
+					CommandRequest::EchoAllCommands => {
+						let mut string = "All available commands:".to_string();
+
+						for command in core.terminal.all_commands() {
+							string.push('\r');
+							string.push('\n');
+							string.push_str(command.0);
+						}
+
+						info!("{}", string);
+					}
+					CommandRequest::CommandHelp(key) => match core.terminal.find_command(&key) {
+						Some(cmd) => {
+							(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
+						}
+						None => {
+							info!("No command found by name: {}", key);
+						}
+					},
+					CommandRequest::CreateAlias(alias, string) => {
+						core.terminal.register_alias(alias, string);
+					}
+					CommandRequest::EchoAlias(alias) => match core.terminal.find_alias(&alias) {
+						Some(a) => {
+							info!("{}", a.1);
+						}
+						None => {
+							info!("No existing alias: {}", alias);
+						}
+					},
+				}
 			}
 
 			cmd_buffer.clear();

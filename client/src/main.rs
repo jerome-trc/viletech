@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod commands;
 #[allow(dead_code)]
 mod core;
 
@@ -160,8 +161,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 		WinitEvent::MainEventsCleared => {
 			core.process_console_requests();
+			core.scene_change(control_flow);
 			core.audio.update();
-			core.scene_change();
 			core.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {

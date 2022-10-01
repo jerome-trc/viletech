@@ -20,11 +20,11 @@ impure = {
 	--- @param ... any Values to format into `msg`.
 	warn = function(msg, ...) end,
 
-	--- @param msg string A Rust-like format string (only supports `{}`). Gets prefixed with `[ERROR]`
+	--- @param msg string A Rust-like format string (only supports `{}`). Gets prefixed with `[ERROR]`.
 	--- @param ... any Values to format into `msg`.
 	err = function(msg, ...) end,
 
-	--- @param msg string A Rust-like format string (only supports `{}`). Gets prefixed with `[DEBUG]`
+	--- @param msg string A Rust-like format string (only supports `{}`). Gets prefixed with `[DEBUG]`.
 	--- @param ... any Values to format into `msg`.
 	debug = function(msg, ...) end,
 }

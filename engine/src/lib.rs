@@ -44,6 +44,8 @@ pub mod math;
 pub mod rng;
 #[allow(dead_code)]
 pub mod sim;
+// #[allow(unused)]
+pub mod terminal;
 #[allow(dead_code)]
 pub mod user;
 pub mod utils;
@@ -66,6 +68,7 @@ pub extern crate num_derive;
 pub extern crate num_traits;
 
 pub mod depends {
+	pub extern crate bitflags;
 	pub extern crate bytemuck;
 	pub extern crate chrono;
 	pub extern crate crossbeam;

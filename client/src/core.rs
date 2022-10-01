@@ -19,14 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use impure::{
 	audio::{self, AudioCore},
-	console::{Command as ConsoleCommand, Console, Request as ConsoleRequest},
+	console::Console,
 	data::game::DataCore,
 	depends::*,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
-	utils::path::*,
+	terminal,
 	vfs::{ImpureVfs, VirtualFs},
 };
 
@@ -40,13 +40,16 @@ use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
 use std::{
-	env,
 	error::Error,
 	path::PathBuf,
 	sync::{atomic::AtomicBool, Arc},
 	thread::JoinHandle,
 };
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
+
+use crate::commands::{
+	self, Command as ConsoleCommand, CommandFlags as ConsoleCommandFlags, Request as ConsoleRequest,
+};
 
 enum Scene {
 	/// The user hasn't entered the game yet. From here they can select a user
@@ -67,6 +70,7 @@ enum Scene {
 }
 
 enum SceneChange {
+	Exit,
 	Title { to_mount: Vec<PathBuf> },
 }
 
@@ -78,7 +82,7 @@ pub struct ClientCore<'lua> {
 	pub rng: RngCore<WyRand>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
-	pub console: Console,
+	pub console: Console<ConsoleCommand>,
 	pub gui: World,
 	pub camera: Camera,
 	pub playsim: Arc<RwLock<PlaySim>>,
@@ -94,7 +98,7 @@ impl<'lua> ClientCore<'lua> {
 		lua: Lua,
 		data: DataCore<'lua>,
 		gfx: GraphicsCore,
-		console: Console,
+		console: Console<ConsoleCommand>,
 	) -> Result<Self, Box<dyn Error>> {
 		let audio_mgr_settings = AudioManagerSettings::default();
 		let sound_cap = audio_mgr_settings.capacities.sound_capacity;
@@ -210,20 +214,50 @@ impl<'lua> ClientCore<'lua> {
 	}
 
 	pub fn process_console_requests(&mut self) {
-		let cons_reqs: Vec<_> = self.console.requests.drain(..).collect();
-
-		for req in cons_reqs {
-			match req {
+		while !self.console.requests.is_empty() {
+			match self.console.requests.pop_front().unwrap() {
 				ConsoleRequest::None => {}
+				ConsoleRequest::EchoAllCommands => {
+					let mut string = "All available commands:".to_string();
+
+					for command in self.console.all_commands() {
+						string.push('\r');
+						string.push('\n');
+						string.push_str(command.0);
+					}
+
+					info!("{}", string);
+				}
+				ConsoleRequest::CommandHelp(key) => match self.console.find_command(&key) {
+					Some(cmd) => {
+						(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
+					}
+					None => {
+						info!("No command found by name: {}", key);
+					}
+				},
+				ConsoleRequest::Exit => {
+					self.next_scene = Some(SceneChange::Exit);
+					return;
+				}
+				ConsoleRequest::CreateAlias(alias, string) => {
+					info!("Alias registered: {}\r\nExpands to: {}", &alias, &string);
+					self.console.register_alias(alias, string);
+				}
+				ConsoleRequest::EchoAlias(alias) => match self.console.find_alias(&alias) {
+					Some(a) => {
+						info!("{}", a.1);
+					}
+					None => {
+						info!("No existing alias: {}", alias);
+					}
+				},
+				ConsoleRequest::Callback(func) => {
+					(func)(self);
+				}
 				ConsoleRequest::File(p) => {
 					let vfsg = self.vfs.read();
 					info!("{}", vfsg.ccmd_file(p));
-				}
-				ConsoleRequest::LuaMem => {
-					info!(
-						"Client Lua state heap usage (bytes): {}",
-						self.lua.used_memory()
-					);
 				}
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
@@ -253,12 +287,6 @@ impl<'lua> ClientCore<'lua> {
 						}
 					};
 				}
-				ConsoleRequest::Uptime => {
-					info!("{}", impure::uptime_string(self.start_time))
-				}
-				ConsoleRequest::WgpuDiag => {
-					info!("{}", self.gfx.diag());
-				}
 			}
 		}
 	}
@@ -273,7 +301,7 @@ impl<'lua> ClientCore<'lua> {
 		self.console.on_key_event(input);
 	}
 
-	pub fn scene_change(&mut self) {
+	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {
 		let next_scene = self.next_scene.take();
 
 		match next_scene {
@@ -281,6 +309,10 @@ impl<'lua> ClientCore<'lua> {
 				// TODO: Mark as likely with intrinsics...?
 			}
 			Some(scene) => match scene {
+				SceneChange::Exit => {
+					info!("{}", impure::uptime_string(self.start_time));
+					*control_flow = ControlFlow::Exit;
+				}
 				SceneChange::Title { to_mount } => {
 					let mut metas = vec![self
 						.vfs
@@ -304,122 +336,131 @@ impl<'lua> ClientCore<'lua> {
 // Internal implementation details: general.
 impl<'lua> ClientCore<'lua> {
 	fn register_console_commands(&mut self) {
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
+			"alias",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_alias,
+			},
+			true,
+		);
+
+		self.console.register_command(
 			"args",
-			|_, _| {
-				let mut args = env::args();
-
-				let argv0 = match args.next() {
-					Some(a) => a,
-					None => {
-						error!("This runtime did not receive `argv[0]`.");
-						return ConsoleRequest::None;
-					}
-				};
-
-				let mut output = argv0;
-
-				for arg in args {
-					output.push('\r');
-					output.push('\n');
-					output.push('\t');
-					output += &arg;
-				}
-
-				info!("{}", output);
-
-				ConsoleRequest::None
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_args,
 			},
-			|_, _| info!("Prints out all of the program's launch arguments."),
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
+			"clear",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_clear,
+			},
+			true,
+		);
+
+		self.console.register_command(
+			"exit",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_exit,
+			},
+			true,
+		);
+
+		self.console.register_command(
 			"file",
-			|_, args| {
-				let path = if args.is_empty() { "/" } else { args[0] };
-				ConsoleRequest::File(PathBuf::from(path))
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_file,
 			},
-			|_, _| {
-				info!(
-					"Prints the contents of a virtual file system directory, \
-					or information about a file."
-				);
-			},
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
+			"hclear",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_hclear,
+			},
+			true,
+		);
+
+		self.console.register_command(
+			"help",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_help,
+			},
+			true,
+		);
+
+		self.console.register_command(
 			"home",
-			|_, _| {
-				match get_user_dir() {
-					Some(p) => info!("{}", p.display()),
-					None => {
-						info!(
-							"Home directory path is malformed, \
-							or this platform is unsupported."
-						);
-					}
-				}
-
-				ConsoleRequest::None
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_home,
 			},
-			|_, _| {
-				info!("Prints the directory used to store user info.");
-			},
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
 			"luamem",
-			|_, _| ConsoleRequest::LuaMem,
-			|_, _| {
-				info!("Prints the current heap memory used by the client-side Lua state.");
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_luamem,
 			},
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
+			"quit",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_exit,
+			},
+			true,
+		); // Built-in alias for "exit"
+
+		self.console.register_command(
 			"sound",
-			|this, args| {
-				if args.is_empty() {
-					this.call_help(None);
-					return ConsoleRequest::None;
-				}
-
-				ConsoleRequest::Sound(args[0].to_string())
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_sound,
 			},
-			|this, _| {
-				info!(
-					"Starts a sound at default settings from the virtual file system.
-					Usage: {} <virtual file path/asset number/asset ID>",
-					this.get_id()
-				);
-			},
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
 			"uptime",
-			|_, _| ConsoleRequest::Uptime,
-			|_, _| {
-				info!("Prints the length of the time the engine has been running.");
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_uptime,
 			},
-		));
+			true,
+		);
 
-		self.console.register_command(ConsoleCommand::new(
-			"version",
-			|_, _| {
-				info!("{}", impure::full_version_string());
-				ConsoleRequest::None
-			},
-			|_, _| {
-				info!("Prints the engine version.");
-			},
-		));
-
-		self.console.register_command(ConsoleCommand::new(
+		self.console.register_command(
 			"wgpudiag",
-			|_, _| ConsoleRequest::WgpuDiag,
-			|_, _| {
-				info!("Prints information about the graphics device and WGPU backend.");
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_wgpudiag,
 			},
-		));
+			true,
+		);
+
+		self.console.register_command(
+			"version",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_version,
+			},
+			true,
+		);
 	}
 
 	fn start_game(&mut self) {}
