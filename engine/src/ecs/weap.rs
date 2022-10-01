@@ -45,7 +45,6 @@ enum WeaponBobStyle {
 
 bitflags::bitflags! {
 	pub struct WeaponFlags : u8 {
-		const NONE = 0;
 		const NO_AUTOAIM = 1 << 0;
 		/// If picking up the first instance of this weapon, don't
 		/// automatically switch to it as per the vanilla Doom behavior.

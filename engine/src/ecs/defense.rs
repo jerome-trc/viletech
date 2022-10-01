@@ -33,7 +33,6 @@ pub struct Defense {
 
 bitflags::bitflags! {
 	pub struct DefenseFlags: u8 {
-		const NONE = 0;
 		/// No incoming damage, no flincing, no target changes.
 		const INVULNERABLE = 1 << 0;
 		/// Entity has one indestructible hit point.

@@ -34,7 +34,6 @@ pub struct Motion {
 
 bitflags::bitflags! {
 	pub struct MotionFlags : u8 {
-		const NONE = 0;
 		const NOGRAVITY = 1 << 0;
 		const FALLDAMAGE = 1 << 1;
 	}

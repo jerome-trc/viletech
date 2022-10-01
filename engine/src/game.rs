@@ -61,7 +61,6 @@ pub enum SpawnFilter {
 
 bitflags! {
 	pub struct SkillFlags: u16 {
-		const NONE = 0;
 		const DEFAULT = 1 << 0;
 		/// Does not appear in the selection menu.
 		const HIDDEN = 1 << 1;
@@ -92,7 +91,6 @@ pub struct DamageType {
 
 bitflags! {
 	pub struct DamageTypeFlags: u8 {
-		const NONE = 0;
 		const REPLACE_FACTOR = 1 << 0;
 		const BYPASS_ARMOR = 1 << 1;
 	}
@@ -138,7 +136,6 @@ impl<'l> ActorState<'l> {
 
 bitflags! {
 	pub struct ActorStateFlags : u8 {
-		const NONE = 0;
 		const FAST = 1 << 0;
 		const SLOW = 1 << 1;
 		const FULLBRIGHT = 1 << 2;

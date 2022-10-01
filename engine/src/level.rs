@@ -41,7 +41,6 @@ pub struct LineDef {
 bitflags! {
 	#[derive(Default)]
 	pub struct LineDefFlags: u32 {
-		const NONE = 0;
 		/// If set, line blocks things.
 		const BLOCK_THINGS = 1 << 0;
 		/// If set, line blocks monsters.
@@ -129,7 +128,6 @@ pub struct Metadata {
 bitflags! {
 	#[derive(Default)]
 	pub struct Flags: u8 {
-		const NONE = 0;
 		/// Switch lines must be vertically reachable to allow interaction.
 		const CHECK_SWITCH_RANGE = 1 << 0;
 	}
@@ -146,7 +144,6 @@ pub struct Episode {
 bitflags! {
 	#[derive(Default)]
 	pub struct EpisodeFlags: u8 {
-		const NONE = 0;
 		const NO_SKILL_MENU = 1 << 0;
 		const OPTIONAL = 1 << 1;
 		const EXTENDED = 1 << 2;
@@ -166,7 +163,6 @@ pub struct Cluster {
 bitflags! {
 	#[derive(Default)]
 	pub struct ClusterFlags: u8 {
-		const NONE = 0;
 		const IS_HUB = 1 << 0;
 		const ALLOW_INTERMISSION = 1 << 1;
 	}

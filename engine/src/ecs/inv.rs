@@ -38,7 +38,6 @@ pub struct Item {
 
 bitflags::bitflags! {
 	pub struct ItemFlags : u8 {
-		const NONE = 0;
 		const INVBAR = 1 << 0;
 		const KEEP_DEPLETED = 1 << 1;
 		const AUTO_ACTIVATE = 1 << 2;

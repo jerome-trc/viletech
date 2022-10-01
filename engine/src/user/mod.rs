@@ -33,7 +33,6 @@ use crate::{
 
 bitflags! {
 	pub struct PrefFlags: u8 {
-		const NONE = 0;
 		/// If unset, this pref only applies client-side.
 		const SIM = 1 << 0;
 	}

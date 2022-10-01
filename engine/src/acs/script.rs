@@ -51,7 +51,6 @@ pub(super) enum Kind {
 bitflags::bitflags! {
 	#[derive(Default)]
 	pub(super) struct PointerFlags: u16 {
-		const NONE = 0;
 		const NET_SAFE = 1 << 0;
 	}
 }
@@ -95,7 +94,6 @@ impl Pointer {
 
 bitflags::bitflags! {
 	pub struct Flags : u8 {
-		const NONE = 0;
 		const BACKSIDE = 1 << 0;
 		const HANDLE_ASPECT = 1 << 1;
 	}

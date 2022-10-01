@@ -31,7 +31,6 @@ pub struct Bounce {
 
 bitflags::bitflags! {
 	pub struct BounceFlags: u16 {
-		const NONE = 0;
 		const ON_WALLS = 1 << 0;
 		const ON_FLOORS = 1 << 1;
 		const ON_CEILINGS = 1 << 2;

@@ -33,7 +33,6 @@ pub struct Monster {
 
 bitflags::bitflags! {
 	pub struct MonsterFlags : u8 {
-		const NONE = 0;
 		const AMBUSH = 1 << 0;
 		const AVOID_HAZARDS = 1 << 1;
 		const FAST_RETALIATE = 1 << 2;

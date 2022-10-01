@@ -103,7 +103,6 @@ pub(super) enum HexenClass {
 
 bitflags! {
 	pub(super) struct HudMessageFlags: u8 {
-		const NONE = 0;
 		const COLOR_STRING = 1 << 0;
 		const ADD_BLEND = 1 << 1;
 		const ALPHA = 1 << 2;
@@ -127,7 +126,6 @@ pub(super) enum LevelInfo {
 
 bitflags! {
 	pub(super) struct LineAttackFlags: u8 {
-		const NONE = 0;
 		const NO_RANDOM_PUFF_Z = 1 << 0;
 		const NO_IMPACT_DECAL = 1 << 1;
 	}
@@ -138,7 +136,6 @@ pub(super) const LINE_BACK: i32 = 1;
 
 bitflags! {
 	pub(super) struct PickActorFlags: u8 {
-		const NONE = 0;
 		const FORCE_TID = 1 << 0;
 		const RETURN_TID = 1 << 1;
 	}
@@ -193,7 +190,6 @@ pub(super) enum SoundType {
 
 bitflags! {
 	pub(super) struct SpawnDecalFlags: u8 {
-		const NONE = 0;
 		const ABS_ANGLE = 1 << 0;
 		const PERMANENT = 1 << 1;
 		const FIXED_Z_OFFS = 1 << 2;
