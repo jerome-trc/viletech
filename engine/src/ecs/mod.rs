@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 pub struct Common {
 	/// For display to the user. Known in GZDoom as a "tag".
 	name: String,
-	/// Game tics since this entity was spawned.
-	lifetime: u32,
+	/// The sim tic on which this entity was spawned.
+	spawned_tic: u32,
 }
 
 /// A template used to instantiate entities.
