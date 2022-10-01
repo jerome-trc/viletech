@@ -68,6 +68,7 @@ pub(super) enum ActorProperty {
 	MaxDropOffHeight,
 	DamageType,
 	SoundClass,
+	FriendlySeeBlocks,
 }
 
 pub(super) enum ArmorInfo {
