@@ -24,7 +24,7 @@ use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
 use log::{error, warn};
 use serde::Deserialize;
-use zsparse::err::ParsingErrorLevel as ZsParsingErrorLevel;
+use zscript::parser::error::ParsingErrorLevel as ZsParsingErrorLevel;
 
 use crate::{
 	ecs::Blueprint,

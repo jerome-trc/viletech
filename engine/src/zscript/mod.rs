@@ -19,10 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use zsparse::{
-	err::ParsingError,
-	filesystem::{File, FileSystem, Files},
-	parser_manager::{parse_filesystem, FileIndexAndAst},
+pub mod parser;
+
+use parser::{
+	error::ParsingError,
+	fs::{File, FileSystem, Files},
+	manager::{parse_filesystem, FileIndexAndAst},
 };
 
 use crate::utils::string::line_from_char_index;

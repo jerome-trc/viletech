@@ -44,13 +44,13 @@ pub mod math;
 pub mod rng;
 #[allow(dead_code)]
 pub mod sim;
-// #[allow(unused)]
 pub mod terminal;
 #[allow(dead_code)]
 pub mod user;
 pub mod utils;
 pub mod vfs;
 pub mod wad;
+#[allow(dead_code)]
 pub mod zscript;
 
 // Type aliases

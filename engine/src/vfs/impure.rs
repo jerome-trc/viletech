@@ -29,8 +29,8 @@ use regex::Regex;
 
 use super::{Error, Handle, VirtualFs};
 
-use zsparse::filesystem::File as ZsFile;
-use zsparse::filesystem::FileSystem as ZsFileSystem;
+use crate::zscript::parser::fs::File as ZsFile;
+use crate::zscript::parser::fs::FileSystem as ZsFileSystem;
 
 use crate::{
 	data::{game::GameDataKind, GameDataMeta},

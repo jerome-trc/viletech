@@ -66,10 +66,6 @@ vec1 = { version = "1.8.0", features = ["serde"] }
 wgpu = "0.12"
 winit = "0.26.1"
 zip = "0.6.2"
-zsparse = { version = "0.2.0", package = "zscript_parser", features = [
-	"multithreaded",
-	"gzd_folder_filesystem",
-] }
 
 [[bench]]
 name = "bench"

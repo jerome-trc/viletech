@@ -1494,7 +1494,6 @@ dependencies = [
  "wgpu",
  "winit",
  "zip",
- "zscript_parser",
 ]
 
 [[package]]
@@ -3737,22 +3736,6 @@ dependencies = [
  "sha1",
  "time 0.3.11",
  "zstd",
-]
-
-[[package]]
-name = "zscript_parser"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84aee1612bf2438a93a6eab3d98bae142daaed02467d75772a1ff73ca1b58ea9"
-dependencies = [
- "bitflags",
- "once_cell",
- "parking_lot 0.11.2",
- "rayon",
- "str-utils",
- "unicode-width",
- "vec1",
- "walkdir",
 ]
 
 [[package]]
