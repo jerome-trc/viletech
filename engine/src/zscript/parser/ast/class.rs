@@ -27,7 +27,7 @@ use super::{states::StatesDefinition, Declaration, StaticConstArray};
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "def")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ClassMetadataItemKind {
 	Abstract,
 	Native,
@@ -37,7 +37,7 @@ pub enum ClassMetadataItemKind {
 	Replaces(DottableId),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ClassMetadataItem {
 	pub span: Span,
 	#[serde(flatten)]
@@ -86,7 +86,7 @@ pub struct ExtendClass {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "def")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StructMetadataItemKind {
 	ClearScope,
 	Native,
@@ -95,7 +95,7 @@ pub enum StructMetadataItemKind {
 	Version(StringConst),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct StructMetadataItem {
 	pub span: Span,
 	#[serde(flatten)]

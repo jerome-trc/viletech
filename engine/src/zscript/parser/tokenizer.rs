@@ -32,7 +32,7 @@ macro_rules! rule_grouping_type {
     ($name: ident, $reg_func: ident, $match_func: ident {
         $( $rule: literal => $res: ident ),*
     }) => {
-        #[derive(Debug, PartialEq, Copy, Clone)]
+        #[derive(Debug, Eq, PartialEq, Copy, Clone)]
         pub enum $name {
             $(
                 $res,
@@ -513,7 +513,7 @@ impl<'src> Tokenizer<'src> {
 				data,
 			}
 		} else {
-			let val = (&self.text[self.current_range.clone()])
+			let val = (self.text[self.current_range.clone()])
 				.parse::<u64>()
 				.unwrap_or(u64::max_value());
 			let (long, unsigned) = self.int_suffix();

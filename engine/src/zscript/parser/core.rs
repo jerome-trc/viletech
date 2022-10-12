@@ -59,7 +59,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	pub fn to_errs(self) -> Vec<ParsingError> {
+	pub fn into_errs(self) -> Vec<ParsingError> {
 		self.errs
 	}
 

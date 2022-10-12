@@ -42,25 +42,25 @@ impl From<&Identifier> for NameSymbol {
 	}
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct DottableId {
 	pub span: Span,
 	pub ids: Vec1<Identifier>,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct StringConst {
 	pub span: Span,
 	pub symbol: StringSymbol,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct NameConst {
 	pub span: Span,
 	pub symbol: NameSymbol,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IntConst {
 	pub span: Span,
 	pub val: u64,
@@ -94,7 +94,7 @@ pub struct Const {
 	pub kind: ConstKind,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct VersionInfo {
 	pub major: u16,
 	pub minor: u16,
@@ -191,7 +191,7 @@ pub struct Expression {
 	pub kind: ExpressionKind,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BinaryOp {
 	Add,
 	Subtract,
@@ -241,7 +241,7 @@ pub enum BinaryOp {
 	BitwiseXorAssign,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum PrefixOp {
 	Plus,
 	Minus,
@@ -253,7 +253,7 @@ pub enum PrefixOp {
 	AlignOf,
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum PostfixOp {
 	Increment,
 	Decrement,
@@ -313,7 +313,7 @@ pub struct FunctionCallArg {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "data")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum IntTypeKind {
 	SByte,
 	Byte,
@@ -323,7 +323,7 @@ pub enum IntTypeKind {
 	UInt,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct IntType {
 	pub span: Span,
 	#[serde(flatten)]
@@ -355,7 +355,7 @@ pub struct ConstDefinition {
 	pub expr: Expression,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct FlagDefinition {
 	pub doc_comment: Option<StringSymbol>,
 	pub span: Span,
@@ -364,7 +364,7 @@ pub struct FlagDefinition {
 	pub shift: IntConst,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct PropertyDefinition {
 	pub doc_comment: Option<StringSymbol>,
 	pub span: Span,
@@ -397,7 +397,7 @@ pub struct DefaultDefinition {
 	pub statements: Vec<DefaultStatement>,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct NonWhitespace {
 	pub span: Span,
 	pub symbol: NameSymbol,

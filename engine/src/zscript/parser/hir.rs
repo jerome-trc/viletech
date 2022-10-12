@@ -214,7 +214,7 @@ bitflags! {
 	}
 }
 
-#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Deprecated {
 	pub version: VersionInfo,
 	pub message: Option<StringConst>,
@@ -234,11 +234,11 @@ bitflags! {
 #[serde(tag = "kind", content = "data")]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-	SingleUserType(Identifier),
-	DottedUserType(DottableId),
-	NativeType(Identifier),
-	ReadonlyType(Identifier),
-	ReadonlyNativeType(Identifier),
+	SingleUser(Identifier),
+	DottedUser(DottableId),
+	Native(Identifier),
+	Readonly(Identifier),
+	ReadonlyNative(Identifier),
 	Class(Option<DottableId>),
 	Map(Box<(Type, Type)>),
 	Array(Box<Type>, Option<Expression>),
@@ -435,14 +435,14 @@ pub struct StateLine {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "data")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StateGotoTargetKind {
 	Unscoped(DottableId),
 	Scoped(Identifier, DottableId),
 	Super(DottableId),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct StateGotoTarget {
 	pub span: Span,
 	#[serde(flatten)]

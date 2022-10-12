@@ -76,14 +76,14 @@ pub struct StateLine {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "def")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StateGotoTargetKind {
 	Unscoped(DottableId),
 	Scoped(Identifier, DottableId),
 	Super(DottableId),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct StateGotoTarget {
 	pub span: Span,
 	#[serde(flatten)]

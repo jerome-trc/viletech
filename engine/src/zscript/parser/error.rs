@@ -28,13 +28,13 @@ use super::Span;
 
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub enum ParsingErrorLevel {
 	Warning,
 	Error,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ParsingError {
 	pub level: ParsingErrorLevel,
 	pub msg: String,
@@ -119,7 +119,7 @@ impl std::fmt::Display for DisplayedParsingErrors {
 
 impl std::error::Error for DisplayedParsingErrors {}
 
-pub fn sort_errs(errs: &mut Vec<ParsingError>) {
+pub fn sort_errs(errs: &mut [ParsingError]) {
 	errs.sort_unstable_by_key(|err| *err.main_spans.iter().min().unwrap());
 }
 

@@ -39,7 +39,7 @@ pub struct StaticConstArray {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "def")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DeclarationMetadataItemKind {
 	Native,
 	Static,
@@ -67,7 +67,7 @@ pub enum DeclarationMetadataItemKind {
 	Action(Option<Vec1<Identifier>>),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct DeclarationMetadataItem {
 	pub span: Span,
 	#[serde(flatten)]
@@ -130,14 +130,14 @@ pub struct TypeListOrVoid {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "def")]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ParamFlagItemKind {
 	In,
 	Out,
 	Optional,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ParamFlagItem {
 	pub span: Span,
 	#[serde(flatten)]
@@ -200,7 +200,7 @@ pub enum Declaration {
 	Member(MemberDeclaration),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub enum CondIterType {
 	While,
 	Until,

@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use super::Span;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct File {
 	pub(super) filename: String,
 	pub(super) data: Vec<u8>,

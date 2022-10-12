@@ -46,7 +46,7 @@ impl<const CASE_SENSITIVE: bool> std::fmt::Display for Interner<CASE_SENSITIVE> 
 impl<const CASE_SENSITIVE: bool> Interner<CASE_SENSITIVE> {
 	pub fn interned(&mut self, string: &str) -> Symbol<CASE_SENSITIVE> {
 		if CASE_SENSITIVE {
-			if let Some(s) = self.symbol_map.get(&*string) {
+			if let Some(s) = self.symbol_map.get(string) {
 				return *s;
 			}
 		} else if let Some(s) = self.symbol_map.get(&*string.to_lowercase()) {
@@ -68,7 +68,7 @@ impl<const CASE_SENSITIVE: bool> Interner<CASE_SENSITIVE> {
 
 	pub fn try_interned(&self, string: &str) -> Option<Symbol<CASE_SENSITIVE>> {
 		if CASE_SENSITIVE {
-			if let Some(s) = self.symbol_map.get(&*string) {
+			if let Some(s) = self.symbol_map.get(string) {
 				return Some(*s);
 			}
 		} else if let Some(s) = self.symbol_map.get(&*string.to_lowercase()) {
