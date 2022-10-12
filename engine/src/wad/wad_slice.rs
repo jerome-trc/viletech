@@ -16,7 +16,7 @@ pub struct WadSlice<'a> {
 }
 
 impl<'a> WadSlice<'a> {
-	pub(crate) fn new<'n>(data: &'n [u8], directory: &'n [RawEntry]) -> WadSlice<'n> {
+	pub(super) fn new<'n>(data: &'n [u8], directory: &'n [RawEntry]) -> WadSlice<'n> {
 		WadSlice { data, directory }
 	}
 

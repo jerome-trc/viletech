@@ -46,8 +46,8 @@ pub use self::error::*;
 pub use self::iterator::*;
 pub use self::wad_slice::*;
 
-pub(crate) const HEADER_BYTE_SIZE: usize = 12;
-pub(crate) const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
+pub(super) const HEADER_BYTE_SIZE: usize = 12;
+pub(super) const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Kind {

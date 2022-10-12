@@ -9,7 +9,7 @@ pub struct EntryIterator<'a> {
 }
 
 impl<'a> EntryIterator<'a> {
-	pub(crate) fn new(wad: &Wad) -> EntryIterator {
+	pub(super) fn new(wad: &Wad) -> EntryIterator {
 		EntryIterator { index: 0, wad }
 	}
 }
@@ -37,7 +37,7 @@ pub struct IdIterator<'a> {
 }
 
 impl<'a> IdIterator<'a> {
-	pub(crate) fn new(wad: &Wad) -> IdIterator {
+	pub(super) fn new(wad: &Wad) -> IdIterator {
 		IdIterator { index: 0, wad }
 	}
 }
@@ -65,7 +65,7 @@ pub struct SliceEntryIterator<'a> {
 }
 
 impl<'a> SliceEntryIterator<'a> {
-	pub(crate) fn new<'b>(wad: &'b WadSlice) -> SliceEntryIterator<'b> {
+	pub(super) fn new<'b>(wad: &'b WadSlice) -> SliceEntryIterator<'b> {
 		SliceEntryIterator { index: 0, wad }
 	}
 }
@@ -93,7 +93,7 @@ pub struct SliceIdIterator<'a> {
 }
 
 impl<'a> SliceIdIterator<'a> {
-	pub(crate) fn new<'b>(wad: &'b WadSlice) -> SliceIdIterator<'b> {
+	pub(super) fn new<'b>(wad: &'b WadSlice) -> SliceIdIterator<'b> {
 		SliceIdIterator { index: 0, wad }
 	}
 }
