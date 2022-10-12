@@ -1477,6 +1477,7 @@ dependencies = [
  "num",
  "num-derive",
  "num-traits",
+ "once_cell",
  "palette",
  "parking_lot 0.12.1",
  "pollster",
@@ -1486,7 +1487,10 @@ dependencies = [
  "serde",
  "sha3",
  "shipyard",
+ "str-utils",
  "toml",
+ "unicode-width",
+ "vec1",
  "wgpu",
  "winit",
  "zip",
@@ -2168,9 +2172,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.13.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
+checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
 
 [[package]]
 name = "oorandom"
@@ -3222,9 +3226,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-width"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
+checksum = "c0edd1e5b14653f783770bce4a4dabb4a5108a5370a5f5d8cfe8710c361f6c8b"
 
 [[package]]
 name = "universal-hash"
@@ -3253,6 +3257,9 @@ name = "vec1"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fc1631c774f0f9570797191e01247cbefde789eebfbf128074cb934115a6133"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "version_check"

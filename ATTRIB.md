@@ -112,6 +112,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By the [rust-num](https://github.com/rust-num) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-num/num/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-num/num/blob/master/LICENSE-MIT).
 	- https://docs.rs/num/latest/num/
+- once_cell
+	- By Alex "matklad" Kladov et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/matklad/once_cell/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/matklad/once_cell/blob/master/LICENSE-MIT). 
+	- https://docs.rs/once_cell/latest/once_cell/
 - palette
 	- By Erik "Ogeon" Hedvall et. al. 
 	- Provided under the [Apache 2.0 License](https://github.com/Ogeon/palette/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Ogeon/palette/blob/master/LICENSE-MIT).
@@ -152,10 +156,22 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Dylan "leudz" Ancel et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).
 	- https://docs.rs/shipyard/latest/shipyard/
+- str-utils
+	- By Ron "Magic Len" Li.
+	- Provided under the [MIT License](https://github.com/magiclen/str-utils/blob/master/LICENSE).
+	- https://docs.rs/str-utils/latest/str_utils/
 - toml
 	- By Alex "alexcrichton" Crichton et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).
 	- https://docs.rs/toml/latest/toml/
+- unicode-width
+	- By the [unicode-rs](https://github.com/unicode-rs) organisation et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/unicode-rs/unicode-width/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/unicode-rs/unicode-width/blob/master/LICENSE-MIT).
+	- https://unicode-rs.github.io/unicode-width/unicode_width/
+- vec1
+	- By Philipp "rustonaut" Korber et. al.
+	- Provided under the [Apache 2.0 License and MIT License](https://docs.rs/crate/vec1/latest) (see section: License).
+	- https://docs.rs/vec1/latest/vec1/
 - wad
 	- By Magnus "maghoff" Hoff.
 	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).
