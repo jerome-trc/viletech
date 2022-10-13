@@ -176,7 +176,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						info!("{}", impure::uptime_string(core.start_time));
 						*control_flow = ControlFlow::Exit;
 						return;
 					}
@@ -191,7 +190,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 					}
 				}
 				WindowEvent::CloseRequested => {
-					info!("{}", impure::uptime_string(core.start_time));
 					*control_flow = ControlFlow::Exit;
 				}
 				WindowEvent::Resized(psize) => {
@@ -202,6 +200,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 				}
 				_ => {}
 			}
+		}
+		WinitEvent::LoopDestroyed => {
+			info!("{}", impure::uptime_string(core.start_time));
 		}
 		_ => {}
 	});
