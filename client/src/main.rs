@@ -201,6 +201,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 				_ => {}
 			}
 		}
+		WinitEvent::Suspended => {
+			info!("Application suspended...");
+		}
+		WinitEvent::Resumed => {
+			info!("Application resumed...");
+		}
 		WinitEvent::LoopDestroyed => {
 			info!("{}", impure::uptime_string(core.start_time));
 		}
