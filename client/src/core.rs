@@ -40,12 +40,7 @@ use mlua::Lua;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{
-	error::Error,
-	path::PathBuf,
-	sync::{atomic::AtomicBool, Arc},
-	thread::JoinHandle,
-};
+use std::{error::Error, path::PathBuf, sync::Arc, thread::JoinHandle};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 use crate::commands::{
@@ -61,10 +56,12 @@ enum Scene {
 	},
 	/// Where the user is taken after leaving the frontend, unless they have
 	/// specified to be taken directly to a playsim.
-	Title,
+	Title {
+		playsim: Arc<RwLock<PlaySim>>,
+	},
 	Playsim {
-		running: Arc<AtomicBool>,
 		messenger: crossbeam::channel::Sender<SimMessage>,
+		playsim: Arc<RwLock<PlaySim>>,
 		thread: JoinHandle<()>,
 	},
 	CastCall,
@@ -87,7 +84,6 @@ pub struct ClientCore<'lua> {
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
 	pub camera: Camera,
-	pub playsim: Arc<RwLock<PlaySim>>,
 	scene: Scene,
 	next_scene: Option<SceneChange>,
 }
@@ -129,7 +125,6 @@ impl<'lua> ClientCore<'lua> {
 			console,
 			gui: World::default(),
 			camera,
-			playsim: Arc::new(RwLock::new(PlaySim::default())),
 			scene: Scene::Frontend {
 				menu: FrontendMenu::default(),
 			},
@@ -498,19 +493,17 @@ impl<'lua> ClientCore<'lua> {
 
 	fn start_sim(&mut self) {
 		let (sender, receiver) = crossbeam::channel::unbounded();
-		let playsim = self.playsim.clone();
-		let running = Arc::new(AtomicBool::new(true));
+		let playsim = Arc::new(RwLock::new(PlaySim::default()));
 
 		self.scene = Scene::Playsim {
-			running: running.clone(),
 			messenger: sender,
+			playsim: playsim.clone(),
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
 					impure::sim::run(SimThreadContext {
-						playsim,
+						playsim: playsim.clone(),
 						receiver,
-						running,
 					});
 				})
 				.expect("Failed to spawn OS thread for playsim."),

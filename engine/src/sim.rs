@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use std::{
-	sync::{atomic::AtomicBool, Arc},
+	sync::Arc,
 	time::{Duration, Instant},
 };
 
@@ -35,13 +35,12 @@ pub struct PlaySim {
 }
 
 pub enum InMessage {
-	// ???
+	Stop,
 }
 
 pub struct ThreadContext {
 	pub playsim: Arc<RwLock<PlaySim>>,
 	pub receiver: crossbeam::channel::Receiver<InMessage>,
-	pub running: Arc<AtomicBool>,
 }
 
 const WAIT_TIMES: [u64; 21] = [
@@ -71,19 +70,11 @@ const WAIT_TIMES: [u64; 21] = [
 const BASE_SIM_SPEED_INDEX: usize = 10;
 
 pub fn run(context: ThreadContext) {
-	let ThreadContext {
-		playsim,
-		receiver,
-		running,
-	} = context;
+	let ThreadContext { playsim, receiver } = context;
 
 	let mut speed_index = BASE_SIM_SPEED_INDEX;
 
-	loop {
-		if !running.load(std::sync::atomic::Ordering::Relaxed) {
-			break;
-		}
-
+	'sim: loop {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(WAIT_TIMES[speed_index]);
 
@@ -91,7 +82,10 @@ pub fn run(context: ThreadContext) {
 
 		while let Ok(msg) = receiver.try_recv() {
 			match msg {
-				// ???	
+				InMessage::Stop => {
+					break 'sim;
+				}
+				_ => {}
 			}
 		}
 
