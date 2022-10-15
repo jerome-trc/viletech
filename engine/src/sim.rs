@@ -36,6 +36,8 @@ pub struct PlaySim {
 
 pub enum InMessage {
 	Stop,
+	SpeedUp,
+	SlowDown,
 }
 
 pub struct ThreadContext {
@@ -85,7 +87,12 @@ pub fn run(context: ThreadContext) {
 				InMessage::Stop => {
 					break 'sim;
 				}
-				_ => {}
+				InMessage::SpeedUp => {
+					speed_index = WAIT_TIMES.len().min(speed_index + 1);
+				}
+				InMessage::SlowDown => {
+					speed_index = 0.max(speed_index - 1);
+				}
 			}
 		}
 
