@@ -182,6 +182,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 					core.on_key_event(input);
 				}
+				WindowEvent::MouseInput { state, button, .. } => {
+					core.input.on_mouse_input(button, state);
+				}
+				WindowEvent::ModifiersChanged(state) => {
+					core.input.on_modifiers_changed(state);
+				}
+				WindowEvent::CursorMoved { position, .. } => {
+					core.input.on_cursor_moved(position);
+				}
 				WindowEvent::Focused(gained) => {
 					if *gained {
 						core.audio.resume_all();

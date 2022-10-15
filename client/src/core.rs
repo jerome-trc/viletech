@@ -21,9 +21,10 @@ use impure::{
 	audio::{self, AudioCore},
 	console::Console,
 	data::game::DataCore,
-	depends::*,
+	depends::{winit::event::ElementState, *},
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
+	input::InputCore,
 	rng::RngCore,
 	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
 	terminal,
@@ -82,6 +83,7 @@ pub struct ClientCore<'lua> {
 	pub rng: RngCore<WyRand>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
+	pub input: InputCore<'lua>,
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
 	pub camera: Camera,
@@ -123,6 +125,7 @@ impl<'lua> ClientCore<'lua> {
 			gfx,
 			rng: RngCore::default(),
 			audio,
+			input: InputCore::default(),
 			console,
 			gui: World::default(),
 			camera,
@@ -297,8 +300,36 @@ impl<'lua> ClientCore<'lua> {
 			.resize(new_size.width as f32, new_size.height as f32);
 	}
 
-	pub fn on_key_event(&mut self, input: &KeyboardInput) {
-		self.console.on_key_event(input);
+	pub fn on_key_event(&mut self, event: &KeyboardInput) {
+		self.console.on_key_event(event);
+		self.input.on_key_event(event);
+
+		if event.virtual_keycode.is_none() {
+			return;
+		}
+
+		let vkc = event.virtual_keycode.unwrap();
+		let binds = self.input.user_binds.iter().filter(|kb| kb.keycode == vkc);
+
+		if event.state == ElementState::Pressed {
+			for bind in binds {
+				match bind.on_press.call(()) {
+					Ok(()) => {}
+					Err(err) => {
+						error!("Error in key action `{}`: {}", bind.id, err);
+					}
+				};
+			}
+		} else {
+			for bind in binds {
+				match bind.on_release.call(()) {
+					Ok(()) => {}
+					Err(err) => {
+						error!("Error in key action `{}`: {}", bind.id, err);
+					}
+				};
+			}
+		}
 	}
 
 	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {

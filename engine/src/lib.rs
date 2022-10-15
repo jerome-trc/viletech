@@ -36,6 +36,7 @@ pub mod frontend;
 #[allow(dead_code)]
 pub mod game;
 pub mod gfx;
+pub mod input;
 #[allow(dead_code)]
 pub mod level;
 pub mod lua;
