@@ -40,7 +40,7 @@ pub enum InMessage {
 	SlowDown,
 }
 
-pub struct ThreadContext {
+pub struct Context {
 	pub playsim: Arc<RwLock<PlaySim>>,
 	pub receiver: crossbeam::channel::Receiver<InMessage>,
 }
@@ -71,8 +71,8 @@ const WAIT_TIMES: [u64; 21] = [
 
 const BASE_SIM_SPEED_INDEX: usize = 10;
 
-pub fn run(context: ThreadContext) {
-	let ThreadContext { playsim, receiver } = context;
+pub fn run(context: Context) {
+	let Context { playsim, receiver } = context;
 
 	let mut speed_index = BASE_SIM_SPEED_INDEX;
 

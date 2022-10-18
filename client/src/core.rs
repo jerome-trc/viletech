@@ -26,7 +26,7 @@ use impure::{
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
 	rng::RngCore,
-	sim::{InMessage as SimMessage, PlaySim, ThreadContext as SimThreadContext},
+	sim::{InMessage as SimMessage, PlaySim, Context as SimThreadContext},
 	terminal,
 	vfs::{ImpureVfs, VirtualFs},
 };
@@ -501,7 +501,7 @@ impl<'lua> ClientCore<'lua> {
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
-					impure::sim::run(SimThreadContext {
+					impure::sim::run(Context {
 						playsim: playsim.clone(),
 						receiver,
 					});
