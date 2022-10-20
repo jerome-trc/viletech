@@ -117,20 +117,15 @@ pub enum ActorStateVisual {
 	Model(AssetIndex),
 }
 
-pub struct ActorStateAction<'l> {
-	function: LuaFunction<'l>,
-	args: LuaMultiValue<'l>,
-}
-
-pub struct ActorState<'l> {
+pub struct ActorState {
 	visual: ActorStateVisual,
 	duration: i16,
 	tic_range: u16,
 	flags: ActorStateFlags,
-	action: Option<ActorStateAction<'l>>,
+	action: Option<LuaRegistryKey>,
 }
 
-impl<'l> ActorState<'l> {
+impl ActorState {
 	const INFINITE_DURATION: i16 = -1;
 }
 
@@ -147,8 +142,8 @@ bitflags! {
 	}
 }
 
-pub struct ActorStateMachine<'l> {
+pub struct ActorStateMachine {
 	/// Each element's field `::1` indexes into `states`.
 	labels: Vec<(String, usize)>,
-	states: Vec<ActorState<'l>>,
+	states: Vec<ActorState>,
 }

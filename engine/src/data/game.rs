@@ -188,7 +188,7 @@ impl Default for GameDataKind {
 /// Represents anything that the user added to their load order.
 /// Comes with a certain degree of compartmentalization: for example,
 /// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
-pub struct Namespace<'lua> {
+pub struct Namespace {
 	pub meta: Metadata,
 	// Needed for the sim
 	pub blueprints: Vec<Blueprint>,
@@ -198,7 +198,7 @@ pub struct Namespace<'lua> {
 	pub levels: Vec<LevelMetadata>,
 	pub skills: Vec<SkillInfo>,
 	pub species: Vec<Species>,
-	pub state_machines: Vec<ActorStateMachine<'lua>>,
+	pub state_machines: Vec<ActorStateMachine>,
 	// Client-only
 	pub language: Vec<String>,
 	pub music: Vec<Music>,
@@ -208,7 +208,7 @@ pub struct Namespace<'lua> {
 	pub palette: Option<Palette>,
 }
 
-impl<'lua> Namespace<'lua> {
+impl Namespace {
 	#[must_use]
 	pub fn new(metadata: Metadata) -> Self {
 		Namespace {
@@ -234,10 +234,10 @@ impl<'lua> Namespace<'lua> {
 }
 
 #[derive(Default)]
-pub struct DataCore<'lua> {
+pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
-	pub namespaces: Vec<Namespace<'lua>>,
+	pub namespaces: Vec<Namespace>,
 	pub asset_map: HashMap<AssetHash, AssetIndex>,
 	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
 	/// under any given UUID in the load order. For use in interop, since, for
@@ -249,7 +249,7 @@ pub struct DataCore<'lua> {
 }
 
 // Public interface.
-impl<'lua> DataCore<'lua> {
+impl DataCore {
 	/// Note: UUIDs are checked for an exact match.
 	#[must_use]
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
@@ -258,7 +258,7 @@ impl<'lua> DataCore<'lua> {
 
 	/// Note: UUIDs are checked for an exact match.
 	#[must_use]
-	pub fn get_namespace_mut(&'lua mut self, uuid: &str) -> Option<&mut Namespace> {
+	pub fn get_namespace_mut(&mut self, uuid: &str) -> Option<&mut Namespace> {
 		self.namespaces.iter_mut().find(|ns| ns.meta.uuid == uuid)
 	}
 
@@ -351,7 +351,7 @@ impl<'lua> DataCore<'lua> {
 	}
 }
 
-impl DataCore<'_> {
+impl DataCore {
 	fn try_load_zscript(namespace: &mut Namespace, handle: &VfsHandle) {
 		let parse_out = zscript::parse(handle.clone());
 		let nsid = &namespace.meta.uuid;

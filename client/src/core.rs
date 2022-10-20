@@ -36,7 +36,7 @@ use kira::{
 	sound::static_sound::StaticSoundSettings,
 };
 use log::{error, info};
-use mlua::Lua;
+use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
@@ -72,15 +72,15 @@ enum SceneChange {
 	Title { to_mount: Vec<PathBuf> },
 }
 
-pub struct ClientCore<'lua> {
+pub struct ClientCore {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Lua,
-	pub data: DataCore<'lua>,
+	pub data: DataCore,
 	pub rng: RngCore<WyRand>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
-	pub input: InputCore<'lua>,
+	pub input: InputCore,
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
 	pub camera: Camera,
@@ -89,12 +89,12 @@ pub struct ClientCore<'lua> {
 }
 
 // Public interface.
-impl<'lua> ClientCore<'lua> {
+impl ClientCore {
 	pub fn new(
 		start_time: std::time::Instant,
 		vfs: Arc<RwLock<VirtualFs>>,
 		lua: Lua,
-		data: DataCore<'lua>,
+		data: DataCore,
 		gfx: GraphicsCore,
 		console: Console<ConsoleCommand>,
 	) -> Result<Self, Box<dyn Error>> {
@@ -308,7 +308,9 @@ impl<'lua> ClientCore<'lua> {
 
 		if event.state == ElementState::Pressed {
 			for bind in binds {
-				match bind.on_press.call(()) {
+				let func: LuaFunction = self.lua.registry_value(&bind.on_press).unwrap();
+
+				match func.call(()) {
 					Ok(()) => {}
 					Err(err) => {
 						error!("Error in key action `{}`: {}", bind.id, err);
@@ -317,7 +319,9 @@ impl<'lua> ClientCore<'lua> {
 			}
 		} else {
 			for bind in binds {
-				match bind.on_release.call(()) {
+				let func: LuaFunction = self.lua.registry_value(&bind.on_release).unwrap();
+
+				match func.call(()) {
 					Ok(()) => {}
 					Err(err) => {
 						error!("Error in key action `{}`: {}", bind.id, err);
@@ -360,7 +364,7 @@ impl<'lua> ClientCore<'lua> {
 }
 
 // Internal implementation details: general.
-impl<'lua> ClientCore<'lua> {
+impl ClientCore {
 	fn register_console_commands(&mut self) {
 		self.console.register_command(
 			"alias",

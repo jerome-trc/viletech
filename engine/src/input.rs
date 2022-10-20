@@ -29,7 +29,7 @@ use winit::{
 // TODO: Use `std::mem::variant_count` when it's stable
 const NUM_VIRTKEYS: usize = winit::event::VirtualKeyCode::Cut as usize;
 
-pub struct InputCore<'lua> {
+pub struct InputCore {
 	pub keys_phys: [bool; 256],
 	pub keys_virt: [bool; NUM_VIRTKEYS],
 	/// Left, right, middle, and then 15 auxiliary buttons.
@@ -37,10 +37,10 @@ pub struct InputCore<'lua> {
 	pub modifiers: ModifiersState,
 	pub cursor_pos: PhysicalPosition<f64>,
 
-	pub user_binds: Vec<UserKeyBind<'lua>>,
+	pub user_binds: Vec<UserKeyBind>,
 }
 
-impl<'lua> Default for InputCore<'lua> {
+impl Default for InputCore {
 	fn default() -> Self {
 		Self {
 			keys_phys: [false; 256],
@@ -48,12 +48,12 @@ impl<'lua> Default for InputCore<'lua> {
 			mouse_buttons: [false; 18],
 			modifiers: ModifiersState::default(),
 			cursor_pos: PhysicalPosition { x: 0.0, y: 0.0 },
-			user_binds: Vec::<UserKeyBind<'lua>>::default(),
+			user_binds: Vec::<UserKeyBind>::default(),
 		}
 	}
 }
 
-impl<'lua> InputCore<'lua> {
+impl InputCore {
 	pub fn on_modifiers_changed(&mut self, state: &ModifiersState) {
 		self.modifiers = *state;
 	}
@@ -121,5 +121,5 @@ pub struct KeyBind<A> {
 	pub on_release: A,
 }
 
-pub type UserKeyBind<'lua> = KeyBind<LuaFunction<'lua>>;
+pub type UserKeyBind = KeyBind<LuaRegistryKey>;
 pub type IdleKeyBind = KeyBind<()>;
