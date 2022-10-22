@@ -22,16 +22,63 @@ use std::{
 	time::{Duration, Instant},
 };
 
+use mlua::prelude::*;
 use nanorand::WyRand;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use shipyard::World;
 
-use crate::rng::RngCore;
+use crate::{data::game::DataCore, newtype_mutref, rng::RngCore};
 
 #[derive(Default)]
 pub struct PlaySim {
-	rng: RngCore<WyRand>,
-	world: World,
+	pub rng: RngCore<WyRand>,
+	pub world: World,
+}
+
+impl PlaySim {
+	// To make it easier to rearrange implementations of `LuaUserData`,
+	// define the functionality for its two associated functions here
+
+	fn add_lua_userdata_fields<'lua, T: LuaUserData, F: LuaUserDataFields<'lua, T>>(
+		_fields: &mut F,
+	) {
+		// ???
+	}
+
+	fn add_lua_userdata_methods<'lua, T: LuaUserData, M: LuaUserDataMethods<'lua, T>>(
+		_methods: &mut M,
+	) {
+		// ???
+	}
+}
+
+newtype_mutref!(pub, PlaySim, PlaySimRef);
+
+impl LuaUserData for PlaySimRef<'_> {
+	fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
+		PlaySim::add_lua_userdata_fields(fields);
+	}
+
+	fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
+		PlaySim::add_lua_userdata_methods(methods);
+	}
+}
+
+pub trait EgressConfig {
+	fn egress(sender: OutSender, msg: OutMessage);
+}
+
+pub struct EgressConfigClient;
+pub struct EgressConfigNoop;
+
+impl EgressConfig for EgressConfigClient {
+	fn egress(sender: OutSender, msg: OutMessage) {
+		debug_assert!(sender.send(msg).is_ok());
+	}
+}
+
+impl EgressConfig for EgressConfigNoop {
+	fn egress(_: OutSender, _: OutMessage) {}
 }
 
 pub enum InMessage {
@@ -40,9 +87,22 @@ pub enum InMessage {
 	SlowDown,
 }
 
+/// Outbound messages are only for playsims running within the client.
+pub enum OutMessage {
+	// ???
+}
+
+pub type InSender = crossbeam::channel::Sender<InMessage>;
+pub type InReceiver = crossbeam::channel::Receiver<InMessage>;
+pub type OutSender = crossbeam::channel::Sender<OutMessage>;
+pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
+
 pub struct Context {
 	pub playsim: Arc<RwLock<PlaySim>>,
-	pub receiver: crossbeam::channel::Receiver<InMessage>,
+	pub lua: Arc<Mutex<Lua>>,
+	pub data: Arc<RwLock<DataCore>>,
+	pub receiver: InReceiver,
+	pub sender: OutSender,
 }
 
 const WAIT_TIMES: [u64; 21] = [
@@ -71,15 +131,24 @@ const WAIT_TIMES: [u64; 21] = [
 
 const BASE_SIM_SPEED_INDEX: usize = 10;
 
-pub fn run(context: Context) {
-	let Context { playsim, receiver } = context;
+pub fn run<C: EgressConfig>(context: Context) {
+	let Context {
+		playsim,
+		lua: _,
+		data: _,
+		receiver,
+		sender,
+	} = context;
+
+	// Ensure channels are unbounded
+	debug_assert!(receiver.capacity().is_none());
+	debug_assert!(sender.capacity().is_none());
 
 	let mut speed_index = BASE_SIM_SPEED_INDEX;
 
 	'sim: loop {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(WAIT_TIMES[speed_index]);
-
 		let playsim = playsim.write();
 
 		while let Ok(msg) = receiver.try_recv() {

@@ -21,12 +21,12 @@ use impure::{
 	audio::{self, AudioCore},
 	console::Console,
 	data::game::DataCore,
-	depends::{winit::event::ElementState, *},
+	depends::{parking_lot::Mutex, winit::event::ElementState, *},
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
 	rng::RngCore,
-	sim::{InMessage as SimMessage, PlaySim, Context as SimThreadContext},
+	sim::{self, PlaySim},
 	terminal,
 	vfs::{ImpureVfs, VirtualFs},
 };
@@ -60,7 +60,8 @@ enum Scene {
 		playsim: Arc<RwLock<PlaySim>>,
 	},
 	Playsim {
-		messenger: crossbeam::channel::Sender<SimMessage>,
+		sender: sim::InSender,
+		receiver: sim::OutReceiver,
 		playsim: Arc<RwLock<PlaySim>>,
 		thread: JoinHandle<()>,
 	},
@@ -75,8 +76,8 @@ enum SceneChange {
 pub struct ClientCore {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
-	pub lua: Lua,
-	pub data: DataCore,
+	pub lua: Arc<Mutex<Lua>>,
+	pub data: Arc<RwLock<DataCore>>,
 	pub rng: RngCore<WyRand>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
@@ -116,8 +117,8 @@ impl ClientCore {
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
-			lua,
-			data,
+			lua: Arc::new(Mutex::new(lua)),
+			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: RngCore::default(),
 			audio,
@@ -305,10 +306,11 @@ impl ClientCore {
 
 		let vkc = event.virtual_keycode.unwrap();
 		let binds = self.input.user_binds.iter().filter(|kb| kb.keycode == vkc);
+		let lua = self.lua.lock();
 
 		if event.state == ElementState::Pressed {
 			for bind in binds {
-				let func: LuaFunction = self.lua.registry_value(&bind.on_press).unwrap();
+				let func: LuaFunction = lua.registry_value(&bind.on_press).unwrap();
 
 				match func.call(()) {
 					Ok(()) => {}
@@ -319,7 +321,7 @@ impl ClientCore {
 			}
 		} else {
 			for bind in binds {
-				let func: LuaFunction = self.lua.registry_value(&bind.on_release).unwrap();
+				let func: LuaFunction = lua.registry_value(&bind.on_release).unwrap();
 
 				match func.call(()) {
 					Ok(()) => {}
@@ -355,7 +357,7 @@ impl ClientCore {
 						metas.append(&mut m);
 					}
 
-					self.data.populate(metas, &self.vfs.read());
+					self.data.write().populate(metas, &self.vfs.read());
 					self.start_game();
 				}
 			},
@@ -496,18 +498,25 @@ impl ClientCore {
 	fn start_game(&mut self) {}
 
 	fn start_sim(&mut self) {
-		let (sender, receiver) = crossbeam::channel::unbounded();
+		let (txout, rxout) = crossbeam::channel::unbounded();
+		let (txin, rxin) = crossbeam::channel::unbounded();
 		let playsim = Arc::new(RwLock::new(PlaySim::default()));
+		let lua = self.lua.clone();
+		let data = self.data.clone();
 
 		self.scene = Scene::Playsim {
-			messenger: sender,
+			sender: txin,
+			receiver: rxout,
 			playsim: playsim.clone(),
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
-					impure::sim::run(Context {
+					impure::sim::run::<sim::EgressConfigClient>(sim::Context {
 						playsim: playsim.clone(),
-						receiver,
+						lua,
+						data,
+						sender: txout,
+						receiver: rxin,
 					});
 				})
 				.expect("Failed to spawn OS thread for playsim."),

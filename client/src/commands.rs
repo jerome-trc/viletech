@@ -207,7 +207,10 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	}
 
 	Request::Callback(|core| {
-		info!("Lua state heap usage (bytes): {}", core.lua.used_memory());
+		info!(
+			"Lua state heap usage (bytes): {}",
+			core.lua.lock().used_memory()
+		);
 	})
 }
 
