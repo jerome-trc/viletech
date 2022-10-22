@@ -19,36 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-/// Every entity is guaranteed to have this component.
-#[derive(Debug, shipyard::Component, Default)]
-pub struct Common {
-	/// For display to the user. Known in GZDoom as a "tag".
-	name: String,
-	/// The sim tic on which this entity was spawned.
-	spawned_tic: u32,
-}
-
-/// A template used to instantiate entities.
-#[derive(Debug, Default)]
-pub struct Blueprint {
-	common: Common,
-
-	actor: Option<Actor>,
-	bleed: Option<Bleed>,
-	bounce: Option<Bounce>,
-	box_collider: Option<BoxCollider>,
-	defense: Option<Defense>,
-	health: Option<Health>,
-	inventory: Option<Inventory>,
-	item: Option<Item>,
-	monster: Option<Monster>,
-	motion: Option<Motion>,
-	player: Option<Player>,
-	projectile: Option<Projectile>,
-	special_vars: Option<SpecialVars>,
-	weapon: Option<Weapon>,
-}
-
 mod actor;
 pub use actor::Actor;
 
@@ -101,3 +71,36 @@ pub use transform::Transform;
 mod weap;
 pub use weap::Weapon;
 pub use weap::WeaponFlags;
+
+use crate::data::game::AssetIndex;
+
+/// Every entity is guaranteed to have this component.
+#[derive(Debug, shipyard::Component)]
+pub struct Common {
+	/// For display to the user. Known in GZDoom as a "tag".
+	name: String,
+	/// The sim tic on which this entity was spawned.
+	spawned_tic: u32,
+	blueprint: AssetIndex,
+}
+
+/// A template used to instantiate entities.
+#[derive(Debug)]
+pub struct Blueprint {
+	common: Common,
+
+	actor: Option<Actor>,
+	bleed: Option<Bleed>,
+	bounce: Option<Bounce>,
+	box_collider: Option<BoxCollider>,
+	defense: Option<Defense>,
+	health: Option<Health>,
+	inventory: Option<Inventory>,
+	item: Option<Item>,
+	monster: Option<Monster>,
+	motion: Option<Motion>,
+	player: Option<Player>,
+	projectile: Option<Projectile>,
+	special_vars: Option<SpecialVars>,
+	weapon: Option<Weapon>,
+}
