@@ -112,15 +112,18 @@ impl AudioCore {
 		let tween = tween_instant();
 
 		for handle in &mut self.sounds {
-			debug_assert!(handle.pause(tween).is_ok());
+			let res = handle.pause(tween);
+			debug_assert!(res.is_ok(), "Failed to pause a sound: {}", res.unwrap_err());
 		}
 
 		if let Some(mus) = &mut self.music1 {
-			debug_assert!(mus.pause(tween).is_ok());
+			let res = mus.pause(tween);
+			debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			debug_assert!(mus.pause(tween).is_ok())
+			let res = mus.pause(tween);
+			debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
 		}
 	}
 
@@ -128,15 +131,30 @@ impl AudioCore {
 		let tween = tween_instant();
 
 		for handle in &mut self.sounds {
-			debug_assert!(handle.resume(tween).is_ok());
+			let res = handle.resume(tween);
+			debug_assert!(
+				res.is_ok(),
+				"Failed to resume a sound: {}",
+				res.unwrap_err()
+			);
 		}
 
 		if let Some(mus) = &mut self.music1 {
-			debug_assert!(mus.resume(tween).is_ok());
+			let res = mus.resume(tween);
+			debug_assert!(
+				res.is_ok(),
+				"Failed to resume music 1: {}",
+				res.unwrap_err()
+			);
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			debug_assert!(mus.resume(tween).is_ok())
+			let res = mus.resume(tween);
+			debug_assert!(
+				res.is_ok(),
+				"Failed to resume music 2: {}",
+				res.unwrap_err()
+			);
 		}
 	}
 }

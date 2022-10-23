@@ -51,7 +51,12 @@ pub struct EgressConfigNoop;
 
 impl EgressConfig for EgressConfigClient {
 	fn egress(sender: OutSender, msg: OutMessage) {
-		debug_assert!(sender.send(msg).is_ok());
+		let res = sender.send(msg);
+		debug_assert!(
+			res.is_ok(),
+			"Failed to send sim egress message: {}",
+			res.unwrap_err()
+		);
 	}
 }
 
