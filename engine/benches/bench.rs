@@ -26,7 +26,7 @@ fn vfs(crit: &mut Criterion) {
 	fn mount(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
 		let mut vfs = VirtualFs::default();
 
-		let mut grp_mount = crit.benchmark_group("Mount");
+		let mut grp_mount = crit.benchmark_group("VFS: Mount");
 		grp_mount.sample_size(20);
 
 		grp_mount.bench_function("Gamedata", |bencher| {
@@ -42,7 +42,7 @@ fn vfs(crit: &mut Criterion) {
 		let mut vfs = VirtualFs::default();
 		let _ = vfs.mount(&mount_paths);
 
-		let mut grp_lookup = crit.benchmark_group("Lookup");
+		let mut grp_lookup = crit.benchmark_group("VFS: Lookup");
 		grp_lookup.sample_size(10_000);
 
 		grp_lookup.bench_with_input("Worst-Case", &vfs, |bencher, vfs| {
