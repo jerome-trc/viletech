@@ -70,6 +70,12 @@ pub struct AudioCore {
 
 pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
 
+const TWEEN_INSTANT: Tween = Tween {
+	start_time: kira::StartTime::Immediate,
+	duration: Duration::ZERO,
+	easing: kira::tween::Easing::Linear,
+};
+
 impl AudioCore {
 	/// Clear handles for sounds which have finished playing.
 	pub fn update(&mut self) {
@@ -109,29 +115,25 @@ impl AudioCore {
 	}
 
 	pub fn pause_all(&mut self) {
-		let tween = tween_instant();
-
 		for handle in &mut self.sounds {
-			let res = handle.pause(tween);
+			let res = handle.pause(TWEEN_INSTANT);
 			debug_assert!(res.is_ok(), "Failed to pause a sound: {}", res.unwrap_err());
 		}
 
 		if let Some(mus) = &mut self.music1 {
-			let res = mus.pause(tween);
+			let res = mus.pause(TWEEN_INSTANT);
 			debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			let res = mus.pause(tween);
+			let res = mus.pause(TWEEN_INSTANT);
 			debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
 		}
 	}
 
 	pub fn resume_all(&mut self) {
-		let tween = tween_instant();
-
 		for handle in &mut self.sounds {
-			let res = handle.resume(tween);
+			let res = handle.resume(TWEEN_INSTANT);
 			debug_assert!(
 				res.is_ok(),
 				"Failed to resume a sound: {}",
@@ -140,7 +142,7 @@ impl AudioCore {
 		}
 
 		if let Some(mus) = &mut self.music1 {
-			let res = mus.resume(tween);
+			let res = mus.resume(TWEEN_INSTANT);
 			debug_assert!(
 				res.is_ok(),
 				"Failed to resume music 1: {}",
@@ -149,7 +151,7 @@ impl AudioCore {
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			let res = mus.resume(tween);
+			let res = mus.resume(TWEEN_INSTANT);
 			debug_assert!(
 				res.is_ok(),
 				"Failed to resume music 2: {}",
@@ -169,13 +171,5 @@ pub fn sound_from_file(
 	match StaticSoundData::from_cursor(cursor, settings) {
 		Ok(ssd) => Ok(ssd),
 		Err(err) => Err(Box::new(err)),
-	}
-}
-
-pub fn tween_instant() -> Tween {
-	Tween {
-		start_time: kira::StartTime::Immediate,
-		duration: Duration::default(),
-		easing: kira::tween::Easing::Linear,
 	}
 }
