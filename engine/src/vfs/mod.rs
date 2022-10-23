@@ -343,6 +343,15 @@ impl VirtualFs {
 				}),
 		)
 	}
+
+	#[must_use]
+	pub fn diag(&self) -> DiagInfo {
+		DiagInfo {
+			mount_count: self.real_paths.len(),
+			num_entries: self.entries.len(),
+			mem_usage: self.mem_usage(&self.entries[0]),
+		}
+	}
 }
 
 impl Default for VirtualFs {
@@ -353,6 +362,12 @@ impl Default for VirtualFs {
 			real_paths: Default::default(),
 		}
 	}
+}
+
+pub struct DiagInfo {
+	pub mount_count: usize,
+	pub num_entries: usize,
+	pub mem_usage: usize,
 }
 
 // Miscellaneous internal implementation details.
@@ -390,6 +405,27 @@ impl VirtualFs {
 	#[must_use]
 	fn lookup_hash(&self, hash: u64) -> Option<&Entry> {
 		self.entries.iter().find(|e| e.hash == hash)
+	}
+
+	/// Recursively gets the total memory usage of a directory.
+	#[must_use]
+	fn mem_usage(&self, dir: &Entry) -> usize {
+		let mut ret = 0;
+
+		for child in self.children_of(dir) {
+			ret += std::mem::size_of_val(child);
+
+			match &child.kind {
+				EntryKind::Leaf { bytes } => {
+					ret += bytes.len();
+				}
+				EntryKind::Directory => {
+					ret += self.mem_usage(child);
+				}
+			}
+		}
+
+		ret
 	}
 }
 

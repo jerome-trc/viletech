@@ -29,13 +29,11 @@ use regex::Regex;
 
 use super::{Error, Handle, VirtualFs};
 
-use crate::zscript::parser::fs::File as ZsFile;
-use crate::zscript::parser::fs::FileSystem as ZsFileSystem;
-
 use crate::{
 	data::{game::GameDataKind, GameDataMeta},
 	utils::{path::*, string::*},
 	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
+	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
 };
 
 /// A separate trait provides functions that are specific to Impure, so that the

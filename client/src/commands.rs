@@ -40,6 +40,7 @@ pub enum Request {
 	EchoAlias(String),
 	File(PathBuf),
 	Sound(String),
+	VfsDiag,
 }
 
 bitflags::bitflags! {
@@ -261,4 +262,13 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 
 	info!("{}", impure::full_version_string());
 	Request::None
+}
+
+pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
+	if args.help() {
+		info!("Prints information about the state of the virtual file system.");
+		return Request::None;
+	}
+
+	Request::VfsDiag
 }

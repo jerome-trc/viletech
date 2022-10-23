@@ -286,6 +286,19 @@ impl ClientCore {
 						}
 					};
 				}
+				ConsoleRequest::VfsDiag => {
+					let vfsg = self.vfs.read();
+					let diag = vfsg.diag();
+					info!(
+						"Virtual file system diagnostics:\r\n\t{} {}\r\n\t{} {}\r\n\t{} {} kB",
+						"Mounted objects:",
+						diag.mount_count,
+						"Total entries:",
+						diag.num_entries,
+						"Total memory usage:",
+						diag.mem_usage / 1000
+					);
+				}
 			}
 		}
 	}
@@ -490,6 +503,15 @@ impl ClientCore {
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
 				func: commands::ccmd_version,
+			},
+			true,
+		);
+
+		self.console.register_command(
+			"vfsdiag",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_vfsdiag,
 			},
 			true,
 		);
