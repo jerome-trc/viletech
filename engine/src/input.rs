@@ -117,6 +117,7 @@ pub struct KeyBind<A> {
 	pub id: String,
 	pub name: String,
 	pub keycode: VirtualKeyCode,
+	pub modifiers: ModifiersState,
 	pub on_press: A,
 	pub on_release: A,
 }

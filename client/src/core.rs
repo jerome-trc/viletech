@@ -318,7 +318,11 @@ impl ClientCore {
 		}
 
 		let vkc = event.virtual_keycode.unwrap();
-		let binds = self.input.user_binds.iter().filter(|kb| kb.keycode == vkc);
+		let binds = self
+			.input
+			.user_binds
+			.iter()
+			.filter(|kb| kb.keycode == vkc && kb.modifiers == self.input.modifiers);
 		let lua = self.lua.lock();
 
 		if event.state == ElementState::Pressed {
