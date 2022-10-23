@@ -40,7 +40,7 @@ use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{error::Error, path::PathBuf, sync::Arc, thread::JoinHandle};
+use std::{error::Error, path::PathBuf, sync::Arc};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 use crate::commands::{
@@ -48,6 +48,7 @@ use crate::commands::{
 };
 
 enum Scene {
+	Transition,
 	/// The user hasn't entered the game yet. From here they can select a user
 	/// profile and engine-global/cross-game preferences, assemble a load order,
 	/// and begin the game launch process.
@@ -57,13 +58,10 @@ enum Scene {
 	/// Where the user is taken after leaving the frontend, unless they have
 	/// specified to be taken directly to a playsim.
 	Title {
-		playsim: Arc<RwLock<PlaySim>>,
+		inner: sim::Handle,
 	},
-	Playsim {
-		sender: sim::InSender,
-		receiver: sim::OutReceiver,
-		playsim: Arc<RwLock<PlaySim>>,
-		thread: JoinHandle<()>,
+	PlaySim {
+		inner: sim::Handle,
 	},
 	CastCall,
 }
@@ -71,6 +69,7 @@ enum Scene {
 enum SceneChange {
 	Exit,
 	Title { to_mount: Vec<PathBuf> },
+	PlaySim {},
 }
 
 pub struct ClientCore {
@@ -165,6 +164,12 @@ impl ClientCore {
 		self.gfx.egui_start();
 
 		match &mut self.scene {
+			Scene::PlaySim { .. } => {
+				// ???
+			}
+			Scene::Title { .. } => {
+				// ???
+			}
 			Scene::Frontend { menu } => {
 				let action = menu.ui(&self.gfx.egui.context);
 
@@ -201,10 +206,6 @@ impl ClientCore {
 				rpass.set_pipeline(&self.gfx.pipelines[0]);
 				rpass.draw(0..3, 0..1);
 			}
-			Scene::Title { .. } => {
-				// ???
-			}
-			Scene::Playsim { .. } => {}
 			_ => {}
 		};
 
@@ -236,7 +237,7 @@ impl ClientCore {
 					}
 				},
 				ConsoleRequest::Exit => {
-					self.next_scene = Some(SceneChange::Exit);
+					self.exit();
 					return;
 				}
 				ConsoleRequest::CreateAlias(alias, string) => {
@@ -357,28 +358,51 @@ impl ClientCore {
 			None => {
 				// TODO: Mark as likely with intrinsics...?
 			}
-			Some(scene) => match scene {
-				SceneChange::Exit => {
-					info!("{}", impure::uptime_string(self.start_time));
-					*control_flow = ControlFlow::Exit;
-				}
-				SceneChange::Title { to_mount } => {
-					let mut metas = vec![self
-						.vfs
-						.read()
-						.parse_gamedata_meta("/impure/meta.toml")
-						.expect("Engine data package manifest is malformed.")];
+			Some(scene) => {
+				let mut prev = Scene::Transition;
+				std::mem::swap(&mut self.scene, &mut prev);
 
-					if !to_mount.is_empty() {
-						let mut m = self.vfs.write().mount_gamedata(&to_mount);
-						metas.append(&mut m);
+				match prev {
+					Scene::PlaySim { inner } | Scene::Title { inner } => {
+						self.end_sim(inner);
 					}
+					_ => {}
+				};
 
-					self.data.write().populate(metas, &self.vfs.read());
-					self.start_game();
+				match scene {
+					SceneChange::Exit => {
+						*control_flow = ControlFlow::Exit;
+					}
+					SceneChange::Title { to_mount } => {
+						let mut metas = vec![self
+							.vfs
+							.read()
+							.parse_gamedata_meta("/impure/meta.toml")
+							.expect("Engine data package manifest is malformed.")];
+
+						if !to_mount.is_empty() {
+							let mut m = self.vfs.write().mount_gamedata(&to_mount);
+							metas.append(&mut m);
+						}
+
+						self.data.write().populate(metas, &self.vfs.read());
+
+						self.scene = Scene::Title {
+							inner: self.start_sim(),
+						};
+					}
+					SceneChange::PlaySim {} => {
+						self.scene = Scene::PlaySim {
+							inner: self.start_sim(),
+						};
+					}
 				}
-			},
+			}
 		};
+	}
+
+	pub fn exit(&mut self) {
+		self.next_scene = Some(SceneChange::Exit);
 	}
 }
 
@@ -521,24 +545,22 @@ impl ClientCore {
 		);
 	}
 
-	fn start_game(&mut self) {}
+	fn start_sim(&mut self) -> sim::Handle {
+		self.lua.lock().set_app_data(PlaySim::default());
 
-	fn start_sim(&mut self) {
 		let (txout, rxout) = crossbeam::channel::unbounded();
 		let (txin, rxin) = crossbeam::channel::unbounded();
-		let playsim = Arc::new(RwLock::new(PlaySim::default()));
+
 		let lua = self.lua.clone();
 		let data = self.data.clone();
 
-		self.scene = Scene::Playsim {
+		sim::Handle {
 			sender: txin,
 			receiver: rxout,
-			playsim: playsim.clone(),
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
 					impure::sim::run::<sim::EgressConfigClient>(sim::Context {
-						playsim,
 						lua,
 						data,
 						sender: txout,
@@ -546,6 +568,19 @@ impl ClientCore {
 					});
 				})
 				.expect("Failed to spawn OS thread for playsim."),
+		}
+	}
+
+	fn end_sim(&mut self, sim: sim::Handle) {
+		sim.sender
+			.send(sim::InMessage::Stop)
+			.expect("Sim sender channel unexpectedly disconnected.");
+
+		match sim.thread.join() {
+			Ok(()) => {}
+			Err(err) => panic!("Sim thread panicked: {:#?}", err),
 		};
+
+		self.lua.lock().remove_app_data::<PlaySim>();
 	}
 }

@@ -36,7 +36,7 @@ use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 use winit::{
 	dpi::PhysicalSize,
 	event::{Event as WinitEvent, VirtualKeyCode, WindowEvent},
-	event_loop::{ControlFlow, EventLoop},
+	event_loop::EventLoop,
 };
 
 use crate::core::ClientCore;
@@ -176,7 +176,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						*control_flow = ControlFlow::Exit;
+						core.exit();
+						core.scene_change(control_flow);
 						return;
 					}
 
@@ -199,7 +200,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 					}
 				}
 				WindowEvent::CloseRequested => {
-					*control_flow = ControlFlow::Exit;
+					core.exit();
+					core.scene_change(control_flow);
 				}
 				WindowEvent::Resized(psize) => {
 					core.on_window_resize(*psize);

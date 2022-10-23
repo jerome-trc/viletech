@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{
 	sync::Arc,
+	thread::JoinHandle,
 	time::{Duration, Instant},
 };
 
@@ -27,7 +28,7 @@ use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
 use shipyard::World;
 
-use crate::{data::game::DataCore, newtype_mutref, rng::RngCore};
+use crate::{data::game::DataCore, rng::RngCore};
 
 #[derive(Default)]
 pub struct PlaySim {
@@ -35,33 +36,10 @@ pub struct PlaySim {
 	pub world: World,
 }
 
-impl PlaySim {
-	// To make it easier to rearrange implementations of `LuaUserData`,
-	// define the functionality for its two associated functions here
-
-	fn add_lua_userdata_fields<'lua, T: LuaUserData, F: LuaUserDataFields<'lua, T>>(
-		_fields: &mut F,
-	) {
-		// ???
-	}
-
-	fn add_lua_userdata_methods<'lua, T: LuaUserData, M: LuaUserDataMethods<'lua, T>>(
-		_methods: &mut M,
-	) {
-		// ???
-	}
-}
-
-newtype_mutref!(pub, PlaySim, PlaySimRef);
-
-impl LuaUserData for PlaySimRef<'_> {
-	fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
-		PlaySim::add_lua_userdata_fields(fields);
-	}
-
-	fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-		PlaySim::add_lua_userdata_methods(methods);
-	}
+pub struct Handle {
+	pub sender: InSender,
+	pub receiver: OutReceiver,
+	pub thread: JoinHandle<()>,
 }
 
 pub trait EgressConfig {
@@ -98,7 +76,6 @@ pub type OutSender = crossbeam::channel::Sender<OutMessage>;
 pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
 pub struct Context {
-	pub playsim: Arc<RwLock<PlaySim>>,
 	pub lua: Arc<Mutex<Lua>>,
 	pub data: Arc<RwLock<DataCore>>,
 	pub receiver: InReceiver,
@@ -133,8 +110,7 @@ const BASE_SIM_SPEED_INDEX: usize = 10;
 
 pub fn run<C: EgressConfig>(context: Context) {
 	let Context {
-		playsim,
-		lua: _,
+		lua,
 		data: _,
 		receiver,
 		sender,
@@ -149,7 +125,8 @@ pub fn run<C: EgressConfig>(context: Context) {
 	'sim: loop {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(WAIT_TIMES[speed_index]);
-		let playsim = playsim.write();
+		let lua = lua.lock();
+		let playsim = lua.app_data_mut::<PlaySim>().unwrap();
 
 		while let Ok(msg) = receiver.try_recv() {
 			match msg {
@@ -168,6 +145,7 @@ pub fn run<C: EgressConfig>(context: Context) {
 		// ???
 
 		drop(playsim);
+		drop(lua);
 
 		// If it took longer than the expected interval to process this tic,
 		// increase the time dilation
