@@ -117,6 +117,8 @@ impl<'lua> ToLua<'lua> for Blueprint {
 				.expect("Failed to set a blueprint table's auxiliary values.");
 		}
 
+		ret.set_metatable(Some(lua.metatable_readonly()));
+
 		Ok(LuaValue::Table(ret))
 	}
 }

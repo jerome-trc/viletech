@@ -24,6 +24,7 @@ use log::{debug, error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
 use std::{
+	fmt,
 	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},
 };
@@ -45,6 +46,8 @@ pub trait ImpureLua<'p> {
 	fn envbuild_std(&self, env: &LuaTable);
 
 	fn getfenv(&self) -> LuaTable;
+
+	fn metatable_readonly(&self) -> LuaTable;
 
 	/// For guaranteeing that loaded chunks are text.
 	fn safeload<'lua, 'a, S>(
@@ -116,6 +119,35 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 				Err(err) => warn!("Failed to seed a Lua state's RNG: {}", err),
 			};
 		}
+
+		// Metatables kept in the registry
+
+		let metas = ret
+			.create_table()
+			.expect("Failed to create in-registry table `metas`.");
+
+		let readonly = ret
+			.create_table()
+			.expect("Failed to create meta-table `readonly`.");
+
+		readonly
+			.set(
+				"__newindex",
+				ret.create_function(|_, _: LuaValue| -> LuaResult<()> {
+					Err(LuaError::ExternalError(Arc::new(NewIndexError)))
+				})
+				.expect("Failed to create `__newindex` function for `metas.readonly`."),
+			)
+			.expect("Failed to set function `metas.readonly.__newindex`.");
+
+		metas
+			.set("readonly", readonly)
+			.expect("Failed to set `metas.readonly`.");
+
+		ret.set_named_registry_value("metas", metas)
+			.expect("Failed to set table `metas` in registry.");
+
+		// Dependency-free Impure-specific global functions
 
 		let impure = match ret.create_table() {
 			Ok(t) => t,
@@ -507,6 +539,13 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.expect("Failed to retrieve the current environment.")
 	}
 
+	fn metatable_readonly(&self) -> LuaTable {
+		self.named_registry_value::<_, LuaTable>("metas")
+			.unwrap()
+			.get("readonly")
+			.unwrap()
+	}
+
 	fn safeload<'lua, 'a, S>(
 		&'lua self,
 		chunk: &'a S,
@@ -535,5 +574,47 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 	fn repr(&self, val: LuaValue) -> LuaResult<String> {
 		self.globals().call_function::<_, _, String>("repr", val)
+	}
+}
+
+#[derive(Debug)]
+pub struct NewIndexError;
+
+impl std::error::Error for NewIndexError {}
+
+impl fmt::Display for NewIndexError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "Attempted to modify a read-only table.")
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn metatable_readonly() {
+		let lua = Lua::new_ex(true, true).unwrap();
+		let table = lua.create_table().unwrap();
+		table.set_metatable(Some(lua.metatable_readonly()));
+		lua.globals().set("test_table", table).unwrap();
+
+		const CHUNK: &str = "test_table.field = 0";
+		let c = lua.safeload(CHUNK, "test_chunk", lua.globals());
+
+		let err = match c.eval::<()>() {
+			Ok(()) => panic!("Assignment succeeded unexpectedly."),
+			Err(err) => err,
+		};
+
+		let cause = match err {
+			LuaError::CallbackError { cause, .. } => cause,
+			other => panic!("Unexpected Lua error kind: {:#?}", other),
+		};
+
+		match cause.as_ref() {
+			LuaError::ExternalError(err) => assert!(err.is::<NewIndexError>()),
+			other => panic!("Unexpected Lua callback error cause: {:#?}", other),
+		}
 	}
 }
