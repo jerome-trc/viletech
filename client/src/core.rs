@@ -534,7 +534,7 @@ impl ClientCore {
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
 					impure::sim::run::<sim::EgressConfigClient>(sim::Context {
-						playsim: playsim.clone(),
+						playsim,
 						lua,
 						data,
 						sender: txout,
