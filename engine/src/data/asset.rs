@@ -39,7 +39,7 @@ pub trait Asset {
 	#[must_use]
 	fn add_impl(namespace: &mut Namespace, asset: Self) -> usize;
 	#[must_use]
-	fn get_impl<'lua>(namespace: &'lua Namespace, index: usize) -> Option<&'lua Self>;
+	fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self>;
 }
 
 macro_rules! asset_vec {
@@ -52,7 +52,7 @@ macro_rules! asset_vec {
 				namespace.$vecname.len() - 1
 			}
 
-			fn get_impl<'lua>(namespace: &'lua Namespace, index: usize) -> Option<&'lua Self> {
+			fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self> {
 				namespace.$vecname.get(index)
 			}
 		}
@@ -69,7 +69,7 @@ macro_rules! asset_opt {
 				0
 			}
 
-			fn get_impl<'lua>(namespace: &'lua Namespace, _index: usize) -> Option<&'lua Self> {
+			fn get_impl(namespace: &Namespace, _index: usize) -> Option<&Self> {
 				namespace.$optname.as_ref()
 			}
 		}
