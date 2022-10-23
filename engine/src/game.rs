@@ -117,12 +117,20 @@ pub enum ActorStateVisual {
 	Model(AssetIndex),
 }
 
+pub struct ActorStateAction {
+	/// Note that this function will have already been bound to its arguments,
+	/// destructured from the table stored in `args`.
+	func: LuaRegistryKey,
+	/// Points to a table.
+	args: LuaRegistryKey,
+}
+
 pub struct ActorState {
 	visual: ActorStateVisual,
 	duration: i16,
 	tic_range: u16,
 	flags: ActorStateFlags,
-	action: Option<LuaRegistryKey>,
+	action: Option<ActorStateAction>,
 }
 
 impl ActorState {
