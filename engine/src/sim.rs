@@ -66,8 +66,9 @@ impl EgressConfig for EgressConfigNoop {
 
 pub enum InMessage {
 	Stop,
-	SpeedUp,
-	SlowDown,
+	IncreaseTicRate,
+	DecreaseTicRate,
+	SetTicRate(i8),
 }
 
 /// Outbound messages are only for playsims running within the client.
@@ -87,33 +88,27 @@ pub struct Context {
 	pub sender: OutSender,
 }
 
-const WAIT_TIMES: [u64; 21] = [
-	28_571 * 11, // -10
-	28_571 * 10,
-	28_571 * 9,
-	28_571 * 8,
-	28_571 * 7,
-	28_571 * 6,
-	28_571 * 5,
-	28_571 * 4,
-	28_571 * 3,
-	28_571 * 2,
-	28_571, // 0: normal, 35 tics/second
-	28_571 / 2,
-	28_571 / 3,
-	28_571 / 4,
-	28_571 / 5,
-	28_571 / 6,
-	28_571 / 7,
-	28_571 / 8,
-	28_571 / 9,
-	28_571 / 10,
-	28_571 / 11, // +10
-];
-
-const BASE_SIM_SPEED_INDEX: usize = 10;
-
 pub fn run<C: EgressConfig>(context: Context) {
+	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds
+	const BASE_TICINTERVAL_INDEX: usize = 10;
+
+	#[rustfmt::skip]
+	const TICINTERVAL_POWERS: [f64; 21] = [
+		// Minimum speed (-10 in the UI) is approximately 12 tics per second
+		1.10, 1.09, 1.08, 1.07, 1.06,
+		1.05, 1.04, 1.03, 1.02, 1.01,
+		1.00, // Base speed (0 in the UI) is 35 tics per second
+		0.99, 0.98, 0.97, 0.96, 0.95,
+		0.94, 0.93, 0.92, 0.91, 0.90,
+		// Maximum speed (+10 in the UI) is approximately 97 tics per second
+	];
+
+	fn calc_tic_interval(index: usize) -> u64 {
+		(BASE_TICINTERVAL as f64)
+			.powf(TICINTERVAL_POWERS[index])
+			.round() as u64
+	}
+
 	let Context {
 		lua,
 		data: _,
@@ -125,11 +120,13 @@ pub fn run<C: EgressConfig>(context: Context) {
 	debug_assert!(receiver.capacity().is_none());
 	debug_assert!(sender.capacity().is_none());
 
-	let mut speed_index = BASE_SIM_SPEED_INDEX;
+	let mut tindx_real = BASE_TICINTERVAL_INDEX;
+	let mut tindx_goal = BASE_TICINTERVAL_INDEX;
+	let mut tic_interval = BASE_TICINTERVAL; // In microseconds
 
 	'sim: loop {
 		let now = Instant::now();
-		let next_tic = now + Duration::from_micros(WAIT_TIMES[speed_index]);
+		let next_tic = now + Duration::from_micros(tic_interval);
 		let lua = lua.lock();
 		let playsim = lua.app_data_mut::<PlaySim>().unwrap();
 
@@ -138,11 +135,19 @@ pub fn run<C: EgressConfig>(context: Context) {
 				InMessage::Stop => {
 					break 'sim;
 				}
-				InMessage::SpeedUp => {
-					speed_index = WAIT_TIMES.len().min(speed_index + 1);
+				InMessage::IncreaseTicRate => {
+					if tindx_goal < (TICINTERVAL_POWERS.len() - 1) {
+						tindx_goal += 1;
+					}
 				}
-				InMessage::SlowDown => {
-					speed_index = 0.max(speed_index - 1);
+				InMessage::DecreaseTicRate => {
+					if tindx_goal > 0 {
+						tindx_goal -= 1;
+					}
+				}
+				InMessage::SetTicRate(s_ticrate) => {
+					debug_assert!((-10..=10).contains(&s_ticrate));
+					tindx_goal = (s_ticrate + 10) as usize;
 				}
 			}
 		}
@@ -153,9 +158,14 @@ pub fn run<C: EgressConfig>(context: Context) {
 		drop(lua);
 
 		// If it took longer than the expected interval to process this tic,
-		// increase the time dilation
-		if Instant::now() > next_tic {
-			speed_index -= 1;
+		// increase the time dilation; if it took less, try to go back up to
+		// the user's desired tic rate
+		if Instant::now() > next_tic && tindx_real > 0 {
+			tindx_real -= 1;
+			tic_interval = calc_tic_interval(tindx_real);
+		} else if tindx_real < tindx_goal {
+			tindx_real += 1;
+			tic_interval = calc_tic_interval(tindx_real);
 		}
 
 		std::thread::sleep(next_tic - now);
