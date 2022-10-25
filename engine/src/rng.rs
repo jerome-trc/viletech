@@ -79,6 +79,7 @@ impl<B: ImpureRng + Default> Default for RngCore<B> {
 }
 
 impl<B: ImpureRng + Default> RngCore<B> {
+	/// Returns an error if there's already a PRNG under `key`.
 	pub fn add_default(&mut self, key: String) -> Result<(), Error> {
 		if self.prngs.contains_key(&key) {
 			return Err(Error::KeyOverlap);
@@ -89,6 +90,7 @@ impl<B: ImpureRng + Default> RngCore<B> {
 		Ok(())
 	}
 
+	/// Returns an error if there's already a PRNG under `key`.
 	pub fn add(&mut self, key: String, prng: B) -> Result<(), Error> {
 		if self.prngs.contains_key(&key) {
 			return Err(Error::KeyOverlap);
@@ -99,24 +101,18 @@ impl<B: ImpureRng + Default> RngCore<B> {
 		Ok(())
 	}
 
-	#[must_use]
-	pub fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32 {
-		self.prngs
-			.get_mut("")
-			.unwrap()
-			.range_i32(min_incl, max_incl)
+	pub fn try_get(&mut self, key: &str) -> Option<&mut B> {
+		self.prngs.get_mut(key)
 	}
 
-	#[must_use]
-	pub fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32 {
-		self.prngs
-			.get_mut("")
-			.unwrap()
-			.range_f32(min_incl, max_incl)
+	/// Shortcut for `try_get().unwrap()`, for PRNGs which are provably known to
+	/// be registered by the engine. Panics if there's no PRNG under `key`.
+	pub fn get(&mut self, key: &str) -> &mut B {
+		self.prngs.get_mut(key).unwrap()
 	}
 
-	#[must_use]
-	pub fn coinflip(&mut self) -> bool {
-		self.prngs.get_mut("").unwrap().coin_flip()
+	/// Retrieves the PRNG behind the key "", used as a sensible default.
+	pub fn get_anon(&mut self) -> &mut B {
+		self.prngs.get_mut("").unwrap()
 	}
 }
