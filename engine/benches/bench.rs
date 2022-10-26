@@ -17,10 +17,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use impure::vfs::VirtualFs;
+use impure::{lua::ImpureLua, newtype, rng::ImpureRng, sim::PlaySim, vfs::VirtualFs};
+use mlua::prelude::*;
+use parking_lot::{Mutex, RwLock};
+
+newtype!(, PlaySim, PlaySimBenchWrapper);
+
+impl LuaUserData for PlaySimBenchWrapper {}
+
+fn lua(crit: &mut Criterion) {
+	let lua = Lua::new_ex(true, true).unwrap();
+	lua.set_app_data(PlaySim::default());
+	let amps = Arc::new(Mutex::new(PlaySim::default()));
+	let arwps = Arc::new(RwLock::new(PlaySim::default()));
+	let regkey = lua
+		.create_registry_value(PlaySimBenchWrapper(PlaySim::default()))
+		.unwrap();
+
+	let mut grp_nativebind = crit.benchmark_group("Lua");
+
+	grp_nativebind.bench_function("Native Bind, App Data", |bencher| {
+		bencher.iter(|| {
+			let mut r = lua.app_data_mut::<PlaySim>().unwrap();
+			let _ = r.rng.get_anon().range_i32(0, 1);
+		});
+	});
+
+	grp_nativebind.bench_function("Native Bind, Registry Userdata", |bencher| {
+		bencher.iter(|| {
+			let r = lua.registry_value::<LuaAnyUserData>(&regkey).unwrap();
+			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
+			let _ = ps.rng.get_anon().range_i32(0, 1);
+		});
+	});
+
+	grp_nativebind.bench_function("Native Bind, Arc/Mutex", |bencher| {
+		bencher.iter(|| {
+			let _ = amps.lock().rng.get_anon().range_i32(0, 1);
+		});
+	});
+
+	grp_nativebind.bench_function("Native Bind, Arc/RwLock", |bencher| {
+		bencher.iter(|| {
+			let _ = arwps.write().rng.get_anon().range_i32(0, 1);
+		});
+	});
+
+	grp_nativebind.finish();
+}
 
 fn vfs(crit: &mut Criterion) {
 	fn mount(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
@@ -76,5 +123,5 @@ fn vfs(crit: &mut Criterion) {
 	lookup(crit, &mount_paths);
 }
 
-criterion_group!(benches, vfs);
+criterion_group!(benches, lua, vfs);
 criterion_main!(benches);
