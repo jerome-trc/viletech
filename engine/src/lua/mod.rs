@@ -267,9 +267,9 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			"version",
 			ret.create_function(|_, _: ()| {
 				Ok((
-					env!("CARGO_PKG_VERSION_MAJOR"),
-					env!("CARGO_PKG_VERSION_MINOR"),
-					env!("CARGO_PKG_VERSION_PATCH"),
+					env!("CARGO_PKG_VERSION_MAJOR").parse::<u32>().unwrap(),
+					env!("CARGO_PKG_VERSION_MINOR").parse::<u32>().unwrap(),
+					env!("CARGO_PKG_VERSION_PATCH").parse::<u32>().unwrap(),
 				))
 			})?,
 		)?;
