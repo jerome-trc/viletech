@@ -28,7 +28,7 @@ use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
 use shipyard::World;
 
-use crate::{data::game::DataCore, rng::RngCore};
+use crate::{data::DataCore, rng::RngCore};
 
 #[derive(Default)]
 pub struct PlaySim {

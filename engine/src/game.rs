@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::data::game::AssetIndex;
+use crate::data::AssetHandle;
 
 use bitflags::bitflags;
 use mlua::prelude::*;
@@ -28,7 +28,7 @@ pub struct SkillInfo {
 	/// Displayed to the user. May be a string ID.
 	name: String,
 	/// Displayed to the user in the selection menu.
-	graphic: AssetIndex,
+	graphic: AssetHandle,
 	spawn_filter: SpawnFilter,
 	respawn_time: u32,
 	respawn_limit: u32,
@@ -83,7 +83,7 @@ bitflags! {
 }
 
 pub struct DamageType {
-	id: AssetIndex,
+	id: AssetHandle,
 
 	base_factor: f32,
 	flags: DamageTypeFlags,
@@ -98,7 +98,7 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct DamageOverTime {
-	damage_type: AssetIndex,
+	damage_type: AssetHandle,
 	/// Applied per tic.
 	damage: i32,
 	tics_remaining: u32,
@@ -107,14 +107,14 @@ pub struct DamageOverTime {
 }
 
 pub struct Species {
-	id: AssetIndex,
+	id: AssetHandle,
 }
 
 pub enum ActorStateVisual {
 	None,
-	Sprite(AssetIndex),
-	Voxel(AssetIndex),
-	Model(AssetIndex),
+	Sprite(AssetHandle),
+	Voxel(AssetHandle),
+	Model(AssetHandle),
 }
 
 pub struct ActorStateAction {

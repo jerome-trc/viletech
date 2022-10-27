@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use impure::{
 	audio::{self, AudioCore},
 	console::Console,
-	data::game::DataCore,
+	data::DataCore,
 	depends::{parking_lot::Mutex, winit::event::ElementState, *},
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},

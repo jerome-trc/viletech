@@ -23,7 +23,7 @@ mod core;
 
 use impure::{
 	console::Console,
-	data::game::DataCore,
+	data::DataCore,
 	depends::*,
 	gfx::{core::GraphicsCore, render},
 	lua::ImpureLua,

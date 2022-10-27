@@ -1,4 +1,4 @@
-//! A trait providing generic functionality for [`super::game::DataCore`].
+//! A trait providing generic functionality for [`super::DataCore`].
 
 /*
 
@@ -19,74 +19,161 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::{
-	ecs::Blueprint,
-	game::DamageType,
-	game::{SkillInfo, Species},
-	gfx::doom::{ColorMap, Endoom, Palette},
-	level::Episode,
-	LevelCluster, LevelMetadata, Namespace,
+use std::{
+	fmt,
+	ops::{Deref, DerefMut},
 };
 
-use super::game::{Music, Sound};
+use fasthash::metro;
+use serde::{Deserialize, Serialize};
 
-pub trait Asset {
-	/// For "singleton" assets like palettes, this should be left empty.
+use super::{AssetVec, Namespace};
+
+pub trait Asset: Sized {
 	const DOMAIN_STRING: &'static str;
 
-	/// Returns the index of the asset in the vector that newly holds it.
-	/// If the asset doesn't go into a vector, return 0.
+	/// Should refer to one of the members of [`Namespace`].
 	#[must_use]
-	fn add_impl(namespace: &mut Namespace, asset: Self) -> usize;
+	fn collection(namespace: &Namespace) -> &AssetVec<Self>;
+	/// Should refer to one of the members of [`Namespace`].
 	#[must_use]
-	fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self>;
+	fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self>;
 }
 
-macro_rules! asset_vec {
+/// Wraps a hash, generated from an asset ID string, used as a key in
+/// [`super::DataCore`]'s `asset_map`. Scripts call asset-domain-specific functions
+/// and pass in strings like `"namespace:sound_id"`, so mixing in the domain's
+/// string (e.g. "snd") ensures uniqueness in one hash map amongst other assets.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IdHash(pub(super) u64);
+
+impl IdHash {
+	#[must_use]
+	pub(super) fn from_id_pair<A: Asset>(namespace_id: &str, asset_id: &str) -> Self {
+		let mut ret = metro::hash64(namespace_id);
+		ret ^= metro::hash64(A::DOMAIN_STRING);
+		ret ^= metro::hash64(asset_id);
+
+		Self(ret)
+	}
+
+	pub(super) fn from_id<A: Asset>(string: &str) -> Result<Self, Error> {
+		let mut split = string.split(':');
+
+		let nsid = split.next().ok_or(Error::HashEmptyString)?;
+		let aid = split.next().ok_or(Error::IdMissingPostfix)?;
+
+		Ok(Self::from_id_pair::<A>(nsid, aid))
+	}
+}
+
+/// `namespace` corresponds to one of the elements in [`super::DataCore`]'s `namespaces`.
+/// `element` corresponds to an element in the relevant sub-vector of the namespace.
+/// `hash` comes from the inner field of an [`IdHash`]; it's stored in save-files
+/// since the ordering of elements in [`Namespace`] isn't a given.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Handle {
+	#[serde(skip)]
+	pub(super) namespace: usize,
+	#[serde(skip)]
+	pub(super) element: usize,
+	pub(super) hash: u64,
+}
+
+#[derive(Debug)]
+pub enum Error {
+	HashEmptyString,
+	IdClobber,
+	IdMissingPostfix,
+	IdNotFound,
+	NamespaceNotFound,
+}
+
+impl std::error::Error for Error {}
+
+impl fmt::Display for Error {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::HashEmptyString => {
+				write!(f, "Cannot form an asset hash from an empty ID string.")
+			}
+			Self::IdClobber => {
+				write!(f, "Attempted to overwrite an existing asset ID map key.")
+			}
+			Self::IdMissingPostfix => {
+				write!(f, "Asset ID is malformed, and lacks a postfix.")
+			}
+			Self::IdNotFound => {
+				write!(f, "The given asset ID did not match any existing asset.")
+			}
+			Self::NamespaceNotFound => {
+				write!(
+					f,
+					"The given namespace ID did not match any existing game data object's UUID."
+				)
+			}
+		}
+	}
+}
+
+bitflags::bitflags! {
+	pub struct Flags: u8 {
+		/// This asset was generated at run-time, rather than loaded in from the
+		/// VFS. Assets without this flag are never written to save-files.
+		const DYNAMIC = 1 << 0;
+		/// Only assets marked `DYNAMIC` and `SAVED` are written to save-files.
+		const SAVED = 1 << 1;
+	}
+}
+
+pub struct Wrapper<A: Asset> {
+	pub(super) inner: A,
+	pub(super) hash: u64,
+	pub(super) flags: Flags,
+}
+
+impl<A: Asset> Deref for Wrapper<A> {
+	type Target = A;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+impl<A: Asset> DerefMut for Wrapper<A> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.inner
+	}
+}
+
+macro_rules! asset_impl {
 	($asset_t:ty, $vecname:ident, $dom:literal) => {
 		impl Asset for $asset_t {
 			const DOMAIN_STRING: &'static str = $dom;
 
-			fn add_impl(namespace: &mut Namespace, asset: Self) -> usize {
-				namespace.$vecname.push(asset);
-				namespace.$vecname.len() - 1
+			fn collection(namespace: &Namespace) -> &AssetVec<Self> {
+				&namespace.$vecname
 			}
 
-			fn get_impl(namespace: &Namespace, index: usize) -> Option<&Self> {
-				namespace.$vecname.get(index)
-			}
-		}
-	};
-}
-
-macro_rules! asset_opt {
-	($asset_t:ty, $optname:ident) => {
-		impl Asset for $asset_t {
-			const DOMAIN_STRING: &'static str = "";
-
-			fn add_impl(namespace: &mut Namespace, asset: Self) -> usize {
-				namespace.$optname = Some(asset);
-				0
-			}
-
-			fn get_impl(namespace: &Namespace, _index: usize) -> Option<&Self> {
-				namespace.$optname.as_ref()
+			fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self> {
+				&mut namespace.$vecname
 			}
 		}
 	};
 }
 
-asset_vec!(Blueprint, blueprints, "bp");
-asset_vec!(DamageType, damage_types, "dmg_t");
-asset_vec!(LevelCluster, clusters, "cluster");
-asset_vec!(Episode, episodes, "episode");
-asset_vec!(LevelMetadata, levels, "lvl");
-asset_vec!(SkillInfo, skills, "skill");
-asset_vec!(Species, species, "species");
-asset_vec!(String, language, "lang");
-asset_vec!(Music, music, "mus");
-asset_vec!(Sound, sounds, "snd");
+asset_impl!(crate::game::ActorStateMachine, state_machines, "afsm");
+asset_impl!(crate::ecs::Blueprint, blueprints, "bp");
+asset_impl!(crate::game::DamageType, damage_types, "dmg_t");
+asset_impl!(crate::level::Cluster, clusters, "cluster");
+asset_impl!(crate::level::Episode, episodes, "episode");
+asset_impl!(crate::level::Metadata, levels, "lvl");
+asset_impl!(crate::game::SkillInfo, skills, "skill");
+asset_impl!(crate::game::Species, species, "species");
 
-asset_opt!(ColorMap, colormap);
-asset_opt!(Endoom, endoom);
-asset_opt!(Palette, palette);
+asset_impl!(String, language, "lang");
+asset_impl!(super::Music, music, "mus");
+asset_impl!(super::Sound, sounds, "snd");
+asset_impl!(crate::gfx::doom::ColorMap, colormap, "clrmap");
+asset_impl!(crate::gfx::doom::Endoom, endoom, "endoom");
+asset_impl!(crate::gfx::doom::Palette, palette, "playpal");

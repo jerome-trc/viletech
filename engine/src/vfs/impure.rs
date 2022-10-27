@@ -30,7 +30,7 @@ use regex::Regex;
 use super::{Error, Handle, VirtualFs};
 
 use crate::{
-	data::{game::GameDataKind, GameDataMeta},
+	data::{GameDataKind, GameDataMeta},
 	utils::{path::*, string::*},
 	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
 	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},

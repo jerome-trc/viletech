@@ -21,7 +21,7 @@ use num::traits::FromPrimitive;
 use num_derive::FromPrimitive;
 use shipyard::EntityId;
 
-use crate::{data::game::AssetIndex, math::IRect32};
+use crate::{data::AssetHandle, math::IRect32};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
@@ -121,7 +121,7 @@ pub(super) struct Script {
 	local_vars: Vec<i32>,
 	activator: EntityId,
 	line: Option<usize>,
-	font: Option<AssetIndex>,
+	font: Option<AssetHandle>,
 
 	hud_height: u32,
 	hud_width: u32,

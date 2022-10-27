@@ -27,6 +27,7 @@ pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod cvarinfo;
+#[allow(dead_code)]
 pub mod data;
 #[allow(dead_code)]
 pub mod ecs;
@@ -57,7 +58,6 @@ pub mod zscript;
 
 // Type aliases
 
-pub use data::game::Namespace;
 pub use level::Cluster as LevelCluster;
 pub use level::Flags as LevelFlags;
 pub use level::Metadata as LevelMetadata;

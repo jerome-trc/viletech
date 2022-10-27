@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::data::game::AssetIndex;
+use crate::data::AssetHandle;
 use bitflags::bitflags;
 use glam::IVec2;
 
@@ -90,17 +90,17 @@ bitflags! {
 
 pub struct SideDef {
 	offset: IVec2,
-	tex_top: AssetIndex,
-	tex_bottom: AssetIndex,
-	tex_mid: AssetIndex,
+	tex_top: AssetHandle,
+	tex_bottom: AssetHandle,
+	tex_mid: AssetHandle,
 	sector: i32,
 }
 
 pub struct Sector {
 	height_floor: i32,
 	height_ceiling: i32,
-	tex_floor: AssetIndex,
-	tex_ceiling: AssetIndex,
+	tex_floor: AssetHandle,
+	tex_ceiling: AssetHandle,
 	light_level: i32,
 	special: i32,
 	id: i32,
@@ -113,11 +113,11 @@ pub struct Metadata {
 	pub label: String,
 	/// May be a string ID.
 	pub author_name: String,
-	pub music: Option<AssetIndex>,
+	pub music: Option<AssetHandle>,
 	/// The map that players are taken to upon passing through the normal exit.
-	pub next: Option<AssetIndex>,
+	pub next: Option<AssetHandle>,
 	/// The map to which the secret exit leads, if any.
-	pub next_secret: Option<AssetIndex>,
+	pub next_secret: Option<AssetHandle>,
 	/// In seconds.
 	pub par_time: u32,
 	/// Only used by ACS.
@@ -136,8 +136,8 @@ bitflags! {
 pub struct Episode {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
-	pub start_map: AssetIndex,
-	pub background: AssetIndex,
+	pub start_map: AssetHandle,
+	pub background: AssetHandle,
 	pub flags: EpisodeFlags,
 }
 
@@ -156,8 +156,8 @@ pub struct Cluster {
 	/// Displayed to the user. May be a string ID.
 	text_exit: String,
 	flags: ClusterFlags,
-	music: AssetIndex,
-	background: AssetIndex,
+	music: AssetHandle,
+	background: AssetHandle,
 }
 
 bitflags! {

@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 mod blueprint;
 pub use blueprint::Blueprint;
 
-use crate::data::game::AssetIndex;
+use crate::data::AssetHandle;
 
 use mlua::prelude::*;
 
@@ -30,7 +30,7 @@ use mlua::prelude::*;
 pub struct Constant {
 	/// The sim tic on which this entity was spawned.
 	spawned_tic: u32,
-	blueprint: AssetIndex,
+	blueprint: AssetHandle,
 }
 
 impl LuaUserData for Constant {
