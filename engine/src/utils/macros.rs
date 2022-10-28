@@ -17,12 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-/// Convenience macro for defining a newtype (single-field tuple struct).
-/// Provide a visibility qualifier, type to wrap, and a name for the newtype.
+/// Convenience macro for defining a newtype (single-field tuple struct). Provide
+/// a type to wrap, a comma, optionally a visibility qualifier, and a name.
 /// Implementations are provided for [`std::ops::Deref`] and [`std::ops::DerefMut`].
 #[macro_export]
 macro_rules! newtype {
-	($visqual:vis, $type:ty, $name:ident) => {
+	($type:ty, $visqual:vis $name:ident) => {
 		$visqual struct $name($type);
 
 		impl std::ops::Deref for $name {
@@ -41,12 +41,12 @@ macro_rules! newtype {
 	};
 }
 
-/// Serves a similar role to [`newtype`].
-/// Provide a visibility qualifier, type to wrap, and a name for the newtype.
+/// Serves a similar role to [`newtype`]. Provide a type to wrap, a comma,
+/// optionally a visibility qualifier, and a name.
 /// When given type `T`, creates a newtype wrapping `&mut T`.
 #[macro_export]
 macro_rules! newtype_mutref {
-	($visqual:vis, $type:ty, $name:ident) => {
+	($type:ty, $visqual:vis $name:ident) => {
 		$visqual struct $name<'inner>(&'inner mut $type);
 
 		impl<'inner> std::ops::Deref for $name<'_> {
