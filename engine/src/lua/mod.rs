@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::vfs::VirtualFs;
+use crate::{newtype, vfs::VirtualFs};
 use log::{debug, error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
@@ -35,7 +35,7 @@ pub trait ImpureLua<'p> {
 	/// If `safe` is `false`, the debug and FFI libraries are loaded.
 	/// If `clientside` is `true`, the state's registry will contain the key-value
 	/// pair `['clientside'] = true`. Otherwise, this key will be left nil.
-	fn new_ex(safe: bool, clientside: bool) -> LuaResult<Lua>;
+	fn new_ex(safe: bool) -> LuaResult<Lua>;
 
 	/// Modifies the Lua global environment to be more conducive to a safe,
 	/// Impure-suitable sandbox, and adds numerous Impure-specific symbols.
@@ -48,6 +48,8 @@ pub trait ImpureLua<'p> {
 	fn getfenv(&self) -> LuaTable;
 
 	fn metatable_readonly(&self) -> LuaTable;
+
+	fn set_clientside(&self, clientside: bool);
 
 	/// For guaranteeing that loaded chunks are text.
 	fn safeload<'lua, 'a, S>(
@@ -65,7 +67,7 @@ pub trait ImpureLua<'p> {
 }
 
 impl<'p> ImpureLua<'p> for mlua::Lua {
-	fn new_ex(safe: bool, clientside: bool) -> LuaResult<Lua> {
+	fn new_ex(safe: bool) -> LuaResult<Lua> {
 		// Note: `io`, `os`, and `package` aren't sandbox-safe by themselves.
 		// They either get pruned of dangerous functions by `global_init` or
 		// are deleted now and may get returned in reduced form in the future.
@@ -92,10 +94,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			}
 		};
 
-		if clientside {
-			ret.set_named_registry_value("clientside", true)
-				.expect("`ImpureLua::new_ex` failed to set state ID in registry.");
-		}
+		ret.set_app_data(ClientsideAppData(true));
 
 		// Table for memoizing imported modules
 
@@ -511,6 +510,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.unwrap()
 	}
 
+	fn set_clientside(&self, clientside: bool) {
+		self.app_data_mut::<ClientsideAppData>().unwrap().0 = clientside;
+	}
+
 	fn safeload<'lua, 'a, S>(
 		&'lua self,
 		chunk: &'a S,
@@ -533,6 +536,12 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 	}
 }
 
+newtype!(
+	/// Unique type for use as Lua app data, indicating whether the owning state
+	/// is currently in the process of running a sim tick.
+	pub struct ClientsideAppData(bool)
+);
+
 #[derive(Debug)]
 pub struct NewIndexError;
 
@@ -550,7 +559,7 @@ mod test {
 
 	#[test]
 	fn metatable_readonly() {
-		let lua = Lua::new_ex(true, true).unwrap();
+		let lua = Lua::new_ex(true).unwrap();
 		let table = lua.create_table().unwrap();
 		table.set_metatable(Some(lua.metatable_readonly()));
 		lua.globals().set("test_table", table).unwrap();

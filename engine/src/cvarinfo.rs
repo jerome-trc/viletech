@@ -350,7 +350,7 @@ KatanaZERO
 
 		"#;
 
-		let lua = Lua::new_ex(true, true).expect("Failed to create Lua state.");
+		let lua = Lua::new_ex(true).expect("Failed to create Lua state.");
 
 		let table = match transpile(&lua, SOURCE) {
 			Ok(t) => t,

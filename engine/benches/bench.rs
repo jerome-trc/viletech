@@ -29,24 +29,26 @@ newtype!(struct PlaySimBenchWrapper(PlaySim));
 impl LuaUserData for PlaySimBenchWrapper {}
 
 fn lua(crit: &mut Criterion) {
-	let lua = Lua::new_ex(true, true).unwrap();
+	let lua = Lua::new_ex(true).unwrap();
 	lua.set_app_data(PlaySim::default());
 	let amps = Arc::new(Mutex::new(PlaySim::default()));
 	let arwps = Arc::new(RwLock::new(PlaySim::default()));
 	let regkey = lua
 		.create_registry_value(PlaySimBenchWrapper(PlaySim::default()))
 		.unwrap();
+	lua.set_named_registry_value("playsim", PlaySimBenchWrapper(PlaySim::default()))
+		.unwrap();
 
-	let mut grp_nativebind = crit.benchmark_group("Lua");
+	let mut grp_nativebind = crit.benchmark_group("Lua Native Binding");
 
-	grp_nativebind.bench_function("Native Bind, App Data", |bencher| {
+	grp_nativebind.bench_function("App Data", |bencher| {
 		bencher.iter(|| {
 			let mut r = lua.app_data_mut::<PlaySim>().unwrap();
 			let _ = r.rng.get_anon().range_i32(0, 1);
 		});
 	});
 
-	grp_nativebind.bench_function("Native Bind, Registry Userdata", |bencher| {
+	grp_nativebind.bench_function("Registry (Keyed) Userdata", |bencher| {
 		bencher.iter(|| {
 			let r = lua.registry_value::<LuaAnyUserData>(&regkey).unwrap();
 			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
@@ -54,13 +56,23 @@ fn lua(crit: &mut Criterion) {
 		});
 	});
 
-	grp_nativebind.bench_function("Native Bind, Arc/Mutex", |bencher| {
+	grp_nativebind.bench_function("Registry (Named) Userdata", |bencher| {
+		bencher.iter(|| {
+			let r = lua
+				.named_registry_value::<_, LuaAnyUserData>("playsim")
+				.unwrap();
+			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
+			let _ = ps.rng.get_anon().range_i32(0, 1);
+		});
+	});
+
+	grp_nativebind.bench_function("Arc<Mutex<>>", |bencher| {
 		bencher.iter(|| {
 			let _ = amps.lock().rng.get_anon().range_i32(0, 1);
 		});
 	});
 
-	grp_nativebind.bench_function("Native Bind, Arc/RwLock", |bencher| {
+	grp_nativebind.bench_function("Arc<RwLock<>>", |bencher| {
 		bencher.iter(|| {
 			let _ = arwps.write().rng.get_anon().range_i32(0, 1);
 		});
