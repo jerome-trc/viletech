@@ -20,6 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use lazy_static::lazy_static;
 use regex::Regex;
 
+#[must_use]
+pub fn is_only_whitespace(string: &str) -> bool {
+	!string.chars().any(|c| !c.is_whitespace())
+}
+
 /// For use with a parser span (i.e. ZScript), so returns not only a line
 /// but also which line in the text it is out of each line (starting at 0).
 #[must_use]

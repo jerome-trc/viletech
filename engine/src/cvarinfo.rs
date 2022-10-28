@@ -28,6 +28,8 @@ use std::{
 
 use mlua::prelude::*;
 
+use crate::utils::string::is_only_whitespace;
+
 #[derive(Debug)]
 pub enum Error {
 	Lua(LuaError),
@@ -150,20 +152,10 @@ pub fn transpile<'lua>(lua: &'lua Lua, lump: &str) -> Result<LuaTable<'lua>, Err
 		false
 	}
 
-	fn whitespace_only(string: &str) -> bool {
-		for c in string.chars() {
-			if !c.is_whitespace() {
-				return false;
-			}
-		}
-
-		true
-	}
-
 	let ret = lua.create_table().map_err(map_lua_err)?;
 
 	for decl in lump.split_inclusive(';') {
-		if whitespace_only(decl) {
+		if is_only_whitespace(decl) {
 			continue;
 		}
 
@@ -177,7 +169,7 @@ pub fn transpile<'lua>(lua: &'lua Lua, lump: &str) -> Result<LuaTable<'lua>, Err
 		// A token can be empty or just whitespace if the user chains spaces/tabs/etc.
 		let mut tokens = lhs
 			.split(char::is_whitespace)
-			.filter(|t| !t.is_empty() && !whitespace_only(t));
+			.filter(|t| !t.is_empty() && !is_only_whitespace(t));
 
 		let scope = tokens.next().ok_or(Error::NoScope)?.trim();
 		let server = scope.eq_ignore_ascii_case("server");
