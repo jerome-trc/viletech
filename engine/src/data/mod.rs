@@ -46,8 +46,8 @@ pub use asset::{
 
 use self::asset::{Asset, IdHash};
 
-newtype!(StaticSoundData, pub Music);
-newtype!(StaticSoundData, pub Sound);
+newtype!(pub struct Music(StaticSoundData));
+newtype!(pub struct Sound(StaticSoundData));
 
 /// Note that all user-facing string fields within may be IDs or expanded.
 #[derive(Deserialize)]

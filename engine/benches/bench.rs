@@ -24,7 +24,7 @@ use impure::{lua::ImpureLua, newtype, rng::ImpureRng, sim::PlaySim, vfs::Virtual
 use mlua::prelude::*;
 use parking_lot::{Mutex, RwLock};
 
-newtype!(PlaySim, PlaySimBenchWrapper);
+newtype!(struct PlaySimBenchWrapper(PlaySim));
 
 impl LuaUserData for PlaySimBenchWrapper {}
 

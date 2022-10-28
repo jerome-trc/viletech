@@ -22,7 +22,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /// Implementations are provided for [`std::ops::Deref`] and [`std::ops::DerefMut`].
 #[macro_export]
 macro_rules! newtype {
-	($type:ty, $visqual:vis $name:ident) => {
+	(
+		$(#[$outer:meta])*
+		$visqual:vis struct $name:ident($type:ty)
+	) => {
+		$(#[$outer])*
 		$visqual struct $name($type);
 
 		impl std::ops::Deref for $name {
@@ -46,7 +50,11 @@ macro_rules! newtype {
 /// When given type `T`, creates a newtype wrapping `&mut T`.
 #[macro_export]
 macro_rules! newtype_mutref {
-	($type:ty, $visqual:vis $name:ident) => {
+	(
+		$(#[$outer:meta])*
+		$visqual:vis struct $name:ident($type:ty)
+	) => {
+		$(#[$outer])*
 		$visqual struct $name<'inner>(&'inner mut $type);
 
 		impl<'inner> std::ops::Deref for $name<'_> {
