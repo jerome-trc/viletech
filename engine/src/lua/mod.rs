@@ -59,8 +59,6 @@ pub trait ImpureLua<'p> {
 	where
 		S: mlua::AsChunk<'lua> + ?Sized;
 
-	fn teal_compile(&self, source: &str) -> LuaResult<String>;
-
 	/// Generate a human-friendly string representation of
 	/// any kind of Lua value via the Serpent library.
 	fn repr(&self, val: LuaValue) -> LuaResult<String>;
@@ -351,14 +349,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 						}
 					};
 
-					let string = match std::str::from_utf8(bytes) {
-						Ok(s) => s,
-						Err(err) => {
-							return Err(LuaError::ExternalError(Arc::new(err)));
-						}
-					};
-
-					let chunk = match l.teal_compile(string) {
+					let chunk = match std::str::from_utf8(bytes) {
 						Ok(s) => s,
 						Err(err) => {
 							return Err(LuaError::ExternalError(Arc::new(err)));
@@ -366,7 +357,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 					};
 
 					match l
-						.safeload(&chunk, path.as_str(), l.getfenv())
+						.safeload(chunk, path.as_str(), l.getfenv())
 						.eval::<LuaValue>()
 					{
 						Ok(ret) => {
@@ -418,36 +409,13 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			g_vfs.set("read", func)
 		}
 
-		fn teal(lua: &Lua, compat53: LuaTable) -> LuaResult<()> {
-			let env = lua.create_table()?;
-
-			for pair in lua.globals().pairs::<LuaValue, LuaValue>() {
-				let (key, value) = pair?;
-				env.set(key, value)?;
-			}
-
-			env.set("compat53", compat53)?;
-
-			let teal: LuaTable = lua
-				.safeload(include_str!("./teal.lua"), "teal", env)
-				.eval()?;
-
-			lua.globals().set("teal", teal)
-		}
-
 		let globals = self.globals();
 		let g_vfs = self.create_table()?;
-		// compat53 module gets privileged access to symbols which are later deleted.
-		// This only gets referenced by the Teal compiler, so nothing unsafe leaks
-		let compat53 = self
-			.safeload(include_str!("./compat53.lua"), "compat53", self.globals())
-			.eval::<LuaTable>()?;
 
 		delete_g(&globals)?;
 		delete_g_os(&globals)?;
 		g_import(self, &globals, vfs.clone())?;
 		g_vfs_read(self, &g_vfs, vfs.clone())?;
-		teal(self, compat53)?;
 
 		globals.set("vfs", g_vfs)?;
 
@@ -456,25 +424,22 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		let vfsg = vfs.read();
 
 		let utils = vfsg
-			.read_str("/impure/lua/utils.tl")
+			.read_str("/impure/lua/utils.lua")
 			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let utils = self.teal_compile(utils)?;
-		let utils = self.safeload(&utils, "utils", globals.clone());
+		let utils = self.safeload(utils, "utils", globals.clone());
 		utils.eval()?;
 
 		let array = vfsg
-			.read_str("/impure/lua/array.tl")
+			.read_str("/impure/lua/array.lua")
 			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let array = self.teal_compile(array)?;
-		let array = self.safeload(&array, "array", globals.clone());
+		let array = self.safeload(array, "array", globals.clone());
 		let array: LuaTable = array.eval()?;
 		globals.set("array", array)?;
 
 		let map = vfsg
-			.read_str("/impure/lua/map.tl")
+			.read_str("/impure/lua/map.lua")
 			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let map = self.teal_compile(map)?;
-		let map = self.safeload(&map, "map", globals.clone());
+		let map = self.safeload(map, "map", globals.clone());
 		let map: LuaTable = map.eval()?;
 		globals.set("map", map)?;
 
@@ -561,15 +526,6 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.expect("`ImpureLua::safeload()`: Got malformed environment.")
 			.set_name(name)
 			.expect("`ImpureLua::safeload()`: Got unsanitised name.")
-	}
-
-	fn teal_compile(&self, source: &str) -> LuaResult<String> {
-		self.globals()
-			.get::<&str, LuaTable>("teal")
-			.expect("Teal compiler hasn't been exported yet.")
-			.get::<&str, LuaFunction>("gen")
-			.expect("Teal compiler is missing function: `gen`.")
-			.call::<&str, String>(source)
 	}
 
 	fn repr(&self, val: LuaValue) -> LuaResult<String> {

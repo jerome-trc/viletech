@@ -20,13 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ]]
 
+--- @type serpent
 local serpent = import('/impure/lua/serpent.lua')
 
-global function repr(obj: any): string
+function _G.repr(obj)
 	return serpent.block(obj, {
 		indent = '\t',
 		maxlevel = 8,
 		nocode = true,
-		numformat = '%.6g',
+		numformat = '%.6g'
 	})
 end

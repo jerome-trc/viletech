@@ -1,4 +1,4 @@
--- Map utilities.
+-- Helpers for maps (tables only consisting of string-key/value pairs).
 -- Pre-exported globally in all Lua contexts.
 
 --[[
@@ -20,21 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ]]
 
-local record map
-	size: function<K, V>(m: {K:V}): integer
-	contains_key: function<K, V>(m: {K:V}, key: K): boolean
-	contains_val: function<K, V>(m: {K:V}, val: V): boolean
+--- @class map
+local map = {}
 
-	-- Sets every element in this map to `nil`, leaving it empty.
-	clear: function<K, V>(m: {K:V})
+-- Non-mutating ----------------------------------------------------------------
 
-	-- Copies every value 
-	to_array: function<K, V>(m: {K:V}): {V}
-end
-
--- Accessors -------------------------------------------------------------------
-
-function map.size<K, V>(m: {K:V}): integer
+--- @generic T
+--- @param m { [string]: T }
+--- @return integer size The number of non-sequential pairs in this map.
+function map.size(m)
 	local ret = 0
 
 	for _, _ in pairs(m) do
@@ -44,11 +38,11 @@ function map.size<K, V>(m: {K:V}): integer
 	return ret
 end
 
-function map.contains_key<K, V>(m: {K:V}, key: K): boolean
-	return m[key] ~= nil
-end
-
-function map.contains_val<K, V>(m: {K:V}, val: V): boolean
+--- @generic T
+--- @param m { [string]: T }
+--- @param val T
+--- @return boolean
+function map.contains_val(m, val)
 	for _, v in pairs(m) do
 		if v == val then
 			return true
@@ -58,9 +52,12 @@ function map.contains_val<K, V>(m: {K:V}, val: V): boolean
 	return false
 end
 
--- Mutators --------------------------------------------------------------------
+-- Mutating --------------------------------------------------------------------
 
-function map.clear<K, V>(m: {K:V})
+--- Sets every element in this map to `nil`, leaving it empty.
+--- @generic T
+--- @param m { [string]: T }
+function map.clear(m)
 	for k, _ in pairs(m) do
 		m[k] = nil
 	end
@@ -68,7 +65,10 @@ end
 
 -- Miscellaneous ---------------------------------------------------------------
 
-function map.to_array<K, V>(m: {K:V}): {V}
+--- @generic T
+--- @param m { [string]: T } Left untouched by this function.
+--- @return T[]
+function map.to_array(m)
 	local ret = {}
 
 	for _, v in pairs(m) do

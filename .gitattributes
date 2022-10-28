@@ -10,7 +10,6 @@
 *.rs text eol=lf
 *.svg text eol=lf
 *.toml text eol=lf
-*.tl text eol=lf
 *.txt text eol=lf
 *.wgsl text eol=lf
 
