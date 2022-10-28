@@ -43,7 +43,7 @@ pub fn create_shader_module<'d>(
 		source,
 	};
 
-	device.create_shader_module(&desc)
+	device.create_shader_module(desc)
 }
 
 pub fn create_shader_states<'m>(
@@ -51,7 +51,7 @@ pub fn create_shader_states<'m>(
 	entry_point_vert: &'m str,
 	vertex_buffers: &'m [wgpu::VertexBufferLayout],
 	entry_point_frag: &'m str,
-	color_targets: &'m [wgpu::ColorTargetState],
+	color_targets: &'m [Option<wgpu::ColorTargetState>],
 ) -> (wgpu::VertexState<'m>, wgpu::FragmentState<'m>) {
 	(
 		wgpu::VertexState {

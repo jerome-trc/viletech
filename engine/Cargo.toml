@@ -19,18 +19,18 @@ bytemuck = { version = "1.11.0", features = ["derive"] }
 byteorder = "1.4.3"
 chrono = "0.4.19"
 crossbeam = "0.8.1"
-dolly = "0.3.1"
-egui = "0.18"
-egui-wgpu = "0.18"
-egui-winit = "0.18"
+dolly = "0.4.0"
+egui = "0.19"
+egui-wgpu = "0.19"
+egui-winit = "0.19"
 fasthash = "0.4.0"
 fern = { version = "0.6.1", features = ["colored"] }
 fixed = "1.19.0"
 formatx = "0.1.4"
-glam = { version = "0.21.2", features = ["approx", "bytemuck", "serde"] }
+glam = { version = "0.22.0", features = ["approx", "bytemuck", "serde"] }
 globset = "0.4.9"
 home = "0.5.3"
-image = { version = "0.24.2", default-features = false, features = ["png"] }
+image = { version = "0.24.4", default-features = false, features = ["png"] }
 kira = "0.7.0"
 lazy_static = "1.4.0"
 log = "0.4.16"
@@ -44,7 +44,7 @@ mlua = { version = "0.8.2", features = [
 	"serialize",
 	"vendored",
 ] }
-naga = "0.9.0"
+naga = "0.10.0"
 nanorand = "0.7.0"
 num = "0.4.0"
 num-traits = "0.2.15"
@@ -63,8 +63,8 @@ str-utils = "0.1.6"
 toml = "0.5.9"
 unicode-width = "0.1.10"
 vec1 = { version = "1.8.0", features = ["serde"] }
-wgpu = "0.12"
-winit = "0.26.1"
+wgpu = "0.13"
+winit = "0.27.2"
 zip = "0.6.2"
 
 [[bench]]

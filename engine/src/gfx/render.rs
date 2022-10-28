@@ -63,7 +63,7 @@ impl<'d> PipelineBuilder<'d> {
 		mut self,
 		module: &'d ShaderModule,
 		entry_point: &'d str,
-		targets: &'d [ColorTargetState],
+		targets: &'d [Option<ColorTargetState>],
 	) -> Self {
 		self.fragment = Some(FragmentState {
 			module,

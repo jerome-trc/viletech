@@ -102,27 +102,27 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let event_loop = EventLoop::new();
 
-	let mut gfx = match GraphicsCore::new(
-		match winit::window::WindowBuilder::new()
-			.with_title("Impure")
-			.with_min_inner_size(PhysicalSize::new(320, 200))
-			.with_max_inner_size(PhysicalSize::new(7680, 4320))
-			.with_inner_size(PhysicalSize::new(800, 600))
-			.with_decorations(true)
-			.with_resizable(true)
-			.with_transparent(false)
-			.with_window_icon(
-				vfs.read()
-					.window_icon_from_file(Path::new("/impure/impure.png")),
-			)
-			.build(&event_loop)
-		{
-			Ok(w) => w,
-			Err(err) => {
-				return Err(Box::new(err));
-			}
-		},
-	) {
+	let window = match winit::window::WindowBuilder::new()
+		.with_title("Impure")
+		.with_min_inner_size(PhysicalSize::new(320, 200))
+		.with_max_inner_size(PhysicalSize::new(7680, 4320))
+		.with_inner_size(PhysicalSize::new(800, 600))
+		.with_decorations(true)
+		.with_resizable(true)
+		.with_transparent(false)
+		.with_window_icon(
+			vfs.read()
+				.window_icon_from_file(Path::new("/impure/impure.png")),
+		)
+		.build(&event_loop)
+	{
+		Ok(w) => w,
+		Err(err) => {
+			return Err(Box::new(err));
+		}
+	};
+
+	let mut gfx = match GraphicsCore::new(window, &event_loop) {
 		Ok(g) => g,
 		Err(err) => {
 			error!("Graphics subsystem initialisation failed: {}", err);
@@ -142,11 +142,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 			"vs_main",
 			&[],
 			"fs_main",
-			&[wgpu::ColorTargetState {
+			&[Some(wgpu::ColorTargetState {
 				format: gfx.surface_config.format,
 				blend: Some(wgpu::BlendState::REPLACE),
 				write_mask: wgpu::ColorWrites::ALL,
-			}],
+			})],
 		))
 		// Remaining defaults are acceptable
 		.build();

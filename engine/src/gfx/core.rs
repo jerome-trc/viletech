@@ -31,7 +31,7 @@ use wgpu::{
 	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, RenderPass, RenderPipeline,
 	SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
 };
-use winit::window::Window;
+use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
 /// Holds all state common to rendering between scenes.
 pub struct GraphicsCore {
@@ -56,7 +56,10 @@ pub struct EguiCore {
 }
 
 impl GraphicsCore {
-	pub fn new(window: Window) -> Result<GraphicsCore, Box<dyn std::error::Error>> {
+	pub fn new(
+		window: Window,
+		event_loop: &EventLoopWindowTarget<()>,
+	) -> Result<GraphicsCore, Box<dyn std::error::Error>> {
 		let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 		let surface = unsafe { instance.create_surface(&window) };
 
@@ -87,6 +90,11 @@ impl GraphicsCore {
 			}
 		};
 
+		#[cfg(not(debug_assertions))]
+		device.on_uncaptured_error(|err| {
+			log::error!("WGPU error: {}", err);
+		});
+
 		{
 			let adpinfo = adapter.get_info();
 
@@ -95,10 +103,26 @@ impl GraphicsCore {
 		}
 
 		let window_size = window.inner_size();
-		let srf_format = surface.get_preferred_format(&adapter).unwrap();
+		let tex_formats = surface.get_supported_formats(&adapter);
+
+		const PREFERRED_FORMATS: [wgpu::TextureFormat; 5] = [
+			wgpu::TextureFormat::Bgra8UnormSrgb,
+			wgpu::TextureFormat::Rgba8UnormSrgb,
+			wgpu::TextureFormat::Bgra8Unorm,
+			wgpu::TextureFormat::Rgba8Unorm,
+			wgpu::TextureFormat::Rgba16Float,
+		];
+
+		let srf_format = match tex_formats.iter().find(|tf| PREFERRED_FORMATS.contains(tf)) {
+			Some(tf) => tf,
+			None => {
+				return Err(Box::new(Error::NoSurfaceFormat));
+			}
+		};
+
 		let srf_cfg = wgpu::SurfaceConfiguration {
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-			format: srf_format,
+			format: *srf_format,
 			width: window_size.width as u32,
 			height: window_size.height as u32,
 			present_mode: wgpu::PresentMode::Fifo,
@@ -106,9 +130,9 @@ impl GraphicsCore {
 		surface.configure(&device, &srf_cfg);
 
 		let egui = EguiCore {
-			state: egui_winit::State::new(4096, &window),
+			state: egui_winit::State::new(event_loop),
 			context: egui::Context::default(),
-			render_pass: EguiRenderPass::new(&device, srf_format, 1),
+			render_pass: EguiRenderPass::new(&device, *srf_format, 1),
 		};
 
 		Ok(GraphicsCore {
@@ -273,14 +297,14 @@ impl Frame {
 	pub fn render_pass(&mut self, clear_color: wgpu::Color) -> RenderPass {
 		self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("IMPURE: Render Pass"),
-			color_attachments: &[wgpu::RenderPassColorAttachment {
+			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
 				view: &self.view,
 				resolve_target: None,
 				ops: wgpu::Operations {
 					load: wgpu::LoadOp::Clear(clear_color),
 					store: true,
 				},
-			}],
+			})],
 			depth_stencil_attachment: None,
 		})
 	}
