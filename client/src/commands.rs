@@ -44,12 +44,27 @@ pub enum Request {
 }
 
 bitflags::bitflags! {
-	pub struct CommandFlags : u8 {
+	pub struct CommandFlags: u8 {
+		/// This command is enabled when entering the frontend
+		/// and disabled when leaving it.
 		const FRONTEND = 1 << 0;
+		/// This command is enabled when entering the title scene
+		/// and disabled when leaving it.
 		const TITLE = 1 << 1;
-		const SIM = 1 << 2;
-		const LOCKSTEP = 1 << 3;
-		const AUTHORITATIVE = 1 << 4;
+		/// This command is enabled when entering any menu
+		/// and disabled when the menu stack is cleared.
+		const MENU = 1 << 2;
+		/// This command is enabled when starting a playsim
+		/// and disabled when it ends.
+		const SIM = 1 << 3;
+		/// This command is enabled when starting a lockstep
+		/// network play game and disabled when it ends.
+		const LOCKSTEP = 1 << 4;
+		/// This command is enabled when starting an authoritative
+		/// network play game and disabled when it ends.
+		const AUTHORITATIVE = 1 << 5;
+		/// This command is enabled when starting any network play game
+		/// and disabled when it ends.
 		const NETPLAY = Self::LOCKSTEP.bits | Self::AUTHORITATIVE.bits;
 	}
 }

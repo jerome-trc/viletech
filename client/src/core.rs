@@ -68,6 +68,7 @@ enum Scene {
 
 enum SceneChange {
 	Exit,
+	Frontend,
 	Title { to_mount: Vec<PathBuf> },
 	PlaySim {},
 }
@@ -362,6 +363,22 @@ impl ClientCore {
 				let mut prev = Scene::Transition;
 				std::mem::swap(&mut self.scene, &mut prev);
 
+				// Disable contextual console commands
+				match prev {
+					Scene::Frontend { .. } => {
+						self.console.disable_commands(|ccmd| {
+							ccmd.flags.contains(ConsoleCommandFlags::FRONTEND)
+						});
+					}
+					Scene::Title { .. } => {
+						self.console.disable_commands(|ccmd| {
+							ccmd.flags.contains(ConsoleCommandFlags::TITLE)
+						});
+					}
+					_ => {}
+				}
+
+				// End sim where necessary
 				match prev {
 					Scene::PlaySim { inner } | Scene::Title { inner } => {
 						self.end_sim(inner);
@@ -372,6 +389,11 @@ impl ClientCore {
 				match scene {
 					SceneChange::Exit => {
 						*control_flow = ControlFlow::Exit;
+					}
+					SceneChange::Frontend => {
+						self.console.enable_commands(|ccmd| {
+							ccmd.flags.contains(ConsoleCommandFlags::FRONTEND)
+						});
 					}
 					SceneChange::Title { to_mount } => {
 						let mut metas = vec![self
@@ -386,6 +408,10 @@ impl ClientCore {
 						}
 
 						self.data.write().populate(metas, &self.vfs.read());
+
+						self.console.enable_commands(|ccmd| {
+							ccmd.flags.contains(ConsoleCommandFlags::TITLE)
+						});
 
 						self.scene = Scene::Title {
 							inner: self.start_sim(),
@@ -554,6 +580,9 @@ impl ClientCore {
 		let lua = self.lua.clone();
 		let data = self.data.clone();
 
+		self.console
+			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
+
 		sim::Handle {
 			sender: txin,
 			receiver: rxout,
@@ -572,6 +601,9 @@ impl ClientCore {
 	}
 
 	fn end_sim(&mut self, sim: sim::Handle) {
+		self.console
+			.disable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
+
 		sim.sender
 			.send(sim::InMessage::Stop)
 			.expect("Sim sender channel unexpectedly disconnected.");
