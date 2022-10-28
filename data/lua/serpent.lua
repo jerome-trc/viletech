@@ -194,7 +194,7 @@ local function merge(a, b) if b then for k,v in pairs(b) do a[k] = v end end; re
 --- @field custom function Provide custom output for tables.
 --- @field name string Triggers full serialization with self-ref section.
 
---- @class serpent
+--- @class serpentlib
 return {
   _NAME = n, _COPYRIGHT = c, _DESCRIPTION = d, _VERSION = v,
   serialize = s,

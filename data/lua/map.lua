@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ]]
 
---- @class map
+--- @class maplib
 local map = {}
 
 -- Non-mutating ----------------------------------------------------------------
