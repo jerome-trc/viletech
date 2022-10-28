@@ -536,6 +536,36 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 	}
 }
 
+#[must_use]
+pub fn is_reserved_keyword(string: &str) -> bool {
+	#[rustfmt::skip]
+	const RESERVED_KEYWORDS: &[&str] = &[
+		"and",   
+		"break",    
+		"do",      
+		"else",     
+		"elseif",
+		"end",    
+		"false",   
+		"for",     
+		"function",  
+		"if",
+		"in",     
+		"local",   
+		"nil",     
+		"not",       
+		"or",
+		"repeat", 
+		"return",  
+		"then",    
+		"true",      
+		"until",     
+		"while",
+	];
+
+	RESERVED_KEYWORDS.iter().any(|s| s == &string)
+}
+
 newtype!(
 	/// Unique type for use as Lua app data, indicating whether the owning state
 	/// is currently in the process of running a sim tick.
