@@ -218,17 +218,6 @@ impl ClientCore {
 		while !self.console.requests.is_empty() {
 			match self.console.requests.pop_front().unwrap() {
 				ConsoleRequest::None => {}
-				ConsoleRequest::EchoAllCommands => {
-					let mut string = "All available commands:".to_string();
-
-					for command in self.console.all_commands() {
-						string.push('\r');
-						string.push('\n');
-						string.push_str(command.0);
-					}
-
-					info!("{}", string);
-				}
 				ConsoleRequest::CommandHelp(key) => match self.console.find_command(&key) {
 					Some(cmd) => {
 						(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
@@ -287,19 +276,6 @@ impl ClientCore {
 							continue;
 						}
 					};
-				}
-				ConsoleRequest::VfsDiag => {
-					let vfsg = self.vfs.read();
-					let diag = vfsg.diag();
-					info!(
-						"Virtual file system diagnostics:\r\n\t{} {}\r\n\t{} {}\r\n\t{} {} kB",
-						"Mounted objects:",
-						diag.mount_count,
-						"Total entries:",
-						diag.num_entries,
-						"Total memory usage:",
-						diag.mem_usage / 1000
-					);
 				}
 			}
 		}

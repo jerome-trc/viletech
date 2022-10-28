@@ -34,13 +34,11 @@ pub enum Request {
 	None,
 	Callback(fn(&mut ClientCore)),
 	Exit,
-	EchoAllCommands,
 	CommandHelp(String),
 	CreateAlias(String, String),
 	EchoAlias(String),
 	File(PathBuf),
 	Sound(String),
-	VfsDiag,
 }
 
 bitflags::bitflags! {
@@ -191,7 +189,17 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 	}
 
 	if args.id_only() {
-		return Request::EchoAllCommands;
+		return Request::Callback(|core| {
+			let mut string = "All available commands:".to_string();
+
+			for command in core.console.all_commands() {
+				string.push('\r');
+				string.push('\n');
+				string.push_str(command.0);
+			}
+
+			info!("{}", string);
+		});
 	}
 
 	Request::CommandHelp(args[1].to_string())
@@ -285,5 +293,17 @@ pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	Request::VfsDiag
+	Request::Callback(|core| {
+		let vfs = core.vfs.read();
+		let diag = vfs.diag();
+		info!(
+			"Virtual file system diagnostics:\r\n\t{} {}\r\n\t{} {}\r\n\t{} {} kB",
+			"Mounted objects:",
+			diag.mount_count,
+			"Total entries:",
+			diag.num_entries,
+			"Total memory usage:",
+			diag.mem_usage / 1000
+		);
+	})
 }
