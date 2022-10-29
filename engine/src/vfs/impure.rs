@@ -288,7 +288,8 @@ impl ImpureVfs for VirtualFs {
 			}
 
 			if path.has_wad_extension() {
-				return Some(GameDataKind::Wad);
+				// TODO: Hash known IWADs, compare against those
+				return Some(GameDataKind::Wad { internal: false });
 			}
 
 			None

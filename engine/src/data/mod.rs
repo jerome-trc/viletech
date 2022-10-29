@@ -124,7 +124,7 @@ pub enum GameDataKind {
 	File,
 	/// Every file in this WAD is loaded into an asset based on
 	/// the kind of file it is.
-	Wad,
+	Wad { internal: bool },
 	/// Assets are loaded from this archive/directory based on the
 	/// manifest specified by the meta.toml file.
 	Impure { manifest: PathBuf },
@@ -318,7 +318,7 @@ impl DataCore {
 				GameDataKind::ZDoom => {
 					// ???
 				}
-				GameDataKind::Wad => {
+				GameDataKind::Wad { .. } => {
 					// ???
 				}
 				GameDataKind::Impure { .. } => {
