@@ -29,8 +29,9 @@ use regex::Regex;
 
 use super::{Error, Handle, VirtualFs};
 
+use crate::data::GameDataKind;
 use crate::{
-	data::{GameDataKind, GameDataMeta},
+	data::MetaToml as GameDataMetaToml,
 	utils::{path::*, string::*},
 	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
 	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
@@ -43,7 +44,7 @@ pub trait ImpureVfs {
 	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
 	#[must_use]
-	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta>;
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml>;
 
 	/// See [`ImpureVfsHandle::is_impure_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
@@ -76,7 +77,7 @@ pub trait ImpureVfs {
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GameDataMeta, Box<dyn std::error::Error>>;
+	) -> Result<GameDataMetaToml, Box<dyn std::error::Error>>;
 
 	#[must_use]
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
@@ -106,11 +107,11 @@ impl ImpureVfs for VirtualFs {
 		self.mount(&[(path, "/impure")]).pop().unwrap()
 	}
 
-	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMeta> {
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml> {
 		let call_time = Instant::now();
 		let mut to_mount = Vec::<(&Path, PathBuf)>::with_capacity(paths.len());
 		let mut vers_strings = Vec::<String>::with_capacity(paths.len());
-		let mut ret = Vec::<GameDataMeta>::with_capacity(paths.len());
+		let mut ret = Vec::<GameDataMetaToml>::with_capacity(paths.len());
 
 		for real_path in paths {
 			if real_path.is_symlink() {
@@ -210,9 +211,13 @@ impl ImpureVfs for VirtualFs {
 				}
 			} else {
 				let uuid = to_mount[i].1.to_string_lossy().to_string();
-				let vers = vers_strings.remove(0);
-				let kind = self.gamedata_kind(&uuid);
-				GameDataMeta::new(uuid, vers, kind)
+				let version = vers_strings.remove(0);
+
+				GameDataMetaToml {
+					uuid,
+					version,
+					..Default::default()
+				}
 			};
 
 			ret.push(meta);
@@ -325,22 +330,13 @@ impl ImpureVfs for VirtualFs {
 							continue;
 						}
 					};
-
-					let mline = match string.lines().find(|l| l.starts_with("manifest = ")) {
-						Some(l) => l,
-						None => {
-							warn!("Impure package '{}' defines no manifest.", entry.path_str());
-							continue;
-						}
-					};
-
-					let pb: PathBuf = match toml::from_str(mline) {
-						Ok(p) => p,
+					
+					let meta: GameDataMetaToml = match toml::from_str(string) {
+						Ok(m) => m,
 						Err(err) => {
 							warn!(
-								"Failed to convert manifest string to path: '{}' ('{}')
+								"Failed to read game data meta file: {}\r\n
 								Error: {}",
-								mline,
 								entry.path_str(),
 								err
 							);
@@ -348,7 +344,10 @@ impl ImpureVfs for VirtualFs {
 						}
 					};
 
-					return GameDataKind::Impure { manifest: pb };
+					match meta.manifest {
+						Some(pb) => { return GameDataKind::Impure { manifest: pb } },
+						None => { return GameDataKind::Impure { manifest: PathBuf::default() } }
+					}
 				}
 
 				if let Some(kind) = check_path(real_path) {
@@ -365,9 +364,9 @@ impl ImpureVfs for VirtualFs {
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GameDataMeta, Box<dyn std::error::Error>> {
+	) -> Result<GameDataMetaToml, Box<dyn std::error::Error>> {
 		let text = self.read_str(path.as_ref())?;
-		let ret: GameDataMeta = toml::from_str(text)?;
+		let ret: GameDataMetaToml = toml::from_str(text)?;
 		Ok(ret)
 	}
 

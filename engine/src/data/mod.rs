@@ -35,7 +35,7 @@ use crate::{
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
 	newtype,
-	vfs::VirtualFs,
+	vfs::{ImpureVfs, VirtualFs},
 	zscript::{self, parser::error::ParsingErrorLevel as ZsParseErrorLevel},
 	VfsHandle,
 };
@@ -50,24 +50,16 @@ newtype!(pub struct Music(StaticSoundData));
 newtype!(pub struct Sound(StaticSoundData));
 
 /// Note that all user-facing string fields within may be IDs or expanded.
-#[derive(Deserialize)]
 pub struct GameDataMeta {
 	pub uuid: String,
-	#[serde(skip)]
 	pub kind: GameDataKind,
-	#[serde(default)]
 	pub version: String,
 	/// Display name presented to users.
-	#[serde(default)]
 	pub name: String,
-	#[serde(default)]
 	pub description: String,
-	#[serde(default)]
 	pub authors: Vec<String>,
-	#[serde(default)]
 	pub copyright: String,
 	/// Allow a package to link to its forum post/homepage/Discord server/etc.
-	#[serde(default)]
 	pub links: Vec<String>,
 }
 
@@ -84,6 +76,38 @@ impl GameDataMeta {
 			links: Vec::<String>::default(),
 		}
 	}
+
+	pub fn from_toml(toml: MetaToml, manifest: PathBuf) -> Self {
+		Self {
+			uuid: toml.uuid,
+			kind: GameDataKind::Impure { manifest },
+			version: toml.version,
+			name: toml.name,
+			description: toml.description,
+			authors: toml.authors,
+			copyright: toml.copyright,
+			links: toml.links,
+		}
+	}
+}
+
+#[derive(Default, Deserialize)]
+pub struct MetaToml {
+	pub uuid: String,
+	#[serde(default)]
+	pub version: String,
+	#[serde(default)]
+	pub name: String,
+	#[serde(default)]
+	pub description: String,
+	#[serde(default)]
+	pub authors: Vec<String>,
+	#[serde(default)]
+	pub copyright: String,
+	#[serde(default)]
+	pub links: Vec<String>,
+	#[serde(default)]
+	pub manifest: Option<PathBuf>,
 }
 
 /// Allows game data objects to define high-level, all-encompassing information
@@ -112,14 +136,6 @@ pub enum GameDataKind {
 	/// Eternity Engine sub-directory namespacing system. Sounds outside of
 	/// `sounds/`, for example, don't get loaded at all.
 	Eternity,
-}
-
-impl Default for GameDataKind {
-	fn default() -> Self {
-		Self::Impure {
-			manifest: PathBuf::default(),
-		}
-	}
 }
 
 pub type AssetVec<A> = Vec<asset::Wrapper<A>>;
@@ -283,7 +299,10 @@ impl DataCore {
 		}
 	}
 
-	pub fn populate(&mut self, mut metas: Vec<GameDataMeta>, vfs: &VirtualFs) {
+	/// This function expects:
+	/// - That `self.namespaces` is empty.
+	/// - That `metas[0]` is the parsed metadata for the Impure data package.
+	pub fn populate(&mut self, mut metas: Vec<MetaToml>, vfs: &VirtualFs) {
 		debug_assert!(self.namespaces.is_empty());
 		debug_assert!(!metas.is_empty());
 		debug_assert!(metas[0].uuid == "impure");
@@ -293,14 +312,16 @@ impl DataCore {
 				.lookup(&meta.uuid)
 				.expect("Failed to find a namespace's VFS handle for data core population.");
 
-			match meta.kind {
+			let kind = vfs.gamedata_kind(&meta.uuid);
+
+			match kind {
 				GameDataKind::ZDoom => {
 					// ???
 				}
 				GameDataKind::Wad => {
 					// ???
 				}
-				GameDataKind::Impure { manifest: _ } => {
+				GameDataKind::Impure { .. } => {
 					// ???
 				}
 				GameDataKind::File => {
