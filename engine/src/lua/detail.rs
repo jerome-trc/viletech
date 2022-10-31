@@ -95,7 +95,7 @@ pub(super) fn logger(
 			Ok(s) => template.replace_positional(s),
 			Err(err) => {
 				return Err(format!(
-					"Formatting error in `{}` arguments: {}",
+					"String-representation error in `{}` arguments: {}",
 					func_name, err
 				));
 			}
