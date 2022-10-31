@@ -178,6 +178,46 @@ pub(super) fn delete_g_package(globals: &LuaTable) -> LuaResult<()> {
 	Ok(())
 }
 
+/// When not running in "developer" mode (`-d` or `--dev`), the Lua state is
+/// constructed without the `debug` stdlib. Replace it and its functions with
+/// no-op versions under the same names so that these symbols can be used in
+/// normal code, work normally when developing, but then be optimized away
+/// when the end user runs that code.
+pub(super) fn g_debug_noop(lua: &Lua) -> LuaResult<LuaTable> {
+	let ret = lua.create_table()?;
+
+	// (Rat): I sure hope LuaJIT actually eliminates these calls...
+
+	const KEYS: [&str; 15] = [
+		"debug",
+		"getfenv",
+		"gethook",
+		"getinfo",
+		"getlocal",
+		"getmetatable",
+		"getregistry",
+		"getupvalue",
+		"setfenv",
+		"sethook",
+		"setlocal",
+		"setmetatable",
+		"setupvalue",
+		"traceback",
+		// Non-standard
+		"mem",
+	];
+
+	let func = lua.create_function(|_, ()| Ok(()))?;
+
+	for key in KEYS {
+		ret.set(key, func.clone())?;
+	}
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(ret)
+}
+
 /// Replaces the standard global function `require` with an alternative
 /// tied to the VFS.
 pub(super) fn g_require(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()> {
@@ -236,9 +276,7 @@ pub(super) fn g_require(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()>
 				.safeload(chunk, path.as_str(), l.getfenv())
 				.eval::<LuaValue>()
 			{
-				Ok(ret) => {
-					ret
-				}
+				Ok(ret) => ret,
 				Err(err) => {
 					error!("{}", err);
 					return Err(err);
@@ -249,11 +287,11 @@ pub(super) fn g_require(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()>
 				LuaNil => {
 					loaded.raw_set::<&str, bool>(&path, true)?;
 					Ok(LuaValue::Boolean(true))
-				},
+				}
 				other => {
 					loaded.raw_set::<&str, LuaValue>(&path, other.clone())?;
 					Ok(other)
-				},
+				}
 			}
 		})?,
 	)

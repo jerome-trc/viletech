@@ -212,6 +212,16 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		detail::delete_g_os(&globals)?;
 		detail::delete_g_package(&globals)?;
 
+		if let Ok(LuaValue::Table(debug)) = globals.get("debug") {
+			debug.set(
+				"mem",
+				self.create_function(|lua, ()| Ok(lua.used_memory()))?,
+			)?;
+		} else {
+			debug_assert!(!self.is_devmode()); // Minor sanity check
+			globals.set("debug", detail::g_debug_noop(self)?)?;
+		}
+
 		globals
 			.get::<_, LuaTable>("package")?
 			.get::<_, LuaTable>("loaded")?
@@ -259,9 +269,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		let globals = self.globals();
 
-		const GLOBAL_KEYS: [&str; 19] = [
+		const GLOBAL_KEYS: [&str; 20] = [
 			"_VERSION",
 			// Tables
+			"debug",
 			"math",
 			"os",
 			"package",
@@ -457,7 +468,7 @@ mod test {
 		match c.eval::<LuaValue>() {
 			Ok(LuaValue::Integer(num)) => assert_eq!(num, 23),
 			Ok(other) => panic!("Expected integer, got: {:#?}", other),
-			Err(err) => panic!("{}", err)
+			Err(err) => panic!("{}", err),
 		};
 	}
 }
