@@ -412,11 +412,12 @@ mod test {
 	fn metatable_readonly() {
 		let lua = Lua::new_ex(true).unwrap();
 		let table = lua.create_table().unwrap();
+		table.set("field2", 23).unwrap();
 		table.set_metatable(Some(lua.metatable_readonly()));
 		lua.globals().set("test_table", table).unwrap();
 
-		const CHUNK: &str = "test_table.field = 0";
-		let c = lua.safeload(CHUNK, "test_chunk", lua.globals());
+		const CHUNK_NEWINDEX: &str = "test_table.field1 = 0";
+		let c = lua.safeload(CHUNK_NEWINDEX, "test_chunk", lua.globals());
 
 		let err = match c.eval::<()>() {
 			Ok(()) => panic!("Assignment succeeded unexpectedly."),
@@ -432,5 +433,14 @@ mod test {
 			LuaError::ExternalError(err) => assert!(err.is::<NewIndexError>()),
 			other => panic!("Unexpected Lua callback error cause: {:#?}", other),
 		}
+
+		const CHUNK_INDEX: &str = "return test_table.field2";
+		let c = lua.safeload(CHUNK_INDEX, "test_chunk", lua.globals());
+
+		match c.eval::<LuaValue>() {
+			Ok(LuaValue::Integer(num)) => assert_eq!(num, 23),
+			Ok(other) => panic!("Expected integer, got: {:#?}", other),
+			Err(err) => panic!("{}", err)
+		};
 	}
 }
