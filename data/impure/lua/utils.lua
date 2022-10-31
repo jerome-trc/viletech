@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ]]
 
---- @type serpentlib
 local serpent = require('impure.lua.serpent')
 
 function _G.repr(obj)

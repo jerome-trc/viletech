@@ -98,7 +98,7 @@ impl ImpureVfs for VirtualFs {
 		{
 			path = [
 				std::env::current_dir().map_err(Error::IoError)?,
-				PathBuf::from("data"),
+				PathBuf::from("data/impure"),
 			]
 			.iter()
 			.collect();

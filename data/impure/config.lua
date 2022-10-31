@@ -1,5 +1,7 @@
-_G.name = "Impure Engine API"
+-- Library configuration module for the Lua language server
+-- (https://github.com/sumneko/lua-language-server).
 
+_G.name = "Impure Engine API"
 _G.words = {'impure%.%w+'}
 
 _G.configs = {
@@ -17,7 +19,7 @@ local disabled_builtins = {
 	'io',
 	'jit',
 	'os',
-	'package',
+	'package.loaders',
 	'table.clear',
 	'table.new',
 	'utf8',
