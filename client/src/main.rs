@@ -69,7 +69,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
 	info!("{}", impure::utils::env::os_info()?);
 
-	let lua = match Lua::new_ex(true) {
+	let devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
+
+	let lua = match Lua::new_ex(!devmode) {
 		Ok(l) => l,
 		Err(err) => {
 			error!("Failed to initialise client Lua state: {}", err);

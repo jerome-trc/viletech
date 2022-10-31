@@ -21,6 +21,7 @@ impure = {
 	--- @param ... any Values to format into `msg`.
 	err = function(msg, ...) end,
 
+	--- Does nothing if not running with the developer mode launch arguments.
 	--- @param msg string A Rust-like format string (only supports `{}`). Gets prefixed with `[DEBUG]`.
 	--- @param ... any Values to format into `msg`.
 	debug = function(msg, ...) end,

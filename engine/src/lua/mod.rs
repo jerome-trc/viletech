@@ -51,6 +51,9 @@ pub trait ImpureLua<'p> {
 
 	fn set_clientside(&self, clientside: bool);
 
+	#[must_use]
+	fn is_devmode(&self) -> bool;
+
 	/// For guaranteeing that loaded chunks are text.
 	fn safeload<'lua, 'a, S>(
 		&'lua self,
@@ -83,7 +86,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			LuaStdLib::STRING |
 			LuaStdLib::TABLE;
 
-		let ret = if let true = safe {
+		let ret = if safe {
 			Lua::new_with(safe_libs, LuaOptions::default())?
 		} else {
 			unsafe {
@@ -94,6 +97,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			}
 		};
 
+		ret.set_app_data(DevModeAppData(!safe));
 		ret.set_app_data(ClientsideAppData(true));
 
 		detail::randomseed(&ret)?;
@@ -174,10 +178,12 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		impure.set(
 			"debug",
 			ret.create_function(|lua, args: LuaMultiValue| {
-				match detail::logger(lua, args, "debug") {
-					Ok(s) => debug!("{}", s),
-					Err(s) => error!("{}", s),
-				};
+				if lua.is_devmode() {
+					match detail::logger(lua, args, "debug") {
+						Ok(s) => debug!("{}", s),
+						Err(s) => error!("{}", s),
+					};
+				}
 
 				Ok(())
 			})?,
@@ -315,6 +321,11 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		self.app_data_mut::<ClientsideAppData>().unwrap().0 = clientside;
 	}
 
+	#[must_use]
+	fn is_devmode(&self) -> bool {
+		**self.app_data_ref::<DevModeAppData>().unwrap()
+	}
+
 	fn safeload<'lua, 'a, S>(
 		&'lua self,
 		chunk: &'a S,
@@ -391,6 +402,12 @@ newtype!(
 	/// Unique type for use as Lua app data, indicating whether the owning state
 	/// is currently in the process of running a sim tick.
 	pub struct ClientsideAppData(bool)
+);
+
+newtype!(
+	/// Unique type for use as Lua app data, indicating whether the owning state
+	/// was initialized with launch arguments `-d` or `--dev`.
+	pub struct DevModeAppData(bool)
 );
 
 #[derive(Debug)]
