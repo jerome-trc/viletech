@@ -18,15 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use core::str::CharIndices;
-use std::collections::VecDeque;
-use std::ops::Range;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::VecDeque, ops::Range};
+
 use str_utils::*;
 
-use super::error::{ParsingError, ParsingErrorLevel};
-use super::fs::FileIndex;
-use super::Span;
+use super::{
+	error::{ParsingError, ParsingErrorLevel},
+	fs::FileIndex,
+	Span,
+};
 
 macro_rules! rule_grouping_type {
     ($name: ident, $reg_func: ident, $match_func: ident {

@@ -19,11 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::{newtype, vfs::VirtualFs};
+use std::{fmt, sync::Arc};
+
 use log::{debug, error, info, warn};
 use mlua::{prelude::*, TableExt as LuaTableExt};
 use parking_lot::RwLock;
-use std::{fmt, sync::Arc};
+
+use crate::{newtype, vfs::VirtualFs};
 
 mod detail;
 

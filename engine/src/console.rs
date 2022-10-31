@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+use std::{cell::Cell, collections::VecDeque, io, thread, time::Duration};
+
 use crossbeam::channel::{Receiver, Sender};
 use egui::{
 	text::{CCursor, LayoutJob},
@@ -26,7 +28,6 @@ use egui::{
 use lazy_static::lazy_static;
 use log::{error, info};
 use regex::Regex;
-use std::{cell::Cell, collections::VecDeque, io, thread, time::Duration};
 use winit::event::{KeyboardInput, VirtualKeyCode};
 
 use crate::terminal::{self, Alias, Terminal};

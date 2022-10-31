@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+use std::{error::Error, path::PathBuf, sync::Arc};
+
 use impure::{
 	audio::{self, AudioCore},
 	console::Console,
@@ -40,7 +42,6 @@ use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::RwLock;
 use shipyard::World;
-use std::{error::Error, path::PathBuf, sync::Arc};
 use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
 
 use crate::commands::{

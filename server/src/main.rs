@@ -17,6 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod commands;
+
+use std::{
+	error::Error,
+	io::{self, Write},
+	net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
+	sync::atomic::AtomicBool,
+	time::{Duration, Instant, SystemTime},
+};
+
 use clap::Parser;
 use impure::{
 	depends::{
@@ -28,15 +38,6 @@ use impure::{
 	terminal::{self, Terminal},
 };
 use log::info;
-use std::{
-	error::Error,
-	io::{self, Write},
-	net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
-	sync::atomic::AtomicBool,
-	time::{Duration, Instant, SystemTime},
-};
-
-mod commands;
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
 

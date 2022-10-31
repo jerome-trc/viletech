@@ -20,13 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::collections::HashMap;
 
 use bitflags::bitflags;
+use serde::Serialize;
 use vec1::Vec1;
 
-use super::interner::{NameSymbol, StringSymbol};
-use super::ir::*;
-use super::Span;
-
-use serde::Serialize;
+use super::{
+	interner::{NameSymbol, StringSymbol},
+	ir::*,
+	Span,
+};
 
 #[derive(Serialize)]
 #[serde(tag = "kind", content = "data")]

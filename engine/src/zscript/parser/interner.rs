@@ -17,10 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use once_cell::sync::Lazy;
-use parking_lot::RwLock;
 use std::collections::HashMap;
 
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 use serde::{Serialize, Serializer};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

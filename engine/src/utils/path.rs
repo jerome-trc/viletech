@@ -19,15 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use lazy_static::lazy_static;
-use log::warn;
-use regex::Regex;
 use std::{
 	env,
 	fs::{self, File},
 	io::{self, Read},
 	path::{Path, PathBuf},
 };
+
+use lazy_static::lazy_static;
+use log::warn;
+use regex::Regex;
 
 lazy_static! {
 	static ref EMPTY_PATH: &'static Path = Path::new("");

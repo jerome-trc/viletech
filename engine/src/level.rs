@@ -17,9 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::data::AssetHandle;
 use bitflags::bitflags;
 use glam::IVec2;
+
+use crate::data::AssetHandle;
 
 pub struct Vertex {
 	x: f64,

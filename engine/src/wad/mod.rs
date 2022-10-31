@@ -26,25 +26,18 @@ THE SOFTWARE.
 
 */
 
-use std::path::Path;
-use std::slice::SliceIndex;
-
-use byteorder::ByteOrder;
-use byteorder::LittleEndian;
-
 #[macro_use]
 pub mod error;
-
 pub mod entry;
 pub mod entry_id;
 pub mod iterator;
 pub mod wad_slice;
 
-pub use self::entry::*;
-pub use self::entry_id::*;
-pub use self::error::*;
-pub use self::iterator::*;
-pub use self::wad_slice::*;
+use std::{path::Path, slice::SliceIndex};
+
+use byteorder::{ByteOrder, LittleEndian};
+
+pub use self::{entry::*, entry_id::*, error::*, iterator::*, wad_slice::*};
 
 pub(super) const HEADER_BYTE_SIZE: usize = 12;
 pub(super) const DIRECTORY_ENTRY_BYTE_SIZE: usize = 16;

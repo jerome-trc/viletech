@@ -19,10 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
+use std::{
+	collections::HashMap,
+	fs,
+	path::{Path, PathBuf},
+};
 
 use fasthash::metro;
 use globset::Glob;
@@ -31,6 +32,20 @@ use log::warn;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use regex::Regex;
+
+mod entry;
+mod error;
+mod handle;
+mod impure;
+mod mount;
+#[cfg(test)]
+mod test;
+
+use entry::{Entry, EntryKind};
+
+pub use self::impure::{ImpureVfs, ImpureVfsHandle};
+pub use error::Error;
+pub use handle::Handle;
 
 /// Abstraction over the OS file system for security and ease.
 /// Inspired by PhysicsFS, but differs in that it owns every byte mounted.
@@ -433,19 +448,3 @@ lazy_static::lazy_static! {
 	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
 		.expect("Failed to evaluate `vfs::RGX_INVALIDMOUNTPATH`.");
 }
-
-mod entry;
-mod error;
-mod handle;
-mod impure;
-mod mount;
-#[cfg(test)]
-mod test;
-
-use entry::Entry;
-use entry::EntryKind;
-
-pub use self::impure::ImpureVfs;
-pub use self::impure::ImpureVfsHandle;
-pub use error::Error;
-pub use handle::Handle;

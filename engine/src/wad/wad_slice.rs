@@ -1,14 +1,10 @@
-use byteorder::{ByteOrder, LittleEndian};
-
 use std::slice::SliceIndex;
+
+use byteorder::{ByteOrder, LittleEndian};
 
 use crate::wad::HEADER_BYTE_SIZE;
 
-use super::entry::Entry;
-use super::entry_id::EntryId;
-use super::error::Error;
-use super::iterator::*;
-use super::{RawEntry, Wad};
+use super::{entry::Entry, entry_id::EntryId, error::Error, iterator::*, RawEntry, Wad};
 
 pub struct WadSlice<'a> {
 	data: &'a [u8],

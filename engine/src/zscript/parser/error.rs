@@ -17,16 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::collections::{BTreeMap, HashMap};
-use std::ops::Range;
-use vec1::Vec1;
-
-use unicode_width::UnicodeWidthChar;
-
-use super::fs::{FileIndex, Files};
-use super::Span;
+use std::{
+	collections::{BTreeMap, HashMap},
+	ops::Range,
+};
 
 use serde::Serialize;
+use unicode_width::UnicodeWidthChar;
+use vec1::Vec1;
+
+use super::{
+	fs::{FileIndex, Files},
+	Span,
+};
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub enum ParsingErrorLevel {

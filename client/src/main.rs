@@ -21,6 +21,8 @@ mod commands;
 #[allow(dead_code)]
 mod core;
 
+use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
+
 use impure::{
 	console::Console,
 	data::DataCore,
@@ -32,7 +34,6 @@ use impure::{
 use log::{error, info};
 use mlua::prelude::*;
 use parking_lot::RwLock;
-use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 use winit::{
 	dpi::PhysicalSize,
 	event::{Event as WinitEvent, VirtualKeyCode, WindowEvent},

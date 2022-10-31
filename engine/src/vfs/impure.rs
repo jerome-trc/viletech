@@ -19,23 +19,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::fmt::Write;
-use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::{
+	fmt::Write,
+	path::{Path, PathBuf},
+	time::Instant,
+};
 
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use regex::Regex;
 
-use super::{Error, Handle, VirtualFs};
-
-use crate::data::GameDataKind;
 use crate::{
-	data::MetaToml as GameDataMetaToml,
+	data::{GameDataKind, MetaToml as GameDataMetaToml},
 	utils::{path::*, string::*},
 	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
 	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
 };
+
+use super::{Error, Handle, VirtualFs};
 
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.

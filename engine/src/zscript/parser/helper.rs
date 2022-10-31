@@ -17,8 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use super::ir::*;
-use super::tokenizer::*;
+use super::{ir::*, tokenizer::*};
 
 pub(super) fn get_prefix_op(t: &Option<Token>) -> Option<PrefixOp> {
 	if t.is_none() {

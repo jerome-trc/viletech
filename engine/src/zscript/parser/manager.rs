@@ -19,10 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use rayon::prelude::*;
 
-use super::ast::top::{TopLevel, TopLevelDefinitionKind};
-use super::core::Parser;
-use super::error::ParsingError;
-use super::fs::{FileIndex, FileSystem, Files};
+use super::{
+	ast::top::{TopLevel, TopLevelDefinitionKind},
+	core::Parser,
+	error::ParsingError,
+	fs::{FileIndex, FileSystem, Files},
+};
 
 #[derive(serde::Serialize, Debug)]
 pub struct FileIndexAndAst {

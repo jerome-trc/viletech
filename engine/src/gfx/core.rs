@@ -19,19 +19,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use super::error::Error;
-
-use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
-use log::info;
 use std::{
 	iter,
 	time::{Duration, Instant},
 };
+
+use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
+use log::info;
 use wgpu::{
 	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, RenderPass, RenderPipeline,
 	SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
 };
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
+
+use super::error::Error;
 
 /// Holds all state common to rendering between scenes.
 pub struct GraphicsCore {

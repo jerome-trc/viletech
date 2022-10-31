@@ -17,10 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use crate::data::AssetHandle;
-
 use bitflags::bitflags;
 use mlua::prelude::*;
+
+use crate::data::AssetHandle;
 
 /// i.e., a difficulty setting.
 pub struct SkillInfo {

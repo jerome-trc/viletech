@@ -17,12 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+use serde::Serialize;
 use vec1::Vec1;
 
-use super::interner::{NameSymbol, StringSymbol};
-use super::Span;
-
-use serde::Serialize;
+use super::{
+	interner::{NameSymbol, StringSymbol},
+	Span,
+};
 
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Identifier {

@@ -1,7 +1,4 @@
-use super::Entry;
-use super::EntryId;
-use super::Wad;
-use super::WadSlice;
+use super::{Entry, EntryId, Wad, WadSlice};
 
 pub struct EntryIterator<'a> {
 	index: usize,
