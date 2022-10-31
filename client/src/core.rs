@@ -383,9 +383,7 @@ impl ClientCore {
 							metas.append(&mut m);
 						}
 
-						self.data
-							.write()
-							.populate(metas, &self.vfs.read());
+						self.data.write().populate(metas, &self.vfs.read());
 
 						self.console.enable_commands(|ccmd| {
 							ccmd.flags.contains(ConsoleCommandFlags::TITLE)

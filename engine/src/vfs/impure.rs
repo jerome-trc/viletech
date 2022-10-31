@@ -331,7 +331,7 @@ impl ImpureVfs for VirtualFs {
 							continue;
 						}
 					};
-					
+
 					let meta: GameDataMetaToml = match toml::from_str(string) {
 						Ok(m) => m,
 						Err(err) => {
@@ -346,8 +346,12 @@ impl ImpureVfs for VirtualFs {
 					};
 
 					match meta.manifest {
-						Some(pb) => { return GameDataKind::Impure { manifest: pb } },
-						None => { return GameDataKind::Impure { manifest: PathBuf::default() } }
+						Some(pb) => return GameDataKind::Impure { manifest: pb },
+						None => {
+							return GameDataKind::Impure {
+								manifest: PathBuf::default(),
+							}
+						}
 					}
 				}
 

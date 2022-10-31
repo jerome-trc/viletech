@@ -1,10 +1,5 @@
 --- @meta
 
---- @param path string The virtual file system path to a Lua file.
---- @return any module If the Lua module compiles successfully and returns anything, that will be returned. Otherwise, returns `nil`.
---- @nodiscard
-function import(path) end
-
 --- @class impure
 impure = {
 	--- The engine's own version.
