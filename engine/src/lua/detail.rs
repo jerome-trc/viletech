@@ -26,7 +26,7 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 
-use log::{error, warn};
+use log::{debug, error, info, warn};
 use mlua::prelude::*;
 use parking_lot::RwLock;
 
@@ -54,11 +54,26 @@ pub(super) fn randomseed(lua: &Lua) -> LuaResult<()> {
 	Ok(())
 }
 
-pub(super) fn logger(
-	lua: &Lua,
-	args: LuaMultiValue,
-	func_name: &'static str,
-) -> Result<String, String> {
+/// Delete certain global symbols which would be unsafe for use by modders.
+/// Note that not everything meeting that criteria is deleted (e.g. `jit`, `setfenv`),
+/// but user-facing environments are always guaranteed to be safe.
+pub(super) fn g_std(globals: &LuaTable) -> LuaResult<()> {
+	const DELETED_KEYS: [&str; 4] = [
+		"io",
+		// Free functions
+		"collectgarbage",
+		"module",
+		"print",
+	];
+
+	for key in DELETED_KEYS {
+		globals.set(key, LuaValue::Nil)?;
+	}
+
+	Ok(())
+}
+
+fn logger(lua: &Lua, args: LuaMultiValue, func_name: &'static str) -> Result<String, String> {
 	let mut args = args.iter();
 
 	let template = match args.next() {
@@ -115,30 +130,129 @@ pub(super) fn logger(
 	Ok(output)
 }
 
-/// Delete certain global symbols which would be unsafe for use by modders.
-/// Note that not everything meeting that criteria is deleted (e.g. `jit`, `setfenv`),
-/// but user-facing environments are always guaranteed to be safe.
-pub(super) fn delete_g(globals: &LuaTable) -> LuaResult<()> {
-	const KEYS_STD_GLOBAL: [&str; 4] = [
-		"io",
-		// Free functions
-		"collectgarbage",
-		"module",
-		"print",
-	];
+/// The returned table becomes `_G.log`, and is populated with functions
+/// mapping to [`info`], [`warn`], [`error`], and [`debug`].
+pub(super) fn g_log(lua: &Lua) -> LuaResult<LuaTable> {
+	let ret = lua.create_table()?;
 
-	for key in KEYS_STD_GLOBAL {
-		globals.set(key, LuaValue::Nil)?;
+	ret.set(
+		"info",
+		lua.create_function(|lua, args: LuaMultiValue| {
+			match logger(lua, args, "log") {
+				Ok(s) => info!("{}", s),
+				Err(s) => error!("{}", s),
+			};
+
+			Ok(())
+		})?,
+	)?;
+
+	ret.set(
+		"warn",
+		lua.create_function(|lua, args: LuaMultiValue| {
+			match logger(lua, args, "warn") {
+				Ok(s) => warn!("{}", s),
+				Err(s) => error!("{}", s),
+			};
+
+			Ok(())
+		})?,
+	)?;
+
+	ret.set(
+		"err",
+		lua.create_function(|lua, args: LuaMultiValue| {
+			match logger(lua, args, "err") {
+				Ok(s) => error!("{}", s),
+				Err(s) => error!("{}", s),
+			};
+
+			Ok(())
+		})?,
+	)?;
+
+	ret.set(
+		"debug",
+		lua.create_function(|lua, args: LuaMultiValue| {
+			if lua.is_devmode() {
+				match logger(lua, args, "debug") {
+					Ok(s) => debug!("{}", s),
+					Err(s) => error!("{}", s),
+				};
+			}
+
+			Ok(())
+		})?,
+	)?;
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(ret)
+}
+
+/// The returned (read-only) table becomes `_G.impure` and is populated with
+/// functions for the most basic engine functionality, like getting its version.
+pub(super) fn g_impure(lua: &Lua) -> LuaResult<LuaTable> {
+	let ret = lua.create_table()?;
+
+	ret.set(
+		"version",
+		lua.create_function(|_, _: ()| {
+			Ok((
+				env!("CARGO_PKG_VERSION_MAJOR").parse::<u32>().unwrap(),
+				env!("CARGO_PKG_VERSION_MINOR").parse::<u32>().unwrap(),
+				env!("CARGO_PKG_VERSION_PATCH").parse::<u32>().unwrap(),
+			))
+		})?,
+	)?;
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(ret)
+}
+
+/// Loads several Lua modules (those expected to receive prolific use) from the
+/// engine's package and makes them available globally for all other environments.
+pub(super) fn g_prelude(lua: &Lua, vfs: &VirtualFs) -> LuaResult<()> {
+	let globals = lua.globals();
+
+	let utils = vfs
+		.read_str("/impure/lua/utils.lua")
+		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
+	let utils = lua.safeload(utils, "utils", globals.clone());
+	let utils: LuaTable = utils.eval()?;
+
+	for pair in utils.pairs::<LuaString, LuaValue>() {
+		let (key, val) = pair?;
+		debug_assert!(!globals.contains_key(key.clone()).unwrap());
+		globals.set(key, val)?;
 	}
+
+	let array = vfs
+		.read_str("/impure/lua/array.lua")
+		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
+	let array = lua.safeload(array, "array", globals.clone());
+	let array: LuaTable = array.eval()?;
+	array.set_metatable(Some(lua.metatable_readonly()));
+	globals.set("array", array)?;
+
+	let map = vfs
+		.read_str("/impure/lua/map.lua")
+		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
+	let map = lua.safeload(map, "map", globals.clone());
+	let map: LuaTable = map.eval()?;
+	map.set_metatable(Some(lua.metatable_readonly()));
+	globals.set("map", map)?;
 
 	Ok(())
 }
 
-/// Delete parts of the `os` standard library that would allow running arbitrary
+/// Deletes parts of the `os` standard library that would allow running arbitrary
 /// OS processes, modifying the file system, altering the locale, or accessing
 /// the OS' environment variables.
-pub(super) fn delete_g_os(globals: &LuaTable) -> LuaResult<()> {
-	const KEYS_STD_OS: [&str; 7] = [
+/// Sets `_G.os` to use the readonly metatable when done.
+pub(super) fn g_os(lua: &Lua) -> LuaResult<()> {
+	const DELETED_KEYS: [&str; 7] = [
 		"execute",
 		"exit",
 		"getenv",
@@ -154,36 +268,48 @@ pub(super) fn delete_g_os(globals: &LuaTable) -> LuaResult<()> {
 	// - `difftime`
 	// - `time`
 
-	let g_os: LuaTable = globals.get("os")?;
+	let g_os: LuaTable = lua.globals().get("os")?;
 
-	for key in KEYS_STD_OS {
+	for key in DELETED_KEYS {
 		g_os.set(key, LuaValue::Nil)?;
 	}
 
+	g_os.set_metatable(Some(lua.metatable_readonly()));
+
 	Ok(())
 }
 
-/// Delete everything in the `package` standard library except `loaded`,
-/// since Impure has an in-house system tied to the VFS to replace it.
-pub(super) fn delete_g_package(globals: &LuaTable) -> LuaResult<()> {
-	const KEYS_STD_PACKAGE: [&str; 6] =
-		["cpath", "loaders", "loadlib", "path", "preload", "seeall"];
+/// Deletes everything in the `package` standard library except `loaded`, since
+/// Impure has an in-house system tied to the VFS to replace it. Sets `_G.package`
+/// and `_G.package.loaded` to use the readonly metatable when done.
+pub(super) fn g_package(lua: &Lua) -> LuaResult<()> {
+	const DELETED_KEYS: [&str; 6] = ["cpath", "loaders", "loadlib", "path", "preload", "seeall"];
 
-	let g_package: LuaTable = globals.get("package")?;
+	let g_package: LuaTable = lua.globals().get("package")?;
 
-	for key in KEYS_STD_PACKAGE {
+	for key in DELETED_KEYS {
 		g_package.set(key, LuaValue::Nil)?;
 	}
 
+	let metatable_readonly = lua.metatable_readonly();
+	g_package
+		.get::<_, LuaTable>("loaded")
+		.unwrap()
+		.set_metatable(Some(metatable_readonly.clone()));
+	g_package.set_metatable(Some(metatable_readonly.clone()));
+
 	Ok(())
 }
 
-/// When not running in "developer" mode (`-d` or `--dev`), the Lua state is
-/// constructed without the `debug` stdlib. Replace it and its functions with
-/// no-op versions under the same names so that these symbols can be used in
-/// normal code, work normally when developing, but then be optimized away
-/// when the end user runs that code.
-pub(super) fn g_debug_noop(lua: &Lua) -> LuaResult<LuaTable> {
+/// See [`g_debug`].
+fn g_debug_full<'t>(lua: &Lua, debug: LuaTable<'t>) -> LuaResult<LuaTable<'t>> {
+	debug.set("mem", lua.create_function(|l, ()| Ok(l.used_memory()))?)?;
+
+	Ok(debug)
+}
+
+/// See [`g_debug`].
+fn g_debug_noop(lua: &Lua) -> LuaResult<LuaTable> {
 	let ret = lua.create_table()?;
 
 	// (Rat): I sure hope LuaJIT actually eliminates these calls...
@@ -213,92 +339,104 @@ pub(super) fn g_debug_noop(lua: &Lua) -> LuaResult<LuaTable> {
 		ret.set(key, func.clone())?;
 	}
 
-	ret.set_metatable(Some(lua.metatable_readonly()));
-
 	Ok(ret)
 }
 
-/// Replaces the standard global function `require` with an alternative
-/// tied to the VFS.
-pub(super) fn g_require(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()> {
-	lua.globals().set(
-		"require",
-		lua.create_function(move |l, path: String| -> LuaResult<LuaValue> {
-			let loaded = l
-				.globals()
-				.raw_get::<_, LuaTable>("package")?
-				.raw_get::<_, LuaTable>("loaded")?;
+/// When not running in "developer" mode (`-d` or `--dev`), the Lua state is
+/// constructed without the `debug` stdlib. Replace it and its functions with
+/// no-op versions under the same names so that these symbols can be used in
+/// normal code, work normally when developing, but then be optimized away
+/// when the end user runs that code.
+pub(super) fn g_debug(lua: &Lua) -> LuaResult<LuaTable> {
+	let debug = if let Ok(LuaValue::Table(debug)) = lua.globals().get("debug") {
+		g_debug_full(lua, debug)?
+	} else {
+		debug_assert!(!lua.is_devmode()); // Minor sanity check
+		g_debug_noop(lua)?
+	};
 
-			match loaded.get::<&str, LuaValue>(&path) {
-				Ok(module) => {
-					if let LuaValue::Nil = module {
-						// It wasn't found. Proceed with VFS read
-					} else {
-						return Ok(module);
-					}
-				}
-				Err(err) => {
-					error!("Failed to import Lua module from path: {}", path);
-					return Err(err);
-				}
-			}
+	debug.set_metatable(Some(lua.metatable_readonly()));
 
-			let vfs = vfs.read();
-			let mut vpath = String::with_capacity(64);
-
-			if !path.starts_with('/') {
-				vpath.push('/');
-			}
-
-			for comp in path.split('.') {
-				vpath.push_str(comp);
-				vpath.push('/');
-			}
-
-			vpath.pop();
-			vpath.push_str(".lua");
-
-			let bytes = match vfs.read(&vpath) {
-				Ok(b) => b,
-				Err(err) => {
-					return Err(LuaError::ExternalError(Arc::new(err)));
-				}
-			};
-
-			let chunk = match std::str::from_utf8(bytes) {
-				Ok(s) => s,
-				Err(err) => {
-					return Err(LuaError::ExternalError(Arc::new(err)));
-				}
-			};
-
-			let output = match l
-				.safeload(chunk, path.as_str(), l.getfenv())
-				.eval::<LuaValue>()
-			{
-				Ok(ret) => ret,
-				Err(err) => {
-					error!("{}", err);
-					return Err(err);
-				}
-			};
-
-			match output {
-				LuaNil => {
-					loaded.raw_set::<&str, bool>(&path, true)?;
-					Ok(LuaValue::Boolean(true))
-				}
-				other => {
-					loaded.raw_set::<&str, LuaValue>(&path, other.clone())?;
-					Ok(other)
-				}
-			}
-		})?,
-	)
+	Ok(debug)
 }
 
-/// Takes in an empty table and outputs the same table, but with functions
-/// for accessing the virtual file system.
+/// Returns a replacement for the standard global function `require`.
+/// This in-house alternative acts as a convenient interface for the VFS.
+pub(super) fn g_require(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<LuaFunction> {
+	lua.create_function(move |l, path: String| -> LuaResult<LuaValue> {
+		let loaded = l
+			.globals()
+			.raw_get::<_, LuaTable>("package")?
+			.raw_get::<_, LuaTable>("loaded")?;
+
+		match loaded.get::<&str, LuaValue>(&path) {
+			Ok(module) => {
+				if let LuaValue::Nil = module {
+					// It wasn't found. Proceed with VFS read
+				} else {
+					return Ok(module);
+				}
+			}
+			Err(err) => {
+				error!("Failed to import Lua module from path: {}", path);
+				return Err(err);
+			}
+		}
+
+		let vfs = vfs.read();
+		let mut vpath = String::with_capacity(64);
+
+		if !path.starts_with('/') {
+			vpath.push('/');
+		}
+
+		for comp in path.split('.') {
+			vpath.push_str(comp);
+			vpath.push('/');
+		}
+
+		vpath.pop();
+		vpath.push_str(".lua");
+
+		let bytes = match vfs.read(&vpath) {
+			Ok(b) => b,
+			Err(err) => {
+				return Err(LuaError::ExternalError(Arc::new(err)));
+			}
+		};
+
+		let chunk = match std::str::from_utf8(bytes) {
+			Ok(s) => s,
+			Err(err) => {
+				return Err(LuaError::ExternalError(Arc::new(err)));
+			}
+		};
+
+		let output = match l
+			.safeload(chunk, path.as_str(), l.getfenv())
+			.eval::<LuaValue>()
+		{
+			Ok(ret) => ret,
+			Err(err) => {
+				error!("{}", err);
+				return Err(err);
+			}
+		};
+
+		match output {
+			LuaNil => {
+				loaded.raw_set::<&str, bool>(&path, true)?;
+				Ok(LuaValue::Boolean(true))
+			}
+			other => {
+				loaded.raw_set::<&str, LuaValue>(&path, other.clone())?;
+				Ok(other)
+			}
+		}
+	})
+}
+
+/// Returns a (read-only) table populated with functions for accessing the virtual file system.
 pub(super) fn g_vfs(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<LuaTable> {
 	let ret = lua.create_table()?;
 
@@ -335,6 +473,8 @@ pub(super) fn g_vfs(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<LuaTabl
 	})?;
 
 	ret.set("read", read)?;
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
 
 	Ok(ret)
 }

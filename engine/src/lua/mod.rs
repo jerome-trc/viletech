@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{fmt, sync::Arc};
 
-use log::{debug, error, info, warn};
 use mlua::{prelude::*, TableExt as LuaTableExt};
 use parking_lot::RwLock;
 
@@ -31,10 +30,8 @@ mod detail;
 
 /// Only exists to extend [`mlua::Lua`] with new methods.
 pub trait ImpureLua<'p> {
-	/// Seeds the RNG, defines some dependency-free global functions (logging, etc.).
+	/// Seeds the RNG, defines some universal app data and registry values.
 	/// If `safe` is `false`, the debug and FFI libraries are loaded.
-	/// If `clientside` is `true`, the state's registry will contain the key-value
-	/// pair `['clientside'] = true`. Otherwise, this key will be left nil.
 	fn new_ex(safe: bool) -> LuaResult<Lua>;
 
 	/// Modifies the Lua global environment to be more conducive to a safe,
@@ -129,134 +126,22 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		ret.set_named_registry_value("metas", metas)
 			.expect("Failed to set table `metas` in registry.");
 
-		// Dependency-free Impure-specific global functions
-
-		let impure = match ret.create_table() {
-			Ok(t) => t,
-			Err(err) => {
-				error!("Failed to create global table `impure`.");
-				return Err(err);
-			}
-		};
-
-		impure.set(
-			"log",
-			ret.create_function(|lua, args: LuaMultiValue| {
-				match detail::logger(lua, args, "log") {
-					Ok(s) => info!("{}", s),
-					Err(s) => error!("{}", s),
-				};
-
-				Ok(())
-			})?,
-		)?;
-
-		impure.set(
-			"warn",
-			ret.create_function(|lua, args: LuaMultiValue| {
-				match detail::logger(lua, args, "warn") {
-					Ok(s) => warn!("{}", s),
-					Err(s) => error!("{}", s),
-				};
-
-				Ok(())
-			})?,
-		)?;
-
-		impure.set(
-			"err",
-			ret.create_function(|lua, args: LuaMultiValue| {
-				match detail::logger(lua, args, "err") {
-					Ok(s) => error!("{}", s),
-					Err(s) => error!("{}", s),
-				};
-
-				Ok(())
-			})?,
-		)?;
-
-		impure.set(
-			"debug",
-			ret.create_function(|lua, args: LuaMultiValue| {
-				if lua.is_devmode() {
-					match detail::logger(lua, args, "debug") {
-						Ok(s) => debug!("{}", s),
-						Err(s) => error!("{}", s),
-					};
-				}
-
-				Ok(())
-			})?,
-		)?;
-
-		impure.set(
-			"version",
-			ret.create_function(|_, _: ()| {
-				Ok((
-					env!("CARGO_PKG_VERSION_MAJOR").parse::<u32>().unwrap(),
-					env!("CARGO_PKG_VERSION_MINOR").parse::<u32>().unwrap(),
-					env!("CARGO_PKG_VERSION_PATCH").parse::<u32>().unwrap(),
-				))
-			})?,
-		)?;
-
-		ret.globals().set("impure", impure)?;
-
 		Ok(ret)
 	}
 
 	fn global_init(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()> {
 		let globals = self.globals();
 
-		detail::delete_g(&globals)?;
-		detail::delete_g_os(&globals)?;
-		detail::delete_g_package(&globals)?;
-
-		if let Ok(LuaValue::Table(debug)) = globals.get("debug") {
-			debug.set(
-				"mem",
-				self.create_function(|lua, ()| Ok(lua.used_memory()))?,
-			)?;
-		} else {
-			debug_assert!(!self.is_devmode()); // Minor sanity check
-			globals.set("debug", detail::g_debug_noop(self)?)?;
-		}
-
-		globals
-			.get::<_, LuaTable>("package")?
-			.get::<_, LuaTable>("loaded")?
-			.set_metatable(Some(self.metatable_readonly()));
-
-		detail::g_require(self, vfs.clone())?;
-		detail::g_vfs(self, vfs.clone())?;
-
+		detail::g_std(&globals)?;
+		detail::g_os(self)?;
+		detail::g_package(self)?;
+		globals.set("impure", detail::g_impure(self)?)?;
+		globals.set("log", detail::g_log(self)?)?;
+		globals.set("debug", detail::g_debug(self)?)?;
+		globals.set("require", detail::g_require(self, vfs.clone())?)?;
 		globals.set("vfs", detail::g_vfs(self, vfs.clone())?)?;
 
-		// Script "prelude" ////////////////////////////////////////////////////
-
-		let vfsg = vfs.read();
-
-		let utils = vfsg
-			.read_str("/impure/lua/utils.lua")
-			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let utils = self.safeload(utils, "utils", globals.clone());
-		utils.eval()?;
-
-		let array = vfsg
-			.read_str("/impure/lua/array.lua")
-			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let array = self.safeload(array, "array", globals.clone());
-		let array: LuaTable = array.eval()?;
-		globals.set("array", array)?;
-
-		let map = vfsg
-			.read_str("/impure/lua/map.lua")
-			.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
-		let map = self.safeload(map, "map", globals.clone());
-		let map: LuaTable = map.eval()?;
-		globals.set("map", map)?;
-
-		drop(vfsg);
+		detail::g_prelude(self, &vfs.read())?;
 
 		Ok(())
 	}
