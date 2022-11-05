@@ -128,7 +128,7 @@ pub fn run<C: EgressConfig>(context: Context) {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(tic_interval);
 		let lua = lua.lock();
-		lua.set_clientside(false);
+		lua.start_sim_tic();
 		let playsim = lua.app_data_mut::<PlaySim>().unwrap();
 
 		while let Ok(msg) = receiver.try_recv() {
@@ -156,7 +156,7 @@ pub fn run<C: EgressConfig>(context: Context) {
 		// ???
 
 		drop(playsim);
-		lua.set_clientside(true);
+		lua.finish_sim_tic();
 		drop(lua);
 
 		// If it took longer than the expected interval to process this tic,

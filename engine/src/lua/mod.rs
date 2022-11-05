@@ -46,7 +46,8 @@ pub trait ImpureLua<'p> {
 
 	fn metatable_readonly(&self) -> LuaTable;
 
-	fn set_clientside(&self, clientside: bool);
+	fn start_sim_tic(&self);
+	fn finish_sim_tic(&self);
 
 	#[must_use]
 	fn is_devmode(&self) -> bool;
@@ -95,7 +96,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		};
 
 		ret.set_app_data(DevModeAppData(!safe));
-		ret.set_app_data(ClientsideAppData(true));
+		ret.set_app_data(SimsideAppData(true));
 
 		detail::randomseed(&ret)?;
 
@@ -213,8 +214,12 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.unwrap()
 	}
 
-	fn set_clientside(&self, clientside: bool) {
-		self.app_data_mut::<ClientsideAppData>().unwrap().0 = clientside;
+	fn start_sim_tic(&self) {
+		self.app_data_mut::<SimsideAppData>().unwrap().0 = true;
+	}
+
+	fn finish_sim_tic(&self) {
+		self.app_data_mut::<SimsideAppData>().unwrap().0 = false;
 	}
 
 	#[must_use]
@@ -296,8 +301,8 @@ pub fn is_reserved_keyword(string: &str) -> bool {
 
 newtype!(
 	/// Unique type for use as Lua app data, indicating whether the owning state
-	/// is currently in the process of running a sim tick.
-	pub struct ClientsideAppData(bool)
+	/// is currently in the process of running a sim tic.
+	pub struct SimsideAppData(bool)
 );
 
 newtype!(
