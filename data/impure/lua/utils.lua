@@ -22,13 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 local serpent = require('impure.lua.serpent')
 
+local utils = {}
+
 --- Wraps `serpent.block`, adding indentation, an 8-level recursion limit,
 --- eliminating code output, and formatting numbers to six decimal places.
 --- Use whenever you just want a to-string of some Lua thing.
 --- @param obj any
 --- @return string
 --- @nodiscard
-local repr = function(obj)
+utils.repr = function(obj)
 	return serpent.block(obj, {
 		indent = '\t',
 		maxlevel = 8,
@@ -37,4 +39,4 @@ local repr = function(obj)
 	})
 end
 
-return { repr }
+return utils
