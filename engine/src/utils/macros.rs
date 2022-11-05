@@ -17,9 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-/// Convenience macro for defining a newtype (single-field tuple struct). Provide
-/// a type to wrap, a comma, optionally a visibility qualifier, and a name.
+/// Convenience macro for defining a newtype (single-field tuple struct).
 /// Implementations are provided for [`std::ops::Deref`] and [`std::ops::DerefMut`].
+///
+/// Usage examples:
+/// ```
+/// newtype!(pub struct NewType(i32));
+/// newtype!(
+///     /// Here's an informative comment.
+///     pub struct NewType2(Vec<usize>)
+/// );
+/// ```
 #[macro_export]
 macro_rules! newtype {
 	(
@@ -45,8 +53,7 @@ macro_rules! newtype {
 	};
 }
 
-/// Serves a similar role to [`newtype`]. Provide a type to wrap, a comma,
-/// optionally a visibility qualifier, and a name.
+/// Serves a similar role to [`newtype`].
 /// When given type `T`, creates a newtype wrapping `&mut T`.
 #[macro_export]
 macro_rules! newtype_mutref {
