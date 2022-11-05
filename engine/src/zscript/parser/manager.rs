@@ -22,8 +22,8 @@ use rayon::prelude::*;
 use super::{
 	ast::top::{TopLevel, TopLevelDefinitionKind},
 	core::Parser,
-	error::ParsingError,
 	fs::{FileIndex, FileSystem, Files},
+	issue::Issue,
 };
 
 #[derive(serde::Serialize, Debug)]
@@ -52,7 +52,7 @@ impl<'a> Default for ParseFileSystemConfig<'a> {
 pub fn parse_filesystem<F: FileSystem>(
 	filesystem: F,
 	files: &mut Files,
-	errs: &mut Vec<ParsingError>,
+	errs: &mut Vec<Issue>,
 ) -> FileSystemParseResult {
 	parse_filesystem_config(filesystem, files, errs, &ParseFileSystemConfig::default())
 }
@@ -60,7 +60,7 @@ pub fn parse_filesystem<F: FileSystem>(
 pub fn parse_filesystem_config<F: FileSystem>(
 	mut filesystem: F,
 	files: &mut Files,
-	errs: &mut Vec<ParsingError>,
+	errs: &mut Vec<Issue>,
 	config: &ParseFileSystemConfig,
 ) -> FileSystemParseResult {
 	let mut ret = FileSystemParseResult { asts: vec![] };
@@ -88,7 +88,7 @@ pub fn parse_filesystem_config<F: FileSystem>(
 					needed_files.push(f);
 				}
 			}
-			for e in r.errs {
+			for e in r.issues {
 				errs.push(e);
 			}
 			ret.asts.push(FileIndexAndAst {

@@ -49,14 +49,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-mod ast;
+pub(super) mod ast;
 mod core;
-pub mod error;
 pub mod fs;
 mod helper;
 mod hir;
-mod interner;
-mod ir;
+pub(super) mod interner;
+pub(super) mod ir;
+pub mod issue;
 pub(super) mod manager;
 mod tokenizer;
 

@@ -32,24 +32,25 @@ use super::{
 };
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
-pub enum ParsingErrorLevel {
+pub enum Level {
 	Warning,
 	Error,
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct ParsingError {
-	pub level: ParsingErrorLevel,
+pub struct Issue {
+	pub level: Level,
 	pub msg: String,
 	pub main_spans: Vec1<Span>,
 	pub info_spans: Vec<Span>,
 }
 
-impl ParsingError {
+impl Issue {
 	fn get_lines(&self, files: &Files) -> ParsingErrorLines {
 		let mut ret = ParsingErrorLines {
 			file_lines: HashMap::new(),
 		};
+
 		for s in self.main_spans.iter() {
 			let file = &files[s.file];
 			let span_lines = get_span_lines(&file.lines, *s);
@@ -64,6 +65,7 @@ impl ParsingError {
 				ranges.main.push(l.range);
 			}
 		}
+
 		for s in self.info_spans.iter() {
 			let file = &files[s.file];
 			let span_lines = get_span_lines(&file.lines, *s);
@@ -83,8 +85,8 @@ impl ParsingError {
 
 	pub fn repr(&self, files: &Files) -> String {
 		let s = match self.level {
-			ParsingErrorLevel::Warning => "warning",
-			ParsingErrorLevel::Error => "error",
+			Level::Warning => "warning",
+			Level::Error => "error",
 		};
 		let mut ret = format!("{}: {}\n", s, self.msg);
 		let err_lines = self.get_lines(files);
@@ -97,13 +99,13 @@ pub trait ToDisplayedErrors {
 	fn to_displayed_errors(&self, files: &Files) -> DisplayedParsingErrors;
 }
 
-impl ToDisplayedErrors for ParsingError {
+impl ToDisplayedErrors for Issue {
 	fn to_displayed_errors(&self, files: &Files) -> DisplayedParsingErrors {
 		DisplayedParsingErrors(self.repr(files))
 	}
 }
 
-impl ToDisplayedErrors for Vec<ParsingError> {
+impl ToDisplayedErrors for Vec<Issue> {
 	fn to_displayed_errors(&self, files: &Files) -> DisplayedParsingErrors {
 		let mut sorted = self.clone();
 		sort_errs(&mut sorted);
@@ -122,11 +124,11 @@ impl std::fmt::Display for DisplayedParsingErrors {
 
 impl std::error::Error for DisplayedParsingErrors {}
 
-pub fn sort_errs(errs: &mut [ParsingError]) {
+pub fn sort_errs(errs: &mut [Issue]) {
 	errs.sort_unstable_by_key(|err| *err.main_spans.iter().min().unwrap());
 }
 
-pub fn repr_errs(files: &Files, errs: &[ParsingError]) -> String {
+pub fn repr_errs(files: &Files, errs: &[Issue]) -> String {
 	let mut ret = "".to_string();
 	for e in errs.iter() {
 		ret += &format!("{}\n", e.repr(files));

@@ -21,11 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use vec1::{vec1, Vec1};
 
 use super::ast::*;
-use super::error::{ParsingError, ParsingErrorLevel};
 use super::fs::FileIndex;
 use super::helper::*;
 use super::interner::*;
 use super::ir::*;
+use super::issue::{Issue, Level};
 use super::tokenizer::*;
 use super::*;
 
@@ -34,14 +34,14 @@ pub struct Parser<'src> {
 	file: FileIndex,
 	text: &'src str,
 	tokenizer: Tokenizer<'src>,
-	errs: Vec<ParsingError>,
+	issues: Vec<Issue>,
 }
 
 #[derive(Serialize, Debug)]
 pub struct ParserResult {
 	pub file: FileIndex,
 	pub ast: TopLevel,
-	pub errs: Vec<ParsingError>,
+	pub issues: Vec<Issue>,
 }
 
 enum Extend {
@@ -55,27 +55,27 @@ impl<'src> Parser<'src> {
 			file,
 			text,
 			tokenizer: Tokenizer::new(file, text),
-			errs: vec![],
+			issues: vec![],
 		}
 	}
 
-	pub fn into_errs(self) -> Vec<ParsingError> {
-		self.errs
+	pub fn into_issues(self) -> Vec<Issue> {
+		self.issues
 	}
 
-	fn err(&mut self, e: ParsingError) {
-		self.errs.push(e);
+	fn issue(&mut self, e: Issue) {
+		self.issues.push(e);
 	}
 
 	fn get_keyword(&mut self, keywords: &[Keyword]) -> Option<(Keyword, Span)> {
 		if let Some(Token {
 			data: TokenData::Keyword(k),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			for key in keywords {
 				if *key == *k {
-					let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+					let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 					let span = t.span(self.file, self.text);
 					if let Token {
 						data: TokenData::Keyword(k),
@@ -97,11 +97,11 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Punctuation(p),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			for punc in puncs {
 				if *punc == *p {
-					let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+					let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 					let span = t.span(self.file, self.text);
 					if let Token {
 						data: TokenData::Punctuation(p),
@@ -123,13 +123,13 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Identifier(i),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let i_sym = intern_name(i);
 			for id in idents {
 				let id_sym = intern_name(id);
 				if id_sym == i_sym {
-					let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+					let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 					return Some(Identifier {
 						span: t.span(self.file, self.text),
 						symbol: i_sym,
@@ -145,10 +145,10 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Identifier(s),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let sym = intern_name(s);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(Identifier {
 				span: t.span(self.file, self.text),
 				symbol: sym,
@@ -161,10 +161,10 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::NonWhitespace(s),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let sym = intern_name(s);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(NonWhitespace {
 				span: t.span(self.file, self.text),
 				symbol: sym,
@@ -177,10 +177,10 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::String(s),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let sym = intern_string(s);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(StringConst {
 				span: t.span(self.file, self.text),
 				symbol: sym,
@@ -193,18 +193,18 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::String(s),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let mut sym = intern_string(s);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			let mut span = t.span(self.file, self.text);
 			while let Some(Token {
 				data: TokenData::String(s),
 				..
-			}) = self.tokenizer.peek_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_no_doc(&mut self.issues)
 			{
 				let new = sym.string().to_string() + s;
-				let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+				let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 				sym = intern_string(&new);
 				span = span.combine(t.span(self.file, self.text));
 			}
@@ -217,10 +217,10 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Name(s),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let sym = intern_name(s);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(NameConst {
 				span: t.span(self.file, self.text),
 				symbol: sym,
@@ -237,10 +237,10 @@ impl<'src> Parser<'src> {
 				unsigned,
 			},
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let (val, long, unsigned) = (*val, *long, *unsigned);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(IntConst {
 				span: t.span(self.file, self.text),
 				val,
@@ -255,10 +255,10 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Float { val, double },
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let (val, double) = (*val, *double);
-			let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 			Some(FloatConst {
 				span: t.span(self.file, self.text),
 				val,
@@ -317,18 +317,18 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::DocComment(s),
 			..
-		}) = self.tokenizer.peek_doc(&mut self.errs)
+		}) = self.tokenizer.peek_doc(&mut self.issues)
 		{
 			let mut sym = intern_string(s);
-			let t = self.tokenizer.next_doc(&mut self.errs).unwrap();
+			let t = self.tokenizer.next_doc(&mut self.issues).unwrap();
 			let mut span = t.span(self.file, self.text);
 			while let Some(Token {
 				data: TokenData::DocComment(s),
 				..
-			}) = self.tokenizer.peek_doc(&mut self.errs)
+			}) = self.tokenizer.peek_doc(&mut self.issues)
 			{
 				let new = sym.string().to_string() + s;
-				let t = self.tokenizer.next_doc(&mut self.errs).unwrap();
+				let t = self.tokenizer.next_doc(&mut self.issues).unwrap();
 				sym = intern_string(&new);
 				span = span.combine(t.span(self.file, self.text));
 			}
@@ -338,11 +338,11 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	pub fn expect<T>(&mut self, val: Option<T>, msg: &str) -> Result<T, ParsingError> {
+	pub fn expect<T>(&mut self, val: Option<T>, msg: &str) -> Result<T, Issue> {
 		if let Some(v) = val {
 			Ok(v)
 		} else {
-			let next = self.tokenizer.peek_no_doc(&mut self.errs);
+			let next = self.tokenizer.peek_no_doc(&mut self.issues);
 			let err_msg = match next {
 				Some(n) => format!("expected {}, got {}", msg, n.data),
 				None => format!("expected {}, got `EOF`", msg),
@@ -355,8 +355,8 @@ impl<'src> Parser<'src> {
 					file: self.file,
 				},
 			};
-			Err(ParsingError {
-				level: ParsingErrorLevel::Error,
+			Err(Issue {
+				level: Level::Error,
 				msg: err_msg,
 				main_spans: vec1![span],
 				info_spans: vec![],
@@ -364,7 +364,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	fn get_lump_version(&mut self) -> Result<Option<VersionInfo>, ParsingError> {
+	fn get_lump_version(&mut self) -> Result<Option<VersionInfo>, Issue> {
 		if self.get_keyword(&[Keyword::Version][..]).is_some() {
 			let ex = self.get_string();
 			let s = self.expect(ex, "string literal")?;
@@ -372,8 +372,8 @@ impl<'src> Parser<'src> {
 
 			match parse_lump_version(&ver_str) {
 				Some(v) => Ok(Some(v)),
-				None => Err(ParsingError {
-					level: ParsingErrorLevel::Error,
+				None => Err(Issue {
+					level: Level::Error,
 					msg: "invalid version directive".to_string(),
 					main_spans: vec1![s.span],
 					info_spans: vec![],
@@ -384,7 +384,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	fn get_dottable_id(&mut self) -> Result<Option<DottableId>, ParsingError> {
+	fn get_dottable_id(&mut self) -> Result<Option<DottableId>, Issue> {
 		let id = match self.get_ident() {
 			None => return Ok(None),
 			Some(id) => id,
@@ -404,7 +404,7 @@ impl<'src> Parser<'src> {
 		Ok(Some(ret))
 	}
 
-	fn get_primary_expr(&mut self) -> Result<Option<Expression>, ParsingError> {
+	fn get_primary_expr(&mut self) -> Result<Option<Expression>, Issue> {
 		if let Some((_, s)) = self.get_keyword(&[Keyword::Super]) {
 			return Ok(Some(Expression {
 				span: Some(s),
@@ -481,9 +481,9 @@ impl<'src> Parser<'src> {
 			};
 		}
 
-		let op_tok = self.tokenizer.peek_no_doc(&mut self.errs);
+		let op_tok = self.tokenizer.peek_no_doc(&mut self.issues);
 		if let Some(op) = get_prefix_op(op_tok) {
-			let op_tok = self.tokenizer.next_no_doc(&mut self.errs);
+			let op_tok = self.tokenizer.next_no_doc(&mut self.issues);
 			let (_, r_prec) = get_prefix_precedence(op);
 
 			let ex = self.get_primary_expr()?;
@@ -524,17 +524,17 @@ impl<'src> Parser<'src> {
 		&mut self,
 		lhs: Expression,
 		min_precedence: usize,
-	) -> Result<Expression, ParsingError> {
+	) -> Result<Expression, Issue> {
 		let mut lhs = lhs;
 		loop {
-			let op_tok = self.tokenizer.peek_no_doc(&mut self.errs);
+			let op_tok = self.tokenizer.peek_no_doc(&mut self.issues);
 
 			if let Some(op) = get_postfix_op(op_tok) {
 				let (l_prec, _) = get_postfix_precedence(op);
 				if l_prec < min_precedence {
 					break;
 				}
-				let op_tok = self.tokenizer.next_no_doc(&mut self.errs);
+				let op_tok = self.tokenizer.next_no_doc(&mut self.issues);
 
 				lhs = Expression {
 					span: Some(
@@ -556,7 +556,7 @@ impl<'src> Parser<'src> {
 				if l_prec < min_precedence {
 					break;
 				}
-				let op_tok = self.tokenizer.next_no_doc(&mut self.errs);
+				let op_tok = self.tokenizer.next_no_doc(&mut self.issues);
 
 				lhs = match op {
 					InfixOp::Binary(op) => {
@@ -628,10 +628,7 @@ impl<'src> Parser<'src> {
 		Ok(lhs)
 	}
 
-	fn get_function_call_args(
-		&mut self,
-		s0: Span,
-	) -> Result<(Vec<FunctionCallArg>, Span), ParsingError> {
+	fn get_function_call_args(&mut self, s0: Span) -> Result<(Vec<FunctionCallArg>, Span), Issue> {
 		if let Some((_, s1)) = self.get_punc(&[Punctuation::RightRound]) {
 			Ok((vec![], s0.combine(s1)))
 		} else {
@@ -641,12 +638,12 @@ impl<'src> Parser<'src> {
 				if let Some(Token {
 					data: TokenData::Identifier { .. },
 					..
-				}) = self.tokenizer.peek_no_doc(&mut self.errs)
+				}) = self.tokenizer.peek_no_doc(&mut self.issues)
 				{
 					if let Some(Token {
 						data: TokenData::Punctuation(Punctuation::Colon),
 						..
-					}) = self.tokenizer.peek_twice_no_doc(&mut self.errs)
+					}) = self.tokenizer.peek_twice_no_doc(&mut self.issues)
 					{
 						let id = self.get_ident().expect("should get an ident at this point");
 						self.get_punc(&[Punctuation::Colon])
@@ -683,7 +680,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	fn get_expr(&mut self) -> Result<Option<Expression>, ParsingError> {
+	fn get_expr(&mut self) -> Result<Option<Expression>, Issue> {
 		let p = if let Some(p) = self.get_primary_expr()? {
 			p
 		} else {
@@ -692,7 +689,7 @@ impl<'src> Parser<'src> {
 		self.get_expr_inner(p, 0).map(Some)
 	}
 
-	fn get_expr_list(&mut self) -> Result<Option<ExprList>, ParsingError> {
+	fn get_expr_list(&mut self) -> Result<Option<ExprList>, Issue> {
 		let expr = if let Some(e) = self.get_expr()? {
 			e
 		} else {
@@ -716,7 +713,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_compound_statement(&mut self) -> Result<Option<CompoundStatement>, ParsingError> {
+	fn get_compound_statement(&mut self) -> Result<Option<CompoundStatement>, Issue> {
 		let p = self.get_punc(&[Punctuation::LeftCurly]);
 		if p.is_none() {
 			return Ok(None);
@@ -747,19 +744,17 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_variable_declaration(
-		&mut self,
-	) -> Result<Option<LocalVariableDefinition>, ParsingError> {
+	fn get_variable_declaration(&mut self) -> Result<Option<LocalVariableDefinition>, Issue> {
 		if let Some(Token {
 			data: TokenData::Identifier(id),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			let id_sym = intern_name(id);
 			if id_sym != intern_name("array")
 				&& id_sym != intern_name("map")
 				&& !matches!(
-					self.tokenizer.peek_twice_no_doc(&mut self.errs),
+					self.tokenizer.peek_twice_no_doc(&mut self.issues),
 					Some(Token {
 						data: TokenData::Identifier { .. },
 						..
@@ -876,7 +871,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_if_body(&mut self, s0: Span) -> Result<Option<Statement>, ParsingError> {
+	fn get_if_body(&mut self, s0: Span) -> Result<Option<Statement>, Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftRound]);
 		self.expect(ex, "`(`")?;
 
@@ -911,7 +906,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_switch_body(&mut self, s0: Span) -> Result<Option<Statement>, ParsingError> {
+	fn get_switch_body(&mut self, s0: Span) -> Result<Option<Statement>, Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftRound]);
 		self.expect(ex, "`(`")?;
 
@@ -935,7 +930,7 @@ impl<'src> Parser<'src> {
 		&mut self,
 		start: Keyword,
 		s0: Span,
-	) -> Result<Option<Statement>, ParsingError> {
+	) -> Result<Option<Statement>, Issue> {
 		let iter_type = match start {
 			Keyword::While => CondIterType::While,
 			Keyword::Until => CondIterType::Until,
@@ -965,7 +960,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_do_body(&mut self, s0: Span) -> Result<Option<Statement>, ParsingError> {
+	fn get_do_body(&mut self, s0: Span) -> Result<Option<Statement>, Issue> {
 		let ex = self.get_statement()?;
 		let body = self.expect(ex, "a statement")?;
 
@@ -997,7 +992,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_for_init(&mut self) -> Result<Option<ForInit>, ParsingError> {
+	fn get_for_init(&mut self) -> Result<Option<ForInit>, Issue> {
 		if let Some(var_def) = self.get_variable_declaration()? {
 			Ok(Some(ForInit {
 				span: var_def.span,
@@ -1013,7 +1008,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	fn get_for_body(&mut self, s0: Span) -> Result<Option<Statement>, ParsingError> {
+	fn get_for_body(&mut self, s0: Span) -> Result<Option<Statement>, Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftRound]);
 		self.expect(ex, "`(`")?;
 
@@ -1051,7 +1046,7 @@ impl<'src> Parser<'src> {
 		&mut self,
 		s0: Span,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<StaticConstArray>, ParsingError> {
+	) -> Result<Option<StaticConstArray>, Issue> {
 		if self.get_keyword(&[Keyword::Const]).is_none() {
 			return Ok(None);
 		}
@@ -1102,7 +1097,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_statement(&mut self) -> Result<Option<Statement>, ParsingError> {
+	fn get_statement(&mut self) -> Result<Option<Statement>, Issue> {
 		if let Some(c) = self.get_compound_statement()? {
 			return Ok(Some(Statement {
 				span: c.span,
@@ -1239,7 +1234,7 @@ impl<'src> Parser<'src> {
 		Ok(None)
 	}
 
-	fn get_single_type(&mut self) -> Result<Option<Type>, ParsingError> {
+	fn get_single_type(&mut self) -> Result<Option<Type>, Issue> {
 		if let Some((_, s)) = self.get_keyword(&[Keyword::Let]) {
 			Ok(Some(Type {
 				span: s,
@@ -1358,7 +1353,7 @@ impl<'src> Parser<'src> {
 		}
 	}
 
-	fn get_array_sizes(&mut self) -> Result<Option<ArraySizes>, ParsingError> {
+	fn get_array_sizes(&mut self) -> Result<Option<ArraySizes>, Issue> {
 		let mut ret = None;
 		while let Some((_, s0)) = self.get_punc(&[Punctuation::LeftSquare]) {
 			let expr = self.get_expr()?;
@@ -1382,7 +1377,7 @@ impl<'src> Parser<'src> {
 		Ok(ret)
 	}
 
-	fn get_type_or_array(&mut self) -> Result<Option<TypeOrArray>, ParsingError> {
+	fn get_type_or_array(&mut self) -> Result<Option<TypeOrArray>, Issue> {
 		let ty = if let Some(t) = self.get_single_type()? {
 			t
 		} else {
@@ -1403,7 +1398,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_types_or_void(&mut self) -> Result<Option<TypeListOrVoid>, ParsingError> {
+	fn get_types_or_void(&mut self) -> Result<Option<TypeListOrVoid>, Issue> {
 		if let Some(id) = self.get_specific_ident(&["void"]) {
 			return Ok(Some(TypeListOrVoid {
 				span: id.span,
@@ -1430,7 +1425,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_func_param(&mut self) -> Result<Option<FuncParam>, ParsingError> {
+	fn get_func_param(&mut self) -> Result<Option<FuncParam>, Issue> {
 		let mut flags = vec![];
 		let mut s0 = None;
 		loop {
@@ -1496,7 +1491,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_func_params(&mut self, s0: Span) -> Result<FuncParams, ParsingError> {
+	fn get_func_params(&mut self, s0: Span) -> Result<FuncParams, Issue> {
 		if self.get_specific_ident(&["void"]).is_some() {
 			let ex = self.get_punc(&[Punctuation::RightRound]);
 			let (_, s1) = self.expect(ex, "`)`")?;
@@ -1538,9 +1533,7 @@ impl<'src> Parser<'src> {
 		})
 	}
 
-	fn get_decl_prelude(
-		&mut self,
-	) -> Result<Option<(Vec<DeclarationMetadataItem>, Span)>, ParsingError> {
+	fn get_decl_prelude(&mut self) -> Result<Option<(Vec<DeclarationMetadataItem>, Span)>, Issue> {
 		let mut ret = None;
 		let mut top_span = Span {
 			start: 0,
@@ -1551,12 +1544,12 @@ impl<'src> Parser<'src> {
 			if let Some(Token {
 				data: TokenData::Keyword(Keyword::ReadOnly),
 				..
-			}) = self.tokenizer.peek_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_no_doc(&mut self.issues)
 			{
 				if let Some(Token {
 					data: TokenData::Punctuation(Punctuation::LeftAngle),
 					..
-				}) = self.tokenizer.peek_twice_no_doc(&mut self.errs)
+				}) = self.tokenizer.peek_twice_no_doc(&mut self.issues)
 				{
 					break;
 				}
@@ -1785,7 +1778,7 @@ impl<'src> Parser<'src> {
 	fn get_declaration(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<Declaration>, ParsingError> {
+	) -> Result<Option<Declaration>, Issue> {
 		let metadata = self.get_decl_prelude()?;
 
 		let ex = self.get_types_or_void()?;
@@ -1855,7 +1848,7 @@ impl<'src> Parser<'src> {
 		})))
 	}
 
-	pub fn get_class_inner(&mut self) -> Result<Option<ClassInner>, ParsingError> {
+	pub fn get_class_inner(&mut self) -> Result<Option<ClassInner>, Issue> {
 		let doc = self.get_doc_comment();
 		if let Some(e) = self.get_enum(doc)? {
 			return Ok(Some(ClassInner {
@@ -1914,16 +1907,16 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Keyword(Keyword::Static),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			if let Some(Token {
 				data: TokenData::Keyword(Keyword::Const),
 				..
-			}) = self.tokenizer.peek_twice_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_twice_no_doc(&mut self.issues)
 			{
 				let s0 = self
 					.tokenizer
-					.next_no_doc(&mut self.errs)
+					.next_no_doc(&mut self.issues)
 					.unwrap()
 					.span(self.file, self.text);
 				let s = self.get_static_const_body(s0, doc)?.unwrap();
@@ -1946,7 +1939,7 @@ impl<'src> Parser<'src> {
 		Ok(None)
 	}
 
-	fn get_class_ancestry(&mut self) -> Result<Option<DottableId>, ParsingError> {
+	fn get_class_ancestry(&mut self) -> Result<Option<DottableId>, Issue> {
 		if self.get_punc(&[Punctuation::Colon]).is_none() {
 			return Ok(None);
 		}
@@ -1957,7 +1950,7 @@ impl<'src> Parser<'src> {
 		Ok(Some(ancestor))
 	}
 
-	fn get_class_metadata(&mut self) -> Result<Vec<ClassMetadataItem>, ParsingError> {
+	fn get_class_metadata(&mut self) -> Result<Vec<ClassMetadataItem>, Issue> {
 		let mut ret = vec![];
 
 		while let Some((k, s0)) = self.get_keyword(&[
@@ -2024,7 +2017,7 @@ impl<'src> Parser<'src> {
 		Ok(ret)
 	}
 
-	fn get_class_body(&mut self) -> Result<(Vec<ClassInner>, Span), ParsingError> {
+	fn get_class_body(&mut self) -> Result<(Vec<ClassInner>, Span), Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftCurly]);
 		let (_, s0) = self.expect(ex, "`{`")?;
 
@@ -2046,7 +2039,7 @@ impl<'src> Parser<'src> {
 	fn get_class(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<ClassDefinition>, ParsingError> {
+	) -> Result<Option<ClassDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Class]) {
 			Some((_, s)) => s,
 			None => {
@@ -2072,7 +2065,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_mixin_class_inner(&mut self) -> Result<Option<MixinClassInner>, ParsingError> {
+	fn get_mixin_class_inner(&mut self) -> Result<Option<MixinClassInner>, Issue> {
 		let doc = self.get_doc_comment();
 		if let Some(e) = self.get_enum(doc)? {
 			return Ok(Some(MixinClassInner {
@@ -2119,16 +2112,16 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Keyword(Keyword::Static),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			if let Some(Token {
 				data: TokenData::Keyword(Keyword::Const),
 				..
-			}) = self.tokenizer.peek_twice_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_twice_no_doc(&mut self.issues)
 			{
 				let s0 = self
 					.tokenizer
-					.next_no_doc(&mut self.errs)
+					.next_no_doc(&mut self.issues)
 					.unwrap()
 					.span(self.file, self.text);
 				let s = self.get_static_const_body(s0, doc)?.unwrap();
@@ -2151,7 +2144,7 @@ impl<'src> Parser<'src> {
 		Ok(None)
 	}
 
-	fn get_mixin_class_body(&mut self) -> Result<(Vec<MixinClassInner>, Span), ParsingError> {
+	fn get_mixin_class_body(&mut self) -> Result<(Vec<MixinClassInner>, Span), Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftCurly]);
 		let (_, s0) = self.expect(ex, "`{`")?;
 
@@ -2173,7 +2166,7 @@ impl<'src> Parser<'src> {
 	fn get_mixin(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<MixinClassDefinition>, ParsingError> {
+	) -> Result<Option<MixinClassDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Mixin]) {
 			Some((_, s)) => s,
 			None => {
@@ -2197,7 +2190,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_struct_inner(&mut self) -> Result<Option<StructInner>, ParsingError> {
+	fn get_struct_inner(&mut self) -> Result<Option<StructInner>, Issue> {
 		let doc = self.get_doc_comment();
 		if let Some(e) = self.get_enum(doc)? {
 			return Ok(Some(StructInner {
@@ -2214,16 +2207,16 @@ impl<'src> Parser<'src> {
 		if let Some(Token {
 			data: TokenData::Keyword(Keyword::Static),
 			..
-		}) = self.tokenizer.peek_no_doc(&mut self.errs)
+		}) = self.tokenizer.peek_no_doc(&mut self.issues)
 		{
 			if let Some(Token {
 				data: TokenData::Keyword(Keyword::Const),
 				..
-			}) = self.tokenizer.peek_twice_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_twice_no_doc(&mut self.issues)
 			{
 				let s0 = self
 					.tokenizer
-					.next_no_doc(&mut self.errs)
+					.next_no_doc(&mut self.issues)
 					.unwrap()
 					.span(self.file, self.text);
 				let s = self.get_static_const_body(s0, doc)?.unwrap();
@@ -2246,7 +2239,7 @@ impl<'src> Parser<'src> {
 		Ok(None)
 	}
 
-	fn get_struct_metadata(&mut self) -> Result<Vec<StructMetadataItem>, ParsingError> {
+	fn get_struct_metadata(&mut self) -> Result<Vec<StructMetadataItem>, Issue> {
 		let mut ret = vec![];
 
 		while let Some((k, s0)) = self.get_keyword(&[
@@ -2303,7 +2296,7 @@ impl<'src> Parser<'src> {
 		Ok(ret)
 	}
 
-	fn get_struct_body(&mut self) -> Result<(Vec<StructInner>, Span), ParsingError> {
+	fn get_struct_body(&mut self) -> Result<(Vec<StructInner>, Span), Issue> {
 		let ex = self.get_punc(&[Punctuation::LeftCurly]);
 		let (_, s0) = self.expect(ex, "'{'")?;
 
@@ -2331,7 +2324,7 @@ impl<'src> Parser<'src> {
 	fn get_struct(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<StructDefinition>, ParsingError> {
+	) -> Result<Option<StructDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Struct]) {
 			Some((_, s)) => s,
 			None => {
@@ -2355,7 +2348,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_extend(&mut self) -> Result<Option<Extend>, ParsingError> {
+	fn get_extend(&mut self) -> Result<Option<Extend>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Extend]) {
 			Some((_, s)) => s,
 			None => {
@@ -2398,7 +2391,7 @@ impl<'src> Parser<'src> {
 	fn get_enum(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<EnumDefinition>, ParsingError> {
+	) -> Result<Option<EnumDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Enum]) {
 			Some((_, s)) => s,
 			None => {
@@ -2518,7 +2511,7 @@ impl<'src> Parser<'src> {
 	fn get_const_def(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<ConstDefinition>, ParsingError> {
+	) -> Result<Option<ConstDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Const]) {
 			Some((_, s)) => s,
 			None => {
@@ -2549,7 +2542,7 @@ impl<'src> Parser<'src> {
 	fn get_flag_def(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<FlagDefinition>, ParsingError> {
+	) -> Result<Option<FlagDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::FlagDef]) {
 			Some((_, s)) => s,
 			None => {
@@ -2587,7 +2580,7 @@ impl<'src> Parser<'src> {
 	fn get_property_def(
 		&mut self,
 		doc_comment: Option<StringSymbol>,
-	) -> Result<Option<PropertyDefinition>, ParsingError> {
+	) -> Result<Option<PropertyDefinition>, Issue> {
 		let s0 = match self.get_specific_ident(&["property"]) {
 			Some(id) => id.span,
 			None => {
@@ -2622,7 +2615,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_default_def(&mut self) -> Result<Option<DefaultDefinition>, ParsingError> {
+	fn get_default_def(&mut self) -> Result<Option<DefaultDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::Default]) {
 			Some((_, s)) => s,
 			None => {
@@ -2686,7 +2679,7 @@ impl<'src> Parser<'src> {
 		}))
 	}
 
-	fn get_ident_list(&mut self) -> Result<Vec1<Identifier>, ParsingError> {
+	fn get_ident_list(&mut self) -> Result<Vec1<Identifier>, Issue> {
 		let ex = self.get_ident();
 		let var = self.expect(ex, "an identifier")?;
 		let mut ret = vec1![var];
@@ -2700,7 +2693,7 @@ impl<'src> Parser<'src> {
 		Ok(ret)
 	}
 
-	fn get_states_def(&mut self) -> Result<Option<StatesDefinition>, ParsingError> {
+	fn get_states_def(&mut self) -> Result<Option<StatesDefinition>, Issue> {
 		let s0 = match self.get_keyword(&[Keyword::States]) {
 			Some((_, s)) => s,
 			None => {
@@ -2986,14 +2979,14 @@ impl<'src> Parser<'src> {
 		let version = match self.get_lump_version() {
 			Ok(v) => v,
 			Err(e) => {
-				self.err(e);
+				self.issue(e);
 				return ParserResult {
 					file: self.file,
 					ast: TopLevel {
 						version: None,
 						definitions: vec![],
 					},
-					errs: self.errs,
+					issues: self.issues,
 				};
 			}
 		};
@@ -3003,23 +2996,23 @@ impl<'src> Parser<'src> {
 		loop {
 			let doc = self.get_doc_comment();
 
-			if self.tokenizer.peek_no_doc(&mut self.errs).is_none() {
-				self.tokenizer.next_no_doc(&mut self.errs);
+			if self.tokenizer.peek_no_doc(&mut self.issues).is_none() {
+				self.tokenizer.next_no_doc(&mut self.issues);
 				break;
 			}
 
 			if let Some(Token {
 				data: TokenData::Include,
 				..
-			}) = self.tokenizer.peek_no_doc(&mut self.errs)
+			}) = self.tokenizer.peek_no_doc(&mut self.issues)
 			{
-				let t = self.tokenizer.next_no_doc(&mut self.errs).unwrap();
+				let t = self.tokenizer.next_no_doc(&mut self.issues).unwrap();
 
 				let ex = self.get_string_concat();
 				let path = match self.expect(ex, "a string constant") {
 					Ok(p) => p,
 					Err(e) => {
-						self.err(e);
+						self.issue(e);
 						break;
 					}
 				};
@@ -3040,7 +3033,7 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
@@ -3054,7 +3047,7 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
@@ -3068,7 +3061,7 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
@@ -3092,7 +3085,7 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
@@ -3106,7 +3099,7 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
@@ -3120,13 +3113,13 @@ impl<'src> Parser<'src> {
 				}
 				Ok(None) => {}
 				Err(e) => {
-					self.err(e);
+					self.issue(e);
 					break;
 				}
 			}
 
 			let e = self.expect::<()>(None, "a top level element").unwrap_err();
-			self.err(e);
+			self.issue(e);
 			break;
 		}
 
@@ -3136,7 +3129,7 @@ impl<'src> Parser<'src> {
 				version,
 				definitions,
 			},
-			errs: self.errs,
+			issues: self.issues,
 		}
 	}
 }
@@ -3153,10 +3146,10 @@ mod test {
 	}
 
 	fn assert_no_errors(result: ParserResult) {
-		if !result.errs.is_empty() {
+		if !result.issues.is_empty() {
 			let mut errors = String::new();
 
-			for err in result.errs {
+			for err in result.issues {
 				errors.push_str("- ");
 				errors.push_str(&err.msg);
 				errors.push('\n');
@@ -3167,8 +3160,8 @@ mod test {
 		}
 	}
 
-	fn assert_errors(result: ParserResult, expected: &[ParsingError]) {
-		assert_eq!(result.errs, expected);
+	fn assert_errors(result: ParserResult, expected: &[Issue]) {
+		assert_eq!(result.issues, expected);
 	}
 
 	#[test]
@@ -3248,8 +3241,8 @@ mod test {
 
 		assert_errors(
 			parser.parse(),
-			&[ParsingError {
-				level: ParsingErrorLevel::Error,
+			&[Issue {
+				level: Level::Error,
 				msg: "unterminated block comment".to_string(),
 				main_spans: vec1![Span {
 					file,

@@ -118,6 +118,19 @@ pub fn intern_string(s: &str) -> StringSymbol {
 	}
 }
 
+pub fn clear() {
+	{
+		let mut l = NAME_INTERNER.write();
+		l.string_map.clear();
+		l.symbol_map.clear();
+	}
+	{
+		let mut l = STRING_INTERNER.write();
+		l.string_map.clear();
+		l.symbol_map.clear();
+	}
+}
+
 pub type NameInterner = Interner<false>;
 pub type NameSymbol = Symbol<false>;
 

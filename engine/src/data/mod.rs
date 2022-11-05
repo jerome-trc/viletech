@@ -36,7 +36,7 @@ use crate::{
 	level::{self, Cluster, Episode},
 	newtype,
 	vfs::{ImpureVfs, VirtualFs},
-	zscript::{self, parser::error::ParsingErrorLevel as ZsParseErrorLevel},
+	zscript::{self, parser::issue::Level as ZsParseIssueLevel},
 	VfsHandle,
 };
 
@@ -341,47 +341,47 @@ impl DataCore {
 		let nsid = &namespace.meta.uuid;
 
 		let any_parse_errors = parse_out
-			.errors
+			.issues
 			.iter()
-			.any(|e| e.level == ZsParseErrorLevel::Error);
+			.any(|e| e.level == ZsParseIssueLevel::Error);
 
 		if any_parse_errors {
 			error!(
 				"{} errors during ZScript transpile, parse phase: {}",
-				parse_out.errors.len(),
+				parse_out.issues.len(),
 				nsid
 			);
 		}
 
-		for err in parse_out
-			.errors
+		for issue in parse_out
+			.issues
 			.iter()
-			.filter(|e| e.level == ZsParseErrorLevel::Error)
+			.filter(|e| e.level == ZsParseIssueLevel::Error)
 		{
-			let file = &parse_out.files[err.main_spans[0].get_file()];
-			error!("{}", zscript::prettify_error(nsid, file, err));
+			let file = &parse_out.files[issue.main_spans[0].get_file()];
+			error!("{}", zscript::prettify_parse_issue(nsid, file, issue));
 		}
 
 		let any_parse_warnings = parse_out
-			.errors
+			.issues
 			.iter()
-			.any(|e| e.level == ZsParseErrorLevel::Warning);
+			.any(|e| e.level == ZsParseIssueLevel::Warning);
 
 		if any_parse_warnings {
 			warn!(
 				"{} warnings during ZScript transpile, parse phase: {}",
-				parse_out.errors.len(),
+				parse_out.issues.len(),
 				nsid
 			);
 		}
 
 		for warn in parse_out
-			.errors
+			.issues
 			.iter()
-			.filter(|e| e.level == ZsParseErrorLevel::Warning)
+			.filter(|e| e.level == ZsParseIssueLevel::Warning)
 		{
 			let file = &parse_out.files[warn.main_spans[0].get_file()];
-			warn!("{}", zscript::prettify_error(nsid, file, warn));
+			warn!("{}", zscript::prettify_parse_issue(nsid, file, warn));
 		}
 
 		if any_parse_errors {

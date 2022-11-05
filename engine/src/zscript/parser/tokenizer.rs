@@ -24,8 +24,8 @@ use std::{borrow::Cow, collections::VecDeque, ops::Range};
 use str_utils::*;
 
 use super::{
-	error::{ParsingError, ParsingErrorLevel},
 	fs::FileIndex,
+	issue::{Issue, Level},
 	Span,
 };
 
@@ -432,7 +432,7 @@ impl<'src> Tokenizer<'src> {
 		(long, unsigned)
 	}
 
-	fn number(&mut self, errs: &mut Vec<ParsingError>, first: char) -> Token<'src> {
+	fn number(&mut self, issues: &mut Vec<Issue>, first: char) -> Token<'src> {
 		if first == '0' {
 			if let Some('x') = self.first() {
 				self.bump();
@@ -477,13 +477,13 @@ impl<'src> Tokenizer<'src> {
 				Err(()) => {
 					let double = self.float_suffix();
 					let s = &self.text[self.current_range.clone()];
-					let err = ParsingError {
-						level: ParsingErrorLevel::Error,
+					let err = Issue {
+						level: Level::Error,
 						msg: "expected at least one digit in exponent".to_string(),
 						main_spans: vec1::vec1![span(self.file, self.text, s)],
 						info_spans: vec![],
 					};
-					errs.push(err);
+					issues.push(err);
 					(0.0, double)
 				}
 			};
@@ -598,7 +598,7 @@ impl<'src> Tokenizer<'src> {
 		}
 	}
 
-	fn name(&mut self, errs: &mut Vec<ParsingError>) -> Token<'src> {
+	fn name(&mut self, issues: &mut Vec<Issue>) -> Token<'src> {
 		loop {
 			match self.first() {
 				Some('\'') => {
@@ -614,13 +614,13 @@ impl<'src> Tokenizer<'src> {
 				}
 				Some('\n') | None => {
 					let res = &self.text[self.current_range.clone()];
-					let err = ParsingError {
-						level: ParsingErrorLevel::Error,
+					let err = Issue {
+						level: Level::Error,
 						msg: "unterminated name constant".to_string(),
 						main_spans: vec1::vec1![span(self.file, self.text, res)],
 						info_spans: vec![],
 					};
-					errs.push(err);
+					issues.push(err);
 					let data = TokenData::Name(
 						&self.text[self.current_range.start + 1..self.current_range.end],
 					);
@@ -637,7 +637,7 @@ impl<'src> Tokenizer<'src> {
 		}
 	}
 
-	fn string(&mut self, errs: &mut Vec<ParsingError>) -> Token<'src> {
+	fn string(&mut self, issues: &mut Vec<Issue>) -> Token<'src> {
 		let mut needs_unescape = false;
 		loop {
 			match self.first() {
@@ -665,13 +665,13 @@ impl<'src> Tokenizer<'src> {
 				None => {
 					self.bump();
 					let res = &self.text[self.current_range.clone()];
-					let err = ParsingError {
-						level: ParsingErrorLevel::Error,
+					let err = Issue {
+						level: Level::Error,
 						msg: "unterminated string constant".to_string(),
 						main_spans: vec1::vec1![span(self.file, self.text, res)],
 						info_spans: vec![],
 					};
-					errs.push(err);
+					issues.push(err);
 					let s = &self.text[self.current_range.start + 1..self.current_range.end - 1];
 					let data = TokenData::String(if needs_unescape {
 						unescape(s)
@@ -753,7 +753,7 @@ impl<'src> Tokenizer<'src> {
 		}
 	}
 
-	fn block_comment(&mut self, errs: &mut Vec<ParsingError>) {
+	fn block_comment(&mut self, issues: &mut Vec<Issue>) {
 		loop {
 			match self.bump() {
 				Some('*') => {
@@ -764,13 +764,13 @@ impl<'src> Tokenizer<'src> {
 				}
 				None => {
 					let res = &self.text[self.current_range.clone()];
-					let err = ParsingError {
-						level: ParsingErrorLevel::Error,
+					let err = Issue {
+						level: Level::Error,
 						msg: "unterminated block comment".to_string(),
 						main_spans: vec1::vec1![span(self.file, self.text, res)],
 						info_spans: vec![],
 					};
-					errs.push(err);
+					issues.push(err);
 					break;
 				}
 				_ => {}
@@ -778,19 +778,19 @@ impl<'src> Tokenizer<'src> {
 		}
 	}
 
-	fn invalid_start(&self, errs: &mut Vec<ParsingError>) {
+	fn invalid_start(&self, issues: &mut Vec<Issue>) {
 		let s = &self.text[self.current_range.clone()];
 		let c = s.chars().next().unwrap();
-		let err = ParsingError {
-			level: ParsingErrorLevel::Error,
+		let err = Issue {
+			level: Level::Error,
 			msg: format!("unknown token start U+{:04X}", c as u32),
 			main_spans: vec1::vec1![span(self.file, self.text, s)],
 			info_spans: vec![],
 		};
-		errs.push(err);
+		issues.push(err);
 	}
 
-	fn next_internal(&mut self, errs: &mut Vec<ParsingError>) -> Option<Token<'src>> {
+	fn next_internal(&mut self, issues: &mut Vec<Issue>) -> Option<Token<'src>> {
 		if self.states_mode {
 			'outer_states: loop {
 				self.reset();
@@ -843,12 +843,12 @@ impl<'src> Tokenizer<'src> {
 							continue 'outer_states;
 						} else if matches!(self.first(), Some('*')) {
 							self.bump();
-							self.block_comment(errs);
+							self.block_comment(issues);
 							continue 'outer_states;
 						} else if self.matches_nws() {
 							self.nws()
 						} else {
-							self.invalid_start(errs);
+							self.invalid_start(issues);
 							continue 'outer_states;
 						}
 					}
@@ -860,7 +860,7 @@ impl<'src> Tokenizer<'src> {
 						if let Token {
 							original,
 							data: TokenData::String(s),
-						} = self.string(errs)
+						} = self.string(issues)
 						{
 							Token {
 								original,
@@ -874,7 +874,7 @@ impl<'src> Tokenizer<'src> {
 					c if !matches!(c, '\u{0001}'..=' ' | '"' | ':' | ';' | '}') => self.nws(),
 
 					_ => {
-						self.invalid_start(errs);
+						self.invalid_start(issues);
 						continue 'outer_states;
 					}
 				});
@@ -888,7 +888,7 @@ impl<'src> Tokenizer<'src> {
 						continue 'outer;
 					}
 					'a'..='z' | 'A'..='Z' | '_' => self.ident_or_keyword(),
-					'0'..='9' => self.number(errs, start),
+					'0'..='9' => self.number(issues, start),
 					'#' => {
 						if self
 							.remaining
@@ -939,7 +939,7 @@ impl<'src> Tokenizer<'src> {
 					}
 					'.' => {
 						if matches!(self.first(), Some('0'..='9')) {
-							self.number(errs, start)
+							self.number(issues, start)
 						} else {
 							self.punc(Punctuation::Dot, true)
 						}
@@ -953,7 +953,7 @@ impl<'src> Tokenizer<'src> {
 							continue 'outer;
 						} else if matches!(self.first(), Some('*')) {
 							self.bump();
-							self.block_comment(errs);
+							self.block_comment(issues);
 							continue 'outer;
 						} else {
 							self.punc(Punctuation::Divide, true)
@@ -983,11 +983,11 @@ impl<'src> Tokenizer<'src> {
 					'?' => self.punc(Punctuation::QuestionMark, true),
 					'@' => self.punc(Punctuation::AtSign, true),
 
-					'\'' => self.name(errs),
-					'\"' => self.string(errs),
+					'\'' => self.name(issues),
+					'\"' => self.string(issues),
 
 					_ => {
-						self.invalid_start(errs);
+						self.invalid_start(issues);
 						continue 'outer;
 					}
 				});
@@ -1005,7 +1005,7 @@ impl<'src> Tokenizer<'src> {
 		)
 	}
 
-	pub(super) fn next_no_doc(&mut self, errs: &mut Vec<ParsingError>) -> Option<Token<'src>> {
+	pub(super) fn next_no_doc(&mut self, issues: &mut Vec<Issue>) -> Option<Token<'src>> {
 		while let Some(p) = self.peeked.pop_front() {
 			if Self::doc_filter(&p) {
 				continue;
@@ -1013,7 +1013,7 @@ impl<'src> Tokenizer<'src> {
 			return p;
 		}
 		loop {
-			let r = self.next_internal(errs);
+			let r = self.next_internal(issues);
 			if Self::doc_filter(&r) {
 				continue;
 			}
@@ -1021,18 +1021,15 @@ impl<'src> Tokenizer<'src> {
 		}
 	}
 
-	pub(super) fn peek_no_doc(&mut self, errs: &mut Vec<ParsingError>) -> &Option<Token<'src>> {
+	pub(super) fn peek_no_doc(&mut self, issues: &mut Vec<Issue>) -> &Option<Token<'src>> {
 		while !self.peeked.iter().any(|t| !Self::doc_filter(t)) {
-			let r = self.next_internal(errs);
+			let r = self.next_internal(issues);
 			self.peeked.push_back(r);
 		}
 		self.peeked.iter().find(|t| !Self::doc_filter(t)).unwrap()
 	}
 
-	pub(super) fn peek_twice_no_doc(
-		&mut self,
-		errs: &mut Vec<ParsingError>,
-	) -> &Option<Token<'src>> {
+	pub(super) fn peek_twice_no_doc(&mut self, issues: &mut Vec<Issue>) -> &Option<Token<'src>> {
 		while self
 			.peeked
 			.iter()
@@ -1040,7 +1037,7 @@ impl<'src> Tokenizer<'src> {
 			.nth(1)
 			.is_none()
 		{
-			let r = self.next_internal(errs);
+			let r = self.next_internal(issues);
 			self.peeked.push_back(r);
 		}
 		self.peeked
@@ -1050,16 +1047,16 @@ impl<'src> Tokenizer<'src> {
 			.unwrap()
 	}
 
-	pub(super) fn next_doc(&mut self, errs: &mut Vec<ParsingError>) -> Option<Token<'src>> {
+	pub(super) fn next_doc(&mut self, issues: &mut Vec<Issue>) -> Option<Token<'src>> {
 		if let Some(p) = self.peeked.pop_front() {
 			return p;
 		}
-		self.next_internal(errs)
+		self.next_internal(issues)
 	}
 
-	pub(super) fn peek_doc(&mut self, errs: &mut Vec<ParsingError>) -> &Option<Token<'src>> {
+	pub(super) fn peek_doc(&mut self, issues: &mut Vec<Issue>) -> &Option<Token<'src>> {
 		if self.peeked.get(0).is_none() {
-			let r = self.next_internal(errs);
+			let r = self.next_internal(issues);
 			self.peeked.push_back(r);
 		}
 		&self.peeked[0]
@@ -1084,38 +1081,38 @@ mod test {
             'Hello...'424l += 0x7453 0.42 @
             #endregion
         "#;
-		let mut errs = vec![];
+		let mut issues = vec![];
 		let mut tok = Tokenizer::new(dummy_file(), s);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: "something",
 				data: TokenData::Identifier("something")
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: "_s",
 				data: TokenData::Identifier("_s")
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#""Hi!""#,
 				data: TokenData::String(Cow::from("Hi!"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"'Hello...'"#,
 				data: TokenData::Name("Hello...")
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"424l"#,
 				data: TokenData::Int {
@@ -1126,14 +1123,14 @@ mod test {
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"+="#,
 				data: TokenData::Punctuation(Punctuation::PlusAssign)
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"0x7453"#,
 				data: TokenData::Int {
@@ -1144,7 +1141,7 @@ mod test {
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"0.42"#,
 				data: TokenData::Float {
@@ -1154,13 +1151,13 @@ mod test {
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"@"#,
 				data: TokenData::Punctuation(Punctuation::AtSign)
 			}
 		);
-		assert!(tok.next_no_doc(&mut errs).is_none());
+		assert!(tok.next_no_doc(&mut issues).is_none());
 	}
 
 	#[test]
@@ -1170,56 +1167,57 @@ mod test {
             "Hello\t...""#;
 		let mut tok = Tokenizer::new(dummy_file(), s);
 		tok.set_states_mode(true);
-		let mut errs = vec![];
+		let mut issues = vec![];
+
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"HI#24"#,
 				data: TokenData::NonWhitespace(Cow::from("HI#24"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"AA##A"#,
 				data: TokenData::NonWhitespace(Cow::from("AA##A"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"/A"#,
 				data: TokenData::NonWhitespace(Cow::from("/A"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#";"#,
 				data: TokenData::Punctuation(Punctuation::Semicolon)
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"A"#,
 				data: TokenData::NonWhitespace(Cow::from("A"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#"A/B"#,
 				data: TokenData::NonWhitespace(Cow::from("A/B"))
 			}
 		);
 		assert_eq!(
-			tok.next_no_doc(&mut errs).unwrap(),
+			tok.next_no_doc(&mut issues).unwrap(),
 			Token {
 				original: r#""Hello\t...""#,
 				data: TokenData::NonWhitespace(Cow::from("Hello\t..."))
 			}
 		);
-		assert!(tok.next_no_doc(&mut errs).is_none());
+		assert!(tok.next_no_doc(&mut issues).is_none());
 	}
 }

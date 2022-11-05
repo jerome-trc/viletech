@@ -20,37 +20,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 pub mod parser;
+mod transpiler;
 
 use parser::{
-	error::ParsingError,
 	fs::{File, FileSystem, Files},
+	issue::Issue as ParseIssue,
 	manager::{parse_filesystem, FileIndexAndAst},
 };
 
 use crate::utils::string::line_from_char_index;
 
+pub use transpiler::Transpiler;
+
 pub struct ParseOutput {
 	pub files: Files,
-	pub errors: Vec<ParsingError>,
+	pub issues: Vec<ParseIssue>,
 	pub asts: Vec<FileIndexAndAst>,
 }
 
 #[must_use]
 pub fn parse(fs: impl FileSystem) -> ParseOutput {
-	let mut errors = Default::default();
+	let mut issues = Default::default();
 	let mut files = Default::default();
-	let asts = parse_filesystem(fs, &mut files, &mut errors).asts;
+	let asts = parse_filesystem(fs, &mut files, &mut issues).asts;
 
 	ParseOutput {
 		files,
-		errors,
+		issues,
 		asts,
 	}
 }
 
-pub fn prettify_error(namespace: &str, file: &File, error: &ParsingError) -> String {
-	let start = error.main_spans[0].get_start();
-	let end = error.main_spans[0].get_end();
+pub fn prettify_parse_issue(namespace: &str, file: &File, issue: &ParseIssue) -> String {
+	let start = issue.main_spans[0].get_start();
+	let end = issue.main_spans[0].get_end();
 	let (line, line_index) = line_from_char_index(file.text(), start).unwrap();
 	let line = line.trim();
 	let line_start = file.text().find(line).unwrap();
@@ -74,6 +77,6 @@ pub fn prettify_error(namespace: &str, file: &File, error: &ParsingError) -> Str
 		start - line_start,
 		line,
 		indicators,
-		error.msg
+		issue.msg
 	)
 }
