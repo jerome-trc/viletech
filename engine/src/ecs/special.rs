@@ -1,5 +1,3 @@
-//! Playsim entity components.
-
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -19,25 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-mod blueprint;
-mod special;
-
-use crate::data::AssetHandle;
-
-use mlua::prelude::*;
-
-pub use blueprint::Blueprint;
-pub use special::SpecialVars;
-
+/// Primarily for use by ACS behaviours. An entity won't have this component
+/// unless the map or blueprint specifies one of the fields within.
 #[derive(Debug, shipyard::Component)]
-pub struct Constant {
-	/// The sim tic on which this entity was spawned.
-	spawned_tic: u32,
-	blueprint: AssetHandle,
-}
-
-impl LuaUserData for Constant {
-	fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
-		fields.add_field_method_get("spawned_tic", |_, this| Ok(this.spawned_tic));
-	}
+pub struct SpecialVars {
+	tid: i32,
+	special: i32,
+	special_i: [i32; 2],
+	special_f: [f64; 2],
+	args: [i32; 5],
 }
