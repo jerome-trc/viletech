@@ -40,20 +40,26 @@ impl fmt::Display for Error {
 
 pub trait ImpureRng {
 	#[must_use]
-	fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32;
+	fn range_i64(&mut self, min_incl: i64, max_incl: i64) -> i64;
 	#[must_use]
-	fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32;
+	fn range_f64(&mut self, min_incl: f64, max_incl: f64) -> f64;
+	#[must_use]
+	fn range_usize(&mut self, min_incl: usize, max_incl: usize) -> usize;
 	#[must_use]
 	fn coin_flip(&mut self) -> bool;
 }
 
 impl ImpureRng for WyRand {
-	fn range_i32(&mut self, min_incl: i32, max_incl: i32) -> i32 {
-		self.generate_range(min_incl..(max_incl + 1))
+	fn range_i64(&mut self, min_incl: i64, max_incl: i64) -> i64 {
+		self.generate_range(min_incl..=max_incl)
 	}
 
-	fn range_f32(&mut self, min_incl: f32, max_incl: f32) -> f32 {
-		min_incl + (self.generate::<f32>() / (1.0 / (max_incl - min_incl)))
+	fn range_f64(&mut self, min_incl: f64, max_incl: f64) -> f64 {
+		min_incl + (self.generate::<f64>() / (1.0 / (max_incl - min_incl)))
+	}
+
+	fn range_usize(&mut self, min_incl: usize, max_incl: usize) -> usize {
+		self.generate_range(min_incl..=max_incl)
 	}
 
 	fn coin_flip(&mut self) -> bool {

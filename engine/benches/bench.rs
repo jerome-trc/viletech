@@ -44,7 +44,7 @@ fn lua(crit: &mut Criterion) {
 	grp_nativebind.bench_function("App Data", |bencher| {
 		bencher.iter(|| {
 			let mut r = lua.app_data_mut::<PlaySim>().unwrap();
-			let _ = r.rng.get_anon().range_i32(0, 1);
+			let _ = r.rng.get_anon().range_i64(0, 1);
 		});
 	});
 
@@ -52,7 +52,7 @@ fn lua(crit: &mut Criterion) {
 		bencher.iter(|| {
 			let r = lua.registry_value::<LuaAnyUserData>(&regkey).unwrap();
 			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
-			let _ = ps.rng.get_anon().range_i32(0, 1);
+			let _ = ps.rng.get_anon().range_i64(0, 1);
 		});
 	});
 
@@ -62,19 +62,19 @@ fn lua(crit: &mut Criterion) {
 				.named_registry_value::<_, LuaAnyUserData>("playsim")
 				.unwrap();
 			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
-			let _ = ps.rng.get_anon().range_i32(0, 1);
+			let _ = ps.rng.get_anon().range_i64(0, 1);
 		});
 	});
 
 	grp_nativebind.bench_function("Arc<Mutex<>>", |bencher| {
 		bencher.iter(|| {
-			let _ = amps.lock().rng.get_anon().range_i32(0, 1);
+			let _ = amps.lock().rng.get_anon().range_i64(0, 1);
 		});
 	});
 
 	grp_nativebind.bench_function("Arc<RwLock<>>", |bencher| {
 		bencher.iter(|| {
-			let _ = arwps.write().rng.get_anon().range_i32(0, 1);
+			let _ = arwps.write().rng.get_anon().range_i64(0, 1);
 		});
 	});
 
