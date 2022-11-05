@@ -28,11 +28,17 @@ use std::{
 
 use log::{debug, error, info, warn};
 use mlua::prelude::*;
-use parking_lot::RwLock;
+use nanorand::WyRand;
+use parking_lot::{Mutex, RwLock};
 
-use crate::vfs::VirtualFs;
+use crate::{
+	lua::TableExt,
+	rng::{ImpureRng, RngCore},
+	sim::PlaySim,
+	vfs::VirtualFs,
+};
 
-use super::ImpureLua;
+use super::{Error, ImpureLua};
 
 /// Seed a Lua state's PRNG for trivial (i.e. client-side) purposes.
 pub(super) fn randomseed(lua: &Lua) -> LuaResult<()> {
@@ -299,6 +305,164 @@ pub(super) fn g_package(lua: &Lua) -> LuaResult<()> {
 	g_package.set_metatable(Some(metatable_readonly.clone()));
 
 	Ok(())
+}
+
+pub(super) fn g_rng_client(lua: &Lua, rng: Arc<Mutex<RngCore<WyRand>>>) -> LuaResult<LuaTable> {
+	fn resolve_prng<'rng>(
+		val: LuaValue,
+		rng: &'rng mut RngCore<WyRand>,
+	) -> LuaResult<&'rng mut WyRand> {
+		if let LuaNil = val {
+			Ok(rng.get_anon())
+		} else if let LuaValue::String(id) = val {
+			let id = id.to_str()?;
+
+			match rng.try_get(id) {
+				Some(p) => Ok(p),
+				None => Err(LuaError::ExternalError(Arc::new(Error::NonExistentPrng(
+					id.to_string(),
+				)))),
+			}
+		} else {
+			Err(LuaError::FromLuaConversionError {
+				from: val.type_name(),
+				to: "string",
+				message: Some(
+					"To specify which named RNG to use, the given ID must be a string.".to_string(),
+				),
+			})
+		}
+	}
+
+	let ret = lua.create_table()?;
+
+	let rng_c = rng.clone();
+
+	ret.set(
+		"int",
+		lua.create_function(move |_, args: (i64, i64, LuaValue)| {
+			let mut rng = rng_c.lock();
+			let prng = resolve_prng(args.2, &mut rng)?;
+			Ok(prng.range_i64(args.0, args.1))
+		})?,
+	)?;
+
+	let rng_c = rng.clone();
+
+	ret.set(
+		"float",
+		lua.create_function(move |_, args: (f64, f64, LuaValue)| {
+			let mut rng = rng_c.lock();
+			let prng = resolve_prng(args.2, &mut rng)?;
+			Ok(prng.range_f64(args.0, args.1))
+		})?,
+	)?;
+
+	let rng_c = rng.clone();
+
+	ret.set(
+		"pick",
+		lua.create_function(move |_, args: (LuaTable, LuaValue)| {
+			if args.0.is_empty() {
+				return Ok(LuaValue::Nil);
+			}
+
+			let mut rng = rng_c.lock();
+			let prng = resolve_prng(args.1, &mut rng)?;
+			args.0.get(prng.range_i64(1, args.0.len()?))
+		})?,
+	)?;
+
+	ret.set(
+		"coinflip",
+		lua.create_function(move |_, id: LuaValue| {
+			let mut rng = rng.lock();
+			let prng = resolve_prng(id, &mut rng)?;
+			Ok(prng.coin_flip())
+		})?,
+	)?;
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(ret)
+}
+
+pub(super) fn g_rng_sim(lua: &Lua, sim: Arc<RwLock<PlaySim>>) -> LuaResult<LuaTable> {
+	fn resolve_prng<'sim>(val: LuaValue, sim: &'sim mut PlaySim) -> LuaResult<&'sim mut WyRand> {
+		if let LuaNil = val {
+			Ok(sim.rng.get_anon())
+		} else if let LuaValue::String(id) = val {
+			let id = id.to_str()?;
+
+			match sim.rng.try_get(id) {
+				Some(p) => Ok(p),
+				None => Err(LuaError::ExternalError(Arc::new(Error::NonExistentPrng(
+					id.to_string(),
+				)))),
+			}
+		} else {
+			Err(LuaError::FromLuaConversionError {
+				from: val.type_name(),
+				to: "string",
+				message: Some(
+					"To specify which named RNG to use, the given ID must be a string.".to_string(),
+				),
+			})
+		}
+	}
+
+	let ret = lua.create_table()?;
+
+	let sim_c = sim.clone();
+
+	ret.set(
+		"int",
+		lua.create_function(move |_, args: (i64, i64, LuaValue)| {
+			let mut sim = sim_c.write();
+			let prng = resolve_prng(args.2, &mut sim)?;
+			let num = LuaValue::Integer(prng.range_i64(args.0, args.1));
+			Ok(num)
+		})?,
+	)?;
+
+	let sim_c = sim.clone();
+
+	ret.set(
+		"float",
+		lua.create_function(move |_, args: (f64, f64, LuaValue)| {
+			let mut sim = sim_c.write();
+			let prng = resolve_prng(args.2, &mut sim)?;
+			Ok(prng.range_f64(args.0, args.1))
+		})?,
+	)?;
+
+	let sim_c = sim.clone();
+
+	ret.set(
+		"pick",
+		lua.create_function(move |_, args: (LuaTable, LuaValue)| {
+			if args.0.is_empty() {
+				return Ok(LuaValue::Nil);
+			}
+
+			let mut sim = sim_c.write();
+			let prng = resolve_prng(args.1, &mut sim)?;
+			args.0.get(prng.range_i64(1, args.0.len()?))
+		})?,
+	)?;
+
+	ret.set(
+		"coinflip",
+		lua.create_function(move |_, id: LuaValue| {
+			let mut sim = sim.write();
+			let prng = resolve_prng(id, &mut sim)?;
+			Ok(prng.coin_flip())
+		})?,
+	)?;
+
+	ret.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(ret)
 }
 
 /// See [`g_debug`].

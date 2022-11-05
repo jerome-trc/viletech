@@ -1,4 +1,4 @@
-//! Trait extending [`mlua::Lua`] with Impure-specific behavior.
+//! Impure-specific Lua behaviour and myriad utilities.
 
 /*
 
@@ -22,9 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{fmt, sync::Arc};
 
 use mlua::{prelude::*, TableExt as LuaTableExt};
-use parking_lot::RwLock;
+use nanorand::WyRand;
+use parking_lot::{Mutex, RwLock};
 
-use crate::{newtype, vfs::VirtualFs};
+use crate::{newtype, rng::RngCore, sim::PlaySim, vfs::VirtualFs};
 
 mod detail;
 
@@ -36,7 +37,22 @@ pub trait ImpureLua<'p> {
 
 	/// Modifies the Lua global environment to be more conducive to a safe,
 	/// Impure-suitable sandbox, and adds numerous Impure-specific symbols.
-	fn global_init(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()>;
+	fn init_api_common(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()>;
+
+	/// Loads the registry with tables (to be loaded into `_G` whenever a sim tic
+	/// ends) containing functions that access and modify the client state.
+	fn init_api_client(&self, rng: Option<Arc<Mutex<RngCore<WyRand>>>>) -> LuaResult<()>;
+	/// Loads `_G` with tables containing functions that access and modify
+	/// the client state. Call when a sim tic ends, or building client state.
+	fn load_api_client(&self);
+
+	/// Loads the registry with tables (to be loaded into `_G` whenever a sim tic
+	/// starts) containing functions that access and modify the sim state.
+	fn init_api_playsim(&self, sim: Arc<RwLock<PlaySim>>) -> LuaResult<()>;
+	/// Loads `_G` with tables containing functions that access and modify
+	/// the sim state. Call when a sim tic starts.
+	fn load_api_playsim(&self);
+	fn clear_api_playsim(&self) -> LuaResult<()>;
 
 	/// Adds `math`, `string`, and `table` standard libraries to an environment,
 	/// as well as several standard free functions and `_VERSION`.
@@ -67,11 +83,15 @@ pub trait ImpureLua<'p> {
 	fn repr(&self, val: LuaValue) -> LuaResult<String>;
 }
 
+const REGID_CLIENT_RNG: &str = "api/client/rng";
+const REGID_SIM_RNG: &str = "api/sim/rng";
+
 impl<'p> ImpureLua<'p> for mlua::Lua {
 	fn new_ex(safe: bool) -> LuaResult<Lua> {
 		// Note: `io`, `os`, and `package` aren't sandbox-safe by themselves.
-		// They either get pruned of dangerous functions by `global_init` or
-		// are deleted now and may get returned in reduced form in the future.
+		// They either get pruned of dangerous functions by global API init
+		// functions or are deleted now and may get returned in reduced form
+		// in the future.
 
 		#[rustfmt::skip]
 		let safe_libs =
@@ -114,7 +134,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 			.set(
 				"__newindex",
 				ret.create_function(|_, _: LuaValue| -> LuaResult<()> {
-					Err(LuaError::ExternalError(Arc::new(NewIndexError)))
+					Err(LuaError::ExternalError(Arc::new(Error::IllegalNewIndex)))
 				})
 				.expect("Failed to create `__newindex` function for `metas.readonly`."),
 			)
@@ -130,7 +150,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		Ok(ret)
 	}
 
-	fn global_init(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()> {
+	fn init_api_common(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()> {
 		let globals = self.globals();
 
 		detail::g_std(&globals)?;
@@ -147,10 +167,52 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		Ok(())
 	}
 
+	fn init_api_client(&self, rng: Option<Arc<Mutex<RngCore<WyRand>>>>) -> LuaResult<()> {
+		if let Some(rng) = rng {
+			self.set_named_registry_value(REGID_CLIENT_RNG, detail::g_rng_client(self, rng)?)?;
+		}
+
+		Ok(())
+	}
+
+	fn load_api_client(&self) {
+		let globals = self.globals();
+
+		globals
+			.set(
+				"rng",
+				self.named_registry_value::<_, LuaTable>(REGID_CLIENT_RNG)
+					.unwrap(),
+			)
+			.unwrap();
+	}
+
+	fn init_api_playsim(&self, sim: Arc<RwLock<PlaySim>>) -> LuaResult<()> {
+		self.set_named_registry_value(REGID_SIM_RNG, detail::g_rng_sim(self, sim)?)?;
+
+		Ok(())
+	}
+
+	fn load_api_playsim(&self) { 
+		let globals = self.globals();
+
+		globals
+			.set(
+				"rng",
+				self.named_registry_value::<_, LuaTable>(REGID_SIM_RNG)
+					.unwrap(),
+			)
+			.unwrap();
+	}
+
+	fn clear_api_playsim(&self) -> LuaResult<()> {
+		self.unset_named_registry_value(REGID_SIM_RNG)
+	}
+
 	fn envbuild_std(&self, env: &LuaTable) {
 		debug_assert!(
 			env.is_empty(),
-			"`ImpureLua::env_init_std`: Called on a non-empty table."
+			"Lua env-init (std.): Called on a non-empty table."
 		);
 
 		let globals = self.globals();
@@ -183,13 +245,10 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		for key in GLOBAL_KEYS {
 			let val = globals
 				.get::<&str, LuaValue>(key)
-				.expect("`ImpureLua::env_init_std`: global `{}` is missing.");
+				.expect("Lua env-init (std.): Cglobal `{}` is missing.");
 
 			env.set(key, val).unwrap_or_else(|err| {
-				panic!(
-					"`ImpureLua::env_init_std`: failed to set `{}` ({}).",
-					key, err
-				)
+				panic!("Lua env-init (std.): Cfailed to set `{}` ({}).", key, err)
 			});
 		}
 
@@ -197,7 +256,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		if let Ok(d) = debug {
 			env.set("debug", d)
-				.expect("`ImpureLua::env_init_std`: Failed to set `debug`.");
+				.expect("Lua env-init (std.): CFailed to set `debug`.");
 		}
 	}
 
@@ -216,10 +275,12 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 	fn start_sim_tic(&self) {
 		self.app_data_mut::<SimsideAppData>().unwrap().0 = true;
+		self.load_api_playsim();
 	}
 
 	fn finish_sim_tic(&self) {
 		self.app_data_mut::<SimsideAppData>().unwrap().0 = false;
+		self.load_api_client();
 	}
 
 	#[must_use]
@@ -312,13 +373,23 @@ newtype!(
 );
 
 #[derive(Debug)]
-pub struct NewIndexError;
+pub enum Error {
+	IllegalNewIndex,
+	NonExistentPrng(String),
+}
 
-impl std::error::Error for NewIndexError {}
+impl std::error::Error for Error {}
 
-impl fmt::Display for NewIndexError {
+impl fmt::Display for Error {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "Attempted to modify a read-only table.")
+		match self {
+			Self::IllegalNewIndex => {
+				write!(f, "Attempted to modify a read-only table.")
+			}
+			Self::NonExistentPrng(id) => {
+				write!(f, "No random number generator under the ID: {}", id)
+			}
+		}
 	}
 }
 
@@ -348,7 +419,7 @@ mod test {
 		};
 
 		match cause.as_ref() {
-			LuaError::ExternalError(err) => assert!(err.is::<NewIndexError>()),
+			LuaError::ExternalError(err) => assert!(err.is::<Error>()),
 			other => panic!("Unexpected Lua callback error cause: {:#?}", other),
 		}
 

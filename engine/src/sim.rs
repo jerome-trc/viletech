@@ -37,6 +37,7 @@ pub struct PlaySim {
 }
 
 pub struct Handle {
+	pub sim: Arc<RwLock<PlaySim>>,
 	pub sender: InSender,
 	pub receiver: OutReceiver,
 	pub thread: JoinHandle<()>,
@@ -82,6 +83,7 @@ pub type OutSender = crossbeam::channel::Sender<OutMessage>;
 pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
 pub struct Context {
+	pub sim: Arc<RwLock<PlaySim>>,
 	pub lua: Arc<Mutex<Lua>>,
 	pub data: Arc<RwLock<DataCore>>,
 	pub receiver: InReceiver,
@@ -110,6 +112,7 @@ pub fn run<C: EgressConfig>(context: Context) {
 	}
 
 	let Context {
+		sim,
 		lua,
 		data: _,
 		receiver,
@@ -129,11 +132,12 @@ pub fn run<C: EgressConfig>(context: Context) {
 		let next_tic = now + Duration::from_micros(tic_interval);
 		let lua = lua.lock();
 		lua.start_sim_tic();
-		let playsim = lua.app_data_mut::<PlaySim>().unwrap();
+		let sim = sim.write();
 
 		while let Ok(msg) = receiver.try_recv() {
 			match msg {
 				InMessage::Stop => {
+					lua.finish_sim_tic();
 					break 'sim;
 				}
 				InMessage::IncreaseTicRate => {
@@ -155,7 +159,7 @@ pub fn run<C: EgressConfig>(context: Context) {
 
 		// ???
 
-		drop(playsim);
+		drop(sim);
 		lua.finish_sim_tic();
 		drop(lua);
 

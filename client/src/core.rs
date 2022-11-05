@@ -27,6 +27,7 @@ use impure::{
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
+	lua::ImpureLua,
 	rng::RngCore,
 	sim::{self, PlaySim},
 	terminal,
@@ -79,7 +80,7 @@ pub struct ClientCore {
 	pub vfs: Arc<RwLock<VirtualFs>>,
 	pub lua: Arc<Mutex<Lua>>,
 	pub data: Arc<RwLock<DataCore>>,
-	pub rng: RngCore<WyRand>,
+	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
 	pub input: InputCore,
@@ -121,7 +122,7 @@ impl ClientCore {
 			lua: Arc::new(Mutex::new(lua)),
 			data: Arc::new(RwLock::new(data)),
 			gfx,
-			rng: RngCore::default(),
+			rng: Arc::new(Mutex::new(RngCore::default())),
 			audio,
 			input: InputCore::default(),
 			console,
@@ -132,6 +133,12 @@ impl ClientCore {
 			},
 			next_scene: None,
 		};
+
+		{
+			let lua = ret.lua.lock();
+			lua.init_api_client(Some(ret.rng.clone()))?;
+			lua.load_api_client();
+		}
 
 		ret.register_console_commands();
 		impure::user::build_user_dirs()?;
@@ -549,24 +556,30 @@ impl ClientCore {
 	}
 
 	fn start_sim(&mut self) -> sim::Handle {
-		self.lua.lock().set_app_data(PlaySim::default());
-
 		let (txout, rxout) = crossbeam::channel::unbounded();
 		let (txin, rxin) = crossbeam::channel::unbounded();
 
+		let sim = Arc::new(RwLock::new(PlaySim::default()));
 		let lua = self.lua.clone();
 		let data = self.data.clone();
+
+		self.lua
+			.lock()
+			.init_api_playsim(sim.clone())
+			.expect("Failed to construct Lua's playsim API.");
 
 		self.console
 			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
 
 		sim::Handle {
+			sim: sim.clone(),
 			sender: txin,
 			receiver: rxout,
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
 					impure::sim::run::<sim::EgressConfigClient>(sim::Context {
+						sim,
 						lua,
 						data,
 						sender: txout,
@@ -590,6 +603,26 @@ impl ClientCore {
 			Err(err) => panic!("Sim thread panicked: {:#?}", err),
 		};
 
-		self.lua.lock().remove_app_data::<PlaySim>();
+		let lua = self.lua.lock();
+
+		lua.clear_api_playsim()
+			.expect("Failed to destroy Lua's playsim API.");
+		lua.expire_registry_values();
+
+		// This function's documentation recommends running it twice
+		lua.gc_collect()
+			.expect("Failed to run Lua GC after closing playsim.");
+		lua.gc_collect()
+			.expect("Failed to run Lua GC after closing playsim.");
+
+		// The arc-locked playsim object is meant to be dropped upon scene change,
+		// so ensure no references have survived thread teardown and Lua GC
+
+		debug_assert_eq!(
+			Arc::strong_count(&sim.sim),
+			1,
+			"Sim state has {} illegal extra references.",
+			Arc::strong_count(&sim.sim) - 1
+		);
 	}
 }
