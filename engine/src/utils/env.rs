@@ -30,7 +30,7 @@ pub fn os_info() -> Result<String, Box<dyn Error>> {
 
 	match env::consts::OS {
 		"linux" => {
-			let uname = Command::new("uname").args(&["-s", "-r", "-v"]).output();
+			let uname = Command::new("uname").args(["-s", "-r", "-v"]).output();
 
 			let output = match uname {
 				Ok(o) => o,
@@ -55,7 +55,7 @@ pub fn os_info() -> Result<String, Box<dyn Error>> {
 		}
 		"windows" => {
 			let systeminfo = Command::new("systeminfo | findstr")
-				.args(&["/C:\"OS\""])
+				.args(["/C:\"OS\""])
 				.output();
 
 			let output = match systeminfo {

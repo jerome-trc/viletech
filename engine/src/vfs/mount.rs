@@ -205,7 +205,7 @@ impl VirtualFs {
 	) -> Result<Vec<Entry>, Error> {
 		lazy_static::lazy_static! {
 			static ref RGXSET_MAPMARKER: RegexSet =
-				RegexSet::new(&[r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$"])
+				RegexSet::new([r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$"])
 					.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPMARKER`.");
 		};
 

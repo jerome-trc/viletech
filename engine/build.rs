@@ -22,7 +22,7 @@ use std::{error::Error, process::Command};
 /// Injects the current Git hash and date and time of compilation
 /// into the environment before building.
 fn main() -> Result<(), Box<dyn Error>> {
-	let hash = match Command::new("git").args(&["rev-parse", "HEAD"]).output() {
+	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {
 			eprintln!("Failed to execute `git rev-parse HEAD`: {}", err);

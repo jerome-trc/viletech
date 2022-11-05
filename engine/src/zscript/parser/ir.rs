@@ -146,7 +146,7 @@ pub(super) fn parse_lump_version(s: &str) -> Option<VersionInfo> {
 		0
 	};
 
-	if s.chars().next() != None {
+	if s.chars().next().is_some() {
 		return None;
 	}
 
