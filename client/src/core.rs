@@ -563,10 +563,14 @@ impl ClientCore {
 		let lua = self.lua.clone();
 		let data = self.data.clone();
 
-		self.lua
-			.lock()
-			.init_api_playsim(sim.clone())
-			.expect("Failed to construct Lua's playsim API.");
+		{
+			let l = self.lua.lock();
+
+			l.init_api_playsim(sim.clone())
+				.expect("Failed to construct Lua's playsim API.");
+
+			l.set_app_data(sim.clone());
+		}
 
 		self.console
 			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
@@ -604,6 +608,7 @@ impl ClientCore {
 		};
 
 		let lua = self.lua.lock();
+		lua.remove_app_data::<Arc<RwLock<PlaySim>>>().unwrap();
 
 		lua.clear_api_playsim()
 			.expect("Failed to destroy Lua's playsim API.");

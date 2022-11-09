@@ -193,7 +193,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		Ok(())
 	}
 
-	fn load_api_playsim(&self) { 
+	fn load_api_playsim(&self) {
 		let globals = self.globals();
 
 		globals
@@ -376,6 +376,11 @@ newtype!(
 pub enum Error {
 	IllegalNewIndex,
 	NonExistentPrng(String),
+	IndexOutOfRange {
+		given: usize,
+		min: usize,
+		max: usize,
+	},
 }
 
 impl std::error::Error for Error {}
@@ -388,6 +393,12 @@ impl fmt::Display for Error {
 			}
 			Self::NonExistentPrng(id) => {
 				write!(f, "No random number generator under the ID: {}", id)
+			}
+			Self::IndexOutOfRange { given, min, max } => {
+				write!(
+					f,
+					"Expected index between {min} and {max} (inclusive); got {given}."
+				)
 			}
 		}
 	}

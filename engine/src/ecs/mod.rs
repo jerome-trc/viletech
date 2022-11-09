@@ -22,22 +22,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 mod blueprint;
 mod special;
 
-use crate::data::AssetHandle;
+use std::{marker::PhantomData, sync::Arc};
 
 use mlua::prelude::*;
+use parking_lot::RwLock;
+use shipyard::{Component, EntityId};
+
+use crate::{data::AssetHandle, sim::PlaySim};
 
 pub use blueprint::Blueprint;
 pub use special::SpecialVars;
 
-#[derive(Debug, shipyard::Component)]
+/// Userdata objects wrapping this type are stored in script-accessible entity
+/// tables and used as proxies for the real ECS components.
+pub struct UserData<T: Component>(EntityId, PhantomData<T>);
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Component for data which is baked into a newly-spawned entity and never changes.
+#[derive(Debug, Component)]
 pub struct Constant {
 	/// The sim tic on which this entity was spawned.
 	spawned_tic: u32,
 	blueprint: AssetHandle,
 }
 
-impl LuaUserData for Constant {
+impl LuaUserData for UserData<Constant> {
 	fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
-		fields.add_field_method_get("spawned_tic", |_, this| Ok(this.spawned_tic));
+		use shipyard::View;
+
+		fields.add_field_method_get("spawned_tic", |lua, this| {
+			let sim = lua.app_data_ref::<Arc<RwLock<PlaySim>>>().unwrap();
+			let sim = sim.read();
+			let view = sim.world.borrow::<View<Constant>>().unwrap();
+			Ok((view[this.0]).spawned_tic)
+		});
 	}
 }
