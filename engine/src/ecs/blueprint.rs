@@ -47,17 +47,18 @@ impl Blueprint {
 		for pair in table.pairs::<LuaString, LuaValue>() {
 			let (key, value) = match pair {
 				Ok(tup) => tup,
-				Err(_) => {
-					return Err(Error::InvalidPair);
+				Err(err) => {
+					return Err(touchup_fromluaconv_error(
+						err,
+						"string",
+						"Blueprint contains a non-string key.",
+					));
 				}
 			};
 
-			let key = match key.to_str() {
-				Ok(k) => k,
-				Err(err) => {
-					return Err(Error::InvalidKeyUtf8(err));
-				}
-			};
+			let key = key
+				.to_str()
+				.map_err(|err| map_lua_utf8_error(err, "Invalid characters in a `special` key:"))?;
 
 			match key {
 				"id" => {
@@ -82,19 +83,29 @@ impl Blueprint {
 // Internal implementation details: construction from Lua tables.
 impl Blueprint {
 	fn read_id(value: LuaValue) -> Result<String, Error> {
-		match value {
-			LuaValue::String(id) => match id.to_str() {
-				Ok(s) => {
-					if s.chars().any(|c| !(c.is_alphanumeric() || c == '_')) {
-						Err(Error::InvalidIdChars)
-					} else {
-						Ok(s.to_string())
-					}
-				}
-				Err(err) => Err(Error::InvalidIdUtf8(err)),
-			},
-			_ => Err(Error::NonStringId),
+		let string = if let LuaValue::String(s) = value {
+			s
+		} else {
+			return Err(fromluaconv_error(
+				"string",
+				&value,
+				"A blueprint's ID must be a string.",
+			));
+		};
+
+		let id = string
+			.to_str()
+			.map_err(|err| map_lua_utf8_error(err, "A blueprint's ID must be valid UTF-8 text."))?;
+
+		if id.chars().any(|c| !(c.is_alphanumeric() || c == '_')) {
+			return Err(Error::MiscWithStr(
+				r"
+A blueprint's ID can only consist of letters, numbers, and underscores.
+",
+			));
 		}
+
+		Ok(id.to_string())
 	}
 }
 
@@ -125,11 +136,9 @@ impl<'lua> ToLua<'lua> for Blueprint {
 
 #[derive(Debug)]
 pub enum Error {
-	InvalidPair,
-	InvalidKeyUtf8(LuaError),
-	NonStringId,
-	InvalidIdChars,
-	InvalidIdUtf8(LuaError),
+	/// Generally wraps a [`mlua::Error::FromLuaConversionError`].
+	Lua(LuaError),
+	MiscWithStr(&'static str),
 }
 
 impl std::error::Error for Error {}
@@ -137,36 +146,52 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Self::InvalidPair => {
-				write!(f, "The given blueprint contains a non-string key.")
-			}
-			Self::InvalidKeyUtf8(err) => {
-				write!(
-					f,
-					"The given blueprint contained a key with invalid UTF-8. Error: {}",
-					err
-				)
-			}
-			Self::NonStringId => {
-				write!(
-					f,
-					"The given blueprint contains a non-string under the key `id`."
-				)
-			}
-			Self::InvalidIdChars => {
-				write!(
-					f,
-					"The given blueprint's ID string contains characters \
-					that aren't alphanumeric or underscores."
-				)
-			}
-			Error::InvalidIdUtf8(err) => {
-				write!(
-					f,
-					"The given blueprint's ID string is invalid UTF-8. Error: {}",
-					err
-				)
-			}
+			Self::Lua(err) => err.fmt(f),
+			Self::MiscWithStr(string) => string.fmt(f),
 		}
+	}
+}
+
+/// Takes an [`mlua::Error`] emitted by [`mlua::String::to_str`], guaranteed to
+/// be of the variant `FromLuaConversionError`. The same type and variant is emitted,
+/// wrapped in a blueprint [`Error`], with `to` changed from `&str` to `UTF-8` for
+/// the user's benefit. The message also gets context added.
+fn map_lua_utf8_error(err: LuaError, context: &'static str) -> Error {
+	if let LuaError::FromLuaConversionError { message, .. } = err {
+		let message = message.expect(
+			"`mlua::String::to_str` unexpectedly returned an error without an attached message.",
+		);
+
+		Error::Lua(LuaError::FromLuaConversionError {
+			from: "string",
+			to: "UTF-8",
+			message: Some(format!("{context}: {message}")),
+		})
+	} else {
+		unreachable!("`mlua::String::to_str` unexpectedly returned: {err}");
+	}
+}
+
+fn fromluaconv_error(expected: &'static str, value: &LuaValue, message: &'static str) -> Error {
+	Error::Lua(LuaError::FromLuaConversionError {
+		from: value.type_name(),
+		to: expected,
+		message: Some(message.to_string()),
+	})
+}
+
+fn touchup_fromluaconv_error(
+	err: LuaError,
+	expected: &'static str,
+	context: &'static str,
+) -> Error {
+	if let LuaError::FromLuaConversionError { from, .. } = err {
+		Error::Lua(LuaError::FromLuaConversionError {
+			from,
+			to: expected,
+			message: Some(context.to_string()),
+		})
+	} else {
+		unreachable!("`touchup_fromluaconv_error` unexpectedly received: {err}");
 	}
 }
