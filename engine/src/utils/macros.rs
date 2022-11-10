@@ -32,10 +32,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 macro_rules! newtype {
 	(
 		$(#[$outer:meta])*
-		$visqual:vis struct $name:ident($type:ty)
+		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
-		$visqual struct $name($type);
+		$ownvis struct $name($innervis $type);
 
 		impl std::ops::Deref for $name {
 			type Target = $type;
@@ -59,10 +59,10 @@ macro_rules! newtype {
 macro_rules! newtype_mutref {
 	(
 		$(#[$outer:meta])*
-		$visqual:vis struct $name:ident($type:ty)
+		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
-		$visqual struct $name<'inner>(&'inner mut $type);
+		$ownvis struct $name<'inner>($innervis &'inner mut $type);
 
 		impl<'inner> std::ops::Deref for $name<'_> {
 			type Target = $type;
