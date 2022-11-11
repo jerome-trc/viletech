@@ -36,7 +36,7 @@ lazy_static = "1.4.0"
 log = "0.4.16"
 luajit-src = "210.3.4"
 md5 = "0.7.0"
-mlua = { version = "0.8.5", features = [
+mlua = { version = "0.8.6", features = [
 	"async",
 	"luajit52",
 	"parking_lot",
