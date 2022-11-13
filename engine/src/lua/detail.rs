@@ -38,7 +38,7 @@ use crate::{
 	vfs::VirtualFs,
 };
 
-use super::{Error, ImpureLua};
+use super::{Error, ImpureLua, UserDataWrapper};
 
 /// Seed a Lua state's PRNG for trivial (i.e. client-side) purposes.
 pub(super) fn randomseed(lua: &Lua) -> LuaResult<()> {
@@ -368,6 +368,150 @@ pub(super) fn g_math(lua: &Lua) -> LuaResult<()> {
 	)?;
 
 	g_math.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(())
+}
+
+pub(super) fn g_vector(lua: &Lua) -> LuaResult<()> {
+	let vector = lua.create_table()?;
+	let dvec2 = lua.create_table()?;
+	let dvec3 = lua.create_table()?;
+	let dvec4 = lua.create_table()?;
+
+	vector.set("APPROX", 1.0e-4_f64)?;
+	vector.set("APPROX_ZS", 1.5285e-5_f64)?;
+
+	macro_rules! vector_constants {
+		($fn_name:ident, $type:path; $($name:literal -> $constant:ident),+) => {
+			fn $fn_name(lua: &Lua, table: &LuaTable) -> LuaResult<()> {
+				$(
+					table.set(
+						$name,
+						lua.create_function(|_, ()| {
+							Ok(UserDataWrapper(<$type>::$constant))
+						})?,
+					)?;
+				)+
+
+				Ok(())
+			}
+		};
+	}
+
+	vector_constants!(
+		dvec2_constants, glam::DVec2;
+		"one" -> ONE,
+		"zero" -> ZERO,
+		"neg_one" -> NEG_ONE,
+		"x" -> X,
+		"y" -> Y,
+		"neg_x" -> NEG_X,
+		"neg_y" -> NEG_Y
+	);
+
+	vector_constants!(
+		dvec3_constants, glam::DVec3;
+		"one" -> ONE,
+		"zero" -> ZERO,
+		"neg_one" -> NEG_ONE,
+		"x" -> X,
+		"y" -> Y,
+		"z" -> Z,
+		"neg_x" -> NEG_X,
+		"neg_y" -> NEG_Y,
+		"neg_z" -> NEG_Z
+	);
+
+	vector_constants!(
+		dvec4_constants, glam::DVec4;
+		"one" -> ONE,
+		"zero" -> ZERO,
+		"neg_one" -> NEG_ONE,
+		"x" -> X,
+		"y" -> Y,
+		"z" -> Z,
+		"w" -> W,
+		"neg_x" -> NEG_X,
+		"neg_y" -> NEG_Y,
+		"neg_z" -> NEG_Z,
+		"neg_w" -> NEG_W
+	);
+
+	// 2-dimensional ///////////////////////////////////////////////////////////
+
+	dvec2.set(
+		"new",
+		lua.create_function(|_, args: (LuaNumber, LuaNumber)| {
+			Ok(UserDataWrapper(glam::DVec2::new(args.0, args.1)))
+		})?,
+	)?;
+
+	dvec2.set(
+		"splat",
+		lua.create_function(|_, scalar: LuaNumber| {
+			Ok(UserDataWrapper(glam::DVec2::splat(scalar)))
+		})?,
+	)?;
+
+	dvec2.set(
+		"from_angle",
+		lua.create_function(|_, angle: LuaNumber| {
+			Ok(UserDataWrapper(glam::DVec2::from_angle(angle)))
+		})?,
+	)?;
+
+	dvec2_constants(lua, &dvec2)?;
+
+	// 3-dimensional ///////////////////////////////////////////////////////////
+
+	dvec3.set(
+		"new",
+		lua.create_function(|_, args: (LuaNumber, LuaNumber, LuaNumber)| {
+			Ok(UserDataWrapper(glam::DVec3::new(args.0, args.1, args.2)))
+		})?,
+	)?;
+
+	dvec3.set(
+		"splat",
+		lua.create_function(|_, scalar: LuaNumber| {
+			Ok(UserDataWrapper(glam::DVec3::splat(scalar)))
+		})?,
+	)?;
+
+	dvec3_constants(lua, &dvec3)?;
+
+	// 4-dimensional ///////////////////////////////////////////////////////////
+
+	dvec4.set(
+		"new",
+		lua.create_function(|_, args: (LuaNumber, LuaNumber, LuaNumber, LuaNumber)| {
+			Ok(UserDataWrapper(glam::DVec4::new(
+				args.0, args.1, args.2, args.3,
+			)))
+		})?,
+	)?;
+
+	dvec4.set(
+		"splat",
+		lua.create_function(|_, scalar: LuaNumber| {
+			Ok(UserDataWrapper(glam::DVec4::splat(scalar)))
+		})?,
+	)?;
+
+	dvec4_constants(lua, &dvec4)?;
+
+	// Finalization ////////////////////////////////////////////////////////////
+
+	for table in &[&vector, &dvec2, &dvec3, &dvec4] {
+		table.set_metatable(Some(lua.metatable_readonly()));
+	}
+
+	let globals = lua.globals();
+
+	globals.set("vector", vector)?;
+	globals.set("dvec2", dvec2)?;
+	globals.set("dvec3", dvec3)?;
+	globals.set("dvec4", dvec4)?;
 
 	Ok(())
 }

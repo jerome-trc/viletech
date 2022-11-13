@@ -28,6 +28,7 @@ use parking_lot::{Mutex, RwLock};
 use crate::{newtype, rng::RngCore, sim::PlaySim, vfs::VirtualFs};
 
 mod detail;
+mod vector;
 
 /// Only exists to extend [`mlua::Lua`] with new methods.
 pub trait ImpureLua<'p> {
@@ -155,6 +156,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 
 		detail::g_std(&globals)?;
 		detail::g_math(self)?;
+		detail::g_vector(self)?;
 		detail::g_os(self)?;
 		detail::g_package(self)?;
 		globals.set("impure", detail::g_impure(self)?)?;
@@ -330,6 +332,29 @@ impl<'lua> TableExt<'_> for LuaTable<'lua> {
 		self.clone().pairs::<LuaString, LuaValue>().count()
 	}
 }
+
+/// [`mlua::UserData`] can't be implemented for external types,
+/// so wrap them in this and then provide that implementation.
+#[derive(Clone)]
+pub struct UserDataWrapper<T: Sized + Clone>(pub T);
+
+impl<T: Sized + Clone> std::ops::Deref for UserDataWrapper<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl<T: Sized + Clone> std::ops::DerefMut for UserDataWrapper<T> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+pub type Vec2 = UserDataWrapper<glam::Vec2>;
+pub type Vec3 = UserDataWrapper<glam::Vec3>;
+pub type Vec4 = UserDataWrapper<glam::Vec4>;
 
 #[must_use]
 pub fn is_reserved_keyword(string: &str) -> bool {
