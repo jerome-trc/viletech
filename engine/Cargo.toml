@@ -27,7 +27,13 @@ fasthash = "0.4.0"
 fern = { version = "0.6.1", features = ["colored"] }
 fixed = "1.19.0"
 formatx = "0.1.4"
-glam = { version = "0.22.0", features = ["approx", "bytemuck", "serde"] }
+glam = { version = "0.22.0", features = [
+	"approx",
+	"bytemuck",
+	"rand",
+	"serde",
+	"debug-glam-assert",
+] }
 globset = "0.4.9"
 home = "0.5.3"
 image = { version = "0.24.4", default-features = false, features = ["png"] }
