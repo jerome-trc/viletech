@@ -154,6 +154,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		let globals = self.globals();
 
 		detail::g_std(&globals)?;
+		detail::g_math(self)?;
 		detail::g_os(self)?;
 		detail::g_package(self)?;
 		globals.set("impure", detail::g_impure(self)?)?;

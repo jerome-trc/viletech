@@ -307,6 +307,71 @@ pub(super) fn g_package(lua: &Lua) -> LuaResult<()> {
 	Ok(())
 }
 
+/// Extends the `math` standard library with new functions and constants and
+/// sets it to be read-only.
+pub(super) fn g_math(lua: &Lua) -> LuaResult<()> {
+	let g_math: LuaTable = lua.globals().get("math")?;
+
+	// Constants ///////////////////////////////////////////////////////////////
+
+	let huge = g_math.get::<_, LuaNumber>("huge")?;
+	let neg_huge = lua.load("-math.huge").eval::<LuaNumber>()?;
+
+	g_math.set("INF", huge)?;
+	g_math.set("NEG_INF", neg_huge)?;
+	g_math.set("EPSILON", f64::EPSILON)?;
+	g_math.set("MAX", f64::MAX)?;
+	g_math.set("MIN", f64::MIN)?;
+
+	// Functions ///////////////////////////////////////////////////////////////
+
+	g_math.set(
+		"acosh",
+		lua.create_function(|_, num: LuaNumber| Ok(num.acosh()))?,
+	)?;
+
+	g_math.set(
+		"asinh",
+		lua.create_function(|_, num: LuaNumber| Ok(num.asinh()))?,
+	)?;
+
+	g_math.set(
+		"atanh",
+		lua.create_function(|_, num: LuaNumber| Ok(num.atanh()))?,
+	)?;
+
+	g_math.set(
+		"cbrt",
+		lua.create_function(|_, num: LuaNumber| Ok(num.cbrt()))?,
+	)?;
+
+	g_math.set(
+		"lerp",
+		lua.create_function(|_, args: (LuaNumber, LuaNumber, LuaNumber)| {
+			Ok(args.0 + (args.1 - args.0) * args.2)
+		})?,
+	)?;
+
+	g_math.set(
+		"logn",
+		lua.create_function(|_, nums: (LuaNumber, LuaNumber)| Ok(nums.0.log(nums.1)))?,
+	)?;
+
+	g_math.set(
+		"log2",
+		lua.create_function(|_, num: LuaNumber| Ok(num.log2()))?,
+	)?;
+
+	g_math.set(
+		"hypotenuse",
+		lua.create_function(|_, nums: (LuaNumber, LuaNumber)| Ok(nums.0.hypot(nums.1)))?,
+	)?;
+
+	g_math.set_metatable(Some(lua.metatable_readonly()));
+
+	Ok(())
+}
+
 pub(super) fn g_rng_client(lua: &Lua, rng: Arc<Mutex<RngCore<WyRand>>>) -> LuaResult<LuaTable> {
 	fn resolve_prng<'rng>(
 		val: LuaValue,
