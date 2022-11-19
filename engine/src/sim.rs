@@ -43,28 +43,6 @@ pub struct Handle {
 	pub thread: JoinHandle<()>,
 }
 
-pub trait EgressConfig {
-	fn egress(sender: OutSender, msg: OutMessage);
-}
-
-pub struct EgressConfigClient;
-pub struct EgressConfigNoop;
-
-impl EgressConfig for EgressConfigClient {
-	fn egress(sender: OutSender, msg: OutMessage) {
-		let res = sender.send(msg);
-		debug_assert!(
-			res.is_ok(),
-			"Failed to send sim egress message: {}",
-			res.unwrap_err()
-		);
-	}
-}
-
-impl EgressConfig for EgressConfigNoop {
-	fn egress(_: OutSender, _: OutMessage) {}
-}
-
 pub enum InMessage {
 	Stop,
 	IncreaseTicRate,
@@ -90,7 +68,15 @@ pub struct Context {
 	pub sender: OutSender,
 }
 
-pub fn run<C: EgressConfig>(context: Context) {
+bitflags::bitflags! {
+	pub struct Config: u8 {
+		/// If not set, the sim thread will not send out client messages
+		/// (e.g. sound, particles, screen effects).
+		const CLIENT = 1 << 0;
+	}
+}
+
+pub fn run<const CFG: u8>(context: Context) {
 	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds
 	const BASE_TICINTERVAL_INDEX: usize = 10;
 

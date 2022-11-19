@@ -582,7 +582,7 @@ impl ClientCore {
 			thread: std::thread::Builder::new()
 				.name("Impure: Playsim".to_string())
 				.spawn(move || {
-					impure::sim::run::<sim::EgressConfigClient>(sim::Context {
+					impure::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
 						sim,
 						lua,
 						data,
