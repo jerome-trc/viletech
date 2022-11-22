@@ -17,6 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#[macro_export]
+macro_rules! replace_expr {
+	($_t:tt $sub:expr) => {
+		$sub
+	};
+}
+
 /// Convenience macro for defining a newtype (single-field tuple struct).
 /// Implementations are provided for [`std::ops::Deref`] and [`std::ops::DerefMut`].
 ///

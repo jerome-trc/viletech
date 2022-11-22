@@ -27,6 +27,7 @@ use std::{collections::HashMap, path::PathBuf};
 use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
 use log::{error, warn};
+use regex::bytes::Regex;
 use serde::Deserialize;
 
 use crate::{
@@ -44,7 +45,7 @@ pub use asset::{
 	Error as AssetError, Flags as AssetFlags, Handle as AssetHandle, Wrapper as AssetWrapper,
 };
 
-use self::asset::{Asset, IdHash};
+use self::asset::Asset;
 
 newtype!(pub struct Music(StaticSoundData));
 newtype!(pub struct Sound(StaticSoundData));
@@ -113,8 +114,8 @@ pub struct MetaToml {
 /// Allows game data objects to define high-level, all-encompassing information
 /// relevant to making games as opposed to mods.
 pub struct GameInfo {
-	steam_app_id: Option<u32>,
-	discord_app_id: Option<String>,
+	_steam_app_id: Option<u32>,
+	_discord_app_id: Option<String>,
 }
 
 /// Determines the system used for loading assets from a mounted game data object.
@@ -193,11 +194,17 @@ pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, UUID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
 	pub namespaces: Vec<Namespace>,
-	pub asset_map: HashMap<IdHash, AssetHandle>,
-	/// Like [`DataCore::asset_map`], but without namespacing. Reflects the last thing
-	/// under any given UUID in the load order. For use in interop, since, for
-	/// example, GZDoom mods will expect that port's overlay/replacement system.
-	pub lump_map: HashMap<String, AssetHandle>,
+	/// IDs are derived from virtual file system paths. The asset ID for
+	/// `/impure/textures/default.png` is exactly the same string; the ID for
+	/// blueprint `Imp` defined in file `/impure/blueprints/imp.zs` is
+	/// `/impure/blueprints/imp/Imp`, since multiple classes can be defined in
+	/// one ZScript translation unit.
+	pub asset_map: HashMap<String, AssetHandle>,
+	/// Doom and its source ports work on a simple data replacement system; a name
+	/// points to the last map/texture/song/etc. loaded by that name. Impure offers
+	/// full namespacing via asset IDs, but also has the concept of a short asset ID (SAID)
+	/// which mimics Doom's behaviour for interop purposes.
+	pub short_id_maps: [HashMap<String, AssetHandle>; asset::COLLECTION_COUNT],
 
 	pub editor_numbers: HashMap<u16, AssetHandle>,
 	pub spawn_numbers: HashMap<u16, AssetHandle>,
@@ -205,69 +212,94 @@ pub struct DataCore {
 
 // Public interface.
 impl DataCore {
-	/// Note: UUIDs are checked for an exact match.
 	#[must_use]
 	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
 		self.namespaces.iter().find(|ns| ns.meta.uuid == uuid)
 	}
 
-	/// Note: UUIDs are checked for an exact match.
+	#[must_use]
+	pub fn get_namespace_glob(&self, glob: Glob) -> Option<&Namespace> {
+		let matcher = glob.compile_matcher();
+		self.namespaces
+			.iter()
+			.find(|ns| matcher.is_match(&ns.meta.uuid))
+	}
+
+	#[must_use]
+	pub fn get_namespace_regex(&self, regex: Regex) -> Option<&Namespace> {
+		self.namespaces
+			.iter()
+			.find(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+	}
+
 	#[must_use]
 	pub fn get_namespace_mut(&mut self, uuid: &str) -> Option<&mut Namespace> {
 		self.namespaces.iter_mut().find(|ns| ns.meta.uuid == uuid)
 	}
 
-	// Takes a glob pattern.
-	pub fn namespace_exists(&self, pattern: &str) -> Result<bool, globset::Error> {
-		let glob = Glob::new(pattern)?.compile_matcher();
-
-		for namespace in &self.namespaces {
-			if glob.is_match(&namespace.meta.uuid) {
-				return Ok(true);
-			}
-		}
-
-		Ok(false)
+	#[must_use]
+	pub fn get_namespace_mut_glob(&mut self, glob: Glob) -> Option<&mut Namespace> {
+		let matcher = glob.compile_matcher();
+		self.namespaces
+			.iter_mut()
+			.find(|ns| matcher.is_match(&ns.meta.uuid))
 	}
 
-	pub fn add<'s, A: Asset>(
+	#[must_use]
+	pub fn get_namespace_mut_regex(&mut self, regex: Regex) -> Option<&mut Namespace> {
+		self.namespaces
+			.iter_mut()
+			.find(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+	}
+
+	#[must_use]
+	pub fn namespace_exists(&self, uuid: &str) -> bool {
+		self.namespaces.iter().any(|ns| ns.meta.uuid == uuid)
+	}
+
+	#[must_use]
+	pub fn namespace_exists_glob(&self, glob: Glob) -> bool {
+		let matcher = glob.compile_matcher();
+		self.namespaces
+			.iter()
+			.any(|ns| matcher.is_match(&ns.meta.uuid))
+	}
+
+	#[must_use]
+	pub fn namespace_exists_regex(&self, regex: Regex) -> bool {
+		self.namespaces
+			.iter()
+			.any(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+	}
+
+	pub fn add<A: Asset>(
 		&mut self,
 		asset: A,
-		namespace_id: &'s str,
-		asset_id: &'s str,
+		namespace: usize,
+		id: &str,
+		short_id: &str,
 	) -> Result<(), AssetError> {
-		let ns_index = self
-			.namespaces
-			.iter()
-			.position(|o| o.meta.uuid == namespace_id)
-			.ok_or(AssetError::NamespaceNotFound)?;
-
+		let ns_index = namespace;
 		let namespace = &mut self.namespaces[ns_index];
 		let coll = A::collection_mut(namespace);
 		let asset_index = coll.len();
-		let id_hash = IdHash::from_id_pair::<A>(namespace_id, asset_id);
 
 		coll.push(AssetWrapper {
 			inner: asset,
-			hash: id_hash.0,
-			flags: AssetFlags::empty(),
+			_flags: AssetFlags::empty(),
 		});
 
 		let ndx_pair = AssetHandle {
 			namespace: ns_index,
 			element: asset_index,
-			hash: id_hash.0,
 		};
 
-		if self.asset_map.contains_key(&id_hash) {
+		if self.asset_map.contains_key(id) {
 			return Err(AssetError::IdClobber);
 		}
 
-		self.asset_map.insert(id_hash, ndx_pair);
-		let lump_name = asset_id.split('.').next().unwrap();
-		let strlen = lump_name.chars().count().min(8);
-		self.lump_map
-			.insert(lump_name[..strlen].to_string(), ndx_pair);
+		self.asset_map.insert(id.to_string(), ndx_pair);
+		self.short_id_maps[A::INDEX].insert(short_id.to_string(), ndx_pair);
 
 		Ok(())
 	}
@@ -289,8 +321,18 @@ impl DataCore {
 	}
 
 	pub fn lookup<A: Asset>(&self, id: &str) -> Result<&A, AssetError> {
-		let hash = IdHash::from_id::<A>(id)?;
-		let handle = self.asset_map.get(&hash).ok_or(AssetError::IdNotFound)?;
+		let handle = self.asset_map.get(id).ok_or(AssetError::IdNotFound)?;
+		let collection = A::collection(&self.namespaces[handle.namespace]);
+
+		match collection.get(handle.element) {
+			Some(r) => Ok(&r.inner),
+			None => Err(AssetError::IdNotFound),
+		}
+	}
+
+	/// Tries to find an asset by its short ID (no namespace qualification).
+	pub fn lookup_global<A: Asset>(&self, short_id: &str) -> Result<&A, AssetError> {
+		let handle = self.short_id_maps[A::INDEX].get(short_id).ok_or(AssetError::IdNotFound)?;
 		let collection = A::collection(&self.namespaces[handle.namespace]);
 
 		match collection.get(handle.element) {
@@ -336,6 +378,7 @@ impl DataCore {
 }
 
 impl DataCore {
+	#[allow(dead_code)]
 	fn try_load_zscript(namespace: &mut Namespace, handle: &VfsHandle) {
 		let parse_out = zscript::parse(handle.clone());
 		let nsid = &namespace.meta.uuid;

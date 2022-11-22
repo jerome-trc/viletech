@@ -27,7 +27,6 @@ pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod cvarinfo;
-#[allow(dead_code)]
 pub mod data;
 #[allow(dead_code)]
 pub mod ecs;

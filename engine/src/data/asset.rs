@@ -24,13 +24,16 @@ use std::{
 	ops::{Deref, DerefMut},
 };
 
-use fasthash::metro;
 use serde::{Deserialize, Serialize};
+
+use crate::replace_expr;
 
 use super::{AssetVec, Namespace};
 
 pub trait Asset: Sized {
-	const DOMAIN_STRING: &'static str;
+	/// Wherever a homogenous array of items is declared wherein there must be
+	/// one element per asset type, this constant is used to index into it.
+	const INDEX: usize;
 
 	/// Should refer to one of the members of [`Namespace`].
 	#[must_use]
@@ -40,44 +43,12 @@ pub trait Asset: Sized {
 	fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self>;
 }
 
-/// Wraps a hash, generated from an asset ID string, used as a key in
-/// [`super::DataCore`]'s `asset_map`. Scripts call asset-domain-specific functions
-/// and pass in strings like `"namespace:sound_id"`, so mixing in the domain's
-/// string (e.g. "snd") ensures uniqueness in one hash map amongst other assets.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct IdHash(pub(super) u64);
-
-impl IdHash {
-	#[must_use]
-	pub(super) fn from_id_pair<A: Asset>(namespace_id: &str, asset_id: &str) -> Self {
-		let mut ret = metro::hash64(namespace_id);
-		ret ^= metro::hash64(A::DOMAIN_STRING);
-		ret ^= metro::hash64(asset_id);
-
-		Self(ret)
-	}
-
-	pub(super) fn from_id<A: Asset>(string: &str) -> Result<Self, Error> {
-		let mut split = string.split(':');
-
-		let nsid = split.next().ok_or(Error::HashEmptyString)?;
-		let aid = split.next().ok_or(Error::IdMissingPostfix)?;
-
-		Ok(Self::from_id_pair::<A>(nsid, aid))
-	}
-}
-
 /// `namespace` corresponds to one of the elements in [`super::DataCore`]'s `namespaces`.
 /// `element` corresponds to an element in the relevant sub-vector of the namespace.
-/// `hash` comes from the inner field of an [`IdHash`]; it's stored in save-files
-/// since the ordering of elements in [`Namespace`] isn't a given.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Handle {
-	#[serde(skip)]
 	pub(super) namespace: usize,
-	#[serde(skip)]
 	pub(super) element: usize,
-	pub(super) hash: u64,
 }
 
 #[derive(Debug)]
@@ -128,8 +99,7 @@ bitflags::bitflags! {
 
 pub struct Wrapper<A: Asset> {
 	pub(super) inner: A,
-	pub(super) hash: u64,
-	pub(super) flags: Flags,
+	pub(super) _flags: Flags,
 }
 
 impl<A: Asset> Deref for Wrapper<A> {
@@ -146,34 +116,40 @@ impl<A: Asset> DerefMut for Wrapper<A> {
 	}
 }
 
-macro_rules! asset_impl {
-	($asset_t:ty, $vecname:ident, $dom:literal) => {
-		impl Asset for $asset_t {
-			const DOMAIN_STRING: &'static str = $dom;
+macro_rules! asset_impls {
+	($({$asset_t:ty, $coll:ident, $idx:literal}),+) => {
+		pub(super) const COLLECTION_COUNT: usize = 0 $(+ replace_expr!($coll 1))+;
 
-			fn collection(namespace: &Namespace) -> &AssetVec<Self> {
-				&namespace.$vecname
-			}
+		$(
+			impl Asset for $asset_t {
+				const INDEX: usize = $idx;
 
-			fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self> {
-				&mut namespace.$vecname
+				fn collection(namespace: &Namespace) -> &AssetVec<Self> {
+					&namespace.$coll
+				}
+
+				fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self> {
+					&mut namespace.$coll
+				}
 			}
-		}
+		)+
 	};
 }
 
-asset_impl!(crate::game::ActorStateMachine, state_machines, "afsm");
-asset_impl!(crate::ecs::Blueprint, blueprints, "bp");
-asset_impl!(crate::game::DamageType, damage_types, "dmg_t");
-asset_impl!(crate::level::Cluster, clusters, "cluster");
-asset_impl!(crate::level::Episode, episodes, "episode");
-asset_impl!(crate::level::Metadata, levels, "lvl");
-asset_impl!(crate::game::SkillInfo, skills, "skill");
-asset_impl!(crate::game::Species, species, "species");
+asset_impls! {
+	{ crate::game::ActorStateMachine, state_machines, 0 },
+	{ crate::ecs::Blueprint, blueprints, 1 },
+	{ crate::game::DamageType, damage_types, 2 },
+	{ crate::level::Cluster, clusters, 3 },
+	{ crate::level::Episode, episodes, 4 },
+	{ crate::level::Metadata, levels, 5 },
+	{ crate::game::SkillInfo, skills, 6 },
+	{ crate::game::Species, species, 7 },
 
-asset_impl!(String, language, "lang");
-asset_impl!(super::Music, music, "mus");
-asset_impl!(super::Sound, sounds, "snd");
-asset_impl!(crate::gfx::doom::ColorMap, colormap, "clrmap");
-asset_impl!(crate::gfx::doom::Endoom, endoom, "endoom");
-asset_impl!(crate::gfx::doom::Palette, palette, "playpal");
+	{ String, language, 8 },
+	{ super::Music, music, 9 },
+	{ super::Sound, sounds, 10 },
+	{ crate::gfx::doom::ColorMap, colormap, 11 },
+	{ crate::gfx::doom::Endoom, endoom, 12 },
+	{ crate::gfx::doom::Palette, palette, 13 }
+}
