@@ -80,7 +80,7 @@ impl fmt::Display for Error {
 			Self::NamespaceNotFound => {
 				write!(
 					f,
-					"The given namespace ID did not match any existing game data object's UUID."
+					"The given namespace ID did not match any existing game data object's ID."
 				)
 			}
 		}

@@ -73,7 +73,7 @@ pub trait ImpureVfs {
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	#[must_use]
-	fn gamedata_kind(&self, uuid: &str) -> GameDataKind;
+	fn gamedata_kind(&self, id: &str) -> GameDataKind;
 
 	fn parse_gamedata_meta(
 		&self,
@@ -211,11 +211,11 @@ impl ImpureVfs for VirtualFs {
 					}
 				}
 			} else {
-				let uuid = to_mount[i].1.to_string_lossy().to_string();
+				let id = to_mount[i].1.to_string_lossy().to_string();
 				let version = vers_strings.remove(0);
 
 				GameDataMetaToml {
-					uuid,
+					id,
 					version,
 					..Default::default()
 				}
@@ -278,7 +278,7 @@ impl ImpureVfs for VirtualFs {
 			.map(|handle| handle.is_dir() && handle.contains_regex(&RGX_DECORATE))
 	}
 
-	fn gamedata_kind(&self, uuid: &str) -> GameDataKind {
+	fn gamedata_kind(&self, id: &str) -> GameDataKind {
 		fn check_path(path: &Path) -> std::option::Option<GameDataKind> {
 			if path.has_gzdoom_extension() {
 				return Some(GameDataKind::ZDoom);
@@ -299,8 +299,8 @@ impl ImpureVfs for VirtualFs {
 		let entry = &self
 			.entries
 			.iter()
-			.find(|c| c.file_name() == uuid)
-			.expect("Invalid UUID passed to `ImpureVfs::gamedata_kind`.");
+			.find(|c| c.file_name() == id)
+			.expect("Invalid ID passed to `ImpureVfs::gamedata_kind`.");
 
 		match &entry.kind {
 			EntryKind::Leaf { .. } => {
@@ -309,8 +309,8 @@ impl ImpureVfs for VirtualFs {
 			EntryKind::Directory => {
 				let real_path = self
 					.real_paths
-					.get(uuid)
-					.expect("Invalid UUID passed to `ImpureVfs::gamedata_kind`.");
+					.get(id)
+					.expect("Invalid ID passed to `ImpureVfs::gamedata_kind`.");
 
 				for child in self.children_of(entry) {
 					if !child.file_name().eq_ignore_ascii_case("meta.toml") {

@@ -52,7 +52,7 @@ newtype!(pub struct Sound(StaticSoundData));
 
 /// Note that all user-facing string fields within may be IDs or expanded.
 pub struct GameDataMeta {
-	pub uuid: String,
+	pub id: String,
 	pub kind: GameDataKind,
 	pub version: String,
 	/// Display name presented to users.
@@ -65,9 +65,9 @@ pub struct GameDataMeta {
 }
 
 impl GameDataMeta {
-	pub fn new(uuid: String, version: String, kind: GameDataKind) -> Self {
+	pub fn new(id: String, version: String, kind: GameDataKind) -> Self {
 		GameDataMeta {
-			uuid,
+			id,
 			version,
 			kind,
 			name: String::default(),
@@ -80,7 +80,7 @@ impl GameDataMeta {
 
 	pub fn from_toml(toml: MetaToml, manifest: PathBuf) -> Self {
 		Self {
-			uuid: toml.uuid,
+			id: toml.id,
 			kind: GameDataKind::Impure { manifest },
 			version: toml.version,
 			name: toml.name,
@@ -94,7 +94,7 @@ impl GameDataMeta {
 
 #[derive(Default, Deserialize)]
 pub struct MetaToml {
-	pub uuid: String,
+	pub id: String,
 	#[serde(default)]
 	pub version: String,
 	#[serde(default)]
@@ -191,7 +191,7 @@ impl Namespace {
 
 #[derive(Default)]
 pub struct DataCore {
-	/// Element 0 should _always_ be the engine's own data, UUID "impure".
+	/// Element 0 should _always_ be the engine's own data, ID "impure".
 	/// Everything afterwards is ordered as per the user's specification.
 	pub namespaces: Vec<Namespace>,
 	/// IDs are derived from virtual file system paths. The asset ID for
@@ -213,8 +213,8 @@ pub struct DataCore {
 // Public interface.
 impl DataCore {
 	#[must_use]
-	pub fn get_namespace(&self, uuid: &str) -> Option<&Namespace> {
-		self.namespaces.iter().find(|ns| ns.meta.uuid == uuid)
+	pub fn get_namespace(&self, id: &str) -> Option<&Namespace> {
+		self.namespaces.iter().find(|ns| ns.meta.id == id)
 	}
 
 	#[must_use]
@@ -222,19 +222,19 @@ impl DataCore {
 		let matcher = glob.compile_matcher();
 		self.namespaces
 			.iter()
-			.find(|ns| matcher.is_match(&ns.meta.uuid))
+			.find(|ns| matcher.is_match(&ns.meta.id))
 	}
 
 	#[must_use]
 	pub fn get_namespace_regex(&self, regex: Regex) -> Option<&Namespace> {
 		self.namespaces
 			.iter()
-			.find(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+			.find(|ns| regex.is_match(ns.meta.id.as_bytes()))
 	}
 
 	#[must_use]
-	pub fn get_namespace_mut(&mut self, uuid: &str) -> Option<&mut Namespace> {
-		self.namespaces.iter_mut().find(|ns| ns.meta.uuid == uuid)
+	pub fn get_namespace_mut(&mut self, id: &str) -> Option<&mut Namespace> {
+		self.namespaces.iter_mut().find(|ns| ns.meta.id == id)
 	}
 
 	#[must_use]
@@ -242,19 +242,19 @@ impl DataCore {
 		let matcher = glob.compile_matcher();
 		self.namespaces
 			.iter_mut()
-			.find(|ns| matcher.is_match(&ns.meta.uuid))
+			.find(|ns| matcher.is_match(&ns.meta.id))
 	}
 
 	#[must_use]
 	pub fn get_namespace_mut_regex(&mut self, regex: Regex) -> Option<&mut Namespace> {
 		self.namespaces
 			.iter_mut()
-			.find(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+			.find(|ns| regex.is_match(ns.meta.id.as_bytes()))
 	}
 
 	#[must_use]
-	pub fn namespace_exists(&self, uuid: &str) -> bool {
-		self.namespaces.iter().any(|ns| ns.meta.uuid == uuid)
+	pub fn namespace_exists(&self, id: &str) -> bool {
+		self.namespaces.iter().any(|ns| ns.meta.id == id)
 	}
 
 	#[must_use]
@@ -262,14 +262,14 @@ impl DataCore {
 		let matcher = glob.compile_matcher();
 		self.namespaces
 			.iter()
-			.any(|ns| matcher.is_match(&ns.meta.uuid))
+			.any(|ns| matcher.is_match(&ns.meta.id))
 	}
 
 	#[must_use]
 	pub fn namespace_exists_regex(&self, regex: Regex) -> bool {
 		self.namespaces
 			.iter()
-			.any(|ns| regex.is_match(ns.meta.uuid.as_bytes()))
+			.any(|ns| regex.is_match(ns.meta.id.as_bytes()))
 	}
 
 	pub fn add<A: Asset>(
@@ -332,7 +332,9 @@ impl DataCore {
 
 	/// Tries to find an asset by its short ID (no namespace qualification).
 	pub fn lookup_global<A: Asset>(&self, short_id: &str) -> Result<&A, AssetError> {
-		let handle = self.short_id_maps[A::INDEX].get(short_id).ok_or(AssetError::IdNotFound)?;
+		let handle = self.short_id_maps[A::INDEX]
+			.get(short_id)
+			.ok_or(AssetError::IdNotFound)?;
 		let collection = A::collection(&self.namespaces[handle.namespace]);
 
 		match collection.get(handle.element) {
@@ -347,14 +349,14 @@ impl DataCore {
 	pub fn populate(&mut self, mut metas: Vec<MetaToml>, vfs: &VirtualFs) {
 		debug_assert!(self.namespaces.is_empty());
 		debug_assert!(!metas.is_empty());
-		debug_assert!(metas[0].uuid == "impure");
+		debug_assert!(metas[0].id == "impure");
 
 		for (_index, meta) in metas.drain(..).enumerate() {
 			let _handle = vfs
-				.lookup(&meta.uuid)
+				.lookup(&meta.id)
 				.expect("Failed to find a namespace's VFS handle for data core population.");
 
-			let kind = vfs.gamedata_kind(&meta.uuid);
+			let kind = vfs.gamedata_kind(&meta.id);
 
 			match kind {
 				GameDataKind::ZDoom => {
@@ -381,7 +383,7 @@ impl DataCore {
 	#[allow(dead_code)]
 	fn try_load_zscript(namespace: &mut Namespace, handle: &VfsHandle) {
 		let parse_out = zscript::parse(handle.clone());
-		let nsid = &namespace.meta.uuid;
+		let nsid = &namespace.meta.id;
 
 		let any_parse_errors = parse_out
 			.issues

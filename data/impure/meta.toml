@@ -1,4 +1,4 @@
-uuid = 'impure'
+id = 'impure'
 name = 'impure:appname'
 desc = 'impure:meta_desc'
 authors = ["***REMOVED***"]

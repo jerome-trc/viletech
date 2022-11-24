@@ -53,7 +53,7 @@ pub use handle::Handle;
 /// so clustering a complete read along with it grants a time savings.
 pub struct VirtualFs {
 	entries: Vec<Entry>,
-	/// Mounted game data object UUIDs are used as keys.
+	/// Mounted game data object IDs are used as keys.
 	real_paths: HashMap<String, PathBuf>,
 }
 
