@@ -208,3 +208,81 @@ pub fn uptime_string(start_time: std::time::Instant) -> String {
 	let hours = mins / 60;
 	format!("Uptime: {:02}:{:02}:{:02}", hours, mins % 60, secs % 60)
 }
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+pub fn log_cpu_info() {}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub fn log_cpu_info() {
+	let cpuid = raw_cpuid::CpuId::new();
+	let mut output = String::with_capacity(512);
+
+	if let Some(vendor) = cpuid.get_vendor_info() {
+		output.push_str(&format!("\t- Vendor ID: \"{}\"\r\n", vendor.as_str()))
+	} else {
+		output.push_str("\t- Vendor ID: <unknown>\r\n");
+	};
+
+	if let Some(pbs) = cpuid.get_processor_brand_string() {
+		output.push_str(&format!("\t- Name: \"{}\"\r\n", pbs.as_str()));
+	} else {
+		output.push_str("\t- Name: <unknown>\r\n");
+	}
+
+	if let Some(feats) = cpuid.get_feature_info() {
+		output.push_str(&format!(
+			"\t- Family ID: {} ({} base, {} extended)
+\t- Model ID: {} ({} base, {} extended)
+\t- Stepping ID: {}\r\n",
+			feats.family_id(),
+			feats.base_family_id(),
+			feats.extended_family_id(),
+			feats.model_id(),
+			feats.base_model_id(),
+			feats.extended_model_id(),
+			feats.stepping_id()
+		));
+
+		output.push_str("\t- Features:");
+
+		if feats.has_avx() {
+			output.push_str(" AVX");
+		}
+
+		if feats.has_f16c() {
+			output.push_str(" F16C");
+		}
+
+		if feats.has_fma() {
+			output.push_str(" FMA");
+		}
+
+		if feats.has_sse() {
+			output.push_str(" SSE");
+		}
+
+		if feats.has_sse2() {
+			output.push_str(" SSE2");
+		}
+
+		if feats.has_sse3() {
+			output.push_str(" SSE3");
+		}
+
+		if feats.has_sse41() {
+			output.push_str(" SSE4.1");
+		}
+
+		if feats.has_sse42() {
+			output.push_str(" SSE4.2");
+		}
+
+		if output.ends_with("Features:") {
+			output.push_str(" <none>");
+		}
+	} else {
+		output.push_str("\t- Feature/family information not found\r\n");
+	}
+
+	log::info!("CPU diagnostics: \r\n{}", output);
+}

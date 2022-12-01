@@ -68,6 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	info!("{}", impure::short_version_string());
 	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
 	info!("{}", impure::utils::env::os_info()?);
+	impure::log_cpu_info();
 
 	let devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 

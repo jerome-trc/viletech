@@ -7,7 +7,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 ## Technologies
 
 - bitflags
-	- By Ashley "KodrAus" Mannix et. al. 
+	- By Ashley "KodrAus" Mannix et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
 	- https://docs.rs/bitflags/latest/bitflags/
 - bytemuck
@@ -34,7 +34,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Tomasz "h3r2tic" Stachowiak et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-MIT).
 	- https://docs.rs/dolly/latest/dolly/
-- egui, egui-wgpu, egui-winit 
+- egui, egui-wgpu, egui-winit
 	- By Emil "emilk" Ernerfeldt et. al.
 	- Provided under the [MIT License](https://github.com/emilk/egui/blob/master/LICENSE-MIT) and [Apache 2.0 License](https://github.com/emilk/egui/blob/master/LICENSE-APACHE).
 	- https://docs.rs/egui/latest/egui/
@@ -114,10 +114,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- https://docs.rs/num/latest/num/
 - once_cell
 	- By Alex "matklad" Kladov et. al.
-	- Provided under the [Apache 2.0 License](https://github.com/matklad/once_cell/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/matklad/once_cell/blob/master/LICENSE-MIT). 
+	- Provided under the [Apache 2.0 License](https://github.com/matklad/once_cell/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/matklad/once_cell/blob/master/LICENSE-MIT).
 	- https://docs.rs/once_cell/latest/once_cell/
 - palette
-	- By Erik "Ogeon" Hedvall et. al. 
+	- By Erik "Ogeon" Hedvall et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/Ogeon/palette/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Ogeon/palette/blob/master/LICENSE-MIT).
 	- https://docs.rs/palette/latest/palette/
 - parking_lot
@@ -128,8 +128,12 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Joshua "zesterer" Barretto et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
 	- https://docs.rs/pollster/latest/pollster/
+- raw-cpuid
+	- By Gerd "gz" Zellweger et. al.
+	- Provided under the [MIT License](https://github.com/gz/rust-cpuid/blob/master/LICENSE.md).
+	- https://docs.rs/raw-cpuid/latest/raw_cpuid/
 - rayon
-	- By Josh "cuviper" Stone, Niko "nikomatsakis" Matsakis, et. al. 
+	- By Josh "cuviper" Stone, Niko "nikomatsakis" Matsakis, et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT).
 	- https://docs.rs/rayon/latest/rayon/
 - regex

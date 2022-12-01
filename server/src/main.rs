@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		env!("CARGO_PKG_VERSION")
 	);
 	info!("{}", impure::utils::env::os_info()?);
+	impure::log_cpu_info();
 
 	let passhash = if !args.password.is_empty() {
 		let mut hasher = Sha3_256::new();
