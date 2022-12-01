@@ -21,7 +21,7 @@ use std::{error::Error, path::PathBuf, sync::Arc};
 
 use impure::{
 	audio::{self, AudioCore},
-	console::Console,
+	console::{self, Console},
 	data::DataCore,
 	depends::{parking_lot::Mutex, winit::event::ElementState, *},
 	frontend::{FrontendAction, FrontendMenu},
@@ -146,6 +146,9 @@ impl ClientCore {
 		Ok(ret)
 	}
 
+	/// Draw a new frame. Since this requires branching on the current scene, take
+	/// the opportunity to do scene-specific processing like acting on egress
+	/// messages coming out of a running playsim.
 	pub fn redraw_requested(&mut self, window_id: WindowId, control_flow: &mut ControlFlow) {
 		if window_id != self.gfx.window.id() {
 			return;
@@ -173,8 +176,14 @@ impl ClientCore {
 		self.gfx.egui_start();
 
 		match &mut self.scene {
-			Scene::PlaySim { .. } => {
-				// ???
+			Scene::PlaySim { inner } => {
+				while let Ok(egress) = inner.receiver.try_recv() {
+					match egress {
+						sim::OutMessage::Toast(toast) => {
+							self.console.write(toast, console::MessageKind::Toast)
+						}
+					}
+				}
 			}
 			Scene::Title { .. } => {
 				// ???
@@ -234,6 +243,9 @@ impl ClientCore {
 						info!("No command found by name: {}", key);
 					}
 				},
+				ConsoleRequest::ConsoleWrite(string, kind) => {
+					self.console.write(string, kind);
+				}
 				ConsoleRequest::Exit => {
 					self.exit();
 					return;

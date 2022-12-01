@@ -111,7 +111,7 @@ pub fn full_version_string() -> String {
 
 /// Prepares the fern logging backend.
 pub fn log_init(
-	sender: Option<crossbeam::channel::Sender<String>>,
+	sender: Option<crossbeam::channel::Sender<console::Message>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	use console::Writer;
 	use std::{
@@ -184,7 +184,7 @@ pub fn log_init(
 		.chain(file_cfg)
 		.chain(stdout_cfg);
 
-	let res = if let Some(s) = sender {
+	if let Some(s) = sender {
 		let console_cfg = fern::Dispatch::new()
 			.format(move |out, message, record| {
 				out.finish(format_args!("[{}] {}", record.level(), message))
@@ -194,11 +194,7 @@ pub fn log_init(
 		dispatch.chain(console_cfg).apply()
 	} else {
 		dispatch.apply()
-	};
-
-	if let Err(err) = res {
-		return Err(Box::new(err));
-	}
+	}?;
 
 	Ok(())
 }

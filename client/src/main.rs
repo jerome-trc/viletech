@@ -53,9 +53,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let (cons_sender, cons_receiver) = crossbeam::channel::unbounded();
+	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
-	match impure::log_init(Some(cons_sender)) {
+	match impure::log_init(Some(log_sender)) {
 		Ok(()) => {}
 		Err(err) => {
 			eprintln!("Failed to initialise logging backend: {}", err);
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let console = Console::new(cons_receiver);
+	let console = Console::new(log_receiver);
 
 	info!("{}", impure::short_version_string());
 	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));

@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::{cell::Cell, collections::VecDeque, io, thread, time::Duration};
 
-use crossbeam::channel::{Receiver, Sender};
+use crossbeam::channel::Receiver;
 use egui::{
 	text::{CCursor, LayoutJob},
 	text_edit::{CCursorRange, TextEditState},
@@ -32,87 +32,106 @@ use winit::event::{KeyboardInput, VirtualKeyCode};
 
 use crate::terminal::{self, Alias, Terminal};
 
+pub type Sender = crossbeam::channel::Sender<Message>;
+
 pub struct Console<C: terminal::Command> {
 	open: Cell<bool>,
-	/// Takes messages written by logging to fill `log`.
-	receiver: Receiver<String>,
-	/// Output from the `log` crate, displayed to the user.
-	/// Also includes every line of input submitted.
-	log: Vec<String>,
+	/// Takes messages coming from the `log` crate's backend.
+	log_receiver: Receiver<Message>,
+	messages: Vec<Message>,
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
-	history: Vec<String>,
+	input_history: Vec<String>,
+	/// Commands, aliases, command string parser.
 	terminal: Terminal<C>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
 
-	history_pos: usize,
+	input_history_pos: usize,
 	defocus_textedit: bool,
 	scroll_to_bottom: bool,
 	cursor_to_end: bool,
 
+	/// If `false`, messages tagged [`MessageKind::Log`] aren't drawn.
+	draw_log: bool,
+	/// If `false`, messages tagged [`MessageKind::Toast`] aren't drawn.
+	draw_toast: bool,
+	/// Console commands can emit a "request" in order to act upon the client.
+	/// Between frames, this container gets drained and all requests are fulfilled.
 	pub requests: VecDeque<C::Output>,
+}
+
+/// All messages that get sent to the console are tagged so they can be filtered.
+#[derive(Debug, PartialEq, Eq)]
+pub enum MessageKind {
+	/// Help messages emitted by console usage. These don't go through logging
+	/// so as not to pollute stdout/stderr or the log files.
+	Help,
+	/// Game messages like "you picked up a thing".
+	/// Kept separate to enable filtering in the GUI.
+	Toast,
+	/// Calls into the `log` crate go through a logging backend and end up here.
+	Log,
+}
+
+#[derive(Debug)]
+pub struct Message {
+	string: String,
+	kind: MessageKind,
 }
 
 // Public interface.
 impl<C: terminal::Command> Console<C> {
 	#[must_use]
-	pub fn new(msg_receiver: Receiver<String>) -> Self {
+	pub fn new(log_receiver: Receiver<Message>) -> Self {
 		Console {
 			#[cfg(debug_assertions)]
 			open: Cell::new(true),
 			#[cfg(not(debug_assertions))]
 			open: Cell::new(false),
-			receiver: msg_receiver,
-			log: Vec::<String>::default(),
-			history: Vec::<String>::default(),
+			log_receiver,
+			messages: Vec::<Message>::default(),
+			input_history: Vec::<String>::default(),
 			terminal: Terminal::<C>::new(|key| {
 				info!("Unknown command: {}", key);
 			}),
 			input: String::with_capacity(512),
-			history_pos: 0,
+			input_history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			cursor_to_end: false,
+			draw_log: true,
+			draw_toast: true,
 			requests: VecDeque::<C::Output>::default(),
 		}
 	}
 
+	/// Receive incoming messages from the log backend - and ongoing playsim, if
+	/// any - and draw the window and all of its contents.
 	pub fn ui(&mut self, ctx: &egui::Context) {
-		let mut recvtries: u8 = 0;
-
-		while !self.receiver.is_empty() && recvtries < 100 {
-			let s = match self.receiver.recv() {
-				Ok(s) => s,
-				Err(err) => {
-					error!(
-						"Console message channel was disconnected unexpectedly: {}",
-						err
-					);
-					recvtries += 1;
-					continue;
-				}
-			};
-
-			if !s.is_empty() {
-				self.log.push(s);
-			}
+		while let Ok(msg) = self.log_receiver.try_recv() {
+			self.messages.push(msg);
 		}
 
-		if !self.open.get() {
+		let mut is_open = self.open.get();
+
+		if !is_open {
 			return;
 		}
 
-		let mut o = self.open.get();
-
 		egui::Window::new("Console")
-			.open(&mut o)
+			.open(&mut is_open)
 			.resizable(true)
 			.show(ctx, |ui| {
 				self.ui_impl(ui, ctx);
 			});
 
-		self.open.set(o);
+		self.open.set(is_open);
+	}
+
+	/// Appends a custom message.
+	pub fn write(&mut self, string: String, kind: MessageKind) {
+		self.messages.push(Message { string, kind });
 	}
 
 	pub fn on_key_event(&mut self, input: &KeyboardInput) {
@@ -144,26 +163,28 @@ impl<C: terminal::Command> Console<C> {
 			}
 			VirtualKeyCode::Return => self.try_submit(),
 			VirtualKeyCode::Up => {
-				if self.history_pos < 1 {
+				if self.input_history_pos < 1 {
 					return;
 				}
 
 				self.cursor_to_end = true;
-				self.history_pos -= 1;
+				self.input_history_pos -= 1;
 				self.input.clear();
-				self.input.push_str(&self.history[self.history_pos]);
+				self.input
+					.push_str(&self.input_history[self.input_history_pos]);
 			}
 			VirtualKeyCode::Down => {
-				if self.history_pos >= self.history.len() {
+				if self.input_history_pos >= self.input_history.len() {
 					return;
 				}
 
 				self.cursor_to_end = true;
-				self.history_pos += 1;
+				self.input_history_pos += 1;
 				self.input.clear();
 
-				if self.history_pos < self.history.len() {
-					self.input.push_str(&self.history[self.history_pos]);
+				if self.input_history_pos < self.input_history.len() {
+					self.input
+						.push_str(&self.input_history[self.input_history_pos]);
 				}
 			}
 			_ => {}
@@ -213,12 +234,12 @@ impl<C: terminal::Command> Console<C> {
 	}
 
 	pub fn clear_log(&mut self) {
-		self.log.clear();
+		self.messages.clear();
 	}
 
 	pub fn clear_input_history(&mut self) {
-		self.history.clear();
-		self.history_pos = 0;
+		self.input_history.clear();
+		self.input_history_pos = 0;
 	}
 }
 
@@ -231,16 +252,16 @@ impl<C: terminal::Command> Console<C> {
 			return;
 		}
 
-		match self.history.last() {
+		match self.input_history.last() {
 			Some(last_cmd) => {
 				if last_cmd != &self.input[..] {
-					self.history.push(self.input.clone());
-					self.history_pos = self.history.len();
+					self.input_history.push(self.input.clone());
+					self.input_history_pos = self.input_history.len();
 				}
 			}
 			None => {
-				self.history.push(self.input.clone());
-				self.history_pos = self.history.len();
+				self.input_history.push(self.input.clone());
+				self.input_history_pos = self.input_history.len();
 			}
 		};
 
@@ -255,34 +276,36 @@ impl<C: terminal::Command> Console<C> {
 		self.input.clear();
 	}
 
-	fn draw_log_line(&self, ui: &mut egui::Ui, line: &str) {
-		lazy_static! {
-			static ref RGX_LOGOUTPUT: Regex =
-				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
-		};
-
+	fn draw_line_generic(ui: &mut egui::Ui, line: &str) {
 		let font_id = TextStyle::Monospace.resolve(ui.style());
+		let job =
+			LayoutJob::simple_singleline(line.to_string(), font_id, ui.visuals().text_color());
+		let galley = ui.fonts().layout_job(job);
+		ui.label(galley);
+	}
 
-		if !RGX_LOGOUTPUT.is_match(line) {
-			let job = LayoutJob::simple_singleline(line.to_string(), font_id, Color32::GRAY);
-			let galley = ui.fonts().layout_job(job);
-			ui.label(galley);
-			return;
-		}
+	/// Colors the bracketed qualifier prepended to all messages sent via the `log`
+	/// crate, with (approximately) the same colors that would appear in a terminal.
+	fn draw_line_log(ui: &mut egui::Ui, line: &str) {
+		const INFO_COLOR: Color32 = Color32::from_rgb(0, 188, 126);
+		const ERROR_COLOR: Color32 = Color32::from_rgb(225, 105, 107);
+		const DEBUG_COLOR: Color32 = Color32::from_rgb(0, 169, 197);
+		const TRACE_COLOR: Color32 = Color32::from_rgb(204, 102, 197);
+
+		let mut s = line.splitn(2, "] ");
+		let loglvl = s.next().unwrap_or_default();
+		let color = match &loglvl[1..] {
+			"INFO" => INFO_COLOR,
+			"WARN" => Color32::YELLOW,
+			"ERROR" => ERROR_COLOR,
+			"DEBUG" => DEBUG_COLOR,
+			"TRACE" => TRACE_COLOR,
+			other => unreachable!("Unexpected log message qualifier: {other}"),
+		};
 
 		let mut job = LayoutJob::default();
-		let mut s = line.splitn(2, "] ");
-
-		let loglvl = s.next().unwrap_or_default();
-
-		let color = match &loglvl[1..] {
-			"INFO" => Color32::GREEN,
-			"WARN" => Color32::YELLOW,
-			"ERROR" => Color32::RED,
-			_ => Color32::LIGHT_BLUE,
-		};
-
-		let tfmt = TextFormat::simple(font_id.clone(), Color32::GRAY);
+		let font_id = TextStyle::Monospace.resolve(ui.style());
+		let tfmt = TextFormat::simple(font_id.clone(), ui.visuals().text_color());
 
 		job.append("[", 0.0, tfmt.clone());
 		job.append(&loglvl[1..], 0.0, TextFormat::simple(font_id, color));
@@ -294,15 +317,53 @@ impl<C: terminal::Command> Console<C> {
 	}
 
 	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+		egui::menu::bar(ui, |ui| {
+			ui.toggle_value(&mut self.draw_log, "Show Engine Log");
+			ui.toggle_value(&mut self.draw_toast, "Show Game Log");
+		});
+
+		ui.separator();
+
 		let scroll_area = ScrollArea::vertical()
 			.max_height(200.0)
 			.auto_shrink([false; 2]);
 
+		lazy_static! {
+			static ref RGX_LOGOUTPUT: Regex =
+				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
+		};
+
 		scroll_area.show(ui, |ui| {
 			ui.vertical(|ui| {
-				for item in &self.log {
-					for line in item.lines() {
-						self.draw_log_line(ui, line);
+				for item in &self.messages {
+					match item.kind {
+						MessageKind::Toast => {
+							if !self.draw_toast {
+								continue;
+							}
+
+							for line in item.string.lines() {
+								Self::draw_line_generic(ui, line);
+							}
+						}
+						MessageKind::Log => {
+							if !self.draw_log {
+								continue;
+							}
+
+							for line in item.string.lines() {
+								if RGX_LOGOUTPUT.is_match(line) {
+									Self::draw_line_log(ui, line);
+								} else {
+									Self::draw_line_generic(ui, line);
+								}
+							}
+						}
+						MessageKind::Help => {
+							for line in item.string.lines() {
+								Self::draw_line_generic(ui, line);
+							}
+						}
 					}
 				}
 			});
@@ -340,14 +401,16 @@ impl<C: terminal::Command> Console<C> {
 	}
 }
 
+/// Provides a bridge between the logging backend, which needs a channel sender
+/// as well as a [`std::io::Write`] implementation, and the console.
 pub struct Writer {
 	buffer: Vec<u8>,
-	sender: Sender<String>,
+	sender: Sender,
 }
 
 impl Writer {
 	#[must_use]
-	pub fn new(sender: Sender<String>) -> Self {
+	pub fn new(sender: Sender) -> Self {
 		Writer {
 			buffer: Vec::<u8>::with_capacity(512),
 			sender,
@@ -359,9 +422,12 @@ impl io::Write for Writer {
 	fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
 		if buf[0] == 10 {
 			let drain = self.buffer.drain(..);
-			let s = String::from_utf8_lossy(drain.as_slice());
+			let string = String::from_utf8_lossy(drain.as_slice()).to_string();
 
-			match self.sender.try_send(s.to_string()) {
+			match self.sender.try_send(Message {
+				string,
+				kind: MessageKind::Log,
+			}) {
 				Ok(()) => {}
 				Err(err) => {
 					error!(
@@ -379,9 +445,12 @@ impl io::Write for Writer {
 
 	fn flush(&mut self) -> io::Result<()> {
 		let drain = self.buffer.drain(..);
-		let s = String::from_utf8_lossy(drain.as_slice());
+		let string = String::from_utf8_lossy(drain.as_slice()).to_string();
 
-		match self.sender.try_send(s.to_string()) {
+		match self.sender.try_send(Message {
+			string,
+			kind: MessageKind::Log,
+		}) {
 			Ok(()) => {}
 			Err(err) => {
 				error!(

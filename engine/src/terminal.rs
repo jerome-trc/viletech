@@ -129,6 +129,9 @@ struct CommandWrapper<C: Command> {
 	command: C,
 }
 
+/// This combines storage for text-based commands and aliases with a parser
+/// for matching against those commands, allowing both the client's console
+/// and headless server to seamlessly use the same code and UI.
 pub struct Terminal<C: Command> {
 	commands: Vec<CommandWrapper<C>>,
 	command_not_found: fn(&str),

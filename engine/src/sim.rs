@@ -52,7 +52,7 @@ pub enum InMessage {
 
 /// Outbound messages are only for playsims running within the client.
 pub enum OutMessage {
-	// ???
+	Toast(String),
 }
 
 pub type InSender = crossbeam::channel::Sender<InMessage>;

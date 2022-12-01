@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{env, path::PathBuf};
 
 use impure::{
+	console::MessageKind,
 	depends::{
 		bitflags,
 		log::{error, info},
@@ -34,6 +35,7 @@ pub enum Request {
 	None,
 	Callback(fn(&mut ClientCore)),
 	Exit,
+	ConsoleWrite(String, MessageKind),
 	CommandHelp(String),
 	CreateAlias(String, String),
 	EchoAlias(String),
@@ -81,20 +83,16 @@ impl terminal::Command for Command {
 }
 
 pub fn ccmd_alias(args: CommandArgs) -> Request {
-	fn help(cmd_key: &str) {
-		info!(
-			"Usage: {} [alias] [string]
-			If no alias is provided, all aliases are listed.
-			If no string is provided, \
-			the alias' associated string is expanded into the output, \
-			if that alias exists.",
-			cmd_key
-		);
-	}
-
 	if args.id_only() || args.help() {
-		help(args[0]);
-		return Request::None;
+		return Request::ConsoleWrite(
+			format!(
+				"Usage: {} [alias] [string]
+If no alias is provided, all aliases are listed. If no string is provided,
+the alias' associated string is expanded into the output, if that alias exists.",
+				args[0]
+			),
+			MessageKind::Help,
+		);
 	}
 
 	if args.len() == 2 {
@@ -106,8 +104,10 @@ pub fn ccmd_alias(args: CommandArgs) -> Request {
 
 pub fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints out all of the program's launch arguments.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints out all of the program's launch arguments.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	let mut args = env::args();
@@ -136,8 +136,10 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 
 pub fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Clears the console's message log.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Clears the console's message log.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
@@ -147,8 +149,10 @@ pub fn ccmd_clear(args: CommandArgs) -> Request {
 
 pub fn ccmd_exit(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Instantly closes the client.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Instantly closes the client.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Exit
@@ -156,11 +160,12 @@ pub fn ccmd_exit(args: CommandArgs) -> Request {
 
 pub fn ccmd_file(args: CommandArgs) -> Request {
 	if args.help() {
-		info!(
+		return Request::ConsoleWrite(
 			"Prints the contents of a virtual file system directory, \
-			or information about a file."
+or information about a file."
+				.to_string(),
+			MessageKind::Help,
 		);
-		return Request::None;
 	}
 
 	Request::File(PathBuf::from(if args.id_only() { "/" } else { args[1] }))
@@ -168,8 +173,10 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Clear's the console's history of submitted input strings.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Clear's the console's history of submitted input strings.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
@@ -180,17 +187,21 @@ pub fn ccmd_hclear(args: CommandArgs) -> Request {
 
 pub fn ccmd_help(args: CommandArgs) -> Request {
 	if args.help() {
-		info!(
+		return Request::ConsoleWrite(
 			"If used without arguments, prints a list of all available commands.
-			Giving the name of a command as a first argument is the same as giving
-			`command --help`."
+Giving the name of a command as a first argument is the same as giving
+`command --help`."
+				.to_string(),
+			MessageKind::Help,
 		);
-		return Request::None;
 	}
 
 	if args.id_only() {
 		return Request::Callback(|core| {
-			let mut string = "All available commands:".to_string();
+			let cap = core.console.all_commands().map(|cmd| cmd.0.len()).sum();
+			let mut string = String::with_capacity(cap);
+
+			string.push_str("All available commands:");
 
 			for command in core.console.all_commands() {
 				string.push('\r');
@@ -198,7 +209,7 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 				string.push_str(command.0);
 			}
 
-			info!("{}", string);
+			core.console.write(string, MessageKind::Help);
 		});
 	}
 
@@ -207,8 +218,10 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 
 pub fn ccmd_home(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints the directory which holds the user info directory.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints the directory which holds the user info directory.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	match get_user_dir() {
@@ -226,8 +239,10 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 
 pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints the current heap memory used by the client's Lua state.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints the current heap memory used by the client's Lua state.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
@@ -239,17 +254,15 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 }
 
 pub fn ccmd_sound(args: CommandArgs) -> Request {
-	fn help(cmd_key: &str) {
-		info!(
-			"Starts a sound at default settings from the virtual file s
-			Usage: {} <virtual file path/asset number/asset ID>",
-			cmd_key
-		);
-	}
-
 	if args.help() || args.is_empty() {
-		help(args[0]);
-		return Request::None;
+		return Request::ConsoleWrite(
+			format!(
+				"Starts a sound at default settings from the virtual file system.
+Usage: {} <virtual file path/asset number/asset ID>",
+				args[0]
+			),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Sound(args[1].to_string())
@@ -257,8 +270,10 @@ pub fn ccmd_sound(args: CommandArgs) -> Request {
 
 pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints the length of the time the engine has been running.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints the length of the time the engine has been running.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
@@ -268,8 +283,10 @@ pub fn ccmd_uptime(args: CommandArgs) -> Request {
 
 pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints information about the graphics device and WGPU backend.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints information about the graphics device and WGPU backend.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
@@ -279,8 +296,7 @@ pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 
 pub fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints the engine version.");
-		return Request::None;
+		return Request::ConsoleWrite("Prints the engine version.".to_string(), MessageKind::Help);
 	}
 
 	info!("{}", impure::full_version_string());
@@ -289,8 +305,10 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 
 pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 	if args.help() {
-		info!("Prints information about the state of the virtual file system.");
-		return Request::None;
+		return Request::ConsoleWrite(
+			"Prints information about the state of the virtual file system.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	Request::Callback(|core| {
