@@ -125,6 +125,22 @@ impl<'v, 'e> Handle<'v, 'e> {
 	/// Note: non-recursive. Panics if used on a leaf node.
 	/// Check to ensure it's a directory beforehand.
 	#[must_use]
+	pub fn contains_any(&self, predicate: fn(&Path) -> bool) -> bool {
+		self.child_entries().any(|e| predicate(&e.path))
+	}
+
+	/// Note: non-recursive. Panics if used on a leaf node.
+	/// Check to ensure it's a directory beforehand. Like `contains` but
+	/// ignores ASCII case.
+	#[must_use]
+	pub fn contains_nocase(&self, name: &str) -> bool {
+		self.child_entries()
+			.any(|e| e.file_name().eq_ignore_ascii_case(name))
+	}
+
+	/// Note: non-recursive. Panics if used on a leaf node.
+	/// Check to ensure it's a directory beforehand.
+	#[must_use]
 	pub fn contains_regex(&self, regex: &Regex) -> bool {
 		self.children().any(|h| regex.is_match(h.file_name()))
 	}

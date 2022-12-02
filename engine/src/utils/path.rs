@@ -26,14 +26,13 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use lazy_static::lazy_static;
 use log::warn;
-use regex::Regex;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-	static ref EMPTY_PATH: &'static Path = Path::new("");
-	static ref ROOT_PATH: &'static Path = Path::new("/");
-}
+use crate::lazy_regex;
+
+static EMPTY_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new(""));
+static ROOT_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new("/"));
 
 pub trait PathEx {
 	#[must_use]
@@ -106,55 +105,43 @@ impl<T: AsRef<Path>> PathEx for T {
 	}
 
 	fn has_zip_extension(&self) -> bool {
-		let p = self.as_ref();
-		let ext = p.extension().unwrap_or_default();
-		let extstr = ext.to_str().unwrap_or_default();
-
-		lazy_static! {
-			static ref RGX_ZIPEXT: Regex = Regex::new(r"^(?i)zip$")
-				.expect("Failed to evaluate `has_zip_extension::RGX_ZIPEXT`.");
-		};
-
-		RGX_ZIPEXT.is_match(extstr)
+		self.as_ref()
+			.extension()
+			.unwrap_or_default()
+			.to_str()
+			.unwrap_or_default()
+			.eq_ignore_ascii_case("zip")
 	}
 
 	fn has_wad_extension(&self) -> bool {
-		let p = self.as_ref();
-		let ext = p.extension().unwrap_or_default();
-		let extstr = ext.to_str().unwrap_or_default();
-
-		lazy_static! {
-			static ref RGX_WADEXT: Regex = Regex::new(r"^(?i)[pi]*wad$")
-				.expect("Failed to evaluate `has_wad_extension::RGX_WADEXT`.");
-		};
-
-		RGX_WADEXT.is_match(extstr)
+		lazy_regex!(r"^(?i)[pi]?wad$").is_match(
+			self.as_ref()
+				.extension()
+				.unwrap_or_default()
+				.to_str()
+				.unwrap_or_default(),
+		)
 	}
 
 	fn has_gzdoom_extension(&self) -> bool {
-		let p = self.as_ref();
-		let ext = p.extension().unwrap_or_default();
-		let extstr = ext.to_str().unwrap_or_default();
-
-		lazy_static! {
-			static ref RGX_GZDEXT: Regex = Regex::new(r"^(?i)i*pk[37]$")
-				.expect("Failed to evaluate `has_zip_extension::RGX_GZDEXT`.");
-		};
-
-		RGX_GZDEXT.is_match(extstr)
+		lazy_regex!(r"^(?i)i?pk[37]$").is_match(
+			self.as_ref()
+				.extension()
+				.unwrap_or_default()
+				.to_str()
+				.unwrap_or_default(),
+		)
 	}
 
 	fn has_eternity_extension(&self) -> bool {
-		let p = self.as_ref();
-		let ext = p.extension().unwrap_or_default();
-		let extstr = ext.to_str().unwrap_or_default();
+		let s = self
+			.as_ref()
+			.extension()
+			.unwrap_or_default()
+			.to_str()
+			.unwrap_or_default();
 
-		lazy_static! {
-			static ref RGX_ETERNEXT: Regex = Regex::new(r"^(?i)pk[e3]$")
-				.expect("Failed to evaluate `has_zip_extension::RGX_ETERNEXT`.");
-		};
-
-		RGX_ETERNEXT.is_match(extstr)
+		s.eq_ignore_ascii_case("pk3") || s.eq_ignore_ascii_case("pke")
 	}
 
 	fn is_binary(&self) -> io::Result<bool> {
@@ -296,12 +283,7 @@ pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 		string = string.replace('~', &home);
 	}
 
-	lazy_static! {
-		static ref RGX_ENVVAR: Regex =
-			Regex::new(r"\$[[:word:]]+").expect("Failed to evaluate `nice_path::RGX_ENVVAR`.");
-	};
-
-	let matches = RGX_ENVVAR.find_iter(&string);
+	let matches = lazy_regex!(r"\$[[:word:]]+").find_iter(&string);
 	let mut ret = string.clone();
 
 	for m in matches {

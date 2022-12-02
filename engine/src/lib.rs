@@ -77,7 +77,6 @@ pub mod depends {
 	pub extern crate dolly;
 	pub extern crate fasthash;
 	pub extern crate kira;
-	pub extern crate lazy_static;
 	pub extern crate log;
 	pub extern crate mlua;
 	pub extern crate nanorand;

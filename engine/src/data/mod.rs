@@ -267,9 +267,7 @@ impl DataCore {
 
 	#[must_use]
 	pub fn namespace_exists_regex(&self, regex: Regex) -> bool {
-		self.namespaces
-			.iter()
-			.any(|ns| regex.is_match(&ns.meta.id))
+		self.namespaces.iter().any(|ns| regex.is_match(&ns.meta.id))
 	}
 
 	pub fn add<A: Asset>(

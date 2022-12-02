@@ -36,7 +36,6 @@ globset = "0.4.9"
 home = "0.5.3"
 image = { version = "0.24.4", default-features = false, features = ["png"] }
 kira = "0.7.0"
-lazy_static = "1.4.0"
 log = "0.4.16"
 luajit-src = "210.3.4"
 md5 = "0.7.0"

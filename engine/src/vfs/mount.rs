@@ -26,10 +26,9 @@ use std::{
 };
 
 use log::warn;
-use regex::RegexSet;
 use zip::ZipArchive;
 
-use crate::{utils::io::*, wad};
+use crate::{lazy_regexset, utils::io::*, wad};
 
 use super::{Entry, EntryKind, Error, VirtualFs};
 
@@ -203,12 +202,6 @@ impl VirtualFs {
 		virt_path: PathBuf,
 		parent_hash: u64,
 	) -> Result<Vec<Entry>, Error> {
-		lazy_static::lazy_static! {
-			static ref RGXSET_MAPMARKER: RegexSet =
-				RegexSet::new([r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$"])
-					.expect("Failed to evaluate `VirtualFs::mount_wad::RGXSET_MAPMARKER`.");
-		};
-
 		#[rustfmt::skip]
 		const MAP_COMPONENTS: &[&str] = &[
 			"blockmap",
@@ -242,7 +235,7 @@ impl VirtualFs {
 			let mut vpath = virt_path.clone();
 			vpath.push(&name);
 
-			if RGXSET_MAPMARKER.is_match(&name) {
+			if lazy_regexset!(r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$").is_match(&name) {
 				if let Some(entry) = mapfold.take() {
 					ret.push(entry);
 				}

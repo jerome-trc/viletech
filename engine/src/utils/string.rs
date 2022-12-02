@@ -17,8 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use lazy_static::lazy_static;
-use regex::Regex;
+use crate::lazy_regex;
 
 #[must_use]
 pub fn is_only_whitespace(string: &str) -> bool {
@@ -54,20 +53,17 @@ pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)>
 /// in ZDoom modding. If the returned option is `None`, the given string is unmodified.
 #[must_use]
 pub fn version_from_string(string: &mut String) -> Option<String> {
-	lazy_static! {
-		static ref RGX_VERSION: Regex = Regex::new(
-			r"(?x)
-			(?:[VR]|[\s\-_][VvRr]|[\s\-_\.])\d{1,}
-			(?:[\._\-]\d{1,})*
-			(?:[\._\-]\d{1,})*
-			[A-Za-z]*[\._\-]*
-			[A-Za-z0-9]*
-			$"
-		)
-		.expect("Failed to evaluate `utils::version_from_string::RGX_VERSION`.");
-	}
-
-	match RGX_VERSION.find(string) {
+	match lazy_regex!(
+		r"(?x)
+		(?:[VR]|[\s\-_][VvRr]|[\s\-_\.])\d{1,}
+		(?:[\._\-]\d{1,})*
+		(?:[\._\-]\d{1,})*
+		[A-Za-z]*[\._\-]*
+		[A-Za-z0-9]*
+		$"
+	)
+	.find(string)
+	{
 		Some(m) => {
 			const TO_TRIM: [char; 3] = [' ', '_', '-'];
 			let ret = m.as_str().trim_matches(&TO_TRIM[..]).to_string();

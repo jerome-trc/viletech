@@ -25,9 +25,7 @@ use std::{
 	time::Instant,
 };
 
-use lazy_static::lazy_static;
 use log::{error, info, warn};
-use regex::Regex;
 
 use crate::{
 	data::{GameDataKind, MetaToml as GameDataMetaToml},
@@ -234,48 +232,23 @@ impl ImpureVfs for VirtualFs {
 	}
 
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool> {
-		lazy_static! {
-			static ref RGX_METATOML: Regex = Regex::new(r"^(?i)meta\.toml")
-				.expect("Failed to evaluate `ImpureVfs::is_impure_package::RGX_METATOML`.");
-		};
-
-		self.lookup(path)
-			.map(|handle| handle.is_dir() && handle.contains_regex(&RGX_METATOML))
+		self.lookup(path).map(|handle| handle.is_impure_package())
 	}
 
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path)
-			.map(|handle| handle.is_dir() && handle.contains("TEXTMAP"))
+		self.lookup(path).map(|handle| handle.is_udmf_map())
 	}
 
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool> {
-		lazy_static! {
-			static ref RGX_ZSCRIPT: Regex = Regex::new(r"^(?i)zscript")
-				.expect("Failed to evaluate `ImpureVfs::has_zscript::RGX_ZSCRIPT`.");
-		};
-
-		self.lookup(path)
-			.map(|handle| handle.is_dir() && handle.contains_regex(&RGX_ZSCRIPT))
+		self.lookup(path).map(|handle| handle.has_zscript())
 	}
 
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool> {
-		lazy_static! {
-			static ref RGX_EDFROOT: Regex = Regex::new(r"^(?i)edfroot")
-				.expect("Failed to evaluate `ImpureVfs::has_edfroot::RGX_EDFROOT`.");
-		};
-
-		self.lookup(path)
-			.map(|handle| handle.is_dir() && handle.contains_regex(&RGX_EDFROOT))
+		self.lookup(path).map(|handle| handle.has_edfroot())
 	}
 
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool> {
-		lazy_static! {
-			static ref RGX_DECORATE: Regex = Regex::new(r"^(?i)decorate")
-				.expect("Failed to evaluate `ImpureVfs::has_decorate::RGX_DECORATE`.");
-		};
-
-		self.lookup(path)
-			.map(|handle| handle.is_dir() && handle.contains_regex(&RGX_DECORATE))
+		self.lookup(path).map(|handle| handle.has_decorate())
 	}
 
 	fn gamedata_kind(&self, id: &str) -> GameDataKind {
@@ -471,12 +444,12 @@ pub trait ImpureVfsHandle {
 
 impl ImpureVfsHandle for Handle<'_, '_> {
 	fn is_impure_package(&self) -> bool {
-		lazy_static! {
-			static ref RGX_METATOML: Regex = Regex::new(r"^(?i)meta\.toml")
-				.expect("Failed to evaluate `ImpureVfs::is_impure_package::RGX_METATOML`.");
-		};
-
-		self.is_dir() && self.contains_regex(&RGX_METATOML)
+		self.is_dir()
+			&& self.contains_any(|p| {
+				p.file_stem()
+					.unwrap_or_default()
+					.eq_ignore_ascii_case("meta.toml")
+			})
 	}
 
 	fn is_udmf_map(&self) -> bool {
@@ -484,30 +457,48 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 	}
 
 	fn has_decorate(&self) -> bool {
-		lazy_static! {
-			static ref RGX_DECORATE: Regex = Regex::new(r"^(?i)decorate")
-				.expect("Failed to evaluate `ImpureVfs::has_decorate::RGX_DECORATE`.");
-		};
-
-		self.is_dir() && self.contains_regex(&RGX_DECORATE)
+		self.is_dir()
+			&& self.contains_any(|p| {
+				let stem = p
+					.file_stem()
+					.unwrap_or_default()
+					.to_str()
+					.unwrap_or_default();
+				stem.split('.')
+					.next()
+					.unwrap_or_default()
+					.eq_ignore_ascii_case("edfroot")
+			})
 	}
 
 	fn has_zscript(&self) -> bool {
-		lazy_static! {
-			static ref RGX_ZSCRIPT: Regex = Regex::new(r"^(?i)zscript")
-				.expect("Failed to evaluate `ImpureVfs::has_zscript::RGX_ZSCRIPT`.");
-		};
-
-		self.is_dir() && self.contains_regex(&RGX_ZSCRIPT)
+		self.is_dir()
+			&& self.contains_any(|p| {
+				let stem = p
+					.file_stem()
+					.unwrap_or_default()
+					.to_str()
+					.unwrap_or_default();
+				stem.split('.')
+					.next()
+					.unwrap_or_default()
+					.eq_ignore_ascii_case("zscript")
+			})
 	}
 
 	fn has_edfroot(&self) -> bool {
-		lazy_static! {
-			static ref RGX_EDFROOT: Regex = Regex::new(r"^(?i)edfroot")
-				.expect("Failed to evaluate `ImpureVfs::has_edfroot::RGX_EDFROOT`.");
-		};
-
-		self.is_dir() && self.contains_regex(&RGX_EDFROOT)
+		self.is_dir()
+			&& self.contains_any(|p| {
+				let stem = p
+					.file_stem()
+					.unwrap_or_default()
+					.to_str()
+					.unwrap_or_default();
+				stem.split('.')
+					.next()
+					.unwrap_or_default()
+					.eq_ignore_ascii_case("edfroot")
+			})
 	}
 }
 

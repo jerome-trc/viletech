@@ -25,12 +25,13 @@ use egui::{
 	text_edit::{CCursorRange, TextEditState},
 	Color32, ScrollArea, TextFormat, TextStyle,
 };
-use lazy_static::lazy_static;
 use log::{error, info};
-use regex::Regex;
 use winit::event::{KeyboardInput, VirtualKeyCode};
 
-use crate::terminal::{self, Alias, Terminal};
+use crate::{
+	lazy_regex,
+	terminal::{self, Alias, Terminal},
+};
 
 pub type Sender = crossbeam::channel::Sender<Message>;
 
@@ -328,11 +329,6 @@ impl<C: terminal::Command> Console<C> {
 			.max_height(200.0)
 			.auto_shrink([false; 2]);
 
-		lazy_static! {
-			static ref RGX_LOGOUTPUT: Regex =
-				Regex::new(r"^\[[A-Z]+\] ").expect("Failed to evaluate `RGX_LOGOUTPUT`.");
-		};
-
 		scroll_area.show(ui, |ui| {
 			ui.vertical(|ui| {
 				for item in &self.messages {
@@ -352,7 +348,7 @@ impl<C: terminal::Command> Console<C> {
 							}
 
 							for line in item.string.lines() {
-								if RGX_LOGOUTPUT.is_match(line) {
+								if lazy_regex!(r"^\[[A-Z]+\] ").is_match(line) {
 									Self::draw_line_log(ui, line);
 								} else {
 									Self::draw_line_generic(ui, line);

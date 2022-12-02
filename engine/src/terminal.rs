@@ -21,8 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::ops::Deref;
 
-use lazy_static::lazy_static;
-use regex::Regex;
+use crate::lazy_regex;
 
 /// `::0` is the alias, `::1` is what it expands into.
 pub type Alias = (String, String);
@@ -149,11 +148,6 @@ impl<C: Command> Terminal<C> {
 	}
 
 	pub fn submit(&self, string: &str) -> Vec<C::Output> {
-		lazy_static! {
-			static ref RGX_ARGSPLIT: Regex = Regex::new(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#)
-				.expect("Failed to evaluate `Terminal::submit::RGX_ARGSPLIT`.");
-		};
-
 		let mut ret = Vec::<_>::default();
 		let mut string = string.to_owned();
 
@@ -187,7 +181,7 @@ impl<C: Command> Terminal<C> {
 			};
 
 			let args = if let Some(a) = tokens.next() { a } else { "" };
-			let args_iter = RGX_ARGSPLIT.captures_iter(args);
+			let args_iter = lazy_regex!(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#).captures_iter(args);
 			let mut args = vec![key];
 
 			for arg in args_iter {
@@ -310,14 +304,10 @@ impl<C: Command> Terminal<C> {
 
 // Internal implementation details.
 impl<C: Command> Terminal<C> {
-	/// Valid command IDs must contain one letter or number to begin with.
+	/// Valid command IDs must contain at least two characters,
+	/// and must begin with one ASCII letter or number.
 	#[must_use]
 	fn id_valid(id: &str) -> bool {
-		lazy_static! {
-			static ref RGX_VALID_COMMAND_ID: Regex = Regex::new("^[A-Za-z0-9]+")
-				.expect("Failed to evaluate `Terminal::id_valid::RGX_VALID_COMMAND_ID`.");
-		}
-
-		RGX_VALID_COMMAND_ID.is_match(id)
+		id.chars().count() > 2 && id.chars().next().unwrap().is_ascii_alphanumeric()
 	}
 }

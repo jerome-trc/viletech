@@ -86,3 +86,41 @@ macro_rules! newtype_mutref {
 		}
 	}
 }
+
+/// Creates an anonymous block with a lazy-initialised static [`regex::Regex`].
+/// From https://docs.rs/once_cell/latest/once_cell/index.html#lazily-compiled-regex.
+#[macro_export]
+macro_rules! lazy_regex {
+	($re:literal $(,)?) => {{
+		static RGX: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
+
+		RGX.get_or_init(|| {
+			regex::Regex::new($re).expect(concat!(
+				"Failed to evaluate regex: ",
+				module_path!(),
+				":",
+				line!(),
+				":",
+				column!(),
+			))
+		})
+	}};
+}
+
+/// See [`lazy_regex`].
+#[macro_export]
+macro_rules! lazy_regexset {
+	($($re:literal),+) => {{
+		static RGXSET: once_cell::sync::OnceCell<regex::RegexSet> = once_cell::sync::OnceCell::new();
+
+		RGXSET.get_or_init(|| regex::RegexSet::new([$($re),+]).expect(
+			concat!(
+				"Failed to evaluate regex set: ",
+				module_path!(),
+				":",
+				line!(),
+				":",
+				column!(),
+		)))
+	}};
+}

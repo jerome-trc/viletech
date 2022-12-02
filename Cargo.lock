@@ -1581,7 +1581,6 @@ dependencies = [
  "home",
  "image",
  "kira",
- "lazy_static",
  "log",
  "luajit-src",
  "md5",

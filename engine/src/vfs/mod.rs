@@ -29,6 +29,7 @@ use fasthash::metro;
 use globset::Glob;
 use log::info;
 use log::warn;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use regex::Regex;
@@ -444,7 +445,13 @@ impl VirtualFs {
 	}
 }
 
-lazy_static::lazy_static! {
-	static ref RGX_INVALIDMOUNTPATH: Regex = Regex::new(r"[^A-Za-z0-9-_/\.]")
-		.expect("Failed to evaluate `vfs::RGX_INVALIDMOUNTPATH`.");
-}
+static RGX_INVALIDMOUNTPATH: Lazy<Regex> = Lazy::new(|| {
+	Regex::new(r"[^A-Za-z0-9-_/\.]").expect(stringify!(
+			"Failed to evaluate regex set: "
+			module_path!(),
+			":",
+			line!(),
+			":"
+			column!()
+	))
+});
