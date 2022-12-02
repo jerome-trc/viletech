@@ -124,6 +124,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Amanieu "Amanieu" d'Antras et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
 	- https://docs.rs/parking_lot/latest/parking_lot/
+- pest
+	- By the [pest-parser](https://github.com/pest-parser) organisation, Dragoș "dragostis" Tiselice, et. al.
+	- Provided under the [Apache 2.0 License](https://github.com/pest-parser/pest/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/pest-parser/pest/blob/master/LICENSE-MIT).
+	- https://docs.rs/pest/latest/pest/
 - pollster
 	- By Joshua "zesterer" Barretto et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).

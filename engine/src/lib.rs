@@ -44,6 +44,7 @@ pub mod lua;
 pub mod math;
 #[allow(dead_code)]
 pub mod rng;
+pub mod script;
 #[allow(dead_code)]
 pub mod sim;
 pub mod terminal;
