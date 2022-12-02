@@ -27,7 +27,7 @@ use std::{collections::HashMap, path::PathBuf};
 use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
 use log::{error, warn};
-use regex::bytes::Regex;
+use regex::Regex;
 use serde::Deserialize;
 
 use crate::{
@@ -229,7 +229,7 @@ impl DataCore {
 	pub fn get_namespace_regex(&self, regex: Regex) -> Option<&Namespace> {
 		self.namespaces
 			.iter()
-			.find(|ns| regex.is_match(ns.meta.id.as_bytes()))
+			.find(|ns| regex.is_match(&ns.meta.id))
 	}
 
 	#[must_use]
@@ -249,7 +249,7 @@ impl DataCore {
 	pub fn get_namespace_mut_regex(&mut self, regex: Regex) -> Option<&mut Namespace> {
 		self.namespaces
 			.iter_mut()
-			.find(|ns| regex.is_match(ns.meta.id.as_bytes()))
+			.find(|ns| regex.is_match(&ns.meta.id))
 	}
 
 	#[must_use]
@@ -269,7 +269,7 @@ impl DataCore {
 	pub fn namespace_exists_regex(&self, regex: Regex) -> bool {
 		self.namespaces
 			.iter()
-			.any(|ns| regex.is_match(ns.meta.id.as_bytes()))
+			.any(|ns| regex.is_match(&ns.meta.id))
 	}
 
 	pub fn add<A: Asset>(
