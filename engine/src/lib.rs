@@ -31,8 +31,6 @@ pub mod data;
 #[allow(dead_code)]
 pub mod ecs;
 #[allow(dead_code)]
-pub mod file_browser;
-#[allow(dead_code)]
 pub mod frontend;
 #[allow(dead_code)]
 pub mod game;
@@ -40,11 +38,11 @@ pub mod gfx;
 pub mod input;
 #[allow(dead_code)]
 pub mod level;
+pub mod lith;
 pub mod lua;
 pub mod math;
 #[allow(dead_code)]
 pub mod rng;
-pub mod lith;
 #[allow(dead_code)]
 pub mod sim;
 pub mod terminal;

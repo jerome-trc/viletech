@@ -144,6 +144,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By lucaspoffo et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-MIT).
 	- https://docs.rs/renet/latest/renet/
+- rfd
+	- By Bartłomiej Maryńczak ([@PolyMeilex](https://github.com/PolyMeilex)) et. al.
+	- Provided under the [MIT License](https://github.com/PolyMeilex/rfd/blob/master/LICENSE).
+	- https://docs.rs/rfd/latest/rfd/
 - serde
 	- By the [serde-rs](https://github.com/serde-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT).

@@ -22,7 +22,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use crate::{file_browser::FileBrowser, utils::string::*};
+use crate::utils::string::*;
 
 #[derive(PartialEq, Eq)]
 pub enum FrontendAction {
@@ -87,7 +87,6 @@ struct LoadOrderPreset {
 pub struct FrontendMenu {
 	presets: Vec<LoadOrderPreset>,
 	load_order: VecDeque<LoadOrderEntry>,
-	file_browser: FileBrowser,
 }
 
 // Public interface.
@@ -122,9 +121,44 @@ impl FrontendMenu {
 			let mut selected = self.load_order.iter().filter(|loe| loe.selected).count();
 
 			egui::menu::bar(ui, |ui| {
-				// Let the user add a file/directory to their load order
-				if ui.button("\u{2B}").clicked() {
-					self.file_browser.toggle();
+				if ui.button("\u{2B}\u{1F4C4}").clicked() {
+					if let Some(files) = rfd::FileDialog::new()
+						.set_directory(
+							std::env::current_dir()
+								.expect("Failed to get program's working directory."),
+						)
+						.pick_files()
+					{
+						for file in files {
+							self.load_order.push_front(LoadOrderEntry {
+								selected: false,
+								kind: LoadOrderEntryKind::Item {
+									path: file,
+									enabled: true,
+								},
+							})
+						}
+					}
+				}
+
+				if ui.button("\u{2B}\u{1F4C1}").clicked() {
+					if let Some(dirs) = rfd::FileDialog::new()
+						.set_directory(
+							std::env::current_dir()
+								.expect("Failed to get program's working directory."),
+						)
+						.pick_folders()
+					{
+						for dir in dirs {
+							self.load_order.push_front(LoadOrderEntry {
+								selected: false,
+								kind: LoadOrderEntryKind::Item {
+									path: dir,
+									enabled: true,
+								},
+							})
+						}
+					}
 				}
 
 				ui.add_enabled_ui(selected > 0, |ui| {
@@ -185,20 +219,6 @@ impl FrontendMenu {
 				}
 			});
 		});
-
-		if self.file_browser.ui(ctx) {
-			for pb in self.file_browser.drain() {
-				self.load_order.push_front(LoadOrderEntry {
-					selected: false,
-					kind: LoadOrderEntryKind::Item {
-						path: pb,
-						enabled: true,
-					},
-				})
-			}
-
-			self.file_browser.toggle();
-		}
 
 		ret
 	}
