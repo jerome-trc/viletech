@@ -816,14 +816,14 @@ pub(super) fn g_vfs(lua: &Lua, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<LuaTabl
 	let read = lua.create_function(move |l, path: String| {
 		let vfs = vfs.read();
 
-		let handle = match vfs.lookup(&path) {
+		let fref = match vfs.lookup(&path) {
 			Some(h) => h,
 			None => {
 				return Ok(LuaValue::Nil);
 			}
 		};
 
-		let content = match handle.read_str() {
+		let content = match fref.read_str() {
 			Ok(s) => s,
 			Err(err) => {
 				error!(

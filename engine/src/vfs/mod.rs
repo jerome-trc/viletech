@@ -36,7 +36,7 @@ use regex::Regex;
 
 mod entry;
 mod error;
-mod handle;
+mod fileref;
 mod impure;
 mod mount;
 #[cfg(test)]
@@ -44,11 +44,12 @@ mod test;
 
 use entry::{Entry, EntryKind};
 
-pub use self::impure::{ImpureVfs, ImpureVfsHandle};
+pub use self::impure::{ImpureVfs, ImpureFileRef};
 pub use error::Error;
-pub use handle::Handle;
+pub use fileref::FileRef;
 
 /// Abstraction over the OS file system for security and ease.
+///
 /// Inspired by PhysicsFS, but differs in that it owns every byte mounted.
 /// Just the mounting process requires large amounts of time spent on file I/O,
 /// so clustering a complete read along with it grants a time savings.
@@ -249,7 +250,7 @@ impl VirtualFs {
 
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
-	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<Handle> {
+	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		let entry = match self.lookup_hash(Self::hash_path(path)) {
 			Some(e) => e,
 			None => {
@@ -257,13 +258,13 @@ impl VirtualFs {
 			}
 		};
 
-		Some(Handle { vfs: self, entry })
+		Some(FileRef { vfs: self, entry })
 	}
 
 	/// Returns `None` if and only if nothing exists at the given path.
 	/// Note that that `path` must be exact, including the root path separator.
 	#[must_use]
-	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
+	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		self.entries
 			.iter()
 			.find(|e| {
@@ -273,7 +274,7 @@ impl VirtualFs {
 						.expect("`lookup_nocase` received a path with invalid UTF-8."),
 				)
 			})
-			.map(|e| Handle {
+			.map(|e| FileRef {
 				vfs: self,
 				entry: e,
 			})
@@ -346,14 +347,14 @@ impl VirtualFs {
 	}
 
 	#[must_use]
-	pub fn glob(&self, pattern: Glob) -> Option<impl Iterator<Item = Handle>> {
+	pub fn glob(&self, pattern: Glob) -> Option<impl Iterator<Item = FileRef>> {
 		let glob = pattern.compile_matcher();
 
 		Some(
 			self.entries
 				.iter()
 				.filter(move |e| glob.is_match(e.path_str()))
-				.map(move |e| Handle {
+				.map(move |e| FileRef {
 					vfs: self,
 					entry: e,
 				}),

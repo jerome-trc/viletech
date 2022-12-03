@@ -34,7 +34,7 @@ use kira::{
 };
 use shipyard::EntityId;
 
-use crate::VfsHandle;
+use crate::vfs::FileRef;
 
 pub struct SourcedHandle {
 	inner: StaticSoundHandle,
@@ -162,10 +162,10 @@ impl AudioCore {
 }
 
 pub fn sound_from_file(
-	handle: VfsHandle,
+	file: FileRef,
 	settings: StaticSoundSettings,
 ) -> Result<StaticSoundData, Box<dyn Error>> {
-	let bytes = handle.read()?.to_owned();
+	let bytes = file.read()?.to_owned();
 	let cursor = io::Cursor::new(bytes);
 
 	match StaticSoundData::from_cursor(cursor, settings) {

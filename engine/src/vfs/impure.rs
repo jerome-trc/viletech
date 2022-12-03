@@ -34,7 +34,7 @@ use crate::{
 	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
 };
 
-use super::{Error, Handle, VirtualFs};
+use super::{Error, FileRef, VirtualFs};
 
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
@@ -45,27 +45,27 @@ pub trait ImpureVfs {
 	#[must_use]
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml>;
 
-	/// See [`ImpureVfsHandle::is_impure_package`].
+	/// See [`ImpureFileRef::is_impure_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsHandle::is_udmf_map`].
+	/// See [`ImpureFileRef::is_udmf_map`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsHandle::has_zscript`].
+	/// See [`ImpureFileRef::has_zscript`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsHandle::has_edfroot`].
+	/// See [`ImpureFileRef::has_edfroot`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureVfsHandle::has_decorate`].
+	/// See [`ImpureFileRef::has_decorate`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
@@ -232,23 +232,23 @@ impl ImpureVfs for VirtualFs {
 	}
 
 	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|handle| handle.is_impure_package())
+		self.lookup(path).map(|file| file.is_impure_package())
 	}
 
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|handle| handle.is_udmf_map())
+		self.lookup(path).map(|file| file.is_udmf_map())
 	}
 
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|handle| handle.has_zscript())
+		self.lookup(path).map(|file| file.has_zscript())
 	}
 
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|handle| handle.has_edfroot())
+		self.lookup(path).map(|file| file.has_edfroot())
 	}
 
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|handle| handle.has_decorate())
+		self.lookup(path).map(|file| file.has_decorate())
 	}
 
 	fn gamedata_kind(&self, id: &str) -> GameDataKind {
@@ -380,25 +380,25 @@ impl ImpureVfs for VirtualFs {
 	}
 
 	fn ccmd_file(&self, path: PathBuf) -> String {
-		let handle = match self.lookup(&path) {
+		let file = match self.lookup(&path) {
 			Some(e) => e,
 			None => {
 				return "Nothing exists at that path.".to_string();
 			}
 		};
 
-		if !handle.is_dir() {
+		if !file.is_dir() {
 			return format!(
 				"{}\r\n\tSize: {}B",
-				handle.file_name(),
-				handle.read().unwrap().len()
+				file.file_name(),
+				file.read().unwrap().len()
 			);
 		}
 
-		let count = handle.count();
+		let count = file.count();
 		let mut ret = String::with_capacity(count * 32);
 
-		for child in handle.children() {
+		for child in file.children() {
 			match write!(ret, "\r\n\t{}", child.file_name()) {
 				Ok(()) => {}
 				Err(err) => {
@@ -419,30 +419,30 @@ impl ImpureVfs for VirtualFs {
 	}
 }
 
-pub trait ImpureVfsHandle {
+pub trait ImpureFileRef {
 	/// Check if a directory node has a `meta.toml` leaf (case-insensitive) in it.
-	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
 	fn is_impure_package(&self) -> bool;
 	/// Check if this is a directory with a leaf node named `TEXTMAP`.
-	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
 	fn is_udmf_map(&self) -> bool;
 	/// Check if a directory node has a `decorate` file (case-insensitive) in it.
-	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
 	fn has_decorate(&self) -> bool;
 	/// Check if a directory node has a `zscript` file (case-insensitive) in it.
-	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
 	fn has_zscript(&self) -> bool;
 	/// Check if a directory node has an `edfroot` file (case-insensitive) in it.
-	/// Unconditionally returns false if the handle's entry is, itself, a leaf node.
+	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
 	fn has_edfroot(&self) -> bool;
 }
 
-impl ImpureVfsHandle for Handle<'_, '_> {
+impl ImpureFileRef for FileRef<'_, '_> {
 	fn is_impure_package(&self) -> bool {
 		self.is_dir()
 			&& self.contains_any(|p| {
@@ -502,7 +502,7 @@ impl ImpureVfsHandle for Handle<'_, '_> {
 	}
 }
 
-impl ZsFileSystem for Handle<'_, '_> {
+impl ZsFileSystem for FileRef<'_, '_> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
 		let target = match self.lookup_nocase(filename) {
 			Some(h) => h,

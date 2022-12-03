@@ -29,14 +29,14 @@ use super::{
 };
 
 #[derive(Clone)]
-pub struct Handle<'v, 'e> {
+pub struct FileRef<'v, 'e> {
 	pub(super) vfs: &'v VirtualFs,
 	pub(super) entry: &'e Entry,
 }
 
-impl<'v, 'e> Handle<'v, 'e> {
+impl<'v, 'e> FileRef<'v, 'e> {
 	#[must_use]
-	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<Handle> {
+	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		debug_assert!(self.entry.path.starts_with("/"));
 
 		let mut hash = 0u64;
@@ -49,14 +49,14 @@ impl<'v, 'e> Handle<'v, 'e> {
 			hash ^= metro::hash64(comp.as_os_str().to_str().unwrap());
 		}
 
-		self.vfs.lookup_hash(hash).map(|e| Handle {
+		self.vfs.lookup_hash(hash).map(|e| FileRef {
 			vfs: self.vfs,
 			entry: e,
 		})
 	}
 
 	#[must_use]
-	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<Handle> {
+	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		let full_path = self.entry.path.join(path);
 
 		for entry in &self.vfs.entries {
@@ -65,7 +65,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 				.to_string_lossy()
 				.eq_ignore_ascii_case(full_path.to_string_lossy().borrow())
 			{
-				return Some(Handle {
+				return Some(FileRef {
 					vfs: self.vfs,
 					entry,
 				});
@@ -83,7 +83,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 	}
 
 	/// Returns [`Error::InvalidUtf8`] if the entry's contents aren't valid UTF-8.
-	/// Otherwise acts like [`Handle::read`].
+	/// Otherwise acts like [`FileRef::read`].
 	pub fn read_str(&self) -> Result<&str, Error> {
 		match std::str::from_utf8(self.read()?) {
 			Ok(ret) => Ok(ret),
@@ -100,7 +100,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 	}
 
 	/// Returns [`Error::InvalidUtf8`] if the entry's contents aren't valid UTF-8.
-	/// Otherwise acts like [`Handle::copy`].
+	/// Otherwise acts like [`FileRef::copy`].
 	pub fn copy_string(&self) -> Result<String, Error> {
 		match String::from_utf8(self.copy()?) {
 			Ok(ret) => Ok(ret),
@@ -108,8 +108,8 @@ impl<'v, 'e> Handle<'v, 'e> {
 		}
 	}
 
-	pub fn children(&'e self) -> impl Iterator<Item = Handle> {
-		self.child_entries().map(|e| Handle {
+	pub fn children(&'e self) -> impl Iterator<Item = FileRef> {
+		self.child_entries().map(|e| FileRef {
 			vfs: self.vfs,
 			entry: e,
 		})
@@ -193,7 +193,7 @@ impl<'v, 'e> Handle<'v, 'e> {
 }
 
 // Internal implementation details.
-impl<'v, 'e> Handle<'v, 'e> {
+impl<'v, 'e> FileRef<'v, 'e> {
 	fn child_entries(&'e self) -> impl Iterator<Item = &'e Entry> {
 		self.vfs
 			.entries

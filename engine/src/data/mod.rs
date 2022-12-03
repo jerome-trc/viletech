@@ -36,9 +36,8 @@ use crate::{
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
 	newtype,
-	vfs::{ImpureVfs, VirtualFs},
+	vfs::{FileRef, ImpureVfs, VirtualFs},
 	zscript::{self, parser::issue::Level as ZsParseIssueLevel},
-	VfsHandle,
 };
 
 pub use asset::{
@@ -350,9 +349,9 @@ impl DataCore {
 		debug_assert!(metas[0].id == "impure");
 
 		for (_index, meta) in metas.drain(..).enumerate() {
-			let _handle = vfs
+			let _fref = vfs
 				.lookup(&meta.id)
-				.expect("Failed to find a namespace's VFS handle for data core population.");
+				.expect("Failed to find a namespace's VFS fileref for data core population.");
 
 			let kind = vfs.gamedata_kind(&meta.id);
 
@@ -379,8 +378,8 @@ impl DataCore {
 
 impl DataCore {
 	#[allow(dead_code)]
-	fn try_load_zscript(namespace: &mut Namespace, handle: &VfsHandle) {
-		let parse_out = zscript::parse(handle.clone());
+	fn try_load_zscript(namespace: &mut Namespace, file: &FileRef) {
+		let parse_out = zscript::parse(file.clone());
 		let nsid = &namespace.meta.id;
 
 		let any_parse_errors = parse_out

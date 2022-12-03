@@ -272,7 +272,7 @@ impl ClientCore {
 				ConsoleRequest::Sound(arg) => {
 					let vfsg = self.vfs.read();
 
-					let handle = match vfsg.lookup(&arg) {
+					let fref = match vfsg.lookup(&arg) {
 						Some(h) => h,
 						None => {
 							info!("No file under virtual path: {}", arg);
@@ -280,7 +280,7 @@ impl ClientCore {
 						}
 					};
 
-					let sdat = match audio::sound_from_file(handle, StaticSoundSettings::default())
+					let sdat = match audio::sound_from_file(fref, StaticSoundSettings::default())
 					{
 						Ok(ssd) => ssd,
 						Err(err) => {
