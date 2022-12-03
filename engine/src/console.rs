@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{cell::Cell, collections::VecDeque, io, thread, time::Duration};
+use std::{collections::VecDeque, io, thread, time::Duration};
 
 use crossbeam::channel::Receiver;
 use egui::{
@@ -36,7 +36,7 @@ use crate::{
 pub type Sender = crossbeam::channel::Sender<Message>;
 
 pub struct Console<C: terminal::Command> {
-	open: Cell<bool>,
+	open: bool,
 	/// Takes messages coming from the `log` crate's backend.
 	log_receiver: Receiver<Message>,
 	messages: Vec<Message>,
@@ -57,6 +57,7 @@ pub struct Console<C: terminal::Command> {
 	draw_log: bool,
 	/// If `false`, messages tagged [`MessageKind::Toast`] aren't drawn.
 	draw_toast: bool,
+
 	/// Console commands can emit a "request" in order to act upon the client.
 	/// Between frames, this container gets drained and all requests are fulfilled.
 	pub requests: VecDeque<C::Output>,
@@ -87,9 +88,9 @@ impl<C: terminal::Command> Console<C> {
 	pub fn new(log_receiver: Receiver<Message>) -> Self {
 		Console {
 			#[cfg(debug_assertions)]
-			open: Cell::new(true),
+			open: true,
 			#[cfg(not(debug_assertions))]
-			open: Cell::new(false),
+			open: false,
 			log_receiver,
 			messages: Vec::<Message>::default(),
 			input_history: Vec::<String>::default(),
@@ -114,20 +115,20 @@ impl<C: terminal::Command> Console<C> {
 			self.messages.push(msg);
 		}
 
-		let mut is_open = self.open.get();
-
-		if !is_open {
+		if !self.open {
 			return;
 		}
 
+		let mut open = self.open;
+
 		egui::Window::new("Console")
-			.open(&mut is_open)
+			.open(&mut open)
 			.resizable(true)
 			.show(ctx, |ui| {
 				self.ui_impl(ui, ctx);
 			});
 
-		self.open.set(is_open);
+		self.open = open;
 	}
 
 	/// Appends a custom message.
@@ -147,14 +148,14 @@ impl<C: terminal::Command> Console<C> {
 			}
 		};
 
-		if !self.open.get() {
+		if !self.open {
 			if vkc == VirtualKeyCode::Grave {
-				self.open.set(true);
+				self.open = true;
 			} else {
 				return;
 			}
 		} else if vkc == VirtualKeyCode::Grave {
-			self.open.set(false);
+			self.open = false;
 			return;
 		}
 
