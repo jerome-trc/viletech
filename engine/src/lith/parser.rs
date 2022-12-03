@@ -17,53 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-pub mod parser;
-
-#[must_use]
-#[allow(dead_code)]
-pub(crate) fn is_keyword(string: &str) -> bool {
-	const KEYWORDS: &[&'static str] = &[
-		"abstract",
-		"break",
-		"catch",
-		"class",
-		"compile",
-		"const",
-		"continue",
-		"defer",
-		"do",
-		"else",
-		"enum",
-		"final",
-		"finally",
-		"for",
-		"foreach",
-		"if",
-		"in",
-		"interface",
-		"is",
-		"let",
-		"loop",
-		"macro",
-		"mixin",
-		"native",
-		"out",
-		"override",
-		"private",
-		"protected",
-		"public",
-		"return",
-		"static",
-		"struct",
-		"try",
-		"type",
-		"typeof",
-		"union",
-		"until",
-		"virtual",
-		"while",
-		"yield",
-	];
-
-	KEYWORDS.iter().any(|s| *s == string)
-}
+#[derive(pest_derive::Parser)]
+#[grammar = "lith/lith.pest"]
+struct Parser;
