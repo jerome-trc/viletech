@@ -30,10 +30,12 @@ macro_rules! replace_expr {
 /// Usage examples:
 /// ```
 /// newtype!(pub struct NewType(i32));
-/// newtype!(
-///     /// Here's an informative comment.
+///
+/// newtype! {
+///     /// This newtype derives `Clone`.
+///     #[derive(Clone)]
 ///     pub struct NewType2(Vec<usize>)
-/// );
+/// }
 /// ```
 #[macro_export]
 macro_rules! newtype {
@@ -88,7 +90,7 @@ macro_rules! newtype_mutref {
 }
 
 /// Creates an anonymous block with a lazy-initialised static [`regex::Regex`].
-/// From https://docs.rs/once_cell/latest/once_cell/index.html#lazily-compiled-regex.
+/// From <https://docs.rs/once_cell/latest/once_cell/index.html#lazily-compiled-regex>.
 #[macro_export]
 macro_rules! lazy_regex {
 	($re:literal $(,)?) => {{
