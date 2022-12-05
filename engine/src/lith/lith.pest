@@ -25,20 +25,19 @@
 	IsolatedCr = { "\r" ~ (!"\n" ~ ANY) }
 
 	Ellipsis = { "..." }
-	ScopeRes = { "::" }
 	Ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 	BlockLabel = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* ~ ":" }
 
 // Primitives //////////////////////////////////////////////////////////////////
 
-	SignedIntType = { "int8" | "int16" | "int" | "int64" | "int128" }
-	UnsignedIntType = { "uint8" | "uint16" | "uint" | "uint64" | "uint128" }
+	SignedIntType = { "i8" | "i16" | "i32" | "i64" | "i128" }
+	UnsignedIntType = { "u8" | "u16" | "u32" | "u64" | "u128" }
 	IntType = { SignedIntType | UnsignedIntType }
 	FloatType = { "float" | "double" }
 
 // Literals ////////////////////////////////////////////////////////////////////
 
-	Literal = { NullLit | BoolLit | NumLit | CharLit | StringLit }
+	Literal = _{ NullLit | BoolLit | NumLit | CharLit | StringLit }
 
 	NullLit = { "null" }
 	BoolLit = { "true" | "false" }
@@ -59,11 +58,11 @@
 	StringLit = @{
 		"\"" ~ (
 			!("\"" | "\\" | IsolatedCr) ~
-			QuoteEscape | AsciiEscape | UnicodeEscape
+			(ANY | QuoteEscape | AsciiEscape | UnicodeEscape)
 		)* ~ "\""
 	}
 
-	NumLit = { IntLit | FloatLit }
+	NumLit = _{ IntLit | FloatLit }
 	IntLit = @{ (DecLit | BinLit | OctLit | HexLit) ~ IntSuffix? }
 	IntSuffix = {
 		"i8" | "i16" | "i32" | "i64" | "i128" |
@@ -102,7 +101,38 @@
 		ASCII_DIGIT ~
 		(ASCII_DIGIT | "_")*
 	}
-	FloatSuffix = { "f" | "d" }
+	FloatSuffix = { "f32" | "f64" }
 
 	RawString = @{ "r" ~ PUSH("#"*) ~ "\"" ~ RawStringInner ~ "\"" ~ POP }
 	RawStringInner = @{ (!("\"" ~ PEEK) ~ ANY)* }
+
+// Operators ///////////////////////////////////////////////////////////////////
+
+	BinOp = _{ ArithOp | BitwiseOp | LogicOp | CompareOp | ConcatOp }
+	// `**` is an exponent operator, from ZScript
+	ArithOp = { "+" | "-" | "*" | "/" | "%" | "**" | ".." }
+	// `>>>` is a right-wards unsigned bit shift, from ZScript
+	BitwiseOp = { "&" | "|" | "^" | "<<" | ">>" | ">>>" }
+	LogicOp = { "&&" | "||" }
+	// `~==` is from ZScript's "approximately equals" operator,
+	// which checks float equality with a small tolerance margin and
+	// compares strings case-insensitively
+	CompareOp = { "==" | "!=" | "<" | ">" | "<=" | ">=" | "~==" }
+	// String concatenation operator, from ZScript and Lua
+	ConcatOp = { ".." }
+	// From ZScript. If left < right, return -1. If right > left return 1.
+	// Otherwise, return 0.
+	// [RAT] Do I bother keeping this? I've never seen it
+	// in *anyone's* code. It's not even in gzdoom.pk3/zscript.
+	SignedDiffOp = { "<>=" }
+
+	UnOp = _{
+		ArithNegOp | ArithAntiNegOp | LogicNegOp | BitNegOp |
+		IncOp | DecOp
+	}
+	ArithNegOp = { "-" }
+	ArithAntiNegOp = { "+" }
+	LogicNegOp = { "!" }
+	BitNegOp = { "~" }
+	IncOp = { "++" }
+	DecOp = { "--" }
