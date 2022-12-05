@@ -1,3 +1,5 @@
+//! Infrastructure powering the LithScript language.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -59,6 +61,7 @@ pub(crate) fn is_keyword(string: &str) -> bool {
 		"type",
 		"typeof",
 		"union",
+		"unsafe",
 		"until",
 		"virtual",
 		"while",
