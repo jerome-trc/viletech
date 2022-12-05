@@ -280,8 +280,7 @@ impl ClientCore {
 						}
 					};
 
-					let sdat = match audio::sound_from_file(fref, StaticSoundSettings::default())
-					{
+					let sdat = match audio::sound_from_file(fref, StaticSoundSettings::default()) {
 						Ok(ssd) => ssd,
 						Err(err) => {
 							info!("Failed to create sound from file: {}", err);

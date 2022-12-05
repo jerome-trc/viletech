@@ -44,7 +44,7 @@ mod test;
 
 use entry::{Entry, EntryKind};
 
-pub use self::impure::{ImpureVfs, ImpureFileRef};
+pub use self::impure::{ImpureFileRef, ImpureVfs};
 pub use error::Error;
 pub use fileref::FileRef;
 
@@ -80,8 +80,12 @@ impl VirtualFs {
 			.collect();
 
 		let output = Mutex::new(Vec::<(Vec<Entry>, String, PathBuf)>::default());
-		let root = self.lookup_hash(Self::hash_path("/"));
-		let root_hash = root.expect("VFS root node is missing.").hash;
+
+		let (_, root) = self
+			.lookup_hash(Self::hash_path("/"))
+			.expect("VFS root node is missing.");
+
+		let root_hash = root.hash;
 
 		mounts.par_iter().for_each(|tuple| {
 			let pair = &tuple.1;
@@ -251,14 +255,18 @@ impl VirtualFs {
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<FileRef> {
-		let entry = match self.lookup_hash(Self::hash_path(path)) {
+		let (index, entry) = match self.lookup_hash(Self::hash_path(path)) {
 			Some(e) => e,
 			None => {
 				return None;
 			}
 		};
 
-		Some(FileRef { vfs: self, entry })
+		Some(FileRef {
+			vfs: self,
+			entry,
+			handle: Handle(index),
+		})
 	}
 
 	/// Returns `None` if and only if nothing exists at the given path.
@@ -267,16 +275,18 @@ impl VirtualFs {
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		self.entries
 			.iter()
-			.find(|e| {
+			.enumerate()
+			.find(|(_, e)| {
 				e.path_str().eq_ignore_ascii_case(
 					path.as_ref()
 						.to_str()
 						.expect("`lookup_nocase` received a path with invalid UTF-8."),
 				)
 			})
-			.map(|e| FileRef {
+			.map(|(i, e)| FileRef {
 				vfs: self,
 				entry: e,
+				handle: Handle(i),
 			})
 	}
 
@@ -298,7 +308,7 @@ impl VirtualFs {
 	pub fn read(&self, path: impl AsRef<Path>) -> Result<&[u8], Error> {
 		let path = path.as_ref();
 
-		let entry = match self.lookup_hash(Self::hash_path(path)) {
+		let (_, entry) = match self.lookup_hash(Self::hash_path(path)) {
 			Some(e) => e,
 			None => {
 				return Err(Error::NonExistentEntry(path.to_owned()));
@@ -326,7 +336,7 @@ impl VirtualFs {
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	pub fn count(&self, path: impl AsRef<Path>) -> Option<usize> {
-		let entry = self.lookup_hash(Self::hash_path(path))?;
+		let (_, entry) = self.lookup_hash(Self::hash_path(path))?;
 
 		if entry.is_leaf() {
 			Some(0)
@@ -353,10 +363,12 @@ impl VirtualFs {
 		Some(
 			self.entries
 				.iter()
-				.filter(move |e| glob.is_match(e.path_str()))
-				.map(move |e| FileRef {
+				.enumerate()
+				.filter(move |(_, e)| glob.is_match(e.path_str()))
+				.map(move |(i, e)| FileRef {
 					vfs: self,
 					entry: e,
+					handle: Handle(i),
 				}),
 		)
 	}
@@ -386,6 +398,18 @@ pub struct DiagInfo {
 	pub num_entries: usize,
 	pub mem_usage: usize,
 }
+
+/// An index into the VFS. Allows `O(1)` access to an entry with no borrows.
+///
+/// Retrieve one via [`FileRef::get_handle`].
+///
+/// There's nothing preventing these from being invalidated if the VFS is rearranged
+/// while one is outstanding, but Impure applications operate on the principle that,
+/// excluding the mandatory engine data, files are only mounted when starting a
+/// game and unmounted when quitting it, and handles that don't point into `/impure`
+/// should only be created during this period and dropped afterwards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Handle(pub(super) usize);
 
 // Miscellaneous internal implementation details.
 impl VirtualFs {
@@ -420,8 +444,11 @@ impl VirtualFs {
 	}
 
 	#[must_use]
-	fn lookup_hash(&self, hash: u64) -> Option<&Entry> {
-		self.entries.iter().find(|e| e.hash == hash)
+	fn lookup_hash(&self, hash: u64) -> Option<(usize, &Entry)> {
+		self.entries
+			.iter()
+			.enumerate()
+			.find(|(_, e)| e.hash == hash)
 	}
 
 	/// Recursively gets the total memory usage of a directory.

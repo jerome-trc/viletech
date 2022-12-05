@@ -25,13 +25,14 @@ use regex::Regex;
 use super::{
 	entry::{Entry, EntryKind},
 	error::Error,
-	VirtualFs,
+	Handle, VirtualFs,
 };
 
 #[derive(Clone)]
 pub struct FileRef<'v, 'e> {
 	pub(super) vfs: &'v VirtualFs,
 	pub(super) entry: &'e Entry,
+	pub(super) handle: Handle,
 }
 
 impl<'v, 'e> FileRef<'v, 'e> {
@@ -49,9 +50,10 @@ impl<'v, 'e> FileRef<'v, 'e> {
 			hash ^= metro::hash64(comp.as_os_str().to_str().unwrap());
 		}
 
-		self.vfs.lookup_hash(hash).map(|e| FileRef {
+		self.vfs.lookup_hash(hash).map(|(i, e)| FileRef {
 			vfs: self.vfs,
 			entry: e,
+			handle: Handle(i),
 		})
 	}
 
@@ -59,7 +61,7 @@ impl<'v, 'e> FileRef<'v, 'e> {
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<FileRef> {
 		let full_path = self.entry.path.join(path);
 
-		for entry in &self.vfs.entries {
+		for (index, entry) in self.vfs.entries.iter().enumerate() {
 			if entry
 				.path
 				.to_string_lossy()
@@ -68,6 +70,7 @@ impl<'v, 'e> FileRef<'v, 'e> {
 				return Some(FileRef {
 					vfs: self.vfs,
 					entry,
+					handle: Handle(index),
 				});
 			}
 		}
@@ -109,10 +112,16 @@ impl<'v, 'e> FileRef<'v, 'e> {
 	}
 
 	pub fn children(&'e self) -> impl Iterator<Item = FileRef> {
-		self.child_entries().map(|e| FileRef {
-			vfs: self.vfs,
-			entry: e,
-		})
+		self.vfs
+			.entries
+			.iter()
+			.enumerate()
+			.filter(|(_, e)| e.parent_hash == self.entry.hash)
+			.map(|(i, e)| FileRef {
+				vfs: self.vfs,
+				entry: e,
+				handle: Handle(i),
+			})
 	}
 
 	/// Note: non-recursive. Panics if used on a leaf node.
@@ -190,10 +199,12 @@ impl<'v, 'e> FileRef<'v, 'e> {
 	pub fn hash(&self) -> u64 {
 		self.entry.hash
 	}
-}
 
-// Internal implementation details.
-impl<'v, 'e> FileRef<'v, 'e> {
+	#[must_use]
+	pub fn get_handle(&self) -> Handle {
+		self.handle
+	}
+
 	fn child_entries(&'e self) -> impl Iterator<Item = &'e Entry> {
 		self.vfs
 			.entries
