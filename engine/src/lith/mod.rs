@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#[allow(dead_code)]
+pub mod ast;
 pub mod parse;
 
 #[must_use]
