@@ -24,7 +24,7 @@ pub mod ast;
 pub mod parse;
 
 #[must_use]
-#[allow(dead_code)]
+#[allow(unused)]
 pub(crate) fn is_keyword(string: &str) -> bool {
 	const KEYWORDS: &[&str] = &[
 		"abstract",
@@ -54,6 +54,7 @@ pub(crate) fn is_keyword(string: &str) -> bool {
 		"out",
 		"override",
 		"private",
+		"property",
 		"protected",
 		"public",
 		"return",
