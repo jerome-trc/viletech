@@ -20,10 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use serde::Serialize;
+use vec1::Vec1;
 
 use crate::utils::lang::{Identifier, FileSpan};
 
-use super::{literal::Literal, func::FunctionCallArg};
+use super::{literal::Literal, func::FunctionCallArg, Resolver};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
 pub enum BinaryOp {
@@ -95,6 +96,7 @@ pub struct Expression<'inp> {
 pub enum ExpressionKind<'inp> {
 	Ident(Identifier<'inp>),
 	Literal(Literal<'inp>),
+	Type(TypeExpr<'inp>),
 	Binary {
 		op: BinaryOp,
 		exprs: Box<BinaryOpExprs<'inp>>
@@ -115,6 +117,25 @@ pub enum ExpressionKind<'inp> {
 	},
 	Array(Box<ArrayExpr<'inp>>),
 	Structure(Box<StructExpr<'inp>>),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ExprList<'inp> {
+	pub span: FileSpan<'inp>,
+	pub exprs: Vec1<Expression<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TypeExpr<'inp> {
+	pub span: FileSpan<'inp>,
+	#[serde(flatten)]
+	pub kind: TypeExprKind<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum TypeExprKind<'inp> {
+	Anonymous,
+	Resolver(Resolver<'inp>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

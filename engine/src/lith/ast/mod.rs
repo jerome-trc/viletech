@@ -24,6 +24,7 @@ mod expr;
 mod func;
 mod item;
 mod literal;
+mod stat;
 
 use serde::Serialize;
 use vec1::Vec1;
@@ -68,4 +69,9 @@ pub struct Annotation<'inp> {
 	pub resolver: Resolver<'inp>,
 	pub outer: bool,
 	pub args: Vec<FunctionCallArg<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct BlockLabel<'inp> {
+	pub span: FileSpan<'inp>,
 }
