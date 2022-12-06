@@ -17,6 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+use pest::{iterators::Pairs, Parser as PestParser};
+
 #[derive(pest_derive::Parser)]
-#[grammar = "lith/lith.pest"]
-struct Parser;
+#[grammar = "lith/lex.pest"]
+struct Lexer;
+
+#[allow(unused)]
+fn lex(input: &str) -> Result<Pairs<Rule>, Box<pest::error::Error<Rule>>> {
+	Ok(Lexer::parse(Rule::TokenStream, input)?
+		.next()
+		.unwrap()
+		.into_inner())
+}

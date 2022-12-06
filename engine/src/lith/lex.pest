@@ -1,6 +1,4 @@
-// Indented in hopes that your editor provides folding.
-
-// Foundational ////////////////////////////////////////////////////////////////
+// Whitespace, comments ////////////////////////////////////////////////////////
 
 	WHITESPACE = _{ " " | "\t" | NEWLINE }
 	COMMENT = { BlockComment | LineComment }
@@ -24,16 +22,11 @@
 	BlockCommentOrDoc = { BlockComment | OuterBlockDoc | InnerBlockDoc }
 	IsolatedCr = { "\r" ~ (!"\n" ~ ANY) }
 
-	Ellipsis = { "..." }
-	Ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
-	BlockLabel = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* ~ ":" }
+// Top-level ///////////////////////////////////////////////////////////////////
 
-// Primitives //////////////////////////////////////////////////////////////////
+	TokenStream = { SOI ~ Token* ~ EOI }
 
-	SignedIntType = { "i8" | "i16" | "i32" | "i64" | "i128" }
-	UnsignedIntType = { "u8" | "u16" | "u32" | "u64" | "u128" }
-	IntType = { SignedIntType | UnsignedIntType }
-	FloatType = { "float" | "double" }
+	Token = _{ Literal | Keyword | Ident | Symbol }
 
 // Literals ////////////////////////////////////////////////////////////////////
 
@@ -106,33 +99,59 @@
 	RawString = @{ "r" ~ PUSH("#"*) ~ "\"" ~ RawStringInner ~ "\"" ~ POP }
 	RawStringInner = @{ (!("\"" ~ PEEK) ~ ANY)* }
 
-// Operators ///////////////////////////////////////////////////////////////////
+// Keywords ////////////////////////////////////////////////////////////////////
 
-	BinOp = _{ ArithOp | BitwiseOp | LogicOp | CompareOp | ConcatOp }
-	// `**` is an exponent operator, from ZScript
-	ArithOp = { "+" | "-" | "*" | "/" | "%" | "**" | ".." }
-	// `>>>` is a right-wards unsigned bit shift, from ZScript
-	BitwiseOp = { "&" | "|" | "^" | "<<" | ">>" | ">>>" }
-	LogicOp = { "&&" | "||" }
-	// `~==` is from ZScript's "approximately equals" operator,
-	// which checks float equality with a small tolerance margin and
-	// compares strings case-insensitively
-	CompareOp = { "==" | "!=" | "<" | ">" | "<=" | ">=" | "~==" }
-	// String concatenation operator, from ZScript and Lua
-	ConcatOp = { ".." }
-	// From ZScript. If left < right, return -1. If right > left return 1.
-	// Otherwise, return 0.
-	// [RAT] Do I bother keeping this? I've never seen it
-	// in *anyone's* code. It's not even in gzdoom.pk3/zscript.
-	SignedDiffOp = { "<>=" }
-
-	UnOp = _{
-		ArithNegOp | ArithAntiNegOp | LogicNegOp | BitNegOp |
-		IncOp | DecOp
+	Keyword = {
+		"abstract" | "break" | "catch" | "ceval" | "class" | "const" |
+		"continue" | "defer" | "do" | "else" | "enum" | "final" | "finally" |
+		"for" | "foreach" | "if" | "in" | "interface" | "is" | "let" | "loop" |
+		"macro" | "mixin" | "native" | "out" | "override" | "private" |
+		"protected" | "public" | "return" | "static" | "struct" | "try" |
+		"type" | "typeof" | "union" | "unsafe" | "until" | "virtual" |
+		"while" | "yield"
 	}
-	ArithNegOp = { "-" }
-	ArithAntiNegOp = { "+" }
-	LogicNegOp = { "!" }
-	BitNegOp = { "~" }
-	IncOp = { "++" }
-	DecOp = { "--" }
+
+// Symbols /////////////////////////////////////////////////////////////////////
+
+	Symbol = _{
+		BackTick | Tilde | Exclamation | At | Pound | Dollar | Percent | Caret |
+		Ampersand | Asterisk | LeftParen | RightParen | Minus | Underscore |
+		Plus | Equals | VertLine | BackSlash | LeftBracket | RightBracket |
+		LeftBrace | RightBrace | Colon | Semicolon | Comma | Period | LeftAngle |
+		RightAngle | Question | ForwardSlash
+	}
+
+	BackTick = { "`" }
+	Tilde = { "~" }
+	Exclamation = { "!" }
+	At = { "@" }
+	Pound = { "#" }
+	Dollar = { "$" }
+	Percent = { "%" }
+	Caret = { "^" }
+	Ampersand = { "&" }
+	Asterisk = { "*" }
+	LeftParen = { "(" }
+	RightParen = { ")" }
+	Minus = { "-" }
+	Underscore = { "_" }
+	Plus = { "+" }
+	Equals = { "=" }
+	VertLine = { "|" }
+	BackSlash = { "\\" }
+	LeftBracket = { "[" }
+	RightBracket = { "]" }
+	LeftBrace = { "{" }
+	RightBrace = { "}" }
+	Colon = { ":" }
+	Semicolon = { ";" }
+	Comma = { "," }
+	Period = { "." }
+	LeftAngle = { "<" }
+	RightAngle = { ">" }
+	Question = { "?" }
+	ForwardSlash = { "/" }
+
+// Miscellaneous ///////////////////////////////////////////////////////////////
+
+	Ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
