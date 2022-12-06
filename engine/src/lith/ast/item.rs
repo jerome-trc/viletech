@@ -105,14 +105,16 @@ pub struct DeclQualifier<'inp> {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 pub enum DeclQualifierKind {
-	Static,
-	Private,
-	Protected,
-	Final,
-	Virtual,
-	Override,
 	Abstract,
 	Action,
+	CEval,
+	Final,
+	Override,
+	Private,
+	Protected,
+	Public,
+	Static,
+	Virtual,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
