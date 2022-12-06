@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 mod decl;
 mod expr;
 mod func;
+mod item;
 mod literal;
 
 use serde::Serialize;
@@ -29,11 +30,11 @@ use vec1::Vec1;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use self::func::FunctionCallArg;
+use self::{func::FunctionCallArg, item::ItemDef};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct AbstractSyntaxTree {
-	// ???
+pub struct AbstractSyntaxTree<'inp> {
+	pub items: Vec<ItemDef<'inp>>
 }
 
 /// A "resolver" is a double-colon-separated token chain, named after the
