@@ -41,6 +41,7 @@ pub use stat::*;
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AbstractSyntaxTree<'inp> {
 	pub annotations: Vec<Annotation<'inp>>,
+	/// Inner annotations only, applied to the entire translation unit.
 	pub items: Vec<ItemDef<'inp>>,
 }
 

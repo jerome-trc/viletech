@@ -26,7 +26,7 @@ use crate::utils::lang::{FileSpan, Identifier};
 use super::{
 	expr::{ExprList, Expression, TypeExpr},
 	item::ItemDef,
-	BlockLabel,
+	BlockLabel, Annotation,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -45,32 +45,44 @@ pub enum StatementKind<'inp> {
 		cond: Expression<'inp>,
 		body: CompoundStatement<'inp>,
 		else_body: Option<CompoundStatement<'inp>>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	Switch {
 		val: Expression<'inp>,
 		label: Option<BlockLabel<'inp>>,
 		body: Vec<CompoundStatement<'inp>>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	CondIter {
 		cond: Expression<'inp>,
 		kind: CondIterKind,
 		body: Box<CompoundStatement<'inp>>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	ForIter {
 		init: Option<ForInit<'inp>>,
 		cond: Option<Expression<'inp>>,
 		update: Option<ExprList<'inp>>,
 		body: Box<CompoundStatement<'inp>>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	ForEachIter {
 		var_name: Identifier<'inp>,
 		sequence: Expression<'inp>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	Item(ItemDef<'inp>),
 	LocalVarDecl(LocalVarDecl<'inp>),
 	MultiAssign {
 		assignees: ExprList<'inp>,
 		rhs: Expression<'inp>,
+		/// Outer annotations only.
+		annotations: Vec<Annotation<'inp>>,
 	},
 	Continue,
 	Break,
@@ -82,6 +94,8 @@ pub struct CompoundStatement<'inp> {
 	pub span: FileSpan<'inp>,
 	pub label: Option<BlockLabel<'inp>>,
 	pub statements: Vec<Statement<'inp>>,
+	/// Inner annotations only, applied to the entire block.
+	pub annotations: Vec<Annotation<'inp>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -90,10 +104,10 @@ pub struct LocalVarDecl<'inp> {
 	pub name: Identifier<'inp>,
 	pub type_spec: Option<TypeExpr<'inp>>,
 	pub init: Option<Expression<'inp>>,
+	pub annotations: Vec<Annotation<'inp>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-
 pub enum CondIterKind {
 	Loop,
 	While,
