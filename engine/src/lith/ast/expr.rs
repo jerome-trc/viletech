@@ -113,23 +113,35 @@ pub enum ExpressionKind<'inp> {
 		lhs: Box<Expression<'inp>>,
 		exprs: Vec<FunctionCallArg<'inp>>,
 	},
+	Array(Box<ArrayExpr<'inp>>),
+	Structure(Box<StructExpr<'inp>>),
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BinaryOpExprs<'inp> {
 	pub lhs: Expression<'inp>,
 	pub rhs: Expression<'inp>,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TernaryOpExprs<'inp> {
 	pub cond: Expression<'inp>,
 	pub if_true: Expression<'inp>,
 	pub if_false: Expression<'inp>,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ArrayIndexExprs<'inp> {
 	pub lhs: Expression<'inp>,
 	pub index: Expression<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ArrayExpr<'inp> {
+	pub exprs: Vec<Expression<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StructExpr<'inp> {
+	pub inits: Vec<(Identifier<'inp>, Expression<'inp>)>,
 }
