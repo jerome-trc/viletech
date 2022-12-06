@@ -21,6 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
+use crate::utils::lang::{Identifier, FileSpan};
+
+use super::{literal::Literal, func::FunctionCallArg};
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
 pub enum BinaryOp {
 	Add,
@@ -77,4 +81,55 @@ pub enum PrefixOp {
 pub enum PostfixOp {
 	Increment,
 	Decrement,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Expression<'inp> {
+	pub span: Option<FileSpan<'inp>>,
+	#[serde(flatten)]
+	pub kind: ExpressionKind<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "data")]
+pub enum ExpressionKind<'inp> {
+	Ident(Identifier<'inp>),
+	Literal(Literal<'inp>),
+	Binary {
+		op: BinaryOp,
+		exprs: Box<BinaryOpExprs<'inp>>
+	},
+	Prefix {
+		op: PrefixOp,
+		expr: Box<Expression<'inp>>,
+	},
+	Postfix {
+		op: PostfixOp,
+		expr: Box<Expression<'inp>>,
+	},
+	Ternary(Box<TernaryOpExprs<'inp>>),
+	ArrayIndex(Box<ArrayIndexExprs<'inp>>),
+	Call {
+		lhs: Box<Expression<'inp>>,
+		exprs: Vec<FunctionCallArg<'inp>>,
+	},
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct BinaryOpExprs<'inp> {
+	pub lhs: Expression<'inp>,
+	pub rhs: Expression<'inp>,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct TernaryOpExprs<'inp> {
+	pub cond: Expression<'inp>,
+	pub if_true: Expression<'inp>,
+	pub if_false: Expression<'inp>,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct ArrayIndexExprs<'inp> {
+	pub lhs: Expression<'inp>,
+	pub index: Expression<'inp>,
 }

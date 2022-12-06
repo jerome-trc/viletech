@@ -19,7 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod decl;
 mod expr;
+mod func;
 mod literal;
 
 use serde::Serialize;
