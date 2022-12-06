@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{class::ClassInnerKind, decl::FieldDeclaration, item::ItemDef};
+use super::{class::ClassInnerKind, item::ItemDef, FieldDeclaration};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MixinClassDef<'inp> {

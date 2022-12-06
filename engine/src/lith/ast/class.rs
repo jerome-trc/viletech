@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{decl::FieldDeclaration, item::ItemDef, Resolver};
+use super::{item::ItemDef, FieldDeclaration, Resolver};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ClassDef<'inp> {

@@ -24,7 +24,7 @@ use vec1::Vec1;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{func::FunctionCallArg, literal::Literal, Resolver};
+use super::{literal::Literal, Resolver};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
 pub enum BinaryOp {
@@ -155,6 +155,20 @@ pub struct TernaryOpExprs<'inp> {
 pub struct ArrayIndexExprs<'inp> {
 	pub lhs: Expression<'inp>,
 	pub index: Expression<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FunctionCallArg<'inp> {
+	pub span: FileSpan<'inp>,
+	#[serde(flatten)]
+	pub kind: FunctionCallArgKind<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "data")]
+pub enum FunctionCallArgKind<'inp> {
+	Unnamed(Expression<'inp>),
+	Named(Identifier<'inp>, Expression<'inp>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

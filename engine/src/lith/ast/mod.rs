@@ -20,9 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 mod class;
-mod decl;
 mod expr;
-mod func;
 mod item;
 mod literal;
 mod mixin;
@@ -33,7 +31,12 @@ use vec1::Vec1;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use self::{func::FunctionCallArg, item::ItemDef};
+pub use class::*;
+pub use expr::*;
+pub use item::*;
+pub use literal::*;
+pub use mixin::*;
+pub use stat::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AbstractSyntaxTree<'inp> {
@@ -66,11 +69,16 @@ pub enum ResolverPartKind<'inp> {
 	SelfUppercase,
 }
 
+/// Equivalent to "attributes" in Rust and C#, and Java's feature of the same name.
+/// These use the syntax `#[]` with an optional `!` in between the `#` and `[`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Annotation<'inp> {
 	pub span: FileSpan<'inp>,
 	pub resolver: Resolver<'inp>,
-	pub outer: bool,
+	/// If an exclamation mark is between the pound and left bracket, this is an
+	/// "inner" annotation, and applies to the item/block it's declared in.
+	/// Otherwise it's "outer" and applies to the next item/block.
+	pub inner: bool,
 	pub args: Vec<FunctionCallArg<'inp>>,
 }
 
