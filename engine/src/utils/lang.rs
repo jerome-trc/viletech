@@ -29,9 +29,9 @@ use crate::vfs;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct FileSpan<'inp> {
 	#[serde(skip)]
-	file: vfs::Handle,
+	pub(crate) file: vfs::Handle,
 	#[serde(with = "PestSpanSerde")]
-	span: pest::Span<'inp>,
+	pub(crate) span: pest::Span<'inp>,
 }
 
 #[derive(Serialize)]
