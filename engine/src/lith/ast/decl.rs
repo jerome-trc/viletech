@@ -21,7 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::FileSpan;
+use crate::utils::lang::{FileSpan, Identifier};
+
+use super::Resolver;
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FieldDeclaration<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub type_spec: Resolver<'inp>,
+	pub quals: Vec<DeclQualifier<'inp>>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DeclQualifier<'inp> {

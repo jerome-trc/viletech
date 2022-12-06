@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{Resolver, expr::Expression};
+use super::{Resolver, expr::Expression, decl::FieldDeclaration};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ItemDef<'inp> {
@@ -37,6 +37,8 @@ pub struct ItemDef<'inp> {
 pub enum ItemDefKind<'inp> {
 	TypeAlias(TypeAlias<'inp>),
 	Constant(Constant<'inp>),
+	Enum(EnumDef<'inp>),
+	Union(UnionDef<'inp>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -52,4 +54,33 @@ pub struct Constant<'inp> {
 	pub name: Identifier<'inp>,
 	pub type_spec: Option<Resolver<'inp>>,
 	pub value: Expression<'inp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct EnumDef<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub type_spec: Option<Resolver<'inp>>,
+	pub variants: Vec<EnumVariant<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct EnumVariant<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub init: Option<Expression<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct UnionDef<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub variants: Vec<UnionVariant<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct UnionVariant<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub inners: Vec<FieldDeclaration<'inp>>,
 }
