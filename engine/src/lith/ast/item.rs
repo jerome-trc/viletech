@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{Resolver, expr::Expression, decl::FieldDeclaration};
+use super::{Resolver, expr::Expression, decl::{FieldDeclaration, FunctionDeclaration}, class::ClassDef};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ItemDef<'inp> {
@@ -39,6 +39,8 @@ pub enum ItemDefKind<'inp> {
 	Constant(Constant<'inp>),
 	Enum(EnumDef<'inp>),
 	Union(UnionDef<'inp>),
+	Function(FunctionDeclaration<'inp>),
+	Class(ClassDef<'inp>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

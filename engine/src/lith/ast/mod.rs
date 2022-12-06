@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod class;
 mod decl;
 mod expr;
 mod func;
