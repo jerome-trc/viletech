@@ -17,16 +17,53 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use pest::{iterators::Pairs, Parser as PestParser};
+use std::collections::VecDeque;
+
+use pest::{iterators::Pair, Parser as PestParser};
+use serde::Serialize;
+use vec1::Vec1;
+
+use crate::utils::lang::FileSpan;
+
+type LexError = Box<pest::error::Error<Rule>>;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "lith/lex.pest"]
 struct Lexer;
 
-#[allow(unused)]
-fn lex(input: &str) -> Result<Pairs<Rule>, Box<pest::error::Error<Rule>>> {
-	Ok(Lexer::parse(Rule::TokenStream, input)?
+pub fn parse<'inp>(input: &'inp str) -> Result<ParseOutput<'inp>, LexError> {
+	let token_stream = Lexer::parse(Rule::TokenStream, input)?
 		.next()
 		.unwrap()
-		.into_inner())
+		.into_inner();
+
+	let _tq = VecDeque::<Pair<Rule>>::with_capacity(8);
+	let issues = Vec::<Issue>::default();
+
+	for token in token_stream {
+		match token.as_rule() {
+			_ => {}
+		}
+	}
+
+	Ok(ParseOutput { issues })
+}
+
+#[derive(Debug)]
+pub struct ParseOutput<'inp> {
+	pub issues: Vec<Issue<'inp>>,
+}
+
+#[derive(Debug)]
+pub struct Issue<'inp> {
+	pub level: IssueLevel,
+	pub msg: String,
+	pub main_spans: Vec1<FileSpan<'inp>>,
+	pub info_spans: Vec<FileSpan<'inp>>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
+pub enum IssueLevel {
+	Warning,
+	Error,
 }
