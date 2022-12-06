@@ -37,7 +37,8 @@ use self::{func::FunctionCallArg, item::ItemDef};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AbstractSyntaxTree<'inp> {
-	pub items: Vec<ItemDef<'inp>>
+	pub annotations: Vec<Annotation<'inp>>,
+	pub items: Vec<ItemDef<'inp>>,
 }
 
 /// A "resolver" is a double-colon-separated token chain, named after the
@@ -73,7 +74,7 @@ pub struct Annotation<'inp> {
 	pub args: Vec<FunctionCallArg<'inp>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BlockLabel<'inp> {
 	pub span: FileSpan<'inp>,
 }

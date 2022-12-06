@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{Resolver, decl::FieldDeclaration, item::ItemDef};
+use super::{decl::FieldDeclaration, item::ItemDef, Resolver};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ClassDef<'inp> {
@@ -54,7 +54,7 @@ pub enum ClassInnerKind<'inp> {
 	Item(ItemDef<'inp>),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ClassQualifier<'inp> {
 	pub span: FileSpan<'inp>,
 	pub kind: ClassQualKind,

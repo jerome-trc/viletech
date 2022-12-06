@@ -29,7 +29,7 @@ use super::{
 	Resolver,
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DeclQualifier<'inp> {
 	pub span: FileSpan<'inp>,
 	#[serde(flatten)]
@@ -48,7 +48,7 @@ pub enum DeclQualifierKind {
 	Action,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FieldDeclaration<'inp> {
 	pub span: FileSpan<'inp>,
 	pub name: Identifier<'inp>,

@@ -22,9 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use serde::Serialize;
 use vec1::Vec1;
 
-use crate::utils::lang::{Identifier, FileSpan};
+use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{literal::Literal, func::FunctionCallArg, Resolver};
+use super::{func::FunctionCallArg, literal::Literal, Resolver};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
 pub enum BinaryOp {
@@ -99,7 +99,7 @@ pub enum ExpressionKind<'inp> {
 	Type(TypeExpr<'inp>),
 	Binary {
 		op: BinaryOp,
-		exprs: Box<BinaryOpExprs<'inp>>
+		exprs: Box<BinaryOpExprs<'inp>>,
 	},
 	Prefix {
 		op: PrefixOp,
@@ -125,14 +125,14 @@ pub struct ExprList<'inp> {
 	pub exprs: Vec1<Expression<'inp>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TypeExpr<'inp> {
 	pub span: FileSpan<'inp>,
 	#[serde(flatten)]
 	pub kind: TypeExprKind<'inp>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum TypeExprKind<'inp> {
 	Anonymous,
 	Resolver(Resolver<'inp>),

@@ -31,7 +31,7 @@ type LexError = Box<pest::error::Error<Rule>>;
 #[grammar = "lith/lex.pest"]
 struct Lexer;
 
-pub fn parse<'inp>(input: &'inp str) -> Result<ParseOutput<'inp>, LexError> {
+pub fn parse(input: &str) -> Result<ParseOutput, LexError> {
 	let token_stream = Lexer::parse(Rule::TokenStream, input)?
 		.next()
 		.unwrap()

@@ -23,7 +23,12 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{Resolver, expr::Expression, decl::{FieldDeclaration, FunctionDeclaration}, class::ClassDef};
+use super::{
+	class::ClassDef,
+	decl::{FieldDeclaration, FunctionDeclaration},
+	expr::Expression,
+	Resolver,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ItemDef<'inp> {
@@ -43,7 +48,7 @@ pub enum ItemDefKind<'inp> {
 	Class(ClassDef<'inp>),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TypeAlias<'inp> {
 	pub span: FileSpan<'inp>,
 	pub name: Identifier<'inp>,
@@ -73,14 +78,14 @@ pub struct EnumVariant<'inp> {
 	pub init: Option<Expression<'inp>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct UnionDef<'inp> {
 	pub span: FileSpan<'inp>,
 	pub name: Identifier<'inp>,
 	pub variants: Vec<UnionVariant<'inp>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct UnionVariant<'inp> {
 	pub span: FileSpan<'inp>,
 	pub name: Identifier<'inp>,

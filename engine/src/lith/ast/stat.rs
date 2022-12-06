@@ -23,7 +23,11 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::{expr::{Expression, TypeExpr, ExprList}, item::ItemDef, BlockLabel};
+use super::{
+	expr::{ExprList, Expression, TypeExpr},
+	item::ItemDef,
+	BlockLabel,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Statement<'inp> {
@@ -88,7 +92,7 @@ pub struct LocalVarDecl<'inp> {
 	pub init: Option<Expression<'inp>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 
 pub enum CondIterKind {
 	Loop,
