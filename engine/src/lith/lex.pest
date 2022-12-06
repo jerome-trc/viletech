@@ -2,12 +2,17 @@
 
 	WHITESPACE = _{ " " | "\t" | NEWLINE }
 	COMMENT = { BlockComment | LineComment }
+
 	LineComment = { "//" ~ (!("/" | "!") | "//") ~ "\n"* | "//" }
 	BlockComment = {
 		"/*" ~ (!("*" | "!") | "**" | BlockCommentOrDoc) ~
 		(BlockCommentOrDoc | (!"*/" ~ ANY))* ~
 		"*/" | "/**/" | "/***/"
 	}
+
+	BlockCommentOrDoc = { BlockComment | OuterBlockDoc | InnerBlockDoc }
+	IsolatedCr = { "\r" ~ (!"\n" ~ ANY) }
+
 	InnerLineDoc = { "//!" ~ !("\n" | IsolatedCr)* }
 	InnerBlockDoc = {
 		"/*!" ~ (BlockCommentOrDoc | (!("*/" | IsolatedCr) ~ ANY))* ~ "*/"
@@ -19,14 +24,12 @@
 		(BlockCommentOrDoc | (!("*/" | IsolatedCr) ~ ANY))* ~
 		"*/"
 	}
-	BlockCommentOrDoc = { BlockComment | OuterBlockDoc | InnerBlockDoc }
-	IsolatedCr = { "\r" ~ (!"\n" ~ ANY) }
 
 // Top-level ///////////////////////////////////////////////////////////////////
 
 	TokenStream = { SOI ~ Token* ~ EOI }
 
-	Token = _{ Literal | Keyword | Ident | Symbol }
+	Token = _{ Literal | Keyword | Ident | Glyph }
 
 // Literals ////////////////////////////////////////////////////////////////////
 
@@ -111,9 +114,9 @@
 		"while" | "yield"
 	}
 
-// Symbols /////////////////////////////////////////////////////////////////////
+// Glyphs //////////////////////////////////////////////////////////////////////
 
-	Symbol = _{
+	Glyph = _{
 		BackTick | Tilde | Exclamation | At | Pound | Dollar | Percent | Caret |
 		Ampersand | Asterisk | LeftParen | RightParen | Minus | Underscore |
 		Plus | Equals | VertLine | BackSlash | LeftBracket | RightBracket |
