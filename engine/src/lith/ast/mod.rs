@@ -25,6 +25,7 @@ mod expr;
 mod func;
 mod item;
 mod literal;
+mod mixin;
 mod stat;
 
 use serde::Serialize;
