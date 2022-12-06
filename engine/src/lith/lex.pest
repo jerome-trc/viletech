@@ -104,15 +104,56 @@
 
 // Keywords ////////////////////////////////////////////////////////////////////
 
-	Keyword = {
-		"abstract" | "break" | "catch" | "ceval" | "class" | "const" |
-		"continue" | "defer" | "do" | "else" | "enum" | "final" | "finally" |
-		"for" | "foreach" | "if" | "in" | "interface" | "is" | "let" | "loop" |
-		"macro" | "mixin" | "native" | "out" | "override" | "private" |
-		"property" | "protected" | "public" | "return" | "static" | "struct" |
-		"try" | "type" | "typeof" | "union" | "unsafe" | "until" | "virtual" |
-		"while" | "yield"
+	Keyword = _{
+		Abstract | Break | Catch | Ceval | Class | Const | Continue | Defer |
+		Do | Else | Enum | Final | Finally | For | ForEach | If | In | Interface |
+		Is | Let | Loop | Macro | Mixin | Native | Out | Override | Private |
+		Property | Protected | Public | Return | Static | Struct | Try | Type |
+		TypeOf | Union | Unsafe | Until | Virtual | While | Yield
 	}
+
+	Abstract = { "abstract" }
+	Break = { "break" }
+	Catch = { "catch" }
+	Ceval = { "ceval" }
+	Class = { "class" }
+	Const = { "const" }
+	Continue = { "continue" }
+	Defer = { "defer" }
+	Do = { "do" }
+	Else = { "else" }
+	Enum = { "enum" }
+	Final = { "final" }
+	Finally = { "finally" }
+	For = { "for" }
+	ForEach = { "foreach" }
+	If = { "if" }
+	In = { "in" }
+	Interface = { "interface" }
+	Is = { "is" }
+	Let = { "let" }
+	Loop = { "loop" }
+	Macro = { "macro" }
+	Mixin = { "mixin" }
+	Native = { "native" }
+	Out = { "out" }
+	Override = { "override" }
+	Private = { "private" }
+	Property = { "property" }
+	Protected = { "protected" }
+	Public = { "public" }
+	Return = { "return" }
+	Static = { "static" }
+	Struct = { "struct" }
+	Try = { "try" }
+	Type = { "type" }
+	TypeOf = { "typeof" }
+	Union = { "union" }
+	Unsafe = { "unsafe" }
+	Until = { "until" }
+	Virtual = { "virtual" }
+	While = { "while" }
+	Yield = { "yield" }
 
 // Glyphs //////////////////////////////////////////////////////////////////////
 
