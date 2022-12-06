@@ -29,9 +29,11 @@ use vec1::Vec1;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
+use self::func::FunctionCallArg;
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct AbstractSyntaxTree<'inp> {
-	pub resolvers: Vec<Resolver<'inp>>,
+pub struct AbstractSyntaxTree {
+	// ???
 }
 
 /// A "resolver" is a double-colon-separated token chain, named after the
@@ -57,4 +59,12 @@ pub enum ResolverPartKind<'inp> {
 	Identifier(Identifier<'inp>),
 	Super,
 	SelfUppercase,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Annotation<'inp> {
+	pub span: FileSpan<'inp>,
+	pub resolver: Resolver<'inp>,
+	pub outer: bool,
+	pub args: Vec<FunctionCallArg<'inp>>,
 }
