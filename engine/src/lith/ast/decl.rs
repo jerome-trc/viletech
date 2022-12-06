@@ -1,4 +1,4 @@
-//! Declarations of members, functions...
+//! Declarations of members, properties, functions, bitflags...
 
 /*
 
@@ -23,15 +23,11 @@ use serde::Serialize;
 
 use crate::utils::lang::{FileSpan, Identifier};
 
-use super::Resolver;
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FieldDeclaration<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub type_spec: Resolver<'inp>,
-	pub quals: Vec<DeclQualifier<'inp>>,
-}
+use super::{
+	expr::{Expression, TypeExpr},
+	stat::CompoundStatement,
+	Resolver,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DeclQualifier<'inp> {
@@ -50,4 +46,55 @@ pub enum DeclQualifierKind {
 	Override,
 	Abstract,
 	Action,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FieldDeclaration<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub type_spec: Resolver<'inp>,
+	pub quals: Vec<DeclQualifier<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FunctionDeclaration<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub quals: Vec<DeclQualifier<'inp>>,
+	pub return_type: Option<TypeExpr<'inp>>,
+	pub params: Vec<FuncParameter<'inp>>,
+	pub body: Option<CompoundStatement<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FuncParameter<'inp> {
+	pub span: FileSpan<'inp>,
+	pub quals: Vec<FuncParamQualifier<'inp>>,
+	pub type_spec: TypeExpr<'inp>,
+	pub name: Identifier<'inp>,
+	pub default: Option<Expression<'inp>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct FuncParamQualifier<'inp> {
+	pub span: FileSpan<'inp>,
+	#[serde(flatten)]
+	pub kind: FuncParamQualKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "def")]
+pub enum FuncParamQualKind {
+	In,
+	Out,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PropertyDef<'inp> {
+	pub span: FileSpan<'inp>,
+	pub name: Identifier<'inp>,
+	pub quals: Vec<DeclQualifier<'inp>>,
+	pub type_spec: Option<TypeExpr<'inp>>,
+	pub getter: Option<CompoundStatement<'inp>>,
+	pub setter: Option<CompoundStatement<'inp>>,
 }
