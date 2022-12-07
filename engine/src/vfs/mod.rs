@@ -54,6 +54,8 @@ pub use fileref::FileRef;
 /// Just the mounting process requires large amounts of time spent on file I/O,
 /// so clustering a complete read along with it grants a time savings.
 pub struct VirtualFs {
+	/// The first entry is always the root node. This is of the kind
+	/// [`EntryKind::Directory`], and lies under the virtual path `/`.
 	entries: Vec<Entry>,
 	/// Mounted game data object IDs are used as keys.
 	real_paths: HashMap<String, PathBuf>,
@@ -63,8 +65,8 @@ pub struct VirtualFs {
 impl VirtualFs {
 	/// For each tuple of the given slice, `::0` should be the path to the real
 	/// file/directory, and `::1` should be the desired "mount point".
-	/// Returns a `Vec` parallel to `mounts` which contains `true` for each
-	/// successful mount and `false` otherwise.
+	/// Returns a `Vec` parallel to `mounts` which contains an `Ok(())` for each
+	/// successful mount and an error otherwise.
 	#[must_use]
 	pub fn mount(
 		&mut self,
@@ -124,6 +126,8 @@ impl VirtualFs {
 				}
 			};
 
+			// Ensure mount point is valid UTF-8
+
 			let mpoint_str = match mount_point.to_str() {
 				Some(s) => s,
 				None => {
@@ -135,6 +139,8 @@ impl VirtualFs {
 					return;
 				}
 			};
+
+			// Ensure mount point is only alphanumerics and underscores
 
 			if RGX_INVALIDMOUNTPATH.is_match(mpoint_str) {
 				warn!(
@@ -351,11 +357,13 @@ impl VirtualFs {
 		self.entries.len() - 1
 	}
 
+	/// The number of real files/directories mounted anywhere in the tree.
 	#[must_use]
 	pub fn mount_count(&self) -> usize {
 		self.real_paths.len()
 	}
 
+	/// Linear-searches for all entries which match a glob pattern.
 	#[must_use]
 	pub fn glob(&self, pattern: Glob) -> Option<impl Iterator<Item = FileRef>> {
 		let glob = pattern.compile_matcher();
@@ -373,6 +381,7 @@ impl VirtualFs {
 		)
 	}
 
+	/// Provides quantitative information about the VFS' current internal state.
 	#[must_use]
 	pub fn diag(&self) -> DiagInfo {
 		DiagInfo {

@@ -1,3 +1,5 @@
+//! The primary interface for quick introspection into the VFS.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -28,6 +30,7 @@ use super::{
 	Handle, VirtualFs,
 };
 
+/// The primary interface for quick introspection into the VFS.
 #[derive(Clone)]
 pub struct FileRef<'v, 'e> {
 	pub(super) vfs: &'v VirtualFs,

@@ -41,7 +41,7 @@ pub enum Error {
 	NonExistentEntry(PathBuf),
 	/// The caller attempted to lookup/read/write/mount a non-existent file.
 	NonExistentFile(PathBuf),
-	/// The caller attempted to read a directory, archive, or WAD.
+	/// The caller attempted to read a non-leaf node.
 	Unreadable,
 	/// The caller attempted to mount something to a point which
 	/// already had something mounted onto it.

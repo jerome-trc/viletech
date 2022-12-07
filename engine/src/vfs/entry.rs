@@ -24,10 +24,11 @@ use fasthash::metro;
 use crate::{utils::path::PathExt, vfs::Error};
 
 pub(super) struct Entry {
-	/// Absolute virtual, not real.
+	/// Absolute virtual. Guaranteed to contain only valid UTF-8
+	/// and start with a root separator.
 	pub(super) path: PathBuf,
 	pub(super) kind: EntryKind,
-	/// Derived from `path`.
+	/// Derived from `path`; see [`VirtualFs::hash_path`].
 	pub(super) hash: u64,
 	/// Should only be 0 for the root node.
 	/// Corresponds to parent's `hash`.
