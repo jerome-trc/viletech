@@ -25,14 +25,194 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use log::warn;
+use log::{info, warn};
+use parking_lot::Mutex;
+use rayon::prelude::*;
 use zip::ZipArchive;
 
-use crate::{lazy_regexset, utils::io::*, wad};
+use crate::{lazy_regexset, utils::io::*, vfs::RGX_INVALIDMOUNTPATH, wad};
 
 use super::{Entry, EntryKind, Error, VirtualFs};
 
 impl VirtualFs {
+	pub(super) fn mount_parallel(
+		&mut self,
+		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
+	) -> Vec<Result<(), Error>> {
+		let results = Vec::<(usize, Result<(), Error>)>::with_capacity(mounts.len());
+		let results = Mutex::new(results);
+
+		let mounts: Vec<(usize, (&Path, &Path))> = mounts
+			.iter()
+			.map(|pair| (pair.0.as_ref(), pair.1.as_ref()))
+			.enumerate()
+			.collect();
+
+		let output = Mutex::new(Vec::<(Vec<Entry>, String, PathBuf)>::default());
+
+		let (_, root) = self
+			.lookup_hash(Self::hash_path("/"))
+			.expect("VFS root node is missing.");
+
+		let root_hash = root.hash;
+
+		mounts.par_iter().for_each(|tuple| {
+			let pair = &tuple.1;
+
+			let real_path = match pair.0.canonicalize() {
+				Ok(c) => c,
+				Err(err) => {
+					warn!(
+						"Failed to canonicalize real path: {}
+						Error: {}",
+						pair.0.display(),
+						err
+					);
+					results
+						.lock()
+						.push((tuple.0, Err(Error::Canonicalization(err))));
+					return;
+				}
+			};
+
+			let mount_point = pair.1;
+
+			// Don't let the caller mount symbolic links, etc.
+
+			match Self::mount_supported(&real_path) {
+				Ok(()) => {}
+				Err(err) => {
+					warn!(
+						"Attempted to mount an unsupported file: {}
+						Reason: {}",
+						real_path.display(),
+						err
+					);
+					results.lock().push((tuple.0, Err(err)));
+					return;
+				}
+			};
+
+			// Ensure mount point is valid UTF-8
+
+			let mpoint_str = match mount_point.to_str() {
+				Some(s) => s,
+				None => {
+					warn!(
+						"Attempted to use a mount point that isn't valid Unicode ({})",
+						mount_point.display()
+					);
+					results.lock().push((tuple.0, Err(Error::InvalidUtf8)));
+					return;
+				}
+			};
+
+			// Ensure mount point is only alphanumerics and underscores
+
+			if RGX_INVALIDMOUNTPATH.is_match(mpoint_str) {
+				warn!(
+					"Attempted to use a mount point that isn't comprised \
+					solely of alphanumerics, underscores, dashes, periods, \
+					and forward slashes. ({})",
+					mount_point.display()
+				);
+				results
+					.lock()
+					.push((tuple.0, Err(Error::InvalidMountPoint)));
+				return;
+			}
+
+			// Ensure nothing already exists at end of mount point
+
+			if self.exists(mount_point) {
+				results.lock().push((tuple.0, Err(Error::Remount)));
+				return;
+			}
+
+			// All checks passed. Start recurring down real path
+
+			let mut mpoint = PathBuf::new();
+
+			if !mount_point.starts_with("/") {
+				mpoint.push("/");
+			}
+
+			mpoint.push(mount_point);
+
+			let res = if real_path.is_dir() {
+				Self::mount_dir(&real_path, mpoint.clone(), root_hash)
+			} else {
+				let bytes = match fs::read(&real_path) {
+					Ok(b) => b,
+					Err(err) => {
+						warn!(
+							"Failed to read object for mounting: {}
+							Error: {}",
+							real_path.display(),
+							err
+						);
+
+						results.lock().push((tuple.0, Err(Error::IoError(err))));
+						return;
+					}
+				};
+
+				Self::mount_file(bytes, mpoint.clone(), root_hash)
+			};
+
+			let new_entries = match res {
+				Ok(e) => e,
+				Err(err) => {
+					warn!(
+						"Failed to mount object: {}
+						Error: {}",
+						real_path.display(),
+						err
+					);
+					return;
+				}
+			};
+
+			info!(
+				"Mounted: \"{}\" -> \"{}\".",
+				real_path.display(),
+				mpoint.display()
+			);
+
+			output
+				.lock()
+				.push((new_entries, mpoint.to_str().unwrap().to_owned(), real_path));
+			results.lock().push((tuple.0, Ok(())));
+		});
+
+		let mut output = output.into_inner();
+
+		for mut troika in output.drain(..) {
+			self.entries.append(&mut troika.0);
+			troika.1.remove(0); // Take off preceding root backslash
+			self.real_paths.insert(troika.1, troika.2);
+		}
+
+		let mut results = results.into_inner();
+		let mut ret = Vec::<Result<(), Error>>::with_capacity(results.len());
+
+		while !results.is_empty() {
+			let mut i = 0;
+
+			while i < results.len() {
+				if results[i].0 == ret.len() {
+					ret.push(results.swap_remove(i).1);
+				} else {
+					i += 1;
+				}
+			}
+		}
+
+		debug_assert!(ret.len() == mounts.len());
+
+		ret
+	}
+
 	/// Forwards files of an as-yet unknown kind to the right mounting function.
 	pub(super) fn mount_file(
 		bytes: Vec<u8>,
@@ -277,7 +457,11 @@ impl VirtualFs {
 							let new_folder_hash = new_folder.hash;
 							ret.push(new_folder);
 
-							ret.push(Entry::new_leaf(svpath0, new_folder_hash, string.into_bytes()));
+							ret.push(Entry::new_leaf(
+								svpath0,
+								new_folder_hash,
+								string.into_bytes(),
+							));
 							ret.push(Entry::new_leaf(svpath1, new_folder_hash, ebytes));
 						}
 						EntryKind::Directory => {
