@@ -47,6 +47,10 @@ pub trait PathEx {
 	fn is_empty(&self) -> bool;
 	#[must_use]
 	fn is_root(&self) -> bool;
+	/// Results are only valid for absolute paths;
+	/// will always return `false` is `self` or `other` is relative.
+	#[must_use]
+	fn is_child_of(&self, other: impl AsRef<Path>) -> bool;
 	/// Returns the number of components in the path.
 	#[must_use]
 	fn size(&self) -> usize;
@@ -98,6 +102,31 @@ impl<T: AsRef<Path>> PathEx for T {
 
 	fn is_root(&self) -> bool {
 		self.as_ref() == *ROOT_PATH
+	}
+
+	fn is_child_of(&self, other: impl AsRef<Path>) -> bool {
+		let this = self.as_ref();
+		let other = other.as_ref();
+
+		if this.is_relative() | other.is_relative() {
+			return false;
+		}
+
+		let mut self_comps = this.components();
+
+		for comp in other.components() {
+			if let Some(self_comp) = self_comps.next() {
+				if self_comp == comp {
+					continue;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		}
+
+		true
 	}
 
 	fn size(&self) -> usize {
