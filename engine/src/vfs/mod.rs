@@ -324,8 +324,8 @@ impl VirtualFs {
 		};
 
 		match &entry.kind {
+			EntryKind::Binary { .. } | EntryKind::String { .. } => Ok(entry.read()),
 			EntryKind::Directory { .. } => Err(Error::Unreadable),
-			EntryKind::Leaf { bytes } => Ok(&bytes[..]),
 		}
 	}
 
@@ -471,8 +471,11 @@ impl VirtualFs {
 			ret += std::mem::size_of_val(child);
 
 			match &child.kind {
-				EntryKind::Leaf { bytes } => {
+				EntryKind::Binary(bytes) => {
 					ret += bytes.len();
+				}
+				EntryKind::String(string) => {
+					ret += string.len();
 				}
 				EntryKind::Directory => {
 					ret += self.mem_usage(child);

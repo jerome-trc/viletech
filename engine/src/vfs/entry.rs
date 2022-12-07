@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use fasthash::metro;
 
-use crate::{utils::path::PathExt, vfs::Error};
+use crate::utils::path::PathExt;
 
 pub(super) struct Entry {
 	/// Absolute virtual. Guaranteed to contain only valid UTF-8
@@ -36,7 +36,8 @@ pub(super) struct Entry {
 }
 
 pub(super) enum EntryKind {
-	Leaf { bytes: Vec<u8> },
+	String(String),
+	Binary(Vec<u8>),
 	Directory,
 }
 
@@ -54,11 +55,19 @@ impl Entry {
 			);
 		}
 
-		Self {
-			path: virt_path,
-			kind: EntryKind::Leaf { bytes },
-			hash,
-			parent_hash,
+		match String::from_utf8(bytes) {
+			Ok(string) => Self {
+				path: virt_path,
+				kind: EntryKind::String(string),
+				hash,
+				parent_hash,
+			},
+			Err(err) => Self {
+				path: virt_path,
+				kind: EntryKind::Binary(err.into_bytes()),
+				hash,
+				parent_hash,
+			},
 		}
 	}
 
@@ -105,12 +114,23 @@ impl Entry {
 
 	#[must_use]
 	pub(super) fn is_leaf(&self) -> bool {
-		matches!(self.kind, EntryKind::Leaf { .. })
+		!self.is_dir()
 	}
 
 	#[must_use]
 	pub(super) fn is_dir(&self) -> bool {
 		matches!(self.kind, EntryKind::Directory { .. })
+	}
+
+	#[must_use]
+	pub(super) fn is_binary(&self) -> bool {
+		matches!(self.kind, EntryKind::Binary { .. })
+	}
+
+	#[must_use]
+	#[allow(unused)]
+	pub(super) fn is_string(&self) -> bool {
+		matches!(self.kind, EntryKind::String { .. })
 	}
 
 	#[must_use]
@@ -124,17 +144,22 @@ impl Entry {
 		}
 	}
 
+	#[must_use]
 	pub(super) fn read(&self) -> &[u8] {
 		match &self.kind {
-			EntryKind::Directory { .. } => unreachable!(),
-			EntryKind::Leaf { bytes } => &bytes[..],
+			EntryKind::Binary(bytes) => &bytes[..],
+			EntryKind::String(string) => string.as_bytes(),
+			EntryKind::Directory { .. } => unreachable!("Tried to `read` a VFS directory."),
 		}
 	}
 
-	pub(super) fn read_str(&self) -> Result<&str, Error> {
-		match std::str::from_utf8(self.read()) {
-			Ok(ret) => Ok(ret),
-			Err(_) => Err(Error::InvalidUtf8),
+	#[must_use]
+	pub(super) fn read_str(&self) -> &str {
+		match &self.kind {
+			EntryKind::String(string) => &string,
+			EntryKind::Binary { .. } | EntryKind::Directory { .. } => {
+				unreachable!("Tried to `read_str` a VFS directory or binary leaf.")
+			}
 		}
 	}
 }

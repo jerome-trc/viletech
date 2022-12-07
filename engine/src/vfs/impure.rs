@@ -276,7 +276,7 @@ impl ImpureVfs for VirtualFs {
 			.expect("Invalid ID passed to `ImpureVfs::gamedata_kind`.");
 
 		match &entry.kind {
-			EntryKind::Leaf { .. } => {
+			EntryKind::Binary { .. } | EntryKind::String { .. } => {
 				return GameDataKind::File;
 			}
 			EntryKind::Directory => {
@@ -294,19 +294,15 @@ impl ImpureVfs for VirtualFs {
 						continue;
 					}
 
-					let string = match child.read_str() {
-						Ok(s) => s,
-						Err(err) => {
-							warn!(
-								"Invalid meta.toml file under '{}': {}",
-								entry.path_str(),
-								err
-							);
-							continue;
-						}
-					};
+					if child.is_binary() {
+						warn!(
+							"Invalid meta.toml file under '{}': expected string entry, found binary entry.",
+							entry.path_str(),
+						);
+						continue;
+					}
 
-					let meta: GameDataMetaToml = match toml::from_str(string) {
+					let meta: GameDataMetaToml = match toml::from_str(child.read_str()) {
 						Ok(m) => m,
 						Err(err) => {
 							warn!(

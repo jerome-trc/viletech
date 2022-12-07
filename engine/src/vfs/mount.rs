@@ -252,7 +252,7 @@ impl VirtualFs {
 					let entry = ret.remove(pos);
 
 					match entry.kind {
-						EntryKind::Leaf { bytes } => {
+						EntryKind::Binary(bytes) => {
 							let mut svpath0 = vpath.clone();
 							svpath0.push("000");
 
@@ -264,6 +264,20 @@ impl VirtualFs {
 							ret.push(new_folder);
 
 							ret.push(Entry::new_leaf(svpath0, new_folder_hash, bytes));
+							ret.push(Entry::new_leaf(svpath1, new_folder_hash, ebytes));
+						}
+						EntryKind::String(string) => {
+							let mut svpath0 = vpath.clone();
+							svpath0.push("000");
+
+							let mut svpath1 = vpath.clone();
+							svpath1.push("001");
+
+							let new_folder = Entry::new_dir(vpath, this_hash);
+							let new_folder_hash = new_folder.hash;
+							ret.push(new_folder);
+
+							ret.push(Entry::new_leaf(svpath0, new_folder_hash, string.into_bytes()));
 							ret.push(Entry::new_leaf(svpath1, new_folder_hash, ebytes));
 						}
 						EntryKind::Directory => {

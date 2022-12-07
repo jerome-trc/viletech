@@ -81,15 +81,17 @@ impl<'v, 'e> FileRef<'v, 'e> {
 		None
 	}
 
+	/// Returns [`Error::Unreadable`] if attempting to read a directory.
 	pub fn read(&self) -> Result<&[u8], Error> {
 		match &self.entry.kind {
+			EntryKind::Binary(bytes) => Ok(&bytes[..]),
+			EntryKind::String(string) => Ok(string.as_bytes()),
 			EntryKind::Directory { .. } => Err(Error::Unreadable),
-			EntryKind::Leaf { bytes } => Ok(&bytes[..]),
 		}
 	}
 
 	/// Returns [`Error::InvalidUtf8`] if the entry's contents aren't valid UTF-8.
-	/// Otherwise acts like [`FileRef::read`].
+	/// Otherwise acts like `read`.
 	pub fn read_str(&self) -> Result<&str, Error> {
 		match std::str::from_utf8(self.read()?) {
 			Ok(ret) => Ok(ret),
@@ -100,17 +102,19 @@ impl<'v, 'e> FileRef<'v, 'e> {
 	/// Returns [`Error::Unreadable`] if attempting to read a directory.
 	pub fn copy(&self) -> Result<Vec<u8>, Error> {
 		match &self.entry.kind {
+			EntryKind::Binary(bytes) => Ok(bytes.clone()),
+			EntryKind::String(string) => Ok(string.as_bytes().to_owned()),
 			EntryKind::Directory { .. } => Err(Error::Unreadable),
-			EntryKind::Leaf { bytes } => Ok(bytes.clone()),
 		}
 	}
 
-	/// Returns [`Error::InvalidUtf8`] if the entry's contents aren't valid UTF-8.
-	/// Otherwise acts like [`FileRef::copy`].
+	/// Returns [`Error::InvalidUtf8`] if this isn't a string entry.
+	/// Otherwise acts like `copy`.
 	pub fn copy_string(&self) -> Result<String, Error> {
-		match String::from_utf8(self.copy()?) {
-			Ok(ret) => Ok(ret),
-			Err(_) => Err(Error::InvalidUtf8),
+		match &self.entry.kind {
+			EntryKind::Binary(_) => Err(Error::InvalidUtf8),
+			EntryKind::String(string) => Ok(string.clone()),
+			EntryKind::Directory { .. } => Err(Error::Unreadable),
 		}
 	}
 
@@ -157,10 +161,12 @@ impl<'v, 'e> FileRef<'v, 'e> {
 		self.children().any(|h| regex.is_match(h.file_name()))
 	}
 
+	/// Returns the number of child entries this entry has, if it's a directory.
+	/// If it's a leaf node, returns 0.
 	#[must_use]
 	pub fn count(&self) -> usize {
 		match &self.entry.kind {
-			EntryKind::Leaf { .. } => 0,
+			EntryKind::Binary { .. } | EntryKind::String { .. } => 0,
 			EntryKind::Directory { .. } => self.child_entries().count(),
 		}
 	}
