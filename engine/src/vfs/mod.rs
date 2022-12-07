@@ -241,6 +241,8 @@ impl VirtualFs {
 			}
 		}
 
+		debug_assert!(ret.len() == mounts.len());
+
 		ret
 	}
 

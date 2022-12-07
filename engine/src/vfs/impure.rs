@@ -177,7 +177,7 @@ impl ImpureVfs for VirtualFs {
 		}
 
 		let results = self.mount(&to_mount[..]);
-		debug_assert!(results.len() == to_mount.len() && to_mount.len() == vers_strings.len());
+		debug_assert!(to_mount.len() == vers_strings.len());
 
 		for (i, res) in results.iter().enumerate() {
 			if res.is_err() {
