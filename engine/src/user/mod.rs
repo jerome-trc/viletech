@@ -27,7 +27,7 @@ use crate::{
 	gfx::Rgb32,
 	utils::{
 		env::create_default_user_dir,
-		path::{get_user_dir, PathEx},
+		path::{get_user_dir, PathExt},
 	},
 };
 

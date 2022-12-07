@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use fasthash::metro;
 
-use crate::{utils::path::PathEx, vfs::Error};
+use crate::{utils::path::PathExt, vfs::Error};
 
 pub(super) struct Entry {
 	/// Absolute virtual, not real.

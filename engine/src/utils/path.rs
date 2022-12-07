@@ -34,7 +34,7 @@ use crate::lazy_regex;
 static EMPTY_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new(""));
 static ROOT_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new("/"));
 
-pub trait PathEx {
+pub trait PathExt {
 	#[must_use]
 	fn dir_count(&self) -> usize;
 	#[must_use]
@@ -53,7 +53,7 @@ pub trait PathEx {
 	fn is_child_of(&self, other: impl AsRef<Path>) -> bool;
 	/// Returns the number of components in the path.
 	#[must_use]
-	fn size(&self) -> usize;
+	fn comp_len(&self) -> usize;
 
 	#[must_use]
 	fn has_zip_extension(&self) -> bool;
@@ -77,7 +77,7 @@ pub trait PathEx {
 	fn is_supported_archive(&self) -> io::Result<bool>;
 }
 
-impl<T: AsRef<Path>> PathEx for T {
+impl<T: AsRef<Path>> PathExt for T {
 	fn dir_count(&self) -> usize {
 		match fs::read_dir(self.as_ref()) {
 			Ok(read_dir) => read_dir.count(),
@@ -129,7 +129,7 @@ impl<T: AsRef<Path>> PathEx for T {
 		true
 	}
 
-	fn size(&self) -> usize {
+	fn comp_len(&self) -> usize {
 		self.as_ref().components().count()
 	}
 
