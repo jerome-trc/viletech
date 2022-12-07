@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{
 	env,
 	fs::{self, File},
-	io::{self, Read},
+	io::{self, Read, SeekFrom, Seek},
 	path::{Path, PathBuf},
 };
 
@@ -71,6 +71,10 @@ pub trait PathExt {
 	fn is_binary(&self) -> io::Result<bool>;
 	/// See [`super::io::is_zip`].
 	fn is_zip(&self) -> io::Result<bool>;
+	/// See [`super::io::is_lzma`].
+	fn is_lzma(&self) -> io::Result<bool>;
+	/// See [`super::io::is_xz`].
+	fn is_xz(&self) -> io::Result<bool>;
 	/// See [`super::io::is_valid_wad`].
 	fn is_valid_wad(&self) -> io::Result<bool>;
 	/// Check if this file is a zip or WAD.
@@ -197,7 +201,7 @@ impl<T: AsRef<Path>> PathExt for T {
 			return Err(io::ErrorKind::NotFound.into());
 		}
 
-		let mut buffer: [u8; 4] = [0; 4];
+		let mut buffer = [0u8; 4];
 		let mut file = File::open(self)?;
 
 		let bytes_read = file.read(&mut buffer)?;
@@ -209,12 +213,56 @@ impl<T: AsRef<Path>> PathExt for T {
 		Ok(super::io::is_zip(&buffer[..]))
 	}
 
+	fn is_lzma(&self) -> io::Result<bool> {
+		if !self.as_ref().exists() {
+			return Err(io::ErrorKind::NotFound.into());
+		}
+
+		let mut buffer = [0u8; 13];
+		let mut file = File::open(self)?;
+
+		let bytes_read = file.read(&mut buffer)?;
+
+		if bytes_read < buffer.len() {
+			return Ok(false);
+		}
+
+		Ok(super::io::is_lzma(&buffer[..]))
+	}
+
+	fn is_xz(&self) -> io::Result<bool> {
+		if !self.as_ref().exists() {
+			return Err(io::ErrorKind::NotFound.into());
+		}
+
+		let mut header = [0u8; 6];
+		let mut footer = [0u8; 2];
+		let mut file = File::open(self)?;
+		let len = file.metadata()?.len();
+
+		let header_read = file.read(&mut header)?;
+
+		if header_read < header.len() {
+			return Ok(false);
+		}
+
+		file.seek(SeekFrom::End(-2))?;
+
+		let footer_read = file.read(&mut footer)?;
+
+		if footer_read < footer.len() {
+			return Ok(false);
+		}
+
+		Ok(super::io::is_xz(&header[..], &footer[..], len))
+	}
+
 	fn is_valid_wad(&self) -> io::Result<bool> {
 		if !self.as_ref().exists() {
 			return Err(io::ErrorKind::NotFound.into());
 		}
 
-		let mut buffer: [u8; 12] = [0; 12];
+		let mut buffer = [0u8; 12];
 		let mut file = File::open(self)?;
 		let metadata = file.metadata()?;
 

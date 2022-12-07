@@ -56,10 +56,39 @@ pub fn is_binary(bytes: &[u8]) -> bool {
 	true
 }
 
-/// Checks for a 4-byte magic number at the very beginning of the file.
+/// Checks for a 4-byte magic number.
+/// Ensure the given slice starts at the file's beginning
 #[must_use]
 pub fn is_zip(bytes: &[u8]) -> bool {
 	bytes.len() >= 4 && matches!(&bytes[0..4], &[0x50, 0x4b, 0x03, 0x04])
+}
+
+/// Checks for a 13-byte series of properties.
+/// Ensure the given slice starts at the file's beginning.
+#[must_use]
+pub fn is_lzma(bytes: &[u8]) -> bool {
+	// [RAT] I have limited reason to believe this is sound. No good formal spec for
+	// LZMA's header seems to exist *anywhere*. I just compressed some files, passed
+	// them through integrity tests via CLI, and then read the headers in those
+	bytes.len() >= 13
+		&& matches!(
+			&bytes[0..13],
+			&[0x5D, 0x00, 0x00, 0x80, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+		)
+}
+
+/// Checks for:
+/// - A byte length that's a multiple of 4.
+/// - A 6-byte magic number in the header.
+/// - A 2-byte magic number in the footer.
+#[must_use]
+pub fn is_xz(header: &[u8], footer: &[u8], file_len: u64) -> bool {
+	// http://fileformats.archiveteam.org/wiki/XZ
+	(file_len % 4) == 0
+		&& header.len() >= 6
+		&& footer.len() >= 2
+		&& matches!(&header[0..6], &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00])
+		&& matches!(&footer[(footer.len() - 2)..], &[0x59, 0x5A])
 }
 
 /// Checks for the 4-byte magic number, directory info, and that the
