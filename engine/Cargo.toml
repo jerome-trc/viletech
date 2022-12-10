@@ -34,7 +34,12 @@ glam = { version = "0.22.0", features = [
 ] }
 globset = "0.4.9"
 home = "0.5.3"
-image = { version = "0.24.4", default-features = false, features = ["png"] }
+image = { version = "0.24.4", default-features = false, features = [
+	"dds",
+	"jpeg",
+	"png",
+	"tga",
+] }
 indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
 kira = "0.7.0"
 log = "0.4.16"
