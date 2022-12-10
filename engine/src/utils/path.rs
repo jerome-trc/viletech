@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{
 	env,
 	fs::{self, File},
-	io::{self, Read, SeekFrom, Seek},
+	io::{self, Read, Seek, SeekFrom},
 	path::{Path, PathBuf},
 };
 
@@ -47,8 +47,9 @@ pub trait PathExt {
 	fn is_empty(&self) -> bool;
 	#[must_use]
 	fn is_root(&self) -> bool;
-	/// Results are only valid for absolute paths;
-	/// will always return `false` is `self` or `other` is relative.
+	/// Results are only valid for absolute paths; will always return `false` if
+	/// `self` or `other` is relative. A path can not be a child of itself; giving
+	/// two equal paths will also return `false`.
 	#[must_use]
 	fn is_child_of(&self, other: impl AsRef<Path>) -> bool;
 	/// Returns the number of components in the path.
@@ -113,6 +114,10 @@ impl<T: AsRef<Path>> PathExt for T {
 		let other = other.as_ref();
 
 		if this.is_relative() | other.is_relative() {
+			return false;
+		}
+
+		if this == other {
 			return false;
 		}
 
