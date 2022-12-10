@@ -19,15 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{
-	collections::HashMap,
-	path::{Path, PathBuf},
-};
-
-use fasthash::metro;
-use globset::Glob;
-use once_cell::sync::Lazy;
-use regex::Regex;
+// [Rat] If you're reading this, congratulations!
+// This module sub-tree is, historically speaking, the most tortured code in Impure.
 
 mod entry;
 mod error;
@@ -37,7 +30,19 @@ mod mount;
 #[cfg(test)]
 mod test;
 
-use entry::{Entry, EntryKind};
+use std::{
+	collections::HashMap,
+	path::{Path, PathBuf},
+};
+
+use globset::Glob;
+use indexmap::IndexMap;
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+use entry::{Entry, EntryKind, PathHash};
+
+use crate::utils::path::PathExt;
 
 pub use self::impure::{ImpureFileRef, ImpureVfs};
 pub use error::Error;
@@ -48,12 +53,23 @@ pub use fileref::FileRef;
 /// Inspired by PhysicsFS, but differs in that it owns every byte mounted.
 /// Just the mounting process requires large amounts of time spent on file I/O,
 /// so clustering a complete read along with it grants a time savings.
+#[derive(Debug)]
 pub struct VirtualFs {
 	/// The first entry is always the root node. This is of the kind
 	/// [`EntryKind::Directory`], and lies under the virtual path `/`.
-	entries: Vec<Entry>,
-	/// Mounted game data object IDs are used as keys.
-	real_paths: HashMap<String, PathBuf>,
+	entries: IndexMap<PathHash, Entry>,
+	/// Real filesystem paths are used as keys; retrieved values can be fed into
+	/// `entries` to perform real-to-virtual path resolution.
+	real_paths: HashMap<PathBuf, PathHash>,
+	/// Monotonic counter for the number of changes made to this VFS. Starts at 0,
+	/// and is incremented by 1 every time the VFS is modified. This includes
+	/// single mounts, single unmounts, or multiple mounts at once (as long as
+	/// at least one of those mounts succeeds).
+	///
+	/// When `debug_assertions` is on, attempting to index into the VFS with an
+	/// external [`Handle`] will check to ensure that it has the same generation
+	/// as the VFS does. A mismatch will cause a panic.
+	generation: u16,
 }
 
 // Public interface.
@@ -62,71 +78,158 @@ impl VirtualFs {
 	/// file/directory, and `::1` should be the desired "mount point".
 	/// Returns a `Vec` parallel to `mounts` which contains an `Ok(())` for each
 	/// successful mount and an error otherwise.
+	///
+	/// # Errors
+	///
+	/// - [`Error::NonExistentFile`] if attempting to mount a
+	/// real path that points to nothing.
+	/// - [`Error::SymlinkMount`] if attempting to mount a symbolic link, which
+	/// is unconditionally forbidden.
+	/// - [`Error::InvalidUtf8`] if a mount point is given that does not contain
+	/// only valid UTF-8 characters.
+	/// - [`Error::ParentlessMountPoint`] if the mount point's "parent" path
+	/// somehow can not be resolved.
+	/// - [`Error::NonExistentEntry`] if the VFS entry belonging to the mount point's
+	/// "parent" path couldn't be resolved.
+	/// - [`Error::Remount`] if there is already a VFS entry belonging to the same
+	/// path as the mount point.
+	/// - [`Error::IoError`] if reading physical filesystem data fails for any reason.
 	#[must_use]
 	pub fn mount(
 		&mut self,
 		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
 	) -> Vec<Result<(), Error>> {
-		self.mount_parallel(mounts)
+		// Remember: never sort the whole entry array. Virtual representations of
+		// WADs are expected to maintain their original order. Only real directories
+		// and archive directories get sorted
+
+		let ret = if mounts.len() <= 2 {
+			self.mount_serial(mounts)
+		} else {
+			self.mount_parallel(mounts)
+		};
+
+		if ret.iter().any(|res| res.is_ok()) {
+			self.update_dirs();
+			self.generation += 1;
+		}
+
+		ret
 	}
 
-	pub fn mount_supported(path: impl AsRef<Path>) -> Result<(), Error> {
-		let path = path.as_ref();
-
-		if !path.exists() {
-			return Err(Error::NonExistentFile(path.to_owned()));
+	/// # Errors
+	///
+	/// - [`Error::UnmountRoot`] if attempting to unmount the root node.
+	/// - [`Error::NonExistentEntry`] if there's nothing to unmount at the given virtual path.
+	pub fn unmount(&mut self, virtual_path: impl AsRef<Path>) -> Result<(), Error> {
+		if virtual_path.is_root() {
+			return Err(Error::UnmountRoot);
 		}
 
-		if path.is_symlink() {
-			return Err(Error::SymlinkMount);
+		if !self.exists(&virtual_path) {
+			return Err(Error::NonExistentEntry(virtual_path.as_ref().to_owned()));
 		}
+
+		let real_path = self
+			.virtual_to_real(&virtual_path)
+			.ok_or_else(|| Error::NonExistentEntry(virtual_path.as_ref().to_owned()))?;
+
+		self.real_paths
+			.remove(&real_path)
+			.expect("`VirtualFs::unmount` failed to remove a real path.");
+
+		let p = virtual_path.as_ref();
+		let p_hash = PathHash::new(p);
+		self.entries.retain(|_, v| {
+			let ph = PathHash::new(&v.path);
+			ph != p_hash && !v.path.is_child_of(p)
+		});
+		self.update_dirs();
+		self.generation += 1;
 
 		Ok(())
 	}
 
-	/// Returns `None` if and only if nothing exists at the given path.
+	/// Removes all entries except the root.
+	/// Calling this function advances the VFS "generation" by 1.
+	pub fn clear(&mut self) {
+		self.entries.truncate(1);
+		self.update_dirs();
+		self.real_paths.clear();
+		self.generation += 1;
+	}
+
+	#[must_use]
+	pub fn root(&self) -> FileRef {
+		FileRef {
+			vfs: self,
+			entry: self.root_entry(),
+			index: 0,
+		}
+	}
+
+	/// Returns `None` if nothing exists at the given path.
 	#[must_use]
 	pub fn lookup(&self, path: impl AsRef<Path>) -> Option<FileRef> {
-		let (index, entry) = match self.lookup_hash(Self::hash_path(path)) {
-			Some(e) => e,
-			None => {
-				return None;
-			}
-		};
-
-		Some(FileRef {
-			vfs: self,
-			entry,
-			handle: Handle(index),
-		})
+		self.entries
+			.get_full(&PathHash::new(path))
+			.map(|(index, _, e)| FileRef {
+				vfs: self,
+				entry: e,
+				index,
+			})
 	}
 
 	/// Returns `None` if and only if nothing exists at the given path.
-	/// Note that that `path` must be exact, including the root path separator.
+	/// Note that `path` must be exact, including the root path separator.
 	#[must_use]
 	pub fn lookup_nocase(&self, path: impl AsRef<Path>) -> Option<FileRef> {
+		let string = path.as_ref().to_string_lossy();
+
 		self.entries
-			.iter()
+			.values()
 			.enumerate()
-			.find(|(_, e)| {
-				e.path_str().eq_ignore_ascii_case(
-					path.as_ref()
-						.to_str()
-						.expect("`lookup_nocase` received a path with invalid UTF-8."),
-				)
-			})
-			.map(|(i, e)| FileRef {
+			.find(|(_, e)| e.path_str().eq_ignore_ascii_case(string.as_ref()))
+			.map(|(index, entry)| FileRef {
 				vfs: self,
-				entry: e,
-				handle: Handle(i),
+				entry,
+				index,
 			})
 	}
 
+	#[must_use]
+	pub fn make_handle(&self, path: impl AsRef<Path>) -> Option<Handle> {
+		self.entries
+			.get_full(&PathHash::new(path))
+			.map(|(i, _, _)| Handle {
+				index: i,
+				generation: self.generation,
+			})
+	}
+
+	/// This function can't fail, since a `Handle` is assumed to always be correct.
+	/// In a debug build, this will panic if the VFS was modified in any way after
+	/// the handle was retrieved via [`make_handle`]. In a release build, this
+	/// function may panic or quietly emit incorrect results if the VFS gets modified
+	/// after the given handle was generated.
+	#[must_use]
+	pub fn get(&self, handle: Handle) -> FileRef {
+		debug_assert!(handle.generation == self.generation);
+
+		FileRef {
+			vfs: self,
+			entry: &self.entries[handle.index],
+			index: handle.index,
+		}
+	}
+
+	/// Check if anything exists at the given path.
+	#[must_use]
 	pub fn exists(&self, path: impl AsRef<Path>) -> bool {
 		self.lookup(path).is_some()
 	}
 
-	/// Returns `false` if nothing is at the given path.
+	/// Returns `false` if nothing exists at the given path.
 	#[must_use]
 	pub fn is_dir(&self, path: impl AsRef<Path>) -> bool {
 		match self.lookup(path) {
@@ -136,44 +239,32 @@ impl VirtualFs {
 	}
 
 	/// Returns [`Error::NonExistentEntry`] if there's nothing at the supplied path,
-	/// or [`Error::Unreadable`] if attempting to read a directory.
+	/// or [`Error::Unreadable`] if attempting to read a directory or empty entry.
 	pub fn read(&self, path: impl AsRef<Path>) -> Result<&[u8], Error> {
-		let path = path.as_ref();
-
-		let (_, entry) = match self.lookup_hash(Self::hash_path(path)) {
+		let entry = match self.entries.get(&PathHash::new(&path)) {
 			Some(e) => e,
 			None => {
-				return Err(Error::NonExistentEntry(path.to_owned()));
+				return Err(Error::NonExistentEntry(path.as_ref().to_owned()));
 			}
 		};
 
 		match &entry.kind {
-			EntryKind::Binary { .. } | EntryKind::String { .. } => Ok(entry.read()),
-			EntryKind::Directory { .. } => Err(Error::Unreadable),
+			EntryKind::Binary(..) | EntryKind::String(..) => Ok(entry.read_unchecked()),
+			_ => Err(Error::Unreadable),
 		}
 	}
 
-	/// Returns [`Error::InvalidUtf8`] if the contents at the path are not valid UTF-8.
-	/// Otherwise acts like [`VirtualFs::read`].
+	/// # Errors
+	///
+	/// - [`Error::NonExistentEntry`] if nothing is found at the given path.
+	/// - [`Error::InvalidUtf8`] if attempting to read from a binary entry.
+	/// - [`Error::Unreadable`] if attempting to read a string from a directory entry.
 	pub fn read_str(&self, path: impl AsRef<Path>) -> Result<&str, Error> {
 		let bytes = self.read(path)?;
 
 		match std::str::from_utf8(bytes) {
 			Ok(ret) => Ok(ret),
 			Err(_) => Err(Error::InvalidUtf8),
-		}
-	}
-
-	/// Returns `Some(0)` if the given path is a leaf node.
-	/// Returns `None` if and only if nothing exists at the given path.
-	#[must_use]
-	pub fn count(&self, path: impl AsRef<Path>) -> Option<usize> {
-		let (_, entry) = self.lookup_hash(Self::hash_path(path))?;
-
-		if entry.is_leaf() {
-			Some(0)
-		} else {
-			Some(self.children_of(entry).count())
 		}
 	}
 
@@ -190,124 +281,181 @@ impl VirtualFs {
 	}
 
 	/// Linear-searches for all entries which match a glob pattern.
-	#[must_use]
-	pub fn glob(&self, pattern: Glob) -> Option<impl Iterator<Item = FileRef>> {
+	/// If the VFS doesn't have anything mounted (or nothing matches),
+	/// the returned iterator will be empty.
+	pub fn glob(&self, pattern: Glob) -> impl Iterator<Item = FileRef> {
 		let glob = pattern.compile_matcher();
 
-		Some(
+		self.entries
+			.values()
+			.enumerate()
+			.filter(move |(_, e)| glob.is_match(&e.path))
+			.map(|(index, entry)| FileRef {
+				vfs: self,
+				entry,
+				index,
+			})
+	}
+
+	#[must_use]
+	pub fn virtual_to_real(&self, path: impl AsRef<Path>) -> Option<PathBuf> {
+		let phash = PathHash::new(path);
+
+		self.entries
+			.get(&phash)
+			.map(|_| self.real_paths.iter().find(|(_, ph)| **ph == phash))
+			.map(|opt| {
+				opt.expect("`VirtualFs::virtual_to_real` failed to resolve a real path.")
+					.0
+					.clone()
+			})
+	}
+
+	/// The real path given must exactly match the canonicalized form of whatever
+	/// was mounted.
+	#[must_use]
+	pub fn real_to_virtual(&self, path: impl AsRef<Path>) -> Option<PathBuf> {
+		self.real_paths.get(&path.as_ref().to_owned()).map(|rp| {
 			self.entries
-				.iter()
-				.enumerate()
-				.filter(move |(_, e)| glob.is_match(e.path_str()))
-				.map(move |(i, e)| FileRef {
-					vfs: self,
-					entry: e,
-					handle: Handle(i),
-				}),
-		)
+				.get(rp)
+				.expect("`VirtualFs::real_to_virtual` failed to resolve an entry.")
+				.path
+				.clone()
+		})
 	}
 
 	/// Provides quantitative information about the VFS' current internal state.
 	#[must_use]
 	pub fn diag(&self) -> DiagInfo {
+		let mut mem_usage = std::mem::size_of::<Self>();
+		mem_usage += self.entries.capacity() * std::mem::size_of::<(PathHash, Entry)>();
+		mem_usage += self.real_paths.capacity() * std::mem::size_of::<(PathBuf, PathHash)>();
+
+		for entry in self.entries.values() {
+			mem_usage += entry.path.capacity();
+
+			match &entry.kind {
+				EntryKind::String(string) => mem_usage += string.capacity(),
+				EntryKind::Binary(bytes) => mem_usage += bytes.len(),
+				EntryKind::Directory(children) => {
+					mem_usage += children.capacity() * std::mem::size_of::<usize>()
+				}
+				EntryKind::Empty => {}
+			}
+		}
+
+		for real_path in self.real_paths.keys() {
+			mem_usage += real_path.capacity();
+		}
+
 		DiagInfo {
-			mount_count: self.real_paths.len(),
-			num_entries: self.entries.len(),
-			mem_usage: self.mem_usage(&self.entries[0]),
+			mount_count: self.mount_count(),
+			num_entries: self.total_count(),
+			mem_usage,
 		}
 	}
 }
 
-impl Default for VirtualFs {
-	#[must_use]
-	fn default() -> Self {
-		VirtualFs {
-			entries: vec![Entry::new_dir(PathBuf::from("/"), 0)],
-			real_paths: Default::default(),
-		}
-	}
-}
-
+#[derive(Debug)]
 pub struct DiagInfo {
 	pub mount_count: usize,
 	pub num_entries: usize,
 	pub mem_usage: usize,
 }
 
-/// An index into the VFS. Allows `O(1)` access to an entry with no borrows.
+/// An index into the VFS, allowing `O(1)` access to a single entry.
+/// These are as fast to produce as a [`FileRef`] and trivial to copy.
 ///
-/// Retrieve one via [`FileRef::get_handle`].
-///
-/// There's nothing preventing these from being invalidated if the VFS is rearranged
-/// while one is outstanding, but Impure applications operate on the principle that,
-/// excluding the mandatory engine data, files are only mounted when starting a
-/// game and unmounted when quitting it, and handles that don't point into `/impure`
-/// should only be created during this period and dropped afterwards.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Handle(pub(super) usize);
+/// To acquire one, use [`VirtualFs::make_handle`], and to consume one, use
+/// [`VirtualFs::get`]. See those two functions' documentation for usage caveats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Handle {
+	index: usize,
+	/// See [`VirtualFs::generation`].
+	generation: u16,
+}
 
-// Miscellaneous internal implementation details.
+#[derive(Debug)]
+pub struct Iter<'vfs> {
+	vfs: &'vfs VirtualFs,
+	elements: &'vfs [usize],
+	/// This points into `elements`, not `VirtualFs::entries`.
+	current: usize,
+}
+
+impl<'vfs> Iterator for Iter<'vfs> {
+	type Item = &'vfs Entry;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.current >= self.elements.len() {
+			return None;
+		}
+
+		let ret = &self.vfs.entries[self.elements[self.current]];
+		self.current += 1;
+		Some(ret)
+	}
+}
+
+// Internal ////////////////////////////////////////////////////////////////////
+
+impl Default for VirtualFs {
+	#[must_use]
+	fn default() -> Self {
+		VirtualFs {
+			entries: indexmap::indexmap! {
+				PathHash::new("/") => Entry::new_dir(PathBuf::from("/".to_string())),
+			},
+			real_paths: HashMap::default(),
+			generation: 0,
+		}
+	}
+}
+
 impl VirtualFs {
-	/// To make path-hashing flexible over paths that don't include a root path
-	/// separator (the VFS never deals in relative paths), the path is hashed
-	/// by its components (with a preceding path separator hashed beforehand if
-	/// necessary) one at a time, rather than as a whole string.
 	#[must_use]
-	fn hash_path(path: impl AsRef<Path>) -> u64 {
-		let path = path.as_ref();
-		let mut hash = 0u64;
-
-		if !path.starts_with("/") {
-			hash ^= metro::hash64("/");
-		}
-
-		let comps = path.components();
-
-		for comp in comps {
-			hash ^= metro::hash64(
-				comp.as_os_str()
-					.to_str()
-					.expect("`hash_path` received a path with invalid UTF-8."),
-			);
-		}
-
-		hash
-	}
-
-	fn children_of<'v>(&'v self, dir: &'v Entry) -> impl Iterator<Item = &'v Entry> {
-		self.entries.iter().filter(|e| e.parent_hash == dir.hash)
-	}
-
-	#[must_use]
-	fn lookup_hash(&self, hash: u64) -> Option<(usize, &Entry)> {
+	fn root_entry(&self) -> &Entry {
 		self.entries
-			.iter()
-			.enumerate()
-			.find(|(_, e)| e.hash == hash)
+			.get_index(0)
+			.expect("The root VFS entry is not at index 0.")
+			.1
 	}
 
-	/// Recursively gets the total memory usage of a directory.
-	#[must_use]
-	fn mem_usage(&self, dir: &Entry) -> usize {
-		let mut ret = 0;
+	/// Panics if a non-directory entry is passed to it.
+	fn children_of<'vfs>(&'vfs self, entry: &'vfs Entry) -> impl Iterator<Item = &'vfs Entry> {
+		match &entry.kind {
+			EntryKind::Directory(elements) => Iter::<'vfs> {
+				vfs: self,
+				elements,
+				current: 0,
+			},
+			_ => unreachable!(),
+		}
+	}
 
-		for child in self.children_of(dir) {
-			ret += std::mem::size_of_val(child);
-
-			match &child.kind {
-				EntryKind::Binary(bytes) => {
-					ret += bytes.len();
-				}
-				EntryKind::String(string) => {
-					ret += string.len();
-				}
-				EntryKind::Directory => {
-					ret += self.mem_usage(child);
-				}
+	fn update_dirs(&mut self) {
+		for entry in self.entries.values_mut() {
+			if let EntryKind::Directory(dir) = &mut entry.kind {
+				dir.clear();
 			}
 		}
 
-		ret
+		for idx in 0..self.entries.len() {
+			let parent_hash = if let Some(p) = self.entries[idx].path.parent() {
+				PathHash::new(p)
+			} else {
+				// No parent; `entries[idx]` is the root
+				continue;
+			};
+
+			let parent = self.entries.get_mut(&parent_hash).unwrap();
+
+			if let EntryKind::Directory(dir) = &mut parent.kind {
+				dir.push(idx);
+			} else {
+				unreachable!()
+			}
+		}
 	}
 }
 

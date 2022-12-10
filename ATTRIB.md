@@ -72,6 +72,10 @@ If you're aware of any attribution which is evidently missing from this list, or
     - By the [image-rs](https://github.com/image-rs) organisation et. al.
     - Provided under the [MIT License](https://github.com/image-rs/image/blob/master/LICENSE).
     - https://docs.rs/image/latest/image/
+- indexmap
+    - By [@bluss](https://github.com/bluss), Josh Stone ([@cuviper](https://github.com/cuviper)), et. al.
+    - Provided under the [Apache 2.0 License](https://github.com/bluss/indexmap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/indexmap/blob/master/LICENSE-MIT).
+	- https://docs.rs/indexmap/latest/indexmap/
 - kira
 	- By [@tesselode](https://github.com/tesselode) et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).

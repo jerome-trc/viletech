@@ -30,11 +30,10 @@ use log::{error, info, warn};
 use crate::{
 	data::{GameDataKind, MetaToml as GameDataMetaToml},
 	utils::{path::*, string::*},
-	vfs::{EntryKind, RGX_INVALIDMOUNTPATH},
 	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
 };
 
-use super::{Error, FileRef, VirtualFs};
+use super::{entry::PathHash, EntryKind, Error, FileRef, VirtualFs, RGX_INVALIDMOUNTPATH};
 
 /// A separate trait provides functions that are specific to Impure, so that the
 /// VFS itself can later be more easily made into a standalone library.
@@ -71,7 +70,7 @@ pub trait ImpureVfs {
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	#[must_use]
-	fn gamedata_kind(&self, id: &str) -> GameDataKind;
+	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> GameDataKind;
 
 	fn parse_gamedata_meta(
 		&self,
@@ -251,7 +250,7 @@ impl ImpureVfs for VirtualFs {
 		self.lookup(path).map(|file| file.has_decorate())
 	}
 
-	fn gamedata_kind(&self, id: &str) -> GameDataKind {
+	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> GameDataKind {
 		fn check_path(path: &Path) -> std::option::Option<GameDataKind> {
 			if path.has_gzdoom_extension() {
 				return Some(GameDataKind::ZDoom);
@@ -271,19 +270,14 @@ impl ImpureVfs for VirtualFs {
 
 		let entry = &self
 			.entries
-			.iter()
-			.find(|c| c.file_name() == id)
-			.expect("Invalid ID passed to `ImpureVfs::gamedata_kind`.");
+			.get(&PathHash::new(virtual_path))
+			.expect("`ImpureVfs::gamedata_kind` received a non-existent virtual path.");
 
 		match &entry.kind {
-			EntryKind::Binary { .. } | EntryKind::String { .. } => {
-				return GameDataKind::File;
-			}
-			EntryKind::Directory => {
+			EntryKind::Directory(..) => {
 				let real_path = self
-					.real_paths
-					.get(id)
-					.expect("Invalid ID passed to `ImpureVfs::gamedata_kind`.");
+					.virtual_to_real(&entry.path)
+					.expect("`ImpureVfs::gamedata_kind` failed to resolve a real path.");
 
 				for child in self.children_of(entry) {
 					if !child.file_name().eq_ignore_ascii_case("meta.toml") {
@@ -302,7 +296,7 @@ impl ImpureVfs for VirtualFs {
 						continue;
 					}
 
-					let meta: GameDataMetaToml = match toml::from_str(child.read_str()) {
+					let meta: GameDataMetaToml = match toml::from_str(child.read_str_unchecked()) {
 						Ok(m) => m,
 						Err(err) => {
 							warn!(
@@ -325,9 +319,12 @@ impl ImpureVfs for VirtualFs {
 					}
 				}
 
-				if let Some(kind) = check_path(real_path) {
+				if let Some(kind) = check_path(&real_path) {
 					return kind;
 				}
+			}
+			_ => {
+				return GameDataKind::File;
 			}
 		};
 
@@ -391,8 +388,8 @@ impl ImpureVfs for VirtualFs {
 			);
 		}
 
-		let count = file.count();
-		let mut ret = String::with_capacity(count * 32);
+		let child_count = file.child_count();
+		let mut ret = String::with_capacity(child_count * 32);
 
 		for child in file.children() {
 			match write!(ret, "\r\n\t{}", child.file_name()) {
@@ -411,7 +408,12 @@ impl ImpureVfs for VirtualFs {
 			}
 		}
 
-		format!("Files under \"{}\" ({}): {}", path.display(), count, ret)
+		format!(
+			"Files under \"{}\" ({}): {}",
+			path.display(),
+			child_count,
+			ret
+		)
 	}
 }
 
@@ -438,24 +440,26 @@ pub trait ImpureFileRef {
 	fn has_edfroot(&self) -> bool;
 }
 
-impl ImpureFileRef for FileRef<'_, '_> {
+impl ImpureFileRef for FileRef<'_> {
 	fn is_impure_package(&self) -> bool {
 		self.is_dir()
-			&& self.contains_any(|p| {
-				p.file_stem()
+			&& self.children().any(|e| {
+				e.path
+					.file_stem()
 					.unwrap_or_default()
 					.eq_ignore_ascii_case("meta.toml")
 			})
 	}
 
 	fn is_udmf_map(&self) -> bool {
-		self.contains("TEXTMAP")
+		self.children().any(|e| e.file_name() == "TEXTMAP")
 	}
 
 	fn has_decorate(&self) -> bool {
 		self.is_dir()
-			&& self.contains_any(|p| {
-				let stem = p
+			&& self.children().any(|e| {
+				let stem = e
+					.path
 					.file_stem()
 					.unwrap_or_default()
 					.to_str()
@@ -469,8 +473,9 @@ impl ImpureFileRef for FileRef<'_, '_> {
 
 	fn has_zscript(&self) -> bool {
 		self.is_dir()
-			&& self.contains_any(|p| {
-				let stem = p
+			&& self.children().any(|e| {
+				let stem = e
+					.path
 					.file_stem()
 					.unwrap_or_default()
 					.to_str()
@@ -484,8 +489,9 @@ impl ImpureFileRef for FileRef<'_, '_> {
 
 	fn has_edfroot(&self) -> bool {
 		self.is_dir()
-			&& self.contains_any(|p| {
-				let stem = p
+			&& self.children().any(|e| {
+				let stem = e
+					.path
 					.file_stem()
 					.unwrap_or_default()
 					.to_str()
@@ -498,19 +504,19 @@ impl ImpureFileRef for FileRef<'_, '_> {
 	}
 }
 
-impl ZsFileSystem for FileRef<'_, '_> {
+impl ZsFileSystem for FileRef<'_> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
-		let target = match self.lookup_nocase(filename) {
+		let target = match self.children().find(|e| e.path_str() == filename) {
 			Some(h) => h,
 			None => {
-				let full_path = self.virtual_path().join(filename);
+				let full_path = self.path.join(filename);
 				warn!("Failed to find ZScript file: {}", full_path.display());
 				return None;
 			}
 		};
 
 		if target.is_dir() {
-			let full_path = self.virtual_path().join(filename);
+			let full_path = self.path.join(filename);
 			warn!(
 				"Expected ZScript file, found directory: {}",
 				full_path.display()
@@ -518,7 +524,7 @@ impl ZsFileSystem for FileRef<'_, '_> {
 			return None;
 		}
 
-		Some(ZsFile::new(filename.to_string(), target.copy().unwrap()))
+		Some(ZsFile::new(filename.to_string(), target.clone().unwrap()))
 	}
 
 	fn get_files_no_ext(&mut self, filename: &str) -> Vec<ZsFile> {

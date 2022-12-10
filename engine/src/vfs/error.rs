@@ -32,6 +32,10 @@ pub enum Error {
 	/// The caller provided a mount point that isn't comprised solely of
 	/// alphanumeric characters, underscores, dashes, periods, and forward slashes.
 	InvalidMountPoint,
+	/// If, for example, a mount point `/hello/world/foo/bar` is given, its parent
+	/// path is `/hello/world/foo`. If the parent of a given mount point cannot
+	/// be retrieved for whatever reason, this error will be emitted.
+	ParentlessMountPoint,
 	/// A path argument did not pass a UTF-8 validity check.
 	InvalidUtf8,
 	IoError(io::Error),
@@ -48,6 +52,8 @@ pub enum Error {
 	Remount,
 	/// The caller attempted to illegally mount a symbolic link.
 	SymlinkMount,
+	/// The caller attempted to unmount the root node (path `/` or ``).
+	UnmountRoot,
 	WadError(wad::Error),
 	ZipError(ZipError),
 }
@@ -66,12 +72,14 @@ impl fmt::Display for Error {
 			Self::InvalidMountPoint => {
 				write!(
 					f,
-					"Mount point can only contain letters, numbers, underscores, \
-					periods, dashes, and forward slashes."
+					"Attempted to use a mount point that contains invalid characters."
 				)
 			}
+			Self::ParentlessMountPoint => {
+				write!(f, "The given path has no parent path.")
+			}
 			Self::InvalidUtf8 => {
-				write!(f, "Given path failed to pass a UTF-8 validity check.")
+				write!(f, "The given path failed to pass a UTF-8 validity check.")
 			}
 			Self::IoError(err) => {
 				write!(f, "{}", err)
@@ -100,14 +108,21 @@ impl fmt::Display for Error {
 			Self::Unreadable => {
 				write!(
 					f,
-					"Directories, archives, and WADs are ineligible for reading."
+					"Attempted to read the byte content of an empty entry, \
+					or of a directory entry."
 				)
 			}
 			Self::Remount => {
-				write!(f, "Something is already mounted to the given path.")
+				write!(
+					f,
+					"Attempted to overwrite an existing entry with a new mount."
+				)
 			}
 			Self::SymlinkMount => {
-				write!(f, "Symbolic links can not be mounted.")
+				write!(f, "Attempted to mount a symbolic link.")
+			}
+			Self::UnmountRoot => {
+				write!(f, "Attempted to unmount the root VFS entry.")
 			}
 			Self::WadError(err) => {
 				write!(f, "{}", err)

@@ -57,7 +57,7 @@ pub fn is_binary(bytes: &[u8]) -> bool {
 }
 
 /// Checks for a 4-byte magic number.
-/// Ensure the given slice starts at the file's beginning
+/// Ensure the given slice starts at the file's beginning.
 #[must_use]
 pub fn is_zip(bytes: &[u8]) -> bool {
 	bytes.len() >= 4 && matches!(&bytes[0..4], &[0x50, 0x4b, 0x03, 0x04])

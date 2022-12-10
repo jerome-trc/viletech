@@ -30,182 +30,136 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use zip::ZipArchive;
 
-use crate::{lazy_regexset, utils::io::*, vfs::RGX_INVALIDMOUNTPATH, wad};
+use crate::{utils::io::*, wad};
 
-use super::{Entry, EntryKind, Error, VirtualFs};
+use super::{entry::PathHash, Entry, Error, VirtualFs, RGX_INVALIDMOUNTPATH};
 
 impl VirtualFs {
-	pub(super) fn mount_parallel(
+	// Note to self: in a 2-path tuple, `::0` is real and `::1` is virtual
+
+	#[must_use]
+	pub(super) fn mount_serial(
 		&mut self,
 		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
 	) -> Vec<Result<(), Error>> {
-		let results = Vec::<(usize, Result<(), Error>)>::with_capacity(mounts.len());
-		let results = Mutex::new(results);
+		let mut ret = Vec::with_capacity(mounts.len());
 
-		let mounts: Vec<(usize, (&Path, &Path))> = mounts
-			.iter()
-			.map(|pair| (pair.0.as_ref(), pair.1.as_ref()))
-			.enumerate()
-			.collect();
-
-		let output = Mutex::new(Vec::<(Vec<Entry>, String, PathBuf)>::default());
-
-		let (_, root) = self
-			.lookup_hash(Self::hash_path("/"))
-			.expect("VFS root node is missing.");
-
-		let root_hash = root.hash;
-
-		mounts.par_iter().for_each(|tuple| {
-			let pair = &tuple.1;
-
-			let real_path = match pair.0.canonicalize() {
-				Ok(c) => c,
+		for (real_path, mount_path) in mounts {
+			let real_path = match real_path.as_ref().canonicalize() {
+				Ok(canon) => canon,
 				Err(err) => {
-					warn!(
-						"Failed to canonicalize real path: {}
-						Error: {}",
-						pair.0.display(),
-						err
-					);
-					results
-						.lock()
-						.push((tuple.0, Err(Error::Canonicalization(err))));
-					return;
+					ret.push(Err(Error::Canonicalization(err)));
+					continue;
 				}
 			};
 
-			let mount_point = pair.1;
+			let mount_path = mount_path.as_ref();
 
-			// Don't let the caller mount symbolic links, etc.
+			if !real_path.exists() {
+				ret.push(Err(Error::NonExistentFile(real_path)));
+				continue;
+			}
 
-			match Self::mount_supported(&real_path) {
-				Ok(()) => {}
-				Err(err) => {
-					warn!(
-						"Attempted to mount an unsupported file: {}
-						Reason: {}",
-						real_path.display(),
-						err
-					);
-					results.lock().push((tuple.0, Err(err)));
-					return;
-				}
-			};
+			if real_path.is_symlink() {
+				ret.push(Err(Error::SymlinkMount));
+				continue;
+			}
 
 			// Ensure mount point is valid UTF-8
 
-			let mpoint_str = match mount_point.to_str() {
+			let mount_point_str = match mount_path.to_str() {
 				Some(s) => s,
 				None => {
-					warn!(
-						"Attempted to use a mount point that isn't valid Unicode ({})",
-						mount_point.display()
-					);
-					results.lock().push((tuple.0, Err(Error::InvalidUtf8)));
-					return;
+					ret.push(Err(Error::InvalidUtf8));
+					continue;
 				}
 			};
 
 			// Ensure mount point is only alphanumerics and underscores
 
-			if RGX_INVALIDMOUNTPATH.is_match(mpoint_str) {
-				warn!(
-					"Attempted to use a mount point that isn't comprised \
-					solely of alphanumerics, underscores, dashes, periods, \
-					and forward slashes. ({})",
-					mount_point.display()
-				);
-				results
-					.lock()
-					.push((tuple.0, Err(Error::InvalidMountPoint)));
-				return;
+			if RGX_INVALIDMOUNTPATH.is_match(mount_point_str) {
+				ret.push(Err(Error::InvalidMountPoint));
+				continue;
+			}
+
+			// Ensure mount point path has a parent path
+
+			let mount_point_parent = match mount_path.parent() {
+				Some(p) => p,
+				None => {
+					ret.push(Err(Error::ParentlessMountPoint));
+					continue;
+				}
+			};
+
+			// Ensure mount point parent exists
+
+			if !self.exists(mount_point_parent) {
+				ret.push(Err(Error::NonExistentEntry(mount_point_parent.to_owned())));
+				continue;
 			}
 
 			// Ensure nothing already exists at end of mount point
 
-			if self.exists(mount_point) {
-				results.lock().push((tuple.0, Err(Error::Remount)));
-				return;
+			if self.exists(mount_path) {
+				ret.push(Err(Error::Remount));
+				continue;
 			}
 
 			// All checks passed. Start recurring down real path
 
-			let mut mpoint = PathBuf::new();
+			let mut mount_point = PathBuf::new();
 
-			if !mount_point.starts_with("/") {
-				mpoint.push("/");
+			if !mount_path.starts_with("/") {
+				mount_point.push("/");
 			}
 
-			mpoint.push(mount_point);
+			mount_point.push(mount_path);
 
 			let res = if real_path.is_dir() {
-				Self::mount_dir(&real_path, mpoint.clone(), root_hash)
+				Self::mount_dir(&real_path, mount_point.clone())
 			} else {
 				let bytes = match fs::read(&real_path) {
 					Ok(b) => b,
 					Err(err) => {
-						warn!(
-							"Failed to read object for mounting: {}
-							Error: {}",
-							real_path.display(),
-							err
-						);
-
-						results.lock().push((tuple.0, Err(Error::IoError(err))));
-						return;
+						ret.push(Err(Error::IoError(err)));
+						continue;
 					}
 				};
 
-				Self::mount_file(bytes, mpoint.clone(), root_hash)
+				Self::mount_file(bytes, mount_point.clone())
 			};
 
 			let new_entries = match res {
 				Ok(e) => e,
 				Err(err) => {
-					warn!(
-						"Failed to mount object: {}
-						Error: {}",
-						real_path.display(),
-						err
-					);
-					return;
+					ret.push(Err(err));
+					continue;
 				}
 			};
 
 			info!(
 				"Mounted: \"{}\" -> \"{}\".",
 				real_path.display(),
-				mpoint.display()
+				mount_point.display()
 			);
 
-			output
-				.lock()
-				.push((new_entries, mpoint.to_str().unwrap().to_owned(), real_path));
-			results.lock().push((tuple.0, Ok(())));
-		});
+			self.real_paths
+				.insert(real_path, PathHash::new(&mount_point));
 
-		let mut output = output.into_inner();
+			for new_entry in new_entries {
+				let displaced = self
+					.entries
+					.insert(PathHash::new(&new_entry.path), new_entry);
 
-		for mut troika in output.drain(..) {
-			self.entries.append(&mut troika.0);
-			troika.1.remove(0); // Take off preceding root backslash
-			self.real_paths.insert(troika.1, troika.2);
-		}
-
-		let mut results = results.into_inner();
-		let mut ret = Vec::<Result<(), Error>>::with_capacity(results.len());
-
-		while !results.is_empty() {
-			let mut i = 0;
-
-			while i < results.len() {
-				if results[i].0 == ret.len() {
-					ret.push(results.swap_remove(i).1);
-				} else {
-					i += 1;
-				}
+				debug_assert!(
+					displaced.is_none(),
+					"A VFS serial mount displaced entry: {}",
+					displaced.unwrap().path.display()
+				);
 			}
+
+			ret.push(Ok(()));
 		}
 
 		debug_assert!(ret.len() == mounts.len());
@@ -213,27 +167,197 @@ impl VirtualFs {
 		ret
 	}
 
+	#[must_use]
+	pub(super) fn mount_parallel(
+		&mut self,
+		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
+	) -> Vec<Result<(), Error>> {
+		enum Output {
+			Uninit,
+			Ok {
+				new_entries: Vec<Entry>,
+				mount_point: PathBuf,
+				real_path: PathBuf,
+			},
+			Err(Error),
+		}
+
+		let mut results = Vec::with_capacity(mounts.len());
+
+		for _ in 0..mounts.len() {
+			results.push(Output::Uninit);
+		}
+
+		let results = Mutex::new(results);
+
+		let mounts: Vec<(&Path, &Path)> = mounts
+			.iter()
+			.map(|pair| (pair.0.as_ref(), pair.1.as_ref()))
+			.collect();
+
+		mounts
+			.par_iter()
+			.enumerate()
+			.for_each(|(index, (real_path, mount_path))| {
+				let real_path = match real_path.canonicalize() {
+					Ok(canon) => canon,
+					Err(err) => {
+						results.lock()[index] = Output::Err(Error::Canonicalization(err));
+						return;
+					}
+				};
+
+				if !real_path.exists() {
+					results.lock()[index] = Output::Err(Error::NonExistentFile(real_path));
+					return;
+				}
+
+				if real_path.is_symlink() {
+					results.lock()[index] = Output::Err(Error::SymlinkMount);
+					return;
+				}
+
+				// Ensure mount point is valid UTF-8
+
+				let mount_point_str = match mount_path.to_str() {
+					Some(s) => s,
+					None => {
+						results.lock()[index] = Output::Err(Error::InvalidUtf8);
+						return;
+					}
+				};
+
+				// Ensure mount point is only alphanumerics and underscores
+
+				if RGX_INVALIDMOUNTPATH.is_match(mount_point_str) {
+					results.lock()[index] = Output::Err(Error::InvalidMountPoint);
+					return;
+				}
+
+				// Ensure mount point path has a parent path
+
+				let mount_point_parent = match mount_path.parent() {
+					Some(p) => p,
+					None => {
+						results.lock()[index] = Output::Err(Error::ParentlessMountPoint);
+						return;
+					}
+				};
+
+				// Ensure mount point parent exists
+
+				if !self.exists(mount_point_parent) {
+					results.lock()[index] =
+						Output::Err(Error::NonExistentEntry(mount_point_parent.to_owned()));
+					return;
+				}
+
+				// Ensure nothing already exists at end of mount point
+
+				if self.exists(mount_path) {
+					results.lock()[index] = Output::Err(Error::Remount);
+					return;
+				}
+
+				// All checks passed. Start recurring down real path
+
+				let mut mount_point = PathBuf::new();
+
+				if !mount_path.starts_with("/") {
+					mount_point.push("/");
+				}
+
+				mount_point.push(mount_path);
+
+				let res = if real_path.is_dir() {
+					Self::mount_dir(&real_path, mount_point.clone())
+				} else {
+					let bytes = match fs::read(&real_path) {
+						Ok(b) => b,
+						Err(err) => {
+							results.lock()[index] = Output::Err(Error::IoError(err));
+							return;
+						}
+					};
+
+					Self::mount_file(bytes, mount_point.clone())
+				};
+
+				let new_entries = match res {
+					Ok(e) => e,
+					Err(err) => {
+						results.lock()[index] = Output::Err(err);
+						return;
+					}
+				};
+
+				info!(
+					"Mounted: \"{}\" -> \"{}\".",
+					real_path.display(),
+					mount_point.display()
+				);
+
+				results.lock()[index] = Output::Ok {
+					new_entries,
+					mount_point,
+					real_path,
+				};
+			});
+
+		let ret: Vec<Result<(), Error>> = results
+			.into_inner()
+			.into_iter()
+			.map(|out| match out {
+				Output::Uninit => {
+					unreachable!("A VFS parallel mount result was left uninitialized.");
+				}
+				Output::Ok {
+					new_entries,
+					mount_point,
+					real_path,
+				} => {
+					self.real_paths
+						.insert(real_path, PathHash::new(&mount_point));
+
+					for new_entry in new_entries {
+						let displaced = self
+							.entries
+							.insert(PathHash::new(&new_entry.path), new_entry);
+
+						debug_assert!(
+							displaced.is_none(),
+							"A VFS parallel mount displaced entry: {}",
+							displaced.unwrap().path.display()
+						);
+					}
+
+					Ok(())
+				}
+				Output::Err(err) => Err(err),
+			})
+			.collect();
+
+		debug_assert!(ret.len() == mounts.len());
+
+		ret
+	}
+
 	/// Forwards files of an as-yet unknown kind to the right mounting function.
-	pub(super) fn mount_file(
-		bytes: Vec<u8>,
-		mut virt_path: PathBuf,
-		parent_hash: u64,
-	) -> Result<Vec<Entry>, Error> {
+	fn mount_file(bytes: Vec<u8>, mut virt_path: PathBuf) -> Result<Vec<Entry>, Error> {
 		match is_valid_wad(&bytes[..], bytes.len().try_into().unwrap()) {
 			Ok(b) => {
 				if b {
 					// If this WAD was nested in another archive,
 					// it will need to have its extension taken off
 					virt_path.set_extension("");
-					return Self::mount_wad(bytes, virt_path, parent_hash);
+					return Self::mount_wad(bytes, virt_path);
 				}
 			}
 			Err(err) => {
 				warn!(
-					"Failed to determine if file is a WAD: {}
-					Error: {}",
+					"Failed to determine if file is a WAD: {}\r\n\
+					Error: {err}",
 					virt_path.display(),
-					err
 				);
 				return Err(Error::IoError(err));
 			}
@@ -243,22 +367,18 @@ impl VirtualFs {
 			// If this zip file was nested in another archive,
 			// it will need to have its extension taken off
 			virt_path.set_extension("");
-			return Self::mount_zip(bytes, virt_path, parent_hash);
+			return Self::mount_zip(bytes, virt_path);
 		}
 
 		// This isn't any kind of archive. Mount whatever it may be
 
-		Ok(vec![Entry::new_leaf(virt_path, parent_hash, bytes)])
+		Ok(vec![Entry::new_leaf(virt_path, bytes)])
 	}
 
-	fn mount_zip(
-		bytes: Vec<u8>,
-		virt_path: PathBuf,
-		parent_hash: u64,
-	) -> Result<Vec<Entry>, Error> {
+	fn mount_zip(bytes: Vec<u8>, virt_path: PathBuf) -> Result<Vec<Entry>, Error> {
 		let cursor = Cursor::new(&bytes);
 		let mut zip = ZipArchive::new(cursor).map_err(Error::ZipError)?;
-		let mut ret = vec![Entry::new_dir(virt_path.clone(), parent_hash)];
+		let mut ret = vec![Entry::new_dir(virt_path.clone())];
 
 		// First pass creates a directory structure
 
@@ -273,10 +393,9 @@ impl VirtualFs {
 				}
 				Err(err) => {
 					warn!(
-						"Skipping malformed entry in zip archive: {}
-						Error: {}",
+						"Skipping malformed entry in zip archive: {}\r\n\
+						Error: {err}",
 						virt_path.display(),
-						err
 					);
 					continue;
 				}
@@ -286,9 +405,8 @@ impl VirtualFs {
 				Some(p) => p,
 				None => {
 					warn!(
-						"A zip file entry contains an unsafe path at index: {}
+						"A zip file entry contains an unsafe path at index: {i}\r\n
 						Zip file virtual path: {}",
-						i,
 						virt_path.display()
 					);
 					continue;
@@ -297,9 +415,7 @@ impl VirtualFs {
 
 			let mut vpath = virt_path.clone();
 			vpath.push(zfpath);
-			let parent_path = vpath.parent().unwrap();
-			let parent = ret.iter().find(|e| e.path.as_path() == parent_path);
-			ret.push(Entry::new_dir(vpath, parent.unwrap().hash));
+			ret.push(Entry::new_dir(vpath));
 		}
 
 		// Second pass covers leaf nodes
@@ -315,10 +431,9 @@ impl VirtualFs {
 				}
 				Err(err) => {
 					warn!(
-						"Skipping malformed entry in zip archive: {}
-						Error: {}",
+						"Skipping malformed entry in zip archive: {}\r\n\
+						Error: {err}",
 						virt_path.display(),
-						err
 					);
 					continue;
 				}
@@ -331,7 +446,7 @@ impl VirtualFs {
 				Ok(count) => {
 					if count != zfsize {
 						warn!(
-							"Failed to read all bytes of zip file entry: {}
+							"Failed to read all bytes of zip file entry: {}\r\n\
 							Zip file virtual path: {}",
 							zfile.enclosed_name().unwrap().display(),
 							virt_path.display()
@@ -341,12 +456,10 @@ impl VirtualFs {
 				}
 				Err(err) => {
 					warn!(
-						"Failed to read zip file entry: {}
-						Zip file virtual path: {}
-						Error: {}",
+						"Failed to read zip file entry: {}\r\nZip file virtual path: {}\r\n\
+						Error: {err}",
 						zfile.enclosed_name().unwrap().display(),
 						virt_path.display(),
-						err
 					);
 					continue;
 				}
@@ -356,9 +469,8 @@ impl VirtualFs {
 				Some(p) => p,
 				None => {
 					warn!(
-						"A zip file entry contains an unsafe path at index: {}
+						"A zip file entry contains an unsafe path at index: {i}\r\n\
 						Zip file virtual path: {}",
-						i,
 						virt_path.display()
 					);
 					continue;
@@ -367,21 +479,15 @@ impl VirtualFs {
 
 			let mut vpath = virt_path.clone();
 			vpath.push(zfpath);
-			let parent_path = vpath.parent().unwrap();
-			let parent = ret.iter().find(|e| e.path.as_path() == parent_path);
-			ret.push(Entry::new_leaf(vpath, parent.unwrap().hash, bytes));
+			ret.push(Entry::new_leaf(vpath, bytes));
 		}
 
-		ret[1..].sort_by(Entry::cmp_name);
+		ret[1..].par_sort_by(Entry::cmp_name);
 
 		Ok(ret)
 	}
 
-	fn mount_wad(
-		bytes: Vec<u8>,
-		virt_path: PathBuf,
-		parent_hash: u64,
-	) -> Result<Vec<Entry>, Error> {
+	fn mount_wad(bytes: Vec<u8>, virt_path: PathBuf) -> Result<Vec<Entry>, Error> {
 		#[rustfmt::skip]
 		const MAP_COMPONENTS: &[&str] = &[
 			"blockmap",
@@ -403,122 +509,64 @@ impl VirtualFs {
 			// Note: ENDMAP gets filtered out, since there's no need to keep it
 		];
 
-		let wad = wad::parse_wad(bytes).map_err(Error::WadError)?;
-		let mut dissolution = wad.dissolve();
-
-		let mut ret = vec![Entry::new_dir(virt_path.clone(), parent_hash)];
-		let this_hash = ret.last().unwrap().hash;
-
-		let mut mapfold: Option<Entry> = None;
-
-		for (ebytes, name) in dissolution.drain(..) {
-			let mut vpath = virt_path.clone();
-			vpath.push(&name);
-
-			if lazy_regexset!(r"^MAP[0-9]{2}$", r"^E[0-9]M[0-9]$", r"^HUBMAP$").is_match(&name) {
-				if let Some(entry) = mapfold.take() {
-					ret.push(entry);
-				}
-
-				mapfold = Some(Entry::new_dir(vpath, this_hash));
-				continue;
-			}
-
-			let dup_pos = ret.iter().position(|entry| entry.file_name() == name);
-
-			match dup_pos {
-				None => {}
-				Some(pos) => {
-					let entry = ret.remove(pos);
-
-					match entry.kind {
-						EntryKind::Binary(bytes) => {
-							let mut svpath0 = vpath.clone();
-							svpath0.push("000");
-
-							let mut svpath1 = vpath.clone();
-							svpath1.push("001");
-
-							let new_folder = Entry::new_dir(vpath, this_hash);
-							let new_folder_hash = new_folder.hash;
-							ret.push(new_folder);
-
-							ret.push(Entry::new_leaf(svpath0, new_folder_hash, bytes));
-							ret.push(Entry::new_leaf(svpath1, new_folder_hash, ebytes));
-						}
-						EntryKind::String(string) => {
-							let mut svpath0 = vpath.clone();
-							svpath0.push("000");
-
-							let mut svpath1 = vpath.clone();
-							svpath1.push("001");
-
-							let new_folder = Entry::new_dir(vpath, this_hash);
-							let new_folder_hash = new_folder.hash;
-							ret.push(new_folder);
-
-							ret.push(Entry::new_leaf(
-								svpath0,
-								new_folder_hash,
-								string.into_bytes(),
-							));
-							ret.push(Entry::new_leaf(svpath1, new_folder_hash, ebytes));
-						}
-						EntryKind::Directory => {
-							let count = ret.iter().filter(|e| e.parent_hash == entry.hash).count();
-
-							let mut svpath = vpath.clone();
-							svpath.push(format!("{:03}", count));
-
-							ret.push(Entry::new_leaf(svpath, entry.hash, ebytes));
-						}
-					}
-
-					continue;
-				}
-			}
-
-			let pop_map = match &mut mapfold {
-				Some(folder) => {
-					let mut is_map_part = false;
-
-					for lmpname in MAP_COMPONENTS {
-						if name.eq_ignore_ascii_case(lmpname) {
-							is_map_part = true;
-							break;
-						}
-					}
-
-					if is_map_part {
-						ret.push(Entry::new_leaf(vpath, folder.hash, ebytes));
-						continue;
-					} else {
-						true
-					}
-				}
-				None => {
-					ret.push(Entry::new_leaf(vpath, parent_hash, ebytes));
-					continue;
-				}
-			};
-
-			if pop_map {
-				ret.push(mapfold.take().unwrap());
-			}
+		#[must_use]
+		fn is_map_component(name: &str) -> bool {
+			MAP_COMPONENTS.iter().any(|s| s.eq_ignore_ascii_case(name))
 		}
 
-		if mapfold.is_some() {
-			ret.push(mapfold.take().unwrap());
+		#[must_use]
+		fn is_first_map_component(name: &str) -> bool {
+			name.eq_ignore_ascii_case("things") || name.eq_ignore_ascii_case("textmap")
+		}
+
+		let wad = wad::parse_wad(bytes).map_err(Error::WadError)?;
+		let mut ret = Vec::with_capacity(wad.len());
+		let mut dissolution = wad.dissolve();
+		ret.push(Entry::new_dir(virt_path.clone()));
+		let mut index = 0_usize;
+		let mut mapfold: Option<usize> = None;
+
+		for (bytes, name) in dissolution.drain(..) {
+			index += 1;
+
+			// Is this WAD entry the first component in a map grouping?
+			// If so, the previous WAD entry was a map marker, and needs to be
+			// treated like a directory. Future WAD entries until the next map
+			// marker or non-map component will get a child path to [index - 1]
+			if is_first_map_component(&name) && ret[index - 1].is_empty() {
+				let prev = ret.pop().unwrap();
+				ret.push(Entry::new_dir(prev.path));
+				mapfold = Some(index - 1);
+			} else if !is_map_component(name.as_str()) {
+				mapfold = None;
+			}
+
+			let child_path = if let Some(entry_idx) = mapfold {
+				// virt_path currently: `/mount_point`
+				let mut cpath = virt_path.join(ret[entry_idx].file_name());
+				// cpath currently: `/mount_point/MAP01`
+				cpath.push(&name);
+				// cpath currently: `/mount_point/MAP01/THINGS`
+				cpath
+			} else {
+				virt_path.join(&name)
+			};
+
+			// What if a WAD contains two entries with the same name?
+			// (e.g. DOOM2.WAD has two identical `SW18_7` entries)
+			// In this case, the last entry clobbers the previous ones
+
+			if let Some(pos) = ret.iter().position(|e| e.path == child_path) {
+				ret.remove(pos);
+			}
+
+			ret.push(Entry::new_leaf(child_path, bytes));
 		}
 
 		Ok(ret)
 	}
 
-	pub(super) fn mount_dir(
-		real_path: &Path,
-		virt_path: PathBuf,
-		parent_hash: u64,
-	) -> Result<Vec<Entry>, Error> {
+	fn mount_dir(real_path: &Path, virt_path: PathBuf) -> Result<Vec<Entry>, Error> {
 		let mut ret = Vec::<Entry>::default();
 
 		// Check under this directory for other files/directories/archives
@@ -533,18 +581,16 @@ impl VirtualFs {
 			}
 		};
 
-		ret.push(Entry::new_dir(virt_path.clone(), parent_hash));
-		let this_hash = ret.last().unwrap().hash;
+		ret.push(Entry::new_dir(virt_path.clone()));
 
 		for entry in read_dir {
 			let ftype = match entry.file_type() {
 				Ok(ft) => ft,
 				Err(err) => {
 					warn!(
-						"Skipping mounting dir. entry of unknown type: {}
-						File type acquiry error: {}",
+						"Skipping mounting dir. entry of unknown type: {}\r\n\
+						File type acquiry error: {err}",
 						entry.path().display(),
-						err
 					);
 					continue;
 				}
@@ -561,8 +607,8 @@ impl VirtualFs {
 				Some(f) => f,
 				None => {
 					warn!(
-						"Directory entry with invalid UTF-8 in file name will \
-						not be mounted: {}",
+						"Directory entry with invalid UTF-8 in file name \
+						will not be mounted: {}",
 						entry_path.display()
 					);
 					continue;
@@ -573,23 +619,22 @@ impl VirtualFs {
 			vpath.push(fname);
 
 			let res = if ftype.is_dir() {
-				Self::mount_dir(&entry_path, vpath, this_hash)
+				Self::mount_dir(&entry_path, vpath)
 			} else {
 				let bytes = match fs::read(&entry_path) {
 					Ok(b) => b,
 					Err(err) => {
 						warn!(
-							"Failed to read object for mounting: {}
-							Error: {}",
+							"Failed to read object for mounting: {}\r\n\
+							Error: {err}",
 							entry_path.display(),
-							err
 						);
 
 						return Err(Error::IoError(err));
 					}
 				};
 
-				Self::mount_file(bytes, vpath, this_hash)
+				Self::mount_file(bytes, vpath)
 			};
 
 			match res {
@@ -598,17 +643,16 @@ impl VirtualFs {
 				}
 				Err(err) => {
 					warn!(
-						"Failed to mount directory entry: {}
-						Error: {}",
+						"Failed to mount directory entry: {}\r\n\
+						Error: {err}",
 						entry_path.display(),
-						err
 					);
 					continue;
 				}
 			}
 		}
 
-		ret[1..].sort_by(Entry::cmp_name);
+		ret[1..].par_sort_by(Entry::cmp_name);
 
 		Ok(ret)
 	}
