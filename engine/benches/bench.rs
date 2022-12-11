@@ -20,11 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{env, path::PathBuf, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use impure::{lua::ImpureLua, newtype, rng::ImpureRng, sim::PlaySim, vfs::VirtualFs};
+use impure::{lua::ImpureLua, newtype_mut, rng::ImpureRng, sim::PlaySim, vfs::VirtualFs};
 use mlua::prelude::*;
 use parking_lot::{Mutex, RwLock};
 
-newtype!(struct PlaySimBenchWrapper(PlaySim));
+newtype_mut!(struct PlaySimBenchWrapper(PlaySim));
 
 impl LuaUserData for PlaySimBenchWrapper {}
 

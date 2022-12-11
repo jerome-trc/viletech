@@ -25,7 +25,7 @@ use mlua::{prelude::*, TableExt as LuaTableExt};
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
 
-use crate::{newtype, rng::RngCore, sim::PlaySim, vfs::VirtualFs};
+use crate::{newtype_mut, rng::RngCore, sim::PlaySim, vfs::VirtualFs};
 
 mod detail;
 mod vector;
@@ -360,39 +360,39 @@ pub type Vec4 = UserDataWrapper<glam::Vec4>;
 pub fn is_reserved_keyword(string: &str) -> bool {
 	#[rustfmt::skip]
 	const RESERVED_KEYWORDS: &[&str] = &[
-		"and",   
-		"break",    
-		"do",      
-		"else",     
+		"and",
+		"break",
+		"do",
+		"else",
 		"elseif",
-		"end",    
-		"false",   
-		"for",     
-		"function",  
+		"end",
+		"false",
+		"for",
+		"function",
 		"if",
-		"in",     
-		"local",   
-		"nil",     
-		"not",       
+		"in",
+		"local",
+		"nil",
+		"not",
 		"or",
-		"repeat", 
-		"return",  
-		"then",    
-		"true",      
-		"until",     
+		"repeat",
+		"return",
+		"then",
+		"true",
+		"until",
 		"while",
 	];
 
 	RESERVED_KEYWORDS.iter().any(|s| s == &string)
 }
 
-newtype!(
+newtype_mut!(
 	/// Unique type for use as Lua app data, indicating whether the owning state
 	/// is currently in the process of running a sim tic.
 	pub struct SimsideAppData(bool)
 );
 
-newtype!(
+newtype_mut!(
 	/// Unique type for use as Lua app data, indicating whether the owning state
 	/// was initialized with launch arguments `-d` or `--dev`.
 	pub struct DevModeAppData(bool)

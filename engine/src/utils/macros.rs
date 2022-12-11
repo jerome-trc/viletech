@@ -25,7 +25,7 @@ macro_rules! replace_expr {
 }
 
 /// Convenience macro for defining a newtype (single-field tuple struct).
-/// Implementations are provided for [`std::ops::Deref`] and [`std::ops::DerefMut`].
+/// Generates an implementation for [`std::ops::Deref`].
 ///
 /// Usage examples:
 /// ```
@@ -39,6 +39,26 @@ macro_rules! replace_expr {
 /// ```
 #[macro_export]
 macro_rules! newtype {
+	(
+		$(#[$outer:meta])*
+		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
+	) => {
+		$(#[$outer])*
+		$ownvis struct $name($innervis $type);
+
+		impl std::ops::Deref for $name {
+			type Target = $type;
+
+			fn deref(&self) -> &Self::Target {
+				&self.0
+			}
+		}
+	};
+}
+
+/// Like [`newtype`] but also implements [`std::ops::DerefMut`].
+#[macro_export]
+macro_rules! newtype_mut {
 	(
 		$(#[$outer:meta])*
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
