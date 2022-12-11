@@ -81,6 +81,14 @@ fn lua(crit: &mut Criterion) {
 	grp_nativebind.finish();
 }
 
+/// Leave this here even if it's empty, so there's a quick scaffold ready
+/// for one-off benchmarking experiments.
+fn misc(crit: &mut Criterion) {
+	#[allow(unused)]
+	let mut grp = crit.benchmark_group("Miscellaneous");
+	grp.finish();
+}
+
 fn vfs(crit: &mut Criterion) {
 	fn mount(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
 		let mut vfs = VirtualFs::default();
@@ -135,5 +143,5 @@ fn vfs(crit: &mut Criterion) {
 	lookup(crit, &mount_paths);
 }
 
-criterion_group!(benches, lua, vfs);
+criterion_group!(benches, lua, misc, vfs);
 criterion_main!(benches);
