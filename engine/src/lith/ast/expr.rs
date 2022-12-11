@@ -22,11 +22,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use serde::Serialize;
 use vec1::Vec1;
 
-use crate::utils::lang::{FileSpan, Identifier};
+use crate::utils::lang::{Span, Identifier};
 
 use super::{literal::Literal, Resolver};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum BinaryOp {
 	Add,
 	Subtract,
@@ -68,7 +68,7 @@ pub enum BinaryOp {
 	BitwiseXorAssign,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PrefixOp {
 	Plus,
 	Minus,
@@ -78,105 +78,105 @@ pub enum PrefixOp {
 	BitwiseNot,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PostfixOp {
 	Increment,
 	Decrement,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Expression<'inp> {
-	pub span: Option<FileSpan<'inp>>,
+pub struct Expression {
+	pub span: Option<Span>,
 	#[serde(flatten)]
-	pub kind: ExpressionKind<'inp>,
+	pub kind: ExpressionKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum ExpressionKind<'inp> {
-	Ident(Identifier<'inp>),
-	Literal(Literal<'inp>),
-	Type(TypeExpr<'inp>),
+pub enum ExpressionKind {
+	Ident(Identifier),
+	Literal(Literal),
+	Type(TypeExpr),
 	Binary {
 		op: BinaryOp,
-		exprs: Box<BinaryOpExprs<'inp>>,
+		exprs: Box<BinaryOpExprs>,
 	},
 	Prefix {
 		op: PrefixOp,
-		expr: Box<Expression<'inp>>,
+		expr: Box<Expression>,
 	},
 	Postfix {
 		op: PostfixOp,
-		expr: Box<Expression<'inp>>,
+		expr: Box<Expression>,
 	},
-	Ternary(Box<TernaryOpExprs<'inp>>),
-	ArrayIndex(Box<ArrayIndexExprs<'inp>>),
+	Ternary(Box<TernaryOpExprs>),
+	ArrayIndex(Box<ArrayIndexExprs>),
 	Call {
-		lhs: Box<Expression<'inp>>,
-		exprs: Vec<FunctionCallArg<'inp>>,
+		lhs: Box<Expression>,
+		exprs: Vec<FunctionCallArg>,
 	},
-	Array(Box<ArrayExpr<'inp>>),
-	Structure(Box<StructExpr<'inp>>),
+	Array(Box<ArrayExpr>),
+	Structure(Box<StructExpr>),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ExprList<'inp> {
-	pub span: FileSpan<'inp>,
-	pub exprs: Vec1<Expression<'inp>>,
+pub struct ExprList {
+	pub span: Span,
+	pub exprs: Vec1<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TypeExpr<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct TypeExpr {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: TypeExprKind<'inp>,
+	pub kind: TypeExprKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum TypeExprKind<'inp> {
+pub enum TypeExprKind {
 	Anonymous,
-	Resolver(Resolver<'inp>),
+	Resolver(Resolver),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BinaryOpExprs<'inp> {
-	pub lhs: Expression<'inp>,
-	pub rhs: Expression<'inp>,
+pub struct BinaryOpExprs {
+	pub lhs: Expression,
+	pub rhs: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct TernaryOpExprs<'inp> {
-	pub cond: Expression<'inp>,
-	pub if_true: Expression<'inp>,
-	pub if_false: Expression<'inp>,
+pub struct TernaryOpExprs {
+	pub cond: Expression,
+	pub if_true: Expression,
+	pub if_false: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ArrayIndexExprs<'inp> {
-	pub lhs: Expression<'inp>,
-	pub index: Expression<'inp>,
+pub struct ArrayIndexExprs {
+	pub lhs: Expression,
+	pub index: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FunctionCallArg<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct FunctionCallArg {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: FunctionCallArgKind<'inp>,
+	pub kind: FunctionCallArgKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum FunctionCallArgKind<'inp> {
-	Unnamed(Expression<'inp>),
-	Named(Identifier<'inp>, Expression<'inp>),
+pub enum FunctionCallArgKind {
+	Unnamed(Expression),
+	Named(Identifier, Expression),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ArrayExpr<'inp> {
-	pub exprs: Vec<Expression<'inp>>,
+pub struct ArrayExpr {
+	pub exprs: Vec<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct StructExpr<'inp> {
-	pub inits: Vec<(Identifier<'inp>, Expression<'inp>)>,
+pub struct StructExpr {
+	pub inits: Vec<(Identifier, Expression)>,
 }

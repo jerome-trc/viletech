@@ -19,58 +19,145 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::hash::Hash;
+use std::{hash::Hash, sync::Arc};
 
+use indexmap::IndexSet;
+use parking_lot::RwLock;
 use serde::Serialize;
 
-use crate::vfs;
-
-/// Ties a [`pest::Span`] to an entry in the [virtual file system](vfs).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct FileSpan<'inp> {
+pub struct Span {
 	#[serde(skip)]
-	pub(crate) file: vfs::Handle,
-	#[serde(with = "PestSpanSerde")]
-	pub(crate) span: pest::Span<'inp>,
-}
-
-#[derive(Serialize)]
-#[serde(remote = "pest::Span")]
-struct PestSpanSerde<'inp> {
-	#[serde(skip)]
-	input: &'inp str,
-	#[serde(getter = "pest::Span::start")]
+	source_hash: u64,
 	start: usize,
-	#[serde(getter = "pest::Span::end")]
 	end: usize,
 }
 
-impl<'inp> From<PestSpanSerde<'inp>> for pest::Span<'inp> {
-	fn from(f: PestSpanSerde<'inp>) -> Self {
-		pest::Span::new(f.input, f.start, f.end).unwrap()
+impl Span {
+	/// No specific hashing function needs to be used to compute `source_hash`,
+	/// but it has to be the same for every span generated from that source, and
+	/// the whole of that source (e.g. the entire file) must be hashed.
+	#[must_use]
+	pub fn new(source_hash: u64, start: usize, end: usize) -> Self {
+		Self { source_hash, start, end }
+	}
+
+	/// Verify that the span's start and end positions lie on UTF-8 character
+	/// boundaries. Principally for use in a debug assertion.
+	#[must_use]
+	pub fn validate(&self, source: &str) -> bool {
+		source.get(self.start..self.end).is_some()
+	}
+
+	#[must_use]
+	#[inline(always)]
+	pub fn combine(self, other: Self) -> Self {
+		debug_assert!(
+			self.source_hash == other.source_hash,
+			"Tried to combine `Span`s from different files."
+		);
+
+		Self {
+			source_hash: other.source_hash,
+			start: self.start.max(other.start),
+			end: self.end.max(other.end),
+		}
+	}
+
+	#[must_use]
+	pub fn start(&self) -> usize {
+		self.start
+	}
+
+	#[must_use]
+	pub fn end(&self) -> usize {
+		self.end
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct Identifier<'inp>(pub FileSpan<'inp>);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Identifier(StringHandle);
 
-impl<'inp> std::ops::Deref for Identifier<'inp> {
-	type Target = FileSpan<'inp>;
+// String/identifier interning /////////////////////////////////////////////////
 
-	fn deref(&self) -> &Self::Target {
-		&self.0
+/// Points to an entry in the string interner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Hash)]
+pub struct StringIndex(usize);
+
+/// Ties a [`StringIndex`] to the interner that created it, allowing operations
+/// on the contents behind the index without having to make the interner global.
+#[derive(Debug, Clone, Serialize)]
+pub struct StringHandle {
+	#[serde(skip)]
+	interner: Arc<RwLock<Interner>>,
+	index: StringIndex,
+}
+
+impl PartialEq for StringHandle {
+	fn eq(&self, other: &Self) -> bool {
+		Arc::ptr_eq(&self.interner, &other.interner) && self.index == other.index
 	}
 }
 
-impl Hash for Identifier<'_> {
+impl Eq for StringHandle {}
+
+impl Hash for StringHandle {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.span.start().hash(state);
-		self.span.end().hash(state);
+		self.interner.read().get(self.index).hash(state);
 	}
 }
 
-impl std::fmt::Display for Identifier<'_> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{:?}", self.0.span.as_str())
+impl std::fmt::Display for StringHandle {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		write!(f, "{:?}", self.interner.read().get(self.index))
+	}
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Interner {
+	set: IndexSet<Box<str>>,
+}
+
+impl std::fmt::Display for Interner {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		writeln!(f, "{{")?;
+
+		for (i, s) in self.set.iter().enumerate() {
+			writeln!(f, "\t{} => {:?},", i, s)?;
+		}
+
+		write!(f, "}}")?;
+
+		Ok(())
+	}
+}
+
+impl Interner {
+	#[must_use]
+	pub(crate) fn add(&mut self, string: &str) -> StringIndex {
+		StringIndex(self.set.insert_full(string.to_string().into_boxed_str()).0)
+	}
+
+	#[must_use]
+	pub(crate) fn get(&self, index: StringIndex) -> &str {
+		self.set[index.0].as_ref()
+	}
+
+	#[must_use]
+	pub(crate) fn lookup(&mut self, string: &str) -> StringIndex {
+		if let Some(index) = self.set.get_index_of(string) {
+			StringIndex(index)
+		} else {
+			self.add(string)
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn try_lookup(&self, string: &str) -> Option<StringIndex> {
+		self.set.get_index_of(string).map(StringIndex)
+	}
+
+	pub(crate) fn clear(&mut self) {
+		self.set.clear();
 	}
 }

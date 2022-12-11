@@ -21,89 +21,89 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::{FileSpan, Identifier};
+use crate::utils::lang::{Span, Identifier};
 
 use super::{class::ClassDef, expr::Expression, Annotation, CompoundStatement, Resolver, TypeExpr};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ItemDef<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct ItemDef {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: ItemDefKind<'inp>,
-	pub quals: Vec<DeclQualifier<'inp>>,
+	pub kind: ItemDefKind,
+	pub quals: Vec<DeclQualifier>,
 	/// Outer annotations only, applied to the entire item.
-	pub annotations: Vec<Annotation<'inp>>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum ItemDefKind<'inp> {
-	TypeAlias(TypeAlias<'inp>),
-	Constant(Constant<'inp>),
-	Enum(EnumDef<'inp>),
-	Union(UnionDef<'inp>),
-	Function(FunctionDeclaration<'inp>),
-	Class(ClassDef<'inp>),
+pub enum ItemDefKind {
+	TypeAlias(TypeAlias),
+	Constant(Constant),
+	Enum(EnumDef),
+	Union(UnionDef),
+	Function(FunctionDeclaration),
+	Class(ClassDef),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TypeAlias<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub resolver: Resolver<'inp>,
+pub struct TypeAlias {
+	pub span: Span,
+	pub name: Identifier,
+	pub resolver: Resolver,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Constant<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub type_spec: Option<Resolver<'inp>>,
-	pub value: Expression<'inp>,
+pub struct Constant {
+	pub span: Span,
+	pub name: Identifier,
+	pub type_spec: Option<Resolver>,
+	pub value: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct EnumDef<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub type_spec: Option<Resolver<'inp>>,
-	pub variants: Vec<EnumVariant<'inp>>,
+pub struct EnumDef {
+	pub span: Span,
+	pub name: Identifier,
+	pub type_spec: Option<Resolver>,
+	pub variants: Vec<EnumVariant>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct EnumVariant<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub init: Option<Expression<'inp>>,
+pub struct EnumVariant {
+	pub span: Span,
+	pub name: Identifier,
+	pub init: Option<Expression>,
 	/// Outer annotations only.
-	pub annotations: Vec<Annotation<'inp>>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct UnionDef<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub variants: Vec<UnionVariant<'inp>>,
+pub struct UnionDef {
+	pub span: Span,
+	pub name: Identifier,
+	pub variants: Vec<UnionVariant>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct UnionVariant<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub inners: Vec<FieldDeclaration<'inp>>,
+pub struct UnionVariant {
+	pub span: Span,
+	pub name: Identifier,
+	pub inners: Vec<FieldDeclaration>,
 	/// Outer annotations only.
-	pub annotations: Vec<Annotation<'inp>>,
+	pub annotations: Vec<Annotation>,
 }
 
 // Item innards ////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct DeclQualifier<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct DeclQualifier {
+	pub span: Span,
 	#[serde(flatten)]
 	pub kind: DeclQualifierKind,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum DeclQualifierKind {
 	Abstract,
 	Action,
@@ -118,39 +118,39 @@ pub enum DeclQualifierKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FieldDeclaration<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub type_spec: Resolver<'inp>,
-	pub quals: Vec<DeclQualifier<'inp>>,
+pub struct FieldDeclaration {
+	pub span: Span,
+	pub name: Identifier,
+	pub type_spec: Resolver,
+	pub quals: Vec<DeclQualifier>,
 	/// Outer annotations only.
-	pub annotations: Vec<Annotation<'inp>>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FunctionDeclaration<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub quals: Vec<DeclQualifier<'inp>>,
-	pub return_type: Option<TypeExpr<'inp>>,
-	pub params: Vec<FuncParameter<'inp>>,
-	pub body: Option<CompoundStatement<'inp>>,
+pub struct FunctionDeclaration {
+	pub span: Span,
+	pub name: Identifier,
+	pub quals: Vec<DeclQualifier>,
+	pub return_type: Option<TypeExpr>,
+	pub params: Vec<FuncParameter>,
+	pub body: Option<CompoundStatement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FuncParameter<'inp> {
-	pub span: FileSpan<'inp>,
-	pub quals: Vec<FuncParamQualifier<'inp>>,
-	pub type_spec: TypeExpr<'inp>,
-	pub name: Identifier<'inp>,
-	pub default: Option<Expression<'inp>>,
+pub struct FuncParameter {
+	pub span: Span,
+	pub quals: Vec<FuncParamQualifier>,
+	pub type_spec: TypeExpr,
+	pub name: Identifier,
+	pub default: Option<Expression>,
 	/// Outer annotations only.
-	pub annotation: Vec<Annotation<'inp>>,
+	pub annotation: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct FuncParamQualifier<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct FuncParamQualifier {
+	pub span: Span,
 	#[serde(flatten)]
 	pub kind: FuncParamQualKind,
 }
@@ -163,11 +163,11 @@ pub enum FuncParamQualKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct PropertyDef<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub quals: Vec<DeclQualifier<'inp>>,
-	pub type_spec: Option<TypeExpr<'inp>>,
-	pub getter: Option<CompoundStatement<'inp>>,
-	pub setter: Option<CompoundStatement<'inp>>,
+pub struct PropertyDef {
+	pub span: Span,
+	pub name: Identifier,
+	pub quals: Vec<DeclQualifier>,
+	pub type_spec: Option<TypeExpr>,
+	pub getter: Option<CompoundStatement>,
+	pub setter: Option<CompoundStatement>,
 }

@@ -19,32 +19,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::{FileSpan, Identifier};
+use crate::utils::lang::{Span, Identifier};
 
 use super::{class::ClassInnerKind, item::ItemDef, FieldDeclaration};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct MixinClassDef<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub inners: Vec<MixinClassInner<'inp>>,
+pub struct MixinClassDef {
+	pub span: Span,
+	pub name: Identifier,
+	pub inners: Vec<MixinClassInner>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct MixinClassInner<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct MixinClassInner {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: MixinClassInnerKind<'inp>,
+	pub kind: MixinClassInnerKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum MixinClassInnerKind<'inp> {
-	Field(FieldDeclaration<'inp>),
-	Item(ItemDef<'inp>),
+pub enum MixinClassInnerKind {
+	Field(FieldDeclaration),
+	Item(ItemDef),
 }
 
-impl<'inp> MixinClassInnerKind<'inp> {
-	pub(crate) fn map_to_class_inner_kind(self) -> ClassInnerKind<'inp> {
+impl MixinClassInnerKind {
+	pub(crate) fn map_to_class_inner_kind(self) -> ClassInnerKind {
 		match self {
 			MixinClassInnerKind::Field(field) => ClassInnerKind::Field(field),
 			MixinClassInnerKind::Item(item) => ClassInnerKind::Item(item),

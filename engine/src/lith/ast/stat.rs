@@ -21,68 +21,68 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::{FileSpan, Identifier};
+use crate::utils::lang::{Span, Identifier};
 
 use super::{
 	expr::{ExprList, Expression, TypeExpr},
 	item::ItemDef,
-	BlockLabel, Annotation,
+	Annotation, BlockLabel,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Statement<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct Statement {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: StatementKind<'inp>,
+	pub kind: StatementKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "def")]
-pub enum StatementKind<'inp> {
-	Expression(Expression<'inp>),
-	Compound(CompoundStatement<'inp>),
+pub enum StatementKind {
+	Expression(Expression),
+	Compound(CompoundStatement),
 	If {
-		cond: Expression<'inp>,
-		body: CompoundStatement<'inp>,
-		else_body: Option<CompoundStatement<'inp>>,
+		cond: Expression,
+		body: CompoundStatement,
+		else_body: Option<CompoundStatement>,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
 	Switch {
-		val: Expression<'inp>,
-		label: Option<BlockLabel<'inp>>,
-		body: Vec<CompoundStatement<'inp>>,
+		val: Expression,
+		label: Option<BlockLabel>,
+		body: Vec<CompoundStatement>,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
 	CondIter {
-		cond: Expression<'inp>,
+		cond: Expression,
 		kind: CondIterKind,
-		body: Box<CompoundStatement<'inp>>,
+		body: Box<CompoundStatement>,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
 	ForIter {
-		init: Option<ForInit<'inp>>,
-		cond: Option<Expression<'inp>>,
-		update: Option<ExprList<'inp>>,
-		body: Box<CompoundStatement<'inp>>,
+		init: Option<ForInit>,
+		cond: Option<Expression>,
+		update: Option<ExprList>,
+		body: Box<CompoundStatement>,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
 	ForEachIter {
-		var_name: Identifier<'inp>,
-		sequence: Expression<'inp>,
+		var_name: Identifier,
+		sequence: Expression,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
-	Item(ItemDef<'inp>),
-	LocalVarDecl(LocalVarDecl<'inp>),
+	Item(ItemDef),
+	LocalVarDecl(LocalVarDecl),
 	MultiAssign {
-		assignees: ExprList<'inp>,
-		rhs: Expression<'inp>,
+		assignees: ExprList,
+		rhs: Expression,
 		/// Outer annotations only.
-		annotations: Vec<Annotation<'inp>>,
+		annotations: Vec<Annotation>,
 	},
 	Continue,
 	Break,
@@ -90,21 +90,21 @@ pub enum StatementKind<'inp> {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CompoundStatement<'inp> {
-	pub span: FileSpan<'inp>,
-	pub label: Option<BlockLabel<'inp>>,
-	pub statements: Vec<Statement<'inp>>,
+pub struct CompoundStatement {
+	pub span: Span,
+	pub label: Option<BlockLabel>,
+	pub statements: Vec<Statement>,
 	/// Inner annotations only, applied to the entire block.
-	pub annotations: Vec<Annotation<'inp>>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct LocalVarDecl<'inp> {
-	pub span: FileSpan<'inp>,
-	pub name: Identifier<'inp>,
-	pub type_spec: Option<TypeExpr<'inp>>,
-	pub init: Option<Expression<'inp>>,
-	pub annotations: Vec<Annotation<'inp>>,
+pub struct LocalVarDecl {
+	pub span: Span,
+	pub name: Identifier,
+	pub type_spec: Option<TypeExpr>,
+	pub init: Option<Expression>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -116,14 +116,14 @@ pub enum CondIterKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ForInit<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct ForInit {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: ForInitKind<'inp>,
+	pub kind: ForInitKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum ForInitKind<'inp> {
-	VarDef(LocalVarDecl<'inp>),
-	ExprList(ExprList<'inp>),
+pub enum ForInitKind {
+	VarDef(LocalVarDecl),
+	ExprList(ExprList),
 }

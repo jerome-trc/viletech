@@ -23,7 +23,7 @@ use pest::{iterators::Pair, Parser as PestParser};
 use serde::Serialize;
 use vec1::Vec1;
 
-use crate::utils::lang::FileSpan;
+use crate::utils::lang::Span;
 
 type LexError = Box<pest::error::Error<Rule>>;
 
@@ -50,16 +50,16 @@ pub fn parse(input: &str) -> Result<ParseOutput, LexError> {
 }
 
 #[derive(Debug)]
-pub struct ParseOutput<'inp> {
-	pub issues: Vec<Issue<'inp>>,
+pub struct ParseOutput {
+	pub issues: Vec<Issue>,
 }
 
 #[derive(Debug)]
-pub struct Issue<'inp> {
+pub struct Issue {
 	pub level: IssueLevel,
 	pub msg: String,
-	pub main_spans: Vec1<FileSpan<'inp>>,
-	pub info_spans: Vec<FileSpan<'inp>>,
+	pub main_spans: Vec1<Span>,
+	pub info_spans: Vec<Span>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]

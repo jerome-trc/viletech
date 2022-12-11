@@ -19,33 +19,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::FileSpan;
+use crate::utils::lang::{Span, StringHandle};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Literal<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct Literal {
+	pub span: Span,
 	#[serde(flatten)]
-	pub kind: LiteralKind<'inp>,
+	pub kind: LiteralKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum LiteralKind<'inp> {
-	String(StringLiteral<'inp>),
-	Int(IntLiteral<'inp>),
-	Float(FloatLiteral<'inp>),
+pub enum LiteralKind {
+	String(StringLiteral),
+	Int(IntLiteral),
+	Float(FloatLiteral),
 	Bool(bool),
 	Null,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct StringLiteral<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct StringLiteral {
+	pub span: Span,
+	pub string: StringHandle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct IntLiteral<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct IntLiteral {
+	pub span: Span,
 	#[serde(flatten)]
 	pub kind: IntLiteralKind,
 }
@@ -65,8 +66,8 @@ pub enum IntLiteralKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FloatLiteral<'inp> {
-	pub span: FileSpan<'inp>,
+pub struct FloatLiteral {
+	pub span: Span,
 	#[serde(flatten)]
 	pub kind: FloatLiteralKind,
 }
