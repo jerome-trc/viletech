@@ -209,9 +209,9 @@ impl VirtualFs {
 
 	/// This function can't fail, since a `Handle` is assumed to always be correct.
 	/// In a debug build, this will panic if the VFS was modified in any way after
-	/// the handle was retrieved via [`make_handle`]. In a release build, this
-	/// function may panic or quietly emit incorrect results if the VFS gets modified
-	/// after the given handle was generated.
+	/// the handle was retrieved via [`make_handle`](Self::make_handle).
+	/// In a release build, this function may panic or quietly emit incorrect
+	/// results if the VFS gets modified after the given handle was generated.
 	#[must_use]
 	pub fn get(&self, handle: Handle) -> FileRef {
 		debug_assert!(handle.generation == self.generation);
