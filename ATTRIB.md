@@ -26,6 +26,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Kevin K. ([@kbknapp](https://github.com/kbknapp)), Ed Page ([@epage](https://github.com/epage)), et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/clap-rs/clap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/clap-rs/clap/blob/master/LICENSE-MIT).
 	- https://docs.rs/clap/latest/clap/
+- cranelift
+    - By the [Bytecode Alliance organisation](https://github.com/bytecodealliance) et. al.
+    - Provided under the [Apache 2.0 License](https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE).
+    - https://docs.rs/cranelift/latest/cranelift/
 - crossbeam
 	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
