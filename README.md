@@ -6,7 +6,7 @@ Impure is a pet project, meant as an experiment in creating a modern Doom source
 
 ## Licensing, Attribution
 
-The Doom source code (c) 1997 id Software, Raven Software, et. al.
+The Doom source code (c) 1997 id Software, Raven Software, et al.
 
 Impure is provided under the GNU General Public License Version 3; further information is [here](/LICENSE).
 
