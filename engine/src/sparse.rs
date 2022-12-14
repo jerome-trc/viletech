@@ -1047,7 +1047,12 @@ impl<I, T> SparseSet<I, T> {
 			sparse_capacity >= dense_capacity,
 			"Sparse capacity must be at least as large as the dense capacity."
 		);
-		Self::with_capacity(sparse_capacity, dense_capacity)
+
+		Self {
+			dense: Vec::with_capacity(dense_capacity),
+			sparse: SparseVec::with_capacity(sparse_capacity),
+			indices: Vec::with_capacity(dense_capacity),
+		}
 	}
 }
 
