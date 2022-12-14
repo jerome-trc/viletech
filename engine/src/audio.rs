@@ -32,9 +32,8 @@ use kira::{
 	},
 	tween::Tween,
 };
-use shipyard::EntityId;
 
-use crate::vfs::FileRef;
+use crate::{ecs::EntityId, vfs::FileRef};
 
 pub struct SourcedHandle {
 	inner: StaticSoundHandle,

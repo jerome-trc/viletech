@@ -26,14 +26,30 @@ use std::{
 use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
-use shipyard::World;
 
-use crate::{data::DataCore, lua::ImpureLua, rng::RngCore};
+use crate::{
+	data::DataCore,
+	ecs::{Components, DenseRegistry},
+	lua::ImpureLua,
+	rng::RngCore,
+};
 
-#[derive(Default)]
 pub struct PlaySim {
 	pub rng: RngCore<WyRand>,
-	pub world: World,
+	pub entities: DenseRegistry,
+	pub components: Components,
+}
+
+impl Default for PlaySim {
+	/// This constructor exists for easy testing/mocking/placeholder code but
+	/// is not intended for use in any final implementations.
+	fn default() -> Self {
+		Self {
+			rng: Default::default(),
+			entities: DenseRegistry::new(521),
+			components: Components::new(521),
+		}
+	}
 }
 
 pub struct Handle {

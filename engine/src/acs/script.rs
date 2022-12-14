@@ -49,9 +49,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use num::traits::FromPrimitive;
 use num_derive::FromPrimitive;
-use shipyard::EntityId;
 
-use crate::{data::AssetHandle, math::IRect32};
+use crate::{data::AssetHandle, ecs::EntityId, math::IRect32};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
