@@ -29,7 +29,7 @@ mod stat;
 use serde::Serialize;
 use vec1::Vec1;
 
-use crate::utils::lang::{Span, Identifier};
+use crate::utils::lang::{Identifier, Span};
 
 pub use class::*;
 pub use expr::*;

@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use serde::Serialize;
 
-use crate::utils::lang::{Span, Identifier};
+use crate::utils::lang::{Identifier, Span};
 
 use super::{
 	expr::{ExprList, Expression, TypeExpr},

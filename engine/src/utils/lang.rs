@@ -27,8 +27,6 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Span {
-	#[serde(skip)]
-	source_hash: u64,
 	start: usize,
 	end: usize,
 }
@@ -38,8 +36,8 @@ impl Span {
 	/// but it has to be the same for every span generated from that source, and
 	/// the whole of that source (e.g. the entire file) must be hashed.
 	#[must_use]
-	pub fn new(source_hash: u64, start: usize, end: usize) -> Self {
-		Self { source_hash, start, end }
+	pub fn new(start: usize, end: usize) -> Self {
+		Self { start, end }
 	}
 
 	/// Verify that the span's start and end positions lie on UTF-8 character
@@ -52,13 +50,7 @@ impl Span {
 	#[must_use]
 	#[inline(always)]
 	pub fn combine(self, other: Self) -> Self {
-		debug_assert!(
-			self.source_hash == other.source_hash,
-			"Tried to combine `Span`s from different files."
-		);
-
 		Self {
-			source_hash: other.source_hash,
 			start: self.start.max(other.start),
 			end: self.end.max(other.end),
 		}
@@ -134,7 +126,7 @@ impl std::fmt::Display for Interner {
 
 impl Interner {
 	#[must_use]
-	pub(crate) fn add(&mut self, string: &str) -> StringIndex {
+	pub(crate) fn _add(&mut self, string: &str) -> StringIndex {
 		StringIndex(self.set.insert_full(string.to_string().into_boxed_str()).0)
 	}
 
@@ -144,20 +136,20 @@ impl Interner {
 	}
 
 	#[must_use]
-	pub(crate) fn lookup(&mut self, string: &str) -> StringIndex {
+	pub(crate) fn _lookup(&mut self, string: &str) -> StringIndex {
 		if let Some(index) = self.set.get_index_of(string) {
 			StringIndex(index)
 		} else {
-			self.add(string)
+			self._add(string)
 		}
 	}
 
 	#[must_use]
-	pub(crate) fn try_lookup(&self, string: &str) -> Option<StringIndex> {
+	pub(crate) fn _try_lookup(&self, string: &str) -> Option<StringIndex> {
 		self.set.get_index_of(string).map(StringIndex)
 	}
 
-	pub(crate) fn clear(&mut self) {
+	pub(crate) fn _clear(&mut self) {
 		self.set.clear();
 	}
 }
