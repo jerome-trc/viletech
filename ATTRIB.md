@@ -172,6 +172,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Dylan Ancel ([@leudz](https://github.com/leudz)) et. al.
 	- Provided under the [Apache 2.0 License](https://github.com/leudz/shipyard/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/leudz/shipyard/blob/master/LICENSE-MIT).
 	- https://docs.rs/shipyard/latest/shipyard/
+- sparse_set
+	- By Scott Godwin ([@sgodwincs](https://gitub.com/sgodwincs)).
+	- Provided under the [Apache 2.0 License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-MIT).
+	- https://docs.rs/sparse_set/latest/sparse_set/
 - str-utils
 	- By Ron "Magic Len" Li ([@magiclen](https://github.com/magiclen)).
 	- Provided under the [MIT License](https://github.com/magiclen/str-utils/blob/master/LICENSE).
