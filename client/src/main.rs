@@ -42,6 +42,11 @@ use winit::{
 
 use crate::core::ClientCore;
 
+#[must_use]
+pub fn version_string() -> String {
+	format!("Impure client version: {}", env!("CARGO_PKG_VERSION"))
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
 
@@ -65,10 +70,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let console = Console::new(log_receiver);
 
-	info!("{}", impure::short_version_string());
-	info!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
-	info!("{}", impure::utils::env::os_info()?);
-	impure::log_cpu_info();
+	impure::log_init_diag(&version_string())?;
 
 	let devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 

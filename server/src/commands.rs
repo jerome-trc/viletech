@@ -178,6 +178,6 @@ pub fn cmd_version(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	info!("{}", impure::full_version_string());
+	info!("{}", impure::full_version_string(&super::version_string()));
 	Request::None
 }

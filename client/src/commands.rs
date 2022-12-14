@@ -299,7 +299,7 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 		return Request::ConsoleWrite("Prints the engine version.".to_string(), MessageKind::Help);
 	}
 
-	info!("{}", impure::full_version_string());
+	info!("{}", impure::full_version_string(&super::version_string()));
 	Request::None
 }
 

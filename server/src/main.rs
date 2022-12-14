@@ -41,6 +41,11 @@ use log::info;
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
 
+#[must_use]
+pub fn version_string() -> String {
+	format!("Impure dedicated server version: {}", env!("CARGO_PKG_VERSION"))
+}
+
 pub struct ServerCore {
 	start_time: Instant,
 	terminal: Terminal<Command>,
@@ -70,13 +75,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	info!("{}", impure::short_version_string());
-	info!(
-		"Impure dedicated server version {}.",
-		env!("CARGO_PKG_VERSION")
-	);
-	info!("{}", impure::utils::env::os_info()?);
-	impure::log_cpu_info();
+	impure::log_init_diag(&version_string())?;
 
 	let passhash = if !args.password.is_empty() {
 		let mut hasher = Sha3_256::new();
