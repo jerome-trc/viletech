@@ -23,11 +23,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{Identifier, Span};
 
-use super::{
-	expr::{ExprList, Expression, TypeExpr},
-	item::ItemDef,
-	Annotation, BlockLabel,
-};
+use super::{expr::Expression, item::Item, Annotation, BlockLabel, TypeExpr};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Statement {
@@ -39,58 +35,41 @@ pub struct Statement {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "def")]
 pub enum StatementKind {
+	Empty,
+	Break {
+		target: Option<String>,
+	},
+	Continue {
+		target: Option<String>,
+	},
+	Item(Item),
+	Binding(Binding),
 	Expression(Expression),
-	Compound(CompoundStatement),
+	Block(StatementBlock),
 	If {
 		cond: Expression,
-		body: CompoundStatement,
-		else_body: Option<CompoundStatement>,
+		body: StatementBlock,
+		else_body: Option<Box<Statement>>,
 		/// Outer annotations only.
 		annotations: Vec<Annotation>,
 	},
 	Switch {
 		val: Expression,
 		label: Option<BlockLabel>,
-		body: Vec<CompoundStatement>,
+		cases: Vec<SwitchCase>,
 		/// Outer annotations only.
 		annotations: Vec<Annotation>,
 	},
-	CondIter {
-		cond: Expression,
-		kind: CondIterKind,
-		body: Box<CompoundStatement>,
+	Loop {
+		kind: LoopKind,
+		body: Box<StatementBlock>,
 		/// Outer annotations only.
 		annotations: Vec<Annotation>,
 	},
-	ForIter {
-		init: Option<ForInit>,
-		cond: Option<Expression>,
-		update: Option<ExprList>,
-		body: Box<CompoundStatement>,
-		/// Outer annotations only.
-		annotations: Vec<Annotation>,
-	},
-	ForEachIter {
-		var_name: Identifier,
-		sequence: Expression,
-		/// Outer annotations only.
-		annotations: Vec<Annotation>,
-	},
-	Item(ItemDef),
-	LocalVarDecl(LocalVarDecl),
-	MultiAssign {
-		assignees: ExprList,
-		rhs: Expression,
-		/// Outer annotations only.
-		annotations: Vec<Annotation>,
-	},
-	Continue,
-	Break,
-	Empty,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CompoundStatement {
+pub struct StatementBlock {
 	pub span: Span,
 	pub label: Option<BlockLabel>,
 	pub statements: Vec<Statement>,
@@ -99,31 +78,43 @@ pub struct CompoundStatement {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct LocalVarDecl {
+pub struct Binding {
 	pub span: Span,
-	pub name: Identifier,
-	pub type_spec: Option<TypeExpr>,
+	pub names: Vec<Identifier>,
 	pub init: Option<Expression>,
+	pub type_spec: Option<TypeExpr>,
 	pub annotations: Vec<Annotation>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum CondIterKind {
-	Loop,
-	While,
-	DoWhile,
-	DoUntil,
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ForInit {
+pub struct SwitchCase {
 	pub span: Span,
-	#[serde(flatten)]
-	pub kind: ForInitKind,
+	pub kind: SwitchCaseKind,
+	pub block: StatementBlock,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum ForInitKind {
-	VarDef(LocalVarDecl),
-	ExprList(ExprList),
+#[serde(tag = "kind", content = "data")]
+pub enum SwitchCaseKind {
+	Default,
+	Specific(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "data")]
+pub enum LoopKind {
+	Infinite,
+	Range {
+		bindings: Vec<Identifier>,
+		sequence: Expression,
+	},
+	While {
+		condition: Expression,
+	},
+	DoWhile {
+		condition: Expression,
+	},
+	DoUntil {
+		condition: Expression,
+	},
 }

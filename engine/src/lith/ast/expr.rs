@@ -24,54 +24,62 @@ use vec1::Vec1;
 
 use crate::utils::lang::{Identifier, Span};
 
-use super::{literal::Literal, Resolver};
+use super::{
+	literal::Literal, DeclQualifier, FuncParameter, ResolverPart, StatementBlock, TypeExpr,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum BinaryOp {
 	Add,
+	AddAssign,
 	Subtract,
-	Times,
+	SubtractAssign,
+	Multiply,
+	MultiplyAssign,
 	Divide,
+	DivideAssign,
 	Modulo,
+	ModuloAssign,
 	Raise,
+	RaiseAssign,
 	LeftShift,
+	LeftShiftAssign,
 	RightShift,
+	RightShiftAssign,
 	UnsignedRightShift,
+	UnsignedRightShiftAssign,
 	Concat,
+	ConcatAssign,
 	LessThan,
-	LessThanEquals,
+	LessThanOrEquals,
 	GreaterThan,
-	GreaterThanEquals,
+	GreaterThanOrEquals,
 	Equals,
 	NotEquals,
 	ApproxEquals,
 	ThreeWayComp,
 	LogicalAnd,
-	BitwiseAnd,
+	LogicalAndAssign,
 	LogicalOr,
-	BitwiseOr,
-	BitwiseXor,
-	Is,
-	Scope,
-	MemberAccess,
-	Assign,
-	PlusAssign,
-	MinusAssign,
-	TimesAssign,
-	DivideAssign,
-	ModuloAssign,
-	LeftShiftAssign,
-	RightShiftAssign,
-	UnsignedRightShiftAssign,
-	BitwiseOrAssign,
+	LogicalOrAssign,
+	LogicalXor,
+	LogicalXorAssign,
+	BitwiseAnd,
 	BitwiseAndAssign,
+	BitwiseOr,
+	BitwiseOrAssign,
+	BitwiseXor,
 	BitwiseXorAssign,
+	TypeCompare,
+	NegativeTypeCompare,
+	ScopeRes,
+	Assign,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PrefixOp {
-	Plus,
-	Minus,
+	AntiNegate,
+	Negate,
 	Increment,
 	Decrement,
 	LogicalNot,
@@ -86,7 +94,7 @@ pub enum PostfixOp {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Expression {
-	pub span: Option<Span>,
+	pub span: Span,
 	#[serde(flatten)]
 	pub kind: ExpressionKind,
 }
@@ -94,26 +102,32 @@ pub struct Expression {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
 pub enum ExpressionKind {
-	Ident(Identifier),
+	Identifier(Identifier),
 	Literal(Literal),
 	Type(TypeExpr),
+	Prefix(Box<PrefixOpExpr>),
+	Postfix(Box<PostfixOpExpr>),
 	Binary {
 		op: BinaryOp,
 		exprs: Box<BinaryOpExprs>,
 	},
-	Prefix {
-		op: PrefixOp,
-		expr: Box<Expression>,
-	},
-	Postfix {
-		op: PostfixOp,
-		expr: Box<Expression>,
-	},
 	Ternary(Box<TernaryOpExprs>),
-	ArrayIndex(Box<ArrayIndexExprs>),
+	Field(Box<FieldExpr>),
+	Index(Box<ArrayIndexExprs>),
 	Call {
 		lhs: Box<Expression>,
-		exprs: Vec<FunctionCallArg>,
+		args: Vec<CallArg>,
+	},
+	MethodCall {
+		lhs: Box<Expression>,
+		method: ResolverPart,
+		args: Vec<CallArg>,
+	},
+	Lambda {
+		quals: Vec<DeclQualifier>,
+		params: Vec<FuncParameter>,
+		return_type: Option<TypeExpr>,
+		body: StatementBlock,
 	},
 	Array(Box<ArrayExpr>),
 	Structure(Box<StructExpr>),
@@ -125,17 +139,16 @@ pub struct ExprList {
 	pub exprs: Vec1<Expression>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TypeExpr {
-	pub span: Span,
-	#[serde(flatten)]
-	pub kind: TypeExprKind,
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PrefixOpExpr {
+	pub op: PrefixOp,
+	pub expr: Expression,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum TypeExprKind {
-	Anonymous,
-	Resolver(Resolver),
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PostfixOpExpr {
+	pub op: PostfixOp,
+	pub expr: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -152,23 +165,29 @@ pub struct TernaryOpExprs {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FieldExpr {
+	pub owner: Expression,
+	pub field: Identifier,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ArrayIndexExprs {
 	pub lhs: Expression,
 	pub index: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FunctionCallArg {
+pub struct CallArg {
 	pub span: Span,
 	#[serde(flatten)]
-	pub kind: FunctionCallArgKind,
+	pub kind: CallArgKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum FunctionCallArgKind {
+pub enum CallArgKind {
 	Unnamed(Expression),
-	Named(Identifier, Expression),
+	Named { name: Identifier, expr: Expression },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

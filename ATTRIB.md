@@ -128,10 +128,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Amanieu d'Antras ([@Amanieu](https://github.com/Amanieu)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
 	- https://docs.rs/parking_lot/latest/parking_lot/
-- pest
-	- By the [pest-parser](https://github.com/pest-parser) organisation, Dragoș Tiselice ([dragostis](https://github.com/dragostis)), et al.
-	- Provided under the [Apache 2.0 License](https://github.com/pest-parser/pest/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/pest-parser/pest/blob/master/LICENSE-MIT).
-	- https://docs.rs/pest/latest/pest/
+- peg
+    - By Kevin Mehall ([@kevinmehall](https://github.com/kevinmehall)) et al.
+    - Provided under the [MIT License](https://github.com/kevinmehall/rust-peg/blob/master/LICENSE).
+    - https://docs.rs/peg/latest/peg/
 - pollster
 	- By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
@@ -188,6 +188,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By the [unicode-rs](https://github.com/unicode-rs) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/unicode-rs/unicode-width/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/unicode-rs/unicode-width/blob/master/LICENSE-MIT).
 	- https://unicode-rs.github.io/unicode-width/unicode_width/
+- unicode-xid
+    - By the [unicode-rs](https://github.com/unicode-rs) organisation et al.
+	- Provided under the [Apache 2.0 License](https://github.com/unicode-rs/unicode-xid/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/unicode-rs/unicode-xid/blob/master/LICENSE-MIT).
+	- https://unicode-rs.github.io/unicode-xid/unicode_xid/
 - vec1
 	- By Philipp Korber ([@rustonaut](https://github.com/rustonaut)) et al.
 	- Provided under the [Apache 2.0 License and MIT License](https://docs.rs/crate/vec1/latest) (see section: License).

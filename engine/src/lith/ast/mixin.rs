@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{Identifier, Span};
 
-use super::{class::ClassInnerKind, item::ItemDef, FieldDeclaration};
+use super::{class::ClassInnerKind, item::Item, VariableDeclaration};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MixinClassDef {
@@ -39,8 +39,8 @@ pub struct MixinClassInner {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum MixinClassInnerKind {
-	Field(FieldDeclaration),
-	Item(ItemDef),
+	Field(VariableDeclaration),
+	Item(Item),
 }
 
 impl MixinClassInnerKind {

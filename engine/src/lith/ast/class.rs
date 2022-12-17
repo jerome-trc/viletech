@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::utils::lang::{Identifier, Span};
 
-use super::{item::ItemDef, FieldDeclaration, Resolver};
+use super::{item::Item, Resolver, VariableDeclaration};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ClassDef {
@@ -50,8 +50,8 @@ pub struct ClassInner {
 #[serde(tag = "kind", content = "data")]
 pub enum ClassInnerKind {
 	Mixin(Identifier),
-	Field(FieldDeclaration),
-	Item(ItemDef),
+	Field(VariableDeclaration),
+	Item(Item),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

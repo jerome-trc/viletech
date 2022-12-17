@@ -39,19 +39,24 @@ pub use mixin::*;
 pub use stat::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct AbstractSyntaxTree {
-	pub annotations: Vec<Annotation>,
+pub struct ModuleTree {
+	pub top_level: Vec<TopLevel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum TopLevel {
 	/// Inner annotations only, applied to the entire translation unit.
-	pub items: Vec<ItemDef>,
+	Annotation(Annotation),
+	Item(Item),
 }
 
 /// A "resolver" is a double-colon-separated token chain, named after the
 /// concept of "scope resolution". These are the Lith counterpart to Rust "paths",
-/// named differently to disambiguate from the filesystem idea of a "path".
+/// named differently to disambiguate from the filesystem idea of a "path". A
+/// single identifier can be a valid resolver.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Resolver {
 	pub span: Span,
-	pub outer: bool,
 	pub parts: Vec1<ResolverPart>,
 }
 
@@ -80,10 +85,53 @@ pub struct Annotation {
 	/// "inner" annotation, and applies to the item/block it's declared in.
 	/// Otherwise it's "outer" and applies to the next item/block.
 	pub inner: bool,
-	pub args: Vec<FunctionCallArg>,
+	pub args: Vec<CallArg>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BlockLabel {
 	pub span: Span,
+	pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TypeExpr {
+	pub span: Span,
+	#[serde(flatten)]
+	pub kind: TypeExprKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "data")]
+pub enum TypeExprKind {
+	Void,
+	Primitive(PrimitiveTypeKind),
+	Resolver(Resolver),
+	Array(Box<ArrayTypeExpr>),
+	Tuple { members: Vec<TypeExpr> },
+	Inferred,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ArrayTypeExpr {
+	pub storage: TypeExpr,
+	pub length: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum PrimitiveTypeKind {
+	Bool,
+	Char,
+	I8,
+	U8,
+	I16,
+	U16,
+	I32,
+	U32,
+	I64,
+	U64,
+	I128,
+	U128,
+	F32,
+	F64,
 }

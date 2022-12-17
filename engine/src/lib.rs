@@ -93,9 +93,7 @@ pub mod depends {
 pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error::Error>> {
 	#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 	fn log_cpu_info() -> Result<(), Box<dyn std::error::Error>> {
-		unimplemented!(
-			"CPU diagnostics logging only available on x86(_64)."
-		);
+		unimplemented!("CPU diagnostics logging only available on x86(_64).");
 	}
 
 	#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

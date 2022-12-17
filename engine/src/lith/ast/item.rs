@@ -23,41 +23,44 @@ use serde::Serialize;
 
 use crate::utils::lang::{Identifier, Span};
 
-use super::{class::ClassDef, expr::Expression, Annotation, CompoundStatement, Resolver, TypeExpr};
+use super::{class::ClassDef, expr::Expression, Annotation, Resolver, StatementBlock, TypeExpr};
 
+/// Lith "items" are like Rust items; function/class definitions, etc.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ItemDef {
+pub struct Item {
 	pub span: Span,
 	#[serde(flatten)]
-	pub kind: ItemDefKind,
-	pub quals: Vec<DeclQualifier>,
+	pub kind: ItemKind,
 	/// Outer annotations only, applied to the entire item.
 	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "data")]
-pub enum ItemDefKind {
+pub enum ItemKind {
 	TypeAlias(TypeAlias),
 	Constant(Constant),
 	Enum(EnumDef),
 	Union(UnionDef),
 	Function(FunctionDeclaration),
 	Class(ClassDef),
+	MacroInvoc(MacroInvocation),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypeAlias {
 	pub span: Span,
 	pub name: Identifier,
-	pub resolver: Resolver,
+	pub quals: Vec<DeclQualifier>,
+	pub underlying: TypeExpr,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Constant {
 	pub span: Span,
 	pub name: Identifier,
-	pub type_spec: Option<Resolver>,
+	pub quals: Vec<DeclQualifier>,
+	pub type_spec: Option<TypeExpr>,
 	pub value: Expression,
 }
 
@@ -65,7 +68,8 @@ pub struct Constant {
 pub struct EnumDef {
 	pub span: Span,
 	pub name: Identifier,
-	pub type_spec: Option<Resolver>,
+	pub quals: Vec<DeclQualifier>,
+	pub type_spec: Option<TypeExpr>,
 	pub variants: Vec<EnumVariant>,
 }
 
@@ -82,6 +86,7 @@ pub struct EnumVariant {
 pub struct UnionDef {
 	pub span: Span,
 	pub name: Identifier,
+	pub quals: Vec<DeclQualifier>,
 	pub variants: Vec<UnionVariant>,
 }
 
@@ -89,7 +94,8 @@ pub struct UnionDef {
 pub struct UnionVariant {
 	pub span: Span,
 	pub name: Identifier,
-	pub inners: Vec<FieldDeclaration>,
+	pub quals: Vec<DeclQualifier>,
+	pub inners: Vec<VariableDeclaration>,
 	/// Outer annotations only.
 	pub annotations: Vec<Annotation>,
 }
@@ -106,7 +112,6 @@ pub struct DeclQualifier {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum DeclQualifierKind {
 	Abstract,
-	Action,
 	CEval,
 	Final,
 	Override,
@@ -118,7 +123,7 @@ pub enum DeclQualifierKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FieldDeclaration {
+pub struct VariableDeclaration {
 	pub span: Span,
 	pub name: Identifier,
 	pub type_spec: Resolver,
@@ -132,20 +137,20 @@ pub struct FunctionDeclaration {
 	pub span: Span,
 	pub name: Identifier,
 	pub quals: Vec<DeclQualifier>,
-	pub return_type: Option<TypeExpr>,
+	pub return_type: TypeExpr,
 	pub params: Vec<FuncParameter>,
-	pub body: Option<CompoundStatement>,
+	pub body: Option<StatementBlock>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct FuncParameter {
 	pub span: Span,
+	pub name: Identifier,
 	pub quals: Vec<FuncParamQualifier>,
 	pub type_spec: TypeExpr,
-	pub name: Identifier,
 	pub default: Option<Expression>,
 	/// Outer annotations only.
-	pub annotation: Vec<Annotation>,
+	pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -168,6 +173,12 @@ pub struct PropertyDef {
 	pub name: Identifier,
 	pub quals: Vec<DeclQualifier>,
 	pub type_spec: Option<TypeExpr>,
-	pub getter: Option<CompoundStatement>,
-	pub setter: Option<CompoundStatement>,
+	pub getter: Option<StatementBlock>,
+	pub setter: Option<StatementBlock>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MacroInvocation {
+	pub span: Span,
+	pub inner: String,
 }
