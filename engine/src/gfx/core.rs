@@ -124,8 +124,8 @@ impl GraphicsCore {
 		let srf_cfg = wgpu::SurfaceConfiguration {
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
 			format: *srf_format,
-			width: window_size.width as u32,
-			height: window_size.height as u32,
+			width: window_size.width,
+			height: window_size.height,
 			present_mode: wgpu::PresentMode::Fifo,
 		};
 		surface.configure(&device, &srf_cfg);

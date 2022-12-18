@@ -317,7 +317,7 @@ impl VirtualFs {
 					real_path,
 				} => {
 					self.real_paths
-						.insert(real_path, PathHash::new(&mount_point));
+						.insert(real_path, PathHash::new(mount_point));
 
 					for new_entry in new_entries {
 						let displaced = self

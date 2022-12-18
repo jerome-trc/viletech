@@ -148,9 +148,7 @@ pub fn run<const CFG: u8>(context: Context) {
 					}
 				}
 				InMessage::DecreaseTicRate => {
-					if tindx_goal > 0 {
-						tindx_goal -= 1;
-					}
+					tindx_goal = tindx_goal.saturating_sub(1);
 				}
 				InMessage::SetTicRate(s_ticrate) => {
 					debug_assert!((-10..=10).contains(&s_ticrate));
