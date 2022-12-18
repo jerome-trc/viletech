@@ -26,6 +26,23 @@ use super::ast::*;
 
 use crate::utils::lang::{Identifier, Interner, Span};
 
+pub type Error = peg::error::ParseError<<str as peg::Parse>::PositionRepr>;
+
+pub fn parse_statement(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<Statement, Error> {
+	parser::statement(input, interner)
+}
+
+pub fn parse_expression(
+	input: &str,
+	interner: &Arc<RwLock<Interner>>,
+) -> Result<Expression, Error> {
+	parser::expr(input, interner)
+}
+
+pub fn parse_module(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<ModuleTree, Error> {
+	parser::module_tree(input, interner)
+}
+
 peg::parser! {
 	grammar parser(interner: &Arc<RwLock<Interner>>) for str {
 		use unicode_xid::UnicodeXID;
@@ -42,8 +59,7 @@ peg::parser! {
 
 		// Foundational, common ////////////////////////////////////////////////
 
-		rule isolated_cr() -> &'input str
-			= $("\r" [^ '\n'])
+		rule isolated_cr() -> &'input str = $("\r" [^ '\n'])
 
 		rule digit_dec() -> char = ['0'..='9']
 		rule digit_dec_nonzero() -> char = ['1'..='9']
@@ -1302,23 +1318,6 @@ peg::parser! {
 				}
 			}
 	}
-}
-
-pub type Error = peg::error::ParseError<<str as peg::Parse>::PositionRepr>;
-
-pub fn parse_statement(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<Statement, Error> {
-	parser::statement(input, interner)
-}
-
-pub fn parse_expression(
-	input: &str,
-	interner: &Arc<RwLock<Interner>>,
-) -> Result<Expression, Error> {
-	parser::expr(input, interner)
-}
-
-pub fn parse_module(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<ModuleTree, Error> {
-	parser::module_tree(input, interner)
 }
 
 #[cfg(test)]
