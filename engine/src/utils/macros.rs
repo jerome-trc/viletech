@@ -44,6 +44,7 @@ macro_rules! newtype {
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
+		#[repr(transparent)]
 		$ownvis struct $name($innervis $type);
 
 		impl std::ops::Deref for $name {
@@ -64,6 +65,7 @@ macro_rules! newtype_mut {
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
+		#[repr(transparent)]
 		$ownvis struct $name($innervis $type);
 
 		impl std::ops::Deref for $name {
@@ -91,6 +93,7 @@ macro_rules! newtype_mutref {
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
+		#[repr(transparent)]
 		$ownvis struct $name<'inner>($innervis &'inner mut $type);
 
 		impl<'inner> std::ops::Deref for $name<'_> {
