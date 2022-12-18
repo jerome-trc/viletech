@@ -43,7 +43,10 @@ use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
 
 #[must_use]
 pub fn version_string() -> String {
-	format!("Impure dedicated server version: {}", env!("CARGO_PKG_VERSION"))
+	format!(
+		"Impure dedicated server version: {}",
+		env!("CARGO_PKG_VERSION")
+	)
 }
 
 pub struct ServerCore {

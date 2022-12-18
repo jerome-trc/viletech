@@ -32,9 +32,6 @@ pub struct Span {
 }
 
 impl Span {
-	/// No specific hashing function needs to be used to compute `source_hash`,
-	/// but it has to be the same for every span generated from that source, and
-	/// the whole of that source (e.g. the entire file) must be hashed.
 	#[must_use]
 	pub fn new(start: usize, end: usize) -> Self {
 		Self { start, end }

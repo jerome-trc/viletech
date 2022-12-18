@@ -67,7 +67,7 @@ pub fn is_zip(bytes: &[u8]) -> bool {
 /// Ensure the given slice starts at the file's beginning.
 #[must_use]
 pub fn is_lzma(bytes: &[u8]) -> bool {
-	// [RAT] I have limited reason to believe this is sound. No good formal spec for
+	// [Rat] I have limited reason to believe this is sound. No good formal spec for
 	// LZMA's header seems to exist *anywhere*. I just compressed some files, passed
 	// them through integrity tests via CLI, and then read the headers in those
 	bytes.len() >= 13

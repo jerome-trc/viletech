@@ -27,7 +27,7 @@ pub trait Numeric<T>:
 	+ MulAssign
 	+ DivAssign
 	+ SubAssign
-	// (Rat): `+ Rem<Output = T>` here generates a compiler error here
+	// [Rat]: `+ Rem<Output = T>` here generates a compiler error here
 	// for a reason I'm not smart enough to understand yet
 	+ RemAssign
 {
