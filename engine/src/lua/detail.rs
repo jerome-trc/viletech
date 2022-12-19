@@ -685,7 +685,7 @@ fn g_debug_full<'t>(lua: &Lua, debug: LuaTable<'t>) -> LuaResult<LuaTable<'t>> {
 fn g_debug_noop(lua: &Lua) -> LuaResult<LuaTable> {
 	let ret = lua.create_table()?;
 
-	// [Rat]: I sure hope LuaJIT actually eliminates these calls...
+	// [Rat] I sure hope LuaJIT actually eliminates these calls...
 
 	const KEYS: [&str; 15] = [
 		"debug",

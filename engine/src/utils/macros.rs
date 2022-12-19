@@ -24,8 +24,8 @@ macro_rules! replace_expr {
 	};
 }
 
-/// Convenience macro for defining a newtype (single-field tuple struct).
-/// Generates an implementation for [`std::ops::Deref`].
+/// Convenience macro for defining a newtype (single-field tuple struct,
+/// represented transparently). Generates an implementation for [`std::ops::Deref`].
 ///
 /// Usage examples:
 /// ```
