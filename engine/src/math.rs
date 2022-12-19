@@ -19,30 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::ops::{AddAssign, DivAssign, MulAssign, Rem, RemAssign, SubAssign};
 
-pub trait Numeric<T>:
-	Sized
-	+ Copy
-	+ num::Num
-	+ AddAssign
-	+ MulAssign
-	+ DivAssign
-	+ SubAssign
-	// [Rat]: `+ Rem<Output = T>` here generates a compiler error here
-	// for a reason I'm not smart enough to understand yet
-	+ RemAssign
+pub trait Numeric:
+	Sized + Copy + num::Num + AddAssign + MulAssign + DivAssign + SubAssign + Rem + RemAssign
 {
 }
 
-impl<T> Numeric<T> for T where
-	T: Sized
-		+ Copy
-		+ num::Num
-		+ AddAssign
-		+ MulAssign
-		+ DivAssign
-		+ SubAssign
-		+ Rem<Output = T>
-		+ RemAssign
+impl<T> Numeric for T where
+	T: Sized + Copy + num::Num + AddAssign + MulAssign + DivAssign + SubAssign + Rem + RemAssign
 {
 }
 
@@ -68,7 +51,7 @@ pub const fn mm_shuffle_fwd(e1: u32, e2: u32, e3: u32, e4: u32) -> i32 {
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Rect4<T>
 where
-	T: Numeric<T>,
+	T: Numeric,
 {
 	left: T,
 	top: T,
@@ -78,7 +61,7 @@ where
 
 impl<T> Rect4<T>
 where
-	T: Numeric<T>,
+	T: Numeric,
 {
 	#[must_use]
 	pub fn right(&self) -> T {
