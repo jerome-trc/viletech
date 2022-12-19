@@ -167,7 +167,23 @@ pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error:
 				output.push_str("\r\n");
 			}
 		} else {
-			output.push_str("\t- Feature/family information not found\r\n");
+			output.push_str("\t- Feature/family information unavailable\r\n");
+		}
+
+		if let Some(extfeats) = cpuid.get_extended_feature_info() {
+			output.push_str("\t- Extended features:");
+
+			if extfeats.has_avx2() {
+				output.push_str(" AVX2");
+			}
+
+			if output.ends_with("Extended features:") {
+				output.push_str(" <none>\r\n");
+			} else {
+				output.push_str("\r\n");
+			}
+		} else {
+			output.push_str("\t- Extended feature information unavailable\r\n");
 		}
 
 		let avail_par = std::thread::available_parallelism()?;
