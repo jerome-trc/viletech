@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-// [Rat] If you're reading this, congratulations!
+// [Rat] If you're reading this, congratulations! You've found something special.
 // This module sub-tree is, historically speaking, the most tortured code in Impure.
 
 mod entry;
 mod error;
 mod fileref;
-mod impure;
+mod ext;
 mod mount;
 #[cfg(test)]
 mod test;
@@ -44,7 +44,7 @@ use entry::{Entry, EntryKind, PathHash};
 
 use crate::utils::path::PathExt;
 
-pub use self::impure::{ImpureFileRef, ImpureVfs};
+pub use self::ext::{ImpureFileRef, ImpureVfs};
 pub use error::Error;
 pub use fileref::FileRef;
 
