@@ -23,7 +23,6 @@ use impure::{
 	audio::{self, AudioCore},
 	console::{self, Console},
 	data::DataCore,
-	depends::{parking_lot::Mutex, winit::event::ElementState, *},
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
@@ -38,9 +37,13 @@ use kira::sound::static_sound::StaticSoundSettings;
 use log::{error, info};
 use mlua::prelude::*;
 use nanorand::WyRand;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use shipyard::World;
-use winit::{event::KeyboardInput, event_loop::ControlFlow, window::WindowId};
+use winit::{
+	event::{ElementState, KeyboardInput},
+	event_loop::ControlFlow,
+	window::WindowId,
+};
 
 use crate::commands::{
 	self, Command as ConsoleCommand, CommandFlags as ConsoleCommandFlags, Request as ConsoleRequest,

@@ -17,3 +17,39 @@ codegen-units = 1
 # https://github.com/tesselode/kira/issues/24
 [profile.dev.package.symphonia-bundle-mp3]
 opt-level = 3
+
+[workspace.dependencies]
+bitflags = "1.3.2"
+bytemuck = { version = "1.11.0", features = ["derive"] }
+chrono = "0.4.19"
+crossbeam = "0.8.1"
+dolly = "0.4.0"
+fasthash = "0.4.0"
+globset = "0.4.9"
+indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
+kira = "0.7.0"
+log = "0.4.16"
+luajit-src = "210.3.4"
+mlua = { version = "0.8.6", features = [
+	"async",
+	"luajit52",
+	"parking_lot",
+	"send",
+	"serialize",
+	"vendored",
+] }
+nanorand = "0.7.0"
+parking_lot = "0.12.1"
+rayon = "1.5.3"
+regex = "1.6.0"
+renet = "0.0.9"
+sha3 = "0.10.2"
+shipyard = { version = "0.6.2", features = ["serde1"] }
+wgpu = "0.13"
+winit = "0.27.2"
+zip = "0.6.2"
+
+# Both of these are temporary. Change to use Git when a crate stabilizes;
+# change to use crates.io when a crate is suitable for publishing
+doom-front = { path = "../doom-front/front" }
+zmusic = { path = "../zmusic-rs/wrapper" }

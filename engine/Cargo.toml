@@ -12,19 +12,20 @@ keywords = ["game", "engine", "gamedev", "graphics", "doom"]
 publish = false
 
 [dependencies]
-bitflags = "1.3.2"
-bytemuck = { version = "1.11.0", features = ["derive"] }
+bitflags = { workspace = true }
+bytemuck = { workspace = true }
 byteorder = "1.4.3"
-chrono = "0.4.19"
+chrono = { workspace = true }
 cranelift = "0.90.1"
 cranelift-jit = "0.90.1"
 cranelift-module = "0.90.1"
-crossbeam = "0.8.1"
-dolly = "0.4.0"
+crossbeam = { workspace = true }
+dolly = { workspace = true }
+doom-front = { workspace = true }
 egui = "0.19"
 egui-wgpu = "0.19"
 egui-winit = "0.19"
-fasthash = "0.4.0"
+fasthash = { workspace = true }
 fern = { version = "0.6.1", features = ["colored"] }
 fixed = "1.19.0"
 formatx = "0.1.4"
@@ -35,7 +36,7 @@ glam = { version = "0.22.0", features = [
 	"serde",
 	"debug-glam-assert",
 ] }
-globset = "0.4.9"
+globset = { workspace = true }
 home = "0.5.3"
 image = { version = "0.24.4", default-features = false, features = [
 	"dds",
@@ -43,54 +44,39 @@ image = { version = "0.24.4", default-features = false, features = [
 	"png",
 	"tga",
 ] }
-indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
-kira = "0.7.0"
-log = "0.4.16"
-luajit-src = "210.3.4"
+indexmap = { workspace = true }
+kira = { workspace = true}
+log = { workspace = true }
 md5 = "0.7.0"
-mlua = { version = "0.8.6", features = [
-	"async",
-	"luajit52",
-	"parking_lot",
-	"send",
-	"serialize",
-	"vendored",
-] }
+mlua = { workspace = true }
 naga = "0.10.0"
-nanorand = "0.7.0"
+nanorand = { workspace = true }
 num = "0.4.0"
 num-traits = "0.2.15"
 num-derive = "0.3.3"
 once_cell = "1.15.0"
 palette = "0.6.1"
-parking_lot = "0.12.1"
+parking_lot = { workspace = true }
 peg = "0.8.1"
 pollster = "0.2"
 raw-cpuid = "10.6.0"
-rayon = "1.5.3"
-regex = "1.6.0"
-renet = "0.0.9"
+rayon = { workspace = true }
+regex = { workspace = true }
+renet = { workspace = true }
 rfd = "0.10.0"
 serde = "1.0.140"
-sha3 = "0.10.2"
-shipyard = { version = "0.6.2", features = ["serde1"] }
+sha3 = { workspace = true }
+shipyard = { workspace = true }
 str-utils = "0.1.6"
 toml = "0.5.9"
 unicode-width = "0.1.10"
 unicode-xid = "0.2.4"
 vec1 = { version = "1.10.1", features = ["serde"] }
 walkdir = "2.3.2"
-wgpu = "0.13"
-winit = "0.27.2"
-zip = "0.6.2"
-
-# Temporary. Change to use Git when a crate stabilizes;
-# change to use crates.io when a crate is suitable for publishing
-
-# doom-front = { git = "https://github.com/***REMOVED***/doom-front" }
-# zmusic = { git = "https://github.com/***REMOVED***/zmusic-rs" }
-doom-front = { path = "../../doom-front/front" }
-zmusic = { path = "../../zmusic-rs/wrapper" }
+wgpu = { workspace = true }
+winit = { workspace = true }
+zip = { workspace = true }
+zmusic = { workspace = true }
 
 [[bench]]
 name = "bench"

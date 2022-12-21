@@ -14,4 +14,10 @@ publish = false
 [dependencies]
 impure = { path = "../engine" }
 
+bitflags = { workspace = true }
+bytemuck = { workspace = true }
 clap = { version = "3.2.15", features = ["derive"] }
+crossbeam = { workspace = true }
+log = { workspace = true }
+renet = { workspace = true }
+sha3 = { workspace = true }

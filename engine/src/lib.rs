@@ -54,38 +54,15 @@ pub mod wad;
 #[allow(dead_code)]
 pub mod zscript;
 
+pub extern crate num_derive;
+pub extern crate num_traits;
+
 // Type aliases
 
 pub use level::Cluster as LevelCluster;
 pub use level::Flags as LevelFlags;
 pub use level::Metadata as LevelMetadata;
 pub use vfs::Error as VfsError;
-
-// Re-export transitive dependencies
-
-pub extern crate num_derive;
-pub extern crate num_traits;
-
-pub mod depends {
-	pub extern crate bitflags;
-	pub extern crate bytemuck;
-	pub extern crate chrono;
-	pub extern crate crossbeam;
-	pub extern crate dolly;
-	pub extern crate fasthash;
-	pub extern crate kira;
-	pub extern crate log;
-	pub extern crate mlua;
-	pub extern crate nanorand;
-	pub extern crate parking_lot;
-	pub extern crate regex;
-	pub extern crate renet;
-	pub extern crate sha3;
-	pub extern crate shipyard;
-	pub extern crate wgpu;
-	pub extern crate winit;
-	pub extern crate zip;
-}
 
 // Symbols that don't belong in any other module ///////////////////////////////
 
@@ -186,7 +163,7 @@ pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error:
 		}
 
 		let avail_par = std::thread::available_parallelism()?;
-		output.push_str(&format!("\t - Available parallelism: {avail_par}"));
+		output.push_str(&format!("\t- Available parallelism: {avail_par}"));
 
 		log::info!("CPU diagnostics: \r\n{}", output);
 

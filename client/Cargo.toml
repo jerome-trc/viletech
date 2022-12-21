@@ -13,3 +13,15 @@ publish = false
 
 [dependencies]
 impure = { path = "../engine" }
+
+bitflags = { workspace = true }
+crossbeam = { workspace = true }
+kira = { workspace = true }
+log = { workspace = true }
+mlua = { workspace = true }
+nanorand = { workspace = true }
+parking_lot = { workspace = true }
+shipyard = { workspace = true }
+wgpu = { workspace = true }
+winit = { workspace = true }
+zmusic = { workspace = true }

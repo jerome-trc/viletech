@@ -215,7 +215,11 @@ impl AudioCore {
 			let metadata = match dir_entry.metadata() {
 				Ok(m) => m,
 				Err(err) => {
-					warn!("Failed to retrieve metadata for file: {}\r\nError: {}", path.display(), err);
+					warn!(
+						"Failed to retrieve metadata for file: {}\r\nError: {}",
+						path.display(),
+						err
+					);
 					continue;
 				}
 			};

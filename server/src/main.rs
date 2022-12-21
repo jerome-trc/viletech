@@ -28,18 +28,12 @@ use std::{
 };
 
 use clap::Parser;
-use impure::{
-	depends::{
-		log::error,
-		renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent},
-		sha3::{Digest, Sha3_256},
-		*,
-	},
-	terminal::{self, Terminal},
-};
-use log::info;
+use impure::terminal::{self, Terminal};
+use log::{error, info};
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
+use renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent};
+use sha3::{Digest, Sha3_256};
 
 #[must_use]
 pub fn version_string() -> String {

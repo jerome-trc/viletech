@@ -23,13 +23,10 @@ use std::{env, path::PathBuf};
 
 use impure::{
 	console::MessageKind,
-	depends::{
-		bitflags,
-		log::{error, info},
-	},
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
 };
+use log::{error, info};
 
 use crate::core::ClientCore;
 

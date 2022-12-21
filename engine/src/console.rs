@@ -236,7 +236,10 @@ impl<C: terminal::Command> Console<C> {
 	}
 
 	pub fn clear_message_history(&mut self, log: bool, toast: bool, help: bool) {
-		debug_assert!(log || toast || help, "Invalid arguments given to `Console::clear_message_history`.");
+		debug_assert!(
+			log || toast || help,
+			"Invalid arguments given to `Console::clear_message_history`."
+		);
 
 		self.messages.retain(|msg| {
 			if msg.kind == MessageKind::Log && log {

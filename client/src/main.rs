@@ -26,7 +26,6 @@ use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 use impure::{
 	console::Console,
 	data::DataCore,
-	depends::*,
 	gfx::{core::GraphicsCore, render},
 	lua::ImpureLua,
 	vfs::{ImpureVfs, VirtualFs},

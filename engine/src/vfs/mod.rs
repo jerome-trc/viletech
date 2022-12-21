@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod entry;
 mod error;
-mod fileref;
 mod ext;
+mod fileref;
 mod mount;
 #[cfg(test)]
 mod test;

@@ -1941,7 +1941,6 @@ dependencies = [
  "indexmap",
  "kira",
  "log",
- "luajit-src",
  "md5",
  "mlua",
  "naga 0.10.0",
@@ -1978,15 +1977,32 @@ dependencies = [
 name = "impure-client"
 version = "0.0.0"
 dependencies = [
+ "bitflags",
+ "crossbeam",
  "impure",
+ "kira",
+ "log",
+ "mlua",
+ "nanorand",
+ "parking_lot 0.12.1",
+ "shipyard",
+ "wgpu",
+ "winit",
+ "zmusic",
 ]
 
 [[package]]
 name = "impure-server"
 version = "0.0.0"
 dependencies = [
+ "bitflags",
+ "bytemuck",
  "clap 3.2.15",
+ "crossbeam",
  "impure",
+ "log",
+ "renet",
+ "sha3",
 ]
 
 [[package]]
