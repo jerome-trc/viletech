@@ -84,8 +84,13 @@ wgpu = "0.13"
 winit = "0.27.2"
 zip = "0.6.2"
 
-doom-front = { git = "https://github.com/***REMOVED***/doom-front" }
-zmusic = { git = "https://github.com/***REMOVED***/zmusic-rs" }
+# Temporary. Change to use Git when a crate stabilizes;
+# change to use crates.io when a crate is suitable for publishing
+
+# doom-front = { git = "https://github.com/***REMOVED***/doom-front" }
+# zmusic = { git = "https://github.com/***REMOVED***/zmusic-rs" }
+doom-front = { path = "../../doom-front/front" }
+zmusic = { path = "../../zmusic-rs/wrapper" }
 
 [[bench]]
 name = "bench"

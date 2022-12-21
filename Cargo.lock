@@ -1226,7 +1226,6 @@ dependencies = [
 [[package]]
 name = "doom-front"
 version = "0.0.0"
-source = "git+https://github.com/***REMOVED***/doom-front#e36b6e722e64b693c3950e727465a6fcbc1732aa"
 dependencies = [
  "bitflags",
  "indexmap",
@@ -4677,7 +4676,6 @@ dependencies = [
 [[package]]
 name = "zmusic"
 version = "0.0.0"
-source = "git+https://github.com/***REMOVED***/zmusic-rs#064bcefe4cba24c429c1ae00aafdddcaf7d81b8f"
 dependencies = [
  "zmusic-sys",
 ]
@@ -4685,7 +4683,6 @@ dependencies = [
 [[package]]
 name = "zmusic-sys"
 version = "0.0.0"
-source = "git+https://github.com/***REMOVED***/zmusic-rs#064bcefe4cba24c429c1ae00aafdddcaf7d81b8f"
 dependencies = [
  "bindgen 0.60.1",
  "cmake",
