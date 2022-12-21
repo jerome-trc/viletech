@@ -6,6 +6,8 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## Technologies
 
+Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
+
 - bitflags
 	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
@@ -212,10 +214,6 @@ If you're aware of any attribution which is evidently missing from this list, or
 	- By Mathijs van de Nes ([@mvdnes](https://github.com/mvdnes)), [@Plecra](https://github.com/Plecra), et al.
 	- Provided under the [MIT License](https://github.com/zip-rs/zip/blob/master/LICENSE).
 	- https://docs.rs/zip/latest/zip/
-- zscript_parser
-	- By Jessica Russell ([@Gutawer](https://gitlab.com/Gutawer)).
-	- Provided under the [MIT License](https://gitlab.com/Gutawer/zscript_parser/-/blob/master/LICENSE).
-	- https://gitlab.com/Gutawer/zscript_parser
 
 ## Code
 
