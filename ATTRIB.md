@@ -202,6 +202,10 @@ Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/
 	- By Magnus Hoff ([@maghoff](https://github.com/maghoff)).
 	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).
 	- https://docs.rs/wad/latest/wad/
+- walkdir
+	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
+	- Provided under the [MIT License](https://github.com/BurntSushi/walkdir/blob/master/LICENSE-MIT).
+	- https://docs.rs/walkdir/latest/walkdir/
 - wgpu
     - By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.APACHE) and [MIT License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.MIT).
@@ -218,6 +222,10 @@ Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/
 ## Code
 
 Impure relies heavily on code ported from GZDoom, which is the creation of the ZDoom and GZDoom teams, principally led by Marisa Heit ([@rheit](https://github.com/rheit)) and Christoph Oelckers ([@coelckers](https://github.com/coelckers)). See https://github.com/ZDoom/gzdoom/graphs/contributors for more information. Code derived from GZDoom is used under the [GNU General Public License Version 3](https://github.com/ZDoom/gzdoom/blob/master/LICENSE).
+
+## Miscellaneous
+
+The SoundFont file located at /data/soundfonts/impure.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
 
 ## Special Thanks
 

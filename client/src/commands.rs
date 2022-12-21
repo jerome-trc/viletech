@@ -253,6 +253,31 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	})
 }
 
+pub fn ccmd_mididiag(args: CommandArgs) -> Request {
+	if args.help() {
+		return Request::ConsoleWrite(
+			"Lists all SoundFonts available for MIDI rendering.".to_string(),
+			MessageKind::Help,
+		);
+	}
+
+	Request::Callback(|core| {
+		let mut output = String::with_capacity(256);
+
+		output.push_str("All available SoundFonts:");
+
+		for soundfont in &core.audio.soundfonts {
+			output.push_str(&format!(
+				"\r\n\t - {} ({})",
+				soundfont.full_path().display(),
+				soundfont.kind()
+			));
+		}
+
+		info!("{}", output);
+	})
+}
+
 pub fn ccmd_sound(args: CommandArgs) -> Request {
 	if args.help() || args.is_empty() {
 		return Request::ConsoleWrite(

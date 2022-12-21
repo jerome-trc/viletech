@@ -1,3 +1,5 @@
+//! Sound- and music-related code.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -18,22 +20,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use std::{
-	error::Error,
-	io,
+	io::{self, Read, Seek},
 	ops::{Deref, DerefMut},
+	path::{Path, PathBuf},
 	time::Duration,
 };
 
 use kira::{
-	manager::{error::PlaySoundError, AudioManager},
+	manager::{
+		backend::{cpal::CpalBackend, Backend},
+		error::PlaySoundError,
+		AudioManager, AudioManagerSettings,
+	},
 	sound::{
 		static_sound::{PlaybackState, StaticSoundData, StaticSoundHandle, StaticSoundSettings},
 		SoundData,
 	},
 	tween::Tween,
 };
+use log::{info, warn};
+use once_cell::sync::Lazy;
+use zmusic::SoundFontKind;
 
-use crate::{ecs::EntityId, vfs::FileRef};
+use crate::{ecs::EntityId, utils, vfs::FileRef};
 
 pub struct SourcedHandle {
 	inner: StaticSoundHandle,
@@ -56,6 +65,7 @@ impl DerefMut for SourcedHandle {
 }
 
 pub struct AudioCore {
+	pub soundfonts: Vec<SoundFont>,
 	pub manager: AudioManager,
 	/// General-purpose music slot.
 	pub music1: Option<StaticSoundHandle>,
@@ -65,6 +75,8 @@ pub struct AudioCore {
 	pub music2: Option<StaticSoundHandle>,
 	/// Sounds currently being played.
 	pub sounds: Vec<SourcedHandle>,
+	/// Private field so this struct can only be created using `new`.
+	_private: (),
 }
 
 pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
@@ -76,6 +88,25 @@ const TWEEN_INSTANT: Tween = Tween {
 };
 
 impl AudioCore {
+	#[must_use]
+	pub fn new(manager_settings: Option<AudioManagerSettings<CpalBackend>>) -> Result<Self, Error> {
+		let manager_settings = manager_settings.unwrap_or_default();
+		let sound_cap = manager_settings.capacities.sound_capacity;
+
+		let mut ret = Self {
+			soundfonts: Vec::with_capacity(1),
+			manager: AudioManager::new(manager_settings).or_else(|err| Err(Error::Backend(err)))?,
+			music1: None,
+			music2: None,
+			sounds: Vec::with_capacity(sound_cap),
+			_private: (),
+		};
+
+		ret.collect_soundfonts()?;
+
+		Ok(ret)
+	}
+
 	/// Clear handles for sounds which have finished playing.
 	pub fn update(&mut self) {
 		let mut i = 0;
@@ -113,6 +144,7 @@ impl AudioCore {
 		Ok(())
 	}
 
+	/// Pauses every sound and music handle.
 	pub fn pause_all(&mut self) {
 		for handle in &mut self.sounds {
 			let res = handle.pause(TWEEN_INSTANT);
@@ -130,6 +162,7 @@ impl AudioCore {
 		}
 	}
 
+	/// Resumes every sound and music handle.
 	pub fn resume_all(&mut self) {
 		for handle in &mut self.sounds {
 			let res = handle.resume(TWEEN_INSTANT);
@@ -158,17 +191,243 @@ impl AudioCore {
 			);
 		}
 	}
+
+	/// A fundamental part of engine initialization. Recursively read the contents of
+	/// `<executable_directory>/soundfonts`, determine their types, and store their
+	/// paths. Note that in the debug build, `<working_directory>/data/soundfonts`
+	/// will be walked instead. Returns [`Error::NoSoundFonts`] if no SoundFont
+	/// files whatsoever could be found. This should never be considered fatal;
+	/// it just means the engine won't be able to render MIDIs.
+	pub fn collect_soundfonts(&mut self) -> Result<(), Error> {
+		self.soundfonts.clear();
+
+		let walker = walkdir::WalkDir::new::<&Path>(SOUNDFONTS_PATH.as_ref())
+			.follow_links(false)
+			.max_depth(8)
+			.same_file_system(true)
+			.sort_by_file_name()
+			.into_iter()
+			.filter_map(|res| res.ok());
+
+		for dir_entry in walker {
+			let path = dir_entry.path();
+
+			let metadata = match dir_entry.metadata() {
+				Ok(m) => m,
+				Err(err) => {
+					warn!("Failed to retrieve metadata for file: {}\r\nError: {}", path.display(), err);
+					continue;
+				}
+			};
+
+			if metadata.is_dir() || metadata.is_symlink() || metadata.len() == 0 {
+				continue;
+			}
+
+			// Check if another SoundFont by this name has already been collected
+			if self
+				.soundfonts
+				.iter()
+				.any(|sf| sf.name().as_os_str().eq_ignore_ascii_case(path.as_os_str()))
+			{
+				continue;
+			}
+
+			let mut file = match std::fs::File::open(path) {
+				Ok(f) => f,
+				Err(err) => {
+					warn!("Failed to open file: {}\r\nError: {}", path.display(), err);
+					continue;
+				}
+			};
+
+			let mut header = [0_u8; 16];
+
+			match file.read_exact(&mut header) {
+				Ok(()) => {}
+				Err(err) => {
+					warn!("Failed to read file: {}\r\nError: {}", path.display(), err);
+				}
+			};
+
+			let sf_kind = if &header[0..4] == b"RIFF" && &header[8..16] == b"sfbkLIST" {
+				SoundFontKind::Sf2
+			} else if &header[..11] == b"WOPL3-BANK\0" {
+				SoundFontKind::Wopl
+			} else if &header[..11] == b"WOPN2-BANK\0" {
+				SoundFontKind::Wopn
+			} else if utils::io::is_zip(&header) {
+				SoundFontKind::Gus
+			} else {
+				info!(
+					"Failed to determine SoundFont type of file: {}\r\nSkipping it.",
+					path.display()
+				);
+				continue;
+			};
+
+			if sf_kind == SoundFontKind::Gus {
+				match file.rewind() {
+					Ok(()) => {}
+					Err(err) => {
+						warn!(
+							"Failed to rewind file stream for zip read: {}\r\nError: {}",
+							path.display(),
+							err
+						);
+						continue;
+					}
+				};
+
+				let mut archive = match zip::ZipArchive::new(&mut file) {
+					Ok(zf) => zf,
+					Err(err) => {
+						warn!("Failed to unzip file: {}\r\nError: {}", path.display(), err);
+						continue;
+					}
+				};
+
+				// [GZ] A SoundFont archive with only one file can't be a packed GUS patch.
+				// Just skip this entirely
+				if archive.len() <= 1 {
+					continue;
+				}
+
+				let timidity = match archive.by_name("timidity.cfg") {
+					Ok(timid) => timid,
+					Err(err) => {
+						warn!(
+							"Failed to find `timidity.cfg` file in: {}\r\nError: {}",
+							path.display(),
+							err
+						);
+						continue;
+					}
+				};
+
+				if !timidity.is_file() || timidity.size() < 1 {
+					warn!(
+						"Found `timidity.cfg` in a zip SoundFont but it's malformed. ({})",
+						path.display()
+					);
+					continue;
+				}
+
+				// This GUS SoundFont has been validated. Now it can be pushed
+			}
+
+			self.soundfonts.push(SoundFont {
+				path: path.to_owned(),
+				kind: sf_kind,
+			});
+		}
+
+		if self.soundfonts.is_empty() {
+			Err(Error::NoSoundFonts)
+		} else {
+			Ok(())
+		}
+	}
 }
+
+static SOUNDFONTS_PATH: Lazy<PathBuf> = Lazy::new(|| {
+	#[cfg(not(debug_assertions))]
+	{
+		let ret = utils::path::exe_dir().join("soundfonts");
+
+		if !ret.exists() {
+			std::fs::create_dir(ret).or_else(|err| {
+				panic!(
+					"Failed to create directory: {}\r\nError: {}",
+					ret.display(),
+					err
+				)
+			})
+		}
+
+		ret
+	}
+
+	#[cfg(debug_assertions)]
+	{
+		[
+			std::env::current_dir().expect("Failed to get working directory."),
+			PathBuf::from("data/soundfonts"),
+		]
+		.iter()
+		.collect()
+	}
+});
 
 pub fn sound_from_file(
 	file: FileRef,
 	settings: StaticSoundSettings,
-) -> Result<StaticSoundData, Box<dyn Error>> {
+) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
 	let bytes = file.read()?.to_owned();
 	let cursor = io::Cursor::new(bytes);
 
 	match StaticSoundData::from_cursor(cursor, settings) {
 		Ok(ssd) => Ok(ssd),
 		Err(err) => Err(Box::new(err)),
+	}
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SoundFont {
+	/// The canonicalized path to this SoundFont's file.
+	/// Needed by the FluidSynth backend of the ZMusic library.
+	path: PathBuf,
+	kind: SoundFontKind,
+}
+
+impl SoundFont {
+	#[must_use]
+	pub fn new(path: PathBuf, kind: SoundFontKind) -> Self {
+		Self { path, kind }
+	}
+
+	/// The name of the SoundFont file, without the extension (i.e. the file stem).
+	#[must_use]
+	pub fn name(&self) -> &Path {
+		Path::new(self.path.file_stem().unwrap_or_default())
+	}
+
+	/// The name of the SoundFont file, along with the extension.
+	#[must_use]
+	pub fn name_ext(&self) -> &Path {
+		Path::new(self.path.file_name().unwrap_or_default())
+	}
+
+	/// The canonicalized path to this SoundFont's file.
+	/// Needed by the FluidSynth backend of the ZMusic library.
+	#[must_use]
+	pub fn full_path(&self) -> &Path {
+		&self.path
+	}
+
+	#[must_use]
+	pub fn kind(&self) -> SoundFontKind {
+		self.kind
+	}
+}
+
+#[derive(Debug)]
+pub enum Error {
+	Backend(<CpalBackend as Backend>::Error),
+	NoSoundFonts,
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Error::Backend(err) => err.fmt(f),
+			Error::NoSoundFonts => write!(
+				f,
+				"No SoundFont files found under path: {}",
+				SOUNDFONTS_PATH.to_string_lossy().as_ref()
+			),
+		}
 	}
 }

@@ -34,10 +34,7 @@ use impure::{
 	vfs::{ImpureVfs, VirtualFs},
 };
 
-use kira::{
-	manager::{AudioManager, AudioManagerSettings},
-	sound::static_sound::StaticSoundSettings,
-};
+use kira::sound::static_sound::StaticSoundSettings;
 use log::{error, info};
 use mlua::prelude::*;
 use nanorand::WyRand;
@@ -101,16 +98,6 @@ impl ClientCore {
 		gfx: GraphicsCore,
 		console: Console<ConsoleCommand>,
 	) -> Result<Self, Box<dyn Error>> {
-		let audio_mgr_settings = AudioManagerSettings::default();
-		let sound_cap = audio_mgr_settings.capacities.sound_capacity;
-
-		let audio = AudioCore {
-			manager: AudioManager::new(audio_mgr_settings)?,
-			music1: None,
-			music2: None,
-			sounds: Vec::<_>::with_capacity(sound_cap),
-		};
-
 		let camera = Camera::new(
 			gfx.surface_config.width as f32,
 			gfx.surface_config.height as f32,
@@ -123,7 +110,7 @@ impl ClientCore {
 			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
-			audio,
+			audio: AudioCore::new(None)?,
 			input: InputCore::default(),
 			console,
 			gui: World::default(),
@@ -507,6 +494,15 @@ impl ClientCore {
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
 				func: commands::ccmd_luamem,
+			},
+			true,
+		);
+
+		self.console.register_command(
+			"mididiag",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_mididiag,
 			},
 			true,
 		);
