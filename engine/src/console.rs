@@ -235,8 +235,24 @@ impl<C: terminal::Command> Console<C> {
 		self.terminal.find_alias(key)
 	}
 
-	pub fn clear_log(&mut self) {
-		self.messages.clear();
+	pub fn clear_message_history(&mut self, log: bool, toast: bool, help: bool) {
+		debug_assert!(log || toast || help, "Invalid arguments given to `Console::clear_message_history`.");
+
+		self.messages.retain(|msg| {
+			if msg.kind == MessageKind::Log && log {
+				return false;
+			}
+
+			if msg.kind == MessageKind::Toast && toast {
+				return false;
+			}
+
+			if msg.kind == MessageKind::Help && help {
+				return false;
+			}
+
+			true
+		})
 	}
 
 	pub fn clear_input_history(&mut self) {

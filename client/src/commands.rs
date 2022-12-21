@@ -137,13 +137,13 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 pub fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
-			"Clears the console's message log.".to_string(),
+			"Clears the console's message history.".to_string(),
 			MessageKind::Help,
 		);
 	}
 
 	Request::Callback(|core| {
-		core.console.clear_log();
+		core.console.clear_message_history(true, true, true);
 	})
 }
 
