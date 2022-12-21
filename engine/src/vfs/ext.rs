@@ -25,12 +25,12 @@ use std::{
 	time::Instant,
 };
 
+use doom_front::zscript::filesystem::{File as ZsFile, FileSystem as ZsFileSystem};
 use log::{error, info, warn};
 
 use crate::{
 	data::{GameDataKind, MetaToml as GameDataMetaToml},
 	utils::{path::*, string::*},
-	zscript::parser::fs::{File as ZsFile, FileSystem as ZsFileSystem},
 };
 
 use super::{entry::PathHash, EntryKind, Error, FileRef, VirtualFs, RGX_INVALIDMOUNTPATH};

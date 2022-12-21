@@ -24,6 +24,7 @@ pub mod asset;
 
 use std::{collections::HashMap, path::PathBuf};
 
+use doom_front::zscript::err::ParsingErrorLevel as ZsParseIssueLevel;
 use globset::Glob;
 use kira::sound::static_sound::StaticSoundData;
 use log::{error, warn};
@@ -37,7 +38,7 @@ use crate::{
 	level::{self, Cluster, Episode},
 	newtype,
 	vfs::{FileRef, ImpureVfs, VirtualFs},
-	zscript::{self, parser::issue::Level as ZsParseIssueLevel},
+	zscript,
 };
 
 pub use asset::{

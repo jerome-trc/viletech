@@ -19,32 +19,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
 
-use super::{
-	parser::{
-		ast,
-		fs::Files,
-		interner::NameSymbol,
-		ir::{self, DottableId, EnumVariant, Expression, IntType},
-		issue::Level as ParseIssueLevel,
-		Span,
-	},
-	ParseOutput,
+use doom_front::zscript::{
+	ast,
+	err::ParsingErrorLevel as ParseIssueLevel,
+	filesystem::Files,
+	interner::NameSymbol,
+	ir_common::{self as ir, DottableId, EnumVariant, Expression, IntType},
+	Span,
 };
 
+use super::ParseOutput;
+
 /// Instantiated when performing an asset load if a namespace has any ZScript in it.
-/// Emits one complete Lua module per namespace, accumulating types and constants
+/// Emits one complete Lith module per namespace, accumulating types and constants
 /// so that later namespaces can reference symbols from earlier ones.
+#[derive(Debug, Default)]
 pub struct Transpiler {
 	trees: Vec<FileTree>,
-}
-
-impl Default for Transpiler {
-	fn default() -> Self {
-		super::parser::interner::clear();
-		Self {
-			trees: Default::default(),
-		}
-	}
 }
 
 impl Transpiler {
@@ -108,6 +99,7 @@ impl Transpiler {
 	}
 }
 
+#[derive(Debug)]
 struct FileTree {
 	id: String,
 	files: Files,
@@ -292,12 +284,13 @@ impl FileTree {
 			astdef.name.symbol,
 			MixinDef {
 				name: astdef.name.symbol,
+				#[allow(unreachable_code)]
 				inners: astdef
 					.inners
 					.drain(..)
 					.map(|inner| ast::ClassInner {
 						span: inner.span,
-						kind: inner.kind.map_to_class_inner_kind(),
+						kind: unimplemented!("`inner.kind.map_to_class_inner_kind()`"),
 					})
 					.collect(),
 			},
@@ -326,7 +319,7 @@ impl FileTree {
 	}
 }
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 enum Scope {
 	#[default]
 	Data,
@@ -334,6 +327,7 @@ enum Scope {
 	Play,
 }
 
+#[derive(Debug)]
 struct ClassDef {
 	name: NameSymbol,
 	is_abstract: bool,
@@ -345,36 +339,43 @@ struct ClassDef {
 	inners: Vec<ast::ClassInner>,
 }
 
+#[derive(Debug)]
 struct MixinDef {
 	name: NameSymbol,
 	inners: Vec<ast::ClassInner>,
 }
 
+#[derive(Debug)]
 struct EnumDef {
 	name: NameSymbol,
 	underlying: Option<IntType>,
 	variants: Vec<EnumVariant>,
 }
 
+#[derive(Debug)]
 struct ConstantDef {
 	name: NameSymbol,
 	expr: Expression,
 }
 
+#[derive(Debug)]
 pub struct Issue {
 	level: IssueLevel,
 	span: Span,
 }
 
+#[derive(Debug)]
 pub enum IssueLevel {
 	Warning(Warning),
 	Error(Error),
 }
 
+#[derive(Debug)]
 pub enum Warning {
 	// ???
 }
 
+#[derive(Debug)]
 pub enum Error {
 	/// Attempted to define a class with the `ui` scope qualifier more than once.
 	MultiAbstract(NameSymbol),

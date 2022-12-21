@@ -1,4 +1,4 @@
-//! End-to-end ZScript-to-LuaJIT transpilation.
+//! End-to-end ZScript-to-LithScript transpilation.
 
 /*
 
@@ -19,19 +19,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-pub mod parser;
 mod transpiler;
 
-use parser::{
-	fs::{File, FileSystem, Files},
-	issue::Issue as ParseIssue,
-	manager::{parse_filesystem, FileIndexAndAst},
+use doom_front::zscript::{
+	err::ParsingError as ParseIssue,
+	filesystem::{File, FileSystem, Files},
+	parser_manager::{parse_filesystem, FileIndexAndAst},
 };
 
 use crate::utils::string::line_from_char_index;
 
 pub use transpiler::Transpiler;
 
+#[derive(Debug)]
 pub struct ParseOutput {
 	pub files: Files,
 	pub issues: Vec<ParseIssue>,
