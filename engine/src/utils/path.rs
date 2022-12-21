@@ -309,14 +309,17 @@ impl<T: AsRef<Path>> PathExt for T {
 	}
 }
 
+/// Gets [`std::env::current_exe`] and pops the file component off.
+#[must_use]
 pub fn exe_dir() -> PathBuf {
 	let mut ret = env::current_exe().expect("Failed to get executable's directory.");
 	ret.pop();
 	ret
 }
 
-/// Returns `None` if this platform is unsupported
-/// or the home directory path is malformed.
+/// Returns `None` if this platform is unsupported or the home directory path is
+/// malformed. See [`home::home_dir`].
+#[must_use]
 pub fn get_user_dir() -> Option<PathBuf> {
 	let mut ret = match home::home_dir() {
 		Some(hdir) => hdir,

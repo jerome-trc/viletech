@@ -1,3 +1,5 @@
+//! Console command callbacks and the client's console "frontend" details.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -82,6 +84,8 @@ impl terminal::Command for Command {
 	}
 }
 
+/// Creates a console alias from a contiguous string that expands into another
+/// string (whose contents can be anything, even if non-contiguous).
 pub fn ccmd_alias(args: CommandArgs) -> Request {
 	if args.id_only() || args.help() {
 		return Request::ConsoleWrite(
@@ -102,6 +106,7 @@ the alias' associated string is expanded into the output, if that alias exists."
 	Request::CreateAlias(args[1].to_string(), CommandArgs::concat(&args[2..]))
 }
 
+/// Echoes every launch argument given to the client.
 pub fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -134,6 +139,7 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 	Request::None
 }
 
+/// Clears the console's message history.
 pub fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -158,6 +164,8 @@ pub fn ccmd_exit(args: CommandArgs) -> Request {
 	Request::Exit
 }
 
+/// Prints the contents of a virtual file system directory,
+/// or information about a file.
 pub fn ccmd_file(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -171,6 +179,7 @@ or information about a file."
 	Request::File(PathBuf::from(if args.id_only() { "/" } else { args[1] }))
 }
 
+/// Clears the console's history of submitted input strings.
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -185,6 +194,9 @@ pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	})
 }
 
+/// Prints a list of all available console commands if given no arguments.
+/// If the first argument is a command's name, it's equivalent to submitting
+/// `command --help`.
 pub fn ccmd_help(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -216,6 +228,7 @@ Giving the name of a command as a first argument is the same as giving
 	Request::CommandHelp(args[1].to_string())
 }
 
+/// Prints the directory holding the user info directory. Also see [`get_user_dir`].
 pub fn ccmd_home(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -237,6 +250,7 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 	Request::None
 }
 
+/// Prints the current heap memory used by the client's Lua state.
 pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -253,6 +267,7 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	})
 }
 
+/// Lists all SoundFonts available for MIDI rendering.
 pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -278,6 +293,7 @@ pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 	})
 }
 
+/// Starts a sound at default settings from the virtual file system.
 pub fn ccmd_sound(args: CommandArgs) -> Request {
 	if args.help() || args.is_empty() {
 		return Request::ConsoleWrite(
@@ -293,6 +309,7 @@ Usage: {} <virtual file path/asset number/asset ID>",
 	Request::Sound(args[1].to_string())
 }
 
+/// Prints the length of the time the engine has been running.
 pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -306,6 +323,7 @@ pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	})
 }
 
+/// Prints information about the graphics device and WGPU backend.
 pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(
@@ -319,15 +337,20 @@ pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 	})
 }
 
+/// Prints the full version information of the engine and client.
 pub fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite("Prints the engine version.".to_string(), MessageKind::Help);
+		return Request::ConsoleWrite(
+			"Prints the full version information of the engine and client.".to_string(),
+			MessageKind::Help,
+		);
 	}
 
 	info!("{}", impure::full_version_string(&super::version_string()));
 	Request::None
 }
 
+/// Prints information about the state of the virtual file system.
 pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 	if args.help() {
 		return Request::ConsoleWrite(

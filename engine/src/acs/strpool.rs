@@ -53,7 +53,7 @@ use fasthash::metro;
 
 const NUM_BUCKETS: usize = 251;
 
-/// [GZ]:
+/// [GZ]
 /// Programmatically generated strings (e.g. those returned by strparam) are stored here.
 /// PCD_TAGSTRING also now stores strings in this table instead of simply
 /// tagging strings with their library ID.
