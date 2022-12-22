@@ -178,6 +178,11 @@ impl Entry {
 	}
 
 	#[must_use]
+	pub fn is_readable(&self) -> bool {
+		self.is_binary() || self.is_string()
+	}
+
+	#[must_use]
 	pub(super) fn cmp_name(a: &Entry, b: &Entry) -> std::cmp::Ordering {
 		if a.is_leaf() && b.is_dir() {
 			std::cmp::Ordering::Greater
