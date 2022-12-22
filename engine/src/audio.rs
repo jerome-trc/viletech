@@ -40,7 +40,7 @@ use kira::{
 };
 use log::{info, warn};
 use once_cell::sync::Lazy;
-use zmusic::SoundFontKind;
+use zmusic::{config::SoundFontKindMask, soundfont};
 
 use crate::{ecs::EntityId, utils, vfs::FileRef};
 
@@ -255,13 +255,13 @@ impl AudioCore {
 			};
 
 			let sf_kind = if &header[0..4] == b"RIFF" && &header[8..16] == b"sfbkLIST" {
-				SoundFontKind::Sf2
+				soundfont::Kind::Sf2
 			} else if &header[..11] == b"WOPL3-BANK\0" {
-				SoundFontKind::Wopl
+				soundfont::Kind::Wopl
 			} else if &header[..11] == b"WOPN2-BANK\0" {
-				SoundFontKind::Wopn
+				soundfont::Kind::Wopn
 			} else if utils::io::is_zip(&header) {
-				SoundFontKind::Gus
+				soundfont::Kind::Gus
 			} else {
 				info!(
 					"Failed to determine SoundFont type of file: {}\r\nSkipping it.",
@@ -270,7 +270,7 @@ impl AudioCore {
 				continue;
 			};
 
-			if sf_kind == SoundFontKind::Gus {
+			if sf_kind == soundfont::Kind::Gus {
 				match file.rewind() {
 					Ok(()) => {}
 					Err(err) => {
@@ -381,12 +381,12 @@ pub struct SoundFont {
 	/// The canonicalized path to this SoundFont's file.
 	/// Needed by the FluidSynth backend of the ZMusic library.
 	path: PathBuf,
-	kind: SoundFontKind,
+	kind: soundfont::Kind,
 }
 
 impl SoundFont {
 	#[must_use]
-	pub fn new(path: PathBuf, kind: SoundFontKind) -> Self {
+	pub fn new(path: PathBuf, kind: soundfont::Kind) -> Self {
 		Self { path, kind }
 	}
 
@@ -410,7 +410,7 @@ impl SoundFont {
 	}
 
 	#[must_use]
-	pub fn kind(&self) -> SoundFontKind {
+	pub fn kind(&self) -> soundfont::Kind {
 		self.kind
 	}
 }
