@@ -69,7 +69,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 
 	let alias = args[1].to_string();
 
-	if args.id_only() || args.help() {
+	if args.name_only() || args.help_requested() {
 		help(args[0]);
 		return Request::None;
 	}
@@ -85,7 +85,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 		});
 	}
 
-	let string = CommandArgs::concat(&args[2..]);
+	let string = args.concat(2);
 
 	req_callback(move |core| {
 		info!("Alias registered: {}\r\nExpands to: {}", alias, &string);
@@ -94,7 +94,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_args(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!("Prints out all of the program's launch arguments.");
 		return Request::None;
 	}
@@ -124,7 +124,7 @@ pub fn cmd_args(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_help(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!(
 			"If used without arguments, prints a list of all available commands.
 			Giving the name of a command as a first argument is the same as giving
@@ -133,7 +133,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	if args.id_only() {
+	if args.name_only() {
 		return req_callback(|core| {
 			let mut string = "All available commands:".to_string();
 
@@ -151,7 +151,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 
 	req_callback(move |core| match core.terminal.find_command(&key) {
 		Some(cmd) => {
-			(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
+			(cmd.func)(terminal::CommandArgs::new(vec![&key, "--help"]));
 		}
 		None => {
 			info!("No command found by name: {}", key);
@@ -160,7 +160,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_home(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!("Prints the directory which holds the user info directory.");
 		return Request::None;
 	}
@@ -179,7 +179,7 @@ pub fn cmd_home(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_quit(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!("Instantly closes the application.");
 		return Request::None;
 	}
@@ -188,7 +188,7 @@ pub fn cmd_quit(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_uptime(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!("Prints the current cumulative uptime of the application.");
 		return Request::None;
 	}
@@ -199,7 +199,7 @@ pub fn cmd_uptime(args: CommandArgs) -> Request {
 }
 
 pub fn cmd_version(args: CommandArgs) -> Request {
-	if args.help() {
+	if args.help_requested() {
 		info!("Prints the engine version.");
 		return Request::None;
 	}

@@ -82,6 +82,10 @@ Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/
     - By [@bluss](https://github.com/bluss), Josh Stone ([@cuviper](https://github.com/cuviper)), et al.
     - Provided under the [Apache 2.0 License](https://github.com/bluss/indexmap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/indexmap/blob/master/LICENSE-MIT).
 	- https://docs.rs/indexmap/latest/indexmap/
+- indoc
+	- By David Tolnay ([@dtolnay](https://github.com/dtolnay)) et al.
+	- Provided under the [Apache 2.0 License](https://github.com/dtolnay/indoc/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/indoc/blob/master/LICENSE-MIT).
+	- https://docs.rs/indoc/latest/indoc/
 - kira
 	- By [@tesselode](https://github.com/tesselode) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).

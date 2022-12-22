@@ -16,6 +16,7 @@ impure = { path = "../engine" }
 
 bitflags = { workspace = true }
 crossbeam = { workspace = true }
+indoc = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }
 mlua = { workspace = true }

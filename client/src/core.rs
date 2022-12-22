@@ -367,16 +367,14 @@ impl ClientCore {
 // Internal implementation details: general.
 impl ClientCore {
 	fn zmusic_init() {
-		zmusic::config::Global::callbacks(
-			Some(Box::new(|severity, msg| match severity {
-				zmusic::config::MessageSeverity::Verbose => log::trace!("(ZMusic)"),
-				zmusic::config::MessageSeverity::Debug => log::debug!("(ZMusic) {}", msg),
-				zmusic::config::MessageSeverity::Notify => info!("(ZMusic) {}", msg),
-				zmusic::config::MessageSeverity::Warning => warn!("(ZMusic) {}", msg),
-				zmusic::config::MessageSeverity::Error => error!("(ZMusic) {}", msg),
-				zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {}", msg),
-			}))
-		);
+		zmusic::config::Global::callbacks(Some(Box::new(|severity, msg| match severity {
+			zmusic::config::MessageSeverity::Verbose => log::trace!("(ZMusic)"),
+			zmusic::config::MessageSeverity::Debug => log::debug!("(ZMusic) {}", msg),
+			zmusic::config::MessageSeverity::Notify => info!("(ZMusic) {}", msg),
+			zmusic::config::MessageSeverity::Warning => warn!("(ZMusic) {}", msg),
+			zmusic::config::MessageSeverity::Error => error!("(ZMusic) {}", msg),
+			zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {}", msg),
+		})));
 
 		zmusic::init();
 
@@ -470,6 +468,15 @@ impl ClientCore {
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
 				func: commands::ccmd_mididiag,
+			},
+			true,
+		);
+
+		self.console.register_command(
+			"music",
+			ConsoleCommand {
+				flags: ConsoleCommandFlags::all(),
+				func: commands::ccmd_music,
 			},
 			true,
 		);
