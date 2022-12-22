@@ -278,7 +278,7 @@ pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 
 		output.push_str("All available SoundFonts:");
 
-		for soundfont in &core.audio.soundfonts {
+		for soundfont in &core.audio.borrow().soundfonts {
 			output.push_str(&format!(
 				"\r\n\t - {} ({})",
 				soundfont.full_path().display(),

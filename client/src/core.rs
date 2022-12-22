@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{error::Error, path::PathBuf, sync::Arc};
+use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
 use impure::{
 	audio::{self, AudioCore},
@@ -82,7 +82,7 @@ pub struct ClientCore {
 	pub data: Arc<RwLock<DataCore>>,
 	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub gfx: GraphicsCore,
-	pub audio: AudioCore,
+	pub audio: Rc<RefCell<AudioCore>>,
 	pub input: InputCore,
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
@@ -106,6 +106,8 @@ impl ClientCore {
 			gfx.surface_config.height as f32,
 		);
 
+		let audio = Rc::new(RefCell::new(AudioCore::new(None)?));
+
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
@@ -113,7 +115,7 @@ impl ClientCore {
 			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
-			audio: AudioCore::new(None)?,
+			audio,
 			input: InputCore::default(),
 			console,
 			gui: World::default(),
@@ -278,7 +280,7 @@ impl ClientCore {
 						}
 					};
 
-					match self.audio.play_global(sdat) {
+					match self.audio.borrow_mut().play_global(sdat) {
 						Ok(()) => {}
 						Err(err) => {
 							info!("Failed to play sound: {}", err);

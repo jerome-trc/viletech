@@ -167,7 +167,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		WinitEvent::MainEventsCleared => {
 			core.process_console_requests();
 			core.scene_change(control_flow);
-			core.audio.update();
+			core.audio.borrow_mut().update();
 			core.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {
@@ -199,9 +199,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 				}
 				WindowEvent::Focused(gained) => {
 					if *gained {
-						core.audio.resume_all();
+						core.audio.borrow_mut().resume_all();
 					} else {
-						core.audio.pause_all();
+						core.audio.borrow_mut().pause_all();
 					}
 				}
 				WindowEvent::CloseRequested => {
