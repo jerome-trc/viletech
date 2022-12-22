@@ -347,16 +347,17 @@ pub fn get_user_dir() -> Option<PathBuf> {
 /// Expands `~` on Unix and performs environment variable substitution.
 /// Deliberately designed to mimic `NicePath` in
 /// <https://github.com/ZDoom/gzdoom/blob/master/src/common/utility/cmdlib.cpp>.
-pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
+#[must_use]
+pub fn nice_path(path: impl AsRef<Path>) -> PathBuf {
 	let p = path.as_ref();
 
 	if p.is_empty() {
-		return Ok(PathBuf::from("."));
+		return PathBuf::from(".");
 	}
 
 	#[cfg(not(target_os = "windows"))]
 	if p.is_root() {
-		return Ok(PathBuf::from("/"));
+		return PathBuf::from("/");
 	}
 
 	let mut string = p.to_string_lossy().to_string();
@@ -382,7 +383,7 @@ pub fn nice_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 		}
 	}
 
-	Ok(PathBuf::from(string))
+	PathBuf::from(string)
 }
 
 pub fn str_iter_from_path(path: &Path) -> impl Iterator<Item = &str> {
