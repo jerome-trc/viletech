@@ -332,6 +332,37 @@ impl AudioCore {
 			Ok(())
 		}
 	}
+
+	#[must_use]
+	pub fn find_soundfont(&self, name: &str, mask: SoundFontKindMask) -> Option<&SoundFont> {
+		for sf in &self.soundfonts {
+			if !mask.is_allowed(sf.kind()) {
+				continue;
+			}
+
+			if !sf
+				.name()
+				.to_string_lossy()
+				.as_ref()
+				.eq_ignore_ascii_case(name)
+			{
+				continue;
+			}
+
+			if !sf
+				.name_ext()
+				.to_string_lossy()
+				.as_ref()
+				.eq_ignore_ascii_case(name)
+			{
+				continue;
+			}
+
+			return Some(sf);
+		}
+
+		return self.soundfonts.iter().find(|sf| mask.is_allowed(sf.kind()));
+	}
 }
 
 static SOUNDFONTS_PATH: Lazy<PathBuf> = Lazy::new(|| {
