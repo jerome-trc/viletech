@@ -249,6 +249,7 @@ impl AudioCore {
 	pub fn resume_all(&mut self) {
 		for handle in &mut self.sounds {
 			let res = handle.resume(TWEEN_INSTANT);
+
 			debug_assert!(
 				res.is_ok(),
 				"Failed to resume a sound: {}",
@@ -281,6 +282,21 @@ impl AudioCore {
 			Some(MusicHandle::Midi(midi)) => midi.resume(),
 			None => {}
 		}
+	}
+
+	/// Instantly stops every ongoing sound and music track. The sound array
+	/// gets cleared along with both music slots.
+	pub fn stop_all(&mut self) -> Result<(), Error> {
+		for sound in &mut self.sounds {
+			sound.stop(TWEEN_INSTANT).map_err(Error::Command)?;
+		}
+
+		self.sounds.clear();
+
+		self.stop_music::<false>().map_err(Error::Command)?;
+		self.stop_music::<true>().map_err(Error::Command)?;
+
+		Ok(())
 	}
 
 	/// A fundamental part of engine initialization. Recursively read the contents of
