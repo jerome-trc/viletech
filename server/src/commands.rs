@@ -29,12 +29,8 @@ use crate::ServerCore;
 
 pub enum Request {
 	None,
-	Callback(fn(&mut ServerCore)),
 	Exit,
-	EchoAllCommands,
-	CommandHelp(String),
-	CreateAlias(String, String),
-	EchoAlias(String),
+	Callback(Box<dyn Fn(&mut ServerCore)>),
 }
 
 bitflags::bitflags! {
@@ -71,16 +67,30 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 		);
 	}
 
+	let alias = args[1].to_string();
+
 	if args.id_only() || args.help() {
 		help(args[0]);
 		return Request::None;
 	}
 
 	if args.len() == 2 {
-		return Request::EchoAlias(args[1].to_string());
+		return req_callback(move |core| match core.terminal.find_alias(&alias) {
+			Some(a) => {
+				info!("{}", a.1);
+			}
+			None => {
+				info!("No existing alias: {}", alias);
+			}
+		});
 	}
 
-	Request::CreateAlias(args[1].to_string(), CommandArgs::concat(&args[2..]))
+	let string = CommandArgs::concat(&args[2..]);
+
+	req_callback(move |core| {
+		info!("Alias registered: {}\r\nExpands to: {}", alias, &string);
+		core.terminal.register_alias(alias.clone(), string.clone());
+	})
 }
 
 pub fn cmd_args(args: CommandArgs) -> Request {
@@ -124,10 +134,29 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 	}
 
 	if args.id_only() {
-		return Request::EchoAllCommands;
+		return req_callback(|core| {
+			let mut string = "All available commands:".to_string();
+
+			for command in core.terminal.all_commands() {
+				string.push('\r');
+				string.push('\n');
+				string.push_str(command.0);
+			}
+
+			info!("{}", string);
+		});
 	}
 
-	Request::CommandHelp(args[1].to_string())
+	let key = args[1].to_string();
+
+	req_callback(move |core| match core.terminal.find_command(&key) {
+		Some(cmd) => {
+			(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
+		}
+		None => {
+			info!("No command found by name: {}", key);
+		}
+	})
 }
 
 pub fn cmd_home(args: CommandArgs) -> Request {
@@ -164,7 +193,7 @@ pub fn cmd_uptime(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		info!("{}", impure::uptime_string(core.start_time));
 	})
 }
@@ -177,4 +206,11 @@ pub fn cmd_version(args: CommandArgs) -> Request {
 
 	info!("{}", impure::full_version_string(&super::version_string()));
 	Request::None
+}
+
+// Helpers /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn req_callback<F: 'static + Fn(&mut ServerCore)>(callback: F) -> Request {
+	Request::Callback(Box::new(callback))
 }

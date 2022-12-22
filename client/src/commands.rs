@@ -19,27 +19,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{env, path::PathBuf};
+use std::{
+	env,
+	path::{Path, PathBuf},
+};
 
 use impure::{
+	audio,
 	console::MessageKind,
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
+	vfs::ImpureVfs,
 };
+use kira::sound::static_sound::StaticSoundSettings;
 use log::{error, info};
 
 use crate::core::ClientCore;
 
 pub enum Request {
 	None,
-	Callback(fn(&mut ClientCore)),
 	Exit,
-	ConsoleWrite(String, MessageKind),
-	CommandHelp(String),
-	CreateAlias(String, String),
-	EchoAlias(String),
-	File(PathBuf),
-	Sound(String),
+	Callback(Box<dyn Fn(&mut ClientCore)>),
 }
 
 bitflags::bitflags! {
@@ -85,30 +85,40 @@ impl terminal::Command for Command {
 /// string (whose contents can be anything, even if non-contiguous).
 pub fn ccmd_alias(args: CommandArgs) -> Request {
 	if args.id_only() || args.help() {
-		return Request::ConsoleWrite(
-			format!(
-				"Usage: {} [alias] [string]
+		return req_console_write_help(format!(
+			"Usage: {} [alias] [string]
 If no alias is provided, all aliases are listed. If no string is provided,
 the alias' associated string is expanded into the output, if that alias exists.",
-				args[0]
-			),
-			MessageKind::Help,
-		);
+			args[0]
+		));
 	}
+
+	let alias = args[1].to_string();
 
 	if args.len() == 2 {
-		return Request::EchoAlias(args[1].to_string());
+		return req_callback(move |core| match core.console.find_alias(&alias) {
+			Some(a) => {
+				info!("{}", a.1);
+			}
+			None => {
+				info!("No existing alias: {}", alias);
+			}
+		});
 	}
 
-	Request::CreateAlias(args[1].to_string(), CommandArgs::concat(&args[2..]))
+	let string = CommandArgs::concat(&args[2..]);
+
+	req_callback(move |core| {
+		info!("Alias registered: {}\r\nExpands to: {}", alias, &string);
+		core.console.register_alias(alias.clone(), string.clone());
+	})
 }
 
 /// Echoes every launch argument given to the client.
 pub fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints out all of the program's launch arguments.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
@@ -139,23 +149,17 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 /// Clears the console's message history.
 pub fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
-			"Clears the console's message history.".to_string(),
-			MessageKind::Help,
-		);
+		return req_console_write_help("Clears the console's message history.".to_string());
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		core.console.clear_message_history(true, true, true);
 	})
 }
 
 pub fn ccmd_exit(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
-			"Instantly closes the client.".to_string(),
-			MessageKind::Help,
-		);
+		return req_console_write_help("Instantly closes the client.".to_string());
 	}
 
 	Request::Exit
@@ -165,27 +169,30 @@ pub fn ccmd_exit(args: CommandArgs) -> Request {
 /// or information about a file.
 pub fn ccmd_file(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints the contents of a virtual file system directory, \
 or information about a file."
 				.to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::File(PathBuf::from(if args.id_only() { "/" } else { args[1] }))
+	let path = PathBuf::from(if args.id_only() { "/" } else { args[1] });
+
+	req_callback(move |core| {
+		let vfsg = core.vfs.read();
+		info!("{}", vfsg.ccmd_file(path.clone()));
+	})
 }
 
 /// Clears the console's history of submitted input strings.
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Clear's the console's history of submitted input strings.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		info!("Clearing history of submitted input strings.");
 		core.console.clear_input_history();
 	})
@@ -196,17 +203,16 @@ pub fn ccmd_hclear(args: CommandArgs) -> Request {
 /// `command --help`.
 pub fn ccmd_help(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"If used without arguments, prints a list of all available commands.
 Giving the name of a command as a first argument is the same as giving
 `command --help`."
 				.to_string(),
-			MessageKind::Help,
 		);
 	}
 
 	if args.id_only() {
-		return Request::Callback(|core| {
+		return req_callback(|core| {
 			let cap = core.console.all_commands().map(|cmd| cmd.0.len()).sum();
 			let mut string = String::with_capacity(cap);
 
@@ -222,15 +228,23 @@ Giving the name of a command as a first argument is the same as giving
 		});
 	}
 
-	Request::CommandHelp(args[1].to_string())
+	let key = args[1].to_string();
+
+	req_callback(move |core| match core.console.find_command(&key) {
+		Some(cmd) => {
+			(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
+		}
+		None => {
+			info!("No command found by name: {}", key);
+		}
+	})
 }
 
 /// Prints the directory holding the user info directory. Also see [`get_user_dir`].
 pub fn ccmd_home(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
-			"Prints the directory which holds the user info directory.".to_string(),
-			MessageKind::Help,
+		return req_console_write_help(
+			"Prints the path to the directory which holds the user info directory.".to_string(),
 		);
 	}
 
@@ -250,13 +264,12 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 /// Prints the current heap memory used by the client's Lua state.
 pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints the current heap memory used by the client's Lua state.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		info!(
 			"Lua state heap usage (bytes): {}",
 			core.lua.lock().used_memory()
@@ -267,13 +280,12 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 /// Lists all SoundFonts available for MIDI rendering.
 pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Lists all SoundFonts available for MIDI rendering.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		let mut output = String::with_capacity(256);
 
 		output.push_str("All available SoundFonts:");
@@ -293,29 +305,55 @@ pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 /// Starts a sound at default settings from the virtual file system.
 pub fn ccmd_sound(args: CommandArgs) -> Request {
 	if args.help() || args.is_empty() {
-		return Request::ConsoleWrite(
-			format!(
-				"Starts a sound at default settings from the virtual file system.
+		return req_console_write_help(format!(
+			"Starts a sound at default settings from the virtual file system.
 Usage: {} <virtual file path/asset number/asset ID>",
-				args[0]
-			),
-			MessageKind::Help,
-		);
+			args[0]
+		));
 	}
 
-	Request::Sound(args[1].to_string())
+	let path_string = args[1].to_string();
+
+	req_callback(move |core| {
+		let path = Path::new(&path_string);
+		let vfsg = core.vfs.read();
+
+		let fref = match vfsg.lookup(path) {
+			Some(h) => h,
+			None => {
+				info!("No file under virtual path: {}", path_string);
+				return;
+			}
+		};
+
+		let sdat = match audio::sound_from_file(fref, StaticSoundSettings::default()) {
+			Ok(ssd) => ssd,
+			Err(err) => {
+				info!("Failed to create sound from file: {}", err);
+				return;
+			}
+		};
+
+		match core.audio.borrow_mut().play_global(sdat) {
+			Ok(()) => {
+				info!("Playing sound: {}", path_string);
+			}
+			Err(err) => {
+				info!("Failed to play sound: {}", err);
+			}
+		};
+	})
 }
 
 /// Prints the length of the time the engine has been running.
 pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints the length of the time the engine has been running.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		info!("{}", impure::uptime_string(core.start_time));
 	})
 }
@@ -323,23 +361,21 @@ pub fn ccmd_uptime(args: CommandArgs) -> Request {
 /// Prints information about the graphics device and WGPU backend.
 pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints information about the graphics device and WGPU backend.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	Request::Callback(Box::new(|core| {
 		info!("{}", core.gfx.diag());
-	})
+	}))
 }
 
 /// Prints the full version information of the engine and client.
 pub fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints the full version information of the engine and client.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
@@ -350,13 +386,12 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 /// Prints information about the state of the virtual file system.
 pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 	if args.help() {
-		return Request::ConsoleWrite(
+		return req_console_write_help(
 			"Prints information about the state of the virtual file system.".to_string(),
-			MessageKind::Help,
 		);
 	}
 
-	Request::Callback(|core| {
+	req_callback(|core| {
 		let vfs = core.vfs.read();
 		let diag = vfs.diag();
 		info!(
@@ -369,4 +404,18 @@ pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 			diag.mem_usage / 1000
 		);
 	})
+}
+
+// Helpers /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn req_console_write_help(message: String) -> Request {
+	Request::Callback(Box::new(move |core| {
+		core.console.write(message.clone(), MessageKind::Help);
+	}))
+}
+
+#[must_use]
+fn req_callback<F: 'static + Fn(&mut ClientCore)>(callback: F) -> Request {
+	Request::Callback(Box::new(callback))
 }

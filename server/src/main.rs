@@ -28,7 +28,7 @@ use std::{
 };
 
 use clap::Parser;
-use impure::terminal::{self, Terminal};
+use impure::terminal::Terminal;
 use log::{error, info};
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
@@ -276,36 +276,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 						break 'term;
 					}
-					CommandRequest::EchoAllCommands => {
-						let mut string = "All available commands:".to_string();
-
-						for command in core.terminal.all_commands() {
-							string.push('\r');
-							string.push('\n');
-							string.push_str(command.0);
-						}
-
-						info!("{}", string);
-					}
-					CommandRequest::CommandHelp(key) => match core.terminal.find_command(&key) {
-						Some(cmd) => {
-							(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
-						}
-						None => {
-							info!("No command found by name: {}", key);
-						}
-					},
-					CommandRequest::CreateAlias(alias, string) => {
-						core.terminal.register_alias(alias, string);
-					}
-					CommandRequest::EchoAlias(alias) => match core.terminal.find_alias(&alias) {
-						Some(a) => {
-							info!("{}", a.1);
-						}
-						None => {
-							info!("No existing alias: {}", alias);
-						}
-					},
 				}
 			}
 

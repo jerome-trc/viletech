@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
 use impure::{
-	audio::{self, AudioCore},
+	audio::AudioCore,
 	console::{self, Console},
 	data::DataCore,
 	frontend::{FrontendAction, FrontendMenu},
@@ -29,12 +29,10 @@ use impure::{
 	lua::ImpureLua,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	terminal,
 	vfs::{ImpureVfs, VirtualFs},
 };
 
-use kira::sound::static_sound::StaticSoundSettings;
-use log::{error, info};
+use log::error;
 use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
@@ -226,68 +224,14 @@ impl ClientCore {
 	pub fn process_console_requests(&mut self) {
 		while !self.console.requests.is_empty() {
 			match self.console.requests.pop_front().unwrap() {
-				ConsoleRequest::None => {}
-				ConsoleRequest::CommandHelp(key) => match self.console.find_command(&key) {
-					Some(cmd) => {
-						(cmd.func)(terminal::CommandArgs(vec![&key, "--help"]));
-					}
-					None => {
-						info!("No command found by name: {}", key);
-					}
-				},
-				ConsoleRequest::ConsoleWrite(string, kind) => {
-					self.console.write(string, kind);
+				ConsoleRequest::Callback(func) => {
+					(func)(self);
 				}
 				ConsoleRequest::Exit => {
 					self.exit();
 					return;
 				}
-				ConsoleRequest::CreateAlias(alias, string) => {
-					info!("Alias registered: {}\r\nExpands to: {}", &alias, &string);
-					self.console.register_alias(alias, string);
-				}
-				ConsoleRequest::EchoAlias(alias) => match self.console.find_alias(&alias) {
-					Some(a) => {
-						info!("{}", a.1);
-					}
-					None => {
-						info!("No existing alias: {}", alias);
-					}
-				},
-				ConsoleRequest::Callback(func) => {
-					(func)(self);
-				}
-				ConsoleRequest::File(p) => {
-					let vfsg = self.vfs.read();
-					info!("{}", vfsg.ccmd_file(p));
-				}
-				ConsoleRequest::Sound(arg) => {
-					let vfsg = self.vfs.read();
-
-					let fref = match vfsg.lookup(&arg) {
-						Some(h) => h,
-						None => {
-							info!("No file under virtual path: {}", arg);
-							continue;
-						}
-					};
-
-					let sdat = match audio::sound_from_file(fref, StaticSoundSettings::default()) {
-						Ok(ssd) => ssd,
-						Err(err) => {
-							info!("Failed to create sound from file: {}", err);
-							continue;
-						}
-					};
-
-					match self.audio.borrow_mut().play_global(sdat) {
-						Ok(()) => {}
-						Err(err) => {
-							info!("Failed to play sound: {}", err);
-							continue;
-						}
-					};
-				}
+				ConsoleRequest::None => {}
 			}
 		}
 	}
