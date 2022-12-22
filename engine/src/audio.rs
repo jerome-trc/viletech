@@ -64,19 +64,23 @@ impl DerefMut for SourcedHandle {
 	}
 }
 
+pub enum MusicHandle {
+	Raw(StaticSoundHandle),
+	Midi(zmusic::Song),
+}
+
+#[non_exhaustive]
 pub struct AudioCore {
 	pub soundfonts: Vec<SoundFont>,
 	pub manager: AudioManager,
 	/// General-purpose music slot.
-	pub music1: Option<StaticSoundHandle>,
+	pub music1: Option<MusicHandle>,
 	/// Secondary music slot. Allows scripts to set a song to pause the level's
 	/// main song, briefly play another piece, and then carry on with `music1`
 	/// wherever it left off.
-	pub music2: Option<StaticSoundHandle>,
+	pub music2: Option<MusicHandle>,
 	/// Sounds currently being played.
 	pub sounds: Vec<SourcedHandle>,
-	/// Private field so this struct can only be created using `new`.
-	_private: (),
 }
 
 pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
@@ -88,18 +92,17 @@ const TWEEN_INSTANT: Tween = Tween {
 };
 
 impl AudioCore {
-	#[must_use]
+	/// If `None` is given, the defaults will be used.
 	pub fn new(manager_settings: Option<AudioManagerSettings<CpalBackend>>) -> Result<Self, Error> {
 		let manager_settings = manager_settings.unwrap_or_default();
 		let sound_cap = manager_settings.capacities.sound_capacity;
 
 		let mut ret = Self {
 			soundfonts: Vec::with_capacity(1),
-			manager: AudioManager::new(manager_settings).or_else(|err| Err(Error::Backend(err)))?,
+			manager: AudioManager::new(manager_settings).map_err(Error::Backend)?,
 			music1: None,
 			music2: None,
 			sounds: Vec::with_capacity(sound_cap),
-			_private: (),
 		};
 
 		ret.collect_soundfonts()?;
@@ -118,11 +121,83 @@ impl AudioCore {
 				i += 1;
 			}
 		}
+
+		if let Some(MusicHandle::Midi(midi)) = &mut self.music1 {
+			midi.update();
+
+			if !midi.is_playing() {
+				let _ = self.music1.take();
+			}
+		}
+
+		if let Some(MusicHandle::Midi(midi)) = &mut self.music2 {
+			midi.update();
+
+			if !midi.is_playing() {
+				let _ = self.music2.take();
+			}
+		}
+	}
+
+	pub fn start_music_raw<const SLOT2: bool>(
+		&mut self,
+		data: StaticSoundData,
+	) -> Result<(), PlayError> {
+		let handle = self.manager.play(data)?;
+
+		if !SLOT2 {
+			self.music1 = Some(MusicHandle::Raw(handle));
+		} else {
+			self.music2 = Some(MusicHandle::Raw(handle));
+		}
+
+		Ok(())
+	}
+
+	/// `song` should not have started playing yet; a debug assertion guards
+	/// against this, so make sure of it.
+	pub fn start_music_midi<const SLOT2: bool>(
+		&mut self,
+		mut song: zmusic::Song,
+		looping: bool,
+	) -> Result<(), Error> {
+		debug_assert!(!song.is_playing());
+
+		song.start(looping).map_err(Error::Midi)?;
+
+		if !SLOT2 {
+			self.music1 = Some(MusicHandle::Midi(song));
+		} else {
+			self.music2 = Some(MusicHandle::Midi(song));
+		}
+
+		Ok(())
+	}
+
+	/// Instantly stops the music track in the requested slot and then empties it.
+	pub fn stop_music<const SLOT2: bool>(&mut self) -> Result<(), kira::CommandError> {
+		let slot = if !SLOT2 {
+			&mut self.music1
+		} else {
+			&mut self.music2
+		};
+
+		let res = match slot {
+			Some(MusicHandle::Midi(midi)) => {
+				midi.stop();
+				Ok(())
+			}
+			Some(MusicHandle::Raw(raw)) => raw.stop(TWEEN_INSTANT),
+			None => Ok(()),
+		};
+
+		*slot = None;
+		res
 	}
 
 	/// Play a sound without an in-world source.
 	/// Always audible to all clients, not subject to panning or attenuation.
-	pub fn play_global(&mut self, data: StaticSoundData) -> Result<(), PlayError> {
+	pub fn start_sound_global(&mut self, data: StaticSoundData) -> Result<(), PlayError> {
 		self.sounds.push(SourcedHandle {
 			inner: self.manager.play(data)?,
 			source: None,
@@ -131,7 +206,7 @@ impl AudioCore {
 		Ok(())
 	}
 
-	pub fn play_sourced(
+	pub fn start_sound_sourced(
 		&mut self,
 		data: StaticSoundData,
 		entity: EntityId,
@@ -144,25 +219,33 @@ impl AudioCore {
 		Ok(())
 	}
 
-	/// Pauses every sound and music handle.
+	/// Instantly pauses every sound and music handle.
 	pub fn pause_all(&mut self) {
 		for handle in &mut self.sounds {
 			let res = handle.pause(TWEEN_INSTANT);
 			debug_assert!(res.is_ok(), "Failed to pause a sound: {}", res.unwrap_err());
 		}
 
-		if let Some(mus) = &mut self.music1 {
-			let res = mus.pause(TWEEN_INSTANT);
-			debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
+		match &mut self.music1 {
+			Some(MusicHandle::Raw(raw)) => {
+				let res = raw.pause(TWEEN_INSTANT);
+				debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
+			}
+			Some(MusicHandle::Midi(midi)) => midi.pause(),
+			None => {}
 		}
 
-		if let Some(mus) = &mut self.music2 {
-			let res = mus.pause(TWEEN_INSTANT);
-			debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
+		match &mut self.music2 {
+			Some(MusicHandle::Raw(raw)) => {
+				let res = raw.pause(TWEEN_INSTANT);
+				debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
+			}
+			Some(MusicHandle::Midi(midi)) => midi.pause(),
+			None => {}
 		}
 	}
 
-	/// Resumes every sound and music handle.
+	/// Instantly resumes every sound and music handle.
 	pub fn resume_all(&mut self) {
 		for handle in &mut self.sounds {
 			let res = handle.resume(TWEEN_INSTANT);
@@ -173,22 +256,30 @@ impl AudioCore {
 			);
 		}
 
-		if let Some(mus) = &mut self.music1 {
-			let res = mus.resume(TWEEN_INSTANT);
-			debug_assert!(
-				res.is_ok(),
-				"Failed to resume music 1: {}",
-				res.unwrap_err()
-			);
+		match &mut self.music1 {
+			Some(MusicHandle::Raw(raw)) => {
+				let res = raw.resume(TWEEN_INSTANT);
+				debug_assert!(
+					res.is_ok(),
+					"Failed to resume music 1: {}",
+					res.unwrap_err()
+				);
+			}
+			Some(MusicHandle::Midi(midi)) => midi.resume(),
+			None => {}
 		}
 
-		if let Some(mus) = &mut self.music2 {
-			let res = mus.resume(TWEEN_INSTANT);
-			debug_assert!(
-				res.is_ok(),
-				"Failed to resume music 2: {}",
-				res.unwrap_err()
-			);
+		match &mut self.music2 {
+			Some(MusicHandle::Raw(raw)) => {
+				let res = raw.resume(TWEEN_INSTANT);
+				debug_assert!(
+					res.is_ok(),
+					"Failed to resume music 2: {}",
+					res.unwrap_err()
+				);
+			}
+			Some(MusicHandle::Midi(midi)) => midi.resume(),
+			None => {}
 		}
 	}
 
@@ -201,7 +292,7 @@ impl AudioCore {
 	pub fn collect_soundfonts(&mut self) -> Result<(), Error> {
 		self.soundfonts.clear();
 
-		let walker = walkdir::WalkDir::new::<&Path>(SOUNDFONTS_PATH.as_ref())
+		let walker = walkdir::WalkDir::new::<&Path>(SOUNDFONT_DIR.as_ref())
 			.follow_links(false)
 			.max_depth(8)
 			.same_file_system(true)
@@ -320,10 +411,8 @@ impl AudioCore {
 				// This GUS SoundFont has been validated. Now it can be pushed
 			}
 
-			self.soundfonts.push(SoundFont {
-				path: path.to_owned(),
-				kind: sf_kind,
-			});
+			self.soundfonts
+				.push(SoundFont::new(path.to_path_buf(), sf_kind));
 		}
 
 		if self.soundfonts.is_empty() {
@@ -340,32 +429,32 @@ impl AudioCore {
 				continue;
 			}
 
-			if !sf
+			if sf
 				.name()
 				.to_string_lossy()
 				.as_ref()
 				.eq_ignore_ascii_case(name)
 			{
-				continue;
+				return Some(sf);
 			}
 
-			if !sf
+			if sf
 				.name_ext()
 				.to_string_lossy()
 				.as_ref()
 				.eq_ignore_ascii_case(name)
 			{
-				continue;
+				return Some(sf);
 			}
 
-			return Some(sf);
+			continue;
 		}
 
 		return self.soundfonts.iter().find(|sf| mask.is_allowed(sf.kind()));
 	}
 }
 
-static SOUNDFONTS_PATH: Lazy<PathBuf> = Lazy::new(|| {
+static SOUNDFONT_DIR: Lazy<PathBuf> = Lazy::new(|| {
 	#[cfg(not(debug_assertions))]
 	{
 		let ret = utils::path::exe_dir().join("soundfonts");
@@ -393,6 +482,11 @@ static SOUNDFONTS_PATH: Lazy<PathBuf> = Lazy::new(|| {
 		.collect()
 	}
 });
+
+#[must_use]
+pub fn soundfont_dir() -> &'static Path {
+	&SOUNDFONT_DIR
+}
 
 pub fn sound_from_file(
 	file: FileRef,
@@ -449,6 +543,8 @@ impl SoundFont {
 #[derive(Debug)]
 pub enum Error {
 	Backend(<CpalBackend as Backend>::Error),
+	Command(kira::CommandError),
+	Midi(zmusic::Error),
 	NoSoundFonts,
 }
 
@@ -457,11 +553,13 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Error::Backend(err) => err.fmt(f),
-			Error::NoSoundFonts => write!(
+			Self::Backend(err) => err.fmt(f),
+			Self::Command(err) => err.fmt(f),
+			Self::Midi(err) => err.fmt(f),
+			Self::NoSoundFonts => write!(
 				f,
 				"No SoundFont files found under path: {}",
-				SOUNDFONTS_PATH.to_string_lossy().as_ref()
+				SOUNDFONT_DIR.to_string_lossy().as_ref()
 			),
 		}
 	}

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
 use impure::{
-	audio::AudioCore,
+	audio::{self, AudioCore},
 	console::{self, Console},
 	data::DataCore,
 	frontend::{FrontendAction, FrontendMenu},
@@ -31,8 +31,7 @@ use impure::{
 	sim::{self, PlaySim},
 	vfs::{ImpureVfs, VirtualFs},
 };
-
-use log::error;
+use log::{error, info, warn};
 use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
@@ -105,6 +104,8 @@ impl ClientCore {
 		);
 
 		let audio = Rc::new(RefCell::new(AudioCore::new(None)?));
+
+		Self::zmusic_init();
 
 		let mut ret = ClientCore {
 			start_time,
@@ -365,6 +366,23 @@ impl ClientCore {
 
 // Internal implementation details: general.
 impl ClientCore {
+	fn zmusic_init() {
+		zmusic::config::Global::callbacks(
+			Some(Box::new(|severity, msg| match severity {
+				zmusic::config::MessageSeverity::Verbose => log::trace!("(ZMusic)"),
+				zmusic::config::MessageSeverity::Debug => log::debug!("(ZMusic) {}", msg),
+				zmusic::config::MessageSeverity::Notify => info!("(ZMusic) {}", msg),
+				zmusic::config::MessageSeverity::Warning => warn!("(ZMusic) {}", msg),
+				zmusic::config::MessageSeverity::Error => error!("(ZMusic) {}", msg),
+				zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {}", msg),
+			}))
+		);
+
+		zmusic::init();
+
+		zmusic::config::Global::fluid_patchset(audio::soundfont_dir().join("impure.sf2"));
+	}
+
 	fn register_console_commands(&mut self) {
 		self.console.register_command(
 			"alias",

@@ -334,7 +334,7 @@ Usage: {} <virtual file path/asset number/asset ID>",
 			}
 		};
 
-		match core.audio.borrow_mut().play_global(sdat) {
+		match core.audio.borrow_mut().start_sound_global(sdat) {
 			Ok(()) => {
 				info!("Playing sound: {}", path_string);
 			}
