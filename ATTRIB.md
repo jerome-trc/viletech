@@ -231,6 +231,8 @@ Impure relies heavily on code ported from GZDoom, which is the creation of the Z
 
 The SoundFont file located at /data/soundfonts/impure.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
 
+The OPN wave bank file located at /data/impure/xg.wopn is courtesy of Vitaly Novichkov ([@Wohlstand](https://github.com/Wohlstand)). In the absence of a contribution-specific license, this is used under the same licensing terms as the GZDoom source code, as detailed in [Code](#code).
+
 ## Special Thanks
 
 - Alison "Marrub" Watson

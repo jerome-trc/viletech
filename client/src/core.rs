@@ -29,7 +29,7 @@ use impure::{
 	lua::ImpureLua,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	vfs::{ImpureVfs, VirtualFs},
+	vfs::{self, FileRef, ImpureVfs, VirtualFs},
 };
 use log::{error, info, warn};
 use mlua::prelude::*;
@@ -105,7 +105,18 @@ impl ClientCore {
 
 		let audio = Rc::new(RefCell::new(AudioCore::new(None)?));
 
-		Self::zmusic_init();
+		{
+			let vfsg = vfs.read();
+			let xg_opn = vfsg
+				.lookup("/impure/xg.wopn")
+				.ok_or_else(|| vfs::Error::NonExistentEntry(PathBuf::from("/impure/xg.wopn")))?;
+
+			if !xg_opn.is_readable() {
+				return Err(Box::new(vfs::Error::Unreadable));
+			}
+
+			Self::zmusic_init(xg_opn);
+		}
 
 		let mut ret = ClientCore {
 			start_time,
@@ -366,8 +377,9 @@ impl ClientCore {
 
 // Internal implementation details: general.
 impl ClientCore {
-	fn zmusic_init() {
-		zmusic::config::Global::callbacks(Some(Box::new(|severity, msg| match severity {
+	/// `xg_wopn` should already have been checked for readability.
+	fn zmusic_init(xg_wopn: FileRef) {
+		zmusic::config::set_callbacks(Some(Box::new(|severity, msg| match severity {
 			zmusic::config::MessageSeverity::Verbose => log::trace!("(ZMusic)"),
 			zmusic::config::MessageSeverity::Debug => log::debug!("(ZMusic) {}", msg),
 			zmusic::config::MessageSeverity::Notify => info!("(ZMusic) {}", msg),
@@ -378,7 +390,10 @@ impl ClientCore {
 
 		zmusic::init();
 
-		zmusic::config::Global::fluid_patchset(audio::soundfont_dir().join("impure.sf2"));
+		zmusic::config::set_fluid_patchset(audio::soundfont_dir().join("impure.sf2"));
+
+		let xg_wopn = xg_wopn.read_unchecked();
+		zmusic::config::set_wgopn(xg_wopn);
 	}
 
 	fn register_console_commands(&mut self) {
