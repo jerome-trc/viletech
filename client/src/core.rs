@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
 use impure::{
-	audio::{self, AudioCore},
+	audio::{AudioCore},
 	console::{self, Console},
 	data::DataCore,
 	frontend::{FrontendAction, FrontendMenu},
@@ -29,9 +29,9 @@ use impure::{
 	lua::ImpureLua,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	vfs::{self, FileRef, ImpureVfs, VirtualFs},
+	vfs::{ImpureVfs, VirtualFs},
 };
-use log::{error, info, warn};
+use log::{error};
 use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
@@ -104,19 +104,6 @@ impl ClientCore {
 		);
 
 		let audio = Rc::new(RefCell::new(AudioCore::new(None)?));
-
-		{
-			let vfsg = vfs.read();
-			let xg_opn = vfsg
-				.lookup("/impure/xg.wopn")
-				.ok_or_else(|| vfs::Error::NonExistentEntry(PathBuf::from("/impure/xg.wopn")))?;
-
-			if !xg_opn.is_readable() {
-				return Err(Box::new(vfs::Error::Unreadable));
-			}
-
-			Self::zmusic_init(xg_opn);
-		}
 
 		let mut ret = ClientCore {
 			start_time,
@@ -377,25 +364,6 @@ impl ClientCore {
 
 // Internal implementation details: general.
 impl ClientCore {
-	/// `xg_wopn` should already have been checked for readability.
-	fn zmusic_init(xg_wopn: FileRef) {
-		zmusic::config::set_callbacks(Some(Box::new(|severity, msg| match severity {
-			zmusic::config::MessageSeverity::Verbose => log::trace!("(ZMusic)"),
-			zmusic::config::MessageSeverity::Debug => log::debug!("(ZMusic) {}", msg),
-			zmusic::config::MessageSeverity::Notify => info!("(ZMusic) {}", msg),
-			zmusic::config::MessageSeverity::Warning => warn!("(ZMusic) {}", msg),
-			zmusic::config::MessageSeverity::Error => error!("(ZMusic) {}", msg),
-			zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {}", msg),
-		})));
-
-		zmusic::init();
-
-		zmusic::config::set_fluid_patchset(audio::soundfont_dir().join("impure.sf2"));
-
-		let xg_wopn = xg_wopn.read_unchecked();
-		zmusic::config::set_wgopn(xg_wopn);
-	}
-
 	fn register_console_commands(&mut self) {
 		self.console.register_command(
 			"alias",

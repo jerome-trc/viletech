@@ -175,7 +175,7 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
 			"Prints the contents of a virtual file system directory, \
-or information about a file."
+			or information about a file."
 				.to_string(),
 		);
 	}
@@ -281,28 +281,13 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	})
 }
 
-/// Lists all SoundFonts available for MIDI rendering.
 pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		return req_console_write_help(
-			"Lists all SoundFonts available for MIDI rendering.".to_string(),
-		);
+		return req_console_write_help("???".to_string());
 	}
 
-	req_callback(|core| {
-		let mut output = String::with_capacity(256);
-
-		output.push_str("All available SoundFonts:");
-
-		for soundfont in &core.audio.borrow().soundfonts {
-			output.push_str(&format!(
-				"\r\n\t - {} ({})",
-				soundfont.full_path().display(),
-				soundfont.kind()
-			));
-		}
-
-		info!("{}", output);
+	req_callback(|_| {
+		unimplemented!()
 	})
 }
 
@@ -318,26 +303,28 @@ Usage: {cmd_name} [options] <source>
 Options:
 
 	--device=<midi-device>	<midi-device> can be one of the following:
-								std
-								standard
+								default
+								std standard
 								opl
 								sndsys
 								timidity
-								fluid
-								fluidsynth
+								fluid fluidsynth
 								gus
 								wildmidi
 								adl
 								opn
+							`default` will cause the internal MIDI system to try
+							to find a fallback device, but if this option isn't
+							set, `fluidsynth` will be used.
 
 	--volume=<float>		The default volume is 1.0; the given value is clamped
-							between 0.0 and 2.0.
+							between 0.0 and 1.0.
 ",
 			cmd_name = args.command_name(),
 		});
 	}
 
-	if let Some(inval) = args.any_invalid_options(&["--device"]) {
+	if let Some(inval) = args.any_invalid_options(&["--device", "--volume"]) {
 		return req_console_write_invalidopt(inval);
 	}
 
@@ -351,6 +338,7 @@ Options:
 
 	let midi_dev = if let Some(option) = args.find_option(|opt| opt.starts_with("--device")) {
 		match CommandArgs::option_value(option) {
+			"default" => zmusic::device::Index::Default,
 			"std" | "standard" => zmusic::device::Index::Standard,
 			"opl" => zmusic::device::Index::Opl,
 			"sndsys" => zmusic::device::Index::Sndsys,
@@ -364,7 +352,7 @@ Options:
 			other => return req_console_write_help(format!("Unknown MIDI device: `{other}`")),
 		}
 	} else {
-		zmusic::device::Index::Default
+		zmusic::device::Index::FluidSynth
 	};
 
 	let volume = if let Some(option) = args.find_option(|opt| opt.starts_with("--volume")) {
@@ -373,8 +361,8 @@ Options:
 			v => v,
 		};
 
-		match CommandArgs::option_value(val).parse::<f64>() {
-			Ok(f) => f,
+		match val.parse::<f64>() {
+			Ok(f) => f.clamp(0.0, 1.0),
 			Err(err) => {
 				return req_console_write_help(format!(
 					"Failed to parse `--volume` option value: {err}"
@@ -405,44 +393,33 @@ Options:
 		let bytes = fref.read_unchecked();
 
 		if zmusic::MidiKind::is_midi(bytes) {
-			let mut song = match zmusic::Song::new(bytes, midi_dev) {
-				Ok(s) => s,
+			let mut audio = core.audio.borrow_mut();
+
+			let midi = match audio.zmusic.new_song(bytes, midi_dev) {
+				Ok(m) => m,
 				Err(err) => {
-					info!("Failed to load MIDI from file: {path_string}\r\nError: {err}");
+					info!("Failed to create MIDI song from: {path_string}\r\n\tError: {err}");
 					return;
 				}
 			};
 
-			song.set_volume((volume as f32) * 10.0);
+			let midi_cfg = audio.zmusic.config_global_mut();
+			midi_cfg.set_master_volume(volume as f32);
+			midi_cfg.set_music_volume(volume as f32);
+			midi_cfg.set_relative_volume(volume as f32);
 
-			match core
-				.audio
-				.borrow_mut()
-				.start_music_midi::<false>(song, false)
-			{
+			match audio.start_music_midi::<false>(midi, false) {
 				Ok(()) => {
-					info!(
-						"Playing MIDI song: {path_string}\r\n\t\
-						Using MIDI device: {midi_dev}\r\n\t\
-						At volume: {volume}"
-					);
-				}
+					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
+				},
 				Err(err) => {
-					info!("Failed to play MIDI from file: {path_string}\r\nError: {err}");
-				}
-			}
-		} else {
-			let mut sdat = match audio::sound_from_file(fref, StaticSoundSettings::default()) {
-				Ok(ssd) => ssd,
-				Err(err) => {
-					info!("Failed to create sound from file: {}", err);
-					return;
+					info!("Failed to play MIDI song from: {path_string}\r\n\tError: {err}");
 				}
 			};
-
+		} else if let Ok(mut sdat) = audio::sound_from_file(fref, StaticSoundSettings::default()) {
 			sdat.settings.volume = kira::Volume::Amplitude(volume);
 
-			match core.audio.borrow_mut().start_music_raw::<false>(sdat) {
+			match core.audio.borrow_mut().start_music_wave::<false>(sdat) {
 				Ok(()) => {
 					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
 				}
@@ -450,6 +427,8 @@ Options:
 					info!("Failed to play song: {path_string}\r\nError: {err}");
 				}
 			};
+		} else {
+			info!("Given file is neither waveform nor MIDI audio: {path_string}");
 		}
 	})
 }
@@ -473,7 +452,7 @@ Options:
 		});
 	}
 
-	if let Some(inval) = args.any_invalid_options(&["--device"]) {
+	if let Some(inval) = args.any_invalid_options(&["--device", "--volume"]) {
 		return req_console_write_invalidopt(inval);
 	}
 

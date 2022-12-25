@@ -20,13 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 use std::{
-	io::{self, Read, Seek},
+	io,
 	ops::{Deref, DerefMut},
-	path::{Path, PathBuf},
-	time::Duration,
+	path::{Path, PathBuf}, sync::Arc,
 };
 
 use kira::{
+	dsp::Frame,
 	manager::{
 		backend::{cpal::CpalBackend, Backend},
 		error::PlaySoundError,
@@ -38,157 +38,145 @@ use kira::{
 	},
 	tween::Tween,
 };
-use log::{info, warn};
+use log::{debug, error, info, trace, warn};
 use once_cell::sync::Lazy;
-use zmusic::{config::SoundFontKindMask, soundfont};
+use zmusic::cpal::SampleFormat;
 
-use crate::{ecs::EntityId, utils, vfs::FileRef};
-
-pub struct SourcedHandle {
-	inner: StaticSoundHandle,
-	#[allow(unused)]
-	source: Option<EntityId>,
-}
-
-impl Deref for SourcedHandle {
-	type Target = StaticSoundHandle;
-
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
-}
-
-impl DerefMut for SourcedHandle {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.inner
-	}
-}
-
-pub enum MusicHandle {
-	Raw(StaticSoundHandle),
-	Midi(zmusic::Song),
-}
+use crate::{ecs::EntityId, vfs::FileRef};
 
 #[non_exhaustive]
 pub struct AudioCore {
-	pub soundfonts: Vec<SoundFont>,
 	pub manager: AudioManager,
+	pub zmusic: zmusic::Manager,
 	/// General-purpose music slot.
-	pub music1: Option<MusicHandle>,
+	pub music1: Option<Handle>,
 	/// Secondary music slot. Allows scripts to set a song to pause the level's
 	/// main song, briefly play another piece, and then carry on with `music1`
 	/// wherever it left off.
-	pub music2: Option<MusicHandle>,
+	pub music2: Option<Handle>,
 	/// Sounds currently being played.
-	pub sounds: Vec<SourcedHandle>,
+	pub sounds: Vec<Sound>,
 }
-
-pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
-
-const TWEEN_INSTANT: Tween = Tween {
-	start_time: kira::StartTime::Immediate,
-	duration: Duration::ZERO,
-	easing: kira::tween::Easing::Linear,
-};
 
 impl AudioCore {
 	/// If `None` is given, the defaults will be used.
 	pub fn new(manager_settings: Option<AudioManagerSettings<CpalBackend>>) -> Result<Self, Error> {
 		let manager_settings = manager_settings.unwrap_or_default();
 		let sound_cap = manager_settings.capacities.sound_capacity;
+		let mut zmusic = zmusic::Manager::new().map_err(Error::ZMusic)?;
 
-		let mut ret = Self {
-			soundfonts: Vec::with_capacity(1),
-			manager: AudioManager::new(manager_settings).map_err(Error::Backend)?,
+		zmusic
+			.config_global_mut()
+			.set_callbacks(Some(Box::new(|severity, msg| match severity {
+				zmusic::config::MessageSeverity::Verbose => trace!(target: "zmusic", "{msg}"),
+				zmusic::config::MessageSeverity::Debug => debug!(target: "zmusic", "{msg}"),
+				zmusic::config::MessageSeverity::Notify => info!(target: "zmusic", "{msg}"),
+				zmusic::config::MessageSeverity::Warning => warn!(target: "zmusic", "{msg}"),
+				zmusic::config::MessageSeverity::Error => error!(target: "zmusic", "{msg}"),
+				zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {msg}"),
+			})));
+
+		let fluid_sf = soundfont_dir().join("impure.sf2");
+
+		if !fluid_sf.exists() {
+			warn!(
+				"Default SoundFont not found at path: {}\r\n\t\
+				MIDI playback via FluidSynth will be unavailable.",
+				fluid_sf.display(),
+			);
+		} else {
+			zmusic.config_fluid_mut().set_soundfont(fluid_sf);
+		}
+
+		let ret = Self {
+			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
+			zmusic,
 			music1: None,
 			music2: None,
 			sounds: Vec::with_capacity(sound_cap),
 		};
 
-		ret.collect_soundfonts()?;
-
 		Ok(ret)
 	}
 
-	/// Clear handles for sounds which have finished playing.
+	/// Clear handles for sounds which have finished playing,
+	/// and update ZMusic MIDI song status.
 	pub fn update(&mut self) {
 		let mut i = 0;
 
 		while i < self.sounds.len() {
-			if self.sounds[i].state() == PlaybackState::Stopped {
+			if self.sounds[i].status() == PlaybackState::Stopped {
 				self.sounds.swap_remove(i);
 			} else {
 				i += 1;
 			}
 		}
 
-		if let Some(MusicHandle::Midi(midi)) = &mut self.music1 {
+		if let Some(Handle::Midi(midi)) = &mut self.music1 {
 			midi.update();
-
-			if !midi.is_playing() {
-				let _ = self.music1.take();
-			}
 		}
 
-		if let Some(MusicHandle::Midi(midi)) = &mut self.music2 {
+		if let Some(Handle::Midi(midi)) = &mut self.music2 {
 			midi.update();
-
-			if !midi.is_playing() {
-				let _ = self.music2.take();
-			}
 		}
 	}
 
-	pub fn start_music_raw<const SLOT2: bool>(
+	/// This assumes that `data` has already been completely configured.
+	pub fn start_music_wave<const SLOT2: bool>(
 		&mut self,
 		data: StaticSoundData,
-	) -> Result<(), PlayError> {
-		let handle = self.manager.play(data)?;
+	) -> Result<(), Error> {
+		let handle = self.manager.play(data).map_err(Error::KiraPlay)?;
 
 		if !SLOT2 {
-			self.music1 = Some(MusicHandle::Raw(handle));
+			self.music1 = Some(Handle::Wave(handle));
 		} else {
-			self.music2 = Some(MusicHandle::Raw(handle));
+			self.music2 = Some(Handle::Wave(handle));
 		}
 
 		Ok(())
 	}
 
 	/// `song` should not have started playing yet; a debug assertion guards
-	/// against this, so make sure of it.
+	/// against this, so make sure of it. Returns an error if:
+	/// - The given song fails to start playback.
+	/// - The given music slot fails to stop and be cleared.
 	pub fn start_music_midi<const SLOT2: bool>(
 		&mut self,
 		mut song: zmusic::Song,
 		looping: bool,
 	) -> Result<(), Error> {
+		fn stream_err_fn(err: zmusic::cpal::StreamError) {
+			error!("{}", err);
+		}
+
 		debug_assert!(!song.is_playing());
 
-		song.start(looping).map_err(Error::Midi)?;
+		song.start(looping, stream_err_fn).map_err(Error::ZMusic)?;
+		song.on_volume_change();
+		self.stop_music::<SLOT2>()?;
 
 		if !SLOT2 {
-			self.music1 = Some(MusicHandle::Midi(song));
+			self.music1 = Some(Handle::Midi(song));
 		} else {
-			self.music2 = Some(MusicHandle::Midi(song));
+			self.music2 = Some(Handle::Midi(song));
 		}
 
 		Ok(())
 	}
 
 	/// Instantly stops the music track in the requested slot and then empties it.
-	pub fn stop_music<const SLOT2: bool>(&mut self) -> Result<(), kira::CommandError> {
+	pub fn stop_music<const SLOT2: bool>(&mut self) -> Result<(), Error> {
 		let slot = if !SLOT2 {
 			&mut self.music1
 		} else {
 			&mut self.music2
 		};
 
-		let res = match slot {
-			Some(MusicHandle::Midi(midi)) => {
-				midi.stop();
-				Ok(())
-			}
-			Some(MusicHandle::Raw(raw)) => raw.stop(TWEEN_INSTANT),
-			None => Ok(()),
+		let res = if let Some(mus) = slot {
+			mus.stop(Tween::default())
+		} else {
+			return Ok(());
 		};
 
 		*slot = None;
@@ -198,9 +186,9 @@ impl AudioCore {
 	/// Play a sound without an in-world source.
 	/// Always audible to all clients, not subject to panning or attenuation.
 	pub fn start_sound_global(&mut self, data: StaticSoundData) -> Result<(), PlayError> {
-		self.sounds.push(SourcedHandle {
-			inner: self.manager.play(data)?,
-			source: None,
+		self.sounds.push(Sound {
+			handle: Handle::Wave(self.manager.play(data)?),
+			_source: None,
 		});
 
 		Ok(())
@@ -211,9 +199,9 @@ impl AudioCore {
 		data: StaticSoundData,
 		entity: EntityId,
 	) -> Result<(), PlayError> {
-		self.sounds.push(SourcedHandle {
-			inner: self.manager.play(data)?,
-			source: Some(entity),
+		self.sounds.push(Sound {
+			handle: Handle::Wave(self.manager.play(data)?),
+			_source: Some(entity),
 		});
 
 		Ok(())
@@ -222,33 +210,25 @@ impl AudioCore {
 	/// Instantly pauses every sound and music handle.
 	pub fn pause_all(&mut self) {
 		for handle in &mut self.sounds {
-			let res = handle.pause(TWEEN_INSTANT);
+			let res = handle.pause(Tween::default());
 			debug_assert!(res.is_ok(), "Failed to pause a sound: {}", res.unwrap_err());
 		}
 
-		match &mut self.music1 {
-			Some(MusicHandle::Raw(raw)) => {
-				let res = raw.pause(TWEEN_INSTANT);
-				debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
-			}
-			Some(MusicHandle::Midi(midi)) => midi.pause(),
-			None => {}
+		if let Some(mus) = &mut self.music1 {
+			let res = mus.pause(Tween::default());
+			debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
 		}
 
-		match &mut self.music2 {
-			Some(MusicHandle::Raw(raw)) => {
-				let res = raw.pause(TWEEN_INSTANT);
-				debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
-			}
-			Some(MusicHandle::Midi(midi)) => midi.pause(),
-			None => {}
+		if let Some(mus) = &mut self.music2 {
+			let res = mus.pause(Tween::default());
+			debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
 		}
 	}
 
 	/// Instantly resumes every sound and music handle.
 	pub fn resume_all(&mut self) {
 		for handle in &mut self.sounds {
-			let res = handle.resume(TWEEN_INSTANT);
+			let res = handle.resume(Tween::default());
 
 			debug_assert!(
 				res.is_ok(),
@@ -257,30 +237,24 @@ impl AudioCore {
 			);
 		}
 
-		match &mut self.music1 {
-			Some(MusicHandle::Raw(raw)) => {
-				let res = raw.resume(TWEEN_INSTANT);
-				debug_assert!(
-					res.is_ok(),
-					"Failed to resume music 1: {}",
-					res.unwrap_err()
-				);
-			}
-			Some(MusicHandle::Midi(midi)) => midi.resume(),
-			None => {}
+		if let Some(mus) = &mut self.music1 {
+			let res = mus.resume(Tween::default());
+
+			debug_assert!(
+				res.is_ok(),
+				"Failed to resume music 1: {}",
+				res.unwrap_err()
+			);
 		}
 
-		match &mut self.music2 {
-			Some(MusicHandle::Raw(raw)) => {
-				let res = raw.resume(TWEEN_INSTANT);
-				debug_assert!(
-					res.is_ok(),
-					"Failed to resume music 2: {}",
-					res.unwrap_err()
-				);
-			}
-			Some(MusicHandle::Midi(midi)) => midi.resume(),
-			None => {}
+		if let Some(mus) = &mut self.music2 {
+			let res = mus.resume(Tween::default());
+
+			debug_assert!(
+				res.is_ok(),
+				"Failed to resume music 2: {}",
+				res.unwrap_err()
+			);
 		}
 	}
 
@@ -288,201 +262,191 @@ impl AudioCore {
 	/// gets cleared along with both music slots.
 	pub fn stop_all(&mut self) -> Result<(), Error> {
 		for sound in &mut self.sounds {
-			sound.stop(TWEEN_INSTANT).map_err(Error::Command)?;
+			sound.stop(Tween::default())?;
 		}
 
 		self.sounds.clear();
 
-		self.stop_music::<false>().map_err(Error::Command)?;
-		self.stop_music::<true>().map_err(Error::Command)?;
+		self.stop_music::<false>()?;
+		self.stop_music::<true>()?;
 
 		Ok(())
 	}
 
-	/// A fundamental part of engine initialization. Recursively read the contents of
-	/// `<executable_directory>/soundfonts`, determine their types, and store their
-	/// paths. Note that in the debug build, `<working_directory>/data/soundfonts`
-	/// will be walked instead. Returns [`Error::NoSoundFonts`] if no SoundFont
-	/// files whatsoever could be found. This should never be considered fatal;
-	/// it just means the engine won't be able to render MIDIs.
-	pub fn collect_soundfonts(&mut self) -> Result<(), Error> {
-		self.soundfonts.clear();
+	/// Hypothetically, this could be a free function taking a [`zmusic::Song`] but
+	/// tying it to the manager via mutable reference prevents use from multiple
+	/// threads, to which FluidSynth is unfriendly.
+	pub fn render_midi(
+		&mut self,
+		source: &[u8],
+		settings: StaticSoundSettings,
+	) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
+		let mut song = self.zmusic.new_song(source, zmusic::device::Index::FluidSynth)?;
+		let cfg = song.start_silent()?;
 
-		let walker = walkdir::WalkDir::new::<&Path>(SOUNDFONT_DIR.as_ref())
-			.follow_links(false)
-			.max_depth(8)
-			.same_file_system(true)
-			.sort_by_file_name()
-			.into_iter()
-			.filter_map(|res| res.ok());
-
-		for dir_entry in walker {
-			let path = dir_entry.path();
-
-			let metadata = match dir_entry.metadata() {
-				Ok(m) => m,
-				Err(err) => {
-					warn!(
-						"Failed to retrieve metadata for file: {}\r\nError: {}",
-						path.display(),
-						err
-					);
-					continue;
-				}
-			};
-
-			if metadata.is_dir() || metadata.is_symlink() || metadata.len() == 0 {
-				continue;
-			}
-
-			// Check if another SoundFont by this name has already been collected
-			if self
-				.soundfonts
-				.iter()
-				.any(|sf| sf.name().as_os_str().eq_ignore_ascii_case(path.as_os_str()))
-			{
-				continue;
-			}
-
-			let mut file = match std::fs::File::open(path) {
-				Ok(f) => f,
-				Err(err) => {
-					warn!("Failed to open file: {}\r\nError: {}", path.display(), err);
-					continue;
-				}
-			};
-
-			let mut header = [0_u8; 16];
-
-			match file.read_exact(&mut header) {
-				Ok(()) => {}
-				Err(err) => {
-					warn!("Failed to read file: {}\r\nError: {}", path.display(), err);
-				}
-			};
-
-			let sf_kind = if &header[0..4] == b"RIFF" && &header[8..16] == b"sfbkLIST" {
-				soundfont::Kind::Sf2
-			} else if &header[..11] == b"WOPL3-BANK\0" {
-				soundfont::Kind::Wopl
-			} else if &header[..11] == b"WOPN2-BANK\0" {
-				soundfont::Kind::Wopn
-			} else if utils::io::is_zip(&header) {
-				soundfont::Kind::Gus
-			} else {
-				info!(
-					"Failed to determine SoundFont type of file: {}\r\nSkipping it.",
-					path.display()
-				);
-				continue;
-			};
-
-			if sf_kind == soundfont::Kind::Gus {
-				match file.rewind() {
-					Ok(()) => {}
-					Err(err) => {
-						warn!(
-							"Failed to rewind file stream for zip read: {}\r\nError: {}",
-							path.display(),
-							err
-						);
-						continue;
-					}
-				};
-
-				let mut archive = match zip::ZipArchive::new(&mut file) {
-					Ok(zf) => zf,
-					Err(err) => {
-						warn!("Failed to unzip file: {}\r\nError: {}", path.display(), err);
-						continue;
-					}
-				};
-
-				// [GZ] A SoundFont archive with only one file can't be a packed GUS patch.
-				// Just skip this entirely
-				if archive.len() <= 1 {
-					continue;
-				}
-
-				let timidity = match archive.by_name("timidity.cfg") {
-					Ok(timid) => timid,
-					Err(err) => {
-						warn!(
-							"Failed to find `timidity.cfg` file in: {}\r\nError: {}",
-							path.display(),
-							err
-						);
-						continue;
-					}
-				};
-
-				if !timidity.is_file() || timidity.size() < 1 {
-					warn!(
-						"Found `timidity.cfg` in a zip SoundFont but it's malformed. ({})",
-						path.display()
-					);
-					continue;
-				}
-
-				// This GUS SoundFont has been validated. Now it can be pushed
-			}
-
-			self.soundfonts
-				.push(SoundFont::new(path.to_path_buf(), sf_kind));
+		if cfg.buffer_size == 0 {
+			unreachable!();
 		}
 
-		if self.soundfonts.is_empty() {
-			Err(Error::NoSoundFonts)
+		let bufsz = (cfg.buffer_size as usize) / 10;
+
+		let frames = if cfg.num_channels == 1 {
+			match cfg.sample_format {
+				SampleFormat::I16 => render_midi_impl::<1, i16>(&mut song, bufsz),
+				SampleFormat::U16 => render_midi_impl::<1, u16>(&mut song, bufsz),
+				SampleFormat::F32 => render_midi_impl::<1, f32>(&mut song, bufsz),
+			}
 		} else {
-			Ok(())
+			match cfg.sample_format {
+				SampleFormat::I16 => render_midi_impl::<2, i16>(&mut song, bufsz),
+				SampleFormat::U16 => render_midi_impl::<2, u16>(&mut song, bufsz),
+				SampleFormat::F32 => render_midi_impl::<2, f32>(&mut song, bufsz),
+			}
+		};
+
+		Ok(StaticSoundData {
+			sample_rate: cfg.sample_rate,
+			frames: Arc::new(frames),
+			settings,
+		})
+	}
+}
+
+pub enum Handle {
+	Wave(StaticSoundHandle),
+	Midi(zmusic::Song),
+}
+
+impl Handle {
+	#[must_use]
+	pub fn status(&self) -> PlaybackState {
+		match self {
+			Self::Wave(wave) => wave.state(),
+			Self::Midi(midi) => {
+				if midi.is_stopped() {
+					PlaybackState::Stopped
+				} else if midi.is_paused() {
+					PlaybackState::Paused
+				} else {
+					PlaybackState::Playing
+				}
+			}
+		}
+	}
+
+	pub fn pause(&mut self, tween: Tween) -> Result<(), Error> {
+		match self {
+			Handle::Wave(wave) => wave.pause(tween).map_err(Error::Command),
+			Handle::Midi(midi) => midi.pause().map_err(Error::ZMusic),
+		}
+	}
+
+	pub fn resume(&mut self, tween: Tween) -> Result<(), Error> {
+		match self {
+			Handle::Wave(wave) => wave.resume(tween).map_err(Error::Command),
+			Handle::Midi(midi) => midi.resume().map_err(Error::ZMusic),
+		}
+	}
+
+	pub fn stop(&mut self, tween: Tween) -> Result<(), Error> {
+		match self {
+			Handle::Wave(wave) => wave.stop(tween).map_err(Error::Command),
+			Handle::Midi(midi) => {
+				midi.stop();
+				Ok(())
+			}
 		}
 	}
 
 	#[must_use]
-	pub fn find_soundfont(&self, name: &str, mask: SoundFontKindMask) -> Option<&SoundFont> {
-		for sf in &self.soundfonts {
-			if !mask.is_allowed(sf.kind()) {
-				continue;
-			}
-
-			if sf
-				.name()
-				.to_string_lossy()
-				.as_ref()
-				.eq_ignore_ascii_case(name)
-			{
-				return Some(sf);
-			}
-
-			if sf
-				.name_ext()
-				.to_string_lossy()
-				.as_ref()
-				.eq_ignore_ascii_case(name)
-			{
-				return Some(sf);
-			}
-
-			continue;
+	pub fn is_playing(&self) -> bool {
+		match self {
+			Handle::Wave(wave) => wave.state() == PlaybackState::Playing,
+			Handle::Midi(midi) => midi.is_playing(),
 		}
-
-		return self.soundfonts.iter().find(|sf| mask.is_allowed(sf.kind()));
 	}
+}
+
+pub struct Sound {
+	handle: Handle,
+	_source: Option<EntityId>,
+}
+
+impl Deref for Sound {
+	type Target = Handle;
+
+	fn deref(&self) -> &Self::Target {
+		&self.handle
+	}
+}
+
+impl DerefMut for Sound {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.handle
+	}
+}
+
+pub fn sound_from_file(
+	file: FileRef,
+	settings: StaticSoundSettings,
+) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
+	let bytes = file.read()?.to_owned();
+	let cursor = io::Cursor::new(bytes);
+
+	match StaticSoundData::from_cursor(cursor, settings) {
+		Ok(ssd) => Ok(ssd),
+		Err(err) => Err(Box::new(err)),
+	}
+}
+
+/// Monomorphize over the streaming properties of the MIDI for speed.
+fn render_midi_impl<const CHANS: usize, S: zmusic::cpal::Sample + Default>(
+	song: &mut zmusic::Song,
+	buffer_size: usize,
+) -> Vec<Frame> {
+	let mut frames = Vec::<Frame>::with_capacity(buffer_size * 300 * 10);
+	let mut buf = Vec::<S>::with_capacity(buffer_size);
+	buf.resize(buffer_size, S::default());
+
+	while song.is_playing() {
+		song.fill_stream::<S>(&mut buf);
+		song.update();
+
+		for frame in buf.chunks_exact_mut(CHANS as usize) {
+			if CHANS == 1 {
+				frames.push(Frame {
+					left: frame[0].to_f32(),
+					right: frame[0].to_f32(),
+				});
+			} else {
+				frames.push(Frame {
+					left: frame[0].to_f32(),
+					right: frame[1].to_f32(),
+				});
+			}
+		}
+	}
+
+	frames
 }
 
 static SOUNDFONT_DIR: Lazy<PathBuf> = Lazy::new(|| {
 	#[cfg(not(debug_assertions))]
 	{
+		use crate::utils;
+
 		let ret = utils::path::exe_dir().join("soundfonts");
 
 		if !ret.exists() {
-			std::fs::create_dir(ret).or_else(|err| {
+			let res = std::fs::create_dir(&ret);
+
+			if let Err(err) = res {
 				panic!(
-					"Failed to create directory: {}\r\nError: {}",
+					"Failed to create directory: {}\r\n\tError: {}",
 					ret.display(),
 					err
 				)
-			})
+			}
 		}
 
 		ret
@@ -504,64 +468,12 @@ pub fn soundfont_dir() -> &'static Path {
 	&SOUNDFONT_DIR
 }
 
-pub fn sound_from_file(
-	file: FileRef,
-	settings: StaticSoundSettings,
-) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
-	let bytes = file.read()?.to_owned();
-	let cursor = io::Cursor::new(bytes);
-
-	match StaticSoundData::from_cursor(cursor, settings) {
-		Ok(ssd) => Ok(ssd),
-		Err(err) => Err(Box::new(err)),
-	}
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SoundFont {
-	/// The canonicalized path to this SoundFont's file.
-	/// Needed by the FluidSynth backend of the ZMusic library.
-	path: PathBuf,
-	kind: soundfont::Kind,
-}
-
-impl SoundFont {
-	#[must_use]
-	pub fn new(path: PathBuf, kind: soundfont::Kind) -> Self {
-		Self { path, kind }
-	}
-
-	/// The name of the SoundFont file, without the extension (i.e. the file stem).
-	#[must_use]
-	pub fn name(&self) -> &Path {
-		Path::new(self.path.file_stem().unwrap_or_default())
-	}
-
-	/// The name of the SoundFont file, along with the extension.
-	#[must_use]
-	pub fn name_ext(&self) -> &Path {
-		Path::new(self.path.file_name().unwrap_or_default())
-	}
-
-	/// The canonicalized path to this SoundFont's file.
-	/// Needed by the FluidSynth backend of the ZMusic library.
-	#[must_use]
-	pub fn full_path(&self) -> &Path {
-		&self.path
-	}
-
-	#[must_use]
-	pub fn kind(&self) -> soundfont::Kind {
-		self.kind
-	}
-}
-
 #[derive(Debug)]
 pub enum Error {
-	Backend(<CpalBackend as Backend>::Error),
+	ZMusic(zmusic::Error),
+	KiraBackend(<CpalBackend as Backend>::Error),
 	Command(kira::CommandError),
-	Midi(zmusic::Error),
-	NoSoundFonts,
+	KiraPlay(PlayError),
 }
 
 impl std::error::Error for Error {}
@@ -569,14 +481,12 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Backend(err) => err.fmt(f),
+			Self::ZMusic(err) => err.fmt(f),
+			Self::KiraBackend(err) => err.fmt(f),
 			Self::Command(err) => err.fmt(f),
-			Self::Midi(err) => err.fmt(f),
-			Self::NoSoundFonts => write!(
-				f,
-				"No SoundFont files found under path: {}",
-				SOUNDFONT_DIR.to_string_lossy().as_ref()
-			),
+			Self::KiraPlay(err) => err.fmt(f),
 		}
 	}
 }
+
+pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
