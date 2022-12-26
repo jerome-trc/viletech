@@ -25,7 +25,7 @@ use std::{
 };
 
 use impure::{
-	audio,
+	audio::{self, MidiData, MidiSettings},
 	console::MessageKind,
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
@@ -286,9 +286,7 @@ pub fn ccmd_mididiag(args: CommandArgs) -> Request {
 		return req_console_write_help("???".to_string());
 	}
 
-	req_callback(|_| {
-		unimplemented!()
-	})
+	req_callback(|_| unimplemented!())
 }
 
 pub fn ccmd_music(args: CommandArgs) -> Request {
@@ -318,7 +316,7 @@ Options:
 							set, `fluidsynth` will be used.
 
 	--volume=<float>		The default volume is 1.0; the given value is clamped
-							between 0.0 and 1.0.
+							between 0.0 and 4.0.
 ",
 			cmd_name = args.command_name(),
 		});
@@ -362,7 +360,7 @@ Options:
 		};
 
 		match val.parse::<f64>() {
-			Ok(f) => f.clamp(0.0, 1.0),
+			Ok(f) => f.clamp(0.0, 4.0),
 			Err(err) => {
 				return req_console_write_help(format!(
 					"Failed to parse `--volume` option value: {err}"
@@ -403,15 +401,14 @@ Options:
 				}
 			};
 
-			let midi_cfg = audio.zmusic.config_global_mut();
-			midi_cfg.set_master_volume(volume as f32);
-			midi_cfg.set_music_volume(volume as f32);
-			midi_cfg.set_relative_volume(volume as f32);
+			let mut midi = MidiData::new(midi, MidiSettings::default());
 
-			match audio.start_music_midi::<false>(midi, false) {
+			midi.settings.volume = kira::Volume::Amplitude(volume);
+
+			match audio.start_music_midi::<false>(midi) {
 				Ok(()) => {
 					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
-				},
+				}
 				Err(err) => {
 					info!("Failed to play MIDI song from: {path_string}\r\n\tError: {err}");
 				}

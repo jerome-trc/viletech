@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
 use impure::{
-	audio::{AudioCore},
+	audio::AudioCore,
 	console::{self, Console},
 	data::DataCore,
 	frontend::{FrontendAction, FrontendMenu},
@@ -31,7 +31,7 @@ use impure::{
 	sim::{self, PlaySim},
 	vfs::{ImpureVfs, VirtualFs},
 };
-use log::{error};
+use log::error;
 use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};

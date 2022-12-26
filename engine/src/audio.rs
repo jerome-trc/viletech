@@ -19,10 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod midi;
+
 use std::{
 	io,
 	ops::{Deref, DerefMut},
-	path::{Path, PathBuf}, sync::Arc,
+	path::{Path, PathBuf},
+	sync::Arc,
 };
 
 use kira::{
@@ -43,6 +46,10 @@ use once_cell::sync::Lazy;
 use zmusic::cpal::SampleFormat;
 
 use crate::{ecs::EntityId, vfs::FileRef};
+
+pub use midi::MidiData;
+pub use midi::MidiSettings;
+pub use midi::MidiSoundHandle;
 
 #[non_exhaustive]
 pub struct AudioCore {
@@ -99,25 +106,23 @@ impl AudioCore {
 		Ok(ret)
 	}
 
-	/// Clear handles for sounds which have finished playing,
-	/// and update ZMusic MIDI song status.
+	/// Sound handles which have finished playing get swap-removed.
+	/// Music handles which have finished playing get assigned `None`.
 	pub fn update(&mut self) {
 		let mut i = 0;
 
 		while i < self.sounds.len() {
-			if self.sounds[i].status() == PlaybackState::Stopped {
+			if self.sounds[i].state() == PlaybackState::Stopped {
 				self.sounds.swap_remove(i);
 			} else {
 				i += 1;
 			}
 		}
 
-		if let Some(Handle::Midi(midi)) = &mut self.music1 {
-			midi.update();
-		}
-
-		if let Some(Handle::Midi(midi)) = &mut self.music2 {
-			midi.update();
+		if let Some(mus) = &mut self.music1 {
+			if mus.state() == PlaybackState::Stopped {
+				let _ = self.music1.take();
+			}
 		}
 	}
 
@@ -126,7 +131,7 @@ impl AudioCore {
 		&mut self,
 		data: StaticSoundData,
 	) -> Result<(), Error> {
-		let handle = self.manager.play(data).map_err(Error::KiraPlay)?;
+		let handle = self.manager.play(data).map_err(Error::PlayWave)?;
 
 		if !SLOT2 {
 			self.music1 = Some(Handle::Wave(handle));
@@ -137,29 +142,17 @@ impl AudioCore {
 		Ok(())
 	}
 
-	/// `song` should not have started playing yet; a debug assertion guards
-	/// against this, so make sure of it. Returns an error if:
+	/// Returns an error if:
 	/// - The given song fails to start playback.
 	/// - The given music slot fails to stop and be cleared.
-	pub fn start_music_midi<const SLOT2: bool>(
-		&mut self,
-		mut song: zmusic::Song,
-		looping: bool,
-	) -> Result<(), Error> {
-		fn stream_err_fn(err: zmusic::cpal::StreamError) {
-			error!("{}", err);
-		}
-
-		debug_assert!(!song.is_playing());
-
-		song.start(looping, stream_err_fn).map_err(Error::ZMusic)?;
-		song.on_volume_change();
+	pub fn start_music_midi<const SLOT2: bool>(&mut self, data: MidiData) -> Result<(), Error> {
+		let handle = self.manager.play(data).map_err(Error::PlayMidi)?;
 		self.stop_music::<SLOT2>()?;
 
 		if !SLOT2 {
-			self.music1 = Some(Handle::Midi(song));
+			self.music1 = Some(Handle::Midi(handle));
 		} else {
-			self.music2 = Some(Handle::Midi(song));
+			self.music2 = Some(Handle::Midi(handle));
 		}
 
 		Ok(())
@@ -185,7 +178,7 @@ impl AudioCore {
 
 	/// Play a sound without an in-world source.
 	/// Always audible to all clients, not subject to panning or attenuation.
-	pub fn start_sound_global(&mut self, data: StaticSoundData) -> Result<(), PlayError> {
+	pub fn start_sound_global(&mut self, data: StaticSoundData) -> Result<(), PlayWaveError> {
 		self.sounds.push(Sound {
 			handle: Handle::Wave(self.manager.play(data)?),
 			_source: None,
@@ -198,7 +191,7 @@ impl AudioCore {
 		&mut self,
 		data: StaticSoundData,
 		entity: EntityId,
-	) -> Result<(), PlayError> {
+	) -> Result<(), PlayWaveError> {
 		self.sounds.push(Sound {
 			handle: Handle::Wave(self.manager.play(data)?),
 			_source: Some(entity),
@@ -281,8 +274,10 @@ impl AudioCore {
 		source: &[u8],
 		settings: StaticSoundSettings,
 	) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
-		let mut song = self.zmusic.new_song(source, zmusic::device::Index::FluidSynth)?;
-		let cfg = song.start_silent()?;
+		let mut song = self
+			.zmusic
+			.new_song(source, zmusic::device::Index::FluidSynth)?;
+		let cfg = song.start_silent(false)?;
 
 		if cfg.buffer_size == 0 {
 			unreachable!();
@@ -312,49 +307,40 @@ impl AudioCore {
 	}
 }
 
+/// A handle to a currently-playing (or paused) sound or song,
+/// whether it's MIDI or waveform.
 pub enum Handle {
 	Wave(StaticSoundHandle),
-	Midi(zmusic::Song),
+	Midi(MidiSoundHandle),
 }
 
 impl Handle {
 	#[must_use]
-	pub fn status(&self) -> PlaybackState {
+	pub fn state(&self) -> PlaybackState {
 		match self {
 			Self::Wave(wave) => wave.state(),
-			Self::Midi(midi) => {
-				if midi.is_stopped() {
-					PlaybackState::Stopped
-				} else if midi.is_paused() {
-					PlaybackState::Paused
-				} else {
-					PlaybackState::Playing
-				}
-			}
+			Self::Midi(midi) => midi.state(),
 		}
 	}
 
 	pub fn pause(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.pause(tween).map_err(Error::Command),
-			Handle::Midi(midi) => midi.pause().map_err(Error::ZMusic),
+			Handle::Wave(wave) => wave.pause(tween).map_err(Error::CommandWave),
+			Handle::Midi(midi) => midi.pause(tween),
 		}
 	}
 
 	pub fn resume(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.resume(tween).map_err(Error::Command),
-			Handle::Midi(midi) => midi.resume().map_err(Error::ZMusic),
+			Handle::Wave(wave) => wave.resume(tween).map_err(Error::CommandWave),
+			Handle::Midi(midi) => midi.resume(tween),
 		}
 	}
 
 	pub fn stop(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.stop(tween).map_err(Error::Command),
-			Handle::Midi(midi) => {
-				midi.stop();
-				Ok(())
-			}
+			Handle::Wave(wave) => wave.stop(tween).map_err(Error::CommandWave),
+			Handle::Midi(midi) => midi.stop(tween),
 		}
 	}
 
@@ -412,7 +398,7 @@ fn render_midi_impl<const CHANS: usize, S: zmusic::cpal::Sample + Default>(
 		song.fill_stream::<S>(&mut buf);
 		song.update();
 
-		for frame in buf.chunks_exact_mut(CHANS as usize) {
+		for frame in buf.chunks_exact_mut(CHANS) {
 			if CHANS == 1 {
 				frames.push(Frame {
 					left: frame[0].to_f32(),
@@ -472,8 +458,10 @@ pub fn soundfont_dir() -> &'static Path {
 pub enum Error {
 	ZMusic(zmusic::Error),
 	KiraBackend(<CpalBackend as Backend>::Error),
-	Command(kira::CommandError),
-	KiraPlay(PlayError),
+	CommandWave(kira::CommandError),
+	PlayWave(PlayWaveError),
+	PlayMidi(PlayMidiError),
+	CommandMidi,
 }
 
 impl std::error::Error for Error {}
@@ -483,10 +471,13 @@ impl std::fmt::Display for Error {
 		match self {
 			Self::ZMusic(err) => err.fmt(f),
 			Self::KiraBackend(err) => err.fmt(f),
-			Self::Command(err) => err.fmt(f),
-			Self::KiraPlay(err) => err.fmt(f),
+			Self::CommandWave(err) => err.fmt(f),
+			Self::PlayWave(err) => err.fmt(f),
+			Self::PlayMidi(err) => err.fmt(f),
+			Self::CommandMidi => write!(f, "Failed to send a command to a MIDI sound."),
 		}
 	}
 }
 
-pub type PlayError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
+pub type PlayWaveError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
+pub type PlayMidiError = PlaySoundError<<MidiData as SoundData>::Error>;
