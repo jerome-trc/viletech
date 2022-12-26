@@ -28,7 +28,7 @@ fasthash = "0.4.0"
 globset = "0.4.9"
 indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
 indoc = "1.0.8"
-kira = "0.7.0"
+kira = "0.7.1"
 log = "0.4.16"
 luajit-src = "210.3.4"
 mlua = { version = "0.8.6", features = [
