@@ -62,6 +62,12 @@ impl<'a> CommandArgs<'a> {
 		self.0.len()
 	}
 
+	/// Remember that 0 is always the command's name.
+	#[must_use]
+	pub fn get(&self, position: usize) -> Option<&str> {
+		self.0.get(position).copied()
+	}
+
 	/// If the end user's argument list is broken by a `--` argument, this will
 	/// contain every argument before that delimiter (excluding the delimiter itself).
 	/// If there's no `--`, this will contain every argument that doesn't start
