@@ -1,3 +1,5 @@
+//! Symbols relating to pseudo-random number generation.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -13,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -38,7 +40,10 @@ impl fmt::Display for Error {
 	}
 }
 
-pub trait ImpureRng {
+/// The PRNG behavior used by the engine all passes through this trait, so that
+/// alternative implementations (e.g. Boom-like, Doom-like, SFMT) can hypothetically
+/// be built and substituted.
+pub trait Prng {
 	#[must_use]
 	fn range_i64(&mut self, min_incl: i64, max_incl: i64) -> i64;
 	#[must_use]
@@ -49,7 +54,7 @@ pub trait ImpureRng {
 	fn coin_flip(&mut self) -> bool;
 }
 
-impl ImpureRng for WyRand {
+impl Prng for WyRand {
 	fn range_i64(&mut self, min_incl: i64, max_incl: i64) -> i64 {
 		self.generate_range(min_incl..=max_incl)
 	}
@@ -68,11 +73,12 @@ impl ImpureRng for WyRand {
 }
 
 /// Contains a map of named random number generators.
-pub struct RngCore<B: ImpureRng + Default> {
+#[derive(Debug)]
+pub struct RngCore<B: Prng + Default> {
 	prngs: HashMap<String, B>,
 }
 
-impl<B: ImpureRng + Default> Default for RngCore<B> {
+impl<B: Prng + Default> Default for RngCore<B> {
 	fn default() -> Self {
 		let mut ret = RngCore {
 			prngs: Default::default(),
@@ -84,7 +90,7 @@ impl<B: ImpureRng + Default> Default for RngCore<B> {
 	}
 }
 
-impl<B: ImpureRng + Default> RngCore<B> {
+impl<B: Prng + Default> RngCore<B> {
 	/// Returns an error if there's already a PRNG under `key`.
 	pub fn add_default(&mut self, key: String) -> Result<(), Error> {
 		if self.prngs.contains_key(&key) {

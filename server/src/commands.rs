@@ -13,13 +13,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 use std::env;
 
-use impure::{
+use vile::{
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
 };
@@ -194,7 +194,7 @@ pub fn cmd_uptime(args: CommandArgs) -> Request {
 	}
 
 	req_callback(|core| {
-		info!("{}", impure::uptime_string(core.start_time));
+		info!("{}", vile::uptime_string(core.start_time));
 	})
 }
 
@@ -204,7 +204,7 @@ pub fn cmd_version(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	info!("{}", impure::full_version_string(&super::version_string()));
+	info!("{}", vile::full_version_string(&super::version_string()));
 	Request::None
 }
 

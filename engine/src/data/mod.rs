@@ -16,7 +16,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -37,7 +37,7 @@ use crate::{
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
 	newtype,
-	vfs::{FileRef, ImpureVfs, VirtualFs},
+	vfs::{FileRef, VirtualFsExt, VirtualFs},
 	zscript,
 };
 
@@ -81,7 +81,7 @@ impl GameDataMeta {
 	pub fn from_toml(toml: MetaToml, manifest: PathBuf) -> Self {
 		Self {
 			id: toml.id,
-			kind: GameDataKind::Impure { manifest },
+			kind: GameDataKind::VileTech { manifest },
 			version: toml.version,
 			name: toml.name,
 			description: toml.description,
@@ -128,7 +128,7 @@ pub enum GameDataKind {
 	Wad { internal: bool },
 	/// Assets are loaded from this archive/directory based on the
 	/// manifest specified by the meta.toml file.
-	Impure { manifest: PathBuf },
+	VileTech { manifest: PathBuf },
 	/// Assets are loaded from this archive/directory based on the
 	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
 	/// for example, don't get loaded at all.
@@ -191,17 +191,17 @@ impl Namespace {
 
 #[derive(Default)]
 pub struct DataCore {
-	/// Element 0 should _always_ be the engine's own data, ID "impure".
+	/// Element 0 should _always_ be the engine's own data, ID "viletech".
 	/// Everything afterwards is ordered as per the user's specification.
 	pub namespaces: Vec<Namespace>,
 	/// IDs are derived from virtual file system paths. The asset ID for
-	/// `/impure/textures/default.png` is exactly the same string; the ID for
-	/// blueprint `Imp` defined in file `/impure/blueprints/imp.zs` is
-	/// `/impure/blueprints/imp/Imp`, since multiple classes can be defined in
+	/// `/viletech/textures/default.png` is exactly the same string; the ID for
+	/// blueprint `Imp` defined in file `/viletech/blueprints/imp.zs` is
+	/// `/viletech/blueprints/imp/Imp`, since multiple classes can be defined in
 	/// one ZScript translation unit.
 	pub asset_map: HashMap<String, AssetHandle>,
 	/// Doom and its source ports work on a simple data replacement system; a name
-	/// points to the last map/texture/song/etc. loaded by that name. Impure offers
+	/// points to the last map/texture/song/etc. loaded by that name. VileTech offers
 	/// full namespacing via asset IDs, but also has the concept of a short asset ID (SAID)
 	/// which mimics Doom's behaviour for interop purposes.
 	pub short_id_maps: [HashMap<String, AssetHandle>; asset::COLLECTION_COUNT],
@@ -343,11 +343,11 @@ impl DataCore {
 
 	/// This function expects:
 	/// - That `self.namespaces` is empty.
-	/// - That `metas[0]` is the parsed metadata for the Impure data package.
+	/// - That `metas[0]` is the parsed metadata for the VileTech data package.
 	pub fn populate(&mut self, mut metas: Vec<MetaToml>, vfs: &VirtualFs) {
 		debug_assert!(self.namespaces.is_empty());
 		debug_assert!(!metas.is_empty());
-		debug_assert!(metas[0].id == "impure");
+		debug_assert!(metas[0].id == "viletech");
 
 		for (_index, meta) in metas.drain(..).enumerate() {
 			let _fref = vfs
@@ -363,7 +363,7 @@ impl DataCore {
 				GameDataKind::Wad { .. } => {
 					// ???
 				}
-				GameDataKind::Impure { .. } => {
+				GameDataKind::VileTech { .. } => {
 					// ???
 				}
 				GameDataKind::File => {

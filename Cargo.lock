@@ -1918,100 +1918,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "impure"
-version = "0.0.0"
-dependencies = [
- "bitflags",
- "bytemuck",
- "byteorder",
- "chrono",
- "cranelift",
- "cranelift-jit",
- "cranelift-module",
- "criterion",
- "crossbeam",
- "dolly",
- "doom-front",
- "egui",
- "egui-wgpu",
- "egui-winit",
- "fasthash",
- "fern",
- "fixed",
- "formatx",
- "glam",
- "globset",
- "home",
- "image",
- "indexmap",
- "kira",
- "log",
- "md5",
- "mlua",
- "naga 0.10.0",
- "nanorand",
- "num",
- "num-derive",
- "num-traits",
- "once_cell",
- "palette",
- "parking_lot 0.12.1",
- "peg",
- "pollster",
- "raw-cpuid",
- "rayon",
- "regex",
- "renet",
- "rfd",
- "serde",
- "sha3",
- "shipyard",
- "str-utils",
- "toml",
- "unicode-width",
- "unicode-xid",
- "vec1",
- "walkdir",
- "wgpu",
- "winit",
- "zip",
- "zmusic",
-]
-
-[[package]]
-name = "impure-client"
-version = "0.0.0"
-dependencies = [
- "bitflags",
- "crossbeam",
- "impure",
- "indoc",
- "kira",
- "log",
- "mlua",
- "nanorand",
- "parking_lot 0.12.1",
- "shipyard",
- "wgpu",
- "winit",
- "zmusic",
-]
-
-[[package]]
-name = "impure-server"
-version = "0.0.0"
-dependencies = [
- "bitflags",
- "bytemuck",
- "clap 3.2.15",
- "crossbeam",
- "impure",
- "log",
- "renet",
- "sha3",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4233,6 +4139,100 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "viletech"
+version = "0.0.0"
+dependencies = [
+ "bitflags",
+ "bytemuck",
+ "byteorder",
+ "chrono",
+ "cranelift",
+ "cranelift-jit",
+ "cranelift-module",
+ "criterion",
+ "crossbeam",
+ "dolly",
+ "doom-front",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "fasthash",
+ "fern",
+ "fixed",
+ "formatx",
+ "glam",
+ "globset",
+ "home",
+ "image",
+ "indexmap",
+ "kira",
+ "log",
+ "md5",
+ "mlua",
+ "naga 0.10.0",
+ "nanorand",
+ "num",
+ "num-derive",
+ "num-traits",
+ "once_cell",
+ "palette",
+ "parking_lot 0.12.1",
+ "peg",
+ "pollster",
+ "raw-cpuid",
+ "rayon",
+ "regex",
+ "renet",
+ "rfd",
+ "serde",
+ "sha3",
+ "shipyard",
+ "str-utils",
+ "toml",
+ "unicode-width",
+ "unicode-xid",
+ "vec1",
+ "walkdir",
+ "wgpu",
+ "winit",
+ "zip",
+ "zmusic",
+]
+
+[[package]]
+name = "viletech-client"
+version = "0.0.0"
+dependencies = [
+ "bitflags",
+ "crossbeam",
+ "indoc",
+ "kira",
+ "log",
+ "mlua",
+ "nanorand",
+ "parking_lot 0.12.1",
+ "shipyard",
+ "viletech",
+ "wgpu",
+ "winit",
+ "zmusic",
+]
+
+[[package]]
+name = "viletech-server"
+version = "0.0.0"
+dependencies = [
+ "bitflags",
+ "bytemuck",
+ "clap 3.2.15",
+ "crossbeam",
+ "log",
+ "renet",
+ "sha3",
+ "viletech",
+]
 
 [[package]]
 name = "walkdir"

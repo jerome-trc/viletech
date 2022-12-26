@@ -1,4 +1,4 @@
-//! Impure-specific functionality.
+//! VileTech-specific functionality.
 
 /*
 
@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -35,36 +35,36 @@ use crate::{
 
 use super::{entry::PathHash, EntryKind, Error, FileRef, VirtualFs, RGX_INVALIDMOUNTPATH};
 
-/// A separate trait provides functions that are specific to Impure, so that the
+/// A separate trait provides functions that are specific to VileTech, so that the
 /// VFS itself can later be more easily made into a standalone library.
-pub trait ImpureVfs {
+pub trait VirtualFsExt {
 	/// On the debug build, attempt to mount `/env::current_dir()/data`.
-	/// On the release build, attempt to mount `/utils::exe_dir()/impure.zip`.
+	/// On the release build, attempt to mount `/utils::exe_dir()/viletech.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
 	#[must_use]
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml>;
 
-	/// See [`ImpureFileRef::is_impure_package`].
+	/// See [`FileRefExt::is_viletech_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
-	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool>;
+	fn is_viletech_package(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureFileRef::is_udmf_map`].
+	/// See [`FileRefExt::is_udmf_map`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureFileRef::has_zscript`].
+	/// See [`FileRefExt::has_zscript`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_zscript(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureFileRef::has_edfroot`].
+	/// See [`FileRefExt::has_edfroot`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_edfroot(&self, path: impl AsRef<Path>) -> Option<bool>;
 
-	/// See [`ImpureFileRef::has_decorate`].
+	/// See [`FileRefExt::has_decorate`].
 	/// Returns `None` if and only if nothing exists at the given path.
 	#[must_use]
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
@@ -84,25 +84,25 @@ pub trait ImpureVfs {
 	fn ccmd_file(&self, path: PathBuf) -> String;
 }
 
-impl ImpureVfs for VirtualFs {
+impl VirtualFsExt for VirtualFs {
 	fn mount_enginedata(&mut self) -> Result<(), Error> {
 		let path: PathBuf;
 
 		#[cfg(not(debug_assertions))]
 		{
-			path = [exe_dir(), PathBuf::from("impure.zip")].iter().collect();
+			path = [exe_dir(), PathBuf::from("viletech.zip")].iter().collect();
 		}
 		#[cfg(debug_assertions)]
 		{
 			path = [
 				std::env::current_dir().map_err(Error::IoError)?,
-				PathBuf::from("data/impure"),
+				PathBuf::from("data/viletech"),
 			]
 			.iter()
 			.collect();
 		}
 
-		self.mount(&[(path, "/impure")]).pop().unwrap()
+		self.mount(&[(path, "/viletech")]).pop().unwrap()
 	}
 
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml> {
@@ -186,11 +186,11 @@ impl ImpureVfs for VirtualFs {
 			}
 
 			// If we mount `foo` and then can't find `foo`, things are REALLY bad
-			let is_impure_package = self
-				.is_impure_package(&to_mount[i].1)
+			let is_vile_pkg = self
+				.is_viletech_package(&to_mount[i].1)
 				.expect("Failed to look up a newly-mounted item.");
 
-			let meta = if is_impure_package {
+			let meta = if is_vile_pkg {
 				let metapath: PathBuf = [PathBuf::from(&to_mount[i].1), PathBuf::from("meta.toml")]
 					.iter()
 					.collect();
@@ -230,8 +230,8 @@ impl ImpureVfs for VirtualFs {
 		ret
 	}
 
-	fn is_impure_package(&self, path: impl AsRef<Path>) -> Option<bool> {
-		self.lookup(path).map(|file| file.is_impure_package())
+	fn is_viletech_package(&self, path: impl AsRef<Path>) -> Option<bool> {
+		self.lookup(path).map(|file| file.is_viletech_package())
 	}
 
 	fn is_udmf_map(&self, path: impl AsRef<Path>) -> Option<bool> {
@@ -271,13 +271,13 @@ impl ImpureVfs for VirtualFs {
 		let entry = &self
 			.entries
 			.get(&PathHash::new(virtual_path))
-			.expect("`ImpureVfs::gamedata_kind` received a non-existent virtual path.");
+			.expect("`VirtualFsExt::gamedata_kind` received a non-existent virtual path.");
 
 		match &entry.kind {
 			EntryKind::Directory(..) => {
 				let real_path = self
 					.virtual_to_real(&entry.path)
-					.expect("`ImpureVfs::gamedata_kind` failed to resolve a real path.");
+					.expect("`VirtualFsExt::gamedata_kind` failed to resolve a real path.");
 
 				for child in self.children_of(entry) {
 					if !child.file_name().eq_ignore_ascii_case("meta.toml") {
@@ -310,9 +310,9 @@ impl ImpureVfs for VirtualFs {
 					};
 
 					match meta.manifest {
-						Some(pb) => return GameDataKind::Impure { manifest: pb },
+						Some(pb) => return GameDataKind::VileTech { manifest: pb },
 						None => {
-							return GameDataKind::Impure {
+							return GameDataKind::VileTech {
 								manifest: PathBuf::default(),
 							}
 						}
@@ -417,11 +417,13 @@ impl ImpureVfs for VirtualFs {
 	}
 }
 
-pub trait ImpureFileRef {
+/// A separate trait provides functions that are specific to VileTech, so that the
+/// VFS itself can later be more easily made into a standalone library.
+pub trait FileRefExt {
 	/// Check if a directory node has a `meta.toml` leaf (case-insensitive) in it.
 	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
-	fn is_impure_package(&self) -> bool;
+	fn is_viletech_package(&self) -> bool;
 	/// Check if this is a directory with a leaf node named `TEXTMAP`.
 	/// Unconditionally returns false if the file's entry is, itself, a leaf node.
 	#[must_use]
@@ -440,8 +442,8 @@ pub trait ImpureFileRef {
 	fn has_edfroot(&self) -> bool;
 }
 
-impl ImpureFileRef for FileRef<'_> {
-	fn is_impure_package(&self) -> bool {
+impl FileRefExt for FileRef<'_> {
+	fn is_viletech_package(&self) -> bool {
 		self.is_dir()
 			&& self.children().any(|e| {
 				e.path

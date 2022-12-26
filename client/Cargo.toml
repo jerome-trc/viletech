@@ -1,18 +1,18 @@
 [package]
-name = "impure-client"
-description = "Client for Impure Engine"
+name = "viletech-client"
+description = "Client for the VileTech Engine"
 authors = ["***REMOVED***"]
 version = "0.0.0"
 edition = "2021"
 license = "GPL-3.0-only"
-homepage = "https://github.com/***REMOVED***/impure/"
-repository = "https://github.com/***REMOVED***/impure/"
+homepage = "https://github.com/***REMOVED***/viletech/"
+repository = "https://github.com/***REMOVED***/viletech/"
 categories = ["games", "game-engines", "game-development"]
 keywords = ["game", "engine", "gamedev", "graphics", "doom"]
 publish = false
 
 [dependencies]
-impure = { path = "../engine" }
+vile = { path = "../engine", package = "viletech" }
 
 bitflags = { workspace = true }
 crossbeam = { workspace = true }

@@ -1,4 +1,4 @@
-//! Impure-specific Lua behaviour and myriad utilities.
+//! VileTech-specific Lua behaviour and myriad utilities.
 
 /*
 
@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -31,13 +31,13 @@ mod detail;
 mod vector;
 
 /// Only exists to extend [`mlua::Lua`] with new methods.
-pub trait ImpureLua<'p> {
+pub trait LuaExt<'p> {
 	/// Seeds the RNG, defines some universal app data and registry values.
 	/// If `safe` is `false`, the debug and FFI libraries are loaded.
 	fn new_ex(safe: bool) -> LuaResult<Lua>;
 
 	/// Modifies the Lua global environment to be more conducive to a safe,
-	/// Impure-suitable sandbox, and adds numerous Impure-specific symbols.
+	/// VileTech-suitable sandbox, and adds numerous VileTech-specific symbols.
 	fn init_api_common(&self, vfs: Arc<RwLock<VirtualFs>>) -> LuaResult<()>;
 
 	/// Loads the registry with tables (to be loaded into `_G` whenever a sim tic
@@ -87,7 +87,7 @@ pub trait ImpureLua<'p> {
 const REGID_CLIENT_RNG: &str = "api/client/rng";
 const REGID_SIM_RNG: &str = "api/sim/rng";
 
-impl<'p> ImpureLua<'p> for mlua::Lua {
+impl<'p> LuaExt<'p> for mlua::Lua {
 	fn new_ex(safe: bool) -> LuaResult<Lua> {
 		// Note: `io`, `os`, and `package` aren't sandbox-safe by themselves.
 		// They either get pruned of dangerous functions by global API init
@@ -159,7 +159,7 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		detail::g_vector(self)?;
 		detail::g_os(self)?;
 		detail::g_package(self)?;
-		globals.set("impure", detail::g_impure(self)?)?;
+		globals.set("vile", detail::g_vile(self)?)?;
 		globals.set("log", detail::g_log(self)?)?;
 		globals.set("debug", detail::g_debug(self)?)?;
 		globals.set("require", detail::g_require(self, vfs.clone())?)?;
@@ -303,9 +303,9 @@ impl<'p> ImpureLua<'p> for mlua::Lua {
 		self.load(chunk)
 			.set_mode(mlua::ChunkMode::Text)
 			.set_environment(env)
-			.expect("`ImpureLua::safeload()`: Got malformed environment.")
+			.expect("`LuaExt::safeload()`: Got malformed environment.")
 			.set_name(name)
-			.expect("`ImpureLua::safeload()`: Got unsanitised name.")
+			.expect("`LuaExt::safeload()`: Got unsanitised name.")
 	}
 
 	fn repr(&self, val: LuaValue) -> LuaResult<String> {

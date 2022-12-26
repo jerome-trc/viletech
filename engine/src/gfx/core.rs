@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -81,7 +81,7 @@ impl GraphicsCore {
 			&wgpu::DeviceDescriptor {
 				features: wgpu::Features::PUSH_CONSTANTS,
 				limits: wgpu::Limits::default(),
-				label: Some("IMPURE: Device"),
+				label: Some("VILETECH: Device"),
 			},
 			None,
 		)) {
@@ -175,7 +175,7 @@ impl GraphicsCore {
 		let encoder = self
 			.device
 			.create_command_encoder(&CommandEncoderDescriptor {
-				label: Some("IMPURE: Render Encoder"),
+				label: Some("VILETECH: Render Encoder"),
 			});
 
 		Ok(Frame {
@@ -297,7 +297,7 @@ impl Frame {
 	#[must_use]
 	pub fn render_pass(&mut self, clear_color: wgpu::Color) -> RenderPass {
 		self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("IMPURE: Render Pass"),
+			label: Some("VILETECH: Render Pass"),
 			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
 				view: &self.view,
 				resolve_target: None,

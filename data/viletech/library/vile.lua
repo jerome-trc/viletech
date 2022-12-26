@@ -1,7 +1,7 @@
 --- @meta
 
---- @class impurelib
-impure = {
+--- @class vilelib
+vile = {
 	--- The engine's own version.
 	--- @return number major
 	--- @return number minor
@@ -10,4 +10,4 @@ impure = {
 	version = function() end,
 }
 
-return impure
+return vile

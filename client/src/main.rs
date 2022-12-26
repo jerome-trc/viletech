@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -23,12 +23,12 @@ mod core;
 
 use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 
-use impure::{
+use vile::{
 	console::Console,
 	data::DataCore,
 	gfx::{core::GraphicsCore, render},
-	lua::ImpureLua,
-	vfs::{ImpureVfs, VirtualFs},
+	lua::LuaExt,
+	vfs::{VirtualFsExt, VirtualFs},
 };
 use log::{error, info};
 use mlua::prelude::*;
@@ -43,7 +43,7 @@ use crate::core::ClientCore;
 
 #[must_use]
 pub fn version_string() -> String {
-	format!("Impure client version: {}", env!("CARGO_PKG_VERSION"))
+	format!("VileTech client version: {}", env!("CARGO_PKG_VERSION"))
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -51,15 +51,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	for arg in env::args() {
 		if arg == "--version" || arg == "-v" {
-			println!("{}", impure::short_version_string());
-			println!("Impure client version {}.", env!("CARGO_PKG_VERSION"));
+			println!("{}", vile::short_version_string());
+			println!("VileTech client version {}.", env!("CARGO_PKG_VERSION"));
 			return Ok(());
 		}
 	}
 
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
-	match impure::log_init(Some(log_sender)) {
+	match vile::log_init(Some(log_sender)) {
 		Ok(()) => {}
 		Err(err) => {
 			eprintln!("Failed to initialise logging backend: {}", err);
@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let console = Console::new(log_receiver);
 
-	impure::log_init_diag(&version_string())?;
+	vile::log_init_diag(&version_string())?;
 
 	let devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 
@@ -88,9 +88,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 		Ok(()) => {}
 		Err(err) => {
 			error!(
-				"Failed to find and mount engine gamedata.
-				Is 'impure.zip' missing?
-				Error: {}",
+				"Failed to find and mount engine gamedata. Is 'viletech.zip' missing?\
+				\r\nError: {}",
 				err
 			);
 			return Err(Box::new(err));
@@ -108,7 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let event_loop = EventLoop::new();
 
 	let window = match winit::window::WindowBuilder::new()
-		.with_title("Impure")
+		.with_title("VileTech")
 		.with_min_inner_size(PhysicalSize::new(320, 200))
 		.with_max_inner_size(PhysicalSize::new(7680, 4320))
 		.with_inner_size(PhysicalSize::new(800, 600))
@@ -117,7 +116,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.with_transparent(false)
 		.with_window_icon(
 			vfs.read()
-				.window_icon_from_file(Path::new("/impure/impure.png")),
+				.window_icon_from_file(Path::new("/viletech/viletech.png")),
 		)
 		.build(&event_loop)
 	{
@@ -135,14 +134,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
-	let shader = impure::gfx::create_shader_module(
+	let shader = vile::gfx::create_shader_module(
 		&gfx.device,
 		"hello-tri",
-		vfs.read().read_str("/impure/shaders/hello-tri.wgsl")?,
+		vfs.read().read_str("/viletech/shaders/hello-tri.wgsl")?,
 	);
 
 	let pipeline = render::pipeline_builder("Hello Triangle", &gfx.device)
-		.shader_states(impure::gfx::create_shader_states(
+		.shader_states(vile::gfx::create_shader_states(
 			&shader,
 			"vs_main",
 			&[],
@@ -224,7 +223,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 			info!("Application resumed...");
 		}
 		WinitEvent::LoopDestroyed => {
-			info!("{}", impure::uptime_string(core.start_time));
+			info!("{}", vile::uptime_string(core.start_time));
 		}
 		_ => {}
 	});

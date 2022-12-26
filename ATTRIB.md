@@ -6,7 +6,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## Technologies
 
-Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
+VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
 
 - bitflags
 	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
@@ -225,13 +225,13 @@ Impure depends on the libraries [`doom-front`](https://github.com/***REMOVED***/
 
 ## Code
 
-Impure relies heavily on code ported from GZDoom, which is the creation of the ZDoom and GZDoom teams, principally led by Marisa Heit ([@rheit](https://github.com/rheit)) and Christoph Oelckers ([@coelckers](https://github.com/coelckers)). See https://github.com/ZDoom/gzdoom/graphs/contributors for more information. Code derived from GZDoom is used under the [GNU General Public License Version 3](https://github.com/ZDoom/gzdoom/blob/master/LICENSE).
+VileTech relies heavily on code ported from GZDoom, which is the creation of the ZDoom and GZDoom teams, principally led by Marisa Heit ([@rheit](https://github.com/rheit)) and Christoph Oelckers ([@coelckers](https://github.com/coelckers)). See https://github.com/ZDoom/gzdoom/graphs/contributors for more information. Code derived from GZDoom is used under the [GNU General Public License Version 3](https://github.com/ZDoom/gzdoom/blob/master/LICENSE).
 
 ## Miscellaneous
 
-The SoundFont file located at /data/soundfonts/impure.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
+The SoundFont file located at /data/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
 
-The OPN wave bank file located at /data/impure/xg.wopn is courtesy of Vitaly Novichkov ([@Wohlstand](https://github.com/Wohlstand)). In the absence of a contribution-specific license, this is used under the same licensing terms as the GZDoom source code, as detailed in [Code](#code).
+The OPN wave bank file located at /data/viletech/xg.wopn is courtesy of Vitaly Novichkov ([@Wohlstand](https://github.com/Wohlstand)). In the absence of a contribution-specific license, this is used under the same licensing terms as the GZDoom source code, as detailed in [Code](#code).
 
 ## Special Thanks
 

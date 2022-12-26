@@ -1,4 +1,6 @@
-//! Impure is a pet project, meant as an experiment in creating a modern,
+//! # VileTech Engine
+//!
+//! VileTech is a pet project, meant as an experiment in creating a modern,
 //! feature-oriented Doom source port in Rust which can successfully interpret
 //! user-generated content for GZDoom and the Eternity Engine with zero end-user
 //! overhead and minimal runtime overhead.
@@ -18,7 +20,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -180,13 +182,13 @@ pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error:
 
 #[must_use]
 pub fn short_version_string() -> String {
-	format!("Impure Engine version: {}", env!("CARGO_PKG_VERSION"))
+	format!("VileTech Engine version: {}", env!("CARGO_PKG_VERSION"))
 }
 
 #[must_use]
 pub fn full_version_string(app_version_string: &str) -> String {
 	format!(
-		"Impure Engine version: {}.{}.{}\r\n\t{app_version_string}\
+		"VileTech Engine version: {}.{}.{}\r\n\t{app_version_string}\
 		\r\n\tGit commit: {}\r\n\tCompiled on: {}",
 		env!("CARGO_PKG_VERSION_MAJOR"),
 		env!("CARGO_PKG_VERSION_MINOR"),
@@ -215,10 +217,10 @@ pub fn log_init(
 		.debug(fern::colors::Color::Cyan)
 		.trace(fern::colors::Color::Magenta);
 
-	let fpath: PathBuf = [&exe_dir, Path::new("impure.log")].iter().collect();
+	let fpath: PathBuf = [&exe_dir, Path::new("viletech.log")].iter().collect();
 
 	if fpath.exists() {
-		let oldpath: PathBuf = [&exe_dir, Path::new("impure.log.old")].iter().collect();
+		let oldpath: PathBuf = [&exe_dir, Path::new("viletech.log.old")].iter().collect();
 
 		match fs::rename(&fpath, oldpath) {
 			Ok(()) => {}

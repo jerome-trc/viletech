@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -28,7 +28,7 @@ use std::{
 };
 
 use clap::Parser;
-use impure::terminal::Terminal;
+use vile::terminal::Terminal;
 use log::{error, info};
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
@@ -38,7 +38,7 @@ use sha3::{Digest, Sha3_256};
 #[must_use]
 pub fn version_string() -> String {
 	format!(
-		"Impure dedicated server version: {}",
+		"VileTech dedicated server version: {}",
 		env!("CARGO_PKG_VERSION")
 	)
 }
@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = Instant::now();
 	let args = Args::parse();
 
-	match impure::log_init(None) {
+	match vile::log_init(None) {
 		Ok(()) => {}
 		Err(err) => {
 			eprintln!("Failed to initialise logging backend: {}", err);
@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	impure::log_init_diag(&version_string())?;
+	vile::log_init_diag(&version_string())?;
 
 	let passhash = if !args.password.is_empty() {
 		let mut hasher = Sha3_256::new();
@@ -288,7 +288,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	match res {
 		Ok(()) => {
-			info!("{}", impure::uptime_string(start_time));
+			info!("{}", vile::uptime_string(start_time));
 			Ok(())
 		}
 		Err(err) => Err(Box::new(err)),

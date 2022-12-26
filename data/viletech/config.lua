@@ -1,8 +1,8 @@
 -- Library configuration module for the Lua language server
 -- (https://github.com/sumneko/lua-language-server).
 
-_G.name = "Impure Engine API"
-_G.words = {'impure%.%w+'}
+_G.name = "VileTech Engine API"
+_G.words = {'viletech%.%w+'}
 
 _G.configs = {
 	{

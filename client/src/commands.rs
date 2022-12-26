@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -24,12 +24,12 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use impure::{
+use vile::{
 	audio::{self, MidiData, MidiSettings},
 	console::MessageKind,
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
-	vfs::ImpureVfs,
+	vfs::VirtualFsExt,
 };
 use indoc::formatdoc;
 use kira::sound::static_sound::StaticSoundSettings;
@@ -526,7 +526,7 @@ pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	}
 
 	req_callback(|core| {
-		info!("{}", impure::uptime_string(core.start_time));
+		info!("{}", vile::uptime_string(core.start_time));
 	})
 }
 
@@ -551,7 +551,7 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 		);
 	}
 
-	info!("{}", impure::full_version_string(&super::version_string()));
+	info!("{}", vile::full_version_string(&super::version_string()));
 	Request::None
 }
 

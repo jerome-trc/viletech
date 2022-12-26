@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -137,7 +137,7 @@ impl<'d> PipelineBuilder<'d> {
 		self.device
 			.create_render_pipeline(&RenderPipelineDescriptor {
 				label: Some(&format!(
-					"IMPURE: Render Pipeline, {}",
+					"VILETECH: Render Pipeline, {}",
 					self.label.unwrap_or("unnamed")
 				)),
 				layout: Some(
@@ -145,7 +145,7 @@ impl<'d> PipelineBuilder<'d> {
 						.device
 						.create_pipeline_layout(&PipelineLayoutDescriptor {
 							label: Some(&format!(
-								"IMPURE: Render Pipeline Layout, {}",
+								"VILETECH: Render Pipeline Layout, {}",
 								self.label.unwrap_or("unnamed")
 							)),
 							bind_group_layouts: &self.bind_group_layouts,

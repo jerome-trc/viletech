@@ -15,12 +15,12 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 // [Rat] If you're reading this, congratulations! You've found something special.
-// This module sub-tree is, historically speaking, the most tortured code in Impure.
+// This module sub-tree is, historically speaking, the most tortured code in VileTech.
 
 mod entry;
 mod error;
@@ -44,7 +44,7 @@ use entry::{Entry, EntryKind, PathHash};
 
 use crate::utils::path::PathExt;
 
-pub use self::ext::{ImpureFileRef, ImpureVfs};
+pub use self::ext::{FileRefExt, VirtualFsExt};
 pub use error::Error;
 pub use fileref::FileRef;
 

@@ -1,8 +1,0 @@
-id = 'impure'
-name = 'impure:appname'
-desc = 'impure:meta_desc'
-authors = ["***REMOVED***"]
-copyright = "© 2022 ***REMOVED***"
-links = ['https://github.com/***REMOVED***/impure']
-version = "0.0.0"
-manifest = 'manifest/main.lua'

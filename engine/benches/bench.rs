@@ -13,14 +13,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 use std::{env, path::PathBuf, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use impure::{lua::ImpureLua, newtype_mut, rng::ImpureRng, sim::PlaySim, vfs::VirtualFs};
+use viletech::{lua::LuaExt, newtype_mut, rng::Prng, sim::PlaySim, vfs::VirtualFs};
 use mlua::prelude::*;
 use parking_lot::{Mutex, RwLock};
 

@@ -13,23 +13,23 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
 
-use impure::{
+use vile::{
 	audio::AudioCore,
 	console::{self, Console},
 	data::DataCore,
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
-	lua::ImpureLua,
+	lua::LuaExt,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	vfs::{ImpureVfs, VirtualFs},
+	vfs::{VirtualFsExt, VirtualFs},
 };
 use log::error;
 use mlua::prelude::*;
@@ -130,7 +130,7 @@ impl ClientCore {
 		}
 
 		ret.register_console_commands();
-		impure::user::build_user_dirs()?;
+		vile::user::build_user_dirs()?;
 
 		Ok(ret)
 	}
@@ -329,7 +329,7 @@ impl ClientCore {
 						let mut metas = vec![self
 							.vfs
 							.read()
-							.parse_gamedata_meta("/impure/meta.toml")
+							.parse_gamedata_meta("/viletech/meta.toml")
 							.expect("Engine data package manifest is malformed.")];
 
 						if !to_mount.is_empty() {
@@ -544,9 +544,9 @@ impl ClientCore {
 			sender: txin,
 			receiver: rxout,
 			thread: std::thread::Builder::new()
-				.name("Impure: Playsim".to_string())
+				.name("VileTech: Playsim".to_string())
 				.spawn(move || {
-					impure::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
+					vile::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
 						sim,
 						lua,
 						data,

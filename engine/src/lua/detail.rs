@@ -1,4 +1,4 @@
-//! Implementation details for [`super::ImpureLua`].
+//! Implementation details for [`LuaExt`](super::LuaExt).
 //!
 //! Kept out of mod.rs to reduce clutter.
 
@@ -17,7 +17,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -33,12 +33,12 @@ use parking_lot::{Mutex, RwLock};
 
 use crate::{
 	lua::TableExt,
-	rng::{ImpureRng, RngCore},
+	rng::{Prng, RngCore},
 	sim::PlaySim,
 	vfs::VirtualFs,
 };
 
-use super::{Error, ImpureLua, UserDataWrapper};
+use super::{Error, LuaExt, UserDataWrapper};
 
 /// Seed a Lua state's PRNG for trivial (i.e. client-side) purposes.
 pub(super) fn randomseed(lua: &Lua) -> LuaResult<()> {
@@ -196,9 +196,9 @@ pub(super) fn g_log(lua: &Lua) -> LuaResult<LuaTable> {
 	Ok(ret)
 }
 
-/// The returned (read-only) table becomes `_G.impure` and is populated with
+/// The returned (read-only) table becomes `_G.vile` and is populated with
 /// functions for the most basic engine functionality, like getting its version.
-pub(super) fn g_impure(lua: &Lua) -> LuaResult<LuaTable> {
+pub(super) fn g_vile(lua: &Lua) -> LuaResult<LuaTable> {
 	let ret = lua.create_table()?;
 
 	ret.set(
@@ -223,7 +223,7 @@ pub(super) fn g_prelude(lua: &Lua, vfs: &VirtualFs) -> LuaResult<()> {
 	let globals = lua.globals();
 
 	let utils = vfs
-		.read_str("/impure/lua/utils.lua")
+		.read_str("/viletech/lua/utils.lua")
 		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 	let utils = lua.safeload(utils, "utils", globals.clone());
 	let utils: LuaTable = utils.eval()?;
@@ -235,7 +235,7 @@ pub(super) fn g_prelude(lua: &Lua, vfs: &VirtualFs) -> LuaResult<()> {
 	}
 
 	let array = vfs
-		.read_str("/impure/lua/array.lua")
+		.read_str("/viletech/lua/array.lua")
 		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 	let array = lua.safeload(array, "array", globals.clone());
 	let array: LuaTable = array.eval()?;
@@ -243,7 +243,7 @@ pub(super) fn g_prelude(lua: &Lua, vfs: &VirtualFs) -> LuaResult<()> {
 	globals.set("array", array)?;
 
 	let map = vfs
-		.read_str("/impure/lua/map.lua")
+		.read_str("/viletech/lua/map.lua")
 		.map_err(|err| LuaError::ExternalError(Arc::new(err)))?;
 	let map = lua.safeload(map, "map", globals.clone());
 	let map: LuaTable = map.eval()?;
@@ -286,7 +286,7 @@ pub(super) fn g_os(lua: &Lua) -> LuaResult<()> {
 }
 
 /// Deletes everything in the `package` standard library except `loaded`, since
-/// Impure has an in-house system tied to the VFS to replace it. Sets `_G.package`
+/// VileTech has an in-house system tied to the VFS to replace it. Sets `_G.package`
 /// and `_G.package.loaded` to use the readonly metatable when done.
 pub(super) fn g_package(lua: &Lua) -> LuaResult<()> {
 	const DELETED_KEYS: [&str; 6] = ["cpath", "loaders", "loadlib", "path", "preload", "seeall"];
