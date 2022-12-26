@@ -20,9 +20,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 use std::{env, path::PathBuf, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use viletech::{lua::LuaExt, newtype_mut, rng::Prng, sim::PlaySim, vfs::VirtualFs};
 use mlua::prelude::*;
 use parking_lot::{Mutex, RwLock};
+use viletech::{lua::LuaExt, newtype_mut, rng::Prng, sim::PlaySim, vfs::VirtualFs};
 
 newtype_mut!(struct PlaySimBenchWrapper(PlaySim));
 

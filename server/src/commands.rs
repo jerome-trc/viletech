@@ -19,11 +19,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use std::env;
 
+use log::{error, info};
 use vile::{
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
 };
-use log::{error, info};
 
 use crate::ServerCore;
 

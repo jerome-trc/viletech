@@ -23,16 +23,16 @@ mod core;
 
 use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 
+use log::{error, info};
+use mlua::prelude::*;
+use parking_lot::RwLock;
 use vile::{
 	console::Console,
 	data::DataCore,
 	gfx::{core::GraphicsCore, render},
 	lua::LuaExt,
-	vfs::{VirtualFsExt, VirtualFs},
+	vfs::{VirtualFs, VirtualFsExt},
 };
-use log::{error, info};
-use mlua::prelude::*;
-use parking_lot::RwLock;
 use winit::{
 	dpi::PhysicalSize,
 	event::{Event as WinitEvent, VirtualKeyCode, WindowEvent},
@@ -166,7 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		WinitEvent::MainEventsCleared => {
 			core.process_console_requests();
 			core.scene_change(control_flow);
-			core.audio.borrow_mut().update();
+			core.audio.update();
 			core.gfx.window.request_redraw();
 		}
 		WinitEvent::WindowEvent {
@@ -198,9 +198,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 				}
 				WindowEvent::Focused(gained) => {
 					if *gained {
-						core.audio.borrow_mut().resume_all();
+						core.audio.resume_all();
 					} else {
-						core.audio.borrow_mut().pause_all();
+						core.audio.pause_all();
 					}
 				}
 				WindowEvent::CloseRequested => {

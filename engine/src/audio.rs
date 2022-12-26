@@ -53,7 +53,9 @@ pub use midi::MidiSoundHandle;
 
 #[non_exhaustive]
 pub struct AudioCore {
+	/// The centre of waveform sound synthesis and playback.
 	pub manager: AudioManager,
+	/// The centre of MIDI sound synthesis, configuration, and playback.
 	pub zmusic: zmusic::Manager,
 	/// General-purpose music slot.
 	pub music1: Option<Handle>,

@@ -24,6 +24,9 @@ use std::{
 	path::{Path, PathBuf},
 };
 
+use indoc::formatdoc;
+use kira::sound::static_sound::StaticSoundSettings;
+use log::{error, info};
 use vile::{
 	audio::{self, MidiData, MidiSettings},
 	console::MessageKind,
@@ -31,9 +34,6 @@ use vile::{
 	utils::path::get_user_dir,
 	vfs::VirtualFsExt,
 };
-use indoc::formatdoc;
-use kira::sound::static_sound::StaticSoundSettings;
-use log::{error, info};
 
 use crate::core::ClientCore;
 
@@ -391,9 +391,7 @@ Options:
 		let bytes = fref.read_unchecked();
 
 		if zmusic::MidiKind::is_midi(bytes) {
-			let mut audio = core.audio.borrow_mut();
-
-			let midi = match audio.zmusic.new_song(bytes, midi_dev) {
+			let midi = match core.audio.zmusic.new_song(bytes, midi_dev) {
 				Ok(m) => m,
 				Err(err) => {
 					info!("Failed to create MIDI song from: {path_string}\r\n\tError: {err}");
@@ -405,7 +403,7 @@ Options:
 
 			midi.settings.volume = kira::Volume::Amplitude(volume);
 
-			match audio.start_music_midi::<false>(midi) {
+			match core.audio.start_music_midi::<false>(midi) {
 				Ok(()) => {
 					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
 				}
@@ -416,7 +414,7 @@ Options:
 		} else if let Ok(mut sdat) = audio::sound_from_file(fref, StaticSoundSettings::default()) {
 			sdat.settings.volume = kira::Volume::Amplitude(volume);
 
-			match core.audio.borrow_mut().start_music_wave::<false>(sdat) {
+			match core.audio.start_music_wave::<false>(sdat) {
 				Ok(()) => {
 					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
 				}
@@ -506,7 +504,7 @@ Options:
 
 		sdat.settings.volume = kira::Volume::Amplitude(volume);
 
-		match core.audio.borrow_mut().start_sound_global(sdat) {
+		match core.audio.start_sound_global(sdat) {
 			Ok(()) => {
 				info!("Playing sound: {}", path_string);
 			}

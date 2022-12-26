@@ -28,8 +28,8 @@ use std::{
 };
 
 use clap::Parser;
-use vile::terminal::Terminal;
 use log::{error, info};
+use vile::terminal::Terminal;
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
 use renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent};

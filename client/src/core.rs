@@ -17,8 +17,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{cell::RefCell, error::Error, path::PathBuf, rc::Rc, sync::Arc};
+use std::{error::Error, path::PathBuf, sync::Arc};
 
+use log::error;
+use mlua::prelude::*;
+use nanorand::WyRand;
+use parking_lot::{Mutex, RwLock};
+use shipyard::World;
 use vile::{
 	audio::AudioCore,
 	console::{self, Console},
@@ -29,13 +34,8 @@ use vile::{
 	lua::LuaExt,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	vfs::{VirtualFsExt, VirtualFs},
+	vfs::{VirtualFs, VirtualFsExt},
 };
-use log::error;
-use mlua::prelude::*;
-use nanorand::WyRand;
-use parking_lot::{Mutex, RwLock};
-use shipyard::World;
 use winit::{
 	event::{ElementState, KeyboardInput},
 	event_loop::ControlFlow,
@@ -79,7 +79,7 @@ pub struct ClientCore {
 	pub data: Arc<RwLock<DataCore>>,
 	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub gfx: GraphicsCore,
-	pub audio: Rc<RefCell<AudioCore>>,
+	pub audio: AudioCore,
 	pub input: InputCore,
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
@@ -103,8 +103,6 @@ impl ClientCore {
 			gfx.surface_config.height as f32,
 		);
 
-		let audio = Rc::new(RefCell::new(AudioCore::new(None)?));
-
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
@@ -112,7 +110,7 @@ impl ClientCore {
 			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
-			audio,
+			audio: AudioCore::new(None)?,
 			input: InputCore::default(),
 			console,
 			gui: World::default(),

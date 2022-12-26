@@ -37,7 +37,7 @@ use crate::{
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
 	newtype,
-	vfs::{FileRef, VirtualFsExt, VirtualFs},
+	vfs::{FileRef, VirtualFs, VirtualFsExt},
 	zscript,
 };
 
