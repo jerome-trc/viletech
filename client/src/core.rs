@@ -231,10 +231,14 @@ impl ClientCore {
 		if self.devgui.open {
 			let ctx = &self.gfx.egui.context;
 			let mut devgui_open = true;
+			let screen_rect = ctx.input().screen_rect;
 
 			DeveloperGui::window(ctx)
 				.open(&mut devgui_open)
 				.show(ctx, |ui| {
+					// Prevent window from overflowing off the screen's sides
+					ui.set_max_width(screen_rect.width());
+
 					self.devgui.selectors(
 						ui,
 						&[

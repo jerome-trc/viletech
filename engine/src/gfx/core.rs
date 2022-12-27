@@ -24,12 +24,12 @@ use std::{
 	time::{Duration, Instant},
 };
 
-use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
+use egui_wgpu::renderer::ScreenDescriptor;
 use indoc::formatdoc;
 use log::info;
 use wgpu::{
-	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, RenderPass, RenderPipeline,
-	SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
+	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, CompositeAlphaMode, RenderPass,
+	RenderPipeline, SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
 };
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
@@ -54,7 +54,7 @@ pub struct GraphicsCore {
 pub struct EguiCore {
 	pub state: egui_winit::State,
 	pub context: egui::Context,
-	pub render_pass: EguiRenderPass,
+	pub renderer: egui_wgpu::Renderer,
 }
 
 impl GraphicsCore {
@@ -128,13 +128,15 @@ impl GraphicsCore {
 			width: window_size.width,
 			height: window_size.height,
 			present_mode: wgpu::PresentMode::Fifo,
+			alpha_mode: CompositeAlphaMode::Auto,
 		};
+
 		surface.configure(&device, &srf_cfg);
 
 		let egui = EguiCore {
 			state: egui_winit::State::new(event_loop),
 			context: egui::Context::default(),
-			render_pass: EguiRenderPass::new(&device, *srf_format, 1),
+			renderer: egui_wgpu::Renderer::new(&device, *srf_format, None, 1),
 		};
 
 		Ok(GraphicsCore {
@@ -210,21 +212,39 @@ impl GraphicsCore {
 
 		for (id, image_delta) in &output.textures_delta.set {
 			self.egui
-				.render_pass
+				.renderer
 				.update_texture(&self.device, &self.queue, *id, image_delta);
 		}
 
 		for id in &output.textures_delta.free {
-			self.egui.render_pass.free_texture(id);
+			self.egui.renderer.free_texture(id);
 		}
 
-		self.egui
-			.render_pass
-			.update_buffers(&self.device, &self.queue, &paint_jobs, &screen_desc);
+		self.egui.renderer.update_buffers(
+			&self.device,
+			&self.queue,
+			&mut encoder,
+			&paint_jobs,
+			&screen_desc,
+		);
+
+		let mut rpass_egui = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("VILETECH: Render Pass, egui"),
+			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+				view: &outview,
+				resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Load,
+					store: true,
+				},
+			})],
+			depth_stencil_attachment: None,
+		});
 
 		self.egui
-			.render_pass
-			.execute(&mut encoder, &outview, &paint_jobs, &screen_desc, None);
+			.renderer
+			.render(&mut rpass_egui, &paint_jobs, &screen_desc);
+		drop(rpass_egui);
 
 		self.queue.submit(iter::once(encoder.finish()));
 		outframe.present();

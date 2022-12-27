@@ -87,6 +87,7 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 		let screen_rect = ctx.input().screen_rect;
 
 		egui::Window::new("Developer Tools")
+			.id(egui::Id::new("vile_devgui"))
 			.anchor(egui::Align2::CENTER_TOP, [0.0, 0.0])
 			.fixed_pos([0.0, 0.0])
 			.collapsible(false)
@@ -103,11 +104,13 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 			.default_width(screen_rect.width() * 0.5)
 			.resizable(true)
 			.width_range((screen_rect.width() * 0.1)..=(screen_rect.width() * 0.9))
+			.frame(egui::Frame::window(&ctx.style()).multiply_with_opacity(0.8))
 	}
 
 	/// Ensure this is only called after [`panel_left`](DeveloperGui::panel_left).
-	pub fn panel_right(&self, _ctx: &egui::Context) -> egui::CentralPanel {
+	pub fn panel_right(&self, ctx: &egui::Context) -> egui::CentralPanel {
 		egui::CentralPanel::default()
+			.frame(egui::Frame::window(&ctx.style()).multiply_with_opacity(0.8))
 	}
 
 	/// Call after opening the [developer GUI window](DeveloperGui::window).
