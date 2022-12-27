@@ -23,6 +23,24 @@ Session.vim
 /debug/
 /target/
 
+# Sample data ##################################################################
+
+# Anything here is useful to have around but too big to track,
+# or keeping it remotely would violate copyright law
+
+*.[Ii][Ww][Aa][Dd]
+*.[Pp][Ww][Aa][Dd]
+*.[Ww][Aa][Dd]
+*.[Pp][Kk][37Ee]
+*.[Zz][Ii][Pp]
+*.7[Zz]
+
+*.mid
+*.mp3
+*.ogg
+*.wav
+*.flac
+
 # Miscellaneous ################################################################
 
 # Generated rustdoc
@@ -43,10 +61,3 @@ doc
 **/flamegraph.svg
 
 /temp
-
-*.[Ii][Ww][Aa][Dd]
-*.[Pp][Ww][Aa][Dd]
-*.[Ww][Aa][Dd]
-*.[Pp][Kk][37Ee]
-*.[Zz][Ii][Pp]
-*.7[Zz]
