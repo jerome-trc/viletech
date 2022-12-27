@@ -36,7 +36,6 @@ use crate::{
 pub type Sender = crossbeam::channel::Sender<Message>;
 
 pub struct Console<C: terminal::Command> {
-	open: bool,
 	/// Takes messages coming from the `log` crate's backend.
 	log_receiver: Receiver<Message>,
 	messages: Vec<Message>,
@@ -87,10 +86,6 @@ impl<C: terminal::Command> Console<C> {
 	#[must_use]
 	pub fn new(log_receiver: Receiver<Message>) -> Self {
 		Console {
-			#[cfg(debug_assertions)]
-			open: true,
-			#[cfg(not(debug_assertions))]
-			open: false,
 			log_receiver,
 			messages: Vec::<Message>::default(),
 			input_history: Vec::<String>::default(),
@@ -110,25 +105,85 @@ impl<C: terminal::Command> Console<C> {
 
 	/// Receive incoming messages from the log backend - and ongoing playsim, if
 	/// any - and draw the window and all of its contents.
-	pub fn ui(&mut self, ctx: &egui::Context) {
+	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		while let Ok(msg) = self.log_receiver.try_recv() {
 			self.messages.push(msg);
 		}
 
-		if !self.open {
-			return;
-		}
+		egui::menu::bar(ui, |ui| {
+			ui.toggle_value(&mut self.draw_log, "Show Engine Log");
+			ui.toggle_value(&mut self.draw_toast, "Show Game Log");
+		});
 
-		let mut open = self.open;
+		ui.separator();
 
-		egui::Window::new("Console")
-			.open(&mut open)
-			.resizable(true)
-			.show(ctx, |ui| {
-				self.ui_impl(ui, ctx);
+		let scroll_area = ScrollArea::both().id_source("vile_devgui_console_scroll");
+
+		scroll_area.show(ui, |ui| {
+			ui.vertical(|ui| {
+				for item in &self.messages {
+					match item.kind {
+						MessageKind::Toast => {
+							if !self.draw_toast {
+								continue;
+							}
+
+							for line in item.string.lines() {
+								Self::draw_line_generic(ui, line);
+							}
+						}
+						MessageKind::Log => {
+							if !self.draw_log {
+								continue;
+							}
+
+							for line in item.string.lines() {
+								if lazy_regex!(r"^\[[A-Z]+\] ").is_match(line) {
+									Self::draw_line_log(ui, line);
+								} else {
+									Self::draw_line_generic(ui, line);
+								}
+							}
+						}
+						MessageKind::Help => {
+							for line in item.string.lines() {
+								Self::draw_line_generic(ui, line);
+							}
+						}
+					}
+				}
 			});
 
-		self.open = open;
+			if self.scroll_to_bottom {
+				self.scroll_to_bottom = false;
+				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+			}
+		});
+
+		ui.separator();
+
+		ui.horizontal(|ui| {
+			let input_len = self.input.len();
+			let edit_id = egui::Id::new("console_text_edit");
+			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
+			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+
+			if self.cursor_to_end {
+				self.cursor_to_end = false;
+				let range = CCursorRange::one(CCursor::new(input_len));
+				tes.set_ccursor_range(Some(range));
+				TextEditState::store(tes, ctx, edit_id);
+			}
+
+			if self.defocus_textedit {
+				self.defocus_textedit = false;
+				resp_edit.surrender_focus();
+			}
+
+			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
+				self.try_submit();
+			}
+		});
 	}
 
 	/// Appends a custom message.
@@ -141,30 +196,13 @@ impl<C: terminal::Command> Console<C> {
 			return;
 		}
 
-		let vkc = match input.virtual_keycode {
-			Some(kc) => kc,
-			None => {
-				return;
-			}
-		};
-
-		if !self.open {
-			if vkc == VirtualKeyCode::Grave {
-				self.open = true;
-			} else {
-				return;
-			}
-		} else if vkc == VirtualKeyCode::Grave {
-			self.open = false;
-			return;
-		}
-
-		match input.virtual_keycode.unwrap() {
-			VirtualKeyCode::Escape => {
+		match input.virtual_keycode {
+			None => {}
+			Some(VirtualKeyCode::Escape) => {
 				self.defocus_textedit = true;
 			}
-			VirtualKeyCode::Return => self.try_submit(),
-			VirtualKeyCode::Up => {
+			Some(VirtualKeyCode::Return) => self.try_submit(),
+			Some(VirtualKeyCode::Up) => {
 				if self.input_history_pos < 1 {
 					return;
 				}
@@ -175,7 +213,7 @@ impl<C: terminal::Command> Console<C> {
 				self.input
 					.push_str(&self.input_history[self.input_history_pos]);
 			}
-			VirtualKeyCode::Down => {
+			Some(VirtualKeyCode::Down) => {
 				if self.input_history_pos >= self.input_history.len() {
 					return;
 				}
@@ -335,85 +373,6 @@ impl<C: terminal::Command> Console<C> {
 
 		let galley = ui.fonts().layout_job(job);
 		ui.label(galley);
-	}
-
-	fn ui_impl(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-		egui::menu::bar(ui, |ui| {
-			ui.toggle_value(&mut self.draw_log, "Show Engine Log");
-			ui.toggle_value(&mut self.draw_toast, "Show Game Log");
-		});
-
-		ui.separator();
-
-		let scroll_area = ScrollArea::vertical()
-			.max_height(200.0)
-			.auto_shrink([false; 2]);
-
-		scroll_area.show(ui, |ui| {
-			ui.vertical(|ui| {
-				for item in &self.messages {
-					match item.kind {
-						MessageKind::Toast => {
-							if !self.draw_toast {
-								continue;
-							}
-
-							for line in item.string.lines() {
-								Self::draw_line_generic(ui, line);
-							}
-						}
-						MessageKind::Log => {
-							if !self.draw_log {
-								continue;
-							}
-
-							for line in item.string.lines() {
-								if lazy_regex!(r"^\[[A-Z]+\] ").is_match(line) {
-									Self::draw_line_log(ui, line);
-								} else {
-									Self::draw_line_generic(ui, line);
-								}
-							}
-						}
-						MessageKind::Help => {
-							for line in item.string.lines() {
-								Self::draw_line_generic(ui, line);
-							}
-						}
-					}
-				}
-			});
-
-			if self.scroll_to_bottom {
-				self.scroll_to_bottom = false;
-				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
-			}
-		});
-
-		ui.separator();
-
-		ui.horizontal(|ui| {
-			let input_len = self.input.len();
-			let edit_id = egui::Id::new("console_text_edit");
-			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
-			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
-
-			if self.cursor_to_end {
-				self.cursor_to_end = false;
-				let range = CCursorRange::one(CCursor::new(input_len));
-				tes.set_ccursor_range(Some(range));
-				TextEditState::store(tes, ctx, edit_id);
-			}
-
-			if self.defocus_textedit {
-				self.defocus_textedit = false;
-				resp_edit.surrender_focus();
-			}
-
-			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
-				self.try_submit();
-			}
-		});
 	}
 }
 

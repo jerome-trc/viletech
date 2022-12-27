@@ -68,6 +68,84 @@ pub use vfs::Error as VfsError;
 
 // Symbols that don't belong in any other module ///////////////////////////////
 
+pub struct DeveloperGui<S: PartialEq + Copy> {
+	pub open: bool,
+	pub left: S,
+	pub right: S,
+}
+
+impl<S: PartialEq + Copy> DeveloperGui<S> {
+	/// Returns an egui window that:
+	/// - Is 80% opaque
+	/// - Stretches to fill the screen's width
+	/// - Is immovably anchored to the screen's top
+	/// - Can be resized, but only vertically
+	pub fn window(ctx: &egui::Context) -> egui::containers::Window {
+		let screen_rect = ctx.input().screen_rect;
+
+		egui::Window::new("Developer Tools")
+			.anchor(egui::Align2::CENTER_TOP, [0.0, 0.0])
+			.fixed_pos([0.0, 0.0])
+			.collapsible(false)
+			.resizable(true)
+			.min_width(screen_rect.width())
+			.min_height(screen_rect.height() * 0.1)
+			.frame(egui::Frame::window(&ctx.style()).multiply_with_opacity(0.8))
+	}
+
+	pub fn panel_left(&self, ctx: &egui::Context) -> egui::SidePanel {
+		let screen_rect = ctx.input().screen_rect;
+
+		egui::SidePanel::left("vile_devgui_left")
+			.default_width(screen_rect.width() * 0.5)
+			.resizable(true)
+			.width_range((screen_rect.width() * 0.1)..=(screen_rect.width() * 0.9))
+	}
+
+	/// Ensure this is only called after [`panel_left`](DeveloperGui::panel_left).
+	pub fn panel_right(&self, _ctx: &egui::Context) -> egui::CentralPanel {
+		egui::CentralPanel::default()
+	}
+
+	/// Call after opening the [developer GUI window](DeveloperGui::window).
+	/// Draws two dropdowns in its menu bar that allow changing which menu is
+	/// being drawn in each pane. A menu can't replace itself, but the left and
+	/// right side can be swapped.
+	pub fn selectors(&mut self, ui: &mut egui::Ui, choices: &[(S, &str)]) {
+		egui::menu::bar(ui, |ui| {
+			ui.menu_button("Left", |ui| {
+				for (choice, label) in choices {
+					let btn = egui::Button::new(*label);
+					let resp = ui.add_enabled(self.left != *choice, btn);
+
+					if resp.clicked() {
+						if self.right == *choice {
+							std::mem::swap(&mut self.left, &mut self.right);
+						} else {
+							self.left = *choice;
+						}
+					}
+				}
+			});
+
+			ui.menu_button("Right", |ui| {
+				for (choice, label) in choices {
+					let btn = egui::Button::new(*label);
+					let resp = ui.add_enabled(self.right != *choice, btn);
+
+					if resp.clicked() {
+						if self.left == *choice {
+							std::mem::swap(&mut self.left, &mut self.right);
+						} else {
+							self.right = *choice;
+						}
+					}
+				}
+			});
+		});
+	}
+}
+
 pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error::Error>> {
 	#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 	fn log_cpu_info() -> Result<(), Box<dyn std::error::Error>> {

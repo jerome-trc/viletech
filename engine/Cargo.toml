@@ -22,9 +22,9 @@ cranelift-module = "0.90.1"
 crossbeam = { workspace = true }
 dolly = { workspace = true }
 doom-front = { workspace = true }
-egui = "0.19"
-egui-wgpu = "0.19"
-egui-winit = "0.19"
+egui = { workspace = true }
+egui-wgpu = "0.19.0"
+egui-winit = "0.19.0"
 fasthash = { workspace = true }
 fern = { version = "0.6.1", features = ["colored"] }
 fixed = "1.19.0"
@@ -45,6 +45,7 @@ image = { version = "0.24.4", default-features = false, features = [
 	"tga",
 ] }
 indexmap = { workspace = true }
+indoc = { workspace = true }
 kira = { workspace = true}
 log = { workspace = true }
 md5 = "0.7.0"

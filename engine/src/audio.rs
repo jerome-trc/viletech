@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+mod gui;
 mod midi;
 
 use std::{
@@ -43,13 +44,19 @@ use kira::{
 };
 use log::{debug, error, info, trace, warn};
 use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 use zmusic::cpal::SampleFormat;
 
-use crate::{ecs::EntityId, vfs::FileRef};
+use crate::{
+	ecs::EntityId,
+	vfs::{FileRef, VirtualFs},
+};
 
 pub use midi::MidiData;
 pub use midi::MidiSettings;
 pub use midi::MidiSoundHandle;
+
+use self::gui::DeveloperGui;
 
 #[non_exhaustive]
 pub struct AudioCore {
@@ -65,11 +72,16 @@ pub struct AudioCore {
 	pub music2: Option<Handle>,
 	/// Sounds currently being played.
 	pub sounds: Vec<Sound>,
+	vfs: Arc<RwLock<VirtualFs>>,
+	gui: DeveloperGui,
 }
 
 impl AudioCore {
 	/// If `None` is given, the defaults will be used.
-	pub fn new(manager_settings: Option<AudioManagerSettings<CpalBackend>>) -> Result<Self, Error> {
+	pub fn new(
+		vfs: Arc<RwLock<VirtualFs>>,
+		manager_settings: Option<AudioManagerSettings<CpalBackend>>,
+	) -> Result<Self, Error> {
 		let manager_settings = manager_settings.unwrap_or_default();
 		let sound_cap = manager_settings.capacities.sound_capacity;
 		let mut zmusic = zmusic::Manager::new().map_err(Error::ZMusic)?;
@@ -98,11 +110,13 @@ impl AudioCore {
 		}
 
 		let ret = Self {
+			vfs,
 			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
 			zmusic,
 			music1: None,
 			music2: None,
 			sounds: Vec::with_capacity(sound_cap),
+			gui: DeveloperGui::default(),
 		};
 
 		Ok(ret)
@@ -178,25 +192,31 @@ impl AudioCore {
 		res
 	}
 
-	/// Play a sound without an in-world source.
-	/// Always audible to all clients, not subject to panning or attenuation.
-	pub fn start_sound_global(&mut self, data: StaticSoundData) -> Result<(), PlayWaveError> {
+	/// If no `source` is given, the sound will always audible to all clients
+	/// and not be subjected to any panning or attenuation.
+	pub fn start_sound_wave(
+		&mut self,
+		data: StaticSoundData,
+		source: Option<EntityId>,
+	) -> Result<(), Error> {
 		self.sounds.push(Sound {
-			handle: Handle::Wave(self.manager.play(data)?),
-			_source: None,
+			handle: Handle::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
+			_source: source,
 		});
 
 		Ok(())
 	}
 
-	pub fn start_sound_sourced(
+	/// If no `source` is given, the sound will always audible to all clients
+	/// and not be subjected to any panning or attenuation.
+	pub fn start_sound_midi(
 		&mut self,
-		data: StaticSoundData,
-		entity: EntityId,
-	) -> Result<(), PlayWaveError> {
+		data: MidiData,
+		source: Option<EntityId>,
+	) -> Result<(), Error> {
 		self.sounds.push(Sound {
-			handle: Handle::Wave(self.manager.play(data)?),
-			_source: Some(entity),
+			handle: Handle::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
+			_source: source,
 		});
 
 		Ok(())
@@ -279,6 +299,7 @@ impl AudioCore {
 		let mut song = self
 			.zmusic
 			.new_song(source, zmusic::device::Index::FluidSynth)?;
+
 		let cfg = song.start_silent(false)?;
 
 		if cfg.buffer_size == 0 {
@@ -307,10 +328,16 @@ impl AudioCore {
 			settings,
 		})
 	}
+
+	/// Draw the developer GUI,
+	/// and make any state changes that the user requests through it.
+	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_impl(ctx, ui);
+	}
 }
 
-/// A handle to a currently-playing (or paused) sound or song,
-/// whether it's MIDI or waveform.
+/// Enables inspection and control of a currently-playing sound or musical track,
+/// whether it's waveform or MIDI.
 pub enum Handle {
 	Wave(StaticSoundHandle),
 	Midi(MidiSoundHandle),
@@ -355,6 +382,15 @@ impl Handle {
 	}
 }
 
+impl std::fmt::Debug for Handle {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Wave(_) => f.debug_tuple("Wave").finish(),
+			Self::Midi(_) => f.debug_tuple("Midi").finish(),
+		}
+	}
+}
+
 pub struct Sound {
 	handle: Handle,
 	_source: Option<EntityId>,
@@ -385,6 +421,14 @@ pub fn sound_from_file(
 		Ok(ssd) => Ok(ssd),
 		Err(err) => Err(Box::new(err)),
 	}
+}
+
+pub fn sound_from_bytes(
+	bytes: impl Into<Vec<u8>>,
+	settings: StaticSoundSettings,
+) -> Result<StaticSoundData, kira::sound::FromFileError> {
+	let cursor = io::Cursor::new(bytes.into());
+	StaticSoundData::from_cursor(cursor, settings)
 }
 
 /// Monomorphize over the streaming properties of the MIDI for speed.

@@ -37,7 +37,7 @@ use vile::{
 	vfs::{VirtualFs, VirtualFsExt},
 };
 use winit::{
-	event::{ElementState, KeyboardInput},
+	event::{ElementState, KeyboardInput, VirtualKeyCode},
 	event_loop::ControlFlow,
 	window::WindowId,
 };
@@ -45,6 +45,8 @@ use winit::{
 use crate::commands::{
 	self, Command as ConsoleCommand, CommandFlags as ConsoleCommandFlags, Request as ConsoleRequest,
 };
+
+type DeveloperGui = vile::DeveloperGui<DevGuiStatus>;
 
 enum Scene {
 	Transition,
@@ -84,6 +86,7 @@ pub struct ClientCore {
 	pub console: Console<ConsoleCommand>,
 	pub gui: World,
 	pub camera: Camera,
+	devgui: DeveloperGui,
 	scene: Scene,
 	next_scene: Option<SceneChange>,
 }
@@ -103,6 +106,8 @@ impl ClientCore {
 			gfx.surface_config.height as f32,
 		);
 
+		let vfs_audio = vfs.clone();
+
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
@@ -110,11 +115,19 @@ impl ClientCore {
 			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
-			audio: AudioCore::new(None)?,
+			audio: AudioCore::new(vfs_audio, None)?,
 			input: InputCore::default(),
 			console,
 			gui: World::default(),
 			camera,
+			devgui: DeveloperGui {
+				#[cfg(debug_assertions)]
+				open: true,
+				#[cfg(not(debug_assertions))]
+				open: false,
+				left: DevGuiStatus::Audio,
+				right: DevGuiStatus::Console,
+			},
 			scene: Scene::Frontend {
 				menu: FrontendMenu::default(),
 			},
@@ -214,7 +227,68 @@ impl ClientCore {
 			_ => {}
 		};
 
-		self.console.ui(&self.gfx.egui.context);
+		// TODO: mark as `unlikely` when it stabilizes
+		if self.devgui.open {
+			let ctx = &self.gfx.egui.context;
+			let mut devgui_open = true;
+
+			DeveloperGui::window(ctx)
+				.open(&mut devgui_open)
+				.show(ctx, |ui| {
+					self.devgui.selectors(
+						ui,
+						&[
+							(DevGuiStatus::Console, "Console"),
+							(DevGuiStatus::LithRepl, "REPL"),
+							(DevGuiStatus::Vfs, "VFS"),
+							(DevGuiStatus::Audio, "Audio"),
+						],
+					);
+
+					self.devgui.panel_left(ctx).show_inside(ui, |ui| {
+						match self.devgui.left {
+							DevGuiStatus::Console => {
+								self.console.ui(ctx, ui);
+							}
+							DevGuiStatus::LithRepl => {
+								// Soon!
+							}
+							DevGuiStatus::Vfs => {
+								// Soon!
+							}
+							DevGuiStatus::Graphics => {
+								// Soon!
+							}
+							DevGuiStatus::Audio => {
+								self.audio.ui(ctx, ui);
+							}
+						};
+					});
+
+					self.devgui.panel_right(ctx).show_inside(ui, |ui| {
+						match self.devgui.right {
+							DevGuiStatus::Console => {
+								self.console.ui(ctx, ui);
+							}
+							DevGuiStatus::LithRepl => {
+								// Soon!
+							}
+							DevGuiStatus::Vfs => {
+								// Soon!
+							}
+							DevGuiStatus::Graphics => {
+								// Soon!
+							}
+							DevGuiStatus::Audio => {
+								self.audio.ui(ctx, ui);
+							}
+						};
+					});
+				});
+
+			self.devgui.open = devgui_open;
+		}
+
 		self.gfx.render_finish(frame);
 	}
 
@@ -245,6 +319,10 @@ impl ClientCore {
 
 		if event.virtual_keycode.is_none() {
 			return;
+		} else if let Some(VirtualKeyCode::Grave) = event.virtual_keycode {
+			if event.state == ElementState::Pressed {
+				self.devgui.open = !self.devgui.open;
+			}
 		}
 
 		let vkc = event.virtual_keycode.unwrap();
@@ -592,4 +670,13 @@ impl ClientCore {
 			Arc::strong_count(&sim.sim) - 1
 		);
 	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DevGuiStatus {
+	Console,
+	LithRepl,
+	Vfs,
+	Graphics,
+	Audio,
 }

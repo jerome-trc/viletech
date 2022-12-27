@@ -376,7 +376,7 @@ Options:
 		let vfsg = core.vfs.read();
 
 		let fref = match vfsg.lookup(path) {
-			Some(h) => h,
+			Some(f) => f,
 			None => {
 				info!("No file under virtual path: {path_string}");
 				return;
@@ -504,7 +504,7 @@ Options:
 
 		sdat.settings.volume = kira::Volume::Amplitude(volume);
 
-		match core.audio.start_sound_global(sdat) {
+		match core.audio.start_sound_wave(sdat, None) {
 			Ok(()) => {
 				info!("Playing sound: {}", path_string);
 			}
