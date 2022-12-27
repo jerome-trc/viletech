@@ -68,6 +68,9 @@ pub use vfs::Error as VfsError;
 
 // Symbols that don't belong in any other module ///////////////////////////////
 
+/// State and functions for a two-panel egui window that sticks to the top of the
+/// screen like GZDoom's console. `S` should be a simple untagged enum that
+/// informs the user what they should draw in each panel.
 pub struct DeveloperGui<S: PartialEq + Copy> {
 	pub open: bool,
 	pub left: S,
@@ -119,6 +122,8 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 					let resp = ui.add_enabled(self.left != *choice, btn);
 
 					if resp.clicked() {
+						ui.close_menu();
+
 						if self.right == *choice {
 							std::mem::swap(&mut self.left, &mut self.right);
 						} else {
@@ -134,6 +139,8 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 					let resp = ui.add_enabled(self.right != *choice, btn);
 
 					if resp.clicked() {
+						ui.close_menu();
+
 						if self.left == *choice {
 							std::mem::swap(&mut self.left, &mut self.right);
 						} else {

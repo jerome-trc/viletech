@@ -1,3 +1,5 @@
+/// egui-based graphical shell for diagnosis, development, and debugging.
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -35,6 +37,7 @@ use crate::{
 
 pub type Sender = crossbeam::channel::Sender<Message>;
 
+/// egui-based graphical shell for diagnosis, development, and debugging.
 pub struct Console<C: terminal::Command> {
 	/// Takes messages coming from the `log` crate's backend.
 	log_receiver: Receiver<Message>,

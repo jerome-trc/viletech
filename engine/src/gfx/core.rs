@@ -25,6 +25,7 @@ use std::{
 };
 
 use egui_wgpu::renderer::{RenderPass as EguiRenderPass, ScreenDescriptor};
+use indoc::formatdoc;
 use log::info;
 use wgpu::{
 	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, RenderPass, RenderPipeline,
@@ -246,6 +247,7 @@ impl GraphicsCore {
 			\r\n\tBuffer binding arrays: {} \
 			\r\n\tStorage resource binding arrays: {} \
 			\r\nRelevant limits: \
+			\r\n\tMax. buffer size: {} \
 			\r\n\tMax. 2D texture width/height: {} \
 			\r\n\tMax. texture array layers: {} \
 			\r\n\tMax. bind groups: {} \
@@ -267,7 +269,7 @@ impl GraphicsCore {
 			feats.contains(wgpu::Features::TEXTURE_BINDING_ARRAY),
 			feats.contains(wgpu::Features::BUFFER_BINDING_ARRAY),
 			feats.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY),
-			// TODO: max_buffer_size in wgpu 0.13
+			limits.max_buffer_size,
 			limits.max_texture_dimension_2d,
 			limits.max_texture_array_layers,
 			limits.max_bind_groups,
@@ -283,6 +285,65 @@ impl GraphicsCore {
 			limits.max_push_constant_size,
 			limits.max_inter_stage_shader_components
 		)
+	}
+
+	/// Draw the egui-based developer/debug/diagnosis menu.
+	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
+		egui::ScrollArea::vertical().show(ui, |ui| {
+			ui.collapsing("WGPU Diagnostics", |ui| {
+				let adpinfo = self.adapter.get_info();
+				let feats = self.device.features();
+				let limits = self.device.limits();
+
+				ui.label(&formatdoc! {"
+					Backend: {backend:?}
+					GPU: {gpu_name} ({device_type:?})
+					Relevant features:
+						- Push constants: {push_consts}
+						- Texture binding arrays: {tex_bind_arrs}
+						- Buffer binding arrays: {buf_bind_arrs}
+						- Storage resource binding arrays: {storres_bind_arrs}
+					Relevant limits:
+						- Max. buffer size: {max_buf_sz}
+						- Max. 2D texture width/height: {max_2dtex_dims}
+						- Max. texture array layers: {max_texarr_layers}
+						- Max. bind groups: {max_bind_grps}
+						- Max. samplers per shader stage: {max_samplers}
+						- Max. sampled textures per shader stage: {max_sampled}
+						- Max. UBOs per shader stage: {max_ubos}
+						- Max. UBO binding size: {max_ubo_bind_sz}
+						- Max. storage buffers per shader stage: {max_sbuf_per_sstage}
+						- Max. storage buffer binding size: {max_sbuf_bind_sz}
+						- Max. Vertex buffer objects: {max_vbos}
+						- Max. vertex attributes: {max_vert_attrs}
+						- Max. VBO array stride: {max_vbo_arr_stride}
+						- Max. push constant size: {max_pushconst_sz}
+						- Max. inter-stage shader components: {max_interstage_comps}",
+					backend = adpinfo.backend,
+					gpu_name = adpinfo.name,
+					device_type = adpinfo.device_type,
+					push_consts = feats.contains(wgpu::Features::PUSH_CONSTANTS),
+					tex_bind_arrs = feats.contains(wgpu::Features::TEXTURE_BINDING_ARRAY),
+					buf_bind_arrs = feats.contains(wgpu::Features::BUFFER_BINDING_ARRAY),
+					storres_bind_arrs = feats.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY),
+					max_buf_sz = limits.max_buffer_size,
+					max_2dtex_dims = limits.max_texture_dimension_2d,
+					max_texarr_layers = limits.max_texture_array_layers,
+					max_bind_grps = limits.max_bind_groups,
+					max_samplers = limits.max_samplers_per_shader_stage,
+					max_sampled = limits.max_sampled_textures_per_shader_stage,
+					max_ubos = limits.max_uniform_buffers_per_shader_stage,
+					max_ubo_bind_sz = limits.max_uniform_buffer_binding_size,
+					max_sbuf_per_sstage = limits.max_storage_buffers_per_shader_stage,
+					max_sbuf_bind_sz = limits.max_storage_buffer_binding_size,
+					max_vbos = limits.max_vertex_buffers,
+					max_vert_attrs = limits.max_vertex_attributes,
+					max_vbo_arr_stride = limits.max_vertex_buffer_array_stride,
+					max_pushconst_sz = limits.max_push_constant_size,
+					max_interstage_comps = limits.max_inter_stage_shader_components,
+				});
+			});
+		});
 	}
 }
 

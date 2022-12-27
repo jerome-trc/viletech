@@ -240,6 +240,7 @@ impl ClientCore {
 						&[
 							(DevGuiStatus::Console, "Console"),
 							(DevGuiStatus::LithRepl, "REPL"),
+							(DevGuiStatus::Graphics, "Graphics"),
 							(DevGuiStatus::Vfs, "VFS"),
 							(DevGuiStatus::Audio, "Audio"),
 						],
@@ -257,7 +258,7 @@ impl ClientCore {
 								// Soon!
 							}
 							DevGuiStatus::Graphics => {
-								// Soon!
+								self.gfx.ui(ctx, ui);
 							}
 							DevGuiStatus::Audio => {
 								self.audio.ui(ctx, ui);
@@ -277,7 +278,7 @@ impl ClientCore {
 								// Soon!
 							}
 							DevGuiStatus::Graphics => {
-								// Soon!
+								self.gfx.ui(ctx, ui);
 							}
 							DevGuiStatus::Audio => {
 								self.audio.ui(ctx, ui);

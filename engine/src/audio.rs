@@ -329,8 +329,8 @@ impl AudioCore {
 		})
 	}
 
-	/// Draw the developer GUI,
-	/// and make any state changes that the user requests through it.
+	/// Draw the egui-based developer/debug/diagnosis menu, and perform any
+	/// state mutations requested through it by the user.
 	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_impl(ctx, ui);
 	}
