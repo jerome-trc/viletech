@@ -50,7 +50,7 @@ pub struct ServerCore {
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
-struct Args {
+struct LaunchArgs {
 	#[clap(long, value_parser, default_value_t = 64)]
 	max_clients: usize,
 	/// Can be empty.
@@ -62,7 +62,7 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = Instant::now();
-	let args = Args::parse();
+	let args = LaunchArgs::parse();
 
 	match vile::log_init(None) {
 		Ok(()) => {}

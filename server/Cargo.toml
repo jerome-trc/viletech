@@ -16,7 +16,7 @@ vile = { path = "../engine", package = "viletech" }
 
 bitflags = { workspace = true }
 bytemuck = { workspace = true }
-clap = { version = "3.2.15", features = ["derive"] }
+clap = { workspace = true }
 crossbeam = { workspace = true }
 log = { workspace = true }
 renet = { workspace = true }
