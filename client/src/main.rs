@@ -173,7 +173,32 @@ fn main() -> Result<(), Box<dyn Error>> {
 			ref event,
 			window_id,
 		} if window_id == core.gfx.window.id() => {
-			core.gfx.egui.state.on_event(&core.gfx.egui.context, event);
+			let resp = core.gfx.egui.state.on_event(&core.gfx.egui.context, event);
+
+			match event {
+				WindowEvent::CloseRequested => {
+					core.exit();
+					core.scene_change(control_flow);
+				}
+				WindowEvent::Resized(psize) => {
+					core.on_window_resize(*psize);
+				}
+				WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+					core.on_window_resize(**new_inner_size);
+				}
+				WindowEvent::Focused(gained) => {
+					if *gained {
+						core.audio.resume_all();
+					} else {
+						core.audio.pause_all();
+					}
+				}
+				_ => {},
+			}
+
+			if resp.consumed {
+				return;
+			}
 
 			match event {
 				WindowEvent::KeyboardInput { input, .. } => {
@@ -195,23 +220,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 				}
 				WindowEvent::CursorMoved { position, .. } => {
 					core.input.on_cursor_moved(position);
-				}
-				WindowEvent::Focused(gained) => {
-					if *gained {
-						core.audio.resume_all();
-					} else {
-						core.audio.pause_all();
-					}
-				}
-				WindowEvent::CloseRequested => {
-					core.exit();
-					core.scene_change(control_flow);
-				}
-				WindowEvent::Resized(psize) => {
-					core.on_window_resize(*psize);
-				}
-				WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-					core.on_window_resize(**new_inner_size);
 				}
 				_ => {}
 			}
