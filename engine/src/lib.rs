@@ -156,6 +156,11 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	}
 }
 
+/// After initializing [`log`], call this to print:
+/// - The engine's semantic version.
+/// - The application's semantic version.
+/// - Information about the operating system.
+/// - Information about the CPU's relevant properties.
 pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error::Error>> {
 	#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 	fn log_cpu_info() -> Result<(), Box<dyn std::error::Error>> {
@@ -268,19 +273,21 @@ pub fn log_init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error:
 	Ok(())
 }
 
+/// Returns a message telling the user the engine's `CARGO_PKG_VERSION`.
 #[must_use]
 pub fn short_version_string() -> String {
 	format!("VileTech Engine version: {}", env!("CARGO_PKG_VERSION"))
 }
 
+/// Returns a message telling the user the engine's `CARGO_PKG_VERSION`, the version
+/// of the application running on the engine, the SHA hash of the Git commit from
+/// which the engine was built, and the date and time of engine compilation.
 #[must_use]
 pub fn full_version_string(app_version_string: &str) -> String {
 	format!(
-		"VileTech Engine version: {}.{}.{}\r\n\t{app_version_string}\
+		"VileTech Engine version: {}\r\n\t{app_version_string}\
 		\r\n\tGit commit: {}\r\n\tCompiled on: {}",
-		env!("CARGO_PKG_VERSION_MAJOR"),
-		env!("CARGO_PKG_VERSION_MINOR"),
-		env!("CARGO_PKG_VERSION_PATCH"),
+		env!("CARGO_PKG_VERSION"),
 		env!("GIT_HASH"),
 		env!("COMPILE_DATETIME")
 	)
@@ -376,6 +383,7 @@ pub fn log_init(
 	Ok(())
 }
 
+/// Returns a message telling the user how long the engine was running.
 #[must_use]
 pub fn uptime_string(start_time: std::time::Instant) -> String {
 	let elapsed = start_time.elapsed();
