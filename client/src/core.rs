@@ -528,15 +528,6 @@ impl ClientCore {
 		);
 
 		self.console.register_command(
-			"mididiag",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_mididiag,
-			},
-			true,
-		);
-
-		self.console.register_command(
 			"music",
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),

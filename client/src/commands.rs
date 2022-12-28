@@ -281,14 +281,6 @@ pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	})
 }
 
-pub fn ccmd_mididiag(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help("???".to_string());
-	}
-
-	req_callback(|_| unimplemented!())
-}
-
 pub fn ccmd_music(args: CommandArgs) -> Request {
 	if args.help_requested() || args.name_only() {
 		return req_console_write_help(formatdoc! {"
