@@ -57,12 +57,11 @@ impl terminal::Command for Command {
 
 pub fn cmd_alias(args: CommandArgs) -> Request {
 	fn help(cmd_key: &str) {
-		info!(
-			"Usage: {} [alias] [string]
-			If no alias is provided, all aliases are listed.
-			If no string is provided, \
-			the alias' associated string is expanded into the output, \
-			if that alias exists.",
+		println!(
+			"Usage: {} [alias] [string]\r\n\r\n\
+			If no alias is provided, all aliases are listed. \r\n\
+			If no string is provided, the alias' associated string is expanded \
+			into the output, if that alias exists.",
 			cmd_key
 		);
 	}
@@ -70,7 +69,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 	let alias = args[1].to_string();
 
 	if args.name_only() || args.help_requested() {
-		help(args[0]);
+		help(args.command_name());
 		return Request::None;
 	}
 
@@ -95,7 +94,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 
 pub fn cmd_args(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!("Prints out all of the program's launch arguments.");
+		println!("Prints out all of the program's launch arguments.");
 		return Request::None;
 	}
 
@@ -125,9 +124,9 @@ pub fn cmd_args(args: CommandArgs) -> Request {
 
 pub fn cmd_help(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!(
-			"If used without arguments, prints a list of all available commands.
-			Giving the name of a command as a first argument is the same as giving
+		println!(
+			"If used without arguments, prints a list of all available commands.\r\n\
+			Giving the name of a command as a first argument is the same as giving \
 			`command --help`."
 		);
 		return Request::None;
@@ -161,7 +160,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 
 pub fn cmd_home(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!("Prints the directory which holds the user info directory.");
+		println!("Prints the directory which holds the user info directory.");
 		return Request::None;
 	}
 
@@ -169,8 +168,7 @@ pub fn cmd_home(args: CommandArgs) -> Request {
 		Some(p) => info!("{}", p.display()),
 		None => {
 			info!(
-				"Home directory path is malformed, \
-				or this platform is unsupported."
+				"Home directory path is malformed, or this platform is unsupported."
 			);
 		}
 	}
@@ -180,7 +178,7 @@ pub fn cmd_home(args: CommandArgs) -> Request {
 
 pub fn cmd_quit(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!("Instantly closes the application.");
+		println!("Instantly closes the application.");
 		return Request::None;
 	}
 
@@ -189,7 +187,7 @@ pub fn cmd_quit(args: CommandArgs) -> Request {
 
 pub fn cmd_uptime(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!("Prints the current cumulative uptime of the application.");
+		println!("Prints the current cumulative uptime of the application.");
 		return Request::None;
 	}
 
@@ -200,7 +198,7 @@ pub fn cmd_uptime(args: CommandArgs) -> Request {
 
 pub fn cmd_version(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		info!("Prints the engine version.");
+		println!("Prints the engine version.");
 		return Request::None;
 	}
 
