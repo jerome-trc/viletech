@@ -405,7 +405,7 @@ impl VirtualFs {
 				Some(p) => p,
 				None => {
 					warn!(
-						"A zip file entry contains an unsafe path at index: {i}\r\n
+						"A zip file entry contains an unsafe path at index: {i}\r\n\
 						Zip file virtual path: {}",
 						virt_path.display()
 					);
