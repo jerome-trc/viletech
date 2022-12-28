@@ -122,7 +122,7 @@ the alias' associated string is expanded into the output, if that alias exists."
 pub fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints out all of the program's launch arguments.".to_string(),
+			"Prints out all of the program's launch arguments.",
 		);
 	}
 
@@ -153,7 +153,7 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 /// Clears the console's message history.
 pub fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		return req_console_write_help("Clears the console's message history.".to_string());
+		return req_console_write_help("Clears the console's message history.");
 	}
 
 	req_callback(|core| {
@@ -163,7 +163,7 @@ pub fn ccmd_clear(args: CommandArgs) -> Request {
 
 pub fn ccmd_exit(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		return req_console_write_help("Instantly closes the client.".to_string());
+		return req_console_write_help("Instantly closes the client.");
 	}
 
 	Request::Exit
@@ -176,7 +176,7 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 		return req_console_write_help(
 			"Prints the contents of a virtual file system directory, \
 			or information about a file."
-				.to_string(),
+				,
 		);
 	}
 
@@ -192,7 +192,7 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Clear's the console's history of submitted input strings.".to_string(),
+			"Clear's the console's history of submitted input strings.",
 		);
 	}
 
@@ -211,7 +211,7 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 			"If used without arguments, prints a list of all available commands.\r\n\
 			Giving the name of a command as a first argument is the same as giving \
 			`command --help`."
-				.to_string(),
+				,
 		);
 	}
 
@@ -248,7 +248,7 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 pub fn ccmd_home(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints the path to the directory which holds the user info directory.".to_string(),
+			"Prints the path to the directory which holds the user info directory.",
 		);
 	}
 
@@ -269,7 +269,7 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 pub fn ccmd_luamem(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints the current heap memory used by the client's Lua state.".to_string(),
+			"Prints the current heap memory used by the client's Lua state.",
 		);
 	}
 
@@ -320,7 +320,7 @@ Options:
 
 	if args.no_operands() {
 		return req_console_write_help(
-			"No virtual file path, asset ID, or asset handle provided.".to_string(),
+			"No virtual file path, asset ID, or asset handle provided.",
 		);
 	}
 
@@ -338,7 +338,7 @@ Options:
 			"wildmidi" => zmusic::device::Index::WildMidi,
 			"adl" => zmusic::device::Index::Adl,
 			"opn" => zmusic::device::Index::Opn,
-			"" => return req_console_write_help("`--device` requires a string value.".to_string()),
+			"" => return req_console_write_help("`--device` requires a string value."),
 			other => return req_console_write_help(format!("Unknown MIDI device: `{other}`")),
 		}
 	} else {
@@ -347,7 +347,7 @@ Options:
 
 	let volume = if let Some(option) = args.find_option(|opt| opt.starts_with("--volume")) {
 		let val = match CommandArgs::option_value(option) {
-			"" => return req_console_write_help("`--volume` requires a string value.".to_string()),
+			"" => return req_console_write_help("`--volume` requires a string value."),
 			v => v,
 		};
 
@@ -445,7 +445,7 @@ Options:
 
 	if args.no_operands() {
 		return req_console_write_help(
-			"No virtual file path, asset ID, or asset handle provided.".to_string(),
+			"No virtual file path, asset ID, or asset handle provided.",
 		);
 	}
 
@@ -453,7 +453,7 @@ Options:
 
 	let volume = if let Some(option) = args.find_option(|opt| opt.starts_with("--volume")) {
 		let val = match CommandArgs::option_value(option) {
-			"" => return req_console_write_help("`--volume` requires a string value.".to_string()),
+			"" => return req_console_write_help("`--volume` requires a string value."),
 			v => v,
 		};
 
@@ -511,7 +511,7 @@ Options:
 pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints the length of the time the engine has been running.".to_string(),
+			"Prints the length of the time the engine has been running.",
 		);
 	}
 
@@ -524,7 +524,7 @@ pub fn ccmd_uptime(args: CommandArgs) -> Request {
 pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints information about the graphics device and WGPU backend.".to_string(),
+			"Prints information about the graphics device and WGPU backend.",
 		);
 	}
 
@@ -537,7 +537,7 @@ pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
 pub fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints the full version information of the engine and client.".to_string(),
+			"Prints the full version information of the engine and client.",
 		);
 	}
 
@@ -549,7 +549,7 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
-			"Prints information about the state of the virtual file system.".to_string(),
+			"Prints information about the state of the virtual file system.",
 		);
 	}
 
@@ -580,7 +580,9 @@ fn req_console_write_invalidopt(opt: &str) -> Request {
 }
 
 #[must_use]
-fn req_console_write_help(message: String) -> Request {
+fn req_console_write_help(message: impl Into<String>) -> Request {
+	let message = message.into();
+
 	Request::Callback(Box::new(move |core| {
 		core.console.write(message.clone(), MessageKind::Help);
 	}))
