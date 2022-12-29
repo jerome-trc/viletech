@@ -16,9 +16,9 @@ bitflags = { workspace = true }
 bytemuck = { workspace = true }
 byteorder = "1.4.3"
 chrono = { workspace = true }
-cranelift = "0.90.1"
-cranelift-jit = "0.90.1"
-cranelift-module = "0.90.1"
+cranelift = "0.91.0"
+cranelift-jit = "0.91.0"
+cranelift-module = "0.91.0"
 crossbeam = { workspace = true }
 dolly = { workspace = true }
 doom-front = { workspace = true }
