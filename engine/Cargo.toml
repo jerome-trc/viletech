@@ -49,7 +49,6 @@ indoc = { workspace = true }
 kira = { workspace = true}
 log = { workspace = true }
 md5 = "0.7.0"
-mlua = { workspace = true }
 naga = "0.10.0"
 nanorand = { workspace = true }
 num = "0.4.0"

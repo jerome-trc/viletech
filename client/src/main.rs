@@ -24,13 +24,11 @@ mod core;
 use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
 
 use log::{error, info};
-use mlua::prelude::*;
 use parking_lot::RwLock;
 use vile::{
 	console::Console,
 	data::DataCore,
 	gfx::{core::GraphicsCore, render},
-	lua::LuaExt,
 	vfs::{VirtualFs, VirtualFsExt},
 };
 use winit::{
@@ -71,15 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	vile::log_init_diag(&version_string())?;
 
-	let devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
-
-	let lua = match Lua::new_ex(!devmode) {
-		Ok(l) => l,
-		Err(err) => {
-			error!("Failed to initialise client Lua state: {}", err);
-			return Err(Box::new(err));
-		}
-	};
+	let _devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
@@ -92,14 +82,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 				\r\nError: {}",
 				err
 			);
-			return Err(Box::new(err));
-		}
-	};
-
-	match lua.init_api_common(vfs.clone()) {
-		Ok(()) => {}
-		Err(err) => {
-			error!("Failed to initialise Lua global state: {}", err);
 			return Err(Box::new(err));
 		}
 	};
@@ -157,7 +139,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	gfx.pipelines.push(pipeline);
 
-	let mut core = ClientCore::new(start_time, vfs, lua, data, gfx, console)?;
+	let mut core = ClientCore::new(start_time, vfs, data, gfx, console)?;
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {
@@ -193,7 +175,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 						core.audio.pause_all();
 					}
 				}
-				_ => {},
+				_ => {}
 			}
 
 			if resp.consumed {

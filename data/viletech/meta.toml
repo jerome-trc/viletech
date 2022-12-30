@@ -5,4 +5,4 @@ authors = ["***REMOVED***"]
 copyright = "© 2022 ***REMOVED***"
 links = ['https://github.com/***REMOVED***/viletech']
 version = "0.0.0"
-manifest = 'manifest/main.lua'
+manifest = 'manifest/main.lith'

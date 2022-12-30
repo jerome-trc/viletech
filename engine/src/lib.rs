@@ -40,7 +40,6 @@ pub mod input;
 #[allow(dead_code)]
 pub mod level;
 pub mod lith;
-pub mod lua;
 pub mod math;
 #[allow(dead_code)]
 pub mod rng;

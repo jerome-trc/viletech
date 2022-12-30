@@ -23,14 +23,12 @@ use std::{
 	time::{Duration, Instant},
 };
 
-use mlua::prelude::*;
 use nanorand::WyRand;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 
 use crate::{
 	data::DataCore,
 	ecs::{Components, DenseRegistry},
-	lua::LuaExt,
 	rng::RngCore,
 };
 
@@ -78,7 +76,6 @@ pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
 pub struct Context {
 	pub sim: Arc<RwLock<PlaySim>>,
-	pub lua: Arc<Mutex<Lua>>,
 	pub data: Arc<RwLock<DataCore>>,
 	pub receiver: InReceiver,
 	pub sender: OutSender,
@@ -115,7 +112,6 @@ pub fn run<const CFG: u8>(context: Context) {
 
 	let Context {
 		sim,
-		lua,
 		data: _,
 		receiver,
 		sender,
@@ -132,14 +128,11 @@ pub fn run<const CFG: u8>(context: Context) {
 	'sim: loop {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(tic_interval);
-		let lua = lua.lock();
-		lua.start_sim_tic();
 		let sim = sim.write();
 
 		while let Ok(msg) = receiver.try_recv() {
 			match msg {
 				InMessage::Stop => {
-					lua.finish_sim_tic();
 					break 'sim;
 				}
 				InMessage::IncreaseTicRate => {
@@ -160,8 +153,6 @@ pub fn run<const CFG: u8>(context: Context) {
 		// ???
 
 		drop(sim);
-		lua.finish_sim_tic();
-		drop(lua);
 
 		// If it took longer than the expected interval to process this tic,
 		// increase the time dilation; if it took less, try to go back up to

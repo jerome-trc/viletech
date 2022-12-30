@@ -20,7 +20,6 @@ egui = { workspace = true }
 indoc = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }
-mlua = { workspace = true }
 nanorand = { workspace = true }
 parking_lot = { workspace = true }
 shipyard = { workspace = true }

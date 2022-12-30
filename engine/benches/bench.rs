@@ -17,69 +17,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use std::{env, path::PathBuf, sync::Arc};
+use std::{env, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use mlua::prelude::*;
-use parking_lot::{Mutex, RwLock};
-use viletech::{lua::LuaExt, newtype_mut, rng::Prng, sim::PlaySim, vfs::VirtualFs};
 
-newtype_mut!(struct PlaySimBenchWrapper(PlaySim));
-
-impl LuaUserData for PlaySimBenchWrapper {}
-
-fn lua(crit: &mut Criterion) {
-	let lua = Lua::new_ex(true).unwrap();
-	lua.set_app_data(PlaySim::default());
-	let amps = Arc::new(Mutex::new(PlaySim::default()));
-	let arwps = Arc::new(RwLock::new(PlaySim::default()));
-	let regkey = lua
-		.create_registry_value(PlaySimBenchWrapper(PlaySim::default()))
-		.unwrap();
-	lua.set_named_registry_value("playsim", PlaySimBenchWrapper(PlaySim::default()))
-		.unwrap();
-
-	let mut grp_nativebind = crit.benchmark_group("Lua Native Binding");
-
-	grp_nativebind.bench_function("App Data", |bencher| {
-		bencher.iter(|| {
-			let mut r = lua.app_data_mut::<PlaySim>().unwrap();
-			let _ = r.rng.get_anon().range_i64(0, 1);
-		});
-	});
-
-	grp_nativebind.bench_function("Registry (Keyed) Userdata", |bencher| {
-		bencher.iter(|| {
-			let r = lua.registry_value::<LuaAnyUserData>(&regkey).unwrap();
-			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
-			let _ = ps.rng.get_anon().range_i64(0, 1);
-		});
-	});
-
-	grp_nativebind.bench_function("Registry (Named) Userdata", |bencher| {
-		bencher.iter(|| {
-			let r = lua
-				.named_registry_value::<_, LuaAnyUserData>("playsim")
-				.unwrap();
-			let mut ps = r.borrow_mut::<PlaySimBenchWrapper>().unwrap();
-			let _ = ps.rng.get_anon().range_i64(0, 1);
-		});
-	});
-
-	grp_nativebind.bench_function("Arc<Mutex<>>", |bencher| {
-		bencher.iter(|| {
-			let _ = amps.lock().rng.get_anon().range_i64(0, 1);
-		});
-	});
-
-	grp_nativebind.bench_function("Arc<RwLock<>>", |bencher| {
-		bencher.iter(|| {
-			let _ = arwps.write().rng.get_anon().range_i64(0, 1);
-		});
-	});
-
-	grp_nativebind.finish();
-}
+use viletech::vfs::VirtualFs;
 
 /// Leave this here even if it's empty, so there's a quick scaffold ready
 /// for one-off benchmarking experiments.
@@ -143,5 +85,5 @@ fn vfs(crit: &mut Criterion) {
 	lookup(crit, &mount_paths);
 }
 
-criterion_group!(benches, lua, misc, vfs);
+criterion_group!(benches, misc, vfs);
 criterion_main!(benches);

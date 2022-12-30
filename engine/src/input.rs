@@ -20,7 +20,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-use mlua::prelude::*;
 use winit::{
 	dpi::PhysicalPosition,
 	event::{ElementState, KeyboardInput, ModifiersState, MouseButton, ScanCode, VirtualKeyCode},
@@ -122,5 +121,5 @@ pub struct KeyBind<A> {
 	pub on_release: A,
 }
 
-pub type UserKeyBind = KeyBind<LuaRegistryKey>;
+pub type UserKeyBind = KeyBind<()>; // TODO: Bound LithScript function
 pub type IdleKeyBind = KeyBind<()>;

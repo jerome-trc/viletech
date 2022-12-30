@@ -18,7 +18,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 use bitflags::bitflags;
-use mlua::prelude::*;
 
 use crate::data::AssetHandle;
 
@@ -118,11 +117,7 @@ pub enum ActorStateVisual {
 }
 
 pub struct ActorStateAction {
-	/// Note that this function will have already been bound to its arguments,
-	/// destructured from the table stored in `args`.
-	func: LuaRegistryKey,
-	/// Points to a table.
-	args: LuaRegistryKey,
+	// TODO: Bound LithScript function
 }
 
 pub struct ActorState {

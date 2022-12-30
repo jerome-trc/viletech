@@ -20,7 +20,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 use std::{error::Error, path::PathBuf, sync::Arc};
 
 use log::error;
-use mlua::prelude::*;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
 use shipyard::World;
@@ -31,7 +30,6 @@ use vile::{
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
-	lua::LuaExt,
 	rng::RngCore,
 	sim::{self, PlaySim},
 	vfs::{VirtualFs, VirtualFsExt},
@@ -77,7 +75,6 @@ enum SceneChange {
 pub struct ClientCore {
 	pub start_time: std::time::Instant,
 	pub vfs: Arc<RwLock<VirtualFs>>,
-	pub lua: Arc<Mutex<Lua>>,
 	pub data: Arc<RwLock<DataCore>>,
 	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub gfx: GraphicsCore,
@@ -96,7 +93,6 @@ impl ClientCore {
 	pub fn new(
 		start_time: std::time::Instant,
 		vfs: Arc<RwLock<VirtualFs>>,
-		lua: Lua,
 		data: DataCore,
 		gfx: GraphicsCore,
 		console: Console<ConsoleCommand>,
@@ -111,7 +107,6 @@ impl ClientCore {
 		let mut ret = ClientCore {
 			start_time,
 			vfs,
-			lua: Arc::new(Mutex::new(lua)),
 			data: Arc::new(RwLock::new(data)),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
@@ -133,12 +128,6 @@ impl ClientCore {
 			},
 			next_scene: None,
 		};
-
-		{
-			let lua = ret.lua.lock();
-			lua.init_api_client(Some(ret.rng.clone()))?;
-			lua.load_api_client();
-		}
 
 		ret.register_console_commands();
 		vile::user::build_user_dirs()?;
@@ -331,36 +320,13 @@ impl ClientCore {
 		}
 
 		let vkc = event.virtual_keycode.unwrap();
-		let binds = self
+		let _binds = self
 			.input
 			.user_binds
 			.iter()
 			.filter(|kb| kb.keycode == vkc && kb.modifiers == self.input.modifiers);
-		let lua = self.lua.lock();
 
-		if event.state == ElementState::Pressed {
-			for bind in binds {
-				let func: LuaFunction = lua.registry_value(&bind.on_press).unwrap();
-
-				match func.call(()) {
-					Ok(()) => {}
-					Err(err) => {
-						error!("Error in key action `{}`: {}", bind.id, err);
-					}
-				};
-			}
-		} else {
-			for bind in binds {
-				let func: LuaFunction = lua.registry_value(&bind.on_release).unwrap();
-
-				match func.call(()) {
-					Ok(()) => {}
-					Err(err) => {
-						error!("Error in key action `{}`: {}", bind.id, err);
-					}
-				};
-			}
-		}
+		// TODO: Invoke LithScript callbacks
 	}
 
 	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {
@@ -519,15 +485,6 @@ impl ClientCore {
 		);
 
 		self.console.register_command(
-			"luamem",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_luamem,
-			},
-			true,
-		);
-
-		self.console.register_command(
 			"music",
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
@@ -596,17 +553,7 @@ impl ClientCore {
 		let (txin, rxin) = crossbeam::channel::unbounded();
 
 		let sim = Arc::new(RwLock::new(PlaySim::default()));
-		let lua = self.lua.clone();
 		let data = self.data.clone();
-
-		{
-			let l = self.lua.lock();
-
-			l.init_api_playsim(sim.clone())
-				.expect("Failed to construct Lua's playsim API.");
-
-			l.set_app_data(sim.clone());
-		}
 
 		self.console
 			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
@@ -620,7 +567,6 @@ impl ClientCore {
 				.spawn(move || {
 					vile::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
 						sim,
-						lua,
 						data,
 						sender: txout,
 						receiver: rxin,
@@ -643,21 +589,8 @@ impl ClientCore {
 			Err(err) => panic!("Sim thread panicked: {:#?}", err),
 		};
 
-		let lua = self.lua.lock();
-		lua.remove_app_data::<Arc<RwLock<PlaySim>>>().unwrap();
-
-		lua.clear_api_playsim()
-			.expect("Failed to destroy Lua's playsim API.");
-		lua.expire_registry_values();
-
-		// This function's documentation recommends running it twice
-		lua.gc_collect()
-			.expect("Failed to run Lua GC after closing playsim.");
-		lua.gc_collect()
-			.expect("Failed to run Lua GC after closing playsim.");
-
 		// The arc-locked playsim object is meant to be dropped upon scene change,
-		// so ensure no references have survived thread teardown and Lua GC
+		// so ensure no references have survived thread teardown
 
 		debug_assert_eq!(
 			Arc::strong_count(&sim.sim),

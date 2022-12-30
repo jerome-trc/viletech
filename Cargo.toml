@@ -32,15 +32,6 @@ indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
 indoc = "1.0.8"
 kira = "0.7.1"
 log = "0.4.16"
-luajit-src = "210.3.4"
-mlua = { version = "0.8.6", features = [
-	"async",
-	"luajit52",
-	"parking_lot",
-	"send",
-	"serialize",
-	"vendored",
-] }
 nanorand = "0.7.0"
 parking_lot = "0.12.1"
 rayon = "1.5.3"

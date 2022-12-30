@@ -121,9 +121,7 @@ the alias' associated string is expanded into the output, if that alias exists."
 /// Echoes every launch argument given to the client.
 pub fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		return req_console_write_help(
-			"Prints out all of the program's launch arguments.",
-		);
+		return req_console_write_help("Prints out all of the program's launch arguments.");
 	}
 
 	let mut args = env::args();
@@ -175,8 +173,7 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
 			"Prints the contents of a virtual file system directory, \
-			or information about a file."
-				,
+			or information about a file.",
 		);
 	}
 
@@ -191,9 +188,7 @@ pub fn ccmd_file(args: CommandArgs) -> Request {
 /// Clears the console's history of submitted input strings.
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help_requested() {
-		return req_console_write_help(
-			"Clear's the console's history of submitted input strings.",
-		);
+		return req_console_write_help("Clear's the console's history of submitted input strings.");
 	}
 
 	req_callback(|core| {
@@ -210,8 +205,7 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 		return req_console_write_help(
 			"If used without arguments, prints a list of all available commands.\r\n\
 			Giving the name of a command as a first argument is the same as giving \
-			`command --help`."
-				,
+			`command --help`.",
 		);
 	}
 
@@ -265,22 +259,6 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 	Request::None
 }
 
-/// Prints the current heap memory used by the client's Lua state.
-pub fn ccmd_luamem(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints the current heap memory used by the client's Lua state.",
-		);
-	}
-
-	req_callback(|core| {
-		info!(
-			"Lua state heap usage (bytes): {}",
-			core.lua.lock().used_memory()
-		);
-	})
-}
-
 pub fn ccmd_music(args: CommandArgs) -> Request {
 	if args.help_requested() || args.name_only() {
 		return req_console_write_help(formatdoc! {"
@@ -319,9 +297,7 @@ Options:
 	}
 
 	if args.no_operands() {
-		return req_console_write_help(
-			"No virtual file path, asset ID, or asset handle provided.",
-		);
+		return req_console_write_help("No virtual file path, asset ID, or asset handle provided.");
 	}
 
 	let path_string = args.operands().next().unwrap().to_string();
@@ -444,9 +420,7 @@ Options:
 	}
 
 	if args.no_operands() {
-		return req_console_write_help(
-			"No virtual file path, asset ID, or asset handle provided.",
-		);
+		return req_console_write_help("No virtual file path, asset ID, or asset handle provided.");
 	}
 
 	let path_string = args.operands().next().unwrap().to_string();

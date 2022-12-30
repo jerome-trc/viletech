@@ -167,9 +167,7 @@ pub fn cmd_home(args: CommandArgs) -> Request {
 	match get_user_dir() {
 		Some(p) => info!("{}", p.display()),
 		None => {
-			info!(
-				"Home directory path is malformed, or this platform is unsupported."
-			);
+			info!("Home directory path is malformed, or this platform is unsupported.");
 		}
 	}
 
