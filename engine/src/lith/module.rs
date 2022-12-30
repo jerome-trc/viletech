@@ -16,6 +16,7 @@ use super::{
 	func::{FunctionFlags, FunctionInfo},
 	interop::NativeFnBox,
 	word::Word,
+	Params, Returns,
 };
 
 /// Start by [creating a `Builder`] and populating it with native functions and
@@ -88,30 +89,38 @@ impl Builder {
 
 	/// Note that this is the only way to register native functions with a module.
 	/// Panics if a native function with the same name has already been registered.
-	pub fn add_function<F, const PARAM_C: usize, const RET_C: usize>(
+	pub fn add_function<F, P, R, const PARAM_C: usize, const RET_C: usize>(
 		mut self,
-		function: F,
+		mut function: F,
 		name: String,
 	) -> Self
 	where
-		F: 'static + Send + FnMut([Word; PARAM_C]) -> [Word; RET_C],
+		F: 'static + Send + FnMut(P) -> R,
+		P: Params<PARAM_C>,
+		R: Returns<RET_C>,
 	{
 		assert!(
 			!self.native_fns.iter().any(|nfn| name == nfn.name),
 			"Tried to clobber native function: {name}"
 		);
 
-		let callback = Box::new(function);
+		let wrapper = Box::new(move |args: [Word; PARAM_C]| {
+			let rs_args = P::decompose(args);
+			let rs_rets = function(rs_args);
+			rs_rets.compose()
+		});
+
 		let (fat0, fat1) =
-			unsafe { std::mem::transmute_copy::<_, (*const u8, *const u8)>(&callback) };
+			unsafe { std::mem::transmute_copy::<_, (*const u8, *const u8)>(&wrapper) };
 		let trampoline = C_TRAMPOLINES[RET_C * (MAX_RETS + 1) + PARAM_C];
 
 		self.native_fns.push(NativeFn {
 			name: name.clone(),
+			wrapper,
+			trampoline,
+			sig_hash: super::func::hash_signature::<P, R, PARAM_C, RET_C>(),
 			param_len: PARAM_C,
 			ret_len: RET_C,
-			callback,
-			trampoline,
 		});
 
 		self.inner.symbol(format!("__{name}_FAT0__"), fat0);
@@ -145,7 +154,8 @@ impl Builder {
 				FunctionInfo {
 					_code: nfn.trampoline as *const c_void,
 					_flags: FunctionFlags::empty(),
-					_native: Some(nfn.callback),
+					_sig_hash: nfn.sig_hash,
+					_native: Some(nfn.wrapper),
 					_id: id,
 				},
 			);
@@ -162,8 +172,9 @@ impl Builder {
 /// Intermediate storage from [`Builder`] to [`Module`].
 struct NativeFn {
 	name: String,
+	wrapper: NativeFnBox,
+	trampoline: *const c_void,
 	param_len: usize,
 	ret_len: usize,
-	callback: NativeFnBox,
-	trampoline: *const c_void,
+	sig_hash: u64,
 }

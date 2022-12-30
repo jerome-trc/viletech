@@ -27,6 +27,8 @@ mod module;
 pub mod parse;
 mod word;
 
+pub use interop::Params;
+pub use interop::Returns;
 pub use module::Builder as ModuleBuilder;
 pub use module::Module;
 

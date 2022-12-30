@@ -210,6 +210,27 @@ impl From<Vec4I> for Word {
 		Self(unsafe { _mm_castsi128_ps(value.0) })
 	}
 }
+
+impl<T> From<Word> for (T,)
+where
+	T: Into<Word> + From<Word>,
+{
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		value.into()
+	}
+}
+
+impl<T> From<(T,)> for Word
+where
+	T: Into<Word> + From<Word>,
+{
+	#[inline(always)]
+	fn from(value: (T,)) -> Self {
+		value.into()
+	}
+}
+
 // Conversions: integral ///////////////////////////////////////////////////////
 
 macro_rules! int_converters {

@@ -1,3 +1,5 @@
+//! Some useful general-purpose macros. See the [crate docs](crate).
+
 /*
 
 Copyright (C) 2022 ***REMOVED***
@@ -16,6 +18,18 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
+
+/// Courtesy of Reddit user [YatoRust].
+///
+/// See <https://veykril.github.io/tlborm/decl-macros/building-blocks/counting.html>.
+///
+/// [YatoRust]: <https://www.reddit.com/r/rust/comments/d3yag8/the_little_book_of_rust_macros/>
+#[macro_export]
+macro_rules! count_tts {
+	() => { 0 };
+    ($odd:tt $($a:tt $b:tt)*) => { (count_tts!($($a)*) << 1) | 1 };
+    ($($a:tt $even:tt)*) => { count_tts!($($a)*) << 1 };
+}
 
 #[macro_export]
 macro_rules! replace_expr {
