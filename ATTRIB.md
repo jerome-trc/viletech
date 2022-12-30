@@ -122,6 +122,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By Amanieu d'Antras ([@Amanieu](https://github.com/Amanieu)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
 	- https://docs.rs/parking_lot/latest/parking_lot/
+- paste
+	- By David Tolnay ([@dtolnay](https://github.com/dtolnay)) et al.
+	- Provided under the [Apache 2.0 License](https://github.com/dtolnay/paste/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/paste/blob/master/LICENSE-MIT).
+	- https://docs.rs/paste/latest/paste/
 - peg
     - By Kevin Mehall ([@kevinmehall](https://github.com/kevinmehall)) et al.
     - Provided under the [MIT License](https://github.com/kevinmehall/rust-peg/blob/master/LICENSE).

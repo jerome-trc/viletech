@@ -57,6 +57,7 @@ num-derive = "0.3.3"
 once_cell = "1.15.0"
 palette = "0.6.1"
 parking_lot = { workspace = true }
+paste = "1.0.11"
 peg = "0.8.1"
 pollster = "0.2"
 raw-cpuid = "10.6.0"
