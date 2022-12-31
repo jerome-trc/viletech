@@ -27,10 +27,8 @@ mod module;
 pub mod parse;
 mod word;
 
-pub use interop::Params;
-pub use interop::Returns;
-pub use module::Builder as ModuleBuilder;
-pub use module::Module;
+pub use interop::{Params, Returns};
+pub use module::{Builder as ModuleBuilder, Module, OpenModule};
 
 /// No LithScript identifier in human-readable form may exceed this byte length.
 /// Mind that Lith only allows ASCII alphanumerics and underscores for identifiers,

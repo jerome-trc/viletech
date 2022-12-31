@@ -32,19 +32,19 @@ use crate::count_tts;
 
 use super::word::Word;
 
-pub(super) type NativeFnPtr<const ARG_C: usize, const RET_C: usize> =
-	*mut (dyn 'static + Send + FnMut([Word; ARG_C]) -> [Word; RET_C]);
+pub(super) type NativeFnPtr<const PARAM_C: usize, const RET_C: usize> =
+	*mut (dyn 'static + Send + FnMut([Word; PARAM_C]) -> [Word; RET_C]);
 
 pub(super) type NativeFnBox = Box<dyn 'static + Send + Any>;
 
 macro_rules! c_trampoline {
-	($arg_n:tt, $ret_n:tt) => {
+	($param_n:tt, $ret_n:tt) => {
 		paste! {
-			unsafe extern "C" fn [<c_trampoline_a $arg_n _r $ret_n>](
+			unsafe extern "C" fn [<c_trampoline_a $param_n _r $ret_n>](
 				function: (*const c_void, *const c_void),
-				args: [Word; $arg_n],
+				args: [Word; $param_n],
 			) -> [Word; $ret_n] {
-				let func = std::mem::transmute::<_, NativeFnPtr<{$arg_n}, {$ret_n}>>(function);
+				let func = std::mem::transmute::<_, NativeFnPtr<{$param_n}, {$ret_n}>>(function);
 				(*func)(args)
 			}
 		}
@@ -52,24 +52,24 @@ macro_rules! c_trampoline {
 }
 
 macro_rules! c_trampolines {
-	($($arg_n:tt),+) => {
+	($($param_n:tt),+) => {
 		$(
-			c_trampoline! { $arg_n, 0 }
-			c_trampoline! { $arg_n, 1 }
-			c_trampoline! { $arg_n, 2 }
-			c_trampoline! { $arg_n, 3 }
-			c_trampoline! { $arg_n, 4 }
+			c_trampoline! { $param_n, 0 }
+			c_trampoline! { $param_n, 1 }
+			c_trampoline! { $param_n, 2 }
+			c_trampoline! { $param_n, 3 }
+			c_trampoline! { $param_n, 4 }
 		)+
 
 		paste! {
-			/// Can be indexed into with `RET_C * (MAX_RETS + 1) + ARG_C`.
+			/// Can be indexed into with `RET_C * (MAX_RETS + 1) + PARAM_C`.
 			pub(super) const C_TRAMPOLINES: &[*const c_void] = &[
 				$(
-					[<c_trampoline_a $arg_n _r 0>] as *const c_void,
-					[<c_trampoline_a $arg_n _r 1>] as *const c_void,
-					[<c_trampoline_a $arg_n _r 2>] as *const c_void,
-					[<c_trampoline_a $arg_n _r 3>] as *const c_void,
-					[<c_trampoline_a $arg_n _r 4>] as *const c_void,
+					[<c_trampoline_a $param_n _r 0>] as *const c_void,
+					[<c_trampoline_a $param_n _r 1>] as *const c_void,
+					[<c_trampoline_a $param_n _r 2>] as *const c_void,
+					[<c_trampoline_a $param_n _r 3>] as *const c_void,
+					[<c_trampoline_a $param_n _r 4>] as *const c_void,
 				)+
 			];
 		}

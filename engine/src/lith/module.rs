@@ -1,9 +1,15 @@
 //! A LithScript module is a single linkage unit.
 //!
-//! This is an equivalent concept to LLVM's module, Rust's module, Cranelift's
-//! module...
+//! This is an equivalent concept to modules in LLVM, Rust, and Cranelift.
+//!
+//! To get started, [create a `Builder`]. Register all native functions and data
+//! objects with it, and then use it to emit an [`OpenModule`]. This can then
+//! have script source compiled into it. When you're ready to start running code,
+//! close the `OpenModule` to get a [`Module`].
+//!
+//! [create a `Builder`]: Builder::new
 
-use std::ffi::c_void;
+use std::{ffi::c_void, sync::Arc};
 
 use cranelift::prelude::{types as ClTypes, AbiParam};
 use cranelift_jit::{JITBuilder, JITModule};
@@ -19,30 +25,54 @@ use super::{
 	Params, Returns,
 };
 
-/// Start by [creating a `Builder`] and populating it with native functions and
-/// data that you want to allow scripts to be able to access, and then call
-/// [`Builder::build`].
-///
-/// [creating a `Builder`]: Builder::new
-pub struct Module {
-	_name: String,
-	/// Freeing the module's memory requires pass-by-value, but [`Drop::drop`]
-	/// takes a mutable reference, so an indirection is needed here to allow
-	/// removing the module upon destruction. It is never `None`, ever.
-	inner: Option<JITModule>,
-	/// Indices are guaranteed to be stable, since this map is append-only.
-	_functions: IndexMap<String, FunctionInfo>,
+/// This can be cheaply cloned since it wraps an `Arc`. The actual compiled data
+/// is accessed lock-free, since it's stored immutably.
+#[derive(Clone)]
+pub struct Module(Arc<Inner>);
+
+impl Module {
+	/// "Native" modules are those with symbols pre-registered upon construction.
+	#[must_use]
+	pub fn is_native(&self) -> bool {
+		self.0.native
+	}
+
+	/// Re-open the module, re-enabling modification to its functions and data.
+	/// If this is not the only outstanding handle to this module's data, then
+	/// `Err(Self)` will be returned.
+	pub fn open(self) -> Result<OpenModule, Self> {
+		match Arc::try_unwrap(self.0) {
+			Ok(inner) => Ok(OpenModule(inner)),
+			Err(arc) => Err(Self(arc)),
+		}
+	}
 }
 
-impl Drop for Module {
-	fn drop(&mut self) {
-		let inner = self.inner.take();
+// Lith makes the following guarantees:
+// - An `OpenModule` is mutable, but it can not be safely moved across threads.
+// - A closed `Module` can be safely moved across threads, and its functions can
+// be called, but not in any way that mutates its inner state.
+unsafe impl Send for Module {}
+unsafe impl Sync for Module {}
 
-		debug_assert!(inner.is_some());
+impl std::fmt::Debug for OpenModule {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Module")
+			.field("name", &self.0.name)
+			.field("native", &self.0.native)
+			.field("functions", &self.0.functions)
+			.finish()
+	}
+}
 
-		unsafe {
-			inner.unwrap_unchecked().free_memory();
-		}
+/// A module has to be "open" for compiling code into it; it must be "closed" via
+/// [`close`](OpenModule::close) in order to be used by a runtime.
+pub struct OpenModule(Inner);
+
+impl OpenModule {
+	#[must_use]
+	pub fn close(self) -> Module {
+		Module(Arc::new(self.0))
 	}
 }
 
@@ -131,9 +161,11 @@ impl Builder {
 	}
 
 	#[must_use]
-	pub fn build(mut self) -> Module {
+	pub fn build(mut self) -> OpenModule {
 		let mut module = JITModule::new(self.inner);
 		let mut functions = IndexMap::with_capacity(self.native_fns.len());
+
+		let native = !self.native_fns.is_empty();
 
 		for nfn in self.native_fns.drain(..) {
 			let mut sig = module.make_signature();
@@ -161,15 +193,52 @@ impl Builder {
 			);
 		}
 
-		Module {
-			_name: self.name,
+		OpenModule(Inner {
+			name: self.name,
+			native,
 			inner: Some(module),
-			_functions: functions,
+			functions,
+		})
+	}
+}
+
+impl std::fmt::Debug for Builder {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Builder")
+			.field("name", &self.name)
+			.field("native_fns", &self.native_fns)
+			.finish()
+	}
+}
+
+struct Inner {
+	name: String,
+	/// Is `true` if this module had any native symbols loaded into it.
+	/// Special rules are applied when performing semantic checks on source being
+	/// compiled into a native module.
+	native: bool,
+	/// Freeing the module's memory requires pass-by-value, but [`Drop::drop`]
+	/// takes a mutable reference, so an indirection is needed here to allow
+	/// removing the module upon destruction. It is never `None`, ever.
+	inner: Option<JITModule>,
+	/// Indices are guaranteed to be stable, since this map is append-only.
+	functions: IndexMap<String, FunctionInfo>,
+}
+
+impl Drop for Inner {
+	fn drop(&mut self) {
+		let inner = self.inner.take();
+
+		debug_assert!(inner.is_some());
+
+		unsafe {
+			inner.unwrap_unchecked().free_memory();
 		}
 	}
 }
 
 /// Intermediate storage from [`Builder`] to [`Module`].
+#[derive(Debug)]
 struct NativeFn {
 	name: String,
 	wrapper: NativeFnBox,

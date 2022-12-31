@@ -30,6 +30,7 @@ use cranelift_module::FuncId;
 use super::{interop::NativeFnBox, Params, Returns};
 
 /// Internal storage of the function code pointer and metadata.
+#[derive(Debug)]
 pub(super) struct FunctionInfo {
 	/// This is a pointer to either a JIT-compiled function or a C trampoline
 	/// for a native function. Either way, never try to deallocate it.
