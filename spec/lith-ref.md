@@ -12,7 +12,7 @@ The following characters are considered whitespace and are insignificant to the 
 
 ## Comments
 
-Lith uses Rust-style comments. These are treated as whitespace by the compiler.
+LithScript uses Rust-style comments. These are treated as whitespace by the compiler.
 
 `// This is a single-line comment.`
 `x = /* Block comments can be written between tokens.*/ y + z`
@@ -48,11 +48,13 @@ Identifiers are used to name items, types, and variables. An identifier can cons
 
 Identifiers beginning with an underscore (e.g. `_id_tech`) are to be used as a hint to tools that the thing under the identifier is allowed to go unused.
 
+Identifiers beginning and/or ending with two underscores (e.g. `__escape`, `Castle__`, or `__WOLFENSTEIN__`) are invalid for use by user scripts, as they are reserved for internal use.
+
 The "discard" identifier consists of only one underscore (`_`) and is used to indicate to both humans and tools that a declared local variable or parameter is unused by the program. This identifier can not overlap or shadow other identical identifiers and can not be consumed; a variable under this identifier can not be passed as an argument.
 
 ## Type System
 
-Lith leans to strong, gradual typing.
+LithScript leans towards strong, gradual typing.
 
 `void` is a non-type that only exists for the purposes of function return type specification.
 
@@ -62,7 +64,7 @@ Lith leans to strong, gradual typing.
 
 `char` uses Rust character semantics; it represents a single valid UTF-8 code point.
 
-Lith's integral and floating-point types map to LLVM integral types for brevity and immediate clarity as to their size:
+LithScript's integral and floating-point types map to LLVM integral types for brevity and immediate clarity as to their size:
 
 `i8` `u8`
 `i16` `u16`
@@ -75,13 +77,29 @@ Integers of different signedness and bit-width can only be converted via cast.
 
 The function pointer type is written `function<(A...) R>`, where `A` is any number of arguments and `R` is a return type.
 
+### Enumerations
+
+LithScript enumerations behave similarly to C++ scoped enumerations. Each is a series of named integral constants, incrementing with each variant declared, with an optional discriminant in the form of a constant expression.
+
+### Unions
+
+LithScript unions are tagged algebraic types.
+
+### Classes
+
+A class object in LithScript is a reference-counted heap object that can never be held by value.
+
+### Pointers and References
+
+LithScript offers two ways to manage memory in the VM heap: `Ref` and `Ptr`. `Ref` is a handle to a heap value that is guaranteed at compile time to be non-null. `Ptr` is a type known to the compiler which uses the same semantics as `Option`. These handles types are the only ways to interact with class objects, which are never held as script values.
+
 ## Resolvers
 
 "Resolver" is the name given to what is known in Rust as a "path"; a series of identifiers with optionally-interspersed generic arguments joined by the scope resolution operator `::`. The name was chosen as such since "path" is a term reserved for filesystem nomenclature.
 
 ## Operators
 
-What follows is the complete list of Lith operators.
+What follows is the complete list of LithScript operators.
 
 ### Unary
 
@@ -152,12 +170,12 @@ Annotations are an all-purpose system for compile-time qualifications of arbitra
 
 ## Functions
 
-Lith does not support function overloading; identifiers must be unique.
+LithScript does not support function overloading; identifiers must be unique.
+
+A function declared in the body of a class or structure taking the parameter `self` or `const self` is considered a class method.
 
 ## Macros
 
-Definition of a Lith macro takes the following syntax: `macro macro_name(input, output) {}`, where `macro_name` is any valid identifier. The parameters can not take on any other name and do not require type specification. `input` is always a token stream and `output` is always a stream into which new AST nodes can be passed.
-
-The block within can be omitted for the purpose of declaring the macro without defining it, but only if the declaration is annotated as `#[native]`.
+A LithScript macro is a function with special semantics. Declaration of macro requires the signature `#[macro] TokenStream macro_name(input: TokenStream) {}`;  `macro_name` is any valid identifier, and the annotation `#[macro]` is a compiler built-in. The block within can be omitted for the purpose of declaring the macro without defining it, but only if the declaration is also annotated as `#[native]`.
 
 Invocation of a macro uses Rust form, wherein the macro's identifier is followed by a `!` and the input string is surrounded a pair of delimiters, both of which must belong to one kind from a choice of three. If using braces (`{}`), no semicolon is needed after the closing delimiter, but one is needed if using parentheses (`()`) or brackets (`[]`).
