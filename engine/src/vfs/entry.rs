@@ -105,6 +105,7 @@ impl Entry {
 		}
 	}
 
+	/// See [`std::path::Path::file_name`].
 	#[must_use]
 	pub fn file_name(&self) -> &str {
 		if self.path.is_root() {
@@ -118,14 +119,22 @@ impl Entry {
 			.expect("A VFS virtual path wasn't sanitised (UTF-8).")
 	}
 
-	/// For dealing in files in terms of "lumps" and their 8-ASCII-character name limit.
-	/// Truncates output of [`Self::file_name`] to 8 characters maximum.
+	/// See [`std::path::Path::file_stem`].
 	#[must_use]
-	pub fn file_name_short(&self) -> &str {
-		let strlen = self.file_name().chars().count().min(8);
-		&self.file_name()[..strlen]
+	pub fn file_stem(&self) -> &str {
+		if self.path.is_root() {
+			return "/";
+		}
+
+		self.path
+			.file_stem()
+			.expect("A VFS virtual path wasn't sanitised (OS).")
+			.to_str()
+			.expect("A VFS virtual path wasn't sanitised (UTF-8).")
 	}
 
+	/// Quickly gets the full path as a string slice. This is infallible, since
+	/// mounted paths are pre-sanitized.
 	#[must_use]
 	pub fn path_str(&self) -> &str {
 		self.path
@@ -175,7 +184,7 @@ impl Entry {
 	}
 
 	/// Returns [`Error::Unreadable`] if this entry is a directory, or empty.
-	pub fn read(&self) -> Result<&[u8], Error> {
+	pub fn try_read(&self) -> Result<&[u8], Error> {
 		match &self.kind {
 			EntryKind::Binary(bytes) => Ok(&bytes[..]),
 			EntryKind::String(string) => Ok(string.as_bytes()),
@@ -184,8 +193,8 @@ impl Entry {
 	}
 
 	/// Returns [`Error::InvalidUtf8`] if attempting to read a binary entry.
-	/// Otherwise acts like [`read`].
-	pub fn read_str(&self) -> Result<&str, Error> {
+	/// Otherwise acts like [`try_read`].
+	pub fn try_read_str(&self) -> Result<&str, Error> {
 		match &self.kind {
 			EntryKind::String(string) => Ok(string),
 			EntryKind::Binary(_) => Err(Error::InvalidUtf8),
@@ -193,9 +202,9 @@ impl Entry {
 		}
 	}
 
-	/// Like [`read`] but panics if trying to read a directory or empty entry.
+	/// Like [`try_read`] but panics if trying to read a directory or empty entry.
 	#[must_use]
-	pub fn read_unchecked(&self) -> &[u8] {
+	pub fn read(&self) -> &[u8] {
 		match &self.kind {
 			EntryKind::Binary(bytes) => &bytes[..],
 			EntryKind::String(string) => string.as_bytes(),
@@ -203,9 +212,9 @@ impl Entry {
 		}
 	}
 
-	/// Like [`read_str`] but panics if this isn't a string entry.
+	/// Like [`try_read_str`] but panics if this isn't a string entry.
 	#[must_use]
-	pub fn read_str_unchecked(&self) -> &str {
+	pub fn read_str(&self) -> &str {
 		match &self.kind {
 			EntryKind::String(string) => string,
 			_ => unreachable!("Tried to `read_str` a VFS non-string leaf."),

@@ -70,6 +70,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct SideDef {
 	offset: IVec2,
 	tex_top: AssetHandle,
@@ -78,6 +79,7 @@ pub struct SideDef {
 	sector: i32,
 }
 
+#[derive(Debug)]
 pub struct Sector {
 	height_floor: i32,
 	height_ceiling: i32,
@@ -88,6 +90,7 @@ pub struct Sector {
 	id: i32,
 }
 
+#[derive(Debug)]
 pub struct Metadata {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
@@ -115,6 +118,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct Episode {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
@@ -132,6 +136,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct Cluster {
 	/// Displayed to the user. May be a string ID.
 	text_enter: String,

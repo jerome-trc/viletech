@@ -337,7 +337,7 @@ Options:
 			return;
 		}
 
-		let bytes = fref.read_unchecked();
+		let bytes = fref.read();
 
 		if zmusic::MidiKind::is_midi(bytes) {
 			let midi = match core.audio.zmusic.new_song(bytes, midi_dev) {

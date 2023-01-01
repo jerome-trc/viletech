@@ -10,7 +10,7 @@ use doom_front::zscript::filesystem::{File as ZsFile, FileSystem as ZsFileSystem
 use log::{error, info, warn};
 
 use crate::{
-	data::{GameDataKind, MetaToml as GameDataMetaToml},
+	data::{MountKind, MountMetaIngest},
 	utils::{path::*, string::*},
 };
 
@@ -23,7 +23,7 @@ pub trait VirtualFsExt {
 	/// On the release build, attempt to mount `/utils::exe_dir()/viletech.zip`.
 	fn mount_enginedata(&mut self) -> Result<(), Error>;
 	#[must_use]
-	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml>;
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<MountMetaIngest>;
 
 	/// See [`FileRefExt::is_viletech_package`].
 	/// Returns `None` if and only if nothing exists at the given path.
@@ -51,12 +51,12 @@ pub trait VirtualFsExt {
 	fn has_decorate(&self, path: impl AsRef<Path>) -> Option<bool>;
 
 	#[must_use]
-	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> GameDataKind;
+	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> MountKind;
 
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GameDataMetaToml, Box<dyn std::error::Error>>;
+	) -> Result<MountMetaIngest, Box<dyn std::error::Error>>;
 
 	#[must_use]
 	fn window_icon_from_file(&self, path: impl AsRef<Path>) -> Option<winit::window::Icon>;
@@ -86,11 +86,11 @@ impl VirtualFsExt for VirtualFs {
 		self.mount(&[(path, "/viletech")]).pop().unwrap()
 	}
 
-	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<GameDataMetaToml> {
+	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<MountMetaIngest> {
 		let call_time = Instant::now();
 		let mut to_mount = Vec::<(&Path, PathBuf)>::with_capacity(paths.len());
 		let mut vers_strings = Vec::<String>::with_capacity(paths.len());
-		let mut ret = Vec::<GameDataMetaToml>::with_capacity(paths.len());
+		let mut ret = Vec::<MountMetaIngest>::with_capacity(paths.len());
 
 		for real_path in paths {
 			if real_path.is_symlink() {
@@ -192,7 +192,7 @@ impl VirtualFsExt for VirtualFs {
 				let id = to_mount[i].1.to_string_lossy().to_string();
 				let version = vers_strings.remove(0);
 
-				GameDataMetaToml {
+				MountMetaIngest {
 					id,
 					version,
 					..Default::default()
@@ -231,19 +231,19 @@ impl VirtualFsExt for VirtualFs {
 		self.lookup(path).map(|file| file.has_decorate())
 	}
 
-	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> GameDataKind {
-		fn check_path(path: &Path) -> std::option::Option<GameDataKind> {
+	fn gamedata_kind(&self, virtual_path: impl AsRef<Path>) -> MountKind {
+		fn check_path(path: &Path) -> std::option::Option<MountKind> {
 			if path.has_gzdoom_extension() {
-				return Some(GameDataKind::ZDoom);
+				return Some(MountKind::ZDoom);
 			}
 
 			if path.has_eternity_extension() {
-				return Some(GameDataKind::Eternity);
+				return Some(MountKind::Eternity);
 			}
 
 			if path.has_wad_extension() {
 				// TODO: Hash known IWADs, compare against those
-				return Some(GameDataKind::Wad { internal: false });
+				return Some(MountKind::Wad { internal: false });
 			}
 
 			None
@@ -277,7 +277,7 @@ impl VirtualFsExt for VirtualFs {
 						continue;
 					}
 
-					let meta: GameDataMetaToml = match toml::from_str(child.read_str_unchecked()) {
+					let meta: MountMetaIngest = match toml::from_str(child.read_str()) {
 						Ok(m) => m,
 						Err(err) => {
 							warn!(
@@ -291,9 +291,9 @@ impl VirtualFsExt for VirtualFs {
 					};
 
 					match meta.manifest {
-						Some(pb) => return GameDataKind::VileTech { manifest: pb },
+						Some(pb) => return MountKind::VileTech { manifest: pb },
 						None => {
-							return GameDataKind::VileTech {
+							return MountKind::VileTech {
 								manifest: PathBuf::default(),
 							}
 						}
@@ -305,7 +305,7 @@ impl VirtualFsExt for VirtualFs {
 				}
 			}
 			_ => {
-				return GameDataKind::File;
+				return MountKind::File;
 			}
 		};
 
@@ -317,9 +317,9 @@ impl VirtualFsExt for VirtualFs {
 	fn parse_gamedata_meta(
 		&self,
 		path: impl AsRef<Path>,
-	) -> Result<GameDataMetaToml, Box<dyn std::error::Error>> {
+	) -> Result<MountMetaIngest, Box<dyn std::error::Error>> {
 		let text = self.read_str(path.as_ref())?;
-		let ret: GameDataMetaToml = toml::from_str(text)?;
+		let ret: MountMetaIngest = toml::from_str(text)?;
 		Ok(ret)
 	}
 
@@ -365,14 +365,14 @@ impl VirtualFsExt for VirtualFs {
 			return format!(
 				"{}\r\n\tSize: {}B",
 				file.file_name(),
-				file.read().unwrap().len()
+				file.try_read().unwrap().len()
 			);
 		}
 
 		let child_count = file.child_count();
 		let mut ret = String::with_capacity(child_count * 32);
 
-		for child in file.children() {
+		for child in file.child_entries() {
 			match write!(ret, "\r\n\t{}", child.file_name()) {
 				Ok(()) => {}
 				Err(err) => {
@@ -426,7 +426,7 @@ pub trait FileRefExt {
 impl FileRefExt for FileRef<'_> {
 	fn is_viletech_package(&self) -> bool {
 		self.is_dir()
-			&& self.children().any(|e| {
+			&& self.child_entries().any(|e| {
 				e.path
 					.file_stem()
 					.unwrap_or_default()
@@ -435,12 +435,12 @@ impl FileRefExt for FileRef<'_> {
 	}
 
 	fn is_udmf_map(&self) -> bool {
-		self.children().any(|e| e.file_name() == "TEXTMAP")
+		self.child_entries().any(|e| e.file_name() == "TEXTMAP")
 	}
 
 	fn has_decorate(&self) -> bool {
 		self.is_dir()
-			&& self.children().any(|e| {
+			&& self.child_entries().any(|e| {
 				let stem = e
 					.path
 					.file_stem()
@@ -456,7 +456,7 @@ impl FileRefExt for FileRef<'_> {
 
 	fn has_zscript(&self) -> bool {
 		self.is_dir()
-			&& self.children().any(|e| {
+			&& self.child_entries().any(|e| {
 				let stem = e
 					.path
 					.file_stem()
@@ -472,7 +472,7 @@ impl FileRefExt for FileRef<'_> {
 
 	fn has_edfroot(&self) -> bool {
 		self.is_dir()
-			&& self.children().any(|e| {
+			&& self.child_entries().any(|e| {
 				let stem = e
 					.path
 					.file_stem()
@@ -489,7 +489,7 @@ impl FileRefExt for FileRef<'_> {
 
 impl ZsFileSystem for FileRef<'_> {
 	fn get_file(&mut self, filename: &str) -> Option<ZsFile> {
-		let target = match self.children().find(|e| e.path_str() == filename) {
+		let target = match self.child_entries().find(|e| e.path_str() == filename) {
 			Some(h) => h,
 			None => {
 				let full_path = self.path.join(filename);
@@ -513,11 +513,11 @@ impl ZsFileSystem for FileRef<'_> {
 	fn get_files_no_ext(&mut self, filename: &str) -> Vec<ZsFile> {
 		let mut ret = Vec::<ZsFile>::default();
 
-		for child in self.children() {
+		for child in self.child_entries() {
 			let mut noext = child.file_name().splitn(2, '.');
 
 			let bytes = if child.is_leaf() {
-				child.read().unwrap()
+				child.try_read().unwrap()
 			} else {
 				continue;
 			};

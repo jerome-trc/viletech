@@ -13,6 +13,7 @@ mod test;
 
 use std::{
 	collections::HashMap,
+	marker::PhantomData,
 	path::{Path, PathBuf},
 };
 
@@ -188,20 +189,54 @@ impl VirtualFs {
 			})
 	}
 
-	/// This function can't fail, since a `Handle` is assumed to always be correct.
-	/// In a debug build, this will panic if the VFS was modified in any way after
-	/// the handle was retrieved via [`make_handle`](Self::make_handle).
-	/// In a release build, this function may panic or quietly emit incorrect
-	/// results if the VFS gets modified after the given handle was generated.
+	/// Will panic if the VFS was modified between handle creation and usage here.
 	#[must_use]
 	pub fn get(&self, handle: Handle) -> FileRef {
-		debug_assert!(handle.generation == self.generation);
+		assert!(
+			handle.generation == self.generation,
+			"Tried to consume an outdated `vfs::Handle`."
+		);
 
 		FileRef {
 			vfs: self,
 			entry: &self.entries[handle.index],
 			index: handle.index,
 		}
+	}
+
+	/// Will return `None` if the VFS was modified between handle creation and usage here.
+	#[must_use]
+	pub fn try_get(&self, handle: Handle) -> Option<FileRef> {
+		if handle.generation == self.generation {
+			Some(FileRef {
+				vfs: self,
+				entry: &self.entries[handle.index],
+				index: handle.index,
+			})
+		} else {
+			None
+		}
+	}
+
+	/// Maximally-fast consumption of a handle. Comes with the minimal protection
+	/// of a debug assertion. Not marked `unsafe` since the internal index operation
+	/// will panic if the handle is out-of-bounds, and the worst consequence of
+	/// misuse is getting a `FileRef` to an unexpected entry, which can't cause
+	/// undefined behaviour or program corruption without external use of `unsafe`.
+	#[must_use]
+	pub fn get_unchecked(&self, handle: Handle) -> FileRef {
+		FileRef {
+			vfs: self,
+			entry: &self.entries[handle.index],
+			index: handle.index,
+		}
+	}
+
+	/// Returns `false` if this VFS has been modified between the creation
+	/// of `handle` and the time this function is called.
+	#[must_use]
+	pub fn handle_is_valid(&self, handle: Handle) -> bool {
+		handle.generation == self.generation
 	}
 
 	/// Check if anything exists at the given path.
@@ -230,7 +265,7 @@ impl VirtualFs {
 		};
 
 		match &entry.kind {
-			EntryKind::Binary(..) | EntryKind::String(..) => Ok(entry.read_unchecked()),
+			EntryKind::Binary(..) | EntryKind::String(..) => Ok(entry.read()),
 			_ => Err(Error::Unreadable),
 		}
 	}
@@ -348,7 +383,8 @@ pub struct DiagInfo {
 /// These are as fast to produce as a [`FileRef`] and trivial to copy.
 ///
 /// To acquire one, use [`VirtualFs::make_handle`], and to consume one, use
-/// [`VirtualFs::get`]. See those two functions' documentation for usage caveats.
+/// [`VirtualFs::try_get`], [`VirtualFs::get`], or [`VirtualFs::get_unchecked`].
+/// See those functions' documentation for usage caveats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Handle {
 	index: usize,
@@ -357,14 +393,15 @@ pub struct Handle {
 }
 
 #[derive(Debug)]
-pub struct Iter<'vfs> {
+pub struct Iter<'vfs, T> {
 	vfs: &'vfs VirtualFs,
 	elements: &'vfs [usize],
 	/// This points into `elements`, not `VirtualFs::entries`.
 	current: usize,
+	_phantom: PhantomData<T>,
 }
 
-impl<'vfs> Iterator for Iter<'vfs> {
+impl<'vfs> Iterator for Iter<'vfs, &Entry> {
 	type Item = &'vfs Entry;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -375,6 +412,25 @@ impl<'vfs> Iterator for Iter<'vfs> {
 		let ret = &self.vfs.entries[self.elements[self.current]];
 		self.current += 1;
 		Some(ret)
+	}
+}
+
+impl<'vfs> Iterator for Iter<'vfs, FileRef<'vfs>> {
+	type Item = FileRef<'vfs>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.current >= self.elements.len() {
+			return None;
+		}
+
+		let entry = &self.vfs.entries[self.elements[self.current]];
+		self.current += 1;
+
+		Some(FileRef {
+			vfs: self.vfs,
+			entry,
+			index: self.elements[self.current],
+		})
 	}
 }
 
@@ -403,12 +459,13 @@ impl VirtualFs {
 	}
 
 	/// Panics if a non-directory entry is passed to it.
-	fn children_of<'vfs>(&'vfs self, entry: &'vfs Entry) -> impl Iterator<Item = &'vfs Entry> {
+	fn children_of<'vfs>(&'vfs self, entry: &'vfs Entry) -> Iter<&Entry> {
 		match &entry.kind {
 			EntryKind::Directory(elements) => Iter::<'vfs> {
 				vfs: self,
 				elements,
 				current: 0,
+				_phantom: PhantomData,
 			},
 			_ => unreachable!(),
 		}

@@ -395,7 +395,7 @@ pub fn sound_from_file(
 	file: FileRef,
 	settings: StaticSoundSettings,
 ) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
-	let bytes = file.read()?.to_owned();
+	let bytes = file.try_read()?.to_owned();
 	let cursor = io::Cursor::new(bytes);
 
 	match StaticSoundData::from_cursor(cursor, settings) {

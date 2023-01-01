@@ -170,7 +170,7 @@ impl AudioCore {
 			return;
 		}
 
-		let bytes = fref.read_unchecked();
+		let bytes = fref.read();
 
 		if zmusic::MidiKind::is_midi(bytes) {
 			let midi = match self.zmusic.new_song(bytes, self.gui.midi_device) {

@@ -78,6 +78,7 @@ bitflags::bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct Wrapper<A: Asset> {
 	pub(super) inner: A,
 	pub(super) _flags: Flags,
@@ -131,6 +132,6 @@ asset_impls! {
 	{ super::Music, music, 9 },
 	{ super::Sound, sounds, 10 },
 	{ crate::gfx::doom::ColorMap, colormap, 11 },
-	{ crate::gfx::doom::Endoom, endoom, 12 },
-	{ crate::gfx::doom::Palette, palette, 13 }
+	{ crate::gfx::doom::Endoom, endooms, 12 },
+	{ crate::gfx::doom::Palette, palettes, 13 }
 }

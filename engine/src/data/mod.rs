@@ -3,7 +3,10 @@
 
 pub mod asset;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+	collections::HashMap,
+	path::{Path, PathBuf},
+};
 
 use doom_front::zscript::err::ParsingErrorLevel as ZsParseIssueLevel;
 use globset::Glob;
@@ -17,7 +20,8 @@ use crate::{
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
-	newtype,
+	lith, newtype,
+	utils::string,
 	vfs::{FileRef, VirtualFs, VirtualFsExt},
 	zscript,
 };
@@ -28,53 +32,73 @@ pub use asset::{
 
 use self::asset::Asset;
 
+// TODO: Unify whenever ZMusic gets replaced
 newtype!(pub struct Music(StaticSoundData));
 newtype!(pub struct Sound(StaticSoundData));
 
 /// Note that all user-facing string fields within may be IDs or expanded.
-pub struct GameDataMeta {
-	pub id: String,
-	pub kind: GameDataKind,
-	pub version: String,
+#[derive(Debug)]
+pub struct MountMeta {
+	id: String,
+	kind: MountKind,
+	version: String,
 	/// Display name presented to users.
-	pub name: String,
-	pub description: String,
-	pub authors: Vec<String>,
-	pub copyright: String,
+	name: String,
+	_description: String,
+	_authors: Vec<String>,
+	_copyright: String,
 	/// Allow a package to link to its forum post/homepage/Discord server/etc.
-	pub links: Vec<String>,
+	_links: Vec<String>,
+	virt_path: PathBuf,
 }
 
-impl GameDataMeta {
-	pub fn new(id: String, version: String, kind: GameDataKind) -> Self {
-		GameDataMeta {
-			id,
-			version,
-			kind,
-			name: String::default(),
-			description: String::default(),
-			authors: Vec::<String>::default(),
-			copyright: String::default(),
-			links: Vec::<String>::default(),
-		}
+impl MountMeta {
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
 	}
 
-	pub fn from_toml(toml: MetaToml, manifest: PathBuf) -> Self {
+	#[must_use]
+	pub fn kind(&self) -> &MountKind {
+		&self.kind
+	}
+
+	#[must_use]
+	pub fn version(&self) -> &str {
+		&self.version
+	}
+
+	#[must_use]
+	pub fn name(&self) -> &str {
+		&self.name
+	}
+
+	#[must_use]
+	pub fn virt_path(&self) -> &Path {
+		&self.virt_path
+	}
+
+	#[must_use]
+	pub fn from_ingest(ingest: MountMetaIngest, kind: MountKind) -> Self {
 		Self {
-			id: toml.id,
-			kind: GameDataKind::VileTech { manifest },
-			version: toml.version,
-			name: toml.name,
-			description: toml.description,
-			authors: toml.authors,
-			copyright: toml.copyright,
-			links: toml.links,
+			id: ingest.id,
+			kind,
+			version: ingest.version,
+			name: ingest.name,
+			_description: ingest.description,
+			_authors: ingest.authors,
+			_copyright: ingest.copyright,
+			_links: ingest.links,
+			virt_path: ingest.virt_path,
 		}
 	}
 }
 
-#[derive(Default, Deserialize)]
-pub struct MetaToml {
+/// Intermediate format to keep the code path from mounting to asset loading cleaner.
+/// Mostly for TOML parsing, but gets generated and consumed even for loading
+/// non-VileTech-packages.
+#[derive(Debug, Default, Deserialize)]
+pub struct MountMetaIngest {
 	pub id: String,
 	#[serde(default)]
 	pub version: String,
@@ -90,17 +114,21 @@ pub struct MetaToml {
 	pub links: Vec<String>,
 	#[serde(default)]
 	pub manifest: Option<PathBuf>,
+	#[serde(skip)]
+	pub virt_path: PathBuf,
 }
 
 /// Allows game data objects to define high-level, all-encompassing information
 /// relevant to making games as opposed to mods.
+#[derive(Debug)]
 pub struct GameInfo {
 	_steam_app_id: Option<u32>,
 	_discord_app_id: Option<String>,
 }
 
 /// Determines the system used for loading assets from a mounted game data object.
-pub enum GameDataKind {
+#[derive(Debug)]
+pub enum MountKind {
 	/// The file is read to determine what kind of assets are in it,
 	/// and loading is handled accordingly.
 	File,
@@ -126,7 +154,7 @@ pub type AssetVec<A> = Vec<asset::Wrapper<A>>;
 /// Comes with a certain degree of compartmentalization: for example,
 /// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
 pub struct Namespace {
-	pub meta: GameDataMeta,
+	pub meta: MountMeta,
 	// Needed for the sim
 	pub blueprints: AssetVec<Blueprint>,
 	pub clusters: AssetVec<Cluster>,
@@ -141,13 +169,13 @@ pub struct Namespace {
 	pub music: AssetVec<Music>,
 	pub sounds: AssetVec<Sound>,
 	pub colormap: AssetVec<ColorMap>,
-	pub endoom: AssetVec<Endoom>,
-	pub palette: AssetVec<Palette>,
+	pub endooms: AssetVec<Endoom>,
+	pub palettes: AssetVec<Palette>,
 }
 
 impl Namespace {
 	#[must_use]
-	pub fn new(metadata: GameDataMeta) -> Self {
+	pub fn new(metadata: MountMeta) -> Self {
 		Namespace {
 			meta: metadata,
 
@@ -164,8 +192,8 @@ impl Namespace {
 			music: Default::default(),
 			sounds: Default::default(),
 			colormap: Default::default(),
-			endoom: Default::default(),
-			palette: Default::default(),
+			endooms: Default::default(),
+			palettes: Default::default(),
 		}
 	}
 }
@@ -177,9 +205,9 @@ pub struct DataCore {
 	pub namespaces: Vec<Namespace>,
 	/// IDs are derived from virtual file system paths. The asset ID for
 	/// `/viletech/textures/default.png` is exactly the same string; the ID for
-	/// blueprint `Imp` defined in file `/viletech/blueprints/imp.zs` is
+	/// blueprint `Imp` defined in file `/viletech/blueprints/doom/imp.lith` is
 	/// `/viletech/blueprints/imp/Imp`, since multiple classes can be defined in
-	/// one ZScript translation unit.
+	/// one LithScript translation unit.
 	pub asset_map: HashMap<String, AssetHandle>,
 	/// Doom and its source ports work on a simple data replacement system; a name
 	/// points to the last map/texture/song/etc. loaded by that name. VileTech offers
@@ -324,41 +352,92 @@ impl DataCore {
 
 	/// This function expects:
 	/// - That `self.namespaces` is empty.
-	/// - That `metas[0]` is the parsed metadata for the VileTech data package.
-	pub fn populate(&mut self, mut metas: Vec<MetaToml>, vfs: &VirtualFs) {
-		debug_assert!(self.namespaces.is_empty());
-		debug_assert!(!metas.is_empty());
-		debug_assert!(metas[0].id == "viletech");
+	/// - That `ingests[0]` is the parsed metadata for the VileTech data package.
+	pub fn populate(
+		&mut self,
+		mut ingests: Vec<MountMetaIngest>,
+		vfs: &VirtualFs,
+	) -> Result<(), Error> {
+		assert!(
+			self.namespaces.is_empty(),
+			"Attempting to populate a non-empty `DataCore`."
+		);
 
-		for (_index, meta) in metas.drain(..).enumerate() {
+		assert!(
+			!ingests.is_empty(),
+			"Called `DataCore::populate` with no mount metadata."
+		);
+
+		assert!(
+			ingests[0].id == "viletech",
+			"`DataCore::populate` should receive the VileTech metadata first."
+		);
+
+		for (_index, meta_in) in ingests.drain(..).enumerate() {
 			let _fref = vfs
-				.lookup(&meta.id)
+				.lookup(&meta_in.id)
 				.expect("Failed to find a namespace's VFS fileref for data core population.");
 
-			let kind = vfs.gamedata_kind(&meta.id);
+			let kind = vfs.gamedata_kind(&meta_in.id);
 
 			match kind {
-				GameDataKind::ZDoom => {
+				MountKind::ZDoom => {
+					let namespace = Namespace::new(MountMeta::from_ingest(meta_in, kind));
+					self.populate_zdoom(vfs, namespace)?;
+				}
+				MountKind::Wad { .. } => {
 					// ???
 				}
-				GameDataKind::Wad { .. } => {
+				MountKind::VileTech { .. } => {
 					// ???
 				}
-				GameDataKind::VileTech { .. } => {
+				MountKind::File => {
 					// ???
 				}
-				GameDataKind::File => {
-					// ???
-				}
-				GameDataKind::Eternity => {
+				MountKind::Eternity => {
 					// ???
 				}
 			};
 		}
+
+		Ok(())
 	}
 }
 
 impl DataCore {
+	/// This method is atomic; `self` is left unmodified in the event of an error.
+	fn populate_zdoom(&mut self, vfs: &VirtualFs, namespace: Namespace) -> Result<(), Error> {
+		let mount = vfs.lookup(namespace.meta.virt_path()).unwrap();
+
+		let mut dec_root_opt = None;
+		let mut zs_root_opt = None;
+
+		for child in mount.child_entries() {
+			let file_stem = child.file_stem();
+			let lmpname = string::subslice(file_stem, 8);
+
+			if lmpname.eq_ignore_ascii_case("DECORATE") && child.is_string() {
+				dec_root_opt = Some(child);
+			}
+
+			if lmpname.eq_ignore_ascii_case("ZSCRIPT") && child.is_string() {
+				zs_root_opt = Some(child);
+			}
+		}
+
+		if let Some(dec_root) = dec_root_opt {
+			let _content = dec_root.read_str();
+			// Soon!
+		}
+
+		if let Some(zs_root) = zs_root_opt {
+			let _content = zs_root.read_str();
+			// Soon!
+		}
+
+		Ok(())
+	}
+
 	#[allow(dead_code)]
 	fn try_load_zscript(namespace: &mut Namespace, file: &FileRef) {
 		let parse_out = zscript::parse(file.clone());
@@ -413,5 +492,24 @@ impl DataCore {
 		}
 
 		todo!()
+	}
+}
+
+/// Things that can go wrong during asset loading or access.
+#[derive(Debug)]
+pub enum Error {
+	/// An error occurred at some point during the LithScript compilation pipeline.
+	Lith(lith::Error),
+	ZScript(zscript::Error),
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Lith(err) => err.fmt(f),
+			Self::ZScript(err) => err.fmt(f),
+		}
 	}
 }

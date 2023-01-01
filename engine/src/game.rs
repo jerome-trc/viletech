@@ -3,6 +3,7 @@ use bitflags::bitflags;
 use crate::data::AssetHandle;
 
 /// i.e., a difficulty setting.
+#[derive(Debug)]
 pub struct SkillInfo {
 	flags: SkillFlags,
 	/// Displayed to the user. May be a string ID.
@@ -21,6 +22,7 @@ pub struct SkillInfo {
 	knockback_factor: f32,
 }
 
+#[derive(Debug)]
 pub enum SpawnFilter {
 	Baby = 1,
 	Easy,
@@ -62,9 +64,8 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct DamageType {
-	id: AssetHandle,
-
 	base_factor: f32,
 	flags: DamageTypeFlags,
 }
@@ -86,10 +87,12 @@ pub struct DamageOverTime {
 	interval: u32,
 }
 
+#[derive(Debug)]
 pub struct Species {
-	id: AssetHandle,
+	// ???
 }
 
+#[derive(Debug)]
 pub enum ActorStateVisual {
 	None,
 	Sprite(AssetHandle),
@@ -97,10 +100,12 @@ pub enum ActorStateVisual {
 	Model(AssetHandle),
 }
 
+#[derive(Debug)]
 pub struct ActorStateAction {
 	// TODO: Bound LithScript function
 }
 
+#[derive(Debug)]
 pub struct ActorState {
 	visual: ActorStateVisual,
 	duration: i16,
@@ -126,6 +131,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug)]
 pub struct ActorStateMachine {
 	/// Each element's field `::1` indexes into `states`.
 	labels: Vec<(String, usize)>,

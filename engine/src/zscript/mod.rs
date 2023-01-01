@@ -3,7 +3,7 @@
 mod transpiler;
 
 use doom_front::zscript::{
-	err::ParsingError as ParseIssue,
+	err::{DisplayedParsingErrors, ParsingError as ParseIssue},
 	filesystem::{File, FileSystem, Files},
 	parser_manager::{parse_filesystem, FileIndexAndAst},
 };
@@ -32,6 +32,7 @@ pub fn parse(fs: impl FileSystem) -> ParseOutput {
 	}
 }
 
+#[must_use]
 pub fn prettify_parse_issue(namespace: &str, file: &File, issue: &ParseIssue) -> String {
 	let start = issue.main_spans[0].get_start();
 	let end = issue.main_spans[0].get_end();
@@ -60,4 +61,25 @@ pub fn prettify_parse_issue(namespace: &str, file: &File, issue: &ParseIssue) ->
 		indicators,
 		issue.msg
 	)
+}
+
+#[derive(Debug)]
+pub enum Error {
+	Parse(DisplayedParsingErrors),
+}
+
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Self::Parse(err) => Some(err),
+		}
+	}
+}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Parse(err) => err.fmt(f),
+		}
+	}
 }

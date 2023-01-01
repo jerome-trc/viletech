@@ -91,7 +91,7 @@ fn dir_structure() {
 	for (index, child) in vfs
 		.lookup("/freedoom2/MAP01")
 		.unwrap()
-		.children()
+		.child_entries()
 		.enumerate()
 	{
 		assert_eq!(child.path_str(), EXPECTED_CHILDREN[index]);
@@ -144,7 +144,7 @@ fn unmount() {
 	for (index, child) in vfs
 		.lookup("/freedoom1/E1M1")
 		.unwrap()
-		.children()
+		.child_entries()
 		.enumerate()
 	{
 		assert_eq!(child.path_str(), EXPECTED_CHILDREN[index]);

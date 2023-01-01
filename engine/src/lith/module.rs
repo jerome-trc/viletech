@@ -1,6 +1,9 @@
 //! A LithScript module is a single linkage unit.
 //!
-//! This is an equivalent concept to modules in LLVM, Rust, and Cranelift.
+//! This is an equivalent concept to modules in LLVM, Rust, and Cranelift, but it
+//! inherits the ZScript behavior of being compiled from an arbitrary number of
+//! source files, rather than just one. Hence, `lith` is a module (for language
+//! support), `vile` is a module for native engine functionality, et cetera.
 //!
 //! To get started, [create a `Builder`]. Register all native functions and data
 //! objects with it, and then use it to emit an [`OpenModule`]. This can then
@@ -223,6 +226,16 @@ struct Inner {
 	inner: Option<JITModule>,
 	/// Indices are guaranteed to be stable, since this map is append-only.
 	functions: IndexMap<String, FunctionInfo>,
+}
+
+impl std::fmt::Debug for Inner {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Inner")
+			.field("name", &self.name)
+			.field("native", &self.native)
+			.field("functions", &self.functions)
+			.finish()
+	}
 }
 
 impl Drop for Inner {

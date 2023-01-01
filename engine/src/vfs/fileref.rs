@@ -1,5 +1,7 @@
 //! The primary interface for quick introspection into the VFS.
 
+use std::{iter::Iterator, marker::PhantomData};
+
 use regex::Regex;
 
 use super::{
@@ -30,17 +32,37 @@ impl std::ops::Deref for FileRef<'_> {
 
 impl<'vfs> FileRef<'vfs> {
 	/// The returned iterator will be empty if requesting the children of a leaf node.
-	pub fn children(&'vfs self) -> impl Iterator<Item = &'vfs Entry> {
+	pub fn child_entries(&'vfs self) -> super::Iter<&Entry> {
 		match &self.entry.kind {
 			EntryKind::Directory(children) => super::Iter {
 				vfs: self.vfs,
 				elements: children,
 				current: 0,
+				_phantom: PhantomData,
 			},
 			_ => super::Iter {
 				vfs: self.vfs,
 				elements: &[],
 				current: 0,
+				_phantom: PhantomData,
+			},
+		}
+	}
+
+	/// The returned iterator will be empty if requesting the children of a leaf node.
+	pub fn child_refs(&'vfs self) -> super::Iter<FileRef> {
+		match &self.entry.kind {
+			EntryKind::Directory(children) => super::Iter {
+				vfs: self.vfs,
+				elements: children,
+				current: 0,
+				_phantom: PhantomData,
+			},
+			_ => super::Iter {
+				vfs: self.vfs,
+				elements: &[],
+				current: 0,
+				_phantom: PhantomData,
 			},
 		}
 	}
@@ -49,7 +71,7 @@ impl<'vfs> FileRef<'vfs> {
 	/// Check to ensure it's a directory beforehand.
 	#[must_use]
 	pub fn contains_regex(&self, regex: &Regex) -> bool {
-		self.children().any(|h| regex.is_match(h.file_name()))
+		self.child_entries().any(|h| regex.is_match(h.file_name()))
 	}
 
 	/// Returns the number of child entries this entry has, if it's a directory.

@@ -27,3 +27,24 @@ pub const MAX_PARAMS: usize = 12;
 /// function's signature; also the maximum number of values that a function
 /// may return. Native functions are also bound to this limit.
 pub const MAX_RETS: usize = 4;
+
+#[derive(Debug)]
+pub enum Error {
+	Parse(parse::Error),
+}
+
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Self::Parse(err) => Some(err),
+		}
+	}
+}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Parse(err) => err.fmt(f),
+		}
+	}
+}

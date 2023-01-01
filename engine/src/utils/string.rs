@@ -1,5 +1,11 @@
 use crate::lazy_regex;
 
+/// Shortcut for `string.get(..string.chars().count().min(chars)).unwrap()`.
+#[must_use]
+pub fn subslice(string: &str, chars: usize) -> &str {
+	string.get(..string.chars().count().min(chars)).unwrap()
+}
+
 #[must_use]
 pub fn is_only_whitespace(string: &str) -> bool {
 	!string.chars().any(|c| !c.is_whitespace())

@@ -365,7 +365,10 @@ impl ClientCore {
 							metas.append(&mut m);
 						}
 
-						self.data.write().populate(metas, &self.vfs.read());
+						if let Err(err) = self.data.write().populate(metas, &self.vfs.read()) {
+							error!("Asset load failed: {err}");
+							unimplemented!();
+						}
 
 						self.console.enable_commands(|ccmd| {
 							ccmd.flags.contains(ConsoleCommandFlags::TITLE)
