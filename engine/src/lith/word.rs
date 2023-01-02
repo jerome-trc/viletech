@@ -56,28 +56,6 @@ impl Word {
 		Self(unsafe { _mm_set_ss(value) })
 	}
 
-	#[inline(always)]
-	#[must_use]
-	pub(super) unsafe fn into_any<T: Sized>(self) -> T {
-		debug_assert!(
-			std::mem::size_of::<T>() <= 16,
-			"Attempted to transmute a Lith word into an oversized type."
-		);
-
-		std::mem::transmute_copy(&self)
-	}
-
-	#[inline(always)]
-	#[must_use]
-	pub(super) unsafe fn from_any<T: Sized>(value: T) -> Self {
-		debug_assert!(
-			std::mem::size_of_val(&value) <= 16,
-			"Attempted to overfill a Lith word."
-		);
-
-		std::mem::transmute_copy(&value)
-	}
-
 	/// Copies the 1st lane of `self` to every lane in a new vector and returns it.
 	#[inline(always)]
 	#[must_use]
