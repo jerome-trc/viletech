@@ -294,28 +294,28 @@ impl From<usize> for Word {
 impl From<Word> for i128 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		unsafe { std::mem::transmute::<_, Self>(value) }
+		unsafe { std::mem::transmute(value) }
 	}
 }
 
 impl From<i128> for Word {
 	#[inline(always)]
 	fn from(value: i128) -> Self {
-		unsafe { std::mem::transmute::<_, Self>(value) }
+		unsafe { std::mem::transmute(value) }
 	}
 }
 
 impl From<Word> for u128 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		unsafe { std::mem::transmute::<_, Self>(value) }
+		unsafe { std::mem::transmute(value) }
 	}
 }
 
 impl From<u128> for Word {
 	#[inline(always)]
 	fn from(value: u128) -> Self {
-		unsafe { std::mem::transmute::<_, Self>(value) }
+		unsafe { std::mem::transmute(value) }
 	}
 }
 
@@ -376,6 +376,100 @@ impl<T> From<*mut T> for Word {
 	#[inline(always)]
 	fn from(value: *mut T) -> Self {
 		(value as usize).into()
+	}
+}
+
+// Conversions: glam vectors ///////////////////////////////////////////////////
+
+macro_rules! glam_transmutes {
+	($($glam_t:ty) +) => {
+		$(
+			#[cfg(target_feature = "sse2")]
+			impl From<Word> for $glam_t {
+				#[inline(always)]
+				fn from(value: Word) -> Self {
+					// Safety: if using SSE2 and not feature `glam/scalar-math`,
+					// these two types have identical representation
+					unsafe { std::mem::transmute(value) }
+				}
+			}
+
+			#[cfg(target_feature = "sse2")]
+			impl From<$glam_t> for Word {
+				#[inline(always)]
+				fn from(value: $glam_t) -> Self {
+					// Safety: if using SSE2 and not feature `glam/scalar-math`,
+					// these two types have identical representation
+					unsafe { std::mem::transmute(value) }
+				}
+			}
+		)+
+	};
+}
+
+glam_transmutes! { glam::Vec3A glam::Vec4 glam::Quat glam::Mat2 }
+
+impl From<Word> for glam::Vec2 {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		Self::from_array([value.x(), value.y()])
+	}
+}
+
+impl From<glam::Vec2> for Word {
+	#[inline(always)]
+	fn from(value: glam::Vec2) -> Self {
+		let arr = value.to_array();
+		Self::new(arr[0], arr[1], 0.0, 0.0)
+	}
+}
+
+impl From<Word> for glam::Vec3 {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		Self::from_array([value.x(), value.y(), value.z()])
+	}
+}
+
+impl From<glam::Vec3> for Word {
+	#[inline(always)]
+	fn from(value: glam::Vec3) -> Self {
+		let arr = value.to_array();
+		Self::new(arr[0], arr[1], arr[2], 0.0)
+	}
+}
+
+#[cfg(not(target_feature = "sse2"))]
+impl From<Word> for glam::Vec3A {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		Self::from_array([value.x(), value.y(), value.z()])
+	}
+}
+
+#[cfg(not(target_feature = "sse2"))]
+impl From<glam::Vec3A> for Word {
+	#[inline(always)]
+	fn from(value: glam::Vec3A) -> Self {
+		let arr = value.to_array();
+		Self::new(arr[0], arr[1], arr[2], 0.0)
+	}
+}
+
+#[cfg(not(target_feature = "sse2"))]
+impl From<Word> for glam::Vec4 {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		Self::from_array([value.x(), value.y(), value.z(), value.w()])
+	}
+}
+
+#[cfg(not(target_feature = "sse2"))]
+impl From<glam::Vec4> for Word {
+	#[inline(always)]
+	fn from(value: glam::Vec4) -> Self {
+		let arr = value.to_array();
+		Self::new(arr[0], arr[1], arr[2], arr[3])
 	}
 }
 
