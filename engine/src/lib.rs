@@ -363,6 +363,107 @@ pub fn log_init(
 	Ok(())
 }
 
+/// Panics if:
+/// - In release mode, and the executable path can't be retrieved.
+/// - In debug mode, and the working directory path can't be retrieved.
+#[must_use]
+pub fn basedata_path() -> std::path::PathBuf {
+	use std::path::PathBuf;
+
+	let path: PathBuf;
+
+	#[cfg(not(debug_assertions))]
+	{
+		path = [utils::path::exe_dir(), PathBuf::from("viletech.zip")]
+			.iter()
+			.collect();
+	}
+	#[cfg(debug_assertions)]
+	{
+		path = [
+			std::env::current_dir().expect("Failed to get working directory"),
+			PathBuf::from("data/viletech"),
+		]
+		.iter()
+		.collect();
+	}
+
+	path
+}
+
+/// Returns an error if the engine's base data can't be found,
+/// or has been tampered with somehow since application installation.
+///
+/// In the debug build, this looks for `$PWD/data/viletech`, and returns `Ok`
+/// simply if that directory is found.
+/// In the release build, this looks for `<exec dir>/viletech.zip`, and
+/// ensures it's present and matches a checksum.
+pub fn basedata_is_valid() -> Result<(), BaseDataError> {
+	use sha3::Digest;
+	use std::io::Read;
+	use BaseDataError as Error;
+
+	let path = basedata_path();
+
+	if !path.exists() {
+		return Err(Error::Missing);
+	}
+
+	let mut file = std::fs::File::open(path).map_err(Error::ReadFailure)?;
+	let file_len = file.metadata().map_err(Error::ReadFailure)?.len() as usize;
+	let mut zip_bytes = Vec::with_capacity(file_len);
+	file.read_to_end(&mut zip_bytes)
+		.map_err(Error::ReadFailure)?;
+
+	let mut hasher = sha3::Sha3_256::new();
+	hasher.update(&zip_bytes[..]);
+	let checksum = hasher.finalize();
+	let mut string = String::with_capacity(checksum.len());
+
+	for n in checksum {
+		string.push(n.into());
+	}
+
+	if cfg!(debug_assertions) {
+		return Ok(());
+	}
+
+	if string == env!("BASEDATA_CHECKSUM") {
+		Ok(())
+	} else {
+		Err(Error::ChecksumMismatch)
+	}
+}
+
+#[derive(Debug)]
+pub enum BaseDataError {
+	Missing,
+	ReadFailure(std::io::Error),
+	ChecksumMismatch,
+}
+
+impl std::error::Error for BaseDataError {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Self::ReadFailure(err) => Some(err),
+			_ => None,
+		}
+	}
+}
+
+impl std::fmt::Display for BaseDataError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let path = basedata_path();
+		let p = path.display();
+
+		match self {
+			Self::Missing => write!(f, "Engine base data not found at `{p}`."),
+			Self::ReadFailure(err) => err.fmt(f),
+			Self::ChecksumMismatch => write!(f, "Engine base data at `{p}` is corrupted."),
+		}
+	}
+}
+
 /// Returns a message telling the user how long the engine was running.
 #[must_use]
 pub fn uptime_string(start_time: std::time::Instant) -> String {

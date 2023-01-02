@@ -57,15 +57,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let data = DataCore::default();
 	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
 
-	match vfs.write().mount_enginedata() {
+	match vfs.write().mount_basedata() {
 		Ok(()) => {}
 		Err(err) => {
-			error!(
-				"Failed to find and mount engine gamedata. Is 'viletech.zip' missing?\
-				\r\nError: {}",
-				err
-			);
-			return Err(Box::new(err));
+			error!("Failed to find and mount engine base data: {err}");
+			return Err(err);
 		}
 	};
 

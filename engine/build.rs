@@ -1,8 +1,16 @@
-use std::{error::Error, process::Command};
+use std::{
+	error::Error,
+	fs::File,
+	io::{Read, Write},
+	path::{Path, PathBuf},
+	process::Command,
+};
+
+use sha3::{Digest, Sha3_256};
 
 /// Injects the current Git hash and date and time of compilation
 /// into the environment before building.
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> miette::Result<(), Box<dyn Error>> {
 	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {
@@ -22,11 +30,106 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 	};
 
-	println!("cargo:rustc-env=GIT_HASH={}", hash_str);
-	println!(
-		"cargo:rustc-env=COMPILE_DATETIME={} UTC",
-		chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
-	);
+	let compile_timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S");
+
+	println!("cargo:rustc-env=GIT_HASH={hash_str}");
+	println!("cargo:rustc-env=COMPILE_DATETIME={compile_timestamp} UTC");
+
+	println!("cargo:rustc-env=BASEDATA_CHECKSUM=");
+
+	if std::env::var("PROFILE").unwrap() == "release" {
+		build_basedata()?;
+	}
+
+	Ok(())
+}
+
+/// In release mode, compile the contents of `/data/viletech` into
+/// `/target/viletech.zip`. Hash the bytes of that file, and store the stringified
+/// hash in an environment variable that gets compiled into the engine.
+fn build_basedata() -> Result<(), Box<dyn Error>> {
+	let data_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "data", "viletech"]
+		.iter()
+		.collect::<PathBuf>();
+
+	if !data_path.exists() {
+		panic!("Base data directory not found.");
+	}
+
+	let pkg_path = [
+		env!("CARGO_WORKSPACE_DIR"),
+		"target",
+		"release",
+		"viletech.zip",
+	]
+	.iter()
+	.collect::<PathBuf>();
+
+	let options = zip::write::FileOptions::default().compression_level(Some(9));
+
+	let file = File::create(&pkg_path)?;
+	let mut zip = zip::ZipWriter::new(file);
+
+	let walker = walkdir::WalkDir::new::<&Path>(&data_path)
+		.follow_links(false)
+		.max_depth(16)
+		.same_file_system(true)
+		.sort_by_file_name()
+		.into_iter();
+
+	let mut buffer = Vec::with_capacity(1024 * 1024 * 16);
+
+	for dir_entry in walker {
+		let dir_entry = dir_entry?;
+		let metadata = dir_entry.metadata()?;
+
+		let path = dir_entry.path();
+
+		let path_rel = match path.strip_prefix(&data_path)?.to_str() {
+			Some(s) => s.to_string(),
+			None => {
+				let p = path.display();
+				panic!("Base data file has path with invalid UTF-8: {p}");
+			}
+		};
+
+		if metadata.is_dir() {
+			zip.add_directory(path_rel, options)?;
+			continue;
+		}
+
+		let file_len = metadata.len() as usize;
+
+		zip.start_file(path_rel, options)?;
+		let mut f = File::open(path)?;
+		f.read_to_end(&mut buffer)?;
+		let written = zip.write(&buffer[..])?;
+
+		assert!(
+			written == file_len,
+			"Expected to write {file_len} bytes, wrote {written}.",
+		);
+
+		buffer.clear();
+	}
+
+	zip.finish()?;
+
+	let mut file = File::open(&pkg_path)?;
+	let file_len = file.metadata()?.len() as usize;
+	let mut zip_bytes = Vec::with_capacity(file_len);
+	file.read_to_end(&mut zip_bytes)?;
+
+	let mut hasher = Sha3_256::new();
+	hasher.update(&zip_bytes[..]);
+	let checksum = hasher.finalize();
+	let mut string = String::with_capacity(checksum.len());
+
+	for n in checksum {
+		string.push(n.into());
+	}
+
+	println!("cargo:rustc-env=BASEDATA_CHECKSUM={string}");
 
 	Ok(())
 }

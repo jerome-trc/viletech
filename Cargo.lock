@@ -4161,6 +4161,7 @@ dependencies = [
  "kira",
  "log",
  "md5",
+ "miette",
  "naga",
  "nanorand",
  "num",

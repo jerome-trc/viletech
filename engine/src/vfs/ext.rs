@@ -14,14 +14,14 @@ use crate::{
 	utils::{path::*, string::*},
 };
 
-use super::{entry::PathHash, EntryKind, Error, FileRef, VirtualFs, RGX_INVALIDMOUNTPATH};
+use super::{entry::PathHash, EntryKind, FileRef, VirtualFs, RGX_INVALIDMOUNTPATH};
 
 /// A separate trait provides functions that are specific to VileTech, so that the
 /// VFS itself can later be more easily made into a standalone library.
 pub trait VirtualFsExt {
 	/// On the debug build, attempt to mount `/env::current_dir()/data`.
 	/// On the release build, attempt to mount `/utils::exe_dir()/viletech.zip`.
-	fn mount_enginedata(&mut self) -> Result<(), Error>;
+	fn mount_basedata(&mut self) -> Result<(), Box<dyn std::error::Error>>;
 	#[must_use]
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<MountMetaIngest>;
 
@@ -66,24 +66,20 @@ pub trait VirtualFsExt {
 }
 
 impl VirtualFsExt for VirtualFs {
-	fn mount_enginedata(&mut self) -> Result<(), Error> {
-		let path: PathBuf;
-
-		#[cfg(not(debug_assertions))]
-		{
-			path = [exe_dir(), PathBuf::from("viletech.zip")].iter().collect();
-		}
-		#[cfg(debug_assertions)]
-		{
-			path = [
-				std::env::current_dir().map_err(Error::IoError)?,
-				PathBuf::from("data/viletech"),
-			]
-			.iter()
-			.collect();
+	fn mount_basedata(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+		if let Err(err) = crate::basedata_is_valid() {
+			return Err(Box::new(err));
 		}
 
-		self.mount(&[(path, "/viletech")]).pop().unwrap()
+		if let Err(err) = self
+			.mount(&[(crate::basedata_path(), "/viletech")])
+			.pop()
+			.unwrap()
+		{
+			Err(Box::new(err))
+		} else {
+			Ok(())
+		}
 	}
 
 	fn mount_gamedata(&mut self, paths: &[PathBuf]) -> Vec<MountMetaIngest> {
@@ -95,7 +91,7 @@ impl VirtualFsExt for VirtualFs {
 		for real_path in paths {
 			if real_path.is_symlink() {
 				info!(
-					"Skipping game data object for mount: {}
+					"Skipping game data object for mount: {}\r\n\t\
 					Reason: mounting symbolic links is forbidden",
 					real_path.display()
 				);
@@ -118,7 +114,7 @@ impl VirtualFsExt for VirtualFs {
 
 					if fstem.is_none() {
 						warn!(
-							"Skipping gamedata entry (invalid Unicode in name): {}",
+							"Skipping gamedata entry (invalid UTF-8 in name): {}",
 							real_path.display()
 						);
 						continue;
@@ -131,7 +127,7 @@ impl VirtualFsExt for VirtualFs {
 
 					if fname.is_none() {
 						warn!(
-							"Skipping gamedata entry (invalid Unicode in name): {}",
+							"Skipping gamedata entry (invalid UTF-8 in name): {}",
 							real_path.display()
 						);
 						continue;
@@ -180,7 +176,7 @@ impl VirtualFsExt for VirtualFs {
 					Ok(m) => m,
 					Err(err) => {
 						error!(
-							"Failed to parse gamedata meta file for package: {}
+							"Failed to parse gamedata meta file for package: {}\r\n\t\
 							Error: {}",
 							to_mount[i].0.display(),
 							err
@@ -271,7 +267,7 @@ impl VirtualFsExt for VirtualFs {
 
 					if child.is_binary() {
 						warn!(
-							"Invalid meta.toml file under '{}': expected string entry, found binary entry.",
+							"Invalid meta.toml file under `{}`: expected string entry, found binary entry.",
 							entry.path_str(),
 						);
 						continue;
@@ -281,7 +277,7 @@ impl VirtualFsExt for VirtualFs {
 						Ok(m) => m,
 						Err(err) => {
 							warn!(
-								"Failed to read game data meta file: {}\r\n
+								"Failed to read game data meta file: {}\r\n\t\
 								Error: {}",
 								entry.path_str(),
 								err
@@ -327,7 +323,7 @@ impl VirtualFsExt for VirtualFs {
 		let bytes = match self.read(path) {
 			Ok(b) => b,
 			Err(err) => {
-				error!("Failed to read engine icon image bytes: {}", err);
+				error!("Failed to read engine icon image bytes: {err}");
 				return None;
 			}
 		};
@@ -335,7 +331,7 @@ impl VirtualFsExt for VirtualFs {
 		let icon = match image::load_from_memory(bytes) {
 			Ok(i) => i,
 			Err(err) => {
-				error!("Failed to load engine icon: {}", err);
+				error!("Failed to load engine icon: {err}");
 				return None;
 			}
 		}
@@ -347,7 +343,7 @@ impl VirtualFsExt for VirtualFs {
 		match winit::window::Icon::from_rgba(rgba, width, height) {
 			Ok(r) => Some(r),
 			Err(err) => {
-				error!("Failed to create winit icon from image data: {}", err);
+				error!("Failed to create winit icon from image data: {err}");
 				None
 			}
 		}
@@ -377,7 +373,7 @@ impl VirtualFsExt for VirtualFs {
 				Ok(()) => {}
 				Err(err) => {
 					warn!(
-						"Failed to write an output line for ccmd.: `file`
+						"Failed to write an output line for ccmd.: `file`\r\n\t\
 						Error: {}",
 						err
 					);
