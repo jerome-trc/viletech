@@ -291,6 +291,34 @@ impl From<usize> for Word {
 	}
 }
 
+impl From<Word> for i128 {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { std::mem::transmute::<_, Self>(value) }
+	}
+}
+
+impl From<i128> for Word {
+	#[inline(always)]
+	fn from(value: i128) -> Self {
+		unsafe { std::mem::transmute::<_, Self>(value) }
+	}
+}
+
+impl From<Word> for u128 {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { std::mem::transmute::<_, Self>(value) }
+	}
+}
+
+impl From<u128> for Word {
+	#[inline(always)]
+	fn from(value: u128) -> Self {
+		unsafe { std::mem::transmute::<_, Self>(value) }
+	}
+}
+
 // Conversions: floating-point /////////////////////////////////////////////////
 
 impl From<Word> for f32 {
