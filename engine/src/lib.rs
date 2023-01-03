@@ -409,6 +409,10 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 		return Err(Error::Missing);
 	}
 
+	if cfg!(debug_assertions) {
+		return Ok(());
+	}
+
 	let mut file = std::fs::File::open(path).map_err(Error::ReadFailure)?;
 	let file_len = file.metadata().map_err(Error::ReadFailure)?.len() as usize;
 	let mut zip_bytes = Vec::with_capacity(file_len);
@@ -424,10 +428,7 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 		string.push(n.into());
 	}
 
-	if cfg!(debug_assertions) {
-		return Ok(());
-	}
-
+	#[cfg_attr(debug_assertions, allow(clippy::comparison_to_empty))]
 	if string == env!("BASEDATA_CHECKSUM") {
 		Ok(())
 	} else {
