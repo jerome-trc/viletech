@@ -38,7 +38,6 @@ pub enum BinaryOp {
 	Equals,
 	NotEquals,
 	ApproxEquals,
-	ThreeWayComp,
 	LogicalAnd,
 	LogicalAndAssign,
 	LogicalOr,
@@ -59,7 +58,6 @@ pub enum BinaryOp {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PrefixOp {
-	AntiNegate,
 	Negate,
 	Increment,
 	Decrement,

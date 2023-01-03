@@ -12,431 +12,830 @@ use crate::utils::lang::{Identifier, Interner, Span};
 pub type Error = peg::error::ParseError<<str as peg::Parse>::PositionRepr>;
 
 pub fn parse_statement(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<Statement, Error> {
-	parser::statement(input, interner)
+	parse::statement(input, interner)
 }
 
 pub fn parse_expression(
 	input: &str,
 	interner: &Arc<RwLock<Interner>>,
 ) -> Result<Expression, Error> {
-	parser::expr(input, interner)
+	parse::expr(input, interner)
 }
 
 pub fn parse_module(input: &str, interner: &Arc<RwLock<Interner>>) -> Result<ModuleTree, Error> {
-	parser::module_tree(input, interner)
+	parse::module_tree(input, interner)
 }
 
 peg::parser! {
-	grammar parser(interner: &Arc<RwLock<Interner>>) for str {
+	grammar parse(interner: &Arc<RwLock<Interner>>) for str {
 		use unicode_xid::UnicodeXID;
 
-		// Whitespace, comments ////////////////////////////////////////////////
-
-		rule _ = (" " / "\n" / "\r" / "\t" / line_comment() / block_comment())*
-
-		rule line_comment()
-			= "//" ([^ '/' | '!'] / "//") "\n"*
-			/ "//"
-
-		rule block_comment() = "/*"
-
-		// Foundational, common ////////////////////////////////////////////////
-
-		rule isolated_cr() -> &'input str = $("\r" [^ '\n'])
-
-		rule digit_dec() -> char = ['0'..='9']
-		rule digit_dec_nonzero() -> char = ['1'..='9']
-		rule digit_dec_or_underscore() -> char = ['0'..='9' | '_']
-
-		rule digit_bin() -> char = ['0' | '1']
-		rule digit_bin_or_underscore() -> char = ['0' | '1' | '_']
-
-		rule digit_hex() -> char = ['0'..='9' | 'a'..='f' | 'A'..='F']
-		rule digit_hex_or_underscore() -> char = ['0'..='9' | 'a'..='f' | 'A'..='F' | '_']
-
-		rule digit_oct() -> char = ['0'..='7']
-		rule digit_oct_or_underscore() -> char = ['0'..='7' | '_']
-
-		rule ascii_word() -> &'input str
-			= $(
-				['a'..='z' | 'A'..='Z' | '_']
-				['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*
-			)
-
-		rule identifier() -> Identifier
-			= start:position!() ident:ascii_word() end:position!()
-			{
-				Identifier {
-					span: Span::new(start, end),
-					string: Interner::intern(interner, ident),
+		pub(crate) rule module_tree() -> ModuleTree
+			= tops:top_level_item()* ![_] {
+				ModuleTree {
+					top_level: tops,
 				}
 			}
 
-		rule resolver_part_kind() -> ResolverPartKind
-			= 	start:position!()
-				string:$(
-				['a'..='z' | 'A'..='Z' | '_']
-				['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*
+		rule top_level_item() -> TopLevel
+			= item:item() {
+				TopLevel::Item(item)
+			}
+
+		rule top_level_annotation() -> TopLevel
+			= annotation:annotation() {
+				TopLevel::Annotation(annotation)
+			}
+
+		// Items ///////////////////////////////////////////////////////////////
+
+		rule item() -> Item
+			=	start:position!()
+				annotations:annotation()* _
+				kind:(
+					type_alias() / constant() /
+					enum_def() / function_decl() /
+					macro_invoc() / class_def()
 				)
 				end:position!()
 			{
-				match string {
-					"super" => ResolverPartKind::Super,
-					"Self" => ResolverPartKind::SelfUppercase,
-					other => ResolverPartKind::Identifier(
-						Identifier {
-							span: Span::new(start, end),
-							string: Interner::intern(interner, other),
-						}
-					)
+				Item {
+					span: Span::new(start, end),
+					kind,
+					annotations,
 				}
 			}
 
-		rule resolver_part() -> ResolverPart
-			= start:position!() kind:resolver_part_kind() end:position!() {
-				ResolverPart {
+		rule decl_qual() -> DeclQualifier
+			= 	start:position!()
+				keyword:$(
+					"abstract" / "virtual" / "override" / "final" /
+					"ceval" /
+					"private" / "protected" / "public" /
+					"static"
+				)
+				end:position!()
+			{
+				DeclQualifier {
+					span: Span::new(start, end),
+					kind: match keyword {
+						"abstract" => DeclQualifierKind::Abstract,
+						"virtual" => DeclQualifierKind::Virtual,
+						"override" => DeclQualifierKind::Override,
+						"final" => DeclQualifierKind::Final,
+						"ceval" => DeclQualifierKind::CEval,
+						"private" => DeclQualifierKind::Private,
+						"protected" => DeclQualifierKind::Protected,
+						"public" => DeclQualifierKind::Public,
+						"static" => DeclQualifierKind::Static,
+						_ => unreachable!()
+					}
+				}
+			}
+
+		rule type_alias() -> ItemKind
+			= 	start:position!()
+				quals:(decl_qual() ** _) _
+				"using" _
+				name:identifier() _
+				"=" _
+				underlying:type_expr()
+				end:position!()
+			{
+				ItemKind::TypeAlias(
+					TypeAlias {
+						span: Span::new(start, end),
+						name,
+						quals,
+						underlying
+					}
+				)
+			}
+
+		rule constant() -> ItemKind
+			=	start:position!()
+				quals:(decl_qual() ** _) _
+				"const" _
+				name:identifier()
+				type_spec:type_spec()? _
+				"=" _
+				value:expr()
+				end:position!()
+			{
+				ItemKind::Constant(
+					Constant {
+						span: Span::new(start, end),
+						name,
+						quals,
+						type_spec,
+						value,
+					}
+				)
+			}
+
+		rule macro_invoc() -> ItemKind
+			=	start:position!()
+				resolver:resolver()
+				"!" _
+				delim_l:['(' | '[' | '{'] _
+				inner:$([_]*) _
+				delim_r:['(' | '[' | '{']
+				end:position!()
+			{?
+				if delim_r != delim_l {
+					return Err("matching left and right delimiters");
+				};
+
+				Ok(ItemKind::MacroInvoc(
+					MacroInvocation {
+						span: Span::new(start, end),
+						resolver,
+						inner: inner.to_owned(),
+					}
+				))
+			}
+
+		rule func_param_qual() -> FuncParamQualifier
+			=	start:position!()
+				keyword:$("in" / "out" / "const")
+				end:position!()
+			{
+				let kind = match keyword {
+					"in" => FuncParamQualKind::In,
+					"out" => FuncParamQualKind::Out,
+					"const" => FuncParamQualKind::Const,
+					_ => unreachable!(),
+				};
+
+				FuncParamQualifier {
 					span: Span::new(start, end),
 					kind,
 				}
 			}
 
-		rule resolver() -> Resolver
+		rule func_param() -> FuncParameter
 			= 	start:position!()
-				"::"?
-				parts:(resolver_part() ** "::")
-				end:position!()
-			{
-				Resolver {
-					span: Span::new(start, end),
-					parts: Vec1::try_from_vec(parts).unwrap(),
-				}
-			}
-
-		rule annotation() -> Annotation
-			= 	start:position!()
-				"#" inner:"!"? "[" _ resolver:resolver() _ "]"
-				end:position!()
-			{
-				Annotation {
-					span: Span::new(start, end),
-					resolver,
-					inner: inner.is_some(),
-					args: Vec::default(),
-				}
-			}
-
-		rule block_label() -> BlockLabel
-			= start:position!() name:ascii_word() ":" end:position!() {
-				BlockLabel {
-					span: Span::new(start, end),
-					name: name.to_string(),
-				}
-			}
-
-		rule ident_as_vec() -> Vec<Identifier>
-			= name:identifier() { vec![name] }
-
-		/// Specifically for destructuring and range-based for loops.
-		rule ident_list() -> Vec<Identifier>
-			= "(" _ names:(identifier() ** ",") _ ")" {
-				names
-			}
-
-		rule type_spec() -> TypeExpr
-			= start:position!() ":" _ type_expr:type_expr() end:position!() {
-				type_expr
-			}
-
-		rule initializer() -> Expression = "=" _ expr:expr() { expr }
-
-		rule block(label_allowed: bool) -> StatementBlock
-			=	start:position!()
-				label:block_label()?
-				_
-				"{"
-				_
 				annotations:annotation()*
-				statements:statement()*
-				_
-				"}"
+				quals:(func_param_qual() ** _) _
+				name:identifier() _
+				type_spec:type_spec() _
+				default:initializer()?
+				end:position!()
+			{
+				FuncParameter {
+					span: Span::new(start, end),
+					name,
+					quals,
+					type_spec,
+					default,
+					annotations,
+				}
+			}
+
+		rule function_decl() -> ItemKind
+			=	start:position!()
+				return_type:type_expr() _
+				quals:(decl_qual() ** _) _
+				name:identifier() _
+				"(" _ params:(func_param() ** ",") _ ")" _
+				body:block(false)? _
+				term:";"?
 				end:position!()
 			{?
-				if label.is_some() && !label_allowed {
-					return Err("unlabeled block");
+				if body.is_none() && term.is_none() {
+					return Err("a function body or trailing semicolon");
 				}
 
 				Ok(
-					StatementBlock {
+					ItemKind::Function(
+						FunctionDeclaration {
+							span: Span::new(start, end),
+							name,
+							quals,
+							return_type,
+							params,
+							body,
+						}
+					)
+				)
+			}
+
+		// Classes /////////////////////////////////////////////////////////////
+
+		rule class_def() -> ItemKind
+			=	start:position!()
+				quals:(decl_qual() ** _) _
+				"class" _
+				name:identifier() _
+				ancestors:class_ancestors()? _
+				"{" _
+				inners:(
+					class_inner_field() /
+					class_inner_item() /
+					class_inner_mixin() /
+					class_inner_annotation()
+				)* _
+				"}"
+				end:position!()
+			{
+				ItemKind::Class(
+					ClassDef {
 						span: Span::new(start, end),
-						label,
-						statements,
+						name,
+						ancestors: ancestors.unwrap_or_default(),
+						quals,
+						inners
+					}
+				)
+			}
+
+		rule class_ancestors() -> Vec<Resolver>
+			= ":" _ resolvers:(resolver() ++ ",") {
+				resolvers
+			}
+
+		rule class_ext() -> ItemKind
+			=	start:position!()
+				"extend" _ "class" _
+				name:identifier() _
+				"{" _
+				inners:(
+					class_inner_field() /
+					class_inner_item() /
+					class_inner_mixin() /
+					class_inner_annotation()
+				)* _
+				"}"
+				end:position!()
+			{
+				ItemKind::ClassExt(
+					ClassExtend {
+						span: Span::new(start, end),
+						name,
+						inners,
+					}
+				)
+			}
+
+		rule class_inner_mixin() -> ClassInner
+			=	start:position!()
+				"mixin" _ resolver:resolver() _ ";"
+				end:position!()
+			{
+				ClassInner {
+					span: Span::new(start, end),
+					kind: ClassInnerKind::Mixin(resolver),
+				}
+			}
+
+		rule class_inner_field() -> ClassInner
+			=	start:position!()
+				field:field_decl()
+				end:position!()
+			{
+				ClassInner {
+					span: Span::new(start, end),
+					kind: ClassInnerKind::Field(field),
+				}
+			}
+
+		rule class_inner_item() -> ClassInner
+			=	start:position!()
+				item:item()
+				end:position!()
+			{
+				ClassInner {
+					span: Span::new(start, end),
+					kind: ClassInnerKind::Item(item),
+				}
+			}
+
+		rule class_inner_annotation() -> ClassInner
+			=	start:position!()
+				annotation:annotation()
+				end:position!()
+			{
+				ClassInner {
+					span: Span::new(start, end),
+					kind: ClassInnerKind::Annotation(annotation),
+				}
+			}
+
+		// Enums ///////////////////////////////////////////////////////////////
+
+		rule enum_def() -> ItemKind
+			=	start:position!()
+				quals:(decl_qual() ** _) _
+				"enum" _
+				name:identifier() _
+				type_spec:type_spec()? _
+				"{" _
+				variants:enum_variant()* _
+				"}"
+				end:position!()
+			{
+				ItemKind::Enum(
+					EnumDef {
+						span: Span::new(start, end),
+						name,
+						quals,
+						type_spec,
+						variants,
+					}
+				)
+			}
+
+		rule enum_variant() -> EnumVariant
+			=	start:position!()
+				annotations:annotation()*
+				name:identifier() _
+				init:initializer()?
+				end:position!()
+			{
+				EnumVariant {
+					span: Span::new(start, end),
+					name,
+					init,
+					annotations,
+				}
+			}
+
+		rule enum_ext() -> ItemKind
+			=	start:position!()
+				"extend" _ "enum" _
+				name:identifier() _
+				"{" _
+				inners:item()*
+				"}"
+				end:position!()
+			{
+				ItemKind::EnumExt(
+					EnumExtend {
+						span: Span::new(start, end),
+						name,
+						inners,
+					}
+				)
+			}
+
+		// Structs /////////////////////////////////////////////////////////////
+
+		rule struct_def() -> ItemKind
+			=	start:position!()
+				quals:(decl_qual() ** _) _
+				"struct" _
+				name:identifier() _
+				"{" _
+				inners:(
+					struct_inner_field() /
+					struct_inner_item() /
+					struct_inner_annotation()
+				)*
+				"}"
+				end:position!()
+			{
+				ItemKind::Struct(
+					StructDef {
+						span: Span::new(start, end),
+						name,
+						quals,
+						inners,
+					}
+				)
+			}
+
+		rule struct_inner_field() -> StructInner
+			=	start:position!()
+				field:field_decl()
+				end:position!()
+			{
+				StructInner {
+					span: Span::new(start, end),
+					kind: StructInnerKind::Field(field),
+				}
+			}
+
+		rule struct_inner_item() -> StructInner
+			=	start:position!()
+				item:item()
+				end:position!()
+			{
+				StructInner {
+					span: Span::new(start, end),
+					kind: StructInnerKind::Item(item)
+				}
+			}
+
+		rule struct_inner_annotation() -> StructInner
+			=	start:position!()
+				annotation:annotation()
+				end:position!()
+			{
+				StructInner {
+					span: Span::new(start, end),
+					kind: StructInnerKind::Annotation(annotation),
+				}
+			}
+
+		rule struct_ext() -> ItemKind
+			=	start:position!()
+				"extend" _ "struct" _
+				name:identifier() _
+				"{" _
+				inners:(
+					struct_inner_field() /
+					struct_inner_item() /
+					struct_inner_annotation()
+				)*
+				"}"
+				end:position!()
+			{
+				ItemKind::StructExt(
+					StructExtend {
+						span: Span::new(start, end),
+						name,
+						inners,
+					}
+				)
+			}
+
+		// Unions //////////////////////////////////////////////////////////////
+
+		rule union_def() -> ItemKind
+			=	start:position!()
+				quals:(decl_qual() ** _) _
+				"union" _
+				name:identifier() _
+				"{" _
+				variants:(union_variant() ** _) _
+				"}"
+				end:position!()
+			{
+				ItemKind::Union(
+					UnionDef {
+						span: Span::new(start, end),
+						name,
+						quals,
+						variants,
+					}
+				)
+			}
+
+		rule union_variant() -> UnionVariant
+			=	start:position!()
+				annotations:annotation()*
+				name:identifier() _
+				"{" _
+				fields:(field_decl() ** _)
+				"}"
+				end:position!()
+			{
+				UnionVariant {
+					span: Span::new(start, end),
+					name,
+					fields,
+					annotations,
+				}
+			}
+
+		rule union_ext() -> ItemKind
+			=	start:position!()
+				"extend" _ "union" _
+				name:identifier() _
+				"{" _
+				inners:item()*
+				"}"
+				end:position!()
+			{
+				ItemKind::UnionExt(
+					UnionExtend {
+						span: Span::new(start, end),
+						name,
+						inners,
+					}
+				)
+			}
+
+		// Mixin classes ///////////////////////////////////////////////////////
+
+		rule mixin_class_def() -> ItemKind
+			=	start:position!()
+				"mixin" _ "class" _
+				name:identifier() _
+				"{" _
+				inners:mixin_class_inner()* _
+				"}"
+				end:position!()
+			{
+				ItemKind::MixinClass(
+					MixinClassDef {
+						span: Span::new(start, end),
+						name,
+						inners,
+					}
+				)
+			}
+
+		rule mixin_class_inner() -> MixinClassInner
+			= start:position!()
+				kind:(mixin_class_inner_field() / mixin_class_inner_item())
+				end:position!()
+			{
+				MixinClassInner {
+					span: Span::new(start, end),
+					kind,
+				}
+			}
+
+		rule mixin_class_inner_field() -> MixinClassInnerKind
+			= field:field_decl() { MixinClassInnerKind::Field(field) }
+
+		rule mixin_class_inner_item() -> MixinClassInnerKind
+			= item:item() { MixinClassInnerKind::Item(item) }
+
+		// Bitfields ///////////////////////////////////////////////////////////
+
+		rule bitfield() -> ItemKind
+			= 	start:position!()
+				"bitfield" _
+				name:identifier() _
+				":" _
+				type_spec:type_expr() _
+				"{" _
+				subfields:bitfield_bit()* _
+				"}"
+				end:position!()
+			{
+				ItemKind::Bitfield(
+					BitfieldDef {
+						span: Span::new(start, end),
+						name,
+						type_spec,
+						subfields,
+					}
+				)
+			}
+
+		rule bitfield_bit() -> BitfieldBit
+			=	start:position!()
+				name:identifier() _
+				":" _
+				shifts:(
+					(bitfield_bit_subfield() / bitfield_bit_int()) ++ (_ "," _)
+				) _
+				";"
+				end:position!()
+			{
+				BitfieldBit {
+					span: Span::new(start, end),
+					name,
+					shifts: Vec1::try_from_vec(shifts).unwrap(),
+				}
+			}
+
+		rule bitfield_bit_subfield() -> BitfieldBitShift = ident:identifier() {
+			BitfieldBitShift::Subfield(ident)
+		}
+
+		rule bitfield_bit_int() -> BitfieldBitShift = lit:lit_int_impl() {
+			BitfieldBitShift::Integer(lit)
+		}
+
+		// Item innards ////////////////////////////////////////////////////////
+
+		rule field_decl() -> FieldDeclaration
+			= 	start:position!()
+				annotations:annotation()*
+				quals:(decl_qual() ** _) _
+				name:identifier() _
+				":" _
+				type_spec:type_expr() _
+				";"
+				end:position!()
+			{
+				FieldDeclaration {
+					span: Span::new(start, end),
+					name,
+					type_spec,
+					quals,
+					annotations,
+				}
+			}
+
+		// Statements //////////////////////////////////////////////////////////
+
+		rule stat_empty() -> StatementKind = ";" { StatementKind::Empty }
+
+		rule stat_break() -> StatementKind
+			= "break" _ tgt:ascii_word()? _ ";" {
+				StatementKind::Break {
+					target: tgt.map(|s| s.to_owned())
+				}
+			}
+
+		rule stat_continue() -> StatementKind
+			= "continue" _ tgt:ascii_word()? _ ";" {
+				StatementKind::Continue {
+					target: tgt.map(|s| s.to_owned())
+				}
+			}
+
+		rule stat_expr() -> StatementKind
+			= expr:expr() _ ";" {
+				StatementKind::Expression(expr)
+			}
+
+		rule stat_block() -> StatementKind
+			= block:block(true) { StatementKind::Block(block) }
+
+		rule stat_item() -> StatementKind
+			= item:item() { StatementKind::Item(item) }
+
+		rule stat_binding_single() -> StatementKind
+			=	start:position!()
+				annotations:annotation()* _
+				"let" _
+				name:identifier() _
+				type_spec:type_spec()? _
+				"=" _
+				init:expr()? _
+				";"
+				end:position!()
+			{
+				StatementKind::Binding(
+					Binding {
+						span: Span::new(start, end),
+						names: vec![name],
+						type_spec,
+						init,
 						annotations,
 					}
 				)
 			}
 
-		// Type ////////////////////////////////////////////////////////////////
-
-		rule type_expr_void() -> TypeExprKind
-			= "void" { TypeExprKind::Void }
-
-		rule type_expr_primitive() -> TypeExprKind
-			= name:$(
-				"i8" / "u8" / "i16" / "u16" /
-				"i32" / "u32" / "i64" / "u64" /
-				"i128" / "u128" / "bool" / "char"
-			) {
-				TypeExprKind::Primitive(match name {
-					"bool" => PrimitiveTypeKind::Bool,
-					"char" => PrimitiveTypeKind::Char,
-					"i8" => PrimitiveTypeKind::I8,
-					"u8" => PrimitiveTypeKind::U8,
-					"i16" => PrimitiveTypeKind::I16,
-					"u16" => PrimitiveTypeKind::U16,
-					"i32" => PrimitiveTypeKind::I32,
-					"u32" => PrimitiveTypeKind::U32,
-					"i64" => PrimitiveTypeKind::I64,
-					"u64" => PrimitiveTypeKind::U64,
-					"i128" => PrimitiveTypeKind::I128,
-					"u128" => PrimitiveTypeKind::U128,
-					_ => unreachable!()
-				})
-			}
-
-		rule type_expr_array() -> TypeExprKind
-			= "[" _ storage:type_expr() _ ";" _ length:expr() _ "]" {
-				TypeExprKind::Array(
-					Box::new(
-						ArrayTypeExpr {
-							storage,
-							length,
-						}
-					)
-				)
-			}
-
-		rule type_expr_resolver() -> TypeExprKind
-			= resolver:resolver() { TypeExprKind::Resolver(resolver) }
-
-		rule type_expr_tuple() -> TypeExprKind
-			= "(" _ members:(type_expr() ** ",") ")" {
-				TypeExprKind::Tuple { members }
-			}
-
-		rule type_expr_inferred() -> TypeExprKind
-			= "_" { TypeExprKind::Inferred }
-
-		rule type_expr() -> TypeExpr
+		rule stat_binding_multi() -> StatementKind
 			=	start:position!()
-				kind:(
-					type_expr_void() /
-					type_expr_primitive() /
-					type_expr_array() /
-					type_expr_tuple() /
-					type_expr_resolver() /
-					type_expr_inferred()
-				)
+				annotations:annotation()* _
+				"let" _
+				names:(identifier() ** ",") _
+				type_spec:type_spec()? _
+				"=" _
+				init:expr()? _
+				";"
 				end:position!()
 			{
-				TypeExpr {
+				StatementKind::Binding(
+					Binding {
+						span: Span::new(start, end),
+						names,
+						type_spec,
+						init,
+						annotations,
+					}
+				)
+			}
+
+		rule stat_if() -> StatementKind
+			= 	annotations:annotation()*
+				 "if" _ "(" _ cond:expr() _ ")" _ body:block(true) _
+				else_body:else_body()?
+			 {
+				StatementKind::If {
+					cond,
+					body,
+					else_body: else_body.map(Box::new),
+					annotations,
+				}
+			}
+
+		rule else_body() -> Statement
+			=	start:position!()
+				"else" _ else_body:(stat_if() / stat_block())
+				end:position!()
+			{
+				Statement {
 					span: Span::new(start, end),
-					kind,
+					kind: else_body,
 				}
 			}
 
-		// Literals ////////////////////////////////////////////////////////////
-
-		rule lit_null() -> LiteralKind
-			= "null" { LiteralKind::Null }
-
-		rule lit_bool() -> LiteralKind
-			= lit:$("true" / "false") {
-				match lit {
-					"true" => LiteralKind::Bool(true),
-					"false" => LiteralKind::Bool(false),
-					_ => unreachable!()
-				}
-			}
-
-		rule int_suffix() -> IntType
-			= string:$(
-				"i8" / "u8" / "i16" / "u16" /
-				"i32" / "u32" / "i64" / "u64" /
-				"i128" / "u128"
-			) {
-				match string {
-					"i8" => IntType::I8,
-					"u8" => IntType::U8,
-					"i16" => IntType::I16,
-					"u16" => IntType::U16,
-					"i32" => IntType::I32,
-					"u32" => IntType::U32,
-					"i64" => IntType::I64,
-					"u64" => IntType::U64,
-					"i128" => IntType::I128,
-					"u128" => IntType::U128,
-					_ => unreachable!(),
-				}
-			}
-
-		rule float_suffix() -> FloatType
-			= string:$("f32" / "f64") {
-				match string {
-					"f32" => FloatType::F32,
-					"f64" => FloatType::F64,
-					_ => unreachable!(),
-				}
-			}
-
-		rule float_exponent() -> &'input str
-			= $(
-				['e' | 'E']
-				['+' | '-']?
-				digit_dec_or_underscore()*
-				digit_dec()
-				digit_dec_or_underscore()*
-			)
-
-		rule lit_int() -> LiteralKind
-			= 	start:position!()
-				value:$(
-					lit_decimal() / lit_binary() / lit_octal() / lit_hexadecimal()
-				)
-				suffix:int_suffix()?
-				end:position!()
-			{?
-				let num = match value.parse::<u128>() {
-					Ok(n) => n,
-					Err(_) => {
-						return Err("decimal, binary, octal, or hexadecimal number");
-					}
-				};
-
-				Ok(LiteralKind::Int(
-					IntLiteral {
-						span: Span::new(start, end),
-						value: num,
-						type_spec: suffix,
-					}
-				))
-			}
-
-		rule lit_float() -> LiteralKind
-			= 	start:position!()
-				string:$(
-					(lit_decimal() "." ![c @ '.' | c @ '_' | c if c.is_xid_start()]) /
-					(lit_decimal() float_exponent()) /
-					(lit_decimal() "." lit_decimal() float_exponent()?) /
-					(lit_decimal() ("." lit_decimal())? float_exponent()? float_suffix())
-				)
-				end:position!()
-			{?
-				let type_spec = if string.ends_with("f32") {
-					Some(FloatType::F32)
-				} else if string.ends_with("f64") {
-					Some(FloatType::F64)
-				} else {
-					None
-				};
-
-				let value = string.parse::<f64>().or(Err("floating-point number"))?;
-
-				Ok(
-					LiteralKind::Float(
-						FloatLiteral {
-							span: Span::new(start, end),
-							value,
-							type_spec,
-						}
-					)
-				)
-			}
-
-		rule lit_decimal() -> u128
-			= string:$(digit_dec() digit_dec_or_underscore()*) {?
-				string.parse::<u128>().or(Err("decimal (base ten) number"))
-			}
-
-		rule lit_binary() -> u128
-			= string:$(
-				"0b"
-				digit_bin_or_underscore()*
-				digit_bin()
-				digit_bin_or_underscore()*
-			) {?
-				string.parse::<u128>().or(Err("binary number"))
-			}
-
-		rule lit_hexadecimal() -> u128
-			= string:$(
-				"0x"
-				digit_hex_or_underscore()*
-				digit_hex()
-				digit_hex_or_underscore()*
-			) {?
-				string.parse::<u128>().or(Err("hexadecimal number"))
-			}
-
-		rule lit_octal() -> u128
-			= string:$(
-				"0o"
-				digit_oct_or_underscore()*
-				digit_oct()
-				digit_oct_or_underscore()*
-			) {?
-				string.parse::<u128>().or(Err("octal number"))
-			}
-
-		rule quote_escape() -> &'input str = $("\\'" / "\\\"")
-
-		rule ascii_escape() -> &'input str
-			= $(
-				("\\x" digit_oct() digit_hex()) /
-				"\\n" / "\\r" / "\\t" / "\\\\" / "\\0"
-			)
-
-		rule lit_char() -> LiteralKind
+		rule switch_case_specific() -> SwitchCase
 			=	start:position!()
-				"'"
-				character:[
-					^ '\'' | '\\' | '\n' | '\r' | '\t'
-				]
-				"'"
+				"case" _ expr:expr() _ ":" _ block:block(true)
 				end:position!()
 			{
-				LiteralKind::Char(
-					CharLiteral {
-						span: Span::new(start, end),
-						character,
-					}
-				)
+				SwitchCase {
+					span: Span::new(start, end),
+					kind: SwitchCaseKind::Specific(expr),
+					block,
+				}
 			}
 
-		rule lit_string() -> LiteralKind
+		rule switch_case_default() -> SwitchCase
 			=	start:position!()
-				"\""
-				inner:$(!isolated_cr() [^ '\"' | '\\']+)
-				"\""
+				"default" _ ":" _ block:block(true)
 				end:position!()
 			{
-				LiteralKind::String(
-					StringLiteral {
-						span: Span::new(start, end),
-						string: Interner::intern(interner, inner),
-					}
-				)
+				SwitchCase {
+					span: Span::new(start, end),
+					kind: SwitchCaseKind::Default,
+					block,
+				}
 			}
 
-		rule literal() -> Literal
+		rule stat_switch() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"switch" _ "(" _ val:expr() _ ")" _
+				"{" _
+				cases:(switch_case_specific() / switch_case_default())* _
+				"}"
+			{
+				StatementKind::Switch {
+					val,
+					label,
+					cases,
+					annotations,
+				}
+			}
+
+		rule stat_loop_infinite() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"loop" _ body:block(false)
+			{
+				StatementKind::Loop {
+					kind: LoopKind::Infinite,
+					body: Box::new(body),
+					annotations,
+				}
+			}
+
+		rule stat_loop_range() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"for" _ names:(ident_as_vec() / ident_list()) _
+				"in" _ sequence:expr() _ body:block(false)
+			{
+				StatementKind::Loop {
+					kind: LoopKind::Range {
+						bindings: names,
+						sequence,
+					},
+					body: Box::new(body),
+					annotations,
+				}
+			}
+
+		rule stat_loop_while() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"while" _ "(" _ cond:expr() _ ")" _ body:block(false)
+			{
+				StatementKind::Loop {
+					kind: LoopKind::While { condition: cond, },
+					body: Box::new(body),
+					annotations,
+				}
+			}
+
+		rule stat_loop_dowhile() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"do" _ body:block(false) _ "while" _ "(" _ cond:expr() _ ")" _ ";"
+			{
+				StatementKind::Loop {
+					kind: LoopKind::DoWhile { condition: cond, },
+					body: Box::new(body),
+					annotations,
+				}
+			}
+
+		rule stat_loop_dountil() -> StatementKind
+			=	annotations:annotation()*
+				label:block_label()? _
+				"do" _ body:block(false) _ "until" _ "(" _ cond:expr() _ ")" _ ";"
+			{
+				StatementKind::Loop {
+					kind: LoopKind::DoUntil { condition: cond, },
+					body: Box::new(body),
+					annotations,
+				}
+			}
+
+		pub(crate) rule statement() -> Statement
 			= 	start:position!()
 				kind:(
-					lit_null() / lit_bool() /
-					lit_int() / lit_float() /
-					lit_char() / lit_string()
+					stat_empty() / stat_break() / stat_continue() /
+					stat_expr() / stat_block() / stat_item() /
+					stat_binding_single() / stat_binding_multi() /
+					stat_if() / stat_switch() /
+					stat_loop_infinite() / stat_loop_range() /
+					stat_loop_while() / stat_loop_dowhile() / stat_loop_dountil()
 				)
 				end:position!()
 			{
-				Literal {
+				Statement {
 					span: Span::new(start, end),
 					kind,
 				}
@@ -756,19 +1155,7 @@ peg::parser! {
 					exprs: Box::new(BinaryOpExprs { lhs, rhs, })
 				}
 			}
-			lhs:(@) _ "<>=" rhs:@ {
-				ExpressionKind::Binary {
-					op: BinaryOp::ThreeWayComp,
-					exprs: Box::new(BinaryOpExprs { lhs, rhs, })
-				}
-			}
 			-- // Unary
-			"+" operand:@ {
-				ExpressionKind::Prefix(Box::new(PrefixOpExpr {
-					op: PrefixOp::AntiNegate,
-					expr: operand,
-				}))
-			}
 			"-" operand:@ {
 				ExpressionKind::Prefix(Box::new(PrefixOpExpr {
 					op: PrefixOp::Negate,
@@ -846,460 +1233,412 @@ peg::parser! {
 		rule call_arg() -> CallArg = arg_named() / arg_anon()
 		rule call_args() -> Vec<CallArg> = call_arg() ** ","
 
-		// Statements //////////////////////////////////////////////////////////
+		// Type ////////////////////////////////////////////////////////////////
 
-		rule stat_empty() -> StatementKind = ";" { StatementKind::Empty }
+		rule type_expr_void() -> TypeExprKind = "void" { TypeExprKind::Void }
 
-		rule stat_break() -> StatementKind
-			= "break" _ tgt:ascii_word()? _ ";" {
-				StatementKind::Break {
-					target: tgt.map(|s| s.to_owned())
-				}
+		rule type_expr_primitive() -> TypeExprKind
+			= name:$(
+				"i8" / "u8" / "i16" / "u16" /
+				"i32" / "u32" / "i64" / "u64" /
+				"i128" / "u128" / "bool" / "char"
+			) {
+				TypeExprKind::Primitive(match name {
+					"bool" => PrimitiveTypeKind::Bool,
+					"char" => PrimitiveTypeKind::Char,
+					"i8" => PrimitiveTypeKind::I8,
+					"u8" => PrimitiveTypeKind::U8,
+					"i16" => PrimitiveTypeKind::I16,
+					"u16" => PrimitiveTypeKind::U16,
+					"i32" => PrimitiveTypeKind::I32,
+					"u32" => PrimitiveTypeKind::U32,
+					"i64" => PrimitiveTypeKind::I64,
+					"u64" => PrimitiveTypeKind::U64,
+					"i128" => PrimitiveTypeKind::I128,
+					"u128" => PrimitiveTypeKind::U128,
+					_ => unreachable!()
+				})
 			}
 
-		rule stat_continue() -> StatementKind
-			= "continue" _ tgt:ascii_word()? _ ";" {
-				StatementKind::Continue {
-					target: tgt.map(|s| s.to_owned())
-				}
-			}
-
-		rule stat_expr() -> StatementKind
-			= expr:expr() _ ";" {
-				StatementKind::Expression(expr)
-			}
-
-		rule stat_block() -> StatementKind
-			= block:block(true) { StatementKind::Block(block) }
-
-		rule stat_item() -> StatementKind
-			= item:item() { StatementKind::Item(item) }
-
-		rule stat_binding_single() -> StatementKind
-			=	start:position!()
-				annotations:annotation()* _
-				"let" _
-				name:identifier() _
-				type_spec:type_spec()? _
-				"=" _
-				init:expr()? _
-				";"
-				end:position!()
-			{
-				StatementKind::Binding(
-					Binding {
-						span: Span::new(start, end),
-						names: vec![name],
-						type_spec,
-						init,
-						annotations,
-					}
-				)
-			}
-
-		rule stat_binding_multi() -> StatementKind
-			=	start:position!()
-				annotations:annotation()* _
-				"let" _
-				names:(identifier() ** ",") _
-				type_spec:type_spec()? _
-				"=" _
-				init:expr()? _
-				";"
-				end:position!()
-			{
-				StatementKind::Binding(
-					Binding {
-						span: Span::new(start, end),
-						names,
-						type_spec,
-						init,
-						annotations,
-					}
-				)
-			}
-
-		rule stat_if() -> StatementKind
-			= 	annotations:annotation()*
-				 "if" _ "(" _ cond:expr() _ ")" _ body:block(true) _
-				else_body:else_body()?
-			 {
-				StatementKind::If {
-					cond,
-					body,
-					else_body: else_body.map(Box::new),
-					annotations,
-				}
-			}
-
-		rule else_body() -> Statement
-			=	start:position!()
-				"else" _ else_body:(stat_if() / stat_block())
-				end:position!()
-			{
-				Statement {
-					span: Span::new(start, end),
-					kind: else_body,
-				}
-			}
-
-		rule switch_case_specific() -> SwitchCase
-			=	start:position!()
-				"case" _ expr:expr() _ ":" _ block:block(true)
-				end:position!()
-			{
-				SwitchCase {
-					span: Span::new(start, end),
-					kind: SwitchCaseKind::Specific(expr),
-					block,
-				}
-			}
-
-		rule switch_case_default() -> SwitchCase
-			=	start:position!()
-				"default" _ ":" _ block:block(true)
-				end:position!()
-			{
-				SwitchCase {
-					span: Span::new(start, end),
-					kind: SwitchCaseKind::Default,
-					block,
-				}
-			}
-
-		rule stat_switch() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"switch" _ "(" _ val:expr() _ ")" _
-				"{" _
-				cases:(switch_case_specific() / switch_case_default())* _
-				"}"
-			{
-				StatementKind::Switch {
-					val,
-					label,
-					cases,
-					annotations,
-				}
-			}
-
-		rule stat_loop_infinite() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"loop" _ body:block(false)
-			{
-				StatementKind::Loop {
-					kind: LoopKind::Infinite,
-					body: Box::new(body),
-					annotations,
-				}
-			}
-
-		rule stat_loop_range() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"for" _ names:(ident_as_vec() / ident_list()) _
-				"in" _ sequence:expr() _ body:block(false)
-			{
-				StatementKind::Loop {
-					kind: LoopKind::Range {
-						bindings: names,
-						sequence,
-					},
-					body: Box::new(body),
-					annotations,
-				}
-			}
-
-		rule stat_loop_while() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"while" _ "(" _ cond:expr() _ ")" _ body:block(false)
-			{
-				StatementKind::Loop {
-					kind: LoopKind::While { condition: cond, },
-					body: Box::new(body),
-					annotations,
-				}
-			}
-
-		rule stat_loop_dowhile() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"do" _ body:block(false) _ "while" _ "(" _ cond:expr() _ ")" _ ";"
-			{
-				StatementKind::Loop {
-					kind: LoopKind::DoWhile { condition: cond, },
-					body: Box::new(body),
-					annotations,
-				}
-			}
-
-		rule stat_loop_dountil() -> StatementKind
-			=	annotations:annotation()*
-				label:block_label()? _
-				"do" _ body:block(false) _ "until" _ "(" _ cond:expr() _ ")" _ ";"
-			{
-				StatementKind::Loop {
-					kind: LoopKind::DoUntil { condition: cond, },
-					body: Box::new(body),
-					annotations,
-				}
-			}
-
-		pub(crate) rule statement() -> Statement
-			= 	start:position!()
-				kind:(
-					stat_empty() / stat_break() / stat_continue() /
-					stat_expr() / stat_block() / stat_item() /
-					stat_binding_single() / stat_binding_multi() /
-					stat_if() / stat_switch() /
-					stat_loop_infinite() / stat_loop_range() /
-					stat_loop_while() / stat_loop_dowhile() / stat_loop_dountil()
-				)
-				end:position!()
-			{
-				Statement {
-					span: Span::new(start, end),
-					kind,
-				}
-			}
-
-		// Item ////////////////////////////////////////////////////////////////
-
-		rule decl_qual() -> DeclQualifier
-			= 	start:position!()
-				keyword:$(
-					"abstract" / "virtual" / "override" / "final" /
-					"ceval" /
-					"private" / "protected" / "public" /
-					"static"
-				)
-				end:position!()
-			{
-				DeclQualifier {
-					span: Span::new(start, end),
-					kind: match keyword {
-						"abstract" => DeclQualifierKind::Abstract,
-						"virtual" => DeclQualifierKind::Virtual,
-						"override" => DeclQualifierKind::Override,
-						"final" => DeclQualifierKind::Final,
-						"ceval" => DeclQualifierKind::CEval,
-						"private" => DeclQualifierKind::Private,
-						"protected" => DeclQualifierKind::Protected,
-						"public" => DeclQualifierKind::Public,
-						"static" => DeclQualifierKind::Static,
-						_ => unreachable!()
-					}
-				}
-			}
-
-		rule type_alias() -> ItemKind
-			= 	start:position!()
-				quals:(decl_qual() ** _)
-				_
-				"type"
-				_
-				name:identifier()
-				_
-				"="
-				_
-				underlying:type_expr()
-				end:position!()
-			{
-				ItemKind::TypeAlias(
-					TypeAlias {
-						span: Span::new(start, end),
-						name,
-						quals,
-						underlying
-					}
-				)
-			}
-
-		rule constant() -> ItemKind
-			=	start:position!()
-				quals:(decl_qual() ** _)
-				_
-				"const"
-				_
-				name:identifier()
-				type_spec:type_spec()?
-				_
-				"="
-				_
-				value:expr()
-				end:position!()
-			{
-				ItemKind::Constant(
-					Constant {
-						span: Span::new(start, end),
-						name,
-						quals,
-						type_spec,
-						value,
-					}
-				)
-			}
-
-		rule macro_invoc() -> ItemKind
-			=	start:position!()
-				resolver:resolver()
-				"!"
-				_
-				delim_l:['(' | '[' | '{']
-				_
-				inner:$([_]*)
-				_
-				delim_r:['(' | '[' | '{']
-				end:position!()
-			{?
-				if delim_r != delim_l {
-					return Err("");
-				};
-
-				Ok(ItemKind::MacroInvoc(
-					MacroInvocation {
-						span: Span::new(start, end),
-						inner: inner.to_owned(),
-					}
-				))
-			}
-
-		rule enum_variant() -> EnumVariant
-			=	start:position!()
-				annotations:annotation()*
-				name:identifier() _
-				init:initializer()?
-				end:position!()
-			{
-				EnumVariant {
-					span: Span::new(start, end),
-					name,
-					init,
-					annotations,
-				}
-			}
-
-		rule enum_decl() -> ItemKind
-			=	start:position!()
-				quals:(decl_qual() ** _) _
-				"enum" _
-				name:identifier() _
-				type_spec:type_spec()? _
-				"{" _
-				variants:enum_variant()* _
-				"}"
-				end:position!()
-			{
-				ItemKind::Enum(
-					EnumDef {
-						span: Span::new(start, end),
-						name,
-						quals,
-						type_spec,
-						variants,
-					}
-				)
-			}
-
-		rule func_param_qual() -> FuncParamQualifier
-			=	start:position!()
-				string:$("in" / "out")
-				end:position!()
-			{
-				let kind = match string {
-					"in" => FuncParamQualKind::In,
-					"out" => FuncParamQualKind::Out,
-					_ => unreachable!(),
-				};
-
-				FuncParamQualifier {
-					span: Span::new(start, end),
-					kind,
-				}
-			}
-
-		rule func_param() -> FuncParameter
-			= 	start:position!()
-				annotations:annotation()*
-				quals:(func_param_qual() ** _) _
-				name:identifier() _
-				type_spec:type_spec() _
-				default:initializer()?
-				end:position!()
-			{
-				FuncParameter {
-					span: Span::new(start, end),
-					name,
-					quals,
-					type_spec,
-					default,
-					annotations,
-				}
-			}
-
-		rule function_decl() -> ItemKind
-			=	start:position!()
-				return_type:type_expr() _
-				quals:(decl_qual() ** _) _
-				name:identifier() _
-				"(" _ params:(func_param() ** ",") _ ")" _
-				body:block(false)? _
-				term:";"?
-				end:position!()
-			{?
-				if body.is_none() && term.is_none() {
-					return Err("a function body or trailing semicolon");
-				}
-
-				Ok(
-					ItemKind::Function(
-						FunctionDeclaration {
-							span: Span::new(start, end),
-							name,
-							quals,
-							return_type,
-							params,
-							body,
+		rule type_expr_array() -> TypeExprKind
+			= "[" _ storage:type_expr() _ ";" _ length:expr() _ "]" {
+				TypeExprKind::Array(
+					Box::new(
+						ArrayTypeExpr {
+							storage,
+							length,
 						}
 					)
 				)
 			}
 
-		rule item() -> Item
+		rule type_expr_resolver() -> TypeExprKind
+			= resolver:resolver() { TypeExprKind::Resolver(resolver) }
+
+		rule type_expr_tuple() -> TypeExprKind
+			= "(" _ members:(type_expr() ** ",") ")" {
+				TypeExprKind::Tuple { members }
+			}
+
+		rule type_expr_inferred() -> TypeExprKind
+			= "_" { TypeExprKind::Inferred }
+
+		rule type_expr() -> TypeExpr
 			=	start:position!()
-				annotations:annotation()* _
 				kind:(
-					type_alias() / constant() /
-					enum_decl() / function_decl() /
-					macro_invoc()
+					type_expr_void() /
+					type_expr_primitive() /
+					type_expr_array() /
+					type_expr_tuple() /
+					type_expr_resolver() /
+					type_expr_inferred()
 				)
 				end:position!()
 			{
-				Item {
+				TypeExpr {
 					span: Span::new(start, end),
 					kind,
-					annotations,
 				}
 			}
 
-		rule top_level_item() -> TopLevel
-			= item:item() {
-				TopLevel::Item(item)
-			}
+		// Literals ////////////////////////////////////////////////////////////
 
-		rule top_level_annotation() -> TopLevel
-			= annotation:annotation() {
-				TopLevel::Annotation(annotation)
-			}
+		rule lit_null() -> LiteralKind
+			= "null" { LiteralKind::Null }
 
-		pub(crate) rule module_tree() -> ModuleTree
-			= tops:top_level_item()* ![_] {
-				ModuleTree {
-					top_level: tops,
+		rule lit_bool() -> LiteralKind
+			= lit:$("true" / "false") {
+				match lit {
+					"true" => LiteralKind::Bool(true),
+					"false" => LiteralKind::Bool(false),
+					_ => unreachable!()
 				}
 			}
+
+		rule int_suffix() -> IntType
+			= string:$(
+				"i8" / "u8" / "i16" / "u16" /
+				"i32" / "u32" / "i64" / "u64" /
+				"i128" / "u128"
+			) {
+				match string {
+					"i8" => IntType::I8,
+					"u8" => IntType::U8,
+					"i16" => IntType::I16,
+					"u16" => IntType::U16,
+					"i32" => IntType::I32,
+					"u32" => IntType::U32,
+					"i64" => IntType::I64,
+					"u64" => IntType::U64,
+					"i128" => IntType::I128,
+					"u128" => IntType::U128,
+					_ => unreachable!(),
+				}
+			}
+
+		rule float_suffix() -> FloatType
+			= string:$("f32" / "f64") {
+				match string {
+					"f32" => FloatType::F32,
+					"f64" => FloatType::F64,
+					_ => unreachable!(),
+				}
+			}
+
+		rule float_exponent() -> &'input str
+			= $(
+				['e' | 'E']
+				['+' | '-']?
+				digit_dec_or_underscore()*
+				digit_dec()
+				digit_dec_or_underscore()*
+			)
+
+		rule lit_int() -> LiteralKind
+			= lit:lit_int_impl() { LiteralKind::Int(lit) }
+
+		rule lit_int_impl() -> IntLiteral
+			= 	start:position!()
+				value:$(
+					lit_decimal() / lit_binary() / lit_octal() / lit_hexadecimal()
+				)
+				suffix:int_suffix()?
+				end:position!()
+			{?
+				let num = match value.parse::<u128>() {
+					Ok(n) => n,
+					Err(_) => {
+						return Err("decimal, binary, octal, or hexadecimal number");
+					}
+				};
+
+				Ok(IntLiteral {
+					span: Span::new(start, end),
+					value: num,
+					type_spec: suffix,
+				})
+			}
+
+		rule lit_float() -> LiteralKind
+			= 	start:position!()
+				string:$(
+					(lit_decimal() "." ![c @ '.' | c @ '_' | c if c.is_xid_start()]) /
+					(lit_decimal() float_exponent()) /
+					(lit_decimal() "." lit_decimal() float_exponent()?) /
+					(lit_decimal() ("." lit_decimal())? float_exponent()? float_suffix())
+				)
+				end:position!()
+			{?
+				let type_spec = if string.ends_with("f32") {
+					Some(FloatType::F32)
+				} else if string.ends_with("f64") {
+					Some(FloatType::F64)
+				} else {
+					None
+				};
+
+				let value = string.parse::<f64>().or(Err("floating-point number"))?;
+
+				Ok(
+					LiteralKind::Float(
+						FloatLiteral {
+							span: Span::new(start, end),
+							value,
+							type_spec,
+						}
+					)
+				)
+			}
+
+		rule lit_decimal() -> u128
+			= string:$(digit_dec() digit_dec_or_underscore()*) {?
+				string.parse::<u128>().or(Err("decimal (base ten) number"))
+			}
+
+		rule lit_binary() -> u128
+			= string:$(
+				"0b"
+				digit_bin_or_underscore()*
+				digit_bin()
+				digit_bin_or_underscore()*
+			) {?
+				string.parse::<u128>().or(Err("binary number"))
+			}
+
+		rule lit_hexadecimal() -> u128
+			= string:$(
+				"0x"
+				digit_hex_or_underscore()*
+				digit_hex()
+				digit_hex_or_underscore()*
+			) {?
+				string.parse::<u128>().or(Err("hexadecimal number"))
+			}
+
+		rule lit_octal() -> u128
+			= string:$(
+				"0o"
+				digit_oct_or_underscore()*
+				digit_oct()
+				digit_oct_or_underscore()*
+			) {?
+				string.parse::<u128>().or(Err("octal number"))
+			}
+
+		rule quote_escape() -> &'input str = $("\\'" / "\\\"")
+
+		rule ascii_escape() -> &'input str
+			= $(
+				("\\x" digit_oct() digit_hex()) /
+				"\\n" / "\\r" / "\\t" / "\\\\" / "\\0"
+			)
+
+		rule lit_char() -> LiteralKind
+			=	start:position!()
+				"'"
+				character:[
+					^ '\'' | '\\' | '\n' | '\r' | '\t'
+				]
+				"'"
+				end:position!()
+			{
+				LiteralKind::Char(
+					CharLiteral {
+						span: Span::new(start, end),
+						character,
+					}
+				)
+			}
+
+		rule lit_string() -> LiteralKind
+			=	start:position!()
+				"\""
+				inner:$(!isolated_cr() [^ '\"' | '\\']+)
+				"\""
+				end:position!()
+			{
+				LiteralKind::String(
+					StringLiteral {
+						span: Span::new(start, end),
+						string: Interner::intern(interner, inner),
+					}
+				)
+			}
+
+		rule literal() -> Literal
+			= 	start:position!()
+				kind:(
+					lit_null() / lit_bool() /
+					lit_int() / lit_float() /
+					lit_char() / lit_string()
+				)
+				end:position!()
+			{
+				Literal {
+					span: Span::new(start, end),
+					kind,
+				}
+			}
+
+		// Foundational, common ////////////////////////////////////////////////
+
+		rule isolated_cr() -> &'input str = $("\r" [^ '\n'])
+
+		rule digit_dec() -> char = ['0'..='9']
+		rule digit_dec_nonzero() -> char = ['1'..='9']
+		rule digit_dec_or_underscore() -> char = ['0'..='9' | '_']
+
+		rule digit_bin() -> char = ['0' | '1']
+		rule digit_bin_or_underscore() -> char = ['0' | '1' | '_']
+
+		rule digit_hex() -> char = ['0'..='9' | 'a'..='f' | 'A'..='F']
+		rule digit_hex_or_underscore() -> char = ['0'..='9' | 'a'..='f' | 'A'..='F' | '_']
+
+		rule digit_oct() -> char = ['0'..='7']
+		rule digit_oct_or_underscore() -> char = ['0'..='7' | '_']
+
+		rule ascii_word() -> &'input str
+			= $(
+				['a'..='z' | 'A'..='Z' | '_']
+				['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*
+			)
+
+		rule identifier() -> Identifier
+			= start:position!() ident:ascii_word() end:position!()
+			{
+				Identifier {
+					span: Span::new(start, end),
+					string: Interner::intern(interner, ident),
+				}
+			}
+
+		rule resolver_part_kind() -> ResolverPartKind
+			= 	start:position!()
+				string:$(
+				['a'..='z' | 'A'..='Z' | '_']
+				['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*
+				)
+				end:position!()
+			{
+				match string {
+					"super" => ResolverPartKind::Super,
+					"Self" => ResolverPartKind::SelfUppercase,
+					other => ResolverPartKind::Identifier(
+						Identifier {
+							span: Span::new(start, end),
+							string: Interner::intern(interner, other),
+						}
+					)
+				}
+			}
+
+		rule resolver_part() -> ResolverPart
+			= start:position!() kind:resolver_part_kind() end:position!() {
+				ResolverPart {
+					span: Span::new(start, end),
+					kind,
+				}
+			}
+
+		rule resolver() -> Resolver
+			= 	start:position!()
+				"::"?
+				parts:(resolver_part() ** "::")
+				end:position!()
+			{
+				Resolver {
+					span: Span::new(start, end),
+					parts: Vec1::try_from_vec(parts).unwrap(),
+				}
+			}
+
+		rule annotation() -> Annotation
+			= 	start:position!()
+				"#" inner:"!"? "[" _ resolver:resolver() _ "]"
+				end:position!()
+			{
+				Annotation {
+					span: Span::new(start, end),
+					resolver,
+					inner: inner.is_some(),
+					args: Vec::default(),
+				}
+			}
+
+		rule block_label() -> BlockLabel
+			= start:position!() name:ascii_word() ":" end:position!() {
+				BlockLabel {
+					span: Span::new(start, end),
+					name: name.to_string(),
+				}
+			}
+
+		rule ident_as_vec() -> Vec<Identifier>
+			= name:identifier() { vec![name] }
+
+		/// Specifically for destructuring and range-based for loops.
+		rule ident_list() -> Vec<Identifier>
+			= "(" _ names:(identifier() ** ",") _ ")" {
+				names
+			}
+
+		rule type_spec() -> TypeExpr
+			= start:position!() ":" _ type_expr:type_expr() end:position!() {
+				type_expr
+			}
+
+		rule initializer() -> Expression = "=" _ expr:expr() { expr }
+
+		rule block(label_allowed: bool) -> StatementBlock
+			=	start:position!()
+				label:block_label()? _ "{" _
+				annotations:annotation()*
+				statements:statement()* _ "}"
+				end:position!()
+			{?
+				if label.is_some() && !label_allowed {
+					return Err("unlabeled block");
+				}
+
+				Ok(
+					StatementBlock {
+						span: Span::new(start, end),
+						label,
+						statements,
+						annotations,
+					}
+				)
+			}
+
+		// Whitespace, comments ////////////////////////////////////////////////
+
+		rule _ = (" " / "\n" / "\r" / "\t" / line_comment() / block_comment())*
+
+		rule line_comment()
+			= "//" ([^ '/' | '!'] / "//") "\n"*
+			/ "//"
+
+		rule block_comment() = "/*"
 	}
 }
 

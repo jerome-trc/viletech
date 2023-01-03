@@ -1,5 +1,27 @@
 # LithScript Reference
 
+- [LithScript Reference](#lithscript-reference)
+	- [Whitespace](#whitespace)
+	- [Comments](#comments)
+	- [Keywords](#keywords)
+	- [Literals](#literals)
+	- [Identifiers](#identifiers)
+	- [Type System](#type-system)
+		- [Primitive Types](#primitive-types)
+		- [Enumerations](#enumerations)
+		- [Classes](#classes)
+		- [Structures](#structures)
+		- [Unions](#unions)
+		- [Bitfields](#bitfields)
+		- [Pointers and References](#pointers-and-references)
+	- [Resolvers](#resolvers)
+	- [Operators](#operators)
+		- [Unary](#unary)
+		- [Binary](#binary)
+	- [Annotations](#annotations)
+	- [Functions](#functions)
+	- [Macros](#macros)
+
 Note that this is a living document.
 
 ## Whitespace
@@ -26,11 +48,11 @@ Block comments can span multiple lines.
 
 The following keywords are reserved and can not be used as identifiers or labels:
 
-`await` `break` `catch` `continue` `defer` `do` `else` `finally` `for` `foreach` `if` `in` `loop` `return` `switch` `try` `until` `use` `while` `yield`
+`await` `break` `catch` `continue` `defer` `do` `else` `finally` `for` `foreach` `if` `in` `loop` `recover` `return` `switch` `try` `until` `use` `while` `yield`
 
-`abstract` `ceval` `const` `final` `override` `private` `protected` `public` `static` `using` `virtual`
+`abstract` `ceval` `const` `final` `override` `private` `protected` `public` `static` `throws` `throw` `using` `virtual`
 
-`async` `class` `enum` `extend` `interface` `macro` `mixin` `module` `property` `struct` `type` `union` `unsafe`
+`class` `enum` `extend` `interface` `macro` `mixin` `module` `property` `struct` `typedef` `union` `unsafe`
 
 `as` `case` `default` `let` `use` `where` `with`
 
@@ -41,6 +63,8 @@ This list is intended to be overly restrictive, and is eligible for relaxation i
 `true` and `false` are boolean literals. `null` is a pointer literal.
 
 String literals are delimited by `"`.
+
+Character literals are delimited by `'`, and contain exactly one UTF-8 character.
 
 ## Identifiers
 
@@ -81,13 +105,35 @@ The function pointer type is written `function<(A...) R>`, where `A` is any numb
 
 LithScript enumerations behave similarly to C++ scoped enumerations. Each is a series of named integral constants, incrementing with each variant declared, with an optional discriminant in the form of a constant expression.
 
-### Unions
-
-LithScript unions are tagged algebraic types.
+Enumerations support methods, but they may only be declared in an `extend enum EnumIdentifier` block. Enum extensions can not have more variants declared in them.
 
 ### Classes
 
 A class object in LithScript is a reference-counted heap object that can never be held by value.
+
+Classes may be "extended" with an `extend class ClassIdentifier` block. These get merged into the original class definition during preprocessing, and are meant as a way to ease code organization.
+
+A class qualified with `abstract` can not be instantiated, and serves only as a base for other classes.
+
+A class qualified with `final` may not be inherited from. This keyword and `abstract` are mutually-exclusive.
+
+### Structures
+
+A LithScript structure is a compositional aid, meant to be used primarily for grouping fields and functions together.
+
+Structs may be "extended" with an `extend struct StructIdentifier` block. These get merged into the original struct definition during preprocessing, and are meant as a way to ease code organization.
+
+### Unions
+
+LithScript unions are tagged algebraic types.
+
+Unions support methods, but they may only be declared in an `extend union UnionIdentifier` block. Union extensions can not have more variants declared in them.
+
+### Bitfields
+
+A bitfield is a type which wraps a single unsigned integer and behaves like a structure of booleans.
+
+A bitfield's underlying integer is given the identifier `__bits`.
 
 ### Pointers and References
 
@@ -172,7 +218,7 @@ Annotations are an all-purpose system for compile-time qualifications of arbitra
 
 LithScript does not support function overloading; identifiers must be unique.
 
-A function declared in the body of a class or structure taking the parameter `self` or `const self` is considered a class method.
+A function declared in the body of a class or structure is considered a class method unless it is qualified with `static`.
 
 ## Macros
 

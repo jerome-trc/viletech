@@ -12,6 +12,7 @@ Use `UPPER_SNAKE_CASE` for identifiers for all of the following:
 - Enum variants
 - Static variables
 - Generic parameters
+- Bitfield subfields
 
 Use `snake_case` for identifiers for all of the following:
 - Modules

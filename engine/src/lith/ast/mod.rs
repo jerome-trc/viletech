@@ -1,10 +1,8 @@
 //! Symbols representing a LithScript abstract syntax tree.
 
-mod class;
 mod expr;
 mod item;
 mod literal;
-mod mixin;
 mod stat;
 
 use serde::Serialize;
@@ -12,11 +10,9 @@ use vec1::Vec1;
 
 use crate::utils::lang::{Identifier, Span};
 
-pub use class::*;
 pub use expr::*;
 pub use item::*;
 pub use literal::*;
-pub use mixin::*;
 pub use stat::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
