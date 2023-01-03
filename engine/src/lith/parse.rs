@@ -47,6 +47,42 @@ peg::parser! {
 				TopLevel::Annotation(annotation)
 			}
 
+		rule top_level_preproc() -> TopLevel
+			=	start:position!()
+				kind:(
+					preproc_edition() /
+					preproc_include() /
+					preproc_namespace()
+				)
+				end:position!()
+			{
+				TopLevel::Preproc(
+					PreprocDirective {
+						span: Span::new(start, end),
+						kind,
+					}
+				)
+			}
+
+		rule preproc_edition() -> PreprocDirectiveKind
+			= "#edition" lnws() string:lit_string_impl() lnws() eol() {
+				PreprocDirectiveKind::Edition(string)
+			}
+
+		rule preproc_include() -> PreprocDirectiveKind
+			= "#include" lnws() string:lit_string_impl() lnws() eol() {
+				PreprocDirectiveKind::Include(string)
+			}
+
+		rule preproc_namespace() -> PreprocDirectiveKind
+			= "#namespace" lnws() ident:identifier() lnws() eol() {
+				PreprocDirectiveKind::Namespace(ident)
+			}
+
+		// "Line whitespace" for preproc directives
+		rule lnws() = [' ' | '\t']*
+		rule eol() = ['\r' | '\n'] / ![_]
+
 		// Items ///////////////////////////////////////////////////////////////
 
 		rule item() -> Item
@@ -1471,18 +1507,19 @@ peg::parser! {
 			}
 
 		rule lit_string() -> LiteralKind
+			= lit:lit_string_impl() { LiteralKind::String(lit) }
+
+		rule lit_string_impl() -> StringLiteral
 			=	start:position!()
 				"\""
 				inner:$(!isolated_cr() [^ '\"' | '\\']+)
 				"\""
 				end:position!()
 			{
-				LiteralKind::String(
-					StringLiteral {
-						span: Span::new(start, end),
-						string: Interner::intern(interner, inner),
-					}
-				)
+				StringLiteral {
+					span: Span::new(start, end),
+					string: Interner::intern(interner, inner),
+				}
 			}
 
 		rule literal() -> Literal

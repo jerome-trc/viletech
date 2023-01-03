@@ -25,6 +25,20 @@ pub enum TopLevel {
 	/// Inner annotations only, applied to the entire translation unit.
 	Annotation(Annotation),
 	Item(Item),
+	Preproc(PreprocDirective),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PreprocDirective {
+	pub span: Span,
+	pub kind: PreprocDirectiveKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum PreprocDirectiveKind {
+	Edition(StringLiteral),
+	Include(StringLiteral),
+	Namespace(Identifier),
 }
 
 /// A "resolver" is a double-colon-separated token chain, named after the
