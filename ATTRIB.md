@@ -219,6 +219,8 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 
 VileTech relies heavily on code ported from GZDoom, which is the creation of the ZDoom and GZDoom teams, principally led by Marisa Heit ([@rheit](https://github.com/rheit)) and Christoph Oelckers ([@coelckers](https://github.com/coelckers)). See https://github.com/ZDoom/gzdoom/graphs/contributors for more information. Code derived from GZDoom is used under the [GNU General Public License Version 3](https://github.com/ZDoom/gzdoom/blob/master/LICENSE).
 
+VileTech's SIMD code and "LithScript" embedded scripting language borrows much of its implementation from that of Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](https://github.com/GaijinEntertainment/daScript/blob/master/LICENSE).
+
 ## Miscellaneous
 
 The SoundFont file located at /data/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).

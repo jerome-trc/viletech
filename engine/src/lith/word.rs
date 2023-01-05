@@ -1,115 +1,83 @@
 //! The basis for the LithScript ABI.
 
-// TODO:
-// - Use `__vectorcall` calling convention when it stabilizes
-#![allow(dead_code)] // - Remove this?
+use std::ops::Range;
 
-#[cfg(target_arch = "x86")]
-use core::arch::x86::*;
-#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::*;
+use crate::simd::{F32X4, F64X2, I32X4, I64X2};
 
-use crate::{math::mm_shuffle, newtype};
-
-newtype! {
-	/// Implementation detail of LithScript's ABI. This type is only exposed to
-	/// enable trait bounds on conversions.
-	///
-	/// A LithScript "word" is a vector of 4 `f32`s, preferably using a SIMD type.
-	///
-	/// This structure is used to hold anything that can pass between the langauge
-	/// boundary; if it can't fit into 128 bits, it gets boxed/referenced. For the
-	/// rationale as to this decision, see the [daScript Reference Manual, section 3.1].
-	///
-	/// Every type conversion implemented herein is considered "safe" in that the
-	/// to and from types are both trivial, such as numbers and [`glam`] structures.
-	/// For anything which has non-trivial construction/drop semantics, use
-	/// [`Word::from_any`] and [`Word::into_any`], but there are no assurances
-	/// that something coming out of a `Word` is remotely the same as what got put in.
-	/// Take caution.
-	///
-	/// For now, systems that can't use SSE2's [`__m128`] are unsupported, although
-	/// there is nothing stopping an alternate implementation using a plain struct.
-	///
-	/// [daScript Reference Manual, section 3.1]: https://dascript.org/doc/dascript.pdf
-	#[derive(Debug, Clone, Copy)]
-	pub struct Word(__m128)
+/// The principal unit of LithScript's ABI.
+/// Wraps either an [`__m128`], an [`__m128d`], or an [`__m128i`].
+/// Only exposed to enable type conversions.
+///
+/// This structure is used to hold anything that can pass between the langauge
+/// boundary; if it can't fit into 128 bits, it gets boxed/referenced. For the
+/// rationale as to this decision, see the [daScript Reference Manual], section 3.1.
+///
+/// Every type conversion implemented herein is considered "safe" in that the
+/// to and from types are both trivial, such as numbers and [`glam`] structures.
+///
+/// For now, systems that can't use SSE2 are unsupported, although there is nothing
+/// stopping an alternative implementation with a plain byte array underneath.
+///
+/// [daScript Reference Manual]: https://dascript.org/doc/dascript.pdf
+#[derive(Clone, Copy)]
+pub union Word {
+	pub(crate) f32x4: F32X4,
+	pub(crate) i32x4: I32X4<i32>,
+	pub(crate) u32x4: I32X4<u32>,
+	pub(crate) f64x2: F64X2,
+	pub(crate) i64x2: I64X2<i64>,
+	pub(crate) u64x2: I64X2<u64>,
 }
 
 impl Word {
 	#[inline(always)]
 	#[must_use]
-	pub(super) fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
-		Self(unsafe { _mm_setr_ps(x, y, z, w) })
+	pub(crate) fn zeroed() -> Self {
+		Self {
+			f32x4: F32X4::zeroed(),
+		}
 	}
+}
 
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn zeroed() -> Self {
-		Self(unsafe { _mm_setzero_ps() })
-	}
-
-	/// Returns a `Word` with an X set to `value`, and all other components zeroed.
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn x_zero(value: f32) -> Self {
-		Self(unsafe { _mm_set_ss(value) })
-	}
-
-	/// Copies the 1st lane of `self` to every lane in a new vector and returns it.
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn splat_x(self) -> Self {
-		Self(unsafe { _mm_shuffle_ps::<{ mm_shuffle(0, 0, 0, 0) }>(self.0, self.0) })
-	}
-
-	/// Copies the 2nd lane of `self` to every lane in a new vector and returns it.
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn splat_y(self) -> Self {
-		Self(unsafe { _mm_shuffle_ps::<{ mm_shuffle(1, 1, 1, 1) }>(self.0, self.0) })
-	}
-
-	/// Copies the 3rd lane of `self` to every lane in a new vector and returns it.
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn splat_z(self) -> Self {
-		Self(unsafe { _mm_shuffle_ps::<{ mm_shuffle(2, 2, 2, 2) }>(self.0, self.0) })
-	}
-
-	/// Copies the 4th lane of `self` to every lane in a new vector and returns it.
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn splat_w(self) -> Self {
-		Self(unsafe { _mm_shuffle_ps::<{ mm_shuffle(3, 3, 3, 3) }>(self.0, self.0) })
-	}
-
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn x(self) -> f32 {
-		unsafe { _mm_cvtss_f32(self.0) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn y(self) -> f32 {
-		unsafe { _mm_cvtss_f32(self.splat_y().0) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn z(self) -> f32 {
-		unsafe { _mm_cvtss_f32(self.splat_z().0) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	pub(super) fn w(self) -> f32 {
-		unsafe { _mm_cvtss_f32(self.splat_w().0) }
+impl std::fmt::Debug for Word {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		unsafe {
+			f.debug_struct("Word")
+				.field("i32x4[0]", &self.i32x4.e0())
+				.field("i32x4[1]", &self.i32x4.e1())
+				.field("i32x4[2]", &self.i32x4.e2())
+				.field("i32x4[3]", &self.i32x4.e3())
+				.finish()
+		}
 	}
 }
 
 // Conversions: miscellaneous //////////////////////////////////////////////////
+
+macro_rules! simd_wrapper_conv {
+	($t:ty, $field:ident) => {
+		impl From<Word> for $t {
+			#[inline(always)]
+			fn from(value: Word) -> Self {
+				unsafe { value.$field }
+			}
+		}
+
+		impl From<$t> for Word {
+			#[inline(always)]
+			fn from(value: $t) -> Self {
+				Self { $field: value }
+			}
+		}
+	};
+}
+
+simd_wrapper_conv!(F32X4, f32x4);
+simd_wrapper_conv!(I32X4<i32>, i32x4);
+simd_wrapper_conv!(I32X4<u32>, u32x4);
+simd_wrapper_conv!(F64X2, f64x2);
+simd_wrapper_conv!(I64X2<i64>, i64x2);
+simd_wrapper_conv!(I64X2<u64>, u64x2);
 
 impl From<Word> for () {
 	#[inline(always)]
@@ -124,14 +92,18 @@ impl From<()> for Word {
 }
 
 impl From<Word> for bool {
+	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Into::<Vec4I>::into(value).x() != 0
+		unsafe { value.u32x4.e0() != 0 }
 	}
 }
 
 impl From<bool> for Word {
+	#[inline(always)]
 	fn from(value: bool) -> Self {
-		Vec4I::x_zero(value as i32).into()
+		Self {
+			u32x4: I32X4::new_e0(value as u32),
+		}
 	}
 }
 
@@ -154,20 +126,6 @@ impl From<char> for Word {
 	fn from(value: char) -> Self {
 		let ctw = CharToWord { character: value };
 		unsafe { ctw.word }
-	}
-}
-
-impl From<Word> for Vec4I {
-	#[inline(always)]
-	fn from(value: Word) -> Self {
-		Self(unsafe { _mm_castps_si128(value.0) })
-	}
-}
-
-impl From<Vec4I> for Word {
-	#[inline(always)]
-	fn from(value: Vec4I) -> Self {
-		Self(unsafe { _mm_castsi128_ps(value.0) })
 	}
 }
 
@@ -199,47 +157,54 @@ macro_rules! int_converters {
 			impl From<Word> for $int_t {
 				#[inline(always)]
 				fn from(value: Word) -> Self {
-					Into::<Vec4I>::into(value).x() as Self
+					unsafe {
+						value.i32x4.e0() as Self
+					}
 				}
 			}
 
 			impl From<$int_t> for Word {
 				#[inline(always)]
 				fn from(value: $int_t) -> Self {
-					Vec4I::x_zero(value as i32).into()
+					I32X4::new_e0(value).into()
 				}
 			}
 		)+
 	};
 }
 
-int_converters!(i8, u8, i16, u16, i32, u32);
+// int_converters!(i8, u8, i16, u16, i32, u32);
+int_converters!(i32, u32);
 
 impl From<Word> for i64 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Into::<Vec4I>::into(value).x64()
+		unsafe { value.i64x2.e0() }
 	}
 }
 
 impl From<i64> for Word {
 	#[inline(always)]
 	fn from(value: i64) -> Self {
-		Vec4I::splat_half(value).into()
+		Self {
+			i64x2: I64X2::new_e0(value),
+		}
 	}
 }
 
 impl From<Word> for u64 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Into::<Vec4I>::into(value).x64u()
+		unsafe { value.u64x2.e0() }
 	}
 }
 
 impl From<u64> for Word {
 	#[inline(always)]
 	fn from(value: u64) -> Self {
-		Vec4I::splat_half_u(value).into()
+		Self {
+			u64x2: I64X2::new_e0(value),
+		}
 	}
 }
 
@@ -324,28 +289,178 @@ impl From<u128> for Word {
 impl From<Word> for f32 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		value.x()
+		unsafe { value.f32x4.e0() }
 	}
 }
 
 impl From<f32> for Word {
 	#[inline(always)]
 	fn from(value: f32) -> Self {
-		Self::x_zero(value)
+		Self {
+			f32x4: F32X4::new_e0(value),
+		}
 	}
 }
 
 impl From<Word> for f64 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		unsafe { _mm_cvtsd_f64(_mm_cvtps_pd(value.0)) }
+		unsafe { value.f64x2.e0() }
 	}
 }
 
 impl From<f64> for Word {
 	#[inline(always)]
 	fn from(value: f64) -> Self {
-		unsafe { Self(_mm_castpd_ps(_mm_set_sd(value))) }
+		Self {
+			f64x2: F64X2::new_e0(value),
+		}
+	}
+}
+
+// Conversions: ranges /////////////////////////////////////////////////////////
+
+impl From<Word> for Range<i32> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.i32x4.e0()..value.i32x4.e1() }
+	}
+}
+
+impl From<Range<i32>> for Word {
+	#[inline(always)]
+	fn from(value: Range<i32>) -> Self {
+		I32X4::new(value.start, value.end, 0, 0).into()
+	}
+}
+
+impl From<Word> for Range<u32> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.u32x4.e0()..value.u32x4.e1() }
+	}
+}
+
+impl From<Range<u32>> for Word {
+	#[inline(always)]
+	fn from(value: Range<u32>) -> Self {
+		I32X4::new(value.start, value.end, 0, 0).into()
+	}
+}
+
+impl From<Word> for Range<i64> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.i64x2.e0()..value.i64x2.e1() }
+	}
+}
+
+impl From<Range<i64>> for Word {
+	#[inline(always)]
+	fn from(value: Range<i64>) -> Self {
+		I64X2::new(value.start, value.end).into()
+	}
+}
+
+impl From<Word> for Range<u64> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.u64x2.e0()..value.u64x2.e1() }
+	}
+}
+
+impl From<Range<u64>> for Word {
+	#[inline(always)]
+	fn from(value: Range<u64>) -> Self {
+		I64X2::new(value.start, value.end).into()
+	}
+}
+
+impl From<Word> for Range<isize> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		#[cfg(target_pointer_width = "64")]
+		unsafe {
+			(value.i64x2.e0() as isize)..(value.i64x2.e1() as isize)
+		}
+
+		#[cfg(target_pointer_width = "32")]
+		unsafe {
+			(value.i32x4.e0() as isize)..(value.i32x4.e1() as isize)
+		}
+	}
+}
+
+impl From<Range<isize>> for Word {
+	#[inline(always)]
+	fn from(value: Range<isize>) -> Self {
+		#[cfg(target_pointer_width = "64")]
+		{
+			I64X2::new(value.start as i64, value.end as i64).into()
+		}
+
+		#[cfg(target_pointer_width = "32")]
+		{
+			I32X4::new(value.start as i32, value.end as i32, 0, 0).into()
+		}
+	}
+}
+
+impl From<Word> for Range<usize> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		#[cfg(target_pointer_width = "64")]
+		unsafe {
+			(value.u64x2.e0() as usize)..(value.u64x2.e1() as usize)
+		}
+
+		#[cfg(target_pointer_width = "32")]
+		unsafe {
+			(value.u32x4.e0() as usize)..(value.u32x4.e1() as usize)
+		}
+	}
+}
+
+impl From<Range<usize>> for Word {
+	#[inline(always)]
+	fn from(value: Range<usize>) -> Self {
+		#[cfg(target_pointer_width = "64")]
+		{
+			I64X2::new(value.start as u64, value.end as u64).into()
+		}
+
+		#[cfg(target_pointer_width = "32")]
+		{
+			I32X4::new(value.start as u32, value.end as u32, 0, 0).into()
+		}
+	}
+}
+
+impl From<Word> for Range<f32> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.f32x4.e0()..value.f32x4.e1() }
+	}
+}
+
+impl From<Range<f32>> for Word {
+	#[inline(always)]
+	fn from(value: Range<f32>) -> Self {
+		F32X4::new(value.start, value.end, 0.0, 0.0).into()
+	}
+}
+
+impl From<Word> for Range<f64> {
+	#[inline(always)]
+	fn from(value: Word) -> Self {
+		unsafe { value.f64x2.e0()..value.f64x2.e1() }
+	}
+}
+
+impl From<Range<f64>> for Word {
+	#[inline(always)]
+	fn from(value: Range<f64>) -> Self {
+		F64X2::new(value.start, value.end).into()
 	}
 }
 
@@ -412,7 +527,7 @@ glam_transmutes! { glam::Vec3A glam::Vec4 glam::Quat glam::Mat2 }
 impl From<Word> for glam::Vec2 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Self::from_array([value.x(), value.y()])
+		unsafe { Self::from_array([value.f32x4.e0(), value.f32x4.e1()]) }
 	}
 }
 
@@ -420,14 +535,14 @@ impl From<glam::Vec2> for Word {
 	#[inline(always)]
 	fn from(value: glam::Vec2) -> Self {
 		let arr = value.to_array();
-		Self::new(arr[0], arr[1], 0.0, 0.0)
+		F32X4::new(arr[0], arr[1], 0.0, 0.0).into()
 	}
 }
 
 impl From<Word> for glam::Vec3 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Self::from_array([value.x(), value.y(), value.z()])
+		unsafe { Self::from_array([value.f32x4.e0(), value.f32x4.e1(), value.f32x4.e2()]) }
 	}
 }
 
@@ -435,7 +550,7 @@ impl From<glam::Vec3> for Word {
 	#[inline(always)]
 	fn from(value: glam::Vec3) -> Self {
 		let arr = value.to_array();
-		Self::new(arr[0], arr[1], arr[2], 0.0)
+		F32X4::new(arr[0], arr[1], arr[2], 0.0).into()
 	}
 }
 
@@ -443,7 +558,7 @@ impl From<glam::Vec3> for Word {
 impl From<Word> for glam::Vec3A {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Self::from_array([value.x(), value.y(), value.z()])
+		Self::from_array([value.f32x4.e0(), value.f32x4.e0(), value.f32x4.e0()])
 	}
 }
 
@@ -452,7 +567,7 @@ impl From<glam::Vec3A> for Word {
 	#[inline(always)]
 	fn from(value: glam::Vec3A) -> Self {
 		let arr = value.to_array();
-		Self::new(arr[0], arr[1], arr[2], 0.0)
+		F32X4::new(arr[0], arr[1], arr[2], 0.0).into()
 	}
 }
 
@@ -460,7 +575,14 @@ impl From<glam::Vec3A> for Word {
 impl From<Word> for glam::Vec4 {
 	#[inline(always)]
 	fn from(value: Word) -> Self {
-		Self::from_array([value.x(), value.y(), value.z(), value.w()])
+		unsafe {
+			Self::from_array([
+				value.f32x4.e0(),
+				value.f32x4.e1(),
+				value.f32x4.e2(),
+				value.f32x4.e3(),
+			])
+		}
 	}
 }
 
@@ -469,129 +591,6 @@ impl From<glam::Vec4> for Word {
 	#[inline(always)]
 	fn from(value: glam::Vec4) -> Self {
 		let arr = value.to_array();
-		Self::new(arr[0], arr[1], arr[2], arr[3])
-	}
-}
-
-// Vec4I ///////////////////////////////////////////////////////////////////////
-
-newtype! {
-	/// Implementation detail of `Word`.
-	///
-	/// Essentially just a friendlier type alias for `Word`'s integral sibling,
-	/// with some methods attached for convenience.
-	#[derive(Clone, Copy)]
-	struct Vec4I(pub(self) __m128i)
-}
-
-impl Vec4I {
-	#[inline(always)]
-	#[must_use]
-	fn _zero() -> Self {
-		Self(unsafe { _mm_setzero_si128() })
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn _splat(value: i32) -> Self {
-		Self(unsafe { _mm_set1_epi32(value) })
-	}
-
-	/// The first half of the returned vector gets filled with the given value.
-	/// The rest is uninitialized.
-	#[inline(always)]
-	#[must_use]
-	fn splat_half(value: i64) -> Self {
-		let addr = std::ptr::addr_of!(value) as *const __m128i;
-		Self(unsafe { _mm_loadl_epi64(addr) })
-	}
-
-	/// The first half of the returned vector gets filled with the given value.
-	/// The rest is uninitialized.
-	#[inline(always)]
-	#[must_use]
-	fn splat_half_u(value: u64) -> Self {
-		let addr = std::ptr::addr_of!(value) as *const __m128i;
-		Self(unsafe { _mm_loadl_epi64(addr) })
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn x_zero(value: i32) -> Self {
-		Self(unsafe { _mm_cvtsi32_si128(value) })
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn x(self) -> i32 {
-		unsafe { _mm_cvtsi128_si32(self.0) }
-	}
-}
-
-#[cfg(not(target_feature = "sse4.1"))]
-impl Vec4I {
-	#[inline(always)]
-	#[must_use]
-	fn y(self) -> i32 {
-		unsafe { _mm_cvtsi128_si32(_mm_shuffle_epi32::<{ mm_shuffle(1, 1, 1, 1) }>(self.0)) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn z(self) -> i32 {
-		unsafe { _mm_cvtsi128_si32(_mm_shuffle_epi32::<{ mm_shuffle(2, 2, 2, 2) }>(self.0)) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn w(self) -> i32 {
-		unsafe { _mm_cvtsi128_si32(_mm_shuffle_epi32::<{ mm_shuffle(3, 3, 3, 3) }>(self.0)) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn x64(self) -> i64 {
-		let mut ret = 0;
-		unsafe {
-			_mm_storel_epi64(std::ptr::addr_of_mut!(ret) as *mut __m128i, self.0);
-		}
-		ret
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn x64u(self) -> u64 {
-		let mut ret = 0;
-		unsafe {
-			_mm_storel_epi64(std::ptr::addr_of_mut!(ret) as *mut __m128i, self.0);
-		}
-		ret
-	}
-}
-
-#[cfg(target_feature = "sse4.1")]
-impl Vec4I {
-	#[inline(always)]
-	#[must_use]
-	fn y(self) -> i32 {
-		unsafe { _mm_extract_epi32(self.0, 1) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn z(self) -> i32 {
-		unsafe { _mm_extract_epi32(self.0, 2) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn z(self) -> i32 {
-		unsafe { _mm_extract_epi32(self.0, 3) }
-	}
-
-	#[inline(always)]
-	#[must_use]
-	fn x64(self) -> i64 {
-		unsafe { _mm_extract_epi64(self.0, 0) }
+		F32X4::new(arr[0], arr[1], arr[2], arr[3]).into()
 	}
 }

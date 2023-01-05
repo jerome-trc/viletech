@@ -26,6 +26,7 @@ pub mod math;
 pub mod rng;
 #[allow(dead_code)]
 pub mod sim;
+pub mod simd;
 pub mod sparse;
 pub mod terminal;
 #[allow(dead_code)]
