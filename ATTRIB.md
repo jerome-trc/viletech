@@ -139,7 +139,7 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- Provided under the [MIT License](https://github.com/gz/rust-cpuid/blob/master/LICENSE.md).
 	- https://docs.rs/raw-cpuid/latest/raw_cpuid/
 - rayon
-	- By Josh Stone ([@cuviper](https://github.com/cuviper)), Niko "nikomatsakis" Matsakis, et al.
+	- By Josh Stone ([@cuviper](https://github.com/cuviper)), Niko Matsakis ([@nikomatsakis](https://github.com/nikomatsakis)), et al.
 	- Provided under the [Apache 2.0 License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT).
 	- https://docs.rs/rayon/latest/rayon/
 - regex
