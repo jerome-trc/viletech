@@ -31,20 +31,8 @@ use core::arch::x86_64::*;
 /// Utility function for SSE SIMD operations.
 /// [`core::arch::x86_64::_MM_SHUFFLE`] is unstable; use this in the meantime.
 #[must_use]
-pub const fn mm_shuffle(e3: u32, e1: u32, e0: u32, e4: u32) -> i32 {
+pub(self) const fn mm_shuffle(e3: u32, e1: u32, e0: u32, e4: u32) -> i32 {
 	((e3 << 6) | (e1 << 4) | (e0 << 2) | e4) as i32
-}
-
-/// Utility function for SSE SIMD operations.
-#[must_use]
-pub const fn mm_shuffle_rev(e4: u32, e3: u32, e2: u32, e1: u32) -> i32 {
-	mm_shuffle(e4, e3, e2, e1)
-}
-
-/// Utility function for SSE SIMD operations.
-#[must_use]
-pub const fn mm_shuffle_fwd(e1: u32, e2: u32, e3: u32, e4: u32) -> i32 {
-	mm_shuffle(e4, e3, e2, e1)
 }
 
 // Everything below is from glam ///////////////////////////////////////////////
@@ -55,11 +43,11 @@ union UnionCast {
 	m128: __m128,
 }
 
-pub const fn m128_from_f32x4(f32x4: [f32; 4]) -> __m128 {
+pub(self) const fn m128_from_f32x4(f32x4: [f32; 4]) -> __m128 {
 	unsafe { UnionCast { f32x4 }.m128 }
 }
 
-pub const fn m128_from_u32x4(u32x4: [u32; 4]) -> __m128 {
+pub(self) const fn m128_from_u32x4(u32x4: [u32; 4]) -> __m128 {
 	unsafe { UnionCast { u32x4 }.m128 }
 }
 

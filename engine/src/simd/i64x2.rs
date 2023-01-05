@@ -160,32 +160,30 @@ pub trait Int64: Default + Copy + Clone {
 	fn from_i64(value: i64) -> Self;
 }
 
-impl sealed::Sealed for i64 {}
-impl sealed::Sealed for u64 {}
+macro_rules! int64_impl {
+	($int_t:ty) => {
+		impl sealed::Sealed for $int_t {}
 
-impl Int64 for i64 {
-	#[inline(always)]
-	fn to_i64(self) -> i64 {
-		self
-	}
+		impl Int64 for $int_t {
+			#[inline(always)]
+			fn to_i64(self) -> i64 {
+				self as i64
+			}
 
-	#[inline(always)]
-	fn from_i64(value: i64) -> Self {
-		value
-	}
+			#[inline(always)]
+			fn from_i64(value: i64) -> Self {
+				value as $int_t
+			}
+		}
+	};
 }
 
-impl Int64 for u64 {
-	#[inline(always)]
-	fn to_i64(self) -> i64 {
-		self as i64
-	}
-
-	#[inline(always)]
-	fn from_i64(value: i64) -> Self {
-		value as u64
-	}
-}
+int64_impl!(i64);
+int64_impl!(u64);
+#[cfg(target_pointer_width = "64")]
+int64_impl!(isize);
+#[cfg(target_pointer_width = "64")]
+int64_impl!(usize);
 
 mod sealed {
 	pub trait Sealed {}

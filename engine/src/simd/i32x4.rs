@@ -214,32 +214,30 @@ pub trait Int32: Default + Copy + Clone {
 	fn from_i32(value: i32) -> Self;
 }
 
-impl sealed::Sealed for i32 {}
-impl sealed::Sealed for u32 {}
+macro_rules! int32_impl {
+	($int_t:ty) => {
+		impl sealed::Sealed for $int_t {}
 
-impl Int32 for i32 {
-	#[inline(always)]
-	fn to_i32(self) -> i32 {
-		self
-	}
+		impl Int32 for $int_t {
+			#[inline(always)]
+			fn to_i32(self) -> i32 {
+				self as i32
+			}
 
-	#[inline(always)]
-	fn from_i32(value: i32) -> Self {
-		value
-	}
+			#[inline(always)]
+			fn from_i32(value: i32) -> Self {
+				value as $int_t
+			}
+		}
+	};
 }
 
-impl Int32 for u32 {
-	#[inline(always)]
-	fn to_i32(self) -> i32 {
-		self as i32
-	}
-
-	#[inline(always)]
-	fn from_i32(value: i32) -> Self {
-		value as u32
-	}
-}
+int32_impl!(i32);
+int32_impl!(u32);
+#[cfg(target_pointer_width = "32")]
+int32_impl!(isize);
+#[cfg(target_pointer_width = "32")]
+int32_impl!(usize);
 
 mod sealed {
 	pub trait Sealed {}
