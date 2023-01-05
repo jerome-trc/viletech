@@ -354,18 +354,20 @@ impl ClientCore {
 						});
 					}
 					SceneChange::Title { to_mount } => {
-						let mut metas = vec![self
+						let mut ingests = vec![self
 							.vfs
 							.read()
 							.parse_gamedata_meta("/viletech/meta.toml")
 							.expect("Engine data package manifest is malformed.")];
 
+						ingests[0].virt_path = PathBuf::from("/viletech");
+
 						if !to_mount.is_empty() {
 							let mut m = self.vfs.write().mount_gamedata(&to_mount);
-							metas.append(&mut m);
+							ingests.append(&mut m);
 						}
 
-						if let Err(err) = self.data.write().populate(metas, &self.vfs.read()) {
+						if let Err(err) = self.data.write().populate(ingests, &self.vfs.read()) {
 							error!("Asset load failed: {err}");
 							unimplemented!();
 						}

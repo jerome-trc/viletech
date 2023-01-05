@@ -31,6 +31,11 @@ impl std::ops::Deref for FileRef<'_> {
 }
 
 impl<'vfs> FileRef<'vfs> {
+	#[must_use]
+	pub fn vfs(&self) -> &VirtualFs {
+		self.vfs
+	}
+
 	/// The returned iterator will be empty if requesting the children of a leaf node.
 	pub fn child_entries(&'vfs self) -> super::Iter<&Entry> {
 		match &self.entry.kind {

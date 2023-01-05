@@ -92,7 +92,7 @@ impl VirtualFsExt for VirtualFs {
 			if real_path.is_symlink() {
 				info!(
 					"Skipping game data object for mount: {}\r\n\t\
-					Reason: mounting symbolic links is forbidden",
+					Reason: mounting symbolic links is forbidden.",
 					real_path.display()
 				);
 				continue;
@@ -173,7 +173,10 @@ impl VirtualFsExt for VirtualFs {
 					.collect();
 
 				match self.parse_gamedata_meta(&metapath) {
-					Ok(m) => m,
+					Ok(mut m) => {
+						m.virt_path = to_mount[i].1.clone();
+						m
+					}
 					Err(err) => {
 						error!(
 							"Failed to parse gamedata meta file for package: {}\r\n\t\
@@ -191,6 +194,7 @@ impl VirtualFsExt for VirtualFs {
 				MountMetaIngest {
 					id,
 					version,
+					virt_path: to_mount[i].1.clone(),
 					..Default::default()
 				}
 			};

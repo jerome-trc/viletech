@@ -20,6 +20,24 @@ pub struct ModuleTree {
 	pub top_level: Vec<TopLevel>,
 }
 
+impl ModuleTree {
+	pub fn includes(&self) -> impl Iterator<Item = &StringLiteral> {
+		self.top_level.iter().filter_map(|top| {
+			let directive = match top {
+				TopLevel::Preproc(directive) => directive,
+				_ => {
+					return None;
+				}
+			};
+
+			match &directive.kind {
+				PreprocDirectiveKind::Include(inc) => Some(inc),
+				_ => None,
+			}
+		})
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TopLevel {
 	/// Inner annotations only, applied to the entire translation unit.

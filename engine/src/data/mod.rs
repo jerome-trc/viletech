@@ -20,8 +20,9 @@ use crate::{
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
-	lith, newtype,
-	utils::string,
+	lith::parse::parse_include_tree,
+	newtype,
+	utils::{lang::Interner, string},
 	vfs::{FileRef, VirtualFs, VirtualFsExt},
 	zscript,
 };
@@ -92,6 +93,14 @@ impl MountMeta {
 			virt_path: ingest.virt_path,
 		}
 	}
+
+	#[must_use]
+	pub fn manifest_path(&self) -> Option<&Path> {
+		match &self.kind {
+			MountKind::VileTech { manifest } => Some(manifest),
+			_ => None,
+		}
+	}
 }
 
 /// Intermediate format to keep the code path from mounting to asset loading cleaner.
@@ -137,7 +146,11 @@ pub enum MountKind {
 	Wad { internal: bool },
 	/// Assets are loaded from this archive/directory based on the
 	/// manifest specified by the meta.toml file.
-	VileTech { manifest: PathBuf },
+	VileTech {
+		/// A package can only specify a file native to it as a manifest, so this
+		/// is always relative. viletech.zip's manifest is at `manifest/main.lith`.
+		manifest: PathBuf,
+	},
 	/// Assets are loaded from this archive/directory based on the
 	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
 	/// for example, don't get loaded at all.
@@ -173,6 +186,14 @@ pub struct Namespace {
 	pub palettes: AssetVec<Palette>,
 }
 
+impl std::fmt::Debug for Namespace {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Namespace")
+			.field("meta", &self.meta)
+			.finish()
+	}
+}
+
 impl Namespace {
 	#[must_use]
 	pub fn new(metadata: MountMeta) -> Self {
@@ -198,7 +219,10 @@ impl Namespace {
 	}
 }
 
-#[derive(Default)]
+/// This structure is left in a completely default state at the frontend, is
+/// populated when starting a game, and gets cleared again when returning to
+/// the frontend.
+#[derive(Debug, Default)]
 pub struct DataCore {
 	/// Element 0 should _always_ be the engine's own data, ID "viletech".
 	/// Everything afterwards is ordered as per the user's specification.
@@ -214,8 +238,9 @@ pub struct DataCore {
 	/// full namespacing via asset IDs, but also has the concept of a short asset ID (SAID)
 	/// which mimics Doom's behaviour for interop purposes.
 	pub short_id_maps: [HashMap<String, AssetHandle>; asset::COLLECTION_COUNT],
-
+	/// See <https://zdoom.org/wiki/Editor_number>.
 	pub editor_numbers: HashMap<u16, AssetHandle>,
+	/// See <https://zdoom.org/wiki/Editor_number>.
 	pub spawn_numbers: HashMap<u16, AssetHandle>,
 }
 
@@ -279,6 +304,7 @@ impl DataCore {
 		self.namespaces.iter().any(|ns| regex.is_match(&ns.meta.id))
 	}
 
+	/// The only possible error condition returns [`AssetError::IdClobber`].
 	pub fn add<A: Asset>(
 		&mut self,
 		asset: A,
@@ -350,18 +376,19 @@ impl DataCore {
 		}
 	}
 
-	/// This function expects:
-	/// - That `self.namespaces` is empty.
-	/// - That `ingests[0]` is the parsed metadata for the VileTech data package.
+	/// This function expects that `ingests[0]` is the parsed metadata for the
+	/// VileTech data package. There's no reason to ever call it unless starting
+	/// from empty, so as a convenience, it clears all internal collections.
 	pub fn populate(
 		&mut self,
 		mut ingests: Vec<MountMetaIngest>,
 		vfs: &VirtualFs,
 	) -> Result<(), Error> {
-		assert!(
-			self.namespaces.is_empty(),
-			"Attempting to populate a non-empty `DataCore`."
-		);
+		self.namespaces.clear();
+		self.asset_map.clear();
+		self.short_id_maps.iter_mut().for_each(|map| map.clear());
+		self.editor_numbers.clear();
+		self.spawn_numbers.clear();
 
 		assert!(
 			!ingests.is_empty(),
@@ -379,25 +406,47 @@ impl DataCore {
 				.expect("Failed to find a namespace's VFS fileref for data core population.");
 
 			let kind = vfs.gamedata_kind(&meta_in.id);
+			let ns_idx = self.namespaces.len();
 
-			match kind {
+			let mut output = match kind {
 				MountKind::ZDoom => {
 					let namespace = Namespace::new(MountMeta::from_ingest(meta_in, kind));
-					self.populate_zdoom(vfs, namespace)?;
+					self.load_zdoom_pk(vfs, namespace, ns_idx)?
 				}
 				MountKind::Wad { .. } => {
-					// ???
+					unimplemented!() // ???
 				}
 				MountKind::VileTech { .. } => {
-					// ???
+					let namespace = Namespace::new(MountMeta::from_ingest(meta_in, kind));
+					self.load_vile_pk(vfs, namespace, ns_idx)?
 				}
 				MountKind::File => {
-					// ???
+					unimplemented!() // ???
 				}
 				MountKind::Eternity => {
-					// ???
+					unimplemented!() // ???
 				}
 			};
+
+			self.namespaces.push(output.namespace);
+
+			for (id, handle) in output.asset_mappings {
+				self.asset_map.insert(id, handle);
+			}
+
+			for coll_idx in 0..asset::COLLECTION_COUNT {
+				for (short_id, handle) in output.short_ids[coll_idx].drain(..) {
+					self.short_id_maps[coll_idx].insert(short_id, handle);
+				}
+			}
+
+			for (editor_num, handle) in output.editor_nums {
+				self.editor_numbers.insert(editor_num, handle);
+			}
+
+			for (spawn_num, handle) in output.spawn_nums {
+				self.spawn_numbers.insert(spawn_num, handle);
+			}
 		}
 
 		Ok(())
@@ -405,8 +454,13 @@ impl DataCore {
 }
 
 impl DataCore {
-	/// This method is atomic; `self` is left unmodified in the event of an error.
-	fn populate_zdoom(&mut self, vfs: &VirtualFs, namespace: Namespace) -> Result<(), Error> {
+	/// `namespace_index` is needed for generating asset handles.
+	fn load_zdoom_pk(
+		&self,
+		vfs: &VirtualFs,
+		namespace: Namespace,
+		_namespace_index: usize,
+	) -> Result<AssetLoadOutput, Error> {
 		let mount = vfs.lookup(namespace.meta.virt_path()).unwrap();
 
 		let mut dec_root_opt = None;
@@ -435,7 +489,84 @@ impl DataCore {
 			// Soon!
 		}
 
-		Ok(())
+		let ret = AssetLoadOutput::new(namespace);
+
+		Ok(ret)
+	}
+
+	/// `namespace_index` is needed for generating asset handles.
+	fn load_vile_pk(
+		&self,
+		vfs: &VirtualFs,
+		namespace: Namespace,
+		_namespace_index: usize,
+	) -> Result<AssetLoadOutput, Error> {
+		let mount_path = namespace.meta.virt_path(); // e.g. `/viletech`
+
+		let manifest_path: PathBuf = [mount_path, namespace.meta.manifest_path().unwrap()]
+			.iter()
+			.collect(); // e.g. `/viletech/manifest/main.lith`
+
+		let manifest = if let Some(mnf) = vfs.lookup(&manifest_path) {
+			mnf
+		} else {
+			return Err(Error::MissingManifest(manifest_path));
+		};
+
+		drop(manifest_path);
+
+		let interner = Interner::new_arc();
+		let inctree = parse_include_tree(mount_path, manifest, &interner);
+		let ret = AssetLoadOutput::new(namespace);
+
+		if !inctree.file_errs.is_empty() {
+			let mut msg = format!(
+				"{len} {noun} while parsing manifest for: `{nsid}`",
+				len = inctree.file_errs.len(),
+				noun = if inctree.file_errs.len() == 1 {
+					"error"
+				} else {
+					"errors"
+				},
+				nsid = &ret.namespace.meta.id
+			);
+
+			for err in inctree.file_errs {
+				msg.push_str("\r\n\t");
+				let prettified = err.to_string();
+				msg.push_str(&prettified);
+			}
+
+			error!("{msg}");
+			return Err(Error::Lith);
+		}
+
+		if !inctree.parse_errs.is_empty() {
+			let mut msg = format!(
+				"{len} {noun} while parsing manifest for: `{nsid}`",
+				len = inctree.parse_errs.len(),
+				noun = if inctree.parse_errs.len() == 1 {
+					"error"
+				} else {
+					"errors"
+				},
+				nsid = &ret.namespace.meta.id
+			);
+
+			for err in inctree.parse_errs {
+				msg.push_str("\r\n");
+				let path = err.file.as_ref().unwrap();
+				let file = vfs.lookup(path).unwrap();
+				let src = file.read_str();
+				let prettified = err.prettify(src);
+				msg.push_str(&prettified);
+			}
+
+			error!("{msg}");
+			return Err(Error::Lith);
+		}
+
+		Ok(ret)
 	}
 
 	#[allow(dead_code)]
@@ -495,12 +626,38 @@ impl DataCore {
 	}
 }
 
+#[derive(Debug)]
+struct AssetLoadOutput {
+	namespace: Namespace,
+	asset_mappings: Vec<(String, AssetHandle)>,
+	short_ids: [Vec<(String, AssetHandle)>; asset::COLLECTION_COUNT],
+	editor_nums: Vec<(u16, AssetHandle)>,
+	spawn_nums: Vec<(u16, AssetHandle)>,
+}
+
+impl AssetLoadOutput {
+	fn new(namespace: Namespace) -> Self {
+		Self {
+			namespace,
+			asset_mappings: Default::default(),
+			short_ids: Default::default(),
+			editor_nums: Default::default(),
+			spawn_nums: Default::default(),
+		}
+	}
+}
+
 /// Things that can go wrong during asset loading or access.
 #[derive(Debug)]
 pub enum Error {
-	/// An error occurred at some point during the LithScript compilation pipeline.
-	Lith(lith::Error),
-	ZScript(zscript::Error),
+	/// An error occurred during the LithScript compilation pipeline.
+	/// Has no content, since errors are logged as they are encountered.
+	Lith,
+	/// An error occurred during the ZScript-to-LithScript transpilation pipeline.
+	/// Has no content, since errors are logged as they are encountered.
+	ZScript,
+	/// A package specified a manifest file that wasn't found in the VFS.
+	MissingManifest(PathBuf),
 }
 
 impl std::error::Error for Error {}
@@ -508,8 +665,13 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Lith(err) => err.fmt(f),
-			Self::ZScript(err) => err.fmt(f),
+			Self::Lith => write!(f, "Error during LithScript compilation."),
+			Self::ZScript => write!(f, "Error during ZScript transpilation."),
+			Self::MissingManifest(path) => write!(
+				f,
+				"Specified manifest file could not be found: {}",
+				path.display()
+			),
 		}
 	}
 }
