@@ -31,12 +31,19 @@ pub const MAX_RETS: usize = 4;
 #[derive(Debug)]
 pub enum Error {
 	Parse(parse::Error),
+	/// Tried to retrieve a symbol from a module using an identifier that didn't
+	/// resolve to anything.
+	UnknownIdentifier,
+	/// Tried to retrieve a function from a module and found it, but failed to
+	/// pass the generic arguments matching its signature.
+	SignatureMismatch,
 }
 
 impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
 		match self {
 			Self::Parse(err) => Some(err),
+			_ => None,
 		}
 	}
 }
@@ -45,6 +52,14 @@ impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Parse(err) => err.fmt(f),
+			Self::UnknownIdentifier => write!(
+				f,
+				"Module symbol lookup failure; identifier didn't resolve to anything."
+			),
+			Self::SignatureMismatch => write!(
+				f,
+				"Module symbol lookup failure; function signature mismatch."
+			),
 		}
 	}
 }

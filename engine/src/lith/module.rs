@@ -12,7 +12,7 @@
 //!
 //! [create a `Builder`]: Builder::new
 
-use std::{ffi::c_void, sync::Arc};
+use std::{ffi::c_void, marker::PhantomData, sync::Arc};
 
 use cranelift::prelude::{types as ClTypes, AbiParam};
 use cranelift_jit::{JITBuilder, JITModule};
@@ -22,15 +22,16 @@ use indexmap::IndexMap;
 use crate::lith::{interop::C_TRAMPOLINES, MAX_RETS};
 
 use super::{
-	func::{FunctionFlags, FunctionInfo},
+	func::{Function, FunctionFlags, FunctionInfo},
 	interop::NativeFnBox,
 	word::Word,
-	Params, Returns,
+	Error, Params, Returns,
 };
 
 /// This can be cheaply cloned since it wraps an `Arc`. The actual compiled data
 /// is accessed lock-free, since it's stored immutably.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
+#[repr(transparent)]
 pub struct Module(Arc<Inner>);
 
 impl Module {
@@ -49,9 +50,36 @@ impl Module {
 			Err(arc) => Err(Self(arc)),
 		}
 	}
+
+	pub fn get_function<P, R, const PARAM_C: usize, const RET_C: usize>(
+		&self,
+		name: &str,
+	) -> Result<Function<P, R, PARAM_C, RET_C>, Error>
+	where
+		P: Params<PARAM_C>,
+		R: Returns<RET_C>,
+	{
+		match self.0.functions.get_full(name) {
+			Some((index, _, func)) => {
+				if super::func::hash_signature::<P, R, PARAM_C, RET_C>() == func.sig_hash {
+					Ok(Function::new(self.0.clone(), index))
+				} else {
+					Err(Error::SignatureMismatch)
+				}
+			}
+			None => Err(Error::UnknownIdentifier),
+		}
+	}
 }
 
-// Lith makes the following guarantees:
+impl PartialEq for Module {
+	/// Check that these two objects are backed by the same Cranelift module.
+	fn eq(&self, other: &Self) -> bool {
+		Arc::ptr_eq(&self.0, &other.0)
+	}
+}
+
+// Safety: Lith makes the following guarantees:
 // - An `OpenModule` is mutable, but it can not be safely moved across threads.
 // - A closed `Module` can be safely moved across threads, and its functions can
 // be called, but not in any way that mutates its inner state.
@@ -70,6 +98,7 @@ impl std::fmt::Debug for OpenModule {
 
 /// A module has to be "open" for compiling code into it; it must be "closed" via
 /// [`close`](OpenModule::close) in order to be used by a runtime.
+#[repr(transparent)]
 pub struct OpenModule(Inner);
 
 impl OpenModule {
@@ -188,9 +217,9 @@ impl Builder {
 				nfn.name,
 				FunctionInfo {
 					_code: nfn.trampoline as *const c_void,
-					_flags: FunctionFlags::empty(),
-					_sig_hash: nfn.sig_hash,
-					_native: Some(nfn.wrapper),
+					flags: FunctionFlags::empty(),
+					sig_hash: nfn.sig_hash,
+					native: Some(nfn.wrapper),
 					_id: id,
 				},
 			);
@@ -214,18 +243,18 @@ impl std::fmt::Debug for Builder {
 	}
 }
 
-struct Inner {
-	name: String,
+pub(super) struct Inner {
+	pub(super) name: String,
 	/// Is `true` if this module had any native symbols loaded into it.
 	/// Special rules are applied when performing semantic checks on source being
 	/// compiled into a native module.
-	native: bool,
+	pub(super) native: bool,
 	/// Freeing the module's memory requires pass-by-value, but [`Drop::drop`]
 	/// takes a mutable reference, so an indirection is needed here to allow
 	/// removing the module upon destruction. It is never `None`, ever.
-	inner: Option<JITModule>,
+	pub(super) inner: Option<JITModule>,
 	/// Indices are guaranteed to be stable, since this map is append-only.
-	functions: IndexMap<String, FunctionInfo>,
+	pub(super) functions: IndexMap<String, FunctionInfo>,
 }
 
 impl std::fmt::Debug for Inner {
@@ -247,6 +276,25 @@ impl Drop for Inner {
 		unsafe {
 			inner.unwrap_unchecked().free_memory();
 		}
+	}
+}
+
+/// Proxy for access to some kind of symbol in a LithScript [`Module`].
+///
+/// Wraps an [`Arc`], much like the module itself, so it's easy to store it far
+/// from the module itself. If you need to re-open the module for alteration later,
+/// all outstanding handles pointing it will need to be dropped first.
+#[derive(Debug, Clone)]
+pub struct Handle<T> {
+	pub(self) module: Arc<Inner>,
+	pub(self) index: usize,
+	_phantom: PhantomData<T>,
+}
+
+impl<T> PartialEq for Handle<T> {
+	/// Check that these two handles point to the same object in the same module.
+	fn eq(&self, other: &Self) -> bool {
+		Arc::ptr_eq(&self.module, &other.module) && self.index == other.index
 	}
 }
 
