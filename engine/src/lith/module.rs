@@ -24,6 +24,7 @@ use crate::lith::{interop::C_TRAMPOLINES, MAX_RETS};
 use super::{
 	func::{Function, FunctionFlags, FunctionInfo},
 	interop::NativeFnBox,
+	tsys::ScriptType,
 	word::Word,
 	Error, Params, Returns,
 };
@@ -230,6 +231,7 @@ impl Builder {
 			native,
 			inner: Some(module),
 			functions,
+			types: Default::default(),
 		})
 	}
 }
@@ -255,6 +257,8 @@ pub(super) struct Inner {
 	pub(super) inner: Option<JITModule>,
 	/// Indices are guaranteed to be stable, since this map is append-only.
 	pub(super) functions: IndexMap<String, FunctionInfo>,
+	/// Indices are guaranteed to be stable, since this map is append-only.
+	pub(super) types: IndexMap<String, ScriptType>,
 }
 
 impl std::fmt::Debug for Inner {
@@ -289,6 +293,27 @@ pub struct Handle<T> {
 	pub(self) module: Arc<Inner>,
 	pub(self) index: usize,
 	_phantom: PhantomData<T>,
+}
+
+impl std::ops::Deref for Handle<ScriptType> {
+	type Target = ScriptType;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe {
+			// Note that `unwrap_unchecked` has a debug assertion in it
+			self.module.types.get_index(self.index).unwrap_unchecked().1
+		}
+	}
+}
+
+impl Handle<ScriptType> {
+	#[must_use]
+	pub fn name(&self) -> &str {
+		unsafe {
+			// Note that `unwrap_unchecked` has a debug assertion in it
+			self.module.types.get_index(self.index).unwrap_unchecked().0
+		}
+	}
 }
 
 impl<T> PartialEq for Handle<T> {

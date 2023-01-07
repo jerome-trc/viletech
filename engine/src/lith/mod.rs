@@ -6,10 +6,12 @@ mod func;
 mod interop;
 mod module;
 pub mod parse;
+mod tsys;
 mod word;
 
 pub use interop::{Params, Returns};
 pub use module::{Builder as ModuleBuilder, Module, OpenModule};
+pub use tsys::*;
 
 /// No LithScript identifier in human-readable form may exceed this byte length.
 /// Mind that Lith only allows ASCII alphanumerics and underscores for identifiers,

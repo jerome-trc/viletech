@@ -101,6 +101,8 @@ Integers of different signedness and bit-width can only be converted via cast.
 
 The function pointer type is written `function<(A...) R>`, where `A` is any number of arguments and `R` is a return type.
 
+The `type` primitive is a handle to a single type in the system.
+
 ### Enumerations
 
 LithScript enumerations behave similarly to C++ scoped enumerations. Each is a series of named integral constants, incrementing with each variant declared, with an optional discriminant in the form of a constant expression.
@@ -137,7 +139,7 @@ A bitfield's underlying integer is given the identifier `__bits`.
 
 ### Pointers and References
 
-LithScript offers two ways to manage memory in the VM heap: `Ref` and `Ptr`. `Ref` is a handle to a heap value that is guaranteed at compile time to be non-null. `Ptr` is a type known to the compiler which uses the same semantics as `Option`. These handles types are the only ways to interact with class objects, which are never held as script values.
+LithScript offers two ways to manage memory in the VM heap: `Ref` and `Ptr`. `Ref` is a handle to a heap value that is guaranteed at compile time to be non-null. `Ptr` is a type known to the compiler which uses the same semantics as `Option`. These handle types are the only ways to interact with class objects, which are never held as script values.
 
 ## Resolvers
 
