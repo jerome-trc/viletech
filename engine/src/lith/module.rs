@@ -288,11 +288,12 @@ impl Drop for Inner {
 /// Wraps an [`Arc`], much like the module itself, so it's easy to store it far
 /// from the module itself. If you need to re-open the module for alteration later,
 /// all outstanding handles pointing it will need to be dropped first.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Handle<T> {
 	pub(self) module: Arc<Inner>,
 	pub(self) index: usize,
-	_phantom: PhantomData<T>,
+	#[allow(unused)]
+	phantom: PhantomData<T>,
 }
 
 impl std::ops::Deref for Handle<ScriptType> {
@@ -320,6 +321,16 @@ impl<T> PartialEq for Handle<T> {
 	/// Check that these two handles point to the same object in the same module.
 	fn eq(&self, other: &Self) -> bool {
 		Arc::ptr_eq(&self.module, &other.module) && self.index == other.index
+	}
+}
+
+impl<T> Clone for Handle<T> {
+	fn clone(&self) -> Self {
+		Self {
+			module: self.module.clone(),
+			index: self.index,
+			phantom: PhantomData,
+		}
 	}
 }
 
