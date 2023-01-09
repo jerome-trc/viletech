@@ -9,12 +9,22 @@ use super::module::Handle;
 #[derive(Debug)]
 pub struct ScriptType {
 	kind: TypeKind,
+	/// See the documentation for the method of the same name.
+	layout: std::alloc::Layout,
 }
 
 impl ScriptType {
 	#[must_use]
 	pub fn kind(&self) -> &TypeKind {
 		&self.kind
+	}
+
+	/// This is meant to be agnostic to the allocation strategy used, so it's
+	/// only based on the 128-bit word array needed to hold the type's data.
+	/// Allocation generations, GC tricolors, et cetera are excluded.
+	#[must_use]
+	pub fn layout(&self) -> std::alloc::Layout {
+		self.layout
 	}
 }
 
@@ -102,6 +112,8 @@ pub struct FieldDesc {
 	/// Human-readable.
 	name: String,
 	stype: Handle<ScriptType>,
+	/// See the documentation for the method of the same name.
+	offset: usize,
 }
 
 impl FieldDesc {
@@ -113,6 +125,13 @@ impl FieldDesc {
 	#[must_use]
 	pub fn stype(&self) -> &Handle<ScriptType> {
 		&self.stype
+	}
+
+	/// In bytes, from the end of the allocation header.
+	#[must_use]
+	#[allow(unused)]
+	pub(super) fn offset(&self) -> usize {
+		self.offset
 	}
 }
 
