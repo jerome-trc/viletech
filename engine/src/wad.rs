@@ -2,6 +2,7 @@
 //! License notice is in the source. Also see the attributions document.
 
 /*
+
 https://github.com/maghoff/wad/blob/master/LICENSE.txt
 
 Copyright (C) 2019 Magnus Hoff
