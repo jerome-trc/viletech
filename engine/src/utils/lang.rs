@@ -116,21 +116,20 @@ impl std::fmt::Display for Interner {
 
 impl Interner {
 	#[must_use]
-	#[allow(unused)]
-	pub(crate) fn new_arc() -> Arc<RwLock<Self>> {
+	pub(crate) fn _new_arc() -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self::default()))
 	}
 
 	#[must_use]
-	pub(crate) fn add(&mut self, string: &str) -> StringIndex {
+	pub(crate) fn _add(&mut self, string: &str) -> StringIndex {
 		StringIndex(self.set.insert_full(string.to_string().into_boxed_str()).0)
 	}
 
-	pub(crate) fn intern(this: &Arc<RwLock<Interner>>, string: &str) -> StringHandle {
+	pub(crate) fn _intern(this: &Arc<RwLock<Interner>>, string: &str) -> StringHandle {
 		{
 			let guard = this.read();
 
-			if let Some(s) = guard.try_lookup(string) {
+			if let Some(s) = guard._try_lookup(string) {
 				return StringHandle {
 					interner: this.clone(),
 					index: s,
@@ -143,7 +142,7 @@ impl Interner {
 
 			StringHandle {
 				interner: this.clone(),
-				index: guard.add(string),
+				index: guard._add(string),
 			}
 		}
 	}
@@ -158,12 +157,12 @@ impl Interner {
 		if let Some(index) = self.set.get_index_of(string) {
 			StringIndex(index)
 		} else {
-			self.add(string)
+			self._add(string)
 		}
 	}
 
 	#[must_use]
-	pub(crate) fn try_lookup(&self, string: &str) -> Option<StringIndex> {
+	pub(crate) fn _try_lookup(&self, string: &str) -> Option<StringIndex> {
 		self.set.get_index_of(string).map(StringIndex)
 	}
 

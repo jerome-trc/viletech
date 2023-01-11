@@ -20,9 +20,8 @@ use crate::{
 	game::{ActorStateMachine, DamageType, SkillInfo, Species},
 	gfx::doom::{ColorMap, Endoom, Palette},
 	level::{self, Cluster, Episode},
-	lith::parse::parse_include_tree,
 	newtype,
-	utils::{lang::Interner, string},
+	utils::string,
 	vfs::{FileRef, VirtualFs, VirtualFsExt},
 	zscript,
 };
@@ -507,17 +506,19 @@ impl DataCore {
 			.iter()
 			.collect(); // e.g. `/viletech/manifest/main.lith`
 
-		let manifest = if let Some(mnf) = vfs.lookup(&manifest_path) {
+		let _manifest = if let Some(mnf) = vfs.lookup(&manifest_path) {
 			mnf
 		} else {
 			return Err(Error::MissingManifest(manifest_path));
 		};
 
 		drop(manifest_path);
+		let ret = AssetLoadOutput::new(namespace);
+
+		/*
 
 		let interner = Interner::new_arc();
 		let inctree = parse_include_tree(mount_path, manifest, &interner);
-		let ret = AssetLoadOutput::new(namespace);
 
 		if !inctree.file_errs.is_empty() {
 			let mut msg = format!(
@@ -565,6 +566,8 @@ impl DataCore {
 			error!("{msg}");
 			return Err(Error::Lith);
 		}
+
+		*/
 
 		Ok(ret)
 	}

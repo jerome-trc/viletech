@@ -8,6 +8,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
 
+- ariadne
+    - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
+    - Provided under the [MIT License](https://github.com/zesterer/ariadne/blob/main/LICENSE).
+    - https://docs.rs/ariadne/latest/ariadne/
 - bitflags
 	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
@@ -24,6 +28,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By Kang Seonghoon ([@lifthrasiir](https://github.com/lifthrasiir)), Brandon W. Maister ([@quodlibetor](https://github.com/quodlibetor)), et al.
 	- Provided under the [Apache 2.0 License and MIT License](https://github.com/chronotope/chrono/blob/main/LICENSE.txt).
 	- https://docs.rs/chrono/latest/chrono/
+- chumsky
+    - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
+    - Provided under the [MIT License](https://github.com/zesterer/chumsky/blob/master/LICENSE).
+    - https://docs.rs/chumsky/latest/chumsky/
 - clap
 	- By Kevin K. ([@kbknapp](https://github.com/kbknapp)), Ed Page ([@epage](https://github.com/epage)), et al.
 	- Provided under the [Apache 2.0 License](https://github.com/clap-rs/clap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/clap-rs/clap/blob/master/LICENSE-MIT).
@@ -154,6 +162,9 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By Bartłomiej Maryńczak ([@PolyMeilex](https://github.com/PolyMeilex)) et al.
 	- Provided under the [MIT License](https://github.com/PolyMeilex/rfd/blob/master/LICENSE).
 	- https://docs.rs/rfd/latest/rfd/
+- rowan
+    - By Alex Kladov ([@matklad](https://github.com/matklad)) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/rust-analyzer/rowan/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-analyzer/rowan/blob/master/LICENSE-MIT).
 - serde
 	- By the [serde-rs](https://github.com/serde-rs) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT).

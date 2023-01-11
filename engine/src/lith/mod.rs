@@ -1,17 +1,30 @@
 //! Infrastructure powering the LithScript language.
 
-#[allow(dead_code)]
 pub mod ast;
 mod func;
 mod interop;
 mod module;
 pub mod parse;
+pub mod syn;
 mod tsys;
 mod word;
+
+use std::{
+	collections::HashMap,
+	path::{Path, PathBuf},
+	sync::Arc,
+};
+
+use indexmap::IndexMap;
+use parking_lot::RwLock;
+
+use crate::vfs::{self, VirtualFs};
 
 pub use interop::{Params, Returns};
 pub use module::{Builder as ModuleBuilder, Module, OpenModule};
 pub use tsys::*;
+
+use self::parse::ParseTree;
 
 /// No LithScript identifier in human-readable form may exceed this byte length.
 /// Mind that Lith only allows ASCII alphanumerics and underscores for identifiers,
@@ -30,9 +43,86 @@ pub const MAX_PARAMS: usize = 12;
 /// may return. Native functions are also bound to this limit.
 pub const MAX_RETS: usize = 4;
 
+/// Create one and store it permanently in your application's state.
+/// Call [`clear`] if you need to perform a recompilation.
+///
+/// [`clear`]: Self::clear
+pub struct Project {
+	vfs: Arc<RwLock<VirtualFs>>,
+	/// Used for generating error output.
+	sources: HashMap<PathBuf, ariadne::Source>,
+	modules: IndexMap<String, Module>,
+}
+
+impl Project {
+	#[must_use]
+	pub fn new(vfs: Arc<RwLock<VirtualFs>>) -> Self {
+		Self {
+			vfs,
+			sources: HashMap::default(),
+			modules: IndexMap::default(),
+		}
+	}
+
+	#[must_use]
+	pub fn is_empty(&self) -> bool {
+		self.sources.is_empty() && self.modules.is_empty()
+	}
+
+	pub fn clear(&mut self) {
+		self.sources.clear();
+		self.modules.clear();
+	}
+}
+
+impl ariadne::Cache<Path> for Project {
+	fn fetch(&mut self, id: &Path) -> Result<&ariadne::Source, Box<dyn std::fmt::Debug + '_>> {
+		use ariadne::Source;
+
+		if !self.sources.contains_key(id) {
+			let vfs = self.vfs.read();
+
+			let eref = if let Some(eref) = vfs.lookup(id) {
+				eref
+			} else {
+				return Err(Box::new(vfs::Error::NonExistentEntry(id.to_path_buf())));
+			};
+
+			if !eref.is_readable() {
+				return Err(Box::new(vfs::Error::Unreadable));
+			}
+
+			let entry = self
+				.sources
+				.entry(id.to_path_buf())
+				.or_insert_with(|| Source::from(eref.read_str()));
+
+			Ok(entry)
+		} else {
+			// The weakness of `HashMap`'s API forces us to run the lookup again
+			// to satisfy the borrow checker...[Rat] and it mildly annoys me
+			Ok(&self.sources[id])
+		}
+	}
+
+	fn display<'a>(&self, id: &'a Path) -> Option<Box<dyn std::fmt::Display + 'a>> {
+		Some(Box::new(id.display()))
+	}
+}
+
+/// If a mount (i.e. a mod or game) has LithScript, it has at least one
+/// "include tree". This is an unordered collection of source files brought
+/// together via `#include` preprocessor directives.
+///
+/// A manifest is its own include tree, and the manifest may dictate another file
+/// to act as the root for the mount's other include tree, which can contain
+/// game-modifying scripts.
+pub struct IncludeTree {
+	pub roots: Vec<ParseTree>,
+}
+
 #[derive(Debug)]
 pub enum Error {
-	Parse(parse::Error),
 	/// Tried to retrieve a symbol from a module using an identifier that didn't
 	/// resolve to anything.
 	UnknownIdentifier,
@@ -41,19 +131,11 @@ pub enum Error {
 	SignatureMismatch,
 }
 
-impl std::error::Error for Error {
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		match self {
-			Self::Parse(err) => Some(err),
-			_ => None,
-		}
-	}
-}
+impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Parse(err) => err.fmt(f),
 			Self::UnknownIdentifier => write!(
 				f,
 				"Module symbol lookup failure; identifier didn't resolve to anything."
