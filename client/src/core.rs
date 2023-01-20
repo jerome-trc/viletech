@@ -543,7 +543,7 @@ impl ClientCore {
 			sender: txin,
 			receiver: rxout,
 			thread: std::thread::Builder::new()
-				.name("VileTech: Playsim".to_string())
+				.name("vile-playsim".to_string())
 				.spawn(move || {
 					vile::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
 						sim,

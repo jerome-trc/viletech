@@ -6,6 +6,8 @@ mod core;
 
 use std::{boxed::Box, env, error::Error};
 
+use clap::Parser;
+use indoc::printdoc;
 use log::{error, info, warn};
 use vile::{
 	console::Console,
@@ -20,21 +22,30 @@ use winit::{
 
 use crate::core::ClientCore;
 
-#[must_use]
-pub fn version_string() -> String {
-	format!("VileTech client version: {}", env!("CARGO_PKG_VERSION"))
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = std::time::Instant::now();
+	let args = Clap::parse();
 
-	for arg in env::args() {
-		if arg == "--version" || arg == "-v" {
-			println!("{}", vile::short_version_string());
-			println!("VileTech client version {}.", env!("CARGO_PKG_VERSION"));
-			return Ok(());
-		}
+	if args.version {
+		println!("{}", vile::short_version_string());
+		println!("{}", &version_string());
+		return Ok(());
 	}
+
+	if args.about {
+		printdoc! {"
+VileTech Client - Copyright (C) 2022-2023 - ***REMOVED***
+
+This program comes with ABSOLUTELY NO WARRANTY.
+
+This is free software, and you are welcome to redistribute it under certain
+conditions. See the license document that come with your installation."
+		};
+
+		return Ok(());
+	}
+
+	vile::thread_pool_init(args.threads);
 
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
@@ -198,4 +209,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 		}
 		_ => {}
 	});
+}
+
+#[must_use]
+fn version_string() -> String {
+	format!("VileTech Client {}", env!("CARGO_PKG_VERSION"))
+}
+
+#[derive(Debug, clap::Parser)]
+struct Clap {
+	/// Prints the client and engine versions.
+	#[arg(short = 'V', long = "version")]
+	version: bool,
+	/// Prints license information.
+	#[arg(short = 'A', long = "about")]
+	about: bool,
+	/// Sets the number of threads used by the global thread pool
+	///
+	/// If set to 0 or not set, this will be automatically selected based on the
+	/// number of logical CPUs your computer has.
+	#[arg(short, long)]
+	threads: Option<usize>,
 }

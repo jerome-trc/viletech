@@ -144,6 +144,17 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	}
 }
 
+/// Prepares the rayon global thread pool. See [`rayon::ThreadPoolBuilder`].
+/// If `num_threads` is `None` then rayon chooses it automatically.
+/// This also ensures that these threads have clear names for debugging purposes.
+pub fn thread_pool_init(num_threads: Option<usize>) {
+	rayon::ThreadPoolBuilder::new()
+		.thread_name(|index| format!("vile-global-{index}"))
+		.num_threads(num_threads.unwrap_or(0))
+		.build_global()
+		.expect("Failed to build rayon's global thread pool.")
+}
+
 /// After initializing [`log`], call this to print:
 /// - The engine's semantic version.
 /// - The application's semantic version.
@@ -273,7 +284,7 @@ pub fn short_version_string() -> String {
 #[must_use]
 pub fn full_version_string(app_version_string: &str) -> String {
 	format!(
-		"VileTech Engine version: {}\r\n\t{app_version_string}\
+		"VileTech Engine {}\r\n\t{app_version_string}\
 		\r\n\tGit commit: {}\r\n\tCompiled on: {}",
 		env!("CARGO_PKG_VERSION"),
 		env!("GIT_HASH"),

@@ -4310,6 +4310,7 @@ name = "viletech-client"
 version = "0.0.0"
 dependencies = [
  "bitflags",
+ "clap 4.0.32",
  "crossbeam",
  "egui",
  "indoc",
@@ -4332,6 +4333,7 @@ dependencies = [
  "bytemuck",
  "clap 4.0.32",
  "crossbeam",
+ "indoc",
  "log",
  "renet",
  "sha3",

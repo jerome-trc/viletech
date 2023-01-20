@@ -11,6 +11,7 @@ use std::{
 };
 
 use clap::Parser;
+use indoc::printdoc;
 use log::{error, info};
 use vile::terminal::Terminal;
 
@@ -20,10 +21,7 @@ use sha3::{Digest, Sha3_256};
 
 #[must_use]
 pub fn version_string() -> String {
-	format!(
-		"VileTech dedicated server version: {}",
-		env!("CARGO_PKG_VERSION")
-	)
+	format!("VileTech Server {}", env!("CARGO_PKG_VERSION"))
 }
 
 pub struct ServerCore {
@@ -32,20 +30,54 @@ pub struct ServerCore {
 }
 
 #[derive(Parser, Debug)]
-#[clap(version, about, long_about = None)]
-struct LaunchArgs {
+struct Clap {
+	#[arg(short = 'V', long = "version")]
+	version: bool,
+	#[arg(short = 'A', long = "about")]
+	about: bool,
+
+	/// Sets the number of threads used by the global thread pool
+	///
+	/// If set to 0 or not set, this will be automatically selected based on the
+	/// number of logical CPUs your computer has.
+	#[arg(short, long)]
+	threads: Option<usize>,
+
+	/// If not set, this defaults to 64.
 	#[clap(long, value_parser, default_value_t = 64)]
 	max_clients: usize,
 	/// Can be empty.
 	#[clap(long, value_parser, default_value = "")]
 	password: String,
+	/// If not set, this defaults to 6666.
 	#[clap(long, value_parser, default_value_t = 6666)]
 	port: u16,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = Instant::now();
-	let args = LaunchArgs::parse();
+	let args = Clap::parse();
+
+	if args.version {
+		println!("{}", vile::short_version_string());
+		println!("{}", &version_string());
+		return Ok(());
+	}
+
+	if args.about {
+		printdoc! {"
+VileTech Server - Copyright (C) 2022-2023 - ***REMOVED***
+
+This program comes with ABSOLUTELY NO WARRANTY.
+
+This is free software, and you are welcome to redistribute it under certain
+conditions. See the license document that come with your installation."
+		};
+
+		return Ok(());
+	}
+
+	vile::thread_pool_init(args.threads);
 
 	match vile::log_init(None) {
 		Ok(()) => {}
