@@ -8,6 +8,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
 
+- arrayvec
+    - By [@bluss](https://github.com/bluss) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/bluss/arrayvec/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/arrayvec/blob/master/LICENSE-MIT).
+    - https://docs.rs/arrayvec/latest/arrayvec/
 - ariadne
     - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
     - Provided under the [MIT License](https://github.com/zesterer/ariadne/blob/main/LICENSE).
@@ -44,6 +48,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
 	- https://docs.rs/crossbeam/latest/crossbeam/
+- dashmap
+    - By [@xacrimon](https://github.com/xacrimon) et al.
+    - Provided under the [MIT License](https://github.com/xacrimon/dashmap/blob/master/LICENSE).
+    - https://docs.rs/dashmap/latest/dashmap/
 - dolly
 	- By Tomasz Stachowiak ([@h3r2tic](https://github.com/h3r2tic)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-MIT).

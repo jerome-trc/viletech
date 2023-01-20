@@ -1,19 +1,13 @@
 //! Console command callbacks and the client's console "frontend" details.
 
-use std::{
-	env,
-	path::{Path, PathBuf},
-};
+use std::env;
 
 use indoc::formatdoc;
-use kira::sound::static_sound::StaticSoundSettings;
 use log::{error, info};
 use vile::{
-	audio::{self, MidiData, MidiSettings},
 	console::MessageKind,
 	terminal::{self, CommandArgs},
 	utils::path::get_user_dir,
-	vfs::VirtualFsExt,
 };
 
 use crate::core::ClientCore;
@@ -148,24 +142,6 @@ pub fn ccmd_exit(args: CommandArgs) -> Request {
 	Request::Exit
 }
 
-/// Prints the contents of a virtual file system directory,
-/// or information about a file.
-pub fn ccmd_file(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints the contents of a virtual file system directory, \
-			or information about a file.",
-		);
-	}
-
-	let path = PathBuf::from(if args.name_only() { "/" } else { args[1] });
-
-	req_callback(move |core| {
-		let vfsg = core.vfs.read();
-		info!("{}", vfsg.ccmd_file(path.clone()));
-	})
-}
-
 /// Clears the console's history of submitted input strings.
 pub fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help_requested() {
@@ -240,228 +216,6 @@ pub fn ccmd_home(args: CommandArgs) -> Request {
 	Request::None
 }
 
-pub fn ccmd_music(args: CommandArgs) -> Request {
-	if args.help_requested() || args.name_only() {
-		return req_console_write_help(formatdoc! {"
-Starts playing a music track.
-
-Usage: {cmd_name} [options] <source>
-
-<source> can (currently only) be a virtual file system path.
-
-Options:
-
-	--device=<midi-device>	<midi-device> can be one of the following:
-								default
-								std standard
-								opl
-								sndsys
-								timidity
-								fluid fluidsynth
-								gus
-								wildmidi
-								adl
-								opn
-							`default` will cause the internal MIDI system to try
-							to find a fallback device, but if this option isn't
-							set, `fluidsynth` will be used.
-
-	--volume=<float>		The default volume is 1.0; the given value is clamped
-							between 0.0 and 4.0.
-",
-			cmd_name = args.command_name(),
-		});
-	}
-
-	if let Some(inval) = args.any_invalid_options(&["--device", "--volume"]) {
-		return req_console_write_invalidopt(inval);
-	}
-
-	if args.no_operands() {
-		return req_console_write_help("No virtual file path, asset ID, or asset handle provided.");
-	}
-
-	let path_string = args.operands().next().unwrap().to_string();
-
-	let midi_dev = if let Some(option) = args.find_option(|opt| opt.starts_with("--device")) {
-		match CommandArgs::option_value(option) {
-			"default" => zmusic::device::Index::Default,
-			"std" | "standard" => zmusic::device::Index::Standard,
-			"opl" => zmusic::device::Index::Opl,
-			"sndsys" => zmusic::device::Index::Sndsys,
-			"timidity" => zmusic::device::Index::TiMidity,
-			"fluid" | "fluidsynth" => zmusic::device::Index::FluidSynth,
-			"gus" => zmusic::device::Index::Gus,
-			"wildmidi" => zmusic::device::Index::WildMidi,
-			"adl" => zmusic::device::Index::Adl,
-			"opn" => zmusic::device::Index::Opn,
-			"" => return req_console_write_help("`--device` requires a string value."),
-			other => return req_console_write_help(format!("Unknown MIDI device: `{other}`")),
-		}
-	} else {
-		zmusic::device::Index::FluidSynth
-	};
-
-	let volume = if let Some(option) = args.find_option(|opt| opt.starts_with("--volume")) {
-		let val = match CommandArgs::option_value(option) {
-			"" => return req_console_write_help("`--volume` requires a string value."),
-			v => v,
-		};
-
-		match val.parse::<f64>() {
-			Ok(f) => f.clamp(0.0, 4.0),
-			Err(err) => {
-				return req_console_write_help(format!(
-					"Failed to parse `--volume` option value: {err}"
-				));
-			}
-		}
-	} else {
-		1.0
-	};
-
-	req_callback(move |core| {
-		let path = Path::new(&path_string);
-		let vfsg = core.vfs.read();
-
-		let fref = match vfsg.lookup(path) {
-			Some(f) => f,
-			None => {
-				info!("No file under virtual path: {path_string}");
-				return;
-			}
-		};
-
-		if !fref.is_readable() {
-			info!("File can not be read (neither binary nor text): {path_string}");
-			return;
-		}
-
-		let bytes = fref.read();
-
-		if zmusic::MidiKind::is_midi(bytes) {
-			let midi = match core.audio.zmusic.new_song(bytes, midi_dev) {
-				Ok(m) => m,
-				Err(err) => {
-					info!("Failed to create MIDI song from: {path_string}\r\n\tError: {err}");
-					return;
-				}
-			};
-
-			let mut midi = MidiData::new(midi, MidiSettings::default());
-
-			midi.settings.volume = kira::Volume::Amplitude(volume);
-
-			match core.audio.start_music_midi::<false>(midi) {
-				Ok(()) => {
-					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
-				}
-				Err(err) => {
-					info!("Failed to play MIDI song from: {path_string}\r\n\tError: {err}");
-				}
-			};
-		} else if let Ok(mut sdat) = audio::sound_from_file(fref, StaticSoundSettings::default()) {
-			sdat.settings.volume = kira::Volume::Amplitude(volume);
-
-			match core.audio.start_music_wave::<false>(sdat) {
-				Ok(()) => {
-					info!("Playing song: {path_string}\r\n\tAt volume: {volume}");
-				}
-				Err(err) => {
-					info!("Failed to play song: {path_string}\r\nError: {err}");
-				}
-			};
-		} else {
-			info!("Given file is neither waveform nor MIDI audio: {path_string}");
-		}
-	})
-}
-
-/// Starts a sound at default settings from the virtual file system.
-pub fn ccmd_sound(args: CommandArgs) -> Request {
-	if args.help_requested() || args.name_only() {
-		return req_console_write_help(formatdoc! {"
-Starts a playing a sound.
-
-Usage: {cmd_name} <source>
-
-<source> can (currently only) be a virtual file system path.
-
-Options:
-
-	--volume=<float>		The default volume is 1.0; the given value is clamped
-							between 0.0 and 2.0.
-",
-			cmd_name = args.command_name()
-		});
-	}
-
-	if let Some(inval) = args.any_invalid_options(&["--device", "--volume"]) {
-		return req_console_write_invalidopt(inval);
-	}
-
-	if args.no_operands() {
-		return req_console_write_help("No virtual file path, asset ID, or asset handle provided.");
-	}
-
-	let path_string = args.operands().next().unwrap().to_string();
-
-	let volume = if let Some(option) = args.find_option(|opt| opt.starts_with("--volume")) {
-		let val = match CommandArgs::option_value(option) {
-			"" => return req_console_write_help("`--volume` requires a string value."),
-			v => v,
-		};
-
-		match CommandArgs::option_value(val).parse::<f64>() {
-			Ok(f) => f,
-			Err(err) => {
-				return req_console_write_help(format!(
-					"Failed to parse `--volume` option value: {err}"
-				));
-			}
-		}
-	} else {
-		1.0
-	};
-
-	req_callback(move |core| {
-		let path = Path::new(&path_string);
-		let vfsg = core.vfs.read();
-
-		let fref = match vfsg.lookup(path) {
-			Some(h) => h,
-			None => {
-				info!("No file under virtual path: {}", path_string);
-				return;
-			}
-		};
-
-		if !fref.is_readable() {
-			info!("File can not be read (neither binary nor text): {path_string}");
-			return;
-		}
-
-		let mut sdat = match audio::sound_from_file(fref, StaticSoundSettings::default()) {
-			Ok(ssd) => ssd,
-			Err(err) => {
-				info!("Failed to create sound from file: {}", err);
-				return;
-			}
-		};
-
-		sdat.settings.volume = kira::Volume::Amplitude(volume);
-
-		match core.audio.start_sound_wave(sdat, None) {
-			Ok(()) => {
-				info!("Playing sound: {}", path_string);
-			}
-			Err(err) => {
-				info!("Failed to play sound: {}", err);
-			}
-		};
-	})
-}
-
 /// Prints the length of the time the engine has been running.
 pub fn ccmd_uptime(args: CommandArgs) -> Request {
 	if args.help_requested() {
@@ -500,32 +254,10 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 	Request::None
 }
 
-/// Prints information about the state of the virtual file system.
-pub fn ccmd_vfsdiag(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints information about the state of the virtual file system.",
-		);
-	}
-
-	req_callback(|core| {
-		let vfs = core.vfs.read();
-		let diag = vfs.diag();
-		info!(
-			"Virtual file system diagnostics:\r\n\t{} {}\r\n\t{} {}\r\n\t{} {} kB",
-			"Mounted objects:",
-			diag.mount_count,
-			"Total entries:",
-			diag.num_entries,
-			"Total memory usage:",
-			diag.mem_usage / 1000
-		);
-	})
-}
-
 // Helpers /////////////////////////////////////////////////////////////////////
 
 #[must_use]
+#[allow(unused)]
 fn req_console_write_invalidopt(opt: &str) -> Request {
 	let msg = format!("Unknown option: `{opt}`");
 

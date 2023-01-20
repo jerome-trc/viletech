@@ -10,7 +10,7 @@ use nanorand::WyRand;
 use parking_lot::RwLock;
 
 use crate::{
-	data::DataCore,
+	data::Catalog,
 	ecs::{Components, DenseRegistry},
 	rng::RngCore,
 };
@@ -59,7 +59,7 @@ pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
 pub struct Context {
 	pub sim: Arc<RwLock<PlaySim>>,
-	pub data: Arc<RwLock<DataCore>>,
+	pub catalog: Arc<RwLock<Catalog>>,
 	pub receiver: InReceiver,
 	pub sender: OutSender,
 }
@@ -95,7 +95,7 @@ pub fn run<const CFG: u8>(context: Context) {
 
 	let Context {
 		sim,
-		data: _,
+		catalog: _,
 		receiver,
 		sender,
 	} = context;

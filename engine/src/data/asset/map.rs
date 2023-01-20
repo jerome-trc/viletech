@@ -1,23 +1,26 @@
+//! Map data.
+
 use bitflags::bitflags;
 use glam::IVec2;
 
-use crate::data::AssetHandle;
+use super::{super::InHandle, Asset, Image, Music};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vertex {
 	x: f64,
 	y: f64,
 }
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct LineDef {
-	id: i32,
-	v1: i32,
-	v2: i32,
-	flags: LineDefFlags,
-	special: i32,
-	args: [i32; 5],
-	side_front: i32,
-	side_back: i32,
+	pub id: i32,
+	pub v1: i32,
+	pub v2: i32,
+	pub flags: LineDefFlags,
+	pub special: i32,
+	pub args: [i32; 5],
+	pub side_front: i32,
+	pub side_back: i32,
 }
 
 bitflags! {
@@ -72,58 +75,78 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct SideDef {
-	offset: IVec2,
-	tex_top: AssetHandle,
-	tex_bottom: AssetHandle,
-	tex_mid: AssetHandle,
-	sector: i32,
+	pub offset: IVec2,
+	pub tex_top: Option<InHandle<Image>>,
+	pub tex_bottom: Option<InHandle<Image>>,
+	pub tex_mid: Option<InHandle<Image>>,
+	pub sector: i32,
 }
 
 #[derive(Debug)]
 pub struct Sector {
-	height_floor: i32,
-	height_ceiling: i32,
-	tex_floor: AssetHandle,
-	tex_ceiling: AssetHandle,
-	light_level: i32,
-	special: i32,
-	id: i32,
+	pub height_floor: i32,
+	pub height_ceiling: i32,
+	pub tex_floor: Option<InHandle<Image>>,
+	pub tex_ceiling: Option<InHandle<Image>>,
+	pub light_level: i32,
+	pub special: i32,
+	pub id: i32,
 }
 
 #[derive(Debug)]
-pub struct Metadata {
+pub struct Map {
+	pub meta: MapMetadata,
+	pub udmf_namespace: Option<UdmfNamespace>,
+}
+
+impl Asset for Map {}
+
+/// Comes from a map entry in a MAPINFO lump.
+#[derive(Debug)]
+pub struct MapMetadata {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
 	/// Prepended to the level name on the automap. May be a string ID.
 	pub label: String,
 	/// May be a string ID.
 	pub author_name: String,
-	pub music: Option<AssetHandle>,
+	pub music: Option<InHandle<Music>>,
 	/// The map that players are taken to upon passing through the normal exit.
-	pub next: Option<AssetHandle>,
+	pub next: Option<InHandle<Map>>,
 	/// The map to which the secret exit leads, if any.
-	pub next_secret: Option<AssetHandle>,
+	pub next_secret: Option<InHandle<Map>>,
 	/// In seconds.
 	pub par_time: u32,
 	/// Only used by ACS.
 	pub special_num: i32,
-	pub flags: Flags,
+	pub flags: MapFlags,
 }
 
 bitflags! {
 	#[derive(Default)]
-	pub struct Flags: u8 {
+	pub struct MapFlags: u8 {
 		/// Switch lines must be vertically reachable to allow interaction.
 		const CHECK_SWITCH_RANGE = 1 << 0;
 	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UdmfNamespace {
+	Doom,
+	Heretic,
+	Hexen,
+	Strife,
+	ZDoom,
+	ZDoomTranslated,
+	Vavoom,
 }
 
 #[derive(Debug)]
 pub struct Episode {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
-	pub start_map: AssetHandle,
-	pub background: AssetHandle,
+	pub start_map: Option<InHandle<Map>>,
+	pub background: Option<InHandle<Image>>,
 	pub flags: EpisodeFlags,
 }
 
@@ -139,12 +162,12 @@ bitflags! {
 #[derive(Debug)]
 pub struct Cluster {
 	/// Displayed to the user. May be a string ID.
-	text_enter: String,
+	pub text_enter: String,
 	/// Displayed to the user. May be a string ID.
-	text_exit: String,
-	flags: ClusterFlags,
-	music: AssetHandle,
-	background: AssetHandle,
+	pub text_exit: String,
+	pub flags: ClusterFlags,
+	pub music: InHandle<Music>,
+	pub background: InHandle<Image>,
 }
 
 bitflags! {

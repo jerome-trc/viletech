@@ -31,7 +31,7 @@
 use num::traits::FromPrimitive;
 use num_derive::FromPrimitive;
 
-use crate::{data::AssetHandle, ecs::EntityId, math::IRect32};
+use crate::{ecs::EntityId, math::IRect32};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
@@ -131,8 +131,7 @@ pub(super) struct Script {
 	local_vars: Vec<i32>,
 	activator: EntityId,
 	line: Option<usize>,
-	font: Option<AssetHandle>,
-
+	// TODO: Why did GZDoom's counterpart to this type store a font?
 	hud_height: u32,
 	hud_width: u32,
 	clip: IRect32,

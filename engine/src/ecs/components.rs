@@ -1,11 +1,8 @@
-use crate::data::AssetHandle;
-
 /// Component for data which is baked into a newly-spawned entity and never changes.
 #[derive(Debug)]
 pub struct Constant {
 	/// The sim tic on which this entity was spawned.
 	spawned_tic: u32,
-	blueprint: AssetHandle,
 }
 
 /// Primarily for use by ACS behaviours. An entity won't have this component unless

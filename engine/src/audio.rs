@@ -4,7 +4,7 @@ mod gui;
 mod midi;
 
 use std::{
-	io::{self, Read, Seek},
+	io::{Cursor, Read, Seek},
 	ops::{Deref, DerefMut},
 	path::{Path, PathBuf},
 	sync::Arc,
@@ -29,9 +29,9 @@ use parking_lot::RwLock;
 use zmusic::cpal::SampleFormat;
 
 use crate::{
+	data::{Catalog, FileRef},
 	ecs::EntityId,
 	utils,
-	vfs::{FileRef, VirtualFs},
 };
 
 pub use midi::MidiData;
@@ -55,14 +55,14 @@ pub struct AudioCore {
 	pub music2: Option<Handle>,
 	/// Sounds currently being played.
 	pub sounds: Vec<Sound>,
-	vfs: Arc<RwLock<VirtualFs>>,
+	catalog: Arc<RwLock<Catalog>>,
 	gui: DeveloperGui,
 }
 
 impl AudioCore {
 	/// If `None` is given, the defaults will be used.
 	pub fn new(
-		vfs: Arc<RwLock<VirtualFs>>,
+		catalog: Arc<RwLock<Catalog>>,
 		manager_settings: Option<AudioManagerSettings<CpalBackend>>,
 	) -> Result<Self, Error> {
 		let manager_settings = manager_settings.unwrap_or_default();
@@ -93,7 +93,7 @@ impl AudioCore {
 		}
 
 		let mut ret = Self {
-			vfs,
+			catalog,
 			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
 			zmusic,
 			soundfonts: Vec::with_capacity(1),
@@ -274,9 +274,9 @@ impl AudioCore {
 		Ok(())
 	}
 
-	/// Hypothetically, this could be a free function taking a [`zmusic::Song`] but
-	/// tying it to the manager via mutable reference prevents use from multiple
-	/// threads, to which FluidSynth is unfriendly.
+	/// Hypothetically, this could be a free function taking a [`zmusic::Song`]
+	/// but tying it to the manager via mutable reference prevents use from
+	/// multiple threads, to which FluidSynth is unfriendly.
 	pub fn render_midi(
 		&mut self,
 		source: &[u8],
@@ -540,8 +540,8 @@ pub fn sound_from_file(
 	file: FileRef,
 	settings: StaticSoundSettings,
 ) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
-	let bytes = file.try_read()?.to_owned();
-	let cursor = io::Cursor::new(bytes);
+	let bytes = file.try_read_bytes()?.to_owned();
+	let cursor = Cursor::new(bytes);
 
 	match StaticSoundData::from_cursor(cursor, settings) {
 		Ok(ssd) => Ok(ssd),
@@ -553,7 +553,7 @@ pub fn sound_from_bytes(
 	bytes: impl Into<Vec<u8>>,
 	settings: StaticSoundSettings,
 ) -> Result<StaticSoundData, kira::sound::FromFileError> {
-	let cursor = io::Cursor::new(bytes.into());
+	let cursor = Cursor::new(bytes.into());
 	StaticSoundData::from_cursor(cursor, settings)
 }
 

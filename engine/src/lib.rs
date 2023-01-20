@@ -18,8 +18,6 @@ pub mod frontend;
 pub mod game;
 pub mod gfx;
 pub mod input;
-#[allow(dead_code)]
-pub mod level;
 pub mod lith;
 pub mod math;
 #[allow(dead_code)]
@@ -32,7 +30,6 @@ pub mod terminal;
 #[allow(dead_code)]
 pub mod user;
 pub mod utils;
-pub mod vfs;
 pub mod wad;
 #[allow(dead_code)]
 pub mod zscript;
@@ -42,10 +39,20 @@ pub extern crate num_traits;
 
 // Type aliases
 
-pub use level::Cluster as LevelCluster;
-pub use level::Flags as LevelFlags;
-pub use level::Metadata as LevelMetadata;
-pub use vfs::Error as VfsError;
+/// Disambiguates between real FS paths and virtual FS paths.
+pub type VPath = std::path::Path;
+/// Disambiguates between real FS paths and virtual FS paths.
+pub type VPathBuf = std::path::PathBuf;
+/// WAD entries have a name length limit of 8 ASCII characters, and this limitation
+/// has persisted through Doom's descendant source ports (for whatever reason).
+/// For compatibility purposes, VileTech sometimes needs to pretend that there's
+/// no game data namespacing and look up the last loaded thing with a certain name.
+pub type ShortId = arrayvec::ArrayString<8>;
+
+/// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.
+pub type EditorNum = u16;
+/// See <https://zdoom.org/wiki/Spawn_number>. Used by ACS.
+pub type SpawnNum = u16;
 
 // Symbols that don't belong in any other module ///////////////////////////////
 
@@ -364,6 +371,9 @@ pub fn log_init(
 	Ok(())
 }
 
+pub const BASEDATA_ID: &str = env!("BASEDATA_ID");
+pub const BASEDATA_FILENAME: &str = env!("BASEDATA_FILENAME");
+
 /// Panics if:
 /// - In release mode, and the executable path can't be retrieved.
 /// - In debug mode, and the working directory path can't be retrieved.
@@ -375,7 +385,7 @@ pub fn basedata_path() -> std::path::PathBuf {
 
 	#[cfg(not(debug_assertions))]
 	{
-		path = [utils::path::exe_dir(), PathBuf::from("viletech.zip")]
+		path = [utils::path::exe_dir(), PathBuf::from(BASEDATA_FILENAME)]
 			.iter()
 			.collect();
 	}

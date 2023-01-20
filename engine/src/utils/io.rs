@@ -4,39 +4,6 @@ use std::io;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-/// Check if the given byte slice is not ASCII-encoded, UTF-8 encoded, or UTF-16 encoded.
-#[must_use]
-pub fn is_binary(bytes: &[u8]) -> bool {
-	if std::str::from_utf8(bytes).is_ok() || bytes.is_ascii() {
-		return false;
-	}
-
-	let slice16 = match bytemuck::try_cast_slice::<u8, u16>(bytes) {
-		Ok(s) => s,
-		Err(_) => {
-			return true;
-		}
-	};
-
-	// Check for two consecutive NUL characters
-	let mut nul = false;
-	let end = std::cmp::min(slice16.len(), 512);
-
-	for c16 in &slice16[0..end] {
-		if nul {
-			if *c16 == 0 {
-				return false;
-			} else {
-				nul = false;
-			}
-		} else if *c16 == 0 {
-			nul = true;
-		}
-	}
-
-	true
-}
-
 /// Checks for a 4-byte magic number.
 /// Ensure the given slice starts at the file's beginning.
 #[must_use]
@@ -72,9 +39,9 @@ pub fn is_xz(header: &[u8], footer: &[u8], file_len: u64) -> bool {
 		&& matches!(&footer[(footer.len() - 2)..], &[0x59, 0x5A])
 }
 
-/// Checks for the 4-byte magic number, directory info, and that the
-/// file size is as expected given the number of entries. `len` should be the
-/// length of the entire WAD's file length, regardless of the length of `bytes`.
+/// Checks for the 4-byte magic number, directory info, and that the file size is
+/// as expected given the number of entries. `len` should be the entire WAD's file
+/// length, regardless of the length of `bytes`.
 pub fn is_valid_wad(bytes: &[u8], len: u64) -> io::Result<bool> {
 	if len < 12 {
 		return Ok(false);

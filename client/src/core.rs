@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf, sync::Arc};
+use std::{error::Error, path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
 
 use log::error;
 use nanorand::WyRand;
@@ -7,13 +7,13 @@ use shipyard::World;
 use vile::{
 	audio::AudioCore,
 	console::{self, Console},
-	data::DataCore,
+	data::{Catalog, LoadError, LoadRequest, LoadTracker},
 	frontend::{FrontendAction, FrontendMenu},
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
+	lith,
 	rng::RngCore,
 	sim::{self, PlaySim},
-	vfs::{VirtualFs, VirtualFsExt},
 };
 use winit::{
 	event::{ElementState, KeyboardInput, VirtualKeyCode},
@@ -35,6 +35,15 @@ enum Scene {
 	Frontend {
 		menu: FrontendMenu,
 	},
+	GameLoad {
+		/// The mount thread takes a write guard to the catalog and another
+		/// pointer to `tracker`.
+		thread: JoinHandle<Vec<Result<(), LoadError>>>,
+		/// How far along the mount/load process is `thread`?
+		tracker: Arc<LoadTracker>,
+		/// Print to the log how long the mount takes for diagnostic purposes.
+		start_time: Instant,
+	},
 	/// Where the user is taken after leaving the frontend, unless they have
 	/// specified to be taken directly to a playsim.
 	Title {
@@ -46,23 +55,33 @@ enum Scene {
 	CastCall,
 }
 
+#[derive(Debug)]
 enum SceneChange {
+	/// The user has requested an immediate exit from any other scene.
+	/// Stop everything, drop everything, and close the window as fast as possible.
 	Exit,
-	Frontend,
-	Title { to_mount: Vec<PathBuf> },
-	PlaySim {},
+	FrontendToTitle {
+		/// The user's load order. Gets handed off to the mount thread.
+		to_mount: Vec<PathBuf>,
+	},
+	TitleToFrontend,
 }
 
 pub struct ClientCore {
-	pub start_time: std::time::Instant,
-	pub vfs: Arc<RwLock<VirtualFs>>,
-	pub data: Arc<RwLock<DataCore>>,
-	pub rng: Arc<Mutex<RngCore<WyRand>>>,
+	/// (Rat) In my experience, a runtime log is much more informative if it
+	/// states the duration for which the program executed.
+	pub start_time: Instant,
+	pub catalog: Arc<RwLock<Catalog>>,
+	pub project: Arc<RwLock<lith::Project>>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
 	pub input: InputCore,
+	/// Kept behind an arc-lock in case the client's script API ends up needing
+	/// to call into it from multiple threads. If this proves to never happen,
+	/// it will be unwrapped.
+	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub console: Console<ConsoleCommand>,
-	pub gui: World,
+	pub gui: World, // TODO: Replace with a menu stack
 	pub camera: Camera,
 	devgui: DeveloperGui,
 	scene: Scene,
@@ -73,8 +92,7 @@ pub struct ClientCore {
 impl ClientCore {
 	pub fn new(
 		start_time: std::time::Instant,
-		vfs: Arc<RwLock<VirtualFs>>,
-		data: DataCore,
+		catalog: Catalog,
 		gfx: GraphicsCore,
 		console: Console<ConsoleCommand>,
 	) -> Result<Self, Box<dyn Error>> {
@@ -83,15 +101,17 @@ impl ClientCore {
 			gfx.surface_config.height as f32,
 		);
 
-		let vfs_audio = vfs.clone();
+		let catalog = Arc::new(RwLock::new(catalog));
+		let catalog_audio = catalog.clone();
+		let catalog_lith = catalog.clone();
 
 		let mut ret = ClientCore {
 			start_time,
-			vfs,
-			data: Arc::new(RwLock::new(data)),
+			catalog,
+			project: Arc::new(RwLock::new(lith::Project::new(catalog_lith))),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
-			audio: AudioCore::new(vfs_audio, None)?,
+			audio: AudioCore::new(catalog_audio, None)?,
 			input: InputCore::default(),
 			console,
 			gui: World::default(),
@@ -169,7 +189,7 @@ impl ClientCore {
 					FrontendAction::Start => {
 						let to_mount = menu.to_mount();
 						let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
-						self.next_scene = Some(SceneChange::Title { to_mount });
+						self.next_scene = Some(SceneChange::FrontendToTitle { to_mount });
 					}
 				}
 
@@ -311,83 +331,33 @@ impl ClientCore {
 	}
 
 	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {
-		let next_scene = self.next_scene.take();
+		// TODO: Tell branch predictor this is likely when the intrinsic stabilizes
+		if self.next_scene.is_none() {
+			return;
+		}
 
-		match next_scene {
-			None => {
-				// TODO: Mark as likely with intrinsics...?
+		match &mut self.next_scene {
+			Some(SceneChange::Exit) => {
+				*control_flow = ControlFlow::Exit;
 			}
-			Some(scene) => {
-				let mut prev = Scene::Transition;
-				std::mem::swap(&mut self.scene, &mut prev);
+			Some(SceneChange::FrontendToTitle { to_mount }) => {
+				let to_mount = std::mem::take(to_mount);
 
-				// Disable contextual console commands
-				match prev {
-					Scene::Frontend { .. } => {
-						self.console.disable_commands(|ccmd| {
-							ccmd.flags.contains(ConsoleCommandFlags::FRONTEND)
-						});
+				self.scene = match self.mount_load_order(to_mount) {
+					Ok(s) => s,
+					Err(err) => {
+						error!("Game load failed. Reason: {err}");
+						return;
 					}
-					Scene::Title { .. } => {
-						self.console.disable_commands(|ccmd| {
-							ccmd.flags.contains(ConsoleCommandFlags::TITLE)
-						});
-					}
-					_ => {}
-				}
-
-				// End sim where necessary
-				match prev {
-					Scene::PlaySim { inner } | Scene::Title { inner } => {
-						self.end_sim(inner);
-					}
-					_ => {}
 				};
-
-				match scene {
-					SceneChange::Exit => {
-						*control_flow = ControlFlow::Exit;
-					}
-					SceneChange::Frontend => {
-						self.console.enable_commands(|ccmd| {
-							ccmd.flags.contains(ConsoleCommandFlags::FRONTEND)
-						});
-					}
-					SceneChange::Title { to_mount } => {
-						let mut ingests = vec![self
-							.vfs
-							.read()
-							.parse_gamedata_meta("/viletech/meta.toml")
-							.expect("Engine data package manifest is malformed.")];
-
-						ingests[0].virt_path = PathBuf::from("/viletech");
-
-						if !to_mount.is_empty() {
-							let mut m = self.vfs.write().mount_gamedata(&to_mount);
-							ingests.append(&mut m);
-						}
-
-						if let Err(err) = self.data.write().populate(ingests, &self.vfs.read()) {
-							error!("Asset load failed: {err}");
-							unimplemented!();
-						}
-
-						self.console.enable_commands(|ccmd| {
-							ccmd.flags.contains(ConsoleCommandFlags::TITLE)
-						});
-
-						self.scene = Scene::Title {
-							inner: self.start_sim(),
-						};
-					}
-					SceneChange::PlaySim {} => {
-						self.scene = Scene::PlaySim {
-							inner: self.start_sim(),
-						};
-					}
-				}
 			}
-		};
+			Some(SceneChange::TitleToFrontend) => {
+				self.catalog.write().truncate(1); // Keep base data
+			}
+			None => unreachable!(),
+		}
+
+		let _ = self.next_scene.take();
 	}
 
 	pub fn exit(&mut self) {
@@ -435,15 +405,6 @@ impl ClientCore {
 		);
 
 		self.console.register_command(
-			"file",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_file,
-			},
-			true,
-		);
-
-		self.console.register_command(
 			"hclear",
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
@@ -471,15 +432,6 @@ impl ClientCore {
 		);
 
 		self.console.register_command(
-			"music",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_music,
-			},
-			true,
-		);
-
-		self.console.register_command(
 			"quit",
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
@@ -487,15 +439,6 @@ impl ClientCore {
 			},
 			true,
 		); // Built-in alias for "exit"
-
-		self.console.register_command(
-			"sound",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_sound,
-			},
-			true,
-		);
 
 		self.console.register_command(
 			"uptime",
@@ -523,15 +466,66 @@ impl ClientCore {
 			},
 			true,
 		);
+	}
 
-		self.console.register_command(
-			"vfsdiag",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_vfsdiag,
-			},
-			true,
-		);
+	fn mount_load_order(&mut self, to_mount: Vec<PathBuf>) -> Result<Scene, String> {
+		let start_time = Instant::now();
+		let catalog = self.catalog.clone();
+		let tracker = Arc::new(LoadTracker::default());
+		let mut mounts = Vec::with_capacity(to_mount.len());
+
+		for real_path in to_mount {
+			if real_path.is_symlink() {
+				return Err(format!(
+					"Could not mount file: {}\r\n\t\
+					Details: mounting symbolic links is forbidden.",
+					real_path.display()
+				));
+			}
+
+			let fstem = if let Some(stem) = real_path.file_stem() {
+				stem
+			} else {
+				return Err(format!(
+					"Could not mount file: {}\r\n\t\
+					Details: file has no name.",
+					real_path.display()
+				));
+			};
+
+			let mount_point = if let Some(s) = fstem.to_str() {
+				s
+			} else {
+				return Err(format!(
+					"Could not mount file: {}\r\n\t\
+					Details: file has invalid characters in its name.",
+					real_path.display()
+				));
+			};
+
+			let mount_point = mount_point.to_string();
+
+			mounts.push((real_path, mount_point));
+		}
+
+		let tracker_sent = tracker.clone();
+		let project_sent = self.project.clone();
+
+		let thread = std::thread::spawn(move || {
+			let request = LoadRequest {
+				paths: &mounts,
+				project: project_sent,
+				tracker: Some(tracker_sent),
+			};
+
+			catalog.write().load(request)
+		});
+
+		Ok(Scene::GameLoad {
+			thread,
+			tracker,
+			start_time,
+		})
 	}
 
 	fn start_sim(&mut self) -> sim::Handle {
@@ -539,7 +533,7 @@ impl ClientCore {
 		let (txin, rxin) = crossbeam::channel::unbounded();
 
 		let sim = Arc::new(RwLock::new(PlaySim::default()));
-		let data = self.data.clone();
+		let catalog = self.catalog.clone();
 
 		self.console
 			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
@@ -553,7 +547,7 @@ impl ClientCore {
 				.spawn(move || {
 					vile::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
 						sim,
-						data,
+						catalog,
 						sender: txout,
 						receiver: rxin,
 					});

@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use viletech::vfs::VirtualFs;
+use viletech::data::Catalog;
 
 /// Leave this here even if it's empty, so there's a quick scaffold ready
 /// for one-off benchmarking experiments.
@@ -13,56 +13,66 @@ fn misc(crit: &mut Criterion) {
 }
 
 fn vfs(crit: &mut Criterion) {
-	fn mount(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
-		let mut vfs = VirtualFs::default();
+	fn mount_unmount(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
+		let mut catalog = Catalog::default();
 
-		let mut grp_mount = crit.benchmark_group("VFS: Mount");
-		grp_mount.sample_size(20);
+		let mut grp = crit.benchmark_group("VFS: Mount, Unmount");
+		grp.sample_size(20);
 
-		grp_mount.bench_function("Gamedata", |bencher| {
+		grp.bench_function("FreeDoom, FreeDoom 2", |bencher| {
 			bencher.iter(|| {
-				let _ = vfs.mount(&mount_paths);
+				let _ = catalog.load_simple(mount_paths);
+				let _ = catalog.truncate(0);
 			});
 		});
 
-		grp_mount.finish();
+		grp.finish();
 	}
 
 	fn lookup(crit: &mut Criterion, mount_paths: &[(PathBuf, &str)]) {
-		let mut vfs = VirtualFs::default();
-		let _ = vfs.mount(&mount_paths);
+		let mut catalog = Catalog::default();
+		let _ = catalog.load_simple(&mount_paths);
 
-		let mut grp_lookup = crit.benchmark_group("VFS: Lookup");
-		grp_lookup.sample_size(10_000);
+		let mut grp = crit.benchmark_group("VFS: Lookup");
+		grp.sample_size(10_000);
 
-		grp_lookup.bench_with_input("Worst-Case", &vfs, |bencher, vfs| {
+		grp.bench_function("First Loaded", |bencher| {
 			bencher.iter(|| {
-				vfs.lookup("freedoom2/FCGRATE2").unwrap();
+				let _ = catalog.get_file("/freedoom1/E1M1").unwrap();
 			});
 		});
 
-		grp_lookup.finish();
+		grp.bench_function("Last Loaded", |bencher| {
+			bencher.iter(|| {
+				let _ = catalog.get_file("freedoom2/FCGRATE2").unwrap();
+			});
+		});
+
+		grp.finish();
 	}
 
-	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+	let sample = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 		.join("..")
 		.join("sample");
 	let mount_paths = [
-		(base.join("freedoom1.wad"), "freedoom1"),
-		(base.join("freedoom2.wad"), "freedoom2"),
+		(sample.join("freedoom1.wad"), "freedoom1"),
+		(sample.join("freedoom2.wad"), "freedoom2"),
 	];
 
-	for tuple in &mount_paths {
-		if !tuple.0.exists() {
+	for (real_path, _) in &mount_paths {
+		if !real_path.exists() {
 			eprintln!(
-				"VFS benchmarking depends on \
-				sample/freedoom1.wad and sample/freedoom2.wad."
+				"VFS benchmarking depends on the following files of sample data:\r\n\t\
+				- `$CARGO_MANIFEST_DIR/sample/freedoom1.wad`\r\n\t
+				- `$CARGO_MANIFEST_DIR/sample/freedoom2.wad`\r\n\t
+				They can be acquired from https://freedoom.github.io/."
 			);
+
 			return;
 		}
 	}
 
-	mount(crit, &mount_paths);
+	mount_unmount(crit, &mount_paths);
 	lookup(crit, &mount_paths);
 }
 

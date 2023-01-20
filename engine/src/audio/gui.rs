@@ -1,7 +1,5 @@
 //! Developer GUI for diagnosing and interacting with the audio subsystem.
 
-use std::path::Path;
-
 use indoc::formatdoc;
 use kira::{
 	sound::static_sound::{PlaybackState, StaticSoundSettings},
@@ -9,7 +7,9 @@ use kira::{
 };
 use log::{info, warn};
 
-use super::{AudioCore, MidiData, MidiSettings};
+use crate::VPath;
+
+use super::AudioCore;
 
 impl AudioCore {
 	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
@@ -151,10 +151,10 @@ impl AudioCore {
 	}
 
 	fn ui_impl_try_play(&mut self) {
-		let path = Path::new(&self.gui.string_buf).to_path_buf();
-		let vfs = self.vfs.read();
+		let path = VPath::new(&self.gui.string_buf).to_path_buf();
+		let catalog = self.catalog.read();
 
-		let fref = match vfs.lookup(&path) {
+		let fref = match catalog.get_file(&path) {
 			Some(f) => f,
 			None => {
 				info!("No file under virtual path: {}", path.display());
@@ -170,52 +170,17 @@ impl AudioCore {
 			return;
 		}
 
-		let bytes = fref.read();
+		let bytes = fref.read_bytes();
 
-		if zmusic::MidiKind::is_midi(bytes) {
-			let midi = match self.zmusic.new_song(bytes, self.gui.midi_device) {
-				Ok(m) => m,
-				Err(err) => {
-					info!(
-						"Failed to create MIDI song from: {}\r\n\tError: {err}",
-						path.display()
-					);
-					return;
-				}
-			};
-
-			let mut midi = MidiData::new(midi, MidiSettings::default());
-			midi.settings.volume = kira::Volume::Amplitude(self.gui.volume);
-			drop(vfs);
-
-			let res = match self.gui.slot_to_play {
-				SELSLOT_MUS1 => self.start_music_midi::<false>(midi),
-				SELSLOT_MUS2 => self.start_music_midi::<true>(midi),
-				SELSLOT_SOUND => self.start_sound_midi(midi, None),
-				_ => unreachable!(),
-			};
-
-			match res {
-				Ok(()) => {
-					info!(
-						"Playing MIDI: {}\r\n\tWith device: {}\r\n\tAt volume: {}",
-						path.display(),
-						self.gui.midi_device,
-						self.gui.volume
-					);
-				}
-				Err(err) => {
-					info!(
-						"Failed to play MIDI from: {}\r\n\tError: {err}",
-						path.display()
-					);
-				}
-			};
+		if false
+		/* zmusic::MidiKind::is_midi(bytes) */
+		{
+			unimplemented!("ZMusic is pending replacement.");
 		} else if let Ok(mut sdat) =
 			super::sound_from_bytes(bytes.to_owned(), StaticSoundSettings::default())
 		{
 			sdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
-			drop(vfs);
+			drop(catalog);
 
 			let res = match self.gui.slot_to_play {
 				SELSLOT_MUS1 => self.start_music_wave::<false>(sdat),
@@ -233,7 +198,7 @@ impl AudioCore {
 					);
 				}
 				Err(err) => {
-					info!("Failed to play: {}\r\nError: {err}", path.display());
+					info!("Failed to play: {}\r\n\tError: {err}", path.display());
 				}
 			};
 		} else {

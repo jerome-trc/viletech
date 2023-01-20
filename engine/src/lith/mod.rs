@@ -9,20 +9,19 @@ pub mod syn;
 mod tsys;
 mod word;
 
-use std::{
-	collections::HashMap,
-	path::{Path, PathBuf},
-	sync::Arc,
-};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use indexmap::IndexMap;
 use parking_lot::RwLock;
 
-use crate::vfs::{self, VirtualFs};
-
 pub use interop::{Params, Returns};
-pub use module::{Builder as ModuleBuilder, Module, OpenModule};
+pub use module::{Builder as ModuleBuilder, Handle, Module, OpenModule};
 pub use tsys::*;
+
+use crate::{
+	data::{self, Catalog},
+	VPathBuf,
+};
 
 use self::parse::ParseTree;
 
@@ -48,17 +47,17 @@ pub const MAX_RETS: usize = 4;
 ///
 /// [`clear`]: Self::clear
 pub struct Project {
-	vfs: Arc<RwLock<VirtualFs>>,
+	catalog: Arc<RwLock<Catalog>>,
 	/// Used for generating error output.
-	sources: HashMap<PathBuf, ariadne::Source>,
+	sources: HashMap<VPathBuf, ariadne::Source>,
 	modules: IndexMap<String, Module>,
 }
 
 impl Project {
 	#[must_use]
-	pub fn new(vfs: Arc<RwLock<VirtualFs>>) -> Self {
+	pub fn new(catalog: Arc<RwLock<Catalog>>) -> Self {
 		Self {
-			vfs,
+			catalog,
 			sources: HashMap::default(),
 			modules: IndexMap::default(),
 		}
@@ -80,22 +79,25 @@ impl ariadne::Cache<Path> for Project {
 		use ariadne::Source;
 
 		if !self.sources.contains_key(id) {
-			let vfs = self.vfs.read();
+			let catalog = self.catalog.read();
 
-			let eref = if let Some(eref) = vfs.lookup(id) {
-				eref
+			let file = if let Some(f) = catalog.get_file(id) {
+				f
 			} else {
-				return Err(Box::new(vfs::Error::NonExistentEntry(id.to_path_buf())));
+				return Err(Box::new(data::VfsError::NotFound(id.to_path_buf())));
 			};
 
-			if !eref.is_readable() {
-				return Err(Box::new(vfs::Error::Unreadable));
-			}
+			let text = match file.try_read_str() {
+				Ok(t) => t,
+				Err(err) => {
+					return Err(Box::new(err));
+				}
+			};
 
 			let entry = self
 				.sources
 				.entry(id.to_path_buf())
-				.or_insert_with(|| Source::from(eref.read_str()));
+				.or_insert_with(|| Source::from(text));
 
 			Ok(entry)
 		} else {
@@ -107,6 +109,14 @@ impl ariadne::Cache<Path> for Project {
 
 	fn display<'a>(&self, id: &'a Path) -> Option<Box<dyn std::fmt::Display + 'a>> {
 		Some(Box::new(id.display()))
+	}
+}
+
+impl std::fmt::Debug for Project {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Project")
+			.field("modules", &self.modules)
+			.finish()
 	}
 }
 

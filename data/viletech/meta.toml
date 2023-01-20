@@ -1,6 +1,6 @@
 id = 'viletech'
-name = '/viletech/lang/engine_name'
-desc = '/viletech/lang/meta_desc'
+name = "$VILETECH_BASEDATA_NAME"
+desc = "$VILETECH_BASEDATA_DESC"
 authors = ["***REMOVED***"]
 copyright = "© 2022-2023 ***REMOVED***"
 links = ['https://github.com/***REMOVED***/viletech']

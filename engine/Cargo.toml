@@ -12,6 +12,7 @@ keywords = ["game", "engine", "gamedev", "graphics", "doom"]
 publish = false
 
 [dependencies]
+arrayvec = { version = "0.7.2", features = ["serde"] }
 ariadne = "0.1.5"
 bitflags = { workspace = true }
 bytemuck = { workspace = true }
@@ -22,6 +23,7 @@ cranelift = "0.91.0"
 cranelift-jit = "0.91.0"
 cranelift-module = "0.91.0"
 crossbeam = { workspace = true }
+dashmap = { workspace = true }
 dolly = { workspace = true }
 doom-front = { workspace = true }
 egui = { workspace = true }
@@ -48,7 +50,7 @@ image = { version = "0.24.4", default-features = false, features = [
 ] }
 indexmap = { workspace = true }
 indoc = { workspace = true }
-kira = { workspace = true}
+kira = { workspace = true }
 log = { workspace = true }
 md5 = "0.7.0"
 naga = "0.10.0"

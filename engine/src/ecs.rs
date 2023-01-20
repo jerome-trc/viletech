@@ -1,6 +1,5 @@
 //! All symbols involved in implementing VileTech's custom playsim ECS.
 
-mod blueprint;
 mod components;
 
 use std::collections::VecDeque;
@@ -9,7 +8,6 @@ use rayon::prelude::*;
 
 use crate::sparse::{SparseSet, SparseSetIndex};
 
-pub use blueprint::Blueprint;
 pub use components::{Constant, SpecialVars};
 
 // ID newtype //////////////////////////////////////////////////////////////////

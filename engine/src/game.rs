@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 
-use crate::data::AssetHandle;
+use crate::data::{asset, Handle, InHandle};
 
 /// i.e., a difficulty setting.
 #[derive(Debug)]
@@ -9,7 +9,7 @@ pub struct SkillInfo {
 	/// Displayed to the user. May be a string ID.
 	name: String,
 	/// Displayed to the user in the selection menu.
-	graphic: AssetHandle,
+	graphic: InHandle<asset::Image>,
 	spawn_filter: SpawnFilter,
 	respawn_time: u32,
 	respawn_limit: u32,
@@ -65,21 +65,8 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub struct DamageType {
-	base_factor: f32,
-	flags: DamageTypeFlags,
-}
-
-bitflags! {
-	pub struct DamageTypeFlags: u8 {
-		const REPLACE_FACTOR = 1 << 0;
-		const BYPASS_ARMOR = 1 << 1;
-	}
-}
-
-#[derive(Debug)]
 pub struct DamageOverTime {
-	damage_type: AssetHandle,
+	damage_type: Handle<asset::DamageType>,
 	/// Applied per tic.
 	damage: i32,
 	tics_remaining: u32,
@@ -95,9 +82,9 @@ pub struct Species {
 #[derive(Debug)]
 pub enum ActorStateVisual {
 	None,
-	Sprite(AssetHandle),
-	Voxel(AssetHandle),
-	Model(AssetHandle),
+	Sprite(InHandle<asset::Image>),
+	Voxel(InHandle<asset::VoxelModel>),
+	Poly(InHandle<asset::PolyModel>),
 }
 
 #[derive(Debug)]

@@ -15,7 +15,8 @@ use crate::lazy_regex;
 static EMPTY_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new(""));
 static ROOT_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new("/"));
 
-pub trait PathExt {
+/// Extension trait for anything fulfilling `impl AsRef<std::path::Path>`.
+pub trait PathExt: AsRef<Path> {
 	#[must_use]
 	fn dir_count(&self) -> usize;
 	#[must_use]
@@ -36,6 +37,9 @@ pub trait PathExt {
 	/// Returns the number of components in the path.
 	#[must_use]
 	fn comp_len(&self) -> usize;
+	/// Check if the file name starts with a `.`.
+	#[must_use]
+	fn is_hidden(&self) -> bool;
 
 	#[must_use]
 	fn has_zip_extension(&self) -> bool;
@@ -49,8 +53,6 @@ pub trait PathExt {
 	#[must_use]
 	fn has_eternity_extension(&self) -> bool;
 
-	/// See [`super::io::is_binary`].
-	fn is_binary(&self) -> io::Result<bool>;
 	/// See [`super::io::is_zip`].
 	fn is_zip(&self) -> io::Result<bool>;
 	/// See [`super::io::is_lzma`].
@@ -123,6 +125,14 @@ impl<T: AsRef<Path>> PathExt for T {
 		self.as_ref().components().count()
 	}
 
+	#[must_use]
+	fn is_hidden(&self) -> bool {
+		self.as_ref()
+			.file_name()
+			.map(|fname| fname.to_str().map(|s| s.starts_with('.')).unwrap_or(false))
+			.unwrap_or(true)
+	}
+
 	fn has_zip_extension(&self) -> bool {
 		self.as_ref()
 			.extension()
@@ -161,25 +171,6 @@ impl<T: AsRef<Path>> PathExt for T {
 			.unwrap_or_default();
 
 		s.eq_ignore_ascii_case("pk3") || s.eq_ignore_ascii_case("pke")
-	}
-
-	fn is_binary(&self) -> io::Result<bool> {
-		let p = self.as_ref();
-
-		if !p.exists() {
-			return Err(io::ErrorKind::NotFound.into());
-		}
-
-		let mut buffer = [0u8; 512];
-		let mut file = File::open(p)?;
-
-		let bytes_read = file.read(&mut buffer)?;
-
-		if bytes_read == 0 {
-			return Ok(false);
-		}
-
-		Ok(super::io::is_binary(&buffer))
 	}
 
 	fn is_zip(&self) -> io::Result<bool> {

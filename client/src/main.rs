@@ -4,15 +4,13 @@ mod commands;
 #[allow(dead_code)]
 mod core;
 
-use std::{boxed::Box, env, error::Error, path::Path, sync::Arc};
+use std::{boxed::Box, env, error::Error};
 
-use log::{error, info};
-use parking_lot::RwLock;
+use log::{error, info, warn};
 use vile::{
 	console::Console,
-	data::DataCore,
+	data::{Catalog, CatalogExt},
 	gfx::{core::GraphicsCore, render},
-	vfs::{VirtualFs, VirtualFsExt},
 };
 use winit::{
 	dpi::PhysicalSize,
@@ -54,16 +52,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let _devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 
-	let data = DataCore::default();
-	let vfs = Arc::new(RwLock::new(VirtualFs::default()));
+	let mut catalog = Catalog::default();
 
-	match vfs.write().mount_basedata() {
-		Ok(()) => {}
-		Err(err) => {
-			error!("Failed to find and mount engine base data: {err}");
-			return Err(err);
-		}
-	};
+	if let Err(err) = catalog.mount_basedata() {
+		error!("Failed to find and mount engine base data: {err}");
+		return Err(err);
+	}
 
 	let event_loop = EventLoop::new();
 
@@ -76,8 +70,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.with_resizable(true)
 		.with_transparent(false)
 		.with_window_icon(
-			vfs.read()
-				.window_icon_from_file(Path::new("/viletech/viletech.png")),
+			catalog
+				.window_icon_from_file("/viletech/viletech.png")
+				.map_err(|err| {
+					warn!("Failed to load engine's window icon: {err}");
+					err
+				})
+				.ok(),
 		)
 		.build(&event_loop)
 	{
@@ -98,7 +97,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let shader = vile::gfx::create_shader_module(
 		&gfx.device,
 		"hello-tri",
-		vfs.read().read_str("/viletech/shaders/hello-tri.wgsl")?,
+		catalog
+			.get_file("/viletech/shaders/hello-tri.wgsl")
+			.expect("Engine base data validity check is compromised.")
+			.try_read_str()?,
 	);
 
 	let pipeline = render::pipeline_builder("Hello Triangle", &gfx.device)
@@ -118,7 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	gfx.pipelines.push(pipeline);
 
-	let mut core = ClientCore::new(start_time, vfs, data, gfx, console)?;
+	let mut core = ClientCore::new(start_time, catalog, gfx, console)?;
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {

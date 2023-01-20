@@ -8,6 +8,9 @@ use std::{
 
 use sha3::{Digest, Sha3_256};
 
+const BASEDATA_ID: &str = "viletech";
+const BASEDATA_FILENAME: &str = "viletech.zip";
+
 /// Injects the current Git hash and date and time of compilation
 /// into the environment before building.
 fn main() -> miette::Result<(), Box<dyn Error>> {
@@ -35,6 +38,8 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 	println!("cargo:rustc-env=GIT_HASH={hash_str}");
 	println!("cargo:rustc-env=COMPILE_DATETIME={compile_timestamp} UTC");
 
+	println!("cargo:rustc-env=BASEDATA_ID={BASEDATA_ID}");
+	println!("cargo:rustc-env=BASEDATA_FILENAME={BASEDATA_FILENAME}");
 	println!("cargo:rustc-env=BASEDATA_CHECKSUM=");
 
 	if std::env::var("PROFILE").unwrap() == "release" {
@@ -60,7 +65,7 @@ fn build_basedata() -> Result<(), Box<dyn Error>> {
 		env!("CARGO_WORKSPACE_DIR"),
 		"target",
 		"release",
-		"viletech.zip",
+		BASEDATA_FILENAME,
 	]
 	.iter()
 	.collect::<PathBuf>();

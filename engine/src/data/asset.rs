@@ -1,137 +1,117 @@
-//! A trait providing generic functionality for [`super::DataCore`].
+//! "Asset" is the catch-all term for any data unit the catalog can store.
 
-use std::{
-	fmt,
-	ops::{Deref, DerefMut},
-};
+mod audio;
+mod gameplay;
+mod map;
+mod visual;
 
-use serde::{Deserialize, Serialize};
+use std::{any::TypeId, marker::PhantomPinned, sync::Arc};
 
-use crate::replace_expr;
+use dashmap::mapref::one::RefMut as DashMapRefMut;
 
-use super::{AssetVec, Namespace};
+pub use audio::*;
+pub use gameplay::*;
+pub use map::*;
+pub use visual::*;
 
-pub trait Asset: Sized {
-	/// Wherever a homogenous array of items is declared wherein there must be
-	/// one element per asset type, this constant is used to index into it.
-	const INDEX: usize;
+use super::{detail::AssetKey, AssetError, Handle};
 
-	/// Should refer to one of the members of [`Namespace`].
-	#[must_use]
-	fn collection(namespace: &Namespace) -> &AssetVec<Self>;
-	/// Should refer to one of the members of [`Namespace`].
-	#[must_use]
-	fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self>;
-}
-
-/// `namespace` corresponds to one of the elements in [`super::DataCore`]'s `namespaces`.
-/// `element` corresponds to an element in the relevant sub-vector of the namespace.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Handle {
-	pub(super) namespace: usize,
-	pub(super) element: usize,
-}
-
+/// A dynamically-typed storage for a single asset.
 #[derive(Debug)]
-pub enum Error {
-	HashEmptyString,
-	IdClobber,
-	IdMissingPostfix,
-	IdNotFound,
-	NamespaceNotFound,
+pub struct Record {
+	/// Note to reader: leave this here, even if not doing any pinning.
+	#[allow(unused)]
+	pin: PhantomPinned,
+	pub(super) id: String,
+	pub(super) data: Box<dyn Asset>,
+	// Q: Could this safely and painlessly be made into a DST?
 }
 
-impl std::error::Error for Error {}
+impl Record {
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
+	}
 
-impl fmt::Display for Error {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::HashEmptyString => {
-				write!(f, "Cannot form an asset hash from an empty ID string.")
-			}
-			Self::IdClobber => {
-				write!(f, "Attempted to overwrite an existing asset ID map key.")
-			}
-			Self::IdMissingPostfix => {
-				write!(f, "Asset ID is malformed, and lacks a postfix.")
-			}
-			Self::IdNotFound => {
-				write!(f, "The given asset ID did not match any existing asset.")
-			}
-			Self::NamespaceNotFound => {
-				write!(
-					f,
-					"The given namespace ID did not match any existing game data object's ID."
-				)
-			}
+	/// Check this record's storage type.
+	#[must_use]
+	pub fn is<T: 'static>(&self) -> bool {
+		self.data.as_any().is::<T>()
+	}
+
+	/// Returns [`AssetError::TypeMismatch`] if the storage type isn't `T`.
+	///
+	/// [`AssetError::TypeMismatch`]: super::AssetError::TypeMismatch
+	pub fn downcast<T: 'static>(&self) -> Result<&T, AssetError> {
+		self.data
+			.as_any()
+			.downcast_ref::<T>()
+			.ok_or_else(|| AssetError::TypeMismatch {
+				expected: self.data.type_id(),
+				given: TypeId::of::<T>(),
+			})
+	}
+
+	/// Returns [`AssetError::TypeMismatch`] if the storage type isn't `T`.
+	///
+	/// [`AssetError::TypeMismatch`]: super::AssetError::TypeMismatch
+	pub fn handle<T: 'static + Asset>(self: &Arc<Self>) -> Result<Handle<T>, AssetError> {
+		if self.data.as_any().is::<T>() {
+			Ok(Handle::new(self))
+		} else {
+			Err(AssetError::TypeMismatch {
+				expected: self.data.as_any().type_id(),
+				given: TypeId::of::<T>(),
+			})
 		}
 	}
 }
 
-bitflags::bitflags! {
-	pub struct Flags: u8 {
-		/// This asset was generated at run-time, rather than loaded in from the
-		/// VFS. Assets without this flag are never written to save-files.
-		const DYNAMIC = 1 << 0;
-		/// Only assets marked `DYNAMIC` and `SAVED` are written to save-files.
-		const SAVED = 1 << 1;
+impl PartialEq for Record {
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self, other)
 	}
 }
 
-#[derive(Debug)]
-pub struct Wrapper<A: Asset> {
-	pub(super) inner: A,
-	pub(super) _flags: Flags,
-}
+impl Eq for Record {}
 
-impl<A: Asset> Deref for Wrapper<A> {
-	type Target = A;
+/// See [`Catalog::try_mutate`](super::Catalog::try_mutate).
+pub struct RefMut<'cat>(pub(super) DashMapRefMut<'cat, AssetKey, Arc<Record>>);
+
+// Newtype this so the record is mutable but the key is not
+
+impl std::ops::Deref for RefMut<'_> {
+	type Target = Record;
 
 	fn deref(&self) -> &Self::Target {
-		&self.inner
+		<Arc<Record> as AsRef<Record>>::as_ref(self.0.value())
 	}
 }
 
-impl<A: Asset> DerefMut for Wrapper<A> {
+impl std::ops::DerefMut for RefMut<'_> {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.inner
+		Arc::get_mut(self.0.value_mut()).expect("An asset record mutation failed unexpectedly.")
 	}
 }
 
-macro_rules! asset_impls {
-	($({$asset_t:ty, $coll:ident, $idx:literal}),+) => {
-		pub(super) const COLLECTION_COUNT: usize = 0 $(+ replace_expr!($coll 1))+;
+pub trait Asset: private::Sealed {}
 
-		$(
-			impl Asset for $asset_t {
-				const INDEX: usize = $idx;
+mod private {
+	use std::any::Any;
 
-				fn collection(namespace: &Namespace) -> &AssetVec<Self> {
-					&namespace.$coll
-				}
+	pub trait Sealed: Any + Send + Sync + std::fmt::Debug {
+		/// Boilerplate allowing upcasting from `Asset` to `Any`.
+		#[must_use]
+		fn as_any(&self) -> &dyn Any;
+	}
 
-				fn collection_mut(namespace: &mut Namespace) -> &mut AssetVec<Self> {
-					&mut namespace.$coll
-				}
-			}
-		)+
-	};
-}
-
-asset_impls! {
-	{ crate::game::ActorStateMachine, state_machines, 0 },
-	{ crate::ecs::Blueprint, blueprints, 1 },
-	{ crate::game::DamageType, damage_types, 2 },
-	{ crate::level::Cluster, clusters, 3 },
-	{ crate::level::Episode, episodes, 4 },
-	{ crate::level::Metadata, levels, 5 },
-	{ crate::game::SkillInfo, skills, 6 },
-	{ crate::game::Species, species, 7 },
-
-	{ String, language, 8 },
-	{ super::Music, music, 9 },
-	{ super::Sound, sounds, 10 },
-	{ crate::gfx::doom::ColorMap, colormap, 11 },
-	{ crate::gfx::doom::Endoom, endooms, 12 },
-	{ crate::gfx::doom::Palette, palettes, 13 }
+	impl<T> Sealed for T
+	where
+		T: Any + Send + Sync + std::fmt::Debug,
+	{
+		#[inline]
+		fn as_any(&self) -> &dyn Any {
+			self
+		}
+	}
 }

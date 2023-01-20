@@ -1,680 +1,342 @@
-//! "Game data" means audio, graphics, levels, ECS definitions, localization
-//! strings, and structures for representing the packages they come in.
+//! Management of files, audio, graphics, levels, text, localization, and so on.
 
 pub mod asset;
+mod detail;
+mod error;
+mod ext;
+mod file;
+mod interface;
+mod mount;
+mod pproc;
+#[cfg(test)]
+mod test;
 
-use std::{
-	collections::HashMap,
-	path::{Path, PathBuf},
-};
+use std::{path::Path, sync::Arc};
 
-use doom_front::zscript::err::ParsingErrorLevel as ZsParseIssueLevel;
 use globset::Glob;
-use kira::sound::static_sound::StaticSoundData;
-use log::{error, warn};
+use indexmap::IndexMap;
+use rayon::prelude::*;
 use regex::Regex;
-use serde::Deserialize;
 
-use crate::{
-	ecs::Blueprint,
-	game::{ActorStateMachine, DamageType, SkillInfo, Species},
-	gfx::doom::{ColorMap, Endoom, Palette},
-	level::{self, Cluster, Episode},
-	newtype,
-	utils::string,
-	vfs::{FileRef, VirtualFs, VirtualFsExt},
-	zscript,
+use crate::{utils::path::PathExt, ShortId, VPath, VPathBuf};
+
+pub use asset::*;
+pub use error::{
+	Asset as AssetError, Load as LoadError, Mount as MountError, PostProc as PostProcError,
+	Vfs as VfsError,
 };
+pub use ext::*;
+pub use file::*;
+pub use interface::*;
 
-pub use asset::{
-	Error as AssetError, Flags as AssetFlags, Handle as AssetHandle, Wrapper as AssetWrapper,
-};
+use self::detail::{AssetKey, Config, VfsKey};
 
-use self::asset::Asset;
-
-// TODO: Unify whenever ZMusic gets replaced
-newtype!(pub struct Music(StaticSoundData));
-newtype!(pub struct Sound(StaticSoundData));
-
-/// Note that all user-facing string fields within may be IDs or expanded.
+/// The data catalog is the heart of file and asset management in VileTech.
+/// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
+/// tree that makes it easy for all other parts of the engine to access any given
+/// unit of data, without exposing any details of the user's real underlying machine.
+///
+/// A mounted file or directory has the same tree structure in the virtual FS as
+/// in the physical one, although binary files are converted into more useful
+/// forms (e.g. decoding sounds and images) if their format can be easily identified.
+/// Otherwise, they're left as-is.
+///
+/// Any given unit of data or [`Asset`] is stored in a [`Record`] and kept behind
+/// an [`Arc`], allowing other parts of the engine to take out high-speed
+/// [`Handle`]s to something and safely access it lock-free.
+///
+/// Some miscellaneous notes on semantics:
+/// - It's impossible to mount a file that's nested within an archive. If
+/// `mymod.zip` contains `myothermod.zip`, there's no way to register `myothermod`
+/// as a mount in the official sense. It's just a part of `mymod`'s file tree.
+/// - If, for example, a zip file is mounted, and within that zip is a WAD, the
+/// WAD is not considered a "mount" like the zip.
 #[derive(Debug)]
-pub struct MountMeta {
-	id: String,
-	kind: MountKind,
-	version: String,
-	/// Display name presented to users.
-	name: String,
-	_description: String,
-	_authors: Vec<String>,
-	_copyright: String,
-	/// Allow a package to link to its forum post/homepage/Discord server/etc.
-	_links: Vec<String>,
-	virt_path: PathBuf,
+pub struct Catalog {
+	pub(self) config: Config,
+	/// Element 0 is always the root node, under virtual path `/`.
+	///
+	/// The choice to use an `IndexMap` here is very deliberate.
+	/// - Directory contents can be stored in an alphabetically-sorted way.
+	/// - Ordering is preserved for WAD entries.
+	/// - Exact-path lookups are fast.
+	/// - Memory contiguity means that linear searches are non-pessimized.
+	/// - If a load fails, restoring the previous state is simple truncation.
+	pub(self) files: IndexMap<VfsKey, VirtualFile>, // Q: FNV hashing?
+	/// The first element is always the engine's base data (ID `viletech`),
+	/// but every following element is user-specified, including their order.
+	pub(self) mounts: Vec<Mount>,
 }
 
-impl MountMeta {
-	#[must_use]
-	pub fn id(&self) -> &str {
-		&self.id
-	}
-
-	#[must_use]
-	pub fn kind(&self) -> &MountKind {
-		&self.kind
-	}
-
-	#[must_use]
-	pub fn version(&self) -> &str {
-		&self.version
-	}
-
-	#[must_use]
-	pub fn name(&self) -> &str {
-		&self.name
-	}
-
-	#[must_use]
-	pub fn virt_path(&self) -> &Path {
-		&self.virt_path
-	}
-
-	#[must_use]
-	pub fn from_ingest(ingest: MountMetaIngest, kind: MountKind) -> Self {
-		Self {
-			id: ingest.id,
-			kind,
-			version: ingest.version,
-			name: ingest.name,
-			_description: ingest.description,
-			_authors: ingest.authors,
-			_copyright: ingest.copyright,
-			_links: ingest.links,
-			virt_path: ingest.virt_path,
-		}
-	}
-
-	#[must_use]
-	pub fn manifest_path(&self) -> Option<&Path> {
-		match &self.kind {
-			MountKind::VileTech { manifest } => Some(manifest),
-			_ => None,
-		}
-	}
-}
-
-/// Intermediate format to keep the code path from mounting to asset loading cleaner.
-/// Mostly for TOML parsing, but gets generated and consumed even for loading
-/// non-VileTech-packages.
-#[derive(Debug, Default, Deserialize)]
-pub struct MountMetaIngest {
-	pub id: String,
-	#[serde(default)]
-	pub version: String,
-	#[serde(default)]
-	pub name: String,
-	#[serde(default)]
-	pub description: String,
-	#[serde(default)]
-	pub authors: Vec<String>,
-	#[serde(default)]
-	pub copyright: String,
-	#[serde(default)]
-	pub links: Vec<String>,
-	#[serde(default)]
-	pub manifest: Option<PathBuf>,
-	#[serde(skip)]
-	pub virt_path: PathBuf,
-}
-
-/// Allows game data objects to define high-level, all-encompassing information
-/// relevant to making games as opposed to mods.
-#[derive(Debug)]
-pub struct GameInfo {
-	_steam_app_id: Option<u32>,
-	_discord_app_id: Option<String>,
-}
-
-/// Determines the system used for loading assets from a mounted game data object.
-#[derive(Debug)]
-pub enum MountKind {
-	/// The file is read to determine what kind of assets are in it,
-	/// and loading is handled accordingly.
-	File,
-	/// Every file in this WAD is loaded into an asset based on
-	/// the kind of file it is.
-	Wad { internal: bool },
-	/// Assets are loaded from this archive/directory based on the
-	/// manifest specified by the meta.toml file.
-	VileTech {
-		/// A package can only specify a file native to it as a manifest, so this
-		/// is always relative. viletech.zip's manifest is at `manifest/main.lith`.
-		manifest: PathBuf,
-	},
-	/// Assets are loaded from this archive/directory based on the
-	/// ZDoom sub-directory namespacing system. Sounds outside of `sounds/`,
-	/// for example, don't get loaded at all.
-	ZDoom,
-	/// Assets are loaded from this archive/directory based on the
-	/// Eternity Engine sub-directory namespacing system. Sounds outside of
-	/// `sounds/`, for example, don't get loaded at all.
-	Eternity,
-}
-
-pub type AssetVec<A> = Vec<asset::Wrapper<A>>;
-
-/// Represents anything that the user added to their load order.
-/// Comes with a certain degree of compartmentalization: for example,
-/// MAPINFO loaded as part of a WAD will only apply to maps in that WAD.
-pub struct Namespace {
-	pub meta: MountMeta,
-	// Needed for the sim
-	pub blueprints: AssetVec<Blueprint>,
-	pub clusters: AssetVec<Cluster>,
-	pub damage_types: AssetVec<DamageType>,
-	pub episodes: AssetVec<Episode>,
-	pub levels: AssetVec<level::Metadata>,
-	pub skills: AssetVec<SkillInfo>,
-	pub species: AssetVec<Species>,
-	pub state_machines: AssetVec<ActorStateMachine>,
-	// Client-only
-	pub language: AssetVec<String>,
-	pub music: AssetVec<Music>,
-	pub sounds: AssetVec<Sound>,
-	pub colormap: AssetVec<ColorMap>,
-	pub endooms: AssetVec<Endoom>,
-	pub palettes: AssetVec<Palette>,
-}
-
-impl std::fmt::Debug for Namespace {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Namespace")
-			.field("meta", &self.meta)
-			.finish()
-	}
-}
-
-impl Namespace {
-	#[must_use]
-	pub fn new(metadata: MountMeta) -> Self {
-		Namespace {
-			meta: metadata,
-
-			blueprints: Default::default(),
-			clusters: Default::default(),
-			damage_types: Default::default(),
-			episodes: Default::default(),
-			levels: Default::default(),
-			skills: Default::default(),
-			species: Default::default(),
-			state_machines: Default::default(),
-
-			language: Default::default(),
-			music: Default::default(),
-			sounds: Default::default(),
-			colormap: Default::default(),
-			endooms: Default::default(),
-			palettes: Default::default(),
-		}
-	}
-}
-
-/// This structure is left in a completely default state at the frontend, is
-/// populated when starting a game, and gets cleared again when returning to
-/// the frontend.
-#[derive(Debug, Default)]
-pub struct DataCore {
-	/// Element 0 should _always_ be the engine's own data, ID "viletech".
-	/// Everything afterwards is ordered as per the user's specification.
-	pub namespaces: Vec<Namespace>,
-	/// IDs are derived from virtual file system paths. The asset ID for
-	/// `/viletech/textures/default.png` is exactly the same string; the ID for
-	/// blueprint `Imp` defined in file `/viletech/blueprints/doom/imp.lith` is
-	/// `/viletech/blueprints/imp/Imp`, since multiple classes can be defined in
-	/// one LithScript translation unit.
-	pub asset_map: HashMap<String, AssetHandle>,
-	/// Doom and its source ports work on a simple data replacement system; a name
-	/// points to the last map/texture/song/etc. loaded by that name. VileTech offers
-	/// full namespacing via asset IDs, but also has the concept of a short asset ID (SAID)
-	/// which mimics Doom's behaviour for interop purposes.
-	pub short_id_maps: [HashMap<String, AssetHandle>; asset::COLLECTION_COUNT],
-	/// See <https://zdoom.org/wiki/Editor_number>.
-	pub editor_numbers: HashMap<u16, AssetHandle>,
-	/// See <https://zdoom.org/wiki/Editor_number>.
-	pub spawn_numbers: HashMap<u16, AssetHandle>,
-}
-
-// Public interface.
-impl DataCore {
-	#[must_use]
-	pub fn get_namespace(&self, id: &str) -> Option<&Namespace> {
-		self.namespaces.iter().find(|ns| ns.meta.id == id)
-	}
-
-	#[must_use]
-	pub fn get_namespace_glob(&self, glob: Glob) -> Option<&Namespace> {
-		let matcher = glob.compile_matcher();
-		self.namespaces
-			.iter()
-			.find(|ns| matcher.is_match(&ns.meta.id))
-	}
-
-	#[must_use]
-	pub fn get_namespace_regex(&self, regex: Regex) -> Option<&Namespace> {
-		self.namespaces
-			.iter()
-			.find(|ns| regex.is_match(&ns.meta.id))
-	}
-
-	#[must_use]
-	pub fn get_namespace_mut(&mut self, id: &str) -> Option<&mut Namespace> {
-		self.namespaces.iter_mut().find(|ns| ns.meta.id == id)
-	}
-
-	#[must_use]
-	pub fn get_namespace_mut_glob(&mut self, glob: Glob) -> Option<&mut Namespace> {
-		let matcher = glob.compile_matcher();
-		self.namespaces
-			.iter_mut()
-			.find(|ns| matcher.is_match(&ns.meta.id))
-	}
-
-	#[must_use]
-	pub fn get_namespace_mut_regex(&mut self, regex: Regex) -> Option<&mut Namespace> {
-		self.namespaces
-			.iter_mut()
-			.find(|ns| regex.is_match(&ns.meta.id))
-	}
-
-	#[must_use]
-	pub fn namespace_exists(&self, id: &str) -> bool {
-		self.namespaces.iter().any(|ns| ns.meta.id == id)
-	}
-
-	#[must_use]
-	pub fn namespace_exists_glob(&self, glob: Glob) -> bool {
-		let matcher = glob.compile_matcher();
-		self.namespaces
-			.iter()
-			.any(|ns| matcher.is_match(&ns.meta.id))
-	}
-
-	#[must_use]
-	pub fn namespace_exists_regex(&self, regex: Regex) -> bool {
-		self.namespaces.iter().any(|ns| regex.is_match(&ns.meta.id))
-	}
-
-	/// The only possible error condition returns [`AssetError::IdClobber`].
-	pub fn add<A: Asset>(
+impl Catalog {
+	/// This is an end-to-end function that reads physical files, fills out the
+	/// VFS, and then post-processes the files to decompose them into assets.
+	/// Much of the important things to know are in the documentation for
+	/// [`LoadRequest`]. The range of possible errors is documented by
+	/// [`MountError`].
+	///
+	/// Notes:
+	/// - The order of pre-existing entries and mounts is unchanged upon success.
+	/// - Returned errors parallel the given mount requests.
+	/// - This function is atomic; if one mount operation fails, all of them fail,
+	/// and the VFS's state is left entirely unchanged.
+	/// - Each mount request is fulfilled in parallel using [`rayon`]'s global
+	/// thread pool, but the caller thread itself gets blocked.
+	#[must_use = "mounting may return errors which should be handled"]
+	pub fn load<RP: AsRef<Path>, MP: AsRef<VPath>>(
 		&mut self,
-		asset: A,
-		namespace: usize,
-		id: &str,
-		short_id: &str,
-	) -> Result<(), AssetError> {
-		let ns_index = namespace;
-		let namespace = &mut self.namespaces[ns_index];
-		let coll = A::collection_mut(namespace);
-		let asset_index = coll.len();
-
-		coll.push(AssetWrapper {
-			inner: asset,
-			_flags: AssetFlags::empty(),
-		});
-
-		let ndx_pair = AssetHandle {
-			namespace: ns_index,
-			element: asset_index,
+		request: LoadRequest<RP, MP>,
+	) -> Vec<Result<(), LoadError>> {
+		let ctx = mount::Context {
+			// Build a dummy tracker if none was given to avoid branching later
+			// and simplify the rest of the loading code
+			tracker: request
+				.tracker
+				.unwrap_or_else(|| Arc::new(LoadTracker::default())),
 		};
 
-		if self.asset_map.contains_key(id) {
-			return Err(AssetError::IdClobber);
+		// Note to reader: check ./mount.rs
+		let output = self.mount(request.paths, ctx);
+
+		if output.any_errs() {
+			return output
+				.results
+				.into_iter()
+				.map(|res| match res {
+					Ok(()) => Ok(()),
+					Err(err) => Err(LoadError::Mount(err)),
+				})
+				.collect();
 		}
 
-		self.asset_map.insert(id.to_string(), ndx_pair);
-		self.short_id_maps[A::INDEX].insert(short_id.to_string(), ndx_pair);
-
-		Ok(())
-	}
-
-	#[must_use]
-	pub fn try_get<A: Asset>(&self, handle: AssetHandle) -> Option<&A> {
-		let collection = A::collection(&self.namespaces[handle.namespace]);
-
-		match collection.get(handle.element) {
-			Some(r) => Some(&r.inner),
-			None => None,
-		}
-	}
-
-	#[must_use]
-	pub fn get<A: Asset>(&self, handle: AssetHandle) -> &A {
-		let collection = A::collection(&self.namespaces[handle.namespace]);
-		&collection[handle.element]
-	}
-
-	pub fn lookup<A: Asset>(&self, id: &str) -> Result<&A, AssetError> {
-		let handle = self.asset_map.get(id).ok_or(AssetError::IdNotFound)?;
-		let collection = A::collection(&self.namespaces[handle.namespace]);
-
-		match collection.get(handle.element) {
-			Some(r) => Ok(&r.inner),
-			None => Err(AssetError::IdNotFound),
-		}
-	}
-
-	/// Tries to find an asset by its short ID (no namespace qualification).
-	pub fn lookup_global<A: Asset>(&self, short_id: &str) -> Result<&A, AssetError> {
-		let handle = self.short_id_maps[A::INDEX]
-			.get(short_id)
-			.ok_or(AssetError::IdNotFound)?;
-		let collection = A::collection(&self.namespaces[handle.namespace]);
-
-		match collection.get(handle.element) {
-			Some(r) => Ok(&r.inner),
-			None => Err(AssetError::IdNotFound),
-		}
-	}
-
-	/// This function expects that `ingests[0]` is the parsed metadata for the
-	/// VileTech data package. There's no reason to ever call it unless starting
-	/// from empty, so as a convenience, it clears all internal collections.
-	pub fn populate(
-		&mut self,
-		mut ingests: Vec<MountMetaIngest>,
-		vfs: &VirtualFs,
-	) -> Result<(), Error> {
-		self.namespaces.clear();
-		self.asset_map.clear();
-		self.short_id_maps.iter_mut().for_each(|map| map.clear());
-		self.editor_numbers.clear();
-		self.spawn_numbers.clear();
-
-		assert!(
-			!ingests.is_empty(),
-			"Called `DataCore::populate` with no mount metadata."
-		);
-
-		assert!(
-			ingests[0].id == "viletech",
-			"`DataCore::populate` should receive the VileTech metadata first."
-		);
-
-		for (_index, meta_in) in ingests.drain(..).enumerate() {
-			let _fref = vfs
-				.lookup(&meta_in.id)
-				.expect("Failed to find a namespace's VFS fileref for data core population.");
-
-			let kind = vfs.gamedata_kind(&meta_in.id);
-			let ns_idx = self.namespaces.len();
-
-			let mut output = match kind {
-				MountKind::ZDoom => {
-					let namespace = Namespace::new(MountMeta::from_ingest(meta_in, kind));
-					self.load_zdoom_pk(vfs, namespace, ns_idx)?
-				}
-				MountKind::Wad { .. } => {
-					unimplemented!() // ???
-				}
-				MountKind::VileTech { .. } => {
-					let namespace = Namespace::new(MountMeta::from_ingest(meta_in, kind));
-					self.load_vile_pk(vfs, namespace, ns_idx)?
-				}
-				MountKind::File => {
-					unimplemented!() // ???
-				}
-				MountKind::Eternity => {
-					unimplemented!() // ???
-				}
-			};
-
-			self.namespaces.push(output.namespace);
-
-			for (id, handle) in output.asset_mappings {
-				self.asset_map.insert(id, handle);
-			}
-
-			for coll_idx in 0..asset::COLLECTION_COUNT {
-				for (short_id, handle) in output.short_ids[coll_idx].drain(..) {
-					self.short_id_maps[coll_idx].insert(short_id, handle);
-				}
-			}
-
-			for (editor_num, handle) in output.editor_nums {
-				self.editor_numbers.insert(editor_num, handle);
-			}
-
-			for (spawn_num, handle) in output.spawn_nums {
-				self.spawn_numbers.insert(spawn_num, handle);
-			}
-		}
-
-		Ok(())
-	}
-}
-
-impl DataCore {
-	/// `namespace_index` is needed for generating asset handles.
-	fn load_zdoom_pk(
-		&self,
-		vfs: &VirtualFs,
-		namespace: Namespace,
-		_namespace_index: usize,
-	) -> Result<AssetLoadOutput, Error> {
-		let mount = vfs.lookup(namespace.meta.virt_path()).unwrap();
-
-		let mut dec_root_opt = None;
-		let mut zs_root_opt = None;
-
-		for child in mount.child_entries() {
-			let file_stem = child.file_stem();
-			let lmpname = string::subslice(file_stem, 8);
-
-			if lmpname.eq_ignore_ascii_case("DECORATE") && child.is_string() {
-				dec_root_opt = Some(child);
-			}
-
-			if lmpname.eq_ignore_ascii_case("ZSCRIPT") && child.is_string() {
-				zs_root_opt = Some(child);
-			}
-		}
-
-		if let Some(dec_root) = dec_root_opt {
-			let _content = dec_root.read_str();
-			// Soon!
-		}
-
-		if let Some(zs_root) = zs_root_opt {
-			let _content = zs_root.read_str();
-			// Soon!
-		}
-
-		let ret = AssetLoadOutput::new(namespace);
-
-		Ok(ret)
-	}
-
-	/// `namespace_index` is needed for generating asset handles.
-	fn load_vile_pk(
-		&self,
-		vfs: &VirtualFs,
-		namespace: Namespace,
-		_namespace_index: usize,
-	) -> Result<AssetLoadOutput, Error> {
-		let mount_path = namespace.meta.virt_path(); // e.g. `/viletech`
-
-		let manifest_path: PathBuf = [mount_path, namespace.meta.manifest_path().unwrap()]
-			.iter()
-			.collect(); // e.g. `/viletech/manifest/main.lith`
-
-		let _manifest = if let Some(mnf) = vfs.lookup(&manifest_path) {
-			mnf
-		} else {
-			return Err(Error::MissingManifest(manifest_path));
+		let ctx = pproc::Context {
+			project: request.project,
+			tracker: output.tracker,
+			orig_files_len: output.orig_files_len,
+			orig_mounts_len: output.orig_mounts_len,
 		};
 
-		drop(manifest_path);
-		let ret = AssetLoadOutput::new(namespace);
+		let output = self.postproc(ctx);
 
-		/*
-
-		let interner = Interner::new_arc();
-		let inctree = parse_include_tree(mount_path, manifest, &interner);
-
-		if !inctree.file_errs.is_empty() {
-			let mut msg = format!(
-				"{len} {noun} while parsing manifest for: `{nsid}`",
-				len = inctree.file_errs.len(),
-				noun = if inctree.file_errs.len() == 1 {
-					"error"
-				} else {
-					"errors"
-				},
-				nsid = &ret.namespace.meta.id
-			);
-
-			for err in inctree.file_errs {
-				msg.push_str("\r\n\t");
-				let prettified = err.to_string();
-				msg.push_str(&prettified);
-			}
-
-			error!("{msg}");
-			return Err(Error::Lith);
-		}
-
-		if !inctree.parse_errs.is_empty() {
-			let mut msg = format!(
-				"{len} {noun} while parsing manifest for: `{nsid}`",
-				len = inctree.parse_errs.len(),
-				noun = if inctree.parse_errs.len() == 1 {
-					"error"
-				} else {
-					"errors"
-				},
-				nsid = &ret.namespace.meta.id
-			);
-
-			for err in inctree.parse_errs {
-				msg.push_str("\r\n");
-				let path = err.file.as_ref().unwrap();
-				let file = vfs.lookup(path).unwrap();
-				let src = file.read_str();
-				let prettified = err.prettify(src);
-				msg.push_str(&prettified);
-			}
-
-			error!("{msg}");
-			return Err(Error::Lith);
-		}
-
-		*/
-
-		Ok(ret)
+		output
+			.results
+			.into_iter()
+			.map(|res| match res {
+				Ok(()) => Ok(()),
+				Err(err) => Err(LoadError::PostProc(err)),
+			})
+			.collect()
 	}
 
-	#[allow(dead_code)]
-	fn try_load_zscript(namespace: &mut Namespace, file: &FileRef) {
-		let parse_out = zscript::parse(file.clone());
-		let nsid = &namespace.meta.id;
+	/// Like [`Self::load`], but performs no file culling, asset loading, or LithScript
+	/// compilation. Used for preparing the engine's base data, and for testing.
+	///
+	/// See the aforementioned function's docs; most of the same caveats apply.
+	/// Additionally, see [`LoadRequest`] to better understand the `mounts` parameter.
+	pub fn load_simple(
+		&mut self,
+		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
+	) -> Vec<Result<(), MountError>> {
+		let ctx = mount::Context {
+			// Build a dummy tracker if none was given to avoid branching later
+			// and simplify the rest of the loading code
+			tracker: Arc::new(LoadTracker::default()),
+		};
 
-		let any_parse_errors = parse_out
-			.issues
-			.iter()
-			.any(|e| e.level == ZsParseIssueLevel::Error);
+		// Note to reader: check ./mount.rs
+		self.mount(mounts, ctx).results
+	}
 
-		if any_parse_errors {
-			error!(
-				"{} errors during ZScript transpile, parse phase: {}",
-				parse_out.issues.len(),
-				nsid
-			);
-		}
-
-		for issue in parse_out
-			.issues
-			.iter()
-			.filter(|e| e.level == ZsParseIssueLevel::Error)
-		{
-			let file = &parse_out.files[issue.main_spans[0].get_file()];
-			error!("{}", zscript::prettify_parse_issue(nsid, file, issue));
-		}
-
-		let any_parse_warnings = parse_out
-			.issues
-			.iter()
-			.any(|e| e.level == ZsParseIssueLevel::Warning);
-
-		if any_parse_warnings {
-			warn!(
-				"{} warnings during ZScript transpile, parse phase: {}",
-				parse_out.issues.len(),
-				nsid
-			);
-		}
-
-		for warn in parse_out
-			.issues
-			.iter()
-			.filter(|e| e.level == ZsParseIssueLevel::Warning)
-		{
-			let file = &parse_out.files[warn.main_spans[0].get_file()];
-			warn!("{}", zscript::prettify_parse_issue(nsid, file, warn));
-		}
-
-		if any_parse_errors {
+	/// Keep the first `len` mounts. Remove the rest, along their files.
+	/// If `len` is greater than the number of mounts, this function is a no-op.
+	pub fn truncate(&mut self, len: usize) {
+		if len == 0 {
+			self.files.clear();
+			self.mounts.clear();
+			return;
+		} else if len >= self.mounts.len() {
 			return;
 		}
 
-		todo!()
+		for mount in self.mounts.drain(len..) {
+			let vpath = mount.info.virtual_path();
+
+			self.files.retain(|_, entry| !entry.path.is_child_of(vpath));
+		}
+
+		self.clear_dirs();
+		self.populate_dirs();
+	}
+
+	#[must_use]
+	pub fn get_file(&self, path: impl AsRef<VPath>) -> Option<FileRef> {
+		self.files.get(&VfsKey::new(path)).map(|file| FileRef {
+			catalog: self,
+			file,
+		})
+	}
+
+	/// Note that `T` here is a filter on the type that comes out of the lookup,
+	/// rather than an assertion that the asset under `id` is that type, so this
+	/// returns an `Option` rather than a [`Result`].
+	#[must_use]
+	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<Arc<Record>> {
+		let key = AssetKey::new::<A>(id);
+
+		self.mounts
+			.par_iter()
+			.find_map_any(|mount| mount.assets.get(&key))
+			.map(|kvp| kvp.value().clone())
+	}
+
+	#[must_use]
+	pub fn file_exists(&self, path: impl AsRef<VPath>) -> bool {
+		let key = VfsKey::new(path);
+		self.files.contains_key(&key)
+	}
+
+	pub fn all_files(&self) -> impl Iterator<Item = FileRef> {
+		self.files.iter().map(|(_, file)| FileRef {
+			catalog: self,
+			file,
+		})
+	}
+
+	/// Note that WAD files will be yielded out of their original order, and
+	/// all other files will not exhibit the alphabetical sorting with which
+	/// they are internally stored.
+	#[must_use = "iterators are lazy and do nothing unless consumed"]
+	pub fn all_files_par(&self) -> impl ParallelIterator<Item = FileRef> {
+		self.all_files().par_bridge()
+	}
+
+	pub fn get_files_glob(&self, pattern: Glob) -> impl Iterator<Item = FileRef> {
+		let glob = pattern.compile_matcher();
+
+		self.files.iter().filter_map(move |(_, file)| {
+			if glob.is_match(&file.path) {
+				Some(FileRef {
+					catalog: self,
+					file,
+				})
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Note that WAD files will be yielded out of their original order, and
+	/// all other files will not exhibit the alphabetical sorting with which
+	/// they are internally stored.
+	#[must_use = "iterators are lazy and do nothing unless consumed"]
+	pub fn get_files_glob_par(&self, pattern: Glob) -> impl ParallelIterator<Item = FileRef> {
+		self.get_files_glob(pattern).par_bridge()
+	}
+
+	pub fn get_files_regex(&self, pattern: Regex) -> impl Iterator<Item = FileRef> {
+		self.files.iter().filter_map(move |(_, file)| {
+			if pattern.is_match(file.path_str()) {
+				Some(FileRef {
+					catalog: self,
+					file,
+				})
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Note that WAD files will be yielded out of their original order, and
+	/// all other files will not exhibit the alphabetical sorting with which
+	/// they are internally stored.
+	#[must_use = "iterators are lazy and do nothing unless consumed"]
+	pub fn get_files_regex_par(&self, pattern: Regex) -> impl ParallelIterator<Item = FileRef> {
+		self.get_files_regex(pattern).par_bridge()
+	}
+
+	/// Finds the last-loaded asset by a given ID and type.
+	#[must_use]
+	pub fn get_asset_shortid<A: Asset>(&self, shortid: ShortId) -> Option<Arc<Record>> {
+		self.mounts
+			.par_iter()
+			.find_map_last(|mount| mount.shortid_map.get(&shortid))
+			.map(|kvp| {
+				kvp.value()
+					.upgrade()
+					.expect("A dangling short-ID weak pointer wasn't garbage-collected.")
+			})
+	}
+
+	/// Allow altering a single asset record in place.
+	///
+	/// Returns [`AssetError::NotFound`] if no records of a matching ID and type
+	/// are found; returns `Ok(None)` if the record has one or more [`Handle`]s
+	/// pointing to it.
+	pub fn try_mutate<A: Asset>(&mut self, id: &str) -> Result<asset::RefMut, AssetError> {
+		let key = AssetKey::new::<A>(id);
+
+		match self
+			.mounts
+			.par_iter_mut()
+			.find_map_last(|ns| ns.assets.get_mut(&key))
+		{
+			Some(entry) => {
+				let strong_count = Arc::strong_count(entry.value());
+
+				if strong_count > 1 {
+					Err(AssetError::Immutable(strong_count - 1))
+				} else {
+					Ok(asset::RefMut(entry))
+				}
+			}
+			None => Err(AssetError::NotFound(id.to_string())),
+		}
+	}
+
+	#[must_use]
+	pub fn mounts(&self) -> &[Mount] {
+		&self.mounts
+	}
+
+	#[must_use]
+	pub fn config_get(&self) -> ConfigGet {
+		ConfigGet(self)
+	}
+
+	#[must_use]
+	pub fn config_set(&mut self) -> ConfigSet {
+		ConfigSet(self)
+	}
+
+	/// The returned value reflects only the footprint of the content of the
+	/// virtual files themselves; the size of the data structures isn't included,
+	/// since it's trivial next to the size of large text files and binary blobs.
+	#[must_use]
+	pub fn vfs_mem_usage(&self) -> usize {
+		self.files
+			.par_values()
+			.fold(|| 0_usize, |acc, file| acc + file.byte_len())
+			.sum()
 	}
 }
 
-#[derive(Debug)]
-struct AssetLoadOutput {
-	namespace: Namespace,
-	asset_mappings: Vec<(String, AssetHandle)>,
-	short_ids: [Vec<(String, AssetHandle)>; asset::COLLECTION_COUNT],
-	editor_nums: Vec<(u16, AssetHandle)>,
-	spawn_nums: Vec<(u16, AssetHandle)>,
-}
+impl Default for Catalog {
+	fn default() -> Self {
+		let root = VirtualFile {
+			path: VPathBuf::from("/").into_boxed_path(),
+			kind: VirtFileKind::Directory(Vec::default()),
+		};
 
-impl AssetLoadOutput {
-	fn new(namespace: Namespace) -> Self {
+		let key = VfsKey::new(&root.path);
+
 		Self {
-			namespace,
-			asset_mappings: Default::default(),
-			short_ids: Default::default(),
-			editor_nums: Default::default(),
-			spawn_nums: Default::default(),
+			config: Config::default(),
+			files: indexmap::indexmap! { key => root },
+			mounts: vec![],
 		}
 	}
 }
 
-/// Things that can go wrong during asset loading or access.
-#[derive(Debug)]
-pub enum Error {
-	/// An error occurred during the LithScript compilation pipeline.
-	/// Has no content, since errors are logged as they are encountered.
-	Lith,
-	/// An error occurred during the ZScript-to-LithScript transpilation pipeline.
-	/// Has no content, since errors are logged as they are encountered.
-	ZScript,
-	/// A package specified a manifest file that wasn't found in the VFS.
-	MissingManifest(PathBuf),
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::Lith => write!(f, "Error during LithScript compilation."),
-			Self::ZScript => write!(f, "Error during ZScript transpilation."),
-			Self::MissingManifest(path) => write!(
-				f,
-				"Specified manifest file could not be found: {}",
-				path.display()
-			),
-		}
-	}
-}
+// [Rat] If you're reading this, congratulations! You've found something special.
+// This module sub-tree is, historically speaking, the most tortured code in VileTech.
+// The Git history doesn't even reflect half of the reworks the VFS has undergone.
