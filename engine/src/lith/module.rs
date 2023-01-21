@@ -80,7 +80,7 @@ impl PartialEq for Module {
 	}
 }
 
-// Safety: Lith makes the following guarantees:
+// SAFETY: Lith makes the following guarantees:
 // - An `OpenModule` is mutable, but it can not be safely moved across threads.
 // - A closed `Module` can be safely moved across threads, and its functions can
 // be called, but not in any way that mutates its inner state.
@@ -295,6 +295,10 @@ pub struct Handle<T> {
 	#[allow(unused)]
 	phantom: PhantomData<T>,
 }
+
+// SAFETY: See disclaimer for `Module`'s implementations of these markers.
+unsafe impl<T> Send for Handle<T> {}
+unsafe impl<T> Sync for Handle<T> {}
 
 impl std::ops::Deref for Handle<ScriptType> {
 	type Target = ScriptType;
