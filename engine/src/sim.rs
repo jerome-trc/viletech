@@ -1,5 +1,8 @@
 //! Home of all gameplay code.
 
+mod ecs;
+pub mod level;
+
 use std::{
 	sync::Arc,
 	thread::JoinHandle,
@@ -9,30 +12,37 @@ use std::{
 use nanorand::WyRand;
 use parking_lot::RwLock;
 
-use crate::{
-	data::Catalog,
-	ecs::{Components, DenseRegistry},
-	rng::RngCore,
-};
+use crate::{data::Catalog, player::Player, rng::RngCore};
 
+pub use self::ecs::*;
+use self::level::Level;
+
+#[derive(Debug)]
 pub struct PlaySim {
+	pub players: Vec<Player>,
 	pub rng: RngCore<WyRand>,
-	pub entities: DenseRegistry,
-	pub components: Components,
+	pub level: Level,
+	pub ecs: World,
+	/// Time spent in this hub thus far.
+	pub hub_tics_elapsed: u64,
+	/// Time spent in this playthrough thus far.
+	pub tics_elapsed: u64,
 }
 
 impl Default for PlaySim {
-	/// This constructor exists for easy testing/mocking/placeholder code but
-	/// is not intended for use in any final implementations.
 	fn default() -> Self {
 		Self {
-			rng: Default::default(),
-			entities: DenseRegistry::new(521),
-			components: Components::new(521),
+			players: Vec::default(),
+			rng: RngCore::default(),
+			level: Level::default(),
+			ecs: World::new(521),
+			hub_tics_elapsed: 0,
+			tics_elapsed: 0,
 		}
 	}
 }
 
+#[derive(Debug)]
 pub struct Handle {
 	pub sim: Arc<RwLock<PlaySim>>,
 	pub sender: InSender,
@@ -40,6 +50,7 @@ pub struct Handle {
 	pub thread: JoinHandle<()>,
 }
 
+#[derive(Debug)]
 pub enum InMessage {
 	Stop,
 	IncreaseTicRate,
@@ -48,6 +59,7 @@ pub enum InMessage {
 }
 
 /// Outbound messages are only for playsims running within the client.
+#[derive(Debug)]
 pub enum OutMessage {
 	Toast(String),
 }
@@ -57,6 +69,7 @@ pub type InReceiver = crossbeam::channel::Receiver<InMessage>;
 pub type OutSender = crossbeam::channel::Sender<OutMessage>;
 pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
+#[derive(Debug)]
 pub struct Context {
 	pub sim: Arc<RwLock<PlaySim>>,
 	pub catalog: Arc<RwLock<Catalog>>,
@@ -72,6 +85,12 @@ bitflags::bitflags! {
 	}
 }
 
+/// Pass [`Config::bits`] to `CFG`.
+///
+/// Note that the idea here is explicitly to generate versions of this function
+/// and others it calls for every possible sim configuration to eliminate branches.
+/// This may well generate an oversized binary and/or bloat the instruction cache,
+/// negating performance gains. Benchmarks will eventually be needed.
 pub fn run<const CFG: u8>(context: Context) {
 	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds
 	const BASE_TICINTERVAL_INDEX: usize = 10;
@@ -111,7 +130,6 @@ pub fn run<const CFG: u8>(context: Context) {
 	'sim: loop {
 		let now = Instant::now();
 		let next_tic = now + Duration::from_micros(tic_interval);
-		let sim = sim.write();
 
 		while let Ok(msg) = receiver.try_recv() {
 			match msg {
@@ -133,9 +151,9 @@ pub fn run<const CFG: u8>(context: Context) {
 			}
 		}
 
-		// ???
-
-		drop(sim);
+		unsafe {
+			tick::<CFG>(sim.write(), &receiver, &sender);
+		}
 
 		// If it took longer than the expected interval to process this tic,
 		// increase the time dilation; if it took less, try to go back up to
@@ -150,4 +168,27 @@ pub fn run<const CFG: u8>(context: Context) {
 
 		std::thread::sleep(next_tic - now);
 	}
+}
+
+type WriteGuard<'a> = parking_lot::RwLockWriteGuard<'a, PlaySim>;
+
+/// The critical section for sim tic execution. By taking a write guard, it is
+/// guaranteed that any mutable references created to the playsim data are truly
+/// exclusive.
+///
+/// In combination with the [`UnsafeCell`](std::cell::UnsafeCell) in parking_lot's
+/// [`RwLock`], this function can be trusted to be the sole source of truth
+/// for manipulating sim state, whether that be by itself or in Lith functions.
+#[inline]
+unsafe fn tick<const CFG: u8>(mut sim: WriteGuard, _receiver: &InReceiver, _sender: &OutSender) {
+	'actors: for (core, _, _) in sim.ecs.comps.iter_mut_all() {
+		if core.freeze_tics > 0 {
+			core.freeze_tics -= 1;
+			continue 'actors;
+		}
+	}
+
+	sim.tics_elapsed += 1;
+	sim.level.tics_elapsed += 1;
+	sim.hub_tics_elapsed += 1;
 }

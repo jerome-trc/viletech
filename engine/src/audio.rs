@@ -30,7 +30,7 @@ use zmusic::cpal::SampleFormat;
 
 use crate::{
 	data::{Catalog, FileRef},
-	ecs::EntityId,
+	sim::ActorId,
 	utils,
 };
 
@@ -183,7 +183,7 @@ impl AudioCore {
 	pub fn start_sound_wave(
 		&mut self,
 		data: StaticSoundData,
-		source: Option<EntityId>,
+		source: Option<ActorId>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
@@ -198,7 +198,7 @@ impl AudioCore {
 	pub fn start_sound_midi(
 		&mut self,
 		data: MidiData,
-		source: Option<EntityId>,
+		source: Option<ActorId>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
@@ -519,7 +519,7 @@ impl std::fmt::Debug for Handle {
 
 pub struct Sound {
 	handle: Handle,
-	_source: Option<EntityId>,
+	_source: Option<ActorId>,
 }
 
 impl Deref for Sound {

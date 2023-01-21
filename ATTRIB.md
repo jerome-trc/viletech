@@ -20,6 +20,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
 	- https://docs.rs/bitflags/latest/bitflags/
+- bitvec
+    - By Alexander Payne ([@myrrlyn](https://github.com/myrrlyn)) et al.
+    - Provided under the [MIT License](https://github.com/ferrilab/bitvec/blob/main/LICENSE.txt).
+    - https://docs.rs/bitvec/latest/bitvec/
 - bytemuck
 	- By [@Lokathor](https://github.com/Lokathor) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-APACHE), [MIT License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-MIT), and [zlib License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-ZLIB).
@@ -102,6 +106,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
 	- By David Tolnay ([@dtolnay](https://github.com/dtolnay)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/dtolnay/indoc/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/indoc/blob/master/LICENSE-MIT).
 	- https://docs.rs/indoc/latest/indoc/
+- itertools
+    - By [@bluss](https://github.com/bluss), [@phimuemue](https://github.com/phimuemue) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/rust-itertools/itertools/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-itertools/itertools/blob/master/LICENSE-MIT).
+    - https://docs.rs/itertools/latest/itertools/
 - kira
 	- By [@tesselode](https://github.com/tesselode) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).

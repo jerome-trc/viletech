@@ -1,199 +1,150 @@
-//! All symbols involved in implementing VileTech's custom playsim ECS.
+/// Entity (a.k.a. "actor") components for the playsim and renderer.
+///
+/// Notes to self/the reader/anyone who wants to make changes:
+///
+/// - These are arranged specifically based on GZDoom's per-sim-tick behavior.
+/// If the choices made seem odd, now you know why.
+/// - When changing a component's layout or creating a new component, keep an
+/// eye on how many 64-byte cache lines it occupies and the effects of the `repr`
+/// chosen. `C` is needed for Lith but `Rust` might produce more compact layouts.
+use bitflags::bitflags;
+use glam::DVec3;
 
-mod components;
+use crate::{lith, math::Rotator64, sim::PlaySim};
 
-use std::collections::VecDeque;
+/// Currently only a type constraint.
+/// Will probably provide functionality to component-managing code in the future.
+pub trait Component: Sized {}
 
-use rayon::prelude::*;
+// Core ////////////////////////////////////////////////////////////////////////
 
-use crate::sparse::{SparseSet, SparseSetIndex};
+/// State machine information, an optional player index, flags.
+#[derive(Debug)]
+pub struct Core {
+	pub flags: CoreFlags,
+	pub state_machine: lith::Handle<()>, // TODO: Lith-based actor state machines
+	pub state: Option<usize>,
+	/// Tics remaining in the current state.
+	/// May be -1, which is treated as infinity.
+	pub state_tics: i32,
+	pub freeze_tics: u32,
+	pub player: Option<u8>,
+}
 
-pub use components::{Constant, SpecialVars};
+bitflags! {
+	pub struct CoreFlags: u64 {
+		/// The entity is excluded from gameplay-related checks.
+		const NO_INTERACTION = 1 << 0;
+		/// Level-wide time freezes do not affect this entity.
+		const NO_TIMEFREEZE = 1 << 1;
+		/// Effectively inert, but displayable.
+		const NO_BLOCKMAP = 1 << 2;
+		/// The entity is partially inside a scroll sector.
+		const SCROLL_SECTOR = 1 << 3;
+		const UNMORPHED = 1 << 4;
+		const SOLID = 1 << 5;
+		const NO_CLIP = 1 << 6;
+		const NO_GRAVITY = 1 << 7;
+	}
+}
 
-// ID newtype //////////////////////////////////////////////////////////////////
+impl Core {
+	#[must_use]
+	pub fn no_interaction(&self) -> bool {
+		self.flags.contains(CoreFlags::NO_INTERACTION)
+	}
+
+	#[must_use]
+	pub fn is_frozen(&self, ctx: &PlaySim) -> bool {
+		if self.freeze_tics > 0 {
+			return true;
+		}
+
+		if self.flags.contains(CoreFlags::NO_TIMEFREEZE) {
+			return false;
+		}
+
+		if !ctx.level.is_frozen() {
+			return false;
+		}
+
+		if self.player.is_none() {
+			return true;
+		}
+
+		let player = &ctx.players[self.player.unwrap() as usize];
+
+		if player.bot.is_some() {
+			return true;
+		}
+
+		// GZ: This is the only place in the entire engine when the two freeze
+		// flags need different treatment. The time freezer flag also freezes
+		// other players; the global setting does not.
+		ctx.level.is_frozen_local() && player.time_freeze.is_empty()
+	}
+}
+
+impl Component for Core {}
+
+// Spatial /////////////////////////////////////////////////////////////////////
+
+/// Position, motion, direction, size.
+#[derive(Debug)]
+pub struct Spatial {
+	pub position: DVec3,
+	pub velocity: DVec3,
+	pub angles: Rotator64,
+	pub radius: f64,
+	pub height: f64,
+	pub floor_z: f64,
+	pub ceiling_z: f64,
+	pub water_level: WaterLevel,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct EntityId(pub(self) usize);
+pub enum WaterLevel {
+	None,
+	Feet,
+	Waist,
+	Eyes,
+}
 
-impl From<EntityId> for usize {
-	fn from(entity: EntityId) -> Self {
-		entity.0
+impl Spatial {
+	#[must_use]
+	pub fn vel_zero(&self) -> bool {
+		self.velocity == DVec3::ZERO
 	}
 }
 
-impl SparseSetIndex for EntityId {}
+impl Component for Spatial {}
 
-// Entity storage //////////////////////////////////////////////////////////////
+// Monster /////////////////////////////////////////////////////////////////////
 
-/// Structure for tracking entity state, kept separate from [`Components`] storage
-/// to allow them to be borrowed independently. Keeps a dynamic array of entity
-/// IDs in no specific order. An entity is extant if it is in this array, and
-/// absent otherwise.
-///
-/// It's named the way it is in case a `SparseRegistry` gets implemented and
-/// proves to be situationally better.
-///
-/// # Tradeoffs
-///
-/// - Iterations are as fast as they possibly can be, since the array slice can
-/// be looped over as-is.
-/// - Insertions into the array require a free entity be popped off the front
-/// of the absent queue and pushed to the front of the extant array.
-/// - Trying to find an existing entity's index in the array is always `O(n)`.
-/// In the worst case, the whole array needs to be traversed to perform an
-/// existence check or removal.
 #[derive(Debug)]
-pub struct DenseRegistry {
-	/// Initialized to the length of `absent`.
-	next_open: usize,
-	absent: VecDeque<EntityId>,
-	extant: Vec<EntityId>,
+pub struct Monster {
+	pub flags: MonsterFlags,
+	/// Primarily relevant to Nightmare! difficulty.
+	pub times_respawned: u16,
 }
 
-impl DenseRegistry {
-	/// `hint` is meant to inform what size of allocation should be pre-reserved.
-	/// This should come from the number of "things" that were pre-placed in a
-	/// level (monsters, inventory items, decorations). Extra space beyond `hint`
-	/// is always allocated to account for projectiles, hitscan puffs, teleport
-	/// effects, Lost Souls, and whatever other entities a mod may spawn dynamically.
-	/// This extra headroom diminishes as `hint` increases; it is assumed that
-	/// DOOM E1M1 requires less headroom as a proportion of its initial thing
-	/// count than the larger slaughtermaps which don't frontload all of their
-	/// monsters at once.
-	#[must_use]
-	pub fn new(hint: usize) -> Self {
-		assert_ne!(
-			hint, 0,
-			"Illegally tried to create an entity registry with 0 capacity."
-		);
-
-		let extra = Self::extra_alloc(hint);
-
-		let mut ret = Self {
-			next_open: extra,
-			absent: VecDeque::with_capacity(extra),
-			extant: Vec::with_capacity(hint + extra),
-		};
-
-		for i in 0..extra {
-			ret.absent.push_back(EntityId(i));
-		}
-
-		ret
-	}
-
-	#[must_use]
-	pub(self) fn extra_alloc(hint: usize) -> usize {
-		match hint {
-			0 => unreachable!(),
-			1..=69 => {
-				// Thing count for DOOM2 MAP01 is 69
-				((hint as f32) * 0.5) as usize
-			}
-			70..=521 => {
-				// Thing count for Plutonia MAP32 is 521
-				((hint as f32) * 0.33) as usize
-			}
-			522..=1817 => {
-				// Thing count for Scythe 2 MAP30 is 1817
-				((hint as f32) * 0.2) as usize
-			}
-			1818..=3232 => {
-				// Thing count for Alien Vendetta MAP25 is 3232
-				((hint as f32) * 0.1) as usize
-			}
-			3233..=5537 => {
-				// Thing count for Slaughterfest 2012 MAP25 is 5537
-				((hint as f32) * 0.05) as usize
-			}
-			_ => {
-				// Thing count for Cosmogenesis MAP05 is 81036 (!!!)
-				((hint as f32) * 0.01) as usize
-			}
-		}
-	}
-
-	pub fn iter_extant(&self) -> impl Iterator<Item = EntityId> + '_ {
-		self.extant.iter().copied()
-	}
-
-	pub fn par_iter_extant(&self) -> impl ParallelIterator<Item = EntityId> + '_ {
-		self.extant.par_iter().copied()
-	}
-
-	pub fn spawn(&mut self) -> EntityId {
-		if let Some(new_ent) = self.absent.pop_front() {
-			self.extant.push(new_ent);
-			new_ent
-		} else {
-			// - "Last" entity is N
-			// - Next open entity is N + 1
-			// - Advance `next_open` to N + 3
-			// - N + 1 becomes extant
-			// - N + 2 becomes absent as extra headroom
-
-			let next_open = EntityId(self.next_open);
-			self.extant.push(next_open);
-			self.absent.push_back(EntityId(next_open.0 + 1));
-			self.next_open += 2;
-			next_open
-		}
-	}
-
-	pub fn spawn_bulk(&mut self, count: usize) {
-		for _ in 0..count {
-			let _ = self.spawn();
-		}
-	}
-
-	#[must_use]
-	pub fn exists(&self, entity: EntityId) -> bool {
-		self.extant.iter().any(|e| *e == entity)
-	}
-
-	pub fn remove_unchecked(&mut self, entity: EntityId) {
-		self.extant.remove(
-			self.extant
-				.iter()
-				.position(|e| *e == entity)
-				.expect("`DenseRegistry::remove_unchecked` failed to find the given entity."),
-		);
-
-		self.absent.push_back(entity);
+bitflags! {
+	pub struct MonsterFlags: u64 {
+		/// For Strife and MBF.
+		const FRIENDLY = 1 << 0;
+		const KILL_COUNTED = 1 << 1;
+		/// Solely for the Pain Elemental's attack.
+		/// (VileTech may cull this if it proves possible.)
+		const VERT_FRICTION = 1 << 2;
 	}
 }
 
-// Component storage ///////////////////////////////////////////////////////////
-
-/// Component collections are kept separate from the [entity registry](DenseRegistry)
-/// to allow them to be borrowed independently. All members are kept public deliberately.
-#[derive(Debug)]
-pub struct Components {
-	pub constant: SparseSet<EntityId, Constant>,
-	pub special: SparseSet<EntityId, SpecialVars>,
-}
-
-impl Components {
-	/// See [`DenseRegistry::new`], which consumes `hint` the same way, for details
-	/// on how component collection capacity gets reserved.
+impl Monster {
 	#[must_use]
-	pub fn new(hint: usize) -> Self {
-		assert_ne!(
-			hint, 0,
-			"Illegally tried to create a component storage with 0 capacity."
-		);
-
-		let extra = DenseRegistry::extra_alloc(hint);
-
-		Self {
-			constant: SparseSet::with_capacity(hint + extra, hint + extra),
-			special: SparseSet::with_capacity(hint + extra, hint + extra),
-		}
-	}
-
-	pub fn clear(&mut self) {
-		self.constant.clear();
-		self.special.clear();
+	pub fn kill_counted(&self) -> bool {
+		self.flags
+			.contains(MonsterFlags::KILL_COUNTED & !MonsterFlags::FRIENDLY)
 	}
 }
+
+impl Component for Monster {}

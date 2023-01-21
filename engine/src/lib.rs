@@ -10,7 +10,6 @@ pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod data;
-#[allow(dead_code)]
 pub mod ecs;
 #[allow(dead_code)]
 pub mod frontend;
@@ -20,6 +19,7 @@ pub mod gfx;
 pub mod input;
 pub mod lith;
 pub mod math;
+pub mod player;
 #[allow(dead_code)]
 pub mod rng;
 #[allow(dead_code)]

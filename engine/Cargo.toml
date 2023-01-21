@@ -15,6 +15,7 @@ publish = false
 arrayvec = { version = "0.7.2", features = ["serde"] }
 ariadne = "0.1.5"
 bitflags = { workspace = true }
+bitvec = { workspace = true }
 bytemuck = { workspace = true }
 byteorder = "1.4.3"
 chrono = { workspace = true }
@@ -50,6 +51,7 @@ image = { version = "0.24.4", default-features = false, features = [
 ] }
 indexmap = { workspace = true }
 indoc = { workspace = true }
+itertools = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }
 md5 = "0.7.0"
