@@ -12,7 +12,6 @@ use once_cell::sync::Lazy;
 
 use crate::lazy_regex;
 
-static EMPTY_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new(""));
 static ROOT_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new("/"));
 
 /// Extension trait for anything fulfilling `impl AsRef<std::path::Path>`.
@@ -25,6 +24,7 @@ pub trait PathExt: AsRef<Path> {
 	}
 	#[must_use]
 	fn extension_is(&self, test: &str) -> bool;
+	/// Check if this path has no components at all.
 	#[must_use]
 	fn is_empty(&self) -> bool;
 	#[must_use]
@@ -85,7 +85,7 @@ impl<T: AsRef<Path>> PathExt for T {
 	}
 
 	fn is_empty(&self) -> bool {
-		self.as_ref() == *EMPTY_PATH
+		self.comp_len() == 0
 	}
 
 	fn is_root(&self) -> bool {
