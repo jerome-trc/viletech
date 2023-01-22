@@ -26,4 +26,3 @@ parking_lot = { workspace = true }
 shipyard = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }
-zmusic = { workspace = true }

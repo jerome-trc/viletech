@@ -51,4 +51,3 @@ zip = "0.6.2"
 # Both of these are temporary. Change to use Git when a crate stabilizes;
 # change to use crates.io when a crate is suitable for publishing
 doom-front = { path = "../doom-front/front" }
-zmusic = { path = "../zmusic-rs/wrapper" }

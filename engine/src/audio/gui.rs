@@ -1,15 +1,18 @@
 //! Developer GUI for diagnosing and interacting with the audio subsystem.
 
+use std::path::PathBuf;
+
 use indoc::formatdoc;
 use kira::{
 	sound::static_sound::{PlaybackState, StaticSoundSettings},
 	tween::Tween,
 };
 use log::{info, warn};
+use nodi::midly;
 
 use crate::VPath;
 
-use super::AudioCore;
+use super::{midi, AudioCore, MidiData, MidiSettings};
 
 impl AudioCore {
 	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
@@ -96,43 +99,38 @@ impl AudioCore {
 				ui.menu_button(format!("{} | \u{23F7}", self.gui.midi_device), |ui| {
 					ui.set_min_width(20.0);
 
-					for device in zmusic::device::Index::all() {
-						match *device {
-							// Support for these two by zmusic-rs and VileTech are WIP
-							zmusic::device::Index::Standard | zmusic::device::Index::Default => {
-								continue;
-							}
-							_ => {}
-						};
-
-						if ui.button(format!("{}", device)).clicked() {
-							self.gui.midi_device = *device;
-							ui.close_menu();
-						}
+					if ui.button(format!("{}", midi::Device::FluidSynth)).clicked() {
+						self.gui.midi_device = midi::Device::FluidSynth;
+						ui.close_menu();
 					}
 				});
 			});
 
-			ui.label("(VFS Path/Asset ID/Asset Index)");
+			ui.horizontal(|ui| {
+				ui.label("MIDI SoundFont File: ");
+				ui.text_edit_singleline(&mut self.gui.soundfont_buf);
+			});
+
+			ui.label("(VFS Path/Asset ID)");
 
 			ui.horizontal(|ui| {
-				ui.text_edit_singleline(&mut self.gui.string_buf);
+				ui.text_edit_singleline(&mut self.gui.id_buf);
 
 				let btn_play = egui::Button::new("Play");
 				let btn_clear = egui::Button::new("Clear");
 
 				if ui
-					.add_enabled(!self.gui.string_buf.is_empty(), btn_play)
+					.add_enabled(!self.gui.id_buf.is_empty(), btn_play)
 					.clicked()
 				{
 					self.ui_impl_try_play();
 				}
 
 				if ui
-					.add_enabled(!self.gui.string_buf.is_empty(), btn_clear)
+					.add_enabled(!self.gui.id_buf.is_empty(), btn_clear)
 					.clicked()
 				{
-					self.gui.string_buf.clear();
+					self.gui.id_buf.clear();
 				}
 			});
 
@@ -151,7 +149,7 @@ impl AudioCore {
 	}
 
 	fn ui_impl_try_play(&mut self) {
-		let path = VPath::new(&self.gui.string_buf).to_path_buf();
+		let path = VPath::new(&self.gui.id_buf).to_path_buf();
 		let catalog = self.catalog.read();
 
 		let fref = match catalog.get_file(&path) {
@@ -172,15 +170,49 @@ impl AudioCore {
 
 		let bytes = fref.read_bytes();
 
-		if false
-		/* zmusic::MidiKind::is_midi(bytes) */
-		{
-			unimplemented!("ZMusic is pending replacement.");
+		if let Ok(midi) = midly::Smf::parse(bytes) {
+			let sf_path = PathBuf::from(self.gui.soundfont_buf.clone());
+
+			if !sf_path.exists() {
+				info!("The requested SoundFont was not found on the disk.");
+				return;
+			}
+
+			let mut mdat = MidiData::new(midi, sf_path.clone(), MidiSettings::default());
+
+			drop(catalog);
+
+			mdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
+
+			let res = match self.gui.slot_to_play {
+				SELSLOT_MUS1 => self.start_music_midi::<false>(mdat),
+				SELSLOT_MUS2 => self.start_music_midi::<true>(mdat),
+				SELSLOT_SOUND => self.start_sound_midi(mdat, None),
+				_ => unreachable!(),
+			};
+
+			match res {
+				Ok(()) => {
+					info!(
+						"Playing: {p}\r\n\tAt volume: {vol}\r\n\tWith device: {dev}",
+						p = path.display(),
+						vol = self.gui.volume,
+						dev = self.gui.midi_device
+					);
+				}
+				Err(err) => {
+					info!(
+						"Failed to play MIDI from: {}\r\n\tError: {err}",
+						sf_path.display()
+					);
+				}
+			}
 		} else if let Ok(mut sdat) =
 			super::sound_from_bytes(bytes.to_owned(), StaticSoundSettings::default())
 		{
-			sdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
 			drop(catalog);
+
+			sdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
 
 			let res = match self.gui.slot_to_play {
 				SELSLOT_MUS1 => self.start_music_wave::<false>(sdat),
@@ -192,9 +224,9 @@ impl AudioCore {
 			match res {
 				Ok(()) => {
 					info!(
-						"Playing: {}\r\n\tAt volume: {}",
-						path.display(),
-						self.gui.volume
+						"Playing: {p}\r\n\tAt volume: {vol}",
+						p = path.display(),
+						vol = self.gui.volume
 					);
 				}
 				Err(err) => {
@@ -212,10 +244,17 @@ impl AudioCore {
 
 /// State storage for the audio developer GUI.
 pub(super) struct DeveloperGui {
-	string_buf: String,
-	volume: f64,
-	midi_device: zmusic::device::Index,
-	slot_to_play: u8,
+	/// Let the user write a VFS path or asset ID.
+	pub(super) id_buf: String,
+	/// For allowing the user to enter a custom SoundFont path.
+	///
+	/// Set by default from the first SoundFont collected during audio core
+	/// initialization. If none were found, this will be empty.
+	pub(super) soundfont_buf: String,
+	/// Amplitude. Slider runs from 0.0 to 4.0.
+	pub(super) volume: f64,
+	pub(super) midi_device: midi::Device,
+	pub(super) slot_to_play: u8,
 }
 
 const SELSLOT_MUS1: u8 = 0;
@@ -225,9 +264,10 @@ const SELSLOT_SOUND: u8 = 2;
 impl Default for DeveloperGui {
 	fn default() -> Self {
 		Self {
-			string_buf: Default::default(),
+			id_buf: String::default(),
+			soundfont_buf: String::default(),
 			volume: 1.0,
-			midi_device: zmusic::device::Index::FluidSynth,
+			midi_device: midi::Device::FluidSynth,
 			slot_to_play: SELSLOT_SOUND,
 		}
 	}

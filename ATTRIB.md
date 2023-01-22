@@ -6,7 +6,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## Technologies
 
-VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED***/doom-front) and [`zmusic`](https://github.com/***REMOVED***/zmusic-rs). The former is my own creation and the latter is a wrapper I wrote over [ZMusic](https://github.com/ZDoom/ZMusic) by the ZDoom team. See the READMEs and attributions documents for those two crates to see transitive acknowledgements.
+VileTech depends on the [`doom-front`](https://github.com/***REMOVED***/doom-front) library, which is my own creation. See its own README and attributions document to see transitive acknowledgements.
 
 - arrayvec
     - By [@bluss](https://github.com/bluss) et al.
@@ -40,6 +40,10 @@ VileTech depends on the libraries [`doom-front`](https://github.com/***REMOVED**
     - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
     - Provided under the [MIT License](https://github.com/zesterer/chumsky/blob/master/LICENSE).
     - https://docs.rs/chumsky/latest/chumsky/
+- cpal
+    - By the [RustAudio organisation](https://github.com/RustAudio) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/RustAudio/cpal/blob/master/LICENSE).
+	- https://docs.rs/cpal/latest/cpal/
 - clap
 	- By Kevin K. ([@kbknapp](https://github.com/kbknapp)), Ed Page ([@epage](https://github.com/epage)), et al.
 	- Provided under the [Apache 2.0 License](https://github.com/clap-rs/clap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/clap-rs/clap/blob/master/LICENSE-MIT).

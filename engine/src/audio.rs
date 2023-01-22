@@ -11,7 +11,6 @@ use std::{
 };
 
 use kira::{
-	dsp::Frame,
 	manager::{
 		backend::{cpal::CpalBackend, Backend},
 		error::PlaySoundError,
@@ -23,10 +22,10 @@ use kira::{
 	},
 	tween::Tween,
 };
-use log::{debug, error, info, trace, warn};
+use log::{info, warn};
+use nodi::midly;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use zmusic::cpal::SampleFormat;
 
 use crate::{
 	data::{Catalog, FileRef},
@@ -34,9 +33,9 @@ use crate::{
 	utils,
 };
 
-pub use midi::MidiData;
-pub use midi::MidiSettings;
-pub use midi::MidiSoundHandle;
+pub use midi::{
+	render as render_midi, Data as MidiData, Handle as MidiHandle, Settings as MidiSettings,
+};
 
 use self::gui::DeveloperGui;
 
@@ -44,8 +43,6 @@ use self::gui::DeveloperGui;
 pub struct AudioCore {
 	/// The centre of waveform sound synthesis and playback.
 	pub manager: AudioManager,
-	/// The centre of MIDI sound synthesis, configuration, and playback.
-	pub zmusic: zmusic::Manager,
 	pub soundfonts: Vec<SoundFont>,
 	/// General-purpose music slot.
 	pub music1: Option<Handle>,
@@ -67,35 +64,21 @@ impl AudioCore {
 	) -> Result<Self, Error> {
 		let manager_settings = manager_settings.unwrap_or_default();
 		let sound_cap = manager_settings.capacities.sound_capacity;
-		let mut zmusic = zmusic::Manager::new().map_err(Error::ZMusic)?;
 
-		zmusic
-			.config_global_mut()
-			.set_callbacks(Some(Box::new(|severity, msg| match severity {
-				zmusic::config::MessageSeverity::Verbose => trace!(target: "zmusic", "{msg}"),
-				zmusic::config::MessageSeverity::Debug => debug!(target: "zmusic", "{msg}"),
-				zmusic::config::MessageSeverity::Notify => info!(target: "zmusic", "{msg}"),
-				zmusic::config::MessageSeverity::Warning => warn!(target: "zmusic", "{msg}"),
-				zmusic::config::MessageSeverity::Error => error!(target: "zmusic", "{msg}"),
-				zmusic::config::MessageSeverity::Fatal => panic!("Fatal ZMusic error: {msg}"),
-			})));
-
-		let fluid_sf = soundfont_dir().join("viletech.sf2");
-
-		if !fluid_sf.exists() {
-			warn!(
-				"Default SoundFont not found at path: {}\r\n\t\
-				MIDI playback via FluidSynth will be unavailable.",
-				fluid_sf.display(),
-			);
-		} else {
-			zmusic.config_fluid_mut().set_soundfont(fluid_sf);
-		}
+		fluidlite::Log::set(
+			fluidlite::LogLevel::DEBUG,
+			fluidlite::FnLogger::new(|level, msg| match level {
+				fluidlite::LogLevel::Panic => log::error!(target: "fluidlite", "(FATAL): {msg}"),
+				fluidlite::LogLevel::Error => log::error!(target: "fluidlite", "msg"),
+				fluidlite::LogLevel::Warning => log::warn!(target: "fluidlite", "{msg}"),
+				fluidlite::LogLevel::Info => log::info!(target: "fluidlite", "{msg}"),
+				fluidlite::LogLevel::Debug => log::debug!(target: "fluidlite", "{msg}"),
+			}),
+		);
 
 		let mut ret = Self {
 			catalog,
 			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
-			zmusic,
 			soundfonts: Vec::with_capacity(1),
 			music1: None,
 			music2: None,
@@ -104,6 +87,11 @@ impl AudioCore {
 		};
 
 		ret.collect_soundfonts()?;
+
+		if !ret.soundfonts.is_empty() {
+			let cow = ret.soundfonts[0].path.to_string_lossy();
+			ret.gui.soundfont_buf = cow.to_string();
+		}
 
 		Ok(ret)
 	}
@@ -274,47 +262,6 @@ impl AudioCore {
 		Ok(())
 	}
 
-	/// Hypothetically, this could be a free function taking a [`zmusic::Song`]
-	/// but tying it to the manager via mutable reference prevents use from
-	/// multiple threads, to which FluidSynth is unfriendly.
-	pub fn render_midi(
-		&mut self,
-		source: &[u8],
-		settings: StaticSoundSettings,
-	) -> Result<StaticSoundData, Box<dyn std::error::Error>> {
-		let mut song = self
-			.zmusic
-			.new_song(source, zmusic::device::Index::FluidSynth)?;
-
-		let cfg = song.start_silent(false)?;
-
-		if cfg.buffer_size == 0 {
-			unreachable!();
-		}
-
-		let bufsz = (cfg.buffer_size as usize) / 10;
-
-		let frames = if cfg.num_channels == 1 {
-			match cfg.sample_format {
-				SampleFormat::I16 => render_midi_impl::<1, i16>(&mut song, bufsz),
-				SampleFormat::U16 => render_midi_impl::<1, u16>(&mut song, bufsz),
-				SampleFormat::F32 => render_midi_impl::<1, f32>(&mut song, bufsz),
-			}
-		} else {
-			match cfg.sample_format {
-				SampleFormat::I16 => render_midi_impl::<2, i16>(&mut song, bufsz),
-				SampleFormat::U16 => render_midi_impl::<2, u16>(&mut song, bufsz),
-				SampleFormat::F32 => render_midi_impl::<2, f32>(&mut song, bufsz),
-			}
-		};
-
-		Ok(StaticSoundData {
-			sample_rate: cfg.sample_rate,
-			frames: Arc::new(frames),
-			settings,
-		})
-	}
-
 	/// A fundamental part of engine initialization. Recursively read the contents of
 	/// `<executable_directory>/soundfonts`, determine their types, and store their
 	/// paths. Note that in the debug build, `<working_directory>/data/soundfonts`
@@ -413,7 +360,8 @@ impl AudioCore {
 					}
 				};
 
-				// [GZ] A SoundFont archive with only one file can't be a packed GUS patch.
+				// GZ:
+				// A SoundFont archive with only one file can't be a packed GUS patch.
 				// Just skip this entirely
 				if archive.len() <= 1 {
 					continue;
@@ -466,7 +414,7 @@ impl AudioCore {
 /// whether it's waveform or MIDI.
 pub enum Handle {
 	Wave(StaticSoundHandle),
-	Midi(MidiSoundHandle),
+	Midi(MidiHandle),
 }
 
 impl Handle {
@@ -557,37 +505,6 @@ pub fn sound_from_bytes(
 	StaticSoundData::from_cursor(cursor, settings)
 }
 
-/// Monomorphize over the streaming properties of the MIDI for speed.
-fn render_midi_impl<const CHANS: usize, S: zmusic::cpal::Sample + Default>(
-	song: &mut zmusic::Song,
-	buffer_size: usize,
-) -> Vec<Frame> {
-	let mut frames = Vec::<Frame>::with_capacity(buffer_size * 300 * 10);
-	let mut buf = Vec::<S>::with_capacity(buffer_size);
-	buf.resize(buffer_size, S::default());
-
-	while song.is_playing() {
-		song.fill_stream::<S>(&mut buf);
-		song.update();
-
-		for frame in buf.chunks_exact_mut(CHANS) {
-			if CHANS == 1 {
-				frames.push(Frame {
-					left: frame[0].to_f32(),
-					right: frame[0].to_f32(),
-				});
-			} else {
-				frames.push(Frame {
-					left: frame[0].to_f32(),
-					right: frame[1].to_f32(),
-				});
-			}
-		}
-	}
-
-	frames
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct SoundFont {
 	/// The canonicalized path to this SoundFont's file.
@@ -615,7 +532,6 @@ impl SoundFont {
 	}
 
 	/// The canonicalized path to this SoundFont's file.
-	/// Needed by the FluidSynth backend of the ZMusic library.
 	#[must_use]
 	pub fn full_path(&self) -> &Path {
 		&self.path
@@ -674,15 +590,21 @@ pub fn soundfont_dir() -> &'static Path {
 #[derive(Debug)]
 pub enum Error {
 	NoSoundFonts,
-	ZMusic(zmusic::Error),
+	SoundFontRead(PathBuf, fluidlite::Error),
 	KiraBackend(<CpalBackend as Backend>::Error),
-	CommandWave(kira::CommandError),
-	PlayWave(PlayWaveError),
+	ParseMidi(midly::Error),
+	MidiSynth(fluidlite::Error),
 	PlayMidi(PlayMidiError),
+	PlayWave(PlayWaveError),
 	CommandMidi,
+	CommandWave(kira::CommandError),
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		None
+	}
+}
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -692,12 +614,19 @@ impl std::fmt::Display for Error {
 				"No SoundFont files found under path: {}",
 				SOUNDFONT_DIR.to_string_lossy().as_ref()
 			),
-			Self::ZMusic(err) => err.fmt(f),
+			Self::SoundFontRead(path, err) => write!(
+				f,
+				"Failed to read SoundFont at path: {p}\r\n\t\
+				Details: {err}",
+				p = path.display()
+			),
 			Self::KiraBackend(err) => err.fmt(f),
-			Self::CommandWave(err) => err.fmt(f),
-			Self::PlayWave(err) => err.fmt(f),
+			Self::ParseMidi(err) => err.fmt(f),
+			Self::MidiSynth(err) => err.fmt(f),
 			Self::PlayMidi(err) => err.fmt(f),
+			Self::PlayWave(err) => err.fmt(f),
 			Self::CommandMidi => write!(f, "Failed to send a command to a MIDI sound."),
+			Self::CommandWave(err) => err.fmt(f),
 		}
 	}
 }

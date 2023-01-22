@@ -307,29 +307,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bindgen"
-version = "0.60.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062dddbc1ba4aca46de6338e2bf87771414c335f7b2f2036e8f3e9befebf88e6"
-dependencies = [
- "bitflags",
- "cexpr",
- "clang-sys",
- "clap 3.2.15",
- "env_logger",
- "lazy_static",
- "lazycell",
- "log",
- "peeking_take_while",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash",
- "shlex",
- "which",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -612,28 +589,13 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44bbe24bbd31a185bc2c4f7c2abe80bea13a20d57ee4e55be70ac512bdc76417"
-dependencies = [
- "atty",
- "bitflags",
- "clap_lex 0.2.4",
- "indexmap",
- "strsim",
- "termcolor",
- "textwrap 0.15.0",
-]
-
-[[package]]
-name = "clap"
 version = "4.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7db700bc935f9e43e88d00b0850dae18a63773cfbec6d8e070fccf7fef89a39"
 dependencies = [
  "bitflags",
  "clap_derive",
- "clap_lex 0.3.0",
+ "clap_lex",
  "is-terminal",
  "once_cell",
  "strsim",
@@ -651,15 +613,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "clap_lex"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
-dependencies = [
- "os_str_bytes",
 ]
 
 [[package]]
@@ -856,7 +809,7 @@ version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dff444d80630d7073077d38d40b4501fd518bd2b922c2a55edcc8b0f7be57e6"
 dependencies = [
- "bindgen 0.59.2",
+ "bindgen",
 ]
 
 [[package]]
@@ -1322,6 +1275,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
 name = "dolly"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1433,19 +1392,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9852635589dc9f9ea1b6fe9f05b50ef208c85c834a562f0c6abb1c475736ec2b"
 dependencies = [
  "cfg-if 1.0.0",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
 ]
 
 [[package]]
@@ -1572,6 +1518,26 @@ checksum = "f82b0f4c27ad9f8bfd1f3208d882da2b09c301bc1c828fd3a00d0216d2fbbff6"
 dependencies = [
  "crc32fast",
  "miniz_oxide 0.5.3",
+]
+
+[[package]]
+name = "fluidlite"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c0265cc6e1b01b9418d29acc5b48c57b21775b5de59264f1afe13d9b529a401"
+dependencies = [
+ "bitflags",
+ "doc-comment",
+ "fluidlite-sys",
+]
+
+[[package]]
+name = "fluidlite-sys"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f8574ea7d1f3d03d9713f9983c5c2f128abda23a99603f6af86bbecb2a03809"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -1982,12 +1948,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "humantime"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2307,6 +2267,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "midly"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "207d755f4cb882d20c4da58d707ca9130a0c9bc5061f657a4f299b8e36362b7a"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
 name = "miette"
 version = "5.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2515,6 +2484,15 @@ dependencies = [
  "cfg-if 1.0.0",
  "libc",
  "memoffset",
+]
+
+[[package]]
+name = "nodi"
+version = "0.19.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15cd4fb98cfff4df8678ea420956a86cfe3765b31ee07966dce80df8556d1673"
+dependencies = [
+ "midly",
 ]
 
 [[package]]
@@ -4280,6 +4258,7 @@ dependencies = [
  "byteorder",
  "chrono",
  "chumsky",
+ "cpal",
  "cranelift",
  "cranelift-jit",
  "cranelift-module",
@@ -4294,6 +4273,7 @@ dependencies = [
  "fasthash",
  "fern",
  "fixed",
+ "fluidlite",
  "formatx",
  "glam",
  "globset",
@@ -4308,6 +4288,7 @@ dependencies = [
  "miette",
  "naga",
  "nanorand",
+ "nodi",
  "num",
  "num-derive",
  "num-traits",
@@ -4335,7 +4316,6 @@ dependencies = [
  "wgpu",
  "winit",
  "zip",
- "zmusic",
 ]
 
 [[package]]
@@ -4355,7 +4335,6 @@ dependencies = [
  "viletech",
  "wgpu",
  "winit",
- "zmusic",
 ]
 
 [[package]]
@@ -4664,17 +4643,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb6b28ef22cac17b9109b25b3bf8c9a103eeb293d7c5f78653979b09140375f6"
 dependencies = [
  "bitflags",
-]
-
-[[package]]
-name = "which"
-version = "4.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c831fbbee9e129a8cf93e7747a82da9d95ba8e16621cae60ec2cdc849bacb7b"
-dependencies = [
- "either",
- "libc",
- "once_cell",
 ]
 
 [[package]]
@@ -5004,24 +4972,6 @@ dependencies = [
  "sha1 0.10.1",
  "time 0.3.11",
  "zstd",
-]
-
-[[package]]
-name = "zmusic"
-version = "0.0.0"
-dependencies = [
- "cpal",
- "parking_lot 0.12.1",
- "zmusic-sys",
-]
-
-[[package]]
-name = "zmusic-sys"
-version = "0.0.0"
-dependencies = [
- "bindgen 0.60.1",
- "cmake",
- "miette",
 ]
 
 [[package]]
