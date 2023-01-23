@@ -91,6 +91,7 @@ impl<C: terminal::Command> Console<C> {
 	/// any - and draw the window and all of its contents.
 	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		while let Ok(msg) = self.log_receiver.try_recv() {
+			self.scroll_to_bottom = true;
 			self.messages.push(msg);
 		}
 
@@ -173,6 +174,7 @@ impl<C: terminal::Command> Console<C> {
 	/// Appends a custom message.
 	pub fn write(&mut self, string: String, kind: MessageKind) {
 		self.messages.push(Message { string, kind });
+		self.scroll_to_bottom = true;
 	}
 
 	pub fn on_key_event(&mut self, input: &KeyboardInput) {
