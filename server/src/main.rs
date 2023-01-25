@@ -220,14 +220,6 @@ conditions. See the license document that come with your installation."
 			true,
 		);
 		core.terminal.register_command(
-			"home",
-			Command {
-				flags: CommandFlags::all(),
-				func: commands::cmd_home,
-			},
-			true,
-		);
-		core.terminal.register_command(
 			"quit",
 			Command {
 				flags: CommandFlags::all(),

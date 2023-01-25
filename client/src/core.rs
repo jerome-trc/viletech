@@ -1,4 +1,11 @@
-use std::{error::Error, path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
+use std::{
+	borrow::Cow,
+	error::Error,
+	path::{Path, PathBuf},
+	sync::Arc,
+	thread::JoinHandle,
+	time::Instant,
+};
 
 use log::error;
 use nanorand::WyRand;
@@ -14,6 +21,7 @@ use vile::{
 	lith,
 	rng::RngCore,
 	sim::{self, PlaySim},
+	user::UserCore,
 };
 use winit::{
 	event::{ElementState, KeyboardInput, VirtualKeyCode},
@@ -28,6 +36,15 @@ use crate::commands::{
 type DeveloperGui = vile::DeveloperGui<DevGuiStatus>;
 
 enum Scene {
+	/// The user needs to choose whether their information should be stored
+	/// portably or at a "home" directory.
+	FirstStartup {
+		/// `true` is the default presented to the user.
+		portable: bool,
+
+		portable_path: PathBuf,
+		home_path: Option<PathBuf>,
+	},
 	Transition,
 	/// The user hasn't entered the game yet. From here they can select a user
 	/// profile and engine-global/cross-game preferences, assemble a load order,
@@ -60,6 +77,8 @@ enum SceneChange {
 	/// The user has requested an immediate exit from any other scene.
 	/// Stop everything, drop everything, and close the window as fast as possible.
 	Exit,
+	/// Only used to transition from the first-time startup screen.
+	ToFrontend,
 	FrontendToTitle {
 		/// The user's load order. Gets handed off to the mount thread.
 		to_mount: Vec<PathBuf>,
@@ -71,6 +90,7 @@ pub struct ClientCore {
 	/// (Rat) In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed.
 	pub start_time: Instant,
+	pub user: UserCore,
 	pub catalog: Arc<RwLock<Catalog>>,
 	pub project: Arc<RwLock<lith::Project>>,
 	pub gfx: GraphicsCore,
@@ -96,6 +116,31 @@ impl ClientCore {
 		gfx: GraphicsCore,
 		console: Console<ConsoleCommand>,
 	) -> Result<Self, Box<dyn Error>> {
+		let user;
+		let scene;
+		let user_dir_home = vile::user::user_dir_home();
+		let user_dir_portable = vile::user::user_dir_portable();
+		let user_dir = vile::user::select_user_dir(&user_dir_portable, &user_dir_home);
+
+		match user_dir {
+			Some(udir) => {
+				scene = Scene::Frontend {
+					menu: FrontendMenu::default(),
+				};
+
+				user = UserCore::new(udir)?;
+			}
+			None => {
+				scene = Scene::FirstStartup {
+					portable: true,
+					portable_path: user_dir_portable,
+					home_path: user_dir_home,
+				};
+
+				user = UserCore::uninit();
+			}
+		}
+
 		let camera = Camera::new(
 			gfx.surface_config.width as f32,
 			gfx.surface_config.height as f32,
@@ -107,6 +152,7 @@ impl ClientCore {
 
 		let mut ret = ClientCore {
 			start_time,
+			user,
 			catalog,
 			project: Arc::new(RwLock::new(lith::Project::new(catalog_lith))),
 			gfx,
@@ -124,14 +170,11 @@ impl ClientCore {
 				left: DevGuiStatus::Audio,
 				right: DevGuiStatus::Console,
 			},
-			scene: Scene::Frontend {
-				menu: FrontendMenu::default(),
-			},
+			scene,
 			next_scene: None,
 		};
 
 		ret.register_console_commands();
-		vile::user::build_user_dirs()?;
 
 		Ok(ret)
 	}
@@ -178,6 +221,13 @@ impl ClientCore {
 			Scene::Title { .. } => {
 				// ???
 			}
+			Scene::GameLoad {
+				thread: _,
+				tracker: _,
+				start_time: _,
+			} => {
+				// ???
+			}
 			Scene::Frontend { menu } => {
 				let action = menu.ui(&self.gfx.egui.context);
 
@@ -214,7 +264,21 @@ impl ClientCore {
 				rpass.set_pipeline(&self.gfx.pipelines[0]);
 				rpass.draw(0..3, 0..1);
 			}
-			_ => {}
+			Scene::FirstStartup {
+				portable,
+				portable_path,
+				home_path,
+			} => {
+				if let Some(next) = Self::first_startup_screen(
+					&self.gfx.egui.context,
+					portable,
+					portable_path.as_path(),
+					home_path,
+				) {
+					self.next_scene = Some(next);
+				}
+			}
+			_ => unimplemented!(),
 		};
 
 		// TODO: mark as `unlikely` when it stabilizes
@@ -354,6 +418,48 @@ impl ClientCore {
 			Some(SceneChange::TitleToFrontend) => {
 				self.catalog.write().truncate(1); // Keep base data
 			}
+			Some(SceneChange::ToFrontend) => {
+				let first_startup = std::mem::replace(
+					&mut self.scene,
+					Scene::Frontend {
+						menu: FrontendMenu::default(),
+					},
+				);
+
+				if let Scene::FirstStartup {
+					portable,
+					portable_path,
+					home_path,
+				} = first_startup
+				{
+					let path = if portable {
+						portable_path
+					} else {
+						home_path.unwrap()
+					};
+
+					if path.exists() {
+						panic!(
+							"Could not create user info folder; \
+							something already exists at path: {p}",
+							p = path.display(),
+						);
+					}
+
+					std::fs::create_dir(&path)
+						.expect("User information setup failed: directory creation error.");
+
+					// If the basic file IO needed to initialize user information
+					// is not even possible, there's no reason to go further
+
+					self.user = match UserCore::new(path) {
+						Ok(u) => u,
+						Err(err) => panic!("User information setup failed: {err}"),
+					};
+				} else {
+					unreachable!();
+				}
+			}
 			None => unreachable!(),
 		}
 
@@ -418,15 +524,6 @@ impl ClientCore {
 			ConsoleCommand {
 				flags: ConsoleCommandFlags::all(),
 				func: commands::ccmd_help,
-			},
-			true,
-		);
-
-		self.console.register_command(
-			"home",
-			ConsoleCommand {
-				flags: ConsoleCommandFlags::all(),
-				func: commands::ccmd_home,
 			},
 			true,
 		);
@@ -578,6 +675,63 @@ impl ClientCore {
 			"Sim state has {} illegal extra references.",
 			Arc::strong_count(&sim.sim) - 1
 		);
+	}
+
+	fn first_startup_screen(
+		ctx: &egui::Context,
+		portable: &mut bool,
+		portable_path: &Path,
+		home_path: &Option<PathBuf>,
+	) -> Option<SceneChange> {
+		let mut ret = None;
+
+		egui::Window::new("Initial Setup").show(ctx, |ui| {
+			ui.label(
+				"Select where you want user information \
+				- saved games, preferences, screenshots - \
+				to be stored.",
+			);
+
+			ui.separator();
+
+			ui.horizontal(|ui| {
+				ui.radio_value(portable, true, "Portable: ");
+				let p_path = portable_path.to_string_lossy();
+				ui.code(p_path.as_ref());
+			});
+
+			ui.horizontal(|ui| {
+				ui.add_enabled_ui(home_path.is_some(), |ui| {
+					let label;
+					let h_path;
+
+					if let Some(home) = home_path {
+						label = "Home: ";
+						h_path = home.to_string_lossy();
+					} else {
+						label = "No home folder found.";
+						h_path = Cow::Borrowed("");
+					}
+
+					ui.radio_value(portable, false, label);
+					ui.code(h_path.as_ref())
+				});
+			});
+
+			ui.separator();
+
+			ui.horizontal(|ui| {
+				if ui.button("Continue").clicked() {
+					ret = Some(SceneChange::ToFrontend);
+				}
+
+				if ui.button("Exit").clicked() {
+					ret = Some(SceneChange::Exit);
+				}
+			});
+		});
+
+		ret
 	}
 }
 

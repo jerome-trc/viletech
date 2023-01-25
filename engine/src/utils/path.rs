@@ -289,33 +289,6 @@ pub fn exe_dir() -> PathBuf {
 	ret
 }
 
-/// Returns `None` if this platform is unsupported or the home directory path is
-/// malformed. See [`home::home_dir`].
-#[must_use]
-pub fn get_user_dir() -> Option<PathBuf> {
-	let mut ret = match home::home_dir() {
-		Some(hdir) => hdir,
-		None => {
-			return None;
-		}
-	};
-
-	match env::consts::OS {
-		"linux" => {
-			ret.push(".config");
-			ret.push("viletech");
-		}
-		"windows" => {
-			ret.push("viletech");
-		}
-		_ => {
-			return None;
-		}
-	}
-
-	Some(ret)
-}
-
 /// Expands `~` on Unix and performs environment variable substitution.
 /// Deliberately designed to mimic `NicePath` in
 /// <https://github.com/ZDoom/gzdoom/blob/master/src/common/utility/cmdlib.cpp>.

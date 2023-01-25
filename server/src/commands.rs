@@ -1,10 +1,7 @@
 use std::env;
 
 use log::{error, info};
-use vile::{
-	terminal::{self, CommandArgs},
-	utils::path::get_user_dir,
-};
+use vile::terminal::{self, CommandArgs};
 
 use crate::ServerCore;
 
@@ -137,22 +134,6 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 			info!("No command found by name: {}", key);
 		}
 	})
-}
-
-pub fn cmd_home(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		println!("Prints the directory which holds the user info directory.");
-		return Request::None;
-	}
-
-	match get_user_dir() {
-		Some(p) => info!("{}", p.display()),
-		None => {
-			info!("Home directory path is malformed, or this platform is unsupported.");
-		}
-	}
-
-	Request::None
 }
 
 pub fn cmd_quit(args: CommandArgs) -> Request {

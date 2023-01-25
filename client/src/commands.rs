@@ -7,7 +7,6 @@ use log::{error, info};
 use vile::{
 	console::MessageKind,
 	terminal::{self, CommandArgs},
-	utils::path::get_user_dir,
 };
 
 use crate::core::ClientCore;
@@ -193,27 +192,6 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 			info!("No command found by name: {}", key);
 		}
 	})
-}
-
-/// Prints the directory holding the user info directory. Also see [`get_user_dir`].
-pub fn ccmd_home(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints the path to the directory which holds the user info directory.",
-		);
-	}
-
-	match get_user_dir() {
-		Some(p) => info!("{}", p.display()),
-		None => {
-			info!(
-				"Home directory path is malformed, \
-				or this platform is unsupported."
-			);
-		}
-	}
-
-	Request::None
 }
 
 /// Prints the length of the time the engine has been running.
