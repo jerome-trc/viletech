@@ -8,7 +8,7 @@ use egui::{
 	text_edit::{CCursorRange, TextEditState},
 	Color32, ScrollArea, TextFormat, TextStyle,
 };
-use log::{error, info};
+use log::info;
 use winit::event::{KeyboardInput, VirtualKeyCode};
 
 use crate::{
@@ -390,11 +390,10 @@ impl io::Write for Writer {
 				kind: MessageKind::Log,
 			}) {
 				Ok(()) => {}
-				Err(err) => {
-					error!(
-						"Console message channel was disconnected unexpectedly: {}",
-						err
-					);
+				Err(_) => {
+					#[cfg(debug_assertions)]
+					eprintln!("Console message channel was disconnected unexpectedly.");
+					return std::io::stderr().lock().write(buf);
 				}
 			}
 		} else {
@@ -413,11 +412,10 @@ impl io::Write for Writer {
 			kind: MessageKind::Log,
 		}) {
 			Ok(()) => {}
-			Err(err) => {
-				error!(
-					"Console message channel was disconnected unexpectedly: {}",
-					err
-				);
+			Err(_) => {
+				#[cfg(debug_assertions)]
+				eprintln!("Console message channel was disconnected unexpectedly.");
+				return std::io::stderr().lock().flush();
 			}
 		};
 

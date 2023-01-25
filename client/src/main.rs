@@ -131,7 +131,13 @@ conditions. See the license document that come with your installation."
 
 	gfx.pipelines.push(pipeline);
 
-	let mut core = ClientCore::new(start_time, catalog, gfx, console)?;
+	let mut core = match ClientCore::new(start_time, catalog, gfx, console) {
+		Ok(c) => c,
+		Err(err) => {
+			eprintln!("Client init failed: {err}");
+			return Err(err);
+		}
+	};
 
 	event_loop.run(move |event, _, control_flow| match event {
 		WinitEvent::RedrawRequested(window_id) => {
