@@ -1290,14 +1290,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "doom-front"
+name = "doomfront"
 version = "0.0.0"
 dependencies = [
- "bitflags",
- "indexmap",
- "parking_lot 0.12.1",
- "peg",
- "vec1",
+ "chumsky",
+ "rowan",
  "zscript_parser",
 ]
 
@@ -3676,6 +3673,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
+name = "stardate"
+version = "0.0.0"
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3751,6 +3752,10 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "subterra"
+version = "0.0.0"
 
 [[package]]
 name = "subtle"
@@ -4266,7 +4271,7 @@ dependencies = [
  "crossbeam",
  "dashmap",
  "dolly",
- "doom-front",
+ "doomfront",
  "egui",
  "egui-wgpu",
  "egui-winit",
@@ -4307,7 +4312,9 @@ dependencies = [
  "serde",
  "sha3",
  "shipyard",
+ "stardate",
  "str-utils",
+ "subterra",
  "toml",
  "unicode-width",
  "unicode-xid",
@@ -4984,7 +4991,6 @@ dependencies = [
  "once_cell",
  "parking_lot 0.11.2",
  "rayon",
- "serde",
  "str-utils",
  "unicode-width",
  "vec1",

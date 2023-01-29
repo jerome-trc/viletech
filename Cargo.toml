@@ -48,6 +48,7 @@ wgpu = "0.14"
 winit = "0.27.2"
 zip = "0.6.2"
 
-# Both of these are temporary. Change to use Git when a crate stabilizes;
-# change to use crates.io when a crate is suitable for publishing
-doom-front = { path = "../doom-front/front" }
+# Temporary; will change to crates.io when one is suitable for publishing
+doomfront = { path = "../doom-rs/doomfront" }
+stardate = { path = "../doom-rs/stardate" }
+subterra = { path = "../doom-rs/subterra" }

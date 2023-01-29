@@ -27,7 +27,7 @@ cranelift-module = "0.91.0"
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
 dolly = { workspace = true }
-doom-front = { workspace = true }
+doomfront = { workspace = true }
 egui = { workspace = true }
 egui-wgpu = "0.20.0"
 egui-winit = "0.20.0"
@@ -78,7 +78,9 @@ rowan = "0.15.10"
 serde = "1.0.140"
 sha3 = { workspace = true }
 shipyard = { workspace = true }
+stardate = { workspace = true }
 str-utils = "0.1.6"
+subterra = { workspace = true }
 toml = "0.5.9"
 unicode-width = "0.1.10"
 unicode-xid = "0.2.4"
