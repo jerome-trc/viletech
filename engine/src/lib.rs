@@ -316,12 +316,9 @@ pub fn log_init(
 	if fpath.exists() {
 		let oldpath: PathBuf = [&exe_dir, Path::new("viletech.log.old")].iter().collect();
 
-		match fs::rename(&fpath, oldpath) {
-			Ok(()) => {}
-			Err(err) => {
-				eprintln!("Failed to rotate previous log file: {}", err);
-			}
-		};
+		if let Err(err) = fs::rename(&fpath, oldpath) {
+			eprintln!("Failed to rotate previous log file: {err}");
+		}
 	}
 
 	let file_cfg = fern::Dispatch::new()

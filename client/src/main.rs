@@ -52,7 +52,7 @@ conditions. See the license document that come with your installation."
 	match vile::log_init(Some(log_sender)) {
 		Ok(()) => {}
 		Err(err) => {
-			eprintln!("Failed to initialise logging backend: {}", err);
+			eprintln!("Failed to initialise logging backend: {err}");
 			return Err(err);
 		}
 	}

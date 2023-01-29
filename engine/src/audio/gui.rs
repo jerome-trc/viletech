@@ -48,7 +48,7 @@ impl AudioCore {
 				let state = self.sounds[i].state();
 
 				ui.horizontal(|ui| {
-					ui.label(format!("{} - {:#?}", i, state));
+					ui.label(format!("{i} - {state:#?}"));
 
 					ui.add_visible_ui(state != PlaybackState::Playing, |ui| {
 						if ui.button("Resume").clicked() {

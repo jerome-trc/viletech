@@ -663,7 +663,7 @@ impl ClientCore {
 
 		match sim.thread.join() {
 			Ok(()) => {}
-			Err(err) => panic!("Sim thread panicked: {:#?}", err),
+			Err(err) => panic!("Sim thread panicked: {err:#?}"),
 		};
 
 		// The arc-locked playsim object is meant to be dropped upon scene change,

@@ -42,8 +42,8 @@ pub enum LoadError {
 impl std::fmt::Display for LoadError {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
 		match self {
-			LoadError::Error(e) => write!(fmt, "{}", e),
-			LoadError::IoError(e) => write!(fmt, "{}", e),
+			LoadError::Error(e) => write!(fmt, "{e}"),
+			LoadError::IoError(e) => write!(fmt, "{e}"),
 		}
 	}
 }

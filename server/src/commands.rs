@@ -36,11 +36,10 @@ impl terminal::Command for Command {
 pub fn cmd_alias(args: CommandArgs) -> Request {
 	fn help(cmd_key: &str) {
 		println!(
-			"Usage: {} [alias] [string]\r\n\r\n\
+			"Usage: {cmd_key} [alias] [string]\r\n\r\n\
 			If no alias is provided, all aliases are listed. \r\n\
 			If no string is provided, the alias' associated string is expanded \
-			into the output, if that alias exists.",
-			cmd_key
+			into the output, if that alias exists."
 		);
 	}
 

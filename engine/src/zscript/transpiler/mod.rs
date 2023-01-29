@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use doom_front::zscript::{
+use doomfront::zscript::{
 	ast,
 	err::ParsingErrorLevel as ParseIssueLevel,
 	filesystem::Files,

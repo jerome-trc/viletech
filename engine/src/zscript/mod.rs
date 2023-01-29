@@ -2,7 +2,7 @@
 
 mod transpiler;
 
-use doom_front::zscript::{
+use doomfront::zscript::{
 	err::{DisplayedParsingErrors, ParsingError as ParseIssue},
 	filesystem::{File, FileSystem, Files},
 	parser_manager::{parse_filesystem, FileIndexAndAst},

@@ -3,7 +3,7 @@
 //! Keeps the more crucial namespaces cleaner and makes it easier to reuse the
 //! data management code, in case it proves robust enough for other projects.
 
-use doom_front::zscript;
+use doomfront::zscript;
 use log::error;
 
 use crate::VPath;

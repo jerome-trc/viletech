@@ -86,9 +86,8 @@ impl std::fmt::Display for Error {
 			Self::TypeMismatch { expected, given } => {
 				write!(
 					f,
-					"Type mismatch during pref lookup. Expected {e:#?}, got {g:#?}.",
-					e = expected,
-					g = given
+					"Type mismatch during pref lookup. \
+					Expected {expected:#?}, got {given:#?}.",
 				)
 			}
 			Self::Utf8 { source, path } => {

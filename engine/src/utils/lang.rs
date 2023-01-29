@@ -105,7 +105,7 @@ impl std::fmt::Display for Interner {
 		writeln!(f, "{{")?;
 
 		for (i, s) in self.set.iter().enumerate() {
-			writeln!(f, "\t{} => {:?},", i, s)?;
+			writeln!(f, "\t{i} => {s:?},")?;
 		}
 
 		write!(f, "}}")?;

@@ -90,9 +90,8 @@ impl std::fmt::Display for Asset {
 			Self::TypeMismatch { expected, given } => {
 				write!(
 					f,
-					"Type mismatch during asset lookup. Expected {e:#?}, got {g:#?}.",
-					e = expected,
-					g = given
+					"Type mismatch during asset lookup. \
+					Expected {expected:#?}, got {given:#?}.",
 				)
 			}
 		}

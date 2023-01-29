@@ -17,7 +17,7 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {
-			eprintln!("Failed to execute `git rev-parse HEAD`: {}", err);
+			eprintln!("Failed to execute `git rev-parse HEAD`: {err}");
 			return Err(Box::new(err));
 		}
 	};
@@ -25,10 +25,7 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 	let hash_str = match String::from_utf8(hash.stdout) {
 		Ok(s) => s,
 		Err(err) => {
-			eprintln!(
-				"Failed to convert output of `git rev-parse HEAD` to UTF-8: {}",
-				err
-			);
+			eprintln!("Failed to convert output of `git rev-parse HEAD` to UTF-8: {err}",);
 			return Err(Box::new(err));
 		}
 	};

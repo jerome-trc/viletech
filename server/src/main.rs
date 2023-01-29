@@ -82,7 +82,7 @@ conditions. See the license document that come with your installation."
 	match vile::log_init(None) {
 		Ok(()) => {}
 		Err(err) => {
-			eprintln!("Failed to initialise logging backend: {}", err);
+			eprintln!("Failed to initialise logging backend: {err}");
 			return Err(err);
 		}
 	}
@@ -277,7 +277,7 @@ conditions. See the license document that come with your installation."
 						match lobby_thread.join() {
 							Ok(_) => {}
 							Err(err) => {
-								println!("Failed to join lobby thread: {:?}", err);
+								println!("Failed to join lobby thread: {err:?}");
 							}
 						};
 
