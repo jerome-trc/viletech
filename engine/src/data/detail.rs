@@ -76,6 +76,7 @@ impl Catalog {
 /// components (with a preceding path separator hashed beforehand if necessary)
 /// one at a time, rather than as a whole string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub(super) struct VfsKey(u64);
 
 impl VfsKey {
@@ -91,9 +92,11 @@ impl VfsKey {
 /// type system is an irrelevant detail). The actual map keys are composed by
 /// hashing the ID string slice and then the type ID, in that order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub(super) struct AssetKey(u64);
 
 impl AssetKey {
+	#[must_use]
 	pub(super) fn new<A: Asset>(id: &str) -> Self {
 		let mut hasher = SeaHasher::default();
 		id.hash(&mut hasher);
