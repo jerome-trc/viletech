@@ -34,9 +34,6 @@ pub mod wad;
 #[allow(dead_code)]
 pub mod zscript;
 
-pub extern crate num_derive;
-pub extern crate num_traits;
-
 // Type aliases
 
 /// Disambiguates between real FS paths and virtual FS paths.
