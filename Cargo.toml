@@ -49,6 +49,6 @@ winit = "0.27.2"
 zip = "0.6.2"
 
 # Temporary; will change to crates.io when one is suitable for publishing
-doomfront = { path = "../doom-rs/doomfront" }
+doomfront = { path = "../doom-rs/doomfront", features = ["ser_de"] }
 stardate = { path = "../doom-rs/stardate" }
 subterra = { path = "../doom-rs/subterra" }

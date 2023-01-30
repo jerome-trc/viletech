@@ -10,7 +10,7 @@
 use bitflags::bitflags;
 use glam::DVec3;
 
-use crate::{lith, math::Rotator64, sim::PlaySim};
+use crate::{math::Rotator64, sim::PlaySim};
 
 /// Currently only a type constraint.
 /// Will probably provide functionality to component-managing code in the future.
@@ -22,7 +22,8 @@ pub trait Component: Sized {}
 #[derive(Debug)]
 pub struct Core {
 	pub flags: CoreFlags,
-	pub state_machine: lith::Handle<()>, // TODO: Lith-based actor state machines
+	/// TODO: Actor state machines. For now, pretend this is a pointer.
+	pub state_machine: [u8; 8],
 	pub state: Option<usize>,
 	/// Tics remaining in the current state.
 	/// May be -1, which is treated as infinity.

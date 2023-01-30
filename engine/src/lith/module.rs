@@ -12,109 +12,172 @@
 //!
 //! [create a `Builder`]: Builder::new
 
-use std::{ffi::c_void, marker::PhantomData, sync::Arc};
-
-use cranelift::prelude::{types as ClTypes, AbiParam};
-use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::{Linkage, Module as CraneliftModule};
-use indexmap::IndexMap;
-
-use crate::lith::{interop::C_TRAMPOLINES, MAX_RETS};
-
-use super::{
-	func::{Function, FunctionFlags, FunctionInfo},
-	interop::NativeFnBox,
-	tsys::ScriptType,
-	word::Word,
-	Error, Params, Returns,
+use std::{
+	any::{Any, TypeId},
+	collections::HashMap,
+	marker::PhantomData,
+	mem::MaybeUninit,
+	sync::{Arc, Weak},
 };
 
-/// This can be cheaply cloned since it wraps an `Arc`. The actual compiled data
-/// is accessed lock-free, since it's stored immutably.
+use cranelift_jit::{JITBuilder, JITModule};
+
+use super::{
+	abi::Abi,
+	func::TFunc,
+	symbol::{Symbol, SymbolKey},
+	Error, Function,
+};
+
 #[derive(Debug, Clone)]
-#[repr(transparent)]
-pub struct Module(Arc<Inner>);
+pub struct Module {
+	pub(super) name: String,
+	/// Is `true` if this module had any native symbols loaded into it.
+	/// Special rules are applied when performing semantic checks on source being
+	/// compiled into a native module.
+	pub(super) native: bool,
+	#[allow(unused)]
+	pub(super) inner: Arc<JitModule>,
+	/// Functions, types, type aliases, et cetera.
+	pub(super) symbols: HashMap<SymbolKey, Arc<SymStore>>,
+}
 
 impl Module {
-	/// "Native" modules are those with symbols pre-registered upon construction.
+	#[must_use]
+	pub fn name(&self) -> &str {
+		&self.name
+	}
+
 	#[must_use]
 	pub fn is_native(&self) -> bool {
-		self.0.native
+		self.native
 	}
 
-	/// Re-open the module, re-enabling modification to its functions and data.
-	/// If this is not the only outstanding handle to this module's data, then
-	/// `Err(Self)` will be returned.
-	pub fn open(self) -> Result<OpenModule, Self> {
-		match Arc::try_unwrap(self.0) {
-			Ok(inner) => Ok(OpenModule(inner)),
-			Err(arc) => Err(Self(arc)),
-		}
-	}
+	pub fn get<S: Symbol>(&self, name: &str) -> Result<Handle<S>, Error> {
+		let key = SymbolKey::new::<S>(name);
+		let sym = self.symbols.get(&key).ok_or(Error::UnknownIdentifier)?;
 
-	pub fn get_function<P, R, const PARAM_C: usize, const RET_C: usize>(
-		&self,
-		name: &str,
-	) -> Result<Function<P, R, PARAM_C, RET_C>, Error>
-	where
-		P: Params<PARAM_C>,
-		R: Returns<RET_C>,
-	{
-		match self.0.functions.get_full(name) {
-			Some((index, _, func)) => {
-				if super::func::hash_signature::<P, R, PARAM_C, RET_C>() == func.sig_hash {
-					Ok(Function::new(self.0.clone(), index))
-				} else {
-					Err(Error::SignatureMismatch)
-				}
-			}
-			None => Err(Error::UnknownIdentifier),
+		if sym.data.as_any().is::<S>() {
+			Ok(Handle(sym.clone(), PhantomData))
+		} else {
+			Err(Error::TypeMismatch {
+				expected: sym.data.type_id(),
+				given: TypeId::of::<S>(),
+			})
 		}
 	}
 }
 
-impl PartialEq for Module {
-	/// Check that these two objects are backed by the same Cranelift module.
+// SAFETY:
+// - Functions can only be hotswapped if there are no handles to them.
+// - Data can not be modified while it is reachable by an existing runtime.
+unsafe impl Send for Module {}
+unsafe impl Sync for Module {}
+
+#[derive(Debug)]
+pub(super) struct SymStore {
+	pub(super) name: String,
+	pub(super) data: Box<dyn Symbol>,
+	/// Ensure the JIT-compiled code lives long enough.
+	#[allow(unused)]
+	module: Arc<JitModule>,
+}
+
+/// Thin wrapper around an [`Arc`] pointing to a [`Symbol`]'s storage. Attaching
+/// a generic type allows the pointer to be safely downcast without any checks,
+/// enabling safe, instant access to a symbol's data from anywhere in the engine.
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct Handle<S: Symbol>(Arc<SymStore>, PhantomData<S>);
+
+impl<S: Symbol> Handle<S> {
+	pub fn name(&self) -> &str {
+		&self.0.name
+	}
+}
+
+impl Handle<Function> {
+	pub fn downcast<A, R>(&self) -> Result<Handle<TFunc<A, R>>, Error>
+	where
+		A: Abi,
+		R: Abi,
+	{
+		if self.has_signature::<A, R>() {
+			Ok(Handle(
+				Arc::new(SymStore {
+					name: self.name().to_string(),
+					data: Box::new(TFunc::<A, R> {
+						code: self.code,
+						source: self.clone(),
+						phantom: PhantomData,
+					}),
+					module: self.0.module.clone(),
+				}),
+				PhantomData,
+			))
+		} else {
+			Err(Error::SignatureMismatch)
+		}
+	}
+}
+
+impl<S: 'static + Symbol> std::ops::Deref for Handle<S> {
+	type Target = S;
+
+	#[inline]
+	fn deref(&self) -> &Self::Target {
+		debug_assert!(self.0.data.as_any().is::<S>());
+		// SAFETY: the check for downcast validity was already performed during
+		// handle acquisition. This is the same implementation used by std's
+		// `downcast_ref_unchecked`; use that instead when it stabilizes
+		unsafe { &*(&self.0.data as *const dyn Any as *const S) }
+	}
+}
+
+impl<S: Symbol> PartialEq for Handle<S> {
+	/// Check that these are two handles to the same symbol in the same module.
 	fn eq(&self, other: &Self) -> bool {
 		Arc::ptr_eq(&self.0, &other.0)
 	}
 }
 
-// SAFETY: Lith makes the following guarantees:
-// - An `OpenModule` is mutable, but it can not be safely moved across threads.
-// - A closed `Module` can be safely moved across threads, and its functions can
-// be called, but not in any way that mutates its inner state.
-unsafe impl Send for Module {}
-unsafe impl Sync for Module {}
+impl<S: Symbol> Eq for Handle<S> {}
 
-impl std::fmt::Debug for OpenModule {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Module")
-			.field("name", &self.0.name)
-			.field("native", &self.0.native)
-			.field("functions", &self.0.functions)
-			.finish()
+impl<S: Symbol> Clone for Handle<S> {
+	fn clone(&self) -> Self {
+		Self(self.0.clone(), PhantomData)
 	}
 }
 
-/// A module has to be "open" for compiling code into it; it must be "closed" via
-/// [`close`](OpenModule::close) in order to be used by a runtime.
+// SAFETY: See safety disclaimer for `Module`
+unsafe impl<S: Symbol> Send for Handle<S> {}
+unsafe impl<S: Symbol> Sync for Handle<S> {}
+
+/// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-symbol
+/// relationships (without preventing in-place mutation or removal) in a way
+/// that can't leak.
+#[derive(Debug, Clone)]
 #[repr(transparent)]
-pub struct OpenModule(Inner);
+pub struct InHandle<S: Symbol>(Weak<SymStore>, PhantomData<S>);
 
-impl OpenModule {
-	#[must_use]
-	pub fn close(self) -> Module {
-		Module(Arc::new(self.0))
+impl<S: Symbol> PartialEq for InHandle<S> {
+	/// Check that these are two handles to the same symbol in the same module.
+	fn eq(&self, other: &Self) -> bool {
+		Weak::ptr_eq(&self.0, &other.0)
 	}
 }
+
+impl<S: Symbol> Eq for InHandle<S> {}
+
+// SAFETY: See safety disclaimer for `Module`
+unsafe impl<S: Symbol> Send for InHandle<S> {}
+unsafe impl<S: Symbol> Sync for InHandle<S> {}
 
 /// Used to prepare for building a [`Module`], primarily by registering native
 /// functions to be callable by scripts.
 pub struct Builder {
 	name: String,
 	inner: JITBuilder,
-	native_fns: Vec<NativeFn>,
 }
 
 impl Builder {
@@ -129,222 +192,31 @@ impl Builder {
 		Self {
 			name,
 			inner: builder,
-			native_fns: Default::default(),
 		}
 	}
 
-	/// See [`JITBuilder::symbol_lookup_fn`].
-	///
-	/// When declaring data to the JIT module, symbol lookup will use these, in
-	/// the reverse order that they were pushed in. The last function to try will
-	/// always try to find the symbol in the system's C runtime.
-	///
-	/// If this is undesirable, it is recommended that you add a lookup function
-	/// which alerts you to the lookup and returns a null pointer, or panics outright.
 	#[must_use]
-	pub fn symbol_lookup_fn<F: 'static + Fn(&str) -> Option<*const u8>>(
-		mut self,
-		function: F,
-	) -> Self {
-		self.inner.symbol_lookup_fn(Box::new(function));
-		self
-	}
-
-	/// Note that this is the only way to register native functions with a module.
-	/// Panics if a native function with the same name has already been registered.
-	pub fn add_function<F, P, R, const PARAM_C: usize, const RET_C: usize>(
-		mut self,
-		mut function: F,
-		name: String,
-	) -> Self
-	where
-		F: 'static + Send + FnMut(P) -> R,
-		P: Params<PARAM_C>,
-		R: Returns<RET_C>,
-	{
-		assert!(
-			!self.native_fns.iter().any(|nfn| name == nfn.name),
-			"Tried to clobber native function: {name}"
-		);
-
-		let wrapper = Box::new(move |args: [Word; PARAM_C]| {
-			let rs_args = P::decompose(args);
-			let rs_rets = function(rs_args);
-			rs_rets.compose()
-		});
-
-		let (fat0, fat1) =
-			unsafe { std::mem::transmute_copy::<_, (*const u8, *const u8)>(&wrapper) };
-		let trampoline = C_TRAMPOLINES[RET_C * (MAX_RETS + 1) + PARAM_C];
-
-		self.native_fns.push(NativeFn {
-			name: name.clone(),
-			wrapper,
-			trampoline,
-			sig_hash: super::func::hash_signature::<P, R, PARAM_C, RET_C>(),
-			param_len: PARAM_C,
-			ret_len: RET_C,
-		});
-
-		self.inner.symbol(format!("__{name}_FAT0__"), fat0);
-		self.inner.symbol(format!("__{name}_FAT1__"), fat1);
-		self.inner.symbol(name, trampoline as *mut u8);
-
-		self
-	}
-
-	#[must_use]
-	pub fn build(mut self) -> OpenModule {
-		let mut module = JITModule::new(self.inner);
-		let mut functions = IndexMap::with_capacity(self.native_fns.len());
-
-		let native = !self.native_fns.is_empty();
-
-		for nfn in self.native_fns.drain(..) {
-			let mut sig = module.make_signature();
-
-			sig.params = Vec::with_capacity(nfn.param_len);
-			sig.params
-				.resize(nfn.param_len, AbiParam::new(ClTypes::F32X4));
-			sig.returns = Vec::with_capacity(nfn.ret_len);
-			sig.returns
-				.resize(nfn.ret_len, AbiParam::new(ClTypes::F32X4));
-
-			let id = module
-				.declare_function(&nfn.name, Linkage::Export, &sig)
-				.expect("Failed to declare native function");
-
-			let _ = functions.insert(
-				nfn.name,
-				FunctionInfo {
-					_code: nfn.trampoline as *const c_void,
-					flags: FunctionFlags::empty(),
-					sig_hash: nfn.sig_hash,
-					native: Some(nfn.wrapper),
-					_id: id,
-				},
-			);
-		}
-
-		OpenModule(Inner {
+	pub fn build(self) -> Module {
+		Module {
 			name: self.name,
-			native,
-			inner: Some(module),
-			functions,
-			types: Default::default(),
-		})
+			native: true,
+			inner: Arc::new(JitModule(MaybeUninit::new(JITModule::new(self.inner)))),
+			symbols: HashMap::default(),
+		}
 	}
 }
 
-impl std::fmt::Debug for Builder {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Builder")
-			.field("name", &self.name)
-			.field("native_fns", &self.native_fns)
-			.finish()
-	}
-}
+/// Ensures proper JIT code de-allocation when all [`SymStore`]s
+/// (and, by extension, all [`Handle`]s) drop their `Arc`s.
+#[derive(Debug)]
+#[repr(transparent)]
+pub(super) struct JitModule(MaybeUninit<cranelift_jit::JITModule>);
 
-pub(super) struct Inner {
-	pub(super) name: String,
-	/// Is `true` if this module had any native symbols loaded into it.
-	/// Special rules are applied when performing semantic checks on source being
-	/// compiled into a native module.
-	pub(super) native: bool,
-	/// Freeing the module's memory requires pass-by-value, but [`Drop::drop`]
-	/// takes a mutable reference, so an indirection is needed here to allow
-	/// removing the module upon destruction. It is never `None`, ever.
-	pub(super) inner: Option<JITModule>,
-	/// Indices are guaranteed to be stable, since this map is append-only.
-	pub(super) functions: IndexMap<String, FunctionInfo>,
-	/// Indices are guaranteed to be stable, since this map is append-only.
-	pub(super) types: IndexMap<String, ScriptType>,
-}
-
-impl std::fmt::Debug for Inner {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Inner")
-			.field("name", &self.name)
-			.field("native", &self.native)
-			.field("functions", &self.functions)
-			.finish()
-	}
-}
-
-impl Drop for Inner {
+impl Drop for JitModule {
 	fn drop(&mut self) {
-		let inner = self.inner.take();
-
-		debug_assert!(inner.is_some());
-
 		unsafe {
-			inner.unwrap_unchecked().free_memory();
+			let i = std::mem::replace(&mut self.0, MaybeUninit::uninit());
+			i.assume_init().free_memory();
 		}
 	}
-}
-
-/// Proxy for access to some kind of symbol in a LithScript [`Module`].
-///
-/// Wraps an [`Arc`], much like the module itself, so it's easy to store it far
-/// from the module itself. If you need to re-open the module for alteration later,
-/// all outstanding handles pointing it will need to be dropped first.
-#[derive(Debug)]
-pub struct Handle<T> {
-	pub(self) module: Arc<Inner>,
-	pub(self) index: usize,
-	#[allow(unused)]
-	phantom: PhantomData<T>,
-}
-
-// SAFETY: See disclaimer for `Module`'s implementations of these markers.
-unsafe impl<T> Send for Handle<T> {}
-unsafe impl<T> Sync for Handle<T> {}
-
-impl std::ops::Deref for Handle<ScriptType> {
-	type Target = ScriptType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe {
-			// Note that `unwrap_unchecked` has a debug assertion in it
-			self.module.types.get_index(self.index).unwrap_unchecked().1
-		}
-	}
-}
-
-impl Handle<ScriptType> {
-	#[must_use]
-	pub fn name(&self) -> &str {
-		unsafe {
-			// Note that `unwrap_unchecked` has a debug assertion in it
-			self.module.types.get_index(self.index).unwrap_unchecked().0
-		}
-	}
-}
-
-impl<T> PartialEq for Handle<T> {
-	/// Check that these two handles point to the same object in the same module.
-	fn eq(&self, other: &Self) -> bool {
-		Arc::ptr_eq(&self.module, &other.module) && self.index == other.index
-	}
-}
-
-impl<T> Clone for Handle<T> {
-	fn clone(&self) -> Self {
-		Self {
-			module: self.module.clone(),
-			index: self.index,
-			phantom: PhantomData,
-		}
-	}
-}
-
-/// Intermediate storage from [`Builder`] to [`Module`].
-#[derive(Debug)]
-struct NativeFn {
-	name: String,
-	wrapper: NativeFnBox,
-	trampoline: *const c_void,
-	param_len: usize,
-	ret_len: usize,
-	sig_hash: u64,
 }

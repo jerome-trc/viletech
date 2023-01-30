@@ -2,7 +2,7 @@
 
 use bitflags::bitflags;
 
-use super::module::Handle;
+use super::{module::Handle, Symbol};
 
 /// Note that the type of a variable declared `let const x = 0` isn't separate
 /// from the `i32` primitive. For qualified types such as that, see [`QualifiedType`].
@@ -27,6 +27,8 @@ impl ScriptType {
 		self.layout
 	}
 }
+
+impl Symbol for ScriptType {}
 
 pub struct QualifiedType {
 	inner: Handle<ScriptType>,
@@ -61,8 +63,6 @@ pub enum TypeKind {
 	U32,
 	I64,
 	U64,
-	I128,
-	U128,
 	Type,
 	Array {
 		value: Handle<ScriptType>,
@@ -159,7 +159,7 @@ pub struct BitDesc {
 	/// Human-readable.
 	name: String,
 	/// Operations on this subfield alter all of the bits set on this integer.
-	bits: u128,
+	bits: u64,
 }
 
 impl BitDesc {
@@ -169,7 +169,7 @@ impl BitDesc {
 	}
 
 	#[must_use]
-	pub fn affects_all(&self, bits: u128) -> bool {
+	pub fn affects_all(&self, bits: u64) -> bool {
 		(self.bits & bits) == bits
 	}
 }

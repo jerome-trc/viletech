@@ -1295,6 +1295,7 @@ version = "0.0.0"
 dependencies = [
  "chumsky",
  "rowan",
+ "serde",
  "zscript_parser",
 ]
 
@@ -1974,6 +1975,17 @@ dependencies = [
  "num-rational",
  "num-traits",
  "png",
+]
+
+[[package]]
+name = "impl-trait-for-tuples"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11d7a9f6330b71fea57921c9b61c47ee6e84f72d394754eff6163ae67e7395eb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -3348,6 +3360,7 @@ dependencies = [
  "hashbrown 0.12.3",
  "memoffset",
  "rustc-hash",
+ "serde",
  "text-size",
 ]
 
@@ -4262,7 +4275,6 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "chrono",
- "chumsky",
  "cpal",
  "cranelift",
  "cranelift-jit",
@@ -4284,6 +4296,7 @@ dependencies = [
  "globset",
  "home",
  "image",
+ "impl-trait-for-tuples",
  "indexmap",
  "indoc",
  "itertools",
@@ -4308,7 +4321,6 @@ dependencies = [
  "regex",
  "renet",
  "rfd",
- "rowan",
  "serde",
  "sha3",
  "shipyard",
@@ -4991,6 +5003,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.11.2",
  "rayon",
+ "serde",
  "str-utils",
  "unicode-width",
  "vec1",

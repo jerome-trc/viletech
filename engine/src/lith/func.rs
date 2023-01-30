@@ -1,111 +1,122 @@
-//! Functions and everything related.
+//! Function wrappers and information, as well as interop details.
 
 use std::{
-	collections::hash_map::RandomState,
 	ffi::c_void,
-	hash::{BuildHasher, Hash, Hasher},
+	hash::{Hash, Hasher},
 	marker::PhantomData,
-	sync::Arc,
 };
 
 use cranelift_module::FuncId;
+use fasthash::SeaHasher;
 
-use super::{interop::NativeFnBox, module, Params, Returns};
+use super::{abi::Abi, Handle, Symbol};
 
-/// Internal storage of the function code pointer and metadata.
+/// Pointer to a function, whether native or compiled.
 #[derive(Debug)]
-pub(super) struct FunctionInfo {
-	/// This is a pointer to either a JIT-compiled function or a C trampoline
-	/// for a native function. Either way, never try to deallocate it.
-	pub(super) _code: *const c_void,
-	pub(super) flags: FunctionFlags,
-	/// See [`hash_signature`].
-	pub(super) sig_hash: u64,
-	/// The "source of truth" for native functions. Gets transmuted into two
-	/// void pointers, each of which is stored as a global in the JIT binary,
-	/// and then passed to a C-linkage trampoline.
-	pub(super) native: Option<NativeFnBox>,
+pub struct Function {
+	/// Never try to de-allocate this.
+	pub(super) code: *const c_void,
+	pub(super) flags: Flags,
 	pub(super) _id: FuncId,
+	/// See [`Self::hash_signature`].
+	pub(super) sig_hash: u64,
 }
 
 bitflags::bitflags! {
-	pub struct FunctionFlags: u8 {
+	/// Qualifiers and annotations.
+	pub struct Flags: u8 {
 		/// This function has been marked as being compile-time evaluable.
 		const CEVAL = 1 << 0;
 	}
 }
 
-/// Take all parameter type IDs in order and feed them to a hasher.
-/// Then, take all return type IDs in order and feed them to that same hasher.
-#[must_use]
-pub(super) fn hash_signature<P, R, const PARAM_C: usize, const RET_C: usize>() -> u64
-where
-	P: Params<PARAM_C>,
-	R: Returns<RET_C>,
-{
-	let mut hasher = RandomState::default().build_hasher();
-
-	for t_id in P::type_ids() {
-		t_id.hash(&mut hasher);
+impl Function {
+	#[must_use]
+	pub fn has_signature<A, R>(&self) -> bool
+	where
+		A: Abi,
+		R: Abi,
+	{
+		Self::hash_signature::<A, R>() == self.sig_hash
 	}
 
-	for t_id in R::type_ids() {
-		t_id.hash(&mut hasher);
+	#[must_use]
+	pub fn flags(&self) -> Flags {
+		self.flags
 	}
 
-	hasher.finish()
+	#[must_use]
+	fn hash_signature<A, R>() -> u64
+	where
+		A: Abi,
+		R: Abi,
+	{
+		let mut hasher = SeaHasher::default();
+		A::type_id_hash(&mut hasher);
+		R::type_id_hash(&mut hasher);
+		hasher.finish()
+	}
 }
 
-/// This is a type similar in purpose to [`Handle`], but separate to enable
-/// generic parameterization.
-///
-/// [`Handle`]: super::module::Handle
-pub struct Function<P, R, const PARAM_C: usize, const RET_C: usize>
-where
-	P: Params<PARAM_C>,
-	R: Returns<RET_C>,
-{
-	module: Arc<module::Inner>,
-	index: usize,
+// SAFETY: See safety disclaimer for `Module`
+unsafe impl Send for Function {}
+unsafe impl Sync for Function {}
+
+impl Symbol for Function {}
+
+/// Typed function.
+pub struct TFunc<A: Abi, R: Abi> {
+	/// Copied from the source [`Function`].
+	/// *Definitely* never try to de-allocate this.
+	pub(super) code: *const c_void,
 	#[allow(unused)]
-	phantom: PhantomData<Box<dyn 'static + Send + FnMut(P) -> R>>,
+	pub(super) source: Handle<Function>,
+	#[allow(unused)]
+	pub(super) phantom: PhantomData<fn(A) -> R>,
 }
 
-impl<P: Params<PARAM_C>, R: Returns<RET_C>, const PARAM_C: usize, const RET_C: usize>
-	Function<P, R, PARAM_C, RET_C>
+impl<A, R> TFunc<A, R>
+where
+	A: Abi,
+	R: Abi,
 {
-	pub fn call(&self, _: P) -> R {
-		unimplemented!()
+	pub fn call(&self, args: A) -> R {
+		let a = args.to_words();
+		// SAFETY: For the public interface to have gotten to this point, it must
+		// have performed a check that signature types match
+		let func = unsafe { std::mem::transmute::<_, fn(A::Repr) -> R::Repr>(self.code) };
+		let r = func(a);
+		R::from_words(r)
 	}
+}
 
-	#[must_use]
-	pub fn is_native(&self) -> bool {
-		self.inner().native.is_some()
+impl<A, R> std::fmt::Debug for TFunc<A, R>
+where
+	A: Abi,
+	R: Abi,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("TFunc").field("code", &self.code).finish()
 	}
+}
 
-	#[must_use]
-	pub fn is_ceval(&self) -> bool {
-		self.inner().flags.contains(FunctionFlags::CEVAL)
-	}
+// SAFETY: See safety disclaimer for `Module`
+unsafe impl<A, R> Send for TFunc<A, R>
+where
+	A: Abi,
+	R: Abi,
+{
+}
+unsafe impl<A, R> Sync for TFunc<A, R>
+where
+	A: Abi,
+	R: Abi,
+{
+}
 
-	#[must_use]
-	pub(super) fn inner(&self) -> &FunctionInfo {
-		unsafe {
-			// Note that `unwrap_unchecked` has an internal debug assertion
-			self.module
-				.functions
-				.get_index(self.index)
-				.unwrap_unchecked()
-				.1
-		}
-	}
-
-	#[must_use]
-	pub(super) fn new(module: Arc<module::Inner>, index: usize) -> Self {
-		Self {
-			module,
-			index,
-			phantom: PhantomData,
-		}
-	}
+impl<A, R> Symbol for TFunc<A, R>
+where
+	A: Abi,
+	R: Abi,
+{
 }

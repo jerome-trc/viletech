@@ -102,6 +102,10 @@ VileTech depends on the [`doom-front`](https://github.com/***REMOVED***/doom-fro
     - By the [image-rs](https://github.com/image-rs) organisation et al.
     - Provided under the [MIT License](https://github.com/image-rs/image/blob/master/LICENSE).
     - https://docs.rs/image/latest/image/
+- impl-trait-for-tuples
+    - By Bastian Köcher ([@bkchr](https://github.com/bkchr)) et al.
+    - Provided under the [Apache 2.0 License and MIT License](https://github.com/bkchr/impl-trait-for-tuples/blob/master/README.md).
+    - https://docs.rs/impl-trait-for-tuples/latest/impl_trait_for_tuples/
 - indexmap
     - By [@bluss](https://github.com/bluss), Josh Stone ([@cuviper](https://github.com/cuviper)), et al.
     - Provided under the [Apache 2.0 License](https://github.com/bluss/indexmap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/indexmap/blob/master/LICENSE-MIT).
