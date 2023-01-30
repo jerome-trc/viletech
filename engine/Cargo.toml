@@ -78,12 +78,8 @@ serde = "1.0.140"
 sha3 = { workspace = true }
 shipyard = { workspace = true }
 stardate = { workspace = true }
-str-utils = "0.1.6"
 subterra = { workspace = true }
 toml = "0.5.9"
-unicode-width = "0.1.10"
-unicode-xid = "0.2.4"
-vec1 = { version = "1.10.1", features = ["serde"] }
 walkdir = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }
