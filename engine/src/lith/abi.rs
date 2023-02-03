@@ -17,20 +17,27 @@ use std::{
 /// [reference manual](https://dascript.org/doc/dascript.pdf), section 3.1.
 #[derive(Clone, Copy)]
 pub union QWord {
-	boolean: bool,
-	character: char,
-	i_8: i8,
-	u_8: u8,
-	i_16: i16,
-	u_16: u16,
-	i_32: i32,
-	u_32: u32,
-	i_64: i64,
-	u_64: u64,
-	i_size: isize,
-	u_size: usize,
-	f_32: f32,
-	f_64: f64,
+	pub(super) boolean: bool,
+	pub(super) character: char,
+	pub(super) i_8: i8,
+	pub(super) u_8: u8,
+	pub(super) i_16: i16,
+	pub(super) u_16: u16,
+	pub(super) i_32: i32,
+	pub(super) u_32: u32,
+	pub(super) i_64: i64,
+	pub(super) u_64: u64,
+	pub(super) i_size: isize,
+	pub(super) u_size: usize,
+	pub(super) f_32: f32,
+	pub(super) f_64: f64,
+}
+
+impl Default for QWord {
+	/// Returns a zeroed quad-word.
+	fn default() -> Self {
+		unsafe { std::mem::zeroed() }
+	}
 }
 
 impl std::fmt::Debug for QWord {
