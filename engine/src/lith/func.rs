@@ -1,23 +1,20 @@
 //! Function wrappers and information, as well as interop details.
 
 use std::{
-	ffi::c_void,
 	hash::{Hash, Hasher},
 	marker::PhantomData,
+	sync::Arc,
 };
 
-use cranelift_module::FuncId;
 use fasthash::SeaHasher;
 
-use super::{abi::Abi, Handle, Symbol};
+use super::{abi::Abi, inode, Handle, Runtime, Symbol};
 
 /// Pointer to a function, whether native or compiled.
 #[derive(Debug)]
 pub struct Function {
-	/// Never try to de-allocate this.
-	pub(super) code: *const c_void,
+	pub(super) code: Arc<inode::Tree>,
 	pub(super) flags: Flags,
-	pub(super) _id: FuncId,
 	/// See [`Self::hash_signature`].
 	pub(super) sig_hash: u64,
 }
@@ -64,15 +61,19 @@ unsafe impl Sync for Function {}
 
 impl Symbol for Function {}
 
-/// Typed function.
+/// Typed function handle.
 pub struct TFunc<A: Abi, R: Abi> {
-	/// Copied from the source [`Function`].
-	/// *Definitely* never try to de-allocate this.
-	pub(super) code: *const c_void,
-	#[allow(unused)]
 	pub(super) source: Handle<Function>,
 	#[allow(unused)]
 	pub(super) phantom: PhantomData<fn(A) -> R>,
+}
+
+impl<A: Abi, R: Abi> std::fmt::Debug for TFunc<A, R> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("TFunc")
+			.field("source", &self.source)
+			.finish()
+	}
 }
 
 impl<A, R> TFunc<A, R>
@@ -80,23 +81,8 @@ where
 	A: Abi,
 	R: Abi,
 {
-	pub fn call(&self, args: A) -> R {
-		let a = args.to_words();
-		// SAFETY: For the public interface to have gotten to this point, it must
-		// have performed a check that signature types match
-		let func = unsafe { std::mem::transmute::<_, fn(A::Repr) -> R::Repr>(self.code) };
-		let r = func(a);
-		R::from_words(r)
-	}
-}
-
-impl<A, R> std::fmt::Debug for TFunc<A, R>
-where
-	A: Abi,
-	R: Abi,
-{
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("TFunc").field("code", &self.code).finish()
+	pub fn call(&self, runtime: &mut Runtime, args: A) -> R {
+		self.source.code.eval(runtime, args)
 	}
 }
 

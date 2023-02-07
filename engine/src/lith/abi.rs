@@ -1,4 +1,4 @@
-//! Trait for the LithScript ABI and its two kinds of "words".
+//! Trait for the LithScript ABI and its "words".
 
 use std::{
 	any::TypeId,
@@ -31,6 +31,32 @@ pub union QWord {
 	pub(super) u_size: usize,
 	pub(super) f_32: f32,
 	pub(super) f_64: f64,
+}
+
+impl QWord {
+	#[must_use]
+	pub fn size_of<T>() -> usize {
+		std::mem::size_of::<T>() / std::mem::size_of::<Self>()
+	}
+
+	/// For "unrepresentable" values. Loaded with bytes making up a highly
+	/// exotic value (f32 infinity followed by f32 negative infinity) as a canary,
+	/// so it is easy to identify misplaced words when debugging.
+	#[must_use]
+	pub fn invalid() -> Self {
+		unsafe {
+			Self {
+				f_64: std::mem::transmute((f32::INFINITY, f32::NEG_INFINITY)),
+			}
+		}
+	}
+
+	#[must_use]
+	pub fn is_invalid(&self) -> bool {
+		unsafe {
+			std::mem::transmute::<_, (f32, f32)>(self.f_64) == (f32::INFINITY, f32::NEG_INFINITY)
+		}
+	}
 }
 
 impl Default for QWord {
@@ -187,7 +213,8 @@ where
 
 // RAT: This might be the biggest bottleneck on compile speed in the workspace
 
-#[impl_trait_for_tuples::impl_for_tuples(1, 2)]
+// The second argument to this macro should always equal `MAX_PARAMS`.
+#[impl_trait_for_tuples::impl_for_tuples(1, 16)]
 impl Abi for Tuple {
 	for_tuples!(type Repr = (#(Tuple::Repr),*););
 

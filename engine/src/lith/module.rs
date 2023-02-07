@@ -107,7 +107,6 @@ impl Handle<Function> {
 				Arc::new(SymStore {
 					name: self.name().to_string(),
 					data: Box::new(TFunc::<A, R> {
-						code: self.code,
 						source: self.clone(),
 						phantom: PhantomData,
 					}),
