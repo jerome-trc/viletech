@@ -13,7 +13,7 @@ https://www.gnu.org/licenses/quick-guide-gplv3.en.html. As per those terms, the 
 
 All script code found in `/data` and distributed in `viletech.zip` is provided under the GNU General Public License Version 3.
 
-Some VileTech source is derived from GZDoom-original source - i.e., that which is not derived from the Doom source - and is used under the terms of a [sic] "BSD-like licnse". See https://github.com/ZDoom/gzdoom/tree/master/docs/licenses for details.
+Some VileTech source is derived from GZDoom-original source - i.e., that which is not derived from the Doom source - and is used under the terms of a [sic] "BSD-like lincese". See https://github.com/ZDoom/gzdoom/tree/master/docs/licenses for details.
 
 All VileTech-original source - i.e., that which is in no way derived from any of the aforementioned source provided under the GPLv3 - is provided under either of
 
