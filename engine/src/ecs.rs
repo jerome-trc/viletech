@@ -1,12 +1,13 @@
-/// Entity (a.k.a. "actor") components for the playsim and renderer.
-///
-/// Notes to self/the reader/anyone who wants to make changes:
-///
-/// - These are arranged specifically based on GZDoom's per-sim-tick behavior.
-/// If the choices made seem odd, now you know why.
-/// - When changing a component's layout or creating a new component, keep an
-/// eye on how many 64-byte cache lines it occupies and the effects of the `repr`
-/// chosen. `C` is needed for Lith but `Rust` might produce more compact layouts.
+//! Entity (a.k.a. "actor") components for the playsim and renderer.
+//!
+//! Notes to self/the reader/anyone who wants to make changes:
+//!
+//! - These are arranged specifically based on GZDoom's per-sim-tick behavior.
+//! If the choices made seem odd, now you know why.
+//! - When changing a component's layout or creating a new component, keep an
+//! eye on how many 64-byte cache lines it occupies and the effects of the `repr`
+//! chosen. `C` is needed for Lith but `Rust` might produce more compact layouts.
+
 use bitflags::bitflags;
 use glam::DVec3;
 
