@@ -24,7 +24,7 @@ impl fmt::Display for Error {
 /// The PRNG behavior used by the engine all passes through this trait, so that
 /// alternative implementations (e.g. Boom-like, Doom-like, SFMT) can hypothetically
 /// be built and substituted.
-pub trait Prng {
+pub trait Prng: Default {
 	#[must_use]
 	fn range_i64(&mut self, min_incl: i64, max_incl: i64) -> i64;
 	#[must_use]
@@ -55,11 +55,11 @@ impl Prng for WyRand {
 
 /// Contains a map of named random number generators.
 #[derive(Debug)]
-pub struct RngCore<B: Prng + Default> {
+pub struct RngCore<B: Prng> {
 	prngs: HashMap<String, B>,
 }
 
-impl<B: Prng + Default> Default for RngCore<B> {
+impl<B: Prng> Default for RngCore<B> {
 	fn default() -> Self {
 		let mut ret = RngCore {
 			prngs: Default::default(),
@@ -71,7 +71,7 @@ impl<B: Prng + Default> Default for RngCore<B> {
 	}
 }
 
-impl<B: Prng + Default> RngCore<B> {
+impl<B: Prng> RngCore<B> {
 	/// Returns an error if there's already a PRNG under `key`.
 	pub fn add_default(&mut self, key: String) -> Result<(), Error> {
 		if self.prngs.contains_key(&key) {
