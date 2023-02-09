@@ -155,7 +155,6 @@ pub enum Syn {
 	KwOverride,
 	KwPrivate,
 	KwProtected,
-	KwPublic,
 	KwReturn,
 	KwStatic,
 	KwStruct,
@@ -178,6 +177,10 @@ pub enum Syn {
 	Annotation,
 	/// `{` then `}`, optionally with statements in between.
 	Block,
+	/// Accessibility specifiers, `ceval`, `abstract`, `virtual`, et cetera.
+	DeclQualifier,
+	/// A group of [`Syn::DeclQualifier`]s separated by whitespace.
+	DeclQualifiers,
 	ExprBinary,
 	ExprCall,
 	ExprIdent,
@@ -191,8 +194,8 @@ pub enum Syn {
 	/// A type expression may be a resolver, an array descriptor, a tuple
 	/// descriptor, or `_` to make the compiler attempt inferrence.
 	ExprType,
-	/// `<return type> <ident>(<params>) {}`
-	FunctionDef,
+	/// `<return types> <ident>(<params>) {}` or `<return types> <ident>(<params>);`
+	FunctionDecl,
 	/// Takes C form; an ASCII letter or underscore, then any number of ASCII
 	/// letters, ASCII digits, or underscores.
 	Identifier,
@@ -232,6 +235,9 @@ pub enum Syn {
 	ResolverPart,
 	/// `<ident>::<ident>` and so on.
 	Resolver,
+	/// Part of a function declaration, after qualifiers.
+	/// One or more type expressions separated by commas.
+	ReturnTypes,
 	/// `using <ident> = <type expr>`
 	TypeAlias,
 

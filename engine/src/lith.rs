@@ -32,7 +32,7 @@ pub use self::{
 	func::{Flags as FunctionFlags, Function},
 	inode::*,
 	module::{Builder as ModuleBuilder, Handle, Module},
-	parse::{file_parser, repl_parser},
+	parse::*,
 	runtime::*,
 	symbol::Symbol,
 	syn::Syn,
