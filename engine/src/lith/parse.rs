@@ -42,16 +42,16 @@ pub fn parse(source: &str, repl: bool, tolerant: bool) -> Option<ParseTree<Syn>>
 
 #[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn file_parser(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
-	primitive::choice((wsp_ext(src), item(src)))
+	primitive::choice((wsp_ext(src), item(src), annotation(src)))
 		.recover_with(recovery::skip_then_retry_until([]))
-		.labelled("item, annotation, or preprocessor directive")
+		.labelled("item or annotation")
 		.repeated()
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
 
 #[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn file_parser_tolerant(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
-	primitive::choice((wsp_ext(src), item(src), unknown(src)))
+	primitive::choice((wsp_ext(src), item(src), annotation(src), unknown(src)))
 		.repeated()
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
@@ -96,7 +96,7 @@ fn func_decl(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ 
 		.map(help::map_push_opt())
 		.then(primitive::choice((
 			comb::just::<Syn>(";", Syn::Semicolon),
-			block(src),
+			block(),
 		)))
 		.map(help::map_push())
 		.map(help::map_collect::<Syn>(Syn::FunctionDecl))

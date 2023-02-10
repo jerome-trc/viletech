@@ -15,6 +15,8 @@ use expr::*;
 /// One of the top-level elements of a file or REPL input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Root {
+	/// Only "inner" annotations are legal at the top level.
+	Annotation(Annotation),
 	Item(Item),
 }
 
@@ -25,11 +27,7 @@ impl AstNode for Root {
 	where
 		Self: Sized,
 	{
-		#[allow(clippy::match_like_matches_macro)]
-		match kind {
-			Syn::FunctionDecl => true,
-			_ => false,
-		}
+		matches!(kind, Syn::Annotation | Syn::FunctionDecl)
 	}
 
 	fn cast(node: SyntaxNode<Self::Language>) -> Option<Self>
@@ -37,6 +35,7 @@ impl AstNode for Root {
 		Self: Sized,
 	{
 		match node.kind() {
+			Syn::Annotation => Some(Self::Annotation(Annotation(node))),
 			Syn::FunctionDecl => Some(Self::Item(Item::FunctionDecl(FunctionDecl(node)))),
 			_ => None,
 		}
@@ -44,8 +43,64 @@ impl AstNode for Root {
 
 	fn syntax(&self) -> &SyntaxNode<Self::Language> {
 		match self {
+			Self::Annotation(inner) => inner.syntax(),
 			Self::Item(inner) => inner.syntax(),
 		}
+	}
+}
+
+/// Wraps a [`Syn::Annotation`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Annotation(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Annotation, Syn::Annotation);
+
+impl Annotation {
+	/// Returns `true` if this annotation uses the syntax `#![]` instead of `#[]`.
+	#[must_use]
+	pub fn is_inner(&self) -> bool {
+		self.0.children_with_tokens().nth(1).unwrap().kind() == Syn::Bang
+	}
+
+	#[must_use]
+	pub fn resolver(&self) -> Resolver {
+		self.0.children().find_map(Resolver::cast).unwrap()
+	}
+
+	#[must_use]
+	pub fn args(&self) -> Option<ArgList> {
+		self.0.children().find_map(ArgList::cast)
+	}
+}
+
+/// Wraps a [`Syn::Argument`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Argument(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Argument, Syn::Argument);
+
+impl Argument {
+	#[must_use]
+	pub fn name(&self) -> Option<SyntaxToken<Syn>> {
+		self.0
+			.first_child_or_token()
+			.filter(|n_or_t| n_or_t.kind() == Syn::Identifier)
+			.map(|n_or_t| n_or_t.into_token().unwrap())
+	}
+}
+
+/// Wraps a [`Syn::ArgList`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct ArgList(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, ArgList, Syn::ArgList);
+
+impl ArgList {
+	pub fn iter(&self) -> impl Iterator<Item = Argument> {
+		self.0.children().filter_map(Argument::cast)
 	}
 }
 
@@ -205,5 +260,25 @@ impl AstNode for Item {
 		match self {
 			Self::FunctionDecl(inner) => inner.syntax(),
 		}
+	}
+}
+
+/// Wraps a [`Syn::Resolver`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Resolver(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Resolver, Syn::Resolver);
+
+impl Resolver {
+	/// Every token returns is tagged [`Syn::Identifier`].
+	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken<Syn>> {
+		self.0.children_with_tokens().filter_map(|n_or_t| {
+			if n_or_t.kind() == Syn::Identifier {
+				n_or_t.into_token()
+			} else {
+				None
+			}
+		})
 	}
 }

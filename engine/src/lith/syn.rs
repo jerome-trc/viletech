@@ -163,17 +163,13 @@ pub enum Syn {
 	KwVirtual,
 	KwWhile,
 
-	// Preprocessor ////////////////////////////////////////////////////////////
-	/// The exact string `#include`.
-	PreprocInclude,
-	/// The exact string `#namespace`.
-	PreprocNamespace,
-	/// The exact string `#edition`.
-	PreprocEdition,
-
 	// Higher-level composites /////////////////////////////////////////////////
+	/// For both function calls and annotations. Wraps zero or more [`Syn::Argument`]s.
+	/// Like in C# and ZScript, arguments can be passed by parameter name.
 	ArgList,
-	/// `@<resolver>`, optionally followed by `(<args>)`, like in Java.
+	/// `<expr>` or `<name>: <expr>`. Given to function calls and annotations.
+	Argument,
+	/// `#![<resolver>(<args>)]`. `!` and arguments are optional.
 	Annotation,
 	/// `{` then `}`, optionally with statements in between.
 	Block,
@@ -181,6 +177,7 @@ pub enum Syn {
 	DeclQualifier,
 	/// A group of [`Syn::DeclQualifier`]s separated by whitespace.
 	DeclQualifiers,
+	Expression,
 	ExprBinary,
 	ExprCall,
 	ExprIdent,
@@ -202,8 +199,6 @@ pub enum Syn {
 	Literal,
 	/// Part of a function definition.
 	ParamList,
-	/// A preprocessor directive and its "arguments".
-	Preproc,
 	/// `let <ident> = <expr>`. May include a `const` after `let` and/or a type
 	/// specifier after the identifier, in the form `: <type expr>`.
 	StatBinding,
@@ -281,4 +276,13 @@ impl doomfront::LangExt for Syn {
 
 impl doomfront::LangComment for Syn {
 	const SYN_COMMENT: Self::Kind = Self::Comment;
+}
+
+impl Syn {
+	/// Alternatively "is whitespace or comment".
+	/// Doc comments do not count as trivial syntax.
+	#[must_use]
+	pub fn is_trivia(&self) -> bool {
+		matches!(self, Syn::Comment | Syn::Whitespace)
+	}
 }

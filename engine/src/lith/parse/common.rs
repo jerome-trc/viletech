@@ -5,14 +5,80 @@ use doomfront::{
 	comb, help, ParseError, ParseOut,
 };
 
+use crate::lith::parse::expr::*;
+
 use super::Syn;
 
 #[must_use]
-pub(super) fn block(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	primitive::just('{')
-		.map_with_span(help::map_tok::<Syn, _>(src, Syn::LBrace))
+pub(super) fn annotation(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+	comb::just::<Syn>("#", Syn::Pound)
 		.map(help::map_nvec())
-		.then(primitive::just('}').map_with_span(help::map_tok::<Syn, _>(src, Syn::LBrace)))
+		.then(comb::just::<Syn>("!", Syn::Bang).or_not())
+		.map(help::map_push_opt())
+		.then(comb::just::<Syn>("[", Syn::LBracket))
+		.map(help::map_push())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(resolver(src))
+		.map(help::map_push())
+		.then(arg_list(src).or_not())
+		.map(help::map_push_opt())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(comb::just::<Syn>("]", Syn::RBracket))
+		.map(help::map_push())
+		.map(help::map_collect::<Syn>(Syn::Annotation))
+}
+
+/// Includes delimiting parentheses.
+#[must_use]
+pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+	let anon = || expr(src).map(help::map_node::<Syn>(Syn::Argument));
+
+	let named = || {
+		ident(src)
+			.map(help::map_nvec())
+			.then(comb::just::<Syn>(":", Syn::Colon))
+			.map(help::map_push())
+			.then(wsp_ext(src).or_not())
+			.map(help::map_push_opt())
+			.then(expr(src))
+			.map(help::map_push())
+			.map(help::map_collect::<Syn>(Syn::Argument))
+	};
+
+	let rep = comb::just::<Syn>(",", Syn::Comma)
+		.map(help::map_nvec())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(primitive::choice((named(), anon())))
+		.map(help::map_push())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt());
+
+	comb::just::<Syn>("(", Syn::LParen)
+		.map(help::map_nvec())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(primitive::choice((named(), anon())).or_not())
+		.map(help::map_push_opt())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(rep.repeated())
+		.map(|(mut vec, mut v_v)| {
+			v_v.iter_mut().for_each(|v| vec.append(v));
+			vec
+		})
+		.then(comb::just::<Syn>(")", Syn::RParen))
+		.map(help::map_push())
+		.map(help::map_collect::<Syn>(Syn::ArgList))
+}
+
+#[must_use]
+pub(super) fn block() -> impl Parser<char, ParseOut, Error = ParseError> {
+	comb::just::<Syn>("{", Syn::LBrace)
+		.map(help::map_nvec())
+		.then(comb::just::<Syn>("}", Syn::RBrace))
 		.map(help::map_push())
 		.map(help::map_collect::<Syn>(Syn::Block))
 }
