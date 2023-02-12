@@ -80,6 +80,7 @@ shipyard = { workspace = true }
 stardate = { workspace = true }
 subterra = { workspace = true }
 toml = "0.5.9"
+unicode-ident = "1.0.6"
 walkdir = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }

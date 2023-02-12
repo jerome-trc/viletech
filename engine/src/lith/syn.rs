@@ -122,12 +122,23 @@ pub enum Syn {
 	IsNot,
 
 	// Literals ////////////////////////////////////////////////////////////////
+	/// The exact string `null`.
 	LitNull,
+	/// The exact string `false`.
 	LitFalse,
+	/// The exact string `true`.
 	LitTrue,
+	/// Lith integer literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#integer-literals>
 	LitInt,
+	/// Lith floating-point literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#floating-point-literals>
 	LitFloat,
+	/// Lith character literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#character-literals>
 	LitChar,
+	/// Lith string literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#string-literals>
 	LitString,
 
 	// Keywords ////////////////////////////////////////////////////////////////
@@ -167,40 +178,50 @@ pub enum Syn {
 	/// For both function calls and annotations. Wraps zero or more [`Syn::Argument`]s.
 	/// Like in C# and ZScript, arguments can be passed by parameter name.
 	ArgList,
-	/// `<expr>` or `<name>: <expr>`. Given to function calls and annotations.
+	/// `expr` or `label: expr`. Given to function calls and annotations.
 	Argument,
-	/// `#![<resolver>(<args>)]`. `!` and arguments are optional.
+	/// `#![resolver(args)]`. `!` and arguments are optional.
 	Annotation,
 	/// `{` then `}`, optionally with statements in between.
 	Block,
-	/// Accessibility specifiers, `ceval`, `abstract`, `virtual`, et cetera.
-	DeclQualifier,
-	/// A group of [`Syn::DeclQualifier`]s separated by whitespace.
+	/// A group of declaration qualifier keywords separated by whitespace.
+	/// Part of a [`Syn::FunctionDecl`].
 	DeclQualifiers,
 	Expression,
+	/// e.g. `expr + expr` or `expr?.expr`.
 	ExprBinary,
 	ExprCall,
-	ExprIdent,
-	/// `<expr>[<expr>]`; array element access.
+	/// `expr[expr]`; array element access.
 	ExprIndex,
-	ExprLiteral,
+	/// e.g. `expr++` or `expr?`
 	ExprPostfix,
+	/// e.g. `++expr`
 	ExprPrefix,
-	/// e.g. `x = cond ? a : b`
+	/// `expr = expr ? expr : expr`
 	ExprTernary,
-	/// A type expression may be a resolver, an array descriptor, a tuple
-	/// descriptor, or `_` to make the compiler attempt inferrence.
+	/// `@[typeref]`.
 	ExprType,
-	/// `<return types> <ident>(<params>) {}` or `<return types> <ident>(<params>);`
+	/// `quals returntypes name(params) {}` or `quals returntypes name(params);`
 	FunctionDecl,
-	/// Takes C form; an ASCII letter or underscore, then any number of ASCII
-	/// letters, ASCII digits, or underscores.
-	Identifier,
+	/// `ident:`. Used to distinguish blocks and for naming passed arguments.
+	/// Distinct from [`Syn::Name`] since it does not introduce a name into scope.
+	Label,
+	/// Will have one of the following tokens as a child:
+	/// - [`Syn::LitChar`]
+	/// - [`Syn::LitFalse`]
+	/// - [`Syn::LitFloat`]
+	/// - [`Syn::LitInt`]
+	/// - [`Syn::LitNull`]
+	/// - [`Syn::LitString`]
+	/// - [`Syn::LitTrue`]
 	Literal,
+	/// Syntax node with a [`Syn::Ident`] token as a child.
+	/// Used as part of function declarations, variable bindings, et cetera.
+	Name,
 	/// Part of a function definition.
 	ParamList,
-	/// `let <ident> = <expr>`. May include a `const` after `let` and/or a type
-	/// specifier after the identifier, in the form `: <type expr>`.
+	/// `let ident = <expr>`. May include a `const` after `let` and/or a type
+	/// specifier after the identifier, in the form `: typeref`.
 	StatBinding,
 	/// `break;`
 	StatBreak,
@@ -212,15 +233,15 @@ pub enum Syn {
 	StatExpr,
 	/// `if {}`
 	StatIf,
-	/// `do {} until (<expr>)`
+	/// `do {} until (expr)`
 	StatLoopDoUntil,
-	/// `do {} while (<expr>)`
+	/// `do {} while (expr)`
 	StatLoopDoWhile,
-	/// `for <ident> in <expr> {}`
+	/// `for (ident : expr) {}`
 	StatLoopFor,
 	/// `loop {}`
 	StatLoopInfinite,
-	/// `while (<expr>) {}`
+	/// `while (expr) {}`
 	StatLoopWhile,
 	/// `return;`
 	StatReturn,
@@ -228,15 +249,24 @@ pub enum Syn {
 	StatSwitch,
 	/// An identifier, `Super`, or `Self`.
 	ResolverPart,
-	/// `<ident>::<ident>` and so on.
+	/// `name::name` and so on.
 	Resolver,
 	/// Part of a function declaration, after qualifiers.
-	/// One or more type expressions separated by commas.
+	/// One or more written types separated by commas.
 	ReturnTypes,
-	/// `using <ident> = <type expr>`
+	/// A type reference may be a [`Syn::Resolver`], an array descriptor, a
+	/// tuple descriptor, or `_` to make the compiler attempt inferrence.
+	TypeRef,
+	/// "Type specifier". A [`Syn::Colon`] followed by a [`Syn::TypeRef`].
+	TypeSpec,
+	/// `using ident = type`
 	TypeAlias,
 
 	// Miscellaneous ///////////////////////////////////////////////////////////
+	/// C-style; an ASCII letter or underscore, then any number of ASCII letters,
+	/// ASCII digits, or underscores. Assigned only to tokens.
+	/// Can be used in [`Syn::Ident`] or [`Syn::Label`] nodes.
+	Ident,
 	/// C++/Rust form. Treated as though it were whitespace.
 	/// This tag covers both single- and multi-line variations, but not docs.
 	Comment,

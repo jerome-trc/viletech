@@ -209,6 +209,11 @@ VileTech depends on the [`doom-front`](https://github.com/***REMOVED***/doom-fro
 	- By Alex Crichton ([@alexcrichton](https://github.com/alexcrichton)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).
 	- https://docs.rs/toml/latest/toml/
+- unicode-ident
+    - By David Tolnay ([@dtolnay](https://github.com/dtolnay)).
+    - Original source is provided under the [Apache 2.0 License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-MIT).
+    - Generated source is provided under the [Unicode License Agreement - Data Files and Software (2016)](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-UNICODE).
+    - https://docs.rs/unicode-ident/latest/unicode_ident/
 - wad
 	- By Magnus Hoff ([@maghoff](https://github.com/maghoff)).
 	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).

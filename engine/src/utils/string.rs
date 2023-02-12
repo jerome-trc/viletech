@@ -1,3 +1,5 @@
+use arrayvec::ArrayString;
+
 use crate::lazy_regex;
 
 /// Shortcut for `string.get(..string.chars().count().min(chars)).unwrap()`.
@@ -33,6 +35,102 @@ pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)>
 	}
 
 	None
+}
+
+/// Taken from the [`enquote`] crate courtesy of Christopher Knight
+/// ([@reujab](https://github.com/reujab)) and used under [The Unlicense].
+/// Modified for parsing Lith character literals; performs no allocations
+/// internally and emits a single character.
+///
+/// This specialization means that reaching the end of the given string unexpectedly
+/// causes a panic, as does supplying a `string` longer than 10 code points.
+///
+/// [`enquote`]: https://github.com/reujab/enquote/blob/master/src/lib.rs
+/// [The Unlicense]: https://github.com/reujab/enquote/blob/master/unlicense
+pub fn unescape_char(string: &str) -> Result<char, UnescapeError> {
+	#[inline]
+	/// `Iterator::take` cannot be used because it consumes the iterator.
+	fn take<I: Iterator<Item = char>>(iterator: &mut I, n: usize) -> ArrayString<10> {
+		let mut s = ArrayString::<10>::default();
+
+		for _ in 0..n {
+			s.push(iterator.next().unwrap_or_default());
+		}
+
+		s
+	}
+
+	fn decode_unicode(code_point: &str) -> Result<char, UnescapeError> {
+		match u32::from_str_radix(code_point, 16) {
+			Err(_) => Err(UnescapeError::Unrecognized),
+			Ok(n) => std::char::from_u32(n).ok_or(UnescapeError::InvalidUtf8),
+		}
+	}
+
+	let mut chars = string.chars();
+	let mut ret = ArrayString::<10>::new();
+
+	loop {
+		match chars.next() {
+			None => break,
+			Some(c) => ret.push(match c {
+				'\\' => match chars.next() {
+					Some(c) => match c {
+						_ if c == '\\' || c == '"' || c == '\'' || c == '`' => c,
+						'a' => '\x07',
+						'b' => '\x08',
+						'f' => '\x0c',
+						'n' => '\n',
+						'r' => '\r',
+						't' => '\t',
+						'v' => '\x0b',
+						// Octal
+						'0'..='9' => {
+							let mut octal = ArrayString::<10>::default();
+							octal.push(c);
+							octal.push_str(&take(&mut chars, 2));
+
+							u8::from_str_radix(&octal, 8)
+								.map_err(|_| UnescapeError::Unrecognized)? as char
+						}
+						// Hexadecimal
+						'x' => {
+							let hex = take(&mut chars, 2);
+
+							u8::from_str_radix(&hex, 16).map_err(|_| UnescapeError::Unrecognized)?
+								as char
+						}
+						// Unicode
+						'u' => decode_unicode(&take(&mut chars, 4))?,
+						'U' => decode_unicode(&take(&mut chars, 8))?,
+						_ => return Err(UnescapeError::Unrecognized),
+					},
+					None => unreachable!(),
+				},
+				_ => c,
+			}),
+		}
+	}
+
+	Ok(ret.parse::<char>().unwrap())
+}
+
+/// See [`unescape_char`].
+#[derive(Debug)]
+pub enum UnescapeError {
+	Unrecognized,
+	InvalidUtf8,
+}
+
+impl std::error::Error for UnescapeError {}
+
+impl std::fmt::Display for UnescapeError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Unrecognized => write!(f, "Encountered an unrecognized escape character."),
+			Self::InvalidUtf8 => write!(f, "Invalid UTF-8 code point."),
+		}
+	}
 }
 
 /// Extracts a version string from what will almost always be a file stem,

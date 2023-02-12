@@ -11,11 +11,11 @@ use super::Syn;
 
 mod common;
 mod expr;
+mod lit;
 #[cfg(test)]
 mod test;
 
 use common::*;
-use expr::*;
 
 /// If `repl` is true, look for expressions and statements at the top level instead
 /// of items, annotations, and macro invocations.
@@ -27,9 +27,19 @@ use expr::*;
 pub fn parse(source: &str, repl: bool, tolerant: bool) -> Option<ParseTree<Syn>> {
 	let (root, errs) = if !repl {
 		if !tolerant {
-			file_parser(source).parse_recovery(source)
+			#[cfg(not(test))]
+			let pt = file_parser(source).parse_recovery(source);
+			#[cfg(test)]
+			let pt = file_parser(source).parse_recovery_verbose(source);
+
+			pt
 		} else {
-			file_parser_tolerant(source).parse_recovery(source)
+			#[cfg(not(test))]
+			let pt = file_parser_tolerant(source).parse_recovery(source);
+			#[cfg(test)]
+			let pt = file_parser(source).parse_recovery_verbose(source);
+
+			pt
 		}
 	} else if !tolerant {
 		repl_parser(source).parse_recovery(source)
@@ -40,7 +50,6 @@ pub fn parse(source: &str, repl: bool, tolerant: bool) -> Option<ParseTree<Syn>>
 	root.map(|r| ParseTree::new(r, errs))
 }
 
-#[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn file_parser(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
 	primitive::choice((wsp_ext(src), item(src), annotation(src)))
 		.recover_with(recovery::skip_then_retry_until([]))
@@ -49,14 +58,12 @@ pub fn file_parser(src: &str) -> impl Parser<char, GreenNode, Error = ParseError
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
 
-#[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn file_parser_tolerant(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
 	primitive::choice((wsp_ext(src), item(src), annotation(src), unknown(src)))
 		.repeated()
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
 
-#[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn repl_parser(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
 	primitive::choice((wsp_ext(src),))
 		.recover_with(recovery::skip_then_retry_until([]))
@@ -65,19 +72,16 @@ pub fn repl_parser(src: &str) -> impl Parser<char, GreenNode, Error = ParseError
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
 
-#[must_use = "combinator parsers are lazy and do nothing unless consumed"]
 pub fn repl_parser_tolerant(src: &str) -> impl Parser<char, GreenNode, Error = ParseError> + '_ {
 	primitive::choice((wsp_ext(src), unknown(src)))
 		.repeated()
 		.map(help::map_finish::<Syn>(Syn::Root))
 }
 
-#[must_use]
 fn item(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	primitive::choice((func_decl(src),))
 }
 
-#[must_use]
 fn func_decl(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	decl_quals(src)
 		.or_not()
@@ -86,7 +90,7 @@ fn func_decl(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ 
 		.map(help::map_push())
 		.then(wsp_ext(src))
 		.map(help::map_push())
-		.then(ident(src))
+		.then(name(src))
 		.map(help::map_push())
 		.then(comb::just::<Syn>("(", Syn::LParen))
 		.map(help::map_push())
@@ -102,7 +106,6 @@ fn func_decl(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ 
 		.map(help::map_collect::<Syn>(Syn::FunctionDecl))
 }
 
-#[must_use]
 fn return_types(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	let rep1 = wsp_ext(src)
 		.or_not()
@@ -111,10 +114,10 @@ fn return_types(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + 
 		.map(help::map_push())
 		.then(wsp_ext(src).or_not())
 		.map(help::map_push_opt())
-		.then(type_expr(src))
+		.then(type_ref(src))
 		.map(help::map_push());
 
-	type_expr(src)
+	type_ref(src)
 		.map(help::map_nvec())
 		.then(rep1.repeated())
 		.map(|(mut first, mut others)| {
@@ -124,7 +127,10 @@ fn return_types(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + 
 		.map(help::map_collect::<Syn>(Syn::ReturnTypes))
 }
 
-#[must_use]
+fn type_ref(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+	primitive::choice((resolver(src),)).map(help::map_node::<Syn>(Syn::ExprType))
+}
+
 fn unknown(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	primitive::any().map_with_span(help::map_tok::<Syn, _>(src, Syn::Unknown))
 }

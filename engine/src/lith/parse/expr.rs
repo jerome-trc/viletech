@@ -2,30 +2,34 @@
 
 use doomfront::{
 	chumsky::{primitive, Parser},
-	help, ParseError, ParseOut,
+	comb, help, ParseError, ParseOut,
 };
 
 use crate::lith::Syn;
 
-use super::common::*;
+use super::{common::*, lit::*, type_ref};
 
 pub(super) fn expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	primitive::choice((
-		atom(src),
+		literal(src),
+		name(src),
+		type_expr(src),
 		// TODO: Unary, binary, ternary
 	))
-	.map(help::map_node::<Syn>(Syn::Expression))
 }
 
-fn atom(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	primitive::choice((
-		type_expr(src),
-		ident(src),
-		// TODO: Literals
-	))
-}
-
-#[must_use]
 pub(super) fn type_expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	primitive::choice((resolver(src),)).map(help::map_node::<Syn>(Syn::ExprType))
+	comb::just::<Syn>("@", Syn::At)
+		.map(help::map_nvec())
+		.then(comb::just::<Syn>("[", Syn::LBracket))
+		.map(help::map_push())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(type_ref(src))
+		.map(help::map_push())
+		.then(wsp_ext(src).or_not())
+		.map(help::map_push_opt())
+		.then(comb::just::<Syn>("]", Syn::RBracket))
+		.map(help::map_push())
+		.map(help::map_collect::<Syn>(Syn::ExprType))
 }

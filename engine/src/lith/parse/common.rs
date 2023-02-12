@@ -9,7 +9,6 @@ use crate::lith::parse::expr::*;
 
 use super::Syn;
 
-#[must_use]
 pub(super) fn annotation(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	comb::just::<Syn>("#", Syn::Pound)
 		.map(help::map_nvec())
@@ -31,12 +30,11 @@ pub(super) fn annotation(src: &str) -> impl Parser<char, ParseOut, Error = Parse
 }
 
 /// Includes delimiting parentheses.
-#[must_use]
 pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	let anon = || expr(src).map(help::map_node::<Syn>(Syn::Argument));
 
-	let named = || {
-		ident(src)
+	let labelled = || {
+		label(src)
 			.map(help::map_nvec())
 			.then(comb::just::<Syn>(":", Syn::Colon))
 			.map(help::map_push())
@@ -51,7 +49,7 @@ pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 		.map(help::map_nvec())
 		.then(wsp_ext(src).or_not())
 		.map(help::map_push_opt())
-		.then(primitive::choice((named(), anon())))
+		.then(primitive::choice((labelled(), anon())))
 		.map(help::map_push())
 		.then(wsp_ext(src).or_not())
 		.map(help::map_push_opt());
@@ -60,7 +58,7 @@ pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 		.map(help::map_nvec())
 		.then(wsp_ext(src).or_not())
 		.map(help::map_push_opt())
-		.then(primitive::choice((named(), anon())).or_not())
+		.then(primitive::choice((labelled(), anon())).or_not())
 		.map(help::map_push_opt())
 		.then(wsp_ext(src).or_not())
 		.map(help::map_push_opt())
@@ -74,7 +72,6 @@ pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 		.map(help::map_collect::<Syn>(Syn::ArgList))
 }
 
-#[must_use]
 pub(super) fn block() -> impl Parser<char, ParseOut, Error = ParseError> {
 	comb::just::<Syn>("{", Syn::LBrace)
 		.map(help::map_nvec())
@@ -83,7 +80,6 @@ pub(super) fn block() -> impl Parser<char, ParseOut, Error = ParseError> {
 		.map(help::map_collect::<Syn>(Syn::Block))
 }
 
-#[must_use]
 pub(super) fn decl_quals(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	let rep = wsp_ext(src).then(decl_qual(src));
 
@@ -103,7 +99,6 @@ pub(super) fn decl_quals(src: &str) -> impl Parser<char, ParseOut, Error = Parse
 		.map(help::map_collect::<Syn>(Syn::DeclQualifiers))
 }
 
-#[must_use]
 pub(super) fn decl_qual(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	primitive::choice((
 		text::keyword("abstract").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwAbstract)),
@@ -117,14 +112,20 @@ pub(super) fn decl_qual(src: &str) -> impl Parser<char, ParseOut, Error = ParseE
 	))
 }
 
-#[must_use]
 pub(super) fn ident(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	text::ident().map_with_span(help::map_tok::<Syn, _>(src, Syn::Identifier))
+	text::ident().map_with_span(help::map_tok::<Syn, _>(src, Syn::Ident))
 }
 
-#[must_use]
+pub(super) fn label(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+	ident(src).map(help::map_node::<Syn>(Syn::Label))
+}
+
+pub(super) fn name(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+	ident(src).map(help::map_node::<Syn>(Syn::Name))
+}
+
 pub(super) fn resolver(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	let rep = comb::just::<Syn>("::", Syn::Colon2).then(ident(src));
+	let rep = comb::just::<Syn>("::", Syn::Colon2).then(name(src));
 
 	comb::just::<Syn>("::", Syn::Colon2)
 		.or_not()
@@ -132,7 +133,7 @@ pub(super) fn resolver(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 			Some(n_or_t) => vec![n_or_t],
 			None => vec![],
 		})
-		.then(ident(src))
+		.then(name(src))
 		.map(help::map_push())
 		.then(rep.repeated())
 		.map(|(mut vec, parts)| {
@@ -146,7 +147,6 @@ pub(super) fn resolver(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 		.map(help::map_collect::<Syn>(Syn::Resolver))
 }
 
-#[must_use]
 pub(super) fn wsp_ext(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
 	comb::wsp_ext::<Syn, _>(src, comb::c_cpp_comment::<Syn>(src))
 }

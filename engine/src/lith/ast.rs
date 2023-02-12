@@ -2,15 +2,19 @@
 
 mod expr;
 
+use std::num::ParseIntError;
+
 use bitflags::bitflags;
 use doomfront::{
 	rowan::{self, ast::AstNode, SyntaxNode, SyntaxToken},
 	simple_astnode,
 };
 
+use crate::utils::string::unescape_char;
+
 use super::Syn;
 
-use expr::*;
+pub use expr::*;
 
 /// One of the top-level elements of a file or REPL input.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,7 +53,7 @@ impl AstNode for Root {
 	}
 }
 
-/// Wraps a [`Syn::Annotation`].
+/// Wraps a node tagged [`Syn::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Annotation(SyntaxNode<Syn>);
@@ -74,7 +78,7 @@ impl Annotation {
 	}
 }
 
-/// Wraps a [`Syn::Argument`].
+/// Wraps a node tagged [`Syn::Argument`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Argument(SyntaxNode<Syn>);
@@ -83,15 +87,20 @@ simple_astnode!(Syn, Argument, Syn::Argument);
 
 impl Argument {
 	#[must_use]
-	pub fn name(&self) -> Option<SyntaxToken<Syn>> {
+	pub fn label(&self) -> Option<Label> {
 		self.0
-			.first_child_or_token()
-			.filter(|n_or_t| n_or_t.kind() == Syn::Identifier)
-			.map(|n_or_t| n_or_t.into_token().unwrap())
+			.first_child()
+			.filter(|node| node.kind() == Syn::Label)
+			.map(Label)
+	}
+
+	#[must_use]
+	pub fn expr(&self) -> Expression {
+		Expression::cast(self.0.last_child().unwrap()).unwrap()
 	}
 }
 
-/// Wraps a [`Syn::ArgList`].
+/// Wraps a node tagged [`Syn::ArgList`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct ArgList(SyntaxNode<Syn>);
@@ -104,7 +113,7 @@ impl ArgList {
 	}
 }
 
-/// Wraps a [`Syn::Block`].
+/// Wraps a node tagged [`Syn::Block`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Block(SyntaxNode<Syn>);
@@ -135,7 +144,7 @@ impl AstNode for Block {
 	}
 }
 
-/// Wraps a [`Syn::DeclQualifiers`].
+/// Wraps a node tagged [`Syn::DeclQualifiers`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct DeclQualifiers(SyntaxNode<Syn>);
@@ -179,7 +188,7 @@ bitflags! {
 	}
 }
 
-/// Wraps a [`Syn::FunctionDecl`].
+/// Wraps a node tagged [`Syn::FunctionDecl`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct FunctionDecl(SyntaxNode<Syn>);
@@ -187,17 +196,8 @@ pub struct FunctionDecl(SyntaxNode<Syn>);
 impl FunctionDecl {
 	/// The identifier given to this function, after the return type specifier.
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken<Syn> {
-		self.0
-			.children_with_tokens()
-			.find_map(|n_or_t| {
-				if n_or_t.kind() == Syn::Identifier {
-					n_or_t.into_token()
-				} else {
-					None
-				}
-			})
-			.unwrap()
+	pub fn name(&self) -> Name {
+		self.0.children().find_map(Name::cast).unwrap()
 	}
 
 	/// Returns `None` if no qualifiers were written.
@@ -263,6 +263,166 @@ impl AstNode for Item {
 	}
 }
 
+/// Wraps a node tagged [`Syn::Label`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Label(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Label, Syn::Label);
+
+impl Label {
+	/// Shorthand for
+	/// `self.syntax().first_child_or_token().unwrap().into_token().unwrap()`.
+	#[must_use]
+	pub fn token(&self) -> SyntaxToken<Syn> {
+		self.0.first_child_or_token().unwrap().into_token().unwrap()
+	}
+}
+
+/// Wraps a node tagged [`Syn::Literal`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Literal(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Literal, Syn::Literal);
+
+impl Literal {
+	#[must_use]
+	pub fn token(&self) -> LitToken {
+		LitToken(self.0.first_child_or_token().unwrap().into_token().unwrap())
+	}
+}
+
+/// Wrapper around a [`SyntaxToken`] with convenience functions.
+/// See [`Syn::Literal`]'s documentation to see possible token tags.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct LitToken(SyntaxToken<Syn>);
+
+impl LitToken {
+	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
+	/// this returns the corresponding value. Otherwise this returns `None`.
+	#[must_use]
+	pub fn bool(&self) -> Option<bool> {
+		match self.0.kind() {
+			Syn::LitTrue => Some(true),
+			Syn::LitFalse => Some(false),
+			_ => None,
+		}
+	}
+
+	/// If this wraps a [`Syn::LitChar`], this returns the character within
+	/// the delimiting quotation marks. Otherwise this returns `None`.
+	#[must_use]
+	pub fn char(&self) -> Option<char> {
+		if self.0.kind() == Syn::LitChar {
+			let text = self.0.text();
+			let start = text.chars().position(|c| c == '\'').unwrap();
+			let end = text.chars().rev().position(|c| c == '\'').unwrap();
+			let inner = text.get((start + 1)..(text.len() - end - 1)).unwrap();
+			unescape_char(inner).ok()
+		} else {
+			None
+		}
+	}
+
+	#[must_use]
+	pub fn float(&self) -> Option<f64> {
+		if !matches!(self.0.kind(), Syn::LitFloat) {
+			return None;
+		}
+
+		let text = self.0.text();
+
+		// Identify the position of the suffix
+		let end = text.len() - text.chars().rev().position(|c| c != 'f').unwrap();
+		let inner = &text[0..end];
+		let mut temp = String::with_capacity(text.len());
+
+		for c in inner.chars().filter(|c| *c != '_') {
+			temp.push(c);
+		}
+
+		temp.parse::<f64>().ok()
+	}
+
+	/// Shorthand for `self.syntax().kind() == Syn::LitNull`.
+	#[must_use]
+	pub fn is_null(&self) -> bool {
+		self.0.kind() == Syn::LitNull
+	}
+
+	/// Returns `None` if this is not tagged with [`Syn::LitInt`].
+	/// Returns `Some(Err)` if integer parsing fails,
+	/// such as if the written value is too large to fit into a `u64`.
+	#[must_use]
+	pub fn int(&self) -> Option<Result<u64, ParseIntError>> {
+		if !matches!(self.0.kind(), Syn::LitInt) {
+			return None;
+		}
+
+		let text = self.0.text();
+
+		let radix = if text.len() > 2 {
+			match &text[0..2] {
+				"0x" => 16,
+				"0b" => 2,
+				"0o" => 8,
+				_ => 10,
+			}
+		} else {
+			10
+		};
+
+		// Identify the span between the prefix and suffix
+		let start = if radix != 10 { 2 } else { 0 };
+		let end = text.len()
+			- text
+				.chars()
+				.rev()
+				.position(|c| !matches!(c, 'i' | 'u'))
+				.unwrap();
+		let inner = &text[start..end];
+		let mut temp = String::with_capacity(inner.len());
+
+		for c in inner.chars().filter(|c| *c != '_') {
+			temp.push(c);
+		}
+
+		Some(u64::from_str_radix(&temp, radix))
+	}
+
+	/// If this wraps a [`Syn::LitString`] token, this returns the string's
+	/// content with the delimiting quotation marks stripped away.
+	/// Otherwise this returns `None`.
+	#[must_use]
+	pub fn string(&self) -> Option<&str> {
+		if self.0.kind() == Syn::LitString {
+			let text = self.0.text();
+			let start = text.chars().position(|c| c == '"').unwrap();
+			let end = text.chars().rev().position(|c| c == '"').unwrap();
+			text.get((start + 1)..(text.len() - end - 1))
+		} else {
+			None
+		}
+	}
+}
+
+/// Wraps a node tagged [`Syn::Name`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Name(SyntaxNode<Syn>);
+
+simple_astnode!(Syn, Name, Syn::Name);
+
+impl Name {
+	/// Shorthand for
+	/// `self.syntax().first_child_or_token().unwrap().into_token().unwrap()`.
+	#[must_use]
+	pub fn token(&self) -> SyntaxToken<Syn> {
+		self.0.first_child_or_token().unwrap().into_token().unwrap()
+	}
+}
+
 /// Wraps a [`Syn::Resolver`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
@@ -274,7 +434,7 @@ impl Resolver {
 	/// Every token returns is tagged [`Syn::Identifier`].
 	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken<Syn>> {
 		self.0.children_with_tokens().filter_map(|n_or_t| {
-			if n_or_t.kind() == Syn::Identifier {
+			if n_or_t.kind() == Syn::Ident {
 				n_or_t.into_token()
 			} else {
 				None
