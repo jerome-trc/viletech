@@ -6,7 +6,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## Technologies
 
-VileTech depends on the [`doom-front`](https://github.com/***REMOVED***/doom-front) library, which is my own creation. See its own README and attributions document to see transitive acknowledgements.
+VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all of which are my creation. See their own READMEs and attributions documents to see transitive acknowledgements at https://github.com/***REMOVED***/doom-rs.
 
 - arrayvec
     - By [@bluss](https://github.com/bluss) et al.
