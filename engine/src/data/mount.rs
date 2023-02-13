@@ -192,7 +192,7 @@ impl Catalog {
 						links: Vec::default(),
 						real_path: real_path.into_boxed_path(),
 						virtual_path: mount_point.into_boxed_path(),
-						manifest_path: None,
+						script_root: None,
 					}));
 
 					Ok(())
@@ -866,7 +866,7 @@ impl Catalog {
 			info.authors = ingest.authors;
 			info.copyright = ingest.copyright;
 			info.links = ingest.links;
-			info.manifest_path = ingest.manifest.map(|vpb| vpb.into_boxed_path());
+			info.script_root = ingest.script_root.map(|vpb| vpb.into_boxed_path());
 			return;
 		}
 

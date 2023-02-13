@@ -26,7 +26,7 @@ use super::{
 /// provides read access to one entry and the catalog itself. Prefer these over
 /// working directly with references to [`VirtualFile`]s, since this can trace
 /// inter-file relationships.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileRef<'cat> {
 	pub(super) catalog: &'cat Catalog,
 	pub(super) file: &'cat VirtualFile,
@@ -178,17 +178,19 @@ pub struct MountInfo {
 	/// Always canonicalized, but may not necessarily be valid UTF-8.
 	pub(super) real_path: Box<Path>,
 	pub(super) virtual_path: Box<VPath>,
-	/// VileTech, ZDoom, and Eternity packages are allowed to specify a manifest:
-	/// a LithScript include tree outlining how to handle asset loading.
+	/// The base of the package's LithScript include tree.
 	///
-	/// For VileTech packages, the manifest is required for anything to be loaded.
-	/// If no manifest is given, the package is effectively ignored. For ZDoom and
-	/// Eternity, the lack of a manifest tells the engine to infer intent based
-	/// on these engines' own game loading procedures.
+	/// - For VileTech packages, this is specified by a `meta.toml` file.
+	/// - For ZDoom and Eternity packages, the script root is the first
+	/// "lump" with the file stem `VTECHLITH` in the package's global namespace.
+	/// - For WADs, the script root is the first `VTECHLITH` "lump" found.
 	///
-	/// A package can only specify a file native to it as a manifest, so this
-	/// is always relative. viletech.zip's manifest is at `manifest/main.lith`.
-	pub(super) manifest_path: Option<Box<VPath>>,
+	/// Normally, the scripts can define manifest items used to direct post-processing,
+	/// but if there is no script root or manifests, ZDoom loading rules are used.
+	///
+	/// A package can only specify a file owned by it as a script root, so this
+	/// is always relative. `viletech.zip`'s script root, for example, is `main.lith`.
+	pub(super) script_root: Option<Box<VPath>>,
 	// Q:
 	// - Dependency specification?
 	// - Incompatibility specification?

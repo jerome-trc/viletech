@@ -249,12 +249,19 @@ impl std::fmt::Display for Mount {
 /// Game loading is a two-step process; post-processing is the second step.
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
-pub enum PostProc {}
+pub enum PostProc {
+	/// A mount declared a script root file that was not found in the VFS.
+	MissingScriptRoot(VPathBuf),
+}
 
 impl std::error::Error for PostProc {}
 
 impl std::fmt::Display for PostProc {
-	fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		unimplemented!("Soon!")
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::MissingScriptRoot(path) => {
+				write!(f, "Script root not found at path: {}", path.display())
+			}
+		}
 	}
 }

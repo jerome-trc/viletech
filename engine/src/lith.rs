@@ -128,6 +128,12 @@ pub const MAX_PARAMS: usize = 16;
 /// In terms of values, not [quad-words](abi::QWord).
 pub const MAX_RETURNS: usize = 4;
 
+pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
+pub type Token = doomfront::rowan::SyntaxToken<Syn>;
+pub type RawParseTree = doomfront::RawParseTree<Syn>;
+pub type ParseTree = doomfront::ParseTree<Syn>;
+pub type IncludeTree = doomfront::IncludeTree<Syn>;
+
 #[derive(Debug)]
 pub enum Error {
 	/// Tried to retrieve a symbol from a module using an identifier that didn't

@@ -124,5 +124,5 @@ pub(super) struct MountMetaIngest {
 	#[serde(default)]
 	pub links: Vec<String>,
 	#[serde(default)]
-	pub manifest: Option<VPathBuf>,
+	pub script_root: Option<VPathBuf>,
 }

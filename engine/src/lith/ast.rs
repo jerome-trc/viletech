@@ -406,6 +406,11 @@ impl LitToken {
 			None
 		}
 	}
+
+	#[must_use]
+	pub fn syntax(&self) -> &SyntaxToken<Syn> {
+		&self.0
+	}
 }
 
 /// Wraps a node tagged [`Syn::Name`].

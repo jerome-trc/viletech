@@ -5,10 +5,7 @@
 //! source files, rather than just one. Hence, `lith` is a module (for language
 //! support), `vile` is a module for native engine functionality, et cetera.
 //!
-//! To get started, [create a `Builder`]. Register all native functions and data
-//! objects with it, and then use it to emit an [`OpenModule`]. This can then
-//! have script source compiled into it. When you're ready to start running code,
-//! close the `OpenModule` to get a [`Module`].
+//! To get started, [create a `Builder`].
 //!
 //! [create a `Builder`]: Builder::new
 

@@ -15,9 +15,8 @@ abstract vile::Pref my_fn() {}
 "#;
 
 	let pt = parse(SOURCE, false, false).unwrap();
-
 	assert_no_errors(&pt);
-
+	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();
 
 	if let ast::Root::Item(ast::Item::FunctionDecl(fn0)) = ast.next().unwrap() {
@@ -65,9 +64,8 @@ fn smoke_annotations() {
 "##;
 
 	let pt = parse(SOURCE, false, false).unwrap();
-
 	assert_no_errors(&pt);
-
+	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
@@ -118,9 +116,8 @@ fn smoke_literals() {
 	"##;
 
 	let pt = parse(SOURCE, false, false).unwrap();
-
 	assert_no_errors(&pt);
-
+	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
@@ -309,7 +306,7 @@ fn smoke_literals() {
 	}
 }
 
-fn assert_no_errors(pt: &ParseTree<Syn>) {
+fn assert_no_errors(pt: &RawParseTree) {
 	assert!(!pt.any_errors(), "Encountered errors: {}", {
 		let mut output = String::default();
 
