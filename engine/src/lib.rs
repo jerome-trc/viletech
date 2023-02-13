@@ -69,7 +69,7 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	/// - Is immovably anchored to the screen's top
 	/// - Can be resized, but only vertically
 	pub fn window(ctx: &egui::Context) -> egui::containers::Window {
-		let screen_rect = ctx.input().screen_rect;
+		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
 		egui::Window::new("Developer Tools")
 			.id(egui::Id::new("vile_devgui"))
@@ -83,7 +83,7 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	}
 
 	pub fn panel_left(&self, ctx: &egui::Context) -> egui::SidePanel {
-		let screen_rect = ctx.input().screen_rect;
+		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
 		egui::SidePanel::left("vile_devgui_left")
 			.default_width(screen_rect.width() * 0.5)

@@ -282,7 +282,7 @@ impl FrontendMenu {
 		}
 
 		if to_select != self.load_order.len() {
-			if ui.input().modifiers.ctrl {
+			if ui.input(|inps| inps.modifiers.ctrl) {
 				self.load_order[to_select].selected = !self.load_order[to_select].selected;
 			} else {
 				self.clear_selection();

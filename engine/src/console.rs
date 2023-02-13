@@ -325,7 +325,7 @@ impl<C: terminal::Command> Console<C> {
 		let font_id = TextStyle::Monospace.resolve(ui.style());
 		let job =
 			LayoutJob::simple_singleline(line.to_string(), font_id, ui.visuals().text_color());
-		let galley = ui.fonts().layout_job(job);
+		let galley = ui.fonts(|f| f.layout_job(job));
 		ui.label(galley);
 	}
 
@@ -357,7 +357,7 @@ impl<C: terminal::Command> Console<C> {
 		job.append("] ", 0.0, tfmt.clone());
 		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
 
-		let galley = ui.fonts().layout_job(job);
+		let galley = ui.fonts(|fonts| fonts.layout_job(job));
 		ui.label(galley);
 	}
 }

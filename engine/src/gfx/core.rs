@@ -9,8 +9,9 @@ use egui_wgpu::renderer::ScreenDescriptor;
 use indoc::formatdoc;
 use log::info;
 use wgpu::{
-	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, CompositeAlphaMode, RenderPass,
-	RenderPipeline, SurfaceConfiguration, SurfaceTexture, TextureView, TextureViewDescriptor,
+	util::StagingBelt, CommandEncoder, CommandEncoderDescriptor, CompositeAlphaMode, Dx12Compiler,
+	InstanceDescriptor, RenderPass, RenderPipeline, SurfaceConfiguration, SurfaceTexture,
+	TextureView, TextureViewDescriptor,
 };
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
@@ -43,8 +44,13 @@ impl GraphicsCore {
 		window: Window,
 		event_loop: &EventLoopWindowTarget<()>,
 	) -> Result<GraphicsCore, Box<dyn std::error::Error>> {
-		let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
-		let surface = unsafe { instance.create_surface(&window) };
+		let instance = wgpu::Instance::new(InstanceDescriptor {
+			backends: wgpu::Backends::PRIMARY,
+			// TODO: Change to Dxc; ship along with Windows binaries
+			dx12_shader_compiler: Dx12Compiler::Fxc,
+		});
+
+		let surface = unsafe { instance.create_surface(&window)? };
 
 		let adpreq = instance.request_adapter(&wgpu::RequestAdapterOptions {
 			power_preference: wgpu::PowerPreference::HighPerformance,
@@ -86,7 +92,7 @@ impl GraphicsCore {
 		}
 
 		let window_size = window.inner_size();
-		let tex_formats = surface.get_supported_formats(&adapter);
+		let caps = surface.get_capabilities(&adapter);
 
 		const PREFERRED_FORMATS: [wgpu::TextureFormat; 5] = [
 			wgpu::TextureFormat::Bgra8UnormSrgb,
@@ -96,7 +102,11 @@ impl GraphicsCore {
 			wgpu::TextureFormat::Rgba16Float,
 		];
 
-		let srf_format = match tex_formats.iter().find(|tf| PREFERRED_FORMATS.contains(tf)) {
+		let srf_format = match caps
+			.formats
+			.iter()
+			.find(|tf| PREFERRED_FORMATS.contains(tf))
+		{
 			Some(tf) => tf,
 			None => {
 				return Err(Box::new(Error::NoSurfaceFormat));
@@ -110,6 +120,7 @@ impl GraphicsCore {
 			height: window_size.height,
 			present_mode: wgpu::PresentMode::Fifo,
 			alpha_mode: CompositeAlphaMode::Auto,
+			view_formats: vec![*srf_format],
 		};
 
 		surface.configure(&device, &srf_cfg);

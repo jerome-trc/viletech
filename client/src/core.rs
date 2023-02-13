@@ -285,7 +285,7 @@ impl ClientCore {
 		if self.devgui.open {
 			let ctx = &self.gfx.egui.context;
 			let mut devgui_open = true;
-			let screen_rect = ctx.input().screen_rect;
+			let screen_rect = ctx.input(|inps| inps.screen_rect);
 
 			DeveloperGui::window(ctx)
 				.open(&mut devgui_open)
