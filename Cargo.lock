@@ -174,7 +174,7 @@ dependencies = [
  "objc-foundation",
  "objc_id",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot",
  "thiserror",
  "winapi",
  "x11rb",
@@ -817,12 +817,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7704b5fdd17b18ae31c4c1da5a2e0305a2bf17b5249300a9ee9ed7b72114c636"
 
 [[package]]
-name = "cow-utils"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79bb3adfaf5f75d24b01aee375f7555907840fa2800e5ec8fa3b9e2031830173"
-
-[[package]]
 name = "cpal"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -839,7 +833,7 @@ dependencies = [
  "ndk-context",
  "oboe",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot",
  "stdweb",
  "thiserror",
  "wasm-bindgen",
@@ -1176,7 +1170,7 @@ dependencies = [
  "hashbrown 0.12.3",
  "lock_api",
  "once_cell",
- "parking_lot_core 0.9.3",
+ "parking_lot_core",
  "rayon",
  "serde",
 ]
@@ -1255,7 +1249,6 @@ dependencies = [
  "chumsky",
  "rowan",
  "serde",
- "zscript_parser",
 ]
 
 [[package]]
@@ -1351,7 +1344,7 @@ dependencies = [
  "ecolor",
  "emath",
  "nohash-hasher",
- "parking_lot 0.12.1",
+ "parking_lot",
 ]
 
 [[package]]
@@ -2749,37 +2742,12 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
-dependencies = [
- "instant",
- "lock_api",
- "parking_lot_core 0.8.5",
-]
-
-[[package]]
-name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
 dependencies = [
  "lock_api",
- "parking_lot_core 0.9.3",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.8.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d76e8e1493bcac0d2766c42737f34458f1c8c50c0d23bcb24ea953affb273216"
-dependencies = [
- "cfg-if 1.0.0",
- "instant",
- "libc",
- "redox_syscall 0.2.13",
- "smallvec",
- "winapi",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -3672,16 +3640,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e08d8363704e6c71fc928674353e6b7c23dcea9d82d7012c8faf2a3a025f8d0"
 
 [[package]]
-name = "str-utils"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b505e52a89a4c6075ef4a2b9c77f9785d63fd51d952b71bb8496bd53b7946709"
-dependencies = [
- "cow-utils",
- "unicase",
-]
-
-[[package]]
 name = "strict-num"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4106,15 +4064,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
-name = "unicase"
-version = "2.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50f37be617794602aabbeee0be4f259dc1778fabe05e2d67ee8f79326d5cb4f6"
-dependencies = [
- "version_check",
-]
-
-[[package]]
 name = "unicode-bidi"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4176,15 +4125,6 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
-]
-
-[[package]]
-name = "vec1"
-version = "1.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bda7c41ca331fe9a1c278a9e7ee055f4be7f5eb1c2b72f079b4ff8b5fce9d5c"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -4253,7 +4193,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "palette",
- "parking_lot 0.12.1",
+ "parking_lot",
  "paste",
  "pollster",
  "raw-cpuid",
@@ -4286,7 +4226,7 @@ dependencies = [
  "kira",
  "log",
  "nanorand",
- "parking_lot 0.12.1",
+ "parking_lot",
  "shipyard",
  "viletech",
  "wgpu",
@@ -4519,7 +4459,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot",
  "profiling",
  "raw-window-handle",
  "smallvec",
@@ -4545,7 +4485,7 @@ dependencies = [
  "fxhash",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot",
  "profiling",
  "raw-window-handle",
  "smallvec",
@@ -4584,7 +4524,7 @@ dependencies = [
  "metal",
  "naga",
  "objc",
- "parking_lot 0.12.1",
+ "parking_lot",
  "profiling",
  "range-alloc",
  "raw-window-handle",
@@ -4961,23 +4901,6 @@ dependencies = [
  "sha1 0.10.1",
  "time 0.3.11",
  "zstd",
-]
-
-[[package]]
-name = "zscript_parser"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84aee1612bf2438a93a6eab3d98bae142daaed02467d75772a1ff73ca1b58ea9"
-dependencies = [
- "bitflags",
- "once_cell",
- "parking_lot 0.11.2",
- "rayon",
- "serde",
- "str-utils",
- "unicode-width",
- "vec1",
- "walkdir",
 ]
 
 [[package]]

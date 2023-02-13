@@ -31,8 +31,6 @@ pub mod terminal;
 pub mod user;
 pub mod utils;
 pub mod wad;
-#[allow(dead_code)]
-pub mod zscript;
 
 // Type aliases
 
