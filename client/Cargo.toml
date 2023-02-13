@@ -23,6 +23,5 @@ kira = { workspace = true }
 log = { workspace = true }
 nanorand = { workspace = true }
 parking_lot = { workspace = true }
-shipyard = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }

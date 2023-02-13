@@ -10,7 +10,6 @@ use std::{
 use log::error;
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
-use shipyard::World;
 use vile::{
 	audio::AudioCore,
 	console::{self, Console},
@@ -101,7 +100,7 @@ pub struct ClientCore {
 	/// it will be unwrapped.
 	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub console: Console<ConsoleCommand>,
-	pub gui: World, // TODO: Replace with a menu stack
+	// TODO: Menu stack
 	pub camera: Camera,
 	devgui: DeveloperGui,
 	scene: Scene,
@@ -160,7 +159,6 @@ impl ClientCore {
 			audio: AudioCore::new(catalog_audio, None)?,
 			input: InputCore::default(),
 			console,
-			gui: World::default(),
 			camera,
 			devgui: DeveloperGui {
 				#[cfg(debug_assertions)]

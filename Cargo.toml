@@ -42,7 +42,6 @@ rayon = "1.6.1"
 regex = "1.7.1"
 renet = "0.0.9"
 sha3 = "0.10.6"
-shipyard = { version = "0.6.2", features = ["serde1"] }
 walkdir = "2.3.2"
 wgpu = "0.15.1"
 winit = "0.28.1"

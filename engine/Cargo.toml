@@ -75,7 +75,6 @@ renet = { workspace = true }
 rfd = "0.11.1"
 serde = "1.0.152"
 sha3 = { workspace = true }
-shipyard = { workspace = true }
 stardate = { workspace = true }
 subterra = { workspace = true }
 toml = "0.7.2"
