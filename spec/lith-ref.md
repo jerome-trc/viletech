@@ -7,6 +7,8 @@
 	- [Keywords](#keywords)
 	- [Literals](#literals)
 	- [Identifiers](#identifiers)
+	- [Type Reference](#type-reference)
+	- [Expressions](#expressions)
 	- [Type System](#type-system)
 		- [Primitive Types](#primitive-types)
 		- [Enumerations](#enumerations)
@@ -75,7 +77,10 @@ This list is intended to be overly restrictive, and is eligible for relaxation i
 
 `true` and `false` are boolean literals. `null` is a pointer literal.
 
-String literals are delimited by `"`.
+String literals are delimited by `"`. These have the following subsets, which count as separate tokens:
+- Glob literals, which start with a `g` before the leading `"`.
+- Regular expression literals, which start with an `R` before the leading `"`.
+The latter two exist to provide compile-time validation for "special sub-syntaxes" and open the way for better tooling.
 
 Character literals are delimited by `'`, and contain exactly one UTF-8 character.
 
@@ -93,16 +98,29 @@ Identifiers beginning and/or ending with two underscores (e.g. `__escape`, `Cast
 
 The "discard" identifier consists of only one underscore (`_`) and is used to indicate to both humans and tools that a declared local variable or parameter is unused by the program. This identifier can not overlap or shadow other identical identifiers and can not be consumed; a variable under this identifier can not be passed as an argument.
 
+## Type Reference
+
+```bnf
+<TYPE_REF> ::= <RESOLVER> | <ARRAY_DESC> | "_"
+<ARRAY_DESC> ::= "[" <TYPE_REF> ; <DEC_LITERAL> "]"
+```
+
+A type reference is a written way of expressing a type in a non-imperative context (e.g. declaring a function or field).
+
+## Expressions
+
+```bnf
+<EXPR_TYPE> ::= "@[" <TYPE_REF> "]"
+```
+
 ## Type System
 
 LithScript leans towards strong, gradual typing.
 
-`void` is a non-type that only exists for the purposes of function return type specification.
-
 ### Primitive Types
 
+`void` is a tangible, zero-size type with the literal `()`.
 `bool` is a strongly-typed true-or-false byte.
-
 `char` uses Rust character semantics; it represents a single valid UTF-8 code point.
 
 LithScript's integral and floating-point types map to LLVM integral types for brevity and immediate clarity as to their size:
@@ -111,7 +129,6 @@ LithScript's integral and floating-point types map to LLVM integral types for br
 `i16` `u16`
 `i32` `u32`
 `i64` `u64`
-`i128` `u128`
 `f32` `f64`
 
 Integers of different signedness and bit-width can only be converted via cast.
@@ -135,6 +152,11 @@ Classes may be "extended" with an `extend class ClassIdentifier` block. These ge
 A class qualified with `abstract` can not be instantiated, and serves only as a base for other classes.
 
 A class qualified with `final` may not be inherited from. This keyword and `abstract` are mutually-exclusive.
+
+Because class objects can only be interacted with through pointer types, a class' identifier is used as syntactic sugar for `Ptr<ClassIdent>` in the following contexts:
+- Type references for function parameters and arguments
+- Type specifications in field declarations
+- Type specifications in variable bindings
 
 ### Structures
 
@@ -161,7 +183,9 @@ A bitfield's underlying integer is given the identifier `__bits`.
 
 ### Pointers and References
 
-LithScript offers two ways to manage memory in the VM heap: `Ref` and `Ptr`. `Ref` is a handle to a heap value that is guaranteed at compile time to be non-null. `Ptr` is a type known to the compiler which uses the same semantics as `Option`. These handle types are the only ways to interact with class objects, which are never held as script values.
+LithScript offers two ways to manage memory in the VM heap: `Ref` and `Ptr`. These are the only ways to interact with class objects.
+
+`Ref` is a `Ptr` guaranteed at compile time to be valid by null coalescing.
 
 ## Resolvers
 
@@ -237,7 +261,8 @@ What follows is the complete list of LithScript operators.
 
 `==`: logical equality comparison.
 `!=`: logical negative comparison.
-`~==`: logical approximate equality comparison. Can be used on strings to test case-insensitive equality and on floating-point numbers to check for equality with a small tolerance margin.
+`~==`: logical approximate equality comparison. Can be used on strings to test case-insensitive equality and on floating-point numbers to check for equality with a small tolerance margin (TBD).
+`~!=`: logical approximate inequality comparison.
 
 ## Annotations
 
