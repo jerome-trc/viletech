@@ -7,26 +7,26 @@ use doomfront::{
 
 use crate::lith::Syn;
 
-pub(super) fn literal(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn literal(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	primitive::choice((
 		lit_char(src),
 		lit_string(src),
 		lit_float(src),
 		lit_int(src),
-		lit_null(),
-		lit_bool(),
+		lit_null(src),
+		lit_bool(src),
 	))
 	.map(help::map_node::<Syn>(Syn::Literal))
 }
 
-pub(super) fn lit_bool() -> impl Parser<char, ParseOut, Error = ParseError> {
+pub(super) fn lit_bool(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	primitive::choice((
-		comb::just::<Syn>("false", Syn::LitFalse),
-		comb::just::<Syn>("true", Syn::LitTrue),
+		comb::just::<Syn, _>("false", Syn::LitFalse, src),
+		comb::just::<Syn, _>("true", Syn::LitTrue, src),
 	))
 }
 
-pub(super) fn lit_char(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn lit_char(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	let inner = primitive::none_of("'\\\n\r\t").map(|_| ());
 
 	primitive::just('\'')
@@ -40,7 +40,7 @@ pub(super) fn lit_char(src: &str) -> impl Parser<char, ParseOut, Error = ParseEr
 		.map_with_span(help::map_tok::<Syn, _>(src, Syn::LitChar))
 }
 
-pub(super) fn lit_float(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn lit_float(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	let notail = lit_dec()
 		.then(primitive::just("."))
 		.then_ignore(
@@ -82,7 +82,7 @@ pub(super) fn lit_float(src: &str) -> impl Parser<char, ParseOut, Error = ParseE
 		.map_with_span(help::map_tok::<Syn, _>(src, Syn::LitFloat))
 }
 
-pub(super) fn lit_int(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn lit_int(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	let dec = lit_dec().map(|_| ());
 
 	let bin = primitive::just("0b")
@@ -142,17 +142,19 @@ pub(super) fn lit_int(src: &str) -> impl Parser<char, ParseOut, Error = ParseErr
 	primitive::choice((bin, oct, hex, dec)).map_with_span(help::map_tok::<Syn, _>(src, Syn::LitInt))
 }
 
-fn lit_dec() -> impl Parser<char, (), Error = ParseError> {
+fn lit_dec() -> impl Parser<char, (), Error = ParseError> + Clone {
 	primitive::one_of("0123456789")
 		.then(primitive::one_of("0123456789_").repeated())
 		.map(|_| ())
 }
 
-pub(super) fn lit_null() -> impl Parser<char, ParseOut, Error = ParseError> {
-	comb::just::<Syn>("null", Syn::LitNull)
+pub(super) fn lit_null(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
+	comb::just::<Syn, _>("null", Syn::LitNull, src)
 }
 
-pub(super) fn lit_string(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn lit_string(
+	src: &str,
+) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	let inner = primitive::none_of("\"\\").map(|_| ());
 	let strcont = primitive::just('\\')
 		.then(primitive::just('\n'))
@@ -173,7 +175,7 @@ pub(super) fn lit_string(src: &str) -> impl Parser<char, ParseOut, Error = Parse
 		.map_with_span(help::map_tok::<Syn, _>(src, Syn::LitString))
 }
 
-fn ascii_escape() -> impl Parser<char, (), Error = ParseError> {
+fn ascii_escape() -> impl Parser<char, (), Error = ParseError> + Clone {
 	primitive::choice((
 		primitive::just("\\x")
 			.then(comb::oct_digit())
@@ -188,11 +190,11 @@ fn ascii_escape() -> impl Parser<char, (), Error = ParseError> {
 	.map(|_| ())
 }
 
-fn quote_escape() -> impl Parser<char, (), Error = ParseError> {
+fn quote_escape() -> impl Parser<char, (), Error = ParseError> + Clone {
 	primitive::choice((primitive::just("\\'"), primitive::just("\\\""))).map(|_| ())
 }
 
-fn unicode_escape() -> impl Parser<char, (), Error = ParseError> {
+fn unicode_escape() -> impl Parser<char, (), Error = ParseError> + Clone {
 	let digit = comb::hex_digit().then(primitive::just('_').or_not());
 
 	primitive::just("\\u{")

@@ -2,14 +2,16 @@
 
 use doomfront::{
 	chumsky::{primitive, Parser},
-	comb, help, ParseError, ParseOut,
+	comb,
+	ext::{Parser1, ParserVec},
+	ParseError, ParseOut,
 };
 
 use crate::lith::Syn;
 
 use super::{common::*, lit::*, type_ref};
 
-pub(super) fn expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
+pub(super) fn expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	primitive::choice((
 		literal(src),
 		name(src),
@@ -18,18 +20,16 @@ pub(super) fn expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError>
 	))
 }
 
-pub(super) fn type_expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + '_ {
-	comb::just::<Syn>("@", Syn::At)
-		.map(help::map_nvec())
-		.then(comb::just::<Syn>("[", Syn::LBracket))
-		.map(help::map_push())
-		.then(wsp_ext(src).or_not())
-		.map(help::map_push_opt())
-		.then(type_ref(src))
-		.map(help::map_push())
-		.then(wsp_ext(src).or_not())
-		.map(help::map_push_opt())
-		.then(comb::just::<Syn>("]", Syn::RBracket))
-		.map(help::map_push())
-		.map(help::map_collect::<Syn>(Syn::ExprType))
+pub(super) fn type_expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
+	comb::just::<Syn, _>('@', Syn::At, src)
+		.start_vec()
+		.chain_push(comb::just::<Syn, _>('[', Syn::BracketL, src))
+		.chain_append(wsp_ext(src).repeated())
+		.chain_push(primitive::choice(
+			// TODO: Array notation, tuple notation
+			(type_ref(src),),
+		))
+		.chain_append(wsp_ext(src).repeated())
+		.chain_push(comb::just::<Syn, _>(']', Syn::BracketR, src))
+		.collect_n::<Syn, { Syn::ExprType as u16 }>()
 }

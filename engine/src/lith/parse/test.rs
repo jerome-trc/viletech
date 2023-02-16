@@ -14,7 +14,7 @@ abstract vile::Pref my_fn() {}
 
 "#;
 
-	let pt = parse(SOURCE, false, false).unwrap();
+	let pt = parse(SOURCE, false).unwrap();
 	assert_no_errors(&pt);
 	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();
@@ -63,7 +63,7 @@ fn smoke_annotations() {
 
 "##;
 
-	let pt = parse(SOURCE, false, false).unwrap();
+	let pt = parse(SOURCE, false).unwrap();
 	assert_no_errors(&pt);
 	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();
@@ -115,7 +115,7 @@ fn smoke_literals() {
 	)]
 	"##;
 
-	let pt = parse(SOURCE, false, false).unwrap();
+	let pt = parse(SOURCE, false).unwrap();
 	assert_no_errors(&pt);
 	let pt = ParseTree::new(pt);
 	let mut ast = pt.ast();

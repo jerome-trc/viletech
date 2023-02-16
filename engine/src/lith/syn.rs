@@ -9,37 +9,99 @@ use super::ast;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Syn {
 	// Glyphs, composite glyphs, glyph-adjacent ////////////////////////////////
-	Semicolon = 0,
-	Comma,
-	LParen,
-	RParen,
-	LBrace,
-	RBrace,
-	LBracket,
-	RBracket,
-	LAngle,
-	RAngle,
-	/// `@`
-	At,
-	/// `#`
-	Pound,
-	/// `~` a.k.a tilde.
-	Grave,
-	Question,
-	Dollar,
+	/// `&`
 	Ampersand,
-	/// `|`
-	Pipe,
-	Plus,
+	/// `&&`
+	Ampersand2,
+	/// `&&=`
+	Ampersand2Eq,
+	/// `&=`
+	AmpersandEq,
+	/// `<`
+	AngleL,
+	/// `<<`
+	AngleL2,
+	/// `<<=`
+	AngleL2Eq,
+	/// `<=`
+	AngleLEq,
+	/// `>`
+	AngleR,
+	/// `>>`
+	AngleR2,
+	/// `>>=`
+	AngleR2Eq,
+	/// `>>>`
+	AngleR3,
+	/// `>>>=`
+	AngleR3Eq,
+	/// `>=`
+	AngleREq,
+	/// `*`
 	Asterisk,
 	/// `**`
 	Asterisk2,
-	/// `/`
-	Slash,
+	/// `**=`
+	Asterisk2Eq,
+	/// `*=`
+	AsteriskEq,
+	/// `@`
+	At,
+	/// `!`
+	Bang,
+	/// `!=`
+	BangEq,
+	/// `{`
+	BraceL,
+	/// `}`
+	BraceR,
+	/// `[`
+	BracketL,
+	/// `]`
+	BracketR,
 	/// `^`
 	Caret,
+	/// `^^`
+	Caret2,
+	/// `^^`
+	Caret2Eq,
+	/// `^=`
+	CaretEq,
+	/// `:`
+	Colon,
+	/// `::`
+	Colon2,
+	/// `,`
+	Comma,
+	/// `$`
+	Dollar,
+	/// `=`
+	Eq,
+	/// `==`
+	Eq2,
+	/// `~` a.k.a tilde.
+	Grave,
+	/// `~!=`
+	GraveBangEq,
+	/// `~==`
+	GraveEq,
+	/// `is` (a specialized operator).
+	Is,
+	/// `!is` (a specialized operator).
+	IsNot,
+	/// `-`
+	Minus,
+	/// `-=`
+	MinusEq,
+	/// `--`
+	Minus2,
+	/// `(`
+	ParenL,
+	/// `)`
+	ParenR,
+	/// `%`
 	Percent,
-	Underscore,
+	/// `.`
 	Period,
 	/// `..`
 	Period2,
@@ -47,79 +109,36 @@ pub enum Syn {
 	Period3,
 	/// `..=`
 	Period2Eq,
-	Colon,
-	/// `::`
-	Colon2,
-	Eq,
-	/// `==`
-	Eq2,
-	/// `=>`
-	FatArrow,
-	/// `!`
-	Bang,
-	/// `!=`
-	BangEq,
-	/// `~==`
-	GraveEq,
-	/// `~!=`
-	GraveBangEq,
-	Minus,
-	/// `->`
-	ThinArrow,
-	/// `<=`
-	LAngleEq,
-	/// `>=`
-	RAngleEq,
-	/// `+=`
-	PlusEq,
-	/// `-=`
-	MinusEq,
+	/// `|`
+	Pipe,
 	/// `|=`
 	PipeEq,
-	/// `&=`
-	AmpersandEq,
-	/// `^=`
-	CaretEq,
-	/// `/=`
-	SlashEq,
-	/// `*=`
-	AsteriskEq,
-	/// `**=`
-	Asterisk2Eq,
 	/// `%=`
 	PercentEq,
-	/// `&&`
-	Ampersand2,
 	/// `||`
 	Pipe2,
-	/// `^^`
-	Caret2,
-	/// `&&=`
-	Ampersand2Eq,
 	/// `||=`
 	Pipe2Eq,
-	/// `^^`
-	Caret2Eq,
-	/// `<<`
-	LeftAngle2,
-	/// `>>`
-	RightAngle2,
-	/// `>>>`
-	RightAngle3,
-	/// `<<=`
-	LeftAngle2Eq,
-	/// `>>=`
-	RightAngle2Eq,
-	/// `>>>=`
-	RightAngle3Eq,
+	/// `+`
+	Plus,
 	/// `++`
 	Plus2,
-	/// `--`
-	Minus2,
-	/// `is` (a specialized operator).
-	Is,
-	/// `!is` (a specialized operator).
-	IsNot,
+	/// `+=`
+	PlusEq,
+	/// `#`
+	Pound,
+	/// `?`
+	Question,
+	/// `;`
+	Semicolon,
+	/// `/`
+	Slash,
+	/// `/=`
+	SlashEq,
+	/// `=>`
+	ThickArrow,
+	/// `->`
+	ThinArrow,
 
 	// Literals ////////////////////////////////////////////////////////////////
 	/// The exact string `null`.
@@ -187,7 +206,6 @@ pub enum Syn {
 	/// A group of declaration qualifier keywords separated by whitespace.
 	/// Part of a [`Syn::FunctionDecl`].
 	DeclQualifiers,
-	Expression,
 	/// e.g. `expr + expr` or `expr?.expr`.
 	ExprBinary,
 	ExprCall,
@@ -247,9 +265,9 @@ pub enum Syn {
 	StatReturn,
 	/// Same syntax as C.
 	StatSwitch,
-	/// An identifier, `Super`, or `Self`.
+	/// A [`Syn::Name`], `Super`, or `Self`.
 	ResolverPart,
-	/// `name::name` and so on.
+	/// `name`, `name::name`, `name::name::name`, and so on.
 	Resolver,
 	/// Part of a function declaration, after qualifiers.
 	/// One or more written types separated by commas.
@@ -259,22 +277,23 @@ pub enum Syn {
 	TypeRef,
 	/// "Type specifier". A [`Syn::Colon`] followed by a [`Syn::TypeRef`].
 	TypeSpec,
-	/// `using ident = type`
+	/// `using ident = type;` or `using ident;`.
 	TypeAlias,
 
 	// Miscellaneous ///////////////////////////////////////////////////////////
-	/// C-style; an ASCII letter or underscore, then any number of ASCII letters,
-	/// ASCII digits, or underscores. Assigned only to tokens.
-	/// Can be used in [`Syn::Ident`] or [`Syn::Label`] nodes.
-	Ident,
 	/// C++/Rust form. Treated as though it were whitespace.
 	/// This tag covers both single- and multi-line variations, but not docs.
 	Comment,
 	/// Rust form.
 	DocComment,
-	Whitespace,
+	/// C-style; an ASCII letter or underscore, then any number of ASCII letters,
+	/// ASCII digits, or underscores. Assigned only to tokens.
+	/// Can be used in [`Syn::Name`] or [`Syn::Label`] nodes.
+	Ident,
 	/// Input that the lexer considered to be invalid.
 	Unknown,
+	/// An unbroken string of spaces, tabs, newlines, and/or carriage returns.
+	Whitespace,
 	/// The top-level node.
 	Root, // Ensure this is always the last variant!
 }
@@ -300,7 +319,6 @@ impl rowan::Language for Syn {
 
 impl doomfront::LangExt for Syn {
 	const SYN_WHITESPACE: Self::Kind = Self::Whitespace;
-
 	type AstRoot = ast::Root;
 }
 

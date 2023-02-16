@@ -6,13 +6,13 @@ use std::num::ParseIntError;
 
 use bitflags::bitflags;
 use doomfront::{
-	rowan::{self, ast::AstNode, SyntaxNode, SyntaxToken},
+	rowan::{self, ast::AstNode},
 	simple_astnode,
 };
 
 use crate::utils::string::unescape_char;
 
-use super::Syn;
+use super::{Syn, SyntaxNode, SyntaxToken};
 
 pub use expr::*;
 
@@ -34,7 +34,7 @@ impl AstNode for Root {
 		matches!(kind, Syn::Annotation | Syn::FunctionDecl)
 	}
 
-	fn cast(node: SyntaxNode<Self::Language>) -> Option<Self>
+	fn cast(node: SyntaxNode) -> Option<Self>
 	where
 		Self: Sized,
 	{
@@ -45,7 +45,7 @@ impl AstNode for Root {
 		}
 	}
 
-	fn syntax(&self) -> &SyntaxNode<Self::Language> {
+	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::Annotation(inner) => inner.syntax(),
 			Self::Item(inner) => inner.syntax(),
@@ -56,7 +56,7 @@ impl AstNode for Root {
 /// Wraps a node tagged [`Syn::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Annotation(SyntaxNode<Syn>);
+pub struct Annotation(SyntaxNode);
 
 simple_astnode!(Syn, Annotation, Syn::Annotation);
 
@@ -81,7 +81,7 @@ impl Annotation {
 /// Wraps a node tagged [`Syn::Argument`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Argument(SyntaxNode<Syn>);
+pub struct Argument(SyntaxNode);
 
 simple_astnode!(Syn, Argument, Syn::Argument);
 
@@ -103,7 +103,7 @@ impl Argument {
 /// Wraps a node tagged [`Syn::ArgList`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct ArgList(SyntaxNode<Syn>);
+pub struct ArgList(SyntaxNode);
 
 simple_astnode!(Syn, ArgList, Syn::ArgList);
 
@@ -116,7 +116,7 @@ impl ArgList {
 /// Wraps a node tagged [`Syn::Block`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Block(SyntaxNode<Syn>);
+pub struct Block(SyntaxNode);
 
 impl AstNode for Block {
 	type Language = Syn;
@@ -128,7 +128,7 @@ impl AstNode for Block {
 		kind == Syn::Block
 	}
 
-	fn cast(node: SyntaxNode<Self::Language>) -> Option<Self>
+	fn cast(node: SyntaxNode) -> Option<Self>
 	where
 		Self: Sized,
 	{
@@ -139,7 +139,7 @@ impl AstNode for Block {
 		}
 	}
 
-	fn syntax(&self) -> &SyntaxNode<Self::Language> {
+	fn syntax(&self) -> &SyntaxNode {
 		&self.0
 	}
 }
@@ -147,7 +147,7 @@ impl AstNode for Block {
 /// Wraps a node tagged [`Syn::DeclQualifiers`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct DeclQualifiers(SyntaxNode<Syn>);
+pub struct DeclQualifiers(SyntaxNode);
 
 impl DeclQualifiers {
 	#[must_use]
@@ -191,7 +191,7 @@ bitflags! {
 /// Wraps a node tagged [`Syn::FunctionDecl`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct FunctionDecl(SyntaxNode<Syn>);
+pub struct FunctionDecl(SyntaxNode);
 
 impl FunctionDecl {
 	/// The identifier given to this function, after the return type specifier.
@@ -206,14 +206,14 @@ impl FunctionDecl {
 		self.0.children().find_map(DeclQualifiers::cast)
 	}
 
-	pub fn return_types(&self) -> impl Iterator<Item = ExprType> {
+	pub fn return_types(&self) -> impl Iterator<Item = TypeRef> {
 		let rets = self
 			.0
 			.children()
 			.find(|node| node.kind() == Syn::ReturnTypes)
 			.unwrap();
 
-		rets.children().filter_map(ExprType::cast)
+		rets.children().filter_map(TypeRef::cast)
 	}
 
 	/// Built-in and native functions can only be declared, not defined,
@@ -246,7 +246,7 @@ impl AstNode for Item {
 		}
 	}
 
-	fn cast(node: SyntaxNode<Self::Language>) -> Option<Self>
+	fn cast(node: SyntaxNode) -> Option<Self>
 	where
 		Self: Sized,
 	{
@@ -256,7 +256,7 @@ impl AstNode for Item {
 		}
 	}
 
-	fn syntax(&self) -> &SyntaxNode<Self::Language> {
+	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::FunctionDecl(inner) => inner.syntax(),
 		}
@@ -266,7 +266,7 @@ impl AstNode for Item {
 /// Wraps a node tagged [`Syn::Label`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Label(SyntaxNode<Syn>);
+pub struct Label(SyntaxNode);
 
 simple_astnode!(Syn, Label, Syn::Label);
 
@@ -274,7 +274,7 @@ impl Label {
 	/// Shorthand for
 	/// `self.syntax().first_child_or_token().unwrap().into_token().unwrap()`.
 	#[must_use]
-	pub fn token(&self) -> SyntaxToken<Syn> {
+	pub fn token(&self) -> SyntaxToken {
 		self.0.first_child_or_token().unwrap().into_token().unwrap()
 	}
 }
@@ -282,7 +282,7 @@ impl Label {
 /// Wraps a node tagged [`Syn::Literal`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Literal(SyntaxNode<Syn>);
+pub struct Literal(SyntaxNode);
 
 simple_astnode!(Syn, Literal, Syn::Literal);
 
@@ -297,7 +297,7 @@ impl Literal {
 /// See [`Syn::Literal`]'s documentation to see possible token tags.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct LitToken(SyntaxToken<Syn>);
+pub struct LitToken(SyntaxToken);
 
 impl LitToken {
 	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
@@ -408,14 +408,14 @@ impl LitToken {
 	}
 
 	#[must_use]
-	pub fn syntax(&self) -> &SyntaxToken<Syn> {
+	pub fn syntax(&self) -> &SyntaxToken {
 		&self.0
 	}
 }
 
 /// Wraps a node tagged [`Syn::Name`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Name(SyntaxNode<Syn>);
+pub struct Name(SyntaxNode);
 
 simple_astnode!(Syn, Name, Syn::Name);
 
@@ -423,7 +423,7 @@ impl Name {
 	/// Shorthand for
 	/// `self.syntax().first_child_or_token().unwrap().into_token().unwrap()`.
 	#[must_use]
-	pub fn token(&self) -> SyntaxToken<Syn> {
+	pub fn token(&self) -> SyntaxToken {
 		self.0.first_child_or_token().unwrap().into_token().unwrap()
 	}
 }
@@ -431,13 +431,13 @@ impl Name {
 /// Wraps a [`Syn::Resolver`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Resolver(SyntaxNode<Syn>);
+pub struct Resolver(SyntaxNode);
 
 simple_astnode!(Syn, Resolver, Syn::Resolver);
 
 impl Resolver {
 	/// Every token returns is tagged [`Syn::Identifier`].
-	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken<Syn>> {
+	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0.children_with_tokens().filter_map(|n_or_t| {
 			if n_or_t.kind() == Syn::Ident {
 				n_or_t.into_token()
@@ -447,3 +447,10 @@ impl Resolver {
 		})
 	}
 }
+
+/// Wraps a [`Syn::TypeRef`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct TypeRef(SyntaxNode);
+
+simple_astnode!(Syn, TypeRef, Syn::TypeRef);

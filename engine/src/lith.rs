@@ -129,6 +129,7 @@ pub const MAX_PARAMS: usize = 16;
 pub const MAX_RETURNS: usize = 4;
 
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
+pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 pub type Token = doomfront::rowan::SyntaxToken<Syn>;
 pub type RawParseTree = doomfront::RawParseTree<Syn>;
 pub type ParseTree = doomfront::ParseTree<Syn>;
