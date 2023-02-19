@@ -92,6 +92,7 @@ pub struct ClientCore {
 	pub user: UserCore,
 	pub catalog: Arc<RwLock<Catalog>>,
 	pub project: Arc<RwLock<lith::Project>>,
+	pub runtime: Arc<RwLock<lith::Runtime>>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
 	pub input: InputCore,
@@ -154,6 +155,7 @@ impl ClientCore {
 			user,
 			catalog,
 			project: Arc::new(RwLock::new(lith::Project::new(catalog_lith))),
+			runtime: Arc::new(RwLock::new(lith::Runtime::default())),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
 			audio: AudioCore::new(catalog_audio, None)?,
@@ -627,8 +629,9 @@ impl ClientCore {
 		let (txout, rxout) = crossbeam::channel::unbounded();
 		let (txin, rxin) = crossbeam::channel::unbounded();
 
-		let sim = Arc::new(RwLock::new(PlaySim::default()));
 		let catalog = self.catalog.clone();
+		let runtime = self.runtime.clone();
+		let sim = Arc::new(PlaySim::new(catalog, runtime, txout, rxin));
 
 		self.console
 			.enable_commands(|ccmd| ccmd.flags.contains(ConsoleCommandFlags::SIM));
@@ -639,14 +642,7 @@ impl ClientCore {
 			receiver: rxout,
 			thread: std::thread::Builder::new()
 				.name("vile-playsim".to_string())
-				.spawn(move || {
-					vile::sim::run::<{ sim::Config::CLIENT.bits() }>(sim::Context {
-						sim,
-						catalog,
-						sender: txout,
-						receiver: rxin,
-					});
-				})
+				.spawn(move || vile::sim::run(sim))
 				.expect("Failed to spawn OS thread for playsim."),
 		}
 	}

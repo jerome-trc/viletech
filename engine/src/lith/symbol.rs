@@ -8,8 +8,8 @@ use fasthash::SeaHasher;
 pub trait Symbol: private::Sealed {}
 
 /// Thin wrapper around a hash generated from a symbol's fully-qualified name
-/// and the type ID of its corresponding Rust structure. Only exists for use as
-/// a key in a module's symbol map.
+/// and the type ID of its corresponding Rust structure (in that order)
+///  Only exists for use as a key in a module's symbol map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct SymbolKey(u64);

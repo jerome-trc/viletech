@@ -36,6 +36,7 @@ impl Instruction<OwningNode> {
 			}
 			Instruction::Pop => Instruction::Pop,
 			Instruction::Push(qw) => Instruction::Push(mapper(*qw)),
+			Instruction::Allocate(typeinfo) => Instruction::Allocate(typeinfo),
 			Instruction::Panic => Instruction::Panic,
 			Instruction::NoOp => Instruction::NoOp,
 		}

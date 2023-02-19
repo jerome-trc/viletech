@@ -4,6 +4,7 @@ use std::mem::MaybeUninit;
 
 use super::{
 	abi::{Abi, QWord},
+	heap::Heap,
 	inode,
 };
 
@@ -12,7 +13,9 @@ use super::{
 pub struct Runtime {
 	pub(super) iptr: InstPtr,
 	pub(super) stack: Stack,
+	pub(super) heap: Heap,
 	pub(super) icache: ICache,
+	// See lith::heap for memory management, GC methods
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -26,8 +29,8 @@ pub(super) enum InstPtr {
 
 #[derive(Debug)]
 pub(super) struct Stack {
-	buf: Box<[QWord]>,
-	top: *mut QWord,
+	pub(super) buf: Box<[QWord]>,
+	pub(super) top: *mut QWord,
 }
 
 impl Stack {
@@ -76,6 +79,10 @@ impl Default for Stack {
 		}
 	}
 }
+
+// SAFETY: Internal pointer is only mutated through exclusive references.
+unsafe impl Send for Stack {}
+unsafe impl Sync for Stack {}
 
 /// Gets filled with the results of instruction node evaluation.
 #[derive(Debug)]

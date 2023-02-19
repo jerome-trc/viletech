@@ -2,42 +2,56 @@
 
 use bitflags::bitflags;
 
-use super::{module::Handle, Symbol};
+use crate::lith::{abi::QWord, heap};
+
+use super::{
+	module::{Handle, InHandle},
+	Symbol,
+};
+
+/// No LithScript type is allowed to exceed this size in bytes.
+pub const MAX_SIZE: usize = 1024 * 2;
 
 /// Note that the type of a variable declared `let const x = 0` isn't separate
 /// from the `i32` primitive. For qualified types such as that, see [`QualifiedType`].
 #[derive(Debug)]
-pub struct ScriptType {
+pub struct TypeInfo {
 	kind: TypeKind,
 	/// See the documentation for the method of the same name.
 	layout: std::alloc::Layout,
+	heap_layout: std::alloc::Layout,
 }
 
-impl ScriptType {
+impl TypeInfo {
 	#[must_use]
 	pub fn kind(&self) -> &TypeKind {
 		&self.kind
 	}
 
-	/// This is meant to be agnostic to the allocation strategy used, so it's
-	/// only based on the 128-bit word array needed to hold the type's data.
-	/// Allocation generations, GC tricolors, et cetera are excluded.
 	#[must_use]
 	pub fn layout(&self) -> std::alloc::Layout {
 		self.layout
 	}
+
+	/// This includes the allocation's header; it is always 16-byte aligned and
+	/// always at least 16 bytes large, except for zero-size types.
+	#[must_use]
+	pub fn heap_layout(&self) -> std::alloc::Layout {
+		self.heap_layout
+	}
 }
 
-impl Symbol for ScriptType {}
+impl Symbol for TypeInfo {}
 
+#[derive(Debug)]
 pub struct QualifiedType {
-	inner: Handle<ScriptType>,
+	inner: Handle<TypeInfo>,
 	quals: TypeQualifiers,
 }
 
 impl QualifiedType {
 	#[must_use]
-	pub fn inner(&self) -> &Handle<ScriptType> {
+	pub fn inner(&self) -> &Handle<TypeInfo> {
 		&self.inner
 	}
 
@@ -63,13 +77,13 @@ pub enum TypeKind {
 	U32,
 	I64,
 	U64,
-	Type,
+	TypeInfo,
 	Array {
-		value: Handle<ScriptType>,
+		value: InHandle<TypeInfo>,
 		length: usize,
 	},
 	Class {
-		ancestor: Option<Handle<ScriptType>>,
+		ancestor: Option<InHandle<TypeInfo>>,
 		structure: StructDesc,
 		flags: ClassFlags,
 	},
@@ -79,10 +93,10 @@ pub enum TypeKind {
 	},
 	Bitfield {
 		/// Which integral type backs this bitfield?
-		underlying: Handle<ScriptType>,
+		underlying: InHandle<TypeInfo>,
 	},
-	Pointer(Handle<ScriptType>),
-	Reference(Handle<ScriptType>),
+	Pointer(InHandle<TypeInfo>),
+	Reference(InHandle<TypeInfo>),
 }
 
 #[derive(Debug)]
@@ -111,7 +125,7 @@ bitflags! {
 pub struct FieldDesc {
 	/// Human-readable.
 	name: String,
-	stype: Handle<ScriptType>,
+	tinfo: InHandle<TypeInfo>,
 	/// See the documentation for the method of the same name.
 	offset: usize,
 }
@@ -123,8 +137,8 @@ impl FieldDesc {
 	}
 
 	#[must_use]
-	pub fn stype(&self) -> &Handle<ScriptType> {
-		&self.stype
+	pub fn tinfo(&self) -> &InHandle<TypeInfo> {
+		&self.tinfo
 	}
 
 	/// In bytes, from the end of the allocation header.
@@ -172,4 +186,25 @@ impl BitDesc {
 	pub fn affects_all(&self, bits: u64) -> bool {
 		(self.bits & bits) == bits
 	}
+}
+
+/// For use when constructing the `lith` module.
+#[must_use]
+pub(super) fn builtins() -> Vec<(String, TypeInfo)> {
+	use std::alloc::Layout;
+
+	let qword_layout = Layout::new::<QWord>();
+	let qword_heap_layout = heap::layout_for(qword_layout);
+
+	vec![
+		(
+			"i32".to_string(),
+			TypeInfo {
+				kind: TypeKind::I32,
+				layout: qword_layout,
+				heap_layout: qword_heap_layout,
+			},
+		),
+		// TODO: ...everything else
+	]
 }

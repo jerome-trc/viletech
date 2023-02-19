@@ -9,6 +9,7 @@
 mod abi;
 pub mod ast;
 mod func;
+pub mod heap;
 mod inode;
 mod module;
 mod parse;

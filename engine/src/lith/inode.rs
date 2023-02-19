@@ -37,7 +37,7 @@ use crate::lith::InstPtr;
 
 use super::{
 	abi::{Abi, QWord},
-	Runtime, MAX_PARAMS,
+	Runtime, TypeInfo, MAX_PARAMS,
 };
 
 #[allow(unused)]
@@ -157,6 +157,8 @@ pub(super) struct INode<K: NodeKind> {
 
 #[derive(Debug)]
 pub(super) enum Instruction<K: NodeKind> {
+	/// Evaluation emits a pointer.
+	Allocate(K::HandleT<TypeInfo>),
 	/// Evaluation emits a single q-word result.
 	BinOp { l: K::Index, r: K::Index, op: BinOp },
 	/// Evaluation emits [`QWord::invalid`], regardless of the function's actual

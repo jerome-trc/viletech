@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 
-use crate::data::{asset, Handle, InHandle};
+use crate::data::{asset, InHandle};
 
 /// i.e., a difficulty setting.
 #[derive(Debug)]
@@ -62,21 +62,6 @@ bitflags! {
 		const ALLOW_RESPAWN = 1 << 11;
 		const AUTO_USE_HEALTH = 1 << 12;
 	}
-}
-
-#[derive(Debug)]
-pub struct DamageOverTime {
-	damage_type: Handle<asset::DamageType>,
-	/// Applied per tic.
-	damage: i32,
-	tics_remaining: u32,
-	/// Damage is applied every `interval` tics.
-	interval: u32,
-}
-
-#[derive(Debug)]
-pub struct Species {
-	// ???
 }
 
 #[derive(Debug)]

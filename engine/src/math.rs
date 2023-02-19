@@ -66,6 +66,14 @@ pub type IRect64 = Rect4<i64>;
 pub type FRect32 = Rect4<f32>;
 pub type FRect64 = Rect4<f64>;
 
+/// A strongly-typed angle in degrees of type `T`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Angle<T: Numeric>(T);
+
+pub type Angle32 = Angle<f32>;
+pub type Angle64 = Angle<f64>;
+
 #[repr(transparent)]
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Rotator32(Vec3A);

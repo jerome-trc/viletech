@@ -10,7 +10,6 @@ pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod data;
-pub mod ecs;
 #[allow(dead_code)]
 pub mod frontend;
 #[allow(dead_code)]

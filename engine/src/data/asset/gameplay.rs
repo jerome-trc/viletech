@@ -18,3 +18,10 @@ bitflags! {
 }
 
 impl Asset for DamageType {}
+
+#[derive(Debug)]
+pub struct Species {
+	// ???
+}
+
+impl Asset for Species {}

@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData, mem::MaybeUninit, sync::Arc};
 
-use crate::lith::abi::QWord;
+use crate::lith::{abi::QWord, Handle, Symbol};
 
 /// Points to an i-node. Used by other i-nodes and the
 /// [`Runtime`](crate::lith::Runtime)'s "instruction pointer".
@@ -12,6 +12,7 @@ pub(in crate::lith) struct Index(pub(super) usize);
 pub(in crate::lith) trait NodeKind {
 	type Index: Debug;
 	type ArcT<AT: 'static + Debug>: Debug;
+	type HandleT<HT: 'static + Symbol>: Debug;
 }
 
 #[derive(Debug)]
@@ -22,11 +23,13 @@ pub(in crate::lith) struct RefNode<'i>(PhantomData<&'i ()>);
 impl NodeKind for OwningNode {
 	type Index = Index;
 	type ArcT<AT: 'static + Debug> = Arc<AT>;
+	type HandleT<HT: 'static + Symbol> = Handle<HT>;
 }
 
 impl<'i> NodeKind for RefNode<'i> {
 	type Index = QWord;
 	type ArcT<AT: 'static + Debug> = &'i Arc<AT>;
+	type HandleT<HT: 'static + Symbol> = &'i Handle<HT>;
 }
 
 /// Ensures proper JIT code de-allocation.

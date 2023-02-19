@@ -23,7 +23,7 @@ use super::{
 	abi::Abi,
 	func::TFunc,
 	symbol::{Symbol, SymbolKey},
-	Error, Function,
+	tsys, Error, Function, TypeInfo,
 };
 
 #[derive(Debug, Clone)]
@@ -63,6 +63,26 @@ impl Module {
 			})
 		}
 	}
+
+	/// Returns the `lith` module.
+	#[must_use]
+	pub fn core() -> Self {
+		let mut ret = Builder::new("lith".to_string(), false).build();
+
+		for (name, typeinfo) in tsys::builtins() {
+			let key = SymbolKey::new::<TypeInfo>(&name);
+
+			ret.symbols.insert(
+				key,
+				Arc::new(SymStore {
+					name,
+					data: Box::new(typeinfo),
+				}),
+			);
+		}
+
+		ret
+	}
 }
 
 // SAFETY:
@@ -75,9 +95,6 @@ unsafe impl Sync for Module {}
 pub(super) struct SymStore {
 	pub(super) name: String,
 	pub(super) data: Box<dyn Symbol>,
-	/// Ensure the JIT-compiled code lives long enough.
-	#[allow(unused)]
-	module: Arc<JitModule>,
 }
 
 /// Thin wrapper around an [`Arc`] pointing to a [`Symbol`]'s storage. Attaching
@@ -88,6 +105,7 @@ pub(super) struct SymStore {
 pub struct Handle<S: Symbol>(Arc<SymStore>, PhantomData<S>);
 
 impl<S: Symbol> Handle<S> {
+	#[must_use]
 	pub fn name(&self) -> &str {
 		&self.0.name
 	}
@@ -107,7 +125,6 @@ impl Handle<Function> {
 						source: self.clone(),
 						phantom: PhantomData,
 					}),
-					module: self.0.module.clone(),
 				}),
 				PhantomData,
 			))
@@ -122,11 +139,9 @@ impl<S: 'static + Symbol> std::ops::Deref for Handle<S> {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
-		debug_assert!(self.0.data.as_any().is::<S>());
-		// SAFETY: the check for downcast validity was already performed during
-		// handle acquisition. This is the same implementation used by std's
-		// `downcast_ref_unchecked`; use that instead when it stabilizes
-		unsafe { &*(&self.0.data as *const dyn Any as *const S) }
+		// SAFETY: Type correctness was already validated during handle acquisition
+		// Q: `downcast_ref_unchecked` when it stabilizes?
+		unsafe { self.0.data.as_any().downcast_ref::<S>().unwrap_unchecked() }
 	}
 }
 
