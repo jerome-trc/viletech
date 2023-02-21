@@ -16,7 +16,6 @@ arrayvec = { version = "0.7.2", features = ["serde"] }
 ariadne = "0.1.5"
 bitflags = { workspace = true }
 bitvec = { workspace = true }
-bumpalo = "3.12.0"
 bytemuck = { workspace = true }
 byteorder = "1.4.3"
 chrono = { workspace = true }
@@ -58,6 +57,7 @@ itertools = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }
 md5 = "0.7.0"
+memoffset = { workspace = true }
 naga = "0.11.0"
 nanorand = { workspace = true }
 nodi = "0.19.2"

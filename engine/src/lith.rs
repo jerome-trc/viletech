@@ -123,10 +123,10 @@ impl std::fmt::Debug for Project {
 /// `_0_i_weighed_down_the_earth_through_the_stars_to_the_pavement_9_`
 pub const MAX_IDENT_LEN: usize = 64;
 
-/// In terms of values, not [quad-words](abi::QWord).
+/// In terms of values, not quad-words.
 pub const MAX_PARAMS: usize = 16;
 
-/// In terms of values, not [quad-words](abi::QWord).
+/// In terms of values, not quad-words.
 pub const MAX_RETURNS: usize = 4;
 
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;

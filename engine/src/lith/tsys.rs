@@ -1,5 +1,7 @@
 //! Symbols making up LithScript's type system.
 
+use std::any::TypeId;
+
 use bitflags::bitflags;
 
 use crate::lith::{abi::QWord, heap};
@@ -17,12 +19,18 @@ pub const MAX_SIZE: usize = 1024 * 2;
 #[derive(Debug)]
 pub struct TypeInfo {
 	kind: TypeKind,
+	native: Option<NativeInfo>,
 	/// See the documentation for the method of the same name.
 	layout: std::alloc::Layout,
+	/// See the documentation for the method of the same name.
 	heap_layout: std::alloc::Layout,
 }
 
 impl TypeInfo {
+	pub fn native(&self) -> &Option<NativeInfo> {
+		&self.native
+	}
+
 	#[must_use]
 	pub fn kind(&self) -> &TypeKind {
 		&self.kind
@@ -38,6 +46,24 @@ impl TypeInfo {
 	#[must_use]
 	pub fn heap_layout(&self) -> std::alloc::Layout {
 		self.heap_layout
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NativeInfo {
+	type_id: TypeId,
+	size: usize,
+	align: usize,
+}
+
+impl NativeInfo {
+	#[must_use]
+	fn new<T: Sized + 'static>() -> Self {
+		Self {
+			type_id: TypeId::of::<T>(),
+			size: std::mem::size_of::<T>(),
+			align: std::mem::align_of::<T>(),
+		}
 	}
 }
 
@@ -201,6 +227,7 @@ pub(super) fn builtins() -> Vec<(String, TypeInfo)> {
 			"i32".to_string(),
 			TypeInfo {
 				kind: TypeKind::I32,
+				native: Some(NativeInfo::new::<i32>()),
 				layout: qword_layout,
 				heap_layout: qword_heap_layout,
 			},

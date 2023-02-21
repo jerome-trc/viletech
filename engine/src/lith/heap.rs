@@ -27,7 +27,7 @@
 #[cfg(target_pointer_width = "32")]
 std::compile_error!("Lith's heap does not yet support 32-bit architectures.");
 
-use std::{alloc::Layout, collections::HashMap, ptr::NonNull};
+use std::{alloc::Layout, collections::HashMap, num::NonZeroUsize, ptr::NonNull};
 
 use bitvec::prelude::BitArray;
 
@@ -35,21 +35,20 @@ use super::{tsys, Handle, Runtime, TypeInfo};
 
 // Public //////////////////////////////////////////////////////////////////////
 
-/// Due to the needs of the JIT, this wraps a raw pointer rather than a [`NonNull`],
-/// and therefore is not eligible to benefit from the null-pointer optimization.
+/// Benefits from null-pointer optimization.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub(crate) struct Pointer(*mut RegionHeader);
+pub(crate) struct Pointer(NonNull<RegionHeader>);
 
 impl Pointer {
 	#[must_use]
 	pub(super) fn typeinfo(&self) -> &Handle<TypeInfo> {
-		unsafe { &(*self.0).tinfo }
+		unsafe { &self.0.as_ref().tinfo }
 	}
 
 	#[must_use]
 	fn chunk(&self) -> NonNull<ChunkHeader> {
-		let addr = (self.0 as usize) & 0x00000fffffffffff;
+		let addr = (self.0.as_ptr() as usize) & 0x00000fffffffffff;
 		NonNull::new(addr as *mut ChunkHeader).unwrap()
 	}
 
@@ -57,17 +56,17 @@ impl Pointer {
 	/// object which has been marked for forced destruction.
 	#[must_use]
 	fn get<T>(&self) -> *mut T {
-		let header = unsafe { &(*self.0) };
+		let header = unsafe { self.0.as_ref() };
 
 		if header.flags.contains(RegionFlags::DESTROYED) {
 			return std::ptr::null_mut();
 		}
 
-		self.0.cast::<T>()
+		self.0.as_ptr().cast::<T>()
 	}
 
 	fn write_barrier(&self) {
-		let header = unsafe { &(*self.0) };
+		let header = unsafe { self.0.as_ref() };
 
 		if header.flags.contains(RegionFlags::GRAY) {
 			return;
@@ -76,6 +75,13 @@ impl Pointer {
 		unimplemented!()
 	}
 }
+
+/// "Index pointer". Wraps a [`NonZeroUsize`] used to index into a specific
+/// native slice global to a [`Runtime`]. This is how scripts acquire handles to
+/// map geometry, ECS components, et cetera.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub(crate) struct IPointer(NonZeroUsize);
 
 #[derive(Debug)]
 pub(super) struct Heap {
@@ -121,14 +127,14 @@ impl Runtime {
 			tinfo.name(),
 		);
 
-		let ptr = self.alloc(layout).cast::<RegionHeader>().as_ptr();
+		let ptr = self.alloc(layout).cast::<RegionHeader>();
 
 		let header = RegionHeader {
 			flags: RegionFlags::GRAY,
 			tinfo,
 		};
 
-		std::ptr::write(ptr, header);
+		std::ptr::write(ptr.as_ptr(), header);
 
 		Pointer(ptr)
 	}

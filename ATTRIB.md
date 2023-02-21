@@ -24,10 +24,6 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
     - By Alexander Payne ([@myrrlyn](https://github.com/myrrlyn)) et al.
     - Provided under the [MIT License](https://github.com/ferrilab/bitvec/blob/main/LICENSE.txt).
     - https://docs.rs/bitvec/latest/bitvec/
-- bumpalo
-    - By Nick Fitzgerald ([@fitzgen](https://github.com/fitzgen)) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/fitzgen/bumpalo/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/fitzgen/bumpalo/blob/main/LICENSE-MIT).
-    - https://docs.rs/bumpalo/latest/bumpalo/
 - bytemuck
 	- By [@Lokathor](https://github.com/Lokathor) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-APACHE), [MIT License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-MIT), and [zlib License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-ZLIB).
@@ -134,6 +130,10 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By the [Stainless Steel](https://github.com/stainless-steel) organisation et al.
 	- [Apache 2.0 License and MIT License](https://github.com/stainless-steel/md5/blob/master/LICENSE.md).
 	- https://docs.rs/md5/latest/md5/
+- memoffset
+    - By Ralf Jung ([@RalfJung](https://github.com/RalfJung)), Gilad Naaman ([@Gilnaa](https://github.com/gilnaa)), et al.
+	- Provided under the [MIT License](https://github.com/Gilnaa/memoffset/blob/master/LICENSE).
+	- https://docs.rs/memoffset/latest/memoffset/
 - naga
 	- By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/naga/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/gfx-rs/naga/blob/master/LICENSE-MIT).
