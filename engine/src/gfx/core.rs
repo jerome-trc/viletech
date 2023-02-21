@@ -79,10 +79,9 @@ impl GraphicsCore {
 			}
 		};
 
-		#[cfg(not(debug_assertions))]
-		device.on_uncaptured_error(|err| {
-			log::error!("WGPU error: {}", err);
-		});
+		device.on_uncaptured_error(Box::new(|err| {
+			log::error!(target: "wgpu", "{err}");
+		}));
 
 		{
 			let adpinfo = adapter.get_info();
