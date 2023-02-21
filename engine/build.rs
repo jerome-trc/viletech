@@ -127,8 +127,8 @@ fn build_basedata() -> Result<(), Box<dyn Error>> {
 	let checksum = hasher.finalize();
 	let mut string = String::with_capacity(checksum.len());
 
-	for n in checksum {
-		string.push(n.into());
+	for byte in checksum {
+		string.push_str(&byte.to_string());
 	}
 
 	println!("cargo:rustc-env=BASEDATA_CHECKSUM={string}");

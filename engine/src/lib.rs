@@ -437,8 +437,8 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 	let checksum = hasher.finalize();
 	let mut string = String::with_capacity(checksum.len());
 
-	for n in checksum {
-		string.push(n.into());
+	for byte in checksum {
+		string.push_str(&byte.to_string());
 	}
 
 	#[cfg_attr(debug_assertions, allow(clippy::comparison_to_empty))]
