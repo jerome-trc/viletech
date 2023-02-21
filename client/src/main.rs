@@ -4,7 +4,7 @@ mod commands;
 #[allow(dead_code)]
 mod core;
 
-use std::{boxed::Box, env, error::Error};
+use std::{boxed::Box, env, error::Error, time::Instant};
 
 use clap::Parser;
 use indoc::printdoc;
@@ -13,6 +13,7 @@ use vile::{
 	console::Console,
 	data::{Catalog, CatalogExt},
 	gfx::{core::GraphicsCore, render},
+	utils::duration_to_hhmmss,
 };
 use winit::{
 	dpi::PhysicalSize,
@@ -23,7 +24,7 @@ use winit::{
 use crate::core::ClientCore;
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let start_time = std::time::Instant::now();
+	let start_time = Instant::now();
 	let args = Clap::parse();
 
 	if args.version {
@@ -211,7 +212,9 @@ conditions. See the license document that come with your installation."
 			info!("Application resumed...");
 		}
 		WinitEvent::LoopDestroyed => {
-			info!("{}", vile::uptime_string(core.start_time));
+			let uptime = core.start_time.elapsed();
+			let (hh, mm, ss) = duration_to_hhmmss(uptime);
+			info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 		}
 		_ => {}
 	});

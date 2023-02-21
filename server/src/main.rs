@@ -13,7 +13,7 @@ use std::{
 use clap::Parser;
 use indoc::printdoc;
 use log::{error, info};
-use vile::terminal::Terminal;
+use vile::{terminal::Terminal, utils::duration_to_hhmmss};
 
 use commands::{Command, Flags as CommandFlags, Request as CommandRequest};
 use renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerEvent};
@@ -25,6 +25,8 @@ pub fn version_string() -> String {
 }
 
 pub struct ServerCore {
+	/// RAT: In my experience, a runtime log is much more informative if it
+	/// states the duration for which the program executed.
 	start_time: Instant,
 	terminal: Terminal<Command>,
 }
@@ -295,7 +297,9 @@ conditions. See the license document that come with your installation."
 
 	match res {
 		Ok(()) => {
-			info!("{}", vile::uptime_string(start_time));
+			let uptime = core.start_time.elapsed();
+			let (hh, mm, ss) = duration_to_hhmmss(uptime);
+			info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 			Ok(())
 		}
 		Err(err) => Err(Box::new(err)),

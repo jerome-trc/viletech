@@ -1,7 +1,10 @@
 use std::env;
 
 use log::{error, info};
-use vile::terminal::{self, CommandArgs};
+use vile::{
+	terminal::{self, CommandArgs},
+	utils::duration_to_hhmmss,
+};
 
 use crate::ServerCore;
 
@@ -151,7 +154,9 @@ pub fn cmd_uptime(args: CommandArgs) -> Request {
 	}
 
 	req_callback(|core| {
-		info!("{}", vile::uptime_string(core.start_time));
+		let uptime = core.start_time.elapsed();
+		let (hh, mm, ss) = duration_to_hhmmss(uptime);
+		info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 	})
 }
 

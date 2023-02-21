@@ -86,7 +86,7 @@ enum SceneChange {
 }
 
 pub struct ClientCore {
-	/// (Rat) In my experience, a runtime log is much more informative if it
+	/// RAT: In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed.
 	pub start_time: Instant,
 	pub user: UserCore,
