@@ -1,6 +1,6 @@
 //! Home of all gameplay code.
 
-pub mod ecs;
+pub mod actor;
 pub mod level;
 
 use std::{
@@ -16,7 +16,7 @@ use crate::{data::Catalog, lith, player::Player, rng::RngCore};
 
 use self::level::Level;
 
-pub use ecs::ActorId;
+pub use actor::ActorId;
 
 #[derive(Debug)]
 pub struct PlaySim {
@@ -34,7 +34,7 @@ struct Context {
 
 #[derive(Debug, Default)]
 pub struct State {
-	pub players: Vec<Player>, // Q: Null player 0, for non-zero optimizations?
+	pub players: Vec<Player>,
 	pub rng: RngCore<WyRand>,
 	pub level: Level,
 	/// Time spent in this hub thus far.

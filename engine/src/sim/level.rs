@@ -1,4 +1,5 @@
-/// Level state for the playsim and renderer.
+//! Level state for the playsim and renderer.
+
 use crate::{
 	data::{asset, Handle},
 	sim,

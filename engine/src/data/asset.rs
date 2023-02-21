@@ -1,7 +1,7 @@
 //! "Asset" is the catch-all term for any data unit the catalog can store.
 
+mod actor;
 mod audio;
-mod gameplay;
 mod map;
 mod visual;
 
@@ -9,8 +9,8 @@ use std::{any::TypeId, marker::PhantomPinned, sync::Arc};
 
 use dashmap::mapref::one::RefMut as DashMapRefMut;
 
+pub use actor::*;
 pub use audio::*;
-pub use gameplay::*;
 pub use map::*;
 pub use visual::*;
 
