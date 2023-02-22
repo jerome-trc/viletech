@@ -141,7 +141,7 @@ pub enum Mount {
 	/// The given mount point wasn't valid UTF-8, had invalid characters, had a
 	/// component comprised only of `.` characters, or had a component with a
 	/// reserved name in it.
-	InvalidMountPoint(VPathBuf, &'static str),
+	InvalidMountPoint(VPathBuf, String),
 	/// Mount batch operations are atomic; if one fails, they all fail.
 	/// During a non-parallel mount, the first failure will have a specific error,
 	/// and results for all following requested mounts will be this, to avoid

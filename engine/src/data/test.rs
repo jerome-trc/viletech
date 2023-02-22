@@ -3,17 +3,17 @@ use std::path::PathBuf;
 use super::*;
 
 #[must_use]
-fn sample_paths() -> [(PathBuf, &'static str); 2] {
+fn request() -> LoadRequest<PathBuf, &'static str> {
 	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 		.join("..")
 		.join("sample");
 
-	let ret = [
+	let paths = vec![
 		(base.join("freedoom1.wad"), "freedoom1"),
 		(base.join("freedoom2.wad"), "/freedoom2"),
 	];
 
-	for (real_path, _) in &ret {
+	for (real_path, _) in &paths {
 		if !real_path.exists() {
 			panic!(
 				"VFS benchmarking depends on the following files of sample data:\r\n\t\
@@ -24,7 +24,10 @@ fn sample_paths() -> [(PathBuf, &'static str); 2] {
 		}
 	}
 
-	ret
+	LoadRequest {
+		paths,
+		tracker: None,
+	}
 }
 
 #[test]
@@ -37,7 +40,7 @@ fn vfs_path_hash() {
 #[test]
 fn load() {
 	let mut catalog = Catalog::default();
-	let results = catalog.load_simple(&sample_paths());
+	let results = catalog.load(request());
 
 	assert!(
 		results.len() == 2,
@@ -47,13 +50,13 @@ fn load() {
 
 	assert!(
 		results[0].is_ok(),
-		"Failed to mount `freedoom1.wad`: {res}",
+		"Failed to mount `freedoom1.wad`: {res:#?}",
 		res = results[0].as_ref().unwrap_err()
 	);
 
 	assert!(
 		results[1].is_ok(),
-		"Failed to mount `freedoom2.wad`: {res}",
+		"Failed to mount `freedoom2.wad`: {res:#?}",
 		res = results[1].as_ref().unwrap_err()
 	);
 
@@ -76,7 +79,7 @@ fn load() {
 #[test]
 fn vfs_lookup() {
 	let mut catalog = Catalog::default();
-	let _ = catalog.load_simple(&sample_paths());
+	let _ = catalog.load(request());
 
 	assert!(catalog.get_file("/").is_some(), "Root lookup failed.");
 	assert!(catalog.get_file("//").is_some(), "`//` lookup failed."); // Should return root
@@ -106,7 +109,7 @@ fn vfs_lookup() {
 #[test]
 fn vfs_dir_structure() {
 	let mut catalog = Catalog::default();
-	let _ = catalog.load_simple(&sample_paths());
+	let _ = catalog.load(request());
 
 	let root = catalog.get_file("/").unwrap();
 
@@ -143,7 +146,7 @@ fn vfs_dir_structure() {
 #[test]
 fn glob() {
 	let mut catalog = Catalog::default();
-	let _ = catalog.load_simple(&sample_paths());
+	let _ = catalog.load(request());
 	let glob = globset::Glob::new("/freedoom2/FCGRATE*").unwrap();
 	let count = catalog.get_files_glob_par(glob).count();
 	assert!(

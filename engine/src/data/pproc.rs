@@ -11,59 +11,83 @@ use parking_lot::RwLock;
 
 use crate::{lith, VPath, VPathBuf};
 
-use super::{Catalog, FileRef, LoadTracker, Mount, MountInfo, PostProcError};
+use super::{Catalog, FileRef, LoadTracker, Mount, MountInfo, MountKind, PostProcError};
 
 #[derive(Debug)]
 pub(super) struct Context {
-	pub(super) project: Arc<RwLock<lith::Project>>,
 	pub(super) tracker: Arc<LoadTracker>,
 	// To enable atomicity, remember where `self.files` and `self.mounts` were.
-	// Truncate back to them upon a failure
+	// Truncate back to them upon a failure.
 	pub(super) orig_files_len: usize,
 	pub(super) orig_mounts_len: usize,
 }
 
 #[derive(Debug)]
+#[must_use]
 pub(super) struct Output {
 	/// One per mount.
-	pub(super) results: Vec<Result<(), PostProcError>>,
+	pub(super) results: Vec<Result<(), Vec<PostProcError>>>,
 }
 
 impl Catalog {
 	/// Preconditions:
 	/// - `self.files` has been populated. All directories know their contents.
 	/// - `self.mounts` has been populated.
-	#[must_use]
 	pub(super) fn postproc(&mut self, ctx: Context) -> Output {
-		let mut outcomes = Vec::with_capacity(self.mounts.len());
-		outcomes.resize_with(self.mounts.len(), || Outcome::Uninit);
+		let mut results = vec![];
+
+		// Pass 1: compile Lith; transpile EDF and (G)ZDoom DSLs.
 
 		for i in 0..self.mounts.len() {
-			let outcome = match &self.mounts[i].info.kind {
-				super::MountKind::VileTech => self.postproc_vile_pkg(i, &ctx),
-				super::MountKind::ZDoom => todo!(),
-				super::MountKind::Eternity => todo!(),
-				super::MountKind::Wad => todo!(),
-				super::MountKind::Misc => todo!(),
+			let module = match &self.mounts[i].info.kind {
+				MountKind::VileTech => self.pproc_pass1_vpk(i, &ctx),
+				MountKind::ZDoom => self.pproc_pass1_pk(i, &ctx),
+				MountKind::Eternity => todo!(),
+				MountKind::Wad => self.pproc_pass1_wad(i, &ctx),
+				MountKind::Misc => self.pproc_pass1_file(i, &ctx),
 			};
+
+			match module {
+				Ok(m) => {
+					self.mounts[i].lith = m;
+					results.push(Ok(()));
+				}
+				Err(errs) => {
+					results.push(Err(errs));
+					continue;
+				}
+			}
 		}
 
-		unimplemented!("Soon!")
+		// Pass 2: load images, sounds, music, maps.
+		// ...soon!
+
+		Output { results }
 	}
 
-	fn postproc_vile_pkg(&mut self, mount: usize, ctx: &Context) -> Outcome {
+	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
+	/// DSLs all go into the same Lith module, regardless of which are present
+	/// and which are absent.
+	fn pproc_pass1_vpk(
+		&self,
+		mount: usize,
+		ctx: &Context,
+	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+		let ret = None;
 		let mntinfo = &self.mounts[mount].info;
 
-		let script_root = if let Some(srp) = &mntinfo.script_root {
-			srp
+		let script_root: VPathBuf = if let Some(srp) = &mntinfo.script_root {
+			[mntinfo.virtual_path(), srp].iter().collect()
 		} else {
-			return self.postproc_zdoom_pkg(mount, ctx);
+			todo!()
 		};
 
-		let script_root = match self.get_file(script_root) {
+		let script_root = match self.get_file(&script_root) {
 			Some(fref) => fref,
 			None => {
-				return Outcome::Err(PostProcError::MissingScriptRoot(script_root.to_path_buf()))
+				return Err(vec![PostProcError::MissingScriptRoot(
+					script_root.to_path_buf(),
+				)]);
 			}
 		};
 
@@ -73,21 +97,59 @@ impl Catalog {
 			unimplemented!("Soon");
 		}
 
-		if inctree.tree.is_none() {
-			return self.postproc_zdoom_pkg(mount, ctx);
+		Ok(ret)
+	}
+
+	fn pproc_pass1_file(
+		&self,
+		mount: usize,
+		ctx: &Context,
+	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+		let ret = None;
+
+		let file = self
+			.get_file(self.mounts[mount].info.virtual_path())
+			.unwrap();
+
+		// Pass 1 only deals in text files.
+		if !file.is_text() {
+			return Ok(None);
 		}
 
-		Outcome::Ok {}
+		if file
+			.path_extension()
+			.filter(|p_ext| p_ext.eq_ignore_ascii_case("lith"))
+			.is_some()
+		{
+			unimplemented!();
+		} else if file.file_stem().eq_ignore_ascii_case("decorate") {
+			unimplemented!();
+		} else if file.file_stem().eq_ignore_ascii_case("zscript") {
+			unimplemented!();
+		} else if file.file_stem().eq_ignore_ascii_case("edfroot") {
+			unimplemented!();
+		}
+
+		Ok(ret)
 	}
 
-	fn postproc_zdoom_pkg(&mut self, mount: usize, ctx: &Context) -> Outcome {
-		Outcome::Ok {}
-	}
-}
+	fn pproc_pass1_pk(
+		&self,
+		mount: usize,
+		ctx: &Context,
+	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+		let ret = None;
 
-#[derive(Debug)]
-enum Outcome {
-	Uninit,
-	Err(PostProcError),
-	Ok {},
+		Ok(ret)
+	}
+
+	fn pproc_pass1_wad(
+		&self,
+		mount: usize,
+		ctx: &Context,
+	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+		let ret = None;
+
+		Ok(ret)
+	}
 }

@@ -11,7 +11,7 @@ The Doom source code (c) 1997 id Software LLC, the Raven Software Corporation, e
 The original Doom source code was released by id Software LLC under the GPL v2. Usage of this source, as well as usage of the derivative source of GZDoom and ZDoom-family source ports, is covered by the terms of the GNU General Public License Version 3; further information is [here](/LICENSE-GPL3) or at
 https://www.gnu.org/licenses/quick-guide-gplv3.en.html. As per those terms, the VileTech Engine, VileTech Client, and VileTech Dedicated Server are all provided under the same license.
 
-All script code found in `/data` and distributed in `viletech.zip` is provided under the GNU General Public License Version 3.
+All script code found in `/data` and distributed in `viletech.vpk3` is provided under the GNU General Public License Version 3.
 
 Some VileTech source is derived from GZDoom-original source - i.e., that which is not derived from the Doom source - and is used under the terms of a [sic] "BSD-like lincese". See https://github.com/ZDoom/gzdoom/tree/master/docs/licenses for details.
 

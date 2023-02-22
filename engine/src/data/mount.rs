@@ -68,10 +68,9 @@ impl Catalog {
 		let orig_files_len = self.files.len();
 		let orig_mounts_len = self.mounts.len();
 
-		let mut results = Vec::with_capacity(mount_reqs.len());
-		results.resize_with(mount_reqs.len(), || Outcome::Uninit);
-
-		let results = Mutex::new(results);
+		let mut outcomes = Vec::with_capacity(mount_reqs.len());
+		outcomes.resize_with(mount_reqs.len(), || Outcome::Uninit);
+		let outcomes = Mutex::new(outcomes);
 
 		let reqs: Vec<(usize, &Path, &VPath)> = mount_reqs
 			.iter()
@@ -88,7 +87,7 @@ impl Catalog {
 				match self.validate_mount_request(real_path.as_ref(), mount_path.as_ref()) {
 					Ok(paths) => paths,
 					Err(err) => {
-						results.lock()[index] = Outcome::Err(err);
+						outcomes.lock()[index] = Outcome::Err(err);
 						return;
 					}
 				};
@@ -103,7 +102,7 @@ impl Catalog {
 				.iter()
 				.any(|(_, _, mpath)| mount_point.is_child_of(mpath))
 			{
-				results.lock()[index] = Outcome::Err(MountError::Remount);
+				outcomes.lock()[index] = Outcome::Err(MountError::Remount);
 				return;
 			}
 
@@ -114,14 +113,14 @@ impl Catalog {
 						.fetch_add(metadata.len(), atomic::Ordering::SeqCst);
 				}
 				Err(err) => {
-					results.lock()[index] = Outcome::Err(MountError::Metadata(err));
+					outcomes.lock()[index] = Outcome::Err(MountError::Metadata(err));
 					return;
 				}
 			};
 
 			match self.mount_real_unknown(&ctx, &real_path, &mount_point) {
 				Ok((new_files, format)) => {
-					results.lock()[index] = Outcome::Ok {
+					outcomes.lock()[index] = Outcome::Ok {
 						format,
 						new_files,
 						real_path,
@@ -129,19 +128,19 @@ impl Catalog {
 					};
 				}
 				Err(err) => {
-					results.lock()[index] = Outcome::Err(err);
+					outcomes.lock()[index] = Outcome::Err(err);
 				}
 			}
 		});
 
-		let results = results.into_inner();
-		let failed = results.iter().any(|outp| matches!(outp, Outcome::Err(_)));
+		let outcomes = outcomes.into_inner();
+		let failed = outcomes.iter().any(|outp| matches!(outp, Outcome::Err(_)));
 		let mut mounts = Vec::with_capacity(mount_reqs.len());
 
 		// Push new entries into `self.files` if `!failed`
 		// Don't push mounts to `self.mounts` yet; we need to fully populate the
 		// file tree so we have the context needed to resolve more metadata
-		let results: Vec<Result<(), MountError>> = results
+		let results: Vec<Result<(), MountError>> = outcomes
 			.into_iter()
 			.map(|outp| match outp {
 				Outcome::Uninit => {
@@ -216,10 +215,10 @@ impl Catalog {
 			return ret;
 		}
 
-		// Tell directories about their children
+		// Tell directories about their children.
 		self.populate_dirs();
 
-		// Register mounts; learn as much about them as possible in the process
+		// Register mounts; learn as much about them as possible in the process.
 
 		for mut mount in mounts {
 			mount.info.kind =
@@ -379,7 +378,7 @@ impl Catalog {
 			// to discern), then in all likelihood the previous WAD entry was a
 			// map marker, and needs to be treated like a directory. Future WAD
 			// entries until the next map marker or non-map component will be made
-			// children of that folder
+			// children of that folder.
 			if ret[index - 1].is_empty()
 				&& (is_map_component(&name) || name.eq_ignore_ascii_case("TEXTMAP"))
 			{
@@ -391,7 +390,7 @@ impl Catalog {
 				mapfold = None;
 			}
 
-			let child_path = if let Some(entry_idx) = mapfold {
+			let mut child_path = if let Some(entry_idx) = mapfold {
 				// virt_path currently: `/mount_point`
 				let mut cpath = virt_path.join(ret[entry_idx].file_name());
 				// cpath currently: `/mount_point/MAP01`
@@ -403,16 +402,40 @@ impl Catalog {
 			};
 
 			// What if a WAD contains two entries with the same name?
-			// (e.g. DOOM2.WAD has two identical `SW18_7` entries)
-			// In this case, the last entry clobbers the previous ones
+			// For example, DOOM2.WAD has two identical `SW18_7` entries, and
+			// Angelic Aviary 1.0 has several `DECORATE` lumps.
+			// Roll them together into virtual directories. The end result is:
+			// - /DECORATE
+			// -	/000
+			// - 	/001
+			// - 	/002
+			// ...and so on.
 
 			if let Some(pos) = ret
 				.iter()
 				.position(|e| e.path.as_ref() == <VPathBuf as AsRef<VPath>>::as_ref(&child_path))
 			{
-				info!("Overwriting WAD entry: {}", ret[pos].path_str());
-				ret.remove(pos);
-				index -= 1;
+				if !ret[pos].is_dir() {
+					ret.insert(pos, Self::new_dir(ret[pos].path.to_path_buf()));
+
+					let prev_path = std::mem::replace(
+						&mut ret[pos + 1].path,
+						VPathBuf::default().into_boxed_path(),
+					);
+
+					let mut prev_path = VPathBuf::from(prev_path);
+					prev_path.push("000");
+
+					ret[pos + 1].path = prev_path.into_boxed_path();
+					child_path.push("001");
+				} else {
+					let num_children = ret
+						.iter()
+						.filter(|vf| vf.parent_path().unwrap() == child_path)
+						.count();
+
+					child_path.push(format!("{num_children:03}"));
+				}
 			}
 
 			if let Some(leaf) = self.new_leaf_file(child_path, bytes) {
@@ -436,7 +459,7 @@ impl Catalog {
 		let mut ret = Vec::with_capacity(zip.len() + 1);
 		ret.push(Self::new_dir(virt_path.to_path_buf()));
 
-		// First pass creates a directory structure
+		// First pass creates a directory structure.
 
 		for i in 0..zip.len() {
 			let zfile = match zip.by_index(i) {
@@ -473,7 +496,7 @@ impl Catalog {
 			ret.push(Self::new_dir(zdir_virt_path));
 		}
 
-		// Second pass covers leaf nodes
+		// Second pass covers leaf nodes.
 
 		for i in 0..zip.len() {
 			let mut zfile = match zip.by_index(i) {
@@ -639,7 +662,7 @@ impl Catalog {
 
 		self.mount_path_valid(mount_path)?;
 
-		// Ensure mount point path has a parent path
+		// Ensure mount point path has a parent path.
 
 		let mount_point_parent = match mount_path.parent() {
 			Some(p) => p,
@@ -648,13 +671,13 @@ impl Catalog {
 			}
 		};
 
-		// Ensure nothing already exists at end of mount point
+		// Ensure nothing already exists at end of mount point.
 
 		if self.file_exists(mount_path) {
 			return Err(MountError::Remount);
 		}
 
-		// Ensure mount point parent exists
+		// Ensure mount point parent exists.
 
 		if !self.file_exists(mount_point_parent) {
 			return Err(MountError::MountParentNotFound(
@@ -662,7 +685,7 @@ impl Catalog {
 			));
 		}
 
-		// All checks passed
+		// All checks passed.
 
 		let mut mount_point = VPathBuf::new();
 
@@ -691,25 +714,15 @@ impl Catalog {
 			None => {
 				return Err(MountError::InvalidMountPoint(
 					path.to_path_buf(),
-					"Path is not valid UTF-8.",
+					"Path is not valid UTF-8.".to_string(),
 				));
 			}
 		};
 
-		if string.contains(|c: char| {
-			!(c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '/' || c == '.')
-		}) {
-			return Err(MountError::InvalidMountPoint(
-				path.to_path_buf(),
-				"Path contains a character that isn't an ASCII letter/number, \
-				underscore, dash, period, or forward slash.",
-			));
-		}
-
 		if string.starts_with('.') {
 			return Err(MountError::InvalidMountPoint(
 				path.to_path_buf(),
-				"Path contains a component containing only `.` characters.",
+				"Path contains a component containing only `.` characters.".to_string(),
 			));
 		}
 
@@ -722,7 +735,16 @@ impl Catalog {
 			return Ok(());
 		}
 
-		const RESERVED: &[&str] = &["vile", "viletec", "viletech", "lith", "lithscript"];
+		const RESERVED: &[&str] = &[
+			"vile",
+			"viletec",
+			"vt",
+			"vtec",
+			"vtech",
+			"viletech",
+			"lith",
+			"lithscript",
+		];
 
 		for comp in path.components() {
 			match comp {
@@ -733,13 +755,13 @@ impl Catalog {
 				std::path::Component::CurDir => {
 					return Err(MountError::InvalidMountPoint(
 						path.to_path_buf(),
-						"Path contains an illegal `.` component.",
+						"Path contains an illegal `.` component.".to_string(),
 					));
 				}
 				std::path::Component::ParentDir => {
 					return Err(MountError::InvalidMountPoint(
 						path.to_path_buf(),
-						"Path contains an illegal `..` component.",
+						"Path contains an illegal `..` component.".to_string(),
 					))
 				}
 				std::path::Component::Normal(os_str) => {
@@ -749,7 +771,7 @@ impl Catalog {
 						if s.contains(reserved) {
 							return Err(MountError::InvalidMountPoint(
 								path.to_path_buf(),
-								"Path contains a component that's engine-reserved.",
+								"Path contains a component that's engine-reserved.".to_string(),
 							));
 						}
 					}
@@ -803,7 +825,7 @@ impl Catalog {
 			return MountKind::Misc;
 		}
 
-		// Heuristics have a precedence hierarchy, so use multiple passes
+		// Heuristics have a precedence hierarchy, so use multiple passes.
 
 		if fref
 			.children()
@@ -870,7 +892,7 @@ impl Catalog {
 			return;
 		}
 
-		// Try to infer the mount's version based on the mount point
+		// Try to infer the mount's version based on the mount point.
 
 		let mut id = info.id.clone();
 

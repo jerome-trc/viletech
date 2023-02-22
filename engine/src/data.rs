@@ -18,7 +18,7 @@ use indexmap::IndexMap;
 use rayon::prelude::*;
 use regex::Regex;
 
-use crate::{utils::path::PathExt, ShortId, VPath, VPathBuf};
+use crate::{utils::path::PathExt, EditorNum, ShortId, SpawnNum, VPath, VPathBuf};
 
 pub use asset::*;
 pub use error::{
@@ -47,7 +47,7 @@ use self::detail::{AssetKey, Config, VfsKey};
 ///
 /// Some miscellaneous notes on semantics:
 /// - It's impossible to mount a file that's nested within an archive. If
-/// `mymod.zip` contains `myothermod.zip`, there's no way to register `myothermod`
+/// `mymod.zip` contains `myothermod.vpk7`, there's no way to register `myothermod`
 /// as a mount in the official sense. It's just a part of `mymod`'s file tree.
 /// - If, for example, a zip file is mounted, and within that zip is a WAD, the
 /// WAD is not considered a "mount" like the zip.
@@ -86,17 +86,17 @@ impl Catalog {
 	pub fn load<RP: AsRef<Path>, MP: AsRef<VPath>>(
 		&mut self,
 		request: LoadRequest<RP, MP>,
-	) -> Vec<Result<(), LoadError>> {
+	) -> Vec<Result<(), Vec<LoadError>>> {
 		let ctx = mount::Context {
 			// Build a dummy tracker if none was given to avoid branching later
-			// and simplify the rest of the loading code
+			// and simplify the rest of the loading code.
 			tracker: request
 				.tracker
 				.unwrap_or_else(|| Arc::new(LoadTracker::default())),
 		};
 
-		// Note to reader: check ./mount.rs
-		let output = self.mount(request.paths, ctx);
+		// Note to reader: check `./mount.rs`.
+		let output = self.mount(&request.paths, ctx);
 
 		if output.any_errs() {
 			return output
@@ -104,13 +104,12 @@ impl Catalog {
 				.into_iter()
 				.map(|res| match res {
 					Ok(()) => Ok(()),
-					Err(err) => Err(LoadError::Mount(err)),
+					Err(err) => Err(vec![LoadError::Mount(err)]),
 				})
 				.collect();
 		}
 
 		let ctx = pproc::Context {
-			project: request.project,
 			tracker: output.tracker,
 			orig_files_len: output.orig_files_len,
 			orig_mounts_len: output.orig_mounts_len,
@@ -123,28 +122,9 @@ impl Catalog {
 			.into_iter()
 			.map(|res| match res {
 				Ok(()) => Ok(()),
-				Err(err) => Err(LoadError::PostProc(err)),
+				Err(errs) => Err(errs.into_iter().map(LoadError::PostProc).collect()),
 			})
 			.collect()
-	}
-
-	/// Like [`Self::load`], but performs no file culling, asset loading, or LithScript
-	/// compilation. Used for preparing the engine's base data, and for testing.
-	///
-	/// See the aforementioned function's docs; most of the same caveats apply.
-	/// Additionally, see [`LoadRequest`] to better understand the `mounts` parameter.
-	pub fn load_simple(
-		&mut self,
-		mounts: &[(impl AsRef<Path>, impl AsRef<Path>)],
-	) -> Vec<Result<(), MountError>> {
-		let ctx = mount::Context {
-			// Build a dummy tracker if none was given to avoid branching later
-			// and simplify the rest of the loading code
-			tracker: Arc::new(LoadTracker::default()),
-		};
-
-		// Note to reader: check ./mount.rs
-		self.mount(mounts, ctx).results
 	}
 
 	/// Keep the first `len` mounts. Remove the rest, along their files.
@@ -176,7 +156,7 @@ impl Catalog {
 		})
 	}
 
-	/// Note that `T` here is a filter on the type that comes out of the lookup,
+	/// Note that `A` here is a filter on the type that comes out of the lookup,
 	/// rather than an assertion that the asset under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
@@ -185,14 +165,63 @@ impl Catalog {
 
 		self.mounts
 			.par_iter()
-			.find_map_any(|mount| mount.assets.get(&key))
-			.map(|kvp| kvp.value().clone())
+			.find_map_last(|mount| mount.assets.get(&key))
+			.cloned()
+	}
+
+	/// Find an [`Actor`] [`Blueprint`] by a 16-bit editor number.
+	/// The last blueprint assigned the given number is what gets returned.
+	///
+	/// [`Actor`]: crate::sim::actor::Actor
+	#[must_use]
+	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<Handle<Blueprint>> {
+		self.mounts
+			.par_iter()
+			.find_map_last(|mount| mount.editor_numbers.get(&num))
+			.map(|opt| {
+				Handle::from(
+					opt.upgrade()
+						.expect("Catalog GC missed a weak record pointer."),
+				)
+			})
+	}
+
+	/// Find an [`Actor`] [`Blueprint`] by a 16-bit spawn number.
+	/// The last blueprint assigned the given number is what gets returned.
+	///
+	/// [`Actor`]: crate::sim::actor::Actor
+	#[must_use]
+	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<Handle<Blueprint>> {
+		self.mounts
+			.par_iter()
+			.find_map_last(|mount| mount.spawn_numbers.get(&num))
+			.map(|opt| {
+				Handle::from(
+					opt.upgrade()
+						.expect("Catalog GC missed a weak record pointer."),
+				)
+			})
+	}
+
+	/// If `id` starts with a `$` character, find the last-loaded locale string
+	/// stored under that ID and return a wrapper to a cloned [`Arc`] to it.
+	/// If it can not be found, or `id` does not begin with a `$`,
+	/// return a new pointer to a clone of `id`.
+	#[must_use]
+	pub fn localize(&self, id: &str) -> InString {
+		if id.starts_with('$') {
+			self.mounts
+				.par_iter()
+				.find_map_last(|mount| mount.strings.get(id).cloned())
+				.unwrap_or(InString::from(id))
+		} else {
+			InString::from(id)
+		}
 	}
 
 	#[must_use]
 	pub fn file_exists(&self, path: impl AsRef<VPath>) -> bool {
-		let key = VfsKey::new(path);
-		self.files.contains_key(&key)
+		self.files.contains_key(&VfsKey::new(path))
 	}
 
 	pub fn all_files(&self) -> impl Iterator<Item = FileRef> {
@@ -260,9 +289,8 @@ impl Catalog {
 		self.mounts
 			.par_iter()
 			.find_map_last(|mount| mount.shortid_map.get(&shortid))
-			.map(|kvp| {
-				kvp.value()
-					.upgrade()
+			.map(|weak| {
+				weak.upgrade()
 					.expect("A dangling short-ID weak pointer wasn't garbage-collected.")
 			})
 	}
@@ -272,7 +300,7 @@ impl Catalog {
 	/// Returns [`AssetError::NotFound`] if no records of a matching ID and type
 	/// are found; returns `Ok(None)` if the record has one or more [`Handle`]s
 	/// pointing to it.
-	pub fn try_mutate<A: Asset>(&mut self, id: &str) -> Result<asset::RefMut, AssetError> {
+	pub fn try_mutate<A: Asset>(&mut self, id: &str) -> Result<&mut Arc<Record>, AssetError> {
 		let key = AssetKey::new::<A>(id);
 
 		match self
@@ -281,12 +309,12 @@ impl Catalog {
 			.find_map_last(|ns| ns.assets.get_mut(&key))
 		{
 			Some(entry) => {
-				let strong_count = Arc::strong_count(entry.value());
+				let strong_count = Arc::strong_count(entry);
 
 				if strong_count > 1 {
 					Err(AssetError::Immutable(strong_count - 1))
 				} else {
-					Ok(asset::RefMut(entry))
+					Ok(entry)
 				}
 			}
 			None => Err(AssetError::NotFound(id.to_string())),
@@ -318,13 +346,18 @@ impl Catalog {
 			.fold(|| 0_usize, |acc, file| acc + file.byte_len())
 			.sum()
 	}
+
+	/// Draw the egui-based developer/debug/diagnosis menu.
+	pub fn ui(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_impl(ctx, ui);
+	}
 }
 
 impl Default for Catalog {
 	fn default() -> Self {
 		let root = VirtualFile {
 			path: VPathBuf::from("/").into_boxed_path(),
-			kind: VirtFileKind::Directory(Vec::default()),
+			kind: VirtFileKind::Directory(vec![]),
 		};
 
 		let key = VfsKey::new(&root.path);
@@ -337,6 +370,6 @@ impl Default for Catalog {
 	}
 }
 
-// [Rat] If you're reading this, congratulations! You've found something special.
+// RAT: If you're reading this, congratulations! You've found something special.
 // This module sub-tree is, historically speaking, the most tortured code in VileTech.
 // The Git history doesn't even reflect half of the reworks the VFS has undergone.

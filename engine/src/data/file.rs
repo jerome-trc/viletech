@@ -11,7 +11,6 @@ pub struct VirtualFile {
 	/// Guaranteed to contain only valid UTF-8 and start with a root separator.
 	pub path: Box<VPath>,
 	pub(super) kind: VirtFileKind,
-	// Q: Could this safely and painlessly be made into a DST?
 }
 
 #[derive(Debug)]
@@ -28,7 +27,8 @@ pub(super) enum VirtFileKind {
 }
 
 impl VirtualFile {
-	/// See [`std::path::Path::file_name`].
+	/// See [`std::path::Path::file_name`]. Returns a string slice instead of an
+	/// OS string slice since mounted paths are pre-sanitized.
 	#[must_use]
 	pub fn file_name(&self) -> &str {
 		if self.path.is_root() {
@@ -42,7 +42,8 @@ impl VirtualFile {
 			.expect("A VFS path wasn't sanitised (UTF-8).")
 	}
 
-	/// See [`std::path::Path::file_stem`].
+	/// See [`std::path::Path::file_stem`]. Returns a string slice instead of an
+	/// OS string slice since mounted paths are pre-sanitized.
 	#[must_use]
 	pub fn file_stem(&self) -> &str {
 		if self.path.is_root() {
@@ -73,7 +74,7 @@ impl VirtualFile {
 
 	/// See [`std::path::Path::extension`].
 	#[must_use]
-	pub fn extension(&self) -> Option<&str> {
+	pub fn path_extension(&self) -> Option<&str> {
 		self.path.extension().map(|os_str| {
 			os_str
 				.to_str()
@@ -165,7 +166,7 @@ impl VirtualFile {
 		}
 	}
 
-	/// Returns 0 for directory and empty files.
+	/// Returns 0 for directories and empty files.
 	#[must_use]
 	pub(super) fn byte_len(&self) -> usize {
 		match &self.kind {

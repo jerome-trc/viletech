@@ -20,14 +20,7 @@ mod syn;
 mod test;
 mod tsys;
 
-use std::{any::TypeId, collections::HashMap, sync::Arc};
-
-use parking_lot::RwLock;
-
-use crate::{
-	data::{self, Catalog},
-	VPath, VPathBuf,
-};
+use std::any::TypeId;
 
 pub use self::{
 	func::{Flags as FunctionFlags, Function},
@@ -39,82 +32,6 @@ pub use self::{
 	syn::Syn,
 	tsys::*,
 };
-
-/// Create one and store it permanently in your application's state.
-/// Call [`clear`](Self::clear) if you need to perform a recompilation.
-pub struct Project {
-	catalog: Arc<RwLock<Catalog>>,
-	sources: HashMap<VPathBuf, ariadne::Source>,
-	modules: HashMap<String, Module>,
-}
-
-impl Project {
-	#[must_use]
-	pub fn new(catalog: Arc<RwLock<Catalog>>) -> Self {
-		Self {
-			catalog,
-			sources: HashMap::default(),
-			modules: HashMap::default(),
-		}
-	}
-
-	#[must_use]
-	pub fn is_empty(&self) -> bool {
-		self.sources.is_empty() && self.modules.is_empty()
-	}
-
-	pub fn clear(&mut self) {
-		self.sources.clear();
-		self.modules.clear();
-	}
-}
-
-impl ariadne::Cache<VPath> for Project {
-	fn fetch(&mut self, id: &VPath) -> Result<&ariadne::Source, Box<dyn std::fmt::Debug + '_>> {
-		use ariadne::Source;
-
-		if !self.sources.contains_key(id) {
-			let catalog = self.catalog.read();
-
-			let file = if let Some(f) = catalog.get_file(id) {
-				f
-			} else {
-				return Err(Box::new(data::VfsError::NotFound(id.to_path_buf())));
-			};
-
-			let text = match file.try_read_str() {
-				Ok(t) => t,
-				Err(err) => {
-					return Err(Box::new(err));
-				}
-			};
-
-			let entry = self
-				.sources
-				.entry(id.to_path_buf())
-				.or_insert_with(|| Source::from(text));
-
-			Ok(entry)
-		} else {
-			// The weakness of `HashMap`'s API forces us to run the lookup again
-			// to satisfy the borrow checker...[Rat] and it mildly annoys me
-			Ok(&self.sources[id])
-		}
-	}
-
-	fn display<'a>(&self, id: &'a VPath) -> Option<Box<dyn std::fmt::Display + 'a>> {
-		Some(Box::new(id.display()))
-	}
-}
-
-impl std::fmt::Debug for Project {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Project")
-			.field("catalog", &self.catalog)
-			.field("modules", &self.modules)
-			.finish()
-	}
-}
 
 /// No LithScript identifier in human-readable form may exceed this byte length.
 /// Mind that Lith only allows ASCII alphanumerics and underscores for identifiers,

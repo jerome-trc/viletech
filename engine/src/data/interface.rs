@@ -1,7 +1,8 @@
 //! Assorted parts of the public API, in a separate file for cleanliness.
 
 use std::{
-	any::Any,
+	any::TypeId,
+	collections::HashMap,
 	marker::PhantomData,
 	path::Path,
 	sync::{
@@ -10,8 +11,7 @@ use std::{
 	},
 };
 
-use dashmap::DashMap;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockReadGuard};
 
 use crate::{lith, EditorNum, ShortId, SpawnNum, VPath};
 
@@ -19,6 +19,34 @@ use super::{
 	detail::{AssetKey, VfsKey},
 	Asset, Catalog, Record, VirtFileKind, VirtualFile,
 };
+
+/// "Interned string". Wraps an [`Arc`].
+/// At the moment, an [`RwLock`] is used to protect the string within.
+#[derive(Debug, Clone)]
+pub struct InString(Arc<RwLock<Box<str>>>);
+
+impl InString {
+	pub fn get(&self) -> RwLockReadGuard<'_, Box<str>> {
+		self.0.read()
+	}
+}
+
+impl PartialEq for InString {
+	/// Check if these are two pointers to the same interned string.
+	fn eq(&self, other: &Self) -> bool {
+		Arc::ptr_eq(&self.0, &other.0)
+	}
+}
+
+impl Eq for InString {}
+
+impl<T: AsRef<str>> From<T> for InString {
+	fn from(value: T) -> Self {
+		Self(Arc::new(RwLock::new(
+			value.as_ref().to_string().into_boxed_str(),
+		)))
+	}
+}
 
 // FileRef /////////////////////////////////////////////////////////////////////
 
@@ -120,15 +148,24 @@ impl Eq for FileRef<'_> {}
 pub struct Mount {
 	/// Metadata.
 	pub(super) info: MountInfo,
+	pub(super) lith: Option<lith::Module>,
 	/// The "source of truth" for record pointers.
-	pub(super) assets: DashMap<AssetKey, Arc<Record>>,
+	pub(super) assets: HashMap<AssetKey, Arc<Record>>,
 	/// See the key type's documentation for background details.
-	pub(super) shortid_map: DashMap<ShortId, Weak<Record>>,
+	pub(super) shortid_map: HashMap<ShortId, Weak<Record>>,
 	/// See the key type's documentation for background details.
-	pub(super) _editor_numbers: DashMap<EditorNum, ()>, // TODO: Lith class, probably
+	/// Stored records always wrap a [`Blueprint`].
+	///
+	/// [`Blueprint`]: super::asset::Blueprint
+	pub(super) editor_numbers: HashMap<EditorNum, Weak<Record>>,
 	/// See the key type's documentation for background details.
-	pub(super) _spawn_numbers: DashMap<SpawnNum, ()>, // TODO: Lith class, probably
-	                                                  // Q: FNV hashing for int-keyed, short ID-keyed maps?
+	/// Stored records always wrap a [`Blueprint`].
+	///
+	/// [`Blueprint`]: super::asset::Blueprint
+	pub(super) spawn_numbers: HashMap<SpawnNum, Weak<Record>>,
+	/// Keys take the form `$ID` as in (G)ZDoom.
+	pub(super) strings: HashMap<String, InString>,
+	// Q: FNV hashing for int-keyed, short ID-keyed maps?
 }
 
 impl Mount {
@@ -136,10 +173,12 @@ impl Mount {
 	pub(super) fn new(info: MountInfo) -> Self {
 		Self {
 			info,
-			assets: DashMap::default(),
-			shortid_map: DashMap::default(),
-			_editor_numbers: DashMap::default(),
-			_spawn_numbers: DashMap::default(),
+			lith: None,
+			assets: HashMap::default(),
+			shortid_map: HashMap::default(),
+			editor_numbers: HashMap::default(),
+			spawn_numbers: HashMap::default(),
+			strings: HashMap::default(),
 		}
 	}
 
@@ -148,10 +187,15 @@ impl Mount {
 	pub fn info(&self) -> &MountInfo {
 		&self.info
 	}
+
+	#[must_use]
+	pub fn lith_module(&self) -> &Option<lith::Module> {
+		&self.lith
+	}
 }
 
 /// Metadata about a mounted file/directory. For VileTech packages, this comes
-/// from a meta.toml file. Otherwise it's left largely unpopulated.
+/// from a `meta.toml` file. Otherwise it is left largely unpopulated.
 #[derive(Debug)]
 pub struct MountInfo {
 	/// Specified by `meta.toml` if one exists.
@@ -189,7 +233,7 @@ pub struct MountInfo {
 	/// but if there is no script root or manifests, ZDoom loading rules are used.
 	///
 	/// A package can only specify a file owned by it as a script root, so this
-	/// is always relative. `viletech.zip`'s script root, for example, is `main.lith`.
+	/// is always relative. `viletech.vpk3`'s script root, for example, is `main.lith`.
 	pub(super) script_root: Option<Box<VPath>>,
 	// Q:
 	// - Dependency specification?
@@ -313,14 +357,40 @@ impl MountInfo {
 pub struct Handle<A: Asset>(Arc<Record>, PhantomData<A>);
 
 impl<A: Asset> Handle<A> {
-	pub(super) fn new(record: &Arc<Record>) -> Self {
-		Self(record.clone(), PhantomData)
-	}
-
 	/// For use in inter-asset relationships.
 	#[must_use]
 	pub fn downgrade(&self) -> InHandle<A> {
 		InHandle(Arc::downgrade(&self.0), PhantomData)
+	}
+}
+
+impl<A: Asset> From<Arc<Record>> for Handle<A> {
+	/// This conversion panics if the asset type of the given record is not `A`.
+	fn from(value: Arc<Record>) -> Self {
+		let expected = TypeId::of::<A>();
+		let typeid = value.data.type_id();
+
+		assert_eq!(
+			expected, typeid,
+			"Expected asset type: {expected:#?}, but got: {typeid:#?}",
+		);
+
+		Self(value, PhantomData)
+	}
+}
+
+impl<A: Asset> From<&Arc<Record>> for Handle<A> {
+	/// This conversion panics if the asset type of the given record is not `A`.
+	fn from(value: &Arc<Record>) -> Self {
+		let expected = TypeId::of::<A>();
+		let typeid = value.data.type_id();
+
+		assert_eq!(
+			expected, typeid,
+			"Expected asset type: {expected:#?}, but got: {typeid:#?}",
+		);
+
+		Self(value.clone(), PhantomData)
 	}
 }
 
@@ -329,11 +399,10 @@ impl<A: 'static + Asset> std::ops::Deref for Handle<A> {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
-		debug_assert!(self.0.data.as_any().is::<A>());
-		// Safety: the check for downcast validity was already performed during
-		// handle acquisition. This is the same implementation used by std's
-		// `downcast_ref_unchecked`; use that instead when it stabilizes
-		unsafe { &*(&self.0.data as *const dyn Any as *const A) }
+		// SAFETY: Type correctness was validated during handle acquisition.
+		// Note that `unwrap_unchecked` contains a debug assertion.
+		// Q: `downcast_ref_unchecked` when it stabilizes?
+		unsafe { self.0.data.as_any().downcast_ref::<A>().unwrap_unchecked() }
 	}
 }
 
@@ -352,6 +421,13 @@ impl<A: Asset> Eq for Handle<A> {}
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 pub struct InHandle<A: Asset>(Weak<Record>, PhantomData<A>);
+
+impl<A: Asset> InHandle<A> {
+	#[must_use]
+	pub fn upgrade(&self) -> Option<Handle<A>> {
+		self.0.upgrade().map(Handle::from)
+	}
+}
 
 impl<A: Asset> PartialEq for InHandle<A> {
 	/// Check that these are two handles to the same [`Record`].
@@ -441,7 +517,11 @@ pub mod limits {
 
 /// Also make sure to read [`Catalog::load`].
 #[derive(Debug)]
-pub struct LoadRequest<'p, RP: AsRef<Path>, MP: AsRef<VPath>> {
+pub struct LoadRequest<RP, MP>
+where
+	RP: AsRef<Path>,
+	MP: AsRef<VPath>,
+{
 	/// In any given tuple, element `::0` should be a real path and `::1` should
 	/// be the mount point. `mymount` and `/mymount` both put the mount on the root.
 	/// An empty path and `/` are both invalid mount points, but one can mount
@@ -449,12 +529,7 @@ pub struct LoadRequest<'p, RP: AsRef<Path>, MP: AsRef<VPath>> {
 	///
 	/// If this is an empty slice, any mount operation becomes a no-op, and
 	/// an empty array of results is returned.
-	pub paths: &'p [(RP, MP)],
-	/// Every time a project is passed to a mount operation, its modules are
-	/// flushed and a full recompilation takes place. The exception is the
-	/// engine's base data, which gets compiled before reaching the frontend and
-	/// is left alone for the rest of the application's execution.
-	pub project: Arc<RwLock<lith::Project>>,
+	pub paths: Vec<(RP, MP)>,
 	/// Only pass a `Some` if you need to, for instance, display a loading screen,
 	/// or otherwise report to the end user on the progress of a mount operation.
 	pub tracker: Option<Arc<LoadTracker>>,

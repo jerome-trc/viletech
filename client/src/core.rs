@@ -7,7 +7,7 @@ use std::{
 	time::Instant,
 };
 
-use log::error;
+use log::{error, info};
 use nanorand::WyRand;
 use parking_lot::{Mutex, RwLock};
 use vile::{
@@ -21,6 +21,7 @@ use vile::{
 	rng::RngCore,
 	sim::{self, PlaySim},
 	user::UserCore,
+	utils::duration_to_hhmmss,
 };
 use winit::{
 	event::{ElementState, KeyboardInput, VirtualKeyCode},
@@ -54,7 +55,7 @@ enum Scene {
 	GameLoad {
 		/// The mount thread takes a write guard to the catalog and another
 		/// pointer to `tracker`.
-		thread: JoinHandle<Vec<Result<(), LoadError>>>,
+		thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
 		/// How far along the mount/load process is `thread`?
 		tracker: Arc<LoadTracker>,
 		/// Print to the log how long the mount takes for diagnostic purposes.
@@ -91,7 +92,6 @@ pub struct ClientCore {
 	pub start_time: Instant,
 	pub user: UserCore,
 	pub catalog: Arc<RwLock<Catalog>>,
-	pub project: Arc<RwLock<lith::Project>>,
 	pub runtime: Arc<RwLock<lith::Runtime>>,
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
@@ -148,13 +148,11 @@ impl ClientCore {
 
 		let catalog = Arc::new(RwLock::new(catalog));
 		let catalog_audio = catalog.clone();
-		let catalog_lith = catalog.clone();
 
 		let mut ret = ClientCore {
 			start_time,
 			user,
 			catalog,
-			project: Arc::new(RwLock::new(lith::Project::new(catalog_lith))),
 			runtime: Arc::new(RwLock::new(lith::Runtime::default())),
 			gfx,
 			rng: Arc::new(Mutex::new(RngCore::default())),
@@ -167,7 +165,7 @@ impl ClientCore {
 				open: true,
 				#[cfg(not(debug_assertions))]
 				open: false,
-				left: DevGuiStatus::Audio,
+				left: DevGuiStatus::Vfs,
 				right: DevGuiStatus::Console,
 			},
 			scene,
@@ -313,7 +311,7 @@ impl ClientCore {
 								// Soon!
 							}
 							DevGuiStatus::Vfs => {
-								// Soon!
+								self.catalog.read().ui(ctx, ui);
 							}
 							DevGuiStatus::Graphics => {
 								self.gfx.ui(ctx, ui);
@@ -333,7 +331,7 @@ impl ClientCore {
 								// Soon!
 							}
 							DevGuiStatus::Vfs => {
-								// Soon!
+								self.catalog.read().ui(ctx, ui);
 							}
 							DevGuiStatus::Graphics => {
 								self.gfx.ui(ctx, ui);
@@ -349,6 +347,54 @@ impl ClientCore {
 		}
 
 		self.gfx.render_finish(frame);
+	}
+
+	pub fn main_events_cleared(&mut self, control_flow: &mut ControlFlow) {
+		let mut load_time = None;
+
+		if let Scene::GameLoad {
+			thread,
+			tracker,
+			start_time,
+		} = &self.scene
+		{
+			if tracker.mount_done() && tracker.pproc_done() {
+				debug_assert!(thread.is_finished());
+				load_time = Some(start_time.elapsed());
+			}
+		}
+
+		if let Some(load_time) = load_time {
+			let next = self.start_sim();
+			let prev = std::mem::replace(&mut self.scene, Scene::Title { inner: next });
+
+			let thread = if let Scene::GameLoad { thread, .. } = prev {
+				thread
+			} else {
+				unreachable!();
+			};
+
+			let results = thread.join().expect("Failed to join game load thread.");
+			let mut failed = false;
+
+			for errs in results.into_iter().filter_map(|res| res.err()) {
+				failed = true;
+
+				for err in errs {
+					error!("{err}");
+				}
+			}
+
+			if !failed {
+				let (hh, mm, ss) = duration_to_hhmmss(load_time);
+				info!("Game loading finished in {hh:02}:{mm:02}:{ss:02}.");
+			}
+		}
+
+		self.process_console_requests();
+		self.scene_change(control_flow);
+		self.audio.update();
+		self.gfx.window.request_redraw();
 	}
 
 	pub fn process_console_requests(&mut self) {
@@ -395,7 +441,7 @@ impl ClientCore {
 	}
 
 	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {
-		// TODO: Tell branch predictor this is likely when the intrinsic stabilizes
+		// TODO: Tell branch predictor this is likely when the intrinsic stabilizes.
 		if self.next_scene.is_none() {
 			return;
 		}
@@ -416,7 +462,7 @@ impl ClientCore {
 				};
 			}
 			Some(SceneChange::TitleToFrontend) => {
-				self.catalog.write().truncate(1); // Keep base data
+				self.catalog.write().truncate(1); // Keep base data.
 			}
 			Some(SceneChange::ToFrontend) => {
 				let first_startup = std::mem::replace(
@@ -535,7 +581,7 @@ impl ClientCore {
 				func: commands::ccmd_exit,
 			},
 			true,
-		); // Built-in alias for "exit"
+		); // Built-in alias for "exit".
 
 		self.console.register_command(
 			"uptime",
@@ -565,7 +611,7 @@ impl ClientCore {
 		);
 	}
 
-	fn mount_load_order(&mut self, to_mount: Vec<PathBuf>) -> Result<Scene, String> {
+	fn mount_load_order(&self, to_mount: Vec<PathBuf>) -> Result<Scene, String> {
 		let start_time = Instant::now();
 		let catalog = self.catalog.clone();
 		let tracker = Arc::new(LoadTracker::default());
@@ -606,12 +652,10 @@ impl ClientCore {
 		}
 
 		let tracker_sent = tracker.clone();
-		let project_sent = self.project.clone();
 
 		let thread = std::thread::spawn(move || {
 			let request = LoadRequest {
-				paths: &mounts,
-				project: project_sent,
+				paths: mounts,
 				tracker: Some(tracker_sent),
 			};
 
@@ -661,7 +705,7 @@ impl ClientCore {
 		};
 
 		// The arc-locked playsim object is meant to be dropped upon scene change,
-		// so ensure no references have survived thread teardown
+		// so ensure no references have survived thread teardown.
 
 		debug_assert_eq!(
 			Arc::strong_count(&sim.sim),

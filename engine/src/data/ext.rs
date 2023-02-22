@@ -3,14 +3,16 @@
 //! Keeps the more crucial namespaces cleaner and makes it easier to reuse the
 //! data management code, in case it proves robust enough for other projects.
 
-use crate::VPath;
+use log::error;
 
-use super::{Catalog, VfsError};
+use crate::{BaseDataError, VPath};
+
+use super::{Catalog, LoadRequest, VfsError};
 
 pub trait CatalogExt {
-	/// On the debug build, attempt to mount `/env::current_dir()/data`.
-	/// On the release build, attempt to mount `/utils::exe_dir()/viletech.zip`.
-	fn mount_basedata(&mut self) -> Result<(), Box<dyn std::error::Error>>;
+	/// On the debug build, attempt to load `/env::current_dir()/data/viletech`.
+	/// On the release build, attempt to load `/utils::exe_dir()/viletech.vpk3`.
+	fn mount_basedata(&mut self) -> Result<(), BaseDataError>;
 
 	fn window_icon_from_file(
 		&self,
@@ -19,17 +21,17 @@ pub trait CatalogExt {
 }
 
 impl CatalogExt for Catalog {
-	fn mount_basedata(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-		if let Err(err) = crate::basedata_is_valid() {
-			return Err(Box::new(err));
-		}
+	fn mount_basedata(&mut self) -> Result<(), BaseDataError> {
+		crate::basedata_is_valid()?;
 
-		if let Err(err) = self
-			.load_simple(&[(crate::basedata_path(), "/viletech")])
-			.pop()
-			.unwrap()
-		{
-			Err(Box::new(err))
+		let req = LoadRequest {
+			paths: vec![(crate::basedata_path(), "/viletech")],
+			tracker: None,
+		};
+
+		if let Err(errs) = self.load(req).pop().unwrap() {
+			errs.iter().for_each(|err| error!("{err}"));
+			Err(BaseDataError::Load(errs))
 		} else {
 			Ok(())
 		}

@@ -7,14 +7,12 @@ mod visual;
 
 use std::{any::TypeId, marker::PhantomPinned, sync::Arc};
 
-use dashmap::mapref::one::RefMut as DashMapRefMut;
-
 pub use actor::*;
 pub use audio::*;
 pub use map::*;
 pub use visual::*;
 
-use super::{detail::AssetKey, AssetError, Handle};
+use super::{AssetError, Handle};
 
 /// A dynamically-typed storage for a single asset.
 #[derive(Debug)]
@@ -57,7 +55,7 @@ impl Record {
 	/// [`AssetError::TypeMismatch`]: super::AssetError::TypeMismatch
 	pub fn handle<T: 'static + Asset>(self: &Arc<Self>) -> Result<Handle<T>, AssetError> {
 		if self.data.as_any().is::<T>() {
-			Ok(Handle::new(self))
+			Ok(Handle::from(self))
 		} else {
 			Err(AssetError::TypeMismatch {
 				expected: self.data.as_any().type_id(),
@@ -74,25 +72,6 @@ impl PartialEq for Record {
 }
 
 impl Eq for Record {}
-
-/// See [`Catalog::try_mutate`](super::Catalog::try_mutate).
-pub struct RefMut<'cat>(pub(super) DashMapRefMut<'cat, AssetKey, Arc<Record>>);
-
-// Newtype this so the record is mutable but the key is not
-
-impl std::ops::Deref for RefMut<'_> {
-	type Target = Record;
-
-	fn deref(&self) -> &Self::Target {
-		<Arc<Record> as AsRef<Record>>::as_ref(self.0.value())
-	}
-}
-
-impl std::ops::DerefMut for RefMut<'_> {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		Arc::get_mut(self.0.value_mut()).expect("An asset record mutation failed unexpectedly.")
-	}
-}
 
 pub trait Asset: private::Sealed {}
 

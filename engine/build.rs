@@ -9,7 +9,7 @@ use std::{
 use sha3::{Digest, Sha3_256};
 
 const BASEDATA_ID: &str = "viletech";
-const BASEDATA_FILENAME: &str = "viletech.zip";
+const BASEDATA_FILENAME: &str = "viletech.vpk3";
 
 /// Injects the current Git hash and date and time of compilation
 /// into the environment before building.
@@ -47,7 +47,7 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 }
 
 /// In release mode, compile the contents of `/data/viletech` into
-/// `/target/viletech.zip`. Hash the bytes of that file, and store the stringified
+/// `/target/viletech.vpk3`. Hash the bytes of that file, and store the stringified
 /// hash in an environment variable that gets compiled into the engine.
 fn build_basedata() -> Result<(), Box<dyn Error>> {
 	let data_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "data", "viletech"]

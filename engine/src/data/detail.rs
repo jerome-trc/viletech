@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
-use super::{Asset, Catalog, VirtFileKind};
+use super::{Asset, Catalog, VirtFileKind, VirtualFile};
 
 #[derive(Debug)]
 pub(super) struct Config {
@@ -64,6 +64,71 @@ impl Catalog {
 	pub(super) fn load_fail_cleanup(&mut self, orig_files_len: usize, orig_mounts_len: usize) {
 		self.files.truncate(orig_files_len);
 		self.mounts.truncate(orig_mounts_len);
+	}
+
+	pub(super) fn ui_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		ui.heading("Virtual File System");
+
+		egui::ScrollArea::vertical().show(ui, |ui| {
+			for file in self.files.values() {
+				let resp = ui.label(file.path_str());
+
+				let resp = if resp.hovered() {
+					resp.highlight()
+				} else {
+					resp
+				};
+
+				resp.on_hover_ui_at_pointer(|ui| {
+					egui::Area::new("vtec_vfs_tt").show(ctx, |_| {
+						Self::ui_file_tooltip(ui, file);
+					});
+				});
+			}
+		});
+	}
+
+	fn ui_file_tooltip(ui: &mut egui::Ui, file: &VirtualFile) {
+		match &file.kind {
+			VirtFileKind::Binary(bytes) => {
+				ui.label("Binary");
+				let mut unit = "B";
+				let mut len = bytes.len() as f64;
+
+				if len > 1024.0 {
+					len /= 1024.0;
+					unit = "KB";
+				}
+
+				if len > 1024.0 {
+					len /= 1024.0;
+					unit = "MB";
+				}
+
+				if len > 1024.0 {
+					len /= 1024.0;
+					unit = "GB";
+				}
+
+				ui.label(&format!("{len:.2} {unit}"));
+			}
+			VirtFileKind::Text(string) => {
+				ui.label("Text");
+				ui.label(&format!("{} B", string.len()));
+			}
+			VirtFileKind::Empty => {
+				ui.label("Empty");
+			}
+			VirtFileKind::Directory(dir) => {
+				ui.label("Directory");
+
+				if dir.len() == 1 {
+					ui.label("1 child");
+				} else {
+					ui.label(&format!("{} children", dir.len()));
+				}
+			}
+		}
 	}
 }
 

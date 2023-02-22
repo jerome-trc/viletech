@@ -8,6 +8,7 @@ pub mod macros;
 pub mod path;
 pub mod string;
 
+/// Note that minutes and seconds are both remainders, not totals.
 #[must_use]
 pub fn duration_to_hhmmss(duration: std::time::Duration) -> (i64, i64, i64) {
 	let duration = chrono::Duration::from_std(duration).unwrap();

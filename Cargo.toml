@@ -1,9 +1,5 @@
 [workspace]
-members = [
-	"engine",
-	"client",
-	"server"
-]
+members = ["engine", "client", "server"]
 default-members = ["engine", "client"]
 # Needed for WGPU; having crates define edition 2021 does not suffice
 resolver = "2"

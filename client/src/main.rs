@@ -68,7 +68,7 @@ conditions. See the license document that come with your installation."
 
 	if let Err(err) = catalog.mount_basedata() {
 		error!("Failed to find and mount engine base data: {err}");
-		return Err(err);
+		return Err(Box::new(err));
 	}
 
 	let event_loop = EventLoop::new();
@@ -145,10 +145,7 @@ conditions. See the license document that come with your installation."
 			core.redraw_requested(window_id, control_flow);
 		}
 		WinitEvent::MainEventsCleared => {
-			core.process_console_requests();
-			core.scene_change(control_flow);
-			core.audio.update();
-			core.gfx.window.request_redraw();
+			core.main_events_cleared(control_flow);
 		}
 		WinitEvent::WindowEvent {
 			ref event,
