@@ -232,6 +232,6 @@ pub(super) fn builtins() -> Vec<(String, TypeInfo)> {
 				heap_layout: qword_heap_layout,
 			},
 		),
-		// TODO: ...everything else
+		// TODO: ...everything else.
 	]
 }

@@ -64,7 +64,7 @@ impl Catalog {
 		ctx: Context,
 	) -> Output {
 		// To enable atomicity, remember where `self.files` and `self.mounts` were.
-		// Truncate back to them upon a failure
+		// Truncate back to them upon a failure.
 		let orig_files_len = self.files.len();
 		let orig_mounts_len = self.mounts.len();
 
@@ -97,7 +97,7 @@ impl Catalog {
 			// - `/mygame/myothergame`
 			// In two separate mount batches this is valid, but in one batch, it
 			// can lead to a parent existence check passing when it shouldn't due
-			// to a data race, or the parallel iterator only being given 1 thread
+			// to a data race, or the parallel iterator only being given 1 thread.
 			if reqs
 				.iter()
 				.any(|(_, _, mpath)| mount_point.is_child_of(mpath))
@@ -139,7 +139,7 @@ impl Catalog {
 
 		// Push new entries into `self.files` if `!failed`
 		// Don't push mounts to `self.mounts` yet; we need to fully populate the
-		// file tree so we have the context needed to resolve more metadata
+		// file tree so we have the context needed to resolve more metadata.
 		let results: Vec<Result<(), MountError>> = outcomes
 			.into_iter()
 			.map(|outp| match outp {
@@ -154,7 +154,7 @@ impl Catalog {
 				} => {
 					if failed {
 						// See `Error::MountFallthrough`'s docs for rationale
-						// on why we return `Ok` here
+						// on why we return `Ok` here.
 						return Ok(());
 					}
 

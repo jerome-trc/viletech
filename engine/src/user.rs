@@ -95,8 +95,8 @@ impl UserCore {
 		}
 
 		// TODO:
-		// - Define prefs from manifests as they get mounted to the VFS
-		// - Fill pref values from .toml files
+		// - Define prefs from manifests as they get mounted to the VFS.
+		// - Fill pref values from .toml files.
 
 		Ok(ret)
 	}

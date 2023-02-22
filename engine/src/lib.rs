@@ -53,6 +53,7 @@ pub type SpawnNum = u16;
 /// State and functions for a two-panel egui window that sticks to the top of the
 /// screen like GZDoom's console. `S` should be a simple untagged enum that
 /// informs the user what they should draw in each panel.
+#[derive(Debug)]
 pub struct DeveloperGui<S: PartialEq + Copy> {
 	pub open: bool,
 	pub left: S,
@@ -333,7 +334,7 @@ pub fn log_init(
 				.open(fpath)?,
 		);
 
-	// Stdout logging has console colouring and less date-time elaboration
+	// Stdout logging has console colouring and less date-time elaboration.
 	let stdout_cfg = fern::Dispatch::new()
 		.format(move |out, message, record| {
 			out.finish(format_args!(

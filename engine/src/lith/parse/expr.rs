@@ -16,7 +16,7 @@ pub(super) fn expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseError>
 		literal(src),
 		name(src),
 		type_expr(src),
-		// TODO: Unary, binary, ternary
+		// TODO: Unary, binary, ternary.
 	))
 }
 
@@ -26,7 +26,7 @@ pub(super) fn type_expr(src: &str) -> impl Parser<char, ParseOut, Error = ParseE
 		.chain_push(comb::just::<Syn, _>('[', Syn::BracketL, src))
 		.chain_append(wsp_ext(src).repeated())
 		.chain_push(primitive::choice(
-			// TODO: Array notation, tuple notation
+			// TODO: Array notation, tuple notation.
 			(type_ref(src),),
 		))
 		.chain_append(wsp_ext(src).repeated())

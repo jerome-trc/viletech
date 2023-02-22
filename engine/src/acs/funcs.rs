@@ -30,6 +30,7 @@
 ** -----------------------------------------------------------------------------
 */
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Function {
 	GetLineUdmfInt = 1,
 	GetLineUdmfFixed,

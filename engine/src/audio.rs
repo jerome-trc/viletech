@@ -39,7 +39,6 @@ pub use midi::{
 
 use self::gui::DeveloperGui;
 
-#[non_exhaustive]
 pub struct AudioCore {
 	/// The centre of waveform sound synthesis and playback.
 	pub manager: AudioManager,
@@ -297,7 +296,7 @@ impl AudioCore {
 				continue;
 			}
 
-			// Check if another SoundFont by this name has already been collected
+			// Check if another SoundFont by this name has already been collected.
 			if self
 				.soundfonts
 				.iter()
@@ -360,9 +359,9 @@ impl AudioCore {
 					}
 				};
 
-				// GZ:
+				// (GZ)
 				// A SoundFont archive with only one file can't be a packed GUS patch.
-				// Just skip this entirely
+				// Just skip this entirely.
 				if archive.len() <= 1 {
 					continue;
 				}
@@ -387,7 +386,7 @@ impl AudioCore {
 					continue;
 				}
 
-				// This GUS SoundFont has been validated. Now it can be pushed
+				// This GUS SoundFont has been validated. Now it can be pushed.
 			}
 
 			self.soundfonts.push(SoundFont {
@@ -407,6 +406,19 @@ impl AudioCore {
 	/// state mutations requested through it by the user.
 	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_impl(ctx, ui);
+	}
+}
+
+impl std::fmt::Debug for AudioCore {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("AudioCore")
+			.field("soundfonts", &self.soundfonts)
+			.field("music1", &self.music1)
+			.field("music2", &self.music2)
+			.field("sounds", &self.sounds)
+			.field("catalog", &self.catalog)
+			.field("gui", &self.gui)
+			.finish()
 	}
 }
 
@@ -465,6 +477,7 @@ impl std::fmt::Debug for Handle {
 	}
 }
 
+#[derive(Debug)]
 pub struct Sound {
 	handle: Handle,
 	_source: Option<ActorId>,

@@ -116,7 +116,7 @@ impl Data {
 
 		let tempo = match tempo {
 			// If the MIDI is malformed and has no tempo meta-message,
-			// we just have to make a best guess
+			// we just have to make a best guess.
 			None => return Duration::from_secs_f32(secs_per_tick * moments.len() as f32),
 			Some(t) => t.as_int(),
 		};
@@ -156,11 +156,11 @@ impl Data {
 }
 
 impl SoundData for Data {
-	type Error = Box<Error>; // Indirection prevents recursive type
+	type Error = Box<Error>; // Indirection prevents a recursive type.
 	type Handle = Handle;
 
 	fn into_sound(self) -> Result<(Box<dyn kira::sound::Sound>, Self::Handle), Self::Error> {
-		// `sleep_duration` demands `mut` but it never does any real mutation
+		// `sleep_duration` demands `mut` but it never does any real mutation.
 		let mut timer = self.create_timer();
 
 		let _ = timer.duration(&self.sheet);
@@ -516,7 +516,7 @@ impl Renderer {
 			.map_err(|err| Error::SoundFontRead(soundfont.as_ref().to_path_buf(), err))?;
 
 		// FluidSynth's docs recommend setting the sample rate to the audio
-		// driver's native output rate, so retrieve it via `cpal`
+		// driver's native output rate, so retrieve it via `cpal`.
 
 		let host = cpal::default_host();
 		let device = host
@@ -529,14 +529,14 @@ impl Renderer {
 		let sample_rate = dev_config.sample_rate().0;
 		synth.set_sample_rate(sample_rate as f32);
 		synth.set_gain(0.5);
-		synth.set_reverb_on(false); // `kira` reverb effects can be applied later
+		synth.set_reverb_on(false); // `kira` reverb effects can be applied later.
 		synth.set_chorus_on(false);
 		synth.system_reset().map_err(Error::MidiSynth)?;
 
 		let channels = synth.count_audio_channels();
 
-		// RAT: Hack that makes *most* MIDIs sound *almost* correct.
-		// Next step is to study prior art to properly allocate and use buffer
+		// (RAT) Hack that makes *most* MIDIs sound *almost* correct.
+		// Next step is to study prior art to properly allocate and use buffer.
 		let bufsize = tick_len.as_micros() as usize / 25;
 		let sample_format = dev_config.sample_format();
 
@@ -609,8 +609,8 @@ impl Renderer {
 
 	fn generate_frames(&mut self) {
 		match &mut self.mode {
-			// RAT: All I seem to have is sample data using 1 channel of floats,
-			// so all the other cases are untested
+			// (RAT) All I seem to have is sample data using 1 channel of floats,
+			// so all the other cases are untested.
 			RenderMode::F32X1(sbuf) | RenderMode::F32X2(sbuf) => {
 				let _ = self.synth.write::<&mut [f32]>(sbuf.as_mut());
 

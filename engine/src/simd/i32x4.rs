@@ -203,7 +203,7 @@ impl<T: Int32 + std::ops::Div<Output = T>> std::ops::Div for I32X4<T> {
 
 // Details /////////////////////////////////////////////////////////////////////
 
-// [Rat] I am sad to say this is the cleanest way there is to do this
+// (RAT) I am sad to say this is the cleanest way there is to do this.
 
 /// Both `i32` and `u32` can be packed into an `__m128i`.
 /// A helper trait makes [`I32X4`] generic over both.

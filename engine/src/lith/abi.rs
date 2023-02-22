@@ -227,7 +227,7 @@ where
 	}
 }
 
-// RAT: This might be the biggest bottleneck on compile speed in the workspace
+// (RAT) This might be the biggest bottleneck on compile speed in the workspace
 
 // The second argument to this macro should always equal `MAX_PARAMS`.
 #[impl_trait_for_tuples::impl_for_tuples(1, 16)]

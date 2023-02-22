@@ -1,9 +1,21 @@
+//! Starting the client shows a menu for changing settings and choosing files to load.
+
 use std::{
 	collections::VecDeque,
 	path::{Path, PathBuf},
 };
 
 use crate::utils::string::*;
+
+/// Starting the client shows a menu for changing settings and choosing files to load.
+///
+/// This is the first thing a client end user sees assuming they have not passed
+/// in launch arguments which bypass it to a different scene.
+#[derive(Debug, Default)]
+pub struct FrontendMenu {
+	presets: Vec<LoadOrderPreset>,
+	load_order: VecDeque<LoadOrderEntry>,
+}
 
 #[derive(PartialEq, Eq)]
 pub enum FrontendAction {
@@ -12,6 +24,7 @@ pub enum FrontendAction {
 	Start,
 }
 
+#[derive(Debug)]
 pub enum LoadOrderEntryKind {
 	Item {
 		path: PathBuf,
@@ -23,6 +36,7 @@ pub enum LoadOrderEntryKind {
 	},
 }
 
+#[derive(Debug)]
 pub struct LoadOrderEntry {
 	selected: bool,
 	kind: LoadOrderEntryKind,
@@ -56,18 +70,6 @@ impl LoadOrderEntry {
 			}
 		};
 	}
-}
-
-struct LoadOrderPreset {
-	entries: VecDeque<LoadOrderEntry>,
-}
-
-/// First thing shown to the user when they start the engine, assuming they
-/// haven't passed in launch arguments which bypass it to the sim.
-#[derive(Default)]
-pub struct FrontendMenu {
-	presets: Vec<LoadOrderPreset>,
-	load_order: VecDeque<LoadOrderEntry>,
 }
 
 // Public interface.
@@ -149,11 +151,11 @@ impl FrontendMenu {
 					}
 
 					if ui.button("\u{2B06}").clicked() {
-						// TODO: Shift all highlighted load order items up once
+						// TODO: Shift all highlighted load order items up once.
 					}
 
 					if ui.button("\u{2B07}").clicked() {
-						// TODO: Shift all highlighted load order items down once
+						// TODO: Shift all highlighted load order items down once.
 					}
 
 					if ui.button("To Top").clicked() {}
@@ -163,7 +165,7 @@ impl FrontendMenu {
 			});
 
 			ui.horizontal(|ui| {
-				// Load order list
+				// Load order list.
 
 				egui::ScrollArea::new([false, true]).show(ui, |ui| {
 					ui.vertical(|ui| {
@@ -176,7 +178,7 @@ impl FrontendMenu {
 					});
 				});
 
-				// Information panel on first selected item, if it's not a group
+				// Information panel on first selected item, if it's not a group.
 
 				if selected == 1 {
 					let entry = self.load_order.iter().find(|loe| loe.selected).unwrap();
@@ -290,4 +292,9 @@ impl FrontendMenu {
 			}
 		}
 	}
+}
+
+#[derive(Debug)]
+struct LoadOrderPreset {
+	entries: VecDeque<LoadOrderEntry>,
 }

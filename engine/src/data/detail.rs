@@ -46,7 +46,7 @@ impl Catalog {
 			let parent = if let Some(p) = self.files[index].parent_path() {
 				VfsKey::new(p)
 			} else {
-				continue; // No parent; `self.files[index]` is the root node
+				continue; // No parent; `self.files[index]` is the root node.
 			};
 
 			let (&key, _) = self.files.get_index(index).unwrap();

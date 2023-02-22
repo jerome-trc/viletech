@@ -218,6 +218,7 @@ pub trait Command {
 	fn call(&self, args: CommandArgs) -> Self::Output;
 }
 
+#[derive(Debug)]
 struct CommandWrapper<C: Command> {
 	id: &'static str,
 	enabled: bool,
@@ -231,6 +232,15 @@ pub struct Terminal<C: Command> {
 	commands: Vec<CommandWrapper<C>>,
 	command_not_found: fn(&str),
 	aliases: Vec<Alias>,
+}
+
+impl<C: Command + std::fmt::Debug> std::fmt::Debug for Terminal<C> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Terminal")
+			.field("commands", &self.commands)
+			.field("aliases", &self.aliases)
+			.finish()
+	}
 }
 
 // Public interface.
@@ -247,7 +257,7 @@ impl<C: Command> Terminal<C> {
 		let mut ret = Vec::<_>::default();
 		let mut string = string.to_owned();
 
-		// "Recursive" alias expansion, no more than 8 levels deep
+		// "Recursive" alias expansion, no more than 8 levels deep.
 
 		for _ in 0..8 {
 			let mut s = String::default();

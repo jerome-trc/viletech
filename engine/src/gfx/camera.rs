@@ -1,5 +1,6 @@
 use dolly::prelude::*;
 
+#[derive(Debug)]
 pub struct Camera {
 	pub rig: CameraRig,
 	pub fov_y: f32,

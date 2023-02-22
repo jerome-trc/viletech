@@ -66,7 +66,7 @@ fn load() {
 		len = catalog.mounts().len()
 	);
 
-	// Root, 2 mounts, freedoom1.wad's contents, freedoom2.wad's contents
+	// Root, 2 mounts, freedoom1.wad's contents, freedoom2.wad's contents.
 	const EXPECTED: usize = 1 + 2 + 3081 + 3649;
 
 	assert!(
@@ -82,7 +82,7 @@ fn vfs_lookup() {
 	let _ = catalog.load(request());
 
 	assert!(catalog.get_file("/").is_some(), "Root lookup failed.");
-	assert!(catalog.get_file("//").is_some(), "`//` lookup failed."); // Should return root
+	assert!(catalog.get_file("//").is_some(), "`//` lookup failed."); // Should return root.
 
 	assert!(
 		catalog.get_file("/freedoom2").is_some(),

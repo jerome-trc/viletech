@@ -18,7 +18,7 @@ impl<'i> Instruction<RefNode<'i>> {
 			}
 			Instruction::BinOp { l, r, op } => unsafe { op.eval(l, r) },
 			Instruction::Call { func, args } => {
-				// TODO: There must be a better way to do this
+				// TODO: There must be a better way to do this.
 				match args.len() {
 					0 => func.eval(ctx, ()),
 					1 => func.eval(ctx, (args[0],)),

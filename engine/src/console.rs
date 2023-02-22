@@ -19,6 +19,7 @@ use crate::{
 pub type Sender = crossbeam::channel::Sender<Message>;
 
 /// egui-based graphical shell for diagnosis, development, and debugging.
+#[derive(Debug)]
 pub struct Console<C: terminal::Command> {
 	/// Takes messages coming from the `log` crate's backend.
 	log_receiver: Receiver<Message>,
@@ -364,6 +365,7 @@ impl<C: terminal::Command> Console<C> {
 
 /// Provides a bridge between the logging backend, which needs a channel sender
 /// as well as a [`std::io::Write`] implementation, and the console.
+#[derive(Debug)]
 pub struct Writer {
 	buffer: Vec<u8>,
 	sender: Sender,

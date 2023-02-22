@@ -371,7 +371,7 @@ impl std::fmt::Debug for Pref {
 impl Drop for Pref {
 	fn drop(&mut self) {
 		// `AtomicCell` implements `Drop`, but it and the primitive within
-		// are both trivially destructible, so don't bother
+		// are both trivially destructible, so don't bother.
 		if let PrefKind::String = self.kind {
 			unsafe {
 				ManuallyDrop::drop(&mut self.data.string);

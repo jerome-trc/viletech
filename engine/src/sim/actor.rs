@@ -116,7 +116,7 @@ bitflags! {
 		/// The actor is allowed to bounce off liquid surfaces.
 		const WATER = 1 << 18;
 		/// Explodes when hitting a water surface.
-		/// RAT: Not sure why GZ has this as part of these flags...?
+		/// (RAT) Not sure why GZ has this as part of these flags...?
 		const WATER_EXPLODE = 1 << 19;
 
 		const TYPEMASK =
@@ -149,7 +149,7 @@ pub struct Core {
 	pub flags_specialty: SpecialtyFlags,
 	/// An actor's held items are kept in a singly-linked list.
 	pub inventory: Option<ActorId>,
-	pub name: String, // TODO: String interning
+	pub name: String, // TODO: String interning.
 	pub player: Option<u8>,
 	/// Mostly only relevant to monster infighting (e.g. Barons and Hell Knights).
 	pub species: Option<data::Handle<Species>>,

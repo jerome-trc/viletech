@@ -29,6 +29,7 @@
 */
 
 #[repr(u16)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum PCode {
 	NoOp,
 	Terminate,
@@ -417,4 +418,6 @@ pub(super) enum PCode {
 	TranslationRange5,
 }
 
-const COUNT: usize = (PCode::TranslationRange5 as usize) + 1;
+impl PCode {
+	const COUNT: usize = (Self::TranslationRange5 as usize) + 1;
+}

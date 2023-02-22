@@ -36,7 +36,7 @@ use crate::{math::IRect32, sim::ActorId};
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
 #[repr(u8)]
-#[derive(Default, FromPrimitive)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, FromPrimitive)]
 pub(super) enum Kind {
 	Closed,
 	Open,
@@ -65,7 +65,7 @@ bitflags::bitflags! {
 	}
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub(super) struct Pointer {
 	number: i32,
 	address: u32,
@@ -109,7 +109,7 @@ bitflags::bitflags! {
 	}
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum Status {
 	Running,
 	Suspended,
@@ -123,6 +123,7 @@ pub(super) enum Status {
 	ModulusByZero,
 }
 
+#[derive(Debug)]
 pub(super) struct Script {
 	status: Status,
 
@@ -131,7 +132,7 @@ pub(super) struct Script {
 	local_vars: Vec<i32>,
 	activator: ActorId,
 	line: Option<usize>,
-	// TODO: Why did GZDoom's counterpart to this type store a font?
+	// Q: Why did GZDoom's counterpart to this type store a font?
 	hud_height: u32,
 	hud_width: u32,
 	clip: IRect32,

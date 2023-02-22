@@ -164,7 +164,7 @@ impl DeclQualifiers {
 				Syn::KwProtected => ret.insert(DeclQualifierFlags::PROTECTED),
 				Syn::KwStatic => ret.insert(DeclQualifierFlags::STATIC),
 				Syn::KwVirtual => ret.insert(DeclQualifierFlags::VIRTUAL),
-				_ => {} // Whitespace or comment
+				_ => {} // Whitespace or comment.
 			}
 		}
 
@@ -334,7 +334,7 @@ impl LitToken {
 
 		let text = self.0.text();
 
-		// Identify the position of the suffix
+		// Identify the position of the suffix.
 		let end = text.len() - text.chars().rev().position(|c| c != 'f').unwrap();
 		let inner = &text[0..end];
 		let mut temp = String::with_capacity(text.len());
@@ -374,7 +374,7 @@ impl LitToken {
 			10
 		};
 
-		// Identify the span between the prefix and suffix
+		// Identify the span between the prefix and suffix.
 		let start = if radix != 10 { 2 } else { 0 };
 		let end = text.len()
 			- text

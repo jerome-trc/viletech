@@ -508,7 +508,7 @@ pub mod limits {
 	/// 1024 B * 1024 kB * 128 MB = 134217728 bytes.
 	pub const MAX_TEXT_FILE_SIZE: usize = 1024 * 1024 * 128;
 
-	// [Rat] If you guessed that the default text file size limit could
+	// (RAT) If you guessed that the default text file size limit could
 	// be much lower if not for the UDMF TEXTMAP format, then you're correct.
 	// Ar Luminae's MAP01 TEXTMAP is 43.69 MB.
 }

@@ -76,7 +76,7 @@ impl Wad {
 
 		unsafe {
 			// This is safe because the bounds and size of the entry table were
-			// verified in parse_wad
+			// verified in `parse_wad`.
 
 			std::slice::from_raw_parts(
 				std::mem::transmute(directory.as_ptr()),

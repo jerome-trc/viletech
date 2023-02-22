@@ -18,6 +18,16 @@ pub enum Request {
 	Callback(Box<dyn Fn(&mut ClientCore)>),
 }
 
+impl std::fmt::Debug for Request {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::None => write!(f, "None"),
+			Self::Exit => write!(f, "Exit"),
+			Self::Callback(_) => f.debug_tuple("Callback").finish(),
+		}
+	}
+}
+
 bitflags::bitflags! {
 	pub struct CommandFlags: u8 {
 		/// This command is enabled when entering the frontend
@@ -54,6 +64,14 @@ impl terminal::Command for Command {
 
 	fn call(&self, args: terminal::CommandArgs) -> Self::Output {
 		(self.func)(args)
+	}
+}
+
+impl std::fmt::Debug for Command {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Command")
+			.field("flags", &self.flags)
+			.finish()
 	}
 }
 

@@ -127,7 +127,7 @@ conditions. See the license document that come with your installation."
 				write_mask: wgpu::ColorWrites::ALL,
 			})],
 		))
-		// Remaining defaults are acceptable
+		// Remaining defaults are acceptable.
 		.build();
 
 	gfx.pipelines.push(pipeline);

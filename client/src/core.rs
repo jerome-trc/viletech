@@ -35,59 +35,9 @@ use crate::commands::{
 
 type DeveloperGui = vile::DeveloperGui<DevGuiStatus>;
 
-enum Scene {
-	/// The user needs to choose whether their information should be stored
-	/// portably or at a "home" directory.
-	FirstStartup {
-		/// `true` is the default presented to the user.
-		portable: bool,
-
-		portable_path: PathBuf,
-		home_path: Option<PathBuf>,
-	},
-	Transition,
-	/// The user hasn't entered the game yet. From here they can select a user
-	/// profile and engine-global/cross-game preferences, assemble a load order,
-	/// and begin the game launch process.
-	Frontend {
-		menu: FrontendMenu,
-	},
-	GameLoad {
-		/// The mount thread takes a write guard to the catalog and another
-		/// pointer to `tracker`.
-		thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
-		/// How far along the mount/load process is `thread`?
-		tracker: Arc<LoadTracker>,
-		/// Print to the log how long the mount takes for diagnostic purposes.
-		start_time: Instant,
-	},
-	/// Where the user is taken after leaving the frontend, unless they have
-	/// specified to be taken directly to a playsim.
-	Title {
-		inner: sim::Handle,
-	},
-	PlaySim {
-		inner: sim::Handle,
-	},
-	CastCall,
-}
-
 #[derive(Debug)]
-enum SceneChange {
-	/// The user has requested an immediate exit from any other scene.
-	/// Stop everything, drop everything, and close the window as fast as possible.
-	Exit,
-	/// Only used to transition from the first-time startup screen.
-	ToFrontend,
-	FrontendToTitle {
-		/// The user's load order. Gets handed off to the mount thread.
-		to_mount: Vec<PathBuf>,
-	},
-	TitleToFrontend,
-}
-
 pub struct ClientCore {
-	/// RAT: In my experience, a runtime log is much more informative if it
+	/// (RAT) In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed.
 	pub start_time: Instant,
 	pub user: UserCore,
@@ -101,7 +51,7 @@ pub struct ClientCore {
 	/// it will be unwrapped.
 	pub rng: Arc<Mutex<RngCore<WyRand>>>,
 	pub console: Console<ConsoleCommand>,
-	// TODO: Menu stack
+	// TODO: A menu stack.
 	pub camera: Camera,
 	devgui: DeveloperGui,
 	scene: Scene,
@@ -202,7 +152,7 @@ impl ClientCore {
 			}
 		};
 
-		// Temporary discard
+		// Discard this for now; it will get used later.
 		let _ = self.camera.update(frame.delta_time_secs_f32());
 		self.gfx.egui_start();
 
@@ -279,7 +229,6 @@ impl ClientCore {
 			_ => unimplemented!(),
 		};
 
-		// TODO: mark as `unlikely` when it stabilizes
 		if self.devgui.open {
 			let ctx = &self.gfx.egui.context;
 			let mut devgui_open = true;
@@ -437,7 +386,7 @@ impl ClientCore {
 			.iter()
 			.filter(|kb| kb.keycode == vkc && kb.modifiers == self.input.modifiers);
 
-		// TODO: Invoke LithScript callbacks
+		// TODO: Invoke LithScript callbacks.
 	}
 
 	pub fn scene_change(&mut self, control_flow: &mut ControlFlow) {
@@ -496,7 +445,7 @@ impl ClientCore {
 						.expect("User information setup failed: directory creation error.");
 
 					// If the basic file IO needed to initialize user information
-					// is not even possible, there's no reason to go further
+					// is not even possible, there's no reason to go further.
 
 					self.user = match UserCore::new(path) {
 						Ok(u) => u,
@@ -773,8 +722,60 @@ impl ClientCore {
 	}
 }
 
+#[derive(Debug)]
+enum Scene {
+	/// The user needs to choose whether their information should be stored
+	/// portably or at a "home" directory.
+	FirstStartup {
+		/// `true` is the default presented to the user.
+		portable: bool,
+
+		portable_path: PathBuf,
+		home_path: Option<PathBuf>,
+	},
+	Transition,
+	/// The user hasn't entered the game yet. From here they can select a user
+	/// profile and engine-global/cross-game preferences, assemble a load order,
+	/// and begin the game launch process.
+	Frontend {
+		menu: FrontendMenu,
+	},
+	GameLoad {
+		/// The mount thread takes a write guard to the catalog and another
+		/// pointer to `tracker`.
+		thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
+		/// How far along the mount/load process is `thread`?
+		tracker: Arc<LoadTracker>,
+		/// Print to the log how long the mount takes for diagnostic purposes.
+		start_time: Instant,
+	},
+	/// Where the user is taken after leaving the frontend, unless they have
+	/// specified to be taken directly to a playsim.
+	Title {
+		inner: sim::Handle,
+	},
+	PlaySim {
+		inner: sim::Handle,
+	},
+	CastCall,
+}
+
+#[derive(Debug)]
+enum SceneChange {
+	/// The user has requested an immediate exit from any other scene.
+	/// Stop everything, drop everything, and close the window as fast as possible.
+	Exit,
+	/// Only used to transition from the first-time startup screen.
+	ToFrontend,
+	FrontendToTitle {
+		/// The user's load order. Gets handed off to the mount thread.
+		to_mount: Vec<PathBuf>,
+	},
+	TitleToFrontend,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DevGuiStatus {
+enum DevGuiStatus {
 	Console,
 	LithRepl,
 	Vfs,

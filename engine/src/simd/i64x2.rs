@@ -122,7 +122,7 @@ impl<T: Int64> std::ops::Mul for I64X2<T> {
 	#[inline(always)]
 	fn mul(self, rhs: Self) -> Self::Output {
 		// https://stackoverflow.com/questions/17863411/sse-multiplication-of-2-64-bit-integers
-		// By user "EasyasPi", used under CC BY-SA 4.0
+		// By user "EasyasPi", used under CC BY-SA 4.0.
 		// https://stackoverflow.com/users/4014461/easyaspi
 
 		unsafe {
@@ -149,7 +149,7 @@ impl<T: Int64 + std::ops::Div<Output = T>> std::ops::Div for I64X2<T> {
 
 // Details /////////////////////////////////////////////////////////////////////
 
-// [Rat] I am sad to say this is the cleanest way there is to do this
+// (RAT) I am sad to say this is the cleanest way there is to do this.
 
 /// Both `i64` and `u64` can be packed into an `__m128i`.
 /// A helper trait makes [`I64X2`] generic over both.

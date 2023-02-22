@@ -32,9 +32,7 @@ use std::collections::HashMap;
 
 use fasthash::metro;
 
-const NUM_BUCKETS: usize = 251;
-
-/// [GZ]
+/// (GZ)
 /// Programmatically generated strings (e.g. those returned by strparam) are stored here.
 /// PCD_TAGSTRING also now stores strings in this table instead of simply
 /// tagging strings with their library ID.
@@ -67,13 +65,18 @@ const NUM_BUCKETS: usize = 251;
 ///   * You can pass library strings around freely without having to worry
 ///     about always having the same libraries loaded in the same order on
 ///     every map that needs to use those strings.
+#[derive(Debug)]
 pub(super) struct StringPool {
 	pool: Vec<Entry>,
-	buckets: [usize; NUM_BUCKETS],
+	buckets: [usize; Self::NUM_BUCKETS],
 	first_free_entry: usize,
 }
 
-#[derive(Default)]
+impl StringPool {
+	const NUM_BUCKETS: usize = 251;
+}
+
+#[derive(Debug, Default)]
 struct Entry {
 	string: String,
 	hash: usize,
@@ -128,7 +131,7 @@ impl StringPool {
 
 	fn add(&mut self, string: &str) -> Option<usize> {
 		let hash = metro::hash64(string) as usize;
-		let bucket = hash % NUM_BUCKETS;
+		let bucket = hash % Self::NUM_BUCKETS;
 
 		match self.find(string, hash, bucket) {
 			Some(i) => Some(i | Self::LIBID_OR),
@@ -156,13 +159,13 @@ impl StringPool {
 		let mut index = self.first_free_entry;
 
 		if index >= Self::MIN_GC_SIZE && index == self.pool.capacity() {
-			// Array needs to grow. Try a GC first
+			// Array needs to grow. Try a GC first.
 			self.gc_all();
 			index = self.first_free_entry;
 		}
 
 		if self.first_free_entry >= Self::LIBID_OR {
-			// Any higher will collide with the library ID marker
+			// Any higher will collide with the library ID marker.
 			return None;
 		}
 
@@ -215,8 +218,8 @@ impl StringPool {
 
 	fn purge(&mut self) {
 		// Clear hash buckets; rebuild them while choosing
-		// which strings to keep and which will be purged
-		self.buckets = [255usize; NUM_BUCKETS];
+		// which strings to keep and which will be purged.
+		self.buckets = [255usize; Self::NUM_BUCKETS];
 
 		for (i, entry) in self.pool.iter_mut().enumerate() {
 			if entry.next == Self::FREE_ENTRY {
@@ -234,7 +237,7 @@ impl StringPool {
 			} else {
 				let bytes = bytemuck::bytes_of(&entry.hash);
 				let hash = metro::hash64(bytes) as usize;
-				let hash = hash % NUM_BUCKETS;
+				let hash = hash % Self::NUM_BUCKETS;
 				entry.next = self.buckets[hash];
 				self.buckets[hash] = i;
 				entry.marked = false;
@@ -326,10 +329,10 @@ impl StringPool {
 
 	fn gc_all(&mut self) {
 		// TODO:
-		// - Mark all string arrays in stack
-		// - Mark all level var strings in each level's behaviors
-		// - Mark world var strings
-		// - Mark global var strings
+		// - Mark all string arrays in stack.
+		// - Mark all level var strings in each level's behaviors.
+		// - Mark world var strings.
+		// - Mark global var strings.
 		self.purge();
 		todo!();
 	}

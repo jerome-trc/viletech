@@ -12,7 +12,7 @@ use super::{Asset, Image, PolyModel, Sound, VoxelModel};
 pub struct Blueprint {
 	pub base: Actor,
 	pub blood_types: [Option<InHandle<Blueprint>>; 3],
-	pub bones: Option<()>, // TODO: Skeletal animation w/ data representation
+	pub bones: Option<()>, // TODO: Skeletal animation w/ data representation.
 	pub damage_factors: Vec<(InHandle<DamageType>, f64)>,
 	/// Actor is shrunk to this height after being killed.
 	pub death_height: f64,
@@ -23,11 +23,11 @@ pub struct Blueprint {
 	pub health_starting: i32,
 	/// Health value below which actor enters "extreme death" f-state sequence.
 	pub gib_health: i32,
-	pub model: Option<()>, // TODO: Polymodel data representation
+	pub model: Option<()>, // TODO: Polymodel data representation.
 	/// What to write if a player actor was killed by this actor's non-melee attack.
-	pub obituary: String, // TODO: String interning
+	pub obituary: String, // TODO: String interning.
 	/// What to write if a player actor was killed by this actor's melee attack.
-	pub obituary_melee: String, // TODO: String interning
+	pub obituary_melee: String, // TODO: String interning.
 	pub pain_chances: Vec<(InHandle<DamageType>, u16)>,
 	pub render_feats: RenderFeatures,
 	pub sounds: Sounds,

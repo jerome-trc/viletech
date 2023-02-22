@@ -38,7 +38,7 @@ pub(in crate::lith) enum BinOp {
 impl BinOp {
 	#[must_use]
 	pub(super) unsafe fn eval(&self, l: &QWord, r: &QWord) -> QWord {
-		// TODO: Divide-by-zero exceptions
+		// TODO: Divide-by-zero exceptions.
 		match self {
 			BinOp::AddI32 => (l.i_32.wrapping_add(r.i_32)).into(),
 			BinOp::SubI32 => (l.i_32.wrapping_sub(r.i_32)).into(),

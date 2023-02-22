@@ -79,7 +79,7 @@ pub fn parse_include_tree(mount_path: &VPath, root: FileRef) -> IncTreeResult {
 
 			if !anno.is_inner() {
 				// When pairing annotations with syntax nodes later,
-				// this will get flagged as an error; `include` can't be outer
+				// this will get flagged as an error; `include` can't be outer.
 				continue;
 			}
 

@@ -82,9 +82,21 @@ impl AudioCore {
 			ui.heading("Quick Play");
 
 			ui.horizontal(|ui| {
-				ui.radio_value(&mut self.gui.slot_to_play, SELSLOT_MUS1, "Music 1");
-				ui.radio_value(&mut self.gui.slot_to_play, SELSLOT_MUS2, "Music 2");
-				ui.radio_value(&mut self.gui.slot_to_play, SELSLOT_SOUND, "Sound");
+				ui.radio_value(
+					&mut self.gui.slot_to_play,
+					DeveloperGui::SELSLOT_MUS1,
+					"Music 1",
+				);
+				ui.radio_value(
+					&mut self.gui.slot_to_play,
+					DeveloperGui::SELSLOT_MUS2,
+					"Music 2",
+				);
+				ui.radio_value(
+					&mut self.gui.slot_to_play,
+					DeveloperGui::SELSLOT_SOUND,
+					"Sound",
+				);
 			});
 
 			ui.add(
@@ -185,9 +197,9 @@ impl AudioCore {
 			mdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
 
 			let res = match self.gui.slot_to_play {
-				SELSLOT_MUS1 => self.start_music_midi::<false>(mdat),
-				SELSLOT_MUS2 => self.start_music_midi::<true>(mdat),
-				SELSLOT_SOUND => self.start_sound_midi(mdat, None),
+				DeveloperGui::SELSLOT_MUS1 => self.start_music_midi::<false>(mdat),
+				DeveloperGui::SELSLOT_MUS2 => self.start_music_midi::<true>(mdat),
+				DeveloperGui::SELSLOT_SOUND => self.start_sound_midi(mdat, None),
 				_ => unreachable!(),
 			};
 
@@ -215,9 +227,9 @@ impl AudioCore {
 			sdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
 
 			let res = match self.gui.slot_to_play {
-				SELSLOT_MUS1 => self.start_music_wave::<false>(sdat),
-				SELSLOT_MUS2 => self.start_music_wave::<true>(sdat),
-				SELSLOT_SOUND => self.start_sound_wave(sdat, None),
+				DeveloperGui::SELSLOT_MUS1 => self.start_music_wave::<false>(sdat),
+				DeveloperGui::SELSLOT_MUS2 => self.start_music_wave::<true>(sdat),
+				DeveloperGui::SELSLOT_SOUND => self.start_sound_wave(sdat, None),
 				_ => unreachable!(),
 			};
 
@@ -243,6 +255,7 @@ impl AudioCore {
 }
 
 /// State storage for the audio developer GUI.
+#[derive(Debug)]
 pub(super) struct DeveloperGui {
 	/// Let the user write a VFS path or asset ID.
 	pub(super) id_buf: String,
@@ -257,9 +270,11 @@ pub(super) struct DeveloperGui {
 	pub(super) slot_to_play: u8,
 }
 
-const SELSLOT_MUS1: u8 = 0;
-const SELSLOT_MUS2: u8 = 1;
-const SELSLOT_SOUND: u8 = 2;
+impl DeveloperGui {
+	const SELSLOT_MUS1: u8 = 0;
+	const SELSLOT_MUS2: u8 = 1;
+	const SELSLOT_SOUND: u8 = 2;
+}
 
 impl Default for DeveloperGui {
 	fn default() -> Self {
@@ -268,7 +283,7 @@ impl Default for DeveloperGui {
 			soundfont_buf: String::default(),
 			volume: 1.0,
 			midi_device: midi::Device::FluidSynth,
-			slot_to_play: SELSLOT_SOUND,
+			slot_to_play: DeveloperGui::SELSLOT_SOUND,
 		}
 	}
 }

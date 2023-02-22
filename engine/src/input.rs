@@ -9,6 +9,7 @@ use winit::{
 // TODO: Use `std::mem::variant_count` when it's stable
 const NUM_VIRTKEYS: usize = winit::event::VirtualKeyCode::Cut as usize;
 
+#[derive(Debug)]
 pub struct InputCore {
 	pub keys_phys: [bool; 256],
 	pub keys_virt: [bool; NUM_VIRTKEYS],
@@ -28,7 +29,7 @@ impl Default for InputCore {
 			mouse_buttons: [false; 18],
 			modifiers: ModifiersState::default(),
 			cursor_pos: PhysicalPosition { x: 0.0, y: 0.0 },
-			user_binds: Vec::<UserKeyBind>::default(),
+			user_binds: vec![],
 		}
 	}
 }
@@ -64,35 +65,43 @@ impl InputCore {
 		}
 	}
 
+	#[must_use]
 	pub fn pkey_is_up(&self, scancode: ScanCode) -> bool {
 		self.keys_phys[scancode as usize]
 	}
 
+	#[must_use]
 	pub fn pkey_is_down(&self, scancode: ScanCode) -> bool {
 		self.keys_phys[scancode as usize]
 	}
 
+	#[must_use]
 	pub fn vkey_is_up(&self, virtcode: VirtualKeyCode) -> bool {
 		self.keys_virt[virtcode as usize]
 	}
 
+	#[must_use]
 	pub fn vkey_is_down(&self, virtcode: VirtualKeyCode) -> bool {
 		self.keys_virt[virtcode as usize]
 	}
 
+	#[must_use]
 	pub fn lmb_down(&self) -> bool {
 		self.mouse_buttons[0]
 	}
 
+	#[must_use]
 	pub fn rmb_down(&self) -> bool {
 		self.mouse_buttons[1]
 	}
 
+	#[must_use]
 	pub fn mmb_down(&self) -> bool {
 		self.mouse_buttons[2]
 	}
 }
 
+#[derive(Debug)]
 pub struct KeyBind<A> {
 	pub id: String,
 	pub name: String,
@@ -102,5 +111,5 @@ pub struct KeyBind<A> {
 	pub on_release: A,
 }
 
-pub type UserKeyBind = KeyBind<()>; // TODO: Bound LithScript function
+pub type UserKeyBind = KeyBind<()>; // TODO: LithScript function binding.
 pub type IdleKeyBind = KeyBind<()>;

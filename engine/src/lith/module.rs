@@ -139,7 +139,7 @@ impl<S: 'static + Symbol> std::ops::Deref for Handle<S> {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
-		// SAFETY: Type correctness was already validated during handle acquisition
+		// SAFETY: Type correctness was already validated during handle acquisition.
 		// Q: `downcast_ref_unchecked` when it stabilizes?
 		unsafe { self.0.data.as_any().downcast_ref::<S>().unwrap_unchecked() }
 	}

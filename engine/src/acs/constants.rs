@@ -32,6 +32,7 @@
 
 use bitflags::bitflags;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum ActorProperty {
 	Health,
 	Speed,
@@ -84,6 +85,7 @@ pub(super) enum ActorProperty {
 	FriendlySeeBlocks,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum ArmorInfo {
 	ClassName,
 	SaveAmount,
@@ -94,6 +96,7 @@ pub(super) enum ArmorInfo {
 }
 
 #[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum BlockType {
 	Nothing,
 	Creatures,
@@ -102,6 +105,7 @@ pub(super) enum BlockType {
 	Players,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum GameScene {
 	Single,
 	NetCoop,
@@ -109,6 +113,7 @@ pub(super) enum GameScene {
 	Titlemap,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum HexenClass {
 	Fighter,
 	Cleric,
@@ -125,6 +130,7 @@ bitflags! {
 }
 
 #[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum LevelInfo {
 	ParTime,
 	ClusterNum,
@@ -156,6 +162,7 @@ bitflags! {
 }
 
 #[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum PlayerInfo {
 	Team,
 	AimDist,
@@ -170,6 +177,7 @@ pub(super) enum PlayerInfo {
 }
 
 #[repr(i8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum PrintName {
 	LevelName = -1,
 	Level = -2,
@@ -181,6 +189,7 @@ pub(super) enum PrintName {
 pub(super) const SIDE_FRONT: i32 = 0;
 pub(super) const SIDE_BACK: i32 = 1;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Skill {
 	VeryEasy,
 	Easy,
@@ -189,6 +198,7 @@ pub(super) enum Skill {
 	VeryHard,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum SoundType {
 	See,
 	Attack,
@@ -211,6 +221,7 @@ bitflags! {
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Texture {
 	Top,
 	Middle,

@@ -133,7 +133,7 @@ impl Tree {
 				ctx.iptr = InstPtr::None;
 
 				// Function calls never directly emit a valid word. Leave a
-				// type-annotated discard here so it's clear what's happening
+				// type-annotated discard here so it's clear what's happening.
 				let _: QWord = unsafe {
 					let maybe_uninit = std::mem::replace(
 						ctx.icache.0.get_unchecked_mut(Index::default().0),

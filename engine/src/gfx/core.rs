@@ -18,6 +18,7 @@ use winit::{event_loop::EventLoopWindowTarget, window::Window};
 use super::error::Error;
 
 /// Holds all state common to rendering between scenes.
+#[derive(Debug)]
 pub struct GraphicsCore {
 	pub window: Window,
 	pub window_size: winit::dpi::PhysicalSize<u32>,
@@ -39,6 +40,14 @@ pub struct EguiCore {
 	pub renderer: egui_wgpu::Renderer,
 }
 
+impl std::fmt::Debug for EguiCore {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("EguiCore")
+			.field("context", &self.context)
+			.finish()
+	}
+}
+
 impl GraphicsCore {
 	pub fn new(
 		window: Window,
@@ -46,7 +55,7 @@ impl GraphicsCore {
 	) -> Result<GraphicsCore, Box<dyn std::error::Error>> {
 		let instance = wgpu::Instance::new(InstanceDescriptor {
 			backends: wgpu::Backends::PRIMARY,
-			// TODO: Change to Dxc; ship along with Windows binaries
+			// TODO: Change to Dxc; ship along with Windows binaries.
 			dx12_shader_compiler: Dx12Compiler::Fxc,
 		});
 

@@ -15,9 +15,9 @@ pub fn is_zip(bytes: &[u8]) -> bool {
 /// Ensure the given slice starts at the file's beginning.
 #[must_use]
 pub fn is_lzma(bytes: &[u8]) -> bool {
-	// [Rat] I have limited reason to believe this is sound. No good formal spec for
+	// (RAT) I have limited reason to believe this is sound. No good formal spec for
 	// LZMA's header seems to exist *anywhere*. I just compressed some files, passed
-	// them through integrity tests via CLI, and then read the headers in those
+	// them through integrity tests via CLI, and then read the headers in those.
 	bytes.len() >= 13
 		&& matches!(
 			&bytes[0..13],
@@ -102,7 +102,7 @@ pub fn is_doom_gfx(bytes: &[u8]) -> bool {
 	let left = LittleEndian::read_i16(&bytes[4..6]);
 	let top = LittleEndian::read_i16(&bytes[6..8]);
 
-	// Sanity check on dimensions
+	// Sanity check on dimensions.
 	if !(0..=4096).contains(&width) {
 		return false;
 	}

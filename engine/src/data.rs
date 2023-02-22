@@ -370,6 +370,6 @@ impl Default for Catalog {
 	}
 }
 
-// RAT: If you're reading this, congratulations! You've found something special.
+// (RAT) If you're reading this, congratulations! You've found something special.
 // This module sub-tree is, historically speaking, the most tortured code in VileTech.
 // The Git history doesn't even reflect half of the reworks the VFS has undergone.

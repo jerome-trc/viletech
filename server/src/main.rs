@@ -25,7 +25,7 @@ pub fn version_string() -> String {
 }
 
 pub struct ServerCore {
-	/// RAT: In my experience, a runtime log is much more informative if it
+	/// (RAT) In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed.
 	start_time: Instant,
 	terminal: Terminal<Command>,
@@ -150,7 +150,7 @@ conditions. See the license document that come with your installation."
 					}
 				};
 
-				// Check for client connections/disconnections
+				// Check for client connections/disconnections.
 				while let Some(event) = server.get_event() {
 					match event {
 						ServerEvent::ClientConnected(id, user_data) => {

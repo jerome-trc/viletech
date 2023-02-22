@@ -157,7 +157,7 @@ impl Runtime {
 			.iter_mut()
 			.find(|a| a.capacity() >= layout.size());
 
-		// First, attempt to bump to an arena that has space
+		// First, attempt to bump to an arena that has space.
 
 		if let Some(arena) = arena {
 			let ret = arena.bump(layout);
@@ -171,11 +171,11 @@ impl Runtime {
 
 		unimplemented!()
 
-		// If no existing arena can be bumped, try a best fit
+		// If no existing arena can be bumped, try a best fit.
 
-		// If best-fit fails, try first fit
+		// If best-fit fails, try first fit.
 
-		// If first-fit fails, allocate a new arena
+		// If first-fit fails, allocate a new arena.
 	}
 
 	/// Huge blocks are allocated directly through a `malloc` call.
@@ -210,8 +210,8 @@ impl Runtime {
 	fn gc_cycle(&mut self) {
 		self.heap.status = Status::Mark;
 
-		// TODO: Type information needed on the stack for root tracing
-		// This depends on future reclamation schemes for concurrent collections
+		// TODO: Type information needed on the stack for root tracing.
+		// This depends on future reclamation schemes for concurrent collections.
 		// (e.g. assets, module symbols). Might be Hyaline, hazard pointers, epoch...
 
 		self.heap.status = Status::Sweep;

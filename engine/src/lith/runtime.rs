@@ -15,7 +15,7 @@ pub struct Runtime {
 	pub(super) stack: Stack,
 	pub(super) heap: Heap,
 	pub(super) icache: ICache,
-	// See lith::heap for memory management, GC methods
+	// See lith::heap for memory management, GC methods.
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]

@@ -57,7 +57,7 @@ const PS_NO_FRACTION: __m128 = m128_from_f32x4([8388608.0; 4]);
 #[inline]
 pub(self) unsafe fn m128_floor(v: __m128) -> __m128 {
 	// Based on https://github.com/microsoft/DirectXMath `XMVectorFloor`
-	// To handle NAN, INF and numbers greater than 8388608, use masking
+	// To handle NAN, INF and numbers greater than 8388608, use masking.
 	let test = _mm_and_si128(_mm_castps_si128(v), _mm_castps_si128(PS_INV_SIGN_MASK));
 	let test = _mm_cmplt_epi32(test, _mm_castps_si128(PS_NO_FRACTION));
 	// Truncate
@@ -67,9 +67,9 @@ pub(self) unsafe fn m128_floor(v: __m128) -> __m128 {
 	// 0 -> 0, 0xffffffff -> -1.0f
 	let larger = _mm_cvtepi32_ps(_mm_castps_si128(larger));
 	let result = _mm_add_ps(result, larger);
-	// All numbers less than 8388608 will use the round to int
+	// All numbers less than 8388608 will use the round to int.
 	let result = _mm_and_ps(result, _mm_castsi128_ps(test));
-	// All others, use the ORIGINAL value
+	// All others, use the ORIGINAL value.
 	let test = _mm_andnot_si128(test, _mm_castps_si128(v));
 	_mm_or_ps(result, _mm_castsi128_ps(test))
 }

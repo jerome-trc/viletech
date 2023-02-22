@@ -128,7 +128,7 @@ impl Rotator32 {
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Rotator64(DVec3);
 
-// [Rat] Q: Would this type benefit from SIMD? using `__m256d` would depend on
+// (RAT) Q: Would this type benefit from SIMD? using `__m256d` would depend on
 // AVX2 intrinsics that aren't even supported on my current machine.
 
 impl Rotator64 {

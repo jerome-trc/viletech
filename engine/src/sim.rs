@@ -163,18 +163,18 @@ pub type OutSender = crossbeam::channel::Sender<OutMessage>;
 pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
 
 pub fn run(sim: Arc<PlaySim>) {
-	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds
+	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds.
 	const BASE_TICINTERVAL_INDEX: usize = 10;
 
 	#[rustfmt::skip]
 	const TICINTERVAL_POWERS: [f64; 21] = [
-		// Minimum speed (-10 in the UI) is approximately 12 tics per second
+		// Minimum speed (-10 in the UI) is approximately 12 tics per second.
 		1.10, 1.09, 1.08, 1.07, 1.06,
 		1.05, 1.04, 1.03, 1.02, 1.01,
-		1.00, // Base speed (0 in the UI) is 35 tics per second
+		1.00, // Base speed (0 in the UI) is 35 tics per second.
 		0.99, 0.98, 0.97, 0.96, 0.95,
 		0.94, 0.93, 0.92, 0.91, 0.90,
-		// Maximum speed (+10 in the UI) is approximately 97 tics per second
+		// Maximum speed (+10 in the UI) is approximately 97 tics per second.
 	];
 
 	fn calc_tic_interval(index: usize) -> u64 {
@@ -185,7 +185,7 @@ pub fn run(sim: Arc<PlaySim>) {
 
 	let mut tindx_real = BASE_TICINTERVAL_INDEX;
 	let mut tindx_goal = BASE_TICINTERVAL_INDEX;
-	let mut tic_interval = BASE_TICINTERVAL; // In microseconds
+	let mut tic_interval = BASE_TICINTERVAL; // In microseconds.
 
 	'sim: loop {
 		let tic_start = Instant::now();
@@ -215,11 +215,11 @@ pub fn run(sim: Arc<PlaySim>) {
 
 		// If it took longer than the expected interval to process this tic,
 		// increase the time dilation; if it took less, try to go back up to
-		// the user's desired tic rate
+		// the user's desired tic rate.
 		if Instant::now() > next_tic_start && tindx_real > 0 {
 			tindx_real -= 1;
 			tic_interval = calc_tic_interval(tindx_real);
-			continue 'sim; // Already behind schedule; don't sleep
+			continue 'sim; // Already behind schedule; don't sleep.
 		} else if tindx_real < tindx_goal {
 			tindx_real += 1;
 			tic_interval = calc_tic_interval(tindx_real);
