@@ -1,7 +1,6 @@
 //! # VileTech Client
 
-mod commands;
-#[allow(dead_code)]
+mod ccmd;
 mod core;
 
 use std::{boxed::Box, env, error::Error, time::Instant};
@@ -18,7 +17,7 @@ use vile::{
 use winit::{
 	dpi::PhysicalSize,
 	event::{Event as WinitEvent, VirtualKeyCode, WindowEvent},
-	event_loop::EventLoop,
+	event_loop::{ControlFlow, EventLoop},
 };
 
 use crate::core::ClientCore;
@@ -58,11 +57,9 @@ conditions. See the license document that come with your installation."
 		}
 	}
 
-	let console = Console::new(log_receiver);
+	let console = Console::<ccmd::Command>::new(log_receiver);
 
 	vile::log_init_diag(&version_string())?;
-
-	let _devmode = env::args().any(|arg| arg == "-d" || arg == "--dev");
 
 	let mut catalog = Catalog::default();
 
@@ -141,11 +138,8 @@ conditions. See the license document that come with your installation."
 	};
 
 	event_loop.run(move |event, _, control_flow| match event {
-		WinitEvent::RedrawRequested(window_id) => {
-			core.redraw_requested(window_id, control_flow);
-		}
 		WinitEvent::MainEventsCleared => {
-			core.main_events_cleared(control_flow);
+			core.main_loop(control_flow);
 		}
 		WinitEvent::WindowEvent {
 			ref event,
@@ -155,8 +149,8 @@ conditions. See the license document that come with your installation."
 
 			match event {
 				WindowEvent::CloseRequested => {
-					core.exit();
-					core.scene_change(control_flow);
+					*control_flow = ControlFlow::Exit;
+					return;
 				}
 				WindowEvent::Resized(psize) => {
 					core.on_window_resize(*psize);
@@ -183,8 +177,7 @@ conditions. See the license document that come with your installation."
 					if input.state == winit::event::ElementState::Pressed
 						&& input.virtual_keycode == Some(VirtualKeyCode::Escape)
 					{
-						core.exit();
-						core.scene_change(control_flow);
+						*control_flow = ControlFlow::Exit;
 						return;
 					}
 

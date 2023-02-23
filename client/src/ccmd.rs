@@ -29,7 +29,7 @@ impl std::fmt::Debug for Request {
 }
 
 bitflags::bitflags! {
-	pub struct CommandFlags: u8 {
+	pub struct Flags: u8 {
 		/// This command is enabled when entering the frontend
 		/// and disabled when leaving it.
 		const FRONTEND = 1 << 0;
@@ -55,7 +55,7 @@ bitflags::bitflags! {
 }
 
 pub struct Command {
-	pub flags: CommandFlags,
+	pub flags: Flags,
 	pub func: fn(args: terminal::CommandArgs) -> Request,
 }
 
