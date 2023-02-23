@@ -159,10 +159,15 @@ conditions. See the license document that come with your installation."
 					core.on_window_resize(**new_inner_size);
 				}
 				WindowEvent::Focused(gained) => {
-					if *gained {
-						core.audio.resume_all();
+					let res = if *gained {
+						core.audio.resume_all()
 					} else {
-						core.audio.pause_all();
+						core.audio.pause_all()
+					};
+
+					if let Err(err) = res {
+						let what = if *gained { "resume" } else { "pause" };
+						error!("Failed to {what} all audio: {err}");
 					}
 				}
 				_ => {}

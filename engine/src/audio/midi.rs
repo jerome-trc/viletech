@@ -249,6 +249,7 @@ pub struct Handle {
 }
 
 impl Handle {
+	/// Returns the current playback state of the sound.
 	#[must_use]
 	pub fn state(&self) -> PlaybackState {
 		self.shared.playback_state()
@@ -260,33 +261,29 @@ impl Handle {
 	}
 
 	pub fn pause(&mut self, tween: Tween) -> Result<(), Error> {
-		self.sender
-			.send(Command::Pause(tween))
-			.map_err(|_| Error::CommandMidi)
+		self.sender.send(Command::Pause(tween)).map_err(Error::from)
 	}
 
 	pub fn resume(&mut self, tween: Tween) -> Result<(), Error> {
 		self.sender
 			.send(Command::Resume(tween))
-			.map_err(|_| Error::CommandMidi)
+			.map_err(Error::from)
 	}
 
 	pub fn stop(&mut self, tween: Tween) -> Result<(), Error> {
-		self.sender
-			.send(Command::Stop(tween))
-			.map_err(|_| Error::CommandMidi)
+		self.sender.send(Command::Stop(tween)).map_err(Error::from)
 	}
 
 	pub fn set_volume(&mut self, volume: impl Into<Volume>, tween: Tween) -> Result<(), Error> {
 		self.sender
 			.send(Command::SetVolume(volume.into(), tween))
-			.map_err(|_| Error::CommandMidi)
+			.map_err(Error::from)
 	}
 
 	pub fn set_panning(&mut self, panning: f64, tween: Tween) -> Result<(), Error> {
 		self.sender
 			.send(Command::SetPanning(panning, tween))
-			.map_err(|_| Error::CommandMidi)
+			.map_err(Error::from)
 	}
 }
 
@@ -485,7 +482,7 @@ impl Shared {
 // Internal: Command ///////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-enum Command {
+pub(super) enum Command {
 	SetVolume(Volume, Tween),
 	SetPanning(f64, Tween),
 	Pause(Tween),

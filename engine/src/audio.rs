@@ -10,6 +10,7 @@ use std::{
 	sync::Arc,
 };
 
+use crossbeam::channel::SendError;
 use kira::{
 	manager::{
 		backend::{cpal::CpalBackend, Backend},
@@ -21,8 +22,9 @@ use kira::{
 		SoundData,
 	},
 	tween::Tween,
+	CommandError,
 };
-use log::{info, warn};
+use log::{error, info, warn};
 use nodi::midly;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
@@ -78,14 +80,12 @@ impl AudioCore {
 		let mut ret = Self {
 			catalog,
 			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
-			soundfonts: Vec::with_capacity(1),
+			soundfonts: Self::collect_soundfonts()?,
 			music1: None,
 			music2: None,
 			sounds: Vec::with_capacity(sound_cap),
 			gui: DeveloperGui::default(),
 		};
-
-		ret.collect_soundfonts()?;
 
 		if !ret.soundfonts.is_empty() {
 			let cow = ret.soundfonts[0].path.to_string_lossy();
@@ -111,6 +111,12 @@ impl AudioCore {
 		if let Some(mus) = &mut self.music1 {
 			if mus.state() == PlaybackState::Stopped {
 				let _ = self.music1.take();
+			}
+		}
+
+		if let Some(mus) = &mut self.music2 {
+			if mus.state() == PlaybackState::Stopped {
+				let _ = self.music2.take();
 			}
 		}
 	}
@@ -196,79 +202,97 @@ impl AudioCore {
 	}
 
 	/// Instantly pauses every sound and music handle.
-	pub fn pause_all(&mut self) {
-		for handle in &mut self.sounds {
-			let res = handle.pause(Tween::default());
-			debug_assert!(res.is_ok(), "Failed to pause a sound: {}", res.unwrap_err());
-		}
+	pub fn pause_all(&mut self) -> Result<(), Error> {
+		self.manager.pause(Tween::default()).map_err(Error::from)
+	}
 
+	pub fn pause_all_sounds(&mut self) {
+		for (i, handle) in self.sounds.iter_mut().enumerate() {
+			if let Err(err) = handle.pause(Tween::default()) {
+				error!("Failed to pause sound {i}: {err}");
+			}
+		}
+	}
+
+	pub fn pause_all_music(&mut self) {
 		if let Some(mus) = &mut self.music1 {
-			let res = mus.pause(Tween::default());
-			debug_assert!(res.is_ok(), "Failed to pause music 1: {}", res.unwrap_err());
+			if let Err(err) = mus.pause(Tween::default()) {
+				error!("Failed to pause music 1: {err}");
+			}
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			let res = mus.pause(Tween::default());
-			debug_assert!(res.is_ok(), "Failed to pause music 2: {}", res.unwrap_err());
+			if let Err(err) = mus.pause(Tween::default()) {
+				error!("Failed to pause music 2: {err}");
+			}
 		}
 	}
 
 	/// Instantly resumes every sound and music handle.
-	pub fn resume_all(&mut self) {
-		for handle in &mut self.sounds {
-			let res = handle.resume(Tween::default());
+	pub fn resume_all(&mut self) -> Result<(), Error> {
+		self.manager.resume(Tween::default()).map_err(Error::from)
+	}
 
-			debug_assert!(
-				res.is_ok(),
-				"Failed to resume a sound: {}",
-				res.unwrap_err()
-			);
+	pub fn resume_all_sounds(&mut self) {
+		for (i, handle) in self.sounds.iter_mut().enumerate() {
+			if let Err(err) = handle.resume(Tween::default()) {
+				error!("Failed to resume sound {i}: {err}");
+			}
 		}
+	}
 
+	pub fn resume_all_music(&mut self) {
 		if let Some(mus) = &mut self.music1 {
-			let res = mus.resume(Tween::default());
-
-			debug_assert!(
-				res.is_ok(),
-				"Failed to resume music 1: {}",
-				res.unwrap_err()
-			);
+			if let Err(err) = mus.resume(Tween::default()) {
+				error!("Failed to resume music 1: {err}");
+			}
 		}
 
 		if let Some(mus) = &mut self.music2 {
-			let res = mus.resume(Tween::default());
-
-			debug_assert!(
-				res.is_ok(),
-				"Failed to resume music 2: {}",
-				res.unwrap_err()
-			);
+			if let Err(err) = mus.resume(Tween::default()) {
+				error!("Failed to resume music 2: {err}");
+			}
 		}
 	}
 
 	/// Instantly stops every ongoing sound and music track. The sound array
 	/// gets cleared along with both music slots.
-	pub fn stop_all(&mut self) -> Result<(), Error> {
-		for sound in &mut self.sounds {
-			sound.stop(Tween::default())?;
+	pub fn stop_all(&mut self) {
+		self.stop_all_sounds();
+		self.stop_all_music();
+	}
+
+	/// An error gets logged if stopping a sound fails.
+	pub fn stop_all_sounds(&mut self) {
+		for (i, sound) in self.sounds.iter_mut().enumerate() {
+			if let Err(err) = sound.stop(Tween::default()) {
+				error!("`stop_all_sounds` failed to stop sound {i}: {err}");
+			}
 		}
 
 		self.sounds.clear();
+	}
 
-		self.stop_music::<false>()?;
-		self.stop_music::<true>()?;
+	/// An error gets logged if stopping a slot fails.
+	pub fn stop_all_music(&mut self) {
+		if let Err(err) = self.stop_music::<false>() {
+			error!("`stop_all_music` failed to stop music 1: {err}");
+		}
 
-		Ok(())
+		if let Err(err) = self.stop_music::<true>() {
+			error!("`stop_all_music` failed to stop music 1: {err}");
+		}
 	}
 
 	/// A fundamental part of engine initialization. Recursively read the contents of
 	/// `<executable_directory>/soundfonts`, determine their types, and store their
 	/// paths. Note that in the debug build, `<working_directory>/data/soundfonts`
-	/// will be walked instead. Returns [`Error::NoSoundFonts`] if no SoundFont
-	/// files whatsoever could be found. This should never be considered fatal;
-	/// it just means the engine won't be able to render MIDIs.
-	pub fn collect_soundfonts(&mut self) -> Result<(), Error> {
-		self.soundfonts.clear();
+	/// will be walked instead.
+	///
+	/// If no SoundFont files whatsoever could be found, `Ok(())` still gets
+	/// returned, but a log warning gets emitted.
+	fn collect_soundfonts() -> Result<Vec<SoundFont>, Error> {
+		let mut ret = vec![];
 
 		let walker = walkdir::WalkDir::new::<&Path>(SOUNDFONT_DIR.as_ref())
 			.follow_links(false)
@@ -297,10 +321,9 @@ impl AudioCore {
 			}
 
 			// Check if another SoundFont by this name has already been collected.
-			if self
-				.soundfonts
+			if ret
 				.iter()
-				.any(|sf| sf.name().as_os_str().eq_ignore_ascii_case(path.as_os_str()))
+				.any(|sf: &SoundFont| sf.name().as_os_str().eq_ignore_ascii_case(path.as_os_str()))
 			{
 				continue;
 			}
@@ -389,17 +412,21 @@ impl AudioCore {
 				// This GUS SoundFont has been validated. Now it can be pushed.
 			}
 
-			self.soundfonts.push(SoundFont {
+			ret.push(SoundFont {
 				path: path.to_owned(),
 				kind: sf_kind,
 			});
 		}
 
-		if self.soundfonts.is_empty() {
-			Err(Error::NoSoundFonts)
-		} else {
-			Ok(())
+		if ret.is_empty() {
+			warn!(
+				"No SoundFont files were found under path: {}\r\n\t\
+				The engine will be unable to render MIDI sound.",
+				SOUNDFONT_DIR.display(),
+			);
 		}
+
+		Ok(ret)
 	}
 
 	/// Draw the egui-based developer/debug/diagnosis menu, and perform any
@@ -440,21 +467,21 @@ impl Handle {
 
 	pub fn pause(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.pause(tween).map_err(Error::CommandWave),
+			Handle::Wave(wave) => wave.pause(tween).map_err(Error::from),
 			Handle::Midi(midi) => midi.pause(tween),
 		}
 	}
 
 	pub fn resume(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.resume(tween).map_err(Error::CommandWave),
+			Handle::Wave(wave) => wave.resume(tween).map_err(Error::from),
 			Handle::Midi(midi) => midi.resume(tween),
 		}
 	}
 
 	pub fn stop(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.stop(tween).map_err(Error::CommandWave),
+			Handle::Wave(wave) => wave.stop(tween).map_err(Error::from),
 			Handle::Midi(midi) => midi.stop(tween),
 		}
 	}
@@ -602,31 +629,33 @@ pub fn soundfont_dir() -> &'static Path {
 
 #[derive(Debug)]
 pub enum Error {
-	NoSoundFonts,
 	SoundFontRead(PathBuf, fluidlite::Error),
 	KiraBackend(<CpalBackend as Backend>::Error),
 	ParseMidi(midly::Error),
 	MidiSynth(fluidlite::Error),
 	PlayMidi(PlayMidiError),
 	PlayWave(PlayWaveError),
-	CommandMidi,
-	CommandWave(kira::CommandError),
+	CommandOverflow,
+	ThreadPanic,
 }
 
 impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		None
+		match self {
+			Self::SoundFontRead(_, err) => Some(err),
+			Self::KiraBackend(err) => Some(err),
+			Self::ParseMidi(err) => Some(err),
+			Self::MidiSynth(err) => Some(err),
+			Self::PlayMidi(err) => Some(err),
+			Self::PlayWave(err) => Some(err),
+			Self::CommandOverflow | Self::ThreadPanic => None,
+		}
 	}
 }
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::NoSoundFonts => write!(
-				f,
-				"No SoundFont files found under path: {}",
-				SOUNDFONT_DIR.to_string_lossy().as_ref()
-			),
 			Self::SoundFontRead(path, err) => write!(
 				f,
 				"Failed to read SoundFont at path: {p}\r\n\t\
@@ -638,9 +667,27 @@ impl std::fmt::Display for Error {
 			Self::MidiSynth(err) => err.fmt(f),
 			Self::PlayMidi(err) => err.fmt(f),
 			Self::PlayWave(err) => err.fmt(f),
-			Self::CommandMidi => write!(f, "Failed to send a command to a MIDI sound."),
-			Self::CommandWave(err) => err.fmt(f),
+			Self::CommandOverflow => {
+				write!(f, "Tried to send too many commands to a sound at once.")
+			}
+			Self::ThreadPanic => write!(f, "Audio thread has panicked."),
 		}
+	}
+}
+
+impl From<CommandError> for Error {
+	fn from(value: CommandError) -> Self {
+		match value {
+			CommandError::CommandQueueFull => Self::CommandOverflow,
+			CommandError::MutexPoisoned => Self::ThreadPanic,
+			_ => unreachable!(),
+		}
+	}
+}
+
+impl From<SendError<midi::Command>> for Error {
+	fn from(_: SendError<midi::Command>) -> Self {
+		Self::ThreadPanic
 	}
 }
 
