@@ -20,9 +20,9 @@ bytemuck = { workspace = true }
 byteorder = "1.4.3"
 chrono = { workspace = true }
 cpal = "0.14.1" # Same version as `kira`
-cranelift = "0.92.0"
-cranelift-jit = "0.92.0"
-cranelift-module = "0.92.0"
+cranelift = "0.93.1"
+cranelift-jit = "0.93.1"
+cranelift-module = "0.93.1"
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
 dolly = { workspace = true }
