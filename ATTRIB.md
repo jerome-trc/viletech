@@ -245,6 +245,5 @@ The SoundFont file located at /data/soundfonts/viletech.sf2 is courtesy of [deem
 
 - Alison "Marrub" Watson
 - Jessica "Russell" Gutawer
-- Marisa "the Magician"
 - Marisa "Randi" Heit
 - Yholl
