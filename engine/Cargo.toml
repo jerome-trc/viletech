@@ -12,71 +12,60 @@ keywords = ["game", "engine", "gamedev", "graphics", "doom"]
 publish = false
 
 [dependencies]
-arrayvec = { version = "0.7.2", features = ["serde"] }
-ariadne = "0.1.5"
+arrayvec = { workspace = true }
+ariadne = { workspace = true }
 bitflags = { workspace = true }
 bitvec = { workspace = true }
 bytemuck = { workspace = true }
-byteorder = "1.4.3"
+byteorder = { workspace = true }
 chrono = { workspace = true }
-cpal = "0.14.1" # Same version as `kira`
-cranelift = "0.93.1"
-cranelift-jit = "0.93.1"
-cranelift-module = "0.93.1"
+cpal = { workspace = true }
+cranelift = { workspace = true }
+cranelift-jit = { workspace = true }
+cranelift-module = { workspace = true }
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
 dolly = { workspace = true }
 doomfront = { workspace = true }
 egui = { workspace = true }
-egui-wgpu = "0.21.0"
-egui-winit = "0.21.1"
+egui-wgpu = { workspace = true }
+egui-winit = { workspace = true }
 fasthash = { workspace = true }
-fern = { version = "0.6.1", features = ["colored"] }
-fixed = "1.23.0"
-fluidlite = "0.2.1"
-formatx = "0.2.1"
-glam = { version = "0.22.0", features = [
-	"approx",
-	"bytemuck",
-	"rand",
-	"serde",
-	"debug-glam-assert",
-] }
+fern = { workspace = true }
+fixed = { workspace = true }
+fluidlite = { workspace = true }
+formatx = { workspace = true }
+glam = { workspace = true }
 globset = { workspace = true }
-home = "0.5.4"
-image = { version = "0.24.5", default-features = false, features = [
-	"dds",
-	"jpeg",
-	"png",
-	"tga",
-] }
-impl-trait-for-tuples = "0.2.2"
+home = { workspace = true }
+image = { workspace = true }
+impl-trait-for-tuples = { workspace = true }
 indexmap = { workspace = true }
 indoc = { workspace = true }
 itertools = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }
-md5 = "0.7.0"
+md5 = { workspace = true }
 memoffset = { workspace = true }
-naga = "0.11.0"
+naga = { workspace = true }
 nanorand = { workspace = true }
-nodi = "0.19.2"
+nodi = { workspace = true }
 once_cell = { workspace = true }
-palette = "0.6.1"
+palette = { workspace = true }
 parking_lot = { workspace = true }
-paste = "1.0.11"
-pollster = "0.3.0"
-raw-cpuid = "10.6.1"
+paste = { workspace = true }
+pollster = { workspace = true }
+raw-cpuid = { workspace = true }
 rayon = { workspace = true }
 regex = { workspace = true }
 renet = { workspace = true }
-rfd = "0.11.1"
-serde = "1.0.152"
+rfd = { workspace = true }
+serde = { workspace = true }
 sha3 = { workspace = true }
 stardate = { workspace = true }
 subterra = { workspace = true }
-toml = "0.7.2"
-unicode-ident = "1.0.6"
+toml = { workspace = true }
+unicode-ident = { workspace = true }
 walkdir = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }
@@ -87,7 +76,7 @@ name = "bench"
 harness = false
 
 [build-dependencies]
-chrono = "0.4.23"
+chrono = { workspace = true }
 miette = { version = "5.5.0", features = ["fancy"] }
 sha3 = { workspace = true }
 walkdir = { workspace = true }

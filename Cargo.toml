@@ -14,30 +14,69 @@ codegen-units = 4
 opt-level = 3
 
 [workspace.dependencies]
+ariadne = "0.1.5"
+arrayvec = { version = "0.7.2", features = ["serde"] }
 bitflags = "1.3.2"
 bitvec = { version = "1.0.1", features = ["serde"] }
 bytemuck = { version = "1.11.0", features = ["derive"] }
+byteorder = "1.4.3"
 chrono = "0.4.23"
 clap = { version = "4.0.32", features = ["derive"] }
+cpal = "0.14.1" # Same version as `kira`
+cranelift = "0.93.1"
+cranelift-jit = "0.93.1"
+cranelift-module = "0.93.1"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 dolly = "0.4.0"
 egui = "0.21.0"
+egui-wgpu = "0.21.0"
+egui-winit = "0.21.1"
 fasthash = "0.4.0"
+fern = { version = "0.6.1", features = ["colored"] }
+fixed = "1.23.0"
+fluidlite = "0.2.1"
+formatx = "0.2.1"
+glam = { version = "0.22.0", features = [
+	"approx",
+	"bytemuck",
+	"rand",
+	"serde",
+	"debug-glam-assert",
+] }
 globset = "0.4.10"
+home = "0.5.4"
+image = { version = "0.24.5", default-features = false, features = [
+	"dds",
+	"jpeg",
+	"png",
+	"tga",
+] }
+impl-trait-for-tuples = "0.2.2"
 indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
 indoc = "2.0.0"
 itertools = "0.10.5"
 kira = "0.7.1"
 log = "0.4.17"
+md5 = "0.7.0"
 memoffset = "0.8.0"
+naga = "0.11.0"
 nanorand = "0.7.0"
+nodi = "0.19.2"
 once_cell = "1.17.0"
+palette = "0.6.1"
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
+paste = "1.0.11"
+pollster = "0.3.0"
+raw-cpuid = "10.6.1"
 rayon = "1.6.1"
 regex = "1.7.1"
 renet = "0.0.9"
+rfd = "0.11.1"
+serde = "1.0.152"
 sha3 = "0.10.6"
+toml = "0.7.2"
+unicode-ident = "1.0.6"
 walkdir = "2.3.2"
 wgpu = "0.15.1"
 winit = "0.28.1"
