@@ -31,7 +31,7 @@ pub mod user;
 pub mod utils;
 pub mod wad;
 
-// Type aliases
+// Type aliases ////////////////////////////////////////////////////////////////
 
 /// Disambiguates between real FS paths and virtual FS paths.
 pub type VPath = std::path::Path;
@@ -47,6 +47,12 @@ pub type ShortId = arrayvec::ArrayString<8>;
 pub type EditorNum = u16;
 /// See <https://zdoom.org/wiki/Spawn_number>. Used by ACS.
 pub type SpawnNum = u16;
+
+// Constants ///////////////////////////////////////////////////////////////////
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const GIT_HASH: &str = env!("GIT_HASH");
+pub const COMPILE_DATETIME: &str = env!("COMPILE_DATETIME");
 
 // Symbols that don't belong in any other module ///////////////////////////////
 
@@ -279,11 +285,8 @@ pub fn short_version_string() -> String {
 #[must_use]
 pub fn full_version_string(app_version_string: &str) -> String {
 	format!(
-		"VileTech Engine {}\r\n\t{app_version_string}\
-		\r\n\tGit commit: {}\r\n\tCompiled on: {}",
-		env!("CARGO_PKG_VERSION"),
-		env!("GIT_HASH"),
-		env!("COMPILE_DATETIME")
+		"VileTech Engine {VERSION}\r\n\t{app_version_string}\
+		\r\n\tGit commit: {GIT_HASH}\r\n\tCompiled on: {COMPILE_DATETIME}",
 	)
 }
 
