@@ -123,13 +123,17 @@ LithScript leans towards strong, gradual typing.
 `bool` is a strongly-typed true-or-false byte.
 `char` uses Rust character semantics; it represents a single valid UTF-8 code point.
 
-LithScript's integral and floating-point types map to LLVM integral types for brevity and immediate clarity as to their size:
+LithScript has the following numeric types:
 
-`i8` `u8`
-`i16` `u16`
-`i32` `u32`
-`i64` `u64`
-`f32` `f64`
+`int8` `uint8`
+`int16` `uint16`
+`int32` `uint32`
+`int64` `uint64`
+`float` `float64`
+
+The following aliases are also provided:
+- `int` for `int32`
+- `uint` for `uint32`.
 
 Integers of different signedness and bit-width can only be converted via cast.
 
