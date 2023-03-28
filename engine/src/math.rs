@@ -1,21 +1,15 @@
-use std::ops::{AddAssign, DivAssign, MulAssign, Rem, RemAssign, SubAssign};
+use std::ops::{Add, AddAssign, Mul};
 
 use glam::{DQuat, DVec3, EulerRot, Quat, Vec3A};
 
-pub trait Numeric:
-	Sized + Copy + num::Num + AddAssign + MulAssign + DivAssign + SubAssign + Rem + RemAssign
-{
-}
+pub trait Dimension: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
 
-impl<T> Numeric for T where
-	T: Sized + Copy + num::Num + AddAssign + MulAssign + DivAssign + SubAssign + Rem + RemAssign
-{
-}
+impl<T> Dimension for T where T: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Rect4<T>
 where
-	T: Numeric,
+	T: Dimension,
 {
 	left: T,
 	top: T,
@@ -25,7 +19,7 @@ where
 
 impl<T> Rect4<T>
 where
-	T: Numeric,
+	T: Dimension,
 {
 	#[must_use]
 	pub fn right(&self) -> T {
@@ -69,7 +63,7 @@ pub type FRect64 = Rect4<f64>;
 /// A strongly-typed angle in degrees of type `T`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Angle<T: Numeric>(T);
+pub struct Angle<T: Dimension>(T);
 
 pub type Angle32 = Angle<f32>;
 pub type Angle64 = Angle<f64>;

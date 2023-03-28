@@ -28,15 +28,12 @@
 ** -----------------------------------------------------------------------------
 */
 
-use num::traits::FromPrimitive;
-use num_derive::FromPrimitive;
-
 use crate::{math::IRect32, sim::ActorId};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
 #[repr(u8)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Kind {
 	Closed,
 	Open,
@@ -56,6 +53,18 @@ pub(super) enum Kind {
 	Reopen,
 	#[default]
 	Unknown = u8::MAX,
+}
+
+impl From<u8> for Kind {
+	fn from(value: u8) -> Self {
+		const MAX: u8 = Kind::Reopen as u8;
+
+		if value > MAX {
+			Self::Unknown
+		} else {
+			unsafe { std::mem::transmute::<_, _>(value) }
+		}
+	}
 }
 
 bitflags::bitflags! {
@@ -79,24 +88,23 @@ pub(super) struct Pointer {
 impl Pointer {
 	pub(super) fn mimic_hexen(&mut self, ptrh: &ScriptPointerH) {
 		self.number = (ptrh.number & 1000) as i32;
-		self.kind = FromPrimitive::from_u8((ptrh.number / 1000) as u8)
-			.expect("An intermediate ACS script pointer type wasn't pre-validated.");
+		// self.kind = FromPrimitive::from_u8((ptrh.number / 1000) as u8)
+		// 	.expect("An intermediate ACS script pointer type wasn't pre-validated.");
+		self.kind = Kind::from((ptrh.number / 1000) as u8);
 		self.arg_count = (ptrh.arg_count) as u8;
 		self.address = ptrh.address;
 	}
 
 	pub(super) fn mimic_zdoom(&mut self, ptrz: &ScriptPointerZD) {
 		self.number = ptrz.number as i32;
-		self.kind = FromPrimitive::from_u8(ptrz.kind as u8)
-			.expect("An intermediate ACS script pointer type wasn't pre-validated.");
+		self.kind = Kind::from(ptrz.kind as u8);
 		self.arg_count = ptrz.arg_count as u8;
 		self.address = ptrz.address;
 	}
 
 	pub(super) fn mimic_intermediate(&mut self, ptri: &ScriptPointerI) {
 		self.number = ptri.number as i32;
-		self.kind = FromPrimitive::from_u8(ptri.kind)
-			.expect("An intermediate ACS script pointer type wasn't pre-validated.");
+		self.kind = Kind::from(ptri.kind);
 		self.arg_count = ptri.arg_count;
 		self.address = ptri.address;
 	}
