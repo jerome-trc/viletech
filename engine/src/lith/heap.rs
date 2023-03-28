@@ -42,8 +42,8 @@ pub(crate) struct Pointer(NonNull<RegionHeader>);
 
 impl Pointer {
 	#[must_use]
-	pub(super) fn typeinfo(&self) -> &Handle<TypeInfo> {
-		unsafe { &self.0.as_ref().tinfo }
+	pub(super) unsafe fn typeinfo(&self) -> &Handle<TypeInfo> {
+		&(*self.0.as_ptr()).tinfo
 	}
 
 	#[must_use]
@@ -55,20 +55,16 @@ impl Pointer {
 	/// Comes with a read barrier; returns `NULL` if attempting to read an
 	/// object which has been marked for forced destruction.
 	#[must_use]
-	fn get<T>(&self) -> *mut T {
-		let header = unsafe { self.0.as_ref() };
-
-		if header.flags.contains(RegionFlags::DESTROYED) {
+	unsafe fn get<T>(&self) -> *mut T {
+		if (*self.0.as_ptr()).flags.contains(RegionFlags::DESTROYED) {
 			return std::ptr::null_mut();
 		}
 
 		self.0.as_ptr().cast::<T>()
 	}
 
-	fn write_barrier(&self) {
-		let header = unsafe { self.0.as_ref() };
-
-		if header.flags.contains(RegionFlags::GRAY) {
+	unsafe fn write_barrier(&self) {
+		if (*self.0.as_ptr()).flags.contains(RegionFlags::GRAY) {
 			return;
 		}
 
