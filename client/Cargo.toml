@@ -1,19 +1,22 @@
 [package]
 name = "viletech-client"
-description = "Client for the VileTech Engine"
-authors = ["***REMOVED***"]
 version = "0.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
-homepage = "https://github.com/***REMOVED***/viletech/"
-repository = "https://github.com/***REMOVED***/viletech/"
+
+authors = ["***REMOVED***"]
 categories = ["games", "game-engines", "game-development"]
-keywords = ["game", "engine", "gamedev", "graphics", "doom"]
+description = "Client for the VileTech Engine"
+homepage = "https://github.com/***REMOVED***/viletech/"
+keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
+license = "GPL-3.0-or-later"
 publish = false
+repository = "https://github.com/***REMOVED***/viletech/"
 
 [dependencies]
 vile = { path = "../engine", package = "viletech" }
 
+bevy = { workspace = true }
+bevy_egui = { workspace = true }
 bitflags = { workspace = true }
 clap = { workspace = true }
 crossbeam = { workspace = true }

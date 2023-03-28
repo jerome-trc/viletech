@@ -28,6 +28,14 @@ pub struct Command {
 	pub func: fn(args: CommandArgs) -> Request,
 }
 
+impl std::fmt::Debug for Command {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Command")
+			.field("flags", &self.flags)
+			.finish()
+	}
+}
+
 impl terminal::Command for Command {
 	type Output = Request;
 

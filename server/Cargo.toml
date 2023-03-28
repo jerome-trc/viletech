@@ -1,24 +1,25 @@
 [package]
 name = "viletech-server"
-description = "Headless dedicated server for the VileTech Engine"
-authors = ["***REMOVED***"]
 version = "0.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
-homepage = "https://github.com/***REMOVED***/viletech/"
-repository = "https://github.com/***REMOVED***/viletech/"
+
+authors = ["***REMOVED***"]
 categories = ["games", "game-engines", "game-development"]
-keywords = ["game", "engine", "gamedev", "graphics", "doom"]
+description = "Dedicated server for the VileTech Engine"
+homepage = "https://github.com/***REMOVED***/viletech/"
+keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
+license = "GPL-3.0-or-later"
 publish = false
+repository = "https://github.com/***REMOVED***/viletech/"
 
 [dependencies]
 vile = { path = "../engine", package = "viletech" }
 
+bevy_quinnet = { workspace = true }
 bitflags = { workspace = true }
 bytemuck = { workspace = true }
 clap = { workspace = true }
 crossbeam = { workspace = true }
 indoc = { workspace = true }
 log = { workspace = true }
-renet = { workspace = true }
 sha3 = { workspace = true }

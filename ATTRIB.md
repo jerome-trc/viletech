@@ -16,6 +16,18 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
     - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
     - Provided under the [MIT License](https://github.com/zesterer/ariadne/blob/main/LICENSE).
     - https://docs.rs/ariadne/latest/ariadne/
+- bevy
+    - By Carter Anderson ([@cart](https://github.com/cart)), the [Bevy Engine organisation](https://github.com/bevyengine), et al.
+    - Provided under the [Apache 2.0 License](https://github.com/bevyengine/bevy/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bevyengine/bevy/blob/main/LICENSE-MIT).
+    - https://bevyengine.org/
+- bevy_egui
+    - By Vladyslav Batyrenko ([@mvlabat](https://github.com/mvlabat)), Jakob Hellermann ([@jakobhellermann](https://github.com/jakobhellermann)), et al.
+    - Provided under the [MIT License](https://github.com/mvlabat/bevy_egui/blob/main/LICENSE).
+    - https://docs.rs/bevy_egui/latest/bevy_egui/
+- bevy_quinnet
+    - By Gilles Henaux ([@Henauxg](https://github.com/Henauxg)) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/Henauxg/bevy_quinnet/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/Henauxg/bevy_quinnet/blob/main/LICENSE-MIT).
+    - https://docs.rs/bevy_quinnet/latest/bevy_quinnet/
 - bitflags
 	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
@@ -174,10 +186,6 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
 	- https://docs.rs/regex/latest/regex/
-- renet
-	- By [@lucaspoffo](https://github.com/lucaspoffo) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/lucaspoffo/renet/blob/master/LICENSE-MIT).
-	- https://docs.rs/renet/latest/renet/
 - rfd
 	- By Bartłomiej Maryńczak ([@PolyMeilex](https://github.com/PolyMeilex)) et al.
 	- Provided under the [MIT License](https://github.com/PolyMeilex/rfd/blob/master/LICENSE).
