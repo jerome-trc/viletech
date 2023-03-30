@@ -1,11 +1,11 @@
 use bitvec::vec::BitVec;
 
-use crate::sim::ActorId;
+use crate::sim::ActorPtr;
 
 #[derive(Debug)]
 pub struct Player {
 	/// What actor is this player controlling?
-	pub actor: ActorId,
+	pub actor: Option<ActorPtr>,
 	pub bot: Option<Bot>,
 	/// Mask indicating time freeze powerup status. Applied between teammates.
 	pub time_freeze: BitVec,

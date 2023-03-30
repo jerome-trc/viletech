@@ -6,7 +6,7 @@ use std::{
 	ops::Range,
 };
 
-use super::heap::Pointer;
+use super::heap::Ptr;
 
 /// The principal unit of LithScript's ABI.
 /// Only exposed to enable type conversions.
@@ -147,15 +147,15 @@ impl<T> From<*mut T> for QWord {
 	}
 }
 
-impl From<Pointer> for QWord {
-	fn from(value: Pointer) -> Self {
+impl From<Ptr> for QWord {
+	fn from(value: Ptr) -> Self {
 		Self {
 			u_size: unsafe { std::mem::transmute::<_, _>(value) },
 		}
 	}
 }
 
-impl From<QWord> for Pointer {
+impl From<QWord> for Ptr {
 	fn from(value: QWord) -> Self {
 		unsafe { std::mem::transmute::<_, _>(value.u_size) }
 	}

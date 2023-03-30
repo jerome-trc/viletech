@@ -1,27 +1,11 @@
 //! # VileTech Client
 
-mod ccmd;
-mod core;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+	// Soon!
+	unreachable!()
+}
 
-use std::{boxed::Box, env, error::Error, time::Instant};
-
-use clap::Parser;
-use indoc::printdoc;
-use log::{error, info, warn};
-use vile::{
-	console::Console,
-	data::{Catalog, CatalogExt},
-	gfx::{core::GraphicsCore, render},
-	utils::duration_to_hhmmss,
-};
-use winit::{
-	dpi::PhysicalSize,
-	event::{Event as WinitEvent, VirtualKeyCode, WindowEvent},
-	event_loop::{ControlFlow, EventLoop},
-};
-
-use crate::core::ClientCore;
-
+#[cfg(not(all()))]
 fn main() -> Result<(), Box<dyn Error>> {
 	let start_time = Instant::now();
 	let args = Clap::parse();
@@ -213,25 +197,4 @@ conditions. See the license document that come with your installation."
 		}
 		_ => {}
 	});
-}
-
-#[must_use]
-fn version_string() -> String {
-	format!("VileTech Client {}", env!("CARGO_PKG_VERSION"))
-}
-
-#[derive(Debug, clap::Parser)]
-struct Clap {
-	/// Prints the client and engine versions.
-	#[arg(short = 'V', long = "version")]
-	version: bool,
-	/// Prints license information.
-	#[arg(short = 'A', long = "about")]
-	about: bool,
-	/// Sets the number of threads used by the global thread pool
-	///
-	/// If set to 0 or not set, this will be automatically selected based on the
-	/// number of logical CPUs your computer has.
-	#[arg(short, long)]
-	threads: Option<usize>,
 }

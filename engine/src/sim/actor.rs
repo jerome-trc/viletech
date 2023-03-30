@@ -193,15 +193,15 @@ pub struct Defense {
 	pub rip_level_max: i32,
 }
 
-/// A status effect attached to an actor which deals some damage on a fixed tic
-/// interval for a set amount of tics before wearing off.
+/// A status effect attached to an actor which deals some damage on a fixed tick
+/// interval for a set amount of ticks before wearing off.
 #[derive(Debug)]
 pub struct DamageOverTime {
-	/// Applied per tic.
+	/// Applied per tick.
 	pub damage: i32,
 	pub damage_type: data::Handle<DamageType>,
-	pub remaining_tics: u32,
-	/// Damage is applied every `period` tics.
+	pub remaining_ticks: u32,
+	/// Damage is applied every `period` ticks.
 	pub period: u32,
 	pub source: Option<ActorId>,
 }
@@ -279,8 +279,8 @@ pub struct Readonly {
 	pub id: ActorId,
 	/// From GZ; affects render order somehow. VT may cull.
 	pub spawn_order: u32,
-	/// The tic this actor was created on.
-	pub spawn_tic: u32,
+	/// The tick this actor was created on.
+	pub spawn_tick: u32,
 }
 
 // Sounds //////////////////////////////////////////////////////////////////////
@@ -362,11 +362,11 @@ pub struct Special {
 #[derive(Debug)]
 pub struct StateMachine {
 	pub state: usize,
-	/// Tics remaining in the current state.
+	/// Ticks remaining in the current state.
 	/// May be -1, which is treated as infinity.
-	pub state_tics: i32,
+	pub state_ticks: i32,
 	pub frame: u8,
-	pub freeze_tics: u32,
+	pub freeze_ticks: u32,
 }
 
 // Trivia //////////////////////////////////////////////////////////////////////

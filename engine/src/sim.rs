@@ -3,245 +3,92 @@
 pub mod actor;
 pub mod level;
 
-use std::{
-	sync::Arc,
-	thread::JoinHandle,
-	time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
+use bevy::prelude::*;
 use nanorand::WyRand;
-use parking_lot::RwLock;
 
-use crate::{data::Catalog, lith, player::Player, rng::RngCore};
+use crate::{lith::heap::TPtr, rng::RngCore};
 
-use self::level::Level;
+pub type ActorPtr = TPtr<self::actor::Actor>;
 
-pub use actor::ActorId;
-
-#[derive(Debug)]
-pub struct PlaySim {
-	pub(self) context: Context,
-	pub state: RwLock<State>,
-}
-
-#[derive(Debug)]
-struct Context {
-	pub(self) catalog: Arc<RwLock<Catalog>>,
-	pub(self) runtime: Arc<RwLock<lith::Runtime>>,
-	pub(self) sender: OutSender,
-	pub(self) receiver: InReceiver,
-}
-
-#[derive(Debug, Default)]
-pub struct State {
-	pub players: Vec<Player>,
-	pub rng: RngCore<WyRand>,
-	pub level: Level,
+/// All gameplay simulation state.
+#[derive(Debug, Resource)]
+pub struct Sim {
+	timing: Timing,
+	cur_part: Partition,
+	inactive_parts: Vec<Partition>,
+	rng: RngCore<WyRand>,
 	/// Time spent in this hub thus far.
-	pub hub_tics_elapsed: u64,
+	hub_ticks_elapsed: u64,
 	/// Time spent in this playthrough thus far.
-	pub tics_elapsed: u64,
+	ticks_elapsed: u64,
 }
 
-impl PlaySim {
+/// A segment of the game world. In the overwhelming majority of cases, this will
+/// only be one level. At the moment this does not do much, but having this code
+/// in place paves the way to eventually do things like streaming parts of a level
+/// to and from the disk, or achieving better performance on enormously-demanding
+/// levels that do not need everything active all at once.
+#[derive(Debug)]
+pub struct Partition {
+	// ???
+}
+
+/// Separate from [`Sim`] for cleanliness.
+#[derive(Debug)]
+struct Timing {
+	/// `true` by default. If enabled, the sim will slow down whenever a tick-rate
+	/// of 35 Hz becomes unsustainable in order to prevent frame skipping.
+	dilate: bool,
+	/// 0 by default. Clamped to the range `-10..=10`.
+	/// See [`Self::tick_interval`] to understand how this value factors in.
+	tweak_real: i64,
+	/// 0 by default. Clamped to the range `-10..=10`.
+	/// The user sets this value to attempt to change the simulation rate.
+	/// The scheduler will aim to keep `tweak_real` equivalent to this, but will
+	/// set it lower if necessary to prevent the renderer from missing frames
+	/// (note that this behavior never happens at all if `dilate` is `false`).
+	tweak_goal: i64,
+}
+
+impl Timing {
 	#[must_use]
-	pub fn new(
-		catalog: Arc<RwLock<Catalog>>,
-		runtime: Arc<RwLock<lith::Runtime>>,
-		sender: OutSender,
-		receiver: InReceiver,
-	) -> Self {
+	fn tick_interval(&self) -> Duration {
+		let base = Duration::from_secs_f64(1.0 / 35.0);
+
+		if self.tweak_real >= 0 {
+			base + Duration::from_millis((self.tweak_real as u64) * 2)
+		} else {
+			base - Duration::from_millis((self.tweak_real.unsigned_abs()) * 2)
+		}
+	}
+}
+
+impl Default for Timing {
+	fn default() -> Self {
 		Self {
-			context: Context {
-				catalog,
-				runtime,
-				sender,
-				receiver,
-			},
-			state: RwLock::new(State::default()),
-		}
-	}
-
-	/// For the client to read all render state.
-	/// - Sim state gets read-locked.
-	/// - Lith runtime gets read-locked.
-	/// - Catalog gets read-locked.
-	#[must_use]
-	pub fn read(&self) -> Ref {
-		Ref {
-			ctx: &self.context,
-			catalog: self.context.catalog.read(),
-			runtime: self.context.runtime.read(),
-			state: self.state.read(),
-		}
-	}
-
-	/// For the sim thread to run a tic and the client to unmark dirty level geometry.
-	/// - Sim state gets write-locked.
-	/// - Lith runtime gets write-locked.
-	/// - Catalog gets read-locked.
-	#[must_use]
-	pub fn write(&self) -> RefMut {
-		RefMut {
-			ctx: &self.context,
-			catalog: self.context.catalog.read(),
-			runtime: self.context.runtime.write(),
-			state: self.state.write(),
+			dilate: true,
+			tweak_real: 0,
+			tweak_goal: 0,
 		}
 	}
 }
 
-pub type WriteGuard<'s, T> = parking_lot::RwLockWriteGuard<'s, T>;
-pub type ReadGuard<'s, T> = parking_lot::RwLockReadGuard<'s, T>;
+/// Intended to be run on a fixed-time update loop, 35 Hz by default.
+pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
+	let deadline = Instant::now() + sim.timing.tick_interval();
 
-/// See [`PlaySim::read`].
-#[derive(Debug)]
-pub struct Ref<'s> {
-	pub(self) ctx: &'s Context,
-	pub(self) catalog: ReadGuard<'s, Catalog>,
-	pub(self) runtime: ReadGuard<'s, lith::Runtime>,
-	pub(self) state: ReadGuard<'s, State>,
-}
+	sim.ticks_elapsed += 1;
+	sim.hub_ticks_elapsed += 1;
 
-impl<'s> std::ops::Deref for Ref<'s> {
-	type Target = ReadGuard<'s, State>;
-
-	fn deref(&self) -> &Self::Target {
-		&self.state
-	}
-}
-
-/// See [`PlaySim::write`].
-#[derive(Debug)]
-pub struct RefMut<'s> {
-	pub(self) ctx: &'s Context,
-	pub(self) catalog: ReadGuard<'s, Catalog>,
-	pub(self) runtime: WriteGuard<'s, lith::Runtime>,
-	pub(self) state: WriteGuard<'s, State>,
-}
-
-impl<'s> std::ops::Deref for RefMut<'s> {
-	type Target = WriteGuard<'s, State>;
-
-	fn deref(&self) -> &Self::Target {
-		&self.state
-	}
-}
-
-impl<'s> std::ops::DerefMut for RefMut<'s> {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.state
-	}
-}
-
-/// Allows the main thread to interface with the sim thread.
-#[derive(Debug)]
-pub struct Handle {
-	pub sim: Arc<PlaySim>,
-	pub sender: InSender,
-	pub receiver: OutReceiver,
-	pub thread: JoinHandle<()>,
-}
-
-#[derive(Debug)]
-pub enum InMessage {
-	Stop,
-	IncreaseTicRate,
-	DecreaseTicRate,
-	SetTicRate(i8),
-}
-
-/// Outbound messages are only for playsims running within the client.
-#[derive(Debug)]
-pub enum OutMessage {
-	Toast(String),
-}
-
-pub type InSender = crossbeam::channel::Sender<InMessage>;
-pub type InReceiver = crossbeam::channel::Receiver<InMessage>;
-pub type OutSender = crossbeam::channel::Sender<OutMessage>;
-pub type OutReceiver = crossbeam::channel::Receiver<OutMessage>;
-
-pub fn run(sim: Arc<PlaySim>) {
-	const BASE_TICINTERVAL: u64 = 28_571; // In microseconds.
-	const BASE_TICINTERVAL_INDEX: usize = 10;
-
-	#[rustfmt::skip]
-	const TICINTERVAL_POWERS: [f64; 21] = [
-		// Minimum speed (-10 in the UI) is approximately 12 tics per second.
-		1.10, 1.09, 1.08, 1.07, 1.06,
-		1.05, 1.04, 1.03, 1.02, 1.01,
-		1.00, // Base speed (0 in the UI) is 35 tics per second.
-		0.99, 0.98, 0.97, 0.96, 0.95,
-		0.94, 0.93, 0.92, 0.91, 0.90,
-		// Maximum speed (+10 in the UI) is approximately 97 tics per second.
-	];
-
-	fn calc_tic_interval(index: usize) -> u64 {
-		(BASE_TICINTERVAL as f64)
-			.powf(TICINTERVAL_POWERS[index])
-			.round() as u64
-	}
-
-	let mut tindx_real = BASE_TICINTERVAL_INDEX;
-	let mut tindx_goal = BASE_TICINTERVAL_INDEX;
-	let mut tic_interval = BASE_TICINTERVAL; // In microseconds.
-
-	'sim: loop {
-		let tic_start = Instant::now();
-		let next_tic_start = tic_start + Duration::from_micros(tic_interval);
-
-		while let Ok(msg) = sim.context.receiver.try_recv() {
-			match msg {
-				InMessage::Stop => {
-					break 'sim;
-				}
-				InMessage::IncreaseTicRate => {
-					if tindx_goal < (TICINTERVAL_POWERS.len() - 1) {
-						tindx_goal += 1;
-					}
-				}
-				InMessage::DecreaseTicRate => {
-					tindx_goal = tindx_goal.saturating_sub(1);
-				}
-				InMessage::SetTicRate(s_ticrate) => {
-					debug_assert!((-10..=10).contains(&s_ticrate));
-					tindx_goal = (s_ticrate + 10) as usize;
-				}
-			}
+	if sim.timing.dilate {
+		if Instant::now() > deadline && sim.timing.tweak_real > -10 {
+			sim.timing.tweak_real = (sim.timing.tweak_real - 1).max(-10);
+		} else if sim.timing.tweak_real < sim.timing.tweak_goal {
+			sim.timing.tweak_real = (sim.timing.tweak_real + 1).min(10);
 		}
 
-		tick(sim.write());
-
-		// If it took longer than the expected interval to process this tic,
-		// increase the time dilation; if it took less, try to go back up to
-		// the user's desired tic rate.
-		if Instant::now() > next_tic_start && tindx_real > 0 {
-			tindx_real -= 1;
-			tic_interval = calc_tic_interval(tindx_real);
-			continue 'sim; // Already behind schedule; don't sleep.
-		} else if tindx_real < tindx_goal {
-			tindx_real += 1;
-			tic_interval = calc_tic_interval(tindx_real);
-		}
-
-		// Q:
-		// - Better precision with spin-locks for tail end of sleep interval?
-		// - Better precision via exponential back-off?
-		std::thread::sleep(next_tic_start - tic_start);
+		fixed_time.period = sim.timing.tick_interval();
 	}
-}
-
-/// The critical section for sim tic execution. By taking a write guard, it is
-/// guaranteed that any mutable references created to the playsim data are truly
-/// exclusive.
-///
-/// In combination with the [`UnsafeCell`](std::cell::UnsafeCell) in parking_lot's
-/// [`RwLock`], this function can be trusted to be the sole source of truth
-/// for manipulating sim state, whether that be by itself or in Lith functions.
-#[inline]
-fn tick(mut sim: RefMut) {
-	sim.tics_elapsed += 1;
-	sim.level.tics_elapsed += 1;
-	sim.hub_tics_elapsed += 1;
 }

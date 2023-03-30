@@ -38,10 +38,12 @@ mod script;
 mod strpool;
 
 /// ACS demands sweeping access to information at several levels of the engine.
-/// This gets constructed per-tic from the playsim loop and passed down to run
+/// This gets constructed per-tick from the playsim loop and passed down to run
 /// scripts with.
+#[derive(Debug)]
 pub struct Context {}
 
+#[derive(Debug)]
 pub struct Controller {}
 
 impl Controller {
@@ -50,6 +52,7 @@ impl Controller {
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
 	Old,
 	Enhanced,

@@ -31,7 +31,7 @@ use parking_lot::RwLock;
 
 use crate::{
 	data::{Catalog, FileRef},
-	sim::ActorId,
+	sim::ActorPtr,
 	utils,
 };
 
@@ -176,7 +176,7 @@ impl AudioCore {
 	pub fn start_sound_wave(
 		&mut self,
 		data: StaticSoundData,
-		source: Option<ActorId>,
+		source: Option<ActorPtr>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
@@ -191,7 +191,7 @@ impl AudioCore {
 	pub fn start_sound_midi(
 		&mut self,
 		data: MidiData,
-		source: Option<ActorId>,
+		source: Option<ActorPtr>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
@@ -507,7 +507,7 @@ impl std::fmt::Debug for Handle {
 #[derive(Debug)]
 pub struct Sound {
 	handle: Handle,
-	_source: Option<ActorId>,
+	_source: Option<ActorPtr>,
 }
 
 impl Deref for Sound {

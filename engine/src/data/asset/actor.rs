@@ -56,12 +56,12 @@ pub struct FStateMachine {
 	pub states: Vec<FState>,
 }
 
-/// "Finite state". An actor appearance tied to some behavior and a tic duration.
+/// "Finite state". An actor appearance tied to some behavior and a tick duration.
 /// See [`FStateMachine`].
 pub struct FState {
 	pub visual: FStateVisual,
 	pub duration: i16,
-	pub tic_range: u16,
+	pub tick_range: u16,
 	pub flags: FStateFlags,
 	// TODO: What params/return types?
 	pub action: Option<Box<dyn FnMut() + Send + Sync + 'static>>,
@@ -72,7 +72,7 @@ impl std::fmt::Debug for FState {
 		f.debug_struct("FState")
 			.field("visual", &self.visual)
 			.field("duration", &self.duration)
-			.field("tic_range", &self.tic_range)
+			.field("tick_range", &self.tick_range)
 			.field("flags", &self.flags)
 			.field(
 				"action",

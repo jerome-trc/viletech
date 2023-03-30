@@ -28,7 +28,7 @@
 ** -----------------------------------------------------------------------------
 */
 
-use crate::{math::IRect32, sim::ActorId};
+use crate::{math::IRect32, sim::ActorPtr};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 
@@ -138,7 +138,7 @@ pub(super) struct Script {
 	number: i32,
 	module_number: i32,
 	local_vars: Vec<i32>,
-	activator: ActorId,
+	activator: ActorPtr,
 	line: Option<usize>,
 	// Q: Why did GZDoom's counterpart to this type store a font?
 	hud_height: u32,

@@ -27,7 +27,7 @@
 #[cfg(target_pointer_width = "32")]
 std::compile_error!("Lith's heap does not yet support 32-bit architectures.");
 
-use std::{alloc::Layout, collections::HashMap, num::NonZeroUsize, ptr::NonNull};
+use std::{alloc::Layout, collections::HashMap, marker::PhantomData, ptr::NonNull};
 
 use bitvec::prelude::BitArray;
 
@@ -38,9 +38,9 @@ use super::{tsys, Handle, Runtime, TypeInfo};
 /// Benefits from null-pointer optimization.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub(crate) struct Pointer(NonNull<RegionHeader>);
+pub struct Ptr(NonNull<RegionHeader>);
 
-impl Pointer {
+impl Ptr {
 	#[must_use]
 	pub(super) unsafe fn typeinfo(&self) -> &Handle<TypeInfo> {
 		&(*self.0.as_ptr()).tinfo
@@ -72,12 +72,19 @@ impl Pointer {
 	}
 }
 
-/// "Index pointer". Wraps a [`NonZeroUsize`] used to index into a specific
-/// native slice global to a [`Runtime`]. This is how scripts acquire handles to
-/// map geometry, ECS components, et cetera.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// "Typed pointer". Benefits from null-pointer optimization.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub(crate) struct IPointer(NonZeroUsize);
+pub struct TPtr<T>(NonNull<RegionHeader>, PhantomData<T>);
+
+/// "Index pointer". Double-wide, and necessary for pointing to certain kinds of
+/// objects which can not reasonably be allocated next to a header on a
+/// per-instance basis, such as map lines.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IPtr {
+	base: Ptr,
+	index: usize,
+}
 
 #[derive(Debug)]
 pub(super) struct Heap {
@@ -100,7 +107,7 @@ pub(super) struct Heap {
 
 impl Runtime {
 	#[must_use]
-	pub(super) unsafe fn alloc_t(&mut self, tinfo: Handle<TypeInfo>) -> Pointer {
+	pub(super) unsafe fn alloc_t(&mut self, tinfo: Handle<TypeInfo>) -> Ptr {
 		let layout = tinfo.heap_layout();
 
 		debug_assert_ne!(
@@ -132,7 +139,7 @@ impl Runtime {
 
 		std::ptr::write(ptr.as_ptr(), header);
 
-		Pointer(ptr)
+		Ptr(ptr)
 	}
 
 	#[must_use]

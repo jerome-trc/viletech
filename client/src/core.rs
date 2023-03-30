@@ -37,9 +37,6 @@ pub struct ClientCore {
 	pub gfx: GraphicsCore,
 	pub audio: AudioCore,
 	pub input: InputCore,
-	/// Kept behind an arc-lock in case the client's script API ends up needing
-	/// to call into it from multiple threads. If this proves to never happen,
-	/// it will be unwrapped.
 	pub rng: RngCore<WyRand>,
 	pub console: Console<ConsoleCommand>,
 	// TODO: A menu stack.
