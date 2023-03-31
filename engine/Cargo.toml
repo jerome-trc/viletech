@@ -12,15 +12,42 @@ license = "GPL-3.0-or-later"
 publish = false
 repository = "https://github.com/***REMOVED***/viletech/"
 
+[dependencies.bevy]
+workspace = true
+default-features = false
+features = [
+	# Default
+	"bevy_asset",
+	"bevy_gilrs",
+	"bevy_render",
+	"bevy_scene",
+	"bevy_winit",
+	"animation",
+	"filesystem_watcher",
+	"x11",
+
+	"hdr",
+	"png",
+	"vorbis",
+
+	# Optional
+	"serialize",
+
+	"bmp",
+	"ktx2",
+	"tga",
+
+	"flac",
+	"mp3",
+	"wav",
+
+	"dynamic_linking", # Temporary.
+]
+
 [dependencies]
 arrayvec = { workspace = true }
 ariadne = { workspace = true }
-bevy = { workspace = true, features = [
-	"flac",
-	"mp3",
-	"tga",
-	"wav",
-] }
+bevy_egui = { workspace = true }
 bitflags = { workspace = true }
 bitvec = { workspace = true }
 bytemuck = { workspace = true }
@@ -34,11 +61,7 @@ crossbeam = { workspace = true }
 dashmap = { workspace = true }
 dolly = { workspace = true }
 doomfront = { workspace = true }
-egui = { workspace = true }
-egui-wgpu = { workspace = true }
-egui-winit = { workspace = true }
 fasthash = { workspace = true }
-fern = { workspace = true }
 fixed = { workspace = true }
 fluidlite = { workspace = true }
 formatx = { workspace = true }
@@ -51,7 +74,6 @@ indexmap = { workspace = true }
 indoc = { workspace = true }
 itertools = { workspace = true }
 kira = { workspace = true }
-log = { workspace = true }
 md5 = { workspace = true }
 memoffset = { workspace = true }
 naga = { workspace = true }
@@ -71,10 +93,12 @@ sha3 = { workspace = true }
 stardate = { workspace = true }
 subterra = { workspace = true }
 toml = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-log = { workspace = true }
+tracing-subscriber = { workspace = true }
 unicode-ident = { workspace = true }
 walkdir = { workspace = true }
-wgpu = { workspace = true }
-winit = { workspace = true }
 zip = { workspace = true }
 
 [[bench]]

@@ -14,14 +14,10 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use bevy::prelude::Resource;
-use log::warn;
+use bevy::prelude::{warn, Resource};
 use serde::{Deserialize, Serialize};
 
-pub use dirs::*;
-pub use error::*;
-pub use pref::*;
-pub use profile::*;
+pub use self::{dirs::*, error::*, pref::*, profile::*};
 
 /// Hub for preferences, persistent storage (p-storage),
 /// saved games, demos, and screenshot management.

@@ -1,5 +1,6 @@
 //! # VileTech Client
 
+mod ccmd;
 mod core;
 mod frontend;
 mod game;
@@ -7,34 +8,37 @@ mod load;
 
 use std::{
 	borrow::Cow,
-	sync::Arc,
 	time::{Duration, Instant},
 };
 
 use bevy::{
 	app::AppExit,
 	diagnostic::LogDiagnosticsPlugin,
+	input::InputSystem,
+	log::LogPlugin,
 	prelude::*,
 	window::WindowMode,
 	winit::{UpdateMode, WinitSettings},
 };
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_egui::{egui, systems::InputEvents, EguiContexts, EguiPlugin};
 use clap::Parser;
 use indoc::printdoc;
-use parking_lot::RwLock;
 use viletech::{
-	audio::AudioCore,
+	console::Console,
 	data::{Catalog, CatalogExt},
-	lith,
-	rng::RngCore,
+	log::TracingPlugin,
 	user::UserCore,
-	DeveloperGui,
 };
 
 use self::core::*;
 
+// TODO:
+// - Pause all audio when focus is lost, and resume when focus is regained.
+// - Write log messages when Winit reports application suspension or resume,
+// for the benefit of diagnostics.
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	let start_time = Instant::now();
+	viletech::START_TIME.set(Instant::now()).unwrap();
 	let args = Clap::parse();
 
 	if args.version {
@@ -60,9 +64,11 @@ conditions. See the license document that comes with your installation."
 
 	let mut app = App::new();
 
+	// Common //////////////////////////////////////////////////////////////////
+
 	app.add_plugin(LogDiagnosticsPlugin::default());
 
-	// Common //////////////////////////////////////////////////////////////////
+	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
 	app.add_state::<AppState>()
 		.insert_resource(WinitSettings {
@@ -92,30 +98,32 @@ conditions. See the license document that comes with your installation."
 								.unwrap_or(0)
 						}),
 					),
+				})
+				.disable::<LogPlugin>()
+				.disable::<bevy::input::InputPlugin>()
+				.add_before::<WindowPlugin, _>(viletech::input::InputPlugin)
+				.add_before::<TaskPoolPlugin, _>(TracingPlugin {
+					console_sender: Some(log_sender),
+					..Default::default()
 				}),
 		)
 		.add_plugin(EguiPlugin)
-		.add_system(common_update);
+		.add_system(update_audio)
+		.add_system(update_input.in_set(InputSystem));
 
-	let catalog = Arc::new(RwLock::new(Catalog::default()));
-	let catalog_audio = catalog.clone();
+	let mut catalog = Catalog::default();
 
-	if let Err(err) = catalog.write().mount_basedata() {
+	if let Err(err) = catalog.mount_basedata() {
 		error!("Failed to find and mount engine base data: {err}");
 		return Err(Box::new(err));
 	}
 
-	let audio = AudioCore::new(catalog_audio, None)?;
-	let runtime = lith::Runtime::default();
-	let rng = RngCore::default();
-	let user;
-
-	let user_dir_home = viletech::user::user_dir_home();
 	let user_dir_portable = viletech::user::user_dir_portable();
+	let user_dir_home = viletech::user::user_dir_home();
 	let user_dir = viletech::user::select_user_dir(&user_dir_portable, &user_dir_home);
 
-	if let Some(udir) = user_dir {
-		user = UserCore::new(udir)?;
+	let user = if let Some(udir) = user_dir {
+		UserCore::new(udir)?
 	} else {
 		app.insert_resource(FirstStartup {
 			portable: true,
@@ -123,25 +131,10 @@ conditions. See the license document that comes with your installation."
 			home_path: user_dir_home,
 		});
 
-		user = UserCore::uninit();
-	}
+		UserCore::uninit()
+	};
 
-	app.insert_resource(ClientCore {
-		start_time,
-		audio,
-		catalog,
-		devgui: DeveloperGui {
-			#[cfg(debug_assertions)]
-			open: true,
-			#[cfg(not(debug_assertions))]
-			open: false,
-			left: DevGuiStatus::Vfs,
-			right: DevGuiStatus::Console,
-		},
-		runtime,
-		rng,
-		user,
-	});
+	app.insert_resource(ClientCore::new(catalog, Console::new(log_receiver), user)?);
 
 	app.add_system(init_on_enter.in_schedule(OnEnter(AppState::Init)));
 
@@ -172,6 +165,8 @@ conditions. See the license document that comes with your installation."
 		.add_system(game::on_exit.in_schedule(OnExit(AppState::Game)));
 
 	// Run /////////////////////////////////////////////////////////////////////
+
+	viletech::log::init_diag(&version_string())?;
 
 	app.run();
 
@@ -206,6 +201,7 @@ fn version_string() -> String {
 	format!("VileTech Client {}", env!("CARGO_PKG_VERSION"))
 }
 
+/// See [`AppState::Init`].
 fn init_on_enter(startup: Option<Res<FirstStartup>>, mut next_state: ResMut<NextState<AppState>>) {
 	if startup.is_none() {
 		next_state.set(AppState::Frontend);
@@ -299,8 +295,14 @@ fn first_startup(
 	});
 }
 
-fn common_update(mut core: ResMut<ClientCore>) {
+fn update_audio(mut core: ResMut<ClientCore>) {
 	core.audio.update();
+}
+
+fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
+	core.input.update(input);
+	// TODO: Console keyboard input.
+	// Requires either a splitting borrow or turning `ClientCore` into a `SystemParam`.
 }
 
 #[derive(Debug, clap::Parser)]

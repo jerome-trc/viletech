@@ -1,7 +1,7 @@
 use std::env;
 
-use log::{error, info};
-use vile::{
+use bevy::prelude::{error, info};
+use viletech::{
 	terminal::{self, CommandArgs},
 	utils::duration_to_hhmmss,
 };
@@ -174,7 +174,10 @@ pub fn cmd_version(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	info!("{}", vile::full_version_string(&super::version_string()));
+	info!(
+		"{}",
+		viletech::full_version_string(&super::version_string())
+	);
 	Request::None
 }
 

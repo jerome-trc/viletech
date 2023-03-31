@@ -10,6 +10,8 @@ use std::{
 	sync::Arc,
 };
 
+use bevy::prelude::{debug, error, info, warn};
+use bevy_egui::egui;
 use crossbeam::channel::SendError;
 use kira::{
 	manager::{
@@ -24,7 +26,6 @@ use kira::{
 	tween::Tween,
 	CommandError,
 };
-use log::{error, info, warn};
 use nodi::midly;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
@@ -73,11 +74,11 @@ impl AudioCore {
 		fluidlite::Log::set(
 			fluidlite::LogLevel::DEBUG,
 			fluidlite::FnLogger::new(|level, msg| match level {
-				fluidlite::LogLevel::Panic => log::error!(target: "fluidlite", "(FATAL): {msg}"),
-				fluidlite::LogLevel::Error => log::error!(target: "fluidlite", "msg"),
-				fluidlite::LogLevel::Warning => log::warn!(target: "fluidlite", "{msg}"),
-				fluidlite::LogLevel::Info => log::info!(target: "fluidlite", "{msg}"),
-				fluidlite::LogLevel::Debug => log::debug!(target: "fluidlite", "{msg}"),
+				fluidlite::LogLevel::Panic => error!(target: "fluidlite", "(FATAL): {msg}"),
+				fluidlite::LogLevel::Error => error!(target: "fluidlite", "msg"),
+				fluidlite::LogLevel::Warning => warn!(target: "fluidlite", "{msg}"),
+				fluidlite::LogLevel::Info => info!(target: "fluidlite", "{msg}"),
+				fluidlite::LogLevel::Debug => debug!(target: "fluidlite", "{msg}"),
 			}),
 		);
 

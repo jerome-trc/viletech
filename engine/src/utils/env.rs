@@ -2,7 +2,7 @@
 
 use std::{env, error::Error, io};
 
-use log::error;
+use bevy::prelude::error;
 
 pub fn os_info() -> Result<String, Box<dyn Error>> {
 	type Command = std::process::Command;

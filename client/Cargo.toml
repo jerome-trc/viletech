@@ -12,18 +12,46 @@ license = "GPL-3.0-or-later"
 publish = false
 repository = "https://github.com/***REMOVED***/viletech/"
 
+[dependencies.bevy]
+workspace = true
+default-features = false
+features = [
+	# Default
+	"bevy_asset",
+	"bevy_gilrs",
+	"bevy_render",
+	"bevy_scene",
+	"bevy_winit",
+	"animation",
+	"filesystem_watcher",
+	"x11",
+
+	"hdr",
+	"png",
+	"vorbis",
+
+	# Optional
+	"serialize",
+
+	"bmp",
+	"ktx2",
+	"tga",
+
+	"flac",
+	"mp3",
+	"wav",
+
+	"dynamic_linking", # Temporary.
+]
+
 [dependencies]
 viletech = { path = "../engine" }
 
-bevy = { workspace = true }
 bevy_egui = { workspace = true }
 bitflags = { workspace = true }
 clap = { workspace = true }
 crossbeam = { workspace = true }
 indoc = { workspace = true }
 kira = { workspace = true }
-log = { workspace = true }
 nanorand = { workspace = true }
 parking_lot = { workspace = true }
-wgpu = { workspace = true }
-winit = { workspace = true }

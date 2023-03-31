@@ -5,6 +5,7 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
+use bevy_egui::egui;
 use fasthash::SeaHasher;
 use rayon::prelude::*;
 use serde::Deserialize;

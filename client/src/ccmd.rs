@@ -2,12 +2,11 @@
 
 use std::env;
 
+use bevy::prelude::{error, info};
 use indoc::formatdoc;
-use log::{error, info};
 use viletech::{
 	console::MessageKind,
 	terminal::{self, CommandArgs},
-	utils::duration_to_hhmmss,
 };
 
 use crate::core::ClientCore;
@@ -15,7 +14,7 @@ use crate::core::ClientCore;
 pub enum Request {
 	None,
 	Exit,
-	Callback(Box<dyn Fn(&mut ClientCore)>),
+	Callback(Box<dyn 'static + Fn(&mut ClientCore) + Send + Sync>),
 }
 
 impl std::fmt::Debug for Request {
@@ -184,34 +183,6 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 	})
 }
 
-/// Prints the length of the time the engine has been running.
-pub fn ccmd_uptime(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints the length of the time the engine has been running.",
-		);
-	}
-
-	req_callback(|core| {
-		let uptime = core.start_time.elapsed();
-		let (hh, mm, ss) = duration_to_hhmmss(uptime);
-		info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
-	})
-}
-
-/// Prints information about the graphics device and WGPU backend.
-pub fn ccmd_wgpudiag(args: CommandArgs) -> Request {
-	if args.help_requested() {
-		return req_console_write_help(
-			"Prints information about the graphics device and WGPU backend.",
-		);
-	}
-
-	Request::Callback(Box::new(|core| {
-		info!("{}", core.gfx.diag());
-	}))
-}
-
 /// Prints the full version information of the engine and client.
 pub fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help_requested() {
@@ -220,7 +191,10 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 		);
 	}
 
-	info!("{}", viletech::full_version_string(&super::version_string()));
+	info!(
+		"{}",
+		viletech::full_version_string(&super::version_string())
+	);
 	Request::None
 }
 
@@ -246,6 +220,6 @@ fn req_console_write_help(message: impl Into<String>) -> Request {
 }
 
 #[must_use]
-fn req_callback<F: 'static + Fn(&mut ClientCore)>(callback: F) -> Request {
+fn req_callback<F: 'static + Fn(&mut ClientCore) + Send + Sync>(callback: F) -> Request {
 	Request::Callback(Box::new(callback))
 }

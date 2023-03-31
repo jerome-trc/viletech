@@ -3,17 +3,21 @@
 //! Keeps the more crucial namespaces cleaner and makes it easier to reuse the
 //! data management code, in case it proves robust enough for other projects.
 
-use log::error;
+use bevy::prelude::error;
 
-use crate::{BaseDataError, VPath};
+use crate::BaseDataError;
 
-use super::{Catalog, LoadRequest, VfsError};
+use super::{Catalog, LoadRequest};
 
 pub trait CatalogExt {
 	/// On the debug build, attempt to load `/env::current_dir()/data/viletech`.
 	/// On the release build, attempt to load `/utils::exe_dir()/viletech.vpk3`.
 	fn mount_basedata(&mut self) -> Result<(), BaseDataError>;
 
+	// TODO: Re-enable this helper when Bevy supports it.
+	// See: https://github.com/bevyengine/bevy/issues/1031
+
+	#[cfg(any())]
 	fn window_icon_from_file(
 		&self,
 		path: impl AsRef<VPath>,
@@ -37,6 +41,7 @@ impl CatalogExt for Catalog {
 		}
 	}
 
+	#[cfg(any())]
 	fn window_icon_from_file(
 		&self,
 		path: impl AsRef<VPath>,

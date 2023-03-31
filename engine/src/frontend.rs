@@ -6,6 +6,7 @@ use std::{
 };
 
 use bevy::prelude::Resource;
+use bevy_egui::egui;
 
 use crate::utils::string::*;
 

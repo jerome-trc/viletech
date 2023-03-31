@@ -1,115 +1,142 @@
 //! A structure for caching incoming mouse/keyboard/etc. input state from winit,
 //! for use by the engine's other subsystems.
 
-use winit::{
-	dpi::PhysicalPosition,
-	event::{ElementState, KeyboardInput, ModifiersState, MouseButton, ScanCode, VirtualKeyCode},
+use bevy::{
+	input::{keyboard::KeyboardInput, ButtonState, InputSystem},
+	prelude::*,
 };
+use bevy_egui::systems::InputEvents;
 
-// TODO: Use `std::mem::variant_count` when it's stable
-const NUM_VIRTKEYS: usize = winit::event::VirtualKeyCode::Cut as usize;
-
-#[derive(Debug)]
+/// Stateful storage of user input.
+#[derive(Debug, Default)]
 pub struct InputCore {
-	pub keys_phys: [bool; 256],
-	pub keys_virt: [bool; NUM_VIRTKEYS],
-	/// Left, right, middle, and then 15 auxiliary buttons.
-	pub mouse_buttons: [bool; 18],
-	pub modifiers: ModifiersState,
-	pub cursor_pos: PhysicalPosition<f64>,
-
-	pub user_binds: Vec<UserKeyBind>,
-}
-
-impl Default for InputCore {
-	fn default() -> Self {
-		Self {
-			keys_phys: [false; 256],
-			keys_virt: [false; NUM_VIRTKEYS],
-			mouse_buttons: [false; 18],
-			modifiers: ModifiersState::default(),
-			cursor_pos: PhysicalPosition { x: 0.0, y: 0.0 },
-			user_binds: vec![],
-		}
-	}
+	pub keys_virt: Input<KeyCode>,
+	pub keys_phys: Input<ScanCode>,
+	pub mouse_buttons: Input<MouseButton>,
+	pub gamepad_buttons: Input<GamepadButton>,
+	/// In logical pixels.
+	pub cursor_pos: Vec2,
+	/// In logical pixels.
+	pub cursor_pos_prev: Vec2,
 }
 
 impl InputCore {
-	pub fn on_modifiers_changed(&mut self, state: &ModifiersState) {
-		self.modifiers = *state;
-	}
+	pub fn update(&mut self, mut events: InputEvents) {
+		for event in events.ev_keyboard_input.iter() {
+			let KeyboardInput {
+				scan_code, state, ..
+			} = event;
 
-	pub fn on_key_event(&mut self, event: &KeyboardInput) {
-		self.keys_phys[event.scancode as usize] = event.state == ElementState::Pressed;
-
-		if let Some(vkc) = event.virtual_keycode {
-			self.keys_virt[vkc as usize] = event.state == ElementState::Pressed;
-		}
-	}
-
-	pub fn on_cursor_moved(&mut self, position: &PhysicalPosition<f64>) {
-		self.cursor_pos.x = position.x;
-		self.cursor_pos.y = position.y;
-	}
-
-	pub fn on_mouse_input(&mut self, button: &MouseButton, state: &ElementState) {
-		match button {
-			MouseButton::Left => self.mouse_buttons[0] = *state == ElementState::Pressed,
-			MouseButton::Right => self.mouse_buttons[1] = *state == ElementState::Pressed,
-			MouseButton::Middle => self.mouse_buttons[2] = *state == ElementState::Pressed,
-			MouseButton::Other(index) => {
-				if *index < 15 {
-					self.mouse_buttons[*index as usize] = *state == ElementState::Pressed;
+			if let Some(key_code) = event.key_code {
+				match state {
+					ButtonState::Pressed => self.keys_virt.press(key_code),
+					ButtonState::Released => self.keys_virt.release(key_code),
 				}
 			}
+
+			match state {
+				ButtonState::Pressed => self.keys_phys.press(ScanCode(*scan_code)),
+				ButtonState::Released => self.keys_phys.release(ScanCode(*scan_code)),
+			}
 		}
-	}
 
-	#[must_use]
-	pub fn pkey_is_up(&self, scancode: ScanCode) -> bool {
-		self.keys_phys[scancode as usize]
-	}
+		for event in events.ev_mouse_button_input.iter() {
+			match event.state {
+				ButtonState::Pressed => self.mouse_buttons.press(event.button),
+				ButtonState::Released => self.mouse_buttons.release(event.button),
+			}
+		}
 
-	#[must_use]
-	pub fn pkey_is_down(&self, scancode: ScanCode) -> bool {
-		self.keys_phys[scancode as usize]
-	}
+		self.cursor_pos_prev = self.cursor_pos;
 
-	#[must_use]
-	pub fn vkey_is_up(&self, virtcode: VirtualKeyCode) -> bool {
-		self.keys_virt[virtcode as usize]
-	}
-
-	#[must_use]
-	pub fn vkey_is_down(&self, virtcode: VirtualKeyCode) -> bool {
-		self.keys_virt[virtcode as usize]
-	}
-
-	#[must_use]
-	pub fn lmb_down(&self) -> bool {
-		self.mouse_buttons[0]
-	}
-
-	#[must_use]
-	pub fn rmb_down(&self) -> bool {
-		self.mouse_buttons[1]
-	}
-
-	#[must_use]
-	pub fn mmb_down(&self) -> bool {
-		self.mouse_buttons[2]
+		for event in events.ev_cursor.iter() {
+			self.cursor_pos = event.position;
+		}
 	}
 }
 
 #[derive(Debug)]
-pub struct KeyBind<A> {
+pub struct Binding {
 	pub id: String,
-	pub name: String,
-	pub keycode: VirtualKeyCode,
-	pub modifiers: ModifiersState,
-	pub on_press: A,
-	pub on_release: A,
+	pub trigger: BindingTrigger,
+	pub trigger_alt: BindingTrigger,
+	pub shift: bool,
+	pub alt: bool,
+	pub ctrl: bool,
+	// TODO: What a triggered binding actually does will depend on Lith.
 }
 
-pub type UserKeyBind = KeyBind<()>; // TODO: LithScript function binding.
-pub type IdleKeyBind = KeyBind<()>;
+#[derive(Debug)]
+pub enum BindingTrigger {
+	ScanCode(u32),
+	MouseButton(MouseButton),
+	// TODO: Gamepad support.
+}
+
+/// Copies [`bevy::input::InputPlugin`] but adds no input resources and no
+/// systems. Instead, [add systems](bevy::prelude::App::add_system) to the
+/// [`InputSystem`] set which feed [`InputEvents`] to an [`InputCore`].
+#[derive(Debug, Default)]
+pub struct InputPlugin;
+
+impl Plugin for InputPlugin {
+	fn build(&self, app: &mut App) {
+		use bevy::input::{gamepad::*, keyboard::*, mouse::*, touch::*};
+
+		app.configure_set(InputSystem.in_base_set(CoreSet::PreUpdate))
+			// keyboard
+			.add_event::<KeyboardInput>()
+			.init_resource::<Input<KeyCode>>()
+			.init_resource::<Input<ScanCode>>()
+			// mouse
+			.add_event::<MouseButtonInput>()
+			.add_event::<MouseMotion>()
+			.add_event::<MouseWheel>()
+			.init_resource::<Input<MouseButton>>()
+			// gamepad
+			.add_event::<GamepadConnectionEvent>()
+			.add_event::<GamepadButtonChangedEvent>()
+			.add_event::<GamepadAxisChangedEvent>()
+			.add_event::<GamepadEvent>()
+			.init_resource::<GamepadSettings>()
+			.init_resource::<Gamepads>()
+			.init_resource::<Input<GamepadButton>>()
+			.init_resource::<Axis<GamepadAxis>>()
+			.init_resource::<Axis<GamepadButton>>()
+			// touch
+			.add_event::<TouchInput>()
+			.init_resource::<Touches>();
+
+		// Register common types
+		app.register_type::<ButtonState>();
+
+		// Register keyboard types
+		app.register_type::<KeyboardInput>()
+			.register_type::<KeyCode>()
+			.register_type::<ScanCode>();
+
+		// Register mouse types
+		app.register_type::<MouseButtonInput>()
+			.register_type::<MouseButton>()
+			.register_type::<MouseMotion>()
+			.register_type::<MouseScrollUnit>()
+			.register_type::<MouseWheel>();
+
+		// Register touch types
+		app.register_type::<TouchInput>()
+			.register_type::<ForceTouch>()
+			.register_type::<TouchPhase>();
+
+		// Register gamepad types
+		app.register_type::<Gamepad>()
+			.register_type::<GamepadConnection>()
+			.register_type::<GamepadButtonType>()
+			.register_type::<GamepadButton>()
+			.register_type::<GamepadAxisType>()
+			.register_type::<GamepadAxis>()
+			.register_type::<GamepadSettings>()
+			.register_type::<ButtonSettings>()
+			.register_type::<AxisSettings>()
+			.register_type::<ButtonAxisSettings>();
+	}
+}

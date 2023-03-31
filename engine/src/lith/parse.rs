@@ -1,5 +1,6 @@
 //! Combinator-based parsers.
 
+use bevy::prelude::warn;
 use crossbeam::queue::SegQueue;
 use doomfront::{
 	chumsky::{primitive, Parser},
@@ -8,7 +9,6 @@ use doomfront::{
 	rowan::{ast::AstNode, GreenNode},
 	ParseError, ParseOut,
 };
-use log::warn;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 

@@ -8,9 +8,10 @@ mod commands;
 
 use std::{error::Error, time::Instant};
 
+use bevy::prelude::*;
 use clap::Parser;
 use indoc::printdoc;
-use vile::terminal::Terminal;
+use viletech::{terminal::Terminal, utils::duration_to_hhmmss};
 
 use commands::Command;
 
@@ -21,8 +22,6 @@ pub fn version_string() -> String {
 
 #[derive(Debug)]
 pub struct ServerCore {
-	/// (RAT) In my experience, a runtime log is much more informative if it
-	/// states the duration for which the program executed.
 	start_time: Instant,
 	terminal: Terminal<Command>,
 }
@@ -53,11 +52,11 @@ struct Clap {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let start_time = Instant::now();
+	viletech::START_TIME.set(Instant::now()).unwrap();
 	let args = Clap::parse();
 
 	if args.version {
-		println!("{}", vile::short_version_string());
+		println!("{}", viletech::short_version_string());
 		println!("{}", &version_string());
 		return Ok(());
 	}
@@ -75,19 +74,14 @@ conditions. See the license document that comes with your installation."
 		return Ok(());
 	}
 
-	vile::thread_pool_init(args.threads);
+	viletech::thread_pool_init(args.threads);
+	viletech::log::init_diag(&version_string())?;
 
-	match vile::log_init(None) {
-		Ok(()) => {}
-		Err(err) => {
-			eprintln!("Failed to initialise logging backend: {err}");
-			return Err(err);
-		}
-	}
-
-	vile::log_init_diag(&version_string())?;
-
-	// Soon!
+	/// (RAT) In my experience, a runtime log is much more informative if it
+	/// states the duration for which the program executed.
+	let uptime = viletech::START_TIME.get().unwrap().elapsed();
+	let (hh, mm, ss) = duration_to_hhmmss(uptime);
+	info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 
 	Ok(())
 }

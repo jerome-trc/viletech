@@ -6,7 +6,9 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## Technologies
 
-VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all of which are my creation. See their own READMEs and attributions documents to see transitive acknowledgements at https://github.com/***REMOVED***/doom-rs.
+Note that any library shown below may come with its own transitive dependencies, none of which is necessarily covered here. See the links provided to know more.
+
+`doom-front`, `stardate`, and `subterra` are not listed by virtue of also being my own creation. See https://github.com/***REMOVED***/doom-rs.
 
 - arrayvec
     - By [@bluss](https://github.com/bluss) et al.
@@ -76,20 +78,10 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By Tomasz Stachowiak ([@h3r2tic](https://github.com/h3r2tic)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-MIT).
 	- https://docs.rs/dolly/latest/dolly/
-- egui, egui-wgpu, egui-winit
-	- By Emil Ernerfeldt ([@emilk](https://github.com/emilk)) et al.
-	- Provided under the [MIT License](https://github.com/emilk/egui/blob/master/LICENSE-MIT) and [Apache 2.0 License](https://github.com/emilk/egui/blob/master/LICENSE-APACHE).
-	- https://docs.rs/egui/latest/egui/
-	- https://docs.rs/egui-wgpu/latest/egui_wgpu/
-	- https://docs.rs/egui-winit/latest/egui_winit/
 - fasthash
 	- By Flier Lu ([@flier](https://github.com/flier)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/flier/rust-fasthash/blob/master/LICENSE).
 	- https://docs.rs/fasthash/latest/fasthash/
-- fern
-	- By David Ross ([@daboross](https://github.com/daboross)) et al.
-	- Provided under the [MIT License](https://github.com/daboross/fern/blob/main/LICENSE).
-	- https://docs.rs/fern/latest/fern/
 - fixed
 	- By Trevor Spiteri ([@tspiteri](https://gitlab.com/tspiteri)) et al.
 	- Provided under the [Apache 2.0 License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-APACHE) and [MIT License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-MIT).
@@ -134,10 +126,6 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By [@tesselode](https://github.com/tesselode) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).
 	- https://docs.rs/kira/latest/kira/
-- log
-	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/log/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/log/blob/master/LICENSE-MIT).
-	- https://docs.rs/log/latest/log/
 - md5
 	- By the [Stainless Steel](https://github.com/stainless-steel) organisation et al.
 	- [Apache 2.0 License and MIT License](https://github.com/stainless-steel/md5/blob/master/LICENSE.md).
@@ -209,6 +197,10 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By Alex Crichton ([@alexcrichton](https://github.com/alexcrichton)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).
 	- https://docs.rs/toml/latest/toml/
+- tracing
+    - By the [Tokio organisation](https://github.com/tokio-rs), Eliza Weisman ([@hawkw](https://github.com/hawkw)), et al.
+    - Provided under the [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE).
+    - https://docs.rs/tracing/latest/tracing/
 - unicode-ident
     - By David Tolnay ([@dtolnay](https://github.com/dtolnay)).
     - Original source is provided under the [Apache 2.0 License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-MIT).
@@ -222,14 +214,6 @@ VileTech depends on the `doom-front`, `stardate`, and `subterra` libraries, all 
 	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
 	- Provided under the [MIT License](https://github.com/BurntSushi/walkdir/blob/master/LICENSE-MIT).
 	- https://docs.rs/walkdir/latest/walkdir/
-- wgpu
-    - By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.APACHE) and [MIT License](https://github.com/gfx-rs/wgpu/blob/master/LICENSE.MIT).
-	- https://docs.rs/wgpu/latest/wgpu/
-- winit
-	- By the [Rust Windowing](https://github.com/rust-windowing) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/rust-windowing/winit/blob/master/LICENSE).
-	- https://docs.rs/winit/latest/winit/
 - zip
 	- By Mathijs van de Nes ([@mvdnes](https://github.com/mvdnes)), [@Plecra](https://github.com/Plecra), et al.
 	- Provided under the [MIT License](https://github.com/zip-rs/zip/blob/master/LICENSE).

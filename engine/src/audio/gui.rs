@@ -2,12 +2,13 @@
 
 use std::path::PathBuf;
 
+use bevy::prelude::{info, warn};
+use bevy_egui::egui;
 use indoc::formatdoc;
 use kira::{
 	sound::static_sound::{PlaybackState, StaticSoundSettings},
 	tween::Tween,
 };
-use log::{info, warn};
 use nodi::midly;
 
 use crate::VPath;

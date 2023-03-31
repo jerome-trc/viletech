@@ -8,7 +8,7 @@ use std::{
 	sync::{atomic, Arc},
 };
 
-use log::{info, warn};
+use bevy::prelude::{info, warn};
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use zip::ZipArchive;

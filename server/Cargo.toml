@@ -12,8 +12,23 @@ license = "GPL-3.0-or-later"
 publish = false
 repository = "https://github.com/***REMOVED***/viletech/"
 
+[dependencies.bevy]
+workspace = true
+default-features = false
+features = [
+	# Default
+	"bevy_asset",
+	"bevy_scene",
+	"filesystem_watcher",
+
+	# Optional
+	"serialize",
+
+	"dynamic_linking", # Temporary.
+]
+
 [dependencies]
-vile = { path = "../engine", package = "viletech" }
+viletech = { path = "../engine" }
 
 bevy_quinnet = { workspace = true }
 bitflags = { workspace = true }
@@ -21,5 +36,4 @@ bytemuck = { workspace = true }
 clap = { workspace = true }
 crossbeam = { workspace = true }
 indoc = { workspace = true }
-log = { workspace = true }
 sha3 = { workspace = true }

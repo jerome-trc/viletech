@@ -7,7 +7,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use log::warn;
+use bevy::prelude::warn;
 use once_cell::sync::Lazy;
 
 use crate::lazy_regex;

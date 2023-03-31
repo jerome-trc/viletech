@@ -2,16 +2,17 @@
 
 use std::{collections::VecDeque, io, thread, time::Duration};
 
-use crossbeam::channel::Receiver;
-use egui::{
+use bevy::prelude::*;
+use bevy_egui::egui::{
+	self,
 	text::{CCursor, LayoutJob},
 	text_edit::{CCursorRange, TextEditState},
 	Color32, ScrollArea, TextFormat, TextStyle,
 };
-use log::info;
-use winit::event::{KeyboardInput, VirtualKeyCode};
+use crossbeam::channel::Receiver;
 
 use crate::{
+	input::InputCore,
 	lazy_regex,
 	terminal::{self, Alias, Terminal},
 };
@@ -178,43 +179,34 @@ impl<C: terminal::Command> Console<C> {
 		self.scroll_to_bottom = true;
 	}
 
-	pub fn on_key_event(&mut self, input: &KeyboardInput) {
-		if input.state != winit::event::ElementState::Pressed {
-			return;
-		}
-
-		match input.virtual_keycode {
-			None => {}
-			Some(VirtualKeyCode::Escape) => {
-				self.defocus_textedit = true;
+	pub fn input(&mut self, input: &InputCore) {
+		if input.keys_virt.pressed(KeyCode::Up) {
+			if self.input_history_pos < 1 {
+				return;
 			}
-			Some(VirtualKeyCode::Return) => self.try_submit(),
-			Some(VirtualKeyCode::Up) => {
-				if self.input_history_pos < 1 {
-					return;
-				}
 
-				self.cursor_to_end = true;
-				self.input_history_pos -= 1;
-				self.input.clear();
+			self.cursor_to_end = true;
+			self.input_history_pos -= 1;
+			self.input.clear();
+			self.input
+				.push_str(&self.input_history[self.input_history_pos]);
+		} else if input.keys_virt.pressed(KeyCode::Down) {
+			if self.input_history_pos >= self.input_history.len() {
+				return;
+			}
+
+			self.cursor_to_end = true;
+			self.input_history_pos += 1;
+			self.input.clear();
+
+			if self.input_history_pos < self.input_history.len() {
 				self.input
 					.push_str(&self.input_history[self.input_history_pos]);
 			}
-			Some(VirtualKeyCode::Down) => {
-				if self.input_history_pos >= self.input_history.len() {
-					return;
-				}
-
-				self.cursor_to_end = true;
-				self.input_history_pos += 1;
-				self.input.clear();
-
-				if self.input_history_pos < self.input_history.len() {
-					self.input
-						.push_str(&self.input_history[self.input_history_pos]);
-				}
-			}
-			_ => {}
+		} else if input.keys_virt.just_pressed(KeyCode::Escape) {
+			self.defocus_textedit = true;
+		} else if input.keys_virt.just_pressed(KeyCode::Return) {
+			self.try_submit();
 		}
 	}
 
@@ -384,6 +376,7 @@ impl Writer {
 impl io::Write for Writer {
 	fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
 		if buf[0] == 10 {
+			// Newline
 			let drain = self.buffer.drain(..);
 			let string = String::from_utf8_lossy(drain.as_slice()).to_string();
 

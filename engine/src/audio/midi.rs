@@ -558,6 +558,7 @@ impl Renderer {
 					_ => unreachable!(),
 				}
 			}
+			other => unimplemented!("Unexpected sample format: {other:#?}"),
 		};
 
 		let mut ret = Self {
@@ -623,8 +624,8 @@ impl Renderer {
 
 				for chunk in sbuf.chunks_exact_mut(2) {
 					self.fbuf.push(Frame {
-						left: <i16 as cpal::Sample>::to_f32(&chunk[0]),
-						right: <i16 as cpal::Sample>::to_f32(&chunk[1]),
+						left: <i16 as cpal::Sample>::to_float_sample(chunk[0]),
+						right: <i16 as cpal::Sample>::to_float_sample(chunk[1]),
 					});
 				}
 			}

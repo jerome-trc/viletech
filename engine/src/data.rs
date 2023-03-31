@@ -13,6 +13,7 @@ mod test;
 
 use std::{path::Path, sync::Arc};
 
+use bevy_egui::egui;
 use globset::Glob;
 use indexmap::IndexMap;
 use rayon::prelude::*;
@@ -20,14 +21,16 @@ use regex::Regex;
 
 use crate::{utils::path::PathExt, EditorNum, ShortId, SpawnNum, VPath, VPathBuf};
 
-pub use asset::*;
-pub use error::{
-	Asset as AssetError, Load as LoadError, Mount as MountError, PostProc as PostProcError,
-	Vfs as VfsError,
+pub use self::{
+	asset::*,
+	error::{
+		Asset as AssetError, Load as LoadError, Mount as MountError, PostProc as PostProcError,
+		Vfs as VfsError,
+	},
+	ext::*,
+	file::*,
+	interface::*,
 };
-pub use ext::*;
-pub use file::*;
-pub use interface::*;
 
 use self::detail::{AssetKey, Config, VfsKey};
 
