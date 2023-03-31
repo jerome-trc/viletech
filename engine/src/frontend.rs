@@ -5,13 +5,15 @@ use std::{
 	path::{Path, PathBuf},
 };
 
+use bevy::prelude::Resource;
+
 use crate::utils::string::*;
 
 /// Starting the client shows a menu for changing settings and choosing files to load.
 ///
 /// This is the first thing a client end user sees assuming they have not passed
 /// in launch arguments which bypass it to a different scene.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Resource)]
 pub struct FrontendMenu {
 	presets: Vec<LoadOrderPreset>,
 	load_order: VecDeque<LoadOrderEntry>,

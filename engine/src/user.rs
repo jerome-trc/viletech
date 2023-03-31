@@ -14,6 +14,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
+use bevy::prelude::Resource;
 use log::warn;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +25,7 @@ pub use profile::*;
 
 /// Hub for preferences, persistent storage (p-storage),
 /// saved games, demos, and screenshot management.
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct UserCore {
 	user_dir: PathBuf,
 	global_cfg: GlobalConfig,

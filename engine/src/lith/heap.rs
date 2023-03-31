@@ -77,6 +77,13 @@ impl Ptr {
 #[repr(transparent)]
 pub struct TPtr<T>(NonNull<RegionHeader>, PhantomData<T>);
 
+// SAFETY: This structure gets used as a key in certain specialized collection types.
+// Safety is guaranteed when going through these collections' interfaces.
+// It can be dereferenced as a raw pointer, but this is always unsafe, so the
+// responsibility to do so in a thread-safe way falls to the API consumer.
+unsafe impl<T> Send for TPtr<T> {}
+unsafe impl<T> Sync for TPtr<T> {}
+
 /// "Index pointer". Double-wide, and necessary for pointing to certain kinds of
 /// objects which can not reasonably be allocated next to a header on a
 /// per-instance basis, such as map lines.
@@ -268,6 +275,7 @@ impl Drop for Heap {
 	}
 }
 
+// SAFETY: `Runtime` governs this struct entirely.
 unsafe impl Send for Heap {}
 unsafe impl Sync for Heap {}
 

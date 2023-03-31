@@ -1,118 +1,132 @@
 //! The struct representing the application's state and its related symbols.
 
-mod detail;
-mod event;
-mod init;
-
 use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
 
-use crate::ccmd::Command as ConsoleCommand;
+use bevy::prelude::*;
+use bevy_egui::egui;
 use nanorand::WyRand;
 use parking_lot::RwLock;
-use vile::{
+use viletech::{
 	audio::AudioCore,
-	console::Console,
 	data::{Catalog, LoadError, LoadTracker},
-	frontend::FrontendMenu,
-	gfx::{camera::Camera, core::GraphicsCore},
-	input::InputCore,
 	lith,
 	rng::RngCore,
-	sim::{self},
 	user::UserCore,
+	utils::duration_to_hhmmss,
 };
 
-type DeveloperGui = vile::DeveloperGui<DevGuiStatus>;
+pub type DeveloperGui = viletech::DeveloperGui<DevGuiStatus>;
 
-/// All of the client application's state wrapped up for ease of use.
-/// `main` only manipulates this through methods defined in [`crate::event`].
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct ClientCore {
 	/// (RAT) In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed.
 	pub start_time: Instant,
-	pub user: UserCore,
-	pub catalog: Arc<RwLock<Catalog>>,
-	pub runtime: Arc<RwLock<lith::Runtime>>,
-	pub gfx: GraphicsCore,
+
 	pub audio: AudioCore,
-	pub input: InputCore,
+	pub catalog: Arc<RwLock<Catalog>>,
+	pub devgui: DeveloperGui,
+	pub runtime: lith::Runtime,
 	pub rng: RngCore<WyRand>,
-	pub console: Console<ConsoleCommand>,
-	// TODO: A menu stack.
-	pub camera: Camera,
-	pub(self) devgui: DeveloperGui,
-	pub(self) scene: Scene,
+	pub user: UserCore,
 }
 
-/// The general status of the entire client application.
-///
-/// Also see [`Transition`] to understand the paths of the client state machine.
-#[derive(Debug)]
-pub(self) enum Scene {
-	/// The user needs to choose whether their information should be stored
-	/// portably or at a "home" directory.
-	FirstStartup {
-		/// Radio button state. `true` is the default presented to the user.
-		/// `false` is no even an option if `home_path` is `None`.
-		portable: bool,
-		portable_path: PathBuf,
-		home_path: Option<PathBuf>,
-	},
-	/// The user has not entered the game yet. From here they can select a user
-	/// profile and engine-global/cross-game preferences, assemble a load order,
-	/// and begin the game launch process.
-	Frontend { menu: FrontendMenu },
-	/// A loading screen which draws progress bars.
-	GameLoad {
-		/// The mount thread takes a write guard to the catalog and another
-		/// pointer to `tracker`.
-		thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
-		/// How far along the mount/load process is `thread`?
-		tracker: Arc<LoadTracker>,
-		/// Print to the log how long the mount takes for diagnostic purposes.
-		start_time: Instant,
-	},
-	/// The title screen, gameplay, intermissions, casting calls...
-	/// - `sim` is only `Some` at the title if the game calls for a title map.
-	/// If the script controlling game flow chooses, it can last into gameplay,
-	/// but in most cases it will be swapped out with an entirely new instance.
-	/// - `sim` stays between intermissions, although much of its state is altered.
-	/// - `sim` is put back to `None` when the game finishes and the cast call starts.
-	Game { sim: Option<sim::Handle> },
-	/// A temporary value. Sometimes it is necessary to extract the current scene
-	/// variant and not replace it with another valid variant until some validation
-	/// has been performed.
-	Transition,
+impl ClientCore {
+	pub fn draw_devgui(&mut self, ctx: &mut egui::Context) {
+		if !self.devgui.open {
+			return;
+		}
+
+		let mut devgui_open = true;
+		let screen_rect = ctx.input(|inps| inps.screen_rect);
+
+		DeveloperGui::window(ctx)
+			.open(&mut devgui_open)
+			.show(ctx, |ui| {
+				// Prevent window from overflowing off the screen's sides
+				ui.set_max_width(screen_rect.width());
+
+				self.devgui.selectors(
+					ui,
+					&[
+						(DevGuiStatus::Console, "Console"),
+						(DevGuiStatus::LithRepl, "REPL"),
+						(DevGuiStatus::Vfs, "VFS"),
+						(DevGuiStatus::Audio, "Audio"),
+					],
+				);
+
+				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
+					match self.devgui.left {
+						DevGuiStatus::Console => {
+							// Soon!
+						}
+						DevGuiStatus::LithRepl => {
+							// Soon!
+						}
+						DevGuiStatus::Vfs => {
+							self.catalog.read().ui(ctx, ui);
+						}
+						DevGuiStatus::Audio => {
+							self.audio.ui(ctx, ui);
+						}
+					};
+				});
+
+				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
+					match self.devgui.right {
+						DevGuiStatus::Console => {
+							// Soon!
+						}
+						DevGuiStatus::LithRepl => {
+							// Soon!
+						}
+						DevGuiStatus::Vfs => {
+							self.catalog.read().ui(ctx, ui);
+						}
+						DevGuiStatus::Audio => {
+							self.audio.ui(ctx, ui);
+						}
+					};
+				});
+			});
+
+		self.devgui.open = devgui_open;
+	}
 }
 
-#[derive(Debug)]
-pub(self) enum Transition {
-	None,
-	/// The user has requested an immediate exit from any other scene.
-	/// Stop everything, drop everything, and close the window post-haste.
-	Exit,
-
-	/// From [`Scene::FirstStartup`] to [`Scene::Frontend`].
-	FirstTimeFrontend,
-
-	/// From [`Scene::Frontend`] to [`Scene::GameLoad`].
-	StartGameLoad {
-		/// The user's load order. Gets handed off to the mount thread.
-		to_mount: Vec<PathBuf>,
-	},
-	/// From [`Scene::GameLoad`] to [`Scene::Game`].
-	FinishGameLoad,
-
-	/// From [`Scene::Game`] or [`Scene::GameLoad`].
-	ReturnToFrontend,
+impl Drop for ClientCore {
+	fn drop(&mut self) {
+		let uptime = self.start_time.elapsed();
+		let (hh, mm, ss) = duration_to_hhmmss(uptime);
+		info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(self) enum DevGuiStatus {
+pub enum DevGuiStatus {
 	Console,
 	LithRepl,
 	Vfs,
-	Graphics,
 	Audio,
+}
+
+#[derive(Debug, Resource)]
+pub struct FirstStartup {
+	/// Radio button state. `true` is the default presented to the user.
+	/// `false` is no even an option if `home_path` is `None`.
+	pub portable: bool,
+	pub portable_path: PathBuf,
+	pub home_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Resource)]
+pub struct GameLoad {
+	/// The mount thread takes a write guard to the catalog and another
+	/// pointer to `tracker`.
+	pub thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
+	/// How far along the mount/load process is `thread`?
+	pub tracker: Arc<LoadTracker>,
+	/// Print to the log how long the mount takes for diagnostic purposes.
+	pub start_time: Instant,
 }

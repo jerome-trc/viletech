@@ -69,7 +69,7 @@ VileTech Server - Copyright (C) 2022-2023 - ***REMOVED***
 This program comes with ABSOLUTELY NO WARRANTY.
 
 This is free software, and you are welcome to redistribute it under certain
-conditions. See the license document that come with your installation."
+conditions. See the license document that comes with your installation."
 		};
 
 		return Ok(());

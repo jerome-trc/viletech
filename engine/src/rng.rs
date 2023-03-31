@@ -2,6 +2,7 @@
 
 use std::{collections::HashMap, fmt};
 
+use bevy::prelude::Resource;
 use nanorand::{Rng, WyRand};
 
 #[derive(Debug)]
@@ -78,7 +79,7 @@ impl Prng for WyRand {
 }
 
 /// Contains a map of named random number generators.
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct RngCore<B: Prng> {
 	prngs: HashMap<String, B>,
 }

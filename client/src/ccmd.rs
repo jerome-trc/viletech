@@ -4,7 +4,7 @@ use std::env;
 
 use indoc::formatdoc;
 use log::{error, info};
-use vile::{
+use viletech::{
 	console::MessageKind,
 	terminal::{self, CommandArgs},
 	utils::duration_to_hhmmss,
@@ -28,34 +28,7 @@ impl std::fmt::Debug for Request {
 	}
 }
 
-bitflags::bitflags! {
-	pub struct Flags: u8 {
-		/// This command is enabled when entering the frontend
-		/// and disabled when leaving it.
-		const FRONTEND = 1 << 0;
-		/// This command is enabled when entering the title scene
-		/// and disabled when leaving it.
-		const TITLE = 1 << 1;
-		/// This command is enabled when entering any menu
-		/// and disabled when the menu stack is cleared.
-		const MENU = 1 << 2;
-		/// This command is enabled when starting a playsim
-		/// and disabled when it ends.
-		const SIM = 1 << 3;
-		/// This command is enabled when starting a lockstep
-		/// network play game and disabled when it ends.
-		const LOCKSTEP = 1 << 4;
-		/// This command is enabled when starting an authoritative
-		/// network play game and disabled when it ends.
-		const AUTHORITATIVE = 1 << 5;
-		/// This command is enabled when starting any network play game
-		/// and disabled when it ends.
-		const NETPLAY = Self::LOCKSTEP.bits | Self::AUTHORITATIVE.bits;
-	}
-}
-
 pub struct Command {
-	pub flags: Flags,
 	pub func: fn(args: terminal::CommandArgs) -> Request,
 }
 
@@ -69,9 +42,7 @@ impl terminal::Command for Command {
 
 impl std::fmt::Debug for Command {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Command")
-			.field("flags", &self.flags)
-			.finish()
+		f.debug_struct("Command").finish()
 	}
 }
 
@@ -249,7 +220,7 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 		);
 	}
 
-	info!("{}", vile::full_version_string(&super::version_string()));
+	info!("{}", viletech::full_version_string(&super::version_string()));
 	Request::None
 }
 

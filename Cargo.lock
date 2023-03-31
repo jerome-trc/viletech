@@ -5992,7 +5992,6 @@ dependencies = [
  "bitflags",
  "clap 4.0.32",
  "crossbeam",
- "egui",
  "indoc",
  "kira",
  "log",

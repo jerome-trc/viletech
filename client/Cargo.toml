@@ -13,14 +13,13 @@ publish = false
 repository = "https://github.com/***REMOVED***/viletech/"
 
 [dependencies]
-vile = { path = "../engine", package = "viletech" }
+viletech = { path = "../engine" }
 
 bevy = { workspace = true }
 bevy_egui = { workspace = true }
 bitflags = { workspace = true }
 clap = { workspace = true }
 crossbeam = { workspace = true }
-egui = { workspace = true }
 indoc = { workspace = true }
 kira = { workspace = true }
 log = { workspace = true }

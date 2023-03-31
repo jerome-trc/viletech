@@ -57,6 +57,10 @@ pub struct AudioCore {
 	gui: DeveloperGui,
 }
 
+// SAFETY: This is to deal with `AudioManager`, which uses sufficient internal
+// synchronization to be safe but is missing a trait bound on a `PhantomData`.
+unsafe impl Sync for AudioCore {}
+
 impl AudioCore {
 	/// If `None` is given, the defaults will be used.
 	pub fn new(
