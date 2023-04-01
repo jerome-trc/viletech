@@ -27,7 +27,7 @@ pub struct Console<C: terminal::Command> {
 	messages: Vec<Message>,
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
-	input_history: Vec<String>,
+	input_history: Vec<Box<str>>,
 	/// Commands, aliases, command string parser.
 	terminal: Terminal<C>,
 	/// The currently-buffered input waiting to be submitted.
@@ -57,13 +57,13 @@ pub enum MessageKind {
 	/// Game messages like "you picked up a thing".
 	/// Kept separate to enable filtering in the GUI.
 	Toast,
-	/// Calls into the `log` crate go through a logging backend and end up here.
+	/// `tracing` messages end up stored as one of these.
 	Log,
 }
 
 #[derive(Debug)]
 pub struct Message {
-	string: String,
+	string: Box<str>,
 	kind: MessageKind,
 }
 
@@ -73,19 +73,19 @@ impl<C: terminal::Command> Console<C> {
 	pub fn new(log_receiver: Receiver<Message>) -> Self {
 		Console {
 			log_receiver,
-			messages: Vec::<Message>::default(),
-			input_history: Vec::<String>::default(),
-			terminal: Terminal::<C>::new(|key| {
+			messages: vec![],
+			input_history: vec![],
+			terminal: Terminal::new(|key| {
 				info!("Unknown command: {}", key);
 			}),
-			input: String::with_capacity(512),
+			input: String::with_capacity(128),
 			input_history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			cursor_to_end: false,
 			draw_log: true,
 			draw_toast: true,
-			requests: VecDeque::<C::Output>::default(),
+			requests: VecDeque::default(),
 		}
 	}
 
@@ -116,7 +116,7 @@ impl<C: terminal::Command> Console<C> {
 							}
 
 							for line in item.string.lines() {
-								Self::draw_line_generic(ui, line);
+								Self::draw_line(ui, line);
 							}
 						}
 						MessageKind::Log => {
@@ -125,16 +125,12 @@ impl<C: terminal::Command> Console<C> {
 							}
 
 							for line in item.string.lines() {
-								if lazy_regex!(r"^\[[A-Z]+\] ").is_match(line) {
-									Self::draw_line_log(ui, line);
-								} else {
-									Self::draw_line_generic(ui, line);
-								}
+								Self::draw_line_log(ui, line);
 							}
 						}
 						MessageKind::Help => {
 							for line in item.string.lines() {
-								Self::draw_line_generic(ui, line);
+								Self::draw_line(ui, line);
 							}
 						}
 					}
@@ -175,7 +171,11 @@ impl<C: terminal::Command> Console<C> {
 
 	/// Appends a custom message.
 	pub fn write(&mut self, string: String, kind: MessageKind) {
-		self.messages.push(Message { string, kind });
+		self.messages.push(Message {
+			string: string.into_boxed_str(),
+			kind,
+		});
+
 		self.scroll_to_bottom = true;
 	}
 
@@ -292,13 +292,13 @@ impl<C: terminal::Command> Console<C> {
 
 		match self.input_history.last() {
 			Some(last_cmd) => {
-				if last_cmd != &self.input[..] {
-					self.input_history.push(self.input.clone());
+				if last_cmd.as_ref() != self.input {
+					self.input_history.push(self.input.clone().into_boxed_str());
 					self.input_history_pos = self.input_history.len();
 				}
 			}
 			None => {
-				self.input_history.push(self.input.clone());
+				self.input_history.push(self.input.clone().into_boxed_str());
 				self.input_history_pos = self.input_history.len();
 			}
 		};
@@ -314,7 +314,7 @@ impl<C: terminal::Command> Console<C> {
 		self.input.clear();
 	}
 
-	fn draw_line_generic(ui: &mut egui::Ui, line: &str) {
+	fn draw_line(ui: &mut egui::Ui, line: &str) {
 		let font_id = TextStyle::Monospace.resolve(ui.style());
 		let job =
 			LayoutJob::simple_singleline(line.to_string(), font_id, ui.visuals().text_color());
@@ -322,22 +322,25 @@ impl<C: terminal::Command> Console<C> {
 		ui.label(galley);
 	}
 
-	/// Colors the bracketed qualifier prepended to all messages sent via the `log`
-	/// crate, with (approximately) the same colors that would appear in a terminal.
 	fn draw_line_log(ui: &mut egui::Ui, line: &str) {
-		const INFO_COLOR: Color32 = Color32::from_rgb(0, 188, 126);
-		const ERROR_COLOR: Color32 = Color32::from_rgb(225, 105, 107);
-		const DEBUG_COLOR: Color32 = Color32::from_rgb(0, 169, 197);
-		const TRACE_COLOR: Color32 = Color32::from_rgb(204, 102, 197);
+		let smatch =
+			if let Some(m) = lazy_regex!(r"(  INFO|  WARN| ERROR| DEBUG| TRACE) ").find(line) {
+				m
+			} else {
+				Self::draw_line(ui, line);
+				return;
+			};
 
-		let mut s = line.splitn(2, "] ");
-		let loglvl = s.next().unwrap_or_default();
-		let color = match &loglvl[1..] {
-			"INFO" => INFO_COLOR,
-			"WARN" => Color32::YELLOW,
-			"ERROR" => ERROR_COLOR,
-			"DEBUG" => DEBUG_COLOR,
-			"TRACE" => TRACE_COLOR,
+		const INFO_COLOR: Color32 = Color32::from_rgb(45, 189, 122);
+		const DEBUG_COLOR: Color32 = Color32::from_rgb(63, 143, 206);
+		const TRACE_COLOR: Color32 = Color32::from_rgb(202, 101, 202);
+
+		let color = match smatch.as_str() {
+			"  INFO " => INFO_COLOR,
+			"  WARN " => Color32::YELLOW,
+			" ERROR " => Color32::LIGHT_RED,
+			" DEBUG " => DEBUG_COLOR,
+			" TRACE " => TRACE_COLOR,
 			other => unreachable!("Unexpected log message qualifier: {other}"),
 		};
 
@@ -345,10 +348,9 @@ impl<C: terminal::Command> Console<C> {
 		let font_id = TextStyle::Monospace.resolve(ui.style());
 		let tfmt = TextFormat::simple(font_id.clone(), ui.visuals().text_color());
 
-		job.append("[", 0.0, tfmt.clone());
-		job.append(&loglvl[1..], 0.0, TextFormat::simple(font_id, color));
-		job.append("] ", 0.0, tfmt.clone());
-		job.append(s.next().unwrap_or_default(), 0.0, tfmt);
+		job.append(&line[..smatch.start()], 0.0, tfmt.clone());
+		job.append(smatch.as_str(), 0.0, TextFormat::simple(font_id, color));
+		job.append(&line[smatch.end()..], 0.0, tfmt);
 
 		let galley = ui.fonts(|fonts| fonts.layout_job(job));
 		ui.label(galley);
@@ -381,7 +383,7 @@ impl io::Write for Writer {
 			let string = String::from_utf8_lossy(drain.as_slice()).to_string();
 
 			match self.sender.try_send(Message {
-				string,
+				string: string.into_boxed_str(),
 				kind: MessageKind::Log,
 			}) {
 				Ok(()) => {}
@@ -403,7 +405,7 @@ impl io::Write for Writer {
 		let string = String::from_utf8_lossy(drain.as_slice()).to_string();
 
 		match self.sender.try_send(Message {
-			string,
+			string: string.into_boxed_str(),
 			kind: MessageKind::Log,
 		}) {
 			Ok(()) => {}

@@ -14,7 +14,6 @@ use viletech::{
 	lith,
 	rng::RngCore,
 	user::UserCore,
-	utils::duration_to_hhmmss,
 };
 
 use crate::ccmd;
@@ -192,11 +191,10 @@ impl ClientCore {
 
 impl Drop for ClientCore {
 	/// (RAT) In my experience, a runtime log is much more informative if it
-	/// states the duration for which the program executed.
+	/// states the duration for which the program executed. Messages are already
+	/// stamped with the current uptime, so just state that the program is closing.
 	fn drop(&mut self) {
-		let uptime = viletech::START_TIME.get().unwrap().elapsed();
-		let (hh, mm, ss) = duration_to_hhmmss(uptime);
-		info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
+		info!("Shutting down.");
 	}
 }
 

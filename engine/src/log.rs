@@ -17,6 +17,8 @@ use crate::{
 	utils::{self, duration_to_hhmmss},
 };
 
+pub use tracing::Level;
+
 #[derive(Debug)]
 pub struct TracingPlugin {
 	/// Filters logs using the [`tracing_subscriber::EnvFilter`] format.
