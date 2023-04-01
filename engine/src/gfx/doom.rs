@@ -1,18 +1,5 @@
 //! Graphics symbols specific to Doom games, such as PLAYPAL and ENDOOM.
 
-use palette::rgb::Rgb;
-
-use super::Rgb32;
-
-pub struct Palette(pub [Rgb32; 256]);
-
-impl Default for Palette {
-	#[must_use]
-	fn default() -> Self {
-		Palette([Rgb::default(); 256])
-	}
-}
-
 pub struct ColorMap(pub [u8; 256]);
 
 pub struct Endoom {
