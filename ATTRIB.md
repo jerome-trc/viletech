@@ -46,10 +46,6 @@ Note that any library shown below may come with its own transitive dependencies,
 	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
 	- Provided under the [MIT License](https://github.com/BurntSushi/byteorder/blob/master/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/byteorder/blob/master/UNLICENSE).
 	- https://docs.rs/byteorder/latest/byteorder/
-- chrono
-	- By Kang Seonghoon ([@lifthrasiir](https://github.com/lifthrasiir)), Brandon W. Maister ([@quodlibetor](https://github.com/quodlibetor)), et al.
-	- Provided under the [Apache 2.0 License and MIT License](https://github.com/chronotope/chrono/blob/main/LICENSE.txt).
-	- https://docs.rs/chrono/latest/chrono/
 - chumsky
     - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
     - Provided under the [MIT License](https://github.com/zesterer/chumsky/blob/master/LICENSE).
@@ -193,6 +189,10 @@ Note that any library shown below may come with its own transitive dependencies,
 	- By Scott Godwin ([@sgodwincs](https://gitub.com/sgodwincs)).
 	- Provided under the [Apache 2.0 License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-MIT).
 	- https://docs.rs/sparse_set/latest/sparse_set/
+- time
+    - By Jacob Pratt ([@jhpratt](https://github.com/jhpratt)) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/time-rs/time/blob/main/LICENSE-Apache) and [MIT License](https://github.com/time-rs/time/blob/main/LICENSE-MIT).
+    - https://docs.rs/time/latest/time/
 - toml
 	- By Alex Crichton ([@alexcrichton](https://github.com/alexcrichton)) et al.
 	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).

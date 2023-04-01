@@ -31,7 +31,9 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 		}
 	};
 
-	let compile_timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S");
+	let fmt =
+		time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
+	let compile_timestamp = time::OffsetDateTime::now_utc().format(&fmt).unwrap();
 
 	println!("cargo:rustc-env=GIT_HASH={hash_str}");
 	println!("cargo:rustc-env=COMPILE_DATETIME={compile_timestamp} UTC");

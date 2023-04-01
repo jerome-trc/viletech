@@ -52,7 +52,6 @@ bitflags = { workspace = true }
 bitvec = { workspace = true }
 bytemuck = { workspace = true }
 byteorder = { workspace = true }
-chrono = { workspace = true }
 cpal = { workspace = true }
 cranelift = { workspace = true }
 cranelift-jit = { workspace = true }
@@ -92,6 +91,7 @@ serde = { workspace = true }
 sha3 = { workspace = true }
 stardate = { workspace = true }
 subterra = { workspace = true }
+time = { workspace = true }
 toml = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
@@ -106,9 +106,9 @@ name = "bench"
 harness = false
 
 [build-dependencies]
-chrono = { workspace = true }
 miette = { version = "5.5.0", features = ["fancy"] }
 sha3 = { workspace = true }
+time = { workspace = true }
 walkdir = { workspace = true }
 zip = { workspace = true }
 
