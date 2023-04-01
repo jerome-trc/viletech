@@ -6,7 +6,7 @@ use bitflags::bitflags;
 use glam::{DVec2, DVec3};
 
 use crate::{
-	data::{self, Blueprint, DamageType, Sound, Species},
+	data::{self, Audio, Blueprint, DamageType, Species},
 	gfx::Rgb32,
 	math::{Angle32, Angle64, Rotator64},
 	sparse::SparseSetIndex,
@@ -289,15 +289,15 @@ pub struct Readonly {
 /// Sounds emitted by an actor in response to certain triggers.
 #[derive(Debug)]
 pub struct Sounds {
-	on_active: Option<data::Handle<Sound>>,
-	on_attack: Option<data::Handle<Sound>>,
-	on_bounce: Option<data::Handle<Sound>>,
-	on_bounce_wall: Option<data::Handle<Sound>>,
-	on_crush_pain: Option<data::Handle<Sound>>,
-	on_death: Option<data::Handle<Sound>>,
-	on_pain: Option<data::Handle<Sound>>,
-	on_see: Option<data::Handle<Sound>>,
-	on_use: Option<data::Handle<Sound>>,
+	on_active: Option<data::Handle<Audio>>,
+	on_attack: Option<data::Handle<Audio>>,
+	on_bounce: Option<data::Handle<Audio>>,
+	on_bounce_wall: Option<data::Handle<Audio>>,
+	on_crush_pain: Option<data::Handle<Audio>>,
+	on_death: Option<data::Handle<Audio>>,
+	on_pain: Option<data::Handle<Audio>>,
+	on_see: Option<data::Handle<Audio>>,
+	on_use: Option<data::Handle<Audio>>,
 }
 
 // Spatial /////////////////////////////////////////////////////////////////////

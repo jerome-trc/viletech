@@ -1,9 +1,9 @@
-//! Map data.
+//! Level (a.k.a. "map") data.
 
 use bitflags::bitflags;
 use glam::IVec2;
 
-use super::{super::InHandle, Asset, Image, Music};
+use super::{super::InHandle, Asset, AssetKind, Audio, Image, Record};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vertex {
@@ -36,13 +36,13 @@ bitflags! {
 		const DONT_PEG_TOP = 1 << 3;
 		/// If set, lower texture is unpegged.
 		const DONT_PEG_BOTTOM = 1 << 4;
-		/// If set, drawn as 1S on map.
+		/// If set, drawn as 1S on the map.
 		const SECRET = 1 << 5;
 		/// If set, blocks sound propagation.
 		const BLOCK_SOUND = 1 << 6;
-		/// If set, line is never drawn on map.
+		/// If set, line is never drawn on the map.
 		const DONT_DRAW = 1 << 7;
-		/// If set, line always appears on map.
+		/// If set, line always appears on the map.
 		const MAPPED = 1 << 8;
 		/// If set, linedef passes use action.
 		const PASS_USE = 1 << 9;
@@ -94,37 +94,47 @@ pub struct Sector {
 }
 
 #[derive(Debug)]
-pub struct Map {
-	pub meta: MapMetadata,
+pub struct Level {
+	pub meta: LevelMeta,
 	pub udmf_namespace: Option<UdmfNamespace>,
 }
 
-impl Asset for Map {}
+impl Asset for Level {
+	const KIND: AssetKind = AssetKind::Level;
+
+	unsafe fn get(record: &Record) -> &Self {
+		&record.asset.level
+	}
+
+	unsafe fn get_mut(record: &mut Record) -> &mut Self {
+		&mut record.asset.level
+	}
+}
 
 /// Comes from a map entry in a MAPINFO lump.
 #[derive(Debug)]
-pub struct MapMetadata {
+pub struct LevelMeta {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
 	/// Prepended to the level name on the automap. May be a string ID.
 	pub label: String,
 	/// May be a string ID.
 	pub author_name: String,
-	pub music: Option<InHandle<Music>>,
-	/// The map that players are taken to upon passing through the normal exit.
-	pub next: Option<InHandle<Map>>,
-	/// The map to which the secret exit leads, if any.
-	pub next_secret: Option<InHandle<Map>>,
+	pub music: Option<InHandle<Audio>>,
+	/// The level that players are taken to upon passing through the normal exit.
+	pub next: Option<InHandle<Level>>,
+	/// The level to which the secret exit leads, if any.
+	pub next_secret: Option<InHandle<Level>>,
 	/// In seconds.
 	pub par_time: u32,
 	/// Only used by ACS.
 	pub special_num: i32,
-	pub flags: MapFlags,
+	pub flags: LevelFlags,
 }
 
 bitflags! {
 	#[derive(Default)]
-	pub struct MapFlags: u8 {
+	pub struct LevelFlags: u8 {
 		/// Switch lines must be vertically reachable to allow interaction.
 		const CHECK_SWITCH_RANGE = 1 << 0;
 	}
@@ -145,7 +155,7 @@ pub enum UdmfNamespace {
 pub struct Episode {
 	/// Displayed to the user. May be a string ID.
 	pub name: String,
-	pub start_map: Option<InHandle<Map>>,
+	pub start_level: Option<InHandle<Level>>,
 	pub background: Option<InHandle<Image>>,
 	pub flags: EpisodeFlags,
 }
@@ -166,7 +176,7 @@ pub struct Cluster {
 	/// Displayed to the user. May be a string ID.
 	pub text_exit: String,
 	pub flags: ClusterFlags,
-	pub music: InHandle<Music>,
+	pub music: InHandle<Audio>,
 	pub background: InHandle<Image>,
 }
 

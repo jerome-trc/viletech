@@ -1,10 +1,12 @@
 //! Things that can go wrong during VFS and asset management operations.
 
-use std::{any::TypeId, path::PathBuf};
+use std::path::PathBuf;
 
 use zip::result::ZipError;
 
 use crate::{wad, VPathBuf};
+
+use super::AssetKind;
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`Mount`].
@@ -70,7 +72,10 @@ pub enum Asset {
 	///
 	/// [`Handle`]: super::Handle
 	/// [`Record`]: super::Record
-	TypeMismatch { expected: TypeId, given: TypeId },
+	TypeMismatch {
+		expected: AssetKind,
+		given: AssetKind,
+	},
 }
 
 impl std::error::Error for Asset {}

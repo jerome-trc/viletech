@@ -1,9 +1,6 @@
 //! Internal implementation details that don't belong anywhere else.
 
-use std::{
-	any::TypeId,
-	hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
 
 use bevy_egui::egui;
 use fasthash::SeaHasher;
@@ -166,7 +163,7 @@ impl AssetKey {
 	pub(super) fn new<A: Asset>(id: &str) -> Self {
 		let mut hasher = SeaHasher::default();
 		id.hash(&mut hasher);
-		TypeId::of::<A>().hash(&mut hasher);
+		A::KIND.hash(&mut hasher);
 		Self(hasher.finish())
 	}
 }

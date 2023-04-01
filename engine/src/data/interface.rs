@@ -1,9 +1,7 @@
 //! Assorted parts of the public API, in a separate file for cleanliness.
 
 use std::{
-	any::TypeId,
 	collections::HashMap,
-	marker::PhantomData,
 	path::Path,
 	sync::{
 		atomic::{self, AtomicU32, AtomicU64},
@@ -17,7 +15,7 @@ use crate::{lith, EditorNum, ShortId, SpawnNum, VPath};
 
 use super::{
 	detail::{AssetKey, VfsKey},
-	Asset, Catalog, Record, VirtFileKind, VirtualFile,
+	Catalog, Record, VirtFileKind, VirtualFile,
 };
 
 /// "Interned string". Wraps an [`Arc`].
@@ -346,97 +344,6 @@ impl MountInfo {
 		&self.links
 	}
 }
-
-// Handle //////////////////////////////////////////////////////////////////////
-
-/// Thin wrapper around an [`Arc`] pointing to a [`Record`]. Attaching a generic
-/// asset type allows the asset pointer to be safely downcast without any checks,
-/// enabling safe, instant access to an asset's data from anywhere in the engine.
-#[derive(Debug, Clone)]
-#[repr(transparent)]
-pub struct Handle<A: Asset>(Arc<Record>, PhantomData<A>);
-
-impl<A: Asset> Handle<A> {
-	/// For use in inter-asset relationships.
-	#[must_use]
-	pub fn downgrade(&self) -> InHandle<A> {
-		InHandle(Arc::downgrade(&self.0), PhantomData)
-	}
-}
-
-impl<A: Asset> From<Arc<Record>> for Handle<A> {
-	/// This conversion panics if the asset type of the given record is not `A`.
-	fn from(value: Arc<Record>) -> Self {
-		let expected = TypeId::of::<A>();
-		let typeid = value.data.type_id();
-
-		assert_eq!(
-			expected, typeid,
-			"Expected asset type: {expected:#?}, but got: {typeid:#?}",
-		);
-
-		Self(value, PhantomData)
-	}
-}
-
-impl<A: Asset> From<&Arc<Record>> for Handle<A> {
-	/// This conversion panics if the asset type of the given record is not `A`.
-	fn from(value: &Arc<Record>) -> Self {
-		let expected = TypeId::of::<A>();
-		let typeid = value.data.type_id();
-
-		assert_eq!(
-			expected, typeid,
-			"Expected asset type: {expected:#?}, but got: {typeid:#?}",
-		);
-
-		Self(value.clone(), PhantomData)
-	}
-}
-
-impl<A: 'static + Asset> std::ops::Deref for Handle<A> {
-	type Target = A;
-
-	#[inline]
-	fn deref(&self) -> &Self::Target {
-		// SAFETY: Type correctness was validated during handle acquisition.
-		// Note that `unwrap_unchecked` contains a debug assertion.
-		// Q: `downcast_ref_unchecked` when it stabilizes?
-		unsafe { self.0.data.as_any().downcast_ref::<A>().unwrap_unchecked() }
-	}
-}
-
-impl<A: Asset> PartialEq for Handle<A> {
-	/// Check that these are two handles to the same [`Record`].
-	fn eq(&self, other: &Self) -> bool {
-		Arc::ptr_eq(&self.0, &other.0)
-	}
-}
-
-impl<A: Asset> Eq for Handle<A> {}
-
-/// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-asset
-/// relationships (without preventing in-place mutation or removal) in a way
-/// that can't leak.
-#[derive(Debug, Clone)]
-#[repr(transparent)]
-pub struct InHandle<A: Asset>(Weak<Record>, PhantomData<A>);
-
-impl<A: Asset> InHandle<A> {
-	#[must_use]
-	pub fn upgrade(&self) -> Option<Handle<A>> {
-		self.0.upgrade().map(Handle::from)
-	}
-}
-
-impl<A: Asset> PartialEq for InHandle<A> {
-	/// Check that these are two handles to the same [`Record`].
-	fn eq(&self, other: &Self) -> bool {
-		Weak::ptr_eq(&self.0, &other.0)
-	}
-}
-
-impl<A: Asset> Eq for InHandle<A> {}
 
 // Configuration ///////////////////////////////////////////////////////////////
 

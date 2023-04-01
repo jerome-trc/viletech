@@ -5,7 +5,7 @@ use crate::data::{asset, Handle};
 /// Stateful playsim map geometry information.
 #[derive(Debug, Default)]
 pub struct Level {
-	pub base: Option<Handle<asset::Map>>,
+	pub base: Option<Handle<asset::Level>>,
 	pub flags: LevelFlags,
 	/// Time spent in this level thus far.
 	pub ticks_elapsed: u64,

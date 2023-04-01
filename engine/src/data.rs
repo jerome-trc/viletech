@@ -81,9 +81,9 @@ impl Catalog {
 	/// Notes:
 	/// - The order of pre-existing entries and mounts is unchanged upon success.
 	/// - Returned errors parallel the given mount requests.
-	/// - This function is atomic; if one mount operation fails, all of them fail,
-	/// and the VFS's state is left entirely unchanged.
-	/// - Each mount request is fulfilled in parallel using [`rayon`]'s global
+	/// - This function is atomic; if one load operation fails, all of them fail,
+	/// and the catalog's state is left entirely unchanged.
+	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
 	#[must_use = "mounting may return errors which should be handled"]
 	pub fn load<RP: AsRef<Path>, MP: AsRef<VPath>>(
