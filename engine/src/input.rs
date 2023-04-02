@@ -22,6 +22,11 @@ pub struct InputCore {
 
 impl InputCore {
 	pub fn update(&mut self, mut events: InputEvents) {
+		self.keys_virt.clear();
+		self.keys_phys.clear();
+		self.mouse_buttons.clear();
+		self.gamepad_buttons.clear();
+
 		for event in events.ev_keyboard_input.iter() {
 			let KeyboardInput {
 				scan_code, state, ..
