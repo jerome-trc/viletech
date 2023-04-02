@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 
 use crate::{lith, VPath, VPathBuf};
 
-use super::{Catalog, FileRef, LoadTracker, Mount, MountInfo, MountKind, PostProcError};
+use super::{Catalog, FileRef, LoadTracker, MountInfo, MountKind, PostProcError};
 
 #[derive(Debug)]
 pub(super) struct Context {
@@ -39,7 +39,7 @@ impl Catalog {
 		// Pass 1: compile Lith; transpile EDF and (G)ZDoom DSLs.
 
 		for i in 0..self.mounts.len() {
-			let module = match &self.mounts[i].info.kind {
+			let module = match &self.mounts[i].kind {
 				MountKind::VileTech => self.pproc_pass1_vpk(i, &ctx),
 				MountKind::ZDoom => self.pproc_pass1_pk(i, &ctx),
 				MountKind::Eternity => todo!(),
@@ -48,8 +48,11 @@ impl Catalog {
 			};
 
 			match module {
-				Ok(m) => {
-					self.mounts[i].lith = m;
+				Ok(Some(m)) => {
+					self.modules.push(m);
+					results.push(Ok(()));
+				}
+				Ok(None) => {
 					results.push(Ok(()));
 				}
 				Err(errs) => {
@@ -74,7 +77,7 @@ impl Catalog {
 		ctx: &Context,
 	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
 		let ret = None;
-		let mntinfo = &self.mounts[mount].info;
+		let mntinfo = &self.mounts[mount];
 
 		let script_root: VPathBuf = if let Some(srp) = &mntinfo.script_root {
 			[mntinfo.virtual_path(), srp].iter().collect()
@@ -107,9 +110,7 @@ impl Catalog {
 	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
 		let ret = None;
 
-		let file = self
-			.get_file(self.mounts[mount].info.virtual_path())
-			.unwrap();
+		let file = self.get_file(self.mounts[mount].virtual_path()).unwrap();
 
 		// Pass 1 only deals in text files.
 		if !file.is_text() {

@@ -1,48 +1,65 @@
 //! Assorted parts of the public API, in a separate file for cleanliness.
 
 use std::{
-	collections::HashMap,
 	path::Path,
 	sync::{
 		atomic::{self, AtomicU32, AtomicU64},
-		Arc, Weak,
+		Arc,
 	},
 };
 
-use parking_lot::{RwLock, RwLockReadGuard};
-
-use crate::{lith, EditorNum, ShortId, SpawnNum, VPath};
+use crate::VPath;
 
 use super::{
 	detail::{AssetKey, VfsKey},
 	Catalog, Record, VirtFileKind, VirtualFile,
 };
 
-/// "Interned string". Wraps an [`Arc`].
-/// At the moment, an [`RwLock`] is used to protect the string within.
-#[derive(Debug, Clone)]
-pub struct InString(Arc<RwLock<Box<str>>>);
+#[derive(Debug)]
+pub struct AssetRef<'cat> {
+	pub(super) catalog: &'cat Catalog,
+	pub(super) asset: dashmap::mapref::one::Ref<'cat, AssetKey, Arc<Record>>,
+}
 
-impl InString {
-	pub fn get(&self) -> RwLockReadGuard<'_, Box<str>> {
-		self.0.read()
+impl AssetRef<'_> {
+	#[must_use]
+	pub fn catalog(&self) -> &Catalog {
+		self.catalog
 	}
 }
 
-impl PartialEq for InString {
-	/// Check if these are two pointers to the same interned string.
-	fn eq(&self, other: &Self) -> bool {
-		Arc::ptr_eq(&self.0, &other.0)
+impl std::ops::Deref for AssetRef<'_> {
+	type Target = Arc<Record>;
+
+	fn deref(&self) -> &Self::Target {
+		self.asset.value()
 	}
 }
 
-impl Eq for InString {}
+#[derive(Debug)]
+pub struct AssetRefMut<'cat> {
+	pub(super) catalog: &'cat Catalog,
+	pub(super) asset: dashmap::mapref::one::RefMut<'cat, AssetKey, Arc<Record>>,
+}
 
-impl<T: AsRef<str>> From<T> for InString {
-	fn from(value: T) -> Self {
-		Self(Arc::new(RwLock::new(
-			value.as_ref().to_string().into_boxed_str(),
-		)))
+impl AssetRefMut<'_> {
+	#[must_use]
+	pub fn catalog(&self) -> &Catalog {
+		self.catalog
+	}
+}
+
+impl std::ops::Deref for AssetRefMut<'_> {
+	type Target = Arc<Record>;
+
+	fn deref(&self) -> &Self::Target {
+		self.asset.value()
+	}
+}
+
+impl std::ops::DerefMut for AssetRefMut<'_> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		self.asset.value_mut()
 	}
 }
 
@@ -140,57 +157,7 @@ impl PartialEq for FileRef<'_> {
 
 impl Eq for FileRef<'_> {}
 
-// Mount, MountInfo ////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-pub struct Mount {
-	/// Metadata.
-	pub(super) info: MountInfo,
-	pub(super) lith: Option<lith::Module>,
-	/// The "source of truth" for record pointers.
-	pub(super) assets: HashMap<AssetKey, Arc<Record>>,
-	/// See the key type's documentation for background details.
-	pub(super) shortid_map: HashMap<ShortId, Weak<Record>>,
-	/// See the key type's documentation for background details.
-	/// Stored records always wrap a [`Blueprint`].
-	///
-	/// [`Blueprint`]: super::asset::Blueprint
-	pub(super) editor_numbers: HashMap<EditorNum, Weak<Record>>,
-	/// See the key type's documentation for background details.
-	/// Stored records always wrap a [`Blueprint`].
-	///
-	/// [`Blueprint`]: super::asset::Blueprint
-	pub(super) spawn_numbers: HashMap<SpawnNum, Weak<Record>>,
-	/// Keys take the form `$ID` as in (G)ZDoom.
-	pub(super) strings: HashMap<String, InString>,
-	// Q: FNV hashing for int-keyed, short ID-keyed maps?
-}
-
-impl Mount {
-	#[must_use]
-	pub(super) fn new(info: MountInfo) -> Self {
-		Self {
-			info,
-			lith: None,
-			assets: HashMap::default(),
-			shortid_map: HashMap::default(),
-			editor_numbers: HashMap::default(),
-			spawn_numbers: HashMap::default(),
-			strings: HashMap::default(),
-		}
-	}
-
-	/// Metadata about this mount.
-	#[must_use]
-	pub fn info(&self) -> &MountInfo {
-		&self.info
-	}
-
-	#[must_use]
-	pub fn lith_module(&self) -> &Option<lith::Module> {
-		&self.lith
-	}
-}
+// MountInfo ///////////////////////////////////////////////////////////////////
 
 /// Metadata about a mounted file/directory. For VileTech packages, this comes
 /// from a `meta.toml` file. Otherwise it is left largely unpopulated.

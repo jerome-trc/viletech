@@ -5508,6 +5508,7 @@ dependencies = [
  "rfd",
  "serde",
  "sha3",
+ "smallvec",
  "stardate",
  "subterra",
  "time",

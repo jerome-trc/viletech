@@ -11,15 +11,20 @@ mod pproc;
 #[cfg(test)]
 mod test;
 
-use std::{path::Path, sync::Arc};
+use std::{
+	path::Path,
+	sync::{Arc, Weak},
+};
 
 use bevy_egui::egui;
+use dashmap::DashMap;
 use globset::Glob;
 use indexmap::IndexMap;
 use rayon::prelude::*;
 use regex::Regex;
+use smallvec::SmallVec;
 
-use crate::{utils::path::PathExt, EditorNum, ShortId, SpawnNum, VPath, VPathBuf};
+use crate::{lith, utils::path::PathExt, EditorNum, ShortId, SpawnNum, VPath, VPathBuf};
 
 pub use self::{
 	asset::*,
@@ -68,7 +73,23 @@ pub struct Catalog {
 	pub(self) files: IndexMap<VfsKey, VirtualFile>, // Q: FNV hashing?
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
-	pub(self) mounts: Vec<Mount>,
+	pub(self) mounts: Vec<MountInfo>,
+	pub(self) modules: Vec<lith::Module>,
+	/// The "source of truth" for record pointers.
+	pub(self) assets: DashMap<AssetKey, Arc<Record>>,
+	/// See the key type's documentation for background details.
+	pub(self) short_ids: DashMap<ShortId, SmallVec<[Weak<Record>; 2]>>,
+	/// See the key type's documentation for background details.
+	/// Stored records always wrap a [`Blueprint`].
+	///
+	/// [`Blueprint`]: super::asset::Blueprint
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[Weak<Record>; 2]>>,
+	/// See the key type's documentation for background details.
+	/// Stored records always wrap a [`Blueprint`].
+	///
+	/// [`Blueprint`]: super::asset::Blueprint
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[Weak<Record>; 2]>>,
+	// FNV/aHash for maps using small key types?
 }
 
 impl Catalog {
@@ -142,7 +163,7 @@ impl Catalog {
 		}
 
 		for mount in self.mounts.drain(len..) {
-			let vpath = mount.info.virtual_path();
+			let vpath = mount.virtual_path();
 
 			self.files.retain(|_, entry| !entry.path.is_child_of(vpath));
 		}
@@ -163,13 +184,13 @@ impl Catalog {
 	/// rather than an assertion that the asset under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<Arc<Record>> {
+	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<AssetRef> {
 		let key = AssetKey::new::<A>(id);
 
-		self.mounts
-			.par_iter()
-			.find_map_last(|mount| mount.assets.get(&key))
-			.cloned()
+		self.assets.get(&key).map(|r| AssetRef {
+			catalog: self,
+			asset: r,
+		})
 	}
 
 	/// Find an [`Actor`] [`Blueprint`] by a 16-bit editor number.
@@ -178,15 +199,18 @@ impl Catalog {
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<Handle<Blueprint>> {
-		self.mounts
-			.par_iter()
-			.find_map_last(|mount| mount.editor_numbers.get(&num))
-			.map(|opt| {
-				Handle::from(
-					opt.upgrade()
-						.expect("Catalog GC missed a weak record pointer."),
-				)
-			})
+		self.editor_nums.get(&num).map(|r| {
+			let stack = r.value();
+
+			let last = stack
+				.last()
+				.expect("Catalog cleanup missed an empty ed-num stack.");
+
+			Handle::from(
+				last.upgrade()
+					.expect("Catalog cleanup missed a dangling ed-num weak pointer."),
+			)
+		})
 	}
 
 	/// Find an [`Actor`] [`Blueprint`] by a 16-bit spawn number.
@@ -195,31 +219,18 @@ impl Catalog {
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<Handle<Blueprint>> {
-		self.mounts
-			.par_iter()
-			.find_map_last(|mount| mount.spawn_numbers.get(&num))
-			.map(|opt| {
-				Handle::from(
-					opt.upgrade()
-						.expect("Catalog GC missed a weak record pointer."),
-				)
-			})
-	}
+		self.spawn_nums.get(&num).map(|r| {
+			let stack = r.value();
 
-	/// If `id` starts with a `$` character, find the last-loaded locale string
-	/// stored under that ID and return a wrapper to a cloned [`Arc`] to it.
-	/// If it can not be found, or `id` does not begin with a `$`,
-	/// return a new pointer to a clone of `id`.
-	#[must_use]
-	pub fn localize(&self, id: &str) -> InString {
-		if id.starts_with('$') {
-			self.mounts
-				.par_iter()
-				.find_map_last(|mount| mount.strings.get(id).cloned())
-				.unwrap_or(InString::from(id))
-		} else {
-			InString::from(id)
-		}
+			let last = stack
+				.last()
+				.expect("Catalog cleanup missed an empty spawn-num stack.");
+
+			Handle::from(
+				last.upgrade()
+					.expect("Catalog cleanup missed a dangling spawn-num weak pointer."),
+			)
+		})
 	}
 
 	#[must_use]
@@ -288,44 +299,23 @@ impl Catalog {
 
 	/// Finds the last-loaded asset by a given ID and type.
 	#[must_use]
-	pub fn get_asset_shortid<A: Asset>(&self, shortid: ShortId) -> Option<Arc<Record>> {
-		self.mounts
-			.par_iter()
-			.find_map_last(|mount| mount.shortid_map.get(&shortid))
-			.map(|weak| {
-				weak.upgrade()
-					.expect("A dangling short-ID weak pointer wasn't garbage-collected.")
-			})
-	}
+	pub fn get_asset_shortid<A: Asset>(&self, short_id: ShortId) -> Option<Handle<A>> {
+		self.short_ids.get(&short_id).map(|r| {
+			let stack = r.value();
 
-	/// Allow altering a single asset record in place.
-	///
-	/// Returns [`AssetError::NotFound`] if no records of a matching ID and type
-	/// are found; returns `Ok(None)` if the record has one or more [`Handle`]s
-	/// pointing to it.
-	pub fn try_mutate<A: Asset>(&mut self, id: &str) -> Result<&mut Arc<Record>, AssetError> {
-		let key = AssetKey::new::<A>(id);
+			let last = stack
+				.last()
+				.expect("Catalog cleanup missed an empty short ID stack.");
 
-		match self
-			.mounts
-			.par_iter_mut()
-			.find_map_last(|ns| ns.assets.get_mut(&key))
-		{
-			Some(entry) => {
-				let strong_count = Arc::strong_count(entry);
-
-				if strong_count > 1 {
-					Err(AssetError::Immutable(strong_count - 1))
-				} else {
-					Ok(entry)
-				}
-			}
-			None => Err(AssetError::NotFound(id.to_string())),
-		}
+			Handle::from(
+				last.upgrade()
+					.expect("Catalog cleanup missed a dangling short ID weak pointer."),
+			)
+		})
 	}
 
 	#[must_use]
-	pub fn mounts(&self) -> &[Mount] {
+	pub fn mounts(&self) -> &[MountInfo] {
 		&self.mounts
 	}
 
@@ -369,6 +359,11 @@ impl Default for Catalog {
 			config: Config::default(),
 			files: indexmap::indexmap! { key => root },
 			mounts: vec![],
+			modules: vec![],
+			assets: DashMap::default(),
+			short_ids: DashMap::default(),
+			editor_nums: DashMap::default(),
+			spawn_nums: DashMap::default(),
 		}
 	}
 }

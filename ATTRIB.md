@@ -185,6 +185,10 @@ Note that any library shown below may come with its own transitive dependencies,
 	- By the [Rust Crypto](https://github.com/RustCrypto) organisation et al.
 	- Provided under the [Apache 2.0 License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-APACHE) and [MIT License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-MIT).
 	- https://docs.rs/sha3/latest/sha3/
+- smallvec
+    - By Matt Brubeck ([@mbrubeck](https://github.com/mbrubeck)) et al.
+    - Provided under the [Apache 2.0 License](https://github.com/servo/rust-smallvec/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/servo/rust-smallvec/blob/master/LICENSE-MIT).
+    - https://docs.rs/smallvec/latest/smallvec/
 - sparse_set
 	- By Scott Godwin ([@sgodwincs](https://gitub.com/sgodwincs)).
 	- Provided under the [Apache 2.0 License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-MIT).

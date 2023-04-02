@@ -20,7 +20,7 @@ use crate::{
 };
 
 use super::{
-	detail::VfsKey, Catalog, LoadTracker, Mount, MountError, MountFormat, MountInfo, MountKind,
+	detail::VfsKey, Catalog, LoadTracker, MountError, MountFormat, MountInfo, MountKind,
 	VirtFileKind, VirtualFile,
 };
 
@@ -174,7 +174,7 @@ impl Catalog {
 						);
 					}
 
-					mounts.push(Mount::new(MountInfo {
+					mounts.push(MountInfo {
 						id: mount_point
 							.file_stem()
 							.unwrap()
@@ -192,7 +192,7 @@ impl Catalog {
 						real_path: real_path.into_boxed_path(),
 						virtual_path: mount_point.into_boxed_path(),
 						script_root: None,
-					}));
+					});
 
 					Ok(())
 				}
@@ -221,10 +221,9 @@ impl Catalog {
 		// Register mounts; learn as much about them as possible in the process.
 
 		for mut mount in mounts {
-			mount.info.kind =
-				self.resolve_mount_kind(mount.info.format(), mount.info.virtual_path());
+			mount.kind = self.resolve_mount_kind(mount.format(), mount.virtual_path());
 
-			self.resolve_mount_metadata(&mut mount.info);
+			self.resolve_mount_metadata(&mut mount);
 			self.mounts.push(mount);
 		}
 
