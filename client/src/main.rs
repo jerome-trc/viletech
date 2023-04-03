@@ -104,6 +104,7 @@ conditions. See the license document that comes with your installation."
 				.add_before::<WindowPlugin, _>(viletech::input::InputPlugin)
 				.add_before::<TaskPoolPlugin, _>(TracingPlugin {
 					console_sender: Some(log_sender),
+					level: args.verbosity,
 					..Default::default()
 				}),
 		)
@@ -308,10 +309,10 @@ fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
 
 #[derive(Debug, clap::Parser)]
 struct Clap {
-	/// Prints the client and engine versions.
+	/// Prints the client and engine versions and then exits.
 	#[arg(short = 'V', long = "version")]
 	version: bool,
-	/// Prints license information.
+	/// Prints license information and then exits.
 	#[arg(short = 'A', long = "about")]
 	about: bool,
 	/// Sets the number of threads used by the global thread pool
@@ -320,6 +321,11 @@ struct Clap {
 	/// number of logical CPUs your computer has.
 	#[arg(short, long)]
 	threads: Option<usize>,
+	/// Sets how much logging goes to stdout, the console, and log files.
+	///
+	/// Possible values: ERROR, WARN, INFO, DEBUG, or TRACE.
+	#[arg(short, long, default_value_t = viletech::log::Level::INFO)]
+	verbosity: viletech::log::Level,
 }
 
 #[cfg(not(all()))]
