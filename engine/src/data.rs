@@ -4,12 +4,12 @@ pub mod asset;
 mod detail;
 mod error;
 mod ext;
-mod file;
 mod interface;
 mod mount;
 mod pproc;
 #[cfg(test)]
 mod test;
+mod vfs;
 
 use std::{
 	marker::PhantomData,
@@ -34,8 +34,8 @@ pub use self::{
 		Vfs as VfsError,
 	},
 	ext::*,
-	file::*,
 	interface::*,
+	vfs::*,
 };
 
 use self::detail::{AssetKey, Config, VfsKey};
@@ -69,7 +69,7 @@ pub struct Catalog {
 	/// - Exact-path lookups are fast.
 	/// - Memory contiguity means that linear searches are non-pessimized.
 	/// - If a load fails, restoring the previous state is simple truncation.
-	pub(self) files: IndexMap<VfsKey, VirtualFile>, // Q: FNV hashing?
+	pub(self) files: IndexMap<VfsKey, File>, // Q: FNV hashing?
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
 	pub(self) mounts: Vec<MountInfo>,
@@ -381,9 +381,9 @@ impl Catalog {
 
 impl Default for Catalog {
 	fn default() -> Self {
-		let root = VirtualFile {
+		let root = File {
 			path: VPathBuf::from("/").into_boxed_path(),
-			kind: VirtFileKind::Directory(vec![]),
+			kind: FileKind::Directory(vec![]),
 		};
 
 		let key = VfsKey::new(&root.path);

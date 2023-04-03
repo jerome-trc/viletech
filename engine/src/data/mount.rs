@@ -20,8 +20,8 @@ use crate::{
 };
 
 use super::{
-	detail::VfsKey, Catalog, LoadTracker, MountError, MountFormat, MountInfo, MountKind,
-	VirtFileKind, VirtualFile,
+	detail::VfsKey, Catalog, File, FileKind, LoadTracker, MountError, MountFormat, MountInfo,
+	MountKind,
 };
 
 #[derive(Debug)]
@@ -50,7 +50,7 @@ enum Outcome {
 	Err(MountError),
 	Ok {
 		format: MountFormat,
-		new_files: Vec<VirtualFile>,
+		new_files: Vec<File>,
 		real_path: PathBuf,
 		mount_point: PathBuf,
 	},
@@ -239,7 +239,7 @@ impl Catalog {
 		&self,
 		real_path: &Path,
 		virt_path: &VPath,
-	) -> Result<(Vec<VirtualFile>, MountFormat), MountError> {
+	) -> Result<(Vec<File>, MountFormat), MountError> {
 		let (format, bytes) = if real_path.is_dir() {
 			(MountFormat::Directory, vec![])
 		} else {
@@ -273,11 +273,7 @@ impl Catalog {
 		}
 	}
 
-	fn mount_dir(
-		&self,
-		real_path: &Path,
-		virt_path: &VPath,
-	) -> Result<Vec<VirtualFile>, MountError> {
+	fn mount_dir(&self, real_path: &Path, virt_path: &VPath) -> Result<Vec<File>, MountError> {
 		let mut ret = Vec::default();
 
 		let dir_iter = match std::fs::read_dir(real_path) {
@@ -324,12 +320,12 @@ impl Catalog {
 			}
 		}
 
-		ret[1..].par_sort_by(VirtualFile::cmp_name);
+		ret[1..].par_sort_by(File::cmp_name);
 
 		Ok(ret)
 	}
 
-	fn mount_wad(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<VirtualFile>, MountError> {
+	fn mount_wad(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<File>, MountError> {
 		#[rustfmt::skip]
 		const MAP_COMPONENTS: &[&str] = &[
 			"blockmap",
@@ -376,7 +372,7 @@ impl Catalog {
 			{
 				let prev_index = ret.len() - 1;
 				let prev = ret.get_mut(prev_index).unwrap();
-				prev.kind = VirtFileKind::Directory(Vec::with_capacity(10));
+				prev.kind = FileKind::Directory(Vec::with_capacity(10));
 				mapfold = Some(index - 1);
 			} else if !is_map_component(name.as_str()) {
 				mapfold = None;
@@ -438,7 +434,7 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn mount_zip(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<VirtualFile>, MountError> {
+	fn mount_zip(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<File>, MountError> {
 		let cursor = Cursor::new(&bytes);
 		let mut zip = ZipArchive::new(cursor).map_err(MountError::Zip)?;
 
@@ -548,7 +544,7 @@ impl Catalog {
 			}
 		}
 
-		ret[1..].par_sort_by(VirtualFile::cmp_name);
+		ret[1..].par_sort_by(File::cmp_name);
 
 		Ok(ret)
 	}
@@ -563,9 +559,9 @@ impl Catalog {
 	/// [text]: VirtFileKind::Text
 	/// [binary]: VirtFileKind::Binary
 	#[must_use]
-	fn new_leaf_file(&self, virt_path: VPathBuf, bytes: Vec<u8>) -> Option<VirtualFile> {
-		let kind: VirtFileKind = if bytes.is_empty() {
-			VirtFileKind::Empty
+	fn new_leaf_file(&self, virt_path: VPathBuf, bytes: Vec<u8>) -> Option<File> {
+		let kind: FileKind = if bytes.is_empty() {
+			FileKind::Empty
 		} else {
 			match String::from_utf8(bytes) {
 				Ok(string) => {
@@ -582,7 +578,7 @@ impl Catalog {
 						return None;
 					}
 
-					VirtFileKind::Text(string.into_boxed_str())
+					FileKind::Text(string.into_boxed_str())
 				}
 				Err(err) => {
 					let slice = err.into_bytes().into_boxed_slice();
@@ -600,22 +596,22 @@ impl Catalog {
 						return None;
 					}
 
-					VirtFileKind::Binary(slice)
+					FileKind::Binary(slice)
 				}
 			}
 		};
 
-		Some(VirtualFile {
+		Some(File {
 			path: virt_path.into_boxed_path(),
 			kind,
 		})
 	}
 
 	#[must_use]
-	fn new_dir(virt_path: VPathBuf) -> VirtualFile {
-		VirtualFile {
+	fn new_dir(virt_path: VPathBuf) -> File {
+		File {
 			path: virt_path.into_boxed_path(),
-			kind: VirtFileKind::Directory(Vec::default()),
+			kind: FileKind::Directory(Vec::default()),
 		}
 	}
 

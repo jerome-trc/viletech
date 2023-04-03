@@ -13,7 +13,7 @@ use crate::VPath;
 
 use super::{
 	detail::{AssetKey, VfsKey},
-	Asset, Catalog, Record, VirtFileKind, VirtualFile,
+	Asset, Catalog, File, FileKind, Record,
 };
 
 #[derive(Debug)]
@@ -76,12 +76,12 @@ impl<A: Asset> std::ops::Deref for AssetRefIter<'_, A> {
 
 /// The primary interface for quick introspection into the virtual file system;
 /// provides read access to one entry and the catalog itself. Prefer these over
-/// working directly with references to [`VirtualFile`]s, since this can trace
+/// working directly with references to [`File`]s, since this can trace
 /// inter-file relationships.
 #[derive(Debug, Clone)]
 pub struct FileRef<'cat> {
 	pub(super) catalog: &'cat Catalog,
-	pub(super) file: &'cat VirtualFile,
+	pub(super) file: &'cat File,
 }
 
 impl<'cat> FileRef<'cat> {
@@ -93,7 +93,7 @@ impl<'cat> FileRef<'cat> {
 
 	/// This only returns `None` if this file is the root directory.
 	#[must_use]
-	pub fn parent(&self) -> Option<&VirtualFile> {
+	pub fn parent(&self) -> Option<&File> {
 		if let Some(parent) = self.file.parent_path() {
 			Some(
 				self.catalog
@@ -117,7 +117,7 @@ impl<'cat> FileRef<'cat> {
 
 	/// Non-recursive; only gets immediate children. If this file is not a directory,
 	/// or is an empty directory, the returned iterator will yield no items.
-	pub fn children(&self) -> impl Iterator<Item = &VirtualFile> {
+	pub fn children(&self) -> impl Iterator<Item = &File> {
 		let closure = |key: &VfsKey| {
 			self.catalog
 				.files
@@ -126,7 +126,7 @@ impl<'cat> FileRef<'cat> {
 		};
 
 		match &self.file.kind {
-			VirtFileKind::Directory(children) => children.iter().map(closure),
+			FileKind::Directory(children) => children.iter().map(closure),
 			_ => [].iter().map(closure),
 		}
 	}
@@ -144,14 +144,14 @@ impl<'cat> FileRef<'cat> {
 	#[must_use]
 	pub fn child_count(&self) -> usize {
 		match &self.kind {
-			VirtFileKind::Directory(children) => children.len(),
+			FileKind::Directory(children) => children.len(),
 			_ => 0,
 		}
 	}
 }
 
 impl std::ops::Deref for FileRef<'_> {
-	type Target = VirtualFile;
+	type Target = File;
 
 	fn deref(&self) -> &Self::Target {
 		self.file

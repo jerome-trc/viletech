@@ -11,7 +11,6 @@ use crate::audio::MidiData;
 
 use super::{Asset, AssetKind, Record};
 
-/// Storage for [`Music`] and [`Sound`], which have different needs of their own.
 #[derive(Debug)]
 pub enum Audio {
 	Midi(MidiData),

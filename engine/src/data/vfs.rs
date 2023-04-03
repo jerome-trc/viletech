@@ -6,15 +6,15 @@ use super::{detail::VfsKey, VfsError};
 
 /// A virtual proxy for a physical file, physical directory, or archive entry.
 #[derive(Debug)]
-pub struct VirtualFile {
+pub struct File {
 	/// Virtual and absolute.
 	/// Guaranteed to contain only valid UTF-8 and start with a root separator.
 	pub path: Box<VPath>,
-	pub(super) kind: VirtFileKind,
+	pub(super) kind: FileKind,
 }
 
 #[derive(Debug)]
-pub(super) enum VirtFileKind {
+pub(super) enum FileKind {
 	/// Fallback storage type for physical files or archive entries that can't be
 	/// identified as anything else and don't pass UTF-8 validation.
 	Binary(Box<[u8]>),
@@ -26,7 +26,7 @@ pub(super) enum VirtFileKind {
 	Directory(Vec<VfsKey>),
 }
 
-impl VirtualFile {
+impl File {
 	/// See [`std::path::Path::file_name`]. Returns a string slice instead of an
 	/// OS string slice since mounted paths are pre-sanitized.
 	#[must_use]
@@ -91,22 +91,22 @@ impl VirtualFile {
 
 	#[must_use]
 	pub fn is_dir(&self) -> bool {
-		matches!(self.kind, VirtFileKind::Directory(..))
+		matches!(self.kind, FileKind::Directory(..))
 	}
 
 	#[must_use]
 	pub fn is_binary(&self) -> bool {
-		matches!(self.kind, VirtFileKind::Binary(..))
+		matches!(self.kind, FileKind::Binary(..))
 	}
 
 	#[must_use]
 	pub fn is_text(&self) -> bool {
-		matches!(self.kind, VirtFileKind::Text(..))
+		matches!(self.kind, FileKind::Text(..))
 	}
 
 	#[must_use]
 	pub fn is_empty(&self) -> bool {
-		matches!(self.kind, VirtFileKind::Empty)
+		matches!(self.kind, FileKind::Empty)
 	}
 
 	/// Returns `true` if this is a binary or text file.
@@ -119,8 +119,8 @@ impl VirtualFile {
 	/// or otherwise has no byte content.
 	pub fn try_read_bytes(&self) -> Result<&[u8], VfsError> {
 		match &self.kind {
-			VirtFileKind::Binary(bytes) => Ok(bytes),
-			VirtFileKind::Text(string) => Ok(string.as_bytes()),
+			FileKind::Binary(bytes) => Ok(bytes),
+			FileKind::Text(string) => Ok(string.as_bytes()),
 			_ => Err(VfsError::ByteReadFail),
 		}
 	}
@@ -130,8 +130,8 @@ impl VirtualFile {
 	#[must_use]
 	pub fn read_bytes(&self) -> &[u8] {
 		match &self.kind {
-			VirtFileKind::Binary(bytes) => bytes,
-			VirtFileKind::Text(string) => string.as_bytes(),
+			FileKind::Binary(bytes) => bytes,
+			FileKind::Text(string) => string.as_bytes(),
 			_ => panic!("Tried to read the bytes of a VFS entry with no byte content."),
 		}
 	}
@@ -140,7 +140,7 @@ impl VirtualFile {
 	/// if this is a directory, binary, or empty entry.
 	pub fn try_read_str(&self) -> Result<&str, VfsError> {
 		match &self.kind {
-			VirtFileKind::Text(string) => Ok(string.as_ref()),
+			FileKind::Text(string) => Ok(string.as_ref()),
 			_ => Err(VfsError::StringReadFail),
 		}
 	}
@@ -150,7 +150,7 @@ impl VirtualFile {
 	#[must_use]
 	pub fn read_str(&self) -> &str {
 		match &self.kind {
-			VirtFileKind::Text(string) => string.as_ref(),
+			FileKind::Text(string) => string.as_ref(),
 			_ => panic!("Tried to read text from a VFS entry without UTF-8 content."),
 		}
 	}
@@ -170,8 +170,8 @@ impl VirtualFile {
 	#[must_use]
 	pub(super) fn byte_len(&self) -> usize {
 		match &self.kind {
-			VirtFileKind::Binary(bytes) => bytes.len(),
-			VirtFileKind::Text(string) => string.len(),
+			FileKind::Binary(bytes) => bytes.len(),
+			FileKind::Text(string) => string.len(),
 			_ => 0,
 		}
 	}

@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
-use super::{Asset, Catalog, VirtFileKind, VirtualFile};
+use super::{Asset, Catalog, File, FileKind};
 
 #[derive(Debug)]
 pub(super) struct Config {
@@ -31,7 +31,7 @@ impl Catalog {
 	/// repopulation via `populate_dirs`.
 	pub(super) fn clear_dirs(&mut self) {
 		self.files.par_iter_mut().for_each(|(_, file)| {
-			if let VirtFileKind::Directory(children) = &mut file.kind {
+			if let FileKind::Directory(children) = &mut file.kind {
 				children.clear();
 			}
 		});
@@ -50,7 +50,7 @@ impl Catalog {
 			let (&key, _) = self.files.get_index(index).unwrap();
 			let parent = self.files.get_mut(&parent).unwrap();
 
-			if let VirtFileKind::Directory(children) = &mut parent.kind {
+			if let FileKind::Directory(children) = &mut parent.kind {
 				children.push(key);
 			} else {
 				unreachable!()
@@ -100,9 +100,9 @@ impl Catalog {
 		});
 	}
 
-	fn ui_file_tooltip(ui: &mut egui::Ui, file: &VirtualFile) {
+	fn ui_file_tooltip(ui: &mut egui::Ui, file: &File) {
 		match &file.kind {
-			VirtFileKind::Binary(bytes) => {
+			FileKind::Binary(bytes) => {
 				ui.label("Binary");
 				let mut unit = "B";
 				let mut len = bytes.len() as f64;
@@ -124,14 +124,14 @@ impl Catalog {
 
 				ui.label(&format!("{len:.2} {unit}"));
 			}
-			VirtFileKind::Text(string) => {
+			FileKind::Text(string) => {
 				ui.label("Text");
 				ui.label(&format!("{} B", string.len()));
 			}
-			VirtFileKind::Empty => {
+			FileKind::Empty => {
 				ui.label("Empty");
 			}
-			VirtFileKind::Directory(dir) => {
+			FileKind::Directory(dir) => {
 				ui.label("Directory");
 
 				if dir.len() == 1 {
