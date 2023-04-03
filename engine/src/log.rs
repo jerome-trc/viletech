@@ -96,9 +96,7 @@ impl bevy::prelude::Plugin for TracingPlugin {
 
 		app.insert_resource(FileAppenderWorkerGuard(guard));
 
-		let layer_stdout = fmt::Layer::default()
-			.with_target(false)
-			.with_timer(Uptime(*start_time));
+		let layer_stdout = fmt::Layer::default().with_timer(Uptime(*start_time));
 
 		let layer_file = fmt::Layer::default()
 			.with_ansi(false)
