@@ -94,9 +94,11 @@ impl ClientCore {
 
 		let tracker_sent = tracker.clone();
 
+		let mounts_sent = mounts.clone();
+
 		let thread = std::thread::spawn(move || {
 			let request = LoadRequest {
-				paths: mounts,
+				paths: mounts_sent,
 				tracker: Some(tracker_sent),
 			};
 
@@ -104,9 +106,10 @@ impl ClientCore {
 		});
 
 		Ok(GameLoad {
-			thread,
+			thread: Some(thread),
 			tracker,
 			start_time,
+			load_order: mounts,
 		})
 	}
 }

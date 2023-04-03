@@ -57,12 +57,19 @@ enum Outcome {
 }
 
 impl Catalog {
+	/// Preconditions:
+	/// - Load tracker has already had its mount target number set.
 	#[must_use]
 	pub(super) fn mount(
 		&mut self,
 		mount_reqs: &[(impl AsRef<Path>, impl AsRef<VPath>)],
 		ctx: Context,
 	) -> Output {
+		debug_assert_eq!(
+			ctx.tracker.mount_target.load(atomic::Ordering::SeqCst) as usize,
+			mount_reqs.len()
+		);
+
 		// To enable atomicity, remember where `self.files` and `self.mounts` were.
 		// Truncate back to them upon a failure.
 		let orig_files_len = self.files.len();
@@ -106,20 +113,10 @@ impl Catalog {
 				return;
 			}
 
-			match real_path.metadata() {
-				Ok(metadata) => {
-					ctx.tracker
-						.mount_target
-						.fetch_add(metadata.len(), atomic::Ordering::SeqCst);
-				}
-				Err(err) => {
-					outcomes.lock()[index] = Outcome::Err(MountError::Metadata(err));
-					return;
-				}
-			};
-
-			match self.mount_real_unknown(&ctx, &real_path, &mount_point) {
+			match self.mount_real_unknown(&real_path, &mount_point) {
 				Ok((new_files, format)) => {
+					ctx.tracker.inc_mount_progress();
+
 					outcomes.lock()[index] = Outcome::Ok {
 						format,
 						new_files,
@@ -163,6 +160,10 @@ impl Catalog {
 						real_path.display(),
 						mount_point.display(),
 					);
+
+					ctx.tracker
+						.pproc_target
+						.store(new_files.len() as u32, atomic::Ordering::SeqCst);
 
 					for new_file in new_files {
 						let displaced = self.files.insert(VfsKey::new(&new_file.path), new_file);
@@ -211,7 +212,7 @@ impl Catalog {
 
 		// Time for some housekeeping. If we've failed, clean up after ourselves.
 		if failed {
-			self.load_fail_cleanup(orig_files_len, orig_mounts_len);
+			self.on_mount_fail(orig_files_len, orig_mounts_len);
 			return ret;
 		}
 
@@ -236,7 +237,6 @@ impl Catalog {
 	/// to build the [`MountInfo`].
 	fn mount_real_unknown(
 		&self,
-		ctx: &Context,
 		real_path: &Path,
 		virt_path: &VPath,
 	) -> Result<(Vec<VirtualFile>, MountFormat), MountError> {
@@ -257,15 +257,14 @@ impl Catalog {
 		let res = match format {
 			MountFormat::PlainFile => {
 				if let Some(leaf) = self.new_leaf_file(virt_path.to_path_buf(), bytes) {
-					ctx.tracker.add_mount_progress(leaf.byte_len() as u64);
 					Ok(vec![leaf])
 				} else {
 					Ok(vec![])
 				}
 			}
-			MountFormat::Directory => self.mount_dir(ctx, real_path, virt_path),
-			MountFormat::Zip => self.mount_zip(ctx, virt_path, bytes),
-			MountFormat::Wad => self.mount_wad(ctx, virt_path, bytes),
+			MountFormat::Directory => self.mount_dir(real_path, virt_path),
+			MountFormat::Zip => self.mount_zip(virt_path, bytes),
+			MountFormat::Wad => self.mount_wad(virt_path, bytes),
 		};
 
 		match res {
@@ -276,7 +275,6 @@ impl Catalog {
 
 	fn mount_dir(
 		&self,
-		ctx: &Context,
 		real_path: &Path,
 		virt_path: &VPath,
 	) -> Result<Vec<VirtualFile>, MountError> {
@@ -318,7 +316,7 @@ impl Catalog {
 			let de_real_path = entry.path();
 			let de_virt_path: PathBuf = [virt_path, Path::new(filename)].iter().collect();
 
-			match self.mount_real_unknown(ctx, &de_real_path, &de_virt_path) {
+			match self.mount_real_unknown(&de_real_path, &de_virt_path) {
 				Ok((mut new_files, _)) => {
 					ret.append(&mut new_files);
 				}
@@ -331,12 +329,7 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn mount_wad(
-		&self,
-		ctx: &Context,
-		virt_path: &VPath,
-		bytes: Vec<u8>,
-	) -> Result<Vec<VirtualFile>, MountError> {
+	fn mount_wad(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<VirtualFile>, MountError> {
 		#[rustfmt::skip]
 		const MAP_COMPONENTS: &[&str] = &[
 			"blockmap",
@@ -438,7 +431,6 @@ impl Catalog {
 			}
 
 			if let Some(leaf) = self.new_leaf_file(child_path, bytes) {
-				ctx.tracker.add_mount_progress(leaf.byte_len() as u64);
 				ret.push(leaf);
 			}
 		}
@@ -446,12 +438,7 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn mount_zip(
-		&self,
-		ctx: &Context,
-		virt_path: &VPath,
-		bytes: Vec<u8>,
-	) -> Result<Vec<VirtualFile>, MountError> {
+	fn mount_zip(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<VirtualFile>, MountError> {
 		let cursor = Cursor::new(&bytes);
 		let mut zip = ZipArchive::new(cursor).map_err(MountError::Zip)?;
 
@@ -557,7 +544,6 @@ impl Catalog {
 			let zf_virt_path: VPathBuf = [virt_path, zfpath].iter().collect();
 
 			if let Some(leaf) = self.new_leaf_file(zf_virt_path, bytes) {
-				ctx.tracker.add_mount_progress(leaf.byte_len() as u64);
 				ret.push(leaf);
 			}
 		}
@@ -899,5 +885,12 @@ impl Catalog {
 			info.version = Some(vers);
 			info.name = Some(id);
 		}
+	}
+
+	/// Truncate `self.files` and `self.mounts` back to the given points.
+	/// Also called if loading fails during post-processing.
+	pub(super) fn on_mount_fail(&mut self, orig_files_len: usize, orig_mounts_len: usize) {
+		self.files.truncate(orig_files_len);
+		self.mounts.truncate(orig_mounts_len);
 	}
 }

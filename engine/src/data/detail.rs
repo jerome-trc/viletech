@@ -58,13 +58,27 @@ impl Catalog {
 		}
 	}
 
-	/// Truncate `self.files` and `self.mounts` back to the given points.
-	pub(super) fn load_fail_cleanup(&mut self, orig_files_len: usize, orig_mounts_len: usize) {
-		self.files.truncate(orig_files_len);
-		self.mounts.truncate(orig_mounts_len);
+	pub(super) fn clean(&mut self) {
+		self.nicknames.par_iter_mut().for_each(|mut kvp| {
+			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+		});
+
+		self.nicknames.retain(|_, v| !v.is_empty());
+
+		self.editor_nums.par_iter_mut().for_each(|mut kvp| {
+			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+		});
+
+		self.editor_nums.retain(|_, v| !v.is_empty());
+
+		self.spawn_nums.par_iter_mut().for_each(|mut kvp| {
+			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+		});
+
+		self.spawn_nums.retain(|_, v| !v.is_empty());
 	}
 
-	pub(super) fn ui_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub(super) fn ui_vfs_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		ui.heading("Virtual File System");
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
@@ -127,6 +141,28 @@ impl Catalog {
 				}
 			}
 		}
+	}
+
+	pub(super) fn ui_assets_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		ui.heading("Assets");
+
+		egui::ScrollArea::vertical().show(ui, |ui| {
+			for r in &self.assets {
+				let resp = ui.label(r.value().id());
+
+				let resp = if resp.hovered() {
+					resp.highlight()
+				} else {
+					resp
+				};
+
+				resp.on_hover_ui_at_pointer(|ui| {
+					egui::Area::new("vtec_asset_tt").show(ctx, |_| {
+						ui.label(format!("{:?}", r.value().kind()));
+					});
+				});
+			}
+		});
 	}
 }
 

@@ -11,34 +11,72 @@ use crate::{
 pub fn update(
 	mut core: ResMut<ClientCore>,
 	mut next_state: ResMut<NextState<AppState>>,
-	loader: Res<GameLoad>,
+	mut loader: ResMut<GameLoad>,
 	mut ctxs: EguiContexts,
 ) {
 	// TODO: Localize these strings.
 
-	let m_pct = loader.tracker.mount_progress_percent();
-	let p_pct = loader.tracker.pproc_progress_percent();
+	let m_pct = loader.tracker.mount_progress_percent() * 100.0;
+	let p_pct = loader.tracker.pproc_progress_percent() * 100.0;
 	let mut cancelled = false;
 
 	egui::Window::new("Loading...")
 		.id(egui::Id::new("vile_gameload"))
 		.show(ctxs.ctx_mut(), |ui| {
-			ui.label(&format!("File Mounting: {m_pct}%"));
-			ui.label(&format!("Processing: {p_pct}%"));
+			ui.label(&format!("File Mounting: {m_pct:.1}%"));
+			ui.label(&format!("Processing: {p_pct:.1}%"));
 
 			if ui.button("Cancel").clicked() {
 				cancelled = true;
 			}
 		});
 
-	if loader.tracker.mount_done() && loader.tracker.pproc_done() && !cancelled {
-		debug_assert!(loader.thread.is_finished());
-		next_state.set(AppState::Game);
-	} else if cancelled {
+	core.draw_devgui(ctxs.ctx_mut());
+
+	if cancelled {
 		next_state.set(AppState::Frontend);
+		return;
 	}
 
-	core.draw_devgui(ctxs.ctx_mut());
+	if !loader.tracker.mount_done() || !loader.tracker.pproc_done() {
+		return;
+	}
+
+	let res_join = loader.thread.take().unwrap().join();
+
+	let res_load = match res_join {
+		Ok(results) => results,
+		Err(_) => {
+			next_state.set(AppState::Frontend);
+			error!("Failed to join loader thread.");
+			return;
+		}
+	};
+
+	let mut failed = false;
+
+	for (i, errs) in res_load.into_iter().filter_map(|res| res.err()).enumerate() {
+		let mut msg = String::with_capacity(128 + 256 * errs.len());
+
+		msg.push_str(&format!(
+			"Failed to load: {}",
+			loader.load_order[i].0.display()
+		));
+
+		for err in errs {
+			msg.push_str(&err.to_string());
+		}
+
+		error!("{msg}");
+
+		failed = true;
+	}
+
+	if failed {
+		next_state.set(AppState::Frontend);
+	} else {
+		next_state.set(AppState::Game);
+	}
 }
 
 pub fn on_exit(mut cmds: Commands) {

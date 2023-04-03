@@ -9,7 +9,7 @@ use parking_lot::RwLock;
 use viletech::{
 	audio::AudioCore,
 	console::Console,
-	data::{Catalog, LoadError, LoadTracker},
+	data::{Catalog, LoadOutcome, LoadTracker},
 	input::InputCore,
 	lith,
 	rng::RngCore,
@@ -127,6 +127,11 @@ impl ClientCore {
 	}
 
 	pub fn draw_devgui(&mut self, ctx: &mut egui::Context) {
+		// TODO: Developer GUI toggle key-binding.
+		if self.input.keys_virt.just_pressed(KeyCode::Grave) {
+			self.devgui.open = !self.devgui.open;
+		}
+
 		if !self.devgui.open {
 			return;
 		}
@@ -143,15 +148,22 @@ impl ClientCore {
 				self.devgui.selectors(
 					ui,
 					&[
+						(DevGuiStatus::Assets, "Assets"),
+						(DevGuiStatus::Audio, "Audio"),
 						(DevGuiStatus::Console, "Console"),
 						(DevGuiStatus::LithRepl, "REPL"),
 						(DevGuiStatus::Vfs, "VFS"),
-						(DevGuiStatus::Audio, "Audio"),
 					],
 				);
 
 				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
 					match self.devgui.left {
+						DevGuiStatus::Assets => {
+							self.catalog.read().ui_assets(ctx, ui);
+						}
+						DevGuiStatus::Audio => {
+							self.audio.ui(ctx, ui);
+						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
@@ -159,16 +171,19 @@ impl ClientCore {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.read().ui(ctx, ui);
-						}
-						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui);
+							self.catalog.read().ui_vfs(ctx, ui);
 						}
 					};
 				});
 
 				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
 					match self.devgui.right {
+						DevGuiStatus::Assets => {
+							self.catalog.read().ui_assets(ctx, ui);
+						}
+						DevGuiStatus::Audio => {
+							self.audio.ui(ctx, ui);
+						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
@@ -176,10 +191,7 @@ impl ClientCore {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.read().ui(ctx, ui);
-						}
-						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui);
+							self.catalog.read().ui_vfs(ctx, ui);
 						}
 					};
 				});
@@ -200,10 +212,11 @@ impl Drop for ClientCore {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DevGuiStatus {
+	Assets,
+	Audio,
 	Console,
 	LithRepl,
 	Vfs,
-	Audio,
 }
 
 #[derive(Debug, Resource)]
@@ -218,10 +231,12 @@ pub struct FirstStartup {
 #[derive(Debug, Resource)]
 pub struct GameLoad {
 	/// The mount thread takes a write guard to the catalog and another
-	/// pointer to `tracker`.
-	pub thread: JoinHandle<Vec<Result<(), Vec<LoadError>>>>,
+	/// pointer to `tracker`. This is `Some` from initialization up until it
+	/// gets taken to be joined.
+	pub thread: Option<JoinHandle<LoadOutcome>>,
 	/// How far along the mount/load process is `thread`?
 	pub tracker: Arc<LoadTracker>,
 	/// Print to the log how long the mount takes for diagnostic purposes.
 	pub start_time: Instant,
+	pub load_order: Vec<(PathBuf, String)>,
 }

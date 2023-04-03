@@ -32,6 +32,7 @@ pub enum AssetKind {
 	DamageType,
 	Image,
 	Level,
+	Palettes,
 	PolyModel,
 	Species,
 	VoxelModel,
@@ -46,6 +47,7 @@ union AssetUnion {
 	damage_type: ManuallyDrop<DamageType>,
 	image: ManuallyDrop<Image>,
 	level: ManuallyDrop<Level>,
+	palettes: ManuallyDrop<PaletteSet>,
 	poly_model: ManuallyDrop<PolyModel>,
 	species: ManuallyDrop<Species>,
 	voxel_model: ManuallyDrop<VoxelModel>,
@@ -53,7 +55,7 @@ union AssetUnion {
 
 impl Record {
 	#[must_use]
-	pub(super) fn _new<A: Asset>(id: String, asset: A) -> Self {
+	pub(super) fn new<A: Asset>(id: String, asset: A) -> Self {
 		let mut ret = Self {
 			pin: PhantomPinned,
 			id,
@@ -62,7 +64,9 @@ impl Record {
 		};
 
 		unsafe {
-			*A::get_mut(&mut ret) = asset;
+			let a = A::get_mut(&mut ret);
+			let invalid = std::ptr::replace(a, asset);
+			std::mem::forget(invalid);
 		}
 
 		ret
@@ -101,6 +105,20 @@ impl Record {
 	/// Returns [`AssetError::TypeMismatch`] if the storage type isn't `A`.
 	///
 	/// [`AssetError::TypeMismatch`]: super::AssetError::TypeMismatch
+	pub fn downcast_mut<A: Asset>(&mut self) -> Result<&mut A, AssetError> {
+		if self.is::<A>() {
+			unsafe { Ok(A::get_mut(self)) }
+		} else {
+			Err(AssetError::TypeMismatch {
+				expected: self.kind,
+				given: A::KIND,
+			})
+		}
+	}
+
+	/// Returns [`AssetError::TypeMismatch`] if the storage type isn't `A`.
+	///
+	/// [`AssetError::TypeMismatch`]: super::AssetError::TypeMismatch
 	pub fn handle<A: Asset>(self: &Arc<Self>) -> Result<Handle<A>, AssetError> {
 		if self.is::<A>() {
 			Ok(Handle::from(self))
@@ -122,6 +140,7 @@ impl Drop for Record {
 				AssetKind::DamageType => ManuallyDrop::drop(&mut self.asset.damage_type),
 				AssetKind::Image => ManuallyDrop::drop(&mut self.asset.image),
 				AssetKind::Level => ManuallyDrop::drop(&mut self.asset.level),
+				AssetKind::Palettes => ManuallyDrop::drop(&mut self.asset.palettes),
 				AssetKind::PolyModel => ManuallyDrop::drop(&mut self.asset.poly_model),
 				AssetKind::Species => ManuallyDrop::drop(&mut self.asset.species),
 				AssetKind::VoxelModel => ManuallyDrop::drop(&mut self.asset.voxel_model),
@@ -146,6 +165,7 @@ impl std::fmt::Debug for Record {
 				AssetKind::DamageType => debug.field("damage_type", &self.asset.damage_type),
 				AssetKind::Image => debug.field("image", &self.asset.image),
 				AssetKind::Level => debug.field("level", &self.asset.level),
+				AssetKind::Palettes => debug.field("palette", &self.asset.palettes),
 				AssetKind::PolyModel => debug.field("poly_model", &self.asset.poly_model),
 				AssetKind::Species => debug.field("species", &self.asset.species),
 				AssetKind::VoxelModel => debug.field("voxel_model", &self.asset.voxel_model),

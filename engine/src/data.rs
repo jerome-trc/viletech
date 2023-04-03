@@ -12,19 +12,20 @@ mod pproc;
 mod test;
 
 use std::{
+	marker::PhantomData,
 	path::Path,
-	sync::{Arc, Weak},
+	sync::{atomic, Arc, Weak},
 };
 
 use bevy_egui::egui;
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use globset::Glob;
 use indexmap::IndexMap;
 use rayon::prelude::*;
 use regex::Regex;
 use smallvec::SmallVec;
 
-use crate::{lith, utils::path::PathExt, EditorNum, ShortId, SpawnNum, VPath, VPathBuf};
+use crate::{lith, utils::path::PathExt, EditorNum, SpawnNum, VPath, VPathBuf};
 
 pub use self::{
 	asset::*,
@@ -53,12 +54,10 @@ use self::detail::{AssetKey, Config, VfsKey};
 /// an [`Arc`], allowing other parts of the engine to take out high-speed
 /// [`Handle`]s to something and safely access it lock-free.
 ///
-/// Some miscellaneous notes on semantics:
-/// - It's impossible to mount a file that's nested within an archive. If
-/// `mymod.zip` contains `myothermod.vpk7`, there's no way to register `myothermod`
-/// as a mount in the official sense. It's just a part of `mymod`'s file tree.
-/// - If, for example, a zip file is mounted, and within that zip is a WAD, the
-/// WAD is not considered a "mount" like the zip.
+/// A footnote on semantics: it is impossible to mount a file that's nested within
+/// an archive. If `mymod.zip` contains `myothermod.vpk7`, there's no way to
+/// register `myothermod` as a mount in the official sense. It's just a part of
+/// `mymod`'s file tree.
 #[derive(Debug)]
 pub struct Catalog {
 	pub(self) config: Config,
@@ -77,20 +76,24 @@ pub struct Catalog {
 	pub(self) modules: Vec<lith::Module>,
 	/// The "source of truth" for record pointers.
 	pub(self) assets: DashMap<AssetKey, Arc<Record>>,
-	/// See the key type's documentation for background details.
-	pub(self) short_ids: DashMap<ShortId, SmallVec<[Weak<Record>; 2]>>,
+	/// Asset storage without namespacing. Thus, requesting `MAP01` returns
+	/// the last element in the array behind that key, as doom.exe would if
+	/// loading multiple WADs with similarly-named entries.
+	pub(self) nicknames: DashMap<Box<str>, SmallVec<[Weak<Record>; 2]>>,
 	/// See the key type's documentation for background details.
 	/// Stored records always wrap a [`Blueprint`].
 	///
-	/// [`Blueprint`]: super::asset::Blueprint
+	/// [`Blueprint`]: asset::Blueprint
 	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[Weak<Record>; 2]>>,
 	/// See the key type's documentation for background details.
 	/// Stored records always wrap a [`Blueprint`].
 	///
-	/// [`Blueprint`]: super::asset::Blueprint
+	/// [`Blueprint`]: asset::Blueprint
 	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[Weak<Record>; 2]>>,
 	// FNV/aHash for maps using small key types?
 }
+
+pub type LoadOutcome = Vec<Result<(), Vec<LoadError>>>;
 
 impl Catalog {
 	/// This is an end-to-end function that reads physical files, fills out the
@@ -110,7 +113,11 @@ impl Catalog {
 	pub fn load<RP: AsRef<Path>, MP: AsRef<VPath>>(
 		&mut self,
 		request: LoadRequest<RP, MP>,
-	) -> Vec<Result<(), Vec<LoadError>>> {
+	) -> LoadOutcome {
+		if request.paths.len() > (u8::MAX as usize) {
+			unimplemented!("Loading more than 255 files/folders is unsupported.");
+		}
+
 		let ctx = mount::Context {
 			// Build a dummy tracker if none was given to avoid branching later
 			// and simplify the rest of the loading code.
@@ -118,6 +125,10 @@ impl Catalog {
 				.tracker
 				.unwrap_or_else(|| Arc::new(LoadTracker::default())),
 		};
+
+		ctx.tracker
+			.mount_target
+			.store(request.paths.len() as u8, atomic::Ordering::SeqCst);
 
 		// Note to reader: check `./mount.rs`.
 		let output = self.mount(&request.paths, ctx);
@@ -137,6 +148,7 @@ impl Catalog {
 			tracker: output.tracker,
 			orig_files_len: output.orig_files_len,
 			orig_mounts_len: output.orig_mounts_len,
+			added: DashSet::default(),
 		};
 
 		let output = self.postproc(ctx);
@@ -170,6 +182,7 @@ impl Catalog {
 
 		self.clear_dirs();
 		self.populate_dirs();
+		self.clean();
 	}
 
 	#[must_use]
@@ -184,12 +197,13 @@ impl Catalog {
 	/// rather than an assertion that the asset under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<AssetRef> {
+	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<AssetRef<A>> {
 		let key = AssetKey::new::<A>(id);
 
-		self.assets.get(&key).map(|r| AssetRef {
+		self.assets.get(&key).map(|kvp| AssetRef {
 			catalog: self,
-			asset: r,
+			kvp,
+			phantom: PhantomData,
 		})
 	}
 
@@ -199,8 +213,8 @@ impl Catalog {
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<Handle<Blueprint>> {
-		self.editor_nums.get(&num).map(|r| {
-			let stack = r.value();
+		self.editor_nums.get(&num).map(|kvp| {
+			let stack = kvp.value();
 
 			let last = stack
 				.last()
@@ -219,8 +233,8 @@ impl Catalog {
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<Handle<Blueprint>> {
-		self.spawn_nums.get(&num).map(|r| {
-			let stack = r.value();
+		self.spawn_nums.get(&num).map(|kvp| {
+			let stack = kvp.value();
 
 			let last = stack
 				.last()
@@ -297,19 +311,34 @@ impl Catalog {
 		self.get_files_regex(pattern).par_bridge()
 	}
 
-	/// Finds the last-loaded asset by a given ID and type.
 	#[must_use]
-	pub fn get_asset_shortid<A: Asset>(&self, short_id: ShortId) -> Option<Handle<A>> {
-		self.short_ids.get(&short_id).map(|r| {
-			let stack = r.value();
+	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<Handle<A>> {
+		self.nicknames.get(nick).map(|kvp| {
+			let stack = kvp.value();
 
 			let last = stack
 				.last()
-				.expect("Catalog cleanup missed an empty short ID stack.");
+				.expect("Catalog cleanup missed an empty nicknamed stack.");
 
 			Handle::from(
 				last.upgrade()
-					.expect("Catalog cleanup missed a dangling short ID weak pointer."),
+					.expect("Catalog cleanup missed a dangling nicknamed weak pointer."),
+			)
+		})
+	}
+
+	#[must_use]
+	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<Handle<A>> {
+		self.nicknames.get(nick).map(|kvp| {
+			let stack = kvp.value();
+
+			let last = stack
+				.last()
+				.expect("Catalog cleanup missed an empty nicknamed stack.");
+
+			Handle::from(
+				last.upgrade()
+					.expect("Catalog cleanup missed a dangling nicknamed weak pointer."),
 			)
 		})
 	}
@@ -340,9 +369,13 @@ impl Catalog {
 			.sum()
 	}
 
-	/// Draw the egui-based developer/debug/diagnosis menu.
-	pub fn ui(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		self.ui_impl(ctx, ui);
+	/// Draw the egui-based developer/debug/diagnosis menu for the VFS.
+	pub fn ui_vfs(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_vfs_impl(ctx, ui);
+	}
+
+	pub fn ui_assets(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_assets_impl(ctx, ui);
 	}
 }
 
@@ -361,7 +394,7 @@ impl Default for Catalog {
 			mounts: vec![],
 			modules: vec![],
 			assets: DashMap::default(),
-			short_ids: DashMap::default(),
+			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),
 			spawn_nums: DashMap::default(),
 		}

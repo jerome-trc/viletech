@@ -1,9 +1,10 @@
 //! Assorted parts of the public API, in a separate file for cleanliness.
 
 use std::{
+	marker::PhantomData,
 	path::Path,
 	sync::{
-		atomic::{self, AtomicU32, AtomicU64},
+		atomic::{self, AtomicU32, AtomicU8},
 		Arc,
 	},
 };
@@ -12,54 +13,62 @@ use crate::VPath;
 
 use super::{
 	detail::{AssetKey, VfsKey},
-	Catalog, Record, VirtFileKind, VirtualFile,
+	Asset, Catalog, Record, VirtFileKind, VirtualFile,
 };
 
 #[derive(Debug)]
-pub struct AssetRef<'cat> {
+pub struct AssetRef<'cat, A: Asset> {
 	pub(super) catalog: &'cat Catalog,
-	pub(super) asset: dashmap::mapref::one::Ref<'cat, AssetKey, Arc<Record>>,
+	pub(super) kvp: dashmap::mapref::one::Ref<'cat, AssetKey, Arc<Record>>,
+	pub(super) phantom: PhantomData<&'cat A>,
 }
 
-impl AssetRef<'_> {
+impl<A: Asset> AssetRef<'_, A> {
 	#[must_use]
 	pub fn catalog(&self) -> &Catalog {
 		self.catalog
 	}
-}
 
-impl std::ops::Deref for AssetRef<'_> {
-	type Target = Arc<Record>;
-
-	fn deref(&self) -> &Self::Target {
-		self.asset.value()
+	#[must_use]
+	pub fn record(&self) -> &Arc<Record> {
+		self.kvp.value()
 	}
 }
 
-#[derive(Debug)]
-pub struct AssetRefMut<'cat> {
-	pub(super) catalog: &'cat Catalog,
-	pub(super) asset: dashmap::mapref::one::RefMut<'cat, AssetKey, Arc<Record>>,
+impl<A: Asset> std::ops::Deref for AssetRef<'_, A> {
+	type Target = A;
+
+	fn deref(&self) -> &Self::Target {
+		// SAFETY: `A` was verified to be correct type by catalog's interface.
+		// Also note that `unwrap_unchecked` contains a debug assertion.
+		unsafe { self.kvp.value().downcast().unwrap_unchecked() }
+	}
 }
 
-impl AssetRefMut<'_> {
+pub struct AssetRefIter<'cat, A: Asset> {
+	pub(super) catalog: &'cat Catalog,
+	pub(super) kvp: dashmap::mapref::multiple::RefMulti<'cat, AssetKey, Arc<Record>>,
+	pub(super) phantom: PhantomData<&'cat A>,
+}
+
+impl<A: Asset> AssetRefIter<'_, A> {
 	#[must_use]
 	pub fn catalog(&self) -> &Catalog {
 		self.catalog
 	}
-}
 
-impl std::ops::Deref for AssetRefMut<'_> {
-	type Target = Arc<Record>;
-
-	fn deref(&self) -> &Self::Target {
-		self.asset.value()
+	pub fn record(&self) -> &Arc<Record> {
+		self.kvp.value()
 	}
 }
 
-impl std::ops::DerefMut for AssetRefMut<'_> {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.asset.value_mut()
+impl<A: Asset> std::ops::Deref for AssetRefIter<'_, A> {
+	type Target = A;
+
+	fn deref(&self) -> &Self::Target {
+		// SAFETY: `A` was verified to be correct type by catalog's interface.
+		// Also note that `unwrap_unchecked` contains a debug assertion.
+		unsafe { self.kvp.value().downcast().unwrap_unchecked() }
 	}
 }
 
@@ -106,8 +115,8 @@ impl<'cat> FileRef<'cat> {
 		})
 	}
 
-	/// If this file is not a directory, or is an empty directory, the returned
-	/// iterator will yield no items.
+	/// Non-recursive; only gets immediate children. If this file is not a directory,
+	/// or is an empty directory, the returned iterator will yield no items.
 	pub fn children(&self) -> impl Iterator<Item = &VirtualFile> {
 		let closure = |key: &VfsKey| {
 			self.catalog
@@ -122,8 +131,8 @@ impl<'cat> FileRef<'cat> {
 		}
 	}
 
-	/// If this file is not a directory, or is an empty directory, the returned
-	/// iterator will yield no items.
+	/// Non-recursive; only gets immediate children. If this file is not a directory,
+	/// or is an empty directory, the returned iterator will yield no items.
 	pub fn child_refs(&'cat self) -> impl Iterator<Item = FileRef<'cat>> + '_ {
 		self.children().map(|file| Self {
 			catalog: self.catalog,
@@ -412,11 +421,14 @@ where
 /// Wrap in an [`Arc`] and use to check how far along a load operation is.
 #[derive(Debug, Default)]
 pub struct LoadTracker {
-	/// The total number of bytes the user requested to mount.
-	pub(super) mount_progress: AtomicU64,
-	/// The total number of bytes the VFS has mounted thus far.
-	pub(super) mount_target: AtomicU64,
+	/// The number of VFS mounts performed (successfully or not) thus far.
+	pub(super) mount_progress: AtomicU8,
+	/// The number of VFS mounts requested by the user.
+	pub(super) mount_target: AtomicU8,
+	/// The number of files added to the VFS during the mount phase which have
+	/// been post-processed thus far.
 	pub(super) pproc_progress: AtomicU32,
+	/// The number of files added to the VFS during the mount phase.
 	pub(super) pproc_target: AtomicU32,
 }
 
@@ -431,7 +443,7 @@ impl LoadTracker {
 			return 0.0;
 		}
 
-		(prog / tgt) as f64
+		prog as f64 / tgt as f64
 	}
 
 	/// 0.0 means just started; 1.0 means done.
@@ -444,7 +456,7 @@ impl LoadTracker {
 			return 0.0;
 		}
 
-		(prog / tgt) as f64
+		prog as f64 / tgt as f64
 	}
 
 	#[must_use]
@@ -459,8 +471,11 @@ impl LoadTracker {
 			>= self.pproc_target.load(atomic::Ordering::SeqCst)
 	}
 
-	pub(super) fn add_mount_progress(&self, bytes: u64) {
-		self.mount_progress
-			.fetch_add(bytes, atomic::Ordering::SeqCst);
+	pub(super) fn inc_mount_progress(&self) {
+		self.mount_progress.fetch_add(1, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn _inc_pproc_progress(&self) {
+		self.pproc_progress.fetch_add(1, atomic::Ordering::SeqCst);
 	}
 }
