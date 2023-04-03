@@ -160,6 +160,7 @@ conditions. See the license document that comes with your installation."
 		.add_system(
 			viletech::sim::tick
 				.run_if(in_state(AppState::Game))
+				.run_if(|sim: Option<Res<viletech::sim::Sim>>| sim.is_some())
 				.in_schedule(CoreSchedule::FixedUpdate),
 		)
 		.add_system(game::on_exit.in_schedule(OnExit(AppState::Game)));
