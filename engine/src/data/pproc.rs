@@ -2,6 +2,8 @@
 //!
 //! After mounting is done, start composing useful assets from raw files.
 
+mod level;
+
 use std::{
 	io::Cursor,
 	ops::Range,
@@ -37,7 +39,16 @@ pub(super) struct Context {
 	pub(super) new_mounts: Range<usize>,
 	/// Returning errors through the post-proc call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
-	pub(super) errors: Mutex<Vec<Vec<PostProcError>>>,
+	pub(super) errors: Vec<Mutex<Vec<PostProcError>>>,
+}
+
+/// Context relevant to operations on one mount.
+#[derive(Debug)]
+pub(self) struct SubContext<'ctx> {
+	pub(self) _tracker: &'ctx Arc<LoadTracker>,
+	pub(self) mntinfo: &'ctx MountInfo,
+	pub(self) errors: &'ctx Mutex<Vec<PostProcError>>,
+	pub(self) added: &'ctx DashSet<AssetKey>,
 }
 
 #[derive(Debug)]
@@ -59,7 +70,10 @@ impl Catalog {
 	/// - `self.files` has been populated. All directories know their contents.
 	/// - `self.mounts` has been populated.
 	/// - Load tracker has already had its post-proc target number set.
+	/// - `ctx.errors` has been populated.
 	pub(super) fn postproc(&mut self, mut ctx: Context) -> Output {
+		debug_assert!(!ctx.errors.is_empty());
+
 		let orig_modules_len = self.modules.len();
 		let to_reserve = ctx.tracker.pproc_target.load(atomic::Ordering::SeqCst) as usize;
 
@@ -72,12 +86,19 @@ impl Catalog {
 		// Pass 1: compile Lith; transpile EDF and (G)ZDoom DSLs.
 
 		for i in ctx.new_mounts.clone() {
-			let module = match &self.mounts[i].kind {
-				MountKind::VileTech => self.pproc_pass1_vpk(i, &ctx),
-				MountKind::ZDoom => self.pproc_pass1_pk(i, &ctx),
+			let subctx = SubContext {
+				_tracker: &ctx.tracker,
+				mntinfo: &self.mounts[i],
+				errors: &ctx.errors[i],
+				added: &ctx.added,
+			};
+
+			let module = match &subctx.mntinfo.kind {
+				MountKind::VileTech => self.pproc_pass1_vpk(&subctx),
+				MountKind::ZDoom => self.pproc_pass1_pk(&subctx),
 				MountKind::Eternity => todo!(),
-				MountKind::Wad => self.pproc_pass1_wad(i, &ctx),
-				MountKind::Misc => self.pproc_pass1_file(i, &ctx),
+				MountKind::Wad => self.pproc_pass1_wad(&subctx),
+				MountKind::Misc => self.pproc_pass1_file(&subctx),
 			};
 
 			if let Ok(Some(m)) = module {
@@ -91,8 +112,15 @@ impl Catalog {
 		// - Non-picture-format images.
 
 		for i in 0..self.mounts.len() {
+			let subctx = SubContext {
+				_tracker: &ctx.tracker,
+				mntinfo: &self.mounts[i],
+				errors: &ctx.errors[i],
+				added: &ctx.added,
+			};
+
 			match &self.mounts[i].kind {
-				MountKind::Wad => self.pproc_pass2_wad(i, &ctx),
+				MountKind::Wad => self.pproc_pass2_wad(&subctx),
 				MountKind::VileTech => {} // Soon!
 				_ => unimplemented!("Soon!"),
 			}
@@ -105,14 +133,25 @@ impl Catalog {
 		// - Maps, which need textures, music, scripts, blueprints...
 
 		for i in 0..self.mounts.len() {
+			let subctx = SubContext {
+				_tracker: &ctx.tracker,
+				mntinfo: &self.mounts[i],
+				errors: &ctx.errors[i],
+				added: &ctx.added,
+			};
+
 			match &self.mounts[i].kind {
-				MountKind::Wad => self.pproc_pass3_wad(i, &ctx),
+				MountKind::Wad => self.pproc_pass3_wad(&subctx),
 				MountKind::VileTech => {} // Soon!
 				_ => unimplemented!("Soon!"),
 			}
 		}
 
-		let errors = std::mem::replace(&mut ctx.errors, Mutex::new(vec![])).into_inner();
+		let errors = std::mem::take(&mut ctx.errors)
+			.into_iter()
+			.map(|mutex| mutex.into_inner())
+			.collect();
+
 		let ret = Output { errors };
 
 		if ret.any_errs() {
@@ -133,12 +172,11 @@ impl Catalog {
 	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
 	/// DSLs all go into the same Lith module, regardless of which are present
 	/// and which are absent.
-	fn pproc_pass1_vpk(&self, mount: usize, ctx: &Context) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_vpk(&self, ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
-		let mntinfo = &self.mounts[mount];
 
-		let script_root: VPathBuf = if let Some(srp) = &mntinfo.script_root {
-			[mntinfo.virtual_path(), srp].iter().collect()
+		let script_root: VPathBuf = if let Some(srp) = &ctx.mntinfo.script_root {
+			[ctx.mntinfo.virtual_path(), srp].iter().collect()
 		} else {
 			todo!()
 		};
@@ -146,7 +184,7 @@ impl Catalog {
 		let script_root = match self.get_file(&script_root) {
 			Some(fref) => fref,
 			None => {
-				ctx.errors.lock()[mount].push(PostProcError {
+				ctx.errors.lock().push(PostProcError {
 					path: script_root.to_path_buf(),
 					kind: PostProcErrorKind::MissingScriptRoot,
 				});
@@ -155,7 +193,7 @@ impl Catalog {
 			}
 		};
 
-		let inctree = lith::parse_include_tree(mntinfo.virtual_path(), script_root);
+		let inctree = lith::parse_include_tree(ctx.mntinfo.virtual_path(), script_root);
 
 		if inctree.any_errors() {
 			unimplemented!("Soon");
@@ -164,10 +202,10 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_file(&self, mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_file(&self, ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
 
-		let file = self.get_file(self.mounts[mount].virtual_path()).unwrap();
+		let file = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
 
 		// Pass 1 only deals in text files.
 		if !file.is_text() {
@@ -191,21 +229,20 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_pk(&self, _mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_pk(&self, _ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
-
+		// TODO
 		Ok(ret)
 	}
 
-	fn pproc_pass1_wad(&self, _mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_wad(&self, _ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
-
+		// TODO
 		Ok(ret)
 	}
 
-	fn pproc_pass2_wad(&self, mount: usize, ctx: &Context) {
-		let mntinfo = &self.mounts[mount];
-		let wad = self.get_file(mntinfo.virtual_path()).unwrap();
+	fn pproc_pass2_wad(&self, ctx: &SubContext) {
+		let wad = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
 
 		wad.children().par_bridge().for_each(|child| {
 			if !child.is_readable() {
@@ -216,7 +253,7 @@ impl Catalog {
 			let fstem = child.file_stem();
 
 			let res = if fstem.starts_with("PLAYPAL") {
-				self.pproc_playpal(bytes, mntinfo.id())
+				self.pproc_playpal(bytes, ctx.mntinfo.id())
 			} else {
 				return;
 			};
@@ -232,23 +269,22 @@ impl Catalog {
 		});
 	}
 
-	fn pproc_pass3_wad(&self, mount: usize, ctx: &Context) {
-		let mntinfo = &self.mounts[mount];
-		let wad = self.get_file(mntinfo.virtual_path()).unwrap();
+	fn pproc_pass3_wad(&self, ctx: &SubContext) {
+		let wad = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
 
 		wad.child_refs()
 			.filter(|c| !c.is_empty())
 			.par_bridge()
 			.for_each(|child| {
 				if child.is_dir() {
-					self.pproc_pass3_wad_dir(child, ctx, mntinfo)
+					self.pproc_pass3_wad_dir(ctx, child)
 				} else {
-					self.pproc_pass3_wad_entry(child, ctx, mntinfo)
+					self.pproc_pass3_wad_entry(ctx, child)
 				};
 			});
 	}
 
-	fn pproc_pass3_wad_entry(&self, vfile: FileRef, ctx: &Context, mntinfo: &MountInfo) {
+	fn pproc_pass3_wad_entry(&self, ctx: &SubContext, vfile: FileRef) {
 		let bytes = vfile.read_bytes();
 		let fstem = vfile.file_stem();
 
@@ -264,7 +300,7 @@ impl Catalog {
 			return;
 		}
 
-		let key = self.pproc_picture(bytes, fstem, mntinfo.id());
+		let key = self.pproc_picture(ctx, bytes, fstem);
 
 		let res: std::io::Result<AssetKey> = if let Some(key) = key {
 			Ok(key)
@@ -282,38 +318,18 @@ impl Catalog {
 		}
 	}
 
-	fn pproc_pass3_wad_dir(&self, dir: FileRef, ctx: &Context, mntinfo: &MountInfo) {
-		match self.try_pproc_map_vanilla(dir, ctx, mntinfo) {
+	fn pproc_pass3_wad_dir(&self, ctx: &SubContext, dir: FileRef) {
+		match self.try_pproc_level_vanilla(ctx, dir) {
 			Some(Ok(_key)) => {}
 			Some(Err(_err)) => {}
 			None => {}
 		}
 
-		match self.try_pproc_map_udmf(dir, ctx, mntinfo) {
+		match self.try_pproc_level_udmf(ctx, dir) {
 			None => {}
 			Some(Err(_err)) => {}
 			Some(Ok(_key)) => {}
 		}
-	}
-
-	#[must_use]
-	fn try_pproc_map_vanilla(
-		&self,
-		_dir: FileRef,
-		_ctx: &Context,
-		_mntinfo: &MountInfo,
-	) -> Option<Result<AssetKey, PostProcError>> {
-		todo!()
-	}
-
-	#[must_use]
-	fn try_pproc_map_udmf(
-		&self,
-		_dir: FileRef,
-		_ctx: &Context,
-		_mntinfo: &MountInfo,
-	) -> Option<Result<AssetKey, PostProcError>> {
-		todo!()
 	}
 
 	fn on_pproc_fail(&mut self, ctx: &Context, orig_modules_len: usize) {
@@ -331,11 +347,11 @@ impl Catalog {
 // Post-processors for individual data formats.
 impl Catalog {
 	#[must_use]
-	fn pproc_picture(&self, bytes: &[u8], id: &str, mount_id: &str) -> Option<AssetKey> {
+	fn pproc_picture(&self, ctx: &SubContext, bytes: &[u8], id: &str) -> Option<AssetKey> {
 		let palettes = self.last_asset_by_nick::<PaletteSet>("PLAYPAL").unwrap();
 
 		if let Some(image) = Image::try_from_picture(bytes, &palettes.0[0]) {
-			let id = format!("{mount_id}/{id}");
+			let id = format!("{mount_id}/{id}", mount_id = ctx.mntinfo.id());
 			drop(palettes); // Drop `DashMap` ref, or else get deadlocks.
 			Some(self.register_asset::<Image>(id, image))
 		} else {

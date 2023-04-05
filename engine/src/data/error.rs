@@ -9,12 +9,12 @@ use crate::{wad, VPathBuf};
 use super::AssetKind;
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
-/// like unmounting, lookup, and reading. Also see [`Mount`].
+/// like unmounting, lookup, and reading. Also see [`MountError`].
 #[derive(Debug)]
 pub enum VfsError {
 	/// The caller gave a path that didn't resolve to any [`VirtualFile`].
 	///
-	/// [`VirtualFile`]: super::VirtualFile
+	/// [`VirtualFile`]: super::File
 	NotFound(VPathBuf),
 	/// The caller attempted to unmount the root node (an empty path or `/`).
 	UnmountRoot,
@@ -53,7 +53,7 @@ impl std::fmt::Display for VfsError {
 }
 
 /// Things that can go wrong during (non-postprocessing) asset management operations,
-/// like lookup and mutation. Also see [`PostProc`].
+/// like lookup and mutation. Also see [`PostProcError`].
 #[derive(Debug)]
 pub enum AssetError {
 	/// Tried to get a mutable reference to a [`Record`] that had
@@ -257,7 +257,7 @@ pub struct PostProcError {
 pub enum PostProcErrorKind {
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingScriptRoot,
-	InvalidMap(VPathBuf, String),
+	Level(LevelError),
 }
 
 impl std::error::Error for PostProcError {}
@@ -268,9 +268,43 @@ impl std::fmt::Display for PostProcError {
 			PostProcErrorKind::MissingScriptRoot => {
 				write!(f, "Script root not found at path: {}", self.path.display())
 			}
-			PostProcErrorKind::InvalidMap(vpath, reason) => {
-				write!(f, "Map `{}` is invalid. Reason: {reason}", vpath.display())
+			PostProcErrorKind::Level(err) => {
+				write!(
+					f,
+					"Map `{}` is invalid. Reason: {err}",
+					self.path.display(),
+					err = match err {
+						LevelError::MalformedFile(file) => {
+							format!("`{}` has malformed contents.", file.display())
+						}
+						LevelError::UnreadableFile(file) => {
+							format!("`{}` is empty or a directory.", file.display())
+						}
+						LevelError::UnknownLineSpecial(short) => {
+							format!("Unknown line special: {short}")
+						}
+						LevelError::UnknownSectorSpecial(short) => {
+							format!("Unknown sector special: {short}")
+						}
+					}
+				)
 			}
 		}
 	}
+}
+
+/// Things that can go wrong when trying to [post-process](PostProcError) files
+/// into a [Level](super::asset::Level) asset.
+#[derive(Debug)]
+pub enum LevelError {
+	/// For example, a file's byte length is not divisible
+	/// by the size of its individual structures.
+	MalformedFile(VPathBuf),
+	/// A VFS entry was deduced to be a level component,
+	/// but is empty or a directory.
+	UnreadableFile(VPathBuf),
+	/// Non-fatal.
+	UnknownLineSpecial(i16),
+	/// Non-fatal.
+	UnknownSectorSpecial(i16),
 }

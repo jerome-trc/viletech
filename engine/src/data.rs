@@ -138,7 +138,15 @@ impl Catalog {
 			orig_mounts_len: m_output.orig_mounts_len,
 			added: DashSet::default(),
 			new_mounts,
-			errors: Mutex::new(vec![]),
+			errors: {
+				let mut e = Vec::with_capacity(request.paths.len());
+
+				for _ in 0..request.paths.len() {
+					e.push(Mutex::new(vec![]));
+				}
+
+				e
+			},
 		};
 
 		let p_output = self.postproc(ctx);
