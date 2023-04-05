@@ -14,7 +14,7 @@ use rayon::prelude::*;
 use zip::ZipArchive;
 
 use crate::{
-	data::detail::MountMetaIngest,
+	data::{detail::MountMetaIngest, MountErrorKind, MountPointError},
 	utils::{io::*, path::PathExt, string::version_from_string},
 	wad, VPath, VPathBuf,
 };
@@ -27,11 +27,14 @@ use super::{
 #[derive(Debug)]
 pub(super) struct Context {
 	pub(super) tracker: Arc<LoadTracker>,
+	/// Returning errors through the mounting call tree is somewhat
+	/// inflexible, so pass an array down through the context instead.
+	pub(super) errors: Mutex<Vec<Vec<MountError>>>,
 }
 
 #[derive(Debug)]
 pub(super) struct Output {
-	pub(super) results: Vec<Result<(), MountError>>,
+	pub(super) errors: Vec<Vec<MountError>>,
 	pub(super) orig_files_len: usize,
 	pub(super) orig_mounts_len: usize,
 	pub(super) tracker: Arc<LoadTracker>,
@@ -40,20 +43,16 @@ pub(super) struct Output {
 impl Output {
 	#[must_use]
 	pub(super) fn any_errs(&self) -> bool {
-		self.results.iter().any(|res| res.is_err())
+		self.errors.iter().any(|res| !res.is_empty())
 	}
 }
 
 #[derive(Debug)]
-enum Outcome {
-	Uninit,
-	Err(MountError),
-	Ok {
-		format: MountFormat,
-		new_files: Vec<File>,
-		real_path: PathBuf,
-		mount_point: PathBuf,
-	},
+struct Success {
+	format: MountFormat,
+	new_files: Vec<File>,
+	real_path: PathBuf,
+	mount_point: PathBuf,
 }
 
 impl Catalog {
@@ -63,7 +62,7 @@ impl Catalog {
 	pub(super) fn mount(
 		&mut self,
 		mount_reqs: &[(impl AsRef<Path>, impl AsRef<VPath>)],
-		ctx: Context,
+		mut ctx: Context,
 	) -> Output {
 		debug_assert_eq!(
 			ctx.tracker.mount_target.load(atomic::Ordering::SeqCst) as usize,
@@ -76,7 +75,7 @@ impl Catalog {
 		let orig_mounts_len = self.mounts.len();
 
 		let mut outcomes = Vec::with_capacity(mount_reqs.len());
-		outcomes.resize_with(mount_reqs.len(), || Outcome::Uninit);
+		outcomes.resize_with(mount_reqs.len(), || None);
 		let outcomes = Mutex::new(outcomes);
 
 		let reqs: Vec<(usize, &Path, &VPath)> = mount_reqs
@@ -94,7 +93,7 @@ impl Catalog {
 				match self.validate_mount_request(real_path.as_ref(), mount_path.as_ref()) {
 					Ok(paths) => paths,
 					Err(err) => {
-						outcomes.lock()[index] = Outcome::Err(err);
+						ctx.errors.lock()[index].push(err);
 						return;
 					}
 				};
@@ -109,7 +108,11 @@ impl Catalog {
 				.iter()
 				.any(|(_, _, mpath)| mount_point.is_child_of(mpath))
 			{
-				outcomes.lock()[index] = Outcome::Err(MountError::Remount);
+				ctx.errors.lock()[index].push(MountError {
+					path: real_path,
+					kind: MountErrorKind::Remount,
+				});
+
 				return;
 			}
 
@@ -117,94 +120,82 @@ impl Catalog {
 				Ok((new_files, format)) => {
 					ctx.tracker.inc_mount_progress();
 
-					outcomes.lock()[index] = Outcome::Ok {
+					outcomes.lock()[index] = Some(Success {
 						format,
 						new_files,
 						real_path,
 						mount_point,
-					};
+					});
 				}
 				Err(err) => {
-					outcomes.lock()[index] = Outcome::Err(err);
+					ctx.errors.lock()[index].push(err);
 				}
 			}
 		});
 
 		let outcomes = outcomes.into_inner();
-		let failed = outcomes.iter().any(|outp| matches!(outp, Outcome::Err(_)));
+		let failed = outcomes.iter().any(|outc| outc.is_none());
 		let mut mounts = Vec::with_capacity(mount_reqs.len());
 
-		// Push new entries into `self.files` if `!failed`
+		// Push new entries into `self.files` if altogether successful.
 		// Don't push mounts to `self.mounts` yet; we need to fully populate the
 		// file tree so we have the context needed to resolve more metadata.
-		let results: Vec<Result<(), MountError>> = outcomes
-			.into_iter()
-			.map(|outp| match outp {
-				Outcome::Uninit => {
-					unreachable!("A VFS mount result was left uninitialized.");
-				}
-				Outcome::Ok {
-					format,
-					new_files,
-					real_path,
-					mount_point,
-				} => {
-					if failed {
-						// See `Error::MountFallthrough`'s docs for rationale
-						// on why we return `Ok` here.
-						return Ok(());
-					}
+		if !failed {
+			for Success {
+				format,
+				new_files,
+				real_path,
+				mount_point,
+			} in outcomes.into_iter().map(|outc| outc.unwrap())
+			{
+				info!(
+					"Mounted: \"{}\" -> \"{}\".",
+					real_path.display(),
+					mount_point.display(),
+				);
 
-					info!(
-						"Mounted: \"{}\" -> \"{}\".",
-						real_path.display(),
-						mount_point.display(),
+				ctx.tracker
+					.pproc_target
+					.store(new_files.len() as u32, atomic::Ordering::SeqCst);
+
+				for new_file in new_files {
+					let displaced = self.files.insert(VfsKey::new(&new_file.path), new_file);
+
+					debug_assert!(
+						displaced.is_none(),
+						"A VFS mount operation displaced entry: {}",
+						displaced.unwrap().path.display()
 					);
-
-					ctx.tracker
-						.pproc_target
-						.store(new_files.len() as u32, atomic::Ordering::SeqCst);
-
-					for new_file in new_files {
-						let displaced = self.files.insert(VfsKey::new(&new_file.path), new_file);
-
-						debug_assert!(
-							displaced.is_none(),
-							"A VFS mount operation displaced entry: {}",
-							displaced.unwrap().path.display()
-						);
-					}
-
-					mounts.push(MountInfo {
-						id: mount_point
-							.file_stem()
-							.unwrap()
-							.to_str()
-							.unwrap()
-							.to_string(),
-						format,
-						kind: MountKind::Misc,
-						version: None,
-						name: None,
-						description: None,
-						authors: Vec::default(),
-						copyright: None,
-						links: Vec::default(),
-						real_path: real_path.into_boxed_path(),
-						virtual_path: mount_point.into_boxed_path(),
-						script_root: None,
-					});
-
-					Ok(())
 				}
-				Outcome::Err(err) => Err(err),
-			})
-			.collect();
 
-		debug_assert!(results.len() == mount_reqs.len());
+				mounts.push(MountInfo {
+					id: mount_point
+						.file_stem()
+						.unwrap()
+						.to_str()
+						.unwrap()
+						.to_string(),
+					format,
+					kind: MountKind::Misc,
+					version: None,
+					name: None,
+					description: None,
+					authors: Vec::default(),
+					copyright: None,
+					links: Vec::default(),
+					real_path: real_path.into_boxed_path(),
+					virtual_path: mount_point.into_boxed_path(),
+					script_root: None,
+				});
+			}
+		}
+
+		let errors = std::mem::replace(&mut ctx.errors, Mutex::new(vec![])).into_inner();
+
+		debug_assert_eq!(errors.len(), mount_reqs.len());
 
 		let ret = Output {
-			results,
+			errors,
 			orig_files_len,
 			orig_mounts_len,
 			tracker: ctx.tracker,
@@ -246,7 +237,10 @@ impl Catalog {
 			let b = match std::fs::read(real_path) {
 				Ok(b) => b,
 				Err(err) => {
-					return Err(MountError::FileRead(err));
+					return Err(MountError {
+						path: real_path.to_path_buf(),
+						kind: MountErrorKind::FileRead(err),
+					});
 				}
 			};
 
@@ -282,7 +276,10 @@ impl Catalog {
 				Err(_) => None,
 			}),
 			Err(err) => {
-				return Err(MountError::DirectoryRead(err));
+				return Err(MountError {
+					path: real_path.to_path_buf(),
+					kind: MountErrorKind::DirectoryRead(err),
+				});
 			}
 		};
 
@@ -351,7 +348,11 @@ impl Catalog {
 			MAP_COMPONENTS.iter().any(|s| s.eq_ignore_ascii_case(name))
 		}
 
-		let wad = wad::parse_wad(bytes).map_err(MountError::Wad)?;
+		let wad = wad::parse_wad(bytes).map_err(|err| MountError {
+			path: virt_path.to_path_buf(),
+			kind: MountErrorKind::Wad(err),
+		})?;
+
 		let mut ret = Vec::with_capacity(wad.len() + 1);
 		let mut dissolution = wad.dissolve();
 		ret.push(Self::new_dir(virt_path.to_path_buf()));
@@ -436,7 +437,11 @@ impl Catalog {
 
 	fn mount_zip(&self, virt_path: &VPath, bytes: Vec<u8>) -> Result<Vec<File>, MountError> {
 		let cursor = Cursor::new(&bytes);
-		let mut zip = ZipArchive::new(cursor).map_err(MountError::Zip)?;
+
+		let mut zip = ZipArchive::new(cursor).map_err(|err| MountError {
+			path: virt_path.to_path_buf(),
+			kind: MountErrorKind::Zip(err),
+		})?;
 
 		let mut ret = Vec::with_capacity(zip.len() + 1);
 		ret.push(Self::new_dir(virt_path.to_path_buf()));
@@ -555,9 +560,9 @@ impl Catalog {
 	/// but only if the VFS size limit configuration permits it. If the file is
 	/// oversize, log a warning and return `None`.
 	///
-	/// [empty]: VirtFileKind::Empty
-	/// [text]: VirtFileKind::Text
-	/// [binary]: VirtFileKind::Binary
+	/// [empty]: FileKind::Empty
+	/// [text]: FileKind::Text
+	/// [binary]: FileKind::Binary
 	#[must_use]
 	fn new_leaf_file(&self, virt_path: VPathBuf, bytes: Vec<u8>) -> Option<File> {
 		let kind: FileKind = if bytes.is_empty() {
@@ -623,20 +628,32 @@ impl Catalog {
 		let real_path = match real_path.canonicalize() {
 			Ok(canon) => canon,
 			Err(err) => {
-				return Err(MountError::Canonicalization(err));
+				return Err(MountError {
+					path: real_path.to_path_buf(),
+					kind: MountErrorKind::Canonicalization(err),
+				});
 			}
 		};
 
 		if !real_path.exists() {
-			return Err(MountError::FileNotFound(real_path));
+			return Err(MountError {
+				path: real_path,
+				kind: MountErrorKind::FileNotFound,
+			});
 		}
 
 		if real_path.is_symlink() {
-			return Err(MountError::MountSymlink);
+			return Err(MountError {
+				path: real_path,
+				kind: MountErrorKind::MountSymlink,
+			});
 		}
 
 		if real_path.is_hidden() {
-			return Err(MountError::MountHidden);
+			return Err(MountError {
+				path: real_path,
+				kind: MountErrorKind::MountHidden,
+			});
 		}
 
 		// Ensure mount point has no invalid characters, isn't reserved, etc.
@@ -648,22 +665,29 @@ impl Catalog {
 		let mount_point_parent = match mount_path.parent() {
 			Some(p) => p,
 			None => {
-				return Err(MountError::ParentlessMountPoint);
+				return Err(MountError {
+					path: mount_path.to_path_buf(),
+					kind: MountErrorKind::ParentlessMountPoint,
+				});
 			}
 		};
 
 		// Ensure nothing already exists at end of mount point.
 
 		if self.file_exists(mount_path) {
-			return Err(MountError::Remount);
+			return Err(MountError {
+				path: mount_path.to_path_buf(),
+				kind: MountErrorKind::Remount,
+			});
 		}
 
 		// Ensure mount point parent exists.
 
 		if !self.file_exists(mount_point_parent) {
-			return Err(MountError::MountParentNotFound(
-				mount_point_parent.to_path_buf(),
-			));
+			return Err(MountError {
+				path: mount_path.to_path_buf(),
+				kind: MountErrorKind::MountParentNotFound(mount_point_parent.to_path_buf()),
+			});
 		}
 
 		// All checks passed.
@@ -690,23 +714,12 @@ impl Catalog {
 	/// - If the base data has already been mounted, check that none of the
 	/// components in the mount path are a reserved name (ASCII case ignored).
 	fn mount_path_valid(&self, path: &VPath) -> Result<(), MountError> {
-		let string = match path.to_str() {
-			Some(s) => s,
-			None => {
-				return Err(MountError::InvalidMountPoint(
-					path.to_path_buf(),
-					"Path is not valid UTF-8.".to_string(),
-				));
-			}
-		};
+		path.to_str().ok_or_else(|| MountError {
+			path: path.to_path_buf(),
+			kind: MountErrorKind::InvalidMountPoint(MountPointError::InvalidUtf8),
+		})?;
 
-		if string.starts_with('.') {
-			return Err(MountError::InvalidMountPoint(
-				path.to_path_buf(),
-				"Path contains a component containing only `.` characters.".to_string(),
-			));
-		}
-
+		#[cfg(not(test))]
 		if self.mounts.is_empty() {
 			assert!(
 				path.ends_with(crate::BASEDATA_ID),
@@ -733,27 +746,21 @@ impl Catalog {
 					unreachable!("A Windows path prefix wasn't filtered out of a mount point.")
 				}
 				std::path::Component::RootDir => {} // OK
-				std::path::Component::CurDir => {
-					return Err(MountError::InvalidMountPoint(
-						path.to_path_buf(),
-						"Path contains an illegal `.` component.".to_string(),
-					));
-				}
-				std::path::Component::ParentDir => {
-					return Err(MountError::InvalidMountPoint(
-						path.to_path_buf(),
-						"Path contains an illegal `..` component.".to_string(),
-					))
+				std::path::Component::CurDir | std::path::Component::ParentDir => {
+					return Err(MountError {
+						path: path.to_path_buf(),
+						kind: MountErrorKind::InvalidMountPoint(MountPointError::Relative),
+					});
 				}
 				std::path::Component::Normal(os_str) => {
 					let s = os_str.to_str().unwrap();
 
 					for reserved in RESERVED {
 						if s.contains(reserved) {
-							return Err(MountError::InvalidMountPoint(
-								path.to_path_buf(),
-								"Path contains a component that's engine-reserved.".to_string(),
-							));
+							return Err(MountError {
+								path: path.to_path_buf(),
+								kind: MountErrorKind::InvalidMountPoint(MountPointError::Reserved),
+							});
 						}
 					}
 				}

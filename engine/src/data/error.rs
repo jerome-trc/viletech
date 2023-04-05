@@ -11,7 +11,7 @@ use super::AssetKind;
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`Mount`].
 #[derive(Debug)]
-pub enum Vfs {
+pub enum VfsError {
 	/// The caller gave a path that didn't resolve to any [`VirtualFile`].
 	///
 	/// [`VirtualFile`]: super::VirtualFile
@@ -25,9 +25,9 @@ pub enum Vfs {
 	StringReadFail,
 }
 
-impl std::error::Error for Vfs {}
+impl std::error::Error for VfsError {}
 
-impl std::fmt::Display for Vfs {
+impl std::fmt::Display for VfsError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::NotFound(path) => {
@@ -55,7 +55,7 @@ impl std::fmt::Display for Vfs {
 /// Things that can go wrong during (non-postprocessing) asset management operations,
 /// like lookup and mutation. Also see [`PostProc`].
 #[derive(Debug)]
-pub enum Asset {
+pub enum AssetError {
 	/// Tried to get a mutable reference to a [`Record`] that had
 	/// [`Handle`]s to it. See [`Catalog::try_mutate`].
 	///
@@ -78,9 +78,9 @@ pub enum Asset {
 	},
 }
 
-impl std::error::Error for Asset {}
+impl std::error::Error for AssetError {}
 
-impl std::fmt::Display for Asset {
+impl std::fmt::Display for AssetError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Immutable(handles) => {
@@ -103,37 +103,16 @@ impl std::fmt::Display for Asset {
 	}
 }
 
-/// Things that can possibly go wrong during a [`load`] operation.
-///
-/// [`load`]: super::Catalog::load
-#[derive(Debug)]
-pub enum Load {
-	Mount(Mount),
-	PostProc(PostProc),
-}
-
-impl std::error::Error for Load {
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		match self {
-			Self::Mount(err) => Some(err),
-			Self::PostProc(err) => Some(err),
-		}
-	}
-}
-
-impl std::fmt::Display for Load {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::Mount(err) => err.fmt(f),
-			Self::PostProc(err) => err.fmt(f),
-		}
-	}
-}
-
 /// Game loading is a two-step process; VFS mounting is the first step.
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
-pub enum Mount {
+pub struct MountError {
+	pub path: PathBuf,
+	pub kind: MountErrorKind,
+}
+
+#[derive(Debug)]
+pub enum MountErrorKind {
 	/// A (non-virtual) path argument failed to canonicalize somehow.
 	Canonicalization(std::io::Error),
 	/// Failure to read the entries of a directory the caller wanted to mount.
@@ -142,11 +121,11 @@ pub enum Mount {
 	FileRead(std::io::Error),
 	/// The caller attempted to perform an operating on a real file,
 	/// but the given path didn't resolve to anything.
-	FileNotFound(PathBuf),
+	FileNotFound,
 	/// The given mount point wasn't valid UTF-8, had invalid characters, had a
 	/// component comprised only of `.` characters, or had a component with a
 	/// reserved name in it.
-	InvalidMountPoint(VPathBuf, String),
+	InvalidMountPoint(MountPointError),
 	/// Mount batch operations are atomic; if one fails, they all fail.
 	/// During a non-parallel mount, the first failure will have a specific error,
 	/// and results for all following requested mounts will be this, to avoid
@@ -176,96 +155,121 @@ pub enum Mount {
 	Zip(ZipError),
 }
 
-impl std::error::Error for Mount {
+#[derive(Debug)]
+pub enum MountPointError {
+	InvalidUtf8,
+	/// A component in the path is `.` or `..`.
+	Relative,
+	/// One of the components in the mount path is engine-reserved.
+	Reserved,
+}
+
+impl std::error::Error for MountError {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		match self {
-			Self::Canonicalization(err) => Some(err),
-			Self::DirectoryRead(err) => Some(err),
-			Self::FileRead(err) => Some(err),
-			Self::Metadata(err) => Some(err),
-			Self::Wad(err) => Some(err),
-			Self::Zip(err) => Some(err),
+		match &self.kind {
+			MountErrorKind::Canonicalization(err) => Some(err),
+			MountErrorKind::DirectoryRead(err) => Some(err),
+			MountErrorKind::FileRead(err) => Some(err),
+			MountErrorKind::Metadata(err) => Some(err),
+			MountErrorKind::Wad(err) => Some(err),
+			MountErrorKind::Zip(err) => Some(err),
 			_ => None,
 		}
 	}
 }
 
-impl std::fmt::Display for Mount {
+impl std::fmt::Display for MountError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::Canonicalization(err) => {
+		match &self.kind {
+			MountErrorKind::Canonicalization(err) => {
 				write!(f, "Failed to canonicalize a given path. Details: {err}")
 			}
-			Self::DirectoryRead(err) => {
+			MountErrorKind::DirectoryRead(err) => {
 				write!(f, "Failed to read a directory's contents: {err}")
 			}
-			Self::FileRead(err) => {
+			MountErrorKind::FileRead(err) => {
 				write!(f, "File read failed: {err}")
 			}
-			Self::FileNotFound(path) => {
-				write!(f, "No file exists at path: {}", path.display())
+			MountErrorKind::FileNotFound => {
+				write!(f, "No file exists at path: {}", self.path.display())
 			}
-			Self::InvalidMountPoint(path, reason) => {
+			MountErrorKind::InvalidMountPoint(err) => {
 				write!(
 					f,
 					"Mount point is invalid: {p}\r\n\t\
-					Reason: {reason}",
-					p = path.display()
+					Reason: {e}",
+					p = self.path.display(),
+					e = match err {
+						MountPointError::InvalidUtf8 => "Path is not valid UTF-8.",
+						MountPointError::Relative => "Path contains a `.` or `..` component.",
+						MountPointError::Reserved =>
+							"Path contains a component that is engine-reserved.",
+					}
 				)
 			}
-			Self::MountFallthrough => {
+			MountErrorKind::MountFallthrough => {
 				write!(f, "Another mount operation failed, so this one failed.")
 			}
-			Self::MountHidden => {
+			MountErrorKind::MountHidden => {
 				write!(f, "Tried to mount a hidden file (name starting with `.`).")
 			}
-			Self::MountParentNotFound(path) => {
+			MountErrorKind::MountParentNotFound(path) => {
 				write!(
 					f,
 					"A mount point's parent path mapped to no virtual file: {}",
 					path.display()
 				)
 			}
-			Self::MountSymlink => {
+			MountErrorKind::MountSymlink => {
 				write!(f, "Tried to mount a symbolic link.")
 			}
-			Self::ParentlessMountPoint => {
+			MountErrorKind::ParentlessMountPoint => {
 				write!(f, "The given path has no parent path.")
 			}
-			Self::Metadata(err) => {
+			MountErrorKind::Metadata(err) => {
 				write!(f, "Failed to get file metadata: {err}")
 			}
-			Self::Remount => {
+			MountErrorKind::Remount => {
 				write!(
 					f,
 					"Attempted to overwrite an existing entry with a new mount."
 				)
 			}
-			Self::Wad(err) => {
+			MountErrorKind::Wad(err) => {
 				write!(f, "Failed to parse a WAD archive: {err}")
 			}
-			Self::Zip(err) => {
+			MountErrorKind::Zip(err) => {
 				write!(f, "Failed to open a zip archive: {err}")
 			}
 		}
 	}
 }
 
+#[derive(Debug)]
+pub struct PostProcError {
+	pub path: VPathBuf,
+	pub kind: PostProcErrorKind,
+}
+
 /// Game loading is a two-step process; post-processing is the second step.
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
-pub enum PostProc {
+pub enum PostProcErrorKind {
 	/// A mount declared a script root file that was not found in the VFS.
-	MissingScriptRoot(VPathBuf),
+	MissingScriptRoot,
+	InvalidMap(VPathBuf, String),
 }
 
-impl std::error::Error for PostProc {}
+impl std::error::Error for PostProcError {}
 
-impl std::fmt::Display for PostProc {
+impl std::fmt::Display for PostProcError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::MissingScriptRoot(path) => {
-				write!(f, "Script root not found at path: {}", path.display())
+		match &self.kind {
+			PostProcErrorKind::MissingScriptRoot => {
+				write!(f, "Script root not found at path: {}", self.path.display())
+			}
+			PostProcErrorKind::InvalidMap(vpath, reason) => {
+				write!(f, "Map `{}` is invalid. Reason: {reason}", vpath.display())
 			}
 		}
 	}

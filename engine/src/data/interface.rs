@@ -78,7 +78,7 @@ impl<A: Asset> std::ops::Deref for AssetRefIter<'_, A> {
 /// provides read access to one entry and the catalog itself. Prefer these over
 /// working directly with references to [`File`]s, since this can trace
 /// inter-file relationships.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FileRef<'cat> {
 	pub(super) catalog: &'cat Catalog,
 	pub(super) file: &'cat File,

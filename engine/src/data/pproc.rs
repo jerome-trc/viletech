@@ -4,6 +4,7 @@
 
 use std::{
 	io::Cursor,
+	ops::Range,
 	sync::{atomic, Arc},
 };
 
@@ -12,14 +13,15 @@ use bevy::prelude::info;
 use byteorder::ReadBytesExt;
 use dashmap::DashSet;
 use image::Rgba;
+use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
 use crate::{lith, VPathBuf};
 
 use super::{
-	detail::AssetKey, Asset, Audio, Catalog, Image, LoadTracker, MountKind, Palette, PaletteSet,
-	PostProcError, Record,
+	detail::AssetKey, Asset, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind,
+	Palette, PaletteSet, PostProcError, PostProcErrorKind, Record,
 };
 
 #[derive(Debug)]
@@ -32,13 +34,24 @@ pub(super) struct Context {
 	/// To enable atomicity, remember which assets were added.
 	/// Remove them all in the event of failure.
 	pub(super) added: DashSet<AssetKey>,
+	pub(super) new_mounts: Range<usize>,
+	/// Returning errors through the post-proc call tree is somewhat
+	/// inflexible, so pass an array down through the context instead.
+	pub(super) errors: Mutex<Vec<Vec<PostProcError>>>,
 }
 
 #[derive(Debug)]
 #[must_use]
 pub(super) struct Output {
-	/// One per mount.
-	pub(super) results: Vec<Result<(), Vec<PostProcError>>>,
+	/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
+	pub(super) errors: Vec<Vec<PostProcError>>,
+}
+
+impl Output {
+	#[must_use]
+	pub(super) fn any_errs(&self) -> bool {
+		self.errors.iter().any(|res| !res.is_empty())
+	}
 }
 
 impl Catalog {
@@ -46,7 +59,8 @@ impl Catalog {
 	/// - `self.files` has been populated. All directories know their contents.
 	/// - `self.mounts` has been populated.
 	/// - Load tracker has already had its post-proc target number set.
-	pub(super) fn postproc(&mut self, ctx: Context) -> Output {
+	pub(super) fn postproc(&mut self, mut ctx: Context) -> Output {
+		let orig_modules_len = self.modules.len();
 		let to_reserve = ctx.tracker.pproc_target.load(atomic::Ordering::SeqCst) as usize;
 
 		debug_assert!(to_reserve > 0);
@@ -55,11 +69,9 @@ impl Catalog {
 			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
 		}
 
-		let mut results = vec![];
-
 		// Pass 1: compile Lith; transpile EDF and (G)ZDoom DSLs.
 
-		for i in 0..self.mounts.len() {
+		for i in ctx.new_mounts.clone() {
 			let module = match &self.mounts[i].kind {
 				MountKind::VileTech => self.pproc_pass1_vpk(i, &ctx),
 				MountKind::ZDoom => self.pproc_pass1_pk(i, &ctx),
@@ -68,19 +80,9 @@ impl Catalog {
 				MountKind::Misc => self.pproc_pass1_file(i, &ctx),
 			};
 
-			match module {
-				Ok(Some(m)) => {
-					self.modules.push(m);
-					results.push(Ok(()));
-				}
-				Ok(None) => {
-					results.push(Ok(()));
-				}
-				Err(errs) => {
-					results.push(Err(errs));
-					continue;
-				}
-			}
+			if let Ok(Some(m)) = module {
+				self.modules.push(m);
+			} // Otherwise, errors and warnings have already been added to `ctx`.
 		}
 
 		// Pass 2: dependency-free assets; trivial to parallelize. Includes:
@@ -110,8 +112,11 @@ impl Catalog {
 			}
 		}
 
-		if results.iter().any(|res| res.is_err()) {
-			self.on_pproc_fail(&ctx);
+		let errors = std::mem::replace(&mut ctx.errors, Mutex::new(vec![])).into_inner();
+		let ret = Output { errors };
+
+		if ret.any_errs() {
+			self.on_pproc_fail(&ctx, orig_modules_len);
 		} else {
 			// TODO: Make each successfully processed file increment progress.
 			ctx.tracker.pproc_progress.store(
@@ -122,17 +127,13 @@ impl Catalog {
 			info!("Loading complete.");
 		}
 
-		Output { results }
+		ret
 	}
 
 	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
 	/// DSLs all go into the same Lith module, regardless of which are present
 	/// and which are absent.
-	fn pproc_pass1_vpk(
-		&self,
-		mount: usize,
-		_ctx: &Context,
-	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+	fn pproc_pass1_vpk(&self, mount: usize, ctx: &Context) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
 		let mntinfo = &self.mounts[mount];
 
@@ -145,9 +146,12 @@ impl Catalog {
 		let script_root = match self.get_file(&script_root) {
 			Some(fref) => fref,
 			None => {
-				return Err(vec![PostProcError::MissingScriptRoot(
-					script_root.to_path_buf(),
-				)]);
+				ctx.errors.lock()[mount].push(PostProcError {
+					path: script_root.to_path_buf(),
+					kind: PostProcErrorKind::MissingScriptRoot,
+				});
+
+				return Err(());
 			}
 		};
 
@@ -160,11 +164,7 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_file(
-		&self,
-		mount: usize,
-		_ctx: &Context,
-	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+	fn pproc_pass1_file(&self, mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
 
 		let file = self.get_file(self.mounts[mount].virtual_path()).unwrap();
@@ -191,21 +191,13 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_pk(
-		&self,
-		_mount: usize,
-		_ctx: &Context,
-	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+	fn pproc_pass1_pk(&self, _mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
 
 		Ok(ret)
 	}
 
-	fn pproc_pass1_wad(
-		&self,
-		_mount: usize,
-		_ctx: &Context,
-	) -> Result<Option<lith::Module>, Vec<PostProcError>> {
+	fn pproc_pass1_wad(&self, _mount: usize, _ctx: &Context) -> Result<Option<lith::Module>, ()> {
 		let ret = None;
 
 		Ok(ret)
@@ -244,57 +236,99 @@ impl Catalog {
 		let mntinfo = &self.mounts[mount];
 		let wad = self.get_file(mntinfo.virtual_path()).unwrap();
 
-		wad.children().par_bridge().for_each(|child| {
-			if !child.is_readable() {
-				return;
-			}
-
-			let bytes = child.read_bytes();
-			let fstem = child.file_stem();
-
-			/// Kinds of WAD entries irrelevant to this pass.
-			const UNHANDLED: &[&str] = &[
-				"COLORMAP", "DMXGUS", "ENDOOM", "GENMIDI", "PLAYPAL", "PNAMES", "TEXTURE1",
-				"TEXTURE2",
-			];
-
-			if UNHANDLED.iter().any(|&name| fstem == name)
-				|| Audio::is_pc_speaker_sound(bytes)
-				|| Audio::is_dmxmus(bytes)
-			{
-				return;
-			}
-
-			let key = self.pproc_picture(bytes, fstem, mntinfo.id());
-
-			let res: std::io::Result<AssetKey> = if let Some(key) = key {
-				Ok(key)
-			} else {
-				return;
-			};
-
-			match res {
-				Ok(key) => {
-					ctx.added.insert(key);
-				}
-				Err(err) => {
-					unimplemented!("Unhandled error: {err}");
-				}
-			}
-		});
+		wad.child_refs()
+			.filter(|c| !c.is_empty())
+			.par_bridge()
+			.for_each(|child| {
+				if child.is_dir() {
+					self.pproc_pass3_wad_dir(child, ctx, mntinfo)
+				} else {
+					self.pproc_pass3_wad_entry(child, ctx, mntinfo)
+				};
+			});
 	}
 
-	fn on_pproc_fail(&mut self, ctx: &Context) {
+	fn pproc_pass3_wad_entry(&self, vfile: FileRef, ctx: &Context, mntinfo: &MountInfo) {
+		let bytes = vfile.read_bytes();
+		let fstem = vfile.file_stem();
+
+		/// Kinds of WAD entries irrelevant to this pass.
+		const UNHANDLED: &[&str] = &[
+			"COLORMAP", "DMXGUS", "ENDOOM", "GENMIDI", "PLAYPAL", "PNAMES", "TEXTURE1", "TEXTURE2",
+		];
+
+		if UNHANDLED.iter().any(|&name| fstem == name)
+			|| Audio::is_pc_speaker_sound(bytes)
+			|| Audio::is_dmxmus(bytes)
+		{
+			return;
+		}
+
+		let key = self.pproc_picture(bytes, fstem, mntinfo.id());
+
+		let res: std::io::Result<AssetKey> = if let Some(key) = key {
+			Ok(key)
+		} else {
+			return;
+		};
+
+		match res {
+			Ok(key) => {
+				ctx.added.insert(key);
+			}
+			Err(err) => {
+				unimplemented!("Unhandled error: {err}");
+			}
+		}
+	}
+
+	fn pproc_pass3_wad_dir(&self, dir: FileRef, ctx: &Context, mntinfo: &MountInfo) {
+		match self.try_pproc_map_vanilla(dir, ctx, mntinfo) {
+			Some(Ok(_key)) => {}
+			Some(Err(_err)) => {}
+			None => {}
+		}
+
+		match self.try_pproc_map_udmf(dir, ctx, mntinfo) {
+			None => {}
+			Some(Err(_err)) => {}
+			Some(Ok(_key)) => {}
+		}
+	}
+
+	#[must_use]
+	fn try_pproc_map_vanilla(
+		&self,
+		_dir: FileRef,
+		_ctx: &Context,
+		_mntinfo: &MountInfo,
+	) -> Option<Result<AssetKey, PostProcError>> {
+		todo!()
+	}
+
+	#[must_use]
+	fn try_pproc_map_udmf(
+		&self,
+		_dir: FileRef,
+		_ctx: &Context,
+		_mntinfo: &MountInfo,
+	) -> Option<Result<AssetKey, PostProcError>> {
+		todo!()
+	}
+
+	fn on_pproc_fail(&mut self, ctx: &Context, orig_modules_len: usize) {
 		ctx.added.par_iter().for_each(|key| {
 			let removed = self.assets.remove(key.key());
 			debug_assert!(removed.is_some());
 		});
 
+		self.modules.truncate(orig_modules_len);
+
 		self.on_mount_fail(ctx.orig_files_len, ctx.orig_mounts_len);
 	}
 }
 
-// Post-processors for individual file formats.
+// Post-processors for individual data formats.
 impl Catalog {
 	#[must_use]
 	fn pproc_picture(&self, bytes: &[u8], id: &str, mount_id: &str) -> Option<AssetKey> {

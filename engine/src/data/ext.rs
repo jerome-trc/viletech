@@ -3,11 +3,11 @@
 //! Keeps the more crucial namespaces cleaner and makes it easier to reuse the
 //! data management code, in case it proves robust enough for other projects.
 
-use bevy::prelude::error;
+use bevy::prelude::{error, warn};
 
 use crate::BaseDataError;
 
-use super::{Catalog, LoadRequest};
+use super::{Catalog, LoadOutcome, LoadRequest};
 
 pub trait CatalogExt {
 	/// On the debug build, attempt to load `/env::current_dir()/data/viletech`.
@@ -33,11 +33,37 @@ impl CatalogExt for Catalog {
 			tracker: None,
 		};
 
-		if let Err(errs) = self.load(req).pop().unwrap() {
-			errs.iter().for_each(|err| error!("{err}"));
-			Err(BaseDataError::Load(errs))
-		} else {
-			Ok(())
+		// TODO: Base data may get split into more packages, so refine
+		// this later, when the situation is clearer.
+		match self.load(req) {
+			LoadOutcome::MountFail { mut errors } => {
+				for err in errors.pop().unwrap() {
+					error!("{err}");
+				}
+
+				Err(BaseDataError::Load)
+			}
+			LoadOutcome::PostProcFail { mut errors } => {
+				for err in errors.pop().unwrap() {
+					error!("{err}");
+				}
+
+				Err(BaseDataError::Load)
+			}
+			LoadOutcome::Ok {
+				mut mount,
+				mut pproc,
+			} => {
+				for err in mount.pop().unwrap() {
+					warn!("{err}");
+				}
+
+				for err in pproc.pop().unwrap() {
+					warn!("{err}");
+				}
+
+				Ok(())
+			}
 		}
 	}
 

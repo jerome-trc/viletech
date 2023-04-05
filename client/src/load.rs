@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use viletech::data::LoadOutcome;
 
 use crate::{
 	core::{ClientCore, GameLoad},
@@ -53,24 +54,75 @@ pub fn update(
 		}
 	};
 
-	let mut failed = false;
+	let failed = match &res_load {
+		LoadOutcome::MountFail { errors } => {
+			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
+				let num_errs = res_load.num_errs();
+				let mut msg = String::with_capacity(128 + 256 * num_errs);
 
-	for (i, errs) in res_load.into_iter().filter_map(|res| res.err()).enumerate() {
-		let mut msg = String::with_capacity(128 + 256 * errs.len());
+				msg.push_str(&format!(
+					"{num_errs} errors/warnings while loading: {}",
+					real_path.display()
+				));
 
-		msg.push_str(&format!(
-			"Failed to load: {}",
-			loader.load_order[i].0.display()
-		));
+				msg.push_str("\r\n\r\n");
 
-		for err in errs {
-			msg.push_str(&err.to_string());
+				for err in &errors[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				error!("{msg}");
+			}
+
+			true
 		}
+		LoadOutcome::PostProcFail { errors } => {
+			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
+				let num_errs = res_load.num_errs();
+				let mut msg = String::with_capacity(128 + 256 * num_errs);
 
-		error!("{msg}");
+				msg.push_str(&format!(
+					"{num_errs} errors/warnings while loading: {}",
+					real_path.display()
+				));
 
-		failed = true;
-	}
+				msg.push_str("\r\n\r\n");
+
+				for err in &errors[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				error!("{msg}");
+			}
+
+			true
+		}
+		LoadOutcome::Ok { mount, pproc } => {
+			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
+				let num_errs = res_load.num_errs();
+				let mut msg = String::with_capacity(128 + 256 * num_errs);
+
+				msg.push_str(&format!(
+					"{num_errs} errors/warnings while loading: {}",
+					real_path.display()
+				));
+
+				msg.push_str("\r\n\r\n");
+
+				for err in &mount[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				for err in &pproc[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				warn!("{msg}");
+			}
+
+			false
+		}
+	};
 
 	if failed {
 		next_state.set(AppState::Frontend);

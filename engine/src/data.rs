@@ -21,22 +21,14 @@ use bevy_egui::egui;
 use dashmap::{DashMap, DashSet};
 use globset::Glob;
 use indexmap::IndexMap;
+use parking_lot::Mutex;
 use rayon::prelude::*;
 use regex::Regex;
 use smallvec::SmallVec;
 
 use crate::{lith, utils::path::PathExt, EditorNum, SpawnNum, VPath, VPathBuf};
 
-pub use self::{
-	asset::*,
-	error::{
-		Asset as AssetError, Load as LoadError, Mount as MountError, PostProc as PostProcError,
-		Vfs as VfsError,
-	},
-	ext::*,
-	interface::*,
-	vfs::*,
-};
+pub use self::{asset::*, error::*, ext::*, interface::*, vfs::*};
 
 use self::detail::{AssetKey, Config, VfsKey};
 
@@ -93,8 +85,6 @@ pub struct Catalog {
 	// FNV/aHash for maps using small key types?
 }
 
-pub type LoadOutcome = Vec<Result<(), Vec<LoadError>>>;
-
 impl Catalog {
 	/// This is an end-to-end function that reads physical files, fills out the
 	/// VFS, and then post-processes the files to decompose them into assets.
@@ -103,8 +93,8 @@ impl Catalog {
 	/// [`MountError`].
 	///
 	/// Notes:
-	/// - The order of pre-existing entries and mounts is unchanged upon success.
-	/// - Returned errors parallel the given mount requests.
+	/// - The order of pre-existing VFS entries and mounts is unchanged upon success.
+	/// - Returned `LoadOutcome` objects parallel the given mount requests.
 	/// - This function is atomic; if one load operation fails, all of them fail,
 	/// and the catalog's state is left entirely unchanged.
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
@@ -118,12 +108,15 @@ impl Catalog {
 			unimplemented!("Loading more than 255 files/folders is unsupported.");
 		}
 
+		let new_mounts = self.mounts.len()..(self.mounts.len() + request.paths.len());
+
 		let ctx = mount::Context {
 			// Build a dummy tracker if none was given to avoid branching later
 			// and simplify the rest of the loading code.
 			tracker: request
 				.tracker
 				.unwrap_or_else(|| Arc::new(LoadTracker::default())),
+			errors: Mutex::new(vec![]),
 		};
 
 		ctx.tracker
@@ -131,36 +124,35 @@ impl Catalog {
 			.store(request.paths.len() as u8, atomic::Ordering::SeqCst);
 
 		// Note to reader: check `./mount.rs`.
-		let output = self.mount(&request.paths, ctx);
+		let m_output = self.mount(&request.paths, ctx);
 
-		if output.any_errs() {
-			return output
-				.results
-				.into_iter()
-				.map(|res| match res {
-					Ok(()) => Ok(()),
-					Err(err) => Err(vec![LoadError::Mount(err)]),
-				})
-				.collect();
+		if m_output.any_errs() {
+			return LoadOutcome::MountFail {
+				errors: m_output.errors,
+			};
 		}
 
 		let ctx = pproc::Context {
-			tracker: output.tracker,
-			orig_files_len: output.orig_files_len,
-			orig_mounts_len: output.orig_mounts_len,
+			tracker: m_output.tracker,
+			orig_files_len: m_output.orig_files_len,
+			orig_mounts_len: m_output.orig_mounts_len,
 			added: DashSet::default(),
+			new_mounts,
+			errors: Mutex::new(vec![]),
 		};
 
-		let output = self.postproc(ctx);
+		let p_output = self.postproc(ctx);
 
-		output
-			.results
-			.into_iter()
-			.map(|res| match res {
-				Ok(()) => Ok(()),
-				Err(errs) => Err(errs.into_iter().map(LoadError::PostProc).collect()),
-			})
-			.collect()
+		if p_output.any_errs() {
+			LoadOutcome::PostProcFail {
+				errors: p_output.errors,
+			}
+		} else {
+			LoadOutcome::Ok {
+				mount: m_output.errors,
+				pproc: p_output.errors,
+			}
+		}
 	}
 
 	/// Keep the first `len` mounts. Remove the rest, along their files.
@@ -397,6 +389,46 @@ impl Default for Catalog {
 			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),
 			spawn_nums: DashMap::default(),
+		}
+	}
+}
+
+#[derive(Debug)]
+pub enum LoadOutcome {
+	/// One or more fatal errors prevented a successful VFS mount.
+	MountFail {
+		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
+		errors: Vec<Vec<MountError>>,
+	},
+	/// Mounting succeeeded, but one or more fatal errors
+	/// prevented successful asset post-processing.
+	PostProcFail {
+		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
+		errors: Vec<Vec<PostProcError>>,
+	},
+	/// Loading was successful, but non-fatal errors or warnings may have arisen.
+	Ok {
+		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
+		mount: Vec<Vec<MountError>>,
+		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
+		pproc: Vec<Vec<PostProcError>>,
+	},
+}
+
+impl LoadOutcome {
+	#[must_use]
+	pub fn num_errs(&self) -> usize {
+		match self {
+			LoadOutcome::MountFail { errors } => {
+				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
+			}
+			LoadOutcome::PostProcFail { errors } => {
+				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
+			}
+			LoadOutcome::Ok { mount, pproc } => {
+				mount.iter().fold(0, |acc, subvec| acc + subvec.len())
+					+ pproc.iter().fold(0, |acc, subvec| acc + subvec.len())
+			}
 		}
 	}
 }

@@ -40,25 +40,27 @@ fn vfs_path_hash() {
 #[test]
 fn load() {
 	let mut catalog = Catalog::default();
-	let results = catalog.load(request());
+	let outcome = catalog.load(request());
 
-	assert!(
-		results.len() == 2,
-		"Expected 2 results, got: {len}",
-		len = results.len()
-	);
+	match outcome {
+		LoadOutcome::MountFail { .. } => {
+			panic!("Mount failure.")
+		}
+		LoadOutcome::PostProcFail { .. } => {
+			panic!("Post-processing failure.")
+		}
+		LoadOutcome::Ok { mount, pproc } => {
+			assert_eq!(mount.len(), 2);
+			assert_eq!(pproc.len(), 2);
 
-	assert!(
-		results[0].is_ok(),
-		"Failed to mount `freedoom1.wad`: {res:#?}",
-		res = results[0].as_ref().unwrap_err()
-	);
-
-	assert!(
-		results[1].is_ok(),
-		"Failed to mount `freedoom2.wad`: {res:#?}",
-		res = results[1].as_ref().unwrap_err()
-	);
+			assert!(
+				mount[0].is_empty()
+					&& pproc[0].is_empty()
+					&& mount[1].is_empty()
+					&& pproc[1].is_empty()
+			);
+		}
+	}
 
 	assert!(
 		catalog.mounts().len() == 2,
