@@ -7,9 +7,9 @@ use glam::{DVec2, DVec3};
 
 use crate::{
 	data::{self, Audio, Blueprint, DamageType, Species},
-	gfx::Rgb32,
 	math::{Angle32, Angle64, Rotator64},
 	sparse::SparseSetIndex,
+	RgbaF32,
 };
 
 /// A game simulation entity; may be a monster, player character, inventory item,
@@ -388,7 +388,7 @@ pub struct Trivia {
 #[derive(Debug)]
 pub struct Visual {
 	pub alpha: f64,
-	pub color: Rgb32,
+	pub color: RgbaF32,
 	pub flags_render: RenderFlags,
 	pub floor_clip: f64,
 	pub translation: u32,

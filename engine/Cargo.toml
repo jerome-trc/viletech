@@ -79,7 +79,6 @@ naga = { workspace = true }
 nanorand = { workspace = true }
 nodi = { workspace = true }
 once_cell = { workspace = true }
-palette = { workspace = true }
 parking_lot = { workspace = true }
 paste = { workspace = true }
 pollster = { workspace = true }

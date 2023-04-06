@@ -60,7 +60,6 @@ naga = "0.11.0"
 nanorand = "0.7.0"
 nodi = "0.19.2"
 once_cell = "1.17.0"
-palette = "0.6.1"
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
 paste = "1.0.11"
 pollster = "0.3.0"

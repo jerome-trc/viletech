@@ -1,6 +1,6 @@
 //! A named collection of information of which the user can keep multiple.
 
-use crate::gfx::Rgb32;
+use crate::RgbaF32;
 
 /// A named collection of information of which the user can keep multiple.
 ///
@@ -13,7 +13,7 @@ pub struct Profile {
 	name: String,
 	gender: Gender,
 	/// Applied to the player's sprites.
-	tint: Rgb32,
+	tint: RgbaF32,
 }
 
 impl Profile {
@@ -27,7 +27,12 @@ impl Profile {
 		Self {
 			name,
 			gender: Gender::Neutral,
-			tint: Rgb32::new(50, 200, 0),
+			tint: RgbaF32 {
+				red: 50.0,
+				green: 200.0,
+				blue: 0.0,
+				alpha: 255.0,
+			},
 		}
 	}
 }
@@ -37,7 +42,12 @@ impl Default for Profile {
 		Self {
 			name: String::default(),
 			gender: Gender::Neutral,
-			tint: Rgb32::default(),
+			tint: RgbaF32 {
+				red: 50.0,
+				green: 200.0,
+				blue: 0.0,
+				alpha: 255.0,
+			},
 		}
 	}
 }

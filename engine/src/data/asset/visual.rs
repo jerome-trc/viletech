@@ -12,6 +12,41 @@ use image::{ImageBuffer, Rgba};
 
 use super::{Asset, AssetKind, Record};
 
+#[derive(Debug)]
+pub struct ColorMap(pub [u8; 256]);
+
+#[derive(Debug)]
+pub struct Endoom {
+	colors: [u8; 2000],
+	text: [u8; 2000],
+}
+
+impl Endoom {
+	#[must_use]
+	pub fn new(lump: &[u8]) -> Self {
+		let mut ret = Self {
+			colors: [0; 2000],
+			text: [0; 2000],
+		};
+
+		let mut i = 0;
+
+		while i < 4000 {
+			ret.colors[i] = lump[i];
+			ret.text[i] = lump[i + 1];
+			i += 2;
+		}
+
+		ret
+	}
+
+	#[must_use]
+	pub fn is_blinking(&self, index: usize) -> bool {
+		debug_assert!(index < 2000);
+		self.colors[index] & (1 << 7) == (1 << 7)
+	}
+}
+
 /// Stored in RGBA8 format.
 #[derive(Debug)]
 pub struct Image {

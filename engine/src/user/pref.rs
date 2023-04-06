@@ -6,7 +6,7 @@ use crossbeam::atomic::AtomicCell;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::gfx::Rgb32;
+use crate::RgbaF32;
 
 use super::Error;
 
@@ -247,7 +247,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_color(id: String, default: Rgb32, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn new_color(id: String, default: RgbaF32, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::Color,
@@ -451,14 +451,14 @@ impl PrefHandle<f64> {
 	}
 }
 
-impl PrefHandle<Rgb32> {
+impl PrefHandle<RgbaF32> {
 	#[must_use]
-	pub fn get(&self) -> Rgb32 {
+	pub fn get(&self) -> RgbaF32 {
 		debug_assert!(self.0.kind == PrefKind::Color);
 		unsafe { self.0.data.color.value.load() }
 	}
 
-	pub fn set(&self, value: Rgb32) {
+	pub fn set(&self, value: RgbaF32) {
 		debug_assert!(self.0.kind == PrefKind::Color);
 		unsafe {
 			self.0.data.color.value.store(value);
@@ -506,7 +506,7 @@ impl PrefValue for f64 {
 	const KIND: PrefKind = PrefKind::Float;
 }
 
-impl PrefValue for Rgb32 {
+impl PrefValue for RgbaF32 {
 	const KIND: PrefKind = PrefKind::Color;
 }
 
@@ -544,8 +544,8 @@ struct F64Store {
 
 #[derive(Debug)]
 struct ColorStore {
-	value: AtomicCell<Rgb32>,
-	default: Rgb32,
+	value: AtomicCell<RgbaF32>,
+	default: RgbaF32,
 }
 
 #[derive(Debug)]

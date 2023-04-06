@@ -17,7 +17,6 @@ pub mod devgui;
 pub mod frontend;
 #[allow(dead_code)]
 pub mod game;
-pub mod gfx;
 pub mod input;
 pub mod lith;
 pub mod log;
@@ -198,4 +197,13 @@ impl std::fmt::Display for BaseDataError {
 			Self::Load => write!(f, "Failed to load engine base data."),
 		}
 	}
+}
+
+/// See [`bevy::render::color::Color::Rgba`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RgbaF32 {
+	pub red: f32,
+	pub green: f32,
+	pub blue: f32,
+	pub alpha: f32,
 }
