@@ -10,10 +10,10 @@ use vile::{
 	frontend::FrontendMenu,
 	gfx::{camera::Camera, core::GraphicsCore},
 	input::InputCore,
-	lith,
 	rng::RngCore,
 	user::UserCore,
 	DeveloperGui,
+	zscript,
 };
 
 use crate::{
@@ -66,7 +66,7 @@ impl ClientCore {
 			start_time,
 			user,
 			catalog,
-			runtime: Arc::new(RwLock::new(lith::Runtime::default())),
+			runtime: Arc::new(RwLock::new(vzs::Runtime::default())),
 			gfx,
 			rng: RngCore::default(),
 			audio: AudioCore::new(catalog_audio, None)?,

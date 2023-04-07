@@ -6,7 +6,7 @@ use crate::{data::InHandle, sim::actor::Actor, EditorNum, SpawnNum};
 
 use super::{Asset, AssetKind, Audio, Image, PolyModel, Record, VoxelModel};
 
-/// The prototype used to instantiate new actors. Defined in LithScript.
+/// The prototype used to instantiate new actors. Defined in VZScript.
 /// For simplicity, this inlines an [`Actor`].
 #[derive(Debug)]
 pub struct Blueprint {

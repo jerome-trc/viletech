@@ -1,6 +1,6 @@
 //! The instruction evaluation switch.
 
-use crate::lith::{abi::QWord, InstPtr, Runtime, MAX_PARAMS};
+use crate::vzs::{abi::QWord, InstPtr, Runtime, MAX_PARAMS};
 
 use super::{Instruction, RefNode};
 

@@ -1,9 +1,9 @@
-//! A LithScript module is a single linkage unit.
+//! A VZScript module is a single linkage unit.
 //!
 //! This is an equivalent concept to modules in LLVM, Rust, and Cranelift, but it
 //! inherits the ZScript behavior of being compiled from an arbitrary number of
-//! source files, rather than just one. Hence, `lith` is a module (for language
-//! support), `vile` is a module for native engine functionality, et cetera.
+//! source files, rather than just one. Hence, `vzs` is a module (for language
+//! support), `vtec` is a module for native engine functionality, et cetera.
 //!
 //! To get started, [create a `Builder`].
 //!
@@ -64,10 +64,10 @@ impl Module {
 		}
 	}
 
-	/// Returns the `lith` module.
+	/// Returns the `vzs` module.
 	#[must_use]
 	pub fn core() -> Self {
-		let mut ret = Builder::new("lith".to_string(), false).build();
+		let mut ret = Builder::new("vzs".to_string(), false).build();
 
 		for (name, typeinfo) in tsys::builtins() {
 			let key = SymbolKey::new::<TypeInfo>(&name);

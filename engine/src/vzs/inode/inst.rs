@@ -1,9 +1,9 @@
 //! Concrete implementations of individual instructions and the symbols involved.
 
-use crate::lith::abi::QWord;
+use crate::vzs::abi::QWord;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::lith) enum BinOp {
+pub(in crate::vzs) enum BinOp {
 	AddI8,
 	SubI8,
 	MulI8,

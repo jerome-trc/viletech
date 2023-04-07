@@ -2,7 +2,7 @@
 
 use arrayvec::ArrayVec;
 
-use crate::lith::abi::QWord;
+use crate::vzs::abi::QWord;
 
 use super::{
 	detail::{Index, OwningNode},

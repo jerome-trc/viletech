@@ -8,6 +8,70 @@ use super::ast;
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Syn {
+	// Higher-level composites /////////////////////////////////////////////////
+	/// `#![resolver(args)]`. `!` and arguments are optional.
+	Annotation,
+	/// For both function calls and annotations. Wraps zero or more [`Syn::Argument`]s.
+	/// Like in C#, arguments can be passed by parameter name.
+	ArgList,
+	/// `expr` or `label: expr`. Given to function calls and annotations.
+	Argument,
+	/// `{` then `}`, optionally with statements in between.
+	Block,
+	/// A group of declaration qualifier keywords separated by whitespace.
+	DeclQualifiers,
+	/// `quals returntypes name(params) {}` or `quals returntypes name(params);`
+	FunctionDecl,
+	/// `ident:`. Used to distinguish blocks and for naming passed arguments.
+	/// Distinct from [`Syn::Name`] since it does not introduce a name into scope.
+	Label,
+	/// Will have one of the following tokens as a child:
+	/// - [`Syn::LitChar`]
+	/// - [`Syn::LitFalse`]
+	/// - [`Syn::LitFloat`]
+	/// - [`Syn::LitInt`]
+	/// - [`Syn::LitNull`]
+	/// - [`Syn::LitString`]
+	/// - [`Syn::LitTrue`]
+	Literal,
+	/// Syntax node with a [`Syn::Ident`] token as a child.
+	/// Used as part of function declarations, variable bindings, et cetera.
+	Name,
+	/// Part of a function definition.
+	ParamList,
+	/// `name`, `name::name`, `name::name::name`, and so on.
+	Resolver,
+	/// A [`Syn::Name`], `Super`, or `Self`.
+	ResolverPart,
+	/// Part of a function declaration, after qualifiers.
+	/// One or more written types separated by commas.
+	ReturnTypes,
+	/// A type reference may be a [`Syn::Resolver`], an array descriptor, a
+	/// tuple descriptor, or `_` to make the compiler attempt inferrence.
+	TypeRef,
+	/// "Type specifier". A [`Syn::Colon`] followed by a [`Syn::TypeRef`].
+	TypeSpec,
+
+	// Literals ////////////////////////////////////////////////////////////////
+	/// The exact string `null`.
+	LitNull,
+	/// The exact string `false`.
+	LitFalse,
+	/// The exact string `true`.
+	LitTrue,
+	/// VZS integer literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#integer-literals>
+	LitInt,
+	/// VZS floating-point literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#floating-point-literals>
+	LitFloat,
+	/// VZS character literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#character-literals>
+	LitChar,
+	/// VZS string literals use similar syntax to that of Rust:
+	/// <https://doc.rust-lang.org/stable/reference/tokens.html#string-literals>
+	LitString,
+
 	// Glyphs, composite glyphs, glyph-adjacent ////////////////////////////////
 	/// `&`
 	Ampersand,
@@ -140,26 +204,6 @@ pub enum Syn {
 	/// `->`
 	ThinArrow,
 
-	// Literals ////////////////////////////////////////////////////////////////
-	/// The exact string `null`.
-	LitNull,
-	/// The exact string `false`.
-	LitFalse,
-	/// The exact string `true`.
-	LitTrue,
-	/// Lith integer literals use similar syntax to that of Rust:
-	/// <https://doc.rust-lang.org/stable/reference/tokens.html#integer-literals>
-	LitInt,
-	/// Lith floating-point literals use similar syntax to that of Rust:
-	/// <https://doc.rust-lang.org/stable/reference/tokens.html#floating-point-literals>
-	LitFloat,
-	/// Lith character literals use similar syntax to that of Rust:
-	/// <https://doc.rust-lang.org/stable/reference/tokens.html#character-literals>
-	LitChar,
-	/// Lith string literals use similar syntax to that of Rust:
-	/// <https://doc.rust-lang.org/stable/reference/tokens.html#string-literals>
-	LitString,
-
 	// Keywords ////////////////////////////////////////////////////////////////
 	KwAbstract,
 	KwBitfield,
@@ -192,93 +236,6 @@ pub enum Syn {
 	KwUsing,
 	KwVirtual,
 	KwWhile,
-
-	// Higher-level composites /////////////////////////////////////////////////
-	/// For both function calls and annotations. Wraps zero or more [`Syn::Argument`]s.
-	/// Like in C# and ZScript, arguments can be passed by parameter name.
-	ArgList,
-	/// `expr` or `label: expr`. Given to function calls and annotations.
-	Argument,
-	/// `#![resolver(args)]`. `!` and arguments are optional.
-	Annotation,
-	/// `{` then `}`, optionally with statements in between.
-	Block,
-	/// A group of declaration qualifier keywords separated by whitespace.
-	/// Part of a [`Syn::FunctionDecl`].
-	DeclQualifiers,
-	/// e.g. `expr + expr` or `expr?.expr`.
-	ExprBinary,
-	ExprCall,
-	/// `expr[expr]`; array element access.
-	ExprIndex,
-	/// e.g. `expr++` or `expr?`
-	ExprPostfix,
-	/// e.g. `++expr`
-	ExprPrefix,
-	/// `expr = expr ? expr : expr`
-	ExprTernary,
-	/// `@[typeref]`.
-	ExprType,
-	/// `quals returntypes name(params) {}` or `quals returntypes name(params);`
-	FunctionDecl,
-	/// `ident:`. Used to distinguish blocks and for naming passed arguments.
-	/// Distinct from [`Syn::Name`] since it does not introduce a name into scope.
-	Label,
-	/// Will have one of the following tokens as a child:
-	/// - [`Syn::LitChar`]
-	/// - [`Syn::LitFalse`]
-	/// - [`Syn::LitFloat`]
-	/// - [`Syn::LitInt`]
-	/// - [`Syn::LitNull`]
-	/// - [`Syn::LitString`]
-	/// - [`Syn::LitTrue`]
-	Literal,
-	/// Syntax node with a [`Syn::Ident`] token as a child.
-	/// Used as part of function declarations, variable bindings, et cetera.
-	Name,
-	/// Part of a function definition.
-	ParamList,
-	/// `let ident = <expr>`. May include a `const` after `let` and/or a type
-	/// specifier after the identifier, in the form `: typeref`.
-	StatBinding,
-	/// `break;`
-	StatBreak,
-	/// `continue;`
-	StatContinue,
-	/// e.g. `;`
-	StatEmpty,
-	/// e.g. `666;`.
-	StatExpr,
-	/// `if {}`
-	StatIf,
-	/// `do {} until (expr)`
-	StatLoopDoUntil,
-	/// `do {} while (expr)`
-	StatLoopDoWhile,
-	/// `for (ident : expr) {}`
-	StatLoopFor,
-	/// `loop {}`
-	StatLoopInfinite,
-	/// `while (expr) {}`
-	StatLoopWhile,
-	/// `return;`
-	StatReturn,
-	/// Same syntax as C.
-	StatSwitch,
-	/// A [`Syn::Name`], `Super`, or `Self`.
-	ResolverPart,
-	/// `name`, `name::name`, `name::name::name`, and so on.
-	Resolver,
-	/// Part of a function declaration, after qualifiers.
-	/// One or more written types separated by commas.
-	ReturnTypes,
-	/// A type reference may be a [`Syn::Resolver`], an array descriptor, a
-	/// tuple descriptor, or `_` to make the compiler attempt inferrence.
-	TypeRef,
-	/// "Type specifier". A [`Syn::Colon`] followed by a [`Syn::TypeRef`].
-	TypeSpec,
-	/// `using ident = type;` or `using ident;`.
-	TypeAlias,
 
 	// Miscellaneous ///////////////////////////////////////////////////////////
 	/// C++/Rust form. Treated as though it were whitespace.

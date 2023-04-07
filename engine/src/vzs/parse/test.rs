@@ -1,6 +1,6 @@
 use doomfront::rowan::ast::AstNode;
 
-use crate::lith::ast::{self};
+use crate::vzs::ast::{self};
 
 use super::*;
 
@@ -9,7 +9,7 @@ fn smoke_fndecls() {
 	const SOURCE: &str = r#"
 
 void native_fn();
-private ceval lith::void, ::lith::int builtin_fn();
+private ceval vzs::void, ::vzs::int builtin_fn();
 abstract vile::Pref my_fn() {}
 
 "#;
@@ -37,8 +37,8 @@ abstract vile::Pref my_fn() {}
 
 		let mut fn1_rets = fn1.return_types();
 
-		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "lith::void");
-		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "::lith::int");
+		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "vzs::void");
+		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "::vzs::int");
 	} else {
 		panic!("Expected a top-level function, but failed to parse it.");
 	}
@@ -55,11 +55,11 @@ abstract vile::Pref my_fn() {}
 fn smoke_annotations() {
 	const SOURCE: &str = r##"
 
-#![lith::legal]
+#![vzs::legal]
 #[vile::illegal]
 
 #![legal_w_args(void)]
-#[::vile::illegal_w_args(@[::lith::int], arg1: 123)]
+#[::vile::illegal_w_args(@[::vzs::int], arg1: 123)]
 
 "##;
 
@@ -69,7 +69,7 @@ fn smoke_annotations() {
 	let mut ast = pt.ast();
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
-		assert_eq!(anno0.resolver().syntax().text(), "lith::legal");
+		assert_eq!(anno0.resolver().syntax().text(), "vzs::legal");
 		assert!(anno0.is_inner());
 	} else {
 		panic!("Expected a top-level annotation, but failed to parse it.");

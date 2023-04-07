@@ -7,7 +7,7 @@ use doomfront::{
 	help, ParseError, ParseOut,
 };
 
-use crate::lith::parse::expr::*;
+use crate::vzs::parse::expr::*;
 
 use super::Syn;
 

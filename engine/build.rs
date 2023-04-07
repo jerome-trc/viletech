@@ -1,5 +1,4 @@
 use std::{
-	error::Error,
 	fs::File,
 	io::{Read, Write},
 	path::{Path, PathBuf},
@@ -14,7 +13,7 @@ const BASEDATA_FILENAME: &str = "viletech.vpk3";
 /// - Injects the current Git hash and date and time of compilation
 /// into the environment before building.
 /// - Generates `viletech.vpk3` (a zip archive), known as the "base data".
-fn main() -> miette::Result<(), Box<dyn Error>> {
+fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {
@@ -53,7 +52,7 @@ fn main() -> miette::Result<(), Box<dyn Error>> {
 /// Compile the contents of `/data/viletech` into `/target/viletech.vpk3`.
 /// Hash the bytes of that file, and store the stringifiedhash in an
 /// environment variable that gets compiled into the engine.
-fn build_basedata() -> Result<(), Box<dyn Error>> {
+fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 	let data_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "data", "viletech"]
 		.iter()
 		.collect::<PathBuf>();

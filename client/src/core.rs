@@ -11,9 +11,9 @@ use viletech::{
 	console::Console,
 	data::{Catalog, LoadOutcome, LoadTracker},
 	input::InputCore,
-	lith,
 	rng::RngCore,
 	user::UserCore,
+	vzs,
 };
 
 use crate::ccmd;
@@ -27,7 +27,7 @@ pub struct ClientCore {
 	pub console: Console<ccmd::Command>,
 	pub devgui: DeveloperGui,
 	pub input: InputCore,
-	pub runtime: lith::Runtime,
+	pub runtime: vzs::Runtime,
 	pub rng: RngCore<WyRand>,
 	pub user: UserCore,
 }
@@ -55,7 +55,7 @@ impl ClientCore {
 				right: DevGuiStatus::Console,
 			},
 			input: InputCore::default(),
-			runtime: lith::Runtime::default(),
+			runtime: vzs::Runtime::default(),
 			rng: RngCore::default(),
 			user,
 		};
@@ -151,7 +151,7 @@ impl ClientCore {
 						(DevGuiStatus::Assets, "Assets"),
 						(DevGuiStatus::Audio, "Audio"),
 						(DevGuiStatus::Console, "Console"),
-						(DevGuiStatus::LithRepl, "REPL"),
+						(DevGuiStatus::VzsRepl, "REPL"),
 						(DevGuiStatus::Vfs, "VFS"),
 					],
 				);
@@ -167,7 +167,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::LithRepl => {
+						DevGuiStatus::VzsRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -187,7 +187,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::LithRepl => {
+						DevGuiStatus::VzsRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -215,7 +215,7 @@ pub enum DevGuiStatus {
 	Assets,
 	Audio,
 	Console,
-	LithRepl,
+	VzsRepl,
 	Vfs,
 }
 

@@ -1,17 +1,17 @@
-//! Symbols making up LithScript's type system.
+//! Symbols making up VZScript's type system.
 
 use std::any::TypeId;
 
 use bitflags::bitflags;
 
-use crate::lith::{abi::QWord, heap};
-
 use super::{
+	abi::QWord,
+	heap,
 	module::{Handle, InHandle},
 	Symbol,
 };
 
-/// No LithScript type is allowed to exceed this size in bytes.
+/// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
 
 /// Note that the type of a variable declared `let const x = 0` isn't separate
@@ -214,7 +214,7 @@ impl BitDesc {
 	}
 }
 
-/// For use when constructing the `lith` module.
+/// For use when constructing the `vzs` module.
 #[must_use]
 pub(super) fn builtins() -> Vec<(String, TypeInfo)> {
 	use std::alloc::Layout;

@@ -1,24 +1,24 @@
 use std::{fmt::Debug, marker::PhantomData, mem::MaybeUninit, sync::Arc};
 
-use crate::lith::{abi::QWord, Handle, Symbol};
+use crate::vzs::{abi::QWord, Handle, Symbol};
 
 /// Points to an i-node. Used by other i-nodes and the
-/// [`Runtime`](crate::lith::Runtime)'s "instruction pointer".
+/// [`Runtime`](crate::vzs::Runtime)'s "instruction pointer".
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub(in crate::lith) struct Index(pub(super) usize);
+pub(in crate::vzs) struct Index(pub(super) usize);
 
 /// Generalizes over different instruction fields, allowing the same enum to be
 /// re-used for instructions that own their data and instructions that refer to it.
-pub(in crate::lith) trait NodeKind {
+pub(in crate::vzs) trait NodeKind {
 	type Index: Debug;
 	type ArcT<AT: 'static + Debug>: Debug;
 	type HandleT<HT: 'static + Symbol>: Debug;
 }
 
 #[derive(Debug)]
-pub(in crate::lith) struct OwningNode;
+pub(in crate::vzs) struct OwningNode;
 #[derive(Debug)]
-pub(in crate::lith) struct RefNode<'i>(PhantomData<&'i ()>);
+pub(in crate::vzs) struct RefNode<'i>(PhantomData<&'i ()>);
 
 impl NodeKind for OwningNode {
 	type Index = Index;
@@ -35,7 +35,7 @@ impl<'i> NodeKind for RefNode<'i> {
 /// Ensures proper JIT code de-allocation.
 #[derive(Debug)]
 #[repr(transparent)]
-pub(in crate::lith) struct JitModule(MaybeUninit<cranelift_jit::JITModule>);
+pub(in crate::vzs) struct JitModule(MaybeUninit<cranelift_jit::JITModule>);
 
 impl Drop for JitModule {
 	fn drop(&mut self) {

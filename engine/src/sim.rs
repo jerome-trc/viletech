@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{lith::heap::TPtr, rng::RngCore};
+use crate::{rng::RngCore, vzs::heap::TPtr};
 
 pub type ActorPtr = TPtr<self::actor::Actor>;
 

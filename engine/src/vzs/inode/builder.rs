@@ -2,13 +2,13 @@
 
 use std::sync::Arc;
 
-use crate::lith::{abi::QWord, OwningNode};
+use crate::vzs::{abi::QWord, OwningNode};
 
 use super::{detail::Index, BinOp, INodeOwning, Instruction, LineInfo, Tree};
 
 /// Helper for making it slightly more convenient to construct i-node trees.
 #[derive(Debug, Default)]
-pub(in crate::lith) struct Builder {
+pub(in crate::vzs) struct Builder {
 	nodes: Vec<INodeOwning>,
 }
 
@@ -78,7 +78,7 @@ impl Builder {
 	pub fn build(self) -> Arc<Tree> {
 		debug_assert!(
 			!self.nodes.is_empty(),
-			"Tried to build a Lith function without any nodes."
+			"Tried to build a VZS function without any nodes."
 		);
 
 		debug_assert!(
@@ -86,7 +86,7 @@ impl Builder {
 				&self.nodes.last().unwrap().inst,
 				Instruction::<OwningNode>::Return
 			),
-			"Tried to build a Lith function without a final return."
+			"Tried to build a VZS function without a final return."
 		);
 
 		Tree::new(self.nodes)

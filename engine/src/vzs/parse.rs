@@ -1,5 +1,11 @@
 //! Combinator-based parsers.
 
+mod common;
+mod expr;
+mod lit;
+#[cfg(test)]
+mod test;
+
 use bevy::prelude::warn;
 use crossbeam::queue::SegQueue;
 use doomfront::{
@@ -12,18 +18,15 @@ use doomfront::{
 use parking_lot::Mutex;
 use rayon::prelude::*;
 
-use crate::{data::FileRef, data::VfsError, lith::ast, VPath, VPathBuf};
+use crate::{
+	data::{FileRef, VfsError},
+	vzs::ast,
+	VPath, VPathBuf,
+};
 
 use super::{IncludeTree, ParseTree, RawParseTree, Syn};
 
-mod common;
-mod expr;
-mod lit;
-#[cfg(test)]
-mod test;
-
-use common::*;
-use expr::*;
+use self::{common::*, expr::*};
 
 /// Parses with the opportunity for recovery. Unless `source` has no tokens
 /// whatsoever, this always emits `Some`, although the returned tree may have
@@ -44,7 +47,7 @@ pub fn parse(source: &str, repl: bool) -> Option<RawParseTree> {
 }
 
 /// `mount_path` should be, for example, `/viletech`.
-/// `root` should be, for example, `/viletech/script/main.lith`.
+/// `root` should be, for example, `/viletech/script/main.vzs`.
 pub fn parse_include_tree(mount_path: &VPath, root: FileRef) -> IncTreeResult {
 	fn parse_file(source: &str) -> Result<Option<RawParseTree>, Vec<ParseError>> {
 		let ptree = match parse(source, false) {

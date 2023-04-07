@@ -730,14 +730,8 @@ impl Catalog {
 		}
 
 		const RESERVED: &[&str] = &[
-			"vile",
-			"viletec",
-			"vt",
-			"vtec",
-			"vtech",
-			"viletech",
-			"lith",
-			"lithscript",
+			"vile", "viletec", "vt", "vtec", "vtech", "viletech", "vzs", "vzscript", "zs",
+			"zscript",
 		];
 
 		for comp in path.components() {

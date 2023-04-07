@@ -2,10 +2,10 @@
 //!
 //! This architecture is inspired by [daScript], which compiles an AST into what it
 //! calls "simulation nodes" to interpret them, as opposed to interpreting the AST
-//! itself, or bytecode. What differentiates Lith from daScript is the use of
+//! itself, or bytecode. What differentiates VZS from daScript is the use of
 //! Rust enums and recursion schemes, rather than nodes with vtables.
 //!
-//! This is entirely experimental, to see what merits it has for Lith's purposes.
+//! This is entirely experimental, to see what merits it has for VZS's purposes.
 //!
 //! [daScript]: https://dascript.org/
 
@@ -33,7 +33,7 @@ use std::{ffi::c_void, mem::MaybeUninit, sync::Arc};
 
 use arrayvec::ArrayVec;
 
-use crate::lith::InstPtr;
+use crate::vzs::InstPtr;
 
 use super::{
 	abi::{Abi, QWord},
@@ -104,7 +104,7 @@ impl Tree {
 
 				debug_assert!(
 					ctx.icache.0.capacity() >= (icache_len + nodes.len()),
-					"Lith i-cache lacks capacity."
+					"VZS i-cache lacks capacity."
 				);
 
 				while let InstPtr::Running(index) = &mut ctx.iptr {

@@ -1,10 +1,10 @@
-//! Infrastructure powering the LithScript language.
+//! Infrastructure powering VileTech's implementation of the ZScript language.
 //!
-//! LithScript or just "Lith" is the bespoke scripting language embedded in
-//! VileTech, designed to cover all its needs for custom user-defined behavior
-//! as well as data definition. It is deliberately designed after GZDoom's ZScript,
-//! as both a superset and subset of it, intended to correct its mistakes and
-//! provide backwards compatibility via transpilation.
+//! The VTZS toolchain; VileTech's fork of the [ZScript] programming language used
+//! by GZDoom and Raze, intended to advance it by introducing breaking changes via
+//! "editions" like Rust does.
+//!
+//! [ZScript]: https://zdoom.org/wiki/ZScript
 
 mod abi;
 pub mod ast;
@@ -33,8 +33,15 @@ pub use self::{
 	tsys::*,
 };
 
-/// No LithScript identifier in human-readable form may exceed this byte length.
-/// Mind that Lith only allows ASCII alphanumerics and underscores for identifiers,
+pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
+pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
+pub type Token = doomfront::rowan::SyntaxToken<Syn>;
+pub type RawParseTree = doomfront::RawParseTree<Syn>;
+pub type ParseTree = doomfront::ParseTree<Syn>;
+pub type IncludeTree = doomfront::IncludeTree<Syn>;
+
+/// No VZScript identifier in human-readable form may exceed this byte length.
+/// Mind that VZS only allows ASCII alphanumerics and underscores for identifiers,
 /// so this is also a character limit.
 /// For reference, the following string is exactly 64 ASCII characters:
 /// `_0_i_weighed_down_the_earth_through_the_stars_to_the_pavement_9_`
@@ -45,13 +52,6 @@ pub const MAX_PARAMS: usize = 16;
 
 /// In terms of values, not quad-words.
 pub const MAX_RETURNS: usize = 4;
-
-pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
-pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
-pub type Token = doomfront::rowan::SyntaxToken<Syn>;
-pub type RawParseTree = doomfront::RawParseTree<Syn>;
-pub type ParseTree = doomfront::ParseTree<Syn>;
-pub type IncludeTree = doomfront::IncludeTree<Syn>;
 
 #[derive(Debug)]
 pub enum Error {

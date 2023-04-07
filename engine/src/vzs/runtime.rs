@@ -1,4 +1,4 @@
-//! The LithScript execution context: stack, heap, garbage collector, coroutines...
+//! The VZScript execution context: stack, heap, garbage collector, coroutines...
 
 use std::mem::MaybeUninit;
 
@@ -8,14 +8,16 @@ use super::{
 	inode,
 };
 
-/// Context for LithScript execution.
+/// Context for VZScript execution.
+///
+/// Fully re-entrant; VZS has no global state.
 #[derive(Debug, Default)]
 pub struct Runtime {
 	pub(super) iptr: InstPtr,
 	pub(super) stack: Stack,
 	pub(super) heap: Heap,
 	pub(super) icache: ICache,
-	// See lith::heap for memory management, GC methods.
+	// See vzs::heap for memory management, GC methods.
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -37,7 +39,7 @@ impl Stack {
 	pub(super) unsafe fn push<T: Abi>(&mut self, value: T) {
 		let sz = std::mem::size_of::<T::Repr>();
 
-		assert!(self.capacity() >= sz, "Lith stack overflow.");
+		assert!(self.capacity() >= sz, "VZS stack overflow.");
 
 		unsafe {
 			std::ptr::write(self.top as *mut T::Repr, value.to_words());
@@ -50,7 +52,7 @@ impl Stack {
 
 		assert!(
 			self.top as usize >= (self.buf.as_ptr() as usize + sz),
-			"Tried to pop an empty Lith stack."
+			"Tried to pop an empty VZS stack."
 		);
 
 		unsafe {

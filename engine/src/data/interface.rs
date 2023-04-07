@@ -196,18 +196,18 @@ pub struct MountInfo {
 	/// Always canonicalized, but may not necessarily be valid UTF-8.
 	pub(super) real_path: Box<Path>,
 	pub(super) virtual_path: Box<VPath>,
-	/// The base of the package's LithScript include tree.
+	/// The base of the package's VZScript include tree.
 	///
 	/// - For VileTech packages, this is specified by a `meta.toml` file.
 	/// - For ZDoom and Eternity packages, the script root is the first
-	/// "lump" with the file stem `VTECHLITH` in the package's global namespace.
-	/// - For WADs, the script root is the first `VTECHLITH` "lump" found.
+	/// "lump" with the file stem `VZSCRIPT` in the package's global namespace.
+	/// - For WADs, the script root is the first `VZSCRIPT` "lump" found.
 	///
 	/// Normally, the scripts can define manifest items used to direct post-processing,
 	/// but if there is no script root or manifests, ZDoom loading rules are used.
 	///
 	/// A package can only specify a file owned by it as a script root, so this
-	/// is always relative. `viletech.vpk3`'s script root, for example, is `main.lith`.
+	/// is always relative. `viletech.vpk3`'s script root, for example, is `main.vzs`.
 	pub(super) script_root: Option<Box<VPath>>,
 	// Q:
 	// - Dependency specification?

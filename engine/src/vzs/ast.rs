@@ -14,7 +14,7 @@ use crate::utils::string::unescape_char;
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use expr::*;
+pub use self::expr::*;
 
 /// One of the top-level elements of a file or REPL input.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -436,7 +436,7 @@ pub struct Resolver(SyntaxNode);
 simple_astnode!(Syn, Resolver, Syn::Resolver);
 
 impl Resolver {
-	/// Every token returns is tagged [`Syn::Identifier`].
+	/// Every token returns is tagged [`Syn::Ident`].
 	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0.children_with_tokens().filter_map(|n_or_t| {
 			if n_or_t.kind() == Syn::Ident {

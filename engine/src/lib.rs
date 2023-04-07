@@ -18,7 +18,6 @@ pub mod frontend;
 #[allow(dead_code)]
 pub mod game;
 pub mod input;
-pub mod lith;
 pub mod log;
 pub mod math;
 pub mod player;
@@ -32,6 +31,7 @@ pub mod terminal;
 #[allow(dead_code)]
 pub mod user;
 pub mod utils;
+pub mod vzs;
 pub mod wad;
 
 // Type aliases ////////////////////////////////////////////////////////////////

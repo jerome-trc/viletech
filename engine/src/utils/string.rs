@@ -39,7 +39,7 @@ pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)>
 
 /// Taken from the [`enquote`] crate courtesy of Christopher Knight
 /// ([@reujab](https://github.com/reujab)) and used under [The Unlicense].
-/// Modified for parsing Lith character literals; performs no allocations
+/// Modified for parsing VZS character literals; performs no allocations
 /// internally and emits a single character.
 ///
 /// This specialization means that reaching the end of the given string unexpectedly

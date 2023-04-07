@@ -26,7 +26,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use smallvec::SmallVec;
 
-use crate::{lith, utils::path::PathExt, EditorNum, SpawnNum, VPath, VPathBuf};
+use crate::{utils::path::PathExt, vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 pub use self::{asset::*, error::*, ext::*, interface::*, vfs::*};
 
@@ -65,7 +65,7 @@ pub struct Catalog {
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
 	pub(self) mounts: Vec<MountInfo>,
-	pub(self) modules: Vec<lith::Module>,
+	pub(self) modules: Vec<vzs::Module>,
 	/// The "source of truth" for record pointers.
 	pub(self) assets: DashMap<AssetKey, Arc<Record>>,
 	/// Asset storage without namespacing. Thus, requesting `MAP01` returns

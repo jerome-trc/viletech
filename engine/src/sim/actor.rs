@@ -15,7 +15,7 @@ use crate::{
 /// A game simulation entity; may be a monster, player character, inventory item,
 /// decoration, projectile, or similar. Sometimes known as a "map object" or
 /// "mobj" for short. Maps to the `AActor` class in (G)ZDoom's internals and the
-/// `Actor` class in both ZScript and Lith.
+/// `Actor` class in both ZScript and VZScript.
 ///
 /// VileTech's gameplay code needs to be somewhat similar to that of ZDoom for a
 /// certain degree of backwards compatibility. As such, sim logic will be built
@@ -449,7 +449,7 @@ bitflags! {
 
 // Details /////////////////////////////////////////////////////////////////////
 
-/// Benefits from non-zero optimization. Represented Lith-side as a pointer.
+/// Benefits from non-zero optimization. Represented VZS-side as a pointer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct ActorId(NonZeroUsize);

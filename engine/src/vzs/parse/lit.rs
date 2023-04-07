@@ -5,7 +5,7 @@ use doomfront::{
 	comb, help, ParseError, ParseOut,
 };
 
-use crate::lith::Syn;
+use crate::vzs::Syn;
 
 pub(super) fn literal(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
 	primitive::choice((

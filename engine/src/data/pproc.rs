@@ -19,7 +19,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{lith, VPathBuf};
+use crate::{vzs, VPathBuf};
 
 use super::{
 	detail::AssetKey, Asset, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind,
@@ -83,7 +83,7 @@ impl Catalog {
 			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
 		}
 
-		// Pass 1: compile Lith; transpile EDF and (G)ZDoom DSLs.
+		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
 		for i in ctx.new_mounts.clone() {
 			let subctx = SubContext {
@@ -169,10 +169,10 @@ impl Catalog {
 		ret
 	}
 
-	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
-	/// DSLs all go into the same Lith module, regardless of which are present
+	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
+	/// DSLs all go into the same VZS module, regardless of which are present
 	/// and which are absent.
-	fn pproc_pass1_vpk(&self, ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_vpk(&self, ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
 		let ret = None;
 
 		let script_root: VPathBuf = if let Some(srp) = &ctx.mntinfo.script_root {
@@ -193,7 +193,7 @@ impl Catalog {
 			}
 		};
 
-		let inctree = lith::parse_include_tree(ctx.mntinfo.virtual_path(), script_root);
+		let inctree = vzs::parse_include_tree(ctx.mntinfo.virtual_path(), script_root);
 
 		if inctree.any_errors() {
 			unimplemented!("Soon");
@@ -202,7 +202,7 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_file(&self, ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_file(&self, ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
 		let ret = None;
 
 		let file = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
@@ -214,7 +214,7 @@ impl Catalog {
 
 		if file
 			.path_extension()
-			.filter(|p_ext| p_ext.eq_ignore_ascii_case("lith"))
+			.filter(|p_ext| p_ext.eq_ignore_ascii_case("vzs"))
 			.is_some()
 		{
 			unimplemented!();
@@ -229,13 +229,13 @@ impl Catalog {
 		Ok(ret)
 	}
 
-	fn pproc_pass1_pk(&self, _ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_pk(&self, _ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
 		let ret = None;
 		// TODO
 		Ok(ret)
 	}
 
-	fn pproc_pass1_wad(&self, _ctx: &SubContext) -> Result<Option<lith::Module>, ()> {
+	fn pproc_pass1_wad(&self, _ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
 		let ret = None;
 		// TODO
 		Ok(ret)
