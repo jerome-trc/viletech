@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use viletech::data::LoadOutcome;
+use viletech::{data::LoadOutcome, utils::duration_to_hhmmss};
 
 use crate::{
 	core::{ClientCore, GameLoad},
@@ -119,6 +119,9 @@ pub fn update(
 
 				warn!("{msg}");
 			}
+
+			let (hh, mm, ss) = duration_to_hhmmss(loader.start_time.elapsed());
+			info!("Game loading finished in {hh:02}:{mm:02}:{ss:02}.");
 
 			false
 		}
