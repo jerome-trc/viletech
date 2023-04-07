@@ -1,4 +1,4 @@
-use std::{fmt::Debug, marker::PhantomData, mem::MaybeUninit, sync::Arc};
+use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use crate::vzs::{abi::QWord, Handle, Symbol};
 
@@ -30,18 +30,4 @@ impl<'i> NodeKind for RefNode<'i> {
 	type Index = QWord;
 	type ArcT<AT: 'static + Debug> = &'i Arc<AT>;
 	type HandleT<HT: 'static + Symbol> = &'i Handle<HT>;
-}
-
-/// Ensures proper JIT code de-allocation.
-#[derive(Debug)]
-#[repr(transparent)]
-pub(in crate::vzs) struct JitModule(MaybeUninit<cranelift_jit::JITModule>);
-
-impl Drop for JitModule {
-	fn drop(&mut self) {
-		unsafe {
-			let i = std::mem::replace(&mut self.0, MaybeUninit::uninit());
-			i.assume_init().free_memory();
-		}
-	}
 }

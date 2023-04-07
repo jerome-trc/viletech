@@ -35,6 +35,7 @@ use crate::vzs::InstPtr;
 
 use super::{
 	abi::{Abi, QWord},
+	module::JitModule,
 	Runtime, TypeInfo, MAX_PARAMS,
 };
 

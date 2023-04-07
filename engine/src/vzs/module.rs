@@ -160,7 +160,7 @@ impl<S: Symbol> Clone for Handle<S> {
 	}
 }
 
-// SAFETY: See safety disclaimer for `Module`
+// SAFETY: See safety disclaimer for `Module`.
 unsafe impl<S: Symbol> Send for Handle<S> {}
 unsafe impl<S: Symbol> Sync for Handle<S> {}
 
@@ -180,7 +180,7 @@ impl<S: Symbol> PartialEq for InHandle<S> {
 
 impl<S: Symbol> Eq for InHandle<S> {}
 
-// SAFETY: See safety disclaimer for `Module`
+// SAFETY: See safety disclaimer for `Module`.
 unsafe impl<S: Symbol> Send for InHandle<S> {}
 unsafe impl<S: Symbol> Sync for InHandle<S> {}
 
