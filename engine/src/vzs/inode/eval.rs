@@ -17,9 +17,11 @@ impl<'i> Instruction<RefNode<'i>> {
 				QWord::invalid()
 			}
 			Instruction::BinOp { l, r, op } => unsafe { op.eval(l, r) },
-			Instruction::Call { func, args } => {
+			Instruction::Call { func, args, arg_c } => {
+				const MAX_PARAMS_U8: u8 = MAX_PARAMS as u8;
+
 				// TODO: There must be a better way to do this.
-				match args.len() {
+				match *arg_c {
 					0 => func.eval(ctx, ()),
 					1 => func.eval(ctx, (args[0],)),
 					2 => func.eval(ctx, (args[0], args[1])),
@@ -88,7 +90,7 @@ impl<'i> Instruction<RefNode<'i>> {
 							args[8], args[9], args[10], args[11], args[12], args[13], args[14],
 						),
 					),
-					MAX_PARAMS => func.eval(
+					MAX_PARAMS_U8 => func.eval(
 						ctx,
 						(
 							args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7],

@@ -31,8 +31,6 @@ mod map;
 
 use std::{ffi::c_void, mem::MaybeUninit, sync::Arc};
 
-use arrayvec::ArrayVec;
-
 use crate::vzs::InstPtr;
 
 use super::{
@@ -165,7 +163,8 @@ pub(super) enum Instruction<K: NodeKind> {
 	/// return signature. Return values are left on the stack afterwards.
 	Call {
 		func: K::ArcT<Tree>,
-		args: ArrayVec<K::Index, MAX_PARAMS>,
+		args: Box<[K::Index; MAX_PARAMS]>,
+		arg_c: u8,
 	},
 	/// Sets the runtime's instruction pointer to the contained index.
 	/// Evaluation emits [`QWord::invalid`].

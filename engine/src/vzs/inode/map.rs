@@ -1,8 +1,6 @@
 //! Recursion scheme implementation.
 
-use arrayvec::ArrayVec;
-
-use crate::vzs::abi::QWord;
+use crate::vzs::{abi::QWord, MAX_PARAMS};
 
 use super::{
 	detail::{Index, OwningNode},
@@ -25,14 +23,18 @@ impl Instruction<OwningNode> {
 				op: *op,
 			},
 			Instruction::Immediate(lit) => Instruction::Immediate(*lit),
-			Instruction::Call { func, args } => {
-				let mut a = ArrayVec::new();
+			Instruction::Call { func, args, arg_c } => {
+				let mut mapped_args = Box::new([QWord::invalid(); MAX_PARAMS]);
 
-				for arg in args {
-					a.push(mapper(*arg));
+				for (i, arg) in args.iter().enumerate() {
+					mapped_args[i] = mapper(*arg);
 				}
 
-				Instruction::Call { func, args: a }
+				Instruction::Call {
+					func,
+					args: mapped_args,
+					arg_c: *arg_c,
+				}
 			}
 			Instruction::Pop => Instruction::Pop,
 			Instruction::Push(qw) => Instruction::Push(mapper(*qw)),
