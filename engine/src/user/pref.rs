@@ -555,21 +555,13 @@ struct StringStore {
 }
 
 mod private {
-	use std::any::Any;
+	use crate::RgbaF32;
 
-	pub trait Sealed: Any + Send + Sync + std::fmt::Debug {
-		/// Boilerplate allowing upcasting from `PrefData` to `Any`.
-		#[must_use]
-		fn as_any(&self) -> &dyn Any;
-	}
+	pub trait Sealed {}
 
-	impl<T> Sealed for T
-	where
-		T: Any + Send + Sync + std::fmt::Debug,
-	{
-		#[inline]
-		fn as_any(&self) -> &dyn Any {
-			self
-		}
-	}
+	impl Sealed for bool {}
+	impl Sealed for i64 {}
+	impl Sealed for f64 {}
+	impl Sealed for RgbaF32 {}
+	impl Sealed for String {}
 }
