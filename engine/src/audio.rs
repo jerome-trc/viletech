@@ -28,7 +28,7 @@ use kira::{
 };
 use nodi::midly;
 use once_cell::sync::Lazy;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
 	data::{Catalog, FileRef},
@@ -453,6 +453,11 @@ impl std::fmt::Debug for AudioCore {
 			.finish()
 	}
 }
+
+/// A type alias for convenience and to reduce line noise.
+pub type AudioCoreAM = Arc<Mutex<AudioCore>>;
+/// A type alias for convenience and to reduce line noise.
+pub type AudioCoreAL = Arc<RwLock<AudioCore>>;
 
 /// Enables inspection and control of a currently-playing sound or musical track,
 /// whether it's waveform or MIDI.

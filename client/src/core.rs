@@ -9,7 +9,7 @@ use parking_lot::RwLock;
 use viletech::{
 	audio::AudioCore,
 	console::Console,
-	data::{Catalog, LoadOutcome, LoadTracker},
+	data::{Catalog, CatalogAL, LoadOutcome, LoadTracker},
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,
@@ -23,7 +23,7 @@ pub type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
 #[derive(Debug, Resource)]
 pub struct ClientCore {
 	pub audio: AudioCore,
-	pub catalog: Arc<RwLock<Catalog>>,
+	pub catalog: CatalogAL,
 	pub console: Console<ccmd::Command>,
 	pub devgui: DeveloperGui,
 	pub input: InputCore,

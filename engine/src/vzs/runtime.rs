@@ -1,6 +1,8 @@
 //! The VZScript execution context: stack, heap, garbage collector, coroutines...
 
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, sync::Arc};
+
+use parking_lot::{Mutex, RwLock};
 
 use super::{
 	abi::{Abi, QWord},
@@ -19,6 +21,11 @@ pub struct Runtime {
 	pub(super) icache: ICache,
 	// See vzs::heap for memory management, GC methods.
 }
+
+/// A type alias for convenience and to reduce line noise.
+pub type RuntimeAM = Arc<Mutex<Runtime>>;
+/// A type alias for convenience and to reduce line noise.
+pub type RuntimeAL = Arc<RwLock<Runtime>>;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) enum InstPtr {

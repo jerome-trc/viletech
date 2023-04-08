@@ -21,7 +21,7 @@ use bevy_egui::egui;
 use dashmap::{DashMap, DashSet};
 use globset::Glob;
 use indexmap::IndexMap;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
 use regex::Regex;
 use smallvec::SmallVec;
@@ -400,6 +400,11 @@ impl Default for Catalog {
 		}
 	}
 }
+
+/// A type alias for convenience and to reduce line noise.
+pub type CatalogAM = Arc<Mutex<Catalog>>;
+/// A type alias for convenience and to reduce line noise.
+pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub enum LoadOutcome {

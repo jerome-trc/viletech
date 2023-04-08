@@ -12,9 +12,11 @@ mod profile;
 use std::{
 	fs::ReadDir,
 	path::{Path, PathBuf},
+	sync::Arc,
 };
 
 use bevy::prelude::{warn, Resource};
+use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 
 pub use self::{dirs::*, error::*, pref::*, profile::*};
@@ -480,6 +482,11 @@ impl UserCore {
 			.collect()
 	}
 }
+
+/// A type alias for convenience and to reduce line noise.
+pub type UserCoreAM = Arc<Mutex<UserCore>>;
+/// A type alias for convenience and to reduce line noise.
+pub type UserCoreAL = Arc<RwLock<UserCore>>;
 
 /// An error-mapping helper for brevity.
 fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {

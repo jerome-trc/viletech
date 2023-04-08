@@ -1,11 +1,14 @@
 //! A structure for caching incoming mouse/keyboard/etc. input state from winit,
 //! for use by the engine's other subsystems.
 
+use std::sync::Arc;
+
 use bevy::{
 	input::{keyboard::KeyboardInput, ButtonState, InputSystem},
 	prelude::*,
 };
 use bevy_egui::systems::InputEvents;
+use parking_lot::{Mutex, RwLock};
 
 /// Stateful storage of user input.
 #[derive(Debug, Default)]
@@ -145,3 +148,8 @@ impl Plugin for InputPlugin {
 			.register_type::<ButtonAxisSettings>();
 	}
 }
+
+/// A type alias for convenience and to reduce line noise.
+pub type InputCoreAM = Arc<Mutex<InputCore>>;
+/// A type alias for convenience and to reduce line noise.
+pub type InputCoreAL = Arc<RwLock<InputCore>>;
