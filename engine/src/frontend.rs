@@ -1,4 +1,4 @@
-//! Starting the client shows a menu for changing settings and choosing files to load.
+//! A menu for changing settings and choosing files to load.
 
 use std::{
 	collections::VecDeque,
@@ -10,7 +10,7 @@ use bevy_egui::egui;
 
 use crate::utils::string::*;
 
-/// Starting the client shows a menu for changing settings and choosing files to load.
+/// A menu for changing settings and choosing files to load.
 ///
 /// This is the first thing a client end user sees assuming they have not passed
 /// in launch arguments which bypass it to a different scene.

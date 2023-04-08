@@ -127,7 +127,9 @@ impl ClientCore {
 	}
 
 	pub fn draw_devgui(&mut self, ctx: &mut egui::Context) {
-		// TODO: Developer GUI toggle key-binding.
+		// TODO:
+		// - Developer GUI toggle key-binding.
+		// - Localize these strings?
 		if self.input.keys_virt.just_pressed(KeyCode::Grave) {
 			self.devgui.open = !self.devgui.open;
 		}
@@ -145,16 +147,18 @@ impl ClientCore {
 				// Prevent window from overflowing off the screen's sides
 				ui.set_max_width(screen_rect.width());
 
-				self.devgui.selectors(
-					ui,
-					&[
-						(DevGuiStatus::Assets, "Assets"),
-						(DevGuiStatus::Audio, "Audio"),
-						(DevGuiStatus::Console, "Console"),
-						(DevGuiStatus::VzsRepl, "REPL"),
-						(DevGuiStatus::Vfs, "VFS"),
-					],
-				);
+				egui::menu::bar(ui, |ui| {
+					self.devgui.selectors(
+						ui,
+						&[
+							(DevGuiStatus::Assets, "Assets"),
+							(DevGuiStatus::Audio, "Audio"),
+							(DevGuiStatus::Console, "Console"),
+							(DevGuiStatus::VzsRepl, "REPL"),
+							(DevGuiStatus::Vfs, "VFS"),
+						],
+					);
+				});
 
 				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
 					match self.devgui.left {

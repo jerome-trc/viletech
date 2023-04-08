@@ -10,9 +10,9 @@ pub fn update(
 	mut core: ResMut<ClientCore>,
 	mut _next_state: ResMut<NextState<AppState>>,
 	mut _sim: Option<ResMut<Sim>>,
-	mut ctxs: EguiContexts,
+	mut egui: EguiContexts,
 ) {
-	core.draw_devgui(ctxs.ctx_mut());
+	core.draw_devgui(egui.ctx_mut());
 }
 
 pub fn on_exit(mut cmds: Commands) {

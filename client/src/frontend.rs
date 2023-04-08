@@ -19,10 +19,10 @@ pub fn update(
 	mut core: ResMut<ClientCore>,
 	mut next_state: ResMut<NextState<AppState>>,
 	mut frontend: ResMut<FrontendMenu>,
-	mut ctxs: EguiContexts,
+	mut egui: EguiContexts,
 	mut exit: EventWriter<AppExit>,
 ) {
-	let action = frontend.ui(ctxs.ctx_mut());
+	let action = frontend.ui(egui.ctx_mut());
 
 	match action {
 		FrontendAction::None => {}
@@ -40,7 +40,7 @@ pub fn update(
 		}
 	}
 
-	core.draw_devgui(ctxs.ctx_mut());
+	core.draw_devgui(egui.ctx_mut());
 }
 
 pub fn on_enter(mut cmds: Commands) {

@@ -13,7 +13,7 @@ pub fn update(
 	mut core: ResMut<ClientCore>,
 	mut next_state: ResMut<NextState<AppState>>,
 	mut loader: ResMut<GameLoad>,
-	mut ctxs: EguiContexts,
+	mut egui: EguiContexts,
 ) {
 	// TODO: Localize these strings.
 
@@ -23,7 +23,7 @@ pub fn update(
 
 	egui::Window::new("Loading...")
 		.id(egui::Id::new("vile_gameload"))
-		.show(ctxs.ctx_mut(), |ui| {
+		.show(egui.ctx_mut(), |ui| {
 			ui.label(&format!("File Mounting: {m_pct:.1}%"));
 			ui.label(&format!("Processing: {p_pct:.1}%"));
 
@@ -32,7 +32,7 @@ pub fn update(
 			}
 		});
 
-	core.draw_devgui(ctxs.ctx_mut());
+	core.draw_devgui(egui.ctx_mut());
 
 	if cancelled {
 		next_state.set(AppState::Frontend);

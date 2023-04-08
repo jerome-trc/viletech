@@ -46,45 +46,43 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 			.frame(egui::Frame::window(&ctx.style()).multiply_with_opacity(0.8))
 	}
 
-	/// Call after opening the [developer GUI window](DeveloperGui::window).
-	/// Draws two dropdowns in its menu bar that allow changing which menu is
-	/// being drawn in each pane. A menu can't replace itself, but the left and
-	/// right side can be swapped.
+	/// Call after opening the [developer GUI window](DeveloperGui::window) and
+	/// then calling [`egui::menu::bar`]. Draws two dropdowns that allow changing
+	/// which menu is being drawn in each pane. A menu cannot replace itself, but
+	/// the left and right side can be swapped.
 	pub fn selectors(&mut self, ui: &mut egui::Ui, choices: &[(S, &str)]) {
-		egui::menu::bar(ui, |ui| {
-			ui.menu_button("Left", |ui| {
-				for (choice, label) in choices {
-					let btn = egui::Button::new(*label);
-					let resp = ui.add_enabled(self.left != *choice, btn);
+		ui.menu_button("Left", |ui| {
+			for (choice, label) in choices {
+				let btn = egui::Button::new(*label);
+				let resp = ui.add_enabled(self.left != *choice, btn);
 
-					if resp.clicked() {
-						ui.close_menu();
+				if resp.clicked() {
+					ui.close_menu();
 
-						if self.right == *choice {
-							std::mem::swap(&mut self.left, &mut self.right);
-						} else {
-							self.left = *choice;
-						}
+					if self.right == *choice {
+						std::mem::swap(&mut self.left, &mut self.right);
+					} else {
+						self.left = *choice;
 					}
 				}
-			});
+			}
+		});
 
-			ui.menu_button("Right", |ui| {
-				for (choice, label) in choices {
-					let btn = egui::Button::new(*label);
-					let resp = ui.add_enabled(self.right != *choice, btn);
+		ui.menu_button("Right", |ui| {
+			for (choice, label) in choices {
+				let btn = egui::Button::new(*label);
+				let resp = ui.add_enabled(self.right != *choice, btn);
 
-					if resp.clicked() {
-						ui.close_menu();
+				if resp.clicked() {
+					ui.close_menu();
 
-						if self.left == *choice {
-							std::mem::swap(&mut self.left, &mut self.right);
-						} else {
-							self.right = *choice;
-						}
+					if self.left == *choice {
+						std::mem::swap(&mut self.left, &mut self.right);
+					} else {
+						self.right = *choice;
 					}
 				}
-			});
+			}
 		});
 	}
 }
