@@ -8,11 +8,12 @@ use std::{
 
 use fasthash::SeaHasher;
 
-use super::{abi::Abi, inode, Handle, Runtime, Symbol};
+use super::{abi::Abi, inode, module::SymbolHeader, Handle, Runtime, Symbol};
 
 /// Pointer to a function, whether native or compiled.
 #[derive(Debug)]
 pub struct Function {
+	pub(super) header: SymbolHeader,
 	pub(super) code: Arc<inode::Tree>,
 	pub(super) flags: Flags,
 	/// See [`Self::hash_signature`].
@@ -59,7 +60,15 @@ impl Function {
 unsafe impl Send for Function {}
 unsafe impl Sync for Function {}
 
-impl Symbol for Function {}
+impl Symbol for Function {
+	fn header(&self) -> &SymbolHeader {
+		&self.header
+	}
+
+	fn header_mut(&mut self) -> &mut SymbolHeader {
+		&mut self.header
+	}
+}
 
 /// Typed function handle.
 pub struct TFunc<A: Abi, R: Abi> {
@@ -105,4 +114,11 @@ where
 	A: Abi,
 	R: Abi,
 {
+	fn header(&self) -> &SymbolHeader {
+		&self.source.header
+	}
+
+	fn header_mut(&mut self) -> &mut SymbolHeader {
+		unreachable!("Mutating a function through a `TFunc` is forbidden.")
+	}
 }

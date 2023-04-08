@@ -53,6 +53,7 @@ use self::detail::{AssetKey, Config, VfsKey};
 #[derive(Debug)]
 pub struct Catalog {
 	pub(self) config: Config,
+	pub(self) vzscript: vzs::Project,
 	/// Element 0 is always the root node, under virtual path `/`.
 	///
 	/// The choice to use an `IndexMap` here is very deliberate.
@@ -65,7 +66,6 @@ pub struct Catalog {
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
 	pub(self) mounts: Vec<MountInfo>,
-	pub(self) modules: Vec<vzs::Module>,
 	/// The "source of truth" for record pointers.
 	pub(self) assets: DashMap<AssetKey, Arc<Record>>,
 	/// Asset storage without namespacing. Thus, requesting `MAP01` returns
@@ -390,9 +390,9 @@ impl Default for Catalog {
 
 		Self {
 			config: Config::default(),
+			vzscript: vzs::Project::default(),
 			files: indexmap::indexmap! { key => root },
 			mounts: vec![],
-			modules: vec![],
 			assets: DashMap::default(),
 			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),

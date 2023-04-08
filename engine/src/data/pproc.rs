@@ -74,7 +74,7 @@ impl Catalog {
 	pub(super) fn postproc(&mut self, mut ctx: Context) -> Output {
 		debug_assert!(!ctx.errors.is_empty());
 
-		let orig_modules_len = self.modules.len();
+		let orig_modules_len = self.vzscript.modules().len();
 		let to_reserve = ctx.tracker.pproc_target.load(atomic::Ordering::SeqCst) as usize;
 
 		debug_assert!(to_reserve > 0);
@@ -102,7 +102,7 @@ impl Catalog {
 			};
 
 			if let Ok(Some(m)) = module {
-				self.modules.push(m);
+				self.vzscript.add_module(m);
 			} // Otherwise, errors and warnings have already been added to `ctx`.
 		}
 
@@ -338,7 +338,7 @@ impl Catalog {
 			debug_assert!(removed.is_some());
 		});
 
-		self.modules.truncate(orig_modules_len);
+		self.vzscript.truncate(orig_modules_len);
 
 		self.on_mount_fail(ctx.orig_files_len, ctx.orig_mounts_len);
 	}

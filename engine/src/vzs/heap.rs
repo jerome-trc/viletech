@@ -31,6 +31,8 @@ use std::{alloc::Layout, collections::HashMap, marker::PhantomData, ptr::NonNull
 
 use bitvec::prelude::BitArray;
 
+use crate::vzs::Symbol;
+
 use super::{tsys, Handle, Runtime, TypeInfo};
 
 // Public //////////////////////////////////////////////////////////////////////
@@ -121,20 +123,20 @@ impl Runtime {
 			layout.size(),
 			0,
 			"Tried to allocate a zero-sized type on the VZS heap: {}",
-			tinfo.name(),
+			tinfo.header().name,
 		);
 
 		debug_assert_eq!(
 			layout.align(),
 			16,
 			"VZS type is not 16-byte aligned: {}",
-			tinfo.name()
+			tinfo.header().name
 		);
 
 		debug_assert!(
 			layout.size() < HUGE_SIZE,
 			"VZS type is oversized: {}",
-			tinfo.name(),
+			tinfo.header().name,
 		);
 
 		let ptr = self.alloc(layout).cast::<RegionHeader>();
@@ -485,7 +487,7 @@ bitflags::bitflags! {
 
 #[cfg(test)]
 mod test {
-	use crate::vzs::Module;
+	use crate::vzs::Project;
 
 	use super::*;
 
@@ -493,12 +495,12 @@ mod test {
 	/// its home chunk's header are working properly.
 	#[test]
 	fn arena_resolution() {
+		let project = Project::default();
 		let mut runtime = Runtime::default();
-		let builtins = Module::core();
-		let t = builtins.get::<TypeInfo>("i32").unwrap();
+		let t = project.get::<TypeInfo>("i32").unwrap();
 
 		unsafe {
-			let ptr = runtime.alloc_t(t);
+			let ptr = runtime.alloc_t(t.into());
 			let a = ptr.chunk();
 			assert_eq!(a.as_ref().block_bits.len(), ChunkHeader::BITMAP_LEN);
 			assert_eq!(a.as_ref().mark_bits.len(), ChunkHeader::BITMAP_LEN);

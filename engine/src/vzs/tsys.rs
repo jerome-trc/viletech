@@ -7,7 +7,7 @@ use bitflags::bitflags;
 use super::{
 	abi::QWord,
 	heap,
-	module::{Handle, InHandle},
+	module::{Handle, InHandle, SymbolHeader},
 	Symbol,
 };
 
@@ -18,6 +18,7 @@ pub const MAX_SIZE: usize = 1024 * 2;
 /// from the `i32` primitive. For qualified types such as that, see [`QualifiedType`].
 #[derive(Debug)]
 pub struct TypeInfo {
+	header: SymbolHeader,
 	kind: TypeKind,
 	native: Option<NativeInfo>,
 	/// See the documentation for the method of the same name.
@@ -67,7 +68,15 @@ impl NativeInfo {
 	}
 }
 
-impl Symbol for TypeInfo {}
+impl Symbol for TypeInfo {
+	fn header(&self) -> &super::module::SymbolHeader {
+		&self.header
+	}
+
+	fn header_mut(&mut self) -> &mut super::module::SymbolHeader {
+		&mut self.header
+	}
+}
 
 #[derive(Debug)]
 pub struct QualifiedType {
@@ -214,24 +223,24 @@ impl BitDesc {
 	}
 }
 
-/// For use when constructing the `vzs` module.
+/// For use when constructing the `vzscript` module.
 #[must_use]
-pub(super) fn builtins() -> Vec<(String, TypeInfo)> {
+pub(super) fn builtins() -> Vec<TypeInfo> {
 	use std::alloc::Layout;
 
 	let qword_layout = Layout::new::<QWord>();
 	let qword_heap_layout = heap::layout_for(qword_layout);
 
 	vec![
-		(
-			"i32".to_string(),
-			TypeInfo {
-				kind: TypeKind::I32,
-				native: Some(NativeInfo::new::<i32>()),
-				layout: qword_layout,
-				heap_layout: qword_heap_layout,
+		TypeInfo {
+			header: SymbolHeader {
+				name: "i32".to_string(),
 			},
-		),
+			kind: TypeKind::I32,
+			native: Some(NativeInfo::new::<i32>()),
+			layout: qword_layout,
+			heap_layout: qword_heap_layout,
+		},
 		// TODO: ...everything else.
 	]
 }

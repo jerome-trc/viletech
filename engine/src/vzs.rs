@@ -14,21 +14,17 @@ mod inode;
 mod module;
 mod parse;
 mod runtime;
-mod symbol;
 mod syn;
 #[cfg(test)]
 mod test;
 mod tsys;
 
-use std::any::TypeId;
-
 pub use self::{
 	func::{Flags as FunctionFlags, Function},
 	inode::*,
-	module::{Builder as ModuleBuilder, Handle, Module},
+	module::{Builder as ModuleBuilder, Handle, InHandle, Module, Project, Symbol},
 	parse::*,
 	runtime::*,
-	symbol::Symbol,
 	syn::Syn,
 	tsys::*,
 };
@@ -57,12 +53,7 @@ pub const MAX_RETURNS: usize = 4;
 pub enum Error {
 	/// Tried to retrieve a symbol from a module using an identifier that didn't
 	/// resolve to anything.
-	UnknownIdentifier,
-	/// A caller tried to get a [`Handle`] to a symbol and found it,
-	/// but requested a type different to that of its stored data.
-	///
-	/// [`Handle`]: Handle
-	TypeMismatch { expected: TypeId, given: TypeId },
+	UnknownIdent,
 	/// Tried to retrieve a function from a module and found it, but failed to
 	/// pass the generic arguments matching its signature.
 	SignatureMismatch,
@@ -73,19 +64,12 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::UnknownIdentifier => write!(
-				f,
-				"Module symbol lookup failure; identifier didn't resolve to anything."
-			),
-			Self::TypeMismatch { expected, given } => {
+			Self::UnknownIdent => write!(f, "An identifier was not found in the symbol table."),
+			Self::SignatureMismatch => {
 				write!(
 					f,
-					"Type mismatch during symbol lookup. \
-					Expected {expected:#?}, got {given:#?}.",
+					"Incorrect signature used when downcasting a function handle."
 				)
-			}
-			Self::SignatureMismatch => {
-				write!(f, "Symbol lookup failure; function signature mismatch.")
 			}
 		}
 	}
