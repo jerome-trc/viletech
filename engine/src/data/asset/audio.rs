@@ -9,24 +9,18 @@ use kira::sound::static_sound::StaticSoundData;
 
 use crate::audio::MidiData;
 
-use super::{Asset, AssetKind, Record};
+use super::AssetHeader;
 
 #[derive(Debug)]
-pub enum Audio {
-	Midi(MidiData),
-	Waveform(StaticSoundData),
+pub struct Audio {
+	pub header: AssetHeader,
+	pub data: AudioData,
 }
 
-impl Asset for Audio {
-	const KIND: AssetKind = AssetKind::Audio;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.audio
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.audio
-	}
+#[derive(Debug)]
+pub enum AudioData {
+	Midi(MidiData),
+	Waveform(StaticSoundData),
 }
 
 impl Audio {

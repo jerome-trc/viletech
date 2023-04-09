@@ -4,12 +4,13 @@ use bitflags::bitflags;
 
 use crate::{data::InHandle, sim::actor::Actor, EditorNum, SpawnNum};
 
-use super::{Asset, AssetKind, Audio, Image, PolyModel, Record, VoxelModel};
+use super::{AssetHeader, Audio, Image, PolyModel, VoxelModel};
 
 /// The prototype used to instantiate new actors. Defined in VZScript.
 /// For simplicity, this inlines an [`Actor`].
 #[derive(Debug)]
 pub struct Blueprint {
+	pub header: AssetHeader,
 	pub base: Actor,
 	pub blood_types: [Option<InHandle<Blueprint>>; 3],
 	pub bones: Option<()>, // TODO: Skeletal animation w/ data representation.
@@ -170,20 +171,9 @@ impl std::ops::DerefMut for Blueprint {
 	}
 }
 
-impl Asset for Blueprint {
-	const KIND: AssetKind = AssetKind::Blueprint;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.blueprint
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.blueprint
-	}
-}
-
 #[derive(Debug)]
 pub struct DamageType {
+	pub header: AssetHeader,
 	pub base_factor: f32,
 	pub flags: DamageTypeFlags,
 }
@@ -195,31 +185,8 @@ bitflags! {
 	}
 }
 
-impl Asset for DamageType {
-	const KIND: AssetKind = AssetKind::DamageType;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.damage_type
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.damage_type
-	}
-}
-
 #[derive(Debug)]
 pub struct Species {
+	pub header: AssetHeader,
 	// ???
-}
-
-impl Asset for Species {
-	const KIND: AssetKind = AssetKind::Species;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.species
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.species
-	}
 }

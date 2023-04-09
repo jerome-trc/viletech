@@ -7,9 +7,9 @@ use glam::{DVec2, DVec3, IVec2};
 
 use crate::{
 	data::{
-		detail::AssetKey, Catalog, FileRef, Level, LevelError, LevelFlags, LevelMeta, LineDef,
-		LineDefFlags, LineSpecial, PostProcError, PostProcErrorKind, Sector, SectorSpecial, Seg,
-		SideDef, SubSector, Thing, ThingFlags, Vertex,
+		detail::AssetKey, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags, LevelMeta,
+		LineDef, LineDefFlags, LineSpecial, PostProcError, PostProcErrorKind, Sector,
+		SectorSpecial, Seg, SideDef, SubSector, Thing, ThingFlags, Vertex,
 	},
 	EditorNum, ShortId,
 };
@@ -32,7 +32,7 @@ impl Catalog {
 		&self,
 		ctx: &SubContext,
 		dir: FileRef,
-	) -> Option<Result<AssetKey, ()>> {
+	) -> Option<Result<(), ()>> {
 		let mut _blockmap = None;
 		let mut linedefs = None;
 		let mut _nodes = None;
@@ -188,16 +188,16 @@ impl Catalog {
 		let subsectors = Self::pproc_ssectors(ssectors.read_bytes());
 		let things = Self::pproc_things(things.read_bytes());
 
-		let id = format!(
-			"{mount_id}/{id}",
-			mount_id = ctx.mntinfo.id(),
-			id = dir.file_stem()
-		);
-
 		let level = Level {
+			header: AssetHeader {
+				id: format!(
+					"{mount_id}/{id}",
+					mount_id = ctx.mntinfo.id(),
+					id = dir.file_stem()
+				),
+			},
 			meta: LevelMeta {
 				name: String::default(),
-				label: dir.file_stem().to_string(),
 				author_name: String::default(),
 				music: None,
 				next: None,
@@ -216,7 +216,9 @@ impl Catalog {
 			things,
 		};
 
-		Some(Ok(self.register_asset(id, level)))
+		self.register_asset(ctx, level);
+
+		Some(Ok(()))
 	}
 
 	#[must_use]

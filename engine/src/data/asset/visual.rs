@@ -10,15 +10,15 @@ use bevy::prelude::Vec2;
 use byteorder::{LittleEndian, ReadBytesExt};
 use image::{ImageBuffer, Rgba};
 
-use super::{Asset, AssetKind, Record};
+use super::AssetHeader;
 
 #[derive(Debug)]
 pub struct ColorMap(pub [u8; 256]);
 
 #[derive(Debug)]
 pub struct Endoom {
-	colors: [u8; 2000],
-	text: [u8; 2000],
+	pub colors: [u8; 2000],
+	pub text: [u8; 2000],
 }
 
 impl Endoom {
@@ -50,20 +50,9 @@ impl Endoom {
 /// Stored in RGBA8 format.
 #[derive(Debug)]
 pub struct Image {
+	pub header: AssetHeader,
 	pub inner: image::RgbaImage,
 	pub offset: Vec2,
-}
-
-impl Asset for Image {
-	const KIND: AssetKind = AssetKind::Image;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.image
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.image
-	}
 }
 
 impl Image {
@@ -72,7 +61,7 @@ impl Image {
 	/// Does not allocate until reasonably certain that `bytes` is a picture,
 	/// so `try_from_picture.is_some()` can be used as a fairly cheap check.
 	#[must_use]
-	pub fn try_from_picture(bytes: &[u8], palette: &Palette) -> Option<Self> {
+	pub fn try_from_picture(bytes: &[u8], palette: &Palette) -> Option<(image::RgbaImage, Vec2)> {
 		const HEADER_SIZE: usize = std::mem::size_of::<u16>() * 4;
 
 		if bytes.len() < HEADER_SIZE {
@@ -149,8 +138,6 @@ impl Image {
 					let pixel = palette.0[pal_entry as usize];
 					let row = i as u32;
 					let col = (ii as u32) + (row_start as u32);
-					// debug_assert!((col as u16) < width);
-					// debug_assert!((row as u16) < height);
 					ret.put_pixel(row, col, pixel);
 				}
 
@@ -158,10 +145,7 @@ impl Image {
 			}
 		}
 
-		Some(Self {
-			inner: ret,
-			offset: Vec2::new(left as f32, top as f32),
-		})
+		Some((ret, Vec2::new(left as f32, top as f32)))
 	}
 }
 
@@ -177,48 +161,19 @@ impl Palette {
 }
 
 #[derive(Debug)]
-pub struct PaletteSet(pub [Palette; 14]);
-
-impl Asset for PaletteSet {
-	const KIND: AssetKind = AssetKind::Palettes;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.palettes
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.palettes
-	}
+pub struct PaletteSet {
+	pub header: AssetHeader,
+	pub palettes: [Palette; 14],
 }
 
 /// A placeholder type.
 #[derive(Debug)]
-pub struct PolyModel;
-
-impl Asset for PolyModel {
-	const KIND: AssetKind = AssetKind::PolyModel;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.poly_model
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.poly_model
-	}
+pub struct PolyModel {
+	pub header: AssetHeader,
 }
 
 /// A placeholder type.
 #[derive(Debug)]
-pub struct VoxelModel;
-
-impl Asset for VoxelModel {
-	const KIND: AssetKind = AssetKind::VoxelModel;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.voxel_model
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.voxel_model
-	}
+pub struct VoxelModel {
+	pub header: AssetHeader,
 }

@@ -6,8 +6,6 @@ use zip::result::ZipError;
 
 use crate::{wad, VPathBuf};
 
-use super::AssetKind;
-
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`MountError`].
 #[derive(Debug)]
@@ -67,15 +65,6 @@ pub enum AssetError {
 	///
 	/// [`Record`]: super::Record
 	NotFound(String),
-	/// A caller tried to get a [`Handle`] to an asset by path and found it,
-	/// but requested a type different to the [`Record`]'s storage type.
-	///
-	/// [`Handle`]: super::Handle
-	/// [`Record`]: super::Record
-	TypeMismatch {
-		expected: AssetKind,
-		given: AssetKind,
-	},
 }
 
 impl std::error::Error for AssetError {}
@@ -91,13 +80,6 @@ impl std::fmt::Display for AssetError {
 			}
 			Self::NotFound(id) => {
 				write!(f, "No asset exists by the ID: {id}")
-			}
-			Self::TypeMismatch { expected, given } => {
-				write!(
-					f,
-					"Type mismatch during asset lookup. \
-					Expected {expected:#?}, got {given:#?}.",
-				)
 			}
 		}
 	}
@@ -258,6 +240,7 @@ pub enum PostProcErrorKind {
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingScriptRoot,
 	Level(LevelError),
+	Io(std::io::Error),
 }
 
 impl std::error::Error for PostProcError {}
@@ -289,6 +272,7 @@ impl std::fmt::Display for PostProcError {
 					}
 				)
 			}
+			PostProcErrorKind::Io(err) => err.fmt(f),
 		}
 	}
 }

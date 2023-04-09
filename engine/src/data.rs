@@ -12,13 +12,12 @@ mod test;
 mod vfs;
 
 use std::{
-	marker::PhantomData,
 	path::Path,
-	sync::{atomic, Arc, Weak},
+	sync::{atomic, Arc},
 };
 
 use bevy_egui::egui;
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use globset::Glob;
 use indexmap::IndexMap;
 use parking_lot::{Mutex, RwLock};
@@ -30,7 +29,7 @@ use crate::{utils::path::PathExt, vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 pub use self::{asset::*, error::*, ext::*, interface::*, vfs::*};
 
-use self::detail::{AssetKey, Config, VfsKey};
+use self::detail::{AssetKey, AssetSlotKey, Config, VfsKey};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
@@ -62,26 +61,22 @@ pub struct Catalog {
 	/// - Exact-path lookups are fast.
 	/// - Memory contiguity means that linear searches are non-pessimized.
 	/// - If a load fails, restoring the previous state is simple truncation.
-	pub(self) files: IndexMap<VfsKey, File>, // Q: FNV hashing?
+	pub(self) files: IndexMap<VfsKey, File>,
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
-	pub(self) mounts: Vec<MountInfo>,
-	/// The "source of truth" for record pointers.
-	pub(self) assets: DashMap<AssetKey, Arc<Record>>,
-	/// Asset storage without namespacing. Thus, requesting `MAP01` returns
+	pub(self) mounts: Vec<Mount>,
+	/// In each value:
+	/// - Field `0` is an index into `Self::mounts`.
+	/// - Field `1` is an index into [`Mount::assets`].
+	pub(self) assets: DashMap<AssetKey, (usize, AssetSlotKey)>,
+	/// Asset lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries.
-	pub(self) nicknames: DashMap<Box<str>, SmallVec<[Weak<Record>; 2]>>,
+	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	/// Stored records always wrap a [`Blueprint`].
-	///
-	/// [`Blueprint`]: asset::Blueprint
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[Weak<Record>; 2]>>,
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	/// Stored records always wrap a [`Blueprint`].
-	///
-	/// [`Blueprint`]: asset::Blueprint
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[Weak<Record>; 2]>>,
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	// FNV/aHash for maps using small key types?
 }
 
@@ -136,7 +131,6 @@ impl Catalog {
 			tracker: m_output.tracker,
 			orig_files_len: m_output.orig_files_len,
 			orig_mounts_len: m_output.orig_mounts_len,
-			added: DashSet::default(),
 			new_mounts,
 			errors: {
 				let mut e = Vec::with_capacity(request.paths.len());
@@ -175,7 +169,7 @@ impl Catalog {
 		}
 
 		for mount in self.mounts.drain(len..) {
-			let vpath = mount.virtual_path();
+			let vpath = mount.info.virtual_path();
 
 			self.files.retain(|_, entry| !entry.path.is_child_of(vpath));
 		}
@@ -197,14 +191,14 @@ impl Catalog {
 	/// rather than an assertion that the asset under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<AssetRef<A>> {
+	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<&Arc<A>> {
 		let key = AssetKey::new::<A>(id);
 
-		self.assets.get(&key).map(|kvp| AssetRef {
-			catalog: self,
-			kvp,
-			phantom: PhantomData,
-		})
+		if let Some(kvp) = self.assets.get(&key) {
+			self.mounts[kvp.0].assets[kvp.1].as_any().downcast_ref()
+		} else {
+			None
+		}
 	}
 
 	/// Find an [`Actor`] [`Blueprint`] by a 16-bit editor number.
@@ -212,18 +206,16 @@ impl Catalog {
 	///
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
-	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<Handle<Blueprint>> {
+	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<&Arc<Blueprint>> {
 		self.editor_nums.get(&num).map(|kvp| {
 			let stack = kvp.value();
-
 			let last = stack
 				.last()
 				.expect("Catalog cleanup missed an empty ed-num stack.");
-
-			Handle::from(
-				last.upgrade()
-					.expect("Catalog cleanup missed a dangling ed-num weak pointer."),
-			)
+			self.mounts[last.0].assets[last.1]
+				.as_any()
+				.downcast_ref()
+				.unwrap()
 		})
 	}
 
@@ -232,18 +224,16 @@ impl Catalog {
 	///
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
-	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<Handle<Blueprint>> {
+	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<&Arc<Blueprint>> {
 		self.spawn_nums.get(&num).map(|kvp| {
 			let stack = kvp.value();
-
 			let last = stack
 				.last()
 				.expect("Catalog cleanup missed an empty spawn-num stack.");
-
-			Handle::from(
-				last.upgrade()
-					.expect("Catalog cleanup missed a dangling spawn-num weak pointer."),
-			)
+			self.mounts[last.0].assets[last.1]
+				.as_any()
+				.downcast_ref()
+				.unwrap()
 		})
 	}
 
@@ -312,39 +302,39 @@ impl Catalog {
 	}
 
 	#[must_use]
-	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<Handle<A>> {
-		self.nicknames.get(nick).map(|kvp| {
-			let stack = kvp.value();
+	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&Arc<A>> {
+		let key = AssetKey::new::<A>(nick);
 
+		self.nicknames.get(&key).map(|kvp| {
+			let stack = kvp.value();
 			let last = stack
 				.last()
-				.expect("Catalog cleanup missed an empty nicknamed stack.");
-
-			Handle::from(
-				last.upgrade()
-					.expect("Catalog cleanup missed a dangling nicknamed weak pointer."),
-			)
+				.expect("Catalog cleanup missed an empty nickname stack.");
+			self.mounts[last.0].assets[last.1]
+				.as_any()
+				.downcast_ref()
+				.unwrap()
 		})
 	}
 
 	#[must_use]
-	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<Handle<A>> {
-		self.nicknames.get(nick).map(|kvp| {
+	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&Arc<A>> {
+		let key = AssetKey::new::<A>(nick);
+
+		self.nicknames.get(&key).map(|kvp| {
 			let stack = kvp.value();
-
 			let last = stack
-				.last()
-				.expect("Catalog cleanup missed an empty nicknamed stack.");
-
-			Handle::from(
-				last.upgrade()
-					.expect("Catalog cleanup missed a dangling nicknamed weak pointer."),
-			)
+				.first()
+				.expect("Catalog cleanup missed an empty nickname stack.");
+			self.mounts[last.0].assets[last.1]
+				.as_any()
+				.downcast_ref()
+				.unwrap()
 		})
 	}
 
 	#[must_use]
-	pub fn mounts(&self) -> &[MountInfo] {
+	pub fn mounts(&self) -> &[Mount] {
 		&self.mounts
 	}
 

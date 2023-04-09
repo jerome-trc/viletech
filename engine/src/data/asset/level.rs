@@ -7,7 +7,7 @@ use glam::{DVec2, DVec3, IVec2};
 
 use crate::{EditorNum, ShortId};
 
-use super::{super::InHandle, Asset, AssetKind, Audio, Image, Record};
+use super::{super::InHandle, AssetHeader, Audio, Image};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vertex(pub DVec2);
@@ -280,6 +280,7 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct Level {
+	pub header: AssetHeader,
 	pub meta: LevelMeta,
 	pub udmf_namespace: Option<UdmfNamespace>,
 	pub vertices: Vec<Vertex>,
@@ -291,25 +292,14 @@ pub struct Level {
 	pub things: Vec<Thing>,
 }
 
-impl Asset for Level {
-	const KIND: AssetKind = AssetKind::Level;
-
-	unsafe fn get(record: &Record) -> &Self {
-		&record.asset.level
-	}
-
-	unsafe fn get_mut(record: &mut Record) -> &mut Self {
-		&mut record.asset.level
-	}
-}
-
 /// Comes from a map entry in a MAPINFO lump.
 #[derive(Debug)]
 pub struct LevelMeta {
-	/// Displayed to the user. May be a string ID.
+	/// e.g. "Entryway". Displayed to the user. May be a string ID. The asset ID
+	/// will be, for example, "DOOM2/MAP01" and gets stored in the [header].
+	///
+	/// [header]: AssetHeader
 	pub name: String,
-	/// Prepended to the level name on the automap. May be a string ID.
-	pub label: String,
 	/// May be a string ID.
 	pub author_name: String,
 	pub music: Option<InHandle<Audio>>,

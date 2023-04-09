@@ -1,6 +1,9 @@
 //! Internal implementation details that don't belong anywhere else.
 
-use std::hash::{Hash, Hasher};
+use std::{
+	any::TypeId,
+	hash::{Hash, Hasher},
+};
 
 use bevy_egui::egui;
 use fasthash::SeaHasher;
@@ -60,19 +63,22 @@ impl Catalog {
 
 	pub(super) fn clean(&mut self) {
 		self.nicknames.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+			kvp.value_mut()
+				.retain(|(i_mount, i_asset)| self.mounts[*i_mount].assets.contains_key(*i_asset));
 		});
 
 		self.nicknames.retain(|_, v| !v.is_empty());
 
 		self.editor_nums.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+			kvp.value_mut()
+				.retain(|(i_mount, i_asset)| self.mounts[*i_mount].assets.contains_key(*i_asset));
 		});
 
 		self.editor_nums.retain(|_, v| !v.is_empty());
 
 		self.spawn_nums.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|weak| weak.upgrade().is_some());
+			kvp.value_mut()
+				.retain(|(i_mount, i_asset)| self.mounts[*i_mount].assets.contains_key(*i_asset));
 		});
 
 		self.spawn_nums.retain(|_, v| !v.is_empty());
@@ -147,20 +153,22 @@ impl Catalog {
 		ui.heading("Assets");
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
-			for r in &self.assets {
-				let resp = ui.label(r.value().id());
+			for mount in &self.mounts {
+				for (_, asset) in &mount.assets {
+					let resp = ui.label(&asset.header().id);
 
-				let resp = if resp.hovered() {
-					resp.highlight()
-				} else {
-					resp
-				};
+					let resp = if resp.hovered() {
+						resp.highlight()
+					} else {
+						resp
+					};
 
-				resp.on_hover_ui_at_pointer(|ui| {
-					egui::Area::new("vtec_asset_tt").show(ctx, |_| {
-						ui.label(format!("{:?}", r.value().kind()));
+					resp.on_hover_ui_at_pointer(|ui| {
+						egui::Area::new("vtec_asset_tt").show(ctx, |_| {
+							ui.label(format!("{:?}", asset.type_name()));
+						});
 					});
-				});
+				}
 			}
 		});
 	}
@@ -175,7 +183,6 @@ impl Catalog {
 /// components (with a preceding path separator hashed beforehand if necessary)
 /// one at a time, rather than as a whole string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
 pub(super) struct VfsKey(u64);
 
 impl VfsKey {
@@ -189,9 +196,9 @@ impl VfsKey {
 
 /// Assets of different types are allowed to share IDs (to the scripts, the Rust
 /// type system is an irrelevant detail). The actual map keys are composed by
-/// hashing the ID string slice and then the type ID, in that order.
+/// hashing the ID string (or part of the ID string, in the case of the nickname
+/// lookup table) and then the type ID, in that order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
 pub(super) struct AssetKey(u64);
 
 impl AssetKey {
@@ -199,9 +206,14 @@ impl AssetKey {
 	pub(super) fn new<A: Asset>(id: &str) -> Self {
 		let mut hasher = SeaHasher::default();
 		id.hash(&mut hasher);
-		A::KIND.hash(&mut hasher);
+		TypeId::of::<A>().hash(&mut hasher);
 		Self(hasher.finish())
 	}
+}
+
+slotmap::new_key_type! {
+	/// See [`crate::data::Mount`].
+	pub struct AssetSlotKey;
 }
 
 /// Intermediate format for parsing parts of [`MountInfo`] from meta.toml.

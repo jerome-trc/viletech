@@ -27,8 +27,9 @@ use super::{abi::Abi, func::TFunc, tsys, Error, Function, TypeInfo};
 #[derive(Debug)]
 pub struct Project {
 	modules: Vec<Module>,
-	/// In each value, `0` corresponds to an element in `Self::modules` and `1`
-	/// correpsonds to an element in `Module::symbols`.
+	/// In each value:
+	/// - Field `0` is an index into `Self::modules`.
+	/// - Field `1` is an index into [`Module::symbols`].
 	symbols: DashMap<SymbolKey, (usize, usize)>,
 }
 
@@ -141,9 +142,9 @@ pub struct SymbolHeader {
 	pub name: String,
 }
 
-/// Thin wrapper around an [`Arc`] pointing to a [`Symbol`]'s storage. Attaching
-/// a generic type allows the pointer to be safely downcast without any checks,
-/// enabling safe, instant access to a symbol's data from anywhere in the engine.
+/// Thin wrapper around an [`Arc`] pointing to an [`Symbol`]. Attaching a generic
+/// type allows the pointer to be pre-downcast, so dereferencing is as fast as
+/// with any other pointer with no unsafe code required.
 #[derive(Debug)]
 pub struct Handle<S: Symbol>(Arc<S>, PhantomData<S>);
 

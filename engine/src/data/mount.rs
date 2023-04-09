@@ -11,11 +11,12 @@ use std::{
 use bevy::prelude::{info, warn};
 use parking_lot::Mutex;
 use rayon::prelude::*;
+use slotmap::SlotMap;
 use zip::ZipArchive;
 
 use crate::{
-	data::{detail::MountMetaIngest, MountErrorKind, MountPointError},
-	utils::{io::*, path::PathExt, string::version_from_string},
+	data::{detail::MountMetaIngest, Mount, MountErrorKind, MountMeta, MountPointError},
+	utils::{io::*, path::PathExt},
 	wad, VPath, VPathBuf,
 };
 
@@ -68,6 +69,8 @@ impl Catalog {
 			ctx.tracker.mount_target.load(atomic::Ordering::SeqCst) as usize,
 			mount_reqs.len()
 		);
+
+		ctx.errors.lock().resize_with(mount_reqs.len(), Vec::new);
 
 		// To enable atomicity, remember where `self.files` and `self.mounts` were.
 		// Truncate back to them upon a failure.
@@ -168,24 +171,22 @@ impl Catalog {
 					);
 				}
 
-				mounts.push(MountInfo {
-					id: mount_point
-						.file_stem()
-						.unwrap()
-						.to_str()
-						.unwrap()
-						.to_string(),
-					format,
-					kind: MountKind::Misc,
-					version: None,
-					name: None,
-					description: None,
-					authors: Vec::default(),
-					copyright: None,
-					links: Vec::default(),
-					real_path: real_path.into_boxed_path(),
-					virtual_path: mount_point.into_boxed_path(),
-					script_root: None,
+				mounts.push(Mount {
+					assets: SlotMap::default(),
+					info: MountInfo {
+						id: mount_point
+							.file_stem()
+							.unwrap()
+							.to_str()
+							.unwrap()
+							.to_string(),
+						format,
+						kind: MountKind::Misc,
+						meta: None,
+						real_path: real_path.into_boxed_path(),
+						virtual_path: mount_point.into_boxed_path(),
+						script_root: None,
+					},
 				});
 			}
 		}
@@ -213,9 +214,10 @@ impl Catalog {
 		// Register mounts; learn as much about them as possible in the process.
 
 		for mut mount in mounts {
-			mount.kind = self.resolve_mount_kind(mount.format(), mount.virtual_path());
+			mount.info.kind =
+				self.resolve_mount_kind(mount.info.format(), mount.info.virtual_path());
 
-			self.resolve_mount_metadata(&mut mount);
+			self.resolve_mount_metadata(&mut mount.info);
 			self.mounts.push(mount);
 		}
 
@@ -845,43 +847,39 @@ impl Catalog {
 	fn resolve_mount_metadata(&self, info: &mut MountInfo) {
 		debug_assert!(!info.id.is_empty());
 
-		if info.kind == MountKind::VileTech {
-			let meta_path = info.virtual_path().join("meta.toml");
-			let meta_file = self.get_file(&meta_path).unwrap();
-
-			let ingest: MountMetaIngest = match toml::from_str(meta_file.read_str()) {
-				Ok(toml) => toml,
-				Err(err) => {
-					warn!(
-						"Invalid meta.toml file: {p}\r\n\t\
-						Details: {err}\r\n\t\
-						This mount's metadata may be incomplete.",
-						p = meta_path.display()
-					);
-
-					return;
-				}
-			};
-
-			info.id = ingest.id;
-			info.version = ingest.version;
-			info.name = ingest.name;
-			info.description = ingest.description;
-			info.authors = ingest.authors;
-			info.copyright = ingest.copyright;
-			info.links = ingest.links;
-			info.script_root = ingest.script_root.map(|vpb| vpb.into_boxed_path());
+		if info.kind != MountKind::VileTech {
+			// Q: Should we bother trying to infer the mount's version?
 			return;
 		}
 
-		// Try to infer the mount's version based on the mount point.
+		let meta_path = info.virtual_path().join("meta.toml");
+		let meta_file = self.get_file(&meta_path).unwrap();
 
-		let mut id = info.id.clone();
+		let ingest: MountMetaIngest = match toml::from_str(meta_file.read_str()) {
+			Ok(toml) => toml,
+			Err(err) => {
+				warn!(
+					"Invalid meta.toml file: {p}\r\n\t\
+					Details: {err}\r\n\t\
+					This mount's metadata may be incomplete.",
+					p = meta_path.display()
+				);
 
-		if let Some(vers) = version_from_string(&mut id) {
-			info.version = Some(vers);
-			info.name = Some(id);
-		}
+				return;
+			}
+		};
+
+		info.id = ingest.id;
+		info.script_root = ingest.script_root.map(|vpb| vpb.into_boxed_path());
+
+		info.meta = Some(Box::new(MountMeta {
+			version: ingest.version,
+			name: ingest.name,
+			description: ingest.description,
+			authors: ingest.authors,
+			copyright: ingest.copyright,
+			links: ingest.links,
+		}));
 	}
 
 	/// Truncate `self.files` and `self.mounts` back to the given points.

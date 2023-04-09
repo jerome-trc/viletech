@@ -1,7 +1,6 @@
 //! Assorted parts of the public API, in a separate file for cleanliness.
 
 use std::{
-	marker::PhantomData,
 	path::Path,
 	sync::{
 		atomic::{self, AtomicU32, AtomicU8},
@@ -9,68 +8,14 @@ use std::{
 	},
 };
 
+use slotmap::SlotMap;
+
 use crate::VPath;
 
 use super::{
-	detail::{AssetKey, VfsKey},
-	Asset, Catalog, File, FileKind, Record,
+	detail::{AssetSlotKey, VfsKey},
+	Asset, Catalog, File, FileKind,
 };
-
-#[derive(Debug)]
-pub struct AssetRef<'cat, A: Asset> {
-	pub(super) catalog: &'cat Catalog,
-	pub(super) kvp: dashmap::mapref::one::Ref<'cat, AssetKey, Arc<Record>>,
-	pub(super) phantom: PhantomData<&'cat A>,
-}
-
-impl<A: Asset> AssetRef<'_, A> {
-	#[must_use]
-	pub fn catalog(&self) -> &Catalog {
-		self.catalog
-	}
-
-	#[must_use]
-	pub fn record(&self) -> &Arc<Record> {
-		self.kvp.value()
-	}
-}
-
-impl<A: Asset> std::ops::Deref for AssetRef<'_, A> {
-	type Target = A;
-
-	fn deref(&self) -> &Self::Target {
-		// SAFETY: `A` was verified to be correct type by catalog's interface.
-		// Also note that `unwrap_unchecked` contains a debug assertion.
-		unsafe { self.kvp.value().downcast().unwrap_unchecked() }
-	}
-}
-
-pub struct AssetRefIter<'cat, A: Asset> {
-	pub(super) catalog: &'cat Catalog,
-	pub(super) kvp: dashmap::mapref::multiple::RefMulti<'cat, AssetKey, Arc<Record>>,
-	pub(super) phantom: PhantomData<&'cat A>,
-}
-
-impl<A: Asset> AssetRefIter<'_, A> {
-	#[must_use]
-	pub fn catalog(&self) -> &Catalog {
-		self.catalog
-	}
-
-	pub fn record(&self) -> &Arc<Record> {
-		self.kvp.value()
-	}
-}
-
-impl<A: Asset> std::ops::Deref for AssetRefIter<'_, A> {
-	type Target = A;
-
-	fn deref(&self) -> &Self::Target {
-		// SAFETY: `A` was verified to be correct type by catalog's interface.
-		// Also note that `unwrap_unchecked` contains a debug assertion.
-		unsafe { self.kvp.value().downcast().unwrap_unchecked() }
-	}
-}
 
 // FileRef /////////////////////////////////////////////////////////////////////
 
@@ -166,10 +111,14 @@ impl PartialEq for FileRef<'_> {
 
 impl Eq for FileRef<'_> {}
 
-// MountInfo ///////////////////////////////////////////////////////////////////
+// Mount, MountInfo ////////////////////////////////////////////////////////////
 
-/// Metadata about a mounted file/directory. For VileTech packages, this comes
-/// from a `meta.toml` file. Otherwise it is left largely unpopulated.
+#[derive(Debug)]
+pub struct Mount {
+	pub(super) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
+	pub(super) info: MountInfo,
+}
+
 #[derive(Debug)]
 pub struct MountInfo {
 	/// Specified by `meta.toml` if one exists.
@@ -177,25 +126,11 @@ pub struct MountInfo {
 	pub(super) id: String,
 	pub(super) format: MountFormat,
 	pub(super) kind: MountKind,
-	pub(super) version: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) name: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) description: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) authors: Vec<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) copyright: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Allow a package to link to its forum post/homepage/Discord server/etc.
-	pub(super) links: Vec<String>,
 	/// Always canonicalized, but may not necessarily be valid UTF-8.
 	pub(super) real_path: Box<Path>,
 	pub(super) virtual_path: Box<VPath>,
+	/// Comes from `meta.toml`, so most mounts will lack this.
+	pub(super) meta: Option<Box<MountMeta>>,
 	/// The base of the package's VZScript include tree.
 	///
 	/// - For VileTech packages, this is specified by a `meta.toml` file.
@@ -214,6 +149,36 @@ pub struct MountInfo {
 	// - Incompatibility specification?
 	// - Ordering specification?
 	// - Forced specifications, or just strongly-worded warnings? Multiple levels?
+}
+
+impl MountInfo {
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
+	}
+
+	#[must_use]
+	pub fn format(&self) -> MountFormat {
+		self.format
+	}
+
+	/// The real file/directory this mount represents.
+	/// Always canonicalized, but may not necessarily be valid UTF-8.
+	#[must_use]
+	pub fn real_path(&self) -> &Path {
+		&self.real_path
+	}
+
+	/// Also known as the "mount point". Corresponds to a VFS node.
+	#[must_use]
+	pub fn virtual_path(&self) -> &VPath {
+		&self.virtual_path
+	}
+
+	#[must_use]
+	pub fn metadata(&self) -> Option<&MountMeta> {
+		self.meta.as_deref()
+	}
 }
 
 /// Informs the rules used for post-processing assets from a mount.
@@ -253,30 +218,27 @@ pub enum MountFormat {
 	// TODO: Support LZMA, XZ, GRP, PAK, RFF, SSI
 }
 
-impl MountInfo {
-	#[must_use]
-	pub fn id(&self) -> &str {
-		&self.id
-	}
+#[derive(Debug)]
+pub struct MountMeta {
+	pub(super) version: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) name: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) description: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) authors: Vec<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) copyright: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Allow a package to link to its forum post/homepage/Discord server/etc.
+	pub(super) links: Vec<String>,
+}
 
-	#[must_use]
-	pub fn format(&self) -> MountFormat {
-		self.format
-	}
-
-	/// The real file/directory this mount represents.
-	/// Always canonicalized, but may not necessarily be valid UTF-8.
-	#[must_use]
-	pub fn real_path(&self) -> &Path {
-		&self.real_path
-	}
-
-	/// Also known as the "mount point". Corresponds to a VFS node.
-	#[must_use]
-	pub fn virtual_path(&self) -> &VPath {
-		&self.virtual_path
-	}
-
+impl MountMeta {
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
 		match &self.name {
