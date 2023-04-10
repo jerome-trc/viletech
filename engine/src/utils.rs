@@ -2,7 +2,6 @@
 
 pub mod env;
 pub mod io;
-pub mod lang;
 #[macro_use]
 pub mod macros;
 pub mod path;
