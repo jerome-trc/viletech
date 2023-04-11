@@ -4,11 +4,7 @@
 
 mod level;
 
-use std::{
-	io::Cursor,
-	ops::Range,
-	sync::{atomic, Arc},
-};
+use std::{io::Cursor, ops::Range, sync::Arc};
 
 use arrayvec::ArrayVec;
 use bevy::prelude::info;
@@ -22,7 +18,7 @@ use smallvec::smallvec;
 use crate::{vzs, VPathBuf};
 
 use super::{
-	detail::{AssetKey, AssetSlotKey},
+	detail::{AssetKey, AssetSlotKey, Outcome},
 	Asset, AssetHeader, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind, Palette,
 	PaletteSet, PostProcError, PostProcErrorKind,
 };
@@ -30,20 +26,36 @@ use super::{
 #[derive(Debug)]
 pub(super) struct Context {
 	pub(super) tracker: Arc<LoadTracker>,
-	// To enable atomicity, remember where `self.files` and `self.mounts` were.
-	// Truncate back to them in the event of failure.
-	pub(super) orig_files_len: usize,
-	pub(super) orig_mounts_len: usize,
 	pub(super) new_mounts: Range<usize>,
 	/// Returning errors through the post-proc call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	pub(super) errors: Vec<Mutex<Vec<PostProcError>>>,
 }
 
+impl Context {
+	#[must_use]
+	pub(super) fn new(tracker: Arc<LoadTracker>, new_mounts: Range<usize>) -> Self {
+		Self {
+			tracker,
+			new_mounts: new_mounts.clone(),
+			errors: {
+				let new_mount_count = new_mounts.end - new_mounts.start;
+				let mut e = Vec::with_capacity(new_mount_count);
+
+				for _ in 0..new_mount_count {
+					e.push(Mutex::new(vec![]));
+				}
+
+				e
+			},
+		}
+	}
+}
+
 /// Context relevant to operations on one mount.
 #[derive(Debug)]
 pub(self) struct SubContext<'ctx> {
-	pub(self) _tracker: &'ctx Arc<LoadTracker>,
+	pub(self) tracker: &'ctx Arc<LoadTracker>,
 	pub(self) assets: &'ctx Mutex<SlotMap<AssetSlotKey, Arc<dyn Asset>>>,
 	pub(self) i_mount: usize,
 	pub(self) mntinfo: &'ctx MountInfo,
@@ -70,11 +82,14 @@ impl Catalog {
 	/// - `self.mounts` has been populated.
 	/// - Load tracker has already had its post-proc target number set.
 	/// - `ctx.errors` has been populated.
-	pub(super) fn postproc(&mut self, mut ctx: Context) -> Output {
+	pub(super) fn postproc(
+		&mut self,
+		mut ctx: Context,
+	) -> Outcome<Output, Vec<Vec<PostProcError>>> {
 		debug_assert!(!ctx.errors.is_empty());
 
 		let orig_modules_len = self.vzscript.modules().len();
-		let to_reserve = ctx.tracker.pproc_target.load(atomic::Ordering::SeqCst) as usize;
+		let to_reserve = ctx.tracker.pproc_target();
 
 		debug_assert!(to_reserve > 0);
 
@@ -90,8 +105,12 @@ impl Catalog {
 		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
 		for i in ctx.new_mounts.clone() {
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
+
 			let subctx = SubContext {
-				_tracker: &ctx.tracker,
+				tracker: &ctx.tracker,
 				i_mount: i,
 				mntinfo: &self.mounts[i].info,
 				assets: &staging[i - ctx.new_mounts.start],
@@ -106,7 +125,7 @@ impl Catalog {
 				MountKind::Misc => self.pproc_pass1_file(&subctx),
 			};
 
-			if let Ok(Some(m)) = module {
+			if let Outcome::Ok(m) = module {
 				self.vzscript.add_module(m);
 			} // Otherwise, errors and warnings have already been added to `ctx`.
 		}
@@ -117,8 +136,12 @@ impl Catalog {
 		// - Non-picture-format images.
 
 		for i in ctx.new_mounts.clone() {
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
+
 			let subctx = SubContext {
-				_tracker: &ctx.tracker,
+				tracker: &ctx.tracker,
 				i_mount: i,
 				mntinfo: &self.mounts[i].info,
 				assets: &staging[i - ctx.new_mounts.start],
@@ -139,8 +162,12 @@ impl Catalog {
 		// - Maps, which need textures, music, scripts, blueprints...
 
 		for i in ctx.new_mounts.clone() {
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
+
 			let subctx = SubContext {
-				_tracker: &ctx.tracker,
+				tracker: &ctx.tracker,
 				i_mount: i,
 				mntinfo: &self.mounts[i].info,
 				assets: &staging[i - ctx.new_mounts.start],
@@ -154,10 +181,14 @@ impl Catalog {
 			}
 		}
 
-		let errors = std::mem::take(&mut ctx.errors)
+		let mut errors: Vec<Vec<PostProcError>> = std::mem::take(&mut ctx.errors)
 			.into_iter()
 			.map(|mutex| mutex.into_inner())
 			.collect();
+
+		for subvec in &mut errors {
+			subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+		}
 
 		let ret = Output { errors };
 
@@ -165,21 +196,17 @@ impl Catalog {
 			self.on_pproc_fail(&ctx, orig_modules_len);
 		} else {
 			// TODO: Make each successfully processed file increment progress.
-			ctx.tracker.pproc_progress.store(
-				ctx.tracker.pproc_target.load(atomic::Ordering::SeqCst),
-				atomic::Ordering::SeqCst,
-			);
-
+			ctx.tracker.finish_pproc();
 			info!("Loading complete.");
 		}
 
-		ret
+		Outcome::Ok(ret)
 	}
 
 	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
 	/// DSLs all go into the same VZS module, regardless of which are present
 	/// and which are absent.
-	fn pproc_pass1_vpk(&self, ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
+	fn pproc_pass1_vpk(&self, ctx: &SubContext) -> Outcome<vzs::Module, ()> {
 		let ret = None;
 
 		let script_root: VPathBuf = if let Some(srp) = &ctx.mntinfo.script_root {
@@ -196,9 +223,13 @@ impl Catalog {
 					kind: PostProcErrorKind::MissingScriptRoot,
 				});
 
-				return Err(());
+				return Outcome::Err(());
 			}
 		};
+
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
 
 		let inctree = vzs::parse_include_tree(ctx.mntinfo.virtual_path(), script_root);
 
@@ -206,17 +237,28 @@ impl Catalog {
 			unimplemented!("Soon");
 		}
 
-		Ok(ret)
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
+
+		match ret {
+			Some(module) => Outcome::Ok(module),
+			None => Outcome::None,
+		}
 	}
 
-	fn pproc_pass1_file(&self, ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
+	fn pproc_pass1_file(&self, ctx: &SubContext) -> Outcome<vzs::Module, ()> {
 		let ret = None;
 
 		let file = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
 
 		// Pass 1 only deals in text files.
 		if !file.is_text() {
-			return Ok(None);
+			return Outcome::None;
+		}
+
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
 		}
 
 		if file
@@ -233,19 +275,20 @@ impl Catalog {
 			unimplemented!();
 		}
 
-		Ok(ret)
+		match ret {
+			Some(module) => Outcome::Ok(module),
+			None => Outcome::None,
+		}
 	}
 
-	fn pproc_pass1_pk(&self, _ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
-		let ret = None;
-		// TODO
-		Ok(ret)
+	fn pproc_pass1_pk(&self, _ctx: &SubContext) -> Outcome<vzs::Module, ()> {
+		// TODO: Soon!
+		Outcome::None
 	}
 
-	fn pproc_pass1_wad(&self, _ctx: &SubContext) -> Result<Option<vzs::Module>, ()> {
-		let ret = None;
-		// TODO
-		Ok(ret)
+	fn pproc_pass1_wad(&self, _ctx: &SubContext) -> Outcome<vzs::Module, ()> {
+		// TODO: Soon!
+		Outcome::None
 	}
 
 	fn pproc_pass2_wad(&self, ctx: &SubContext) {
@@ -253,6 +296,10 @@ impl Catalog {
 
 		wad.children().par_bridge().for_each(|child| {
 			if !child.is_readable() {
+				return;
+			}
+
+			if ctx.tracker.is_cancelled() {
 				return;
 			}
 
@@ -284,6 +331,10 @@ impl Catalog {
 			.filter(|c| !c.is_empty())
 			.par_bridge()
 			.for_each(|child| {
+				if ctx.tracker.is_cancelled() {
+					return;
+				}
+
 				if child.is_dir() {
 					self.pproc_pass3_wad_dir(ctx, child)
 				} else {
@@ -307,6 +358,8 @@ impl Catalog {
 		{
 			return;
 		}
+
+		ctx.tracker.add_pproc_progress(1);
 
 		let is_pic = self.pproc_picture(ctx, bytes, fstem);
 
@@ -343,10 +396,9 @@ impl Catalog {
 		}
 	}
 
-	fn on_pproc_fail(&mut self, ctx: &Context, orig_modules_len: usize) {
+	fn on_pproc_fail(&mut self, _ctx: &Context, orig_modules_len: usize) {
 		self.vzscript.truncate(orig_modules_len);
-		self.on_mount_fail(ctx.orig_files_len, ctx.orig_mounts_len);
-		self.clean();
+		self.clean_maps();
 	}
 }
 

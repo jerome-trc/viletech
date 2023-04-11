@@ -11,10 +11,7 @@ mod pproc;
 mod test;
 mod vfs;
 
-use std::{
-	path::Path,
-	sync::{atomic, Arc},
-};
+use std::{path::Path, sync::Arc};
 
 use bevy_egui::egui;
 use dashmap::DashMap;
@@ -77,7 +74,7 @@ pub struct Catalog {
 	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
 	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
-	// FNV/aHash for maps using small key types?
+	// Q: FNV/aHash for maps using small key types?
 }
 
 impl Catalog {
@@ -85,75 +82,45 @@ impl Catalog {
 	/// VFS, and then post-processes the files to decompose them into assets.
 	/// Much of the important things to know are in the documentation for
 	/// [`LoadRequest`]. The range of possible errors is documented by
-	/// [`MountError`].
+	/// [`MountError`] and [`PostProcError`].
 	///
 	/// Notes:
 	/// - The order of pre-existing VFS entries and mounts is unchanged upon success.
-	/// - Returned `LoadOutcome` objects parallel the given mount requests.
-	/// - This function is atomic; if one load operation fails, all of them fail,
-	/// and the catalog's state is left entirely unchanged.
+	/// - This function is partially atomic. If mounting fails, the catalog's
+	/// state is left entirely unchanged from before calling this. If post-processing
+	/// fails, the VFS state is not restored to before the call as a form of
+	/// memoization, allowing future post-process attempts to skip most mounting
+	/// work (to allow faster mod development cycles).
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
-	#[must_use = "mounting may return errors which should be handled"]
-	pub fn load<RP: AsRef<Path>, MP: AsRef<VPath>>(
-		&mut self,
-		request: LoadRequest<RP, MP>,
-	) -> LoadOutcome {
-		if request.paths.len() > (u8::MAX as usize) {
-			unimplemented!("Loading more than 255 files/folders is unsupported.");
-		}
-
+	#[must_use = "loading may return errors which should be handled"]
+	pub fn load<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
+	where
+		RP: AsRef<Path>,
+		MP: AsRef<VPath>,
+	{
 		let new_mounts = self.mounts.len()..(self.mounts.len() + request.paths.len());
-
-		let ctx = mount::Context {
-			// Build a dummy tracker if none was given to avoid branching later
-			// and simplify the rest of the loading code.
-			tracker: request
-				.tracker
-				.unwrap_or_else(|| Arc::new(LoadTracker::default())),
-			errors: Mutex::new(vec![]),
-		};
-
-		ctx.tracker
-			.mount_target
-			.store(request.paths.len() as u8, atomic::Ordering::SeqCst);
+		let mnt_ctx = mount::Context::new(request.tracker);
 
 		// Note to reader: check `./mount.rs`.
-		let m_output = self.mount(&request.paths, ctx);
-
-		if m_output.any_errs() {
-			return LoadOutcome::MountFail {
-				errors: m_output.errors,
-			};
-		}
-
-		let ctx = pproc::Context {
-			tracker: m_output.tracker,
-			orig_files_len: m_output.orig_files_len,
-			orig_mounts_len: m_output.orig_mounts_len,
-			new_mounts,
-			errors: {
-				let mut e = Vec::with_capacity(request.paths.len());
-
-				for _ in 0..request.paths.len() {
-					e.push(Mutex::new(vec![]));
-				}
-
-				e
-			},
+		let mnt_output = match self.mount(&request.paths, mnt_ctx) {
+			detail::Outcome::Ok(output) => output,
+			detail::Outcome::Err(errors) => return LoadOutcome::MountFail { errors },
+			detail::Outcome::Cancelled => return LoadOutcome::Cancelled,
+			detail::Outcome::None => unreachable!(),
 		};
 
-		let p_output = self.postproc(ctx);
+		// Note to reader: check `./pproc.rs`.
+		let p_ctx = pproc::Context::new(mnt_output.tracker, new_mounts);
 
-		if p_output.any_errs() {
-			LoadOutcome::PostProcFail {
-				errors: p_output.errors,
-			}
-		} else {
-			LoadOutcome::Ok {
-				mount: m_output.errors,
-				pproc: p_output.errors,
-			}
+		match self.postproc(p_ctx) {
+			detail::Outcome::Ok(output) => LoadOutcome::Ok {
+				mount: mnt_output.errors,
+				pproc: output.errors,
+			},
+			detail::Outcome::Err(errors) => LoadOutcome::PostProcFail { errors },
+			detail::Outcome::Cancelled => LoadOutcome::Cancelled,
+			detail::Outcome::None => unreachable!(),
 		}
 	}
 
@@ -176,7 +143,7 @@ impl Catalog {
 
 		self.clear_dirs();
 		self.populate_dirs();
-		self.clean();
+		self.clean_maps();
 	}
 
 	#[must_use]
@@ -398,6 +365,9 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub enum LoadOutcome {
+	/// A cancel was requested externally.
+	/// The catalog's state was left unchanged.
+	Cancelled,
 	/// One or more fatal errors prevented a successful VFS mount.
 	MountFail {
 		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
@@ -422,6 +392,7 @@ impl LoadOutcome {
 	#[must_use]
 	pub fn num_errs(&self) -> usize {
 		match self {
+			LoadOutcome::Cancelled => 0,
 			LoadOutcome::MountFail { errors } => {
 				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}

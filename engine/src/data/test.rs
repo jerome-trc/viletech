@@ -43,6 +43,9 @@ fn load() {
 	let outcome = catalog.load(request());
 
 	match outcome {
+		LoadOutcome::Cancelled => {
+			panic!("Unexpected mount cancellation.");
+		}
 		LoadOutcome::MountFail { .. } => {
 			panic!("Mount failure.")
 		}
@@ -73,7 +76,7 @@ fn load() {
 
 	assert!(
 		catalog.all_files().count() == EXPECTED,
-		"Expected {EXPECTED} mounts, found: {count}",
+		"Expected {EXPECTED} mounted files, found: {count}",
 		count = catalog.all_files().count()
 	);
 }

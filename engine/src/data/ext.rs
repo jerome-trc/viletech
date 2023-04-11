@@ -64,6 +64,7 @@ impl CatalogExt for Catalog {
 
 				Ok(())
 			}
+			LoadOutcome::Cancelled => unreachable!("Cancelled base-data load."),
 		}
 	}
 

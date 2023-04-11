@@ -3,7 +3,7 @@
 use std::{
 	path::Path,
 	sync::{
-		atomic::{self, AtomicU32, AtomicU8},
+		atomic::{self, AtomicBool, AtomicUsize},
 		Arc,
 	},
 };
@@ -188,15 +188,15 @@ pub enum MountKind {
 	/// (ASCII-case-ignored), that indicates that the mount is a VileTech package.
 	VileTech,
 	/// If mounting an archive with:
-	/// - no immediate text file child named `meta.toml`
-	/// - the extension `.pk3`, `.ipk3`, `.pk7`, or `.ipk7`
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pk3`, `.ipk3`, `.pk7`, or `.ipk7`,
 	/// then this is what gets resolved. If it's a directory instead of an archive,
 	/// the heuristic used is if there's an immediate child text file with a file
 	/// stem belonging to a ZDoom-exclusive lump.
 	ZDoom,
 	/// If mounting an archive with:
-	/// - no immediate text file child named `meta.toml`
-	/// - the extension `.pke`
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pke`,
 	/// then this is what gets resolved. If it's a directory instead of an archive,
 	/// the heuristic used is if there's an immediate child text file with the
 	/// file stem `edfroot` or `emapinfo` (ASCII-case-ignored).
@@ -383,18 +383,31 @@ where
 /// Wrap in an [`Arc`] and use to check how far along a load operation is.
 #[derive(Debug, Default)]
 pub struct LoadTracker {
+	/// Set to `true` to make the load thread return to be joined as soon as possible.
+	/// The catalog's state will be the same as before calling [`Catalog::load`].
+	cancelled: AtomicBool,
 	/// The number of VFS mounts performed (successfully or not) thus far.
-	pub(super) mount_progress: AtomicU8,
+	mount_progress: AtomicUsize,
 	/// The number of VFS mounts requested by the user.
-	pub(super) mount_target: AtomicU8,
+	mount_target: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase which have
 	/// been post-processed thus far.
-	pub(super) pproc_progress: AtomicU32,
+	pproc_progress: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase.
-	pub(super) pproc_target: AtomicU32,
+	pproc_target: AtomicUsize,
 }
 
 impl LoadTracker {
+	#[must_use]
+	pub fn mount_progress(&self) -> usize {
+		self.mount_progress.load(atomic::Ordering::SeqCst)
+	}
+
+	#[must_use]
+	pub fn mount_target(&self) -> usize {
+		self.mount_target.load(atomic::Ordering::SeqCst)
+	}
+
 	/// 0.0 means just started; 1.0 means done.
 	#[must_use]
 	pub fn mount_progress_percent(&self) -> f64 {
@@ -406,6 +419,16 @@ impl LoadTracker {
 		}
 
 		prog as f64 / tgt as f64
+	}
+
+	#[must_use]
+	pub fn pproc_progress(&self) -> usize {
+		self.pproc_progress.load(atomic::Ordering::SeqCst)
+	}
+
+	#[must_use]
+	pub fn pproc_target(&self) -> usize {
+		self.pproc_target.load(atomic::Ordering::SeqCst)
 	}
 
 	/// 0.0 means just started; 1.0 means done.
@@ -433,11 +456,42 @@ impl LoadTracker {
 			>= self.pproc_target.load(atomic::Ordering::SeqCst)
 	}
 
-	pub(super) fn inc_mount_progress(&self) {
-		self.mount_progress.fetch_add(1, atomic::Ordering::SeqCst);
+	pub fn cancel(&self) {
+		self.cancelled.store(true, atomic::Ordering::SeqCst);
 	}
 
-	pub(super) fn _inc_pproc_progress(&self) {
-		self.pproc_progress.fetch_add(1, atomic::Ordering::SeqCst);
+	pub(super) fn set_mount_target(&self, target: usize) {
+		debug_assert_eq!(self.mount_target.load(atomic::Ordering::Relaxed), 0);
+
+		self.mount_target.store(target, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn set_pproc_target(&self, target: usize) {
+		debug_assert_eq!(self.pproc_target.load(atomic::Ordering::Relaxed), 0);
+
+		self.pproc_target.store(target, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn add_mount_progress(&self, amount: usize) {
+		self.mount_progress
+			.fetch_add(amount, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn add_pproc_progress(&self, amount: usize) {
+		self.pproc_progress
+			.fetch_add(amount, atomic::Ordering::SeqCst);
+	}
+
+	/// Temporary.
+	pub(super) fn finish_pproc(&self) {
+		self.pproc_progress.store(
+			self.pproc_target.load(atomic::Ordering::SeqCst),
+			atomic::Ordering::SeqCst,
+		)
+	}
+
+	#[must_use]
+	pub(super) fn is_cancelled(&self) -> bool {
+		self.cancelled.load(atomic::Ordering::SeqCst)
 	}
 }

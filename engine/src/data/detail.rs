@@ -30,7 +30,7 @@ impl Default for Config {
 }
 
 impl Catalog {
-	/// Clears the paths out of every virtual directory in preparation for
+	/// Clears the keys out of every virtual directory in preparation for
 	/// repopulation via `populate_dirs`.
 	pub(super) fn clear_dirs(&mut self) {
 		self.files.par_iter_mut().for_each(|(_, file)| {
@@ -61,7 +61,7 @@ impl Catalog {
 		}
 	}
 
-	pub(super) fn clean(&mut self) {
+	pub(super) fn clean_maps(&mut self) {
 		self.nicknames.par_iter_mut().for_each(|mut kvp| {
 			kvp.value_mut()
 				.retain(|(i_mount, i_asset)| self.mounts[*i_mount].assets.contains_key(*i_asset));
@@ -216,9 +216,9 @@ slotmap::new_key_type! {
 	pub struct AssetSlotKey;
 }
 
-/// Intermediate format for parsing parts of [`MountInfo`] from meta.toml.
+/// Intermediate format for parsing parts of [`MountMeta`] from `meta.toml` files.
 ///
-/// [`MountInfo`]: super::MountInfo
+/// [`MountMeta`]: super::MountMeta
 #[derive(Debug, Default, Deserialize)]
 pub(super) struct MountMetaIngest {
 	pub id: String,
@@ -236,4 +236,14 @@ pub(super) struct MountMetaIngest {
 	pub links: Vec<String>,
 	#[serde(default)]
 	pub script_root: Option<VPathBuf>,
+}
+
+/// For representing all the possible endings for most load operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
+pub(super) enum Outcome<T, E> {
+	Cancelled,
+	None,
+	Err(E),
+	Ok(T),
 }

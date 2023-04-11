@@ -5,7 +5,7 @@
 use std::{
 	io::Cursor,
 	path::{Path, PathBuf},
-	sync::{atomic, Arc},
+	sync::Arc,
 };
 
 use bevy::prelude::{info, warn};
@@ -21,31 +21,34 @@ use crate::{
 };
 
 use super::{
-	detail::VfsKey, Catalog, File, FileKind, LoadTracker, MountError, MountFormat, MountInfo,
-	MountKind,
+	detail::{Outcome, VfsKey},
+	Catalog, File, FileKind, LoadTracker, MountError, MountFormat, MountInfo, MountKind,
 };
 
 #[derive(Debug)]
 pub(super) struct Context {
-	pub(super) tracker: Arc<LoadTracker>,
+	tracker: Arc<LoadTracker>,
 	/// Returning errors through the mounting call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
-	pub(super) errors: Mutex<Vec<Vec<MountError>>>,
+	errors: Mutex<Vec<Vec<MountError>>>,
+}
+
+impl Context {
+	#[must_use]
+	pub(super) fn new(tracker: Option<Arc<LoadTracker>>) -> Self {
+		Self {
+			// Build a dummy tracker if none was given to avoid branching later
+			// and simplify the rest of the loading code.
+			tracker: tracker.unwrap_or_else(|| Arc::new(LoadTracker::default())),
+			errors: Mutex::new(vec![]),
+		}
+	}
 }
 
 #[derive(Debug)]
 pub(super) struct Output {
 	pub(super) errors: Vec<Vec<MountError>>,
-	pub(super) orig_files_len: usize,
-	pub(super) orig_mounts_len: usize,
 	pub(super) tracker: Arc<LoadTracker>,
-}
-
-impl Output {
-	#[must_use]
-	pub(super) fn any_errs(&self) -> bool {
-		self.errors.iter().any(|res| !res.is_empty())
-	}
 }
 
 #[derive(Debug)]
@@ -57,25 +60,13 @@ struct Success {
 }
 
 impl Catalog {
-	/// Preconditions:
-	/// - Load tracker has already had its mount target number set.
-	#[must_use]
 	pub(super) fn mount(
 		&mut self,
 		mount_reqs: &[(impl AsRef<Path>, impl AsRef<VPath>)],
 		mut ctx: Context,
-	) -> Output {
-		debug_assert_eq!(
-			ctx.tracker.mount_target.load(atomic::Ordering::SeqCst) as usize,
-			mount_reqs.len()
-		);
-
+	) -> Outcome<Output, Vec<Vec<MountError>>> {
+		ctx.tracker.set_mount_target(mount_reqs.len());
 		ctx.errors.lock().resize_with(mount_reqs.len(), Vec::new);
-
-		// To enable atomicity, remember where `self.files` and `self.mounts` were.
-		// Truncate back to them upon a failure.
-		let orig_files_len = self.files.len();
-		let orig_mounts_len = self.mounts.len();
 
 		let mut outcomes = Vec::with_capacity(mount_reqs.len());
 		outcomes.resize_with(mount_reqs.len(), || None);
@@ -88,6 +79,10 @@ impl Catalog {
 				(index, real_path.as_ref(), mount_path.as_ref())
 			})
 			.collect();
+
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
 
 		reqs.par_iter().for_each(|(index, real_path, mount_path)| {
 			let index = *index;
@@ -121,7 +116,7 @@ impl Catalog {
 
 			match self.mount_real_unknown(&real_path, &mount_point) {
 				Ok((new_files, format)) => {
-					ctx.tracker.inc_mount_progress();
+					ctx.tracker.add_mount_progress(1);
 
 					outcomes.lock()[index] = Some(Success {
 						format,
@@ -136,11 +131,15 @@ impl Catalog {
 			}
 		});
 
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
+
 		let outcomes = outcomes.into_inner();
 		let failed = outcomes.iter().any(|outc| outc.is_none());
 		let mut mounts = Vec::with_capacity(mount_reqs.len());
 
-		// Push new entries into `self.files` if altogether successful.
+		// Insert new entries into `self.files` if altogether successful.
 		// Don't push mounts to `self.mounts` yet; we need to fully populate the
 		// file tree so we have the context needed to resolve more metadata.
 		if !failed {
@@ -157,9 +156,7 @@ impl Catalog {
 					mount_point.display(),
 				);
 
-				ctx.tracker
-					.pproc_target
-					.store(new_files.len() as u32, atomic::Ordering::SeqCst);
+				ctx.tracker.set_pproc_target(new_files.len());
 
 				for new_file in new_files {
 					let displaced = self.files.insert(VfsKey::new(&new_file.path), new_file);
@@ -191,21 +188,17 @@ impl Catalog {
 			}
 		}
 
-		let errors = std::mem::replace(&mut ctx.errors, Mutex::new(vec![])).into_inner();
+		let mut errors = std::mem::replace(&mut ctx.errors, Mutex::new(vec![])).into_inner();
 
 		debug_assert_eq!(errors.len(), mount_reqs.len());
 
-		let ret = Output {
-			errors,
-			orig_files_len,
-			orig_mounts_len,
-			tracker: ctx.tracker,
-		};
+		for subvec in &mut errors {
+			subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+		}
 
 		// Time for some housekeeping. If we've failed, clean up after ourselves.
 		if failed {
-			self.on_mount_fail(orig_files_len, orig_mounts_len);
-			return ret;
+			return Outcome::Err(errors);
 		}
 
 		// Tell directories about their children.
@@ -221,7 +214,10 @@ impl Catalog {
 			self.mounts.push(mount);
 		}
 
-		ret
+		Outcome::Ok(Output {
+			errors,
+			tracker: ctx.tracker,
+		})
 	}
 
 	/// Mount functions dealing in real (i.e. non-archived) files funnel their
@@ -707,9 +703,7 @@ impl Catalog {
 
 	/// A mount path must:
 	/// - Be valid UTF-8.
-	/// - Be comprised only of ASCII alphanumerics, dashes, underscores,
-	/// and forward slashes.
-	/// - Not start with a `.` character.
+	/// - Contain no relative components (`.` or `..`).
 	/// There is also the following context-sensitive check:
 	/// - If nothing has been mounted yet, assert that the file name at the end
 	/// of the mount path is the base data's file name.
@@ -880,12 +874,5 @@ impl Catalog {
 			copyright: ingest.copyright,
 			links: ingest.links,
 		}));
-	}
-
-	/// Truncate `self.files` and `self.mounts` back to the given points.
-	/// Also called if loading fails during post-processing.
-	pub(super) fn on_mount_fail(&mut self, orig_files_len: usize, orig_mounts_len: usize) {
-		self.files.truncate(orig_files_len);
-		self.mounts.truncate(orig_mounts_len);
 	}
 }

@@ -35,6 +35,7 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 
 	if cancelled {
+		loader.tracker.cancel();
 		next_state.set(AppState::Frontend);
 		return;
 	}
@@ -54,7 +55,11 @@ pub fn update(
 		}
 	};
 
-	let failed = match &res_load {
+	let go_to_frontend = match &res_load {
+		LoadOutcome::Cancelled => {
+			info!("Game load cancelled.");
+			true
+		}
 		LoadOutcome::MountFail { errors } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
 				let num_errs = res_load.num_errs();
@@ -127,7 +132,7 @@ pub fn update(
 		}
 	};
 
-	if failed {
+	if go_to_frontend {
 		next_state.set(AppState::Frontend);
 	} else {
 		next_state.set(AppState::Game);
