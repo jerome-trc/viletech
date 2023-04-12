@@ -36,6 +36,7 @@ fn vfs(crit: &mut Criterion) {
 		LoadRequest {
 			paths: mount_paths,
 			tracker: None,
+			dev_mode: false,
 		}
 	}
 

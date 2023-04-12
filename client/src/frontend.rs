@@ -2,11 +2,11 @@
 
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
-use bevy::{app::AppExit, prelude::*};
+use bevy::{app::AppExit, prelude::*, window::WindowFocused};
 use bevy_egui::EguiContexts;
 use viletech::{
 	data::{LoadRequest, LoadTracker},
-	frontend::{FrontendAction, FrontendMenu},
+	frontend::{FrontendMenu, Outcome},
 };
 
 use crate::{
@@ -21,22 +21,35 @@ pub fn update(
 	mut frontend: ResMut<FrontendMenu>,
 	mut egui: EguiContexts,
 	mut exit: EventWriter<AppExit>,
+	mut focus: EventReader<WindowFocused>,
 ) {
+	// When re-focusing the window, check to ensure the end user has not deleted
+	// or moved any of their load order items.
+	for event in focus.iter() {
+		if event.focused {
+			frontend.validate();
+			break;
+		}
+	}
+
 	let action = frontend.ui(egui.ctx_mut());
 
 	match action {
-		FrontendAction::None => {}
-		FrontendAction::Quit => {
-			exit.send(AppExit);
-			return;
-		}
-		FrontendAction::Start => {
+		Outcome::None => {}
+		Outcome::Start => {
 			let to_mount = frontend.to_mount();
 			let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
-			cmds.insert_resource(core.start_load(to_mount).unwrap_or_else(|_| {
-				unimplemented!("Handling load order errors is currently unimplemented.")
-			}));
+			cmds.insert_resource(
+				core.start_load(to_mount, frontend.dev_mode())
+					.unwrap_or_else(|_| {
+						unimplemented!("Handling load order errors is currently unimplemented.")
+					}),
+			);
 			next_state.set(AppState::Load);
+		}
+		Outcome::Exit => {
+			exit.send(AppExit);
+			return;
 		}
 	}
 
@@ -44,7 +57,7 @@ pub fn update(
 }
 
 pub fn on_enter(mut cmds: Commands) {
-	cmds.insert_resource(FrontendMenu::default());
+	cmds.insert_resource(FrontendMenu::new(None, None, None));
 }
 
 pub fn on_exit(mut cmds: Commands) {
@@ -52,13 +65,18 @@ pub fn on_exit(mut cmds: Commands) {
 }
 
 impl ClientCore {
-	fn start_load(&self, to_mount: Vec<PathBuf>) -> Result<GameLoad, String> {
+	fn start_load(&self, mut to_mount: Vec<PathBuf>, dev_mode: bool) -> Result<GameLoad, String> {
 		let start_time = Instant::now();
 		let catalog = self.catalog.clone();
 		let tracker = Arc::new(LoadTracker::default());
+
+		to_mount.dedup();
+
 		let mut mounts = Vec::with_capacity(to_mount.len());
 
 		for real_path in to_mount {
+			debug_assert!(real_path.exists());
+
 			if real_path.is_symlink() {
 				return Err(format!(
 					"Could not mount file: {}\r\n\t\
@@ -100,6 +118,7 @@ impl ClientCore {
 			let request = LoadRequest {
 				paths: mounts_sent,
 				tracker: Some(tracker_sent),
+				dev_mode,
 			};
 
 			catalog.write().load(request)

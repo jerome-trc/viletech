@@ -27,6 +27,7 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 	LoadRequest {
 		paths,
 		tracker: None,
+		dev_mode: false,
 	}
 }
 

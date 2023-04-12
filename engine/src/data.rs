@@ -607,6 +607,9 @@ where
 	/// Only pass a `Some` if you need to, for instance, display a loading screen,
 	/// or otherwise report to the end user on the progress of a mount operation.
 	pub tracker: Option<Arc<LoadTracker>>,
+	/// Affects:
+	/// - VZScript optimization. None are applied if this is `false`.
+	pub dev_mode: bool,
 }
 
 /// Wrap in an [`Arc`] and use to check how far along a load operation is.

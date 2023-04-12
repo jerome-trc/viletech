@@ -31,6 +31,7 @@ impl CatalogExt for Catalog {
 		let req = LoadRequest {
 			paths: vec![(crate::basedata_path(), "/viletech")],
 			tracker: None,
+			dev_mode: false,
 		};
 
 		// TODO: Base data may get split into more packages, so refine
