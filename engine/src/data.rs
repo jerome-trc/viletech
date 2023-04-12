@@ -6,7 +6,7 @@ mod error;
 mod ext;
 mod interface;
 mod mount;
-mod pproc;
+mod prep;
 #[cfg(test)]
 mod test;
 mod vfs;
@@ -38,9 +38,9 @@ use self::detail::{AssetKey, AssetSlotKey, Config, VfsKey};
 /// forms (e.g. decoding sounds and images) if their format can be easily identified.
 /// Otherwise, they're left as-is.
 ///
-/// Any given unit of data or [`Asset`] is stored in a [`Record`] and kept behind
-/// an [`Arc`], allowing other parts of the engine to take out high-speed
-/// [`Handle`]s to something and safely access it lock-free.
+/// Any given unit of data or [`Asset`] is stored behind an [`Arc`], allowing
+/// other parts of the engine to take out high-speed [`Handle`]s to something and
+/// safely access it without passing through locks or casts.
 ///
 /// A footnote on semantics: it is impossible to mount a file that's nested within
 /// an archive. If `mymod.zip` contains `myothermod.vpk7`, there's no way to
@@ -79,18 +79,18 @@ pub struct Catalog {
 
 impl Catalog {
 	/// This is an end-to-end function that reads physical files, fills out the
-	/// VFS, and then post-processes the files to decompose them into assets.
+	/// VFS, and then processes the files to decompose them into assets.
 	/// Much of the important things to know are in the documentation for
 	/// [`LoadRequest`]. The range of possible errors is documented by
-	/// [`MountError`] and [`PostProcError`].
+	/// [`MountError`] and [`PrepError`].
 	///
 	/// Notes:
 	/// - The order of pre-existing VFS entries and mounts is unchanged upon success.
 	/// - This function is partially atomic. If mounting fails, the catalog's
-	/// state is left entirely unchanged from before calling this. If post-processing
-	/// fails, the VFS state is not restored to before the call as a form of
-	/// memoization, allowing future post-process attempts to skip most mounting
-	/// work (to allow faster mod development cycles).
+	/// state is left entirely unchanged from before calling this.
+	/// If asset preparation fails, the VFS state is not restored to before the
+	/// call as a form of memoization, allowing future prep attempts to skip most
+	/// mounting work (to allow faster mod development cycles).
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
 	#[must_use = "loading may return errors which should be handled"]
@@ -110,15 +110,15 @@ impl Catalog {
 			detail::Outcome::None => unreachable!(),
 		};
 
-		// Note to reader: check `./pproc.rs`.
-		let p_ctx = pproc::Context::new(mnt_output.tracker, new_mounts);
+		// Note to reader: check `./prep.rs`.
+		let p_ctx = prep::Context::new(mnt_output.tracker, new_mounts);
 
-		match self.postproc(p_ctx) {
+		match self.prep(p_ctx) {
 			detail::Outcome::Ok(output) => LoadOutcome::Ok {
 				mount: mnt_output.errors,
-				pproc: output.errors,
+				prep: output.errors,
 			},
-			detail::Outcome::Err(errors) => LoadOutcome::PostProcFail { errors },
+			detail::Outcome::Err(errors) => LoadOutcome::PrepFail { errors },
 			detail::Outcome::Cancelled => LoadOutcome::Cancelled,
 			detail::Outcome::None => unreachable!(),
 		}
@@ -374,17 +374,17 @@ pub enum LoadOutcome {
 		errors: Vec<Vec<MountError>>,
 	},
 	/// Mounting succeeeded, but one or more fatal errors
-	/// prevented successful asset post-processing.
-	PostProcFail {
+	/// prevented successful asset preparation.
+	PrepFail {
 		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
-		errors: Vec<Vec<PostProcError>>,
+		errors: Vec<Vec<PrepError>>,
 	},
 	/// Loading was successful, but non-fatal errors or warnings may have arisen.
 	Ok {
 		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
 		mount: Vec<Vec<MountError>>,
 		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
-		pproc: Vec<Vec<PostProcError>>,
+		prep: Vec<Vec<PrepError>>,
 	},
 }
 
@@ -396,12 +396,12 @@ impl LoadOutcome {
 			LoadOutcome::MountFail { errors } => {
 				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
-			LoadOutcome::PostProcFail { errors } => {
+			LoadOutcome::PrepFail { errors } => {
 				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
-			LoadOutcome::Ok { mount, pproc } => {
+			LoadOutcome::Ok { mount, prep } => {
 				mount.iter().fold(0, |acc, subvec| acc + subvec.len())
-					+ pproc.iter().fold(0, |acc, subvec| acc + subvec.len())
+					+ prep.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
 		}
 	}

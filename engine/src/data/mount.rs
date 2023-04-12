@@ -156,7 +156,7 @@ impl Catalog {
 					mount_point.display(),
 				);
 
-				ctx.tracker.set_pproc_target(new_files.len());
+				ctx.tracker.set_prep_target(new_files.len());
 
 				for new_file in new_files {
 					let displaced = self.files.insert(VfsKey::new(&new_file.path), new_file);

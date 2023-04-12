@@ -43,7 +43,7 @@ impl CatalogExt for Catalog {
 
 				Err(BaseDataError::Load)
 			}
-			LoadOutcome::PostProcFail { mut errors } => {
+			LoadOutcome::PrepFail { mut errors } => {
 				for err in errors.pop().unwrap() {
 					error!("{err}");
 				}
@@ -52,13 +52,13 @@ impl CatalogExt for Catalog {
 			}
 			LoadOutcome::Ok {
 				mut mount,
-				mut pproc,
+				mut prep,
 			} => {
 				for err in mount.pop().unwrap() {
 					warn!("{err}");
 				}
 
-				for err in pproc.pop().unwrap() {
+				for err in prep.pop().unwrap() {
 					warn!("{err}");
 				}
 

@@ -138,7 +138,7 @@ pub struct MountInfo {
 	/// "lump" with the file stem `VZSCRIPT` in the package's global namespace.
 	/// - For WADs, the script root is the first `VZSCRIPT` "lump" found.
 	///
-	/// Normally, the scripts can define manifest items used to direct post-processing,
+	/// Normally, the scripts can define manifest items used to direct loading,
 	/// but if there is no script root or manifests, ZDoom loading rules are used.
 	///
 	/// A package can only specify a file owned by it as a script root, so this
@@ -181,7 +181,7 @@ impl MountInfo {
 	}
 }
 
-/// Informs the rules used for post-processing assets from a mount.
+/// Informs the rules used for preparing assets from a mount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MountKind {
 	/// If the mount's own root has an immediate child text file named `meta.toml`
@@ -391,10 +391,10 @@ pub struct LoadTracker {
 	/// The number of VFS mounts requested by the user.
 	mount_target: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase which have
-	/// been post-processed thus far.
-	pproc_progress: AtomicUsize,
+	/// been processed into prepared assets thus far.
+	prep_progress: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase.
-	pproc_target: AtomicUsize,
+	prep_target: AtomicUsize,
 }
 
 impl LoadTracker {
@@ -422,20 +422,20 @@ impl LoadTracker {
 	}
 
 	#[must_use]
-	pub fn pproc_progress(&self) -> usize {
-		self.pproc_progress.load(atomic::Ordering::SeqCst)
+	pub fn prep_progress(&self) -> usize {
+		self.prep_progress.load(atomic::Ordering::SeqCst)
 	}
 
 	#[must_use]
-	pub fn pproc_target(&self) -> usize {
-		self.pproc_target.load(atomic::Ordering::SeqCst)
+	pub fn prep_target(&self) -> usize {
+		self.prep_target.load(atomic::Ordering::SeqCst)
 	}
 
 	/// 0.0 means just started; 1.0 means done.
 	#[must_use]
-	pub fn pproc_progress_percent(&self) -> f64 {
-		let prog = self.pproc_progress.load(atomic::Ordering::SeqCst);
-		let tgt = self.pproc_target.load(atomic::Ordering::SeqCst);
+	pub fn prep_progress_percent(&self) -> f64 {
+		let prog = self.prep_progress.load(atomic::Ordering::SeqCst);
+		let tgt = self.prep_target.load(atomic::Ordering::SeqCst);
 
 		if tgt == 0 {
 			return 0.0;
@@ -451,9 +451,9 @@ impl LoadTracker {
 	}
 
 	#[must_use]
-	pub fn pproc_done(&self) -> bool {
-		self.pproc_progress.load(atomic::Ordering::SeqCst)
-			>= self.pproc_target.load(atomic::Ordering::SeqCst)
+	pub fn prep_done(&self) -> bool {
+		self.prep_progress.load(atomic::Ordering::SeqCst)
+			>= self.prep_target.load(atomic::Ordering::SeqCst)
 	}
 
 	pub fn cancel(&self) {
@@ -466,10 +466,10 @@ impl LoadTracker {
 		self.mount_target.store(target, atomic::Ordering::SeqCst);
 	}
 
-	pub(super) fn set_pproc_target(&self, target: usize) {
-		debug_assert_eq!(self.pproc_target.load(atomic::Ordering::Relaxed), 0);
+	pub(super) fn set_prep_target(&self, target: usize) {
+		debug_assert_eq!(self.prep_target.load(atomic::Ordering::Relaxed), 0);
 
-		self.pproc_target.store(target, atomic::Ordering::SeqCst);
+		self.prep_target.store(target, atomic::Ordering::SeqCst);
 	}
 
 	pub(super) fn add_mount_progress(&self, amount: usize) {
@@ -477,15 +477,15 @@ impl LoadTracker {
 			.fetch_add(amount, atomic::Ordering::SeqCst);
 	}
 
-	pub(super) fn add_pproc_progress(&self, amount: usize) {
-		self.pproc_progress
+	pub(super) fn add_prep_progress(&self, amount: usize) {
+		self.prep_progress
 			.fetch_add(amount, atomic::Ordering::SeqCst);
 	}
 
 	/// Temporary.
-	pub(super) fn finish_pproc(&self) {
-		self.pproc_progress.store(
-			self.pproc_target.load(atomic::Ordering::SeqCst),
+	pub(super) fn finish_prep(&self) {
+		self.prep_progress.store(
+			self.prep_target.load(atomic::Ordering::SeqCst),
 			atomic::Ordering::SeqCst,
 		)
 	}

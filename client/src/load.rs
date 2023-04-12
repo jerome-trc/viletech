@@ -18,14 +18,14 @@ pub fn update(
 	// TODO: Localize these strings.
 
 	let m_pct = loader.tracker.mount_progress_percent() * 100.0;
-	let p_pct = loader.tracker.pproc_progress_percent() * 100.0;
+	let p_pct = loader.tracker.prep_progress_percent() * 100.0;
 	let mut cancelled = false;
 
 	egui::Window::new("Loading...")
 		.id(egui::Id::new("vile_gameload"))
 		.show(egui.ctx_mut(), |ui| {
 			ui.label(&format!("File Mounting: {m_pct:.1}%"));
-			ui.label(&format!("Processing: {p_pct:.1}%"));
+			ui.label(&format!("Preparing: {p_pct:.1}%"));
 
 			if ui.button("Cancel").clicked() {
 				cancelled = true;
@@ -40,7 +40,7 @@ pub fn update(
 		return;
 	}
 
-	if !loader.tracker.mount_done() || !loader.tracker.pproc_done() {
+	if !loader.tracker.mount_done() || !loader.tracker.prep_done() {
 		return;
 	}
 
@@ -81,7 +81,7 @@ pub fn update(
 
 			true
 		}
-		LoadOutcome::PostProcFail { errors } => {
+		LoadOutcome::PrepFail { errors } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
 				let num_errs = res_load.num_errs();
 				let mut msg = String::with_capacity(128 + 256 * num_errs);
@@ -102,7 +102,7 @@ pub fn update(
 
 			true
 		}
-		LoadOutcome::Ok { mount, pproc } => {
+		LoadOutcome::Ok { mount, prep } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
 				let num_errs = res_load.num_errs();
 				let mut msg = String::with_capacity(128 + 256 * num_errs);
@@ -118,7 +118,7 @@ pub fn update(
 					msg.push_str(&err.to_string());
 				}
 
-				for err in &pproc[i] {
+				for err in &prep[i] {
 					msg.push_str(&err.to_string());
 				}
 

@@ -50,8 +50,8 @@ impl std::fmt::Display for VfsError {
 	}
 }
 
-/// Things that can go wrong during (non-postprocessing) asset management operations,
-/// like lookup and mutation. Also see [`PostProcError`].
+/// Things that can go wrong during (non-preparation) asset management operations,
+/// like lookup and mutation. Also see [`PrepError`].
 #[derive(Debug)]
 pub enum AssetError {
 	/// Tried to get a mutable reference to a [`Record`] that had
@@ -228,30 +228,30 @@ impl std::fmt::Display for MountError {
 }
 
 #[derive(Debug)]
-pub struct PostProcError {
+pub struct PrepError {
 	pub path: VPathBuf,
-	pub kind: PostProcErrorKind,
+	pub kind: PrepErrorKind,
 }
 
-/// Game loading is a two-step process; post-processing is the second step.
+/// Game loading is a two-step process; asset preparation is the second step.
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
-pub enum PostProcErrorKind {
+pub enum PrepErrorKind {
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingScriptRoot,
 	Level(LevelError),
 	Io(std::io::Error),
 }
 
-impl std::error::Error for PostProcError {}
+impl std::error::Error for PrepError {}
 
-impl std::fmt::Display for PostProcError {
+impl std::fmt::Display for PrepError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
-			PostProcErrorKind::MissingScriptRoot => {
+			PrepErrorKind::MissingScriptRoot => {
 				write!(f, "Script root not found at path: {}", self.path.display())
 			}
-			PostProcErrorKind::Level(err) => {
+			PrepErrorKind::Level(err) => {
 				write!(
 					f,
 					"Map `{}` is invalid. Reason: {err}",
@@ -272,13 +272,14 @@ impl std::fmt::Display for PostProcError {
 					}
 				)
 			}
-			PostProcErrorKind::Io(err) => err.fmt(f),
+			PrepErrorKind::Io(err) => err.fmt(f),
 		}
 	}
 }
 
-/// Things that can go wrong when trying to [post-process](PostProcError) files
-/// into a [Level](super::asset::Level) asset.
+/// Things that can go wrong when trying to process files into a [Level] asset.
+///
+/// [Level]: super::asset::Level
 #[derive(Debug)]
 pub enum LevelError {
 	/// For example, a file's byte length is not divisible

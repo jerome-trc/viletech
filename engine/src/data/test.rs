@@ -49,18 +49,18 @@ fn load() {
 		LoadOutcome::MountFail { .. } => {
 			panic!("Mount failure.")
 		}
-		LoadOutcome::PostProcFail { .. } => {
-			panic!("Post-processing failure.")
+		LoadOutcome::PrepFail { .. } => {
+			panic!("Asset preparation failure.")
 		}
-		LoadOutcome::Ok { mount, pproc } => {
+		LoadOutcome::Ok { mount, prep } => {
 			assert_eq!(mount.len(), 2);
-			assert_eq!(pproc.len(), 2);
+			assert_eq!(prep.len(), 2);
 
 			assert!(
 				mount[0].is_empty()
-					&& pproc[0].is_empty()
+					&& prep[0].is_empty()
 					&& mount[1].is_empty()
-					&& pproc[1].is_empty()
+					&& prep[1].is_empty()
 			);
 		}
 	}

@@ -8,8 +8,8 @@ use glam::{DVec2, DVec3, IVec2};
 use crate::{
 	data::{
 		detail::AssetKey, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags, LevelMeta,
-		LineDef, LineDefFlags, LineSpecial, PostProcError, PostProcErrorKind, Sector,
-		SectorSpecial, Seg, SideDef, SubSector, Thing, ThingFlags, Vertex,
+		LineDef, LineDefFlags, LineSpecial, PrepError, PrepErrorKind, Sector, SectorSpecial, Seg,
+		SideDef, SubSector, Thing, ThingFlags, Vertex,
 	},
 	EditorNum, ShortId,
 };
@@ -28,7 +28,7 @@ impl Catalog {
 
 	/// Returns `None` if `dir` is unlikely to represent a vanilla level definition.
 	#[must_use]
-	pub(super) fn try_pproc_level_vanilla(
+	pub(super) fn try_prep_level_vanilla(
 		&self,
 		ctx: &SubContext,
 		dir: FileRef,
@@ -84,11 +84,9 @@ impl Catalog {
 			linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
 			if !lump.is_readable() {
-				ctx.errors.lock().push(PostProcError {
+				ctx.errors.lock().push(PrepError {
 					path: dir.path.to_path_buf(),
-					kind: PostProcErrorKind::Level(LevelError::UnreadableFile(
-						lump.path.to_path_buf(),
-					)),
+					kind: PrepErrorKind::Level(LevelError::UnreadableFile(lump.path.to_path_buf())),
 				});
 
 				return Some(Err(()));
@@ -100,75 +98,63 @@ impl Catalog {
 		let mut malformed = false;
 
 		if (linedefs.byte_len() % 14) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					linedefs.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(linedefs.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (sectors.byte_len() % 26) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					sectors.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(sectors.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (segs.byte_len() % 12) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(segs.path.to_path_buf())),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(segs.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (sidedefs.byte_len() % 30) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					sidedefs.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(sidedefs.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (ssectors.byte_len() % 4) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					ssectors.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(ssectors.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (things.byte_len() % 10) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					things.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(things.path.to_path_buf())),
 			});
 
 			malformed = true;
 		}
 
 		if (vertexes.byte_len() % 4) != 0 {
-			ctx.errors.lock().push(PostProcError {
+			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
-				kind: PostProcErrorKind::Level(LevelError::MalformedFile(
-					vertexes.path.to_path_buf(),
-				)),
+				kind: PrepErrorKind::Level(LevelError::MalformedFile(vertexes.path.to_path_buf())),
 			});
 
 			malformed = true;
@@ -180,13 +166,13 @@ impl Catalog {
 
 		let lctx = LevelContext { sub: ctx, dir };
 
-		let vertices = Self::pproc_vertexes(vertexes.read_bytes());
-		let linedefs = Self::pproc_linedefs(&lctx, linedefs.read_bytes());
-		let sectors = Self::pproc_sectors(&lctx, sectors.read_bytes());
-		let segs = Self::pproc_segs(segs.read_bytes());
-		let sidedefs = Self::pproc_sidedefs(sidedefs.read_bytes());
-		let subsectors = Self::pproc_ssectors(ssectors.read_bytes());
-		let things = Self::pproc_things(things.read_bytes());
+		let vertices = Self::prep_vertexes(vertexes.read_bytes());
+		let linedefs = Self::prep_linedefs(&lctx, linedefs.read_bytes());
+		let sectors = Self::prep_sectors(&lctx, sectors.read_bytes());
+		let segs = Self::prep_segs(segs.read_bytes());
+		let sidedefs = Self::prep_sidedefs(sidedefs.read_bytes());
+		let subsectors = Self::prep_ssectors(ssectors.read_bytes());
+		let things = Self::prep_things(things.read_bytes());
 
 		let level = Level {
 			header: AssetHeader {
@@ -222,7 +208,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn pproc_linedefs(ctx: &LevelContext, bytes: &[u8]) -> Vec<LineDef> {
+	fn prep_linedefs(ctx: &LevelContext, bytes: &[u8]) -> Vec<LineDef> {
 		let mut ret = Vec::with_capacity(bytes.len() / 14);
 		let mut cursor = Cursor::new(bytes);
 
@@ -254,16 +240,16 @@ impl Catalog {
 		// TODO: Not going to write all conversions until the internal
 		// representation is finalized.
 
-		ctx.sub.errors.lock().push(PostProcError {
+		ctx.sub.errors.lock().push(PrepError {
 			path: ctx.dir.path.to_path_buf(),
-			kind: PostProcErrorKind::Level(LevelError::UnknownLineSpecial(short)),
+			kind: PrepErrorKind::Level(LevelError::UnknownLineSpecial(short)),
 		});
 
 		LineSpecial::Unknown
 	}
 
 	#[must_use]
-	fn pproc_sectors(ctx: &LevelContext, bytes: &[u8]) -> Vec<Sector> {
+	fn prep_sectors(ctx: &LevelContext, bytes: &[u8]) -> Vec<Sector> {
 		let mut ret = Vec::with_capacity(bytes.len() / 26);
 		let mut cursor = Cursor::new(bytes);
 
@@ -300,7 +286,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn pproc_segs(bytes: &[u8]) -> Vec<Seg> {
+	fn prep_segs(bytes: &[u8]) -> Vec<Seg> {
 		let mut ret = Vec::with_capacity(bytes.len() / 12);
 		let mut cursor = Cursor::new(bytes);
 
@@ -330,16 +316,16 @@ impl Catalog {
 		// TODO: Not going to write all conversions until the internal
 		// representation is finalized.
 
-		ctx.sub.errors.lock().push(PostProcError {
+		ctx.sub.errors.lock().push(PrepError {
 			path: ctx.dir.path.to_path_buf(),
-			kind: PostProcErrorKind::Level(LevelError::UnknownSectorSpecial(short)),
+			kind: PrepErrorKind::Level(LevelError::UnknownSectorSpecial(short)),
 		});
 
 		SectorSpecial::Unknown
 	}
 
 	#[must_use]
-	fn pproc_sidedefs(bytes: &[u8]) -> Vec<SideDef> {
+	fn prep_sidedefs(bytes: &[u8]) -> Vec<SideDef> {
 		let mut ret = Vec::with_capacity(bytes.len() / 30);
 		let mut cursor = Cursor::new(bytes);
 
@@ -376,7 +362,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn pproc_ssectors(bytes: &[u8]) -> Vec<SubSector> {
+	fn prep_ssectors(bytes: &[u8]) -> Vec<SubSector> {
 		let mut ret = Vec::with_capacity(bytes.len() / 4);
 		let mut cursor = Cursor::new(bytes);
 
@@ -394,7 +380,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn pproc_things(bytes: &[u8]) -> Vec<Thing> {
+	fn prep_things(bytes: &[u8]) -> Vec<Thing> {
 		let mut ret = Vec::with_capacity(bytes.len() / 10);
 		let mut cursor = Cursor::new(bytes);
 
@@ -443,7 +429,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn pproc_vertexes(bytes: &[u8]) -> Vec<Vertex> {
+	fn prep_vertexes(bytes: &[u8]) -> Vec<Vertex> {
 		let mut ret = Vec::with_capacity(bytes.len() / 4);
 		let mut cursor = Cursor::new(bytes);
 
@@ -459,7 +445,7 @@ impl Catalog {
 
 	/// Returns `None` if `dir` is unlikely to represent a UDMF level definition.
 	#[must_use]
-	pub(super) fn try_pproc_level_udmf(
+	pub(super) fn try_prep_level_udmf(
 		&self,
 		_ctx: &SubContext,
 		dir: FileRef,
