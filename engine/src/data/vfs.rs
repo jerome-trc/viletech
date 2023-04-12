@@ -2,7 +2,7 @@
 
 use crate::{utils::path::PathExt, VPath};
 
-use super::{detail::VfsKey, VfsError};
+use super::{detail::VfsKey, Catalog, VfsError};
 
 /// A virtual proxy for a physical file, physical directory, or archive entry.
 #[derive(Debug)]
@@ -176,3 +176,97 @@ impl File {
 		}
 	}
 }
+
+// FileRef /////////////////////////////////////////////////////////////////////
+
+/// The primary interface for quick introspection into the virtual file system;
+/// provides read access to one entry and the catalog itself. Prefer these over
+/// working directly with references to [`File`]s, since this can trace
+/// inter-file relationships.
+#[derive(Debug, Clone, Copy)]
+pub struct FileRef<'cat> {
+	pub(super) catalog: &'cat Catalog,
+	pub(super) file: &'cat File,
+}
+
+impl<'cat> FileRef<'cat> {
+	/// The catalog this reference came from.
+	#[must_use]
+	pub fn catalog(&self) -> &Catalog {
+		self.catalog
+	}
+
+	/// This only returns `None` if this file is the root directory.
+	#[must_use]
+	pub fn parent(&self) -> Option<&File> {
+		if let Some(parent) = self.file.parent_path() {
+			Some(
+				self.catalog
+					.files
+					.get(&VfsKey::new(parent))
+					.expect("A VFS entry has a dangling parent path."),
+			)
+		} else {
+			None
+		}
+	}
+
+	/// This only returns `None` if this file is the root directory.
+	#[must_use]
+	pub fn parent_ref(&'cat self) -> Option<Self> {
+		self.parent().map(|file| Self {
+			catalog: self.catalog,
+			file,
+		})
+	}
+
+	/// Non-recursive; only gets immediate children. If this file is not a directory,
+	/// or is an empty directory, the returned iterator will yield no items.
+	pub fn children(&self) -> impl Iterator<Item = &File> {
+		let closure = |key: &VfsKey| {
+			self.catalog
+				.files
+				.get(key)
+				.expect("A VFS directory has a dangling child key.")
+		};
+
+		match &self.file.kind {
+			FileKind::Directory(children) => children.iter().map(closure),
+			_ => [].iter().map(closure),
+		}
+	}
+
+	/// Non-recursive; only gets immediate children. If this file is not a directory,
+	/// or is an empty directory, the returned iterator will yield no items.
+	pub fn child_refs(&'cat self) -> impl Iterator<Item = FileRef<'cat>> + '_ {
+		self.children().map(|file| Self {
+			catalog: self.catalog,
+			file,
+		})
+	}
+
+	/// Returns 0 if this is a leaf node or an empty directory.
+	#[must_use]
+	pub fn child_count(&self) -> usize {
+		match &self.kind {
+			FileKind::Directory(children) => children.len(),
+			_ => 0,
+		}
+	}
+}
+
+impl std::ops::Deref for FileRef<'_> {
+	type Target = File;
+
+	fn deref(&self) -> &Self::Target {
+		self.file
+	}
+}
+
+impl PartialEq for FileRef<'_> {
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self.catalog, other.catalog) && std::ptr::eq(self.file, other.file)
+	}
+}
+
+impl Eq for FileRef<'_> {}

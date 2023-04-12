@@ -14,21 +14,6 @@ use crate::{VPath, VPathBuf};
 
 use super::{Asset, Catalog, File, FileKind};
 
-#[derive(Debug)]
-pub(super) struct Config {
-	pub(super) bin_size_limit: usize,
-	pub(super) text_size_limit: usize,
-}
-
-impl Default for Config {
-	fn default() -> Self {
-		Self {
-			bin_size_limit: super::limits::DEFAULT_BIN_FILE_SIZE,
-			text_size_limit: super::limits::DEFAULT_TEXT_FILE_SIZE,
-		}
-	}
-}
-
 impl Catalog {
 	/// Clears the keys out of every virtual directory in preparation for
 	/// repopulation via `populate_dirs`.

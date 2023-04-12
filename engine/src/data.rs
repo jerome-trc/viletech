@@ -1,17 +1,24 @@
 //! Management of files, audio, graphics, levels, text, localization, and so on.
 
 pub mod asset;
+mod config;
 mod detail;
 mod error;
 mod ext;
-mod interface;
+mod gui;
 mod mount;
 mod prep;
 #[cfg(test)]
 mod test;
 mod vfs;
 
-use std::{path::Path, sync::Arc};
+use std::{
+	path::Path,
+	sync::{
+		atomic::{self, AtomicBool, AtomicUsize},
+		Arc,
+	},
+};
 
 use bevy_egui::egui;
 use dashmap::DashMap;
@@ -20,13 +27,14 @@ use indexmap::IndexMap;
 use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
 use regex::Regex;
+use slotmap::SlotMap;
 use smallvec::SmallVec;
 
 use crate::{utils::path::PathExt, vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
-pub use self::{asset::*, error::*, ext::*, interface::*, vfs::*};
+pub use self::{asset::*, config::*, error::*, ext::*, vfs::*};
 
-use self::detail::{AssetKey, AssetSlotKey, Config, VfsKey};
+use self::detail::{AssetKey, AssetSlotKey, VfsKey};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
@@ -363,6 +371,180 @@ pub type CatalogAM = Arc<Mutex<Catalog>>;
 /// A type alias for convenience and to reduce line noise.
 pub type CatalogAL = Arc<RwLock<Catalog>>;
 
+// Mount, MountInfo ////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub struct Mount {
+	pub(super) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
+	pub(super) info: MountInfo,
+}
+
+#[derive(Debug)]
+pub struct MountInfo {
+	/// Specified by `meta.toml` if one exists.
+	/// Otherwise, this comes from the file stem of the mount point.
+	pub(super) id: String,
+	pub(super) format: MountFormat,
+	pub(super) kind: MountKind,
+	/// Always canonicalized, but may not necessarily be valid UTF-8.
+	pub(super) real_path: Box<Path>,
+	pub(super) virtual_path: Box<VPath>,
+	/// Comes from `meta.toml`, so most mounts will lack this.
+	pub(super) meta: Option<Box<MountMeta>>,
+	/// The base of the package's VZScript include tree.
+	///
+	/// - For VileTech packages, this is specified by a `meta.toml` file.
+	/// - For ZDoom and Eternity packages, the script root is the first
+	/// "lump" with the file stem `VZSCRIPT` in the package's global namespace.
+	/// - For WADs, the script root is the first `VZSCRIPT` "lump" found.
+	///
+	/// Normally, the scripts can define manifest items used to direct loading,
+	/// but if there is no script root or manifests, ZDoom loading rules are used.
+	///
+	/// A package can only specify a file owned by it as a script root, so this
+	/// is always relative. `viletech.vpk3`'s script root, for example, is `main.vzs`.
+	pub(super) script_root: Option<Box<VPath>>,
+	// Q:
+	// - Dependency specification?
+	// - Incompatibility specification?
+	// - Ordering specification?
+	// - Forced specifications, or just strongly-worded warnings? Multiple levels?
+}
+
+impl MountInfo {
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
+	}
+
+	#[must_use]
+	pub fn format(&self) -> MountFormat {
+		self.format
+	}
+
+	/// The real file/directory this mount represents.
+	/// Always canonicalized, but may not necessarily be valid UTF-8.
+	#[must_use]
+	pub fn real_path(&self) -> &Path {
+		&self.real_path
+	}
+
+	/// Also known as the "mount point". Corresponds to a VFS node.
+	#[must_use]
+	pub fn virtual_path(&self) -> &VPath {
+		&self.virtual_path
+	}
+
+	#[must_use]
+	pub fn metadata(&self) -> Option<&MountMeta> {
+		self.meta.as_deref()
+	}
+}
+
+/// Informs the rules used for preparing assets from a mount.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MountKind {
+	/// If the mount's own root has an immediate child text file named `meta.toml`
+	/// (ASCII-case-ignored), that indicates that the mount is a VileTech package.
+	VileTech,
+	/// If mounting an archive with:
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pk3`, `.ipk3`, `.pk7`, or `.ipk7`,
+	/// then this is what gets resolved. If it's a directory instead of an archive,
+	/// the heuristic used is if there's an immediate child text file with a file
+	/// stem belonging to a ZDoom-exclusive lump.
+	ZDoom,
+	/// If mounting an archive with:
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pke`,
+	/// then this is what gets resolved. If it's a directory instead of an archive,
+	/// the heuristic used is if there's an immediate child text file with the
+	/// file stem `edfroot` or `emapinfo` (ASCII-case-ignored).
+	Eternity,
+	/// Deduced from [`MountFormat`], which is itself deduced from the file header.
+	Wad,
+	/// Fallback if the mount resolved to none of the other kinds.
+	/// Usually used if mounting a single non-archive file.
+	Misc,
+}
+
+/// Primarily serves to specify the type of compression used, if any.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MountFormat {
+	PlainFile,
+	Directory,
+	Wad,
+	Zip,
+	// TODO: Support LZMA, XZ, GRP, PAK, RFF, SSI
+}
+
+#[derive(Debug)]
+pub struct MountMeta {
+	pub(super) version: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) name: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) description: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) authors: Vec<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Human-readable, presented to users in the frontend.
+	pub(super) copyright: Option<String>,
+	/// Specified by `meta.toml` if one exists.
+	/// Allow a package to link to its forum post/homepage/Discord server/etc.
+	pub(super) links: Vec<String>,
+}
+
+impl MountMeta {
+	#[must_use]
+	pub fn name(&self) -> Option<&str> {
+		match &self.name {
+			Some(s) => Some(s),
+			None => None,
+		}
+	}
+
+	#[must_use]
+	pub fn version(&self) -> Option<&str> {
+		match &self.version {
+			Some(s) => Some(s),
+			None => None,
+		}
+	}
+
+	#[must_use]
+	pub fn description(&self) -> Option<&str> {
+		match &self.description {
+			Some(s) => Some(s),
+			None => None,
+		}
+	}
+
+	#[must_use]
+	pub fn authors(&self) -> &[String] {
+		self.authors.as_ref()
+	}
+
+	#[must_use]
+	pub fn copyright_info(&self) -> Option<&str> {
+		match &self.copyright {
+			Some(s) => Some(s),
+			None => None,
+		}
+	}
+
+	/// User-specified URLS to a forum post/homepage/Discord server/et cetera.
+	#[must_use]
+	pub fn public_links(&self) -> &[String] {
+		&self.links
+	}
+}
+
+// Loading /////////////////////////////////////////////////////////////////////
+
 #[derive(Debug)]
 pub enum LoadOutcome {
 	/// A cancel was requested externally.
@@ -404,6 +586,142 @@ impl LoadOutcome {
 					+ prep.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
 		}
+	}
+}
+
+/// Also make sure to read [`Catalog::load`].
+#[derive(Debug)]
+pub struct LoadRequest<RP, MP>
+where
+	RP: AsRef<Path>,
+	MP: AsRef<VPath>,
+{
+	/// In any given tuple, element `::0` should be a real path and `::1` should
+	/// be the mount point. `mymount` and `/mymount` both put the mount on the root.
+	/// An empty path and `/` are both invalid mount points, but one can mount
+	/// `/mymount` and then `mymount/myothermount`.
+	///
+	/// If this is an empty slice, any mount operation becomes a no-op, and
+	/// an empty array of results is returned.
+	pub paths: Vec<(RP, MP)>,
+	/// Only pass a `Some` if you need to, for instance, display a loading screen,
+	/// or otherwise report to the end user on the progress of a mount operation.
+	pub tracker: Option<Arc<LoadTracker>>,
+}
+
+/// Wrap in an [`Arc`] and use to check how far along a load operation is.
+#[derive(Debug, Default)]
+pub struct LoadTracker {
+	/// Set to `true` to make the load thread return to be joined as soon as possible.
+	/// The catalog's state will be the same as before calling [`Catalog::load`].
+	cancelled: AtomicBool,
+	/// The number of VFS mounts performed (successfully or not) thus far.
+	mount_progress: AtomicUsize,
+	/// The number of VFS mounts requested by the user.
+	mount_target: AtomicUsize,
+	/// The number of files added to the VFS during the mount phase which have
+	/// been processed into prepared assets thus far.
+	prep_progress: AtomicUsize,
+	/// The number of files added to the VFS during the mount phase.
+	prep_target: AtomicUsize,
+}
+
+impl LoadTracker {
+	#[must_use]
+	pub fn mount_progress(&self) -> usize {
+		self.mount_progress.load(atomic::Ordering::SeqCst)
+	}
+
+	#[must_use]
+	pub fn mount_target(&self) -> usize {
+		self.mount_target.load(atomic::Ordering::SeqCst)
+	}
+
+	/// 0.0 means just started; 1.0 means done.
+	#[must_use]
+	pub fn mount_progress_percent(&self) -> f64 {
+		let prog = self.mount_progress.load(atomic::Ordering::SeqCst);
+		let tgt = self.mount_target.load(atomic::Ordering::SeqCst);
+
+		if tgt == 0 {
+			return 0.0;
+		}
+
+		prog as f64 / tgt as f64
+	}
+
+	#[must_use]
+	pub fn prep_progress(&self) -> usize {
+		self.prep_progress.load(atomic::Ordering::SeqCst)
+	}
+
+	#[must_use]
+	pub fn prep_target(&self) -> usize {
+		self.prep_target.load(atomic::Ordering::SeqCst)
+	}
+
+	/// 0.0 means just started; 1.0 means done.
+	#[must_use]
+	pub fn prep_progress_percent(&self) -> f64 {
+		let prog = self.prep_progress.load(atomic::Ordering::SeqCst);
+		let tgt = self.prep_target.load(atomic::Ordering::SeqCst);
+
+		if tgt == 0 {
+			return 0.0;
+		}
+
+		prog as f64 / tgt as f64
+	}
+
+	#[must_use]
+	pub fn mount_done(&self) -> bool {
+		self.mount_progress.load(atomic::Ordering::SeqCst)
+			>= self.mount_target.load(atomic::Ordering::SeqCst)
+	}
+
+	#[must_use]
+	pub fn prep_done(&self) -> bool {
+		self.prep_progress.load(atomic::Ordering::SeqCst)
+			>= self.prep_target.load(atomic::Ordering::SeqCst)
+	}
+
+	pub fn cancel(&self) {
+		self.cancelled.store(true, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn set_mount_target(&self, target: usize) {
+		debug_assert_eq!(self.mount_target.load(atomic::Ordering::Relaxed), 0);
+
+		self.mount_target.store(target, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn set_prep_target(&self, target: usize) {
+		debug_assert_eq!(self.prep_target.load(atomic::Ordering::Relaxed), 0);
+
+		self.prep_target.store(target, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn add_mount_progress(&self, amount: usize) {
+		self.mount_progress
+			.fetch_add(amount, atomic::Ordering::SeqCst);
+	}
+
+	pub(super) fn add_prep_progress(&self, amount: usize) {
+		self.prep_progress
+			.fetch_add(amount, atomic::Ordering::SeqCst);
+	}
+
+	/// Temporary.
+	pub(super) fn finish_prep(&self) {
+		self.prep_progress.store(
+			self.prep_target.load(atomic::Ordering::SeqCst),
+			atomic::Ordering::SeqCst,
+		)
+	}
+
+	#[must_use]
+	pub(super) fn is_cancelled(&self) -> bool {
+		self.cancelled.load(atomic::Ordering::SeqCst)
 	}
 }
 
