@@ -22,7 +22,7 @@
 //! - Soak testing for leaks over long periods of time.
 //! - All kinds of tuning on all kinds of platforms.
 
-#![allow(dead_code)] // TODO: Remove
+#![allow(dead_code)] // TODO: Disallow
 
 #[cfg(target_pointer_width = "32")]
 std::compile_error!("VZS's heap does not yet support 32-bit architectures.");

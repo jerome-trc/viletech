@@ -1,9 +1,5 @@
 //! VileTech Dedicated Server
 
-// TODO: Remove
-#![allow(dead_code)]
-#![allow(unused)]
-
 mod commands;
 
 use std::{error::Error, time::Instant};
@@ -22,8 +18,8 @@ pub fn version_string() -> String {
 
 #[derive(Debug)]
 pub struct ServerCore {
-	start_time: Instant,
-	terminal: Terminal<Command>,
+	pub start_time: Instant,
+	pub terminal: Terminal<Command>,
 }
 
 #[derive(Parser, Debug)]
@@ -77,8 +73,8 @@ conditions. See the license document that comes with your installation."
 	viletech::thread_pool_init(args.threads);
 	viletech::log::init_diag(&version_string())?;
 
-	/// (RAT) In my experience, a runtime log is much more informative if it
-	/// states the duration for which the program executed.
+	// (RAT) In my experience, a runtime log is much more informative if it
+	// states the duration for which the program executed.
 	let uptime = viletech::START_TIME.get().unwrap().elapsed();
 	let (hh, mm, ss) = duration_to_hhmmss(uptime);
 	info!("Uptime: {hh:02}:{mm:02}:{ss:02}");

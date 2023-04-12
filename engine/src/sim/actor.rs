@@ -63,12 +63,12 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct Bounce {
-	flags: BounceFlags,
-	factor: f64,
+	pub flags: BounceFlags,
+	pub factor: f64,
 	/// Velocity loss upon bouncing off a wall.
-	wall_factor: f64,
+	pub wall_factor: f64,
 	/// How many times has this actor bounced thus far?
-	count: u32,
+	pub count: u32,
 }
 
 bitflags! {
@@ -289,15 +289,15 @@ pub struct Readonly {
 /// Sounds emitted by an actor in response to certain triggers.
 #[derive(Debug)]
 pub struct Sounds {
-	on_active: Option<data::Handle<Audio>>,
-	on_attack: Option<data::Handle<Audio>>,
-	on_bounce: Option<data::Handle<Audio>>,
-	on_bounce_wall: Option<data::Handle<Audio>>,
-	on_crush_pain: Option<data::Handle<Audio>>,
-	on_death: Option<data::Handle<Audio>>,
-	on_pain: Option<data::Handle<Audio>>,
-	on_see: Option<data::Handle<Audio>>,
-	on_use: Option<data::Handle<Audio>>,
+	pub on_active: Option<data::Handle<Audio>>,
+	pub on_attack: Option<data::Handle<Audio>>,
+	pub on_bounce: Option<data::Handle<Audio>>,
+	pub on_bounce_wall: Option<data::Handle<Audio>>,
+	pub on_crush_pain: Option<data::Handle<Audio>>,
+	pub on_death: Option<data::Handle<Audio>>,
+	pub on_pain: Option<data::Handle<Audio>>,
+	pub on_see: Option<data::Handle<Audio>>,
+	pub on_use: Option<data::Handle<Audio>>,
 }
 
 // Spatial /////////////////////////////////////////////////////////////////////

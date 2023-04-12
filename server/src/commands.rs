@@ -44,7 +44,7 @@ impl terminal::Command for Command {
 	}
 }
 
-pub fn cmd_alias(args: CommandArgs) -> Request {
+pub fn _cmd_alias(args: CommandArgs) -> Request {
 	fn help(cmd_key: &str) {
 		println!(
 			"Usage: {cmd_key} [alias] [string]\r\n\r\n\
@@ -62,7 +62,7 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 	}
 
 	if args.len() == 2 {
-		return req_callback(move |core| match core.terminal.find_alias(&alias) {
+		return _req_callback(move |core| match core.terminal.find_alias(&alias) {
 			Some(a) => {
 				info!("{}", a.1);
 			}
@@ -74,13 +74,13 @@ pub fn cmd_alias(args: CommandArgs) -> Request {
 
 	let string = args.concat(2);
 
-	req_callback(move |core| {
+	_req_callback(move |core| {
 		info!("Alias registered: {}\r\nExpands to: {}", alias, &string);
 		core.terminal.register_alias(alias.clone(), string.clone());
 	})
 }
 
-pub fn cmd_args(args: CommandArgs) -> Request {
+pub fn _cmd_args(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		println!("Prints out all of the program's launch arguments.");
 		return Request::None;
@@ -110,7 +110,7 @@ pub fn cmd_args(args: CommandArgs) -> Request {
 	Request::None
 }
 
-pub fn cmd_help(args: CommandArgs) -> Request {
+pub fn _cmd_help(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		println!(
 			"If used without arguments, prints a list of all available commands.\r\n\
@@ -121,7 +121,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 	}
 
 	if args.name_only() {
-		return req_callback(|core| {
+		return _req_callback(|core| {
 			let mut string = "All available commands:".to_string();
 
 			for command in core.terminal.all_commands() {
@@ -136,7 +136,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 
 	let key = args[1].to_string();
 
-	req_callback(move |core| match core.terminal.find_command(&key) {
+	_req_callback(move |core| match core.terminal.find_command(&key) {
 		Some(cmd) => {
 			(cmd.func)(terminal::CommandArgs::new(vec![&key, "--help"]));
 		}
@@ -146,7 +146,7 @@ pub fn cmd_help(args: CommandArgs) -> Request {
 	})
 }
 
-pub fn cmd_quit(args: CommandArgs) -> Request {
+pub fn _cmd_quit(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		println!("Instantly closes the application.");
 		return Request::None;
@@ -155,20 +155,20 @@ pub fn cmd_quit(args: CommandArgs) -> Request {
 	Request::Exit
 }
 
-pub fn cmd_uptime(args: CommandArgs) -> Request {
+pub fn _cmd_uptime(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		println!("Prints the current cumulative uptime of the application.");
 		return Request::None;
 	}
 
-	req_callback(|core| {
+	_req_callback(|core| {
 		let uptime = core.start_time.elapsed();
 		let (hh, mm, ss) = duration_to_hhmmss(uptime);
 		info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 	})
 }
 
-pub fn cmd_version(args: CommandArgs) -> Request {
+pub fn _cmd_version(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		println!("Prints the engine version.");
 		return Request::None;
@@ -178,12 +178,13 @@ pub fn cmd_version(args: CommandArgs) -> Request {
 		"{}",
 		viletech::full_version_string(&super::version_string())
 	);
+
 	Request::None
 }
 
 // Helpers /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn req_callback<F: 'static + Fn(&mut ServerCore)>(callback: F) -> Request {
+fn _req_callback<F: 'static + Fn(&mut ServerCore)>(callback: F) -> Request {
 	Request::Callback(Box::new(callback))
 }

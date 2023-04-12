@@ -10,18 +10,13 @@ use crate::RgbaF32;
 #[derive(Debug)]
 pub struct Profile {
 	/// Must be between 2 and 64 characters long, but is otherwise unrestricted.
-	name: String,
-	gender: Gender,
+	pub name: String,
+	pub gender: Gender,
 	/// Applied to the player's sprites.
-	tint: RgbaF32,
+	pub tint: RgbaF32,
 }
 
 impl Profile {
-	#[must_use]
-	pub(super) fn name(&self) -> &str {
-		&self.name
-	}
-
 	#[must_use]
 	pub(super) fn new(name: String) -> Self {
 		Self {

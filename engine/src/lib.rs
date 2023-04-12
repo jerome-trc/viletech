@@ -7,28 +7,22 @@
 
 use once_cell::sync::OnceCell;
 
-#[allow(dead_code)]
 pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod data;
 pub mod devgui;
-#[allow(dead_code)]
 pub mod frontend;
-#[allow(dead_code)]
 pub mod game;
 pub mod input;
 pub mod log;
 pub mod math;
 pub mod player;
-#[allow(dead_code)]
 pub mod rng;
-#[allow(dead_code)]
 pub mod sim;
 pub mod simd;
 pub mod sparse;
 pub mod terminal;
-#[allow(dead_code)]
 pub mod user;
 pub mod utils;
 pub mod vzs;

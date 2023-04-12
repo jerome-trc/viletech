@@ -19,6 +19,7 @@ pub struct PrefPreset {
 	/// Each mount that declares any prefs (or CVars for that matter) gets one.
 	/// Order is the same as the user's chosen load order.
 	namespaces: Vec<PrefNamespace>,
+	/// Keys take the format `namespace_name/pref_name`.
 	/// In each value:
 	/// - `::0` is an index into `prefs`.
 	/// - `::1` is an index into [`PrefNamespace::prefs`].
@@ -45,12 +46,12 @@ impl PrefPreset {
 	}
 
 	#[must_use]
-	pub(super) fn get_namespace(&self, id: &str) -> Option<&PrefNamespace> {
-		self.namespaces.iter().find(|&ns| ns.id == id)
+	pub(super) fn _get_namespace(&self, id: &str) -> Option<&PrefNamespace> {
+		self.namespaces.iter().find(|&ns| ns._id == id)
 	}
 
 	#[must_use]
-	pub(super) fn all_namespaces(&self) -> &[PrefNamespace] {
+	pub(super) fn _all_namespaces(&self) -> &[PrefNamespace] {
 		&self.namespaces
 	}
 
@@ -68,17 +69,17 @@ impl PrefPreset {
 		}
 	}
 
-	pub(super) fn add_namespaces(&mut self, mut namespaces: Vec<PrefNamespace>) {
+	pub(super) fn _add_namespaces(&mut self, mut namespaces: Vec<PrefNamespace>) {
 		self.namespaces.append(&mut namespaces);
-		self.update();
+		self._update();
 	}
 
-	pub(super) fn truncate(&mut self, len: usize) {
+	pub(super) fn _truncate(&mut self, len: usize) {
 		self.namespaces.truncate(len);
-		self.update();
+		self._update();
 	}
 
-	fn update(&mut self) {
+	fn _update(&mut self) {
 		self.map.clear();
 
 		for (ns_i, namespace) in self.namespaces.iter().enumerate() {
@@ -94,7 +95,7 @@ impl PrefPreset {
 pub struct PrefNamespace {
 	/// Stored so the [core](super::UserCore) knows which .toml file to write to.
 	/// Derived from the [mount's ID](crate::data::MountInfo::id).
-	id: String,
+	_id: String,
 	/// Keys are pref IDs; these are restricted to ASCII alphanumerics and
 	/// underscores, must start with an ASCII letter or underscore, and can not
 	/// be longer than 64 characters.
@@ -105,16 +106,16 @@ pub struct PrefNamespace {
 
 impl PrefNamespace {
 	#[must_use]
-	pub(super) fn id(&self) -> &str {
-		&self.id
+	pub(super) fn _id(&self) -> &str {
+		&self._id
 	}
 
 	#[must_use]
-	pub(super) fn to_toml(&self) -> toml::value::Table {
+	pub(super) fn _to_toml(&self) -> toml::value::Table {
 		let mut ret = toml::value::Table::with_capacity(self.prefs.len());
 
 		for pref in &self.prefs {
-			ret.insert(pref.id.clone(), pref.to_toml());
+			ret.insert(pref.id.clone(), pref._to_toml());
 		}
 
 		ret
@@ -149,6 +150,7 @@ impl Pref {
 
 	/// Returns `true` if this preference has the same storage type and value as
 	/// another.
+	#[must_use]
 	pub fn eq_val(&self, other: &Self) -> bool {
 		unsafe {
 			match (self.kind, other.kind) {
@@ -196,7 +198,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_bool(id: String, default: bool, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn _new_bool(id: String, default: bool, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::Bool,
@@ -213,7 +215,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_int(id: String, default: i64, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn _new_int(id: String, default: i64, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::Int,
@@ -230,7 +232,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_float(id: String, default: f64, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn _new_float(id: String, default: f64, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::Float,
@@ -247,7 +249,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_color(id: String, default: RgbaF32, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn _new_color(id: String, default: RgbaF32, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::Color,
@@ -264,7 +266,7 @@ impl Pref {
 	/// Both the current value and default are set to `default`. Reading the FS
 	/// for the real current value (if any) is left to the caller.
 	#[must_use]
-	pub(super) fn new_string(id: String, default: String, flags: PrefFlags) -> Arc<Self> {
+	pub(super) fn _new_string(id: String, default: String, flags: PrefFlags) -> Arc<Self> {
 		Arc::new(Self {
 			id,
 			kind: PrefKind::String,
@@ -279,7 +281,7 @@ impl Pref {
 	}
 
 	#[must_use]
-	pub(super) fn to_toml(&self) -> toml::Value {
+	pub(super) fn _to_toml(&self) -> toml::Value {
 		unsafe {
 			match self.kind {
 				PrefKind::Bool => toml::Value::Boolean(self.data.boolean.value.load()),

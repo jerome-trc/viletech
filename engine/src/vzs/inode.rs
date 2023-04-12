@@ -21,7 +21,7 @@ Existence of the `enum_dispatch` crate indicates that it would likely not be.
 
 */
 
-#![allow(dead_code)] // TODO: Remove
+#![allow(dead_code)] // TODO: Disallow
 
 mod builder;
 mod detail;

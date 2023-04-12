@@ -5,21 +5,21 @@ use crate::data::{asset, InHandle};
 /// i.e., a difficulty setting.
 #[derive(Debug)]
 pub struct SkillInfo {
-	flags: SkillFlags,
-	/// Displayed to the user. May be a string ID.
-	name: String,
+	pub flags: SkillFlags,
+	/// e.g. "Hurt Me Plenty". Displayed to the user. May be a string ID.
+	pub name: String,
 	/// Displayed to the user in the selection menu.
-	graphic: InHandle<asset::Image>,
-	spawn_filter: SpawnFilter,
-	respawn_time: u32,
-	respawn_limit: u32,
-	ammo_factor: f32,
-	ammo_loot_factor: f32,
-	damage_factor: f32,
+	pub graphic: InHandle<asset::Image>,
+	pub spawn_filter: SpawnFilter,
+	pub respawn_time: u32,
+	pub respawn_limit: u32,
+	pub ammo_factor: f32,
+	pub ammo_loot_factor: f32,
+	pub damage_factor: f32,
 	/// Minimum 0.0, maximum 1.0.
-	mons_aggression: f32,
-	heal_factor: f32,
-	knockback_factor: f32,
+	pub mons_aggression: f32,
+	pub heal_factor: f32,
+	pub knockback_factor: f32,
 }
 
 #[derive(Debug)]

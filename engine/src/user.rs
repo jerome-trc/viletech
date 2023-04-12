@@ -35,7 +35,7 @@ pub struct UserCore {
 impl UserCore {
 	/// Creates an empty core for when the user has no information on the FS and
 	/// needs to decide where it should be stored. Once they have chosen, call
-	/// [`new`](Self::uninit).
+	/// [`new`](Self::new).
 	///
 	/// Almost all of the core's methods will panic if trying to use it while
 	/// in this state.
@@ -146,7 +146,7 @@ impl UserCore {
 	/// Called if the global config file did not exist, and needs to be written.
 	fn init_global_cfg(&self) -> Result<GlobalConfig, Error> {
 		let ret = GlobalConfig {
-			last_profile: self.profile.name().to_string(),
+			last_profile: self.profile.name.clone(),
 			last_preset: self.prefs.name().to_string(),
 		};
 
@@ -394,7 +394,7 @@ impl UserCore {
 	}
 
 	#[must_use]
-	fn globalcfg_path(&self) -> PathBuf {
+	fn _globalcfg_path(&self) -> PathBuf {
 		self.user_dir.join(GLOBALCFG_FILENAME)
 	}
 
@@ -499,7 +499,7 @@ fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
 }
 
 /// An error-mapping helper for brevity.
-fn fread(path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
+fn _fread(path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
 	debug_assert!(path.as_ref().exists());
 
 	std::fs::read(&path).map_err(|err| Error::FileRead {

@@ -1,4 +1,6 @@
-//! Action Code Script execution environment and supporting infrastructure.
+//! [Action Code Script] execution environment and supporting infrastructure.
+//!
+//! [Action Code Script]: https://doomwiki.org/wiki/ACS
 
 /*
 ** -----------------------------------------------------------------------------
@@ -29,6 +31,8 @@
 ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ** -----------------------------------------------------------------------------
 */
+
+#![allow(dead_code)] // TODO: Disallow
 
 mod constants;
 mod detail;

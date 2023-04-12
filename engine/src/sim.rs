@@ -10,29 +10,20 @@ use nanorand::WyRand;
 
 use crate::{rng::RngCore, vzs::heap::TPtr};
 
+use self::level::Level;
+
 pub type ActorPtr = TPtr<self::actor::Actor>;
 
 /// All gameplay simulation state.
 #[derive(Debug, Resource)]
 pub struct Sim {
 	timing: Timing,
-	cur_part: Partition,
-	inactive_parts: Vec<Partition>,
-	rng: RngCore<WyRand>,
+	_levels: Vec<Level>,
+	_rng: RngCore<WyRand>,
 	/// Time spent in this hub thus far.
 	hub_ticks_elapsed: u64,
 	/// Time spent in this playthrough thus far.
 	ticks_elapsed: u64,
-}
-
-/// A segment of the game world. In the overwhelming majority of cases, this will
-/// only be one level. At the moment this does not do much, but having this code
-/// in place paves the way to eventually do things like streaming parts of a level
-/// to and from the disk, or achieving better performance on enormously-demanding
-/// levels that do not need everything active all at once.
-#[derive(Debug)]
-pub struct Partition {
-	// ???
 }
 
 /// Separate from [`Sim`] for cleanliness.
