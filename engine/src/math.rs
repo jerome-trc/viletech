@@ -79,40 +79,33 @@ impl Rotator32 {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	pub fn pitch(&self) -> f32 {
 		self.0[0]
 	}
 
 	#[must_use]
-	#[inline(always)]
 	pub fn yaw(&self) -> f32 {
 		self.0[1]
 	}
 
 	#[must_use]
-	#[inline(always)]
 	pub fn roll(&self) -> f32 {
 		self.0[2]
 	}
 
-	#[inline(always)]
 	pub fn set_pitch(&mut self, pitch: f32) {
 		self.0[0] = pitch
 	}
 
-	#[inline(always)]
 	pub fn set_yaw(&mut self, yaw: f32) {
 		self.0[1] = yaw
 	}
 
-	#[inline(always)]
 	pub fn set_roll(&mut self, roll: f32) {
 		self.0[2] = roll
 	}
 
 	#[must_use]
-	#[inline(always)]
 	pub fn to_quat(self) -> Quat {
 		Quat::from_euler(EulerRot::XZY, self.pitch(), self.yaw(), self.roll())
 	}
@@ -133,42 +126,35 @@ impl Rotator64 {
 
 	/// Rotation around the X axis.
 	#[must_use]
-	#[inline(always)]
 	pub fn pitch(&self) -> f64 {
 		self.0[0]
 	}
 
 	/// Rotation around the Z axis.
 	#[must_use]
-	#[inline(always)]
 	pub fn yaw(&self) -> f64 {
 		self.0[1]
 	}
 
 	/// Rotation around the Y axis.
 	#[must_use]
-	#[inline(always)]
 	pub fn roll(&self) -> f64 {
 		self.0[2]
 	}
 
-	#[inline(always)]
 	pub fn set_pitch(&mut self, pitch: f64) {
 		self.0[0] = pitch
 	}
 
-	#[inline(always)]
 	pub fn set_yaw(&mut self, yaw: f64) {
 		self.0[1] = yaw
 	}
 
-	#[inline(always)]
 	pub fn set_roll(&mut self, roll: f64) {
 		self.0[2] = roll
 	}
 
 	#[must_use]
-	#[inline(always)]
 	pub fn to_dquat(self) -> DQuat {
 		DQuat::from_euler(EulerRot::XZY, self.pitch(), self.yaw(), self.roll())
 	}

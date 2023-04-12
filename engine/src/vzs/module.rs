@@ -171,7 +171,6 @@ impl Handle<Function> {
 impl<S: 'static + Symbol> std::ops::Deref for Handle<S> {
 	type Target = Arc<S>;
 
-	#[inline]
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
@@ -315,7 +314,6 @@ mod private {
 	where
 		T: Any + Send + Sync + std::fmt::Debug,
 	{
-		#[inline]
 		fn as_any(&self) -> &dyn Any {
 			self
 		}

@@ -8,7 +8,6 @@ use super::{
 };
 
 impl Instruction<OwningNode> {
-	#[inline]
 	#[must_use]
 	pub(super) fn map<F>(&self, mut mapper: F) -> InstRef<'_>
 	where

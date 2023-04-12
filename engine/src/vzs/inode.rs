@@ -82,7 +82,6 @@ impl Tree {
 				R::from_words(r)
 			}
 			Code::INodes { nodes } => {
-				#[inline]
 				#[must_use]
 				fn on_return<R: Abi>(ctx: &mut Runtime, icache_len: usize) -> R {
 					ctx.icache.0.truncate(icache_len);

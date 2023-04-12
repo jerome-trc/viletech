@@ -11,7 +11,6 @@ pub struct I64X2<T: Int64>(pub(super) __m128i, PhantomData<T>);
 
 impl<T: Int64> I64X2<T> {
 	/// `e0` a.k.a. `x`; `e1` a.k.a. `y`
-	#[inline(always)]
 	#[must_use]
 	pub fn new(e0: T, e1: T) -> Self {
 		Self(
@@ -22,26 +21,22 @@ impl<T: Int64> I64X2<T> {
 
 	/// The returned vector can never be invalid, but moving from negative signed
 	/// to unsigned will overflow, and moving from unsigned to signed will underflow.
-	#[inline(always)]
 	#[must_use]
 	pub fn new_raw(inner: __m128i) -> Self {
 		Self(inner, PhantomData)
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn zeroed() -> Self {
 		Self(unsafe { _mm_setzero_si128() }, PhantomData)
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn splat(value: T) -> Self {
 		Self(unsafe { _mm_set1_epi64x(value.to_i64()) }, PhantomData)
 	}
 
 	/// The first element is set to `value`; the second is zeroed.
-	#[inline(always)]
 	#[must_use]
 	pub fn new_e0(value: T) -> Self {
 		Self(unsafe { _mm_set_epi64x(value.to_i64(), 0) }, PhantomData)
@@ -50,7 +45,6 @@ impl<T: Int64> I64X2<T> {
 
 #[cfg(not(target_feature = "sse4.1"))]
 impl<T: Int64> I64X2<T> {
-	#[inline(always)]
 	#[must_use]
 	pub fn e0(self) -> T {
 		use super::mm_shuffle;
@@ -63,7 +57,6 @@ impl<T: Int64> I64X2<T> {
 		}
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e1(self) -> T {
 		Int64::from_i64(unsafe { _mm_cvtsi128_si64x(self.0) })
@@ -72,13 +65,11 @@ impl<T: Int64> I64X2<T> {
 
 #[cfg(target_feature = "sse4.1")]
 impl<T: Int64> I64X2<T> {
-	#[inline(always)]
 	#[must_use]
 	pub fn e0(self) -> T {
 		Int64::from_i64(unsafe { _mm_extract_epi64::<0>(self.0) })
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e1(self) -> T {
 		Int64::from_i64(unsafe { _mm_extract_epi64::<1>(self.0) })
@@ -86,7 +77,6 @@ impl<T: Int64> I64X2<T> {
 }
 
 impl<T: Int64> PartialEq for I64X2<T> {
-	#[inline(always)]
 	fn eq(&self, other: &Self) -> bool {
 		unsafe {
 			// From glam
@@ -101,7 +91,6 @@ impl<T: Int64> Eq for I64X2<T> {}
 impl<T: Int64> std::ops::Add for I64X2<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn add(self, rhs: Self) -> Self::Output {
 		Self(unsafe { _mm_add_epi64(self.0, rhs.0) }, PhantomData)
 	}
@@ -110,7 +99,6 @@ impl<T: Int64> std::ops::Add for I64X2<T> {
 impl<T: Int64> std::ops::Sub for I64X2<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn sub(self, rhs: Self) -> Self::Output {
 		Self(unsafe { _mm_sub_epi64(self.0, rhs.0) }, PhantomData)
 	}
@@ -119,7 +107,6 @@ impl<T: Int64> std::ops::Sub for I64X2<T> {
 impl<T: Int64> std::ops::Mul for I64X2<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn mul(self, rhs: Self) -> Self::Output {
 		// https://stackoverflow.com/questions/17863411/sse-multiplication-of-2-64-bit-integers
 		// By user "EasyasPi", used under CC BY-SA 4.0.
@@ -141,7 +128,6 @@ impl<T: Int64> std::ops::Mul for I64X2<T> {
 impl<T: Int64 + std::ops::Div<Output = T>> std::ops::Div for I64X2<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn div(self, rhs: Self) -> Self::Output {
 		Self::new(self.e0() / rhs.e0(), self.e1() / rhs.e1())
 	}
@@ -165,12 +151,10 @@ macro_rules! int64_impl {
 		impl sealed::Sealed for $int_t {}
 
 		impl Int64 for $int_t {
-			#[inline(always)]
 			fn to_i64(self) -> i64 {
 				self as i64
 			}
 
-			#[inline(always)]
 			fn from_i64(value: i64) -> Self {
 				value as $int_t
 			}

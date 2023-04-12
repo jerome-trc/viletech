@@ -116,14 +116,12 @@ num_converters! {
 }
 
 impl<T> From<QWord> for *const T {
-	#[inline(always)]
 	fn from(value: QWord) -> Self {
 		unsafe { value.u_size as *const T }
 	}
 }
 
 impl<T> From<*const T> for QWord {
-	#[inline(always)]
 	fn from(value: *const T) -> Self {
 		Self {
 			u_size: value as usize,
@@ -132,14 +130,12 @@ impl<T> From<*const T> for QWord {
 }
 
 impl<T> From<QWord> for *mut T {
-	#[inline(always)]
 	fn from(value: QWord) -> Self {
 		unsafe { value.u_size as *mut T }
 	}
 }
 
 impl<T> From<*mut T> for QWord {
-	#[inline(always)]
 	fn from(value: *mut T) -> Self {
 		Self {
 			u_size: value as usize,

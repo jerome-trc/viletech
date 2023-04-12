@@ -48,7 +48,6 @@ pub fn line_from_char_index(string: &str, index: usize) -> Option<(&str, usize)>
 /// [`enquote`]: https://github.com/reujab/enquote/blob/master/src/lib.rs
 /// [The Unlicense]: https://github.com/reujab/enquote/blob/master/unlicense
 pub fn unescape_char(string: &str) -> Result<char, UnescapeError> {
-	#[inline]
 	/// `Iterator::take` cannot be used because it consumes the iterator.
 	fn take<I: Iterator<Item = char>>(iterator: &mut I, n: usize) -> ArrayString<10> {
 		let mut s = ArrayString::<10>::default();

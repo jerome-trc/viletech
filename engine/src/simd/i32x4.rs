@@ -22,7 +22,6 @@ impl<T: Int32 + std::fmt::Debug> std::fmt::Debug for I32X4<T> {
 impl<T: Int32> I32X4<T> {
 	/// `e0` a.k.a. `x` a.k.a. `r`; `e1` a.k.a. `y` a.k.a. `g`;
 	/// `e2` a.k.a. `z` a.k.a. `b`; `e3` a.k.a. `w` a.k.a. `a`
-	#[inline(always)]
 	#[must_use]
 	pub fn new(e0: T, e1: T, e2: T, e3: T) -> Self {
 		Self(
@@ -33,26 +32,22 @@ impl<T: Int32> I32X4<T> {
 
 	/// The returned vector can never be invalid, but moving from negative signed
 	/// to unsigned will overflow, and moving from unsigned to signed will underflow.
-	#[inline(always)]
 	#[must_use]
 	pub fn new_raw(inner: __m128i) -> Self {
 		Self(inner, PhantomData)
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn zeroed() -> Self {
 		Self(unsafe { _mm_setzero_si128() }, PhantomData)
 	}
 
 	/// The first element is set to `value`, and all other components are zeroed.
-	#[inline(always)]
 	#[must_use]
 	pub fn new_e0(value: T) -> Self {
 		Self(unsafe { _mm_cvtsi32_si128(value.to_i32()) }, PhantomData)
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn splat(value: T) -> Self {
 		Self(unsafe { _mm_set1_epi32(value.to_i32()) }, PhantomData)
@@ -61,7 +56,6 @@ impl<T: Int32> I32X4<T> {
 
 #[cfg(not(target_feature = "sse4.1"))]
 impl<T: Int32> I32X4<T> {
-	#[inline(always)]
 	#[must_use]
 	pub fn e0(self) -> T {
 		use super::mm_shuffle;
@@ -71,7 +65,6 @@ impl<T: Int32> I32X4<T> {
 		})
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e1(self) -> T {
 		use super::mm_shuffle;
@@ -81,7 +74,6 @@ impl<T: Int32> I32X4<T> {
 		})
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e2(self) -> T {
 		use super::mm_shuffle;
@@ -91,7 +83,6 @@ impl<T: Int32> I32X4<T> {
 		})
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e3(self) -> T {
 		Int32::from_i32(unsafe { _mm_cvtsi128_si32(self.0) })
@@ -100,25 +91,21 @@ impl<T: Int32> I32X4<T> {
 
 #[cfg(target_feature = "sse4.1")]
 impl<T: Int32> I32X4<T> {
-	#[inline(always)]
 	#[must_use]
 	pub fn e0(self) -> T {
 		Int32::from_i32(unsafe { _mm_extract_epi32(self.0, 3) })
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e1(self) -> T {
 		Int32::from_i32(unsafe { _mm_extract_epi32(self.0, 2) })
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e2(self) -> T {
 		Int32::from_i32(unsafe { _mm_extract_epi32(self.0, 1) })
 	}
 
-	#[inline(always)]
 	#[must_use]
 	pub fn e3(self) -> T {
 		Int32::from_i32(unsafe { _mm_extract_epi32(self.0, 0) })
@@ -126,14 +113,12 @@ impl<T: Int32> I32X4<T> {
 }
 
 impl<T: Int32> From<F32X4> for I32X4<T> {
-	#[inline(always)]
 	fn from(value: F32X4) -> Self {
 		Self(unsafe { _mm_castps_si128(value.0) }, PhantomData)
 	}
 }
 
 impl<T: Int32> PartialEq for I32X4<T> {
-	#[inline(always)]
 	fn eq(&self, other: &Self) -> bool {
 		unsafe {
 			// From glam
@@ -148,7 +133,6 @@ impl<T: Int32> Eq for I32X4<T> {}
 impl<T: Int32> std::ops::Add for I32X4<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn add(self, rhs: Self) -> Self::Output {
 		Self(unsafe { _mm_add_epi32(self.0, rhs.0) }, PhantomData)
 	}
@@ -157,7 +141,6 @@ impl<T: Int32> std::ops::Add for I32X4<T> {
 impl<T: Int32> std::ops::Sub for I32X4<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn sub(self, rhs: Self) -> Self::Output {
 		Self(unsafe { _mm_sub_epi32(self.0, rhs.0) }, PhantomData)
 	}
@@ -166,7 +149,6 @@ impl<T: Int32> std::ops::Sub for I32X4<T> {
 impl<T: Int32> std::ops::Mul for I32X4<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn mul(self, rhs: Self) -> Self::Output {
 		// Both from Gaijin Entertainment
 
@@ -190,7 +172,6 @@ impl<T: Int32> std::ops::Mul for I32X4<T> {
 impl<T: Int32 + std::ops::Div<Output = T>> std::ops::Div for I32X4<T> {
 	type Output = Self;
 
-	#[inline(always)]
 	fn div(self, rhs: Self) -> Self::Output {
 		Self::new(
 			self.e0() / rhs.e0(),
@@ -219,12 +200,10 @@ macro_rules! int32_impl {
 		impl sealed::Sealed for $int_t {}
 
 		impl Int32 for $int_t {
-			#[inline(always)]
 			fn to_i32(self) -> i32 {
 				self as i32
 			}
 
-			#[inline(always)]
 			fn from_i32(value: i32) -> Self {
 				value as $int_t
 			}
