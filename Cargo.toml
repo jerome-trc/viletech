@@ -1,5 +1,5 @@
 [workspace]
-members = ["engine", "client", "server"]
+members = ["engine", "client", "server", "cli"]
 default-members = ["engine", "client"]
 resolver = "2" # Needed for WGPU and Bevy.
 
