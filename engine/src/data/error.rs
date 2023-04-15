@@ -12,7 +12,7 @@ use crate::{wad, VPathBuf};
 pub enum VfsError {
 	/// The caller gave a path that didn't resolve to any [`VirtualFile`].
 	///
-	/// [`VirtualFile`]: super::File
+	/// [`VirtualFile`]: super::vfs::File
 	NotFound(VPathBuf),
 	/// The caller attempted to unmount the root node (an empty path or `/`).
 	UnmountRoot,
@@ -54,16 +54,7 @@ impl std::fmt::Display for VfsError {
 /// like lookup and mutation. Also see [`PrepError`].
 #[derive(Debug)]
 pub enum AssetError {
-	/// Tried to get a mutable reference to a [`Record`] that had
-	/// [`Handle`]s to it. See [`Catalog::try_mutate`].
-	///
-	/// [`Record`]: super::Record
-	/// [`Handle`]: super::Handle
-	/// [`Catalog::try_mutate`]: super::Catalog::try_mutate
-	Immutable(usize),
-	/// An asset ID didn't resolve to a [`Record`].
-	///
-	/// [`Record`]: super::Record
+	/// An asset ID didn't resolve to anything.
 	NotFound(String),
 }
 
@@ -72,12 +63,6 @@ impl std::error::Error for AssetError {}
 impl std::fmt::Display for AssetError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Immutable(handles) => {
-				write!(
-					f,
-					"Tried to mutate an asset record with {handles} outstanding handles."
-				)
-			}
 			Self::NotFound(id) => {
 				write!(f, "No asset exists by the ID: {id}")
 			}
@@ -99,11 +84,13 @@ pub enum MountErrorKind {
 	Canonicalization(std::io::Error),
 	/// Failure to read the entries of a directory the caller wanted to mount.
 	DirectoryRead(std::io::Error),
-	/// Failed to read a file's bytes during a mount.
-	FileRead(std::io::Error),
 	/// The caller attempted to perform an operating on a real file,
 	/// but the given path didn't resolve to anything.
 	FileNotFound,
+	/// Failed to read a file's bytes during a mount.
+	FileRead(std::io::Error),
+	/// Failed to acquire a file's type while attempting to mount a directory.
+	FileType(std::io::Error),
 	/// The given mount point wasn't valid UTF-8, had invalid characters, had a
 	/// component comprised only of `.` characters, or had a component with a
 	/// reserved name in it.
@@ -134,7 +121,16 @@ pub enum MountErrorKind {
 	/// Something went wrong when trying to parse a WAD archive during loading.
 	Wad(wad::Error),
 	/// Something went wrong when trying to open a zip archive during loading.
-	Zip(ZipError),
+	ZipArchiveRead(ZipError),
+	/// Indexed retrieval of a zip archive entry failed.
+	ZipFileGet(usize, ZipError),
+	/// A zip archive entry contains an unsafe or malformed name.
+	ZipFileName(String),
+	/// Failed to correctly read all the bytes in a zip archive entry.
+	ZipFileRead {
+		name: PathBuf,
+		err: Option<std::io::Error>,
+	},
 }
 
 #[derive(Debug)]
@@ -154,7 +150,7 @@ impl std::error::Error for MountError {
 			MountErrorKind::FileRead(err) => Some(err),
 			MountErrorKind::Metadata(err) => Some(err),
 			MountErrorKind::Wad(err) => Some(err),
-			MountErrorKind::Zip(err) => Some(err),
+			MountErrorKind::ZipArchiveRead(err) => Some(err),
 			_ => None,
 		}
 	}
@@ -169,11 +165,14 @@ impl std::fmt::Display for MountError {
 			MountErrorKind::DirectoryRead(err) => {
 				write!(f, "Failed to read a directory's contents: {err}")
 			}
+			MountErrorKind::FileNotFound => {
+				write!(f, "No file exists at path: {}", self.path.display())
+			}
 			MountErrorKind::FileRead(err) => {
 				write!(f, "File read failed: {err}")
 			}
-			MountErrorKind::FileNotFound => {
-				write!(f, "No file exists at path: {}", self.path.display())
+			MountErrorKind::FileType(err) => {
+				write!(f, "Failed to retrieve type of file: {err}")
 			}
 			MountErrorKind::InvalidMountPoint(err) => {
 				write!(
@@ -220,8 +219,32 @@ impl std::fmt::Display for MountError {
 			MountErrorKind::Wad(err) => {
 				write!(f, "Failed to parse a WAD archive: {err}")
 			}
-			MountErrorKind::Zip(err) => {
+			MountErrorKind::ZipArchiveRead(err) => {
 				write!(f, "Failed to open a zip archive: {err}")
+			}
+			MountErrorKind::ZipFileGet(index, err) => {
+				write!(
+					f,
+					"Failed to get zip archive entry by index: {index} ({err})"
+				)
+			}
+			MountErrorKind::ZipFileName(name) => {
+				write!(f, "Zip archive entry name is malformed or unsafe: {name}")
+			}
+			MountErrorKind::ZipFileRead { name, err } => {
+				if let Some(err) = err {
+					write!(
+						f,
+						"Failed to read zip archive entry: {n} ({err})",
+						n = name.display()
+					)
+				} else {
+					write!(
+						f,
+						"Failed to read all content of zip archive entry: {n}",
+						n = name.display()
+					)
+				}
 			}
 		}
 	}

@@ -45,7 +45,7 @@ impl Catalog {
 		let mut vertexes = None;
 
 		for child in dir.child_refs() {
-			match child.file_stem() {
+			match child.file_prefix() {
 				"BLOCKMAP" => _blockmap = Some(child),
 				"LINEDEFS" => linedefs = Some(child),
 				"NODES" => _nodes = Some(child),
@@ -179,7 +179,7 @@ impl Catalog {
 				id: format!(
 					"{mount_id}/{id}",
 					mount_id = ctx.mntinfo.id(),
-					id = dir.file_stem()
+					id = dir.file_prefix()
 				),
 			},
 			meta: LevelMeta {
@@ -457,7 +457,7 @@ impl Catalog {
 		let mut _znodes = None;
 
 		for child in dir.child_refs() {
-			match child.file_stem() {
+			match child.file_prefix() {
 				"BEHAVIOR" => _behavior = Some(child),
 				"DIALOGUE" => _dialogue = Some(child),
 				"SCRIPTS" => _scripts = Some(child),

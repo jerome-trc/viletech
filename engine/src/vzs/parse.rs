@@ -19,7 +19,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 
 use crate::{
-	data::{FileRef, VfsError},
+	data::{vfs::FileRef, VfsError},
 	vzs::ast,
 	VPath, VPathBuf,
 };
@@ -165,7 +165,7 @@ pub fn parse_include_tree(mount_path: &VPath, root: FileRef) -> IncTreeResult {
 
 	while !stack.is_empty() {
 		stack.par_drain(..).for_each(|inc_path| {
-			let fref = match root.catalog().get_file(&inc_path) {
+			let fref = match root.vfs().get(&inc_path) {
 				Some(f) => f,
 				None => {
 					vfs_errs.lock().push(VfsError::NotFound(inc_path));

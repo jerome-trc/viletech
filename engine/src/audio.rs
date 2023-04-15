@@ -31,7 +31,7 @@ use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 
 use crate::{
-	data::{Catalog, FileRef},
+	data::{vfs::FileRef, Catalog},
 	sim::ActorPtr,
 	utils,
 };

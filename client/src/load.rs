@@ -56,55 +56,14 @@ pub fn update(
 	};
 
 	let go_to_frontend = match &res_load {
-		LoadOutcome::Cancelled => {
-			info!("Game load cancelled.");
-			true
-		}
-		LoadOutcome::MountFail { errors } => {
-			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
-				let num_errs = res_load.num_errs();
-				let mut msg = String::with_capacity(128 + 256 * num_errs);
-
-				msg.push_str(&format!(
-					"{num_errs} errors/warnings while loading: {}",
-					real_path.display()
-				));
-
-				msg.push_str("\r\n\r\n");
-
-				for err in &errors[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				error!("{msg}");
-			}
-
-			true
-		}
-		LoadOutcome::PrepFail { errors } => {
-			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
-				let num_errs = res_load.num_errs();
-				let mut msg = String::with_capacity(128 + 256 * num_errs);
-
-				msg.push_str(&format!(
-					"{num_errs} errors/warnings while loading: {}",
-					real_path.display()
-				));
-
-				msg.push_str("\r\n\r\n");
-
-				for err in &errors[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				error!("{msg}");
-			}
-
-			true
-		}
 		LoadOutcome::Ok { mount, prep } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
 				let num_errs = res_load.num_errs();
+
+				if num_errs == 0 {
+					continue;
+				}
+
 				let mut msg = String::with_capacity(128 + 256 * num_errs);
 
 				msg.push_str(&format!(
@@ -130,6 +89,63 @@ pub fn update(
 
 			false
 		}
+		LoadOutcome::PrepFail { errors } => {
+			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
+				let num_errs = res_load.num_errs();
+
+				if num_errs == 0 {
+					continue;
+				}
+
+				let mut msg = String::with_capacity(128 + 256 * num_errs);
+
+				msg.push_str(&format!(
+					"{num_errs} errors/warnings while loading: {}",
+					real_path.display()
+				));
+
+				msg.push_str("\r\n\r\n");
+
+				for err in &errors[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				error!("{msg}");
+			}
+
+			true
+		}
+		LoadOutcome::MountFail { errors } => {
+			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
+				let num_errs = res_load.num_errs();
+
+				if num_errs == 0 {
+					continue;
+				}
+
+				let mut msg = String::with_capacity(128 + 256 * num_errs);
+
+				msg.push_str(&format!(
+					"{num_errs} errors/warnings while loading: {}",
+					real_path.display()
+				));
+
+				msg.push_str("\r\n\r\n");
+
+				for err in &errors[i] {
+					msg.push_str(&err.to_string());
+				}
+
+				error!("{msg}");
+			}
+
+			true
+		}
+		LoadOutcome::Cancelled => {
+			info!("Game load cancelled.");
+			true
+		}
+		LoadOutcome::NoOp => unreachable!(),
 	};
 
 	if go_to_frontend {

@@ -12,40 +12,9 @@ use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
-use super::{Asset, Catalog, File, FileKind};
+use super::{Asset, Catalog};
 
 impl Catalog {
-	/// Clears the keys out of every virtual directory in preparation for
-	/// repopulation via `populate_dirs`.
-	pub(super) fn clear_dirs(&mut self) {
-		self.files.par_iter_mut().for_each(|(_, file)| {
-			if let FileKind::Directory(children) = &mut file.kind {
-				children.clear();
-			}
-		});
-	}
-
-	/// Sets every virtual directory to hold paths to child entries.
-	/// Remember to call `clear_dirs` first if necessary.
-	pub(super) fn populate_dirs(&mut self) {
-		for index in 0..self.files.len() {
-			let parent = if let Some(p) = self.files[index].parent_path() {
-				VfsKey::new(p)
-			} else {
-				continue; // No parent; `self.files[index]` is the root node.
-			};
-
-			let (&key, _) = self.files.get_index(index).unwrap();
-			let parent = self.files.get_mut(&parent).unwrap();
-
-			if let FileKind::Directory(children) = &mut parent.kind {
-				children.push(key);
-			} else {
-				unreachable!()
-			}
-		}
-	}
-
 	pub(super) fn clean_maps(&mut self) {
 		self.nicknames.par_iter_mut().for_each(|mut kvp| {
 			kvp.value_mut()
@@ -69,76 +38,11 @@ impl Catalog {
 		self.spawn_nums.retain(|_, v| !v.is_empty());
 	}
 
-	pub(super) fn ui_vfs_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		ui.heading("Virtual File System");
-
-		egui::ScrollArea::vertical().show(ui, |ui| {
-			for file in self.files.values() {
-				let resp = ui.label(file.path_str());
-
-				let resp = if resp.hovered() {
-					resp.highlight()
-				} else {
-					resp
-				};
-
-				resp.on_hover_ui_at_pointer(|ui| {
-					egui::Area::new("vtec_vfs_tt").show(ctx, |_| {
-						Self::ui_file_tooltip(ui, file);
-					});
-				});
-			}
-		});
-	}
-
-	fn ui_file_tooltip(ui: &mut egui::Ui, file: &File) {
-		match &file.kind {
-			FileKind::Binary(bytes) => {
-				ui.label("Binary");
-				let mut unit = "B";
-				let mut len = bytes.len() as f64;
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "KB";
-				}
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "MB";
-				}
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "GB";
-				}
-
-				ui.label(&format!("{len:.2} {unit}"));
-			}
-			FileKind::Text(string) => {
-				ui.label("Text");
-				ui.label(&format!("{} B", string.len()));
-			}
-			FileKind::Empty => {
-				ui.label("Empty");
-			}
-			FileKind::Directory(dir) => {
-				ui.label("Directory");
-
-				if dir.len() == 1 {
-					ui.label("1 child");
-				} else {
-					ui.label(&format!("{} children", dir.len()));
-				}
-			}
-		}
-	}
-
 	pub(super) fn ui_assets_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		ui.heading("Assets");
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
-			for mount in &self.mounts {
+			for (_, mount) in &self.mounts {
 				for (_, asset) in &mount.assets {
 					let resp = ui.label(&asset.header().id);
 
@@ -154,6 +58,8 @@ impl Catalog {
 						});
 					});
 				}
+
+				ui.separator();
 			}
 		});
 	}
@@ -197,8 +103,9 @@ impl AssetKey {
 }
 
 slotmap::new_key_type! {
+	pub(super) struct MountSlotKey;
 	/// See [`crate::data::Mount`].
-	pub struct AssetSlotKey;
+	pub(super) struct AssetSlotKey;
 }
 
 /// Intermediate format for parsing parts of [`MountMeta`] from `meta.toml` files.

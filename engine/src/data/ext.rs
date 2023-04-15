@@ -29,7 +29,7 @@ impl CatalogExt for Catalog {
 		crate::basedata_is_valid()?;
 
 		let req = LoadRequest {
-			paths: vec![(crate::basedata_path(), "/viletech")],
+			load_order: vec![(crate::basedata_path(), "/viletech")],
 			tracker: None,
 			dev_mode: false,
 		};
@@ -65,7 +65,7 @@ impl CatalogExt for Catalog {
 
 				Ok(())
 			}
-			LoadOutcome::Cancelled => unreachable!("Cancelled base-data load."),
+			other => unreachable!("Impossible base data load result: {other:#?}"),
 		}
 	}
 

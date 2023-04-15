@@ -2,8 +2,9 @@
 //!
 //! This is an equivalent concept to modules in LLVM, Rust, and Cranelift, but it
 //! inherits the ZScript behavior of being compiled from an arbitrary number of
-//! source files, rather than just one. Hence, `vzs` is a module (for language
-//! support), `vtec` is a module for native engine functionality, et cetera.
+//! source files, rather than just one. Hence, `vzscript` (namespace `vzs`) is a
+//! module (for language support), `viletech` (namespace `vtec`) is a module for
+//! native engine functionality, et cetera.
 //!
 //! To get started, [create a `Builder`].
 //!
@@ -20,17 +21,18 @@ use std::{
 use cranelift_jit::{JITBuilder, JITModule};
 use dashmap::DashMap;
 use fasthash::SeaHasher;
+use slotmap::SlotMap;
 
 use super::{abi::Abi, func::TFunc, tsys, Error, Function, TypeInfo};
 
 /// A collection of modules and a table for accessing their symbols.
 #[derive(Debug)]
 pub struct Project {
-	modules: Vec<Module>,
+	modules: SlotMap<ModuleSlotKey, Module>,
 	/// In each value:
-	/// - Field `0` is an index into `Self::modules`.
-	/// - Field `1` is an index into [`Module::symbols`].
-	symbols: DashMap<SymbolKey, (usize, usize)>,
+	/// - Field `0` is a key into `Self::modules`.
+	/// - Field `1` is a key into [`Module::symbols`].
+	symbols: DashMap<SymbolKey, (ModuleSlotKey, SymbolSlotKey)>,
 }
 
 impl Project {
@@ -45,23 +47,44 @@ impl Project {
 	}
 
 	pub fn add_module(&mut self, module: Module) {
-		for (i, symbol) in module.symbols.iter().enumerate() {
+		let module_key = self.modules.insert(module);
+
+		for (sym_key, symbol) in &self.modules[module_key].symbols {
 			let key = SymbolKey::new::<TypeInfo>(&symbol.header().name);
-			self.symbols.insert(key, (0, i));
+			self.symbols.insert(key, (module_key, sym_key));
 		}
-
-		self.modules.push(module);
 	}
 
-	#[must_use]
-	pub fn modules(&self) -> &[Module] {
-		&self.modules
+	/// Panics if no module named `name` exists.
+	pub fn remove_module(&mut self, name: &str) {
+		let (key, _) = self
+			.modules
+			.iter()
+			.find(|(_, module)| module.name() == name)
+			.unwrap_or_else(|| panic!("No VZS module named: {name}"));
+
+		self.modules.remove(key);
 	}
 
-	/// Applies [`Vec::truncate`] to the module array.
-	pub fn truncate(&mut self, len: usize) {
-		self.modules.truncate(len);
-		self.symbols.retain(|_, val| val.0 < len);
+	/// Never removes the VZS corelib.
+	pub fn retain<F>(&mut self, mut predicate: F)
+	where
+		F: FnMut(&Module) -> bool,
+	{
+		self.modules.retain(|_, module| {
+			if module.name() == Module::CORELIB_NAME {
+				return true;
+			}
+
+			predicate(module)
+		});
+
+		self.symbols
+			.retain(|_, (msk, _)| self.modules.contains_key(*msk));
+	}
+
+	pub fn modules(&self) -> impl Iterator<Item = &Module> {
+		self.modules.values()
 	}
 }
 
@@ -70,7 +93,7 @@ impl Default for Project {
 		let core = Module::core();
 
 		let mut ret = Self {
-			modules: vec![],
+			modules: SlotMap::default(),
 			symbols: DashMap::with_capacity(core.symbols.len() * 3),
 		};
 
@@ -90,10 +113,17 @@ pub struct Module {
 	#[allow(unused)]
 	pub(super) jit: Arc<JitModule>,
 	/// Functions, types, type aliases, et cetera.
-	pub(super) symbols: Vec<Arc<dyn Symbol>>,
+	pub(super) symbols: SlotMap<SymbolSlotKey, Arc<dyn Symbol>>,
+}
+
+slotmap::new_key_type! {
+	pub(super) struct ModuleSlotKey;
+	pub(super) struct SymbolSlotKey;
 }
 
 impl Module {
+	const CORELIB_NAME: &str = "vzscript";
+
 	#[must_use]
 	pub fn name(&self) -> &str {
 		&self.name
@@ -106,10 +136,10 @@ impl Module {
 
 	#[must_use]
 	fn core() -> Self {
-		let mut ret = Builder::new("vzscript".to_string(), false, false).build();
+		let mut ret = Builder::new(Self::CORELIB_NAME.to_string(), false, false).build();
 
 		for typeinfo in tsys::builtins() {
-			ret.symbols.push(Arc::new(typeinfo));
+			ret.symbols.insert(Arc::new(typeinfo));
 		}
 
 		ret
@@ -245,15 +275,14 @@ impl Builder {
 
 	#[must_use]
 	pub fn build(self) -> Module {
-		let mut symbols: Vec<Arc<dyn Symbol>> =
-			Vec::with_capacity(self.functions.len() + self.types.len());
+		let mut symbols = SlotMap::<SymbolSlotKey, Arc<dyn Symbol>>::default();
 
 		for func in self.functions.into_iter() {
-			symbols.push(Arc::new(func));
+			symbols.insert(Arc::new(func));
 		}
 
 		for tinfo in self.types.into_iter() {
-			symbols.push(Arc::new(tinfo));
+			symbols.insert(Arc::new(tinfo));
 		}
 
 		Module {

@@ -165,7 +165,7 @@ impl AudioCore {
 		let path = VPath::new(&self.gui.id_buf).to_path_buf();
 		let catalog = self.catalog.read();
 
-		let fref = match catalog.get_file(&path) {
+		let fref = match catalog.vfs().get(&path) {
 			Some(f) => f,
 			None => {
 				info!("No file under virtual path: {}", path.display());

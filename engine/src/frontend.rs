@@ -325,7 +325,7 @@ impl FrontendMenu {
 	fn any_nonexistent_items(&self) -> bool {
 		self.load_order().iter().any(|entry| {
 			if let LoadOrderEntryKind::Item { exists, .. } = entry.kind {
-				return exists;
+				return !exists;
 			}
 
 			false

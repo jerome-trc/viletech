@@ -1,5 +1,9 @@
 use std::path::PathBuf;
 
+use rayon::prelude::*;
+
+use crate::data::detail::VfsKey;
+
 use super::*;
 
 #[must_use]
@@ -8,12 +12,12 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 		.join("..")
 		.join("sample");
 
-	let paths = vec![
+	let load_order = vec![
 		(base.join("freedoom1.wad"), "freedoom1"),
 		(base.join("freedoom2.wad"), "/freedoom2"),
 	];
 
-	for (real_path, _) in &paths {
+	for (real_path, _) in &load_order {
 		if !real_path.exists() {
 			panic!(
 				"VFS benchmarking depends on the following files of sample data:\r\n\t\
@@ -25,7 +29,7 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 	}
 
 	LoadRequest {
-		paths,
+		load_order,
 		tracker: None,
 		dev_mode: false,
 	}
@@ -44,15 +48,6 @@ fn load() {
 	let outcome = catalog.load(request());
 
 	match outcome {
-		LoadOutcome::Cancelled => {
-			panic!("Unexpected mount cancellation.");
-		}
-		LoadOutcome::MountFail { .. } => {
-			panic!("Mount failure.")
-		}
-		LoadOutcome::PrepFail { .. } => {
-			panic!("Asset preparation failure.")
-		}
 		LoadOutcome::Ok { mount, prep } => {
 			assert_eq!(mount.len(), 2);
 			assert_eq!(prep.len(), 2);
@@ -64,21 +59,26 @@ fn load() {
 					&& prep[1].is_empty()
 			);
 		}
+		other => {
+			panic!("Unexpected load outcome: {other:#?}");
+		}
 	}
 
-	assert!(
-		catalog.mounts().len() == 2,
-		"Expected 2 mounts, found: {len}",
-		len = catalog.mounts().len()
+	assert_eq!(
+		catalog.mounts_len(),
+		2,
+		"Expected 2 mounts, found: {}",
+		catalog.mounts_len()
 	);
 
 	// Root, 2 mounts, freedoom1.wad's contents, freedoom2.wad's contents.
 	const EXPECTED: usize = 1 + 2 + 3081 + 3649;
 
-	assert!(
-		catalog.all_files().count() == EXPECTED,
-		"Expected {EXPECTED} mounted files, found: {count}",
-		count = catalog.all_files().count()
+	assert_eq!(
+		catalog.vfs.files_len(),
+		EXPECTED,
+		"Expected {EXPECTED} mounted files, found: {}",
+		catalog.vfs.files_len()
 	);
 }
 
@@ -87,27 +87,27 @@ fn vfs_lookup() {
 	let mut catalog = Catalog::default();
 	let _ = catalog.load(request());
 
-	assert!(catalog.get_file("/").is_some(), "Root lookup failed.");
-	assert!(catalog.get_file("//").is_some(), "`//` lookup failed."); // Should return root.
+	assert!(catalog.vfs().get("/").is_some(), "Root lookup failed.");
+	assert!(catalog.vfs().get("//").is_some(), "`//` lookup failed."); // Should return root.
 
 	assert!(
-		catalog.get_file("/freedoom2").is_some(),
+		catalog.vfs().get("/freedoom2").is_some(),
 		"`/freedoom2` lookup failed."
 	);
 	assert!(
-		catalog.get_file("/freedoom2/").is_some(),
+		catalog.vfs().get("/freedoom2/").is_some(),
 		"`/freedoom2/` lookup failed."
 	);
 	assert!(
-		catalog.get_file("freedoom2/FCGRATE2").is_some(),
+		catalog.vfs().get("freedoom2/FCGRATE2").is_some(),
 		"`freedoom2/FCGRATE2` lookup failed."
 	);
 	assert!(
-		catalog.get_file("/freedoom2/FCGRATE2").is_some(),
+		catalog.vfs().get("/freedoom2/FCGRATE2").is_some(),
 		"`/freedoom2/FCGRATE2` lookup failed."
 	);
 	assert!(
-		catalog.get_file("/freedoom2/FCGRATE2/").is_some(),
+		catalog.vfs().get("/freedoom2/FCGRATE2/").is_some(),
 		"`/freedoom2/FCGRATE2/` lookup failed."
 	);
 }
@@ -117,13 +117,13 @@ fn vfs_dir_structure() {
 	let mut catalog = Catalog::default();
 	let _ = catalog.load(request());
 
-	let root = catalog.get_file("/").unwrap();
+	let root = catalog.vfs().get("/").unwrap();
 
 	assert_eq!(
-		root.children().count(),
+		root.child_count(),
 		2,
 		"Expected root to have 2 children, but it has {}.",
-		root.children().count()
+		root.child_count()
 	);
 
 	const EXPECTED_CHILDREN: &[&str] = &[
@@ -140,7 +140,8 @@ fn vfs_dir_structure() {
 	];
 
 	for (index, child) in catalog
-		.get_file("/freedoom2/MAP01")
+		.vfs
+		.get("/freedoom2/MAP01")
 		.unwrap()
 		.children()
 		.enumerate()
@@ -153,19 +154,30 @@ fn vfs_dir_structure() {
 fn glob() {
 	let mut catalog = Catalog::default();
 	let _ = catalog.load(request());
-	let glob = globset::Glob::new("/freedoom2/FCGRATE*").unwrap();
-	let count = catalog.get_files_glob_par(glob).count();
-	assert!(
-		count == 2,
-		"Expected 2 entries matching glob `/freedoom2/FCGRATE*`, found: {}",
-		count
-	);
 
-	let glob = globset::Glob::new("/freedoom1/E*M[0123456789]").unwrap();
-	let count = catalog.get_files_glob_par(glob).count();
-	assert!(count == 36, "Expected 36 maps, found: {}", count);
+	{
+		let glob = globset::Glob::new("/freedoom2/FCGRATE*").unwrap();
+		let count = catalog.vfs.glob_par(glob).count();
+		assert_eq!(
+			count, 2,
+			"Expected 2 entries matching glob `/freedoom2/FCGRATE*`, found: {}",
+			count
+		);
+	}
 
-	let glob = globset::Glob::new("/freedoom2/MAP*").unwrap();
-	let count = catalog.get_files_glob_par(glob).count();
-	assert!(count == 32, "Expected 32 maps, found: {}", count);
+	{
+		let glob = globset::Glob::new("/freedoom1/E*M[0123456789]").unwrap();
+		let count = catalog.vfs.glob_par(glob).count();
+		assert_eq!(count, 36, "Expected 36 maps, found: {}", count);
+	}
+
+	{
+		let glob = globset::Glob::new("/freedoom2/MAP*").unwrap();
+		let count = catalog.vfs.glob_par(glob).count();
+		assert_eq!(
+			count, 352,
+			"Expected 352 maps and sub-entries, found: {}",
+			count
+		);
+	}
 }

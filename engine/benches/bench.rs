@@ -12,7 +12,7 @@ fn misc(crit: &mut Criterion) {
 	grp.finish();
 }
 
-fn vfs(crit: &mut Criterion) {
+fn data(crit: &mut Criterion) {
 	fn request() -> LoadRequest<PathBuf, &'static str> {
 		let sample = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 			.join("..")
@@ -34,23 +34,27 @@ fn vfs(crit: &mut Criterion) {
 		}
 
 		LoadRequest {
-			paths: mount_paths,
+			load_order: mount_paths,
 			tracker: None,
 			dev_mode: false,
 		}
 	}
 
-	fn mount_unmount(crit: &mut Criterion) {
+	fn load_unload(crit: &mut Criterion) {
 		let mut catalog = Catalog::default();
 
-		let mut grp = crit.benchmark_group("VFS: Mount, Unmount");
+		let mut grp = crit.benchmark_group("Data: Load and Unload");
 		grp.sample_size(20);
 
 		grp.bench_function("FreeDoom, FreeDoom 2", |bencher| {
-			bencher.iter(|| {
-				let _ = catalog.load(request());
-				let _ = catalog.truncate(0);
-			});
+			bencher.iter_batched(
+				|| (request(), request()),
+				|(req_l, req_u)| {
+					let _ = catalog.load(req_l);
+					let _ = catalog.unload(req_u.load_order.iter().map(|(_, mp)| mp));
+				},
+				criterion::BatchSize::SmallInput,
+			);
 		});
 
 		grp.finish();
@@ -60,27 +64,27 @@ fn vfs(crit: &mut Criterion) {
 		let mut catalog = Catalog::default();
 		let _ = catalog.load(request());
 
-		let mut grp = crit.benchmark_group("VFS: Lookup");
+		let mut grp = crit.benchmark_group("Data: VFS Lookup");
 		grp.sample_size(10_000);
 
 		grp.bench_function("First Loaded", |bencher| {
 			bencher.iter(|| {
-				let _ = catalog.get_file("/freedoom1/E1M1").unwrap();
+				let _ = catalog.vfs().get("/freedoom1/E1M1").unwrap();
 			});
 		});
 
 		grp.bench_function("Last Loaded", |bencher| {
 			bencher.iter(|| {
-				let _ = catalog.get_file("freedoom2/FCGRATE2").unwrap();
+				let _ = catalog.vfs().get("freedoom2/FCGRATE2").unwrap();
 			});
 		});
 
 		grp.finish();
 	}
 
-	mount_unmount(crit);
+	load_unload(crit);
 	lookup(crit);
 }
 
-criterion_group!(benches, misc, vfs);
+criterion_group!(benches, misc, data);
 criterion_main!(benches);

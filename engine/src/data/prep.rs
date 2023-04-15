@@ -4,7 +4,7 @@
 
 mod level;
 
-use std::{io::Cursor, ops::Range, sync::Arc};
+use std::{io::Cursor, sync::Arc};
 
 use arrayvec::ArrayVec;
 use bevy::prelude::info;
@@ -18,7 +18,7 @@ use smallvec::smallvec;
 use crate::{vzs, VPathBuf};
 
 use super::{
-	detail::{AssetKey, AssetSlotKey, Outcome},
+	detail::{AssetKey, AssetSlotKey, MountSlotKey, Outcome},
 	Asset, AssetHeader, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind, Palette,
 	PaletteSet, PrepError, PrepErrorKind,
 };
@@ -26,28 +26,23 @@ use super::{
 #[derive(Debug)]
 pub(super) struct Context {
 	pub(super) tracker: Arc<LoadTracker>,
-	pub(super) new_mounts: Range<usize>,
 	/// Returning errors through the asset prep call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	pub(super) errors: Vec<Mutex<Vec<PrepError>>>,
+	pub(super) new_mounts: Vec<MountSlotKey>,
 }
 
 impl Context {
 	#[must_use]
-	pub(super) fn new(tracker: Arc<LoadTracker>, new_mounts: Range<usize>) -> Self {
+	pub(super) fn new(tracker: Arc<LoadTracker>, new_mounts: Vec<MountSlotKey>) -> Self {
 		Self {
 			tracker,
-			new_mounts: new_mounts.clone(),
 			errors: {
-				let new_mount_count = new_mounts.end - new_mounts.start;
-				let mut e = Vec::with_capacity(new_mount_count);
-
-				for _ in 0..new_mount_count {
-					e.push(Mutex::new(vec![]));
-				}
-
-				e
+				let mut ret = vec![];
+				ret.resize_with(new_mounts.len(), || Mutex::new(vec![]));
+				ret
 			},
+			new_mounts,
 		}
 	}
 }
@@ -56,9 +51,9 @@ impl Context {
 #[derive(Debug)]
 pub(self) struct SubContext<'ctx> {
 	pub(self) tracker: &'ctx Arc<LoadTracker>,
-	pub(self) assets: &'ctx Mutex<SlotMap<AssetSlotKey, Arc<dyn Asset>>>,
-	pub(self) i_mount: usize,
+	pub(self) mount_key: MountSlotKey,
 	pub(self) mntinfo: &'ctx MountInfo,
+	pub(self) assets: &'ctx Mutex<SlotMap<AssetSlotKey, Arc<dyn Asset>>>,
 	pub(self) errors: &'ctx Mutex<Vec<PrepError>>,
 }
 
@@ -83,35 +78,30 @@ impl Catalog {
 	/// - Load tracker has already had its asset prep target number set.
 	/// - `ctx.errors` has been populated.
 	pub(super) fn prep(&mut self, mut ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
-		debug_assert!(!ctx.errors.is_empty());
-
-		let orig_modules_len = self.vzscript.modules().len();
 		let to_reserve = ctx.tracker.prep_target();
-
+		debug_assert!(!ctx.errors.is_empty());
 		debug_assert!(to_reserve > 0);
 
 		if let Err(err) = self.assets.try_reserve(to_reserve) {
 			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
 		}
 
-		let mut staging = Vec::with_capacity(ctx.new_mounts.end - ctx.new_mounts.start);
-		staging.resize_with(ctx.new_mounts.end - ctx.new_mounts.start, || {
-			Mutex::new(SlotMap::default())
-		});
+		let mut staging = vec![];
+		staging.resize_with(ctx.new_mounts.len(), || Mutex::new(SlotMap::default()));
 
 		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
-		for i in ctx.new_mounts.clone() {
+		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				i_mount: i,
-				mntinfo: &self.mounts[i].info,
-				assets: &staging[i - ctx.new_mounts.start],
-				errors: &ctx.errors[i - ctx.new_mounts.start],
+				mount_key: *mount_key,
+				mntinfo: &self.mounts[*mount_key].info,
+				assets: &staging[i],
+				errors: &ctx.errors[i],
 			};
 
 			let module = match subctx.mntinfo.kind {
@@ -132,17 +122,17 @@ impl Catalog {
 		// - Sounds and music.
 		// - Non-picture-format images.
 
-		for i in ctx.new_mounts.clone() {
+		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				i_mount: i,
-				mntinfo: &self.mounts[i].info,
-				assets: &staging[i - ctx.new_mounts.start],
-				errors: &ctx.errors[i - ctx.new_mounts.start],
+				mount_key: *mount_key,
+				mntinfo: &self.mounts[*mount_key].info,
+				assets: &staging[i],
+				errors: &ctx.errors[i],
 			};
 
 			match subctx.mntinfo.kind {
@@ -158,17 +148,17 @@ impl Catalog {
 		// - Picture-format images, which need palettes.
 		// - Maps, which need textures, music, scripts, blueprints...
 
-		for i in ctx.new_mounts.clone() {
+		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				i_mount: i,
-				mntinfo: &self.mounts[i].info,
-				assets: &staging[i - ctx.new_mounts.start],
-				errors: &ctx.errors[i - ctx.new_mounts.start],
+				mount_key: *mount_key,
+				mntinfo: &self.mounts[*mount_key].info,
+				assets: &staging[i],
+				errors: &ctx.errors[i],
 			};
 
 			match subctx.mntinfo.kind {
@@ -190,8 +180,13 @@ impl Catalog {
 		let ret = Output { errors };
 
 		if ret.any_errs() {
-			self.on_prep_fail(&ctx, orig_modules_len);
+			self.on_prep_fail(ctx.new_mounts);
 		} else {
+			for (i, slotmap) in staging.into_iter().enumerate() {
+				let mount_key = ctx.new_mounts[i];
+				self.mounts[mount_key].assets = slotmap.into_inner();
+			}
+
 			// TODO: Make each successfully processed file increment progress.
 			ctx.tracker.finish_prep();
 			info!("Loading complete.");
@@ -212,7 +207,7 @@ impl Catalog {
 			todo!()
 		};
 
-		let script_root = match self.get_file(&script_root) {
+		let script_root = match self.vfs.get(&script_root) {
 			Some(fref) => fref,
 			None => {
 				ctx.errors.lock().push(PrepError {
@@ -247,7 +242,7 @@ impl Catalog {
 	fn prep_pass1_file(&self, ctx: &SubContext) -> Outcome<vzs::Module, ()> {
 		let ret = None;
 
-		let file = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
+		let file = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
 		// Pass 1 only deals in text files.
 		if !file.is_text() {
@@ -264,11 +259,11 @@ impl Catalog {
 			.is_some()
 		{
 			unimplemented!();
-		} else if file.file_stem().eq_ignore_ascii_case("decorate") {
+		} else if file.file_prefix().eq_ignore_ascii_case("decorate") {
 			unimplemented!();
-		} else if file.file_stem().eq_ignore_ascii_case("zscript") {
+		} else if file.file_prefix().eq_ignore_ascii_case("zscript") {
 			unimplemented!();
-		} else if file.file_stem().eq_ignore_ascii_case("edfroot") {
+		} else if file.file_prefix().eq_ignore_ascii_case("edfroot") {
 			unimplemented!();
 		}
 
@@ -289,7 +284,7 @@ impl Catalog {
 	}
 
 	fn prep_pass2_wad(&self, ctx: &SubContext) {
-		let wad = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
+		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
 		wad.children().par_bridge().for_each(|child| {
 			if !child.is_readable() {
@@ -301,7 +296,7 @@ impl Catalog {
 			}
 
 			let bytes = child.read_bytes();
-			let fstem = child.file_stem();
+			let fstem = child.file_prefix();
 
 			let res = if fstem.starts_with("PLAYPAL") {
 				self.prep_playpal(ctx, bytes)
@@ -313,7 +308,7 @@ impl Catalog {
 				Ok(()) => {}
 				Err(err) => {
 					ctx.errors.lock().push(PrepError {
-						path: child.path.to_path_buf(),
+						path: child.path().to_path_buf(),
 						kind: PrepErrorKind::Io(err),
 					});
 				}
@@ -322,7 +317,7 @@ impl Catalog {
 	}
 
 	fn prep_pass3_wad(&self, ctx: &SubContext) {
-		let wad = self.get_file(ctx.mntinfo.virtual_path()).unwrap();
+		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
 		wad.child_refs()
 			.filter(|c| !c.is_empty())
@@ -342,7 +337,7 @@ impl Catalog {
 
 	fn prep_pass3_wad_entry(&self, ctx: &SubContext, vfile: FileRef) {
 		let bytes = vfile.read_bytes();
-		let fstem = vfile.file_stem();
+		let fstem = vfile.file_prefix();
 
 		/// Kinds of WAD entries irrelevant to this pass.
 		const UNHANDLED: &[&str] = &[
@@ -372,7 +367,7 @@ impl Catalog {
 			Ok(()) => {}
 			Err(err) => {
 				ctx.errors.lock().push(PrepError {
-					path: vfile.path.to_path_buf(),
+					path: vfile.path().to_path_buf(),
 					kind: PrepErrorKind::Io(err),
 				});
 			}
@@ -393,14 +388,17 @@ impl Catalog {
 		}
 	}
 
-	fn on_prep_fail(&mut self, _ctx: &Context, orig_modules_len: usize) {
-		self.vzscript.truncate(orig_modules_len);
-		self.clean_maps();
-	}
-}
+	fn on_prep_fail(&mut self, new_mounts: Vec<MountSlotKey>) {
+		let ids: Vec<_> = new_mounts
+			.iter()
+			.map(|key| self.mounts[*key].info.id().to_string())
+			.collect();
 
-// Processors for individual data formats.
-impl Catalog {
+		self.unload(ids);
+	}
+
+	// Processors for individual data formats //////////////////////////////////
+
 	/// Returns `None` to indicate that `bytes` was checked
 	/// and determined to not be a picture.
 	#[must_use]
@@ -455,10 +453,9 @@ impl Catalog {
 
 		Ok(())
 	}
-}
 
-// Common functions.
-impl Catalog {
+	// Common functions ////////////////////////////////////////////////////////
+
 	fn register_asset<A: Asset>(&self, ctx: &SubContext, asset: A) {
 		let nickname = asset.header().nickname();
 		let key_full = AssetKey::new::<A>(&asset.header().id);
@@ -476,18 +473,18 @@ impl Catalog {
 		let slotkey = ctx.assets.lock().insert(Arc::new(asset));
 
 		if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
-			kvp.value_mut().push((ctx.i_mount, slotkey));
+			kvp.value_mut().push((ctx.mount_key, slotkey));
 		} else {
 			self.nicknames
-				.insert(key_nick, smallvec![(ctx.i_mount, slotkey)]);
+				.insert(key_nick, smallvec![(ctx.mount_key, slotkey)]);
 		};
 
 		match lookup {
 			dashmap::mapref::entry::Entry::Occupied(mut occu) => {
-				occu.insert((ctx.i_mount, slotkey));
+				occu.insert((ctx.mount_key, slotkey));
 			}
 			dashmap::mapref::entry::Entry::Vacant(vacant) => {
-				vacant.insert((ctx.i_mount, slotkey));
+				vacant.insert((ctx.mount_key, slotkey));
 			}
 		}
 	}

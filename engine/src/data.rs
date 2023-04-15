@@ -10,7 +10,7 @@ mod mount;
 mod prep;
 #[cfg(test)]
 mod test;
-mod vfs;
+pub mod vfs;
 
 use std::{
 	path::Path,
@@ -22,19 +22,18 @@ use std::{
 
 use bevy_egui::egui;
 use dashmap::DashMap;
-use globset::Glob;
-use indexmap::IndexMap;
 use parking_lot::{Mutex, RwLock};
-use rayon::prelude::*;
-use regex::Regex;
 use slotmap::SlotMap;
 use smallvec::SmallVec;
 
 use crate::{utils::path::PathExt, vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
-pub use self::{asset::*, config::*, error::*, ext::*, vfs::*};
+use self::{
+	detail::{AssetKey, AssetSlotKey, MountSlotKey},
+	vfs::{FileRef, VirtualFs},
+};
 
-use self::detail::{AssetKey, AssetSlotKey, VfsKey};
+pub use self::{asset::*, config::*, error::*, ext::*};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
@@ -54,34 +53,28 @@ use self::detail::{AssetKey, AssetSlotKey, VfsKey};
 /// an archive. If `mymod.zip` contains `myothermod.vpk7`, there's no way to
 /// register `myothermod` as a mount in the official sense. It's just a part of
 /// `mymod`'s file tree.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Catalog {
 	pub(self) config: Config,
 	pub(self) vzscript: vzs::Project,
-	/// Element 0 is always the root node, under virtual path `/`.
-	///
-	/// The choice to use an `IndexMap` here is very deliberate.
-	/// - Directory contents can be stored in an alphabetically-sorted way.
-	/// - Ordering is preserved for WAD entries.
-	/// - Exact-path lookups are fast.
-	/// - Memory contiguity means that linear searches are non-pessimized.
-	/// - If a load fails, restoring the previous state is simple truncation.
-	pub(self) files: IndexMap<VfsKey, File>,
+	pub(self) vfs: VirtualFs,
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
-	pub(self) mounts: Vec<Mount>,
+	pub(self) mounts: SlotMap<MountSlotKey, Mount>,
 	/// In each value:
-	/// - Field `0` is an index into `Self::mounts`.
-	/// - Field `1` is an index into [`Mount::assets`].
-	pub(self) assets: DashMap<AssetKey, (usize, AssetSlotKey)>,
+	/// - Field `0` is a key into `Self::mounts`.
+	/// - Field `1` is a key into [`Mount::assets`].
+	pub(self) assets: DashMap<AssetKey, (MountSlotKey, AssetSlotKey)>,
 	/// Asset lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries.
-	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	/// Keyed assets are always of type [`Blueprint`].
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	/// Keyed assets are always of type [`Blueprint`].
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
 	// Q: FNV/aHash for maps using small key types?
 }
 
@@ -101,26 +94,28 @@ impl Catalog {
 	/// mounting work (to allow faster mod development cycles).
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
-	#[must_use = "loading may return errors which should be handled"]
 	pub fn load<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
 	where
 		RP: AsRef<Path>,
 		MP: AsRef<VPath>,
 	{
-		let new_mounts = self.mounts.len()..(self.mounts.len() + request.paths.len());
-		let mnt_ctx = mount::Context::new(request.tracker);
+		if request.load_order.is_empty() {
+			return LoadOutcome::NoOp;
+		}
+
+		let mnt_ctx = mount::Context::new(request.tracker, &request.load_order);
 
 		// Note to reader: check `./mount.rs`.
-		let mnt_output = match self.mount(&request.paths, mnt_ctx) {
+		let mnt_output = match self.mount(request.load_order, mnt_ctx) {
 			detail::Outcome::Ok(output) => output,
 			detail::Outcome::Err(errors) => return LoadOutcome::MountFail { errors },
 			detail::Outcome::Cancelled => return LoadOutcome::Cancelled,
 			detail::Outcome::None => unreachable!(),
 		};
 
-		// Note to reader: check `./prep.rs`.
-		let p_ctx = prep::Context::new(mnt_output.tracker, new_mounts);
+		let p_ctx = prep::Context::new(mnt_output.tracker, mnt_output.new_mounts);
 
+		// Note to reader: check `./prep.rs`.
 		match self.prep(p_ctx) {
 			detail::Outcome::Ok(output) => LoadOutcome::Ok {
 				mount: mnt_output.errors,
@@ -132,34 +127,50 @@ impl Catalog {
 		}
 	}
 
-	/// Keep the first `len` mounts. Remove the rest, along their files.
-	/// If `len` is greater than the number of mounts, this function is a no-op.
-	pub fn truncate(&mut self, len: usize) {
-		if len == 0 {
-			self.files.clear();
-			self.mounts.clear();
-			return;
-		} else if len >= self.mounts.len() {
-			return;
+	/// Panics if any of the given mount IDs is not currently mounted, or if
+	/// attempting to unload the engine's base data.
+	pub fn unload<IT, ID>(&mut self, mount_ids: IT)
+	where
+		IT: IntoIterator<Item = ID>,
+		ID: AsRef<str>,
+	{
+		for mount_id in mount_ids {
+			let mount_id = mount_id.as_ref();
+
+			let (key, _) = self
+				.mounts
+				.iter()
+				.find(|(_, mnt)| mnt.info.id() == mount_id)
+				.unwrap_or_else(|| panic!("No mount exists with ID: {mount_id}"));
+
+			let mount = self.mounts.remove(key).unwrap();
+			self.vzscript.remove_module(mount_id);
+			self.vfs
+				.retain(|file| file.path().is_child_of(mount.info.virtual_path()));
 		}
 
-		for mount in self.mounts.drain(len..) {
-			let vpath = mount.info.virtual_path();
-
-			self.files.retain(|_, entry| !entry.path.is_child_of(vpath));
-		}
-
-		self.clear_dirs();
-		self.populate_dirs();
 		self.clean_maps();
 	}
 
-	#[must_use]
-	pub fn get_file(&self, path: impl AsRef<VPath>) -> Option<FileRef> {
-		self.files.get(&VfsKey::new(path)).map(|file| FileRef {
-			catalog: self,
-			file,
-		})
+	/// The engine's base data is unaffected.
+	pub fn unload_all(&mut self) {
+		let basedata_mountpoint: VPathBuf = ["/", crate::BASEDATA_ID].iter().collect();
+
+		self.mounts.retain(|_, mnt| mnt.info.is_basedata());
+		self.vzscript
+			.retain(|module| module.name() != crate::BASEDATA_ID);
+		self.vfs
+			.retain(|file| file.path().starts_with(&basedata_mountpoint));
+		self.clean_maps();
+	}
+
+	pub fn reload<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
+	where
+		RP: AsRef<Path>,
+		MP: AsRef<VPath> + AsRef<str>,
+	{
+		self.unload(request.load_order.iter().map(|(_, mp)| mp));
+		self.load(request)
 	}
 
 	/// Note that `A` here is a filter on the type that comes out of the lookup,
@@ -213,70 +224,6 @@ impl Catalog {
 	}
 
 	#[must_use]
-	pub fn file_exists(&self, path: impl AsRef<VPath>) -> bool {
-		self.files.contains_key(&VfsKey::new(path))
-	}
-
-	pub fn all_files(&self) -> impl Iterator<Item = FileRef> {
-		self.files.iter().map(|(_, file)| FileRef {
-			catalog: self,
-			file,
-		})
-	}
-
-	/// Note that WAD files will be yielded out of their original order, and
-	/// all other files will not exhibit the alphabetical sorting with which
-	/// they are internally stored.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn all_files_par(&self) -> impl ParallelIterator<Item = FileRef> {
-		self.all_files().par_bridge()
-	}
-
-	pub fn get_files_glob(&self, pattern: Glob) -> impl Iterator<Item = FileRef> {
-		let glob = pattern.compile_matcher();
-
-		self.files.iter().filter_map(move |(_, file)| {
-			if glob.is_match(&file.path) {
-				Some(FileRef {
-					catalog: self,
-					file,
-				})
-			} else {
-				None
-			}
-		})
-	}
-
-	/// Note that WAD files will be yielded out of their original order, and
-	/// all other files will not exhibit the alphabetical sorting with which
-	/// they are internally stored.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn get_files_glob_par(&self, pattern: Glob) -> impl ParallelIterator<Item = FileRef> {
-		self.get_files_glob(pattern).par_bridge()
-	}
-
-	pub fn get_files_regex(&self, pattern: Regex) -> impl Iterator<Item = FileRef> {
-		self.files.iter().filter_map(move |(_, file)| {
-			if pattern.is_match(file.path_str()) {
-				Some(FileRef {
-					catalog: self,
-					file,
-				})
-			} else {
-				None
-			}
-		})
-	}
-
-	/// Note that WAD files will be yielded out of their original order, and
-	/// all other files will not exhibit the alphabetical sorting with which
-	/// they are internally stored.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn get_files_regex_par(&self, pattern: Regex) -> impl ParallelIterator<Item = FileRef> {
-		self.get_files_regex(pattern).par_bridge()
-	}
-
-	#[must_use]
 	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&Arc<A>> {
 		let key = AssetKey::new::<A>(nick);
 
@@ -309,8 +256,17 @@ impl Catalog {
 	}
 
 	#[must_use]
-	pub fn mounts(&self) -> &[Mount] {
-		&self.mounts
+	pub fn vfs(&self) -> &VirtualFs {
+		&self.vfs
+	}
+
+	pub fn mounts(&self) -> impl Iterator<Item = &Mount> {
+		self.mounts.values()
+	}
+
+	#[must_use]
+	pub fn mounts_len(&self) -> usize {
+		self.mounts.len()
 	}
 
 	#[must_use]
@@ -323,46 +279,8 @@ impl Catalog {
 		ConfigSet(self)
 	}
 
-	/// The returned value reflects only the footprint of the content of the
-	/// virtual files themselves; the size of the data structures isn't included,
-	/// since it's trivial next to the size of large text files and binary blobs.
-	#[must_use]
-	pub fn vfs_mem_usage(&self) -> usize {
-		self.files
-			.par_values()
-			.fold(|| 0_usize, |acc, file| acc + file.byte_len())
-			.sum()
-	}
-
-	/// Draw the egui-based developer/debug/diagnosis menu for the VFS.
-	pub fn ui_vfs(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		self.ui_vfs_impl(ctx, ui);
-	}
-
 	pub fn ui_assets(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_assets_impl(ctx, ui);
-	}
-}
-
-impl Default for Catalog {
-	fn default() -> Self {
-		let root = File {
-			path: VPathBuf::from("/").into_boxed_path(),
-			kind: FileKind::Directory(vec![]),
-		};
-
-		let key = VfsKey::new(&root.path);
-
-		Self {
-			config: Config::default(),
-			vzscript: vzs::Project::default(),
-			files: indexmap::indexmap! { key => root },
-			mounts: vec![],
-			assets: DashMap::default(),
-			nicknames: DashMap::default(),
-			editor_nums: DashMap::default(),
-			spawn_nums: DashMap::default(),
-		}
 	}
 }
 
@@ -375,8 +293,8 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub struct Mount {
-	pub(super) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
-	pub(super) info: MountInfo,
+	pub(self) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
+	pub(self) info: MountInfo,
 }
 
 #[derive(Debug)]
@@ -438,6 +356,11 @@ impl MountInfo {
 	#[must_use]
 	pub fn metadata(&self) -> Option<&MountMeta> {
 		self.meta.as_deref()
+	}
+
+	#[must_use]
+	pub fn is_basedata(&self) -> bool {
+		self.id == crate::BASEDATA_ID
 	}
 }
 
@@ -546,7 +469,10 @@ impl MountMeta {
 // Loading /////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
+#[must_use = "loading may return errors which should be handled"]
 pub enum LoadOutcome {
+	/// A [load request](LoadRequest) was given with a zero-length load order.
+	NoOp,
 	/// A cancel was requested externally.
 	/// The catalog's state was left unchanged.
 	Cancelled,
@@ -574,7 +500,7 @@ impl LoadOutcome {
 	#[must_use]
 	pub fn num_errs(&self) -> usize {
 		match self {
-			LoadOutcome::Cancelled => 0,
+			LoadOutcome::NoOp | LoadOutcome::Cancelled => 0,
 			LoadOutcome::MountFail { errors } => {
 				errors.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
@@ -596,16 +522,14 @@ where
 	RP: AsRef<Path>,
 	MP: AsRef<VPath>,
 {
-	/// In any given tuple, element `::0` should be a real path and `::1` should
-	/// be the mount point. `mymount` and `/mymount` both put the mount on the root.
-	/// An empty path and `/` are both invalid mount points, but one can mount
-	/// `/mymount` and then `mymount/myothermount`.
+	/// This can be empty; it makes the load operation into a no-op.
 	///
-	/// If this is an empty slice, any mount operation becomes a no-op, and
-	/// an empty array of results is returned.
-	pub paths: Vec<(RP, MP)>,
-	/// Only pass a `Some` if you need to, for instance, display a loading screen,
-	/// or otherwise report to the end user on the progress of a mount operation.
+	/// With regards to mount points (`MP`):
+	/// - `mymount` and `/mymount` both put the mount on the root.
+	/// - An empty path and `/` are both invalid mount points.
+	pub load_order: Vec<(RP, MP)>,
+	/// Only pass a `Some` if you need to report to the end user on the progress of
+	/// a load operation (e.g. a loading screen) or provide the ability to cancel.
 	pub tracker: Option<Arc<LoadTracker>>,
 	/// Affects:
 	/// - VZScript optimization. None are applied if this is `false`.
@@ -698,10 +622,8 @@ impl LoadTracker {
 		self.mount_target.store(target, atomic::Ordering::SeqCst);
 	}
 
-	pub(super) fn set_prep_target(&self, target: usize) {
-		debug_assert_eq!(self.prep_target.load(atomic::Ordering::Relaxed), 0);
-
-		self.prep_target.store(target, atomic::Ordering::SeqCst);
+	pub(super) fn add_to_prep_target(&self, files: usize) {
+		self.prep_target.fetch_add(files, atomic::Ordering::SeqCst);
 	}
 
 	pub(super) fn add_mount_progress(&self, amount: usize) {

@@ -116,7 +116,7 @@ impl ClientCore {
 
 		let thread = std::thread::spawn(move || {
 			let request = LoadRequest {
-				paths: mounts_sent,
+				load_order: mounts_sent,
 				tracker: Some(tracker_sent),
 				dev_mode,
 			};
