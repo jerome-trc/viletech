@@ -36,11 +36,7 @@ pub fn update(
 
 	if cancelled {
 		loader.tracker.cancel();
-		next_state.set(AppState::Frontend);
-		return;
-	}
-
-	if !loader.tracker.mount_done() || !loader.tracker.prep_done() {
+	} else if !loader.tracker.mount_done() || !loader.tracker.prep_done() {
 		return;
 	}
 

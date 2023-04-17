@@ -5,7 +5,7 @@ use std::sync::Arc;
 use bevy_egui::egui;
 use dashmap::DashMap;
 use globset::Glob;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use rayon::prelude::*;
 use regex::Regex;
 
@@ -16,11 +16,6 @@ use super::{detail::VfsKey, VfsError};
 #[derive(Debug)]
 pub struct VirtualFs {
 	/// Element 0 is always the root node, under virtual path `/`.
-	///
-	/// The choice to use an `IndexMap` here is very deliberate.
-	/// - Exact-path lookups are fast.
-	/// - Memory contiguity means that linear searches are non-pessimized.
-	/// - If a load fails, restoring the previous state is simple truncation.
 	files: IndexMap<VfsKey, File>,
 }
 
@@ -84,26 +79,40 @@ impl VirtualFs {
 
 		let parent_path = removed.parent_path().unwrap();
 		let parent = self.files.get_mut(&VfsKey::new(parent_path)).unwrap();
-
-		if let FileContent::Directory(children) = &mut parent.content {
-			let pos = children
-				.iter()
-				.position(|path| Arc::ptr_eq(&removed.path, path))
-				.unwrap();
-
-			children.remove(pos);
-		} else {
-			unreachable!()
-		}
+		Self::unparent(parent, &removed.path);
 
 		Some(removed)
 	}
 
-	pub fn retain<F>(&mut self, predicate: F)
-	where
-		F: Fn(&File) -> bool,
-	{
-		self.files.retain(|_, file| predicate(file))
+	/// Panics if attempting to remove the root node (path `/` or an empty path).
+	pub fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
+		assert!(!path.is_root(), "Tried to remove the root node from a VFS.");
+
+		let key = VfsKey::new(path);
+		let entry = self.files.entry(key);
+
+		let mut removed = match entry {
+			indexmap::map::Entry::Occupied(occ) => occ.remove(),
+			indexmap::map::Entry::Vacant(_) => return,
+		};
+
+		if let FileContent::Directory(children) = &mut removed.content {
+			for child in children.iter() {
+				self.remove_recursive(child.as_ref());
+			}
+		}
+
+		let parent_path = removed.parent_path().unwrap();
+		let parent = self.files.get_mut(&VfsKey::new(parent_path)).unwrap();
+		Self::unparent(parent, &removed.path);
+	}
+
+	fn unparent(parent: &mut File, child_path: &Arc<VPath>) {
+		if let FileContent::Directory(children) = &mut parent.content {
+			children.remove(child_path);
+		} else {
+			unreachable!()
+		}
 	}
 
 	/// Yields every file whose path matches `pattern`, potentially including the root,
@@ -237,7 +246,7 @@ impl VirtualFs {
 			.unwrap();
 
 		if let FileContent::Directory(children) = &mut subtree_parent.content {
-			children.push(subtree_root_path);
+			children.insert(subtree_root_path);
 			children.par_sort_unstable_by(sort_children);
 		} else {
 			unreachable!()
@@ -278,7 +287,7 @@ pub(super) enum FileContent {
 	/// The content of mounts that are not single files, as well as the root VFS
 	/// node. Elements are ordered using `Path`'s `Ord`, except in the case of
 	/// the contents of WADS, which retain their defined order.
-	Directory(Vec<Arc<VPath>>),
+	Directory(IndexSet<Arc<VPath>>),
 }
 
 impl File {
@@ -479,7 +488,7 @@ impl File {
 	pub(super) fn new_dir(path: VPathBuf) -> Self {
 		Self {
 			path: path.into(),
-			content: FileContent::Directory(vec![]),
+			content: FileContent::Directory(indexmap::indexset! {}),
 		}
 	}
 
@@ -531,12 +540,13 @@ impl<'vfs> FileRef<'vfs> {
 		})
 	}
 
-	/// Non-recursive; only gets immediate children. If this file is not a directory,
-	/// or is an empty directory, the returned iterator will yield no items.
+	/// Non-recursive; only gets immediate children. Returns `None` if this
+	/// file is not a directory; returns an empty iterator if this file is an
+	/// empty directory.
 	///
 	/// Files are yielded in the order specified by [`std::path::Path::cmp`],
 	/// unless this is a directory representing a WAD file.
-	pub fn children(&self) -> impl Iterator<Item = &File> {
+	pub fn children(&self) -> Option<impl Iterator<Item = &File>> {
 		let closure = |path: &Arc<VPath>| {
 			self.vfs
 				.files
@@ -545,46 +555,51 @@ impl<'vfs> FileRef<'vfs> {
 		};
 
 		match &self.file.content {
-			FileContent::Directory(children) => children.iter().map(closure),
-			_ => [].iter().map(closure),
+			FileContent::Directory(children) => Some(children.iter().map(closure)),
+			_ => None,
 		}
 	}
 
 	/// Calls [`Self::children`] and maps the yielded items to `FileRef`s.
 	/// The same caveats apply.
-	pub fn child_refs(&'vfs self) -> impl Iterator<Item = FileRef<'vfs>> + '_ {
-		self.children().map(|file| Self {
-			vfs: self.vfs,
-			file,
+	pub fn child_refs(&'vfs self) -> Option<impl Iterator<Item = FileRef<'vfs>> + '_> {
+		self.children().map(|iter| {
+			iter.map(|file| Self {
+				vfs: self.vfs,
+				file,
+			})
 		})
 	}
 
 	/// Files are yielded in the order specified by [`std::path::Path::cmp`],
 	/// unless this is a directory representing a WAD file.
-	pub fn children_glob(&self, pattern: Glob) -> impl Iterator<Item = &File> {
+	pub fn children_glob(&self, pattern: Glob) -> Option<impl Iterator<Item = &File>> {
 		let glob = pattern.compile_matcher();
 
 		self.children()
-			.filter(move |file| glob.is_match(file.path_str()))
+			.map(|iter| iter.filter(move |file| glob.is_match(file.path_str())))
 	}
 
 	/// Shorthand for `children_glob().par_bridge()`.
 	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn children_glob_par(&self, pattern: Glob) -> impl ParallelIterator<Item = &File> {
-		self.children_glob(pattern).par_bridge()
+	pub fn children_glob_par(&self, pattern: Glob) -> Option<impl ParallelIterator<Item = &File>> {
+		self.children_glob(pattern).map(|iter| iter.par_bridge())
 	}
 
 	/// Files are yielded in the order specified by [`std::path::Path::cmp`],
 	/// unless this is a directory representing a WAD file.
-	pub fn children_regex(&self, pattern: Regex) -> impl Iterator<Item = &File> {
+	pub fn children_regex(&self, pattern: Regex) -> Option<impl Iterator<Item = &File>> {
 		self.children()
-			.filter(move |file| pattern.is_match(file.path_str()))
+			.map(|iter| iter.filter(move |file| pattern.is_match(file.path_str())))
 	}
 
 	/// Shorthand for `children_regex().par_bridge()`.
 	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn children_regex_par(&self, pattern: Regex) -> impl ParallelIterator<Item = &File> {
-		self.children_regex(pattern).par_bridge()
+	pub fn children_regex_par(
+		&self,
+		pattern: Regex,
+	) -> Option<impl ParallelIterator<Item = &File>> {
+		self.children_regex(pattern).map(|iter| iter.par_bridge())
 	}
 
 	/// Returns 0 if this is a leaf node or an empty directory.

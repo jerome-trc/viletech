@@ -93,7 +93,7 @@ impl Image {
 			return None;
 		}
 
-		let checkpoint = cursor_h.position();
+		let checkpoint = cursor_h.position(); // Just after the header.
 
 		for _ in 0..width {
 			let col_offs = cursor_h.read_u32::<LittleEndian>().unwrap() as usize;

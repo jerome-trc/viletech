@@ -10,6 +10,7 @@ use std::{
 
 use bevy::prelude::{info, warn};
 use dashmap::DashMap;
+use indexmap::IndexSet;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use slotmap::SlotMap;
@@ -79,11 +80,8 @@ impl SubContext<'_> {
 			None => return, // This is a subtree root. It will have to be handled later.
 		};
 
-		if let FileContent::Directory(children) = &mut parent.content {
-			children.push(path);
-		} else {
-			unreachable!()
-		}
+		let FileContent::Directory(children) = &mut parent.content else {unreachable!()};
+		children.insert(path);
 	}
 }
 
@@ -425,7 +423,7 @@ impl Catalog {
 			{
 				let prev_index = files.len() - 1;
 				let prev = files.get_mut(prev_index).unwrap();
-				prev.content = FileContent::Directory(Vec::with_capacity(10));
+				prev.content = FileContent::Directory(IndexSet::with_capacity(10));
 				mapfold = Some(index - 1);
 			} else if !is_map_component(name.as_str()) {
 				mapfold = None;
@@ -878,6 +876,7 @@ impl Catalog {
 
 		if fref
 			.children()
+			.unwrap()
 			.any(|child| child.file_name().eq_ignore_ascii_case("meta.toml") && child.is_text())
 		{
 			return MountKind::VileTech;
@@ -888,7 +887,7 @@ impl Catalog {
 			"zscript",
 		];
 
-		if fref.children().any(|child| {
+		if fref.children().unwrap().any(|child| {
 			let pfx = child.file_prefix();
 
 			ZDOOM_FILE_PFXES
@@ -898,7 +897,7 @@ impl Catalog {
 			return MountKind::ZDoom;
 		}
 
-		if fref.children().any(|child| {
+		if fref.children().unwrap().any(|child| {
 			let fstem = child.file_prefix();
 			fstem.eq_ignore_ascii_case("edfroot") || fstem.eq_ignore_ascii_case("emapinfo")
 		}) {

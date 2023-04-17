@@ -26,7 +26,7 @@ use parking_lot::{Mutex, RwLock};
 use slotmap::SlotMap;
 use smallvec::SmallVec;
 
-use crate::{utils::path::PathExt, vzs, EditorNum, SpawnNum, VPath, VPathBuf};
+use crate::{vzs, EditorNum, SpawnNum, VPath};
 
 use self::{
 	detail::{AssetKey, AssetSlotKey, MountSlotKey},
@@ -145,8 +145,7 @@ impl Catalog {
 
 			let mount = self.mounts.remove(key).unwrap();
 			self.vzscript.remove_module(mount_id);
-			self.vfs
-				.retain(|file| file.path().is_child_of(mount.info.virtual_path()));
+			self.vfs.remove_recursive(mount.info.virtual_path());
 		}
 
 		self.clean_maps();
@@ -154,14 +153,19 @@ impl Catalog {
 
 	/// The engine's base data is unaffected.
 	pub fn unload_all(&mut self) {
-		let basedata_mountpoint: VPathBuf = ["/", crate::BASEDATA_ID].iter().collect();
+		let ids: Vec<_> = self
+			.mounts
+			.iter()
+			.filter_map(|(_, mnt)| {
+				if mnt.info.is_basedata() {
+					None
+				} else {
+					Some(mnt.info.id().to_string())
+				}
+			})
+			.collect();
 
-		self.mounts.retain(|_, mnt| mnt.info.is_basedata());
-		self.vzscript
-			.retain(|module| module.name() != crate::BASEDATA_ID);
-		self.vfs
-			.retain(|file| file.path().starts_with(&basedata_mountpoint));
-		self.clean_maps();
+		self.unload(ids);
 	}
 
 	pub fn reload<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
@@ -192,17 +196,16 @@ impl Catalog {
 	///
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
-	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<&Arc<Blueprint>> {
-		self.editor_nums.get(&num).map(|kvp| {
-			let stack = kvp.value();
-			let last = stack
-				.last()
-				.expect("Catalog cleanup missed an empty ed-num stack.");
-			self.mounts[last.0].assets[last.1]
-				.as_any()
-				.downcast_ref()
-				.unwrap()
-		})
+	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<&Blueprint> {
+		let Some(kvp) = self.editor_nums.get(&num) else { return None; };
+		let stack = kvp.value();
+
+		let (msk, ask) = stack
+			.last()
+			.expect("Catalog cleanup missed an empty ed-num stack.");
+
+		let asset = &self.mounts[*msk].assets[*ask];
+		Some(asset.as_any().downcast_ref::<Blueprint>().unwrap())
 	}
 
 	/// Find an [`Actor`] [`Blueprint`] by a 16-bit spawn number.
@@ -210,49 +213,44 @@ impl Catalog {
 	///
 	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
-	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<&Arc<Blueprint>> {
-		self.spawn_nums.get(&num).map(|kvp| {
-			let stack = kvp.value();
-			let last = stack
-				.last()
-				.expect("Catalog cleanup missed an empty spawn-num stack.");
-			self.mounts[last.0].assets[last.1]
-				.as_any()
-				.downcast_ref()
-				.unwrap()
-		})
+	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<&Blueprint> {
+		let Some(kvp) = self.spawn_nums.get(&num) else { return None; };
+		let stack = kvp.value();
+
+		let (msk, ask) = stack
+			.last()
+			.expect("Catalog cleanup missed an empty spawn-num stack.");
+
+		let asset = &self.mounts[*msk].assets[*ask];
+		Some(asset.as_any().downcast_ref::<Blueprint>().unwrap())
 	}
 
 	#[must_use]
-	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&Arc<A>> {
+	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&A> {
 		let key = AssetKey::new::<A>(nick);
+		let Some(kvp) = self.nicknames.get(&key) else { return None; };
+		let stack = kvp.value();
 
-		self.nicknames.get(&key).map(|kvp| {
-			let stack = kvp.value();
-			let last = stack
-				.last()
-				.expect("Catalog cleanup missed an empty nickname stack.");
-			self.mounts[last.0].assets[last.1]
-				.as_any()
-				.downcast_ref()
-				.unwrap()
-		})
+		let (msk, ask) = stack
+			.last()
+			.expect("Catalog cleanup missed an empty nickname stack.");
+
+		let asset = &self.mounts[*msk].assets[*ask];
+		Some(asset.as_any().downcast_ref::<A>().unwrap())
 	}
 
 	#[must_use]
-	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&Arc<A>> {
+	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&A> {
 		let key = AssetKey::new::<A>(nick);
+		let Some(kvp) = self.nicknames.get(&key) else { return None; };
+		let stack = kvp.value();
 
-		self.nicknames.get(&key).map(|kvp| {
-			let stack = kvp.value();
-			let last = stack
-				.first()
-				.expect("Catalog cleanup missed an empty nickname stack.");
-			self.mounts[last.0].assets[last.1]
-				.as_any()
-				.downcast_ref()
-				.unwrap()
-		})
+		let (msk, ask) = stack
+			.first()
+			.expect("Catalog cleanup missed an empty nickname stack.");
+
+		let asset = &self.mounts[*msk].assets[*ask];
+		Some(asset.as_any().downcast_ref::<A>().unwrap())
 	}
 
 	#[must_use]

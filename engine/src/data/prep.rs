@@ -12,13 +12,12 @@ use byteorder::ReadBytesExt;
 use image::Rgba;
 use parking_lot::Mutex;
 use rayon::prelude::*;
-use slotmap::SlotMap;
 use smallvec::smallvec;
 
 use crate::{vzs, VPathBuf};
 
 use super::{
-	detail::{AssetKey, AssetSlotKey, MountSlotKey, Outcome},
+	detail::{AssetKey, MountSlotKey, Outcome},
 	Asset, AssetHeader, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind, Palette,
 	PaletteSet, PrepError, PrepErrorKind,
 };
@@ -51,10 +50,30 @@ impl Context {
 #[derive(Debug)]
 pub(self) struct SubContext<'ctx> {
 	pub(self) tracker: &'ctx Arc<LoadTracker>,
-	pub(self) mount_key: MountSlotKey,
 	pub(self) mntinfo: &'ctx MountInfo,
-	pub(self) assets: &'ctx Mutex<SlotMap<AssetSlotKey, Arc<dyn Asset>>>,
+	pub(self) assets: &'ctx Mutex<Vec<StagedAsset>>,
 	pub(self) errors: &'ctx Mutex<Vec<PrepError>>,
+}
+
+#[derive(Debug)]
+pub(self) struct StagedAsset {
+	key_full: AssetKey,
+	key_nick: AssetKey,
+	asset: Arc<dyn Asset>,
+}
+
+impl SubContext<'_> {
+	pub(self) fn add_asset<A: Asset>(&self, asset: A) {
+		let nickname = asset.header().nickname();
+		let key_full = AssetKey::new::<A>(&asset.header().id);
+		let key_nick = AssetKey::new::<A>(nickname);
+
+		self.assets.lock().push(StagedAsset {
+			key_full,
+			key_nick,
+			asset: Arc::new(asset),
+		});
+	}
 }
 
 #[derive(Debug)]
@@ -87,7 +106,7 @@ impl Catalog {
 		}
 
 		let mut staging = vec![];
-		staging.resize_with(ctx.new_mounts.len(), || Mutex::new(SlotMap::default()));
+		staging.resize_with(ctx.new_mounts.len(), || Mutex::new(vec![]));
 
 		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
@@ -98,7 +117,6 @@ impl Catalog {
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mount_key: *mount_key,
 				mntinfo: &self.mounts[*mount_key].info,
 				assets: &staging[i],
 				errors: &ctx.errors[i],
@@ -129,7 +147,6 @@ impl Catalog {
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mount_key: *mount_key,
 				mntinfo: &self.mounts[*mount_key].info,
 				assets: &staging[i],
 				errors: &ctx.errors[i],
@@ -144,6 +161,8 @@ impl Catalog {
 
 		// TODO: Forbid further loading without a PLAYPAL present?
 
+		self.register_assets(&ctx.new_mounts, &staging);
+
 		// Pass 3: assets dependent on pass 2. Includes:
 		// - Picture-format images, which need palettes.
 		// - Maps, which need textures, music, scripts, blueprints...
@@ -155,18 +174,19 @@ impl Catalog {
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mount_key: *mount_key,
 				mntinfo: &self.mounts[*mount_key].info,
 				assets: &staging[i],
 				errors: &ctx.errors[i],
 			};
 
-			match subctx.mntinfo.kind {
+			let _outcome = match subctx.mntinfo.kind {
 				MountKind::Wad => self.prep_pass3_wad(&subctx),
-				MountKind::VileTech => {} // Soon!
+				MountKind::VileTech => Outcome::None, // Soon!
 				_ => unimplemented!("Soon!"),
-			}
+			};
 		}
+
+		self.register_assets(&ctx.new_mounts, &staging);
 
 		let mut errors: Vec<Vec<PrepError>> = std::mem::take(&mut ctx.errors)
 			.into_iter()
@@ -182,11 +202,6 @@ impl Catalog {
 		if ret.any_errs() {
 			self.on_prep_fail(ctx.new_mounts);
 		} else {
-			for (i, slotmap) in staging.into_iter().enumerate() {
-				let mount_key = ctx.new_mounts[i];
-				self.mounts[mount_key].assets = slotmap.into_inner();
-			}
-
 			// TODO: Make each successfully processed file increment progress.
 			ctx.tracker.finish_prep();
 			info!("Loading complete.");
@@ -286,13 +301,13 @@ impl Catalog {
 	fn prep_pass2_wad(&self, ctx: &SubContext) {
 		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
-		wad.children().par_bridge().for_each(|child| {
+		wad.children().unwrap().par_bridge().try_for_each(|child| {
 			if !child.is_readable() {
-				return;
+				return Some(());
 			}
 
 			if ctx.tracker.is_cancelled() {
-				return;
+				return None;
 			}
 
 			let bytes = child.read_bytes();
@@ -301,38 +316,49 @@ impl Catalog {
 			let res = if fstem.starts_with("PLAYPAL") {
 				self.prep_playpal(ctx, bytes)
 			} else {
-				return;
+				return Some(());
 			};
 
 			match res {
-				Ok(()) => {}
+				Ok(()) => Some(()),
 				Err(err) => {
 					ctx.errors.lock().push(PrepError {
 						path: child.path().to_path_buf(),
 						kind: PrepErrorKind::Io(err),
 					});
+
+					Some(())
 				}
 			}
 		});
 	}
 
-	fn prep_pass3_wad(&self, ctx: &SubContext) {
+	fn prep_pass3_wad(&self, ctx: &SubContext) -> Outcome<(), ()> {
 		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
-		wad.child_refs()
+		let cancelled = wad
+			.child_refs()
+			.unwrap()
 			.filter(|c| !c.is_empty())
 			.par_bridge()
-			.for_each(|child| {
+			.try_for_each(|child| {
 				if ctx.tracker.is_cancelled() {
-					return;
+					return None;
 				}
 
 				if child.is_dir() {
-					self.prep_pass3_wad_dir(ctx, child)
+					self.prep_pass3_wad_dir(ctx, child);
 				} else {
-					self.prep_pass3_wad_entry(ctx, child)
+					self.prep_pass3_wad_entry(ctx, child);
 				};
+
+				Some(())
 			});
+
+		match cancelled {
+			Some(()) => Outcome::Ok(()),
+			None => Outcome::Cancelled,
+		}
 	}
 
 	fn prep_pass3_wad_entry(&self, ctx: &SubContext, vfile: FileRef) {
@@ -376,15 +402,15 @@ impl Catalog {
 
 	fn prep_pass3_wad_dir(&self, ctx: &SubContext, dir: FileRef) {
 		match self.try_prep_level_vanilla(ctx, dir) {
-			Some(Ok(_key)) => {}
-			Some(Err(_err)) => {}
-			None => {}
+			Outcome::Ok(()) | Outcome::Err(()) => return,
+			Outcome::None => {}
+			_ => unreachable!(),
 		}
 
 		match self.try_prep_level_udmf(ctx, dir) {
-			None => {}
-			Some(Err(_err)) => {}
-			Some(Ok(_key)) => {}
+			Outcome::Ok(()) | Outcome::Err(()) => {}
+			Outcome::None => {}
+			_ => unreachable!(),
 		}
 	}
 
@@ -407,16 +433,13 @@ impl Catalog {
 		let palettes = self.last_asset_by_nick::<PaletteSet>("PLAYPAL").unwrap();
 
 		if let Some(image) = Image::try_from_picture(bytes, &palettes.palettes[0]) {
-			self.register_asset::<Image>(
-				ctx,
-				Image {
-					header: AssetHeader {
-						id: format!("{mount_id}/{id}", mount_id = ctx.mntinfo.id()),
-					},
-					inner: image.0,
-					offset: image.1,
+			ctx.add_asset::<Image>(Image {
+				header: AssetHeader {
+					id: format!("{mount_id}/{id}", mount_id = ctx.mntinfo.id()),
 				},
-			);
+				inner: image.0,
+				offset: image.1,
+			});
 
 			Some(())
 		} else {
@@ -441,51 +464,64 @@ impl Catalog {
 			palettes.push(pal);
 		}
 
-		self.register_asset::<PaletteSet>(
-			ctx,
-			PaletteSet {
-				header: AssetHeader {
-					id: format!("{}/PLAYPAL", ctx.mntinfo.id()),
-				},
-				palettes: palettes.into_inner().unwrap(),
+		ctx.add_asset::<PaletteSet>(PaletteSet {
+			header: AssetHeader {
+				id: format!("{}/PLAYPAL", ctx.mntinfo.id()),
 			},
-		);
+			palettes: palettes.into_inner().unwrap(),
+		});
 
 		Ok(())
 	}
 
 	// Common functions ////////////////////////////////////////////////////////
 
-	fn register_asset<A: Asset>(&self, ctx: &SubContext, asset: A) {
-		let nickname = asset.header().nickname();
-		let key_full = AssetKey::new::<A>(&asset.header().id);
-		let key_nick = AssetKey::new::<A>(nickname);
-		let lookup = self.assets.entry(key_full);
+	fn register_assets(
+		&mut self,
+		new_mounts: &[MountSlotKey],
+		staging: &[Mutex<Vec<StagedAsset>>],
+	) {
+		for (i, mutex) in staging.iter().enumerate() {
+			let mount_key = new_mounts[i];
+			let mut staged = mutex.lock();
+			let slotmap = &mut self.mounts[mount_key].assets;
+			slotmap.reserve(staged.len());
 
-		if matches!(lookup, dashmap::mapref::entry::Entry::Occupied(_)) {
-			info!(
-				"Overwriting asset: {} type ({})",
-				asset.header().id,
-				asset.type_name()
+			staged.drain(..).for_each(
+				|StagedAsset {
+				     key_full,
+				     key_nick,
+				     asset,
+				 }| {
+					let lookup = self.assets.entry(key_full);
+
+					if matches!(lookup, dashmap::mapref::entry::Entry::Occupied(_)) {
+						info!(
+							"Overwriting asset: {} type ({})",
+							asset.header().id,
+							asset.type_name()
+						);
+					}
+
+					let slotkey = slotmap.insert(asset);
+
+					if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
+						kvp.value_mut().push((mount_key, slotkey));
+					} else {
+						self.nicknames
+							.insert(key_nick, smallvec![(mount_key, slotkey)]);
+					};
+
+					match lookup {
+						dashmap::mapref::entry::Entry::Occupied(mut occu) => {
+							occu.insert((mount_key, slotkey));
+						}
+						dashmap::mapref::entry::Entry::Vacant(vacant) => {
+							vacant.insert((mount_key, slotkey));
+						}
+					}
+				},
 			);
-		}
-
-		let slotkey = ctx.assets.lock().insert(Arc::new(asset));
-
-		if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
-			kvp.value_mut().push((ctx.mount_key, slotkey));
-		} else {
-			self.nicknames
-				.insert(key_nick, smallvec![(ctx.mount_key, slotkey)]);
-		};
-
-		match lookup {
-			dashmap::mapref::entry::Entry::Occupied(mut occu) => {
-				occu.insert((ctx.mount_key, slotkey));
-			}
-			dashmap::mapref::entry::Entry::Vacant(vacant) => {
-				vacant.insert((ctx.mount_key, slotkey));
-			}
 		}
 	}
 }

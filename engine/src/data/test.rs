@@ -20,7 +20,7 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 	for (real_path, _) in &load_order {
 		if !real_path.exists() {
 			panic!(
-				"VFS benchmarking depends on the following files of sample data:\r\n\t\
+				"Load/unload testing depends on the following files of sample data:\r\n\t\
 				- `$CARGO_MANIFEST_DIR/sample/freedoom1.wad`\r\n\t\
 				- `$CARGO_MANIFEST_DIR/sample/freedoom2.wad`\r\n\t\
 				They can be acquired from https://freedoom.github.io/."
@@ -142,8 +142,9 @@ fn vfs_dir_structure() {
 	for (index, child) in catalog
 		.vfs
 		.get("/freedoom2/MAP01")
-		.unwrap()
+		.expect("`/freedoom2/MAP01` was not found.")
 		.children()
+		.expect("`/freedoom2/MAP01` is not a directory.")
 		.enumerate()
 	{
 		assert_eq!(child.path_str(), EXPECTED_CHILDREN[index]);
