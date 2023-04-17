@@ -3,14 +3,14 @@ name = "viletech-client"
 version = "0.0.0"
 edition = "2021"
 
-authors = ["***REMOVED***"]
+authors = ["The Rat Circus"]
 categories = ["games", "game-engines", "game-development"]
 description = "Client for the VileTech Engine"
-homepage = "https://github.com/***REMOVED***/viletech/"
+homepage = "https://github.com/jerome-trc/viletech/"
 keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
-repository = "https://github.com/***REMOVED***/viletech/"
+repository = "https://github.com/jerome-trc/viletech/"
 
 [dependencies.bevy]
 workspace = true

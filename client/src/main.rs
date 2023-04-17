@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if args.about {
 		printdoc! {"
-VileTech Client - Copyright (C) 2022-2023 - ***REMOVED***
+VileTech Client - Copyright (C) 2022-2023 - The Rat Circus
 
 This program comes with ABSOLUTELY NO WARRANTY.
 

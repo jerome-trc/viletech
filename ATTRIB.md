@@ -8,7 +8,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 Note that any library shown below may come with its own transitive dependencies, none of which is necessarily covered here. See the links provided to know more.
 
-`doom-front`, `stardate`, and `subterra` are not listed by virtue of also being my own creation. See https://github.com/***REMOVED***/doom-rs.
+`doom-front`, `stardate`, and `subterra` are not listed by virtue of also being my own creation. See https://github.com/jerome-trc/doom-rs.
 
 - arrayvec
     - By [@bluss](https://github.com/bluss) et al.

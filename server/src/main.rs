@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	if args.about {
 		printdoc! {"
-VileTech Server - Copyright (C) 2022-2023 - ***REMOVED***
+VileTech Server - Copyright (C) 2022-2023 - The Rat Circus
 
 This program comes with ABSOLUTELY NO WARRANTY.
 
