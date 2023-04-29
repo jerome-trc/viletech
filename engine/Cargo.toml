@@ -3,7 +3,7 @@ name = "viletech"
 version = "0.0.0"
 edition = "2021"
 
-authors = ["The Rat Circus"]
+authors = ["jerome-trc"]
 categories = ["games", "game-engines", "game-development"]
 description = "Divergent GZDoom fork built on top of Bevy"
 homepage = "https://github.com/jerome-trc/viletech/"

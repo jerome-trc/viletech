@@ -1,8 +1,8 @@
 id = 'viletech'
 name = "$VILETECH_BASEDATA_NAME"
 desc = "$VILETECH_BASEDATA_DESC"
-authors = ["The Rat Circus"]
-copyright = "© 2022-2023 The Rat Circus"
+authors = ["jerome-trc"]
+copyright = "© 2022-2023 jerome-trc"
 links = ['https://github.com/jerome-trc/viletech']
 version = "0.0.0"
 script_root = 'script/main.vzs'

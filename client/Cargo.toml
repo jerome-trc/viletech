@@ -3,7 +3,7 @@ name = "viletech-client"
 version = "0.0.0"
 edition = "2021"
 
-authors = ["The Rat Circus"]
+authors = ["jerome-trc"]
 categories = ["games", "game-engines", "game-development"]
 description = "Client for the VileTech Engine"
 homepage = "https://github.com/jerome-trc/viletech/"

@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if args.about {
 		printdoc! {"
-VileTech Command Line Interface - Copyright (C) 2022-2023 - The Rat Circus
+VileTech Command Line Interface - Copyright (C) 2022-2023 - jerome-trc
 
 This program comes with ABSOLUTELY NO WARRANTY.
 
