@@ -1,6 +1,9 @@
 use doomfront::rowan::ast::AstNode;
 
-use crate::vzs::ast::{self};
+use crate::vzs::{
+	ast::{self},
+	SyntaxNode,
+};
 
 use super::*;
 
@@ -14,10 +17,10 @@ abstract vile::Pref my_fn() {}
 
 "#;
 
-	let pt = parse(SOURCE, false).unwrap();
+	let pt = parse_file(SOURCE).unwrap();
 	assert_no_errors(&pt);
-	let pt = ParseTree::new(pt);
-	let mut ast = pt.ast();
+	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Item(ast::Item::FunctionDecl(fn0)) = ast.next().unwrap() {
 		assert_eq!(fn0.name().token().text(), "native_fn");
@@ -63,10 +66,10 @@ fn smoke_annotations() {
 
 "##;
 
-	let pt = parse(SOURCE, false).unwrap();
+	let pt = parse_file(SOURCE).unwrap();
 	assert_no_errors(&pt);
-	let pt = ParseTree::new(pt);
-	let mut ast = pt.ast();
+	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
 		assert_eq!(anno0.resolver().syntax().text(), "vzs::legal");
@@ -115,10 +118,10 @@ fn smoke_literals() {
 	)]
 	"##;
 
-	let pt = parse(SOURCE, false).unwrap();
+	let pt = parse_file(SOURCE).unwrap();
 	assert_no_errors(&pt);
-	let pt = ParseTree::new(pt);
-	let mut ast = pt.ast();
+	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
 		let args = anno0.args().unwrap();
@@ -306,7 +309,14 @@ fn smoke_literals() {
 	}
 }
 
-fn assert_no_errors(pt: &RawParseTree) {
+// Helpers /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn ast_iter(cursor: SyntaxNode) -> impl Iterator<Item = ast::Root> {
+	cursor.children().map(|c| ast::Root::cast(c).unwrap())
+}
+
+fn assert_no_errors(pt: &FileParseTree) {
 	assert!(!pt.any_errors(), "Encountered errors: {}", {
 		let mut output = String::default();
 

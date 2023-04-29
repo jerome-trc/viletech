@@ -122,17 +122,13 @@ impl Catalog {
 				errors: &ctx.errors[i],
 			};
 
-			let module = match subctx.mntinfo.kind {
+			let _ = match subctx.mntinfo.kind {
 				MountKind::VileTech => self.prep_pass1_vpk(&subctx),
 				MountKind::ZDoom => self.prep_pass1_pk(&subctx),
 				MountKind::Eternity => todo!(),
 				MountKind::Wad => self.prep_pass1_wad(&subctx),
 				MountKind::Misc => self.prep_pass1_file(&subctx),
 			};
-
-			if let Outcome::Ok(m) = module {
-				self.vzscript.add_module(m);
-			} // Otherwise, errors and warnings have already been added to `ctx`.
 		}
 
 		// Pass 2: dependency-free assets; trivial to parallelize. Includes:
@@ -213,9 +209,7 @@ impl Catalog {
 	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
 	/// DSLs all go into the same VZS module, regardless of which are present
 	/// and which are absent.
-	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<vzs::Module, ()> {
-		let ret = None;
-
+	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<(), ()> {
 		let script_root: VPathBuf = if let Some(srp) = &ctx.mntinfo.script_root {
 			[ctx.mntinfo.virtual_path(), srp].iter().collect()
 		} else {
@@ -238,25 +232,20 @@ impl Catalog {
 			return Outcome::Cancelled;
 		}
 
-		let inctree = vzs::parse_include_tree(ctx.mntinfo.virtual_path(), script_root);
+		let inctree = vzs::IncludeTree::new(ctx.mntinfo.virtual_path(), script_root);
 
 		if inctree.any_errors() {
-			unimplemented!("Soon");
+			unimplemented!("Soon!");
 		}
 
 		if ctx.tracker.is_cancelled() {
 			return Outcome::Cancelled;
 		}
 
-		match ret {
-			Some(module) => Outcome::Ok(module),
-			None => Outcome::None,
-		}
+		Outcome::None
 	}
 
-	fn prep_pass1_file(&self, ctx: &SubContext) -> Outcome<vzs::Module, ()> {
-		let ret = None;
-
+	fn prep_pass1_file(&self, ctx: &SubContext) -> Outcome<(), ()> {
 		let file = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
 
 		// Pass 1 only deals in text files.
@@ -282,18 +271,15 @@ impl Catalog {
 			unimplemented!();
 		}
 
-		match ret {
-			Some(module) => Outcome::Ok(module),
-			None => Outcome::None,
-		}
+		Outcome::None
 	}
 
-	fn prep_pass1_pk(&self, _ctx: &SubContext) -> Outcome<vzs::Module, ()> {
+	fn prep_pass1_pk(&self, _ctx: &SubContext) -> Outcome<(), ()> {
 		// TODO: Soon!
 		Outcome::None
 	}
 
-	fn prep_pass1_wad(&self, _ctx: &SubContext) -> Outcome<vzs::Module, ()> {
+	fn prep_pass1_wad(&self, _ctx: &SubContext) -> Outcome<(), ()> {
 		// TODO: Soon!
 		Outcome::None
 	}

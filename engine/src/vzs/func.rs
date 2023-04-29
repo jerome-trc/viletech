@@ -8,7 +8,7 @@ use std::{
 
 use fasthash::SeaHasher;
 
-use super::{abi::Abi, inode, module::SymbolHeader, Handle, Runtime, Symbol};
+use super::{abi::Abi, inode, Handle, Runtime, Symbol, SymbolHeader};
 
 /// Pointer to a function, whether native or compiled.
 #[derive(Debug)]

@@ -1,12 +1,13 @@
 //! Syntax tags.
 
 use doomfront::rowan;
+use serde::{Deserialize, Serialize};
 
 use super::ast;
 
 /// Tags representing syntax nodes, from low-level primitives to high-level composites.
 #[repr(u16)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Syn {
 	// Higher-level composites /////////////////////////////////////////////////
 	/// `#![resolver(args)]`. `!` and arguments are optional.

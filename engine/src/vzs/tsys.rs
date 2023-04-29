@@ -4,12 +4,7 @@ use std::any::TypeId;
 
 use bitflags::bitflags;
 
-use super::{
-	abi::QWord,
-	heap,
-	module::{Handle, InHandle, SymbolHeader},
-	Symbol,
-};
+use super::{abi::QWord, heap, Handle, InHandle, Symbol, SymbolHeader};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
@@ -69,11 +64,11 @@ impl NativeInfo {
 }
 
 impl Symbol for TypeInfo {
-	fn header(&self) -> &super::module::SymbolHeader {
+	fn header(&self) -> &SymbolHeader {
 		&self.header
 	}
 
-	fn header_mut(&mut self) -> &mut super::module::SymbolHeader {
+	fn header_mut(&mut self) -> &mut SymbolHeader {
 		&mut self.header
 	}
 }
