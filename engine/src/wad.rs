@@ -135,36 +135,17 @@ impl Wad {
 		WadSlice::new(&self.data[0..self.directory_offset], self.directory())
 	}
 
-	pub fn pop_entry(&mut self) -> Result<(Vec<u8>, String), Error> {
-		let entry = unsafe { self.entry_unchecked(self.len() - 1).unwrap() };
-		let size = entry.lump.len();
-		let ret2 = entry.display_name().to_string();
-		let mut dir = self.data.split_off(self.directory_offset);
-		let ret1 = self.data.split_off(self.data.len() - size);
-		self.data.append(&mut dir);
-		self.directory_offset -= size;
-		self.n_entries -= 1;
-		Ok((ret1, ret2))
-	}
-
-	pub fn dissolve(mut self) -> Vec<(Vec<u8>, String)> {
-		let mut ret = Vec::<(Vec<u8>, String)>::with_capacity(self.len());
-		let mut sizes = Vec::<usize>::with_capacity(self.len());
+	#[must_use]
+	pub fn dissolve(self) -> Vec<(Vec<u8>, String)> {
+		let mut ret = Vec::with_capacity(self.len());
 
 		for i in (0..self.len()).rev() {
 			let entry = unsafe { self.entry_unchecked(i).unwrap() };
-			sizes.push(entry.lump.len());
-			ret.push((Vec::<u8>::default(), entry.display_name().to_string()));
-		}
-
-		self.data.truncate(self.directory_offset);
-
-		for (i, (blob, _)) in ret.iter_mut().enumerate() {
-			let mut split = self.data.split_off(self.data.len() - sizes[i]);
-			blob.append(&mut split);
+			ret.push((entry.lump.to_owned(), entry.display_name().to_string()));
 		}
 
 		ret.reverse();
+
 		ret
 	}
 }
