@@ -145,10 +145,8 @@ impl Catalog {
 		}
 	}
 
-	/// Find an [`Actor`] [`Blueprint`] by a 16-bit editor number.
+	/// Find an entity [`Blueprint`] by a 16-bit editor number.
 	/// The last blueprint assigned the given number is what gets returned.
-	///
-	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<&Blueprint> {
 		let Some(kvp) = self.editor_nums.get(&num) else { return None; };
@@ -162,10 +160,8 @@ impl Catalog {
 		Some(asset.as_any().downcast_ref::<Blueprint>().unwrap())
 	}
 
-	/// Find an [`Actor`] [`Blueprint`] by a 16-bit spawn number.
+	/// Find an entity [`Blueprint`] by a 16-bit spawn number.
 	/// The last blueprint assigned the given number is what gets returned.
-	///
-	/// [`Actor`]: crate::sim::actor::Actor
 	#[must_use]
 	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<&Blueprint> {
 		let Some(kvp) = self.spawn_nums.get(&num) else { return None; };

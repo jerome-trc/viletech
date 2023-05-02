@@ -1,6 +1,6 @@
 //! Home of all gameplay code.
 
-pub mod actor;
+pub mod ecs;
 pub mod level;
 
 use std::time::{Duration, Instant};
@@ -8,11 +8,9 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{rng::RngCore, vzs::heap::TPtr};
+use crate::rng::RngCore;
 
 use self::level::Level;
-
-pub type ActorPtr = TPtr<self::actor::Actor>;
 
 /// All gameplay simulation state.
 #[derive(Debug, Resource)]

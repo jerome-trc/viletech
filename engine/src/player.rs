@@ -1,11 +1,10 @@
+use bevy::prelude::Entity;
 use bitvec::vec::BitVec;
-
-use crate::sim::ActorPtr;
 
 #[derive(Debug)]
 pub struct Player {
-	/// What actor is this player controlling?
-	pub actor: Option<ActorPtr>,
+	/// What entity is this player controlling?
+	pub entity: Option<Entity>,
 	pub bot: Option<Bot>,
 	/// Mask indicating time freeze powerup status. Applied between teammates.
 	pub time_freeze: BitVec,

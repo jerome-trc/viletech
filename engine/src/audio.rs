@@ -10,7 +10,7 @@ use std::{
 	sync::Arc,
 };
 
-use bevy::prelude::{debug, error, info, warn};
+use bevy::prelude::{debug, error, info, warn, Entity};
 use bevy_egui::egui;
 use crossbeam::channel::SendError;
 use kira::{
@@ -32,7 +32,6 @@ use parking_lot::{Mutex, RwLock};
 
 use crate::{
 	data::{vfs::FileRef, Catalog},
-	sim::ActorPtr,
 	utils,
 };
 
@@ -181,7 +180,7 @@ impl AudioCore {
 	pub fn start_sound_wave(
 		&mut self,
 		data: StaticSoundData,
-		source: Option<ActorPtr>,
+		source: Option<Entity>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
@@ -196,7 +195,7 @@ impl AudioCore {
 	pub fn start_sound_midi(
 		&mut self,
 		data: MidiData,
-		source: Option<ActorPtr>,
+		source: Option<Entity>,
 	) -> Result<(), Error> {
 		self.sounds.push(Sound {
 			handle: Handle::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
@@ -517,7 +516,7 @@ impl std::fmt::Debug for Handle {
 #[derive(Debug)]
 pub struct Sound {
 	handle: Handle,
-	_source: Option<ActorPtr>,
+	_source: Option<Entity>,
 }
 
 impl Deref for Sound {
