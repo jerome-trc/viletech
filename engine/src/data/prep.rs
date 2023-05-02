@@ -196,7 +196,7 @@ impl Catalog {
 		let ret = Output { errors };
 
 		if ret.any_errs() {
-			self.on_prep_fail(ctx.new_mounts);
+			self.on_prep_fail();
 		} else {
 			// TODO: Make each successfully processed file increment progress.
 			ctx.tracker.finish_prep();
@@ -400,13 +400,8 @@ impl Catalog {
 		}
 	}
 
-	fn on_prep_fail(&mut self, new_mounts: Vec<MountSlotKey>) {
-		let ids: Vec<_> = new_mounts
-			.iter()
-			.map(|key| self.mounts[*key].info.id().to_string())
-			.collect();
-
-		self.unload(ids);
+	fn on_prep_fail(&mut self) {
+		self.unload_all();
 	}
 
 	// Processors for individual data formats //////////////////////////////////

@@ -1,69 +1,58 @@
-//! Symbols making up VZScript's type system.
+use std::{alloc::Layout, borrow::Borrow, sync::Arc};
 
-use std::any::TypeId;
+use serde::{Deserialize, Serialize};
 
-use bitflags::bitflags;
+use crate::vzs::abi::QWord;
 
-use super::{abi::QWord, heap, Handle, InHandle, Symbol, SymbolHeader};
+use super::{Symbol, SymbolHash, SymbolHeader, SymbolKey, TypeInHandle};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
 
-/// Note that the type of a variable declared `let const x = 0` isn't separate
-/// from the `i32` primitive. For qualified types such as that, see [`QualifiedType`].
-#[derive(Debug)]
-pub struct TypeInfo {
-	header: SymbolHeader,
-	kind: TypeKind,
-	native: Option<NativeInfo>,
-	/// See the documentation for the method of the same name.
-	layout: std::alloc::Layout,
-	/// See the documentation for the method of the same name.
-	heap_layout: std::alloc::Layout,
+/// An implementation detail that also provides a constraint on [`TypeInfo`]'s
+/// generic parameter.
+pub trait TypeData: Send + Sync {
+	const GROUP: TypeGroup;
 }
 
-impl TypeInfo {
-	pub fn native(&self) -> &Option<NativeInfo> {
-		&self.native
-	}
+/// An implementation detail that also provides a constraint on [`TypeInfo`]'s
+/// generic parameter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeGroup {
+	Void,
+	Numeric,
+	Array,
+}
 
-	#[must_use]
-	pub fn kind(&self) -> &TypeKind {
-		&self.kind
-	}
+#[derive(Debug)]
+pub struct TypeInfo<T: TypeData> {
+	header: SymbolHeader,
+	/// See the documentation for the method of the same name.
+	layout: Layout,
+	inner: T,
+}
 
+impl<T: TypeData> TypeInfo<T> {
+	/// The layout of the type itself. Not necessarily 16-byte aligned.
 	#[must_use]
-	pub fn layout(&self) -> std::alloc::Layout {
+	pub fn layout(&self) -> Layout {
 		self.layout
 	}
+}
 
-	/// This includes the allocation's header; it is always 16-byte aligned and
-	/// always at least 16 bytes large, except for zero-size types.
-	#[must_use]
-	pub fn heap_layout(&self) -> std::alloc::Layout {
-		self.heap_layout
+impl<T: TypeData> std::ops::Deref for TypeInfo<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NativeInfo {
-	type_id: TypeId,
-	size: usize,
-	align: usize,
+impl TypeData for () {
+	const GROUP: TypeGroup = TypeGroup::Void;
 }
 
-impl NativeInfo {
-	#[must_use]
-	fn new<T: Sized + 'static>() -> Self {
-		Self {
-			type_id: TypeId::of::<T>(),
-			size: std::mem::size_of::<T>(),
-			align: std::mem::align_of::<T>(),
-		}
-	}
-}
-
-impl Symbol for TypeInfo {
+impl Symbol for TypeInfo<()> {
 	fn header(&self) -> &SymbolHeader {
 		&self.header
 	}
@@ -71,34 +60,18 @@ impl Symbol for TypeInfo {
 	fn header_mut(&mut self) -> &mut SymbolHeader {
 		&mut self.header
 	}
-}
 
-#[derive(Debug)]
-pub struct QualifiedType {
-	inner: Handle<TypeInfo>,
-	quals: TypeQualifiers,
-}
-
-impl QualifiedType {
-	#[must_use]
-	pub fn inner(&self) -> &Handle<TypeInfo> {
-		&self.inner
-	}
-
-	#[must_use]
-	pub fn qualifiers(&self) -> TypeQualifiers {
-		self.quals
+	fn key(&self) -> SymbolKey {
+		SymbolKey::new::<Self>(())
 	}
 }
 
-bitflags! {
-	pub struct TypeQualifiers: u8 {
-		const CONST = 1 << 0;
-	}
+impl<'i> SymbolHash<'i> for TypeInfo<()> {
+	type HashInput = ();
 }
 
-#[derive(Debug)]
-pub enum TypeKind {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Numeric {
 	I8,
 	U8,
 	I16,
@@ -107,135 +80,115 @@ pub enum TypeKind {
 	U32,
 	I64,
 	U64,
-	TypeInfo,
-	Array {
-		value: InHandle<TypeInfo>,
-		length: usize,
-	},
-	Class {
-		ancestor: Option<InHandle<TypeInfo>>,
-		structure: StructDesc,
-		flags: ClassFlags,
-	},
-	Struct(StructDesc),
-	Union {
-		variants: Vec<StructDesc>,
-	},
-	Bitfield {
-		/// Which integral type backs this bitfield?
-		underlying: InHandle<TypeInfo>,
-	},
-	Pointer(InHandle<TypeInfo>),
-	Reference(InHandle<TypeInfo>),
+	F32,
+	F64,
+}
+
+impl Numeric {
+	#[must_use]
+	pub const fn name(&self) -> &'static str {
+		match self {
+			Self::I8 => "int8",
+			Self::U8 => "uint8",
+			Self::I16 => "int16",
+			Self::U16 => "uint16",
+			Self::I32 => "int32",
+			Self::U32 => "uint32",
+			Self::I64 => "int64",
+			Self::U64 => "uint64",
+			Self::F32 => "float32",
+			Self::F64 => "float64",
+		}
+	}
+}
+
+impl TypeData for Numeric {
+	const GROUP: TypeGroup = TypeGroup::Numeric;
+}
+
+impl Symbol for TypeInfo<Numeric> {
+	fn header(&self) -> &SymbolHeader {
+		&self.header
+	}
+
+	fn header_mut(&mut self) -> &mut SymbolHeader {
+		&mut self.header
+	}
+
+	fn key(&self) -> SymbolKey {
+		SymbolKey::new::<Self>(self.inner.name())
+	}
+}
+
+impl<'i> SymbolHash<'i> for TypeInfo<Numeric> {
+	type HashInput = &'i str;
 }
 
 #[derive(Debug)]
-pub struct StructDesc {
-	fields: Vec<FieldDesc>,
+pub struct Array {
+	elem_type: TypeInHandle,
+	len: usize,
 }
 
-impl StructDesc {
+impl Array {
 	#[must_use]
-	pub fn fields(&self) -> &[FieldDesc] {
-		&self.fields
-	}
-}
-
-bitflags! {
-	pub struct ClassFlags: u8 {
-		/// This class can't be inherited from. Mutually exclusive with `ABSTRACT`.
-		const FINAL = 1 << 0;
-		/// This class can't be instiantiated; it's only a base for inheritance.
-		/// Mutually exclusive with `FINAL`.
-		const ABSTRACT = 1 << 1;
-	}
-}
-
-#[derive(Debug)]
-pub struct FieldDesc {
-	/// Human-readable.
-	name: String,
-	tinfo: InHandle<TypeInfo>,
-	/// See the documentation for the method of the same name.
-	offset: usize,
-}
-
-impl FieldDesc {
-	#[must_use]
-	pub fn name(&self) -> &str {
-		&self.name
+	pub fn elem_type(&self) -> &TypeInHandle {
+		&self.elem_type
 	}
 
 	#[must_use]
-	pub fn tinfo(&self) -> &InHandle<TypeInfo> {
-		&self.tinfo
-	}
-
-	/// In bytes, from the end of the allocation header.
-	#[must_use]
-	#[allow(unused)]
-	pub(super) fn offset(&self) -> usize {
-		self.offset
+	#[allow(clippy::len_without_is_empty)]
+	pub fn len(&self) -> usize {
+		self.len
 	}
 }
 
-#[derive(Debug)]
-pub struct VariantDesc {
-	name: String,
-	structure: StructDesc,
+impl TypeData for Array {
+	const GROUP: TypeGroup = TypeGroup::Array;
 }
 
-impl VariantDesc {
-	#[must_use]
-	pub fn name(&self) -> &str {
-		&self.name
+impl Symbol for TypeInfo<Array> {
+	fn header(&self) -> &SymbolHeader {
+		&self.header
 	}
 
-	#[must_use]
-	pub fn structure(&self) -> &StructDesc {
-		&self.structure
-	}
-}
-
-/// One subfield in a bitfield.
-#[derive(Debug)]
-pub struct BitDesc {
-	/// Human-readable.
-	name: String,
-	/// Operations on this subfield alter all of the bits set on this integer.
-	bits: u64,
-}
-
-impl BitDesc {
-	#[must_use]
-	pub fn name(&self) -> &str {
-		&self.name
+	fn header_mut(&mut self) -> &mut SymbolHeader {
+		&mut self.header
 	}
 
-	#[must_use]
-	pub fn affects_all(&self, bits: u64) -> bool {
-		(self.bits & bits) == bits
+	fn key(&self) -> SymbolKey {
+		let handle = self.inner.elem_type.upgrade();
+		let input = (self.len(), handle.header().name.as_ref());
+		let i = input.borrow();
+		SymbolKey::new::<Self>(i)
 	}
 }
 
-/// For use when constructing the `vzscript` module.
+impl<'i> SymbolHash<'i> for TypeInfo<Array> {
+	type HashInput = (usize, &'i str);
+}
+
+/// All the types that make up the corelib
+/// but which are not directly declared in script files.
 #[must_use]
-pub(super) fn builtins() -> Vec<TypeInfo> {
-	use std::alloc::Layout;
-
+pub(super) fn _builtins() -> Vec<Arc<dyn Symbol>> {
 	let qword_layout = Layout::new::<QWord>();
-	let qword_heap_layout = heap::layout_for(qword_layout);
 
-	vec![
-		TypeInfo {
-			header: SymbolHeader {
-				name: "i32".to_string(),
-			},
-			kind: TypeKind::I32,
-			native: Some(NativeInfo::new::<i32>()),
-			layout: qword_layout,
-			heap_layout: qword_heap_layout,
+	vec![Arc::new(TypeInfo {
+		header: SymbolHeader {
+			name: Numeric::I32.name().to_string(),
 		},
-		// TODO: ...everything else.
-	]
+		layout: qword_layout,
+		inner: Numeric::I32,
+	})]
+}
+
+mod private {
+	use super::*;
+
+	pub trait Sealed {}
+
+	impl Sealed for () {}
+	impl Sealed for Numeric {}
+	impl Sealed for Array {}
 }

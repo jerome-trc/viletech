@@ -27,13 +27,16 @@
 #[cfg(target_pointer_width = "32")]
 std::compile_error!("VZS's heap does not yet support 32-bit architectures.");
 
-use std::{alloc::Layout, collections::HashMap, marker::PhantomData, ptr::NonNull};
+use std::{
+	alloc::Layout, collections::HashMap, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull,
+};
 
 use bitvec::prelude::BitArray;
 
-use crate::vzs::Symbol;
-
-use super::{tsys, Handle, Runtime, TypeInfo};
+use super::{
+	tsys::{self, TypeData, TypeGroup, TypeInfo},
+	Handle, Runtime, Symbol, TypeHandle,
+};
 
 // Public //////////////////////////////////////////////////////////////////////
 
@@ -44,8 +47,24 @@ pub struct Ptr(NonNull<RegionHeader>);
 
 impl Ptr {
 	#[must_use]
-	pub(super) unsafe fn typeinfo(&self) -> &Handle<TypeInfo> {
-		&(*self.0.as_ptr()).tinfo
+	pub(super) unsafe fn typeinfo<T: TypeData>(&self) -> &Handle<TypeInfo<T>>
+	where
+		TypeInfo<T>: Symbol,
+	{
+		// SAFETY:
+		// - `TypeHandleUnion` always has identical representation to `Handle`.
+		// - The handle's type is asserted to be correct using the union discriminant.
+		// - Pointer aliasing rules are not violated since the handle in a region
+		// header never gets modified.
+		let ptr = self.0.as_ptr();
+
+		assert_eq!(
+			(*ptr).tgrp,
+			T::GROUP,
+			"Mismatch between region type group and requested type group.",
+		);
+
+		std::mem::transmute::<_, _>(&(*ptr).tinfo)
 	}
 
 	#[must_use]
@@ -116,8 +135,8 @@ pub(super) struct Heap {
 
 impl Runtime {
 	#[must_use]
-	pub(super) unsafe fn alloc_t(&mut self, tinfo: Handle<TypeInfo>) -> Ptr {
-		let layout = tinfo.heap_layout();
+	pub(super) unsafe fn alloc_t(&mut self, tinfo: TypeHandle) -> Ptr {
+		let layout = layout_for(tinfo.layout());
 
 		debug_assert_ne!(
 			layout.size(),
@@ -141,9 +160,26 @@ impl Runtime {
 
 		let ptr = self.alloc(layout).cast::<RegionHeader>();
 
+		let tgrp = match tinfo {
+			TypeHandle::Void(_) => TypeGroup::Void,
+			TypeHandle::Numeric(_) => TypeGroup::Numeric,
+			TypeHandle::Array(_) => TypeGroup::Array,
+		};
+
 		let header = RegionHeader {
 			flags: RegionFlags::GRAY,
-			tinfo,
+			tinfo: match tinfo {
+				TypeHandle::Void(tinfo) => TypeHandleUnion {
+					void: ManuallyDrop::new(tinfo),
+				},
+				TypeHandle::Numeric(tinfo) => TypeHandleUnion {
+					num: ManuallyDrop::new(tinfo),
+				},
+				TypeHandle::Array(tinfo) => TypeHandleUnion {
+					array: ManuallyDrop::new(tinfo),
+				},
+			},
+			tgrp,
 		};
 
 		std::ptr::write(ptr.as_ptr(), header);
@@ -462,11 +498,49 @@ impl ChunkHeader {
 }
 
 /// The front of any heap allocation.
-#[derive(Debug)]
 #[repr(align(16))]
 struct RegionHeader {
 	flags: RegionFlags,
-	tinfo: Handle<TypeInfo>,
+	tinfo: TypeHandleUnion,
+	/// Discriminant for `tinfo`.
+	tgrp: TypeGroup,
+}
+
+impl RegionHeader {
+	/// Used only to provide a static assertion.
+	#[allow(unused)]
+	const ASSERT_SIZE: usize = {
+		let l = Layout::new::<Self>();
+
+		assert!(l.size() == 16, "VZS heap region header is an illegal size.");
+
+		l.size()
+	};
+}
+
+impl std::fmt::Debug for RegionHeader {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("RegionHeader")
+			.field("flags", &self.flags)
+			.field("tinfo", unsafe {
+				match self.tgrp {
+					TypeGroup::Void => &self.tinfo.void,
+					TypeGroup::Numeric => &self.tinfo.num,
+					TypeGroup::Array => &self.tinfo.array,
+				}
+			})
+			.field("tgrp", &self.tgrp)
+			.finish()
+	}
+}
+
+/// Keep the type handle in a union separate from its discriminant; using a
+/// [`TypeHandle`] would cause [`RegionHeader`] to go up to 4 heap words.
+/// TODO: VZS' destructor/drop semantics so refcounts are properly decremented.
+union TypeHandleUnion {
+	void: ManuallyDrop<Handle<TypeInfo<()>>>,
+	num: ManuallyDrop<Handle<TypeInfo<tsys::Numeric>>>,
+	array: ManuallyDrop<Handle<TypeInfo<tsys::Array>>>,
 }
 
 /// Not inlined into a huge allocation; kept in the [`Heap::huge`] hash table.
@@ -487,7 +561,10 @@ bitflags::bitflags! {
 
 #[cfg(test)]
 mod test {
-	use crate::vzs::Project;
+	use crate::vzs::{
+		tsys::{self, TypeInfo},
+		Project,
+	};
 
 	use super::*;
 
@@ -497,7 +574,9 @@ mod test {
 	fn arena_resolution() {
 		let project = Project::default();
 		let mut runtime = Runtime::default();
-		let t = project.get::<TypeInfo>("i32").unwrap();
+		let t = project
+			.get::<TypeInfo<tsys::Numeric>>(tsys::Numeric::I32.name())
+			.unwrap();
 
 		unsafe {
 			let ptr = runtime.alloc_t(t.into());

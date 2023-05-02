@@ -1,6 +1,6 @@
 //! Infrastructure powering VileTech's implementation of the ZScript language.
 //!
-//! The VTZS toolchain; VileTech's fork of the [ZScript] programming language used
+//! The VZSC toolchain; VileTech's fork of the [ZScript] programming language used
 //! by GZDoom and Raze, intended to advance it by introducing breaking changes via
 //! "editions" like Rust does.
 //!
@@ -12,6 +12,7 @@ mod func;
 mod handle;
 pub mod heap;
 mod inode;
+mod issue;
 mod module;
 mod parse;
 mod project;
@@ -20,24 +21,23 @@ mod symbol;
 mod syn;
 #[cfg(test)]
 mod test;
-mod tsys;
+pub mod tsys;
 
 pub use self::{
 	func::{Flags as FunctionFlags, Function, TFunc},
 	handle::*,
 	inode::*,
+	issue::*,
 	module::{Builder as ModuleBuilder, Module},
 	parse::*,
 	project::*,
 	runtime::*,
 	symbol::*,
 	syn::Syn,
-	tsys::*,
 };
 
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
-pub type Token = doomfront::rowan::SyntaxToken<Syn>;
 
 /// No VZScript identifier in human-readable form may exceed this byte length.
 /// Mind that VZS only allows ASCII alphanumerics and underscores for identifiers,

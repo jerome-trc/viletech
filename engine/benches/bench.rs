@@ -12,6 +12,20 @@ fn misc(crit: &mut Criterion) {
 	grp.finish();
 }
 
+// TODO:
+// - VFS
+// 		- Mount
+//		- Unmount
+//		- Lookup
+// - Catalog
+// 		- Load
+//		- Unload
+//		- Asset lookup
+// - VZS
+// 		- Parse
+//		- Precompile
+//		- Compile
+
 fn data(crit: &mut Criterion) {
 	fn request() -> LoadRequest<PathBuf, &'static str> {
 		let sample = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -48,10 +62,10 @@ fn data(crit: &mut Criterion) {
 
 		grp.bench_function("FreeDoom, FreeDoom 2", |bencher| {
 			bencher.iter_batched(
-				|| (request(), request()),
-				|(req_l, req_u)| {
+				|| request(),
+				|req_l| {
 					let _ = catalog.load(req_l);
-					let _ = catalog.unload(req_u.load_order.iter().map(|(_, mp)| mp));
+					catalog.unload_all();
 				},
 				criterion::BatchSize::SmallInput,
 			);

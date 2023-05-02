@@ -10,24 +10,44 @@
 //!
 //! [create a `Builder`]: Builder::new
 
-use std::{hash::Hash, mem::MaybeUninit, sync::Arc};
+use std::{
+	hash::{Hash, Hasher},
+	mem::MaybeUninit,
+	sync::Arc,
+};
 
-use cranelift_jit::{JITBuilder, JITModule};
+use cranelift_jit::JITBuilder;
+use fasthash::SeaHasher;
+use serde::{Deserialize, Serialize};
 use slotmap::SlotMap;
 
-use super::{tsys, Symbol};
+use super::{IncludeTree, Symbol};
 
 #[derive(Debug)]
 pub struct Module {
 	pub(super) name: String,
+	/// A module's VZS version affects its compilation rules.
+	pub(super) version: Version,
 	/// Is `true` if this module had any native symbols loaded into it.
 	/// Special rules are applied when performing semantic checks on source being
 	/// compiled into a native module.
 	pub(super) native: bool,
-	#[allow(unused)]
-	pub(super) jit: Arc<JitModule>,
 	/// Functions, types, type aliases, et cetera.
 	pub(super) symbols: SlotMap<SymbolSlotKey, Arc<dyn Symbol>>,
+	/// Derived from all the text source in this module's include tree.
+	pub(super) _checksum: Checksum,
+	#[allow(unused)]
+	pub(super) jit: Arc<JitModule>,
+}
+
+/// Each module is declared as belonging to a version of the VZScript specification.
+///
+/// The specification is versioned as per [Semantic Versioning](https://semver.org/).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Version {
+	pub major: u16,
+	pub minor: u16,
+	pub rev: u16,
 }
 
 slotmap::new_key_type! {
@@ -36,7 +56,7 @@ slotmap::new_key_type! {
 }
 
 impl Module {
-	pub(super) const CORELIB_NAME: &str = "vzscript";
+	pub(super) const _CORELIB_NAME: &str = "vzscript";
 
 	#[must_use]
 	pub fn name(&self) -> &str {
@@ -44,19 +64,13 @@ impl Module {
 	}
 
 	#[must_use]
-	pub fn is_native(&self) -> bool {
-		self.native
+	pub fn version(&self) -> Version {
+		self.version
 	}
 
 	#[must_use]
-	pub(super) fn core() -> Self {
-		let mut ret = Builder::new(Self::CORELIB_NAME.to_string(), false, false).build();
-
-		for typeinfo in tsys::builtins() {
-			ret.symbols.insert(Arc::new(typeinfo));
-		}
-
-		ret
+	pub fn is_native(&self) -> bool {
+		self.native
 	}
 }
 
@@ -70,9 +84,8 @@ unsafe impl Sync for Module {}
 /// functions to be callable by scripts.
 pub struct Builder {
 	name: String,
-	native: bool,
-	symbols: SlotMap<SymbolSlotKey, Arc<dyn Symbol>>,
-	jit: JITBuilder,
+	_native: bool,
+	_jit: JITBuilder,
 }
 
 impl Builder {
@@ -86,9 +99,8 @@ impl Builder {
 
 		Self {
 			name,
-			native,
-			symbols: SlotMap::default(),
-			jit: builder,
+			_native: native,
+			_jit: builder,
 		}
 	}
 
@@ -96,22 +108,17 @@ impl Builder {
 	pub(super) fn _name(&self) -> &str {
 		&self.name
 	}
-
-	#[must_use]
-	pub(super) fn build(self) -> Module {
-		Module {
-			name: self.name,
-			native: self.native,
-			jit: Arc::new(JitModule(MaybeUninit::new(JITModule::new(self.jit)))),
-			symbols: self.symbols,
-		}
-	}
 }
 
 impl std::fmt::Debug for Builder {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("Builder").field("name", &self.name).finish()
 	}
+}
+
+#[derive(Debug)]
+pub(super) struct Blob {
+	// TODO: Byte array and a 64-bit checksum.
 }
 
 /// Ensures proper JIT code de-allocation when all [`SymStore`]s
@@ -125,5 +132,21 @@ impl Drop for JitModule {
 			let i = std::mem::replace(&mut self.0, MaybeUninit::uninit());
 			i.assume_init().free_memory();
 		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub(super) struct Checksum(u64);
+
+impl Checksum {
+	#[must_use]
+	pub(super) fn _new(inctree: &IncludeTree) -> Self {
+		let mut hasher = SeaHasher::default();
+
+		for file in &inctree.files {
+			file.root().hash(&mut hasher);
+		}
+
+		Self(hasher.finish())
 	}
 }

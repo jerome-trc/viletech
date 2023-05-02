@@ -107,9 +107,8 @@ impl<'i> Instruction<RefNode<'i>> {
 				ctx.stack.push(*qw);
 				QWord::invalid()
 			},
-			Instruction::Allocate(typeinfo) => unsafe {
-				let typeinfo = *typeinfo;
-				let ptr = ctx.alloc_t(typeinfo.clone());
+			Instruction::Allocate(tinfo) => unsafe {
+				let ptr = ctx.alloc_t((**tinfo).clone());
 				QWord::from(ptr)
 			},
 			Instruction::Panic => {

@@ -56,7 +56,7 @@ pub use self::{asset::*, config::*, error::*, ext::*};
 #[derive(Debug, Default)]
 pub struct Catalog {
 	pub(self) config: Config,
-	pub(self) vzscript: vzs::Project,
+	pub(self) _vzscript: vzs::Project,
 	pub(self) vfs: VirtualFs,
 	/// The first element is always the engine's base data (ID `viletech`),
 	/// but every following element is user-specified, including their order.
@@ -127,54 +127,8 @@ impl Catalog {
 		}
 	}
 
-	/// Panics if any of the given mount IDs is not currently mounted, or if
-	/// attempting to unload the engine's base data.
-	pub fn unload<IT, ID>(&mut self, mount_ids: IT)
-	where
-		IT: IntoIterator<Item = ID>,
-		ID: AsRef<str>,
-	{
-		for mount_id in mount_ids {
-			let mount_id = mount_id.as_ref();
-
-			let (key, _) = self
-				.mounts
-				.iter()
-				.find(|(_, mnt)| mnt.info.id() == mount_id)
-				.unwrap_or_else(|| panic!("No mount exists with ID: {mount_id}"));
-
-			let mount = self.mounts.remove(key).unwrap();
-			self.vzscript.remove_module(mount_id);
-			self.vfs.remove_recursive(mount.info.virtual_path());
-		}
-
-		self.clean_maps();
-	}
-
-	/// The engine's base data is unaffected.
 	pub fn unload_all(&mut self) {
-		let ids: Vec<_> = self
-			.mounts
-			.iter()
-			.filter_map(|(_, mnt)| {
-				if mnt.info.is_basedata() {
-					None
-				} else {
-					Some(mnt.info.id().to_string())
-				}
-			})
-			.collect();
-
-		self.unload(ids);
-	}
-
-	pub fn reload<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
-	where
-		RP: AsRef<Path>,
-		MP: AsRef<VPath> + AsRef<str>,
-	{
-		self.unload(request.load_order.iter().map(|(_, mp)| mp));
-		self.load(request)
+		unimplemented!("New VFS and load scheme are pending.")
 	}
 
 	/// Note that `A` here is a filter on the type that comes out of the lookup,

@@ -7,7 +7,6 @@ use std::{
 
 use bevy_egui::egui;
 use fasthash::SeaHasher;
-use rayon::prelude::*;
 use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
@@ -15,34 +14,6 @@ use crate::{VPath, VPathBuf};
 use super::{Asset, Catalog};
 
 impl Catalog {
-	pub(super) fn clean_maps(&mut self) {
-		let retainer = |msk: &MountSlotKey, ask: &AssetSlotKey| -> bool {
-			let Some(mnt) = self.mounts.get(*msk) else {
-				return false;
-			};
-
-			mnt.assets.contains_key(*ask)
-		};
-
-		self.assets.retain(|_, (msk, ask)| retainer(msk, ask));
-
-		self.nicknames.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|(msk, ask)| retainer(msk, ask));
-		});
-
-		self.editor_nums.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|(msk, ask)| retainer(msk, ask));
-		});
-
-		self.spawn_nums.par_iter_mut().for_each(|mut kvp| {
-			kvp.value_mut().retain(|(msk, ask)| retainer(msk, ask));
-		});
-
-		self.nicknames.retain(|_, v| !v.is_empty());
-		self.editor_nums.retain(|_, v| !v.is_empty());
-		self.spawn_nums.retain(|_, v| !v.is_empty());
-	}
-
 	pub(super) fn ui_assets_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		ui.heading("Assets");
 

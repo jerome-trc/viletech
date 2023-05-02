@@ -8,7 +8,7 @@ use std::{
 
 use fasthash::SeaHasher;
 
-use super::{abi::Abi, inode, Handle, Runtime, Symbol, SymbolHeader};
+use super::{abi::Abi, inode, Handle, Runtime, Symbol, SymbolHash, SymbolHeader, SymbolKey};
 
 /// Pointer to a function, whether native or compiled.
 #[derive(Debug)]
@@ -68,6 +68,15 @@ impl Symbol for Function {
 	fn header_mut(&mut self) -> &mut SymbolHeader {
 		&mut self.header
 	}
+
+	fn key(&self) -> super::SymbolKey {
+		let s = <std::string::String as AsRef<str>>::as_ref(&self.header().name);
+		SymbolKey::new::<Self>(s)
+	}
+}
+
+impl<'i> SymbolHash<'i> for Function {
+	type HashInput = &'i str;
 }
 
 /// Typed function handle.
@@ -120,5 +129,9 @@ where
 
 	fn header_mut(&mut self) -> &mut SymbolHeader {
 		unreachable!("Mutating a function through a `TFunc` is forbidden.")
+	}
+
+	fn key(&self) -> SymbolKey {
+		unreachable!("`TFunc` has no symbol key scheme.")
 	}
 }
