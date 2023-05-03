@@ -1,3 +1,5 @@
+//! Structures making up individual difficulty configurations.
+
 use bitflags::bitflags;
 
 use crate::data::{asset, InHandle};
@@ -22,7 +24,7 @@ pub struct SkillInfo {
 	pub knockback_factor: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SpawnFilter {
 	Baby = 1,
 	Easy,

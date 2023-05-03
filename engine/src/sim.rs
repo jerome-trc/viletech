@@ -2,6 +2,7 @@
 
 pub mod ecs;
 pub mod level;
+pub mod skill;
 
 use std::time::{Duration, Instant};
 
