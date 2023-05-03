@@ -58,7 +58,6 @@ cranelift-jit = { workspace = true }
 cranelift-module = { workspace = true }
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
-dolly = { workspace = true }
 doomfront = { workspace = true }
 fasthash = { workspace = true }
 fixed = { workspace = true }

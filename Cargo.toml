@@ -23,21 +23,22 @@ bitvec = { version = "1.0.1", features = ["serde"] }
 bytemuck = { version = "1.11.0", features = ["derive"] }
 byteorder = "1.4.3"
 clap = { version = "4.0.32", features = ["derive"] }
-cpal = "0.15.1" # Same version as `kira`
+# Same version as `kira`. Specified here since it's needed by MIDI code.
+cpal = "0.15.1"
 cranelift = "0.94.0"
 cranelift-jit = "0.94.0"
 cranelift-module = "0.94.0"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
-dolly = "0.4.0"
 fasthash = "0.4.0"
 fixed = "1.23.0"
 fluidlite = "0.2.1"
 formatx = "0.2.1"
-glam = { version = "0.22.0", features = [
+# Same version as specified by `bevy_math`. Specified here
+# to add the `approx` and `debug-glam-assert` feature flags.
+glam = { version = "0.23.0", features = [
 	"approx",
 	"bytemuck",
-	"rand",
 	"serde",
 	"debug-glam-assert",
 ] }
@@ -81,7 +82,7 @@ unicode-ident = "1.0.6"
 walkdir = "2.3.2"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 
-# Temporary; will change to crates.io when one is suitable for publishing
+# Temporary; will change to crates.io when one is suitable for publishing.
 doomfront = { path = "../doom-rs/doomfront", features = ["ser_de"] }
 stardate = { path = "../doom-rs/stardate" }
 subterra = { path = "../doom-rs/subterra" }
