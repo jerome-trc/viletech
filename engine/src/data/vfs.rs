@@ -40,6 +40,14 @@ impl VirtualFs {
 		self.files.contains_key(&VfsKey::new(path))
 	}
 
+	#[must_use]
+	pub fn is_dir(&self, path: impl AsRef<VPath>) -> bool {
+		self.files
+			.get(&VfsKey::new(path))
+			.filter(|f| f.is_dir())
+			.is_some()
+	}
+
 	/// Yields every file, root included, in an unspecified order.
 	pub fn iter(&self) -> impl Iterator<Item = FileRef> {
 		self.files.values().map(|file| FileRef { vfs: self, file })
@@ -448,6 +456,14 @@ impl File {
 			FileContent::Binary(bytes) => bytes.len(),
 			FileContent::Text(string) => string.len(),
 			_ => 0,
+		}
+	}
+
+	#[must_use]
+	pub fn child_paths(&self) -> Option<impl Iterator<Item = &VPath>> {
+		match &self.content {
+			FileContent::Directory(children) => Some(children.iter().map(|arc| arc.as_ref())),
+			_ => None,
 		}
 	}
 

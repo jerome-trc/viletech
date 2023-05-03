@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use doomfront::ParseError;
 use zip::result::ZipError;
 
 use crate::{wad, VPathBuf};
@@ -260,10 +261,11 @@ pub struct PrepError {
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
 pub enum PrepErrorKind {
-	/// A mount declared a script root file that was not found in the VFS.
-	MissingScriptRoot,
 	Level(LevelError),
 	Io(std::io::Error),
+	/// A mount declared a script root file that was not found in the VFS.
+	MissingVzsDir,
+	VzsParse(ParseError),
 }
 
 impl std::error::Error for PrepError {}
@@ -271,9 +273,7 @@ impl std::error::Error for PrepError {}
 impl std::fmt::Display for PrepError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
-			PrepErrorKind::MissingScriptRoot => {
-				write!(f, "Script root not found at path: {}", self.path.display())
-			}
+			PrepErrorKind::Io(err) => err.fmt(f),
 			PrepErrorKind::Level(err) => {
 				write!(
 					f,
@@ -295,7 +295,10 @@ impl std::fmt::Display for PrepError {
 					}
 				)
 			}
-			PrepErrorKind::Io(err) => err.fmt(f),
+			PrepErrorKind::MissingVzsDir => {
+				write!(f, "No directory found at path: {}", self.path.display())
+			}
+			PrepErrorKind::VzsParse(err) => err.fmt(f),
 		}
 	}
 }

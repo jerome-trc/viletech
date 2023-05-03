@@ -17,9 +17,9 @@ abstract vile::Pref my_fn() {}
 
 "#;
 
-	let pt = parse_file(SOURCE).unwrap();
+	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
 	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let cursor = SyntaxNode::new_root(pt.root.clone());
 	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Item(ast::Item::FunctionDecl(fn0)) = ast.next().unwrap() {
@@ -66,9 +66,9 @@ fn smoke_annotations() {
 
 "##;
 
-	let pt = parse_file(SOURCE).unwrap();
+	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
 	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let cursor = SyntaxNode::new_root(pt.root.clone());
 	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
@@ -118,9 +118,9 @@ fn smoke_literals() {
 	)]
 	"##;
 
-	let pt = parse_file(SOURCE).unwrap();
+	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
 	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root().clone());
+	let cursor = SyntaxNode::new_root(pt.root.clone());
 	let mut ast = ast_iter(cursor);
 
 	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
@@ -320,7 +320,7 @@ fn assert_no_errors(pt: &FileParseTree) {
 	assert!(!pt.any_errors(), "Encountered errors: {}", {
 		let mut output = String::default();
 
-		for err in pt.errors() {
+		for err in &pt.errors {
 			output.push_str(&format!("{err:#?}"));
 			output.push('\r');
 			output.push('\n');

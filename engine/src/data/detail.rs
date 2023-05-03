@@ -103,7 +103,14 @@ pub(super) struct MountMetaIngest {
 	#[serde(default)]
 	pub links: Vec<String>,
 	#[serde(default)]
-	pub script_root: Option<VPathBuf>,
+	pub vzscript: Option<MountMetaIngestVzs>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct MountMetaIngestVzs {
+	pub folder: VPathBuf,
+	pub namespace: Option<String>,
+	pub version: String,
 }
 
 /// For representing all the possible endings for most load operations.

@@ -21,7 +21,7 @@ use fasthash::SeaHasher;
 use serde::{Deserialize, Serialize};
 use slotmap::SlotMap;
 
-use super::{IncludeTree, Symbol};
+use super::{IncludeTree, Symbol, Version};
 
 #[derive(Debug)]
 pub struct Module {
@@ -38,16 +38,6 @@ pub struct Module {
 	pub(super) _checksum: Checksum,
 	#[allow(unused)]
 	pub(super) jit: Arc<JitModule>,
-}
-
-/// Each module is declared as belonging to a version of the VZScript specification.
-///
-/// The specification is versioned as per [Semantic Versioning](https://semver.org/).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Version {
-	pub major: u16,
-	pub minor: u16,
-	pub rev: u16,
 }
 
 slotmap::new_key_type! {
@@ -143,8 +133,8 @@ impl Checksum {
 	pub(super) fn _new(inctree: &IncludeTree) -> Self {
 		let mut hasher = SeaHasher::default();
 
-		for file in &inctree.files {
-			file.root().hash(&mut hasher);
+		for file in inctree.files() {
+			file.root.hash(&mut hasher);
 		}
 
 		Self(hasher.finish())

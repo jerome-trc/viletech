@@ -19,10 +19,10 @@ use zip::ZipArchive;
 use crate::{
 	data::{
 		detail::{MountMetaIngest, Outcome, VfsKey},
-		Mount, MountInfo, MountKind, MountMeta, MountPointError,
+		Mount, MountInfo, MountKind, MountMeta, MountPointError, VzsManifest,
 	},
 	utils::{io::*, path::PathExt},
-	wad, VPath, VPathBuf,
+	vzs, wad, VPath, VPathBuf,
 };
 
 use super::{
@@ -208,7 +208,7 @@ impl Catalog {
 						meta: None,
 						real_path: real_path.into_boxed_path(),
 						virtual_path: mount_point.into_boxed_path(),
-						script_root: None,
+						vzscript: None,
 					},
 				});
 			}
@@ -935,7 +935,28 @@ impl Catalog {
 		};
 
 		info.id = ingest.id;
-		info.script_root = ingest.script_root.map(|vpb| vpb.into_boxed_path());
+
+		if let Some(mnf) = ingest.vzscript {
+			let version = match mnf.version.parse::<vzs::Version>() {
+				Ok(v) => v,
+				Err(err) => {
+					warn!(
+						"Invalid `vzscript` table in meta.toml file: {p}\r\n\t\
+						Details: {err}\r\n\t\
+						This mount's metadata may be incomplete.",
+						p = meta_path.display()
+					);
+
+					return;
+				}
+			};
+
+			info.vzscript = Some(VzsManifest {
+				root_dir: mnf.folder,
+				namespace: mnf.namespace,
+				version,
+			});
+		}
 
 		info.meta = Some(Box::new(MountMeta {
 			version: ingest.version,

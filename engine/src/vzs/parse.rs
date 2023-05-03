@@ -17,10 +17,7 @@ use doomfront::{
 use parking_lot::Mutex;
 use rayon::prelude::*;
 
-use crate::{
-	data::{vfs::FileRef, VfsError},
-	VPath, VPathBuf,
-};
+use crate::{data::vfs::FileRef, VPath, VPathBuf};
 
 use super::Syn;
 
@@ -35,20 +32,23 @@ use self::{common::*, expr::*};
 /// All input between the error location and the next valid thing gets wrapped
 /// into a token tagged [`Syn::Unknown`].
 #[must_use]
-pub fn parse_file(source: &str) -> Option<FileParseTree> {
+pub fn parse_file(source: &str, path: impl AsRef<VPath>) -> Option<FileParseTree> {
 	let (root, errs) = primitive::choice((wsp_ext(source), item(source), annotation(source)))
 		.repeated()
 		.collect_g::<Syn, { Syn::Root as u16 }>()
 		.parse_recovery(source);
 
-	root.map(|r| ParseTree {
-		root: r,
-		errors: errs,
+	root.map(|r| FileParseTree {
+		inner: ParseTree {
+			root: r,
+			errors: errs,
+		},
+		path: path.as_ref().to_path_buf(),
 	})
 }
 
 #[must_use]
-pub fn parse_repl(source: &str) -> Option<ReplParseTree> {
+pub fn parse_repl(source: &str) -> Option<ParseTree> {
 	let (root, errs) = primitive::choice((wsp_ext(source), expr(source)))
 		.repeated()
 		.collect_g::<Syn, { Syn::Root as u16 }>()
@@ -61,161 +61,99 @@ pub fn parse_repl(source: &str) -> Option<ReplParseTree> {
 }
 
 #[derive(Debug)]
-pub struct ParseTree<const REPL: bool> {
-	root: GreenNode,
-	errors: Vec<ParseError>,
+pub struct ParseTree {
+	pub root: GreenNode,
+	pub errors: Vec<ParseError>,
 }
 
-impl<const REPL: bool> ParseTree<REPL> {
-	#[must_use]
-	pub fn root(&self) -> &GreenNode {
-		&self.root
-	}
-
+impl ParseTree {
 	/// Were any errors encountered when parsing a token stream?
 	#[must_use]
 	pub fn any_errors(&self) -> bool {
 		!self.errors.is_empty()
 	}
-
-	/// Errors encountered while parsing a token stream.
-	#[must_use]
-	pub fn errors(&self) -> &[ParseError] {
-		&self.errors
-	}
-
-	#[must_use]
-	pub fn into_errors(self) -> Vec<ParseError> {
-		self.errors
-	}
 }
 
-pub type FileParseTree = ParseTree<false>;
-pub type ReplParseTree = ParseTree<true>;
+#[derive(Debug)]
+pub struct FileParseTree {
+	pub inner: ParseTree,
+	pub path: VPathBuf,
+}
+
+impl std::ops::Deref for FileParseTree {
+	type Target = ParseTree;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
 
 #[derive(Debug, Default)]
 pub struct IncludeTree {
-	/// Element 0 is always the script root.
-	pub(super) files: Vec<FileParseTree>,
-	pub(super) parse_errs: Vec<ParseError>,
-	/// Raised when a script tries to include a non-existent or unreadable file.
-	pub(super) vfs_errs: Vec<VfsError>,
-	pub(super) misc_errs: Vec<IncTreeError>,
+	files: Vec<FileParseTree>,
 }
 
 impl IncludeTree {
-	/// `mount_path` should be, for example, `/viletech`.
-	/// `root` should be, for example, `/viletech/script/main.vzs`.
-	/// Mind that the returned include tree can be empty if the root file has no
-	/// tokens in it.
-	pub fn new(mount_path: &VPath, root: FileRef) -> Self {
-		fn try_parse(source: &str) -> Result<Option<FileParseTree>, Vec<ParseError>> {
-			let ptree = match parse_file(source) {
-				Some(pt) => pt,
-				None => return Ok(None),
-			};
+	/// Traverses the virtual directory `root` recursively, parsing all text files
+	/// extended with `.vzs`.
+	///
+	/// Panics if `root` is not a directory.
+	/// Mind that it is entirely valid for the returned include tree to be empty.
+	#[must_use]
+	pub fn new(root: FileRef) -> Self {
+		assert!(
+			root.is_dir(),
+			"Tried to build an include tree from non-directory root: {}",
+			root.path().display()
+		);
 
-			if ptree.any_errors() {
-				Err(ptree.into_errors())
-			} else {
-				Ok(Some(ptree))
-			}
+		let dir_q = SegQueue::<VPathBuf>::default();
+		let all_files = Mutex::new(vec![]);
+
+		for child in root.child_paths().unwrap() {
+			dir_q.push(child.to_path_buf());
 		}
 
-		fn get_includes(
-			_ptree: &FileParseTree,
-			_mount_path: &VPath,
-		) -> Result<Vec<VPathBuf>, Vec<IncTreeError>> {
-			unimplemented!("New include tree system pending.")
-		}
+		while let Some(dir_path) = dir_q.pop() {
+			let dir = root.vfs().get(&dir_path).unwrap();
 
-		let root_src = match root.try_read_str() {
-			Ok(src) => src,
-			Err(err) => {
-				return IncludeTree {
-					vfs_errs: vec![err],
-					..Default::default()
-				}
-			}
-		};
-
-		let root_pt = match try_parse(root_src) {
-			Ok(fpt_opt) => match fpt_opt {
-				Some(rpt) => rpt,
-				None => return IncludeTree::default(),
-			},
-			Err(errs) => {
-				return IncludeTree {
-					parse_errs: errs,
-					..Default::default()
-				}
-			}
-		};
-
-		let mut stack = match get_includes(&root_pt, mount_path) {
-			Ok(incs) => incs,
-			Err(errs) => {
-				return IncludeTree {
-					misc_errs: errs,
-					..Default::default()
-				}
-			}
-		};
-
-		let rptq = SegQueue::default();
-		let mut files = vec![];
-		let parse_errs = Mutex::new(vec![]);
-		let vfs_errs = Mutex::new(vec![]);
-		let misc_errs = Mutex::new(vec![]);
-
-		while !stack.is_empty() {
-			stack.par_drain(..).for_each(|inc_path| {
-				let fref = match root.vfs().get(&inc_path) {
-					Some(f) => f,
-					None => {
-						vfs_errs.lock().push(VfsError::NotFound(inc_path));
+			dir.child_paths()
+				.unwrap()
+				.par_bridge()
+				.for_each(|child_path| {
+					if child_path.is_dir() {
+						dir_q.push(child_path.to_path_buf());
 						return;
 					}
-				};
 
-				let src = match fref.try_read_str() {
-					Ok(src) => src,
-					Err(err) => {
-						vfs_errs.lock().push(err);
+					if child_path
+						.extension()
+						.filter(|ext| ext.eq_ignore_ascii_case("vzs"))
+						.is_none()
+					{
 						return;
 					}
-				};
 
-				let rptree = match try_parse(src) {
-					Ok(rpt_opt) => match rpt_opt {
-						Some(rpt) => rpt,
-						None => return,
-					},
-					Err(mut errs) => {
-						parse_errs.lock().append(&mut errs);
+					let child = dir.vfs().get(child_path).unwrap();
+
+					if !child.is_text() {
 						return;
 					}
-				};
 
-				rptq.push(rptree);
-			});
-
-			while let Some(ptree) = rptq.pop() {
-				match get_includes(&ptree, mount_path) {
-					Ok(mut incs) => stack.append(&mut incs),
-					Err(mut errs) => misc_errs.lock().append(&mut errs),
-				}
-
-				files.push(ptree);
-			}
+					if let Some(ptree) = parse_file(child.read_str(), child_path) {
+						all_files.lock().push(ptree);
+					}
+				});
 		}
 
 		IncludeTree {
-			files,
-			parse_errs: parse_errs.into_inner(),
-			vfs_errs: vfs_errs.into_inner(),
-			misc_errs: misc_errs.into_inner(),
+			files: all_files.into_inner(),
 		}
+	}
+
+	#[must_use]
+	pub fn files(&self) -> &[FileParseTree] {
+		&self.files
 	}
 
 	#[must_use]
@@ -225,34 +163,7 @@ impl IncludeTree {
 
 	#[must_use]
 	pub fn any_errors(&self) -> bool {
-		!self.parse_errs.is_empty() || !self.vfs_errs.is_empty() || !self.misc_errs.is_empty()
-	}
-}
-
-/// Things that can go wrong when traversing an include tree that are not
-/// [`VfsError`]s or [`ParseError`]s.
-#[derive(Debug)]
-pub enum IncTreeError {
-	/// An `include` annotation received a non-literal argument.
-	IllegalArgExpr(Syn),
-	/// An `include` annotation received a non-string literal argument.
-	IllegalArgLit(Syn),
-}
-
-impl std::error::Error for IncTreeError {}
-
-impl std::fmt::Display for IncTreeError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::IllegalArgExpr(syn) => write!(
-				f,
-				"`include` annotation expected a literal expression argument, but found: {syn:#?}"
-			),
-			Self::IllegalArgLit(syn) => write!(
-				f,
-				"`include` annotation expected a string literal argument, but found: {syn:#?}"
-			),
-		}
+		self.files.iter().any(|ptree| ptree.any_errors())
 	}
 }
 

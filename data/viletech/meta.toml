@@ -4,5 +4,9 @@ desc = "$VILETECH_BASEDATA_DESC"
 authors = ["jerome-trc"]
 copyright = "© 2022-2023 jerome-trc"
 links = ['https://github.com/jerome-trc/viletech']
-version = "0.0.0"
-script_root = 'script/main.vzs'
+version = '0.0.0'
+
+[vzscript]
+folder = 'script'
+namespace = 'vzs'
+version = '0.0.0'

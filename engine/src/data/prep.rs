@@ -210,36 +210,48 @@ impl Catalog {
 	/// DSLs all go into the same VZS module, regardless of which are present
 	/// and which are absent.
 	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<(), ()> {
-		let script_root: VPathBuf = if let Some(srp) = &ctx.mntinfo.script_root {
-			[ctx.mntinfo.virtual_path(), srp].iter().collect()
-		} else {
-			todo!()
-		};
+		if let Some(vzscript) = &ctx.mntinfo.vzscript {
+			let root_dir_path: VPathBuf = [ctx.mntinfo.virtual_path(), &vzscript.root_dir]
+				.iter()
+				.collect();
 
-		let script_root = match self.vfs.get(&script_root) {
-			Some(fref) => fref,
-			None => {
-				ctx.errors.lock().push(PrepError {
-					path: script_root.to_path_buf(),
-					kind: PrepErrorKind::MissingScriptRoot,
-				});
+			let root_dir = match self.vfs.get(&root_dir_path) {
+				Some(fref) => fref,
+				None => {
+					ctx.errors.lock().push(PrepError {
+						path: vzscript.root_dir.clone(),
+						kind: PrepErrorKind::MissingVzsDir,
+					});
 
-				return Outcome::Err(());
+					return Outcome::Err(());
+				}
+			};
+
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
 			}
-		};
 
-		if ctx.tracker.is_cancelled() {
-			return Outcome::Cancelled;
-		}
+			let inctree = vzs::IncludeTree::new(root_dir);
 
-		let inctree = vzs::IncludeTree::new(ctx.mntinfo.virtual_path(), script_root);
+			if inctree.any_errors() {
+				let mut errors = ctx.errors.lock();
+				let ptrees = inctree.into_inner();
 
-		if inctree.any_errors() {
-			unimplemented!("Soon!");
-		}
+				for ptree in ptrees {
+					let path = ptree.path;
 
-		if ctx.tracker.is_cancelled() {
-			return Outcome::Cancelled;
+					for err in ptree.inner.errors {
+						errors.push(PrepError {
+							path: path.clone(),
+							kind: PrepErrorKind::VzsParse(err),
+						});
+					}
+				}
+			}
+
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
 		}
 
 		Outcome::None

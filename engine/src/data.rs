@@ -26,7 +26,7 @@ use parking_lot::{Mutex, RwLock};
 use slotmap::SlotMap;
 use smallvec::SmallVec;
 
-use crate::{vzs, EditorNum, SpawnNum, VPath};
+use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
 	detail::{AssetKey, AssetSlotKey, MountSlotKey},
@@ -257,24 +257,41 @@ pub struct MountInfo {
 	pub(super) virtual_path: Box<VPath>,
 	/// Comes from `meta.toml`, so most mounts will lack this.
 	pub(super) meta: Option<Box<MountMeta>>,
-	/// The base of the package's VZScript include tree.
-	///
-	/// - For VileTech packages, this is specified by a `meta.toml` file.
-	/// - For ZDoom and Eternity packages, the script root is the first
-	/// "lump" with the file stem `VZSCRIPT` in the package's global namespace.
-	/// - For WADs, the script root is the first `VZSCRIPT` "lump" found.
-	///
-	/// Normally, the scripts can define manifest items used to direct loading,
-	/// but if there is no script root or manifests, ZDoom loading rules are used.
-	///
-	/// A package can only specify a file owned by it as a script root, so this
-	/// is always relative. `viletech.vpk3`'s script root, for example, is `main.vzs`.
-	pub(super) script_root: Option<Box<VPath>>,
+	pub(super) vzscript: Option<VzsManifest>,
 	// Q:
 	// - Dependency specification?
 	// - Incompatibility specification?
 	// - Ordering specification?
 	// - Forced specifications, or just strongly-worded warnings? Multiple levels?
+}
+
+#[derive(Debug)]
+pub struct VzsManifest {
+	/// The base of the package's VZScript include tree.
+	///
+	/// This is irrelevant to WADs, which can only use VZS through lumps named
+	/// `VZSCRIPT`.
+	///
+	/// Normally, the scripts can define manifest items used to direct loading,
+	/// but if there is no script root or manifests, ZDoom loading rules are used.
+	///
+	/// A package can only specify a directory owned by it as a script root, so this
+	/// is always relative. `viletech.vpk3`'s script root, for example, is `scripts`.
+	pub(super) root_dir: VPathBuf,
+	pub(super) namespace: Option<String>,
+	pub(super) version: vzs::Version,
+}
+
+impl VzsManifest {
+	#[must_use]
+	pub fn namespace(&self) -> Option<&str> {
+		self.namespace.as_deref()
+	}
+
+	#[must_use]
+	pub fn version(&self) -> vzs::Version {
+		self.version
+	}
 }
 
 impl MountInfo {
@@ -309,6 +326,11 @@ impl MountInfo {
 	#[must_use]
 	pub fn is_basedata(&self) -> bool {
 		self.id == crate::BASEDATA_ID
+	}
+
+	#[must_use]
+	pub fn vzscript(&self) -> &Option<VzsManifest> {
+		&self.vzscript
 	}
 }
 
