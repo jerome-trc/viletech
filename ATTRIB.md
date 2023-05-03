@@ -1,241 +1,50 @@
-# Credits, Attributions, and Licensing Details
-
 Note that this is a living document. Completeness is not guaranteed. If no author is listed, the intent is to spread attribution across a larger organisation.
 
 If you're aware of any attribution which is evidently missing from this list, or of a misattribution, let me know so I can resolve it.
 
-## Technologies
+# Third-Party Licensing
 
-Note that any library shown below may come with its own transitive dependencies, none of which is necessarily covered here. See the links provided to know more.
+## daScript
 
-`doom-front`, `stardate`, and `subterra` are not listed by virtue of also being my own creation. See https://github.com/jerome-trc/doom-rs.
+VileTech's SIMD code and VZScript embedded scripting language borrows much of its implementation from that of Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](./legal/dascript.txt).
 
-- arrayvec
-    - By [@bluss](https://github.com/bluss) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/bluss/arrayvec/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/arrayvec/blob/master/LICENSE-MIT).
-    - https://docs.rs/arrayvec/latest/arrayvec/
-- ariadne
-    - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
-    - Provided under the [MIT License](https://github.com/zesterer/ariadne/blob/main/LICENSE).
-    - https://docs.rs/ariadne/latest/ariadne/
-- bevy
-    - By Carter Anderson ([@cart](https://github.com/cart)), the [Bevy Engine organisation](https://github.com/bevyengine), et al.
-    - Provided under the [Apache 2.0 License](https://github.com/bevyengine/bevy/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bevyengine/bevy/blob/main/LICENSE-MIT).
-    - https://bevyengine.org/
-- bevy_egui
-    - By Vladyslav Batyrenko ([@mvlabat](https://github.com/mvlabat)), Jakob Hellermann ([@jakobhellermann](https://github.com/jakobhellermann)), et al.
-    - Provided under the [MIT License](https://github.com/mvlabat/bevy_egui/blob/main/LICENSE).
-    - https://docs.rs/bevy_egui/latest/bevy_egui/
-- bevy_quinnet
-    - By Gilles Henaux ([@Henauxg](https://github.com/Henauxg)) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/Henauxg/bevy_quinnet/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/Henauxg/bevy_quinnet/blob/main/LICENSE-MIT).
-    - https://docs.rs/bevy_quinnet/latest/bevy_quinnet/
-- bitflags
-	- By Ashley Mannix ([@KodrAus](https://github.com/KodrAus)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/bitflags/bitflags/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT).
-	- https://docs.rs/bitflags/latest/bitflags/
-- bitvec
-    - By Alexander Payne ([@myrrlyn](https://github.com/myrrlyn)) et al.
-    - Provided under the [MIT License](https://github.com/ferrilab/bitvec/blob/main/LICENSE.txt).
-    - https://docs.rs/bitvec/latest/bitvec/
-- bytemuck
-	- By [@Lokathor](https://github.com/Lokathor) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-APACHE), [MIT License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-MIT), and [zlib License](https://github.com/Lokathor/bytemuck/blob/main/LICENSE-ZLIB).
-	- https://docs.rs/bytemuck/latest/bytemuck/
-- byteorder
-	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
-	- Provided under the [MIT License](https://github.com/BurntSushi/byteorder/blob/master/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/byteorder/blob/master/UNLICENSE).
-	- https://docs.rs/byteorder/latest/byteorder/
-- chumsky
-    - By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
-    - Provided under the [MIT License](https://github.com/zesterer/chumsky/blob/master/LICENSE).
-    - https://docs.rs/chumsky/latest/chumsky/
-- cpal
-    - By the [RustAudio organisation](https://github.com/RustAudio) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/RustAudio/cpal/blob/master/LICENSE).
-	- https://docs.rs/cpal/latest/cpal/
-- clap
-	- By Kevin K. ([@kbknapp](https://github.com/kbknapp)), Ed Page ([@epage](https://github.com/epage)), et al.
-	- Provided under the [Apache 2.0 License](https://github.com/clap-rs/clap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/clap-rs/clap/blob/master/LICENSE-MIT).
-	- https://docs.rs/clap/latest/clap/
-- cranelift
-    - By the [Bytecode Alliance organisation](https://github.com/bytecodealliance) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE).
-    - https://docs.rs/cranelift/latest/cranelift/
-- crossbeam
-	- By the [Crossbeam](https://github.com/crossbeam-rs) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/crossbeam-rs/crossbeam/blob/master/LICENSE-MIT).
-	- https://docs.rs/crossbeam/latest/crossbeam/
-- dashmap
-    - By [@xacrimon](https://github.com/xacrimon) et al.
-    - Provided under the [MIT License](https://github.com/xacrimon/dashmap/blob/master/LICENSE).
-    - https://docs.rs/dashmap/latest/dashmap/
-- dolly
-	- By Tomasz Stachowiak ([@h3r2tic](https://github.com/h3r2tic)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/h3r2tic/dolly/blob/main/LICENSE-MIT).
-	- https://docs.rs/dolly/latest/dolly/
-- fasthash
-	- By Flier Lu ([@flier](https://github.com/flier)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/flier/rust-fasthash/blob/master/LICENSE).
-	- https://docs.rs/fasthash/latest/fasthash/
-- fixed
-	- By Trevor Spiteri ([@tspiteri](https://gitlab.com/tspiteri)) et al.
-	- Provided under the [Apache 2.0 License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-APACHE) and [MIT License](https://gitlab.com/tspiteri/fixed/-/blob/master/LICENSE-MIT).
-	- https://docs.rs/fixed/latest/fixed/
-- formatx
-	- By Apoorv Sachan ([@clitic](https://github.com/clitic)).
-	- Provided under the [Apache 2.0 License](https://github.com/clitic/formatx/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/clitic/formatx/blob/main/LICENSE-MIT).
-	- https://docs.rs/formatx/latest/formatx/
-- glam
-    - By Cameron Hart ([@bitshifter](https://github.com/bitshifter)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/bitshifter/glam-rs/blob/main/LICENSE-MIT).
-	- https://docs.rs/glam/latest/glam/
-- globset
-	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
-	- Provided under the [MIT License](https://github.com/BurntSushi/ripgrep/blob/master/crates/globset/LICENSE-MIT) and [The Unlicense](https://github.com/BurntSushi/ripgrep/blob/master/crates/globset/UNLICENSE).
-	- https://docs.rs/globset/latest/globset/
-- home
-	- By Brian Anderson ([@brson](https://github.com/brson)), [@tesuji](https://github.com/tesuji), et al.
-	- Provided under the [Apache 2.0 License](https://github.com/brson/home/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/brson/home/blob/master/LICENSE-MIT).
-	- https://docs.rs/home/latest/home/
-- image
-    - By the [image-rs](https://github.com/image-rs) organisation et al.
-    - Provided under the [MIT License](https://github.com/image-rs/image/blob/master/LICENSE).
-    - https://docs.rs/image/latest/image/
-- impl-trait-for-tuples
-    - By Bastian Köcher ([@bkchr](https://github.com/bkchr)) et al.
-    - Provided under the [Apache 2.0 License and MIT License](https://github.com/bkchr/impl-trait-for-tuples/blob/master/README.md).
-    - https://docs.rs/impl-trait-for-tuples/latest/impl_trait_for_tuples/
-- indexmap
-    - By [@bluss](https://github.com/bluss), Josh Stone ([@cuviper](https://github.com/cuviper)), et al.
-    - Provided under the [Apache 2.0 License](https://github.com/bluss/indexmap/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/bluss/indexmap/blob/master/LICENSE-MIT).
-	- https://docs.rs/indexmap/latest/indexmap/
-- indoc
-	- By David Tolnay ([@dtolnay](https://github.com/dtolnay)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/dtolnay/indoc/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/indoc/blob/master/LICENSE-MIT).
-	- https://docs.rs/indoc/latest/indoc/
-- itertools
-    - By [@bluss](https://github.com/bluss), [@phimuemue](https://github.com/phimuemue) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/rust-itertools/itertools/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-itertools/itertools/blob/master/LICENSE-MIT).
-    - https://docs.rs/itertools/latest/itertools/
-- kira
-	- By [@tesselode](https://github.com/tesselode) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/tesselode/kira/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/tesselode/kira/blob/main/LICENSE-MIT).
-	- https://docs.rs/kira/latest/kira/
-- md5
-	- By the [Stainless Steel](https://github.com/stainless-steel) organisation et al.
-	- [Apache 2.0 License and MIT License](https://github.com/stainless-steel/md5/blob/master/LICENSE.md).
-	- https://docs.rs/md5/latest/md5/
-- memoffset
-    - By Ralf Jung ([@RalfJung](https://github.com/RalfJung)), Gilad Naaman ([@Gilnaa](https://github.com/gilnaa)), et al.
-	- Provided under the [MIT License](https://github.com/Gilnaa/memoffset/blob/master/LICENSE).
-	- https://docs.rs/memoffset/latest/memoffset/
-- naga
-	- By the [Rust Graphics Mages](https://github.com/gfx-rs) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/gfx-rs/naga/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/gfx-rs/naga/blob/master/LICENSE-MIT).
-	- https://docs.rs/naga/latest/naga/
-- nanorand
-	- By [@Absolucy](https://github.com/Absolucy) et al.
-	- Provided under the [zlib/libpng License](https://github.com/Absolucy/nanorand-rs/blob/main/LICENSE.md).
-	- https://docs.rs/nanorand/latest/nanorand/
-- once_cell
-	- By Alex Kladov ([@matklad](https://github.com/matklad)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/matklad/once_cell/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/matklad/once_cell/blob/master/LICENSE-MIT).
-	- https://docs.rs/once_cell/latest/once_cell/
-- parking_lot
-	- By Amanieu d'Antras ([@Amanieu](https://github.com/Amanieu)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT).
-	- https://docs.rs/parking_lot/latest/parking_lot/
-- paste
-	- By David Tolnay ([@dtolnay](https://github.com/dtolnay)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/dtolnay/paste/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/paste/blob/master/LICENSE-MIT).
-	- https://docs.rs/paste/latest/paste/
-- pollster
-	- By Joshua Barretto ([@zesterer](https://github.com/zesterer)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/zesterer/pollster/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/zesterer/pollster/blob/master/LICENSE-MIT).
-	- https://docs.rs/pollster/latest/pollster/
-- raw-cpuid
-	- By Gerd Zellweger ([@gz](https://github.com/gz)) et al.
-	- Provided under the [MIT License](https://github.com/gz/rust-cpuid/blob/master/LICENSE.md).
-	- https://docs.rs/raw-cpuid/latest/raw_cpuid/
-- rayon
-	- By Josh Stone ([@cuviper](https://github.com/cuviper)), Niko Matsakis ([@nikomatsakis](https://github.com/nikomatsakis)), et al.
-	- Provided under the [Apache 2.0 License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT).
-	- https://docs.rs/rayon/latest/rayon/
-- regex
-	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/rust-lang/regex/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/regex/blob/master/LICENSE-MIT).
-	- https://docs.rs/regex/latest/regex/
-- rfd
-	- By Bartłomiej Maryńczak ([@PolyMeilex](https://github.com/PolyMeilex)) et al.
-	- Provided under the [MIT License](https://github.com/PolyMeilex/rfd/blob/master/LICENSE).
-	- https://docs.rs/rfd/latest/rfd/
-- rowan
-    - By Alex Kladov ([@matklad](https://github.com/matklad)) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/rust-analyzer/rowan/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-analyzer/rowan/blob/master/LICENSE-MIT).
-- serde
-	- By the [serde-rs](https://github.com/serde-rs) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT).
-	- https://docs.rs/serde/latest/serde/
-- sha3
-	- By the [Rust Crypto](https://github.com/RustCrypto) organisation et al.
-	- Provided under the [Apache 2.0 License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-APACHE) and [MIT License](https://github.com/RustCrypto/hashes/blob/master/sha3/LICENSE-MIT).
-	- https://docs.rs/sha3/latest/sha3/
-- slotmap
-    - By Orson Peters ([@orlp](https://github.com/orlp)) et al.
-    - Provided under the [Zlib License](https://github.com/orlp/slotmap/blob/master/LICENSE).
-    - https://docs.rs/slotmap/latest/slotmap/
-- smallvec
-    - By Matt Brubeck ([@mbrubeck](https://github.com/mbrubeck)) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/servo/rust-smallvec/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/servo/rust-smallvec/blob/master/LICENSE-MIT).
-    - https://docs.rs/smallvec/latest/smallvec/
-- sparse_set
-	- By Scott Godwin ([@sgodwincs](https://gitub.com/sgodwincs)).
-	- Provided under the [Apache 2.0 License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/sgodwincs/sparse_set/blob/master/LICENSE-MIT).
-	- https://docs.rs/sparse_set/latest/sparse_set/
-- time
-    - By Jacob Pratt ([@jhpratt](https://github.com/jhpratt)) et al.
-    - Provided under the [Apache 2.0 License](https://github.com/time-rs/time/blob/main/LICENSE-Apache) and [MIT License](https://github.com/time-rs/time/blob/main/LICENSE-MIT).
-    - https://docs.rs/time/latest/time/
-- toml
-	- By Alex Crichton ([@alexcrichton](https://github.com/alexcrichton)) et al.
-	- Provided under the [Apache 2.0 License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/alexcrichton/toml-rs/blob/master/LICENSE-MIT).
-	- https://docs.rs/toml/latest/toml/
-- tracing
-    - By the [Tokio organisation](https://github.com/tokio-rs), Eliza Weisman ([@hawkw](https://github.com/hawkw)), et al.
-    - Provided under the [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE).
-    - https://docs.rs/tracing/latest/tracing/
-- unicode-ident
-    - By David Tolnay ([@dtolnay](https://github.com/dtolnay)).
-    - Original source is provided under the [Apache 2.0 License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-MIT).
-    - Generated source is provided under the [Unicode License Agreement - Data Files and Software (2016)](https://github.com/dtolnay/unicode-ident/blob/master/LICENSE-UNICODE).
-    - https://docs.rs/unicode-ident/latest/unicode_ident/
-- wad
-	- By Magnus Hoff ([@maghoff](https://github.com/maghoff)).
-	- Provided under the [MIT License](https://github.com/maghoff/wad/blob/master/LICENSE.txt).
-	- https://docs.rs/wad/latest/wad/
-- walkdir
-	- By Andrew Gallant ([@BurntSushi](https://github.com/BurntSushi)) et al.
-	- Provided under the [MIT License](https://github.com/BurntSushi/walkdir/blob/master/LICENSE-MIT).
-	- https://docs.rs/walkdir/latest/walkdir/
-- zip
-	- By Mathijs van de Nes ([@mvdnes](https://github.com/mvdnes)), [@Plecra](https://github.com/Plecra), et al.
-	- Provided under the [MIT License](https://github.com/zip-rs/zip/blob/master/LICENSE).
-	- https://docs.rs/zip/latest/zip/
+## Doom
 
-## Code
+The Doom source code (c) 1997 id Software LLC, the Raven Software Corporation, et al.
 
-VileTech relies heavily on code ported from GZDoom, which is the creation of the ZDoom and GZDoom teams, principally led by Marisa Heit ([@rheit](https://github.com/rheit)) and Christoph Oelckers ([@coelckers](https://github.com/coelckers)). See https://github.com/ZDoom/gzdoom/graphs/contributors for more information. Code derived from GZDoom is used under the [GNU General Public License Version 3](https://github.com/ZDoom/gzdoom/blob/master/LICENSE).
+The original Doom source code was released by id Software LLC under the GPL v2. Usage of this source, as well as usage of the derivative source of GZDoom and ZDoom-family source ports, is covered by the terms of the GNU General Public License Version 3.
 
-VileTech's SIMD code and "VZScript" embedded scripting language borrows much of its implementation from that of Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](https://github.com/GaijinEntertainment/daScript/blob/master/LICENSE).
+See [here](./LICENSE) or https://www.gnu.org/licenses/quick-guide-gplv3.en.html.
 
-## Miscellaneous
+## GZDoom
+
+All source code marked as originating from [GZDoom's](https://zdoom.org/index) original C and C++ source is provided under a [sic] ["BSD-like license"](./legal/gzdoom.txt).
+
+All source code marked as originating from GZDoom's ZScript source, whether adapted to native Rust or VileTech's VZScript, is provided under the [GNU General Public License v3.0](./LICENSE) unless explicitly stated to be otherwise.
+
+## SLADE
+
+All source files and functions marked as originating from [SLADE](https://slade.mancubus.net/) are provided under the [GNU General Public License v2.0](./legal/slade.txt).
+
+## sparse_set
+
+VileTech includes a modified version of the [sparse_set](https://crates.io/crates/sparse_set) crate, provided under the [Apache 2.0 License](./legal/sparse-set_apache.txt) and [MIT License](./legal/sparse-set_mit.txt), under the terms of the former.
+
+## wad
+
+VileTech includes a modified version of the [wad](https://crates.io/crates/wad) crate, provided under the [MIT License](./legal/wad.txt).
+
+# Attribution
+
+## MIDI SoundFonts
 
 The SoundFont file located at /data/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
 
-## Special Thanks
+# Special Thanks
 
 - Alison "Marrub" Watson
+- Christoph "Graf Zahl" Oelckers
 - Jessica "Russell" Gutawer
 - Marisa "Randi" Heit
+- Ricardo Luis
 - Yholl

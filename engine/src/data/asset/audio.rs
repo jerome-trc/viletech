@@ -1,8 +1,4 @@
-//! Sounds and music assets.
-//!
-//! Code derived from [SLADE](https://slade.mancubus.net/) is used under the
-//! GNU GPL v2.0. See <https://github.com/sirjuddington/SLADE/blob/master/LICENSE>.
-//! A copy is attached in the `/legal` directory.
+//! Sound and music assets.
 
 use byteorder::{ByteOrder, LittleEndian};
 use kira::sound::static_sound::StaticSoundData;

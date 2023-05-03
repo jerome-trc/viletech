@@ -1,8 +1,4 @@
 //! Textures, sprites, brightmaps, polygonal models, voxel models.
-//!
-//! Code derived from [SLADE](https://slade.mancubus.net/) is used under the
-//! GNU GPL v2.0. See <https://github.com/sirjuddington/SLADE/blob/master/LICENSE>.
-//! A copy is attached in the `/legal` directory.
 
 use std::io::Cursor;
 
