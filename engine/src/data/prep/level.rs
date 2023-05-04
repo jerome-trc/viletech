@@ -1,13 +1,12 @@
 //! Functions for turning vanilla lumps and UDMF TEXTMAP into levels.
 
-use glam::{DVec2, DVec3, IVec2};
-
 use crate::{
 	data::{
 		detail::Outcome, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags, LevelMeta,
-		LineDef, LineDefFlags, LineSpecial, PrepError, PrepErrorKind, Sector, SectorSpecial, Seg,
-		SideDef, SubSector, Thing, ThingFlags, Vertex,
+		LineDef, LineSpecial, PrepError, PrepErrorKind, Sector, SectorSpecial, Seg, SideDef,
+		SubSector, Thing, ThingFlags,
 	},
+	sim::{level::Vertex, line::LineFlags},
 	EditorNum, ShortId,
 };
 
@@ -175,8 +174,8 @@ impl Catalog {
 				),
 			},
 			meta: LevelMeta {
-				name: String::default(),
-				author_name: String::default(),
+				name: String::default().into(),
+				author_name: String::default().into(),
 				music: None,
 				next: None,
 				next_secret: None,
@@ -225,7 +224,7 @@ impl Catalog {
 				id: -1,
 				vert_from: i16::from_le(raw.v_from) as i32,
 				vert_to: i16::from_le(raw.v_to) as i32,
-				flags: LineDefFlags::from_bits_truncate(raw.flags as u32),
+				flags: LineFlags::from_bits_truncate(raw.flags as u32),
 				special: Self::linedef_special_from_vanilla(ctx, raw.special),
 				args: [0; 5],
 				side_right: i16::from_le(raw.right) as i32,
@@ -369,7 +368,7 @@ impl Catalog {
 			let raw = bytemuck::from_bytes::<SidedefRaw>(&bytes[pos..(pos + SIZE)]);
 
 			ret.push(SideDef {
-				offset: IVec2::new(
+				offset: glam::ivec2(
 					i16::from_le(raw.offs_x) as i32,
 					i16::from_le(raw.offs_y) as i32,
 				),
@@ -435,7 +434,7 @@ impl Catalog {
 
 			ret.push(Thing {
 				num: i16::from_le(raw.num).max(0) as EditorNum,
-				pos: DVec3::new(i16::from_le(raw.x) as f64, i16::from_le(raw.y) as f64, 0.0),
+				pos: glam::vec3(i16::from_le(raw.x) as f32, i16::from_le(raw.y) as f32, 0.0),
 				angle: i16::from_le(raw.angle) as f64,
 				flags: {
 					let flags = i16::from_le(raw.flags);
@@ -490,9 +489,10 @@ impl Catalog {
 		while pos < bytes.len() {
 			let raw = bytemuck::from_bytes::<VertexRaw>(&bytes[pos..(pos + SIZE)]);
 
-			ret.push(Vertex(DVec2::new(
-				i16::from_le(raw.x) as f64,
-				i16::from_le(raw.y) as f64,
+			ret.push(Vertex(glam::vec3(
+				i16::from_le(raw.x) as f32,
+				i16::from_le(raw.y) as f32,
+				0.0,
 			)));
 
 			pos += SIZE;

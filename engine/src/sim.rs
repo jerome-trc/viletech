@@ -2,6 +2,8 @@
 
 pub mod ecs;
 pub mod level;
+pub mod line;
+pub mod sector;
 pub mod skill;
 
 use std::time::{Duration, Instant};
@@ -11,13 +13,10 @@ use nanorand::WyRand;
 
 use crate::rng::RngCore;
 
-use self::level::Level;
-
 /// All gameplay simulation state.
-#[derive(Debug, Resource)]
+#[derive(Resource, Debug)]
 pub struct Sim {
 	timing: Timing,
-	_levels: Vec<Level>,
 	_rng: RngCore<WyRand>,
 	/// Time spent in this hub thus far.
 	hub_ticks_elapsed: u64,
@@ -64,6 +63,13 @@ impl Default for Timing {
 		}
 	}
 }
+
+/// A "flag" component for marking entities as being part of an active level.
+///
+/// Level geometry and actors without this are not subject to per-tick iteration.
+#[derive(Component, Debug)]
+#[component(storage = "SparseSet")]
+pub struct ActiveMarker;
 
 /// Intended to be run on a fixed-time update loop, 35 Hz by default.
 pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {

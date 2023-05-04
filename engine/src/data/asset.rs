@@ -40,7 +40,7 @@ pub trait Asset: private::Sealed {
 /// Thin wrapper around an [`Arc`] pointing to an [`Asset`]. Attaching a generic
 /// type allows the pointer to be pre-downcast, so dereferencing is as fast as
 /// with any other pointer with no unsafe code required.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Handle<A: Asset>(Arc<A>, PhantomData<A>);
 
 impl<A: Asset> Handle<A> {
@@ -72,6 +72,12 @@ impl<A: Asset> std::ops::Deref for Handle<A> {
 	}
 }
 
+impl<A: Asset> Clone for Handle<A> {
+	fn clone(&self) -> Self {
+		Self(self.0.clone(), PhantomData)
+	}
+}
+
 impl<A: Asset> PartialEq for Handle<A> {
 	/// Check that these are two handles to the same [`Asset`].
 	fn eq(&self, other: &Self) -> bool {
@@ -82,15 +88,20 @@ impl<A: Asset> PartialEq for Handle<A> {
 impl<A: Asset> Eq for Handle<A> {}
 
 /// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-asset
-/// relationships (without preventing in-place mutation or removal) in a way
-/// that can't leak.
-#[derive(Debug, Clone)]
+/// relationships (without preventing in-place removal) in a way that can't leak.
+#[derive(Debug)]
 pub struct InHandle<A: Asset>(Weak<A>, PhantomData<A>);
 
 impl<A: Asset> InHandle<A> {
 	#[must_use]
 	pub fn upgrade(&self) -> Option<Handle<A>> {
 		self.0.upgrade().map(Handle::from)
+	}
+}
+
+impl<A: Asset> Clone for InHandle<A> {
+	fn clone(&self) -> Self {
+		Self(self.0.clone(), PhantomData)
 	}
 }
 
@@ -129,6 +140,7 @@ impl_asset! {
 	DamageType, "Damage Type";
 	Image, "Image";
 	Level, "Level";
+	LockDef, "Lock";
 	PaletteSet, "Palette Set";
 	PolyModel, "Poly Model";
 	Species, "Species";
@@ -164,6 +176,7 @@ mod private {
 		DamageType,
 		Image,
 		Level,
+		LockDef,
 		PaletteSet,
 		PolyModel,
 		Species,

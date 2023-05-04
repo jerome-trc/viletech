@@ -1,75 +1,28 @@
 //! Level (a.k.a. "map") data.
 
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, sync::Arc};
 
+use bevy::prelude::{IVec2, Vec3};
 use bitflags::bitflags;
-use glam::{DVec2, DVec3, IVec2};
+use image::Rgb;
 
-use crate::{EditorNum, ShortId};
+use crate::{
+	sim::{level::Vertex, line::LineFlags},
+	EditorNum, ShortId,
+};
 
-use super::{super::InHandle, AssetHeader, Audio, Image};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Vertex(pub DVec2);
+use super::{super::InHandle, AssetHeader, Audio, Blueprint, Image};
 
 #[derive(Debug)]
 pub struct LineDef {
 	pub id: i32,
 	pub vert_from: i32,
 	pub vert_to: i32,
-	pub flags: LineDefFlags,
+	pub flags: LineFlags,
 	pub special: LineSpecial,
 	pub args: [i32; 5],
 	pub side_right: i32,
 	pub side_left: i32,
-}
-
-bitflags! {
-	#[derive(Default)]
-	pub struct LineDefFlags: u32 {
-		/// Line blocks things (i.e. player, missiles, and monsters).
-		const IMPASSIBLE = 1 << 0;
-		/// Line blocks monsters.
-		const BLOCK_MONS = 1 << 1;
-		/// Line's two sides can have the "transparent texture".
-		const TWO_SIDED = 1 << 2;
-		/// Upper texture is pasted onto wall from the top down instead of bottom-up.
-		const UPPER_UNPEGGED = 1 << 3;
-		/// Lower and middle textures are drawn from the bottom up instead of top-down.
-		const LOWER_UNPEGGED = 1 << 4;
-		/// If set, drawn as 1S on the map.
-		const SECRET = 1 << 5;
-		/// If set, blocks sound propagation.
-		const BLOCK_SOUND = 1 << 6;
-		/// If set, line is never drawn on the automap,
-		/// even if the computer area map power-up is acquired.
-		const UNMAPPED = 1 << 7;
-		/// If set, line always appears on the automap,
-		/// even if no player has seen it yet.
-		const PRE_MAPPED = 1 << 8;
-		/// If set, linedef passes use action.
-		const PASS_USE = 1 << 9;
-		/// Strife translucency.
-		const TRANSLUCENT = 1 << 10;
-		/// Strife railing.
-		const JUMPOVER = 1 << 11;
-		/// Strife floater-blocker.
-		const BLOCK_FLOATERS = 1 << 12;
-		/// Player can cross.
-		const ALLOW_PLAYER_CROSS = 1 << 13;
-		/// Player can use.
-		const ALLOW_PLAYER_USE = 1 << 14;
-		/// Monsters can cross.
-		const ALLOW_MONS_CROSS = 1 << 15;
-		/// Monsters can use.
-		const ALLOW_MONS_USE = 1 << 16;
-		/// Projectile can activate.
-		const IMPACT = 1 << 17;
-		const ALLOW_PLAYER_PUSH = 1 << 18;
-		const ALLOW_MONS_PUSH = 1 << 19;
-		const ALLOW_PROJ_CROSS = 1 << 20;
-		const REPEAT_SPECIAL = 1 << 21;
-	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -170,7 +123,7 @@ impl LineDef {
 			id: -1,
 			vert_from: vert_from as i32,
 			vert_to: vert_to as i32,
-			flags: LineDefFlags::from_bits_truncate(flags as u32),
+			flags: LineFlags::from_bits_truncate(flags as u32),
 			special,
 			args: [0; 5],
 			side_right: side_right as i32,
@@ -253,7 +206,7 @@ pub struct SubSector {
 #[derive(Debug)]
 pub struct Thing {
 	pub num: EditorNum,
-	pub pos: DVec3,
+	pub pos: Vec3,
 	pub angle: f64,
 	pub flags: ThingFlags,
 }
@@ -278,6 +231,28 @@ bitflags! {
 	}
 }
 
+/// Adapted one-to-one from GZ. See <https://zdoom.org/wiki/LOCKDEFS>.
+#[derive(Debug)]
+pub struct LockDef {
+	pub header: AssetHeader,
+	pub reqs: Vec<KeyReq>,
+	/// Printed when trying to open a door without having the required keys.
+	pub interact_msg: Arc<str>,
+	/// Printed when trying to press a remote switch without having the required keys.
+	pub remote_msg: Arc<str>,
+	/// Played when trying to open this door without having the required keys.
+	pub sound: Option<InHandle<Audio>>,
+	/// Lines with this lock are drawn as this color on the automap.
+	pub automap_color: Rgb<u8>,
+}
+
+/// See [`LockDef`].
+#[derive(Debug)]
+pub enum KeyReq {
+	Exact(InHandle<Blueprint>),
+	AnyOf(Vec<InHandle<Blueprint>>),
+}
+
 #[derive(Debug)]
 pub struct Level {
 	pub header: AssetHeader,
@@ -299,9 +274,9 @@ pub struct LevelMeta {
 	/// will be, for example, "DOOM2/MAP01" and gets stored in the [header].
 	///
 	/// [header]: AssetHeader
-	pub name: String,
+	pub name: Arc<str>,
 	/// May be a string ID.
-	pub author_name: String,
+	pub author_name: Arc<str>,
 	pub music: Option<InHandle<Audio>>,
 	/// The level that players are taken to upon passing through the normal exit.
 	pub next: Option<InHandle<Level>>,
