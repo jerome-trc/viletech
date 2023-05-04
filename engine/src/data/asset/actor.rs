@@ -1,8 +1,8 @@
-//! The [entity blueprint](Blueprint) and related symbols.
+//! The [actor blueprint](Blueprint) and related symbols.
 
 use bitflags::bitflags;
 
-use crate::{data::InHandle, sim::ecs, EditorNum, SpawnNum};
+use crate::{data::InHandle, sim::actor, EditorNum, SpawnNum};
 
 use super::{AssetHeader, Audio, Image, PolyModel, VoxelModel};
 
@@ -16,19 +16,19 @@ pub struct Blueprint {
 	pub blood_types: [Option<InHandle<Blueprint>>; 3],
 	pub bones: Option<()>, // TODO: Skeletal animation w/ data representation.
 	pub damage_factors: Vec<(InHandle<DamageType>, f64)>,
-	/// Entity is shrunk to this height after being killed.
+	/// Actor is shrunk to this height after being killed.
 	pub death_height: f64,
-	/// Entity is shrunk to this height after a burning death.
+	/// Actor is shrunk to this height after a burning death.
 	pub burn_height: f64,
 	pub fsm: FStateMachine,
-	/// Default is 1000. What the entity's health gets set to upon spawning.
+	/// Default is 1000. What the actor's health gets set to upon spawning.
 	pub health_starting: i32,
-	/// Health value below which entity enters "extreme death" f-state sequence.
+	/// Health value below which actor enters "extreme death" f-state sequence.
 	pub gib_health: i32,
 	pub model: Option<()>, // TODO: Polymodel data representation.
-	/// What to write if a player entity was killed by this entity's non-melee attack.
+	/// What to write if a player actor was killed by this actor's non-melee attack.
 	pub obituary: String, // TODO: String interning.
-	/// What to write if a player entity was killed by this entity's melee attack.
+	/// What to write if a player actor was killed by this actor's melee attack.
 	pub obituary_melee: String, // TODO: String interning.
 	pub pain_chances: Vec<(InHandle<DamageType>, u16)>,
 	pub render_feats: RenderFeatures,
@@ -51,8 +51,8 @@ pub struct Blueprint {
 /// Used only for composing [`Blueprint`].
 #[derive(Debug)]
 pub struct Components {
-	pub monster: Option<ecs::Monster>,
-	pub projectile: Option<ecs::Projectile>,
+	pub monster: Option<actor::Monster>,
+	pub projectile: Option<actor::Projectile>,
 }
 
 /// "Finite state machine". See [`FState`] to learn more.
@@ -65,7 +65,7 @@ pub struct FStateMachine {
 	pub states: Vec<FState>,
 }
 
-/// "Finite state". An entity appearance tied to some behavior and a tick duration.
+/// "Finite state". An actor appearance tied to some behavior and a tick duration.
 /// See [`FStateMachine`].
 pub struct FState {
 	pub visual: FStateVisual,
@@ -129,16 +129,16 @@ pub enum FStateVisual {
 /// Sub-structure used to compose [`Blueprint`]. Exists only for cleanliness.
 #[derive(Debug)]
 pub struct Sounds {
-	/// Played when the entity is electrocuted or poisoned.
+	/// Played when the actor is electrocuted or poisoned.
 	pub howl: Option<InHandle<Audio>>,
 	pub melee: Option<InHandle<Audio>>,
 	pub rip: Option<InHandle<Audio>>,
-	/// Played when the entity is being pushed by something.
+	/// Played when the actor is being pushed by something.
 	pub push: Option<InHandle<Audio>>,
 }
 
 bitflags! {
-	/// Flags for filtering entity visibility based on capabilities of the
+	/// Flags for filtering actor visibility based on capabilities of the
 	/// currently-used renderer.
 	pub struct RenderFeatures: u16 {
 		const FLAT_SPRITES = 1 << 0;

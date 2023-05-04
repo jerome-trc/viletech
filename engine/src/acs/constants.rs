@@ -5,7 +5,7 @@
 use bitflags::bitflags;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum EntityProperty {
+pub(super) enum ActorProperty {
 	Health,
 	Speed,
 	Damage,
@@ -127,7 +127,7 @@ pub(super) const LINE_FRONT: i32 = 0;
 pub(super) const LINE_BACK: i32 = 1;
 
 bitflags! {
-	pub(super) struct PickEntityFlags: u8 {
+	pub(super) struct PickActorFlags: u8 {
 		const FORCE_TID = 1 << 0;
 		const RETURN_TID = 1 << 1;
 	}

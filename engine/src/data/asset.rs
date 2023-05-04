@@ -1,7 +1,7 @@
 //! "Asset" is the catch-all term for any data unit the catalog can store.
 
+mod actor;
 mod audio;
-mod ecs;
 mod level;
 mod visual;
 
@@ -10,7 +10,7 @@ use std::{
 	sync::{Arc, Weak},
 };
 
-pub use self::{audio::*, ecs::*, level::*, visual::*};
+pub use self::{actor::*, audio::*, level::*, visual::*};
 
 /// A storage implementation detail, exposed only so library users can
 /// access common asset metadata.

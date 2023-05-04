@@ -1,6 +1,6 @@
 //! Home of all gameplay code.
 
-pub mod ecs;
+pub mod actor;
 pub mod level;
 pub mod line;
 pub mod sector;

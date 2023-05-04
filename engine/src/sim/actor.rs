@@ -1,25 +1,30 @@
-//! Entity components used by the sim.
+//! "Actors" are ECS entities used
 
 use std::{num::NonZeroI32, ptr::NonNull};
 
 use bevy::prelude::*;
 use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
 
 use crate::{
 	data::{self, Blueprint},
 	vzs::heap::TPtr,
 };
 
-pub type EntityPtr = TPtr<VzsEntity>;
+/// Strongly-typed [`Entity`] wrapper.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Actor(Entity);
 
-/// An entity as understood by VZScript.
+pub type ActorPtr = TPtr<VzsActor>;
+
+/// An actor as understood by VZScript.
 ///
 /// A class object, extensible like any other, principally made up of pointers to
 /// Bevy components. These get filled in at spawn time and left untouched by
 /// internal engine code, except when ECS storages are re-allocated, at which
 /// point they are all updated the start of the sim tick.
 #[derive(Debug)]
-pub struct VzsEntity {
+pub struct VzsActor {
 	pub(crate) _readonly: NonNull<Readonly>,
 	pub(crate) _transform: NonNull<Transform>,
 
@@ -30,14 +35,14 @@ pub struct VzsEntity {
 // SAFETY: Pointers are never dereferenced by native Rust, only set.
 // Only VZS modifies their contents, and this only happens when there is already
 // an open Bevy query for mutating all components, so no other references can exist.
-unsafe impl Send for VzsEntity {}
-unsafe impl Sync for VzsEntity {}
+unsafe impl Send for VzsActor {}
+unsafe impl Sync for VzsActor {}
 
 // Monster /////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Component)]
 pub struct Monster {
-	pub goal: Option<EntityPtr>,
+	pub goal: Option<ActorPtr>,
 	pub missile_threshold: f64,
 	pub reaction_time: i32,
 	pub tid_hated: Option<ThingId>,
@@ -64,16 +69,16 @@ bitflags! {
 
 // Readonly ////////////////////////////////////////////////////////////////////
 
-/// Details about an entity that are set at spawn time and never change.
+/// Details about an actor that are set at spawn time and never change.
 #[derive(Debug, Component)]
 pub struct Readonly {
-	/// The blueprint off which this entity is based.
+	/// The blueprint off which this actor is based.
 	pub blueprint: data::Handle<Blueprint>,
 	/// Universally unique.
-	pub id: Entity,
+	pub id: Actor,
 	/// From GZ; affects render order somehow. VileTech may cull.
 	pub spawn_order: u32,
-	/// The tick this entity was spawned on.
+	/// The tick this actor was spawned on.
 	pub spawn_tick: u32,
 }
 
