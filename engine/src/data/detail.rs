@@ -18,7 +18,7 @@ impl Catalog {
 		ui.heading("Assets");
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
-			for (_, mount) in &self.mounts {
+			for mount in &self.mounts {
 				for (_, asset) in &mount.assets {
 					let resp = ui.label(&asset.header().id);
 
@@ -79,7 +79,6 @@ impl AssetKey {
 }
 
 slotmap::new_key_type! {
-	pub(super) struct MountSlotKey;
 	/// See [`crate::data::Mount`].
 	pub(super) struct AssetSlotKey;
 }

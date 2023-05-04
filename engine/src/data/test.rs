@@ -39,12 +39,12 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 fn vfs_path_hash() {
 	let k_root = VfsKey::new("/");
 	let k_empty = VfsKey::new("");
-	assert!(k_root == k_empty);
+	assert_eq!(k_root, k_empty);
 }
 
 #[test]
 fn load() {
-	let mut catalog = Catalog::default();
+	let mut catalog = Catalog::new([]);
 	let outcome = catalog.load(request());
 
 	match outcome {
@@ -65,10 +65,10 @@ fn load() {
 	}
 
 	assert_eq!(
-		catalog.mounts_len(),
+		catalog.mounts().len(),
 		2,
 		"Expected 2 mounts, found: {}",
-		catalog.mounts_len()
+		catalog.mounts().len()
 	);
 
 	// Root, 2 mounts, freedoom1.wad's contents, freedoom2.wad's contents.
@@ -84,7 +84,7 @@ fn load() {
 
 #[test]
 fn vfs_lookup() {
-	let mut catalog = Catalog::default();
+	let mut catalog = Catalog::new([]);
 	let _ = catalog.load(request());
 
 	assert!(catalog.vfs().get("/").is_some(), "Root lookup failed.");
@@ -114,7 +114,7 @@ fn vfs_lookup() {
 
 #[test]
 fn vfs_dir_structure() {
-	let mut catalog = Catalog::default();
+	let mut catalog = Catalog::new([]);
 	let _ = catalog.load(request());
 
 	let root = catalog.vfs().get("/").unwrap();
@@ -153,7 +153,7 @@ fn vfs_dir_structure() {
 
 #[test]
 fn glob() {
-	let mut catalog = Catalog::default();
+	let mut catalog = Catalog::new([]);
 	let _ = catalog.load(request());
 
 	{

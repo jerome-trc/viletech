@@ -26,7 +26,6 @@ use crate::{
 };
 
 use super::{
-	detail::MountSlotKey,
 	vfs::{File, FileContent},
 	Catalog, LoadTracker, MountError, MountErrorKind, MountFormat,
 };
@@ -41,20 +40,16 @@ pub(super) struct Context {
 
 impl Context {
 	#[must_use]
-	pub(super) fn new<RP, MP>(tracker: Option<Arc<LoadTracker>>, load_order: &[(RP, MP)]) -> Self
-	where
-		RP: AsRef<Path>,
-		MP: AsRef<VPath>,
-	{
+	pub(super) fn new(tracker: Option<Arc<LoadTracker>>, load_order_len: usize) -> Self {
 		// Build a dummy tracker if none was given
 		// to simplify the rest of the loading code.
 		// Q: Branching might yield a speed increase compared to wasted atomic
 		// operations, but is there reason to bother?
 		let tracker = tracker.unwrap_or_else(|| Arc::new(LoadTracker::default()));
-		tracker.set_mount_target(load_order.len());
+		tracker.set_mount_target(load_order_len);
 
 		let mut errors = vec![];
-		errors.resize_with(load_order.len(), Mutex::default);
+		errors.resize_with(load_order_len, Mutex::default);
 
 		Self { tracker, errors }
 	}
@@ -97,13 +92,12 @@ struct Success {
 pub(super) struct Output {
 	pub(super) errors: Vec<Vec<MountError>>,
 	pub(super) tracker: Arc<LoadTracker>,
-	pub(super) new_mounts: Vec<MountSlotKey>,
 }
 
 impl Catalog {
 	pub(super) fn mount(
 		&mut self,
-		load_order: Vec<(impl AsRef<Path>, impl AsRef<VPath>)>,
+		load_order: &Vec<(impl AsRef<Path>, impl AsRef<VPath>)>,
 		mut ctx: Context,
 	) -> Outcome<Output, Vec<Vec<MountError>>> {
 		if ctx.tracker.is_cancelled() {
@@ -227,20 +221,17 @@ impl Catalog {
 
 		// Register mounts; learn as much about them as possible in the process.
 
-		let mut new_mounts = Vec::with_capacity(mounts.len());
-
 		for mut mount in mounts {
 			mount.info.kind =
 				self.resolve_mount_kind(mount.info.format(), mount.info.virtual_path());
 
 			self.resolve_mount_metadata(&mut mount.info);
-			new_mounts.push(self.mounts.insert(mount));
+			self.mounts.push(mount);
 		}
 
 		Outcome::Ok(Output {
 			errors,
 			tracker: ctx.tracker,
-			new_mounts,
 		})
 	}
 

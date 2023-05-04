@@ -17,7 +17,7 @@ use smallvec::smallvec;
 use crate::{vzs, ShortId, VPathBuf};
 
 use super::{
-	detail::{AssetKey, MountSlotKey, Outcome},
+	detail::{AssetKey, Outcome},
 	Asset, AssetHeader, Audio, Catalog, FileRef, Image, LoadTracker, MountInfo, MountKind, Palette,
 	PaletteSet, PrepError, PrepErrorKind,
 };
@@ -28,20 +28,18 @@ pub(super) struct Context {
 	/// Returning errors through the asset prep call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	pub(super) errors: Vec<Mutex<Vec<PrepError>>>,
-	pub(super) new_mounts: Vec<MountSlotKey>,
 }
 
 impl Context {
 	#[must_use]
-	pub(super) fn new(tracker: Arc<LoadTracker>, new_mounts: Vec<MountSlotKey>) -> Self {
+	pub(super) fn new(tracker: Arc<LoadTracker>, mounts_len: usize) -> Self {
 		Self {
 			tracker,
 			errors: {
 				let mut ret = vec![];
-				ret.resize_with(new_mounts.len(), || Mutex::new(vec![]));
+				ret.resize_with(mounts_len, || Mutex::new(vec![]));
 				ret
 			},
-			new_mounts,
 		}
 	}
 
@@ -120,18 +118,18 @@ impl Catalog {
 		}
 
 		let mut artifacts = vec![];
-		artifacts.resize_with(ctx.new_mounts.len(), || Mutex::new(Artifacts::default()));
+		artifacts.resize_with(self.mounts.len(), || Mutex::new(Artifacts::default()));
 
 		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
-		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
+		for (i, mount) in self.mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mntinfo: &self.mounts[*mount_key].info,
+				mntinfo: &mount.info,
 				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
@@ -155,14 +153,14 @@ impl Catalog {
 		// - Sounds and music.
 		// - Non-picture-format images.
 
-		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
+		for (i, mount) in self.mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mntinfo: &self.mounts[*mount_key].info,
+				mntinfo: &mount.info,
 				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
@@ -181,20 +179,20 @@ impl Catalog {
 
 		// TODO: Forbid further loading without a PLAYPAL present?
 
-		self.register_assets(&ctx.new_mounts, &artifacts);
+		self.register_assets(&artifacts);
 
 		// Pass 3: assets dependent on pass 2. Includes:
 		// - Picture-format images, which need palettes.
 		// - Maps, which need textures, music, scripts, blueprints...
 
-		for (i, mount_key) in ctx.new_mounts.iter().enumerate() {
+		for (i, mount) in self.mounts.iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
-				mntinfo: &self.mounts[*mount_key].info,
+				mntinfo: &mount.info,
 				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
@@ -211,7 +209,7 @@ impl Catalog {
 			return Outcome::Err(ctx.into_errors());
 		}
 
-		self.register_assets(&ctx.new_mounts, &artifacts);
+		self.register_assets(&artifacts);
 
 		// TODO: Make each successfully processed file increment progress.
 		ctx.tracker.finish_prep();
@@ -547,11 +545,10 @@ impl Catalog {
 
 	// Common functions ////////////////////////////////////////////////////////
 
-	fn register_assets(&mut self, new_mounts: &[MountSlotKey], staging: &[Mutex<Artifacts>]) {
+	fn register_assets(&mut self, staging: &[Mutex<Artifacts>]) {
 		for (i, mutex) in staging.iter().enumerate() {
-			let mount_key = new_mounts[i];
 			let mut artifacts = mutex.lock();
-			let slotmap = &mut self.mounts[mount_key].assets;
+			let slotmap = &mut self.mounts[i].assets;
 			slotmap.reserve(artifacts.assets.len());
 
 			artifacts.assets.drain(..).for_each(
@@ -573,18 +570,18 @@ impl Catalog {
 					let slotkey = slotmap.insert(asset);
 
 					if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
-						kvp.value_mut().push((mount_key, slotkey));
+						kvp.value_mut().push((i, slotkey));
 					} else {
 						self.nicknames
-							.insert(key_nick, smallvec![(mount_key, slotkey)]);
+							.insert(key_nick, smallvec![(i, slotkey)]);
 					};
 
 					match lookup {
 						dashmap::mapref::entry::Entry::Occupied(mut occu) => {
-							occu.insert((mount_key, slotkey));
+							occu.insert((i, slotkey));
 						}
 						dashmap::mapref::entry::Entry::Vacant(vacant) => {
-							vacant.insert((mount_key, slotkey));
+							vacant.insert((i, slotkey));
 						}
 					}
 				},

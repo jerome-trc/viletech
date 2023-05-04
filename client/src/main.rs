@@ -8,6 +8,7 @@ mod load;
 
 use std::{
 	borrow::Cow,
+	path::PathBuf,
 	time::{Duration, Instant},
 };
 
@@ -23,12 +24,7 @@ use bevy::{
 use bevy_egui::{egui, systems::InputEvents, EguiContexts, EguiPlugin};
 use clap::Parser;
 use indoc::printdoc;
-use viletech::{
-	console::Console,
-	data::{Catalog, CatalogExt},
-	log::TracingPlugin,
-	user::UserCore,
-};
+use viletech::{console::Console, data::Catalog, log::TracingPlugin, user::UserCore};
 
 use self::core::*;
 
@@ -112,12 +108,7 @@ conditions. See the license document that comes with your installation."
 		.add_system(common_updates)
 		.add_system(update_input.in_set(InputSystem));
 
-	let mut catalog = Catalog::default();
-
-	if let Err(err) = catalog.mount_basedata() {
-		error!("Failed to find and mount engine base data: {err}");
-		return Err(Box::new(err));
-	}
+	let catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
 
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();

@@ -1,7 +1,11 @@
+use std::{collections::HashSet, path::PathBuf};
+
 use super::Catalog;
 
 #[derive(Debug)]
 pub(super) struct Config {
+	/// Mind that this stores real paths.
+	pub(super) basedata: HashSet<PathBuf>,
 	pub(super) bin_size_limit: usize,
 	pub(super) text_size_limit: usize,
 }
@@ -9,6 +13,7 @@ pub(super) struct Config {
 impl Default for Config {
 	fn default() -> Self {
 		Self {
+			basedata: Default::default(),
 			bin_size_limit: super::limits::DEFAULT_BIN_FILE_SIZE,
 			text_size_limit: super::limits::DEFAULT_TEXT_FILE_SIZE,
 		}

@@ -55,7 +55,7 @@ fn data(crit: &mut Criterion) {
 	}
 
 	fn load_unload(crit: &mut Criterion) {
-		let mut catalog = Catalog::default();
+		let mut catalog = Catalog::new([]);
 
 		let mut grp = crit.benchmark_group("Data: Load and Unload");
 		grp.sample_size(20);
@@ -65,7 +65,7 @@ fn data(crit: &mut Criterion) {
 				|| request(),
 				|req_l| {
 					let _ = catalog.load(req_l);
-					catalog.unload_all();
+					catalog.clear();
 				},
 				criterion::BatchSize::SmallInput,
 			);
@@ -75,7 +75,7 @@ fn data(crit: &mut Criterion) {
 	}
 
 	fn lookup(crit: &mut Criterion) {
-		let mut catalog = Catalog::default();
+		let mut catalog = Catalog::new([]);
 		let _ = catalog.load(request());
 
 		let mut grp = crit.benchmark_group("Data: VFS Lookup");

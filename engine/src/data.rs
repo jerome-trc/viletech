@@ -13,7 +13,7 @@ mod test;
 pub mod vfs;
 
 use std::{
-	path::Path,
+	path::{Path, PathBuf},
 	sync::{
 		atomic::{self, AtomicBool, AtomicUsize},
 		Arc,
@@ -30,7 +30,7 @@ use smallvec::SmallVec;
 use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
-	detail::{AssetKey, AssetSlotKey, MountSlotKey},
+	detail::{AssetKey, AssetSlotKey},
 	vfs::{FileRef, VirtualFs},
 };
 
@@ -50,36 +50,94 @@ pub use self::{asset::*, config::*, error::*, ext::*};
 /// other parts of the engine to take out high-speed [`Handle`]s to something and
 /// safely access it without passing through locks or casts.
 ///
+/// The catalog works in phases; files considered "engine basedata" are always in
+/// the VFS by necessity, but everything else is either in a "fully loaded" or
+/// "unloaded" state.
+///
 /// A footnote on semantics: it is impossible to mount a file that's nested within
 /// an archive. If `mymod.zip` contains `myothermod.vpk7`, there's no way to
 /// register `myothermod` as a mount in the official sense. It's just a part of
 /// `mymod`'s file tree.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Catalog {
 	pub(self) config: Config,
-	pub(self) _vzscript: vzs::Project,
+	/// When the catalog is initialized, this is empty.
+	pub(self) vzscript: vzs::Project,
+	/// See [`Self::new`]; mounts given as `basedata` through that function are
+	/// always present here.
 	pub(self) vfs: VirtualFs,
-	/// The first element is always the engine's base data (ID `viletech`),
-	/// but every following element is user-specified, including their order.
-	pub(self) mounts: SlotMap<MountSlotKey, Mount>,
+	/// When the catalog is initialized, this is empty.
+	pub(self) mounts: Vec<Mount>,
 	/// In each value:
-	/// - Field `0` is a key into `Self::mounts`.
+	/// - Field `0` is an index into `Self::mounts`.
 	/// - Field `1` is a key into [`Mount::assets`].
-	pub(self) assets: DashMap<AssetKey, (MountSlotKey, AssetSlotKey)>,
+	pub(self) assets: DashMap<AssetKey, (usize, AssetSlotKey)>,
 	/// Asset lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries.
-	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
+	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
 	/// Keyed assets are always of type [`Blueprint`].
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
 	/// Keyed assets are always of type [`Blueprint`].
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(MountSlotKey, AssetSlotKey); 2]>>,
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	pub(self) populated: bool,
 	// Q: FNV/aHash for maps using small key types?
 }
 
 impl Catalog {
+	/// Each item in `basedata` is a combination of a real path and mount point.
+	/// These will be mounted onto the VFS permanently but will need to be loaded
+	/// in full along with everything else in a load request.
+	///
+	/// Panics if mounting the basedata fails for any reason.
+	pub fn new(basedata: impl IntoIterator<Item = (PathBuf, VPathBuf)>) -> Self {
+		let mut ret = Self {
+			config: Config::default(),
+			vzscript: vzs::Project::default(),
+			vfs: VirtualFs::default(),
+			mounts: vec![],
+			assets: DashMap::default(),
+			nicknames: DashMap::default(),
+			editor_nums: DashMap::default(),
+			spawn_nums: DashMap::default(),
+			populated: false,
+		};
+
+		let mut load_order = vec![];
+
+		for pair in basedata {
+			load_order.push(pair);
+		}
+
+		let mnt_ctx = mount::Context::new(None, load_order.len());
+
+		match ret.mount(&load_order, mnt_ctx) {
+			detail::Outcome::Ok(_) => {}
+			detail::Outcome::Err(errs) => panic!("Basedata mount failed: {}", {
+				let mut msg = String::default();
+
+				for subvec in errs {
+					msg.push_str("\r\n\r\n");
+
+					for err in subvec {
+						msg.push_str(&err.to_string());
+					}
+				}
+
+				msg
+			}),
+			detail::Outcome::Cancelled | detail::Outcome::None => unreachable!(),
+		};
+
+		for (rp, _) in load_order {
+			ret.config.basedata.insert(rp);
+		}
+
+		ret
+	}
+
 	/// This is an end-to-end function that reads physical files, fills out the
 	/// VFS, and then processes the files to decompose them into assets.
 	/// Much of the important things to know are in the documentation for
@@ -100,36 +158,60 @@ impl Catalog {
 		RP: AsRef<Path>,
 		MP: AsRef<VPath>,
 	{
+		assert!(
+			!self.populated,
+			"Attempted to load a game to an already-populated `Catalog`."
+		);
+
 		if request.load_order.is_empty() {
 			return LoadOutcome::NoOp;
 		}
 
-		let mnt_ctx = mount::Context::new(request.tracker, &request.load_order);
+		let mnt_ctx = mount::Context::new(request.tracker, request.load_order.len());
 
 		// Note to reader: check `./mount.rs`.
-		let mnt_output = match self.mount(request.load_order, mnt_ctx) {
+		let mnt_output = match self.mount(&request.load_order, mnt_ctx) {
 			detail::Outcome::Ok(output) => output,
 			detail::Outcome::Err(errors) => return LoadOutcome::MountFail { errors },
 			detail::Outcome::Cancelled => return LoadOutcome::Cancelled,
 			detail::Outcome::None => unreachable!(),
 		};
 
-		let p_ctx = prep::Context::new(mnt_output.tracker, mnt_output.new_mounts);
+		let p_ctx = prep::Context::new(mnt_output.tracker, self.mounts.len());
 
 		// Note to reader: check `./prep.rs`.
 		match self.prep(p_ctx) {
-			detail::Outcome::Ok(output) => LoadOutcome::Ok {
-				mount: mnt_output.errors,
-				prep: output.errors,
-			},
+			detail::Outcome::Ok(output) => {
+				self.populated = true;
+
+				LoadOutcome::Ok {
+					mount: mnt_output.errors,
+					prep: output.errors,
+				}
+			}
 			detail::Outcome::Err(errors) => LoadOutcome::PrepFail { errors },
 			detail::Outcome::Cancelled => LoadOutcome::Cancelled,
 			detail::Outcome::None => unreachable!(),
 		}
 	}
 
-	pub fn unload_all(&mut self) {
-		unimplemented!("New VFS and load scheme are pending.")
+	pub fn clear(&mut self) {
+		for mount in &self.mounts {
+			if self.config.basedata.contains(mount.info.real_path()) {
+				continue;
+			}
+
+			self.vfs.remove_recursive(mount.info.virtual_path());
+		}
+
+		self.mounts.clear();
+		self.vzscript.clear();
+		self.assets.clear();
+		self.nicknames.clear();
+		self.editor_nums.clear();
+		self.spawn_nums.clear();
+
+		self.populated = false;
 	}
 
 	/// Note that `A` here is a filter on the type that comes out of the lookup,
@@ -213,13 +295,9 @@ impl Catalog {
 		&self.vfs
 	}
 
-	pub fn mounts(&self) -> impl Iterator<Item = &Mount> {
-		self.mounts.values()
-	}
-
 	#[must_use]
-	pub fn mounts_len(&self) -> usize {
-		self.mounts.len()
+	pub fn mounts(&self) -> &[Mount] {
+		&self.mounts
 	}
 
 	#[must_use]
