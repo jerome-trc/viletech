@@ -1,8 +1,13 @@
 //! Functions run when entering, updating, and leaving [`crate::AppState::Load`].
 
+use std::path::Path;
+
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use viletech::{data::LoadOutcome, utils::duration_to_hhmmss};
+use viletech::{
+	data::{LoadOutcome, MountError, PrepError},
+	utils::duration_to_hhmmss,
+};
 
 use crate::{
 	core::{ClientCore, GameLoad},
@@ -42,7 +47,7 @@ pub fn update(
 
 	let res_join = loader.thread.take().unwrap().join();
 
-	let res_load = match res_join {
+	let mut res_load = match res_join {
 		Ok(results) => results,
 		Err(_) => {
 			next_state.set(AppState::Frontend);
@@ -51,33 +56,14 @@ pub fn update(
 		}
 	};
 
+	res_load.sort_errors();
+
 	let go_to_frontend = match &res_load {
 		LoadOutcome::Ok { mount, prep } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
-				let num_errs = res_load.num_errs();
-
-				if num_errs == 0 {
-					continue;
+				if let Some(msg) = error_message(real_path, &mount[i], &prep[i]) {
+					warn!("{msg}");
 				}
-
-				let mut msg = String::with_capacity(128 + 256 * num_errs);
-
-				msg.push_str(&format!(
-					"{num_errs} errors/warnings while loading: {}",
-					real_path.display()
-				));
-
-				msg.push_str("\r\n\r\n");
-
-				for err in &mount[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				for err in &prep[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				warn!("{msg}");
 			}
 
 			let (hh, mm, ss) = duration_to_hhmmss(loader.start_time.elapsed());
@@ -87,52 +73,18 @@ pub fn update(
 		}
 		LoadOutcome::PrepFail { errors } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
-				let num_errs = res_load.num_errs();
-
-				if num_errs == 0 {
-					continue;
+				if let Some(msg) = error_message(real_path, &[], &errors[i]) {
+					warn!("{msg}");
 				}
-
-				let mut msg = String::with_capacity(128 + 256 * num_errs);
-
-				msg.push_str(&format!(
-					"{num_errs} errors/warnings while loading: {}",
-					real_path.display()
-				));
-
-				msg.push_str("\r\n\r\n");
-
-				for err in &errors[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				error!("{msg}");
 			}
 
 			true
 		}
 		LoadOutcome::MountFail { errors } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
-				let num_errs = res_load.num_errs();
-
-				if num_errs == 0 {
-					continue;
+				if let Some(msg) = error_message(real_path, &errors[i], &[]) {
+					warn!("{msg}");
 				}
-
-				let mut msg = String::with_capacity(128 + 256 * num_errs);
-
-				msg.push_str(&format!(
-					"{num_errs} errors/warnings while loading: {}",
-					real_path.display()
-				));
-
-				msg.push_str("\r\n\r\n");
-
-				for err in &errors[i] {
-					msg.push_str(&err.to_string());
-				}
-
-				error!("{msg}");
 			}
 
 			true
@@ -149,6 +101,34 @@ pub fn update(
 	} else {
 		next_state.set(AppState::Game);
 	}
+}
+
+#[must_use]
+fn error_message(real_path: &Path, mount: &[MountError], prep: &[PrepError]) -> Option<String> {
+	let num_errs = mount.len() + prep.len();
+
+	if num_errs == 0 {
+		return None;
+	}
+
+	let mut msg = String::with_capacity(128 + (128 * num_errs));
+
+	msg.push_str(&format!(
+		"{num_errs} errors/warnings while loading: {}",
+		real_path.display()
+	));
+
+	msg.push_str("\r\n\r\n");
+
+	for err in mount {
+		msg.push_str(&err.to_string());
+	}
+
+	for err in prep {
+		msg.push_str(&err.to_string());
+	}
+
+	Some(msg)
 }
 
 pub fn on_exit(mut cmds: Commands) {

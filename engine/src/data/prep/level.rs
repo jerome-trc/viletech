@@ -2,12 +2,12 @@
 
 use crate::{
 	data::{
-		detail::Outcome, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags, LevelMeta,
-		LineDef, LineSpecial, PrepError, PrepErrorKind, Sector, SectorSpecial, Seg, SideDef,
-		SubSector, Thing, ThingFlags,
+		detail::Outcome, prep::*, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags,
+		LevelMeta, LineDef, LineSpecial, PrepError, PrepErrorKind, Sector, SectorSpecial, Seg,
+		SideDef, SubSector, Thing, ThingFlags,
 	},
 	sim::{level::Vertex, line::LineFlags},
-	EditorNum, ShortId,
+	EditorNum,
 };
 
 use super::SubContext;
@@ -75,6 +75,7 @@ impl Catalog {
 				ctx.errors.lock().push(PrepError {
 					path: dir.path.to_path_buf(),
 					kind: PrepErrorKind::Level(LevelError::UnreadableFile(lump.path.to_path_buf())),
+					fatal: true,
 				});
 
 				return Outcome::Err(());
@@ -89,6 +90,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(linedefs.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -98,6 +100,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(sectors.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -107,6 +110,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(segs.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -116,6 +120,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(sidedefs.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -125,6 +130,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(ssectors.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -134,6 +140,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(things.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -143,6 +150,7 @@ impl Catalog {
 			ctx.errors.lock().push(PrepError {
 				path: dir.path.to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(vertexes.path.to_path_buf())),
+				fatal: true,
 			});
 
 			malformed = true;
@@ -526,25 +534,4 @@ impl Catalog {
 
 		Outcome::None // TODO
 	}
-}
-
-/// Returns `None` if `shortid` starts with a NUL.
-/// Return values have no trailing NUL bytes.
-#[must_use]
-fn read_shortid(shortid: [u8; 8]) -> Option<ShortId> {
-	if shortid.starts_with(&[b'\0']) {
-		return None;
-	}
-
-	let mut ret = ShortId::new();
-
-	for byte in shortid {
-		if byte == b'\0' {
-			break;
-		}
-
-		ret.push(char::from(byte));
-	}
-
-	Some(ret)
 }

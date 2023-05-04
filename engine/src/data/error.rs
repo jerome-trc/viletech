@@ -255,6 +255,9 @@ impl std::fmt::Display for MountError {
 pub struct PrepError {
 	pub path: VPathBuf,
 	pub kind: PrepErrorKind,
+	/// If one of these arises during a prep pass,
+	/// the load process must stop before moving on to the next pass.
+	pub fatal: bool,
 }
 
 /// Game loading is a two-step process; asset preparation is the second step.
@@ -265,6 +268,8 @@ pub enum PrepErrorKind {
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingVzsDir,
+	/// A [PNAMES] WAD lump is too short or an incorrect size.
+	PNames,
 	VzsParse(ParseError),
 }
 
@@ -297,6 +302,9 @@ impl std::fmt::Display for PrepError {
 			}
 			PrepErrorKind::MissingVzsDir => {
 				write!(f, "No directory found at path: {}", self.path.display())
+			}
+			PrepErrorKind::PNames => {
+				write!(f, "Malformed PNAMES lump: {}", self.path.display())
 			}
 			PrepErrorKind::VzsParse(err) => err.fmt(f),
 		}

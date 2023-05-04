@@ -23,6 +23,7 @@ use std::{
 use bevy_egui::egui;
 use dashmap::DashMap;
 use parking_lot::{Mutex, RwLock};
+use rayon::prelude::*;
 use slotmap::SlotMap;
 use smallvec::SmallVec;
 
@@ -472,7 +473,7 @@ pub enum LoadOutcome {
 
 impl LoadOutcome {
 	#[must_use]
-	pub fn num_errs(&self) -> usize {
+	pub fn total_err_len(&self) -> usize {
 		match self {
 			LoadOutcome::NoOp | LoadOutcome::Cancelled => 0,
 			LoadOutcome::MountFail { errors } => {
@@ -485,6 +486,34 @@ impl LoadOutcome {
 				mount.iter().fold(0, |acc, subvec| acc + subvec.len())
 					+ prep.iter().fold(0, |acc, subvec| acc + subvec.len())
 			}
+		}
+	}
+
+	/// All errors get sorted by the attached [`PathBuf`]s.
+	///
+	/// [`PathBuf`]: std::path::PathBuf
+	pub fn sort_errors(&mut self) {
+		match self {
+			LoadOutcome::MountFail { errors } => {
+				errors.par_iter_mut().for_each(|subvec| {
+					subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+				});
+			}
+			LoadOutcome::PrepFail { errors } => {
+				errors.par_iter_mut().for_each(|subvec| {
+					subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+				});
+			}
+			LoadOutcome::Ok { mount, prep } => {
+				mount.par_iter_mut().for_each(|subvec| {
+					subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+				});
+
+				prep.par_iter_mut().for_each(|subvec| {
+					subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+				});
+			}
+			_ => {}
 		}
 	}
 }

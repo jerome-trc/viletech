@@ -8,13 +8,13 @@ use std::{io::Cursor, sync::Arc};
 
 use arrayvec::ArrayVec;
 use bevy::prelude::info;
-use byteorder::ReadBytesExt;
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use image::Rgba;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{vzs, VPathBuf};
+use crate::{vzs, ShortId, VPathBuf};
 
 use super::{
 	detail::{AssetKey, MountSlotKey, Outcome},
@@ -44,6 +44,21 @@ impl Context {
 			new_mounts,
 		}
 	}
+
+	#[must_use]
+	pub(super) fn any_fatal_errors(&self) -> bool {
+		self.errors
+			.par_iter()
+			.any(|mutex| mutex.lock().iter().any(|err| err.fatal))
+	}
+
+	#[must_use]
+	pub(super) fn into_errors(mut self) -> Vec<Vec<PrepError>> {
+		std::mem::take(&mut self.errors)
+			.into_iter()
+			.map(|mutex| mutex.into_inner())
+			.collect()
+	}
 }
 
 /// Context relevant to operations on one mount.
@@ -51,8 +66,14 @@ impl Context {
 pub(self) struct SubContext<'ctx> {
 	pub(self) tracker: &'ctx Arc<LoadTracker>,
 	pub(self) mntinfo: &'ctx MountInfo,
-	pub(self) assets: &'ctx Mutex<Vec<StagedAsset>>,
+	pub(self) artifacts: &'ctx Mutex<Artifacts>,
 	pub(self) errors: &'ctx Mutex<Vec<PrepError>>,
+}
+
+#[derive(Debug, Default)]
+pub(self) struct Artifacts {
+	pub(self) assets: Vec<StagedAsset>,
+	pub(self) pnames: Option<PNames>,
 }
 
 #[derive(Debug)]
@@ -68,7 +89,7 @@ impl SubContext<'_> {
 		let key_full = AssetKey::new::<A>(&asset.header().id);
 		let key_nick = AssetKey::new::<A>(nickname);
 
-		self.assets.lock().push(StagedAsset {
+		self.artifacts.lock().assets.push(StagedAsset {
 			key_full,
 			key_nick,
 			asset: Arc::new(asset),
@@ -83,20 +104,13 @@ pub(super) struct Output {
 	pub(super) errors: Vec<Vec<PrepError>>,
 }
 
-impl Output {
-	#[must_use]
-	pub(super) fn any_errs(&self) -> bool {
-		self.errors.iter().any(|res| !res.is_empty())
-	}
-}
-
 impl Catalog {
 	/// Preconditions:
 	/// - `self.files` has been populated. All directories know their contents.
 	/// - `self.mounts` has been populated.
 	/// - Load tracker has already had its asset prep target number set.
 	/// - `ctx.errors` has been populated.
-	pub(super) fn prep(&mut self, mut ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
+	pub(super) fn prep(&mut self, ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
 		let to_reserve = ctx.tracker.prep_target();
 		debug_assert!(!ctx.errors.is_empty());
 		debug_assert!(to_reserve > 0);
@@ -105,8 +119,8 @@ impl Catalog {
 			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
 		}
 
-		let mut staging = vec![];
-		staging.resize_with(ctx.new_mounts.len(), || Mutex::new(vec![]));
+		let mut artifacts = vec![];
+		artifacts.resize_with(ctx.new_mounts.len(), || Mutex::new(Artifacts::default()));
 
 		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
 
@@ -118,7 +132,7 @@ impl Catalog {
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
 				mntinfo: &self.mounts[*mount_key].info,
-				assets: &staging[i],
+				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
 
@@ -129,6 +143,11 @@ impl Catalog {
 				MountKind::Wad => self.prep_pass1_wad(&subctx),
 				MountKind::Misc => self.prep_pass1_file(&subctx),
 			};
+		}
+
+		if ctx.any_fatal_errors() {
+			// TODO: Game load scheme pending some changes.
+			return Outcome::Err(ctx.into_errors());
 		}
 
 		// Pass 2: dependency-free assets; trivial to parallelize. Includes:
@@ -144,7 +163,7 @@ impl Catalog {
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
 				mntinfo: &self.mounts[*mount_key].info,
-				assets: &staging[i],
+				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
 
@@ -155,9 +174,14 @@ impl Catalog {
 			}
 		}
 
+		if ctx.any_fatal_errors() {
+			// TODO: Game load scheme pending some changes.
+			return Outcome::Err(ctx.into_errors());
+		}
+
 		// TODO: Forbid further loading without a PLAYPAL present?
 
-		self.register_assets(&ctx.new_mounts, &staging);
+		self.register_assets(&ctx.new_mounts, &artifacts);
 
 		// Pass 3: assets dependent on pass 2. Includes:
 		// - Picture-format images, which need palettes.
@@ -171,7 +195,7 @@ impl Catalog {
 			let subctx = SubContext {
 				tracker: &ctx.tracker,
 				mntinfo: &self.mounts[*mount_key].info,
-				assets: &staging[i],
+				artifacts: &artifacts[i],
 				errors: &ctx.errors[i],
 			};
 
@@ -182,28 +206,19 @@ impl Catalog {
 			};
 		}
 
-		self.register_assets(&ctx.new_mounts, &staging);
-
-		let mut errors: Vec<Vec<PrepError>> = std::mem::take(&mut ctx.errors)
-			.into_iter()
-			.map(|mutex| mutex.into_inner())
-			.collect();
-
-		for subvec in &mut errors {
-			subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
+		if ctx.any_fatal_errors() {
+			// TODO: Game load scheme pending some changes.
+			return Outcome::Err(ctx.into_errors());
 		}
 
-		let ret = Output { errors };
+		self.register_assets(&ctx.new_mounts, &artifacts);
 
-		if ret.any_errs() {
-			self.on_prep_fail();
-		} else {
-			// TODO: Make each successfully processed file increment progress.
-			ctx.tracker.finish_prep();
-			info!("Loading complete.");
-		}
-
-		Outcome::Ok(ret)
+		// TODO: Make each successfully processed file increment progress.
+		ctx.tracker.finish_prep();
+		info!("Loading complete.");
+		Outcome::Ok(Output {
+			errors: ctx.into_errors(),
+		})
 	}
 
 	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
@@ -221,6 +236,7 @@ impl Catalog {
 					ctx.errors.lock().push(PrepError {
 						path: vzscript.root_dir.clone(),
 						kind: PrepErrorKind::MissingVzsDir,
+						fatal: true,
 					});
 
 					return Outcome::Err(());
@@ -244,6 +260,7 @@ impl Catalog {
 						errors.push(PrepError {
 							path: path.clone(),
 							kind: PrepErrorKind::VzsParse(err),
+							fatal: true,
 						});
 					}
 				}
@@ -311,23 +328,40 @@ impl Catalog {
 			let bytes = child.read_bytes();
 			let fstem = child.file_prefix();
 
-			let res = if fstem.starts_with("PLAYPAL") {
-				self.prep_playpal(ctx, bytes)
-			} else {
-				return Some(());
-			};
-
-			match res {
-				Ok(()) => Some(()),
-				Err(err) => {
-					ctx.errors.lock().push(PrepError {
-						path: child.path().to_path_buf(),
-						kind: PrepErrorKind::Io(err),
-					});
-
-					Some(())
+			if fstem == "PLAYPAL" {
+				match self.prep_playpal(ctx, bytes) {
+					Ok(()) => {}
+					Err(err) => {
+						ctx.errors.lock().push(PrepError {
+							path: child.path().to_path_buf(),
+							kind: PrepErrorKind::Io(err),
+							fatal: false,
+						});
+					}
 				}
+
+				return Some(());
 			}
+
+			if fstem == "PNAMES" {
+				match self.prep_pnames(
+					ctx,
+					FileRef {
+						vfs: &self.vfs,
+						file: child,
+					},
+					bytes,
+				) {
+					Outcome::Ok(pnames) => ctx.artifacts.lock().pnames = Some(pnames),
+					Outcome::Err(err) => ctx.errors.lock().push(err),
+					Outcome::None => {}
+					_ => unreachable!(),
+				}
+
+				return Some(());
+			}
+
+			Some(())
 		});
 	}
 
@@ -393,6 +427,7 @@ impl Catalog {
 				ctx.errors.lock().push(PrepError {
 					path: vfile.path().to_path_buf(),
 					kind: PrepErrorKind::Io(err),
+					fatal: true,
 				});
 			}
 		}
@@ -410,10 +445,6 @@ impl Catalog {
 			Outcome::None => {}
 			_ => unreachable!(),
 		}
-	}
-
-	fn on_prep_fail(&mut self) {
-		self.unload_all();
 	}
 
 	// Processors for individual data formats //////////////////////////////////
@@ -467,20 +498,63 @@ impl Catalog {
 		Ok(())
 	}
 
+	/// Returns `None` if the given PNAMES lump is valid, but reports itself to
+	/// have 0 records in it.
+	fn prep_pnames(
+		&self,
+		_ctx: &SubContext,
+		lump: FileRef,
+		bytes: &[u8],
+	) -> Outcome<PNames, PrepError> {
+		const RECORD_SIZE: usize = 8;
+
+		let mut invalid = false;
+
+		invalid |= bytes.len() < RECORD_SIZE;
+		invalid |= ((bytes.len() - 4) % RECORD_SIZE) != 0;
+
+		let len = LittleEndian::read_u32(bytes) as usize;
+
+		if len == 0 {
+			return Outcome::None;
+		}
+
+		invalid |= bytes.len() != ((len * RECORD_SIZE) + 4);
+
+		if invalid {
+			return Outcome::Err(PrepError {
+				path: lump.path.to_path_buf(),
+				kind: PrepErrorKind::PNames,
+				fatal: false,
+			});
+		}
+
+		let mut ret = Vec::with_capacity(len);
+		let mut pos = RECORD_SIZE;
+
+		while pos < bytes.len() {
+			let raw = bytemuck::from_bytes::<[u8; RECORD_SIZE]>(&bytes[pos..(pos + RECORD_SIZE)]);
+
+			if let Some(pname) = read_shortid(*raw) {
+				ret.push(pname);
+			}
+
+			pos += RECORD_SIZE;
+		}
+
+		Outcome::Ok(PNames(ret))
+	}
+
 	// Common functions ////////////////////////////////////////////////////////
 
-	fn register_assets(
-		&mut self,
-		new_mounts: &[MountSlotKey],
-		staging: &[Mutex<Vec<StagedAsset>>],
-	) {
+	fn register_assets(&mut self, new_mounts: &[MountSlotKey], staging: &[Mutex<Artifacts>]) {
 		for (i, mutex) in staging.iter().enumerate() {
 			let mount_key = new_mounts[i];
-			let mut staged = mutex.lock();
+			let mut artifacts = mutex.lock();
 			let slotmap = &mut self.mounts[mount_key].assets;
-			slotmap.reserve(staged.len());
+			slotmap.reserve(artifacts.assets.len());
 
-			staged.drain(..).for_each(
+			artifacts.assets.drain(..).for_each(
 				|StagedAsset {
 				     key_full,
 				     key_nick,
@@ -517,4 +591,29 @@ impl Catalog {
 			);
 		}
 	}
+}
+
+/// "Patch names", i.e. wall patches. See <https://doomwiki.org/wiki/PNAMES>.
+#[derive(Debug)]
+pub(self) struct PNames(Vec<ShortId>);
+
+/// Returns `None` if `shortid` starts with a NUL.
+/// Return values have no trailing NUL bytes.
+#[must_use]
+pub(self) fn read_shortid(shortid: [u8; 8]) -> Option<ShortId> {
+	if shortid.starts_with(&[b'\0']) {
+		return None;
+	}
+
+	let mut ret = ShortId::new();
+
+	for byte in shortid {
+		if byte == b'\0' {
+			break;
+		}
+
+		ret.push(char::from(byte));
+	}
+
+	Some(ret)
 }

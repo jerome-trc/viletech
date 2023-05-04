@@ -214,16 +214,12 @@ impl Catalog {
 			}
 		}
 
-		let mut errors: Vec<Vec<MountError>> = std::mem::take(&mut ctx.errors)
+		let errors: Vec<Vec<MountError>> = std::mem::take(&mut ctx.errors)
 			.into_iter()
 			.map(|mutex| mutex.into_inner())
 			.collect();
 
 		debug_assert_eq!(errors.len(), load_order.len());
-
-		for subvec in &mut errors {
-			subvec.sort_by(|err1, err2| err1.path.cmp(&err2.path));
-		}
 
 		if failed {
 			return Outcome::Err(errors);
