@@ -64,7 +64,7 @@ pub fn _cmd_alias(args: CommandArgs) -> Request {
 	if args.len() == 2 {
 		return _req_callback(move |core| match core.terminal.find_alias(&alias) {
 			Some(a) => {
-				info!("{}", a.1);
+				info!("{}", a.expanded);
 			}
 			None => {
 				info!("No existing alias: {}", alias);

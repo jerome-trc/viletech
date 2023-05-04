@@ -2,8 +2,195 @@
 
 use crate::lazy_regex;
 
-/// `::0` is the alias, `::1` is what it expands into.
-pub type Alias = (String, String);
+/// This combines storage for text-based commands and aliases with a parser
+/// for matching against those commands, allowing both the client's console
+/// and headless server to seamlessly use the same code and UI.
+pub struct Terminal<C: Command> {
+	commands: Vec<CommandWrapper<C>>,
+	command_not_found: fn(&str),
+	aliases: Vec<Alias>,
+}
+
+impl<C: Command + std::fmt::Debug> std::fmt::Debug for Terminal<C> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Terminal")
+			.field("commands", &self.commands)
+			.field("aliases", &self.aliases)
+			.finish()
+	}
+}
+
+// Public interface.
+impl<C: Command> Terminal<C> {
+	pub fn new(command_not_found: fn(&str)) -> Self {
+		Self {
+			aliases: Vec::<Alias>::default(),
+			commands: Vec::<CommandWrapper<C>>::default(),
+			command_not_found,
+		}
+	}
+
+	pub fn submit(&self, string: &str) -> Vec<C::Output> {
+		let mut ret = Vec::<_>::default();
+		let mut string = string.to_owned();
+
+		// "Recursive" alias expansion, no more than 8 levels deep.
+
+		for _ in 0..8 {
+			let mut s = String::default();
+
+			for token in string.split_whitespace() {
+				if let Some(alias) = self.find_alias(token) {
+					s.push_str(&alias.expanded);
+				} else {
+					s.push(' ');
+					s.push_str(token);
+				}
+			}
+
+			string = s;
+		}
+
+		let inputs = string.split(';');
+
+		for input in inputs {
+			let input = input.trim();
+			let mut tokens = input.splitn(2, ' ');
+
+			let key = if let Some(k) = tokens.next() {
+				k
+			} else {
+				continue;
+			};
+
+			let args = if let Some(a) = tokens.next() { a } else { "" };
+			let args_iter = lazy_regex!(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#).captures_iter(args);
+			let mut args = vec![key];
+
+			for arg in args_iter {
+				let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
+					Some(a) => a,
+					None => {
+						continue;
+					}
+				};
+
+				args.push(arg_match.as_str());
+			}
+
+			match self.find_command(args[0]) {
+				Some(cmd) => {
+					ret.push(cmd.call(CommandArgs::new(args)));
+				}
+				None => {
+					(self.command_not_found)(key);
+				}
+			};
+		}
+
+		ret
+	}
+
+	pub fn register_command(&mut self, id: &'static str, command: C, enabled: bool) {
+		debug_assert!(!id.is_empty());
+		debug_assert!(Self::id_valid(id));
+		debug_assert!(!self.commands.iter().any(|cmd| cmd.id == id));
+
+		self.commands.push(CommandWrapper {
+			id: id.trim(),
+			enabled,
+			command,
+		});
+	}
+
+	/// If the existing alias already exists, it gets replaced.
+	pub fn register_alias(&mut self, alias: String, string: String) {
+		debug_assert!(!alias.is_empty() && !string.is_empty());
+
+		match self.aliases.iter().position(|a| a.alias == alias) {
+			Some(pos) => {
+				self.aliases[pos].alias = alias;
+				self.aliases[pos].expanded = string;
+			}
+			None => {
+				self.aliases.push(Alias {
+					alias,
+					expanded: string,
+				});
+			}
+		};
+	}
+
+	/// If the given predicate returns `true` for a contained `C`,
+	/// that command will be enabled.
+	pub fn enable_commands(&mut self, predicate: fn(&C) -> bool) {
+		for wrapper in &mut self.commands {
+			if (predicate)(&wrapper.command) {
+				wrapper.enabled = true;
+			}
+		}
+	}
+
+	/// If the given predicate returns `true` for a contained `C`,
+	/// that command will be disabled.
+	pub fn disable_commands(&mut self, predicate: fn(&C) -> bool) {
+		for wrapper in &mut self.commands {
+			if (predicate)(&wrapper.command) {
+				wrapper.enabled = false;
+			}
+		}
+	}
+
+	pub fn enable_all_commands(&mut self) {
+		for wrapper in &mut self.commands {
+			wrapper.enabled = true;
+		}
+	}
+
+	pub fn disable_all_commands(&mut self) {
+		for wrapper in &mut self.commands {
+			wrapper.enabled = false;
+		}
+	}
+
+	pub fn all_commands(&self) -> impl Iterator<Item = (&'static str, &C)> {
+		self.commands.iter().map(|w| (w.id, &w.command))
+	}
+
+	pub fn all_aliases(&self) -> impl Iterator<Item = &Alias> {
+		self.aliases.iter()
+	}
+
+	#[must_use]
+	pub fn find_command(&self, key: &str) -> Option<&C> {
+		self.commands
+			.iter()
+			.find(|wrapper| key == wrapper.id && wrapper.enabled)
+			.map(|wrapper| &wrapper.command)
+	}
+
+	#[must_use]
+	pub fn find_alias(&self, key: &str) -> Option<&Alias> {
+		self.aliases.iter().find(|a| key == a.alias)
+	}
+
+	// Internal implementation details /////////////////////////////////////////////
+
+	/// Valid command IDs must contain at least two characters,
+	/// and must begin with one ASCII letter or number.
+	#[must_use]
+	fn id_valid(id: &str) -> bool {
+		id.chars().count() > 2 && id.chars().next().unwrap().is_ascii_alphanumeric()
+	}
+}
+
+pub trait Command {
+	type Output;
+
+	/// The first argument given is always the command's ID,
+	/// never aliased, with surrounding whitespace trimmed.
+	fn call(&self, args: CommandArgs) -> Self::Output;
+}
 
 /// The command input, trimmed of whitespace between tokens and dissected for
 /// easier consumption by commands themselves. Guaranteed to be in the end user's
@@ -210,12 +397,10 @@ impl<'a> CommandArgs<'a> {
 	}
 }
 
-pub trait Command {
-	type Output;
-
-	/// The first argument given is always the command's ID,
-	/// never aliased, with surrounding whitespace trimmed.
-	fn call(&self, args: CommandArgs) -> Self::Output;
+#[derive(Debug)]
+pub struct Alias {
+	pub alias: String,
+	pub expanded: String,
 }
 
 #[derive(Debug)]
@@ -223,197 +408,4 @@ struct CommandWrapper<C: Command> {
 	id: &'static str,
 	enabled: bool,
 	command: C,
-}
-
-/// This combines storage for text-based commands and aliases with a parser
-/// for matching against those commands, allowing both the client's console
-/// and headless server to seamlessly use the same code and UI.
-pub struct Terminal<C: Command> {
-	commands: Vec<CommandWrapper<C>>,
-	command_not_found: fn(&str),
-	aliases: Vec<Alias>,
-}
-
-impl<C: Command + std::fmt::Debug> std::fmt::Debug for Terminal<C> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Terminal")
-			.field("commands", &self.commands)
-			.field("aliases", &self.aliases)
-			.finish()
-	}
-}
-
-// Public interface.
-impl<C: Command> Terminal<C> {
-	pub fn new(command_not_found: fn(&str)) -> Self {
-		Self {
-			aliases: Vec::<Alias>::default(),
-			commands: Vec::<CommandWrapper<C>>::default(),
-			command_not_found,
-		}
-	}
-
-	pub fn submit(&self, string: &str) -> Vec<C::Output> {
-		let mut ret = Vec::<_>::default();
-		let mut string = string.to_owned();
-
-		// "Recursive" alias expansion, no more than 8 levels deep.
-
-		for _ in 0..8 {
-			let mut s = String::default();
-
-			for token in string.split_whitespace() {
-				if let Some(alias) = self.find_alias(token) {
-					s.push_str(&alias.1);
-				} else {
-					s.push(' ');
-					s.push_str(token);
-				}
-			}
-
-			string = s;
-		}
-
-		let inputs = string.split(';');
-
-		for input in inputs {
-			let input = input.trim();
-			let mut tokens = input.splitn(2, ' ');
-
-			let key = if let Some(k) = tokens.next() {
-				k
-			} else {
-				continue;
-			};
-
-			let args = if let Some(a) = tokens.next() { a } else { "" };
-			let args_iter = lazy_regex!(r#"'([^']+)'|"([^"]+)"|([^'" ]+) *"#).captures_iter(args);
-			let mut args = vec![key];
-
-			for arg in args_iter {
-				let arg_match = match arg.get(1).or_else(|| arg.get(2)).or_else(|| arg.get(3)) {
-					Some(a) => a,
-					None => {
-						continue;
-					}
-				};
-
-				args.push(arg_match.as_str());
-			}
-
-			match self.find_command(args[0]) {
-				Some(cmd) => {
-					ret.push(cmd.call(CommandArgs::new(args)));
-				}
-				None => {
-					(self.command_not_found)(key);
-				}
-			};
-		}
-
-		ret
-	}
-
-	pub fn register_command(&mut self, id: &'static str, command: C, enabled: bool) {
-		debug_assert!(!id.is_empty());
-		debug_assert!(Self::id_valid(id));
-		debug_assert!(!self.commands.iter().any(|cmd| cmd.id == id));
-
-		self.commands.push(CommandWrapper {
-			id: id.trim(),
-			enabled,
-			command,
-		});
-	}
-
-	/// If the existing alias already exists, it gets replaced.
-	pub fn register_alias(&mut self, alias: String, string: String) {
-		debug_assert!(!alias.is_empty() && !string.is_empty());
-
-		match self.aliases.iter().position(|a| a.0 == alias) {
-			Some(pos) => {
-				self.aliases[pos].0 = alias;
-				self.aliases[pos].1 = string;
-			}
-			None => {
-				self.aliases.push((alias, string));
-			}
-		};
-	}
-
-	/// If the given predicate returns `true` for a contained `C`,
-	/// that command will be enabled.
-	pub fn enable_commands(&mut self, predicate: fn(&C) -> bool) {
-		for wrapper in &mut self.commands {
-			if (predicate)(&wrapper.command) {
-				wrapper.enabled = true;
-			}
-		}
-	}
-
-	/// If the given predicate returns `true` for a contained `C`,
-	/// that command will be disabled.
-	pub fn disable_commands(&mut self, predicate: fn(&C) -> bool) {
-		for wrapper in &mut self.commands {
-			if (predicate)(&wrapper.command) {
-				wrapper.enabled = false;
-			}
-		}
-	}
-
-	pub fn enable_all_commands(&mut self) {
-		for wrapper in &mut self.commands {
-			wrapper.enabled = true;
-		}
-	}
-
-	pub fn disable_all_commands(&mut self) {
-		for wrapper in &mut self.commands {
-			wrapper.enabled = false;
-		}
-	}
-
-	pub fn all_commands(&self) -> impl Iterator<Item = (&'static str, &C)> {
-		self.commands.iter().map(|w| (w.id, &w.command))
-	}
-
-	pub fn all_aliases(&self) -> impl Iterator<Item = &Alias> {
-		self.aliases.iter()
-	}
-
-	#[must_use]
-	pub fn find_command(&self, key: &str) -> Option<&C> {
-		for wrapper in &self.commands {
-			if key != wrapper.id || !wrapper.enabled {
-				continue;
-			}
-
-			return Some(&wrapper.command);
-		}
-
-		None
-	}
-
-	#[must_use]
-	pub fn find_alias(&self, key: &str) -> Option<&Alias> {
-		for alias in &self.aliases {
-			if key != alias.0 {
-				continue;
-			}
-
-			return Some(alias);
-		}
-
-		None
-	}
-}
-
-// Internal implementation details.
-impl<C: Command> Terminal<C> {
-	/// Valid command IDs must contain at least two characters,
-	/// and must begin with one ASCII letter or number.
-	#[must_use]
-	fn id_valid(id: &str) -> bool {
-		id.chars().count() > 2 && id.chars().next().unwrap().is_ascii_alphanumeric()
-	}
 }

@@ -65,7 +65,7 @@ the alias' associated string is expanded into the output, if that alias exists."
 	if args.len() == 2 {
 		return req_callback(move |core| match core.console.find_alias(&alias) {
 			Some(a) => {
-				info!("{}", a.1);
+				info!("{}", a.expanded);
 			}
 			None => {
 				info!("No existing alias: {}", alias);
