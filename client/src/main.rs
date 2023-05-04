@@ -110,6 +110,8 @@ conditions. See the license document that comes with your installation."
 
 	let catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
 
+	info!("Catalog initialized.");
+
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();
 	let user_dir = viletech::user::select_user_dir(&user_dir_portable, &user_dir_home);
@@ -125,6 +127,8 @@ conditions. See the license document that comes with your installation."
 
 		UserCore::uninit()
 	};
+
+	info!("User info initialized.");
 
 	app.insert_resource(ClientCore::new(catalog, Console::new(log_receiver), user)?);
 

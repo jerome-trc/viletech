@@ -18,6 +18,7 @@ default-features = false
 features = [
 	# Default
 	"bevy_asset",
+	"bevy_core_pipeline",
 	"bevy_gilrs",
 	"bevy_gltf",
 	"bevy_pbr",
