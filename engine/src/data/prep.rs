@@ -528,7 +528,7 @@ impl Catalog {
 		}
 
 		let mut ret = Vec::with_capacity(len);
-		let mut pos = RECORD_SIZE;
+		let mut pos = 4;
 
 		while pos < bytes.len() {
 			let raw = bytemuck::from_bytes::<[u8; RECORD_SIZE]>(&bytes[pos..(pos + RECORD_SIZE)]);
@@ -572,8 +572,7 @@ impl Catalog {
 					if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
 						kvp.value_mut().push((i, slotkey));
 					} else {
-						self.nicknames
-							.insert(key_nick, smallvec![(i, slotkey)]);
+						self.nicknames.insert(key_nick, smallvec![(i, slotkey)]);
 					};
 
 					match lookup {
