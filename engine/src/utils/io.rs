@@ -1,8 +1,35 @@
 //! Functions for inspecting and manipulating byte slices.
 
-use std::io;
+use std::io::{self, Cursor};
 
+use bytemuck::AnyBitPattern;
 use byteorder::{ByteOrder, LittleEndian};
+
+/// Extends [`Cursor`] with some convenience functions.
+pub trait CursorExt {
+	/// Shorthand for `self.set_position(self.position() + bytes)`.
+	fn advance(&mut self, bytes: u64);
+
+	/// See [`bytemuck::from_bytes`]. Advances the cursor by the size of `A`.
+	#[must_use]
+	fn read_from_bytes<A: AnyBitPattern>(&mut self) -> &A;
+}
+
+impl<T> CursorExt for Cursor<T>
+where
+	T: AsRef<[u8]>,
+{
+	fn advance(&mut self, bytes: u64) {
+		self.set_position(self.position() + bytes)
+	}
+
+	fn read_from_bytes<A: AnyBitPattern>(&mut self) -> &A {
+		let pos = self.position() as usize;
+		let size = std::mem::size_of::<A>();
+		self.advance(size as u64);
+		bytemuck::from_bytes(&self.get_ref().as_ref()[pos..(pos + size)])
+	}
+}
 
 /// Checks for a 4-byte magic number.
 /// Ensure the given slice starts at the file's beginning.

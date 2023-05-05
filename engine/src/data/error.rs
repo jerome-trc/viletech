@@ -269,7 +269,13 @@ pub enum PrepErrorKind {
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingVzsDir,
 	/// A [PNAMES] WAD lump is too short or an incorrect size.
+	///
+	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
 	PNames,
+	/// A [TEXTURE1 or TEXTURE2] WAD lump is too short or an incorrect size.
+	///
+	/// [TEXTURE1 or TEXTURE2]: https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2
+	TextureX,
 	VzsParse(ParseError),
 }
 
@@ -305,6 +311,13 @@ impl std::fmt::Display for PrepError {
 			}
 			PrepErrorKind::PNames => {
 				write!(f, "Malformed PNAMES lump: {}", self.path.display())
+			}
+			PrepErrorKind::TextureX => {
+				write!(
+					f,
+					"Malformed TEXTURE1 or TEXTURE2 lump: {}",
+					self.path.display()
+				)
 			}
 			PrepErrorKind::VzsParse(err) => err.fmt(f),
 		}

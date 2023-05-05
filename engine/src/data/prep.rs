@@ -7,14 +7,14 @@ mod level;
 use std::{io::Cursor, sync::Arc};
 
 use arrayvec::ArrayVec;
-use bevy::prelude::info;
+use bevy::prelude::{info, IVec2, UVec2};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use image::Rgba;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{vzs, ShortId, VPathBuf};
+use crate::{utils::io::CursorExt, vzs, ShortId, VPathBuf};
 
 use super::{
 	detail::{AssetKey, Outcome},
@@ -71,7 +71,9 @@ pub(self) struct SubContext<'ctx> {
 #[derive(Debug, Default)]
 pub(self) struct Artifacts {
 	pub(self) assets: Vec<StagedAsset>,
-	pub(self) pnames: Option<PNames>,
+	pub(self) pnames: Option<PatchTable>,
+	pub(self) texture1: Option<TextureX>,
+	pub(self) texture2: Option<TextureX>,
 }
 
 #[derive(Debug)]
@@ -359,6 +361,27 @@ impl Catalog {
 				return Some(());
 			}
 
+			if fstem == "TEXTURE1" || fstem == "TEXTURE2" {
+				match self.prep_texturex(
+					ctx,
+					FileRef {
+						vfs: &self.vfs,
+						file: child,
+					},
+					bytes,
+				) {
+					Outcome::Ok(texturex) => {
+						if fstem.ends_with('1') {
+							ctx.artifacts.lock().texture1 = Some(texturex);
+						} else if fstem.ends_with('2') {
+							ctx.artifacts.lock().texture2 = Some(texturex);
+						}
+					}
+					Outcome::Err(err) => ctx.errors.lock().push(err),
+					_ => unreachable!(),
+				}
+			}
+
 			Some(())
 		});
 	}
@@ -503,7 +526,7 @@ impl Catalog {
 		_ctx: &SubContext,
 		lump: FileRef,
 		bytes: &[u8],
-	) -> Outcome<PNames, PrepError> {
+	) -> Outcome<PatchTable, PrepError> {
 		const RECORD_SIZE: usize = 8;
 
 		let mut invalid = false;
@@ -540,7 +563,114 @@ impl Catalog {
 			pos += RECORD_SIZE;
 		}
 
-		Outcome::Ok(PNames(ret))
+		Outcome::Ok(PatchTable(ret))
+	}
+
+	fn prep_texturex(
+		&self,
+		_ctx: &SubContext,
+		lump: FileRef,
+		bytes: &[u8],
+	) -> Outcome<TextureX, PrepError> {
+		#[repr(C)]
+		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+		struct RawMapTexture {
+			name: [u8; 8],
+			/// C boolean, unused.
+			masked: i32,
+			width: i16,
+			height: i16,
+			/// Unused.
+			col_dir: i32,
+			patch_count: i16,
+		}
+
+		#[repr(C)]
+		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+		struct RawMapPatch {
+			origin_x: i16,
+			origin_y: i16,
+			/// Index into [`PatchTable`].
+			patch: i16,
+			/// Unused.
+			stepdir: i16,
+			/// Unused.
+			colormap: i16,
+		}
+
+		let err_fn = || PrepError {
+			path: lump.path.to_path_buf(),
+			kind: PrepErrorKind::TextureX,
+			fatal: false,
+		};
+
+		if bytes.len() < 4 {
+			return Outcome::Err(err_fn());
+		}
+
+		let num_textures = LittleEndian::read_u32(bytes) as usize;
+
+		if num_textures == 0 {
+			return Outcome::None;
+		}
+
+		let mut curs_maptex = Cursor::new(bytes);
+		curs_maptex.set_position(curs_maptex.position() + 4);
+
+		let mut ret = Vec::with_capacity(num_textures);
+
+		for _ in 0..num_textures {
+			let start = curs_maptex.read_i32::<LittleEndian>().unwrap() as usize;
+			let end = start + 22;
+
+			if end > bytes.len() {
+				return Outcome::Err(err_fn());
+			}
+
+			let mut curs_patch = Cursor::new(bytes);
+			curs_patch.set_position(start as u64);
+
+			let raw_tex = RawMapTexture {
+				name: *curs_patch.read_from_bytes::<[u8; 8]>(),
+				masked: curs_patch.read_i32::<LittleEndian>().unwrap(),
+				width: curs_patch.read_i16::<LittleEndian>().unwrap(),
+				height: curs_patch.read_i16::<LittleEndian>().unwrap(),
+				col_dir: curs_patch.read_i32::<LittleEndian>().unwrap(),
+				patch_count: curs_patch.read_i16::<LittleEndian>().unwrap(),
+			};
+
+			let patch_count = raw_tex.patch_count as usize;
+
+			debug_assert_eq!(curs_patch.position(), end as u64);
+
+			let mut patches = Vec::with_capacity(patch_count);
+
+			for _ in 0..patch_count {
+				let end = curs_patch.position() + (std::mem::size_of::<RawMapPatch>() as u64);
+
+				if end as usize > bytes.len() {
+					return Outcome::Err(err_fn());
+				}
+
+				let range = (curs_patch.position() as usize)..(end as usize);
+				let raw_patch = bytemuck::from_bytes::<RawMapPatch>(&bytes[range]);
+
+				patches.push(TexPatch {
+					_origin: glam::ivec2(raw_patch.origin_x as i32, raw_patch.origin_y as i32),
+					_index: raw_patch.patch as usize,
+				});
+
+				curs_patch.set_position(end);
+			}
+
+			ret.push(PatchedTex {
+				_name: read_shortid(raw_tex.name).unwrap_or_default(),
+				_size: glam::uvec2(raw_tex.width as u32, raw_tex.height as u32),
+				_patches: patches,
+			});
+		}
+
+		Outcome::Ok(TextureX(ret))
 	}
 
 	// Common functions ////////////////////////////////////////////////////////
@@ -589,9 +719,28 @@ impl Catalog {
 	}
 }
 
-/// "Patch names", i.e. wall patches. See <https://doomwiki.org/wiki/PNAMES>.
+/// See <https://doomwiki.org/wiki/PNAMES>.
 #[derive(Debug)]
-pub(self) struct PNames(Vec<ShortId>);
+pub(self) struct PatchTable(Vec<ShortId>);
+
+/// See <https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2>.
+#[derive(Debug)]
+pub(self) struct TextureX(Vec<PatchedTex>);
+
+#[derive(Debug)]
+pub(self) struct PatchedTex {
+	pub(self) _name: ShortId,
+	pub(self) _size: UVec2,
+	pub(self) _patches: Vec<TexPatch>,
+}
+
+#[derive(Debug)]
+pub(self) struct TexPatch {
+	/// Offset of this patch relative to the upper-left of the whole texture.
+	pub(self) _origin: IVec2,
+	/// Index into [`PatchTable`].
+	pub(self) _index: usize,
+}
 
 /// Returns `None` if `shortid` starts with a NUL.
 /// Return values have no trailing NUL bytes.
