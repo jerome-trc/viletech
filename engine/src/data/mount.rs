@@ -75,7 +75,10 @@ impl SubContext<'_> {
 			None => return, // This is a subtree root. It will have to be handled later.
 		};
 
-		let FileContent::Directory(children) = &mut parent.content else {unreachable!()};
+		let FileContent::Directory(children) = &mut parent.content else {
+			unreachable!("Parent of {} is not a directory.", path.display());
+		};
+
 		children.insert(path);
 	}
 }
@@ -372,6 +375,11 @@ impl Catalog {
 			MAP_COMPONENTS.iter().any(|s| s.eq_ignore_ascii_case(name))
 		}
 
+		#[must_use]
+		fn maybe_map_marker(file: &File) -> bool {
+			file.is_empty() && !is_map_component(file.file_prefix())
+		}
+
 		if ctx.tracker.is_cancelled() {
 			return Outcome::Cancelled;
 		}
@@ -406,11 +414,8 @@ impl Catalog {
 			// map marker, and needs to be treated like a directory. Future WAD
 			// entries until the next map marker or non-map component will be made
 			// children of that folder.
-			if files[index - 1].is_empty()
-				&& (is_map_component(&name) || name.eq_ignore_ascii_case("TEXTMAP"))
-			{
-				let prev_index = files.len() - 1;
-				let prev = files.get_mut(prev_index).unwrap();
+			if maybe_map_marker(&files[index - 1]) && is_map_component(&name) {
+				let prev = files.get_mut(index - 1).unwrap();
 				prev.content = FileContent::Directory(IndexSet::with_capacity(10));
 				mapfold = Some(index - 1);
 			} else if !is_map_component(name.as_str()) {
