@@ -5,6 +5,7 @@ mod config;
 mod detail;
 mod error;
 mod ext;
+mod extras;
 mod gui;
 mod mount;
 mod prep;
@@ -34,7 +35,7 @@ use self::{
 	vfs::{FileRef, VirtualFs},
 };
 
-pub use self::{asset::*, config::*, error::*, ext::*};
+pub use self::{asset::*, config::*, error::*, ext::*, extras::*};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
@@ -291,6 +292,14 @@ impl Catalog {
 	}
 
 	#[must_use]
+	pub fn last_paletteset(&self) -> Option<&PaletteSet> {
+		self.mounts
+			.iter()
+			.rev()
+			.find_map(|mnt| mnt.extras.palset.as_deref())
+	}
+
+	#[must_use]
 	pub fn vfs(&self) -> &VirtualFs {
 		&self.vfs
 	}
@@ -326,6 +335,7 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 pub struct Mount {
 	pub(self) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
 	pub(self) info: MountInfo,
+	pub(self) extras: WadExtras,
 }
 
 #[derive(Debug)]
@@ -363,6 +373,16 @@ pub struct VzsManifest {
 	pub(super) root_dir: VPathBuf,
 	pub(super) namespace: Option<String>,
 	pub(super) version: vzs::Version,
+}
+
+/// A WAD file may come with its own color palettes, color-remapping table,
+/// and/or ENDOOM lump. These are practically never included multiple times,
+/// or included by non-WADs, and most PWADs also have none.
+#[derive(Debug, Default)]
+pub struct WadExtras {
+	pub(self) colormap: Option<Box<ColorMap>>,
+	pub(self) palset: Option<Box<PaletteSet>>,
+	pub(self) endoom: Option<Box<EnDoom>>,
 }
 
 impl VzsManifest {

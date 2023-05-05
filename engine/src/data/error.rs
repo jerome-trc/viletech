@@ -264,6 +264,14 @@ pub struct PrepError {
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
 pub enum PrepErrorKind {
+	/// A [COLORMAP] WAD lump is the wrong size.
+	///
+	/// [COLORMAP]: crate::data::extras::ColorMap
+	ColorMap(usize),
+	/// An [ENDOOM] WAD lump is the wrong size.
+	///
+	/// [ENDOOM]: crate::data::extras::EnDoom
+	EnDoom(usize),
 	Level(LevelError),
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
@@ -284,6 +292,22 @@ impl std::error::Error for PrepError {}
 impl std::fmt::Display for PrepError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
+			PrepErrorKind::ColorMap(size) => {
+				write!(
+					f,
+					"`COLORMAP` lump is the wrong size: {p}\r\n\t\
+					Expected 8704, but found: {size}",
+					p = self.path.display()
+				)
+			}
+			PrepErrorKind::EnDoom(size) => {
+				write!(
+					f,
+					"`ENDOOM` lump is the wrong size: {p}\r\n\t\
+					Expected 4000, but found: {size}",
+					p = self.path.display()
+				)
+			}
 			PrepErrorKind::Io(err) => err.fmt(f),
 			PrepErrorKind::Level(err) => {
 				write!(

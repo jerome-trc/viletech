@@ -19,7 +19,7 @@ use zip::ZipArchive;
 use crate::{
 	data::{
 		detail::{MountMetaIngest, Outcome, VfsKey},
-		Mount, MountInfo, MountKind, MountMeta, MountPointError, VzsManifest,
+		Mount, MountInfo, MountKind, MountMeta, MountPointError, VzsManifest, WadExtras,
 	},
 	utils::{io::*, path::PathExt},
 	vzs, wad, VPath, VPathBuf,
@@ -189,7 +189,6 @@ impl Catalog {
 				self.vfs.insert_dashmap(new_files, &mount_point);
 
 				mounts.push(Mount {
-					assets: SlotMap::default(),
 					info: MountInfo {
 						id: mount_point
 							.file_stem()
@@ -204,6 +203,8 @@ impl Catalog {
 						virtual_path: mount_point.into_boxed_path(),
 						vzscript: None,
 					},
+					assets: SlotMap::default(),
+					extras: WadExtras::default(),
 				});
 			}
 		}

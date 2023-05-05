@@ -141,7 +141,6 @@ impl_asset! {
 	Image, "Image";
 	Level, "Level";
 	LockDef, "Lock";
-	PaletteSet, "Palette Set";
 	PolyModel, "Poly Model";
 	Species, "Species";
 	VoxelModel, "Voxel Model"
@@ -177,7 +176,6 @@ mod private {
 		Image,
 		Level,
 		LockDef,
-		PaletteSet,
 		PolyModel,
 		Species,
 		VoxelModel

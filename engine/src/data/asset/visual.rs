@@ -4,44 +4,11 @@ use std::io::Cursor;
 
 use bevy::prelude::Vec2;
 use byteorder::{LittleEndian, ReadBytesExt};
-use image::{ImageBuffer, Rgba};
+use image::ImageBuffer;
+
+use crate::data::Palette;
 
 use super::AssetHeader;
-
-#[derive(Debug)]
-pub struct ColorMap(pub [u8; 256]);
-
-#[derive(Debug)]
-pub struct Endoom {
-	pub colors: [u8; 2000],
-	pub text: [u8; 2000],
-}
-
-impl Endoom {
-	#[must_use]
-	pub fn new(lump: &[u8]) -> Self {
-		let mut ret = Self {
-			colors: [0; 2000],
-			text: [0; 2000],
-		};
-
-		let mut i = 0;
-
-		while i < 4000 {
-			ret.colors[i] = lump[i];
-			ret.text[i] = lump[i + 1];
-			i += 2;
-		}
-
-		ret
-	}
-
-	#[must_use]
-	pub fn is_blinking(&self, index: usize) -> bool {
-		debug_assert!(index < 2000);
-		self.colors[index] & (1 << 7) == (1 << 7)
-	}
-}
 
 /// Stored in RGBA8 format.
 #[derive(Debug)]
@@ -143,23 +110,6 @@ impl Image {
 
 		Some((ret, Vec2::new(left as f32, top as f32)))
 	}
-}
-
-#[derive(Debug)]
-pub struct Palette(pub [Rgba<u8>; 256]);
-
-impl Palette {
-	/// A sensible default for internal use. All colors are `0 0 0 255`.
-	#[must_use]
-	pub(in super::super) fn black() -> Self {
-		Self([Rgba([0, 0, 0, 255]); 256])
-	}
-}
-
-#[derive(Debug)]
-pub struct PaletteSet {
-	pub header: AssetHeader,
-	pub palettes: [Palette; 14],
 }
 
 /// A placeholder type.

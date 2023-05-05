@@ -9,8 +9,8 @@ use image::Rgba;
 
 use crate::{
 	data::{
-		detail::Outcome, prep::read_shortid, vfs::FileRef, AssetHeader, Catalog, Image, Palette,
-		PaletteSet, PrepError, PrepErrorKind,
+		detail::Outcome, prep::read_shortid, vfs::FileRef, AssetHeader, Catalog, ColorMap, EnDoom,
+		Image, Palette, PaletteSet, PrepError, PrepErrorKind,
 	},
 	utils::io::CursorExt,
 	ShortId,
@@ -42,14 +42,70 @@ pub(super) struct TexPatch {
 }
 
 impl Catalog {
+	pub(super) fn prep_colormap(
+		&self,
+		lump: FileRef,
+		bytes: &[u8],
+	) -> Result<ColorMap, Box<PrepError>> {
+		if bytes.len() != (34 * 256) {
+			return Err(Box::new(PrepError {
+				path: lump.path.to_path_buf(),
+				kind: PrepErrorKind::ColorMap(bytes.len()),
+				fatal: false,
+			}));
+		}
+
+		let mut ret = ColorMap::black();
+		let mut i = 0;
+
+		for subarr in ret.0.iter_mut() {
+			for byte in subarr {
+				*byte = bytes[i];
+				i += 1;
+			}
+		}
+
+		Ok(ret)
+	}
+
+	pub(super) fn prep_endoom(
+		&self,
+		lump: FileRef,
+		bytes: &[u8],
+	) -> Result<EnDoom, Box<PrepError>> {
+		if bytes.len() != 4000 {
+			return Err(Box::new(PrepError {
+				path: lump.path.to_path_buf(),
+				kind: PrepErrorKind::EnDoom(bytes.len()),
+				fatal: false,
+			}));
+		}
+
+		let mut ret = EnDoom {
+			colors: [0; 2000],
+			text: [0; 2000],
+		};
+
+		let mut r_i = 0;
+		let mut b_i = 0;
+
+		while b_i < 4000 {
+			ret.colors[r_i] = bytes[b_i];
+			ret.text[r_i] = bytes[b_i + 1];
+			r_i += 1;
+			b_i += 2;
+		}
+
+		Ok(ret)
+	}
+
 	/// Returns `None` to indicate that `bytes` was checked
 	/// and determined to not be a picture.
 	#[must_use]
 	pub(super) fn prep_picture(&self, ctx: &SubContext, bytes: &[u8], id: &str) -> Option<()> {
-		// TODO: Wasteful to run a hash lookup before checking if this is a picture.
-		let palettes = self.last_asset_by_nick::<PaletteSet>("PLAYPAL").unwrap();
+		let palettes = self.last_paletteset().unwrap();
 
-		if let Some(image) = Image::try_from_picture(bytes, &palettes.palettes[0]) {
+		if let Some(image) = Image::try_from_picture(bytes, &palettes.0[0]) {
 			ctx.add_asset::<Image>(Image {
 				header: AssetHeader {
 					id: format!("{mount_id}/{id}", mount_id = ctx.mntinfo.id()),
@@ -64,7 +120,11 @@ impl Catalog {
 		}
 	}
 
-	pub(super) fn prep_playpal(&self, ctx: &SubContext, bytes: &[u8]) -> std::io::Result<()> {
+	pub(super) fn prep_playpal(
+		&self,
+		_ctx: &SubContext,
+		bytes: &[u8],
+	) -> std::io::Result<PaletteSet> {
 		let mut palettes = ArrayVec::<_, 14>::default();
 		let mut cursor = Cursor::new(bytes);
 
@@ -81,14 +141,7 @@ impl Catalog {
 			palettes.push(pal);
 		}
 
-		ctx.add_asset::<PaletteSet>(PaletteSet {
-			header: AssetHeader {
-				id: format!("{}/PLAYPAL", ctx.mntinfo.id()),
-			},
-			palettes: palettes.into_inner().unwrap(),
-		});
-
-		Ok(())
+		Ok(PaletteSet(palettes.into_inner().unwrap()))
 	}
 
 	/// Returns `None` if the given PNAMES lump is valid, but reports itself to

@@ -27,9 +27,41 @@ impl Catalog {
 			let bytes = child.read_bytes();
 			let fstem = child.file_prefix();
 
+			if fstem == "COLORMAP" {
+				match self.prep_colormap(
+					FileRef {
+						vfs: &self.vfs,
+						file: child,
+					},
+					bytes,
+				) {
+					Ok(colormap) => {
+						ctx.artifacts.lock().extras.colormap = Some(Box::new(colormap));
+					}
+					Err(err) => ctx.errors.lock().push(*err),
+				}
+
+				return Some(());
+			}
+
+			if fstem == "ENDOOM" {
+				match self.prep_endoom(
+					FileRef {
+						vfs: &self.vfs,
+						file: child,
+					},
+					bytes,
+				) {
+					Ok(endoom) => ctx.artifacts.lock().extras.endoom = Some(Box::new(endoom)),
+					Err(err) => ctx.errors.lock().push(*err),
+				}
+			}
+
 			if fstem == "PLAYPAL" {
 				match self.prep_playpal(ctx, bytes) {
-					Ok(()) => {}
+					Ok(palset) => {
+						ctx.artifacts.lock().extras.palset = Some(Box::new(palset));
+					}
 					Err(err) => {
 						ctx.errors.lock().push(PrepError {
 							path: child.path().to_path_buf(),
@@ -77,6 +109,7 @@ impl Catalog {
 						}
 					}
 					Outcome::Err(err) => ctx.errors.lock().push(err),
+					Outcome::None => {}
 					_ => unreachable!(),
 				}
 			}

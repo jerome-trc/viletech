@@ -19,7 +19,7 @@ use self::vanilla::{PatchTable, TextureX};
 
 use super::{
 	detail::{AssetKey, Outcome},
-	Asset, Catalog, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind,
+	Asset, Catalog, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
 };
 
 #[derive(Debug)]
@@ -71,6 +71,7 @@ pub(self) struct SubContext<'ctx> {
 #[derive(Debug, Default)]
 pub(self) struct Artifacts {
 	pub(self) assets: Vec<StagedAsset>,
+	pub(self) extras: WadExtras,
 	pub(self) pnames: Option<PatchTable>,
 	pub(self) texture1: Option<TextureX>,
 	pub(self) texture2: Option<TextureX>,
@@ -179,9 +180,11 @@ impl Catalog {
 			return Outcome::Err(ctx.into_errors());
 		}
 
-		// TODO: Forbid further loading without a PLAYPAL present?
+		self.register_artifacts(&artifacts);
 
-		self.register_assets(&artifacts);
+		if self.last_paletteset().is_none() {
+			unimplemented!("Further loading without a PLAYPAL is unsupported for now.");
+		}
 
 		// Pass 3: assets dependent on pass 2. Includes:
 		// - Picture-format images, which need palettes.
@@ -211,7 +214,7 @@ impl Catalog {
 			return Outcome::Err(ctx.into_errors());
 		}
 
-		self.register_assets(&artifacts);
+		self.register_artifacts(&artifacts);
 
 		// TODO: Make each successfully processed file increment progress.
 		ctx.tracker.finish_prep();
@@ -310,7 +313,7 @@ impl Catalog {
 
 	// Common functions ////////////////////////////////////////////////////////
 
-	pub(self) fn register_assets(&mut self, staging: &[Mutex<Artifacts>]) {
+	fn register_artifacts(&mut self, staging: &[Mutex<Artifacts>]) {
 		for (i, mutex) in staging.iter().enumerate() {
 			let mut artifacts = mutex.lock();
 			let slotmap = &mut self.mounts[i].assets;
@@ -350,6 +353,18 @@ impl Catalog {
 					}
 				},
 			);
+
+			if let Some(colormap) = artifacts.extras.colormap.take() {
+				self.mounts[i].extras.colormap = Some(colormap);
+			}
+
+			if let Some(endoom) = artifacts.extras.endoom.take() {
+				self.mounts[i].extras.endoom = Some(endoom);
+			}
+
+			if let Some(palset) = artifacts.extras.palset.take() {
+				self.mounts[i].extras.palset = Some(palset);
+			}
 		}
 	}
 }
