@@ -20,9 +20,40 @@ pub enum AudioData {
 }
 
 impl Audio {
+	#[must_use]
+	pub fn is_dmxmus(bytes: &[u8]) -> bool {
+		if bytes.len() < 4 {
+			return false;
+		}
+
+		bytes[0] == b'M' && bytes[1] == b'U' && bytes[2] == b'S' && bytes[3] == 0x1A
+	}
+
+	/// Source: <https://docs.rs/infer/0.13.0/src/infer/matchers/audio.rs.html#50-52>
+	#[must_use]
+	pub fn is_flac(bytes: &[u8]) -> bool {
+		bytes.len() > 3 && matches!(bytes, &[0x66, 0x4c, 0x61, 0x43])
+	}
+
+	/// Source: <https://docs.rs/infer/0.13.0/src/infer/matchers/audio.rs.html#7-12>
+	#[must_use]
+	pub fn is_mp3(bytes: &[u8]) -> bool {
+		bytes.len() > 2
+			&& matches!(bytes, &[])
+			&& ((bytes[0] == 0x49 && bytes[1] == 0x44 && bytes[2] == 0x33) // ID3v2
+		// (INFER) Final bit (has crc32) may be or may not be set.
+		|| (bytes[0] == 0xFF && bytes[1] == 0xFB))
+	}
+
+	/// Source: <https://docs.rs/infer/0.13.0/src/infer/matchers/audio.rs.html#28-30>
+	#[must_use]
+	pub fn is_ogg(bytes: &[u8]) -> bool {
+		bytes.len() > 3 && matches!(bytes, &[0x4f, 0x67, 0x67, 0x53])
+	}
+
 	/// Adapted from SLADE's `DoomPCSpeakerDataFormat::isThisFormat`.
 	#[must_use]
-	pub(in super::super) fn is_pc_speaker_sound(bytes: &[u8]) -> bool {
+	pub fn is_pc_speaker_sound(bytes: &[u8]) -> bool {
 		if bytes.len() < 4 {
 			return false;
 		}
@@ -44,12 +75,17 @@ impl Audio {
 		false
 	}
 
+	/// Source: <https://docs.rs/infer/0.13.0/src/infer/matchers/audio.rs.html#55-65>
 	#[must_use]
-	pub(in super::super) fn is_dmxmus(bytes: &[u8]) -> bool {
-		if bytes.len() < 4 {
-			return false;
-		}
-
-		bytes[0] == b'M' && bytes[1] == b'U' && bytes[2] == b'S' && bytes[3] == 0x1A
+	pub fn is_wav(bytes: &[u8]) -> bool {
+		bytes.len() > 11
+			&& bytes[0] == 0x52
+			&& bytes[1] == 0x49
+			&& bytes[2] == 0x46
+			&& bytes[3] == 0x46
+			&& bytes[8] == 0x57
+			&& bytes[9] == 0x41
+			&& bytes[10] == 0x56
+			&& bytes[11] == 0x45
 	}
 }

@@ -1,8 +1,13 @@
 //! Functions for reading assets from WADs.
 
+use std::io::Cursor;
+
+use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
-use crate::data::{detail::Outcome, vfs::FileRef, Audio, Catalog, PrepError, PrepErrorKind};
+use crate::data::{
+	detail::Outcome, vfs::FileRef, AssetHeader, Audio, AudioData, Catalog, PrepError, PrepErrorKind,
+};
 
 use super::SubContext;
 
@@ -26,6 +31,38 @@ impl Catalog {
 
 			let bytes = child.read_bytes();
 			let fstem = child.file_prefix();
+
+			if Audio::is_flac(bytes)
+				|| Audio::is_mp3(bytes)
+				|| Audio::is_ogg(bytes)
+				|| Audio::is_wav(bytes)
+			{
+				let cursor = Cursor::new(bytes.to_owned());
+
+				match StaticSoundData::from_cursor(cursor, StaticSoundSettings::default()) {
+					Ok(statsnd) => {
+						ctx.add_asset(Audio {
+							header: AssetHeader {
+								id: format!(
+									"{mount_id}/{id}",
+									mount_id = ctx.mntinfo.id(),
+									id = child.file_stem()
+								),
+							},
+							data: AudioData::Waveform(statsnd),
+						});
+					}
+					Err(err) => {
+						ctx.errors.lock().push(PrepError {
+							path: child.path.to_path_buf(),
+							kind: PrepErrorKind::WaveformAudio(err),
+							fatal: false,
+						});
+					}
+				}
+
+				return Some(());
+			}
 
 			if fstem == "COLORMAP" {
 				match self.prep_colormap(

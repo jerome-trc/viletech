@@ -285,6 +285,8 @@ pub enum PrepErrorKind {
 	/// [TEXTURE1 or TEXTURE2]: https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2
 	TextureX,
 	VzsParse(ParseError),
+	/// Failure to decode a FLAC, MP3, Ogg, or WAV file.
+	WaveformAudio(kira::sound::FromFileError),
 }
 
 impl std::error::Error for PrepError {}
@@ -344,6 +346,12 @@ impl std::fmt::Display for PrepError {
 				)
 			}
 			PrepErrorKind::VzsParse(err) => err.fmt(f),
+			PrepErrorKind::WaveformAudio(err) => write!(
+				f,
+				"Failed to load audio file: {p}\r\n\t\
+				Details: {err}",
+				p = self.path.display()
+			),
 		}
 	}
 }
