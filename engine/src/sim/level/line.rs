@@ -1,33 +1,28 @@
 //! Entity-components making up lines (part of level geometry).
-//!
-//! A sector only has the contents of a [`MaterialMeshBundle`] if it can move.
 
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::data::{self, asset};
 
-use super::level::{Level, SideIndex, VertIndex};
+use super::{SideIndex, VertIndex};
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Line(Entity);
+pub struct Line(pub(super) Entity);
 
 /// Ties line effects to [sectors](crate::sim::sector) with the same trigger.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Trigger(u16);
+pub struct Trigger(pub(super) u16);
 
 #[derive(Component, Debug)]
 pub struct Core {
-	/// Which level does this line belong to?
-	pub level: Level,
-	/// From UDMF; deliberately very distinct from the Bevy entity.
-	pub id: i32,
-	pub vert_from: VertIndex,
-	pub vert_to: VertIndex,
+	pub udmf_id: i32,
+	pub vert_start: VertIndex,
+	pub vert_end: VertIndex,
 	pub flags: LineFlags,
 	pub side_right: SideIndex,
-	pub side_left: SideIndex,
+	pub side_left: Option<SideIndex>,
 }
 
 bitflags::bitflags! {
@@ -104,6 +99,13 @@ pub struct Door {
 	/// In map units.
 	pub speed: f32,
 	pub lock: Option<data::Handle<asset::LockDef>>,
+}
+
+impl Door {
+	// TODO: Determine values for these constants.
+	// Will depend on actual units used by the sim.
+	pub const SPEED_NORMAL: f32 = 0.0;
+	pub const SPEED_FAST: f32 = 0.0;
 }
 
 #[derive(Component, Debug)]

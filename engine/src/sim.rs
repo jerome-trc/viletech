@@ -2,8 +2,6 @@
 
 pub mod actor;
 pub mod level;
-pub mod line;
-pub mod sector;
 pub mod skill;
 
 use std::time::{Duration, Instant};
@@ -11,7 +9,10 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::rng::RngCore;
+use crate::{
+	data::{self, asset},
+	rng::RngCore,
+};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -87,4 +88,23 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 
 		fixed_time.period = sim.timing.tick_interval();
 	}
+}
+
+pub fn start(mut cmds: Commands, meshes: ResMut<Assets<Mesh>>, level: data::Handle<asset::Level>) {
+	cmds.spawn(Camera3dBundle {
+		transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+		..default()
+	});
+
+	cmds.spawn(PointLightBundle {
+		point_light: PointLight {
+			intensity: 1500.0,
+			shadows_enabled: true,
+			..default()
+		},
+		transform: Transform::from_xyz(4.0, 8.0, 4.0),
+		..default()
+	}); // TODO: Remove this when it's possible to see anything.
+
+	level::init(cmds, meshes, level, true);
 }

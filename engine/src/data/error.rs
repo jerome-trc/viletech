@@ -93,7 +93,7 @@ pub enum MountErrorKind {
 	/// Failed to acquire a file's type while attempting to mount a directory.
 	FileType(std::io::Error),
 	/// The given mount point wasn't valid UTF-8, had invalid characters, had a
-	/// component comprised only of `.` characters, or had a component with a
+	/// component comprising only `.` characters, or had a component with a
 	/// reserved name in it.
 	InvalidMountPoint(MountPointError),
 	/// Mount batch operations are atomic; if one fails, they all fail.
@@ -255,9 +255,23 @@ impl std::fmt::Display for MountError {
 pub struct PrepError {
 	pub path: VPathBuf,
 	pub kind: PrepErrorKind,
-	/// If one of these arises during a prep pass,
-	/// the load process must stop before moving on to the next pass.
-	pub fatal: bool,
+}
+
+impl PrepError {
+	#[must_use]
+	pub fn is_fatal(&self) -> bool {
+		match &self.kind {
+			PrepErrorKind::Level(err) => err.is_fatal(),
+			PrepErrorKind::ColorMap(_)
+			| PrepErrorKind::EnDoom(_)
+			| PrepErrorKind::PNames
+			| PrepErrorKind::TextureX
+			| PrepErrorKind::WaveformAudio(_) => false,
+			PrepErrorKind::Io(_) | PrepErrorKind::MissingVzsDir | PrepErrorKind::VzsParse(_) => {
+				true
+			}
+		}
+	}
 }
 
 /// Game loading is a two-step process; asset preparation is the second step.
@@ -367,8 +381,15 @@ pub enum LevelError {
 	/// A VFS entry was deduced to be a level component,
 	/// but is empty or a directory.
 	UnreadableFile(VPathBuf),
-	/// Non-fatal.
+	/// Non-fatal; the line is treated as though it has no special.
 	UnknownLineSpecial(i16),
-	/// Non-fatal.
+	/// Non-fatal; the sector is treated as though it has no special.
 	UnknownSectorSpecial(i16),
+}
+
+impl LevelError {
+	#[must_use]
+	pub fn is_fatal(&self) -> bool {
+		false
+	}
 }

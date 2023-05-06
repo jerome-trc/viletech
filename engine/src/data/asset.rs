@@ -151,7 +151,7 @@ mod private {
 
 	use super::*;
 
-	pub trait Sealed: 'static + Send + Sync + std::fmt::Debug {
+	pub trait Sealed: 'static + Any + Send + Sync + std::fmt::Debug {
 		/// Boilerplate allowing upcasting from [`super::Asset`] to [`Any`].
 		#[must_use]
 		fn as_any(&self) -> &dyn Any;

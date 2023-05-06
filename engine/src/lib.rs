@@ -200,3 +200,12 @@ pub struct RgbaF32 {
 	pub blue: f32,
 	pub alpha: f32,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum BaseGame {
+	Doom,
+	Hexen,
+	Heretic,
+	Strife,
+	ChexQuest,
+}

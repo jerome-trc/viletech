@@ -3,6 +3,7 @@
 //! After mounting is done, start composing useful assets from raw files.
 
 mod level;
+mod udmf;
 mod vanilla;
 mod wad;
 
@@ -47,7 +48,7 @@ impl Context {
 	pub(super) fn any_fatal_errors(&self) -> bool {
 		self.errors
 			.par_iter()
-			.any(|mutex| mutex.lock().iter().any(|err| err.fatal))
+			.any(|mutex| mutex.lock().iter().any(|err| err.is_fatal()))
 	}
 
 	#[must_use]
@@ -239,7 +240,6 @@ impl Catalog {
 					ctx.errors.lock().push(PrepError {
 						path: vzscript.root_dir.clone(),
 						kind: PrepErrorKind::MissingVzsDir,
-						fatal: true,
 					});
 
 					return Outcome::Err(());
@@ -263,7 +263,6 @@ impl Catalog {
 						errors.push(PrepError {
 							path: path.clone(),
 							kind: PrepErrorKind::VzsParse(err),
-							fatal: true,
 						});
 					}
 				}

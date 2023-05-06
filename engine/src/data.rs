@@ -14,6 +14,7 @@ mod test;
 pub mod vfs;
 
 use std::{
+	any::Any,
 	path::{Path, PathBuf},
 	sync::{
 		atomic::{self, AtomicBool, AtomicUsize},
@@ -219,11 +220,30 @@ impl Catalog {
 	/// rather than an assertion that the asset under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<&Arc<A>> {
+	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<&A> {
 		let key = AssetKey::new::<A>(id);
 
 		if let Some(kvp) = self.assets.get(&key) {
 			self.mounts[kvp.0].assets[kvp.1].as_any().downcast_ref()
+		} else {
+			None
+		}
+	}
+
+	/// Note that `A` here is a filter on the type that comes out of the lookup,
+	/// rather than an assertion that the asset under `id` is that type, so this
+	/// returns an `Option` rather than a [`Result`].
+	#[must_use]
+	pub fn get_asset_handle<A: Asset>(&self, id: &str) -> Option<Handle<A>> {
+		let key = AssetKey::new::<A>(id);
+
+		if let Some(kvp) = self.assets.get(&key) {
+			// SAFETY: `Asset` meets all destination constraints.
+			unsafe {
+				let arc = self.mounts[kvp.0].assets[kvp.1].clone();
+				let ret: Arc<dyn 'static + Send + Sync + Any> = std::mem::transmute::<_, _>(arc);
+				ret.downcast::<A>().ok().map(Handle::from)
+			}
 		} else {
 			None
 		}
@@ -333,7 +353,7 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub struct Mount {
-	pub(self) assets: SlotMap<AssetSlotKey, Arc<dyn Asset>>,
+	pub(self) assets: SlotMap<AssetSlotKey, Arc<dyn 'static + Asset>>,
 	pub(self) info: MountInfo,
 	pub(self) extras: WadExtras,
 }

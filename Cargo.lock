@@ -3637,6 +3637,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7940cf2ca942593318d07fcf2596cdca60a85c9e7fab408a5e21a4f9dcd40d87"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "os_str_bytes"
 version = "6.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5122,6 +5131,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "triangulate"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f737ed9bcc496b67fd1e24f63c14eace0cb9216d14bca000fd5934fddc6af7f6"
+dependencies = [
+ "backtrace",
+ "num-traits",
+ "ordered-float",
+ "rand 0.8.5",
+ "smallvec",
+ "zot",
+]
+
+[[package]]
 name = "ttf-parser"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5293,6 +5316,7 @@ dependencies = [
  "tracing-appender",
  "tracing-log",
  "tracing-subscriber",
+ "triangulate",
  "unicode-ident",
  "walkdir",
  "zip",
@@ -5941,6 +5965,12 @@ dependencies = [
  "time",
  "zstd",
 ]
+
+[[package]]
+name = "zot"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12a5c04eac01d1f630aa1b7375984fbbc6c3b28b0975fc90bfa3e2c58caaa727"
 
 [[package]]
 name = "zstd"

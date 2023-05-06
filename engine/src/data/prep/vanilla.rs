@@ -51,7 +51,6 @@ impl Catalog {
 			return Err(Box::new(PrepError {
 				path: lump.path.to_path_buf(),
 				kind: PrepErrorKind::ColorMap(bytes.len()),
-				fatal: false,
 			}));
 		}
 
@@ -77,7 +76,6 @@ impl Catalog {
 			return Err(Box::new(PrepError {
 				path: lump.path.to_path_buf(),
 				kind: PrepErrorKind::EnDoom(bytes.len()),
-				fatal: false,
 			}));
 		}
 
@@ -171,7 +169,6 @@ impl Catalog {
 			return Outcome::Err(PrepError {
 				path: lump.path.to_path_buf(),
 				kind: PrepErrorKind::PNames,
-				fatal: false,
 			});
 		}
 
@@ -226,7 +223,6 @@ impl Catalog {
 		let err_fn = || PrepError {
 			path: lump.path.to_path_buf(),
 			kind: PrepErrorKind::TextureX,
-			fatal: false,
 		};
 
 		if bytes.len() < 4 {

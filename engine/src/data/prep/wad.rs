@@ -56,7 +56,6 @@ impl Catalog {
 						ctx.errors.lock().push(PrepError {
 							path: child.path.to_path_buf(),
 							kind: PrepErrorKind::WaveformAudio(err),
-							fatal: false,
 						});
 					}
 				}
@@ -103,7 +102,6 @@ impl Catalog {
 						ctx.errors.lock().push(PrepError {
 							path: child.path().to_path_buf(),
 							kind: PrepErrorKind::Io(err),
-							fatal: false,
 						});
 					}
 				}
@@ -217,7 +215,6 @@ impl Catalog {
 				ctx.errors.lock().push(PrepError {
 					path: vfile.path().to_path_buf(),
 					kind: PrepErrorKind::Io(err),
-					fatal: true,
 				});
 			}
 		}

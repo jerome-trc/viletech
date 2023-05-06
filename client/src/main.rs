@@ -17,7 +17,12 @@ use bevy::{
 	diagnostic::LogDiagnosticsPlugin,
 	input::InputSystem,
 	log::LogPlugin,
+	pbr::wireframe::WireframePlugin,
 	prelude::*,
+	render::{
+		settings::{WgpuFeatures, WgpuSettings},
+		RenderPlugin,
+	},
 	window::WindowMode,
 	winit::{UpdateMode, WinitSettings},
 };
@@ -95,6 +100,12 @@ conditions. See the license document that comes with your installation."
 						}),
 					),
 				})
+				.set(RenderPlugin {
+					wgpu_settings: WgpuSettings {
+						features: WgpuFeatures::default() | WgpuFeatures::POLYGON_MODE_LINE,
+						..default()
+					},
+				})
 				.disable::<LogPlugin>()
 				.disable::<bevy::input::InputPlugin>()
 				.add_before::<WindowPlugin, _>(viletech::input::InputPlugin)
@@ -104,6 +115,7 @@ conditions. See the license document that comes with your installation."
 					..Default::default()
 				}),
 		)
+		.add_plugin(WireframePlugin)
 		.add_plugin(EguiPlugin)
 		.add_system(common_updates)
 		.add_system(update_input.in_set(InputSystem));
@@ -153,6 +165,7 @@ conditions. See the license document that comes with your installation."
 
 	app.add_system(game::update.in_set(OnUpdate(AppState::Game)))
 		.insert_resource(FixedTime::new_from_secs(1.0 / 35.0))
+		.add_system(game::on_enter.in_schedule(OnEnter(AppState::Game)))
 		.add_system(
 			viletech::sim::tick
 				.run_if(in_state(AppState::Game))
