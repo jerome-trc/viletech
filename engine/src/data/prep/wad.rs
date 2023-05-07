@@ -6,7 +6,10 @@ use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
 use crate::data::{
-	detail::Outcome, vfs::FileRef, AssetHeader, Audio, AudioData, Catalog, PrepError, PrepErrorKind,
+	asset::{AssetHeader, Audio, AudioData},
+	detail::Outcome,
+	vfs::FileRef,
+	Catalog, PrepError, PrepErrorKind,
 };
 
 use super::SubContext;

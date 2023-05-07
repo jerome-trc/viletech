@@ -8,13 +8,7 @@ use indexmap::IndexMap;
 use rayon::prelude::*;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
-use crate::{
-	data::{self, asset},
-	sim::level,
-	sim::ActiveMarker,
-	sparse::SparseSet,
-	BaseGame,
-};
+use crate::{data::asset, sim::level, sim::ActiveMarker, sparse::SparseSet, BaseGame};
 
 use super::{
 	line::{self, Line},
@@ -25,7 +19,7 @@ use super::{
 pub fn init(
 	mut cmds: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
-	base: data::Handle<asset::Level>,
+	base: asset::Handle<asset::Level>,
 	active: bool,
 ) {
 	let level_id = if active {

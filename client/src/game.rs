@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_egui::EguiContexts;
 use viletech::{
-	data::Level,
+	data::asset::Level,
 	sim::{self, Sim},
 };
 

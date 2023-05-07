@@ -3,7 +3,7 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
-use crate::data::{self, asset};
+use crate::data::asset;
 
 use super::{SideIndex, VertIndex};
 
@@ -98,7 +98,7 @@ pub struct Door {
 	pub remote: bool,
 	/// In map units.
 	pub speed: f32,
-	pub lock: Option<data::Handle<asset::LockDef>>,
+	pub lock: Option<asset::Handle<asset::LockDef>>,
 }
 
 impl Door {

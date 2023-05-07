@@ -2,9 +2,9 @@
 
 use bitflags::bitflags;
 
-use crate::{data::InHandle, sim::actor, EditorNum, SpawnNum};
+use crate::{sim::actor, EditorNum, SpawnNum};
 
-use super::{AssetHeader, Audio, Image, PolyModel, VoxelModel};
+use super::{AssetHeader, Audio, Image, InHandle, PolyModel, VoxelModel};
 
 /// The prototype used to instantiate new entities.
 ///

@@ -7,7 +7,7 @@ use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	data::{self, Blueprint},
+	data::asset::{self, Blueprint},
 	vzs::heap::TPtr,
 };
 
@@ -73,7 +73,7 @@ bitflags! {
 #[derive(Debug, Component)]
 pub struct Readonly {
 	/// The blueprint off which this actor is based.
-	pub blueprint: data::Handle<Blueprint>,
+	pub blueprint: asset::Handle<Blueprint>,
 	/// Universally unique.
 	pub id: Actor,
 	/// From GZ; affects render order somehow. VileTech may cull.

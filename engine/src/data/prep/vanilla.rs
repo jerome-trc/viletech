@@ -9,8 +9,11 @@ use image::Rgba;
 
 use crate::{
 	data::{
-		detail::Outcome, prep::read_shortid, vfs::FileRef, AssetHeader, Catalog, ColorMap, EnDoom,
-		Image, Palette, PaletteSet, PrepError, PrepErrorKind,
+		asset::{AssetHeader, Image},
+		detail::Outcome,
+		prep::read_shortid,
+		vfs::FileRef,
+		Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError, PrepErrorKind,
 	},
 	utils::io::CursorExt,
 	ShortId,

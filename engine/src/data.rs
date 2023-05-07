@@ -31,11 +31,12 @@ use smallvec::SmallVec;
 use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
+	asset::{Asset, Blueprint, Handle},
 	detail::{AssetKey, AssetSlotKey},
 	vfs::{FileRef, VirtualFs},
 };
 
-pub use self::{asset::*, config::*, error::*, extras::*};
+pub use self::{config::*, error::*, extras::*};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)

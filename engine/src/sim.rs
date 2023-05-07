@@ -9,10 +9,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{
-	data::{self, asset},
-	rng::RngCore,
-};
+use crate::{data::asset, rng::RngCore};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -90,7 +87,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, meshes: ResMut<Assets<Mesh>>, level: data::Handle<asset::Level>) {
+pub fn start(mut cmds: Commands, meshes: ResMut<Assets<Mesh>>, level: asset::Handle<asset::Level>) {
 	cmds.spawn(Camera3dBundle {
 		transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
 		..default()

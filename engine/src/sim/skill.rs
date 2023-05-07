@@ -2,7 +2,7 @@
 
 use bitflags::bitflags;
 
-use crate::data::{asset, InHandle};
+use crate::data::asset;
 
 /// i.e., a difficulty setting.
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct SkillInfo {
 	/// e.g. "Hurt Me Plenty". Displayed to the user. May be a string ID.
 	pub name: String,
 	/// Displayed to the user in the selection menu.
-	pub graphic: InHandle<asset::Image>,
+	pub graphic: asset::InHandle<asset::Image>,
 	pub spawn_filter: SpawnFilter,
 	pub respawn_time: u32,
 	pub respawn_limit: u32,

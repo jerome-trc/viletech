@@ -4,9 +4,13 @@ use std::io::Cursor;
 
 use crate::{
 	data::{
-		detail::Outcome, prep::*, AssetHeader, Catalog, FileRef, Level, LevelError, LevelFlags,
-		LevelFormat, LevelMeta, LineDef, PrepError, PrepErrorKind, Sector, Seg, SegDirection,
-		SideDef, SubSector, Thing, ThingFlags,
+		asset::{
+			AssetHeader, Level, LevelFlags, LevelFormat, LevelMeta, LineDef, Sector, Seg,
+			SegDirection, SideDef, SubSector, Thing, ThingFlags,
+		},
+		detail::Outcome,
+		prep::*,
+		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
 	},
 	sim::level::{line::LineFlags, Vertex},
 	utils::io::CursorExt,

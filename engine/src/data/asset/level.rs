@@ -12,7 +12,7 @@ use crate::{
 	EditorNum, ShortId,
 };
 
-use super::{super::InHandle, AssetHeader, Audio, Blueprint, Image};
+use super::{AssetHeader, Audio, Blueprint, Image, InHandle};
 
 #[derive(Debug)]
 pub struct LineDef {
