@@ -4,7 +4,6 @@ pub mod asset;
 mod config;
 mod detail;
 mod error;
-mod ext;
 mod extras;
 mod gui;
 mod mount;
@@ -36,7 +35,7 @@ use self::{
 	vfs::{FileRef, VirtualFs},
 };
 
-pub use self::{asset::*, config::*, error::*, ext::*, extras::*};
+pub use self::{asset::*, config::*, error::*, extras::*};
 
 /// The data catalog is the heart of file and asset management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
@@ -337,6 +336,29 @@ impl Catalog {
 	#[must_use]
 	pub fn config_set(&mut self) -> ConfigSet {
 		ConfigSet(self)
+	}
+
+	// TODO: Re-enable this helper when Bevy supports it.
+	// See: https://github.com/bevyengine/bevy/issues/1031
+	#[cfg(any())]
+	fn window_icon_from_file(
+		&self,
+		path: impl AsRef<VPath>,
+	) -> Result<winit::window::Icon, Box<dyn std::error::Error>> {
+		let path = path.as_ref();
+
+		let file = self
+			.get_file(path)
+			.ok_or_else(|| Box::new(VfsError::NotFound(path.to_path_buf())))?;
+
+		let bytes = file.try_read_bytes()?;
+		let icon = image::load_from_memory(bytes)?.into_rgba8();
+		let (width, height) = icon.dimensions();
+
+		winit::window::Icon::from_rgba(icon.into_raw(), width, height).map_err(|err| {
+			let b: Box<dyn std::error::Error> = Box::new(err);
+			b
+		})
 	}
 
 	pub fn ui_assets(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
