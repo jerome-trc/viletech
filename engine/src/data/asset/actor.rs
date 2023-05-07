@@ -20,7 +20,8 @@ pub struct Blueprint {
 	pub death_height: f64,
 	/// Actor is shrunk to this height after a burning death.
 	pub burn_height: f64,
-	pub fsm: FStateMachine,
+	/// "Actor finite state machine".
+	pub afsm: AStateMachine,
 	/// Default is 1000. What the actor's health gets set to upon spawning.
 	pub health_starting: i32,
 	/// Health value below which actor enters "extreme death" f-state sequence.
@@ -55,30 +56,30 @@ pub struct Components {
 	pub projectile: Option<actor::Projectile>,
 }
 
-/// "Finite state machine". See [`FState`] to learn more.
+/// "Finite state machine". See [`AState`] to learn more.
 /// Sub-structure used to compose [`Blueprint`]. Mostly exists for cleanliness.
 #[derive(Debug)]
-pub struct FStateMachine {
+pub struct AStateMachine {
 	/// Each element's field `::1` indexes into `states`.
 	pub labels: Vec<(String, usize)>,
 	/// Ordering is defined by the script-based blueprint.
-	pub states: Vec<FState>,
+	pub states: Vec<AState>,
 }
 
-/// "Finite state". An actor appearance tied to some behavior and a tick duration.
-/// See [`FStateMachine`].
-pub struct FState {
-	pub visual: FStateVisual,
+/// "Actor state". An actor appearance tied to some behavior and a tick duration.
+/// See [`AStateMachine`].
+pub struct AState {
+	pub visual: AStateVisual,
 	pub duration: i16,
 	pub tick_range: u16,
-	pub flags: FStateFlags,
+	pub flags: AStateFlags,
 	// TODO: What params/return types?
 	pub action: Option<Box<dyn FnMut() + Send + Sync + 'static>>,
 }
 
-impl std::fmt::Debug for FState {
+impl std::fmt::Debug for AState {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("FState")
+		f.debug_struct("AState")
 			.field("visual", &self.visual)
 			.field("duration", &self.duration)
 			.field("tick_range", &self.tick_range)
@@ -95,7 +96,7 @@ impl std::fmt::Debug for FState {
 	}
 }
 
-impl FState {
+impl AState {
 	#[must_use]
 	pub fn infinite(&self) -> bool {
 		self.duration == -1
@@ -103,8 +104,8 @@ impl FState {
 }
 
 bitflags! {
-	/// See [`FState`].
-	pub struct FStateFlags: u8 {
+	/// See [`AState`].
+	pub struct AStateFlags: u8 {
 		const FAST = 1 << 0;
 		const SLOW = 1 << 1;
 		const FULLBRIGHT = 1 << 2;
@@ -116,9 +117,9 @@ bitflags! {
 	}
 }
 
-/// See [`FState`].
+/// See [`AState`].
 #[derive(Debug)]
-pub enum FStateVisual {
+pub enum AStateVisual {
 	/// Known commonly as `TNT1`.
 	None,
 	Sprite(InHandle<Image>),
