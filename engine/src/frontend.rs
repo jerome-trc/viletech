@@ -24,21 +24,19 @@ pub struct FrontendMenu {
 // Public interface.
 impl FrontendMenu {
 	#[must_use]
-	pub fn new(
-		presets: Option<VecDeque<LoadOrderPreset>>,
-		cur_preset: Option<usize>,
-		dev_mode: Option<bool>,
-	) -> Self {
-		Self {
-			presets: presets.unwrap_or_else(|| {
-				VecDeque::from([LoadOrderPreset {
-					name: "Default".to_string(), // TODO: Localize this.
-					entries: VecDeque::default(),
-				}])
-			}),
-			cur_preset: cur_preset.unwrap_or(0),
-			dev_mode: dev_mode.unwrap_or(false),
-		}
+	pub fn new(presets: Option<(VecDeque<LoadOrderPreset>, usize)>, dev_mode: bool) -> Self {
+		let (presets, cur_preset) =
+			presets.unwrap_or_else(|| (VecDeque::from([LoadOrderPreset::new()]), 0));
+
+		let ret = Self {
+			presets,
+			cur_preset,
+			dev_mode,
+		};
+
+		assert!(ret.cur_preset < ret.presets.len());
+
+		ret
 	}
 
 	#[must_use]
@@ -183,6 +181,14 @@ impl FrontendMenu {
 	#[must_use]
 	pub fn dev_mode(&self) -> bool {
 		self.dev_mode
+	}
+
+	/// Returns the current array of load order presets as well as the
+	/// index of the currently-selected one, to be serialized.
+	#[must_use]
+	pub fn consume(&mut self) -> (VecDeque<LoadOrderPreset>, usize) {
+		let presets = std::mem::take(&mut self.presets);
+		(presets, self.cur_preset)
 	}
 
 	// Internal UI drawing helpers /////////////////////////////////////////////
@@ -342,10 +348,20 @@ pub enum Outcome {
 	Start,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct LoadOrderPreset {
 	name: String,
 	entries: VecDeque<LoadOrderEntry>,
+}
+
+impl LoadOrderPreset {
+	#[must_use]
+	pub fn new() -> Self {
+		LoadOrderPreset {
+			name: "Default".to_string(), // TODO: Localize this.
+			entries: VecDeque::default(),
+		}
+	}
 }
 
 impl std::ops::Deref for LoadOrderPreset {
@@ -362,9 +378,10 @@ impl std::ops::DerefMut for LoadOrderPreset {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadOrderEntry {
 	selected: bool,
+	#[serde(flatten)]
 	kind: LoadOrderEntryKind,
 }
 
@@ -398,7 +415,7 @@ impl LoadOrderEntry {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadOrderEntryKind {
 	Item {
 		path: PathBuf,

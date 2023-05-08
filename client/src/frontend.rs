@@ -39,16 +39,19 @@ pub fn update(
 		Outcome::Start => {
 			let to_mount = frontend.to_mount();
 			let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
+
 			cmds.insert_resource(
 				core.start_load(to_mount, frontend.dev_mode())
 					.unwrap_or_else(|_| {
 						unimplemented!("Handling load order errors is currently unimplemented.")
 					}),
 			);
+
 			next_state.set(AppState::Load);
 		}
 		Outcome::Exit => {
 			exit.send(AppExit);
+			on_exit(cmds, frontend, core);
 			return;
 		}
 	}
@@ -56,12 +59,38 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 }
 
-pub fn on_enter(mut cmds: Commands) {
-	cmds.insert_resource(FrontendMenu::new(None, None, None));
+pub fn on_enter(mut cmds: Commands, core: Res<ClientCore>) {
+	let globalcfg = core.user.globalcfg();
+
+	cmds.insert_resource(FrontendMenu::new(
+		Some((
+			globalcfg.load_order_presets.clone(),
+			globalcfg.cur_load_order_preset,
+		)),
+		globalcfg.dev_mode,
+	));
 }
 
-pub fn on_exit(mut cmds: Commands) {
+pub fn on_exit(
+	mut cmds: Commands,
+	mut frontend: ResMut<FrontendMenu>,
+	mut core: ResMut<ClientCore>,
+) {
 	cmds.remove_resource::<FrontendMenu>();
+
+	let globalcfg = core.user.globalcfg_mut();
+	globalcfg.dev_mode = frontend.dev_mode();
+
+	let (loadord_presets, cur_preset) = frontend.consume();
+	globalcfg.load_order_presets = loadord_presets;
+	globalcfg.cur_load_order_preset = cur_preset;
+
+	if let Err(err) = core.user.write_global_cfg() {
+		error!(
+			"Failed to write to global config file: {p}\r\n\tDetails: {err}",
+			p = core.user.globalcfg_path().display()
+		);
+	}
 }
 
 impl ClientCore {

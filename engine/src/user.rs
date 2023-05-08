@@ -10,6 +10,7 @@ mod pref;
 mod profile;
 
 use std::{
+	collections::VecDeque,
 	fs::ReadDir,
 	path::{Path, PathBuf},
 	sync::Arc,
@@ -18,6 +19,8 @@ use std::{
 use bevy::prelude::{warn, Resource};
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
+
+use crate::frontend::LoadOrderPreset;
 
 pub use self::{dirs::*, error::*, pref::*, profile::*};
 
@@ -60,31 +63,8 @@ impl UserCore {
 			prefs: PrefPreset::default(),
 		};
 
-		if let Some(gcfg) = ret.read_global_cfg()? {
-			if !gcfg.last_profile.is_empty() {
-				let path = ret.profile_path(&gcfg.last_profile);
-				let p = ret.find_profile(&path)?;
-
-				ret.profile = match p {
-					Some(p) => p,
-					None => ret.find_any_profile()?,
-				};
-			} else {
-				ret.profile = ret.find_any_profile()?;
-			}
-
-			if !gcfg.last_preset.is_empty() {
-				let path = ret.pref_preset_path(&gcfg.last_profile);
-				let p = ret.find_pref_preset(&path)?;
-
-				ret.prefs = match p {
-					Some(p) => p,
-					None => ret.find_any_pref_preset()?,
-				};
-			} else {
-				ret.prefs = ret.find_any_pref_preset()?;
-			}
-
+		if let Some(mut gcfg) = ret.read_global_cfg()? {
+			ret.converge_with_global_cfg(&mut gcfg)?;
 			ret.global_cfg = gcfg;
 		} else {
 			ret.profile = ret.find_any_profile()?;
@@ -103,32 +83,42 @@ impl UserCore {
 	pub fn get_pref<P: PrefValue>(&self, id: &str) -> Result<PrefHandle<P>, Error> {
 		self.prefs.get::<P>(id)
 	}
-}
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-struct GlobalConfig {
-	last_profile: String,
-	last_preset: String,
-}
+	pub fn write_global_cfg(&self) -> Result<(), Error> {
+		let text = toml::ser::to_string_pretty(&self.global_cfg)
+			.expect("Failed to serialize global config.");
 
-/// Lives directly under the user info directory.
-pub(self) const GLOBALCFG_FILENAME: &str = "global.toml";
+		freplace(self.globalcfg_path(), text)
+	}
 
-// Internal implementation details.
-impl UserCore {
+	#[must_use]
+	pub fn globalcfg(&self) -> &GlobalConfig {
+		&self.global_cfg
+	}
+
+	#[must_use]
+	pub fn globalcfg_mut(&mut self) -> &mut GlobalConfig {
+		&mut self.global_cfg
+	}
+
+	#[must_use]
+	pub fn globalcfg_path(&self) -> PathBuf {
+		self.user_dir.join(GLOBALCFG_FILENAME)
+	}
+
+	// Internal ////////////////////////////////////////////////////////////////
+
 	/// Returns `Ok(None)` if the global config file does not exist.
-	/// Mind that its fields may still be empty even if it does exist.
+	/// Mind that its fields may still be empty even if it does exist;
+	/// responsibility for filling them falls to the caller.
 	fn read_global_cfg(&self) -> Result<Option<GlobalConfig>, Error> {
-		let gcfg_path = self.user_dir.join(GLOBALCFG_FILENAME);
+		let gcfg_path = self.globalcfg_path();
 
 		if !gcfg_path.exists() {
 			return Ok(None);
 		}
 
-		let bytes = std::fs::read(&gcfg_path).map_err(|err| Error::FileRead {
-			source: err,
-			path: gcfg_path.clone(),
-		})?;
+		let bytes = fread(&gcfg_path)?;
 
 		let text = String::from_utf8(bytes).map_err(|err| Error::Utf8 {
 			source: err.utf8_error(),
@@ -148,13 +138,55 @@ impl UserCore {
 		let ret = GlobalConfig {
 			last_profile: self.profile.name.clone(),
 			last_preset: self.prefs.name().to_string(),
+
+			load_order_presets: VecDeque::from([LoadOrderPreset::new()]),
+			cur_load_order_preset: 0,
+			dev_mode: false,
 		};
 
 		let text = toml::ser::to_string_pretty(&ret).expect("Failed to serialize global config.");
 
-		fwrite(self.user_dir.join(GLOBALCFG_FILENAME), text)?;
+		fwrite(self.globalcfg_path(), text)?;
 
 		Ok(ret)
+	}
+
+	/// Filling in missing fields of `gcfg` with defaults if necessary, as well as
+	/// setting up `self.profile` and `self.prefs`.
+	fn converge_with_global_cfg(&mut self, gcfg: &mut GlobalConfig) -> Result<(), Error> {
+		if !gcfg.last_profile.is_empty() {
+			let path = self.profile_path(&gcfg.last_profile);
+			let p = self.find_profile(&path)?;
+
+			self.profile = match p {
+				Some(p) => p,
+				None => self.find_any_profile()?,
+			};
+		} else {
+			self.profile = self.find_any_profile()?;
+		}
+
+		if !gcfg.last_preset.is_empty() {
+			let path = self.pref_preset_path(&gcfg.last_profile);
+			let p = self.find_pref_preset(&path)?;
+
+			self.prefs = match p {
+				Some(p) => p,
+				None => self.find_any_pref_preset()?,
+			};
+		} else {
+			self.prefs = self.find_any_pref_preset()?;
+		}
+
+		if gcfg.load_order_presets.is_empty() {
+			gcfg.load_order_presets.push_back(LoadOrderPreset::new());
+		}
+
+		gcfg.cur_load_order_preset = gcfg
+			.cur_load_order_preset
+			.min(gcfg.load_order_presets.len() - 1);
+
+		Ok(())
 	}
 
 	/// Returns:
@@ -393,11 +425,6 @@ impl UserCore {
 		Ok(())
 	}
 
-	#[must_use]
-	fn _globalcfg_path(&self) -> PathBuf {
-		self.user_dir.join(GLOBALCFG_FILENAME)
-	}
-
 	/// Shortcut for `self.user_dir.join("profiles")`.
 	#[must_use]
 	fn profiles_dir(&self) -> PathBuf {
@@ -488,6 +515,24 @@ pub type UserCoreAM = Arc<Mutex<UserCore>>;
 /// A type alias for convenience and to reduce line noise.
 pub type UserCoreAL = Arc<RwLock<UserCore>>;
 
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct GlobalConfig {
+	#[serde(default)]
+	last_profile: String,
+	#[serde(default)]
+	last_preset: String,
+
+	#[serde(default)]
+	pub load_order_presets: VecDeque<LoadOrderPreset>,
+	#[serde(default)]
+	pub cur_load_order_preset: usize,
+	#[serde(default)]
+	pub dev_mode: bool,
+}
+
+/// Lives directly under the user info directory.
+pub(self) const GLOBALCFG_FILENAME: &str = "global.toml";
+
 /// An error-mapping helper for brevity.
 fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
 	debug_assert!(!path.as_ref().exists());
@@ -499,7 +544,7 @@ fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
 }
 
 /// An error-mapping helper for brevity.
-fn _fread(path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
+fn fread(path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
 	debug_assert!(path.as_ref().exists());
 
 	std::fs::read(&path).map_err(|err| Error::FileRead {
@@ -509,13 +554,18 @@ fn _fread(path: impl AsRef<Path>) -> Result<Vec<u8>, Error> {
 }
 
 /// An error-mapping helper for brevity.
-fn fwrite(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> Result<(), Error> {
-	debug_assert!(!path.as_ref().exists());
-
+fn freplace(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> Result<(), Error> {
 	std::fs::write(&path, content).map_err(|err| Error::FileWrite {
 		source: err,
 		path: path.as_ref().to_path_buf(),
 	})
+}
+
+/// An error-mapping helper for brevity. Wraps [`freplace`] but has a debug-mode
+/// assertion to guard against unintentionally writing to an existing file.
+fn fwrite(path: impl AsRef<Path>, content: impl AsRef<[u8]>) -> Result<(), Error> {
+	debug_assert!(!path.as_ref().exists());
+	freplace(path, content)
 }
 
 /// An error-mapping helper for brevity.
