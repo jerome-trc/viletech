@@ -118,15 +118,17 @@ fn error_message(real_path: &Path, mount: &[MountError], prep: &[PrepError]) -> 
 		real_path.display()
 	));
 
-	msg.push_str("\r\n\r\n");
-
 	for err in mount {
+		msg.push_str("\r\n\r\n");
 		msg.push_str(&err.to_string());
 	}
 
 	for err in prep {
+		msg.push_str("\r\n\r\n");
 		msg.push_str(&err.to_string());
 	}
+
+	msg.push_str("\r\n");
 
 	Some(msg)
 }
