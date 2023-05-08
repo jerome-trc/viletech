@@ -14,7 +14,7 @@ use crate::{VPath, VPathBuf};
 use super::{Asset, Catalog};
 
 impl Catalog {
-	pub(super) fn ui_assets_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub(super) fn ui_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		ui.heading("Assets");
 
 		egui::ScrollArea::vertical().show(ui, |ui| {

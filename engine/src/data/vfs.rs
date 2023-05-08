@@ -1,6 +1,9 @@
 //! The symbols making up the content of the virtual file system.
 
-use std::sync::Arc;
+use std::sync::{
+	atomic::{self, AtomicUsize},
+	Arc,
+};
 
 use bevy_egui::egui;
 use dashmap::DashMap;
@@ -17,6 +20,7 @@ use super::{detail::VfsKey, VfsError};
 pub struct VirtualFs {
 	/// Element 0 is always the root node, under virtual path `/`.
 	files: IndexMap<VfsKey, File>,
+	gui_sel: AtomicUsize,
 }
 
 impl VirtualFs {
@@ -164,71 +168,6 @@ impl VirtualFs {
 			.sum()
 	}
 
-	pub fn ui(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		ui.heading("Virtual File System");
-
-		egui::ScrollArea::vertical().show(ui, |ui| {
-			for file in self.files.values() {
-				let resp = ui.label(file.path_str());
-
-				let resp = if resp.hovered() {
-					resp.highlight()
-				} else {
-					resp
-				};
-
-				resp.on_hover_ui_at_pointer(|ui| {
-					egui::Area::new("vtec_vfs_tt").show(ctx, |_| {
-						Self::ui_file_tooltip(ui, file);
-					});
-				});
-			}
-		});
-	}
-
-	fn ui_file_tooltip(ui: &mut egui::Ui, file: &File) {
-		match &file.content {
-			FileContent::Binary(bytes) => {
-				ui.label("Binary");
-				let mut unit = "B";
-				let mut len = bytes.len() as f64;
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "KB";
-				}
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "MB";
-				}
-
-				if len > 1024.0 {
-					len /= 1024.0;
-					unit = "GB";
-				}
-
-				ui.label(&format!("{len:.2} {unit}"));
-			}
-			FileContent::Text(string) => {
-				ui.label("Text");
-				ui.label(&format!("{} B", string.len()));
-			}
-			FileContent::Empty => {
-				ui.label("Empty");
-			}
-			FileContent::Directory(dir) => {
-				ui.label("Directory");
-
-				if dir.len() == 1 {
-					ui.label("1 child");
-				} else {
-					ui.label(&format!("{} children", dir.len()));
-				}
-			}
-		}
-	}
-
 	pub(super) fn insert_dashmap(
 		&mut self,
 		files: DashMap<VfsKey, File>,
@@ -260,6 +199,125 @@ impl VirtualFs {
 			unreachable!()
 		}
 	}
+
+	// Developer GUI ///////////////////////////////////////////////////////////
+
+	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
+		ui.heading("Virtual File System");
+
+		let gui_sel = self.gui_sel.load(atomic::Ordering::Relaxed);
+
+		if gui_sel >= self.files.len() {
+			self.gui_sel.store(0, atomic::Ordering::Relaxed);
+		}
+
+		egui::ScrollArea::vertical().show(ui, |ui| {
+			let file = &self.files[gui_sel];
+
+			self.ui_nav(ui, file, gui_sel);
+
+			match &file.content {
+				FileContent::Binary(bytes) => {
+					ui.label("Binary");
+					let mut unit = "B";
+					let mut len = bytes.len() as f64;
+
+					if len > 1024.0 {
+						len /= 1024.0;
+						unit = "KB";
+					}
+
+					if len > 1024.0 {
+						len /= 1024.0;
+						unit = "MB";
+					}
+
+					if len > 1024.0 {
+						len /= 1024.0;
+						unit = "GB";
+					}
+
+					ui.label(&format!("{len:.2} {unit}"));
+				}
+				FileContent::Text(string) => {
+					ui.label("Text");
+					ui.label(&format!("{} B", string.len()));
+				}
+				FileContent::Empty => {
+					ui.label("Empty");
+				}
+				FileContent::Directory(dir) => {
+					if dir.len() == 1 {
+						ui.label("Directory: 1 child");
+					} else {
+						ui.label(&format!("Directory: {} children", dir.len()));
+					}
+
+					for path in dir {
+						let label = egui::Label::new(path.to_string_lossy().as_ref())
+							.sense(egui::Sense::click());
+
+						let resp = ui.add(label);
+
+						let resp = if resp.hovered() {
+							resp.highlight()
+						} else {
+							resp
+						};
+
+						if resp.clicked() {
+							let idx = self.files.get_index_of(&VfsKey::new(path));
+							self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
+						}
+
+						resp.on_hover_text("View");
+					}
+				}
+			}
+		});
+	}
+
+	fn ui_nav(&self, ui: &mut egui::Ui, file: &File, gui_sel: usize) {
+		ui.horizontal(|ui| {
+			ui.add_enabled_ui(gui_sel != 0, |ui| {
+				if ui
+					.button("\u{2B06}")
+					.on_hover_text("Go to Parent")
+					.clicked()
+				{
+					let idx = self
+						.files
+						.get_index_of(&VfsKey::new(file.parent_path().unwrap()));
+					self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
+				}
+			});
+
+			for (i, comp) in file.path.components().enumerate() {
+				let label = egui::Label::new(comp.as_os_str().to_string_lossy().as_ref())
+					.sense(egui::Sense::click());
+
+				let resp = ui.add(label);
+
+				let resp = if resp.hovered() {
+					resp.highlight()
+				} else {
+					resp
+				};
+
+				if resp.clicked() {
+					let p: VPathBuf = file.path.components().take(i + 1).collect();
+					let idx = self.files.get_index_of(&VfsKey::new(&p));
+					self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
+				}
+
+				resp.on_hover_text("Go to");
+
+				if !matches!(comp, std::path::Component::RootDir) {
+					ui.label("/");
+				}
+			}
+		});
+	}
 }
 
 impl Default for VirtualFs {
@@ -269,6 +327,7 @@ impl Default for VirtualFs {
 
 		Self {
 			files: indexmap::indexmap! { key => root },
+			gui_sel: AtomicUsize::new(0),
 		}
 	}
 }
@@ -360,7 +419,7 @@ impl File {
 			.expect("A VFS path wasn't UTF-8 sanitised.")
 	}
 
-	/// See [`std::path::Path::parent`].
+	/// See [`std::path::Path::parent`]. Only returns `None` if this is the root directory.
 	#[must_use]
 	pub fn parent_path(&self) -> Option<&VPath> {
 		self.path.parent()

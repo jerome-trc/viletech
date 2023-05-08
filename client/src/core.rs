@@ -163,7 +163,7 @@ impl ClientCore {
 				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
 					match self.devgui.left {
 						DevGuiStatus::Assets => {
-							self.catalog.read().ui_assets(ctx, ui);
+							self.catalog.read().ui(ctx, ui);
 						}
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);
@@ -183,7 +183,7 @@ impl ClientCore {
 				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
 					match self.devgui.right {
 						DevGuiStatus::Assets => {
-							self.catalog.read().ui_assets(ctx, ui);
+							self.catalog.read().ui(ctx, ui);
 						}
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);

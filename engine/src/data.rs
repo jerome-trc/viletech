@@ -5,7 +5,6 @@ mod config;
 mod detail;
 mod error;
 mod extras;
-mod gui;
 mod mount;
 mod prep;
 #[cfg(test)]
@@ -362,8 +361,8 @@ impl Catalog {
 		})
 	}
 
-	pub fn ui_assets(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		self.ui_assets_impl(ctx, ui);
+	pub fn ui(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_impl(ctx, ui);
 	}
 }
 
