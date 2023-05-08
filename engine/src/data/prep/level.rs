@@ -5,8 +5,8 @@ use std::io::Cursor;
 use crate::{
 	data::{
 		asset::{
-			AssetHeader, Level, LevelFlags, LevelFormat, LevelMeta, LineDef, Sector, Seg,
-			SegDirection, SideDef, SubSector, Thing, ThingFlags,
+			AssetHeader, BspNode, BspNodeChild, Level, LevelFlags, LevelFormat, LevelMeta, LineDef,
+			Sector, Seg, SegDirection, SideDef, SubSector, Thing, ThingFlags,
 		},
 		detail::Outcome,
 		prep::*,
@@ -20,13 +20,7 @@ use super::SubContext;
 
 /// All 16-bit integer position values get reduced by this
 /// to fit VileTech's floating-point space.
-const VANILLA_SCALEDOWN: f32 = 0.1;
-
-#[derive(Debug)]
-struct LevelContext<'ctx> {
-	_sub: &'ctx SubContext<'ctx>,
-	_dir: FileRef<'ctx>,
-} // (RAT) Context with context with context...
+const VANILLA_SCALEDOWN: f32 = 0.01;
 
 impl Catalog {
 	/// Covers both Doom- and Hexen-format levels.
@@ -34,7 +28,7 @@ impl Catalog {
 	pub(super) fn try_prep_level_vanilla(&self, ctx: &SubContext, dir: FileRef) -> Outcome<(), ()> {
 		let mut _blockmap = None;
 		let mut linedefs = None;
-		let mut _nodes = None;
+		let mut nodes = None;
 		let mut _reject = None;
 		let mut sectors = None;
 		let mut segs = None;
@@ -48,7 +42,7 @@ impl Catalog {
 			match child.file_prefix() {
 				"BLOCKMAP" => _blockmap = Some(child),
 				"LINEDEFS" => linedefs = Some(child),
-				"NODES" => _nodes = Some(child),
+				"NODES" => nodes = Some(child),
 				"REJECT" => _reject = Some(child),
 				"SECTORS" => sectors = Some(child),
 				"SEGS" => segs = Some(child),
@@ -66,14 +60,17 @@ impl Catalog {
 		}
 
 		for lump in &[
-			linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
+			nodes, linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
+			// TODO: NODES is only mandatory until a nodebuilder gets integrated.
+
 			if lump.is_none() {
 				return Outcome::None;
 			}
 		}
 
 		let linedefs = linedefs.unwrap();
+		let nodes = nodes.unwrap();
 		let segs = segs.unwrap();
 		let sectors = sectors.unwrap();
 		let sidedefs = sidedefs.unwrap();
@@ -82,7 +79,7 @@ impl Catalog {
 		let vertexes = vertexes.unwrap();
 
 		for lump in &[
-			linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
+			linedefs, nodes, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
 			if !lump.is_readable() {
 				ctx.errors.lock().push(PrepError {
@@ -165,12 +162,13 @@ impl Catalog {
 			return Outcome::Err(());
 		}
 
-		let vertices = Self::prep_vertexes(vertexes.read_bytes());
 		let linedefs = Self::prep_linedefs(linedefs.read_bytes());
+		let nodes = Self::prep_nodes(nodes.read_bytes());
 		let sectors = Self::prep_sectors(sectors.read_bytes());
 		let segs = Self::prep_segs(segs.read_bytes());
 		let sidedefs = Self::prep_sidedefs(sidedefs.read_bytes());
 		let subsectors = Self::prep_ssectors(ssectors.read_bytes());
+		let vertices = Self::prep_vertexes(vertexes.read_bytes());
 
 		let things = if behavior.is_none() {
 			Self::prep_things_doom(things.read_bytes())
@@ -201,13 +199,14 @@ impl Catalog {
 			} else {
 				LevelFormat::Doom
 			},
-			vertices,
 			linedefs,
+			nodes,
 			sectors,
 			segs,
 			sidedefs,
 			subsectors,
 			things,
+			vertices,
 		};
 
 		ctx.add_asset(level);
@@ -264,6 +263,63 @@ impl Catalog {
 	}
 
 	#[must_use]
+	fn prep_nodes(bytes: &[u8]) -> Vec<BspNode> {
+		#[repr(C)]
+		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+		struct NodeRaw {
+			x: i16,
+			y: i16,
+			delta_x: i16,
+			delta_y: i16,
+			/// Top, bottom, left, right.
+			aabb_r: [i16; 4],
+			aabb_l: [i16; 4],
+			child_r: i16,
+			child_l: i16,
+		}
+
+		const SIZE: usize = std::mem::size_of::<NodeRaw>();
+
+		debug_assert_eq!(bytes.len() % SIZE, 0);
+
+		let mut ret = Vec::with_capacity(bytes.len() / SIZE);
+		let mut cursor = Cursor::new(bytes);
+
+		for _ in 0..(bytes.len() / SIZE) {
+			let raw = cursor.read_from_bytes::<NodeRaw>();
+
+			let child_r = i16::from_le(raw.child_r);
+			let child_l = i16::from_le(raw.child_l);
+
+			let start = glam::vec2(
+				-((i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN),
+				-((i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN),
+			);
+
+			ret.push(BspNode {
+				seg_start: start,
+				seg_end: start
+					+ glam::vec2(
+						-((i16::from_le(raw.delta_y) as f32) * VANILLA_SCALEDOWN),
+						-((i16::from_le(raw.delta_x) as f32) * VANILLA_SCALEDOWN),
+					),
+				child_r: if child_r.is_negative() {
+					BspNodeChild::SubSector((child_r & 0x7FFF) as usize)
+				} else {
+					BspNodeChild::SubNode(child_r as usize)
+				},
+				child_l: if child_l.is_negative() {
+					BspNodeChild::SubSector((child_l & 0x7FFF) as usize)
+				} else {
+					BspNodeChild::SubNode(child_l as usize)
+				},
+			});
+		}
+
+		ret
+	}
+
+	#[must_use]
 	fn prep_sectors(bytes: &[u8]) -> Vec<Sector> {
 		#[repr(C)]
 		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
@@ -289,8 +345,8 @@ impl Catalog {
 
 			ret.push(Sector {
 				udmf_id: 0,
-				height_floor: i16::from_le(raw.height_floor) as i32,
-				height_ceil: i16::from_le(raw.height_ceil) as i32,
+				height_floor: (i16::from_le(raw.height_floor) as f32) * VANILLA_SCALEDOWN,
+				height_ceil: (i16::from_le(raw.height_ceil) as f32) * VANILLA_SCALEDOWN,
 				tex_floor: read_shortid(raw.tex_floor),
 				tex_ceil: read_shortid(raw.tex_ceil),
 				light_level: u16::from_le(raw.light_level) as i32,
@@ -385,7 +441,7 @@ impl Catalog {
 		#[repr(C)]
 		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 		struct SSectorRaw {
-			seg_count: i16,
+			seg_count: u16,
 			seg: u16,
 		}
 
@@ -400,8 +456,8 @@ impl Catalog {
 			let raw = cursor.read_from_bytes::<SSectorRaw>();
 
 			ret.push(SubSector {
-				seg_count: i16::from_le(raw.seg_count) as i32,
-				seg: u16::from_le(raw.seg) as usize,
+				seg_count: u16::from_le(raw.seg_count) as usize,
+				seg0: u16::from_le(raw.seg) as usize,
 			});
 		}
 
@@ -602,9 +658,10 @@ impl Catalog {
 		for _ in 0..(bytes.len() / SIZE) {
 			let raw = cursor.read_from_bytes::<VertexRaw>();
 
-			ret.push(Vertex(glam::vec3(
+			ret.push(Vertex(glam::vec4(
 				(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
 				(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
+				0.0,
 				0.0,
 			)));
 		}

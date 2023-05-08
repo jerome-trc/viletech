@@ -26,6 +26,10 @@ All source code marked as originating from GZDoom's ZScript source, whether adap
 
 All functions marked as originating from the [infer](https://crates.io/crates/infer) crate are provided under the [MIT License](./legal/infer.txt).
 
+## rust-doom
+
+All functions marked as originating from the [rust-doom](https://github.com/cristicbz/rust-doom) project are provided under the [Apache 2.0 License](./legal/rust-doom.txt).
+
 ## SLADE
 
 All source files and functions marked as originating from [SLADE](https://slade.mancubus.net/) are provided under the [GNU General Public License v2.0](./legal/slade.txt).

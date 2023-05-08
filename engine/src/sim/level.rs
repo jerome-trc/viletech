@@ -68,7 +68,47 @@ bitflags::bitflags! {
 // Vertex information //////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Vertex(pub Vec3);
+pub struct Vertex(pub Vec4);
+
+impl Vertex {
+	/// Corresponds to the vector's `z` component.
+	#[must_use]
+	pub fn z_lower(self) -> f32 {
+		self.0.z
+	}
+
+	/// Corresponds to the vector's `w` component.
+	#[must_use]
+	pub fn z_upper(self) -> f32 {
+		self.0.w
+	}
+}
+
+impl std::ops::Deref for Vertex {
+	type Target = Vec4;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl std::ops::DerefMut for Vertex {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+impl From<Vertex> for Vec4 {
+	fn from(value: Vertex) -> Self {
+		value.0
+	}
+}
+
+impl From<Vec4> for Vertex {
+	fn from(value: Vec4) -> Self {
+		Self(value)
+	}
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VertIndex(usize);

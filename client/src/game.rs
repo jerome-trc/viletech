@@ -16,27 +16,31 @@ pub fn update(
 	mut egui: EguiContexts,
 	mut cameras: Query<&mut Transform, With<Camera>>,
 ) {
+	let mut cam_speed = 0.1;
+
+	if core.input.keys_virt.pressed(KeyCode::LShift) {
+		cam_speed *= 5.0;
+	}
+
 	for mut camera in &mut cameras {
 		let mut new_pos = camera.translation;
 
-		const CAM_SPEED: f32 = 0.1;
-
 		if core.input.keys_virt.pressed(KeyCode::W) {
-			new_pos += camera.forward() * CAM_SPEED;
+			new_pos += camera.forward() * cam_speed;
 		} else if core.input.keys_virt.pressed(KeyCode::S) {
-			new_pos += camera.back() * CAM_SPEED;
+			new_pos += camera.back() * cam_speed;
 		}
 
 		if core.input.keys_virt.pressed(KeyCode::A) {
-			new_pos += camera.left() * CAM_SPEED;
+			new_pos += camera.left() * cam_speed;
 		} else if core.input.keys_virt.pressed(KeyCode::D) {
-			new_pos += camera.right() * CAM_SPEED;
+			new_pos += camera.right() * cam_speed;
 		}
 
 		if core.input.keys_virt.pressed(KeyCode::Q) {
-			new_pos += camera.up() * CAM_SPEED;
+			new_pos += camera.up() * cam_speed;
 		} else if core.input.keys_virt.pressed(KeyCode::E) {
-			new_pos += camera.down() * CAM_SPEED;
+			new_pos += camera.down() * cam_speed;
 		}
 
 		camera.translation = new_pos;
@@ -48,10 +52,15 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 }
 
-pub fn on_enter(core: ResMut<ClientCore>, cmds: Commands, meshes: ResMut<Assets<Mesh>>) {
+pub fn on_enter(
+	core: ResMut<ClientCore>,
+	cmds: Commands,
+	meshes: ResMut<Assets<Mesh>>,
+	materials: ResMut<Assets<StandardMaterial>>,
+) {
 	let catalog = core.catalog.read();
 	let base = catalog.get_asset_handle::<Level>("DOOM/E1M1").unwrap();
-	sim::start(cmds, meshes, base);
+	sim::start(cmds, meshes, materials, base);
 }
 
 pub fn on_exit(mut cmds: Commands) {

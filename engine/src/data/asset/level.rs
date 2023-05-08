@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use bevy::prelude::{IVec2, Vec3};
+use bevy::prelude::{IVec2, Vec2, Vec3};
 use bitflags::bitflags;
 use image::Rgb;
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,23 @@ use crate::{
 
 use super::{AssetHeader, Audio, Blueprint, Image, InHandle};
 
+/// See <https://doomwiki.org/wiki/Node>.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BspNode {
+	pub seg_start: Vec2,
+	pub seg_end: Vec2,
+	pub child_r: BspNodeChild,
+	pub child_l: BspNodeChild,
+}
+
+/// See [`BspNode`].
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum BspNodeChild {
+	SubSector(usize),
+	SubNode(usize),
+}
+
+/// See <https://doomwiki.org/wiki/Linedef>.
 #[derive(Debug)]
 pub struct LineDef {
 	pub udmf_id: i32,
@@ -29,6 +46,7 @@ pub struct LineDef {
 	pub side_left: Option<usize>,
 }
 
+/// See <https://doomwiki.org/wiki/Sidedef>.
 #[derive(Debug)]
 pub struct SideDef {
 	pub offset: IVec2,
@@ -41,11 +59,12 @@ pub struct SideDef {
 	pub sector: usize,
 }
 
+/// See <https://doomwiki.org/wiki/Sector>.
 #[derive(Debug)]
 pub struct Sector {
 	pub udmf_id: i32,
-	pub height_floor: i32,
-	pub height_ceil: i32,
+	pub height_floor: f32,
+	pub height_ceil: f32,
 	/// The ID within maps to a WAD entry's name.
 	pub tex_floor: Option<ShortId>,
 	/// The ID within maps to a WAD entry's name.
@@ -56,6 +75,7 @@ pub struct Sector {
 	pub trigger: u16,
 }
 
+/// See <https://doomwiki.org/wiki/Seg>.
 #[derive(Debug, Hash, Serialize, Deserialize)]
 pub struct Seg {
 	pub vert_start: usize,
@@ -68,6 +88,7 @@ pub struct Seg {
 	pub offset: i16,
 }
 
+/// See [`Seg`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SegDirection {
 	/// This seg runs along the right of a linedef.
@@ -76,12 +97,14 @@ pub enum SegDirection {
 	Back,
 }
 
+/// See <https://doomwiki.org/wiki/Subsector>.
 #[derive(Debug)]
 pub struct SubSector {
-	pub seg_count: i32,
-	pub seg: usize,
+	pub seg0: usize,
+	pub seg_count: usize,
 }
 
+/// See <https://doomwiki.org/wiki/Thing>.
 #[derive(Debug)]
 pub struct Thing {
 	pub tid: i32,
@@ -94,6 +117,7 @@ pub struct Thing {
 }
 
 bitflags! {
+	/// See [`Thing`].
 	pub struct ThingFlags: u16 {
 		const SKILL_1 = 1 << 0;
 		const SKILL_2 = 1 << 1;
@@ -138,18 +162,20 @@ pub enum KeyReq {
 	AnyOf(Vec<InHandle<Blueprint>>),
 }
 
+/// Alternatively a "map".
 #[derive(Debug)]
 pub struct Level {
 	pub header: AssetHeader,
 	pub meta: LevelMeta,
 	pub format: LevelFormat,
-	pub vertices: Vec<Vertex>,
 	pub linedefs: Vec<LineDef>,
+	pub nodes: Vec<BspNode>,
 	pub sectors: Vec<Sector>,
 	pub segs: Vec<Seg>,
 	pub sidedefs: Vec<SideDef>,
 	pub subsectors: Vec<SubSector>,
 	pub things: Vec<Thing>,
+	pub vertices: Vec<Vertex>,
 }
 
 /// Comes from a map entry in a MAPINFO lump.
@@ -182,6 +208,7 @@ bitflags! {
 	}
 }
 
+/// See <https://doomwiki.org/wiki/Map_format>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LevelFormat {
 	Doom,
@@ -189,6 +216,7 @@ pub enum LevelFormat {
 	Udmf(UdmfNamespace),
 }
 
+/// See <https://doomwiki.org/wiki/UDMF>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UdmfNamespace {
 	Doom,
@@ -211,6 +239,7 @@ pub struct Episode {
 }
 
 bitflags! {
+	/// See [`Episode`].
 	#[derive(Default)]
 	pub struct EpisodeFlags: u8 {
 		const NO_SKILL_MENU = 1 << 0;
@@ -231,6 +260,7 @@ pub struct Cluster {
 }
 
 bitflags! {
+	/// See [`Cluster`].
 	#[derive(Default)]
 	pub struct ClusterFlags: u8 {
 		const IS_HUB = 1 << 0;

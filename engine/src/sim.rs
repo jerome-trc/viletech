@@ -87,7 +87,12 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, meshes: ResMut<Assets<Mesh>>, level: asset::Handle<asset::Level>) {
+pub fn start(
+	mut cmds: Commands,
+	meshes: ResMut<Assets<Mesh>>,
+	materials: ResMut<Assets<StandardMaterial>>,
+	level: asset::Handle<asset::Level>,
+) {
 	cmds.spawn(Camera3dBundle {
 		transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
 		..default()
@@ -103,5 +108,5 @@ pub fn start(mut cmds: Commands, meshes: ResMut<Assets<Mesh>>, level: asset::Han
 		..default()
 	}); // TODO: Remove this when it's possible to see anything.
 
-	level::init(cmds, meshes, level, true);
+	level::init(cmds, meshes, materials, level, true);
 }
