@@ -1,4 +1,7 @@
-//! "Actors" are ECS entities used
+//! "Actors" are ECS entities used for representing Doom's "map objects".
+//!
+//! In other words, the player, monsters, inventory items, decorations,
+//! and projectiles are all actors.
 
 use std::{num::NonZeroI32, ptr::NonNull};
 
