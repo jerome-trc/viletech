@@ -109,6 +109,7 @@ pub struct SubSector {
 pub struct Thing {
 	pub tid: i32,
 	pub num: EditorNum,
+	/// Reader's note: Bevy's coordinate system is right-handed Y-up.
 	pub pos: Vec3,
 	/// In degrees.
 	pub angle: u16,

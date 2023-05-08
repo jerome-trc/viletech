@@ -491,8 +491,8 @@ impl Catalog {
 				num: u16::from_le(raw.ednum),
 				pos: glam::vec3(
 					(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
-					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 					0.0,
+					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				),
 				angle: u16::from_le(raw.angle),
 				flags: {
@@ -574,8 +574,8 @@ impl Catalog {
 				num: u16::from_le(raw.ednum),
 				pos: glam::vec3(
 					(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
-					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 					(i16::from_le(raw.z) as f32) * VANILLA_SCALEDOWN,
+					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				),
 				angle: u16::from_le(raw.angle),
 				flags: {
@@ -660,8 +660,8 @@ impl Catalog {
 
 			ret.push(Vertex(glam::vec4(
 				(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
-				(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				0.0,
+				(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				0.0,
 			)));
 		}

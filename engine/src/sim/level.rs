@@ -71,15 +71,15 @@ bitflags::bitflags! {
 pub struct Vertex(pub Vec4);
 
 impl Vertex {
-	/// Corresponds to the vector's `z` component.
+	/// a.k.a. "floor" or "ground". Corresponds to the vector's `y` component.
 	#[must_use]
-	pub fn z_lower(self) -> f32 {
-		self.0.z
+	pub fn bottom(self) -> f32 {
+		self.0.y
 	}
 
-	/// Corresponds to the vector's `w` component.
+	/// a.k.a. "ceiling" or "sky". Corresponds to the vector's `w` component.
 	#[must_use]
-	pub fn z_upper(self) -> f32 {
+	pub fn top(self) -> f32 {
 		self.0.w
 	}
 }

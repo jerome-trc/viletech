@@ -120,7 +120,7 @@ pub fn init(
 
 	mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, {
 		let mut normals = vec![];
-		normals.resize(mesh_verts_len, Vec3::Z);
+		normals.resize(mesh_verts_len, Vec3::Y);
 		normals
 	});
 
@@ -222,7 +222,7 @@ fn recur(
 			}
 
 			for vert in poly_verts {
-				mesh_verts.push(vert);
+				mesh_verts.push(-vert);
 			}
 		}
 	}
@@ -243,7 +243,7 @@ fn recur(
 			}
 
 			for vert in poly_verts {
-				mesh_verts.push(vert);
+				mesh_verts.push(-vert);
 			}
 		}
 	}
@@ -265,7 +265,7 @@ fn subsector_to_poly(
 	let seg0 = &base.segs[subsect.seg0];
 	let linedef = &base.linedefs[seg0.linedef];
 	let side = &base.sidedefs[linedef.side_right];
-	let _sector = &base.sectors[side.sector];
+	let sector = &base.sectors[side.sector];
 
 	let mut last_seg_vert = 0;
 
@@ -275,8 +275,8 @@ fn subsector_to_poly(
 		let v_start = &map_verts[VertIndex(s.vert_start)];
 		let v_end = &map_verts[VertIndex(s.vert_end)];
 
-		verts.push(glam::vec3(-v_start.y, -v_start.x, v_start.z));
-		verts.push(glam::vec3(-v_end.y, -v_end.x, v_end.z));
+		verts.push(glam::vec3(-v_start.z, sector.height_floor, -v_start.x));
+		verts.push(glam::vec3(-v_end.z, sector.height_floor, -v_end.x));
 
 		last_seg_vert += 2;
 	}
@@ -299,15 +299,15 @@ fn subsector_to_poly(
 				.step_by(2)
 				.map(|vi| {
 					Disp::new(
-						glam::vec2(verts[vi].x, verts[vi].y),
-						glam::vec2(verts[vi + 1].x, verts[vi + 1].y),
+						glam::vec2(verts[vi].x, verts[vi].z),
+						glam::vec2(verts[vi + 1].x, verts[vi + 1].z),
 					)
 					.signed_distance(point)
 				})
 				.all(|d| d <= SEG_TOLERANCE);
 
 			if inside_bsp && inside_segs {
-				verts.push(glam::vec3(point.x, point.y, verts[0].z));
+				verts.push(glam::vec3(point.x, sector.height_floor, point.y));
 			}
 		}
 	}
@@ -334,31 +334,34 @@ fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
 	let center = poly_center(&points);
 
 	points.sort_unstable_by(|a, b| {
-		let ac = (*a - center).xy();
-		let bc = (*b - center).xy();
+		let ac = *a - center;
+		let bc = *b - center;
 
-		if ac[0] >= 0.0 && bc[0] < 0.0 {
+		if ac.x >= 0.0 && bc.x < 0.0 {
 			return Ordering::Less;
 		}
-		if ac[0] < 0.0 && bc[0] >= 0.0 {
+
+		if ac.x < 0.0 && bc.x >= 0.0 {
 			return Ordering::Greater;
 		}
-		if ac[0] == 0.0 && bc[0] == 0.0 {
-			if ac[1] >= 0.0 || bc[1] >= 0.0 {
-				return if a[1] > b[1] {
+
+		if ac.x == 0.0 && bc.x == 0.0 {
+			if ac.z >= 0.0 || bc.z >= 0.0 {
+				return if a.z > b.z {
 					Ordering::Less
 				} else {
 					Ordering::Greater
 				};
 			}
-			return if b[1] > a[1] {
+
+			return if b.z > a.z {
 				Ordering::Less
 			} else {
 				Ordering::Greater
 			};
 		}
 
-		if ac.perp_dot(bc) < 0.0 {
+		if ac.xz().perp_dot(bc.xz()) < 0.0 {
 			Ordering::Less
 		} else {
 			Ordering::Greater
@@ -367,16 +370,16 @@ fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
 
 	// Remove duplicates.
 	let mut simplified = SmallVec::<[Vec3; 4]>::new();
-	simplified.push((*points)[0]);
-	let mut current_point = (*points)[1];
+	simplified.push(points[0]);
+	let mut current_point = points[1];
 	let mut area = 0.0;
 
 	for i_point in 2..points.len() {
-		let next_point = (*points)[i_point];
+		let next_point = points[i_point];
 		let prev_point = simplified[simplified.len() - 1];
 
-		let new = (next_point - current_point).xy();
-		let new_area = new.perp_dot((current_point - prev_point).xy()) * 0.5;
+		let new = (next_point - current_point).xz();
+		let new_area = new.perp_dot((current_point - prev_point).xz()) * 0.5;
 
 		if new_area >= 0.0 {
 			if area + new_area > 1.024e-5 {
@@ -390,11 +393,15 @@ fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
 		current_point = next_point;
 	}
 
-	simplified.push((*points)[points.len() - 1]);
+	simplified.push(points[points.len() - 1]);
 
 	debug_assert!(simplified.len() >= 3);
 
-	while (simplified[0] - simplified[simplified.len() - 1]).length() < 0.0032 {
+	while (simplified[0] - simplified[simplified.len() - 1])
+		.xz()
+		.length()
+		< 0.0032
+	{
 		simplified.pop();
 	}
 
@@ -422,7 +429,7 @@ fn poly_center(verts: &[Vec3]) -> Vec3 {
 
 	// Move the center slightly so that the angles are not all equal
 	// if the polygon is a perfect quadrilateral.
-	glam::vec3(center.x + f32::EPSILON, center.y + f32::EPSILON, center.z)
+	glam::vec3(center.x + f32::EPSILON, center.y, center.z + f32::EPSILON)
 }
 
 /// Fake type for impl trait coherence.
@@ -437,8 +444,9 @@ impl triangulate::Vertex for NodeVert {
 		self.0.x
 	}
 
+	#[allow(clippy::misnamed_getters)]
 	fn y(&self) -> Self::Coordinate {
-		self.0.y
+		self.0.z
 	}
 }
 
