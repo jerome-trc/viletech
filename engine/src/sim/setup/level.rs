@@ -12,6 +12,7 @@ use bevy::{
 };
 use glam::Vec3Swizzles;
 use indexmap::IndexMap;
+use parking_lot::Mutex;
 use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
@@ -31,15 +32,64 @@ pub(crate) fn setup(
 	base: asset::Handle<asset::Level>,
 	level: &mut ChildBuilder,
 ) {
+	let level = Mutex::new(level);
+
 	let mut verts = SparseSet::with_capacity(base.vertices.len(), base.vertices.len());
-	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
 
 	for (i, vert) in base.vertices.iter().enumerate() {
 		verts.insert(VertIndex(i), vert.clone());
 	}
 
+	let (mesh, simstate) = rayon::join(
+		|| build_mesh(&base, &verts),
+		|| {
+			let mut level = level.lock();
+			spawn_children(&base, &mut level)
+		},
+	);
+
+	let mesh = ctx.meshes.add(mesh);
+	let level = level.into_inner();
+
+	level.add_command(Insert {
+		entity: level.parent_entity(),
+		bundle: PbrBundle {
+			mesh: mesh.clone(),
+			material: ctx.materials.add(StandardMaterial {
+				base_color: Color::rgb(1.0, 1.0, 1.0),
+				..default()
+			}),
+			..default()
+		},
+	});
+
+	level.add_command(Insert {
+		entity: level.parent_entity(),
+		bundle: level::Core {
+			base: Some(base.clone()),
+			flags: level::Flags::empty(),
+			ticks_elapsed: 0,
+			geom: level::Geometry {
+				mesh,
+				verts,
+				sides: simstate.sides,
+				triggers: simstate.triggers,
+				num_sectors: base.sectors.len(),
+			},
+		},
+	});
+}
+
+struct SimState {
+	sides: SparseSet<SideIndex, Side>,
+	triggers: HashMap<line::Trigger, Vec<Sector>>,
+}
+
+#[must_use]
+fn spawn_children(base: &asset::Handle<asset::Level>, level: &mut ChildBuilder) -> SimState {
 	let mut lines = IndexMap::with_capacity(base.linedefs.len());
 	let mut sectors = IndexMap::with_capacity(base.sectors.len());
+	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
 
 	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
 
@@ -99,27 +149,6 @@ pub(crate) fn setup(
 		}
 	}
 
-	let mesh_parts = walk_nodes(&base, &verts);
-	let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-	mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_parts.verts);
-	mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_parts.normals);
-	mesh.set_indices(Some(Indices::U32(mesh_parts.indices)));
-
-	let mesh = ctx.meshes.add(mesh);
-
-	level.add_command(Insert {
-		entity: level.parent_entity(),
-		bundle: PbrBundle {
-			mesh: mesh.clone(),
-			material: ctx.materials.add(StandardMaterial {
-				base_color: Color::rgb(1.0, 1.0, 1.0),
-				..default()
-			}),
-			..default()
-		},
-	});
-
 	for (line_id, (line, _special)) in lines {
 		// TODO: Add line special bundles here.
 		level.add_command(Insert {
@@ -136,21 +165,10 @@ pub(crate) fn setup(
 		});
 	}
 
-	level.add_command(Insert {
-		entity: level.parent_entity(),
-		bundle: level::Core {
-			base: Some(base.clone()),
-			flags: level::Flags::empty(),
-			ticks_elapsed: 0,
-			geom: level::Geometry {
-				mesh,
-				verts,
-				sides,
-				triggers: sectors_by_trigger,
-				num_sectors: base.sectors.len(),
-			},
-		},
-	});
+	SimState {
+		sides,
+		triggers: sectors_by_trigger,
+	}
 }
 
 // Node walking and subsector-to-polygon conversion ////////////////////////////
@@ -171,18 +189,15 @@ TODO:
 */
 
 #[derive(Debug)]
-struct LevelMesh {
+struct MeshParts {
 	verts: Vec<Vec3>,
 	indices: Vec<u32>,
 	normals: Vec<Vec3>,
 }
 
 #[must_use]
-fn walk_nodes(
-	base: &asset::Handle<asset::Level>,
-	verts: &SparseSet<VertIndex, Vertex>,
-) -> LevelMesh {
-	let mut ret = LevelMesh {
+fn build_mesh(base: &asset::Handle<asset::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
+	let mut parts = MeshParts {
 		verts: vec![],
 		indices: vec![],
 		normals: vec![],
@@ -190,7 +205,19 @@ fn walk_nodes(
 
 	let mut bsp_lines = vec![];
 
-	recur(base, verts, &mut ret, &mut bsp_lines, base.nodes.len() - 1);
+	recur(
+		base,
+		verts,
+		&mut parts,
+		&mut bsp_lines,
+		base.nodes.len() - 1,
+	);
+
+	let mut ret = Mesh::new(PrimitiveTopology::TriangleList);
+
+	ret.insert_attribute(Mesh::ATTRIBUTE_POSITION, parts.verts);
+	ret.insert_attribute(Mesh::ATTRIBUTE_NORMAL, parts.normals);
+	ret.set_indices(Some(Indices::U32(parts.indices)));
 
 	ret
 }
@@ -198,7 +225,7 @@ fn walk_nodes(
 fn recur(
 	base: &asset::Handle<asset::Level>,
 	verts: &SparseSet<VertIndex, Vertex>,
-	mesh: &mut LevelMesh,
+	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
 	node_idx: usize,
 ) {
@@ -206,7 +233,7 @@ fn recur(
 
 	bsp_lines.push(Disp::new(node.seg_start, node.seg_end));
 
-	fn add_poly(mut sspoly: SSectorPoly, mesh: &mut LevelMesh) {
+	fn add_poly(mut sspoly: SSectorPoly, mesh: &mut MeshParts) {
 		for idx in sspoly.indices.drain(sspoly.top_indices..) {
 			mesh.indices.push((idx + mesh.verts.len()) as u32);
 		}
