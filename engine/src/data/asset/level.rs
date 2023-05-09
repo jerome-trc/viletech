@@ -8,7 +8,7 @@ use image::Rgb;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	sim::level::{line::LineFlags, Vertex},
+	sim::{level::Vertex, line::Flags},
 	EditorNum, ShortId,
 };
 
@@ -36,7 +36,7 @@ pub struct LineDef {
 	pub udmf_id: i32,
 	pub vert_start: usize,
 	pub vert_end: usize,
-	pub flags: LineFlags,
+	pub flags: Flags,
 	pub special: u16,
 	/// Corresponds to the field of [`Sector`] with the same name.
 	pub trigger: u16,

@@ -2,15 +2,18 @@
 
 pub mod actor;
 pub mod level;
+pub mod line;
+pub mod sector;
+pub mod setup;
 pub mod skill;
 
 use std::time::{Duration, Instant};
 
-use bevy::prelude::*;
+use bevy::{pbr::wireframe::Wireframe, prelude::*};
 use nanorand::WyRand;
 
 use crate::{
-	data::{asset, Catalog},
+	data::asset::{self, Asset},
 	rng::RngCore,
 };
 
@@ -90,21 +93,35 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(
-	catalog: &Catalog,
-	cmds: Commands,
-	meshes: ResMut<Assets<Mesh>>,
-	materials: ResMut<Assets<StandardMaterial>>,
-	images: ResMut<Assets<Image>>,
-	level: asset::Handle<asset::Level>,
-) {
-	level::init(level::InitContext {
-		catalog,
-		cmds,
-		meshes,
-		materials,
-		images,
-		base: level,
-		active: true,
+pub fn start(mut cmds: Commands, context: setup::Context, level: asset::Handle<asset::Level>) {
+	let start_time = Instant::now();
+
+	let l = level.clone();
+
+	cmds.spawn((
+		GlobalTransform::default(),
+		ComputedVisibility::default(),
+		Wireframe,
+		ActiveMarker,
+	))
+	.with_children(|cbuilder| {
+		for thingdef in &level.things {
+			if thingdef.num == 1 {
+				cbuilder.spawn(Camera3dBundle {
+					transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),
+					..default()
+				});
+
+				break;
+			}
+		}
+
+		setup::level::setup(context, level, cbuilder);
 	});
+
+	debug!(
+		"Sim setup complete ({}) in {}ms.",
+		&l.header().id,
+		start_time.elapsed().as_millis()
+	);
 }

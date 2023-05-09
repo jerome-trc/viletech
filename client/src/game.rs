@@ -76,8 +76,18 @@ pub fn on_enter(
 	images: ResMut<Assets<Image>>,
 ) {
 	let catalog = core.catalog.read();
-	let base = catalog.get_asset_handle::<Level>("DOOM/E1M1").unwrap();
-	sim::start(&catalog, cmds, meshes, materials, images, base);
+	let level = catalog.get_asset_handle::<Level>("DOOM/E1M1").unwrap();
+
+	sim::start(
+		cmds,
+		sim::setup::Context {
+			catalog: &catalog,
+			meshes,
+			materials,
+			images,
+		},
+		level,
+	);
 }
 
 pub fn on_exit(mut cmds: Commands) {

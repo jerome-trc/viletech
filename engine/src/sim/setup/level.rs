@@ -3,12 +3,10 @@
 use std::{
 	cmp::Ordering,
 	collections::{hash_map::RandomState, HashMap},
-	time::Instant,
 };
 
 use bevy::{
-	ecs::system::{EntityCommands, Insert},
-	pbr::wireframe::Wireframe,
+	ecs::system::Insert,
 	prelude::*,
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -18,79 +16,21 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::{
-		asset::{self, Asset, BspNodeChild, LevelFormat, SegDirection, UdmfNamespace},
-		Catalog,
+	data::asset::{self, BspNodeChild, SegDirection},
+	sim::level::VertIndex,
+	sim::{
+		level::{self, Side, SideIndex, Udmf, Vertex},
+		line::{self, Line},
+		sector::{self, Sector},
 	},
-	sim::level,
-	sim::ActiveMarker,
 	sparse::SparseSet,
-	BaseGame,
 };
 
-use super::{
-	line::{self, Line},
-	sector::{self, Sector},
-	Side, SideIndex, Udmf, VertIndex, Vertex,
-};
-
-pub struct InitContext<'w, 's> {
-	pub catalog: &'w Catalog,
-	pub cmds: Commands<'w, 's>,
-	pub meshes: ResMut<'w, Assets<Mesh>>,
-	pub materials: ResMut<'w, Assets<StandardMaterial>>,
-	pub images: ResMut<'w, Assets<Image>>,
-	pub base: asset::Handle<asset::Level>,
-	pub active: bool,
-}
-
-pub fn init(context: InitContext) {
-	let InitContext {
-		catalog,
-		mut cmds,
-		meshes,
-		materials,
-		images,
-		base,
-		active,
-	} = context;
-
-	for thingdef in &base.things {
-		if thingdef.num == 1 {
-			cmds.spawn(Camera3dBundle {
-				transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),
-				..default()
-			});
-
-			break;
-		}
-	}
-
-	let mut level = cmds.spawn((
-		GlobalTransform::default(),
-		ComputedVisibility::default(),
-		Wireframe,
-	));
-
-	if active {
-		level.insert(ActiveMarker);
-	}
-
-	level.with_children(|child_builder| {
-		init_impl(catalog, meshes, materials, images, base, child_builder);
-	});
-}
-
-fn init_impl(
-	_catalog: &Catalog,
-	mut meshes: ResMut<Assets<Mesh>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
-	_images: ResMut<Assets<Image>>,
+pub(crate) fn setup(
+	mut ctx: super::Context,
 	base: asset::Handle<asset::Level>,
-	cbuilder: &mut ChildBuilder,
+	level: &mut ChildBuilder,
 ) {
-	let start_time = Instant::now();
-
 	let mut verts = SparseSet::with_capacity(base.vertices.len(), base.vertices.len());
 	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
 
@@ -104,7 +44,7 @@ fn init_impl(
 	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
 
 	for linedef in &base.linedefs {
-		let line_id = cbuilder.spawn(()).id();
+		let line_id = level.spawn(()).id();
 
 		lines.insert(
 			Line(line_id),
@@ -123,7 +63,7 @@ fn init_impl(
 	}
 
 	for sectordef in &base.sectors {
-		let sect_id = cbuilder.spawn(()).id();
+		let sect_id = level.spawn(()).id();
 
 		sectors.insert(
 			Sector(sect_id),
@@ -166,13 +106,13 @@ fn init_impl(
 	mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_parts.normals);
 	mesh.set_indices(Some(Indices::U32(mesh_parts.indices)));
 
-	let mesh = meshes.add(mesh);
+	let mesh = ctx.meshes.add(mesh);
 
-	cbuilder.add_command(Insert {
-		entity: cbuilder.parent_entity(),
+	level.add_command(Insert {
+		entity: level.parent_entity(),
 		bundle: PbrBundle {
 			mesh: mesh.clone(),
-			material: materials.add(StandardMaterial {
+			material: ctx.materials.add(StandardMaterial {
 				base_color: Color::rgb(1.0, 1.0, 1.0),
 				..default()
 			}),
@@ -182,7 +122,7 @@ fn init_impl(
 
 	for (line_id, (line, _special)) in lines {
 		// TODO: Add line special bundles here.
-		cbuilder.add_command(Insert {
+		level.add_command(Insert {
 			entity: line_id.0,
 			bundle: line,
 		});
@@ -190,14 +130,14 @@ fn init_impl(
 
 	for (sect_id, (sect, _special)) in sectors {
 		// TODO: Add sector special bundles here.
-		cbuilder.add_command(Insert {
+		level.add_command(Insert {
 			entity: sect_id.0,
 			bundle: sect,
 		});
 	}
 
-	cbuilder.add_command(Insert {
-		entity: cbuilder.parent_entity(),
+	level.add_command(Insert {
+		entity: level.parent_entity(),
 		bundle: level::Core {
 			base: Some(base.clone()),
 			flags: level::Flags::empty(),
@@ -211,12 +151,6 @@ fn init_impl(
 			},
 		},
 	});
-
-	debug!(
-		"Initialized level {} in {}ms",
-		&base.header().id,
-		start_time.elapsed().as_millis()
-	);
 }
 
 // Node walking and subsector-to-polygon conversion ////////////////////////////
@@ -605,147 +539,5 @@ impl Disp {
 	fn intersect_pt(self, other: Self) -> Option<Vec2> {
 		self.intersect_offs(other)
 			.map(|offs| self.origin + self.displace * offs)
-	}
-}
-
-// Line specials ///////////////////////////////////////////////////////////////
-
-fn _line_special_bundle(mut cmds: EntityCommands, format: LevelFormat, num: u16) {
-	match format {
-		LevelFormat::Doom => match num {
-			0 => {}
-			1 => {
-				cmds.insert(line::Door {
-					stay_time: 35 * 4,
-					stay_timer: 0,
-					one_off: false,
-					monster_usable: true,
-					remote: false,
-					speed: line::Door::SPEED_NORMAL,
-					lock: None,
-				});
-			}
-			other => unimplemented!("Doom line special {other} is unimplemented."),
-		},
-		LevelFormat::Hexen => todo!(),
-		LevelFormat::Udmf(namespace) => match namespace {
-			UdmfNamespace::Doom => todo!(),
-			other => unimplemented!("UDMF namespace `{other:#?}` is not yet supported."),
-		},
-	}
-}
-
-// Sector specials /////////////////////////////////////////////////////////////
-
-fn _sector_special_bundle(cmds: EntityCommands, game: BaseGame, format: LevelFormat, num: u16) {
-	match game {
-		BaseGame::Doom => match format {
-			LevelFormat::Doom => _sector_special_bundle_boom(cmds, num),
-			LevelFormat::Udmf(UdmfNamespace::ZDoom) => _sector_special_bundle_zdoom(cmds, num),
-			_ => unimplemented!("Unsupported configuration: {game:#?}/{format:#?}"),
-		},
-		BaseGame::Hexen => {
-			_sector_special_bundle_zdoom(cmds, num);
-		}
-		BaseGame::Heretic => {
-			_sector_special_bundle_heretic(cmds, num);
-		}
-		BaseGame::Strife => {
-			_sector_special_bundle_strife(cmds, num);
-		}
-		BaseGame::ChexQuest => {
-			// TODO: Not sure yet.
-		}
-	}
-}
-
-fn _sector_special_bundle_boom(mut cmds: EntityCommands, num: u16) {
-	if (num & 96) != 0 {
-		cmds.insert(sector::Damaging {
-			damage: 20,
-			interval: 35,
-			leak_chance: 6,
-		});
-	} else if (num & 64) != 0 {
-		cmds.insert(sector::Damaging {
-			damage: 10,
-			interval: 35,
-			leak_chance: 0,
-		});
-	} else if (num & 32) != 0 {
-		cmds.insert(sector::Damaging {
-			damage: 5,
-			interval: 35,
-			leak_chance: 0,
-		});
-	}
-
-	if (num & 128) != 0 {
-		cmds.insert(sector::Secret);
-	}
-
-	if (num & 256) != 0 {
-		unimplemented!("Boom friction effects are unimplemented.");
-	}
-
-	if (num & 512) != 0 {
-		unimplemented!("Boom conveyor effects are unimplemented.");
-	}
-
-	match num {
-		9 => {
-			cmds.insert(sector::Secret);
-		}
-		10 => {
-			cmds.insert(sector::CloseAfter { ticks: 35 * 30 });
-		}
-		11 => {
-			cmds.insert(sector::Ending { threshold: 11 });
-
-			cmds.insert(sector::Damaging {
-				damage: 20,
-				interval: 35,
-				leak_chance: 6, // Q: Suit leak on ending damage floors?
-			});
-		}
-		14 => {
-			cmds.insert(sector::OpenAfter { ticks: 35 * 300 });
-		}
-		16 => {
-			cmds.insert(sector::Damaging {
-				damage: 20,
-				interval: 35,
-				leak_chance: 16,
-			});
-		}
-		other => unimplemented!("Boom sector special {other} is unimplemented."),
-	}
-}
-
-fn _sector_special_bundle_heretic(mut _cmds: EntityCommands, _num: u16) {
-	unimplemented!("Heretic sector specials are unimplemented.")
-}
-
-fn _sector_special_bundle_strife(mut _cmds: EntityCommands, _num: u16) {
-	unimplemented!("Strife sector specials are unimplemented.")
-}
-
-fn _sector_special_bundle_zdoom(mut cmds: EntityCommands, num: u16) {
-	match num {
-		115 => {
-			// Instant death.
-			cmds.insert(sector::Damaging {
-				damage: 999,
-				interval: 1,
-				leak_chance: u8::MAX,
-			});
-		}
-		196 => {
-			cmds.insert(sector::Healing {
-				interval: 32,
-				amount: 1,
-			});
-		}
-		other => unimplemented!("ZDoom sector special {other} is unimplemented."),
 	}
 }

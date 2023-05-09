@@ -12,7 +12,7 @@ use crate::{
 		prep::*,
 		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
 	},
-	sim::level::{line::LineFlags, Vertex},
+	sim::{level::Vertex, line::Flags},
 	utils::io::CursorExt,
 };
 
@@ -242,7 +242,7 @@ impl Catalog {
 				udmf_id: -1,
 				vert_start: u16::from_le(raw.v_start) as usize,
 				vert_end: u16::from_le(raw.v_end) as usize,
-				flags: LineFlags::from_bits_truncate(raw.flags as u32),
+				flags: Flags::from_bits_truncate(raw.flags as u32),
 				special: u16::from_le(raw.special),
 				trigger: u16::from_le(raw.trigger),
 				args: None,

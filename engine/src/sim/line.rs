@@ -5,29 +5,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::asset;
 
-use super::{SideIndex, VertIndex};
+use super::level::{SideIndex, VertIndex};
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Line(pub(super) Entity);
+pub struct Line(pub(in crate::sim) Entity);
 
 /// Ties line effects to [sectors](crate::sim::sector) with the same trigger.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Trigger(pub(super) u16);
+pub struct Trigger(pub(in crate::sim) u16);
 
 #[derive(Component, Debug)]
 pub struct Core {
 	pub udmf_id: i32,
 	pub vert_start: VertIndex,
 	pub vert_end: VertIndex,
-	pub flags: LineFlags,
+	pub flags: Flags,
 	pub side_right: SideIndex,
 	pub side_left: Option<SideIndex>,
 }
 
 bitflags::bitflags! {
 	#[derive(Default)]
-	pub struct LineFlags: u32 {
+	pub struct Flags: u32 {
 		/// Line blocks things (i.e. player, missiles, and monsters).
 		const IMPASSIBLE = 1 << 0;
 		/// Line blocks monsters.

@@ -4,10 +4,6 @@
 //! Bevy's ECS hierarchies to easily clean up an entire level recursively with
 //! one call.
 
-mod init;
-pub mod line;
-pub mod sector;
-
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
@@ -18,8 +14,7 @@ use crate::{
 	sparse::{SparseSet, SparseSetIndex},
 };
 
-pub use self::init::*;
-use self::sector::Sector;
+use super::{line, sector::Sector};
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -117,7 +112,7 @@ impl From<Vec4> for Vertex {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct VertIndex(usize);
+pub struct VertIndex(pub(super) usize);
 
 impl From<VertIndex> for usize {
 	fn from(value: VertIndex) -> Self {
@@ -137,7 +132,7 @@ pub struct Side {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct SideIndex(usize);
+pub struct SideIndex(pub(super) usize);
 
 impl From<SideIndex> for usize {
 	fn from(value: SideIndex) -> Self {
