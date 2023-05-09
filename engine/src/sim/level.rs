@@ -65,6 +65,12 @@ bitflags::bitflags! {
 	}
 }
 
+/// If a piece of level geometry changes during a sim tick so as to require an
+/// update to one of its vertex attributes, this component is added by the sim.
+#[derive(Component, Debug)]
+#[component(storage = "SparseSet")]
+pub struct Dirty;
+
 // Vertex information //////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

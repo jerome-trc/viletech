@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{data::asset, rng::RngCore};
+use crate::{data::{asset, Catalog}, rng::RngCore};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -88,25 +88,20 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 }
 
 pub fn start(
+	catalog: &Catalog,
 	mut cmds: Commands,
 	meshes: ResMut<Assets<Mesh>>,
 	materials: ResMut<Assets<StandardMaterial>>,
+	images: ResMut<Assets<Image>>,
 	level: asset::Handle<asset::Level>,
 ) {
-	cmds.spawn(Camera3dBundle {
-		transform: Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
-		..default()
+	level::init(level::InitContext {
+		catalog,
+		cmds,
+		meshes,
+		materials,
+		images,
+		base: level,
+		active: true,
 	});
-
-	cmds.spawn(PointLightBundle {
-		point_light: PointLight {
-			intensity: 1500.0,
-			shadows_enabled: true,
-			..default()
-		},
-		transform: Transform::from_xyz(4.0, 8.0, 4.0),
-		..default()
-	}); // TODO: Remove this when it's possible to see anything.
-
-	level::init(cmds, meshes, materials, level, true);
 }

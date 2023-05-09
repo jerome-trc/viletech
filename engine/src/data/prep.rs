@@ -219,7 +219,9 @@ impl Catalog {
 
 		// TODO: Make each successfully processed file increment progress.
 		ctx.tracker.finish_prep();
+
 		info!("Loading complete.");
+
 		Outcome::Ok(Output {
 			errors: ctx.into_errors(),
 		})

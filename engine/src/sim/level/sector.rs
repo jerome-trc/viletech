@@ -14,11 +14,18 @@ use super::line::Line;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Sector(pub(super) Entity);
 
-/// Every sector has this component.
+/// A mandatory component in a sector entity.
 #[derive(Component, Debug)]
 pub struct Core {
 	/// Lines encompassing this sector.
 	pub lines: Vec<Line>,
+}
+
+/// A mandatory component in a sector entity.
+#[derive(Component, Debug)]
+pub struct Mesh {
+	/// Each element corresponds to a set of 3 vertices in the level's mesh.
+	pub tris: Vec<usize>,
 }
 
 // Optional components /////////////////////////////////////////////////////////

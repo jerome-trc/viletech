@@ -426,9 +426,9 @@ impl Catalog {
 					i16::from_le(raw.offs_x) as i32,
 					i16::from_le(raw.offs_y) as i32,
 				),
-				tex_top: read_shortid(raw.tex_top),
-				tex_bottom: read_shortid(raw.tex_bottom),
-				tex_mid: read_shortid(raw.tex_mid),
+				tex_top: read_shortid(raw.tex_top).filter(|shortid| shortid != "-"),
+				tex_bottom: read_shortid(raw.tex_bottom).filter(|shortid| shortid != "-"),
+				tex_mid: read_shortid(raw.tex_mid).filter(|shortid| shortid != "-"),
 				sector: u16::from_le(raw.sector) as usize,
 			});
 		}

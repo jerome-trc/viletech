@@ -16,7 +16,7 @@ pub use self::{actor::*, audio::*, level::*, visual::*};
 /// access common asset metadata.
 #[derive(Debug)]
 pub struct AssetHeader {
-	pub(super) id: String,
+	pub id: String,
 }
 
 impl AssetHeader {

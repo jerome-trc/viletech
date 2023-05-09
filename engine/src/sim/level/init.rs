@@ -3,10 +3,11 @@
 use std::{
 	cmp::Ordering,
 	collections::{hash_map::RandomState, HashMap},
+	time::Instant,
 };
 
 use bevy::{
-	ecs::system::EntityCommands,
+	ecs::system::{EntityCommands, Insert},
 	prelude::*,
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -16,7 +17,10 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::asset::{self, BspNodeChild, LevelFormat, UdmfNamespace},
+	data::{
+		asset::{self, Asset, BspNodeChild, LevelFormat, UdmfNamespace},
+		Catalog,
+	},
 	sim::level,
 	sim::ActiveMarker,
 	sparse::SparseSet,
@@ -29,19 +33,58 @@ use super::{
 	Side, SideIndex, Udmf, VertIndex, Vertex,
 };
 
-pub fn init(
-	mut cmds: Commands,
+pub struct InitContext<'w, 's> {
+	pub catalog: &'w Catalog,
+	pub cmds: Commands<'w, 's>,
+	pub meshes: ResMut<'w, Assets<Mesh>>,
+	pub materials: ResMut<'w, Assets<StandardMaterial>>,
+	pub images: ResMut<'w, Assets<Image>>,
+	pub base: asset::Handle<asset::Level>,
+	pub active: bool,
+}
+
+pub fn init(context: InitContext) {
+	let InitContext {
+		catalog,
+		mut cmds,
+		meshes,
+		materials,
+		images,
+		base,
+		active,
+	} = context;
+
+	for thingdef in &base.things {
+		if thingdef.num == 1 {
+			cmds.spawn(Camera3dBundle {
+				transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),
+				..default()
+			});
+
+			break;
+		}
+	}
+
+	let mut level = cmds.spawn((GlobalTransform::default(), ComputedVisibility::default()));
+
+	if active {
+		level.insert(ActiveMarker);
+	}
+
+	level.with_children(|child_builder| {
+		init_impl(catalog, meshes, materials, images, base, child_builder);
+	});
+}
+
+fn init_impl(
+	_catalog: &Catalog,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
+	_images: ResMut<Assets<Image>>,
 	base: asset::Handle<asset::Level>,
-	active: bool,
+	cbuilder: &mut ChildBuilder,
 ) {
-	let level_id = if active {
-		cmds.spawn(ActiveMarker)
-	} else {
-		cmds.spawn(())
-	}
-	.id();
+	let start_time = Instant::now();
 
 	let mut verts = SparseSet::with_capacity(base.vertices.len(), base.vertices.len());
 	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
@@ -56,7 +99,7 @@ pub fn init(
 	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
 
 	for linedef in &base.linedefs {
-		let line_id = cmds.spawn(()).id();
+		let line_id = cbuilder.spawn(()).id();
 
 		lines.insert(
 			Line(line_id),
@@ -75,11 +118,13 @@ pub fn init(
 	}
 
 	for sectordef in &base.sectors {
-		let sect_id = cmds.spawn(()).id();
+		let sect_id = cbuilder.spawn(()).id();
+
 		sectors.insert(
 			Sector(sect_id),
 			(sector::Core { lines: vec![] }, sectordef.special),
 		);
+
 		let trigger = line::Trigger(sectordef.trigger);
 
 		let sect_grp = sectors_by_trigger.entry(trigger).or_insert(vec![]);
@@ -109,55 +154,64 @@ pub fn init(
 		}
 	}
 
-	let (mesh_verts, indices) = walk_nodes(&base, &verts);
-
-	let mesh_verts_len = mesh_verts.len();
+	let mesh_parts = walk_nodes(&base, &verts);
 	let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
-	mesh.set_indices(Some(Indices::U32(indices)));
-
-	mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_verts);
-
-	mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, {
-		let mut normals = vec![];
-		normals.resize(mesh_verts_len, Vec3::Y);
-		normals
-	});
+	mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_parts.verts);
+	mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_parts.normals);
+	mesh.set_indices(Some(Indices::U32(mesh_parts.indices)));
 
 	let mesh = meshes.add(mesh);
 
-	cmds.get_entity(level_id).unwrap().insert(PbrBundle {
-		mesh: mesh.clone(),
-		material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-		..default()
+	cbuilder.add_command(Insert {
+		entity: cbuilder.parent_entity(),
+		bundle: PbrBundle {
+			mesh: mesh.clone(),
+			material: materials.add(StandardMaterial {
+				base_color: Color::rgb(1.0, 1.0, 1.0),
+				..default()
+			}),
+			..default()
+		},
 	});
 
 	for (line_id, (line, _special)) in lines {
-		let mut ent = cmds.get_entity(line_id.0).unwrap();
-		ent.insert(line);
 		// TODO: Add line special bundles here.
-		cmds.get_entity(level_id).unwrap().add_child(line_id.0);
+		cbuilder.add_command(Insert {
+			entity: line_id.0,
+			bundle: line,
+		});
 	}
 
 	for (sect_id, (sect, _special)) in sectors {
-		let mut ent = cmds.get_entity(sect_id.0).unwrap();
-		ent.insert(sect);
 		// TODO: Add sector special bundles here.
-		cmds.get_entity(level_id).unwrap().add_child(sect_id.0);
+		cbuilder.add_command(Insert {
+			entity: sect_id.0,
+			bundle: sect,
+		});
 	}
 
-	cmds.get_entity(level_id).unwrap().insert(level::Core {
-		base: Some(base.clone()),
-		flags: level::Flags::empty(),
-		ticks_elapsed: 0,
-		geom: level::Geometry {
-			mesh,
-			verts,
-			sides,
-			triggers: sectors_by_trigger,
-			num_sectors: base.sectors.len(),
+	cbuilder.add_command(Insert {
+		entity: cbuilder.parent_entity(),
+		bundle: level::Core {
+			base: Some(base.clone()),
+			flags: level::Flags::empty(),
+			ticks_elapsed: 0,
+			geom: level::Geometry {
+				mesh,
+				verts,
+				sides,
+				triggers: sectors_by_trigger,
+				num_sectors: base.sectors.len(),
+			},
 		},
 	});
+
+	debug!(
+		"Initialized level {} in {}ms",
+		&base.header().id,
+		start_time.elapsed().as_millis()
+	);
 }
 
 // Node walking and subsector-to-polygon conversion ////////////////////////////
@@ -177,53 +231,68 @@ TODO:
 
 */
 
+#[derive(Debug)]
+struct LevelMesh {
+	verts: Vec<Vec3>,
+	indices: Vec<u32>,
+	normals: Vec<Vec3>,
+}
+
 #[must_use]
 fn walk_nodes(
 	base: &asset::Handle<asset::Level>,
 	verts: &SparseSet<VertIndex, Vertex>,
-) -> (Vec<Vec3>, Vec<u32>) {
-	let mut mesh_verts = vec![];
-	let mut indices = vec![];
+) -> LevelMesh {
+	let mut ret = LevelMesh {
+		verts: vec![],
+		indices: vec![],
+		normals: vec![],
+	};
+
 	let mut bsp_lines = vec![];
 
-	recur(
-		base,
-		verts,
-		&mut bsp_lines,
-		&mut mesh_verts,
-		&mut indices,
-		base.nodes.len() - 1,
-	);
+	recur(base, verts, &mut ret, &mut bsp_lines, base.nodes.len() - 1);
 
-	(mesh_verts, indices)
+	ret
 }
 
 fn recur(
 	base: &asset::Handle<asset::Level>,
 	verts: &SparseSet<VertIndex, Vertex>,
+	mesh: &mut LevelMesh,
 	bsp_lines: &mut Vec<Disp>,
-	mesh_verts: &mut Vec<Vec3>,
-	indices: &mut Vec<u32>,
 	node_idx: usize,
 ) {
 	let node = &base.nodes[node_idx];
 
 	bsp_lines.push(Disp::new(node.seg_start, node.seg_end));
 
+	fn add_poly(mut sspoly: SSectorPoly, mesh: &mut LevelMesh) {
+		for idx in sspoly.indices.drain(sspoly.top_indices..) {
+			mesh.indices.push((idx + mesh.verts.len()) as u32);
+		}
+
+		for vert in sspoly.verts.drain(sspoly.top_verts..) {
+			mesh.verts.push(-vert);
+			mesh.normals.push(Vec3::NEG_Y);
+		}
+
+		for idx in sspoly.indices {
+			mesh.indices.push((idx + mesh.verts.len()) as u32);
+		}
+
+		for vert in sspoly.verts {
+			mesh.verts.push(-vert);
+			mesh.normals.push(Vec3::Y);
+		}
+	}
+
 	match node.child_l {
 		BspNodeChild::SubNode(subnode_idx) => {
-			recur(base, verts, bsp_lines, mesh_verts, indices, subnode_idx);
+			recur(base, verts, mesh, bsp_lines, subnode_idx);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			let (poly_verts, poly_indices) = subsector_to_poly(base, verts, bsp_lines, subsect_idx);
-
-			for idx in poly_indices {
-				indices.push((idx + mesh_verts.len()) as u32);
-			}
-
-			for vert in poly_verts {
-				mesh_verts.push(-vert);
-			}
+			add_poly(subsector_to_poly(base, verts, bsp_lines, subsect_idx), mesh);
 		}
 	}
 
@@ -233,22 +302,22 @@ fn recur(
 
 	match node.child_r {
 		BspNodeChild::SubNode(subnode_idx) => {
-			recur(base, verts, bsp_lines, mesh_verts, indices, subnode_idx);
+			recur(base, verts, mesh, bsp_lines, subnode_idx);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			let (poly_verts, poly_indices) = subsector_to_poly(base, verts, bsp_lines, subsect_idx);
-
-			for idx in poly_indices {
-				indices.push((idx + mesh_verts.len()) as u32);
-			}
-
-			for vert in poly_verts {
-				mesh_verts.push(-vert);
-			}
+			add_poly(subsector_to_poly(base, verts, bsp_lines, subsect_idx), mesh);
 		}
 	}
 
 	bsp_lines.pop();
+}
+
+#[derive(Debug)]
+struct SSectorPoly {
+	verts: SmallVec<[Vec3; 8]>,
+	indices: Vec<usize>,
+	top_verts: usize,
+	top_indices: usize,
 }
 
 #[must_use]
@@ -257,7 +326,7 @@ fn subsector_to_poly(
 	map_verts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,
-) -> (SmallVec<[Vec3; 4]>, Vec<usize>) {
+) -> SSectorPoly {
 	let mut verts = SmallVec::<[Vec3; 4]>::new();
 	let mut indices = Vec::<usize>::new();
 
@@ -312,24 +381,43 @@ fn subsector_to_poly(
 		}
 	}
 
-	let verts = points_to_poly(verts);
+	let mut verts = points_to_poly(verts);
 
 	let format = IndexedListFormat::new(&mut indices).into_fan_format();
 
 	// SAFETY: `NodeVert` is `repr(transparent)` over `glam::vec3`.
 	unsafe {
-		let v = std::mem::transmute::<_, &SmallVec<[NodeVert; 4]>>(&verts);
+		let v = std::mem::transmute::<_, &SmallVec<[TmutVert; 8]>>(&verts);
 
 		if let Err(err) = v.triangulate(format) {
 			warn!("Failed to triangulate subsector {subsect_idx}: {err}");
 		}
 	}
 
-	(verts, indices)
+	let v_len = verts.len();
+
+	for i in 0..v_len {
+		let vert = verts[i];
+		verts.push(glam::vec3(vert.x, sector.height_ceil, vert.z));
+	}
+
+	let i_len = indices.len();
+
+	for i in (0..i_len).rev() {
+		let vndx = indices[i];
+		indices.push(vndx);
+	}
+
+	SSectorPoly {
+		verts,
+		indices,
+		top_verts: v_len,
+		top_indices: i_len,
+	}
 }
 
 #[must_use]
-fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
+fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 8]> {
 	// Sort points in polygonal CCW order around their center.
 	let center = poly_center(&points);
 
@@ -369,7 +457,7 @@ fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
 	});
 
 	// Remove duplicates.
-	let mut simplified = SmallVec::<[Vec3; 4]>::new();
+	let mut simplified = SmallVec::<[Vec3; 8]>::new();
 	simplified.push(points[0]);
 	let mut current_point = points[1];
 	let mut area = 0.0;
@@ -395,7 +483,10 @@ fn points_to_poly(mut points: SmallVec<[Vec3; 4]>) -> SmallVec<[Vec3; 4]> {
 
 	simplified.push(points[points.len() - 1]);
 
-	debug_assert!(simplified.len() >= 3);
+	debug_assert!(
+		simplified.len() >= 3,
+		"Degenerate polygon created during level init."
+	);
 
 	while (simplified[0] - simplified[simplified.len() - 1])
 		.xz()
@@ -435,9 +526,9 @@ fn poly_center(verts: &[Vec3]) -> Vec3 {
 /// Fake type for impl trait coherence.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(transparent)]
-struct NodeVert(Vec3);
+struct TmutVert(Vec3);
 
-impl triangulate::Vertex for NodeVert {
+impl triangulate::Vertex for TmutVert {
 	type Coordinate = f32;
 
 	fn x(&self) -> Self::Coordinate {
