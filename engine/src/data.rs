@@ -31,7 +31,7 @@ use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
 	asset::{Asset, Blueprint, Handle},
-	detail::{AssetKey, AssetSlotKey},
+	detail::{AssetKey, AssetSlotKey, DeveloperGui},
 	vfs::{FileRef, VirtualFs},
 };
 
@@ -83,6 +83,7 @@ pub struct Catalog {
 	/// See the key type's documentation for background details.
 	/// Keyed assets are always of type [`Blueprint`].
 	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	pub(self) gui: DeveloperGui,
 	pub(self) populated: bool,
 	// Q: FNV/aHash for maps using small key types?
 }
@@ -103,6 +104,7 @@ impl Catalog {
 			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),
 			spawn_nums: DashMap::default(),
+			gui: DeveloperGui::default(),
 			populated: false,
 		};
 
@@ -361,7 +363,7 @@ impl Catalog {
 		})
 	}
 
-	pub fn ui(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_impl(ctx, ui);
 	}
 }

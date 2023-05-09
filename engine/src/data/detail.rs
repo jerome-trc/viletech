@@ -7,19 +7,50 @@ use std::{
 
 use bevy_egui::egui;
 use fasthash::SeaHasher;
+use regex::Regex;
 use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
 use super::{Asset, Catalog};
 
+/// State storage for the catalog's developer GUI.
+#[derive(Debug)]
+pub(super) struct DeveloperGui {
+	search_buf: String,
+	search: Regex,
+}
+
+impl Default for DeveloperGui {
+	fn default() -> Self {
+		Self {
+			search_buf: String::new(),
+			search: Regex::new("").unwrap(),
+		}
+	}
+}
+
 impl Catalog {
-	pub(super) fn ui_impl(&self, ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub(super) fn ui_impl(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
 		ui.heading("Assets");
+
+		ui.horizontal(|ui| {
+			ui.label("Search");
+
+			if ui.text_edit_singleline(&mut self.gui.search_buf).changed() {
+				let mut esc = regex::escape(&self.gui.search_buf);
+				esc.insert_str(0, "(?i)"); // Case insensitivity
+				self.gui.search = Regex::new(&esc).unwrap_or(Regex::new("").unwrap());
+			}
+		});
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
 			for mount in &self.mounts {
 				for (_, asset) in &mount.assets {
+					if !self.gui.search.is_match(&asset.header().id) {
+						continue;
+					}
+
 					let resp = ui.label(&asset.header().id);
 
 					let resp = if resp.hovered() {
@@ -30,7 +61,7 @@ impl Catalog {
 
 					resp.on_hover_ui_at_pointer(|ui| {
 						egui::Area::new("vtec_asset_tt").show(ctx, |_| {
-							ui.label(format!("{:?}", asset.type_name()));
+							ui.label(asset.type_name());
 						});
 					});
 				}

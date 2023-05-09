@@ -9,7 +9,10 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{data::{asset, Catalog}, rng::RngCore};
+use crate::{
+	data::{asset, Catalog},
+	rng::RngCore,
+};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -89,7 +92,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 
 pub fn start(
 	catalog: &Catalog,
-	mut cmds: Commands,
+	cmds: Commands,
 	meshes: ResMut<Assets<Mesh>>,
 	materials: ResMut<Assets<StandardMaterial>>,
 	images: ResMut<Assets<Image>>,
