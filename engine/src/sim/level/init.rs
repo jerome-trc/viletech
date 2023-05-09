@@ -8,6 +8,7 @@ use std::{
 
 use bevy::{
 	ecs::system::{EntityCommands, Insert},
+	pbr::wireframe::Wireframe,
 	prelude::*,
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -18,7 +19,7 @@ use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
 	data::{
-		asset::{self, Asset, BspNodeChild, LevelFormat, UdmfNamespace},
+		asset::{self, Asset, BspNodeChild, LevelFormat, SegDirection, UdmfNamespace},
 		Catalog,
 	},
 	sim::level,
@@ -65,7 +66,11 @@ pub fn init(context: InitContext) {
 		}
 	}
 
-	let mut level = cmds.spawn((GlobalTransform::default(), ComputedVisibility::default()));
+	let mut level = cmds.spawn((
+		GlobalTransform::default(),
+		ComputedVisibility::default(),
+		Wireframe,
+	));
 
 	if active {
 		level.insert(ActiveMarker);
@@ -218,7 +223,7 @@ fn init_impl(
 
 /*
 
-All code in this part of this file is courtesy of Cristi Cobzarenco's rust-doom.
+All code in this part of this file is adapted from Cristi Cobzarenco's rust-doom.
 For licensing information, see the repository's ATTRIB.md file.
 
 TODO:
@@ -331,18 +336,23 @@ fn subsector_to_poly(
 	let mut indices = Vec::<usize>::new();
 
 	let subsect = &base.subsectors[subsect_idx];
-	let seg0 = &base.segs[subsect.seg0];
+	let seg0 = &base.segs[subsect.seg0 + (subsect.seg_count - 1)];
 	let linedef = &base.linedefs[seg0.linedef];
-	let side = &base.sidedefs[linedef.side_right];
-	let sector = &base.sectors[side.sector];
+
+	let sidedef = match seg0.direction {
+		SegDirection::Front => &base.sidedefs[linedef.side_right],
+		SegDirection::Back => &base.sidedefs[linedef.side_left.unwrap()],
+	};
+
+	let sector = &base.sectors[sidedef.sector];
 
 	let mut last_seg_vert = 0;
 
 	for i in subsect.seg0..(subsect.seg0 + subsect.seg_count) {
-		let s = &base.segs[i];
+		let seg_i = &base.segs[i];
 
-		let v_start = &map_verts[VertIndex(s.vert_start)];
-		let v_end = &map_verts[VertIndex(s.vert_end)];
+		let v_start = &map_verts[VertIndex(seg_i.vert_start)];
+		let v_end = &map_verts[VertIndex(seg_i.vert_end)];
 
 		verts.push(glam::vec3(-v_start.z, sector.height_floor, -v_start.x));
 		verts.push(glam::vec3(-v_end.z, sector.height_floor, -v_end.x));

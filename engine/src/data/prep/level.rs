@@ -62,7 +62,7 @@ impl Catalog {
 		for lump in &[
 			nodes, linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
-			// TODO: NODES is only mandatory until a nodebuilder gets integrated.
+			// TODO: What is mandatory might change if a nodebuilder gets integrated.
 
 			if lump.is_none() {
 				return Outcome::None;
