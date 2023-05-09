@@ -264,7 +264,9 @@ impl PrepError {
 			PrepErrorKind::Level(err) => err.is_fatal(),
 			PrepErrorKind::ColorMap(_)
 			| PrepErrorKind::EnDoom(_)
+			| PrepErrorKind::Flat
 			| PrepErrorKind::PNames
+			| PrepErrorKind::Sprite
 			| PrepErrorKind::TextureX
 			| PrepErrorKind::WaveformAudio(_) => false,
 			PrepErrorKind::Io(_) | PrepErrorKind::MissingVzsDir | PrepErrorKind::VzsParse(_) => {
@@ -286,6 +288,10 @@ pub enum PrepErrorKind {
 	///
 	/// [ENDOOM]: crate::data::extras::EnDoom
 	EnDoom(usize),
+	/// A file between the `F_START` and `F_END` markers was not 4096 bytes in size.
+	///
+	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
+	Flat,
 	Level(LevelError),
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
@@ -294,6 +300,10 @@ pub enum PrepErrorKind {
 	///
 	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
 	PNames,
+	/// A file between the `S_START` and `S_END` markers was not in picture format.
+	///
+	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
+	Sprite,
 	/// A [TEXTURE1 or TEXTURE2] WAD lump is too short or an incorrect size.
 	///
 	/// [TEXTURE1 or TEXTURE2]: https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2
@@ -324,6 +334,13 @@ impl std::fmt::Display for PrepError {
 					p = self.path.display()
 				)
 			}
+			PrepErrorKind::Flat => {
+				write!(
+					f,
+					"Lump {} is between `F_START` and `F_END` but is not a flat.",
+					self.path.display()
+				)
+			}
 			PrepErrorKind::Io(err) => err.fmt(f),
 			PrepErrorKind::Level(err) => {
 				write!(
@@ -351,6 +368,13 @@ impl std::fmt::Display for PrepError {
 			}
 			PrepErrorKind::PNames => {
 				write!(f, "Malformed PNAMES lump: {}", self.path.display())
+			}
+			PrepErrorKind::Sprite => {
+				write!(
+					f,
+					"Lump {} is between `S_START` and `S_END` but is not a sprite.",
+					self.path.display()
+				)
 			}
 			PrepErrorKind::TextureX => {
 				write!(

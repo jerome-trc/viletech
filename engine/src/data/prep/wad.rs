@@ -1,6 +1,6 @@
 //! Functions for reading assets from WADs.
 
-use std::io::Cursor;
+use std::{io::Cursor, ops::Range};
 
 use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
@@ -13,6 +13,63 @@ use crate::data::{
 };
 
 use super::SubContext;
+
+#[derive(Debug)]
+struct Markers {
+	flats: Option<Range<usize>>,
+	sprites: Option<Range<usize>>,
+}
+
+impl Markers {
+	#[must_use]
+	fn new(wad: FileRef) -> Self {
+		let mut buf = wad.path().join("F_START");
+
+		Markers {
+			flats: {
+				if let Some(f_start) = wad.child_index(&buf) {
+					buf.pop();
+					buf.push("F_END");
+
+					wad.child_index(&buf).map(|f_end| (f_start + 1)..f_end)
+				} else {
+					None
+				}
+			},
+			sprites: {
+				buf.pop();
+				buf.push("S_START");
+
+				if let Some(s_start) = wad.child_index(&buf) {
+					buf.pop();
+					buf.push("S_END");
+
+					wad.child_index(&buf).map(|s_end| (s_start + 1)..s_end)
+				} else {
+					None
+				}
+			},
+		}
+	}
+
+	#[must_use]
+	fn is_flat(&self, child_index: usize) -> bool {
+		if let Some(flats) = &self.flats {
+			return flats.contains(&child_index);
+		}
+
+		false
+	}
+
+	#[must_use]
+	fn is_sprite(&self, child_index: usize) -> bool {
+		if let Some(sprites) = &self.sprites {
+			return sprites.contains(&child_index);
+		}
+
+		false
+	}
+}
 
 impl Catalog {
 	pub(super) fn prep_pass1_wad(&self, _ctx: &SubContext) -> Outcome<(), ()> {
@@ -130,7 +187,11 @@ impl Catalog {
 				return Some(());
 			}
 
-			if fstem == "TEXTURE1" || fstem == "TEXTURE2" {
+			if fstem == "TEXTURE1"
+				|| fstem == "TEXTURE2"
+				|| fstem == "TEXTURE3"
+				|| fstem == "TEXTURES"
+			{
 				match self.prep_texturex(
 					ctx,
 					FileRef {
@@ -158,13 +219,15 @@ impl Catalog {
 
 	pub(super) fn prep_pass3_wad(&self, ctx: &SubContext) -> Outcome<(), ()> {
 		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
+		let markers = Markers::new(wad);
 
-		let cancelled = wad
+		let proceed = wad
 			.child_refs()
 			.unwrap()
 			.filter(|c| !c.is_empty())
+			.enumerate()
 			.par_bridge()
-			.try_for_each(|child| {
+			.try_for_each(|(cndx, child)| {
 				if ctx.tracker.is_cancelled() {
 					return None;
 				}
@@ -172,55 +235,77 @@ impl Catalog {
 				if child.is_dir() {
 					self.prep_pass3_wad_dir(ctx, child);
 				} else {
-					self.prep_pass3_wad_entry(ctx, child);
+					self.prep_pass3_wad_entry(ctx, &markers, child, cndx);
 				};
 
 				Some(())
 			});
 
-		match cancelled {
+		match proceed {
 			Some(()) => Outcome::Ok(()),
 			None => Outcome::Cancelled,
 		}
 	}
 
-	fn prep_pass3_wad_entry(&self, ctx: &SubContext, vfile: FileRef) {
+	fn prep_pass3_wad_entry(
+		&self,
+		ctx: &SubContext,
+		markers: &Markers,
+		vfile: FileRef,
+		child_index: usize,
+	) {
 		let bytes = vfile.read_bytes();
-		let fstem = vfile.file_prefix();
+		let fpfx = vfile.file_prefix();
+
+		ctx.tracker.add_prep_progress(1);
+
+		if markers.is_flat(child_index) {
+			match self.prep_flat(ctx, vfile, fpfx, bytes) {
+				Ok(image) => ctx.add_asset(image),
+				Err(err) => ctx.errors.lock().push(*err),
+			}
+
+			return;
+		}
+
+		if markers.is_sprite(child_index) {
+			match self.prep_picture(ctx, fpfx, bytes) {
+				Some(image) => ctx.add_asset(image),
+				None => {
+					ctx.errors.lock().push(PrepError {
+						path: vfile.path().to_path_buf(),
+						kind: PrepErrorKind::Sprite,
+					});
+				}
+			}
+
+			return;
+		}
+
+		if fpfx.starts_with("DEMO") && fpfx.ends_with(|c| char::is_ascii_digit(&c)) {
+			// TODO: Demo file format support.
+			return;
+		}
 
 		/// Kinds of WAD entries irrelevant to this pass.
 		const UNHANDLED: &[&str] = &[
 			"COLORMAP", "DMXGUS", "ENDOOM", "GENMIDI", "PLAYPAL", "PNAMES", "TEXTURE1", "TEXTURE2",
+			"TEXTURE3", "TEXTURES",
 		];
 
-		if UNHANDLED.iter().any(|&name| fstem == name)
+		if UNHANDLED.iter().any(|&name| fpfx == name)
 			|| Audio::is_pc_speaker_sound(bytes)
 			|| Audio::is_dmxmus(bytes)
 		{
 			return;
 		}
 
-		ctx.tracker.add_prep_progress(1);
-
-		let is_pic = self.prep_picture(ctx, bytes, fstem);
-
-		// TODO: Processors for more file formats.
-
-		let res: std::io::Result<()> = if is_pic.is_some() {
-			Ok(())
-		} else {
-			return;
-		};
-
-		match res {
-			Ok(()) => {}
-			Err(err) => {
-				ctx.errors.lock().push(PrepError {
-					path: vfile.path().to_path_buf(),
-					kind: PrepErrorKind::Io(err),
-				});
-			}
+		if let Some(image) = self.prep_picture(ctx, fpfx, bytes) {
+			ctx.add_asset(image);
 		}
+
+		// Else this file has an unknown purpose.
+		// User scripts may have their own intent for it, so this is fine.
 	}
 
 	fn prep_pass3_wad_dir(&self, ctx: &SubContext, dir: FileRef) {

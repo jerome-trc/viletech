@@ -363,8 +363,12 @@ impl File {
 		&self.path
 	}
 
-	/// See [`std::path::Path::file_name`]. Returns a string slice instead of an
-	/// OS string slice since mounted paths are pre-sanitized.
+	/// See [`std::path::Path::file_name`].
+	///
+	/// Returns a string slice instead of an OS string slice since mounted paths
+	/// are pre-sanitized.
+	///
+	/// Panics if this is the root.
 	#[must_use]
 	pub fn file_name(&self) -> &str {
 		if self.path.is_root() {
@@ -378,8 +382,12 @@ impl File {
 			.expect("A VFS path wasn't sanitised (UTF-8).")
 	}
 
-	/// See [`std::path::Path::file_stem`]. Returns a string slice instead of an
-	/// OS string slice since mounted paths are pre-sanitized.
+	/// See [`std::path::Path::file_stem`].
+	///
+	/// Returns a string slice instead of an OS string slice since mounted paths
+	/// are pre-sanitized.
+	///
+	/// Panics if this is the root.
 	#[must_use]
 	pub fn file_stem(&self) -> &str {
 		if self.path.is_root() {
@@ -393,8 +401,12 @@ impl File {
 			.expect("A VFS path wasn't sanitised (UTF-8).")
 	}
 
-	/// See [`std::path::Path::file_prefix`]. Returns a string slice instead of an
-	/// OS string slice since mounted paths are pre-sanitized.
+	/// See [`std::path::Path::file_prefix`].
+	///
+	/// Returns a string slice instead of an OS string slice since mounted paths
+	/// are pre-sanitized.
+	///
+	/// Panics if this is the root.
 	pub fn file_prefix(&self) -> &str {
 		if self.path.is_root() {
 			return "/";
@@ -683,6 +695,23 @@ impl<'vfs> FileRef<'vfs> {
 		match &self.content {
 			FileContent::Directory(children) => children.len(),
 			_ => 0,
+		}
+	}
+
+	/// Panics if this is not a directory node, or if `path`'s parent is not equal
+	/// to this file's path.
+	#[must_use]
+	pub fn child_index(&self, path: impl AsRef<VPath>) -> Option<usize> {
+		let path = path.as_ref();
+
+		if path.parent().filter(|&p| p == self.path()).is_none() {
+			panic!("`child_index` expects `path` to be a child of `self.path`.");
+		}
+
+		if let FileContent::Directory(children) = &self.content {
+			children.get_index_of(path)
+		} else {
+			panic!("`child_index` expects `self` to be a directory.");
 		}
 	}
 }

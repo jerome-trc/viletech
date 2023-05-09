@@ -5,7 +5,8 @@ use std::io::Cursor;
 use arrayvec::ArrayVec;
 use bevy::prelude::{IVec2, UVec2};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use image::Rgba;
+use glam::Vec2;
+use image::{ImageBuffer, Rgba};
 
 use crate::{
 	data::{
@@ -100,25 +101,54 @@ impl Catalog {
 		Ok(ret)
 	}
 
+	pub(super) fn prep_flat(
+		&self,
+		ctx: &SubContext,
+		lump: FileRef,
+		fpfx: &str,
+		bytes: &[u8],
+	) -> Result<Image, Box<PrepError>> {
+		if bytes.len() != (64 * 64) {
+			return Err(Box::new(PrepError {
+				path: lump.path.to_path_buf(),
+				kind: PrepErrorKind::Flat,
+			}));
+		}
+
+		let palettes = self.last_paletteset().unwrap();
+		let palette = &palettes.0[0];
+		let mut ret = ImageBuffer::new(64, 64);
+
+		for y in 0..64 {
+			for x in 0..64 {
+				let palndx = bytes[x + (y * 64)];
+				let pixel = palette.0[palndx as usize];
+				ret.put_pixel(x as u32, y as u32, pixel);
+			}
+		}
+
+		Ok(Image {
+			header: AssetHeader {
+				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
+			},
+			inner: ret,
+			offset: Vec2::default(),
+		})
+	}
+
 	/// Returns `None` to indicate that `bytes` was checked
 	/// and determined to not be a picture.
 	#[must_use]
-	pub(super) fn prep_picture(&self, ctx: &SubContext, bytes: &[u8], id: &str) -> Option<()> {
+	pub(super) fn prep_picture(&self, ctx: &SubContext, fpfx: &str, bytes: &[u8]) -> Option<Image> {
 		let palettes = self.last_paletteset().unwrap();
 
-		if let Some(image) = Image::try_from_picture(bytes, &palettes.0[0]) {
-			ctx.add_asset::<Image>(Image {
-				header: AssetHeader {
-					id: format!("{mount_id}/{id}", mount_id = ctx.mntinfo.id()),
-				},
-				inner: image.0,
-				offset: image.1,
-			});
-
-			Some(())
-		} else {
-			None
-		}
+		Image::try_from_picture(bytes, &palettes.0[0]).map(|(ibuf, offs)| Image {
+			header: AssetHeader {
+				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
+			},
+			inner: ibuf,
+			offset: offs,
+		})
 	}
 
 	pub(super) fn prep_playpal(
