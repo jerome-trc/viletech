@@ -119,7 +119,7 @@ pub fn start(mut cmds: Commands, context: setup::Context, level: asset::Handle<a
 		setup::level::setup(context, level, cbuilder);
 	});
 
-	debug!(
+	info!(
 		"Sim setup complete ({}) in {}ms.",
 		&l.header().id,
 		start_time.elapsed().as_millis()
