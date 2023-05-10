@@ -6,6 +6,7 @@ pub trait Dimension: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output 
 
 impl<T> Dimension for T where T: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
 
+/// A generic rectangle represented with a top-left, width, and height.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Rect4<T>
 where
