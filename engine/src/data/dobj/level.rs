@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
 	sim::{level::Vertex, line::Flags},
-	EditorNum, ShortId,
+	EditorNum, Id8,
 };
 
 use super::{Audio, Blueprint, DatumHeader, Image, InHandle};
@@ -51,11 +51,11 @@ pub struct LineDef {
 pub struct SideDef {
 	pub offset: IVec2,
 	/// The ID within maps to a TEXTURE1/2 entry.
-	pub tex_top: Option<ShortId>,
+	pub tex_top: Option<Id8>,
 	/// The ID within maps to a TEXTURE1/2 entry.
-	pub tex_bottom: Option<ShortId>,
+	pub tex_bottom: Option<Id8>,
 	/// The ID within maps to a TEXTURE1/2 entry.
-	pub tex_mid: Option<ShortId>,
+	pub tex_mid: Option<Id8>,
 	pub sector: usize,
 }
 
@@ -66,9 +66,9 @@ pub struct Sector {
 	pub height_floor: f32,
 	pub height_ceil: f32,
 	/// The ID within maps to a WAD entry's name.
-	pub tex_floor: Option<ShortId>,
+	pub tex_floor: Option<Id8>,
 	/// The ID within maps to a WAD entry's name.
-	pub tex_ceil: Option<ShortId>,
+	pub tex_ceil: Option<Id8>,
 	pub light_level: i32,
 	pub special: u16,
 	/// Corresponds to the field of [`LineDef`] with the same name.

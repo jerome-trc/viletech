@@ -347,8 +347,8 @@ impl Catalog {
 				udmf_id: 0,
 				height_floor: (i16::from_le(raw.height_floor) as f32) * VANILLA_SCALEDOWN,
 				height_ceil: (i16::from_le(raw.height_ceil) as f32) * VANILLA_SCALEDOWN,
-				tex_floor: read_shortid(raw.tex_floor),
-				tex_ceil: read_shortid(raw.tex_ceil),
+				tex_floor: read_id8(raw.tex_floor),
+				tex_ceil: read_id8(raw.tex_ceil),
 				light_level: u16::from_le(raw.light_level) as i32,
 				special: raw.special,
 				trigger: u16::from_le(raw.trigger),
@@ -426,9 +426,9 @@ impl Catalog {
 					i16::from_le(raw.offs_x) as i32,
 					i16::from_le(raw.offs_y) as i32,
 				),
-				tex_top: read_shortid(raw.tex_top).filter(|shortid| shortid != "-"),
-				tex_bottom: read_shortid(raw.tex_bottom).filter(|shortid| shortid != "-"),
-				tex_mid: read_shortid(raw.tex_mid).filter(|shortid| shortid != "-"),
+				tex_top: read_id8(raw.tex_top).filter(|id8| id8 != "-"),
+				tex_bottom: read_id8(raw.tex_bottom).filter(|id8| id8 != "-"),
+				tex_mid: read_id8(raw.tex_mid).filter(|id8| id8 != "-"),
 				sector: u16::from_le(raw.sector) as usize,
 			});
 		}

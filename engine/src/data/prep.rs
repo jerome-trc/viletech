@@ -14,7 +14,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{vzs, ShortId, VPathBuf};
+use crate::{vzs, Id8, VPathBuf};
 
 use self::vanilla::{PatchTable, TextureX};
 
@@ -370,17 +370,17 @@ impl Catalog {
 	}
 }
 
-/// Returns `None` if `shortid` starts with a NUL.
+/// Returns `None` if `id8` starts with a NUL.
 /// Return values have no trailing NUL bytes.
 #[must_use]
-pub(self) fn read_shortid(shortid: [u8; 8]) -> Option<ShortId> {
-	if shortid.starts_with(&[b'\0']) {
+pub(self) fn read_id8(id8: [u8; 8]) -> Option<Id8> {
+	if id8.starts_with(&[b'\0']) {
 		return None;
 	}
 
-	let mut ret = ShortId::new();
+	let mut ret = Id8::new();
 
-	for byte in shortid {
+	for byte in id8 {
 		if byte == b'\0' {
 			break;
 		}

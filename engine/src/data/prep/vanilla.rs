@@ -12,19 +12,19 @@ use crate::{
 	data::{
 		detail::Outcome,
 		dobj::{DatumHeader, Image},
-		prep::read_shortid,
+		prep::read_id8,
 		vfs::FileRef,
 		Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError, PrepErrorKind,
 	},
 	utils::io::CursorExt,
-	ShortId,
+	Id8,
 };
 
 use super::SubContext;
 
 /// See <https://doomwiki.org/wiki/PNAMES>.
 #[derive(Debug)]
-pub(super) struct PatchTable(pub(super) Vec<ShortId>);
+pub(super) struct PatchTable(pub(super) Vec<Id8>);
 
 /// See <https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2>.
 #[derive(Debug)]
@@ -32,7 +32,7 @@ pub(super) struct TextureX(pub(super) Vec<PatchedTex>);
 
 #[derive(Debug)]
 pub(super) struct PatchedTex {
-	pub(super) _name: ShortId,
+	pub(super) _name: Id8,
 	pub(super) _size: UVec2,
 	pub(super) _patches: Vec<TexPatch>,
 }
@@ -211,7 +211,7 @@ impl Catalog {
 		while pos < bytes.len() {
 			let raw = bytemuck::from_bytes::<[u8; RECORD_SIZE]>(&bytes[pos..(pos + RECORD_SIZE)]);
 
-			if let Some(pname) = read_shortid(*raw) {
+			if let Some(pname) = read_id8(*raw) {
 				ret.push(pname);
 			}
 
@@ -318,7 +318,7 @@ impl Catalog {
 			}
 
 			ret.push(PatchedTex {
-				_name: read_shortid(raw_tex.name).unwrap_or_default(),
+				_name: read_id8(raw_tex.name).unwrap_or_default(),
 				_size: glam::uvec2(raw_tex.width as u32, raw_tex.height as u32),
 				_patches: patches,
 			});

@@ -38,7 +38,7 @@ pub type VPathBuf = std::path::PathBuf;
 /// has persisted through Doom's descendant source ports (for whatever reason).
 /// For compatibility purposes, VileTech sometimes needs to pretend that there's
 /// no game data namespacing and look up the last loaded thing with a certain name.
-pub type ShortId = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 8 }>;
+pub type Id8 = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 8 }>;
 
 /// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.
 pub type EditorNum = u16;
