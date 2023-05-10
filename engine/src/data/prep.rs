@@ -148,7 +148,7 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			// TODO: Game load scheme pending some changes.
+			ctx.tracker.finish_prep();
 			return Outcome::Err(ctx.into_errors());
 		}
 
@@ -177,7 +177,7 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			// TODO: Game load scheme pending some changes.
+			ctx.tracker.finish_prep();
 			return Outcome::Err(ctx.into_errors());
 		}
 
@@ -211,7 +211,7 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			// TODO: Game load scheme pending some changes.
+			ctx.tracker.finish_prep();
 			return Outcome::Err(ctx.into_errors());
 		}
 
