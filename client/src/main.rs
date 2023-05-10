@@ -9,6 +9,7 @@ mod load;
 use std::{
 	borrow::Cow,
 	path::PathBuf,
+	sync::Arc,
 	time::{Duration, Instant},
 };
 
@@ -29,7 +30,13 @@ use bevy::{
 use bevy_egui::{egui, systems::InputEvents, EguiContexts, EguiPlugin};
 use clap::Parser;
 use indoc::printdoc;
-use viletech::{console::Console, data::Catalog, log::TracingPlugin, user::UserCore};
+use parking_lot::RwLock;
+use viletech::{
+	console::Console,
+	data::{Catalog, CatalogAssetIo},
+	log::TracingPlugin,
+	user::UserCore,
+};
 
 use self::core::*;
 
@@ -70,6 +77,13 @@ conditions. See the license document that comes with your installation."
 	app.add_plugin(LogDiagnosticsPlugin::default());
 
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
+
+	let catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
+	info!("Catalog initialized.");
+	let catalog = Arc::new(RwLock::new(catalog));
+
+	app.world
+		.insert_resource(AssetServer::new(CatalogAssetIo(catalog.clone())));
 
 	app.add_state::<AppState>()
 		.insert_resource(WinitSettings {
@@ -120,10 +134,6 @@ conditions. See the license document that comes with your installation."
 		.add_system(common_updates)
 		.add_system(update_input.in_set(InputSystem));
 
-	let catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
-
-	info!("Catalog initialized.");
-
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();
 	let user_dir = viletech::user::select_user_dir(&user_dir_portable, &user_dir_home);
@@ -142,7 +152,9 @@ conditions. See the license document that comes with your installation."
 
 	info!("User info initialized.");
 
-	app.insert_resource(ClientCore::new(catalog, Console::new(log_receiver), user)?);
+	let core = ClientCore::new(catalog, Console::new(log_receiver), user)?;
+
+	app.insert_resource(core);
 
 	app.add_system(init_on_enter.in_schedule(OnEnter(AppState::Init)));
 

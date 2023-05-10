@@ -5,11 +5,10 @@ use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
 use bevy::prelude::*;
 use bevy_egui::egui;
 use nanorand::WyRand;
-use parking_lot::RwLock;
 use viletech::{
 	audio::AudioCore,
 	console::Console,
-	data::{Catalog, CatalogAL, LoadOutcome, LoadTracker},
+	data::{CatalogAL, LoadOutcome, LoadTracker},
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,
@@ -34,11 +33,10 @@ pub struct ClientCore {
 
 impl ClientCore {
 	pub fn new(
-		catalog: Catalog,
+		catalog: CatalogAL,
 		console: Console<ccmd::Command>,
 		user: UserCore,
 	) -> Result<Self, Box<dyn std::error::Error>> {
-		let catalog = Arc::new(RwLock::new(catalog));
 		let catalog_audio = catalog.clone();
 		let audio = AudioCore::new(catalog_audio, None)?;
 

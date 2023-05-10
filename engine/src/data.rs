@@ -20,6 +20,10 @@ use std::{
 	},
 };
 
+use bevy::{
+	asset::{AssetIo, AssetIoError},
+	utils::BoxedFuture,
+};
 use bevy_egui::egui;
 use dashmap::DashMap;
 use parking_lot::{Mutex, RwLock};
@@ -792,6 +796,82 @@ impl LoadTracker {
 	#[must_use]
 	pub(super) fn is_cancelled(&self) -> bool {
 		self.cancelled.load(atomic::Ordering::SeqCst)
+	}
+}
+
+/// Newtype for trait impl coherence; pass to [`bevy::asset::AssetServer::new`].
+pub struct CatalogAssetIo(pub CatalogAL);
+
+/// Opens the catalog's VFS up to a [`bevy::asset::AssetServer`].
+impl AssetIo for CatalogAssetIo {
+	fn load_path<'a>(&'a self, path: &'a VPath) -> BoxedFuture<'a, Result<Vec<u8>, AssetIoError>> {
+		Box::pin(async move {
+			let catalog = self.0.read();
+
+			match catalog.vfs.get(path) {
+				Some(fref) => {
+					if !fref.is_readable() {
+						return Err(AssetIoError::Io(std::io::ErrorKind::Other.into()));
+					}
+
+					Ok(fref.read_bytes().to_owned())
+				}
+				None => Err(AssetIoError::NotFound(path.to_path_buf())),
+			}
+		})
+	}
+
+	fn read_directory(
+		&self,
+		path: &VPath,
+	) -> Result<Box<dyn Iterator<Item = VPathBuf>>, AssetIoError> {
+		let catalog = self.0.read();
+
+		match catalog.vfs.get(path) {
+			Some(fref) => {
+				if !fref.is_dir() {
+					return Err(AssetIoError::Io(std::io::Error::from(
+						std::io::ErrorKind::Other,
+					)));
+				}
+
+				Ok(Box::new(
+					fref.child_paths()
+						.unwrap()
+						.map(|path| path.to_path_buf())
+						.collect::<Vec<_>>()
+						.into_iter(),
+				))
+			}
+			None => Err(AssetIoError::NotFound(path.to_path_buf())),
+		}
+	}
+
+	fn get_metadata(&self, path: &VPath) -> Result<bevy::asset::Metadata, AssetIoError> {
+		let catalog = self.0.read();
+
+		match catalog.vfs.get(path) {
+			Some(fref) => {
+				if fref.is_dir() {
+					Ok(bevy::asset::Metadata::new(bevy::asset::FileType::Directory))
+				} else {
+					Ok(bevy::asset::Metadata::new(bevy::asset::FileType::File))
+				}
+			}
+			None => Err(AssetIoError::NotFound(path.to_path_buf())),
+		}
+	}
+
+	fn watch_path_for_changes(
+		&self,
+		_to_watch: &VPath,
+		_to_reload: Option<VPathBuf>,
+	) -> Result<(), AssetIoError> {
+		unimplemented!()
+	}
+
+	fn watch_for_changes(&self) -> Result<(), AssetIoError> {
+		unimplemented!()
 	}
 }
 
