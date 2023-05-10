@@ -24,6 +24,7 @@ features = [
 	"bevy_pbr",
 	"bevy_render",
 	"bevy_scene",
+	"bevy_sprite",
 	"bevy_winit",
 	"animation",
 	"filesystem_watcher",

@@ -13,6 +13,7 @@ pub mod console;
 pub mod data;
 pub mod devgui;
 pub mod frontend;
+pub mod gfx;
 pub mod input;
 pub mod log;
 pub mod math;

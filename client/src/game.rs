@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
 	data::asset::Level,
+	gfx::TerrainMaterial,
 	sim::{self, Sim},
 };
 
@@ -72,7 +73,7 @@ pub fn on_enter(
 	core: ResMut<ClientCore>,
 	cmds: Commands,
 	meshes: ResMut<Assets<Mesh>>,
-	materials: ResMut<Assets<StandardMaterial>>,
+	materials: ResMut<Assets<TerrainMaterial>>,
 	images: ResMut<Assets<Image>>,
 ) {
 	let catalog = core.catalog.read();

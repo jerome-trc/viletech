@@ -18,6 +18,7 @@ use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
 	data::asset::{self, BspNodeChild, SegDirection},
+	gfx::TerrainMaterial,
 	sim::level::VertIndex,
 	sim::{
 		level::{self, Side, SideIndex, Udmf, Vertex},
@@ -53,12 +54,11 @@ pub(crate) fn setup(
 
 	level.add_command(Insert {
 		entity: level.parent_entity(),
-		bundle: PbrBundle {
+		bundle: MaterialMeshBundle {
 			mesh: mesh.clone(),
-			material: ctx.materials.add(StandardMaterial {
-				base_color: Color::rgb(1.0, 1.0, 1.0),
-				..default()
-			}),
+			material: Handle::<TerrainMaterial>::weak(bevy::asset::HandleId::default::<
+				TerrainMaterial,
+			>()),
 			..default()
 		},
 	});
@@ -179,7 +179,6 @@ All code in this part of this file is adapted from Cristi Cobzarenco's rust-doom
 For licensing information, see the repository's ATTRIB.md file.
 
 TODO:
-- Adapt codebase to Bevy's Y-up coordinate system.
 - Faster vertex sort?
 - Faster triangulation (e.g. Earcut)?
 - Using SIMD to find node line intersections?
@@ -224,7 +223,7 @@ fn build_mesh(base: &asset::Handle<asset::Level>, verts: &SparseSet<VertIndex, V
 
 fn recur(
 	base: &asset::Handle<asset::Level>,
-	verts: &SparseSet<VertIndex, Vertex>,
+	lverts: &SparseSet<VertIndex, Vertex>,
 	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
 	node_idx: usize,
@@ -255,10 +254,13 @@ fn recur(
 
 	match node.child_l {
 		BspNodeChild::SubNode(subnode_idx) => {
-			recur(base, verts, mesh, bsp_lines, subnode_idx);
+			recur(base, lverts, mesh, bsp_lines, subnode_idx);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			add_poly(subsector_to_poly(base, verts, bsp_lines, subsect_idx), mesh);
+			add_poly(
+				subsector_to_poly(base, lverts, bsp_lines, subsect_idx),
+				mesh,
+			);
 		}
 	}
 
@@ -268,10 +270,13 @@ fn recur(
 
 	match node.child_r {
 		BspNodeChild::SubNode(subnode_idx) => {
-			recur(base, verts, mesh, bsp_lines, subnode_idx);
+			recur(base, lverts, mesh, bsp_lines, subnode_idx);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			add_poly(subsector_to_poly(base, verts, bsp_lines, subsect_idx), mesh);
+			add_poly(
+				subsector_to_poly(base, lverts, bsp_lines, subsect_idx),
+				mesh,
+			);
 		}
 	}
 
@@ -289,11 +294,11 @@ struct SSectorPoly {
 #[must_use]
 fn subsector_to_poly(
 	base: &asset::Handle<asset::Level>,
-	map_verts: &SparseSet<VertIndex, Vertex>,
+	lverts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,
 ) -> SSectorPoly {
-	let mut verts = SmallVec::<[Vec3; 4]>::new();
+	let mut mverts = SmallVec::<[Vec3; 4]>::new();
 	let mut indices = Vec::<usize>::new();
 
 	let subsect = &base.subsectors[subsect_idx];
@@ -312,11 +317,11 @@ fn subsector_to_poly(
 	for i in subsect.seg0..(subsect.seg0 + subsect.seg_count) {
 		let seg_i = &base.segs[i];
 
-		let v_start = &map_verts[VertIndex(seg_i.vert_start)];
-		let v_end = &map_verts[VertIndex(seg_i.vert_end)];
+		let v_start = &lverts[VertIndex(seg_i.vert_start)];
+		let v_end = &lverts[VertIndex(seg_i.vert_end)];
 
-		verts.push(glam::vec3(-v_start.z, sector.height_floor, -v_start.x));
-		verts.push(glam::vec3(-v_end.z, sector.height_floor, -v_end.x));
+		mverts.push(glam::vec3(-v_start.z, sector.height_floor, -v_start.x));
+		mverts.push(glam::vec3(-v_end.z, sector.height_floor, -v_end.x));
 
 		last_seg_vert += 2;
 	}
@@ -339,24 +344,24 @@ fn subsector_to_poly(
 				.step_by(2)
 				.map(|vi| {
 					Disp::new(
-						glam::vec2(verts[vi].x, verts[vi].z),
-						glam::vec2(verts[vi + 1].x, verts[vi + 1].z),
+						glam::vec2(mverts[vi].x, mverts[vi].z),
+						glam::vec2(mverts[vi + 1].x, mverts[vi + 1].z),
 					)
 					.signed_distance(point)
 				})
 				.all(|d| d <= SEG_TOLERANCE);
 
 			if inside_bsp && inside_segs {
-				verts.push(glam::vec3(point.x, sector.height_floor, point.y));
+				mverts.push(glam::vec3(point.x, sector.height_floor, point.y));
 			}
 		}
 	}
 
-	let mut verts = points_to_poly(verts);
+	let mut verts = points_to_poly(mverts);
 
 	let format = IndexedListFormat::new(&mut indices).into_fan_format();
 
-	// SAFETY: `NodeVert` is `repr(transparent)` over `glam::vec3`.
+	// SAFETY: `TmutVert` is `repr(transparent)` over `glam::vec3`.
 	unsafe {
 		let v = std::mem::transmute::<_, &SmallVec<[TmutVert; 8]>>(&verts);
 
