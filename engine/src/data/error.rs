@@ -364,7 +364,11 @@ impl std::fmt::Display for PrepError {
 				)
 			}
 			PrepErrorKind::MissingVzsDir => {
-				write!(f, "No directory found at path: {}", self.path.display())
+				write!(
+					f,
+					"VZScript root directory not found at path: {}",
+					self.path.display()
+				)
 			}
 			PrepErrorKind::PNames => {
 				write!(f, "Malformed PNAMES lump: {}", self.path.display())

@@ -240,7 +240,7 @@ impl Catalog {
 				Some(fref) => fref,
 				None => {
 					ctx.errors.lock().push(PrepError {
-						path: vzscript.root_dir.clone(),
+						path: ctx.mntinfo.virtual_path().join(&vzscript.root_dir),
 						kind: PrepErrorKind::MissingVzsDir,
 					});
 
