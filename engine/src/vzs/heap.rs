@@ -52,7 +52,7 @@ impl Ptr {
 		TypeInfo<T>: Symbol,
 	{
 		// SAFETY:
-		// - `TypeHandleUnion` always has identical representation to `Handle`.
+		// - `TypeHandleUnion` always has identical representation to `TypeHandle`.
 		// - The handle's type is asserted to be correct using the union discriminant.
 		// - Pointer aliasing rules are not violated since the handle in a region
 		// header never gets modified.
@@ -260,7 +260,7 @@ impl Runtime {
 
 		// TODO: Type information needed on the stack for root tracing.
 		// This depends on future reclamation schemes for concurrent collections.
-		// (e.g. assets, module symbols). Might be Hyaline, hazard pointers, epoch...
+		// (e.g. dobjs, module symbols). Might be Hyaline, hazard pointers, epoch...
 
 		self.heap.status = Status::Sweep;
 
@@ -534,7 +534,7 @@ impl std::fmt::Debug for RegionHeader {
 	}
 }
 
-/// Keep the type handle in a union separate from its discriminant; using a
+/// Keep the type pointer in a union separate from its discriminant; using a
 /// [`TypeHandle`] would cause [`RegionHeader`] to go up to 4 heap words.
 /// TODO: VZS' destructor/drop semantics so refcounts are properly decremented.
 union TypeHandleUnion {

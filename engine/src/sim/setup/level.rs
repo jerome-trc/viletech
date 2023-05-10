@@ -1,4 +1,4 @@
-//! Functions for assembling a level's compact asset representation into ECS form.
+//! Functions for assembling a level's compact datum representation into ECS form.
 
 use std::{
 	cmp::Ordering,
@@ -17,7 +17,7 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::asset::{self, BspNodeChild, SegDirection},
+	data::dobj::{self, BspNodeChild, SegDirection},
 	gfx::TerrainMaterial,
 	sim::level::VertIndex,
 	sim::{
@@ -30,7 +30,7 @@ use crate::{
 
 pub(crate) fn setup(
 	mut ctx: super::Context,
-	base: asset::Handle<asset::Level>,
+	base: dobj::Handle<dobj::Level>,
 	level: &mut ChildBuilder,
 ) {
 	let level = Mutex::new(level);
@@ -86,7 +86,7 @@ struct SimState {
 }
 
 #[must_use]
-fn spawn_children(base: &asset::Handle<asset::Level>, level: &mut ChildBuilder) -> SimState {
+fn spawn_children(base: &dobj::Handle<dobj::Level>, level: &mut ChildBuilder) -> SimState {
 	let mut lines = IndexMap::with_capacity(base.linedefs.len());
 	let mut sectors = IndexMap::with_capacity(base.sectors.len());
 	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
@@ -195,7 +195,7 @@ struct MeshParts {
 }
 
 #[must_use]
-fn build_mesh(base: &asset::Handle<asset::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
+fn build_mesh(base: &dobj::Handle<dobj::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
 	let mut parts = MeshParts {
 		verts: vec![],
 		indices: vec![],
@@ -222,7 +222,7 @@ fn build_mesh(base: &asset::Handle<asset::Level>, verts: &SparseSet<VertIndex, V
 }
 
 fn recur(
-	base: &asset::Handle<asset::Level>,
+	base: &dobj::Handle<dobj::Level>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
@@ -293,7 +293,7 @@ struct SSectorPoly {
 
 #[must_use]
 fn subsector_to_poly(
-	base: &asset::Handle<asset::Level>,
+	base: &dobj::Handle<dobj::Level>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,

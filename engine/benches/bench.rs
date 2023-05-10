@@ -20,7 +20,7 @@ fn misc(crit: &mut Criterion) {
 // - Catalog
 // 		- Load
 //		- Unload
-//		- Asset lookup
+//		- Datum lookup
 // - VZS
 // 		- Parse
 //		- Precompile

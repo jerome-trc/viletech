@@ -13,7 +13,7 @@ use bevy::{pbr::wireframe::Wireframe, prelude::*};
 use nanorand::WyRand;
 
 use crate::{
-	data::asset::{self, Asset},
+	data::dobj::{self, Datum},
 	rng::RngCore,
 };
 
@@ -93,7 +93,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, context: setup::Context, level: asset::Handle<asset::Level>) {
+pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<dobj::Level>) {
 	let start_time = Instant::now();
 
 	let l = level.clone();

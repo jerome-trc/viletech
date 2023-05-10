@@ -10,8 +10,8 @@ use image::{ImageBuffer, Rgba};
 
 use crate::{
 	data::{
-		asset::{AssetHeader, Image},
 		detail::Outcome,
+		dobj::{DatumHeader, Image},
 		prep::read_shortid,
 		vfs::FileRef,
 		Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError, PrepErrorKind,
@@ -128,7 +128,7 @@ impl Catalog {
 		}
 
 		Ok(Image {
-			header: AssetHeader {
+			header: DatumHeader {
 				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
 			},
 			inner: ret,
@@ -143,7 +143,7 @@ impl Catalog {
 		let palettes = self.last_paletteset().unwrap();
 
 		Image::try_from_picture(bytes, &palettes.0[0]).map(|(ibuf, offs)| Image {
-			header: AssetHeader {
+			header: DatumHeader {
 				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
 			},
 			inner: ibuf,

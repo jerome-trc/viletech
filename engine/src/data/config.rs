@@ -27,7 +27,7 @@ impl Default for Config {
 pub struct ConfigGet<'cat>(pub(super) &'cat Catalog);
 
 impl ConfigGet<'_> {
-	/// The limit on the size of a virtual binary file. Irrelevant to asset management.
+	/// The limit on the size of a virtual binary file. Irrelevant to datum management.
 	/// A mount can be any size the physical filesystem can handle, but any children
 	/// over this size are rejected with a logged warning.
 	///
@@ -37,7 +37,7 @@ impl ConfigGet<'_> {
 		self.0.config.bin_size_limit
 	}
 
-	/// The limit on the size of a virtual text file. Irrelevant to asset management.
+	/// The limit on the size of a virtual text file. Irrelevant to datum management.
 	/// A mount can be any size the physical filesystem can handle, but any children
 	/// over this size are rejected with a logged warning.
 	///
@@ -55,7 +55,7 @@ impl ConfigGet<'_> {
 pub struct ConfigSet<'cat>(pub(super) &'cat mut Catalog);
 
 impl ConfigSet<'_> {
-	/// The limit on the size of a virtual binary file. Irrelevant to asset management.
+	/// The limit on the size of a virtual binary file. Irrelevant to datum management.
 	/// A mount can be any size the physical filesystem can handle, but any children
 	/// over this size are rejected with a logged warning.
 	///
@@ -66,7 +66,7 @@ impl ConfigSet<'_> {
 		self
 	}
 
-	/// The limit on the size of a virtual text file. Irrelevant to asset management.
+	/// The limit on the size of a virtual text file. Irrelevant to datum management.
 	/// A mount can be any size the physical filesystem can handle, but any children
 	/// over this size are rejected with a logged warning.
 	///

@@ -5,11 +5,11 @@ use kira::sound::static_sound::StaticSoundData;
 
 use crate::audio::MidiData;
 
-use super::AssetHeader;
+use super::DatumHeader;
 
 #[derive(Debug)]
 pub struct Audio {
-	pub header: AssetHeader,
+	pub header: DatumHeader,
 	pub data: AudioData,
 }
 

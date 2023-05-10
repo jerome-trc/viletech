@@ -1,4 +1,6 @@
-//! "Extras" are items of game data that are not assets but asset-adjacent.
+//! "Extras" are items of game data that are not [`Datum`] but datum-adjacent.
+//!
+//! [`Datum`]: super::Datum
 
 use image::Rgba;
 

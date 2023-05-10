@@ -1,4 +1,4 @@
-//! Functions for reading assets from WADs.
+//! Functions for reading data objects from WADs.
 
 use std::{io::Cursor, ops::Range};
 
@@ -6,8 +6,8 @@ use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
 use crate::data::{
-	asset::{AssetHeader, Audio, AudioData},
 	detail::Outcome,
+	dobj::{Audio, AudioData, DatumHeader},
 	vfs::FileRef,
 	Catalog, PrepError, PrepErrorKind,
 };
@@ -101,8 +101,8 @@ impl Catalog {
 
 				match StaticSoundData::from_cursor(cursor, StaticSoundSettings::default()) {
 					Ok(statsnd) => {
-						ctx.add_asset(Audio {
-							header: AssetHeader {
+						ctx.add_datum(Audio {
+							header: DatumHeader {
 								id: format!(
 									"{mount_id}/{id}",
 									mount_id = ctx.mntinfo.id(),
@@ -261,7 +261,7 @@ impl Catalog {
 
 		if markers.is_flat(child_index) {
 			match self.prep_flat(ctx, vfile, fpfx, bytes) {
-				Ok(image) => ctx.add_asset(image),
+				Ok(image) => ctx.add_datum(image),
 				Err(err) => ctx.errors.lock().push(*err),
 			}
 
@@ -270,7 +270,7 @@ impl Catalog {
 
 		if markers.is_sprite(child_index) {
 			match self.prep_picture(ctx, fpfx, bytes) {
-				Some(image) => ctx.add_asset(image),
+				Some(image) => ctx.add_datum(image),
 				None => {
 					ctx.errors.lock().push(PrepError {
 						path: vfile.path().to_path_buf(),
@@ -301,7 +301,7 @@ impl Catalog {
 		}
 
 		if let Some(image) = self.prep_picture(ctx, fpfx, bytes) {
-			ctx.add_asset(image);
+			ctx.add_datum(image);
 		}
 
 		// Else this file has an unknown purpose.

@@ -1,4 +1,4 @@
-//! "Asset" is the catch-all term for any data unit the catalog can store.
+//! "Data objects". Things like levels, actor blueprints, and sounds.
 
 mod actor;
 mod audio;
@@ -13,58 +13,59 @@ use std::{
 pub use self::{actor::*, audio::*, level::*, visual::*};
 
 /// A storage implementation detail, exposed only so library users can
-/// access common asset metadata.
+/// access common datum metadata.
 #[derive(Debug)]
-pub struct AssetHeader {
+pub struct DatumHeader {
 	pub id: String,
 }
 
-impl AssetHeader {
+impl DatumHeader {
 	#[must_use]
 	pub fn nickname(&self) -> &str {
 		self.id.split('/').last().unwrap()
 	}
 }
 
-pub trait Asset: private::Sealed {
+pub trait Datum: private::Sealed {
 	#[must_use]
-	fn header(&self) -> &AssetHeader;
+	fn header(&self) -> &DatumHeader;
 	#[must_use]
-	fn header_mut(&mut self) -> &mut AssetHeader;
+	fn header_mut(&mut self) -> &mut DatumHeader;
 	#[must_use]
 	fn type_name(&self) -> &'static str;
 }
 
-// Handle //////////////////////////////////////////////////////////////////////
+// Handle and InHandle /////////////////////////////////////////////////////////
 
-/// Thin wrapper around an [`Arc`] pointing to an [`Asset`]. Attaching a generic
-/// type allows the pointer to be pre-downcast, so dereferencing is as fast as
-/// with any other pointer with no unsafe code required.
+/// Thin wrapper around an [`Arc`] pointing to a [`Datum`].
+///
+/// Attaching a generic type allows the pointer to be pre-downcast, so
+/// dereferencing is as fast as with any other pointer with no unsafe code required.
 #[derive(Debug)]
-pub struct Handle<A: Asset>(Arc<A>, PhantomData<A>);
+pub struct Handle<D: Datum>(Arc<D>, PhantomData<D>);
 
-impl<A: Asset> Handle<A> {
-	/// For use in inter-asset relationships.
+impl<D: Datum> Handle<D> {
+	/// For use in inter-datum relationships.
 	#[must_use]
-	pub fn downgrade(&self) -> InHandle<A> {
+	pub fn downgrade(&self) -> InHandle<D> {
 		InHandle(Arc::downgrade(&self.0), PhantomData)
 	}
 }
 
-impl<A: Asset> From<Arc<A>> for Handle<A> {
-	fn from(value: Arc<A>) -> Self {
+impl<D: Datum> From<Arc<D>> for Handle<D> {
+	fn from(value: Arc<D>) -> Self {
 		Self(value, PhantomData)
 	}
 }
 
-impl<A: Asset> From<&Arc<A>> for Handle<A> {
-	fn from(value: &Arc<A>) -> Self {
+impl<D: Datum> From<&Arc<D>> for Handle<D> {
+	fn from(value: &Arc<D>) -> Self {
 		Self(value.clone(), PhantomData)
 	}
 }
 
-impl<A: Asset> std::ops::Deref for Handle<A> {
-	type Target = A;
+impl<D: Datum> std::ops::Deref for Handle<D> {
+	type Target = D;
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
@@ -72,57 +73,59 @@ impl<A: Asset> std::ops::Deref for Handle<A> {
 	}
 }
 
-impl<A: Asset> Clone for Handle<A> {
+impl<D: Datum> Clone for Handle<D> {
 	fn clone(&self) -> Self {
 		Self(self.0.clone(), PhantomData)
 	}
 }
 
-impl<A: Asset> PartialEq for Handle<A> {
-	/// Check that these are two handles to the same [`Asset`].
+impl<D: Datum> PartialEq for Handle<D> {
+	/// Check that these are two pointers to the same [`Datum`].
 	fn eq(&self, other: &Self) -> bool {
 		Arc::ptr_eq(&self.0, &other.0)
 	}
 }
 
-impl<A: Asset> Eq for Handle<A> {}
+impl<D: Datum> Eq for Handle<D> {}
 
-/// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-asset
-/// relationships (without preventing in-place removal) in a way that can't leak.
+/// "Internal datum atomically reference counted".
+///
+/// Like [`Rcd`] but [`Weak`], allowing inter-datum relationships (without
+/// preventing in-place removal) in a way that can't leak.
 #[derive(Debug)]
-pub struct InHandle<A: Asset>(Weak<A>, PhantomData<A>);
+pub struct InHandle<D: Datum>(Weak<D>, PhantomData<D>);
 
-impl<A: Asset> InHandle<A> {
+impl<D: Datum> InHandle<D> {
 	#[must_use]
-	pub fn upgrade(&self) -> Option<Handle<A>> {
+	pub fn upgrade(&self) -> Option<Handle<D>> {
 		self.0.upgrade().map(Handle::from)
 	}
 }
 
-impl<A: Asset> Clone for InHandle<A> {
+impl<D: Datum> Clone for InHandle<D> {
 	fn clone(&self) -> Self {
 		Self(self.0.clone(), PhantomData)
 	}
 }
 
-impl<A: Asset> PartialEq for InHandle<A> {
-	/// Check that these are two handles to the same [`Asset`].
+impl<D: Datum> PartialEq for InHandle<D> {
+	/// Check that these are two pointers to the same [`Datum`].
 	fn eq(&self, other: &Self) -> bool {
 		Weak::ptr_eq(&self.0, &other.0)
 	}
 }
 
-impl<A: Asset> Eq for InHandle<A> {}
+impl<D: Datum> Eq for InHandle<D> {}
 
-macro_rules! impl_asset {
+macro_rules! impl_datum {
 	($($t:ty, $tname:literal);+) => {
 		$(
-			impl Asset for $t {
-				fn header(&self) -> &AssetHeader {
+			impl Datum for $t {
+				fn header(&self) -> &DatumHeader {
 					&self.header
 				}
 
-				fn header_mut(&mut self) -> &mut AssetHeader {
+				fn header_mut(&mut self) -> &mut DatumHeader {
 					&mut self.header
 				}
 
@@ -134,7 +137,7 @@ macro_rules! impl_asset {
 	};
 }
 
-impl_asset! {
+impl_datum! {
 	Audio, "Audio";
 	Blueprint, "Blueprint";
 	DamageType, "Damage Type";
@@ -152,7 +155,7 @@ mod private {
 	use super::*;
 
 	pub trait Sealed: 'static + Any + Send + Sync + std::fmt::Debug {
-		/// Boilerplate allowing upcasting from [`super::Asset`] to [`Any`].
+		/// Boilerplate allowing upcasting from [`super::Datum`] to [`Any`].
 		#[must_use]
 		fn as_any(&self) -> &dyn Any;
 	}

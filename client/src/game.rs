@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
-	data::asset::Level,
+	data::dobj::Level,
 	gfx::TerrainMaterial,
 	sim::{self, Sim},
 };
@@ -77,7 +77,7 @@ pub fn on_enter(
 	images: ResMut<Assets<Image>>,
 ) {
 	let catalog = core.catalog.read();
-	let level = catalog.get_asset_handle::<Level>("DOOM/E1M1").unwrap();
+	let level = catalog.get_ptr::<Level>("DOOM/E1M1").unwrap();
 
 	sim::start(
 		cmds,

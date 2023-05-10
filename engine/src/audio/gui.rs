@@ -124,7 +124,7 @@ impl AudioCore {
 				ui.text_edit_singleline(&mut self.gui.soundfont_buf);
 			});
 
-			ui.label("(VFS Path/Asset ID)");
+			ui.label("(VFS Path/Data ID)");
 
 			ui.horizontal(|ui| {
 				ui.text_edit_singleline(&mut self.gui.id_buf);
@@ -258,7 +258,7 @@ impl AudioCore {
 /// State storage for the audio developer GUI.
 #[derive(Debug)]
 pub(super) struct DeveloperGui {
-	/// Let the user write a VFS path or asset ID.
+	/// Let the user write a VFS path or data object ID.
 	pub(super) id_buf: String,
 	/// For allowing the user to enter a custom SoundFont path.
 	///

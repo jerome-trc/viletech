@@ -1,4 +1,4 @@
-//! Things that can go wrong during VFS and asset management operations.
+//! Things that can go wrong during VFS and data management operations.
 
 use std::path::PathBuf;
 
@@ -51,21 +51,21 @@ impl std::fmt::Display for VfsError {
 	}
 }
 
-/// Things that can go wrong during (non-preparation) asset management operations,
+/// Things that can go wrong during (non-preparation) datum management operations,
 /// like lookup and mutation. Also see [`PrepError`].
 #[derive(Debug)]
-pub enum AssetError {
-	/// An asset ID didn't resolve to anything.
+pub enum DatumError {
+	/// A data object ID didn't resolve to anything.
 	NotFound(String),
 }
 
-impl std::error::Error for AssetError {}
+impl std::error::Error for DatumError {}
 
-impl std::fmt::Display for AssetError {
+impl std::fmt::Display for DatumError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::NotFound(id) => {
-				write!(f, "No asset exists by the ID: {id}")
+				write!(f, "No data object exists by the ID: {id}")
 			}
 		}
 	}
@@ -276,7 +276,7 @@ impl PrepError {
 	}
 }
 
-/// Game loading is a two-step process; asset preparation is the second step.
+/// Game loading is a two-step process; data preparation is the second step.
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
 pub enum PrepErrorKind {
@@ -398,9 +398,9 @@ impl std::fmt::Display for PrepError {
 	}
 }
 
-/// Things that can go wrong when trying to process files into a [Level] asset.
+/// Things that can go wrong when trying to process files into a [Level] datum.
 ///
-/// [Level]: super::asset::Level
+/// [Level]: super::obj::Level
 #[derive(Debug)]
 pub enum LevelError {
 	/// For example, a file's byte length is not divisible

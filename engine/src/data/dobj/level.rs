@@ -12,7 +12,7 @@ use crate::{
 	EditorNum, ShortId,
 };
 
-use super::{AssetHeader, Audio, Blueprint, Image, InHandle};
+use super::{Audio, Blueprint, DatumHeader, Image, InHandle};
 
 /// See <https://doomwiki.org/wiki/Node>.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -144,7 +144,7 @@ bitflags! {
 /// Adapted one-to-one from GZ. See <https://zdoom.org/wiki/LOCKDEFS>.
 #[derive(Debug)]
 pub struct LockDef {
-	pub header: AssetHeader,
+	pub header: DatumHeader,
 	pub reqs: Vec<KeyReq>,
 	/// Printed when trying to open a door without having the required keys.
 	pub interact_msg: Arc<str>,
@@ -166,7 +166,7 @@ pub enum KeyReq {
 /// Alternatively a "map".
 #[derive(Debug)]
 pub struct Level {
-	pub header: AssetHeader,
+	pub header: DatumHeader,
 	pub meta: LevelMeta,
 	pub format: LevelFormat,
 	pub linedefs: Vec<LineDef>,
@@ -182,10 +182,10 @@ pub struct Level {
 /// Comes from a map entry in a MAPINFO lump.
 #[derive(Debug)]
 pub struct LevelMeta {
-	/// e.g. "Entryway". Displayed to the user. May be a string ID. The asset ID
+	/// e.g. "Entryway". Displayed to the user. May be a string ID. The datum ID
 	/// will be, for example, "DOOM2/MAP01" and gets stored in the [header].
 	///
-	/// [header]: AssetHeader
+	/// [header]: DatumHeader
 	pub name: Arc<str>,
 	/// May be a string ID.
 	pub author_name: Arc<str>,

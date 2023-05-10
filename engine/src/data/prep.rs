@@ -1,6 +1,6 @@
-//! Internal asset preparation functions.
+//! Internal data preparation functions.
 //!
-//! After mounting is done, start composing useful assets from raw files.
+//! After mounting is done, start composing useful objects from raw files.
 
 mod level;
 mod udmf;
@@ -19,14 +19,14 @@ use crate::{vzs, ShortId, VPathBuf};
 use self::vanilla::{PatchTable, TextureX};
 
 use super::{
-	detail::{AssetKey, Outcome},
-	Asset, Catalog, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
+	detail::{DatumKey, Outcome},
+	Catalog, Datum, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
 };
 
 #[derive(Debug)]
 pub(super) struct Context {
 	pub(super) tracker: Arc<LoadTracker>,
-	/// Returning errors through the asset prep call tree is somewhat
+	/// Returning errors through the prep call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	pub(super) errors: Vec<Mutex<Vec<PrepError>>>,
 }
@@ -71,7 +71,7 @@ pub(self) struct SubContext<'ctx> {
 
 #[derive(Debug, Default)]
 pub(self) struct Artifacts {
-	pub(self) assets: Vec<StagedAsset>,
+	pub(self) objs: Vec<StagedDatum>,
 	pub(self) extras: WadExtras,
 	pub(self) pnames: Option<PatchTable>,
 	pub(self) texture1: Option<TextureX>,
@@ -79,22 +79,22 @@ pub(self) struct Artifacts {
 }
 
 #[derive(Debug)]
-pub(self) struct StagedAsset {
-	key_full: AssetKey,
-	key_nick: AssetKey,
-	asset: Arc<dyn Asset>,
+pub(self) struct StagedDatum {
+	key_full: DatumKey,
+	key_nick: DatumKey,
+	datum: Arc<dyn Datum>,
 }
 
 impl SubContext<'_> {
-	pub(self) fn add_asset<A: Asset>(&self, asset: A) {
-		let nickname = asset.header().nickname();
-		let key_full = AssetKey::new::<A>(&asset.header().id);
-		let key_nick = AssetKey::new::<A>(nickname);
+	pub(self) fn add_datum<D: Datum>(&self, datum: D) {
+		let nickname = datum.header().nickname();
+		let key_full = DatumKey::new::<D>(&datum.header().id);
+		let key_nick = DatumKey::new::<D>(nickname);
 
-		self.artifacts.lock().assets.push(StagedAsset {
+		self.artifacts.lock().objs.push(StagedDatum {
 			key_full,
 			key_nick,
-			asset: Arc::new(asset),
+			datum: Arc::new(datum),
 		});
 	}
 }
@@ -110,14 +110,14 @@ impl Catalog {
 	/// Preconditions:
 	/// - `self.files` has been populated. All directories know their contents.
 	/// - `self.mounts` has been populated.
-	/// - Load tracker has already had its asset prep target number set.
+	/// - Load tracker has already had its prep target number set.
 	/// - `ctx.errors` has been populated.
 	pub(super) fn prep(&mut self, ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
 		let to_reserve = ctx.tracker.prep_target();
 		debug_assert!(!ctx.errors.is_empty());
 		debug_assert!(to_reserve > 0);
 
-		if let Err(err) = self.assets.try_reserve(to_reserve) {
+		if let Err(err) = self.objs.try_reserve(to_reserve) {
 			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
 		}
 
@@ -317,26 +317,26 @@ impl Catalog {
 	fn register_artifacts(&mut self, staging: &[Mutex<Artifacts>]) {
 		for (i, mutex) in staging.iter().enumerate() {
 			let mut artifacts = mutex.lock();
-			let slotmap = &mut self.mounts[i].assets;
-			slotmap.reserve(artifacts.assets.len());
+			let slotmap = &mut self.mounts[i].objs;
+			slotmap.reserve(artifacts.objs.len());
 
-			artifacts.assets.drain(..).for_each(
-				|StagedAsset {
+			artifacts.objs.drain(..).for_each(
+				|StagedDatum {
 				     key_full,
 				     key_nick,
-				     asset,
+				     datum,
 				 }| {
-					let lookup = self.assets.entry(key_full);
+					let lookup = self.objs.entry(key_full);
 
 					if matches!(lookup, dashmap::mapref::entry::Entry::Occupied(_)) {
 						info!(
 							"Overwriting asset: {} type ({})",
-							asset.header().id,
-							asset.type_name()
+							datum.header().id,
+							datum.type_name()
 						);
 					}
 
-					let slotkey = slotmap.insert(asset);
+					let slotkey = slotmap.insert(datum);
 
 					if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
 						kvp.value_mut().push((i, slotkey));

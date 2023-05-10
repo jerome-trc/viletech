@@ -1,8 +1,8 @@
 //! Management of files, audio, graphics, levels, text, localization, and so on.
 
-pub mod asset;
 mod config;
 mod detail;
+pub mod dobj;
 mod error;
 mod extras;
 mod mount;
@@ -34,14 +34,14 @@ use smallvec::SmallVec;
 use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
-	asset::{Asset, Blueprint, Handle},
-	detail::{AssetKey, AssetSlotKey, DeveloperGui},
+	detail::{DatumKey, DatumSlotKey, DeveloperGui},
+	dobj::{Blueprint, Datum, Handle},
 	vfs::{FileRef, VirtualFs},
 };
 
 pub use self::{config::*, error::*, extras::*};
 
-/// The data catalog is the heart of file and asset management in VileTech.
+/// The data catalog is the heart of file and game data management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)
 /// tree that makes it easy for all other parts of the engine to access any given
 /// unit of data, without exposing any details of the user's real underlying machine.
@@ -51,8 +51,8 @@ pub use self::{config::*, error::*, extras::*};
 /// forms (e.g. decoding sounds and images) if their format can be easily identified.
 /// Otherwise, they're left as-is.
 ///
-/// Any given unit of data or [`Asset`] is stored behind an [`Arc`], allowing
-/// other parts of the engine to take out high-speed [`Handle`]s to something and
+/// Any given unit of data or [`Datum`] is stored behind an [`Arc`], allowing
+/// other parts of the engine to take out high-speed [pointers] to something and
 /// safely access it without passing through locks or casts.
 ///
 /// The catalog works in phases; files considered "engine basedata" are always in
@@ -63,6 +63,8 @@ pub use self::{config::*, error::*, extras::*};
 /// an archive. If `mymod.zip` contains `myothermod.vpk7`, there's no way to
 /// register `myothermod` as a mount in the official sense. It's just a part of
 /// `mymod`'s file tree.
+///
+/// [pointers]: obj::Rcd
 #[derive(Debug)]
 pub struct Catalog {
 	pub(self) config: Config,
@@ -75,18 +77,18 @@ pub struct Catalog {
 	pub(self) mounts: Vec<Mount>,
 	/// In each value:
 	/// - Field `0` is an index into `Self::mounts`.
-	/// - Field `1` is a key into [`Mount::assets`].
-	pub(self) assets: DashMap<AssetKey, (usize, AssetSlotKey)>,
-	/// Asset lookup table without namespacing. Thus, requesting `MAP01` returns
+	/// - Field `1` is a key into [`Mount::objs`].
+	pub(self) objs: DashMap<DatumKey, (usize, DatumSlotKey)>,
+	/// Datum lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries.
-	pub(self) nicknames: DashMap<AssetKey, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	pub(self) nicknames: DashMap<DatumKey, SmallVec<[(usize, DatumSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	/// Keyed assets are always of type [`Blueprint`].
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	/// Keyed objects are always of type [`Blueprint`].
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, DatumSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
-	/// Keyed assets are always of type [`Blueprint`].
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, AssetSlotKey); 2]>>,
+	/// Keyed objects are always of type [`Blueprint`].
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, DatumSlotKey); 2]>>,
 	pub(self) gui: DeveloperGui,
 	pub(self) populated: bool,
 	// Q: FNV/aHash for maps using small key types?
@@ -104,7 +106,7 @@ impl Catalog {
 			vzscript: vzs::Project::default(),
 			vfs: VirtualFs::default(),
 			mounts: vec![],
-			assets: DashMap::default(),
+			objs: DashMap::default(),
 			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),
 			spawn_nums: DashMap::default(),
@@ -146,7 +148,7 @@ impl Catalog {
 	}
 
 	/// This is an end-to-end function that reads physical files, fills out the
-	/// VFS, and then processes the files to decompose them into assets.
+	/// VFS, and then processes the files to decompose them into data objects.
 	/// Much of the important things to know are in the documentation for
 	/// [`LoadRequest`]. The range of possible errors is documented by
 	/// [`MountError`] and [`PrepError`].
@@ -155,7 +157,7 @@ impl Catalog {
 	/// - The order of pre-existing VFS entries and mounts is unchanged upon success.
 	/// - This function is partially atomic. If mounting fails, the catalog's
 	/// state is left entirely unchanged from before calling this.
-	/// If asset preparation fails, the VFS state is not restored to before the
+	/// If datum preparation fails, the VFS state is not restored to before the
 	/// call as a form of memoization, allowing future prep attempts to skip most
 	/// mounting work (to allow faster mod development cycles).
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
@@ -213,7 +215,7 @@ impl Catalog {
 
 		self.mounts.clear();
 		self.vzscript.clear();
-		self.assets.clear();
+		self.objs.clear();
 		self.nicknames.clear();
 		self.editor_nums.clear();
 		self.spawn_nums.clear();
@@ -221,33 +223,33 @@ impl Catalog {
 		self.populated = false;
 	}
 
-	/// Note that `A` here is a filter on the type that comes out of the lookup,
-	/// rather than an assertion that the asset under `id` is that type, so this
+	/// Note that `D` here is a filter on the type that comes out of the lookup,
+	/// rather than an assertion that the datum under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset<A: Asset>(&self, id: &str) -> Option<&A> {
-		let key = AssetKey::new::<A>(id);
+	pub fn get<D: Datum>(&self, id: &str) -> Option<&D> {
+		let key = DatumKey::new::<D>(id);
 
-		if let Some(kvp) = self.assets.get(&key) {
-			self.mounts[kvp.0].assets[kvp.1].as_any().downcast_ref()
+		if let Some(kvp) = self.objs.get(&key) {
+			self.mounts[kvp.0].objs[kvp.1].as_any().downcast_ref()
 		} else {
 			None
 		}
 	}
 
 	/// Note that `A` here is a filter on the type that comes out of the lookup,
-	/// rather than an assertion that the asset under `id` is that type, so this
+	/// rather than an assertion that the datum under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get_asset_handle<A: Asset>(&self, id: &str) -> Option<Handle<A>> {
-		let key = AssetKey::new::<A>(id);
+	pub fn get_ptr<D: Datum>(&self, id: &str) -> Option<Handle<D>> {
+		let key = DatumKey::new::<D>(id);
 
-		if let Some(kvp) = self.assets.get(&key) {
-			// SAFETY: `Asset` meets all destination constraints.
+		if let Some(kvp) = self.objs.get(&key) {
+			// SAFETY: `Datum` meets all destination constraints.
 			unsafe {
-				let arc = self.mounts[kvp.0].assets[kvp.1].clone();
+				let arc = self.mounts[kvp.0].objs[kvp.1].clone();
 				let ret: Arc<dyn 'static + Send + Sync + Any> = std::mem::transmute::<_, _>(arc);
-				ret.downcast::<A>().ok().map(Handle::from)
+				ret.downcast::<D>().ok().map(Handle::from)
 			}
 		} else {
 			None
@@ -267,8 +269,8 @@ impl Catalog {
 			.last()
 			.expect("Catalog cleanup missed an empty ed-num stack.");
 
-		let asset = &self.mounts[*msk].assets[*ask];
-		Some(asset.as_any().downcast_ref::<Blueprint>().unwrap())
+		let datum = &self.mounts[*msk].objs[*ask];
+		Some(datum.as_any().downcast_ref::<Blueprint>().unwrap())
 	}
 
 	/// Find an [actor] [`Blueprint`] by a 16-bit spawn number.
@@ -284,13 +286,13 @@ impl Catalog {
 			.last()
 			.expect("Catalog cleanup missed an empty spawn-num stack.");
 
-		let asset = &self.mounts[*msk].assets[*ask];
-		Some(asset.as_any().downcast_ref::<Blueprint>().unwrap())
+		let datum = &self.mounts[*msk].objs[*ask];
+		Some(datum.as_any().downcast_ref::<Blueprint>().unwrap())
 	}
 
 	#[must_use]
-	pub fn last_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&A> {
-		let key = AssetKey::new::<A>(nick);
+	pub fn last_by_nick<D: Datum>(&self, nick: &str) -> Option<&D> {
+		let key = DatumKey::new::<D>(nick);
 		let Some(kvp) = self.nicknames.get(&key) else { return None; };
 		let stack = kvp.value();
 
@@ -298,13 +300,13 @@ impl Catalog {
 			.last()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		let asset = &self.mounts[*msk].assets[*ask];
-		Some(asset.as_any().downcast_ref::<A>().unwrap())
+		let datum = &self.mounts[*msk].objs[*ask];
+		Some(datum.as_any().downcast_ref::<D>().unwrap())
 	}
 
 	#[must_use]
-	pub fn first_asset_by_nick<A: Asset>(&self, nick: &str) -> Option<&A> {
-		let key = AssetKey::new::<A>(nick);
+	pub fn first_by_nick<D: Datum>(&self, nick: &str) -> Option<&D> {
+		let key = DatumKey::new::<D>(nick);
 		let Some(kvp) = self.nicknames.get(&key) else { return None; };
 		let stack = kvp.value();
 
@@ -312,8 +314,8 @@ impl Catalog {
 			.first()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		let asset = &self.mounts[*msk].assets[*ask];
-		Some(asset.as_any().downcast_ref::<A>().unwrap())
+		let datum = &self.mounts[*msk].objs[*ask];
+		Some(datum.as_any().downcast_ref::<D>().unwrap())
 	}
 
 	#[must_use]
@@ -381,7 +383,7 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub struct Mount {
-	pub(self) assets: SlotMap<AssetSlotKey, Arc<dyn 'static + Asset>>,
+	pub(self) objs: SlotMap<DatumSlotKey, Arc<dyn 'static + Datum>>,
 	pub(self) info: MountInfo,
 	pub(self) extras: WadExtras,
 }
@@ -485,7 +487,7 @@ impl MountInfo {
 	}
 }
 
-/// Informs the rules used for preparing assets from a mount.
+/// Informs the rules used for preparing data from a mount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MountKind {
 	/// If the mount's own root has an immediate child text file named `meta.toml`
@@ -603,7 +605,7 @@ pub enum LoadOutcome {
 		errors: Vec<Vec<MountError>>,
 	},
 	/// Mounting succeeeded, but one or more fatal errors
-	/// prevented successful asset preparation.
+	/// prevented successful data preparation.
 	PrepFail {
 		/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
 		errors: Vec<Vec<PrepError>>,
@@ -696,7 +698,7 @@ pub struct LoadTracker {
 	/// The number of VFS mounts requested by the user.
 	mount_target: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase which have
-	/// been processed into prepared assets thus far.
+	/// been processed into prepared data thus far.
 	prep_progress: AtomicUsize,
 	/// The number of files added to the VFS during the mount phase.
 	prep_target: AtomicUsize,

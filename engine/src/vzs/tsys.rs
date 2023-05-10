@@ -157,8 +157,8 @@ impl Symbol for TypeInfo<Array> {
 	}
 
 	fn key(&self) -> SymbolKey {
-		let handle = self.inner.elem_type.upgrade();
-		let input = (self.len(), handle.header().name.as_ref());
+		let thandle = self.inner.elem_type.upgrade();
+		let input = (self.len(), thandle.header().name.as_ref());
 		let i = input.borrow();
 		SymbolKey::new::<Self>(i)
 	}

@@ -47,13 +47,13 @@ pub struct AudioCore {
 	pub manager: AudioManager,
 	pub soundfonts: Vec<SoundFont>,
 	/// General-purpose music slot.
-	pub music1: Option<Handle>,
+	pub music1: Option<Sound>,
 	/// Secondary music slot. Allows scripts to set a song to pause the level's
 	/// main song, briefly play another piece, and then carry on with `music1`
 	/// wherever it left off.
-	pub music2: Option<Handle>,
+	pub music2: Option<Sound>,
 	/// Sounds currently being played.
-	pub sounds: Vec<Sound>,
+	pub sounds: Vec<WorldSound>,
 	catalog: Arc<RwLock<Catalog>>,
 	gui: DeveloperGui,
 }
@@ -134,9 +134,9 @@ impl AudioCore {
 		let handle = self.manager.play(data).map_err(Error::PlayWave)?;
 
 		if !SLOT2 {
-			self.music1 = Some(Handle::Wave(handle));
+			self.music1 = Some(Sound::Wave(handle));
 		} else {
-			self.music2 = Some(Handle::Wave(handle));
+			self.music2 = Some(Sound::Wave(handle));
 		}
 
 		Ok(())
@@ -150,9 +150,9 @@ impl AudioCore {
 		self.stop_music::<SLOT2>()?;
 
 		if !SLOT2 {
-			self.music1 = Some(Handle::Midi(handle));
+			self.music1 = Some(Sound::Midi(handle));
 		} else {
-			self.music2 = Some(Handle::Midi(handle));
+			self.music2 = Some(Sound::Midi(handle));
 		}
 
 		Ok(())
@@ -183,8 +183,8 @@ impl AudioCore {
 		data: StaticSoundData,
 		source: Option<Actor>,
 	) -> Result<(), Error> {
-		self.sounds.push(Sound {
-			handle: Handle::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
+		self.sounds.push(WorldSound {
+			sound: Sound::Wave(self.manager.play(data).map_err(Error::PlayWave)?),
 			_source: source,
 		});
 
@@ -194,8 +194,8 @@ impl AudioCore {
 	/// If no `source` is given, the sound will always audible to all clients
 	/// and not be subjected to any panning or attenuation.
 	pub fn start_sound_midi(&mut self, data: MidiData, source: Option<Actor>) -> Result<(), Error> {
-		self.sounds.push(Sound {
-			handle: Handle::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
+		self.sounds.push(WorldSound {
+			sound: Sound::Midi(self.manager.play(data).map_err(Error::PlayMidi)?),
 			_source: source,
 		});
 
@@ -208,8 +208,8 @@ impl AudioCore {
 	}
 
 	pub fn pause_all_sounds(&mut self) {
-		for (i, handle) in self.sounds.iter_mut().enumerate() {
-			if let Err(err) = handle.pause(Tween::default()) {
+		for (i, sound) in self.sounds.iter_mut().enumerate() {
+			if let Err(err) = sound.pause(Tween::default()) {
 				error!("Failed to pause sound {i}: {err}");
 			}
 		}
@@ -235,8 +235,8 @@ impl AudioCore {
 	}
 
 	pub fn resume_all_sounds(&mut self) {
-		for (i, handle) in self.sounds.iter_mut().enumerate() {
-			if let Err(err) = handle.resume(Tween::default()) {
+		for (i, sound) in self.sounds.iter_mut().enumerate() {
+			if let Err(err) = sound.resume(Tween::default()) {
 				error!("Failed to resume sound {i}: {err}");
 			}
 		}
@@ -457,12 +457,12 @@ pub type AudioCoreAL = Arc<RwLock<AudioCore>>;
 
 /// Enables inspection and control of a currently-playing sound or musical track,
 /// whether it's waveform or MIDI.
-pub enum Handle {
+pub enum Sound {
 	Wave(StaticSoundHandle),
 	Midi(MidiHandle),
 }
 
-impl Handle {
+impl Sound {
 	#[must_use]
 	pub fn state(&self) -> PlaybackState {
 		match self {
@@ -473,35 +473,35 @@ impl Handle {
 
 	pub fn pause(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.pause(tween).map_err(Error::from),
-			Handle::Midi(midi) => midi.pause(tween),
+			Sound::Wave(wave) => wave.pause(tween).map_err(Error::from),
+			Sound::Midi(midi) => midi.pause(tween),
 		}
 	}
 
 	pub fn resume(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.resume(tween).map_err(Error::from),
-			Handle::Midi(midi) => midi.resume(tween),
+			Sound::Wave(wave) => wave.resume(tween).map_err(Error::from),
+			Sound::Midi(midi) => midi.resume(tween),
 		}
 	}
 
 	pub fn stop(&mut self, tween: Tween) -> Result<(), Error> {
 		match self {
-			Handle::Wave(wave) => wave.stop(tween).map_err(Error::from),
-			Handle::Midi(midi) => midi.stop(tween),
+			Sound::Wave(wave) => wave.stop(tween).map_err(Error::from),
+			Sound::Midi(midi) => midi.stop(tween),
 		}
 	}
 
 	#[must_use]
 	pub fn is_playing(&self) -> bool {
 		match self {
-			Handle::Wave(wave) => wave.state() == PlaybackState::Playing,
-			Handle::Midi(midi) => midi.is_playing(),
+			Sound::Wave(wave) => wave.state() == PlaybackState::Playing,
+			Sound::Midi(midi) => midi.is_playing(),
 		}
 	}
 }
 
-impl std::fmt::Debug for Handle {
+impl std::fmt::Debug for Sound {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Wave(_) => f.debug_tuple("Wave").finish(),
@@ -510,23 +510,24 @@ impl std::fmt::Debug for Handle {
 	}
 }
 
+/// [`Sound`] with a source actor attached.
 #[derive(Debug)]
-pub struct Sound {
-	handle: Handle,
+pub struct WorldSound {
+	sound: Sound,
 	_source: Option<Actor>,
 }
 
-impl Deref for Sound {
-	type Target = Handle;
+impl Deref for WorldSound {
+	type Target = Sound;
 
 	fn deref(&self) -> &Self::Target {
-		&self.handle
+		&self.sound
 	}
 }
 
-impl DerefMut for Sound {
+impl DerefMut for WorldSound {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.handle
+		&mut self.sound
 	}
 }
 

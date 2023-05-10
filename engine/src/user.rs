@@ -80,7 +80,7 @@ impl UserCore {
 		Ok(ret)
 	}
 
-	pub fn get_pref<P: PrefValue>(&self, id: &str) -> Result<PrefHandle<P>, Error> {
+	pub fn get_pref<P: PrefValue>(&self, id: &str) -> Result<Handle<P>, Error> {
 		self.prefs.get::<P>(id)
 	}
 

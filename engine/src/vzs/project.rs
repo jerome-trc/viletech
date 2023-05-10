@@ -50,7 +50,7 @@ impl Project {
 			for (_, sym) in &module.symbols {
 				if Arc::strong_count(sym) > 0 || Arc::weak_count(sym) > 0 {
 					panic!(
-						"Tried to clear a VZS project with outstanding handle to symbol: {}",
+						"Tried to clear a VZS project with outstanding pointer to symbol: {}",
 						&sym.header().name
 					);
 				}

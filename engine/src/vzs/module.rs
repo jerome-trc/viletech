@@ -65,7 +65,7 @@ impl Module {
 }
 
 // SAFETY:
-// - Functions can only be hotswapped if there are no handles to them.
+// - Functions can only be hotswapped if there are no ARC pointers to them.
 // - Data can not be modified while it is reachable by an existing runtime.
 unsafe impl Send for Module {}
 unsafe impl Sync for Module {}

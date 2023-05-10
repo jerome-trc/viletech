@@ -4,11 +4,11 @@ use std::io::Cursor;
 
 use crate::{
 	data::{
-		asset::{
-			AssetHeader, BspNode, BspNodeChild, Level, LevelFlags, LevelFormat, LevelMeta, LineDef,
+		detail::Outcome,
+		dobj::{
+			BspNode, BspNodeChild, DatumHeader, Level, LevelFlags, LevelFormat, LevelMeta, LineDef,
 			Sector, Seg, SegDirection, SideDef, SubSector, Thing, ThingFlags,
 		},
-		detail::Outcome,
 		prep::*,
 		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
 	},
@@ -177,7 +177,7 @@ impl Catalog {
 		};
 
 		let level = Level {
-			header: AssetHeader {
+			header: DatumHeader {
 				id: format!(
 					"{mount_id}/{id}",
 					mount_id = ctx.mntinfo.id(),
@@ -209,7 +209,7 @@ impl Catalog {
 			vertices,
 		};
 
-		ctx.add_asset(level);
+		ctx.add_datum(level);
 
 		Outcome::Ok(())
 	}

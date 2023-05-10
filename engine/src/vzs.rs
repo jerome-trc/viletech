@@ -9,7 +9,6 @@
 mod abi;
 pub mod ast;
 mod func;
-mod handle;
 pub mod heap;
 mod inode;
 mod issue;
@@ -17,7 +16,7 @@ mod module;
 mod parse;
 mod project;
 mod runtime;
-mod symbol;
+mod sym;
 mod syn;
 #[cfg(test)]
 mod test;
@@ -25,14 +24,13 @@ pub mod tsys;
 
 pub use self::{
 	func::{Flags as FunctionFlags, Function, TFunc},
-	handle::*,
 	inode::*,
 	issue::*,
 	module::{Builder as ModuleBuilder, Module},
 	parse::*,
 	project::*,
 	runtime::*,
-	symbol::*,
+	sym::*,
 	syn::Syn,
 };
 
@@ -131,7 +129,7 @@ impl std::fmt::Display for Error {
 			Self::SignatureMismatch => {
 				write!(
 					f,
-					"Incorrect signature used when downcasting a function handle."
+					"Incorrect signature used when downcasting a function pointer."
 				)
 			}
 			Self::UnknownIdent => write!(f, "An identifier was not found in the symbol table."),

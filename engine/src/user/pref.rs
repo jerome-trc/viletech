@@ -27,7 +27,7 @@ pub struct PrefPreset {
 }
 
 impl PrefPreset {
-	pub(super) fn get<P: PrefValue>(&self, id: &str) -> Result<PrefHandle<P>, Error> {
+	pub(super) fn get<P: PrefValue>(&self, id: &str) -> Result<Handle<P>, Error> {
 		let ipair = match self.map.get(id) {
 			Some(e) => e,
 			None => return Err(Error::PrefNotFound(id.to_string())),
@@ -36,7 +36,7 @@ impl PrefPreset {
 		let pref = &self.namespaces[ipair.0].prefs[ipair.1];
 
 		if P::KIND == pref.kind() {
-			Ok(PrefHandle::new(pref.clone()))
+			Ok(Handle::new(pref.clone()))
 		} else {
 			Err(Error::TypeMismatch {
 				expected: pref.kind(),
@@ -382,11 +382,11 @@ impl Drop for Pref {
 	}
 }
 
+/// Thin wrapper around an [`Arc`] leveraging generic typing to provide fast access.
 #[derive(Debug)]
-#[repr(transparent)]
-pub struct PrefHandle<P: PrefValue>(Arc<Pref>, PhantomData<P>);
+pub struct Handle<P: PrefValue>(Arc<Pref>, PhantomData<P>);
 
-impl<P: PrefValue> PrefHandle<P> {
+impl<P: PrefValue> Handle<P> {
 	#[must_use]
 	pub(super) fn new(p: Arc<Pref>) -> Self {
 		Self(p, PhantomData)
@@ -406,9 +406,9 @@ impl<P: PrefValue> PrefHandle<P> {
 }
 
 // SAFETY: Handles can access raw union fields because their creation
-// demands that a type check takes place first
+// demands that a type check takes place first.
 
-impl PrefHandle<bool> {
+impl Handle<bool> {
 	#[must_use]
 	pub fn get(&self) -> bool {
 		debug_assert!(self.0.kind == PrefKind::Bool);
@@ -423,7 +423,7 @@ impl PrefHandle<bool> {
 	}
 }
 
-impl PrefHandle<i64> {
+impl Handle<i64> {
 	#[must_use]
 	pub fn get(&self) -> i64 {
 		debug_assert!(self.0.kind == PrefKind::Int);
@@ -438,7 +438,7 @@ impl PrefHandle<i64> {
 	}
 }
 
-impl PrefHandle<f64> {
+impl Handle<f64> {
 	#[must_use]
 	pub fn get(&self) -> f64 {
 		debug_assert!(self.0.kind == PrefKind::Float);
@@ -453,7 +453,7 @@ impl PrefHandle<f64> {
 	}
 }
 
-impl PrefHandle<RgbaF32> {
+impl Handle<RgbaF32> {
 	#[must_use]
 	pub fn get(&self) -> RgbaF32 {
 		debug_assert!(self.0.kind == PrefKind::Color);
@@ -468,7 +468,7 @@ impl PrefHandle<RgbaF32> {
 	}
 }
 
-impl<'p> PrefHandle<String> {
+impl<'p> Handle<String> {
 	pub fn get(&'p self) -> RwLockReadGuard<'p, String> {
 		debug_assert!(self.0.kind == PrefKind::String);
 		unsafe { self.0.data.string.value.read() }
@@ -480,8 +480,8 @@ impl<'p> PrefHandle<String> {
 	}
 }
 
-impl<P: PrefValue> PartialEq for PrefHandle<P> {
-	/// Checks if these two handles are pointers to the same preference object.
+impl<P: PrefValue> PartialEq for Handle<P> {
+	/// Checks if these are two pointers to the same preference object.
 	/// To check if they have the same storage type and value, use [`eq_val`].
 	///
 	/// [`eq_val`]: Self::eq_val
@@ -490,7 +490,7 @@ impl<P: PrefValue> PartialEq for PrefHandle<P> {
 	}
 }
 
-impl<P: PrefValue> Eq for PrefHandle<P> {}
+impl<P: PrefValue> Eq for Handle<P> {}
 
 pub trait PrefValue: private::Sealed {
 	const KIND: PrefKind;

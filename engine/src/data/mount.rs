@@ -206,7 +206,7 @@ impl Catalog {
 						virtual_path: mount_point.into_boxed_path(),
 						vzscript: None,
 					},
-					assets: SlotMap::default(),
+					objs: SlotMap::default(),
 					extras: WadExtras::default(),
 				});
 			}

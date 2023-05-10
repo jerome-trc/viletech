@@ -9,10 +9,10 @@ use super::PrefKind;
 pub enum Error {
 	/// A caller gave an ID that did not resolve to any known [`Pref`](super::Pref).
 	PrefNotFound(String),
-	/// A caller tried to get a [`PrefHandle`] and the ID resolved correctly,
+	/// A caller tried to get a [`Handle`] and the ID resolved correctly,
 	/// but the type requested was different to that of the backing [`Pref`].
 	///
-	/// [`PrefHandle`]: super::PrefHandle
+	/// [`Handle`]: super::Handle
 	/// [`Pref`]: super::Pref
 	TypeMismatch {
 		expected: PrefKind,

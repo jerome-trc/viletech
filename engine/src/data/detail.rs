@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
-use super::{Asset, Catalog};
+use super::{Catalog, Datum};
 
 /// State storage for the catalog's developer GUI.
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl Default for DeveloperGui {
 
 impl Catalog {
 	pub(super) fn ui_impl(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
-		ui.heading("Assets");
+		ui.heading("Game Data");
 
 		ui.horizontal(|ui| {
 			ui.label("Search");
@@ -46,12 +46,12 @@ impl Catalog {
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
 			for mount in &self.mounts {
-				for (_, asset) in &mount.assets {
-					if !self.gui.search.is_match(&asset.header().id) {
+				for (_, datum) in &mount.objs {
+					if !self.gui.search.is_match(&datum.header().id) {
 						continue;
 					}
 
-					let resp = ui.label(&asset.header().id);
+					let resp = ui.label(&datum.header().id);
 
 					let resp = if resp.hovered() {
 						resp.highlight()
@@ -60,8 +60,8 @@ impl Catalog {
 					};
 
 					resp.on_hover_ui_at_pointer(|ui| {
-						egui::Area::new("vtec_asset_tt").show(ctx, |_| {
-							ui.label(asset.type_name());
+						egui::Area::new("vtec_datum_tt").show(ctx, |_| {
+							ui.label(datum.type_name());
 						});
 					});
 				}
@@ -92,26 +92,26 @@ impl VfsKey {
 	}
 }
 
-/// Assets of different types are allowed to share IDs (to the scripts, the Rust
-/// type system is an irrelevant detail). The actual map keys are composed by
-/// hashing the ID string (or part of the ID string, in the case of the nickname
+/// Data objects of different types are allowed to share IDs (to the scripts,
+/// the Rust type system is an irrelevant detail). The actual map keys are composed
+/// by hashing the ID string (or part of the ID string, in the case of the nickname
 /// lookup table) and then the type ID, in that order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct AssetKey(u64);
+pub(super) struct DatumKey(u64);
 
-impl AssetKey {
+impl DatumKey {
 	#[must_use]
-	pub(super) fn new<A: Asset>(id: &str) -> Self {
+	pub(super) fn new<D: Datum>(id: &str) -> Self {
 		let mut hasher = SeaHasher::default();
 		id.hash(&mut hasher);
-		TypeId::of::<A>().hash(&mut hasher);
+		TypeId::of::<D>().hash(&mut hasher);
 		Self(hasher.finish())
 	}
 }
 
 slotmap::new_key_type! {
 	/// See [`crate::data::Mount`].
-	pub(super) struct AssetSlotKey;
+	pub(super) struct DatumSlotKey;
 }
 
 /// Intermediate format for parsing parts of [`MountMeta`] from `meta.toml` files.

@@ -3,7 +3,7 @@
 use bevy::ecs::system::EntityCommands;
 
 use crate::{
-	data::asset::{LevelFormat, UdmfNamespace},
+	data::dobj::{LevelFormat, UdmfNamespace},
 	sim::sector,
 	BaseGame,
 };

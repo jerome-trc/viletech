@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	data::asset,
+	data::dobj,
 	sparse::{SparseSet, SparseSetIndex},
 };
 
@@ -23,7 +23,7 @@ pub struct Level(Entity);
 /// The principal component in a level entity.
 #[derive(Component, Debug)]
 pub struct Core {
-	pub base: Option<asset::Handle<asset::Level>>,
+	pub base: Option<dobj::Handle<dobj::Level>>,
 	pub flags: Flags,
 	/// Time spent in this level thus far.
 	pub ticks_elapsed: u64,

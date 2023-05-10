@@ -149,9 +149,9 @@ impl ClientCore {
 					self.devgui.selectors(
 						ui,
 						&[
-							(DevGuiStatus::Assets, "Assets"),
 							(DevGuiStatus::Audio, "Audio"),
 							(DevGuiStatus::Console, "Console"),
+							(DevGuiStatus::Data, "Data"),
 							(DevGuiStatus::VzsRepl, "REPL"),
 							(DevGuiStatus::Vfs, "VFS"),
 						],
@@ -160,12 +160,12 @@ impl ClientCore {
 
 				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
 					match self.devgui.left {
-						DevGuiStatus::Assets => {
-							let mut catalog = self.catalog.write();
-							catalog.ui(ctx, ui);
-						}
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);
+						}
+						DevGuiStatus::Data => {
+							let mut catalog = self.catalog.write();
+							catalog.ui(ctx, ui);
 						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
@@ -181,12 +181,12 @@ impl ClientCore {
 
 				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
 					match self.devgui.right {
-						DevGuiStatus::Assets => {
-							let mut catalog = self.catalog.write();
-							catalog.ui(ctx, ui);
-						}
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);
+						}
+						DevGuiStatus::Data => {
+							let mut catalog = self.catalog.write();
+							catalog.ui(ctx, ui);
 						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
@@ -216,7 +216,7 @@ impl Drop for ClientCore {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DevGuiStatus {
-	Assets,
+	Data,
 	Audio,
 	Console,
 	VzsRepl,

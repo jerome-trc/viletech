@@ -79,7 +79,7 @@ impl<'i> SymbolHash<'i> for Function {
 	type HashInput = &'i str;
 }
 
-/// Typed function handle.
+/// Typed function pointer.
 pub struct TFunc<A: Abi, R: Abi> {
 	pub(super) source: Handle<Function>,
 	#[allow(unused)]
