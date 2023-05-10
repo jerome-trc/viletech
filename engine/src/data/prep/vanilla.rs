@@ -163,10 +163,10 @@ impl Catalog {
 			let mut pal = Palette::black();
 
 			for ii in 0..256 {
-				let r = cursor.read_u8()?;
-				let g = cursor.read_u8()?;
-				let b = cursor.read_u8()?;
-				pal.0[ii] = Rgba([r, g, b, 255]);
+				let r = (cursor.read_u8()? as f32) / 255.0;
+				let g = (cursor.read_u8()? as f32) / 255.0;
+				let b = (cursor.read_u8()? as f32) / 255.0;
+				pal.0[ii] = Rgba([r, g, b, 255.0]);
 			}
 
 			palettes.push(pal);

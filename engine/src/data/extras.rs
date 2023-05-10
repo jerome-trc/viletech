@@ -30,13 +30,13 @@ impl EnDoom {
 }
 
 #[derive(Debug)]
-pub struct Palette(pub [Rgba<u8>; 256]);
+pub struct Palette(pub [Rgba<f32>; 256]);
 
 impl Palette {
-	/// A sensible default for internal use. All colors are `0 0 0 255`.
+	/// A sensible default for internal use. All colors are `0.0 0.0 0.0 1.0`.
 	#[must_use]
 	pub(in super::super) fn black() -> Self {
-		Self([Rgba([0, 0, 0, 255]); 256])
+		Self([Rgba([0.0, 0.0, 0.0, 1.0]); 256])
 	}
 }
 

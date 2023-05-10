@@ -4,17 +4,16 @@ use std::io::Cursor;
 
 use bevy::prelude::Vec2;
 use byteorder::{LittleEndian, ReadBytesExt};
-use image::ImageBuffer;
+use image::{ImageBuffer, Rgba32FImage};
 
 use crate::data::Palette;
 
 use super::AssetHeader;
 
-/// Stored in RGBA8 format.
 #[derive(Debug)]
 pub struct Image {
 	pub header: AssetHeader,
-	pub inner: image::RgbaImage,
+	pub inner: Rgba32FImage,
 	pub offset: Vec2,
 }
 
@@ -24,7 +23,7 @@ impl Image {
 	/// Does not allocate until reasonably certain that `bytes` is a picture,
 	/// so `try_from_picture.is_some()` can be used as a fairly cheap check.
 	#[must_use]
-	pub fn try_from_picture(bytes: &[u8], palette: &Palette) -> Option<(image::RgbaImage, Vec2)> {
+	pub fn try_from_picture(bytes: &[u8], palette: &Palette) -> Option<(Rgba32FImage, Vec2)> {
 		const HEADER_SIZE: usize = std::mem::size_of::<u16>() * 4;
 
 		if bytes.len() < HEADER_SIZE {
