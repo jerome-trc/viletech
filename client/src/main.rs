@@ -34,6 +34,7 @@ use parking_lot::RwLock;
 use viletech::{
 	console::Console,
 	data::{Catalog, CatalogAssetIo},
+	gfx::TerrainMaterial,
 	log::TracingPlugin,
 	user::UserCore,
 };
@@ -131,6 +132,7 @@ conditions. See the license document that comes with your installation."
 		)
 		.add_plugin(WireframePlugin)
 		.add_plugin(EguiPlugin)
+		.add_asset::<TerrainMaterial>()
 		.add_system(common_updates)
 		.add_system(update_input.in_set(InputSystem));
 
