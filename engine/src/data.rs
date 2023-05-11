@@ -154,12 +154,8 @@ impl Catalog {
 	/// [`MountError`] and [`PrepError`].
 	///
 	/// Notes:
-	/// - The order of pre-existing VFS entries and mounts is unchanged upon success.
-	/// - This function is partially atomic. If mounting fails, the catalog's
-	/// state is left entirely unchanged from before calling this.
-	/// If datum preparation fails, the VFS state is not restored to before the
-	/// call as a form of memoization, allowing future prep attempts to skip most
-	/// mounting work (to allow faster mod development cycles).
+	/// - This can only be called on a newly-created catalog or one which has had
+	/// [`Self::clear`] called on it. Otherwise, a panic will occur.
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
 	pub fn load<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
