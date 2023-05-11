@@ -5,10 +5,7 @@ mod audio;
 mod level;
 mod visual;
 
-use std::{
-	marker::PhantomData,
-	sync::{Arc, Weak},
-};
+use std::sync::{Arc, Weak};
 
 pub use self::{actor::*, audio::*, level::*, visual::*};
 
@@ -42,25 +39,25 @@ pub trait Datum: private::Sealed {
 /// Attaching a generic type allows the pointer to be pre-downcast, so
 /// dereferencing is as fast as with any other pointer with no unsafe code required.
 #[derive(Debug)]
-pub struct Handle<D: Datum>(Arc<D>, PhantomData<D>);
+pub struct Handle<D: Datum>(Arc<D>);
 
 impl<D: Datum> Handle<D> {
 	/// For use in inter-datum relationships.
 	#[must_use]
 	pub fn downgrade(&self) -> InHandle<D> {
-		InHandle(Arc::downgrade(&self.0), PhantomData)
+		InHandle(Arc::downgrade(&self.0))
 	}
 }
 
 impl<D: Datum> From<Arc<D>> for Handle<D> {
 	fn from(value: Arc<D>) -> Self {
-		Self(value, PhantomData)
+		Self(value)
 	}
 }
 
 impl<D: Datum> From<&Arc<D>> for Handle<D> {
 	fn from(value: &Arc<D>) -> Self {
-		Self(value.clone(), PhantomData)
+		Self(value.clone())
 	}
 }
 
@@ -75,7 +72,7 @@ impl<D: Datum> std::ops::Deref for Handle<D> {
 
 impl<D: Datum> Clone for Handle<D> {
 	fn clone(&self) -> Self {
-		Self(self.0.clone(), PhantomData)
+		Self(self.0.clone())
 	}
 }
 
@@ -88,12 +85,10 @@ impl<D: Datum> PartialEq for Handle<D> {
 
 impl<D: Datum> Eq for Handle<D> {}
 
-/// "Internal datum atomically reference counted".
-///
-/// Like [`Rcd`] but [`Weak`], allowing inter-datum relationships (without
+/// Like [`Handle`] but [`Weak`], allowing inter-datum relationships (without
 /// preventing in-place removal) in a way that can't leak.
 #[derive(Debug)]
-pub struct InHandle<D: Datum>(Weak<D>, PhantomData<D>);
+pub struct InHandle<D: Datum>(Weak<D>);
 
 impl<D: Datum> InHandle<D> {
 	#[must_use]
@@ -104,7 +99,7 @@ impl<D: Datum> InHandle<D> {
 
 impl<D: Datum> Clone for InHandle<D> {
 	fn clone(&self) -> Self {
-		Self(self.0.clone(), PhantomData)
+		Self(self.0.clone())
 	}
 }
 

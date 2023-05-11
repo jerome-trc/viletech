@@ -63,7 +63,7 @@ impl SymbolKey {
 /// type allows the pointer to be pre-downcast, so dereferencing is as fast as
 /// with any other pointer with no unsafe code required.
 #[derive(Debug)]
-pub struct Handle<S: Symbol>(Arc<S>, PhantomData<S>);
+pub struct Handle<S: Symbol>(Arc<S>);
 
 impl Handle<Function> {
 	pub fn downcast<A, R>(&self) -> Result<Handle<TFunc<A, R>>, Error>
@@ -72,13 +72,10 @@ impl Handle<Function> {
 		R: Abi,
 	{
 		if self.has_signature::<A, R>() {
-			Ok(Handle(
-				Arc::new(TFunc {
-					source: self.clone(),
-					phantom: PhantomData,
-				}),
-				PhantomData,
-			))
+			Ok(Handle(Arc::new(TFunc {
+				source: self.clone(),
+				phantom: PhantomData,
+			})))
 		} else {
 			Err(Error::SignatureMismatch)
 		}
@@ -104,13 +101,13 @@ impl<S: Symbol> Eq for Handle<S> {}
 
 impl<S: Symbol> Clone for Handle<S> {
 	fn clone(&self) -> Self {
-		Self(self.0.clone(), PhantomData)
+		Self(self.0.clone())
 	}
 }
 
 impl<S: Symbol> From<&Arc<S>> for Handle<S> {
 	fn from(value: &Arc<S>) -> Self {
-		Handle(value.clone(), PhantomData)
+		Handle(value.clone())
 	}
 }
 
@@ -121,27 +118,24 @@ unsafe impl<S: Symbol> Sync for Handle<S> {}
 /// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-symbol
 /// relationships (without preventing in-place removal) in a way that can't leak.
 #[derive(Debug)]
-pub struct InHandle<S: Symbol>(Weak<S>, PhantomData<S>);
+pub struct InHandle<S: Symbol>(Weak<S>);
 
 impl<S: Symbol> InHandle<S> {
 	#[must_use]
 	pub fn upgrade(&self) -> Handle<S> {
-		Handle(
-			Weak::upgrade(&self.0).expect("Failed to upgrade a symbol ARC."),
-			PhantomData,
-		)
+		Handle(Weak::upgrade(&self.0).expect("Failed to upgrade a symbol ARC."))
 	}
 }
 
 impl<S: Symbol> Clone for InHandle<S> {
 	fn clone(&self) -> Self {
-		Self(self.0.clone(), PhantomData)
+		Self(self.0.clone())
 	}
 }
 
 impl<S: Symbol> From<&Arc<S>> for InHandle<S> {
 	fn from(value: &Arc<S>) -> Self {
-		Self(Arc::downgrade(value), PhantomData)
+		Self(Arc::downgrade(value))
 	}
 }
 
@@ -219,7 +213,7 @@ macro_rules! type_handle_converters {
 		$(
 			impl From<&Arc<TypeInfo<$subtype>>> for TypeHandle {
 				fn from(value: &Arc<TypeInfo<$subtype>>) -> Self {
-					Self::$variant(Handle(value.clone(), PhantomData))
+					Self::$variant(Handle(value.clone()))
 				}
 			}
 		)+
