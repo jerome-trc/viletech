@@ -19,8 +19,8 @@ macro_rules! replace_expr {
 	};
 }
 
-/// Convenience macro for defining a newtype (single-field tuple struct,
-/// represented transparently). Generates an implementation for [`std::ops::Deref`].
+/// Convenience macro for defining a newtype (single-field tuple struct).
+/// Generates an implementation for [`std::ops::Deref`].
 ///
 /// Usage examples:
 /// ```
@@ -39,7 +39,6 @@ macro_rules! newtype {
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
-		#[repr(transparent)]
 		$ownvis struct $name($innervis $type);
 
 		impl std::ops::Deref for $name {
@@ -60,7 +59,6 @@ macro_rules! newtype_mut {
 		$ownvis:vis struct $name:ident($innervis:vis $type:ty)
 	) => {
 		$(#[$outer])*
-		#[repr(transparent)]
 		$ownvis struct $name($innervis $type);
 
 		impl std::ops::Deref for $name {
