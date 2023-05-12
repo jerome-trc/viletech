@@ -119,6 +119,15 @@ impl VirtualFs {
 		Self::unparent(parent, &removed.path);
 	}
 
+	/// Leaves the root node.
+	pub fn clear(&mut self) {
+		self.files.truncate(1);
+
+		let root = &mut self.files[0];
+		let FileContent::Directory(children) = &mut root.content else { unreachable!() };
+		children.clear();
+	}
+
 	fn unparent(parent: &mut File, child_path: &Arc<VPath>) {
 		if let FileContent::Directory(children) = &mut parent.content {
 			children.remove(child_path);
