@@ -12,7 +12,6 @@ mod test;
 pub mod vfs;
 
 use std::{
-	any::Any,
 	path::{Path, PathBuf},
 	sync::{
 		atomic::{self, AtomicBool, AtomicUsize},
@@ -35,7 +34,7 @@ use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
 
 use self::{
 	detail::{DatumKey, DatumSlotKey, DeveloperGui},
-	dobj::{Blueprint, Datum, Handle},
+	dobj::{Blueprint, DataRef, Datum, DatumStore},
 	vfs::{FileRef, VirtualFs},
 };
 
@@ -81,7 +80,8 @@ pub struct Catalog {
 	pub(self) objs: DashMap<DatumKey, (usize, DatumSlotKey)>,
 	/// Datum lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
-	/// loading multiple WADs with similarly-named entries.
+	/// loading multiple WADs with similarly-named entries. Also contains names
+	/// assigned via [`SNDINFO`](https://zdoom.org/wiki/SNDINFO).
 	pub(self) nicknames: DashMap<DatumKey, SmallVec<[(usize, DatumSlotKey); 2]>>,
 	/// See the key type's documentation for background details.
 	/// Keyed objects are always of type [`Blueprint`].
@@ -223,30 +223,11 @@ impl Catalog {
 	/// rather than an assertion that the datum under `id` is that type, so this
 	/// returns an `Option` rather than a [`Result`].
 	#[must_use]
-	pub fn get<D: Datum>(&self, id: &str) -> Option<&D> {
+	pub fn get<D: Datum>(&self, id: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(id);
 
 		if let Some(kvp) = self.objs.get(&key) {
-			self.mounts[kvp.0].objs[kvp.1].as_any().downcast_ref()
-		} else {
-			None
-		}
-	}
-
-	/// Note that `A` here is a filter on the type that comes out of the lookup,
-	/// rather than an assertion that the datum under `id` is that type, so this
-	/// returns an `Option` rather than a [`Result`].
-	#[must_use]
-	pub fn get_ptr<D: Datum>(&self, id: &str) -> Option<Handle<D>> {
-		let key = DatumKey::new::<D>(id);
-
-		if let Some(kvp) = self.objs.get(&key) {
-			// SAFETY: `Datum` meets all destination constraints.
-			unsafe {
-				let arc = self.mounts[kvp.0].objs[kvp.1].clone();
-				let ret: Arc<dyn 'static + Send + Sync + Any> = std::mem::transmute::<_, _>(arc);
-				ret.downcast::<D>().ok().map(Handle::from)
-			}
+			Some(DataRef::new(self, &self.mounts[kvp.0].objs[kvp.1]))
 		} else {
 			None
 		}
@@ -257,16 +238,15 @@ impl Catalog {
 	///
 	/// [actor]: crate::sim::actor
 	#[must_use]
-	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<&Blueprint> {
+	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<DataRef<Blueprint>> {
 		let Some(kvp) = self.editor_nums.get(&num) else { return None; };
 		let stack = kvp.value();
 
-		let (msk, ask) = stack
+		let (mnt_i, dsk) = stack
 			.last()
 			.expect("Catalog cleanup missed an empty ed-num stack.");
 
-		let datum = &self.mounts[*msk].objs[*ask];
-		Some(datum.as_any().downcast_ref::<Blueprint>().unwrap())
+		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
 	}
 
 	/// Find an [actor] [`Blueprint`] by a 16-bit spawn number.
@@ -274,44 +254,41 @@ impl Catalog {
 	///
 	/// [actor]: crate::sim::actor
 	#[must_use]
-	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<&Blueprint> {
+	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<DataRef<Blueprint>> {
 		let Some(kvp) = self.spawn_nums.get(&num) else { return None; };
 		let stack = kvp.value();
 
-		let (msk, ask) = stack
+		let (mnt_i, dsk) = stack
 			.last()
 			.expect("Catalog cleanup missed an empty spawn-num stack.");
 
-		let datum = &self.mounts[*msk].objs[*ask];
-		Some(datum.as_any().downcast_ref::<Blueprint>().unwrap())
+		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
 	}
 
 	#[must_use]
-	pub fn last_by_nick<D: Datum>(&self, nick: &str) -> Option<&D> {
+	pub fn last_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
 		let Some(kvp) = self.nicknames.get(&key) else { return None; };
 		let stack = kvp.value();
 
-		let (msk, ask) = stack
+		let (mnt_i, dsk) = stack
 			.last()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		let datum = &self.mounts[*msk].objs[*ask];
-		Some(datum.as_any().downcast_ref::<D>().unwrap())
+		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
 	}
 
 	#[must_use]
-	pub fn first_by_nick<D: Datum>(&self, nick: &str) -> Option<&D> {
+	pub fn first_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
 		let Some(kvp) = self.nicknames.get(&key) else { return None; };
 		let stack = kvp.value();
 
-		let (msk, ask) = stack
+		let (mnt_i, dsk) = stack
 			.first()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		let datum = &self.mounts[*msk].objs[*ask];
-		Some(datum.as_any().downcast_ref::<D>().unwrap())
+		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
 	}
 
 	#[must_use]
@@ -379,7 +356,7 @@ pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 #[derive(Debug)]
 pub struct Mount {
-	pub(self) objs: SlotMap<DatumSlotKey, Arc<dyn 'static + Datum>>,
+	pub(self) objs: SlotMap<DatumSlotKey, Arc<dyn DatumStore>>,
 	pub(self) info: MountInfo,
 	pub(self) extras: WadExtras,
 }

@@ -4,14 +4,13 @@ use bitflags::bitflags;
 
 use crate::{sim::actor, EditorNum, SpawnNum};
 
-use super::{Audio, DatumHeader, Image, InHandle, PolyModel, VoxelModel};
+use super::{Audio, Image, InHandle, PolyModel, VoxelModel};
 
 /// The prototype used to instantiate new entities.
 ///
 /// Maps to a VZScript class, which are used to define these.
 #[derive(Debug)]
 pub struct Blueprint {
-	pub header: DatumHeader,
 	pub base: Components,
 	pub blood_types: [Option<InHandle<Blueprint>>; 3],
 	pub bones: Option<()>, // TODO: Skeletal animation w/ data representation.
@@ -182,7 +181,6 @@ impl std::ops::DerefMut for Blueprint {
 
 #[derive(Debug)]
 pub struct DamageType {
-	pub header: DatumHeader,
 	pub base_factor: f32,
 	pub flags: DamageTypeFlags,
 }
@@ -196,6 +194,5 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct Species {
-	pub header: DatumHeader,
 	// ???
 }

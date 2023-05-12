@@ -5,12 +5,7 @@ use std::{io::Cursor, ops::Range};
 use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
-use crate::data::{
-	detail::Outcome,
-	dobj::{Audio, AudioData, DatumHeader},
-	vfs::FileRef,
-	Catalog, PrepError, PrepErrorKind,
-};
+use crate::data::{detail::Outcome, dobj::Audio, vfs::FileRef, Catalog, PrepError, PrepErrorKind};
 
 use super::SubContext;
 
@@ -101,16 +96,7 @@ impl Catalog {
 
 				match StaticSoundData::from_cursor(cursor, StaticSoundSettings::default()) {
 					Ok(statsnd) => {
-						ctx.add_datum(Audio {
-							header: DatumHeader {
-								id: format!(
-									"{mount_id}/{id}",
-									mount_id = ctx.mntinfo.id(),
-									id = child.file_stem()
-								),
-							},
-							data: AudioData::Waveform(statsnd),
-						});
+						ctx.add_datum(Audio::Waveform(statsnd), child.file_prefix());
 					}
 					Err(err) => {
 						ctx.errors.lock().push(PrepError {
@@ -260,8 +246,8 @@ impl Catalog {
 		ctx.tracker.add_prep_progress(1);
 
 		if markers.is_flat(child_index) {
-			match self.prep_flat(ctx, vfile, fpfx, bytes) {
-				Ok(image) => ctx.add_datum(image),
+			match self.prep_flat(ctx, vfile, bytes) {
+				Ok(image) => ctx.add_datum(image, fpfx),
 				Err(err) => ctx.errors.lock().push(*err),
 			}
 
@@ -269,8 +255,8 @@ impl Catalog {
 		}
 
 		if markers.is_sprite(child_index) {
-			match self.prep_picture(ctx, fpfx, bytes) {
-				Some(image) => ctx.add_datum(image),
+			match self.prep_picture(ctx, bytes) {
+				Some(image) => ctx.add_datum(image, fpfx),
 				None => {
 					ctx.errors.lock().push(PrepError {
 						path: vfile.path().to_path_buf(),
@@ -300,8 +286,8 @@ impl Catalog {
 			return;
 		}
 
-		if let Some(image) = self.prep_picture(ctx, fpfx, bytes) {
-			ctx.add_datum(image);
+		if let Some(image) = self.prep_picture(ctx, bytes) {
+			ctx.add_datum(image, fpfx);
 		}
 
 		// Else this file has an unknown purpose.

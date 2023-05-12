@@ -12,7 +12,7 @@ use crate::{
 	EditorNum, Id8,
 };
 
-use super::{Audio, Blueprint, DatumHeader, Image, InHandle};
+use super::{Audio, Blueprint, Image, InHandle};
 
 /// See <https://doomwiki.org/wiki/Node>.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -144,7 +144,6 @@ bitflags! {
 /// Adapted one-to-one from GZ. See <https://zdoom.org/wiki/LOCKDEFS>.
 #[derive(Debug)]
 pub struct LockDef {
-	pub header: DatumHeader,
 	pub reqs: Vec<KeyReq>,
 	/// Printed when trying to open a door without having the required keys.
 	pub interact_msg: Arc<str>,
@@ -166,7 +165,6 @@ pub enum KeyReq {
 /// Alternatively a "map".
 #[derive(Debug)]
 pub struct Level {
-	pub header: DatumHeader,
 	pub meta: LevelMeta,
 	pub format: LevelFormat,
 	pub linedefs: Vec<LineDef>,

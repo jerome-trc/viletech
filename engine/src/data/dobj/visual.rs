@@ -8,11 +8,8 @@ use image::{ImageBuffer, Rgba32FImage};
 
 use crate::data::Palette;
 
-use super::DatumHeader;
-
 #[derive(Debug)]
 pub struct Image {
-	pub header: DatumHeader,
 	pub inner: Rgba32FImage,
 	pub offset: Vec2,
 }
@@ -113,12 +110,8 @@ impl Image {
 
 /// A placeholder type.
 #[derive(Debug)]
-pub struct PolyModel {
-	pub header: DatumHeader,
-}
+pub struct PolyModel;
 
 /// A placeholder type.
 #[derive(Debug)]
-pub struct VoxelModel {
-	pub header: DatumHeader,
-}
+pub struct VoxelModel;

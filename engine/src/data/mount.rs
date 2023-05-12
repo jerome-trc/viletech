@@ -845,7 +845,7 @@ impl Catalog {
 		MountFormat::PlainFile
 	}
 
-	/// Assumes that `self.files` has been fully populated.
+	/// Assumes that `self.vfs` has been fully populated.
 	#[must_use]
 	fn resolve_mount_kind(
 		&self,

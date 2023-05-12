@@ -6,8 +6,8 @@ use crate::{
 	data::{
 		detail::Outcome,
 		dobj::{
-			BspNode, BspNodeChild, DatumHeader, Level, LevelFlags, LevelFormat, LevelMeta, LineDef,
-			Sector, Seg, SegDirection, SideDef, SubSector, Thing, ThingFlags,
+			BspNode, BspNodeChild, Level, LevelFlags, LevelFormat, LevelMeta, LineDef, Sector, Seg,
+			SegDirection, SideDef, SubSector, Thing, ThingFlags,
 		},
 		prep::*,
 		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
@@ -177,13 +177,6 @@ impl Catalog {
 		};
 
 		let level = Level {
-			header: DatumHeader {
-				id: format!(
-					"{mount_id}/{id}",
-					mount_id = ctx.mntinfo.id(),
-					id = dir.file_prefix()
-				),
-			},
 			meta: LevelMeta {
 				name: String::default().into(),
 				author_name: String::default().into(),
@@ -209,7 +202,7 @@ impl Catalog {
 			vertices,
 		};
 
-		ctx.add_datum(level);
+		ctx.add_datum(level, dir.file_prefix());
 
 		Outcome::Ok(())
 	}

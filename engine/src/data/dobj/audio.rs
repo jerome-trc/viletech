@@ -5,16 +5,8 @@ use kira::sound::static_sound::StaticSoundData;
 
 use crate::audio::MidiData;
 
-use super::DatumHeader;
-
 #[derive(Debug)]
-pub struct Audio {
-	pub header: DatumHeader,
-	pub data: AudioData,
-}
-
-#[derive(Debug)]
-pub enum AudioData {
+pub enum Audio {
 	Midi(MidiData),
 	Waveform(StaticSoundData),
 }

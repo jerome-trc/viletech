@@ -10,11 +10,8 @@ use image::{ImageBuffer, Rgba};
 
 use crate::{
 	data::{
-		detail::Outcome,
-		dobj::{DatumHeader, Image},
-		prep::read_id8,
-		vfs::FileRef,
-		Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError, PrepErrorKind,
+		detail::Outcome, dobj::Image, prep::read_id8, vfs::FileRef, Catalog, ColorMap, EnDoom,
+		Palette, PaletteSet, PrepError, PrepErrorKind,
 	},
 	utils::io::CursorExt,
 	Id8,
@@ -103,9 +100,8 @@ impl Catalog {
 
 	pub(super) fn prep_flat(
 		&self,
-		ctx: &SubContext,
+		_ctx: &SubContext,
 		lump: FileRef,
-		fpfx: &str,
 		bytes: &[u8],
 	) -> Result<Image, Box<PrepError>> {
 		if bytes.len() != (64 * 64) {
@@ -128,9 +124,6 @@ impl Catalog {
 		}
 
 		Ok(Image {
-			header: DatumHeader {
-				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
-			},
 			inner: ret,
 			offset: Vec2::default(),
 		})
@@ -139,13 +132,10 @@ impl Catalog {
 	/// Returns `None` to indicate that `bytes` was checked
 	/// and determined to not be a picture.
 	#[must_use]
-	pub(super) fn prep_picture(&self, ctx: &SubContext, fpfx: &str, bytes: &[u8]) -> Option<Image> {
+	pub(super) fn prep_picture(&self, _ctx: &SubContext, bytes: &[u8]) -> Option<Image> {
 		let palettes = self.last_paletteset().unwrap();
-
-		Image::try_from_picture(bytes, &palettes.0[0]).map(|(ibuf, offs)| Image {
-			header: DatumHeader {
-				id: format!("{mount_id}/{fpfx}", mount_id = ctx.mntinfo.id()),
-			},
+		let opt = Image::try_from_picture(bytes, &palettes.0[0]);
+		opt.map(|(ibuf, offs)| Image {
 			inner: ibuf,
 			offset: offs,
 		})

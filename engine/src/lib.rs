@@ -28,6 +28,31 @@ pub mod utils;
 pub mod vzs;
 pub mod wad;
 
+// Types ///////////////////////////////////////////////////////////////////////
+
+/// See [`bevy::render::color::Color::Rgba`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RgbaF32 {
+	pub red: f32,
+	pub green: f32,
+	pub blue: f32,
+	pub alpha: f32,
+}
+
+/// Type alias for Bevy's two-point rectangle to disambiguate from VileTech's [4-point counterpart].
+///
+/// [4-point counterpart]: math::Rect4
+pub type Rect2 = bevy::math::Rect;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum BaseGame {
+	Doom,
+	Hexen,
+	Heretic,
+	Strife,
+	ChexQuest,
+}
+
 // Type aliases ////////////////////////////////////////////////////////////////
 
 /// Disambiguates between real FS paths and virtual FS paths.
@@ -193,25 +218,16 @@ impl std::fmt::Display for BaseDataError {
 	}
 }
 
-/// See [`bevy::render::color::Color::Rgba`].
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct RgbaF32 {
-	pub red: f32,
-	pub green: f32,
-	pub blue: f32,
-	pub alpha: f32,
+/// Allows upcasting from `dyn T` to [`std::any::Any`].
+pub trait AsAny: std::any::Any {
+	#[must_use]
+	fn as_any(&self) -> &dyn std::any::Any;
 }
 
-/// Type alias for Bevy's two-point rectangle to disambiguate from VileTech's [4-point counterpart].
-///
-/// [4-point counterpart]: math::Rect4
-pub type Rect2 = bevy::math::Rect;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub enum BaseGame {
-	Doom,
-	Hexen,
-	Heretic,
-	Strife,
-	ChexQuest,
+impl<T: std::any::Any> AsAny for T {
+	fn as_any(&self) -> &dyn std::any::Any {
+		// (RAT) As silly as this seems, it is the only halfway-elegant way of
+		// doing this, and it has some surprisingly useful niche applications.
+		self
+	}
 }

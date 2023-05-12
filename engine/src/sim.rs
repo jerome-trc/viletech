@@ -13,7 +13,7 @@ use bevy::{pbr::wireframe::Wireframe, prelude::*};
 use nanorand::WyRand;
 
 use crate::{
-	data::dobj::{self, Datum},
+	data::dobj::{self},
 	rng::RngCore,
 };
 
@@ -121,7 +121,7 @@ pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<do
 
 	info!(
 		"Sim setup complete ({}) in {}ms.",
-		&l.header().id,
+		&l.id(),
 		start_time.elapsed().as_millis()
 	);
 }

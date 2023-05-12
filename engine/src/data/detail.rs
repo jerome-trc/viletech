@@ -5,20 +5,28 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
-use bevy_egui::egui;
+use bevy_egui::egui::{self, TextStyle};
 use fasthash::SeaHasher;
 use regex::Regex;
 use serde::Deserialize;
 
 use crate::{VPath, VPathBuf};
 
-use super::{Catalog, Datum};
+use super::{dobj::DATUM_TYPE_NAMES, Catalog, Datum};
 
 /// State storage for the catalog's developer GUI.
 #[derive(Debug)]
 pub(super) struct DeveloperGui {
 	search_buf: String,
 	search: Regex,
+}
+
+impl DeveloperGui {
+	fn update_search_regex(&mut self) {
+		let mut esc = regex::escape(&self.search_buf);
+		esc.insert_str(0, "(?i)"); // Case insensitivity
+		self.search = Regex::new(&esc).unwrap();
+	}
 }
 
 impl Default for DeveloperGui {
@@ -38,37 +46,53 @@ impl Catalog {
 			ui.label("Search");
 
 			if ui.text_edit_singleline(&mut self.gui.search_buf).changed() {
-				let mut esc = regex::escape(&self.gui.search_buf);
-				esc.insert_str(0, "(?i)"); // Case insensitivity
-				self.gui.search = Regex::new(&esc).unwrap_or(Regex::new("").unwrap());
+				self.gui.update_search_regex();
+			}
+
+			if ui.button("Clear").clicked() {
+				self.gui.search_buf.clear();
+				self.gui.update_search_regex();
 			}
 		});
 
-		egui::ScrollArea::vertical().show(ui, |ui| {
-			for mount in &self.mounts {
-				for (_, datum) in &mount.objs {
-					if !self.gui.search.is_match(&datum.header().id) {
-						continue;
-					}
+		egui::ScrollArea::vertical()
+			.auto_shrink([false; 2])
+			.show_rows(
+				ui,
+				ui.text_style_height(&TextStyle::Body),
+				self.objs.len(),
+				|ui, row_range| {
+					for (_, (_, store)) in self
+						.mounts
+						.iter()
+						.flat_map(|mnt| &mnt.objs)
+						.enumerate()
+						.skip(row_range.start)
+					{
+						let id = store.id();
 
-					let resp = ui.label(&datum.header().id);
+						if !self.gui.search.is_match(id) {
+							continue;
+						}
 
-					let resp = if resp.hovered() {
-						resp.highlight()
-					} else {
-						resp
-					};
+						let resp = ui.label(id);
 
-					resp.on_hover_ui_at_pointer(|ui| {
-						egui::Area::new("vtec_datum_tt").show(ctx, |_| {
-							ui.label(datum.type_name());
+						let resp = if resp.hovered() {
+							resp.highlight()
+						} else {
+							resp
+						};
+
+						resp.on_hover_ui_at_pointer(|ui| {
+							egui::Area::new("vtec_datum_tt").show(ctx, |_| {
+								let &type_name =
+									DATUM_TYPE_NAMES.get(&store.datum_typeid()).unwrap();
+								ui.label(type_name);
+							});
 						});
-					});
-				}
-
-				ui.separator();
-			}
-		});
+					}
+				},
+			);
 	}
 }
 
@@ -92,20 +116,16 @@ impl VfsKey {
 	}
 }
 
-/// Data objects of different types are allowed to share IDs (to the scripts,
-/// the Rust type system is an irrelevant detail). The actual map keys are composed
-/// by hashing the ID string (or part of the ID string, in the case of the nickname
-/// lookup table) and then the type ID, in that order.
+/// Field `1` is a hash of the datum's ID string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct DatumKey(u64);
+pub(super) struct DatumKey(TypeId, u64);
 
 impl DatumKey {
 	#[must_use]
 	pub(super) fn new<D: Datum>(id: &str) -> Self {
 		let mut hasher = SeaHasher::default();
 		id.hash(&mut hasher);
-		TypeId::of::<D>().hash(&mut hasher);
-		Self(hasher.finish())
+		Self(TypeId::of::<D>(), hasher.finish())
 	}
 }
 

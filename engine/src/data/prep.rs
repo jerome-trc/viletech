@@ -7,19 +7,20 @@ mod udmf;
 mod vanilla;
 mod wad;
 
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use bevy::prelude::info;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{vzs, Id8, VPathBuf};
+use crate::{data::dobj::DATUM_TYPE_NAMES, vzs, Id8, VPathBuf};
 
 use self::vanilla::{PatchTable, TextureX};
 
 use super::{
 	detail::{DatumKey, Outcome},
+	dobj::{DatumStore, Store},
 	Catalog, Datum, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
 };
 
@@ -80,21 +81,19 @@ pub(self) struct Artifacts {
 
 #[derive(Debug)]
 pub(self) struct StagedDatum {
-	key_full: DatumKey,
+	key: DatumKey,
 	key_nick: DatumKey,
-	datum: Arc<dyn Datum>,
+	datum: Arc<dyn DatumStore>,
 }
 
 impl SubContext<'_> {
-	pub(self) fn add_datum<D: Datum>(&self, datum: D) {
-		let nickname = datum.header().nickname();
-		let key_full = DatumKey::new::<D>(&datum.header().id);
-		let key_nick = DatumKey::new::<D>(nickname);
+	pub(self) fn add_datum<D: Datum>(&self, datum: D, id_suffix: impl AsRef<str>) {
+		let id = format!("{}/{}", self.mntinfo.id(), id_suffix.as_ref());
 
 		self.artifacts.lock().objs.push(StagedDatum {
-			key_full,
-			key_nick,
-			datum: Arc::new(datum),
+			key: DatumKey::new::<D>(&id),
+			key_nick: DatumKey::new::<D>(id.split('/').last().unwrap()),
+			datum: Arc::new(Store::new(id, datum)),
 		});
 	}
 }
@@ -322,26 +321,26 @@ impl Catalog {
 
 			artifacts.objs.drain(..).for_each(
 				|StagedDatum {
-				     key_full,
-				     key_nick,
+				     key: id,
+				     key_nick: nick,
 				     datum,
 				 }| {
-					let lookup = self.objs.entry(key_full);
+					let lookup = self.objs.entry(id);
 
 					if matches!(lookup, dashmap::mapref::entry::Entry::Occupied(_)) {
 						info!(
-							"Overwriting asset: {} type ({})",
-							datum.header().id,
-							datum.type_name()
+							"Overwriting: {} ({})",
+							datum.id(),
+							DATUM_TYPE_NAMES.get(&datum.type_id()).unwrap(),
 						);
 					}
 
 					let slotkey = slotmap.insert(datum);
 
-					if let Some(mut kvp) = self.nicknames.get_mut(&key_nick) {
+					if let Some(mut kvp) = self.nicknames.get_mut(&nick) {
 						kvp.value_mut().push((i, slotkey));
 					} else {
-						self.nicknames.insert(key_nick, smallvec![(i, slotkey)]);
+						self.nicknames.insert(nick, smallvec![(i, slotkey)]);
 					};
 
 					match lookup {

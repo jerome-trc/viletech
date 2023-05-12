@@ -5,32 +5,133 @@ mod audio;
 mod level;
 mod visual;
 
-use std::sync::{Arc, Weak};
+use std::{
+	any::{Any, TypeId},
+	collections::HashMap,
+	sync::{Arc, Weak},
+};
+
+use once_cell::sync::Lazy;
 
 pub use self::{actor::*, audio::*, level::*, visual::*};
 
-/// A storage implementation detail, exposed only so library users can
-/// access common datum metadata.
+use super::Catalog;
+
+pub trait Datum: 'static + Any + Send + Sync + std::fmt::Debug {}
+
 #[derive(Debug)]
-pub struct DatumHeader {
-	pub id: String,
+pub struct Store<D: Datum> {
+	id: String,
+	inner: D,
 }
 
-impl DatumHeader {
+impl<D: Datum> Store<D> {
 	#[must_use]
-	pub fn nickname(&self) -> &str {
-		self.id.split('/').last().unwrap()
+	pub fn new(id: String, datum: D) -> Self {
+		Self { id, inner: datum }
+	}
+
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
+	}
+
+	#[must_use]
+	pub fn inner(&self) -> &D {
+		&self.inner
+	}
+
+	#[must_use]
+	pub fn inner_mut(&mut self) -> &mut D {
+		&mut self.inner
+	}
+
+	#[must_use]
+	pub fn into_inner(self) -> D {
+		self.inner
+	}
+
+	#[must_use]
+	pub(super) fn _as_ptr(&mut self) -> *mut D {
+		std::ptr::addr_of_mut!(self.inner)
 	}
 }
 
-pub trait Datum: private::Sealed {
+/// Adding some dynamic polymorphism to [`Store`] provides a few conveniences.
+pub(super) trait DatumStore: 'static + Any + Send + Sync + std::fmt::Debug {
 	#[must_use]
-	fn header(&self) -> &DatumHeader;
+	fn id(&self) -> &str;
+
 	#[must_use]
-	fn header_mut(&mut self) -> &mut DatumHeader;
-	#[must_use]
-	fn type_name(&self) -> &'static str;
+	fn datum_typeid(&self) -> TypeId;
 }
+
+impl<D: Datum> DatumStore for Store<D> {
+	fn id(&self) -> &str {
+		&self.id
+	}
+
+	fn datum_typeid(&self) -> TypeId {
+		TypeId::of::<D>()
+	}
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DataRef<'cat, D: Datum> {
+	pub(super) catalog: &'cat Catalog,
+	pub(super) arc: &'cat Arc<dyn DatumStore>,
+	pub(super) store: &'cat Store<D>,
+}
+
+impl<'cat, D: Datum> DataRef<'cat, D> {
+	#[must_use]
+	pub(super) fn new(catalog: &'cat Catalog, arc: &'cat Arc<dyn DatumStore>) -> Self {
+		Self {
+			catalog,
+			arc,
+			// SAFETY: `DatumStore` has `Any` as a supertrait; these types are
+			// essentially equivalent. Rust's dynamic type framework is just obstinate.
+			store: unsafe {
+				std::mem::transmute::<_, &Arc<dyn Any>>(arc)
+					.downcast_ref()
+					.unwrap()
+			},
+		}
+	}
+
+	#[must_use]
+	pub fn catalog(&self) -> &Catalog {
+		self.catalog
+	}
+
+	#[must_use]
+	pub fn handle(&self) -> Handle<D> {
+		// SAFETY: `DatumStore` meets all destination constraints, and this ref
+		// could only have been created using the correct type.
+		unsafe {
+			let ret: Arc<dyn 'static + Send + Sync + Any> =
+				std::mem::transmute::<_, _>(self.arc.clone());
+			Handle::from(ret.downcast::<Store<D>>().unwrap_unchecked())
+		}
+	}
+}
+
+impl<D: Datum> std::ops::Deref for DataRef<'_, D> {
+	type Target = Store<D>;
+
+	fn deref(&self) -> &Self::Target {
+		self.store
+	}
+}
+
+impl<D: Datum> PartialEq for DataRef<'_, D> {
+	/// Check if these are two references to the same datum and the same catalog.
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self.arc, other.arc) && std::ptr::eq(self.catalog, other.catalog)
+	}
+}
+
+impl<D: Datum> Eq for DataRef<'_, D> {}
 
 // Handle and InHandle /////////////////////////////////////////////////////////
 
@@ -39,9 +140,13 @@ pub trait Datum: private::Sealed {
 /// Attaching a generic type allows the pointer to be pre-downcast, so
 /// dereferencing is as fast as with any other pointer with no unsafe code required.
 #[derive(Debug)]
-pub struct Handle<D: Datum>(Arc<D>);
+pub struct Handle<D: Datum>(Arc<Store<D>>);
 
 impl<D: Datum> Handle<D> {
+	pub fn id(&self) -> &str {
+		self.0.id()
+	}
+
 	/// For use in inter-datum relationships.
 	#[must_use]
 	pub fn downgrade(&self) -> InHandle<D> {
@@ -49,14 +154,14 @@ impl<D: Datum> Handle<D> {
 	}
 }
 
-impl<D: Datum> From<Arc<D>> for Handle<D> {
-	fn from(value: Arc<D>) -> Self {
+impl<D: Datum> From<Arc<Store<D>>> for Handle<D> {
+	fn from(value: Arc<Store<D>>) -> Self {
 		Self(value)
 	}
 }
 
-impl<D: Datum> From<&Arc<D>> for Handle<D> {
-	fn from(value: &Arc<D>) -> Self {
+impl<D: Datum> From<&Arc<Store<D>>> for Handle<D> {
+	fn from(value: &Arc<Store<D>>) -> Self {
 		Self(value.clone())
 	}
 }
@@ -66,7 +171,7 @@ impl<D: Datum> std::ops::Deref for Handle<D> {
 
 	#[inline]
 	fn deref(&self) -> &Self::Target {
-		&self.0
+		self.0.inner()
 	}
 }
 
@@ -88,7 +193,7 @@ impl<D: Datum> Eq for Handle<D> {}
 /// Like [`Handle`] but [`Weak`], allowing inter-datum relationships (without
 /// preventing in-place removal) in a way that can't leak.
 #[derive(Debug)]
-pub struct InHandle<D: Datum>(Weak<D>);
+pub struct InHandle<D: Datum>(Weak<Store<D>>);
 
 impl<D: Datum> InHandle<D> {
 	#[must_use]
@@ -113,22 +218,18 @@ impl<D: Datum> PartialEq for InHandle<D> {
 impl<D: Datum> Eq for InHandle<D> {}
 
 macro_rules! impl_datum {
-	($($t:ty, $tname:literal);+) => {
+	($($datum_t:ty, $tname:literal);+) => {
 		$(
-			impl Datum for $t {
-				fn header(&self) -> &DatumHeader {
-					&self.header
-				}
-
-				fn header_mut(&mut self) -> &mut DatumHeader {
-					&mut self.header
-				}
-
-				fn type_name(&self) -> &'static str {
-					$tname
-				}
-			}
+			impl Datum for $datum_t {}
 		)+
+
+		pub(super) static DATUM_TYPE_NAMES: Lazy<HashMap<TypeId, &'static str>> = Lazy::new(|| {
+			HashMap::from([
+				$(
+					(TypeId::of::<$datum_t>(), $tname),
+				)+
+			])
+		});
 	};
 }
 
@@ -142,40 +243,4 @@ impl_datum! {
 	PolyModel, "Poly Model";
 	Species, "Species";
 	VoxelModel, "Voxel Model"
-}
-
-mod private {
-	use std::any::Any;
-
-	use super::*;
-
-	pub trait Sealed: 'static + Any + Send + Sync + std::fmt::Debug {
-		/// Boilerplate allowing upcasting from [`super::Datum`] to [`Any`].
-		#[must_use]
-		fn as_any(&self) -> &dyn Any;
-	}
-
-	macro_rules! impl_sealed {
-		($($type:ty),+) => {
-			$(
-				impl Sealed for $type {
-					fn as_any(&self) -> &dyn Any {
-						self
-					}
-				}
-			)+
-		};
-	}
-
-	impl_sealed! {
-		Audio,
-		Blueprint,
-		DamageType,
-		Image,
-		Level,
-		LockDef,
-		PolyModel,
-		Species,
-		VoxelModel
-	}
 }

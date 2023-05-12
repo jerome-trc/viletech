@@ -77,7 +77,7 @@ pub fn on_enter(
 	images: ResMut<Assets<Image>>,
 ) {
 	let catalog = core.catalog.read();
-	let level = catalog.get_ptr::<Level>("DOOM/E1M1").unwrap();
+	let level = catalog.get::<Level>("DOOM/E1M1").unwrap().handle();
 
 	sim::start(
 		cmds,
