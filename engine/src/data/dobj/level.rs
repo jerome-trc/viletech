@@ -1,6 +1,6 @@
 //! Level (a.k.a. "map") data.
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use bevy::prelude::{IVec2, Vec2, Vec3};
 use bitflags::bitflags;
@@ -175,6 +175,7 @@ pub struct Level {
 	pub subsectors: Vec<SubSector>,
 	pub things: Vec<Thing>,
 	pub vertices: Vec<Vertex>,
+	pub udmf: HashMap<UdmfKey, UdmfValue>,
 }
 
 /// Comes from a map entry in a MAPINFO lump.
@@ -265,4 +266,24 @@ bitflags! {
 		const IS_HUB = 1 << 0;
 		const ALLOW_INTERMISSION = 1 << 1;
 	}
+}
+
+/// No UDMF field name exceeds 32 ASCII characters, so no need to heap-allocate them.
+pub type String32 = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 32 }>;
+
+/// In any given variant, `index` corresponds to one of the arrays in [`Level`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum UdmfKey {
+	Linedef { field: String32, index: usize },
+	Sector { field: String32, index: usize },
+	Sidedef { field: String32, index: usize },
+	Thing { field: String32, index: usize },
+}
+
+/// Booleans are covered by flag fields, and thus are not represented here.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum UdmfValue {
+	Int(i32),
+	Float(f64),
+	String(String),
 }

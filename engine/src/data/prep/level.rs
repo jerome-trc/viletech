@@ -1,6 +1,6 @@
 //! Functions for turning vanilla lumps into levels.
 
-use std::io::Cursor;
+use std::{collections::HashMap, io::Cursor};
 
 use crate::{
 	data::{
@@ -200,6 +200,7 @@ impl Catalog {
 			subsectors,
 			things,
 			vertices,
+			udmf: HashMap::new(),
 		};
 
 		ctx.add_datum(level, dir.file_prefix());
