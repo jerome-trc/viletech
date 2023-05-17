@@ -58,6 +58,7 @@ bytemuck = { workspace = true }
 byteorder = { workspace = true }
 cpal = { workspace = true }
 cranelift = { workspace = true }
+cranelift-interpreter = { workspace = true }
 cranelift-jit = { workspace = true }
 cranelift-module = { workspace = true }
 crossbeam = { workspace = true }

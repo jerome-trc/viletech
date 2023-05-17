@@ -3,8 +3,6 @@
 use doomfront::rowan;
 use serde::{Deserialize, Serialize};
 
-use super::ast;
-
 /// Tags representing syntax nodes, from low-level primitives to high-level composites.
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -253,7 +251,9 @@ pub enum Syn {
 	/// An unbroken string of spaces, tabs, newlines, and/or carriage returns.
 	Whitespace,
 	/// The top-level node.
-	Root, // Ensure this is always the last variant!
+	Root,
+	#[doc(hidden)]
+	__Last,
 }
 
 impl From<Syn> for rowan::SyntaxKind {
@@ -266,22 +266,13 @@ impl rowan::Language for Syn {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
-		assert!(raw.0 <= Self::Root as u16);
+		assert!(raw.0 < Self::__Last as u16);
 		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
 		kind.into()
 	}
-}
-
-impl doomfront::LangExt for Syn {
-	const SYN_WHITESPACE: Self::Kind = Self::Whitespace;
-	type AstRoot = ast::Root;
-}
-
-impl doomfront::LangComment for Syn {
-	const SYN_COMMENT: Self::Kind = Self::Comment;
 }
 
 impl Syn {

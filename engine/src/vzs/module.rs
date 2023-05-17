@@ -21,7 +21,7 @@ use fasthash::SeaHasher;
 use serde::{Deserialize, Serialize};
 use slotmap::SlotMap;
 
-use super::{IncludeTree, Symbol, Version};
+use super::{parse::IncludeTree, Symbol, Version};
 
 #[derive(Debug)]
 pub struct Module {

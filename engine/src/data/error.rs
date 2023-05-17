@@ -2,10 +2,9 @@
 
 use std::path::PathBuf;
 
-use doomfront::ParseError;
 use zip::result::ZipError;
 
-use crate::{wad, VPathBuf};
+use crate::{vzs, wad, VPathBuf};
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`MountError`].
@@ -308,7 +307,7 @@ pub enum PrepErrorKind {
 	///
 	/// [TEXTURE1 or TEXTURE2]: https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2
 	TextureX,
-	VzsParse(ParseError),
+	VzsParse(vzs::parse::Error<'static>),
 	/// Failure to decode a FLAC, MP3, Ogg, or WAV file.
 	WaveformAudio(kira::sound::FromFileError),
 }

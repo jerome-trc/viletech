@@ -9,9 +9,6 @@
 	- [Type System](#type-system)
 		- [Primitive Types](#primitive-types)
 	- [Editions](#editions)
-		- [`GZ`](#gz)
-		- [`2021X`](#2021x)
-			- [Changes](#changes)
 
 Note that this is a living document.
 
@@ -102,20 +99,4 @@ The following aliases are also provided:
 
 ## Editions
 
-VZScript uses an edition system, much like those of Rust, to enable backwards-compatibility-breaking changes to syntax and semantics. Only the latest edition is to be implemented; editions prior are to have transpilation modes which parse, analyse, and then convert code to the newest edition at the AST level.
-
-### `GZ`
-
-Being a fork of VZScript, GZDoom's ZScript itself is considered to be a VZScript edition, although without official support. Since no meaningful specification exists, the current compiler used by [GZDoom trunk](https://github.com/ZDoom/gzdoom) is considered to be a reference implementation.
-
-### `2021X`
-
-The first VZScript edition.
-
-#### Changes
-
-Changes between `GZ` and `2021X`:
-
-- All keywords and identifiers are case-sensitive.
-- The unused `latent` keyword has been removed.
-- The no-op unary affirmation operator (`+`) has been removed.
+This specification follows [Semantic Versioning](https://semver.org/). Its content is relevant to the latest version; this section contains a list of major versions and the breaking changes introduced therein to lead up to this docuent.

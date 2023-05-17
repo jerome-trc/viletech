@@ -7,19 +7,17 @@
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
 mod abi;
-pub mod ast;
+// pub mod ast;
 mod func;
 pub mod heap;
 mod inode;
 mod issue;
 mod module;
-mod parse;
+pub mod parse;
 mod project;
 mod runtime;
 mod sym;
 mod syn;
-#[cfg(test)]
-mod test;
 pub mod tsys;
 
 pub use self::{
@@ -27,7 +25,7 @@ pub use self::{
 	inode::*,
 	issue::*,
 	module::{Builder as ModuleBuilder, Module},
-	parse::*,
+	parse::{FileParseTree, IncludeTree, ParseTree},
 	project::*,
 	runtime::*,
 	sym::*,
