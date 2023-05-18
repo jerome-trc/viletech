@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Syn {
-	// Higher-level composites /////////////////////////////////////////////////
+	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `#![resolver(args)]`. `!` and arguments are optional.
 	Annotation,
 	/// For both function calls and annotations. Wraps zero or more [`Syn::Argument`]s.
@@ -21,9 +21,6 @@ pub enum Syn {
 	DeclQualifiers,
 	/// `quals returntypes name(params) {}` or `quals returntypes name(params);`
 	FunctionDecl,
-	/// `ident:`. Used to distinguish blocks and for naming passed arguments.
-	/// Distinct from [`Syn::Name`] since it does not introduce a name into scope.
-	Label,
 	/// Will have one of the following tokens as a child:
 	/// - [`Syn::LitChar`]
 	/// - [`Syn::LitFalse`]
@@ -32,6 +29,7 @@ pub enum Syn {
 	/// - [`Syn::LitNull`]
 	/// - [`Syn::LitString`]
 	/// - [`Syn::LitTrue`]
+	/// - [`Syn::LitVoid`]
 	Literal,
 	/// Syntax node with a [`Syn::Ident`] token as a child.
 	/// Used as part of function declarations, variable bindings, et cetera.
@@ -51,7 +49,9 @@ pub enum Syn {
 	/// "Type specifier". A [`Syn::Colon`] followed by a [`Syn::TypeRef`].
 	TypeSpec,
 
-	// Literals ////////////////////////////////////////////////////////////////
+	// Tokens: literals ////////////////////////////////////////////////////////
+	/// The exact string `()`.
+	LitVoid,
 	/// The exact string `null`.
 	LitNull,
 	/// The exact string `false`.
@@ -71,7 +71,7 @@ pub enum Syn {
 	/// <https://doc.rust-lang.org/stable/reference/tokens.html#string-literals>
 	LitString,
 
-	// Glyphs, composite glyphs, glyph-adjacent ////////////////////////////////
+	// Tokens: glyphs, composite glyphs, glyph-adjacent ////////////////////////
 	/// `&`
 	Ampersand,
 	/// `&&`
@@ -203,7 +203,7 @@ pub enum Syn {
 	/// `->`
 	ThinArrow,
 
-	// Keywords ////////////////////////////////////////////////////////////////
+	// Tokens: keywords ////////////////////////////////////////////////////////
 	KwAbstract,
 	KwBitfield,
 	KwBreak,

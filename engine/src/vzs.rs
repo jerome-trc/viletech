@@ -7,7 +7,7 @@
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
 mod abi;
-// pub mod ast;
+pub mod ast;
 mod func;
 pub mod heap;
 mod inode;

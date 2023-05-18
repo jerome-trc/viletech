@@ -1,140 +1,131 @@
-//! Combinators used by multiple other combinators.
+//! Various combinators which are broadly applicable elsewhere.
 
 use doomfront::{
-	chumsky::{primitive, text, Parser},
+	chumsky::{primitive, text, IterParser, Parser},
 	comb,
-	ext::{Parser1, ParserVec},
-	help, ParseError, ParseOut,
+	util::{builder::GreenCache, state::*},
+	Extra,
 };
 
 use crate::vzs::parse::expr::*;
 
 use super::Syn;
 
-pub(super) fn annotation(
-	src: &str,
-) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	comb::just::<Syn, _>('#', Syn::Pound, src)
-		.start_vec()
-		.chain_push_opt(comb::just::<Syn, _>('!', Syn::Bang, src).or_not())
-		.chain_push(comb::just::<Syn, _>('[', Syn::BracketL, src))
-		.chain_append(wsp_ext(src).repeated())
-		.chain_push(resolver(src))
-		.chain_push_opt(arg_list(src).or_not())
-		.chain_append(wsp_ext(src).repeated())
-		.chain_push(comb::just::<Syn, _>(']', Syn::BracketR, src))
-		.collect_n::<Syn, { Syn::Annotation as u16 }>()
+/// Builds a [`Syn::Annotation`] node.
+pub(super) fn annotation<'i, C: 'i + GreenCache>(
+) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	primitive::group((
+		primitive::just("#")
+			.map_with_state(gtb_open_with(Syn::Annotation.into(), Syn::Pound.into())),
+		primitive::just("!")
+			.or_not()
+			.map_with_state(gtb_token_opt(Syn::Bang.into())),
+		primitive::just("[").map_with_state(gtb_token(Syn::BracketL.into())),
+		wsp_ext().repeated().collect::<()>(),
+		resolver(),
+		wsp_ext().repeated().collect::<()>(),
+		arg_list().or_not(),
+		wsp_ext().repeated().collect::<()>(),
+		primitive::just("]").map_with_state(gtb_token(Syn::BracketR.into())),
+	))
+	.map_with_state(gtb_close())
+	.map_err_with_state(gtb_cancel(Syn::Annotation.into()))
 }
 
-/// Includes delimiting parentheses.
-pub(super) fn arg_list(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	let anon = expr(src).map(help::map_node::<Syn>(Syn::Argument));
-
-	let labelled = label(src)
-		.start_vec()
-		.chain_push(comb::just::<Syn, _>(':', Syn::Colon, src))
-		.chain_append(wsp_ext(src).repeated())
-		.chain_push(expr(src))
-		.collect_n::<Syn, { Syn::Argument as u16 }>();
-
-	let rep = comb::just::<Syn, _>(',', Syn::Comma, src)
-		.start_vec()
-		.chain_append(wsp_ext(src).repeated())
-		.chain_push(primitive::choice((labelled.clone(), anon.clone())))
-		.chain_append(wsp_ext(src).repeated());
-
-	comb::just::<Syn, _>('(', Syn::ParenL, src)
-		.start_vec()
-		.chain_append(wsp_ext(src).repeated())
-		.chain_push_opt(primitive::choice((labelled.clone(), anon.clone())).or_not())
-		.chain_append(wsp_ext(src).repeated())
-		.then(rep.repeated())
-		.map(|(mut vec, mut v_v)| {
-			v_v.iter_mut().for_each(|v| vec.append(v));
-			vec
-		})
-		.chain_push(comb::just::<Syn, _>(')', Syn::ParenR, src))
-		.collect_n::<Syn, { Syn::ArgList as u16 }>()
-}
-
-pub(super) fn block(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	comb::just::<Syn, _>('{', Syn::BraceL, src)
-		.start_vec()
-		.chain_push(comb::just::<Syn, _>('}', Syn::BraceR, src))
-		.collect_n::<Syn, { Syn::Block as u16 }>()
-}
-
-pub(super) fn decl_quals(
-	src: &str,
-) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	let rep = wsp_ext(src).then(decl_qual(src));
-
-	decl_qual(src)
-		.start_vec()
-		.then(rep.repeated())
-		.map(|(mut vec, others)| {
-			for (wsp, qual) in others {
-				vec.push(wsp);
-				vec.push(qual);
-			}
-
-			vec
-		})
-		.chain_append(wsp_ext(src).repeated().at_least(1))
-		.collect_n::<Syn, { Syn::DeclQualifiers as u16 }>()
-}
-
-pub(super) fn decl_qual(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
+pub(super) fn any_kw<'i, C: 'i + GreenCache>(
+) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
 	primitive::choice((
-		text::keyword("abstract").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwAbstract)),
-		text::keyword("ceval").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwCEval)),
-		text::keyword("final").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwFinal)),
-		text::keyword("override").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwOverride)),
-		text::keyword("private").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwPrivate)),
-		text::keyword("protected").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwProtected)),
-		text::keyword("static").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwStatic)),
-		text::keyword("virtual").map_with_span(help::map_tok::<Syn, _>(src, Syn::KwVirtual)),
+		primitive::just("break"),
+		primitive::just("ceval"),
+		primitive::just("continue"),
+		primitive::just("const"),
+		primitive::just("do"),
+		primitive::just("else"),
+		primitive::just("for"),
+		primitive::just("if"),
+		primitive::just("let"),
+		primitive::just("return"),
+		primitive::just("switch"),
+		primitive::just("until"),
+		primitive::just("while"),
 	))
 }
 
-pub(super) fn ident(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	text::ident().map_with_span(help::map_tok::<Syn, _>(src, Syn::Ident))
+/// Includes delimiting parentheses. Builds a [`Syn::ArgList`] node.
+pub(super) fn arg_list<'i, C: 'i + GreenCache>(
+) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	let anon = primitive::group((
+		primitive::empty().map_with_state(gtb_open(Syn::Argument.into())),
+		expr(),
+	))
+	.map_with_state(gtb_close())
+	.map_with_state(gtb_cancel(Syn::Argument.into()));
+
+	let labelled = primitive::group((
+		ident().map_with_state(gtb_open_with(Syn::Argument.into(), Syn::Ident.into())),
+		wsp_ext().repeated().collect::<()>(),
+		primitive::just(":").map_with_state(gtb_token(Syn::Colon.into())),
+		wsp_ext().repeated().collect::<()>(),
+		expr(),
+	))
+	.map_with_state(gtb_close())
+	.map_err_with_state(gtb_cancel(Syn::Argument.into()));
+
+	let rep = primitive::group((
+		primitive::just(",").map_with_state(gtb_token(Syn::Comma.into())),
+		wsp_ext().repeated().collect::<()>(),
+		primitive::choice((labelled.clone(), anon.clone())),
+		wsp_ext().repeated().collect::<()>(),
+	));
+
+	primitive::group((
+		primitive::just("(").map_with_state(gtb_open_with(Syn::ArgList.into(), Syn::ParenL.into())),
+		wsp_ext().repeated().collect::<()>(),
+		primitive::choice((labelled, anon)).or_not(),
+		wsp_ext().repeated().collect::<()>(),
+		rep.repeated().collect::<()>(),
+		primitive::just(")").map_with_state(gtb_token(Syn::ParenR.into())),
+	))
+	.map_with_state(gtb_close())
+	.map_err_with_state(gtb_cancel(Syn::ArgList.into()))
 }
 
-pub(super) fn label(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	ident(src).map(help::map_node::<Syn>(Syn::Label))
+/// Shorthand for `chumsky::text::ident().and_is(any_kw().not())`.
+pub(super) fn ident<'i, C: 'i + GreenCache>(
+) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
+	text::ident().and_is(any_kw().not()).slice()
 }
 
-pub(super) fn name(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	ident(src).map(help::map_node::<Syn>(Syn::Name))
+/// Builds a [`Syn::Name`] node.
+pub(super) fn name<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	ident().map_with_state(gtb_open_close(Syn::Name.into(), Syn::Ident.into()))
 }
 
-pub(super) fn resolver(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	let rep = comb::just::<Syn, _>("::", Syn::Colon2, src).then(name(src));
+/// Builds a [`Syn::Resolver`] node.
+pub(super) fn resolver<'i, C: 'i + GreenCache>(
+) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	let delimiter = primitive::just("::").map_with_state(gtb_token(Syn::Colon2.into()));
 
-	comb::just::<Syn, _>("::", Syn::Colon2, src)
-		.or_not()
-		.map(|opt| match opt {
-			Some(n_or_t) => vec![n_or_t],
-			None => vec![],
-		})
-		.chain_push(name(src))
-		.then(rep.repeated())
-		.map(|(mut vec, parts)| {
-			for (p_sep, p_ident) in parts {
-				vec.push(p_sep);
-				vec.push(p_ident);
-			}
+	let rep = primitive::group((delimiter.clone(), name()));
 
-			vec
-		})
-		.collect_n::<Syn, { Syn::Resolver as u16 }>()
+	primitive::group((
+		primitive::empty().map_with_state(gtb_open(Syn::Resolver.into())),
+		delimiter.or_not(),
+		name(),
+		rep.repeated().collect::<()>(),
+	))
+	.map_with_state(gtb_close())
+	.map_err_with_state(gtb_cancel(Syn::Resolver.into()))
 }
 
-pub(super) fn type_ref(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	primitive::choice((resolver(src),)).map(help::map_node::<Syn>(Syn::TypeRef))
-}
-
-pub(super) fn wsp_ext(src: &str) -> impl Parser<char, ParseOut, Error = ParseError> + Clone + '_ {
-	comb::wsp_ext::<Syn, _>(comb::c_cpp_comment::<Syn>(src), src)
+/// Remember that this matches either a heterogenous whitespace span or a comment,
+/// so to deal with both in one span requires repetition.
+/// Builds [`Syn::Comment`] or [`Syn::Whitespace`] tokens.
+pub(super) fn wsp_ext<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone
+{
+	primitive::choice((
+		comb::cpp_comment().map_with_state(gtb_token(Syn::Comment.into())),
+		comb::c_comment().map_with_state(gtb_token(Syn::Comment.into())),
+		comb::wsp().map_with_state(gtb_token(Syn::Whitespace.into())),
+	))
 }

@@ -1,4 +1,4 @@
-use doomfront::rowan::ast::AstNode;
+use doomfront::{rowan::ast::AstNode, util::testing::prettyprint};
 
 use crate::vzs::{
 	ast::{self},
@@ -8,322 +8,142 @@ use crate::vzs::{
 use super::*;
 
 #[test]
-fn smoke_fndecls() {
-	const SOURCE: &str = r#"
-
-void native_fn();
-private ceval vzs::void, ::vzs::int builtin_fn();
-abstract vile::Pref my_fn() {}
-
-"#;
-
-	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
-	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root.clone());
-	let mut ast = ast_iter(cursor);
-
-	if let ast::Root::Item(ast::Item::FunctionDecl(fn0)) = ast.next().unwrap() {
-		assert_eq!(fn0.name().token().text(), "native_fn");
-		assert!(fn0.body().is_none());
-	} else {
-		panic!("Expected a top-level function, but failed to parse it.");
-	}
-
-	if let ast::Root::Item(ast::Item::FunctionDecl(fn1)) = ast.next().unwrap() {
-		assert_eq!(fn1.name().token().text(), "builtin_fn");
-		assert!(fn1
-			.qualifiers()
-			.unwrap()
-			.as_flags()
-			.contains(ast::DeclQualifierFlags::PRIVATE | ast::DeclQualifierFlags::CEVAL));
-		assert!(fn1.body().is_none());
-
-		let mut fn1_rets = fn1.return_types();
-
-		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "vzs::void");
-		assert_eq!(fn1_rets.next().unwrap().syntax().text(), "::vzs::int");
-	} else {
-		panic!("Expected a top-level function, but failed to parse it.");
-	}
-
-	if let ast::Root::Item(ast::Item::FunctionDecl(fn2)) = ast.next().unwrap() {
-		assert_eq!(fn2.name().token().text(), "my_fn");
-		assert!(fn2.body().is_some());
-	} else {
-		panic!("Expected a top-level function, but failed to parse it.");
-	}
-}
-
-#[test]
 fn smoke_annotations() {
 	const SOURCE: &str = r##"
-
 #![vzs::legal]
 #[vile::illegal]
 
-#![legal_w_args(void)]
-#[::vile::illegal_w_args(@[::vzs::int], arg1: 123)]
-
+#![legal_w_args(())]
+#[::vile::illegal_w_args(::some_resolver, arg1: 123)]
 "##;
 
-	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
-	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root.clone());
+	let ptree = parse_file::<GreenCacheNoop>(SOURCE, "/test.vzs", None).unwrap();
+	assert_no_errors(&ptree);
+	let cursor = SyntaxNode::new_root(ptree.root.clone());
 	let mut ast = ast_iter(cursor);
 
-	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
-		assert_eq!(anno0.resolver().syntax().text(), "vzs::legal");
-		assert!(anno0.is_inner());
-	} else {
-		panic!("Expected a top-level annotation, but failed to parse it.");
-	}
+	let ast::FileRoot::Annotation(anno0) = ast.next().unwrap();
+
+	assert_eq!(anno0.resolver().syntax().text(), "vzs::legal");
+	assert!(anno0.is_inner());
 
 	ast.next().unwrap();
 	ast.next().unwrap();
 
-	if let ast::Root::Annotation(anno4) = ast.next().unwrap() {
-		assert_eq!(anno4.resolver().syntax().text(), "::vile::illegal_w_args");
-		assert!(!anno4.is_inner());
+	let ast::FileRoot::Annotation(anno4) = ast.next().unwrap();
 
-		let args = anno4.args().unwrap();
-		let mut args = args.iter();
+	assert_eq!(anno4.resolver().syntax().text(), "::vile::illegal_w_args");
+	assert!(!anno4.is_inner());
 
-		assert!(args.next().unwrap().label().is_none());
-		assert_eq!(args.next().unwrap().label().unwrap().token().text(), "arg1");
-	} else {
-		panic!("Expected a top-level annotation, but failed to parse it.");
-	}
+	let args = anno4.args().unwrap();
+	let mut args = args.iter();
+
+	assert!(args.next().unwrap().label().is_none());
+	assert_eq!(args.next().unwrap().label().unwrap().text(), "arg1");
+}
+
+#[test]
+fn smoke_arglist() {
+	const SOURCE: &str = "(barons)";
+	let parser = common::arg_list();
+	let mut state = ParseState::<GreenCacheNoop>::new(None);
+	let res = parser.parse_with_state(SOURCE, &mut state);
+	let _ = res.into_output().unwrap();
+	let root = state.gtb.finish();
+	let cursor = SyntaxNode::new_root(root.clone());
+	prettyprint(cursor);
+}
+
+#[test]
+fn smoke_exprs() {
+	const SOURCE: &str = "BANQUET";
+	let parser = expr::expr();
+	let mut state = ParseState::<GreenCacheNoop>::new(None);
+	let res = parser.parse_with_state(SOURCE, &mut state);
+	let _ = res.into_output().unwrap();
+	let root = state.gtb.finish();
+	let cursor = SyntaxNode::new_root(root.clone());
+	prettyprint(cursor);
 }
 
 #[test]
 fn smoke_literals() {
-	const SOURCE: &str = r##"
-	#![annotation(
-		null,
-		true,
-		false,
-		12345_67890,
-		0b0001000__,
-		0xd_E_f_A_c_e,
-		0o77777,
-		12345.67890,
-		1234567890.,
-		123456789e0,
-		12345.6789e00,
-		1234.56789e+000,
-		123456.789e-0000,
-		'\n',
-		"knee deep in the code",
-		""
-	)]
-	"##;
+	const SOURCES: &[&str] = &[
+		"()",
+		"true",
+		"false",
+		"12345_67890",
+		"0b0001000__",
+		"0xd_E_f_A_c_e",
+		"0o77777",
+		"1.",
+		"1234567890.",
+		"1__234__5.6__789__0",
+		"123456789e0",
+		"12345.6789e00",
+		"1234.56789e+000",
+		"123456.789e-0000",
+		"\"knee deep in the code\"",
+		"\"\"",
+	];
 
-	let pt = parse_file(SOURCE, "/test.vzs").unwrap();
-	assert_no_errors(&pt);
-	let cursor = SyntaxNode::new_root(pt.root.clone());
-	let mut ast = ast_iter(cursor);
+	const EXPECTED: &[fn(ast::LitToken) -> bool] = &[
+		|token| token.is_void(),
+		|token| token.bool().filter(|b| *b).is_some(),
+		|token| token.bool().filter(|b| !*b).is_some(),
+		|token| token.int().unwrap().unwrap() == 12345_67890,
+		|token| token.int().unwrap().unwrap() == 0b0001000__,
+		|token| token.int().unwrap().unwrap() == 0xd_E_f_A_c_e,
+		|token| token.int().unwrap().unwrap() == 0o77777,
+		|token| token.float().unwrap() == 1.,
+		|token| token.float().unwrap() == 1234567890.,
+		|token| token.float().unwrap() == 1__234__5.6__789__0,
+		|token| token.float().unwrap() == 123456789e0,
+		|token| token.float().unwrap() == 12345.6789e00,
+		|token| token.float().unwrap() == 1234.56789e+000,
+		|token| token.float().unwrap() == 123456.789e-0000,
+		|token| token.string().unwrap() == "knee deep in the code",
+		|token| token.string().unwrap() == "",
+	];
 
-	if let ast::Root::Annotation(anno0) = ast.next().unwrap() {
-		let args = anno0.args().unwrap();
-		let mut args = args.iter();
-
-		assert!(args
-			.next()
-			.unwrap()
-			.expr()
-			.into_literal()
-			.unwrap()
-			.token()
-			.is_null());
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.bool()
-				.unwrap(),
-			true,
+	for (i, &source) in SOURCES.iter().enumerate() {
+		let parser = lit::literal();
+		let mut state = ParseState::<GreenCacheNoop>::new(None);
+		let res = parser.parse_with_state(source, &mut state);
+		let _ = res.into_output().unwrap_or_else(|| {
+			panic!("Failed to parse a literal from test case: `{source}`");
+		});
+		let root = state.gtb.finish();
+		let cursor = SyntaxNode::new_root(root.clone());
+		assert!(
+			EXPECTED[i](ast::Literal::cast(cursor).unwrap().token()),
+			"Literal parse test case failed: `{source}`"
 		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.bool()
-				.unwrap(),
-			false,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.int()
-				.unwrap()
-				.unwrap(),
-			12345_67890,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.int()
-				.unwrap()
-				.unwrap(),
-			0b0001000,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.int()
-				.unwrap()
-				.unwrap(),
-			0xdeface,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.int()
-				.unwrap()
-				.unwrap(),
-			0o77777,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			12345.67890_f64,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			1234567890_f64,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			123456789e0_f64,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			12345.6789e00,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			1234.56789e+000,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.float()
-				.unwrap(),
-			123456.789e-0000,
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.char()
-				.unwrap(),
-			'\n'
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.string()
-				.unwrap(),
-			"knee deep in the code"
-		);
-		assert_eq!(
-			args.next()
-				.unwrap()
-				.expr()
-				.into_literal()
-				.unwrap()
-				.token()
-				.string()
-				.unwrap(),
-			""
-		);
-	} else {
-		panic!("Expected a top-level annotation, but failed to parse it.");
 	}
+}
+
+#[test]
+fn smoke_resolvers() {
+	const SOURCE: &str = "::march::of::the::Demons";
+	let parser = common::resolver();
+	let mut state = ParseState::<GreenCacheNoop>::new(None);
+	let res = parser.parse_with_state(SOURCE, &mut state);
+	let _ = res.into_output().unwrap();
 }
 
 // Helpers /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn ast_iter(cursor: SyntaxNode) -> impl Iterator<Item = ast::Root> {
-	cursor.children().map(|c| ast::Root::cast(c).unwrap())
+fn ast_iter(cursor: SyntaxNode) -> impl Iterator<Item = ast::FileRoot> {
+	cursor.children().map(|c| ast::FileRoot::cast(c).unwrap())
 }
 
 fn assert_no_errors(pt: &FileParseTree) {
-	assert!(!pt.any_errors(), "Encountered errors: {}", {
+	assert!(pt.errors.is_empty(), "Encountered errors: {}", {
 		let mut output = String::default();
 
 		for err in &pt.errors {
-			output.push_str(&format!("{err:#?}"));
-			output.push('\r');
-			output.push('\n');
+			output.push_str(&format!("{err:#?}\r\n"));
 		}
 
 		output
