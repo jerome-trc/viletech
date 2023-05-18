@@ -25,6 +25,8 @@ Session.vim
 
 # Sample data ##################################################################
 
+/sample/
+
 # Anything here is useful to have around but too big to track,
 # or keeping it remotely would violate copyright law
 
