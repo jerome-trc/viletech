@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
 	sim::{level::Vertex, line::Flags},
-	EditorNum, Id8,
+	EditorNum, Id8, SmallString,
 };
 
 use super::{Audio, Blueprint, Image, InHandle};
@@ -178,6 +178,34 @@ pub struct Level {
 	pub udmf: HashMap<UdmfKey, UdmfValue>,
 }
 
+impl Level {
+	#[must_use]
+	pub fn new(format: LevelFormat) -> Self {
+		Self {
+			meta: LevelMeta {
+				name: String::default().into(),
+				author_name: String::default().into(),
+				music: None,
+				next: None,
+				next_secret: None,
+				par_time: 0,
+				special_num: 0,
+				flags: LevelFlags::empty(),
+			},
+			format,
+			linedefs: vec![],
+			nodes: vec![],
+			sectors: vec![],
+			segs: vec![],
+			sidedefs: vec![],
+			subsectors: vec![],
+			things: vec![],
+			vertices: vec![],
+			udmf: HashMap::new(),
+		}
+	}
+}
+
 /// Comes from a map entry in a MAPINFO lump.
 #[derive(Debug)]
 pub struct LevelMeta {
@@ -268,22 +296,19 @@ bitflags! {
 	}
 }
 
-/// No UDMF field name exceeds 32 ASCII characters, so no need to heap-allocate them.
-pub type String32 = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 32 }>;
-
 /// In any given variant, `index` corresponds to one of the arrays in [`Level`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UdmfKey {
-	Linedef { field: String32, index: usize },
-	Sector { field: String32, index: usize },
-	Sidedef { field: String32, index: usize },
-	Thing { field: String32, index: usize },
+	Linedef { field: SmallString, index: usize },
+	Sector { field: SmallString, index: usize },
+	Sidedef { field: SmallString, index: usize },
+	Thing { field: SmallString, index: usize },
 }
 
-/// Booleans are covered by flag fields, and thus are not represented here.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UdmfValue {
+	Bool(bool),
 	Int(i32),
 	Float(f64),
-	String(String),
+	String(SmallString), // Q: Intern these?
 }

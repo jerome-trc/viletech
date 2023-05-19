@@ -23,6 +23,7 @@ pub mod sim;
 pub mod simd;
 pub mod sparse;
 pub mod terminal;
+pub mod udmf;
 pub mod user;
 pub mod utils;
 pub mod vzs;
@@ -64,6 +65,8 @@ pub type VPathBuf = std::path::PathBuf;
 /// For compatibility purposes, VileTech sometimes needs to pretend that there's
 /// no game data namespacing and look up the last loaded thing with a certain name.
 pub type Id8 = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 8 }>;
+
+pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
 
 /// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.
 pub type EditorNum = u16;

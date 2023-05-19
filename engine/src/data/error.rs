@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use zip::result::ZipError;
 
-use crate::{vzs, wad, VPathBuf};
+use crate::{udmf, vzs, wad, VPathBuf};
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`MountError`].
@@ -350,6 +350,12 @@ impl std::fmt::Display for PrepError {
 						LevelError::MalformedFile(file) => {
 							format!("`{}` has malformed contents.", file.display())
 						}
+						LevelError::TextmapParse(err) => {
+							format!(
+								"Error while parsing `{}/TEXTMAP`: {err}",
+								self.path.display()
+							)
+						}
 						LevelError::UnreadableFile(file) => {
 							format!("`{}` is empty or a directory.", file.display())
 						}
@@ -399,12 +405,13 @@ impl std::fmt::Display for PrepError {
 
 /// Things that can go wrong when trying to process files into a [Level] datum.
 ///
-/// [Level]: super::obj::Level
+/// [Level]: super::dobj::Level
 #[derive(Debug)]
 pub enum LevelError {
 	/// For example, a file's byte length is not divisible
 	/// by the size of its individual structures.
 	MalformedFile(VPathBuf),
+	TextmapParse(udmf::Error),
 	/// A VFS entry was deduced to be a level component,
 	/// but is empty or a directory.
 	UnreadableFile(VPathBuf),

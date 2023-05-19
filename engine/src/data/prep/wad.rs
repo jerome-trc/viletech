@@ -296,13 +296,19 @@ impl Catalog {
 
 	fn prep_pass3_wad_dir(&self, ctx: &SubContext, dir: FileRef) {
 		match self.try_prep_level_vanilla(ctx, dir) {
-			Outcome::Ok(()) | Outcome::Err(()) => return,
+			Outcome::Ok(level) => {
+				ctx.add_datum(level, dir.file_prefix());
+			}
+			Outcome::Err(()) => return,
 			Outcome::None => {}
 			_ => unreachable!(),
 		}
 
 		match self.try_prep_level_udmf(ctx, dir) {
-			Outcome::Ok(()) | Outcome::Err(()) => {}
+			Outcome::Ok(level) => {
+				ctx.add_datum(level, dir.file_prefix());
+			}
+			Outcome::Err(()) => {}
 			Outcome::None => {}
 			_ => unreachable!(),
 		}

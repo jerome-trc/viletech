@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	data::dobj,
+	data::dobj::{self, UdmfValue},
 	sparse::{SparseSet, SparseSetIndex},
 };
 
@@ -78,10 +78,20 @@ impl Vertex {
 		self.0.y
 	}
 
+	#[must_use]
+	pub fn bottom_mut(&mut self) -> &mut f32 {
+		&mut self.0.y
+	}
+
 	/// a.k.a. "ceiling" or "sky". Corresponds to the vector's `w` component.
 	#[must_use]
 	pub fn top(self) -> f32 {
 		self.0.w
+	}
+
+	#[must_use]
+	pub fn top_mut(&mut self) -> &mut f32 {
+		&mut self.0.w
 	}
 }
 
@@ -149,10 +159,3 @@ impl SparseSetIndex for SideIndex {}
 /// Can be attached to a line, side, or sector.
 #[derive(Component, Debug, Default)]
 pub struct Udmf(HashMap<Arc<str>, UdmfValue>);
-
-#[derive(Debug)]
-pub enum UdmfValue {
-	Int(i32),
-	Float(f64),
-	String(Arc<str>),
-}

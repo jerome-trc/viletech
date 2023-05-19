@@ -1,13 +1,13 @@
 //! Functions for turning vanilla lumps into levels.
 
-use std::{collections::HashMap, io::Cursor};
+use std::io::Cursor;
 
 use crate::{
 	data::{
 		detail::Outcome,
 		dobj::{
-			BspNode, BspNodeChild, Level, LevelFlags, LevelFormat, LevelMeta, LineDef, Sector, Seg,
-			SegDirection, SideDef, SubSector, Thing, ThingFlags,
+			BspNode, BspNodeChild, Level, LevelFormat, LineDef, Sector, Seg, SegDirection, SideDef,
+			SubSector, Thing, ThingFlags,
 		},
 		prep::*,
 		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
@@ -25,7 +25,11 @@ const VANILLA_SCALEDOWN: f32 = 0.01;
 impl Catalog {
 	/// Covers both Doom- and Hexen-format levels.
 	/// Returns `None` if `dir` is unlikely to represent a vanilla level definition.
-	pub(super) fn try_prep_level_vanilla(&self, ctx: &SubContext, dir: FileRef) -> Outcome<(), ()> {
+	pub(super) fn try_prep_level_vanilla(
+		&self,
+		ctx: &SubContext,
+		dir: FileRef,
+	) -> Outcome<Level, ()> {
 		let mut _blockmap = None;
 		let mut linedefs = None;
 		let mut nodes = None;
@@ -51,11 +55,7 @@ impl Catalog {
 				"THINGS" => things = Some(child),
 				"VERTEXES" => vertexes = Some(child),
 				"BEHAVIOR" => behavior = Some(child),
-				_ => {
-					// Q: This is probably not a vanilla level, but could it be?
-					// Might be a WAD out there with extra data in a level folder.
-					return Outcome::None;
-				}
+				_ => {}
 			}
 		}
 
@@ -84,7 +84,9 @@ impl Catalog {
 			if !lump.is_readable() {
 				ctx.errors.lock().push(PrepError {
 					path: dir.path.to_path_buf(),
-					kind: PrepErrorKind::Level(LevelError::UnreadableFile(lump.path.to_path_buf())),
+					kind: PrepErrorKind::Level(LevelError::UnreadableFile(
+						lump.path().to_path_buf(),
+					)),
 				});
 
 				return Outcome::Err(());
@@ -176,36 +178,22 @@ impl Catalog {
 			Self::prep_things_hexen(things.read_bytes())
 		};
 
-		let level = Level {
-			meta: LevelMeta {
-				name: String::default().into(),
-				author_name: String::default().into(),
-				music: None,
-				next: None,
-				next_secret: None,
-				par_time: 0,
-				special_num: 0,
-				flags: LevelFlags::empty(),
-			},
-			format: if behavior.is_some() {
-				LevelFormat::Hexen
-			} else {
-				LevelFormat::Doom
-			},
-			linedefs,
-			nodes,
-			sectors,
-			segs,
-			sidedefs,
-			subsectors,
-			things,
-			vertices,
-			udmf: HashMap::new(),
-		};
+		let mut level = Level::new(if behavior.is_some() {
+			LevelFormat::Hexen
+		} else {
+			LevelFormat::Doom
+		});
 
-		ctx.add_datum(level, dir.file_prefix());
+		level.linedefs = linedefs;
+		level.nodes = nodes;
+		level.sectors = sectors;
+		level.segs = segs;
+		level.sidedefs = sidedefs;
+		level.subsectors = subsectors;
+		level.things = things;
+		level.vertices = vertices;
 
-		Outcome::Ok(())
+		Outcome::Ok(level)
 	}
 
 	#[must_use]
