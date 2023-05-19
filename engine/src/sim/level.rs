@@ -68,7 +68,7 @@ pub struct Dirty;
 
 // Vertex information //////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Deref, DerefMut, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Vertex(pub Vec4);
 
 impl Vertex {
@@ -92,20 +92,6 @@ impl Vertex {
 	#[must_use]
 	pub fn top_mut(&mut self) -> &mut f32 {
 		&mut self.0.w
-	}
-}
-
-impl std::ops::Deref for Vertex {
-	type Target = Vec4;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
-
-impl std::ops::DerefMut for Vertex {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
 	}
 }
 
