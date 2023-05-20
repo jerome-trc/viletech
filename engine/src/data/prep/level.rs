@@ -42,7 +42,7 @@ impl Catalog {
 		let mut vertexes = None;
 		let mut behavior = None;
 
-		for child in dir.child_refs().unwrap() {
+		for child in dir.children().unwrap() {
 			match child.file_prefix() {
 				"BLOCKMAP" => _blockmap = Some(child),
 				"LINEDEFS" => linedefs = Some(child),

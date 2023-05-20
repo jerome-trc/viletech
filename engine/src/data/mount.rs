@@ -18,7 +18,7 @@ use zip::ZipArchive;
 
 use crate::{
 	data::{
-		detail::{MountMetaIngest, Outcome, VfsKey},
+		detail::{MountMetaIngest, Outcome},
 		Mount, MountInfo, MountKind, MountMeta, MountPointError, VzsManifest, WadExtras,
 	},
 	utils::{io::*, path::PathExt},
@@ -26,7 +26,7 @@ use crate::{
 };
 
 use super::{
-	vfs::{File, FileContent},
+	vfs::{File, FileKey},
 	Catalog, LoadTracker, MountError, MountErrorKind, MountFormat,
 };
 
@@ -60,33 +60,32 @@ impl Context {
 pub(self) struct SubContext<'ctx> {
 	pub(self) tracker: &'ctx Arc<LoadTracker>,
 	pub(self) errors: &'ctx Mutex<Vec<MountError>>,
-	pub(self) files: DashMap<VfsKey, File>,
+	pub(self) files: DashMap<FileKey, File>,
 }
 
 impl SubContext<'_> {
-	fn add_file(&self, file: File) {
-		let path = file.path_raw().clone();
-		let key = VfsKey::new(file.path());
-		let parent_key = VfsKey::new(file.parent_path().unwrap());
-		self.files.insert(key, file);
+	fn add_file(&self, path: VPathBuf, file: File) {
+		let parent_key: FileKey = path.parent().unwrap().into();
+		let key: FileKey = path.into();
+		self.files.insert(key.clone(), file);
 
 		let mut parent = match self.files.get_mut(&parent_key) {
 			Some(p) => p,
 			None => return, // This is a subtree root. It will have to be handled later.
 		};
 
-		let FileContent::Directory(children) = &mut parent.content else {
-			unreachable!("Parent of {} is not a directory.", path.display());
+		let File::Directory(children) = parent.value_mut() else {
+			unreachable!("Parent of {} is not a directory.", key.display());
 		};
 
-		children.insert(path);
+		children.insert(key);
 	}
 }
 
 #[derive(Debug)]
 struct Success {
 	format: MountFormat,
-	new_files: DashMap<VfsKey, File>,
+	new_files: DashMap<FileKey, File>,
 	real_path: PathBuf,
 	mount_point: VPathBuf,
 }
@@ -268,8 +267,8 @@ impl Catalog {
 
 		let outcome = match format {
 			MountFormat::PlainFile => {
-				if let Some(leaf) = self.new_leaf_file(virt_path.to_path_buf(), bytes) {
-					ctx.add_file(leaf);
+				if let Some((p, leaf)) = self.new_leaf_file(virt_path.to_path_buf(), bytes) {
+					ctx.add_file(p, leaf);
 				}
 
 				Outcome::Ok(())
@@ -306,7 +305,10 @@ impl Catalog {
 			}
 		};
 
-		ctx.add_file(File::new_dir(virt_path.to_path_buf()));
+		ctx.add_file(
+			virt_path.to_path_buf(),
+			File::Directory(indexmap::indexset! {}),
+		);
 
 		for entry in dir_iter {
 			if ctx.tracker.is_cancelled() {
@@ -376,8 +378,11 @@ impl Catalog {
 		}
 
 		#[must_use]
-		fn maybe_map_marker(file: &File) -> bool {
-			file.is_empty() && !is_map_component(file.file_prefix())
+		fn maybe_map_marker(kvp: &(VPathBuf, File)) -> bool {
+			let path_str = kvp.0.to_string_lossy();
+			let fpfx = path_str.as_ref().split('.').next().unwrap();
+			// FIXME: FraggleScript occupies markers, so these may not be empty.
+			kvp.1.is_empty() && !is_map_component(fpfx)
 		}
 
 		if ctx.tracker.is_cancelled() {
@@ -395,7 +400,10 @@ impl Catalog {
 		};
 
 		let mut files = Vec::with_capacity(wad.len() + 1);
-		files.push(File::new_dir(virt_path.to_path_buf()));
+		files.push((
+			virt_path.to_path_buf(),
+			File::Directory(indexmap::indexset! {}),
+		));
 
 		let mut dissolution = wad.dissolve();
 		let mut index = 0_usize;
@@ -416,15 +424,16 @@ impl Catalog {
 			// children of that folder.
 			if maybe_map_marker(&files[index - 1]) && is_map_component(&name) {
 				let prev = files.get_mut(index - 1).unwrap();
-				prev.content = FileContent::Directory(IndexSet::with_capacity(10));
+				prev.1 = File::Directory(IndexSet::with_capacity(10));
 				mapfold = Some(index - 1);
 			} else if !is_map_component(name.as_str()) {
 				mapfold = None;
 			}
 
 			let mut child_path = if let Some(entry_idx) = mapfold {
+				let fname = files[entry_idx].0.file_name().unwrap().to_string_lossy();
 				// virt_path currently: `/mount_point`
-				let mut cpath = virt_path.join(files[entry_idx].file_name());
+				let mut cpath = virt_path.join(VPath::new(fname.as_ref()));
 				// cpath currently: `/mount_point/MAP01`
 				cpath.push(&name);
 				// cpath currently: `/mount_point/MAP01/THINGS`
@@ -444,25 +453,30 @@ impl Catalog {
 			// 			/002
 			// ...and so on.
 
-			if let Some(pos) = files
-				.iter()
-				.position(|e| e.path.as_ref() == <VPathBuf as AsRef<VPath>>::as_ref(&child_path))
-			{
-				if !files[pos].is_dir() {
-					files.insert(pos, File::new_dir(files[pos].path.to_path_buf()));
+			if let Some(pos) = files.iter().position(|(path, _)| {
+				<VPathBuf as AsRef<VPath>>::as_ref(path)
+					== <VPathBuf as AsRef<VPath>>::as_ref(&child_path)
+			}) {
+				if !files[pos].1.is_dir() {
+					files.insert(
+						pos,
+						(
+							files[pos].0.clone(),
+							File::Directory(indexmap::indexset! {}),
+						),
+					);
 
-					let prev_path =
-						std::mem::replace(&mut files[pos + 1].path, PathBuf::default().into());
+					let prev_path = std::mem::take(&mut files[pos + 1].0);
 
 					let mut prev_path = prev_path.to_path_buf();
 					prev_path.push("000");
 
-					files[pos + 1].path = prev_path.into();
+					files[pos + 1].0 = prev_path;
 					child_path.push("001");
 				} else {
 					let num_children = files
 						.iter()
-						.filter(|vf| vf.parent_path().unwrap() == child_path)
+						.filter(|(vp, _)| vp.parent().unwrap() == child_path)
 						.count();
 
 					child_path.push(format!("{num_children:03}"));
@@ -474,8 +488,8 @@ impl Catalog {
 			}
 		}
 
-		for file in files {
-			ctx.add_file(file);
+		for (p, file) in files {
+			ctx.add_file(p, file);
 		}
 
 		Outcome::Ok(())
@@ -499,7 +513,10 @@ impl Catalog {
 			Err(err) => return Outcome::Err(err),
 		};
 
-		ctx.add_file(File::new_dir(virt_path.to_path_buf()));
+		ctx.add_file(
+			virt_path.to_path_buf(),
+			File::Directory(indexmap::indexset! {}),
+		);
 
 		// First pass creates a directory structure.
 
@@ -539,7 +556,7 @@ impl Catalog {
 			};
 
 			let zdir_virt_path: PathBuf = [virt_path, zfpath].iter().collect();
-			ctx.add_file(File::new_dir(zdir_virt_path));
+			ctx.add_file(zdir_virt_path, File::Directory(indexmap::indexset! {}));
 		}
 
 		// Second pass covers leaf nodes.
@@ -617,8 +634,8 @@ impl Catalog {
 
 			let zf_virt_path: VPathBuf = [virt_path, zfpath].iter().collect();
 
-			if let Some(leaf) = self.new_leaf_file(zf_virt_path, bytes) {
-				ctx.add_file(leaf);
+			if let Some((p, leaf)) = self.new_leaf_file(zf_virt_path, bytes) {
+				ctx.add_file(p, leaf);
 			}
 		}
 
@@ -635,9 +652,9 @@ impl Catalog {
 	/// [text]: FileKind::Text
 	/// [binary]: FileKind::Binary
 	#[must_use]
-	fn new_leaf_file(&self, virt_path: VPathBuf, bytes: Vec<u8>) -> Option<File> {
+	fn new_leaf_file(&self, virt_path: VPathBuf, bytes: Vec<u8>) -> Option<(VPathBuf, File)> {
 		if bytes.is_empty() {
-			return Some(File::new_empty(virt_path));
+			return Some((virt_path, File::Empty));
 		}
 
 		match String::from_utf8(bytes) {
@@ -655,7 +672,7 @@ impl Catalog {
 					return None;
 				}
 
-				Some(File::new_text(virt_path, string.into_boxed_str()))
+				Some((virt_path, File::Text(string.into_boxed_str())))
 			}
 			Err(err) => {
 				let slice = err.into_bytes().into_boxed_slice();
@@ -673,7 +690,7 @@ impl Catalog {
 					return None;
 				}
 
-				Some(File::new_binary(virt_path, slice))
+				Some((virt_path, File::Binary(slice)))
 			}
 		}
 	}
@@ -721,7 +738,7 @@ impl Catalog {
 		// Ensure mount point path has a parent path.
 
 		let mount_point_parent = match mount_path.parent() {
-			Some(p) => p,
+			Some(p) => VPathBuf::from("/").join(p),
 			None => {
 				return Err(MountError {
 					path: mount_path.to_path_buf(),
@@ -741,10 +758,10 @@ impl Catalog {
 
 		// Ensure mount point parent exists.
 
-		if !self.vfs.contains(mount_point_parent) {
+		if !self.vfs.contains(&mount_point_parent) {
 			return Err(MountError {
 				path: mount_path.to_path_buf(),
-				kind: MountErrorKind::MountParentNotFound(mount_point_parent.to_path_buf()),
+				kind: MountErrorKind::MountParentNotFound(mount_point_parent),
 			});
 		}
 

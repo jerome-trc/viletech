@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use rayon::prelude::*;
 
-use crate::data::detail::VfsKey;
-
 use super::*;
 
 #[must_use]
@@ -13,7 +11,7 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 		.join("sample");
 
 	let load_order = vec![
-		(base.join("freedoom1.wad"), "freedoom1"),
+		(base.join("freedoom1.wad"), "/freedoom1"),
 		(base.join("freedoom2.wad"), "/freedoom2"),
 	];
 
@@ -33,13 +31,6 @@ fn request() -> LoadRequest<PathBuf, &'static str> {
 		tracker: None,
 		dev_mode: false,
 	}
-}
-
-#[test]
-fn vfs_path_hash() {
-	let k_root = VfsKey::new("/");
-	let k_empty = VfsKey::new("");
-	assert_eq!(k_root, k_empty);
 }
 
 #[test]
@@ -99,8 +90,8 @@ fn vfs_lookup() {
 		"`/freedoom2/` lookup failed."
 	);
 	assert!(
-		catalog.vfs().get("freedoom2/FCGRATE2").is_some(),
-		"`freedoom2/FCGRATE2` lookup failed."
+		catalog.vfs().get("/freedoom2/FCGRATE2").is_some(),
+		"`/freedoom2/FCGRATE2` lookup failed."
 	);
 	assert!(
 		catalog.vfs().get("/freedoom2/FCGRATE2").is_some(),

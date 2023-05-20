@@ -10,7 +10,7 @@ use fasthash::SeaHasher;
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::{VPath, VPathBuf};
+use crate::VPathBuf;
 
 use super::{dobj::DATUM_TYPE_NAMES, Catalog, Datum};
 
@@ -98,23 +98,6 @@ impl Catalog {
 
 // Q: SeaHasher is used for building these two key types because it requires no
 // allocation, unlike metro and xx. Are any others faster for this?
-
-/// The catalog never deals in relative paths; the "current working directory" can
-/// be considered to always be the root. To make path-hashing flexible over
-/// paths that don't include a root path separator, the path is hashed by its
-/// components (with a preceding path separator hashed beforehand if necessary)
-/// one at a time, rather than as a whole string.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct VfsKey(u64);
-
-impl VfsKey {
-	#[must_use]
-	pub(super) fn new(path: impl AsRef<VPath>) -> Self {
-		let mut hasher = SeaHasher::default();
-		path.as_ref().hash(&mut hasher);
-		Self(hasher.finish())
-	}
-}
 
 /// Field `1` is a hash of the datum's ID string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

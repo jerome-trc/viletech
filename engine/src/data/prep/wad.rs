@@ -110,13 +110,7 @@ impl Catalog {
 			}
 
 			if fstem == "COLORMAP" {
-				match self.prep_colormap(
-					FileRef {
-						vfs: &self.vfs,
-						file: child,
-					},
-					bytes,
-				) {
+				match self.prep_colormap(child, bytes) {
 					Ok(colormap) => {
 						ctx.artifacts.lock().extras.colormap = Some(Box::new(colormap));
 					}
@@ -127,13 +121,7 @@ impl Catalog {
 			}
 
 			if fstem == "ENDOOM" {
-				match self.prep_endoom(
-					FileRef {
-						vfs: &self.vfs,
-						file: child,
-					},
-					bytes,
-				) {
+				match self.prep_endoom(child, bytes) {
 					Ok(endoom) => ctx.artifacts.lock().extras.endoom = Some(Box::new(endoom)),
 					Err(err) => ctx.errors.lock().push(*err),
 				}
@@ -156,14 +144,7 @@ impl Catalog {
 			}
 
 			if fstem == "PNAMES" {
-				match self.prep_pnames(
-					ctx,
-					FileRef {
-						vfs: &self.vfs,
-						file: child,
-					},
-					bytes,
-				) {
+				match self.prep_pnames(ctx, child, bytes) {
 					Outcome::Ok(pnames) => ctx.artifacts.lock().pnames = Some(pnames),
 					Outcome::Err(err) => ctx.errors.lock().push(err),
 					Outcome::None => {}
@@ -178,14 +159,7 @@ impl Catalog {
 				|| fstem == "TEXTURE3"
 				|| fstem == "TEXTURES"
 			{
-				match self.prep_texturex(
-					ctx,
-					FileRef {
-						vfs: &self.vfs,
-						file: child,
-					},
-					bytes,
-				) {
+				match self.prep_texturex(ctx, child, bytes) {
 					Outcome::Ok(texturex) => {
 						if fstem.ends_with('1') {
 							ctx.artifacts.lock().texture1 = Some(texturex);
@@ -208,7 +182,7 @@ impl Catalog {
 		let markers = Markers::new(wad);
 
 		let proceed = wad
-			.child_refs()
+			.children()
 			.unwrap()
 			.filter(|c| !c.is_empty())
 			.enumerate()

@@ -20,7 +20,7 @@ impl Catalog {
 		let mut textmap = None;
 		let mut _znodes = None;
 
-		for child in dir.child_refs().unwrap() {
+		for child in dir.children().unwrap() {
 			match child.file_prefix() {
 				"BEHAVIOR" => _behavior = Some(child),
 				"DIALOGUE" => _dialogue = Some(child),
