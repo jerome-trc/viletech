@@ -6,6 +6,8 @@ use super::Catalog;
 pub(super) struct Config {
 	/// Mind that this stores real paths.
 	pub(super) basedata: HashSet<PathBuf>,
+	///
+	pub(super) reserved_mount_points: Vec<String>,
 	pub(super) bin_size_limit: usize,
 	pub(super) text_size_limit: usize,
 }
@@ -13,7 +15,8 @@ pub(super) struct Config {
 impl Default for Config {
 	fn default() -> Self {
 		Self {
-			basedata: Default::default(),
+			basedata: HashSet::default(),
+			reserved_mount_points: vec![],
 			bin_size_limit: super::limits::DEFAULT_BIN_FILE_SIZE,
 			text_size_limit: super::limits::DEFAULT_TEXT_FILE_SIZE,
 		}
@@ -74,6 +77,11 @@ impl ConfigSet<'_> {
 	/// [`limits::MAX_TEXT_FILE_SIZE`]. The default is [`limits::DEFAULT_TEXT_FILE_SIZE`].
 	pub fn text_size_limit(self, limit: usize) -> Self {
 		self.0.config.text_size_limit = limit.clamp(0, limits::MAX_TEXT_FILE_SIZE);
+		self
+	}
+
+	pub fn reserve_mount_point(self, mp: String) -> Self {
+		self.0.config.reserved_mount_points.push(mp);
 		self
 	}
 }

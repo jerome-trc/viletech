@@ -189,6 +189,10 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 	}
 }
 
+pub const RESERVED_MOUNT_POINTS: &[&str] = &[
+	"vile", "viletec", "vt", "vtec", "vtech", "viletech", "vzs", "vzscript", "zs", "zscript",
+];
+
 #[derive(Debug)]
 pub enum BaseDataError {
 	Missing,

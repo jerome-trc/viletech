@@ -79,7 +79,12 @@ conditions. See the license document that comes with your installation."
 
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
-	let catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
+	let mut catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
+
+	for rmp in viletech::RESERVED_MOUNT_POINTS {
+		catalog.config_set().reserve_mount_point(rmp.to_string());
+	}
+
 	info!("Catalog initialized.");
 	let catalog = Arc::new(RwLock::new(catalog));
 

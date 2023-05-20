@@ -100,6 +100,7 @@ impl Catalog {
 	/// in full along with everything else in a load request.
 	///
 	/// Panics if mounting the basedata fails for any reason.
+	#[must_use]
 	pub fn new(basedata: impl IntoIterator<Item = (PathBuf, VPathBuf)>) -> Self {
 		let mut ret = Self {
 			config: Config::default(),
@@ -120,7 +121,7 @@ impl Catalog {
 			load_order.push(pair);
 		}
 
-		let mnt_ctx = mount::Context::new(None, load_order.len());
+		let mnt_ctx = mount::Context::new(None, load_order.len(), true);
 
 		match ret.mount(&load_order, mnt_ctx) {
 			detail::Outcome::Ok(_) => {}
@@ -172,7 +173,7 @@ impl Catalog {
 			return LoadOutcome::NoOp;
 		}
 
-		let mnt_ctx = mount::Context::new(request.tracker, request.load_order.len());
+		let mnt_ctx = mount::Context::new(request.tracker, request.load_order.len(), false);
 
 		// Note to reader: check `./mount.rs`.
 		let mnt_output = match self.mount(&request.load_order, mnt_ctx) {
@@ -760,8 +761,14 @@ impl LoadTracker {
 			.fetch_add(amount, atomic::Ordering::SeqCst);
 	}
 
-	/// Temporary.
-	pub(super) fn finish_prep(&self) {
+	pub(self) fn finish_mount(&self) {
+		self.mount_progress.store(
+			self.prep_target.load(atomic::Ordering::SeqCst),
+			atomic::Ordering::SeqCst,
+		)
+	}
+
+	pub(self) fn finish_prep(&self) {
 		self.prep_progress.store(
 			self.prep_target.load(atomic::Ordering::SeqCst),
 			atomic::Ordering::SeqCst,
@@ -769,7 +776,7 @@ impl LoadTracker {
 	}
 
 	#[must_use]
-	pub(super) fn is_cancelled(&self) -> bool {
+	pub(self) fn is_cancelled(&self) -> bool {
 		self.cancelled.load(atomic::Ordering::SeqCst)
 	}
 }

@@ -36,11 +36,17 @@ pub(super) struct Context {
 	/// Returning errors through the mounting call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	errors: Vec<Mutex<Vec<MountError>>>,
+	/// For bypassing checks on reserved mount points.
+	basedata: bool,
 }
 
 impl Context {
 	#[must_use]
-	pub(super) fn new(tracker: Option<Arc<LoadTracker>>, load_order_len: usize) -> Self {
+	pub(super) fn new(
+		tracker: Option<Arc<LoadTracker>>,
+		load_order_len: usize,
+		basedata: bool,
+	) -> Self {
 		// Build a dummy tracker if none was given
 		// to simplify the rest of the loading code.
 		// Q: Branching might yield a speed increase compared to wasted atomic
@@ -51,7 +57,11 @@ impl Context {
 		let mut errors = vec![];
 		errors.resize_with(load_order_len, Mutex::default);
 
-		Self { tracker, errors }
+		Self {
+			tracker,
+			errors,
+			basedata,
+		}
 	}
 }
 
@@ -130,14 +140,14 @@ impl Catalog {
 				files: DashMap::default(),
 			};
 
-			let (real_path, mount_point) = match self.validate_mount_request(real_path, mount_point)
-			{
-				Ok(paths) => paths,
-				Err(err) => {
-					subctx.errors.lock().push(err);
-					return;
-				}
-			};
+			let (real_path, mount_point) =
+				match self.validate_mount_request(&ctx, real_path, mount_point) {
+					Ok(paths) => paths,
+					Err(err) => {
+						subctx.errors.lock().push(err);
+						return;
+					}
+				};
 
 			match self.mount_real_unknown(&subctx, &real_path, &mount_point) {
 				Outcome::Ok(format) => {
@@ -219,6 +229,7 @@ impl Catalog {
 		debug_assert_eq!(errors.len(), load_order.len());
 
 		if failed {
+			ctx.tracker.finish_mount();
 			return Outcome::Err(errors);
 		}
 
@@ -697,6 +708,7 @@ impl Catalog {
 
 	fn validate_mount_request(
 		&self,
+		ctx: &Context,
 		real_path: &Path,
 		mount_path: &VPath,
 	) -> Result<(PathBuf, VPathBuf), MountError> {
@@ -733,7 +745,7 @@ impl Catalog {
 
 		// Ensure mount point has no invalid characters, isn't reserved, etc.
 
-		self.mount_path_valid(mount_path)?;
+		self.mount_path_valid(ctx, mount_path)?;
 
 		// Ensure mount point path has a parent path.
 
@@ -781,31 +793,16 @@ impl Catalog {
 	/// A mount path must:
 	/// - Be valid UTF-8.
 	/// - Contain no relative components (`.` or `..`).
-	/// There is also the following context-sensitive check:
-	/// - If nothing has been mounted yet, assert that the file name at the end
-	/// of the mount path is the base data's file name.
-	/// - If the base data has already been mounted, check that none of the
-	/// components in the mount path are a reserved name (ASCII case ignored).
-	fn mount_path_valid(&self, path: &VPath) -> Result<(), MountError> {
+	/// - Not be reserved (if `ctx.basedata` is `false`).
+	fn mount_path_valid(&self, ctx: &Context, path: &VPath) -> Result<(), MountError> {
 		path.to_str().ok_or_else(|| MountError {
 			path: path.to_path_buf(),
 			kind: MountErrorKind::InvalidMountPoint(MountPointError::InvalidUtf8),
 		})?;
 
-		#[cfg(not(test))]
-		if self.mounts.is_empty() {
-			assert!(
-				path.ends_with(crate::BASEDATA_ID),
-				"Engine base data is being mounted late."
-			);
-
+		if ctx.basedata {
 			return Ok(());
 		}
-
-		const RESERVED: &[&str] = &[
-			"vile", "viletec", "vt", "vtec", "vtech", "viletech", "vzs", "vzscript", "zs",
-			"zscript",
-		];
 
 		for comp in path.components() {
 			match comp {
@@ -820,15 +817,18 @@ impl Catalog {
 					});
 				}
 				std::path::Component::Normal(os_str) => {
-					let s = os_str.to_str().unwrap();
+					let comp_str = os_str.to_string_lossy();
 
-					for reserved in RESERVED {
-						if s.contains(reserved) {
-							return Err(MountError {
-								path: path.to_path_buf(),
-								kind: MountErrorKind::InvalidMountPoint(MountPointError::Reserved),
-							});
-						}
+					if self
+						.config
+						.reserved_mount_points
+						.iter()
+						.any(|rmp| rmp.eq_ignore_ascii_case(comp_str.as_ref()))
+					{
+						return Err(MountError {
+							path: path.to_path_buf(),
+							kind: MountErrorKind::InvalidMountPoint(MountPointError::Reserved),
+						});
 					}
 				}
 			}
