@@ -201,7 +201,16 @@ impl VirtualFs {
 		let File::Directory(children) = removed else { return; };
 
 		for child in children.iter() {
-			self.remove_recursive(child.as_ref());
+			recur(self, child.as_ref());
+		}
+
+		fn recur(this: &mut VirtualFs, path: impl AsRef<VPath>) {
+			let Some(removed) = this.files.remove(path.as_ref()) else { unreachable!() };
+			let File::Directory(children) = removed else { return; };
+
+			for child in children.iter() {
+				recur(this, child.as_ref());
+			}
 		}
 	}
 
