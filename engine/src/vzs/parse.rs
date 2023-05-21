@@ -19,7 +19,7 @@ use doomfront::{
 use parking_lot::Mutex;
 use rayon::prelude::*;
 
-use crate::{data::vfs::FileRef, VPath, VPathBuf};
+use crate::{vfs::FileRef, VPath, VPathBuf};
 
 use super::Syn;
 

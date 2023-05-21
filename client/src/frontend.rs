@@ -5,8 +5,10 @@ use std::{path::PathBuf, sync::Arc, time::Instant};
 use bevy::{app::AppExit, prelude::*, window::WindowFocused};
 use bevy_egui::EguiContexts;
 use viletech::{
-	data::{LoadRequest, LoadTracker},
+	data::LoadRequest,
 	frontend::{FrontendMenu, Outcome},
+	vfs::MountRequest,
+	SendTracker, VPathBuf,
 };
 
 use crate::{
@@ -97,11 +99,12 @@ impl ClientCore {
 	fn start_load(&self, mut to_mount: Vec<PathBuf>, dev_mode: bool) -> Result<GameLoad, String> {
 		let start_time = Instant::now();
 		let catalog = self.catalog.clone();
-		let tracker = Arc::new(LoadTracker::default());
+		let tracker_m = Arc::new(SendTracker::default());
+		let tracker_p = Arc::new(SendTracker::default());
 
 		to_mount.dedup();
 
-		let mut mounts = Vec::with_capacity(to_mount.len());
+		let mut load_order = Vec::with_capacity(to_mount.len());
 
 		for real_path in to_mount {
 			debug_assert!(real_path.exists());
@@ -134,19 +137,22 @@ impl ClientCore {
 				));
 			};
 
-			let mount_point = mount_point.to_string();
-
-			mounts.push((real_path, mount_point));
+			let mount_point = VPathBuf::from(mount_point);
+			load_order.push((real_path, mount_point));
 		}
 
-		let tracker_sent = tracker.clone();
-
-		let mounts_sent = mounts.clone();
+		let load_order_sent = load_order.clone();
+		let tracker_m_sent = tracker_m.clone();
+		let tracker_p_sent = tracker_p.clone();
 
 		let thread = std::thread::spawn(move || {
 			let request = LoadRequest {
-				load_order: mounts_sent,
-				tracker: Some(tracker_sent),
+				mount: MountRequest {
+					load_order: load_order_sent,
+					tracker: Some(tracker_m_sent),
+					basedata: false,
+				},
+				tracker: Some(tracker_p_sent),
 				dev_mode,
 			};
 
@@ -155,9 +161,10 @@ impl ClientCore {
 
 		Ok(GameLoad {
 			thread: Some(thread),
-			tracker,
+			tracker_m,
+			tracker_p,
 			start_time,
-			load_order: mounts,
+			load_order,
 		})
 	}
 }

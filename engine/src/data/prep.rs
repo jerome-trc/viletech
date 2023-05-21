@@ -14,19 +14,19 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use smallvec::smallvec;
 
-use crate::{data::dobj::DATUM_TYPE_NAMES, vzs, Id8, VPathBuf};
+use crate::{data::dobj::DATUM_TYPE_NAMES, vzs, Id8, Outcome, SendTracker, VPathBuf};
 
 use self::vanilla::{PatchTable, TextureX};
 
 use super::{
-	detail::{DatumKey, Outcome},
+	detail::DatumKey,
 	dobj::{DatumStore, Store},
-	Catalog, Datum, LoadTracker, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
+	Catalog, Datum, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
 };
 
 #[derive(Debug)]
 pub(super) struct Context {
-	pub(super) tracker: Arc<LoadTracker>,
+	pub(super) tracker: Arc<SendTracker>,
 	/// Returning errors through the prep call tree is somewhat
 	/// inflexible, so pass an array down through the context instead.
 	pub(super) errors: Vec<Mutex<Vec<PrepError>>>,
@@ -34,7 +34,7 @@ pub(super) struct Context {
 
 impl Context {
 	#[must_use]
-	pub(super) fn new(tracker: Arc<LoadTracker>, mounts_len: usize) -> Self {
+	pub(super) fn new(tracker: Arc<SendTracker>, mounts_len: usize) -> Self {
 		Self {
 			tracker,
 			errors: {
@@ -64,7 +64,7 @@ impl Context {
 /// Context relevant to operations on one mount.
 #[derive(Debug)]
 pub(self) struct SubContext<'ctx> {
-	pub(self) tracker: &'ctx Arc<LoadTracker>,
+	pub(self) tracker: &'ctx Arc<SendTracker>,
 	pub(self) mntinfo: &'ctx MountInfo,
 	pub(self) artifacts: &'ctx Mutex<Artifacts>,
 	pub(self) errors: &'ctx Mutex<Vec<PrepError>>,
@@ -107,12 +107,10 @@ pub(super) struct Output {
 
 impl Catalog {
 	/// Preconditions:
-	/// - `self.files` has been populated. All directories know their contents.
-	/// - `self.mounts` has been populated.
-	/// - Load tracker has already had its prep target number set.
-	/// - `ctx.errors` has been populated.
+	/// - `self.vfs` has been populated. All directories know their contents.
+	/// - `ctx.tracker` has already had its target number set.
 	pub(super) fn prep(&mut self, ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
-		let to_reserve = ctx.tracker.prep_target();
+		let to_reserve = ctx.tracker.target();
 		debug_assert!(!ctx.errors.is_empty());
 		debug_assert!(to_reserve > 0);
 
@@ -147,7 +145,7 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			ctx.tracker.finish_prep();
+			ctx.tracker.finish();
 			return Outcome::Err(ctx.into_errors());
 		}
 
@@ -176,7 +174,7 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			ctx.tracker.finish_prep();
+			ctx.tracker.finish();
 			return Outcome::Err(ctx.into_errors());
 		}
 
@@ -210,14 +208,14 @@ impl Catalog {
 		}
 
 		if ctx.any_fatal_errors() {
-			ctx.tracker.finish_prep();
+			ctx.tracker.finish();
 			return Outcome::Err(ctx.into_errors());
 		}
 
 		self.register_artifacts(&artifacts);
 
 		// TODO: Make each successfully processed file increment progress.
-		ctx.tracker.finish_prep();
+		ctx.tracker.finish();
 
 		info!("Loading complete.");
 

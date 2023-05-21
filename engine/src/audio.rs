@@ -30,11 +30,7 @@ use nodi::midly;
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 
-use crate::{
-	data::{vfs::FileRef, Catalog},
-	sim::actor::Actor,
-	utils,
-};
+use crate::{data::Catalog, sim::actor::Actor, utils, vfs::FileRef};
 
 pub use midi::{
 	render as render_midi, Data as MidiData, Handle as MidiHandle, Settings as MidiSettings,

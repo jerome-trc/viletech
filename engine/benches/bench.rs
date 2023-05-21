@@ -2,7 +2,10 @@ use std::{env, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use viletech::data::{Catalog, LoadRequest};
+use viletech::{
+	data::{Catalog, LoadRequest},
+	vfs::MountRequest,
+};
 
 /// Leave this here even if it's empty, so there's a quick scaffold ready
 /// for one-off benchmarking experiments.
@@ -27,16 +30,16 @@ fn misc(crit: &mut Criterion) {
 //		- Compile
 
 fn data(crit: &mut Criterion) {
-	fn request() -> LoadRequest<PathBuf, &'static str> {
+	fn request() -> LoadRequest {
 		let sample = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 			.join("..")
 			.join("sample");
-		let mount_paths = vec![
-			(sample.join("freedoom1.wad"), "freedoom1"),
-			(sample.join("freedoom2.wad"), "freedoom2"),
+		let load_order = vec![
+			(sample.join("freedoom1.wad"), PathBuf::from("freedoom1")),
+			(sample.join("freedoom2.wad"), PathBuf::from("freedoom2")),
 		];
 
-		for (real_path, _) in &mount_paths {
+		for (real_path, _) in &load_order {
 			if !real_path.exists() {
 				panic!(
 					"VFS benchmarking depends on the following files of sample data:\r\n\t\
@@ -48,7 +51,11 @@ fn data(crit: &mut Criterion) {
 		}
 
 		LoadRequest {
-			load_order: mount_paths,
+			mount: MountRequest {
+				load_order,
+				tracker: None,
+				basedata: true,
+			},
 			tracker: None,
 			dev_mode: false,
 		}

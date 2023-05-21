@@ -10,11 +10,12 @@ use image::{ImageBuffer, Rgba};
 
 use crate::{
 	data::{
-		detail::Outcome, dobj::Image, prep::read_id8, vfs::FileRef, Catalog, ColorMap, EnDoom,
-		Palette, PaletteSet, PrepError, PrepErrorKind,
+		dobj::Image, prep::read_id8, Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError,
+		PrepErrorKind,
 	},
 	utils::io::CursorExt,
-	Id8,
+	vfs::FileRef,
+	Id8, Outcome,
 };
 
 use super::SubContext;
@@ -50,7 +51,7 @@ impl Catalog {
 	) -> Result<ColorMap, Box<PrepError>> {
 		if bytes.len() != (34 * 256) {
 			return Err(Box::new(PrepError {
-				path: lump.path.to_path_buf(),
+				path: lump.path().to_path_buf(),
 				kind: PrepErrorKind::ColorMap(bytes.len()),
 			}));
 		}
@@ -75,7 +76,7 @@ impl Catalog {
 	) -> Result<EnDoom, Box<PrepError>> {
 		if bytes.len() != 4000 {
 			return Err(Box::new(PrepError {
-				path: lump.path.to_path_buf(),
+				path: lump.path().to_path_buf(),
 				kind: PrepErrorKind::EnDoom(bytes.len()),
 			}));
 		}
@@ -106,7 +107,7 @@ impl Catalog {
 	) -> Result<Image, Box<PrepError>> {
 		if bytes.len() != (64 * 64) {
 			return Err(Box::new(PrepError {
-				path: lump.path.to_path_buf(),
+				path: lump.path().to_path_buf(),
 				kind: PrepErrorKind::Flat,
 			}));
 		}
@@ -190,7 +191,7 @@ impl Catalog {
 
 		if invalid {
 			return Outcome::Err(PrepError {
-				path: lump.path.to_path_buf(),
+				path: lump.path().to_path_buf(),
 				kind: PrepErrorKind::PNames,
 			});
 		}
@@ -244,7 +245,7 @@ impl Catalog {
 		}
 
 		let err_fn = || PrepError {
-			path: lump.path.to_path_buf(),
+			path: lump.path().to_path_buf(),
 			kind: PrepErrorKind::TextureX,
 		};
 

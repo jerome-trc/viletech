@@ -5,7 +5,11 @@ use std::{io::Cursor, ops::Range};
 use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
-use crate::data::{detail::Outcome, dobj::Audio, vfs::FileRef, Catalog, PrepError, PrepErrorKind};
+use crate::{
+	data::{dobj::Audio, Catalog, PrepError, PrepErrorKind},
+	vfs::FileRef,
+	Outcome,
+};
 
 use super::SubContext;
 
@@ -100,7 +104,7 @@ impl Catalog {
 					}
 					Err(err) => {
 						ctx.errors.lock().push(PrepError {
-							path: child.path.to_path_buf(),
+							path: child.path().to_path_buf(),
 							kind: PrepErrorKind::WaveformAudio(err),
 						});
 					}
@@ -217,7 +221,7 @@ impl Catalog {
 		let bytes = vfile.read_bytes();
 		let fpfx = vfile.file_prefix();
 
-		ctx.tracker.add_prep_progress(1);
+		ctx.tracker.add_to_progress(1);
 
 		if markers.is_flat(child_index) {
 			match self.prep_flat(ctx, vfile, bytes) {

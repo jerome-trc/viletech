@@ -26,6 +26,7 @@ pub mod terminal;
 pub mod udmf;
 pub mod user;
 pub mod utils;
+pub mod vfs;
 pub mod vzs;
 pub mod wad;
 
@@ -52,6 +53,105 @@ pub enum BaseGame {
 	Heretic,
 	Strife,
 	ChexQuest,
+}
+
+/// For representing all the possible endings
+/// for operations that can be cancelled by the end user.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
+pub enum Outcome<T, E> {
+	Cancelled,
+	None,
+	Err(E),
+	Ok(T),
+}
+
+/// For sending cancellation and progress updates between threads.
+/// Wrap in a [`std::sync::Arc`] and use to check how far along a load operation is.
+///
+/// For example, this is how game loading displays progress bars.
+///
+/// Uses atomics; all operations run on [`std::sync::atomic::Ordering::Relaxed`].
+#[derive(Debug, Default)]
+pub struct SendTracker {
+	cancelled: std::sync::atomic::AtomicBool,
+	progress: std::sync::atomic::AtomicUsize,
+	target: std::sync::atomic::AtomicUsize,
+}
+
+impl SendTracker {
+	#[must_use]
+	pub fn new(target: usize) -> Self {
+		Self {
+			target: std::sync::atomic::AtomicUsize::new(target),
+			..Default::default()
+		}
+	}
+
+	#[must_use]
+	pub fn progress(&self) -> usize {
+		self.progress.load(std::sync::atomic::Ordering::Relaxed)
+	}
+
+	#[must_use]
+	pub fn target(&self) -> usize {
+		self.target.load(std::sync::atomic::Ordering::Relaxed)
+	}
+
+	/// 0.0 means just started; 1.0 means done.
+	#[must_use]
+	pub fn progress_percent(&self) -> f64 {
+		let prog = self.progress.load(std::sync::atomic::Ordering::Relaxed);
+		let tgt = self.target.load(std::sync::atomic::Ordering::Relaxed);
+
+		if tgt == 0 {
+			return 0.0;
+		}
+
+		prog as f64 / tgt as f64
+	}
+
+	#[must_use]
+	pub fn is_done(&self) -> bool {
+		self.progress.load(std::sync::atomic::Ordering::Relaxed)
+			>= self.target.load(std::sync::atomic::Ordering::Relaxed)
+	}
+
+	pub fn add_to_target(&self, amount: usize) {
+		self.target
+			.fetch_add(amount, std::sync::atomic::Ordering::Relaxed);
+	}
+
+	pub fn set_target(&self, amount: usize) {
+		self.target
+			.store(amount, std::sync::atomic::Ordering::Relaxed);
+	}
+
+	pub fn add_to_progress(&self, amount: usize) {
+		self.progress
+			.fetch_add(amount, std::sync::atomic::Ordering::Relaxed);
+	}
+
+	/// Sets the progress counter to be equal to the target counter.
+	///
+	/// Mind that [`Self::is_done`] will go back to returning `false` if the target
+	/// is incremented after this.
+	pub fn finish(&self) {
+		self.progress.store(
+			self.target.load(std::sync::atomic::Ordering::Relaxed),
+			std::sync::atomic::Ordering::Relaxed,
+		);
+	}
+
+	pub fn cancel(&self) {
+		self.cancelled
+			.store(true, std::sync::atomic::Ordering::Relaxed);
+	}
+
+	#[must_use]
+	pub fn is_cancelled(&self) -> bool {
+		self.cancelled.load(std::sync::atomic::Ordering::Relaxed)
+	}
 }
 
 // Type aliases ////////////////////////////////////////////////////////////////

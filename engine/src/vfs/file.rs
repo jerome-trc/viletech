@@ -1,340 +1,13 @@
-//! The symbols making up the content of the virtual file system.
+use std::sync::Arc;
 
-use std::sync::{
-	atomic::{self, AtomicUsize},
-	Arc,
-};
-
-use bevy_egui::egui;
-use dashmap::DashMap;
 use globset::Glob;
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
 use rayon::prelude::*;
 use regex::Regex;
 
-use crate::{utils::path::PathExt, VPath, VPathBuf};
+use crate::{utils::path::PathExt, VPath};
 
-use super::VfsError;
-
-#[derive(Debug)]
-pub struct VirtualFs {
-	/// Element 0 is always the root node, under virtual path `/`.
-	files: IndexMap<FileKey, File>,
-	gui_sel: AtomicUsize,
-}
-
-impl VirtualFs {
-	#[must_use]
-	pub fn root(&self) -> FileRef {
-		let (path, file) = self.files.get_index(0).unwrap();
-
-		FileRef {
-			vfs: self,
-			path,
-			file,
-		}
-	}
-
-	#[must_use]
-	pub fn get(&self, path: impl AsRef<VPath>) -> Option<FileRef> {
-		self.files
-			.get_key_value(path.as_ref())
-			.map(|(path, file)| FileRef {
-				vfs: self,
-				path,
-				file,
-			})
-	}
-
-	#[must_use]
-	pub fn contains(&self, path: impl AsRef<VPath>) -> bool {
-		self.files.contains_key(path.as_ref())
-	}
-
-	#[must_use]
-	pub fn is_dir(&self, path: impl AsRef<VPath>) -> bool {
-		self.files
-			.get(path.as_ref())
-			.filter(|f| f.is_dir())
-			.is_some()
-	}
-
-	/// Yields every file, root included, in an unspecified order.
-	pub fn iter(&self) -> impl Iterator<Item = FileRef> {
-		self.files.iter().map(|(path, file)| FileRef {
-			vfs: self,
-			path,
-			file,
-		})
-	}
-
-	/// Shorthand for `all_files().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn par_iter(&self) -> impl ParallelIterator<Item = FileRef> {
-		self.iter().par_bridge()
-	}
-
-	pub fn insert(&mut self, path: impl Into<Arc<VPath>>, file: File) -> Option<File> {
-		self.files.insert(path.into(), file)
-	}
-
-	/// Panics if attempting to remove the root node (path `/` or an empty path),
-	/// or attempting to remove a directory which still has children.
-	pub fn remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
-		assert!(!path.is_root(), "Tried to remove the root node from a VFS.");
-
-		let removed = self.files.remove(path.as_ref());
-
-		if let Some(r) = &removed {
-			assert_eq!(
-				r.child_count(),
-				0,
-				"Tried to remove VFS directory with children: {}",
-				path.as_ref().display()
-			);
-			let parent_path = path.as_ref().parent().unwrap();
-			let parent = self.files.get_mut(parent_path).unwrap();
-			Self::unparent(parent, path)
-		}
-
-		removed
-	}
-
-	/// Panics if attempting to remove the root node (path `/` or an empty path).
-	/// Trying to remove a non-existent file is valid.
-	pub fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
-		assert!(!path.is_root(), "Tried to remove the root node from a VFS.");
-
-		let Some(removed) = self.files.remove(path.as_ref()) else { return; };
-
-		let parent_path = path.as_ref().parent().unwrap();
-		let parent = self.files.get_mut(parent_path).unwrap();
-		Self::unparent(parent, path);
-
-		let File::Directory(children) = removed else { return; };
-
-		for child in children.iter() {
-			self.remove_recursive(child.as_ref());
-		}
-	}
-
-	/// Leaves the root node.
-	pub fn clear(&mut self) {
-		self.files.truncate(1);
-
-		let root = &mut self.files[0];
-		let File::Directory(children) = root else { unreachable!() };
-		children.clear();
-	}
-
-	fn unparent(parent: &mut File, child_path: impl AsRef<VPath>) {
-		if let File::Directory(children) = parent {
-			children.remove(child_path.as_ref());
-		} else {
-			unreachable!()
-		}
-	}
-
-	/// Yields every file whose path matches `pattern`, potentially including the root,
-	/// in an unspecified order.
-	pub fn glob(&self, pattern: Glob) -> impl Iterator<Item = FileRef> {
-		let glob = pattern.compile_matcher();
-
-		self.iter()
-			.filter(move |file| glob.is_match(file.path_str()))
-	}
-
-	/// Shorthand for `glob().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn glob_par(&self, pattern: Glob) -> impl ParallelIterator<Item = FileRef> {
-		self.glob(pattern).par_bridge()
-	}
-
-	/// Yields every file whose path matches `pattern`, potentially including the root,
-	/// in an unspecified order.
-	pub fn regex(&self, pattern: Regex) -> impl Iterator<Item = FileRef> {
-		self.iter()
-			.filter(move |file| pattern.is_match(file.path_str()))
-	}
-
-	/// Shorthand for `regex().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn regex_par(&self, pattern: Regex) -> impl ParallelIterator<Item = FileRef> {
-		self.regex(pattern).par_bridge()
-	}
-
-	#[must_use]
-	pub fn files_len(&self) -> usize {
-		self.files.len()
-	}
-
-	#[must_use]
-	pub fn mem_usage(&self) -> usize {
-		self.files
-			.par_iter()
-			.fold(|| 0_usize, |acc, (_, file)| acc + file.byte_len())
-			.sum()
-	}
-
-	pub(super) fn insert_dashmap(
-		&mut self,
-		files: DashMap<FileKey, File>,
-		subtree_root_path: &VPath,
-	) {
-		for (key, new_file) in files {
-			match self.files.entry(key) {
-				indexmap::map::Entry::Occupied(occu) => panic!(
-					"A VFS bulk insertion displaced entry: {}",
-					occu.key().display(),
-				),
-				indexmap::map::Entry::Vacant(vacant) => {
-					vacant.insert(new_file);
-				}
-			}
-		}
-
-		let subtree_parent_path = subtree_root_path.parent().unwrap();
-		let subtree_parent = self.files.get_mut(subtree_parent_path).unwrap();
-
-		if let File::Directory(children) = subtree_parent {
-			children.insert(subtree_root_path.to_path_buf().into());
-			children.par_sort_unstable();
-		} else {
-			unreachable!()
-		}
-	}
-
-	// Developer GUI ///////////////////////////////////////////////////////////
-
-	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
-		ui.heading("Virtual File System");
-
-		let gui_sel = self.gui_sel.load(atomic::Ordering::Relaxed);
-
-		if gui_sel >= self.files.len() {
-			self.gui_sel.store(0, atomic::Ordering::Relaxed);
-		}
-
-		egui::ScrollArea::vertical().show(ui, |ui| {
-			let kvp = self.files.get_index(gui_sel).unwrap();
-			self.ui_nav(ui, kvp, gui_sel);
-			let (_, file) = kvp;
-
-			match &file {
-				File::Binary(bytes) => {
-					ui.label("Binary");
-					let mut unit = "B";
-					let mut len = bytes.len() as f64;
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "KB";
-					}
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "MB";
-					}
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "GB";
-					}
-
-					ui.label(&format!("{len:.2} {unit}"));
-				}
-				File::Text(string) => {
-					ui.label("Text");
-					ui.label(&format!("{} B", string.len()));
-				}
-				File::Empty => {
-					ui.label("Empty");
-				}
-				File::Directory(dir) => {
-					if dir.len() == 1 {
-						ui.label("Directory: 1 child");
-					} else {
-						ui.label(&format!("Directory: {} children", dir.len()));
-					}
-
-					for path in dir {
-						let label = egui::Label::new(path.to_string_lossy().as_ref())
-							.sense(egui::Sense::click());
-
-						let resp = ui.add(label);
-
-						let resp = if resp.hovered() {
-							resp.highlight()
-						} else {
-							resp
-						};
-
-						if resp.clicked() {
-							let idx = self.files.get_index_of(path);
-							self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
-						}
-
-						resp.on_hover_text("View");
-					}
-				}
-			}
-		});
-	}
-
-	fn ui_nav(&self, ui: &mut egui::Ui, kvp: (&FileKey, &File), gui_sel: usize) {
-		let (path, _) = kvp;
-
-		ui.horizontal(|ui| {
-			ui.add_enabled_ui(gui_sel != 0, |ui| {
-				if ui
-					.button("\u{2B06}")
-					.on_hover_text("Go to Parent")
-					.clicked()
-				{
-					let idx = self.files.get_index_of(path.parent().unwrap());
-					self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
-				}
-			});
-
-			for (i, comp) in path.components().enumerate() {
-				let label = egui::Label::new(comp.as_os_str().to_string_lossy().as_ref())
-					.sense(egui::Sense::click());
-
-				let resp = ui.add(label);
-
-				let resp = if resp.hovered() {
-					resp.highlight()
-				} else {
-					resp
-				};
-
-				if resp.clicked() {
-					let p: VPathBuf = path.components().take(i + 1).collect();
-					let idx = self.files.get_index_of::<VPath>(p.as_ref());
-					self.gui_sel.store(idx.unwrap(), atomic::Ordering::Relaxed);
-				}
-
-				resp.on_hover_text("Go to");
-
-				if !matches!(comp, std::path::Component::RootDir) {
-					ui.label("/");
-				}
-			}
-		});
-	}
-}
-
-impl Default for VirtualFs {
-	fn default() -> Self {
-		let path = VPathBuf::from("/").into();
-		let root = File::Directory(indexmap::indexset! {});
-
-		Self {
-			files: indexmap::indexmap! { path => root },
-			gui_sel: AtomicUsize::new(0),
-		}
-	}
-}
+use super::{VfsError, VirtualFs};
 
 /// A virtual directory or virtual proxy for a physical file or archive entry.
 #[derive(Debug)]
@@ -452,11 +125,24 @@ impl File {
 			_ => 0,
 		}
 	}
-}
 
-/// [`Arc`] is used instead of [`PathBuf`] to slightly reduce duplication between
-/// the file map and directory sets.
-pub type FileKey = Arc<VPath>;
+	/// Returns a new [empty], [text], or [binary] file, depending on `bytes`.
+	///
+	/// [empty]: File::Empty
+	/// [text]: File::Text
+	/// [binary]: File::Binary
+	#[must_use]
+	pub(super) fn new_leaf(bytes: Vec<u8>) -> Self {
+		if bytes.is_empty() {
+			return Self::Empty;
+		}
+
+		match String::from_utf8(bytes) {
+			Ok(string) => File::Text(string.into_boxed_str()),
+			Err(err) => File::Binary(err.into_bytes().into_boxed_slice()),
+		}
+	}
+}
 
 // FileRef /////////////////////////////////////////////////////////////////////
 
@@ -675,12 +361,6 @@ impl PartialEq for FileRef<'_> {
 
 impl Eq for FileRef<'_> {}
 
-// Internal ////////////////////////////////////////////////////////////////////
-
-pub(super) fn sort_dirs_dashmap(files: &DashMap<FileKey, File>) {
-	files.par_iter_mut().for_each(|mut kvp| {
-		if let File::Directory(children) = kvp.value_mut() {
-			children.par_sort_unstable();
-		}
-	});
-}
+/// [`Arc`] is used instead of [`PathBuf`] to slightly reduce duplication between
+/// the file map and directory sets.
+pub type FileKey = Arc<VPath>;

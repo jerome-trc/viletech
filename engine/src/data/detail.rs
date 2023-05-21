@@ -16,12 +16,12 @@ use super::{dobj::DATUM_TYPE_NAMES, Catalog, Datum};
 
 /// State storage for the catalog's developer GUI.
 #[derive(Debug)]
-pub(super) struct DeveloperGui {
+pub(super) struct DevGui {
 	search_buf: String,
 	search: Regex,
 }
 
-impl DeveloperGui {
+impl DevGui {
 	fn update_search_regex(&mut self) {
 		let mut esc = regex::escape(&self.search_buf);
 		esc.insert_str(0, "(?i)"); // Case insensitivity
@@ -29,7 +29,7 @@ impl DeveloperGui {
 	}
 }
 
-impl Default for DeveloperGui {
+impl Default for DevGui {
 	fn default() -> Self {
 		Self {
 			search_buf: String::new(),
@@ -144,14 +144,4 @@ pub(super) struct MountMetaIngestVzs {
 	pub folder: VPathBuf,
 	pub namespace: Option<String>,
 	pub version: String,
-}
-
-/// For representing all the possible endings for most load operations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[must_use]
-pub(super) enum Outcome<T, E> {
-	Cancelled,
-	None,
-	Err(E),
-	Ok(T),
 }

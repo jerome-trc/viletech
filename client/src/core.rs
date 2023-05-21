@@ -8,11 +8,11 @@ use nanorand::WyRand;
 use viletech::{
 	audio::AudioCore,
 	console::Console,
-	data::{CatalogAL, LoadOutcome, LoadTracker},
+	data::{CatalogAL, LoadOutcome},
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,
-	vzs,
+	vzs, SendTracker,
 };
 
 use crate::ccmd;
@@ -238,9 +238,11 @@ pub struct GameLoad {
 	/// pointer to `tracker`. This is `Some` from initialization up until it
 	/// gets taken to be joined.
 	pub thread: Option<JoinHandle<LoadOutcome>>,
-	/// How far along the mount/load process is `thread`?
-	pub tracker: Arc<LoadTracker>,
+	/// How far along the mount process is `thread`?
+	pub tracker_m: Arc<SendTracker>,
+	/// How far along the load prep process is `thread`?
+	pub tracker_p: Arc<SendTracker>,
 	/// Print to the log how long the mount takes for diagnostic purposes.
 	pub start_time: Instant,
-	pub load_order: Vec<(PathBuf, String)>,
+	pub load_order: Vec<(PathBuf, PathBuf)>,
 }

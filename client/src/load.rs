@@ -5,8 +5,9 @@ use std::path::Path;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
-	data::{LoadOutcome, MountError, PrepError},
+	data::{LoadOutcome, PrepError},
 	utils::duration_to_hhmmss,
+	vfs::MountError,
 };
 
 use crate::{
@@ -22,8 +23,8 @@ pub fn update(
 ) {
 	// TODO: Localize these strings.
 
-	let m_pct = loader.tracker.mount_progress_percent() * 100.0;
-	let p_pct = loader.tracker.prep_progress_percent() * 100.0;
+	let m_pct = loader.tracker_m.progress_percent() * 100.0;
+	let p_pct = loader.tracker_p.progress_percent() * 100.0;
 	let mut cancelled = false;
 
 	egui::Window::new("Loading...")
@@ -40,8 +41,9 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 
 	if cancelled {
-		loader.tracker.cancel();
-	} else if !loader.tracker.mount_done() || !loader.tracker.prep_done() {
+		loader.tracker_m.cancel();
+		loader.tracker_p.cancel();
+	} else if !loader.tracker_m.is_done() || !loader.tracker_p.is_done() {
 		return;
 	}
 

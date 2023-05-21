@@ -3,10 +3,10 @@
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
 use crate::{
-	data::{
-		detail::Outcome, dobj::Level, vfs::FileRef, Catalog, LevelError, PrepError, PrepErrorKind,
-	},
+	data::{dobj::Level, Catalog, LevelError, PrepError, PrepErrorKind},
 	udmf,
+	vfs::FileRef,
+	Outcome,
 };
 
 use super::SubContext;
@@ -41,7 +41,7 @@ impl Catalog {
 			Ok(s) => s,
 			Err(_) => {
 				ctx.errors.lock().push(PrepError {
-					path: dir.path.to_path_buf(),
+					path: dir.path().to_path_buf(),
 					kind: PrepErrorKind::Level(LevelError::UnreadableFile(
 						textmap.path().to_path_buf(),
 					)),
@@ -58,7 +58,7 @@ impl Catalog {
 
 				for err in errs {
 					ctx_errs.push(PrepError {
-						path: dir.path.to_path_buf(),
+						path: dir.path().to_path_buf(),
 						kind: PrepErrorKind::Level(LevelError::TextmapParse(err)),
 					})
 				}

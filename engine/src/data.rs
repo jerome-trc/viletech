@@ -9,14 +9,10 @@ mod mount;
 mod prep;
 #[cfg(test)]
 mod test;
-pub mod vfs;
 
 use std::{
 	path::{Path, PathBuf},
-	sync::{
-		atomic::{self, AtomicBool, AtomicUsize},
-		Arc,
-	},
+	sync::Arc,
 };
 
 use bevy::{
@@ -30,12 +26,14 @@ use rayon::prelude::*;
 use slotmap::SlotMap;
 use smallvec::SmallVec;
 
-use crate::{vzs, EditorNum, SpawnNum, VPath, VPathBuf};
+use crate::{
+	vfs::{FileRef, MountError, MountFormat, MountOutcome, MountRequest, VirtualFs},
+	vzs, EditorNum, Outcome, SendTracker, SpawnNum, VPath, VPathBuf,
+};
 
 use self::{
-	detail::{DatumKey, DatumSlotKey, DeveloperGui},
+	detail::{DatumKey, DatumSlotKey, DevGui},
 	dobj::{Blueprint, DataRef, Datum, DatumStore},
-	vfs::{FileRef, VirtualFs},
 };
 
 pub use self::{config::*, error::*, extras::*};
@@ -63,7 +61,7 @@ pub use self::{config::*, error::*, extras::*};
 /// register `myothermod` as a mount in the official sense. It's just a part of
 /// `mymod`'s file tree.
 ///
-/// [pointers]: obj::Rcd
+/// [pointers]: dobj::Handle
 #[derive(Debug)]
 pub struct Catalog {
 	pub(self) config: Config,
@@ -89,7 +87,7 @@ pub struct Catalog {
 	/// See the key type's documentation for background details.
 	/// Keyed objects are always of type [`Blueprint`].
 	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, DatumSlotKey); 2]>>,
-	pub(self) gui: DeveloperGui,
+	pub(self) gui: DevGui,
 	pub(self) populated: bool,
 	// Q: FNV/aHash for maps using small key types?
 }
@@ -111,21 +109,24 @@ impl Catalog {
 			nicknames: DashMap::default(),
 			editor_nums: DashMap::default(),
 			spawn_nums: DashMap::default(),
-			gui: DeveloperGui::default(),
+			gui: DevGui::default(),
 			populated: false,
 		};
 
 		let mut load_order = vec![];
 
 		for pair in basedata {
+			ret.config.basedata.push(pair.0.clone());
 			load_order.push(pair);
 		}
 
-		let mnt_ctx = mount::Context::new(None, load_order.len(), true);
-
-		match ret.mount(&load_order, mnt_ctx) {
-			detail::Outcome::Ok(_) => {}
-			detail::Outcome::Err(errs) => panic!("Basedata mount failed: {}", {
+		match ret.vfs.mount(MountRequest {
+			load_order,
+			tracker: None,
+			basedata: true,
+		}) {
+			MountOutcome::Ok(_) => {}
+			MountOutcome::Errs(errs) => panic!("Basedata mount failed: {}", {
 				let mut msg = String::default();
 
 				for subvec in errs {
@@ -138,12 +139,9 @@ impl Catalog {
 
 				msg
 			}),
-			detail::Outcome::Cancelled | detail::Outcome::None => unreachable!(),
+			MountOutcome::Cancelled => unreachable!(),
+			MountOutcome::NoOp => {} // No basedata; this is valid.
 		};
-
-		for (rp, _) in load_order {
-			ret.config.basedata.insert(rp);
-		}
 
 		ret
 	}
@@ -159,51 +157,82 @@ impl Catalog {
 	/// [`Self::clear`] called on it. Otherwise, a panic will occur.
 	/// - Each load request is fulfilled in parallel using [`rayon`]'s global
 	/// thread pool, but the caller thread itself gets blocked.
-	pub fn load<RP, MP>(&mut self, request: LoadRequest<RP, MP>) -> LoadOutcome
-	where
-		RP: AsRef<Path>,
-		MP: AsRef<VPath>,
-	{
+	pub fn load(&mut self, request: LoadRequest) -> LoadOutcome {
 		assert!(
 			!self.populated,
 			"Attempted to load a game to an already-populated `Catalog`."
 		);
 
-		if request.load_order.is_empty() {
+		if request.mount.load_order.is_empty() {
 			return LoadOutcome::NoOp;
 		}
 
-		let mnt_ctx = mount::Context::new(request.tracker, request.load_order.len(), false);
+		let prev_file_count = self.vfs.file_count();
 
-		// Note to reader: check `./mount.rs`.
-		let mnt_output = match self.mount(&request.load_order, mnt_ctx) {
-			detail::Outcome::Ok(output) => output,
-			detail::Outcome::Err(errors) => return LoadOutcome::MountFail { errors },
-			detail::Outcome::Cancelled => return LoadOutcome::Cancelled,
-			detail::Outcome::None => unreachable!(),
+		let mut mounts = request
+			.mount
+			.load_order
+			.iter()
+			.map(|(rp, mp)| Mount {
+				info: MountInfo {
+					id: "".to_string(),
+					format: MountFormat::PlainFile,
+					kind: MountKind::Misc,
+					real_path: rp.clone().into_boxed_path(),
+					virtual_path: mp.clone().into_boxed_path(),
+					meta: None,
+					vzscript: None,
+				},
+				objs: SlotMap::default(),
+				extras: WadExtras::default(),
+			})
+			.collect::<Vec<_>>();
+
+		let mnt_output = match self.vfs.mount(request.mount) {
+			MountOutcome::Ok(output) => output,
+			MountOutcome::Errs(errors) => return LoadOutcome::MountFail { errors },
+			MountOutcome::Cancelled => return LoadOutcome::Cancelled,
+			MountOutcome::NoOp => unreachable!(),
 		};
 
-		let p_ctx = prep::Context::new(mnt_output.tracker, self.mounts.len());
+		for mount in &mut mounts {
+			mount.info.id = mount.info.virtual_path.to_str().unwrap().to_string();
+			mount.info.kind = self.resolve_mount_kind(mount.info.format, mount.info.virtual_path());
+			self.resolve_mount_metadata(&mut mount.info);
+		}
+
+		self.mounts = mounts;
+
+		let prep_tracker = request
+			.tracker
+			.unwrap_or_else(|| Arc::new(SendTracker::new(self.vfs.file_count() - prev_file_count)));
+
+		let p_ctx = prep::Context::new(prep_tracker, self.mounts.len());
 
 		// Note to reader: check `./prep.rs`.
 		match self.prep(p_ctx) {
-			detail::Outcome::Ok(output) => {
+			Outcome::Ok(output) => {
 				self.populated = true;
 
 				LoadOutcome::Ok {
-					mount: mnt_output.errors,
+					mount: mnt_output,
 					prep: output.errors,
 				}
 			}
-			detail::Outcome::Err(errors) => LoadOutcome::PrepFail { errors },
-			detail::Outcome::Cancelled => LoadOutcome::Cancelled,
-			detail::Outcome::None => unreachable!(),
+			Outcome::Err(errors) => LoadOutcome::PrepFail { errors },
+			Outcome::Cancelled => LoadOutcome::Cancelled,
+			Outcome::None => unreachable!(),
 		}
 	}
 
 	pub fn clear(&mut self) {
 		for mount in &self.mounts {
-			if self.config.basedata.contains(mount.info.real_path()) {
+			if self
+				.config
+				.basedata
+				.iter()
+				.any(|bdp| bdp == mount.info.real_path())
+			{
 				continue;
 			}
 
@@ -488,16 +517,6 @@ pub enum MountKind {
 	Misc,
 }
 
-/// Primarily serves to specify the type of compression used, if any.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MountFormat {
-	PlainFile,
-	Directory,
-	Wad,
-	Zip,
-	// TODO: Support LZMA, XZ, GRP, PAK, RFF, SSI
-}
-
 #[derive(Debug)]
 pub struct MountMeta {
 	pub(super) version: Option<String>,
@@ -564,6 +583,18 @@ impl MountMeta {
 }
 
 // Loading /////////////////////////////////////////////////////////////////////
+
+/// Also make sure to read [`Catalog::load`] and [`MountRequest`].
+#[derive(Debug)]
+pub struct LoadRequest {
+	pub mount: MountRequest,
+	/// Only pass a `Some` if you need to report to the end user on the progress of
+	/// a load operation (e.g. a loading screen) or provide the ability to cancel.
+	pub tracker: Option<Arc<SendTracker>>,
+	/// Affects:
+	/// - VZScript optimization. None are applied if this is `false`.
+	pub dev_mode: bool,
+}
 
 #[derive(Debug)]
 #[must_use = "loading may return errors which should be handled"]
@@ -637,147 +668,6 @@ impl LoadOutcome {
 			}
 			_ => {}
 		}
-	}
-}
-
-/// Also make sure to read [`Catalog::load`].
-#[derive(Debug)]
-pub struct LoadRequest<RP, MP>
-where
-	RP: AsRef<Path>,
-	MP: AsRef<VPath>,
-{
-	/// This can be empty; it makes the load operation into a no-op.
-	///
-	/// With regards to mount points (`MP`):
-	/// - `mymount` and `/mymount` both put the mount on the root.
-	/// - An empty path and `/` are both invalid mount points.
-	pub load_order: Vec<(RP, MP)>,
-	/// Only pass a `Some` if you need to report to the end user on the progress of
-	/// a load operation (e.g. a loading screen) or provide the ability to cancel.
-	pub tracker: Option<Arc<LoadTracker>>,
-	/// Affects:
-	/// - VZScript optimization. None are applied if this is `false`.
-	pub dev_mode: bool,
-}
-
-/// Wrap in an [`Arc`] and use to check how far along a load operation is.
-#[derive(Debug, Default)]
-pub struct LoadTracker {
-	/// Set to `true` to make the load thread return to be joined as soon as possible.
-	/// The catalog's state will be the same as before calling [`Catalog::load`].
-	cancelled: AtomicBool,
-	/// The number of VFS mounts performed (successfully or not) thus far.
-	mount_progress: AtomicUsize,
-	/// The number of VFS mounts requested by the user.
-	mount_target: AtomicUsize,
-	/// The number of files added to the VFS during the mount phase which have
-	/// been processed into prepared data thus far.
-	prep_progress: AtomicUsize,
-	/// The number of files added to the VFS during the mount phase.
-	prep_target: AtomicUsize,
-}
-
-impl LoadTracker {
-	#[must_use]
-	pub fn mount_progress(&self) -> usize {
-		self.mount_progress.load(atomic::Ordering::SeqCst)
-	}
-
-	#[must_use]
-	pub fn mount_target(&self) -> usize {
-		self.mount_target.load(atomic::Ordering::SeqCst)
-	}
-
-	/// 0.0 means just started; 1.0 means done.
-	#[must_use]
-	pub fn mount_progress_percent(&self) -> f64 {
-		let prog = self.mount_progress.load(atomic::Ordering::SeqCst);
-		let tgt = self.mount_target.load(atomic::Ordering::SeqCst);
-
-		if tgt == 0 {
-			return 0.0;
-		}
-
-		prog as f64 / tgt as f64
-	}
-
-	#[must_use]
-	pub fn prep_progress(&self) -> usize {
-		self.prep_progress.load(atomic::Ordering::SeqCst)
-	}
-
-	#[must_use]
-	pub fn prep_target(&self) -> usize {
-		self.prep_target.load(atomic::Ordering::SeqCst)
-	}
-
-	/// 0.0 means just started; 1.0 means done.
-	#[must_use]
-	pub fn prep_progress_percent(&self) -> f64 {
-		let prog = self.prep_progress.load(atomic::Ordering::SeqCst);
-		let tgt = self.prep_target.load(atomic::Ordering::SeqCst);
-
-		if tgt == 0 {
-			return 0.0;
-		}
-
-		prog as f64 / tgt as f64
-	}
-
-	#[must_use]
-	pub fn mount_done(&self) -> bool {
-		self.mount_progress.load(atomic::Ordering::SeqCst)
-			>= self.mount_target.load(atomic::Ordering::SeqCst)
-	}
-
-	#[must_use]
-	pub fn prep_done(&self) -> bool {
-		self.prep_progress.load(atomic::Ordering::SeqCst)
-			>= self.prep_target.load(atomic::Ordering::SeqCst)
-	}
-
-	pub fn cancel(&self) {
-		self.cancelled.store(true, atomic::Ordering::SeqCst);
-	}
-
-	pub(super) fn set_mount_target(&self, target: usize) {
-		debug_assert_eq!(self.mount_target.load(atomic::Ordering::Relaxed), 0);
-
-		self.mount_target.store(target, atomic::Ordering::SeqCst);
-	}
-
-	pub(super) fn add_to_prep_target(&self, files: usize) {
-		self.prep_target.fetch_add(files, atomic::Ordering::SeqCst);
-	}
-
-	pub(super) fn add_mount_progress(&self, amount: usize) {
-		self.mount_progress
-			.fetch_add(amount, atomic::Ordering::SeqCst);
-	}
-
-	pub(super) fn add_prep_progress(&self, amount: usize) {
-		self.prep_progress
-			.fetch_add(amount, atomic::Ordering::SeqCst);
-	}
-
-	pub(self) fn finish_mount(&self) {
-		self.mount_progress.store(
-			self.prep_target.load(atomic::Ordering::SeqCst),
-			atomic::Ordering::SeqCst,
-		)
-	}
-
-	pub(self) fn finish_prep(&self) {
-		self.prep_progress.store(
-			self.prep_target.load(atomic::Ordering::SeqCst),
-			atomic::Ordering::SeqCst,
-		)
-	}
-
-	#[must_use]
-	pub(self) fn is_cancelled(&self) -> bool {
-		self.cancelled.load(atomic::Ordering::SeqCst)
 	}
 }
 
