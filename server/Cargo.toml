@@ -23,8 +23,6 @@ features = [
 
 	# Optional
 	"serialize",
-
-	"dynamic_linking", # Temporary.
 ]
 
 [dependencies]

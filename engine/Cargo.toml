@@ -44,8 +44,6 @@ features = [
 	"flac",
 	"mp3",
 	"wav",
-
-	"dynamic_linking", # Temporary.
 ]
 
 [dependencies]
