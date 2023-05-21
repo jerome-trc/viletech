@@ -6,7 +6,10 @@ use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
 
 use crate::{
-	data::{dobj::Audio, Catalog, PrepError, PrepErrorKind},
+	data::{
+		dobj::{Audio, Image},
+		Catalog, PrepError, PrepErrorKind,
+	},
 	vfs::FileRef,
 	Outcome,
 };
@@ -227,6 +230,15 @@ impl Catalog {
 		}
 
 		if markers.is_sprite(child_index) {
+			if let Some(result) = Image::try_decode(vfile, bytes) {
+				match result {
+					Ok(img) => ctx.add_datum(img, fpfx),
+					Err(err) => ctx.raise_error(err),
+				}
+
+				return;
+			}
+
 			match self.prep_picture(ctx, bytes) {
 				Some(image) => ctx.add_datum(image, fpfx),
 				None => {

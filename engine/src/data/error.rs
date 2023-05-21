@@ -1,5 +1,7 @@
 //! Things that can go wrong during data management operations.
 
+use image::ImageError;
+
 use crate::{udmf, vzs, VPathBuf};
 
 /// Things that can go wrong during (non-preparation) datum management operations,
@@ -36,6 +38,7 @@ impl PrepError {
 			PrepErrorKind::ColorMap(_)
 			| PrepErrorKind::EnDoom(_)
 			| PrepErrorKind::Flat
+			| PrepErrorKind::Image(_)
 			| PrepErrorKind::PNames
 			| PrepErrorKind::Sprite
 			| PrepErrorKind::TextureX
@@ -64,6 +67,8 @@ pub enum PrepErrorKind {
 	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
 	Flat,
 	Level(LevelError),
+	/// Tried to decode a non-picture format image and failed.
+	Image(ImageError),
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingVzsDir,
@@ -71,7 +76,8 @@ pub enum PrepErrorKind {
 	///
 	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
 	PNames,
-	/// A file between the `S_START` and `S_END` markers was not in picture format.
+	/// A file between the `S_START` and `S_END` markers is not in picture format,
+	/// or any other recognized image format.
 	///
 	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
 	Sprite,
@@ -140,6 +146,13 @@ impl std::fmt::Display for PrepError {
 					}
 				)
 			}
+			PrepErrorKind::Image(err) => {
+				write!(
+					f,
+					"Failed to decode image: {p}\r\n\tDetails: {err}",
+					p = self.path.display()
+				)
+			}
 			PrepErrorKind::MissingVzsDir => {
 				write!(
 					f,
@@ -153,7 +166,8 @@ impl std::fmt::Display for PrepError {
 			PrepErrorKind::Sprite => {
 				write!(
 					f,
-					"Lump {} is between `S_START` and `S_END` but is not a sprite.",
+					"Lump {} is between `S_START` and `S_END` \
+					but is not a recognized sprite format.",
 					self.path.display()
 				)
 			}
