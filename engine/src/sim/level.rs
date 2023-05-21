@@ -68,7 +68,7 @@ pub struct Dirty;
 
 // Vertex information //////////////////////////////////////////////////////////
 
-#[derive(Debug, Deref, DerefMut, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Deref, DerefMut, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Vertex(pub Vec4);
 
 impl Vertex {

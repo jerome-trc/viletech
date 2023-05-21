@@ -8,6 +8,7 @@ use image::Rgb;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+	math::MinMaxBox,
 	sim::{level::Vertex, line::Flags},
 	EditorNum, Id8, SmallString,
 };
@@ -175,6 +176,7 @@ pub struct Level {
 	pub subsectors: Vec<SubSector>,
 	pub things: Vec<Thing>,
 	pub vertices: Vec<Vertex>,
+	pub bounds: MinMaxBox,
 	pub udmf: HashMap<UdmfKey, UdmfValue>,
 }
 
@@ -201,8 +203,37 @@ impl Level {
 			subsectors: vec![],
 			things: vec![],
 			vertices: vec![],
+			bounds: MinMaxBox::default(),
 			udmf: HashMap::new(),
 		}
+	}
+
+	#[must_use]
+	pub fn bounds(verts: &[Vertex]) -> MinMaxBox {
+		let mut min = glam::vec3a(0.0, 0.0, 0.0);
+		let mut max = glam::vec3a(0.0, 0.0, 0.0);
+
+		for vert in verts {
+			if vert.x < min.x {
+				min.x = vert.x;
+			} else if vert.x > max.x {
+				max.x = vert.x;
+			}
+
+			if vert.bottom() < min.y {
+				min.y = vert.y;
+			} else if vert.bottom() > max.y {
+				max.y = vert.y;
+			}
+
+			if vert.z < min.z {
+				min.z = vert.z;
+			} else if vert.z > max.z {
+				max.z = vert.z;
+			}
+		}
+
+		MinMaxBox { min, max }
 	}
 }
 

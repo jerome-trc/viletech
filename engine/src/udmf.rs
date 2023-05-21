@@ -66,6 +66,7 @@ pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
 	let (output, errors) = result.into_output_errors();
 
 	if errors.is_empty() && output.is_some() {
+		level.bounds = Level::bounds(&level.vertices);
 		Ok(level)
 	} else {
 		Err(errors)

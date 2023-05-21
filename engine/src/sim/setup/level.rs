@@ -38,7 +38,7 @@ pub(crate) fn setup(
 	let mut verts = SparseSet::with_capacity(base.vertices.len(), base.vertices.len());
 
 	for (i, vert) in base.vertices.iter().enumerate() {
-		verts.insert(VertIndex(i), vert.clone());
+		verts.insert(VertIndex(i), *vert);
 	}
 
 	let (mesh, simstate) = rayon::join(

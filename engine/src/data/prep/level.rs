@@ -200,6 +200,7 @@ impl Catalog {
 		level.subsectors = subsectors;
 		level.things = things;
 		level.vertices = vertices;
+		level.bounds = Level::bounds(&level.vertices);
 
 		Outcome::Ok(level)
 	}

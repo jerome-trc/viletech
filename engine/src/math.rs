@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Mul};
 
 use glam::{DQuat, DVec3, EulerRot, Quat, Vec3A};
+use serde::{Deserialize, Serialize};
 
 pub trait Dimension: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
 
@@ -60,6 +61,12 @@ pub type IRect64 = Rect4<i64>;
 
 pub type FRect32 = Rect4<f32>;
 pub type FRect64 = Rect4<f64>;
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MinMaxBox {
+	pub min: glam::Vec3A,
+	pub max: glam::Vec3A,
+}
 
 /// A strongly-typed angle in degrees of type `T`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
