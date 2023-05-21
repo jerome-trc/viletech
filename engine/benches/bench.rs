@@ -35,8 +35,8 @@ fn data(crit: &mut Criterion) {
 			.join("..")
 			.join("sample");
 		let load_order = vec![
-			(sample.join("freedoom1.wad"), PathBuf::from("freedoom1")),
-			(sample.join("freedoom2.wad"), PathBuf::from("freedoom2")),
+			(sample.join("freedoom1.wad"), PathBuf::from("/freedoom1")),
+			(sample.join("freedoom2.wad"), PathBuf::from("/freedoom2")),
 		];
 
 		for (real_path, _) in &load_order {
@@ -96,7 +96,7 @@ fn data(crit: &mut Criterion) {
 
 		grp.bench_function("Last Loaded", |bencher| {
 			bencher.iter(|| {
-				let _ = catalog.vfs().get("freedoom2/FCGRATE2").unwrap();
+				let _ = catalog.vfs().get("/freedoom2/FCGRATE2").unwrap();
 			});
 		});
 
