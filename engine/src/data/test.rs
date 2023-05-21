@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use super::*;
 
 #[test]
-fn load() {
+fn load_unload() {
 	let mut catalog = Catalog::new([]);
 	let outcome = catalog.load(request());
 
@@ -40,6 +40,8 @@ fn load() {
 		"Expected {EXPECTED} mounted files, found: {}",
 		catalog.vfs.file_count()
 	);
+
+	catalog.clear();
 }
 
 // Details /////////////////////////////////////////////////////////////////////
