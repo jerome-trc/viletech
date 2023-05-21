@@ -1,12 +1,12 @@
 use std::{
 	io::Cursor,
+	ops::Range,
 	path::{Path, PathBuf},
 	sync::Arc,
 };
 
 use bevy::prelude::{info, warn};
 use dashmap::DashMap;
-use indexmap::IndexSet;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use zip::{read::ZipFile, ZipArchive};
@@ -350,37 +350,41 @@ impl VirtualFs {
 		virt_path: &VPath,
 		bytes: Vec<u8>,
 	) -> Outcome<(), MountError> {
-		#[rustfmt::skip]
-		const MAP_COMPONENTS: &[&str] = &[
-			"blockmap",
-			"linedefs",
-			"nodes",
-			"reject",
-			"sectors",
-			"segs",
-			"sidedefs",
-			"ssectors",
-			"things",
-			"vertexes",
-			// UDMF
-			"behavior",
-			"dialogue",
-			"scripts",
-			"textmap",
-			"znodes",
-		];
+		fn make_level_folder(
+			files: &mut [(VPathBuf, File)],
+			marker_index: usize,
+			lumps: Range<usize>,
+		) {
+			debug_assert!(!files[marker_index].1.is_dir());
+			files[marker_index].1 = File::Directory(indexmap::indexset! {});
+			let base_path = files[marker_index].0.clone();
 
-		#[must_use]
-		fn is_map_component(name: &str) -> bool {
-			MAP_COMPONENTS.iter().any(|s| s.eq_ignore_ascii_case(name))
+			for (path, _) in &mut files[lumps] {
+				*path = base_path.join(path.file_stem().unwrap());
+			}
 		}
 
+		/// This is for checking the range of files between THINGS and BLOCKMAP,
+		/// so element 0 should be LINEDEFS and the last element should be the
+		/// lump expected to be REJECT.
 		#[must_use]
-		fn maybe_map_marker(kvp: &(VPathBuf, File)) -> bool {
-			let path_str = kvp.0.to_string_lossy();
-			let fpfx = path_str.as_ref().split('.').next().unwrap();
-			// FIXME: FraggleScript occupies markers, so these may not be empty.
-			kvp.1.is_empty() && !is_map_component(fpfx)
+		fn lumps_are_doom_level(files: &[(VPathBuf, File)]) -> bool {
+			files[0].0.ends_with("LINEDEFS")
+				&& files[1].0.ends_with("SIDEDEFS")
+				&& files[2].0.ends_with("VERTEXES")
+				&& files[3].0.ends_with("SEGS")
+				&& files[4].0.ends_with("SSECTORS")
+				&& files[5].0.ends_with("NODES")
+				&& files[6].0.ends_with("SECTORS")
+				&& files[7].0.ends_with("REJECT")
+		}
+
+		/// This is for checking the range of files between THINGS and BEHAVIOR,
+		/// so element 0 should be LINEDEFS and the last element should be the
+		/// lump expected to be BLOCKMAP.
+		#[must_use]
+		fn lumps_are_hexen_level(files: &[(VPathBuf, File)]) -> bool {
+			lumps_are_doom_level(files) && files[8].0.ends_with("BLOCKMAP")
 		}
 
 		if ctx.tracker.is_cancelled() {
@@ -406,7 +410,9 @@ impl VirtualFs {
 
 		let mut dissolution = wad.dissolve();
 		let mut index = 0_usize;
-		let mut mapfold: Option<usize> = None;
+
+		let mut last_things = None;
+		let mut last_textmap = None;
 
 		for (bytes, name) in dissolution.drain(..) {
 			index += 1;
@@ -415,31 +421,41 @@ impl VirtualFs {
 				return Outcome::Cancelled;
 			}
 
-			// If the previous entry was some kind of marker, and we're just now
-			// looking at some kind of map component (UDMF spec makes it easier
-			// to discern), then in all likelihood the previous WAD entry was a
-			// map marker, and needs to be treated like a directory. Future WAD
-			// entries until the next map marker or non-map component will be made
-			// children of that folder.
-			if maybe_map_marker(&files[index - 1]) && is_map_component(&name) {
-				let prev = files.get_mut(index - 1).unwrap();
-				prev.1 = File::Directory(IndexSet::with_capacity(10));
-				mapfold = Some(index - 1);
-			} else if !is_map_component(name.as_str()) {
-				mapfold = None;
+			if name == ("THINGS") {
+				last_things = Some(index);
+			} else if name == ("TEXTMAP") {
+				last_textmap = Some(index);
 			}
 
-			let mut child_path = if let Some(entry_idx) = mapfold {
-				let fname = files[entry_idx].0.file_name().unwrap().to_string_lossy();
-				// virt_path currently: `/mount_point`
-				let mut cpath = virt_path.join(VPath::new(fname.as_ref()));
-				// cpath currently: `/mount_point/MAP01`
-				cpath.push(&name);
-				// cpath currently: `/mount_point/MAP01/THINGS`
-				cpath
-			} else {
-				virt_path.join(&name)
-			};
+			let mut child_path = virt_path.to_path_buf();
+
+			if name == "BEHAVIOR" && index >= 12 {
+				if let Some(l_things) = last_things {
+					if lumps_are_hexen_level(&files[(l_things + 1)..index]) {
+						make_level_folder(&mut files, l_things - 1, l_things..index);
+						child_path.push(files[l_things - 1].0.file_stem().unwrap());
+					}
+
+					last_things = None;
+				}
+			} else if name == "BLOCKMAP" && index >= 11 {
+				if let Some(l_things) = last_things {
+					if lumps_are_doom_level(&files[(l_things + 1)..index]) {
+						make_level_folder(&mut files, l_things - 1, l_things..index);
+						child_path.push(files[l_things - 1].0.file_stem().unwrap());
+					}
+
+					last_things = None;
+				}
+			} else if name == "ENDMAP" && index >= 3 {
+				if let Some(l_textmap) = last_textmap {
+					make_level_folder(&mut files, l_textmap - 1, l_textmap..index);
+					index -= 1;
+					continue; // No need to keep the ENDMAP marker.
+				}
+			}
+
+			child_path.push(&name);
 
 			// What if a WAD contains two entries with the same name?
 			// For example, DOOM2.WAD has two identical `SW18_7` entries, and
@@ -464,6 +480,8 @@ impl VirtualFs {
 							File::Directory(indexmap::indexset! {}),
 						),
 					);
+
+					index += 1;
 
 					let prev_path = std::mem::take(&mut files[pos + 1].0);
 

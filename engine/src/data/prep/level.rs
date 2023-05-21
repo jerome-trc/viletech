@@ -62,8 +62,6 @@ impl Catalog {
 		for lump in &[
 			nodes, linedefs, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
-			// TODO: What is mandatory might change if a nodebuilder gets integrated.
-
 			if lump.is_none() {
 				return Outcome::None;
 			}
@@ -81,6 +79,8 @@ impl Catalog {
 		for lump in &[
 			linedefs, nodes, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
+			// TODO: After integrating a node builder, SEGS, SSECTORS, and NODES
+			// will no longer be mandatory.
 			if !lump.is_readable() {
 				ctx.raise_error(PrepError {
 					path: dir.path().to_path_buf(),

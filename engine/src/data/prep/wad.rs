@@ -160,10 +160,7 @@ impl Catalog {
 				return Some(());
 			}
 
-			if fstem == "TEXTURE1"
-				|| fstem == "TEXTURE2"
-				|| fstem == "TEXTURE3"
-			{
+			if fstem == "TEXTURE1" || fstem == "TEXTURE2" || fstem == "TEXTURE3" {
 				match self.prep_texturex(ctx, child, bytes) {
 					Outcome::Ok(mut texx) => {
 						ctx.arts_w.lock().texturex.append(&mut texx);
