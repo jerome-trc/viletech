@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{hash, sync::Arc};
 
 use globset::Glob;
 use indexmap::IndexSet;
@@ -140,6 +140,20 @@ impl File {
 		match String::from_utf8(bytes) {
 			Ok(string) => File::Text(string.into_boxed_str()),
 			Err(err) => File::Binary(err.into_bytes().into_boxed_slice()),
+		}
+	}
+}
+
+impl hash::Hash for File {
+	/// Be aware that this method panics if this is a [`File::Empty`] or
+	/// [`File::Directory`] to prevent misuse.
+	fn hash<H: hash::Hasher>(&self, state: &mut H) {
+		match self {
+			File::Binary(bytes) => bytes.hash(state),
+			File::Text(string) => string.hash(state),
+			File::Empty | File::Directory(_) => {
+				panic!("Attempted to hash an unreadable virtual file.")
+			}
 		}
 	}
 }
