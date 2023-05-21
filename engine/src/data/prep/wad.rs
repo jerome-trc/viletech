@@ -163,7 +163,6 @@ impl Catalog {
 			if fstem == "TEXTURE1"
 				|| fstem == "TEXTURE2"
 				|| fstem == "TEXTURE3"
-				|| fstem == "TEXTURES"
 			{
 				match self.prep_texturex(ctx, child, bytes) {
 					Outcome::Ok(mut texx) => {
