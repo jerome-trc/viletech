@@ -82,7 +82,7 @@ impl Catalog {
 			linedefs, nodes, sectors, segs, sidedefs, ssectors, things, vertexes,
 		] {
 			if !lump.is_readable() {
-				ctx.errors.lock().push(PrepError {
+				ctx.raise_error(PrepError {
 					path: dir.path().to_path_buf(),
 					kind: PrepErrorKind::Level(LevelError::UnreadableFile(
 						lump.path().to_path_buf(),
@@ -98,7 +98,7 @@ impl Catalog {
 		let mut malformed = false;
 
 		if (linedefs.byte_len() % 14) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(
 					linedefs.path().to_path_buf(),
@@ -109,7 +109,7 @@ impl Catalog {
 		}
 
 		if (sectors.byte_len() % 26) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(sectors.path().to_path_buf())),
 			});
@@ -118,7 +118,7 @@ impl Catalog {
 		}
 
 		if (segs.byte_len() % 12) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(segs.path().to_path_buf())),
 			});
@@ -127,7 +127,7 @@ impl Catalog {
 		}
 
 		if (sidedefs.byte_len() % 30) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(
 					sidedefs.path().to_path_buf(),
@@ -138,7 +138,7 @@ impl Catalog {
 		}
 
 		if (ssectors.byte_len() % 4) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(
 					ssectors.path().to_path_buf(),
@@ -149,7 +149,7 @@ impl Catalog {
 		}
 
 		if (things.byte_len() % 10) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(things.path().to_path_buf())),
 			});
@@ -158,7 +158,7 @@ impl Catalog {
 		}
 
 		if (vertexes.byte_len() % 4) != 0 {
-			ctx.errors.lock().push(PrepError {
+			ctx.raise_error(PrepError {
 				path: dir.path().to_path_buf(),
 				kind: PrepErrorKind::Level(LevelError::MalformedFile(
 					vertexes.path().to_path_buf(),

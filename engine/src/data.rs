@@ -1,17 +1,19 @@
 //! Management of files, audio, graphics, levels, text, localization, and so on.
 
 mod config;
-mod detail;
 pub mod dobj;
 mod error;
 mod extras;
-mod mount;
+mod gui;
 mod prep;
+
 #[cfg(test)]
 mod test;
 
 use std::{
-	path::{Path, PathBuf},
+	any::TypeId,
+	hash::{Hash, Hasher},
+	path::PathBuf,
 	sync::Arc,
 };
 
@@ -21,19 +23,19 @@ use bevy::{
 };
 use bevy_egui::egui;
 use dashmap::DashMap;
+use fasthash::SeaHasher;
 use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
-use slotmap::SlotMap;
 use smallvec::SmallVec;
 
 use crate::{
-	vfs::{FileRef, MountError, MountFormat, MountOutcome, MountRequest, VirtualFs},
+	vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs},
 	vzs, EditorNum, Outcome, SendTracker, SpawnNum, VPath, VPathBuf,
 };
 
 use self::{
-	detail::{DatumKey, DatumSlotKey, DevGui},
 	dobj::{Blueprint, DataRef, Datum, DatumStore},
+	gui::DevGui,
 };
 
 pub use self::{config::*, error::*, extras::*};
@@ -70,23 +72,20 @@ pub struct Catalog {
 	/// See [`Self::new`]; mounts given as `basedata` through that function are
 	/// always present here.
 	pub(self) vfs: VirtualFs,
-	/// When the catalog is initialized, this is empty.
-	pub(self) mounts: Vec<Mount>,
-	/// In each value:
-	/// - Field `0` is an index into `Self::mounts`.
-	/// - Field `1` is a key into [`Mount::objs`].
-	pub(self) objs: DashMap<DatumKey, (usize, DatumSlotKey)>,
+	pub(self) dobjs: dashmap::ReadOnlyView<DatumKey, Arc<dyn DatumStore>>,
 	/// Datum lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries. Also contains names
 	/// assigned via [`SNDINFO`](https://zdoom.org/wiki/SNDINFO).
-	pub(self) nicknames: DashMap<DatumKey, SmallVec<[(usize, DatumSlotKey); 2]>>,
+	pub(self) nicknames: dashmap::ReadOnlyView<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
 	/// See the key type's documentation for background details.
-	/// Keyed objects are always of type [`Blueprint`].
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[(usize, DatumSlotKey); 2]>>,
+	/// These are always backed by a [`Blueprint`]; they are only `dyn` for the
+	/// benefit of [`DataRef`].
+	pub(self) editor_nums: dashmap::ReadOnlyView<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
 	/// See the key type's documentation for background details.
-	/// Keyed objects are always of type [`Blueprint`].
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[(usize, DatumSlotKey); 2]>>,
+	/// These are always backed by a [`Blueprint`]; they are only `dyn` for the
+	/// benefit of [`DataRef`].
+	pub(self) spawn_nums: dashmap::ReadOnlyView<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
 	pub(self) gui: DevGui,
 	pub(self) populated: bool,
 	// Q: FNV/aHash for maps using small key types?
@@ -104,11 +103,10 @@ impl Catalog {
 			config: Config::default(),
 			vzscript: vzs::Project::default(),
 			vfs: VirtualFs::default(),
-			mounts: vec![],
-			objs: DashMap::default(),
-			nicknames: DashMap::default(),
-			editor_nums: DashMap::default(),
-			spawn_nums: DashMap::default(),
+			dobjs: DashMap::default().into_read_only(),
+			nicknames: DashMap::default().into_read_only(),
+			editor_nums: DashMap::default().into_read_only(),
+			spawn_nums: DashMap::default().into_read_only(),
 			gui: DevGui::default(),
 			populated: false,
 		};
@@ -125,7 +123,25 @@ impl Catalog {
 			tracker: None,
 			basedata: true,
 		}) {
-			MountOutcome::Ok(_) => {}
+			MountOutcome::Ok(errors) => {
+				debug_assert!(
+					errors.iter().all(|errs| errs.is_empty()),
+					"Unexpected non-fatal errors during basedata mount: {}",
+					{
+						let mut msg = String::default();
+
+						for subvec in errors {
+							msg.push_str("\r\n\r\n");
+
+							for err in subvec {
+								msg.push_str(&err.to_string());
+							}
+						}
+
+						msg
+					}
+				);
+			}
 			MountOutcome::Errs(errs) => panic!("Basedata mount failed: {}", {
 				let mut msg = String::default();
 
@@ -169,45 +185,20 @@ impl Catalog {
 
 		let prev_file_count = self.vfs.file_count();
 
-		let mut mounts = request
-			.mount
-			.load_order
-			.iter()
-			.map(|(rp, mp)| Mount {
-				info: MountInfo {
-					id: "".to_string(),
-					format: MountFormat::PlainFile,
-					kind: MountKind::Misc,
-					real_path: rp.clone().into_boxed_path(),
-					virtual_path: mp.clone().into_boxed_path(),
-					meta: None,
-					vzscript: None,
-				},
-				objs: SlotMap::default(),
-				extras: WadExtras::default(),
-			})
-			.collect::<Vec<_>>();
-
-		let mnt_output = match self.vfs.mount(request.mount) {
-			MountOutcome::Ok(output) => output,
+		let mnt_errs = match self.vfs.mount(request.mount) {
+			MountOutcome::Ok(errors) => errors,
 			MountOutcome::Errs(errors) => return LoadOutcome::MountFail { errors },
 			MountOutcome::Cancelled => return LoadOutcome::Cancelled,
 			MountOutcome::NoOp => unreachable!(),
 		};
 
-		for mount in &mut mounts {
-			mount.info.id = mount.info.virtual_path.to_str().unwrap().to_string();
-			mount.info.kind = self.resolve_mount_kind(mount.info.format, mount.info.virtual_path());
-			self.resolve_mount_metadata(&mut mount.info);
-		}
-
-		self.mounts = mounts;
-
 		let prep_tracker = request
 			.tracker
-			.unwrap_or_else(|| Arc::new(SendTracker::new(self.vfs.file_count() - prev_file_count)));
+			.unwrap_or_else(|| Arc::new(SendTracker::default()));
 
-		let p_ctx = prep::Context::new(prep_tracker, self.mounts.len());
+		prep_tracker.set_target(self.vfs.file_count() - prev_file_count);
+
+		let p_ctx = prep::Context::new(prep_tracker, self.vfs.mounts().len());
 
 		// Note to reader: check `./prep.rs`.
 		match self.prep(p_ctx) {
@@ -215,8 +206,8 @@ impl Catalog {
 				self.populated = true;
 
 				LoadOutcome::Ok {
-					mount: mnt_output,
-					prep: output.errors,
+					mount: mnt_errs,
+					prep: output,
 				}
 			}
 			Outcome::Err(errors) => LoadOutcome::PrepFail { errors },
@@ -226,25 +217,31 @@ impl Catalog {
 	}
 
 	pub fn clear(&mut self) {
-		for mount in &self.mounts {
-			if self
-				.config
-				.basedata
-				.iter()
-				.any(|bdp| bdp == mount.info.real_path())
-			{
-				continue;
-			}
+		self.vfs.truncate(self.config.basedata.len());
 
-			self.vfs.remove_recursive(mount.info.virtual_path());
-		}
-
-		self.mounts.clear();
 		self.vzscript.clear();
-		self.objs.clear();
-		self.nicknames.clear();
-		self.editor_nums.clear();
-		self.spawn_nums.clear();
+
+		let dobjs =
+			std::mem::replace(&mut self.dobjs, DashMap::default().into_read_only()).into_inner();
+		dobjs.clear();
+		self.dobjs = dobjs.into_read_only();
+
+		let nicknames = std::mem::replace(&mut self.nicknames, DashMap::default().into_read_only())
+			.into_inner();
+		nicknames.clear();
+		self.nicknames = nicknames.into_read_only();
+
+		let editor_nums =
+			std::mem::replace(&mut self.editor_nums, DashMap::default().into_read_only())
+				.into_inner();
+		editor_nums.clear();
+		self.editor_nums = editor_nums.into_read_only();
+
+		let spawn_nums =
+			std::mem::replace(&mut self.spawn_nums, DashMap::default().into_read_only())
+				.into_inner();
+		spawn_nums.clear();
+		self.spawn_nums = spawn_nums.into_read_only();
 
 		self.populated = false;
 	}
@@ -255,12 +252,7 @@ impl Catalog {
 	#[must_use]
 	pub fn get<D: Datum>(&self, id: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(id);
-
-		if let Some(kvp) = self.objs.get(&key) {
-			Some(DataRef::new(self, &self.mounts[kvp.0].objs[kvp.1]))
-		} else {
-			None
-		}
+		self.dobjs.get(&key).map(|arc| DataRef::new(self, arc))
 	}
 
 	/// Find an [actor] [`Blueprint`] by a 16-bit editor number.
@@ -269,14 +261,13 @@ impl Catalog {
 	/// [actor]: crate::sim::actor
 	#[must_use]
 	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<DataRef<Blueprint>> {
-		let Some(kvp) = self.editor_nums.get(&num) else { return None; };
-		let stack = kvp.value();
+		let Some(stack) = self.editor_nums.get(&num) else { return None; };
 
-		let (mnt_i, dsk) = stack
+		let arc = stack
 			.last()
 			.expect("Catalog cleanup missed an empty ed-num stack.");
 
-		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
+		Some(DataRef::new(self, arc))
 	}
 
 	/// Find an [actor] [`Blueprint`] by a 16-bit spawn number.
@@ -285,58 +276,42 @@ impl Catalog {
 	/// [actor]: crate::sim::actor
 	#[must_use]
 	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<DataRef<Blueprint>> {
-		let Some(kvp) = self.spawn_nums.get(&num) else { return None; };
-		let stack = kvp.value();
+		let Some(stack) = self.spawn_nums.get(&num) else { return None; };
 
-		let (mnt_i, dsk) = stack
+		let arc = stack
 			.last()
 			.expect("Catalog cleanup missed an empty spawn-num stack.");
 
-		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
+		Some(DataRef::new(self, arc))
 	}
 
 	#[must_use]
 	pub fn last_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
-		let Some(kvp) = self.nicknames.get(&key) else { return None; };
-		let stack = kvp.value();
+		let Some(stack) = self.nicknames.get(&key) else { return None; };
 
-		let (mnt_i, dsk) = stack
+		let arc = stack
 			.last()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
+		Some(DataRef::new(self, arc))
 	}
 
 	#[must_use]
 	pub fn first_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
-		let Some(kvp) = self.nicknames.get(&key) else { return None; };
-		let stack = kvp.value();
+		let Some(stack) = self.nicknames.get(&key) else { return None; };
 
-		let (mnt_i, dsk) = stack
+		let arc = stack
 			.first()
 			.expect("Catalog cleanup missed an empty nickname stack.");
 
-		Some(DataRef::new(self, &self.mounts[*mnt_i].objs[*dsk]))
-	}
-
-	#[must_use]
-	pub fn last_paletteset(&self) -> Option<&PaletteSet> {
-		self.mounts
-			.iter()
-			.rev()
-			.find_map(|mnt| mnt.extras.palset.as_deref())
+		Some(DataRef::new(self, arc))
 	}
 
 	#[must_use]
 	pub fn vfs(&self) -> &VirtualFs {
 		&self.vfs
-	}
-
-	#[must_use]
-	pub fn mounts(&self) -> &[Mount] {
-		&self.mounts
 	}
 
 	#[must_use]
@@ -383,204 +358,6 @@ pub type CatalogAM = Arc<Mutex<Catalog>>;
 pub type CatalogAL = Arc<RwLock<Catalog>>;
 
 // Mount, MountInfo ////////////////////////////////////////////////////////////
-
-#[derive(Debug)]
-pub struct Mount {
-	pub(self) objs: SlotMap<DatumSlotKey, Arc<dyn DatumStore>>,
-	pub(self) info: MountInfo,
-	pub(self) extras: WadExtras,
-}
-
-#[derive(Debug)]
-pub struct MountInfo {
-	/// Specified by `meta.toml` if one exists.
-	/// Otherwise, this comes from the file stem of the mount point.
-	pub(super) id: String,
-	pub(super) format: MountFormat,
-	pub(super) kind: MountKind,
-	/// Always canonicalized, but may not necessarily be valid UTF-8.
-	pub(super) real_path: Box<Path>,
-	pub(super) virtual_path: Box<VPath>,
-	/// Comes from `meta.toml`, so most mounts will lack this.
-	pub(super) meta: Option<Box<MountMeta>>,
-	pub(super) vzscript: Option<VzsManifest>,
-	// Q:
-	// - Dependency specification?
-	// - Incompatibility specification?
-	// - Ordering specification?
-	// - Forced specifications, or just strongly-worded warnings? Multiple levels?
-}
-
-#[derive(Debug)]
-pub struct VzsManifest {
-	/// The base of the package's VZScript include tree.
-	///
-	/// This is irrelevant to WADs, which can only use VZS through lumps named
-	/// `VZSCRIPT`.
-	///
-	/// Normally, the scripts can define manifest items used to direct loading,
-	/// but if there is no script root or manifests, ZDoom loading rules are used.
-	///
-	/// A package can only specify a directory owned by it as a script root, so this
-	/// is always relative. `viletech.vpk3`'s script root, for example, is `scripts`.
-	pub(super) root_dir: VPathBuf,
-	pub(super) namespace: Option<String>,
-	pub(super) version: vzs::Version,
-}
-
-/// A WAD file may come with its own color palettes, color-remapping table,
-/// and/or ENDOOM lump. These are practically never included multiple times,
-/// or included by non-WADs, and most PWADs also have none.
-#[derive(Debug, Default)]
-pub struct WadExtras {
-	pub(self) colormap: Option<Box<ColorMap>>,
-	pub(self) palset: Option<Box<PaletteSet>>,
-	pub(self) endoom: Option<Box<EnDoom>>,
-}
-
-impl VzsManifest {
-	#[must_use]
-	pub fn namespace(&self) -> Option<&str> {
-		self.namespace.as_deref()
-	}
-
-	#[must_use]
-	pub fn version(&self) -> vzs::Version {
-		self.version
-	}
-}
-
-impl MountInfo {
-	#[must_use]
-	pub fn id(&self) -> &str {
-		&self.id
-	}
-
-	#[must_use]
-	pub fn format(&self) -> MountFormat {
-		self.format
-	}
-
-	/// The real file/directory this mount represents.
-	/// Always canonicalized, but may not necessarily be valid UTF-8.
-	#[must_use]
-	pub fn real_path(&self) -> &Path {
-		&self.real_path
-	}
-
-	/// Also known as the "mount point". Corresponds to a VFS node.
-	#[must_use]
-	pub fn virtual_path(&self) -> &VPath {
-		&self.virtual_path
-	}
-
-	#[must_use]
-	pub fn metadata(&self) -> Option<&MountMeta> {
-		self.meta.as_deref()
-	}
-
-	#[must_use]
-	pub fn is_basedata(&self) -> bool {
-		self.id == crate::BASEDATA_ID
-	}
-
-	#[must_use]
-	pub fn vzscript(&self) -> &Option<VzsManifest> {
-		&self.vzscript
-	}
-}
-
-/// Informs the rules used for preparing data from a mount.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MountKind {
-	/// If the mount's own root has an immediate child text file named `meta.toml`
-	/// (ASCII-case-ignored), that indicates that the mount is a VileTech package.
-	VileTech,
-	/// If mounting an archive with:
-	/// - no immediate text file child named `meta.toml`, and
-	/// - the extension `.pk3`, `.ipk3`, `.pk7`, or `.ipk7`,
-	/// then this is what gets resolved. If it's a directory instead of an archive,
-	/// the heuristic used is if there's an immediate child text file with a file
-	/// stem belonging to a ZDoom-exclusive lump.
-	ZDoom,
-	/// If mounting an archive with:
-	/// - no immediate text file child named `meta.toml`, and
-	/// - the extension `.pke`,
-	/// then this is what gets resolved. If it's a directory instead of an archive,
-	/// the heuristic used is if there's an immediate child text file with the
-	/// file stem `edfroot` or `emapinfo` (ASCII-case-ignored).
-	Eternity,
-	/// Deduced from [`MountFormat`], which is itself deduced from the file header.
-	Wad,
-	/// Fallback if the mount resolved to none of the other kinds.
-	/// Usually used if mounting a single non-archive file.
-	Misc,
-}
-
-#[derive(Debug)]
-pub struct MountMeta {
-	pub(super) version: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) name: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) description: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) authors: Vec<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Human-readable, presented to users in the frontend.
-	pub(super) copyright: Option<String>,
-	/// Specified by `meta.toml` if one exists.
-	/// Allow a package to link to its forum post/homepage/Discord server/etc.
-	pub(super) links: Vec<String>,
-}
-
-impl MountMeta {
-	#[must_use]
-	pub fn name(&self) -> Option<&str> {
-		match &self.name {
-			Some(s) => Some(s),
-			None => None,
-		}
-	}
-
-	#[must_use]
-	pub fn version(&self) -> Option<&str> {
-		match &self.version {
-			Some(s) => Some(s),
-			None => None,
-		}
-	}
-
-	#[must_use]
-	pub fn description(&self) -> Option<&str> {
-		match &self.description {
-			Some(s) => Some(s),
-			None => None,
-		}
-	}
-
-	#[must_use]
-	pub fn authors(&self) -> &[String] {
-		self.authors.as_ref()
-	}
-
-	#[must_use]
-	pub fn copyright_info(&self) -> Option<&str> {
-		match &self.copyright {
-			Some(s) => Some(s),
-			None => None,
-		}
-	}
-
-	/// User-specified URLS to a forum post/homepage/Discord server/et cetera.
-	#[must_use]
-	pub fn public_links(&self) -> &[String] {
-		&self.links
-	}
-}
 
 // Loading /////////////////////////////////////////////////////////////////////
 
@@ -744,6 +521,22 @@ impl AssetIo for CatalogAssetIo {
 
 	fn watch_for_changes(&self) -> Result<(), AssetIoError> {
 		unimplemented!()
+	}
+}
+
+// Q: SeaHasher is used for building this key type because it requires no
+// allocation, unlike metro and xx. Are any others faster for this?
+
+/// Field `1` is a hash of the datum's ID string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(self) struct DatumKey(TypeId, u64);
+
+impl DatumKey {
+	#[must_use]
+	pub(self) fn new<D: Datum>(id: &str) -> Self {
+		let mut hasher = SeaHasher::default();
+		id.hash(&mut hasher);
+		Self(TypeId::of::<D>(), hasher.finish())
 	}
 }
 

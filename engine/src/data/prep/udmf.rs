@@ -40,7 +40,7 @@ impl Catalog {
 		let source = match textmap.try_read_str() {
 			Ok(s) => s,
 			Err(_) => {
-				ctx.errors.lock().push(PrepError {
+				ctx.raise_error(PrepError {
 					path: dir.path().to_path_buf(),
 					kind: PrepErrorKind::Level(LevelError::UnreadableFile(
 						textmap.path().to_path_buf(),
@@ -54,7 +54,7 @@ impl Catalog {
 		match udmf::parse_textmap(source) {
 			Ok(level) => Outcome::Ok(level),
 			Err(errs) => {
-				let mut ctx_errs = ctx.errors.lock();
+				let ctx_errs = &mut ctx.arts_w.lock().errors;
 
 				for err in errs {
 					ctx_errs.push(PrepError {

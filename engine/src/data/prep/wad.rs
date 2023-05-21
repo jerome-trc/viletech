@@ -77,14 +77,14 @@ impl Catalog {
 	}
 
 	pub(super) fn prep_pass2_wad(&self, ctx: &SubContext) {
-		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
+		let wad = self.vfs.get(ctx.mntinfo.mount_point()).unwrap();
 
 		wad.children().unwrap().par_bridge().try_for_each(|child| {
 			if !child.is_readable() {
 				return Some(());
 			}
 
-			if ctx.tracker.is_cancelled() {
+			if ctx.is_cancelled() {
 				return None;
 			}
 
@@ -103,7 +103,7 @@ impl Catalog {
 						ctx.add_datum(Audio::Waveform(statsnd), child.file_prefix());
 					}
 					Err(err) => {
-						ctx.errors.lock().push(PrepError {
+						ctx.raise_error(PrepError {
 							path: child.path().to_path_buf(),
 							kind: PrepErrorKind::WaveformAudio(err),
 						});
@@ -116,9 +116,9 @@ impl Catalog {
 			if fstem == "COLORMAP" {
 				match self.prep_colormap(child, bytes) {
 					Ok(colormap) => {
-						ctx.artifacts.lock().extras.colormap = Some(Box::new(colormap));
+						ctx.arts_w.lock().colormap = Some(Box::new(colormap));
 					}
-					Err(err) => ctx.errors.lock().push(*err),
+					Err(err) => ctx.raise_error(*err),
 				}
 
 				return Some(());
@@ -126,18 +126,18 @@ impl Catalog {
 
 			if fstem == "ENDOOM" {
 				match self.prep_endoom(child, bytes) {
-					Ok(endoom) => ctx.artifacts.lock().extras.endoom = Some(Box::new(endoom)),
-					Err(err) => ctx.errors.lock().push(*err),
+					Ok(endoom) => ctx.arts_w.lock().endoom = Some(Box::new(endoom)),
+					Err(err) => ctx.raise_error(*err),
 				}
 			}
 
 			if fstem == "PLAYPAL" {
 				match self.prep_playpal(ctx, bytes) {
 					Ok(palset) => {
-						ctx.artifacts.lock().extras.palset = Some(Box::new(palset));
+						ctx.arts_w.lock().palset = Some(Box::new(palset));
 					}
 					Err(err) => {
-						ctx.errors.lock().push(PrepError {
+						ctx.raise_error(PrepError {
 							path: child.path().to_path_buf(),
 							kind: PrepErrorKind::Io(err),
 						});
@@ -149,8 +149,10 @@ impl Catalog {
 
 			if fstem == "PNAMES" {
 				match self.prep_pnames(ctx, child, bytes) {
-					Outcome::Ok(pnames) => ctx.artifacts.lock().pnames = Some(pnames),
-					Outcome::Err(err) => ctx.errors.lock().push(err),
+					Outcome::Ok(mut pnames) => {
+						ctx.arts_w.lock().pnames.append(&mut pnames);
+					}
+					Outcome::Err(err) => ctx.raise_error(err),
 					Outcome::None => {}
 					_ => unreachable!(),
 				}
@@ -164,14 +166,10 @@ impl Catalog {
 				|| fstem == "TEXTURES"
 			{
 				match self.prep_texturex(ctx, child, bytes) {
-					Outcome::Ok(texturex) => {
-						if fstem.ends_with('1') {
-							ctx.artifacts.lock().texture1 = Some(texturex);
-						} else if fstem.ends_with('2') {
-							ctx.artifacts.lock().texture2 = Some(texturex);
-						}
+					Outcome::Ok(mut texx) => {
+						ctx.arts_w.lock().texturex.append(&mut texx);
 					}
-					Outcome::Err(err) => ctx.errors.lock().push(err),
+					Outcome::Err(err) => ctx.raise_error(err),
 					Outcome::None => {}
 					_ => unreachable!(),
 				}
@@ -182,7 +180,7 @@ impl Catalog {
 	}
 
 	pub(super) fn prep_pass3_wad(&self, ctx: &SubContext) -> Outcome<(), ()> {
-		let wad = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
+		let wad = self.vfs.get(ctx.mntinfo.mount_point()).unwrap();
 		let markers = Markers::new(wad);
 
 		let proceed = wad
@@ -192,7 +190,7 @@ impl Catalog {
 			.enumerate()
 			.par_bridge()
 			.try_for_each(|(cndx, child)| {
-				if ctx.tracker.is_cancelled() {
+				if ctx.is_cancelled() {
 					return None;
 				}
 
@@ -221,12 +219,12 @@ impl Catalog {
 		let bytes = vfile.read_bytes();
 		let fpfx = vfile.file_prefix();
 
-		ctx.tracker.add_to_progress(1);
+		ctx.higher.tracker.add_to_progress(1);
 
 		if markers.is_flat(child_index) {
 			match self.prep_flat(ctx, vfile, bytes) {
 				Ok(image) => ctx.add_datum(image, fpfx),
-				Err(err) => ctx.errors.lock().push(*err),
+				Err(err) => ctx.raise_error(*err),
 			}
 
 			return;
@@ -236,7 +234,7 @@ impl Catalog {
 			match self.prep_picture(ctx, bytes) {
 				Some(image) => ctx.add_datum(image, fpfx),
 				None => {
-					ctx.errors.lock().push(PrepError {
+					ctx.raise_error(PrepError {
 						path: vfile.path().to_path_buf(),
 						kind: PrepErrorKind::Sprite,
 					});

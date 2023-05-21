@@ -3,139 +3,58 @@
 //! After mounting is done, start composing useful objects from raw files.
 
 mod level;
+mod pk37;
 mod udmf;
 mod vanilla;
 mod wad;
 
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
-use bevy::prelude::info;
+use bevy::prelude::{info, warn};
+use dashmap::DashMap;
 use parking_lot::Mutex;
 use rayon::prelude::*;
-use smallvec::smallvec;
+use serde::Deserialize;
+use smallvec::{smallvec, SmallVec};
 
-use crate::{data::dobj::DATUM_TYPE_NAMES, vzs, Id8, Outcome, SendTracker, VPathBuf};
+use crate::{
+	data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, vzs, EditorNum, Id8, Outcome, SendTracker,
+	SpawnNum, VPathBuf,
+};
 
 use self::vanilla::{PatchTable, TextureX};
 
 use super::{
-	detail::DatumKey,
 	dobj::{DatumStore, Store},
-	Catalog, Datum, MountInfo, MountKind, PrepError, PrepErrorKind, WadExtras,
+	Catalog, ColorMap, Datum, DatumKey, EnDoom, MountInfo, PaletteSet, PrepError, PrepErrorKind,
 };
 
-#[derive(Debug)]
-pub(super) struct Context {
-	pub(super) tracker: Arc<SendTracker>,
-	/// Returning errors through the prep call tree is somewhat
-	/// inflexible, so pass an array down through the context instead.
-	pub(super) errors: Vec<Mutex<Vec<PrepError>>>,
-}
-
-impl Context {
-	#[must_use]
-	pub(super) fn new(tracker: Arc<SendTracker>, mounts_len: usize) -> Self {
-		Self {
-			tracker,
-			errors: {
-				let mut ret = vec![];
-				ret.resize_with(mounts_len, || Mutex::new(vec![]));
-				ret
-			},
-		}
-	}
-
-	#[must_use]
-	pub(super) fn any_fatal_errors(&self) -> bool {
-		self.errors
-			.par_iter()
-			.any(|mutex| mutex.lock().iter().any(|err| err.is_fatal()))
-	}
-
-	#[must_use]
-	pub(super) fn into_errors(mut self) -> Vec<Vec<PrepError>> {
-		std::mem::take(&mut self.errors)
-			.into_iter()
-			.map(|mutex| mutex.into_inner())
-			.collect()
-	}
-}
-
-/// Context relevant to operations on one mount.
-#[derive(Debug)]
-pub(self) struct SubContext<'ctx> {
-	pub(self) tracker: &'ctx Arc<SendTracker>,
-	pub(self) mntinfo: &'ctx MountInfo,
-	pub(self) artifacts: &'ctx Mutex<Artifacts>,
-	pub(self) errors: &'ctx Mutex<Vec<PrepError>>,
-}
-
-#[derive(Debug, Default)]
-pub(self) struct Artifacts {
-	pub(self) objs: Vec<StagedDatum>,
-	pub(self) extras: WadExtras,
-	pub(self) pnames: Option<PatchTable>,
-	pub(self) texture1: Option<TextureX>,
-	pub(self) texture2: Option<TextureX>,
-}
-
-#[derive(Debug)]
-pub(self) struct StagedDatum {
-	key: DatumKey,
-	key_nick: DatumKey,
-	datum: Arc<dyn DatumStore>,
-}
-
-impl SubContext<'_> {
-	pub(self) fn add_datum<D: Datum>(&self, datum: D, id_suffix: impl AsRef<str>) {
-		let id = format!("{}/{}", self.mntinfo.id(), id_suffix.as_ref());
-
-		self.artifacts.lock().objs.push(StagedDatum {
-			key: DatumKey::new::<D>(&id),
-			key_nick: DatumKey::new::<D>(id.split('/').last().unwrap()),
-			datum: Arc::new(Store::new(id, datum)),
-		});
-	}
-}
-
-#[derive(Debug)]
-#[must_use]
-pub(super) struct Output {
-	/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
-	pub(super) errors: Vec<Vec<PrepError>>,
-}
+type Output = Vec<Vec<PrepError>>;
 
 impl Catalog {
 	/// Preconditions:
 	/// - `self.vfs` has been populated. All directories know their contents.
 	/// - `ctx.tracker` has already had its target number set.
-	pub(super) fn prep(&mut self, ctx: Context) -> Outcome<Output, Vec<Vec<PrepError>>> {
-		let to_reserve = ctx.tracker.target();
-		debug_assert!(!ctx.errors.is_empty());
-		debug_assert!(to_reserve > 0);
+	pub(super) fn prep(&mut self, mut ctx: Context) -> Outcome<Output, Output> {
+		// Pass 1: determine how each mount needs to be processed.
+		// Compile VZS; transpile EDF and (G)ZDoom DSLs.
 
-		if let Err(err) = self.objs.try_reserve(to_reserve) {
-			panic!("Failed to reserve memory for approx. {to_reserve} new assets. Error: {err:?}",);
-		}
-
-		let mut artifacts = vec![];
-		artifacts.resize_with(self.mounts.len(), || Mutex::new(Artifacts::default()));
-
-		// Pass 1: compile VZS; transpile EDF and (G)ZDoom DSLs.
-
-		for (i, mount) in self.mounts.iter().enumerate() {
+		for (i, mount) in self.vfs.mounts().iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
+			ctx.arts[i].kind = self.resolve_mount_kind(mount);
+			self.resolve_mount_metadata(mount, &mut ctx.arts[i]);
+
 			let subctx = SubContext {
-				tracker: &ctx.tracker,
-				mntinfo: &mount.info,
-				artifacts: &artifacts[i],
-				errors: &ctx.errors[i],
+				higher: &ctx,
+				mntinfo: mount,
+				arts: &ctx.arts[i],
+				arts_w: &ctx.arts_working[i],
 			};
 
-			let _ = match subctx.mntinfo.kind {
+			let _ = match ctx.arts[i].kind {
 				MountKind::VileTech => self.prep_pass1_vpk(&subctx),
 				MountKind::ZDoom => self.prep_pass1_pk(&subctx),
 				MountKind::Eternity => todo!(),
@@ -151,22 +70,24 @@ impl Catalog {
 
 		// Pass 2: dependency-free assets; trivial to parallelize. Includes:
 		// - Palettes and colormaps.
+		// - ENDOOM.
+		// - TEXTUREX and PNAMES.
 		// - Sounds and music.
 		// - Non-picture-format images.
 
-		for (i, mount) in self.mounts.iter().enumerate() {
+		for (i, mount) in self.vfs.mounts().iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
-				tracker: &ctx.tracker,
-				mntinfo: &mount.info,
-				artifacts: &artifacts[i],
-				errors: &ctx.errors[i],
+				higher: &ctx,
+				mntinfo: mount,
+				arts: &ctx.arts[i],
+				arts_w: &ctx.arts_working[i],
 			};
 
-			match subctx.mntinfo.kind {
+			match ctx.arts[i].kind {
 				MountKind::Wad => self.prep_pass2_wad(&subctx),
 				MountKind::VileTech => {} // Soon!
 				_ => unimplemented!("Soon!"),
@@ -178,29 +99,29 @@ impl Catalog {
 			return Outcome::Err(ctx.into_errors());
 		}
 
-		self.register_artifacts(&artifacts);
+		ctx.post_pass2();
 
-		if self.last_paletteset().is_none() {
+		if ctx.last_paletteset().is_none() {
 			unimplemented!("Further loading without a PLAYPAL is unsupported for now.");
 		}
 
 		// Pass 3: assets dependent on pass 2. Includes:
-		// - Picture-format images, which need palettes.
+		// - Picture-format images, which need palettes and PNAMES.
 		// - Maps, which need textures, music, scripts, blueprints...
 
-		for (i, mount) in self.mounts.iter().enumerate() {
+		for (i, mount) in self.vfs.mounts().iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let subctx = SubContext {
-				tracker: &ctx.tracker,
-				mntinfo: &mount.info,
-				artifacts: &artifacts[i],
-				errors: &ctx.errors[i],
+				higher: &ctx,
+				mntinfo: mount,
+				arts: &ctx.arts[i],
+				arts_w: &ctx.arts_working[i],
 			};
 
-			let _outcome = match subctx.mntinfo.kind {
+			let _ = match ctx.arts[i].kind {
 				MountKind::Wad => self.prep_pass3_wad(&subctx),
 				MountKind::VileTech => Outcome::None, // Soon!
 				_ => unimplemented!("Soon!"),
@@ -212,32 +133,45 @@ impl Catalog {
 			return Outcome::Err(ctx.into_errors());
 		}
 
-		self.register_artifacts(&artifacts);
+		ctx.post_pass3();
 
-		// TODO: Make each successfully processed file increment progress.
-		ctx.tracker.finish();
+		let Context {
+			tracker,
+			dobjs,
+			nicknames,
+			editor_nums,
+			spawn_nums,
+			arts_working,
+			arts: _,
+		} = ctx;
+
+		self.dobjs = dobjs.into_read_only();
+		self.nicknames = nicknames.into_read_only();
+		self.editor_nums = editor_nums.into_read_only();
+		self.spawn_nums = spawn_nums.into_read_only();
 
 		info!("Loading complete.");
 
-		Outcome::Ok(Output {
-			errors: ctx.into_errors(),
-		})
+		// TODO: Make each successfully processed file increment progress.
+		tracker.finish();
+
+		Outcome::Ok(Context::rollup_errors(arts_working))
 	}
 
 	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
 	/// DSLs all go into the same VZS module, regardless of which are present
 	/// and which are absent.
 	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<(), ()> {
-		if let Some(vzscript) = &ctx.mntinfo.vzscript {
-			let root_dir_path: VPathBuf = [ctx.mntinfo.virtual_path(), &vzscript.root_dir]
+		if let Some(vzscript) = &ctx.arts.vzscript {
+			let root_dir_path: VPathBuf = [ctx.mntinfo.mount_point(), &vzscript.root_dir]
 				.iter()
 				.collect();
 
 			let root_dir = match self.vfs.get(&root_dir_path) {
 				Some(fref) => fref,
 				None => {
-					ctx.errors.lock().push(PrepError {
-						path: ctx.mntinfo.virtual_path().join(&vzscript.root_dir),
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(&vzscript.root_dir),
 						kind: PrepErrorKind::MissingVzsDir,
 					});
 
@@ -245,14 +179,14 @@ impl Catalog {
 				}
 			};
 
-			if ctx.tracker.is_cancelled() {
+			if ctx.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 
 			let inctree = vzs::IncludeTree::new(root_dir);
 
 			if inctree.any_errors() {
-				let mut errors = ctx.errors.lock();
+				let errors = &mut ctx.arts_w.lock().errors;
 				let ptrees = inctree.into_inner();
 
 				for ptree in ptrees {
@@ -267,7 +201,7 @@ impl Catalog {
 				}
 			}
 
-			if ctx.tracker.is_cancelled() {
+			if ctx.is_cancelled() {
 				return Outcome::Cancelled;
 			}
 		}
@@ -276,14 +210,14 @@ impl Catalog {
 	}
 
 	fn prep_pass1_file(&self, ctx: &SubContext) -> Outcome<(), ()> {
-		let file = self.vfs.get(ctx.mntinfo.virtual_path()).unwrap();
+		let file = self.vfs.get(ctx.mntinfo.mount_point()).unwrap();
 
 		// Pass 1 only deals in text files.
 		if !file.is_text() {
 			return Outcome::None;
 		}
 
-		if ctx.tracker.is_cancelled() {
+		if ctx.is_cancelled() {
 			return Outcome::Cancelled;
 		}
 
@@ -304,68 +238,344 @@ impl Catalog {
 		Outcome::None
 	}
 
-	fn prep_pass1_pk(&self, _ctx: &SubContext) -> Outcome<(), ()> {
-		// TODO: Soon!
-		Outcome::None
+	// Details /////////////////////////////////////////////////////////////////
+
+	/// Assumes that `self.vfs` has been fully populated.
+	#[must_use]
+	fn resolve_mount_kind(&self, mount: &MountInfo) -> MountKind {
+		if mount.format() == MountFormat::Wad {
+			return MountKind::Wad;
+		}
+
+		let fref = self
+			.vfs
+			.get(mount.mount_point())
+			.expect("`resolve_mount_kind` received an invalid virtual path.");
+
+		if fref.is_leaf() {
+			return MountKind::Misc;
+		}
+
+		// Heuristics have a precedence hierarchy, so use multiple passes.
+
+		if fref
+			.children()
+			.unwrap()
+			.any(|child| child.file_name().eq_ignore_ascii_case("meta.toml") && child.is_text())
+		{
+			return MountKind::VileTech;
+		}
+
+		const ZDOOM_FILE_PFXES: &[&str] = &[
+			"cvarinfo", "decorate", "gldefs", "menudef", "modeldef", "sndinfo", "zmapinfo",
+			"zscript",
+		];
+
+		if fref.children().unwrap().any(|child| {
+			let pfx = child.file_prefix();
+
+			ZDOOM_FILE_PFXES
+				.iter()
+				.any(|&constant| pfx.eq_ignore_ascii_case(constant))
+		}) {
+			return MountKind::ZDoom;
+		}
+
+		if fref.children().unwrap().any(|child| {
+			let fstem = child.file_prefix();
+			fstem.eq_ignore_ascii_case("edfroot") || fstem.eq_ignore_ascii_case("emapinfo")
+		}) {
+			return MountKind::Eternity;
+		}
+
+		unreachable!("All mount kind resolution heuristics failed.")
 	}
 
-	// Common functions ////////////////////////////////////////////////////////
+	/// Parses a meta.toml if one exists. Otherwise, make a best-possible effort
+	/// to deduce some metadata. Assumes that `self.vfs` has been fully populated,
+	/// and that `arts` already knows its kind.
+	fn resolve_mount_metadata(&self, info: &MountInfo, arts: &mut Artifacts) {
+		debug_assert!(!info.id().is_empty());
 
-	fn register_artifacts(&mut self, staging: &[Mutex<Artifacts>]) {
-		for (i, mutex) in staging.iter().enumerate() {
-			let mut artifacts = mutex.lock();
-			let slotmap = &mut self.mounts[i].objs;
-			slotmap.reserve(artifacts.objs.len());
+		if arts.kind != MountKind::VileTech {
+			// Q: Should we bother trying to infer the mount's version?
+			return;
+		}
 
-			artifacts.objs.drain(..).for_each(
-				|StagedDatum {
-				     key: id,
-				     key_nick: nick,
-				     datum,
-				 }| {
-					let lookup = self.objs.entry(id);
+		let meta_path = info.mount_point().join("meta.toml");
+		let meta_file = self.vfs.get(&meta_path).unwrap();
 
-					if matches!(lookup, dashmap::mapref::entry::Entry::Occupied(_)) {
-						info!(
-							"Overwriting: {} ({})",
-							datum.id(),
-							DATUM_TYPE_NAMES.get(&datum.type_id()).unwrap(),
-						);
-					}
+		let ingest: MountMetaIngest = match toml::from_str(meta_file.read_str()) {
+			Ok(toml) => toml,
+			Err(err) => {
+				warn!(
+					"Invalid meta.toml file: {p}\r\n\t\
+					Details: {err}\r\n\t\
+					This mount's metadata may be incomplete.",
+					p = meta_path.display()
+				);
 
-					let slotkey = slotmap.insert(datum);
-
-					if let Some(mut kvp) = self.nicknames.get_mut(&nick) {
-						kvp.value_mut().push((i, slotkey));
-					} else {
-						self.nicknames.insert(nick, smallvec![(i, slotkey)]);
-					};
-
-					match lookup {
-						dashmap::mapref::entry::Entry::Occupied(mut occu) => {
-							occu.insert((i, slotkey));
-						}
-						dashmap::mapref::entry::Entry::Vacant(vacant) => {
-							vacant.insert((i, slotkey));
-						}
-					}
-				},
-			);
-
-			if let Some(colormap) = artifacts.extras.colormap.take() {
-				self.mounts[i].extras.colormap = Some(colormap);
+				return;
 			}
+		};
 
-			if let Some(endoom) = artifacts.extras.endoom.take() {
-				self.mounts[i].extras.endoom = Some(endoom);
-			}
+		if let Some(mnf) = ingest.vzscript {
+			let version = match mnf.version.parse::<vzs::Version>() {
+				Ok(v) => v,
+				Err(err) => {
+					warn!(
+						"Invalid `vzscript` table in meta.toml file: {p}\r\n\t\
+						Details: {err}\r\n\t\
+						This mount's metadata may be incomplete.",
+						p = meta_path.display()
+					);
 
-			if let Some(palset) = artifacts.extras.palset.take() {
-				self.mounts[i].extras.palset = Some(palset);
-			}
+					return;
+				}
+			};
+
+			arts.vzscript = Some(VzsManifest {
+				root_dir: mnf.folder,
+				_namespace: mnf.namespace,
+				_version: version,
+			});
 		}
 	}
 }
+
+// Intermediate structures /////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub(super) struct Context {
+	pub(self) tracker: Arc<SendTracker>,
+	pub(self) dobjs: DashMap<DatumKey, Arc<dyn DatumStore>>,
+	pub(self) nicknames: DashMap<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	pub(self) arts_working: Vec<Mutex<WorkingArtifacts>>,
+	pub(self) arts: Vec<Artifacts>,
+}
+
+impl Context {
+	#[must_use]
+	pub(super) fn new(tracker: Arc<SendTracker>, mounts_len: usize) -> Self {
+		debug_assert!(tracker.target() != 0);
+
+		let dobjs = DashMap::with_capacity(tracker.target());
+
+		Self {
+			tracker,
+			dobjs,
+			nicknames: DashMap::default(),
+			editor_nums: DashMap::default(),
+			spawn_nums: DashMap::default(),
+			arts_working: {
+				let mut a = vec![];
+				a.resize_with(mounts_len, || Mutex::new(WorkingArtifacts::default()));
+				a
+			},
+			arts: {
+				let mut a = vec![];
+				a.resize_with(mounts_len, Artifacts::default);
+				a
+			},
+		}
+	}
+
+	#[must_use]
+	pub(super) fn any_fatal_errors(&self) -> bool {
+		self.arts_working
+			.par_iter()
+			.any(|mutex| mutex.lock().errors.iter().any(|err| err.is_fatal()))
+	}
+
+	#[must_use]
+	fn rollup_errors(arts_working: Vec<Mutex<WorkingArtifacts>>) -> Vec<Vec<PrepError>> {
+		arts_working
+			.into_iter()
+			.map(|mutex| mutex.into_inner().errors)
+			.collect()
+	}
+
+	#[must_use]
+	fn into_errors(self) -> Vec<Vec<PrepError>> {
+		Self::rollup_errors(self.arts_working)
+	}
+
+	#[must_use]
+	pub(self) fn last_paletteset(&self) -> Option<&PaletteSet> {
+		self.arts.iter().filter_map(|a| a.palset.as_deref()).last()
+	}
+
+	pub(self) fn post_pass2(&mut self) {
+		for (w, a) in self.arts_working.iter().zip(self.arts.iter_mut()) {
+			let mut w = w.lock();
+
+			a.texturex = std::mem::take(&mut w.texturex);
+			a.pnames = std::mem::take(&mut w.pnames);
+			a.endoom = std::mem::take(&mut w.endoom);
+			a.palset = std::mem::take(&mut w.palset);
+			a.colormap = std::mem::take(&mut w.colormap);
+		}
+	}
+
+	pub(self) fn post_pass3(&mut self) {
+		// ???
+	}
+}
+
+/// Read-only prep artifacts that don't need to be behind a mutex.
+/// Associated with one mount. All get discarded when prep finishes.
+#[derive(Debug, Default)]
+pub(self) struct Artifacts {
+	pub(self) kind: MountKind,
+	pub(self) vzscript: Option<VzsManifest>,
+	pub(self) texturex: TextureX,
+	pub(self) pnames: PatchTable,
+	pub(self) colormap: Option<Box<ColorMap>>,
+	pub(self) palset: Option<Box<PaletteSet>>,
+	pub(self) endoom: Option<Box<EnDoom>>,
+}
+
+/// Working buffer for prep artifacts to put behind a mutex.
+/// Associated with one mount.
+#[derive(Debug, Default)]
+pub(self) struct WorkingArtifacts {
+	/// Preserved between passes; only discharged when prep finishes.
+	pub(self) errors: Vec<PrepError>,
+	pub(self) colormap: Option<Box<ColorMap>>,
+	pub(self) palset: Option<Box<PaletteSet>>,
+	pub(self) endoom: Option<Box<EnDoom>>,
+	pub(self) texturex: TextureX,
+	pub(self) pnames: PatchTable,
+}
+
+#[derive(Debug)]
+pub(self) struct VzsManifest {
+	/// The base of the package's VZScript include tree.
+	///
+	/// This is irrelevant to WADs, which can only use VZS through lumps named
+	/// `VZSCRIPT`.
+	///
+	/// Normally, the scripts can define manifest items used to direct loading,
+	/// but if there is no script root or manifests, ZDoom loading rules are used.
+	///
+	/// A package can only specify a directory owned by it as a script root, so this
+	/// is always relative. `viletech.vpk3`'s script root, for example, is `scripts`.
+	pub(super) root_dir: VPathBuf,
+	pub(super) _namespace: Option<String>,
+	pub(super) _version: vzs::Version,
+}
+
+/// Context relevant to operations on one mount.
+#[derive(Debug)]
+pub(self) struct SubContext<'ctx> {
+	pub(self) higher: &'ctx Context,
+	pub(self) mntinfo: &'ctx MountInfo,
+	pub(self) arts: &'ctx Artifacts,
+	pub(self) arts_w: &'ctx Mutex<WorkingArtifacts>,
+}
+
+/// Informs the rules used for preparing data from a mount.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(self) enum MountKind {
+	/// If the mount's own root has an immediate child text file named `meta.toml`
+	/// (ASCII-case-ignored), that indicates that the mount is a VileTech package.
+	VileTech,
+	/// If mounting an archive with:
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pk3`, `.ipk3`, `.pk7`, or `.ipk7`,
+	/// then this is what gets resolved. If it's a directory instead of an archive,
+	/// the heuristic used is if there's an immediate child text file with a file
+	/// stem belonging to a ZDoom-exclusive lump.
+	ZDoom,
+	/// If mounting an archive with:
+	/// - no immediate text file child named `meta.toml`, and
+	/// - the extension `.pke`,
+	/// then this is what gets resolved. If it's a directory instead of an archive,
+	/// the heuristic used is if there's an immediate child text file with the
+	/// file stem `edfroot` or `emapinfo` (ASCII-case-ignored).
+	Eternity,
+	/// Deduced from [`MountFormat`], which is itself deduced from the file header.
+	Wad,
+	/// Fallback if the mount resolved to none of the other kinds.
+	/// Usually used if mounting a single non-archive file.
+	#[default]
+	Misc,
+}
+
+impl SubContext<'_> {
+	pub(self) fn add_datum<D: Datum>(&self, datum: D, id_suffix: impl AsRef<str>) {
+		let id = format!("{}/{}", self.mntinfo.id(), id_suffix.as_ref());
+
+		let key = DatumKey::new::<D>(&id);
+		let key_nick = DatumKey::new::<D>(id.split('/').last().unwrap());
+
+		let store: Arc<dyn DatumStore> = Arc::new(Store::new(id, datum));
+
+		match self.higher.dobjs.entry(key) {
+			dashmap::mapref::entry::Entry::Occupied(mut occu) => {
+				info!(
+					"Overwriting: {} ({})",
+					store.id(),
+					DATUM_TYPE_NAMES.get(&store.type_id()).unwrap(),
+				);
+
+				occu.insert(store.clone());
+			}
+			dashmap::mapref::entry::Entry::Vacant(vacant) => {
+				vacant.insert(store.clone());
+			}
+		}
+
+		if let Some(mut kvp) = self.higher.nicknames.get_mut(&key_nick) {
+			kvp.value_mut().push(store);
+		} else {
+			self.higher.nicknames.insert(key_nick, smallvec![store]);
+		};
+	}
+
+	pub(self) fn raise_error(&self, err: PrepError) {
+		self.arts_w.lock().errors.push(err);
+	}
+
+	#[must_use]
+	pub(self) fn is_cancelled(&self) -> bool {
+		self.higher.tracker.is_cancelled()
+	}
+}
+
+/// Intermediate format for parsing parts of [`MountMeta`] from `meta.toml` files.
+///
+/// [`MountMeta`]: super::MountMeta
+#[derive(Debug, Default, Deserialize)]
+#[allow(unused, dead_code)] // TODO: Revisit all of this.
+pub(super) struct MountMetaIngest {
+	pub id: String,
+	#[serde(default)]
+	pub version: Option<String>,
+	#[serde(default)]
+	pub name: Option<String>,
+	#[serde(default)]
+	pub description: Option<String>,
+	#[serde(default)]
+	pub authors: Vec<String>,
+	#[serde(default)]
+	pub copyright: Option<String>,
+	#[serde(default)]
+	pub links: Vec<String>,
+	#[serde(default)]
+	pub vzscript: Option<MountMetaIngestVzs>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct MountMetaIngestVzs {
+	pub folder: VPathBuf,
+	pub namespace: Option<String>,
+	pub version: String,
+}
+
+// Helper functions ////////////////////////////////////////////////////////////
 
 /// Returns `None` if `id8` starts with a NUL.
 /// Return values have no trailing NUL bytes.

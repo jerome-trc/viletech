@@ -1,10 +1,14 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+	path::{Path, PathBuf},
+	sync::Arc,
+};
 
 use bevy_egui::egui;
 use globset::Glob;
 use indexmap::IndexMap;
 use rayon::prelude::*;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 mod error;
 mod file;
@@ -28,6 +32,7 @@ pub use self::{
 pub struct VirtualFs {
 	/// Element 0 is always the root node, under virtual path `/`.
 	files: IndexMap<FileKey, File>,
+	mounts: Vec<MountInfo>,
 	gui: gui::DevGui,
 	config: Config,
 }
@@ -127,6 +132,11 @@ impl VirtualFs {
 		self.regex(pattern).par_bridge()
 	}
 
+	#[must_use]
+	pub fn mounts(&self) -> &[MountInfo] {
+		&self.mounts
+	}
+
 	// Mutators ////////////////////////////////////////////////////////////////
 
 	pub fn mount(&mut self, request: MountRequest) -> MountOutcome {
@@ -146,9 +156,18 @@ impl VirtualFs {
 		}
 	}
 
+	pub fn truncate(&mut self, len: usize) {
+		for i in (len + 1)..self.mounts.len() {
+			let mp = self.mounts[i].mount_point().to_path_buf();
+			self.remove_recursive(&mp);
+		}
+
+		self.mounts.truncate(len);
+	}
+
 	/// Panics if attempting to remove the root node (path `/` or an empty path),
 	/// or attempting to remove a directory which still has children.
-	pub fn remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
+	fn _remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
 		assert!(!path.is_root(), "Tried to remove the root node from a VFS.");
 
 		let removed = self.files.remove(path.as_ref());
@@ -170,7 +189,7 @@ impl VirtualFs {
 
 	/// Panics if attempting to remove the root node (path `/` or an empty path).
 	/// Trying to remove a non-existent file is valid.
-	pub fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
+	fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
 		assert!(!path.is_root(), "Tried to remove the root node from a VFS.");
 
 		let Some(removed) = self.files.remove(path.as_ref()) else { return; };
@@ -213,6 +232,7 @@ impl Default for VirtualFs {
 
 		Self {
 			files: indexmap::indexmap! { path => root },
+			mounts: vec![],
 			gui: gui::DevGui::default(),
 			config: Config::default(),
 		}
@@ -248,8 +268,42 @@ pub enum MountOutcome {
 	Ok(Vec<Vec<MountError>>),
 }
 
+#[derive(Debug)]
+pub struct MountInfo {
+	/// Specified by `meta.toml` if one exists.
+	/// Otherwise, this comes from the file stem of the mount point.
+	pub(self) id: String,
+	pub(self) format: MountFormat,
+	/// Always canonicalized, but may not necessarily be valid UTF-8.
+	pub(self) real_path: PathBuf,
+	/// Guaranteed to be valid UTF-8 at mount time.
+	pub(self) mount_point: VPathBuf,
+}
+
+impl MountInfo {
+	#[must_use]
+	pub fn id(&self) -> &str {
+		&self.id
+	}
+
+	#[must_use]
+	pub fn format(&self) -> MountFormat {
+		self.format
+	}
+
+	#[must_use]
+	pub fn real_path(&self) -> &Path {
+		&self.real_path
+	}
+
+	#[must_use]
+	pub fn mount_point(&self) -> &VPath {
+		&self.mount_point
+	}
+}
+
 /// Primarily serves to specify the type of compression used, if any.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MountFormat {
 	PlainFile,
 	Directory,

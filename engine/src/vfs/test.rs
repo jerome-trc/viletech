@@ -6,12 +6,13 @@ fn mount() {
 	let outcome = vfs.mount(request());
 
 	match outcome {
-		MountOutcome::Ok(errs) => {
-			assert_eq!(errs.len(), 2);
-			assert!(errs[0].is_empty());
+		MountOutcome::Ok(errors) => {
+			assert_eq!(vfs.mounts.len(), 2);
+			assert_eq!(errors.len(), 2);
+			assert!(errors[0].is_empty());
 		}
 		other => {
-			panic!("Unexpected load outcome: {other:#?}");
+			panic!("Unexpected mount outcome: {other:#?}");
 		}
 	}
 }

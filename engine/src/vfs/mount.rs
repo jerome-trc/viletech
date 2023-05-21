@@ -13,6 +13,7 @@ use zip::{read::ZipFile, ZipArchive};
 
 use crate::{
 	utils::{io::*, path::PathExt},
+	vfs::MountInfo,
 	wad, Outcome, SendTracker, VPath, VPathBuf,
 };
 
@@ -213,7 +214,7 @@ impl VirtualFs {
 			let subtree_parent = self.files.get_mut(subtree_parent_path).unwrap();
 
 			if let File::Directory(children) = subtree_parent {
-				children.insert(mount_point.into());
+				children.insert(mount_point.clone().into());
 				children.par_sort_unstable();
 			} else {
 				unreachable!()
@@ -221,6 +222,18 @@ impl VirtualFs {
 
 			let errors = std::mem::take(&mut ctx.errors[i]);
 			ret.push(errors.into_inner());
+
+			self.mounts.push(MountInfo {
+				id: mount_point
+					.file_stem()
+					.unwrap()
+					.to_str()
+					.unwrap()
+					.to_string(),
+				format,
+				real_path,
+				mount_point,
+			});
 		}
 
 		Outcome::Ok(ret)

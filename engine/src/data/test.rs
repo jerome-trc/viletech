@@ -25,10 +25,10 @@ fn load() {
 	}
 
 	assert_eq!(
-		catalog.mounts().len(),
+		catalog.vfs().mounts().len(),
 		2,
 		"Expected 2 mounts, found: {}",
-		catalog.mounts().len()
+		catalog.vfs().mounts().len()
 	);
 
 	// Root, 2 mounts, freedoom1.wad's contents, freedoom2.wad's contents.

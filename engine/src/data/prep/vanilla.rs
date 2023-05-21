@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use arrayvec::ArrayVec;
-use bevy::prelude::{IVec2, UVec2};
+use bevy::prelude::{Deref, DerefMut, IVec2, UVec2};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use glam::Vec2;
 use image::{ImageBuffer, Rgba};
@@ -21,11 +21,11 @@ use crate::{
 use super::SubContext;
 
 /// See <https://doomwiki.org/wiki/PNAMES>.
-#[derive(Debug)]
+#[derive(Debug, Default, Deref, DerefMut)]
 pub(super) struct PatchTable(pub(super) Vec<Id8>);
 
 /// See <https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2>.
-#[derive(Debug)]
+#[derive(Debug, Default, Deref, DerefMut)]
 pub(super) struct TextureX(pub(super) Vec<PatchedTex>);
 
 #[derive(Debug)]
@@ -101,7 +101,7 @@ impl Catalog {
 
 	pub(super) fn prep_flat(
 		&self,
-		_ctx: &SubContext,
+		ctx: &SubContext,
 		lump: FileRef,
 		bytes: &[u8],
 	) -> Result<Image, Box<PrepError>> {
@@ -112,7 +112,7 @@ impl Catalog {
 			}));
 		}
 
-		let palettes = self.last_paletteset().unwrap();
+		let palettes = ctx.higher.last_paletteset().unwrap();
 		let palette = &palettes.0[0];
 		let mut ret = ImageBuffer::new(64, 64);
 
@@ -133,8 +133,8 @@ impl Catalog {
 	/// Returns `None` to indicate that `bytes` was checked
 	/// and determined to not be a picture.
 	#[must_use]
-	pub(super) fn prep_picture(&self, _ctx: &SubContext, bytes: &[u8]) -> Option<Image> {
-		let palettes = self.last_paletteset().unwrap();
+	pub(super) fn prep_picture(&self, ctx: &SubContext, bytes: &[u8]) -> Option<Image> {
+		let palettes = ctx.higher.last_paletteset().unwrap();
 		let opt = Image::try_from_picture(bytes, &palettes.0[0]);
 		opt.map(|(ibuf, offs)| Image {
 			inner: ibuf,
