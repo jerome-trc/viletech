@@ -4653,10 +4653,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "stardate"
-version = "0.0.0"
-
-[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4673,10 +4669,6 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
-
-[[package]]
-name = "subterra"
-version = "0.0.0"
 
 [[package]]
 name = "subtle"
@@ -5387,8 +5379,6 @@ dependencies = [
  "slotmap",
  "smallvec",
  "smartstring",
- "stardate",
- "subterra",
  "time",
  "toml 0.7.2",
  "tracing",

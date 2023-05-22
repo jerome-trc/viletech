@@ -61,7 +61,7 @@ cranelift-jit = { workspace = true }
 cranelift-module = { workspace = true }
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
-doomfront = { workspace = true }
+doomfront = { path = "../doomfront", features = ["ser_de"] }
 fasthash = { workspace = true }
 fixed = { workspace = true }
 fluidlite = { workspace = true }
@@ -93,8 +93,6 @@ sha3 = { workspace = true }
 slotmap = { workspace = true }
 smallvec = { workspace = true }
 smartstring = { workspace = true }
-stardate = { workspace = true }
-subterra = { workspace = true }
 time = { workspace = true }
 toml = { workspace = true }
 tracing = { workspace = true }

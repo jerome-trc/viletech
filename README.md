@@ -2,7 +2,7 @@
 
 ## About
 
-VileTech is a pet project, meant as an experiment in creating a modern Doom source port in Rust which can successfully interpret user-generated content for GZDoom and the Eternity Engine with zero end-user overhead.
+VileTech is a collection of Doom-related Rust technologies, oriented towards the building of new tools, game engines, and games descending from id Software's id Tech 1 engine.
 
 ## Licensing, Attribution
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["engine", "client", "server", "cli"]
+members = ["cli", "client", "doomfront", "engine", "server"]
 default-members = ["engine", "client"]
 resolver = "2" # Needed for WGPU and Bevy.
 
@@ -84,8 +84,3 @@ triangulate = "0.2.0"
 unicode-ident = "1.0.6"
 walkdir = "2.3.2"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
-
-# Temporary; will change to crates.io when one is suitable for publishing.
-doomfront = { path = "../doom-rs/doomfront", features = ["ser_de"] }
-stardate = { path = "../doom-rs/stardate" }
-subterra = { path = "../doom-rs/subterra" }

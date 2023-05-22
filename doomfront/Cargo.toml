@@ -1,0 +1,28 @@
+[package]
+name = "doomfront"
+version = "0.0.0"
+edition = "2021"
+
+authors = ["jerome-trc"]
+categories = ["encoding", "game-development", "parser-implementations"]
+description = "Frontends for Doom DSLs"
+homepage = "https://github.com/jerome-trc/viletech/"
+keywords = ["doom", "dsl", "encoding", "gamedev", "parser"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository = "https://github.com/jerome-trc/viletech/"
+
+[features]
+default = []
+
+ser_de = ["serde", "rowan/serde1"]
+
+acs = []
+eternity = []
+umapinfo = []
+zdoom = []
+
+[dependencies]
+chumsky = "1.0.0-alpha.4"
+rowan = "0.15.11"
+serde = { version = "1.0.152", features = ["derive"], optional = true }
