@@ -11,6 +11,7 @@ mod syn;
 #[cfg(test)]
 mod test;
 
+pub use parse::ParseTree;
 pub use syn::Syn;
 
 pub type SyntaxNode = rowan::SyntaxNode<Syn>;
