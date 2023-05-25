@@ -1,0 +1,25 @@
+[package]
+name = "vzscript"
+version = "0.0.0"
+edition = "2021"
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "Fork of GZDoom's ZScript"
+homepage = "https://github.com/jerome-trc/viletech/"
+keywords = ["doom", "dsl", "encoding", "gamedev"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository = "https://github.com/jerome-trc/viletech/"
+
+[features]
+default = []
+
+[dependencies]
+ariadne = { workspace = true }
+cranelift = { workspace = true }
+cranelift-interpreter = { workspace = true }
+cranelift-jit = { workspace = true }
+cranelift-module = { workspace = true }
+doomfront = { path = "../doomfront", features = ["ser_de"] }
+once_cell = { workspace = true }

@@ -25,10 +25,10 @@ byteorder = "1.4.3"
 clap = { version = "4.0.32", features = ["derive"] }
 # Same version as `kira`. Specified here since it's needed by MIDI code.
 cpal = "0.15.1"
-cranelift = "0.95.1"
-cranelift-jit = "0.95.1"
-cranelift-module = "0.95.1"
-cranelift-interpreter = "0.95.1"
+cranelift = "0.96.1"
+cranelift-jit = "0.96.1"
+cranelift-module = "0.96.1"
+cranelift-interpreter = "0.96.1"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 fasthash = "0.4.0"
