@@ -1,3 +1,5 @@
+use crate::ParseTree;
+
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.
 pub fn assert_node<L>(
 	elem: rowan::NodeOrToken<rowan::SyntaxNode<L>, rowan::SyntaxToken<L>>,
@@ -144,4 +146,16 @@ where
 			}
 		}
 	}
+}
+
+pub fn assert_no_errors(pt: &ParseTree) {
+	assert!(pt.errors.is_empty(), "Encountered errors: {}", {
+		let mut output = String::new();
+
+		for err in &pt.errors {
+			output.push_str(&format!("\r\n{err:#?}"));
+		}
+
+		output
+	})
 }
