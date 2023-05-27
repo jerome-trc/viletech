@@ -22,7 +22,7 @@ simple_astnode!(Syn, Literal, Syn::Literal);
 impl Literal {
 	#[must_use]
 	pub fn token(&self) -> LitToken {
-		LitToken(self.0.first_child_or_token().unwrap().into_token().unwrap())
+		LitToken(self.0.first_token().unwrap())
 	}
 }
 

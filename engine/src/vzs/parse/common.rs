@@ -41,11 +41,13 @@ pub(super) fn any_kw<'i, C: 'i + GreenCache>(
 		primitive::just("const"),
 		primitive::just("do"),
 		primitive::just("else"),
+		primitive::just("false"),
 		primitive::just("for"),
 		primitive::just("if"),
 		primitive::just("let"),
 		primitive::just("return"),
 		primitive::just("switch"),
+		primitive::just("true"),
 		primitive::just("until"),
 		primitive::just("while"),
 	))
