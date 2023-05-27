@@ -1,4 +1,6 @@
-//! [ZDoom](https://zdoom.org/index) is a family of Doom source ports.
+//! Frontends for languages defined by the [ZDoom] family of source ports.
+//!
+//! [ZDoom]: https://zdoom.org/index
 
 pub mod lexer;
 

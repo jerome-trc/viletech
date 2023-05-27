@@ -33,6 +33,45 @@ pub type ParseError<'i> = chumsky::error::Rich<'i, char>;
 /// Defines the context and state passed along parsers as well as the error type they emit.
 pub type Extra<'i, C> = chumsky::extra::Full<ParseError<'i>, util::state::ParseState<C>, ()>;
 
+#[derive(Debug)]
+pub struct ParseTree<'i> {
+	pub root: rowan::GreenNode,
+	pub errors: Vec<ParseError<'i>>,
+}
+
+impl ParseTree<'_> {
+	/// Emits a "zipper" tree root that can be used for much more effective traversal
+	/// of the green tree (but which is `!Send` and `!Sync`).
+	#[must_use]
+	pub fn cursor<L: rowan::Language>(&self) -> rowan::SyntaxNode<L> {
+		rowan::SyntaxNode::new_root(self.root.clone())
+	}
+}
+
+/// Each language has a `parse` module filled with functions that emit a combinator-
+/// based parser. Pass one of these along with a source string into this function
+/// to consume that parser and emit a green tree.
+#[must_use]
+pub fn parse<'i, C: 'i + util::builder::GreenCache>(
+	parser: impl chumsky::Parser<'i, &'i str, (), Extra<'i, C>>,
+	cache: Option<C>,
+	root: rowan::SyntaxKind,
+	source: &'i str,
+) -> ParseTree<'i> {
+	let mut state = util::state::ParseState::new(cache);
+
+	state.gtb.open(root);
+
+	let errors = parser.parse_with_state(source, &mut state).into_errors();
+
+	state.gtb.close();
+
+	ParseTree {
+		root: state.gtb.finish(),
+		errors,
+	}
+}
+
 /// The most basic implementors of [`rowan::ast::AstNode`] are newtypes
 /// (single-element tuple structs) which map to a single syntax tag. Automatically
 /// generating `AstNode` implementations for these is trivial.

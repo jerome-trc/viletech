@@ -1,4 +1,4 @@
-//! Parser and syntax trees for the [`DECORATE`](https://zdoom.org/wiki/DECORATE)
+//! Frontend for the [`DECORATE`](https://zdoom.org/wiki/DECORATE)
 //! language defined by (G)ZDoom.
 //!
 //! DECORATE is a data definition language and pseudo-scripting language for
@@ -11,7 +11,6 @@ mod syn;
 #[cfg(test)]
 mod test;
 
-pub use parse::ParseTree;
 pub use syn::Syn;
 
 pub type SyntaxNode = rowan::SyntaxNode<Syn>;

@@ -1,11 +1,9 @@
-// TODO: Test against AST when it is added.
-
 use rowan::{ast::AstNode, SyntaxNode};
 
 use crate::{
 	util::{builder::GreenCacheNoop, testing::*},
 	zdoom::decorate::{
-		ast::{self, ConstType},
+		ast::{self},
 		parse, Syn,
 	},
 };
@@ -263,7 +261,7 @@ const float INFERNO /* forbidden */ = 0.9999999;
 	let constdef1 = constdefs.next().unwrap();
 
 	assert_eq!(constdef1.name().text(), "KNEE_DEEP");
-	assert_eq!(constdef1.type_spec(), ConstType::Int);
+	assert_eq!(constdef1.type_spec(), ast::ConstType::Int);
 	assert_eq!(
 		constdef1
 			.expr()
@@ -279,7 +277,7 @@ const float INFERNO /* forbidden */ = 0.9999999;
 	let constdef2 = constdefs.next().unwrap();
 
 	assert_eq!(constdef2.name().text(), "SHORES");
-	assert_eq!(constdef2.type_spec(), ConstType::Fixed);
+	assert_eq!(constdef2.type_spec(), ast::ConstType::Fixed);
 	assert_eq!(
 		constdef2
 			.expr()
@@ -294,7 +292,7 @@ const float INFERNO /* forbidden */ = 0.9999999;
 	let constdef3 = constdefs.next().unwrap();
 
 	assert_eq!(constdef3.name().text(), "INFERNO");
-	assert_eq!(constdef3.type_spec(), ConstType::Float);
+	assert_eq!(constdef3.type_spec(), ast::ConstType::Float);
 	assert_eq!(
 		constdef3
 			.expr()

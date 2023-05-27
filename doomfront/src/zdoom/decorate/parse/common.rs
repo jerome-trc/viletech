@@ -1,3 +1,5 @@
+//! Combinators applicable to multiple other parts of the syntax.
+
 use chumsky::{primitive, text, IterParser, Parser};
 
 use crate::{

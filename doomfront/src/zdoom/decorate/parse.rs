@@ -4,11 +4,10 @@ mod expr;
 mod top;
 
 use chumsky::{primitive, IterParser, Parser};
-use rowan::GreenNode;
 
 use crate::{
 	util::{builder::GreenCache, state::ParseState},
-	ParseError,
+	ParseTree,
 };
 
 use super::Syn;
@@ -43,10 +42,4 @@ pub fn parse<'i, C: 'i + GreenCache>(source: &'i str, cache: Option<C>) -> Optio
 			errors,
 		}
 	})
-}
-
-#[derive(Debug)]
-pub struct ParseTree<'i> {
-	pub root: GreenNode,
-	pub errors: Vec<ParseError<'i>>,
 }
