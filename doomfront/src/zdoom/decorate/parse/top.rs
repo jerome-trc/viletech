@@ -1,6 +1,6 @@
 //! Non-actor top-level elements: symbolic constants, enums, preprocessor directives.
 
-use chumsky::{primitive, text, IterParser, Parser};
+use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
 	comb,
@@ -22,7 +22,7 @@ pub(super) fn const_def<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, ()
 			comb::kw_nc("int").map_with_state(gtb_token(Syn::KwInt.into())),
 		)),
 		wsp_ext().repeated().collect::<()>(),
-		text::ident().map_with_state(gtb_token(Syn::Ident.into())),
+		ident().map_with_state(gtb_token(Syn::Ident.into())),
 		wsp_ext().repeated().collect::<()>(),
 		primitive::just("=").map_with_state(gtb_token(Syn::Eq.into())),
 		wsp_ext().repeated().collect::<()>(),
@@ -52,7 +52,7 @@ pub(super) fn enum_def<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (),
 
 fn enum_variants<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
 	let init = primitive::group((
-		text::ident().map_with_state(gtb_open_with(Syn::EnumVariant.into(), Syn::Ident.into())),
+		ident().map_with_state(gtb_open_with(Syn::EnumVariant.into(), Syn::Ident.into())),
 		wsp_ext().repeated().collect::<()>(),
 		primitive::just("=").map_with_state(gtb_token(Syn::Eq.into())),
 		wsp_ext().repeated().collect::<()>(),
@@ -61,8 +61,7 @@ fn enum_variants<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra
 	.map_with_state(gtb_close())
 	.map_err_with_state(gtb_cancel(Syn::EnumVariant.into()));
 
-	let uninit =
-		text::ident().map_with_state(gtb_open_close(Syn::EnumVariant.into(), Syn::Ident.into()));
+	let uninit = ident().map_with_state(gtb_open_close(Syn::EnumVariant.into(), Syn::Ident.into()));
 
 	let variant = primitive::choice((init, uninit));
 
