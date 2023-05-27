@@ -1,6 +1,12 @@
 //! Various combinators which are broadly applicable elsewhere.
 
 use chumsky::{error::Error as ChumskyError, extra::ParserExtra, primitive, text, Parser};
+use rowan::SyntaxKind;
+
+use crate::{
+	util::{builder::GreenCache, state::*},
+	Extra,
+};
 
 /// Shorthand for
 /// `primitive::one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")`,
@@ -53,6 +59,53 @@ where
 	E: ParserExtra<'i, &'i str>,
 {
 	primitive::one_of("01234567")
+}
+
+/// Shorthand for the following idiom:
+///
+/// ```
+/// primitive::empty()
+///     .map_with_state(gtb_open(kind))
+///     .then(primitive::group((
+///         parser1,
+///         parser2,
+///         ...
+///     )))
+///     .map_with_state(gtb_close())
+///     .map_err_with_state(gtb_cancel(kind))
+/// ```
+pub fn node<'i, O, C: GreenCache>(
+	kind: SyntaxKind,
+	group: impl Parser<'i, &'i str, O, Extra<'i, C>> + Clone,
+) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	primitive::empty()
+		.map_with_state(gtb_open(kind))
+		.then(group)
+		.map_with_state(gtb_close())
+		.map_err_with_state(gtb_cancel(kind))
+}
+
+/// Shorthand for the following idiom:
+///
+/// ```
+/// primitive::empty()
+///     .map_with_state(gtb_checkpoint())
+///     .then(primitive::group((
+///         parser1,
+///         parser2,
+///         ...
+///     )))
+///     .map(|_| ())
+///     .map_err_with_state(gtb_cancel_checkpoint())
+/// ```
+pub fn checkpointed<'i, O, C: GreenCache>(
+	group: impl Parser<'i, &'i str, O, Extra<'i, C>> + Clone,
+) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	primitive::empty()
+		.map_with_state(gtb_checkpoint())
+		.then(group)
+		.map(|_| ())
+		.map_err_with_state(gtb_cancel_checkpoint())
 }
 
 // Whitespace, comments ////////////////////////////////////////////////////////
