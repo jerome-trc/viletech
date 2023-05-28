@@ -12,9 +12,8 @@ mod thingdef;
 
 use std::num::{ParseFloatError, ParseIntError};
 
-use doomfront::{
-	chumsky::{self, primitive, span::SimpleSpan, text, util::MaybeRef, IterParser, Parser},
-	comb,
+use doomfront::chumsky::{
+	self, primitive, span::SimpleSpan, text, util::MaybeRef, IterParser, Parser,
 };
 
 use crate::{
@@ -156,6 +155,24 @@ impl<'a> chumsky::error::Error<'a, &'a str> for Error {
 type Extra<'i> = chumsky::extra::Full<Error, Level, ()>;
 
 fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
+	let dec_digit = primitive::one_of("0123456789");
+	let hex_digit = primitive::one_of("0123456789abcdefABCDEF");
+	let wsp = primitive::one_of([' ', '\r', '\n', '\t'])
+		.repeated()
+		.at_least(1)
+		.slice();
+	let c_comment = primitive::just("/*")
+		.then(
+			primitive::any()
+				.and_is(primitive::just("*/").not())
+				.repeated(),
+		)
+		.then(primitive::just("*/"))
+		.slice();
+	let cpp_comment = primitive::just("//")
+		.then(primitive::any().and_is(text::newline().not()).repeated())
+		.slice();
+
 	// (RAT) The spec prescribes the following grammar for integer literals:
 	// `integer := [+-]?[1-9]+[0-9]* | 0[0-9]+ | 0x[0-9A-Fa-f]+`
 	// But this can never match the literal `0`, so I assume it's incorrect.
@@ -163,27 +180,23 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 		primitive::one_of(['+', '-']).or_not(),
 		primitive::just('0').repeated(),
 		primitive::one_of("123456789"),
-		comb::dec_digit().repeated(),
+		dec_digit.repeated(),
 	))
 	.slice();
 
-	let hex = primitive::group((
-		primitive::just("0x"),
-		comb::hex_digit().repeated().at_least(1),
-	))
-	.slice();
+	let hex = primitive::group((primitive::just("0x"), hex_digit.repeated().at_least(1))).slice();
 
 	let int = primitive::choice((dec_with_sign, primitive::just('0').slice(), hex)).slice();
 
 	let float = primitive::group((
 		primitive::one_of(['+', '-']).or_not(),
-		comb::dec_digit().repeated().at_least(1),
+		dec_digit.repeated().at_least(1),
 		primitive::just('.'),
-		comb::dec_digit().repeated(),
+		dec_digit.repeated(),
 		primitive::group((
 			primitive::one_of(['e', 'E']),
 			primitive::one_of(['+', '-']).or_not(),
-			comb::dec_digit().repeated().at_least(1),
+			dec_digit.repeated().at_least(1),
 		))
 		.or_not(),
 	))
@@ -240,7 +253,6 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.padded(),
 		primitive::just('{').padded(),
 		field
-			.clone()
 			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
 				linedef::read_linedef_field(kvp, level)
 			})
@@ -268,7 +280,6 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.padded(),
 		primitive::just('{').padded(),
 		field
-			.clone()
 			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
 				thingdef::read_thingdef_field(kvp, level)
 			})
@@ -298,7 +309,6 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.padded(),
 		primitive::just('{').padded(),
 		field
-			.clone()
 			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
 				sectordef::read_sectordef_field(kvp, level)
 			})
@@ -325,7 +335,6 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.padded(),
 		primitive::just('{').padded(),
 		field
-			.clone()
 			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
 				sidedef::read_sidedef_field(kvp, level)
 			})
@@ -346,7 +355,6 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.padded(),
 		primitive::just('{').padded(),
 		field
-			.clone()
 			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
 				let vertdef = level.vertices.last_mut().unwrap();
 				let val = kvp.val.parse::<f64>().map_err(|err| Error::ParseFloat {
@@ -380,9 +388,9 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 		sectordef,
 		sidedef,
 		thingdef,
-		comb::wsp().ignored(),
-		comb::c_comment().ignored(),
-		comb::cpp_comment().ignored(),
+		wsp.ignored(),
+		c_comment.ignored(),
+		cpp_comment.ignored(),
 	))
 	.repeated()
 	.collect::<()>()
