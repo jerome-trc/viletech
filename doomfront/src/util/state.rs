@@ -12,10 +12,7 @@ pub struct ParseState<'i, C: GreenCache> {
 
 impl<'i, C: GreenCache> ParseState<'i, C> {
 	#[must_use]
-	pub fn new(
-		source: &'i str,
-		green_cache: Option<C>
-	) -> Self {
+	pub fn new(source: &'i str, green_cache: Option<C>) -> Self {
 		Self {
 			source,
 			gtb: GreenBuilder::new(green_cache),

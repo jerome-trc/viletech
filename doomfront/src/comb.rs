@@ -8,6 +8,13 @@ use crate::{
 	Extra, ParseError, TokenStream,
 };
 
+/// Shorthand for the following:
+///
+/// ```
+/// primitive::just(token).map_with_state(move |_, sp, state: &mut ParseState<'i, C>| {
+///	    state.gtb.token(syn, &state.source[sp]);
+///	})
+/// ```
 pub fn just<'i, T, C>(
 	token: T,
 	syn: SyntaxKind,
@@ -16,8 +23,8 @@ where
 	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
 	C: GreenCache,
 {
-	primitive::just(token).map_with_state(move |_, sp, state: &mut ParseState<'i, C>| {
-		state.gtb.token(syn, &state.source[sp]);
+	primitive::just(token).map_with_state(move |_, span, state: &mut ParseState<'i, C>| {
+		state.gtb.token(syn, &state.source[span]);
 	})
 }
 

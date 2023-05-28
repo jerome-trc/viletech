@@ -1,4 +1,4 @@
-use chumsky::{primitive, IterParser, Parser};
+use chumsky::{primitive, recovery, IterParser, Parser};
 
 use crate::{
 	comb,
@@ -44,7 +44,8 @@ where
 			trivia_0plus(),
 			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
-	);
+	)
+	.recover_with(recovery::via_parser(recovery()));
 
 	#[cfg(any(debug_assertions, test))]
 	{
@@ -80,7 +81,6 @@ where
 		comb::string_nc(Token::Ident, "noarchive", Syn::KwNoArchive.into()),
 		comb::string_nc(Token::Ident, "cheat", Syn::KwCheat.into()),
 		comb::string_nc(Token::Ident, "latch", Syn::KwLatch.into()),
-		comb::just(Token::Error, Syn::Error.into()),
 	))
 	.map(|_| ())
 }
@@ -95,7 +95,6 @@ where
 		comb::string_nc(Token::KwBool, "bool", Syn::KwBool.into()),
 		comb::string_nc(Token::KwColor, "color", Syn::KwColor.into()),
 		comb::string_nc(Token::KwString, "string", Syn::KwString.into()),
-		comb::just(Token::Error, Syn::Error.into()),
 	))
 	.map(|_| ())
 }
@@ -116,7 +115,6 @@ where
 				comb::just(Token::KwFalse, Syn::LitFalse.into()),
 				comb::just(Token::KwTrue, Syn::LitTrue.into()),
 				comb::just(Token::LitString, Syn::LitString.into()),
-				comb::just(Token::Error, Syn::Error.into()),
 			)),
 		)),
 	)
@@ -145,6 +143,36 @@ where
 	C: GreenCache,
 {
 	trivia().repeated().at_least(1).collect::<()>()
+}
+
+fn recovery<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	comb::node(
+		Syn::Error.into(),
+		primitive::group((
+			primitive::choice((
+				trivia(),
+				flag(),
+				type_spec(),
+				comb::just(Token::Eq, Syn::Eq.into()),
+				comb::just(Token::LitFloat, Syn::LitFloat.into()),
+				comb::just(Token::LitInt, Syn::LitInt.into()),
+				comb::just(Token::KwFalse, Syn::LitFalse.into()),
+				comb::just(Token::KwTrue, Syn::LitTrue.into()),
+				comb::just(Token::LitString, Syn::LitString.into()),
+				comb::just(Token::Ident, Syn::Ident.into()),
+			))
+			.repeated()
+			.at_least(1)
+			.collect::<()>(),
+			primitive::none_of([Token::Semicolon])
+				.repeated()
+				.collect::<()>(),
+			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+		)),
+	)
 }
 
 #[cfg(test)]
@@ -203,5 +231,30 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 		assert_eq!(default_1.literal().text(), "0.4");
 		assert_eq!(default_2.literal().kind(), Syn::LitString);
 		assert_eq!(default_2.literal().text(), r#""Welcome to the Company !""#);
+	}
+
+	#[test]
+	fn err_recovery() {
+		const SOURCE: &str = r#"
+
+	server int theumpteenthcircle = ;
+	user float ICEANDFIRE3 = 0.4;
+
+	"#;
+
+		let parser = file::<GreenCacheNoop>();
+
+		let ptree = crate::parse(
+			parser,
+			None,
+			Syn::Root.into(),
+			SOURCE,
+			Token::stream(SOURCE, None),
+		);
+
+		assert_eq!(ptree.errors.len(), 1);
+
+		let cvar = ast::CVar::cast(ptree.cursor::<Syn>().last_child().unwrap()).unwrap();
+		assert_eq!(cvar.name().text(), "ICEANDFIRE3");
 	}
 }

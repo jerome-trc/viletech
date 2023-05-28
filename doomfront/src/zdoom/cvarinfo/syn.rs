@@ -10,8 +10,13 @@ pub enum Syn {
 	Definition,
 	/// An `=` followed by a literal to optionally set a custom default value.
 	DefaultDef,
+	/// A sequence of tokens that either did not form a valid syntax element,
+	/// or which contained one or more tokens considered invalid by the lexer.
+	Error,
 	/// The set of flags qualifying a definition, scope specifiers included.
 	Flags,
+	/// The top-level node, representing the whole file.
+	Root,
 	/// The type specifier is always followed by the identifier.
 	TypeSpec,
 	// Tokens: literals ////////////////////////////////////////////////////////
@@ -63,10 +68,6 @@ pub enum Syn {
 	Unknown,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
-	/// The top-level node, representing the whole file.
-	Root,
-	/// Input considered by the lexer or parser to be invalid.
-	Error,
 	#[doc(hidden)]
 	__Last,
 }
