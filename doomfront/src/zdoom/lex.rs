@@ -348,20 +348,13 @@ pub enum Token {
 	Error,
 }
 
-pub type Lexer<'i> = std::iter::Map<
-	logos::SpannedIter<'i, Token>,
-	fn((Result<Token, ()>, logos::Span)) -> (Token, logos::Span),
->;
-pub type TokenMapper = fn((Result<Token, ()>, logos::Span)) -> (Token, logos::Span);
-pub type Stream<'i> = chumsky::input::SpannedInput<
-	Token,
-	logos::Span,
-	chumsky::input::Stream<std::iter::Map<logos::SpannedIter<'i, Token>, TokenMapper>>,
->;
+pub type Lexer<'i> = crate::Lexer<'i, Token>;
+pub type TokenMapper = crate::TokenMapper<Token>;
+pub type TokenStream<'i> = crate::TokenStream<'i, Token>;
 
 impl Token {
 	#[must_use]
-	pub fn stream<'i>(source: &'i str, version: Option<zdoom::Version>) -> Stream<'i> {
+	pub fn stream<'i>(source: &'i str, version: Option<zdoom::Version>) -> TokenStream<'i> {
 		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
 			(input.0.unwrap_or(Token::Error), input.1)
 		}

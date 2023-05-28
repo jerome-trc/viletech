@@ -1,64 +1,57 @@
 //! Various combinators which are broadly applicable elsewhere.
 
-use chumsky::{error::Error as ChumskyError, extra::ParserExtra, primitive, text, Parser};
+use chumsky::{primitive, Parser};
 use rowan::SyntaxKind;
 
 use crate::{
 	util::{builder::GreenCache, state::*},
-	Extra,
+	Extra, ParseError, TokenStream,
 };
 
-/// Shorthand for
-/// `primitive::one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")`,
-/// since writing it out manually is error-prone.
-pub fn ascii_letter<'i, E>() -> impl Parser<'i, &'i str, char, E> + Clone
+pub fn just<'i, T, C>(
+	token: T,
+	syn: SyntaxKind,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
 where
-	E: ParserExtra<'i, &'i str>,
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	C: GreenCache,
 {
-	primitive::one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	primitive::just(token).map_with_state(move |_, sp, state: &mut ParseState<'i, C>| {
+		state.gtb.token(syn, &state.source[sp]);
+	})
 }
 
-/// For ASCII-case-insensitive keywords used by (G)ZDoom's DSLs.
+/// Matches `token` as long as it contains `text`, ASCII case-insensitively.
 ///
-/// Chumsky offers no good singular combinator for dealing with these, so
-/// doomfront brings its own. Note that it can also be used for tokens like `#include`.
-pub fn kw_nc<'i, E>(string: &'static str) -> impl Parser<'i, &'i str, &'i str, E> + Clone
+/// This is needed for (G)ZDoom DSLs, many of which are unspecified and use only an
+/// ad-hoc parser as DoomFront's reference implementation. Representing every niche
+/// keyword used by every one of these languages would add complexity to every parser
+/// (since each would have to treat foreign keywords as identifiers), so instead
+/// make the smaller languages look for their keywords through identifiers.
+pub fn string_nc<'i, T, C>(
+	token: T,
+	text: &'static str,
+	syn: SyntaxKind,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
 where
-	E: ParserExtra<'i, &'i str>,
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	C: GreenCache,
 {
-	primitive::any::<&'i str, E>()
-		.repeated()
-		.exactly(string.len())
-		.slice()
-		.try_map(move |s, span| {
-			s.eq_ignore_ascii_case(string)
-				.then_some(s)
-				.ok_or_else(|| E::Error::expected_found(None, None, span))
-		})
-}
+	primitive::just(token).try_map_with_state(
+		move |_, sp: logos::Span, state: &mut ParseState<'i, C>| {
+			let substr: &str = &state.source[sp.clone()];
 
-/// Shorthand for `chumsky::primitive::one_of("0123456789")`.
-pub fn dec_digit<'i, E>() -> impl Parser<'i, &'i str, char, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::one_of("0123456789")
-}
-
-/// Shorthand for `chumsky::primitive::one_of("0123456789abcdefABCDEF")`.
-pub fn hex_digit<'i, E>() -> impl Parser<'i, &'i str, char, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::one_of("0123456789abcdefABCDEF")
-}
-
-/// Shorthand for `chumsky::primitive::one_of("01234567")`.
-pub fn oct_digit<'i, E>() -> impl Parser<'i, &'i str, char, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::one_of("01234567")
+			if substr.eq_ignore_ascii_case(text) {
+				state.gtb.token(syn, substr);
+				Ok(())
+			} else {
+				Err(ParseError::custom(
+					sp,
+					format!("expected `{}`, found `{}`", text, substr),
+				))
+			}
+		},
+	)
 }
 
 /// Shorthand for the following idiom:
@@ -74,76 +67,61 @@ where
 ///     .map_with_state(gtb_close())
 ///     .map_err_with_state(gtb_cancel(kind))
 /// ```
-pub fn node<'i, O, C: GreenCache>(
+pub fn node<'i, T, O, C, G>(
 	kind: SyntaxKind,
-	group: impl Parser<'i, &'i str, O, Extra<'i, C>> + Clone,
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+	group: G,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+where
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	C: GreenCache,
+	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone,
+{
 	primitive::empty()
-		.map_with_state(gtb_open(kind))
+		.map_with_state(move |_, _, state: &mut ParseState<'i, C>| {
+			state.gtb.open(kind);
+		})
 		.then(group)
-		.map_with_state(gtb_close())
-		.map_err_with_state(gtb_cancel(kind))
+		.map_with_state(|_, _, state| {
+			state.gtb.close();
+		})
+		.map_err_with_state(move |err, _, state| {
+			state.gtb.cancel(kind);
+			err
+		})
 }
 
 /// Shorthand for the following idiom:
 ///
 /// ```
 /// primitive::empty()
-///     .map_with_state(gtb_checkpoint())
+///     .map_with_state(/* withdraw a checkpoint from the green builder */)
 ///     .then(primitive::group((
 ///         parser1,
 ///         parser2,
 ///         ...
 ///     )))
 ///     .map(|_| ())
-///     .map_err_with_state(gtb_cancel_checkpoint())
+///     .map_err_with_state(/* cancel the most recent green builder checkpoint */)
 /// ```
-pub fn checkpointed<'i, O, C: GreenCache>(
-	group: impl Parser<'i, &'i str, O, Extra<'i, C>> + Clone,
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+pub fn checkpointed<'i, T, O, C, G>(
+	group: G,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+where
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	C: GreenCache,
+	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone,
+{
 	primitive::empty()
-		.map_with_state(gtb_checkpoint())
+		.map_with_state(|_, _, state: &mut ParseState<'i, C>| {
+			state.checkpoints.push(state.gtb.checkpoint());
+		})
 		.then(group)
 		.map(|_| ())
-		.map_err_with_state(gtb_cancel_checkpoint())
-}
+		.map_err_with_state(|err, _, state| {
+			state
+				.gtb
+				.cancel_checkpoint(state.checkpoints.pop().unwrap());
 
-// Whitespace, comments ////////////////////////////////////////////////////////
-
-/// The most common kind of whitespace;
-/// spaces, carriage returns, newlines, and/or tabs, repeated one or more times.
-pub fn wsp<'i, E>() -> impl Parser<'i, &'i str, &'i str, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::one_of([' ', '\r', '\n', '\t'])
-		.repeated()
-		.at_least(1)
-		.slice()
-}
-
-/// Multi-line comments delimited by `/*` and `*/`.
-/// Used by ACS and (G)ZDoom's languages.
-pub fn c_comment<'i, E>() -> impl Parser<'i, &'i str, &'i str, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::just("/*")
-		.then(
-			primitive::any()
-				.and_is(primitive::just("*/").not())
-				.repeated(),
-		)
-		.then(primitive::just("*/"))
-		.slice()
-}
-
-/// Single-line comments delimited by `//`. Used by ACS and (G)ZDoom's languages.
-pub fn cpp_comment<'i, E>() -> impl Parser<'i, &'i str, &'i str, E> + Clone
-where
-	E: ParserExtra<'i, &'i str>,
-{
-	primitive::just("//")
-		.then(primitive::any().and_is(text::newline().not()).repeated())
-		.slice()
+			err
+		})
 }

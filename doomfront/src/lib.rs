@@ -29,17 +29,23 @@ pub mod util;
 #[cfg(feature = "zdoom")]
 pub mod zdoom;
 
-pub type ParseError<'i> = chumsky::error::Rich<'i, char>;
+pub type TokenMapper<T> = fn((Result<T, ()>, logos::Span)) -> (T, logos::Span);
+pub type Lexer<'i, T> = std::iter::Map<logos::SpannedIter<'i, T>, TokenMapper<T>>;
+pub type TokenStream<'i, T> =
+	chumsky::input::SpannedInput<T, logos::Span, chumsky::input::Stream<Lexer<'i, T>>>;
+
+pub type ParseError<'i, T> = chumsky::error::Rich<'i, T, logos::Span>;
 /// Defines the context and state passed along parsers as well as the error type they emit.
-pub type Extra<'i, C> = chumsky::extra::Full<ParseError<'i>, util::state::ParseState<C>, ()>;
+pub type Extra<'i, T, C> =
+	chumsky::extra::Full<ParseError<'i, T>, util::state::ParseState<'i, C>, ()>;
 
 #[derive(Debug)]
-pub struct ParseTree<'i> {
+pub struct ParseTree<'i, T: logos::Logos<'i>> {
 	pub root: rowan::GreenNode,
-	pub errors: Vec<ParseError<'i>>,
+	pub errors: Vec<ParseError<'i, T>>,
 }
 
-impl ParseTree<'_> {
+impl<'i, T: logos::Logos<'i>> ParseTree<'i, T> {
 	/// Emits a "zipper" tree root that can be used for much more effective traversal
 	/// of the green tree (but which is `!Send` and `!Sync`).
 	#[must_use]
@@ -52,17 +58,23 @@ impl ParseTree<'_> {
 /// based parser. Pass one of these along with a source string into this function
 /// to consume that parser and emit a green tree.
 #[must_use]
-pub fn parse<'i, C: 'i + util::builder::GreenCache>(
-	parser: impl chumsky::Parser<'i, &'i str, (), Extra<'i, C>>,
+pub fn parse<'i, P, T, C>(
+	parser: P,
 	cache: Option<C>,
 	root: rowan::SyntaxKind,
 	source: &'i str,
-) -> ParseTree<'i> {
-	let mut state = util::state::ParseState::new(cache);
+	stream: TokenStream<'i, T>,
+) -> ParseTree<'i, T>
+where
+	P: chumsky::Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>>,
+	T: logos::Logos<'i, Source = str, Error = ()> + PartialEq + Clone,
+	C: 'i + util::builder::GreenCache,
+{
+	let mut state = util::state::ParseState::new(source, cache);
 
 	state.gtb.open(root);
 
-	let errors = parser.parse_with_state(source, &mut state).into_errors();
+	let errors = parser.parse_with_state(stream, &mut state).into_errors();
 
 	state.gtb.close();
 

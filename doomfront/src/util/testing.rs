@@ -148,7 +148,10 @@ where
 	}
 }
 
-pub fn assert_no_errors(pt: &ParseTree) {
+pub fn assert_no_errors<'i, T>(pt: &ParseTree<'i, T>)
+where
+	T: logos::Logos<'i> + std::fmt::Debug,
+{
 	assert!(pt.errors.is_empty(), "Encountered errors: {}", {
 		let mut output = String::new();
 

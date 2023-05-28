@@ -3,9 +3,11 @@
 //! [ZDoom]: https://zdoom.org/index
 
 pub mod lex;
-pub mod lexer;
 
-pub mod decorate;
+pub mod cvarinfo;
+
+pub type Extra<'i, C> = crate::Extra<'i, lex::Token, C>;
+pub type ParseTree<'i> = crate::ParseTree<'i, lex::Token>;
 
 /// When parsing a ZDoom-family DSL,
 /// the engine version dictates the rules used by the lexer.

@@ -4,15 +4,20 @@ use rowan::SyntaxKind;
 use super::builder::{Checkpoint, GreenBuilder, GreenCache};
 
 #[derive(Debug, Default)]
-pub struct ParseState<C: GreenCache> {
+pub struct ParseState<'i, C: GreenCache> {
+	pub source: &'i str,
 	pub gtb: GreenBuilder<C>,
-	checkpoints: Vec<Checkpoint>,
+	pub(crate) checkpoints: Vec<Checkpoint>,
 }
 
-impl<C: GreenCache> ParseState<C> {
+impl<'i, C: GreenCache> ParseState<'i, C> {
 	#[must_use]
-	pub fn new(green_cache: Option<C>) -> Self {
+	pub fn new(
+		source: &'i str,
+		green_cache: Option<C>
+	) -> Self {
 		Self {
+			source,
 			gtb: GreenBuilder::new(green_cache),
 			checkpoints: vec![],
 		}
