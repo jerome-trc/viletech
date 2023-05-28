@@ -143,6 +143,7 @@ impl<D: Datum> Eq for DataRef<'_, D> {}
 pub struct Handle<D: Datum>(Arc<Store<D>>);
 
 impl<D: Datum> Handle<D> {
+	#[must_use]
 	pub fn id(&self) -> &str {
 		self.0.id()
 	}
