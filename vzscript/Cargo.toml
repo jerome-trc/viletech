@@ -17,10 +17,15 @@ default = []
 
 [dependencies]
 ariadne = { workspace = true }
+bitflags = { workspace = true }
+bitvec = { workspace = true }
 cranelift = { workspace = true }
 cranelift-interpreter = { workspace = true }
 cranelift-jit = { workspace = true }
 cranelift-module = { workspace = true }
+crossbeam = { workspace = true }
+dashmap = { workspace = true }
 doomfront = { path = "../doomfront", features = ["ser_de"] }
+fasthash = { workspace = true }
 once_cell = { workspace = true }
 logos = { workspace = true }

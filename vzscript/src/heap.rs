@@ -33,10 +33,12 @@ use std::{
 
 use bitvec::prelude::BitArray;
 
-use super::{
-	tsys::{self, TypeData, TypeGroup, TypeInfo},
-	Handle, Runtime, Symbol, TypeHandle,
+use crate::{
+	runtime::Runtime,
+	sym::{Handle, Symbol, TypeHandle},
 };
+
+use super::tsys::{self, TypeData, TypeGroup, TypeInfo};
 
 // Public //////////////////////////////////////////////////////////////////////
 
@@ -105,15 +107,6 @@ pub struct TPtr<T>(NonNull<RegionHeader>, PhantomData<T>);
 unsafe impl<T> Send for TPtr<T> {}
 unsafe impl<T> Sync for TPtr<T> {}
 
-/// "Index pointer". Double-wide, and necessary for pointing to certain kinds of
-/// objects which can not reasonably be allocated next to a header on a
-/// per-instance basis, such as map lines.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct IPtr {
-	base: Ptr,
-	index: usize,
-}
-
 #[derive(Debug)]
 pub(super) struct Heap {
 	/// Are we marking, sweeping, or none of the above?
@@ -142,20 +135,20 @@ impl Runtime {
 			layout.size(),
 			0,
 			"Tried to allocate a zero-sized type on the VZS heap: {}",
-			tinfo.header().name,
+			tinfo.name(),
 		);
 
 		debug_assert_eq!(
 			layout.align(),
 			16,
 			"VZS type is not 16-byte aligned: {}",
-			tinfo.header().name
+			tinfo.name()
 		);
 
 		debug_assert!(
 			layout.size() < HUGE_SIZE,
 			"VZS type is oversized: {}",
-			tinfo.header().name,
+			tinfo.name(),
 		);
 
 		let ptr = self.alloc(layout).cast::<RegionHeader>();
@@ -561,10 +554,7 @@ bitflags::bitflags! {
 
 #[cfg(test)]
 mod test {
-	use crate::vzs::{
-		tsys::{self, TypeInfo},
-		Project,
-	};
+	use crate::project::Project;
 
 	use super::*;
 
@@ -579,7 +569,7 @@ mod test {
 			.unwrap();
 
 		unsafe {
-			let ptr = runtime.alloc_t(t.into());
+			let ptr = runtime.alloc_t(t.handle().into());
 			let a = ptr.chunk();
 			assert_eq!(a.as_ref().block_bits.len(), ChunkHeader::BITMAP_LEN);
 			assert_eq!(a.as_ref().mark_bits.len(), ChunkHeader::BITMAP_LEN);

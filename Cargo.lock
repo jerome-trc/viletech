@@ -5445,6 +5445,7 @@ dependencies = [
  "tracing-subscriber",
  "triangulate",
  "unicode-ident",
+ "vzscript",
  "walkdir",
  "zip",
 ]
@@ -5494,11 +5495,16 @@ name = "vzscript"
 version = "0.0.0"
 dependencies = [
  "ariadne",
+ "bitflags",
+ "bitvec",
  "cranelift",
  "cranelift-interpreter",
  "cranelift-jit",
  "cranelift-module",
+ "crossbeam",
+ "dashmap",
  "doomfront",
+ "fasthash",
  "logos",
  "once_cell",
 ]

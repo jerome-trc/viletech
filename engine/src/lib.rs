@@ -27,7 +27,7 @@ pub mod udmf;
 pub mod user;
 pub mod utils;
 pub mod vfs;
-pub mod vzs;
+pub extern crate vzs;
 pub mod wad;
 
 // Types ///////////////////////////////////////////////////////////////////////

@@ -7,11 +7,26 @@
 //!
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
+mod heap;
 pub mod lex;
+pub mod library;
+pub mod module;
 pub mod parse;
+pub mod project;
+pub mod runtime;
+pub mod sym;
 mod syn;
+pub mod tsys;
 
-pub use self::syn::Syn;
+pub use self::{
+	heap::TPtr,
+	parse::{FileParseTree, IncludeTree},
+	project::Project,
+	runtime::Runtime,
+	syn::Syn,
+};
+
+pub type ParseTree<'i> = doomfront::ParseTree<'i, lex::Token>;
 
 /// Each library is declared as belonging to a version of the VZScript specification.
 ///
@@ -74,6 +89,7 @@ impl Version {
 	}
 }
 
+/// Things that can go wrong when using this crate, excluding parse and compilation issues.
 #[derive(Debug)]
 pub enum Error {
 	/// Tried to parse a SemVer string without any numbers or periods in it.

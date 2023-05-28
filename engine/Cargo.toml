@@ -47,6 +47,9 @@ features = [
 ]
 
 [dependencies]
+doomfront = { path = "../doomfront", features = ["ser_de"] }
+vzs = { package = "vzscript", path = "../vzscript" }
+
 arrayvec = { workspace = true }
 ariadne = { workspace = true }
 bevy_egui = { workspace = true }
@@ -61,7 +64,6 @@ cranelift-jit = { workspace = true }
 cranelift-module = { workspace = true }
 crossbeam = { workspace = true }
 dashmap = { workspace = true }
-doomfront = { path = "../doomfront", features = ["ser_de"] }
 fasthash = { workspace = true }
 fixed = { workspace = true }
 fluidlite = { workspace = true }

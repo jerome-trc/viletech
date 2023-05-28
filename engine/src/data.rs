@@ -30,7 +30,7 @@ use smallvec::SmallVec;
 
 use crate::{
 	vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs},
-	vzs, EditorNum, Outcome, SendTracker, SpawnNum, VPath, VPathBuf,
+	EditorNum, Outcome, SendTracker, SpawnNum, VPath, VPathBuf,
 };
 
 use self::{

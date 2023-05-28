@@ -1,10 +1,8 @@
-use std::{alloc::Layout, borrow::Borrow, sync::Arc};
+//! Infrastructure supporting VZScript's type system.
 
-use serde::{Deserialize, Serialize};
+use std::{alloc::Layout, sync::Arc};
 
-use crate::vzs::abi::QWord;
-
-use super::{Symbol, SymbolHash, SymbolHeader, SymbolKey, TypeInHandle};
+use crate::sym::{self, Symbol, SymbolKey, SymbolStore, TypeInHandle};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
@@ -17,7 +15,7 @@ pub trait TypeData: Send + Sync {
 
 /// An implementation detail that also provides a constraint on [`TypeInfo`]'s
 /// generic parameter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeGroup {
 	Void,
 	Numeric,
@@ -26,7 +24,6 @@ pub enum TypeGroup {
 
 #[derive(Debug)]
 pub struct TypeInfo<T: TypeData> {
-	header: SymbolHeader,
 	/// See the documentation for the method of the same name.
 	layout: Layout,
 	inner: T,
@@ -53,24 +50,14 @@ impl TypeData for () {
 }
 
 impl Symbol for TypeInfo<()> {
-	fn header(&self) -> &SymbolHeader {
-		&self.header
-	}
+	type HashInput<'i> = ();
 
-	fn header_mut(&mut self) -> &mut SymbolHeader {
-		&mut self.header
-	}
-
-	fn key(&self) -> SymbolKey {
+	fn key<'j>(&self) -> SymbolKey {
 		SymbolKey::new::<Self>(())
 	}
 }
 
-impl<'i> SymbolHash<'i> for TypeInfo<()> {
-	type HashInput = ();
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Numeric {
 	I8,
 	U8,
@@ -107,21 +94,11 @@ impl TypeData for Numeric {
 }
 
 impl Symbol for TypeInfo<Numeric> {
-	fn header(&self) -> &SymbolHeader {
-		&self.header
-	}
+	type HashInput<'i> = &'i str;
 
-	fn header_mut(&mut self) -> &mut SymbolHeader {
-		&mut self.header
-	}
-
-	fn key(&self) -> SymbolKey {
+	fn key<'j>(&self) -> SymbolKey {
 		SymbolKey::new::<Self>(self.inner.name())
 	}
-}
-
-impl<'i> SymbolHash<'i> for TypeInfo<Numeric> {
-	type HashInput = &'i str;
 }
 
 #[derive(Debug)]
@@ -137,8 +114,7 @@ impl Array {
 	}
 
 	#[must_use]
-	#[allow(clippy::len_without_is_empty)]
-	pub fn len(&self) -> usize {
+	pub fn length(&self) -> usize {
 		self.len
 	}
 }
@@ -148,47 +124,28 @@ impl TypeData for Array {
 }
 
 impl Symbol for TypeInfo<Array> {
-	fn header(&self) -> &SymbolHeader {
-		&self.header
-	}
+	type HashInput<'i> = (usize, &'i str);
 
-	fn header_mut(&mut self) -> &mut SymbolHeader {
-		&mut self.header
-	}
-
-	fn key(&self) -> SymbolKey {
+	fn key<'j>(&self) -> SymbolKey {
 		let thandle = self.inner.elem_type.upgrade();
-		let input = (self.len(), thandle.header().name.as_ref());
-		let i = input.borrow();
-		SymbolKey::new::<Self>(i)
+		let input = (self.length(), thandle.name());
+		SymbolKey::new::<Self>(input)
 	}
-}
-
-impl<'i> SymbolHash<'i> for TypeInfo<Array> {
-	type HashInput = (usize, &'i str);
 }
 
 /// All the types that make up the corelib
 /// but which are not directly declared in script files.
 #[must_use]
-pub(super) fn _builtins() -> Vec<Arc<dyn Symbol>> {
-	let qword_layout = Layout::new::<QWord>();
+pub(super) fn _builtins() -> Vec<Arc<dyn SymbolStore>> {
+	let qword_layout = Layout::new::<i64>();
 
-	vec![Arc::new(TypeInfo {
-		header: SymbolHeader {
-			name: Numeric::I32.name().to_string(),
-		},
-		layout: qword_layout,
-		inner: Numeric::I32,
-	})]
-}
-
-mod private {
-	use super::*;
-
-	pub trait Sealed {}
-
-	impl Sealed for () {}
-	impl Sealed for Numeric {}
-	impl Sealed for Array {}
+	vec![
+		Arc::new(sym::Store::new(
+			Numeric::I32.name().to_string(),
+			TypeInfo {
+				layout: qword_layout,
+				inner: Numeric::I32,
+			},
+		)), // TODO: The rest of them.
+	]
 }

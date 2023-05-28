@@ -8,11 +8,9 @@ use std::{num::NonZeroI32, ptr::NonNull};
 use bevy::prelude::*;
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
+use vzs::TPtr;
 
-use crate::{
-	data::dobj::{self, Blueprint},
-	vzs::heap::TPtr,
-};
+use crate::data::dobj::{self, Blueprint};
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

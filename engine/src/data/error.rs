@@ -2,7 +2,7 @@
 
 use image::ImageError;
 
-use crate::{udmf, vzs, VPathBuf};
+use crate::{udmf, VPathBuf};
 
 /// Things that can go wrong during (non-preparation) datum management operations,
 /// like lookup and mutation. Also see [`PrepError`].
@@ -178,7 +178,7 @@ impl std::fmt::Display for PrepError {
 					self.path.display()
 				)
 			}
-			PrepErrorKind::VzsParse(err) => err.fmt(f),
+			PrepErrorKind::VzsParse(_) => todo!(),
 			PrepErrorKind::WaveformAudio(err) => write!(
 				f,
 				"Failed to load audio file: {p}\r\n\t\

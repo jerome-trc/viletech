@@ -18,8 +18,8 @@ use serde::Deserialize;
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
-	data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, vzs, EditorNum, Id8, Outcome, SendTracker,
-	SpawnNum, VPathBuf,
+	data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, EditorNum, Id8, Outcome, SendTracker, SpawnNum,
+	VPathBuf,
 };
 
 use self::vanilla::{PatchTable, TextureX};
@@ -167,7 +167,7 @@ impl Catalog {
 				.iter()
 				.collect();
 
-			let root_dir = match self.vfs.get(&root_dir_path) {
+			let _root_dir = match self.vfs.get(&root_dir_path) {
 				Some(fref) => fref,
 				None => {
 					ctx.raise_error(PrepError {
@@ -183,16 +183,17 @@ impl Catalog {
 				return Outcome::Cancelled;
 			}
 
-			let inctree = vzs::IncludeTree::new(root_dir);
+			let inctree = vzs::IncludeTree::new();
 
 			if inctree.any_errors() {
 				let errors = &mut ctx.arts_w.lock().errors;
 				let ptrees = inctree.into_inner();
 
 				for ptree in ptrees {
-					let path = ptree.path;
+					let path = ptree.path().to_path_buf();
+					let ptree = ptree.into_inner();
 
-					for err in ptree.inner.errors {
+					for err in ptree.errors {
 						errors.push(PrepError {
 							path: path.clone(),
 							kind: PrepErrorKind::VzsParse(err),

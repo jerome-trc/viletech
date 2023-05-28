@@ -5,6 +5,8 @@
 mod common;
 mod expr;
 
+use std::path::{Path, PathBuf};
+
 use doomfront::{
 	chumsky::{primitive, IterParser, Parser},
 	util::builder::GreenCache,
@@ -12,10 +14,11 @@ use doomfront::{
 
 use crate::{
 	lex::{Token, TokenStream},
-	Version,
+	ParseTree, Version,
 };
 
 pub type Extra<'i, C> = doomfront::Extra<'i, Token, C>;
+pub type Error<'i> = doomfront::ParseError<'i, Token>;
 
 /// Gives context to functions yielding parser combinators
 /// (e.g. the user's selected VZScript version).
@@ -76,5 +79,60 @@ impl ParserBuilder {
 		{
 			ret
 		}
+	}
+}
+
+/// Gets compiled into one [module](crate::module::Module).
+#[derive(Debug)]
+pub struct FileParseTree {
+	inner: ParseTree<'static>,
+	path: PathBuf,
+}
+
+impl FileParseTree {
+	#[must_use]
+	pub fn path(&self) -> &Path {
+		&self.path
+	}
+
+	#[must_use]
+	pub fn into_inner(self) -> ParseTree<'static> {
+		self.inner
+	}
+}
+
+impl std::ops::Deref for FileParseTree {
+	type Target = ParseTree<'static>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+/// Gets compiled into one [library](crate::library::Library).
+#[derive(Debug, Default)]
+pub struct IncludeTree {
+	pub files: Vec<FileParseTree>,
+}
+
+impl IncludeTree {
+	#[must_use]
+	pub fn new() -> Self {
+		unimplemented!("Include tree parsing pending DoomFront's `Filesystem` trait.")
+	}
+
+	#[must_use]
+	pub fn files(&self) -> &[FileParseTree] {
+		&self.files
+	}
+
+	#[must_use]
+	pub fn into_inner(self) -> Vec<FileParseTree> {
+		self.files
+	}
+
+	#[must_use]
+	pub fn any_errors(&self) -> bool {
+		self.files.iter().any(|ptree| !ptree.errors.is_empty())
 	}
 }
