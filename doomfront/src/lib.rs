@@ -9,18 +9,20 @@
 //! a filesystem entry of some kind, whether that be a real file, a WAD archive
 //! entry, or some other compressed archive entry.
 //!
+//! [`logos`] is used to procedurally generate lexers.
 //! [`chumsky`] is used to build parsers up from combinators.
 //! [`rowan`], used by [rust-analyzer], provides the basis for syntax representation.
 //! It is recommended that you read its [overview] to understand the conceptual
 //! foundation for the structures emitted by `doomfront`.
 //!
 //! `doomfront` is explicitly designed to be easy to extend.
-//! Both of the aforementioned crates get re-exported in service of this.
+//! All of the aforementioned crates get re-exported in service of this.
 //!
 //! [rust-analyzer]: https://rust-analyzer.github.io/
 //! [overview]: https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md
 
 pub extern crate chumsky;
+pub extern crate logos;
 pub extern crate rowan;
 
 pub mod comb;
