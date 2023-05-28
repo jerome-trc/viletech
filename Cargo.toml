@@ -1,5 +1,5 @@
 [workspace]
-members = ["cli", "client", "doomfront", "engine", "server"]
+members = ["cli", "client", "doomfront", "engine", "server", "vzscript"]
 default-members = ["engine", "client"]
 resolver = "2" # Needed for WGPU and Bevy.
 
@@ -56,6 +56,7 @@ indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
 indoc = "2.0.0"
 itertools = "0.10.5"
 kira = "0.7.3"
+logos = "0.13.0"
 md5 = "0.7.0"
 memoffset = "0.8.0"
 naga = "0.11.0"

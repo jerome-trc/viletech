@@ -24,6 +24,6 @@ zdoom = []
 
 [dependencies]
 chumsky = "1.0.0-alpha.4"
-logos = "0.13.0"
+logos = { workspace = true }
 rowan = "0.15.11"
 serde = { version = "1.0.152", features = ["derive"], optional = true }

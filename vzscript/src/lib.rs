@@ -7,6 +7,8 @@
 //!
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
+pub mod lex;
+pub mod parse;
 mod syn;
 
 pub use self::syn::Syn;
@@ -48,6 +50,11 @@ impl std::str::FromStr for Version {
 }
 
 impl Version {
+	#[must_use]
+	pub fn new(major: u16, minor: u16, rev: u16) -> Self {
+		Self { major, minor, rev }
+	}
+
 	/// Check if this version is equal to an existing VZScript spec version.
 	#[must_use]
 	pub fn is_valid(&self) -> bool {
