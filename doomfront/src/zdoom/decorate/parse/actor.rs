@@ -128,6 +128,7 @@ where
 		enum_def(),
 		states_def(),
 		property_settings(),
+		user_var(),
 	));
 
 	#[cfg(any(debug_assertions, test))]
@@ -189,6 +190,36 @@ where
 			comb::checkpointed(primitive::group((trivia_1plus(), part)))
 				.repeated()
 				.collect::<()>(),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn user_var<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::UserVar.into(),
+		primitive::group((
+			comb::just(Token::KwVar, Syn::KwVar.into()),
+			trivia_1plus(),
+			primitive::choice((
+				comb::just(Token::KwInt, Syn::KwInt.into()),
+				comb::just(Token::KwFloat, Syn::KwFloat.into()),
+			)),
+			trivia_1plus(),
+			comb::just(Token::Ident, Syn::Ident.into()),
+			trivia_0plus(),
+			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	);
 
@@ -622,6 +653,9 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 
 	CONST int DEIMOSANOMALY = 1234567890;
 
+	var int dark_halls;
+	var float hidingTheSecrets;
+
 	ResetAllFlagsOrSomething
 	Containment.Area
 	+REFINERY
@@ -700,6 +734,13 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		let constdef = innards.next().unwrap().into_constdef().unwrap();
 		assert_eq!(constdef.name().text(), "DEIMOSANOMALY");
 		assert_eq!(constdef.type_spec(), ast::ConstType::Int);
+
+		let uservar1 = innards.next().unwrap().into_uservar().unwrap();
+		assert_eq!(uservar1.name().text(), "dark_halls");
+		assert_eq!(uservar1.type_spec(), ast::UserVarType::Int);
+		let uservar2 = innards.next().unwrap().into_uservar().unwrap();
+		assert_eq!(uservar2.name().text(), "hidingTheSecrets");
+		assert_eq!(uservar2.type_spec(), ast::UserVarType::Float);
 
 		let _ = innards.next().unwrap().into_propsettings().unwrap();
 

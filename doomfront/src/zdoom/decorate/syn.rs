@@ -52,6 +52,8 @@ pub enum Syn {
 	RngSpec,
 	/// The top-level node, representing the whole file.
 	Root,
+	/// `'var' ('int'|'float') ident ';'`
+	UserVar,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	CallExpr,
 	IdentExpr,
@@ -91,6 +93,7 @@ pub enum Syn {
 	KwStop,
 	KwSuper,
 	KwTrue,
+	KwVar,
 	KwWait,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
 	BraceL,

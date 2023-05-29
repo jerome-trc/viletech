@@ -1,4 +1,4 @@
-use rowan::ast::AstNode;
+use rowan::{ast::AstNode, SyntaxElement};
 
 use crate::{
 	simple_astnode,
@@ -89,6 +89,7 @@ pub enum Innard {
 	FlagSetting(FlagSetting),
 	PropertySettings(PropertySettings),
 	StatesDef(StatesDef),
+	UserVar(UserVar),
 }
 
 impl AstNode for Innard {
@@ -103,7 +104,7 @@ impl AstNode for Innard {
 			Syn::ConstDef
 				| Syn::EnumDef | Syn::FlagSetting
 				| Syn::PropertySettings
-				| Syn::StatesDef
+				| Syn::StatesDef | Syn::UserVar
 		)
 	}
 
@@ -117,6 +118,7 @@ impl AstNode for Innard {
 			Syn::FlagSetting => Some(Self::FlagSetting(FlagSetting(node))),
 			Syn::PropertySettings => Some(Self::PropertySettings(PropertySettings(node))),
 			Syn::StatesDef => Some(Self::StatesDef(StatesDef(node))),
+			Syn::UserVar => Some(Self::UserVar(UserVar(node))),
 			_ => None,
 		}
 	}
@@ -128,6 +130,7 @@ impl AstNode for Innard {
 			Self::FlagSetting(inner) => inner.syntax(),
 			Self::PropertySettings(inner) => inner.syntax(),
 			Self::StatesDef(inner) => inner.syntax(),
+			Self::UserVar(inner) => inner.syntax(),
 		}
 	}
 }
@@ -172,6 +175,59 @@ impl Innard {
 			_ => None,
 		}
 	}
+
+	#[must_use]
+	pub fn into_uservar(self) -> Option<UserVar> {
+		match self {
+			Self::UserVar(inner) => Some(inner),
+			_ => None,
+		}
+	}
+}
+
+// UserVar /////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::UserVar`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+pub struct UserVar(pub(super) SyntaxNode);
+
+simple_astnode!(Syn, UserVar, Syn::UserVar);
+
+impl UserVar {
+	#[must_use]
+	pub fn name(&self) -> SyntaxToken {
+		self.syntax()
+			.children_with_tokens()
+			.find_map(|elem| {
+				let SyntaxElement::Token(token) = elem else { return None; };
+				(token.kind() == Syn::Ident).then_some(token)
+			})
+			.unwrap()
+	}
+
+	#[must_use]
+	pub fn type_spec(&self) -> UserVarType {
+		self.syntax()
+			.children_with_tokens()
+			.find_map(|elem| {
+				let SyntaxElement::Token(token) = elem else { return None; };
+
+				match token.kind() {
+					Syn::KwInt => Some(UserVarType::Int),
+					Syn::KwFloat => Some(UserVarType::Float),
+					_ => None,
+				}
+			})
+			.unwrap()
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+pub enum UserVarType {
+	Int,
+	Float,
 }
 
 // FlagSetting /////////////////////////////////////////////////////////////////
