@@ -4,7 +4,7 @@
 
 DoomFront aims to be a comprehensive suite of language frontends for the myriad of domain-specific languages recognised by the collective ecosystem of Doom source ports, including those of the [ZDoom](https://zdoom.org/index) family, [Eternity Engine](https://eternity.youfailit.net/wiki/Main_Page), ACS, DeHackEd, and UMAPINFO.
 
-DoomFront uses the Rowan crate (see the attributions section) - which itself serves as the foundation for [rust-analyzer](https://rust-analyzer.github.io/) - to generate lossless syntax trees that are completely representative of the parsed source and easy to traverse.
+DoomFront uses the [Rowan](https://crates.io/crates/rowan) crate (see the attributions section) - which itself serves as the foundation for [rust-analyzer](https://rust-analyzer.github.io/) - to generate lossless syntax trees that are completely representative of the parsed source and easy to traverse.
 
 ## Features
 
