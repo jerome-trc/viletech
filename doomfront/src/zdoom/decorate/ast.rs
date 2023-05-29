@@ -206,11 +206,9 @@ simple_astnode!(Syn, IdentChain, Syn::IdentChain);
 
 impl IdentChain {
 	/// Each yielded token is tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.syntax().children_with_tokens().filter_map(|elem| {
-			elem.into_token()
-				.filter(|tok| tok.kind() == Syn::Ident.into())
-		})
+		self.syntax()
+			.children_with_tokens()
+			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syn::Ident))
 	}
 }

@@ -354,7 +354,7 @@ pub type TokenStream<'i> = crate::TokenStream<'i, Token>;
 
 impl Token {
 	#[must_use]
-	pub fn stream<'i>(source: &'i str, version: Option<zdoom::Version>) -> TokenStream<'i> {
+	pub fn stream(source: &str, version: Option<zdoom::Version>) -> TokenStream {
 		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
 			(input.0.unwrap_or(Token::Error), input.1)
 		}

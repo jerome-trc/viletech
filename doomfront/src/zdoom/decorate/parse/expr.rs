@@ -103,7 +103,7 @@ pub fn rng_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, 
 where
 	C: GreenCache,
 {
-	comb::node(
+	let ret = comb::node(
 		Syn::RngSpec.into(),
 		primitive::group((
 			comb::just(Token::BracketL, Syn::BracketL.into()),
@@ -112,7 +112,16 @@ where
 			trivia_0plus(),
 			comb::just(Token::BracketR, Syn::BracketR.into()),
 		)),
-	)
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
 /// Builds a [`Syn::ArgList`] node.

@@ -216,7 +216,9 @@ where
 			states_usage().or_not(),
 			trivia_0plus(),
 			comb::just(Token::BraceL, Syn::BraceL.into()),
-			primitive::choice((state_def(), state_label(), state_flow(), trivia())),
+			primitive::choice((state_def(), state_label(), state_flow(), trivia()))
+				.repeated()
+				.collect::<()>(),
 			comb::just(Token::BraceR, Syn::BraceR.into()),
 		)),
 	);
@@ -243,9 +245,9 @@ where
 	));
 
 	let rep = comb::checkpointed(primitive::group((
-		single.clone(),
-		trivia_0plus(),
 		comb::just(Token::Comma, Syn::Comma.into()),
+		trivia_0plus(),
+		single.clone(),
 		trivia_0plus(),
 	)));
 
@@ -334,12 +336,10 @@ where
 		scope.or_not(),
 		ident_chain(),
 		offset.or_not(),
-	)));
+	)))
+	.map(|_| ());
 
-	let ret = comb::node(
-		Syn::StateFlow.into(),
-		primitive::choice((kw, goto.map(|_| ()))),
-	);
+	let ret = comb::node(Syn::StateFlow.into(), primitive::choice((kw, goto)));
 
 	#[cfg(any(debug_assertions, test))]
 	{
@@ -431,6 +431,11 @@ pub fn state_frames<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<
 where
 	C: GreenCache,
 {
+	#[must_use]
+	fn is_valid_quoted_char(c: char) -> bool {
+		c.is_ascii_alphabetic() || c == '[' || c == ']' || c == '\\' || c == '#'
+	}
+
 	let unquoted = primitive::just(Token::Ident).try_map_with_state(
 		|_, span: logos::Span, state: &mut ParseState<C>| {
 			if !state.source[span.clone()].contains(|c: char| !c.is_ascii_alphabetic()) {
@@ -451,9 +456,7 @@ where
 		|_, span: logos::Span, state: &mut ParseState<C>| {
 			let inner = &state.source[(span.start + 1)..(span.end - 1)];
 
-			if !inner
-				.contains(|c: char| !c.is_ascii_alphabetic() || c != '[' || c != ']' || c != '\\')
-			{
+			if !inner.contains(|c: char| !is_valid_quoted_char(c)) {
 				state
 					.gtb
 					.token(Syn::StateFrames.into(), &state.source[span]);
@@ -598,8 +601,8 @@ mod test {
 	use rowan::ast::AstNode;
 
 	use crate::{
-		util::builder::GreenCacheNoop,
-		zdoom::decorate::{ast, SyntaxNode},
+		util::{builder::GreenCacheNoop, testing::*},
+		zdoom::decorate::{ast, parse::file, SyntaxNode},
 	};
 
 	use super::*;
@@ -643,7 +646,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 }
 		"#####;
 
-		let parser = actor_def::<GreenCacheNoop>();
+		let parser = file::<GreenCacheNoop>();
 
 		let ptree = crate::parse(
 			parser,
@@ -652,6 +655,9 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 			SOURCE,
 			Token::stream(SOURCE, None),
 		);
+
+		assert_no_errors(&ptree);
+
 		let cursor = SyntaxNode::new_root(ptree.root);
 		let toplevel = ast::TopLevel::cast(cursor.first_child().unwrap()).unwrap();
 
@@ -731,16 +737,16 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		assert_eq!(label2.token().text(), "Wickedly");
 
 		let _state2 = state_items.next().unwrap().into_state().unwrap();
-		let change1 = state_items.next().unwrap().into_change().unwrap();
+		let change1 = state_items.next().unwrap().into_flow().unwrap();
 		match change1 {
-			ast::StateChange::Goto {
+			ast::StateFlow::Goto {
 				target,
 				offset,
-				super_target,
+				scope,
 			} => {
 				assert_eq!(target.syntax().text(), "Spawn.Something");
 				assert_eq!(offset.unwrap(), 0);
-				assert!(super_target);
+				assert_eq!(scope.unwrap().kind(), Syn::KwSuper);
 			}
 			other => panic!("Expected `StateChange::Goto`, found: {other:#?}"),
 		}

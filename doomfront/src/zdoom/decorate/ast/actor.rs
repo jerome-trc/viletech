@@ -75,9 +75,7 @@ impl ActorDef {
 	}
 
 	pub fn innards(&self) -> impl Iterator<Item = Innard> {
-		self.syntax()
-			.children()
-			.filter_map(|node| Innard::cast(node))
+		self.syntax().children().filter_map(Innard::cast)
 	}
 }
 
@@ -228,29 +226,26 @@ simple_astnode!(Syn, StatesDef, Syn::StatesDef);
 impl StatesDef {
 	#[must_use]
 	pub fn usage_quals(&self) -> Option<impl Iterator<Item = StateUsage>> {
-		if let Some(node) = self
-			.syntax()
+		self.syntax()
 			.first_child()
 			.filter(|node| node.kind() == Syn::StatesUsage)
-		{
-			Some(node.children_with_tokens().filter_map(|elem| {
-				let Some(token) = elem.into_token() else { return None; };
+			.map(|node| {
+				node.children_with_tokens().filter_map(|elem| {
+					let Some(token) = elem.into_token() else { return None; };
 
-				if token.text().eq_ignore_ascii_case("actor") {
-					Some(StateUsage::Actor)
-				} else if token.text().eq_ignore_ascii_case("item") {
-					Some(StateUsage::Item)
-				} else if token.text().eq_ignore_ascii_case("overlay") {
-					Some(StateUsage::Overlay)
-				} else if token.text().eq_ignore_ascii_case("weapon") {
-					Some(StateUsage::Weapon)
-				} else {
-					None
-				}
-			}))
-		} else {
-			None
-		}
+					if token.text().eq_ignore_ascii_case("actor") {
+						Some(StateUsage::Actor)
+					} else if token.text().eq_ignore_ascii_case("item") {
+						Some(StateUsage::Item)
+					} else if token.text().eq_ignore_ascii_case("overlay") {
+						Some(StateUsage::Overlay)
+					} else if token.text().eq_ignore_ascii_case("weapon") {
+						Some(StateUsage::Weapon)
+					} else {
+						None
+					}
+				})
+			})
 	}
 
 	pub fn items(&self) -> impl Iterator<Item = StatesItem> {
@@ -272,7 +267,7 @@ pub enum StateUsage {
 pub enum StatesItem {
 	State(StateDef),
 	Label(StateLabel),
-	Change(SyntaxNode),
+	Flow(SyntaxNode),
 }
 
 impl AstNode for StatesItem {
@@ -292,7 +287,7 @@ impl AstNode for StatesItem {
 		match node.kind() {
 			Syn::StateDef => Some(Self::State(StateDef(node))),
 			Syn::StateLabel => Some(Self::Label(StateLabel(node))),
-			Syn::StateFlow => Some(Self::Change(node)),
+			Syn::StateFlow => Some(Self::Flow(node)),
 			_ => None,
 		}
 	}
@@ -301,27 +296,27 @@ impl AstNode for StatesItem {
 		match self {
 			StatesItem::State(inner) => inner.syntax(),
 			StatesItem::Label(inner) => inner.syntax(),
-			StatesItem::Change(inner) => &inner,
+			StatesItem::Flow(inner) => inner,
 		}
 	}
 }
 
 impl StatesItem {
 	#[must_use]
-	pub fn into_change(self) -> Option<StateChange> {
+	pub fn into_flow(self) -> Option<StateFlow> {
 		match self {
-			StatesItem::Change(inner) => Some({
+			StatesItem::Flow(inner) => Some({
 				let tok1 = inner.first_token().unwrap();
 
 				match tok1.kind() {
 					Syn::KwGoto => {
 						let mut target = None;
-						let mut super_target = false;
+						let mut scope = None;
 						let mut offset = None;
 
 						for elem in inner.children_with_tokens() {
-							if elem.kind() == Syn::Ident {
-								super_target = true;
+							if elem.kind() == Syn::Ident || elem.kind() == Syn::KwSuper {
+								scope = Some(elem.into_token().unwrap());
 							} else if elem.kind() == Syn::GotoOffset {
 								offset = elem
 									.into_node()
@@ -336,16 +331,16 @@ impl StatesItem {
 							}
 						}
 
-						StateChange::Goto {
+						StateFlow::Goto {
 							target: target.unwrap(),
 							offset,
-							super_target,
+							scope,
 						}
 					}
-					Syn::KwLoop => StateChange::Loop,
-					Syn::KwStop => StateChange::Stop,
-					Syn::KwWait => StateChange::Wait,
-					Syn::KwFail => StateChange::Fail,
+					Syn::KwLoop => StateFlow::Loop,
+					Syn::KwStop => StateFlow::Stop,
+					Syn::KwWait => StateFlow::Wait,
+					Syn::KwFail => StateFlow::Fail,
 					_ => unreachable!(),
 				}
 			}),
@@ -505,7 +500,7 @@ impl StateLabel {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
-pub enum StateChange {
+pub enum StateFlow {
 	Loop,
 	Stop,
 	Wait,
@@ -514,7 +509,7 @@ pub enum StateChange {
 		target: IdentChain,
 		/// Will be `None` if the integer literal can not fit into a [`u64`].
 		offset: Option<u64>,
-		/// This is `true` if `target` is prefixed with `super::`.
-		super_target: bool,
+		/// Tagged either [`Syn::KwSuper`] or [`Syn::Ident`].
+		scope: Option<SyntaxToken>,
 	},
 }

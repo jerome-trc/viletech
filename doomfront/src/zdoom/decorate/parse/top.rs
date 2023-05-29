@@ -146,7 +146,7 @@ mod test {
 
 	use crate::{
 		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::decorate::{ast, SyntaxNode},
+		zdoom::decorate::{ast, parse::file, SyntaxNode},
 	};
 
 	use super::*;
@@ -166,7 +166,7 @@ enum {
 
 "#;
 
-		let parser = super::enum_def::<GreenCacheNoop>();
+		let parser = file::<GreenCacheNoop>();
 
 		let ptree = crate::parse(
 			parser,
@@ -175,6 +175,9 @@ enum {
 			SOURCE,
 			Token::stream(SOURCE, None),
 		);
+
+		assert_no_errors(&ptree);
+
 		let cursor = SyntaxNode::new_root(ptree.root);
 		let enumdef = ast::TopLevel::cast(cursor.children().next().unwrap())
 			.unwrap()
@@ -218,7 +221,7 @@ enum {
 		const SOURCE: &str =
 			" #InClUdE \"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\"";
 
-		let parser = super::include_directive::<GreenCacheNoop>();
+		let parser = file::<GreenCacheNoop>();
 
 		let ptree = crate::parse(
 			parser,
@@ -227,6 +230,8 @@ enum {
 			SOURCE,
 			Token::stream(SOURCE, None),
 		);
+
+		assert_no_errors(&ptree);
 
 		let cursor = SyntaxNode::new_root(ptree.root);
 
@@ -266,7 +271,7 @@ const float INFERNO /* forbidden */ = 0.9999999;
 
 "##;
 
-		let parser = const_def::<GreenCacheNoop>();
+		let parser = file::<GreenCacheNoop>();
 
 		let ptree = crate::parse(
 			parser,
@@ -275,6 +280,9 @@ const float INFERNO /* forbidden */ = 0.9999999;
 			SOURCE,
 			Token::stream(SOURCE, None),
 		);
+
+		assert_no_errors(&ptree);
+
 		let cursor = SyntaxNode::new_root(ptree.root);
 		let mut constdefs = cursor
 			.children()

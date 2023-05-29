@@ -152,13 +152,27 @@ pub fn assert_no_errors<'i, T>(pt: &ParseTree<'i, T>)
 where
 	T: logos::Logos<'i> + std::fmt::Debug,
 {
-	assert!(pt.errors.is_empty(), "Encountered errors: {}", {
+	let format_errs = |pt: &ParseTree<'i, T>| {
 		let mut output = String::new();
 
 		for err in &pt.errors {
-			output.push_str(&format!("\r\n{err:#?}"));
+			match err.reason() {
+				chumsky::error::RichReason::ExpectedFound { .. }
+				| chumsky::error::RichReason::Custom(_) => output.push_str(&format!("\r\n{err:#?}")),
+				chumsky::error::RichReason::Many(errs) => {
+					for e in errs {
+						output.push_str(&format!("\r\n{e:#?}"));
+					}
+				}
+			}
 		}
 
 		output
-	})
+	};
+
+	assert!(
+		pt.errors.is_empty(),
+		"Encountered errors: {}\r\n",
+		format_errs(pt)
+	);
 }
