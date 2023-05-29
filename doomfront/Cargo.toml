@@ -23,7 +23,7 @@ umapinfo = []
 zdoom = []
 
 [dependencies]
-chumsky = "1.0.0-alpha.4"
+chumsky = { workspace = true }
 logos = { workspace = true }
-rowan = "0.15.11"
-serde = { version = "1.0.152", features = ["derive"], optional = true }
+rowan = { workspace = true }
+serde = { workspace = true, optional = true }
