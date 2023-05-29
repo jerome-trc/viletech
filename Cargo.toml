@@ -72,7 +72,7 @@ rayon = "1.6.1"
 regex = "1.7.1"
 rfd = "0.11.1"
 rowan = "0.15.11"
-serde = "1.0.152"
+serde = { version = "1.0.152", features = ["derive"] }
 sha3 = "0.10.6"
 slotmap = { version = "1.0.6", features = ["serde"] }
 smallvec = { version = "1.10.0", features = ["const_generics", "const_new"] }

@@ -47,7 +47,13 @@ features = [
 ]
 
 [dependencies]
-doomfront = { path = "../doomfront", features = ["ser_de"] }
+doomfront = { path = "../doomfront", features = [
+	"ser_de",
+	"acs",
+	"eternity",
+	"umapinfo",
+	"zdoom",
+] }
 vzs = { package = "vzscript", path = "../vzscript" }
 
 arrayvec = { workspace = true }
