@@ -24,7 +24,7 @@ impl AstNode for Expr {
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::ExprCall | Syn::ExprIdent | Syn::Literal)
+		matches!(kind, Syn::CallExpr | Syn::IdentExpr | Syn::Literal)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -32,8 +32,8 @@ impl AstNode for Expr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
-			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
+			Syn::CallExpr => Some(Self::Call(ExprCall(node))),
+			Syn::IdentExpr => Some(Self::Ident(ExprIdent(node))),
 			Syn::Literal => Some(Self::Literal(Literal(node))),
 			_ => None,
 		}
@@ -71,7 +71,7 @@ impl Expr {
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
 pub struct ExprCall(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ExprCall, Syn::ExprCall);
+simple_astnode!(Syn, ExprCall, Syn::CallExpr);
 
 impl ExprCall {
 	/// The returned token is always tagged [`Syn::Ident`].
@@ -86,7 +86,7 @@ impl ExprCall {
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
 pub struct ExprIdent(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ExprIdent, Syn::ExprIdent);
+simple_astnode!(Syn, ExprIdent, Syn::IdentExpr);
 
 impl ExprIdent {
 	#[must_use]

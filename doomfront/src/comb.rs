@@ -12,8 +12,8 @@ use crate::{
 ///
 /// ```
 /// primitive::just(token).map_with_state(move |_, sp, state: &mut ParseState<'i, C>| {
-///	    state.gtb.token(syn, &state.source[sp]);
-///	})
+///     state.gtb.token(syn, &state.source[sp]);
+/// })
 /// ```
 pub fn just<'i, T, C>(
 	token: T,
@@ -24,6 +24,27 @@ where
 	C: GreenCache,
 {
 	primitive::just(token).map_with_state(move |_, span, state: &mut ParseState<'i, C>| {
+		state.gtb.token(syn, &state.source[span]);
+	})
+}
+
+/// Shorthand for the following:
+///
+/// ```
+/// primitive::none_of(seq).map_with_state(move |_, sp, state: &mut ParseState<'i, C>| {
+///     state.gtb.token(syn, &state.source[sp]);
+/// })
+/// ```
+pub fn none_of<'i, T, S, C>(
+	seq: S,
+	syn: SyntaxKind,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+where
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	S: chumsky::container::Seq<'i, T> + Clone,
+	C: GreenCache,
+{
+	primitive::none_of(seq).map_with_state(move |_, span, state: &mut ParseState<'i, C>| {
 		state.gtb.token(syn, &state.source[span]);
 	})
 }

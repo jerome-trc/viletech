@@ -6,18 +6,18 @@ mod top;
 use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
-	util::{builder::GreenCache, state::ParseState},
-	ParseTree,
+	util::builder::GreenCache,
+	zdoom::{lex::TokenStream, Extra},
 };
 
-use super::Syn;
+pub use self::{actor::*, common::*, expr::*, top::*};
 
-use self::{actor::*, common::*, top::*};
-
-#[must_use]
-pub fn parse<'i, C: 'i + GreenCache>(source: &'i str, cache: Option<C>) -> Option<ParseTree<'i>> {
-	let parser = primitive::choice((
-		wsp_ext(),
+pub fn file<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = primitive::choice((
+		trivia(),
 		actor_def(),
 		include_directive(),
 		const_def(),
@@ -26,20 +26,12 @@ pub fn parse<'i, C: 'i + GreenCache>(source: &'i str, cache: Option<C>) -> Optio
 	.repeated()
 	.collect::<()>();
 
-	let mut state = ParseState::new(cache);
-
-	state.gtb.open(Syn::Root.into());
-
-	let (output, errors) = parser
-		.parse_with_state(source, &mut state)
-		.into_output_errors();
-
-	output.map(|_| {
-		state.gtb.close();
-
-		ParseTree {
-			root: state.gtb.finish(),
-			errors,
-		}
-	})
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }

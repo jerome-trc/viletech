@@ -2,334 +2,765 @@ use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
 	comb,
-	util::{builder::GreenCache, state::*},
-	zdoom::{self, decorate::Syn, lexer::*},
-	Extra,
+	util::{builder::GreenCache, state::ParseState},
+	zdoom::{
+		decorate::Syn,
+		lex::{Token, TokenStream},
+		Extra,
+	},
+	ParseError,
 };
 
 use super::{
 	common::*,
-	expr::*,
+	expr,
 	top::{const_def, enum_def},
 };
 
-pub(super) fn actor_def<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		comb::kw_nc("actor")
-			.map_with_state(gtb_open_with(Syn::ActorDef.into(), Syn::KwActor.into())),
-		wsp_ext().repeated().at_least(1).collect::<()>(),
-		actor_ident().map_with_state(gtb_token(Syn::Ident.into())),
-		inherit_spec().or_not(),
-		replaces_clause().or_not(),
-		editor_number().or_not(),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::just("{").map_with_state(gtb_token(Syn::BraceL.into())),
-		actor_innards().repeated().collect::<()>(),
-		primitive::just("}").map_with_state(gtb_token(Syn::BraceR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::ActorDef.into()))
+pub fn actor_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::ActorDef.into(),
+		primitive::group((
+			comb::string_nc(Token::Ident, "actor", Syn::KwActor.into()),
+			trivia_1plus(),
+			actor_ident(),
+			inherit_spec().or_not(),
+			replaces_clause().or_not(),
+			editor_number().or_not(),
+			trivia_0plus(),
+			comb::just(Token::BraceL, Syn::BraceL.into()),
+			actor_innard().repeated().collect::<()>(),
+			comb::just(Token::BraceR, Syn::BraceR.into()),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn inherit_spec<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_checkpoint()),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::just(":").map_with_state(gtb_token(Syn::Colon.into())),
-		wsp_ext().repeated().collect::<()>(),
-		actor_ident().map_with_state(gtb_token(Syn::Ident.into())),
-	))
-	.map_with_state(gtb_close_checkpoint(Syn::InheritSpec.into()))
-	.map_err_with_state(gtb_cancel_checkpoint())
+fn inherit_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::InheritSpec.into(),
+		primitive::group((
+			trivia_0plus(),
+			comb::just(Token::Colon, Syn::Colon.into()),
+			trivia_0plus(),
+			actor_ident(),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-/// `whitespace+ 'replaces' whitespace+ ident`
-fn replaces_clause<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_checkpoint()),
-		wsp_ext().repeated().at_least(1).collect::<()>(),
-		comb::kw_nc("replaces").map_with_state(gtb_token(Syn::KwReplaces.into())),
-		wsp_ext().repeated().at_least(1).collect::<()>(),
-		actor_ident().map_with_state(gtb_token(Syn::Ident.into())),
-	))
-	.map_with_state(gtb_close_checkpoint(Syn::ReplacesClause.into()))
-	.map_err_with_state(gtb_cancel_checkpoint())
+fn replaces_clause<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::ReplacesClause.into(),
+		primitive::group((
+			trivia_1plus(),
+			comb::just(Token::KwReplaces, Syn::KwReplaces.into()),
+			trivia_1plus(),
+			actor_ident(),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn editor_number<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_checkpoint()),
-		wsp_ext().repeated().at_least(1).collect::<()>(),
-		zdoom::lexer::lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-	))
-	.map_with_state(gtb_close_checkpoint(Syn::EditorNumber.into()))
-	.map_err_with_state(gtb_cancel_checkpoint())
+fn editor_number<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::EditorNumber.into(),
+		primitive::group((
+			trivia_1plus(),
+			comb::just(Token::IntLit, Syn::IntLit.into()),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn actor_innards<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::choice((
-		wsp_ext(),
+pub fn actor_innard<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = primitive::choice((
+		trivia(),
 		flag_setting(),
 		const_def(),
 		enum_def(),
 		states_def(),
 		property_settings(),
-	))
+	));
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn flag_setting<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::one_of(['+', '-']).map_with_state(|c, _, state: &mut ParseState<C>| {
-			state.gtb.open(Syn::FlagSetting.into());
+pub fn flag_setting<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::FlagSetting.into(),
+		primitive::group((
+			primitive::choice((
+				comb::just(Token::Plus, Syn::Plus.into()),
+				comb::just(Token::Minus, Syn::Minus.into()),
+			)),
+			trivia_0plus(),
+			ident_chain(),
+		)),
+	);
 
-			match c {
-				'+' => state.gtb.token(Syn::Plus.into(), "+"),
-				'-' => state.gtb.token(Syn::Minus.into(), "-"),
-				_ => unreachable!(),
-			}
-		}),
-		wsp_ext().repeated().collect::<()>(),
-		ident_chain(),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::FlagSetting.into()))
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn property_settings<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
+pub fn property_settings<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
 	let part = primitive::choice((
-		lit_int_negative().map_with_state(gtb_token(Syn::LitInt.into())),
-		lit_float_negative().map_with_state(gtb_token(Syn::LitFloat.into())),
-		lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-		lit_float().map_with_state(gtb_token(Syn::LitFloat.into())),
-		lit_string().map_with_state(gtb_token(Syn::LitString.into())),
-		lit_name().map_with_state(gtb_token(Syn::LitName.into())),
-		comb::kw_nc("true").map_with_state(gtb_token(Syn::LitTrue.into())),
-		comb::kw_nc("false").map_with_state(gtb_token(Syn::LitFalse.into())),
+		int_lit_negative(),
+		float_lit_negative(),
+		comb::just(Token::IntLit, Syn::IntLit.into()),
+		comb::just(Token::FloatLit, Syn::FloatLit.into()),
+		comb::just(Token::StringLit, Syn::StringLit.into()),
+		comb::just(Token::NameLit, Syn::NameLit.into()),
+		comb::just(Token::KwTrue, Syn::KwTrue.into()),
+		comb::just(Token::KwFalse, Syn::KwFalse.into()),
 		ident_chain(),
 	));
 
-	primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::PropertySettings.into())),
-		part.clone(),
+	let ret = comb::node(
+		Syn::PropertySettings.into(),
 		primitive::group((
-			primitive::empty().map_with_state(gtb_checkpoint()),
-			wsp_ext().repeated().at_least(1).collect::<()>(),
-			part,
-		))
-		.map_err_with_state(gtb_cancel_checkpoint())
-		.repeated()
-		.collect::<()>(),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::PropertySettings.into()))
+			part.clone(),
+			comb::checkpointed(primitive::group((trivia_1plus(), part)))
+				.repeated()
+				.collect::<()>(),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
 // State machine definition ////////////////////////////////////////////////////
 
-fn states_def<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		comb::kw_nc("states")
-			.map_with_state(gtb_open_with(Syn::StatesDef.into(), Syn::KwStates.into())),
-		wsp_ext().repeated().collect::<()>(),
-		states_usage().or_not(),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::just("{").map_with_state(gtb_token(Syn::BraceL.into())),
-		primitive::choice((
-			state_def(),
-			state_label(),
-			state_change(),
-			wsp_ext().repeated().at_least(1).collect::<()>(),
-		))
-		.repeated()
-		.collect::<()>(),
-		primitive::just("}").map_with_state(gtb_token(Syn::BraceR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::StatesDef.into()))
-}
-
-fn states_usage<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::just("(")
-			.map_with_state(gtb_open_with(Syn::StatesUsage.into(), Syn::ParenL.into())),
-		primitive::choice((
-			comb::kw_nc("actor").map_with_state(gtb_token(Syn::StatesUsageActor.into())),
-			comb::kw_nc("item").map_with_state(gtb_token(Syn::StatesUsageItem.into())),
-			comb::kw_nc("overlay").map_with_state(gtb_token(Syn::StatesUsageOverlay.into())),
-			comb::kw_nc("weapon").map_with_state(gtb_token(Syn::StatesUsageWeapon.into())),
+pub fn states_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::StatesDef.into(),
+		primitive::group((
+			comb::just(Token::KwStates, Syn::KwStates.into()),
+			trivia_0plus(),
+			states_usage().or_not(),
+			trivia_0plus(),
+			comb::just(Token::BraceL, Syn::BraceL.into()),
+			primitive::choice((state_def(), state_label(), state_flow(), trivia())),
+			comb::just(Token::BraceR, Syn::BraceR.into()),
 		)),
-		primitive::just(")").map_with_state(gtb_token(Syn::ParenR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::StatesUsage.into()))
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn state_label<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::StateLabel.into())),
-		actor_ident().map_with_state(gtb_token(Syn::Ident.into())),
-		primitive::just(":").map_with_state(gtb_token(Syn::Colon.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::StateLabel.into()))
-}
-
-fn state_change<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	let kw = primitive::choice((
-		comb::kw_nc("fail").map_with_state(gtb_token(Syn::KwFail.into())),
-		comb::kw_nc("loop").map_with_state(gtb_token(Syn::KwLoop.into())),
-		comb::kw_nc("stop").map_with_state(gtb_token(Syn::KwStop.into())),
-		comb::kw_nc("wait").map_with_state(gtb_token(Syn::KwWait.into())),
+pub fn states_usage<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let single = primitive::choice((
+		comb::string_nc(Token::Ident, "actor", Syn::Ident.into()),
+		comb::string_nc(Token::Ident, "item", Syn::Ident.into()),
+		comb::string_nc(Token::Ident, "overlay", Syn::Ident.into()),
+		comb::string_nc(Token::Ident, "weapon", Syn::Ident.into()),
 	));
 
-	let offset = primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::GotoOffset.into())),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::just("+").map_with_state(gtb_token(Syn::Plus.into())),
-		wsp_ext().repeated().collect::<()>(),
-		lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::GotoOffset.into()));
+	let rep = comb::checkpointed(primitive::group((
+		single.clone(),
+		trivia_0plus(),
+		comb::just(Token::Comma, Syn::Comma.into()),
+		trivia_0plus(),
+	)));
 
-	let sup = primitive::group((
-		primitive::empty().map_with_state(gtb_checkpoint()),
-		comb::kw_nc("super").map_with_state(gtb_token(Syn::Ident.into())),
-		primitive::just("::").map_with_state(gtb_token(Syn::Colon2.into())),
-	))
-	.map_err_with_state(gtb_cancel_checkpoint());
+	let ret = comb::node(
+		Syn::StatesUsage.into(),
+		primitive::group((
+			comb::just(Token::ParenL, Syn::ParenL.into()),
+			trivia_0plus(),
+			single,
+			trivia_0plus(),
+			rep.repeated().collect::<()>(),
+			comb::just(Token::ParenR, Syn::ParenR.into()),
+		)),
+	);
 
-	let goto = primitive::group((
-		comb::kw_nc("goto").map_with_state(gtb_token(Syn::KwGoto.into())),
-		wsp_ext().repeated().at_least(1).collect::<()>(),
-		sup.or_not(),
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_label<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let name = primitive::one_of([Token::IntLit, Token::Ident])
+		.repeated()
+		.collect::<()>()
+		.map_with_state(|(), span, state: &mut ParseState<C>| {
+			state.gtb.token(Syn::Ident.into(), &state.source[span])
+		});
+
+	let ret = comb::node(
+		Syn::StateLabel.into(),
+		primitive::group((name, comb::just(Token::Colon, Syn::Colon.into()))),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_flow<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let kw = primitive::choice((
+		comb::just(Token::KwStop, Syn::KwStop.into()),
+		comb::string_nc(Token::Ident, "loop", Syn::KwLoop.into()),
+		comb::string_nc(Token::Ident, "fail", Syn::KwFail.into()),
+		comb::string_nc(Token::Ident, "wait", Syn::KwWait.into()),
+	));
+
+	let offset = comb::node(
+		Syn::GotoOffset.into(),
+		primitive::group((
+			trivia_0plus(),
+			comb::just(Token::Plus, Syn::Plus.into()),
+			trivia_0plus(),
+			comb::just(Token::IntLit, Syn::IntLit.into()),
+		)),
+	);
+
+	let scope = comb::checkpointed(primitive::group((
+		primitive::choice((
+			comb::just(Token::KwSuper, Syn::KwSuper.into()),
+			comb::just(Token::Ident, Syn::Ident.into()),
+		)),
+		trivia_0plus(),
+		comb::just(Token::Colon2, Syn::Colon2.into()),
+		trivia_0plus(),
+	)));
+
+	let goto = comb::checkpointed(primitive::group((
+		comb::just(Token::KwGoto, Syn::KwGoto.into()),
+		trivia_1plus(),
+		scope.or_not(),
 		ident_chain(),
 		offset.or_not(),
+	)));
+
+	let ret = comb::node(
+		Syn::StateFlow.into(),
+		primitive::choice((kw, goto.map(|_| ()))),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::StateDef.into(),
+		primitive::group((
+			state_sprite(),
+			trivia_1line(),
+			state_frames(),
+			trivia_1line(),
+			state_duration(),
+			state_quals(),
+			action_function().or_not(),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_sprite<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let basic = primitive::one_of([Token::Ident, Token::IntLit])
+		.repeated()
+		.collect::<()>()
+		.try_map_with_state(|(), span: logos::Span, state: &mut ParseState<C>| {
+			if span.len() == 4 {
+				state
+					.gtb
+					.token(Syn::StateSprite.into(), &state.source[span]);
+				Ok(())
+			} else {
+				Err(ParseError::custom(
+					span,
+					"state sprite names must be exactly 4 characters long",
+				))
+			}
+		});
+
+	let hold = primitive::just(Token::StringLit).try_map_with_state(
+		|_, span: logos::Span, state: &mut ParseState<C>| {
+			if span.len() == 6 {
+				state
+					.gtb
+					.token(Syn::StateSprite.into(), &state.source[span]);
+				Ok(())
+			} else {
+				Err(ParseError::custom(
+					span,
+					"state sprite names must be exactly 4 characters long",
+				))
+			}
+		},
+	);
+
+	let ret = primitive::choice((basic, hold));
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_frames<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let unquoted = primitive::just(Token::Ident).try_map_with_state(
+		|_, span: logos::Span, state: &mut ParseState<C>| {
+			if !state.source[span.clone()].contains(|c: char| !c.is_ascii_alphabetic()) {
+				state
+					.gtb
+					.token(Syn::StateFrames.into(), &state.source[span]);
+				Ok(())
+			} else {
+				Err(ParseError::custom(
+					span.clone(),
+					format!("invalid frame character string `{}`", &state.source[span]),
+				))
+			}
+		},
+	);
+
+	let quoted = primitive::just(Token::StringLit).try_map_with_state(
+		|_, span: logos::Span, state: &mut ParseState<C>| {
+			let inner = &state.source[(span.start + 1)..(span.end - 1)];
+
+			if !inner
+				.contains(|c: char| !c.is_ascii_alphabetic() || c != '[' || c != ']' || c != '\\')
+			{
+				state
+					.gtb
+					.token(Syn::StateFrames.into(), &state.source[span]);
+				Ok(())
+			} else {
+				Err(ParseError::custom(
+					span.clone(),
+					format!("invalid frame character string `{}`", &state.source[span]),
+				))
+			}
+		},
+	);
+
+	let ret = primitive::choice((unquoted, quoted));
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn state_duration<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = primitive::choice((
+		int_lit_negative(),
+		comb::just(Token::IntLit, Syn::IntLit.into()),
+		expr::call_expr(expr::expr()),
 	));
 
-	primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::StateChange.into())),
-		primitive::choice((kw, goto.map(|_| ()))),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::StateChange.into()))
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn state_def<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::StateDef.into())),
-		state_sprite(),
-		wsp_1line().repeated().at_least(1).collect::<()>(),
-		state_frames(),
-		wsp_1line().repeated().at_least(1).collect::<()>(),
-		state_duration(),
-		state_quals(),
-		action_function().or_not(),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::StateDef.into()))
-}
-
-fn state_sprite<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	let alphanum = primitive::choice((
-		comb::ascii_letter(),
-		comb::dec_digit(),
-		primitive::just('_'),
-	))
-	.repeated()
-	.exactly(4)
-	.slice();
-
-	primitive::choice((
-		alphanum.map_with_state(gtb_token(Syn::StateSprite.into())),
-		primitive::just("\"####\"").map_with_state(gtb_token(Syn::StateSprite.into())),
-		primitive::just("\"----\"").map_with_state(gtb_token(Syn::StateSprite.into())),
-	))
-}
-
-fn state_frames<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	let alpha = primitive::one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-		.repeated()
-		.at_least(1)
-		.slice();
-
-	primitive::choice((
-		alpha.map_with_state(gtb_token(Syn::StateFrames.into())),
-		zdoom::lexer::lit_string().map_with_state(gtb_token(Syn::LitString.into())),
-	))
-}
-
-fn state_duration<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::choice((
-		lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-		lit_int_negative().map_with_state(gtb_token(Syn::LitInt.into())),
-		expr_call(expr()),
-	))
-}
-
-fn state_quals<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	let light = primitive::group((
-		comb::kw_nc("light")
-			.map_with_state(gtb_open_with(Syn::StateLight.into(), Syn::KwLight.into())),
-		primitive::just("(").map_with_state(gtb_token(Syn::ParenL.into())),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::choice((
-			lit_string().map_with_state(gtb_token(Syn::LitString.into())),
-			lit_name().map_with_state(gtb_token(Syn::LitName.into())),
+pub fn state_quals<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let light = comb::node(
+		Syn::StateLight.into(),
+		primitive::group((
+			comb::just(Token::KwLight, Syn::KwLight.into()),
+			trivia_0plus(),
+			comb::just(Token::ParenL, Syn::ParenL.into()),
+			trivia_0plus(),
+			primitive::choice((
+				comb::just(Token::StringLit, Syn::StringLit.into()),
+				comb::just(Token::NameLit, Syn::NameLit.into()),
+			)),
+			trivia_0plus(),
+			comb::just(Token::ParenR, Syn::ParenR.into()),
 		)),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::just(")").map_with_state(gtb_token(Syn::ParenR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_with_state(gtb_cancel(Syn::StateLight.into()));
+	);
 
-	let offset = primitive::group((
-		comb::kw_nc("offset")
-			.map_with_state(gtb_open_with(Syn::StateOffset.into(), Syn::KwOffset.into())),
-		primitive::just("(").map_with_state(gtb_token(Syn::ParenL.into())),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::choice((
-			lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-			lit_int_negative().map_with_state(gtb_token(Syn::LitInt.into())),
+	let offs_num = primitive::choice((
+		int_lit_negative(),
+		comb::just(Token::IntLit, Syn::IntLit.into()),
+	));
+
+	let offset = comb::node(
+		Syn::StateOffset.into(),
+		primitive::group((
+			comb::just(Token::KwOffset, Syn::KwOffset.into()),
+			trivia_0plus(),
+			comb::just(Token::ParenL, Syn::ParenL.into()),
+			trivia_0plus(),
+			offs_num.clone(),
+			trivia_0plus(),
+			comb::just(Token::Comma, Syn::Comma.into()),
+			trivia_0plus(),
+			offs_num,
+			trivia_0plus(),
+			comb::just(Token::ParenR, Syn::ParenR.into()),
 		)),
-		primitive::just(","),
-		wsp_ext().repeated().collect::<()>(),
-		primitive::choice((
-			lit_int().map_with_state(gtb_token(Syn::LitInt.into())),
-			lit_int_negative().map_with_state(gtb_token(Syn::LitInt.into())),
-		)),
-		primitive::just(")").map_with_state(gtb_token(Syn::ParenR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_with_state(gtb_cancel(Syn::StateOffset.into()));
+	);
 
 	let qual = primitive::choice((
-		comb::kw_nc("bright").map_with_state(gtb_token(Syn::KwBright.into())),
-		comb::kw_nc("canraise").map_with_state(gtb_token(Syn::KwCanRaise.into())),
-		comb::kw_nc("fast").map_with_state(gtb_token(Syn::KwFast.into())),
-		comb::kw_nc("nodelay").map_with_state(gtb_token(Syn::KwNoDelay.into())),
-		comb::kw_nc("slow").map_with_state(gtb_token(Syn::KwSlow.into())),
-		// Parameterized ///////////////////////////////////////////////////////
+		comb::just(Token::KwCanRaise, Syn::KwCanRaise.into()),
+		comb::just(Token::KwBright, Syn::KwBright.into()),
+		comb::just(Token::KwSlow, Syn::KwSlow.into()),
+		comb::just(Token::KwNoDelay, Syn::KwNoDelay.into()),
+		comb::just(Token::KwFast, Syn::KwFast.into()),
 		light,
 		offset,
 	));
 
-	primitive::group((
-		primitive::empty().map_with_state(gtb_checkpoint()),
-		wsp_1line().repeated().at_least(1).collect::<()>(),
+	let ret = comb::checkpointed(primitive::group((
+		trivia_1line().repeated().at_least(1).collect::<()>(),
 		qual,
-	))
-	.map_err_with_state(gtb_cancel_checkpoint())
+	)))
 	.repeated()
-	.collect::<()>()
+	.collect::<()>();
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-fn action_function<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> {
-	primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::ActionFunction.into())),
-		wsp_1line().repeated().collect::<()>(),
-		primitive::choice((expr_call(expr()) /* TODO: Anonymous functions. */,)),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::ActionFunction.into()))
+pub fn action_function<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::ActionFunction.into(),
+		primitive::group((
+			trivia_1line().repeated().collect::<()>(),
+			primitive::choice((
+				expr::call_expr(expr::expr()),
+				// TODO: Anonymous functions.
+			)),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use rowan::ast::AstNode;
+
+	use crate::{
+		util::builder::GreenCacheNoop,
+		zdoom::decorate::{ast, SyntaxNode},
+	};
+
+	use super::*;
+
+	#[test]
+	fn smoke() {
+		const SOURCE: &str = r#####"
+aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
+	enum {
+		CMDCTRL,
+		PHOBOSLAB = CMDCTRL,
+		CENTPROC = 0,
+		COMPSTAT = 9.9,
+		PHOBOSANOMALY = false,
+		MILBASE = "Yes, string literals are valid enum initializers in DECORATE!",
+	}; // Floats and booleans too.
+
+	CONST int DEIMOSANOMALY = 1234567890;
+
+	ResetAllFlagsOrSomething
+	Containment.Area
+	+REFINERY
+	DropItem "CMDCENTER" 255 1 PainSound "spawning/vats"
+
+	States(Actor, overlay, ITEM, WeapoN) {
+		Spawn: TNT1 A Random(1, 6)
+		Wickedly:
+			____ "#" 0
+			goto super::Spawn.Something + 0
+		Repent:
+			3HA_ A 1 bright light('perfect')
+			"####" B 6 canraise fast nodelay slow A_SpawnItemEx [rngtbl] (1, "??")
+			"----" "]" -1 offset(-1, 1) light("sever")
+			Loop
+	}
+
+	-TOWER.OF.BABEL
+	Decal mysteryfortress
+	ClassReference 'Pandemonium'
+
+}
+		"#####;
+
+		let parser = actor_def::<GreenCacheNoop>();
+
+		let ptree = crate::parse(
+			parser,
+			None,
+			Syn::Root.into(),
+			SOURCE,
+			Token::stream(SOURCE, None),
+		);
+		let cursor = SyntaxNode::new_root(ptree.root);
+		let toplevel = ast::TopLevel::cast(cursor.first_child().unwrap()).unwrap();
+
+		let actordef = match toplevel {
+			ast::TopLevel::ActorDef(inner) => inner,
+			other => panic!("Expected `ActorDef`, found: {other:#?}"),
+		};
+
+		assert_eq!(actordef.name().text(), "hangar");
+
+		assert_eq!(
+			actordef
+				.base_class()
+				.expect("Actor definition has no base class.")
+				.text(),
+			"nuclearplant"
+		);
+
+		assert_eq!(
+			actordef
+				.replaced_class()
+				.expect("Actor definition has no replacement clause.")
+				.text(),
+			"toxinrefinery"
+		);
+
+		assert_eq!(
+			actordef
+				.editor_number()
+				.expect("Actor definition has no editor number.")
+				.text()
+				.parse::<u16>()
+				.expect("Actor editor number is not a valid u16."),
+			10239
+		);
+
+		let mut innards = actordef.innards();
+
+		let _ = innards.next().unwrap().into_enumdef().unwrap();
+		let constdef = innards.next().unwrap().into_constdef().unwrap();
+		assert_eq!(constdef.name().text(), "DEIMOSANOMALY");
+		assert_eq!(constdef.type_spec(), ast::ConstType::Int);
+
+		let _ = innards.next().unwrap().into_propsettings().unwrap();
+
+		let flag1 = innards.next().unwrap().into_flagsetting().unwrap();
+		assert!(flag1.is_adding());
+		assert_eq!(flag1.name().syntax().text(), "REFINERY");
+
+		let _ = innards.next().unwrap().into_propsettings().unwrap();
+
+		let statesdef = innards.next().unwrap().into_statesdef().unwrap();
+		let mut usage_quals = statesdef.usage_quals().unwrap();
+
+		assert_eq!(usage_quals.next().unwrap(), ast::StateUsage::Actor);
+		assert_eq!(usage_quals.next().unwrap(), ast::StateUsage::Overlay);
+		assert_eq!(usage_quals.next().unwrap(), ast::StateUsage::Item);
+		assert_eq!(usage_quals.next().unwrap(), ast::StateUsage::Weapon);
+
+		let mut state_items = statesdef.items();
+
+		let label1 = state_items.next().unwrap().into_label().unwrap();
+		assert_eq!(label1.token().text(), "Spawn");
+
+		let state1 = state_items.next().unwrap().into_state().unwrap();
+
+		assert_eq!(state1.sprite().text(), "TNT1");
+		assert_eq!(state1.frames().text(), "A");
+
+		let state1_dur = state1.duration().into_node().unwrap();
+		assert_eq!(
+			ast::ExprCall::cast(state1_dur).unwrap().name().text(),
+			"Random"
+		);
+
+		let label2 = state_items.next().unwrap().into_label().unwrap();
+		assert_eq!(label2.token().text(), "Wickedly");
+
+		let _state2 = state_items.next().unwrap().into_state().unwrap();
+		let change1 = state_items.next().unwrap().into_change().unwrap();
+		match change1 {
+			ast::StateChange::Goto {
+				target,
+				offset,
+				super_target,
+			} => {
+				assert_eq!(target.syntax().text(), "Spawn.Something");
+				assert_eq!(offset.unwrap(), 0);
+				assert!(super_target);
+			}
+			other => panic!("Expected `StateChange::Goto`, found: {other:#?}"),
+		}
+
+		let _ = state_items.next().unwrap().into_label().unwrap();
+		let state3 = state_items.next().unwrap().into_state().unwrap();
+		assert_eq!(state3.light().unwrap().text(), "'perfect'");
+
+		let state4 = state_items.next().unwrap().into_state().unwrap();
+		let mut state4_quals = state4.qualifiers();
+
+		assert!(matches!(
+			state4_quals.next().unwrap(),
+			ast::StateQual::CanRaise
+		));
+		assert!(matches!(state4_quals.next().unwrap(), ast::StateQual::Fast));
+		assert!(matches!(
+			state4_quals.next().unwrap(),
+			ast::StateQual::NoDelay
+		));
+		assert!(matches!(state4_quals.next().unwrap(), ast::StateQual::Slow));
+	}
 }

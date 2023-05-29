@@ -6,49 +6,68 @@
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
+	/// `'actor' actorident? inheritspec? replacesclause? editornum? '{' innard* '}'`
 	ActorDef,
+	/// Optional part at the end of a [`Syn::StateDef`].
 	ActionFunction,
+	/// `'(' exprs? ')'`
 	ArgList,
-	Argument,
+	/// `'const' 'int'|'float'|'fixed' ident '=' expr ';'`
 	ConstDef,
+	/// Wraps a [`Syn::IntLit`].
 	EditorNumber,
+	/// `'enum' '{' variant* '}' ';'`
 	EnumDef,
+	/// `ident ('=' expr)?`
 	EnumVariant,
+	/// A sequence of tokens that either did not form a valid syntax element,
+	/// or which contained one or more tokens considered invalid by the lexer.
+	Error,
 	/// `(+ | -) ident`
 	FlagSetting,
+	/// `'+' integer`
 	GotoOffset,
 	/// `(ident) | (ident ('.' ident)?)`
 	IdentChain,
+	/// `':' actorident`
 	InheritSpec,
-	Literal,
 	PropertySettings,
+	/// `'states' '{' (statedef|stateflow|statelabel)* '}'`
 	StatesDef,
+	/// For child nods under a [`Syn::StatesDef`].
 	StateDef,
-	StateChange,
+	StateFlow,
+	/// `ident ':'`
 	StateLabel,
+	/// `'light' '(' string ')'`
 	StateLight,
+	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,
+	/// `'(' ident+ ')'`, where `ident` is "actor", "item", "overlay", or "weapon"
+	/// (matched ASCII case-insensitively).
 	StatesUsage,
+	/// `'replaces' actorident`
 	ReplacesClause,
+	/// `'[' ident ']'`, between a call identifier and argument list.
 	RngSpec,
+	/// The top-level node, representing the whole file.
 	Root,
 	// Nodes: expressions //////////////////////////////////////////////////////
-	ExprCall,
-	ExprIdent,
+	CallExpr,
+	IdentExpr,
+	Literal,
 	// Nodes: preprocessor /////////////////////////////////////////////////////
-	/// [`Syn::PreprocInclude`] followed by a [`Syn::LitString`].
+	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
 	IncludeDirective,
-	// Tokens: preprocessor ////////////////////////////////////////////////////
-	/// The exact string `#include`, case-insensitive.
-	PreprocInclude,
 	// Tokens: literals ////////////////////////////////////////////////////////
-	LitFalse,
-	LitFloat,
-	LitInt,
-	/// Like [`Syn::LitString`] but delimited by single-quotes (`'`) instead of double-quotes.
-	LitName,
-	LitTrue,
-	LitString,
+	/// See [`crate::zdoom::lex::Token::FloatLit`].
+	FloatLit,
+	/// See [`crate::zdoom::lex::Token::IntLit`].
+	IntLit,
+	/// See [`crate::zdoom::lex::Token::NameLit`].
+	NameLit,
+	/// See [`crate::zdoom::lex::Token::StringLit`].
+	StringLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	KwActor,
 	KwBright,
@@ -56,6 +75,7 @@ pub enum Syn {
 	KwConst,
 	KwEnum,
 	KwFail,
+	KwFalse,
 	KwFast,
 	KwFixed,
 	KwFloat,
@@ -69,6 +89,8 @@ pub enum Syn {
 	KwSlow,
 	KwStates,
 	KwStop,
+	KwSuper,
+	KwTrue,
 	KwWait,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
 	BraceL,
@@ -82,22 +104,16 @@ pub enum Syn {
 	Minus,
 	ParenL,
 	ParenR,
-	Period,
+	Dot,
 	Plus,
 	Semicolon,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
+	/// The exact string `#include`, ASCII case-insensitive.
+	PoundInclude,
 	/// `"####"`, `"----"`,
 	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
 	StateSprite,
 	StateFrames,
-	/// The exact string `actor`, ASCII case insensitive.
-	StatesUsageActor,
-	/// The exact string `item`, ASCII case insensitive.
-	StatesUsageItem,
-	/// The exact string `overlay`, ASCII case insensitive.
-	StatesUsageOverlay,
-	/// The exact string `weapon`, ASCII case insensitive.
-	StatesUsageWeapon,
 	// Tokens: foundational ////////////////////////////////////////////////////
 	/// Either single-line or multi-line.
 	Comment,

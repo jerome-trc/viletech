@@ -2,104 +2,177 @@ use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
 	comb,
-	util::{builder::GreenCache, state::*},
-	zdoom::{decorate::Syn, lexer::*},
-	Extra,
+	util::builder::GreenCache,
+	zdoom::{
+		decorate::Syn,
+		lex::{Token, TokenStream},
+		Extra,
+	},
 };
 
-use super::common::{self, wsp_ext};
+use super::common::*;
 
-pub(super) fn expr<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
-	// Parsing DECORATE expressions is tricky. In the reference implementation,
-	// a function call does not require a parenthesis-delimited argument list,
-	// making them ambiguous with all other identifiers. As such, it uses a special
-	// variation on `expr_call` that requires the argument list; all other identifiers
-	// are assumed to be atoms, and must be handled by DoomFront's callers.
-	chumsky::recursive::recursive(|expr| {
-		let atom = primitive::choice((
-			comb::kw_nc("false")
-				.map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitFalse.into())),
-			comb::kw_nc("true")
-				.map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitTrue.into())),
-			common::ident().map_with_state(gtb_open_with(Syn::ExprIdent.into(), Syn::Ident.into())),
-			lit_float().map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitFloat.into())),
-			lit_int().map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitInt.into())),
-			lit_name().map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitName.into())),
-			lit_string().map_with_state(gtb_open_with(Syn::Literal.into(), Syn::LitString.into())),
-		));
+/// Builds expression nodes recursively.
+///
+/// Parsing DECORATE expressions is tricky. In the reference implementation,
+/// a function call does not require a parenthesis-delimited argument list,
+/// making them ambiguous with all other identifiers. As such, it uses a special
+/// variation on `call_expr` that requires the argument list; all other identifiers
+/// are assumed to be atoms, and must be handled by DoomFront's callers.
+pub fn expr<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ident = comb::node(
+		Syn::IdentExpr.into(),
+		comb::just(Token::Ident, Syn::Ident.into()),
+	);
 
-		let call = primitive::group((
-			common::ident().map_with_state(gtb_open_with(Syn::ExprCall.into(), Syn::Ident.into())),
-			wsp_ext().repeated().collect::<()>(),
+	let atom = primitive::choice((lit_expr(), ident));
+
+	let ret = chumsky::recursive::recursive(|expr| primitive::choice((atom, call_expr(expr))));
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+pub fn lit_expr<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ret = comb::node(
+		Syn::Literal.into(),
+		primitive::choice((
+			comb::just(Token::StringLit, Syn::StringLit.into()),
+			comb::just(Token::IntLit, Syn::IntLit.into()),
+			comb::just(Token::FloatLit, Syn::FloatLit.into()),
+			comb::just(Token::KwTrue, Syn::KwTrue.into()),
+			comb::just(Token::KwFalse, Syn::KwFalse.into()),
+		)),
+	);
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
+
+/// Builds a [`Syn::CallExpr`] node. Note that this requires an argument list
+/// [`expr`]'s return value must be passed in to prevent infinite recursion.
+pub fn call_expr<'i, C, P>(
+	expr: P,
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
+{
+	let ret = comb::node(
+		Syn::CallExpr.into(),
+		primitive::group((
+			comb::just(Token::Ident, Syn::Ident.into()),
+			trivia_0plus(),
 			rng_spec().or_not(),
-			wsp_ext().repeated().collect::<()>(),
-			arg_list(expr),
-		))
-		.map_with_state(gtb_close())
-		.map_err_with_state(gtb_cancel(Syn::ExprCall.into()));
+			trivia_0plus(),
+			arg_list(expr).or_not(),
+		)),
+	);
 
-		// TODO: DECORATE's imperative component.
-
-		primitive::choice((atom, call))
-	})
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel_if(|kind| {
-		kind == Syn::ExprIdent.into() || kind == Syn::Literal.into() || kind == Syn::ExprCall.into()
-	}))
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }
 
-pub(super) fn expr_call<'i, C: 'i + GreenCache>(
-	expr: impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone,
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
-	primitive::group((
-		common::ident().map_with_state(gtb_open_with(Syn::ExprCall.into(), Syn::Ident.into())),
-		wsp_ext().repeated().collect::<()>(),
-		rng_spec().or_not(),
-		wsp_ext().repeated().collect::<()>(),
-		arg_list(expr).or_not(),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::ExprCall.into()))
-}
-
+/// Builds a [`Syn::RngSpec`] node.
 /// Can be part of a function call between the identifier and argument list.
-fn rng_spec<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
-	primitive::group((
-		primitive::just("[")
-			.map_with_state(gtb_open_with(Syn::RngSpec.into(), Syn::BracketL.into())),
-		common::ident().map_with_state(gtb_token(Syn::Ident.into())),
-		primitive::just("]").map_with_state(gtb_token(Syn::BracketR.into())),
-	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::RngSpec.into()))
+pub fn rng_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	comb::node(
+		Syn::RngSpec.into(),
+		primitive::group((
+			comb::just(Token::BracketL, Syn::BracketL.into()),
+			trivia_0plus(),
+			comb::just(Token::Ident, Syn::Ident.into()),
+			trivia_0plus(),
+			comb::just(Token::BracketR, Syn::BracketR.into()),
+		)),
+	)
 }
 
-/// Includes the delimiting parentheses.
-fn arg_list<'i, C: 'i + GreenCache>(
-	expr: impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone,
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
-	let arg = primitive::group((
-		primitive::empty().map_with_state(gtb_open(Syn::Argument.into())),
-		expr,
-	))
-	.map_with_state(gtb_close())
-	.map_with_state(gtb_cancel(Syn::Argument.into()));
+/// Builds a [`Syn::ArgList`] node.
+/// [`expr`]'s return value must be passed in to prevent infinite recursion.
+pub fn arg_list<'i, C, P>(
+	expr: P,
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
+{
+	let ret = comb::node(
+		Syn::ArgList.into(),
+		primitive::group((
+			comb::just(Token::ParenL, Syn::ParenL.into()),
+			trivia_0plus(),
+			expr_list(expr),
+			trivia_0plus(),
+			comb::just(Token::ParenR, Syn::ParenR.into()),
+		)),
+	);
 
-	let rep = primitive::group((
-		primitive::just(",").map_with_state(gtb_token(Syn::Comma.into())),
-		wsp_ext().repeated().collect::<()>(),
-		arg.clone(),
-		wsp_ext().repeated().collect::<()>(),
-	));
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
+}
 
-	primitive::group((
-		primitive::just("(").map_with_state(gtb_open_with(Syn::ArgList.into(), Syn::ParenL.into())),
-		wsp_ext().repeated().collect::<()>(),
-		arg,
-		wsp_ext().repeated().collect::<()>(),
-		rep.repeated().collect::<()>(),
-		primitive::just(")").map_with_state(gtb_token(Syn::ParenR.into())),
+/// Builds a series of expression nodes (separated by commas).
+/// [`expr`]'s return value must be passed in to prevent infinite recursion.
+pub fn expr_list<'i, C, P>(
+	expr: P,
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
+{
+	let ret = primitive::group((
+		expr.clone(),
+		comb::checkpointed(primitive::group((
+			trivia_0plus(),
+			comb::just(Token::Comma, Syn::Comma.into()),
+			trivia_0plus(),
+			expr,
+		)))
+		.repeated()
+		.collect::<()>(),
 	))
-	.map_with_state(gtb_close())
-	.map_err_with_state(gtb_cancel(Syn::ArgList.into()))
+	.map(|_| ());
+
+	#[cfg(any(debug_assertions, test))]
+	{
+		ret.boxed()
+	}
+	#[cfg(not(any(debug_assertions, test)))]
+	{
+		ret
+	}
 }

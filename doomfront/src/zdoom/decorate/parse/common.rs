@@ -1,114 +1,149 @@
 //! Combinators applicable to multiple other parts of the syntax.
 
-use chumsky::{primitive, text, IterParser, Parser};
+use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
 	comb,
-	util::{builder::GreenCache, state::*},
-	zdoom::{decorate::Syn, lexer::*},
-	Extra,
+	util::{builder::GreenCache, state::ParseState},
+	zdoom::{
+		decorate::Syn,
+		lex::{Token, TokenStream},
+		Extra,
+	},
+	ParseError,
 };
 
-/// Matches ASCII case-insensitively. Includes `true` and `false`.
-#[must_use]
-pub(super) fn is_any_common_keyword(string: &str) -> bool {
-	string.eq_ignore_ascii_case("actor")
-		|| string.eq_ignore_ascii_case("const")
-		|| string.eq_ignore_ascii_case("do")
-		|| string.eq_ignore_ascii_case("enum")
-		|| string.eq_ignore_ascii_case("false")
-		|| string.eq_ignore_ascii_case("for")
-		|| string.eq_ignore_ascii_case("states")
-		|| string.eq_ignore_ascii_case("true")
-		|| string.eq_ignore_ascii_case("while")
-}
-
-pub(super) fn _any_state_keyword<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
-	primitive::choice((
-		comb::kw_nc("fail"),
-		comb::kw_nc("loop"),
-		comb::kw_nc("stop"),
-		comb::kw_nc("wait"),
-		comb::kw_nc("goto"),
-	))
-}
-
+/// Builds a [`Syn::Ident`] token.
+///
 /// DECORATE actor class identifiers are allowed to consist solely of ASCII digits.
 /// Note that this filters out non-contextual keywords.
-pub(super) fn actor_ident<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
-	primitive::choice((
-		comb::ascii_letter(),
-		comb::dec_digit(),
-		primitive::just('_'),
-	))
-	.repeated()
-	.at_least(1)
-	.slice()
-	.filter(|&s| !is_any_common_keyword(s))
+pub fn actor_ident<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: 'i + GreenCache,
+{
+	primitive::none_of([Token::Whitespace, Token::Comment])
+		.repeated()
+		.collect::<()>()
+		.map_with_state(|(), span, state: &mut ParseState<C>| {
+			state.gtb.token(Syn::Ident.into(), &state.source[span])
+		})
 }
 
-/// Shorthand for `chumsky::text::ident().filter(|&s| !is_any_common_keyword(s))`.
-pub(super) fn ident<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
-	text::ident().filter(|&s| !is_any_common_keyword(s))
-}
-
-/// `ident (whitespace* '.' ident)*`
-pub(super) fn ident_chain<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
-	ident()
-		.map_with_state(gtb_open_with(Syn::IdentChain.into(), Syn::Ident.into()))
-		.then(
-			primitive::group((
-				primitive::empty().map_with_state(gtb_checkpoint()),
-				wsp_ext().repeated().collect::<()>(),
-				primitive::just(".").map_with_state(gtb_token(Syn::Period.into())),
-				ident().map_with_state(gtb_token(Syn::Ident.into())),
-			))
-			.map_err_with_state(gtb_cancel_checkpoint())
-			.repeated()
-			.collect::<()>(),
-		)
-		.map_with_state(gtb_close())
-		.map_err_with_state(gtb_cancel(Syn::IdentChain.into()))
+/// `ident (trivia* '.' trivia* ident)*`
+pub fn ident_chain<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: 'i + GreenCache,
+{
+	comb::node(
+		Syn::IdentChain.into(),
+		primitive::group((
+			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::checkpointed(primitive::group((
+				trivia_0plus(),
+				comb::just(Token::Dot, Syn::Dot.into()),
+				trivia_0plus(),
+				comb::just(Token::Ident, Syn::Ident.into()),
+			))),
+		)),
+	)
 }
 
 /// In certain contexts, DECORATE allows providing number literals but not
 /// expressions, so "negative literals" are required in place of unary negation.
-pub(super) fn lit_int_negative<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
-	primitive::group((primitive::just("-"), lit_int())).slice()
+pub(super) fn int_lit_negative<'i, C>(
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	comb::checkpointed(primitive::group((
+		comb::just(Token::Minus, Syn::Minus.into()),
+		comb::just(Token::IntLit, Syn::IntLit.into()),
+	)))
 }
 
 /// In certain contexts, DECORATE allows providing number literals but not
 /// expressions, so "negative literals" are required in place of unary negation.
-pub(super) fn lit_float_negative<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, &'i str, Extra<'i, C>> + Clone {
-	primitive::group((primitive::just("-"), lit_float())).slice()
+pub(super) fn float_lit_negative<'i, C>(
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	comb::checkpointed(primitive::group((
+		comb::just(Token::Minus, Syn::Minus.into()),
+		comb::just(Token::FloatLit, Syn::FloatLit.into()),
+	)))
 }
 
 /// Remember that this matches either a heterogenous whitespace span or a comment,
 /// so to deal with both in one span requires repetition.
-pub(super) fn wsp_ext<'i, C: 'i + GreenCache>() -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone
+pub fn trivia<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
 {
 	primitive::choice((
-		comb::cpp_comment().map_with_state(gtb_token(Syn::Comment.into())),
-		comb::c_comment().map_with_state(gtb_token(Syn::Comment.into())),
-		comb::wsp().map_with_state(gtb_token(Syn::Whitespace.into())),
+		comb::just(Token::Whitespace, Syn::Whitespace.into()),
+		comb::just(Token::Comment, Syn::Comment.into()),
 	))
+	.map(|_| ())
 }
 
-/// A subset of [`wsp_ext`]. Only C comments, spaces, or tabs.
-pub(super) fn wsp_1line<'i, C: 'i + GreenCache>(
-) -> impl Parser<'i, &'i str, (), Extra<'i, C>> + Clone {
+pub(super) fn trivia_0plus<'i, C>(
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	trivia().repeated().collect::<()>()
+}
+
+pub(super) fn trivia_1plus<'i, C>(
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	trivia().repeated().at_least(1).collect::<()>()
+}
+
+/// A subset of [`trivia`]; fails if a carriage return or newline appears in a
+/// matched [`Token::Whitespace`] or [`Token::Comment`].
+///
+/// Necessary for delimiting parts in an actor state definition.
+pub(super) fn trivia_1line<'i, C>(
+) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
 	primitive::choice((
-		comb::c_comment().map_with_state(gtb_token(Syn::Comment.into())),
-		primitive::one_of([' ', '\t'])
-			.repeated()
-			.at_least(1)
-			.slice()
-			.map_with_state(gtb_token(Syn::Whitespace.into())),
+		primitive::just(Token::Whitespace),
+		primitive::just(Token::Comment),
 	))
+	.try_map_with_state(|token, span: logos::Span, state: &mut ParseState<C>| {
+		let multiline = state.source[span.clone()].contains(&['\r', '\n']);
+
+		let syn = match token {
+			Token::Whitespace => {
+				if !multiline {
+					Syn::Whitespace
+				} else {
+					return Err(ParseError::custom(
+						span,
+						"expected single-line whitespace, found multi-line whitespace",
+					));
+				}
+			}
+			Token::Comment => {
+				if !multiline {
+					Syn::Comment
+				} else {
+					return Err(ParseError::custom(
+						span,
+						"expected multi-line comment, found single-line comment",
+					));
+				}
+			}
+			_ => unreachable!(),
+		};
+
+		state.gtb.token(syn.into(), &state.source[span]);
+		Ok(())
+	})
 }

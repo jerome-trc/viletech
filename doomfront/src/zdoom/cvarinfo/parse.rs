@@ -110,11 +110,11 @@ where
 			comb::just(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
 			primitive::choice((
-				comb::just(Token::LitFloat, Syn::LitFloat.into()),
-				comb::just(Token::LitInt, Syn::LitInt.into()),
+				comb::just(Token::FloatLit, Syn::LitFloat.into()),
+				comb::just(Token::IntLit, Syn::LitInt.into()),
 				comb::just(Token::KwFalse, Syn::LitFalse.into()),
 				comb::just(Token::KwTrue, Syn::LitTrue.into()),
-				comb::just(Token::LitString, Syn::LitString.into()),
+				comb::just(Token::StringLit, Syn::LitString.into()),
 			)),
 		)),
 	)
@@ -157,11 +157,11 @@ where
 				flag(),
 				type_spec(),
 				comb::just(Token::Eq, Syn::Eq.into()),
-				comb::just(Token::LitFloat, Syn::LitFloat.into()),
-				comb::just(Token::LitInt, Syn::LitInt.into()),
+				comb::just(Token::FloatLit, Syn::LitFloat.into()),
+				comb::just(Token::IntLit, Syn::LitInt.into()),
 				comb::just(Token::KwFalse, Syn::LitFalse.into()),
 				comb::just(Token::KwTrue, Syn::LitTrue.into()),
-				comb::just(Token::LitString, Syn::LitString.into()),
+				comb::just(Token::StringLit, Syn::LitString.into()),
 				comb::just(Token::Ident, Syn::Ident.into()),
 			))
 			.repeated()

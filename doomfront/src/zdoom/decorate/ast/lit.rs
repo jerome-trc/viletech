@@ -44,7 +44,7 @@ impl LitToken {
 
 	#[must_use]
 	pub fn float(&self) -> Option<f64> {
-		if !matches!(self.0.kind(), Syn::LitFloat) {
+		if !matches!(self.0.kind(), Syn::FloatLit) {
 			return None;
 		}
 
@@ -65,7 +65,7 @@ impl LitToken {
 	/// such as if the written value can not fit into a `i32`.
 	#[must_use]
 	pub fn int(&self) -> Option<Result<i32, ParseIntError>> {
-		if !matches!(self.0.kind(), Syn::LitInt) {
+		if !matches!(self.0.kind(), Syn::IntLit) {
 			return None;
 		}
 
@@ -98,7 +98,7 @@ impl LitToken {
 	/// Otherwise this returns `None`.
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
-		if self.0.kind() == Syn::LitString {
+		if self.0.kind() == Syn::StringLit {
 			let text = self.0.text();
 			let start = text.chars().position(|c| c == '\'').unwrap();
 			let end = text.chars().rev().position(|c| c == '\'').unwrap();
@@ -113,7 +113,7 @@ impl LitToken {
 	/// Otherwise this returns `None`.
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
-		if self.0.kind() == Syn::LitString {
+		if self.0.kind() == Syn::StringLit {
 			let text = self.0.text();
 			let start = text.chars().position(|c| c == '"').unwrap();
 			let end = text.chars().rev().position(|c| c == '"').unwrap();

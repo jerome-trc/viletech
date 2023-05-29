@@ -227,31 +227,30 @@ simple_astnode!(Syn, StatesDef, Syn::StatesDef);
 
 impl StatesDef {
 	#[must_use]
-	pub fn usage_qual(&self) -> Option<StateUsage> {
+	pub fn usage_quals(&self) -> Option<impl Iterator<Item = StateUsage>> {
 		if let Some(node) = self
 			.syntax()
 			.first_child()
 			.filter(|node| node.kind() == Syn::StatesUsage)
 		{
-			let token = node
-				.children_with_tokens()
-				.nth(1)
-				.unwrap()
-				.into_token()
-				.unwrap();
+			Some(node.children_with_tokens().filter_map(|elem| {
+				let Some(token) = elem.into_token() else { return None; };
 
-			if token.text().eq_ignore_ascii_case("actor") {
-				return Some(StateUsage::Actor);
-			} else if token.text().eq_ignore_ascii_case("item") {
-				return Some(StateUsage::Item);
-			} else if token.text().eq_ignore_ascii_case("overlay") {
-				return Some(StateUsage::Overlay);
-			} else if token.text().eq_ignore_ascii_case("weapon") {
-				return Some(StateUsage::Weapon);
-			}
+				if token.text().eq_ignore_ascii_case("actor") {
+					Some(StateUsage::Actor)
+				} else if token.text().eq_ignore_ascii_case("item") {
+					Some(StateUsage::Item)
+				} else if token.text().eq_ignore_ascii_case("overlay") {
+					Some(StateUsage::Overlay)
+				} else if token.text().eq_ignore_ascii_case("weapon") {
+					Some(StateUsage::Weapon)
+				} else {
+					None
+				}
+			}))
+		} else {
+			None
 		}
-
-		None
 	}
 
 	pub fn items(&self) -> impl Iterator<Item = StatesItem> {
@@ -283,7 +282,7 @@ impl AstNode for StatesItem {
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::StateDef | Syn::StateLabel | Syn::StateChange)
+		matches!(kind, Syn::StateDef | Syn::StateLabel | Syn::StateFlow)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -293,7 +292,7 @@ impl AstNode for StatesItem {
 		match node.kind() {
 			Syn::StateDef => Some(Self::State(StateDef(node))),
 			Syn::StateLabel => Some(Self::Label(StateLabel(node))),
-			Syn::StateChange => Some(Self::Change(node)),
+			Syn::StateFlow => Some(Self::Change(node)),
 			_ => None,
 		}
 	}
@@ -405,8 +404,8 @@ impl StateDef {
 	pub fn duration(&self) -> SyntaxElem {
 		for elem in self.syntax().children_with_tokens() {
 			match elem.kind() {
-				Syn::LitInt => return SyntaxElem::Token(elem.into_token().unwrap()),
-				Syn::ExprCall => return SyntaxElem::Node(elem.into_node().unwrap()),
+				Syn::IntLit => return SyntaxElem::Token(elem.into_token().unwrap()),
+				Syn::CallExpr => return SyntaxElem::Node(elem.into_node().unwrap()),
 				_ => continue,
 			}
 		}
@@ -429,7 +428,7 @@ impl StateDef {
 						.children_with_tokens()
 						.find_map(|e| {
 							e.into_token()
-								.filter(|tok| matches!(tok.kind(), Syn::LitString | Syn::LitName))
+								.filter(|tok| matches!(tok.kind(), Syn::StringLit | Syn::NameLit))
 						})
 						.unwrap()
 				})),
@@ -438,7 +437,7 @@ impl StateDef {
 					let mut y = None;
 
 					for e in elem.into_node().unwrap().children_with_tokens() {
-						if e.kind() == Syn::LitInt {
+						if e.kind() == Syn::IntLit {
 							if x.is_none() {
 								x = Some(e.into_token().unwrap());
 							} else if y.is_none() {
@@ -464,7 +463,7 @@ impl StateDef {
 				return node
 					.children_with_tokens()
 					.find_map(|elem| {
-						(matches!(elem.kind(), Syn::LitString | Syn::LitName))
+						(matches!(elem.kind(), Syn::StringLit | Syn::NameLit))
 							.then(|| elem.into_token())
 					})
 					.unwrap();

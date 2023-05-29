@@ -15,16 +15,16 @@ pub enum Token {
 	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
 	#[regex(r"[0-9]*\.[0-9]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
 	#[regex(r"[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
-	LitFloat,
+	FloatLit,
 	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 4)]
 	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 3)]
 	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 2)]
-	LitInt,
+	IntLit,
 	#[regex("'[^''\n]*'")]
-	LitName,
+	NameLit,
 	// #[regex(r#""((")|[^"])*""#, priority = 2)]
 	#[regex(r#""(([\\]["])|[^"])*""#, priority = 2)]
-	LitString,
+	StringLit,
 	// Keywords ////////////////////////////////////////////////////////////////
 	#[regex("(?i)break", priority = 5)]
 	KwBreak,
@@ -423,5 +423,42 @@ fn ident_pre4_10_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
 		logos::Filter::Emit(())
 	} else {
 		logos::Filter::Skip
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	const SOURCE: &str = r#"
+
+States (actor, overlay) {
+	Spawn:
+		FAIL A -2 offset(-1, 1) light("?", "??") light("!") {
+				return GetSpawnHealth;
+		} TNT1 A Random(1, 2) A_Pain
+	Death: ____ A 0
+	Labelled: TNT1 A 0
+	9: TNT1 A 0
+		7HA_ A 15 bright
+		HAX7 B 15 bright A_Pain
+		HAX7 "A[" 20 bright {
+			health = Random[ rngtbl ](3, 4);
+			health = Random[rgbtbl](1, 2);
+			health = sqrt(1);
+		}
+		gOTO super :: SPAWN + 0
+}
+
+"#;
+
+	#[test]
+	fn smoke() {
+		let mut lexer = Token::lexer(SOURCE);
+
+		while let Some(result) = lexer.next() {
+			let token = result.unwrap();
+			println!("{token:?} : `{}`", lexer.slice());
+		}
 	}
 }
