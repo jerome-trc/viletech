@@ -7,11 +7,11 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
-use fixed::types::I16F16;
 use serde::{Deserialize, Serialize};
 
 use crate::{
 	data::dobj::{self, UdmfValue},
+	math::Fixed32,
 	sparse::{SparseSet, SparseSetIndex},
 };
 
@@ -96,13 +96,13 @@ impl Vertex {
 	}
 
 	#[must_use]
-	pub fn x_fixed(self) -> I16F16 {
-		I16F16::from_num(self.0.x)
+	pub fn x_fixed(self) -> Fixed32 {
+		Fixed32::from_num(self.0.x)
 	}
 
 	#[must_use]
-	pub fn z_fixed(self) -> I16F16 {
-		I16F16::from_num(self.0.z)
+	pub fn z_fixed(self) -> Fixed32 {
+		Fixed32::from_num(self.0.z)
 	}
 }
 

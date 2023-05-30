@@ -3,6 +3,9 @@ use std::ops::{Add, AddAssign, Mul};
 use glam::{DQuat, DVec3, EulerRot, Quat, Vec3A};
 use serde::{Deserialize, Serialize};
 
+pub type Fixed32 = fixed::types::I16F16;
+pub type Fixed64 = fixed::types::I32F32;
+
 pub trait Dimension: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
 
 impl<T> Dimension for T where T: Sized + Copy + Add<Output = Self> + AddAssign + Mul<Output = Self> {}
@@ -302,3 +305,54 @@ macro_rules! rotator_ops {
 
 rotator_ops!(Rotator32, f32, Quat);
 rotator_ops!(Rotator64, f64, DQuat);
+
+pub type UAngle = u32;
+
+#[must_use]
+pub fn point_to_angle(x: Fixed32, y: Fixed32) -> UAngle {
+	let ang = f64::atan2(x.to_num(), y.to_num());
+	let rad2bam = ((1 << 30) as f64) / std::f64::consts::PI;
+	let dbam = ang * rad2bam;
+	(dbam as u32) << 1
+}
+
+pub const UANGLE_180: UAngle = 1 << 31;
+
+/// "Fixed-point multiply" with right-shift scaling.
+#[must_use]
+pub fn fxmul<const SHIFT: i64>(a: Fixed32, b: Fixed32) -> Fixed32 {
+	let a64 = a.to_bits() as i64;
+	let b64 = b.to_bits() as i64;
+	Fixed32::from_bits(((a64 * b64) >> SHIFT) as i32)
+}
+
+/// "Fixed-point divide" with left-shift scaling.
+#[must_use]
+pub fn fxdiv<const SHIFT: i64>(a: Fixed32, b: Fixed32) -> Fixed32 {
+	let a64 = a.to_bits() as f64;
+	let b64 = b.to_bits() as f64;
+	let ret = a64 / b64 * (1 << 30) as f64;
+	Fixed32::from_bits(ret as i32)
+}
+
+/// "Fixed-point double-precision multiply".
+pub fn fxdmul(a: Fixed32, b: Fixed32, c: Fixed32, d: Fixed32) -> Fixed32 {
+	let a64 = a.to_bits() as f64;
+	let b64 = b.to_bits() as f64;
+	let c64 = c.to_bits() as f64;
+	let d64 = d.to_bits() as f64;
+	Fixed32::from_bits(((a64 * b64 + c64 * d64) / 4294967296.0) as i32)
+}
+
+#[cfg(test)]
+#[test]
+fn fixed_ops() {
+	let a = Fixed32::from_num(3104);
+	let b = Fixed32::from_num(-4864);
+	assert_eq!(fxmul::<30>(a, b), Fixed32::from_num(-921.5));
+	assert_eq!(fxdiv::<30>(a, b), Fixed32::from_num(-10455.57893));
+
+	let c = Fixed32::from_num(64);
+	let d = Fixed32::from_num(-2816);
+	assert_eq!(fxdmul(a, b, c, d), Fixed32::from_num(-233.1250));
+}
