@@ -106,7 +106,7 @@ pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<do
 	))
 	.with_children(|cbuilder| {
 		for thingdef in &level.things {
-			if thingdef.num == 1 {
+			if thingdef.ed_num == 1 {
 				cbuilder.spawn(Camera3dBundle {
 					transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),
 					..default()

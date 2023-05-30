@@ -26,7 +26,7 @@ pub(super) fn _line_special_bundle(mut line: EntityCommands, format: LevelFormat
 			}
 			other => unimplemented!("Doom line special {other} is unimplemented."),
 		},
-		LevelFormat::Hexen => todo!(),
+		LevelFormat::Extended => todo!(),
 		LevelFormat::Udmf(namespace) => match namespace {
 			UdmfNamespace::Doom => todo!(),
 			other => unimplemented!("UDMF namespace `{other:#?}` is not yet supported."),

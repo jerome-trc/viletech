@@ -1,10 +1,15 @@
 //! Level (a.k.a. "map") data.
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::HashMap,
+	sync::{atomic::AtomicUsize, Arc},
+};
 
 use bevy::prelude::{IVec2, Vec2, Vec3};
 use bitflags::bitflags;
+use bitvec::{order::Lsb0, vec::BitVec};
 use image::Rgb;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -32,19 +37,30 @@ pub enum BspNodeChild {
 }
 
 /// See <https://doomwiki.org/wiki/Linedef>.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LineDef {
 	pub udmf_id: i32,
+	/// a.k.a "vertex 1" or just "v1".
 	pub vert_start: usize,
+	/// a.k.a. "vertex 2" or just "v2".
 	pub vert_end: usize,
 	pub flags: Flags,
 	pub special: u16,
 	/// Corresponds to the field of [`Sector`] with the same name.
 	pub trigger: u16,
 	/// Defined in UDMF.
-	pub args: Option<[i32; 5]>,
+	pub args: [i32; 5],
+	/// a.k.a. the "front" side.
 	pub side_right: usize,
+	/// a.k.a. the "back" side.
 	pub side_left: Option<usize>,
+}
+
+impl LineDef {
+	/// A possible value for `Self::special`.
+	pub const POBJ_LINE_START: u16 = 1;
+	/// A possible value for `Self::special`.
+	pub const POBJ_LINE_EXPLICIT: u16 = 5;
 }
 
 /// See <https://doomwiki.org/wiki/Sidedef>.
@@ -109,13 +125,24 @@ pub struct SubSector {
 #[derive(Debug)]
 pub struct Thing {
 	pub tid: i32,
-	pub num: EditorNum,
+	pub ed_num: EditorNum,
 	/// Reader's note: Bevy's coordinate system is right-handed Y-up.
 	pub pos: Vec3,
 	/// In degrees.
-	pub angle: u16,
+	pub angle: u32,
 	pub flags: ThingFlags,
 	pub args: [i32; 5],
+}
+
+impl Thing {
+	pub const HEXEN_ANCHOR: EditorNum = 3000;
+	pub const HEXEN_SPAWN: EditorNum = 3001;
+	pub const HEXEN_SPAWNCRUSH: EditorNum = 3002;
+
+	pub const DOOM_ANCHOR: EditorNum = 9300;
+	pub const DOOM_SPAWN: EditorNum = 9301;
+	pub const DOOM_SPAWNCRUSH: EditorNum = 9302;
+	pub const DOOM_SPAWNHURT: EditorNum = 9303;
 }
 
 bitflags! {
@@ -235,6 +262,138 @@ impl Level {
 
 		MinMaxBox { min, max }
 	}
+
+	/// (GZ) Collision detection againstlines with 0.0 length can cause zero-division,
+	/// so use this to remove them. Returns the number of lines pruned.
+	pub fn prune_0len_lines(&mut self) -> usize {
+		let mut n = 0;
+
+		for i in 0..self.linedefs.len() {
+			let line = &self.linedefs[i];
+			let v1 = &self.vertices[line.vert_start];
+			let v2 = &self.vertices[line.vert_end];
+
+			if std::ptr::eq(v1, v2) {
+				continue;
+			}
+
+			if i != n {
+				self.linedefs[n] = self.linedefs[i].clone();
+			}
+
+			n += 1;
+		}
+
+		let l = self.linedefs.len();
+		self.linedefs.truncate(n);
+		l - n
+	}
+
+	/// (GZ) Sides not referenced by any lines are just wasted space,
+	/// and can be removed. Returns the number of sides pruned.
+	pub fn prune_unused_sides(&mut self) -> usize {
+		let mut used: BitVec<AtomicUsize, Lsb0> = BitVec::with_capacity(self.sidedefs.len());
+		used.resize(self.sidedefs.len(), false);
+		let mut remap: Vec<usize> = Vec::with_capacity(self.sidedefs.len());
+
+		self.linedefs.par_iter().for_each(|linedef| {
+			used.set_aliased(linedef.side_right, true);
+			let Some(side_left) = linedef.side_left else { return; };
+			used.set_aliased(side_left, true);
+		});
+
+		// SAFETY: `AtomicUsize` has identical representation to `usize`.
+		let used = unsafe { std::mem::transmute::<_, BitVec<usize, Lsb0>>(used) };
+
+		let mut new_len = 0;
+
+		for i in 0..self.sidedefs.len() {
+			if !used[i] {
+				remap[i] = usize::MAX;
+				continue;
+			}
+
+			if i != new_len {
+				self.sidedefs.swap(new_len, i);
+			}
+
+			remap[i] = new_len;
+			new_len += 1;
+		}
+
+		let ret = self.sidedefs.len() - new_len;
+
+		if ret > 0 {
+			self.sidedefs.truncate(new_len);
+
+			// Re-assign linedefs' side indices.
+
+			self.linedefs.par_iter_mut().for_each(|linedef| {
+				linedef.side_right = remap[linedef.side_right];
+				let Some(side_left) = linedef.side_left.as_mut() else { return; };
+				*side_left = remap[*side_left];
+			});
+		}
+
+		ret
+	}
+
+	/// (GZ) Sectors not referenced by any sides are just wasted space,
+	/// and can be removed. Returns a "remap table" for use in fixing REJECT tables.
+	pub fn prune_unused_sectors(&mut self) -> Vec<usize> {
+		let mut used: BitVec<AtomicUsize, Lsb0> = BitVec::with_capacity(self.sectors.len());
+		used.resize(self.sectors.len(), false);
+		let mut remap: Vec<usize> = Vec::with_capacity(self.sectors.len());
+
+		self.sidedefs.par_iter_mut().for_each(|sidedef| {
+			used.set_aliased(sidedef.sector, true);
+		});
+
+		// SAFETY: `AtomicUsize` has identical representation to `usize`.
+		let used = unsafe { std::mem::transmute::<_, BitVec<usize, Lsb0>>(used) };
+
+		let mut new_len = 0;
+
+		for i in 0..self.sectors.len() {
+			if !used[i] {
+				remap[i] = usize::MAX;
+				continue;
+			}
+
+			if i != new_len {
+				self.sectors.swap(new_len, i);
+			}
+
+			remap[i] = new_len;
+			new_len += 1;
+		}
+
+		let mut ret = vec![];
+
+		if new_len < self.sectors.len() {
+			// Re-assign sidedefs' sector indices.
+
+			self.sidedefs.par_iter_mut().for_each(|sidedef| {
+				sidedef.sector = remap[sidedef.sector];
+			});
+
+			// (GZ) Make a reverse map for fixing reject lumps.
+			ret.resize(new_len, usize::MAX);
+
+			for i in 0..self.sectors.len() {
+				ret[remap[i]] = i;
+			}
+
+			self.sectors.truncate(new_len);
+		}
+
+		ret
+	}
+
+	#[must_use]
+	pub fn is_udmf(&self) -> bool {
+		matches!(self.format, LevelFormat::Udmf(_))
+	}
 }
 
 /// Comes from a map entry in a MAPINFO lump.
@@ -270,8 +429,12 @@ bitflags! {
 /// See <https://doomwiki.org/wiki/Map_format>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LevelFormat {
+	/// Level has an ordered sequence of lumps from `THINGS` to `BLOCKMAP`.
 	Doom,
-	Hexen,
+	/// a.k.a. the "Hexen" format.
+	/// Like [`LevelFormat::Doom`] but with `BEHAVIOR` after `BLOCKMAP`.
+	Extended,
+	/// Starts with a marker and a `TEXTMAP` lump; ends with an `ENDMAP` lump.
 	Udmf(UdmfNamespace),
 }
 

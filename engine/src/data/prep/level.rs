@@ -183,11 +183,11 @@ impl Catalog {
 		let things = if behavior.is_none() {
 			Self::prep_things_doom(things.read_bytes())
 		} else {
-			Self::prep_things_hexen(things.read_bytes())
+			Self::prep_things_extended(things.read_bytes())
 		};
 
 		let mut level = Level::new(if behavior.is_some() {
-			LevelFormat::Hexen
+			LevelFormat::Extended
 		} else {
 			LevelFormat::Doom
 		});
@@ -236,7 +236,7 @@ impl Catalog {
 				flags: Flags::from_bits_truncate(raw.flags as u32),
 				special: u16::from_le(raw.special),
 				trigger: u16::from_le(raw.trigger),
-				args: None,
+				args: [0; 5],
 				side_right: u16::from_le(raw.right) as usize,
 				side_left: {
 					let s = u16::from_le(raw.left);
@@ -479,13 +479,13 @@ impl Catalog {
 
 			ret.push(Thing {
 				tid: 0,
-				num: u16::from_le(raw.ednum),
+				ed_num: u16::from_le(raw.ednum),
 				pos: glam::vec3(
 					(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
 					0.0,
 					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				),
-				angle: u16::from_le(raw.angle),
+				angle: u16::from_le(raw.angle) as u32,
 				flags: {
 					let f = i16::from_le(raw.flags);
 					let mut flags = ThingFlags::empty();
@@ -536,7 +536,7 @@ impl Catalog {
 	}
 
 	#[must_use]
-	fn prep_things_hexen(bytes: &[u8]) -> Vec<Thing> {
+	fn prep_things_extended(bytes: &[u8]) -> Vec<Thing> {
 		#[repr(C)]
 		#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 		struct ThingRaw {
@@ -562,13 +562,13 @@ impl Catalog {
 
 			ret.push(Thing {
 				tid: i16::from_le(raw.tid) as i32,
-				num: u16::from_le(raw.ednum),
+				ed_num: u16::from_le(raw.ednum),
 				pos: glam::vec3(
 					(i16::from_le(raw.x) as f32) * VANILLA_SCALEDOWN,
 					(i16::from_le(raw.z) as f32) * VANILLA_SCALEDOWN,
 					(i16::from_le(raw.y) as f32) * VANILLA_SCALEDOWN,
 				),
-				angle: u16::from_le(raw.angle),
+				angle: u16::from_le(raw.angle) as u32,
 				flags: {
 					let f = i16::from_le(raw.flags);
 					let mut flags = ThingFlags::empty();

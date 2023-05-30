@@ -245,7 +245,7 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 					flags: line::Flags::empty(),
 					special: 0,
 					trigger: 0,
-					args: None,
+					args: [0; 5],
 					side_right: usize::MAX,
 					side_left: None,
 				});
@@ -270,7 +270,7 @@ fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
 			.map_with_state(|_, _, level: &mut Level| {
 				level.things.push(Thing {
 					tid: 0,
-					num: 0,
+					ed_num: 0,
 					pos: glam::vec3(0.0, 0.0, 0.0),
 					angle: 0,
 					flags: ThingFlags::empty(),

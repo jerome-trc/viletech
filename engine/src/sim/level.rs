@@ -7,6 +7,7 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
+use fixed::types::I16F16;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -92,6 +93,16 @@ impl Vertex {
 	#[must_use]
 	pub fn top_mut(&mut self) -> &mut f32 {
 		&mut self.0.w
+	}
+
+	#[must_use]
+	pub fn x_fixed(self) -> I16F16 {
+		I16F16::from_num(self.0.x)
+	}
+
+	#[must_use]
+	pub fn z_fixed(self) -> I16F16 {
+		I16F16::from_num(self.0.z)
 	}
 }
 
