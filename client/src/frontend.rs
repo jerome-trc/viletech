@@ -7,8 +7,9 @@ use bevy_egui::EguiContexts;
 use viletech::{
 	data::LoadRequest,
 	frontend::{FrontendMenu, Outcome},
+	util::SendTracker,
 	vfs::MountRequest,
-	SendTracker, VPathBuf,
+	VPathBuf,
 };
 
 use crate::{

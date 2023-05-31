@@ -7,7 +7,7 @@ use std::{error::Error, time::Instant};
 use bevy::prelude::*;
 use clap::Parser;
 use indoc::printdoc;
-use viletech::{terminal::Terminal, utils::duration_to_hhmmss};
+use viletech::{terminal::Terminal, util::duration_to_hhmmss};
 
 use commands::Command;
 

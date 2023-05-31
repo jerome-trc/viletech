@@ -27,10 +27,12 @@ use fasthash::SeaHasher;
 use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
 use smallvec::SmallVec;
+use util::{Outcome, SendTracker};
+use vfs::{VPath, VPathBuf};
 
 use crate::{
 	vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs},
-	EditorNum, Outcome, SendTracker, SpawnNum, VPath, VPathBuf,
+	EditorNum, SpawnNum,
 };
 
 use self::{

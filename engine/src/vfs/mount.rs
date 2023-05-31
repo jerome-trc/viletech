@@ -9,12 +9,14 @@ use bevy::prelude::{info, warn};
 use dashmap::DashMap;
 use parking_lot::Mutex;
 use rayon::prelude::*;
+use util::{Outcome, SendTracker};
+use vfs::{VPath, VPathBuf};
 use zip::{read::ZipFile, ZipArchive};
 
 use crate::{
-	utils::{io::*, path::PathExt},
+	util::{io::*, path::PathExt},
 	vfs::MountInfo,
-	wad, Outcome, SendTracker, VPath, VPathBuf,
+	wad,
 };
 
 use super::{

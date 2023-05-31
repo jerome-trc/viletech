@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
 	data::{LoadOutcome, PrepError},
-	utils::duration_to_hhmmss,
+	util::duration_to_hhmmss,
 	vfs::MountError,
 };
 

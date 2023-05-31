@@ -1,0 +1,32 @@
+[package]
+name = "viletech-fs"
+version = "0.0.0"
+edition = "2021"
+
+authors = ["jerome-trc"]
+categories = [] # (RAT) Unsure.
+description = "VileTech's virtual file system"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/vfs"
+keywords = ["doom", "gamedev", "viletech"]
+license = "GPL-3.0-or-later"
+publish = false
+repository = "https://github.com/jerome-trc/viletech/"
+
+[features]
+default = []
+bevy = ["dep:bevy"]
+bevy_egui = ["bevy", "dep:bevy_egui"]
+ser_de = ["dep:serde"]
+
+[dependencies]
+util = { package = "viletech-utils", path = "../utils" }
+
+dashmap = { workspace = true }
+bevy = { workspace = true, optional = true }
+bevy_egui = { workspace = true, optional = true }
+globset = { workspace = true }
+indexmap = { workspace = true }
+parking_lot = { workspace = true }
+rayon = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, optional = true }

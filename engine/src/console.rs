@@ -10,10 +10,10 @@ use bevy_egui::egui::{
 	Color32, ScrollArea, TextFormat, TextStyle,
 };
 use crossbeam::channel::Receiver;
+use util::lazy_regex;
 
 use crate::{
 	input::InputCore,
-	lazy_regex,
 	terminal::{self, Alias, Terminal},
 };
 

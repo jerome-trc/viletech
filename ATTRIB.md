@@ -14,7 +14,11 @@ The Doom source code (c) 1997 id Software LLC, the Raven Software Corporation, e
 
 The original Doom source code was released by id Software LLC under the GPL v2. Usage of this source, as well as usage of the derivative source of GZDoom and ZDoom-family source ports, is covered by the terms of the GNU General Public License Version 3.
 
-See [here](./LICENSE) or https://www.gnu.org/licenses/quick-guide-gplv3.en.html.
+See [here](./LICENSE) or https://www.gnu.org/licenses/quick-guide-gplv3.en.html.#
+
+## enquote
+
+VileTech uses a function from the [enquote](https://crates.io/crates/enquote) crate, provided under [The Unlicense](./legal/enquote.txt).
 
 ## GZDoom
 

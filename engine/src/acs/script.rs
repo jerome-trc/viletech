@@ -2,7 +2,7 @@
 //!
 //! Assume all code within originates from GZDoom-original source.
 
-use crate::{math::IRect32, sim::actor::Actor};
+use crate::{sim::actor::Actor, util::math::IRect32};
 
 use super::detail::{LocalArray, ScriptPointerH, ScriptPointerI, ScriptPointerZD};
 

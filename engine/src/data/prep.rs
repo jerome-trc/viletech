@@ -16,11 +16,10 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use serde::Deserialize;
 use smallvec::{smallvec, SmallVec};
+use util::{Id8, Outcome, SendTracker};
+use vfs::VPathBuf;
 
-use crate::{
-	data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, EditorNum, Id8, Outcome, SendTracker, SpawnNum,
-	VPathBuf,
-};
+use crate::{data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, EditorNum, SpawnNum};
 
 use self::vanilla::{PatchTable, TextureX};
 

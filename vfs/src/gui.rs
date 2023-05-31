@@ -1,18 +1,21 @@
-use std::sync::atomic::{self, AtomicUsize};
+use std::ops::Deref;
 
 use bevy_egui::egui;
-use vfs::{VPath, VPathBuf};
+use parking_lot::RwLock;
+use util::path::PathExt;
 
-use super::{file::FileKey, File, VirtualFs};
+use crate::{file::Content, FileRef};
+
+use super::{VPath, VPathBuf, VirtualFs};
 
 #[derive(Debug, Default)]
 pub(super) struct DevGui {
-	sel_file: AtomicUsize,
+	sel_file: RwLock<VPathBuf>,
 }
 
 impl DevGui {
-	fn select_file(&self, index: usize) {
-		self.sel_file.store(index, atomic::Ordering::Relaxed);
+	fn select_file(&self, path: VPathBuf) {
+		*self.sel_file.write() = path;
 	}
 }
 
@@ -20,22 +23,25 @@ impl VirtualFs {
 	pub(super) fn ui_impl(&self, ui: &mut egui::Ui) {
 		ui.heading("Virtual File System");
 
-		let sel_file = self.gui.sel_file.load(atomic::Ordering::Relaxed);
+		let sel_file = self.gui.sel_file.read();
 
-		if sel_file >= self.files.len() {
-			self.gui.select_file(0);
+		if !self
+			.files
+			.contains_key(AsRef::<VPath>::as_ref(sel_file.as_path()))
+		{
+			self.gui.select_file(VPathBuf::from("/"));
 		}
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
-			let kvp = self.files.get_index(sel_file).unwrap();
-			self.ui_nav(ui, kvp, sel_file);
-			let (_, file) = kvp;
+			let fref = self.get(sel_file.as_path()).unwrap();
+			self.ui_nav(ui, fref);
+			let file = fref.deref();
 
-			match &file {
-				File::Binary(bytes) => {
-					ui.label("Binary");
+			match &file.content {
+				Content::File { slice, .. } => {
+					ui.label("File");
 					let mut unit = "B";
-					let mut len = bytes.len() as f64;
+					let mut len = slice.len() as f64;
 
 					if len > 1024.0 {
 						len /= 1024.0;
@@ -54,21 +60,17 @@ impl VirtualFs {
 
 					ui.label(&format!("{len:.2} {unit}"));
 				}
-				File::Text(string) => {
-					ui.label("Text");
-					ui.label(&format!("{} B", string.len()));
-				}
-				File::Empty => {
+				Content::Empty => {
 					ui.label("Empty");
 				}
-				File::Directory(dir) => {
+				Content::Directory(dir) => {
 					if dir.len() == 1 {
 						ui.label("Directory: 1 child");
 					} else {
 						ui.label(&format!("Directory: {} children", dir.len()));
 					}
 
-					for path in dir {
+					for path in dir.iter() {
 						let label = egui::Label::new(path.to_string_lossy().as_ref())
 							.sense(egui::Sense::click());
 
@@ -81,8 +83,7 @@ impl VirtualFs {
 						};
 
 						if resp.clicked() {
-							let idx = self.files.get_index_of(path);
-							self.gui.select_file(idx.unwrap());
+							self.gui.select_file(path.to_path_buf());
 						}
 
 						resp.on_hover_text("View");
@@ -92,22 +93,20 @@ impl VirtualFs {
 		});
 	}
 
-	fn ui_nav(&self, ui: &mut egui::Ui, kvp: (&FileKey, &File), gui_sel: usize) {
-		let (path, _) = kvp;
-
+	fn ui_nav(&self, ui: &mut egui::Ui, fref: FileRef) {
 		ui.horizontal(|ui| {
-			ui.add_enabled_ui(gui_sel != 0, |ui| {
+			ui.add_enabled_ui(!fref.path().is_root(), |ui| {
 				if ui
 					.button("\u{2B06}")
 					.on_hover_text("Go to Parent")
 					.clicked()
 				{
-					let idx = self.files.get_index_of(path.parent().unwrap());
-					self.gui.select_file(idx.unwrap());
+					self.gui
+						.select_file(fref.path().parent().unwrap().to_path_buf());
 				}
 			});
 
-			for (i, comp) in path.components().enumerate() {
+			for (i, comp) in fref.path().components().enumerate() {
 				let label = egui::Label::new(comp.as_os_str().to_string_lossy().as_ref())
 					.sense(egui::Sense::click());
 
@@ -120,9 +119,8 @@ impl VirtualFs {
 				};
 
 				if resp.clicked() {
-					let p: VPathBuf = path.components().take(i + 1).collect();
-					let idx = self.files.get_index_of::<VPath>(p.as_ref());
-					self.gui.select_file(idx.unwrap());
+					self.gui
+						.select_file(fref.path().components().take(i + 1).collect());
 				}
 
 				resp.on_hover_text("Go to");

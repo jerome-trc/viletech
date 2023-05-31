@@ -12,7 +12,8 @@ use viletech::{
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,
-	vzs, SendTracker,
+	util::SendTracker,
+	vzs,
 };
 
 use crate::ccmd;

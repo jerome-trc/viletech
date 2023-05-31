@@ -12,8 +12,7 @@ use crate::{
 		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
 	},
 	sim::{level::Vertex, line::Flags},
-	utils::io::CursorExt,
-	Outcome,
+	util::io::CursorExt,
 };
 
 use super::SubContext;

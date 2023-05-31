@@ -7,7 +7,6 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use bevy::prelude::warn;
 use once_cell::sync::Lazy;
 
 use crate::lazy_regex;
@@ -329,17 +328,4 @@ pub fn nice_path(path: impl AsRef<Path>) -> PathBuf {
 	}
 
 	PathBuf::from(string)
-}
-
-pub fn str_iter_from_path(path: &Path) -> impl Iterator<Item = &str> {
-	path.iter().filter_map(|c| match c.to_str() {
-		Some(c) => Some(c),
-		None => {
-			warn!(
-				"`utils::path::str_iter_from_path` \
-				failed to convert a path component to UTF-8."
-			);
-			None
-		}
-	})
 }

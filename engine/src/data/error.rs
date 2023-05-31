@@ -1,8 +1,9 @@
 //! Things that can go wrong during data management operations.
 
 use image::ImageError;
+use vfs::VPathBuf;
 
-use crate::{udmf, VPathBuf};
+use crate::udmf;
 
 /// Things that can go wrong during (non-preparation) datum management operations,
 /// like lookup and mutation. Also see [`PrepError`].

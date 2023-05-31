@@ -54,6 +54,8 @@ doomfront = { path = "../doomfront", features = [
 	"umapinfo",
 	"zdoom",
 ] }
+util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
+vfs = { package = "viletech-fs", path = "../vfs", features = ["bevy_egui", "ser_de"] }
 vzs = { package = "vzscript", path = "../vzscript" }
 
 arrayvec = { workspace = true }

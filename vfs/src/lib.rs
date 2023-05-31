@@ -1,26 +1,37 @@
-use std::{
-	path::{Path, PathBuf},
-	sync::Arc,
-};
+//! # VileTechFS
+//!
+//! VileTech's virtual file system; an abstraction over the operating system's
+//! "physical" FS. Real files, directories, and various archives are all merged
+//! into one tree so that reading from them is more convenient at all other levels
+//! of the engine, without exposing any details of the user's underlying machine.
 
-use bevy_egui::egui;
-use globset::Glob;
-use indexmap::IndexMap;
-use rayon::prelude::*;
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use util::{path::PathExt, Outcome, SendTracker};
-use vfs::{VPath, VPathBuf};
+// TODO: Disallow these when done.
+#![allow(unused)]
+#![allow(dead_code)]
 
 mod error;
 mod file;
+#[cfg(any(feature = "bevy_egui"))]
 mod gui;
 mod mount;
 
 #[cfg(test)]
-mod test;
+pub mod test;
 
-use self::file::FileKey;
+use std::{
+	collections::HashMap,
+	path::{Path, PathBuf},
+	sync::Arc,
+};
+
+#[cfg(any(feature = "bevy_egui"))]
+use bevy_egui::egui;
+use globset::Glob;
+use rayon::prelude::*;
+use regex::Regex;
+use util::{path::PathExt, Outcome, SendTracker};
+
+use crate::file::Content;
 
 pub use self::{
 	error::MountError,
@@ -28,11 +39,22 @@ pub use self::{
 	file::{File, FileRef},
 };
 
+/// Disambiguates between real FS paths and virtual FS paths.
+pub type VPath = std::path::Path;
+/// Disambiguates between real FS paths and virtual FS paths.
+pub type VPathBuf = std::path::PathBuf;
+
+/// [`Arc`] over [`VPath`] is used instead of a plain [`VPathBuf`] to slightly
+/// reduce duplication between the file map and directory sets.
+pub(crate) type FileKey = Arc<VPath>;
+
 #[derive(Debug)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct VirtualFs {
-	/// Element 0 is always the root node, under virtual path `/`.
-	files: IndexMap<FileKey, File>,
+	/// Always contains the root node, under virtual path `/`.
+	files: HashMap<FileKey, File>,
 	mounts: Vec<MountInfo>,
+	#[cfg(any(feature = "bevy_egui"))]
 	gui: gui::DevGui,
 	config: Config,
 }
@@ -42,13 +64,7 @@ impl VirtualFs {
 
 	#[must_use]
 	pub fn root(&self) -> FileRef {
-		let (path, file) = self.files.get_index(0).unwrap();
-
-		FileRef {
-			vfs: self,
-			path,
-			file,
-		}
+		self.get("/").unwrap()
 	}
 
 	#[must_use]
@@ -79,14 +95,6 @@ impl VirtualFs {
 	#[must_use]
 	pub fn file_count(&self) -> usize {
 		self.files.len()
-	}
-
-	#[must_use]
-	pub fn mem_usage(&self) -> usize {
-		self.files
-			.par_iter()
-			.fold(|| 0_usize, |acc, (_, file)| acc + file.byte_len())
-			.sum()
 	}
 
 	/// Yields every file, root included, in an unspecified order.
@@ -156,6 +164,8 @@ impl VirtualFs {
 		}
 	}
 
+	/// Note that this is with regards to the mount array, not the file tree,
+	/// although all removed mounts will have their subtrees removed.
 	pub fn truncate(&mut self, len: usize) {
 		for i in (len + 1)..self.mounts.len() {
 			let mp = self.mounts[i].mount_point().to_path_buf();
@@ -165,6 +175,21 @@ impl VirtualFs {
 		self.mounts.truncate(len);
 	}
 
+	#[must_use]
+	pub fn config_set(&mut self) -> ConfigSet {
+		ConfigSet(self)
+	}
+
+	// Miscellaneous ///////////////////////////////////////////////////////////
+
+	#[cfg(any(feature = "bevy_egui"))]
+	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
+		self.ui_impl(ui);
+	}
+}
+
+/// Internals.
+impl VirtualFs {
 	/// Panics if attempting to remove the root node (path `/` or an empty path),
 	/// or attempting to remove a directory which still has children.
 	fn _remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
@@ -198,7 +223,7 @@ impl VirtualFs {
 		let parent = self.files.get_mut(parent_path).unwrap();
 		Self::unparent(parent, path);
 
-		let File::Directory(children) = removed else { return; };
+		let Content::Directory(children) = removed.content else { return; };
 
 		for child in children.iter() {
 			recur(self, child.as_ref());
@@ -206,7 +231,7 @@ impl VirtualFs {
 
 		fn recur(this: &mut VirtualFs, path: impl AsRef<VPath>) {
 			let Some(removed) = this.files.remove(path.as_ref()) else { unreachable!() };
-			let File::Directory(children) = removed else { return; };
+			let Content::Directory(children) = removed.content else { return; };
 
 			for child in children.iter() {
 				recur(this, child.as_ref());
@@ -215,33 +240,23 @@ impl VirtualFs {
 	}
 
 	fn unparent(parent: &mut File, child_path: impl AsRef<VPath>) {
-		if let File::Directory(children) = parent {
+		if let Content::Directory(children) = &mut parent.content {
 			children.remove(child_path.as_ref());
 		} else {
 			unreachable!()
 		}
-	}
-
-	#[must_use]
-	pub fn config_set(&mut self) -> ConfigSet {
-		ConfigSet(self)
-	}
-
-	// Miscellaneous ///////////////////////////////////////////////////////////
-
-	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
-		self.ui_impl(ui);
 	}
 }
 
 impl Default for VirtualFs {
 	fn default() -> Self {
 		let path = VPathBuf::from("/").into();
-		let root = File::Directory(indexmap::indexset! {});
+		let root = File::new_dir();
 
 		Self {
-			files: indexmap::indexmap! { path => root },
+			files: HashMap::from([(path, root)]),
 			mounts: vec![],
+			#[cfg(any(feature = "bevy_egui"))]
 			gui: gui::DevGui::default(),
 			config: Config::default(),
 		}
@@ -312,7 +327,8 @@ impl MountInfo {
 }
 
 /// Primarily serves to specify the type of compression used, if any.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub enum MountFormat {
 	PlainFile,
 	Directory,
@@ -325,13 +341,12 @@ pub enum MountFormat {
 
 #[derive(Debug, Default)]
 struct Config {
-	pub(super) reserved_mount_points: Vec<String>,
+	pub(self) reserved_mount_points: Vec<String>,
 }
 
 /// Configuration methods are kept in a wrapper around a [`VirtualFs`] reference
 /// to prevent bloat in the interface of the VFS itself.
 #[derive(Debug)]
-#[repr(transparent)]
 pub struct ConfigSet<'vfs>(&'vfs mut VirtualFs);
 
 impl ConfigSet<'_> {

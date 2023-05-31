@@ -3,7 +3,7 @@ use std::env;
 use bevy::prelude::{error, info};
 use viletech::{
 	terminal::{self, CommandArgs},
-	utils::duration_to_hhmmss,
+	util::duration_to_hhmmss,
 };
 
 use crate::ServerCore;

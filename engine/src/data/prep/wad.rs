@@ -4,6 +4,7 @@ use std::{io::Cursor, ops::Range};
 
 use kira::sound::static_sound::{StaticSoundData, StaticSoundSettings};
 use rayon::prelude::*;
+use util::Outcome;
 
 use crate::{
 	data::{
@@ -11,7 +12,6 @@ use crate::{
 		Catalog, PrepError, PrepErrorKind,
 	},
 	vfs::FileRef,
-	Outcome,
 };
 
 use super::SubContext;

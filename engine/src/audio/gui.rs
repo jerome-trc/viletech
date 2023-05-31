@@ -10,8 +10,7 @@ use kira::{
 	tween::Tween,
 };
 use nodi::midly;
-
-use crate::VPath;
+use vfs::VPath;
 
 use super::{midi, AudioCore, MidiData, MidiSettings};
 

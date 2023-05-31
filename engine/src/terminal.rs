@@ -1,6 +1,6 @@
 //! Abstraction for text-based UI, used by the headless server and client's console.
 
-use crate::lazy_regex;
+use util::lazy_regex;
 
 /// This combines storage for text-based commands and aliases with a parser
 /// for matching against those commands, allowing both the client's console

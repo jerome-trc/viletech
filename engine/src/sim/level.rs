@@ -8,10 +8,10 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use util::math::Fixed32;
 
 use crate::{
 	data::dobj::{self, UdmfValue},
-	math::Fixed32,
 	sparse::{SparseSet, SparseSetIndex},
 };
 

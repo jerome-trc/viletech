@@ -30,7 +30,7 @@ use nodi::midly;
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 
-use crate::{data::Catalog, sim::actor::Actor, utils, vfs::FileRef};
+use crate::{data::Catalog, sim::actor::Actor, util, vfs::FileRef};
 
 pub use midi::{
 	render as render_midi, Data as MidiData, Handle as MidiHandle, Settings as MidiSettings,
@@ -348,7 +348,7 @@ impl AudioCore {
 				SoundFontKind::Wopl
 			} else if &header[..11] == b"WOPN2-BANK\0" {
 				SoundFontKind::Wopn
-			} else if utils::io::is_zip(&header) {
+			} else if util::io::is_zip(&header) {
 				SoundFontKind::Gus
 			} else {
 				info!(
@@ -597,7 +597,7 @@ pub enum SoundFontKind {
 static SOUNDFONT_DIR: Lazy<PathBuf> = Lazy::new(|| {
 	#[cfg(not(debug_assertions))]
 	{
-		let ret = utils::path::exe_dir().join("soundfonts");
+		let ret = util::path::exe_dir().join("soundfonts");
 
 		if !ret.exists() {
 			let res = std::fs::create_dir(&ret);

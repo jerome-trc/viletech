@@ -15,10 +15,10 @@ use std::num::{ParseFloatError, ParseIntError};
 use doomfront::chumsky::{
 	self, primitive, span::SimpleSpan, text, util::MaybeRef, IterParser, Parser,
 };
+use util::lazy_regex;
 
 use crate::{
 	data::dobj::{Level, LevelFormat, LineDef, Sector, SideDef, Thing, ThingFlags, UdmfNamespace},
-	lazy_regex,
 	sim::{level::Vertex, line},
 };
 

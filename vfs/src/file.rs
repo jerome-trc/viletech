@@ -1,29 +1,49 @@
-use std::{hash, sync::Arc};
+use std::{ops::Range, path::Path, sync::Arc};
 
 use globset::Glob;
 use indexmap::IndexSet;
 use rayon::prelude::*;
 use regex::Regex;
-use vfs::VPath;
+use util::path::PathExt;
 
-use crate::util::path::PathExt;
+use crate::{FileKey, VPath, VirtualFs};
 
-use super::{VfsError, VirtualFs};
+#[derive(Debug)]
+pub(crate) enum Reader {
+	Memory(Box<[u8]>),
+	File(Box<Path>),
+	Wad {
+		/// WADs are sometimes nested in PK3/7 (i.e. zip) files, but this is
+		/// less common than not.
+		reader: Arc<Reader>,
+		/// Indicates what part of `reader` has to be read to get this WAD's
+		/// data, header excluded.
+		slice: Range<usize>,
+	},
+	Zip {
+		/// Likely `Self::File`, but this may be nested in another archive.
+		reader: Arc<Reader>,
+		/// Indicates what part of `reader` has to be read to get this zip's
+		/// data, header excluded.
+		slice: Range<usize>,
+	},
+}
+
+#[derive(Debug)]
+pub struct File {
+	pub(crate) content: Content,
+}
 
 /// A virtual directory or virtual proxy for a physical file or archive entry.
 #[derive(Debug)]
-pub enum File {
-	/// Fallback storage type for physical files or archive entries that can't be
-	/// identified as anything else and don't pass UTF-8 validation.
-	Binary(Box<[u8]>),
-	/// All files that pass UTF-8 validation end up stored as one of these.
-	Text(Box<str>),
-	/// If a file's length is exactly 0, it's stored as this kind.
+pub(crate) enum Content {
+	/// The set of children is boxed so as not to penalize the size of other files.
+	Directory(Box<IndexSet<FileKey>>),
 	Empty,
-	/// The content of mounts that are not single files, as well as the root VFS
-	/// node. Elements are ordered using `Path`'s `Ord`, except in the case of
-	/// the contents of WADS, which retain their defined order.
-	Directory(IndexSet<FileKey>),
+	File {
+		reader: Arc<Reader>,
+		slice: Range<usize>,
+	},
 }
 
 impl File {
@@ -36,84 +56,36 @@ impl File {
 
 	#[must_use]
 	pub fn is_dir(&self) -> bool {
-		matches!(self, Self::Directory(..))
-	}
-
-	#[must_use]
-	pub fn is_binary(&self) -> bool {
-		matches!(self, Self::Binary(..))
-	}
-
-	#[must_use]
-	pub fn is_text(&self) -> bool {
-		matches!(self, Self::Text(..))
-	}
-
-	#[must_use]
-	pub fn is_empty(&self) -> bool {
-		matches!(self, Self::Empty)
+		matches!(self.content, Content::Directory(..))
 	}
 
 	/// Returns `true` if this is a binary or text file.
 	#[must_use]
 	pub fn is_readable(&self) -> bool {
-		self.is_binary() || self.is_text()
+		!matches!(self.content, Content::Directory(..) | Content::Empty)
 	}
 
-	/// Returns [`VfsError::ByteReadFail`] if this entry is a directory,
-	/// or otherwise has no byte content.
-	pub fn try_read_bytes(&self) -> Result<&[u8], VfsError> {
-		match self {
-			Self::Binary(bytes) => Ok(bytes),
-			Self::Text(string) => Ok(string.as_bytes()),
-			_ => Err(VfsError::ByteReadFail),
-		}
-	}
-
-	/// Like [`Self::try_read_bytes`] but panics if this is a directory,
-	/// or otherwise has no byte content.
 	#[must_use]
-	pub fn read_bytes(&self) -> &[u8] {
-		match self {
-			Self::Binary(bytes) => bytes,
-			Self::Text(string) => string.as_bytes(),
-			_ => panic!("Tried to read the bytes of a VFS entry with no byte content."),
-		}
+	pub fn is_empty(&self) -> bool {
+		matches!(self.content, Content::Empty)
 	}
 
-	/// Returns [`VfsError::StringReadFail`]
-	/// if this is a directory, binary, or empty entry.
-	pub fn try_read_str(&self) -> Result<&str, VfsError> {
-		match self {
-			Self::Text(string) => Ok(string.as_ref()),
-			_ => Err(VfsError::StringReadFail),
-		}
-	}
-
-	/// Like [`Self::try_read_str`], but panics
-	/// if this is a directory, binary, or empty entry.
+	/// Panics if this file is unreadable (e.g. empty or a directory).
 	#[must_use]
-	pub fn read_str(&self) -> &str {
-		match self {
-			Self::Text(string) => string.as_ref(),
-			_ => panic!("Tried to read text from a VFS entry without UTF-8 content."),
-		}
+	pub fn read_string(&self) -> String {
+		todo!()
 	}
 
-	/// Returns 0 for directories and empty files.
+	/// Panics if this file is unreadable (e.g. empty or a directory).
 	#[must_use]
-	pub fn byte_len(&self) -> usize {
-		match self {
-			Self::Binary(bytes) => bytes.len(),
-			Self::Text(string) => string.len(),
-			_ => 0,
-		}
+	pub fn read_bytes(&self) -> Vec<u8> {
+		todo!()
 	}
 
 	#[must_use]
 	pub fn child_paths(&self) -> Option<impl Iterator<Item = &VPath>> {
-		match self {
-			Self::Directory(children) => Some(children.iter().map(|arc| arc.as_ref())),
+		match &self.content {
+			Content::Directory(children) => Some(children.iter().map(|arc| arc.as_ref())),
 			_ => None,
 		}
 	}
@@ -121,40 +93,26 @@ impl File {
 	/// Returns 0 if this is a leaf node or an empty directory.
 	#[must_use]
 	pub fn child_count(&self) -> usize {
-		match self {
-			Self::Directory(children) => children.len(),
+		match &self.content {
+			Content::Directory(children) => children.len(),
 			_ => 0,
-		}
-	}
-
-	/// Returns a new [empty], [text], or [binary] file, depending on `bytes`.
-	///
-	/// [empty]: File::Empty
-	/// [text]: File::Text
-	/// [binary]: File::Binary
-	#[must_use]
-	pub(super) fn new_leaf(bytes: Vec<u8>) -> Self {
-		if bytes.is_empty() {
-			return Self::Empty;
-		}
-
-		match String::from_utf8(bytes) {
-			Ok(string) => File::Text(string.into_boxed_str()),
-			Err(err) => File::Binary(err.into_bytes().into_boxed_slice()),
 		}
 	}
 }
 
-impl hash::Hash for File {
-	/// Be aware that this method panics if this is a [`File::Empty`] or
-	/// [`File::Directory`] to prevent misuse.
-	fn hash<H: hash::Hasher>(&self, state: &mut H) {
-		match self {
-			File::Binary(bytes) => bytes.hash(state),
-			File::Text(string) => string.hash(state),
-			File::Empty | File::Directory(_) => {
-				panic!("Attempted to hash an unreadable virtual file.")
-			}
+/// Internals.
+impl File {
+	#[must_use]
+	pub(crate) fn new_empty() -> Self {
+		Self {
+			content: Content::Empty,
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn new_dir() -> Self {
+		Self {
+			content: Content::Directory(Box::new(indexmap::indexset! {})),
 		}
 	}
 }
@@ -167,9 +125,9 @@ impl hash::Hash for File {
 /// directly with references to [`File`]s, since this can trace inter-file relationships.
 #[derive(Debug, Clone, Copy)]
 pub struct FileRef<'vfs> {
-	pub(super) vfs: &'vfs VirtualFs,
-	pub(super) path: &'vfs FileKey,
-	pub(super) file: &'vfs File,
+	pub(crate) vfs: &'vfs VirtualFs,
+	pub(crate) path: &'vfs FileKey,
+	pub(crate) file: &'vfs File,
 }
 
 impl<'vfs> FileRef<'vfs> {
@@ -288,8 +246,8 @@ impl<'vfs> FileRef<'vfs> {
 	/// Files are yielded in the order specified by [`std::path::Path::cmp`],
 	/// unless this is a directory representing a WAD file.
 	pub fn children(&self) -> Option<impl Iterator<Item = FileRef>> {
-		match self.file {
-			File::Directory(children) => Some(children.iter().map(|key| {
+		match &self.file.content {
+			Content::Directory(children) => Some(children.iter().map(|key| {
 				self.vfs
 					.get(key.as_ref())
 					.expect("A VFS directory has a dangling child key.")
@@ -335,8 +293,8 @@ impl<'vfs> FileRef<'vfs> {
 	/// Returns 0 if this is a leaf node or an empty directory.
 	#[must_use]
 	pub fn child_count(&self) -> usize {
-		match self.file {
-			File::Directory(children) => children.len(),
+		match &self.file.content {
+			Content::Directory(children) => children.len(),
 			_ => 0,
 		}
 	}
@@ -351,7 +309,7 @@ impl<'vfs> FileRef<'vfs> {
 			panic!("`child_index` expects `path` to be a child of `self.path`.");
 		}
 
-		if let File::Directory(children) = self.file {
+		if let Content::Directory(children) = &self.file.content {
 			children.get_index_of(path)
 		} else {
 			panic!("`child_index` expects `self` to be a directory.");
@@ -375,7 +333,3 @@ impl PartialEq for FileRef<'_> {
 }
 
 impl Eq for FileRef<'_> {}
-
-/// [`Arc`] is used instead of [`PathBuf`] to slightly reduce duplication between
-/// the file map and directory sets.
-pub type FileKey = Arc<VPath>;

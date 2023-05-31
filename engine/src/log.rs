@@ -14,7 +14,7 @@ use tracing_subscriber::{
 
 use crate::{
 	console, short_version_string,
-	utils::{self, duration_to_hhmmss},
+	util::{self, duration_to_hhmmss},
 };
 
 pub use tracing::Level;
@@ -39,7 +39,7 @@ impl TracingPlugin {
 	}
 
 	fn file_writer() -> (NonBlocking, WorkerGuard) {
-		let exe_dir = utils::path::exe_dir();
+		let exe_dir = util::path::exe_dir();
 
 		let fpath: PathBuf = [&exe_dir, Path::new("viletech.log")].iter().collect();
 
@@ -254,8 +254,72 @@ pub fn init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error::Err
 
 	info!("{}", short_version_string());
 	info!("{}", app_version_string);
-	info!("{}", utils::env::os_info()?);
+	info!("{}", os_info()?);
 	log_cpu_info()?;
 
 	Ok(())
+}
+
+fn os_info() -> Result<String, Box<dyn std::error::Error>> {
+	type Command = std::process::Command;
+
+	match std::env::consts::OS {
+		"linux" => {
+			let uname = Command::new("uname").args(["-s", "-r", "-v"]).output();
+
+			let output = match uname {
+				Ok(o) => o,
+				Err(err) => {
+					error!("Failed to execute `uname -s -r -v`: {}", err);
+					return Err(Box::new(err));
+				}
+			};
+
+			let osinfo = match String::from_utf8(output.stdout) {
+				Ok(s) => s.replace('\n', ""),
+				Err(err) => {
+					error!(
+						"Failed to convert `uname -s -r -v` output to UTF-8: {}",
+						err
+					);
+					return Err(Box::new(err));
+				}
+			};
+
+			Ok(osinfo)
+		}
+		"windows" => {
+			let systeminfo = Command::new("systeminfo | findstr")
+				.args(["/C:\"OS\""])
+				.output();
+
+			let output = match systeminfo {
+				Ok(o) => o,
+				Err(err) => {
+					error!(
+						"Failed to execute `systeminfo | findstr /C:\"OS\"`: {}",
+						err
+					);
+					return Err(Box::new(err));
+				}
+			};
+
+			let osinfo = match String::from_utf8(output.stdout) {
+				Ok(s) => s,
+				Err(err) => {
+					error!(
+						"Failed to convert `systeminfo | findstr /C:\"OS\"` \
+						 output to UTF-8: {}",
+						err
+					);
+					return Err(Box::new(err));
+				}
+			};
+
+			Ok(osinfo)
+		}
+		_ => Err(Box::<std::io::Error>::new(
+			std::io::ErrorKind::Unsupported.into(),
+		)),
+	}
 }

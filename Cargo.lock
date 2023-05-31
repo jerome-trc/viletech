@@ -5445,6 +5445,8 @@ dependencies = [
  "tracing-subscriber",
  "triangulate",
  "unicode-ident",
+ "viletech-fs",
+ "viletech-utils",
  "vzscript",
  "walkdir",
  "zip",
@@ -5476,6 +5478,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "viletech-fs"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+ "bevy_egui",
+ "dashmap",
+ "globset",
+ "indexmap",
+ "parking_lot",
+ "rayon",
+ "regex",
+ "serde",
+ "viletech-utils",
+]
+
+[[package]]
 name = "viletech-server"
 version = "0.0.0"
 dependencies = [
@@ -5488,6 +5506,21 @@ dependencies = [
  "indoc",
  "sha3",
  "viletech",
+]
+
+[[package]]
+name = "viletech-utils"
+version = "0.0.0"
+dependencies = [
+ "arrayvec",
+ "bytemuck",
+ "byteorder",
+ "fixed",
+ "glam",
+ "home",
+ "once_cell",
+ "regex",
+ "serde",
 ]
 
 [[package]]

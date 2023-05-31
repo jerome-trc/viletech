@@ -1,6 +1,8 @@
 //! Functions for reading data objects from ZDoom's PK3 and PK7 archives.
 
-use crate::{data::Catalog, Outcome};
+use util::Outcome;
+
+use crate::data::Catalog;
 
 use super::SubContext;
 

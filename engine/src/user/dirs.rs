@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{user::GLOBALCFG_FILENAME, utils::path::exe_dir};
+use crate::{user::GLOBALCFG_FILENAME, util::path::exe_dir};
 
 /// Check both given directories for existence. If both exist, the one which
 /// appears to be more complete will take precedence; if both seem like completely

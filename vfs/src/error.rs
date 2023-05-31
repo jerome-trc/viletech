@@ -1,9 +1,6 @@
 use std::path::PathBuf;
 
-use vfs::VPathBuf;
-use zip::result::ZipError;
-
-use crate::wad;
+use crate::VPathBuf;
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`MountError`].
@@ -99,19 +96,6 @@ pub enum MountErrorKind {
 	/// The caller attempted to mount something to a point which
 	/// already had something mounted onto it.
 	Remount,
-	/// Something went wrong when trying to parse a WAD archive during loading.
-	Wad(wad::Error),
-	/// Something went wrong when trying to open a zip archive during loading.
-	ZipArchiveRead(ZipError),
-	/// Indexed retrieval of a zip archive entry failed.
-	ZipFileGet(usize, ZipError),
-	/// A zip archive entry contains an unsafe or malformed name.
-	ZipFileName(String),
-	/// Failed to correctly read all the bytes in a zip archive entry.
-	ZipFileRead {
-		name: PathBuf,
-		err: Option<std::io::Error>,
-	},
 }
 
 #[derive(Debug)]
@@ -130,8 +114,6 @@ impl std::error::Error for MountError {
 			MountErrorKind::DirectoryRead(err) => Some(err),
 			MountErrorKind::FileRead(err) => Some(err),
 			MountErrorKind::Metadata(err) => Some(err),
-			MountErrorKind::Wad(err) => Some(err),
-			MountErrorKind::ZipArchiveRead(err) => Some(err),
 			_ => None,
 		}
 	}
@@ -196,36 +178,6 @@ impl std::fmt::Display for MountError {
 					f,
 					"Attempted to overwrite an existing entry with a new mount."
 				)
-			}
-			MountErrorKind::Wad(err) => {
-				write!(f, "Failed to parse a WAD archive: {err}")
-			}
-			MountErrorKind::ZipArchiveRead(err) => {
-				write!(f, "Failed to open a zip archive: {err}")
-			}
-			MountErrorKind::ZipFileGet(index, err) => {
-				write!(
-					f,
-					"Failed to get zip archive entry by index: {index} ({err})"
-				)
-			}
-			MountErrorKind::ZipFileName(name) => {
-				write!(f, "Zip archive entry name is malformed or unsafe: {name}")
-			}
-			MountErrorKind::ZipFileRead { name, err } => {
-				if let Some(err) = err {
-					write!(
-						f,
-						"Failed to read zip archive entry: {n} ({err})",
-						n = name.display()
-					)
-				} else {
-					write!(
-						f,
-						"Failed to read all content of zip archive entry: {n}",
-						n = name.display()
-					)
-				}
 			}
 		}
 	}

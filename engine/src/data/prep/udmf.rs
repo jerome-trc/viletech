@@ -2,11 +2,12 @@
 //!
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
+use util::Outcome;
+
 use crate::{
 	data::{dobj::Level, Catalog, LevelError, PrepError, PrepErrorKind},
 	udmf,
 	vfs::FileRef,
-	Outcome,
 };
 
 use super::SubContext;

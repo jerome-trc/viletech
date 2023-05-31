@@ -1,7 +1,6 @@
 use std::ops::{Add, AddAssign, Mul};
 
 use glam::{DQuat, DVec3, EulerRot, Quat, Vec3A};
-use serde::{Deserialize, Serialize};
 
 pub type Fixed32 = fixed::types::I16F16;
 pub type Fixed64 = fixed::types::I32F32;
@@ -65,7 +64,8 @@ pub type IRect64 = Rect4<i64>;
 pub type FRect32 = Rect4<f32>;
 pub type FRect64 = Rect4<f64>;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub struct MinMaxBox {
 	pub min: glam::Vec3A,
 	pub max: glam::Vec3A,
@@ -73,14 +73,14 @@ pub struct MinMaxBox {
 
 /// A strongly-typed angle in degrees of type `T`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub struct Angle<T: Dimension>(T);
 
 pub type Angle32 = Angle<f32>;
 pub type Angle64 = Angle<f64>;
 
-#[repr(transparent)]
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rotator32(Vec3A);
 
 impl Rotator32 {
@@ -122,8 +122,8 @@ impl Rotator32 {
 	}
 }
 
-#[repr(transparent)]
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rotator64(DVec3);
 
 // (RAT) Q: Would this type benefit from SIMD? using `__m256d` would depend on
