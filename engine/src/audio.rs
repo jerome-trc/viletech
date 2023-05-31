@@ -36,22 +36,19 @@ pub use midi::{
 	render as render_midi, Data as MidiData, Handle as MidiHandle, Settings as MidiSettings,
 };
 
-use self::gui::DeveloperGui;
+use self::gui::DevGui;
 
 pub struct AudioCore {
 	/// The centre of waveform sound synthesis and playback.
 	pub manager: AudioManager,
 	pub soundfonts: Vec<SoundFont>,
-	/// General-purpose music slot.
-	pub music1: Option<Sound>,
-	/// Secondary music slot. Allows scripts to set a song to pause the level's
-	/// main song, briefly play another piece, and then carry on with `music1`
-	/// wherever it left off.
-	pub music2: Option<Sound>,
+	/// Unlike `Self::sounds`, this behaves like a stack.
+	/// Only the last element gets played at any given time.
+	pub music: Vec<Sound>,
 	/// Sounds currently being played.
 	pub sounds: Vec<WorldSound>,
 	catalog: Arc<RwLock<Catalog>>,
-	gui: DeveloperGui,
+	gui: DevGui,
 }
 
 // SAFETY: This is to deal with `AudioManager`, which uses sufficient internal
@@ -82,10 +79,9 @@ impl AudioCore {
 			catalog,
 			manager: AudioManager::new(manager_settings).map_err(Error::KiraBackend)?,
 			soundfonts: Self::collect_soundfonts()?,
-			music1: None,
-			music2: None,
+			music: vec![],
 			sounds: Vec::with_capacity(sound_cap),
-			gui: DeveloperGui::default(),
+			gui: DevGui::default(),
 		};
 
 		if !ret.soundfonts.is_empty() {
@@ -96,80 +92,83 @@ impl AudioCore {
 		Ok(ret)
 	}
 
-	/// Sound handles which have finished playing get swap-removed.
-	/// Music handles which have finished playing get assigned `None`.
-	pub fn update(&mut self) {
-		let mut i = 0;
+	/// Clears sound and music handles that have stopped.
+	/// Returns an error if the removal of a music track causes another song
+	/// lower in the stack to start, and it fails to do so.
+	pub fn update(&mut self) -> Result<(), Error> {
+		self.sounds
+			.retain(|snd| snd.state() != PlaybackState::Stopped);
 
-		while i < self.sounds.len() {
-			if self.sounds[i].state() == PlaybackState::Stopped {
-				self.sounds.swap_remove(i);
-			} else {
-				i += 1;
+		self.music
+			.retain(|mus| mus.state() != PlaybackState::Stopped);
+
+		// If the previously-currently-playing music track at the top of the
+		// stack was stopped and removed, whichever track was below it was paused,
+		// and must now be resumed.
+		if let Some(mus) = self.music.last_mut() {
+			if !mus.is_playing() {
+				return mus.resume(Tween::default());
 			}
 		}
 
-		if let Some(mus) = &mut self.music1 {
-			if mus.state() == PlaybackState::Stopped {
-				let _ = self.music1.take();
-			}
-		}
-
-		if let Some(mus) = &mut self.music2 {
-			if mus.state() == PlaybackState::Stopped {
-				let _ = self.music2.take();
-			}
-		}
+		Ok(())
 	}
 
 	/// This assumes that `data` has already been completely configured.
-	pub fn start_music_wave<const SLOT2: bool>(
+	///
+	/// Returns an errorif:
+	/// - An already-playing song fails to pause.
+	/// - The given song fails to start playback.
+	///
+	/// `fade_out` only gets used if the new music is getting pushed over an
+	/// already-playing track, which gets paused. If `None` is given, the pause
+	/// happens practically instantaneously.
+	pub fn start_music_wave(
 		&mut self,
 		data: StaticSoundData,
+		fade_out: Option<Tween>,
 	) -> Result<(), Error> {
+		if let Some(mus) = self.music.last_mut() {
+			mus.pause(fade_out.unwrap_or_default())?;
+		}
+
 		let handle = self.manager.play(data).map_err(Error::PlayWave)?;
 
-		if !SLOT2 {
-			self.music1 = Some(Sound::Wave(handle));
-		} else {
-			self.music2 = Some(Sound::Wave(handle));
-		}
+		self.music.push(Sound::Wave(handle));
 
 		Ok(())
 	}
 
+	/// This assumes that `data` has already been completely configured.
+	///
 	/// Returns an error if:
+	/// - An already-playing song fails to pause.
 	/// - The given song fails to start playback.
-	/// - The given music slot fails to stop and be cleared.
-	pub fn start_music_midi<const SLOT2: bool>(&mut self, data: MidiData) -> Result<(), Error> {
-		let handle = self.manager.play(data).map_err(Error::PlayMidi)?;
-		self.stop_music::<SLOT2>()?;
-
-		if !SLOT2 {
-			self.music1 = Some(Sound::Midi(handle));
-		} else {
-			self.music2 = Some(Sound::Midi(handle));
+	///
+	/// `fade_out` only gets used if the new music is getting pushed over an
+	/// already-playing track, which gets paused. If `None` is given, the pause
+	/// happens practically instantaneously.
+	pub fn start_music_midi(
+		&mut self,
+		data: MidiData,
+		fade_out: Option<Tween>,
+	) -> Result<(), Error> {
+		if let Some(mus) = self.music.last_mut() {
+			mus.pause(fade_out.unwrap_or_default())?;
 		}
+
+		let handle = self.manager.play(data).map_err(Error::PlayMidi)?;
+
+		self.music.push(Sound::Midi(handle));
 
 		Ok(())
 	}
 
-	/// Instantly stops the music track in the requested slot and then empties it.
-	pub fn stop_music<const SLOT2: bool>(&mut self) -> Result<(), Error> {
-		let slot = if !SLOT2 {
-			&mut self.music1
-		} else {
-			&mut self.music2
-		};
-
-		let res = if let Some(mus) = slot {
-			mus.stop(Tween::default())
-		} else {
-			return Ok(());
-		};
-
-		*slot = None;
-		res
+	/// Stops the music slot at the top of the stack.
+	/// If the music stack is empty, this is a valid no-op.
+	pub fn stop_music(&mut self, fade_out: Option<Tween>) -> Result<(), Error> {
+		let Some(mut mus) = self.music.pop() else { return Ok(()); };
+		mus.stop(fade_out.unwrap_or_default())
 	}
 
 	/// If no `source` is given, the sound will always audible to all clients
@@ -211,20 +210,6 @@ impl AudioCore {
 		}
 	}
 
-	pub fn pause_all_music(&mut self) {
-		if let Some(mus) = &mut self.music1 {
-			if let Err(err) = mus.pause(Tween::default()) {
-				error!("Failed to pause music 1: {err}");
-			}
-		}
-
-		if let Some(mus) = &mut self.music2 {
-			if let Err(err) = mus.pause(Tween::default()) {
-				error!("Failed to pause music 2: {err}");
-			}
-		}
-	}
-
 	/// Instantly resumes every sound and music handle.
 	pub fn resume_all(&mut self) -> Result<(), Error> {
 		self.manager.resume(Tween::default()).map_err(Error::from)
@@ -238,20 +223,6 @@ impl AudioCore {
 		}
 	}
 
-	pub fn resume_all_music(&mut self) {
-		if let Some(mus) = &mut self.music1 {
-			if let Err(err) = mus.resume(Tween::default()) {
-				error!("Failed to resume music 1: {err}");
-			}
-		}
-
-		if let Some(mus) = &mut self.music2 {
-			if let Err(err) = mus.resume(Tween::default()) {
-				error!("Failed to resume music 2: {err}");
-			}
-		}
-	}
-
 	/// Instantly stops every ongoing sound and music track. The sound array
 	/// gets cleared along with both music slots.
 	pub fn stop_all(&mut self) {
@@ -261,23 +232,20 @@ impl AudioCore {
 
 	/// An error gets logged if stopping a sound fails.
 	pub fn stop_all_sounds(&mut self) {
-		for (i, sound) in self.sounds.iter_mut().enumerate() {
+		for (i, mut sound) in self.sounds.drain(..).enumerate() {
 			if let Err(err) = sound.stop(Tween::default()) {
 				error!("`stop_all_sounds` failed to stop sound {i}: {err}");
 			}
 		}
-
-		self.sounds.clear();
 	}
 
+	/// The entire music stack gets stopped instantaneously and cleared.
 	/// An error gets logged if stopping a slot fails.
 	pub fn stop_all_music(&mut self) {
-		if let Err(err) = self.stop_music::<false>() {
-			error!("`stop_all_music` failed to stop music 1: {err}");
-		}
-
-		if let Err(err) = self.stop_music::<true>() {
-			error!("`stop_all_music` failed to stop music 1: {err}");
+		for (i, mut mus) in self.music.drain(..).enumerate() {
+			if let Err(err) = mus.stop(Tween::default()) {
+				error!("`stop_all_music` failed to stop song {i}: {err}");
+			}
 		}
 	}
 
@@ -437,8 +405,7 @@ impl std::fmt::Debug for AudioCore {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("AudioCore")
 			.field("soundfonts", &self.soundfonts)
-			.field("music1", &self.music1)
-			.field("music2", &self.music2)
+			.field("music", &self.music)
 			.field("sounds", &self.sounds)
 			.field("catalog", &self.catalog)
 			.field("gui", &self.gui)
