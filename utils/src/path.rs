@@ -1,9 +1,7 @@
 //! Functions for manipulating and inspecting filesystem paths.
 
 use std::{
-	env,
-	fs::{self, File},
-	io::{self, Read, Seek, SeekFrom},
+	env, fs,
 	path::{Path, PathBuf},
 };
 
@@ -51,17 +49,6 @@ pub trait PathExt: AsRef<Path> {
 	/// Check if an archive is a .pk3 or .pke.
 	#[must_use]
 	fn has_eternity_extension(&self) -> bool;
-
-	/// See [`super::io::is_zip`].
-	fn is_zip(&self) -> io::Result<bool>;
-	/// See [`super::io::is_lzma`].
-	fn is_lzma(&self) -> io::Result<bool>;
-	/// See [`super::io::is_xz`].
-	fn is_xz(&self) -> io::Result<bool>;
-	/// See [`super::io::is_valid_wad`].
-	fn is_valid_wad(&self) -> io::Result<bool>;
-	/// Check if this file is a zip or WAD.
-	fn is_supported_archive(&self) -> io::Result<bool>;
 }
 
 impl<T: AsRef<Path>> PathExt for T {
@@ -170,113 +157,6 @@ impl<T: AsRef<Path>> PathExt for T {
 			.unwrap_or_default();
 
 		s.eq_ignore_ascii_case("pk3") || s.eq_ignore_ascii_case("pke")
-	}
-
-	fn is_zip(&self) -> io::Result<bool> {
-		if !self.as_ref().exists() {
-			return Err(io::ErrorKind::NotFound.into());
-		}
-
-		let mut buffer = [0u8; 4];
-		let mut file = File::open(self)?;
-
-		let bytes_read = file.read(&mut buffer)?;
-
-		if bytes_read < buffer.len() {
-			return Ok(false);
-		}
-
-		Ok(super::io::is_zip(&buffer[..]))
-	}
-
-	fn is_lzma(&self) -> io::Result<bool> {
-		if !self.as_ref().exists() {
-			return Err(io::ErrorKind::NotFound.into());
-		}
-
-		let mut buffer = [0u8; 13];
-		let mut file = File::open(self)?;
-
-		let bytes_read = file.read(&mut buffer)?;
-
-		if bytes_read < buffer.len() {
-			return Ok(false);
-		}
-
-		Ok(super::io::is_lzma(&buffer[..]))
-	}
-
-	fn is_xz(&self) -> io::Result<bool> {
-		if !self.as_ref().exists() {
-			return Err(io::ErrorKind::NotFound.into());
-		}
-
-		let mut header = [0u8; 6];
-		let mut footer = [0u8; 2];
-		let mut file = File::open(self)?;
-		let len = file.metadata()?.len();
-
-		let header_read = file.read(&mut header)?;
-
-		if header_read < header.len() {
-			return Ok(false);
-		}
-
-		file.seek(SeekFrom::End(-2))?;
-
-		let footer_read = file.read(&mut footer)?;
-
-		if footer_read < footer.len() {
-			return Ok(false);
-		}
-
-		Ok(super::io::is_xz(&header[..], &footer[..], len))
-	}
-
-	fn is_valid_wad(&self) -> io::Result<bool> {
-		if !self.as_ref().exists() {
-			return Err(io::ErrorKind::NotFound.into());
-		}
-
-		let mut buffer = [0u8; 12];
-		let mut file = File::open(self)?;
-		let metadata = file.metadata()?;
-
-		let bytes_read = file.read(&mut buffer)?;
-
-		if bytes_read < buffer.len() {
-			return Ok(false);
-		}
-
-		super::io::is_valid_wad(&buffer[..], metadata.len())
-	}
-
-	fn is_supported_archive(&self) -> io::Result<bool> {
-		let p = self.as_ref();
-
-		match p.is_zip() {
-			Ok(b) => {
-				if b {
-					return Ok(b);
-				}
-			}
-			Err(err) => {
-				return Err(err);
-			}
-		}
-
-		match p.is_valid_wad() {
-			Ok(b) => {
-				if b {
-					return Ok(b);
-				}
-			}
-			Err(err) => {
-				return Err(err);
-			}
-		}
-
-		Ok(false)
 	}
 }
 
