@@ -1,16 +1,16 @@
 [package]
 name = "viletech"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
 authors = ["jerome-trc"]
-categories = ["games", "game-engines", "game-development"]
+categories = ["game-engines", "game-development"]
 description = "Divergent GZDoom fork built on top of Bevy"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/engine"
 keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
-repository = "https://github.com/jerome-trc/viletech/"
+repository.workspace = true
 
 [dependencies.bevy]
 workspace = true
@@ -58,61 +58,61 @@ util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["bevy_egui", "ser_de"] }
 vzs = { package = "vzscript", path = "../vzscript" }
 
-arrayvec = { workspace = true }
-ariadne = { workspace = true }
-bevy_egui = { workspace = true }
-bitflags = { workspace = true }
-bitvec = { workspace = true }
-bytemuck = { workspace = true }
-byteorder = { workspace = true }
-cpal = { workspace = true }
-cranelift = { workspace = true }
-cranelift-interpreter = { workspace = true }
-cranelift-jit = { workspace = true }
-cranelift-module = { workspace = true }
-crossbeam = { workspace = true }
-dashmap = { workspace = true }
-fasthash = { workspace = true }
-fixed = { workspace = true }
-fluidlite = { workspace = true }
-formatx = { workspace = true }
-glam = { workspace = true }
-globset = { workspace = true }
-home = { workspace = true }
-image = { workspace = true }
-impl-trait-for-tuples = { workspace = true }
-indexmap = { workspace = true }
-indoc = { workspace = true }
-itertools = { workspace = true }
-kira = { workspace = true }
-md5 = { workspace = true }
-memoffset = { workspace = true }
-naga = { workspace = true }
-nanorand = { workspace = true }
-nodi = { workspace = true }
-once_cell = { workspace = true }
-parking_lot = { workspace = true }
-paste = { workspace = true }
-pollster = { workspace = true }
-raw-cpuid = { workspace = true }
-rayon = { workspace = true }
-regex = { workspace = true }
-rfd = { workspace = true }
-serde = { workspace = true }
-sha3 = { workspace = true }
-slotmap = { workspace = true }
-smallvec = { workspace = true }
-smartstring = { workspace = true }
-time = { workspace = true }
-toml = { workspace = true }
-tracing = { workspace = true }
-tracing-appender = { workspace = true }
-tracing-log = { workspace = true }
-tracing-subscriber = { workspace = true }
-triangulate = { workspace = true }
-unicode-ident = { workspace = true }
-walkdir = { workspace = true }
-zip = { workspace = true }
+arrayvec.workspace = true
+ariadne.workspace = true
+bevy_egui.workspace = true
+bitflags.workspace = true
+bitvec.workspace = true
+bytemuck.workspace = true
+byteorder.workspace = true
+cpal.workspace = true
+cranelift.workspace = true
+cranelift-interpreter.workspace = true
+cranelift-jit.workspace = true
+cranelift-module.workspace = true
+crossbeam.workspace = true
+dashmap.workspace = true
+fasthash.workspace = true
+fixed.workspace = true
+fluidlite.workspace = true
+formatx.workspace = true
+glam.workspace = true
+globset.workspace = true
+home.workspace = true
+image.workspace = true
+impl-trait-for-tuples.workspace = true
+indexmap.workspace = true
+indoc.workspace = true
+itertools.workspace = true
+kira.workspace = true
+md5.workspace = true
+memoffset.workspace = true
+naga.workspace = true
+nanorand.workspace = true
+nodi.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+paste.workspace = true
+pollster.workspace = true
+raw-cpuid.workspace = true
+rayon.workspace = true
+regex.workspace = true
+rfd.workspace = true
+serde.workspace = true
+sha3.workspace = true
+slotmap.workspace = true
+smallvec.workspace = true
+smartstring.workspace = true
+time.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+triangulate.workspace = true
+unicode-ident.workspace = true
+walkdir.workspace = true
+zip.workspace = true
 
 [[bench]]
 name = "bench"
@@ -121,10 +121,10 @@ harness = false
 [build-dependencies]
 bindgen = "0.64.0"
 miette = { version = "5.7.0", features = ["fancy"] }
-sha3 = { workspace = true }
-time = { workspace = true }
-walkdir = { workspace = true }
-zip = { workspace = true }
+sha3.workspace = true
+time.workspace = true
+walkdir.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 criterion = "0.4.0"

@@ -1,7 +1,7 @@
 [package]
 name = "viletech-utils"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["game-engines", "game-development"]
@@ -10,19 +10,19 @@ homepage = "https://github.com/jerome-trc/viletech/tree/master/utils"
 keywords = ["doom", "gamedev", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
-repository = "https://github.com/jerome-trc/viletech/"
+repository.workspace = true
 
 [features]
 default = []
 ser_de = ["serde"]
 
 [dependencies]
-arrayvec = { workspace = true }
-bytemuck = { workspace = true }
-byteorder = { workspace = true }
-fixed = { workspace = true }
-glam = { workspace = true }
-home = { workspace = true }
-once_cell = { workspace = true }
-regex = { workspace = true }
+arrayvec.workspace = true
+bytemuck.workspace = true
+byteorder.workspace = true
+fixed.workspace = true
+glam.workspace = true
+home.workspace = true
+once_cell.workspace = true
+regex.workspace = true
 serde = { workspace = true, optional = true }

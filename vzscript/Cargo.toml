@@ -1,7 +1,7 @@
 [package]
 name = "vzscript"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["compilers", "game-development"]
@@ -10,22 +10,22 @@ homepage = "https://github.com/jerome-trc/viletech/tree/master/vzscript"
 keywords = ["compiler", "doom", "dsl", "viletech", "gamedev"]
 license = "MIT OR Apache-2.0"
 publish = false
-repository = "https://github.com/jerome-trc/viletech/"
+repository.workspace = true
 
 [features]
 default = []
 
 [dependencies]
-ariadne = { workspace = true }
-bitflags = { workspace = true }
-bitvec = { workspace = true }
-cranelift = { workspace = true }
-cranelift-interpreter = { workspace = true }
-cranelift-jit = { workspace = true }
-cranelift-module = { workspace = true }
-crossbeam = { workspace = true }
-dashmap = { workspace = true }
+ariadne.workspace = true
+bitflags.workspace = true
+bitvec.workspace = true
+cranelift.workspace = true
+cranelift-interpreter.workspace = true
+cranelift-jit.workspace = true
+cranelift-module.workspace = true
+crossbeam.workspace = true
+dashmap.workspace = true
 doomfront = { path = "../doomfront", features = ["ser_de"] }
-fasthash = { workspace = true }
-once_cell = { workspace = true }
-logos = { workspace = true }
+fasthash.workspace = true
+once_cell.workspace = true
+logos.workspace = true

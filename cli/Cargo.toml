@@ -1,16 +1,17 @@
 [package]
 name = "viletech-cli"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
-categories = ["games", "game-engines", "game-development"]
+categories = ["game-engines", "game-development"]
 description = "VileTech Engine command line utilities"
 keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
+repository.workspace = true
 
 [dependencies]
 viletech = { path = "../engine" }
 
-clap = { workspace = true }
-indoc = { workspace = true }
+clap.workspace = true
+indoc.workspace = true

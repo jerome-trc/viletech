@@ -1,7 +1,7 @@
 [package]
 name = "doomfront"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["encoding", "game-development", "parser-implementations"]
@@ -10,7 +10,7 @@ homepage = "https://github.com/jerome-trc/viletech/tree/master/doomfront"
 keywords = ["doom", "dsl", "encoding", "gamedev", "parser"]
 license = "MIT OR Apache-2.0"
 publish = false
-repository = "https://github.com/jerome-trc/viletech/"
+repository.workspace = true
 
 [features]
 default = []
@@ -23,9 +23,9 @@ umapinfo = []
 zdoom = []
 
 [dependencies]
-chumsky = { workspace = true }
-logos = { workspace = true }
-rowan = { workspace = true }
+chumsky.workspace = true
+logos.workspace = true
+rowan.workspace = true
 serde = { workspace = true, optional = true }
 
 [[bench]]

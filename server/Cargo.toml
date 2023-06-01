@@ -1,7 +1,7 @@
 [package]
 name = "viletech-server"
 version = "0.0.0"
-edition = "2021"
+edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["games", "game-engines", "game-development"]
@@ -10,7 +10,7 @@ homepage = "https://github.com/jerome-trc/viletech/tree/master/server"
 keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
-repository = "https://github.com/jerome-trc/viletech/"
+repository.workspace = true
 
 [dependencies.bevy]
 workspace = true
@@ -28,10 +28,10 @@ features = [
 [dependencies]
 viletech = { path = "../engine" }
 
-bevy_quinnet = { workspace = true }
-bitflags = { workspace = true }
-bytemuck = { workspace = true }
-clap = { workspace = true }
-crossbeam = { workspace = true }
-indoc = { workspace = true }
-sha3 = { workspace = true }
+bevy_quinnet.workspace = true
+bitflags.workspace = true
+bytemuck.workspace = true
+clap.workspace = true
+crossbeam.workspace = true
+indoc.workspace = true
+sha3.workspace = true

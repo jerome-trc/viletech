@@ -3,6 +3,10 @@ members = ["cli", "client", "doomfront", "engine", "server", "utils", "vfs", "vz
 default-members = ["engine", "client"]
 resolver = "2" # Needed for WGPU and Bevy.
 
+[workspace.package]
+edition = "2021"
+repository = "https://github.com/jerome-trc/viletech"
+
 [profile.release]
 strip = true
 opt-level = 3
