@@ -6,7 +6,7 @@ resolver = "2" # Needed for WGPU and Bevy.
 [profile.release]
 strip = true
 opt-level = 3
-lto = true
+# TODO: `lto = true` later.
 codegen-units = 4
 
 [profile.dev.package."*"]
