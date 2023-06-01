@@ -30,23 +30,14 @@ where
 
 	let atom = primitive::choice((lit_expr(), ident));
 
-	let ret = chumsky::recursive::recursive(|expr| primitive::choice((atom, call_expr(expr))));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	chumsky::recursive::recursive(|expr| primitive::choice((atom, call_expr(expr)))).boxed()
 }
 
 pub fn lit_expr<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::Literal.into(),
 		primitive::choice((
 			comb::just(Token::StringLit, Syn::StringLit.into()),
@@ -55,16 +46,7 @@ where
 			comb::just(Token::KwTrue, Syn::KwTrue.into()),
 			comb::just(Token::KwFalse, Syn::KwFalse.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 /// Builds a [`Syn::CallExpr`] node. Note that this requires an argument list
@@ -76,7 +58,7 @@ where
 	C: GreenCache,
 	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::CallExpr.into(),
 		primitive::group((
 			comb::just(Token::Ident, Syn::Ident.into()),
@@ -85,16 +67,7 @@ where
 			trivia_0plus(),
 			arg_list(expr).or_not(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 /// Builds a [`Syn::RngSpec`] node.
@@ -103,7 +76,7 @@ pub fn rng_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, 
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::RngSpec.into(),
 		primitive::group((
 			comb::just(Token::BracketL, Syn::BracketL.into()),
@@ -112,16 +85,7 @@ where
 			trivia_0plus(),
 			comb::just(Token::BracketR, Syn::BracketR.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 /// Builds a [`Syn::ArgList`] node.
@@ -133,7 +97,7 @@ where
 	C: GreenCache,
 	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::ArgList.into(),
 		primitive::group((
 			comb::just(Token::ParenL, Syn::ParenL.into()),
@@ -142,16 +106,7 @@ where
 			trivia_0plus(),
 			comb::just(Token::ParenR, Syn::ParenR.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 /// Builds a series of expression nodes (separated by commas).
@@ -163,7 +118,7 @@ where
 	C: GreenCache,
 	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 {
-	let ret = primitive::group((
+	primitive::group((
 		expr.clone(),
 		comb::checkpointed(primitive::group((
 			trivia_0plus(),
@@ -174,14 +129,5 @@ where
 		.repeated()
 		.collect::<()>(),
 	))
-	.map(|_| ());
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	.map(|_| ())
 }

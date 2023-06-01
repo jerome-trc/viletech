@@ -16,7 +16,7 @@ pub fn file<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> 
 where
 	C: GreenCache,
 {
-	let ret = primitive::choice((
+	primitive::choice((
 		trivia(),
 		actor_def(),
 		include_directive(),
@@ -24,14 +24,6 @@ where
 		enum_def(),
 	))
 	.repeated()
-	.collect::<()>();
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	.collect::<()>()
+	.boxed()
 }

@@ -170,4 +170,3 @@ impl GreenCache for GreenCacheNoop {
 // TODO:
 // - Single-threaded cache behind `Rc<RefCell>`.
 // - Multi-threaded cache using DashMap and SegQueue behind `Arc`.
-// - Mix a type ID into hashes to allow using one cache for multiple languages.

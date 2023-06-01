@@ -15,25 +15,17 @@ pub fn file<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> 
 where
 	C: GreenCache,
 {
-	let ret = primitive::choice((trivia(), definition()))
+	primitive::choice((trivia(), definition()))
 		.repeated()
-		.collect::<()>();
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+		.collect::<()>()
+		.boxed()
 }
 
 pub fn definition<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::Definition.into(),
 		primitive::group((
 			flags(),
@@ -45,16 +37,7 @@ where
 			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
-	.recover_with(recovery::via_parser(recovery()));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	.recover_with(recovery::via_parser(recovery()))
 }
 
 pub fn flags<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone

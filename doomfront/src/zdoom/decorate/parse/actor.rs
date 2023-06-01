@@ -21,7 +21,7 @@ pub fn actor_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i,
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::ActorDef.into(),
 		primitive::group((
 			comb::string_nc(Token::Ident, "actor", Syn::KwActor.into()),
@@ -35,23 +35,15 @@ where
 			actor_innard().repeated().collect::<()>(),
 			comb::just(Token::BraceR, Syn::BraceR.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 fn inherit_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::InheritSpec.into(),
 		primitive::group((
 			trivia_0plus(),
@@ -59,23 +51,14 @@ where
 			trivia_0plus(),
 			actor_ident(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 fn replaces_clause<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::ReplacesClause.into(),
 		primitive::group((
 			trivia_1plus(),
@@ -83,45 +66,27 @@ where
 			trivia_1plus(),
 			actor_ident(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 fn editor_number<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::EditorNumber.into(),
 		primitive::group((
 			trivia_1plus(),
 			comb::just(Token::IntLit, Syn::IntLit.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 pub fn actor_innard<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = primitive::choice((
+	primitive::choice((
 		trivia(),
 		flag_setting(),
 		const_def(),
@@ -129,23 +94,15 @@ where
 		states_def(),
 		property_settings(),
 		user_var(),
-	));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	))
+	.boxed()
 }
 
 pub fn flag_setting<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::FlagSetting.into(),
 		primitive::group((
 			primitive::choice((
@@ -155,16 +112,7 @@ where
 			trivia_0plus(),
 			ident_chain(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 pub fn property_settings<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -183,7 +131,7 @@ where
 		ident_chain(),
 	));
 
-	let ret = comb::node(
+	comb::node(
 		Syn::PropertySettings.into(),
 		primitive::group((
 			part.clone(),
@@ -191,23 +139,14 @@ where
 				.repeated()
 				.collect::<()>(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 pub fn user_var<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::UserVar.into(),
 		primitive::group((
 			comb::just(Token::KwVar, Syn::KwVar.into()),
@@ -221,16 +160,7 @@ where
 			trivia_0plus(),
 			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 // State machine definition ////////////////////////////////////////////////////
@@ -239,7 +169,7 @@ pub fn states_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::StatesDef.into(),
 		primitive::group((
 			comb::just(Token::KwStates, Syn::KwStates.into()),
@@ -252,16 +182,8 @@ where
 				.collect::<()>(),
 			comb::just(Token::BraceR, Syn::BraceR.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 pub fn states_usage<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -282,7 +204,7 @@ where
 		trivia_0plus(),
 	)));
 
-	let ret = comb::node(
+	comb::node(
 		Syn::StatesUsage.into(),
 		primitive::group((
 			comb::just(Token::ParenL, Syn::ParenL.into()),
@@ -292,16 +214,7 @@ where
 			rep.repeated().collect::<()>(),
 			comb::just(Token::ParenR, Syn::ParenR.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 pub fn state_label<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -315,19 +228,10 @@ where
 			state.gtb.token(Syn::Ident.into(), &state.source[span])
 		});
 
-	let ret = comb::node(
+	comb::node(
 		Syn::StateLabel.into(),
 		primitive::group((name, comb::just(Token::Colon, Syn::Colon.into()))),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 pub fn state_flow<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -370,23 +274,14 @@ where
 	)))
 	.map(|_| ());
 
-	let ret = comb::node(Syn::StateFlow.into(), primitive::choice((kw, goto)));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	comb::node(Syn::StateFlow.into(), primitive::choice((kw, goto))).boxed()
 }
 
 pub fn state_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::StateDef.into(),
 		primitive::group((
 			state_sprite(),
@@ -397,16 +292,8 @@ where
 			state_quals(),
 			action_function().or_not(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 pub fn state_sprite<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -446,16 +333,7 @@ where
 		},
 	);
 
-	let ret = primitive::choice((basic, hold));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	primitive::choice((basic, hold))
 }
 
 pub fn state_frames<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -501,36 +379,19 @@ where
 		},
 	);
 
-	let ret = primitive::choice((unquoted, quoted));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	primitive::choice((unquoted, quoted))
 }
 
 pub fn state_duration<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = primitive::choice((
+	primitive::choice((
 		int_lit_negative(),
 		comb::just(Token::IntLit, Syn::IntLit.into()),
 		expr::call_expr(expr::expr()),
-	));
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	))
+	.boxed()
 }
 
 pub fn state_quals<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -585,28 +446,20 @@ where
 		offset,
 	));
 
-	let ret = comb::checkpointed(primitive::group((
+	comb::checkpointed(primitive::group((
 		trivia_1line().repeated().at_least(1).collect::<()>(),
 		qual,
 	)))
 	.repeated()
-	.collect::<()>();
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	.collect::<()>()
+	.boxed()
 }
 
 pub fn action_function<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::ActionFunction.into(),
 		primitive::group((
 			trivia_1line().repeated().collect::<()>(),
@@ -615,16 +468,8 @@ where
 				// TODO: Anonymous functions.
 			)),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 #[cfg(test)]

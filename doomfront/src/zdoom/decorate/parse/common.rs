@@ -21,21 +21,12 @@ pub fn actor_ident<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'
 where
 	C: 'i + GreenCache,
 {
-	let ret = primitive::none_of([Token::Whitespace, Token::Comment])
+	primitive::none_of([Token::Whitespace, Token::Comment])
 		.repeated()
 		.collect::<()>()
 		.map_with_state(|(), span, state: &mut ParseState<C>| {
 			state.gtb.token(Syn::Ident.into(), &state.source[span])
-		});
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+		})
 }
 
 /// `ident (trivia* '.' trivia* ident)*`
@@ -43,7 +34,7 @@ pub fn ident_chain<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'
 where
 	C: 'i + GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::IdentChain.into(),
 		primitive::group((
 			comb::just(Token::Ident, Syn::Ident.into()),
@@ -56,16 +47,7 @@ where
 			.repeated()
 			.collect::<()>(),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
 }
 
 /// In certain contexts, DECORATE allows providing number literals but not
@@ -132,7 +114,7 @@ pub(super) fn trivia_1line<'i, C>(
 where
 	C: GreenCache,
 {
-	let ret = primitive::choice((
+	primitive::choice((
 		primitive::just(Token::Whitespace),
 		primitive::just(Token::Comment),
 	))
@@ -165,14 +147,5 @@ where
 
 		state.gtb.token(syn.into(), &state.source[span]);
 		Ok(())
-	});
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	})
 }

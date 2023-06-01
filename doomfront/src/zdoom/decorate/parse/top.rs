@@ -18,7 +18,7 @@ pub fn const_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i,
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::ConstDef.into(),
 		primitive::group((
 			comb::just(Token::KwConst, Syn::KwConst.into()),
@@ -37,23 +37,15 @@ where
 			trivia_0plus(),
 			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 pub fn enum_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: GreenCache,
 {
-	let ret = comb::node(
+	comb::node(
 		Syn::EnumDef.into(),
 		primitive::group((
 			comb::just(Token::KwEnum, Syn::KwEnum.into()),
@@ -66,16 +58,8 @@ where
 			trivia_0plus(),
 			comb::just(Token::Semicolon, Syn::Semicolon.into()),
 		)),
-	);
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	)
+	.boxed()
 }
 
 fn enum_variants<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -109,21 +93,13 @@ where
 	.repeated()
 	.collect::<()>();
 
-	let ret = primitive::group((
+	primitive::group((
 		variant,
 		successive,
 		comb::just(Token::Comma, Syn::Comma.into()).or_not(),
 	))
-	.map(|_| ());
-
-	#[cfg(any(debug_assertions, test))]
-	{
-		ret.boxed()
-	}
-	#[cfg(not(any(debug_assertions, test)))]
-	{
-		ret
-	}
+	.map(|_| ())
+	.boxed()
 }
 
 pub fn include_directive<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
