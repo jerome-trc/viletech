@@ -345,7 +345,7 @@ pub enum Token {
 	#[regex("//[^\n]*\n", priority = 1)]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
-	Error,
+	Unknown,
 }
 
 pub type Lexer<'i> = crate::Lexer<'i, Token>;
@@ -356,7 +356,7 @@ impl Token {
 	#[must_use]
 	pub fn stream(source: &str, version: Option<zdoom::Version>) -> TokenStream {
 		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
-			(input.0.unwrap_or(Token::Error), input.1)
+			(input.0.unwrap_or(Token::Unknown), input.1)
 		}
 
 		let f: TokenMapper = mapper; // Yes, this is necessary.

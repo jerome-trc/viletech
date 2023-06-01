@@ -77,7 +77,7 @@ pub enum Token {
 	Whitespace,
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
-	Error,
+	Unknown,
 }
 
 pub type Lexer<'i> = doomfront::Lexer<'i, Token>;
@@ -88,7 +88,7 @@ impl Token {
 	#[must_use]
 	pub fn stream(source: &str, version: Version) -> TokenStream<'_> {
 		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
-			(input.0.unwrap_or(Token::Error), input.1)
+			(input.0.unwrap_or(Token::Unknown), input.1)
 		}
 
 		let f: TokenMapper = mapper; // Yes, this is necessary.
