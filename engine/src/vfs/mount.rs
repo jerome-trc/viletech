@@ -16,7 +16,6 @@ use zip::{read::ZipFile, ZipArchive};
 use crate::{
 	util::{io::*, path::PathExt},
 	vfs::MountInfo,
-	wad,
 };
 
 use super::{
@@ -393,14 +392,14 @@ impl VirtualFs {
 			return Outcome::Cancelled;
 		}
 
-		let wad = wad::parse_wad(bytes).map_err(|err| MountError {
-			path: virt_path.to_path_buf(),
-			kind: MountErrorKind::Wad(err),
-		});
-
-		let wad = match wad {
+		let wad = match wadload::Reader::new(Cursor::new(bytes)) {
 			Ok(w) => w,
-			Err(err) => return Outcome::Err(err),
+			Err(err) => {
+				return Outcome::Err(MountError {
+					path: virt_path.to_path_buf(),
+					kind: MountErrorKind::Wad(err),
+				})
+			}
 		};
 
 		let mut files = Vec::with_capacity(wad.len() + 1);
@@ -410,13 +409,24 @@ impl VirtualFs {
 			File::Directory(indexmap::indexset! {}),
 		));
 
-		let mut dissolution = wad.dissolve();
 		let mut index = 0_usize;
 
 		let mut last_things = None;
 		let mut last_textmap = None;
 
-		for (bytes, name) in dissolution.drain(..) {
+		for result in wad {
+			let (dentry, bytes) = match result {
+				Ok(pair) => pair,
+				Err(err) => {
+					return Outcome::Err(MountError {
+						path: virt_path.to_path_buf(),
+						kind: MountErrorKind::Wad(err),
+					});
+				}
+			};
+
+			let name = dentry.name.as_str();
+
 			index += 1;
 
 			if ctx.tracker.is_cancelled() {
@@ -457,7 +467,7 @@ impl VirtualFs {
 				}
 			}
 
-			child_path.push(&name);
+			child_path.push(name);
 
 			// What if a WAD contains two entries with the same name?
 			// For example, DOOM2.WAD has two identical `SW18_7` entries, and

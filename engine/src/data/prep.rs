@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 use serde::Deserialize;
 use smallvec::{smallvec, SmallVec};
-use util::{Id8, Outcome, SendTracker};
+use util::{Outcome, SendTracker};
 use vfs::VPathBuf;
 
 use crate::{data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat, EditorNum, SpawnNum};
@@ -573,27 +573,4 @@ pub(super) struct MountMetaIngestVzs {
 	pub folder: VPathBuf,
 	pub namespace: Option<String>,
 	pub version: String,
-}
-
-// Helper functions ////////////////////////////////////////////////////////////
-
-/// Returns `None` if `id8` starts with a NUL.
-/// Return values have no trailing NUL bytes.
-#[must_use]
-pub(self) fn read_id8(id8: [u8; 8]) -> Option<Id8> {
-	if id8.starts_with(&[b'\0']) {
-		return None;
-	}
-
-	let mut ret = Id8::new();
-
-	for byte in id8 {
-		if byte == b'\0' {
-			break;
-		}
-
-		ret.push(char::from(byte));
-	}
-
-	Some(ret)
 }

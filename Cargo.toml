@@ -1,5 +1,15 @@
 [workspace]
-members = ["cli", "client", "doomfront", "engine", "server", "utils", "vfs", "vzscript"]
+members = [
+	"cli",
+	"client",
+	"doomfront",
+	"engine",
+	"server",
+	"utils",
+	"vfs",
+	"vzscript",
+	"wadload",
+]
 default-members = ["engine", "client"]
 resolver = "2" # Needed for WGPU and Bevy.
 

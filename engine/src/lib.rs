@@ -30,7 +30,7 @@ pub mod vfs;
 pub type VPathBuf = ::vfs::VPathBuf;
 pub type VPath = ::vfs::VPath;
 pub extern crate vzs;
-pub mod wad;
+pub extern crate wadload;
 
 // Types ///////////////////////////////////////////////////////////////////////
 

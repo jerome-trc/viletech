@@ -44,7 +44,7 @@ VileTech includes a modified version of the [sparse_set](https://crates.io/crate
 
 ## wad
 
-VileTech includes a modified version of the [wad](https://crates.io/crates/wad) crate, provided under the [MIT License](./legal/wad.txt).
+The WadLoad library includes some code from the [wad](https://crates.io/crates/wad) crate, provided under the [MIT License](./legal/wad.txt).
 
 # Attribution
 

@@ -2,6 +2,8 @@
 
 use std::io::Cursor;
 
+use util::read_id8;
+
 use crate::{
 	data::{
 		dobj::{

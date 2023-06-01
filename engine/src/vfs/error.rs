@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use vfs::VPathBuf;
 use zip::result::ZipError;
 
-use crate::wad;
-
 /// Things that can go wrong during (non-mounting) virtual file system operations,
 /// like unmounting, lookup, and reading. Also see [`MountError`].
 #[derive(Debug)]
@@ -100,7 +98,7 @@ pub enum MountErrorKind {
 	/// already had something mounted onto it.
 	Remount,
 	/// Something went wrong when trying to parse a WAD archive during loading.
-	Wad(wad::Error),
+	Wad(wadload::Error),
 	/// Something went wrong when trying to open a zip archive during loading.
 	ZipArchiveRead(ZipError),
 	/// Indexed retrieval of a zip archive entry failed.

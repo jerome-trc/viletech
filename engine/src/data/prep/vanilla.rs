@@ -7,13 +7,10 @@ use bevy::prelude::{Deref, DerefMut, IVec2, UVec2};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use glam::Vec2;
 use image::{ImageBuffer, Rgba};
-use util::{Id8, Outcome};
+use util::{read_id8, Id8, Outcome};
 
 use crate::{
-	data::{
-		dobj::Image, prep::read_id8, Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError,
-		PrepErrorKind,
-	},
+	data::{dobj::Image, Catalog, ColorMap, EnDoom, Palette, PaletteSet, PrepError, PrepErrorKind},
 	util::io::CursorExt,
 	vfs::FileRef,
 };

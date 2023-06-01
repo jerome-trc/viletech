@@ -30,3 +30,4 @@ parking_lot.workspace = true
 rayon.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }
+wadload.path = "../wadload"

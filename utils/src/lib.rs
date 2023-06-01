@@ -121,3 +121,24 @@ impl SendTracker {
 /// For compatibility purposes, VileTech sometimes needs to pretend that there's
 /// no game data namespacing and look up the last loaded thing with a certain name.
 pub type Id8 = arrayvec::ArrayString<{ std::mem::size_of::<char>() * 8 }>;
+
+/// Returns `None` if `id8` starts with a NUL.
+/// Return values have no trailing NUL bytes.
+#[must_use]
+pub fn read_id8(id8: [u8; 8]) -> Option<Id8> {
+	if id8.starts_with(&[b'\0']) {
+		return None;
+	}
+
+	let mut ret = Id8::new();
+
+	for byte in id8 {
+		if byte == b'\0' {
+			break;
+		}
+
+		ret.push(char::from(byte));
+	}
+
+	Some(ret)
+}

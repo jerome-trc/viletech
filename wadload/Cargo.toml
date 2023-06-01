@@ -1,0 +1,24 @@
+[package]
+name = "wadload"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["encoding", "game-development"]
+description = "I/O for Doom's WAD archive format"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/wadload"
+keywords = ["doom", "gamedev", "io", "viletech", "wad"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository.workspace = true
+
+[features]
+default = []
+ser_de = ["dep:serde"]
+
+[dependencies]
+util = { package = "viletech-utils", path = "../utils" }
+
+byteorder.workspace = true
+indexmap.workspace = true
+serde = { workspace = true, optional = true }

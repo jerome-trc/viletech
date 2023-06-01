@@ -57,6 +57,7 @@ doomfront = { path = "../doomfront", features = [
 util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["bevy_egui", "ser_de"] }
 vzs = { package = "vzscript", path = "../vzscript" }
+wadload.path = "../wadload"
 
 arrayvec.workspace = true
 ariadne.workspace = true

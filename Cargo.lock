@@ -5472,6 +5472,7 @@ dependencies = [
  "viletech-fs",
  "viletech-utils",
  "vzscript",
+ "wadload",
  "walkdir",
  "zip",
 ]
@@ -5515,6 +5516,7 @@ dependencies = [
  "regex",
  "serde",
  "viletech-utils",
+ "wadload",
 ]
 
 [[package]]
@@ -5564,6 +5566,16 @@ dependencies = [
  "fasthash",
  "logos",
  "once_cell",
+]
+
+[[package]]
+name = "wadload"
+version = "0.0.0"
+dependencies = [
+ "byteorder",
+ "indexmap",
+ "serde",
+ "viletech-utils",
 ]
 
 [[package]]
