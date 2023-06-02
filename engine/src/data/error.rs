@@ -58,11 +58,11 @@ impl PrepError {
 pub enum PrepErrorKind {
 	/// A [COLORMAP] WAD lump is the wrong size.
 	///
-	/// [COLORMAP]: crate::data::extras::ColorMap
+	/// [COLORMAP]: https://doomwiki.org/wiki/COLORMAP
 	ColorMap(usize),
 	/// An [ENDOOM] WAD lump is the wrong size.
 	///
-	/// [ENDOOM]: crate::data::extras::EnDoom
+	/// [ENDOOM]: https://doomwiki.org/wiki/ENDOOM
 	EnDoom(usize),
 	/// A file between the `F_START` and `F_END` markers was not 4096 bytes in size.
 	///

@@ -94,7 +94,7 @@ impl PrefPreset {
 #[derive(Debug)]
 pub struct PrefNamespace {
 	/// Stored so the [core](super::UserCore) knows which .toml file to write to.
-	/// Derived from the [mount's ID](crate::data::MountInfo::id).
+	/// Derived from the [mount's ID](vfs::MountInfo::id).
 	_id: String,
 	/// Keys are pref IDs; these are restricted to ASCII alphanumerics and
 	/// underscores, must start with an ASCII letter or underscore, and can not

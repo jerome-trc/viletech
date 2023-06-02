@@ -45,7 +45,7 @@ pub struct RgbaF32 {
 
 /// Type alias for Bevy's two-point rectangle to disambiguate from VileTech's [4-point counterpart].
 ///
-/// [4-point counterpart]: math::Rect4
+/// [4-point counterpart]: util::math::Rect4
 pub type Rect2 = bevy::math::Rect;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -191,8 +191,6 @@ pub enum BaseDataError {
 	Missing,
 	ReadFailure(std::io::Error),
 	ChecksumMismatch,
-	/// For use by [`data::CatalogExt::mount_basedata`] only.
-	Load,
 }
 
 impl std::error::Error for BaseDataError {
@@ -213,7 +211,6 @@ impl std::fmt::Display for BaseDataError {
 			Self::Missing => write!(f, "Engine base data not found at `{p}`."),
 			Self::ReadFailure(err) => err.fmt(f),
 			Self::ChecksumMismatch => write!(f, "Engine base data at `{p}` is corrupted."),
-			Self::Load => write!(f, "Failed to load engine base data."),
 		}
 	}
 }

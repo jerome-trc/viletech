@@ -7,6 +7,7 @@ pub mod lex;
 pub mod cvarinfo;
 pub mod decorate;
 pub mod mapinfo;
+pub mod zscript;
 
 pub type Extra<'i, C> = crate::Extra<'i, lex::Token, C>;
 pub type ParseTree<'i> = crate::ParseTree<'i, lex::Token>;

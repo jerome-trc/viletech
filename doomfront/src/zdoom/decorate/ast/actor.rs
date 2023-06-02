@@ -449,8 +449,8 @@ impl StateDef {
 	}
 
 	/// If the returned value is [`rowan::NodeOrToken::Token`], its contained value
-	/// is tagged [`Syn::LitInt`] (and may have a negative number in it). If it
-	/// is [`rowan::NodeOrToken::Node`], its contained value is a [`Syn::ExprCall`].
+	/// is tagged [`Syn::IntLit`] (and may have a negative number in it). If it
+	/// is [`rowan::NodeOrToken::Node`], its contained value is a [`Syn::CallExpr`].
 	#[must_use]
 	pub fn duration(&self) -> SyntaxElem {
 		for elem in self.syntax().children_with_tokens() {
@@ -505,7 +505,7 @@ impl StateDef {
 			})
 	}
 
-	/// The returned token is tagged [`Syn::LitName`] or [`Syn::LitString`].
+	/// The returned token is tagged [`Syn::NameLit`] or [`Syn::StringLit`].
 	/// If multiple `light` qualifiers are present, the last one is returned.
 	#[must_use]
 	pub fn light(&self) -> Option<SyntaxToken> {
@@ -533,9 +533,9 @@ pub enum StateQual {
 	Fast,
 	NoDelay,
 	Slow,
-	/// The contained token is tagged [`Syn::LitName`] or [`Syn::LitString`].
+	/// The contained token is tagged [`Syn::NameLit`] or [`Syn::StringLit`].
 	Light(SyntaxToken),
-	/// Each contained token is tagged [`Syn::LitInt`].
+	/// Each contained token is tagged [`Syn::IntLit`].
 	Offset(SyntaxToken, SyntaxToken),
 }
 

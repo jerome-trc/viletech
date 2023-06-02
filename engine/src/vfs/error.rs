@@ -7,9 +7,9 @@ use zip::result::ZipError;
 /// like unmounting, lookup, and reading. Also see [`MountError`].
 #[derive(Debug)]
 pub enum VfsError {
-	/// The caller gave a path that didn't resolve to any [`VirtualFile`].
+	/// The caller gave a path that didn't resolve to any [virtual file].
 	///
-	/// [`VirtualFile`]: super::vfs::File
+	/// [virtual file]: super::File
 	NotFound(VPathBuf),
 	/// The caller attempted to unmount the root node (an empty path or `/`).
 	UnmountRoot,

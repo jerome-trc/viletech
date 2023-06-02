@@ -66,7 +66,7 @@ impl Expr {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ExprCall`].
+/// Wraps a node tagged [`Syn::CallExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
 pub struct ExprCall(pub(super) SyntaxNode);
@@ -81,7 +81,7 @@ impl ExprCall {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ExprIdent`].
+/// Wraps a node tagged [`Syn::IdentExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
 pub struct ExprIdent(pub(super) SyntaxNode);

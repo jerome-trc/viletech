@@ -29,7 +29,7 @@ impl Literal {
 pub struct LitToken(SyntaxToken);
 
 impl LitToken {
-	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
+	/// If this wraps a [`Syn::KwTrue`] or [`Syn::KwFalse`] token,
 	/// this returns the corresponding value. Otherwise this returns `None`.
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {
@@ -60,7 +60,7 @@ impl LitToken {
 		text[..end].parse::<f64>().ok()
 	}
 
-	/// Returns `None` if this is not tagged with [`Syn::LitInt`].
+	/// Returns `None` if this is not tagged with [`Syn::IntLit`].
 	/// Returns `Some(Err)` if integer parsing fails,
 	/// such as if the written value can not fit into a `i32`.
 	#[must_use]
@@ -93,7 +93,7 @@ impl LitToken {
 		Some(i32::from_str_radix(&text[start..end], radix))
 	}
 
-	/// If this wraps a [`Syn::LitName`] token, this returns the string's
+	/// If this wraps a [`Syn::NameLit`] token, this returns the string's
 	/// content with the delimiting single-quotation marks stripped away.
 	/// Otherwise this returns `None`.
 	#[must_use]
@@ -108,7 +108,7 @@ impl LitToken {
 		}
 	}
 
-	/// If this wraps a [`Syn::LitString`] token, this returns the string's
+	/// If this wraps a [`Syn::StringLit`] token, this returns the string's
 	/// content with the delimiting double-quotation marks stripped away.
 	/// Otherwise this returns `None`.
 	#[must_use]
