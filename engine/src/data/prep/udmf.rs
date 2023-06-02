@@ -52,8 +52,8 @@ impl Catalog {
 			}
 		};
 
-		match udmf::parse_textmap(source) {
-			Ok(level) => Outcome::Ok(level),
+		let mut level = match udmf::parse_textmap(source) {
+			Ok(l) => l,
 			Err(errs) => {
 				let ctx_errs = &mut ctx.arts_w.lock().errors;
 
@@ -64,8 +64,15 @@ impl Catalog {
 					})
 				}
 
-				Outcome::Err(())
+				return Outcome::Err(());
 			}
-		}
+		};
+
+		// As a placeholder in case map-info provides nothing.
+		level.meta.name = dir.file_prefix().to_string().into();
+
+		self.level_prep_sanity_checks(ctx, &level);
+
+		Outcome::Ok(level)
 	}
 }

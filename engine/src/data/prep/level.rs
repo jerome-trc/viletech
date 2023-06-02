@@ -7,11 +7,11 @@ use util::read_id8;
 use crate::{
 	data::{
 		dobj::{
-			BspNode, BspNodeChild, Level, LevelFormat, LineDef, Sector, Seg, SegDirection, SideDef,
-			SubSector, Thing, ThingFlags,
+			BspNode, BspNodeChild, Image, Level, LevelFormat, LineDef, Sector, Seg, SegDirection,
+			SideDef, SubSector, Thing, ThingFlags,
 		},
 		prep::*,
-		Catalog, FileRef, LevelError, PrepError, PrepErrorKind,
+		Catalog, FileRef, LevelError, PrepError, PrepErrorKind, SideTexture,
 	},
 	sim::{level::Vertex, line::Flags},
 	util::io::CursorExt,
@@ -193,6 +193,9 @@ impl Catalog {
 			LevelFormat::Doom
 		});
 
+		// As a placeholder in case map-info provides nothing.
+		level.meta.name = dir.file_prefix().to_string().into();
+
 		level.linedefs = linedefs;
 		level.nodes = nodes;
 		level.sectors = sectors;
@@ -203,7 +206,223 @@ impl Catalog {
 		level.vertices = vertices;
 		level.bounds = Level::bounds(&level.vertices);
 
+		self.level_prep_sanity_checks(ctx, &level);
+
 		Outcome::Ok(level)
+	}
+
+	pub(super) fn level_prep_sanity_checks(&self, ctx: &SubContext, level: &Level) {
+		for (i, linedef) in level.linedefs.iter().enumerate() {
+			if linedef.side_right >= level.sidedefs.len() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::InvalidLinedefSide {
+						linedef: i,
+						left: false,
+						sidedef: linedef.side_right,
+						sides_len: level.sidedefs.len(),
+					}),
+				});
+			}
+
+			let Some(side_left) = linedef.side_left else { continue; };
+
+			if side_left >= level.sidedefs.len() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::InvalidLinedefSide {
+						linedef: i,
+						left: true,
+						sidedef: side_left,
+						sides_len: level.sidedefs.len(),
+					}),
+				});
+			}
+		}
+
+		for (i, node) in level.nodes.iter().enumerate() {
+			match node.child_l {
+				BspNodeChild::SubSector(ssector) => {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::InvalidNodeSubsector {
+							node: i,
+							left: true,
+							ssector,
+							ssectors_len: level.subsectors.len(),
+						}),
+					});
+				}
+				BspNodeChild::SubNode(subnode) => {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::InvalidSubnode {
+							node: i,
+							left: true,
+							subnode,
+							nodes_len: level.nodes.len(),
+						}),
+					});
+				}
+			}
+
+			match node.child_r {
+				BspNodeChild::SubSector(ssector) => {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::InvalidNodeSubsector {
+							node: i,
+							left: false,
+							ssector,
+							ssectors_len: level.subsectors.len(),
+						}),
+					});
+				}
+				BspNodeChild::SubNode(subnode) => {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::InvalidSubnode {
+							node: i,
+							left: false,
+							subnode,
+							nodes_len: level.nodes.len(),
+						}),
+					});
+				}
+			}
+		}
+
+		for (i, sector) in level.sectors.iter().enumerate() {
+			if let Some(tex_floor) = &sector.tex_floor {
+				if self.last_by_nick::<Image>(tex_floor.as_str()).is_none() {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::UnknownFlat {
+							sector: i,
+							ceiling: false,
+							name: *tex_floor,
+						}),
+					});
+				}
+			}
+
+			if let Some(tex_ceil) = &sector.tex_ceil {
+				if self.last_by_nick::<Image>(tex_ceil.as_str()).is_none() {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::UnknownFlat {
+							sector: i,
+							ceiling: true,
+							name: *tex_ceil,
+						}),
+					});
+				}
+			}
+		}
+
+		for (i, seg) in level.segs.iter().enumerate() {
+			if seg.linedef >= level.linedefs.len() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::InvalidSegLinedef {
+						seg: i,
+						linedef: seg.linedef,
+						lines_len: level.linedefs.len(),
+					}),
+				});
+			}
+		}
+
+		for (i, sidedef) in level.sidedefs.iter().enumerate() {
+			if let Some(tex_bottom) = &sidedef.tex_bottom {
+				if self.last_by_nick::<Image>(tex_bottom.as_str()).is_none() {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::UnknownSideTex {
+							sidedef: i,
+							which: SideTexture::Bottom,
+							name: *tex_bottom,
+						}),
+					});
+				}
+			}
+
+			if let Some(tex_mid) = &sidedef.tex_mid {
+				if self.last_by_nick::<Image>(tex_mid.as_str()).is_none() {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::UnknownSideTex {
+							sidedef: i,
+							which: SideTexture::Middle,
+							name: *tex_mid,
+						}),
+					});
+				}
+			}
+
+			if let Some(tex_top) = &sidedef.tex_top {
+				if self.last_by_nick::<Image>(tex_top.as_str()).is_none() {
+					ctx.raise_error(PrepError {
+						path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+						kind: PrepErrorKind::Level(LevelError::UnknownSideTex {
+							sidedef: i,
+							which: SideTexture::Top,
+							name: *tex_top,
+						}),
+					});
+				}
+			}
+
+			if sidedef.sector >= level.sectors.len() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::InvalidSidedefSector {
+						sidedef: i,
+						sector: sidedef.sector,
+						sectors_len: level.sectors.len(),
+					}),
+				});
+			}
+		}
+
+		for (i, subsector) in level.subsectors.iter().enumerate() {
+			if subsector.seg0 >= level.segs.len() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::InvalidSubsectorSeg {
+						subsector: i,
+						seg: subsector.seg0,
+						segs_len: level.segs.len(),
+					}),
+				});
+			}
+		}
+
+		let mut player1start = false;
+
+		for (_, thingdef) in level.things.iter().enumerate() {
+			if thingdef.ed_num == 1 {
+				player1start = true;
+			}
+
+			#[cfg(any())] // TODO: Re-enable when VZScript load scripts are in.
+			if self.bp_by_ednum(thingdef.ed_num).is_none() {
+				ctx.raise_error(PrepError {
+					path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+					kind: PrepErrorKind::Level(LevelError::UnknownEdNum {
+						thingdef: i,
+						ed_num: thingdef.ed_num,
+					}),
+				});
+			}
+		}
+
+		if !player1start {
+			ctx.raise_error(PrepError {
+				path: ctx.mntinfo.mount_point().join(level.meta.name.as_ref()),
+				kind: PrepErrorKind::Level(LevelError::NoPlayer1Start),
+			});
+		}
 	}
 
 	#[must_use]

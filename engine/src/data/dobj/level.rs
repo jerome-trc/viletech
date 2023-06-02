@@ -399,10 +399,8 @@ impl Level {
 /// Comes from a map entry in a MAPINFO lump.
 #[derive(Debug)]
 pub struct LevelMeta {
-	/// e.g. "Entryway". Displayed to the user. May be a string ID. The datum ID
-	/// will be, for example, "DOOM2/MAP01" and gets stored in the [header].
-	///
-	/// [header]: DatumHeader
+	/// e.g. "Entryway". Displayed to the user. May be a string ID.
+	/// The datum ID will be, for example, "DOOM2/MAP01".
 	pub name: Arc<str>,
 	/// May be a string ID.
 	pub author_name: Arc<str>,
