@@ -15,15 +15,15 @@ repository.workspace = true
 [features]
 default = []
 bevy = ["dep:bevy"]
-bevy_egui = ["bevy", "dep:bevy_egui"]
-ser_de = ["dep:serde"]
+egui = ["dep:egui"]
+ser_de = ["serde"]
 
 [dependencies]
 util = { package = "viletech-utils", path = "../utils" }
 
 dashmap.workspace = true
 bevy = { workspace = true, optional = true }
-bevy_egui = { workspace = true, optional = true }
+egui = { workspace = true, optional = true }
 globset.workspace = true
 indexmap.workspace = true
 parking_lot.workspace = true

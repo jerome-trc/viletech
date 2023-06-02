@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use bevy_egui::egui;
 use parking_lot::RwLock;
 use util::path::PathExt;
 

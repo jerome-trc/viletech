@@ -5510,8 +5510,8 @@ name = "viletech-fs"
 version = "0.0.0"
 dependencies = [
  "bevy",
- "bevy_egui",
  "dashmap",
+ "egui",
  "globset",
  "indexmap",
  "parking_lot",

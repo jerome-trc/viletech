@@ -11,7 +11,7 @@
 
 mod error;
 mod file;
-#[cfg(any(feature = "bevy_egui"))]
+#[cfg(feature = "egui")]
 mod gui;
 mod mount;
 
@@ -24,8 +24,6 @@ use std::{
 	sync::Arc,
 };
 
-#[cfg(any(feature = "bevy_egui"))]
-use bevy_egui::egui;
 use globset::Glob;
 use rayon::prelude::*;
 use regex::Regex;
@@ -54,7 +52,7 @@ pub struct VirtualFs {
 	/// Always contains the root node, under virtual path `/`.
 	files: HashMap<FileKey, File>,
 	mounts: Vec<MountInfo>,
-	#[cfg(any(feature = "bevy_egui"))]
+	#[cfg(feature = "egui")]
 	gui: gui::DevGui,
 	config: Config,
 }
@@ -182,7 +180,7 @@ impl VirtualFs {
 
 	// Miscellaneous ///////////////////////////////////////////////////////////
 
-	#[cfg(any(feature = "bevy_egui"))]
+	#[cfg(feature = "egui")]
 	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_impl(ui);
 	}
@@ -256,7 +254,7 @@ impl Default for VirtualFs {
 		Self {
 			files: HashMap::from([(path, root)]),
 			mounts: vec![],
-			#[cfg(any(feature = "bevy_egui"))]
+			#[cfg(feature = "egui")]
 			gui: gui::DevGui::default(),
 			config: Config::default(),
 		}
