@@ -46,6 +46,10 @@ VileTech includes a modified version of the [sparse_set](https://crates.io/crate
 
 The WadLoad library includes some code from the [wad](https://crates.io/crates/wad) crate, provided under the [MIT License](./legal/wad.txt).
 
+## ZDBSP
+
+All source files and functions marked as originating from [ZDBSP]() are provided under the [GNU General Public License v2.0](./legal/zdbsp.txt).
+
 # Attribution
 
 ## MIDI SoundFonts
