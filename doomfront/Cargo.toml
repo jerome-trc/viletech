@@ -15,6 +15,7 @@ repository.workspace = true
 [features]
 default = []
 
+parallel = ["dashmap"]
 ser_de = ["serde", "rowan/serde1"]
 
 acs = []
@@ -24,8 +25,11 @@ zdoom = []
 
 [dependencies]
 chumsky.workspace = true
+dashmap = { workspace = true, optional = true, features = ["raw-api"] }
 logos.workspace = true
+hashbrown.workspace = true
 rowan.workspace = true
+rustc-hash.workspace = true
 serde = { workspace = true, optional = true }
 
 [[bench]]

@@ -2015,8 +2015,11 @@ version = "0.0.0"
 dependencies = [
  "chumsky",
  "criterion 0.5.1",
+ "dashmap",
+ "hashbrown 0.12.3",
  "logos",
  "rowan",
+ "rustc-hash",
  "serde",
 ]
 
