@@ -478,7 +478,7 @@ mod test {
 
 	use crate::{
 		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::decorate::{ast, parse::file, SyntaxNode},
+		zdoom::decorate::{ast, parse::file},
 	};
 
 	use super::*;
@@ -537,7 +537,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 
 		assert_no_errors(&ptree);
 
-		let cursor = SyntaxNode::new_root(ptree.root);
+		let cursor = ptree.cursor::<Syn>();
 		let toplevel = ast::TopLevel::cast(cursor.first_child().unwrap()).unwrap();
 
 		let actordef = match toplevel {

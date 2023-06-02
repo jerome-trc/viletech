@@ -21,7 +21,7 @@ pub enum Syn {
 	EdNumsDef,
 	/// `'episode' ident '{' kvp* '}'`
 	EpisodeDef,
-	/// A sequence of tokens that either did not form a valid syntax element.
+	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
 	/// `'gameinfo' '{' kvp* '}'`
 	GameInfoDef,

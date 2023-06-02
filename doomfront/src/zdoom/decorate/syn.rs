@@ -20,10 +20,9 @@ pub enum Syn {
 	EnumDef,
 	/// `ident ('=' expr)?`
 	EnumVariant,
-	/// A sequence of tokens that either did not form a valid syntax element,
-	/// or which contained one or more tokens considered invalid by the lexer.
+	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
-	/// `(+ | -) ident`
+	/// `(+ | -) identchain`
 	FlagSetting,
 	/// `'+' integer`
 	GotoOffset,
@@ -96,19 +95,33 @@ pub enum Syn {
 	KwVar,
 	KwWait,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
+	/// `{`
 	BraceL,
+	/// `}`
 	BraceR,
+	/// `[`
 	BracketL,
+	/// `]`
 	BracketR,
+	/// `:`
 	Colon,
+	/// `::`
 	Colon2,
+	/// `,`
 	Comma,
+	/// `=`
 	Eq,
+	/// `-`
 	Minus,
+	/// `(`
 	ParenL,
+	/// `)`
 	ParenR,
+	/// `.`
 	Dot,
+	/// `+`
 	Plus,
+	/// `;`
 	Semicolon,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// The exact string `#include`, ASCII case-insensitive.

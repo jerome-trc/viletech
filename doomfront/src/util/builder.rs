@@ -84,13 +84,13 @@ impl<C: GreenCache> GreenBuilder<C> {
 
 		assert!(
 			checkpoint <= self.children.len(),
-			"Checkpoint no longer valid, was `close` called early?"
+			"Checkpoint no longer valid; was `close` called early?"
 		);
 
 		if let Some(&(_, first_child)) = self.parents.last() {
 			assert!(
 				checkpoint >= first_child,
-				"Checkpoint no longer valid, was an unmatched `open_at` called?"
+				"Checkpoint no longer valid; was an unmatched `open_at` called?"
 			);
 		}
 

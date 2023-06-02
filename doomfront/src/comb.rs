@@ -86,14 +86,14 @@ where
 ///
 /// ```
 /// primitive::empty()
-///     .map_with_state(gtb_open(kind))
+///     .map_with_state(/* open a new node */)
 ///     .then(primitive::group((
 ///         parser1,
 ///         parser2,
 ///         ...
 ///     )))
-///     .map_with_state(gtb_close())
-///     .map_err_with_state(gtb_cancel(kind))
+///     .map_with_state(/* close the current node */)
+///     .map_err_with_state(/* cancel the node */)
 /// ```
 pub fn node<'i, T, O, C, G>(
 	kind: SyntaxKind,
@@ -102,7 +102,8 @@ pub fn node<'i, T, O, C, G>(
 where
 	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
 	C: GreenCache,
-	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone,
+	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone + 'i,
+	O: 'i,
 {
 	primitive::empty()
 		.map_with_state(move |_, _, state: &mut ParseState<'i, C>| {
@@ -116,6 +117,7 @@ where
 			state.gtb.cancel(kind);
 			err
 		})
+		.boxed()
 }
 
 /// Shorthand for the following idiom:
@@ -137,7 +139,8 @@ pub fn checkpointed<'i, T, O, C, G>(
 where
 	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
 	C: GreenCache,
-	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone,
+	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone + 'i,
+	O: 'i,
 {
 	primitive::empty()
 		.map_with_state(|_, _, state: &mut ParseState<'i, C>| {
@@ -152,4 +155,5 @@ where
 
 			err
 		})
+		.boxed()
 }

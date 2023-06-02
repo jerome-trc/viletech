@@ -87,6 +87,7 @@ where
 		comb::just(Token::Comment, Syn::Comment.into()),
 	))
 	.map(|_| ())
+	.boxed()
 }
 
 pub(super) fn trivia_0plus<'i, C>(

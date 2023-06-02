@@ -22,7 +22,6 @@ pub enum Token {
 	IntLit,
 	#[regex("'[^''\n]*'")]
 	NameLit,
-	// #[regex(r#""((")|[^"])*""#, priority = 2)]
 	#[regex(r#""(([\\]["])|[^"])*""#, priority = 2)]
 	StringLit,
 	// Keywords ////////////////////////////////////////////////////////////////
