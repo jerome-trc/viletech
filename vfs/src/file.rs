@@ -1,49 +1,64 @@
-use std::{ops::Range, path::Path, sync::Arc};
-
 use globset::Glob;
 use indexmap::IndexSet;
 use rayon::prelude::*;
 use regex::Regex;
 use util::path::PathExt;
 
-use crate::{FileKey, VPath, VirtualFs};
+use crate::{FileKey, VPath, VfsError, VirtualFs};
 
-#[derive(Debug)]
-pub(crate) enum Reader {
-	Memory(Box<[u8]>),
-	File(Box<Path>),
-	Wad {
-		/// WADs are sometimes nested in PK3/7 (i.e. zip) files, but this is
-		/// less common than not.
-		reader: Arc<Reader>,
-		/// Indicates what part of `reader` has to be read to get this WAD's
-		/// data, header excluded.
-		slice: Range<usize>,
-	},
-	Zip {
-		/// Likely `Self::File`, but this may be nested in another archive.
-		reader: Arc<Reader>,
-		/// Indicates what part of `reader` has to be read to get this zip's
-		/// data, header excluded.
-		slice: Range<usize>,
-	},
-}
-
+/// A virtual directory or virtual proxy for a physical file or archive entry.
 #[derive(Debug)]
 pub struct File {
 	pub(crate) content: Content,
 }
 
-/// A virtual directory or virtual proxy for a physical file or archive entry.
+/// Virtual directory metadata acquired during mounting. Useful for code which
+/// later has to process these directories and if performing a re-read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+pub enum DirectoryKind {
+	/// This directory was used to deduplicate same-name entries in a WAD.
+	Dedup,
+	/// WAD lumps underneath a level marker.
+	Level,
+	/// Anything not covered by another variant,
+	/// such as directories within zip archives.
+	Misc,
+	/// This virtual directory maps to a real directory.
+	Real,
+	/// A mounted WAD, or a WAD nested in another archive.
+	Wad,
+	/// A mounted zip, or a zip nested in another archive.
+	Zip,
+}
+
+impl std::fmt::Display for DirectoryKind {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			DirectoryKind::Dedup => write!(f, "WAD Dedup."),
+			DirectoryKind::Level => write!(f, "Level"),
+			DirectoryKind::Misc => write!(f, "Misc."),
+			DirectoryKind::Real => write!(f, "Real"),
+			DirectoryKind::Wad => write!(f, "WAD"),
+			DirectoryKind::Zip => write!(f, "Zip"),
+		}
+	}
+}
+
 #[derive(Debug)]
 pub(crate) enum Content {
-	/// The set of children is boxed so as not to penalize the size of other files.
-	Directory(Box<IndexSet<FileKey>>),
-	Empty,
-	File {
-		reader: Arc<Reader>,
-		slice: Range<usize>,
+	/// Fallback storage type for physical files or archive entries that can't be
+	/// identified as anything else and don't pass UTF-8 validation.
+	Binary(Box<[u8]>),
+	/// All files that pass UTF-8 validation end up stored as one of these.
+	Text(Box<str>),
+	Directory {
+		/// Boxed so as not to penalize the size of other files.
+		children: Box<IndexSet<FileKey>>,
+		kind: DirectoryKind,
 	},
+	/// e.g. WAD marker lumps, or physical files with no bytes.
+	Empty,
 }
 
 impl File {
@@ -55,14 +70,24 @@ impl File {
 	}
 
 	#[must_use]
+	pub fn is_binary(&self) -> bool {
+		matches!(self.content, Content::Binary(..))
+	}
+
+	#[must_use]
+	pub fn is_text(&self) -> bool {
+		matches!(self.content, Content::Text(..))
+	}
+
+	#[must_use]
 	pub fn is_dir(&self) -> bool {
-		matches!(self.content, Content::Directory(..))
+		matches!(self.content, Content::Directory { .. })
 	}
 
 	/// Returns `true` if this is a binary or text file.
 	#[must_use]
 	pub fn is_readable(&self) -> bool {
-		!matches!(self.content, Content::Directory(..) | Content::Empty)
+		!matches!(self.content, Content::Directory { .. } | Content::Empty)
 	}
 
 	#[must_use]
@@ -70,22 +95,60 @@ impl File {
 		matches!(self.content, Content::Empty)
 	}
 
-	/// Panics if this file is unreadable (e.g. empty or a directory).
-	#[must_use]
-	pub fn read_string(&self) -> String {
-		todo!()
+	/// Returns [`VfsError::ByteReadFail`] if this entry is a directory,
+	/// or otherwise has no byte content.
+	pub fn try_read_bytes(&self) -> Result<&[u8], VfsError> {
+		match &self.content {
+			Content::Binary(bytes) => Ok(bytes),
+			Content::Text(string) => Ok(string.as_bytes()),
+			_ => Err(VfsError::ByteReadFail),
+		}
 	}
 
-	/// Panics if this file is unreadable (e.g. empty or a directory).
+	/// Like [`Self::try_read_bytes`] but panics if this is a directory,
+	/// or otherwise has no byte content.
 	#[must_use]
-	pub fn read_bytes(&self) -> Vec<u8> {
-		todo!()
+	pub fn read_bytes(&self) -> &[u8] {
+		match &self.content {
+			Content::Binary(bytes) => bytes,
+			Content::Text(string) => string.as_bytes(),
+			_ => panic!("Tried to read the bytes of a VFS entry with no byte content."),
+		}
+	}
+
+	/// Returns [`VfsError::StringReadFail`]
+	/// if this is a directory, binary, or empty entry.
+	pub fn try_read_str(&self) -> Result<&str, VfsError> {
+		match &self.content {
+			Content::Text(string) => Ok(string.as_ref()),
+			_ => Err(VfsError::StringReadFail),
+		}
+	}
+
+	/// Like [`Self::try_read_str`], but panics
+	/// if this is a directory, binary, or empty entry.
+	#[must_use]
+	pub fn read_str(&self) -> &str {
+		match &self.content {
+			Content::Text(string) => string.as_ref(),
+			_ => panic!("Tried to read text from a VFS entry without UTF-8 content."),
+		}
+	}
+
+	/// Returns 0 for directories and empty files.
+	#[must_use]
+	pub fn byte_len(&self) -> usize {
+		match &self.content {
+			Content::Binary(bytes) => bytes.len(),
+			Content::Text(string) => string.len(),
+			_ => 0,
+		}
 	}
 
 	#[must_use]
 	pub fn child_paths(&self) -> Option<impl Iterator<Item = &VPath>> {
 		match &self.content {
-			Content::Directory(children) => Some(children.iter().map(|arc| arc.as_ref())),
+			Content::Directory { children, .. } => Some(children.iter().map(|arc| arc.as_ref())),
 			_ => None,
 		}
 	}
@@ -94,7 +157,7 @@ impl File {
 	#[must_use]
 	pub fn child_count(&self) -> usize {
 		match &self.content {
-			Content::Directory(children) => children.len(),
+			Content::Directory { children, .. } => children.len(),
 			_ => 0,
 		}
 	}
@@ -103,16 +166,35 @@ impl File {
 /// Internals.
 impl File {
 	#[must_use]
-	pub(crate) fn new_empty() -> Self {
+	pub(crate) fn new_dir(kind: DirectoryKind) -> Self {
 		Self {
-			content: Content::Empty,
+			content: Content::Directory {
+				children: Box::new(indexmap::indexset! {}),
+				kind,
+			},
 		}
 	}
 
+	/// Returns a new [empty], [text], or [binary] file, depending on `bytes`.
+	///
+	/// [empty]: File::Empty
+	/// [text]: File::Text
+	/// [binary]: File::Binary
 	#[must_use]
-	pub(crate) fn new_dir() -> Self {
-		Self {
-			content: Content::Directory(Box::new(indexmap::indexset! {})),
+	pub(crate) fn new_leaf(bytes: Vec<u8>) -> Self {
+		if bytes.is_empty() {
+			return File {
+				content: Content::Empty,
+			};
+		}
+
+		match String::from_utf8(bytes) {
+			Ok(string) => File {
+				content: Content::Text(string.into_boxed_str()),
+			},
+			Err(err) => File {
+				content: Content::Binary(err.into_bytes().into_boxed_slice()),
+			},
 		}
 	}
 }
@@ -247,7 +329,7 @@ impl<'vfs> FileRef<'vfs> {
 	/// unless this is a directory representing a WAD file.
 	pub fn children(&self) -> Option<impl Iterator<Item = FileRef>> {
 		match &self.file.content {
-			Content::Directory(children) => Some(children.iter().map(|key| {
+			Content::Directory { children, .. } => Some(children.iter().map(|key| {
 				self.vfs
 					.get(key.as_ref())
 					.expect("A VFS directory has a dangling child key.")
@@ -294,7 +376,7 @@ impl<'vfs> FileRef<'vfs> {
 	#[must_use]
 	pub fn child_count(&self) -> usize {
 		match &self.file.content {
-			Content::Directory(children) => children.len(),
+			Content::Directory { children, .. } => children.len(),
 			_ => 0,
 		}
 	}
@@ -309,7 +391,7 @@ impl<'vfs> FileRef<'vfs> {
 			panic!("`child_index` expects `path` to be a child of `self.path`.");
 		}
 
-		if let Content::Directory(children) = &self.file.content {
+		if let Content::Directory { children, .. } = &self.file.content {
 			children.get_index_of(path)
 		} else {
 			panic!("`child_index` expects `self` to be a directory.");

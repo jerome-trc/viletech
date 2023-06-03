@@ -8,8 +8,7 @@ use viletech::{
 	data::LoadRequest,
 	frontend::{FrontendMenu, Outcome},
 	util::SendTracker,
-	vfs::MountRequest,
-	VPathBuf,
+	vfs::{MountRequest, VPathBuf},
 };
 
 use crate::{

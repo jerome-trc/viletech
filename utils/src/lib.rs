@@ -28,6 +28,26 @@ pub enum Outcome<T, E> {
 	Ok(T),
 }
 
+impl<T, E> Outcome<T, E> {
+	pub fn map<U, F: FnOnce(T) -> U>(self, op: F) -> Outcome<U, E> {
+		match self {
+			Outcome::Ok(t) => Outcome::Ok(op(t)),
+			Outcome::Err(e) => Outcome::Err(e),
+			Outcome::None => Outcome::None,
+			Outcome::Cancelled => todo!(),
+		}
+	}
+}
+
+impl<T, E> From<Result<T, E>> for Outcome<T, E> {
+	fn from(value: Result<T, E>) -> Self {
+		match value {
+			Ok(t) => Outcome::Ok(t),
+			Err(e) => Outcome::Err(e),
+		}
+	}
+}
+
 /// For sending cancellation and progress updates between threads.
 /// Wrap in a [`std::sync::Arc`] and use to check how far along a load operation is.
 ///

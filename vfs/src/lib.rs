@@ -5,10 +5,6 @@
 //! into one tree so that reading from them is more convenient at all other levels
 //! of the engine, without exposing any details of the user's underlying machine.
 
-// TODO: Disallow these when done.
-#![allow(unused)]
-#![allow(dead_code)]
-
 mod error;
 mod file;
 #[cfg(feature = "egui")]
@@ -24,6 +20,7 @@ use std::{
 	sync::Arc,
 };
 
+use file::DirectoryKind;
 use globset::Glob;
 use rayon::prelude::*;
 use regex::Regex;
@@ -221,7 +218,7 @@ impl VirtualFs {
 		let parent = self.files.get_mut(parent_path).unwrap();
 		Self::unparent(parent, path);
 
-		let Content::Directory(children) = removed.content else { return; };
+		let Content::Directory { children, .. } = removed.content else { return; };
 
 		for child in children.iter() {
 			recur(self, child.as_ref());
@@ -229,7 +226,7 @@ impl VirtualFs {
 
 		fn recur(this: &mut VirtualFs, path: impl AsRef<VPath>) {
 			let Some(removed) = this.files.remove(path.as_ref()) else { unreachable!() };
-			let Content::Directory(children) = removed.content else { return; };
+			let Content::Directory { children, .. } = removed.content else { return; };
 
 			for child in children.iter() {
 				recur(this, child.as_ref());
@@ -238,7 +235,7 @@ impl VirtualFs {
 	}
 
 	fn unparent(parent: &mut File, child_path: impl AsRef<VPath>) {
-		if let Content::Directory(children) = &mut parent.content {
+		if let Content::Directory { children, .. } = &mut parent.content {
 			children.remove(child_path.as_ref());
 		} else {
 			unreachable!()
@@ -249,7 +246,7 @@ impl VirtualFs {
 impl Default for VirtualFs {
 	fn default() -> Self {
 		let path = VPathBuf::from("/").into();
-		let root = File::new_dir();
+		let root = File::new_dir(DirectoryKind::Misc);
 
 		Self {
 			files: HashMap::from([(path, root)]),

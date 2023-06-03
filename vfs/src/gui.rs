@@ -37,39 +37,25 @@ impl VirtualFs {
 			let file = fref.deref();
 
 			match &file.content {
-				Content::File { slice, .. } => {
-					ui.label("File");
-					let mut unit = "B";
-					let mut len = slice.len() as f64;
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "KB";
-					}
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "MB";
-					}
-
-					if len > 1024.0 {
-						len /= 1024.0;
-						unit = "GB";
-					}
-
-					ui.label(&format!("{len:.2} {unit}"));
+				Content::Text(string) => {
+					ui.label("Binary");
+					Self::ui_label_file_len(ui, string.len());
+				}
+				Content::Binary(bytes) => {
+					ui.label("Binary");
+					Self::ui_label_file_len(ui, bytes.len());
 				}
 				Content::Empty => {
 					ui.label("Empty");
 				}
-				Content::Directory(dir) => {
-					if dir.len() == 1 {
-						ui.label("Directory: 1 child");
+				Content::Directory { children, kind } => {
+					if children.len() != 1 {
+						ui.label(&format!("Directory: {} children ({kind})", children.len()));
 					} else {
-						ui.label(&format!("Directory: {} children", dir.len()));
+						ui.label(&format!("Directory: 1 child ({kind})"));
 					}
 
-					for path in dir.iter() {
+					for path in children.iter() {
 						let label = egui::Label::new(path.to_string_lossy().as_ref())
 							.sense(egui::Sense::click());
 
@@ -129,5 +115,27 @@ impl VirtualFs {
 				}
 			}
 		});
+	}
+
+	fn ui_label_file_len(ui: &mut egui::Ui, len: usize) {
+		let mut len = len as f64;
+		let mut unit = "B";
+
+		if len > 1024.0 {
+			len /= 1024.0;
+			unit = "KB";
+		}
+
+		if len > 1024.0 {
+			len /= 1024.0;
+			unit = "MB";
+		}
+
+		if len > 1024.0 {
+			len /= 1024.0;
+			unit = "GB";
+		}
+
+		ui.label(&format!("{len:.2} {unit}"));
 	}
 }

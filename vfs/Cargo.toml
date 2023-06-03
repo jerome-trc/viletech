@@ -31,3 +31,4 @@ rayon.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }
 wadload.path = "../wadload"
+zip.workspace = true

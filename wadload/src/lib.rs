@@ -21,6 +21,16 @@ pub enum WadKind {
 	PWad,
 }
 
+/// Checks if `reader` represents an entire valid WAD file.
+/// `reader`'s position upon return is **unspecifed**.
+///
+/// This check is not a complete guarantee, since it only checks the header and
+/// stream length; it is possible that a lump is not in sync with the directory,
+/// for example, but this is too involved a check to be applied often.
+pub fn validate<R: Read + Seek>(reader: &mut R) -> Result<(), Error> {
+	validate_impl(reader).map(|_| ())
+}
+
 /// A stream that wraps a [`std::io::Read`] implementation and yields full list
 /// of entries in the directory part of a WAD file's header.
 #[derive(Debug)]
@@ -46,63 +56,14 @@ impl<R: Read + Seek> DirReader<R> {
 	/// - [`Error::Oversize`] if the directory size derived from the entry count
 	/// or the expected size of the data is too big to be addressable.
 	pub fn new(mut reader: R) -> Result<Self, Error> {
-		let mut hbuf = [0; 12];
-
-		reader.read_exact(&mut hbuf).map_err(|err| Error::Io {
-			source: err,
-			context: "header read",
-		})?;
-
-		let kind = match &hbuf[0..4] {
-			b"IWAD" => WadKind::IWad,
-			b"PWAD" => WadKind::PWad,
-			_ => return Err(Error::InvalidKind([hbuf[0], hbuf[1], hbuf[2], hbuf[3]])),
-		};
-
-		let lump_c = i32::from_le_bytes([hbuf[4], hbuf[5], hbuf[6], hbuf[7]]);
-
-		if lump_c < 0 {
-			return Err(Error::InvalidEntryCount(lump_c));
-		}
-
-		let dir_offs = i32::from_le_bytes([hbuf[8], hbuf[9], hbuf[10], hbuf[11]]);
-
-		if dir_offs < 0 {
-			return Err(Error::InvalidDirOffset(dir_offs));
-		}
-
-		let expected_dir_len = (lump_c as usize)
-			.checked_mul(DIR_ENTRY_SIZE)
-			.ok_or(Error::Oversize)?;
-
-		let expected_data_len = (dir_offs as usize)
-			.checked_add(expected_dir_len)
-			.ok_or(Error::Oversize)?;
-
-		match reader.seek(SeekFrom::End(0)) {
-			Ok(pos) => {
-				if pos != (expected_data_len as u64) {
-					return Err(Error::DataMalformed(pos as usize));
-				}
-			}
-			Err(err) => {
-				return Err(Error::Io {
-					source: err,
-					context: "data length validation",
-				})
-			}
-		};
-
-		let pos = reader
-			.seek(SeekFrom::Start(dir_offs as u64))
-			.expect("A pre-validated seek failed unexpectedly.");
+		let header = validate_impl(&mut reader)?;
 
 		Ok(Self {
 			reader,
-			kind,
-			len: lump_c as usize,
+			kind: header.kind,
+			len: header.lump_c as usize,
 			current: 0,
-			stream_pos: pos,
+			stream_pos: header.dir_offs,
 		})
 	}
 
@@ -234,6 +195,7 @@ impl<R: Read + Seek> Iterator for Reader<R> {
 					.reader
 					.seek(SeekFrom::Start(self.inner.stream_pos))
 					.expect("Failed to reset `Reader`.");
+
 				Ok((entry, buf))
 			}
 			Err(err) => Err(err),
@@ -247,6 +209,7 @@ impl<R: Read + Seek> Iterator for Reader<R> {
 
 impl<R: Read + Seek> ExactSizeIterator for Reader<R> {}
 
+/// An entry in a WAD file.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lump {
@@ -280,6 +243,7 @@ impl From<(DirEntry, Vec<u8>)> for Lump {
 	}
 }
 
+/// Things that can go wrong when reading or writing WADs.
 #[derive(Debug)]
 pub enum Error {
 	Io {
@@ -334,6 +298,71 @@ impl std::fmt::Display for Error {
 }
 
 pub(crate) const DIR_ENTRY_SIZE: usize = 16;
+
+pub(crate) struct Header {
+	kind: WadKind,
+	dir_offs: u64,
+	lump_c: i32,
+}
+
+fn validate_impl<R: Read + Seek>(reader: &mut R) -> Result<Header, Error> {
+	let mut hbuf = [0; 12];
+
+	reader.read_exact(&mut hbuf).map_err(|err| Error::Io {
+		source: err,
+		context: "header read",
+	})?;
+
+	let kind = match &hbuf[0..4] {
+		b"IWAD" => WadKind::IWad,
+		b"PWAD" => WadKind::PWad,
+		_ => return Err(Error::InvalidKind([hbuf[0], hbuf[1], hbuf[2], hbuf[3]])),
+	};
+
+	let lump_c = i32::from_le_bytes([hbuf[4], hbuf[5], hbuf[6], hbuf[7]]);
+
+	if lump_c < 0 {
+		return Err(Error::InvalidEntryCount(lump_c));
+	}
+
+	let dir_offs = i32::from_le_bytes([hbuf[8], hbuf[9], hbuf[10], hbuf[11]]);
+
+	if dir_offs < 0 {
+		return Err(Error::InvalidDirOffset(dir_offs));
+	}
+
+	let expected_dir_len = (lump_c as usize)
+		.checked_mul(DIR_ENTRY_SIZE)
+		.ok_or(Error::Oversize)?;
+
+	let expected_data_len = (dir_offs as usize)
+		.checked_add(expected_dir_len)
+		.ok_or(Error::Oversize)?;
+
+	match reader.seek(SeekFrom::End(0)) {
+		Ok(pos) => {
+			if pos != (expected_data_len as u64) {
+				return Err(Error::DataMalformed(pos as usize));
+			}
+		}
+		Err(err) => {
+			return Err(Error::Io {
+				source: err,
+				context: "data length validation",
+			})
+		}
+	};
+
+	let pos = reader
+		.seek(SeekFrom::Start(dir_offs as u64))
+		.expect("A pre-validated seek failed unexpectedly.");
+
+	Ok(Header {
+		kind,
+		dir_offs: pos,
+		lump_c,
+	})
+}
 
 #[cfg(test)]
 mod test {

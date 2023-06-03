@@ -25,10 +25,7 @@ pub mod terminal;
 pub mod udmf;
 pub mod user;
 pub extern crate util;
-pub mod vfs;
-// TODO: These two aliases are temporary.
-pub type VPathBuf = ::vfs::VPathBuf;
-pub type VPath = ::vfs::VPath;
+pub extern crate vfs;
 pub extern crate vzs;
 pub extern crate wadload;
 

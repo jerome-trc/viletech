@@ -143,7 +143,7 @@ impl ClientCore {
 		DeveloperGui::window(ctx)
 			.open(&mut devgui_open)
 			.show(ctx, |ui| {
-				// Prevent window from overflowing off the screen's sides
+				// Prevent window from overflowing off the screen's sides.
 				ui.set_max_width(screen_rect.width());
 
 				egui::menu::bar(ui, |ui| {

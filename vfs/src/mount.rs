@@ -2,6 +2,8 @@
 
 use std::{
 	collections::hash_map,
+	io::Cursor,
+	ops::Range,
 	path::{Path, PathBuf},
 	sync::Arc,
 };
@@ -10,10 +12,11 @@ use dashmap::DashMap;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use util::{path::PathExt, Outcome, SendTracker};
+use zip::{read::ZipFile, ZipArchive};
 
 use crate::{
 	error::{MountError, MountErrorKind, MountPointError},
-	file::{self, File},
+	file::{self, DirectoryKind, File},
 	FileKey, MountFormat, MountInfo, VPath, VPathBuf, VirtualFs,
 };
 
@@ -69,7 +72,7 @@ impl SubContext<'_> {
 			None => return, // This is a subtree root. It will have to be handled later.
 		};
 
-		let file::Content::Directory(children) = &mut parent.value_mut().content else {
+		let file::Content::Directory { children, .. } = &mut parent.value_mut().content else {
 			unreachable!("Parent of {} is not a directory.", key.display());
 		};
 
@@ -185,7 +188,8 @@ impl VirtualFs {
 
 			if format != MountFormat::Wad {
 				new_files.par_iter_mut().for_each(|mut kvp| {
-					if let file::Content::Directory(children) = &mut kvp.value_mut().content {
+					if let file::Content::Directory { children, .. } = &mut kvp.value_mut().content
+					{
 						children.par_sort_unstable();
 					}
 				});
@@ -206,7 +210,7 @@ impl VirtualFs {
 			let subtree_parent_path = mount_point.parent().unwrap();
 			let subtree_parent = self.files.get_mut(subtree_parent_path).unwrap();
 
-			if let file::Content::Directory(children) = &mut subtree_parent.content {
+			if let file::Content::Directory { children, .. } = &mut subtree_parent.content {
 				children.insert(mount_point.clone().into());
 				children.par_sort_unstable();
 			} else {
@@ -242,7 +246,383 @@ impl VirtualFs {
 		real_path: &Path,
 		virt_path: &VPath,
 	) -> Outcome<MountFormat, MountError> {
-		todo!()
+		let (format, bytes) = if real_path.is_dir() {
+			(MountFormat::Directory, vec![])
+		} else {
+			let b = match std::fs::read(real_path) {
+				Ok(b) => b,
+				Err(err) => {
+					return Outcome::Err(MountError {
+						path: real_path.to_path_buf(),
+						kind: MountErrorKind::FileRead(err),
+					});
+				}
+			};
+
+			let f = Self::resolve_file_format(&b);
+			(f, b)
+		};
+
+		let outcome = match format {
+			MountFormat::PlainFile => {
+				ctx.add_file(virt_path.to_path_buf(), File::new_leaf(bytes));
+				Outcome::Ok(())
+			}
+			MountFormat::Directory => self.mount_dir(ctx, real_path, virt_path),
+			MountFormat::Zip => self.mount_zip(ctx, virt_path, bytes),
+			MountFormat::Wad => self.mount_wad(ctx, virt_path, bytes),
+		};
+
+		match outcome {
+			Outcome::Ok(()) => Outcome::Ok(format),
+			Outcome::Err(err) => Outcome::Err(err),
+			Outcome::Cancelled => Outcome::Cancelled,
+			Outcome::None => unreachable!(),
+		}
+	}
+
+	fn mount_dir(
+		&self,
+		ctx: &SubContext,
+		real_path: &Path,
+		virt_path: &VPath,
+	) -> Outcome<(), MountError> {
+		let dir_iter = match std::fs::read_dir(real_path) {
+			Ok(r) => r.filter_map(|res| match res {
+				Ok(r) => Some(r),
+				Err(_) => None,
+			}),
+			Err(err) => {
+				return Outcome::Err(MountError {
+					path: real_path.to_path_buf(),
+					kind: MountErrorKind::DirectoryRead(err),
+				});
+			}
+		};
+
+		ctx.add_file(virt_path.to_path_buf(), File::new_dir(DirectoryKind::Real));
+
+		for entry in dir_iter {
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
+
+			let ftype = match entry.file_type() {
+				Ok(ft) => ft,
+				Err(err) => {
+					ctx.errors.lock().push(MountError {
+						path: entry.path(),
+						kind: MountErrorKind::FileType(err),
+					});
+
+					continue;
+				}
+			};
+
+			if ftype.is_symlink() {
+				continue;
+			}
+
+			let fname_os = entry.file_name();
+			let fname_cow = fname_os.to_string_lossy();
+			let filename = fname_cow.as_ref();
+
+			let de_real_path = entry.path();
+			let de_virt_path: PathBuf = [virt_path, Path::new(filename)].iter().collect();
+
+			if let Outcome::Err(err) = self.mount_real_unknown(ctx, &de_real_path, &de_virt_path) {
+				return Outcome::Err(err);
+			}
+		}
+
+		Outcome::Ok(())
+	}
+
+	fn mount_wad(
+		&self,
+		ctx: &SubContext,
+		virt_path: &VPath,
+		bytes: Vec<u8>,
+	) -> Outcome<(), MountError> {
+		fn make_level_folder(
+			files: &mut [(VPathBuf, File)],
+			marker_index: usize,
+			lumps: Range<usize>,
+		) {
+			debug_assert!(!files[marker_index].1.is_dir());
+			files[marker_index].1 = File::new_dir(DirectoryKind::Level);
+			let base_path = files[marker_index].0.clone();
+
+			for (path, _) in &mut files[lumps] {
+				*path = base_path.join(path.file_stem().unwrap());
+			}
+		}
+
+		/// This is for checking the range of files between THINGS and BLOCKMAP,
+		/// so element 0 should be LINEDEFS and the last element should be the
+		/// lump expected to be REJECT.
+		#[must_use]
+		fn lumps_are_doom_level(files: &[(VPathBuf, File)]) -> bool {
+			files[0].0.ends_with("LINEDEFS")
+				&& files[1].0.ends_with("SIDEDEFS")
+				&& files[2].0.ends_with("VERTEXES")
+				&& files[3].0.ends_with("SEGS")
+				&& files[4].0.ends_with("SSECTORS")
+				&& files[5].0.ends_with("NODES")
+				&& files[6].0.ends_with("SECTORS")
+				&& files[7].0.ends_with("REJECT")
+		}
+
+		/// This is for checking the range of files between THINGS and BEHAVIOR,
+		/// so element 0 should be LINEDEFS and the last element should be the
+		/// lump expected to be BLOCKMAP.
+		#[must_use]
+		fn lumps_are_hexen_level(files: &[(VPathBuf, File)]) -> bool {
+			lumps_are_doom_level(files) && files[8].0.ends_with("BLOCKMAP")
+		}
+
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
+
+		let wad = match wadload::Reader::new(Cursor::new(bytes)) {
+			Ok(w) => w,
+			Err(err) => {
+				return Outcome::Err(MountError {
+					path: virt_path.to_path_buf(),
+					kind: MountErrorKind::Wad(err),
+				})
+			}
+		};
+
+		let mut files = Vec::with_capacity(wad.len() + 1);
+
+		files.push((virt_path.to_path_buf(), File::new_dir(DirectoryKind::Wad)));
+
+		let mut index = 0_usize;
+
+		let mut last_things = None;
+		let mut last_textmap = None;
+
+		for result in wad {
+			let (dentry, bytes) = match result {
+				Ok(pair) => pair,
+				Err(err) => {
+					return Outcome::Err(MountError {
+						path: virt_path.to_path_buf(),
+						kind: MountErrorKind::Wad(err),
+					});
+				}
+			};
+
+			let name = dentry.name.as_str();
+
+			index += 1;
+
+			if ctx.tracker.is_cancelled() {
+				return Outcome::Cancelled;
+			}
+
+			if name == ("THINGS") {
+				last_things = Some(index);
+			} else if name == ("TEXTMAP") {
+				last_textmap = Some(index);
+			}
+
+			let mut child_path = virt_path.to_path_buf();
+
+			if name == "BEHAVIOR" && index >= 12 {
+				if let Some(l_things) = last_things {
+					if lumps_are_hexen_level(&files[(l_things + 1)..index]) {
+						make_level_folder(&mut files, l_things - 1, l_things..index);
+						child_path.push(files[l_things - 1].0.file_stem().unwrap());
+					}
+
+					last_things = None;
+				}
+			} else if name == "BLOCKMAP" && index >= 11 {
+				if let Some(l_things) = last_things {
+					if lumps_are_doom_level(&files[(l_things + 1)..index]) {
+						make_level_folder(&mut files, l_things - 1, l_things..index);
+						child_path.push(files[l_things - 1].0.file_stem().unwrap());
+					}
+
+					last_things = None;
+				}
+			} else if name == "ENDMAP" && index >= 3 {
+				if let Some(l_textmap) = last_textmap {
+					make_level_folder(&mut files, l_textmap - 1, l_textmap..index);
+					index -= 1;
+					continue; // No need to keep the ENDMAP marker.
+				}
+			}
+
+			child_path.push(name);
+
+			// What if a WAD contains two entries with the same name?
+			// For example, DOOM2.WAD has two identical `SW18_7` entries, and
+			// Angelic Aviary 1.0 has several `DECORATE` lumps.
+			// Roll them together into virtual directories. The end result is:
+			// /Angelic Aviary 1.0
+			//		/DECORATE
+			// 			/000
+			// 			/001
+			// 			/002
+			// ...and so on.
+
+			if let Some(pos) = files.iter().position(|(path, _)| {
+				<VPathBuf as AsRef<VPath>>::as_ref(path)
+					== <VPathBuf as AsRef<VPath>>::as_ref(&child_path)
+			}) {
+				if !files[pos].1.is_dir() {
+					files.insert(
+						pos,
+						(files[pos].0.clone(), File::new_dir(DirectoryKind::Dedup)),
+					);
+
+					index += 1;
+
+					let prev_path = std::mem::take(&mut files[pos + 1].0);
+
+					let mut prev_path = prev_path.to_path_buf();
+					prev_path.push("000");
+
+					files[pos + 1].0 = prev_path;
+					child_path.push("001");
+				} else {
+					let num_children = files
+						.iter()
+						.filter(|(vp, _)| vp.parent().unwrap() == child_path)
+						.count();
+
+					child_path.push(format!("{num_children:03}"));
+				}
+			}
+
+			files.push((child_path, File::new_leaf(bytes)));
+		}
+
+		for (p, file) in files {
+			ctx.add_file(p, file);
+		}
+
+		Outcome::Ok(())
+	}
+
+	fn mount_zip(
+		&self,
+		ctx: &SubContext,
+		virt_path: &VPath,
+		bytes: Vec<u8>,
+	) -> Outcome<(), MountError> {
+		let cursor = Cursor::new(&bytes);
+
+		let zip = ZipArchive::new(cursor).map_err(|err| MountError {
+			path: virt_path.to_path_buf(),
+			kind: MountErrorKind::ZipArchiveRead(err),
+		});
+
+		let base_zip = match zip {
+			Ok(z) => z,
+			Err(err) => return Outcome::Err(err),
+		};
+
+		ctx.add_file(virt_path.to_path_buf(), File::new_dir(DirectoryKind::Zip));
+
+		(0..base_zip.len()).par_bridge().try_for_each(|i| {
+			let mut zip = base_zip.clone();
+
+			if ctx.tracker.is_cancelled() {
+				return None;
+			}
+
+			let zf = match zip.by_index(i) {
+				Ok(e) => e,
+				Err(err) => {
+					ctx.errors.lock().push(MountError {
+						path: virt_path.to_path_buf(),
+						kind: MountErrorKind::ZipFileGet(i, err),
+					});
+
+					return Some(());
+				}
+			};
+
+			let zfpath = match zf.enclosed_name() {
+				Some(p) => p,
+				None => {
+					ctx.errors.lock().push(MountError {
+						path: virt_path.to_path_buf(),
+						kind: MountErrorKind::ZipFileName(zf.name().to_string()),
+					});
+
+					return Some(());
+				}
+			};
+
+			let vpath = [virt_path, zfpath].iter().collect();
+
+			if zf.is_file() {
+				self.mount_zip_leaf(ctx, virt_path, zf, vpath);
+			} else {
+				ctx.add_file(vpath, File::new_dir(DirectoryKind::Misc));
+			}
+
+			Some(())
+		});
+
+		if ctx.tracker.is_cancelled() {
+			return Outcome::Cancelled;
+		}
+
+		Outcome::Ok(())
+	}
+
+	fn mount_zip_leaf(
+		&self,
+		ctx: &SubContext,
+		parent_path: &VPath,
+		mut zf: ZipFile,
+		vpath: VPathBuf,
+	) {
+		let size = zf.size();
+
+		let mut bytes = Vec::with_capacity(size as usize);
+
+		match std::io::copy(&mut zf, &mut bytes) {
+			Ok(count) => {
+				if count != size {
+					ctx.errors.lock().push(MountError {
+						path: parent_path.to_path_buf(),
+						kind: MountErrorKind::ZipFileRead {
+							name: zf
+								.enclosed_name()
+								.unwrap_or_else(|| Path::new(zf.name()))
+								.to_path_buf(),
+							err: None,
+						},
+					});
+
+					return;
+				}
+			}
+			Err(err) => {
+				ctx.errors.lock().push(MountError {
+					path: parent_path.to_path_buf(),
+					kind: MountErrorKind::ZipFileRead {
+						name: zf
+							.enclosed_name()
+							.unwrap_or_else(|| Path::new(zf.name()))
+							.to_path_buf(),
+						err: Some(err),
+					},
+				});
+
+				return;
+			}
+		};
+
+		ctx.add_file(vpath, File::new_leaf(bytes));
 	}
 
 	// Details /////////////////////////////////////////////////////////////////
@@ -379,26 +759,19 @@ impl VirtualFs {
 	}
 
 	#[must_use]
-	fn resolve_file_format(bytes: &[u8], virt_path: &VPath) -> MountFormat {
-		match util::io::is_valid_wad(bytes, bytes.len().try_into().unwrap()) {
-			Ok(is_wad) => {
-				if is_wad {
-					return MountFormat::Wad;
-				}
-			}
-			Err(err) => {
-				#[cfg(feature = "bevy")]
-				bevy::prelude::warn!(
-					"Failed to determine if file is a WAD: {}\r\n\t\
-					Error: {err}\r\n\t\
-					It will likely be treated as an unknown file.",
-					virt_path.display()
-				);
-			}
+	fn resolve_file_format(bytes: &[u8]) -> MountFormat {
+		let mut cursor = Cursor::new(bytes);
+
+		if wadload::validate(&mut cursor).is_ok() {
+			return MountFormat::Wad;
 		}
 
 		if util::io::is_zip(bytes) {
 			return MountFormat::Zip;
+		}
+
+		if util::io::is_7z(bytes) {
+			unimplemented!("Mounting 7z archives is currently unsupported.");
 		}
 
 		MountFormat::PlainFile

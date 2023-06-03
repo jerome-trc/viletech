@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use zip::result::ZipError;
+
 use crate::VPathBuf;
 
 /// Things that can go wrong during (non-mounting) virtual file system operations,
@@ -65,7 +67,7 @@ pub enum MountErrorKind {
 	/// The caller attempted to perform an operating on a real file,
 	/// but the given path didn't resolve to anything.
 	FileNotFound,
-	/// Failed to read a file's bytes during a mount.
+	/// Failed to get a handle to a file during a mount operation.
 	FileRead(std::io::Error),
 	/// Failed to acquire a file's type while attempting to mount a directory.
 	FileType(std::io::Error),
@@ -86,16 +88,29 @@ pub enum MountErrorKind {
 	MountParentNotFound(VPathBuf),
 	/// The caller attempted to illegally mount a symbolic link.
 	MountSymlink,
+	/// Failed to read the metadata for a mount's top-level real file;
+	/// the user likely lacks the operating system permission.
+	Metadata(std::io::Error),
 	/// If, for example, a mount point `/hello/world/foo/bar` is given, its parent
 	/// path is `/hello/world/foo`. If the parent of a given mount point cannot
 	/// be retrieved for whatever reason, this error will be emitted.
 	ParentlessMountPoint,
-	/// Failed to read the metadata for a mount's top-level real file;
-	/// the user likely lacks the operating system permission.
-	Metadata(std::io::Error),
 	/// The caller attempted to mount something to a point which
 	/// already had something mounted onto it.
 	Remount,
+	/// Something went wrong when trying to parse a WAD archive.
+	Wad(wadload::Error),
+	/// Something went wrong when trying to open a zip archive during loading.
+	ZipArchiveRead(ZipError),
+	/// Indexed retrieval of a zip archive entry failed.
+	ZipFileGet(usize, ZipError),
+	/// A zip archive entry contains an unsafe or malformed name.
+	ZipFileName(String),
+	/// Failed to correctly read all the bytes in a zip archive entry.
+	ZipFileRead {
+		name: PathBuf,
+		err: Option<std::io::Error>,
+	},
 }
 
 #[derive(Debug)]
@@ -178,6 +193,36 @@ impl std::fmt::Display for MountError {
 					f,
 					"Attempted to overwrite an existing entry with a new mount."
 				)
+			}
+			MountErrorKind::Wad(err) => {
+				write!(f, "Failed to parse a WAD archive: {err}")
+			}
+			MountErrorKind::ZipArchiveRead(err) => {
+				write!(f, "Failed to open a zip archive: {err}")
+			}
+			MountErrorKind::ZipFileGet(index, err) => {
+				write!(
+					f,
+					"Failed to get zip archive entry by index: {index} ({err})"
+				)
+			}
+			MountErrorKind::ZipFileName(name) => {
+				write!(f, "Zip archive entry name is malformed or unsafe: {name}")
+			}
+			MountErrorKind::ZipFileRead { name, err } => {
+				if let Some(err) = err {
+					write!(
+						f,
+						"Failed to read zip archive entry: {n} ({err})",
+						n = name.display()
+					)
+				} else {
+					write!(
+						f,
+						"Failed to read all content of zip archive entry: {n}",
+						n = name.display()
+					)
+				}
 			}
 		}
 	}

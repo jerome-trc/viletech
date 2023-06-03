@@ -170,3 +170,15 @@ pub fn is_doom_gfx(bytes: &[u8]) -> bool {
 
 	true
 }
+
+/// Source: <https://docs.rs/infer/latest/src/infer/matchers/archive.rs.html#59-67>
+#[must_use]
+pub fn is_7z(bytes: &[u8]) -> bool {
+	bytes.len() > 5
+		&& bytes[0] == 0x37
+		&& bytes[1] == 0x7A
+		&& bytes[2] == 0xBC
+		&& bytes[3] == 0xAF
+		&& bytes[4] == 0x27
+		&& bytes[5] == 0x1C
+}
