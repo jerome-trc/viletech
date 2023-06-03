@@ -40,10 +40,6 @@ features = [
 	"bmp",
 	"ktx2",
 	"tga",
-
-	"flac",
-	"mp3",
-	"wav",
 ]
 
 [dependencies]
