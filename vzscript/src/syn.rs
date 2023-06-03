@@ -38,7 +38,6 @@ pub enum Syn {
 	/// - [`Syn::VoidLit`]
 	Literal,
 	// Tokens: literals ////////////////////////////////////////////////////////
-	/// `false`
 	#[token("false")]
 	FalseLit,
 	/// Uses the same syntax as Rust floating-point literals.
@@ -71,10 +70,8 @@ pub enum Syn {
 		""##
 	)]
 	StringLit,
-	/// `true`
 	#[token("true")]
 	TrueLit,
-	/// `()`
 	#[token("()")]
 	VoidLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////

@@ -7,8 +7,8 @@
 //!
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
+pub mod ast;
 mod heap;
-// pub mod lex;
 pub mod library;
 pub mod module;
 pub mod parse;

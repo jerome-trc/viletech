@@ -16,6 +16,9 @@ repository.workspace = true
 default = []
 
 [dependencies]
+doomfront = { path = "../doomfront", features = ["ser_de"] }
+util = { package = "viletech-utils", path = "../utils" }
+
 ariadne.workspace = true
 bitflags.workspace = true
 bitvec.workspace = true
@@ -25,7 +28,6 @@ cranelift-jit.workspace = true
 cranelift-module.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
-doomfront = { path = "../doomfront", features = ["ser_de"] }
 logos.workspace = true
 once_cell.workspace = true
 rustc-hash.workspace = true

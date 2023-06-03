@@ -5487,6 +5487,7 @@ dependencies = [
  "logos",
  "once_cell",
  "rustc-hash",
+ "viletech-utils",
 ]
 
 [[package]]
