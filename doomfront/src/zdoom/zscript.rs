@@ -4,4 +4,11 @@
 //! ZScript is GZDoom's primary and most well-supported embedded scripting
 //! language, intended as a successor to (and superset of) ZDoom's DECORATE.
 
-// Soon!
+pub mod parse;
+pub mod syn;
+
+pub use syn::Syn;
+
+pub type SyntaxNode = rowan::SyntaxNode<Syn>;
+pub type SyntaxToken = rowan::SyntaxToken<Syn>;
+pub type SyntaxElem = rowan::SyntaxElement<Syn>;

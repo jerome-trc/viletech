@@ -120,6 +120,39 @@ where
 		.boxed()
 }
 
+pub fn node_try_catch<'i, T, O, C, S, G>(
+	kind: SyntaxKind,
+	err_kind: SyntaxKind,
+	start: S,
+	group: G,
+) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+where
+	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
+	C: GreenCache,
+	S: Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone + 'i,
+	G: Parser<'i, TokenStream<'i, T>, O, Extra<'i, T, C>> + Clone + 'i,
+	O: 'i,
+{
+	primitive::group((
+		primitive::empty().map_with_state(|_, _, state: &mut ParseState<'i, C>| {
+			state.checkpoints.push(state.gtb.checkpoint());
+		}),
+		start,
+		group.map_err_with_state(move |err, _, state| {
+			state
+				.gtb
+				.open_at(state.checkpoints.pop().unwrap(), err_kind);
+			state.gtb.close();
+			err
+		}),
+	))
+	.map_with_state(move |_, _, state| {
+		state.gtb.open_at(state.checkpoints.pop().unwrap(), kind);
+		state.gtb.close();
+	})
+	.boxed()
+}
+
 /// Shorthand for the following idiom:
 ///
 /// ```
