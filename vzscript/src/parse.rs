@@ -5,7 +5,10 @@
 mod common;
 mod expr;
 
-use std::path::{Path, PathBuf};
+use std::{
+	marker::PhantomData,
+	path::{Path, PathBuf},
+};
 
 use doomfront::{
 	chumsky::{primitive, IterParser, Parser},
@@ -24,22 +27,23 @@ pub type Error<'i> = doomfront::ParseError<'i, Syn>;
 /// breaking changes to this context are minimal in scope.
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct ParserBuilder {
+pub struct ParserBuilder<C: GreenCache> {
 	pub(self) _version: Version,
+	phantom: PhantomData<C>,
 }
 
-impl ParserBuilder {
+impl<C: GreenCache> ParserBuilder<C> {
 	#[must_use]
 	pub fn new(version: Version) -> Self {
-		Self { _version: version }
+		Self {
+			_version: version,
+			phantom: PhantomData,
+		}
 	}
 
 	/// Does not build a node by itself; use [`doomfront::parse`] and pass
 	/// [`Syn::FileRoot`](crate::Syn::FileRoot).
-	pub fn file<'i, C>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-	where
-		C: GreenCache,
-	{
+	pub fn file<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		primitive::choice((
 			self.trivia(),
 			// Only "inner" annotations are allowed at file scope.
@@ -52,10 +56,7 @@ impl ParserBuilder {
 
 	/// Does not build a node by itself; use [`doomfront::parse`] and pass
 	/// [`Syn::ReplRoot`](crate::Syn::ReplRoot).
-	pub fn repl<'i, C>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-	where
-		C: GreenCache,
-	{
+	pub fn repl<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		primitive::choice((self.trivia(), self.expr()))
 			.repeated()
 			.collect::<()>()

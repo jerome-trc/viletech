@@ -10,11 +10,8 @@ use crate::{Syn, TokenStream};
 
 use super::{Extra, ParserBuilder};
 
-impl ParserBuilder {
-	pub fn expr<'i, C>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-	where
-		C: GreenCache,
-	{
+impl<C: GreenCache> ParserBuilder<C> {
+	pub fn expr<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		chumsky::recursive::recursive(|expr| {
 			primitive::choice((
 				self.atom_expr(),
@@ -25,12 +22,7 @@ impl ParserBuilder {
 		.boxed()
 	}
 
-	pub fn atom_expr<'i, C>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-	where
-		C: GreenCache,
-	{
+	pub fn atom_expr<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		comb::node(
 			Syn::Literal.into(),
 			primitive::choice((
@@ -46,12 +38,11 @@ impl ParserBuilder {
 	}
 
 	/// [`ParserBuilder::expr`]'s return value must be passed in to prevent infinite recursion.
-	pub fn bin_expr<'i, C, P>(
+	pub fn bin_expr<'i, P>(
 		&self,
 		expr: P,
 	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 	where
-		C: GreenCache,
 		P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 	{
 		comb::node(
@@ -76,12 +67,11 @@ impl ParserBuilder {
 		)
 	}
 
-	pub fn grouped_expr<'i, C, P>(
+	pub fn grouped_expr<'i, P>(
 		&self,
 		expr: P,
 	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 	where
-		C: GreenCache,
 		P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 	{
 		comb::node(
@@ -110,8 +100,8 @@ mod test {
 		const SOURCE: &str = "2";
 
 		let vers = Version::new(0, 0, 0);
-		let builder = ParserBuilder::new(vers);
-		let atom_expr = builder.atom_expr::<GreenCacheNoop>();
+		let builder = ParserBuilder::<GreenCacheNoop>::new(vers);
+		let atom_expr = builder.atom_expr();
 		let stream = Syn::stream(SOURCE, vers);
 		let ptree = doomfront::parse(atom_expr, None, Syn::ReplRoot.into(), SOURCE, stream);
 
@@ -123,8 +113,8 @@ mod test {
 		const SOURCE: &str = "2 + 2";
 
 		let vers = Version::new(0, 0, 0);
-		let builder = ParserBuilder::new(vers);
-		let expr = builder.expr::<GreenCacheNoop>();
+		let builder = ParserBuilder::<GreenCacheNoop>::new(vers);
+		let expr = builder.expr();
 		let expr_bin = builder.bin_expr(expr);
 		let stream = Syn::stream(SOURCE, vers);
 		let ptree = doomfront::parse(expr_bin, None, Syn::ReplRoot.into(), SOURCE, stream);
