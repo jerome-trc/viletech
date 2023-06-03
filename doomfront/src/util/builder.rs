@@ -170,12 +170,9 @@ but DashMap type constraints forbid this. Not sure how much I can do about this.
 There's also an unfortunate amount of code duplication here.
 Maybe Rowan just has to get vendored entirely, or forked.
 
-TODO:
-- Single-threaded cache behind `Rc<RefCell>`.
-
 */
 
-pub trait GreenCache: 'static + Default {
+pub trait GreenCache: 'static + Default + Clone {
 	#[must_use]
 	fn token(&mut self, kind: SyntaxKind, text: &str) -> (u64, GreenToken);
 
@@ -188,7 +185,7 @@ pub trait GreenCache: 'static + Default {
 	) -> (u64, GreenNode);
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GreenCacheNoop;
 
 impl GreenCache for GreenCacheNoop {
