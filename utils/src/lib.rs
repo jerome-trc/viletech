@@ -7,6 +7,7 @@ pub mod io;
 pub mod macros;
 pub mod math;
 pub mod path;
+pub mod simd;
 pub mod string;
 
 /// Note that minutes and seconds are both remainders, not totals.

@@ -19,7 +19,6 @@ pub mod log;
 pub mod player;
 pub mod rng;
 pub mod sim;
-pub mod simd;
 pub mod sparse;
 pub mod terminal;
 pub mod udmf;
