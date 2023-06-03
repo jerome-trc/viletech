@@ -62,12 +62,6 @@ impl LitToken {
 		Some(temp.parse::<f64>())
 	}
 
-	/// Shorthand for `self.syntax().kind() == Syn::LitVoid`.
-	#[must_use]
-	pub fn is_void(&self) -> bool {
-		self.0.kind() == Syn::VoidLit
-	}
-
 	/// Returns `None` if this is not tagged with [`Syn::IntLit`].
 	/// Returns `Some(Err)` if integer parsing fails,
 	/// such as if the written value is too large to fit into a `u64`.

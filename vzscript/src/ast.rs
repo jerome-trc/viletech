@@ -1,7 +1,8 @@
 //! Structures for describing a VZScript abstract syntax tree.
 
-pub mod expr;
-pub mod lit;
+mod expr;
+mod item;
+mod lit;
 
 use doomfront::rowan::{self, ast::AstNode};
 
@@ -9,7 +10,31 @@ use doomfront::simple_astnode;
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, lit::*};
+pub use self::{expr::*, item::*, lit::*};
+
+/// Wraps a token tagged [`Syn::Ident`].
+/// Exists for the convenience of automatically handling raw identifiers.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+pub struct Ident(pub(self) SyntaxToken);
+
+impl Ident {
+	#[must_use]
+	pub fn text(&self) -> &str {
+		let text = self.0.text();
+
+		if !text.starts_with("r#") {
+			text
+		} else {
+			&text[2..]
+		}
+	}
+
+	#[must_use]
+	pub fn is_raw(&self) -> bool {
+		self.0.text().starts_with("r#")
+	}
+}
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17,6 +42,7 @@ pub use self::{expr::*, lit::*};
 pub enum FileRoot {
 	/// Only "inner" annotations are allowed in this position.
 	Annotation(Annotation),
+	FuncDecl(FuncDecl),
 }
 
 impl AstNode for FileRoot {
@@ -26,7 +52,7 @@ impl AstNode for FileRoot {
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::Annotation)
+		matches!(kind, Syn::Annotation | Syn::FuncDecl)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -35,13 +61,25 @@ impl AstNode for FileRoot {
 	{
 		match node.kind() {
 			Syn::Annotation => Some(Self::Annotation(Annotation(node))),
+			Syn::FuncDecl => Some(Self::FuncDecl(FuncDecl(node))),
 			_ => None,
 		}
 	}
 
 	fn syntax(&self) -> &rowan::SyntaxNode<Self::Language> {
 		match self {
-			Self::Annotation(anno) => &anno.0,
+			Self::Annotation(inner) => inner.syntax(),
+			Self::FuncDecl(inner) => inner.syntax(),
+		}
+	}
+}
+
+impl FileRoot {
+	#[must_use]
+	pub fn into_func_decl(self) -> Option<FuncDecl> {
+		match self {
+			Self::FuncDecl(inner) => Some(inner),
+			_ => None,
 		}
 	}
 }
@@ -72,7 +110,7 @@ impl AstNode for ReplRoot {
 
 	fn syntax(&self) -> &rowan::SyntaxNode<Self::Language> {
 		match self {
-			Self::Expr(expr) => expr.syntax(),
+			Self::Expr(inner) => inner.syntax(),
 		}
 	}
 }

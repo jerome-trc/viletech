@@ -19,12 +19,22 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `'#' '!'? '[' resolver arglist? ']'`
 	Annotation,
+	/// `'{' statement* '}'`
+	Block,
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
 	/// A top-level node representing a whole file.
 	FileRoot,
+	/// `annotation* 'func' ident paramlist returntype? ('{' statement* '}' | ';')`
+	FuncDecl,
+	/// `(ident) | (ident ('.' ident)?)`
+	IdentChain,
+	/// `'(' (ident ':' typeexpr)* ')'`
+	ParamList,
 	/// A top-level node representing a whole REPL submission.
 	ReplRoot,
+	/// `':' typeexpr`
+	ReturnType,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	BinExpr,
 	/// `'(' expr ')'`
@@ -35,8 +45,9 @@ pub enum Syn {
 	/// - [`Syn::IntLit`]
 	/// - [`Syn::StringLit`]
 	/// - [`Syn::TrueLit`]
-	/// - [`Syn::VoidLit`]
 	Literal,
+	/// `identchain` | `'type' '(' expr ')'`
+	TypeExpr,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	#[token("false")]
 	FalseLit,
@@ -72,8 +83,6 @@ pub enum Syn {
 	StringLit,
 	#[token("true")]
 	TrueLit,
-	#[token("()")]
-	VoidLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	#[token("break", priority = 5)]
 	KwBreak,
@@ -85,12 +94,16 @@ pub enum Syn {
 	KwElse,
 	#[token("for", priority = 5)]
 	KwFor,
+	#[token("func", priority = 5)]
+	KwFunc,
 	#[token("if", priority = 5)]
 	KwIf,
 	#[token("static", priority = 5)]
 	KwStatic,
 	#[token("struct", priority = 5)]
 	KwStruct,
+	#[token("type", priority = 5)]
+	KwType,
 	#[token("until", priority = 5)]
 	KwUntil,
 	#[token("while", priority = 5)]
@@ -108,6 +121,12 @@ pub enum Syn {
 	BracketL,
 	#[token("]")]
 	BracketR,
+	#[token(":")]
+	Colon,
+	#[token(",")]
+	Comma,
+	#[token(".")]
+	Dot,
 	#[token("-")]
 	Minus,
 	#[token("(")]
@@ -118,9 +137,13 @@ pub enum Syn {
 	Plus,
 	#[token("#")]
 	Pound,
+	#[token(";")]
+	Semicolon,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
+	#[regex("r#[a-zA-Z0-9_][a-zA-Z0-9_]*")]
+	IdentRaw,
 	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
 	/// Either single-line (C++-style) or multi-line (C-style).
@@ -166,5 +189,28 @@ impl Syn {
 
 		chumsky::input::Stream::from_iter(Syn::lexer_with_extras(source, version).spanned().map(f))
 			.spanned(source.len()..source.len())
+	}
+}
+
+#[cfg(test)]
+#[test]
+fn smoke() {
+	const SOURCE: &str = "type(9 + 10)";
+
+	const EXPECTED: &[Syn] = &[
+		Syn::KwType,
+		Syn::ParenL,
+		Syn::IntLit,
+		Syn::Whitespace,
+		Syn::Plus,
+		Syn::Whitespace,
+		Syn::IntLit,
+		Syn::ParenR,
+	];
+
+	let lexer = Syn::lexer_with_extras(SOURCE, Version::new(0, 0, 0));
+
+	for (i, token) in lexer.enumerate() {
+		assert_eq!(token.unwrap(), EXPECTED[i]);
 	}
 }

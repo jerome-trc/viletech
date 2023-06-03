@@ -4,6 +4,7 @@
 
 mod common;
 mod expr;
+mod item;
 
 use std::{
 	marker::PhantomData,
@@ -48,6 +49,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 			self.trivia(),
 			// Only "inner" annotations are allowed at file scope.
 			self.annotation(),
+			self.func_decl(),
 		))
 		.repeated()
 		.collect::<()>()
