@@ -21,21 +21,21 @@ where
 	comb::node(
 		Syn::ConstDef.into(),
 		primitive::group((
-			comb::just(Token::KwConst, Syn::KwConst.into()),
+			comb::just_ts(Token::KwConst, Syn::KwConst.into()),
 			trivia_1plus(),
 			primitive::choice((
 				comb::string_nc(Token::Ident, "fixed", Syn::KwFixed.into()),
-				comb::just(Token::KwFloat, Syn::KwFloat.into()),
-				comb::just(Token::KwInt, Syn::KwInt.into()),
+				comb::just_ts(Token::KwFloat, Syn::KwFloat.into()),
+				comb::just_ts(Token::KwInt, Syn::KwInt.into()),
 			)),
 			trivia_1plus(),
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			trivia_0plus(),
-			comb::just(Token::Eq, Syn::Eq.into()),
+			comb::just_ts(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
 			expr::expr(),
 			trivia_0plus(),
-			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
 	.boxed()
@@ -48,15 +48,15 @@ where
 	comb::node(
 		Syn::EnumDef.into(),
 		primitive::group((
-			comb::just(Token::KwEnum, Syn::KwEnum.into()),
+			comb::just_ts(Token::KwEnum, Syn::KwEnum.into()),
 			trivia_0plus(),
-			comb::just(Token::BraceL, Syn::BraceL.into()),
+			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
 			trivia_0plus(),
 			enum_variants(),
 			trivia_0plus(),
-			comb::just(Token::BraceR, Syn::BraceR.into()),
+			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
 			trivia_0plus(),
-			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
 	.boxed()
@@ -69,9 +69,9 @@ where
 	let init = comb::node(
 		Syn::EnumVariant.into(),
 		primitive::group((
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			trivia_0plus(),
-			comb::just(Token::Eq, Syn::Eq.into()),
+			comb::just_ts(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
 			expr::expr(),
 		)),
@@ -79,14 +79,14 @@ where
 
 	let uninit = comb::node(
 		Syn::EnumVariant.into(),
-		comb::just(Token::Ident, Syn::Ident.into()),
+		comb::just_ts(Token::Ident, Syn::Ident.into()),
 	);
 
 	let variant = primitive::choice((init, uninit));
 
 	let successive = comb::checkpointed(primitive::group((
 		trivia_0plus(),
-		comb::just(Token::Comma, Syn::Comma.into()),
+		comb::just_ts(Token::Comma, Syn::Comma.into()),
 		trivia_0plus(),
 		variant.clone(),
 	)))
@@ -96,7 +96,7 @@ where
 	primitive::group((
 		variant,
 		successive,
-		comb::just(Token::Comma, Syn::Comma.into()).or_not(),
+		comb::just_ts(Token::Comma, Syn::Comma.into()).or_not(),
 	))
 	.map(|_| ())
 	.boxed()
@@ -109,9 +109,9 @@ where
 	comb::node(
 		Syn::IncludeDirective.into(),
 		primitive::group((
-			comb::just(Token::PoundInclude, Syn::PoundInclude.into()),
+			comb::just_ts(Token::PoundInclude, Syn::PoundInclude.into()),
 			trivia_0plus(),
-			comb::just(Token::StringLit, Syn::StringLit.into()),
+			comb::just_ts(Token::StringLit, Syn::StringLit.into()),
 		)),
 	)
 }

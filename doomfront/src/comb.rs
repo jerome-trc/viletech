@@ -17,6 +17,20 @@ use crate::{
 /// ```
 pub fn just<'i, T, C>(
 	token: T,
+) -> impl 'i + Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+where
+	T: 'i + logos::Logos<'i, Error = ()> + Into<SyntaxKind> + PartialEq + Copy,
+	C: GreenCache,
+{
+	primitive::just(token).map_with_state(move |_, span, state: &mut ParseState<'i, C>| {
+		state.gtb.token(token.into(), &state.source[span]);
+	})
+}
+
+/// "Just token to syntax". Like [`just`] but for languages which have a
+/// different token type from their [`SyntaxKind`] type.
+pub fn just_ts<'i, T, C>(
+	token: T,
 	syn: SyntaxKind,
 ) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
 where

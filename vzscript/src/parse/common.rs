@@ -4,10 +4,7 @@ use doomfront::{
 	util::builder::GreenCache,
 };
 
-use crate::{
-	lex::{Token, TokenStream},
-	Syn,
-};
+use crate::{Syn, TokenStream};
 
 use super::{Extra, ParserBuilder};
 
@@ -22,11 +19,11 @@ impl ParserBuilder {
 		comb::node(
 			Syn::Annotation.into(),
 			primitive::group((
-				comb::just(Token::Pound, Syn::Pound.into()),
-				comb::just(Token::Bang, Syn::Bang.into()).or_not(),
-				comb::just(Token::BracketL, Syn::BracketL.into()),
+				comb::just(Syn::Pound),
+				comb::just(Syn::Bang).or_not(),
+				comb::just(Syn::BracketL),
 				// TODO: How are names referenced? What do arg lists look like?
-				comb::just(Token::BracketR, Syn::BracketR.into()),
+				comb::just(Syn::BracketR),
 			)),
 		)
 	}
@@ -36,11 +33,7 @@ impl ParserBuilder {
 	where
 		C: GreenCache,
 	{
-		primitive::choice((
-			comb::just(Token::Whitespace, Syn::Whitespace.into()),
-			comb::just(Token::Comment, Syn::Comment.into()),
-		))
-		.map(|_| ())
+		primitive::choice((comb::just(Syn::Whitespace), comb::just(Syn::Comment))).map(|_| ())
 	}
 
 	pub(super) fn trivia_0plus<'i, C>(

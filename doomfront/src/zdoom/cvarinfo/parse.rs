@@ -31,10 +31,10 @@ where
 			flags(),
 			type_spec(),
 			trivia_1plus(),
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			default().or_not(),
 			trivia_0plus(),
-			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
 	.recover_with(recovery::via_parser(recovery()))
@@ -90,14 +90,14 @@ where
 		Syn::DefaultDef.into(),
 		primitive::group((
 			trivia_0plus(),
-			comb::just(Token::Eq, Syn::Eq.into()),
+			comb::just_ts(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
 			primitive::choice((
-				comb::just(Token::FloatLit, Syn::LitFloat.into()),
-				comb::just(Token::IntLit, Syn::LitInt.into()),
-				comb::just(Token::KwFalse, Syn::LitFalse.into()),
-				comb::just(Token::KwTrue, Syn::LitTrue.into()),
-				comb::just(Token::StringLit, Syn::LitString.into()),
+				comb::just_ts(Token::FloatLit, Syn::LitFloat.into()),
+				comb::just_ts(Token::IntLit, Syn::LitInt.into()),
+				comb::just_ts(Token::KwFalse, Syn::LitFalse.into()),
+				comb::just_ts(Token::KwTrue, Syn::LitTrue.into()),
+				comb::just_ts(Token::StringLit, Syn::LitString.into()),
 			)),
 		)),
 	)
@@ -108,8 +108,8 @@ where
 	C: GreenCache,
 {
 	primitive::choice((
-		comb::just(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just(Token::Comment, Syn::Comment.into()),
+		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
+		comb::just_ts(Token::Comment, Syn::Comment.into()),
 	))
 	.map(|_| ())
 }
@@ -139,13 +139,13 @@ where
 				trivia(),
 				flag(),
 				type_spec(),
-				comb::just(Token::Eq, Syn::Eq.into()),
-				comb::just(Token::FloatLit, Syn::LitFloat.into()),
-				comb::just(Token::IntLit, Syn::LitInt.into()),
-				comb::just(Token::KwFalse, Syn::LitFalse.into()),
-				comb::just(Token::KwTrue, Syn::LitTrue.into()),
-				comb::just(Token::StringLit, Syn::LitString.into()),
-				comb::just(Token::Ident, Syn::Ident.into()),
+				comb::just_ts(Token::Eq, Syn::Eq.into()),
+				comb::just_ts(Token::FloatLit, Syn::LitFloat.into()),
+				comb::just_ts(Token::IntLit, Syn::LitInt.into()),
+				comb::just_ts(Token::KwFalse, Syn::LitFalse.into()),
+				comb::just_ts(Token::KwTrue, Syn::LitTrue.into()),
+				comb::just_ts(Token::StringLit, Syn::LitString.into()),
+				comb::just_ts(Token::Ident, Syn::Ident.into()),
 			))
 			.repeated()
 			.at_least(1)
@@ -153,7 +153,7 @@ where
 			primitive::none_of([Token::Semicolon])
 				.repeated()
 				.collect::<()>(),
-			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
 }

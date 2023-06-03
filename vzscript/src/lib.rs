@@ -8,7 +8,7 @@
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
 mod heap;
-pub mod lex;
+// pub mod lex;
 pub mod library;
 pub mod module;
 pub mod parse;
@@ -26,7 +26,13 @@ pub use self::{
 	syn::Syn,
 };
 
-pub type ParseTree<'i> = doomfront::ParseTree<'i, lex::Token>;
+pub type Lexer<'i> = doomfront::Lexer<'i, Syn>;
+pub type ParseTree<'i> = doomfront::ParseTree<'i, Syn>;
+pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
+pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
+pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
+pub type TokenMapper = doomfront::TokenMapper<Syn>;
+pub type TokenStream<'i> = doomfront::TokenStream<'i, Syn>;
 
 /// Each library is declared as belonging to a version of the VZScript specification.
 ///

@@ -31,9 +31,9 @@ where
 			replaces_clause().or_not(),
 			editor_number().or_not(),
 			trivia_0plus(),
-			comb::just(Token::BraceL, Syn::BraceL.into()),
+			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
 			actor_innard().repeated().collect::<()>(),
-			comb::just(Token::BraceR, Syn::BraceR.into()),
+			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
 		)),
 	)
 	.boxed()
@@ -47,7 +47,7 @@ where
 		Syn::InheritSpec.into(),
 		primitive::group((
 			trivia_0plus(),
-			comb::just(Token::Colon, Syn::Colon.into()),
+			comb::just_ts(Token::Colon, Syn::Colon.into()),
 			trivia_0plus(),
 			actor_ident(),
 		)),
@@ -62,7 +62,7 @@ where
 		Syn::ReplacesClause.into(),
 		primitive::group((
 			trivia_1plus(),
-			comb::just(Token::KwReplaces, Syn::KwReplaces.into()),
+			comb::just_ts(Token::KwReplaces, Syn::KwReplaces.into()),
 			trivia_1plus(),
 			actor_ident(),
 		)),
@@ -77,7 +77,7 @@ where
 		Syn::EditorNumber.into(),
 		primitive::group((
 			trivia_1plus(),
-			comb::just(Token::IntLit, Syn::IntLit.into()),
+			comb::just_ts(Token::IntLit, Syn::IntLit.into()),
 		)),
 	)
 }
@@ -106,8 +106,8 @@ where
 		Syn::FlagSetting.into(),
 		primitive::group((
 			primitive::choice((
-				comb::just(Token::Plus, Syn::Plus.into()),
-				comb::just(Token::Minus, Syn::Minus.into()),
+				comb::just_ts(Token::Plus, Syn::Plus.into()),
+				comb::just_ts(Token::Minus, Syn::Minus.into()),
 			)),
 			trivia_0plus(),
 			ident_chain(),
@@ -122,12 +122,12 @@ where
 	let part = primitive::choice((
 		int_lit_negative(),
 		float_lit_negative(),
-		comb::just(Token::IntLit, Syn::IntLit.into()),
-		comb::just(Token::FloatLit, Syn::FloatLit.into()),
-		comb::just(Token::StringLit, Syn::StringLit.into()),
-		comb::just(Token::NameLit, Syn::NameLit.into()),
-		comb::just(Token::KwTrue, Syn::KwTrue.into()),
-		comb::just(Token::KwFalse, Syn::KwFalse.into()),
+		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
+		comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
+		comb::just_ts(Token::StringLit, Syn::StringLit.into()),
+		comb::just_ts(Token::NameLit, Syn::NameLit.into()),
+		comb::just_ts(Token::KwTrue, Syn::KwTrue.into()),
+		comb::just_ts(Token::KwFalse, Syn::KwFalse.into()),
 		ident_chain(),
 	));
 
@@ -149,16 +149,16 @@ where
 	comb::node(
 		Syn::UserVar.into(),
 		primitive::group((
-			comb::just(Token::KwVar, Syn::KwVar.into()),
+			comb::just_ts(Token::KwVar, Syn::KwVar.into()),
 			trivia_1plus(),
 			primitive::choice((
-				comb::just(Token::KwInt, Syn::KwInt.into()),
-				comb::just(Token::KwFloat, Syn::KwFloat.into()),
+				comb::just_ts(Token::KwInt, Syn::KwInt.into()),
+				comb::just_ts(Token::KwFloat, Syn::KwFloat.into()),
 			)),
 			trivia_1plus(),
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			trivia_0plus(),
-			comb::just(Token::Semicolon, Syn::Semicolon.into()),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
 }
@@ -172,15 +172,15 @@ where
 	comb::node(
 		Syn::StatesDef.into(),
 		primitive::group((
-			comb::just(Token::KwStates, Syn::KwStates.into()),
+			comb::just_ts(Token::KwStates, Syn::KwStates.into()),
 			trivia_0plus(),
 			states_usage().or_not(),
 			trivia_0plus(),
-			comb::just(Token::BraceL, Syn::BraceL.into()),
+			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
 			primitive::choice((state_def(), state_label(), state_flow(), trivia()))
 				.repeated()
 				.collect::<()>(),
-			comb::just(Token::BraceR, Syn::BraceR.into()),
+			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
 		)),
 	)
 	.boxed()
@@ -198,7 +198,7 @@ where
 	));
 
 	let rep = comb::checkpointed(primitive::group((
-		comb::just(Token::Comma, Syn::Comma.into()),
+		comb::just_ts(Token::Comma, Syn::Comma.into()),
 		trivia_0plus(),
 		single.clone(),
 		trivia_0plus(),
@@ -207,12 +207,12 @@ where
 	comb::node(
 		Syn::StatesUsage.into(),
 		primitive::group((
-			comb::just(Token::ParenL, Syn::ParenL.into()),
+			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
 			trivia_0plus(),
 			single,
 			trivia_0plus(),
 			rep.repeated().collect::<()>(),
-			comb::just(Token::ParenR, Syn::ParenR.into()),
+			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
 		)),
 	)
 }
@@ -230,7 +230,7 @@ where
 
 	comb::node(
 		Syn::StateLabel.into(),
-		primitive::group((name, comb::just(Token::Colon, Syn::Colon.into()))),
+		primitive::group((name, comb::just_ts(Token::Colon, Syn::Colon.into()))),
 	)
 }
 
@@ -239,7 +239,7 @@ where
 	C: GreenCache,
 {
 	let kw = primitive::choice((
-		comb::just(Token::KwStop, Syn::KwStop.into()),
+		comb::just_ts(Token::KwStop, Syn::KwStop.into()),
 		comb::string_nc(Token::Ident, "loop", Syn::KwLoop.into()),
 		comb::string_nc(Token::Ident, "fail", Syn::KwFail.into()),
 		comb::string_nc(Token::Ident, "wait", Syn::KwWait.into()),
@@ -249,24 +249,24 @@ where
 		Syn::GotoOffset.into(),
 		primitive::group((
 			trivia_0plus(),
-			comb::just(Token::Plus, Syn::Plus.into()),
+			comb::just_ts(Token::Plus, Syn::Plus.into()),
 			trivia_0plus(),
-			comb::just(Token::IntLit, Syn::IntLit.into()),
+			comb::just_ts(Token::IntLit, Syn::IntLit.into()),
 		)),
 	);
 
 	let scope = comb::checkpointed(primitive::group((
 		primitive::choice((
-			comb::just(Token::KwSuper, Syn::KwSuper.into()),
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::KwSuper, Syn::KwSuper.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 		)),
 		trivia_0plus(),
-		comb::just(Token::Colon2, Syn::Colon2.into()),
+		comb::just_ts(Token::Colon2, Syn::Colon2.into()),
 		trivia_0plus(),
 	)));
 
 	let goto = comb::checkpointed(primitive::group((
-		comb::just(Token::KwGoto, Syn::KwGoto.into()),
+		comb::just_ts(Token::KwGoto, Syn::KwGoto.into()),
 		trivia_1plus(),
 		scope.or_not(),
 		ident_chain(),
@@ -388,7 +388,7 @@ where
 {
 	primitive::choice((
 		int_lit_negative(),
-		comb::just(Token::IntLit, Syn::IntLit.into()),
+		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
 		expr::call_expr(expr::expr()),
 	))
 	.boxed()
@@ -401,47 +401,47 @@ where
 	let light = comb::node(
 		Syn::StateLight.into(),
 		primitive::group((
-			comb::just(Token::KwLight, Syn::KwLight.into()),
+			comb::just_ts(Token::KwLight, Syn::KwLight.into()),
 			trivia_0plus(),
-			comb::just(Token::ParenL, Syn::ParenL.into()),
+			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
 			trivia_0plus(),
 			primitive::choice((
-				comb::just(Token::StringLit, Syn::StringLit.into()),
-				comb::just(Token::NameLit, Syn::NameLit.into()),
+				comb::just_ts(Token::StringLit, Syn::StringLit.into()),
+				comb::just_ts(Token::NameLit, Syn::NameLit.into()),
 			)),
 			trivia_0plus(),
-			comb::just(Token::ParenR, Syn::ParenR.into()),
+			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
 		)),
 	);
 
 	let offs_num = primitive::choice((
 		int_lit_negative(),
-		comb::just(Token::IntLit, Syn::IntLit.into()),
+		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
 	));
 
 	let offset = comb::node(
 		Syn::StateOffset.into(),
 		primitive::group((
-			comb::just(Token::KwOffset, Syn::KwOffset.into()),
+			comb::just_ts(Token::KwOffset, Syn::KwOffset.into()),
 			trivia_0plus(),
-			comb::just(Token::ParenL, Syn::ParenL.into()),
+			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
 			trivia_0plus(),
 			offs_num.clone(),
 			trivia_0plus(),
-			comb::just(Token::Comma, Syn::Comma.into()),
+			comb::just_ts(Token::Comma, Syn::Comma.into()),
 			trivia_0plus(),
 			offs_num,
 			trivia_0plus(),
-			comb::just(Token::ParenR, Syn::ParenR.into()),
+			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
 		)),
 	);
 
 	let qual = primitive::choice((
-		comb::just(Token::KwCanRaise, Syn::KwCanRaise.into()),
-		comb::just(Token::KwBright, Syn::KwBright.into()),
-		comb::just(Token::KwSlow, Syn::KwSlow.into()),
-		comb::just(Token::KwNoDelay, Syn::KwNoDelay.into()),
-		comb::just(Token::KwFast, Syn::KwFast.into()),
+		comb::just_ts(Token::KwCanRaise, Syn::KwCanRaise.into()),
+		comb::just_ts(Token::KwBright, Syn::KwBright.into()),
+		comb::just_ts(Token::KwSlow, Syn::KwSlow.into()),
+		comb::just_ts(Token::KwNoDelay, Syn::KwNoDelay.into()),
+		comb::just_ts(Token::KwFast, Syn::KwFast.into()),
 		light,
 		offset,
 	));

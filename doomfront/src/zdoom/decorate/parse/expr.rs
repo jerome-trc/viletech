@@ -25,7 +25,7 @@ where
 {
 	let ident = comb::node(
 		Syn::IdentExpr.into(),
-		comb::just(Token::Ident, Syn::Ident.into()),
+		comb::just_ts(Token::Ident, Syn::Ident.into()),
 	);
 
 	let atom = primitive::choice((lit_expr(), ident));
@@ -40,11 +40,11 @@ where
 	comb::node(
 		Syn::Literal.into(),
 		primitive::choice((
-			comb::just(Token::StringLit, Syn::StringLit.into()),
-			comb::just(Token::IntLit, Syn::IntLit.into()),
-			comb::just(Token::FloatLit, Syn::FloatLit.into()),
-			comb::just(Token::KwTrue, Syn::KwTrue.into()),
-			comb::just(Token::KwFalse, Syn::KwFalse.into()),
+			comb::just_ts(Token::StringLit, Syn::StringLit.into()),
+			comb::just_ts(Token::IntLit, Syn::IntLit.into()),
+			comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
+			comb::just_ts(Token::KwTrue, Syn::KwTrue.into()),
+			comb::just_ts(Token::KwFalse, Syn::KwFalse.into()),
 		)),
 	)
 }
@@ -61,7 +61,7 @@ where
 	comb::node(
 		Syn::CallExpr.into(),
 		primitive::group((
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			trivia_0plus(),
 			rng_spec().or_not(),
 			trivia_0plus(),
@@ -79,11 +79,11 @@ where
 	comb::node(
 		Syn::RngSpec.into(),
 		primitive::group((
-			comb::just(Token::BracketL, Syn::BracketL.into()),
+			comb::just_ts(Token::BracketL, Syn::BracketL.into()),
 			trivia_0plus(),
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			trivia_0plus(),
-			comb::just(Token::BracketR, Syn::BracketR.into()),
+			comb::just_ts(Token::BracketR, Syn::BracketR.into()),
 		)),
 	)
 }
@@ -100,11 +100,11 @@ where
 	comb::node(
 		Syn::ArgList.into(),
 		primitive::group((
-			comb::just(Token::ParenL, Syn::ParenL.into()),
+			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
 			trivia_0plus(),
 			expr_list(expr),
 			trivia_0plus(),
-			comb::just(Token::ParenR, Syn::ParenR.into()),
+			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
 		)),
 	)
 }
@@ -122,7 +122,7 @@ where
 		expr.clone(),
 		comb::checkpointed(primitive::group((
 			trivia_0plus(),
-			comb::just(Token::Comma, Syn::Comma.into()),
+			comb::just_ts(Token::Comma, Syn::Comma.into()),
 			trivia_0plus(),
 			expr,
 		)))

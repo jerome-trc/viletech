@@ -37,12 +37,12 @@ where
 	comb::node(
 		Syn::IdentChain.into(),
 		primitive::group((
-			comb::just(Token::Ident, Syn::Ident.into()),
+			comb::just_ts(Token::Ident, Syn::Ident.into()),
 			comb::checkpointed(primitive::group((
 				trivia_0plus(),
-				comb::just(Token::Dot, Syn::Dot.into()),
+				comb::just_ts(Token::Dot, Syn::Dot.into()),
 				trivia_0plus(),
-				comb::just(Token::Ident, Syn::Ident.into()),
+				comb::just_ts(Token::Ident, Syn::Ident.into()),
 			)))
 			.repeated()
 			.collect::<()>(),
@@ -58,8 +58,8 @@ where
 	C: GreenCache,
 {
 	comb::checkpointed(primitive::group((
-		comb::just(Token::Minus, Syn::Minus.into()),
-		comb::just(Token::IntLit, Syn::IntLit.into()),
+		comb::just_ts(Token::Minus, Syn::Minus.into()),
+		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
 	)))
 }
 
@@ -71,8 +71,8 @@ where
 	C: GreenCache,
 {
 	comb::checkpointed(primitive::group((
-		comb::just(Token::Minus, Syn::Minus.into()),
-		comb::just(Token::FloatLit, Syn::FloatLit.into()),
+		comb::just_ts(Token::Minus, Syn::Minus.into()),
+		comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
 	)))
 }
 
@@ -83,8 +83,8 @@ where
 	C: GreenCache,
 {
 	primitive::choice((
-		comb::just(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just(Token::Comment, Syn::Comment.into()),
+		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
+		comb::just_ts(Token::Comment, Syn::Comment.into()),
 	))
 	.map(|_| ())
 	.boxed()

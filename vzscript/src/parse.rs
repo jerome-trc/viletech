@@ -12,13 +12,10 @@ use doomfront::{
 	util::builder::GreenCache,
 };
 
-use crate::{
-	lex::{Token, TokenStream},
-	ParseTree, Version,
-};
+use crate::{ParseTree, Syn, TokenStream, Version};
 
-pub type Extra<'i, C> = doomfront::Extra<'i, Token, C>;
-pub type Error<'i> = doomfront::ParseError<'i, Token>;
+pub type Extra<'i, C> = doomfront::Extra<'i, Syn, C>;
+pub type Error<'i> = doomfront::ParseError<'i, Syn>;
 
 /// Gives context to functions yielding parser combinators
 /// (e.g. the user's selected VZScript version).
@@ -43,22 +40,14 @@ impl ParserBuilder {
 	where
 		C: GreenCache,
 	{
-		let ret = primitive::choice((
+		primitive::choice((
 			self.trivia(),
 			// Only "inner" annotations are allowed at file scope.
 			self.annotation(),
 		))
 		.repeated()
-		.collect::<()>();
-
-		#[cfg(any(debug_assertions, test))]
-		{
-			ret.boxed()
-		}
-		#[cfg(not(any(debug_assertions, test)))]
-		{
-			ret
-		}
+		.collect::<()>()
+		.boxed()
 	}
 
 	/// Does not build a node by itself; use [`doomfront::parse`] and pass
@@ -67,18 +56,10 @@ impl ParserBuilder {
 	where
 		C: GreenCache,
 	{
-		let ret = primitive::choice((self.trivia(), self.expr()))
+		primitive::choice((self.trivia(), self.expr()))
 			.repeated()
-			.collect::<()>();
-
-		#[cfg(any(debug_assertions, test))]
-		{
-			ret.boxed()
-		}
-		#[cfg(not(any(debug_assertions, test)))]
-		{
-			ret
-		}
+			.collect::<()>()
+			.boxed()
 	}
 }
 

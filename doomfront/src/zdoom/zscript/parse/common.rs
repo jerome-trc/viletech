@@ -20,8 +20,8 @@ where
 	C: 'i + GreenCache,
 {
 	primitive::choice((
-		comb::just(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just(Token::Comment, Syn::Comment.into()),
+		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
+		comb::just_ts(Token::Comment, Syn::Comment.into()),
 	))
 	.map(|_| ())
 	.boxed()
