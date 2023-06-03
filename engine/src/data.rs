@@ -317,6 +317,11 @@ impl Catalog {
 	}
 
 	#[must_use]
+	pub fn vfs_mut(&mut self) -> &mut VirtualFs {
+		&mut self.vfs
+	}
+
+	#[must_use]
 	pub fn config_get(&self) -> ConfigGet {
 		ConfigGet(self)
 	}

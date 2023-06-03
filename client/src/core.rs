@@ -175,7 +175,7 @@ impl ClientCore {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.read().vfs().ui(ctx, ui);
+							self.catalog.write().vfs_mut().ui(ctx, ui);
 						}
 					};
 				});
@@ -196,7 +196,7 @@ impl ClientCore {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.read().vfs().ui(ctx, ui);
+							self.catalog.write().vfs_mut().ui(ctx, ui);
 						}
 					};
 				});

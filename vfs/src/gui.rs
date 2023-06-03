@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use parking_lot::RwLock;
 use util::path::PathExt;
 
 use crate::{file::Content, FileRef};
@@ -9,31 +8,25 @@ use super::{VPath, VPathBuf, VirtualFs};
 
 #[derive(Debug, Default)]
 pub(super) struct DevGui {
-	sel_file: RwLock<VPathBuf>,
-}
-
-impl DevGui {
-	fn select_file(&self, path: VPathBuf) {
-		*self.sel_file.write() = path;
-	}
+	sel_file: VPathBuf,
 }
 
 impl VirtualFs {
-	pub(super) fn ui_impl(&self, ui: &mut egui::Ui) {
-		ui.heading("Virtual File System");
+	pub(super) fn ui_impl(&mut self, ui: &mut egui::Ui) {
+		let mut new_sel_file = None;
 
-		let sel_file = self.gui.sel_file.read();
+		ui.heading("Virtual File System");
 
 		if !self
 			.files
-			.contains_key(AsRef::<VPath>::as_ref(sel_file.as_path()))
+			.contains_key(AsRef::<VPath>::as_ref(self.gui.sel_file.as_path()))
 		{
-			self.gui.select_file(VPathBuf::from("/"));
+			self.gui.sel_file = VPathBuf::from("/");
 		}
 
 		egui::ScrollArea::vertical().show(ui, |ui| {
-			let fref = self.get(sel_file.as_path()).unwrap();
-			self.ui_nav(ui, fref);
+			let fref = self.get(&self.gui.sel_file).unwrap();
+			new_sel_file = self.ui_nav(ui, fref);
 			let file = fref.deref();
 
 			match &file.content {
@@ -68,7 +61,7 @@ impl VirtualFs {
 						};
 
 						if resp.clicked() {
-							self.gui.select_file(path.to_path_buf());
+							new_sel_file = Some(path.to_path_buf());
 						}
 
 						resp.on_hover_text("View");
@@ -76,9 +69,15 @@ impl VirtualFs {
 				}
 			}
 		});
+
+		if let Some(nsf) = new_sel_file {
+			self.gui.sel_file = nsf;
+		}
 	}
 
-	fn ui_nav(&self, ui: &mut egui::Ui, fref: FileRef) {
+	fn ui_nav(&self, ui: &mut egui::Ui, fref: FileRef) -> Option<VPathBuf> {
+		let mut new_sel_file = None;
+
 		ui.horizontal(|ui| {
 			ui.add_enabled_ui(!fref.path().is_root(), |ui| {
 				if ui
@@ -86,8 +85,7 @@ impl VirtualFs {
 					.on_hover_text("Go to Parent")
 					.clicked()
 				{
-					self.gui
-						.select_file(fref.path().parent().unwrap().to_path_buf());
+					new_sel_file = Some(fref.path().parent().unwrap().to_path_buf());
 				}
 			});
 
@@ -104,8 +102,7 @@ impl VirtualFs {
 				};
 
 				if resp.clicked() {
-					self.gui
-						.select_file(fref.path().components().take(i + 1).collect());
+					new_sel_file = Some(fref.path().components().take(i + 1).collect());
 				}
 
 				resp.on_hover_text("Go to");
@@ -115,6 +112,8 @@ impl VirtualFs {
 				}
 			}
 		});
+
+		new_sel_file
 	}
 
 	fn ui_label_file_len(ui: &mut egui::Ui, len: usize) {

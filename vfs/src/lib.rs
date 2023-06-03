@@ -178,7 +178,7 @@ impl VirtualFs {
 	// Miscellaneous ///////////////////////////////////////////////////////////
 
 	#[cfg(feature = "egui")]
-	pub fn ui(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub fn ui(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
 		self.ui_impl(ui);
 	}
 }
