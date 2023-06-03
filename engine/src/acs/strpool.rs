@@ -2,9 +2,12 @@
 //!
 //! Assume all code within originates from GZDoom-original source.
 
-use std::collections::HashMap;
+use std::{
+	collections::HashMap,
+	hash::{Hash, Hasher},
+};
 
-use fasthash::metro;
+use rustc_hash::FxHasher;
 
 /// (GZ)
 /// Programmatically generated strings (e.g. those returned by strparam) are stored here.
@@ -104,7 +107,7 @@ impl StringPool {
 	}
 
 	fn add(&mut self, string: &str) -> Option<usize> {
-		let hash = metro::hash64(string) as usize;
+		let hash = Self::hash_usize(&string);
 		let bucket = hash % Self::NUM_BUCKETS;
 
 		match self.find(string, hash, bucket) {
@@ -193,7 +196,7 @@ impl StringPool {
 	fn purge(&mut self) {
 		// Clear hash buckets; rebuild them while choosing
 		// which strings to keep and which will be purged.
-		self.buckets = [255usize; Self::NUM_BUCKETS];
+		self.buckets = [255; Self::NUM_BUCKETS];
 
 		for (i, entry) in self.pool.iter_mut().enumerate() {
 			if entry.next == Self::FREE_ENTRY {
@@ -210,8 +213,7 @@ impl StringPool {
 				entry.string = String::default();
 			} else {
 				let bytes = bytemuck::bytes_of(&entry.hash);
-				let hash = metro::hash64(bytes) as usize;
-				let hash = hash % Self::NUM_BUCKETS;
+				let hash = (Self::hash_usize(&bytes)) % Self::NUM_BUCKETS;
 				entry.next = self.buckets[hash];
 				self.buckets[hash] = i;
 				entry.marked = false;
@@ -316,5 +318,12 @@ impl StringPool {
 		let ret = str_num & !Self::LIBID_MASK;
 		debug_assert!(ret < self.pool.len());
 		ret
+	}
+
+	#[must_use]
+	fn hash_usize<T: Hash>(value: &T) -> usize {
+		let mut hasher = FxHasher::default();
+		value.hash(&mut hasher);
+		hasher.finish() as usize
 	}
 }

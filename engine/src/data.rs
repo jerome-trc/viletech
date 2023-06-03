@@ -23,9 +23,9 @@ use bevy::{
 };
 use bevy_egui::egui;
 use dashmap::DashMap;
-use fasthash::SeaHasher;
 use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
+use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use util::{Outcome, SendTracker};
 use vfs::{VPath, VPathBuf};
@@ -531,9 +531,6 @@ impl AssetIo for CatalogAssetIo {
 	}
 }
 
-// Q: SeaHasher is used for building this key type because it requires no
-// allocation, unlike metro and xx. Are any others faster for this?
-
 /// Field `1` is a hash of the datum's ID string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(self) struct DatumKey(TypeId, u64);
@@ -541,7 +538,7 @@ pub(self) struct DatumKey(TypeId, u64);
 impl DatumKey {
 	#[must_use]
 	pub(self) fn new<D: Datum>(id: &str) -> Self {
-		let mut hasher = SeaHasher::default();
+		let mut hasher = FxHasher::default();
 		id.hash(&mut hasher);
 		Self(TypeId::of::<D>(), hasher.finish())
 	}

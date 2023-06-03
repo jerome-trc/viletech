@@ -47,7 +47,6 @@ cranelift-interpreter = "0.96.1"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 egui = "0.21.0" # Must be compatible with `bevy_egui`.
-fasthash = "0.4.0"
 fixed = "1.23.0"
 fluidlite = "0.2.1"
 formatx = "0.2.1"

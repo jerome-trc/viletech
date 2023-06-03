@@ -11,7 +11,7 @@ use std::{
 	sync::{Arc, Weak},
 };
 
-use fasthash::SeaHasher;
+use rustc_hash::FxHasher;
 
 use crate::{
 	project::Project,
@@ -284,9 +284,6 @@ type_handle_converters! {
 
 // Details /////////////////////////////////////////////////////////////////////
 
-// Q: SeaHasher is used for building this key type because it requires no
-// allocation, unlike metro and xx. Are any others faster for this?
-
 /// An implementation detail, exposed for the benefit of [`Symbol`].
 /// Field `1` is a hash of the symbol's name string.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -295,7 +292,7 @@ pub struct SymbolKey(TypeId, u64);
 impl SymbolKey {
 	#[must_use]
 	pub(super) fn new<'i, S: Symbol>(input: impl Borrow<S::HashInput<'i>>) -> Self {
-		let mut hasher = SeaHasher::default();
+		let mut hasher = FxHasher::default();
 		input.borrow().hash(&mut hasher);
 		Self(TypeId::of::<S>(), hasher.finish())
 	}
