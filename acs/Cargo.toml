@@ -1,0 +1,27 @@
+[package]
+name = "viletech-acs"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["compilers"]
+description = "Toolchain for Raven Software's Action Code Script"
+homepage = "https://github.com/jerome-trc/tree/master/acs"
+keywords = ["doom", "dsl", "gamedev"]
+license = "GPL-3.0-or-later"
+publish = false
+repository.workspace = true
+
+[features]
+default = []
+parallel = ["rayon"]
+
+[dependencies]
+doomfront = { path = "../doomfront", features = ["acs"] }
+
+arrayvec.workspace = true
+byteorder.workspace = true
+cranelift.workspace = true
+cranelift-jit.workspace = true
+cranelift-module.workspace = true
+rayon = { workspace = true, optional = true }
