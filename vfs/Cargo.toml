@@ -32,3 +32,10 @@ regex.workspace = true
 serde = { workspace = true, optional = true }
 wadload.path = "../wadload"
 zip.workspace = true
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5.1"

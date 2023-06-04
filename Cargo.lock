@@ -5429,6 +5429,7 @@ name = "viletech-fs"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "criterion 0.5.1",
  "dashmap",
  "egui",
  "globset",
