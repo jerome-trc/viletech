@@ -131,11 +131,21 @@ where
 		ident_chain(),
 	));
 
+	let delim = primitive::choice((
+		primitive::group((
+			trivia_0plus(),
+			comb::just_ts(Token::Comma, Syn::Comma.into()),
+			trivia_0plus(),
+		))
+		.map(|_| ()),
+		trivia_1plus(),
+	));
+
 	comb::node(
 		Syn::PropertySettings.into(),
 		primitive::group((
 			part.clone(),
-			comb::checkpointed(primitive::group((trivia_1plus(), part)))
+			comb::checkpointed(primitive::group((delim, part)))
 				.repeated()
 				.collect::<()>(),
 		)),
@@ -502,7 +512,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 	var float hidingTheSecrets;
 
 	ResetAllFlagsOrSomething
-	Containment.Area
+	Containment.Area "unruly",0123
 	+REFINERY
 	DropItem "CMDCENTER" 255 1 PainSound "spawning/vats"
 
