@@ -20,5 +20,4 @@ ser_de = ["dep:serde"]
 util = { package = "viletech-utils", path = "../utils" }
 
 byteorder.workspace = true
-indexmap.workspace = true
 serde = { workspace = true, optional = true }

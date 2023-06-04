@@ -5497,7 +5497,6 @@ name = "wadload"
 version = "0.0.0"
 dependencies = [
  "byteorder",
- "indexmap",
  "serde",
  "viletech-utils",
 ]
