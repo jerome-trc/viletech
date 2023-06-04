@@ -135,7 +135,13 @@ impl IncludeTree {
 
 				debug_assert_eq!(string.kind(), Syn::StringLit.into());
 
-				queue.push_back(PathBuf::from(string.text()));
+				let text = string.text();
+
+				if !text.is_empty() {
+					queue.push_back(PathBuf::from(&text[1..(text.len() - 1)]));
+				} else {
+					queue.push_back(PathBuf::default());
+				}
 			}
 
 			all_files.push(fptree);
@@ -215,7 +221,13 @@ impl IncludeTree {
 
 						debug_assert_eq!(string.kind(), Syn::StringLit.into());
 
-						queue.push(PathBuf::from(string.text()));
+						let text = string.text();
+
+						if !text.is_empty() {
+							queue.push(PathBuf::from(&text[1..(text.len() - 1)]));
+						} else {
+							queue.push(PathBuf::default());
+						}
 					}
 
 					all_files.lock().push(fptree);
@@ -235,7 +247,7 @@ impl IncludeTree {
 
 #[cfg(test)]
 mod test {
-	use crate::util::builder::GreenCacheNoop;
+	use crate::util::{builder::GreenCacheNoop, testing::*};
 
 	use super::*;
 
@@ -269,8 +281,57 @@ actor BaronsBanquet {}
 	}
 
 	#[test]
-	#[cfg(feature = "parallel")]
 	fn smoke_include_tree_par() {
 		let _ = IncludeTree::new_par(None, lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
+	}
+
+	#[test]
+	fn with_sample_data() {
+		const ENV_VAR: &str = "DOOMFRONT_DECORATE_SAMPLE";
+
+		let root_path = match std::env::var(ENV_VAR) {
+			Ok(v) => PathBuf::from(v),
+			Err(_) => {
+				eprintln!("Environment variable not set: `{ENV_VAR}`.");
+				return;
+			}
+		};
+
+		if !root_path.exists() {
+			eprintln!(
+				"Path passed via `{ENV_VAR}` does not exist: {}",
+				root_path.display()
+			);
+			return;
+		}
+
+		let inctree = IncludeTree::new(
+			None,
+			|path: &Path| -> Option<Cow<str>> {
+				let p = if let Some(parent) = root_path.parent() {
+					parent.join(path)
+				} else {
+					return None;
+				};
+
+				if !p.exists() {
+					return None;
+				}
+
+				let bytes = std::fs::read(p)
+					.map_err(|err| panic!("File I/O failure: {err}"))
+					.unwrap();
+				let source = String::from_utf8_lossy(&bytes);
+				Some(Cow::Owned(source.as_ref().to_owned()))
+			},
+			&root_path,
+			Some(GreenCacheNoop),
+		)
+		.unwrap();
+
+		for ptree in inctree.files {
+			eprintln!("Checking `{}`...", ptree.path().display());
+			assert_no_errors(&ptree);
+		}
 	}
 }

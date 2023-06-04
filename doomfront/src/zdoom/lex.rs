@@ -341,7 +341,8 @@ pub enum Token {
 	/// [zscdoc]: https://gitlab.com/Gutawer/zscdoc
 	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
-	#[regex("//[^\n]*\n", priority = 1)]
+	#[regex("//[^\n]*\n*", priority = 1)]
+	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
 	Unknown,
@@ -427,6 +428,8 @@ fn ident_pre4_10_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
 
 #[cfg(test)]
 mod test {
+	use std::path::PathBuf;
+
 	use super::*;
 
 	const SOURCE: &str = r#"
@@ -456,8 +459,39 @@ States (actor, overlay) {
 		let mut lexer = Token::lexer(SOURCE);
 
 		while let Some(result) = lexer.next() {
-			let token = result.unwrap();
-			println!("{token:?} : `{}`", lexer.slice());
+			let token = result.unwrap_or(Token::Unknown);
+			println!("{token:?} ({:?}) : `{}`", lexer.span(), lexer.slice());
+		}
+	}
+
+	#[test]
+	fn with_sample_data() {
+		const ENV_VAR: &str = "DOOMFRONT_ZDOOM_LEX_SAMPLE";
+
+		let path = match std::env::var(ENV_VAR) {
+			Ok(v) => PathBuf::from(v),
+			Err(_) => {
+				eprintln!("Environment variable not set: `{ENV_VAR}`.");
+				return;
+			}
+		};
+
+		if !path.exists() {
+			eprintln!(
+				"Path passed via `{ENV_VAR}` does not exist: {}",
+				path.display()
+			);
+			return;
+		}
+
+		let bytes = std::fs::read(path).unwrap();
+		let source = String::from_utf8(bytes).unwrap();
+
+		let mut lexer = Token::lexer(&source);
+
+		while let Some(result) = lexer.next() {
+			let token = result.unwrap_or(Token::Unknown);
+			println!("{token:?} ({:?}) : `{}`", lexer.span(), lexer.slice());
 		}
 	}
 }
