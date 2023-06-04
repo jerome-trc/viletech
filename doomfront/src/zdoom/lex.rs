@@ -22,197 +22,207 @@ pub enum Token {
 	#[regex(r#""(([\\]["])|[^"])*""#, priority = 2)]
 	StringLit,
 	// Keywords ////////////////////////////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstKw,
+	#[regex("(?i)abstract", priority = 5)]
+	KwAbstract,
+	#[regex("(?i)action", priority = 5)]
+	KwAction,
+	#[regex("(?i)alignof", priority = 5)]
+	KwAlignof,
+	#[regex("(?i)array", priority = 5)]
+	KwArray,
+	#[regex("(?i)auto", priority = 5)]
+	KwAuto,
+	#[regex("(?i)bool", priority = 5)]
+	KwBool,
 	#[regex("(?i)break", priority = 5)]
 	KwBreak,
+	#[regex("(?i)bright", priority = 5)]
+	KwBright,
+	#[regex("(?i)byte", priority = 5)]
+	KwByte,
+	#[regex("(?i)canraise", priority = 5)]
+	KwCanRaise,
 	#[regex("(?i)case", priority = 5)]
 	KwCase,
+	#[regex("(?i)char", priority = 5)]
+	KwChar,
+	#[regex("(?i)class", priority = 5)]
+	KwClearscope,
+	#[regex("(?i)clearscope", priority = 5)]
+	KwClass,
+	#[regex("(?i)color", priority = 5)]
+	KwColor,
 	#[regex("(?i)const", priority = 5)]
 	KwConst,
 	#[regex("(?i)continue", priority = 5)]
 	KwContinue,
+	#[regex("(?i)cross", priority = 5)]
+	KwCross,
 	#[regex("(?i)default", priority = 5)]
 	KwDefault,
+	#[regex("(?i)deprecated", priority = 5)]
+	KwDeprecated,
 	#[regex("(?i)do", priority = 5)]
 	KwDo,
-	#[regex("(?i)else", priority = 5)]
-	KwElse,
-	#[regex("(?i)for", priority = 5)]
-	KwFor,
-	#[regex("(?i)goto", priority = 5)]
-	KwGoto,
-	#[regex("(?i)if", priority = 5)]
-	KwIf,
-	#[regex("(?i)return", priority = 5)]
-	KwReturn,
-	#[regex("(?i)switch", priority = 5)]
-	KwSwitch,
-	#[regex("(?i)until", priority = 5)]
-	KwUntil,
-	#[regex("(?i)volatile", priority = 5)]
-	KwVolatile,
-	#[regex("(?i)while", priority = 5)]
-	KwWhile,
-	#[regex("(?i)bool", priority = 5)]
-	KwBool,
-	#[regex("(?i)float", priority = 5)]
-	KwFloat,
+	#[regex("(?i)dot", priority = 5)]
+	KwDot,
 	#[regex("(?i)double", priority = 5)]
 	KwDouble,
-	#[regex("(?i)char", priority = 5)]
-	KwChar,
-	#[regex("(?i)byte", priority = 5)]
-	KwByte,
-	#[regex("(?i)sbyte", priority = 5)]
-	KwSByte,
-	#[regex("(?i)short", priority = 5)]
-	KwShort,
-	#[regex("(?i)ushort", priority = 5)]
-	KwUShort,
-	#[regex("(?i)int8", priority = 5)]
-	KwInt8,
-	#[regex("(?i)uint8", priority = 5)]
-	KwUInt8,
-	#[regex("(?i)int16", priority = 5)]
-	KwInt16,
-	#[regex("(?i)uint16", priority = 5)]
-	KwUInt16,
-	#[regex("(?i)int", priority = 5)]
-	KwInt,
-	#[regex("(?i)uint", priority = 5)]
-	KwUInt,
-	#[regex("(?i)long", priority = 5)]
-	KwLong,
-	#[regex("(?i)ulong", priority = 5)]
-	KwULong,
-	#[regex("(?i)void", priority = 5)]
-	KwVoid,
-	#[regex("(?i)struct", priority = 5)]
-	KwStruct,
-	#[regex("(?i)class", priority = 5)]
-	KwClass,
-	#[regex("(?i)mixin", priority = 5)]
-	KwMixin,
+	#[regex("(?i)else", priority = 5)]
+	KwElse,
 	#[regex("(?i)enum", priority = 5)]
 	KwEnum,
-	#[regex("(?i)name", priority = 5)]
-	KwName,
-	#[regex("(?i)string", priority = 5)]
-	KwString,
-	#[regex("(?i)sound", priority = 5)]
-	KwSound,
-	#[regex("(?i)state", priority = 5)]
-	KwState,
-	#[regex("(?i)color", priority = 5)]
-	KwColor,
-	#[regex("(?i)vector2", priority = 5)]
-	KwVector2,
-	#[regex("(?i)vector3", priority = 5)]
-	KwVector3,
+	#[regex("(?i)extend", priority = 5)]
+	KwExtend,
+	#[regex("(?i)fail", priority = 5)]
+	KwFail,
+	#[regex("(?i)false", priority = 5)]
+	KwFalse,
+	#[regex("(?i)fast", priority = 5)]
+	KwFast,
+	#[regex("(?i)final", priority = 5)]
+	KwFinal,
+	#[regex("(?i)flagdef", priority = 5)]
+	KwFlagdef,
+	#[regex("(?i)float", priority = 5)]
+	KwFloat,
+	#[regex("(?i)for", priority = 5)]
+	KwFor,
+	#[regex("(?i)foreach", priority = 5)]
+	KwForeach,
+	#[regex("(?i)goto", priority = 5)]
+	KwGoto,
+	#[regex("(?i)in", priority = 5)]
+	KwIn,
+	#[regex("(?i)if", priority = 5)]
+	KwIf,
+	#[regex("(?i)int", priority = 5)]
+	KwInt,
+	#[regex("(?i)int16", priority = 5)]
+	KwInt16,
+	#[regex("(?i)int8", priority = 5)]
+	KwInt8,
+	#[regex("(?i)internal", priority = 5)]
+	KwInternal,
+	#[regex("(?i)is", priority = 5)]
+	KwIs,
+	#[regex("(?i)let", priority = 5)]
+	KwLet,
+	#[regex("(?i)light", priority = 5)]
+	KwLight,
+	#[regex("(?i)long", priority = 5)]
+	KwLong,
+	#[regex("(?i)loop", priority = 5)]
+	KwLoop,
 	#[regex("(?i)map", priority = 5)]
 	KwMap,
 	#[regex("(?i)mapiterator", priority = 5)]
 	KwMapIterator,
-	#[regex("(?i)array", priority = 5)]
-	KwArray,
-	#[regex("(?i)in", priority = 5)]
-	KwIn,
-	#[regex("(?i)sizeof", priority = 5)]
-	KwSizeof,
-	#[regex("(?i)alignof", priority = 5)]
-	KwAlignof,
-	#[regex("(?i)abstract", priority = 5)]
-	KwAbstract,
-	#[regex("(?i)foreach", priority = 5)]
-	KwForeach,
-	#[regex("(?i)true", priority = 5)]
-	KwTrue,
-	#[regex("(?i)false", priority = 5)]
-	KwFalse,
-	#[regex("(?i)none", priority = 5)]
-	KwNone,
-	#[regex("(?i)auto", priority = 5)]
-	KwAuto,
-	#[regex("(?i)property", priority = 5)]
-	KwProperty,
-	#[regex("(?i)flagdef", priority = 5)]
-	KwFlagdef,
+	#[regex("(?i)meta", priority = 5)]
+	KwMeta,
+	#[regex("(?i)mixin", priority = 5)]
+	KwMixin,
+	#[regex("(?i)name", priority = 5)]
+	KwName,
 	#[regex("(?i)native", priority = 5)]
 	KwNative,
-	#[regex("(?i)var", priority = 5)]
-	KwVar,
-	#[regex("(?i)out", priority = 5)]
-	KwOut,
-	#[regex("(?i)static", priority = 5)]
-	KwStatic,
-	#[regex("(?i)transient", priority = 5)]
-	KwTransient,
-	#[regex("(?i)final", priority = 5)]
-	KwFinal,
-	#[regex("(?i)extend", priority = 5)]
-	KwExtend,
-	#[regex("(?i)protected", priority = 5)]
-	KwProtected,
-	#[regex("(?i)private", priority = 5)]
-	KwPrivate,
-	#[regex("(?i)dot", priority = 5)]
-	KwDot,
-	#[regex("(?i)cross", priority = 5)]
-	KwCross,
-	#[regex("(?i)virtual", priority = 5)]
-	KwVirtual,
-	#[regex("(?i)override", priority = 5)]
-	KwOverride,
-	#[regex("(?i)vararg", priority = 5)]
-	KwVararg,
-	#[regex("(?i)ui", priority = 5)]
-	KwUi,
-	#[regex("(?i)play", priority = 5)]
-	KwPlay,
-	#[regex("(?i)clearscope", priority = 5)]
-	KwClearscope,
-	#[regex("(?i)virtualscope", priority = 5)]
-	KwVirtualscope,
-	#[regex("(?i)super", priority = 5)]
-	KwSuper,
-	#[regex("(?i)stop", priority = 5)]
-	KwStop,
+	#[regex("(?i)nodelay", priority = 5)]
+	KwNoDelay,
+	#[regex("(?i)none", priority = 5)]
+	KwNone,
 	#[regex("(?i)null", priority = 5)]
 	#[regex("(?i)nullptr", priority = 5)]
 	KwNull,
-	#[regex("(?i)is", priority = 5)]
-	KwIs,
-	#[regex("(?i)replaces", priority = 5)]
-	KwReplaces,
-	#[regex("(?i)states", priority = 5)]
-	KwStates,
-	#[regex("(?i)meta", priority = 5)]
-	KwMeta,
-	#[regex("(?i)deprecated", priority = 5)]
-	KwDeprecated,
-	#[regex("(?i)version", priority = 5)]
-	KwVersion,
-	#[regex("(?i)action", priority = 5)]
-	KwAction,
-	#[regex("(?i)readonly", priority = 5)]
-	KwReadonly,
-	#[regex("(?i)internal", priority = 5)]
-	KwInternal,
-	#[regex("(?i)let", priority = 5)]
-	KwLet,
-	#[regex("(?i)bright", priority = 5)]
-	KwBright,
-	#[regex("(?i)fast", priority = 5)]
-	KwFast,
-	#[regex("(?i)slow", priority = 5)]
-	KwSlow,
-	#[regex("(?i)nodelay", priority = 5)]
-	KwNoDelay,
-	#[regex("(?i)canraise", priority = 5)]
-	KwCanRaise,
 	#[regex("(?i)offset", priority = 5)]
 	KwOffset,
-	#[regex("(?i)light", priority = 5)]
-	KwLight,
+	#[regex("(?i)out", priority = 5)]
+	KwOut,
+	#[regex("(?i)override", priority = 5)]
+	KwOverride,
+	#[regex("(?i)play", priority = 5)]
+	KwPlay,
+	#[regex("(?i)private", priority = 5)]
+	KwPrivate,
+	#[regex("(?i)property", priority = 5)]
+	KwProperty,
+	#[regex("(?i)protected", priority = 5)]
+	KwProtected,
+	#[regex("(?i)readonly", priority = 5)]
+	KwReadonly,
+	#[regex("(?i)replaces", priority = 5)]
+	KwReplaces,
+	#[regex("(?i)return", priority = 5)]
+	KwReturn,
+	#[regex("(?i)sbyte", priority = 5)]
+	KwSByte,
+	#[regex("(?i)short", priority = 5)]
+	KwShort,
+	#[regex("(?i)sizeof", priority = 5)]
+	KwSizeof,
+	#[regex("(?i)slow", priority = 5)]
+	KwSlow,
+	#[regex("(?i)sound", priority = 5)]
+	KwSound,
+	#[regex("(?i)state", priority = 5)]
+	KwState,
+	#[regex("(?i)states", priority = 5)]
+	KwStates,
+	#[regex("(?i)static", priority = 5)]
+	KwStatic,
+	#[regex("(?i)stop", priority = 5)]
+	KwStop,
+	#[regex("(?i)string", priority = 5)]
+	KwString,
+	#[regex("(?i)struct", priority = 5)]
+	KwStruct,
+	#[regex("(?i)super", priority = 5)]
+	KwSuper,
+	#[regex("(?i)switch", priority = 5)]
+	KwSwitch,
+	#[regex("(?i)transient", priority = 5)]
+	KwTransient,
+	#[regex("(?i)true", priority = 5)]
+	KwTrue,
+	#[regex("(?i)ui", priority = 5)]
+	KwUi,
+	#[regex("(?i)uint", priority = 5)]
+	KwUInt,
+	#[regex("(?i)uint16", priority = 5)]
+	KwUInt16,
+	#[regex("(?i)uint8", priority = 5)]
+	KwUInt8,
+	#[regex("(?i)ulong", priority = 5)]
+	KwULong,
+	#[regex("(?i)until", priority = 5)]
+	KwUntil,
+	#[regex("(?i)ushort", priority = 5)]
+	KwUShort,
+	#[regex("(?i)var", priority = 5)]
+	KwVar,
+	#[regex("(?i)vararg", priority = 5)]
+	KwVararg,
+	#[regex("(?i)vector2", priority = 5)]
+	KwVector2,
+	#[regex("(?i)vector3", priority = 5)]
+	KwVector3,
+	#[regex("(?i)version", priority = 5)]
+	KwVersion,
+	#[regex("(?i)virtual", priority = 5)]
+	KwVirtual,
+	#[regex("(?i)virtualscope", priority = 5)]
+	KwVirtualscope,
+	#[regex("(?i)void", priority = 5)]
+	KwVoid,
+	#[regex("(?i)volatile", priority = 5)]
+	KwVolatile,
+	#[regex("(?i)wait", priority = 5)]
+	KwWait,
+	#[regex("(?i)while", priority = 5)]
+	KwWhile,
+	#[doc(hidden)]
+	__LastKw,
 	// Glyphs //////////////////////////////////////////////////////////////////
 	#[token("&")]
 	Ampersand,
@@ -360,6 +370,12 @@ impl Token {
 
 		chumsky::input::Stream::from_iter(Token::lexer(source).spanned().map(f))
 			.spanned(source.len()..source.len())
+	}
+
+	#[must_use]
+	pub fn is_keyword(self) -> bool {
+		let u = self as u8;
+		u > (Self::__FirstKw as u8) && u < (Self::__LastKw as u8)
 	}
 }
 

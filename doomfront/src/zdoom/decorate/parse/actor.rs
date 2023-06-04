@@ -231,16 +231,49 @@ pub fn state_label<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'
 where
 	C: GreenCache,
 {
-	let name = primitive::one_of([Token::IntLit, Token::Ident])
+	let part = primitive::any()
+		.filter(|t| {
+			if matches!(t, Token::KwFail | Token::KwStop | Token::KwWait) {
+				return false;
+			}
+
+			if t.is_keyword() {
+				return true;
+			}
+
+			matches!(t, Token::Ident | Token::IntLit)
+		})
 		.repeated()
+		.at_least(1)
 		.collect::<()>()
-		.map_with_state(|(), span, state: &mut ParseState<C>| {
+		.map_with_state(|(), mut span: logos::Span, state: &mut ParseState<C>| {
+			if span.start > span.end {
+				// FIXME: Possible Chumsky bug! Not a lexer issue; that's working fine.
+				std::mem::swap(&mut span.start, &mut span.end);
+			}
+
 			state.gtb.token(Syn::Ident.into(), &state.source[span])
 		});
 
+	let name = primitive::group((
+		part,
+		comb::checkpointed(primitive::group((
+			trivia_0plus(),
+			comb::just_ts(Token::Dot, Syn::Dot.into()),
+			trivia_0plus(),
+			part,
+		)))
+		.repeated()
+		.collect::<()>(),
+	));
+
 	comb::node(
 		Syn::StateLabel.into(),
-		primitive::group((name, comb::just_ts(Token::Colon, Syn::Colon.into()))),
+		primitive::group((
+			name,
+			trivia_0plus(),
+			comb::just_ts(Token::Colon, Syn::Colon.into()),
+		)),
 	)
 }
 
@@ -250,9 +283,9 @@ where
 {
 	let kw = primitive::choice((
 		comb::just_ts(Token::KwStop, Syn::KwStop.into()),
-		comb::string_nc(Token::Ident, "loop", Syn::KwLoop.into()),
-		comb::string_nc(Token::Ident, "fail", Syn::KwFail.into()),
-		comb::string_nc(Token::Ident, "wait", Syn::KwWait.into()),
+		comb::just_ts(Token::KwLoop, Syn::KwLoop.into()),
+		comb::just_ts(Token::KwFail, Syn::KwFail.into()),
+		comb::just_ts(Token::KwWait, Syn::KwWait.into()),
 	));
 
 	let offset = comb::node(
@@ -310,8 +343,24 @@ pub fn state_sprite<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<
 where
 	C: GreenCache,
 {
-	let basic = primitive::one_of([Token::Ident, Token::IntLit])
+	let basic = primitive::any()
+		.filter(|t: &Token| {
+			if !(*t == Token::Ident || *t == Token::IntLit || t.is_keyword()) {
+				return false;
+			}
+
+			if matches!(
+				t,
+				Token::KwGoto | Token::KwStop | Token::KwFail | Token::KwWait
+			) {
+				return false;
+			}
+
+			true
+		})
 		.repeated()
+		.at_least(1)
+		.at_most(4)
 		.collect::<()>()
 		.try_map_with_state(|(), span: logos::Span, state: &mut ParseState<C>| {
 			if span.len() == 4 {

@@ -149,4 +149,7 @@ where
 		state.gtb.token(syn.into(), &state.source[span]);
 		Ok(())
 	})
+	.repeated()
+	.at_least(1)
+	.collect::<()>()
 }
