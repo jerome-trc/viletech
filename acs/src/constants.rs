@@ -1,6 +1,7 @@
 //! Constants used by scripts themselves, not by the engine.
 //!
-//! Assume all code within originates from GZDoom-original source.
+//! Assume all code within is derived from GZDoom-original source unless
+//! explicitly stated otherwise.
 
 use bitflags::bitflags;
 

@@ -7,7 +7,6 @@
 
 use once_cell::sync::OnceCell;
 
-pub mod acs;
 pub mod audio;
 pub mod console;
 pub mod data;

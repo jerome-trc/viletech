@@ -1,7 +1,7 @@
 //! .o file format reader.
 //!
-//! Assume all code within is derived wholly or in part from GZDoom-original source
-//! unless explicitly stated otherwise.
+//! Assume all code within is derived from GZDoom-original source unless
+//! explicitly stated otherwise.
 
 use std::borrow::Cow;
 

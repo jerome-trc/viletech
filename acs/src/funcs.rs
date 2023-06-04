@@ -1,6 +1,7 @@
 //! Function indices.
 //!
-//! Assume all code within originates from GZDoom-original source.
+//! Assume all code within is derived from GZDoom-original source unless
+//! explicitly stated otherwise.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum Function {
@@ -103,8 +104,7 @@ pub(super) enum Function {
 	SetMusicVolume,
 	CheckProximity,
 	CheckActorState,
-
-	// Zandronum
+	// Zandronum ///////////////////////////////////////////////////////////////
 	// 100 : ResetMap(0),
 	// 101 : PlayerIsSpectator(1),
 	// 102 : ConsolePlayerNumber(0),
