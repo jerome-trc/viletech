@@ -48,7 +48,7 @@ fn doomfront(crit: &mut Criterion) {
 				Some(GreenCacheNoop),
 				doomfront::zdoom::decorate::Syn::Root.into(),
 				sample,
-				doomfront::zdoom::lex::Token::stream(sample, None),
+				doomfront::zdoom::lex::Token::stream(sample),
 			);
 
 			let _ = std::hint::black_box(ptree);

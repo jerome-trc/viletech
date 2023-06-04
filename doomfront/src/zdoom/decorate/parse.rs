@@ -17,7 +17,6 @@ use chumsky::{primitive, IterParser, Parser};
 use crate::{
 	util::builder::GreenCache,
 	zdoom::{
-		self,
 		lex::{Token, TokenStream},
 		Extra, ParseTree,
 	},
@@ -83,7 +82,6 @@ impl IncludeTree {
 	/// by the given `Filesystem` implementation. The include tree within will
 	/// still contain results that are otherwise valid for all other found files.
 	pub fn new<F, C>(
-		version: Option<zdoom::Version>,
 		mut filesystem: F,
 		path: impl AsRef<Path>,
 		gcache: Option<C>,
@@ -106,7 +104,7 @@ impl IncludeTree {
 			};
 
 			let parser = file();
-			let stream = Token::stream(source.as_ref(), version);
+			let stream = Token::stream(source.as_ref());
 			let ptree = crate::parse(
 				parser,
 				gcache.clone(),
@@ -159,7 +157,6 @@ impl IncludeTree {
 	/// Like [`Self::new`] but taking advantage of [`rayon`]'s global thread pool.
 	#[cfg(feature = "parallel")]
 	pub fn new_par<F, C>(
-		version: Option<zdoom::Version>,
 		filesystem: F,
 		path: impl AsRef<Path>,
 		gcache: Option<C>,
@@ -192,7 +189,7 @@ impl IncludeTree {
 					};
 
 					let parser = file();
-					let stream = Token::stream(source.as_ref(), version);
+					let stream = Token::stream(source.as_ref());
 					let ptree = crate::parse(
 						parser,
 						gcache.clone(),
@@ -250,10 +247,7 @@ impl IncludeTree {
 
 #[cfg(test)]
 mod test {
-	use crate::{
-		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::Version,
-	};
+	use crate::util::{builder::GreenCacheNoop, testing::*};
 
 	use super::*;
 
@@ -283,12 +277,12 @@ actor BaronsBanquet {}
 
 	#[test]
 	fn smoke_include_tree() {
-		let _ = IncludeTree::new(None, lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
+		let _ = IncludeTree::new(lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
 	}
 
 	#[test]
 	fn smoke_include_tree_par() {
-		let _ = IncludeTree::new_par(None, lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
+		let _ = IncludeTree::new_par(lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
 	}
 
 	#[test]
@@ -312,7 +306,6 @@ actor BaronsBanquet {}
 		}
 
 		let inctree = IncludeTree::new(
-			Some(Version::V1_0_0),
 			|path: &Path| -> Option<Cow<str>> {
 				let p = if let Some(parent) = root_path.parent() {
 					parent.join(path)

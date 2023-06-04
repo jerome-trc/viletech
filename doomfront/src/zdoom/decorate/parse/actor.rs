@@ -542,7 +542,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_no_errors(&ptree);

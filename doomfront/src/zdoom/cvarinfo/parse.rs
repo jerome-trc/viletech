@@ -186,7 +186,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_no_errors(&ptree);
@@ -232,7 +232,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_eq!(ptree.errors.len(), 1);

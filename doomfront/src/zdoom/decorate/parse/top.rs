@@ -149,7 +149,7 @@ enum {
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_no_errors(&ptree);
@@ -204,7 +204,7 @@ enum {
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_no_errors(&ptree);
@@ -254,7 +254,7 @@ const float INFERNO /* forbidden */ = 0.9999999;
 			None,
 			Syn::Root.into(),
 			SOURCE,
-			Token::stream(SOURCE, None),
+			Token::stream(SOURCE),
 		);
 
 		assert_no_errors(&ptree);

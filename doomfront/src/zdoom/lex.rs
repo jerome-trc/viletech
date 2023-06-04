@@ -5,11 +5,8 @@
 use chumsky::prelude::Input;
 use logos::Logos;
 
-use crate::zdoom;
-
 #[derive(logos::Logos, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
-#[logos(extras = crate::zdoom::Version)]
 pub enum Token {
 	// Literals ////////////////////////////////////////////////////////////////
 	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
@@ -97,7 +94,7 @@ pub enum Token {
 	KwMixin,
 	#[regex("(?i)enum", priority = 5)]
 	KwEnum,
-	#[regex("(?i)name", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)name", priority = 5)]
 	KwName,
 	#[regex("(?i)string", priority = 5)]
 	KwString,
@@ -125,7 +122,7 @@ pub enum Token {
 	KwAlignof,
 	#[regex("(?i)abstract", priority = 5)]
 	KwAbstract,
-	#[regex("(?i)foreach", ident_pre4_10_0, priority = 5)]
+	#[regex("(?i)foreach", priority = 5)]
 	KwForeach,
 	#[regex("(?i)true", priority = 5)]
 	KwTrue,
@@ -137,70 +134,70 @@ pub enum Token {
 	KwAuto,
 	#[regex("(?i)property", priority = 5)]
 	KwProperty,
-	#[regex("(?i)flagdef", ident_pre3_7_0, priority = 5)]
+	#[regex("(?i)flagdef", priority = 5)]
 	KwFlagdef,
 	#[regex("(?i)native", priority = 5)]
 	KwNative,
 	#[regex("(?i)var", priority = 5)]
 	KwVar,
-	#[regex("(?i)out", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)out", priority = 5)]
 	KwOut,
 	#[regex("(?i)static", priority = 5)]
 	KwStatic,
-	#[regex("(?i)transient", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)transient", priority = 5)]
 	KwTransient,
-	#[regex("(?i)final", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)final", priority = 5)]
 	KwFinal,
-	#[regex("(?i)extend", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)extend", priority = 5)]
 	KwExtend,
-	#[regex("(?i)protected", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)protected", priority = 5)]
 	KwProtected,
-	#[regex("(?i)private", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)private", priority = 5)]
 	KwPrivate,
 	#[regex("(?i)dot", priority = 5)]
 	KwDot,
 	#[regex("(?i)cross", priority = 5)]
 	KwCross,
-	#[regex("(?i)virtual", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)virtual", priority = 5)]
 	KwVirtual,
-	#[regex("(?i)override", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)override", priority = 5)]
 	KwOverride,
-	#[regex("(?i)vararg", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)vararg", priority = 5)]
 	KwVararg,
-	#[regex("(?i)ui", ident_pre2_4_0, priority = 5)]
+	#[regex("(?i)ui", priority = 5)]
 	KwUi,
-	#[regex("(?i)play", ident_pre2_4_0, priority = 5)]
+	#[regex("(?i)play", priority = 5)]
 	KwPlay,
-	#[regex("(?i)clearscope", ident_pre2_4_0, priority = 5)]
+	#[regex("(?i)clearscope", priority = 5)]
 	KwClearscope,
-	#[regex("(?i)virtualscope", ident_pre2_4_0, priority = 5)]
+	#[regex("(?i)virtualscope", priority = 5)]
 	KwVirtualscope,
-	#[regex("(?i)super", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)super", priority = 5)]
 	KwSuper,
 	#[regex("(?i)stop", priority = 5)]
 	KwStop,
 	#[regex("(?i)null", priority = 5)]
-	#[regex("(?i)nullptr", ident_pre4_9_0, priority = 5)]
+	#[regex("(?i)nullptr", priority = 5)]
 	KwNull,
-	#[regex("(?i)is", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)is", priority = 5)]
 	KwIs,
-	#[regex("(?i)replaces", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)replaces", priority = 5)]
 	KwReplaces,
 	#[regex("(?i)states", priority = 5)]
 	KwStates,
-	#[regex("(?i)meta", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)meta", priority = 5)]
 	KwMeta,
-	#[regex("(?i)deprecated", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)deprecated", priority = 5)]
 	KwDeprecated,
-	#[regex("(?i)version", ident_pre2_4_0, priority = 5)]
+	#[regex("(?i)version", priority = 5)]
 	KwVersion,
-	#[regex("(?i)action", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)action", priority = 5)]
 	KwAction,
-	#[regex("(?i)readonly", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)readonly", priority = 5)]
 	KwReadonly,
-	#[regex("(?i)internal", ident_pre3_4_0, priority = 5)]
+	#[regex("(?i)internal", priority = 5)]
 	KwInternal,
-	#[regex("(?i)let", ident_pre1_0_0, priority = 5)]
+	#[regex("(?i)let", priority = 5)]
 	KwLet,
 	#[regex("(?i)bright", priority = 5)]
 	KwBright,
@@ -354,75 +351,15 @@ pub type TokenStream<'i> = crate::TokenStream<'i, Token>;
 
 impl Token {
 	#[must_use]
-	pub fn stream(source: &str, version: Option<zdoom::Version>) -> TokenStream {
+	pub fn stream(source: &str) -> TokenStream {
 		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
 			(input.0.unwrap_or(Token::Unknown), input.1)
 		}
 
 		let f: TokenMapper = mapper; // Yes, this is necessary.
 
-		chumsky::input::Stream::from_iter(
-			Token::lexer_with_extras(source, version.unwrap_or_default())
-				.spanned()
-				.map(f),
-		)
-		.spanned(source.len()..source.len())
-	}
-}
-
-// Lexer callbacks /////////////////////////////////////////////////////////////
-
-#[allow(unused)]
-fn ident_pre1_0_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V1_0_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
-	}
-}
-
-#[allow(unused)]
-fn ident_pre2_4_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V2_4_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
-	}
-}
-
-#[allow(unused)]
-fn ident_pre3_4_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V3_4_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
-	}
-}
-
-#[allow(unused)]
-fn ident_pre3_7_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V3_7_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
-	}
-}
-
-#[allow(unused)]
-fn ident_pre4_9_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V4_9_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
-	}
-}
-
-#[allow(unused)]
-fn ident_pre4_10_0(lexer: &mut logos::Lexer<Token>) -> logos::Filter<()> {
-	if lexer.extras >= zdoom::Version::V4_10_0 {
-		logos::Filter::Emit(())
-	} else {
-		logos::Filter::Skip
+		chumsky::input::Stream::from_iter(Token::lexer(source).spanned().map(f))
+			.spanned(source.len()..source.len())
 	}
 }
 
