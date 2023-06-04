@@ -12,6 +12,7 @@ pub enum Audio {
 }
 
 impl Audio {
+	/// See <https://doomwiki.org/wiki/MUS>.
 	#[must_use]
 	pub fn is_dmxmus(bytes: &[u8]) -> bool {
 		if bytes.len() < 4 {
