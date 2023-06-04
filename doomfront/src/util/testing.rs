@@ -163,6 +163,8 @@ where
 					for e in errs {
 						output.push_str(&format!("\r\n{e:#?}"));
 					}
+
+					output.push_str(&format!("({:?})", err.span()));
 				}
 			}
 		}
