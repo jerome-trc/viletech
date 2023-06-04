@@ -194,7 +194,9 @@ where
 			state.checkpoints.push(state.gtb.checkpoint());
 		})
 		.then(group)
-		.map(|_| ())
+		.map_with_state(|_, _, state| {
+			let _ = state.checkpoints.pop().unwrap();
+		})
 		.map_err_with_state(|err, _, state| {
 			state
 				.gtb
