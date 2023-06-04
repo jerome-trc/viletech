@@ -5389,13 +5389,14 @@ dependencies = [
 name = "viletech-acs"
 version = "0.0.0"
 dependencies = [
- "arrayvec",
+ "bytemuck",
  "byteorder",
  "cranelift",
  "cranelift-jit",
  "cranelift-module",
  "doomfront",
  "rayon",
+ "viletech-utils",
 ]
 
 [[package]]

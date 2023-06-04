@@ -1,9 +1,115 @@
 //! Functions for inspecting and manipulating byte slices.
 
-use std::io::{self, Cursor};
+use std::{
+	io::{self, Cursor},
+	marker::PhantomData,
+};
 
 use bytemuck::AnyBitPattern;
 use byteorder::{ByteOrder, LittleEndian};
+
+/// Strongly-typed cursor, for easy migration of pointer arithmetic code.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TCursor<'b, T>(Cursor<&'b [u8]>, PhantomData<T>)
+where
+	T: Eq + Copy;
+
+impl<'b, T> TCursor<'b, T>
+where
+	T: Eq + Copy,
+{
+	/// `pos` is in bytes, regardless of the type of `T`.
+	#[must_use]
+	pub fn new(inner: &'b [u8], pos: u64) -> Self {
+		let mut ret = Self(Cursor::new(inner), PhantomData);
+		ret.0.set_position(pos);
+		ret
+	}
+
+	/// The returned value is always in bytes, regardless of the type of `T`.
+	#[must_use]
+	pub fn pos(&self) -> u64 {
+		self.0.position()
+	}
+}
+
+impl TCursor<'_, u8> {
+	/// Does not advance the cursor. Panics if out-of-bounds.
+	#[must_use]
+	pub fn peek_u8_le(&self) -> u8 {
+		self.0.get_ref()[self.pos() as usize]
+	}
+
+	/// Increase this cursor's position by `w8` bytes.
+	pub fn advance(&mut self, w8: u64) -> &mut Self {
+		self.0.set_position(self.0.position() + w8);
+		self
+	}
+
+	/// Advances the cursor by `std::mem::size_of::<A>()` bytes.
+	pub fn read_from_bytes<A: AnyBitPattern>(&mut self) -> &A {
+		let pos = self.pos() as usize;
+		let size = std::mem::size_of::<A>();
+		self.advance(size as u64);
+		bytemuck::from_bytes(&self.0.get_ref()[pos..(pos + size)])
+	}
+
+	#[must_use]
+	pub fn to_tcursor32(&self) -> TCursor<u32> {
+		let inner = *self.0.get_ref();
+		TCursor::new(inner, self.pos() / 4)
+	}
+}
+
+impl TCursor<'_, u32> {
+	/// Does not advance the cursor. Panics if out-of-bounds.
+	#[must_use]
+	pub fn peek_u32_le(&self) -> u32 {
+		let inner = *self.0.get_ref();
+		let range = (self.pos() as usize)..(self.pos() as usize + 4);
+		LittleEndian::read_u32(&inner[range])
+	}
+
+	/// Uses this target's native endianness. Does not advance the cursor.
+	/// Panics if out-of-bounds.
+	#[must_use]
+	pub fn peek_u32(&self) -> u32 {
+		let inner = *self.0.get_ref();
+		let pos = self.pos() as usize;
+		u32::from_ne_bytes([inner[pos], inner[pos + 1], inner[pos + 2], inner[pos + 3]])
+	}
+
+	/// Note that `offs` is in terms of `u32`-widths, not bytes.
+	/// Uses this target's native endianness. Does not move the cursor.
+	/// Panics if out-of-bounds.
+	#[must_use]
+	pub fn peek_u32_offs(&self, offs: isize) -> u32 {
+		let inner = *self.0.get_ref();
+		let pos = ((self.pos() as isize) + (offs * 4)) as usize;
+		u32::from_ne_bytes([inner[pos], inner[pos + 1], inner[pos + 2], inner[pos + 3]])
+	}
+
+	/// Note that `offs` is in terms of `u32`-widths, not bytes.
+	/// Does not move the cursor. Panics if out-of-bounds.
+	#[must_use]
+	pub fn peek_u32_offs_le(&self, offs: isize) -> u32 {
+		let inner = *self.0.get_ref();
+		let pos = ((self.pos() as isize) + (offs * 4)) as usize;
+		u32::from_le_bytes([inner[pos], inner[pos + 1], inner[pos + 2], inner[pos + 3]])
+	}
+
+	/// Increase this cursor's position by `w32 * 4` bytes.
+	pub fn advance(&mut self, w32: u64) -> &mut Self {
+		self.0.set_position(self.0.position() + (w32 * 4));
+		self
+	}
+
+	#[must_use]
+	pub fn to_tcursor8(&self) -> TCursor<u32> {
+		let inner = *self.0.get_ref();
+		TCursor::new(inner, self.pos() * 4)
+	}
+}
 
 /// Extends [`Cursor`] with some convenience functions.
 pub trait CursorExt {

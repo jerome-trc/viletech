@@ -18,8 +18,9 @@ parallel = ["rayon"]
 
 [dependencies]
 doomfront = { path = "../doomfront", features = ["acs"] }
+util = { package = "viletech-utils", path = "../utils" }
 
-arrayvec.workspace = true
+bytemuck.workspace = true
 byteorder.workspace = true
 cranelift.workspace = true
 cranelift-jit.workspace = true
