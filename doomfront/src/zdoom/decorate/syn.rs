@@ -54,9 +54,11 @@ pub enum Syn {
 	/// `'var' ('int'|'float') ident ';'`
 	UserVar,
 	// Nodes: expressions //////////////////////////////////////////////////////
+	BinExpr,
 	CallExpr,
 	IdentExpr,
 	Literal,
+	UnaryExpr,
 	// Nodes: preprocessor /////////////////////////////////////////////////////
 	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
 	IncludeDirective,
@@ -95,6 +97,14 @@ pub enum Syn {
 	KwVar,
 	KwWait,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
+	/// `&`
+	Ampersand,
+	/// `&&`
+	Ampersand2,
+	/// `<=`
+	AngleLEq,
+	/// `>=`
+	AngleREq,
 	/// `{`
 	BraceL,
 	/// `}`
@@ -109,20 +119,30 @@ pub enum Syn {
 	Colon2,
 	/// `,`
 	Comma,
+	/// `.`
+	Dot,
 	/// `=`
 	Eq,
+	/// `==`
+	Eq2,
 	/// `-`
 	Minus,
+	/// `--`
+	Minus2,
 	/// `(`
 	ParenL,
 	/// `)`
 	ParenR,
-	/// `.`
-	Dot,
+	/// `|`
+	Pipe,
 	/// `+`
 	Plus,
+	/// `++`
+	Plus2,
 	/// `;`
 	Semicolon,
+	/// `/`
+	Slash,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// The exact string `#include`, ASCII case-insensitive.
 	PoundInclude,
