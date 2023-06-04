@@ -24,13 +24,13 @@ pub struct Version {
 
 impl Version {
 	pub const V1_0_0: Self = Self {
-		major: 3,
-		minor: 4,
+		major: 1,
+		minor: 0,
 		rev: 0,
 	};
 
 	pub const V2_4_0: Self = Self {
-		major: 3,
+		major: 2,
 		minor: 4,
 		rev: 0,
 	};
@@ -48,8 +48,8 @@ impl Version {
 	};
 
 	pub const V4_9_0: Self = Self {
-		major: 3,
-		minor: 7,
+		major: 4,
+		minor: 9,
 		rev: 0,
 	};
 
