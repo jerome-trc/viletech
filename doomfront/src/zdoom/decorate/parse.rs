@@ -1,3 +1,6 @@
+//! Note that the results of these parsers are likely to be incorrect if used with
+//! a [`TokenStream`] bearing a version above [`V1_0_0`](crate::zdoom::Version::V1_0_0).
+
 mod actor;
 mod common;
 mod expr;
@@ -247,7 +250,10 @@ impl IncludeTree {
 
 #[cfg(test)]
 mod test {
-	use crate::util::{builder::GreenCacheNoop, testing::*};
+	use crate::{
+		util::{builder::GreenCacheNoop, testing::*},
+		zdoom::Version,
+	};
 
 	use super::*;
 
@@ -306,7 +312,7 @@ actor BaronsBanquet {}
 		}
 
 		let inctree = IncludeTree::new(
-			None,
+			Some(Version::V1_0_0),
 			|path: &Path| -> Option<Cow<str>> {
 				let p = if let Some(parent) = root_path.parent() {
 					parent.join(path)
