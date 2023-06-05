@@ -147,7 +147,8 @@ pub enum Syn {
 	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
 	/// Either single-line (C++-style) or multi-line (C-style).
-	#[regex("//[^\n]*\n", priority = 1)]
+	#[regex("//[^\n]*\n*", priority = 1)]
+	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
 	/// Spaces, newlines, carriage returns, or tabs.
