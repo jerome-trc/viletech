@@ -1,0 +1,28 @@
+[package]
+name = "subterra"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-engines", "game-development"]
+description = "VileTech's level representation, ZDBSP fork, UDMF support"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/level"
+keywords = ["doom", "gamedev", "udmf", "viletech", "zdbsp"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository.workspace = true
+
+[features]
+default = []
+parallel = ["rayon"]
+ser_de = ["serde"]
+
+[dependencies]
+util = { package = "viletech-utils", path = "../utils" }
+
+bitflags.workspace = true
+bitvec.workspace = true
+chumsky.workspace = true # For UDMF parsing.
+glam.workspace = true
+rayon = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }

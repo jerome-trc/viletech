@@ -4661,6 +4661,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
+name = "subterra"
+version = "0.0.0"
+dependencies = [
+ "bitflags",
+ "bitvec",
+ "chumsky",
+ "glam",
+ "rayon",
+ "serde",
+ "viletech-utils",
+]
+
+[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

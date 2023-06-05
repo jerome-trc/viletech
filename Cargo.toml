@@ -5,6 +5,7 @@ members = [
 	"client",
 	"doomfront",
 	"engine",
+	"level",
 	"server",
 	"utils",
 	"vfs",
