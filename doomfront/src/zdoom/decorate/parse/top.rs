@@ -1,4 +1,4 @@
-//! Non-actor top-level elements: symbolic constants, enums, preprocessor directives.
+//! Non-actor top-level elements: symbolic constants, enums, et cetera.
 
 use chumsky::{primitive, IterParser, Parser};
 
@@ -33,12 +33,11 @@ where
 			trivia_0plus(),
 			comb::just_ts(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
-			expr::expr(),
+			expr::expr(false),
 			trivia_0plus(),
 			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
-	.boxed()
 }
 
 pub fn enum_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -59,7 +58,6 @@ where
 			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
 		)),
 	)
-	.boxed()
 }
 
 fn enum_variants<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
@@ -73,7 +71,7 @@ where
 			trivia_0plus(),
 			comb::just_ts(Token::Eq, Syn::Eq.into()),
 			trivia_0plus(),
-			expr::expr(),
+			expr::expr(false),
 		)),
 	);
 
@@ -99,7 +97,46 @@ where
 		comb::just_ts(Token::Comma, Syn::Comma.into()).or_not(),
 	))
 	.map(|_| ())
-	.boxed()
+}
+
+pub fn damage_type_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
+where
+	C: GreenCache,
+{
+	let ident = primitive::any().filter(|t: &Token| t.is_keyword() || *t == Token::Ident);
+
+	let kvp = comb::node(
+		Syn::DamageTypeKvp.into(),
+		primitive::group((
+			ident,
+			comb::checkpointed(primitive::group((
+				trivia_1plus(),
+				primitive::choice((
+					int_lit_negative(),
+					float_lit_negative(),
+					comb::just_ts(Token::IntLit, Syn::IntLit.into()),
+					comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
+					comb::just_ts(Token::StringLit, Syn::StringLit.into()),
+				)),
+			)))
+			.or_not(),
+		)),
+	);
+
+	comb::node(
+		Syn::DamageTypeDef.into(),
+		primitive::group((
+			ident,
+			trivia_1plus(),
+			ident,
+			trivia_0plus(),
+			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
+			primitive::choice((trivia(), kvp))
+				.repeated()
+				.collect::<()>(),
+			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
+		)),
+	)
 }
 
 pub fn include_directive<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone

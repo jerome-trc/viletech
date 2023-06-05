@@ -92,8 +92,8 @@ where
 		const_def(),
 		enum_def(),
 		states_def(),
-		property_settings(),
 		user_var(),
+		property_settings(),
 	))
 	.boxed()
 }
@@ -119,32 +119,34 @@ pub fn property_settings<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), E
 where
 	C: GreenCache,
 {
+	let parenthesized = comb::checkpointed(primitive::group((
+		comb::just_ts(Token::ParenL, Syn::ParenL.into()),
+		trivia_0plus(),
+		expr::expr(false),
+		trivia_0plus(),
+		comb::just_ts(Token::ParenR, Syn::ParenR.into()),
+	)));
+
 	let part = primitive::choice((
-		int_lit_negative(),
-		float_lit_negative(),
-		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-		comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
-		comb::just_ts(Token::StringLit, Syn::StringLit.into()),
-		comb::just_ts(Token::NameLit, Syn::NameLit.into()),
-		comb::just_ts(Token::KwTrue, Syn::KwTrue.into()),
-		comb::just_ts(Token::KwFalse, Syn::KwFalse.into()),
+		flag_setting(),
+		parenthesized,
+		expr::expr(true),
 		ident_chain(),
 	));
 
 	let delim = primitive::choice((
-		primitive::group((
+		comb::checkpointed(primitive::group((
 			trivia_0plus(),
 			comb::just_ts(Token::Comma, Syn::Comma.into()),
 			trivia_0plus(),
-		))
-		.map(|_| ()),
+		))),
 		trivia_1plus(),
 	));
 
 	comb::node(
 		Syn::PropertySettings.into(),
 		primitive::group((
-			part.clone(),
+			primitive::choice((flag_setting(), ident_chain())),
 			comb::checkpointed(primitive::group((delim, part)))
 				.repeated()
 				.collect::<()>(),
@@ -448,7 +450,7 @@ where
 	primitive::choice((
 		int_lit_negative(),
 		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-		expr::call_expr(expr::expr()),
+		expr::call_expr(expr::expr(false)),
 	))
 	.boxed()
 }
@@ -523,7 +525,7 @@ where
 		primitive::group((
 			trivia_1line().repeated().collect::<()>(),
 			primitive::choice((
-				expr::call_expr(expr::expr()),
+				expr::call_expr(expr::expr(false)),
 				// TODO: Anonymous functions.
 			)),
 		)),

@@ -112,7 +112,7 @@ where
 pub fn node<'i, T, O, C, G>(
 	kind: SyntaxKind,
 	group: G,
-) -> impl Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>> + Clone
+) -> chumsky::Boxed<'i, 'i, TokenStream<'i, T>, (), Extra<'i, T, C>>
 where
 	T: 'i + logos::Logos<'i, Error = ()> + PartialEq + Clone,
 	C: GreenCache,

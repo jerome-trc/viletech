@@ -14,6 +14,10 @@ pub enum Syn {
 	ArgList,
 	/// `'const' 'int'|'float'|'fixed' ident '=' expr ';'`
 	ConstDef,
+	/// `'damagetype' '{' damagetypekvkp* '}'`
+	DamageTypeDef,
+	/// `ident (int | float | string)?`
+	DamageTypeKvp,
 	/// Wraps a [`Syn::IntLit`].
 	EditorNumber,
 	/// `'enum' '{' variant* '}' ';'`
@@ -56,7 +60,9 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	BinExpr,
 	CallExpr,
+	GroupedExpr,
 	IdentExpr,
+	IndexExpr,
 	Literal,
 	UnaryExpr,
 	// Nodes: preprocessor /////////////////////////////////////////////////////
@@ -76,6 +82,7 @@ pub enum Syn {
 	KwBright,
 	KwCanRaise,
 	KwConst,
+	KwDamageType,
 	KwEnum,
 	KwFail,
 	KwFalse,
@@ -101,10 +108,16 @@ pub enum Syn {
 	Ampersand,
 	/// `&&`
 	Ampersand2,
+	/// `<`
+	AngleL,
 	/// `<=`
 	AngleLEq,
+	/// `>`
+	AngleR,
 	/// `>=`
 	AngleREq,
+	/// `*`
+	Asterisk,
 	/// `{`
 	BraceL,
 	/// `}`

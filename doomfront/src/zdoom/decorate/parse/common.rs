@@ -14,19 +14,21 @@ use crate::{
 };
 
 /// Builds a [`Syn::Ident`] token.
-///
-/// DECORATE actor class identifiers are allowed to consist solely of ASCII digits.
-/// Note that this filters out non-contextual keywords.
 pub fn actor_ident<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
 where
 	C: 'i + GreenCache,
 {
-	primitive::none_of([Token::Whitespace, Token::Comment])
-		.repeated()
-		.collect::<()>()
-		.map_with_state(|(), span, state: &mut ParseState<C>| {
-			state.gtb.token(Syn::Ident.into(), &state.source[span])
-		})
+	primitive::none_of([
+		Token::Whitespace,
+		Token::Comment,
+		Token::Colon,
+		Token::BraceL,
+	])
+	.repeated()
+	.collect::<()>()
+	.map_with_state(|(), span, state: &mut ParseState<C>| {
+		state.gtb.token(Syn::Ident.into(), &state.source[span])
+	})
 }
 
 /// `ident (trivia* '.' trivia* ident)*`
@@ -34,15 +36,30 @@ pub fn ident_chain<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'
 where
 	C: 'i + GreenCache,
 {
+	let ident = primitive::any()
+		.filter(|t: &Token| {
+			if matches!(
+				t,
+				Token::KwStates | Token::KwVar | Token::KwEnum | Token::KwConst
+			) {
+				return false;
+			}
+
+			t.is_keyword() || *t == Token::Ident
+		})
+		.map_with_state(|_, span, state: &mut ParseState<'i, C>| {
+			state.gtb.token(Syn::Ident.into(), &state.source[span]);
+		});
+
 	comb::node(
 		Syn::IdentChain.into(),
 		primitive::group((
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
+			ident,
 			comb::checkpointed(primitive::group((
 				trivia_0plus(),
 				comb::just_ts(Token::Dot, Syn::Dot.into()),
 				trivia_0plus(),
-				comb::just_ts(Token::Ident, Syn::Ident.into()),
+				ident,
 			)))
 			.repeated()
 			.collect::<()>(),

@@ -36,6 +36,7 @@ where
 		include_directive(),
 		const_def(),
 		enum_def(),
+		damage_type_def(),
 	))
 	.repeated()
 	.collect::<()>()
@@ -305,13 +306,17 @@ actor BaronsBanquet {}
 			return;
 		}
 
+		let Some(root_parent_path) = root_path.parent() else {
+			eprintln!(
+				"Path passed via `{ENV_VAR}` has no parent: {}",
+				root_path.display()
+			);
+			return;
+		};
+
 		let inctree = IncludeTree::new(
 			|path: &Path| -> Option<Cow<str>> {
-				let p = if let Some(parent) = root_path.parent() {
-					parent.join(path)
-				} else {
-					return None;
-				};
+				let p = root_parent_path.join(path);
 
 				if !p.exists() {
 					return None;
