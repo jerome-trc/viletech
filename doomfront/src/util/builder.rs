@@ -35,6 +35,7 @@ impl<C: GreenCache> GreenBuilder<C> {
 	/// Adds a new token to the current branch.
 	#[inline]
 	pub fn token(&mut self, kind: SyntaxKind, text: &str) {
+		self.heap_guard();
 		let (hash, token) = self.cache.token(kind, text);
 		self.children.push((hash, token.into()));
 	}
@@ -44,6 +45,7 @@ impl<C: GreenCache> GreenBuilder<C> {
 	/// This is a cheap operation, involving only a vector push of two integers.
 	#[inline]
 	pub fn open(&mut self, kind: SyntaxKind) {
+		self.heap_guard();
 		self.parents.push((kind, self.children.len()));
 	}
 
@@ -103,6 +105,7 @@ impl<C: GreenCache> GreenBuilder<C> {
 			);
 		}
 
+		self.heap_guard();
 		self.parents.push((kind, checkpoint));
 	}
 
@@ -133,6 +136,19 @@ impl<C: GreenCache> GreenBuilder<C> {
 	#[must_use]
 	pub fn parent_count(&self) -> usize {
 		self.parents.len()
+	}
+
+	/// In unit tests and debug mode, prevents infinite heap growth from runaway
+	/// parser recursion. Otherwise is a no-op.
+	fn heap_guard(&self) {
+		#[cfg(any(debug_assertions, test))]
+		{
+			if self.children.len() >= (u16::MAX as usize)
+				|| self.parents.len() >= (u16::MAX as usize)
+			{
+				panic!("Runaway parser terminated.");
+			}
+		}
 	}
 }
 
