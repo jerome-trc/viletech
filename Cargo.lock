@@ -4667,6 +4667,7 @@ dependencies = [
  "bitflags",
  "bitvec",
  "chumsky",
+ "criterion 0.5.1",
  "glam",
  "rayon",
  "serde",
@@ -5484,6 +5485,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "smartstring",
 ]
 
 [[package]]

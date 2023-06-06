@@ -26,3 +26,10 @@ chumsky.workspace = true # For UDMF parsing.
 glam.workspace = true
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5.1"
