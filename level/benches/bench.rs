@@ -23,7 +23,14 @@ fn udmf(crit: &mut Criterion) {
 	let bytes = std::fs::read(path)
 		.map_err(|err| panic!("File I/O failure: {err}"))
 		.unwrap();
-	let _ = String::from_utf8_lossy(&bytes);
+	let source = String::from_utf8_lossy(&bytes);
+
+	grp.bench_function("Parse, Chumsky", |bencher| {
+		bencher.iter(|| {
+			let result = subterra::udmf::parse_textmap(source.as_ref());
+			let _ = std::hint::black_box(result.unwrap());
+		});
+	});
 
 	grp.finish();
 }
