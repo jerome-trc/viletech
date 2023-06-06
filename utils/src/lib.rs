@@ -10,6 +10,13 @@ pub mod path;
 pub mod simd;
 pub mod string;
 
+pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
+
+/// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.
+pub type EditorNum = u16;
+/// See <https://zdoom.org/wiki/Spawn_number>. Used by ACS.
+pub type SpawnNum = u16;
+
 /// Note that minutes and seconds are both remainders, not totals.
 #[must_use]
 pub fn duration_to_hhmmss(duration: std::time::Duration) -> (u64, u64, u64) {

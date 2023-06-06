@@ -1,8 +1,9 @@
 //! The [actor blueprint](Blueprint) and related symbols.
 
 use bitflags::bitflags;
+use util::{EditorNum, SpawnNum};
 
-use crate::{sim::actor, EditorNum, SpawnNum};
+use crate::sim::actor;
 
 use super::{Audio, Image, InHandle, PolyModel, VoxelModel};
 

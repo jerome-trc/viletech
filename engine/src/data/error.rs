@@ -1,10 +1,10 @@
 //! Things that can go wrong during data management operations.
 
 use image::ImageError;
-use util::Id8;
+use util::{EditorNum, Id8};
 use vfs::VPathBuf;
 
-use crate::{udmf, EditorNum};
+use crate::udmf;
 
 /// Things that can go wrong during (non-preparation) datum management operations,
 /// like lookup and mutation. Also see [`PrepError`].

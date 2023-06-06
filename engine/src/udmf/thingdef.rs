@@ -1,9 +1,10 @@
 //! Mapping standardized thingdef field names to thingdef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	data::dobj::{Level, Thing, UdmfKey, UdmfValue},
 	udmf::Literal,
-	SmallString,
 };
 
 use super::{Error, KeyValPair};

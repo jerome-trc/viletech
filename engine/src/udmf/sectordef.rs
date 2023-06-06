@@ -1,9 +1,10 @@
 //! Mapping standardized sectordef field names to sectordef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	data::dobj::{Level, Sector, UdmfKey, UdmfValue},
 	udmf::Literal,
-	SmallString,
 };
 
 use super::{Error, KeyValPair};

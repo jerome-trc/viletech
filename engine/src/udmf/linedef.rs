@@ -1,9 +1,10 @@
 //! Mapping standardized linedef field names to linedef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	data::dobj::{Level, LineDef, UdmfKey, UdmfValue},
 	udmf::Literal,
-	SmallString,
 };
 
 use super::{Error, KeyValPair};

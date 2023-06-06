@@ -1,9 +1,10 @@
 //! Mapping standardized sidedef field names to sidedef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	data::dobj::{Level, SideDef, UdmfKey, UdmfValue},
 	udmf::Literal,
-	SmallString,
 };
 
 use super::{Error, KeyValPair};

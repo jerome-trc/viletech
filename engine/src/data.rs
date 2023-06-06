@@ -27,13 +27,10 @@ use parking_lot::{Mutex, RwLock};
 use rayon::prelude::*;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
-use util::{Outcome, SendTracker};
+use util::{EditorNum, Outcome, SendTracker, SpawnNum};
 use vfs::{VPath, VPathBuf};
 
-use crate::{
-	vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs},
-	EditorNum, SpawnNum,
-};
+use crate::vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs};
 
 use self::{
 	dobj::{Blueprint, DataRef, Datum, DatumStore},

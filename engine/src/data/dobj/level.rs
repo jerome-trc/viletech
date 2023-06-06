@@ -11,12 +11,9 @@ use bitvec::{order::Lsb0, vec::BitVec};
 use image::Rgb;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use util::{math::MinMaxBox, Id8};
+use util::{math::MinMaxBox, EditorNum, Id8, SmallString};
 
-use crate::{
-	sim::{level::Vertex, line::Flags},
-	EditorNum, SmallString,
-};
+use crate::sim::{level::Vertex, line::Flags};
 
 use super::{Audio, Blueprint, Image, InHandle};
 

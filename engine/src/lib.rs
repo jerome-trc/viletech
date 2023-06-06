@@ -52,15 +52,6 @@ pub enum BaseGame {
 	ChexQuest,
 }
 
-// Type aliases ////////////////////////////////////////////////////////////////
-
-pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
-
-/// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.
-pub type EditorNum = u16;
-/// See <https://zdoom.org/wiki/Spawn_number>. Used by ACS.
-pub type SpawnNum = u16;
-
 // Constants ///////////////////////////////////////////////////////////////////
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
