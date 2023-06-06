@@ -15,6 +15,8 @@ fn decorate(crit: &mut Criterion) {
 
 	let mut grp = crit.benchmark_group("DECORATE");
 
+	grp.sample_size(20);
+
 	grp.bench_function("Parser Build", |bencher| {
 		bencher.iter(|| {
 			let parser = decorate::parse::file::<GreenCacheNoop>();
