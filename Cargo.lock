@@ -4669,7 +4669,9 @@ dependencies = [
  "chumsky",
  "criterion 0.5.1",
  "glam",
+ "once_cell",
  "rayon",
+ "regex",
  "serde",
  "viletech-utils",
 ]

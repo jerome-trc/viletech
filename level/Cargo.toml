@@ -14,7 +14,6 @@ repository.workspace = true
 
 [features]
 default = []
-parallel = ["rayon"]
 ser_de = ["serde"]
 
 [dependencies]
@@ -24,7 +23,9 @@ bitflags.workspace = true
 bitvec.workspace = true
 chumsky.workspace = true # For UDMF parsing.
 glam.workspace = true
-rayon = { workspace = true, optional = true }
+once_cell.workspace = true
+rayon.workspace = true
+regex.workspace = true
 serde = { workspace = true, optional = true }
 
 [[bench]]
