@@ -422,6 +422,8 @@ pub(crate) enum Literal<'i> {
 
 #[cfg(test)]
 mod test {
+	use std::path::PathBuf;
+
 	use super::*;
 
 	#[test]
@@ -446,5 +448,28 @@ mod test {
 		let (output, errors) = result.into_output_errors();
 		assert!(errors.is_empty());
 		assert!(output.is_some());
+	}
+
+	#[test]
+	fn with_sample_data() {
+		const ENV_VAR: &str = "SUBTERRA_UDMF_SAMPLE";
+
+		let path = match std::env::var(ENV_VAR) {
+			Ok(v) => PathBuf::from(v),
+			Err(_) => {
+				eprintln!(
+					"Environment variable not set: `{ENV_VAR}`. \
+					Cancelling `udmf::test::with_sample_data`."
+				);
+				return;
+			}
+		};
+
+		let bytes = std::fs::read(path)
+			.map_err(|err| panic!("File I/O failure: {err}"))
+			.unwrap();
+		let source = String::from_utf8_lossy(&bytes);
+
+		let _ = parse_textmap(source.as_ref()).unwrap();
 	}
 }
