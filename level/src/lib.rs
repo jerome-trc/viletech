@@ -6,6 +6,7 @@
 pub mod read;
 pub mod repr;
 pub mod udmf;
+pub mod validate;
 
 use util::{EditorNum, Id8};
 
