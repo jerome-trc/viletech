@@ -10,6 +10,10 @@ license = "GPL-3.0-or-later"
 publish = false
 repository.workspace = true
 
+[[bin]]
+name = "viletools"
+path = "src/main.rs"
+
 [dependencies]
 acs = { package = "viletech-acs", path = "../acs" }
 doomfront = { path = "../doomfront", features = [
