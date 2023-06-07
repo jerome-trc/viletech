@@ -70,6 +70,7 @@ pub enum Error {
 		thingdef: usize,
 		ed_num: EditorNum,
 	},
+	Udmf(udmf::Error),
 	/// A sector tried to reference a non-existent texture.
 	UnknownFlat {
 		sector: usize,
@@ -176,6 +177,7 @@ impl std::fmt::Display for Error {
 			Self::TextmapParse(err) => {
 				write!(f, "Error while parsing `TEXTMAP`: {err}")
 			}
+			Self::Udmf(err) => err.fmt(f),
 			Self::UnknownEdNum { thingdef, ed_num } => {
 				write!(f, "Thing {thingdef} has unknown editor number: {ed_num}")
 			}

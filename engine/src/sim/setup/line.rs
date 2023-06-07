@@ -1,11 +1,9 @@
 //! Functions providing ECS components to level lines.
 
 use bevy::ecs::system::EntityCommands;
+use level::repr::{LevelFormat, UdmfNamespace};
 
-use crate::{
-	data::dobj::{LevelFormat, UdmfNamespace},
-	sim::line,
-};
+use crate::sim::line;
 
 pub(super) fn _line_special_bundle(mut line: EntityCommands, format: LevelFormat, num: u16) {
 	match format {

@@ -1,12 +1,9 @@
 //! Functions providing ECS components to level sectors.
 
 use bevy::ecs::system::EntityCommands;
+use level::repr::{LevelFormat, UdmfNamespace};
 
-use crate::{
-	data::dobj::{LevelFormat, UdmfNamespace},
-	sim::sector,
-	BaseGame,
-};
+use crate::{sim::sector, BaseGame};
 
 pub(super) fn _sector_special_bundle(
 	sector: EntityCommands,

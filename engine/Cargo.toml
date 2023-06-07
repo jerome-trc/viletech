@@ -51,6 +51,7 @@ doomfront = { path = "../doomfront", features = [
 	"umapinfo",
 	"zdoom",
 ] }
+level = { package = "subterra", path = "../level", features = ["ser_de"] }
 util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "ser_de"] }
 vzs = { package = "vzscript", path = "../vzscript" }

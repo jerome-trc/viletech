@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
-	data::dobj::Level,
 	gfx::TerrainMaterial,
+	level::Level,
 	sim::{self, Sim},
 };
 

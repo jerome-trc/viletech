@@ -2,11 +2,11 @@
 //!
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
+use level::Level;
 use util::Outcome;
 
 use crate::{
-	data::{dobj::Level, Catalog, LevelError, PrepError, PrepErrorKind},
-	udmf,
+	data::{dobj::Image, Catalog, PrepError, PrepErrorKind},
 	vfs::FileRef,
 };
 
@@ -43,16 +43,14 @@ impl Catalog {
 			Err(_) => {
 				ctx.raise_error(PrepError {
 					path: dir.path().to_path_buf(),
-					kind: PrepErrorKind::Level(LevelError::UnreadableFile(
-						textmap.path().to_path_buf(),
-					)),
+					kind: PrepErrorKind::Unreadable(textmap.path().to_path_buf()),
 				});
 
 				return Outcome::Err(());
 			}
 		};
 
-		let mut level = match udmf::parse_textmap(source) {
+		let mut level = match ::level::udmf::parse_textmap(source) {
 			Ok(l) => l,
 			Err(errs) => {
 				let ctx_errs = &mut ctx.arts_w.lock().errors;
@@ -60,7 +58,7 @@ impl Catalog {
 				for err in errs {
 					ctx_errs.push(PrepError {
 						path: dir.path().to_path_buf(),
-						kind: PrepErrorKind::Level(LevelError::TextmapParse(err)),
+						kind: PrepErrorKind::Level(::level::Error::Udmf(err)),
 					})
 				}
 
@@ -71,7 +69,21 @@ impl Catalog {
 		// As a placeholder in case map-info provides nothing.
 		level.meta.name = dir.file_prefix().to_string().into();
 
-		self.level_prep_sanity_checks(ctx, &level);
+		let err_handler = |err| {
+			ctx.raise_error(PrepError {
+				path: dir.path().to_path_buf(),
+				kind: PrepErrorKind::Level(err),
+			});
+		};
+
+		if level.validate(
+			err_handler,
+			|texname| self.last_by_nick::<Image>(texname).is_none(),
+			|ednum| self.bp_by_ednum(ednum).is_none(),
+		) > 0
+		{
+			return Outcome::Err(());
+		}
 
 		Outcome::Ok(level)
 	}

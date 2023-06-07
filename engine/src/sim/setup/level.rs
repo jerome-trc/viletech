@@ -5,6 +5,7 @@ use std::{
 	collections::{hash_map::RandomState, HashMap},
 };
 
+use ::level::repr::{BspNodeChild, SegDirection, Vertex};
 use bevy::{
 	ecs::system::Insert,
 	prelude::*,
@@ -17,11 +18,11 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::dobj::{self, BspNodeChild, SegDirection},
+	data::dobj::{self},
 	gfx::TerrainMaterial,
 	sim::level::VertIndex,
 	sim::{
-		level::{self, Side, SideIndex, Udmf, Vertex},
+		level::{self, Side, SideIndex, Udmf},
 		line::{self, Line},
 		sector::{self, Sector},
 	},
@@ -30,14 +31,14 @@ use crate::{
 
 pub(crate) fn setup(
 	mut ctx: super::Context,
-	base: dobj::Handle<dobj::Level>,
+	base: dobj::Handle<::level::Level>,
 	level: &mut ChildBuilder,
 ) {
 	let level = Mutex::new(level);
 
-	let mut verts = SparseSet::with_capacity(base.vertices.len(), base.vertices.len());
+	let mut verts = SparseSet::with_capacity(base.geom.vertices.len(), base.geom.vertices.len());
 
-	for (i, vert) in base.vertices.iter().enumerate() {
+	for (i, vert) in base.geom.vertices.iter().enumerate() {
 		verts.insert(VertIndex(i), *vert);
 	}
 
@@ -74,7 +75,7 @@ pub(crate) fn setup(
 				verts,
 				sides: simstate.sides,
 				triggers: simstate.triggers,
-				num_sectors: base.sectors.len(),
+				num_sectors: base.geom.sectors.len(),
 			},
 		},
 	});
@@ -86,14 +87,14 @@ struct SimState {
 }
 
 #[must_use]
-fn spawn_children(base: &dobj::Handle<dobj::Level>, level: &mut ChildBuilder) -> SimState {
-	let mut lines = IndexMap::with_capacity(base.linedefs.len());
-	let mut sectors = IndexMap::with_capacity(base.sectors.len());
-	let mut sides = SparseSet::with_capacity(base.sidedefs.len(), base.sidedefs.len());
+fn spawn_children(base: &dobj::Handle<::level::Level>, level: &mut ChildBuilder) -> SimState {
+	let mut lines = IndexMap::with_capacity(base.geom.linedefs.len());
+	let mut sectors = IndexMap::with_capacity(base.geom.sectors.len());
+	let mut sides = SparseSet::with_capacity(base.geom.sidedefs.len(), base.geom.sidedefs.len());
 
 	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
 
-	for linedef in &base.linedefs {
+	for linedef in &base.geom.linedefs {
 		let line_id = level.spawn(()).id();
 
 		lines.insert(
@@ -112,7 +113,7 @@ fn spawn_children(base: &dobj::Handle<dobj::Level>, level: &mut ChildBuilder) ->
 		);
 	}
 
-	for sectordef in &base.sectors {
+	for sectordef in &base.geom.sectors {
 		let sect_id = level.spawn(()).id();
 
 		sectors.insert(
@@ -126,7 +127,7 @@ fn spawn_children(base: &dobj::Handle<dobj::Level>, level: &mut ChildBuilder) ->
 		sect_grp.push(Sector(sect_id));
 	}
 
-	for (i, sidedef) in base.sidedefs.iter().enumerate() {
+	for (i, sidedef) in base.geom.sidedefs.iter().enumerate() {
 		sides.insert(
 			SideIndex(i),
 			Side {
@@ -195,7 +196,7 @@ struct MeshParts {
 }
 
 #[must_use]
-fn build_mesh(base: &dobj::Handle<dobj::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
+fn build_mesh(base: &dobj::Handle<::level::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
 	let mut parts = MeshParts {
 		verts: vec![],
 		indices: vec![],
@@ -209,7 +210,7 @@ fn build_mesh(base: &dobj::Handle<dobj::Level>, verts: &SparseSet<VertIndex, Ver
 		verts,
 		&mut parts,
 		&mut bsp_lines,
-		base.nodes.len() - 1,
+		base.bsp.nodes.len() - 1,
 	);
 
 	let mut ret = Mesh::new(PrimitiveTopology::TriangleList);
@@ -222,13 +223,13 @@ fn build_mesh(base: &dobj::Handle<dobj::Level>, verts: &SparseSet<VertIndex, Ver
 }
 
 fn recur(
-	base: &dobj::Handle<dobj::Level>,
+	base: &dobj::Handle<::level::Level>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
 	node_idx: usize,
 ) {
-	let node = &base.nodes[node_idx];
+	let node = &base.bsp.nodes[node_idx];
 
 	bsp_lines.push(Disp::new(node.seg_start, node.seg_end));
 
@@ -293,7 +294,7 @@ struct SSectorPoly {
 
 #[must_use]
 fn subsector_to_poly(
-	base: &dobj::Handle<dobj::Level>,
+	base: &dobj::Handle<::level::Level>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,
@@ -301,21 +302,21 @@ fn subsector_to_poly(
 	let mut mverts = SmallVec::<[Vec3; 4]>::new();
 	let mut indices = Vec::<usize>::new();
 
-	let subsect = &base.subsectors[subsect_idx];
-	let seg0 = &base.segs[subsect.seg0 + (subsect.seg_count - 1)];
-	let linedef = &base.linedefs[seg0.linedef];
+	let subsect = &base.bsp.subsectors[subsect_idx];
+	let seg0 = &base.bsp.segs[subsect.seg0 + (subsect.seg_count - 1)];
+	let linedef = &base.geom.linedefs[seg0.linedef];
 
 	let sidedef = match seg0.direction {
-		SegDirection::Front => &base.sidedefs[linedef.side_right],
-		SegDirection::Back => &base.sidedefs[linedef.side_left.unwrap()],
+		SegDirection::Front => &base.geom.sidedefs[linedef.side_right],
+		SegDirection::Back => &base.geom.sidedefs[linedef.side_left.unwrap()],
 	};
 
-	let sector = &base.sectors[sidedef.sector];
+	let sector = &base.geom.sectors[sidedef.sector];
 
 	let mut last_seg_vert = 0;
 
 	for i in subsect.seg0..(subsect.seg0 + subsect.seg_count) {
-		let seg_i = &base.segs[i];
+		let seg_i = &base.bsp.segs[i];
 
 		let v_start = &lverts[VertIndex(seg_i.vert_start)];
 		let v_end = &lverts[VertIndex(seg_i.vert_end)];

@@ -7,11 +7,11 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
+use level::repr::{UdmfValue, Vertex};
 use serde::{Deserialize, Serialize};
-use util::math::Fixed32;
 
 use crate::{
-	data::dobj::{self, UdmfValue},
+	data::dobj,
 	sparse::{SparseSet, SparseSetIndex},
 };
 
@@ -24,7 +24,7 @@ pub struct Level(Entity);
 /// The principal component in a level entity.
 #[derive(Component, Debug)]
 pub struct Core {
-	pub base: Option<dobj::Handle<dobj::Level>>,
+	pub base: Option<dobj::Handle<level::Level>>,
 	pub flags: Flags,
 	/// Time spent in this level thus far.
 	pub ticks_elapsed: u64,
@@ -68,55 +68,6 @@ bitflags::bitflags! {
 pub struct Dirty;
 
 // Vertex information //////////////////////////////////////////////////////////
-
-#[derive(Debug, Deref, DerefMut, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Vertex(pub Vec4);
-
-impl Vertex {
-	/// a.k.a. "floor" or "ground". Corresponds to the vector's `y` component.
-	#[must_use]
-	pub fn bottom(self) -> f32 {
-		self.0.y
-	}
-
-	#[must_use]
-	pub fn bottom_mut(&mut self) -> &mut f32 {
-		&mut self.0.y
-	}
-
-	/// a.k.a. "ceiling" or "sky". Corresponds to the vector's `w` component.
-	#[must_use]
-	pub fn top(self) -> f32 {
-		self.0.w
-	}
-
-	#[must_use]
-	pub fn top_mut(&mut self) -> &mut f32 {
-		&mut self.0.w
-	}
-
-	#[must_use]
-	pub fn x_fixed(self) -> Fixed32 {
-		Fixed32::from_num(self.0.x)
-	}
-
-	#[must_use]
-	pub fn z_fixed(self) -> Fixed32 {
-		Fixed32::from_num(self.0.z)
-	}
-}
-
-impl From<Vertex> for Vec4 {
-	fn from(value: Vertex) -> Self {
-		value.0
-	}
-}
-
-impl From<Vec4> for Vertex {
-	fn from(value: Vec4) -> Self {
-		Self(value)
-	}
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VertIndex(pub(super) usize);

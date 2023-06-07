@@ -2,7 +2,6 @@
 
 mod actor;
 mod audio;
-mod level;
 mod visual;
 
 use std::{
@@ -13,7 +12,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 
-pub use self::{actor::*, audio::*, level::*, visual::*};
+pub use self::{actor::*, audio::*, visual::*};
 
 use super::Catalog;
 
@@ -239,8 +238,8 @@ impl_datum! {
 	Blueprint, "Blueprint";
 	DamageType, "Damage Type";
 	Image, "Image";
-	Level, "Level";
-	LockDef, "Lock";
+	level::Level, "Level";
+	level::repr::LockDef, "Lock";
 	PolyModel, "Poly Model";
 	Species, "Species";
 	VoxelModel, "Voxel Model"

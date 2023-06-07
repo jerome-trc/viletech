@@ -12,10 +12,7 @@ use std::time::{Duration, Instant};
 use bevy::{pbr::wireframe::Wireframe, prelude::*};
 use nanorand::WyRand;
 
-use crate::{
-	data::dobj::{self},
-	rng::RngCore,
-};
+use crate::{data::dobj, rng::RngCore};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -93,7 +90,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<dobj::Level>) {
+pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<::level::Level>) {
 	let start_time = Instant::now();
 
 	let l = level.clone();
