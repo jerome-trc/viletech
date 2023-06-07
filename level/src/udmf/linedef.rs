@@ -1,52 +1,148 @@
 //! Mapping standardized linedef field names to linedef members and flags.
 
-use util::SmallString;
-
 use crate::{
-	repr::{LineDef, UdmfKey, UdmfValue},
-	udmf::Literal,
+	repr::{LineDef, LineFlags},
+	udmf::Value,
 	Level,
 };
 
-use super::{Error, KeyValPair};
+use super::{parse_i32, parse_usize, Error, KeyValPair};
 
-pub(super) fn read_linedef_field(kvp: KeyValPair, level: &mut Level) -> Result<(), Error> {
-	#[allow(clippy::type_complexity)]
-	const KEYS_TO_CALLBACKS: &[(&str, fn(&str, &mut LineDef) -> Result<(), Error>)] = &[
-			// TODO: Remaining fields for at least ZDoom.
-		];
+pub(super) fn read_linedef_field(
+	kvp: KeyValPair,
+	linedef: &mut LineDef,
+	level: &mut Level,
+) -> Result<(), Error> {
+	let KeyValPair { key, val } = kvp;
 
-	let linedef = level.geom.linedefs.last_mut().unwrap();
+	match val {
+		Value::False | Value::True => {
+			if key.eq_ignore_ascii_case("blocking") {
+				linedef
+					.flags
+					.set(LineFlags::IMPASSIBLE, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("blockmonsters") {
+				linedef
+					.flags
+					.set(LineFlags::BLOCK_MONS, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("twosided") {
+				linedef
+					.flags
+					.set(LineFlags::TWO_SIDED, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("dontpegtop") {
+				linedef
+					.flags
+					.set(LineFlags::UPPER_UNPEGGED, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("dontpegbottom") {
+				linedef
+					.flags
+					.set(LineFlags::LOWER_UNPEGGED, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("secret") {
+				linedef
+					.flags
+					.set(LineFlags::SECRET, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("blocksound") {
+				linedef
+					.flags
+					.set(LineFlags::BLOCK_SOUND, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("dontdraw") {
+				linedef
+					.flags
+					.set(LineFlags::UNMAPPED, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("mapped") {
+				linedef
+					.flags
+					.set(LineFlags::PRE_MAPPED, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("passuse") {
+				linedef
+					.flags
+					.set(LineFlags::PASS_USE, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("translucent") {
+				linedef
+					.flags
+					.set(LineFlags::TRANSLUCENT, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("jumpover") {
+				linedef
+					.flags
+					.set(LineFlags::JUMPOVER, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("blockfloaters") {
+				linedef
+					.flags
+					.set(LineFlags::BLOCK_FLOATERS, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("playercross") {
+				linedef
+					.flags
+					.set(LineFlags::ALLOW_PLAYER_CROSS, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("playeruse") {
+				linedef
+					.flags
+					.set(LineFlags::ALLOW_PLAYER_USE, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("monsterpush") {
+				linedef
+					.flags
+					.set(LineFlags::ALLOW_MONS_PUSH, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("missilecross") {
+				linedef
+					.flags
+					.set(LineFlags::ALLOW_PROJ_CROSS, matches!(val, Value::True));
+			} else if key.eq_ignore_ascii_case("repeatspecial") {
+				linedef
+					.flags
+					.set(LineFlags::REPEAT_SPECIAL, matches!(val, Value::True));
+			} else {
+				level.udmf.insert(
+					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+					kvp.to_map_value(),
+				);
+			}
+		}
+		Value::Int(lit) => {
+			if key.eq_ignore_ascii_case("id") {
+				linedef.udmf_id = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("v1") {
+				linedef.vert_start = parse_usize(lit)?;
+			} else if key.eq_ignore_ascii_case("v2") {
+				linedef.vert_end = parse_usize(lit)?;
+			} else if key.eq_ignore_ascii_case("special") {
+				linedef.special = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("arg0") {
+				linedef.args[0] = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("arg1") {
+				linedef.args[1] = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("arg2") {
+				linedef.args[2] = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("arg3") {
+				linedef.args[3] = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("arg4") {
+				linedef.args[4] = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("sidefront") {
+				linedef.side_right = parse_usize(lit)?;
+			} else if key.eq_ignore_ascii_case("sideback") {
+				linedef.side_left = Some(parse_usize(lit)?);
+			} else {
+				level.udmf.insert(
+					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+					kvp.to_map_value(),
+				);
+			}
+		}
+		Value::String(_) => {
+			if key.eq_ignore_ascii_case("comment") {
+				return Ok(());
+			}
 
-	for (k, callback) in KEYS_TO_CALLBACKS {
-		if kvp.key.eq_ignore_ascii_case(k) {
-			return callback(kvp.val, linedef);
+			level.udmf.insert(
+				kvp.to_linedef_mapkey(level.geom.linedefs.len()),
+				kvp.to_map_value(),
+			);
+		}
+		_ => {
+			level.udmf.insert(
+				kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+				kvp.to_map_value(),
+			);
 		}
 	}
-
-	level.udmf.insert(
-		UdmfKey::Linedef {
-			field: SmallString::from(kvp.key),
-			index: level.geom.linedefs.len() - 1,
-		},
-		match kvp.kind {
-			Literal::True => UdmfValue::Bool(true),
-			Literal::False => UdmfValue::Bool(false),
-			Literal::Int(_) => {
-				UdmfValue::Int(kvp.val.parse::<i32>().map_err(|err| Error::ParseInt {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::Float(_) => {
-				UdmfValue::Float(kvp.val.parse::<f64>().map_err(|err| Error::ParseFloat {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::String(_) => UdmfValue::String(SmallString::from(kvp.val)),
-		},
-	);
 
 	Ok(())
 }

@@ -12,77 +12,24 @@ mod thingdef;
 
 use std::num::{ParseFloatError, ParseIntError};
 
-use chumsky::{self, primitive, span::SimpleSpan, text, util::MaybeRef, IterParser, Parser};
-use util::lazy_regex;
+use logos::{Lexer, Logos};
+use util::SmallString;
 
 use crate::repr::{
-	Vertex,
+	UdmfKey, UdmfValue, Vertex,
 	{Level, LevelFormat, LineDef, LineFlags, Sector, SideDef, Thing, ThingFlags, UdmfNamespace},
 };
-
-pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
-	if source.len() < 128 {
-		return Err(vec![Error::TextmapTooShort]);
-	}
-
-	let ns_slice = &source[..128];
-
-	let (namespace, ns_end) = if let Some(captures) = lazy_regex!(
-		"(?i)namespace = \"(doom|heretic|hexen|strife|zdoom|eternity|vavoom|zdoomtranslated)\";"
-	)
-	.captures(ns_slice)
-	{
-		let capture = captures.get(1).unwrap();
-		let ns_str = capture.as_str();
-
-		let ns = if ns_str.eq_ignore_ascii_case("doom") {
-			UdmfNamespace::Doom
-		} else if ns_str.eq_ignore_ascii_case("heretic") {
-			UdmfNamespace::Heretic
-		} else if ns_str.eq_ignore_ascii_case("hexen") {
-			UdmfNamespace::Hexen
-		} else if ns_str.eq_ignore_ascii_case("strife") {
-			UdmfNamespace::Strife
-		} else if ns_str.eq_ignore_ascii_case("zdoom") {
-			UdmfNamespace::ZDoom
-		} else if ns_str.eq_ignore_ascii_case("eternity") {
-			UdmfNamespace::Eternity
-		} else if ns_str.eq_ignore_ascii_case("vavoom") {
-			UdmfNamespace::Vavoom
-		} else if ns_str.eq_ignore_ascii_case("zdoomtranslated") {
-			UdmfNamespace::ZDoomTranslated
-		} else {
-			return Err(vec![Error::InvalidNamespace(ns_str.to_string())]);
-		};
-
-		(ns, capture.end() + 2)
-	} else {
-		return Err(vec![Error::NoNamespace]);
-	};
-
-	let source = &source[ns_end..];
-
-	let mut level = Level::new(LevelFormat::Udmf(namespace));
-
-	let result = parser().parse_with_state(source, &mut level);
-	let (output, errors) = result.into_output_errors();
-
-	if errors.is_empty() && output.is_some() {
-		level.bounds = Level::bounds(&level.geom.vertices);
-		Ok(level)
-	} else {
-		Err(errors)
-	}
-}
 
 #[derive(Debug)]
 pub enum Error {
 	InvalidNamespace(String),
-	Lex {
-		span: SimpleSpan,
-		token: Option<MaybeRef<'static, char>>,
-	},
+	Lex(logos::Span),
 	NoNamespace,
+	Parse {
+		found: Option<Token>,
+		span: logos::Span,
+		expected: &'static [Token],
+	},
 	ParseFloat {
 		inner: ParseFloatError,
 		input: String,
@@ -104,16 +51,27 @@ impl std::fmt::Display for Error {
 			Self::InvalidNamespace(namespace) => {
 				write!(f, "`{namespace}` is not a valid UDMF namespace.")
 			}
-			Self::Lex { span, token } => {
-				if let Some(tok) = token {
-					let c = tok.into_inner();
-					write!(f, "Unexpected token `{c}` at {span}.")
-				} else {
-					write!(f, "Unexpected end of input.")
-				}
+			Self::Lex(span) => {
+				write!(f, "Unrecognized token at {span:?}.")
 			}
 			Self::NoNamespace => {
 				write!(f, "TEXTMAP is missing a UDMF namespace statement.")
+			}
+			Self::Parse {
+				found,
+				span,
+				expected,
+			} => {
+				let fnd = if let Some(token) = found {
+					format!("`{token:?}`")
+				} else {
+					"end of input".to_string()
+				};
+
+				write!(
+					f,
+					"Found {fnd} at position: {span:?}; expected one of the following: {expected:#?}"
+				)
 			}
 			Self::ParseFloat { inner, input } => {
 				write!(
@@ -140,279 +98,432 @@ impl std::fmt::Display for Error {
 	}
 }
 
-impl<'a> chumsky::error::Error<'a, &'a str> for Error {
-	fn expected_found<E: IntoIterator<Item = Option<chumsky::util::MaybeRef<'a, char>>>>(
-		_: E,
-		found: Option<chumsky::util::MaybeRef<'a, char>>,
-		span: SimpleSpan,
-	) -> Self {
-		Self::Lex {
-			span,
-			token: found.map(|mref| mref.into_owned()),
+pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
+	let mut lexer = Token::lexer(source);
+	let namespace = parse_namespace(&mut lexer).map_err(|err| vec![err])?;
+
+	let mut parser = Parser {
+		level: Level::new(LevelFormat::Udmf(namespace)),
+		lexer,
+		buf: None,
+		errors: vec![],
+	};
+
+	parser.level.udmf.reserve(source.len() / 96);
+
+	while let Some(token) = parser.advance() {
+		match token {
+			Token::KwSideDef => {
+				parser.sidedef();
+			}
+			Token::KwLineDef => {
+				parser.linedef();
+			}
+			Token::KwVertex => {
+				parser.vertex();
+			}
+			Token::KwSector => {
+				parser.sectordef();
+			}
+			Token::KwThing => {
+				parser.thingdef();
+			}
+			other => {
+				let span = parser.lexer.span();
+				parser.skip_until(|token| token.is_top_level_keyword());
+
+				parser.errors.push(Error::Parse {
+					found: Some(other),
+					span,
+					expected: &[
+						Token::KwLineDef,
+						Token::KwSector,
+						Token::KwSideDef,
+						Token::KwSector,
+					],
+				});
+
+				continue;
+			}
+		}
+	}
+
+	let Parser {
+		mut level,
+		lexer: _,
+		buf: _,
+		errors,
+	} = parser;
+
+	if errors.is_empty() {
+		level.bounds = Level::bounds(&level.geom.vertices);
+		Ok(level)
+	} else {
+		Err(errors)
+	}
+}
+
+fn parse_namespace(lexer: &mut Lexer<Token>) -> Result<UdmfNamespace, Error> {
+	let _ = lexer
+		.find(|result| result.is_ok_and(|token| token == Token::KwNamespace))
+		.ok_or(Error::NoNamespace)?;
+	let _ = lexer
+		.find(|result| result.is_ok_and(|token| token == Token::Eq))
+		.ok_or(Error::NoNamespace)?;
+	let _ = lexer
+		.find(|result| result.is_ok_and(|token| token == Token::StringLit))
+		.ok_or(Error::NoNamespace)?;
+
+	let span = lexer.span();
+
+	let _ = lexer
+		.find(|result| result.is_ok_and(|token| token == Token::Semicolon))
+		.ok_or(Error::NoNamespace)?;
+
+	let ns_str = &lexer.source()[(span.start + 1)..(span.end - 1)];
+
+	let ns = if ns_str.eq_ignore_ascii_case("doom") {
+		UdmfNamespace::Doom
+	} else if ns_str.eq_ignore_ascii_case("heretic") {
+		UdmfNamespace::Heretic
+	} else if ns_str.eq_ignore_ascii_case("hexen") {
+		UdmfNamespace::Hexen
+	} else if ns_str.eq_ignore_ascii_case("strife") {
+		UdmfNamespace::Strife
+	} else if ns_str.eq_ignore_ascii_case("zdoom") {
+		UdmfNamespace::ZDoom
+	} else if ns_str.eq_ignore_ascii_case("eternity") {
+		UdmfNamespace::Eternity
+	} else if ns_str.eq_ignore_ascii_case("vavoom") {
+		UdmfNamespace::Vavoom
+	} else if ns_str.eq_ignore_ascii_case("zdoomtranslated") {
+		UdmfNamespace::ZDoomTranslated
+	} else {
+		return Err(Error::InvalidNamespace(ns_str.to_string()));
+	};
+
+	Ok(ns)
+}
+
+#[derive(Debug)]
+struct Parser<'i> {
+	level: Level,
+	lexer: logos::Lexer<'i, Token>,
+	buf: Option<Token>,
+	errors: Vec<Error>,
+}
+
+impl<'i> Parser<'i> {
+	#[must_use]
+	fn advance(&mut self) -> Option<Token> {
+		if self.buf.is_none() {
+			let ret = match self.lexer.next() {
+				Some(Ok(token)) => Some(token),
+				Some(Err(())) => Some(Token::Unknown),
+				None => None,
+			};
+
+			self.buf = match self.lexer.next() {
+				Some(Ok(token)) => Some(token),
+				Some(Err(())) => Some(Token::Unknown),
+				None => None,
+			};
+
+			return ret;
+		}
+
+		let ret = self.buf;
+
+		self.buf = match self.lexer.next() {
+			Some(Ok(token)) => Some(token),
+			Some(Err(())) => Some(Token::Unknown),
+			None => None,
+		};
+
+		ret
+	}
+
+	#[must_use]
+	fn one_of(&mut self, expected: &'static [Token]) -> Option<Token> {
+		self.advance().filter(|token| expected.contains(token))
+	}
+
+	fn skip_until<F: Fn(Token) -> bool>(&mut self, predicate: F) {
+		loop {
+			match self.advance() {
+				Some(token) => {
+					if predicate(token) {
+						return;
+					}
+				}
+				None => return,
+			}
+		}
+	}
+
+	fn linedef(&mut self) {
+		let mut linedef = LineDef {
+			udmf_id: -1,
+			vert_start: usize::MAX,
+			vert_end: usize::MAX,
+			flags: LineFlags::empty(),
+			special: 0,
+			trigger: 0,
+			args: [0; 5],
+			side_right: usize::MAX,
+			side_left: None,
+		};
+
+		if self.one_of(&[Token::BraceL]).is_none() {
+			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+		}
+
+		self.fields(&mut linedef, linedef::read_linedef_field);
+
+		if self.one_of(&[Token::BraceR]).is_none() {
+			// Error reported; just proceed.
+		}
+
+		self.level.geom.linedefs.push(linedef);
+	}
+
+	fn thingdef(&mut self) {
+		let mut thingdef = Thing {
+			tid: 0,
+			ed_num: 0,
+			pos: glam::vec3(0.0, 0.0, 0.0),
+			angle: 0,
+			flags: ThingFlags::empty(),
+			special: 0,
+			args: [0; 5],
+		};
+
+		if self.one_of(&[Token::BraceL]).is_none() {
+			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+		}
+
+		self.fields(&mut thingdef, thingdef::read_thingdef_field);
+
+		if self.one_of(&[Token::BraceR]).is_none() {
+			// Error reported; just proceed.
+		}
+
+		self.level.things.push(thingdef);
+	}
+
+	fn sectordef(&mut self) {
+		let mut sectordef = Sector {
+			udmf_id: i32::MAX,
+			height_floor: 0.0,
+			height_ceil: 0.0,
+			tex_floor: None,
+			tex_ceil: None,
+			light_level: 0,
+			special: 0,
+			trigger: 0,
+		};
+
+		if self.one_of(&[Token::BraceL]).is_none() {
+			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+		}
+
+		self.fields(&mut sectordef, sectordef::read_sectordef_field);
+
+		if self.one_of(&[Token::BraceR]).is_none() {
+			// Error reported; just proceed.
+		}
+
+		self.level.geom.sectors.push(sectordef);
+	}
+
+	fn sidedef(&mut self) {
+		let mut sidedef = SideDef {
+			offset: glam::IVec2::default(),
+			tex_top: None,
+			tex_bottom: None,
+			tex_mid: None,
+			sector: usize::MAX,
+		};
+
+		if self.one_of(&[Token::BraceL]).is_none() {
+			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+		}
+
+		self.fields(&mut sidedef, sidedef::read_sidedef_field);
+
+		if self.one_of(&[Token::BraceR]).is_none() {
+			// Error reported; just proceed.
+		}
+
+		self.level.geom.sidedefs.push(sidedef);
+	}
+
+	fn vertex(&mut self) {
+		let mut vertex = Vertex(glam::Vec4::default());
+
+		if self.one_of(&[Token::BraceL]).is_none() {
+			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+		}
+
+		let mut err = None;
+
+		self.fields(&mut vertex, |kvp, vert, _| {
+			let float = match kvp.val {
+				Value::Float(lit) => parse_f64(lit)?,
+				_ => unimplemented!(),
+			};
+
+			// Recall that Y is up in VileTech.
+			if kvp.key.eq_ignore_ascii_case("x") {
+				vert.x = float as f32;
+			} else if kvp.key.eq_ignore_ascii_case("y") {
+				vert.z = float as f32;
+			} else if kvp.key.eq_ignore_ascii_case("zceiling") {
+				*vert.top_mut() = float as f32;
+			} else if kvp.key.eq_ignore_ascii_case("zfloor") {
+				*vert.bottom_mut() = float as f32;
+			} else {
+				err = Some(Error::UnknownVertDefField(kvp.key.to_string()));
+			}
+
+			Ok(())
+		});
+
+		if let Some(e) = err {
+			self.errors.push(e);
+		}
+
+		if self.one_of(&[Token::BraceR]).is_none() {
+			// Error reported; just proceed.
+		}
+
+		self.level.geom.vertices.push(vertex);
+	}
+
+	fn fields<F, T>(&mut self, elem: &mut T, mut reader: F)
+	where
+		F: FnMut(KeyValPair, &mut T, &mut Level) -> Result<(), Error>,
+	{
+		loop {
+			if !self.buf.is_some_and(|token| {
+				matches!(
+					token,
+					Token::Ident
+						| Token::KwSector | Token::KwLineDef
+						| Token::KwNamespace | Token::KwSideDef
+						| Token::KwThing | Token::KwVertex
+				)
+			}) {
+				break;
+			}
+
+			let key_span = self.lexer.span();
+
+			let _ = self.advance();
+
+			if self.one_of(&[Token::Eq]).is_none() {
+				self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
+				continue;
+			}
+
+			let val_span = self.lexer.span();
+
+			let Some(val_token) = self.one_of(&[
+				Token::IntLit,
+				Token::FloatLit,
+				Token::FalseLit,
+				Token::TrueLit,
+				Token::StringLit
+			]) else {
+				self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
+				continue;
+			};
+
+			let value = match val_token {
+				Token::IntLit => Value::Int(&self.lexer.source()[val_span]),
+				Token::FloatLit => Value::Float(&self.lexer.source()[val_span]),
+				Token::FalseLit => Value::False,
+				Token::TrueLit => Value::True,
+				Token::StringLit => Value::String(&self.lexer.source()[val_span]),
+				_ => unreachable!(),
+			};
+
+			if let Err(err) = reader(
+				KeyValPair {
+					key: &self.lexer.source()[key_span],
+					val: value,
+				},
+				elem,
+				&mut self.level,
+			) {
+				self.errors.push(err);
+			}
+
+			if self.one_of(&[Token::Semicolon]).is_none() {
+				// Error reported; just proceed.
+			}
 		}
 	}
 }
 
-// Details /////////////////////////////////////////////////////////////////////
-
-type Extra<'i> = chumsky::extra::Full<Error, Level, ()>;
-
-fn parser<'i>() -> impl Parser<'i, &'i str, (), Extra<'i>> + Clone {
-	let dec_digit = primitive::one_of("0123456789");
-	let hex_digit = primitive::one_of("0123456789abcdefABCDEF");
-	let wsp = primitive::one_of([' ', '\r', '\n', '\t'])
-		.repeated()
-		.at_least(1)
-		.slice();
-	let c_comment = primitive::just("/*")
-		.then(
-			primitive::any()
-				.and_is(primitive::just("*/").not())
-				.repeated(),
-		)
-		.then(primitive::just("*/"))
-		.slice();
-	let cpp_comment = primitive::just("//")
-		.then(primitive::any().and_is(text::newline().not()).repeated())
-		.slice();
-
-	// (RAT) The spec prescribes the following grammar for integer literals:
-	// `integer := [+-]?[1-9]+[0-9]* | 0[0-9]+ | 0x[0-9A-Fa-f]+`
-	// But this can never match the literal `0`, so I assume it's incorrect.
-	let dec_with_sign = primitive::group((
-		primitive::one_of(['+', '-']).or_not(),
-		primitive::just('0').repeated(),
-		primitive::one_of("123456789"),
-		dec_digit.repeated(),
-	))
-	.slice();
-
-	let hex = primitive::group((primitive::just("0x"), hex_digit.repeated().at_least(1))).slice();
-
-	let int = primitive::choice((dec_with_sign, primitive::just('0').slice(), hex)).slice();
-
-	let float = primitive::group((
-		primitive::one_of(['+', '-']).or_not(),
-		dec_digit.repeated().at_least(1),
-		primitive::just('.'),
-		dec_digit.repeated(),
-		primitive::group((
-			primitive::one_of(['e', 'E']),
-			primitive::one_of(['+', '-']).or_not(),
-			dec_digit.repeated().at_least(1),
-		))
-		.or_not(),
-	))
-	.slice();
-
-	let string = primitive::group((
-		primitive::just('"'),
-		primitive::none_of(['"', '\\']).repeated(),
-		primitive::group((
-			primitive::just('\\'),
-			primitive::any(),
-			primitive::none_of(['"', '\\']).repeated(),
-		))
-		.repeated(),
-		primitive::just('"'),
-	))
-	.slice();
-
-	let value = primitive::choice((
-		primitive::just("true").map_slice(|s| (s, Literal::True)),
-		primitive::just("false").map_slice(|s| (s, Literal::False)),
-		string.map_slice(|s| (s, Literal::String(s))),
-		float.map_slice(|s| (s, Literal::Float(s))),
-		int.map_slice(|s| (s, Literal::Int(s))),
-	));
-
-	let field = primitive::group((
-		text::ident(),
-		primitive::just('=').padded().ignored(),
-		value,
-		primitive::just(';').padded().ignored(),
-	))
-	.map(|f| KeyValPair {
-		key: f.0,
-		val: f.2 .0,
-		kind: f.2 .1,
-	});
-
-	let linedef = primitive::group((
-		primitive::just("linedef")
-			.map_with_state(|_, _, level: &mut Level| {
-				level.geom.linedefs.push(LineDef {
-					udmf_id: -1,
-					vert_start: usize::MAX,
-					vert_end: usize::MAX,
-					flags: LineFlags::empty(),
-					special: 0,
-					trigger: 0,
-					args: [0; 5],
-					side_right: usize::MAX,
-					side_left: None,
-				});
-			})
-			.padded(),
-		primitive::just('{').padded(),
-		field
-			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
-				linedef::read_linedef_field(kvp, level)
-			})
-			.padded()
-			.repeated(),
-		primitive::just('}').padded(),
-	))
-	.try_map_with_state(|_, _, _| {
-		// TODO: Sanity checks.
-		Ok(())
-	});
-
-	let thingdef = primitive::group((
-		primitive::just("thing")
-			.map_with_state(|_, _, level: &mut Level| {
-				level.things.push(Thing {
-					tid: 0,
-					ed_num: 0,
-					pos: glam::vec3(0.0, 0.0, 0.0),
-					angle: 0,
-					flags: ThingFlags::empty(),
-					args: [0; 5],
-				});
-			})
-			.padded(),
-		primitive::just('{').padded(),
-		field
-			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
-				thingdef::read_thingdef_field(kvp, level)
-			})
-			.padded()
-			.repeated(),
-		primitive::just('}').padded(),
-	))
-	.try_map_with_state(|_, _, _| {
-		// TODO: Sanity checks.
-		Ok(())
-	});
-
-	let sectordef = primitive::group((
-		primitive::just("sector")
-			.map_with_state(|_, _, level: &mut Level| {
-				level.geom.sectors.push(Sector {
-					udmf_id: i32::MAX,
-					height_floor: 0.0,
-					height_ceil: 0.0,
-					tex_floor: None,
-					tex_ceil: None,
-					light_level: 0,
-					special: 0,
-					trigger: 0,
-				});
-			})
-			.padded(),
-		primitive::just('{').padded(),
-		field
-			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
-				sectordef::read_sectordef_field(kvp, level)
-			})
-			.padded()
-			.repeated(),
-		primitive::just('}').padded(),
-	))
-	.try_map_with_state(|_, _, _| {
-		// TODO: Sanity checks.
-		Ok(())
-	});
-
-	let sidedef = primitive::group((
-		primitive::just("sidedef")
-			.map_with_state(|_, _, level: &mut Level| {
-				level.geom.sidedefs.push(SideDef {
-					offset: glam::IVec2::default(),
-					tex_top: None,
-					tex_bottom: None,
-					tex_mid: None,
-					sector: usize::MAX,
-				});
-			})
-			.padded(),
-		primitive::just('{').padded(),
-		field
-			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
-				sidedef::read_sidedef_field(kvp, level)
-			})
-			.padded()
-			.repeated(),
-		primitive::just('}').padded(),
-	))
-	.try_map_with_state(|_, _, _| {
-		// TODO: Sanity checks.
-		Ok(())
-	});
-
-	let vertdef = primitive::group((
-		primitive::just("vertex")
-			.map_with_state(|_, _, level: &mut Level| {
-				level.geom.vertices.push(Vertex(glam::Vec4::default()));
-			})
-			.padded(),
-		primitive::just('{').padded(),
-		field
-			.try_map_with_state(|kvp: KeyValPair, _, level: &mut Level| {
-				let vertdef = level.geom.vertices.last_mut().unwrap();
-
-				let val = kvp.val.parse::<f64>().map_err(|err| Error::ParseFloat {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?;
-
-				if kvp.key.eq_ignore_ascii_case("x") {
-					vertdef.x = val as f32;
-				} else if kvp.key.eq_ignore_ascii_case("y") {
-					vertdef.y = val as f32;
-				} else if kvp.key.eq_ignore_ascii_case("zfloor") {
-					*vertdef.bottom_mut() = val as f32;
-				} else if kvp.key.eq_ignore_ascii_case("zceiling") {
-					*vertdef.top_mut() = val as f32;
-				} else {
-					return Err(Error::UnknownVertDefField(kvp.key.to_string()));
-				}
-
-				Ok(())
-			})
-			.padded()
-			.repeated(),
-		primitive::just('}').padded(),
-	))
-	.map(|_| ());
-
-	primitive::choice((
-		vertdef,
-		linedef,
-		sectordef,
-		sidedef,
-		thingdef,
-		wsp.ignored(),
-		c_comment.ignored(),
-		cpp_comment.ignored(),
-	))
-	.repeated()
-	.collect::<()>()
-	.recover_with(chumsky::recovery::via_parser(
-		chumsky::recovery::nested_delimiters('{', '}', [], |_| ()),
-	))
-	.boxed()
+#[derive(Debug)]
+pub(crate) struct KeyValPair<'i> {
+	key: &'i str,
+	val: Value<'i>,
 }
 
-#[derive(Debug)]
-pub(self) struct KeyValPair<'i> {
-	key: &'i str,
-	val: &'i str,
-	kind: Literal<'i>,
+impl KeyValPair<'_> {
+	#[must_use]
+	pub(self) fn to_linedef_mapkey(&self, index: usize) -> UdmfKey {
+		UdmfKey::Linedef {
+			field: SmallString::from(self.key),
+			index,
+		}
+	}
+
+	#[must_use]
+	pub(self) fn to_sectordef_mapkey(&self, index: usize) -> UdmfKey {
+		UdmfKey::Sector {
+			field: SmallString::from(self.key),
+			index,
+		}
+	}
+
+	#[must_use]
+	pub(self) fn to_sidedef_mapkey(&self, index: usize) -> UdmfKey {
+		UdmfKey::Sidedef {
+			field: SmallString::from(self.key),
+			index,
+		}
+	}
+
+	#[must_use]
+	pub(self) fn to_thingdef_mapkey(&self, index: usize) -> UdmfKey {
+		UdmfKey::Thing {
+			field: SmallString::from(self.key),
+			index,
+		}
+	}
+
+	pub(self) fn to_map_value(&self) -> UdmfValue {
+		match self.val {
+			Value::True => UdmfValue::Bool(true),
+			Value::False => UdmfValue::Bool(false),
+			Value::String(lit) => UdmfValue::String(lit.into()),
+			Value::Float(lit) => match lit.parse::<f64>() {
+				Ok(float) => UdmfValue::Float(float),
+				Err(_) => UdmfValue::String(lit.into()),
+			},
+			Value::Int(lit) => match lit.parse::<i32>() {
+				Ok(int) => UdmfValue::Int(int),
+				Err(_) => UdmfValue::String(lit.into()),
+			},
+		}
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum Literal<'i> {
+pub(crate) enum Value<'i> {
 	True,
 	False,
 	String(&'i str),
@@ -420,35 +531,107 @@ pub(crate) enum Literal<'i> {
 	Int(&'i str),
 }
 
+/// An error mapping helper for convenience and brevity.
+pub(self) fn parse_u16(lit: &str) -> Result<u16, Error> {
+	lit.parse().map_err(|err| Error::ParseInt {
+		inner: err,
+		input: lit.to_string(),
+	})
+}
+
+/// An error mapping helper for convenience and brevity.
+pub(self) fn parse_i32(lit: &str) -> Result<i32, Error> {
+	lit.parse().map_err(|err| Error::ParseInt {
+		inner: err,
+		input: lit.to_string(),
+	})
+}
+
+/// An error mapping helper for convenience and brevity.
+pub(self) fn parse_u32(lit: &str) -> Result<u32, Error> {
+	lit.parse().map_err(|err| Error::ParseInt {
+		inner: err,
+		input: lit.to_string(),
+	})
+}
+
+/// An error mapping helper for convenience and brevity.
+pub(self) fn parse_usize(lit: &str) -> Result<usize, Error> {
+	lit.parse().map_err(|err| Error::ParseInt {
+		inner: err,
+		input: lit.to_string(),
+	})
+}
+
+/// An error mapping helper for convenience and brevity.
+fn parse_f64(lit: &str) -> Result<f64, Error> {
+	lit.parse().map_err(|err| Error::ParseFloat {
+		inner: err,
+		input: lit.to_string(),
+	})
+}
+
+/// See the [UDMF spec](https://github.com/ZDoom/gzdoom/blob/master/specs/udmf.txt),
+/// section I for its grammar.
+#[derive(Logos, Debug, Clone, Copy, PartialEq, Eq)]
+#[logos(skip r"[ \t\r\n\f]+", skip r"//[^\n\r]*[\n\r]*", skip r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/")]
+pub enum Token {
+	// Literals ////////////////////////////////////////////////////////////////
+	#[regex(r"(?i)false")]
+	FalseLit,
+	#[regex(r"[+-]?[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?")]
+	FloatLit,
+	#[token("0")]
+	#[regex(r"0x[0-9A-Fa-f]+")]
+	#[regex(r"[+-]?0*[1-9][0-9]*")]
+	IntLit,
+	#[regex(r#""([^"\\]*(\\.[^"\\]*)*)""#)]
+	StringLit,
+	#[regex(r"(?i)true")]
+	TrueLit,
+	// Keywords ////////////////////////////////////////////////////////////////
+	#[regex(r"(?i)linedef")]
+	KwLineDef,
+	#[regex(r"(?i)sector")]
+	KwSector,
+	#[regex(r"(?i)sidedef")]
+	KwSideDef,
+	#[regex(r"(?i)thing")]
+	KwThing,
+	#[regex(r"(?i)vertex")]
+	KwVertex,
+
+	#[regex(r"(?i)namespace")]
+	KwNamespace,
+	// Glyphs //////////////////////////////////////////////////////////////////
+	#[token("{")]
+	BraceL,
+	#[token("}")]
+	BraceR,
+	#[token("=")]
+	Eq,
+	#[token(";")]
+	Semicolon,
+	// Miscellaneous ///////////////////////////////////////////////////////////
+	#[regex(r"[A-Za-z_]+[A-Za-z0-9_]*")]
+	Ident,
+	/// Input the lexer failed to recognize gets mapped to this.
+	Unknown,
+}
+
+impl Token {
+	#[must_use]
+	fn is_top_level_keyword(self) -> bool {
+		let u = self as u8;
+		(u >= Self::KwLineDef as u8) && (u <= Self::KwVertex as u8)
+	}
+}
+
 #[cfg(test)]
 mod test {
 	use std::path::PathBuf;
 
 	use super::*;
-
-	#[test]
-	fn block() {
-		const SOURCE: &str = r#" thing {
-			x = 1120.0;
-			y = -1072.0;
-			angle = 0;
-			type = 28800;
-			skill1 = true;
-			skill2 = true;
-			skill3 = true;
-			skill4 = true;
-			skill5 = true;
-			single = true;
-			coop = true;
-			dm = true;
-		} "#;
-
-		let mut level = Level::new(LevelFormat::Udmf(UdmfNamespace::Doom));
-		let result = parser().parse_with_state(SOURCE, &mut level);
-		let (output, errors) = result.into_output_errors();
-		assert!(errors.is_empty());
-		assert!(output.is_some());
-	}
 
 	#[test]
 	fn with_sample_data() {
@@ -470,6 +653,22 @@ mod test {
 			.unwrap();
 		let source = String::from_utf8_lossy(&bytes);
 
-		let _ = parse_textmap(source.as_ref()).unwrap();
+		#[must_use]
+		fn format_errs(errors: Vec<Error>) -> String {
+			let mut output = String::new();
+
+			for error in errors {
+				output.push_str(&format!("\r\n{error:#?}"));
+			}
+
+			output
+		}
+
+		let _ = match parse_textmap(source.as_ref()) {
+			Ok(l) => l,
+			Err(errs) => {
+				panic!("Encountered errors: {}\r\n", format_errs(errs));
+			}
+		};
 	}
 }

@@ -1,52 +1,58 @@
 //! Mapping standardized sectordef field names to sectordef members and flags.
 
-use util::SmallString;
+use util::id8_truncated;
 
-use crate::{
-	repr::{Sector, UdmfKey, UdmfValue},
-	udmf::Literal,
-	Level,
-};
+use crate::{repr::Sector, udmf::Value, Level};
 
-use super::{Error, KeyValPair};
+use super::{parse_i32, Error, KeyValPair};
 
-pub(super) fn read_sectordef_field(kvp: KeyValPair, level: &mut Level) -> Result<(), Error> {
-	#[allow(clippy::type_complexity)]
-	const KEYS_TO_CALLBACKS: &[(&str, fn(&str, &mut Sector) -> Result<(), Error>)] = &[
-			// TODO: Remaining fields for at least ZDoom.
-		];
+pub(super) fn read_sectordef_field(
+	kvp: KeyValPair,
+	sectordef: &mut Sector,
+	level: &mut Level,
+) -> Result<(), Error> {
+	let KeyValPair { key, val } = kvp;
 
-	let sector = level.geom.sectors.last_mut().unwrap();
+	match val {
+		Value::Int(lit) => {
+			if key.eq_ignore_ascii_case("heightfloor") {
+				sectordef.height_floor = parse_i32(lit)? as f32;
+			} else if key.eq_ignore_ascii_case("heightceiling") {
+				sectordef.height_ceil = parse_i32(lit)? as f32;
+			} else if key.eq_ignore_ascii_case("lightlevel") {
+				sectordef.light_level = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("special") {
+				sectordef.special = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("id") {
+				sectordef.udmf_id = parse_i32(lit)?;
+			} else {
+				level.udmf.insert(
+					kvp.to_sectordef_mapkey(level.geom.sectors.len()),
+					kvp.to_map_value(),
+				);
+			}
+		}
+		Value::String(lit) => {
+			if key.eq_ignore_ascii_case("texturefloor") {
+				sectordef.tex_floor = Some(id8_truncated(lit));
+			} else if key.eq_ignore_ascii_case("textureceiling") {
+				sectordef.tex_ceil = Some(id8_truncated(lit));
+			} else if key.eq_ignore_ascii_case("comment") {
+				return Ok(());
+			}
 
-	for (k, callback) in KEYS_TO_CALLBACKS {
-		if kvp.key.eq_ignore_ascii_case(k) {
-			return callback(kvp.val, sector);
+			level.udmf.insert(
+				kvp.to_sectordef_mapkey(level.geom.sectors.len()),
+				kvp.to_map_value(),
+			);
+		}
+		_ => {
+			level.udmf.insert(
+				kvp.to_sectordef_mapkey(level.geom.sectors.len()),
+				kvp.to_map_value(),
+			);
 		}
 	}
-
-	level.udmf.insert(
-		UdmfKey::Sector {
-			field: SmallString::from(kvp.key),
-			index: level.geom.sectors.len() - 1,
-		},
-		match kvp.kind {
-			Literal::True => UdmfValue::Bool(true),
-			Literal::False => UdmfValue::Bool(false),
-			Literal::Int(_) => {
-				UdmfValue::Int(kvp.val.parse::<i32>().map_err(|err| Error::ParseInt {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::Float(_) => {
-				UdmfValue::Float(kvp.val.parse::<f64>().map_err(|err| Error::ParseFloat {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::String(_) => UdmfValue::String(SmallString::from(kvp.val)),
-		},
-	);
 
 	Ok(())
 }

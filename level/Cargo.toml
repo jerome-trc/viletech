@@ -21,8 +21,8 @@ util = { package = "viletech-utils", path = "../utils" }
 
 bitflags.workspace = true
 bitvec.workspace = true
-chumsky.workspace = true # For UDMF parsing.
 glam.workspace = true
+logos.workspace = true # For UDMF parsing.
 once_cell.workspace = true
 rayon.workspace = true
 regex.workspace = true

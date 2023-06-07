@@ -301,6 +301,7 @@ pub struct Thing {
 	/// In degrees.
 	pub angle: u32,
 	pub flags: ThingFlags,
+	pub special: i32,
 	pub args: [i32; 5],
 }
 
@@ -391,7 +392,7 @@ pub struct LineDef {
 	/// a.k.a. "vertex 2" or just "v2".
 	pub vert_end: usize,
 	pub flags: LineFlags,
-	pub special: u16,
+	pub special: i32,
 	/// Corresponds to the field of [`Sector`] with the same name.
 	pub trigger: u16,
 	/// Defined in UDMF.
@@ -482,7 +483,7 @@ pub struct Sector {
 	/// The ID within maps to a WAD entry's name.
 	pub tex_ceil: Option<Id8>,
 	pub light_level: i32,
-	pub special: u16,
+	pub special: i32,
 	/// Corresponds to the field of [`LineDef`] with the same name.
 	pub trigger: u16,
 }

@@ -25,7 +25,7 @@ fn udmf(crit: &mut Criterion) {
 		.unwrap();
 	let source = String::from_utf8_lossy(&bytes);
 
-	grp.bench_function("Parse, Chumsky", |bencher| {
+	grp.bench_function("Parse, Hand-written", |bencher| {
 		bencher.iter(|| {
 			let result = subterra::udmf::parse_textmap(source.as_ref());
 			let _ = std::hint::black_box(result.unwrap());

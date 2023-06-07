@@ -1,52 +1,56 @@
 //! Mapping standardized sidedef field names to sidedef members and flags.
 
-use util::SmallString;
+use util::id8_truncated;
 
-use crate::{
-	repr::{SideDef, UdmfKey, UdmfValue},
-	udmf::Literal,
-	Level,
-};
+use crate::{repr::SideDef, udmf::Value, Level};
 
-use super::{Error, KeyValPair};
+use super::{parse_i32, parse_usize, Error, KeyValPair};
 
-pub(super) fn read_sidedef_field(kvp: KeyValPair, level: &mut Level) -> Result<(), Error> {
-	#[allow(clippy::type_complexity)]
-	const KEYS_TO_CALLBACKS: &[(&str, fn(&str, &mut SideDef) -> Result<(), Error>)] = &[
-			// TODO: Remaining fields for at least ZDoom.
-		];
+pub(super) fn read_sidedef_field(
+	kvp: KeyValPair,
+	sidedef: &mut SideDef,
+	level: &mut Level,
+) -> Result<(), Error> {
+	let KeyValPair { key, val } = kvp;
 
-	let sidedef = level.geom.sidedefs.last_mut().unwrap();
-
-	for (k, callback) in KEYS_TO_CALLBACKS {
-		if kvp.key.eq_ignore_ascii_case(k) {
-			return callback(kvp.val, sidedef);
+	match val {
+		Value::String(lit) => {
+			if key.eq_ignore_ascii_case("texturetop") {
+				sidedef.tex_top = Some(id8_truncated(lit));
+			} else if key.eq_ignore_ascii_case("texturebottom") {
+				sidedef.tex_bottom = Some(id8_truncated(lit));
+			} else if key.eq_ignore_ascii_case("texturemiddle") {
+				sidedef.tex_mid = Some(id8_truncated(lit));
+			} else if key.eq_ignore_ascii_case("comment") {
+				return Ok(());
+			} else {
+				level.udmf.insert(
+					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+					kvp.to_map_value(),
+				);
+			}
+		}
+		Value::Int(lit) => {
+			if key.eq_ignore_ascii_case("sector") {
+				sidedef.sector = parse_usize(lit)?;
+			} else if key.eq_ignore_ascii_case("offsetx") {
+				sidedef.offset.x = parse_i32(lit)?;
+			} else if key.eq_ignore_ascii_case("offsety") {
+				sidedef.offset.y = parse_i32(lit)?;
+			} else {
+				level.udmf.insert(
+					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+					kvp.to_map_value(),
+				);
+			}
+		}
+		_ => {
+			level.udmf.insert(
+				kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
+				kvp.to_map_value(),
+			);
 		}
 	}
-
-	level.udmf.insert(
-		UdmfKey::Sidedef {
-			field: SmallString::from(kvp.key),
-			index: level.geom.sidedefs.len() - 1,
-		},
-		match kvp.kind {
-			Literal::True => UdmfValue::Bool(true),
-			Literal::False => UdmfValue::Bool(false),
-			Literal::Int(_) => {
-				UdmfValue::Int(kvp.val.parse::<i32>().map_err(|err| Error::ParseInt {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::Float(_) => {
-				UdmfValue::Float(kvp.val.parse::<f64>().map_err(|err| Error::ParseFloat {
-					inner: err,
-					input: kvp.val.to_string(),
-				})?)
-			}
-			Literal::String(_) => UdmfValue::String(SmallString::from(kvp.val)),
-		},
-	);
 
 	Ok(())
 }

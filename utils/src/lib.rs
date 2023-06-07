@@ -170,3 +170,12 @@ pub fn read_id8(id8: [u8; 8]) -> Option<Id8> {
 
 	Some(ret)
 }
+
+/// Takes however much of `string` can fit into an `Id8` and returns that.
+#[must_use]
+pub fn id8_truncated(string: &str) -> Id8 {
+	let mut ret = Id8::new();
+	let end = ret.capacity().min(string.len());
+	ret.push_str(&string[0..end]);
+	ret
+}
