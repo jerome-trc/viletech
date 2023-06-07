@@ -33,4 +33,4 @@ name = "bench"
 harness = false
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion.workspace = true

@@ -11,7 +11,19 @@ publish = false
 repository.workspace = true
 
 [dependencies]
-viletech = { path = "../engine" }
+acs = { package = "viletech-acs", path = "../acs" }
+doomfront = { path = "../doomfront", features = [
+	"ser_de",
+	"acs",
+	"eternity",
+	"umapinfo",
+	"zdoom",
+] }
+level = { package = "subterra", path = "../level" }
+util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
+vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "ser_de"] }
+vzs = { package = "vzscript", path = "../vzscript" }
+wadload.path = "../wadload"
 
 clap.workspace = true
 indoc.workspace = true

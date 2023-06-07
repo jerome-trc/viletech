@@ -43,6 +43,7 @@ features = [
 ]
 
 [dependencies]
+acs = { package = "viletech-acs", path = "../acs" }
 doomfront = { path = "../doomfront", features = [
 	"ser_de",
 	"acs",
@@ -63,32 +64,22 @@ bitvec.workspace = true
 bytemuck.workspace = true
 byteorder.workspace = true
 cpal.workspace = true
-cranelift.workspace = true
-cranelift-interpreter.workspace = true
-cranelift-jit.workspace = true
-cranelift-module.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
 fixed.workspace = true
 fluidlite.workspace = true
-formatx.workspace = true
 glam.workspace = true
 globset.workspace = true
 home.workspace = true
 image.workspace = true
-impl-trait-for-tuples.workspace = true
 indexmap.workspace = true
 indoc.workspace = true
-itertools.workspace = true
 kira.workspace = true
-md5.workspace = true
 memoffset.workspace = true
-naga.workspace = true
 nanorand.workspace = true
 nodi.workspace = true
 once_cell.workspace = true
 parking_lot.workspace = true
-paste.workspace = true
 pollster.workspace = true
 raw-cpuid.workspace = true
 rayon.workspace = true
@@ -97,7 +88,6 @@ rfd.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true
 sha3.workspace = true
-slotmap.workspace = true
 smallvec.workspace = true
 smartstring.workspace = true
 time.workspace = true
@@ -107,8 +97,8 @@ tracing-appender.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 triangulate.workspace = true
-unicode-ident.workspace = true
 walkdir.workspace = true
+xml-rs.workspace = true
 zip.workspace = true
 
 [[bench]]
@@ -116,12 +106,11 @@ name = "bench"
 harness = false
 
 [build-dependencies]
-bindgen = "0.64.0"
-miette = { version = "5.7.0", features = ["fancy"] }
+miette.workspace = true
 sha3.workspace = true
 time.workspace = true
 walkdir.workspace = true
 zip.workspace = true
 
 [dev-dependencies]
-criterion = "0.4.0"
+criterion.workspace = true

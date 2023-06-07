@@ -20,6 +20,7 @@ ser_de = ["serde"]
 
 [dependencies]
 util = { package = "viletech-utils", path = "../utils" }
+wadload.path = "../wadload"
 
 dashmap.workspace = true
 bevy = { workspace = true, optional = true }
@@ -30,7 +31,6 @@ parking_lot.workspace = true
 rayon.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }
-wadload.path = "../wadload"
 zip.workspace = true
 
 [[bench]]
@@ -38,4 +38,4 @@ name = "bench"
 harness = false
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion.workspace = true

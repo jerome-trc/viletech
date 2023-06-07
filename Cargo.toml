@@ -33,27 +33,27 @@ debug = true
 strip = false
 
 [workspace.dependencies]
-ariadne = "0.1.5"
+ariadne = "0.3.0"
 arrayvec = { version = "0.7.2", features = ["serde"] }
 bevy = { version = "0.10.1", default-features = false }
 bevy_egui = "0.20.1"
 bevy_quinnet = "0.4.0"
 bitflags = "1.3.2"
 bitvec = { version = "1.0.1", features = ["serde"] }
-bytemuck = { version = "1.11.0", features = ["derive"] }
+bytemuck = { version = "1.13.0", features = ["derive"] }
 byteorder = "1.4.3"
 chumsky = "1.0.0-alpha.4"
-clap = { version = "4.0.32", features = ["derive"] }
+clap = { version = "4.3.2", features = ["derive"] }
 # Same version as `kira`. Specified here since it's needed by MIDI code.
 cpal = "0.15.1"
-cranelift = "0.96.1"
-cranelift-jit = "0.96.1"
-cranelift-module = "0.96.1"
-cranelift-interpreter = "0.96.1"
+cranelift = "0.96.3"
+cranelift-jit = "0.96.3"
+cranelift-module = "0.96.3"
+cranelift-interpreter = "0.96.3"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 egui = "0.21.0" # Must be compatible with `bevy_egui`.
-fixed = "1.23.0"
+fixed = "1.23.1"
 fluidlite = "0.2.1"
 formatx = "0.2.1"
 # Same version as specified by `bevy_math`. Specified here
@@ -66,15 +66,15 @@ glam = { version = "0.23.0", features = [
 ] }
 globset = "0.4.10"
 hashbrown = "0.12"
-home = "0.5.4"
-image = { version = "0.24.5", default-features = false, features = [
+home = "0.5.5"
+image = { version = "0.24.6", default-features = false, features = [
 	"dds",
 	"jpeg",
 	"png",
 	"tga",
 ] }
 impl-trait-for-tuples = "0.2.2"
-indexmap = { version = "1.9.2", features = ["rayon", "serde"] }
+indexmap = { version = "1.9.3", features = ["rayon", "serde"] }
 indoc = "2.0.0"
 itertools = "0.10.5"
 kira = "0.7.3"
@@ -84,23 +84,23 @@ memoffset = "0.8.0"
 naga = "0.11.0"
 nanorand = "0.7.0"
 nodi = "0.19.2"
-once_cell = "1.17.0"
+once_cell = "1.18.0"
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
-paste = "1.0.11"
+paste = "1.0.12"
 pollster = "0.3.0"
-raw-cpuid = "10.6.1"
-rayon = "1.6.1"
+raw-cpuid = "11.0.1"
+rayon = "1.7.0"
 regex = "1.7.1"
-rfd = "0.11.1"
+rfd = "0.11.4"
 rowan = "0.15.11"
 rustc-hash = "1.0.1"
-serde = { version = "1.0.152", features = ["derive"] }
-sha3 = "0.10.6"
+serde = { version = "1.0.163", features = ["derive"] }
+sha3 = "0.10.8"
 slotmap = { version = "1.0.6", features = ["serde"] }
 smallvec = { version = "1.10.0", features = ["const_generics", "const_new"] }
 smartstring = { version = "1.0.1", features = ["serde"] }
 time = { version = "0.3.20", features = ["formatting", "serde"] }
-toml = "0.7.2"
+toml = "0.7.4"
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-log = "0.1.3"
@@ -108,4 +108,9 @@ tracing-subscriber = "0.3.16"
 triangulate = "0.2.0"
 unicode-ident = "1.0.6"
 walkdir = "2.3.2"
+xml-rs = "0.8.14"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
+# Developer only
+criterion = "0.5.1"
+# Build only
+miette = { version = "5.7.0", features = ["fancy"] }

@@ -7,7 +7,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let args = Clap::parse();
 
 	if args.version {
-		println!("{}", viletech::short_version_string());
 		println!("{}", &version_string());
 		return Ok(());
 	}
