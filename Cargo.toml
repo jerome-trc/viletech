@@ -28,6 +28,10 @@ codegen-units = 4
 [profile.dev.package."*"]
 opt-level = 3
 
+[profile.bench]
+debug = true
+strip = false
+
 [workspace.dependencies]
 ariadne = "0.1.5"
 arrayvec = { version = "0.7.2", features = ["serde"] }
