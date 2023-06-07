@@ -44,6 +44,7 @@ pub enum SpawnFilter {
 }
 
 bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct SkillFlags: u16 {
 		const DEFAULT = 1 << 0;
 		/// Does not appear in the selection menu.

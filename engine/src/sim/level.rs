@@ -49,7 +49,7 @@ pub struct Geometry {
 }
 
 bitflags::bitflags! {
-	#[derive(Default)]
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct Flags: u8 {
 		// From GZ. Purpose unclear.
 		const FROZEN_LOCAL = 1 << 0;

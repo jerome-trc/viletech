@@ -329,13 +329,14 @@ impl Serialize for Pref {
 
 bitflags::bitflags! {
 	/// Special treatment rules for preferences.
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct PrefFlags: u8 {
 		/// Only scripts from the mount that declared this pref may read it.
 		const PRIVATE_READ = 1 << 0;
 		/// Only scripts from the mount that declared this pref may mutate it.
 		const PRIVATE_WRITE = 1 << 1;
 		/// Combines `PRIVATE_READ` and `PRIVATE_WRITE`.
-		const PRIVATE = Self::PRIVATE_READ.bits | Self::PRIVATE_WRITE.bits;
+		const PRIVATE = Self::PRIVATE_READ.bits() | Self::PRIVATE_WRITE.bits();
 		/// If unset, this pref only applies client-side.
 		const SIM = 1 << 2;
 		/// If unset, this pref is never written to a file.

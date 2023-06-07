@@ -17,6 +17,7 @@ pub enum Request {
 bitflags::bitflags! {
 	/// A command is enabled if it one of its active bits corresponds to the
 	/// server's current "context".
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct Flags : u8 {
 		const LOBBY = 1 << 0;
 		const SIM = 1 << 1;

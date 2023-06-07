@@ -545,6 +545,7 @@ struct HugeHeader {
 }
 
 bitflags::bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct RegionFlags: u8 {
 		/// Gets set immediately for newly-created objects.
 		const GRAY = 1 << 0;

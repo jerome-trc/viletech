@@ -105,6 +105,7 @@ impl AState {
 
 bitflags! {
 	/// See [`AState`].
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct AStateFlags: u8 {
 		const FAST = 1 << 0;
 		const SLOW = 1 << 1;
@@ -141,6 +142,7 @@ pub struct Sounds {
 bitflags! {
 	/// Flags for filtering actor visibility based on capabilities of the
 	/// currently-used renderer.
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct RenderFeatures: u16 {
 		const FLAT_SPRITES = 1 << 0;
 		const MODELS = 1 << 1;
@@ -187,6 +189,7 @@ pub struct DamageType {
 }
 
 bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct DamageTypeFlags: u8 {
 		const REPLACE_FACTOR = 1 << 0;
 		const BYPASS_ARMOR = 1 << 1;

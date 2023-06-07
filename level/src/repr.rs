@@ -257,7 +257,7 @@ pub struct LevelMeta {
 }
 
 bitflags! {
-	#[derive(Default)]
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct LevelFlags: u8 {
 		/// Switch lines must be vertically reachable to allow interaction.
 		const CHECK_SWITCH_RANGE = 1 << 0;
@@ -318,6 +318,7 @@ impl Thing {
 
 bitflags! {
 	/// See [`Thing`].
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct ThingFlags: u16 {
 		const SKILL_1 = 1 << 0;
 		const SKILL_2 = 1 << 1;
@@ -410,7 +411,7 @@ impl LineDef {
 	pub const POBJ_LINE_EXPLICIT: u16 = 5;
 }
 bitflags! {
-	#[derive(Default)]
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
 	pub struct LineFlags: u32 {
 		/// Line blocks things (i.e. player, missiles, and monsters).

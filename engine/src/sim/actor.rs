@@ -43,6 +43,7 @@ unsafe impl Sync for VzsActor {}
 
 #[derive(Debug, Component)]
 pub struct Monster {
+	pub flags: MonsterFlags,
 	pub goal: Option<ActorPtr>,
 	pub missile_threshold: f64,
 	pub reaction_time: i32,
@@ -50,6 +51,7 @@ pub struct Monster {
 }
 
 bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct MonsterFlags: u64 {
 		/// Mutually exclusive with `NEVER_RESPAWN`.
 		const ALWAYS_RESPAWN = 1;
@@ -97,18 +99,19 @@ pub struct Projectile {
 }
 
 bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct ProjectileFlags: u64 {
 		const CAN_HIT_OWNER = 1;
 		/// Plays expiration/explosion sound at full volume.
-		const FULL_VOL_DEATH = Self::CAN_HIT_OWNER.bits << 1;
-		const HUG_FLOOR = Self::FULL_VOL_DEATH.bits << 1;
-		const HUG_CEILING = Self::HUG_FLOOR.bits << 1;
-		const KNOCKBACK = Self::HUG_CEILING.bits << 1;
-		const SEEK_INVIS = Self::KNOCKBACK.bits << 1;
-		const SET_MASTER_ON_HIT = Self::SEEK_INVIS.bits << 1;
-		const SET_TARGET_ON_HIT = Self::SET_MASTER_ON_HIT.bits << 1;
-		const SET_TRACER_ON_HIT = Self::SET_TARGET_ON_HIT.bits << 1;
-		const STEP_CLIMB = Self::SET_TRACER_ON_HIT.bits << 1;
+		const FULL_VOL_DEATH = Self::CAN_HIT_OWNER.bits() << 1;
+		const HUG_FLOOR = Self::FULL_VOL_DEATH.bits() << 1;
+		const HUG_CEILING = Self::HUG_FLOOR.bits() << 1;
+		const KNOCKBACK = Self::HUG_CEILING.bits() << 1;
+		const SEEK_INVIS = Self::KNOCKBACK.bits() << 1;
+		const SET_MASTER_ON_HIT = Self::SEEK_INVIS.bits() << 1;
+		const SET_TARGET_ON_HIT = Self::SET_MASTER_ON_HIT.bits() << 1;
+		const SET_TRACER_ON_HIT = Self::SET_TARGET_ON_HIT.bits() << 1;
+		const STEP_CLIMB = Self::SET_TRACER_ON_HIT.bits() << 1;
 	}
 }
 

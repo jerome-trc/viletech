@@ -42,7 +42,7 @@ impl From<u8> for Kind {
 }
 
 bitflags::bitflags! {
-	#[derive(Default)]
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub(super) struct PointerFlags: u16 {
 		const NET_SAFE = 1 << 0;
 	}
@@ -85,6 +85,7 @@ impl Pointer {
 }
 
 bitflags::bitflags! {
+	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub struct Flags : u8 {
 		const BACKSIDE = 1 << 0;
 		const HANDLE_ASPECT = 1 << 1;
