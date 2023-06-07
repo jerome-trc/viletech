@@ -1,3 +1,5 @@
+//! Utilities for unit testing and benchmarking.
+
 use crate::ParseTree;
 
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.

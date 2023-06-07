@@ -7,7 +7,7 @@ use criterion::Criterion;
 
 use doomfront::{
 	util::builder::{GreenCacheMt, GreenCacheNoop},
-	zdoom::decorate,
+	zdoom::{self, decorate},
 };
 
 fn decorate(crit: &mut Criterion) {
@@ -134,5 +134,54 @@ fn decorate(crit: &mut Criterion) {
 	grp.finish();
 }
 
-criterion::criterion_group!(benches, decorate);
+fn language(crit: &mut Criterion) {
+	const ENV_VAR: &str = "DOOMFRONT_LANGUAGE_SAMPLE";
+
+	let path = match std::env::var(ENV_VAR) {
+		Ok(v) => PathBuf::from(v),
+		Err(_) => {
+			eprintln!(
+				"Environment variable not set: `{ENV_VAR}`. \
+				Cancelling `zdoom::language::parse::test::with_sample_data`."
+			);
+			return;
+		}
+	};
+
+	if !path.exists() {
+		eprintln!(
+			"File does not exist: `{p}`. \
+			Cancelling ``.",
+			p = path.display(),
+		);
+		return;
+	}
+
+	let bytes = std::fs::read(path)
+		.map_err(|err| panic!("File I/O failure: {err}"))
+		.unwrap();
+	let source = String::from_utf8_lossy(&bytes);
+
+	let mut grp = crit.benchmark_group("LANGUAGE");
+
+	grp.bench_function("Parse", |bencher| {
+		bencher.iter(|| {
+			let parser = zdoom::language::parse::file();
+
+			let ptree = doomfront::parse(
+				parser,
+				Some(GreenCacheNoop),
+				zdoom::language::Syn::Root.into(),
+				source.as_ref(),
+				zdoom::lex::Token::stream(source.as_ref()),
+			);
+
+			let _ = std::hint::black_box(ptree);
+		});
+	});
+
+	grp.finish();
+}
+
+criterion::criterion_group!(benches, decorate, language);
 criterion::criterion_main!(benches);
