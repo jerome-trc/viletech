@@ -2,7 +2,7 @@
 //!
 //! ["map lumps"]: https://doomwiki.org/wiki/Lump#Standard_lumps
 
-use std::io::Cursor;
+use std::{collections::HashMap, io::Cursor};
 
 use util::{io::CursorExt, read_id8};
 
@@ -58,6 +58,7 @@ pub fn linedefs(bytes: &[u8]) -> Result<Vec<LineDef>, Error> {
 					Some(s as usize)
 				}
 			},
+			udmf: HashMap::default(),
 		});
 	}
 
@@ -158,6 +159,7 @@ pub fn sectors(bytes: &[u8]) -> Result<Vec<Sector>, Error> {
 			light_level: u16::from_le(raw.light_level) as i32,
 			special: raw.special as i32,
 			trigger: u16::from_le(raw.trigger),
+			udmf: HashMap::default(),
 		});
 	}
 
@@ -240,6 +242,7 @@ pub fn sidedefs(bytes: &[u8]) -> Result<Vec<SideDef>, Error> {
 			tex_bottom: read_id8(raw.tex_bottom).filter(|id8| id8 != "-"),
 			tex_mid: read_id8(raw.tex_mid).filter(|id8| id8 != "-"),
 			sector: u16::from_le(raw.sector) as usize,
+			udmf: HashMap::default(),
 		});
 	}
 
@@ -353,6 +356,7 @@ pub fn things_doom(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
 			},
 			special: 0,
 			args: [0, 0, 0, 0, 0],
+			udmf: HashMap::default(),
 		});
 	}
 
@@ -453,6 +457,7 @@ pub fn things_extended(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
 				raw.args[3] as i32,
 				raw.args[4] as i32,
 			],
+			udmf: HashMap::default(),
 		});
 	}
 

@@ -1,5 +1,7 @@
 //! Mapping standardized linedef field names to linedef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	repr::{LineDef, LineFlags},
 	udmf::Value,
@@ -11,7 +13,7 @@ use super::{parse_i32, parse_usize, Error, KeyValPair};
 pub(super) fn read_linedef_field(
 	kvp: KeyValPair,
 	linedef: &mut LineDef,
-	level: &mut Level,
+	_: &Level,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 
@@ -90,10 +92,9 @@ pub(super) fn read_linedef_field(
 					.flags
 					.set(LineFlags::REPEAT_SPECIAL, matches!(val, Value::True));
 			} else {
-				level.udmf.insert(
-					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-					kvp.to_map_value(),
-				);
+				linedef
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::Int(lit) => {
@@ -120,10 +121,9 @@ pub(super) fn read_linedef_field(
 			} else if key.eq_ignore_ascii_case("sideback") {
 				linedef.side_left = Some(parse_usize(lit)?);
 			} else {
-				level.udmf.insert(
-					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-					kvp.to_map_value(),
-				);
+				linedef
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::String(_) => {
@@ -131,16 +131,14 @@ pub(super) fn read_linedef_field(
 				return Ok(());
 			}
 
-			level.udmf.insert(
-				kvp.to_linedef_mapkey(level.geom.linedefs.len()),
-				kvp.to_map_value(),
-			);
+			linedef
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 		_ => {
-			level.udmf.insert(
-				kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-				kvp.to_map_value(),
-			);
+			linedef
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 	}
 

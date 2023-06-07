@@ -10,13 +10,15 @@ mod sectordef;
 mod sidedef;
 mod thingdef;
 
-use std::num::{ParseFloatError, ParseIntError};
+use std::{
+	collections::HashMap,
+	num::{ParseFloatError, ParseIntError},
+};
 
 use logos::{Lexer, Logos};
-use util::SmallString;
 
 use crate::repr::{
-	UdmfKey, UdmfValue, Vertex,
+	UdmfValue, Vertex,
 	{Level, LevelFormat, LineDef, LineFlags, Sector, SideDef, Thing, ThingFlags, UdmfNamespace},
 };
 
@@ -108,8 +110,6 @@ pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
 		buf: None,
 		errors: vec![],
 	};
-
-	parser.level.udmf.reserve(source.len() / 96);
 
 	while let Some(token) = parser.advance() {
 		match token {
@@ -272,6 +272,7 @@ impl<'i> Parser<'i> {
 			args: [0; 5],
 			side_right: usize::MAX,
 			side_left: None,
+			udmf: HashMap::default(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -296,6 +297,7 @@ impl<'i> Parser<'i> {
 			flags: ThingFlags::empty(),
 			special: 0,
 			args: [0; 5],
+			udmf: HashMap::default(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -321,6 +323,7 @@ impl<'i> Parser<'i> {
 			light_level: 0,
 			special: 0,
 			trigger: 0,
+			udmf: HashMap::default(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -343,6 +346,7 @@ impl<'i> Parser<'i> {
 			tex_bottom: None,
 			tex_mid: None,
 			sector: usize::MAX,
+			udmf: HashMap::default(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -402,7 +406,7 @@ impl<'i> Parser<'i> {
 
 	fn fields<F, T>(&mut self, elem: &mut T, mut reader: F)
 	where
-		F: FnMut(KeyValPair, &mut T, &mut Level) -> Result<(), Error>,
+		F: FnMut(KeyValPair, &mut T, &Level) -> Result<(), Error>,
 	{
 		loop {
 			if !self.buf.is_some_and(|token| {
@@ -454,7 +458,7 @@ impl<'i> Parser<'i> {
 					val: value,
 				},
 				elem,
-				&mut self.level,
+				&self.level,
 			) {
 				self.errors.push(err);
 			}
@@ -473,38 +477,6 @@ pub(crate) struct KeyValPair<'i> {
 }
 
 impl KeyValPair<'_> {
-	#[must_use]
-	pub(self) fn to_linedef_mapkey(&self, index: usize) -> UdmfKey {
-		UdmfKey::Linedef {
-			field: SmallString::from(self.key),
-			index,
-		}
-	}
-
-	#[must_use]
-	pub(self) fn to_sectordef_mapkey(&self, index: usize) -> UdmfKey {
-		UdmfKey::Sector {
-			field: SmallString::from(self.key),
-			index,
-		}
-	}
-
-	#[must_use]
-	pub(self) fn to_sidedef_mapkey(&self, index: usize) -> UdmfKey {
-		UdmfKey::Sidedef {
-			field: SmallString::from(self.key),
-			index,
-		}
-	}
-
-	#[must_use]
-	pub(self) fn to_thingdef_mapkey(&self, index: usize) -> UdmfKey {
-		UdmfKey::Thing {
-			field: SmallString::from(self.key),
-			index,
-		}
-	}
-
 	pub(self) fn to_map_value(&self) -> UdmfValue {
 		match self.val {
 			Value::True => UdmfValue::Bool(true),

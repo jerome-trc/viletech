@@ -1,6 +1,6 @@
 //! Mapping standardized sectordef field names to sectordef members and flags.
 
-use util::id8_truncated;
+use util::{id8_truncated, SmallString};
 
 use crate::{repr::Sector, udmf::Value, Level};
 
@@ -9,7 +9,7 @@ use super::{parse_i32, Error, KeyValPair};
 pub(super) fn read_sectordef_field(
 	kvp: KeyValPair,
 	sectordef: &mut Sector,
-	level: &mut Level,
+	_: &Level,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 
@@ -26,10 +26,9 @@ pub(super) fn read_sectordef_field(
 			} else if key.eq_ignore_ascii_case("id") {
 				sectordef.udmf_id = parse_i32(lit)?;
 			} else {
-				level.udmf.insert(
-					kvp.to_sectordef_mapkey(level.geom.sectors.len()),
-					kvp.to_map_value(),
-				);
+				sectordef
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::String(lit) => {
@@ -41,16 +40,14 @@ pub(super) fn read_sectordef_field(
 				return Ok(());
 			}
 
-			level.udmf.insert(
-				kvp.to_sectordef_mapkey(level.geom.sectors.len()),
-				kvp.to_map_value(),
-			);
+			sectordef
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 		_ => {
-			level.udmf.insert(
-				kvp.to_sectordef_mapkey(level.geom.sectors.len()),
-				kvp.to_map_value(),
-			);
+			sectordef
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 	}
 

@@ -1,6 +1,6 @@
 //! Mapping standardized sidedef field names to sidedef members and flags.
 
-use util::id8_truncated;
+use util::{id8_truncated, SmallString};
 
 use crate::{repr::SideDef, udmf::Value, Level};
 
@@ -9,7 +9,7 @@ use super::{parse_i32, parse_usize, Error, KeyValPair};
 pub(super) fn read_sidedef_field(
 	kvp: KeyValPair,
 	sidedef: &mut SideDef,
-	level: &mut Level,
+	_: &Level,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 
@@ -24,10 +24,9 @@ pub(super) fn read_sidedef_field(
 			} else if key.eq_ignore_ascii_case("comment") {
 				return Ok(());
 			} else {
-				level.udmf.insert(
-					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-					kvp.to_map_value(),
-				);
+				sidedef
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::Int(lit) => {
@@ -38,17 +37,15 @@ pub(super) fn read_sidedef_field(
 			} else if key.eq_ignore_ascii_case("offsety") {
 				sidedef.offset.y = parse_i32(lit)?;
 			} else {
-				level.udmf.insert(
-					kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-					kvp.to_map_value(),
-				);
+				sidedef
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		_ => {
-			level.udmf.insert(
-				kvp.to_sidedef_mapkey(level.geom.sidedefs.len()),
-				kvp.to_map_value(),
-			);
+			sidedef
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 	}
 

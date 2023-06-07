@@ -21,7 +21,6 @@ pub struct Level {
 	pub geom: LevelGeom,
 	pub bsp: LevelBsp,
 	pub things: Vec<Thing>,
-	pub udmf: HashMap<UdmfKey, UdmfValue>,
 }
 
 impl Level {
@@ -52,7 +51,6 @@ impl Level {
 				subsectors: vec![],
 			},
 			things: vec![],
-			udmf: HashMap::new(),
 		}
 	}
 
@@ -303,6 +301,7 @@ pub struct Thing {
 	pub flags: ThingFlags,
 	pub special: i32,
 	pub args: [i32; 5],
+	pub udmf: HashMap<SmallString, UdmfValue>,
 }
 
 impl Thing {
@@ -339,16 +338,6 @@ bitflags! {
 		/// If unset, this is absent to e.g. Hexen's Mage class.
 		const CLASS_3 = 1 << 13;
 	}
-}
-
-/// In any given variant, `index` corresponds to one of the arrays in [`Level`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum UdmfKey {
-	Linedef { field: SmallString, index: usize },
-	Sector { field: SmallString, index: usize },
-	Sidedef { field: SmallString, index: usize },
-	Thing { field: SmallString, index: usize },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -402,6 +391,7 @@ pub struct LineDef {
 	pub side_right: usize,
 	/// a.k.a. the "back" side.
 	pub side_left: Option<usize>,
+	pub udmf: HashMap<SmallString, UdmfValue>,
 }
 
 impl LineDef {
@@ -410,6 +400,7 @@ impl LineDef {
 	/// A possible value for `Self::special`.
 	pub const POBJ_LINE_EXPLICIT: u16 = 5;
 }
+
 bitflags! {
 	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -469,7 +460,9 @@ pub struct SideDef {
 	pub tex_bottom: Option<Id8>,
 	/// The ID within maps to a TEXTURE1/2 entry.
 	pub tex_mid: Option<Id8>,
+	/// An index into [`Level::sectors`].
 	pub sector: usize,
+	pub udmf: HashMap<SmallString, UdmfValue>,
 }
 
 /// See <https://doomwiki.org/wiki/Sector>.
@@ -487,6 +480,7 @@ pub struct Sector {
 	pub special: i32,
 	/// Corresponds to the field of [`LineDef`] with the same name.
 	pub trigger: u16,
+	pub udmf: HashMap<SmallString, UdmfValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

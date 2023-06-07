@@ -1,5 +1,7 @@
 //! Mapping standardized thingdef field names to thingdef members and flags.
 
+use util::SmallString;
+
 use crate::{
 	repr::{LevelFormat, Thing, ThingFlags, UdmfNamespace},
 	udmf::Value,
@@ -11,7 +13,7 @@ use super::{parse_f64, parse_i32, parse_u16, parse_u32, Error, KeyValPair};
 pub(super) fn read_thingdef_field(
 	kvp: KeyValPair,
 	thing: &mut Thing,
-	level: &mut Level,
+	level: &Level,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 
@@ -76,10 +78,9 @@ pub(super) fn read_thingdef_field(
 			} else if matches!(level.format, LevelFormat::Udmf(UdmfNamespace::Strife)) {
 				unimplemented!("The `Strife` UDMF namespace is not yet supported.");
 			} else {
-				level.udmf.insert(
-					kvp.to_thingdef_mapkey(level.things.len()),
-					kvp.to_map_value(),
-				);
+				thing
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::Int(lit) => {
@@ -102,10 +103,9 @@ pub(super) fn read_thingdef_field(
 			} else if key.eq_ignore_ascii_case("arg4") {
 				thing.args[4] = parse_i32(lit)?;
 			} else {
-				level.udmf.insert(
-					kvp.to_thingdef_mapkey(level.things.len()),
-					kvp.to_map_value(),
-				);
+				thing
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::Float(lit) => {
@@ -119,10 +119,9 @@ pub(super) fn read_thingdef_field(
 			} else if key.eq_ignore_ascii_case("z") {
 				thing.pos.y = float as f32;
 			} else {
-				level.udmf.insert(
-					kvp.to_thingdef_mapkey(level.things.len()),
-					kvp.to_map_value(),
-				);
+				thing
+					.udmf
+					.insert(SmallString::from(kvp.key), kvp.to_map_value());
 			}
 		}
 		Value::String(_) => {
@@ -130,10 +129,9 @@ pub(super) fn read_thingdef_field(
 				return Ok(());
 			}
 
-			level.udmf.insert(
-				kvp.to_thingdef_mapkey(level.things.len()),
-				kvp.to_map_value(),
-			);
+			thing
+				.udmf
+				.insert(SmallString::from(kvp.key), kvp.to_map_value());
 		}
 	}
 
