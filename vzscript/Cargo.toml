@@ -16,7 +16,7 @@ repository.workspace = true
 default = []
 
 [dependencies]
-doomfront = { path = "../doomfront", features = ["ser_de"] }
+doomfront = { path = "../doomfront", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils" }
 
 ariadne.workspace = true

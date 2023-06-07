@@ -14,7 +14,7 @@ repository.workspace = true
 
 [features]
 default = []
-ser_de = ["dep:serde"]
+serde = ["dep:serde"]
 
 [dependencies]
 util = { package = "viletech-utils", path = "../utils" }

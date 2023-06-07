@@ -14,7 +14,7 @@ repository.workspace = true
 
 [features]
 default = []
-ser_de = ["serde"]
+serde = ["dep:serde"]
 
 [dependencies]
 arrayvec.workspace = true

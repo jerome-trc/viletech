@@ -10,7 +10,7 @@ use super::{Syn, SyntaxNode, SyntaxToken};
 
 /// Wraps a node tagged [`Syn::Literal`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Literal(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, Literal, Syn::Literal);
@@ -25,7 +25,7 @@ impl Literal {
 /// Wrapper around a [`SyntaxToken`] with convenience functions.
 /// See [`Syn::Literal`]'s documentation to see possible token tags.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LitToken(SyntaxToken);
 
 impl LitToken {

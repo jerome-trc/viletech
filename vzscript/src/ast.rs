@@ -15,7 +15,7 @@ pub use self::{expr::*, item::*, lit::*};
 /// Wraps a token tagged [`Syn::Ident`].
 /// Exists for the convenience of automatically handling raw identifiers.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Ident(pub(self) SyntaxToken);
 
 impl Ident {
@@ -38,7 +38,7 @@ impl Ident {
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum FileRoot {
 	/// Only "inner" annotations are allowed in this position.
 	Annotation(Annotation),
@@ -86,7 +86,7 @@ impl FileRoot {
 
 /// A top-level element in a REPL submission.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum ReplRoot {
 	Expr(Expr),
 }
@@ -117,7 +117,7 @@ impl AstNode for ReplRoot {
 
 /// Wraps a node tagged [`Syn::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Annotation(SyntaxNode);
 
 simple_astnode!(Syn, Annotation, Syn::Annotation);

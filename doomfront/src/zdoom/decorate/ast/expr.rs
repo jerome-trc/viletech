@@ -10,7 +10,7 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
 	Call(ExprCall),
 	Ident(ExprIdent),
@@ -68,7 +68,7 @@ impl Expr {
 
 /// Wraps a node tagged [`Syn::CallExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprCall(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, ExprCall, Syn::CallExpr);
@@ -83,7 +83,7 @@ impl ExprCall {
 
 /// Wraps a node tagged [`Syn::IdentExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprIdent(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, ExprIdent, Syn::IdentExpr);

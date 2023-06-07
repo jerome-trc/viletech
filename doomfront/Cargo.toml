@@ -16,7 +16,7 @@ repository.workspace = true
 default = []
 
 parallel = ["crossbeam", "dashmap", "parking_lot", "rayon"]
-ser_de = ["serde", "rowan/serde1"]
+serde = ["dep:serde", "rowan/serde1"]
 
 acs = []
 eternity = []

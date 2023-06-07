@@ -9,7 +9,7 @@ use super::{ConstDef, EnumDef, IdentChain};
 
 /// Wraps a node tagged [`Syn::ActorDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ActorDef(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, ActorDef, Syn::ActorDef);
@@ -82,7 +82,7 @@ impl ActorDef {
 // Innard //////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Innard {
 	ConstDef(ConstDef),
 	EnumDef(EnumDef),
@@ -189,7 +189,7 @@ impl Innard {
 
 /// Wraps a node tagged [`Syn::UserVar`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct UserVar(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, UserVar, Syn::UserVar);
@@ -224,7 +224,7 @@ impl UserVar {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UserVarType {
 	Int,
 	Float,
@@ -234,7 +234,7 @@ pub enum UserVarType {
 
 /// Wraps a node tagged [`Syn::FlagSetting`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FlagSetting(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, FlagSetting, Syn::FlagSetting);
@@ -265,7 +265,7 @@ impl FlagSetting {
 /// reads. This is out of scope for DoomFront, so this node may encompass multiple
 /// valid property settings, and the client must decompose them accordingly.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PropertySettings(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, PropertySettings, Syn::PropertySettings);
@@ -274,7 +274,7 @@ simple_astnode!(Syn, PropertySettings, Syn::PropertySettings);
 
 /// Wraps a node tagged [`Syn::StatesDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StatesDef(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, StatesDef, Syn::StatesDef);
@@ -310,7 +310,7 @@ impl StatesDef {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum StateUsage {
 	Actor,
 	Item,
@@ -319,7 +319,7 @@ pub enum StateUsage {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StatesItem {
 	State(StateDef),
 	Label(StateLabel),
@@ -423,7 +423,7 @@ impl StatesItem {
 
 /// Wraps a node tagged [`Syn::StateDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StateDef(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, StateDef, Syn::StateDef);
@@ -526,7 +526,7 @@ impl StateDef {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StateQual {
 	Bright,
 	CanRaise,
@@ -541,7 +541,7 @@ pub enum StateQual {
 
 /// Wraps a node tagged [`Syn::StateLabel`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StateLabel(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, StateLabel, Syn::StateLabel);
@@ -555,7 +555,7 @@ impl StateLabel {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StateFlow {
 	Loop,
 	Stop,

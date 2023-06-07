@@ -14,4 +14,4 @@ DoomFront uses the [Rowan](https://crates.io/crates/rowan) crate (see the attrib
 - `zdoom` - Enables frontends for DSLs used by [ZDoom-family ports](https://zdoom.org).
 
 - `parallel` - Enables extra symbols for enabling multi-threaded parsing.
-- `ser_de` - Enables serialization and deserialization of emitted structures via the [serde](https://serde.rs/) crate.
+- `serde` - Enables serialization and deserialization of emitted structures via the [serde](https://serde.rs/) crate.

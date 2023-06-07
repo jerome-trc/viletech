@@ -10,7 +10,7 @@ use crate::{Syn, SyntaxNode};
 use super::Literal;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
 	Binary(BinExpr),
 	Grouped(GroupedExpr),
@@ -60,7 +60,7 @@ impl Expr {
 
 /// Wraps a node tagged [`Syn::BinExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct BinExpr(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, BinExpr, Syn::BinExpr);
@@ -79,7 +79,7 @@ impl BinExpr {
 
 /// Wraps a node tagged [`Syn::GroupedExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GroupedExpr(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, GroupedExpr, Syn::GroupedExpr);

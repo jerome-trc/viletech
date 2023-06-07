@@ -15,7 +15,7 @@ pub struct File {
 /// Virtual directory metadata acquired during mounting. Useful for code which
 /// later has to process these directories and if performing a re-read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DirectoryKind {
 	/// This directory was used to deduplicate same-name entries in a WAD.
 	Dedup,

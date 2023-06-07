@@ -6,7 +6,7 @@ use chumsky::prelude::Input;
 use logos::Logos;
 
 #[derive(logos::Logos, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Token {
 	// Literals ////////////////////////////////////////////////////////////////
 	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]

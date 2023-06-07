@@ -45,15 +45,15 @@ features = [
 [dependencies]
 acs = { package = "viletech-acs", path = "../acs" }
 doomfront = { path = "../doomfront", features = [
-	"ser_de",
+	"serde",
 	"acs",
 	"eternity",
 	"umapinfo",
 	"zdoom",
 ] }
-level = { package = "subterra", path = "../level", features = ["ser_de"] }
-util = { package = "viletech-utils", path = "../utils", features = ["ser_de"] }
-vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "ser_de"] }
+level = { package = "subterra", path = "../level", features = ["serde"] }
+util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
+vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
 vzs = { package = "vzscript", path = "../vzscript" }
 wadload.path = "../wadload"
 

@@ -219,7 +219,7 @@ impl Level {
 
 /// Sub-structure for composing a [`Level`].
 #[derive(Debug)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LevelGeom {
 	pub linedefs: Vec<LineDef>,
 	pub sectors: Vec<Sector>,
@@ -229,7 +229,7 @@ pub struct LevelGeom {
 
 /// Sub-structure for composing a [`Level`].
 #[derive(Debug)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LevelBsp {
 	pub nodes: Vec<BspNode>,
 	pub segs: Vec<Seg>,
@@ -266,7 +266,7 @@ bitflags! {
 
 /// See <https://doomwiki.org/wiki/Map_format>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LevelFormat {
 	/// Level has an ordered sequence of lumps from `THINGS` to `BLOCKMAP`.
 	Doom,
@@ -279,7 +279,7 @@ pub enum LevelFormat {
 
 /// See <https://doomwiki.org/wiki/UDMF>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UdmfNamespace {
 	Doom,
 	Eternity,
@@ -343,7 +343,7 @@ bitflags! {
 
 /// In any given variant, `index` corresponds to one of the arrays in [`Level`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UdmfKey {
 	Linedef { field: SmallString, index: usize },
 	Sector { field: SmallString, index: usize },
@@ -352,7 +352,7 @@ pub enum UdmfKey {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UdmfValue {
 	Bool(bool),
 	Int(i32),
@@ -385,7 +385,7 @@ pub enum KeyReq {
 
 /// See <https://doomwiki.org/wiki/Linedef>.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LineDef {
 	pub udmf_id: i32,
 	/// a.k.a "vertex 1" or just "v1".
@@ -412,7 +412,7 @@ impl LineDef {
 }
 bitflags! {
 	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-	#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+	#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 	pub struct LineFlags: u32 {
 		/// Line blocks things (i.e. player, missiles, and monsters).
 		const IMPASSIBLE = 1 << 0;
@@ -460,7 +460,7 @@ bitflags! {
 }
 /// See <https://doomwiki.org/wiki/Sidedef>.
 #[derive(Debug)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SideDef {
 	pub offset: IVec2,
 	/// The ID within maps to a TEXTURE1/2 entry.
@@ -474,7 +474,7 @@ pub struct SideDef {
 
 /// See <https://doomwiki.org/wiki/Sector>.
 #[derive(Debug)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sector {
 	pub udmf_id: i32,
 	pub height_floor: f32,
@@ -490,7 +490,7 @@ pub struct Sector {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vertex(pub Vec4);
 
 impl std::ops::Deref for Vertex {
@@ -557,7 +557,7 @@ impl From<Vec4> for Vertex {
 
 /// See <https://doomwiki.org/wiki/Node>.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BspNode {
 	pub seg_start: Vec2,
 	pub seg_end: Vec2,
@@ -567,7 +567,7 @@ pub struct BspNode {
 
 /// See [`BspNode`].
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum BspNodeChild {
 	SubSector(usize),
 	SubNode(usize),
@@ -575,7 +575,7 @@ pub enum BspNodeChild {
 
 /// See <https://doomwiki.org/wiki/Seg>.
 #[derive(Debug, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Seg {
 	pub vert_start: usize,
 	pub vert_end: usize,
@@ -589,7 +589,7 @@ pub struct Seg {
 
 /// See [`Seg`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SegDirection {
 	/// This seg runs along the right of a linedef.
 	Front,
@@ -599,7 +599,7 @@ pub enum SegDirection {
 
 /// See <https://doomwiki.org/wiki/Subsector>.
 #[derive(Debug)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SubSector {
 	pub seg0: usize,
 	pub seg_count: usize,

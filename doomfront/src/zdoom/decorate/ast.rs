@@ -13,7 +13,7 @@ use super::{syn::Syn, SyntaxNode, SyntaxToken};
 pub use self::{actor::*, expr::*, lit::*};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum TopLevel {
 	ActorDef(ActorDef),
 	ConstDef(ConstDef),
@@ -95,7 +95,7 @@ impl TopLevel {
 
 /// Wraps a node tagged [`Syn::ConstDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ConstDef(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, ConstDef, Syn::ConstDef);
@@ -136,7 +136,7 @@ impl ConstDef {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConstType {
 	Int,
 	Fixed,
@@ -147,7 +147,7 @@ pub enum ConstType {
 
 /// Wraps a node tagged [`Syn::EnumDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumDef(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, EnumDef, Syn::EnumDef);
@@ -160,7 +160,7 @@ impl EnumDef {
 
 /// Wraps a node tagged [`Syn::EnumVariant`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumVariant(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, EnumVariant, Syn::EnumVariant);
@@ -183,7 +183,7 @@ impl EnumVariant {
 
 /// Wraps a node tagged [`Syn::IncludeDirective`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IncludeDirective(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
@@ -199,7 +199,7 @@ impl IncludeDirective {
 
 /// Wraps a node tagged [`Syn::IdentChain`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IdentChain(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, IdentChain, Syn::IdentChain);

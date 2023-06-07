@@ -3,7 +3,7 @@
 /// Tags representing syntax nodes, from low-level primitives to high-level composites.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// A whole CVar definition.

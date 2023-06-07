@@ -11,7 +11,7 @@ use super::Ident;
 
 /// Wraps a node tagged [`Syn::FuncDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FuncDecl(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, FuncDecl, Syn::FuncDecl);

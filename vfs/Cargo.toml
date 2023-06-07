@@ -16,7 +16,7 @@ repository.workspace = true
 default = []
 bevy = ["dep:bevy"]
 egui = ["dep:egui"]
-ser_de = ["serde"]
+serde = ["dep:serde"]
 
 [dependencies]
 util = { package = "viletech-utils", path = "../utils" }

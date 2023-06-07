@@ -13,7 +13,7 @@ use util::{read_id8, Id8};
 
 /// Whether this WAD is the basis of a game, or a "mod".
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum WadKind {
 	/// "Internal WAD". See <https://doomwiki.org/wiki/IWAD>.
 	IWad,
@@ -133,7 +133,7 @@ impl<R: Read + Seek> ExactSizeIterator for DirReader<R> {}
 
 /// Yielded from [`DirReader`].
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DirEntry {
 	pub name: Id8,
 	/// Note that this is relative to the whole WAD, not the end of the header.
@@ -211,7 +211,7 @@ impl<R: Read + Seek> ExactSizeIterator for Reader<R> {}
 
 /// An entry in a WAD file.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "ser_de", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lump {
 	name: Id8,
 	bytes: Box<[u8]>,
