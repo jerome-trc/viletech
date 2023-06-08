@@ -99,10 +99,7 @@ where
 mod test {
 	use std::path::PathBuf;
 
-	use crate::util::{
-		builder::GreenCacheNoop,
-		testing::{assert_no_errors, prettyprint},
-	};
+	use crate::util::{builder::GreenCacheNoop, testing::*};
 
 	use super::*;
 
@@ -137,7 +134,7 @@ mod test {
 
 		let parser = file();
 
-		let ptree = crate::parse(
+		let ptree1 = crate::parse(
 			parser,
 			Some(GreenCacheNoop),
 			Syn::Root.into(),
@@ -145,7 +142,15 @@ mod test {
 			Token::stream(source.as_ref()),
 		);
 
-		assert_no_errors(&ptree);
-		prettyprint(ptree.cursor::<Syn>());
+		assert_no_errors(&ptree1);
+
+		let ptree2 = crate::ParseTree::<Token> {
+			root: crate::zdoom::language::parser::file(source.as_ref()).unwrap(),
+			errors: vec![],
+		};
+
+		assert_no_errors(&ptree2);
+
+		assert_eq!(ptree1.cursor::<Syn>().text(), ptree2.cursor::<Syn>().text());
 	}
 }

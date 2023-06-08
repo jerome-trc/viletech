@@ -164,7 +164,7 @@ fn language(crit: &mut Criterion) {
 
 	let mut grp = crit.benchmark_group("LANGUAGE");
 
-	grp.bench_function("Parse", |bencher| {
+	grp.bench_function("Parse, Chumsky", |bencher| {
 		bencher.iter(|| {
 			let parser = zdoom::language::parse::file();
 
@@ -175,6 +175,17 @@ fn language(crit: &mut Criterion) {
 				source.as_ref(),
 				zdoom::lex::Token::stream(source.as_ref()),
 			);
+
+			let _ = std::hint::black_box(ptree);
+		});
+	});
+
+	grp.bench_function("Parse, Peg", |bencher| {
+		bencher.iter(|| {
+			let ptree = doomfront::ParseTree::<zdoom::lex::Token> {
+				root: zdoom::language::parser::file(source.as_ref()).unwrap(),
+				errors: vec![],
+			};
 
 			let _ = std::hint::black_box(ptree);
 		});
