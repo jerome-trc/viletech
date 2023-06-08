@@ -31,6 +31,8 @@ pub mod util;
 #[cfg(feature = "zdoom")]
 pub mod zdoom;
 
+pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
+
 pub type TokenMapper<T> = fn((Result<T, ()>, logos::Span)) -> (T, logos::Span);
 pub type Lexer<'i, T> = std::iter::Map<logos::SpannedIter<'i, T>, TokenMapper<T>>;
 pub type TokenStream<'i, T> =

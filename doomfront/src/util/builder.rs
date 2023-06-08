@@ -11,7 +11,7 @@ use hashbrown::hash_map::RawEntryMut;
 use rowan::{GreenNode, GreenNodeData, GreenToken, GreenTokenData, NodeOrToken, SyntaxKind};
 use rustc_hash::FxHasher;
 
-use super::GreenElement;
+use crate::GreenElement;
 
 /// A drop-in replacement for [`rowan::GreenNodeBuilder`] with more capabilities.
 #[derive(Debug, Default)]

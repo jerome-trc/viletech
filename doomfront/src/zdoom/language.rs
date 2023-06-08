@@ -9,7 +9,7 @@ pub use syn::Syn;
 
 use rowan::{GreenNode, GreenToken};
 
-use crate::util::GreenElement;
+use crate::GreenElement;
 
 peg::parser! {
 	pub grammar parser() for str {
