@@ -12,7 +12,7 @@ use viletech::{
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,
-	util::SendTracker,
+	util::{duration_to_hhmmss, SendTracker},
 	vzs,
 };
 
@@ -147,6 +147,12 @@ impl ClientCore {
 				ui.set_max_width(screen_rect.width());
 
 				egui::menu::bar(ui, |ui| {
+					let uptime = viletech::START_TIME.get().unwrap().elapsed();
+					let (hh, mm, ss) = duration_to_hhmmss(uptime);
+					ui.label(format!("{hh:02}:{mm:02}:{ss:02}"));
+
+					ui.separator();
+
 					self.devgui.selectors(
 						ui,
 						&[
