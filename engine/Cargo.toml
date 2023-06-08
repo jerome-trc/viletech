@@ -32,7 +32,6 @@ features = [
 
 	"hdr",
 	"png",
-	"vorbis",
 
 	# Optional
 	"serialize",
