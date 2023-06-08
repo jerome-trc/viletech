@@ -4,12 +4,11 @@
 pub mod parse;
 mod syn;
 
-use smallvec::SmallVec;
 pub use syn::Syn;
 
 use rowan::{GreenNode, GreenToken};
 
-use crate::GreenElement;
+use crate::{parsing::Gtb8, GreenElement};
 
 peg::parser! {
 	pub grammar parser() for str {
@@ -22,30 +21,23 @@ peg::parser! {
 		pub rule key_val_pair() -> GreenElement
 			= 	id:ident()
 				t0:trivia()*
-				eq:$("=")
-				strings:string()+
+				eq:$("=")?
+				strings:string()*
 				term:$(";")?
 		{
-			let mut elems: SmallVec<[_; 8]> = smallvec::smallvec![id.into()];
-
-			for t in t0 {
-				elems.push(t);
-			}
-
-			elems.push(GreenToken::new(Syn::Eq.into(), eq).into());
-
-			for subvec in strings {
-				for s in subvec {
-					elems.push(s);
+			let mut gtb = Gtb8::new(Syn::KeyValuePair, Syn::Error);
+			gtb.start(id);
+			gtb.append(t0);
+			gtb.just_s(Syn::Eq, eq);
+			if strings.is_empty() {
+				gtb.fail();
+			} else {
+				for s in strings {
+					gtb.append(s);
 				}
 			}
-
-			if let Some(semicolon) = term {
-				elems.push(GreenToken::new(Syn::Semicolon.into(), semicolon).into());
-			}
-
-			let mut node = GreenNode::new(Syn::KeyValuePair.into(), elems);
-			node.into()
+			gtb.maybe_s(Syn::Semicolon, term);
+			gtb.finish().into()
 		}
 
 		pub rule string() -> Vec<GreenElement>
@@ -59,36 +51,21 @@ peg::parser! {
 		pub rule locale_tag() -> GreenElement
 			= 	lb:$("[")
 				t0:trivia()*
-				id:ident()
+				id:ident()?
 				t1:trivia()+
-				kw_def:$("default")
+				kw_def:$("default")?
 				t2:trivia()*
-				rb:$("]")
+				rb:$("]")?
 		{
-			let mut elems: SmallVec<[_; 8]> = smallvec::smallvec![
-				GreenToken::new(Syn::BracketL.into(), lb).into()
-			];
-
-			for t in t0 {
-				elems.push(t);
-			}
-
-			elems.push(id.into());
-
-			for t in t1 {
-				elems.push(t);
-			}
-
-			elems.push(GreenToken::new(Syn::KwDefault.into(), kw_def).into());
-
-			for t in t2 {
-				elems.push(t);
-			}
-
-			elems.push(GreenToken::new(Syn::BracketR.into(), rb).into());
-
-			let mut node = GreenNode::new(Syn::LocaleTag.into(), elems);
-			node.into()
+			let mut gtb = Gtb8::new(Syn::LocaleTag, Syn::Error);
+			gtb.start_s(Syn::BracketL, lb);
+			gtb.append(t0);
+			gtb.just(id);
+			gtb.append(t1);
+			gtb.just_s(Syn::KwDefault, kw_def);
+			gtb.append(t2);
+			gtb.just_s(Syn::BracketR, rb);
+			gtb.finish().into()
 		}
 
 		rule ident() -> GreenToken
@@ -100,17 +77,9 @@ peg::parser! {
 			GreenToken::new(Syn::Ident.into(), string)
 		}
 
-		pub rule trivia() -> GreenElement
-			= t:(wsp() / comment())
-		{
-			t.into()
-		}
+		pub rule trivia() -> GreenElement = t:(wsp() / comment()) { t.into() }
 
-		pub rule wsp() -> GreenToken
-			= string:$(
-				['\0'..=' ']+
-			)
-		{
+		pub rule wsp() -> GreenToken = string:$(['\0'..=' ']+) {
 			GreenToken::new(Syn::Whitespace.into(), string)
 		}
 

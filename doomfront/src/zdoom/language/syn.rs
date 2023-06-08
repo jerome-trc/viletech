@@ -6,6 +6,8 @@
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
+	/// A sequence of tokens that did not form a valid syntax element.
+	Error,
 	/// `ident '=' string ';'`
 	KeyValuePair,
 	/// `'[' locale 'default'? ']'`
