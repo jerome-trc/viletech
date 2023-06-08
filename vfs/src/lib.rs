@@ -287,6 +287,17 @@ pub enum MountOutcome {
 	Ok(Vec<Vec<MountError>>),
 }
 
+impl MountOutcome {
+	#[must_use]
+	pub fn total_err_count(&self) -> usize {
+		match self {
+			MountOutcome::NoOp | MountOutcome::Cancelled => 0,
+			MountOutcome::Errs(errors) => errors.iter().fold(0, |acc, subvec| acc + subvec.len()),
+			MountOutcome::Ok(errors) => errors.iter().fold(0, |acc, subvec| acc + subvec.len()),
+		}
+	}
+}
+
 #[derive(Debug)]
 pub struct MountInfo {
 	/// Specified by `meta.toml` if one exists.

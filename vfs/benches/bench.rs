@@ -76,8 +76,8 @@ fn lookup(crit: &mut Criterion) {
 		tracker: None,
 	};
 
-	if let MountOutcome::Errs(_) = vfs.mount(req) {
-		panic!("VFS lookup benchmark encountered errors.");
+	if vfs.mount(req).total_err_count() > 0 {
+		panic!("VFS lookup benchmark encountered mount errors.");
 	}
 
 	grp.bench_function("Lookup", |bencher| {
