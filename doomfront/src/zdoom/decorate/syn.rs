@@ -164,7 +164,7 @@ pub enum Syn {
 	/// `==`
 	Eq2,
 	/// `~`
-	Grave,
+	Tilde,
 	/// `-`
 	Minus,
 	/// `--`

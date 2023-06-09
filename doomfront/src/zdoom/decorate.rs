@@ -380,9 +380,9 @@ peg::parser! {
 				gtb.start(operand);
 				gtb.finish()
 			}
-			grave:$("~") t:trivia()* operand:@  {
+			tilde:$("~") t:trivia()* operand:@  {
 				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
-				gtb.start_s(Syn::Grave, grave);
+				gtb.start_s(Syn::Tilde, tilde);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()

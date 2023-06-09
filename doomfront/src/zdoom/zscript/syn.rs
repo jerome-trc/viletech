@@ -299,10 +299,10 @@ pub enum Syn {
 	Eq,
 	/// `==`
 	Eq2,
-	/// `~` a.k.a tilde.
-	Grave,
+	/// `~`
+	Tilde,
 	/// `~==`
-	GraveEq2,
+	TildeEq2,
 	/// `-`
 	Minus,
 	/// `-=`

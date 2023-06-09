@@ -293,9 +293,9 @@ pub enum Token {
 	#[token("==")]
 	Eq2,
 	#[token("~")]
-	Grave,
+	Tilde,
 	#[token("~==")]
-	GraveEq2,
+	TildeEq2,
 	#[token("-")]
 	Minus,
 	#[token("--")]
