@@ -64,8 +64,9 @@ pub enum Syn {
 	IdentExpr,
 	IndexExpr,
 	Literal,
+	PostfixExpr,
+	PrefixExpr,
 	TernaryExpr,
-	UnaryExpr,
 	// Nodes: preprocessor /////////////////////////////////////////////////////
 	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
 	IncludeDirective,

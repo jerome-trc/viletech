@@ -346,42 +346,42 @@ peg::parser! {
 			--
 			// Unary, prefix ///////////////////////////////////////////////////
 			plus2:$("++") t:trivia()* operand:@ {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Plus2, plus2);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()
 			}
 			minus2:$("--") t:trivia()* operand:@  {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Minus2, minus2);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()
 			}
 			plus:$("+") t:trivia()* operand:@ {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Plus, plus);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()
 			}
 			minus:$("-") t:trivia()* operand:@ {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Minus, minus);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()
 			}
 			bang:$("!") t:trivia()* operand:@ {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Bang, bang);
 				gtb.append(t);
 				gtb.start(operand);
 				gtb.finish()
 			}
 			tilde:$("~") t:trivia()* operand:@  {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PrefixExpr, Syn::Error);
 				gtb.start_s(Syn::Tilde, tilde);
 				gtb.append(t);
 				gtb.start(operand);
@@ -389,14 +389,14 @@ peg::parser! {
 			}
 			// Unary, postfix //////////////////////////////////////////////////
 			operand:@ t:trivia()* plus2:$("++") {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PostfixExpr, Syn::Error);
 				gtb.start(operand);
 				gtb.append(t);
 				gtb.start_s(Syn::Plus2, plus2);
 				gtb.finish()
 			}
 			operand:@ t:trivia()* minus2:$("--") {
-				let mut gtb = Gtb4::new(Syn::UnaryExpr, Syn::Error);
+				let mut gtb = Gtb4::new(Syn::PostfixExpr, Syn::Error);
 				gtb.start(operand);
 				gtb.append(t);
 				gtb.start_s(Syn::Minus2, minus2);

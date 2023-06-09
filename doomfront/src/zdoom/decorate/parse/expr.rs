@@ -261,7 +261,7 @@ where
 	primitive::choice((unary_expr_prefix(expr.clone()), unary_expr_postfix(expr)))
 }
 
-/// Builds a [`Syn::UnaryExpr`] node.
+/// Builds a [`Syn::PrefixExpr`] node.
 /// [`primary_expr`]'s return value must be passed in to prevent infinite recursion.
 pub fn unary_expr_prefix<'i, C, P>(
 	pex: P,
@@ -271,7 +271,7 @@ where
 	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 {
 	comb::node(
-		Syn::UnaryExpr.into(),
+		Syn::PrefixExpr.into(),
 		primitive::group((
 			primitive::choice((
 				comb::just_ts(Token::Plus2, Syn::Plus2.into()),
@@ -285,7 +285,7 @@ where
 	)
 }
 
-/// Builds a [`Syn::UnaryExpr`] node.
+/// Builds a [`Syn::PostfixExpr`] node.
 /// [`primary_expr`]'s return value must be passed in to prevent infinite recursion.
 pub fn unary_expr_postfix<'i, C, P>(
 	pex: P,
@@ -295,7 +295,7 @@ where
 	P: 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone,
 {
 	comb::node(
-		Syn::UnaryExpr.into(),
+		Syn::PostfixExpr.into(),
 		primitive::group((
 			pex,
 			trivia_0plus(),
