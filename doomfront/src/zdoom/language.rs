@@ -60,7 +60,7 @@ peg::parser! {
 				t0:trivia()*
 				id:ident()?
 				t1:trivia()*
-				kw_def:$("default")?
+				kw_def:kw_nc("default")?
 				t2:trivia()*
 				rb:$("]")?
 		{
@@ -101,6 +101,16 @@ peg::parser! {
 			)
 		{
 			GreenToken::new(Syn::Comment.into(), string)
+		}
+
+		rule kw_nc(kw: &'static str) -> &'input str
+			= input:$([_]* <{kw.len()}>)
+		{?
+			if input.eq_ignore_ascii_case(kw) {
+				Ok(input)
+			} else {
+				Err(kw)
+			}
 		}
 	}
 }
