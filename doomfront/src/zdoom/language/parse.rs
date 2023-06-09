@@ -99,7 +99,11 @@ where
 mod test {
 	use std::path::PathBuf;
 
-	use crate::util::{builder::GreenCacheNoop, testing::*};
+	use crate::{
+		util::{builder::GreenCacheNoop, testing::*},
+		zdoom::language,
+		ParseTree,
+	};
 
 	use super::*;
 
@@ -144,8 +148,8 @@ mod test {
 
 		assert_no_errors(&ptree1);
 
-		let ptree2 = crate::ParseTree::<Token> {
-			root: crate::zdoom::language::parser::file(source.as_ref()).unwrap(),
+		let ptree2 = ParseTree::<Token> {
+			root: language::parser::file(source.as_ref()).unwrap(),
 			errors: vec![],
 		};
 

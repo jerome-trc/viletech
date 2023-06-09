@@ -64,6 +64,7 @@ pub enum Syn {
 	IdentExpr,
 	IndexExpr,
 	Literal,
+	TernaryExpr,
 	UnaryExpr,
 	// Nodes: preprocessor /////////////////////////////////////////////////////
 	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
@@ -108,16 +109,36 @@ pub enum Syn {
 	Ampersand,
 	/// `&&`
 	Ampersand2,
+	/// `&=`
+	AmpersandEq,
 	/// `<`
 	AngleL,
+	/// `<<`
+	AngleL2,
+	/// `<<=`
+	AngleL2Eq,
 	/// `<=`
 	AngleLEq,
 	/// `>`
 	AngleR,
+	/// `>>`
+	AngleR2,
+	/// `>>>`
+	AngleR3,
+	/// `>>=`
+	AngleR2Eq,
+	/// `>>>=`
+	AngleR3Eq,
 	/// `>=`
 	AngleREq,
 	/// `*`
 	Asterisk,
+	/// `*=`
+	AsteriskEq,
+	/// `!`
+	Bang,
+	/// `!=`
+	BangEq,
 	/// `{`
 	BraceL,
 	/// `}`
@@ -126,6 +147,10 @@ pub enum Syn {
 	BracketL,
 	/// `]`
 	BracketR,
+	/// `^`
+	Caret,
+	/// `^=`
+	CaretEq,
 	/// `:`
 	Colon,
 	/// `::`
@@ -138,24 +163,42 @@ pub enum Syn {
 	Eq,
 	/// `==`
 	Eq2,
+	/// `~`
+	Grave,
 	/// `-`
 	Minus,
 	/// `--`
 	Minus2,
+	/// `-=`
+	MinusEq,
 	/// `(`
 	ParenL,
 	/// `)`
 	ParenR,
+	/// `%`
+	Percent,
+	/// `%=`
+	PercentEq,
 	/// `|`
 	Pipe,
+	/// `||`
+	Pipe2,
+	/// `|=`
+	PipeEq,
 	/// `+`
 	Plus,
 	/// `++`
 	Plus2,
+	/// `+=`
+	PlusEq,
+	/// `?`
+	Question,
 	/// `;`
 	Semicolon,
 	/// `/`
 	Slash,
+	/// `/=`
+	SlashEq,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// The exact string `#include`, ASCII case-insensitive.
 	PoundInclude,

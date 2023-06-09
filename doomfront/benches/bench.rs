@@ -17,10 +17,35 @@ fn decorate(crit: &mut Criterion) {
 
 	grp.sample_size(20);
 
+	const SOURCE_EXPR: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
+
 	grp.bench_function("Parser Build", |bencher| {
 		bencher.iter(|| {
 			let parser = decorate::parse::file::<GreenCacheNoop>();
 			let _ = std::hint::black_box(parser);
+		});
+	});
+
+	grp.bench_function("Expressions, Chumsky", |bencher| {
+		let parser = decorate::parse::expr(false);
+
+		bencher.iter(|| {
+			let ptree = doomfront::parse(
+				parser.clone(),
+				Some(GreenCacheNoop),
+				decorate::Syn::Root.into(),
+				SOURCE_EXPR,
+				zdoom::lex::Token::stream(SOURCE_EXPR),
+			);
+
+			let _ = std::hint::black_box(ptree);
+		});
+	});
+
+	grp.bench_function("Expressions, rust-peg", |bencher| {
+		bencher.iter(|| {
+			let root = decorate::parser::expr(SOURCE_EXPR).unwrap();
+			let _ = std::hint::black_box(root);
 		});
 	});
 

@@ -67,6 +67,12 @@ impl<const CAP: usize> GreenBuilder<CAP> {
 		}
 	}
 
+	pub fn maybe_append(&mut self, elems: Option<Vec<impl Into<GreenElement>>>) {
+		if let Some(e) = elems {
+			self.append(e);
+		}
+	}
+
 	pub fn append(&mut self, elems: Vec<impl Into<GreenElement>>) {
 		for elem in elems {
 			self.buf.push(elem.into());
@@ -100,6 +106,22 @@ impl<const CAP: usize> GreenBuilder<CAP> {
 	}
 }
 
+/// A [green tree builder] able to hold 4 elements before spilling to the heap.
+///
+/// [green tree builder]: GreenBuilder
 pub type Gtb4 = GreenBuilder<4>;
+
+/// A [green tree builder] able to hold 8 elements before spilling to the heap.
+///
+/// [green tree builder]: GreenBuilder
 pub type Gtb8 = GreenBuilder<8>;
+
+/// A [green tree builder] able to hold 12 elements before spilling to the heap.
+///
+/// [green tree builder]: GreenBuilder
+pub type Gtb12 = GreenBuilder<12>;
+
+/// A [green tree builder] able to hold 16 elements before spilling to the heap.
+///
+/// [green tree builder]: GreenBuilder
 pub type Gtb16 = GreenBuilder<16>;

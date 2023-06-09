@@ -63,6 +63,7 @@ where
 		comb::just_ts(Token::AngleR, Syn::AngleR.into()),
 		comb::just_ts(Token::Slash, Syn::Slash.into()),
 		comb::just_ts(Token::Asterisk, Syn::Asterisk.into()),
+		comb::just_ts(Token::Caret, Syn::Caret.into()),
 	));
 
 	if !property {
@@ -331,13 +332,16 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::util::{builder::GreenCacheNoop, testing::*};
+	use crate::{
+		util::{builder::GreenCacheNoop, testing::*},
+		zdoom::decorate,
+	};
 
 	use super::*;
 
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = "a * b + c / d";
+		const SOURCE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
 
 		let parser = expr(false);
 
@@ -348,6 +352,18 @@ mod test {
 			SOURCE,
 			Token::stream(SOURCE),
 		);
+
+		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn smoke_peg() {
+		const SOURCE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
+
+		let ptree = crate::ParseTree::<Token> {
+			root: decorate::parser::expr(SOURCE).unwrap(),
+			errors: vec![],
+		};
 
 		assert_no_errors(&ptree);
 		prettyprint(ptree.cursor::<Syn>());
