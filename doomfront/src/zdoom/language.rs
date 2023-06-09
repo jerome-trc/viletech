@@ -34,6 +34,7 @@ peg::parser! {
 			gtb.start(id);
 			gtb.append(t0);
 			gtb.just_s(Syn::Eq, eq);
+
 			if strings.is_empty() {
 				gtb.fail();
 			} else {
@@ -41,6 +42,7 @@ peg::parser! {
 					gtb.append(s);
 				}
 			}
+
 			gtb.maybe_s(Syn::Semicolon, term);
 			gtb.finish().into()
 		}
@@ -57,7 +59,7 @@ peg::parser! {
 			= 	lb:$("[")
 				t0:trivia()*
 				id:ident()?
-				t1:trivia()+
+				t1:trivia()*
 				kw_def:$("default")?
 				t2:trivia()*
 				rb:$("]")?
@@ -66,7 +68,7 @@ peg::parser! {
 			gtb.start_s(Syn::BracketL, lb);
 			gtb.append(t0);
 			gtb.just(id);
-			gtb.append(t1);
+			gtb.append_min1(t1);
 			gtb.just_s(Syn::KwDefault, kw_def);
 			gtb.append(t2);
 			gtb.just_s(Syn::BracketR, rb);
