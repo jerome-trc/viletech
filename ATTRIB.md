@@ -48,7 +48,7 @@ The WadLoad library includes some code from the [wad](https://crates.io/crates/w
 
 ## ZDBSP
 
-All source files and functions marked as originating from [ZDBSP]() are provided under the [GNU General Public License v2.0](./legal/zdbsp.txt).
+All source files and functions marked as originating from [ZDBSP](https://github.com/ZDoom/zdbsp) are provided under the [GNU General Public License v2.0](./legal/zdbsp.txt).
 
 # Attribution
 
