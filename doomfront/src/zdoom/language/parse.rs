@@ -1,107 +1,104 @@
 use chumsky::{primitive, IterParser, Parser};
-use rowan::{GreenNode, GreenToken, SyntaxKind};
+use rowan::GreenNode;
 
 use crate::{
 	comb, parser_t,
-	util::{builder::GreenCache, state::ParseState},
-	zdoom::{
-		lex::{Token, TokenStream},
-		Extra,
-	},
+	parsing::{Gtb12, Gtb8},
+	zdoom::lex::Token,
 	GreenElement,
 };
 
 use super::Syn;
 
-pub fn file<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+pub fn file<'i>() -> parser_t!(GreenNode) {
 	primitive::choice((trivia(), locale_tag(), key_val_pair()))
 		.repeated()
-		.collect::<()>()
+		.collect::<Vec<_>>()
+		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
 		.boxed()
 }
 
-pub fn locale_tag<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::LocaleTag.into(),
-		primitive::group((
-			comb::just_ts(Token::BracketL, Syn::BracketL.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
-			comb::checkpointed(primitive::group((
-				trivia_1plus(),
-				comb::just_ts(Token::KwDefault, Syn::KwDefault.into()),
-			)))
-			.or_not(),
-			trivia_0plus(),
-			comb::just_ts(Token::BracketR, Syn::BracketR.into()),
-		)),
-	)
-}
-
-pub fn key_val_pair<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 	let ident = primitive::any()
 		.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
-		.map_with_state(|_, span, state: &mut ParseState<C>| {
-			state.gtb.token(Syn::Ident.into(), &state.source[span]);
-		});
+		.map_with_state(comb::green_token(Syn::Ident));
 
-	let strings = comb::checkpointed(primitive::group((
+	let rep = primitive::group((
 		trivia_0plus(),
-		comb::just_ts(Token::StringLit, Syn::StringLit.into()),
-	)));
+		comb::just_ts(Token::StringLit, Syn::StringLit),
+	));
 
-	comb::node(
-		Syn::KeyValuePair.into(),
-		primitive::group((
-			ident,
-			trivia_0plus(),
-			comb::just_ts(Token::Eq, Syn::Eq.into()),
-			strings.repeated().at_least(1).collect::<()>(),
-			trivia_0plus(),
-			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()).or_not(),
-		)),
-	)
-}
-
-pub fn trivia<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	primitive::choice((
-		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just_ts(Token::Comment, Syn::Comment.into()),
+	primitive::group((
+		ident,
+		trivia_0plus(),
+		comb::just_ts(Token::Eq, Syn::Eq),
+		rep.repeated().at_least(1).collect::<Vec<_>>(),
+		trivia_0plus(),
+		primitive::just(Token::Semicolon)
+			.map_with_state(comb::green_token(Syn::Semicolon))
+			.or_not(),
 	))
-	.map(|_| ())
+	.map(|group| {
+		let mut gtb = Gtb12::new(Syn::KeyValuePair);
+		gtb.push(group.0);
+		gtb.append(group.1);
+		gtb.push(group.2);
+
+		for (sub_vec, string) in group.3 {
+			gtb.append(sub_vec);
+			gtb.push(string);
+		}
+
+		gtb.append(group.4);
+		gtb.maybe(group.5);
+		gtb.finish().into()
+	})
 }
 
-fn trivia_0plus<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	trivia().repeated().collect::<()>()
+pub fn locale_tag<'i>() -> parser_t!(GreenElement) {
+	primitive::group((
+		comb::just_ts(Token::BracketL, Syn::BracketL),
+		trivia_0plus(),
+		comb::just_ts(Token::Ident, Syn::Ident),
+		trivia_1plus(),
+		comb::just_ts(Token::KwDefault, Syn::KwDefault),
+		trivia_0plus(),
+		comb::just_ts(Token::BracketR, Syn::BracketR),
+	))
+	.map(|group| {
+		let mut gtb = Gtb8::new(Syn::LocaleTag);
+		gtb.push(group.0);
+		gtb.append(group.1);
+		gtb.push(group.2);
+		gtb.append(group.3);
+		gtb.push(group.4);
+		gtb.append(group.5);
+		gtb.push(group.6);
+		gtb.finish().into()
+	})
 }
 
-fn trivia_1plus<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	trivia().repeated().at_least(1).collect::<()>()
+pub fn trivia<'i>() -> parser_t!(GreenElement) {
+	primitive::choice((
+		comb::just_ts(Token::Whitespace, Syn::Whitespace),
+		comb::just_ts(Token::Comment, Syn::Comment),
+	))
+	.map(|token| token.into())
+}
+
+pub fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
+	trivia().repeated().collect()
+}
+
+pub fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
+	trivia().repeated().at_least(1).collect()
 }
 
 #[cfg(test)]
 mod test {
 	use std::path::PathBuf;
 
-	use crate::{testing::*, util::builder::GreenCacheNoop};
+	use crate::{testing::*, zdoom::language::ParseTree};
 
 	use super::*;
 
@@ -135,111 +132,10 @@ mod test {
 		let source = String::from_utf8_lossy(&bytes);
 
 		let parser = file();
+		let tbuf = crate::scan(source.as_ref());
 
-		let ptree = crate::parse(
-			parser,
-			Some(GreenCacheNoop),
-			Syn::Root.into(),
-			source.as_ref(),
-			Token::stream(source.as_ref()),
-		);
+		let ptree: ParseTree = crate::parse(parser, source.as_ref(), &tbuf);
 
 		assert_no_errors(&ptree);
 	}
-}
-
-pub mod tbuf_pure {
-	use crate::parsing::{Gtb12, Gtb8};
-
-	use super::*;
-
-	pub fn _file<'i>() -> parser_t!(GreenNode) {
-		primitive::choice((_trivia(), _locale_tag(), _key_val_pair()))
-			.repeated()
-			.collect::<Vec<_>>()
-			.map(|elems| GreenNode::new(Syn::Root.into(), elems))
-			.boxed()
-	}
-
-	pub fn _key_val_pair<'i>() -> parser_t!(GreenElement) {
-		let ident = primitive::any()
-			.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
-			.map_with_state(green_token(Syn::Ident));
-
-		let rep = primitive::group((
-			_trivia_0plus(),
-			primitive::just(Token::StringLit).map_with_state(green_token(Syn::StringLit)),
-		));
-
-		primitive::group((
-			ident,
-			_trivia_0plus(),
-			primitive::just(Token::Eq).map_with_state(green_token(Syn::Eq)),
-			rep.repeated().at_least(1).collect::<Vec<_>>(),
-			_trivia_0plus(),
-			primitive::just(Token::Semicolon)
-				.map_with_state(green_token(Syn::Semicolon))
-				.or_not(),
-		))
-		.map(|group| {
-			let mut gtb = Gtb12::new(Syn::KeyValuePair);
-			gtb.push(group.0);
-			gtb.append(group.1);
-			gtb.push(group.2);
-
-			for (sub_vec, string) in group.3 {
-				gtb.append(sub_vec);
-				gtb.push(string);
-			}
-
-			gtb.append(group.4);
-			gtb.maybe(group.5);
-			gtb.finish().into()
-		})
-	}
-
-	pub fn _locale_tag<'i>() -> parser_t!(GreenElement) {
-		primitive::group((
-			primitive::just(Token::BracketL).map_with_state(green_token(Syn::BracketL)),
-			_trivia_0plus(),
-			primitive::just(Token::Ident).map_with_state(green_token(Syn::Ident)),
-			_trivia_1plus(),
-			primitive::just(Token::KwDefault).map_with_state(green_token(Syn::KwDefault)),
-			_trivia_0plus(),
-			primitive::just(Token::BracketR).map_with_state(green_token(Syn::BracketR)),
-		))
-		.map(|group| {
-			let mut gtb = Gtb8::new(Syn::LocaleTag);
-			gtb.push(group.0);
-			gtb.append(group.1);
-			gtb.push(group.2);
-			gtb.append(group.3);
-			gtb.push(group.4);
-			gtb.append(group.5);
-			gtb.push(group.6);
-			gtb.finish().into()
-		})
-	}
-
-	pub fn _trivia<'i>() -> parser_t!(GreenElement) {
-		primitive::choice((
-			primitive::just(Token::Whitespace).map_with_state(green_token(Syn::Whitespace)),
-			primitive::just(Token::Comment).map_with_state(green_token(Syn::Comment)),
-		))
-		.map(|token| token.into())
-	}
-
-	pub fn _trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
-		_trivia().repeated().collect()
-	}
-
-	pub fn _trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
-		_trivia().repeated().at_least(1).collect()
-	}
-}
-
-fn green_token(
-	syn: impl Into<SyntaxKind> + Copy,
-) -> impl Clone + Fn(Token, logos::Span, &mut &str) -> GreenToken {
-	move |_, span, source: &mut &str| GreenToken::new(syn.into(), &source[span.start..span.end])
 }

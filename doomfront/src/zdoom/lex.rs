@@ -2,10 +2,7 @@
 //!
 //! [common scanner]: https://github.com/ZDoom/gzdoom/blob/master/src/common/engine/sc_man_scanner.re
 
-use chumsky::prelude::Input;
-use logos::Logos;
-
-#[derive(logos::Logos, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(logos::Logos, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Token {
 	// Literals ////////////////////////////////////////////////////////////////
@@ -352,26 +349,11 @@ pub enum Token {
 	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
+	#[default]
 	Unknown,
 }
 
-pub type Lexer<'i> = crate::Lexer<'i, Token>;
-pub type TokenMapper = crate::TokenMapper<Token>;
-pub type TokenStream<'i> = crate::TokenStream<'i, Token>;
-
 impl Token {
-	#[must_use]
-	pub fn stream(source: &str) -> TokenStream {
-		fn mapper(input: (Result<Token, ()>, logos::Span)) -> (Token, logos::Span) {
-			(input.0.unwrap_or(Token::Unknown), input.1)
-		}
-
-		let f: TokenMapper = mapper; // Yes, this is necessary.
-
-		chumsky::input::Stream::from_iter(Token::lexer(source).spanned().map(f))
-			.spanned(source.len()..source.len())
-	}
-
 	#[must_use]
 	pub fn is_keyword(self) -> bool {
 		let u = self as u8;
@@ -382,6 +364,8 @@ impl Token {
 #[cfg(test)]
 mod test {
 	use std::path::PathBuf;
+
+	use logos::Logos;
 
 	use super::*;
 

@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use rowan::SyntaxKind;
+
 use crate::ParseTree;
 
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.
@@ -152,11 +154,12 @@ where
 	}
 }
 
-pub fn assert_no_errors<'i, T>(pt: &ParseTree<'i, T>)
+pub fn assert_no_errors<'i, T, L>(pt: &ParseTree<'i, T, L>)
 where
-	T: logos::Logos<'i> + std::fmt::Debug,
+	T: logos::Logos<'i, Source = str> + std::fmt::Debug,
+	L: rowan::Language + Into<SyntaxKind>,
 {
-	let format_errs = |pt: &ParseTree<'i, T>| {
+	let format_errs = |pt: &ParseTree<T, L>| {
 		let mut output = String::new();
 
 		for err in &pt.errors {

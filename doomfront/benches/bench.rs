@@ -1,13 +1,10 @@
-use std::{borrow::Cow, path::Path};
-
 use criterion::Criterion;
 
-use doomfront::{
-	testing::read_sample_data,
-	util::builder::{GreenCacheMt, GreenCacheNoop},
-	zdoom::{self, decorate},
-};
+use doomfront::{testing::read_sample_data, zdoom};
 
+fn decorate(_: &mut Criterion) {}
+
+#[cfg(any())]
 fn decorate(crit: &mut Criterion) {
 	let mut grp = crit.benchmark_group("DECORATE");
 
@@ -143,13 +140,10 @@ fn language(crit: &mut Criterion) {
 		bencher.iter(|| {
 			let parser = zdoom::language::parse::file();
 
-			let ptree = doomfront::parse(
-				parser,
-				Some(GreenCacheNoop),
-				zdoom::language::Syn::Root.into(),
-				sample.as_ref(),
-				zdoom::lex::Token::stream(sample.as_ref()),
-			);
+			let tbuf = doomfront::scan(&sample);
+
+			let ptree =
+				doomfront::parse::<zdoom::Token, zdoom::language::Syn>(parser, &sample, &tbuf);
 
 			let _ = std::hint::black_box(ptree);
 		});

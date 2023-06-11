@@ -34,67 +34,81 @@ pub mod util;
 pub mod zdoom;
 
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
-
-pub type TokenMapper<T> = fn((Result<T, ()>, logos::Span)) -> (T, logos::Span);
-pub type Lexer<'i, T> = std::iter::Map<logos::SpannedIter<'i, T>, TokenMapper<T>>;
-pub type TokenStream<'i, T> =
-	chumsky::input::SpannedInput<T, logos::Span, chumsky::input::Stream<Lexer<'i, T>>>;
-
 pub type ParseError<'i, T> = chumsky::error::Rich<'i, T, logos::Span>;
-/// Defines the context and state passed along parsers as well as the error type they emit.
-pub type Extra<'i, T, C> =
-	chumsky::extra::Full<ParseError<'i, T>, util::state::ParseState<'i, C>, ()>;
 
 #[derive(Debug)]
-pub struct ParseTree<'i, T: logos::Logos<'i>> {
+pub struct ParseTree<'i, T, L>
+where
+	T: logos::Logos<'i, Source = str>,
+	L: rowan::Language + Into<rowan::SyntaxKind>,
+{
 	pub root: rowan::GreenNode,
 	pub errors: Vec<ParseError<'i, T>>,
+	phantom: std::marker::PhantomData<L>,
 }
 
-impl<'i, T: logos::Logos<'i>> ParseTree<'i, T> {
+impl<'i, T, L> ParseTree<'i, T, L>
+where
+	T: logos::Logos<'i, Source = str>,
+	L: rowan::Language + Into<rowan::SyntaxKind>,
+{
 	/// Emits a "zipper" tree root that can be used for much more effective traversal
 	/// of the green tree (but which is `!Send` and `!Sync`).
 	#[must_use]
-	pub fn cursor<L: rowan::Language>(&self) -> rowan::SyntaxNode<L> {
+	pub fn cursor(&self) -> rowan::SyntaxNode<L> {
 		rowan::SyntaxNode::new_root(self.root.clone())
 	}
+}
+
+/// Produces the input needed for [`parse`].
+#[must_use]
+pub fn scan<'i, T>(source: &'i str) -> Vec<(T, logos::Span)>
+where
+	T: 'i + logos::Logos<'i, Source = str, Error = ()> + Eq + Copy + Default,
+	T::Extras: Default,
+{
+	let lexer = T::lexer(source)
+		.spanned()
+		.map(|(result, span)| (result.unwrap_or(T::default()), span));
+
+	lexer.collect::<Vec<_>>()
 }
 
 /// Each language has a `parse` module filled with functions that emit a combinator-
 /// based parser. Pass one of these along with a source string into this function
 /// to consume that parser and emit a green tree.
+///
+/// This will **panic** if `parser` fails to produce any output. This means it
+/// either is unable to handle empty source, or lacks sufficient error recovery capability.
 #[must_use]
-pub fn parse<'i, P, T, C>(
-	parser: P,
-	cache: Option<C>,
-	root: rowan::SyntaxKind,
-	source: &'i str,
-	stream: TokenStream<'i, T>,
-) -> ParseTree<'i, T>
+pub fn parse<'i, T, L>(
+	parser: parser_t!(T, rowan::GreenNode),
+	mut source: &'i str,
+	tokens: &'i [(T, logos::Span)],
+) -> ParseTree<'i, T, L>
 where
-	P: chumsky::Parser<'i, TokenStream<'i, T>, (), Extra<'i, T, C>>,
-	T: logos::Logos<'i, Source = str, Error = ()> + PartialEq + Clone,
-	C: 'i + util::builder::GreenCache,
+	T: 'i + logos::Logos<'i, Source = str, Error = ()> + Eq + Copy + Default,
+	T::Extras: Default,
+	L: rowan::Language + Into<rowan::SyntaxKind>,
 {
-	let mut state = util::state::ParseState::new(source, cache);
+	use chumsky::input::Input;
 
-	state.gtb.open(root);
-
-	let errors = parser.parse_with_state(stream, &mut state).into_errors();
-
-	state.gtb.close();
+	let input = tokens.spanned(source.len()..source.len());
+	let state = &mut source;
+	let (output, errors) = parser.parse_with_state(input, state).into_output_errors();
 
 	ParseTree {
-		root: state.gtb.finish(),
+		root: output.expect("`doomfront::parse` failed to produce any output"),
 		errors,
+		phantom: std::marker::PhantomData,
 	}
 }
 
 /// A macro for writing the signatures of functions which return [`chumsky`]
 /// combinators in a more succinct and maintainable way.
 ///
-/// Note that this assumes the name `Token` (implementing [`logos::Logos`]) is
-/// already in scope, since it would otherwise have to be provided.
+/// The one-parameter overload assumes that the name `Token` (implementing
+/// [`logos::Logos`]) is already in scope for convenience.
 #[macro_export]
 macro_rules! parser_t {
 	($out_t:ty) => {
@@ -108,6 +122,22 @@ macro_rules! parser_t {
 			$out_t,
 			chumsky::extra::Full<
 				chumsky::error::Rich<'i, Token, logos::Span>,
+				&'i str,
+				()
+			>
+		> + Clone
+	};
+	($token_t:ty, $out_t:ty) => {
+		impl 'i + chumsky::Parser<
+			'i,
+			chumsky::input::SpannedInput<
+				$token_t,
+				logos::Span,
+				&'i [($token_t, logos::Span)]
+			>,
+			$out_t,
+			chumsky::extra::Full<
+				chumsky::error::Rich<'i, $token_t, logos::Span>,
 				&'i str,
 				()
 			>

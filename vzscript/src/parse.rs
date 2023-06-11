@@ -2,23 +2,15 @@
 //!
 //! To start you will likely want to use [`ParserBuilder::repl`] or [`ParserBuilder::file`].
 
-mod common;
-mod expr;
-mod item;
-
 use std::{
 	marker::PhantomData,
 	path::{Path, PathBuf},
 };
 
-use doomfront::{
-	chumsky::{primitive, IterParser, Parser},
-	util::builder::GreenCache,
-};
+use doomfront::util::builder::GreenCache;
 
-use crate::{ParseTree, Syn, TokenStream, Version};
+use crate::{ParseTree, Syn, Version};
 
-pub type Extra<'i, C> = doomfront::Extra<'i, Syn, C>;
 pub type Error<'i> = doomfront::ParseError<'i, Syn>;
 
 /// Gives context to functions yielding parser combinators
@@ -44,6 +36,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 
 	/// Does not build a node by itself; use [`doomfront::parse`] and pass
 	/// [`Syn::FileRoot`](crate::Syn::FileRoot).
+	#[cfg(any())]
 	pub fn file<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		primitive::choice((
 			self.trivia(),
@@ -58,6 +51,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 
 	/// Does not build a node by itself; use [`doomfront::parse`] and pass
 	/// [`Syn::ReplRoot`](crate::Syn::ReplRoot).
+	#[cfg(any())]
 	pub fn repl<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
 		primitive::choice((self.trivia(), self.expr()))
 			.repeated()

@@ -2,13 +2,10 @@
 //!
 //! [syntax tag type]: Syn
 
-use doomfront::{
-	chumsky::{self, prelude::Input},
-	rowan,
-};
+use doomfront::rowan;
 use logos::Logos;
 
-use crate::{TokenMapper, TokenStream, Version};
+use crate::Version;
 
 /// A stronger type over [`rowan::SyntaxKind`] representing all kinds of syntax elements.
 #[repr(u16)]
@@ -176,20 +173,6 @@ impl rowan::Language for Syn {
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
 		kind.into()
-	}
-}
-
-impl Syn {
-	#[must_use]
-	pub fn stream(source: &str, version: Version) -> TokenStream<'_> {
-		fn mapper(input: (Result<Syn, ()>, logos::Span)) -> (Syn, logos::Span) {
-			(input.0.unwrap_or(Syn::Unknown), input.1)
-		}
-
-		let f: TokenMapper = mapper; // Yes, this is necessary.
-
-		chumsky::input::Stream::from_iter(Syn::lexer_with_extras(source, version).spanned().map(f))
-			.spanned(source.len()..source.len())
 	}
 }
 
