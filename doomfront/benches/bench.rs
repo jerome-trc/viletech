@@ -22,7 +22,7 @@ fn decorate(crit: &mut Criterion) {
 		});
 	});
 
-	grp.bench_function("Expressions, Chumsky", |bencher| {
+	grp.bench_function("Expressions", |bencher| {
 		let parser = decorate::parse::expr(false);
 
 		bencher.iter(|| {
@@ -35,13 +35,6 @@ fn decorate(crit: &mut Criterion) {
 			);
 
 			let _ = std::hint::black_box(ptree);
-		});
-	});
-
-	grp.bench_function("Expressions, rust-peg", |bencher| {
-		bencher.iter(|| {
-			let root = decorate::parser::expr(SOURCE_EXPR).unwrap();
-			let _ = std::hint::black_box(root);
 		});
 	});
 
@@ -146,7 +139,7 @@ fn language(crit: &mut Criterion) {
 
 	let mut grp = crit.benchmark_group("LANGUAGE");
 
-	grp.bench_function("Parse, Chumsky", |bencher| {
+	grp.bench_function("Parse", |bencher| {
 		bencher.iter(|| {
 			let parser = zdoom::language::parse::file();
 
@@ -157,17 +150,6 @@ fn language(crit: &mut Criterion) {
 				sample.as_ref(),
 				zdoom::lex::Token::stream(sample.as_ref()),
 			);
-
-			let _ = std::hint::black_box(ptree);
-		});
-	});
-
-	grp.bench_function("Parse, Peg", |bencher| {
-		bencher.iter(|| {
-			let ptree = doomfront::ParseTree::<zdoom::lex::Token> {
-				root: zdoom::language::parser::file(sample.as_ref()).unwrap(),
-				errors: vec![],
-			};
 
 			let _ = std::hint::black_box(ptree);
 		});

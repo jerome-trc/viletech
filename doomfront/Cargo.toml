@@ -30,7 +30,6 @@ dashmap = { workspace = true, optional = true, features = ["raw-api"] }
 logos.workspace = true
 hashbrown.workspace = true
 parking_lot = { workspace = true, optional = true }
-peg = "0.8.1"
 rayon = { workspace = true, optional = true }
 rowan.workspace = true
 rustc-hash.workspace = true

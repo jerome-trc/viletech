@@ -332,7 +332,7 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::{testing::*, util::builder::GreenCacheNoop, zdoom::decorate};
+	use crate::{testing::*, util::builder::GreenCacheNoop};
 
 	use super::*;
 
@@ -351,18 +351,5 @@ mod test {
 		);
 
 		assert_no_errors(&ptree);
-	}
-
-	#[test]
-	fn smoke_peg() {
-		const SOURCE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
-
-		let ptree = crate::ParseTree::<Token> {
-			root: decorate::parser::expr(SOURCE).unwrap(),
-			errors: vec![],
-		};
-
-		assert_no_errors(&ptree);
-		prettyprint(ptree.cursor::<Syn>());
 	}
 }
