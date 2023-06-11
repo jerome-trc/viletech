@@ -332,10 +332,7 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::{
-		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::decorate,
-	};
+	use crate::{testing::*, util::builder::GreenCacheNoop, zdoom::decorate};
 
 	use super::*;
 

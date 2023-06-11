@@ -118,7 +118,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 
 #[cfg(test)]
 mod test {
-	use doomfront::util::{builder::GreenCacheNoop, testing::*};
+	use doomfront::{testing::*, util::builder::GreenCacheNoop};
 
 	use crate::Version;
 

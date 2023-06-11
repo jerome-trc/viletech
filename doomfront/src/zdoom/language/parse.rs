@@ -101,11 +101,7 @@ where
 mod test {
 	use std::path::PathBuf;
 
-	use crate::{
-		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::language,
-		ParseTree,
-	};
+	use crate::{testing::*, util::builder::GreenCacheNoop, zdoom::language, ParseTree};
 
 	use super::*;
 

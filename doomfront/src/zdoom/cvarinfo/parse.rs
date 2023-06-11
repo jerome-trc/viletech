@@ -162,11 +162,9 @@ where
 mod test {
 	use rowan::ast::AstNode;
 
-	use crate::util::{builder::GreenCacheNoop, testing::*};
+	use crate::{testing::*, util::builder::GreenCacheNoop, zdoom::cvarinfo::ast};
 
 	use super::*;
-
-	use crate::zdoom::cvarinfo::ast;
 
 	#[test]
 	fn smoke() {

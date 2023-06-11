@@ -248,7 +248,7 @@ impl IncludeTree {
 
 #[cfg(test)]
 mod test {
-	use crate::util::{builder::GreenCacheNoop, testing::*};
+	use crate::{testing::*, util::builder::GreenCacheNoop};
 
 	use super::*;
 

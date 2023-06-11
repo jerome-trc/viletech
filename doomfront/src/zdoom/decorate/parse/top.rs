@@ -158,8 +158,9 @@ mod test {
 	use rowan::ast::AstNode;
 
 	use crate::{
-		util::{builder::GreenCacheNoop, testing::*},
-		zdoom::decorate::{ast, parse::file, SyntaxNode},
+		testing::*,
+		util::builder::GreenCacheNoop,
+		zdoom::decorate::{ast, parse::file},
 	};
 
 	use super::*;
@@ -191,7 +192,7 @@ enum {
 
 		assert_no_errors(&ptree);
 
-		let cursor = SyntaxNode::new_root(ptree.root);
+		let cursor = ptree.cursor::<Syn>();
 		let enumdef = ast::TopLevel::cast(cursor.children().next().unwrap())
 			.unwrap()
 			.into_enumdef()
@@ -246,7 +247,7 @@ enum {
 
 		assert_no_errors(&ptree);
 
-		let cursor = SyntaxNode::new_root(ptree.root);
+		let cursor = ptree.cursor::<Syn>();
 
 		assert_sequence(
 			&[
@@ -296,7 +297,8 @@ const float INFERNO /* forbidden */ = 0.9999999;
 
 		assert_no_errors(&ptree);
 
-		let cursor = SyntaxNode::new_root(ptree.root);
+		let cursor = ptree.cursor::<Syn>();
+
 		let mut constdefs = cursor
 			.children()
 			.map(|node| ast::TopLevel::cast(node).unwrap().into_constdef().unwrap());

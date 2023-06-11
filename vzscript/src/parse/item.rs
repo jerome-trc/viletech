@@ -80,10 +80,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 
 #[cfg(test)]
 mod test {
-	use doomfront::{
-		rowan::ast::AstNode,
-		util::{builder::GreenCacheNoop, testing::*},
-	};
+	use doomfront::{rowan::ast::AstNode, testing::*, util::builder::GreenCacheNoop};
 
 	use crate::{ast, Version};
 

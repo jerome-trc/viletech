@@ -27,6 +27,7 @@ pub extern crate rowan;
 
 pub mod comb;
 pub mod parsing;
+pub mod testing;
 pub mod util;
 
 #[cfg(feature = "zdoom")]

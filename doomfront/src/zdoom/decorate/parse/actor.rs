@@ -538,7 +538,8 @@ mod test {
 	use rowan::ast::AstNode;
 
 	use crate::{
-		util::{builder::GreenCacheNoop, testing::*},
+		testing::*,
+		util::builder::GreenCacheNoop,
 		zdoom::decorate::{ast, parse::file},
 	};
 
