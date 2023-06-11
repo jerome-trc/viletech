@@ -288,27 +288,19 @@ actor BaronsBanquet {}
 
 	#[test]
 	fn with_sample_data() {
-		const ENV_VAR: &str = "DOOMFRONT_DECORATE_SAMPLE";
-
-		let root_path = match std::env::var(ENV_VAR) {
-			Ok(v) => PathBuf::from(v),
-			Err(_) => {
-				eprintln!("Environment variable not set: `{ENV_VAR}`.");
+		let (root_path, _) = match read_sample_data("DOOMFRONT_DECORATE_SAMPLE") {
+			Ok(s) => s,
+			Err(err) => {
+				eprintln!(
+					"Skipping DECORATE sample data-based include tree unit test. Reason: {err}"
+				);
 				return;
 			}
 		};
 
-		if !root_path.exists() {
-			eprintln!(
-				"Path passed via `{ENV_VAR}` does not exist: {}",
-				root_path.display()
-			);
-			return;
-		}
-
 		let Some(root_parent_path) = root_path.parent() else {
 			eprintln!(
-				"Path passed via `{ENV_VAR}` has no parent: {}",
+				"Skipping DECORATE sample data-based include tree unit test. Reason: `{}` has no parent.",
 				root_path.display()
 			);
 			return;

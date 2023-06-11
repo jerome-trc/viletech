@@ -1,18 +1,14 @@
-use std::{
-	borrow::Cow,
-	path::{Path, PathBuf},
-};
+use std::{borrow::Cow, path::Path};
 
 use criterion::Criterion;
 
 use doomfront::{
+	testing::read_sample_data,
 	util::builder::{GreenCacheMt, GreenCacheNoop},
 	zdoom::{self, decorate},
 };
 
 fn decorate(crit: &mut Criterion) {
-	const ENV_VAR: &str = "DOOMFRONT_DECORATE_SAMPLE";
-
 	let mut grp = crit.benchmark_group("DECORATE");
 
 	grp.sample_size(20);
@@ -49,37 +45,10 @@ fn decorate(crit: &mut Criterion) {
 		});
 	});
 
-	let root_path = match std::env::var(ENV_VAR) {
-		Ok(v) => PathBuf::from(v),
-		Err(_) => {
-			eprintln!(
-				"Environment variable not set: `{ENV_VAR}`. \
-				Skipping DECORATE sample data-based benchmarks."
-			);
-			return;
-		}
-	};
-
-	let sample = match std::fs::read(&root_path) {
+	let (root_path, sample) = match read_sample_data("DOOMFRONT_DECORATE_SAMPLE") {
 		Ok(s) => s,
-		Err(_) => {
-			eprintln!(
-				"`{ENV_VAR}` not found. \
-			Skipping DECORATE sample data-based benchmarks."
-			);
-
-			return;
-		}
-	};
-
-	let sample = match std::str::from_utf8(&sample) {
-		Ok(s) => s,
-		Err(_) => {
-			eprintln!(
-				"`{ENV_VAR}` is invalid UTF-8.
-				Skipping DECORATE sample data-based benchmarks."
-			);
-
+		Err(err) => {
+			eprintln!("Skipping DECORATE sample data-based benchmarks. Reason: {err}");
 			return;
 		}
 	};
@@ -92,8 +61,8 @@ fn decorate(crit: &mut Criterion) {
 				parser,
 				Some(GreenCacheNoop),
 				decorate::Syn::Root.into(),
-				sample,
-				doomfront::zdoom::lex::Token::stream(sample),
+				&sample,
+				doomfront::zdoom::lex::Token::stream(&sample),
 			);
 
 			let _ = std::hint::black_box(ptree);
@@ -102,9 +71,10 @@ fn decorate(crit: &mut Criterion) {
 
 	let Some(root_parent_path) = root_path.parent() else {
 		eprintln!(
-			"Path passed via `{ENV_VAR}` has no parent: {}",
+			"Skipping DECORATE include tree benchmark. Reason: `{}` has no parent.",
 			root_path.display()
 		);
+
 		return;
 	};
 
@@ -166,32 +136,13 @@ fn decorate(crit: &mut Criterion) {
 }
 
 fn language(crit: &mut Criterion) {
-	const ENV_VAR: &str = "DOOMFRONT_LANGUAGE_SAMPLE";
-
-	let path = match std::env::var(ENV_VAR) {
-		Ok(v) => PathBuf::from(v),
-		Err(_) => {
-			eprintln!(
-				"Environment variable not set: `{ENV_VAR}`. \
-				Skipping LANGUAGE sample data-based benchmarks."
-			);
+	let (_, sample) = match read_sample_data("DOOMFRONT_LANGUAGE_SAMPLE") {
+		Ok(s) => s,
+		Err(err) => {
+			eprintln!("Skipping LANGUAGE sample data-based benchmarks. Reason: {err}");
 			return;
 		}
 	};
-
-	if !path.exists() {
-		eprintln!(
-			"File does not exist: `{p}`. \
-			Skipping LANGUAGE sample data-based benchmarks.",
-			p = path.display(),
-		);
-		return;
-	}
-
-	let bytes = std::fs::read(path)
-		.map_err(|err| panic!("File I/O failure: {err}"))
-		.unwrap();
-	let source = String::from_utf8_lossy(&bytes);
 
 	let mut grp = crit.benchmark_group("LANGUAGE");
 
@@ -203,8 +154,8 @@ fn language(crit: &mut Criterion) {
 				parser,
 				Some(GreenCacheNoop),
 				zdoom::language::Syn::Root.into(),
-				source.as_ref(),
-				zdoom::lex::Token::stream(source.as_ref()),
+				sample.as_ref(),
+				zdoom::lex::Token::stream(sample.as_ref()),
 			);
 
 			let _ = std::hint::black_box(ptree);
@@ -214,7 +165,7 @@ fn language(crit: &mut Criterion) {
 	grp.bench_function("Parse, Peg", |bencher| {
 		bencher.iter(|| {
 			let ptree = doomfront::ParseTree::<zdoom::lex::Token> {
-				root: zdoom::language::parser::file(source.as_ref()).unwrap(),
+				root: zdoom::language::parser::file(sample.as_ref()).unwrap(),
 				errors: vec![],
 			};
 

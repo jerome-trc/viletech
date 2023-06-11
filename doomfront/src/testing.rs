@@ -1,5 +1,7 @@
 //! Utilities for unit testing and benchmarking.
 
+use std::path::PathBuf;
+
 use crate::ParseTree;
 
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.
@@ -179,4 +181,32 @@ where
 		"Encountered errors: {}\r\n",
 		format_errs(pt)
 	);
+}
+
+/// `Err` variants contain the reason the read failed. This can happen because:
+/// - the environment variable behind `env_var_name` could not be retrieved
+/// - the path at the environment variable is to a non-existent file
+/// - filesystem IO fails
+pub fn read_sample_data(env_var_name: &'static str) -> Result<(PathBuf, String), String> {
+	let path = match std::env::var(env_var_name) {
+		Ok(p) => PathBuf::from(p),
+		Err(err) => {
+			return Err(format!(
+				"failed to get environment variable `{env_var_name}` ({err})"
+			))
+		}
+	};
+
+	if !path.exists() {
+		return Err(format!("file `{}` does not exist", path.display()));
+	}
+
+	let bytes = match std::fs::read(&path) {
+		Ok(b) => b,
+		Err(err) => return Err(format!("{err}")),
+	};
+
+	let sample = String::from_utf8_lossy(&bytes).to_string();
+
+	Ok((path, sample))
 }
