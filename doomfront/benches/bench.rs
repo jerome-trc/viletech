@@ -54,7 +54,7 @@ fn decorate(crit: &mut Criterion) {
 		Err(_) => {
 			eprintln!(
 				"Environment variable not set: `{ENV_VAR}`. \
-				Skipping benchmark `DECORATE/Parse`."
+				Skipping DECORATE sample data-based benchmarks."
 			);
 			return;
 		}
@@ -63,7 +63,10 @@ fn decorate(crit: &mut Criterion) {
 	let sample = match std::fs::read(&root_path) {
 		Ok(s) => s,
 		Err(_) => {
-			println!("`{ENV_VAR}` not found. Skipping benchmark `DECORATE/Parse`.");
+			eprintln!(
+				"`{ENV_VAR}` not found. \
+			Skipping DECORATE sample data-based benchmarks."
+			);
 
 			return;
 		}
@@ -72,7 +75,10 @@ fn decorate(crit: &mut Criterion) {
 	let sample = match std::str::from_utf8(&sample) {
 		Ok(s) => s,
 		Err(_) => {
-			println!("`{ENV_VAR}` is invalid UTF-8. Skipping benchmark `DECORATE/Parse`.");
+			eprintln!(
+				"`{ENV_VAR}` is invalid UTF-8.
+				Skipping DECORATE sample data-based benchmarks."
+			);
 
 			return;
 		}
@@ -167,7 +173,7 @@ fn language(crit: &mut Criterion) {
 		Err(_) => {
 			eprintln!(
 				"Environment variable not set: `{ENV_VAR}`. \
-				Cancelling `zdoom::language::parse::test::with_sample_data`."
+				Skipping LANGUAGE sample data-based benchmarks."
 			);
 			return;
 		}
@@ -176,7 +182,7 @@ fn language(crit: &mut Criterion) {
 	if !path.exists() {
 		eprintln!(
 			"File does not exist: `{p}`. \
-			Cancelling ``.",
+			Skipping LANGUAGE sample data-based benchmarks.",
 			p = path.display(),
 		);
 		return;
