@@ -149,6 +149,8 @@ mod test {
 }
 
 pub mod tbuf_pure {
+	use crate::parsing::{Gtb12, Gtb8};
+
 	use super::*;
 
 	pub fn _file<'i>() -> parser_t!(GreenNode) {
@@ -180,33 +182,19 @@ pub mod tbuf_pure {
 				.or_not(),
 		))
 		.map(|group| {
-			let mut elems = vec![];
+			let mut gtb = Gtb12::new(Syn::KeyValuePair);
+			gtb.push(group.0);
+			gtb.append(group.1);
+			gtb.push(group.2);
 
-			elems.push(group.0.into());
-
-			for e in group.1 {
-				elems.push(e);
+			for (sub_vec, string) in group.3 {
+				gtb.append(sub_vec);
+				gtb.push(string);
 			}
 
-			elems.push(group.2.into());
-
-			for (subvec, string) in group.3 {
-				for e in subvec {
-					elems.push(e);
-				}
-
-				elems.push(string.into());
-			}
-
-			for e in group.4 {
-				elems.push(e);
-			}
-
-			if let Some(e) = group.5 {
-				elems.push(e.into());
-			}
-
-			GreenNode::new(Syn::LocaleTag.into(), elems).into()
+			gtb.append(group.4);
+			gtb.maybe(group.5);
+			gtb.finish().into()
 		})
 	}
 
@@ -221,29 +209,15 @@ pub mod tbuf_pure {
 			primitive::just(Token::BracketR).map_with_state(green_token(Syn::BracketR)),
 		))
 		.map(|group| {
-			let mut elems = vec![];
-
-			elems.push(group.0.into());
-
-			for e in group.1 {
-				elems.push(e);
-			}
-
-			elems.push(group.2.into());
-
-			for e in group.3 {
-				elems.push(e);
-			}
-
-			elems.push(group.4.into());
-
-			for e in group.5 {
-				elems.push(e);
-			}
-
-			elems.push(group.6.into());
-
-			GreenNode::new(Syn::LocaleTag.into(), elems).into()
+			let mut gtb = Gtb8::new(Syn::LocaleTag);
+			gtb.push(group.0);
+			gtb.append(group.1);
+			gtb.push(group.2);
+			gtb.append(group.3);
+			gtb.push(group.4);
+			gtb.append(group.5);
+			gtb.push(group.6);
+			gtb.finish().into()
 		})
 	}
 
