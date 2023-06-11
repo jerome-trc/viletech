@@ -89,6 +89,31 @@ where
 	}
 }
 
+/// A macro for writing the signatures of functions which return [`chumsky`]
+/// combinators in a more succinct and maintainable way.
+///
+/// Note that this assumes the name `Token` (implementing [`logos::Logos`]) is
+/// already in scope, since it would otherwise have to be provided.
+#[macro_export]
+macro_rules! parser_t {
+	($out_t:ty) => {
+		impl 'i + chumsky::Parser<
+			'i,
+			chumsky::input::SpannedInput<
+				Token,
+				logos::Span,
+				&'i [(Token, logos::Span)]
+			>,
+			$out_t,
+			chumsky::extra::Full<
+				chumsky::error::Rich<'i, Token, logos::Span>,
+				&'i str,
+				()
+			>
+		> + Clone
+	};
+}
+
 /// The most basic implementors of [`rowan::ast::AstNode`] are newtypes
 /// (single-element tuple structs) which map to a single syntax tag. Automatically
 /// generating `AstNode` implementations for these is trivial.

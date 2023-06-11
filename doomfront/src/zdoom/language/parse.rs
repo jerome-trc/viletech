@@ -1,12 +1,14 @@
 use chumsky::{primitive, IterParser, Parser};
+use rowan::{GreenNode, GreenToken, SyntaxKind};
 
 use crate::{
-	comb,
+	comb, parser_t,
 	util::{builder::GreenCache, state::ParseState},
 	zdoom::{
 		lex::{Token, TokenStream},
 		Extra,
 	},
+	GreenElement,
 };
 
 use super::Syn;
@@ -157,4 +159,126 @@ mod test {
 
 		assert_eq!(ptree1.cursor::<Syn>().text(), ptree2.cursor::<Syn>().text());
 	}
+}
+
+pub mod tbuf_pure {
+	use super::*;
+
+	pub fn _file<'i>() -> parser_t!(GreenNode) {
+		primitive::choice((_trivia(), _locale_tag(), _key_val_pair()))
+			.repeated()
+			.collect::<Vec<_>>()
+			.map(|elems| GreenNode::new(Syn::Root.into(), elems))
+			.boxed()
+	}
+
+	pub fn _key_val_pair<'i>() -> parser_t!(GreenElement) {
+		let ident = primitive::any()
+			.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
+			.map_with_state(green_token(Syn::Ident));
+
+		let rep = primitive::group((
+			_trivia_0plus(),
+			primitive::just(Token::StringLit).map_with_state(green_token(Syn::StringLit)),
+		));
+
+		primitive::group((
+			ident,
+			_trivia_0plus(),
+			primitive::just(Token::Eq).map_with_state(green_token(Syn::Eq)),
+			rep.repeated().at_least(1).collect::<Vec<_>>(),
+			_trivia_0plus(),
+			primitive::just(Token::Semicolon)
+				.map_with_state(green_token(Syn::Semicolon))
+				.or_not(),
+		))
+		.map(|group| {
+			let mut elems = vec![];
+
+			elems.push(group.0.into());
+
+			for e in group.1 {
+				elems.push(e);
+			}
+
+			elems.push(group.2.into());
+
+			for (subvec, string) in group.3 {
+				for e in subvec {
+					elems.push(e);
+				}
+
+				elems.push(string.into());
+			}
+
+			for e in group.4 {
+				elems.push(e);
+			}
+
+			if let Some(e) = group.5 {
+				elems.push(e.into());
+			}
+
+			GreenNode::new(Syn::LocaleTag.into(), elems).into()
+		})
+	}
+
+	pub fn _locale_tag<'i>() -> parser_t!(GreenElement) {
+		primitive::group((
+			primitive::just(Token::BracketL).map_with_state(green_token(Syn::BracketL)),
+			_trivia_0plus(),
+			primitive::just(Token::Ident).map_with_state(green_token(Syn::Ident)),
+			_trivia_1plus(),
+			primitive::just(Token::KwDefault).map_with_state(green_token(Syn::KwDefault)),
+			_trivia_0plus(),
+			primitive::just(Token::BracketR).map_with_state(green_token(Syn::BracketR)),
+		))
+		.map(|group| {
+			let mut elems = vec![];
+
+			elems.push(group.0.into());
+
+			for e in group.1 {
+				elems.push(e);
+			}
+
+			elems.push(group.2.into());
+
+			for e in group.3 {
+				elems.push(e);
+			}
+
+			elems.push(group.4.into());
+
+			for e in group.5 {
+				elems.push(e);
+			}
+
+			elems.push(group.6.into());
+
+			GreenNode::new(Syn::LocaleTag.into(), elems).into()
+		})
+	}
+
+	pub fn _trivia<'i>() -> parser_t!(GreenElement) {
+		primitive::choice((
+			primitive::just(Token::Whitespace).map_with_state(green_token(Syn::Whitespace)),
+			primitive::just(Token::Comment).map_with_state(green_token(Syn::Comment)),
+		))
+		.map(|token| token.into())
+	}
+
+	pub fn _trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
+		_trivia().repeated().collect()
+	}
+
+	pub fn _trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
+		_trivia().repeated().at_least(1).collect()
+	}
+}
+
+fn green_token(
+	syn: impl Into<SyntaxKind> + Copy,
+) -> impl Clone + Fn(Token, logos::Span, &mut &str) -> GreenToken {
+	move |_, span, source: &mut &str| GreenToken::new(syn.into(), &source[span.start..span.end])
 }
