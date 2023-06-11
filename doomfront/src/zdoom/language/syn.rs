@@ -8,10 +8,12 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
+	/// `'$' 'ifgame' `
+	GameQualifier,
 	/// `ident '=' string ';'`
 	KeyValuePair,
-	/// `'[' locale 'default'? ']'`
-	LocaleTag,
+	/// `'[' (locale | 'default' | '*' '~')+ ']'`
+	Header,
 	/// The top-level node, representing the whole file.
 	Root,
 	// Tokens //////////////////////////////////////////////////////////////////
@@ -19,15 +21,26 @@ pub enum Syn {
 	StringLit,
 
 	KwDefault,
+	KwIfGame,
 
+	/// `*`
+	Asterisk,
 	/// `[`
 	BracketL,
 	/// `]`
 	BracketR,
+	/// `$`
+	Dollar,
 	/// `=`
 	Eq,
+	/// `(`
+	ParenL,
+	/// `)`
+	ParenR,
 	/// `;`
 	Semicolon,
+	/// `~`
+	Tilde,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// Either single-line or multi-line.
 	Comment,
@@ -35,6 +48,8 @@ pub enum Syn {
 	Ident,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
+	/// Lexer input rolled up under [`Syn::Error`].
+	Unknown,
 	#[doc(hidden)]
 	__Last,
 }

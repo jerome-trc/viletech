@@ -17,7 +17,18 @@ impl KeyValuePair {
 	/// The returned token is tagged [`Syn::Ident`].
 	#[must_use]
 	pub fn key(&self) -> SyntaxToken {
-		self.0.first_token().unwrap()
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.unwrap()
+	}
+
+	#[must_use]
+	pub fn game_qualifier(&self) -> Option<GameQualifier> {
+		self.0
+			.first_child()
+			.filter(|node| node.kind() == Syn::GameQualifier)
+			.map(GameQualifier)
 	}
 
 	/// Returns all tokens under this node tagged [`Syn::StringLit`].
@@ -29,27 +40,45 @@ impl KeyValuePair {
 	}
 }
 
-/// Wraps a node tagged [`Syn::LocaleTag`].
+/// Wraps a node tagged [`Syn::GameQualifier`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct LocaleTag(SyntaxNode);
+pub struct GameQualifier(SyntaxNode);
 
-impl LocaleTag {
-	/// The returned token is tagged [`Syn::Ident`] and its text will be, for
-	/// example, "enu" or "eng".
-	pub fn locale(&self) -> SyntaxToken {
+simple_astnode!(Syn, GameQualifier, Syn::GameQualifier);
+
+impl GameQualifier {
+	/// The returned token is tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn game_id(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+}
 
-	/// If the [locale identifier](Self::locale) is followed by the keyword
-	/// `default`, this returns `true`.
-	#[must_use]
-	pub fn is_default(&self) -> bool {
-		self.0
-			.children_with_tokens()
-			.any(|elem| elem.kind() == Syn::KwDefault)
+/// Wraps a node tagged [`Syn::Header`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Header(SyntaxNode);
+
+simple_astnode!(Syn, Header, Syn::Header);
+
+impl Header {
+	/// Yielded tokens will be tagged with one of the following:
+	/// - [`Syn::Ident`]
+	/// - [`Syn::KwDefault`]
+	/// - [`Syn::Asterisk`]
+	/// - [`Syn::Tilde`]
+	pub fn contents(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0.children_with_tokens().filter_map(|elem| {
+			let Some(token) = elem.into_token() else { return None; };
+
+			match token.kind() {
+				Syn::Ident | Syn::KwDefault | Syn::Asterisk | Syn::Tilde => Some(token),
+				_ => None,
+			}
+		})
 	}
 }

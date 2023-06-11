@@ -3,7 +3,7 @@
 use chumsky::{primitive, Parser};
 use rowan::{GreenToken, SyntaxKind};
 
-use crate::parser_t;
+use crate::{parser_t, ParseError};
 
 pub fn green_token<'i, T>(
 	syn: impl Into<SyntaxKind> + Copy,
@@ -11,7 +11,7 @@ pub fn green_token<'i, T>(
 where
 	T: 'i + logos::Logos<'i> + Eq + Copy,
 {
-	move |_, span, source: &mut &str| GreenToken::new(syn.into(), &source[span.start..span.end])
+	move |_, span, source: &mut &str| GreenToken::new(syn.into(), &source[span])
 }
 
 /// Shorthand for the following:
@@ -34,4 +34,31 @@ where
 	L: 'i + Into<SyntaxKind> + Copy,
 {
 	primitive::just(token).map_with_state(green_token(syn))
+}
+
+/// Like [`just_ts`], but only matches `token` as long as it holds `string`,
+/// ASCII case-insensitively.
+///
+/// This is needed for (G)ZDoom DSLs, many of which are unspecified and use only an
+/// ad-hoc parser as DoomFront's reference implementation. Representing every niche
+/// keyword used by every one of these languages would add complexity to every parser
+/// (since each would have to treat foreign keywords as identifiers), so instead
+/// make the smaller languages look for their keywords through identifiers.
+pub fn string_nc<'i, T, L>(token: T, string: &'static str, syn: L) -> parser_t!(T, GreenToken)
+where
+	T: 'i + logos::Logos<'i> + Eq + Copy,
+	L: 'i + Into<SyntaxKind> + Copy,
+{
+	primitive::just(token).try_map_with_state(move |_, span: logos::Span, state: &mut &str| {
+		let text: &str = &state[span.clone()];
+
+		if text.eq_ignore_ascii_case(string) {
+			Ok(GreenToken::new(syn.into(), text))
+		} else {
+			Err(ParseError::custom(
+				span,
+				format!("expected `{string}`, found `{text}`"),
+			))
+		}
+	})
 }

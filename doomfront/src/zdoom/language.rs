@@ -1,5 +1,6 @@
-//! [LANGUAGE](https://zdoom.org/wiki/LANGUAGE) is a language for defining
-//! localized strings.
+//! [LANGUAGE] is a file format for defining localized strings.
+//!
+//! [LANGUAGE]: https://zdoom.org/wiki/LANGUAGE
 
 pub mod ast;
 pub mod parse;

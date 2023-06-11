@@ -1,5 +1,5 @@
-use chumsky::{primitive, IterParser, Parser};
-use rowan::GreenNode;
+use chumsky::{primitive, recovery, IterParser, Parser};
+use rowan::{GreenNode, GreenToken};
 
 use crate::{
 	comb, parser_t,
@@ -11,7 +11,7 @@ use crate::{
 use super::Syn;
 
 pub fn file<'i>() -> parser_t!(GreenNode) {
-	primitive::choice((trivia(), locale_tag(), key_val_pair()))
+	primitive::choice((trivia(), header(), key_val_pair()))
 		.repeated()
 		.collect::<Vec<_>>()
 		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
@@ -28,7 +28,35 @@ pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 		comb::just_ts(Token::StringLit, Syn::StringLit),
 	));
 
+	let ifgame = primitive::group((
+		comb::just_ts(Token::Dollar, Syn::Dollar),
+		trivia_0plus(),
+		comb::string_nc(Token::Ident, "ifgame", Syn::KwIfGame),
+		trivia_0plus(),
+		comb::just_ts(Token::ParenL, Syn::ParenL),
+		trivia_0plus(),
+		ident.clone(),
+		trivia_0plus(),
+		comb::just_ts(Token::ParenR, Syn::ParenR),
+		trivia_0plus(),
+	))
+	.map(|group| {
+		let mut gtb = Gtb12::new(Syn::GameQualifier);
+		gtb.push(group.0);
+		gtb.append(group.1);
+		gtb.push(group.2);
+		gtb.append(group.3);
+		gtb.push(group.4);
+		gtb.append(group.5);
+		gtb.push(group.6);
+		gtb.append(group.7);
+		gtb.push(group.8);
+		gtb.append(group.9);
+		gtb.finish()
+	});
+
 	primitive::group((
+		ifgame.or_not(),
 		ident,
 		trivia_0plus(),
 		comb::just_ts(Token::Eq, Syn::Eq),
@@ -40,45 +68,103 @@ pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 	))
 	.map(|group| {
 		let mut gtb = Gtb12::new(Syn::KeyValuePair);
-		gtb.push(group.0);
-		gtb.append(group.1);
-		gtb.push(group.2);
 
-		for (sub_vec, string) in group.3 {
+		if let Some(ifgame) = group.0 {
+			gtb.push(ifgame);
+		}
+
+		gtb.push(group.1);
+		gtb.append(group.2);
+		gtb.push(group.3);
+
+		for (sub_vec, string) in group.4 {
 			gtb.append(sub_vec);
 			gtb.push(string);
 		}
 
-		gtb.append(group.4);
-		gtb.maybe(group.5);
+		gtb.append(group.5);
+		gtb.maybe(group.6);
 		gtb.finish().into()
 	})
+	.recover_with(recovery::via_parser(recover_token(
+		[Token::Dollar, Token::Ident],
+		[Token::Ident, Token::BracketL],
+	)))
 }
 
-pub fn locale_tag<'i>() -> parser_t!(GreenElement) {
+pub fn header<'i>() -> parser_t!(GreenElement) {
+	let content = primitive::choice((
+		comb::just_ts(Token::Tilde, Syn::Tilde),
+		comb::just_ts(Token::KwDefault, Syn::KwDefault),
+		comb::just_ts(Token::Asterisk, Syn::Asterisk),
+		primitive::any()
+			.filter(|token: &Token| token.is_keyword() || *token == Token::Ident)
+			.map_with_state(comb::green_token(Syn::Ident)),
+	));
+
+	let rep = primitive::group((trivia_1plus(), content.clone()));
+
 	primitive::group((
 		comb::just_ts(Token::BracketL, Syn::BracketL),
 		trivia_0plus(),
-		comb::just_ts(Token::Ident, Syn::Ident),
-		trivia_1plus(),
-		comb::just_ts(Token::KwDefault, Syn::KwDefault),
+		content,
+		rep.repeated().collect::<Vec<_>>(),
 		trivia_0plus(),
 		comb::just_ts(Token::BracketR, Syn::BracketR),
 	))
 	.map(|group| {
-		let mut gtb = Gtb8::new(Syn::LocaleTag);
+		let mut gtb = Gtb8::new(Syn::Header);
 		gtb.push(group.0);
+
 		gtb.append(group.1);
 		gtb.push(group.2);
-		gtb.append(group.3);
-		gtb.push(group.4);
-		gtb.append(group.5);
-		gtb.push(group.6);
+
+		for (sub_vec, p) in group.3 {
+			gtb.append(sub_vec);
+			gtb.push(p);
+		}
+
+		gtb.append(group.4);
+		gtb.push(group.5);
 		gtb.finish().into()
 	})
 }
 
-pub fn trivia<'i>() -> parser_t!(GreenElement) {
+fn recover_token<'i, S, U>(start: S, until: U) -> parser_t!(GreenElement)
+where
+	S: 'i + chumsky::container::Seq<'i, Token> + Copy,
+	U: 'i + chumsky::container::Seq<'i, Token> + Copy,
+{
+	let mapper = |token, span, source: &mut &str| {
+		let syn = match token {
+			Token::Whitespace => Syn::Whitespace,
+			Token::Comment => Syn::Comment,
+			_ => Syn::Unknown,
+		};
+
+		GreenToken::new(syn.into(), &source[span])
+	};
+
+	primitive::group((
+		primitive::one_of(start).map_with_state(mapper),
+		primitive::none_of(until)
+			.map_with_state(mapper)
+			.repeated()
+			.at_least(1)
+			.collect::<Vec<_>>(),
+	))
+	.map(|(start, mut following)| {
+		following.insert(0, start);
+
+		GreenNode::new(
+			Syn::Error.into(),
+			following.into_iter().map(|token| token.into()),
+		)
+		.into()
+	})
+}
+
+fn trivia<'i>() -> parser_t!(GreenElement) {
 	primitive::choice((
 		comb::just_ts(Token::Whitespace, Syn::Whitespace),
 		comb::just_ts(Token::Comment, Syn::Comment),
@@ -86,11 +172,11 @@ pub fn trivia<'i>() -> parser_t!(GreenElement) {
 	.map(|token| token.into())
 }
 
-pub fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
+fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
 	trivia().repeated().collect()
 }
 
-pub fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
+fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
 	trivia().repeated().at_least(1).collect()
 }
 
@@ -98,9 +184,88 @@ pub fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
 mod test {
 	use std::path::PathBuf;
 
-	use crate::{testing::*, zdoom::language::ParseTree};
+	use rowan::ast::AstNode;
+
+	use crate::{
+		testing::*,
+		zdoom::language::{ast, ParseTree},
+	};
 
 	use super::*;
+
+	#[test]
+	fn smoke() {
+		const SOURCE: &str = r#"
+[enu * ~ default]
+
+$ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
+MEGALOPOLIS = "The Omega";
+"#;
+
+		let tbuf = crate::scan(SOURCE);
+		let parser = file();
+		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let mut ast = ptree.cursor().children();
+
+		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
+		let mut header_contents = header.contents();
+		assert_eq!(header_contents.next().unwrap().text(), "enu");
+		assert_eq!(header_contents.next().unwrap().text(), "*");
+		assert_eq!(header_contents.next().unwrap().text(), "~");
+		assert_eq!(header_contents.next().unwrap().text(), "default");
+
+		let kvp0 = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
+		assert_eq!(kvp0.game_qualifier().unwrap().game_id().text(), "harmony");
+		assert_eq!(kvp0.key().text(), "THE_UNDERWATER_LAB");
+		assert_eq!(
+			&kvp0
+				.string_parts()
+				.map(|token| token.text().to_string())
+				.collect::<String>(),
+			r#""Echidna""#
+		);
+
+		let kvp1 = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
+		assert!(kvp1.game_qualifier().is_none());
+		assert_eq!(kvp1.key().text(), "MEGALOPOLIS");
+		assert_eq!(
+			&kvp1
+				.string_parts()
+				.map(|token| token.text().to_string())
+				.collect::<String>(),
+			r#""The Omega""#
+		);
+	}
+
+	#[test]
+	fn error_recovery() {
+		const SOURCE: &str = r#"
+ABDUCTION = ;
+[eng]
+$ifgame(harmony) HARMS_WAY = "Operation Rescue";
+"#;
+
+		let tbuf = crate::scan(SOURCE);
+		let parser = file();
+		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let mut ast = ptree.cursor().children();
+
+		assert_eq!(ast.next().unwrap().kind(), Syn::Error);
+
+		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
+		let mut header_contents = header.contents();
+		assert_eq!(header_contents.next().unwrap().text(), "eng");
+
+		let kvp = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
+		assert_eq!(kvp.game_qualifier().unwrap().game_id().text(), "harmony");
+		assert_eq!(kvp.key().text(), "HARMS_WAY");
+		assert_eq!(
+			&kvp.string_parts()
+				.map(|token| token.text().to_string())
+				.collect::<String>(),
+			r#""Operation Rescue""#
+		);
+	}
 
 	#[test]
 	fn with_sample_data() {

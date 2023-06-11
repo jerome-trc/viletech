@@ -279,6 +279,8 @@ pub enum Token {
 	Colon2,
 	#[token(",")]
 	Comma,
+	#[token("$")]
+	Dollar,
 	#[token(".")]
 	Dot,
 	#[token("..")]
