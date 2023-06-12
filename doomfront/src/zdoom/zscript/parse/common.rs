@@ -3,44 +3,27 @@
 use chumsky::{primitive, IterParser, Parser};
 
 use crate::{
-	comb,
-	util::builder::GreenCache,
-	zdoom::{
-		lex::{Token, TokenStream},
-		zscript::Syn,
-		Extra,
-	},
+	comb, parser_t,
+	zdoom::{zscript::Syn, Token},
+	GreenElement,
 };
 
-/// Builds a [`Syn::Comment`] or [`Syn::Whitespace`] token.
-/// Remember that this matches either a heterogenous whitespace span or a comment,
-/// so to deal with both in one span requires repetition.
-pub fn trivia<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: 'i + GreenCache,
-{
-	primitive::choice((
-		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just_ts(Token::Comment, Syn::Comment.into()),
-	))
-	.map(|_| ())
-	.boxed()
-}
+use super::ParserBuilder;
 
-/// Shorthand for `trivia().repeated().collect::<()>()`.
-/// Builds a series of [`Syn::Comment`] or [`Syn::Whitespace`] tokens.
-pub fn trivia_0plus<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: 'i + GreenCache,
-{
-	trivia().repeated().collect::<()>()
-}
+impl ParserBuilder {
+	pub(super) fn trivia<'i>(&self) -> parser_t!(GreenElement) {
+		primitive::choice((
+			comb::just_ts(Token::Whitespace, Syn::Whitespace),
+			comb::just_ts(Token::Comment, Syn::Comment),
+		))
+		.map(|token| token.into())
+	}
 
-/// Shorthand for `trivia().repeated().at_least(1).collect::<()>()`.
-/// Builds a series of [`Syn::Comment`] or [`Syn::Whitespace`] tokens.
-pub fn trivia_1plus<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: 'i + GreenCache,
-{
-	trivia().repeated().at_least(1).collect::<()>()
+	pub(super) fn trivia_0plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
+		self.trivia().repeated().collect()
+	}
+
+	pub(super) fn _trivia_1plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
+		self.trivia().repeated().at_least(1).collect()
+	}
 }

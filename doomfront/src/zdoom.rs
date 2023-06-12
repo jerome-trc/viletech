@@ -5,5 +5,6 @@
 pub mod lex;
 
 pub mod language;
+pub mod zscript;
 
 pub use lex::Token;

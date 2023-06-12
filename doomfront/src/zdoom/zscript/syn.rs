@@ -87,8 +87,12 @@ pub enum Syn {
 	/// `'states' ident '{' innard* '}'`
 	StatesDef,
 	StatesUsage,
+	/// `'struct' ident '{' innard* '}'`
 	StructDef,
+	/// `'extend' 'struct' ident '{' innard* '}'`
 	StructExtend,
+	/// `'[' expr ']'`
+	Subscript,
 	/// Can be [`Syn::KwLet`], [`Syn::IdentChain`], or `'readonly' '<' '@'? ident '>'`.
 	TypeRef,
 	/// The `version` preprocessor directive and its string literal argument.
@@ -97,12 +101,14 @@ pub enum Syn {
 	VersionQual,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
+	BinExpr,
 	CallExpr,
 	GroupExpr,
 	IdentExpr,
 	IndexExpr,
+	PostfixExpr,
+	PrefixExpr,
 	SuperExpr,
-	UnaryExpr,
 	/// Two parentheses surrounding two, three, or four comma-separated expressions.
 	///
 	/// Used to construct vectors and colors.
@@ -295,6 +301,12 @@ pub enum Syn {
 	Comma,
 	/// `$`
 	Dollar,
+	/// `.`
+	Dot,
+	/// `..`
+	Dot2,
+	/// `...`, a.k.a. ellipsis.
+	Dot3,
 	/// `=`
 	Eq,
 	/// `==`
@@ -315,12 +327,6 @@ pub enum Syn {
 	ParenR,
 	/// `%`
 	Percent,
-	/// `.`
-	Period,
-	/// `..`
-	Period2,
-	/// `...`, a.k.a. ellipsis.
-	Period3,
 	/// `|`
 	Pipe,
 	/// `|=`
@@ -366,7 +372,7 @@ pub enum Syn {
 	Ident,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
-	/// Input unrecognized by the lexer.
+	/// Lexer input rolled up under [`Syn::Error`].
 	Unknown,
 	#[doc(hidden)]
 	__Last,

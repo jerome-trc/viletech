@@ -1,6 +1,9 @@
 use criterion::Criterion;
 
-use doomfront::{testing::read_sample_data, zdoom};
+use doomfront::{
+	testing::read_sample_data,
+	zdoom::{self, zscript},
+};
 
 fn decorate(_: &mut Criterion) {}
 
@@ -152,5 +155,22 @@ fn language(crit: &mut Criterion) {
 	grp.finish();
 }
 
-criterion::criterion_group!(benches, decorate, language);
+fn zscript(crit: &mut Criterion) {
+	let mut grp = crit.benchmark_group("ZScript");
+
+	grp.bench_function("Expression", |bencher| {
+		bencher.iter(|| {
+			const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
+			let builder = zscript::parse::ParserBuilder::new(zscript::Version::default());
+			let tbuf = doomfront::scan(SOURCE);
+			let parser = builder.expr();
+			let ptree: zscript::ParseTree = doomfront::parse(parser, SOURCE, &tbuf);
+			let _ = std::hint::black_box(ptree);
+		});
+	});
+
+	grp.finish();
+}
+
+criterion::criterion_group!(benches, decorate, language, zscript);
 criterion::criterion_main!(benches);
