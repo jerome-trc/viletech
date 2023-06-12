@@ -7,7 +7,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use doomfront::util::builder::GreenCache;
+use doomfront::gcache::GreenCache;
 
 use crate::{ParseTree, Syn, Version};
 

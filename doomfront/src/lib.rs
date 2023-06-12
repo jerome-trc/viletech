@@ -26,9 +26,9 @@ pub extern crate logos;
 pub extern crate rowan;
 
 pub mod comb;
+pub mod gcache;
 pub mod parsing;
 pub mod testing;
-pub mod util;
 
 #[cfg(feature = "zdoom")]
 pub mod zdoom;
