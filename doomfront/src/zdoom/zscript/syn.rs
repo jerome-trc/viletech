@@ -21,7 +21,7 @@ pub enum Syn {
 	/// `'default' '{' (propertysetting | flagsetting)* '}'`
 	DefaultBlock,
 	/// `'deprecated' '(' string (',' string)? ')'`
-	DeprecatedQual,
+	DeprecationQual,
 	/// `'enum' ident enumtypespec? '{' variant* '}'`
 	EnumDef,
 	/// `':' ident`

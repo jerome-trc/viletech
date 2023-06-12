@@ -27,6 +27,26 @@ impl ParserBuilder {
 		.collect()
 	}
 
+	pub fn deprecation_qual<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::KwDeprecated, Syn::KwDeprecated),
+			self.trivia_0plus(),
+			comb::just_ts(Token::ParenL, Syn::ParenR),
+			self.trivia_0plus(),
+			comb::just_ts(Token::StringLit, Syn::StringLit),
+			primitive::group((
+				self.trivia_0plus(),
+				comb::just_ts(Token::Comma, Syn::Comma),
+				self.trivia_0plus(),
+				comb::just_ts(Token::StringLit, Syn::StringLit),
+			))
+			.or_not(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::ParenR, Syn::ParenR),
+		))
+		.map(|group| coalesce_node(group, Syn::DeprecationQual))
+	}
+
 	pub(super) fn ident<'i>(&self) -> parser_t!(GreenToken) {
 		primitive::any()
 			.filter(|token: &Token| {
@@ -164,6 +184,19 @@ impl ParserBuilder {
 			primitive::choice((tref_class, tref_array_dyn, tref_map, tref_mapiter, simple)).boxed()
 		})
 	}
+
+	pub fn version_qual<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::KwVersion, Syn::KwVersion),
+			self.trivia_0plus(),
+			comb::just_ts(Token::ParenL, Syn::ParenL),
+			self.trivia_0plus(),
+			comb::just_ts(Token::StringLit, Syn::StringLit),
+			self.trivia_0plus(),
+			comb::just_ts(Token::ParenR, Syn::ParenR),
+		))
+		.map(|group| coalesce_node(group, Syn::VersionQual))
+	}
 }
 
 #[cfg(test)]
@@ -195,5 +228,25 @@ mod test {
 			let ptree: ParseTree = crate::parse(parser, source, &tbuf);
 			assert_no_errors(&ptree);
 		}
+	}
+
+	#[test]
+	fn smoke_version_qual() {
+		const SOURCE: &str = r#"version("3.7.1")"#;
+
+		let tbuf = crate::scan(SOURCE);
+		let parser = ParserBuilder::new(Version::default()).version_qual();
+		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn smoke_deprecation_qual() {
+		const SOURCE: &str = r#"deprecated("2.4.0", "Don't use this please")"#;
+
+		let tbuf = crate::scan(SOURCE);
+		let parser = ParserBuilder::new(Version::default()).deprecation_qual();
+		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		assert_no_errors(&ptree);
 	}
 }
