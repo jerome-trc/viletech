@@ -1,6 +1,6 @@
 //! Utilities for making it easier to write succinct [`peg`] parsers.
 
-use rowan::{GreenNode, SyntaxKind};
+use rowan::{GreenNode, GreenToken, SyntaxKind};
 use smallvec::SmallVec;
 
 use crate::GreenElement;
@@ -19,6 +19,10 @@ impl<const CAP: usize> GreenBuilder<CAP> {
 			buf: SmallVec::new(),
 			syn: syn.into(),
 		}
+	}
+
+	pub fn add<I: BuilderInput>(&mut self, input: I) {
+		input.consume(self);
 	}
 
 	pub fn push(&mut self, elem: impl Into<GreenElement>) {
@@ -77,21 +81,54 @@ pub trait BuilderInput: 'static {
 	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>);
 }
 
-impl<T> BuilderInput for Vec<T>
+impl BuilderInput for GreenNode {
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		builder.push(self);
+	}
+}
+
+impl BuilderInput for GreenToken {
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		builder.push(self);
+	}
+}
+
+impl BuilderInput for GreenElement {
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		builder.push(self);
+	}
+}
+
+impl<T> BuilderInput for Option<T>
 where
-	T: 'static + Into<GreenElement>,
+	T: BuilderInput,
 {
 	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		builder.append(self);
+		if let Some(input) = self {
+			input.consume(builder);
+		}
+	}
+}
+
+impl<T> BuilderInput for Vec<T>
+where
+	T: BuilderInput,
+{
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		for input in self {
+			builder.add(input);
+		}
 	}
 }
 
 impl<T, const C: usize> BuilderInput for SmallVec<[T; C]>
 where
-	T: 'static + Into<GreenElement>,
+	T: BuilderInput,
 {
 	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		builder.append(self);
+		for input in self {
+			input.consume(builder);
+		}
 	}
 }
 
