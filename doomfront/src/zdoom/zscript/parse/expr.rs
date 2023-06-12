@@ -24,8 +24,28 @@ impl ParserBuilder {
 					comb::just_ts(Token::NameLit, Syn::NameLit),
 					comb::just_ts(Token::KwTrue, Syn::TrueLit),
 					comb::just_ts(Token::KwFalse, Syn::FalseLit),
+					comb::just_ts(Token::KwNull, Syn::NullLit),
 				))
 				.map_with_state(|gtok, _, _| GreenNode::new(Syn::Literal.into(), [gtok.into()]));
+
+				let vector = primitive::group((
+					comb::just_ts(Token::ParenL, Syn::ParenL),
+					self.trivia_0plus(),
+					expr.clone(),
+					primitive::group((
+						self.trivia_0plus(),
+						comb::just_ts(Token::Comma, Syn::Comma),
+						self.trivia_0plus(),
+						expr.clone(),
+					))
+					.repeated()
+					.at_least(1)
+					.at_most(3)
+					.collect::<Vec<_>>(),
+					self.trivia_0plus(),
+					comb::just_ts(Token::ParenR, Syn::ParenR),
+				))
+				.map(|group| coalesce_node(group, Syn::VectorExpr));
 
 				let grouped = primitive::group((
 					comb::just_ts(Token::ParenL, Syn::ParenL),
@@ -36,9 +56,7 @@ impl ParserBuilder {
 				))
 				.map(|group| coalesce_node(group, Syn::GroupExpr));
 
-				// TODO: Vector
-
-				let atom = primitive::choice((grouped, literal, ident.clone()));
+				let atom = primitive::choice((vector, grouped, literal, ident.clone()));
 
 				let subscript = primitive::group((
 					comb::just_ts(Token::BracketL, Syn::BracketL),
