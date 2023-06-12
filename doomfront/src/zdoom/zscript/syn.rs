@@ -10,7 +10,7 @@ pub enum Syn {
 	ActionFunction,
 	/// `'(' exprs? ')'`
 	ArgList,
-	/// `'[' expr? ']'`
+	/// `('[' expr? ']')+`
 	ArrayLen,
 	/// `'class' 'ident' inheritspec? replacesclause? '{' innard* '}'`
 	ClassDef,
@@ -156,6 +156,7 @@ pub enum Syn {
 	KwAbstract,
 	KwAction,
 	KwAlignOf,
+	KwArray,
 	KwBreak,
 	/// Only a keyword in [`Syn::StateDef`] elements.
 	KwBright,
@@ -194,6 +195,8 @@ pub enum Syn {
 	KwLight,
 	/// Only a keyword in [`Syn::StateFlow`] elements.
 	KwLoop,
+	KwMap,
+	KwMapIterator,
 	KwMeta,
 	KwMixin,
 	KwNative,

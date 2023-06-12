@@ -154,7 +154,9 @@ where
 	}
 }
 
-pub fn assert_no_errors<'i, T, L>(pt: &ParseTree<'i, T, L>)
+/// A wrapper for `ptree.errors.is_empty()` which also formats and prints out
+/// each error, if any are detected.
+pub fn assert_no_errors<'i, T, L>(ptree: &ParseTree<'i, T, L>)
 where
 	T: logos::Logos<'i, Source = str> + std::fmt::Debug,
 	L: rowan::Language + Into<SyntaxKind>,
@@ -180,9 +182,9 @@ where
 	};
 
 	assert!(
-		pt.errors.is_empty(),
+		ptree.errors.is_empty(),
 		"Encountered errors: {}\r\n",
-		format_errs(pt)
+		format_errs(ptree)
 	);
 }
 
