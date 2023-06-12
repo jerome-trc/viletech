@@ -359,8 +359,6 @@ pub enum Syn {
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	/// The string `#include`, ASCII case insensitive.
 	PoundInclude,
-	/// The string `version`, ASCII case insensitive.
-	PreprocVersion,
 	/// `####`, `----`,
 	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
 	StateSprite,

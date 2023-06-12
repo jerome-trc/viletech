@@ -1,7 +1,16 @@
 mod common;
 mod expr;
+mod top;
 
-use crate::zdoom;
+use chumsky::{primitive, IterParser, Parser};
+use rowan::GreenNode;
+
+use crate::{
+	parser_t,
+	zdoom::{self, Token},
+};
+
+use super::Syn;
 
 /// Gives context to functions yielding parser combinators
 /// (e.g. the user's selected ZScript version).
@@ -17,5 +26,21 @@ impl ParserBuilder {
 	#[must_use]
 	pub fn new(version: zdoom::Version) -> Self {
 		Self { _version: version }
+	}
+
+	pub fn file<'i>(&self) -> parser_t!(GreenNode) {
+		// TODO: Single-class file syntax.
+
+		primitive::choice((
+			self.trivia(),
+			self.const_def().map(|gnode| gnode.into()),
+			self.enum_def().map(|gnode| gnode.into()),
+			self.include_directive().map(|gnode| gnode.into()),
+			self.version_directive().map(|gnode| gnode.into()),
+		))
+		.repeated()
+		.collect::<Vec<_>>()
+		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
+		.boxed()
 	}
 }

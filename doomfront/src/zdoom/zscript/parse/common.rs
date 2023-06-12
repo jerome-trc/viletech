@@ -88,7 +88,7 @@ impl ParserBuilder {
 		self.trivia().repeated().collect()
 	}
 
-	pub(super) fn _trivia_1plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
+	pub(super) fn trivia_1plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
 		self.trivia().repeated().at_least(1).collect()
 	}
 
