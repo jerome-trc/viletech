@@ -2,8 +2,11 @@
 //!
 //! [common scanner]: https://github.com/ZDoom/gzdoom/blob/master/src/common/engine/sc_man_scanner.re
 
+use super::Version;
+
 #[derive(logos::Logos, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[logos(extras = Version, error = Token)]
 pub enum Token {
 	// Literals ////////////////////////////////////////////////////////////////
 	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
@@ -23,7 +26,7 @@ pub enum Token {
 	__FirstKw,
 	#[regex("(?i)abstract", priority = 5)]
 	KwAbstract,
-	#[regex("(?i)action", priority = 5)]
+	#[regex("(?i)action", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwAction,
 	#[regex("(?i)alignof", priority = 5)]
 	KwAlignof,
@@ -45,9 +48,9 @@ pub enum Token {
 	KwCase,
 	#[regex("(?i)char", priority = 5)]
 	KwChar,
-	#[regex("(?i)class", priority = 5)]
+	#[regex("(?i)clearscope", priority = 5, callback = Token::ident_pre2_4_0)]
 	KwClearscope,
-	#[regex("(?i)clearscope", priority = 5)]
+	#[regex("(?i)class", priority = 5)]
 	KwClass,
 	#[regex("(?i)color", priority = 5)]
 	KwColor,
@@ -59,7 +62,7 @@ pub enum Token {
 	KwCross,
 	#[regex("(?i)default", priority = 5)]
 	KwDefault,
-	#[regex("(?i)deprecated", priority = 5)]
+	#[regex("(?i)deprecated", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwDeprecated,
 	#[regex("(?i)do", priority = 5)]
 	KwDo,
@@ -71,7 +74,7 @@ pub enum Token {
 	KwElse,
 	#[regex("(?i)enum", priority = 5)]
 	KwEnum,
-	#[regex("(?i)extend", priority = 5)]
+	#[regex("(?i)extend", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwExtend,
 	#[regex("(?i)fail", priority = 5)]
 	KwFail,
@@ -79,15 +82,15 @@ pub enum Token {
 	KwFalse,
 	#[regex("(?i)fast", priority = 5)]
 	KwFast,
-	#[regex("(?i)final", priority = 5)]
+	#[regex("(?i)final", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwFinal,
-	#[regex("(?i)flagdef", priority = 5)]
+	#[regex("(?i)flagdef", priority = 5, callback = Token::ident_pre3_7_0)]
 	KwFlagdef,
 	#[regex("(?i)float", priority = 5)]
 	KwFloat,
 	#[regex("(?i)for", priority = 5)]
 	KwFor,
-	#[regex("(?i)foreach", priority = 5)]
+	#[regex("(?i)foreach", priority = 5, callback = Token::ident_pre4_10_0)]
 	KwForeach,
 	#[regex("(?i)goto", priority = 5)]
 	KwGoto,
@@ -101,11 +104,11 @@ pub enum Token {
 	KwInt16,
 	#[regex("(?i)int8", priority = 5)]
 	KwInt8,
-	#[regex("(?i)internal", priority = 5)]
+	#[regex("(?i)internal", priority = 5, callback = Token::ident_pre3_4_0)]
 	KwInternal,
-	#[regex("(?i)is", priority = 5)]
+	#[regex("(?i)is", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwIs,
-	#[regex("(?i)let", priority = 5)]
+	#[regex("(?i)let", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwLet,
 	#[regex("(?i)light", priority = 5)]
 	KwLight,
@@ -117,11 +120,11 @@ pub enum Token {
 	KwMap,
 	#[regex("(?i)mapiterator", priority = 5)]
 	KwMapIterator,
-	#[regex("(?i)meta", priority = 5)]
+	#[regex("(?i)meta", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwMeta,
 	#[regex("(?i)mixin", priority = 5)]
 	KwMixin,
-	#[regex("(?i)name", priority = 5)]
+	#[regex("(?i)name", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwName,
 	#[regex("(?i)native", priority = 5)]
 	KwNative,
@@ -130,25 +133,25 @@ pub enum Token {
 	#[regex("(?i)none", priority = 5)]
 	KwNone,
 	#[regex("(?i)null", priority = 5)]
-	#[regex("(?i)nullptr", priority = 5)]
+	#[regex("(?i)nullptr", priority = 5, callback = Token::ident_pre4_9_0)]
 	KwNull,
 	#[regex("(?i)offset", priority = 5)]
 	KwOffset,
-	#[regex("(?i)out", priority = 5)]
+	#[regex("(?i)out", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwOut,
-	#[regex("(?i)override", priority = 5)]
+	#[regex("(?i)override", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwOverride,
-	#[regex("(?i)play", priority = 5)]
+	#[regex("(?i)play", priority = 5, callback = Token::ident_pre2_4_0)]
 	KwPlay,
-	#[regex("(?i)private", priority = 5)]
+	#[regex("(?i)private", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwPrivate,
 	#[regex("(?i)property", priority = 5)]
 	KwProperty,
-	#[regex("(?i)protected", priority = 5)]
+	#[regex("(?i)protected", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwProtected,
-	#[regex("(?i)readonly", priority = 5)]
+	#[regex("(?i)readonly", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwReadonly,
-	#[regex("(?i)replaces", priority = 5)]
+	#[regex("(?i)replaces", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwReplaces,
 	#[regex("(?i)return", priority = 5)]
 	KwReturn,
@@ -174,15 +177,15 @@ pub enum Token {
 	KwString,
 	#[regex("(?i)struct", priority = 5)]
 	KwStruct,
-	#[regex("(?i)super", priority = 5)]
+	#[regex("(?i)super", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwSuper,
 	#[regex("(?i)switch", priority = 5)]
 	KwSwitch,
-	#[regex("(?i)transient", priority = 5)]
+	#[regex("(?i)transient", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwTransient,
 	#[regex("(?i)true", priority = 5)]
 	KwTrue,
-	#[regex("(?i)ui", priority = 5)]
+	#[regex("(?i)ui", priority = 5, callback = Token::ident_pre2_4_0)]
 	KwUi,
 	#[regex("(?i)uint", priority = 5)]
 	KwUInt,
@@ -198,17 +201,17 @@ pub enum Token {
 	KwUShort,
 	#[regex("(?i)var", priority = 5)]
 	KwVar,
-	#[regex("(?i)vararg", priority = 5)]
+	#[regex("(?i)vararg", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwVararg,
 	#[regex("(?i)vector2", priority = 5)]
 	KwVector2,
 	#[regex("(?i)vector3", priority = 5)]
 	KwVector3,
-	#[regex("(?i)version", priority = 5)]
+	#[regex("(?i)version", priority = 5, callback = Token::ident_pre2_4_0)]
 	KwVersion,
-	#[regex("(?i)virtual", priority = 5)]
+	#[regex("(?i)virtual", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwVirtual,
-	#[regex("(?i)virtualscope", priority = 5)]
+	#[regex("(?i)virtualscope", priority = 5, callback = Token::ident_pre2_4_0)]
 	KwVirtualscope,
 	#[regex("(?i)void", priority = 5)]
 	KwVoid,
@@ -256,7 +259,7 @@ pub enum Token {
 	#[token("*=")]
 	AsteriskEq,
 	#[token("@")]
-	AtSign,
+	At,
 	#[token("!")]
 	Bang,
 	#[token("!=")]
@@ -361,6 +364,62 @@ impl Token {
 		let u = self as u8;
 		u > (Self::__FirstKw as u8) && u < (Self::__LastKw as u8)
 	}
+
+	// Callbacks ///////////////////////////////////////////////////////////////////
+
+	#[allow(unused)]
+	fn ident_pre1_0_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V1_0_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
+
+	#[allow(unused)]
+	fn ident_pre2_4_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V2_4_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
+
+	#[allow(unused)]
+	fn ident_pre3_4_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V3_4_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
+
+	#[allow(unused)]
+	fn ident_pre3_7_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V3_7_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
+
+	#[allow(unused)]
+	fn ident_pre4_9_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V4_9_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
+
+	#[allow(unused)]
+	fn ident_pre4_10_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if lexer.extras >= Version::V4_10_0 {
+			Ok(())
+		} else {
+			Err(Self::Ident)
+		}
+	}
 }
 
 #[cfg(test)]
@@ -398,7 +457,10 @@ States (actor, overlay) {
 		let mut lexer = Token::lexer(SOURCE);
 
 		while let Some(result) = lexer.next() {
-			let token = result.unwrap_or(Token::Unknown);
+			let token = match result {
+				Ok(t) | Err(t) => t,
+			};
+
 			println!("{token:?} ({:?}) : `{}`", lexer.span(), lexer.slice());
 		}
 	}
@@ -429,7 +491,10 @@ States (actor, overlay) {
 		let mut lexer = Token::lexer(&source);
 
 		while let Some(result) = lexer.next() {
-			let token = result.unwrap_or(Token::Unknown);
+			let token = match result {
+				Ok(t) | Err(t) => t,
+			};
+
 			println!("{token:?} ({:?}) : `{}`", lexer.span(), lexer.slice());
 		}
 	}

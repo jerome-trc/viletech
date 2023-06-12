@@ -161,7 +161,7 @@ fn zscript(crit: &mut Criterion) {
 	grp.bench_function("Expression", |bencher| {
 		bencher.iter(|| {
 			const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
-			let builder = zscript::parse::ParserBuilder::new(zscript::Version::default());
+			let builder = zscript::parse::ParserBuilder::new(zdoom::Version::default());
 			let tbuf = doomfront::scan(SOURCE);
 			let parser = builder.expr();
 			let ptree: zscript::ParseTree = doomfront::parse(parser, SOURCE, &tbuf);

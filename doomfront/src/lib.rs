@@ -61,15 +61,26 @@ where
 }
 
 /// Produces the input needed for [`parse`].
+///
+/// To developers looking to use DoomFront on their own language, note that
+/// `T`'s error type is also `T`. This allows Logos to emit either an "unknown"
+/// token type (which should correspond to the return value of `T::default()`),
+/// or leverage its `Extras` type to produce different output context-sensitively
+/// (e.g. adding more keywords with newer language versions).
 #[must_use]
 pub fn scan<'i, T>(source: &'i str) -> Vec<(T, logos::Span)>
 where
-	T: 'i + logos::Logos<'i, Source = str, Error = ()> + Eq + Copy + Default,
+	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
 	T::Extras: Default,
 {
-	let lexer = T::lexer(source)
-		.spanned()
-		.map(|(result, span)| (result.unwrap_or(T::default()), span));
+	let lexer = T::lexer(source).spanned().map(|(result, span)| {
+		(
+			match result {
+				Ok(t) | Err(t) => t,
+			},
+			span,
+		)
+	});
 
 	lexer.collect::<Vec<_>>()
 }
@@ -87,7 +98,7 @@ pub fn parse<'i, T, L>(
 	tokens: &'i [(T, logos::Span)],
 ) -> ParseTree<'i, T, L>
 where
-	T: 'i + logos::Logos<'i, Source = str, Error = ()> + Eq + Copy + Default,
+	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
 	T::Extras: Default,
 	L: rowan::Language + Into<rowan::SyntaxKind>,
 {

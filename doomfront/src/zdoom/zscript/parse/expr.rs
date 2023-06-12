@@ -44,6 +44,8 @@ impl ParserBuilder {
 					gtb.finish()
 				});
 
+				// TODO: Vector
+
 				let atom = primitive::choice((grouped, literal, ident.clone()));
 
 				let subscript = primitive::group((
@@ -67,33 +69,9 @@ impl ParserBuilder {
 					GreenNode::new(Syn::IndexExpr.into(), [lhs.into(), subscript.into()])
 				});
 
-				let expr_list = primitive::group((
-					expr.clone(),
-					primitive::group((
-						self.trivia_0plus(),
-						comb::just_ts(Token::Comma, Syn::Comma),
-						self.trivia_0plus(),
-						expr.clone(),
-					))
-					.repeated()
-					.collect::<Vec<_>>(),
-				))
-				.map(|group| {
-					let mut ret = vec![GreenElement::from(group.0)];
-
-					for (mut triv0, comma, mut triv1, e) in group.1 {
-						ret.append(&mut triv0);
-						ret.push(comma.into());
-						ret.append(&mut triv1);
-						ret.push(e.into());
-					}
-
-					ret
-				});
-
 				let arg_list = primitive::group((
 					comb::just_ts(Token::ParenL, Syn::ParenL),
-					expr_list.or_not(),
+					self.expr_list(expr.clone()).or_not(),
 					comb::just_ts(Token::ParenR, Syn::ParenR),
 				))
 				.map(|group| {
@@ -431,11 +409,38 @@ impl ParserBuilder {
 					})
 					.boxed();
 
-				// TODO: Ternary, assignment
+				// TODO: Ternary, assignment, casting
 
 				bin2
 			},
 		)
+	}
+
+	/// The return value of [`Self::expr`] must be passed in to prevent infinite recursion.
+	pub(super) fn expr_list<'i>(&self, expr: parser_t!(GreenNode)) -> parser_t!(Vec<GreenElement>) {
+		primitive::group((
+			expr.clone(),
+			primitive::group((
+				self.trivia_0plus(),
+				comb::just_ts(Token::Comma, Syn::Comma),
+				self.trivia_0plus(),
+				expr,
+			))
+			.repeated()
+			.collect::<Vec<_>>(),
+		))
+		.map(|group| {
+			let mut ret = vec![GreenElement::from(group.0)];
+
+			for (mut triv0, comma, mut triv1, e) in group.1 {
+				ret.append(&mut triv0);
+				ret.push(comma.into());
+				ret.append(&mut triv1);
+				ret.push(e.into());
+			}
+
+			ret
+		})
 	}
 }
 
@@ -443,7 +448,7 @@ impl ParserBuilder {
 mod test {
 	use crate::{
 		testing::*,
-		zdoom::zscript::{ParseTree, Version},
+		zdoom::{zscript::ParseTree, Version},
 	};
 
 	use super::*;

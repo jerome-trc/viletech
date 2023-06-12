@@ -25,8 +25,12 @@ impl<const CAP: usize> GreenBuilder<CAP> {
 		self.buf.push(elem.into());
 	}
 
-	pub fn append(&mut self, elems: Vec<impl Into<GreenElement>>) {
-		for elem in elems {
+	pub fn append<T, I>(&mut self, elems: I)
+	where
+		I: IntoIterator<Item = T>,
+		T: Into<GreenElement>,
+	{
+		for elem in elems.into_iter() {
 			self.buf.push(elem.into());
 		}
 	}
@@ -68,3 +72,32 @@ pub type Gtb12 = GreenBuilder<12>;
 ///
 /// [green tree builder]: GreenBuilder
 pub type Gtb16 = GreenBuilder<16>;
+
+pub trait BuilderInput: 'static {
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>);
+}
+
+impl<T> BuilderInput for Vec<T>
+where
+	T: 'static + Into<GreenElement>,
+{
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		builder.append(self);
+	}
+}
+
+impl<T, const C: usize> BuilderInput for SmallVec<[T; C]>
+where
+	T: 'static + Into<GreenElement>,
+{
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		builder.append(self);
+	}
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(1, 16)]
+impl BuilderInput for Tuple {
+	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+		let _ = for_tuples!((#(Tuple::consume(self.Tuple, builder)),*));
+	}
+}
