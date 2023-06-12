@@ -1,140 +1,82 @@
-//! Utilities for making it easier to write succinct [`peg`] parsers.
+//! Utilities for making it easier succinctly build [`rowan`] green trees.
 
 use rowan::{GreenNode, GreenToken, SyntaxKind};
 use smallvec::SmallVec;
 
 use crate::GreenElement;
 
-/// A helper for building a single [`GreenNode`], wrapping a [`SmallVec`].
-#[derive(Debug)]
-pub struct GreenBuilder<const CAP: usize> {
-	buf: SmallVec<[GreenElement; CAP]>,
-	syn: SyntaxKind,
+#[must_use]
+pub fn coalesce_node<C: Coalesce>(input: C, syn: impl Into<SyntaxKind>) -> GreenNode {
+	let mut elems = vec![];
+	input.coalesce(&mut elems);
+	GreenNode::new(syn.into(), elems)
 }
 
-impl<const CAP: usize> GreenBuilder<CAP> {
-	#[must_use]
-	pub fn new(syn: impl Into<SyntaxKind>) -> Self {
-		Self {
-			buf: SmallVec::new(),
-			syn: syn.into(),
-		}
-	}
+#[must_use]
+pub fn coalesce_vec<C: Coalesce>(input: C) -> Vec<GreenElement> {
+	let mut ret = vec![];
+	input.coalesce(&mut ret);
+	ret
+}
 
-	pub fn add<I: BuilderInput>(&mut self, input: I) {
-		input.consume(self);
-	}
+pub trait Coalesce: 'static {
+	fn coalesce(self, container: &mut Vec<GreenElement>);
+}
 
-	pub fn push(&mut self, elem: impl Into<GreenElement>) {
-		self.buf.push(elem.into());
-	}
-
-	pub fn append<T, I>(&mut self, elems: I)
-	where
-		I: IntoIterator<Item = T>,
-		T: Into<GreenElement>,
-	{
-		for elem in elems.into_iter() {
-			self.buf.push(elem.into());
-		}
-	}
-
-	pub fn maybe(&mut self, elem: Option<impl Into<GreenElement>>) {
-		if let Some(elem) = elem {
-			self.buf.push(elem.into());
-		}
-	}
-
-	pub fn append_many(&mut self, meta_vec: Vec<Vec<impl Into<GreenElement>>>) {
-		for sub_vec in meta_vec {
-			self.append(sub_vec);
-		}
-	}
-
-	#[must_use]
-	pub fn finish(self) -> GreenNode {
-		GreenNode::new(self.syn, self.buf)
+impl Coalesce for GreenNode {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
+		container.push(self.into());
 	}
 }
 
-/// A [green tree builder] able to hold 4 elements before spilling to the heap.
-///
-/// [green tree builder]: GreenBuilder
-pub type Gtb4 = GreenBuilder<4>;
-
-/// A [green tree builder] able to hold 8 elements before spilling to the heap.
-///
-/// [green tree builder]: GreenBuilder
-pub type Gtb8 = GreenBuilder<8>;
-
-/// A [green tree builder] able to hold 12 elements before spilling to the heap.
-///
-/// [green tree builder]: GreenBuilder
-pub type Gtb12 = GreenBuilder<12>;
-
-/// A [green tree builder] able to hold 16 elements before spilling to the heap.
-///
-/// [green tree builder]: GreenBuilder
-pub type Gtb16 = GreenBuilder<16>;
-
-pub trait BuilderInput: 'static {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>);
-}
-
-impl BuilderInput for GreenNode {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		builder.push(self);
+impl Coalesce for GreenToken {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
+		container.push(self.into());
 	}
 }
 
-impl BuilderInput for GreenToken {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		builder.push(self);
+impl Coalesce for GreenElement {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
+		container.push(self);
 	}
 }
 
-impl BuilderInput for GreenElement {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		builder.push(self);
-	}
-}
-
-impl<T> BuilderInput for Option<T>
+impl<T> Coalesce for Option<T>
 where
-	T: BuilderInput,
+	T: Coalesce,
 {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
 		if let Some(input) = self {
-			input.consume(builder);
+			input.coalesce(container);
 		}
 	}
 }
 
-impl<T> BuilderInput for Vec<T>
+impl<T> Coalesce for Vec<T>
 where
-	T: BuilderInput,
+	T: Coalesce,
 {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
 		for input in self {
-			builder.add(input);
+			input.coalesce(container);
 		}
 	}
 }
 
-impl<T, const C: usize> BuilderInput for SmallVec<[T; C]>
+impl<T, const C: usize> Coalesce for SmallVec<[T; C]>
 where
-	T: BuilderInput,
+	T: Coalesce,
 {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
 		for input in self {
-			input.consume(builder);
+			input.coalesce(container);
 		}
 	}
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 16)]
-impl BuilderInput for Tuple {
-	fn consume<const CAP: usize>(self, builder: &mut GreenBuilder<CAP>) {
-		let _ = for_tuples!((#(Tuple::consume(self.Tuple, builder)),*));
+impl Coalesce for Tuple {
+	fn coalesce(self, container: &mut Vec<GreenElement>) {
+		let _ = for_tuples!((#(Tuple::coalesce(self.Tuple, container)),*));
 	}
 }

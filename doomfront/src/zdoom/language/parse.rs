@@ -1,12 +1,7 @@
 use chumsky::{primitive, recovery, IterParser, Parser};
 use rowan::{GreenNode, GreenToken};
 
-use crate::{
-	comb, parser_t,
-	parsing::{Gtb12, Gtb8},
-	zdoom::lex::Token,
-	GreenElement,
-};
+use crate::{comb, parser_t, parsing::*, zdoom::lex::Token, GreenElement};
 
 use super::Syn;
 
@@ -40,20 +35,7 @@ pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 		comb::just_ts(Token::ParenR, Syn::ParenR),
 		trivia_0plus(),
 	))
-	.map(|group| {
-		let mut gtb = Gtb12::new(Syn::GameQualifier);
-		gtb.push(group.0);
-		gtb.append(group.1);
-		gtb.push(group.2);
-		gtb.append(group.3);
-		gtb.push(group.4);
-		gtb.append(group.5);
-		gtb.push(group.6);
-		gtb.append(group.7);
-		gtb.push(group.8);
-		gtb.append(group.9);
-		gtb.finish()
-	});
+	.map(|group| coalesce_node(group, Syn::GameQualifier));
 
 	primitive::group((
 		ifgame.or_not(),
@@ -62,30 +44,9 @@ pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 		comb::just_ts(Token::Eq, Syn::Eq),
 		rep.repeated().at_least(1).collect::<Vec<_>>(),
 		trivia_0plus(),
-		primitive::just(Token::Semicolon)
-			.map_with_state(comb::green_token(Syn::Semicolon))
-			.or_not(),
+		comb::just_ts(Token::Semicolon, Syn::Semicolon).or_not(),
 	))
-	.map(|group| {
-		let mut gtb = Gtb12::new(Syn::KeyValuePair);
-
-		if let Some(ifgame) = group.0 {
-			gtb.push(ifgame);
-		}
-
-		gtb.push(group.1);
-		gtb.append(group.2);
-		gtb.push(group.3);
-
-		for (sub_vec, string) in group.4 {
-			gtb.append(sub_vec);
-			gtb.push(string);
-		}
-
-		gtb.append(group.5);
-		gtb.maybe(group.6);
-		gtb.finish().into()
-	})
+	.map(|group| coalesce_node(group, Syn::KeyValuePair).into())
 	.recover_with(recovery::via_parser(recover_token(
 		[Token::Dollar, Token::Ident],
 		[Token::Ident, Token::BracketL],
@@ -112,22 +73,7 @@ pub fn header<'i>() -> parser_t!(GreenElement) {
 		trivia_0plus(),
 		comb::just_ts(Token::BracketR, Syn::BracketR),
 	))
-	.map(|group| {
-		let mut gtb = Gtb8::new(Syn::Header);
-		gtb.push(group.0);
-
-		gtb.append(group.1);
-		gtb.push(group.2);
-
-		for (sub_vec, p) in group.3 {
-			gtb.append(sub_vec);
-			gtb.push(p);
-		}
-
-		gtb.append(group.4);
-		gtb.push(group.5);
-		gtb.finish().into()
-	})
+	.map(|group| coalesce_node(group, Syn::Header).into())
 }
 
 fn recover_token<'i, S, U>(start: S, until: U) -> parser_t!(GreenElement)

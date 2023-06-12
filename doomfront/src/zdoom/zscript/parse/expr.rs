@@ -3,7 +3,7 @@ use rowan::GreenNode;
 
 use crate::{
 	comb, parser_t,
-	parsing::{Gtb16, Gtb8},
+	parsing::*,
 	zdoom::{zscript::Syn, Token},
 	GreenElement,
 };
@@ -34,15 +34,7 @@ impl ParserBuilder {
 					self.trivia_0plus(),
 					comb::just_ts(Token::ParenR, Syn::ParenR),
 				))
-				.map(|group| {
-					let mut gtb = Gtb8::new(Syn::GroupExpr);
-					gtb.push(group.0);
-					gtb.append(group.1);
-					gtb.push(group.2);
-					gtb.append(group.3);
-					gtb.push(group.4);
-					gtb.finish()
-				});
+				.map(|group| coalesce_node(group, Syn::GroupExpr));
 
 				// TODO: Vector
 
@@ -55,15 +47,7 @@ impl ParserBuilder {
 					self.trivia_0plus(),
 					comb::just_ts(Token::BracketR, Syn::BracketR),
 				))
-				.map(|group| {
-					let mut gtb = Gtb8::new(Syn::Subscript);
-					gtb.push(group.0);
-					gtb.append(group.1);
-					gtb.push(group.2);
-					gtb.append(group.3);
-					gtb.push(group.4);
-					gtb.finish()
-				});
+				.map(|group| coalesce_node(group, Syn::Subscript));
 
 				let index = atom.foldl(subscript.repeated(), |lhs, subscript| {
 					GreenNode::new(Syn::IndexExpr.into(), [lhs.into(), subscript.into()])
@@ -74,17 +58,7 @@ impl ParserBuilder {
 					self.expr_list(expr.clone()).or_not(),
 					comb::just_ts(Token::ParenR, Syn::ParenR),
 				))
-				.map(|group| {
-					let mut gtb = Gtb16::new(Syn::ArgList);
-					gtb.push(group.0);
-
-					if let Some(exprs) = group.1 {
-						gtb.append(exprs);
-					}
-
-					gtb.push(group.2);
-					gtb.finish()
-				});
+				.map(|group| coalesce_node(group, Syn::ArgList));
 
 				let call = index.clone().foldl(arg_list.repeated(), |lhs, arg_list| {
 					GreenNode::new(Syn::CallExpr.into(), [lhs.into(), arg_list.into()])
@@ -95,13 +69,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Dot, Syn::Dot),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				// TODO: Unary
 
@@ -120,13 +88,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Asterisk2, Syn::Asterisk2),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin13 = bin14
 					.clone()
@@ -148,13 +110,7 @@ impl ParserBuilder {
 					)),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin12 = bin13
 					.clone()
@@ -174,13 +130,7 @@ impl ParserBuilder {
 					)),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin11 = bin12
 					.clone()
@@ -200,13 +150,7 @@ impl ParserBuilder {
 					)),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin10 = bin11
 					.clone()
@@ -223,13 +167,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Ampersand, Syn::Ampersand),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin9 = bin10
 					.clone()
@@ -245,13 +183,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Caret, Syn::Caret),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin8 = bin9
 					.clone()
@@ -268,13 +200,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Pipe, Syn::Pipe),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin7 = bin8
 					.clone()
@@ -290,13 +216,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Dot2, Syn::Dot2),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin6 = bin7
 					.clone()
@@ -320,13 +240,7 @@ impl ParserBuilder {
 					)),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin5 = bin6
 					.clone()
@@ -346,13 +260,7 @@ impl ParserBuilder {
 					)),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin4 = bin5
 					.clone()
@@ -369,13 +277,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Ampersand2, Syn::Ampersand2),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin3 = bin4
 					.clone()
@@ -391,13 +293,7 @@ impl ParserBuilder {
 					comb::just_ts(Token::Pipe2, Syn::Pipe2),
 					self.trivia_0plus(),
 				))
-				.map(|mut group| {
-					let mut ret = vec![];
-					ret.append(&mut group.0);
-					ret.push(group.1.into());
-					ret.append(&mut group.2);
-					ret
-				});
+				.map(coalesce_vec);
 
 				let bin2 = bin3
 					.clone()
