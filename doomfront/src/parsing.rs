@@ -5,6 +5,12 @@ use smallvec::SmallVec;
 
 use crate::GreenElement;
 
+/// Gets passed along with [`chumsky`] parsers. See [`chumsky::extra`].
+#[derive(Debug)]
+pub struct State<'i> {
+	pub source: &'i str,
+}
+
 #[must_use]
 pub fn coalesce_node<C: Coalesce>(input: C, syn: impl Into<SyntaxKind>) -> GreenNode {
 	let mut elems = vec![];

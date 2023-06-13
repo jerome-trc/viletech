@@ -35,6 +35,7 @@ pub mod zdoom;
 
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
 pub type ParseError<'i, T> = chumsky::error::Rich<'i, T, logos::Span>;
+pub type ParseState<'i> = parsing::State<'i>;
 
 #[derive(Debug)]
 pub struct ParseTree<'i, T, L>
@@ -94,7 +95,7 @@ where
 #[must_use]
 pub fn parse<'i, T, L>(
 	parser: parser_t!(T, rowan::GreenNode),
-	mut source: &'i str,
+	source: &'i str,
 	tokens: &'i [(T, logos::Span)],
 ) -> ParseTree<'i, T, L>
 where
@@ -105,8 +106,12 @@ where
 	use chumsky::input::Input;
 
 	let input = tokens.spanned(source.len()..source.len());
-	let state = &mut source;
-	let (output, errors) = parser.parse_with_state(input, state).into_output_errors();
+
+	let mut state = ParseState { source };
+
+	let (output, errors) = parser
+		.parse_with_state(input, &mut state)
+		.into_output_errors();
 
 	ParseTree {
 		root: output.expect("`doomfront::parse` failed to produce any output"),
@@ -133,7 +138,7 @@ macro_rules! parser_t {
 			$out_t,
 			chumsky::extra::Full<
 				chumsky::error::Rich<'i, Token, logos::Span>,
-				&'i str,
+				$crate::ParseState<'i>,
 				()
 			>
 		> + Clone
@@ -149,7 +154,7 @@ macro_rules! parser_t {
 			$out_t,
 			chumsky::extra::Full<
 				chumsky::error::Rich<'i, $token_t, logos::Span>,
-				&'i str,
+				$crate::ParseState<'i>,
 				()
 			>
 		> + Clone

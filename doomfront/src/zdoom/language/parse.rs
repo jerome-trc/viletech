@@ -1,7 +1,7 @@
 use chumsky::{primitive, recovery, IterParser, Parser};
 use rowan::{GreenNode, GreenToken};
 
-use crate::{comb, parser_t, parsing::*, zdoom::lex::Token, GreenElement};
+use crate::{comb, parser_t, parsing::*, zdoom::lex::Token, GreenElement, ParseState};
 
 use super::Syn;
 
@@ -84,14 +84,14 @@ where
 	S: 'i + chumsky::container::Seq<'i, Token> + Copy,
 	U: 'i + chumsky::container::Seq<'i, Token> + Copy,
 {
-	let mapper = |token, span, source: &mut &str| {
+	let mapper = |token, span, state: &mut ParseState| {
 		let syn = match token {
 			Token::Whitespace => Syn::Whitespace,
 			Token::Comment => Syn::Comment,
 			_ => Syn::Unknown,
 		};
 
-		GreenToken::new(syn.into(), &source[span])
+		GreenToken::new(syn.into(), &state.source[span])
 	};
 
 	primitive::group((

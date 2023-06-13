@@ -3,15 +3,15 @@
 use chumsky::{primitive, Parser};
 use rowan::{GreenToken, SyntaxKind};
 
-use crate::{parser_t, ParseError};
+use crate::{parser_t, ParseError, ParseState};
 
 pub fn green_token<'i, T>(
 	syn: impl Into<SyntaxKind> + Copy,
-) -> impl Clone + Fn(T, logos::Span, &mut &str) -> GreenToken
+) -> impl Clone + Fn(T, logos::Span, &mut ParseState<'i>) -> GreenToken
 where
 	T: 'i + logos::Logos<'i> + Eq + Copy,
 {
-	move |_, span, source: &mut &str| GreenToken::new(syn.into(), &source[span])
+	move |_, span, state: &mut ParseState| GreenToken::new(syn.into(), &state.source[span])
 }
 
 /// Shorthand for the following:
@@ -49,16 +49,18 @@ where
 	T: 'i + logos::Logos<'i> + Eq + Copy,
 	L: 'i + Into<SyntaxKind> + Copy,
 {
-	primitive::just(token).try_map_with_state(move |_, span: logos::Span, state: &mut &str| {
-		let text: &str = &state[span.clone()];
+	primitive::just(token).try_map_with_state(
+		move |_, span: logos::Span, state: &mut ParseState<'i>| {
+			let text: &str = &state.source[span.clone()];
 
-		if text.eq_ignore_ascii_case(string) {
-			Ok(GreenToken::new(syn.into(), text))
-		} else {
-			Err(ParseError::custom(
-				span,
-				format!("expected `{string}`, found `{text}`"),
-			))
-		}
-	})
+			if text.eq_ignore_ascii_case(string) {
+				Ok(GreenToken::new(syn.into(), text))
+			} else {
+				Err(ParseError::custom(
+					span,
+					format!("expected `{string}`, found `{text}`"),
+				))
+			}
+		},
+	)
 }
