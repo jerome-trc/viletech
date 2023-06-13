@@ -11,6 +11,16 @@ use crate::{
 use super::ParserBuilder;
 
 impl ParserBuilder {
+	/// The returned parser emits a node tagged with one of the following:
+	/// - [`Syn::ArrayExpr`]
+	/// - [`Syn::BinExpr`]
+	/// - [`Syn::CallExpr`]
+	/// - [`Syn::GroupExpr`]
+	/// - [`Syn::IdentExpr`]
+	/// - [`Syn::IndexExpr`]
+	/// - [`Syn::PostfixExpr`]
+	/// - [`Syn::PrefixExpr`]
+	/// - [`Syn::SuperExpr`]
 	pub fn expr<'i>(&self) -> parser_t!(GreenNode) {
 		chumsky::recursive::recursive(
 			|expr: Recursive<dyn chumsky::Parser<'_, _, GreenNode, _>>| {
@@ -330,6 +340,7 @@ impl ParserBuilder {
 		)
 	}
 
+	/// The returned parser emits a series of expression nodes (comma-separated).
 	/// The return value of [`Self::expr`] must be passed in to prevent infinite recursion.
 	pub(super) fn expr_list<'i>(&self, expr: parser_t!(GreenNode)) -> parser_t!(Vec<GreenElement>) {
 		primitive::group((

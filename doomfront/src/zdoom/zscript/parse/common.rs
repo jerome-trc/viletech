@@ -13,6 +13,7 @@ use crate::{
 use super::ParserBuilder;
 
 impl ParserBuilder {
+	/// The returned parser emits a [`Syn::ArrayLen`] node.
 	pub(super) fn array_len<'i>(&self) -> parser_t!(Vec<GreenNode>) {
 		primitive::group((
 			comb::just_ts(Token::BracketL, Syn::BracketL),
@@ -27,6 +28,7 @@ impl ParserBuilder {
 		.collect()
 	}
 
+	/// The returned parser emits a [`Syn::DeprecationQual`] node.
 	pub fn deprecation_qual<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::KwDeprecated, Syn::KwDeprecated),
@@ -47,6 +49,7 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::DeprecationQual))
 	}
 
+	/// The returned parser emits a [`Syn::Ident`] token.
 	pub(super) fn ident<'i>(&self) -> parser_t!(GreenToken) {
 		primitive::any()
 			.filter(|token: &Token| {
@@ -62,6 +65,7 @@ impl ParserBuilder {
 			.map_with_state(comb::green_token(Syn::Ident))
 	}
 
+	/// The returned parser emits a [`Syn::IdentChain`] node.
 	pub fn ident_chain<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			self.ident(),
@@ -76,6 +80,7 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::IdentChain))
 	}
 
+	/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
 	pub(super) fn trivia<'i>(&self) -> parser_t!(GreenElement) {
 		primitive::choice((
 			comb::just_ts(Token::Whitespace, Syn::Whitespace),
@@ -84,14 +89,17 @@ impl ParserBuilder {
 		.map(|token| token.into())
 	}
 
+	/// Shorthand for `self.trivia().repeated().collect()`.
 	pub(super) fn trivia_0plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
 		self.trivia().repeated().collect()
 	}
 
+	/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
 	pub(super) fn trivia_1plus<'i>(&self) -> parser_t!(Vec<GreenElement>) {
 		self.trivia().repeated().at_least(1).collect()
 	}
 
+	/// The returned parser emits a [`Syn::TypeRef`] node.
 	pub fn type_ref<'i>(&self) -> parser_t!(GreenNode) {
 		chumsky::recursive::recursive(|tref| {
 			let at_ident = primitive::group((comb::just_ts(Token::At, Syn::At), self.ident()))
@@ -185,6 +193,7 @@ impl ParserBuilder {
 		})
 	}
 
+	/// The returned parser emits a [`Syn::VersionQual`] node.
 	pub fn version_qual<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::KwVersion, Syn::KwVersion),

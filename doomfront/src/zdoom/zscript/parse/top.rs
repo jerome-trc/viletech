@@ -12,6 +12,7 @@ use crate::{
 use super::ParserBuilder;
 
 impl ParserBuilder {
+	/// The returned parser emits a [`Syn::ConstDef`] node.
 	pub fn const_def<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::KwConst, Syn::KwConst),
@@ -27,6 +28,7 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::ConstDef))
 	}
 
+	/// The returned parser emits a [`Syn::EnumDef`] node.
 	pub fn enum_def<'i>(&self) -> parser_t!(GreenNode) {
 		let variant = primitive::group((
 			self.ident(),
@@ -71,6 +73,7 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::EnumDef))
 	}
 
+	/// The returned parser emits a [`Syn::IncludeDirective`] node.
 	pub fn include_directive<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::PoundInclude, Syn::PoundInclude),
@@ -80,6 +83,7 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::IncludeDirective))
 	}
 
+	/// The returned parser emits a [`Syn::VersionDirective`] node.
 	pub fn version_directive<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::KwVersion, Syn::KwVersion),

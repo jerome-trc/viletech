@@ -28,6 +28,7 @@ impl ParserBuilder {
 		Self { _version: version }
 	}
 
+	/// The returned parser emits a [`Syn::Root`] node.
 	pub fn file<'i>(&self) -> parser_t!(GreenNode) {
 		// TODO: Single-class file syntax.
 

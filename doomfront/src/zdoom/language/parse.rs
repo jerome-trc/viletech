@@ -5,6 +5,7 @@ use crate::{comb, parser_t, parsing::*, zdoom::lex::Token, GreenElement};
 
 use super::Syn;
 
+/// The returned parser emits a [`Syn::Root`] node.
 pub fn file<'i>() -> parser_t!(GreenNode) {
 	primitive::choice((trivia(), header(), key_val_pair()))
 		.repeated()
@@ -13,6 +14,7 @@ pub fn file<'i>() -> parser_t!(GreenNode) {
 		.boxed()
 }
 
+/// The returned parser emits a [`Syn::KeyValuePair`] node.
 pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 	let ident = primitive::any()
 		.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
@@ -53,6 +55,7 @@ pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
 	)))
 }
 
+/// The returned parser emits a [`Syn::Header`] node.
 pub fn header<'i>() -> parser_t!(GreenElement) {
 	let content = primitive::choice((
 		comb::just_ts(Token::Tilde, Syn::Tilde),
@@ -110,6 +113,7 @@ where
 	})
 }
 
+/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
 fn trivia<'i>() -> parser_t!(GreenElement) {
 	primitive::choice((
 		comb::just_ts(Token::Whitespace, Syn::Whitespace),
@@ -118,10 +122,12 @@ fn trivia<'i>() -> parser_t!(GreenElement) {
 	.map(|token| token.into())
 }
 
+/// Shorthand for `self.trivia().repeated().collect()`.
 fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
 	trivia().repeated().collect()
 }
 
+/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
 fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
 	trivia().repeated().at_least(1).collect()
 }
