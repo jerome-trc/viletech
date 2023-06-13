@@ -3,79 +3,55 @@
 use doomfront::{
 	chumsky::{primitive, IterParser, Parser},
 	comb,
-	util::{builder::GreenCache, state::ParseState},
+	gcache::GreenCache,
+	parser_t,
+	parsing::*,
+	rowan::{GreenNode, GreenToken},
+	GreenElement,
 };
 
-use crate::{Syn, TokenStream};
+use crate::Syn;
 
-use super::{Extra, ParserBuilder};
+use super::ParserBuilder;
 
 impl<C: GreenCache> ParserBuilder<C> {
-	/// Builds a [`Syn::Annotation`] node.
-	pub fn annotation<'i>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		comb::node(
-			Syn::Annotation.into(),
-			primitive::group((
-				comb::just(Syn::Pound),
-				comb::just(Syn::Bang).or_not(),
-				comb::just(Syn::BracketL),
-				// TODO: How are names referenced? What do arg lists look like?
-				comb::just(Syn::BracketR),
-			)),
-		)
+	/// The returned parser emits a [`Syn::Annotation`] node.
+	pub fn annotation<'i>(&self) -> parser_t!(Syn, GreenNode) {
+		primitive::group((
+			comb::just(Syn::Pound),
+			comb::just(Syn::Bang).or_not(),
+			comb::just(Syn::BracketL),
+			// TODO: How are names referenced? What do arg lists look like?
+			comb::just(Syn::BracketR),
+		))
+		.map(|group| coalesce_node(group, Syn::Annotation))
 	}
 
-	/// Builds a series of [`Syn::Annotation`] nodes.
-	pub fn annotations<'i>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		self.annotation().repeated().collect::<()>()
+	/// Combines [`Self::annotation`] (0 or more) with [`Self::trivia`] padding.
+	pub fn annotations<'i>(&self) -> parser_t!(Syn, Vec<GreenElement>) {
+		primitive::group((self.annotation(), self.trivia_0plus())).map(coalesce_vec)
 	}
 
-	/// Builds a [`Syn::Ident`] token, possibly converted from a [`Syn::IdentRaw`].
-	pub fn ident<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
+	/// The returned parser emits a [`Syn::Ident`] token (possibly converted
+	/// from a [`Syn::IdentRaw`] coming from the lexer).
+	pub fn ident<'i>(&self) -> parser_t!(Syn, GreenToken) {
 		primitive::choice((primitive::just(Syn::Ident), primitive::just(Syn::IdentRaw)))
-			.map_with_state(|_, span, state: &mut ParseState<C>| {
-				state.gtb.token(Syn::Ident.into(), &state.source[span]);
-			})
+			.map_with_state(comb::green_token(Syn::Ident))
 	}
 
-	/// Builds a [`Syn::IdentChain`] node.
-	pub fn ident_chain<'i>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		comb::node(
-			Syn::IdentChain.into(),
-			primitive::group((
-				self.ident(),
-				comb::checkpointed(primitive::group((
-					self.trivia_0plus(),
-					comb::just(Syn::Dot),
-					self.trivia_0plus(),
-					self.ident(),
-				)))
-				.repeated()
-				.collect::<()>(),
-			)),
-		)
+	/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
+	pub fn trivia<'i>(&self) -> parser_t!(Syn, GreenElement) {
+		primitive::choice((comb::just(Syn::Whitespace), comb::just(Syn::Comment)))
+			.map(|gtok| gtok.into())
 	}
 
-	/// Builds a [`Syn::Whitespace`] or [`Syn::Comment`] token.
-	pub fn trivia<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		primitive::choice((comb::just(Syn::Whitespace), comb::just(Syn::Comment))).map(|_| ())
+	/// Shorthand for `self.trivia().repeated().collect()`.
+	pub(super) fn trivia_0plus<'i>(&self) -> parser_t!(Syn, Vec<GreenElement>) {
+		self.trivia().repeated().collect()
 	}
 
-	pub(super) fn trivia_0plus<'i>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		self.trivia().repeated().collect::<()>()
-	}
-
-	pub(super) fn trivia_1plus<'i>(
-		&self,
-	) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		self.trivia().repeated().at_least(1).collect::<()>()
+	/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
+	pub(super) fn trivia_1plus<'i>(&self) -> parser_t!(Syn, Vec<GreenElement>) {
+		self.trivia().repeated().at_least(1).collect()
 	}
 }

@@ -2,12 +2,21 @@
 //!
 //! To start you will likely want to use [`ParserBuilder::repl`] or [`ParserBuilder::file`].
 
+mod common;
+mod expr;
+mod item;
+
 use std::{
 	marker::PhantomData,
 	path::{Path, PathBuf},
 };
 
-use doomfront::gcache::GreenCache;
+use doomfront::{
+	chumsky::{primitive, IterParser, Parser},
+	gcache::GreenCache,
+	parser_t,
+	rowan::GreenNode,
+};
 
 use crate::{ParseTree, Syn, Version};
 
@@ -34,28 +43,26 @@ impl<C: GreenCache> ParserBuilder<C> {
 		}
 	}
 
-	/// Does not build a node by itself; use [`doomfront::parse`] and pass
-	/// [`Syn::FileRoot`](crate::Syn::FileRoot).
-	#[cfg(any())]
-	pub fn file<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
+	/// The returned parser emits a [`Syn::FileRoot`] node.
+	pub fn file<'i>(&self) -> parser_t!(Syn, GreenNode) {
 		primitive::choice((
 			self.trivia(),
 			// Only "inner" annotations are allowed at file scope.
-			self.annotation(),
-			self.func_decl(),
+			self.annotation().map(|gnode| gnode.into()),
+			self.func_decl().map(|gnode| gnode.into()),
 		))
 		.repeated()
-		.collect::<()>()
+		.collect::<Vec<_>>()
+		.map(|elems| GreenNode::new(Syn::FileRoot.into(), elems))
 		.boxed()
 	}
 
-	/// Does not build a node by itself; use [`doomfront::parse`] and pass
-	/// [`Syn::ReplRoot`](crate::Syn::ReplRoot).
-	#[cfg(any())]
-	pub fn repl<'i>(&self) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone {
-		primitive::choice((self.trivia(), self.expr()))
+	/// The returned parser emits a [`Syn::ReplRoot`] node.
+	pub fn repl<'i>(&self) -> parser_t!(Syn, GreenNode) {
+		primitive::choice((self.trivia(), self.expr().map(|gnode| gnode.into())))
 			.repeated()
-			.collect::<()>()
+			.collect::<Vec<_>>()
+			.map(|elems| GreenNode::new(Syn::ReplRoot.into(), elems))
 			.boxed()
 	}
 }

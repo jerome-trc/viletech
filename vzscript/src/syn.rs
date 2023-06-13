@@ -9,8 +9,8 @@ use crate::Version;
 
 /// A stronger type over [`rowan::SyntaxKind`] representing all kinds of syntax elements.
 #[repr(u16)]
-#[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[logos(extras = Version)]
+#[derive(Logos, Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[logos(extras = Version, error = Syn)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
@@ -24,8 +24,6 @@ pub enum Syn {
 	FileRoot,
 	/// `annotation* 'func' ident paramlist returntype? ('{' statement* '}' | ';')`
 	FuncDecl,
-	/// `(ident) | (ident ('.' ident)?)`
-	IdentChain,
 	/// `'(' (ident ':' typeexpr)* ')'`
 	ParamList,
 	/// A top-level node representing a whole REPL submission.
@@ -33,9 +31,14 @@ pub enum Syn {
 	/// `':' typeexpr`
 	ReturnType,
 	// Nodes: expressions //////////////////////////////////////////////////////
+	ArrayExpr,
 	BinExpr,
+	CallExpr,
 	/// `'(' expr ')'`
 	GroupedExpr,
+	/// Is parent to only a [`Syn::Ident`] token.
+	IdentExpr,
+	IndexExpr,
 	/// Will have a single child token tagged as one of the following:
 	/// - [`Syn::FalseLit`]
 	/// - [`Syn::FloatLit`]
@@ -43,8 +46,9 @@ pub enum Syn {
 	/// - [`Syn::StringLit`]
 	/// - [`Syn::TrueLit`]
 	Literal,
-	/// `identchain` | `'type' '(' expr ')'`
-	TypeExpr,
+	StructExpr,
+	PostfixExpr,
+	PrefixExpr,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	#[token("false")]
 	FalseLit,
@@ -99,8 +103,6 @@ pub enum Syn {
 	KwStatic,
 	#[token("struct", priority = 5)]
 	KwStruct,
-	#[token("type", priority = 5)]
-	KwType,
 	#[token("until", priority = 5)]
 	KwUntil,
 	#[token("while", priority = 5)]
@@ -152,6 +154,7 @@ pub enum Syn {
 	#[regex("[ \r\n\t]+")]
 	Whitespace,
 	/// Input not recognized by the lexer.
+	#[default]
 	Unknown,
 	#[doc(hidden)]
 	__Last,
@@ -179,10 +182,10 @@ impl rowan::Language for Syn {
 #[cfg(test)]
 #[test]
 fn smoke() {
-	const SOURCE: &str = "type(9 + 10)";
+	const SOURCE: &str = "typeof(9 + 10)";
 
 	const EXPECTED: &[Syn] = &[
-		Syn::KwType,
+		Syn::Ident,
 		Syn::ParenL,
 		Syn::IntLit,
 		Syn::Whitespace,
