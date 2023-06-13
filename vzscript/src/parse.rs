@@ -5,6 +5,7 @@
 mod common;
 mod expr;
 mod item;
+mod stat;
 
 use std::{
 	marker::PhantomData,

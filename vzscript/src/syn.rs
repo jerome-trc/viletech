@@ -16,8 +16,10 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `'#' '!'? '[' resolver arglist? ']'`
 	Annotation,
-	/// `'{' statement* '}'`
+	/// `blocklabel? '{' statement* '}'`
 	Block,
+	/// `'::' ident '::'`
+	BlockLabel,
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
 	/// A top-level node representing a whole file.
@@ -28,8 +30,19 @@ pub enum Syn {
 	ParamList,
 	/// A top-level node representing a whole REPL submission.
 	ReplRoot,
-	/// `':' typeexpr`
-	ReturnType,
+	/// `':' expr`
+	TypeSpec,
+	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `'ceval'? ('let' | 'const') 'ident' typespec? ('=' expr)? ';'`
+	BindStat,
+	/// `'break' blocklabel? ';'`
+	BreakStat,
+	/// `'continue' blocklabel? ';'`
+	ContinueStat,
+	/// `expr ';'`
+	ExprStat,
+	/// `'return' expr? ';'`
+	ReturnStat,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
 	BinExpr,
@@ -87,6 +100,8 @@ pub enum Syn {
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	#[token("break", priority = 5)]
 	KwBreak,
+	#[token("ceval", priority = 5)]
+	KwCeval,
 	#[token("const", priority = 5)]
 	KwConst,
 	#[token("continue", priority = 5)]
@@ -99,6 +114,10 @@ pub enum Syn {
 	KwFunc,
 	#[token("if", priority = 5)]
 	KwIf,
+	#[token("let", priority = 5)]
+	KwLet,
+	#[token("return", priority = 5)]
+	KwReturn,
 	#[token("static", priority = 5)]
 	KwStatic,
 	#[token("struct", priority = 5)]
@@ -122,10 +141,14 @@ pub enum Syn {
 	BracketR,
 	#[token(":")]
 	Colon,
+	#[token("::")]
+	Colon2,
 	#[token(",")]
 	Comma,
 	#[token(".")]
 	Dot,
+	#[token("=")]
+	Eq,
 	#[token("-")]
 	Minus,
 	#[token("(")]

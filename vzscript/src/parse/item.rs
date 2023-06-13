@@ -20,14 +20,6 @@ impl<C: GreenCache> ParserBuilder<C> {
 		let body = primitive::group((comb::just(Syn::BraceL), comb::just(Syn::BraceR)))
 			.map(|group| coalesce_node(group, Syn::Block));
 
-		let ret_ty = primitive::group((
-			comb::just(Syn::Colon),
-			self.trivia_0plus(),
-			self.expr(),
-			self.trivia_0plus(),
-		))
-		.map(|group| coalesce_node(group, Syn::ReturnType));
-
 		primitive::group((
 			self.annotations(),
 			// Q: Qualifiers?
@@ -37,7 +29,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 			self.trivia_0plus(),
 			self.param_list(),
 			self.trivia_0plus(),
-			ret_ty.or_not(),
+			self.type_spec().or_not(),
 			primitive::choice((
 				body.map(GreenElement::from),
 				comb::just(Syn::Semicolon).map(GreenElement::from),

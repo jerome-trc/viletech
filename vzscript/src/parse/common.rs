@@ -39,6 +39,18 @@ impl<C: GreenCache> ParserBuilder<C> {
 			.map_with_state(comb::green_token(Syn::Ident))
 	}
 
+	/// The returned parser emits a [`Syn::BlockLabel`] node.
+	pub fn block_label<'i>(&self) -> parser_t!(Syn, GreenNode) {
+		primitive::group((
+			comb::just(Syn::Colon2),
+			self.trivia_0plus(),
+			self.ident(),
+			self.trivia_0plus(),
+			comb::just(Syn::Colon2),
+		))
+		.map(|group| coalesce_node(group, Syn::BlockLabel))
+	}
+
 	/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
 	pub fn trivia<'i>(&self) -> parser_t!(Syn, GreenElement) {
 		primitive::choice((comb::just(Syn::Whitespace), comb::just(Syn::Comment)))
@@ -53,5 +65,18 @@ impl<C: GreenCache> ParserBuilder<C> {
 	/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
 	pub(super) fn trivia_1plus<'i>(&self) -> parser_t!(Syn, Vec<GreenElement>) {
 		self.trivia().repeated().at_least(1).collect()
+	}
+
+	/// The returned parser emits a [`Syn::TypeSpec`] node.
+	/// Note that it will also capture 0 or more trailing trivia tokens after
+	/// the expression, but no leading trivia before the colon.
+	pub fn type_spec<'i>(&self) -> parser_t!(Syn, GreenNode) {
+		primitive::group((
+			comb::just(Syn::Colon),
+			self.trivia_0plus(),
+			self.expr(),
+			self.trivia_0plus(),
+		))
+		.map(|group| coalesce_node(group, Syn::TypeSpec))
 	}
 }
