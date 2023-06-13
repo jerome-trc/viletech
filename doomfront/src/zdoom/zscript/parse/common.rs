@@ -232,7 +232,7 @@ mod test {
 		];
 
 		for source in SOURCES {
-			let tbuf = crate::scan(source);
+			let tbuf = crate::scan(source, Version::default());
 			let parser = ParserBuilder::new(Version::default()).type_ref();
 			let ptree: ParseTree = crate::parse(parser, source, &tbuf);
 			assert_no_errors(&ptree);
@@ -243,7 +243,7 @@ mod test {
 	fn smoke_version_qual() {
 		const SOURCE: &str = r#"version("3.7.1")"#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).version_qual();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);
@@ -253,7 +253,7 @@ mod test {
 	fn smoke_deprecation_qual() {
 		const SOURCE: &str = r#"deprecated("2.4.0", "Don't use this please")"#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).deprecation_qual();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);

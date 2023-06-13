@@ -140,7 +140,10 @@ mod test {
 
 	use crate::{
 		testing::*,
-		zdoom::language::{ast, ParseTree},
+		zdoom::{
+			language::{ast, ParseTree},
+			Version,
+		},
 	};
 
 	use super::*;
@@ -154,7 +157,7 @@ $ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
 MEGALOPOLIS = "The Omega";
 "#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = file();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		let mut ast = ptree.cursor().children();
@@ -197,7 +200,7 @@ ABDUCTION = ;
 $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = file();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		let mut ast = ptree.cursor().children();
@@ -249,7 +252,7 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 		let source = String::from_utf8_lossy(&bytes);
 
 		let parser = file();
-		let tbuf = crate::scan(source.as_ref());
+		let tbuf = crate::scan(source.as_ref(), Version::default());
 
 		let ptree: ParseTree = crate::parse(parser, source.as_ref(), &tbuf);
 

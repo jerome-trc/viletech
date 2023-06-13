@@ -143,7 +143,7 @@ fn language(crit: &mut Criterion) {
 		bencher.iter(|| {
 			let parser = zdoom::language::parse::file();
 
-			let tbuf = doomfront::scan(&sample);
+			let tbuf = doomfront::scan(&sample, zdoom::Version::default());
 
 			let ptree =
 				doomfront::parse::<zdoom::Token, zdoom::language::Syn>(parser, &sample, &tbuf);
@@ -162,7 +162,7 @@ fn zscript(crit: &mut Criterion) {
 		bencher.iter(|| {
 			const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
 			let builder = zscript::parse::ParserBuilder::new(zdoom::Version::default());
-			let tbuf = doomfront::scan(SOURCE);
+			let tbuf = doomfront::scan(SOURCE, zdoom::Version::default());
 			let parser = builder.expr();
 			let ptree: zscript::ParseTree = doomfront::parse(parser, SOURCE, &tbuf);
 			let _ = std::hint::black_box(ptree);

@@ -107,7 +107,7 @@ mod test {
 	fn smoke_constdef() {
 		const SOURCE: &str = r#"const GOLDEN_ANARCHY = BUSHFIRE >>> NONSPECIFIC_TECH_BASE;"#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).const_def();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);
@@ -126,7 +126,7 @@ enum BrickAndRoot {
 }
 "#;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);
@@ -143,7 +143,7 @@ version "3.7.1"
 
 "##;
 
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);

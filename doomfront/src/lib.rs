@@ -69,19 +69,20 @@ where
 /// or leverage its `Extras` type to produce different output context-sensitively
 /// (e.g. adding more keywords with newer language versions).
 #[must_use]
-pub fn scan<'i, T>(source: &'i str) -> Vec<(T, logos::Span)>
+pub fn scan<'i, T>(source: &'i str, extras: T::Extras) -> Vec<(T, logos::Span)>
 where
 	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
-	T::Extras: Default,
 {
-	let lexer = T::lexer(source).spanned().map(|(result, span)| {
-		(
-			match result {
-				Ok(t) | Err(t) => t,
-			},
-			span,
-		)
-	});
+	let lexer = T::lexer_with_extras(source, extras)
+		.spanned()
+		.map(|(result, span)| {
+			(
+				match result {
+					Ok(t) | Err(t) => t,
+				},
+				span,
+			)
+		});
 
 	lexer.collect::<Vec<_>>()
 }
@@ -100,7 +101,6 @@ pub fn parse<'i, T, L>(
 ) -> ParseTree<'i, T, L>
 where
 	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
-	T::Extras: Default,
 	L: rowan::Language + Into<rowan::SyntaxKind>,
 {
 	use chumsky::input::Input;
@@ -128,32 +128,32 @@ where
 #[macro_export]
 macro_rules! parser_t {
 	($out_t:ty) => {
-		impl 'i + chumsky::Parser<
+		impl 'i + $crate::chumsky::Parser<
 			'i,
-			chumsky::input::SpannedInput<
+			$crate::chumsky::input::SpannedInput<
 				Token,
 				logos::Span,
 				&'i [(Token, logos::Span)]
 			>,
 			$out_t,
-			chumsky::extra::Full<
-				chumsky::error::Rich<'i, Token, logos::Span>,
+			$crate::chumsky::extra::Full<
+				$crate::chumsky::error::Rich<'i, Token, logos::Span>,
 				$crate::ParseState<'i>,
 				()
 			>
 		> + Clone
 	};
 	($token_t:ty, $out_t:ty) => {
-		impl 'i + chumsky::Parser<
+		impl 'i + $crate::chumsky::Parser<
 			'i,
-			chumsky::input::SpannedInput<
+			$crate::chumsky::input::SpannedInput<
 				$token_t,
 				logos::Span,
 				&'i [($token_t, logos::Span)]
 			>,
 			$out_t,
-			chumsky::extra::Full<
-				chumsky::error::Rich<'i, $token_t, logos::Span>,
+			$crate::chumsky::extra::Full<
+				$crate::chumsky::error::Rich<'i, $token_t, logos::Span>,
 				$crate::ParseState<'i>,
 				()
 			>

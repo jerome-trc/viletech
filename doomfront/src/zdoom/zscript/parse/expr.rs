@@ -383,7 +383,7 @@ mod test {
 		const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
 
 		let parser = ParserBuilder::new(Version::default()).expr();
-		let tbuf = crate::scan(SOURCE);
+		let tbuf = crate::scan(SOURCE, Version::default());
 		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
 		assert_no_errors(&ptree);
 		prettyprint(ptree.cursor());
