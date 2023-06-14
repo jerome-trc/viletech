@@ -49,7 +49,7 @@ pub enum Token {
 	#[regex("(?i)char", priority = 5)]
 	KwChar,
 	#[regex("(?i)clearscope", priority = 5, callback = Token::ident_pre2_4_0)]
-	KwClearscope,
+	KwClearScope,
 	#[regex("(?i)class", priority = 5)]
 	KwClass,
 	#[regex("(?i)color", priority = 5)]
@@ -202,7 +202,7 @@ pub enum Token {
 	#[regex("(?i)var", priority = 5)]
 	KwVar,
 	#[regex("(?i)vararg", priority = 5, callback = Token::ident_pre1_0_0)]
-	KwVararg,
+	KwVarArg,
 	#[regex("(?i)vector2", priority = 5)]
 	KwVector2,
 	#[regex("(?i)vector3", priority = 5)]
@@ -212,7 +212,7 @@ pub enum Token {
 	#[regex("(?i)virtual", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwVirtual,
 	#[regex("(?i)virtualscope", priority = 5, callback = Token::ident_pre2_4_0)]
-	KwVirtualscope,
+	KwVirtualScope,
 	#[regex("(?i)void", priority = 5)]
 	KwVoid,
 	#[regex("(?i)volatile", priority = 5)]

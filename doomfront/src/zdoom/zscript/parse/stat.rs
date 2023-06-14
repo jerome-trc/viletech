@@ -13,6 +13,27 @@ use crate::{
 use super::ParserBuilder;
 
 impl ParserBuilder {
+	/// The returned parser emits a node tagged with one of the following:
+	/// - [`Syn::AssignStat`]
+	/// - [`Syn::BreakStat`]
+	/// - [`Syn::CaseStat`]
+	/// - [`Syn::CompoundStat`]
+	/// - [`Syn::ContinueStat`]
+	/// - [`Syn::DeclAssignStat`]
+	/// - [`Syn::DefaultStat`]
+	/// - [`Syn::DoUntilStat`]
+	/// - [`Syn::DoWhileStat`]
+	/// - [`Syn::EmptyStat`]
+	/// - [`Syn::ExprStat`]
+	/// - [`Syn::ForStat`]
+	/// - [`Syn::ForEachStat`]
+	/// - [`Syn::LocalStat`]
+	/// - [`Syn::MixinStat`]
+	/// - [`Syn::ReturnStat`]
+	/// - [`Syn::StaticConstStat`]
+	/// - [`Syn::SwitchStat`]
+	/// - [`Syn::UntilStat`]
+	/// - [`Syn::WhileStat`]
 	pub fn statement<'i>(&self) -> parser_t!(GreenNode) {
 		chumsky::recursive::recursive(|stat| {
 			let s_assign = primitive::group((
@@ -44,14 +65,7 @@ impl ParserBuilder {
 			))
 			.map(|group| coalesce_node(group, Syn::CaseStat));
 
-			let s_compound = primitive::group((
-				comb::just_ts(Token::BraceL, Syn::BraceL),
-				self.trivia_0plus(),
-				stat.clone().repeated().collect::<Vec<_>>(),
-				self.trivia_0plus(),
-				comb::just_ts(Token::BraceR, Syn::BraceR),
-			))
-			.map(|group| coalesce_node(group, Syn::CompoundStat));
+			let s_compound = self.compound_stat(stat.clone());
 
 			let s_condloop = primitive::group((
 				primitive::choice((
@@ -264,6 +278,19 @@ impl ParserBuilder {
 			))
 			.boxed()
 		})
+	}
+
+	/// The returned parser emits a [`Syn::CompoundStat`] node. The return value
+	/// of [`Self::statement`] must be passed in to prevent infinite recursion.
+	pub(super) fn compound_stat<'i>(&self, stat: parser_t!(GreenNode)) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::BraceL, Syn::BraceL),
+			self.trivia_0plus(),
+			stat.repeated().collect::<Vec<_>>(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::BraceR, Syn::BraceR),
+		))
+		.map(|group| coalesce_node(group, Syn::CompoundStat))
 	}
 
 	fn local_var<'i>(&self) -> parser_t!(GreenNode) {
