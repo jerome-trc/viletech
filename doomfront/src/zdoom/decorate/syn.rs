@@ -32,6 +32,8 @@ pub enum Syn {
 	GotoOffset,
 	/// `(ident) | (ident ('.' ident)?)`
 	IdentChain,
+	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
+	IncludeDirective,
 	/// `':' actorident`
 	InheritSpec,
 	PropertySettings,
@@ -49,6 +51,8 @@ pub enum Syn {
 	/// `'(' ident+ ')'`, where `ident` is "actor", "item", "overlay", or "weapon"
 	/// (matched ASCII case-insensitively).
 	StatesUsage,
+	/// `'[' expr ']'`
+	Subscript,
 	/// `'replaces' actorident`
 	ReplacesClause,
 	/// `'[' ident ']'`, between a call identifier and argument list.
@@ -67,9 +71,6 @@ pub enum Syn {
 	PostfixExpr,
 	PrefixExpr,
 	TernaryExpr,
-	// Nodes: preprocessor /////////////////////////////////////////////////////
-	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
-	IncludeDirective,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
@@ -214,6 +215,8 @@ pub enum Syn {
 	Ident,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
+	/// Lexer input rolled up under [`Syn::Error`].
+	Unknown,
 	#[doc(hidden)]
 	__Last,
 }

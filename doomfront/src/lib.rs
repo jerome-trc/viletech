@@ -40,7 +40,7 @@ pub type ParseState<'i> = parsing::State<'i>;
 #[derive(Debug)]
 pub struct ParseTree<'i, T, L>
 where
-	T: logos::Logos<'i, Source = str>,
+	for<'input> T: logos::Logos<'i, Source = str> + Copy,
 	L: rowan::Language + Into<rowan::SyntaxKind>,
 {
 	pub root: rowan::GreenNode,
@@ -50,9 +50,18 @@ where
 
 impl<'i, T, L> ParseTree<'i, T, L>
 where
-	T: logos::Logos<'i, Source = str>,
+	for<'input> T: logos::Logos<'input, Source = str> + Copy,
 	L: rowan::Language + Into<rowan::SyntaxKind>,
 {
+	#[must_use]
+	pub fn new(root: rowan::GreenNode, errors: Vec<ParseError<'i, T>>) -> Self {
+		Self {
+			root,
+			errors,
+			phantom: std::marker::PhantomData,
+		}
+	}
+
 	/// Emits a "zipper" tree root that can be used for much more effective traversal
 	/// of the green tree (but which is `!Send` and `!Sync`).
 	#[must_use]
@@ -90,15 +99,12 @@ where
 /// Each language has a `parse` module filled with functions that emit a combinator-
 /// based parser. Pass one of these along with a source string into this function
 /// to consume that parser and emit a green tree.
-///
-/// This will **panic** if `parser` fails to produce any output. This means it
-/// either is unable to handle empty source, or lacks sufficient error recovery capability.
 #[must_use]
 pub fn parse<'i, T, L>(
 	parser: parser_t!(T, rowan::GreenNode),
 	source: &'i str,
 	tokens: &'i [(T, logos::Span)],
-) -> ParseTree<'i, T, L>
+) -> Result<ParseTree<'i, T, L>, Vec<ParseError<'i, T>>>
 where
 	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
 	L: rowan::Language + Into<rowan::SyntaxKind>,
@@ -113,10 +119,14 @@ where
 		.parse_with_state(input, &mut state)
 		.into_output_errors();
 
-	ParseTree {
-		root: output.expect("`doomfront::parse` failed to produce any output"),
-		errors,
-		phantom: std::marker::PhantomData,
+	if let Some(root) = output {
+		Ok(ParseTree {
+			root,
+			errors,
+			phantom: std::marker::PhantomData,
+		})
+	} else {
+		Err(errors)
 	}
 }
 

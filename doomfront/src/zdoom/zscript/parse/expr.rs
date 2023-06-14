@@ -384,7 +384,8 @@ mod test {
 
 		let parser = ParserBuilder::new(Version::default()).expr();
 		let tbuf = crate::scan(SOURCE, Version::default());
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 		prettyprint(ptree.cursor());
 	}

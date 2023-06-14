@@ -1,23 +1,17 @@
 //! Combinators applicable to multiple other parts of the syntax.
 
 use chumsky::{primitive, IterParser, Parser};
+use rowan::{GreenNode, GreenToken};
 
 use crate::{
-	comb,
-	util::{builder::GreenCache, state::ParseState},
-	zdoom::{
-		decorate::Syn,
-		lex::{Token, TokenStream},
-		Extra,
-	},
-	ParseError,
+	comb, parser_t,
+	parsing::*,
+	zdoom::{decorate::Syn, Token},
+	GreenElement, ParseError, ParseState,
 };
 
-/// Builds a [`Syn::Ident`] token.
-pub fn actor_ident<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: 'i + GreenCache,
-{
+/// The returned parser emits a [`Syn::Ident`] token.
+pub fn actor_ident<'i>() -> parser_t!(GreenToken) {
 	primitive::none_of([
 		Token::Whitespace,
 		Token::Comment,
@@ -26,16 +20,13 @@ where
 	])
 	.repeated()
 	.collect::<()>()
-	.map_with_state(|(), span, state: &mut ParseState<C>| {
-		state.gtb.token(Syn::Ident.into(), &state.source[span])
+	.map_with_state(|_, span, state: &mut ParseState| {
+		GreenToken::new(Syn::Ident.into(), &state.source[span])
 	})
 }
 
-/// `ident (trivia* '.' trivia* ident)*`
-pub fn ident_chain<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: 'i + GreenCache,
-{
+/// The returned parser emits a [`Syn::IdentChain`] node.
+pub fn ident_chain<'i>() -> parser_t!(GreenNode) {
 	let ident = primitive::any()
 		.filter(|t: &Token| {
 			if matches!(
@@ -47,96 +38,98 @@ where
 
 			t.is_keyword() || *t == Token::Ident
 		})
-		.map_with_state(|_, span, state: &mut ParseState<'i, C>| {
-			state.gtb.token(Syn::Ident.into(), &state.source[span]);
-		});
+		.map_with_state(comb::green_token(Syn::Ident));
 
-	comb::node(
-		Syn::IdentChain.into(),
+	primitive::group((
+		ident.clone(),
 		primitive::group((
-			ident,
-			comb::checkpointed(primitive::group((
-				trivia_0plus(),
-				comb::just_ts(Token::Dot, Syn::Dot.into()),
-				trivia_0plus(),
-				ident,
-			)))
-			.repeated()
-			.collect::<()>(),
-		)),
-	)
-}
-
-/// In certain contexts, DECORATE allows providing number literals but not
-/// expressions, so "negative literals" are required in place of unary negation.
-pub(super) fn int_lit_negative<'i, C>(
-) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::checkpointed(primitive::group((
-		comb::just_ts(Token::Minus, Syn::Minus.into()),
-		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-	)))
-}
-
-/// In certain contexts, DECORATE allows providing number literals but not
-/// expressions, so "negative literals" are required in place of unary negation.
-pub(super) fn float_lit_negative<'i, C>(
-) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::checkpointed(primitive::group((
-		comb::just_ts(Token::Minus, Syn::Minus.into()),
-		comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
-	)))
-}
-
-/// Remember that this matches either a heterogenous whitespace span or a comment,
-/// so to deal with both in one span requires repetition.
-pub fn trivia<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	primitive::choice((
-		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
-		comb::just_ts(Token::Comment, Syn::Comment.into()),
+			trivia_0plus(),
+			comb::just_ts(Token::Dot, Syn::Dot),
+			ident.clone(),
+		))
+		.repeated()
+		.collect::<Vec<_>>(),
 	))
-	.map(|_| ())
-	.boxed()
+	.map(|group| coalesce_node(group, Syn::IdentChain))
 }
 
-pub(super) fn trivia_0plus<'i, C>(
-) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	trivia().repeated().collect::<()>()
+/// The returned parser emits a [`Syn::IntLit`] token.
+/// In certain contexts, DECORATE allows providing number literals but not
+/// expressions, so "negative literals" are required in place of unary negation.
+pub(super) fn int_lit_negative<'i>() -> parser_t!(GreenToken) {
+	primitive::group((
+		primitive::just(Token::Minus),
+		primitive::just(Token::IntLit),
+	))
+	.map_with_state(|_, span, state: &mut ParseState| {
+		GreenToken::new(Syn::IntLit.into(), &state.source[span])
+	})
 }
 
-pub(super) fn trivia_1plus<'i, C>(
-) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	trivia().repeated().at_least(1).collect::<()>()
+/// The returned parser emits a [`Syn::FloatLit`] token.
+/// In certain contexts, DECORATE allows providing number literals but not
+/// expressions, so "negative literals" are required in place of unary negation.
+pub(super) fn float_lit_negative<'i>() -> parser_t!(GreenToken) {
+	primitive::group((
+		comb::just_ts(Token::Minus, Syn::Minus),
+		comb::just_ts(Token::FloatLit, Syn::FloatLit),
+	))
+	.map_with_state(|_, span, state: &mut ParseState| {
+		GreenToken::new(Syn::FloatLit.into(), &state.source[span])
+	})
 }
 
-/// A subset of [`trivia`]; fails if a carriage return or newline appears in a
-/// matched [`Token::Whitespace`] or [`Token::Comment`].
+pub(super) fn recover_general<'i>(
+	start: parser_t!(GreenToken),
+	inner: parser_t!(Vec<GreenToken>),
+	until: parser_t!(()),
+) -> parser_t!(GreenElement) {
+	primitive::group((start, inner, until.rewind())).map(|(start, mut inner, _)| {
+		inner.insert(0, start);
+
+		GreenNode::new(Syn::Error.into(), inner.into_iter().map(GreenElement::from)).into()
+	})
+}
+
+#[must_use]
+pub(super) fn recover_token(token: Token) -> Syn {
+	match token {
+		Token::Whitespace => Syn::Whitespace,
+		Token::Comment => Syn::Comment,
+		_ => Syn::Unknown,
+	}
+}
+
+/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
+pub(super) fn trivia<'i>() -> parser_t!(GreenElement) {
+	primitive::choice((
+		comb::just_ts(Token::Whitespace, Syn::Whitespace),
+		comb::just_ts(Token::Comment, Syn::Comment),
+	))
+	.map(|gtok| gtok.into())
+}
+
+/// Shorthand for `self.trivia().repeated().collect()`.
+pub(super) fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
+	trivia().repeated().collect()
+}
+
+/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
+pub(super) fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
+	trivia().repeated().at_least(1).collect()
+}
+
+/// The returned parser emits one or more [`Syn::Whitespace`] or [`Syn::Comment`] tokens.
 ///
-/// Necessary for delimiting parts in an actor state definition.
-pub(super) fn trivia_1line<'i, C>(
-) -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// A subset of [`trivia`]; fails if a carriage return or newline appears in a
+/// matched [`Token::Whitespace`] or [`Token::Comment`]. Necessary for delimiting
+/// parts in an actor state definition.
+pub(super) fn trivia_1line<'i>() -> parser_t!(Vec<GreenElement>) {
 	primitive::choice((
 		primitive::just(Token::Whitespace),
 		primitive::just(Token::Comment),
 	))
-	.try_map_with_state(|token, span: logos::Span, state: &mut ParseState<C>| {
+	.try_map_with_state(|token, span: logos::Span, state: &mut ParseState| {
 		let multiline = state.source[span.clone()].contains(['\r', '\n']);
 
 		let syn = match token {
@@ -163,10 +156,9 @@ where
 			_ => unreachable!(),
 		};
 
-		state.gtb.token(syn.into(), &state.source[span]);
-		Ok(())
+		Ok(GreenToken::new(syn.into(), &state.source[span]).into())
 	})
 	.repeated()
 	.at_least(1)
-	.collect::<()>()
+	.collect()
 }

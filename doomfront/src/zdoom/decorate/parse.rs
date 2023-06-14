@@ -1,5 +1,5 @@
 //! Note that the results of these parsers are likely to be incorrect if used with
-//! a [`TokenStream`] bearing a version above [`V1_0_0`](crate::zdoom::Version::V1_0_0).
+//! a [`logos::Lexer`] bearing a version above [`V1_0_0`](crate::zdoom::Version::V1_0_0).
 
 mod actor;
 mod common;
@@ -12,34 +12,58 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use chumsky::{primitive, IterParser, Parser};
+use chumsky::{primitive, recovery, IterParser, Parser};
+use rowan::{GreenNode, GreenToken};
 
 use crate::{
-	util::builder::GreenCache,
-	zdoom::{
-		lex::{Token, TokenStream},
-		Extra, ParseTree,
-	},
+	comb, parser_t,
+	parsing::coalesce_node,
+	zdoom::{self, Token},
+	GreenElement, ParseState,
 };
 
 pub use self::{actor::*, common::*, expr::*, top::*};
 
-use super::Syn;
+use super::{ParseTree, Syn};
 
-pub fn file<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::Root`] node.
+pub fn file<'i>() -> parser_t!(GreenNode) {
+	let recover_actor_inner = primitive::any()
+		.filter(|token| *token == Token::Ident)
+		.map_with_state(|token: Token, span: logos::Span, state: &mut ParseState| {
+			(token, &state.source[span])
+		})
+		.filter(|(_, text)| !text.eq_ignore_ascii_case("actor"))
+		.map(|(token, text)| GreenToken::new(recover_token(token).into(), text))
+		.repeated()
+		.collect();
+
+	let recover_actor = recover_general(
+		comb::string_nc(Token::Ident, "actor", Syn::KwActor),
+		recover_actor_inner,
+		primitive::one_of([
+			Token::Ident,
+			Token::PoundInclude,
+			Token::KwConst,
+			Token::KwEnum,
+		])
+		.rewind()
+		.ignored(),
+	);
+
 	primitive::choice((
 		trivia(),
-		actor_def(),
-		include_directive(),
-		const_def(),
-		enum_def(),
-		damage_type_def(),
+		actor_def()
+			.map(GreenElement::from)
+			.recover_with(recovery::via_parser(recover_actor)),
+		include_directive().map(GreenElement::from),
+		const_def().map(GreenElement::from),
+		enum_def().map(GreenElement::from),
+		damage_type_def().map(GreenElement::from),
 	))
 	.repeated()
-	.collect::<()>()
+	.collect::<Vec<_>>()
+	.map(|group| coalesce_node(group, Syn::Root))
 	.boxed()
 }
 
@@ -82,14 +106,9 @@ impl IncludeTree {
 	/// `Err` is returned only if one or more files included cannot be found
 	/// by the given `Filesystem` implementation. The include tree within will
 	/// still contain results that are otherwise valid for all other found files.
-	pub fn new<F, C>(
-		mut filesystem: F,
-		path: impl AsRef<Path>,
-		gcache: Option<C>,
-	) -> Result<Self, Self>
+	pub fn new<F>(mut filesystem: F, path: impl AsRef<Path>) -> Result<Self, Self>
 	where
 		F: FnMut(&Path) -> Option<Cow<str>>,
-		C: GreenCache,
 	{
 		let mut all_files = vec![];
 		let mut missing = vec![];
@@ -104,25 +123,24 @@ impl IncludeTree {
 				}
 			};
 
-			let parser = file();
-			let stream = Token::stream(source.as_ref());
-			let ptree = crate::parse(
-				parser,
-				gcache.clone(),
-				Syn::Root.into(),
-				source.as_ref(),
-				stream,
+			let tbuf = crate::scan(source.as_ref(), zdoom::Version::V1_0_0);
+
+			let ptree: ParseTree = crate::parse(file(), source.as_ref(), &tbuf).map_or_else(
+				|errors| ParseTree::new(GreenNode::new(Syn::Root.into(), []), errors),
+				|ptree| ptree,
+			);
+
+			let ptree = ParseTree::new(
+				ptree.root,
+				ptree
+					.errors
+					.into_iter()
+					.map(|err| err.into_owned())
+					.collect(),
 			);
 
 			let fptree = FileParseTree {
-				inner: ParseTree {
-					root: ptree.root,
-					errors: ptree
-						.errors
-						.into_iter()
-						.map(|err| err.into_owned())
-						.collect(),
-				},
+				inner: ptree,
 				path: queued,
 			};
 
@@ -157,14 +175,9 @@ impl IncludeTree {
 
 	/// Like [`Self::new`] but taking advantage of [`rayon`]'s global thread pool.
 	#[cfg(feature = "parallel")]
-	pub fn new_par<F, C>(
-		filesystem: F,
-		path: impl AsRef<Path>,
-		gcache: Option<C>,
-	) -> Result<Self, Self>
+	pub fn new_par<F>(filesystem: F, path: impl AsRef<Path>) -> Result<Self, Self>
 	where
 		F: Send + Sync + Fn(&Path) -> Option<Cow<str>>,
-		C: Send + Sync + GreenCache,
 	{
 		use crossbeam::queue::SegQueue;
 		use parking_lot::Mutex;
@@ -189,25 +202,25 @@ impl IncludeTree {
 						}
 					};
 
-					let parser = file();
-					let stream = Token::stream(source.as_ref());
-					let ptree = crate::parse(
-						parser,
-						gcache.clone(),
-						Syn::Root.into(),
-						source.as_ref(),
-						stream,
+					let tbuf = crate::scan(source.as_ref(), zdoom::Version::V1_0_0);
+
+					let ptree: ParseTree = crate::parse(file(), source.as_ref(), &tbuf)
+						.map_or_else(
+							|errors| ParseTree::new(GreenNode::new(Syn::Root.into(), []), errors),
+							|ptree| ptree,
+						);
+
+					let ptree = ParseTree::new(
+						ptree.root,
+						ptree
+							.errors
+							.into_iter()
+							.map(|err| err.into_owned())
+							.collect(),
 					);
 
 					let fptree = FileParseTree {
-						inner: ParseTree {
-							root: ptree.root,
-							errors: ptree
-								.errors
-								.into_iter()
-								.map(|err| err.into_owned())
-								.collect(),
-						},
+						inner: ptree,
 						path: queued,
 					};
 
@@ -248,7 +261,7 @@ impl IncludeTree {
 
 #[cfg(test)]
 mod test {
-	use crate::{testing::*, util::builder::GreenCacheNoop};
+	use crate::testing::*;
 
 	use super::*;
 
@@ -278,12 +291,12 @@ actor BaronsBanquet {}
 
 	#[test]
 	fn smoke_include_tree() {
-		let _ = IncludeTree::new(lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
+		let _ = IncludeTree::new(lookup, "file/a.dec").unwrap();
 	}
 
 	#[test]
 	fn smoke_include_tree_par() {
-		let _ = IncludeTree::new_par(lookup, "file/a.dec", Some(GreenCacheNoop)).unwrap();
+		let _ = IncludeTree::new_par(lookup, "file/a.dec").unwrap();
 	}
 
 	#[test]
@@ -321,7 +334,6 @@ actor BaronsBanquet {}
 				Some(Cow::Owned(source.as_ref().to_owned()))
 			},
 			&root_path,
-			Some(GreenCacheNoop),
 		)
 		.unwrap();
 

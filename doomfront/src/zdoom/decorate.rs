@@ -11,6 +11,7 @@ mod syn;
 pub use syn::Syn;
 
 pub type IncludeTree = parse::IncludeTree;
+pub type ParseTree<'i> = crate::ParseTree<'i, crate::zdoom::Token, Syn>;
 pub type SyntaxNode = rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = rowan::SyntaxElement<Syn>;

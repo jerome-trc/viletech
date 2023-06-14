@@ -109,7 +109,8 @@ mod test {
 
 		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).const_def();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
 
@@ -117,6 +118,10 @@ mod test {
 	fn smoke_enumdef() {
 		const SOURCE: &str = r#"
 enum SepticTank {};
+
+enum BeyondTimesGate {
+	ELEMENTAL,
+}
 
 enum BrickAndRoot {
 	CELL_BLOCK_HELL,
@@ -128,7 +133,8 @@ enum BrickAndRoot {
 
 		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
 
@@ -145,7 +151,8 @@ version "3.7.1"
 
 		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
 }

@@ -234,7 +234,8 @@ mod test {
 		for source in SOURCES {
 			let tbuf = crate::scan(source, Version::default());
 			let parser = ParserBuilder::new(Version::default()).type_ref();
-			let ptree: ParseTree = crate::parse(parser, source, &tbuf);
+			let result = crate::parse(parser, source, &tbuf);
+			let ptree: ParseTree = unwrap_parse_tree(result);
 			assert_no_errors(&ptree);
 		}
 	}
@@ -245,7 +246,8 @@ mod test {
 
 		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).version_qual();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
 
@@ -255,7 +257,8 @@ mod test {
 
 		let tbuf = crate::scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).deprecation_qual();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
 }

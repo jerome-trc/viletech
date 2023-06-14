@@ -4,6 +4,7 @@
 
 pub mod lex;
 
+pub mod decorate;
 pub mod language;
 pub mod zscript;
 

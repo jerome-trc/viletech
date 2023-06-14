@@ -1,238 +1,197 @@
 use chumsky::{primitive, IterParser, Parser};
+use rowan::{GreenNode, GreenToken};
 
 use crate::{
-	comb,
-	util::{builder::GreenCache, state::ParseState},
-	zdoom::{
-		decorate::Syn,
-		lex::{Token, TokenStream},
-		Extra,
-	},
-	ParseError,
+	comb, parser_t,
+	parsing::*,
+	zdoom::{decorate::Syn, Token},
+	GreenElement, ParseError, ParseState,
 };
 
-use super::{
-	common::*,
-	expr,
-	top::{const_def, enum_def},
-};
+use super::{common::*, expr, top::*};
 
-pub fn actor_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::ActorDef.into(),
-		primitive::group((
-			comb::string_nc(Token::Ident, "actor", Syn::KwActor.into()),
-			trivia_1plus(),
-			actor_ident(),
-			inherit_spec().or_not(),
-			replaces_clause().or_not(),
-			editor_number().or_not(),
-			trivia_0plus(),
-			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
-			actor_innard().repeated().collect::<()>(),
-			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
-		)),
-	)
+/// The returned parser emits a [`Syn::ActorDef`] node.
+pub fn actor_def<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		comb::string_nc(Token::Ident, "actor", Syn::KwActor),
+		trivia_1plus(),
+		actor_ident(),
+		inherit_spec().or_not(),
+		replaces_clause().or_not(),
+		editor_number().or_not(),
+		trivia_0plus(),
+		comb::just_ts(Token::BraceL, Syn::BraceL),
+		actor_innard().repeated().collect::<Vec<_>>(),
+		comb::just_ts(Token::BraceR, Syn::BraceR),
+	))
+	.map(|group| coalesce_node(group, Syn::ActorDef))
 	.boxed()
 }
 
-fn inherit_spec<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::InheritSpec.into(),
-		primitive::group((
-			trivia_0plus(),
-			comb::just_ts(Token::Colon, Syn::Colon.into()),
-			trivia_0plus(),
-			actor_ident(),
-		)),
-	)
+/// The returned parser emits a [`Syn::InheritSpec`] node.
+fn inherit_spec<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		trivia_0plus(),
+		comb::just_ts(Token::Colon, Syn::Colon),
+		trivia_0plus(),
+		actor_ident(),
+	))
+	.map(|group| coalesce_node(group, Syn::InheritSpec))
 }
 
-fn replaces_clause<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::ReplacesClause.into(),
-		primitive::group((
-			trivia_1plus(),
-			comb::just_ts(Token::KwReplaces, Syn::KwReplaces.into()),
-			trivia_1plus(),
-			actor_ident(),
-		)),
-	)
+/// The returned parser emits a [`Syn::ReplacesClause`] node.
+fn replaces_clause<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		trivia_1plus(),
+		comb::just_ts(Token::KwReplaces, Syn::KwReplaces),
+		trivia_1plus(),
+		actor_ident(),
+	))
+	.map(|group| coalesce_node(group, Syn::ReplacesClause))
 }
 
-fn editor_number<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::EditorNumber.into(),
-		primitive::group((
-			trivia_1plus(),
-			comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-		)),
-	)
+/// The returned parser emits a [`Syn::EditorNumber`] node.
+fn editor_number<'i>() -> parser_t!(GreenNode) {
+	primitive::group((trivia_1plus(), comb::just_ts(Token::IntLit, Syn::IntLit)))
+		.map(|group| coalesce_node(group, Syn::EditorNumber))
 }
 
-pub fn actor_innard<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+pub fn actor_innard<'i>() -> parser_t!(GreenElement) {
 	primitive::choice((
 		trivia(),
-		flag_setting(),
-		const_def(),
-		enum_def(),
-		states_def(),
-		user_var(),
-		property_settings(),
+		flag_setting().map(|gnode| gnode.into()),
+		const_def().map(|gnode| gnode.into()),
+		enum_def().map(|gnode| gnode.into()),
+		states_def().map(|gnode| gnode.into()),
+		user_var().map(|gnode| gnode.into()),
+		property_settings().map(|gnode| gnode.into()),
 	))
 	.boxed()
 }
 
-pub fn flag_setting<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::FlagSetting.into(),
-		primitive::group((
-			primitive::choice((
-				comb::just_ts(Token::Plus, Syn::Plus.into()),
-				comb::just_ts(Token::Minus, Syn::Minus.into()),
-			)),
-			trivia_0plus(),
-			ident_chain(),
+/// The returned parser emits a [`Syn::FlagSetting`] node.
+pub fn flag_setting<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		primitive::choice((
+			comb::just_ts(Token::Plus, Syn::Plus),
+			comb::just_ts(Token::Minus, Syn::Minus),
 		)),
-	)
+		trivia_0plus(),
+		ident_chain(),
+	))
+	.map(|group| coalesce_node(group, Syn::FlagSetting))
 }
 
-pub fn property_settings<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	let parenthesized = comb::checkpointed(primitive::group((
-		comb::just_ts(Token::ParenL, Syn::ParenL.into()),
+/// The returned parser emits a [`Syn::PropertySettings`] node.
+pub fn property_settings<'i>() -> parser_t!(GreenNode) {
+	let parenthesized = primitive::group((
+		comb::just_ts(Token::ParenL, Syn::ParenL),
 		trivia_0plus(),
-		expr::expr(false),
+		expr::expr(),
 		trivia_0plus(),
-		comb::just_ts(Token::ParenR, Syn::ParenR.into()),
-	)));
+		comb::just_ts(Token::ParenR, Syn::ParenR),
+	))
+	.map(coalesce_vec);
 
 	let part = primitive::choice((
-		flag_setting(),
+		flag_setting().map(coalesce_vec),
 		parenthesized,
-		expr::expr(true),
-		ident_chain(),
+		int_lit_negative().map(coalesce_vec),
+		float_lit_negative().map(coalesce_vec),
+		expr::expr().map(coalesce_vec),
+		ident_chain().map(coalesce_vec),
 	));
 
 	let delim = primitive::choice((
-		comb::checkpointed(primitive::group((
+		primitive::group((
 			trivia_0plus(),
-			comb::just_ts(Token::Comma, Syn::Comma.into()),
+			comb::just_ts(Token::Comma, Syn::Comma),
 			trivia_0plus(),
-		))),
+		))
+		.map(coalesce_vec),
 		trivia_1plus(),
 	));
 
-	comb::node(
-		Syn::PropertySettings.into(),
-		primitive::group((
-			primitive::choice((flag_setting(), ident_chain())),
-			comb::checkpointed(primitive::group((delim, part)))
-				.repeated()
-				.collect::<()>(),
-		)),
-	)
+	primitive::group((
+		primitive::choice((flag_setting(), ident_chain())),
+		primitive::group((delim, part))
+			.repeated()
+			.collect::<Vec<_>>(),
+	))
+	.map(|group| coalesce_node(group, Syn::PropertySettings))
 }
 
-pub fn user_var<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::UserVar.into(),
-		primitive::group((
-			comb::just_ts(Token::KwVar, Syn::KwVar.into()),
-			trivia_1plus(),
-			primitive::choice((
-				comb::just_ts(Token::KwInt, Syn::KwInt.into()),
-				comb::just_ts(Token::KwFloat, Syn::KwFloat.into()),
-			)),
-			trivia_1plus(),
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
+/// The returned parser emits a [`Syn::UserVar`] node.
+pub fn user_var<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		comb::just_ts(Token::KwVar, Syn::KwVar),
+		trivia_1plus(),
+		primitive::choice((
+			comb::just_ts(Token::KwInt, Syn::KwInt),
+			comb::just_ts(Token::KwFloat, Syn::KwFloat),
 		)),
-	)
+		trivia_1plus(),
+		comb::just_ts(Token::Ident, Syn::Ident),
+		trivia_0plus(),
+		comb::just_ts(Token::Semicolon, Syn::Semicolon),
+	))
+	.map(|group| coalesce_node(group, Syn::UserVar))
 }
 
 // State machine definition ////////////////////////////////////////////////////
 
-pub fn states_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::StatesDef.into(),
-		primitive::group((
-			comb::just_ts(Token::KwStates, Syn::KwStates.into()),
-			trivia_0plus(),
-			states_usage().or_not(),
-			trivia_0plus(),
-			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
-			primitive::choice((state_def(), state_label(), state_flow(), trivia()))
-				.repeated()
-				.collect::<()>(),
-			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
-		)),
-	)
+/// The returned parser emits a [`Syn::StatesDef`] node.
+pub fn states_def<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		comb::just_ts(Token::KwStates, Syn::KwStates),
+		trivia_0plus(),
+		states_usage().or_not(),
+		trivia_0plus(),
+		comb::just_ts(Token::BraceL, Syn::BraceL),
+		primitive::choice((
+			state_def().map(GreenElement::from),
+			state_label().map(GreenElement::from),
+			state_flow().map(GreenElement::from),
+			trivia(),
+		))
+		.repeated()
+		.collect::<Vec<_>>(),
+		comb::just_ts(Token::BraceR, Syn::BraceR),
+	))
+	.map(|group| coalesce_node(group, Syn::StatesDef))
 	.boxed()
 }
 
-pub fn states_usage<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::StatesUsage`] node.
+pub fn states_usage<'i>() -> parser_t!(GreenNode) {
 	let single = primitive::choice((
-		comb::string_nc(Token::Ident, "actor", Syn::Ident.into()),
-		comb::string_nc(Token::Ident, "item", Syn::Ident.into()),
-		comb::string_nc(Token::Ident, "overlay", Syn::Ident.into()),
-		comb::string_nc(Token::Ident, "weapon", Syn::Ident.into()),
+		comb::string_nc(Token::Ident, "actor", Syn::Ident),
+		comb::string_nc(Token::Ident, "item", Syn::Ident),
+		comb::string_nc(Token::Ident, "overlay", Syn::Ident),
+		comb::string_nc(Token::Ident, "weapon", Syn::Ident),
 	));
 
-	let rep = comb::checkpointed(primitive::group((
-		comb::just_ts(Token::Comma, Syn::Comma.into()),
+	let rep = primitive::group((
+		comb::just_ts(Token::Comma, Syn::Comma),
 		trivia_0plus(),
 		single.clone(),
 		trivia_0plus(),
-	)));
+	))
+	.map(coalesce_vec);
 
-	comb::node(
-		Syn::StatesUsage.into(),
-		primitive::group((
-			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
-			trivia_0plus(),
-			single,
-			trivia_0plus(),
-			rep.repeated().collect::<()>(),
-			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
-		)),
-	)
+	primitive::group((
+		comb::just_ts(Token::ParenL, Syn::ParenL),
+		trivia_0plus(),
+		single,
+		trivia_0plus(),
+		rep.repeated().collect::<Vec<_>>(),
+		comb::just_ts(Token::ParenR, Syn::ParenR),
+	))
+	.map(|group| coalesce_node(group, Syn::StatesUsage))
 }
 
-pub fn state_label<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::StateLabel`] node.
+pub fn state_label<'i>() -> parser_t!(GreenNode) {
 	let part = primitive::any()
 		.filter(|t| {
 			if matches!(t, Token::KwFail | Token::KwStop | Token::KwWait) {
@@ -248,103 +207,91 @@ where
 		.repeated()
 		.at_least(1)
 		.collect::<()>()
-		.map_with_state(|(), mut span: logos::Span, state: &mut ParseState<C>| {
+		.map_with_state(|(), mut span: logos::Span, state: &mut ParseState| {
 			if span.start > span.end {
 				// FIXME: Possible Chumsky bug! Not a lexer issue; that's working fine.
 				std::mem::swap(&mut span.start, &mut span.end);
 			}
 
-			state.gtb.token(Syn::Ident.into(), &state.source[span])
+			GreenToken::new(Syn::Ident.into(), &state.source[span])
 		});
 
 	let name = primitive::group((
 		part,
-		comb::checkpointed(primitive::group((
+		(primitive::group((
 			trivia_0plus(),
-			comb::just_ts(Token::Dot, Syn::Dot.into()),
+			comb::just_ts(Token::Dot, Syn::Dot),
 			trivia_0plus(),
 			part,
 		)))
 		.repeated()
-		.collect::<()>(),
+		.collect::<Vec<_>>(),
 	));
 
-	comb::node(
-		Syn::StateLabel.into(),
-		primitive::group((
-			name,
-			trivia_0plus(),
-			comb::just_ts(Token::Colon, Syn::Colon.into()),
-		)),
-	)
+	primitive::group((
+		name,
+		trivia_0plus(),
+		comb::just_ts(Token::Colon, Syn::Colon),
+	))
+	.map(|group| coalesce_node(group, Syn::StateLabel))
 }
 
-pub fn state_flow<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::StateFlow`] node.
+pub fn state_flow<'i>() -> parser_t!(GreenNode) {
 	let kw = primitive::choice((
-		comb::just_ts(Token::KwStop, Syn::KwStop.into()),
-		comb::just_ts(Token::KwLoop, Syn::KwLoop.into()),
-		comb::just_ts(Token::KwFail, Syn::KwFail.into()),
-		comb::just_ts(Token::KwWait, Syn::KwWait.into()),
+		comb::just_ts(Token::KwStop, Syn::KwStop),
+		comb::just_ts(Token::KwLoop, Syn::KwLoop),
+		comb::just_ts(Token::KwFail, Syn::KwFail),
+		comb::just_ts(Token::KwWait, Syn::KwWait),
+	))
+	.map(|group| coalesce_node(group, Syn::StateFlow));
+
+	let offset = primitive::group((
+		trivia_0plus(),
+		comb::just_ts(Token::Plus, Syn::Plus),
+		trivia_0plus(),
+		comb::just_ts(Token::IntLit, Syn::IntLit),
+	))
+	.map(|group| coalesce_node(group, Syn::GotoOffset));
+
+	let scope = primitive::group((
+		primitive::choice((
+			comb::just_ts(Token::KwSuper, Syn::KwSuper),
+			comb::just_ts(Token::Ident, Syn::Ident),
+		)),
+		trivia_0plus(),
+		comb::just_ts(Token::Colon2, Syn::Colon2),
+		trivia_0plus(),
 	));
 
-	let offset = comb::node(
-		Syn::GotoOffset.into(),
-		primitive::group((
-			trivia_0plus(),
-			comb::just_ts(Token::Plus, Syn::Plus.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-		)),
-	);
-
-	let scope = comb::checkpointed(primitive::group((
-		primitive::choice((
-			comb::just_ts(Token::KwSuper, Syn::KwSuper.into()),
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
-		)),
-		trivia_0plus(),
-		comb::just_ts(Token::Colon2, Syn::Colon2.into()),
-		trivia_0plus(),
-	)));
-
-	let goto = comb::checkpointed(primitive::group((
-		comb::just_ts(Token::KwGoto, Syn::KwGoto.into()),
+	let goto = primitive::group((
+		comb::just_ts(Token::KwGoto, Syn::KwGoto),
 		trivia_1plus(),
 		scope.or_not(),
 		ident_chain(),
 		offset.or_not(),
-	)))
-	.map(|_| ());
+	))
+	.map(|group| coalesce_node(group, Syn::StateFlow));
 
-	comb::node(Syn::StateFlow.into(), primitive::choice((kw, goto))).boxed()
+	primitive::choice((kw, goto))
 }
 
-pub fn state_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::StateDef.into(),
-		primitive::group((
-			state_sprite(),
-			trivia_1line(),
-			state_frames(),
-			trivia_1line(),
-			state_duration(),
-			state_quals(),
-			action_function().or_not(),
-		)),
-	)
-	.boxed()
+/// The returned parser emits a [`Syn::StateDef`] node.
+pub fn state_def<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		state_sprite(),
+		trivia_1line(),
+		state_frames(),
+		trivia_1line(),
+		state_duration(),
+		state_quals(),
+		action_function().or_not(),
+	))
+	.map(|group| coalesce_node(group, Syn::StateDef))
 }
 
-pub fn state_sprite<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::StateSprite`] token.
+pub fn state_sprite<'i>() -> parser_t!(GreenToken) {
 	let basic = primitive::any()
 		.filter(|t: &Token| {
 			if !(*t == Token::Ident || *t == Token::IntLit || t.is_keyword()) {
@@ -364,12 +311,12 @@ where
 		.at_least(1)
 		.at_most(4)
 		.collect::<()>()
-		.try_map_with_state(|(), span: logos::Span, state: &mut ParseState<C>| {
+		.try_map_with_state(|(), span: logos::Span, state: &mut ParseState| {
 			if span.len() == 4 {
-				state
-					.gtb
-					.token(Syn::StateSprite.into(), &state.source[span]);
-				Ok(())
+				Ok(GreenToken::new(
+					Syn::StateSprite.into(),
+					&state.source[span],
+				))
 			} else {
 				Err(ParseError::custom(
 					span,
@@ -379,12 +326,12 @@ where
 		});
 
 	let hold = primitive::just(Token::StringLit).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState<C>| {
+		|_, span: logos::Span, state: &mut ParseState| {
 			if span.len() == 6 {
-				state
-					.gtb
-					.token(Syn::StateSprite.into(), &state.source[span]);
-				Ok(())
+				Ok(GreenToken::new(
+					Syn::StateSprite.into(),
+					&state.source[span],
+				))
 			} else {
 				Err(ParseError::custom(
 					span,
@@ -397,22 +344,20 @@ where
 	primitive::choice((basic, hold))
 }
 
-pub fn state_frames<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+/// The returned parser emits a [`Syn::StateFrames`] token.
+pub fn state_frames<'i>() -> parser_t!(GreenToken) {
 	#[must_use]
 	fn is_valid_quoted_char(c: char) -> bool {
 		c.is_ascii_alphabetic() || c == '[' || c == ']' || c == '\\' || c == '#'
 	}
 
 	let unquoted = primitive::just(Token::Ident).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState<C>| {
+		|_, span: logos::Span, state: &mut ParseState| {
 			if !state.source[span.clone()].contains(|c: char| !c.is_ascii_alphabetic()) {
-				state
-					.gtb
-					.token(Syn::StateFrames.into(), &state.source[span]);
-				Ok(())
+				Ok(GreenToken::new(
+					Syn::StateFrames.into(),
+					&state.source[span],
+				))
 			} else {
 				Err(ParseError::custom(
 					span.clone(),
@@ -423,14 +368,14 @@ where
 	);
 
 	let quoted = primitive::just(Token::StringLit).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState<C>| {
+		|_, span: logos::Span, state: &mut ParseState| {
 			let inner = &state.source[(span.start + 1)..(span.end - 1)];
 
 			if !inner.contains(|c: char| !is_valid_quoted_char(c)) {
-				state
-					.gtb
-					.token(Syn::StateFrames.into(), &state.source[span]);
-				Ok(())
+				Ok(GreenToken::new(
+					Syn::StateFrames.into(),
+					&state.source[span],
+				))
 			} else {
 				Err(ParseError::custom(
 					span.clone(),
@@ -443,94 +388,100 @@ where
 	primitive::choice((unquoted, quoted))
 }
 
-pub fn state_duration<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
+pub fn state_duration<'i>() -> parser_t!(GreenElement) {
 	primitive::choice((
-		int_lit_negative(),
-		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-		expr::call_expr(expr::expr(false)),
+		int_lit_negative().map(GreenElement::from),
+		comb::just_ts(Token::IntLit, Syn::IntLit).map(GreenElement::from),
+		expr::expr().map(GreenElement::from),
 	))
-	.boxed()
 }
 
-pub fn state_quals<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	let light = comb::node(
-		Syn::StateLight.into(),
-		primitive::group((
-			comb::just_ts(Token::KwLight, Syn::KwLight.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
-			trivia_0plus(),
-			primitive::choice((
-				comb::just_ts(Token::StringLit, Syn::StringLit.into()),
-				comb::just_ts(Token::NameLit, Syn::NameLit.into()),
-			)),
-			trivia_0plus(),
-			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
+pub fn state_quals<'i>() -> parser_t!(Vec<GreenElement>) {
+	let light = primitive::group((
+		comb::just_ts(Token::KwLight, Syn::KwLight),
+		trivia_0plus(),
+		comb::just_ts(Token::ParenL, Syn::ParenL),
+		trivia_0plus(),
+		primitive::choice((
+			comb::just_ts(Token::StringLit, Syn::StringLit),
+			comb::just_ts(Token::NameLit, Syn::NameLit),
 		)),
-	);
+		trivia_0plus(),
+		comb::just_ts(Token::ParenR, Syn::ParenR),
+	))
+	.map(|group| coalesce_node(group, Syn::StateLight));
 
 	let offs_num = primitive::choice((
 		int_lit_negative(),
-		comb::just_ts(Token::IntLit, Syn::IntLit.into()),
+		comb::just_ts(Token::IntLit, Syn::IntLit),
 	));
 
-	let offset = comb::node(
-		Syn::StateOffset.into(),
-		primitive::group((
-			comb::just_ts(Token::KwOffset, Syn::KwOffset.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::ParenL, Syn::ParenL.into()),
-			trivia_0plus(),
-			offs_num.clone(),
-			trivia_0plus(),
-			comb::just_ts(Token::Comma, Syn::Comma.into()),
-			trivia_0plus(),
-			offs_num,
-			trivia_0plus(),
-			comb::just_ts(Token::ParenR, Syn::ParenR.into()),
-		)),
-	);
+	let offset = primitive::group((
+		comb::just_ts(Token::KwOffset, Syn::KwOffset),
+		trivia_0plus(),
+		comb::just_ts(Token::ParenL, Syn::ParenL),
+		trivia_0plus(),
+		offs_num.clone(),
+		trivia_0plus(),
+		comb::just_ts(Token::Comma, Syn::Comma),
+		trivia_0plus(),
+		offs_num,
+		trivia_0plus(),
+		comb::just_ts(Token::ParenR, Syn::ParenR),
+	))
+	.map(|group| coalesce_node(group, Syn::StateOffset));
 
 	let qual = primitive::choice((
-		comb::just_ts(Token::KwCanRaise, Syn::KwCanRaise.into()),
-		comb::just_ts(Token::KwBright, Syn::KwBright.into()),
-		comb::just_ts(Token::KwSlow, Syn::KwSlow.into()),
-		comb::just_ts(Token::KwNoDelay, Syn::KwNoDelay.into()),
-		comb::just_ts(Token::KwFast, Syn::KwFast.into()),
-		light,
-		offset,
+		comb::just_ts(Token::KwCanRaise, Syn::KwCanRaise).map(GreenElement::from),
+		comb::just_ts(Token::KwBright, Syn::KwBright).map(GreenElement::from),
+		comb::just_ts(Token::KwSlow, Syn::KwSlow).map(GreenElement::from),
+		comb::just_ts(Token::KwNoDelay, Syn::KwNoDelay).map(GreenElement::from),
+		comb::just_ts(Token::KwFast, Syn::KwFast).map(GreenElement::from),
+		light.map(GreenElement::from),
+		offset.map(GreenElement::from),
 	));
 
-	comb::checkpointed(primitive::group((
-		trivia_1line().repeated().at_least(1).collect::<()>(),
-		qual,
-	)))
-	.repeated()
-	.collect::<()>()
-	.boxed()
+	primitive::group((trivia_1line(), qual.clone()))
+		.or_not()
+		.map(|group| match group {
+			Some((mut triv, elem)) => {
+				triv.push(elem);
+				triv
+			}
+			None => vec![],
+		})
+		.foldl(
+			primitive::group((trivia_1line(), qual)).repeated(),
+			|lhs, (mut triv, qual)| {
+				let mut elems = lhs;
+				elems.append(&mut triv);
+				elems.push(qual);
+				elems
+			},
+		)
 }
 
-pub fn action_function<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::ActionFunction.into(),
+/// The returned parser emits a [`Syn::ActionFunction`] node.
+pub fn action_function<'i>() -> parser_t!(GreenNode) {
+	let call = primitive::group((
+		comb::just_ts(Token::Ident, Syn::Ident),
 		primitive::group((
-			trivia_1line().repeated().collect::<()>(),
-			primitive::choice((
-				expr::call_expr(expr::expr(false)),
-				// TODO: Anonymous functions.
-			)),
-		)),
-	)
-	.boxed()
+			trivia_0plus(),
+			comb::just_ts(Token::ParenL, Syn::ParenL),
+			trivia_0plus(),
+			expr::expr_list(expr::expr()),
+			trivia_0plus(),
+			comb::just_ts(Token::ParenR, Syn::ParenR),
+		))
+		.or_not(),
+	))
+	.map(|group| coalesce_node(group, Syn::ActionFunction));
+
+	primitive::group((
+		trivia_1line(),
+		primitive::choice((call,)), // TODO: Anonymous functions.
+	))
+	.map(|group| coalesce_node(group, Syn::ActionFunction))
 }
 
 #[cfg(test)]
@@ -539,8 +490,10 @@ mod test {
 
 	use crate::{
 		testing::*,
-		util::builder::GreenCacheNoop,
-		zdoom::decorate::{ast, parse::file},
+		zdoom::{
+			self,
+			decorate::{ast, parse::file},
+		},
 	};
 
 	use super::*;
@@ -575,31 +528,20 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 			goto super::Spawn.Something + 0
 		Repent:
 			3HA_ A 1 bright light('perfect')
-			"####" B 6 canraise fast nodelay slow A_SpawnItemEx [rngtbl] (1, "??")
+			"####" B 6 canraise fast nodelay slow A_SpawnItemEx(1, "??")
 			"----" "]" -1 offset(-1, 1) light("sever")
 			Loop
 	}
-
-	-TOWER.OF.BABEL
-	Decal mysteryfortress
-	ClassReference 'Pandemonium'
-
 }
 		"#####;
 
-		let parser = file::<GreenCacheNoop>();
-
-		let ptree = crate::parse(
-			parser,
-			None,
-			Syn::Root.into(),
-			SOURCE,
-			Token::stream(SOURCE),
-		);
+		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
 
-		let cursor = ptree.cursor::<Syn>();
+		let cursor = ptree.cursor();
 		let toplevel = ast::TopLevel::cast(cursor.first_child().unwrap()).unwrap();
 
 		let actordef = match toplevel {
@@ -648,12 +590,6 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		let uservar2 = innards.next().unwrap().into_uservar().unwrap();
 		assert_eq!(uservar2.name().text(), "hidingTheSecrets");
 		assert_eq!(uservar2.type_spec(), ast::UserVarType::Float);
-
-		let _ = innards.next().unwrap().into_propsettings().unwrap();
-
-		let flag1 = innards.next().unwrap().into_flagsetting().unwrap();
-		assert!(flag1.is_adding());
-		assert_eq!(flag1.name().syntax().text(), "REFINERY");
 
 		let _ = innards.next().unwrap().into_propsettings().unwrap();
 

@@ -4,7 +4,21 @@ use std::path::PathBuf;
 
 use rowan::SyntaxKind;
 
-use crate::ParseTree;
+use crate::{ParseError, ParseTree};
+
+/// A wrapper for `ptree.errors.is_empty()` which also formats and prints out
+/// each error, if any are detected.
+pub fn assert_no_errors<'i, T, L>(ptree: &ParseTree<'i, T, L>)
+where
+	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
+	L: rowan::Language + Into<SyntaxKind>,
+{
+	assert!(
+		ptree.errors.is_empty(),
+		"Encountered errors: {}\r\n",
+		format_errors(&ptree.errors)
+	);
+}
 
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.
 pub fn assert_node<L>(
@@ -154,40 +168,6 @@ where
 	}
 }
 
-/// A wrapper for `ptree.errors.is_empty()` which also formats and prints out
-/// each error, if any are detected.
-pub fn assert_no_errors<'i, T, L>(ptree: &ParseTree<'i, T, L>)
-where
-	T: logos::Logos<'i, Source = str> + std::fmt::Debug,
-	L: rowan::Language + Into<SyntaxKind>,
-{
-	let format_errs = |pt: &ParseTree<T, L>| {
-		let mut output = String::new();
-
-		for err in &pt.errors {
-			match err.reason() {
-				chumsky::error::RichReason::ExpectedFound { .. }
-				| chumsky::error::RichReason::Custom(_) => output.push_str(&format!("\r\n{err:#?}")),
-				chumsky::error::RichReason::Many(errs) => {
-					for e in errs {
-						output.push_str(&format!("\r\n{e:#?}"));
-					}
-
-					output.push_str(&format!("({:?})", err.span()));
-				}
-			}
-		}
-
-		output
-	};
-
-	assert!(
-		ptree.errors.is_empty(),
-		"Encountered errors: {}\r\n",
-		format_errs(ptree)
-	);
-}
-
 /// `Err` variants contain the reason the read failed. This can happen because:
 /// - the environment variable behind `env_var_name` could not be retrieved
 /// - the path at the environment variable is to a non-existent file
@@ -214,4 +194,44 @@ pub fn read_sample_data(env_var_name: &'static str) -> Result<(PathBuf, String),
 	let sample = String::from_utf8_lossy(&bytes).to_string();
 
 	Ok((path, sample))
+}
+
+pub fn unwrap_parse_tree<'i, T, L>(
+	result: Result<ParseTree<'i, T, L>, Vec<ParseError<'i, T>>>,
+) -> ParseTree<'i, T, L>
+where
+	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
+	L: rowan::Language + Into<SyntaxKind>,
+{
+	result
+		.map_err(|errors| {
+			panic!("Encountered errors:\r\n{}", format_errors(&errors));
+		})
+		.unwrap()
+}
+
+// Details /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn format_errors<'i, T>(errors: &Vec<ParseError<'i, T>>) -> String
+where
+	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
+{
+	let mut output = String::new();
+
+	for err in errors {
+		match err.reason() {
+			chumsky::error::RichReason::ExpectedFound { .. }
+			| chumsky::error::RichReason::Custom(_) => output.push_str(&format!("\r\n{err:#?}")),
+			chumsky::error::RichReason::Many(errs) => {
+				for e in errs {
+					output.push_str(&format!("\r\n{e:#?}"));
+				}
+
+				output.push_str(&format!("({:?})", err.span()));
+			}
+		}
+	}
+
+	output
 }

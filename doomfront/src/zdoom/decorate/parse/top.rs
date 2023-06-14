@@ -1,156 +1,133 @@
 //! Non-actor top-level elements: symbolic constants, enums, et cetera.
 
 use chumsky::{primitive, IterParser, Parser};
+use rowan::GreenNode;
 
 use crate::{
-	comb,
-	util::builder::GreenCache,
-	zdoom::{
-		decorate::Syn,
-		lex::{Token, TokenStream},
-		Extra,
-	},
+	comb, parser_t,
+	parsing::*,
+	zdoom::{decorate::Syn, Token},
+	GreenElement,
 };
 
 use super::{common::*, expr};
 
-pub fn const_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::ConstDef.into(),
-		primitive::group((
-			comb::just_ts(Token::KwConst, Syn::KwConst.into()),
-			trivia_1plus(),
-			primitive::choice((
-				comb::string_nc(Token::Ident, "fixed", Syn::KwFixed.into()),
-				comb::just_ts(Token::KwFloat, Syn::KwFloat.into()),
-				comb::just_ts(Token::KwInt, Syn::KwInt.into()),
-			)),
-			trivia_1plus(),
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::Eq, Syn::Eq.into()),
-			trivia_0plus(),
-			expr::expr(false),
-			trivia_0plus(),
-			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
+/// The returned parser emits a [`Syn::ConstDef`] node.
+pub fn const_def<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		comb::just_ts(Token::KwConst, Syn::KwConst),
+		trivia_1plus(),
+		primitive::choice((
+			comb::string_nc(Token::Ident, "fixed", Syn::KwFixed),
+			comb::just_ts(Token::KwFloat, Syn::KwFloat),
+			comb::just_ts(Token::KwInt, Syn::KwInt),
 		)),
-	)
-}
-
-pub fn enum_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::EnumDef.into(),
-		primitive::group((
-			comb::just_ts(Token::KwEnum, Syn::KwEnum.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
-			trivia_0plus(),
-			enum_variants(),
-			trivia_0plus(),
-			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::Semicolon, Syn::Semicolon.into()),
-		)),
-	)
-}
-
-fn enum_variants<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	let init = comb::node(
-		Syn::EnumVariant.into(),
-		primitive::group((
-			comb::just_ts(Token::Ident, Syn::Ident.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::Eq, Syn::Eq.into()),
-			trivia_0plus(),
-			expr::expr(false),
-		)),
-	);
-
-	let uninit = comb::node(
-		Syn::EnumVariant.into(),
-		comb::just_ts(Token::Ident, Syn::Ident.into()),
-	);
-
-	let variant = primitive::choice((init, uninit));
-
-	let successive = comb::checkpointed(primitive::group((
+		trivia_1plus(),
+		comb::just_ts(Token::Ident, Syn::Ident),
 		trivia_0plus(),
-		comb::just_ts(Token::Comma, Syn::Comma.into()),
+		comb::just_ts(Token::Eq, Syn::Eq),
+		trivia_0plus(),
+		expr::expr(),
+		trivia_0plus(),
+		comb::just_ts(Token::Semicolon, Syn::Semicolon),
+	))
+	.map(|group| coalesce_node(group, Syn::ConstDef))
+}
+
+/// The returned parser emits a [`Syn::EnumDef`] node.
+pub fn enum_def<'i>() -> parser_t!(GreenNode) {
+	let ident = primitive::any()
+		.filter(|token: &Token| {
+			matches!(
+				token,
+				Token::Ident
+					| Token::KwBright | Token::KwFast
+					| Token::KwSlow | Token::KwNoDelay
+					| Token::KwCanRaise | Token::KwOffset
+					| Token::KwLight
+			)
+		})
+		.map_with_state(comb::green_token(Syn::Ident));
+
+	let variant = primitive::group((
+		ident,
+		primitive::group((
+			trivia_0plus(),
+			comb::just_ts(Token::Eq, Syn::Eq),
+			trivia_0plus(),
+			expr(),
+		))
+		.or_not(),
+	))
+	.map(|group| coalesce_node(group, Syn::EnumVariant));
+
+	let successive = primitive::group((
+		trivia_0plus(),
+		comb::just_ts(Token::Comma, Syn::Comma),
 		trivia_0plus(),
 		variant.clone(),
-	)))
-	.repeated()
-	.collect::<()>();
+	));
 
 	primitive::group((
-		variant,
-		successive,
-		comb::just_ts(Token::Comma, Syn::Comma.into()).or_not(),
+		comb::just_ts(Token::KwEnum, Syn::KwEnum),
+		trivia_0plus(),
+		comb::just_ts(Token::BraceL, Syn::BraceL),
+		trivia_0plus(),
+		primitive::group((variant.or_not(), successive.repeated().collect::<Vec<_>>())),
+		trivia_0plus(),
+		comb::just_ts(Token::Comma, Syn::Comma).or_not(),
+		trivia_0plus(),
+		comb::just_ts(Token::BraceR, Syn::BraceR),
+		trivia_0plus(),
+		comb::just_ts(Token::Semicolon, Syn::Semicolon),
 	))
-	.map(|_| ())
+	.map(|group| coalesce_node(group, Syn::EnumDef))
 }
 
-pub fn damage_type_def<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	let ident = primitive::any().filter(|t: &Token| t.is_keyword() || *t == Token::Ident);
+/// The returned parser emits a [`Syn::DamageTypeDef`] node.
+pub fn damage_type_def<'i>() -> parser_t!(GreenNode) {
+	let ident = primitive::any()
+		.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
+		.map_with_state(comb::green_token(Syn::Ident));
 
-	let kvp = comb::node(
-		Syn::DamageTypeKvp.into(),
-		primitive::group((
-			ident,
-			comb::checkpointed(primitive::group((
-				trivia_1plus(),
-				primitive::choice((
-					int_lit_negative(),
-					float_lit_negative(),
-					comb::just_ts(Token::IntLit, Syn::IntLit.into()),
-					comb::just_ts(Token::FloatLit, Syn::FloatLit.into()),
-					comb::just_ts(Token::StringLit, Syn::StringLit.into()),
-				)),
-			)))
-			.or_not(),
-		)),
-	);
-
-	comb::node(
-		Syn::DamageTypeDef.into(),
-		primitive::group((
-			ident,
+	let kvp = primitive::group((
+		ident.clone(),
+		(primitive::group((
 			trivia_1plus(),
-			ident,
-			trivia_0plus(),
-			comb::just_ts(Token::BraceL, Syn::BraceL.into()),
-			primitive::choice((trivia(), kvp))
-				.repeated()
-				.collect::<()>(),
-			comb::just_ts(Token::BraceR, Syn::BraceR.into()),
-		)),
-	)
+			primitive::choice((
+				int_lit_negative(),
+				float_lit_negative(),
+				comb::just_ts(Token::IntLit, Syn::IntLit),
+				comb::just_ts(Token::FloatLit, Syn::FloatLit),
+				comb::just_ts(Token::StringLit, Syn::StringLit),
+			)),
+		)))
+		.or_not(),
+	))
+	.map(|group| coalesce_node(group, Syn::DamageTypeKvp));
+
+	primitive::group((
+		comb::string_nc(Token::Ident, "damagetype", Syn::KwDamageType),
+		trivia_1plus(),
+		ident,
+		trivia_0plus(),
+		comb::just_ts(Token::BraceL, Syn::BraceL),
+		primitive::choice((trivia(), kvp.clone().map(GreenElement::from)))
+			.repeated()
+			.collect::<Vec<_>>(),
+		comb::just_ts(Token::BraceR, Syn::BraceR),
+	))
+	.map(|group| coalesce_node(group, Syn::DamageTypeDef))
 }
 
-pub fn include_directive<'i, C>() -> impl 'i + Parser<'i, TokenStream<'i>, (), Extra<'i, C>> + Clone
-where
-	C: GreenCache,
-{
-	comb::node(
-		Syn::IncludeDirective.into(),
-		primitive::group((
-			comb::just_ts(Token::PoundInclude, Syn::PoundInclude.into()),
-			trivia_0plus(),
-			comb::just_ts(Token::StringLit, Syn::StringLit.into()),
-		)),
-	)
+/// The returned parser emits a [`Syn::IncludeDirective`] node.
+pub fn include_directive<'i>() -> parser_t!(GreenNode) {
+	primitive::group((
+		comb::just_ts(Token::PoundInclude, Syn::PoundInclude),
+		trivia_0plus(),
+		comb::just_ts(Token::StringLit, Syn::StringLit),
+	))
+	.map(|group| coalesce_node(group, Syn::IncludeDirective))
 }
 
 #[cfg(test)]
@@ -159,8 +136,10 @@ mod test {
 
 	use crate::{
 		testing::*,
-		util::builder::GreenCacheNoop,
-		zdoom::decorate::{ast, parse::file},
+		zdoom::{
+			self,
+			decorate::{ast, parse::file, ParseTree},
+		},
 	};
 
 	use super::*;
@@ -180,19 +159,13 @@ enum {
 
 "#;
 
-		let parser = file::<GreenCacheNoop>();
-
-		let ptree = crate::parse(
-			parser,
-			None,
-			Syn::Root.into(),
-			SOURCE,
-			Token::stream(SOURCE),
-		);
+		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
 
-		let cursor = ptree.cursor::<Syn>();
+		let cursor = ptree.cursor();
 		let enumdef = ast::TopLevel::cast(cursor.children().next().unwrap())
 			.unwrap()
 			.into_enumdef()
@@ -235,19 +208,13 @@ enum {
 		const SOURCE: &str =
 			" #InClUdE \"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\"";
 
-		let parser = file::<GreenCacheNoop>();
-
-		let ptree = crate::parse(
-			parser,
-			None,
-			Syn::Root.into(),
-			SOURCE,
-			Token::stream(SOURCE),
-		);
+		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
 
-		let cursor = ptree.cursor::<Syn>();
+		let cursor = ptree.cursor();
 
 		assert_sequence(
 			&[
@@ -285,19 +252,13 @@ const float INFERNO /* forbidden */ = 0.9999999;
 
 "##;
 
-		let parser = file::<GreenCacheNoop>();
-
-		let ptree = crate::parse(
-			parser,
-			None,
-			Syn::Root.into(),
-			SOURCE,
-			Token::stream(SOURCE),
-		);
+		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
 
-		let cursor = ptree.cursor::<Syn>();
+		let cursor = ptree.cursor();
 
 		let mut constdefs = cursor
 			.children()

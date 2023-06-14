@@ -158,8 +158,8 @@ MEGALOPOLIS = "The Omega";
 "#;
 
 		let tbuf = crate::scan(SOURCE, Version::default());
-		let parser = file();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		let mut ast = ptree.cursor().children();
 
 		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
@@ -201,8 +201,8 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
 		let tbuf = crate::scan(SOURCE, Version::default());
-		let parser = file();
-		let ptree: ParseTree = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::parse(file(), SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 		let mut ast = ptree.cursor().children();
 
 		assert_eq!(ast.next().unwrap().kind(), Syn::Error);
@@ -251,10 +251,9 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 			.unwrap();
 		let source = String::from_utf8_lossy(&bytes);
 
-		let parser = file();
 		let tbuf = crate::scan(source.as_ref(), Version::default());
-
-		let ptree: ParseTree = crate::parse(parser, source.as_ref(), &tbuf);
+		let result = crate::parse(file(), source.as_ref(), &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
 	}
