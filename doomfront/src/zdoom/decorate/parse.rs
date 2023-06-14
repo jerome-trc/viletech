@@ -301,6 +301,22 @@ actor BaronsBanquet {}
 
 	#[test]
 	fn with_sample_data() {
+		let (_, sample) = match read_sample_data("DOOMFRONT_DECORATE_SAMPLE") {
+			Ok(s) => s,
+			Err(err) => {
+				eprintln!("Skipping DECORATE sample data-based unit test. Reason: {err}");
+				return;
+			}
+		};
+
+		let tbuf = crate::scan(&sample, zdoom::Version::default());
+		let result = crate::parse(file(), &sample, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
+		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn include_tree() {
 		let (root_path, _) = match read_sample_data("DOOMFRONT_DECORATE_SAMPLE") {
 			Ok(s) => s,
 			Err(err) => {

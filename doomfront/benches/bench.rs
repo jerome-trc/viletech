@@ -44,11 +44,8 @@ fn decorate(crit: &mut Criterion) {
 	grp.bench_function("Parse", |bencher| {
 		bencher.iter(|| {
 			let parser = decorate::parse::file();
-
 			let tbuf = doomfront::scan(&sample, zdoom::Version::V1_0_0);
-
 			let ptree: decorate::ParseTree = doomfront::parse(parser, &sample, &tbuf).unwrap();
-
 			let _ = std::hint::black_box(ptree);
 		});
 	});
