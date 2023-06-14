@@ -199,7 +199,7 @@ conditions. See the license document that comes with your installation."
 
 	app.run();
 
-	unreachable!("Unexpected return from Winit event loop.")
+	unreachable!("unexpected return from Winit event loop")
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, States)]
@@ -297,21 +297,21 @@ fn first_startup(
 
 				if path.exists() {
 					panic!(
-						"Could not create user info folder; \
+						"could not create user info folder; \
 						something already exists at path: {p}",
 						p = path.display(),
 					);
 				}
 
 				std::fs::create_dir(&path)
-					.expect("User information setup failed: directory creation error.");
+					.expect("user information setup failed: directory creation error");
 
 				// If the basic file IO needed to initialize user information
 				// is not even possible, there's no reason to go further.
 
 				core.user = match UserCore::new(path) {
 					Ok(u) => u,
-					Err(err) => panic!("User information setup failed: {err}"),
+					Err(err) => panic!("user information setup failed: {err}"),
 				};
 
 				next_state.set(AppState::Frontend);

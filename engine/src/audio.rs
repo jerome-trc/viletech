@@ -571,7 +571,7 @@ static SOUNDFONT_DIR: Lazy<PathBuf> = Lazy::new(|| {
 
 			if let Err(err) = res {
 				panic!(
-					"Failed to create directory: {}\r\n\tError: {}",
+					"failed to create directory: {}\r\n\tError: {}",
 					ret.display(),
 					err
 				)
@@ -584,7 +584,7 @@ static SOUNDFONT_DIR: Lazy<PathBuf> = Lazy::new(|| {
 	#[cfg(debug_assertions)]
 	{
 		[
-			std::env::current_dir().expect("Failed to get working directory."),
+			std::env::current_dir().expect("failed to get working directory"),
 			PathBuf::from("data/soundfonts"),
 		]
 		.iter()
@@ -628,8 +628,7 @@ impl std::fmt::Display for Error {
 		match self {
 			Self::SoundFontRead(path, err) => write!(
 				f,
-				"Failed to read SoundFont at path: {p}\r\n\t\
-				Details: {err}",
+				"failed to read SoundFont at path: `{p}` - details: {err}",
 				p = path.display()
 			),
 			Self::KiraBackend(err) => err.fmt(f),
@@ -638,9 +637,9 @@ impl std::fmt::Display for Error {
 			Self::PlayMidi(err) => err.fmt(f),
 			Self::PlayWave(err) => err.fmt(f),
 			Self::CommandOverflow => {
-				write!(f, "Tried to send too many commands to a sound at once.")
+				write!(f, "tried to send too many commands to a sound at once")
 			}
-			Self::ThreadPanic => write!(f, "Audio thread has panicked."),
+			Self::ThreadPanic => write!(f, "audio thread has panicked"),
 		}
 	}
 }

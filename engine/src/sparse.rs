@@ -834,7 +834,7 @@ impl<I, T> SparseSet<I, T> {
 	pub fn with_capacity(sparse_capacity: usize, dense_capacity: usize) -> Self {
 		assert!(
 			sparse_capacity >= dense_capacity,
-			"Sparse capacity must be at least as large as the dense capacity."
+			"sparse capacity must be at least as large as the dense capacity."
 		);
 
 		Self {

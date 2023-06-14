@@ -341,7 +341,7 @@ impl<C: terminal::Command> Console<C> {
 			" ERROR " => Color32::LIGHT_RED,
 			" DEBUG " => DEBUG_COLOR,
 			" TRACE " => TRACE_COLOR,
-			other => unreachable!("Unexpected log message qualifier: {other}"),
+			other => unreachable!("unexpected log message qualifier: {other}"),
 		};
 
 		let mut job = LayoutJob::default();

@@ -76,7 +76,7 @@ pub(super) fn read_thingdef_field(
 					.flags
 					.set(ThingFlags::CLASS_3, matches!(val, Value::True));
 			} else if matches!(level.format, LevelFormat::Udmf(UdmfNamespace::Strife)) {
-				unimplemented!("The `Strife` UDMF namespace is not yet supported.");
+				unimplemented!("the `Strife` UDMF namespace is not yet supported");
 			} else {
 				thing
 					.udmf

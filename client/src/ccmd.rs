@@ -92,7 +92,7 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 	let argv0 = match args.next() {
 		Some(a) => a,
 		None => {
-			error!("This runtime did not receive `argv[0]`.");
+			error!("this runtime did not receive `argv[0]`");
 			return Request::None;
 		}
 	};

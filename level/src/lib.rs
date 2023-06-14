@@ -101,8 +101,8 @@ impl std::fmt::Display for Error {
 
 				write!(
 					f,
-					"Linedef {linedef} references {l_or_r} side {sidedef}, \
-					but only {sides_len} sidedefs exist."
+					"linedef {linedef} references {l_or_r} side {sidedef}, \
+					but only {sides_len} sidedefs exist"
 				)
 			}
 			Self::InvalidNodeSubsector {
@@ -116,7 +116,7 @@ impl std::fmt::Display for Error {
 				write!(
 					f,
 					"BSP node {node} references {l_or_r} sub-sector {ssector}, \
-				but only {ssectors_len} sub-sectors exist."
+				but only {ssectors_len} sub-sectors exist"
 				)
 			}
 			Self::InvalidSegLinedef {
@@ -126,8 +126,8 @@ impl std::fmt::Display for Error {
 			} => {
 				write!(
 					f,
-					"Seg {seg} references linedef {linedef}, \
-				but only {lines_len} linedefs exist."
+					"seg {seg} references linedef {linedef}, \
+				but only {lines_len} linedefs exist"
 				)
 			}
 			Self::InvalidSidedefSector {
@@ -137,8 +137,8 @@ impl std::fmt::Display for Error {
 			} => {
 				write!(
 					f,
-					"Sidedef {sidedef} references sector {sector}, \
-					but only {sectors_len} sectors exist."
+					"sidedef {sidedef} references sector {sector}, \
+					but only {sectors_len} sectors exist"
 				)
 			}
 			Self::InvalidSubnode {
@@ -152,7 +152,7 @@ impl std::fmt::Display for Error {
 				write!(
 					f,
 					"BSP node {node} references {l_or_r} sub-node {subnode}, \
-				but only {nodes_len} nodes exist."
+				but only {nodes_len} nodes exist"
 				)
 			}
 			Self::InvalidSubsectorSeg {
@@ -162,24 +162,21 @@ impl std::fmt::Display for Error {
 			} => {
 				write!(
 					f,
-					"Sub-sector {subsector} references seg {seg}, but only {segs_len} exist."
+					"sub-sector {subsector} references seg {seg}, but only {segs_len} exist"
 				)
 			}
 			Self::MalformedFile(name) => {
-				write!(f, "`{name}` has malformed contents.")
+				write!(f, "`{name}` has malformed contents")
 			}
 			Self::NoPlayer1Start => {
-				write!(
-					f,
-					"No thingdef was defined as a player 1 starting location."
-				)
+				write!(f, "no thingdef was defined as a player 1 starting location")
 			}
 			Self::TextmapParse(err) => {
-				write!(f, "Error while parsing `TEXTMAP`: {err}")
+				write!(f, "error while parsing `TEXTMAP`: {err}")
 			}
 			Self::Udmf(err) => err.fmt(f),
 			Self::UnknownEdNum { thingdef, ed_num } => {
-				write!(f, "Thing {thingdef} has unknown editor number: {ed_num}")
+				write!(f, "thing {thingdef} has unknown editor number: {ed_num}")
 			}
 			Self::UnknownFlat {
 				sector,
@@ -190,14 +187,14 @@ impl std::fmt::Display for Error {
 
 				write!(
 					f,
-					"Sector {sector} references non-existent {c_or_f} texture {name}."
+					"eector {sector} references non-existent {c_or_f} texture `{name}`"
 				)
 			}
 			Self::UnknownLineSpecial(short) => {
-				write!(f, "Unknown line special: {short}")
+				write!(f, "unknown line special: {short}")
 			}
 			Self::UnknownSectorSpecial(short) => {
-				write!(f, "Unknown sector special: {short}")
+				write!(f, "unknown sector special: {short}")
 			}
 			Self::UnknownSideTex {
 				sidedef,
@@ -206,7 +203,7 @@ impl std::fmt::Display for Error {
 			} => {
 				write!(
 					f,
-					"Sidedef {sidedef} references non-existent {which} texture {name}."
+					"eidedef {sidedef} references non-existent {which} texture `{name}`"
 				)
 			}
 		}

@@ -30,7 +30,7 @@ impl Builder {
 	#[must_use]
 	pub fn new(name: String, source: Source, hotswap: bool) -> Self {
 		let mut jit = JITBuilder::new(cranelift_module::default_libcall_names())
-			.expect("Failed to construct a Cranelift `JITBuilder`.");
+			.expect("failed to construct a Cranelift `JITBuilder`");
 
 		jit.hotswap(hotswap);
 

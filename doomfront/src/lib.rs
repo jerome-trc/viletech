@@ -99,7 +99,6 @@ where
 /// Each language has a `parse` module filled with functions that emit a combinator-
 /// based parser. Pass one of these along with a source string into this function
 /// to consume that parser and emit a green tree.
-#[must_use]
 pub fn parse<'i, T, L>(
 	parser: parser_t!(T, rowan::GreenNode),
 	source: &'i str,

@@ -63,7 +63,7 @@ impl Pointer {
 	pub(super) fn mimic_hexen(&mut self, ptrh: &ScriptPointerH) {
 		self.number = (ptrh.number & 1000) as i32;
 		// self.kind = FromPrimitive::from_u8((ptrh.number / 1000) as u8)
-		// 	.expect("An intermediate ACS script pointer type wasn't pre-validated.");
+		// 	.expect("an intermediate ACS script pointer type wasn't pre-validated");
 		self.kind = Kind::from((ptrh.number / 1000) as u8);
 		self.arg_count = (ptrh.arg_count) as u8;
 		self.address = ptrh.address;

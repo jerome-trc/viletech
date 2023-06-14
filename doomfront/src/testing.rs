@@ -15,7 +15,7 @@ where
 {
 	assert!(
 		ptree.errors.is_empty(),
-		"Encountered errors: {}\r\n",
+		"encountered errors: {}\r\n",
 		format_errors(&ptree.errors)
 	);
 }
@@ -31,7 +31,7 @@ pub fn assert_node<L>(
 
 	assert!(
 		node.is_some(),
-		"Element {elem:?} is unexpectedly not a node.",
+		"element {elem:?} is unexpectedly not a node",
 	);
 
 	let node = node.unwrap();
@@ -39,7 +39,7 @@ pub fn assert_node<L>(
 	assert_eq!(
 		node.kind(),
 		kind,
-		"Expected token kind {kind:?}, found {:?}.",
+		"expected token kind {kind:?}, found {:?}",
 		node.kind()
 	);
 }
@@ -56,7 +56,7 @@ pub fn assert_token<L>(
 
 	assert!(
 		token.is_some(),
-		"Element {elem:?} is unexpectedly not a token.",
+		"element {elem:?} is unexpectedly not a token",
 	);
 
 	let token = token.unwrap();
@@ -64,14 +64,14 @@ pub fn assert_token<L>(
 	assert_eq!(
 		token.kind(),
 		kind,
-		"Expected token kind {kind:?}, found {:?}.",
+		"expected token kind {kind:?}, found {:?}",
 		token.kind()
 	);
 
 	assert_eq!(
 		token.text(),
 		text,
-		"Expected token text {text}, found {}.",
+		"expected token text {text}, found {}",
 		token.text()
 	);
 }
@@ -93,7 +93,7 @@ pub fn assert_sequence<L>(
 	assert_eq!(
 		seq_count,
 		(elem_count / 2),
-		"Expected a parsed sequence of {seq_count} elements, but found {elem_count}.",
+		"expected a parsed sequence of {seq_count} elements, but found {elem_count}",
 	);
 
 	let iter_s = seq.iter().copied();
@@ -110,7 +110,7 @@ pub fn assert_sequence<L>(
 		assert_eq!(
 			elem.kind(),
 			kind,
-			"Expected element {i} to have kind {kind:?} but found {:?}.",
+			"expected element {i} to have kind {kind:?} but found {:?}",
 			elem.kind()
 		);
 
@@ -119,20 +119,20 @@ pub fn assert_sequence<L>(
 
 			assert!(token.is_some());
 
-			assert!(token.is_some(), "Element {i} is unexpectedly not a token.",);
+			assert!(token.is_some(), "element {i} is unexpectedly not a token",);
 
 			let token = token.unwrap();
 
 			assert_eq!(
 				token.text(),
 				text,
-				"Expected element {i} to have text {text} but found {}.",
+				"expected element {i} to have text {text} but found {}",
 				token.text()
 			);
 		} else {
 			assert!(
 				elem.as_node().is_some(),
-				"Element {i} is unexpectedly not a node."
+				"element {i} is unexpectedly not a node"
 			);
 		}
 	}
@@ -205,7 +205,7 @@ where
 {
 	result
 		.map_err(|errors| {
-			panic!("Encountered errors:\r\n{}", format_errors(&errors));
+			panic!("encountered errors:\r\n{}", format_errors(&errors));
 		})
 		.unwrap()
 }

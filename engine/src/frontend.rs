@@ -80,7 +80,7 @@ impl FrontendMenu {
 							if let Some(files) = rfd::FileDialog::new()
 								.set_directory(
 									std::env::current_dir()
-										.expect("Failed to get program's working directory."),
+										.expect("failed to get program's working directory"),
 								)
 								.pick_files()
 							{
@@ -101,7 +101,7 @@ impl FrontendMenu {
 							if let Some(dirs) = rfd::FileDialog::new()
 								.set_directory(
 									std::env::current_dir()
-										.expect("Failed to get program's working directory."),
+										.expect("failed to get program's working directory"),
 								)
 								.pick_folders()
 							{

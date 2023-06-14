@@ -25,7 +25,7 @@
 #![allow(dead_code)] // TODO: Disallow
 
 #[cfg(target_pointer_width = "32")]
-std::compile_error!("VZS's heap does not yet support 32-bit architectures.");
+std::compile_error!("VZS's heap does not yet support 32-bit architectures");
 
 use std::{
 	alloc::Layout, collections::HashMap, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull,
@@ -231,7 +231,7 @@ impl Runtime {
 			}
 		}
 
-		assert_ne!(size, 0, "Oversized VZS allocation.");
+		assert_ne!(size, 0, "oversized VZS allocation");
 
 		let layout = Layout::from_size_align(size, 1 << 20).unwrap();
 		let ptr = NonNull::new(std::alloc::alloc(layout)).unwrap();
@@ -337,20 +337,18 @@ struct Arena {
 }
 
 impl Arena {
-	// Not used except as a provider of static assertions.
+	/// Just a static assertion.
 	#[allow(unused)]
-	const HEADER_LAYOUT: Layout = {
+	const HEADER_LAYOUT: () = {
 		let ret = Layout::new::<ChunkHeader>();
 
 		if ret.size() != ((1 << 20) / 64) {
-			panic!("Chunk header size is incorrect.");
+			panic!("chunk header size is incorrect");
 		}
 
 		if ret.align() != 16 {
-			panic!("Chunk header alignment is not 16.");
+			panic!("chunk header alignment is not 16");
 		}
-
-		ret
 	};
 
 	const CHUNK_LAYOUT: Layout = Layout::new::<Chunk>();
@@ -505,7 +503,7 @@ impl RegionHeader {
 	const ASSERT_SIZE: usize = {
 		let l = Layout::new::<Self>();
 
-		assert!(l.size() == 16, "VZS heap region header is an illegal size.");
+		assert!(l.size() == 16, "VZS heap region header is an illegal size");
 
 		l.size()
 	};

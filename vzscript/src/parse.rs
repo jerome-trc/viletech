@@ -104,7 +104,7 @@ pub struct IncludeTree {
 impl IncludeTree {
 	#[must_use]
 	pub fn new() -> Self {
-		unimplemented!("Include tree parsing pending DoomFront's `Filesystem` trait.")
+		unimplemented!("include tree parsing pending DoomFront's `Filesystem` trait")
 	}
 
 	#[must_use]

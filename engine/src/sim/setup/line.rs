@@ -22,12 +22,12 @@ pub(super) fn _line_special_bundle(mut line: EntityCommands, format: LevelFormat
 					lock: None,
 				});
 			}
-			other => unimplemented!("Doom line special {other} is unimplemented."),
+			other => unimplemented!("Doom line special {other} is unimplemented"),
 		},
 		LevelFormat::Extended => todo!(),
 		LevelFormat::Udmf(namespace) => match namespace {
 			UdmfNamespace::Doom => todo!(),
-			other => unimplemented!("UDMF namespace `{other:#?}` is not yet supported."),
+			other => unimplemented!("UDMF namespace `{other:#?}` is not yet supported"),
 		},
 	}
 }

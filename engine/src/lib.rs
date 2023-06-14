@@ -72,7 +72,7 @@ pub fn thread_pool_init(num_threads: Option<usize>) {
 		.thread_name(|index| format!("vile-global-{index}"))
 		.num_threads(num_threads.unwrap_or(0))
 		.build_global()
-		.expect("Failed to build rayon's global thread pool.")
+		.expect("failed to build Rayon's global thread pool")
 }
 
 /// Returns a message telling the user the engine's `CARGO_PKG_VERSION`.
@@ -113,7 +113,7 @@ pub fn basedata_path() -> std::path::PathBuf {
 	#[cfg(debug_assertions)]
 	{
 		path = [
-			std::env::current_dir().expect("Failed to get working directory"),
+			std::env::current_dir().expect("failed to get working directory"),
 			PathBuf::from("data/viletech"),
 		]
 		.iter()
@@ -194,9 +194,9 @@ impl std::fmt::Display for BaseDataError {
 		let p = path.display();
 
 		match self {
-			Self::Missing => write!(f, "Engine base data not found at `{p}`."),
+			Self::Missing => write!(f, "engine base data not found at `{p}`"),
 			Self::ReadFailure(err) => err.fmt(f),
-			Self::ChecksumMismatch => write!(f, "Engine base data at `{p}` is corrupted."),
+			Self::ChecksumMismatch => write!(f, "engine base data at `{p}` is corrupted"),
 		}
 	}
 }

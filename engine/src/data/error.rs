@@ -17,7 +17,7 @@ impl std::fmt::Display for DatumError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::NotFound(id) => {
-				write!(f, "No data object exists by the ID: {id}")
+				write!(f, "no data object exists by the ID: {id}")
 			}
 		}
 	}
@@ -90,34 +90,36 @@ impl std::fmt::Display for PrepError {
 			PrepErrorKind::ColorMap(size) => {
 				write!(
 					f,
-					"`COLORMAP` lump is the wrong size: {p}\r\n\t\
-					Expected 8704, but found: {size}",
+					"`COLORMAP` lump is the wrong size: `{p}` - expected 8704, but found: {size}",
 					p = self.path.display()
 				)
 			}
 			PrepErrorKind::EnDoom(size) => {
 				write!(
 					f,
-					"`ENDOOM` lump is the wrong size: {p}\r\n\t\
-					Expected 4000, but found: {size}",
+					"`ENDOOM` lump is the wrong size: `{p}` - expected 4000, but found: {size}",
 					p = self.path.display()
 				)
 			}
 			PrepErrorKind::Flat => {
 				write!(
 					f,
-					"Lump {} is between `F_START` and `F_END` but is not a flat.",
+					"lump {} is between `F_START` and `F_END` but is not a flat",
 					self.path.display()
 				)
 			}
 			PrepErrorKind::Io(err) => err.fmt(f),
 			PrepErrorKind::Level(err) => {
-				write!(f, "Map `{}` is invalid. Reason: {err}", self.path.display())
+				write!(
+					f,
+					"level `{}` is invalid. Reason: {err}",
+					self.path.display()
+				)
 			}
 			PrepErrorKind::Image(err) => {
 				write!(
 					f,
-					"Failed to decode image: {p}\r\n\tDetails: {err}",
+					"failed to decode image: `{p}` - details: {err}",
 					p = self.path.display()
 				)
 			}
@@ -129,36 +131,35 @@ impl std::fmt::Display for PrepError {
 				)
 			}
 			PrepErrorKind::PNames => {
-				write!(f, "Malformed PNAMES lump: {}", self.path.display())
+				write!(f, "malformed PNAMES lump: {}", self.path.display())
 			}
 			PrepErrorKind::Sprite => {
 				write!(
 					f,
-					"Lump {} is between `S_START` and `S_END` \
-					but is not a recognized sprite format.",
+					"lump {} is between `S_START` and `S_END` \
+					but is not a recognized sprite format",
 					self.path.display()
 				)
 			}
 			PrepErrorKind::TextureX => {
 				write!(
 					f,
-					"Malformed TEXTURE1 or TEXTURE2 lump: {}",
+					"malformed TEXTURE1 or TEXTURE2 lump: {}",
 					self.path.display()
 				)
 			}
 			PrepErrorKind::Unreadable(path) => {
 				write!(
 					f,
-					"Virtual file {p} was expected to have bytes or text content, \
-					but it is empty or a directory.",
+					"virtual file {p} was expected to have bytes or text content, \
+					but it is empty or a directory",
 					p = path.display()
 				)
 			}
-			PrepErrorKind::VzsParse(_) => todo!(),
+			PrepErrorKind::VzsParse(_) => unimplemented!(),
 			PrepErrorKind::WaveformAudio(err) => write!(
 				f,
-				"Failed to load audio file: {p}\r\n\t\
-				Details: {err}",
+				"failed to load audio file: `{p}` - details: {err}",
 				p = self.path.display()
 			),
 		}

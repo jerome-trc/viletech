@@ -25,7 +25,7 @@ impl<B: Prng> RngCore<B> {
 	pub fn add_default(&mut self, key: String) {
 		assert!(
 			!self.contains(&key),
-			"Tried to overwrite PRNG with key: {key}"
+			"tried to overwrite PRNG with key: {key}"
 		);
 
 		self.prngs.insert(key, B::default());
@@ -36,7 +36,7 @@ impl<B: Prng> RngCore<B> {
 	pub fn add(&mut self, key: String, prng: B) {
 		assert!(
 			!self.contains(&key),
-			"Tried to overwrite PRNG with key: {key}"
+			"tried to overwrite PRNG with key: {key}"
 		);
 
 		self.prngs.insert(key, prng);

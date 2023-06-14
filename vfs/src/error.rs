@@ -27,21 +27,21 @@ impl std::fmt::Display for VfsError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::NotFound(path) => {
-				write!(f, "No virtual file exists under path: {}", path.display())
+				write!(f, "no virtual file exists under path: {}", path.display())
 			}
 			Self::UnmountRoot => {
-				write!(f, "Attempted to unmount the root VFS entry.")
+				write!(f, "attempted to unmount the root VFS entry")
 			}
 			Self::ByteReadFail => {
 				write!(
 					f,
-					"Tried to read/clone the raw bytes of a file with no such content."
+					"tried to read/clone the raw bytes of a file with no such content"
 				)
 			}
 			Self::StringReadFail => {
 				write!(
 					f,
-					"Tried to read/clone the text of a file with non-UTF-8 content or no byte content."
+					"tried to read/clone the text of a file with non-UTF-8 content or no byte content"
 				)
 			}
 		}
@@ -138,88 +138,87 @@ impl std::fmt::Display for MountError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
 			MountErrorKind::Canonicalization(err) => {
-				write!(f, "Failed to canonicalize a given path. Details: {err}")
+				write!(f, "failed to canonicalize a given path. Details: {err}")
 			}
 			MountErrorKind::DirectoryRead(err) => {
-				write!(f, "Failed to read a directory's contents: {err}")
+				write!(f, "failed to read a directory's contents: {err}")
 			}
 			MountErrorKind::FileNotFound => {
-				write!(f, "No file exists at path: {}", self.path.display())
+				write!(f, "no file exists at path: {}", self.path.display())
 			}
 			MountErrorKind::FileRead(err) => {
-				write!(f, "File read failed: {err}")
+				write!(f, "file read failed: {err}")
 			}
 			MountErrorKind::FileType(err) => {
-				write!(f, "Failed to retrieve type of file: {err}")
+				write!(f, "failed to retrieve type of file: {err}")
 			}
 			MountErrorKind::InvalidMountPoint(err) => {
 				write!(
 					f,
-					"Mount point is invalid: {p}\r\n\t\
-					Reason: {e}",
+					"mount point is invalid: `{p}` - reason: {e}",
 					p = self.path.display(),
 					e = match err {
-						MountPointError::InvalidUtf8 => "Path is not valid UTF-8.",
-						MountPointError::Relative => "Path contains a `.` or `..` component.",
+						MountPointError::InvalidUtf8 => "path is not valid UTF-8",
+						MountPointError::Relative => "path contains a `.` or `..` component",
 						MountPointError::Reserved =>
-							"Path contains a component that is engine-reserved.",
+							"path contains a component that is engine-reserved",
 					}
 				)
 			}
 			MountErrorKind::MountFallthrough => {
-				write!(f, "Another mount operation failed, so this one failed.")
+				write!(f, "another mount operation failed, so this one failed")
 			}
 			MountErrorKind::MountHidden => {
-				write!(f, "Tried to mount a hidden file (name starting with `.`).")
+				write!(f, "tried to mount a hidden file (name starting with `.`)")
 			}
 			MountErrorKind::MountParentNotFound(path) => {
 				write!(
 					f,
-					"A mount point's parent path mapped to no virtual file: {}",
+					"a mount point's parent path mapped to no virtual file: {}",
 					path.display()
 				)
 			}
 			MountErrorKind::MountSymlink => {
-				write!(f, "Tried to mount a symbolic link.")
+				write!(f, "tried to mount a symbolic link")
 			}
 			MountErrorKind::ParentlessMountPoint => {
-				write!(f, "The given path has no parent path.")
+				write!(f, "the given path has no parent path")
 			}
 			MountErrorKind::Metadata(err) => {
-				write!(f, "Failed to get file metadata: {err}")
+				write!(f, "failed to get file metadata: {err}")
 			}
 			MountErrorKind::Remount => {
 				write!(
 					f,
-					"Attempted to overwrite an existing entry with a new mount."
+					"attempted to overwrite an existing entry with a new mount"
 				)
 			}
 			MountErrorKind::Wad(err) => {
-				write!(f, "Failed to parse a WAD archive: {err}")
+				write!(f, "failed to parse a WAD archive: {err}")
 			}
 			MountErrorKind::ZipArchiveRead(err) => {
-				write!(f, "Failed to open a zip archive: {err}")
+				write!(f, "failed to open a zip archive: {err}")
 			}
 			MountErrorKind::ZipFileGet(index, err) => {
 				write!(
 					f,
-					"Failed to get zip archive entry by index: {index} ({err})"
+					"failed to get zip archive entry by index: {index} ({err})"
 				)
 			}
 			MountErrorKind::ZipFileName(name) => {
-				write!(f, "Zip archive entry name is malformed or unsafe: {name}")
+				write!(f, "zip archive entry name is malformed or unsafe: {name}")
 			}
 			MountErrorKind::ZipFileRead { name, err } => {
 				if let Some(err) = err {
 					write!(
 						f,
-						"Failed to read zip archive entry: {n} ({err})",
+						"failed to read zip archive entry: {n} ({err})",
 						n = name.display()
 					)
 				} else {
 					write!(
 						f,
-						"Failed to read all content of zip archive entry: {n}",
+						"failed to read all content of zip archive entry: {n}",
 						n = name.display()
 					)
 				}

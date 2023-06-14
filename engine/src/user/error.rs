@@ -81,19 +81,19 @@ impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::PrefNotFound(id) => {
-				write!(f, "No pref exists by the ID: {id}")
+				write!(f, "no pref exists by the ID: {id}")
 			}
 			Self::TypeMismatch { expected, given } => {
 				write!(
 					f,
-					"Type mismatch during pref lookup. \
+					"type mismatch during pref lookup. \
 					Expected {expected:#?}, got {given:#?}.",
 				)
 			}
 			Self::Utf8 { source, path } => {
 				write!(
 					f,
-					"File is invalid text: {p}\r\n\tDetails: {s}",
+					"file is invalid text: `{p}` - details: {s}",
 					p = path.display(),
 					s = source
 				)
@@ -101,7 +101,7 @@ impl std::fmt::Display for Error {
 			Self::FileRead { source, path } => {
 				write!(
 					f,
-					"Failed to read contents of file: {p}\r\n\tDetails: {s}",
+					"failed to read contents of file: {p} - details: {s}",
 					p = path.display(),
 					s = source,
 				)
@@ -109,7 +109,7 @@ impl std::fmt::Display for Error {
 			Self::TomlParse { source, path } => {
 				write!(
 					f,
-					"Failed to parse contents of file: {p}\r\n\tDetails: {s}",
+					"failed to parse contents of file: `{p}` - details: {s}",
 					p = path.display(),
 					s = source,
 				)
@@ -117,7 +117,7 @@ impl std::fmt::Display for Error {
 			Self::CreateDir { source, path } => {
 				write!(
 					f,
-					"Failed to create a folder: {p}\r\n\tDetails: {s}",
+					"failed to create a folder: `{p}` - details: {s}",
 					p = path.display(),
 					s = source,
 				)
@@ -125,7 +125,7 @@ impl std::fmt::Display for Error {
 			Self::FileWrite { source, path } => {
 				write!(
 					f,
-					"Failed to write to file: {p}\r\n\tDetails: {s}",
+					"failed to write to file: {p} - details: {s}",
 					p = path.display(),
 					s = source,
 				)
@@ -137,16 +137,14 @@ impl std::fmt::Display for Error {
 			} => {
 				write!(
 					f,
-					"Abnormality at file path: {p}\r\n\t\
-					Expected to find: {expected}\r\n\t\
-					Found: {found}",
+					"abnormality at file path: `{p}` - expected to find: {expected}, found: {found}",
 					p = path.display(),
 				)
 			}
 			Self::ReadDir { source, path } => {
 				write!(
 					f,
-					"Failed to read contents of directory: {p}\r\n\tDetails: {s}",
+					"failed to read contents of directory: `{p}` - details: {s}",
 					p = path.display(),
 					s = source,
 				)

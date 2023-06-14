@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use super::*;
 
@@ -20,14 +20,14 @@ fn load_unload() {
 			);
 		}
 		other => {
-			panic!("Unexpected load outcome: {other:#?}");
+			panic!("unexpected load outcome: {other:#?}");
 		}
 	}
 
 	assert_eq!(
 		catalog.vfs().mounts().len(),
 		2,
-		"Expected 2 mounts, found: {}",
+		"expected 2 mounts, found: {}",
 		catalog.vfs().mounts().len()
 	);
 
@@ -37,7 +37,7 @@ fn load_unload() {
 	assert_eq!(
 		catalog.vfs.file_count(),
 		EXPECTED,
-		"Expected {EXPECTED} mounted files, found: {}",
+		"expected {EXPECTED} mounted files, found: {}",
 		catalog.vfs.file_count()
 	);
 
@@ -48,9 +48,7 @@ fn load_unload() {
 
 #[must_use]
 fn request() -> LoadRequest {
-	let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-		.join("..")
-		.join("sample");
+	let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample");
 
 	let load_order = vec![
 		(base.join("freedoom1.wad"), VPathBuf::from("/freedoom1")),
@@ -60,10 +58,10 @@ fn request() -> LoadRequest {
 	for (real_path, _) in &load_order {
 		if !real_path.exists() {
 			panic!(
-				"Load/unload testing depends on the following files of sample data:\r\n\t\
+				"load/unload testing depends on the following files of sample data:\r\n\t\
 				- `$CARGO_MANIFEST_DIR/sample/freedoom1.wad`\r\n\t\
 				- `$CARGO_MANIFEST_DIR/sample/freedoom2.wad`\r\n\t\
-				They can be acquired from https://freedoom.github.io/."
+				They can be acquired from https://freedoom.github.io/"
 			);
 		}
 	}

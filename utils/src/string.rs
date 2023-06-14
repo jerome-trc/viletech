@@ -126,8 +126,8 @@ impl std::error::Error for UnescapeError {}
 impl std::fmt::Display for UnescapeError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Unrecognized => write!(f, "Encountered an unrecognized escape character."),
-			Self::InvalidUtf8 => write!(f, "Invalid UTF-8 code point."),
+			Self::Unrecognized => write!(f, "encountered an unrecognized escape character"),
+			Self::InvalidUtf8 => write!(f, "invalid UTF-8 code point"),
 		}
 	}
 }
@@ -202,14 +202,13 @@ mod test {
 			if expected[i].1.is_empty() {
 				assert!(
 					res.is_none(),
-					"[{i}] - Expected nothing; returned: {}",
+					"[{i}] expected nothing; returned: {}",
 					res.unwrap()
 				);
 			} else {
 				assert!(
 					string == expected[i].0,
-					"[{i}] Expected modified string: {}
-					Actual output: {}",
+					"[{i}] expected modified string: {} - actual output: {}",
 					expected[i].0,
 					string
 				);
@@ -218,8 +217,7 @@ mod test {
 
 				assert!(
 					vers == expected[i].1,
-					"[{i}] Expected return value: {}
-					Actual return value: {}",
+					"[{i}] expected return value: {} - actual return value: {}",
 					expected[i].1,
 					vers
 				);

@@ -101,7 +101,7 @@ impl Catalog {
 		ctx.post_pass2();
 
 		if ctx.last_paletteset().is_none() {
-			unimplemented!("Further loading without a PLAYPAL is unsupported for now.");
+			unimplemented!("further loading without a PLAYPAL is unsupported for now");
 		}
 
 		// Pass 3: assets dependent on pass 2. Includes:
@@ -250,7 +250,7 @@ impl Catalog {
 		let fref = self
 			.vfs
 			.get(mount.mount_point())
-			.expect("`resolve_mount_kind` received an invalid virtual path.");
+			.expect("`resolve_mount_kind` received an invalid virtual path");
 
 		if fref.is_leaf() {
 			return MountKind::Misc;
@@ -288,7 +288,7 @@ impl Catalog {
 			return MountKind::Eternity;
 		}
 
-		unreachable!("All mount kind resolution heuristics failed.")
+		unreachable!("all mount kind resolution heuristics failed")
 	}
 
 	/// Parses a meta.toml if one exists. Otherwise, make a best-possible effort

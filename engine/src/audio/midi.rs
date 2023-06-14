@@ -504,7 +504,7 @@ impl Renderer {
 		use kira::manager::backend::cpal::Error as CpalError;
 
 		let synth = Synth::new(
-			fluidlite::Settings::new().expect("Failed to create a FluidSynth settings object."),
+			fluidlite::Settings::new().expect("failed to create a FluidSynth settings object"),
 		)
 		.map_err(Error::MidiSynth)?;
 
@@ -558,7 +558,7 @@ impl Renderer {
 					_ => unreachable!(),
 				}
 			}
-			other => unimplemented!("Unexpected sample format: {other:#?}"),
+			other => unimplemented!("unexpected sample format: {other:#?}"),
 		};
 
 		let mut ret = Self {

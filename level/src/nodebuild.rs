@@ -50,15 +50,15 @@ impl Context {
 	pub fn build(&mut self, level: &mut Level) {
 		assert!(
 			level.nodes.is_empty(),
-			"Tried to build BSP nodes for a level which already had some."
+			"tried to build BSP nodes for a level which already had some"
 		);
 		assert!(
 			level.subsectors.is_empty(),
-			"Tried to build BSP nodes for a level which already had subsectors."
+			"tried to build BSP nodes for a level which already had subsectors"
 		);
 		assert!(
 			level.segs.is_empty(),
-			"Tried to build BSP nodes for a level which already had segs."
+			"tried to build BSP nodes for a level which already had segs"
 		);
 
 		self.reset();
@@ -472,7 +472,7 @@ fn polyspots(level: &Level) -> PolySpots {
 	assert_eq!(
 		level.format,
 		LevelFormat::Extended,
-		"Can only calculate polyobject spots for extended-format levels."
+		"can only calculate polyobject spots for extended-format levels"
 	);
 
 	let is_hexen = level.things.par_iter().any(|thing| thing.ed_num == 3000);

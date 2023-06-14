@@ -45,7 +45,7 @@ pub fn update(
 			cmds.insert_resource(
 				core.start_load(to_mount, frontend.dev_mode())
 					.unwrap_or_else(|_| {
-						unimplemented!("Handling load order errors is currently unimplemented.")
+						unimplemented!("handling load order errors is currently unimplemented")
 					}),
 			);
 

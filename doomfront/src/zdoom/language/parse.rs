@@ -247,7 +247,7 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 		}
 
 		let bytes = std::fs::read(path)
-			.map_err(|err| panic!("File I/O failure: {err}"))
+			.map_err(|err| panic!("file I/O failure: {err}"))
 			.unwrap();
 		let source = String::from_utf8_lossy(&bytes);
 

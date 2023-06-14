@@ -17,7 +17,7 @@ fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {
-			eprintln!("Failed to execute `git rev-parse HEAD`: {err}");
+			eprintln!("failed to execute `git rev-parse HEAD`: {err}");
 			return Err(Box::new(err));
 		}
 	};
@@ -25,7 +25,7 @@ fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 	let hash_str = match String::from_utf8(hash.stdout) {
 		Ok(s) => s,
 		Err(err) => {
-			eprintln!("Failed to convert output of `git rev-parse HEAD` to UTF-8: {err}",);
+			eprintln!("failed to convert output of `git rev-parse HEAD` to UTF-8: {err}",);
 			return Err(Box::new(err));
 		}
 	};
@@ -58,7 +58,7 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 		.collect::<PathBuf>();
 
 	if !data_path.exists() {
-		panic!("Base data directory not found.");
+		panic!("base data directory not found");
 	}
 
 	let pkg_path = [
@@ -94,7 +94,7 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 			Some(s) => s.to_string(),
 			None => {
 				let p = path.display();
-				panic!("Base data file has path with invalid UTF-8: {p}");
+				panic!("base data file has path with invalid UTF-8: `{p}`");
 			}
 		};
 
@@ -112,7 +112,7 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 
 		assert!(
 			written == file_len,
-			"Expected to write {file_len} bytes, wrote {written}.",
+			"expected to write {file_len} bytes, wrote {written}.",
 		);
 
 		buffer.clear();

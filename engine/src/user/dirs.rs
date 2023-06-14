@@ -96,7 +96,7 @@ pub fn user_dir_home() -> Option<PathBuf> {
 			home.push("viletech");
 		}
 		_ => {
-			unimplemented!("This platform is currently unsupported.");
+			unimplemented!("this platform is currently unsupported");
 		}
 	};
 

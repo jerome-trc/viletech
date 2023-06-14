@@ -112,7 +112,7 @@ impl File {
 		match &self.content {
 			Content::Binary(bytes) => bytes,
 			Content::Text(string) => string.as_bytes(),
-			_ => panic!("Tried to read the bytes of a VFS entry with no byte content."),
+			_ => panic!("tried to read the bytes of a VFS entry with no byte content"),
 		}
 	}
 
@@ -131,7 +131,7 @@ impl File {
 	pub fn read_str(&self) -> &str {
 		match &self.content {
 			Content::Text(string) => string.as_ref(),
-			_ => panic!("Tried to read text from a VFS entry without UTF-8 content."),
+			_ => panic!("tried to read text from a VFS entry without UTF-8 content"),
 		}
 	}
 
@@ -239,9 +239,9 @@ impl<'vfs> FileRef<'vfs> {
 
 		self.path
 			.file_name()
-			.expect("A VFS path wasn't sanitised (OS).")
+			.expect("a VFS path wasn't sanitised (OS)")
 			.to_str()
-			.expect("A VFS path wasn't sanitised (UTF-8).")
+			.expect("a VFS path wasn't sanitised (UTF-8)")
 	}
 
 	/// See [`std::path::Path::file_stem`].
@@ -258,9 +258,9 @@ impl<'vfs> FileRef<'vfs> {
 
 		self.path
 			.file_stem()
-			.expect("A VFS path wasn't sanitised (OS).")
+			.expect("a VFS path wasn't sanitised (OS)")
 			.to_str()
-			.expect("A VFS path wasn't sanitised (UTF-8).")
+			.expect("a VFS path wasn't sanitised (UTF-8)")
 	}
 
 	/// See [`std::path::Path::file_prefix`].
@@ -276,9 +276,9 @@ impl<'vfs> FileRef<'vfs> {
 
 		self.path
 			.file_stem()
-			.expect("A VFS path wasn't sanitised (OS).")
+			.expect("a VFS path wasn't sanitised (OS)")
 			.to_str()
-			.expect("A VFS path wasn't sanitised (UTF-8).")
+			.expect("a VFS path wasn't sanitised (UTF-8)")
 			.split('.')
 			.next()
 			.unwrap()
@@ -290,7 +290,7 @@ impl<'vfs> FileRef<'vfs> {
 	pub fn path_str(&self) -> &str {
 		self.path
 			.to_str()
-			.expect("A VFS path wasn't UTF-8 sanitised.")
+			.expect("a VFS path wasn't UTF-8 sanitised")
 	}
 
 	/// See [`std::path::Path::extension`].
@@ -299,7 +299,7 @@ impl<'vfs> FileRef<'vfs> {
 		self.path.extension().map(|os_str| {
 			os_str
 				.to_str()
-				.expect("A VFS path wasn't sanitised (UTF-8).")
+				.expect("a VFS path wasn't sanitised (UTF-8)")
 		})
 	}
 
@@ -317,7 +317,7 @@ impl<'vfs> FileRef<'vfs> {
 		self.parent_path().map(|parent| {
 			self.vfs
 				.get(parent)
-				.expect("A VFS file's parent path is invalid.")
+				.expect("a VFS file's parent path is invalid")
 		})
 	}
 
@@ -332,7 +332,7 @@ impl<'vfs> FileRef<'vfs> {
 			Content::Directory { children, .. } => Some(children.iter().map(|key| {
 				self.vfs
 					.get(key.as_ref())
-					.expect("A VFS directory has a dangling child key.")
+					.expect("a VFS directory has a dangling child key")
 			})),
 			_ => None,
 		}
@@ -388,13 +388,13 @@ impl<'vfs> FileRef<'vfs> {
 		let path = path.as_ref();
 
 		if path.parent().filter(|&p| p == self.path()).is_none() {
-			panic!("`child_index` expects `path` to be a child of `self.path`.");
+			panic!("`child_index` expects `path` to be a child of `self.path`");
 		}
 
 		if let Content::Directory { children, .. } = &self.file.content {
 			children.get_index_of(path)
 		} else {
-			panic!("`child_index` expects `self` to be a directory.");
+			panic!("`child_index` expects `self` to be a directory");
 		}
 	}
 }

@@ -15,7 +15,7 @@ pub(super) fn _sector_special_bundle(
 		BaseGame::Doom => match format {
 			LevelFormat::Doom => _sector_special_bundle_boom(sector, num),
 			LevelFormat::Udmf(UdmfNamespace::ZDoom) => _sector_special_bundle_zdoom(sector, num),
-			_ => unimplemented!("Unsupported configuration: {game:#?}/{format:#?}"),
+			_ => unimplemented!("unsupported configuration: {game:#?}/{format:#?}"),
 		},
 		BaseGame::Hexen => {
 			_sector_special_bundle_zdoom(sector, num);
@@ -58,11 +58,11 @@ fn _sector_special_bundle_boom(mut sector: EntityCommands, num: u16) {
 	}
 
 	if (num & 256) != 0 {
-		unimplemented!("Boom friction effects are unimplemented.");
+		unimplemented!("Boom friction effects are unimplemented");
 	}
 
 	if (num & 512) != 0 {
-		unimplemented!("Boom conveyor effects are unimplemented.");
+		unimplemented!("Boom conveyor effects are unimplemented");
 	}
 
 	match num {
@@ -91,16 +91,16 @@ fn _sector_special_bundle_boom(mut sector: EntityCommands, num: u16) {
 				leak_chance: 16,
 			});
 		}
-		other => unimplemented!("Boom sector special {other} is unimplemented."),
+		other => unimplemented!("Boom sector special {other} is unimplemented"),
 	}
 }
 
 fn _sector_special_bundle_heretic(mut _sector: EntityCommands, _num: u16) {
-	unimplemented!("Heretic sector specials are unimplemented.")
+	unimplemented!("Heretic sector specials are unimplemented")
 }
 
 fn _sector_special_bundle_strife(mut _sector: EntityCommands, _num: u16) {
-	unimplemented!("Strife sector specials are unimplemented.")
+	unimplemented!("Strife sector specials are unimplemented")
 }
 
 fn _sector_special_bundle_zdoom(mut cmds: EntityCommands, num: u16) {
@@ -119,6 +119,6 @@ fn _sector_special_bundle_zdoom(mut cmds: EntityCommands, num: u16) {
 				amount: 1,
 			});
 		}
-		other => unimplemented!("ZDoom sector special {other} is unimplemented."),
+		other => unimplemented!("ZDoom sector special {other} is unimplemented"),
 	}
 }

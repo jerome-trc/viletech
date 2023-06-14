@@ -15,7 +15,7 @@ fn mount() {
 			assert!(errors[0].is_empty());
 		}
 		other => {
-			panic!("Unexpected mount outcome: {other:#?}");
+			panic!("unexpected mount outcome: {other:#?}");
 		}
 	}
 }
@@ -27,11 +27,11 @@ fn lookup() {
 	let mut vfs = VirtualFs::default();
 
 	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS lookup unit test encountered mount errors.");
+		panic!("VFS lookup unit test encountered mount errors");
 	}
 
-	assert!(vfs.get("/").is_some(), "Root lookup failed.");
-	assert!(vfs.get("//").is_some(), "`//` lookup failed."); // Should return root.
+	assert!(vfs.get("/").is_some(), "root lookup failed");
+	assert!(vfs.get("//").is_some(), "`//` lookup failed"); // Should return root.
 
 	assert!(
 		vfs.get("/freedoom2").is_some(),
@@ -57,7 +57,7 @@ fn dir_structure() {
 	let mut vfs = VirtualFs::default();
 
 	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS directory structure unit test encountered mount errors.");
+		panic!("VFS directory structure unit test encountered mount errors");
 	}
 
 	let root = vfs.get("/").unwrap();
@@ -65,7 +65,7 @@ fn dir_structure() {
 	assert_eq!(
 		root.child_count(),
 		2,
-		"Expected root to have 2 children, but it has {}.",
+		"expected root to have 2 children, but it has {}",
 		root.child_count()
 	);
 
@@ -84,9 +84,9 @@ fn dir_structure() {
 
 	for (index, child) in vfs
 		.get("/freedoom2/MAP01")
-		.expect("`/freedoom2/MAP01` was not found.")
+		.expect("`/freedoom2/MAP01` was not found")
 		.children()
-		.expect("`/freedoom2/MAP01` is not a directory.")
+		.expect("`/freedoom2/MAP01` is not a directory")
 		.enumerate()
 	{
 		assert_eq!(child.path_str(), EXPECTED_CHILDREN[index]);
@@ -100,7 +100,7 @@ fn glob() {
 	let mut vfs = VirtualFs::default();
 
 	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS glob unit test encountered mount errors.");
+		panic!("VFS glob unit test encountered mount errors");
 	}
 
 	{
@@ -108,7 +108,7 @@ fn glob() {
 		let count = vfs.glob_par(glob).count();
 		assert_eq!(
 			count, 2,
-			"Expected 2 entries matching glob `/freedoom2/FCGRATE*`, found: {}",
+			"expected 2 entries matching glob `/freedoom2/FCGRATE*`, found: {}",
 			count
 		);
 	}
@@ -116,7 +116,7 @@ fn glob() {
 	{
 		let glob = globset::Glob::new("/freedoom1/E*M[0123456789]").unwrap();
 		let count = vfs.glob_par(glob).count();
-		assert_eq!(count, 36, "Expected 36 maps, found: {}", count);
+		assert_eq!(count, 36, "expected 36 maps, found: {}", count);
 	}
 
 	{
@@ -124,7 +124,7 @@ fn glob() {
 		let count = vfs.glob_par(glob).count();
 		assert_eq!(
 			count, 352,
-			"Expected 352 maps and sub-entries, found: {}",
+			"expected 352 maps and sub-entries, found: {}",
 			count
 		);
 	}

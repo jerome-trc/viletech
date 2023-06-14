@@ -328,7 +328,7 @@ actor BaronsBanquet {}
 				}
 
 				let bytes = std::fs::read(p)
-					.map_err(|err| panic!("File I/O failure: {err}"))
+					.map_err(|err| panic!("file I/O failure: {err}"))
 					.unwrap();
 				let source = String::from_utf8_lossy(&bytes);
 				Some(Cow::Owned(source.as_ref().to_owned()))

@@ -51,13 +51,13 @@ impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::InvalidNamespace(namespace) => {
-				write!(f, "`{namespace}` is not a valid UDMF namespace.")
+				write!(f, "`{namespace}` is not a valid UDMF namespace")
 			}
 			Self::Lex(span) => {
-				write!(f, "Unrecognized token at {span:?}.")
+				write!(f, "unrecognized token at {span:?}")
 			}
 			Self::NoNamespace => {
-				write!(f, "TEXTMAP is missing a UDMF namespace statement.")
+				write!(f, "TEXTMAP is missing a UDMF namespace statement")
 			}
 			Self::Parse {
 				found,
@@ -76,22 +76,19 @@ impl std::fmt::Display for Error {
 				)
 			}
 			Self::ParseFloat { inner, input } => {
-				write!(
-					f,
-					"Failed to parse float from: `{input}`\r\n\tReason: {inner}"
-				)
+				write!(f, "Failed to parse float from: `{input}` - reason: {inner}")
 			}
 			Self::ParseInt { inner, input } => {
 				write!(
 					f,
-					"Failed to parse integer from: `{input}`\r\n\tReason: {inner}"
+					"Failed to parse integer from: `{input}` - reason: {inner}"
 				)
 			}
 			Self::TextmapEmpty => {
-				write!(f, "TEXTMAP is empty.")
+				write!(f, "TEXTMAP is empty")
 			}
 			Self::TextmapTooShort => {
-				write!(f, "TEXTMAP is too short for any meaningful content.")
+				write!(f, "TEXTMAP is too short for any meaningful content")
 			}
 			Self::UnknownVertDefField(name) => {
 				write!(f, "TEXTMAP contains vertex with unknown field: `{name}`")

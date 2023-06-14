@@ -173,7 +173,7 @@ pub struct InHandle<S: Symbol>(Weak<Store<S>>);
 impl<S: Symbol> InHandle<S> {
 	#[must_use]
 	pub fn upgrade(&self) -> Handle<S> {
-		Handle(Weak::upgrade(&self.0).expect("Failed to upgrade a symbol ARC."))
+		Handle(Weak::upgrade(&self.0).expect("failed to upgrade a symbol ARC"))
 	}
 }
 

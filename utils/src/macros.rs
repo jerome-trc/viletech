@@ -28,7 +28,7 @@ macro_rules! lazy_regex {
 
 		RGX.get_or_init(|| {
 			regex::Regex::new($re).expect(concat!(
-				"Failed to evaluate regex: ",
+				"failed to evaluate regex: ",
 				module_path!(),
 				":",
 				line!(),
@@ -47,7 +47,7 @@ macro_rules! lazy_regexset {
 
 		RGXSET.get_or_init(|| regex::RegexSet::new([$($re),+]).expect(
 			concat!(
-				"Failed to evaluate regex set: ",
+				"failed to evaluate regex set: ",
 				module_path!(),
 				":",
 				line!(),

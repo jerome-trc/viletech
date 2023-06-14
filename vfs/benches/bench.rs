@@ -27,7 +27,7 @@ fn mount(crit: &mut Criterion) {
 			},
 			|(mut vfs, req)| {
 				if let MountOutcome::Errs(_) = std::hint::black_box(vfs.mount(req)) {
-					panic!("VFS mount benchmark encountered errors.");
+					panic!("VFS mount benchmark encountered errors");
 				}
 			},
 			criterion::BatchSize::LargeInput,
@@ -46,7 +46,7 @@ fn mount(crit: &mut Criterion) {
 				};
 
 				if let MountOutcome::Errs(_) = vfs.mount(req) {
-					panic!("VFS unmount benchmark encountered errors.");
+					panic!("VFS unmount benchmark encountered errors");
 				}
 
 				vfs
@@ -77,7 +77,7 @@ fn lookup(crit: &mut Criterion) {
 	};
 
 	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS lookup benchmark encountered mount errors.");
+		panic!("VFS lookup benchmark encountered mount errors");
 	}
 
 	grp.bench_function("Lookup", |bencher| {

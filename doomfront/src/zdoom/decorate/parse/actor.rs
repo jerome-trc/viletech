@@ -546,7 +546,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 
 		let actordef = match toplevel {
 			ast::TopLevel::ActorDef(inner) => inner,
-			other => panic!("Expected `ActorDef`, found: {other:#?}"),
+			other => panic!("expected `ActorDef`, found: {other:#?}"),
 		};
 
 		assert_eq!(actordef.name().text(), "hangar");
@@ -554,7 +554,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		assert_eq!(
 			actordef
 				.base_class()
-				.expect("Actor definition has no base class.")
+				.expect("actor definition has no base class")
 				.text(),
 			"nuclearplant"
 		);
@@ -562,7 +562,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		assert_eq!(
 			actordef
 				.replaced_class()
-				.expect("Actor definition has no replacement clause.")
+				.expect("actor definition has no replacement clause")
 				.text(),
 			"toxinrefinery"
 		);
@@ -570,10 +570,10 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 		assert_eq!(
 			actordef
 				.editor_number()
-				.expect("Actor definition has no editor number.")
+				.expect("actor definition has no editor number")
 				.text()
 				.parse::<u16>()
-				.expect("Actor editor number is not a valid u16."),
+				.expect("actor editor number is not a valid u16"),
 			10239
 		);
 
@@ -632,7 +632,7 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 				assert_eq!(offset.unwrap(), 0);
 				assert_eq!(scope.unwrap().kind(), Syn::KwSuper);
 			}
-			other => panic!("Expected `StateChange::Goto`, found: {other:#?}"),
+			other => panic!("expected `StateChange::Goto`, found: {other:#?}"),
 		}
 
 		let _ = state_items.next().unwrap().into_label().unwrap();

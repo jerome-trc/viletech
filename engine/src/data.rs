@@ -125,7 +125,7 @@ impl Catalog {
 			MountOutcome::Ok(errors) => {
 				debug_assert!(
 					errors.iter().all(|errs| errs.is_empty()),
-					"Unexpected non-fatal errors during basedata mount: {}",
+					"unexpected non-fatal errors during basedata mount: {}",
 					{
 						let mut msg = String::default();
 
@@ -141,7 +141,7 @@ impl Catalog {
 					}
 				);
 			}
-			MountOutcome::Errs(errs) => panic!("Basedata mount failed: {}", {
+			MountOutcome::Errs(errs) => panic!("basedata mount failed: {}", {
 				let mut msg = String::default();
 
 				for subvec in errs {
@@ -175,7 +175,7 @@ impl Catalog {
 	pub fn load(&mut self, request: LoadRequest) -> LoadOutcome {
 		assert!(
 			!self.populated,
-			"Attempted to load a game to an already-populated `Catalog`."
+			"attempted to load a game to an already-populated `Catalog`."
 		);
 
 		if request.mount.load_order.is_empty() {
@@ -264,7 +264,7 @@ impl Catalog {
 
 		let arc = stack
 			.last()
-			.expect("Catalog cleanup missed an empty ed-num stack.");
+			.expect("catalog cleanup missed an empty ed-num stack");
 
 		Some(DataRef::new(self, arc))
 	}
@@ -279,7 +279,7 @@ impl Catalog {
 
 		let arc = stack
 			.last()
-			.expect("Catalog cleanup missed an empty spawn-num stack.");
+			.expect("catalog cleanup missed an empty spawn-num stack");
 
 		Some(DataRef::new(self, arc))
 	}
@@ -291,7 +291,7 @@ impl Catalog {
 
 		let arc = stack
 			.last()
-			.expect("Catalog cleanup missed an empty nickname stack.");
+			.expect("catalog cleanup missed an empty nickname stack");
 
 		Some(DataRef::new(self, arc))
 	}
@@ -303,7 +303,7 @@ impl Catalog {
 
 		let arc = stack
 			.first()
-			.expect("Catalog cleanup missed an empty nickname stack.");
+			.expect("catalog cleanup missed an empty nickname stack");
 
 		Some(DataRef::new(self, arc))
 	}

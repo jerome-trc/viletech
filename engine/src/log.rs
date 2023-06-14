@@ -88,7 +88,7 @@ impl bevy::prelude::Plugin for TracingPlugin {
 
 		let start_time = crate::START_TIME
 			.get()
-			.expect("`viletech::START_TIME` must be set to use `TracingPlugin`.");
+			.expect("`viletech::START_TIME` must be set to use `TracingPlugin`");
 
 		let logger_set = LogTracer::init().is_err();
 
@@ -151,7 +151,7 @@ impl bevy::prelude::Plugin for TracingPlugin {
 pub fn init_diag(app_version_string: &str) -> Result<(), Box<dyn std::error::Error>> {
 	#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 	fn log_cpu_info() -> Result<(), Box<dyn std::error::Error>> {
-		unimplemented!("CPU diagnostics logging only available on x86(_64).");
+		unimplemented!("CPU diagnostics logging only available on x86(_64)");
 	}
 
 	#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

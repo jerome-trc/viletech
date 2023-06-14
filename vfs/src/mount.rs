@@ -73,7 +73,7 @@ impl SubContext<'_> {
 		};
 
 		let file::Content::Directory { children, .. } = &mut parent.value_mut().content else {
-			unreachable!("Parent of {} is not a directory.", key.display());
+			unreachable!("parent of {} is not a directory", key.display());
 		};
 
 		children.insert(key);
@@ -198,7 +198,7 @@ impl VirtualFs {
 			for (key, new_file) in new_files {
 				match self.files.entry(key) {
 					hash_map::Entry::Occupied(occu) => panic!(
-						"A VFS bulk insertion displaced entry: {}",
+						"a VFS bulk insertion displaced entry: {}",
 						occu.key().display(),
 					),
 					hash_map::Entry::Vacant(vacant) => {
@@ -728,7 +728,7 @@ impl VirtualFs {
 		for comp in path.components() {
 			match comp {
 				std::path::Component::Prefix(_) => {
-					unreachable!("A Windows path prefix wasn't filtered out of a mount point.")
+					unreachable!("a Windows path prefix wasn't filtered out of a mount point")
 				}
 				std::path::Component::RootDir => {} // OK
 				std::path::Component::CurDir | std::path::Component::ParentDir => {
@@ -771,7 +771,7 @@ impl VirtualFs {
 		}
 
 		if util::io::is_7z(bytes) {
-			unimplemented!("Mounting 7z archives is currently unsupported.");
+			unimplemented!("mounting 7z archives is currently unsupported");
 		}
 
 		MountFormat::PlainFile

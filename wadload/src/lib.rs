@@ -176,7 +176,7 @@ impl<R: Read + Seek> Iterator for Reader<R> {
 				self.inner
 					.reader
 					.seek(SeekFrom::Start(entry.span.start as u64))
-					.expect("Failed to walk back `Reader`.");
+					.expect("failed to walk back `Reader`");
 
 				let mut buf = vec![];
 				buf.resize(entry.span.len(), 0);
@@ -194,7 +194,7 @@ impl<R: Read + Seek> Iterator for Reader<R> {
 				self.inner
 					.reader
 					.seek(SeekFrom::Start(self.inner.stream_pos))
-					.expect("Failed to reset `Reader`.");
+					.expect("failed to reset `Reader`");
 
 				Ok((entry, buf))
 			}
@@ -275,7 +275,7 @@ impl std::fmt::Display for Error {
 				write!(f, "IO error: {source} (during operation: {context})")
 			}
 			Error::InvalidKind(chars) => {
-				write!(f, "Invalid WAD magic number: {chars:?}")
+				write!(f, "invalid WAD magic number: {chars:?}")
 			}
 			Error::InvalidEntryCount(c) => {
 				write!(f, "WAD header has invalid directory entry count: {c}")
@@ -286,11 +286,11 @@ impl std::fmt::Display for Error {
 			Error::InvalidDirEntry(index) => {
 				write!(
 					f,
-					"WAD directory entry {index} has a negative lump size or offset."
+					"WAD directory entry {index} has a negative lump size or offset"
 				)
 			}
 			Error::Oversize => {
-				write!(f, "WAD file is larger than prescribed by its header.")
+				write!(f, "WAD file is larger than prescribed by its header")
 			}
 			Error::DataMalformed(_) => todo!(),
 		}
@@ -355,7 +355,7 @@ fn validate_impl<R: Read + Seek>(reader: &mut R) -> Result<Header, Error> {
 
 	let pos = reader
 		.seek(SeekFrom::Start(dir_offs as u64))
-		.expect("A pre-validated seek failed unexpectedly.");
+		.expect("a pre-validated seek failed unexpectedly");
 
 	Ok(Header {
 		kind,
@@ -376,8 +376,8 @@ mod test {
 
 		if !sample.exists() {
 			panic!(
-				"WadLoad smoke testing depends `{}`.\
-				They can be acquired from https://freedoom.github.io/.",
+				"WadLoad smoke testing depends on `{}`.\
+				It can be acquired from https://freedoom.github.io/",
 				sample.display()
 			);
 		}

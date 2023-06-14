@@ -233,7 +233,7 @@ enum {
 
 		let incdirect = match ast::TopLevel::cast(cursor.first_child().unwrap()).unwrap() {
 			ast::TopLevel::IncludeDirective(inner) => inner,
-			other => panic!("Expected `IncludeDirective`, found: {other:#?}"),
+			other => panic!("expected `IncludeDirective`, found: {other:#?}"),
 		};
 
 		assert_eq!(

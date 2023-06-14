@@ -111,15 +111,15 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::EmptyVersion => write!(f, "Tried to parse an empty version string."),
+			Self::EmptyVersion => write!(f, "tried to parse an empty version string"),
 			Self::SemVerParse(err) => err.fmt(f),
 			Self::SignatureMismatch => {
 				write!(
 					f,
-					"Incorrect signature used when downcasting a function pointer."
+					"incorrect signature used when downcasting a function pointer"
 				)
 			}
-			Self::UnknownIdent => write!(f, "An identifier was not found in the symbol table."),
+			Self::UnknownIdent => write!(f, "an identifier was not found in the symbol table"),
 		}
 	}
 }

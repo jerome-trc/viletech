@@ -86,7 +86,7 @@ impl UserCore {
 
 	pub fn write_global_cfg(&self) -> Result<(), Error> {
 		let text = toml::ser::to_string_pretty(&self.global_cfg)
-			.expect("Failed to serialize global config.");
+			.expect("failed to serialize global config");
 
 		freplace(self.globalcfg_path(), text)
 	}
@@ -144,7 +144,7 @@ impl UserCore {
 			dev_mode: false,
 		};
 
-		let text = toml::ser::to_string_pretty(&ret).expect("Failed to serialize global config.");
+		let text = toml::ser::to_string_pretty(&ret).expect("failed to serialize global config");
 
 		fwrite(self.globalcfg_path(), text)?;
 
@@ -273,7 +273,7 @@ impl UserCore {
 	fn create_profile(&self, name: String) -> Result<Profile, Error> {
 		assert!(
 			(2..=64).contains(&name.chars().count()),
-			"Tried to create a profile with an illegally sized name ({c}).",
+			"tried to create a profile with an illegally sized name ({c}).",
 			c = name.chars().count(),
 		);
 
@@ -395,7 +395,7 @@ impl UserCore {
 	fn create_pref_preset(&self, name: String) -> Result<PrefPreset, Error> {
 		assert!(
 			(2..=64).contains(&name.chars().count()),
-			"Tried to create a pref. preset with an illegally sized name ({c}).",
+			"tried to create a pref. preset with an illegally sized name ({c}).",
 			c = name.chars().count(),
 		);
 
