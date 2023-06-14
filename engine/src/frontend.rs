@@ -1,6 +1,7 @@
 //! A menu for changing settings and choosing files to load.
 
 use std::{
+	borrow::Cow,
 	collections::VecDeque,
 	path::{Path, PathBuf},
 };
@@ -18,10 +19,11 @@ pub struct FrontendMenu {
 	/// *Always* contains at least one element.
 	presets: VecDeque<LoadOrderPreset>,
 	cur_preset: usize,
+	full_paths: bool,
 	dev_mode: bool,
 }
 
-// Public interface.
+/// Public interface.
 impl FrontendMenu {
 	#[must_use]
 	pub fn new(presets: Option<(VecDeque<LoadOrderPreset>, usize)>, dev_mode: bool) -> Self {
@@ -31,6 +33,7 @@ impl FrontendMenu {
 		let ret = Self {
 			presets,
 			cur_preset,
+			full_paths: false,
 			dev_mode,
 		};
 
@@ -136,6 +139,10 @@ impl FrontendMenu {
 
 							if ui.button("To Bottom").clicked() {}
 						});
+
+						ui.separator();
+
+						ui.checkbox(&mut self.full_paths, "Show Full File Paths");
 					});
 
 					egui::ScrollArea::new([false, true]).show(ui, |ui| {
@@ -242,6 +249,7 @@ impl FrontendMenu {
 	}
 
 	fn ui_load_order(&mut self, ui: &mut egui::Ui) {
+		let show_full_paths = self.full_paths;
 		let load_order = self.load_order_mut();
 		let mut to_select = load_order.len();
 
@@ -262,16 +270,17 @@ impl FrontendMenu {
 					if enable_grp {}
 				}
 				LoadOrderEntryKind::Item { path, enabled, .. } => {
-					let fname = if let Some(n) = path.file_name() {
-						n
+					let name = if show_full_paths {
+						path.to_string_lossy()
+					} else if let Some(n) = path.file_name() {
+						n.to_string_lossy()
 					} else {
-						continue;
+						Cow::Borrowed("<unnamed file>")
 					};
 
 					ui.checkbox(enabled, "");
 
-					let fname = fname.to_string_lossy();
-					let name_label = egui::Label::new(fname.as_ref()).sense(egui::Sense::click());
+					let name_label = egui::Label::new(name.as_ref()).sense(egui::Sense::click());
 
 					if ui.add(name_label).clicked() {
 						to_select = i;
