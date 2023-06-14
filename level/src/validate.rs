@@ -8,6 +8,7 @@ impl Level {
 	/// - That no sides or sectors reference a non-existent texture.
 	/// - Thing editor numbers, to ensure that no non-existent things have been placed.
 	/// - That there is at least a player 1 start spot thing in the level.
+	///
 	/// Returns the number of errors raised.
 	pub fn validate(
 		&self,
