@@ -57,7 +57,7 @@ pub fn update(
 	}
 
 	egui::Window::new("")
-		.id("vile_devoverlay_pos".into())
+		.id("viletech_devoverlay_pos".into())
 		.title_bar(false)
 		.show(egui.ctx_mut(), |ui| {
 			ui.label(format!(

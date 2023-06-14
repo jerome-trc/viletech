@@ -104,7 +104,7 @@ impl<C: terminal::Command> Console<C> {
 
 		ui.separator();
 
-		let scroll_area = ScrollArea::both().id_source("vile_devgui_console_scroll");
+		let scroll_area = ScrollArea::both().id_source("viletech_devgui_console_scroll");
 
 		scroll_area.show(ui, |ui| {
 			ui.vertical(|ui| {

@@ -69,7 +69,7 @@ impl Catalog {
 						};
 
 						resp.on_hover_ui_at_pointer(|ui| {
-							egui::Area::new("vtec_datum_tt").show(ctx, |_| {
+							egui::Area::new("viletech_datum_tt").show(ctx, |_| {
 								let &type_name =
 									DATUM_TYPE_NAMES.get(&store.datum_typeid()).unwrap();
 								ui.label(type_name);

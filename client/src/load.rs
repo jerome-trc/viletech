@@ -28,7 +28,7 @@ pub fn update(
 	let mut cancelled = false;
 
 	egui::Window::new("Loading...")
-		.id(egui::Id::new("vile_gameload"))
+		.id(egui::Id::new("viletech_gameload"))
 		.show(egui.ctx_mut(), |ui| {
 			ui.label(&format!("File Mounting: {m_pct:.1}%"));
 			ui.label(&format!("Preparing: {p_pct:.1}%"));

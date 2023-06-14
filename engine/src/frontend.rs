@@ -43,26 +43,26 @@ impl FrontendMenu {
 	pub fn ui(&mut self, ctx: &egui::Context) -> Outcome {
 		let mut ret = Outcome::None;
 
-		egui::TopBottomPanel::top("vtec_frontend_menubar").show(ctx, |ui| {
+		egui::TopBottomPanel::top("viletech_frontend_menubar").show(ctx, |ui| {
 			egui::menu::bar(ui, |ui| {
 				ret = self.ui_menu_bar(ui);
 			});
 		});
 
 		egui::Window::new("Frontend")
-			.id("vtec_frontend".into())
+			.id("viletech_frontend".into())
 			.min_width(480.0)
 			.show(ctx, |ui| {
 				let mut sel_count = self.load_order().iter().filter(|loe| loe.selected).count();
 
-				egui::SidePanel::right("vtec_frontend_presets")
+				egui::SidePanel::right("viletech_frontend_presets")
 					.min_width(120.0)
 					.show_inside(ui, |ui| {
 						ui.heading("Presets");
 
 						egui::ScrollArea::new([false, true]).show(ui, |ui| {
 							ui.vertical(|ui| {
-								egui::Grid::new("vtec_frontend_presets_grid")
+								egui::Grid::new("viletech_frontend_presets_grid")
 									.num_columns(self.load_order().len())
 									.striped(true)
 									.show(ui, |ui| {
@@ -140,7 +140,7 @@ impl FrontendMenu {
 
 					egui::ScrollArea::new([false, true]).show(ui, |ui| {
 						ui.vertical(|ui| {
-							egui::Grid::new("vtec_frontend_loadord_grid")
+							egui::Grid::new("viletech_frontend_loadord_grid")
 								.num_columns(self.load_order().len())
 								.striped(true)
 								.show(ui, |ui| {

@@ -20,7 +20,7 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
 		egui::Window::new("Developer Tools")
-			.id(egui::Id::new("vile_devgui"))
+			.id(egui::Id::new("viletech_devgui"))
 			.anchor(egui::Align2::CENTER_TOP, [0.0, 0.0])
 			.fixed_pos([0.0, 0.0])
 			.collapsible(false)
@@ -33,7 +33,7 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	pub fn panel_left(&self, ctx: &egui::Context) -> egui::SidePanel {
 		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
-		egui::SidePanel::left("vile_devgui_left")
+		egui::SidePanel::left("viletech_devgui_left")
 			.default_width(screen_rect.width() * 0.5)
 			.resizable(true)
 			.width_range((screen_rect.width() * 0.1)..=(screen_rect.width() * 0.9))
