@@ -80,6 +80,26 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::IdentChain))
 	}
 
+	/// The returned parser emits a series of [`Syn::Ident`] tokens (comma-separated).
+	pub fn ident_list<'i>(&self) -> parser_t!(Vec<GreenElement>) {
+		self.ident().map(|gtok| vec![gtok.into()]).foldl(
+			primitive::group((
+				self.trivia_0plus(),
+				comb::just_ts(Token::Comma, Syn::Comma),
+				self.trivia_0plus(),
+				self.ident(),
+			))
+			.repeated(),
+			|mut lhs, (mut t0, comma, mut t1, ident)| {
+				lhs.append(&mut t0);
+				lhs.push(comma.into());
+				lhs.append(&mut t1);
+				lhs.push(ident.into());
+				lhs
+			},
+		)
+	}
+
 	/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
 	pub(super) fn trivia<'i>(&self) -> parser_t!(GreenElement) {
 		primitive::choice((
@@ -193,6 +213,15 @@ impl ParserBuilder {
 		})
 	}
 
+	/// The returned parser emits a [`Syn::VarName`] node.
+	pub fn var_name<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			self.ident(),
+			primitive::group((self.trivia_0plus(), self.array_len())).or_not(),
+		))
+		.map(|group| coalesce_node(group, Syn::VarName))
+	}
+
 	/// The returned parser emits a [`Syn::VersionQual`] node.
 	pub fn version_qual<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
@@ -216,6 +245,19 @@ mod test {
 	};
 
 	use super::*;
+
+	#[test]
+	fn smoke_identlist() {
+		const SOURCE: &str = r#"temple, of, the, ancient, techlords"#;
+
+		let tbuf = crate::scan(SOURCE, Version::default());
+		let parser = ParserBuilder::new(Version::default())
+			.ident_list()
+			.map(|elems| GreenNode::new(Syn::Root.into(), elems));
+		let result = crate::parse(parser, SOURCE, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
+		assert_no_errors(&ptree);
+	}
 
 	#[test]
 	fn smoke_typeref() {

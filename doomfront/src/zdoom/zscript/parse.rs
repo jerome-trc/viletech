@@ -1,5 +1,6 @@
 mod common;
 mod expr;
+mod stat;
 mod top;
 
 use chumsky::{primitive, IterParser, Parser};

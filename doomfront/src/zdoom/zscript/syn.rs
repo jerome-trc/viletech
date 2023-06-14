@@ -95,6 +95,8 @@ pub enum Syn {
 	Subscript,
 	/// Can be [`Syn::KwLet`], [`Syn::IdentChain`], or `'readonly' '<' '@'? ident '>'`.
 	TypeRef,
+	/// ident arraylen?
+	VarName,
 	/// The `version` preprocessor directive and its string literal argument.
 	VersionDirective,
 	/// `'version' '(' string ')'`
@@ -116,9 +118,13 @@ pub enum Syn {
 	// Nodes: statements ///////////////////////////////////////////////////////
 	AssignStat,
 	BreakStat,
+	/// `'case' expr ':'`
+	CaseStat,
 	CompoundStat,
 	ContinueStat,
 	DeclAssignStat,
+	/// `'default' ':'`
+	DefaultStat,
 	DoUntilStat,
 	DoWhileStat,
 	/// A lone semicolon.
@@ -128,8 +134,6 @@ pub enum Syn {
 	/// C-style, with a three-part (semicolon-delimited, parenthesis-enclosed) opener.
 	ForStat,
 	ForEachStat,
-	/// For use in switch cases. May start with `'case' ident ':'` or `'default' ':'`.
-	LabelledStat,
 	LocalStat,
 	MixinStat,
 	ReturnStat,
