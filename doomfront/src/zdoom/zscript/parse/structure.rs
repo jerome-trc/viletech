@@ -13,6 +13,71 @@ use crate::{
 use super::ParserBuilder;
 
 impl ParserBuilder {
+	/// The returned parser emits a [`Syn::ClassDef`] node.
+	pub fn class_def<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::KwClass, Syn::KwClass),
+			self.trivia_1plus(),
+			self.ident(),
+			self.inherit_spec().or_not(),
+			primitive::group((self.class_qual(), self.trivia_1plus()))
+				.repeated()
+				.collect::<Vec<_>>(),
+			self.trivia_1plus(),
+			comb::just_ts(Token::BraceL, Syn::BraceL),
+			self.class_innard().repeated().collect::<Vec<_>>(),
+			comb::just_ts(Token::BraceR, Syn::BraceR),
+		))
+		.map(|group| coalesce_node(group, Syn::ClassDef))
+		.boxed()
+	}
+
+	/// The returned parser emits a [`Syn::InheritSpec`] node.
+	fn inherit_spec<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			self.trivia_1plus(),
+			comb::just_ts(Token::KwReplaces, Syn::KwReplaces),
+			self.trivia_1plus(),
+			self.ident(),
+		))
+		.map(|group| coalesce_node(group, Syn::InheritSpec))
+	}
+
+	fn class_qual<'i>(&self) -> parser_t!(GreenElement) {
+		let replaces = primitive::group((
+			self.trivia_1plus(),
+			comb::just_ts(Token::KwReplaces, Syn::KwReplaces),
+			self.trivia_1plus(),
+			self.ident(),
+		))
+		.map(|group| coalesce_node(group, Syn::ReplacesClause));
+
+		primitive::choice((
+			comb::just_ts(Token::KwAbstract, Syn::KwAbstract).map(GreenElement::from),
+			comb::just_ts(Token::KwNative, Syn::KwNative).map(GreenElement::from),
+			comb::just_ts(Token::KwPlay, Syn::KwPlay).map(GreenElement::from),
+			comb::just_ts(Token::KwUi, Syn::KwUi).map(GreenElement::from),
+			self.version_qual().map(GreenElement::from),
+			replaces.map(GreenElement::from),
+		))
+	}
+
+	/// The returned parser emits a [`Syn::ClassExtend`] node.
+	pub fn class_extend<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::KwExtend, Syn::KwExtend),
+			self.trivia_1plus(),
+			comb::just_ts(Token::KwClass, Syn::KwClass),
+			self.trivia_1plus(),
+			self.ident(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::BraceL, Syn::BraceL),
+			self.class_innard().repeated().collect::<Vec<_>>(),
+			comb::just_ts(Token::BraceR, Syn::BraceR),
+		))
+		.map(|group| coalesce_node(group, Syn::ClassExtend))
+	}
+
 	/// The returned parser emits a [`Syn::StructDef`] node.
 	pub fn struct_def<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
@@ -55,7 +120,34 @@ impl ParserBuilder {
 		.map(|group| coalesce_node(group, Syn::StructExtend))
 	}
 
+	/// The returned parser emits a [`Syn::MixinClassDef`] node.
+	pub fn mixin_class_def<'i>(&self) -> parser_t!(GreenNode) {
+		primitive::group((
+			comb::just_ts(Token::KwMixin, Syn::KwMixin),
+			self.trivia_1plus(),
+			comb::just_ts(Token::KwClass, Syn::KwClass),
+			self.trivia_1plus(),
+			self.ident(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::BraceL, Syn::BraceL),
+			self.class_innard().repeated().collect::<Vec<_>>(),
+			comb::just_ts(Token::BraceR, Syn::BraceR),
+		))
+		.map(|group| coalesce_node(group, Syn::MixinClassDef))
+	}
+
 	// Innards /////////////////////////////////////////////////////////////////
+
+	fn class_innard<'i>(&self) -> parser_t!(GreenElement) {
+		primitive::choice((
+			self.trivia(),
+			self.func_decl().map(GreenElement::from),
+			self.field_decl().map(GreenElement::from),
+			self.const_def().map(GreenElement::from),
+			self.enum_def().map(GreenElement::from),
+			// TODO: Actor states, default blocks, property defs, flagdefs.
+		))
+	}
 
 	fn struct_innard<'i>(&self) -> parser_t!(GreenElement) {
 		primitive::choice((
