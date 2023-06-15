@@ -80,7 +80,7 @@ pub enum Syn {
 	StateDef,
 	/// `ident ':'`
 	StateLabel,
-	/// `'light' '(' string ')'`
+	/// `'light' '(' (string | name) (',' (string | name))* ')'`
 	StateLight,
 	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,

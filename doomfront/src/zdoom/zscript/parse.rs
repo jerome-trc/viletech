@@ -1,3 +1,4 @@
+mod actor;
 mod common;
 mod expr;
 mod stat;

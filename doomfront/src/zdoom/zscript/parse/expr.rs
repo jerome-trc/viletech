@@ -83,7 +83,7 @@ impl ParserBuilder {
 
 				let arg_list = primitive::group((
 					comb::just_ts(Token::ParenL, Syn::ParenL),
-					self.expr_list(expr.clone()).or_not(),
+					self.arg_list(expr.clone()),
 					comb::just_ts(Token::ParenR, Syn::ParenR),
 				))
 				.map(|group| coalesce_node(group, Syn::ArgList));
@@ -365,6 +365,36 @@ impl ParserBuilder {
 			}
 
 			ret
+		})
+	}
+
+	/// The returned parser emits 0 or more expression nodes (comma-separated),
+	/// each with a possible preceding identifier and colon.
+	/// Note that this does not include enclosing parentheses.
+	/// The return value of [`Self::expr`] must be passed in to prevent infinite recursion.
+	pub(super) fn arg_list<'i>(&self, expr: parser_t!(GreenNode)) -> parser_t!(Vec<GreenElement>) {
+		let named_expr = primitive::group((
+			self.ident(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::Colon, Syn::Colon),
+			self.trivia_0plus(),
+			expr,
+		))
+		.map(coalesce_vec);
+
+		let rep = primitive::group((
+			self.trivia_0plus(),
+			comb::just_ts(Token::Comma, Syn::Comma),
+			self.trivia_0plus(),
+			named_expr.clone(),
+		));
+
+		named_expr.foldl(rep.repeated(), |mut lhs, (mut t0, comma, mut t1, mut e)| {
+			lhs.append(&mut t0);
+			lhs.push(comma.into());
+			lhs.append(&mut t1);
+			lhs.append(&mut e);
+			lhs
 		})
 	}
 }

@@ -145,7 +145,10 @@ impl ParserBuilder {
 			self.field_decl().map(GreenElement::from),
 			self.const_def().map(GreenElement::from),
 			self.enum_def().map(GreenElement::from),
-			// TODO: Actor states, default blocks, property defs, flagdefs.
+			self.states_def().map(GreenElement::from),
+			self.default_block().map(GreenElement::from),
+			self.property_def().map(GreenElement::from),
+			self.flag_def().map(GreenElement::from),
 		))
 	}
 
