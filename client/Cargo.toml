@@ -19,26 +19,13 @@ features = [
 	# Default
 	"bevy_asset",
 	"bevy_core_pipeline",
-	"bevy_gilrs",
-	"bevy_gltf",
 	"bevy_pbr",
 	"bevy_render",
 	"bevy_scene",
 	"bevy_sprite",
 	"bevy_winit",
-	"animation",
-	"filesystem_watcher",
 	"x11",
-
-	"hdr",
 	"png",
-
-	# Optional
-	"serialize",
-
-	"bmp",
-	"ktx2",
-	"tga",
 ]
 
 [dependencies]

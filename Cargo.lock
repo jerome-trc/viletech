@@ -56,7 +56,7 @@ dependencies = [
  "arrayvec",
  "once_cell",
  "paste",
- "windows 0.44.0",
+ "windows",
 ]
 
 [[package]]
@@ -138,7 +138,7 @@ dependencies = [
  "alsa-sys",
  "bitflags 1.3.2",
  "libc",
- "nix 0.24.2",
+ "nix",
 ]
 
 [[package]]
@@ -480,24 +480,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_animation"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0dc19f21846ebf8ba4d96617c2517b5119038774aa5dbbaf1bff122332b359c"
-dependencies = [
- "bevy_app",
- "bevy_asset",
- "bevy_core",
- "bevy_ecs",
- "bevy_hierarchy",
- "bevy_math",
- "bevy_reflect",
- "bevy_time",
- "bevy_transform",
- "bevy_utils",
-]
-
-[[package]]
 name = "bevy_app"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -658,19 +640,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_gilrs"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f32eb07e8c9ea4be7195ccec10d8f9ad70200f3ae2e13adc4b84df9f50bb1c6"
-dependencies = [
- "bevy_app",
- "bevy_ecs",
- "bevy_input",
- "bevy_utils",
- "gilrs",
-]
-
-[[package]]
 name = "bevy_gltf"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -678,7 +647,6 @@ checksum = "2707632208617c3660ea7a1d2ef2ccc84b59f217c2f01a1d0abe81db4ae7bbde"
 dependencies = [
  "anyhow",
  "base64 0.13.1",
- "bevy_animation",
  "bevy_app",
  "bevy_asset",
  "bevy_core",
@@ -736,7 +704,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "862b11931c5874cb00778ffb715fc526ee49e52a493d3bcf50e8010f301858b3"
 dependencies = [
  "bevy_a11y",
- "bevy_animation",
  "bevy_app",
  "bevy_asset",
  "bevy_core",
@@ -744,7 +711,6 @@ dependencies = [
  "bevy_derive",
  "bevy_diagnostic",
  "bevy_ecs",
- "bevy_gilrs",
  "bevy_gltf",
  "bevy_hierarchy",
  "bevy_input",
@@ -928,7 +894,6 @@ dependencies = [
  "futures-lite",
  "hexasphere",
  "image",
- "ktx2",
  "naga",
  "once_cell",
  "parking_lot",
@@ -1622,7 +1587,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "windows 0.44.0",
+ "windows",
 ]
 
 [[package]]
@@ -2458,39 +2423,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gilrs"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d0342acdc7b591d171212e17c9350ca02383b86d5f9af33c6e3598e03a6c57e"
-dependencies = [
- "fnv",
- "gilrs-core",
- "log",
- "uuid",
- "vec_map",
-]
-
-[[package]]
-name = "gilrs-core"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6789d356476c3280a4e15365d23f62b4b4f1bcdac81fdd552f65807bce4666dd"
-dependencies = [
- "core-foundation",
- "io-kit-sys",
- "js-sys",
- "libc",
- "libudev-sys",
- "log",
- "nix 0.25.1",
- "uuid",
- "vec_map",
- "wasm-bindgen",
- "web-sys",
- "windows 0.43.0",
-]
-
-[[package]]
 name = "gimli"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2651,7 +2583,7 @@ dependencies = [
  "log",
  "thiserror",
  "winapi",
- "windows 0.44.0",
+ "windows",
 ]
 
 [[package]]
@@ -2910,16 +2842,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "io-kit-sys"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7789f7f3c9686f96164f5109d69152de759e76e284f736bd57661c6df5091919"
-dependencies = [
- "core-foundation-sys 0.8.3",
- "mach",
-]
-
-[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3088,15 +3010,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ktx2"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87d65e08a9ec02e409d27a0139eaa6b9756b4d81fe7cde71f6941a83730ce838"
-dependencies = [
- "bitflags 1.3.2",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3129,16 +3042,6 @@ name = "libm"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
-
-[[package]]
-name = "libudev-sys"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c8469b4a23b962c1396b9b451dda50ef5b283e8dd309d69033475fa9b334324"
-dependencies = [
- "libc",
- "pkg-config",
-]
 
 [[package]]
 name = "linux-raw-sys"
@@ -3427,18 +3330,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "memoffset 0.6.5",
-]
-
-[[package]]
-name = "nix"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f346ff70e7dbfd675fe90590b92d59ef2de15a8779ae305ebcbfd3f0caf59be4"
-dependencies = [
- "autocfg",
- "bitflags 1.3.2",
- "cfg-if",
- "libc",
 ]
 
 [[package]]
@@ -4241,7 +4132,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "windows 0.44.0",
+ "windows",
 ]
 
 [[package]]
@@ -5280,12 +5171,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 
 [[package]]
-name = "vec_map"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
-
-[[package]]
 name = "version-compare"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5786,21 +5671,6 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04662ed0e3e5630dfa9b26e4cb823b817f1a9addda855d973a9458c236556244"
-dependencies = [
- "windows_aarch64_gnullvm 0.42.1",
- "windows_aarch64_msvc 0.42.1",
- "windows_i686_gnu 0.42.1",
- "windows_i686_msvc 0.42.1",
- "windows_x86_64_gnu 0.42.1",
- "windows_x86_64_gnullvm 0.42.1",
- "windows_x86_64_msvc 0.42.1",
-]
-
-[[package]]
-name = "windows"
 version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e745dab35a0c4c77aa3ce42d595e13d2003d6902d6b08c9ef5fc326d08da12b"
@@ -6088,7 +5958,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "592b4883219f345e712b3209c62654ebda0bb50887f330cbd018d0f654bfd507"
 dependencies = [
  "gethostname",
- "nix 0.24.2",
+ "nix",
  "winapi",
  "winapi-wsapoll",
  "x11rb-protocol",
@@ -6100,7 +5970,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56b245751c0ac9db0e006dc812031482784e434630205a93c73cfefcaabeac67"
 dependencies = [
- "nix 0.24.2",
+ "nix",
 ]
 
 [[package]]
