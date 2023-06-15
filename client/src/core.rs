@@ -158,7 +158,7 @@ impl ClientCore {
 						&[
 							(DevGuiStatus::Audio, "Audio"),
 							(DevGuiStatus::Console, "Console"),
-							(DevGuiStatus::Data, "Data"),
+							(DevGuiStatus::Catalog, "Data"),
 							(DevGuiStatus::VzsRepl, "REPL"),
 							(DevGuiStatus::Vfs, "VFS"),
 						],
@@ -170,7 +170,7 @@ impl ClientCore {
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);
 						}
-						DevGuiStatus::Data => {
+						DevGuiStatus::Catalog => {
 							let mut catalog = self.catalog.write();
 							catalog.ui(ctx, ui);
 						}
@@ -191,7 +191,7 @@ impl ClientCore {
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui);
 						}
-						DevGuiStatus::Data => {
+						DevGuiStatus::Catalog => {
 							let mut catalog = self.catalog.write();
 							catalog.ui(ctx, ui);
 						}
@@ -223,11 +223,23 @@ impl Drop for ClientCore {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DevGuiStatus {
-	Data,
 	Audio,
+	Catalog,
 	Console,
-	VzsRepl,
 	Vfs,
+	VzsRepl,
+}
+
+impl std::fmt::Display for DevGuiStatus {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			DevGuiStatus::Audio => write!(f, "Audio"),
+			DevGuiStatus::Catalog => write!(f, "Catalog"),
+			DevGuiStatus::Console => write!(f, "Console"),
+			DevGuiStatus::Vfs => write!(f, "VFS"),
+			DevGuiStatus::VzsRepl => write!(f, "VZScript REPL"),
+		}
+	}
 }
 
 #[derive(Debug, Resource)]

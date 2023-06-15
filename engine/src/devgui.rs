@@ -4,13 +4,19 @@ use bevy_egui::egui;
 /// screen like GZDoom's console. `S` should be a simple untagged enum that
 /// informs the user what they should draw in each panel.
 #[derive(Debug)]
-pub struct DeveloperGui<S: PartialEq + Copy> {
+pub struct DeveloperGui<S>
+where
+	S: Eq + Copy + std::fmt::Display,
+{
 	pub open: bool,
 	pub left: S,
 	pub right: S,
 }
 
-impl<S: PartialEq + Copy> DeveloperGui<S> {
+impl<S> DeveloperGui<S>
+where
+	S: Eq + Copy + std::fmt::Display,
+{
 	/// Returns an egui window that:
 	/// - Is 80% opaque
 	/// - Stretches to fill the screen's width
@@ -51,38 +57,34 @@ impl<S: PartialEq + Copy> DeveloperGui<S> {
 	/// which menu is being drawn in each pane. A menu cannot replace itself, but
 	/// the left and right side can be swapped.
 	pub fn selectors(&mut self, ui: &mut egui::Ui, choices: &[(S, &str)]) {
-		ui.menu_button("Left", |ui| {
-			for (choice, label) in choices {
-				let btn = egui::Button::new(*label);
-				let resp = ui.add_enabled(self.left != *choice, btn);
+		egui::ComboBox::new("viletech_devgui_selector_left", "Left")
+			.selected_text(format!("{}", self.left))
+			.show_ui(ui, |ui| {
+				let cur = self.left;
 
-				if resp.clicked() {
-					ui.close_menu();
-
-					if self.right == *choice {
-						std::mem::swap(&mut self.left, &mut self.right);
-					} else {
-						self.left = *choice;
-					}
+				for (choice, label) in choices.iter().copied() {
+					ui.selectable_value(&mut self.left, choice, label);
 				}
-			}
-		});
 
-		ui.menu_button("Right", |ui| {
-			for (choice, label) in choices {
-				let btn = egui::Button::new(*label);
-				let resp = ui.add_enabled(self.right != *choice, btn);
-
-				if resp.clicked() {
-					ui.close_menu();
-
-					if self.left == *choice {
-						std::mem::swap(&mut self.left, &mut self.right);
-					} else {
-						self.right = *choice;
-					}
+				if self.right == self.left {
+					self.right = cur;
 				}
-			}
-		});
+			});
+
+		ui.separator();
+
+		egui::ComboBox::new("viletech_devgui_selector_right", "Right")
+			.selected_text(format!("{}", self.right))
+			.show_ui(ui, |ui| {
+				let cur = self.right;
+
+				for (choice, label) in choices.iter().copied() {
+					ui.selectable_value(&mut self.right, choice, label);
+				}
+
+				if self.left == self.right {
+					self.left = cur;
+				}
+			});
 	}
 }
