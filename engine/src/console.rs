@@ -7,15 +7,12 @@ use bevy_egui::egui::{
 	self,
 	text::{CCursor, LayoutJob},
 	text_edit::{CCursorRange, TextEditState},
-	Color32, ScrollArea, TextFormat, TextStyle,
+	Color32, DragValue, ScrollArea, TextFormat, TextStyle,
 };
 use crossbeam::channel::Receiver;
 use util::lazy_regex;
 
-use crate::{
-	input::InputCore,
-	terminal::{self, Alias, Terminal},
-};
+use crate::terminal::{self, Alias, Terminal};
 
 pub type Sender = crossbeam::channel::Sender<Message>;
 
@@ -27,12 +24,17 @@ pub struct Console<C: terminal::Command> {
 	messages: Vec<Message>,
 	/// Each element is a line of input submitted. Allows the user to scroll
 	/// back through previous inputs with the up and down arrow keys.
-	input_history: Vec<Box<str>>,
+	input_history: VecDeque<Box<str>>,
+	/// The maximum number of entries that can be held in `input_history` before
+	/// old elements get popped off the back to make room for new ones.
+	input_history_cap: usize,
 	/// Commands, aliases, command string parser.
 	terminal: Terminal<C>,
 	/// The currently-buffered input waiting to be submitted.
 	input: String,
 
+	/// It is valid for this to be equal to `input_history.len`; setting it to
+	/// this clears the input buffer, as in Bash.
 	input_history_pos: usize,
 	defocus_textedit: bool,
 	scroll_to_bottom: bool,
@@ -74,18 +76,19 @@ impl<C: terminal::Command> Console<C> {
 		Console {
 			log_receiver,
 			messages: vec![],
-			input_history: vec![],
+			input: String::new(),
+			input_history: VecDeque::new(),
+			input_history_cap: 128,
+			input_history_pos: 0,
 			terminal: Terminal::new(|key| {
 				info!("Unknown command: {}", key);
 			}),
-			input: String::with_capacity(128),
-			input_history_pos: 0,
 			defocus_textedit: false,
 			scroll_to_bottom: false,
 			cursor_to_end: false,
 			draw_log: true,
 			draw_toast: true,
-			requests: VecDeque::default(),
+			requests: VecDeque::new(),
 		}
 	}
 
@@ -100,72 +103,85 @@ impl<C: terminal::Command> Console<C> {
 		egui::menu::bar(ui, |ui| {
 			ui.toggle_value(&mut self.draw_log, "Show Engine Log");
 			ui.toggle_value(&mut self.draw_toast, "Show Game Log");
+			ui.separator();
+			ui.label("Input History Capacity");
+			ui.add(DragValue::new(&mut self.input_history_cap).clamp_range(0..=1024));
 		});
 
 		ui.separator();
 
-		let scroll_area = ScrollArea::both().id_source("viletech_devgui_console_scroll");
+		let mut layout = *ui.layout();
+		layout.main_dir = egui::Direction::BottomUp;
 
-		scroll_area.show(ui, |ui| {
-			ui.vertical(|ui| {
-				for item in &self.messages {
-					match item.kind {
-						MessageKind::Toast => {
-							if !self.draw_toast {
-								continue;
-							}
+		ui.set_min_height(ui.spacing().interact_size.y * 4.0);
 
-							for line in item.string.lines() {
-								Self::draw_line(ui, line);
-							}
-						}
-						MessageKind::Log => {
-							if !self.draw_log {
-								continue;
-							}
+		ui.with_layout(layout, |ui| {
+			ui.horizontal(|ui| {
+				let input_len = self.input.len();
+				let edit_id = egui::Id::new("viletech_console_text_edit");
+				let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
+				let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
 
-							for line in item.string.lines() {
-								Self::draw_line_log(ui, line);
-							}
-						}
-						MessageKind::Help => {
-							for line in item.string.lines() {
-								Self::draw_line(ui, line);
-							}
-						}
-					}
+				if self.cursor_to_end {
+					self.cursor_to_end = false;
+					let range = CCursorRange::one(CCursor::new(input_len));
+					tes.set_ccursor_range(Some(range));
+					TextEditState::store(tes, ctx, edit_id);
+				}
+
+				if self.defocus_textedit {
+					self.defocus_textedit = false;
+					resp_edit.surrender_focus();
+				}
+
+				if ui.add(egui::widgets::Button::new("Submit")).clicked() {
+					self.try_submit();
 				}
 			});
 
-			if self.scroll_to_bottom {
-				self.scroll_to_bottom = false;
-				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
-			}
-		});
+			ui.separator();
 
-		ui.separator();
+			let scroll_area = ScrollArea::both()
+				.id_source("viletech_devgui_console_log")
+				.auto_shrink([false, false])
+				.stick_to_bottom(true);
 
-		ui.horizontal(|ui| {
-			let input_len = self.input.len();
-			let edit_id = egui::Id::new("console_text_edit");
-			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
-			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+			scroll_area.show(ui, |ui| {
+				ui.vertical(|ui| {
+					for item in &self.messages {
+						match item.kind {
+							MessageKind::Toast => {
+								if !self.draw_toast {
+									continue;
+								}
 
-			if self.cursor_to_end {
-				self.cursor_to_end = false;
-				let range = CCursorRange::one(CCursor::new(input_len));
-				tes.set_ccursor_range(Some(range));
-				TextEditState::store(tes, ctx, edit_id);
-			}
+								for line in item.string.lines() {
+									Self::draw_line(ui, line);
+								}
+							}
+							MessageKind::Log => {
+								if !self.draw_log {
+									continue;
+								}
 
-			if self.defocus_textedit {
-				self.defocus_textedit = false;
-				resp_edit.surrender_focus();
-			}
+								for line in item.string.lines() {
+									Self::draw_line_log(ui, line);
+								}
+							}
+							MessageKind::Help => {
+								for line in item.string.lines() {
+									Self::draw_line(ui, line);
+								}
+							}
+						}
+					}
+				});
 
-			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
-				self.try_submit();
-			}
+				if self.scroll_to_bottom {
+					self.scroll_to_bottom = false;
+					ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+				}
+			});
 		});
 	}
 
@@ -179,8 +195,14 @@ impl<C: terminal::Command> Console<C> {
 		self.scroll_to_bottom = true;
 	}
 
-	pub fn input(&mut self, input: &InputCore) {
-		if input.keys_virt.pressed(KeyCode::Up) {
+	pub fn key_input(
+		&mut self,
+		up_pressed: bool,
+		down_pressed: bool,
+		esc_pressed: bool,
+		enter_pressed: bool,
+	) {
+		if up_pressed {
 			if self.input_history_pos < 1 {
 				return;
 			}
@@ -190,7 +212,7 @@ impl<C: terminal::Command> Console<C> {
 			self.input.clear();
 			self.input
 				.push_str(&self.input_history[self.input_history_pos]);
-		} else if input.keys_virt.pressed(KeyCode::Down) {
+		} else if down_pressed {
 			if self.input_history_pos >= self.input_history.len() {
 				return;
 			}
@@ -203,9 +225,9 @@ impl<C: terminal::Command> Console<C> {
 				self.input
 					.push_str(&self.input_history[self.input_history_pos]);
 			}
-		} else if input.keys_virt.just_pressed(KeyCode::Escape) {
+		} else if esc_pressed {
 			self.defocus_textedit = true;
-		} else if input.keys_virt.just_pressed(KeyCode::Return) {
+		} else if enter_pressed {
 			self.try_submit();
 		}
 	}
@@ -290,18 +312,24 @@ impl<C: terminal::Command> Console<C> {
 			return;
 		}
 
-		match self.input_history.last() {
+		match self.input_history.back() {
 			Some(last_cmd) => {
 				if last_cmd.as_ref() != self.input {
-					self.input_history.push(self.input.clone().into_boxed_str());
+					self.input_history
+						.push_back(self.input.clone().into_boxed_str());
 					self.input_history_pos = self.input_history.len();
 				}
 			}
 			None => {
-				self.input_history.push(self.input.clone().into_boxed_str());
+				self.input_history
+					.push_back(self.input.clone().into_boxed_str());
 				self.input_history_pos = self.input_history.len();
 			}
 		};
+
+		while self.input_history.len() > self.input_history_cap {
+			let _ = self.input_history.pop_front();
+		}
 
 		info!("$ {}", &self.input);
 		let mut ret = self.terminal.submit(&self.input);

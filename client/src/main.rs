@@ -339,8 +339,14 @@ fn common_updates(mut core: ResMut<ClientCore>, mut exit: EventWriter<AppExit>) 
 
 fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
 	core.input.update(input);
-	// TODO: Console keyboard input.
-	// Requires either a splitting borrow or turning `ClientCore` into a `SystemParam`.
+
+	let up_pressed = core.input.keys_virt.just_pressed(KeyCode::Up);
+	let down_pressed = core.input.keys_virt.just_pressed(KeyCode::Down);
+	let esc_pressed = core.input.keys_virt.just_pressed(KeyCode::Escape);
+	let enter_pressed = core.input.keys_virt.just_pressed(KeyCode::Return);
+
+	core.console
+		.key_input(up_pressed, down_pressed, esc_pressed, enter_pressed);
 }
 
 #[derive(Debug, clap::Parser)]

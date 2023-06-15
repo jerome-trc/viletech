@@ -198,8 +198,7 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 VileTech Client {c_vers}
 {e_vers}
 {commit}
-{comp_datetime}
-"};
+{comp_datetime}"};
 
 	info!("{msg}");
 
