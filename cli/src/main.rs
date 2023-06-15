@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if args.about {
 		printdoc! {"
-VileTech Command Line Interface - Copyright (C) 2022-2023 - jerome-trc
+VileTools - Copyright (C) 2022-2023 - jerome-trc
 
 This program comes with ABSOLUTELY NO WARRANTY.
 
@@ -127,8 +127,5 @@ enum Commands {
 
 #[must_use]
 fn version_string() -> String {
-	format!(
-		"VileTech Command Line Interface {}",
-		env!("CARGO_PKG_VERSION")
-	)
+	format!("VileTools {}", env!("CARGO_PKG_VERSION"))
 }
