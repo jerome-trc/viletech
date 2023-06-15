@@ -191,10 +191,18 @@ pub fn ccmd_version(args: CommandArgs) -> Request {
 		);
 	}
 
-	info!(
-		"{}",
-		viletech::full_version_string(&super::version_string())
-	);
+	let c_vers = env!("CARGO_PKG_VERSION");
+	let [e_vers, commit, comp_datetime] = viletech::version_info();
+
+	let msg = formatdoc! {"
+VileTech Client {c_vers}
+{e_vers}
+{commit}
+{comp_datetime}
+"};
+
+	info!("{msg}");
+
 	Request::None
 }
 

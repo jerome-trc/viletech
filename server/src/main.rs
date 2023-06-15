@@ -22,13 +22,24 @@ pub struct ServerCore {
 	pub terminal: Terminal<Command>,
 }
 
-#[derive(Parser, Debug)]
-struct Clap {
-	#[arg(short = 'V', long = "version")]
-	version: bool,
-	#[arg(short = 'A', long = "about")]
-	about: bool,
+#[derive(clap::Parser, Debug)]
+#[command(name = "VileTech Server")]
+#[command(version)]
+#[command(about = "Dedicated server for the VileTech Engine")]
+#[command(long_about = "
+VileTech Server - Copyright (C) 2022-2023 - jerome-trc
 
+This program comes with ABSOLUTELY NO WARRANTY.
+
+This is free software, and you are welcome to redistribute it under certain
+conditions. See the license document that comes with your installation.")]
+struct LaunchArgs {
+	/// Version info for both the server and engine.
+	///
+	/// Same as `--version` along with the version, Git commit SHA, and compile
+	/// timestamp of the `viletech` "engine" library.
+	#[arg(long)]
+	version_full: bool,
 	/// Sets the number of threads used by the global thread pool
 	///
 	/// If set to 0 or not set, this will be automatically selected based on the
@@ -49,23 +60,18 @@ struct Clap {
 
 fn main() -> Result<(), Box<dyn Error>> {
 	viletech::START_TIME.set(Instant::now()).unwrap();
-	let args = Clap::parse();
+	let args = LaunchArgs::parse();
 
-	if args.version {
-		println!("{}", viletech::short_version_string());
-		println!("{}", &version_string());
-		return Ok(());
-	}
+	if args.version_full {
+		let s_vers = env!("CARGO_PKG_VERSION");
+		let [e_vers, commit, comp_datetime] = viletech::version_info();
 
-	if args.about {
 		printdoc! {"
-VileTech Server - Copyright (C) 2022-2023 - jerome-trc
-
-This program comes with ABSOLUTELY NO WARRANTY.
-
-This is free software, and you are welcome to redistribute it under certain
-conditions. See the license document that comes with your installation."
-		};
+VileTech Server {s_vers}
+{e_vers}
+{commit}
+{comp_datetime}
+"};
 
 		return Ok(());
 	}

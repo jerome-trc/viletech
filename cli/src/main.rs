@@ -1,4 +1,7 @@
-//! # VileTech Command Line Interface
+//! # VileTools
+//!
+//! Assorted VileTech-based command line utilities, for doing Doom-related things
+//! that shouldn't require an application as bulky as the client or an editor.
 
 use std::path::PathBuf;
 
@@ -7,25 +10,6 @@ use indoc::printdoc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let args = LaunchArgs::parse();
-
-	if args.version {
-		println!("{}", &version_string());
-		return Ok(());
-	}
-
-	if args.about {
-		printdoc! {"
-VileTools - Copyright (C) 2022-2023 - jerome-trc
-
-This program comes with ABSOLUTELY NO WARRANTY.
-
-This is free software, and you are welcome to redistribute it under certain
-conditions. See the license document that comes with your installation.
-"
-		};
-
-		return Ok(());
-	}
 
 	match args.subcommand {
 		Commands::Midify {
@@ -92,13 +76,17 @@ Converted MUS file: `{i}`
 }
 
 #[derive(Debug, clap::Parser)]
+#[command(name = "VileTools")]
+#[command(version)]
+#[command(about = "VileTech-based command line utilities")]
+#[command(long_about = "
+VileTools - Copyright (C) 2022-2023 - jerome-trc
+
+This program comes with ABSOLUTELY NO WARRANTY.
+
+This is free software, and you are welcome to redistribute it under certain
+conditions. See the license document that comes with your installation.")]
 struct LaunchArgs {
-	/// Prints the CLI and engine versions and then exits.
-	#[arg(short = 'V', long = "version")]
-	version: bool,
-	/// Prints license information and then exits.
-	#[arg(short = 'A', long = "about")]
-	about: bool,
 	/// Sets the number of threads used by the global thread pool.
 	///
 	/// If set to 0 or not set, this will be automatically selected based on the
@@ -123,9 +111,4 @@ enum Commands {
 		#[arg(short, long)]
 		force: bool,
 	},
-}
-
-#[must_use]
-fn version_string() -> String {
-	format!("VileTools {}", env!("CARGO_PKG_VERSION"))
 }

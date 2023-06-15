@@ -79,18 +79,16 @@ pub fn thread_pool_init(num_threads: Option<usize>) {
 /// Returns a message telling the user the engine's `CARGO_PKG_VERSION`.
 #[must_use]
 pub fn short_version_string() -> String {
-	format!("VileTech Engine version: {}", env!("CARGO_PKG_VERSION"))
+	format!("VileTech Engine {}", env!("CARGO_PKG_VERSION"))
 }
 
-/// Returns a message telling the user the engine's `CARGO_PKG_VERSION`, the version
-/// of the application running on the engine, the SHA hash of the Git commit from
-/// which the engine was built, and the date and time of engine compilation.
 #[must_use]
-pub fn full_version_string(app_version_string: &str) -> String {
-	format!(
-		"VileTech Engine {VERSION}\r\n\t{app_version_string}\
-		\r\n\tGit commit: {GIT_HASH}\r\n\tCompiled on: {COMPILE_DATETIME}",
-	)
+pub fn version_info() -> [String; 3] {
+	[
+		short_version_string(),
+		format!("Commit {GIT_HASH}"),
+		format!("Compiled on {COMPILE_DATETIME}"),
+	]
 }
 
 pub const BASEDATA_ID: &str = env!("BASEDATA_ID");

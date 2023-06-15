@@ -48,23 +48,18 @@ use self::core::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	viletech::START_TIME.set(Instant::now()).unwrap();
-	let args = Clap::parse();
+	let args = LaunchArgs::parse();
 
-	if args.version {
-		println!("{}", viletech::short_version_string());
-		println!("{}", &version_string());
-		return Ok(());
-	}
+	if args.version_full {
+		let c_vers = env!("CARGO_PKG_VERSION");
+		let [e_vers, commit, comp_datetime] = viletech::version_info();
 
-	if args.about {
 		printdoc! {"
-VileTech Client - Copyright (C) 2022-2023 - jerome-trc
-
-This program comes with ABSOLUTELY NO WARRANTY.
-
-This is free software, and you are welcome to redistribute it under certain
-conditions. See the license document that comes with your installation."
-		};
+VileTech Client {c_vers}
+{e_vers}
+{commit}
+{comp_datetime}
+"};
 
 		return Ok(());
 	}
@@ -349,14 +344,24 @@ fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
 }
 
 #[derive(Debug, clap::Parser)]
-struct Clap {
-	/// Prints the client and engine versions and then exits.
-	#[arg(short = 'V', long = "version")]
-	version: bool,
-	/// Prints license information and then exits.
-	#[arg(short = 'A', long = "about")]
-	about: bool,
-	/// Sets the number of threads used by the global thread pool
+#[command(name = "VileTech Client")]
+#[command(version)]
+#[command(about = "Client for the VileTech Engine")]
+#[command(long_about = "
+VileTech Client - Copyright (C) 2022-2023 - jerome-trc
+
+This program comes with ABSOLUTELY NO WARRANTY.
+
+This is free software, and you are welcome to redistribute it under certain
+conditions. See the license document that comes with your installation.")]
+struct LaunchArgs {
+	/// Version info for both the client and engine.
+	///
+	/// Same as `--version` along with the version, Git commit SHA, and compile
+	/// timestamp of the `viletech` "engine" library.
+	#[arg(long)]
+	version_full: bool,
+	/// Sets the number of threads used by the global thread pool.
 	///
 	/// If set to 0 or not set, this will be automatically selected based on the
 	/// number of logical CPUs your computer has.

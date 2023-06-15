@@ -34,6 +34,9 @@ fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 		time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
 	let compile_timestamp = time::OffsetDateTime::now_utc().format(&fmt).unwrap();
 
+	let pkg_vers = env!("CARGO_PKG_VERSION");
+
+	println!("cargo:rustc-env=VILETECH_ENGINE_VERSION={pkg_vers}");
 	println!("cargo:rustc-env=GIT_HASH={hash_str}");
 	println!("cargo:rustc-env=COMPILE_DATETIME={compile_timestamp} UTC");
 

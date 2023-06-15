@@ -1,6 +1,7 @@
 use std::env;
 
 use bevy::prelude::{error, info};
+use indoc::formatdoc;
 use viletech::{
 	terminal::{self, CommandArgs},
 	util::duration_to_hhmmss,
@@ -175,10 +176,17 @@ pub fn _cmd_version(args: CommandArgs) -> Request {
 		return Request::None;
 	}
 
-	info!(
-		"{}",
-		viletech::full_version_string(&super::version_string())
-	);
+	let s_vers = env!("CARGO_PKG_VERSION");
+	let [e_vers, commit, comp_datetime] = viletech::version_info();
+
+	let msg = formatdoc! {"
+VileTech Server {s_vers}
+{e_vers}
+{commit}
+{comp_datetime}
+"};
+
+	info!("{msg}");
 
 	Request::None
 }
