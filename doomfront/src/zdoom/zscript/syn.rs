@@ -10,6 +10,8 @@ pub enum Syn {
 	ActionFunction,
 	/// `'(' exprs? ')'`
 	ArgList,
+	/// `(ident ':')? expr`
+	Argument,
 	/// `('[' expr? ']')+`
 	ArrayLen,
 	/// `'class' 'ident' inheritspec? replacesclause? '{' innard* '}'`

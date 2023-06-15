@@ -34,7 +34,7 @@ pub mod testing;
 pub mod zdoom;
 
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
-pub type ParseError<'i, T> = chumsky::error::Rich<'i, T, logos::Span>;
+pub type ParseError<'i, T> = parsing::Error<'i, T>;
 pub type ParseState<'i> = parsing::State<'i>;
 
 #[derive(Debug)]

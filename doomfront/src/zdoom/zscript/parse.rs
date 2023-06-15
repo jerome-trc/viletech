@@ -11,6 +11,7 @@ use rowan::GreenNode;
 use crate::{
 	parser_t,
 	zdoom::{self, Token},
+	GreenElement,
 };
 
 use super::Syn;
@@ -37,14 +38,46 @@ impl ParserBuilder {
 
 		primitive::choice((
 			self.trivia(),
-			self.const_def().map(|gnode| gnode.into()),
-			self.enum_def().map(|gnode| gnode.into()),
-			self.include_directive().map(|gnode| gnode.into()),
-			self.version_directive().map(|gnode| gnode.into()),
+			self.const_def().map(GreenElement::from),
+			self.enum_def().map(GreenElement::from),
+			self.include_directive().map(GreenElement::from),
+			self.version_directive().map(GreenElement::from),
+			self.class_def().map(GreenElement::from),
+			self.struct_def().map(GreenElement::from),
+			self.mixin_class_def().map(GreenElement::from),
+			self.class_extend().map(GreenElement::from),
+			self.struct_extend().map(GreenElement::from),
 		))
 		.repeated()
 		.collect::<Vec<_>>()
 		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
 		.boxed()
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use crate::{
+		testing::*,
+		zdoom::{zscript::ParseTree, Version},
+	};
+
+	use super::*;
+
+	#[test]
+	fn with_sample_data() {
+		let (_, sample) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE") {
+			Ok(s) => s,
+			Err(err) => {
+				eprintln!("Skipping ZScript sample data-based unit test. Reason: {err}");
+				return;
+			}
+		};
+
+		let parser = ParserBuilder::new(Version::default()).file();
+		let tbuf = crate::scan(&sample, zdoom::Version::default());
+		let result = crate::parse(parser, &sample, &tbuf);
+		let ptree: ParseTree = unwrap_parse_tree(result);
+		assert_no_errors(&ptree);
 	}
 }

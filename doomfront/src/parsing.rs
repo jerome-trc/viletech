@@ -5,6 +5,10 @@ use smallvec::SmallVec;
 
 use crate::GreenElement;
 
+pub type Input<'i, T> = chumsky::input::SpannedInput<T, logos::Span, &'i [(T, logos::Span)]>;
+pub type Error<'i, T> = chumsky::error::Rich<'i, T, logos::Span>;
+pub type Extra<'i, T> = chumsky::extra::Full<Error<'i, T>, State<'i>, ()>;
+
 /// Gets passed along with [`chumsky`] parsers. See [`chumsky::extra`].
 #[derive(Debug)]
 pub struct State<'i> {

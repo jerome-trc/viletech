@@ -368,19 +368,22 @@ impl ParserBuilder {
 		})
 	}
 
-	/// The returned parser emits 0 or more expression nodes (comma-separated),
-	/// each with a possible preceding identifier and colon.
+	/// The returned parser emits 0 or more [`Syn::Argument`] nodes
+	/// (comma-separated), each with a possible preceding identifier and colon.
 	/// Note that this does not include enclosing parentheses.
 	/// The return value of [`Self::expr`] must be passed in to prevent infinite recursion.
 	pub(super) fn arg_list<'i>(&self, expr: parser_t!(GreenNode)) -> parser_t!(Vec<GreenElement>) {
 		let named_expr = primitive::group((
-			self.ident(),
-			self.trivia_0plus(),
-			comb::just_ts(Token::Colon, Syn::Colon),
-			self.trivia_0plus(),
+			primitive::group((
+				self.ident(),
+				self.trivia_0plus(),
+				comb::just_ts(Token::Colon, Syn::Colon),
+				self.trivia_0plus(),
+			))
+			.or_not(),
 			expr,
 		))
-		.map(coalesce_vec);
+		.map(|group| coalesce_node(group, Syn::Argument));
 
 		let rep = primitive::group((
 			self.trivia_0plus(),
@@ -389,13 +392,8 @@ impl ParserBuilder {
 			named_expr.clone(),
 		));
 
-		named_expr.foldl(rep.repeated(), |mut lhs, (mut t0, comma, mut t1, mut e)| {
-			lhs.append(&mut t0);
-			lhs.push(comma.into());
-			lhs.append(&mut t1);
-			lhs.append(&mut e);
-			lhs
-		})
+		primitive::group((named_expr.or_not(), rep.repeated().collect::<Vec<_>>()))
+			.map(coalesce_vec)
 	}
 }
 

@@ -19,11 +19,13 @@ impl ParserBuilder {
 			comb::just_ts(Token::KwClass, Syn::KwClass),
 			self.trivia_1plus(),
 			self.ident(),
+			self.trivia_0plus(),
 			self.inherit_spec().or_not(),
+			self.trivia_0plus(),
 			primitive::group((self.class_qual(), self.trivia_1plus()))
 				.repeated()
 				.collect::<Vec<_>>(),
-			self.trivia_1plus(),
+			self.trivia_0plus(),
 			comb::just_ts(Token::BraceL, Syn::BraceL),
 			self.class_innard().repeated().collect::<Vec<_>>(),
 			comb::just_ts(Token::BraceR, Syn::BraceR),
@@ -35,9 +37,8 @@ impl ParserBuilder {
 	/// The returned parser emits a [`Syn::InheritSpec`] node.
 	fn inherit_spec<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
-			self.trivia_1plus(),
-			comb::just_ts(Token::KwReplaces, Syn::KwReplaces),
-			self.trivia_1plus(),
+			comb::just_ts(Token::Colon, Syn::Colon),
+			self.trivia_0plus(),
 			self.ident(),
 		))
 		.map(|group| coalesce_node(group, Syn::InheritSpec))
@@ -76,6 +77,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
 		.map(|group| coalesce_node(group, Syn::ClassExtend))
+		.boxed()
 	}
 
 	/// The returned parser emits a [`Syn::StructDef`] node.
@@ -102,6 +104,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
 		.map(|group| coalesce_node(group, Syn::StructDef))
+		.boxed()
 	}
 
 	/// The returned parser emits a [`Syn::StructExtend`] node.
@@ -118,6 +121,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
 		.map(|group| coalesce_node(group, Syn::StructExtend))
+		.boxed()
 	}
 
 	/// The returned parser emits a [`Syn::MixinClassDef`] node.
@@ -134,6 +138,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
 		.map(|group| coalesce_node(group, Syn::MixinClassDef))
+		.boxed()
 	}
 
 	// Innards /////////////////////////////////////////////////////////////////

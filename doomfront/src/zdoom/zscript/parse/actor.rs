@@ -86,6 +86,7 @@ impl ParserBuilder {
 	fn property_setting<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			self.ident_chain(),
+			self.trivia_1plus(),
 			self.expr_list(self.expr()),
 			comb::just_ts(Token::Semicolon, Syn::Semicolon),
 		))
@@ -113,6 +114,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
 		.map(|group| coalesce_node(group, Syn::StatesDef))
+		.boxed()
 	}
 
 	/// The returned parser emits a [`Syn::StatesUsage`] node.
@@ -160,13 +162,17 @@ impl ParserBuilder {
 
 	/// The returned parser emits a [`Syn::StateFlow`] node.
 	fn state_flow<'i>(&self) -> parser_t!(GreenNode) {
-		let kw = primitive::choice((
-			comb::just_ts(Token::KwFail, Syn::KwFail),
-			comb::just_ts(Token::KwLoop, Syn::KwLoop),
-			comb::just_ts(Token::KwStop, Syn::KwStop),
-			comb::just_ts(Token::KwWait, Syn::KwWait),
+		let kw = primitive::group((
+			primitive::choice((
+				comb::just_ts(Token::KwFail, Syn::KwFail),
+				comb::just_ts(Token::KwLoop, Syn::KwLoop),
+				comb::just_ts(Token::KwStop, Syn::KwStop),
+				comb::just_ts(Token::KwWait, Syn::KwWait),
+			)),
+			self.trivia_0plus(),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon),
 		))
-		.map(|gtok| GreenNode::new(Syn::StateFlow.into(), [gtok.into()]));
+		.map(|group| coalesce_node(group, Syn::StateFlow));
 
 		let offset = primitive::group((
 			self.trivia_0plus(),
@@ -189,6 +195,8 @@ impl ParserBuilder {
 			scope.or_not(),
 			self.ident_chain(),
 			offset.or_not(),
+			self.trivia_0plus(),
+			comb::just_ts(Token::Semicolon, Syn::Semicolon),
 		))
 		.map(|group| coalesce_node(group, Syn::StateFlow));
 
@@ -199,11 +207,12 @@ impl ParserBuilder {
 	pub fn state_def<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			self.state_sprite(),
-			self.trivia_1plus(),
+			self.trivia_0plus(),
 			self.state_frames(),
-			self.trivia_1plus(),
+			self.trivia_0plus(),
 			self.expr(),
 			self.state_quals().or_not(),
+			self.trivia_0plus(),
 			self.action_function(),
 		))
 		.map(|group| coalesce_node(group, Syn::StateDef))
@@ -235,7 +244,11 @@ impl ParserBuilder {
 				GreenToken::new(Syn::StateSprite.into(), &state.source[span])
 			});
 
-		primitive::choice((hold, sel_hold, alphanum))
+		let sel_hold_quoted = comb::string_nc(Token::StringLit, "\"####\"", Syn::StateSprite);
+
+		let hold_quoted = comb::string_nc(Token::StringLit, "\"----\"", Syn::StateSprite);
+
+		primitive::choice((hold, sel_hold, hold_quoted, sel_hold_quoted, alphanum))
 	}
 
 	/// The returned parser emits a [`Syn::StateFrames`] token.
@@ -256,11 +269,16 @@ impl ParserBuilder {
 				false
 			})
 			.repeated()
+			.at_least(1)
 			.map_with_state(|_, span, state: &mut ParseState| {
 				GreenToken::new(Syn::StateFrames.into(), &state.source[span])
 			});
 
-		primitive::choice((unquoted, comb::just_ts(Token::StringLit, Syn::StateFrames)))
+		primitive::choice((
+			unquoted,
+			comb::just_ts(Token::Pound, Syn::StateFrames),
+			comb::just_ts(Token::StringLit, Syn::StateFrames),
+		))
 	}
 
 	fn state_quals<'i>(&self) -> parser_t!(Vec<GreenElement>) {
@@ -371,5 +389,29 @@ impl ParserBuilder {
 			empty_block.map(GreenElement::from),
 			call.map(GreenElement::from),
 		))
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use crate::{
+		testing::*,
+		zdoom::{zscript::ParseTree, Version},
+	};
+
+	use super::*;
+
+	#[test]
+	fn smoke_state_def() {
+		const SOURCES: &[&str] = &["#### # 1;", "---- # 1;", "\"####\" \"#\" 1;"];
+
+		let builder = ParserBuilder::new(Version::default());
+
+		for source in SOURCES {
+			let tbuf = crate::scan(source, Version::default());
+			let result = crate::parse(builder.state_def(), source, &tbuf);
+			let ptree: ParseTree = unwrap_parse_tree(result);
+			assert_no_errors(&ptree);
+		}
 	}
 }

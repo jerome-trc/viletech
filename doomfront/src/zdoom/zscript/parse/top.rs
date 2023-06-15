@@ -71,6 +71,7 @@ impl ParserBuilder {
 			comb::just_ts(Token::Semicolon, Syn::Semicolon).or_not(),
 		))
 		.map(|group| coalesce_node(group, Syn::EnumDef))
+		.boxed()
 	}
 
 	/// The returned parser emits a [`Syn::IncludeDirective`] node.
