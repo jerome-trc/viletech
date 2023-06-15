@@ -797,7 +797,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da6a1109d06fe947990db032e719e162414cf9bf7a478dcc52742f1c7136c42a"
 dependencies = [
- "glam",
+ "glam 0.23.0",
  "serde",
 ]
 
@@ -807,7 +807,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39106bc2ee21fce9496d2e15e0ba7925dff63e3eae10f7c1fc0094b56ad9f2bb"
 dependencies = [
- "glam",
+ "glam 0.23.0",
 ]
 
 [[package]]
@@ -874,7 +874,7 @@ dependencies = [
  "bevy_utils",
  "downcast-rs",
  "erased-serde",
- "glam",
+ "glam 0.23.0",
  "once_cell",
  "parking_lot",
  "serde",
@@ -2056,7 +2056,7 @@ checksum = "e6591f13a63571c4821802eb5b10fd1155b1290bce87086440003841c8c3909b"
 dependencies = [
  "const_panic",
  "encase_derive",
- "glam",
+ "glam 0.23.0",
  "thiserror",
 ]
 
@@ -2526,6 +2526,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad83ab008a4fa3b31dfa713dd41b5a9bdea1e94e4cf1e2fc274ffbd49b0271d3"
+dependencies = [
+ "mint",
+]
+
+[[package]]
 name = "glib-sys"
 version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2778,7 +2787,7 @@ version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd41d443f978bfa380a6dad58b62a08c43bcb960631f13e9d015b911eaf73588"
 dependencies = [
- "glam",
+ "glam 0.23.0",
  "once_cell",
 ]
 
@@ -3040,6 +3049,20 @@ checksum = "9e53aef6f6ec851da68a0ad6d6283bd99ea1a9164f38fd7ac353e28ccd6f5cda"
 dependencies = [
  "atomic-arena",
  "cpal",
+ "ringbuf",
+ "symphonia",
+]
+
+[[package]]
+name = "kira"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3974058fcf12557b10602f1145fd22d554815f0fb2fdc470441828cc0effa74e"
+dependencies = [
+ "atomic-arena",
+ "cpal",
+ "glam 0.24.0",
+ "mint",
  "ringbuf",
  "symphonia",
 ]
@@ -3318,6 +3341,12 @@ checksum = "b275950c28b37e794e8c55d88aeb5e139d0ce23fdbbeda68f8d7174abdf9e8fa"
 dependencies = [
  "adler",
 ]
+
+[[package]]
+name = "mint"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
 
 [[package]]
 name = "mio"
@@ -4594,7 +4623,7 @@ dependencies = [
  "bitvec",
  "bytemuck",
  "criterion",
- "glam",
+ "glam 0.23.0",
  "logos",
  "once_cell",
  "rayon",
@@ -4608,6 +4637,16 @@ name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
+
+[[package]]
+name = "sunrider"
+version = "0.0.0"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "midly",
+ "viletech-utils",
+]
 
 [[package]]
 name = "supports-color"
@@ -5277,13 +5316,14 @@ dependencies = [
  "doomfront",
  "fixed",
  "fluidlite",
- "glam",
+ "glam 0.23.0",
  "globset",
  "home",
  "image",
  "indexmap",
  "indoc",
- "kira",
+ "kira 0.7.3",
+ "kira 0.8.3",
  "memoffset 0.8.0",
  "miette",
  "nanorand",
@@ -5301,6 +5341,7 @@ dependencies = [
  "smallvec",
  "smartstring",
  "subterra",
+ "sunrider",
  "time",
  "toml 0.7.4",
  "tracing",
@@ -5340,6 +5381,7 @@ dependencies = [
  "doomfront",
  "indoc",
  "subterra",
+ "sunrider",
  "viletech-acs",
  "viletech-fs",
  "viletech-utils",
@@ -5357,7 +5399,7 @@ dependencies = [
  "clap",
  "crossbeam",
  "indoc",
- "kira",
+ "kira 0.7.3",
  "nanorand",
  "parking_lot",
  "viletech",
@@ -5405,7 +5447,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "fixed",
- "glam",
+ "glam 0.23.0",
  "home",
  "once_cell",
  "regex",

@@ -12,7 +12,7 @@ use kira::{
 use nodi::midly;
 use vfs::VPath;
 
-use super::{midi, AudioCore, MidiData, MidiSettings};
+use super::{kmidi, AudioCore, MidiData, MidiSettings};
 
 impl AudioCore {
 	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
@@ -104,8 +104,11 @@ impl AudioCore {
 				ui.menu_button(format!("{} | \u{23F7}", self.gui.midi_device), |ui| {
 					ui.set_min_width(20.0);
 
-					if ui.button(format!("{}", midi::Device::FluidSynth)).clicked() {
-						self.gui.midi_device = midi::Device::FluidSynth;
+					if ui
+						.button(format!("{}", kmidi::Device::FluidSynth))
+						.clicked()
+					{
+						self.gui.midi_device = kmidi::Device::FluidSynth;
 						ui.close_menu();
 					}
 				});
@@ -257,7 +260,7 @@ pub(super) struct DevGui {
 	pub(super) soundfont_buf: String,
 	/// Amplitude. Slider runs from 0.0 to 4.0.
 	pub(super) volume: f64,
-	pub(super) midi_device: midi::Device,
+	pub(super) midi_device: kmidi::Device,
 	pub(super) play_music: bool,
 }
 
@@ -267,7 +270,7 @@ impl Default for DevGui {
 			id_buf: String::default(),
 			soundfont_buf: String::default(),
 			volume: 1.0,
-			midi_device: midi::Device::FluidSynth,
+			midi_device: kmidi::Device::FluidSynth,
 			play_music: false,
 		}
 	}

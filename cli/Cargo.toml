@@ -24,6 +24,7 @@ doomfront = { path = "../doomfront", features = [
 	"zdoom",
 ] }
 level = { package = "subterra", path = "../level" }
+midi = { package = "sunrider", path = "../midi" }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
 vzs = { package = "vzscript", path = "../vzscript" }

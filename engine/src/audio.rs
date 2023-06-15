@@ -1,7 +1,7 @@
 //! Sound- and music-related code.
 
 mod gui;
-mod midi;
+mod kmidi;
 
 use std::{
 	io::{Cursor, Read, Seek},
@@ -32,7 +32,7 @@ use parking_lot::{Mutex, RwLock};
 
 use crate::{data::Catalog, sim::actor::Actor, util, vfs::FileRef};
 
-pub use midi::{
+pub use kmidi::{
 	render as render_midi, Data as MidiData, Handle as MidiHandle, Settings as MidiSettings,
 };
 
@@ -654,8 +654,8 @@ impl From<CommandError> for Error {
 	}
 }
 
-impl From<SendError<midi::Command>> for Error {
-	fn from(_: SendError<midi::Command>) -> Self {
+impl From<SendError<kmidi::Command>> for Error {
+	fn from(_: SendError<kmidi::Command>) -> Self {
 		Self::ThreadPanic
 	}
 }

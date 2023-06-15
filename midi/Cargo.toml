@@ -1,0 +1,24 @@
+[package]
+name = "sunrider"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["encoding", "multimedia"]
+description = "VileTech's MIDI and DMXMUS code"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/midi"
+keywords = ["audio", "dmxmus", "doom", "midi", "music"]
+license = "GPL-3.0-or-later"
+publish = false
+repository.workspace = true
+
+[features]
+default = []
+parallel = ["midly/parallel"]
+
+[dependencies]
+util = { package = "viletech-utils", path = "../utils" }
+
+bytemuck.workspace = true
+byteorder.workspace = true
+midly.workspace = true

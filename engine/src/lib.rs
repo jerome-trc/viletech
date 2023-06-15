@@ -16,6 +16,7 @@ pub mod gfx;
 pub mod input;
 pub extern crate level;
 pub mod log;
+pub extern crate midi;
 pub mod player;
 pub mod rng;
 pub mod sim;

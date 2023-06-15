@@ -6,9 +6,7 @@
 use std::borrow::Cow;
 
 use byteorder::{ByteOrder, LittleEndian};
-use util::{io::TCursor, Id8};
-
-use crate::AsciiId;
+use util::{io::TCursor, Ascii4};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Format {
@@ -49,8 +47,8 @@ pub enum Error {
 }
 
 pub fn read(ctx: Context, bytes: Cow<[u8]>) -> Result<(), Error> {
-	const PRETAG_ACSE: AsciiId = AsciiId::from_chars(b'A', b'C', b'S', b'E');
-	const PRETAG_ACSLE: AsciiId = AsciiId::from_chars(b'A', b'C', b'S', b'e');
+	const PRETAG_ACSE: Ascii4 = Ascii4::from_bstr(b"ACSE");
+	const PRETAG_ACSLE: Ascii4 = Ascii4::from_bstr(b"ACSe");
 
 	// (GZ)
 	// Any behaviors smaller than 32 bytes cannot possibly contain anything useful.
@@ -80,7 +78,7 @@ pub fn read(ctx: Context, bytes: Cow<[u8]>) -> Result<(), Error> {
 	let localize;
 
 	if format == Format::Old {
-		let pretag: AsciiId = TCursor::new(&bytes, dir_offs as u64)
+		let pretag: Ascii8 = TCursor::new(&bytes, dir_offs as u64)
 			.peek_u32_offs(-1)
 			.into();
 
@@ -154,7 +152,7 @@ fn load_par(reader: BehaviorReader) -> Artifacts {
 
 #[must_use]
 fn read_functions(reader: BehaviorReader) -> Option<Vec<Function>> {
-	let Some(mut c8) = reader.find_chunk(AsciiId::from_bstr(b"FUNC")) else { return None; };
+	let Some(mut c8) = reader.find_chunk(Ascii8::from_bstr(b"FUNC")) else { return None; };
 	let c32 = c8.to_tcursor32();
 	let len = c32.peek_u32_offs_le(1) / 8;
 	let mut ret = vec![];
@@ -189,7 +187,7 @@ fn read_functions(reader: BehaviorReader) -> Option<Vec<Function>> {
 
 #[must_use]
 fn read_jump_points(reader: BehaviorReader) -> Option<Vec<JumpPoint>> {
-	let Some(c8) = reader.find_chunk(AsciiId::from_bstr(b"JUMP")) else { return None; };
+	let Some(c8) = reader.find_chunk(Ascii8::from_bstr(b"JUMP")) else { return None; };
 	let c32 = c8.to_tcursor32();
 	let len = c32.peek_u32_offs_le(1);
 	let mut ret = vec![];
@@ -212,7 +210,7 @@ struct BehaviorReader<'b> {
 
 impl<'b> BehaviorReader<'b> {
 	#[must_use]
-	fn find_chunk(&self, id: AsciiId) -> Option<TCursor<u8>> {
+	fn find_chunk(&self, id: Ascii8) -> Option<TCursor<u8>> {
 		let mut ret = TCursor::new(&self.bytes, self.chunks as u64);
 
 		while ret.pos() < (self.bytes.len() as u64) {

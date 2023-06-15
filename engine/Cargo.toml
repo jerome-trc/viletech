@@ -50,6 +50,7 @@ doomfront = { path = "../doomfront", features = [
 	"umapinfo",
 	"zdoom",
 ] }
+midi = { package = "sunrider", path = "../midi", features = ["parallel"] }
 level = { package = "subterra", path = "../level", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
@@ -75,6 +76,7 @@ image.workspace = true
 indexmap.workspace = true
 indoc.workspace = true
 kira.workspace = true
+kira0_8_3.workspace = true
 memoffset.workspace = true
 nanorand.workspace = true
 nodi.workspace = true

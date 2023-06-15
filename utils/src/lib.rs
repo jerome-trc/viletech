@@ -179,3 +179,50 @@ pub fn id8_truncated(string: &str) -> Id8 {
 	ret.push_str(&string[0..end]);
 	ret
 }
+
+/// 4 ASCII characters rolled into one `u32`.
+/// Byte ordering is **target-endianness dependent**.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Ascii4(u32);
+
+impl Ascii4 {
+	#[must_use]
+	pub const fn from_bytes(a: u8, b: u8, c: u8, d: u8) -> Self {
+		let a = a as u32;
+		let b = b as u32;
+		let c = c as u32;
+		let d = d as u32;
+
+		#[cfg(target_endian = "little")]
+		{
+			Self(a | (b << 8) | (c << 16) | (d << 24))
+		}
+		#[cfg(target_endian = "big")]
+		{
+			Self(d | (c << 8) | (b << 16) | (a << 24))
+		}
+	}
+
+	#[must_use]
+	pub const fn from_bstr(bstr: &'static [u8; 4]) -> Self {
+		let a = bstr[0] as u32;
+		let b = bstr[1] as u32;
+		let c = bstr[2] as u32;
+		let d = bstr[3] as u32;
+
+		#[cfg(target_endian = "little")]
+		{
+			Self(a | (b << 8) | (c << 16) | (d << 24))
+		}
+		#[cfg(target_endian = "big")]
+		{
+			Self(d | (c << 8) | (b << 16) | (a << 24))
+		}
+	}
+}
+
+impl From<u32> for Ascii4 {
+	fn from(value: u32) -> Self {
+		Self(value)
+	}
+}

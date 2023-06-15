@@ -30,6 +30,10 @@ All source code marked as originating from GZDoom's ZScript source, whether adap
 
 All functions marked as originating from the [infer](https://crates.io/crates/infer) crate are provided under the [MIT License](./legal/infer.txt).
 
+## mus2mid
+
+All symbols marked as originating from [SLADE's port of mus2mid](https://github.com/sirjuddington/SLADE/blob/d7b5e6efd0a567098f536820b9063f2c4540e100/thirdparty/mus2mid/mus2mid.cpp) are provided under the [GNU General Public License v2.0](./legal/mus2mid.txt).
+
 ## rust-doom
 
 All functions marked as originating from the [rust-doom](https://github.com/cristicbz/rust-doom) project are provided under the [Apache 2.0 License](./legal/rust-doom.txt).
@@ -49,6 +53,10 @@ The WadLoad library includes some code from the [wad](https://crates.io/crates/w
 ## ZDBSP
 
 All source files and functions marked as originating from [ZDBSP](https://github.com/ZDoom/zdbsp) are provided under the [GNU General Public License v2.0](./legal/zdbsp.txt).
+
+## ZMusic
+
+All symbols marked as originating from [ZMusic](https://github.com/ZDoom/ZMusic) are provided under the same [sic] ["BSD-like license"](./legal/zmusic.txt) as [GZDoom](#gzdoom), unless explicitly stated to be otherwise.
 
 # Attribution
 
