@@ -16,7 +16,7 @@ where
 
 /// Shorthand for the following:
 ///
-/// ```
+/// ```ignore
 /// primitive::just(token).map_with_state(green_token(token))
 /// ```
 pub fn just<'i, T>(token: T) -> parser_t!(T, GreenToken)
