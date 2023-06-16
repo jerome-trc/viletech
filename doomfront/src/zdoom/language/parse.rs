@@ -118,6 +118,8 @@ fn trivia<'i>() -> parser_t!(GreenElement) {
 	primitive::choice((
 		comb::just_ts(Token::Whitespace, Syn::Whitespace),
 		comb::just_ts(Token::Comment, Syn::Comment),
+		comb::just_ts(Token::RegionStart, Syn::RegionStart),
+		comb::just_ts(Token::RegionEnd, Syn::RegionEnd),
 	))
 	.map(|token| token.into())
 }

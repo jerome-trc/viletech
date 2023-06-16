@@ -204,6 +204,8 @@ pub enum Syn {
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// The exact string `#include`, ASCII case-insensitive.
 	PoundInclude,
+	RegionStart,
+	RegionEnd,
 	/// `"####"`, `"----"`,
 	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
 	StateSprite,

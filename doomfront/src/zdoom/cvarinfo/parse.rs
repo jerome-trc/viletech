@@ -110,6 +110,8 @@ where
 	primitive::choice((
 		comb::just_ts(Token::Whitespace, Syn::Whitespace.into()),
 		comb::just_ts(Token::Comment, Syn::Comment.into()),
+		comb::just_ts(Token::RegionStart, Syn::RegionStart.into()),
+		comb::just_ts(Token::RegionEnd, Syn::RegionEnd.into()),
 	))
 	.map(|_| ())
 }

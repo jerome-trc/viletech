@@ -339,6 +339,10 @@ pub enum Token {
 	// Miscellaneous ///////////////////////////////////////////////////////////
 	#[regex("(?i)#include")]
 	PoundInclude,
+	#[regex("#region[^\n]*\n")]
+	RegionStart,
+	#[regex("#endregion[^\n]*\n")]
+	RegionEnd,
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
 	/// A heterogenous span of any character between NUL and ASCII 32.

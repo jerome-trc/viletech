@@ -42,6 +42,8 @@ pub enum Syn {
 	/// `~`
 	Tilde,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
+	RegionStart,
+	RegionEnd,
 	/// Either single-line or multi-line.
 	Comment,
 	/// A C-style identifier.
