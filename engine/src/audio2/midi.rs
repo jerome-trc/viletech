@@ -1,10 +1,3 @@
-//! # Sunrider
-//!
-//! Sunrider is the crate representing VileTech's code for reading, writing, and
-//! playing the [MIDI](https://doomwiki.org/wiki/MIDI) and
-//! [DMXMUS](https://doomwiki.org/wiki/MUS) file formats.
-
-pub mod mus;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Format {

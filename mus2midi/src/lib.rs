@@ -1,11 +1,27 @@
+//! # mus2midi-rs
+//!
+//! The [mus2midi] library, ported to Rust from its vendored form in [SLADE3] to
+//! provide conversion from the [DMXMUS] file format to [`midly`] sheets.
+//!
+//! [mus2midi]: https://github.com/sirjuddington/SLADE/blob/d7b5e6efd0a567098f536820b9063f2c4540e100/thirdparty/mus2mid/mus2mid.cpp
+//! [SLADE3]: https://slade.mancubus.net/
+//! [DMXMUS]: https://doomwiki.org/wiki/MUS
+
 use std::io::Cursor;
 
 use byteorder::ReadBytesExt;
 use midly::{self, num::u28, MidiMessage, PitchBend, Smf, TrackEvent, TrackEventKind};
 
+#[must_use]
+pub fn is_dmxmus(bytes: &[u8]) -> bool {
+	if bytes.len() < 4 {
+		return false;
+	}
+
+	bytes[0] == b'M' && bytes[1] == b'U' && bytes[2] == b'S' && bytes[3] == 0x1A
+}
+
 /// From SLADE's port of mus2midi.
-///
-/// For licensing information, see the repository's ATTRIB.md file.
 pub fn to_midi(bytes: &[u8]) -> Result<Smf, Error> {
 	#[repr(C, packed)]
 	#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
@@ -337,25 +353,5 @@ impl std::fmt::Display for Error {
 				write!(f, "invalid controller number {num} as byte {pos}")
 			}
 		}
-	}
-}
-
-#[cfg(test)]
-mod test {
-	use super::*;
-
-	#[test]
-	fn smoke_in() {
-		let bytes = std::fs::read("/home/jerome/Temp/SLADE.mid").unwrap();
-		let smf = Smf::parse(&bytes).unwrap();
-		std::fs::write("/home/jerome/Temp/D_SHAWN.slade.txt", format!("{smf:#?}")).unwrap();
-	}
-
-	#[test]
-	fn smoke_out() {
-		let bytes = std::fs::read("/home/jerome/Temp/D_SHAWN.mus").unwrap();
-		let smf = to_midi(&bytes).unwrap();
-		smf.save("/home/jerome/Temp/MIDIFY.mid").unwrap();
-		std::fs::write("/home/jerome/Temp/D_SHAWN.midify.txt", format!("{smf:#?}")).unwrap();
 	}
 }

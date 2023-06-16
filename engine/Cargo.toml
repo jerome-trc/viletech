@@ -38,7 +38,7 @@ doomfront = { path = "../doomfront", features = [
 	"umapinfo",
 	"zdoom",
 ] }
-midi = { package = "sunrider", path = "../midi", features = ["parallel"] }
+mus = { package = "mus2midi", path = "../mus2midi" }
 level = { package = "subterra", path = "../level", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }

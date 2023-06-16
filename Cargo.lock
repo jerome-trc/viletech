@@ -3264,6 +3264,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mus2midi"
+version = "0.0.0"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "midly",
+]
+
+[[package]]
 name = "naga"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4530,16 +4539,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
-name = "sunrider"
-version = "0.0.0"
-dependencies = [
- "bytemuck",
- "byteorder",
- "midly",
- "viletech-utils",
-]
-
-[[package]]
 name = "supports-color"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5211,6 +5210,7 @@ dependencies = [
  "kira 0.8.3",
  "memoffset 0.8.0",
  "miette",
+ "mus2midi",
  "nanorand",
  "nodi",
  "once_cell",
@@ -5226,7 +5226,6 @@ dependencies = [
  "smallvec",
  "smartstring",
  "subterra",
- "sunrider",
  "time",
  "toml 0.7.4",
  "tracing",
@@ -5265,8 +5264,8 @@ dependencies = [
  "clap",
  "doomfront",
  "indoc",
+ "mus2midi",
  "subterra",
- "sunrider",
  "viletech-acs",
  "viletech-fs",
  "viletech-utils",

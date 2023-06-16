@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 				}
 			};
 
-			let smf = match midi::mus::to_midi(&bytes) {
+			let smf = match mus::to_midi(&bytes) {
 				Ok(s) => s,
 				Err(err) => {
 					eprintln!("Failed to convert MUS file: `{}`", input.display());
