@@ -238,7 +238,7 @@ impl_datum! {
 	Blueprint, "Blueprint";
 	DamageType, "Damage Type";
 	Image, "Image";
-	level::Level, "Level";
+	level::LevelDef, "Level";
 	level::repr::LockDef, "Lock";
 	PolyModel, "Poly Model";
 	Species, "Species";

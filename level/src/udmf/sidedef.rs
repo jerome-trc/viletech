@@ -2,14 +2,14 @@
 
 use util::{id8_truncated, SmallString};
 
-use crate::{repr::SideDef, udmf::Value, Level};
+use crate::{repr::SideDef, udmf::Value, LevelDef};
 
 use super::{parse_i32, parse_usize, Error, KeyValPair};
 
 pub(super) fn read_sidedef_field(
 	kvp: KeyValPair,
 	sidedef: &mut SideDef,
-	_: &Level,
+	_: &LevelDef,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 

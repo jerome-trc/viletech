@@ -2,14 +2,14 @@
 
 use util::{id8_truncated, SmallString};
 
-use crate::{repr::Sector, udmf::Value, Level};
+use crate::{repr::SectorDef, udmf::Value, LevelDef};
 
 use super::{parse_i32, Error, KeyValPair};
 
 pub(super) fn read_sectordef_field(
 	kvp: KeyValPair,
-	sectordef: &mut Sector,
-	_: &Level,
+	sectordef: &mut SectorDef,
+	_: &LevelDef,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 

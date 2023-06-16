@@ -14,16 +14,16 @@ use util::{
 
 /// Alternatively a "map".
 #[derive(Debug)]
-pub struct Level {
+pub struct LevelDef {
 	pub meta: LevelMeta,
 	pub format: LevelFormat,
 	pub bounds: MinMaxBox,
 	pub geom: LevelGeom,
 	pub bsp: LevelBsp,
-	pub things: Vec<Thing>,
+	pub thingdefs: Vec<ThingDef>,
 }
 
-impl Level {
+impl LevelDef {
 	#[must_use]
 	pub fn new(format: LevelFormat) -> Self {
 		Self {
@@ -41,25 +41,25 @@ impl Level {
 			bounds: MinMaxBox::default(),
 			geom: LevelGeom {
 				linedefs: vec![],
-				sectors: vec![],
+				sectordefs: vec![],
 				sidedefs: vec![],
-				vertices: vec![],
+				vertdefs: vec![],
 			},
 			bsp: LevelBsp {
 				nodes: vec![],
 				segs: vec![],
 				subsectors: vec![],
 			},
-			things: vec![],
+			thingdefs: vec![],
 		}
 	}
 
 	#[must_use]
-	pub fn bounds(verts: &[Vertex]) -> MinMaxBox {
+	pub fn bounds(vertdefs: &[Vertex]) -> MinMaxBox {
 		let mut min = glam::vec3a(0.0, 0.0, 0.0);
 		let mut max = glam::vec3a(0.0, 0.0, 0.0);
 
-		for vert in verts {
+		for vert in vertdefs {
 			if vert.x < min.x {
 				min.x = vert.x;
 			} else if vert.x > max.x {
@@ -88,9 +88,9 @@ impl Level {
 		let mut n = 0;
 
 		for i in 0..self.geom.linedefs.len() {
-			let line = &self.geom.linedefs[i];
-			let v1 = &self.geom.vertices[line.vert_start];
-			let v2 = &self.geom.vertices[line.vert_end];
+			let linedef = &self.geom.linedefs[i];
+			let v1 = &self.geom.vertdefs[linedef.vert_start];
+			let v2 = &self.geom.vertdefs[linedef.vert_end];
 
 			if std::ptr::eq(v1, v2) {
 				continue;
@@ -160,9 +160,9 @@ impl Level {
 	/// (GZ) Sectors not referenced by any sides are just wasted space,
 	/// and can be removed. Returns a "remap table" for use in fixing REJECT tables.
 	pub fn prune_unused_sectors(&mut self) -> Vec<usize> {
-		let mut used: BitVec<AtomicUsize, Lsb0> = BitVec::with_capacity(self.geom.sectors.len());
-		used.resize(self.geom.sectors.len(), false);
-		let mut remap: Vec<usize> = Vec::with_capacity(self.geom.sectors.len());
+		let mut used: BitVec<AtomicUsize, Lsb0> = BitVec::with_capacity(self.geom.sectordefs.len());
+		used.resize(self.geom.sectordefs.len(), false);
+		let mut remap: Vec<usize> = Vec::with_capacity(self.geom.sectordefs.len());
 
 		self.geom.sidedefs.par_iter_mut().for_each(|sidedef| {
 			used.set_aliased(sidedef.sector, true);
@@ -173,14 +173,14 @@ impl Level {
 
 		let mut new_len = 0;
 
-		for i in 0..self.geom.sectors.len() {
+		for i in 0..self.geom.sectordefs.len() {
 			if !used[i] {
 				remap[i] = usize::MAX;
 				continue;
 			}
 
 			if i != new_len {
-				self.geom.sectors.swap(new_len, i);
+				self.geom.sectordefs.swap(new_len, i);
 			}
 
 			remap[i] = new_len;
@@ -189,7 +189,7 @@ impl Level {
 
 		let mut ret = vec![];
 
-		if new_len < self.geom.sectors.len() {
+		if new_len < self.geom.sectordefs.len() {
 			// Re-assign sidedefs' sector indices.
 
 			self.geom.sidedefs.par_iter_mut().for_each(|sidedef| {
@@ -199,11 +199,11 @@ impl Level {
 			// (GZ) Make a reverse map for fixing reject lumps.
 			ret.resize(new_len, usize::MAX);
 
-			for i in 0..self.geom.sectors.len() {
+			for i in 0..self.geom.sectordefs.len() {
 				ret[remap[i]] = i;
 			}
 
-			self.geom.sectors.truncate(new_len);
+			self.geom.sectordefs.truncate(new_len);
 		}
 
 		ret
@@ -220,9 +220,9 @@ impl Level {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LevelGeom {
 	pub linedefs: Vec<LineDef>,
-	pub sectors: Vec<Sector>,
+	pub sectordefs: Vec<SectorDef>,
 	pub sidedefs: Vec<SideDef>,
-	pub vertices: Vec<Vertex>,
+	pub vertdefs: Vec<Vertex>,
 }
 
 /// Sub-structure for composing a [`Level`].
@@ -291,7 +291,7 @@ pub enum UdmfNamespace {
 
 /// See <https://doomwiki.org/wiki/Thing>.
 #[derive(Debug)]
-pub struct Thing {
+pub struct ThingDef {
 	pub tid: i32,
 	pub ed_num: EditorNum,
 	/// Reader's note: Bevy's coordinate system is right-handed Y-up.
@@ -304,7 +304,7 @@ pub struct Thing {
 	pub udmf: HashMap<SmallString, UdmfValue>,
 }
 
-impl Thing {
+impl ThingDef {
 	pub const HEXEN_ANCHOR: EditorNum = 3000;
 	pub const HEXEN_SPAWN: EditorNum = 3001;
 	pub const HEXEN_SPAWNCRUSH: EditorNum = 3002;
@@ -468,7 +468,7 @@ pub struct SideDef {
 /// See <https://doomwiki.org/wiki/Sector>.
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Sector {
+pub struct SectorDef {
 	pub udmf_id: i32,
 	pub height_floor: f32,
 	pub height_ceil: f32,

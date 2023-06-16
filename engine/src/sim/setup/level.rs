@@ -31,14 +31,14 @@ use crate::{
 
 pub(crate) fn setup(
 	mut ctx: super::Context,
-	base: dobj::Handle<::level::Level>,
+	base: dobj::Handle<::level::LevelDef>,
 	level: &mut ChildBuilder,
 ) {
 	let level = Mutex::new(level);
 
-	let mut verts = SparseSet::with_capacity(base.geom.vertices.len(), base.geom.vertices.len());
+	let mut verts = SparseSet::with_capacity(base.geom.vertdefs.len(), base.geom.vertdefs.len());
 
-	for (i, vert) in base.geom.vertices.iter().enumerate() {
+	for (i, vert) in base.geom.vertdefs.iter().enumerate() {
 		verts.insert(VertIndex(i), *vert);
 	}
 
@@ -75,7 +75,7 @@ pub(crate) fn setup(
 				verts,
 				sides: simstate.sides,
 				triggers: simstate.triggers,
-				num_sectors: base.geom.sectors.len(),
+				num_sectors: base.geom.sectordefs.len(),
 			},
 		},
 	});
@@ -87,9 +87,9 @@ struct SimState {
 }
 
 #[must_use]
-fn spawn_children(base: &dobj::Handle<::level::Level>, level: &mut ChildBuilder) -> SimState {
+fn spawn_children(base: &dobj::Handle<::level::LevelDef>, level: &mut ChildBuilder) -> SimState {
 	let mut lines = IndexMap::with_capacity(base.geom.linedefs.len());
-	let mut sectors = IndexMap::with_capacity(base.geom.sectors.len());
+	let mut sectors = IndexMap::with_capacity(base.geom.sectordefs.len());
 	let mut sides = SparseSet::with_capacity(base.geom.sidedefs.len(), base.geom.sidedefs.len());
 
 	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
@@ -113,7 +113,7 @@ fn spawn_children(base: &dobj::Handle<::level::Level>, level: &mut ChildBuilder)
 		);
 	}
 
-	for sectordef in &base.geom.sectors {
+	for sectordef in &base.geom.sectordefs {
 		let sect_id = level.spawn(()).id();
 
 		sectors.insert(
@@ -196,7 +196,10 @@ struct MeshParts {
 }
 
 #[must_use]
-fn build_mesh(base: &dobj::Handle<::level::Level>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
+fn build_mesh(
+	base: &dobj::Handle<::level::LevelDef>,
+	verts: &SparseSet<VertIndex, Vertex>,
+) -> Mesh {
 	let mut parts = MeshParts {
 		verts: vec![],
 		indices: vec![],
@@ -223,7 +226,7 @@ fn build_mesh(base: &dobj::Handle<::level::Level>, verts: &SparseSet<VertIndex, 
 }
 
 fn recur(
-	base: &dobj::Handle<::level::Level>,
+	base: &dobj::Handle<::level::LevelDef>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
@@ -294,7 +297,7 @@ struct SSectorPoly {
 
 #[must_use]
 fn subsector_to_poly(
-	base: &dobj::Handle<::level::Level>,
+	base: &dobj::Handle<::level::LevelDef>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,
@@ -311,7 +314,7 @@ fn subsector_to_poly(
 		SegDirection::Back => &base.geom.sidedefs[linedef.side_left.unwrap()],
 	};
 
-	let sector = &base.geom.sectors[sidedef.sector];
+	let sector = &base.geom.sectordefs[sidedef.sector];
 
 	let mut last_seg_vert = 0;
 

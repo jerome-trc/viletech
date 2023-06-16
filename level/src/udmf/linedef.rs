@@ -5,7 +5,7 @@ use util::SmallString;
 use crate::{
 	repr::{LineDef, LineFlags},
 	udmf::Value,
-	Level,
+	LevelDef,
 };
 
 use super::{parse_i32, parse_usize, Error, KeyValPair};
@@ -13,7 +13,7 @@ use super::{parse_i32, parse_usize, Error, KeyValPair};
 pub(super) fn read_linedef_field(
 	kvp: KeyValPair,
 	linedef: &mut LineDef,
-	_: &Level,
+	_: &LevelDef,
 ) -> Result<(), Error> {
 	let KeyValPair { key, val } = kvp;
 

@@ -10,13 +10,13 @@ pub mod validate;
 
 use util::{EditorNum, Id8};
 
-pub use repr::Level;
+pub use repr::LevelDef;
 
 /// All 16-bit integer position values get reduced by this
 /// to fit VileTech's floating-point space.
 pub const VANILLA_SCALEDOWN: f32 = 0.01;
 
-/// Things that can go wrong when trying to process files into a [Level] datum.
+/// Possible failure modes of trying to process files into a [LevelDef].
 #[derive(Debug)]
 pub enum Error {
 	/// A line tried to reference a non-existent side.

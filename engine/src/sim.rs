@@ -90,7 +90,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<::level::Level>) {
+pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<::level::LevelDef>) {
 	let start_time = Instant::now();
 
 	let l = level.clone();
@@ -102,7 +102,7 @@ pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<::
 		ActiveMarker,
 	))
 	.with_children(|cbuilder| {
-		for thingdef in &level.things {
+		for thingdef in &level.thingdefs {
 			if thingdef.ed_num == 1 {
 				cbuilder.spawn(Camera3dBundle {
 					transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),

@@ -8,8 +8,8 @@ use util::{io::CursorExt, read_id8};
 
 use crate::{
 	repr::{
-		BspNode, BspNodeChild, LineDef, LineFlags, Sector, Seg, SegDirection, SideDef, SubSector,
-		Thing, ThingFlags, Vertex,
+		BspNode, BspNodeChild, LineDef, LineFlags, SectorDef, Seg, SegDirection, SideDef,
+		SubSector, ThingDef, ThingFlags, Vertex,
 	},
 	Error, VANILLA_SCALEDOWN,
 };
@@ -125,7 +125,7 @@ pub fn nodes(bytes: &[u8]) -> Result<Vec<BspNode>, Error> {
 }
 
 /// Returns [`Error::MalformedFile`] if the length `bytes` is not divisible by 26.
-pub fn sectors(bytes: &[u8]) -> Result<Vec<Sector>, Error> {
+pub fn sectors(bytes: &[u8]) -> Result<Vec<SectorDef>, Error> {
 	#[repr(C)]
 	#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 	struct SectorRaw {
@@ -150,7 +150,7 @@ pub fn sectors(bytes: &[u8]) -> Result<Vec<Sector>, Error> {
 	for _ in 0..(bytes.len() / SIZE) {
 		let raw = cursor.read_from_bytes::<SectorRaw>();
 
-		ret.push(Sector {
+		ret.push(SectorDef {
 			udmf_id: 0,
 			height_floor: (i16::from_le(raw.height_floor) as f32) * VANILLA_SCALEDOWN,
 			height_ceil: (i16::from_le(raw.height_ceil) as f32) * VANILLA_SCALEDOWN,
@@ -280,7 +280,7 @@ pub fn ssectors(bytes: &[u8]) -> Result<Vec<SubSector>, Error> {
 }
 
 /// Returns [`Error::MalformedFile`] if the length `bytes` is not divisible by 10.
-pub fn things_doom(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
+pub fn things_doom(bytes: &[u8]) -> Result<Vec<ThingDef>, Error> {
 	#[repr(C)]
 	#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 	struct ThingRaw {
@@ -303,7 +303,7 @@ pub fn things_doom(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
 	for _ in 0..(bytes.len() / SIZE) {
 		let raw = cursor.read_from_bytes::<ThingRaw>();
 
-		ret.push(Thing {
+		ret.push(ThingDef {
 			tid: 0,
 			ed_num: u16::from_le(raw.ednum),
 			pos: glam::vec3(
@@ -364,7 +364,7 @@ pub fn things_doom(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
 }
 
 /// Returns [`Error::MalformedFile`] if the length `bytes` is not divisible by 20.
-pub fn things_extended(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
+pub fn things_extended(bytes: &[u8]) -> Result<Vec<ThingDef>, Error> {
 	#[repr(C)]
 	#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 	struct ThingRaw {
@@ -390,7 +390,7 @@ pub fn things_extended(bytes: &[u8]) -> Result<Vec<Thing>, Error> {
 	for _ in 0..(bytes.len() / SIZE) {
 		let raw = cursor.read_from_bytes::<ThingRaw>();
 
-		ret.push(Thing {
+		ret.push(ThingDef {
 			tid: i16::from_le(raw.tid) as i32,
 			ed_num: u16::from_le(raw.ednum),
 			pos: glam::vec3(

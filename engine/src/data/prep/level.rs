@@ -2,7 +2,7 @@
 
 use ::level::{
 	repr::{LevelBsp, LevelFormat, LevelGeom},
-	Level,
+	LevelDef,
 };
 
 use crate::data::{dobj::Image, prep::*, Catalog, FileRef, PrepError, PrepErrorKind};
@@ -16,7 +16,7 @@ impl Catalog {
 		&self,
 		ctx: &SubContext,
 		dir: FileRef,
-	) -> Outcome<Level, ()> {
+	) -> Outcome<LevelDef, ()> {
 		let mut _blockmap = None;
 		let mut linedefs = None;
 		let mut nodes = None;
@@ -198,7 +198,7 @@ impl Catalog {
 			}
 		};
 
-		let mut level = Level::new(if behavior.is_some() {
+		let mut level = LevelDef::new(if behavior.is_some() {
 			LevelFormat::Extended
 		} else {
 			LevelFormat::Doom
@@ -209,9 +209,9 @@ impl Catalog {
 
 		level.geom = LevelGeom {
 			linedefs,
-			sectors,
+			sectordefs: sectors,
 			sidedefs,
-			vertices,
+			vertdefs: vertices,
 		};
 
 		level.bsp = LevelBsp {
@@ -220,8 +220,8 @@ impl Catalog {
 			subsectors,
 		};
 
-		level.things = things;
-		level.bounds = Level::bounds(&level.geom.vertices);
+		level.thingdefs = things;
+		level.bounds = LevelDef::bounds(&level.geom.vertdefs);
 
 		let err_handler = |err| {
 			ctx.raise_error(PrepError {

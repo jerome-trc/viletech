@@ -24,7 +24,7 @@ pub struct Level(Entity);
 /// The principal component in a level entity.
 #[derive(Component, Debug)]
 pub struct Core {
-	pub base: Option<dobj::Handle<level::Level>>,
+	pub base: Option<dobj::Handle<level::LevelDef>>,
 	pub flags: Flags,
 	/// Time spent in this level thus far.
 	pub ticks_elapsed: u64,

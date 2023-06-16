@@ -1,8 +1,8 @@
 use util::EditorNum;
 
-use crate::{repr::BspNodeChild, Error, Level, SideTexture};
+use crate::{repr::BspNodeChild, Error, LevelDef, SideTexture};
 
-impl Level {
+impl LevelDef {
 	/// Verifies:
 	/// - Level geometry and BSP tree reference indices, to ensure that none are out-of-bounds.
 	/// - That no sides or sectors reference a non-existent texture.
@@ -92,8 +92,8 @@ impl Level {
 			}
 		}
 
-		for (i, sector) in self.geom.sectors.iter().enumerate() {
-			if let Some(tex_floor) = &sector.tex_floor {
+		for (i, sectordef) in self.geom.sectordefs.iter().enumerate() {
+			if let Some(tex_floor) = &sectordef.tex_floor {
 				if !texture_exists(tex_floor.as_str()) {
 					err_handler(Error::UnknownFlat {
 						sector: i,
@@ -105,7 +105,7 @@ impl Level {
 				}
 			}
 
-			if let Some(tex_ceil) = &sector.tex_ceil {
+			if let Some(tex_ceil) = &sectordef.tex_ceil {
 				if !texture_exists(tex_ceil.as_str()) {
 					err_handler(Error::UnknownFlat {
 						sector: i,
@@ -167,11 +167,11 @@ impl Level {
 				}
 			}
 
-			if sidedef.sector >= self.geom.sectors.len() {
+			if sidedef.sector >= self.geom.sectordefs.len() {
 				err_handler(Error::InvalidSidedefSector {
 					sidedef: i,
 					sector: sidedef.sector,
-					sectors_len: self.geom.sectors.len(),
+					sectors_len: self.geom.sectordefs.len(),
 				});
 
 				ret += 1;
@@ -192,7 +192,7 @@ impl Level {
 
 		let mut player1start = false;
 
-		for (i, thingdef) in self.things.iter().enumerate() {
+		for (i, thingdef) in self.thingdefs.iter().enumerate() {
 			if thingdef.ed_num == 1 {
 				player1start = true;
 			}

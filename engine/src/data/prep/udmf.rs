@@ -2,7 +2,7 @@
 //!
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
-use level::Level;
+use level::LevelDef;
 use util::Outcome;
 
 use crate::{
@@ -14,7 +14,11 @@ use super::SubContext;
 
 impl Catalog {
 	/// Returns `None` if `dir` is unlikely to represent a UDMF level definition.
-	pub(super) fn try_prep_level_udmf(&self, ctx: &SubContext, dir: FileRef) -> Outcome<Level, ()> {
+	pub(super) fn try_prep_level_udmf(
+		&self,
+		ctx: &SubContext,
+		dir: FileRef,
+	) -> Outcome<LevelDef, ()> {
 		let mut _behavior = None;
 		let mut _dialogue = None;
 		let mut _scripts = None;

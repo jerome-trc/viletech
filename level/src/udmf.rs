@@ -19,7 +19,10 @@ use logos::{Lexer, Logos};
 
 use crate::repr::{
 	UdmfValue, Vertex,
-	{Level, LevelFormat, LineDef, LineFlags, Sector, SideDef, Thing, ThingFlags, UdmfNamespace},
+	{
+		LevelDef, LevelFormat, LineDef, LineFlags, SectorDef, SideDef, ThingDef, ThingFlags,
+		UdmfNamespace,
+	},
 };
 
 #[derive(Debug)]
@@ -97,12 +100,12 @@ impl std::fmt::Display for Error {
 	}
 }
 
-pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
+pub fn parse_textmap(source: &str) -> Result<LevelDef, Vec<Error>> {
 	let mut lexer = Token::lexer(source);
 	let namespace = parse_namespace(&mut lexer).map_err(|err| vec![err])?;
 
 	let mut parser = Parser {
-		level: Level::new(LevelFormat::Udmf(namespace)),
+		level: LevelDef::new(LevelFormat::Udmf(namespace)),
 		lexer,
 		buf: None,
 		errors: vec![],
@@ -117,7 +120,7 @@ pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
 				parser.linedef();
 			}
 			Token::KwVertex => {
-				parser.vertex();
+				parser.vertdef();
 			}
 			Token::KwSector => {
 				parser.sectordef();
@@ -153,7 +156,7 @@ pub fn parse_textmap(source: &str) -> Result<Level, Vec<Error>> {
 	} = parser;
 
 	if errors.is_empty() {
-		level.bounds = Level::bounds(&level.geom.vertices);
+		level.bounds = LevelDef::bounds(&level.geom.vertdefs);
 		Ok(level)
 	} else {
 		Err(errors)
@@ -204,7 +207,7 @@ fn parse_namespace(lexer: &mut Lexer<Token>) -> Result<UdmfNamespace, Error> {
 
 #[derive(Debug)]
 struct Parser<'i> {
-	level: Level,
+	level: LevelDef,
 	lexer: logos::Lexer<'i, Token>,
 	buf: Option<Token>,
 	errors: Vec<Error>,
@@ -286,7 +289,7 @@ impl<'i> Parser<'i> {
 	}
 
 	fn thingdef(&mut self) {
-		let mut thingdef = Thing {
+		let mut thingdef = ThingDef {
 			tid: 0,
 			ed_num: 0,
 			pos: glam::vec3(0.0, 0.0, 0.0),
@@ -307,11 +310,11 @@ impl<'i> Parser<'i> {
 			// Error reported; just proceed.
 		}
 
-		self.level.things.push(thingdef);
+		self.level.thingdefs.push(thingdef);
 	}
 
 	fn sectordef(&mut self) {
-		let mut sectordef = Sector {
+		let mut sectordef = SectorDef {
 			udmf_id: i32::MAX,
 			height_floor: 0.0,
 			height_ceil: 0.0,
@@ -333,7 +336,7 @@ impl<'i> Parser<'i> {
 			// Error reported; just proceed.
 		}
 
-		self.level.geom.sectors.push(sectordef);
+		self.level.geom.sectordefs.push(sectordef);
 	}
 
 	fn sidedef(&mut self) {
@@ -359,7 +362,7 @@ impl<'i> Parser<'i> {
 		self.level.geom.sidedefs.push(sidedef);
 	}
 
-	fn vertex(&mut self) {
+	fn vertdef(&mut self) {
 		let mut vertex = Vertex(glam::Vec4::default());
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -398,12 +401,12 @@ impl<'i> Parser<'i> {
 			// Error reported; just proceed.
 		}
 
-		self.level.geom.vertices.push(vertex);
+		self.level.geom.vertdefs.push(vertex);
 	}
 
 	fn fields<F, T>(&mut self, elem: &mut T, mut reader: F)
 	where
-		F: FnMut(KeyValPair, &mut T, &Level) -> Result<(), Error>,
+		F: FnMut(KeyValPair, &mut T, &LevelDef) -> Result<(), Error>,
 	{
 		loop {
 			if !self.buf.is_some_and(|token| {
