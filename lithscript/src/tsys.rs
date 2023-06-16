@@ -1,10 +1,10 @@
-//! Infrastructure supporting VZScript's type system.
+//! Infrastructure supporting LithScript's type system.
 
 use std::{alloc::Layout, sync::Arc};
 
 use crate::sym::{self, Symbol, SymbolKey, SymbolStore, TypeInHandle};
 
-/// No VZScript type is allowed to exceed this size in bytes.
+/// No LithScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
 
 /// An implementation detail that also provides a constraint on [`TypeInfo`]'s

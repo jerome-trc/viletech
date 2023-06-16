@@ -1,6 +1,6 @@
-//! # VZScript
+//! # LithScript
 //!
-//! The VZSC toolchain; VileTech's fork of the [ZScript] programming language
+//! The LithSC toolchain; VileTech's fork of the [ZScript] programming language
 //! used by GZDoom and Raze, designed for being transpiled to from ZScript (and
 //! its predecessors), while not compromising on versatility as a game script,
 //! as ZScript did.
@@ -31,7 +31,7 @@ pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
 
-/// Each library is declared as belonging to a version of the VZScript specification.
+/// Each library is declared as belonging to a version of the LithScript specification.
 ///
 /// The specification is versioned as per [Semantic Versioning](https://semver.org/).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -73,7 +73,7 @@ impl Version {
 		Self { major, minor, rev }
 	}
 
-	/// Check if this version is equal to an existing VZScript spec version.
+	/// Check if this version is equal to an existing LithScript spec version.
 	#[must_use]
 	pub fn is_valid(&self) -> bool {
 		use std::collections::HashSet;

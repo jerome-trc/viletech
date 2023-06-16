@@ -24,7 +24,7 @@ use crate::{ParseTree, Syn, Version};
 pub type Error<'i> = doomfront::ParseError<'i, Syn>;
 
 /// Gives context to functions yielding parser combinators
-/// (e.g. the user's selected VZScript version).
+/// (e.g. the user's selected LithScript version).
 ///
 /// Thus, this information never has to be passed through deep call trees, and any
 /// breaking changes to this context are minimal in scope.

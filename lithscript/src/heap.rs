@@ -1,4 +1,4 @@
-//! VZS's memory model; a per-runtime managed heap and garbage collector.
+//! Lith's memory model; a per-runtime managed heap and garbage collector.
 //!
 //! This is based off Mike Pall's design for LuaJIT 3.0's GC, outlined here:
 //! <https://web.archive.org/web/20220826233802/http://wiki.luajit.org/New-Garbage-Collector>
@@ -25,7 +25,7 @@
 #![allow(dead_code)] // TODO: Disallow
 
 #[cfg(target_pointer_width = "32")]
-std::compile_error!("VZS's heap does not yet support 32-bit architectures");
+std::compile_error!("Lith's heap does not yet support 32-bit architectures");
 
 use std::{
 	alloc::Layout, collections::HashMap, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull,
@@ -119,7 +119,7 @@ pub(super) struct Heap {
 	/// Heap allocations that don't need traversal during GC (e.g. boxed primitives,
 	/// structures with no pointers) are stored in these arenas.
 	untraced: Vec<Arena>,
-	/// For tracking allocations larger than a VZS type's maximum size.
+	/// For tracking allocations larger than a Lith type's maximum size.
 	/// Each allocation's address is a key.
 	huge: HashMap<NonNull<u8>, HugeHeader>,
 	/// How high can `Self::allocated` get before a GC step starts?
@@ -134,20 +134,20 @@ impl Runtime {
 		debug_assert_ne!(
 			layout.size(),
 			0,
-			"Tried to allocate a zero-sized type on the VZS heap: {}",
+			"Tried to allocate a zero-sized type on the Lith heap: {}",
 			tinfo.name(),
 		);
 
 		debug_assert_eq!(
 			layout.align(),
 			16,
-			"VZS type is not 16-byte aligned: {}",
+			"Lith type is not 16-byte aligned: {}",
 			tinfo.name()
 		);
 
 		debug_assert!(
 			layout.size() < HUGE_SIZE,
-			"VZS type is oversized: {}",
+			"Lith type is oversized: {}",
 			tinfo.name(),
 		);
 
@@ -231,7 +231,7 @@ impl Runtime {
 			}
 		}
 
-		assert_ne!(size, 0, "oversized VZS allocation");
+		assert_ne!(size, 0, "oversized Lith allocation");
 
 		let layout = Layout::from_size_align(size, 1 << 20).unwrap();
 		let ptr = NonNull::new(std::alloc::alloc(layout)).unwrap();
@@ -503,7 +503,7 @@ impl RegionHeader {
 	const ASSERT_SIZE: usize = {
 		let l = Layout::new::<Self>();
 
-		assert!(l.size() == 16, "VZS heap region header is an illegal size");
+		assert!(l.size() == 16, "Lith heap region header is an illegal size");
 
 		l.size()
 	};
@@ -527,7 +527,7 @@ impl std::fmt::Debug for RegionHeader {
 
 /// Keep the type pointer in a union separate from its discriminant; using a
 /// [`TypeHandle`] would cause [`RegionHeader`] to go up to 4 heap words.
-/// TODO: VZS' destructor/drop semantics so refcounts are properly decremented.
+/// TODO: Lith' destructor/drop semantics so refcounts are properly decremented.
 union TypeHandleUnion {
 	void: ManuallyDrop<Handle<TypeInfo<()>>>,
 	num: ManuallyDrop<Handle<TypeInfo<tsys::Numeric>>>,

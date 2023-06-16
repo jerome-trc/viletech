@@ -67,7 +67,7 @@ pub use self::{config::*, error::*, extras::*};
 pub struct Catalog {
 	pub(self) config: Config,
 	/// When the catalog is initialized, this is empty.
-	pub(self) vzscript: vzs::Project,
+	pub(self) lith: lith::Project,
 	/// See [`Self::new`]; mounts given as `basedata` through that function are
 	/// always present here.
 	pub(self) vfs: VirtualFs,
@@ -100,7 +100,7 @@ impl Catalog {
 	pub fn new(basedata: impl IntoIterator<Item = (PathBuf, VPathBuf)>) -> Self {
 		let mut ret = Self {
 			config: Config::default(),
-			vzscript: vzs::Project::default(),
+			lith: lith::Project::default(),
 			vfs: VirtualFs::default(),
 			dobjs: DashMap::default().into_read_only(),
 			nicknames: DashMap::default().into_read_only(),
@@ -218,7 +218,7 @@ impl Catalog {
 	pub fn clear(&mut self) {
 		self.vfs.truncate(self.config.basedata.len());
 
-		self.vzscript.clear();
+		self.lith.clear();
 
 		let dobjs =
 			std::mem::replace(&mut self.dobjs, DashMap::default().into_read_only()).into_inner();
@@ -373,7 +373,7 @@ pub struct LoadRequest {
 	/// a load operation (e.g. a loading screen) or provide the ability to cancel.
 	pub tracker: Option<Arc<SendTracker>>,
 	/// Affects:
-	/// - VZScript optimization. None are applied if this is `false`.
+	/// - LithScript optimization. None are applied if this is `false`.
 	pub dev_mode: bool,
 }
 

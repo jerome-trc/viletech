@@ -1,6 +1,6 @@
-# VZScript Specification
+# LithScript Specification
 
-- [VZScript Specification](#vzscript-specification)
+- [LithScript Specification](#lithscript-specification)
 	- [Notation](#notation)
 	- [Whitespace](#whitespace)
 	- [Comments](#comments)
@@ -29,7 +29,7 @@ AsciiWord ::= ('_' | AsciiLetter) ('_' | AsciiAlphanum)*
 
 ## Whitespace
 
-The following characters are considered whitespace and are insignificant to the VZScript syntax:
+The following characters are considered whitespace and are insignificant to the LithScript syntax:
 - ` ` (0x20)
 - `\n` (0x10)
 - `\r` (0x13)
@@ -37,7 +37,7 @@ The following characters are considered whitespace and are insignificant to the 
 
 ## Comments
 
-VZScript uses Rust-style comments. These are treated as whitespace by the compiler.
+LithScript uses Rust-style comments. These are treated as whitespace by the compiler.
 
 `// This is a single-line comment.`
 `x = /* Block comments can be written between tokens.*/ y + z`
@@ -77,7 +77,7 @@ The "discard" identifier consists of only one underscore (`_`) and is used to in
 
 ## Type System
 
-VZScript leans towards strong, gradual typing.
+LithScript leans towards strong, gradual typing.
 
 ### Primitive Types
 
@@ -85,7 +85,7 @@ VZScript leans towards strong, gradual typing.
 `bool` is a strongly-typed true-or-false byte.
 `char` uses Rust character semantics; it represents a single valid UTF-8 code point.
 
-VZScript has the following numeric types:
+LithScript has the following numeric types:
 
 `int8` `uint8`
 `int16` `uint16`

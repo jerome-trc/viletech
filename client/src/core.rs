@@ -10,10 +10,10 @@ use viletech::{
 	console::Console,
 	data::{CatalogAL, LoadOutcome},
 	input::InputCore,
+	lith,
 	rng::RngCore,
 	user::UserCore,
 	util::{duration_to_hhmmss, SendTracker},
-	vzs,
 };
 
 use crate::ccmd;
@@ -27,7 +27,7 @@ pub struct ClientCore {
 	pub console: Console<ccmd::Command>,
 	pub devgui: DeveloperGui,
 	pub input: InputCore,
-	pub runtime: vzs::Runtime,
+	pub runtime: lith::Runtime,
 	pub rng: RngCore<WyRand>,
 	pub user: UserCore,
 }
@@ -54,7 +54,7 @@ impl ClientCore {
 				right: DevGuiStatus::Console,
 			},
 			input: InputCore::default(),
-			runtime: vzs::Runtime::default(),
+			runtime: lith::Runtime::default(),
 			rng: RngCore::default(),
 			user,
 		};
@@ -159,7 +159,7 @@ impl ClientCore {
 							(DevGuiStatus::Audio, "Audio"),
 							(DevGuiStatus::Console, "Console"),
 							(DevGuiStatus::Catalog, "Data"),
-							(DevGuiStatus::VzsRepl, "REPL"),
+							(DevGuiStatus::LithRepl, "REPL"),
 							(DevGuiStatus::Vfs, "VFS"),
 						],
 					);
@@ -177,7 +177,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::VzsRepl => {
+						DevGuiStatus::LithRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -198,7 +198,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::VzsRepl => {
+						DevGuiStatus::LithRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -226,8 +226,8 @@ pub enum DevGuiStatus {
 	Audio,
 	Catalog,
 	Console,
+	LithRepl,
 	Vfs,
-	VzsRepl,
 }
 
 impl std::fmt::Display for DevGuiStatus {
@@ -236,8 +236,8 @@ impl std::fmt::Display for DevGuiStatus {
 			DevGuiStatus::Audio => write!(f, "Audio"),
 			DevGuiStatus::Catalog => write!(f, "Catalog"),
 			DevGuiStatus::Console => write!(f, "Console"),
+			DevGuiStatus::LithRepl => write!(f, "LithScript REPL"),
 			DevGuiStatus::Vfs => write!(f, "VFS"),
-			DevGuiStatus::VzsRepl => write!(f, "VZScript REPL"),
 		}
 	}
 }
@@ -245,7 +245,7 @@ impl std::fmt::Display for DevGuiStatus {
 #[derive(Debug, Resource)]
 pub struct FirstStartup {
 	/// Radio button state. `true` is the default presented to the user.
-	/// `false` is no even an option if `home_path` is `None`.
+	/// `false` is not even an option if `home_path` is `None`.
 	pub portable: bool,
 	pub portable_path: PathBuf,
 	pub home_path: Option<PathBuf>,

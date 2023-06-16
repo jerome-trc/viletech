@@ -9,7 +9,7 @@ use crate::parse::{FileParseTree, IncludeTree};
 /// A single compilation unit, corresponding to one source file.
 #[derive(Debug)]
 pub struct Module {
-	/// Fully-qualified, e.g. `vzscript/core`.
+	/// Fully-qualified, e.g. `lithscript/core`.
 	_name: String,
 	/// A hash derived from this module's entire [source](Source).
 	_checksum: u64,
@@ -52,7 +52,7 @@ impl std::fmt::Debug for Builder {
 	}
 }
 
-/// VZScript supports compiling multiple source files into the same module,
+/// LithScript supports compiling multiple source files into the same module,
 /// for niche use cases such as Doom's [WAD](https://doomwiki.org/wiki/WAD)
 /// file format, which has many more organizational limitations.
 #[derive(Debug)]

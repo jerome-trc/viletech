@@ -9,9 +9,9 @@ use crate::{module::Module, Version};
 pub struct Library {
 	/// e.g. `core` or `viletech`. Follows C identifier rules.
 	pub(super) name: String,
-	/// A module's VZS version affects its compilation rules.
+	/// A module's Lith version affects its compilation rules.
 	pub(super) version: Version,
-	/// Keys are fully-qualified paths (e.g. `vzscript/math`).
+	/// Keys are fully-qualified paths (e.g. `lithscript/math`).
 	pub(super) _modules: HashMap<String, Module>,
 }
 

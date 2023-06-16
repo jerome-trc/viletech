@@ -1,12 +1,12 @@
 [package]
-name = "vzscript"
+name = "lithscript"
 version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["compilers", "game-development"]
 description = "Fork of GZDoom's ZScript"
-homepage = "https://github.com/jerome-trc/viletech/tree/master/vzscript"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/lithscript"
 keywords = ["compiler", "doom", "dsl", "viletech", "gamedev"]
 license = "MIT OR Apache-2.0"
 publish = false

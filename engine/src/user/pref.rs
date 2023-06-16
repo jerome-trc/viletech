@@ -129,7 +129,7 @@ pub struct Pref {
 	kind: PrefKind,
 	data: PrefData,
 	flags: PrefFlags,
-	// TODO: On-change callback which can invoke VZS.
+	// TODO: On-change callback which can invoke Lith.
 }
 
 impl Pref {

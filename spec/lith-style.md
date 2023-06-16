@@ -1,4 +1,4 @@
-# VileTech ZScript Style Guidelines
+# LithScript Style Guidelines
 
 Use `TitleCase` (with fully-uppercase acronyms) for identifiers for all of the following:
 - Class

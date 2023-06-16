@@ -7,8 +7,8 @@ use std::{num::NonZeroI32, ptr::NonNull};
 
 use bevy::prelude::*;
 use bitflags::bitflags;
+use lith::TPtr;
 use serde::{Deserialize, Serialize};
-use vzs::TPtr;
 
 use crate::data::dobj::{self, Blueprint};
 
@@ -16,16 +16,16 @@ use crate::data::dobj::{self, Blueprint};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Actor(Entity);
 
-pub type ActorPtr = TPtr<VzsActor>;
+pub type ActorPtr = TPtr<LithActor>;
 
-/// An actor as understood by VZScript.
+/// An actor as understood by LithScript.
 ///
 /// A class object, extensible like any other, principally made up of pointers to
 /// Bevy components. These get filled in at spawn time and left untouched by
 /// internal engine code, except when ECS storages are re-allocated, at which
 /// point they are all updated the start of the sim tick.
 #[derive(Debug)]
-pub struct VzsActor {
+pub struct LithActor {
 	pub(crate) _readonly: NonNull<Readonly>,
 	pub(crate) _transform: NonNull<Transform>,
 
@@ -34,10 +34,10 @@ pub struct VzsActor {
 }
 
 // SAFETY: Pointers are never dereferenced by native Rust, only set.
-// Only VZS modifies their contents, and this only happens when there is already
+// Only Lith modifies their contents, and this only happens when there is already
 // an open Bevy query for mutating all components, so no other references can exist.
-unsafe impl Send for VzsActor {}
-unsafe impl Sync for VzsActor {}
+unsafe impl Send for LithActor {}
+unsafe impl Sync for LithActor {}
 
 // Monster /////////////////////////////////////////////////////////////////////
 

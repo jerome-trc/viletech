@@ -1,6 +1,6 @@
 //! "Symbols" are things like type and function definitions.
 //!
-//! These are tracked in rich detail by VZScript so that they can be easily
+//! These are tracked in rich detail by LithScript so that they can be easily
 //! introspected by applications embedding the language.
 
 use std::{

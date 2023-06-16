@@ -1,4 +1,4 @@
-//! Structures for describing a VZScript abstract syntax tree.
+//! Structures for describing a LithScript abstract syntax tree.
 
 mod expr;
 mod item;

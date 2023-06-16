@@ -80,7 +80,7 @@ mod test {
 		const SOURCE: &str = r#"
 func conductor();
 func r#faultline():void{}
-func atmospheric_pressure():vzs.int32;
+func atmospheric_pressure():lith.int32;
 func untilted(): type(1) {}
 func liquid_luck(within: reach) {}
 func quicksilver(heliotrope: escape.velocity) {}

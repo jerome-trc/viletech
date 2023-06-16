@@ -71,7 +71,7 @@ pub struct Binding {
 	pub shift: bool,
 	pub alt: bool,
 	pub ctrl: bool,
-	// TODO: What a triggered binding actually does will depend on VZScript.
+	// TODO: What a triggered binding actually does will depend on LithScript.
 }
 
 #[derive(Debug)]

@@ -6,7 +6,7 @@ copyright = "© 2022-2023 jerome-trc"
 links = ['https://github.com/jerome-trc/viletech']
 version = '0.0.0'
 
-[vzscript]
+[lithscript]
 folder = 'script'
-namespace = 'vzs'
+namespace = 'lith'
 version = '0.0.0'

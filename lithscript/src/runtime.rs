@@ -1,12 +1,12 @@
-//! The VZScript execution context: stack, heap, garbage collector, coroutines...
+//! The LithScript execution context: stack, heap, garbage collector, coroutines...
 
 use cranelift_interpreter::interpreter::{Interpreter, InterpreterState};
 
 use crate::heap::Heap;
 
-/// Context for VZScript execution.
+/// Context for LithScript execution.
 ///
-/// Fully re-entrant; VZS has no global state.
+/// Fully re-entrant; Lith has no global state.
 pub struct Runtime {
 	pub(super) heap: Heap,
 	pub(super) _interpreter: Interpreter<'static>,
