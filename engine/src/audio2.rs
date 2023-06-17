@@ -7,13 +7,17 @@ use std::path::PathBuf;
 
 use arrayvec::ArrayVec;
 use bevy_egui::egui;
+use crossbeam::channel::SendError;
 use kira0_8_3::{
 	manager::{
 		backend::{cpal::CpalBackend, Backend},
-		error::{AddSpatialSceneError, AddSubTrackError},
+		error::{AddSpatialSceneError, AddSubTrackError, PlaySoundError},
 		AudioManager, AudioManagerSettings,
 	},
-	sound::static_sound::StaticSoundHandle,
+	sound::{
+		static_sound::{StaticSoundData, StaticSoundHandle},
+		SoundData,
+	},
 	spatial::{
 		emitter::EmitterHandle,
 		listener::{ListenerHandle, ListenerSettings},
@@ -23,13 +27,17 @@ use kira0_8_3::{
 		effect::reverb::{ReverbBuilder, ReverbHandle},
 		TrackBuilder, TrackHandle,
 	},
+	CommandError,
 };
 use nodi::midly;
 use tracing::{debug, error, info, warn};
 
 use crate::data::Catalog;
 
-pub use self::midi::{Format as MidiFormat, SoundFont, SoundFontKind};
+pub use self::midi::{
+	render as render_midi, Data as MidiData, FileFormat as MidiFormat, Handle as MidiHandle,
+	Settings as MidiSettings, SoundFont, SoundFontKind,
+};
 
 #[derive(bevy::ecs::system::Resource)]
 pub struct AudioCore {
@@ -214,6 +222,7 @@ pub enum Error {
 	CommandOverflow,
 	KiraBackend(<CpalBackend as Backend>::Error),
 	Listener(AddListenerError),
+	MidiSynth(fluidlite::Error),
 	ParseMidi(midly::Error),
 	PlayWave(PlayWaveError),
 	SoundFontRead(PathBuf, fluidlite::Error),
@@ -222,4 +231,21 @@ pub enum Error {
 	ThreadPanic,
 }
 
-impl std::error::Error for Error {}
+impl From<CommandError> for Error {
+	fn from(value: CommandError) -> Self {
+		match value {
+			CommandError::CommandQueueFull => Self::CommandOverflow,
+			CommandError::MutexPoisoned => Self::ThreadPanic,
+			_ => unreachable!(),
+		}
+	}
+}
+
+impl From<SendError<midi::Command>> for Error {
+	fn from(_: SendError<midi::Command>) -> Self {
+		Self::ThreadPanic
+	}
+}
+
+pub type PlayWaveError = PlaySoundError<<StaticSoundData as SoundData>::Error>;
+pub type PlayMidiError = PlaySoundError<<MidiData as SoundData>::Error>;
