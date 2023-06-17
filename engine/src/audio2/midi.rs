@@ -103,8 +103,8 @@ impl FileFormat {
 pub struct SoundFont {
 	/// The canonicalized path to this SoundFont's file.
 	/// Needed by the FluidSynth backend.
-	path: PathBuf,
-	kind: SoundFontKind,
+	pub(super) path: PathBuf,
+	pub(super) kind: SoundFontKind,
 }
 
 impl SoundFont {
@@ -494,7 +494,13 @@ impl kira0_8_3::sound::Sound for Sound {
 		self.to_wait = self.to_wait.saturating_sub(Duration::from_secs_f64(dt));
 
 		if self.to_wait.is_zero() {
-			self.position += 1;
+			if (self.position + 1) == self.data.sheet.len() {
+				self.state = PlaybackState::Stopped;
+				self.shared.store(PlaybackState::Stopped);
+			} else {
+				self.position += 1;
+			}
+
 			self.to_wait = self.timer.sleep_duration(1);
 		}
 

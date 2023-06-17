@@ -116,7 +116,7 @@ impl AudioCore {
 
 	/// This assumes that `data` has already been completely configured.
 	///
-	/// Returns an errorif:
+	/// Returns an error if:
 	/// - An already-playing song fails to pause.
 	/// - The given song fails to start playback.
 	///
