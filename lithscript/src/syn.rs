@@ -48,7 +48,7 @@ pub enum Syn {
 	BinExpr,
 	CallExpr,
 	/// `'(' expr ')'`
-	GroupedExpr,
+	GroupExpr,
 	/// Is parent to only a [`Syn::Ident`] token.
 	IdentExpr,
 	IndexExpr,

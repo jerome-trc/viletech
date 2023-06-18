@@ -18,7 +18,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 	/// - [`Syn::ArrayExpr`]
 	/// - [`Syn::BinExpr`]
 	/// - [`Syn::CallExpr`]
-	/// - [`Syn::GroupedExpr`]
+	/// - [`Syn::GroupExpr`]
 	/// - [`Syn::IdentExpr`]
 	/// - [`Syn::IndexExpr`]
 	/// - [`Syn::PostfixExpr`]
@@ -45,7 +45,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 				self.trivia_0plus(),
 				comb::just(Syn::ParenR),
 			))
-			.map(|group| coalesce_node(group, Syn::GroupedExpr));
+			.map(|group| coalesce_node(group, Syn::GroupExpr));
 
 			let _atom = primitive::choice((grouped, literal, ident));
 

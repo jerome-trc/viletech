@@ -1,9 +1,6 @@
 //! AST nodes for representing function declarations, symbolic constants, et cetera.
 
-use doomfront::{
-	rowan::{self, ast::AstNode},
-	simple_astnode,
-};
+use doomfront::simple_astnode;
 
 use crate::{Syn, SyntaxNode};
 

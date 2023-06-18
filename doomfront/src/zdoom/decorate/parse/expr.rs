@@ -14,7 +14,7 @@ use super::common::*;
 /// - [`Syn::ArrayExpr`]
 /// - [`Syn::BinExpr`]
 /// - [`Syn::CallExpr`]
-/// - [`Syn::GroupedExpr`]
+/// - [`Syn::GroupExpr`]
 /// - [`Syn::IdentExpr`]
 /// - [`Syn::IndexExpr`]
 /// - [`Syn::PostfixExpr`]
@@ -43,7 +43,7 @@ pub fn expr<'i>() -> parser_t!(GreenNode) {
 				trivia_0plus(),
 				comb::just_ts(Token::ParenR, Syn::ParenR),
 			))
-			.map(|group| coalesce_node(group, Syn::GroupedExpr));
+			.map(|group| coalesce_node(group, Syn::GroupExpr));
 
 			let atom = primitive::choice((grouped, literal, ident.clone()));
 

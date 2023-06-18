@@ -2,8 +2,6 @@
 
 use std::num::{ParseFloatError, ParseIntError};
 
-use doomfront::rowan::{self, ast::AstNode};
-
 use doomfront::simple_astnode;
 
 use super::{Syn, SyntaxNode, SyntaxToken};

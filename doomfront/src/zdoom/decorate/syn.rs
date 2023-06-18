@@ -64,7 +64,7 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	BinExpr,
 	CallExpr,
-	GroupedExpr,
+	GroupExpr,
 	IdentExpr,
 	IndexExpr,
 	Literal,

@@ -1,9 +1,6 @@
 //! AST nodes for representing expressions.
 
-use doomfront::{
-	rowan::{self, ast::AstNode},
-	simple_astnode,
-};
+use doomfront::{rowan::ast::AstNode, simple_astnode};
 
 use crate::{Syn, SyntaxNode};
 
@@ -13,7 +10,7 @@ use super::Literal;
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
 	Binary(BinExpr),
-	Grouped(GroupedExpr),
+	Group(GroupExpr),
 	Literal(Literal),
 }
 
@@ -24,7 +21,7 @@ impl AstNode for Expr {
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::Literal | Syn::BinExpr | Syn::GroupedExpr)
+		matches!(kind, Syn::Literal | Syn::BinExpr | Syn::GroupExpr)
 	}
 
 	fn cast(node: doomfront::rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -34,7 +31,7 @@ impl AstNode for Expr {
 		match node.kind() {
 			Syn::Literal => Some(Self::Literal(Literal(node))),
 			Syn::BinExpr => Some(Self::Binary(BinExpr(node))),
-			Syn::GroupedExpr => Some(Self::Grouped(GroupedExpr(node))),
+			Syn::GroupExpr => Some(Self::Group(GroupExpr(node))),
 			_ => None,
 		}
 	}
@@ -42,7 +39,7 @@ impl AstNode for Expr {
 	fn syntax(&self) -> &doomfront::rowan::SyntaxNode<Self::Language> {
 		match self {
 			Self::Binary(node) => node.syntax(),
-			Self::Grouped(node) => node.syntax(),
+			Self::Group(node) => node.syntax(),
 			Self::Literal(node) => node.syntax(),
 		}
 	}
@@ -77,14 +74,14 @@ impl BinExpr {
 	}
 }
 
-/// Wraps a node tagged [`Syn::GroupedExpr`].
+/// Wraps a node tagged [`Syn::GroupExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct GroupedExpr(pub(super) SyntaxNode);
+pub struct GroupExpr(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, GroupedExpr, Syn::GroupedExpr);
+simple_astnode!(Syn, GroupExpr, Syn::GroupExpr);
 
-impl GroupedExpr {
+impl GroupExpr {
 	#[must_use]
 	pub fn inner(&self) -> Expr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
