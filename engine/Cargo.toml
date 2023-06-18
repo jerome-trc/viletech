@@ -64,7 +64,6 @@ image.workspace = true
 indexmap.workspace = true
 indoc.workspace = true
 kira.workspace = true
-kira0_8_3.workspace = true
 memoffset.workspace = true
 nanorand.workspace = true
 nodi.workspace = true

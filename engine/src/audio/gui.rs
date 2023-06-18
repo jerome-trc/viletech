@@ -1,118 +1,94 @@
-//! Developer GUI for diagnosing and interacting with the audio subsystem.
-
 use std::path::PathBuf;
 
-use bevy::prelude::{error, info};
 use bevy_egui::egui;
 use indoc::formatdoc;
 use kira::{
-	sound::static_sound::{PlaybackState, StaticSoundSettings},
-	tween::Tween,
+	sound::{static_sound::StaticSoundSettings, PlaybackState},
+	tween::{self, Tween},
+	Volume,
 };
-use nodi::midly;
+use nodi::midly::Smf;
+use tracing::{error, info};
 use vfs::VPath;
 
-use super::{kmidi, AudioCore, MidiData, MidiSettings};
+use crate::data::Catalog;
+
+use super::{AudioCore, MidiData, MidiSettings, SoundSpace};
 
 impl AudioCore {
-	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
+	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, catalog: &Catalog) {
 		egui::ScrollArea::vertical().show(ui, |ui| {
+			// Music ///////////////////////////////////////////////////////////
+
 			ui.heading("Music");
 
-			for (i, mus) in self.music.iter().enumerate() {
-				let state = mus.state();
-				ui.label(format!("{i} - {state:#?}"));
-			}
+			for (i, group) in self.music.iter_mut().enumerate() {
+				ui.group(|ui| {
+					for slot in &mut group.layers {
+						let Some(layer) = slot else {
+							ui.label(format!("Layer {i} - <none>"));
+							continue;
+						};
 
-			ui.separator();
-			ui.heading("Sounds");
-
-			ui.label(&{
-				let mut playing = 0;
-				let mut paused = 0;
-
-				for snd in &self.sounds {
-					if snd.state() == PlaybackState::Playing {
-						playing += 1;
-					}
-
-					if snd.state() == PlaybackState::Paused {
-						paused += 1;
-					}
-				}
-
-				format!(
-					"{playing} playing, {paused} paused, {changing} changing, {total} total",
-					changing = self.sounds.len() - (playing + paused),
-					total = self.sounds.len(),
-				)
-			});
-
-			let mut i = 0;
-
-			while i < self.sounds.len() {
-				let state = self.sounds[i].state();
-
-				ui.horizontal(|ui| {
-					ui.label(format!("{i} - {state:#?}"));
-
-					ui.add_visible_ui(state != PlaybackState::Playing, |ui| {
-						if ui.button("Resume").clicked() {
-							if let Err(err) = self.sounds[i].resume(Tween::default()) {
-								error!("Failed to resume sound: {err}");
-							}
-						}
-					});
-
-					ui.add_visible_ui(state == PlaybackState::Playing, |ui| {
-						if ui.button("Pause").clicked() {
-							if let Err(err) = self.sounds[i].pause(Tween::default()) {
-								error!("Failed to pause sound: {err}");
-							}
-						}
-					});
-
-					if ui.button("Stop").clicked() {
-						if let Err(err) = self.sounds[i].stop(Tween::default()) {
-							error!("Failed to stop sound: {err}");
-						}
-
-						self.sounds.swap_remove(i);
-					} else {
-						i += 1;
+						let state = layer.state();
+						ui.label(format!("Layer {i} - {state:#?}"));
 					}
 				});
 			}
 
 			ui.separator();
-			ui.heading("Quick Play");
 
-			ui.horizontal(|ui| {
-				ui.radio_value(&mut self.gui.play_music, true, "Music");
-				ui.radio_value(&mut self.gui.play_music, false, "Sound");
-			});
+			// Sounds //////////////////////////////////////////////////////////
+
+			ui.heading("Sounds");
+
+			ui.label(&self.ui_label_song_counters());
+
+			for (i, channel) in self.sounds.iter_mut().enumerate() {
+				let Some(sfx) = channel else {
+					ui.label(format!("Channel {i} - <none>"));
+					continue;
+				};
+
+				let state = sfx.state();
+				ui.label(format!("Channel {i} - {state:#?}"));
+
+				ui.add_visible_ui(state != PlaybackState::Playing, |ui| {
+					if ui.button("Resume").clicked() {
+						if let Err(err) = sfx.resume(Tween::default()) {
+							error!("Failed to resume sound in channel {i}: {err}");
+						}
+					}
+				});
+
+				ui.add_visible_ui(state == PlaybackState::Playing, |ui| {
+					if ui.button("Pause").clicked() {
+						if let Err(err) = sfx.pause(Tween::default()) {
+							error!("Failed to pause sound in channel {i}: {err}");
+						}
+					}
+				});
+
+				if ui.button("Stop").clicked() {
+					if let Err(err) = sfx.stop(Tween::default()) {
+						error!("Failed to stop sound in channel {i}: {err}");
+					}
+
+					*channel = None;
+				}
+			}
+
+			ui.separator();
+
+			// Quick play //////////////////////////////////////////////////////
+
+			ui.heading("Quick Play");
 
 			ui.add(
 				egui::Slider::new(&mut self.gui.volume, 0.0..=4.0)
 					.text("Volume")
 					.custom_formatter(|val, _| format!("{:03.2}%", val * 100.0)),
 			);
-
-			ui.horizontal(|ui| {
-				ui.label("MIDI Device: ");
-
-				ui.menu_button(format!("{} | \u{23F7}", self.gui.midi_device), |ui| {
-					ui.set_min_width(20.0);
-
-					if ui
-						.button(format!("{}", kmidi::Device::FluidSynth))
-						.clicked()
-					{
-						self.gui.midi_device = kmidi::Device::FluidSynth;
-						ui.close_menu();
-					}
-				});
-			});
 
 			ui.horizontal(|ui| {
 				ui.label("MIDI SoundFont File: ");
@@ -124,14 +100,14 @@ impl AudioCore {
 			ui.horizontal(|ui| {
 				ui.text_edit_singleline(&mut self.gui.id_buf);
 
+				let btn_clear = egui::Button::new("\u{1F5D9}");
 				let btn_play = egui::Button::new("Play");
-				let btn_clear = egui::Button::new("Clear");
 
 				if ui
 					.add_enabled(!self.gui.id_buf.is_empty(), btn_play)
 					.clicked()
 				{
-					self.ui_impl_try_play();
+					self.ui_impl_try_play(catalog);
 				}
 
 				if ui
@@ -143,6 +119,9 @@ impl AudioCore {
 			});
 
 			ui.separator();
+
+			// Diagnostics /////////////////////////////////////////////////////
+
 			ui.heading("Diagnostics");
 
 			ui.label(formatdoc! {"
@@ -156,9 +135,8 @@ impl AudioCore {
 		});
 	}
 
-	fn ui_impl_try_play(&mut self) {
+	fn ui_impl_try_play(&mut self, catalog: &Catalog) {
 		let path = VPath::new(&self.gui.id_buf).to_path_buf();
-		let catalog = self.catalog.read();
 
 		let fref = match catalog.vfs().get(&path) {
 			Some(f) => f,
@@ -178,73 +156,80 @@ impl AudioCore {
 
 		let bytes = fref.read_bytes();
 
-		if let Ok(midi) = midly::Smf::parse(bytes) {
+		if let Ok(midi) = Smf::parse(bytes) {
 			let sf_path = PathBuf::from(self.gui.soundfont_buf.clone());
 
 			if !sf_path.exists() {
-				info!("The requested SoundFont was not found on the disk.");
+				info!("The requested SoundFont was not found.");
 				return;
 			}
 
 			let mut mdat = MidiData::new(midi, sf_path.clone(), MidiSettings::default());
+			mdat.settings.volume = Volume::Amplitude(self.gui.volume);
 
-			drop(catalog);
-
-			mdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
-
-			let res = if self.gui.play_music {
-				self.start_music_midi(mdat, None)
-			} else {
-				self.start_sound_midi(mdat, None)
-			};
+			let res = self.start_sfx_midi(mdat, None, SoundSpace::Unsourced);
 
 			match res {
 				Ok(()) => {
 					info!(
-						"Playing: {p}\r\n\tAt volume: {vol}\r\n\tWith device: {dev}",
+						"Playing: {p} (volume {vol})",
 						p = path.display(),
 						vol = self.gui.volume,
-						dev = self.gui.midi_device
 					);
 				}
 				Err(err) => {
-					info!(
-						"Failed to play MIDI from: {}\r\n\tError: {err}",
-						sf_path.display()
-					);
+					info!("Failed to play MIDI `{}` - {err}", sf_path.display());
 				}
 			}
 		} else if let Ok(mut sdat) =
 			super::sound_from_bytes(bytes.to_owned(), StaticSoundSettings::default())
 		{
-			drop(catalog);
+			sdat.settings.volume = tween::Value::Fixed(Volume::Amplitude(self.gui.volume));
 
-			sdat.settings.volume = kira::Volume::Amplitude(self.gui.volume);
-
-			let res = if self.gui.play_music {
-				self.start_music_wave(sdat, None)
-			} else {
-				self.start_sound_wave(sdat, None)
-			};
+			let res = self.start_sfx_wave(sdat, None, SoundSpace::Unsourced);
 
 			match res {
 				Ok(()) => {
 					info!(
-						"Playing: {p}\r\n\tAt volume: {vol}",
+						"Playing: {p} (volume {vol})",
 						p = path.display(),
 						vol = self.gui.volume
 					);
 				}
 				Err(err) => {
-					info!("Failed to play: {}\r\n\tError: {err}", path.display());
+					info!("Failed to play `{}` - {err}", path.display());
 				}
 			};
 		} else {
 			info!(
-				"Given file is neither waveform nor MIDI audio: {}",
+				"Given file is neither waveform nor MIDI audio: `{}`",
 				path.display()
 			);
 		}
+	}
+
+	#[must_use]
+	fn ui_label_song_counters(&self) -> String {
+		let mut playing = 0;
+		let mut paused = 0;
+
+		for channel in self.sounds.iter() {
+			let Some(sfx) = channel else { continue; };
+
+			if sfx.state() == PlaybackState::Playing {
+				playing += 1;
+			}
+
+			if sfx.state() == PlaybackState::Paused {
+				paused += 1;
+			}
+		}
+
+		format!(
+			"{playing} playing, {paused} paused, {changing} changing, {total} total",
+			changing = self.sounds.len() - (playing + paused),
+			total = self.sounds.len(),
+		)
 	}
 }
 
@@ -260,18 +245,14 @@ pub(super) struct DevGui {
 	pub(super) soundfont_buf: String,
 	/// Amplitude. Slider runs from 0.0 to 4.0.
 	pub(super) volume: f64,
-	pub(super) midi_device: kmidi::Device,
-	pub(super) play_music: bool,
 }
 
 impl Default for DevGui {
 	fn default() -> Self {
 		Self {
-			id_buf: String::default(),
-			soundfont_buf: String::default(),
+			id_buf: String::new(),
+			soundfont_buf: String::new(),
 			volume: 1.0,
-			midi_device: kmidi::Device::FluidSynth,
-			play_music: false,
 		}
 	}
 }

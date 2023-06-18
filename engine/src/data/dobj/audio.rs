@@ -6,6 +6,7 @@ use kira::sound::static_sound::StaticSoundData;
 use crate::audio::MidiData;
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)] // TODO: `MidiData` will eventually reach size parity.
 pub enum Audio {
 	Midi(MidiData),
 	Waveform(StaticSoundData),

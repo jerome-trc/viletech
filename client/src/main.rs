@@ -320,9 +320,7 @@ fn first_startup(
 }
 
 fn common_updates(mut core: ResMut<ClientCore>, mut exit: EventWriter<AppExit>) {
-	if let Err(err) = core.audio.update() {
-		error!("Audio update error: {err}");
-	}
+	core.audio.lock().update();
 
 	while !core.console.requests.is_empty() {
 		match core.console.requests.pop_front().unwrap() {

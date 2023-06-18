@@ -2966,18 +2966,6 @@ dependencies = [
 
 [[package]]
 name = "kira"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e53aef6f6ec851da68a0ad6d6283bd99ea1a9164f38fd7ac353e28ccd6f5cda"
-dependencies = [
- "atomic-arena",
- "cpal",
- "ringbuf",
- "symphonia",
-]
-
-[[package]]
-name = "kira"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3974058fcf12557b10602f1145fd22d554815f0fb2fdc470441828cc0effa74e"
@@ -5227,8 +5215,7 @@ dependencies = [
  "image",
  "indexmap",
  "indoc",
- "kira 0.7.3",
- "kira 0.8.3",
+ "kira",
  "lithscript",
  "memoffset 0.8.0",
  "miette",
@@ -5304,7 +5291,7 @@ dependencies = [
  "clap",
  "crossbeam",
  "indoc",
- "kira 0.7.3",
+ "kira",
  "nanorand",
  "parking_lot",
  "viletech",

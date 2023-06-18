@@ -5,6 +5,7 @@ use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
 use bevy::prelude::*;
 use bevy_egui::egui;
 use nanorand::WyRand;
+use parking_lot::Mutex;
 use viletech::{
 	audio::AudioCore,
 	console::Console,
@@ -22,7 +23,7 @@ pub type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
 
 #[derive(Debug, Resource)]
 pub struct ClientCore {
-	pub audio: AudioCore,
+	pub audio: Mutex<AudioCore>,
 	pub catalog: CatalogAL,
 	pub console: Console<ccmd::Command>,
 	pub devgui: DeveloperGui,
@@ -38,11 +39,8 @@ impl ClientCore {
 		console: Console<ccmd::Command>,
 		user: UserCore,
 	) -> Result<Self, Box<dyn std::error::Error>> {
-		let catalog_audio = catalog.clone();
-		let audio = AudioCore::new(catalog_audio, None)?;
-
 		let mut ret = Self {
-			audio,
+			audio: Mutex::new(AudioCore::new(None)?),
 			catalog,
 			console,
 			devgui: DeveloperGui {
@@ -168,7 +166,8 @@ impl ClientCore {
 				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
 					match self.devgui.left {
 						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui);
+							let catalog = self.catalog.read();
+							self.audio.lock().ui(ctx, ui, &catalog);
 						}
 						DevGuiStatus::Catalog => {
 							let mut catalog = self.catalog.write();
@@ -189,7 +188,8 @@ impl ClientCore {
 				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
 					match self.devgui.right {
 						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui);
+							let catalog = self.catalog.read();
+							self.audio.lock().ui(ctx, ui, &catalog);
 						}
 						DevGuiStatus::Catalog => {
 							let mut catalog = self.catalog.write();

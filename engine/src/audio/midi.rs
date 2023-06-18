@@ -19,7 +19,7 @@ use crossbeam::{
 	channel::{Receiver, Sender},
 };
 use fluidlite::Synth;
-use kira0_8_3::{
+use kira::{
 	clock::clock_info::ClockInfoProvider,
 	dsp::Frame,
 	modulator::value_provider::ModulatorValueProvider,
@@ -350,7 +350,7 @@ impl SoundData for Data {
 	type Error = Box<Error>; // Indirection prevents a recursive type.
 	type Handle = Handle;
 
-	fn into_sound(self) -> Result<(Box<dyn kira0_8_3::sound::Sound>, Self::Handle), Self::Error> {
+	fn into_sound(self) -> Result<(Box<dyn kira::sound::Sound>, Self::Handle), Self::Error> {
 		// `sleep_duration` demands `mut` but it never does any real mutation.
 		let mut timer = self.create_timer();
 
@@ -454,7 +454,7 @@ impl Sound {
 	}
 }
 
-impl kira0_8_3::sound::Sound for Sound {
+impl kira::sound::Sound for Sound {
 	fn output_destination(&mut self) -> OutputDestination {
 		self.data.settings.destination
 	}
@@ -742,7 +742,7 @@ impl Renderer {
 	/// `tick_len` needs to come from [`nodi::Timer::sleep_duration`],
 	/// which should be passed `1`.
 	fn new(tick_len: Duration, soundfont: impl AsRef<Path>) -> Result<Self, Error> {
-		use kira0_8_3::manager::backend::cpal::Error as CpalError;
+		use kira::manager::backend::cpal::Error as CpalError;
 
 		let synth = Synth::new(
 			fluidlite::Settings::new().expect("failed to create a FluidSynth settings object"),

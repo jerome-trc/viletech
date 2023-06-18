@@ -80,8 +80,7 @@ impl-trait-for-tuples = "0.2.2"
 indexmap = { version = "1.9.3", features = ["rayon", "serde"] }
 indoc = "2.0.0"
 itertools = "0.10.5"
-kira = "0.7.3"
-kira0_8_3 = { package = "kira", version = "0.8.3" }
+kira = "0.8.3"
 logos = "0.13.0"
 md5 = "0.7.0"
 memoffset = "0.8.0"
