@@ -176,17 +176,17 @@ macro_rules! parser_t {
 #[macro_export]
 macro_rules! simple_astnode {
 	($lang:ty, $node:ty, $syn_kind:expr) => {
-		impl AstNode for $node {
+		impl $crate::rowan::ast::AstNode for $node {
 			type Language = $lang;
 
-			fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
+			fn can_cast(kind: <Self::Language as $crate::rowan::Language>::Kind) -> bool
 			where
 				Self: Sized,
 			{
 				kind == $syn_kind
 			}
 
-			fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
+			fn cast(node: $crate::rowan::SyntaxNode<Self::Language>) -> Option<Self>
 			where
 				Self: Sized,
 			{
@@ -197,7 +197,7 @@ macro_rules! simple_astnode {
 				}
 			}
 
-			fn syntax(&self) -> &rowan::SyntaxNode<Self::Language> {
+			fn syntax(&self) -> &$crate::rowan::SyntaxNode<Self::Language> {
 				&self.0
 			}
 		}

@@ -1,7 +1,5 @@
 //! Abstract syntax tree nodes.
 
-use rowan::ast::AstNode;
-
 use crate::simple_astnode;
 
 use super::{Syn, SyntaxNode, SyntaxToken};
