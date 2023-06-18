@@ -8,6 +8,7 @@
 use once_cell::sync::OnceCell;
 
 pub mod audio;
+pub mod audio2;
 pub mod console;
 pub mod data;
 pub mod devgui;

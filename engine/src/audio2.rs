@@ -3,7 +3,7 @@
 mod gui;
 mod midi;
 
-use std::path::PathBuf;
+use std::{io::Cursor, path::PathBuf};
 
 use arrayvec::ArrayVec;
 use bevy::prelude::Entity;
@@ -16,7 +16,7 @@ use kira0_8_3::{
 		AudioManager, AudioManagerSettings,
 	},
 	sound::{
-		static_sound::{StaticSoundData, StaticSoundHandle},
+		static_sound::{StaticSoundData, StaticSoundHandle, StaticSoundSettings},
 		PlaybackState, SoundData,
 	},
 	spatial::{
@@ -41,6 +41,7 @@ use tracing::{debug, error, info, warn};
 use crate::data::Catalog;
 
 use self::gui::DevGui;
+
 pub use self::midi::{
 	render as render_midi, Data as MidiData, FileFormat as MidiFormat, Handle as MidiHandle,
 	Settings as MidiSettings, SoundFont, SoundFontKind,
@@ -573,6 +574,16 @@ impl std::fmt::Debug for MusicController {
 	fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		unimplemented!("proper `Debug` impl. pending internal stabilization")
 	}
+}
+
+// Helpers /////////////////////////////////////////////////////////////////////
+
+pub fn sound_from_bytes(
+	bytes: impl Into<Vec<u8>>,
+	settings: StaticSoundSettings,
+) -> Result<StaticSoundData, kira0_8_3::sound::FromFileError> {
+	let cursor = Cursor::new(bytes.into());
+	StaticSoundData::from_cursor(cursor, settings)
 }
 
 // Error ///////////////////////////////////////////////////////////////////////
