@@ -40,8 +40,8 @@ impl ParserBuilder {
 			self.trivia_1plus(),
 			self.ident(),
 			self.trivia_0plus(),
-			self.ident(),
-			self.trivia_1plus(),
+			comb::just_ts(Token::Colon, Syn::Colon),
+			self.trivia_0plus(),
 			self.ident_list(),
 			comb::just_ts(Token::Semicolon, Syn::Semicolon),
 		))

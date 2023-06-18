@@ -24,7 +24,8 @@ impl ParserBuilder {
 	pub fn expr<'i>(&self) -> parser_t!(GreenNode) {
 		chumsky::recursive::recursive(
 			|expr: Recursive<dyn chumsky::Parser<'_, _, GreenNode, _>>| {
-				let ident = comb::just_ts(Token::Ident, Syn::Ident)
+				let ident = self
+					.ident()
 					.map(|gtok| GreenNode::new(Syn::IdentExpr.into(), [gtok.into()]));
 
 				let literal = primitive::choice((
