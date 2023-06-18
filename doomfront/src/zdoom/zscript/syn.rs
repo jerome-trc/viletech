@@ -87,7 +87,7 @@ pub enum Syn {
 	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,
 	/// `'states' ident '{' innard* '}'`
-	StatesDef,
+	StatesBlock,
 	StatesUsage,
 	/// `'struct' ident '{' innard* '}'`
 	StructDef,

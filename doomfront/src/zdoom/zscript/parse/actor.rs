@@ -1,4 +1,4 @@
-//! Parsers for parts of class definitions inheriting from `Actor`.
+//! Parsers for parts of definitions for classes inheriting from `Actor`.
 
 use chumsky::{primitive, IterParser, Parser};
 use rowan::{GreenNode, GreenToken};
@@ -95,8 +95,8 @@ impl ParserBuilder {
 
 	// State machine definitions ///////////////////////////////////////////////////
 
-	/// The returned parser emits a [`Syn::StatesDef`] node.
-	pub fn states_def<'i>(&self) -> parser_t!(GreenNode) {
+	/// The returned parser emits a [`Syn::StatesBlock`] node.
+	pub fn states_block<'i>(&self) -> parser_t!(GreenNode) {
 		primitive::group((
 			comb::just_ts(Token::KwStates, Syn::KwStates),
 			self.trivia_0plus(),
@@ -113,7 +113,7 @@ impl ParserBuilder {
 			.collect::<Vec<_>>(),
 			comb::just_ts(Token::BraceR, Syn::BraceR),
 		))
-		.map(|group| coalesce_node(group, Syn::StatesDef))
+		.map(|group| coalesce_node(group, Syn::StatesBlock))
 		.boxed()
 	}
 

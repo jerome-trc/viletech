@@ -38,15 +38,15 @@ impl ParserBuilder {
 
 		primitive::choice((
 			self.trivia(),
-			self.const_def().map(GreenElement::from),
-			self.enum_def().map(GreenElement::from),
-			self.include_directive().map(GreenElement::from),
-			self.version_directive().map(GreenElement::from),
 			self.class_def().map(GreenElement::from),
 			self.struct_def().map(GreenElement::from),
-			self.mixin_class_def().map(GreenElement::from),
+			self.enum_def().map(GreenElement::from),
+			self.const_def().map(GreenElement::from),
 			self.class_extend().map(GreenElement::from),
 			self.struct_extend().map(GreenElement::from),
+			self.mixin_class_def().map(GreenElement::from),
+			self.include_directive().map(GreenElement::from),
+			self.version_directive().map(GreenElement::from),
 		))
 		.repeated()
 		.collect::<Vec<_>>()

@@ -8,6 +8,8 @@ pub mod decorate;
 pub mod language;
 pub mod zscript;
 
+use std::num::IntErrorKind;
+
 pub use lex::Token;
 
 /// Used to control [lexer](Token) behaviour; newer versions have more keywords.
@@ -61,5 +63,33 @@ impl Default for Version {
 	/// Returns the current latest GZDoom version.
 	fn default() -> Self {
 		Self::V4_10_0
+	}
+}
+
+impl std::str::FromStr for Version {
+	type Err = IntErrorKind;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		let mut parts = s.split('.');
+
+		let major = parts
+			.next()
+			.ok_or(IntErrorKind::Empty)?
+			.parse::<u64>()
+			.map_err(|err| err.kind().clone())?;
+
+		let minor = parts.next().map_or(Ok(0), |m| {
+			m.parse::<u64>().map_err(|err| err.kind().clone())
+		})?;
+
+		let rev = parts.next().map_or(Ok(0), |m| {
+			m.parse::<u64>().map_err(|err| err.kind().clone())
+		})?;
+
+		Ok(Self {
+			major: major.clamp(0, u16::MAX as u64) as u16,
+			minor: minor.clamp(0, u16::MAX as u64) as u16,
+			rev: rev.clamp(0, u16::MAX as u64) as u32,
+		})
 	}
 }

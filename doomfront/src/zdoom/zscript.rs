@@ -4,6 +4,7 @@
 //! ZScript is GZDoom's primary and most well-supported embedded scripting
 //! language, intended as a successor to (and superset of) ZDoom's DECORATE.
 
+pub mod ast;
 pub mod parse;
 mod syn;
 
