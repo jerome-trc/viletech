@@ -97,7 +97,7 @@ fn language(crit: &mut Criterion) {
 
 	let mut grp = crit.benchmark_group("LANGUAGE");
 
-	grp.bench_function("Parse", |bencher| {
+	grp.bench_function("Parse, Chumsky", |bencher| {
 		bencher.iter(|| {
 			let parser = zdoom::language::parse::file();
 
@@ -106,6 +106,14 @@ fn language(crit: &mut Criterion) {
 			let ptree =
 				doomfront::parse::<zdoom::Token, zdoom::language::Syn>(parser, &sample, &tbuf);
 
+			let _ = std::hint::black_box(ptree);
+		});
+	});
+
+	grp.bench_function("Parse, Handwritten", |bencher| {
+		bencher.iter(|| {
+			let mut parser = doomfront::parser::Parser::new(&sample, zdoom::Version::default());
+			let ptree = zdoom::language::parse::hand::_file(&mut parser);
 			let _ = std::hint::black_box(ptree);
 		});
 	});

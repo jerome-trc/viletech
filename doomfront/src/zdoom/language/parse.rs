@@ -134,6 +134,149 @@ fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
 	trivia().repeated().at_least(1).collect()
 }
 
+pub mod hand {
+	use super::*;
+
+	impl crate::parser::LangExt for Syn {
+		type Token = Token;
+		const EOF: Self::Token = Token::Eof;
+		const ERR_NODE: Self::Kind = Syn::Error;
+	}
+
+	pub fn _file(p: &mut crate::parser::Parser<Syn>) {
+		let root = p.open();
+
+		while !p.eof() {
+			if p.at_if(|t| matches!(t, Token::Ident | Token::Dollar) || t.is_keyword()) {
+				_kvp(p);
+			} else if p.at(Token::BracketL) {
+				_header(p);
+			} else if _trivia(p) {
+			} else {
+				p.advance_with_error(Syn::Unknown);
+			}
+		}
+
+		p.close(root, Syn::Root);
+	}
+
+	pub fn _kvp(p: &mut crate::parser::Parser<Syn>) {
+		debug_assert!(p.at_if(|t| matches!(t, Token::Ident | Token::Dollar)));
+
+		let kvp = p.open();
+
+		if p.at(Token::Dollar) {
+			_ifgame(p);
+		}
+
+		p.expect_if(|t| t == Token::Ident || t.is_keyword(), Syn::Ident);
+		_trivia_0plus(p);
+		p.expect(Token::Eq, Syn::Eq);
+
+		loop {
+			if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
+				break;
+			}
+
+			_trivia_0plus(p);
+
+			if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
+				break;
+			}
+
+			p.expect(Token::StringLit, Syn::StringLit);
+		}
+
+		_trivia_0plus(p);
+		p.eat(Token::Semicolon, Syn::Semicolon);
+
+		p.close(kvp, Syn::KeyValuePair);
+	}
+
+	fn _ifgame(p: &mut crate::parser::Parser<Syn>) {
+		debug_assert!(p.at(Token::Dollar));
+
+		let ifgame = p.open();
+
+		p.expect(Token::Dollar, Syn::Dollar);
+		_trivia_0plus(p);
+		p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame);
+		_trivia_0plus(p);
+		p.expect(Token::ParenL, Syn::ParenL);
+		_trivia_0plus(p);
+		p.expect_if(|t| t == Token::Ident || t.is_keyword(), Syn::Ident);
+		_trivia_0plus(p);
+		p.expect(Token::ParenR, Syn::ParenR);
+		_trivia_0plus(p);
+
+		p.close(ifgame, Syn::GameQualifier);
+	}
+
+	pub fn _header(p: &mut crate::parser::Parser<Syn>) {
+		debug_assert!(p.at(Token::BracketL));
+
+		let header = p.open();
+
+		p.expect(Token::BracketL, Syn::BracketL);
+
+		while !p.at(Token::BracketR) && !p.eof() {
+			if _trivia(p) {
+				continue;
+			}
+
+			let token = p.nth(0);
+
+			if token == Token::Ident || token.is_keyword() {
+				p.advance(Syn::Ident);
+				continue;
+			}
+
+			match token {
+				Token::Tilde => p.advance(Syn::Tilde),
+				Token::KwDefault => p.advance(Syn::KwDefault),
+				Token::Asterisk => p.advance(Syn::Asterisk),
+				_ => {
+					if !p.eof() {
+						p.advance(Syn::Unknown);
+					}
+
+					p.close(header, Syn::Error);
+					return;
+				}
+			}
+		}
+
+		p.expect(Token::BracketR, Syn::BracketR);
+
+		p.close(header, Syn::Header);
+	}
+
+	fn _trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
+		p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
+	}
+
+	fn _trivia_0plus(p: &mut crate::parser::Parser<Syn>) {
+		loop {
+			if !_trivia(p) {
+				return;
+			}
+		}
+	}
+
+	fn _trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
+		p.expect_any(&[
+			(Token::Whitespace, Syn::Whitespace),
+			(Token::Comment, Syn::Comment),
+		]);
+
+		loop {
+			if !_trivia(p) {
+				return;
+			}
+		}
+	}
+}
+
 #[cfg(test)]
 mod test {
 	use std::path::PathBuf;

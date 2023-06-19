@@ -27,6 +27,7 @@ pub extern crate rowan;
 
 pub mod comb;
 pub mod gcache;
+pub mod parser;
 pub mod parsing;
 pub mod testing;
 

@@ -360,6 +360,7 @@ pub enum Token {
 	Comment,
 	#[default]
 	Unknown,
+	Eof,
 }
 
 impl Token {
