@@ -1,12 +1,13 @@
 //! # VileTech Utilities
 //!
-//! Symbols used by multiple other VileTech crates.
+//! An assortment of small helper symbols used by multiple other VileTech crates.
 
 pub mod io;
 #[macro_use]
 pub mod macros;
 pub mod math;
 pub mod path;
+pub mod rstring;
 pub mod simd;
 pub mod string;
 

@@ -1,3 +1,5 @@
+//! String inspection and manipulation tools.
+
 use arrayvec::ArrayString;
 
 use crate::lazy_regex;

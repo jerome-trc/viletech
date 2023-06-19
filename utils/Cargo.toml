@@ -26,4 +26,5 @@ home.workspace = true
 once_cell.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }
-smartstring = { workspace = true }
+smartstring.workspace = true
+triomphe.workspace = true
