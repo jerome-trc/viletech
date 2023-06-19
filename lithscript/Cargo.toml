@@ -29,5 +29,4 @@ cranelift-module.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
 logos.workspace = true
-once_cell.workspace = true
 rustc-hash.workspace = true

@@ -3053,7 +3053,6 @@ dependencies = [
  "dashmap",
  "doomfront",
  "logos",
- "once_cell",
  "rustc-hash",
  "viletech-utils",
 ]

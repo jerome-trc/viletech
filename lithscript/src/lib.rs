@@ -69,26 +69,21 @@ impl std::str::FromStr for Version {
 
 impl Version {
 	#[must_use]
-	pub fn new(major: u16, minor: u16, rev: u16) -> Self {
+	pub const fn new(major: u16, minor: u16, rev: u16) -> Self {
 		Self { major, minor, rev }
 	}
 
 	/// Check if this version is equal to an existing LithScript spec version.
 	#[must_use]
 	pub fn is_valid(&self) -> bool {
-		use std::collections::HashSet;
-
-		use once_cell::sync::Lazy;
-
-		static VERSIONS: Lazy<HashSet<Version>> = Lazy::new(|| {
-			HashSet::from([Version {
+		matches!(
+			self,
+			Version {
 				major: 0,
 				minor: 0,
 				rev: 0,
-			}])
-		});
-
-		VERSIONS.contains(self)
+			}
+		)
 	}
 }
 
