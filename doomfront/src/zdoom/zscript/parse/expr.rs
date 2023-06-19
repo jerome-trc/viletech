@@ -405,17 +405,29 @@ mod test {
 		zdoom::{zscript::ParseTree, Version},
 	};
 
-	use super::*;
-
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
+		const SOURCE: &str = "(a[1]() + --b.c) * ++d && (e << f) ~== ((((g /= h ? i : j))))";
 
-		let parser = ParserBuilder::new(Version::default()).expr();
-		let tbuf = crate::scan(SOURCE, Version::default());
-		let result = crate::parse(parser, SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
+		super::super::hand::_expr(&mut parser);
+		let (root, errors) = parser.finish();
+		assert!(errors.is_empty());
+		let ptree: ParseTree = ParseTree::new(root, vec![]);
+
 		assert_no_errors(&ptree);
-		prettyprint(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_vector_bin() {
+		const SOURCE: &str = "(1.0, 2.0, 3.0) + (4.0, 5.0) - (6.0, 7.0, 8.0)";
+
+		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
+		super::super::hand::_expr(&mut parser);
+		let (root, errors) = parser.finish();
+		assert!(errors.is_empty());
+		let ptree: ParseTree = ParseTree::new(root, vec![]);
+
+		assert_no_errors(&ptree);
 	}
 }

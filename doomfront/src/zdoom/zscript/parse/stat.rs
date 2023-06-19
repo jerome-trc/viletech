@@ -213,7 +213,7 @@ impl ParserBuilder {
 			.map(|group| coalesce_node(group, Syn::ForStat));
 
 			let s_foreach = primitive::group((
-				comb::just_ts(Token::KwForeach, Syn::KwForEach),
+				comb::just_ts(Token::KwForEach, Syn::KwForEach),
 				self.trivia_0plus(),
 				comb::just_ts(Token::ParenL, Syn::ParenL),
 				self.trivia_0plus(),

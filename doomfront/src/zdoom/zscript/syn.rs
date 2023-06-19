@@ -106,13 +106,21 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
 	BinExpr,
+	/// `primaryexpr '(' arglist? ')'`
 	CallExpr,
+	/// `'(' 'class' '<' ident '>' ')' '(' namedexprlist? ')'`
+	ClassCastExpr,
 	GroupExpr,
+	/// `ident`
 	IdentExpr,
+	/// `primaryexpr '[' expr ']'`
 	IndexExpr,
 	PostfixExpr,
 	PrefixExpr,
+	/// `'super'`
 	SuperExpr,
+	/// `expr '?' expr ':' expr`, as in C.
+	TernaryExpr,
 	/// Two parentheses surrounding two, three, or four comma-separated expressions.
 	///
 	/// Used to construct vectors and colors.
@@ -403,5 +411,184 @@ impl rowan::Language for Syn {
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
 		kind.into()
+	}
+}
+
+impl From<crate::zdoom::Token> for Syn {
+	fn from(value: crate::zdoom::Token) -> Self {
+		[
+			Self::FloatLit,
+			Self::IntLit,
+			Self::NameLit,
+			Self::StringLit,
+			// Keywords ////////////////////////////////////////////////////////
+			Self::Unknown, // Dummy; effectively unreachable.
+			Self::KwAbstract,
+			Self::KwAction,
+			Self::KwAlignOf,
+			Self::KwArray,
+			Self::Ident, // KwAuto
+			Self::Ident, // KwBool
+			Self::KwBreak,
+			Self::KwBright,
+			Self::Ident, // KwByte
+			Self::KwCanRaise,
+			Self::KwCase,
+			Self::Ident, // KwChar
+			Self::KwClearScope,
+			Self::KwClass,
+			Self::Ident, // KwColor
+			Self::KwConst,
+			Self::KwContinue,
+			Self::KwCross,
+			Self::KwDefault,
+			Self::KwDeprecated,
+			Self::KwDo,
+			Self::KwDot,
+			Self::Ident, // KwDouble
+			Self::KwElse,
+			Self::KwEnum,
+			Self::KwExtend,
+			Self::KwFail,
+			Self::FalseLit, // KwFalse
+			Self::KwFast,
+			Self::KwFinal,
+			Self::KwFlagdef,
+			Self::Ident, // KwFloat
+			Self::KwFor,
+			Self::KwForEach,
+			Self::KwGoto,
+			Self::KwIn,
+			Self::KwIf,
+			Self::Ident, // KwInt
+			Self::Ident, // KwInt16
+			Self::Ident, // KwInt8
+			Self::KwInternal,
+			Self::KwIs,
+			Self::KwLet,
+			Self::KwLight,
+			Self::Ident, // KwLong
+			Self::KwLoop,
+			Self::KwMap,
+			Self::KwMapIterator,
+			Self::KwMeta,
+			Self::KwMixin,
+			Self::Ident, // KwName
+			Self::KwNative,
+			Self::KwNoDelay,
+			Self::Ident,   // KwNone
+			Self::NullLit, // KwNull
+			Self::KwOffset,
+			Self::KwOut,
+			Self::KwOverride,
+			Self::KwPlay,
+			Self::KwPrivate,
+			Self::KwProperty,
+			Self::KwProtected,
+			Self::KwReadonly,
+			Self::KwReplaces,
+			Self::KwReturn,
+			Self::Ident, // KwSByte
+			Self::Ident, // KwShort
+			Self::KwSizeof,
+			Self::KwSlow,
+			Self::Ident, // KwSound
+			Self::Ident, // KwState
+			Self::KwStates,
+			Self::KwStatic,
+			Self::KwStop,
+			Self::Ident, // KwString
+			Self::KwStruct,
+			Self::KwSuper,
+			Self::KwSwitch,
+			Self::KwTransient,
+			Self::TrueLit, // KwTrue
+			Self::KwUi,
+			Self::Ident, // KwUInt
+			Self::Ident, // KwUInt16
+			Self::Ident, // KwUInt8
+			Self::Ident, // KwULong
+			Self::KwUntil,
+			Self::Ident, // KwUShort
+			Self::KwVar,
+			Self::KwVarArg,
+			Self::Ident, // KwVector2
+			Self::Ident, // KwVector3
+			Self::KwVersion,
+			Self::KwVirtual,
+			Self::KwVirtualScope,
+			Self::Ident, // KwVoid
+			Self::Ident, // KwVolatile
+			Self::KwWait,
+			Self::KwWhile,
+			Self::Unknown, // Dummy; effectively unreachable.
+			// Glyphs //////////////////////////////////////////////////////////
+			Self::Ampersand,
+			Self::Ampersand2,
+			Self::AmpersandEq,
+			Self::AngleL,
+			Self::AngleL2,
+			Self::AngleLEq,
+			Self::AngleL2Eq,
+			Self::AngleR,
+			Self::AngleREq,
+			Self::AngleR2,
+			Self::AngleR3,
+			Self::AngleR2Eq,
+			Self::AngleR3Eq,
+			Self::AngleLAngleREq,
+			Self::Asterisk,
+			Self::Asterisk2,
+			Self::AsteriskEq,
+			Self::At,
+			Self::Bang,
+			Self::BangEq,
+			Self::BraceL,
+			Self::BraceR,
+			Self::BracketL,
+			Self::BracketR,
+			Self::Caret,
+			Self::CaretEq,
+			Self::Colon,
+			Self::Colon2,
+			Self::Comma,
+			Self::Dollar,
+			Self::Dot,
+			Self::Dot2,
+			Self::Dot3,
+			Self::Eq,
+			Self::Eq2,
+			Self::Tilde,
+			Self::TildeEq2,
+			Self::Minus,
+			Self::Minus2,
+			Self::MinusEq,
+			Self::ParenL,
+			Self::ParenR,
+			Self::Percent,
+			Self::PercentEq,
+			Self::Pipe,
+			Self::Pipe2,
+			Self::PipeEq,
+			Self::Plus,
+			Self::Plus2,
+			Self::PlusEq,
+			Self::Pound,
+			Self::Question,
+			Self::Semicolon,
+			Self::Slash,
+			Self::SlashEq,
+			Self::Unknown, // ThinArrow
+			// Miscellaneous ///////////////////////////////////////////////////
+			Self::PoundInclude,
+			Self::RegionStart,
+			Self::RegionEnd,
+			Self::Ident,
+			Self::Whitespace,
+			Self::DocComment,
+			Self::Comment,
+			Self::Unknown,
+			Self::Unknown, // EOF; effectively unreachable.
+		][value as usize]
 	}
 }

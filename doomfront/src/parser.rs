@@ -137,6 +137,17 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
+	pub fn eat_any(&mut self, choices: &'static [(L::Token, L::Kind)]) -> bool {
+		for choice in choices {
+			if self.at(choice.0) {
+				self.advance(choice.1);
+				return true;
+			}
+		}
+
+		false
+	}
+
 	#[must_use]
 	pub fn eat_if(&mut self, predicate: fn(L::Token) -> bool, syn: L::Kind) -> bool {
 		if self.at_if(predicate) {
@@ -228,12 +239,17 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.close(ckpt, L::ERR_NODE);
 	}
 
-	pub fn advance_err_and_close(&mut self, checkpoint: OpenMark, token: L::Kind, err: L::Kind) {
+	pub fn advance_err_and_close(
+		&mut self,
+		checkpoint: OpenMark,
+		token: L::Kind,
+		err: L::Kind,
+	) -> CloseMark {
 		if !self.eof() {
 			self.advance(token);
 		}
 
-		self.close(checkpoint, err);
+		self.close(checkpoint, err)
 	}
 
 	#[must_use]

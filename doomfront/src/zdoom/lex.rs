@@ -29,7 +29,7 @@ pub enum Token {
 	#[regex("(?i)action", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwAction,
 	#[regex("(?i)alignof", priority = 5)]
-	KwAlignof,
+	KwAlignOf,
 	#[regex("(?i)array", priority = 5)]
 	KwArray,
 	#[regex("(?i)auto", priority = 5)]
@@ -91,7 +91,7 @@ pub enum Token {
 	#[regex("(?i)for", priority = 5)]
 	KwFor,
 	#[regex("(?i)foreach", priority = 5, callback = Token::ident_pre4_10_0)]
-	KwForeach,
+	KwForEach,
 	#[regex("(?i)goto", priority = 5)]
 	KwGoto,
 	#[regex("(?i)in", priority = 5)]
