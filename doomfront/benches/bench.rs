@@ -113,8 +113,8 @@ fn language(crit: &mut Criterion) {
 	grp.bench_function("Parse, Handwritten", |bencher| {
 		bencher.iter(|| {
 			let mut parser = doomfront::parser::Parser::new(&sample, zdoom::Version::default());
-			let ptree = zdoom::language::parse::hand::_file(&mut parser);
-			let _ = std::hint::black_box(ptree);
+			zdoom::language::parse::hand::_file(&mut parser);
+			let _ = std::hint::black_box(parser.finish());
 		});
 	});
 

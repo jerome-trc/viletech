@@ -1,15 +1,12 @@
 //! A general-purpose LL parser.
 //!
-//! This parser design is derived from
+//! This design is derived from
 //! https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html.
 
 use std::cell::Cell;
 
 use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, SyntaxKind};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Checkpoint(usize);
 
 /// Ties a [`rowan::Language`] to a [`logos::Logos`] token.
 pub trait LangExt: rowan::Language {
@@ -30,6 +27,7 @@ pub struct Parser<'i, L: LangExt> {
 	pos: usize,
 	fuel: Cell<u32>,
 	events: Vec<Event>,
+	errors: Vec<Error<L>>,
 }
 
 impl<'i, L: LangExt> Parser<'i, L> {
@@ -50,25 +48,27 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			pos: 0,
 			fuel: Cell::new(256),
 			events: vec![],
+			errors: vec![],
 		}
 	}
 
-	pub fn open(&mut self) -> Checkpoint {
-		let checkpoint = Checkpoint(self.events.len());
+	#[must_use]
+	pub fn open(&mut self) -> OpenMark {
+		let checkpoint = OpenMark(self.events.len());
 		self.events.push(Event::Open(L::kind_to_raw(L::ERR_NODE)));
 		checkpoint
 	}
 
-	pub fn close(&mut self, checkpoint: Checkpoint, syn: L::Kind) -> Checkpoint {
-		self.events[checkpoint.0] = Event::Open(L::kind_to_raw(syn));
+	pub fn close(&mut self, mark: OpenMark, syn: L::Kind) -> CloseMark {
+		self.events[mark.0] = Event::Open(L::kind_to_raw(syn));
 		self.events.push(Event::Close);
-		Checkpoint(checkpoint.0)
+		CloseMark(mark.0)
 	}
 
-	pub fn open_before(&mut self, checkpoint: Checkpoint) -> Checkpoint {
-		let ret = Checkpoint(checkpoint.0);
+	pub fn open_before(&mut self, mark: CloseMark) -> OpenMark {
+		let ret = OpenMark(mark.0);
 		self.events
-			.insert(checkpoint.0, Event::Open(L::kind_to_raw(L::ERR_NODE)));
+			.insert(mark.0, Event::Open(L::kind_to_raw(L::ERR_NODE)));
 		ret
 	}
 
@@ -87,7 +87,10 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	#[must_use]
 	pub fn nth(&self, lookahead: usize) -> L::Token {
 		if self.fuel.get() == 0 {
-			panic!("parser is not advancing")
+			panic!(
+				"parser is not advancing (stuck at {:?})",
+				self.tokens[self.pos].span
+			)
 		}
 
 		self.fuel.set(self.fuel.get() - 1);
@@ -144,15 +147,24 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
-	pub fn expect(&mut self, token: L::Token, syn: L::Kind) {
+	pub fn expect(&mut self, token: L::Token, syn: L::Kind, expected: &'static [&'static str]) {
 		if self.eat(token, syn) {
 			return;
 		}
 
-		unimplemented!("error handling unimplemented")
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
 	}
 
-	pub fn expect_str_nc(&mut self, token: L::Token, string: &'static str, syn: L::Kind) {
+	pub fn expect_str_nc(
+		&mut self,
+		token: L::Token,
+		string: &'static str,
+		syn: L::Kind,
+		expected: &'static [&'static str],
+	) {
 		let eof = Lexeme {
 			kind: L::EOF,
 			span: self.source.len()..self.source.len(),
@@ -165,36 +177,67 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			return;
 		}
 
-		unimplemented!("error handling unimplemented")
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
 	}
 
-	pub fn expect_if(&mut self, predicate: fn(L::Token) -> bool, syn: L::Kind) {
+	pub fn expect_if(
+		&mut self,
+		predicate: fn(L::Token) -> bool,
+		syn: L::Kind,
+		expected: &'static [&'static str],
+	) {
 		if self.eat_if(predicate, syn) {
 			return;
 		}
 
-		unimplemented!("error handling unimplemented")
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
 	}
 
-	pub fn expect_any(&mut self, choices: &'static [(L::Token, L::Kind)]) {
+	pub fn expect_any(
+		&mut self,
+		choices: &'static [(L::Token, L::Kind)],
+		expected: &'static [&'static str],
+	) {
 		for choice in choices {
 			if self.eat(choice.0, choice.1) {
 				return;
 			}
 		}
 
-		unimplemented!("error handling unimplemented")
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
 	}
 
-	pub fn advance_with_error(&mut self, syn: L::Kind) {
+	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
 		let ckpt = self.open();
-		// TODO: Error handling goes here.
+
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
+
 		self.advance(syn);
 		self.close(ckpt, L::ERR_NODE);
 	}
 
+	pub fn advance_err_and_close(&mut self, checkpoint: OpenMark, token: L::Kind, err: L::Kind) {
+		if !self.eof() {
+			self.advance(token);
+		}
+
+		self.close(checkpoint, err);
+	}
+
 	#[must_use]
-	pub fn finish(self) -> GreenNode {
+	pub fn finish(self) -> (GreenNode, Vec<Error<L>>) {
 		let mut tokens = self.tokens.into_iter();
 		let mut builder = GreenNodeBuilder::new();
 
@@ -214,12 +257,73 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 
 		assert!(tokens.next().is_none(), "not all tokens were consumed");
-		builder.finish()
+		(builder.finish(), self.errors)
 	}
 }
 
-#[derive(Debug)]
-struct Lexeme<L: LangExt> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct OpenMark(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CloseMark(usize);
+
+pub struct Error<L: LangExt> {
+	expected: &'static [&'static str],
+	found: Lexeme<L>,
+}
+
+impl<L: LangExt> Error<L> {
+	#[must_use]
+	pub fn expected(&self) -> &'static [&'static str] {
+		self.expected
+	}
+
+	#[must_use]
+	pub fn found(&self) -> Lexeme<L> {
+		self.found.clone()
+	}
+}
+
+impl<L: LangExt> std::fmt::Display for Error<L>
+where
+	L::Token: std::fmt::Display,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"found {} at {:?} - expected one of the following: {}",
+			self.found.kind,
+			self.found.span,
+			{
+				let mut out = String::new();
+
+				for e in self.expected {
+					out.push_str(e);
+					out.push('/');
+				}
+
+				out.pop();
+				out
+			}
+		)
+	}
+}
+
+impl<L: LangExt> std::fmt::Debug for Error<L>
+where
+	L::Token: std::fmt::Debug,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Error")
+			.field("expected", &self.expected)
+			.field("found", &self.found)
+			.finish()
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Lexeme<L: LangExt> {
 	kind: L::Token,
 	span: logos::Span,
 }

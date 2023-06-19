@@ -147,13 +147,24 @@ pub mod hand {
 		let root = p.open();
 
 		while !p.eof() {
+			if _trivia(p) {
+				continue;
+			}
+
 			if p.at_if(|t| matches!(t, Token::Ident | Token::Dollar) || t.is_keyword()) {
 				_kvp(p);
 			} else if p.at(Token::BracketL) {
 				_header(p);
-			} else if _trivia(p) {
 			} else {
-				p.advance_with_error(Syn::Unknown);
+				p.advance_with_error(
+					Syn::Unknown,
+					&[
+						"a key-value pair (`$` or an identifier)",
+						"a header (`[`)",
+						"whitespace",
+						"a comment",
+					],
+				);
 			}
 		}
 
@@ -162,62 +173,63 @@ pub mod hand {
 
 	pub fn _kvp(p: &mut crate::parser::Parser<Syn>) {
 		debug_assert!(p.at_if(|t| matches!(t, Token::Ident | Token::Dollar)));
-
 		let kvp = p.open();
 
 		if p.at(Token::Dollar) {
 			_ifgame(p);
 		}
 
-		p.expect_if(|t| t == Token::Ident || t.is_keyword(), Syn::Ident);
+		p.expect_if(
+			|t| t == Token::Ident || t.is_keyword(),
+			Syn::Ident,
+			&["an identifier"],
+		);
 		_trivia_0plus(p);
-		p.expect(Token::Eq, Syn::Eq);
+		p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+		_string(p);
 
 		loop {
 			if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
 				break;
 			}
 
-			_trivia_0plus(p);
-
-			if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
-				break;
-			}
-
-			p.expect(Token::StringLit, Syn::StringLit);
+			_string(p);
 		}
 
 		_trivia_0plus(p);
 		p.eat(Token::Semicolon, Syn::Semicolon);
-
 		p.close(kvp, Syn::KeyValuePair);
+	}
+
+	fn _string(p: &mut crate::parser::Parser<Syn>) {
+		_trivia_0plus(p);
+		p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
 	}
 
 	fn _ifgame(p: &mut crate::parser::Parser<Syn>) {
 		debug_assert!(p.at(Token::Dollar));
-
 		let ifgame = p.open();
-
-		p.expect(Token::Dollar, Syn::Dollar);
+		p.expect(Token::Dollar, Syn::Dollar, &["`$`"]);
 		_trivia_0plus(p);
-		p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame);
+		p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &["`ifgame`"]);
 		_trivia_0plus(p);
-		p.expect(Token::ParenL, Syn::ParenL);
+		p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
 		_trivia_0plus(p);
-		p.expect_if(|t| t == Token::Ident || t.is_keyword(), Syn::Ident);
+		p.expect_if(
+			|t| t == Token::Ident || t.is_keyword(),
+			Syn::Ident,
+			&["an identifier"],
+		);
 		_trivia_0plus(p);
-		p.expect(Token::ParenR, Syn::ParenR);
+		p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
 		_trivia_0plus(p);
-
 		p.close(ifgame, Syn::GameQualifier);
 	}
 
 	pub fn _header(p: &mut crate::parser::Parser<Syn>) {
 		debug_assert!(p.at(Token::BracketL));
-
 		let header = p.open();
-
-		p.expect(Token::BracketL, Syn::BracketL);
+		p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
 
 		while !p.at(Token::BracketR) && !p.eof() {
 			if _trivia(p) {
@@ -236,18 +248,19 @@ pub mod hand {
 				Token::KwDefault => p.advance(Syn::KwDefault),
 				Token::Asterisk => p.advance(Syn::Asterisk),
 				_ => {
-					if !p.eof() {
-						p.advance(Syn::Unknown);
+					if p.at_any(&[Token::Dollar]) {
+						break;
 					}
 
-					p.close(header, Syn::Error);
-					return;
+					return p.advance_with_error(
+						Syn::Unknown,
+						&["`~`", "`*`", "`default`", "an identifier"],
+					);
 				}
 			}
 		}
 
-		p.expect(Token::BracketR, Syn::BracketR);
-
+		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
 		p.close(header, Syn::Header);
 	}
 
@@ -264,10 +277,13 @@ pub mod hand {
 	}
 
 	fn _trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
-		p.expect_any(&[
-			(Token::Whitespace, Syn::Whitespace),
-			(Token::Comment, Syn::Comment),
-		]);
+		p.expect_any(
+			&[
+				(Token::Whitespace, Syn::Whitespace),
+				(Token::Comment, Syn::Comment),
+			],
+			&["whitespace or a comment (one or more)"],
+		);
 
 		loop {
 			if !_trivia(p) {
@@ -302,9 +318,12 @@ $ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
 MEGALOPOLIS = "The Omega";
 "#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
-		let result = crate::parse(file(), SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
+		hand::_file(&mut parser);
+		let (root, errors) = parser.finish();
+		let ptree: ParseTree = ParseTree::new(root, vec![]);
+		assert!(errors.is_empty());
+
 		let mut ast = ptree.cursor().children();
 
 		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
@@ -341,16 +360,26 @@ MEGALOPOLIS = "The Omega";
 	fn error_recovery() {
 		const SOURCE: &str = r#"
 ABDUCTION = ;
-[eng]
+[eng
 $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
-		let result = crate::parse(file(), SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
+		hand::_file(&mut parser);
+		let (root, errors) = parser.finish();
+		let ptree: ParseTree = ParseTree::new(root, vec![]);
+
+		for err in errors {
+			dbg!(err);
+		}
+
+		prettyprint(ptree.cursor());
+
 		let mut ast = ptree.cursor().children();
 
-		assert_eq!(ast.next().unwrap().kind(), Syn::Error);
+		let kvp = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
+		assert_eq!(kvp.key().text(), "ABDUCTION");
+		assert_eq!(kvp.string_parts().count(), 0);
 
 		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
 		let mut header_contents = header.contents();
