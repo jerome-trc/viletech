@@ -1,8 +1,8 @@
 //! A general-purpose LL parser.
 //!
 //! This design is derived from those presented in the following articles:
-//! - https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html
-//! - https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+//! - <https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html>
+//! - <https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html>
 
 use std::cell::Cell;
 
@@ -43,6 +43,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
+	/// Starts a new sub-tree. Also see [`Self::close`].
 	#[must_use]
 	pub fn open(&mut self) -> OpenMark {
 		let checkpoint = OpenMark(self.events.len());
@@ -50,6 +51,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		checkpoint
 	}
 
+	/// Also see [`Self::open`]. Will panic if no sub-trees are open.
 	pub fn close(&mut self, mark: OpenMark, syn: L::Kind) -> CloseMark {
 		self.events[mark.0] = Event::Open(L::kind_to_raw(syn));
 		self.events.push(Event::Close);
@@ -91,17 +93,27 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			.map_or(L::EOF, |lexeme| lexeme.kind)
 	}
 
+	/// Shorthand for `self.nth(0) == token`.
 	#[must_use]
 	pub fn at(&self, token: L::Token) -> bool {
 		self.nth(0) == token
 	}
 
+	/// See [`Self::at`].
 	#[must_use]
 	pub fn at_any(&self, choices: &'static [L::Token]) -> bool {
 		let token = self.nth(0);
 		choices.iter().any(|t| *t == token)
 	}
 
+	/// Like [`Self::at`], but only matches `token` as long as it holds `string`,
+	/// ASCII case-insensitively.
+	///
+	/// This is needed for (G)ZDoom DSLs, many of which are unspecified and use only an
+	/// ad-hoc parser as DoomFront's reference implementation. Representing every niche
+	/// keyword used by every one of these languages would add complexity to every parser
+	/// (since each would have to treat foreign keywords as identifiers), so instead
+	/// make the smaller languages look for their keywords through identifiers.
 	#[must_use]
 	pub fn at_str_nc(&self, token: L::Token, string: &'static str) -> bool {
 		let eof = Lexeme {
@@ -114,11 +126,13 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		lexeme.kind == token && self.source[lexeme.span.clone()].eq_ignore_ascii_case(string)
 	}
 
+	/// See [`Self::at`].
 	#[must_use]
 	pub fn at_if(&self, predicate: fn(L::Token) -> bool) -> bool {
 		predicate(self.nth(0))
 	}
 
+	/// If [`Self::at`] matches `token`, [`Self::advance`] with `syn`.
 	pub fn eat(&mut self, token: L::Token, syn: L::Kind) -> bool {
 		if self.at(token) {
 			self.advance(syn);
@@ -128,6 +142,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
+	/// Like [`Self::eat`] but checks [`Self::at`] on each choice in the given order.
 	pub fn eat_any(&mut self, choices: &'static [(L::Token, L::Kind)]) -> bool {
 		for choice in choices {
 			if self.at(choice.0) {
@@ -139,16 +154,10 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		false
 	}
 
+	/// Composes [`Self::eat`] and [`Self::at_str_nc`].
 	#[must_use]
 	pub fn eat_str_nc(&mut self, token: L::Token, string: &'static str, syn: L::Kind) -> bool {
-		let eof = Lexeme {
-			kind: L::EOF,
-			span: self.source.len()..self.source.len(),
-		};
-
-		let lexeme = self.tokens.get(self.pos).unwrap_or(&eof);
-
-		if lexeme.kind == token && self.source[lexeme.span.clone()].eq_ignore_ascii_case(string) {
+		if self.at_str_nc(token, string) {
 			self.advance(syn);
 			return true;
 		}
@@ -156,6 +165,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		false
 	}
 
+	/// Composes [`Self::eat`] and [`Self::at_if`].
 	#[must_use]
 	pub fn eat_if(&mut self, predicate: fn(L::Token) -> bool, syn: L::Kind) -> bool {
 		if self.at_if(predicate) {
@@ -166,6 +176,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
+	/// If [`Self::eat`] fails to consume `token`, raise an error.
 	pub fn expect(&mut self, token: L::Token, syn: L::Kind, expected: &'static [&'static str]) {
 		if self.eat(token, syn) {
 			return;
@@ -177,6 +188,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// If [`Self::eat_str_nc`] fails to consume `token` corresponding to `string`
+	/// ASCII-case insensitively, raise an error.
 	pub fn expect_str_nc(
 		&mut self,
 		token: L::Token,
@@ -194,6 +207,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// Composes [`Self::expect`] and [`Self::eat_if`].
 	pub fn expect_if(
 		&mut self,
 		predicate: fn(L::Token) -> bool,
@@ -210,6 +224,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// Composes [`Self::expect`] and [`Self::eat_any`].
 	pub fn expect_any(
 		&mut self,
 		choices: &'static [(L::Token, L::Kind)],
@@ -227,6 +242,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// Composes [`Self::expect_any`] and [`Self::expect_str_nc`].
 	pub fn expect_any_str_nc(
 		&mut self,
 		choices: &'static [(L::Token, &'static str, L::Kind)],
@@ -244,6 +260,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// [Opens] a new error node, [advances] it with a `syn` token, and then [closes] it.
+	///
+	/// [Opens]: Parser::open
+	/// [advances]: Parser::advance
+	/// [closes]: Parser::close
 	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
 		let ckpt = self.open();
 
@@ -269,6 +290,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.close(checkpoint, err)
 	}
 
+	/// Panics if an [opened] subtree was never [closed], or if no sub-trees
+	/// were ever opened at all.
+	///
+	/// [opened]: Self::open
+	/// [closed]: Self::close
 	#[must_use]
 	pub fn finish(self) -> (GreenNode, Vec<Error<L>>) {
 		let mut tokens = self.tokens.into_iter();
@@ -294,9 +320,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	}
 }
 
+/// See [`Parser::open`] and [`Parser::close`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct OpenMark(usize);
 
+/// See [`Parser::close`] and [`Parser::open_before`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CloseMark(usize);
 
