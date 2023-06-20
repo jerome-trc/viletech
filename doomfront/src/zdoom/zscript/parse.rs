@@ -16,6 +16,7 @@ use crate::{
 
 use super::Syn;
 
+use self::common::trivia;
 pub use self::{actor::*, expr::*, stat::*, structure::*, top::*};
 
 /// Gives context to functions yielding parser combinators
@@ -55,6 +56,38 @@ impl ParserBuilder {
 		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
 		.boxed()
 	}
+}
+
+pub fn file(p: &mut crate::parser::Parser<Syn>) {
+	let root = p.open();
+
+	while !p.eof() {
+		if trivia(p) {
+			continue;
+		}
+
+		match p.nth(0) {
+			Token::KwConst => const_def(p),
+			Token::KwEnum => enum_def(p),
+			Token::PoundInclude => include_directive(p),
+			Token::KwVersion => version_directive(p),
+			_ => p.advance_with_error(
+				Syn::from(p.nth(0)),
+				&[
+					"`const`",
+					"`enum`",
+					"`class`",
+					"`struct`",
+					"`mixin`",
+					"`extend`",
+					"`#include`",
+					"`version`",
+				],
+			),
+		}
+	}
+
+	p.close(root, Syn::Root);
 }
 
 #[cfg(test)]

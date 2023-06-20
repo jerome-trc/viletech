@@ -173,14 +173,18 @@ pub enum Syn {
 	KwAction,
 	KwAlignOf,
 	KwArray,
+	KwBool,
 	KwBreak,
 	/// Only a keyword in [`Syn::StateDef`] elements.
 	KwBright,
+	KwByte,
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwCanRaise,
 	KwCase,
+	KwChar,
 	KwClass,
 	KwClearScope,
+	KwColor,
 	KwConst,
 	KwContinue,
 	KwCross,
@@ -189,6 +193,7 @@ pub enum Syn {
 	KwDeprecated,
 	KwDo,
 	KwDot,
+	KwDouble,
 	KwElse,
 	KwEnum,
 	KwExtend,
@@ -198,10 +203,14 @@ pub enum Syn {
 	KwFast,
 	KwFinal,
 	KwFlagdef,
+	KwFloat,
 	KwForEach,
 	KwFor,
 	KwGoto,
 	KwIf,
+	KwInt,
+	KwInt16,
+	KwInt8,
 	KwInternal,
 	KwIn,
 	KwIs,
@@ -209,12 +218,14 @@ pub enum Syn {
 	KwLet,
 	/// Only a keyword in [`Syn::StateLight`] elements.
 	KwLight,
+	KwLong,
 	/// Only a keyword in [`Syn::StateFlow`] elements.
 	KwLoop,
 	KwMap,
 	KwMapIterator,
 	KwMeta,
 	KwMixin,
+	KwName,
 	KwNative,
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwNoDelay,
@@ -228,27 +239,40 @@ pub enum Syn {
 	KwProtected,
 	KwReadonly,
 	KwReturn,
+	KwSByte,
+	KwShort,
 	KwSizeof,
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwSlow,
+	KwSound,
+	KwState,
 	KwStates,
 	KwStatic,
-	/// Only a keyword in [`Syn::StateChange`] elements.
+	/// Only a keyword in [`Syn::StateFlow`] elements.
 	KwStop,
+	KwString,
 	KwStruct,
 	KwSuper,
 	KwSwitch,
 	KwReplaces,
 	KwTransient,
 	KwUi,
+	KwUInt,
+	KwUInt16,
+	KwUInt8,
+	KwULong,
 	KwUntil,
+	KwUShort,
 	KwVar,
 	KwVarArg,
+	KwVector2,
+	KwVector3,
 	/// Always child to a [`Syn::VersionQual`] node.
 	KwVersion,
 	KwVirtual,
 	KwVirtualScope,
-	/// Only a keyword in [`Syn::StateChange`] elements.
+	KwVoid,
+	/// Only a keyword in [`Syn::StateFlow`] elements.
 	KwWait,
 	KwWhile,
 	// Tokens: glyphs, composite glyphs ////////////////////////////////////////
@@ -424,22 +448,22 @@ impl From<crate::zdoom::Token> for Syn {
 			Self::NameLit,
 			Self::StringLit,
 			// Keywords ////////////////////////////////////////////////////////
-			Self::Unknown, // Dummy; effectively unreachable.
+			Self::Unknown, // __FirstKw
 			Self::KwAbstract,
 			Self::KwAction,
 			Self::KwAlignOf,
 			Self::KwArray,
 			Self::Ident, // KwAuto
-			Self::Ident, // KwBool
+			Self::KwBool,
 			Self::KwBreak,
 			Self::KwBright,
-			Self::Ident, // KwByte
+			Self::KwByte,
 			Self::KwCanRaise,
 			Self::KwCase,
-			Self::Ident, // KwChar
+			Self::Ident,
 			Self::KwClearScope,
 			Self::KwClass,
-			Self::Ident, // KwColor
+			Self::KwColor,
 			Self::KwConst,
 			Self::KwContinue,
 			Self::KwCross,
@@ -447,7 +471,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Self::KwDeprecated,
 			Self::KwDo,
 			Self::KwDot,
-			Self::Ident, // KwDouble
+			Self::KwDouble,
 			Self::KwElse,
 			Self::KwEnum,
 			Self::KwExtend,
@@ -456,26 +480,26 @@ impl From<crate::zdoom::Token> for Syn {
 			Self::KwFast,
 			Self::KwFinal,
 			Self::KwFlagdef,
-			Self::Ident, // KwFloat
+			Self::KwFloat,
 			Self::KwFor,
 			Self::KwForEach,
 			Self::KwGoto,
 			Self::KwIn,
 			Self::KwIf,
-			Self::Ident, // KwInt
-			Self::Ident, // KwInt16
-			Self::Ident, // KwInt8
+			Self::KwInt,
+			Self::KwInt16,
+			Self::KwInt8,
 			Self::KwInternal,
 			Self::KwIs,
 			Self::KwLet,
 			Self::KwLight,
-			Self::Ident, // KwLong
+			Self::KwLong,
 			Self::KwLoop,
 			Self::KwMap,
 			Self::KwMapIterator,
 			Self::KwMeta,
 			Self::KwMixin,
-			Self::Ident, // KwName
+			Self::KwName, // KwName
 			Self::KwNative,
 			Self::KwNoDelay,
 			Self::Ident,   // KwNone
@@ -490,40 +514,40 @@ impl From<crate::zdoom::Token> for Syn {
 			Self::KwReadonly,
 			Self::KwReplaces,
 			Self::KwReturn,
-			Self::Ident, // KwSByte
-			Self::Ident, // KwShort
+			Self::Ident,
+			Self::Ident,
 			Self::KwSizeof,
 			Self::KwSlow,
-			Self::Ident, // KwSound
-			Self::Ident, // KwState
+			Self::KwSound,
+			Self::KwState,
 			Self::KwStates,
 			Self::KwStatic,
 			Self::KwStop,
-			Self::Ident, // KwString
+			Self::KwString,
 			Self::KwStruct,
 			Self::KwSuper,
 			Self::KwSwitch,
 			Self::KwTransient,
 			Self::TrueLit, // KwTrue
 			Self::KwUi,
-			Self::Ident, // KwUInt
-			Self::Ident, // KwUInt16
-			Self::Ident, // KwUInt8
-			Self::Ident, // KwULong
+			Self::KwUInt,
+			Self::KwUInt16,
+			Self::KwUInt8,
+			Self::KwULong,
 			Self::KwUntil,
-			Self::Ident, // KwUShort
+			Self::KwUShort,
 			Self::KwVar,
 			Self::KwVarArg,
-			Self::Ident, // KwVector2
-			Self::Ident, // KwVector3
+			Self::KwVector2,
+			Self::KwVector3,
 			Self::KwVersion,
 			Self::KwVirtual,
 			Self::KwVirtualScope,
-			Self::Ident, // KwVoid
+			Self::KwVoid,
 			Self::Ident, // KwVolatile
 			Self::KwWait,
 			Self::KwWhile,
-			Self::Unknown, // Dummy; effectively unreachable.
+			Self::Unknown, // __LastKw
 			// Glyphs //////////////////////////////////////////////////////////
 			Self::Ampersand,
 			Self::Ampersand2,

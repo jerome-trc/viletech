@@ -240,32 +240,68 @@ impl ParserBuilder {
 }
 
 pub(super) fn ident(p: &mut crate::parser::Parser<Syn>) {
-	p.expect_any(
-		&[
-			(Token::Ident, Syn::Ident),
-			(Token::KwBright, Syn::Ident),
-			(Token::KwCanRaise, Syn::Ident),
-			(Token::KwFast, Syn::Ident),
-			(Token::KwLight, Syn::Ident),
-			(Token::KwOffset, Syn::Ident),
-			(Token::KwSlow, Syn::Ident),
-		],
-		&["an identifier"],
-	)
+	p.expect_any(IDENT_TOKENS, &["an identifier"])
+}
+
+#[must_use]
+pub(super) fn is_ident(token: Token) -> bool {
+	IDENT_TOKENS.iter().any(|t| t.0 == token)
 }
 
 #[must_use]
 pub(super) fn eat_ident(p: &mut crate::parser::Parser<Syn>) -> bool {
-	p.eat_any(&[
-		(Token::Ident, Syn::Ident),
-		(Token::KwBright, Syn::Ident),
-		(Token::KwCanRaise, Syn::Ident),
-		(Token::KwFast, Syn::Ident),
-		(Token::KwLight, Syn::Ident),
-		(Token::KwOffset, Syn::Ident),
-		(Token::KwSlow, Syn::Ident),
-	])
+	p.eat_any(IDENT_TOKENS)
 }
+
+/// Like [`ident`] but allows [`Token::KwProperty`] and builtin type names.
+pub(super) fn ident_lax(p: &mut crate::parser::Parser<Syn>) {
+	p.expect_if(is_ident_lax, Syn::Ident, &["an identifier"])
+}
+
+#[must_use]
+pub(super) fn is_ident_lax(token: Token) -> bool {
+	is_ident(token) || IDENT_TOKENS_LAX.iter().any(|t| t.0 == token)
+}
+
+const IDENT_TOKENS: &[(Token, Syn)] = &[
+	(Token::Ident, Syn::Ident),
+	(Token::KwBright, Syn::Ident),
+	(Token::KwCanRaise, Syn::Ident),
+	(Token::KwFast, Syn::Ident),
+	(Token::KwLight, Syn::Ident),
+	(Token::KwOffset, Syn::Ident),
+	(Token::KwSlow, Syn::Ident),
+];
+
+const IDENT_TOKENS_LAX: &[(Token, Syn)] = &[
+	(Token::KwInt16, Syn::Ident),
+	(Token::KwSByte, Syn::Ident),
+	(Token::KwByte, Syn::Ident),
+	(Token::KwInt8, Syn::Ident),
+	(Token::KwUInt8, Syn::Ident),
+	(Token::KwShort, Syn::Ident),
+	(Token::KwUShort, Syn::Ident),
+	(Token::KwInt16, Syn::Ident),
+	(Token::KwUInt16, Syn::Ident),
+	(Token::KwInt, Syn::Ident),
+	(Token::KwUInt, Syn::Ident),
+	(Token::KwFloat, Syn::Ident),
+	(Token::KwDouble, Syn::Ident),
+	(Token::KwString, Syn::Ident),
+	(Token::KwVector2, Syn::Ident),
+	(Token::KwVector3, Syn::Ident),
+	// Curiously, ZScript's Lemon grammar prescribes a `vector4` keyword as
+	// being an option here, but there's no RE2C lexer rule for it.
+	(Token::KwName, Syn::Ident),
+	(Token::KwMap, Syn::Ident),
+	(Token::KwMapIterator, Syn::Ident),
+	(Token::KwArray, Syn::Ident),
+	(Token::KwVoid, Syn::Ident),
+	(Token::KwState, Syn::Ident),
+	(Token::KwColor, Syn::Ident),
+	(Token::KwSound, Syn::Ident),
+	(Token::KwProperty, Syn::Ident),
+];
 
 pub(super) fn trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
 	p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
@@ -275,7 +311,7 @@ pub(super) fn trivia_0plus(p: &mut crate::parser::Parser<Syn>) {
 	while trivia(p) {}
 }
 
-pub(super) fn _trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
 	p.expect_any(
 		&[
 			(Token::Whitespace, Syn::Whitespace),

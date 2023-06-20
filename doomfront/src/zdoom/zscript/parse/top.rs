@@ -6,7 +6,13 @@ use rowan::GreenNode;
 use crate::{
 	comb, parser_t,
 	parsing::*,
-	zdoom::{zscript::Syn, Token},
+	zdoom::{
+		zscript::{
+			parse::{common::*, expr},
+			Syn,
+		},
+		Token,
+	},
 };
 
 use super::ParserBuilder;
@@ -95,12 +101,117 @@ impl ParserBuilder {
 	}
 }
 
+/// Builds a [`Syn::ConstDef`] node.
+pub fn const_def(p: &mut crate::parser::Parser<Syn>) {
+	debug_assert!(p.at(Token::KwConst));
+	let constdef = p.open();
+	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
+	trivia_1plus(p);
+	ident(p);
+	trivia_0plus(p);
+	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	trivia_0plus(p);
+	expr(p);
+	trivia_0plus(p);
+	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.close(constdef, Syn::ConstDef);
+}
+
+/// Builds a [`Syn::EnumDef`] node.
+pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
+	fn variant(p: &mut crate::parser::Parser<Syn>) {
+		let var = p.open();
+		ident_lax(p);
+		trivia_0plus(p);
+
+		if p.eat(Token::Eq, Syn::Eq) {
+			trivia_0plus(p);
+			expr(p);
+		}
+
+		p.close(var, Syn::EnumVariant);
+	}
+
+	debug_assert!(p.at(Token::KwEnum));
+	let enumdef = p.open();
+	p.expect(Token::KwEnum, Syn::KwEnum, &["`enum`"]);
+	trivia_1plus(p);
+	ident_lax(p);
+	trivia_0plus(p);
+
+	if p.eat(Token::Colon, Syn::Colon) {
+		trivia_0plus(p);
+
+		p.expect_any(
+			&[
+				(Token::KwSByte, Syn::KwSByte),
+				(Token::KwByte, Syn::KwByte),
+				(Token::KwShort, Syn::KwShort),
+				(Token::KwUShort, Syn::KwUShort),
+				(Token::KwInt, Syn::KwInt),
+				(Token::KwUInt, Syn::KwUInt),
+			],
+			&[
+				"`sbyte` or `byte` or `int8` or `uint8`",
+				"`short` or `ushort` or `int16` or `uint16`",
+				"`int` or `uint`",
+			],
+		);
+	}
+
+	trivia_0plus(p);
+	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	trivia_0plus(p);
+
+	if p.at_if(is_ident_lax) {
+		variant(p);
+		trivia_0plus(p);
+
+		while !p.at(Token::BraceR) && !p.eof() {
+			if p.eat(Token::Comma, Syn::Comma) {
+				trivia_0plus(p);
+				if p.at_if(is_ident_lax) {
+					variant(p);
+				}
+			}
+		}
+	}
+
+	trivia_0plus(p);
+	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	trivia_0plus(p);
+	p.eat(Token::Semicolon, Syn::Semicolon);
+	p.close(enumdef, Syn::EnumDef);
+}
+
+/// Builds a [`Syn::IncludeDirective`] node.
+pub fn include_directive(p: &mut crate::parser::Parser<Syn>) {
+	debug_assert!(p.at(Token::PoundInclude));
+	let directive = p.open();
+	p.expect(Token::PoundInclude, Syn::PoundInclude, &["`#include`"]);
+	trivia_0plus(p);
+	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.close(directive, Syn::IncludeDirective);
+}
+
+/// Builds a [`Syn::VersionDirective`] node.
+pub fn version_directive(p: &mut crate::parser::Parser<Syn>) {
+	debug_assert!(p.at(Token::KwVersion));
+	let directive = p.open();
+	p.expect(Token::KwVersion, Syn::KwVersion, &["`version`"]);
+	trivia_0plus(p);
+	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.close(directive, Syn::VersionDirective);
+}
+
 #[cfg(test)]
-#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
-		zdoom::{zscript::ParseTree, Version},
+		zdoom::{
+			self,
+			zscript::{parse::file, ParseTree},
+		},
 	};
 
 	use super::*;
@@ -109,10 +220,7 @@ mod test {
 	fn smoke_constdef() {
 		const SOURCE: &str = r#"const GOLDEN_ANARCHY = BUSHFIRE >>> NONSPECIFIC_TECH_BASE;"#;
 
-		let tbuf = crate::_scan(SOURCE, Version::default());
-		let parser = ParserBuilder::new(Version::default()).const_def();
-		let result = crate::_parse(parser, SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let ptree: ParseTree = crate::parse(SOURCE, const_def, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 
@@ -133,10 +241,7 @@ enum BrickAndRoot {
 }
 "#;
 
-		let tbuf = crate::_scan(SOURCE, Version::default());
-		let parser = ParserBuilder::new(Version::default()).file();
-		let result = crate::_parse(parser, SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 
@@ -151,10 +256,7 @@ version "3.7.1"
 
 "##;
 
-		let tbuf = crate::_scan(SOURCE, Version::default());
-		let parser = ParserBuilder::new(Version::default()).file();
-		let result = crate::_parse(parser, SOURCE, &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 }
