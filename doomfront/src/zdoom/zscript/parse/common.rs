@@ -515,7 +515,12 @@ pub fn type_ref(p: &mut crate::parser::Parser<Syn>) {
 				p.advance(Syn::At);
 				ident(p);
 			} else {
-				p.advance_err_and_close(tref, Syn::from(t), Syn::ReadonlyType);
+				p.advance_err_and_close(
+					tref,
+					Syn::from(t),
+					Syn::ReadonlyType,
+					&["an identifier", "`@`"],
+				);
 				return;
 			}
 
@@ -530,20 +535,21 @@ pub fn type_ref(p: &mut crate::parser::Parser<Syn>) {
 			p.close(tref, Syn::NativeType);
 		}
 		other => {
-			p.advance_err_and_close(tref, Syn::from(other), Syn::Error);
-
-			/*
-				TODO: `advance_err_and_close` needs an expected param. Pass the following:
-
-				"`let`",
-				"`class`",
-				"`array`",
-				"`map`",
-				"`mapiterator`",
-				"`readonly`",
-				"`@`",
-				"an identifier"
-			*/
+			p.advance_err_and_close(
+				tref,
+				Syn::from(other),
+				Syn::Error,
+				&[
+					"`let`",
+					"`class`",
+					"`array`",
+					"`map`",
+					"`mapiterator`",
+					"`readonly`",
+					"`@`",
+					"an identifier",
+				],
+			);
 		}
 	}
 }

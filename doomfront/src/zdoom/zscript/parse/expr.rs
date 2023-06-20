@@ -547,7 +547,7 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 
 				p.close(ex, Syn::VectorExpr)
 			} else {
-				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error)
+				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error, &["`)`", "`,`"])
 			}
 		}
 		Token::Bang => {
@@ -580,7 +580,27 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 			recur(p, Token::Tilde);
 			p.close(ex, Syn::PrefixExpr)
 		}
-		_ => p.advance_err_and_close(ex, Syn::Unknown, Syn::Error),
+		_ => p.advance_err_and_close(
+			ex,
+			Syn::Unknown,
+			Syn::Error,
+			&[
+				"an integer",
+				"a floating-point number",
+				"a string",
+				"a name",
+				"`true`",
+				"`false`",
+				"`null`",
+				"`(`",
+				"`!`",
+				"`--`",
+				"`++`",
+				"`-`",
+				"`+`",
+				"`~`",
+			],
+		),
 	}
 }
 

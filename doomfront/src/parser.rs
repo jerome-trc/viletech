@@ -275,11 +275,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			.unwrap_or(L::EOF)
 	}
 
-	/// [Opens] a new error node, [advances] it with a `syn` token, and then [closes] it.
-	///
-	/// [Opens]: Parser::open
-	/// [advances]: Parser::advance
-	/// [closes]: Parser::close
+	/// [Opens](Self::open) a new error node, [advances](Self::advance) it with
+	/// a `syn` token, and then [closes](Self::close) it.
 	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
 		let ckpt = self.open();
 
@@ -292,12 +289,20 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.close(ckpt, L::ERR_NODE);
 	}
 
+	/// Raise an error and advance the token cursor (if not at the end-of-input).
+	/// The sub-tree opened by `checkpoint` gets [closed](Self::close) with `err`.
 	pub fn advance_err_and_close(
 		&mut self,
 		checkpoint: OpenMark,
 		token: L::Kind,
 		err: L::Kind,
+		expected: &'static [&'static str],
 	) -> CloseMark {
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
+
 		if !self.eof() {
 			self.advance(token);
 		}

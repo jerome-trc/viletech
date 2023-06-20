@@ -547,7 +547,12 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 					Syn::DoUntilStat
 				}
 				t => {
-					p.advance_err_and_close(stat, Syn::from(t), Syn::Error);
+					p.advance_err_and_close(
+						stat,
+						Syn::from(t),
+						Syn::Error,
+						&["`until`", "`while`"],
+					);
 					return;
 				}
 			};
@@ -745,7 +750,7 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 				trivia_0plus(p);
 				ident(p);
 			} else {
-				p.advance_err_and_close(stat, Syn::from(t), Syn::Error);
+				p.advance_err_and_close(stat, Syn::from(t), Syn::Error, &["`[`", "an identifier"]);
 				return;
 			}
 
@@ -863,7 +868,12 @@ fn local_var_init(p: &mut crate::parser::Parser<Syn>) {
 			p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
 		}
 		other => {
-			p.advance_err_and_close(init, Syn::from(other), Syn::LocalVarInit);
+			p.advance_err_and_close(
+				init,
+				Syn::from(other),
+				Syn::LocalVarInit,
+				&["`[`", "`=`", "`{`"],
+			);
 			return;
 		}
 	}
