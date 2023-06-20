@@ -77,7 +77,7 @@ pub enum PrepErrorKind {
 	/// A [virtual file](vfs::File) was expected to have some byte or string content,
 	/// but was instead empty or a directory.
 	Unreadable(VPathBuf),
-	LithParse(lith::parse::Error<'static>),
+	LithParse(lith::parse::Error),
 	/// Failure to decode a FLAC, MP3, Ogg, or WAV file.
 	WaveformAudio(kira::sound::FromFileError),
 }

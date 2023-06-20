@@ -9,7 +9,6 @@ use super::{Syn, SyntaxNode, SyntaxToken};
 /// Abstract syntax tree node representing a whole CVar definition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[repr(transparent)]
 pub struct CVar(SyntaxNode);
 
 impl CVar {
@@ -70,7 +69,6 @@ simple_astnode!(Syn, CVar, Syn::Definition);
 /// Abstract syntax tree node representing the scope specifier and qualifiers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[repr(transparent)]
 pub struct Flags(SyntaxNode);
 
 impl Flags {
@@ -107,16 +105,15 @@ simple_astnode!(Syn, Flags, Syn::Flags);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[repr(transparent)]
 pub struct Default(SyntaxNode);
 
 impl Default {
 	/// The kind of the returned token will be one of the following:
-	/// [`Syn::LitFalse`]
-	/// [`Syn::LitTrue`]
-	/// [`Syn::LitInt`]
-	/// [`Syn::LitFloat`]
-	/// [`Syn::LitString`]
+	/// [`Syn::FalseLit`]
+	/// [`Syn::TrueLit`]
+	/// [`Syn::IntLit`]
+	/// [`Syn::FloatLit`]
+	/// [`Syn::StringLit`]
 	#[must_use]
 	pub fn literal(&self) -> SyntaxToken {
 		self.0.last_token().unwrap()

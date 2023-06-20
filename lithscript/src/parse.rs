@@ -2,26 +2,22 @@
 //!
 //! To start you will likely want to use [`ParserBuilder::repl`] or [`ParserBuilder::file`].
 
-mod common;
-mod expr;
-mod item;
-mod stat;
-
 use std::{
 	marker::PhantomData,
 	path::{Path, PathBuf},
 };
 
-use doomfront::{
-	chumsky::{primitive, IterParser, Parser},
-	gcache::GreenCache,
-	parser_t,
-	rowan::GreenNode,
-};
+use doomfront::gcache::GreenCache;
 
 use crate::{ParseTree, Syn, Version};
 
-pub type Error<'i> = doomfront::ParseError<'i, Syn>;
+pub type Error = doomfront::ParseError<Syn>;
+
+impl doomfront::LangExt for Syn {
+	type Token = Self;
+	const EOF: Self::Token = Self::Eof;
+	const ERR_NODE: Self::Kind = Self::Error;
+}
 
 /// Gives context to functions yielding parser combinators
 /// (e.g. the user's selected LithScript version).
@@ -35,6 +31,7 @@ pub struct ParserBuilder<C: GreenCache> {
 	phantom: PhantomData<C>,
 }
 
+#[cfg(any())]
 impl<C: GreenCache> ParserBuilder<C> {
 	#[must_use]
 	pub fn new(version: Version) -> Self {
@@ -71,7 +68,7 @@ impl<C: GreenCache> ParserBuilder<C> {
 /// Gets compiled into one [module](crate::module::Module).
 #[derive(Debug)]
 pub struct FileParseTree {
-	inner: ParseTree<'static>,
+	inner: ParseTree,
 	path: PathBuf,
 }
 
@@ -82,13 +79,13 @@ impl FileParseTree {
 	}
 
 	#[must_use]
-	pub fn into_inner(self) -> ParseTree<'static> {
+	pub fn into_inner(self) -> ParseTree {
 		self.inner
 	}
 }
 
 impl std::ops::Deref for FileParseTree {
-	type Target = ParseTree<'static>;
+	type Target = ParseTree;
 
 	fn deref(&self) -> &Self::Target {
 		&self.inner

@@ -3,15 +3,15 @@
 use chumsky::{primitive, Parser};
 use rowan::{GreenToken, SyntaxKind};
 
-use crate::{parser_t, ParseError, ParseState};
+use crate::{_ParseError, _ParseState, parser_t};
 
 pub fn green_token<'i, T>(
 	syn: impl Into<SyntaxKind> + Copy,
-) -> impl Clone + Fn(T, logos::Span, &mut ParseState<'i>) -> GreenToken
+) -> impl Clone + Fn(T, logos::Span, &mut _ParseState<'i>) -> GreenToken
 where
 	T: 'i + logos::Logos<'i> + Eq + Copy,
 {
-	move |_, span, state: &mut ParseState| GreenToken::new(syn.into(), &state.source[span])
+	move |_, span, state: &mut _ParseState| GreenToken::new(syn.into(), &state.source[span])
 }
 
 /// Shorthand for the following:
@@ -50,13 +50,13 @@ where
 	L: 'i + Into<SyntaxKind> + Copy,
 {
 	primitive::just(token).try_map_with_state(
-		move |_, span: logos::Span, state: &mut ParseState<'i>| {
+		move |_, span: logos::Span, state: &mut _ParseState<'i>| {
 			let text: &str = &state.source[span.clone()];
 
 			if text.eq_ignore_ascii_case(string) {
 				Ok(GreenToken::new(syn.into(), text))
 			} else {
-				Err(ParseError::custom(
+				Err(_ParseError::custom(
 					span,
 					format!("expected `{string}`, found `{text}`"),
 				))

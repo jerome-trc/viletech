@@ -1,15 +1,6 @@
-use crate::{
-	parser::{LangExt, Parser},
-	zdoom::lex::Token,
-};
+use crate::{parser::Parser, zdoom::lex::Token};
 
 use super::syn::Syn;
-
-impl LangExt for Syn {
-	type Token = Token;
-	const EOF: Self::Token = Token::Eof;
-	const ERR_NODE: Self::Kind = Syn::Error;
-}
 
 pub fn file(p: &mut Parser<Syn>) {
 	let root = p.open();

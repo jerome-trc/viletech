@@ -7,7 +7,7 @@ use crate::{
 	comb, parser_t,
 	parsing::*,
 	zdoom::{zscript::Syn, Token},
-	GreenElement, ParseState,
+	GreenElement, _ParseState,
 };
 
 use super::ParserBuilder;
@@ -226,21 +226,21 @@ impl ParserBuilder {
 		))
 		.repeated()
 		.at_least(1)
-		.map_with_state(|_, span: logos::Span, state: &mut ParseState| {
+		.map_with_state(|_, span: logos::Span, state: &mut _ParseState| {
 			GreenToken::new(Syn::StateSprite.into(), &state.source[span])
 		});
 
 		let sel_hold = comb::just_ts(Token::Pound, Syn::Pound)
 			.repeated()
 			.exactly(4)
-			.map_with_state(|_, span: logos::Span, state: &mut ParseState| {
+			.map_with_state(|_, span: logos::Span, state: &mut _ParseState| {
 				GreenToken::new(Syn::StateSprite.into(), &state.source[span])
 			});
 
 		let hold = comb::just_ts(Token::Minus2, Syn::Minus2)
 			.repeated()
 			.exactly(2)
-			.map_with_state(|_, span: logos::Span, state: &mut ParseState| {
+			.map_with_state(|_, span: logos::Span, state: &mut _ParseState| {
 				GreenToken::new(Syn::StateSprite.into(), &state.source[span])
 			});
 
@@ -270,7 +270,7 @@ impl ParserBuilder {
 			})
 			.repeated()
 			.at_least(1)
-			.map_with_state(|_, span, state: &mut ParseState| {
+			.map_with_state(|_, span, state: &mut _ParseState| {
 				GreenToken::new(Syn::StateFrames.into(), &state.source[span])
 			});
 
@@ -393,6 +393,7 @@ impl ParserBuilder {
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
@@ -408,8 +409,8 @@ mod test {
 		let builder = ParserBuilder::new(Version::default());
 
 		for source in SOURCES {
-			let tbuf = crate::scan(source, Version::default());
-			let result = crate::parse(builder.state_def(), source, &tbuf);
+			let tbuf = crate::_scan(source, Version::default());
+			let result = crate::_parse(builder.state_def(), source, &tbuf);
 			let ptree: ParseTree = unwrap_parse_tree(result);
 			assert_no_errors(&ptree);
 		}

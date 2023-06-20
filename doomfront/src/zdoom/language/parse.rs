@@ -1,296 +1,138 @@
-use chumsky::{primitive, recovery, IterParser, Parser};
-use rowan::{GreenNode, GreenToken};
-
-use crate::{comb, parser_t, parsing::*, zdoom::lex::Token, GreenElement, ParseState};
+use crate::{parser::Parser, zdoom::lex::Token};
 
 use super::Syn;
 
-/// The returned parser emits a [`Syn::Root`] node.
-pub fn file<'i>() -> parser_t!(GreenNode) {
-	primitive::choice((trivia(), header(), key_val_pair()))
-		.repeated()
-		.collect::<Vec<_>>()
-		.map(|elems| GreenNode::new(Syn::Root.into(), elems))
-		.boxed()
-}
+/// Builds a [`Syn::Root`] node.
+pub fn file(p: &mut Parser<Syn>) {
+	let root = p.open();
 
-/// The returned parser emits a [`Syn::KeyValuePair`] node.
-pub fn key_val_pair<'i>() -> parser_t!(GreenElement) {
-	let ident = primitive::any()
-		.filter(|t: &Token| *t == Token::Ident || t.is_keyword())
-		.map_with_state(comb::green_token(Syn::Ident));
+	while !p.eof() {
+		if trivia(p) {
+			continue;
+		}
 
-	let rep = primitive::group((
-		trivia_0plus(),
-		comb::just_ts(Token::StringLit, Syn::StringLit),
-	));
-
-	let ifgame = primitive::group((
-		comb::just_ts(Token::Dollar, Syn::Dollar),
-		trivia_0plus(),
-		comb::string_nc(Token::Ident, "ifgame", Syn::KwIfGame),
-		trivia_0plus(),
-		comb::just_ts(Token::ParenL, Syn::ParenL),
-		trivia_0plus(),
-		ident.clone(),
-		trivia_0plus(),
-		comb::just_ts(Token::ParenR, Syn::ParenR),
-		trivia_0plus(),
-	))
-	.map(|group| coalesce_node(group, Syn::GameQualifier));
-
-	primitive::group((
-		ifgame.or_not(),
-		ident,
-		trivia_0plus(),
-		comb::just_ts(Token::Eq, Syn::Eq),
-		rep.repeated().at_least(1).collect::<Vec<_>>(),
-		trivia_0plus(),
-		comb::just_ts(Token::Semicolon, Syn::Semicolon).or_not(),
-	))
-	.map(|group| coalesce_node(group, Syn::KeyValuePair).into())
-	.recover_with(recovery::via_parser(recover_token(
-		[Token::Dollar, Token::Ident],
-		[Token::Ident, Token::BracketL],
-	)))
-}
-
-/// The returned parser emits a [`Syn::Header`] node.
-pub fn header<'i>() -> parser_t!(GreenElement) {
-	let content = primitive::choice((
-		comb::just_ts(Token::Tilde, Syn::Tilde),
-		comb::just_ts(Token::KwDefault, Syn::KwDefault),
-		comb::just_ts(Token::Asterisk, Syn::Asterisk),
-		primitive::any()
-			.filter(|token: &Token| token.is_keyword() || *token == Token::Ident)
-			.map_with_state(comb::green_token(Syn::Ident)),
-	));
-
-	let rep = primitive::group((trivia_1plus(), content.clone()));
-
-	primitive::group((
-		comb::just_ts(Token::BracketL, Syn::BracketL),
-		trivia_0plus(),
-		content,
-		rep.repeated().collect::<Vec<_>>(),
-		trivia_0plus(),
-		comb::just_ts(Token::BracketR, Syn::BracketR),
-	))
-	.map(|group| coalesce_node(group, Syn::Header).into())
-}
-
-fn recover_token<'i, S, U>(start: S, until: U) -> parser_t!(GreenElement)
-where
-	S: 'i + chumsky::container::Seq<'i, Token> + Copy,
-	U: 'i + chumsky::container::Seq<'i, Token> + Copy,
-{
-	let mapper = |token, span, state: &mut ParseState| {
-		let syn = match token {
-			Token::Whitespace => Syn::Whitespace,
-			Token::Comment => Syn::Comment,
-			_ => Syn::Unknown,
-		};
-
-		GreenToken::new(syn.into(), &state.source[span])
-	};
-
-	primitive::group((
-		primitive::one_of(start).map_with_state(mapper),
-		primitive::none_of(until)
-			.map_with_state(mapper)
-			.repeated()
-			.at_least(1)
-			.collect::<Vec<_>>(),
-	))
-	.map(|(start, mut following)| {
-		following.insert(0, start);
-
-		GreenNode::new(
-			Syn::Error.into(),
-			following.into_iter().map(|token| token.into()),
-		)
-		.into()
-	})
-}
-
-/// The returned parser emits a [`Syn::Whitespace`] or [`Syn::Comment`] token.
-fn trivia<'i>() -> parser_t!(GreenElement) {
-	primitive::choice((
-		comb::just_ts(Token::Whitespace, Syn::Whitespace),
-		comb::just_ts(Token::Comment, Syn::Comment),
-		comb::just_ts(Token::RegionStart, Syn::RegionStart),
-		comb::just_ts(Token::RegionEnd, Syn::RegionEnd),
-	))
-	.map(|token| token.into())
-}
-
-/// Shorthand for `self.trivia().repeated().collect()`.
-fn trivia_0plus<'i>() -> parser_t!(Vec<GreenElement>) {
-	trivia().repeated().collect()
-}
-
-/// Shorthand for `self.trivia().repeated().at_least(1).collect()`.
-fn trivia_1plus<'i>() -> parser_t!(Vec<GreenElement>) {
-	trivia().repeated().at_least(1).collect()
-}
-
-pub mod hand {
-	use super::*;
-
-	impl crate::parser::LangExt for Syn {
-		type Token = Token;
-		const EOF: Self::Token = Token::Eof;
-		const ERR_NODE: Self::Kind = Syn::Error;
+		if p.at_if(|t| matches!(t, Token::Ident | Token::Dollar) || t.is_keyword()) {
+			key_val_pair(p);
+		} else if p.at(Token::BracketL) {
+			header(p);
+		} else {
+			p.advance_with_error(
+				Syn::Unknown,
+				&[
+					"a key-value pair (`$` or an identifier)",
+					"a header (`[`)",
+					"whitespace",
+					"a comment",
+				],
+			);
+		}
 	}
 
-	pub fn _file(p: &mut crate::parser::Parser<Syn>) {
-		let root = p.open();
+	p.close(root, Syn::Root);
+}
 
-		while !p.eof() {
-			if _trivia(p) {
-				continue;
-			}
+/// Builds a [`Syn::KeyValuePair`] node.
+pub fn key_val_pair(p: &mut Parser<Syn>) {
+	debug_assert!(p.at_if(|t| matches!(t, Token::Ident | Token::Dollar)));
+	let kvp = p.open();
 
-			if p.at_if(|t| matches!(t, Token::Ident | Token::Dollar) || t.is_keyword()) {
-				_kvp(p);
-			} else if p.at(Token::BracketL) {
-				_header(p);
-			} else {
-				p.advance_with_error(
+	if p.at(Token::Dollar) {
+		ifgame(p);
+	}
+
+	p.expect_if(
+		|t| t == Token::Ident || t.is_keyword(),
+		Syn::Ident,
+		&["an identifier"],
+	);
+	trivia_0plus(p);
+	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	string(p);
+
+	loop {
+		if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
+			break;
+		}
+
+		string(p);
+	}
+
+	trivia_0plus(p);
+	p.eat(Token::Semicolon, Syn::Semicolon);
+	p.close(kvp, Syn::KeyValuePair);
+}
+
+fn string(p: &mut Parser<Syn>) {
+	trivia_0plus(p);
+	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+}
+
+/// Builds a [`Syn::GameQualifier`] node.
+fn ifgame(p: &mut Parser<Syn>) {
+	debug_assert!(p.at(Token::Dollar));
+	let ifgame = p.open();
+	p.expect(Token::Dollar, Syn::Dollar, &["`$`"]);
+	trivia_0plus(p);
+	p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &["`ifgame`"]);
+	trivia_0plus(p);
+	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	trivia_0plus(p);
+	p.expect_if(
+		|t| t == Token::Ident || t.is_keyword(),
+		Syn::Ident,
+		&["an identifier"],
+	);
+	trivia_0plus(p);
+	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	trivia_0plus(p);
+	p.close(ifgame, Syn::GameQualifier);
+}
+
+/// Builds a [`Syn::Header`] node.
+pub fn header(p: &mut Parser<Syn>) {
+	debug_assert!(p.at(Token::BracketL));
+	let header = p.open();
+	p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
+
+	while !p.at(Token::BracketR) && !p.eof() {
+		if trivia(p) {
+			continue;
+		}
+
+		let token = p.nth(0);
+
+		if token == Token::Ident || token.is_keyword() {
+			p.advance(Syn::Ident);
+			continue;
+		}
+
+		match token {
+			Token::Tilde => p.advance(Syn::Tilde),
+			Token::KwDefault => p.advance(Syn::KwDefault),
+			Token::Asterisk => p.advance(Syn::Asterisk),
+			_ => {
+				if p.at_any(&[Token::Dollar]) {
+					break;
+				}
+
+				return p.advance_with_error(
 					Syn::Unknown,
-					&[
-						"a key-value pair (`$` or an identifier)",
-						"a header (`[`)",
-						"whitespace",
-						"a comment",
-					],
+					&["`~`", "`*`", "`default`", "an identifier"],
 				);
 			}
 		}
-
-		p.close(root, Syn::Root);
 	}
 
-	pub fn _kvp(p: &mut crate::parser::Parser<Syn>) {
-		debug_assert!(p.at_if(|t| matches!(t, Token::Ident | Token::Dollar)));
-		let kvp = p.open();
+	p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+	p.close(header, Syn::Header);
+}
 
-		if p.at(Token::Dollar) {
-			_ifgame(p);
-		}
+fn trivia(p: &mut Parser<Syn>) -> bool {
+	p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
+}
 
-		p.expect_if(
-			|t| t == Token::Ident || t.is_keyword(),
-			Syn::Ident,
-			&["an identifier"],
-		);
-		_trivia_0plus(p);
-		p.expect(Token::Eq, Syn::Eq, &["`=`"]);
-		_string(p);
-
-		loop {
-			if p.at_any(&[Token::Eof, Token::Semicolon, Token::Ident, Token::BracketL]) {
-				break;
-			}
-
-			_string(p);
-		}
-
-		_trivia_0plus(p);
-		p.eat(Token::Semicolon, Syn::Semicolon);
-		p.close(kvp, Syn::KeyValuePair);
-	}
-
-	fn _string(p: &mut crate::parser::Parser<Syn>) {
-		_trivia_0plus(p);
-		p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
-	}
-
-	fn _ifgame(p: &mut crate::parser::Parser<Syn>) {
-		debug_assert!(p.at(Token::Dollar));
-		let ifgame = p.open();
-		p.expect(Token::Dollar, Syn::Dollar, &["`$`"]);
-		_trivia_0plus(p);
-		p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &["`ifgame`"]);
-		_trivia_0plus(p);
-		p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
-		_trivia_0plus(p);
-		p.expect_if(
-			|t| t == Token::Ident || t.is_keyword(),
-			Syn::Ident,
-			&["an identifier"],
-		);
-		_trivia_0plus(p);
-		p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
-		_trivia_0plus(p);
-		p.close(ifgame, Syn::GameQualifier);
-	}
-
-	pub fn _header(p: &mut crate::parser::Parser<Syn>) {
-		debug_assert!(p.at(Token::BracketL));
-		let header = p.open();
-		p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
-
-		while !p.at(Token::BracketR) && !p.eof() {
-			if _trivia(p) {
-				continue;
-			}
-
-			let token = p.nth(0);
-
-			if token == Token::Ident || token.is_keyword() {
-				p.advance(Syn::Ident);
-				continue;
-			}
-
-			match token {
-				Token::Tilde => p.advance(Syn::Tilde),
-				Token::KwDefault => p.advance(Syn::KwDefault),
-				Token::Asterisk => p.advance(Syn::Asterisk),
-				_ => {
-					if p.at_any(&[Token::Dollar]) {
-						break;
-					}
-
-					return p.advance_with_error(
-						Syn::Unknown,
-						&["`~`", "`*`", "`default`", "an identifier"],
-					);
-				}
-			}
-		}
-
-		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
-		p.close(header, Syn::Header);
-	}
-
-	fn _trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
-		p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
-	}
-
-	fn _trivia_0plus(p: &mut crate::parser::Parser<Syn>) {
-		loop {
-			if !_trivia(p) {
-				return;
-			}
-		}
-	}
-
-	fn _trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
-		p.expect_any(
-			&[
-				(Token::Whitespace, Syn::Whitespace),
-				(Token::Comment, Syn::Comment),
-			],
-			&["whitespace or a comment (one or more)"],
-		);
-
-		loop {
-			if !_trivia(p) {
-				return;
-			}
-		}
-	}
+fn trivia_0plus(p: &mut Parser<Syn>) {
+	while trivia(p) {}
 }
 
 #[cfg(test)]
@@ -302,8 +144,8 @@ mod test {
 	use crate::{
 		testing::*,
 		zdoom::{
+			self,
 			language::{ast, ParseTree},
-			Version,
 		},
 	};
 
@@ -318,12 +160,8 @@ $ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
 MEGALOPOLIS = "The Omega";
 "#;
 
-		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
-		hand::_file(&mut parser);
-		let (root, errors) = parser.finish();
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-		assert!(errors.is_empty());
-
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		assert_no_errors(&ptree);
 		let mut ast = ptree.cursor().children();
 
 		let header = ast::Header::cast(ast.next().unwrap()).unwrap();
@@ -364,17 +202,8 @@ ABDUCTION = ;
 $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
-		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
-		hand::_file(&mut parser);
-		let (root, errors) = parser.finish();
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-
-		for err in errors {
-			dbg!(err);
-		}
-
-		prettyprint(ptree.cursor());
-
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		assert_no_errors(&ptree);
 		let mut ast = ptree.cursor().children();
 
 		let kvp = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
@@ -425,10 +254,7 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 			.unwrap();
 		let source = String::from_utf8_lossy(&bytes);
 
-		let tbuf = crate::scan(source.as_ref(), Version::default());
-		let result = crate::parse(file(), source.as_ref(), &tbuf);
-		let ptree: ParseTree = unwrap_parse_tree(result);
-
+		let ptree: ParseTree = crate::parse(source.as_ref(), file, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 }

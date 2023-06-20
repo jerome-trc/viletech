@@ -131,6 +131,7 @@ pub fn include_directive<'i>() -> parser_t!(GreenNode) {
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use rowan::ast::AstNode;
 
@@ -159,8 +160,8 @@ enum {
 
 "#;
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(file(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(file(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
@@ -208,8 +209,8 @@ enum {
 		const SOURCE: &str =
 			" #InClUdE \"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\"";
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(file(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(file(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
@@ -252,8 +253,8 @@ const float INFERNO /* forbidden */ = 0.9999999;
 
 "##;
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(file(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(file(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);

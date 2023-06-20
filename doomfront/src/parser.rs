@@ -9,17 +9,7 @@ use std::cell::Cell;
 use logos::Logos;
 use rowan::{GreenNode, GreenNodeBuilder, SyntaxKind};
 
-/// Ties a [`rowan::Language`] to a [`logos::Logos`] token.
-pub trait LangExt: rowan::Language {
-	type Token: 'static
-		+ for<'i> logos::Logos<'i, Source = str, Error = Self::Token>
-		+ Eq
-		+ Copy
-		+ Default;
-
-	const EOF: Self::Token;
-	const ERR_NODE: Self::Kind;
-}
+use crate::LangExt;
 
 /// A general-purpose LL parser.
 pub struct Parser<'i, L: LangExt> {

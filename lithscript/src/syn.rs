@@ -179,6 +179,8 @@ pub enum Syn {
 	/// Input not recognized by the lexer.
 	#[default]
 	Unknown,
+	/// A dummy token for [`doomfront::LangExt`].
+	Eof,
 	#[doc(hidden)]
 	__Last,
 }

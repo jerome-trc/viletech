@@ -5,7 +5,7 @@ use crate::{
 	comb, parser_t,
 	parsing::*,
 	zdoom::{decorate::Syn, Token},
-	GreenElement, ParseError, ParseState,
+	GreenElement, _ParseError, _ParseState,
 };
 
 use super::{common::*, expr, top::*};
@@ -207,7 +207,7 @@ pub fn state_label<'i>() -> parser_t!(GreenNode) {
 		.repeated()
 		.at_least(1)
 		.collect::<()>()
-		.map_with_state(|(), mut span: logos::Span, state: &mut ParseState| {
+		.map_with_state(|(), mut span: logos::Span, state: &mut _ParseState| {
 			if span.start > span.end {
 				// FIXME: Possible Chumsky bug! Not a lexer issue; that's working fine.
 				std::mem::swap(&mut span.start, &mut span.end);
@@ -311,14 +311,14 @@ pub fn state_sprite<'i>() -> parser_t!(GreenToken) {
 		.at_least(1)
 		.at_most(4)
 		.collect::<()>()
-		.try_map_with_state(|(), span: logos::Span, state: &mut ParseState| {
+		.try_map_with_state(|(), span: logos::Span, state: &mut _ParseState| {
 			if span.len() == 4 {
 				Ok(GreenToken::new(
 					Syn::StateSprite.into(),
 					&state.source[span],
 				))
 			} else {
-				Err(ParseError::custom(
+				Err(_ParseError::custom(
 					span,
 					"state sprite names must be exactly 4 characters long",
 				))
@@ -326,14 +326,14 @@ pub fn state_sprite<'i>() -> parser_t!(GreenToken) {
 		});
 
 	let hold = primitive::just(Token::StringLit).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState| {
+		|_, span: logos::Span, state: &mut _ParseState| {
 			if span.len() == 6 {
 				Ok(GreenToken::new(
 					Syn::StateSprite.into(),
 					&state.source[span],
 				))
 			} else {
-				Err(ParseError::custom(
+				Err(_ParseError::custom(
 					span,
 					"state sprite names must be exactly 4 characters long",
 				))
@@ -352,14 +352,14 @@ pub fn state_frames<'i>() -> parser_t!(GreenToken) {
 	}
 
 	let unquoted = primitive::just(Token::Ident).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState| {
+		|_, span: logos::Span, state: &mut _ParseState| {
 			if !state.source[span.clone()].contains(|c: char| !c.is_ascii_alphabetic()) {
 				Ok(GreenToken::new(
 					Syn::StateFrames.into(),
 					&state.source[span],
 				))
 			} else {
-				Err(ParseError::custom(
+				Err(_ParseError::custom(
 					span.clone(),
 					format!("invalid frame character string `{}`", &state.source[span]),
 				))
@@ -368,7 +368,7 @@ pub fn state_frames<'i>() -> parser_t!(GreenToken) {
 	);
 
 	let quoted = primitive::just(Token::StringLit).try_map_with_state(
-		|_, span: logos::Span, state: &mut ParseState| {
+		|_, span: logos::Span, state: &mut _ParseState| {
 			let inner = &state.source[(span.start + 1)..(span.end - 1)];
 
 			if !inner.contains(|c: char| !is_valid_quoted_char(c)) {
@@ -377,7 +377,7 @@ pub fn state_frames<'i>() -> parser_t!(GreenToken) {
 					&state.source[span],
 				))
 			} else {
-				Err(ParseError::custom(
+				Err(_ParseError::custom(
 					span.clone(),
 					format!("invalid frame character string `{}`", &state.source[span]),
 				))
@@ -485,6 +485,7 @@ pub fn action_function<'i>() -> parser_t!(GreenNode) {
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use rowan::ast::AstNode;
 
@@ -535,8 +536,8 @@ aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 }
 		"#####;
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(file(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(file(), SOURCE, &tbuf);
 		let ptree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);

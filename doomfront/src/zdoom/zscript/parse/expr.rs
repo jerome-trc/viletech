@@ -2,13 +2,17 @@ use chumsky::{primitive, recursive::Recursive, IterParser, Parser};
 use rowan::GreenNode;
 
 use crate::{
-	comb, parser_t,
+	comb,
+	parser::CloseMark,
+	parser_t,
 	parsing::*,
 	zdoom::{zscript::Syn, Token},
 	GreenElement,
 };
 
 use super::ParserBuilder;
+
+use super::common::*;
 
 impl ParserBuilder {
 	/// The returned parser emits a node tagged with one of the following:
@@ -398,23 +402,300 @@ impl ParserBuilder {
 	}
 }
 
+pub fn expr(p: &mut crate::parser::Parser<Syn>) {
+	recur(p, Token::Eof);
+}
+
+fn recur(p: &mut crate::parser::Parser<Syn>, left: Token) {
+	let mut lhs = primary_expr(p);
+
+	loop {
+		trivia_0plus(p);
+
+		let right = p.nth(0);
+
+		match right {
+			Token::Minus2 => {
+				let m = p.open_before(lhs);
+				p.advance(Syn::Minus2);
+				lhs = p.close(m, Syn::PostfixExpr);
+				continue;
+			}
+			Token::Plus2 => {
+				let m = p.open_before(lhs);
+				p.advance(Syn::Plus2);
+				lhs = p.close(m, Syn::PostfixExpr);
+				continue;
+			}
+			Token::ParenL => {
+				let m = p.open_before(lhs);
+				trivia_0plus(p);
+				arg_list(p);
+				trivia_0plus(p);
+				lhs = p.close(m, Syn::CallExpr);
+				continue;
+			}
+			Token::BracketL => {
+				let m = p.open_before(lhs);
+				p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
+				trivia_0plus(p);
+				expr(p);
+				trivia_0plus(p);
+				p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+				lhs = p.close(m, Syn::IndexExpr);
+				continue;
+			}
+			_ => {}
+		}
+
+		if infix_right_stronger(left, right) {
+			if right == Token::Question {
+				let m = p.open_before(lhs);
+				p.advance(Syn::Question);
+				trivia_0plus(p);
+				expr(p);
+				trivia_0plus(p);
+				p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+				trivia_0plus(p);
+				expr(p);
+				lhs = p.close(m, Syn::TernaryExpr);
+			} else {
+				let m = p.open_before(lhs);
+				p.advance(Syn::from(right));
+				trivia_0plus(p);
+				recur(p, right);
+				lhs = p.close(m, Syn::BinExpr);
+			}
+		} else {
+			break;
+		}
+	}
+}
+
+fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
+	let ex = p.open();
+
+	if eat_ident(p) {
+		return p.close(ex, Syn::IdentExpr);
+	}
+
+	match p.nth(0) {
+		Token::IntLit => {
+			p.advance(Syn::IntLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::FloatLit => {
+			p.advance(Syn::FloatLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::KwTrue => {
+			p.advance(Syn::TrueLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::KwFalse => {
+			p.advance(Syn::FalseLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::StringLit => {
+			p.advance(Syn::StringLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::NameLit => {
+			p.advance(Syn::NameLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::KwNull => {
+			p.advance(Syn::NullLit);
+			p.close(ex, Syn::Literal)
+		}
+		Token::ParenL => {
+			p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+			trivia_0plus(p);
+
+			if p.eat(Token::KwClass, Syn::KwClass) {
+				// Class cast
+				trivia_0plus(p);
+				p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+				trivia_0plus(p);
+				ident(p);
+				trivia_0plus(p);
+				p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+				trivia_0plus(p);
+				p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+				trivia_0plus(p);
+				arg_list(p);
+				return p.close(ex, Syn::ClassCastExpr);
+			}
+
+			expr(p);
+			trivia_0plus(p);
+
+			if p.eat(Token::ParenR, Syn::ParenR) {
+				p.close(ex, Syn::GroupExpr)
+			} else if p.eat(Token::Comma, Syn::Comma) {
+				// Vector
+				for _ in 0..3 {
+					trivia_0plus(p);
+					expr(p);
+					trivia_0plus(p);
+
+					if !p.eat(Token::Comma, Syn::Comma) {
+						p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+						break;
+					}
+				}
+
+				p.close(ex, Syn::VectorExpr)
+			} else {
+				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error)
+			}
+		}
+		Token::Bang => {
+			p.advance(Syn::Bang);
+			recur(p, Token::Bang);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		Token::Minus2 => {
+			p.advance(Syn::Minus2);
+			recur(p, Token::Minus2);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		Token::Plus2 => {
+			p.advance(Syn::Plus2);
+			recur(p, Token::Plus2);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		Token::Minus => {
+			p.advance(Syn::Minus);
+			recur(p, Token::Minus);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		Token::Plus => {
+			p.advance(Syn::Plus);
+			recur(p, Token::Plus);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		Token::Tilde => {
+			p.advance(Syn::Tilde);
+			recur(p, Token::Tilde);
+			p.close(ex, Syn::PrefixExpr)
+		}
+		_ => p.advance_err_and_close(ex, Syn::Unknown, Syn::Error),
+	}
+}
+
+fn arg_list(p: &mut crate::parser::Parser<Syn>) {
+	debug_assert!(p.at(Token::ParenL));
+	let arglist = p.open();
+	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	trivia_0plus(p);
+
+	while !p.at(Token::ParenR) && !p.eof() {
+		argument(p);
+	}
+
+	trivia_0plus(p);
+	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.close(arglist, Syn::ArgList);
+}
+
+fn argument(p: &mut crate::parser::Parser<Syn>) {
+	let arg = p.open();
+
+	if eat_ident(p) {
+		trivia_0plus(p);
+		p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+		trivia_0plus(p);
+	}
+
+	expr(p);
+	trivia_0plus(p);
+
+	if !p.at(Token::ParenR) {
+		p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+	}
+
+	p.close(arg, Syn::Argument);
+}
+
+#[must_use]
+fn infix_right_stronger(left: Token, right: Token) -> bool {
+	#[must_use]
+	fn strength(token: Token) -> Option<usize> {
+		const PREC_TABLE: &[&[Token]] = &[
+			&[
+				Token::Eq,
+				Token::AsteriskEq,
+				Token::SlashEq,
+				Token::PercentEq,
+				Token::PlusEq,
+				Token::MinusEq,
+				Token::AngleL2Eq,
+				Token::AngleR2Eq,
+				Token::AmpersandEq,
+				Token::PipeEq,
+				Token::CaretEq,
+				Token::AngleR3Eq,
+			],
+			&[Token::Question],
+			&[Token::Pipe2],
+			&[Token::Ampersand2],
+			&[Token::Eq2, Token::BangEq, Token::TildeEq2],
+			&[
+				Token::AngleL,
+				Token::AngleR,
+				Token::AngleLEq,
+				Token::AngleREq,
+				Token::AngleLAngleREq,
+				Token::KwIs,
+			],
+			&[Token::Dot2],
+			&[Token::Pipe],
+			&[Token::Caret],
+			&[Token::Ampersand],
+			&[Token::AngleL2, Token::AngleR2, Token::AngleR3],
+			&[Token::Plus, Token::Minus],
+			&[
+				Token::Asterisk,
+				Token::Slash,
+				Token::Percent,
+				Token::KwCross,
+				Token::KwDot,
+			],
+			&[Token::Asterisk2],
+			&[Token::Minus2, Token::Plus2],
+			&[Token::Dot],
+		];
+
+		PREC_TABLE.iter().position(|level| level.contains(&token))
+	}
+
+	let Some(right_s) = strength(right) else {
+		return false;
+	};
+
+	let Some(left_s) = strength(left) else {
+		debug_assert_eq!(left, Token::Eof);
+		return true;
+	};
+
+	right_s > left_s
+}
+
 #[cfg(test)]
 mod test {
 	use crate::{
 		testing::*,
-		zdoom::{zscript::ParseTree, Version},
+		zdoom::{self, zscript::ParseTree},
 	};
+
+	use super::*;
 
 	#[test]
 	fn smoke() {
 		const SOURCE: &str = "(a[1]() + --b.c) * ++d && (e << f) ~== ((((g /= h ? i : j))))";
 
-		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
-		super::super::hand::_expr(&mut parser);
-		let (root, errors) = parser.finish();
-		assert!(errors.is_empty());
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 
@@ -422,12 +703,7 @@ mod test {
 	fn smoke_vector_bin() {
 		const SOURCE: &str = "(1.0, 2.0, 3.0) + (4.0, 5.0) - (6.0, 7.0, 8.0)";
 
-		let mut parser = crate::parser::Parser::new(SOURCE, Version::default());
-		super::super::hand::_expr(&mut parser);
-		let (root, errors) = parser.finish();
-		assert!(errors.is_empty());
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 }

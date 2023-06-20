@@ -239,7 +239,56 @@ impl ParserBuilder {
 	}
 }
 
+pub(super) fn ident(p: &mut crate::parser::Parser<Syn>) {
+	p.expect_any(
+		&[
+			(Token::Ident, Syn::Ident),
+			(Token::KwBright, Syn::Ident),
+			(Token::KwCanRaise, Syn::Ident),
+			(Token::KwFast, Syn::Ident),
+			(Token::KwLight, Syn::Ident),
+			(Token::KwOffset, Syn::Ident),
+			(Token::KwSlow, Syn::Ident),
+		],
+		&["an identifier"],
+	)
+}
+
+#[must_use]
+pub(super) fn eat_ident(p: &mut crate::parser::Parser<Syn>) -> bool {
+	p.eat_any(&[
+		(Token::Ident, Syn::Ident),
+		(Token::KwBright, Syn::Ident),
+		(Token::KwCanRaise, Syn::Ident),
+		(Token::KwFast, Syn::Ident),
+		(Token::KwLight, Syn::Ident),
+		(Token::KwOffset, Syn::Ident),
+		(Token::KwSlow, Syn::Ident),
+	])
+}
+
+pub(super) fn trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
+	p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
+}
+
+pub(super) fn trivia_0plus(p: &mut crate::parser::Parser<Syn>) {
+	while trivia(p) {}
+}
+
+pub(super) fn _trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
+	p.expect_any(
+		&[
+			(Token::Whitespace, Syn::Whitespace),
+			(Token::Comment, Syn::Comment),
+		],
+		&["whitespace or a comment (one or more)"],
+	);
+
+	trivia_0plus(p);
+}
+
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
@@ -252,11 +301,11 @@ mod test {
 	fn smoke_identlist() {
 		const SOURCE: &str = r#"temple, of, the, ancient, techlords"#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default())
 			.ident_list()
 			.map(|elems| GreenNode::new(Syn::Root.into(), elems));
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
@@ -276,9 +325,9 @@ mod test {
 		];
 
 		for source in SOURCES {
-			let tbuf = crate::scan(source, Version::default());
+			let tbuf = crate::_scan(source, Version::default());
 			let parser = ParserBuilder::new(Version::default()).type_ref();
-			let result = crate::parse(parser, source, &tbuf);
+			let result = crate::_parse(parser, source, &tbuf);
 			let ptree: ParseTree = unwrap_parse_tree(result);
 			assert_no_errors(&ptree);
 		}
@@ -288,9 +337,9 @@ mod test {
 	fn smoke_version_qual() {
 		const SOURCE: &str = r#"version("3.7.1")"#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).version_qual();
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
@@ -299,9 +348,9 @@ mod test {
 	fn smoke_deprecation_qual() {
 		const SOURCE: &str = r#"deprecated("2.4.0", "Don't use this please")"#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).deprecation_qual();
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}

@@ -1,5 +1,7 @@
 //! Tags representing syntax nodes, from low-level primitives to high-level composites.
 
+use crate::{LangExt, zdoom::Token};
+
 /// Tags representing syntax nodes, from low-level primitives to high-level composites.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
@@ -102,4 +104,10 @@ impl rowan::Language for Syn {
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
 		kind.into()
 	}
+}
+
+impl LangExt for Syn {
+	type Token = Token;
+	const EOF: Self::Token = Token::Eof;
+	const ERR_NODE: Self::Kind = Syn::Error;
 }

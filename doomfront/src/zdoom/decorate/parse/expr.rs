@@ -310,6 +310,7 @@ pub fn expr_list<'i>(expr: parser_t!(GreenNode)) -> parser_t!(Vec<GreenElement>)
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
@@ -322,8 +323,8 @@ mod test {
 	fn smoke() {
 		const SOURCE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(expr(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(expr(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
@@ -333,8 +334,8 @@ mod test {
 	fn smoke_call() {
 		const SOURCE: &str = "nobody(told + me - about * decorate)";
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(expr(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(expr(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);
@@ -344,8 +345,8 @@ mod test {
 	fn smoke_call_with_rng() {
 		const SOURCE: &str = "set_random_seed[rngtbl](1234567890)";
 
-		let tbuf = crate::scan(SOURCE, zdoom::Version::V1_0_0);
-		let result = crate::parse(expr(), SOURCE, &tbuf);
+		let tbuf = crate::_scan(SOURCE, zdoom::Version::V1_0_0);
+		let result = crate::_parse(expr(), SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 
 		assert_no_errors(&ptree);

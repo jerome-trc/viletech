@@ -2,16 +2,16 @@
 
 use std::path::PathBuf;
 
-use rowan::SyntaxKind;
+use rowan::{SyntaxElement, SyntaxNode, WalkEvent};
 
-use crate::{ParseError, ParseTree};
+use crate::{LangExt, ParseError, ParseTree};
 
 /// A wrapper for `ptree.errors.is_empty()` which also formats and prints out
 /// each error, if any are detected.
-pub fn assert_no_errors<'i, T, L>(ptree: &ParseTree<'i, T, L>)
+pub fn assert_no_errors<L>(ptree: &ParseTree<L>)
 where
-	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
-	L: rowan::Language + Into<SyntaxKind>,
+	L: LangExt,
+	L::Token: std::fmt::Debug,
 {
 	assert!(
 		ptree.errors.is_empty(),
@@ -21,12 +21,7 @@ where
 }
 
 /// Unit testing helper; checks that `elem` is a node with the given syntax tag.
-pub fn assert_node<L>(
-	elem: rowan::NodeOrToken<rowan::SyntaxNode<L>, rowan::SyntaxToken<L>>,
-	kind: L::Kind,
-) where
-	L: rowan::Language,
-{
+pub fn assert_node<L: LangExt>(elem: SyntaxElement<L>, kind: L::Kind) {
 	let node = elem.as_node();
 
 	assert!(
@@ -46,7 +41,7 @@ pub fn assert_node<L>(
 
 /// Unit testing helper; checks that `elem` is a token with the given syntax tag and text.
 pub fn assert_token<L>(
-	elem: rowan::NodeOrToken<rowan::SyntaxNode<L>, rowan::SyntaxToken<L>>,
+	elem: rowan::NodeOrToken<SyntaxNode<L>, rowan::SyntaxToken<L>>,
 	kind: L::Kind,
 	text: &'static str,
 ) where
@@ -79,14 +74,10 @@ pub fn assert_token<L>(
 /// Unit testing helper; checks that [`rowan::WalkEvent::Enter`] events match
 /// the node or token data provided in `seq`.
 #[cfg(test)]
-pub fn assert_sequence<L>(
-	seq: &'static [(L::Kind, Option<&'static str>)],
-	cursor: rowan::SyntaxNode<L>,
-) where
+pub fn assert_sequence<L>(seq: &'static [(L::Kind, Option<&'static str>)], cursor: SyntaxNode<L>)
+where
 	L: rowan::Language,
 {
-	use rowan::WalkEvent;
-
 	let seq_count = seq.iter().clone().count();
 	let elem_count = cursor.preorder_with_tokens().count();
 
@@ -138,18 +129,15 @@ pub fn assert_sequence<L>(
 	}
 }
 
-/// For diagnosing combinators (or tests). Walks the node tree in preorder,
+/// For diagnosing parsers (or tests). Walks the node tree in preorder,
 /// printing each node and token's display representation with indentation
 /// according to the depth in the tree.
-pub fn prettyprint<L>(cursor: rowan::SyntaxNode<L>)
-where
-	L: rowan::Language,
-{
+pub fn prettyprint<L: LangExt>(cursor: SyntaxNode<L>) {
 	let mut depth = 0;
 
 	for event in cursor.preorder_with_tokens() {
 		match event {
-			rowan::WalkEvent::Enter(elem) => {
+			WalkEvent::Enter(elem) => {
 				let mut print = String::new();
 
 				for _ in 0..depth {
@@ -161,7 +149,7 @@ where
 
 				depth += 1;
 			}
-			rowan::WalkEvent::Leave(_) => {
+			WalkEvent::Leave(_) => {
 				depth -= 1;
 			}
 		}
@@ -196,41 +184,18 @@ pub fn read_sample_data(env_var_name: &'static str) -> Result<(PathBuf, String),
 	Ok((path, sample))
 }
 
-pub fn unwrap_parse_tree<'i, T, L>(
-	result: Result<ParseTree<'i, T, L>, Vec<ParseError<'i, T>>>,
-) -> ParseTree<'i, T, L>
-where
-	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
-	L: rowan::Language + Into<SyntaxKind>,
-{
-	result
-		.map_err(|errors| {
-			panic!("encountered errors:\r\n{}", format_errors(&errors));
-		})
-		.unwrap()
-}
-
 // Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn format_errors<'i, T>(errors: &Vec<ParseError<'i, T>>) -> String
+fn format_errors<L>(errors: &Vec<ParseError<L>>) -> String
 where
-	T: logos::Logos<'i, Source = str> + Copy + std::fmt::Debug,
+	L: LangExt,
+	L::Token: std::fmt::Debug,
 {
 	let mut output = String::new();
 
 	for err in errors {
-		match err.reason() {
-			chumsky::error::RichReason::ExpectedFound { .. }
-			| chumsky::error::RichReason::Custom(_) => output.push_str(&format!("\r\n{err:#?}")),
-			chumsky::error::RichReason::Many(errs) => {
-				for e in errs {
-					output.push_str(&format!("\r\n{e:#?}"));
-				}
-
-				output.push_str(&format!("({:?})", err.span()));
-			}
-		}
+		output.push_str(&format!("\r\n{err:#?}"));
 	}
 
 	output

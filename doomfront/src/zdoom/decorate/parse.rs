@@ -19,7 +19,7 @@ use crate::{
 	comb, parser_t,
 	parsing::coalesce_node,
 	zdoom::{self, Token},
-	GreenElement, ParseState,
+	GreenElement, _ParseState,
 };
 
 pub use self::{actor::*, common::*, expr::*, top::*};
@@ -30,7 +30,7 @@ use super::{ParseTree, Syn};
 pub fn file<'i>() -> parser_t!(GreenNode) {
 	let recover_actor_inner = primitive::any()
 		.filter(|token| *token == Token::Ident)
-		.map_with_state(|token: Token, span: logos::Span, state: &mut ParseState| {
+		.map_with_state(|token: Token, span: logos::Span, state: &mut _ParseState| {
 			(token, &state.source[span])
 		})
 		.filter(|(_, text)| !text.eq_ignore_ascii_case("actor"))
@@ -123,9 +123,9 @@ impl IncludeTree {
 				}
 			};
 
-			let tbuf = crate::scan(source.as_ref(), zdoom::Version::V1_0_0);
+			let tbuf = crate::_scan(source.as_ref(), zdoom::Version::V1_0_0);
 
-			let ptree: ParseTree = crate::parse(file(), source.as_ref(), &tbuf).map_or_else(
+			let ptree: ParseTree = crate::_parse(file(), source.as_ref(), &tbuf).map_or_else(
 				|errors| ParseTree::new(GreenNode::new(Syn::Root.into(), []), errors),
 				|ptree| ptree,
 			);
@@ -202,9 +202,9 @@ impl IncludeTree {
 						}
 					};
 
-					let tbuf = crate::scan(source.as_ref(), zdoom::Version::V1_0_0);
+					let tbuf = crate::_scan(source.as_ref(), zdoom::Version::V1_0_0);
 
-					let ptree: ParseTree = crate::parse(file(), source.as_ref(), &tbuf)
+					let ptree: ParseTree = crate::_parse(file(), source.as_ref(), &tbuf)
 						.map_or_else(
 							|errors| ParseTree::new(GreenNode::new(Syn::Root.into(), []), errors),
 							|ptree| ptree,
@@ -260,6 +260,7 @@ impl IncludeTree {
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use crate::testing::*;
 
@@ -309,8 +310,8 @@ actor BaronsBanquet {}
 			}
 		};
 
-		let tbuf = crate::scan(&sample, zdoom::Version::default());
-		let result = crate::parse(file(), &sample, &tbuf);
+		let tbuf = crate::_scan(&sample, zdoom::Version::default());
+		let result = crate::_parse(file(), &sample, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}

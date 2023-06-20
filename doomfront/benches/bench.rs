@@ -4,7 +4,7 @@ use criterion::Criterion;
 
 use doomfront::{
 	testing::read_sample_data,
-	zdoom::{self, decorate, zscript},
+	zdoom::{self, decorate},
 };
 
 fn decorate(crit: &mut Criterion) {
@@ -23,11 +23,11 @@ fn decorate(crit: &mut Criterion) {
 
 	grp.bench_function("Expressions", |bencher| {
 		bencher.iter(|| {
-			let tbuf = doomfront::scan(SOURCE_EXPR, zdoom::Version::V1_0_0);
+			let tbuf = doomfront::_scan(SOURCE_EXPR, zdoom::Version::V1_0_0);
 			let parser = decorate::parse::expr();
 
 			let ptree: decorate::ParseTree =
-				doomfront::parse(parser.clone(), SOURCE_EXPR, &tbuf).unwrap();
+				doomfront::_parse(parser.clone(), SOURCE_EXPR, &tbuf).unwrap();
 
 			let _ = std::hint::black_box(ptree);
 		});
@@ -44,8 +44,8 @@ fn decorate(crit: &mut Criterion) {
 	grp.bench_function("Parse", |bencher| {
 		bencher.iter(|| {
 			let parser = decorate::parse::file();
-			let tbuf = doomfront::scan(&sample, zdoom::Version::V1_0_0);
-			let ptree: decorate::ParseTree = doomfront::parse(parser, &sample, &tbuf).unwrap();
+			let tbuf = doomfront::_scan(&sample, zdoom::Version::V1_0_0);
+			let ptree: decorate::ParseTree = doomfront::_parse(parser, &sample, &tbuf).unwrap();
 			let _ = std::hint::black_box(ptree);
 		});
 	});
@@ -97,24 +97,13 @@ fn language(crit: &mut Criterion) {
 
 	let mut grp = crit.benchmark_group("LANGUAGE");
 
-	grp.bench_function("Parse, Chumsky", |bencher| {
+	grp.bench_function("Parse, Sample Data", |bencher| {
 		bencher.iter(|| {
-			let parser = zdoom::language::parse::file();
-
-			let tbuf = doomfront::scan(&sample, zdoom::Version::default());
-
-			let ptree =
-				doomfront::parse::<zdoom::Token, zdoom::language::Syn>(parser, &sample, &tbuf);
-
-			let _ = std::hint::black_box(ptree);
-		});
-	});
-
-	grp.bench_function("Parse, Handwritten", |bencher| {
-		bencher.iter(|| {
-			let mut parser = doomfront::parser::Parser::new(&sample, zdoom::Version::default());
-			zdoom::language::parse::hand::_file(&mut parser);
-			let _ = std::hint::black_box(parser.finish());
+			let _ = std::hint::black_box(doomfront::parse(
+				&sample,
+				zdoom::language::parse::file,
+				zdoom::Version::default(),
+			));
 		});
 	});
 
@@ -127,21 +116,13 @@ fn zscript(crit: &mut Criterion) {
 	{
 		const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
 
-		grp.bench_function("Expressions, Chumsky", |bencher| {
+		grp.bench_function("Expressions", |bencher| {
 			bencher.iter(|| {
-				let builder = zscript::parse::ParserBuilder::new(zdoom::Version::default());
-				let tbuf = doomfront::scan(SOURCE, zdoom::Version::default());
-				let parser = builder.expr();
-				let ptree: zscript::ParseTree = doomfront::parse(parser, SOURCE, &tbuf).unwrap();
-				let _ = std::hint::black_box(ptree);
-			});
-		});
-
-		grp.bench_function("Expressions, Handwritten", |bencher| {
-			bencher.iter(|| {
-				let mut parser = doomfront::parser::Parser::new(SOURCE, zdoom::Version::default());
-				zdoom::zscript::parse::hand::_expr(&mut parser);
-				let _ = std::hint::black_box(parser.finish());
+				let _ = std::hint::black_box(doomfront::parse(
+					SOURCE,
+					zdoom::zscript::parse::expr,
+					zdoom::Version::default(),
+				));
 			});
 		});
 	}

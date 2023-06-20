@@ -360,6 +360,7 @@ pub enum Token {
 	Comment,
 	#[default]
 	Unknown,
+	/// A dummy token for [`doomfront::LangExt`].
 	Eof,
 }
 

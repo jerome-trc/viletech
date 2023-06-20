@@ -26,7 +26,7 @@ pub use self::{
 	syn::Syn,
 };
 
-pub type ParseTree<'i> = doomfront::ParseTree<'i, Syn, Syn>;
+pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;

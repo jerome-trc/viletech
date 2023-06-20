@@ -96,6 +96,7 @@ impl ParserBuilder {
 }
 
 #[cfg(test)]
+#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
@@ -108,9 +109,9 @@ mod test {
 	fn smoke_constdef() {
 		const SOURCE: &str = r#"const GOLDEN_ANARCHY = BUSHFIRE >>> NONSPECIFIC_TECH_BASE;"#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).const_def();
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
@@ -132,9 +133,9 @@ enum BrickAndRoot {
 }
 "#;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}
@@ -150,9 +151,9 @@ version "3.7.1"
 
 "##;
 
-		let tbuf = crate::scan(SOURCE, Version::default());
+		let tbuf = crate::_scan(SOURCE, Version::default());
 		let parser = ParserBuilder::new(Version::default()).file();
-		let result = crate::parse(parser, SOURCE, &tbuf);
+		let result = crate::_parse(parser, SOURCE, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
 	}

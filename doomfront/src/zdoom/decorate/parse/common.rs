@@ -7,7 +7,7 @@ use crate::{
 	comb, parser_t,
 	parsing::*,
 	zdoom::{decorate::Syn, Token},
-	GreenElement, ParseError, ParseState,
+	GreenElement, _ParseError, _ParseState,
 };
 
 /// The returned parser emits a [`Syn::Ident`] token.
@@ -20,7 +20,7 @@ pub fn actor_ident<'i>() -> parser_t!(GreenToken) {
 	])
 	.repeated()
 	.collect::<()>()
-	.map_with_state(|_, span, state: &mut ParseState| {
+	.map_with_state(|_, span, state: &mut _ParseState| {
 		GreenToken::new(Syn::Ident.into(), &state.source[span])
 	})
 }
@@ -61,7 +61,7 @@ pub(super) fn int_lit_negative<'i>() -> parser_t!(GreenToken) {
 		primitive::just(Token::Minus),
 		primitive::just(Token::IntLit),
 	))
-	.map_with_state(|_, span, state: &mut ParseState| {
+	.map_with_state(|_, span, state: &mut _ParseState| {
 		GreenToken::new(Syn::IntLit.into(), &state.source[span])
 	})
 }
@@ -74,7 +74,7 @@ pub(super) fn float_lit_negative<'i>() -> parser_t!(GreenToken) {
 		comb::just_ts(Token::Minus, Syn::Minus),
 		comb::just_ts(Token::FloatLit, Syn::FloatLit),
 	))
-	.map_with_state(|_, span, state: &mut ParseState| {
+	.map_with_state(|_, span, state: &mut _ParseState| {
 		GreenToken::new(Syn::FloatLit.into(), &state.source[span])
 	})
 }
@@ -131,7 +131,7 @@ pub(super) fn trivia_1line<'i>() -> parser_t!(Vec<GreenElement>) {
 		primitive::just(Token::Whitespace),
 		primitive::just(Token::Comment),
 	))
-	.try_map_with_state(|token, span: logos::Span, state: &mut ParseState| {
+	.try_map_with_state(|token, span: logos::Span, state: &mut _ParseState| {
 		let multiline = state.source[span.clone()].contains(['\r', '\n']);
 
 		let syn = match token {
@@ -139,7 +139,7 @@ pub(super) fn trivia_1line<'i>() -> parser_t!(Vec<GreenElement>) {
 				if !multiline {
 					Syn::Whitespace
 				} else {
-					return Err(ParseError::custom(
+					return Err(_ParseError::custom(
 						span,
 						"expected single-line whitespace, found multi-line whitespace",
 					));
@@ -149,7 +149,7 @@ pub(super) fn trivia_1line<'i>() -> parser_t!(Vec<GreenElement>) {
 				if !multiline {
 					Syn::Comment
 				} else {
-					return Err(ParseError::custom(
+					return Err(_ParseError::custom(
 						span,
 						"expected multi-line comment, found single-line comment",
 					));

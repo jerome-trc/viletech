@@ -1,5 +1,7 @@
 //! Tags representing syntax nodes, from low-level primitives to high-level composites.
 
+use crate::{zdoom::Token, LangExt};
+
 /// Tags representing syntax nodes, from low-level primitives to high-level composites.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
@@ -591,4 +593,10 @@ impl From<crate::zdoom::Token> for Syn {
 			Self::Unknown, // EOF; effectively unreachable.
 		][value as usize]
 	}
+}
+
+impl LangExt for Syn {
+	type Token = Token;
+	const EOF: Self::Token = Token::Eof;
+	const ERR_NODE: Self::Kind = Syn::Error;
 }
