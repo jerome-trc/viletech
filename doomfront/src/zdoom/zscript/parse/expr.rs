@@ -584,6 +584,32 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 	}
 }
 
+/// i.e. can `token` begin a primary expression?
+#[must_use]
+pub(super) fn in_first_set(token: Token) -> bool {
+	if is_ident(token) {
+		return true;
+	}
+
+	matches!(
+		token,
+		Token::IntLit
+			| Token::FloatLit
+			| Token::KwTrue
+			| Token::KwFalse
+			| Token::StringLit
+			| Token::NameLit
+			| Token::KwNull
+			| Token::ParenL
+			| Token::Bang
+			| Token::Minus2
+			| Token::Plus2
+			| Token::Minus
+			| Token::Plus
+			| Token::Tilde,
+	)
+}
+
 fn arg_list(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at(Token::ParenL));
 	let arglist = p.open();
@@ -680,6 +706,22 @@ fn infix_right_stronger(left: Token, right: Token) -> bool {
 	};
 
 	right_s > left_s
+}
+
+/// Expects the current position to be the start of at least one expression.
+pub fn expr_list(p: &mut crate::parser::Parser<Syn>) {
+	expr(p);
+	trivia_0plus(p);
+
+	while !p.eof() {
+		if !p.eat(Token::Comma, Syn::Comma) {
+			break;
+		}
+
+		trivia_0plus(p);
+		expr(p);
+		trivia_0plus(p);
+	}
 }
 
 #[cfg(test)]

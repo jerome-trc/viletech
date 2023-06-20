@@ -371,6 +371,14 @@ impl Token {
 		u > (Self::__FirstKw as u8) && u < (Self::__LastKw as u8)
 	}
 
+	#[must_use]
+	pub fn is_trivia(self) -> bool {
+		matches!(
+			self,
+			Self::Whitespace | Self::Comment | Self::RegionStart | Self::RegionEnd
+		)
+	}
+
 	// Callbacks ///////////////////////////////////////////////////////////////////
 
 	#[allow(unused)]

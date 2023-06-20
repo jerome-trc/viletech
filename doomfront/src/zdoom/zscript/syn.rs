@@ -97,14 +97,33 @@ pub enum Syn {
 	StructExtend,
 	/// `'[' expr ']'`
 	Subscript,
-	/// Can be [`Syn::KwLet`], [`Syn::IdentChain`], or `'readonly' '<' '@'? ident '>'`.
-	TypeRef,
 	/// ident arraylen?
 	VarName,
 	/// The `version` preprocessor directive and its string literal argument.
 	VersionDirective,
 	/// `'version' '(' string ')'`
 	VersionQual,
+	// Nodes: type references //////////////////////////////////////////////////
+	/// `'class' ('<' identchain '>')?`
+	ClassType,
+	/// `'array' '<' typeref arraylen? '>'`
+	DynArrayType,
+	/// `identchain`
+	IdentChainType,
+	/// `'let'`
+	LetType,
+	/// `'mapiterator' '<' typeref arraylen? ',' typeref arraylen? '>'`
+	MapIterType,
+	/// `'map' '<' typeref arraylen? ',' typeref arraylen? '>'`
+	MapType,
+	/// `'@' ident`
+	NativeType,
+	/// `'sbyte' | 'byte' | 'int8' | 'uint8' | 'short' | 'ushort' | 'int16' | 'uint16' |
+	/// 'bool' | 'float' | 'double' | 'vector2' | 'vector3' | 'name' | 'sound' |
+	/// 'state' | 'color'`
+	PrimitiveType,
+	/// `'readonly' '<' (ident | nativetype) '>'`
+	ReadonlyType,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
 	BinExpr,
@@ -128,30 +147,47 @@ pub enum Syn {
 	/// Used to construct vectors and colors.
 	VectorExpr,
 	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `'[' exprlist ']' '=' expr ';'`
 	AssignStat,
+	/// `'break' ';'`
 	BreakStat,
 	/// `'case' expr ':'`
 	CaseStat,
+	/// `'{' statement* '}'`
 	CompoundStat,
+	/// `'continue' ';'`
 	ContinueStat,
+	/// `'let' (localstat | '[' identlist ']' '=' expr) ';'`
 	DeclAssignStat,
 	/// `'default' ':'`
 	DefaultStat,
+	/// `'do' statement 'until' '(' expr ')'`
 	DoUntilStat,
+	/// `'do' statement 'while' '(' expr ')'`
 	DoWhileStat,
-	/// A lone semicolon.
+	/// `';'`
 	EmptyStat,
 	/// An expression followed by a semicolon.
 	ExprStat,
 	/// C-style, with a three-part (semicolon-delimited, parenthesis-enclosed) opener.
 	ForStat,
+	/// `'foreach' '(' varname ':' expr ')' statement`
 	ForEachStat,
+	/// `'if' '(' expr ')' '{' statement '}' ('else' statement)?`
+	IfStat,
+	/// `typeref (ident (arraylen | '{' exprlist '}' | '=' (expr | '{' exprlist '}')))+`
 	LocalStat,
+	/// `'mixin' ident ';'`
 	MixinStat,
+	/// `'return' exprlist ';'`
 	ReturnStat,
+	/// `'static' 'const' (ident '[' ']' | '[' ']' ident) '=' '{' exprlist '}' ';'`
 	StaticConstStat,
+	/// `'switch' '(' expr ')' statement`
 	SwitchStat,
+	/// `'until' '(' expr ')' statement`
 	UntilStat,
+	/// `'while' '(' expr ')' statement`
 	WhileStat,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// The exact string `false`.

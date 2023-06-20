@@ -16,8 +16,7 @@ use crate::{
 
 use super::Syn;
 
-use self::common::trivia;
-pub use self::{actor::*, expr::*, stat::*, structure::*, top::*};
+pub use self::{actor::*, common::*, expr::*, stat::*, structure::*, top::*};
 
 /// Gives context to functions yielding parser combinators
 /// (e.g. the user's selected ZScript version).

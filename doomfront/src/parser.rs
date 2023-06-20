@@ -260,6 +260,21 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		});
 	}
 
+	/// Finds the next token (which may be [`L::EOF`]) for which `predicate`
+	/// returns `true`.
+	pub fn next_filtered(&self, predicate: fn(L::Token) -> bool) -> L::Token {
+		self.tokens[self.pos..]
+			.iter()
+			.find_map(|t| {
+				if predicate(t.kind) {
+					Some(t.kind)
+				} else {
+					None
+				}
+			})
+			.unwrap_or(L::EOF)
+	}
+
 	/// [Opens] a new error node, [advances] it with a `syn` token, and then [closes] it.
 	///
 	/// [Opens]: Parser::open
