@@ -1,7 +1,8 @@
 //! A general-purpose LL parser.
 //!
-//! This design is derived from
-//! https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html.
+//! This design is derived from those presented in the following articles:
+//! - https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html
+//! - https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
 
 use std::cell::Cell;
 
@@ -149,6 +150,23 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	}
 
 	#[must_use]
+	pub fn eat_str_nc(&mut self, token: L::Token, string: &'static str, syn: L::Kind) -> bool {
+		let eof = Lexeme {
+			kind: L::EOF,
+			span: self.source.len()..self.source.len(),
+		};
+
+		let lexeme = self.tokens.get(self.pos).unwrap_or(&eof);
+
+		if lexeme.kind == token && self.source[lexeme.span.clone()].eq_ignore_ascii_case(string) {
+			self.advance(syn);
+			return true;
+		}
+
+		false
+	}
+
+	#[must_use]
 	pub fn eat_if(&mut self, predicate: fn(L::Token) -> bool, syn: L::Kind) -> bool {
 		if self.at_if(predicate) {
 			self.advance(syn);
@@ -176,15 +194,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		syn: L::Kind,
 		expected: &'static [&'static str],
 	) {
-		let eof = Lexeme {
-			kind: L::EOF,
-			span: self.source.len()..self.source.len(),
-		};
-
-		let lexeme = self.tokens.get(self.pos).unwrap_or(&eof);
-
-		if lexeme.kind == token && self.source[lexeme.span.clone()].eq_ignore_ascii_case(string) {
-			self.advance(syn);
+		if self.eat_str_nc(token, string, syn) {
 			return;
 		}
 
@@ -217,6 +227,23 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	) {
 		for choice in choices {
 			if self.eat(choice.0, choice.1) {
+				return;
+			}
+		}
+
+		self.errors.push(Error {
+			expected,
+			found: self.tokens[self.pos].clone(),
+		});
+	}
+
+	pub fn expect_any_str_nc(
+		&mut self,
+		choices: &'static [(L::Token, &'static str, L::Kind)],
+		expected: &'static [&'static str],
+	) {
+		for choice in choices {
+			if self.eat_str_nc(choice.0, choice.1, choice.2) {
 				return;
 			}
 		}

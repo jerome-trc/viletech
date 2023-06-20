@@ -6,10 +6,11 @@
 
 pub mod ast;
 pub mod parse;
-pub mod syn;
+mod syn;
 
 pub use syn::Syn;
 
+pub type ParseTree<'i> = crate::ParseTree<'i, crate::zdoom::Token, Syn>;
 pub type SyntaxNode = rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = rowan::SyntaxElement<Syn>;

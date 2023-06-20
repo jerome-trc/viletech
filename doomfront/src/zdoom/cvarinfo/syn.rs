@@ -21,15 +21,15 @@ pub enum Syn {
 	TypeSpec,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// The boolean literal `false`.
-	LitFalse,
+	FalseLit,
 	/// A (G)ZDoom (i.e. C/C++-style) floating-point literal.
-	LitFloat,
+	FloatLit,
 	/// A (G)ZDoom (i.e. C/C++-style) integer literal.
-	LitInt,
+	IntLit,
 	/// Delimited by double quotes. Also used for defining default color values.
-	LitString,
+	StringLit,
 	/// The boolean literal `true`.
-	LitTrue,
+	TrueLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	/// The type specifier `bool`.
 	KwBool,
