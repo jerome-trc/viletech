@@ -397,7 +397,7 @@ impl ParserBuilder {
 
 /// Builds a [`Syn::FlagDef`] node.
 pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwFlagDef));
+	p.debug_assert_at(Token::KwFlagDef);
 	let flagdef = p.open();
 	p.advance(Syn::KwFlagDef);
 	trivia_1plus(p);
@@ -417,7 +417,7 @@ pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::PropertyDef`] node.
 pub fn property_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwProperty));
+	p.debug_assert_at(Token::KwProperty);
 	let propdef = p.open();
 	p.advance(Syn::KwProperty);
 	trivia_1plus(p);
@@ -433,7 +433,7 @@ pub fn property_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::DefaultBlock`] node.
 pub fn default_block(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwDefault));
+	p.debug_assert_at(Token::KwDefault);
 	let defblock = p.open();
 	p.advance(Syn::KwDefault);
 	trivia_0plus(p);
@@ -473,6 +473,11 @@ fn flag_setting(p: &mut crate::parser::Parser<Syn>) {
 	trivia_0plus(p);
 	ident_chain_lax(p);
 
+	if p.next_filtered(|token| !token.is_trivia()) == Token::Semicolon {
+		trivia_0plus(p);
+		p.advance(Syn::Semicolon);
+	}
+
 	p.close(flag, Syn::FlagSetting);
 }
 
@@ -482,7 +487,11 @@ fn property_setting(p: &mut crate::parser::Parser<Syn>) {
 	let prop = p.open();
 	ident_chain_lax(p);
 	trivia_0plus(p);
-	expr_list(p);
+
+	if !p.at(Token::Semicolon) {
+		expr_list(p);
+	}
+
 	trivia_0plus(p);
 	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 	p.close(prop, Syn::PropertySetting);
@@ -490,7 +499,7 @@ fn property_setting(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::StatesBlock`] node.
 pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwStates));
+	p.debug_assert_at(Token::KwStates);
 	let sblock = p.open();
 	p.advance(Syn::KwStates);
 	trivia_0plus(p);
@@ -508,20 +517,47 @@ pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
 		let token = p.nth(0);
 
 		if is_ident_lax(token) {
-			if p.next_filtered(|token| !token.is_trivia()) == Token::Colon {
+			let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+
+			if matches!(peeked, Token::Colon | Token::Dot) {
 				let label = p.open();
-				p.advance(Syn::Ident);
+				ident_chain(p);
 				trivia_0plus(p);
 				p.advance(Syn::Colon);
 				p.close(label, Syn::StateLabel);
+			} else if p.current_slice().len() != 4 {
+				p.advance_with_error(
+					Syn::Ident,
+					&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
+				);
+			} else {
+				state_def(p);
 			}
 
+			trivia_0plus(p);
 			continue;
 		}
 
 		match token {
+			Token::StringLit => {
+				if p.current_slice().len() != 6 {
+					p.advance_with_error(
+						Syn::StringLit,
+						&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
+					);
+				} else {
+					state_def(p);
+				}
+			}
 			Token::IntLit => {
-				state_def(p);
+				if p.current_slice().len() != 4 {
+					p.advance_with_error(
+						Syn::IntLit,
+						&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
+					);
+				} else {
+					state_def(p);
+				}
 			}
 			Token::KwFail => {
 				let flow = p.open();
@@ -559,6 +595,8 @@ pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
 				if p.eat(Token::KwSuper, Syn::KwSuper) {
 					trivia_0plus(p);
 					p.expect(Token::Colon2, Syn::Colon2, &["`::`"]);
+					trivia_0plus(p);
+					ident_chain_lax(p);
 				} else if p.at_if(is_ident_lax) {
 					let peeked =
 						p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
@@ -572,12 +610,16 @@ pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
 							trivia_0plus(p);
 							ident_chain(p);
 						}
-						Token::Semicolon | Token::Plus | Token::Eof => {}
+						Token::Semicolon | Token::Plus | Token::Eof => {
+							p.advance(Syn::Ident);
+						}
 						other => p.advance_with_error(
 							Syn::from(other),
 							&["an identifier", "`.`", "`::`", "`+`", "`;`"],
 						),
 					}
+				} else {
+					p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`super`"]);
 				}
 
 				if p.next_filtered(|token| !token.is_trivia()) == Token::Plus {
@@ -626,7 +668,7 @@ pub fn states_usage(p: &mut crate::parser::Parser<Syn>) {
 		);
 	}
 
-	debug_assert!(p.at(Token::ParenL));
+	p.debug_assert_at(Token::ParenL);
 	let usage = p.open();
 	p.advance(Syn::ParenL);
 	trivia_0plus(p);
@@ -647,23 +689,28 @@ pub fn states_usage(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::StateDef`] node.
 pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(matches!(
-		p.nth(0),
-		Token::Ident | Token::IntLit | Token::StateSprite
-	));
+	#[cfg(debug_assertions)]
+	if !is_ident_lax(p.nth(0)) && !matches!(p.nth(0), Token::StringLit | Token::IntLit) {
+		panic!();
+	}
+
 	let state = p.open();
 	p.advance(Syn::StateSprite);
 	trivia_0plus(p);
-	p.expect(
-		Token::StateFrames,
-		Syn::StateFrames,
-		&["state frames (an ASCII letter or `\"` or `[` or `]` or `\\`)"],
-	);
+	state_frames(p);
 	trivia_0plus(p);
 	expr(p);
 	trivia_0plus(p);
 
-	while !p.at(Token::Semicolon) && !p.at_if(is_ident_lax) && !p.eof() {
+	loop {
+		if p.eof() {
+			break;
+		}
+
+		if p.at_any(&[Token::Semicolon, Token::BraceL, Token::Ident]) {
+			break;
+		}
+
 		match p.nth(0) {
 			Token::KwLight => {
 				let light = p.open();
@@ -747,6 +794,35 @@ pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
 	p.close(state, Syn::StateDef);
 }
 
+fn state_frames(p: &mut crate::parser::Parser<Syn>) {
+	let token = p.nth(0);
+
+	if is_ident_lax(token) {
+		p.advance(Syn::StateFrames);
+		return;
+	}
+
+	if token == Token::StringLit {
+		p.advance(Syn::StateFrames);
+		return;
+	}
+
+	let mut n = 0;
+
+	while !p.at_if(Token::is_trivia) {
+		if !matches!(
+			p.nth(n),
+			Token::Ident | Token::IntLit | Token::BracketL | Token::BracketR | Token::Backslash
+		) {
+			break;
+		}
+
+		n += 1;
+	}
+
+	p.advance_n(Syn::StateFrames, n);
+}
+
 /// Builds a [`Syn::ActionFunction`] node.
 fn action_function(p: &mut crate::parser::Parser<Syn>) {
 	if p.at(Token::BraceL) {
@@ -765,11 +841,10 @@ fn action_function(p: &mut crate::parser::Parser<Syn>) {
 }
 
 #[cfg(test)]
-#[cfg(any())]
 mod test {
 	use crate::{
 		testing::*,
-		zdoom::{zscript::ParseTree, Version},
+		zdoom::{self, zscript::ParseTree},
 	};
 
 	use super::*;
@@ -778,13 +853,21 @@ mod test {
 	fn smoke_state_def() {
 		const SOURCES: &[&str] = &["#### # 1;", "---- # 1;", "\"####\" \"#\" 1;"];
 
-		let builder = ParserBuilder::new(Version::default());
-
 		for source in SOURCES {
-			let tbuf = crate::_scan(source, Version::default());
-			let result = crate::_parse(builder.state_def(), source, &tbuf);
-			let ptree: ParseTree = unwrap_parse_tree(result);
+			let ptree: ParseTree = crate::parse(source, state_def, zdoom::Version::default());
 			assert_no_errors(&ptree);
+			prettyprint_maybe(ptree.cursor());
 		}
+	}
+
+	#[test]
+	fn smoke_goto() {
+		const SOURCE: &str = r#####"States {
+	goto Super::FrameSetup;
+}"#####;
+
+		let ptree: ParseTree = crate::parse(SOURCE, states_block, zdoom::Version::default());
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 }

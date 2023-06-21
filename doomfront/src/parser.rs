@@ -72,9 +72,33 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.pos += 1;
 	}
 
+	pub fn advance_n(&mut self, syn: L::Kind, tokens: usize) {
+		assert!(
+			tokens >= 1,
+			"`advance_n` was passed 0 at {:?} (`{}`)",
+			self.current_span(),
+			self.current_slice()
+		);
+
+		self.fuel.set(256);
+		self.events
+			.push(Event::AdvanceN(L::kind_to_raw(syn), tokens));
+		self.pos += tokens;
+	}
+
 	#[must_use]
 	pub fn eof(&self) -> bool {
 		self.pos == self.tokens.len()
+	}
+
+	#[must_use]
+	pub fn current_slice(&self) -> &str {
+		&self.source[self.tokens[self.pos].span.clone()]
+	}
+
+	#[must_use]
+	pub fn current_span(&self) -> logos::Span {
+		self.tokens[self.pos].span.clone()
 	}
 
 	#[must_use]
@@ -182,10 +206,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			return;
 		}
 
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 	}
 
 	/// If [`Self::eat_str_nc`] fails to consume `token` corresponding to `string`
@@ -201,10 +222,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			return;
 		}
 
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 	}
 
 	/// Composes [`Self::expect`] and [`Self::eat_if`].
@@ -218,10 +236,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			return;
 		}
 
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 	}
 
 	/// Composes [`Self::expect`] and [`Self::eat_any`].
@@ -236,10 +251,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			}
 		}
 
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 	}
 
 	/// Composes [`Self::expect_any`] and [`Self::expect_str_nc`].
@@ -254,10 +266,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			}
 		}
 
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 	}
 
 	/// Finds the next token (which may be [`L::EOF`]) for which `predicate`
@@ -275,16 +284,39 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			.unwrap_or(L::EOF)
 	}
 
+	/// Like [`Self::next_filtered`] but skips ahead of the current token if possible.
+	pub fn lookahead_filtered(&self, predicate: fn(L::Token) -> bool) -> L::Token {
+		if self.pos >= self.tokens.len() {
+			return L::EOF;
+		}
+
+		self.tokens[(self.pos + 1)..]
+			.iter()
+			.find_map(|t| {
+				if predicate(t.kind) {
+					Some(t.kind)
+				} else {
+					None
+				}
+			})
+			.unwrap_or(L::EOF)
+	}
+
+	fn raise(&mut self, expected: &'static [&'static str]) {
+		self.errors.push(Error {
+			expected,
+			found: self.tokens.get(self.pos).cloned().unwrap_or(Lexeme {
+				kind: L::EOF,
+				span: self.source.len()..self.source.len(),
+			}),
+		});
+	}
+
 	/// [Opens](Self::open) a new error node, [advances](Self::advance) it with
 	/// a `syn` token, and then [closes](Self::close) it.
 	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
 		let ckpt = self.open();
-
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
-
+		self.raise(expected);
 		self.advance(syn);
 		self.close(ckpt, L::ERR_NODE);
 	}
@@ -298,16 +330,46 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		err: L::Kind,
 		expected: &'static [&'static str],
 	) -> CloseMark {
-		self.errors.push(Error {
-			expected,
-			found: self.tokens[self.pos].clone(),
-		});
+		self.raise(expected);
 
 		if !self.eof() {
 			self.advance(token);
 		}
 
 		self.close(checkpoint, err)
+	}
+
+	/// Use when getting ready to open a new node to validate that the parser
+	/// is currently at the first expected token of that node.
+	pub fn debug_assert_at(&self, token: L::Token)
+	where
+		L::Token: std::fmt::Debug,
+	{
+		debug_assert!(
+			self.at(token),
+			"parser expected to be at a `{token:#?}`, but is at `{t:#?}`\r\n\
+			(position {pos}, span {span:?}, slice: `{slice}`)",
+			t = self.nth(0),
+			pos = self.pos,
+			span = self.current_span(),
+			slice = self.current_slice()
+		);
+	}
+
+	/// See [`Self::debug_assert_at`].
+	pub fn debug_assert_at_if(&self, predicate: fn(L::Token) -> bool)
+	where
+		L::Token: std::fmt::Debug,
+	{
+		debug_assert!(
+			predicate(self.nth(0)),
+			"parser's current token did not pass a predicate (at `{t:#?}`)\r\n\
+			(position {pos}, span {span:?}, slice: `{slice}`)",
+			t = self.nth(0),
+			pos = self.pos,
+			span = self.current_span(),
+			slice = self.current_slice()
+		);
 	}
 
 	/// Panics if an [opened] subtree was never [closed], or if no sub-trees
@@ -322,15 +384,25 @@ impl<'i, L: LangExt> Parser<'i, L> {
 
 		for event in self.events {
 			match event {
+				Event::Advance(syn) => {
+					let token = tokens.next().unwrap();
+					builder.token(syn, &self.source[token.span]);
+				}
 				Event::Open(syn) => {
 					builder.start_node(syn);
 				}
 				Event::Close => {
 					builder.finish_node();
 				}
-				Event::Advance(syn) => {
-					let token = tokens.next().unwrap();
-					builder.token(syn, &self.source[token.span]);
+				Event::AdvanceN(syn, n) => {
+					let start = tokens.next().unwrap().span.start;
+
+					for _ in 0..n {
+						let _ = tokens.next().unwrap();
+					}
+
+					let end = tokens.next().unwrap().span.end;
+					builder.token(syn, &self.source[start..end]);
 				}
 			}
 		}
@@ -414,4 +486,5 @@ enum Event {
 	Open(SyntaxKind),
 	Close,
 	Advance(SyntaxKind),
+	AdvanceN(SyntaxKind, usize),
 }

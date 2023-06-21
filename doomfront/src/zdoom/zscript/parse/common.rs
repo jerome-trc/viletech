@@ -244,7 +244,7 @@ impl ParserBuilder {
 
 /// Builds a [`Syn::ArrayLen`] node.
 pub(super) fn array_len(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::BracketL));
+	p.debug_assert_at(Token::BracketL);
 	let l = p.open();
 	p.advance(Syn::BracketL);
 	trivia_0plus(p);
@@ -260,7 +260,7 @@ pub(super) fn array_len(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::DeprecationQual`] node.
 pub(super) fn deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwDeprecated));
+	p.debug_assert_at(Token::KwDeprecated);
 	let qual = p.open();
 	p.advance(Syn::KwDeprecated);
 	trivia_0plus(p);
@@ -289,6 +289,7 @@ pub(super) fn is_ident(token: Token) -> bool {
 }
 
 #[must_use]
+#[allow(unused)]
 pub(super) fn eat_ident(p: &mut crate::parser::Parser<Syn>) -> bool {
 	p.eat_any(IDENT_TOKENS)
 }
@@ -301,6 +302,11 @@ pub(super) fn ident_lax(p: &mut crate::parser::Parser<Syn>) {
 #[must_use]
 pub(super) fn is_ident_lax(token: Token) -> bool {
 	is_ident(token) || IDENT_TOKENS_LAX.iter().any(|t| t.0 == token)
+}
+
+#[must_use]
+pub(super) fn eat_ident_lax(p: &mut crate::parser::Parser<Syn>) -> bool {
+	p.eat_if(is_ident_lax, Syn::Ident)
 }
 
 const IDENT_TOKENS: &[(Token, Syn)] = &[
@@ -576,7 +582,7 @@ pub fn type_ref(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// i.e. can `token` begin a [type reference](type_ref)?
-/// Note that this includes (non-lax) identifiers.
+/// Note that this includes (non-lax) identifiers and [`Token::KwLet`].
 #[must_use]
 pub(super) fn in_type_ref_first_set(token: Token) -> bool {
 	if is_ident(token) || is_primitive_type(token) {
@@ -585,7 +591,12 @@ pub(super) fn in_type_ref_first_set(token: Token) -> bool {
 
 	matches!(
 		token,
-		Token::KwLet | Token::KwArray | Token::KwMap | Token::KwMapIterator | Token::KwReadonly
+		Token::KwLet
+			| Token::KwClass
+			| Token::KwArray
+			| Token::KwMap
+			| Token::KwMapIterator
+			| Token::KwReadonly
 	)
 }
 
@@ -611,19 +622,25 @@ fn is_primitive_type(token: Token) -> bool {
 			| Token::KwName
 			| Token::KwSound
 			| Token::KwState
+			| Token::KwString
 			| Token::KwColor
+			| Token::KwVoid
 	)
 }
 
 /// Builds a [`Syn::VarName`] node.
 pub(super) fn var_name(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at_if(is_ident));
+	p.debug_assert_at_if(is_ident_lax);
 	let name = p.open();
 	p.advance(Syn::Ident);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
-		trivia_0plus(p);
-		array_len(p);
+	loop {
+		if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
+			trivia_0plus(p);
+			array_len(p);
+		} else {
+			break;
+		}
 	}
 
 	p.close(name, Syn::VarName);
@@ -631,7 +648,7 @@ pub(super) fn var_name(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::VersionQual`] node.
 pub(super) fn version_qual(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwVersion));
+	p.debug_assert_at(Token::KwVersion);
 	let qual = p.open();
 	p.advance(Syn::KwVersion);
 	trivia_0plus(p);
@@ -676,13 +693,20 @@ mod test {
 			"class<Forge>",
 			"array<Unwelcome>",
 			"array<class<TheOssuary> >",
-			"map<Corruption[1], Mortem[2][3]>",
+			"map<Corruption[1], Mortem[2]>",
 			"mapiterator<FishInABarrel, Neoplasm>",
 		];
+
+		let printout = std::env::var("DOOMFRONT_TEST_PRETTYPRINT").is_ok_and(|v| v == "1");
 
 		for source in SOURCES {
 			let ptree: ParseTree = crate::parse(source, type_ref, zdoom::Version::default());
 			assert_no_errors(&ptree);
+
+			if printout {
+				eprintln!();
+				prettyprint(ptree.cursor());
+			}
 		}
 	}
 

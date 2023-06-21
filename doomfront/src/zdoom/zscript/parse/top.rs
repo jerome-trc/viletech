@@ -103,7 +103,7 @@ impl ParserBuilder {
 
 /// Builds a [`Syn::ConstDef`] node.
 pub fn const_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwConst));
+	p.debug_assert_at(Token::KwConst);
 	let constdef = p.open();
 	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
 	trivia_1plus(p);
@@ -132,7 +132,7 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 		p.close(var, Syn::EnumVariant);
 	}
 
-	debug_assert!(p.at(Token::KwEnum));
+	p.debug_assert_at(Token::KwEnum);
 	let enumdef = p.open();
 	p.expect(Token::KwEnum, Syn::KwEnum, &["`enum`"]);
 	trivia_1plus(p);
@@ -190,7 +190,7 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::IncludeDirective`] node.
 pub fn include_directive(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::PoundInclude));
+	p.debug_assert_at(Token::PoundInclude);
 	let directive = p.open();
 	p.expect(Token::PoundInclude, Syn::PoundInclude, &["`#include`"]);
 	trivia_0plus(p);
@@ -200,7 +200,7 @@ pub fn include_directive(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::VersionDirective`] node.
 pub fn version_directive(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwVersion));
+	p.debug_assert_at(Token::KwVersion);
 	let directive = p.open();
 	p.expect(Token::KwVersion, Syn::KwVersion, &["`version`"]);
 	trivia_0plus(p);

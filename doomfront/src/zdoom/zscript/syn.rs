@@ -10,6 +10,8 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// Optional part at the end of a [`Syn::StateDef`].
 	ActionFunction,
+	/// `'action' statesusage?`
+	ActionQual,
 	/// `'(' exprs? ')'`
 	ArgList,
 	/// `(ident ':')? expr`
@@ -95,6 +97,7 @@ pub enum Syn {
 	StateOffset,
 	/// `'states' ident '{' innard* '}'`
 	StatesBlock,
+	/// `'(' ('actor' | 'item' | 'overlay' | 'weapon')+ ')'`
 	StatesUsage,
 	/// `'struct' ident '{' innard* '}'`
 	StructDef,
@@ -102,7 +105,7 @@ pub enum Syn {
 	StructExtend,
 	/// `'[' expr ']'`
 	Subscript,
-	/// ident arraylen?
+	/// ident arraylen*
 	VarName,
 	/// The `version` preprocessor directive and its string literal argument.
 	VersionDirective,
@@ -357,6 +360,8 @@ pub enum Syn {
 	AsteriskEq,
 	/// `@`
 	At,
+	/// `\`
+	Backslash,
 	/// `!`
 	Bang,
 	/// `!=`
@@ -608,6 +613,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::Asterisk2,
 			Syn::AsteriskEq,
 			Syn::At,
+			Syn::Backslash,
 			Syn::Bang,
 			Syn::BangEq,
 			Syn::BraceL,
@@ -650,8 +656,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::PoundInclude,
 			Syn::RegionStart,
 			Syn::RegionEnd,
-			Syn::StateSprite,
-			Syn::StateFrames,
 			Syn::Ident,
 			Syn::Whitespace,
 			Syn::DocComment,

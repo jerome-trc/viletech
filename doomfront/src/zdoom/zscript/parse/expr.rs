@@ -475,11 +475,19 @@ fn recur(p: &mut crate::parser::Parser<Syn>, left: Token) {
 fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 	let ex = p.open();
 
-	if eat_ident(p) {
+	if eat_ident_lax(p) {
 		return p.close(ex, Syn::IdentExpr);
 	}
 
 	match p.nth(0) {
+		Token::KwSuper => {
+			p.advance(Syn::KwSuper);
+			p.close(ex, Syn::SuperExpr)
+		}
+		Token::KwDefault => {
+			p.advance(Syn::Ident);
+			p.close(ex, Syn::IdentExpr)
+		}
 		Token::IntLit => {
 			p.advance(Syn::IntLit);
 			p.close(ex, Syn::Literal)
@@ -588,10 +596,11 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 				"an integer",
 				"a floating-point number",
 				"a string",
-				"a name",
+				"a name literal",
 				"`true`",
 				"`false`",
 				"`null`",
+				"`super` or `default`",
 				"`(`",
 				"`!`",
 				"`--`",
@@ -607,7 +616,7 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 /// i.e. can `token` begin a primary expression?
 #[must_use]
 pub(super) fn in_first_set(token: Token) -> bool {
-	if is_ident(token) {
+	if is_ident_lax(token) {
 		return true;
 	}
 
@@ -621,6 +630,7 @@ pub(super) fn in_first_set(token: Token) -> bool {
 			| Token::NameLit
 			| Token::KwNull
 			| Token::ParenL
+			| Token::KwSuper
 			| Token::Bang
 			| Token::Minus2
 			| Token::Plus2
@@ -633,7 +643,7 @@ pub(super) fn in_first_set(token: Token) -> bool {
 /// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
 ///
 pub fn arg_list(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::ParenL));
+	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();
 	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
 	trivia_0plus(p);
@@ -715,7 +725,7 @@ fn infix_right_stronger(left: Token, right: Token) -> bool {
 				Token::KwDot,
 			],
 			&[Token::Asterisk2],
-			&[Token::Minus2, Token::Plus2],
+			&[Token::Minus2, Token::Plus2, Token::Bang, Token::Tilde],
 			&[Token::Dot],
 		];
 
@@ -760,8 +770,16 @@ mod test {
 	use super::*;
 
 	#[test]
-	fn smoke() {
+	fn smoke_1() {
 		const SOURCE: &str = "(a[1]() + --b.c) * ++d && (e << f) ~== ((((g /= h ? i : j))))";
+
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn smoke_2() {
+		const SOURCE: &str = r#"!multiplayer && (GetPlayerInput(INPUT_BUTTONS))"#;
 
 		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);

@@ -442,9 +442,22 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 	let token = p.nth(0);
 
 	if expr::in_first_set(token) {
+		let peeked = p.lookahead_filtered(|token| !token.is_trivia());
+
+		if in_type_ref_first_set(token) && is_ident_lax(peeked) {
+			assign_stat(p);
+			return;
+		}
+
 		let stat = p.open();
 		expr(p);
+		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 		p.close(stat, Syn::ExprStat);
+		return;
+	}
+
+	if in_type_ref_first_set(token) {
+		assign_stat(p);
 		return;
 	}
 
@@ -520,6 +533,7 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 			expr(p);
 			trivia_0plus(p);
 			p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+			trivia_0plus(p);
 			statement(p);
 			p.close(
 				stat,
@@ -580,6 +594,13 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 				let t = p.nth(0);
 
 				if expr::in_first_set(t) {
+					let peeked = p.lookahead_filtered(|token| !token.is_trivia());
+
+					if in_type_ref_first_set(t) && is_ident_lax(peeked) {
+						local_var(p);
+						continue;
+					}
+
 					expr(p);
 				} else if in_type_ref_first_set(t) {
 					local_var(p);
@@ -699,72 +720,8 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 			p.close(stat, Syn::AssignStat);
 		}
-		Token::KwLet => {
-			let stat = p.open();
-			p.advance(Syn::KwLet);
-			trivia_0plus(p);
-
-			let syn = if p.at(Token::BracketL) {
-				p.advance(Syn::BracketL);
-				trivia_0plus(p);
-				ident_list(p);
-				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
-				trivia_0plus(p);
-				p.expect(Token::Eq, Syn::Eq, &["`=`"]);
-				trivia_0plus(p);
-				expr(p);
-				trivia_0plus(p);
-				Syn::DeclAssignStat
-			} else {
-				local_var(p);
-				Syn::LocalStat
-			};
-
-			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-			p.close(stat, syn);
-		}
 		Token::KwStatic => {
-			let stat = p.open();
-			p.advance(Syn::KwStatic);
-			trivia_1plus(p);
-			p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
-			trivia_0plus(p);
-			type_ref(p);
-			trivia_0plus(p);
-
-			let t = p.next_filtered(|token| !token.is_trivia());
-
-			if is_ident(t) {
-				trivia_0plus(p);
-				ident(p);
-				trivia_0plus(p);
-				p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
-				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
-			} else if t == Token::BracketL {
-				trivia_0plus(p);
-				p.advance(Syn::BracketL);
-				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
-				trivia_0plus(p);
-				ident(p);
-			} else {
-				p.advance_err_and_close(stat, Syn::from(t), Syn::Error, &["`[`", "an identifier"]);
-				return;
-			}
-
-			trivia_0plus(p);
-			p.expect(Token::Eq, Syn::Eq, &["`=`"]);
-			trivia_0plus(p);
-			p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
-			trivia_0plus(p);
-			expr::expr_list(p);
-			trivia_0plus(p);
-			p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
-			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-			p.close(stat, Syn::StaticConstStat);
+			static_const_stat(p);
 		}
 		other => {
 			p.advance_with_error(
@@ -784,7 +741,7 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 					"`break`",
 					"`return`",
 					"`[`",
-					"`let`",
+					"`let` or a type name",
 					"`static`",
 				],
 			);
@@ -794,7 +751,7 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::CompoundStat`] node.
 pub(super) fn compound_stat(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::BraceL));
+	p.debug_assert_at(Token::BraceL);
 	let stat = p.open();
 	p.advance(Syn::BraceL);
 
@@ -813,13 +770,87 @@ pub(super) fn compound_stat(p: &mut crate::parser::Parser<Syn>) {
 	p.close(stat, Syn::CompoundStat);
 }
 
+/// Builds a [`Syn::StaticConstStat`] node.
+pub(super) fn static_const_stat(p: &mut crate::parser::Parser<Syn>) {
+	p.debug_assert_at(Token::KwStatic);
+	let stat = p.open();
+	p.advance(Syn::KwStatic);
+	trivia_1plus(p);
+	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
+	trivia_0plus(p);
+	type_ref(p);
+	trivia_0plus(p);
+
+	let t = p.next_filtered(|token| !token.is_trivia());
+
+	if is_ident(t) {
+		trivia_0plus(p);
+		ident(p);
+		trivia_0plus(p);
+		p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
+		trivia_0plus(p);
+		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+	} else if t == Token::BracketL {
+		trivia_0plus(p);
+		p.advance(Syn::BracketL);
+		trivia_0plus(p);
+		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+		trivia_0plus(p);
+		ident(p);
+	} else {
+		p.advance_err_and_close(stat, Syn::from(t), Syn::Error, &["`[`", "an identifier"]);
+		return;
+	}
+
+	trivia_0plus(p);
+	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	trivia_0plus(p);
+	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	trivia_0plus(p);
+	expr::expr_list(p);
+	trivia_0plus(p);
+	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	trivia_0plus(p);
+	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.close(stat, Syn::StaticConstStat);
+}
+
+/// Builds a [`Syn::DeclAssignStat`] or [`Syn::LocalStat`] node.
+fn assign_stat(p: &mut crate::parser::Parser<Syn>) {
+	let stat = p.open();
+
+	let syn = if p.at(Token::KwLet)
+		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::BracketL
+	{
+		p.advance(Syn::KwLet);
+		trivia_0plus(p);
+		p.advance(Syn::BracketL);
+		trivia_0plus(p);
+		ident_list(p);
+		trivia_0plus(p);
+		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+		trivia_0plus(p);
+		p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+		trivia_0plus(p);
+		expr(p);
+		trivia_0plus(p);
+		Syn::DeclAssignStat
+	} else {
+		local_var(p);
+		Syn::LocalStat
+	};
+
+	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.close(stat, syn);
+}
+
 /// Builds a [`Syn::LocalVar`] node. Does not expect a trailing semicolon.
 fn local_var(p: &mut crate::parser::Parser<Syn>) {
 	let local = p.open();
 	type_ref(p);
 	trivia_0plus(p);
 
-	while p.at_if(is_ident) {
+	while p.at_if(is_ident_lax) {
 		local_var_init(p);
 
 		if p.next_filtered(|token| !token.is_trivia()) != Token::Comma {
@@ -827,6 +858,7 @@ fn local_var(p: &mut crate::parser::Parser<Syn>) {
 		} else {
 			trivia_0plus(p);
 			p.advance(Syn::Comma);
+			trivia_0plus(p);
 		}
 	}
 
@@ -836,12 +868,10 @@ fn local_var(p: &mut crate::parser::Parser<Syn>) {
 /// Builds a [`Syn::LocalVarInit`] node.
 fn local_var_init(p: &mut crate::parser::Parser<Syn>) {
 	let init = p.open();
-	ident(p);
+	ident_lax(p);
 	trivia_0plus(p);
 
-	let token = p.nth(0);
-
-	match token {
+	match p.nth(0) {
 		Token::BracketL => {
 			trivia_0plus(p);
 			array_len(p);
@@ -867,6 +897,7 @@ fn local_var_init(p: &mut crate::parser::Parser<Syn>) {
 			trivia_0plus(p);
 			p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
 		}
+		Token::Semicolon | Token::Comma => {} // No initializer; valid.
 		other => {
 			p.advance_err_and_close(
 				init,
@@ -903,6 +934,24 @@ mod test {
 		for source in SOURCES {
 			let ptree: ParseTree = crate::parse(source, statement, zdoom::Version::default());
 			assert_no_errors(&ptree);
+			prettyprint_maybe(ptree.cursor());
 		}
+	}
+
+	#[test]
+	fn smoke_if() {
+		const SOURCE: &str = r"if(player_data ) {
+			uint press =	  GetPlayerInput(INPUT_BUTTONS) &
+							(~GetPlayerInput(INPUT_OLDBUTTONS));
+
+					if(press & BT_USER1)	player_data.Binds.Use(0);
+			else	if(press & BT_USER2)	player_data.Binds.Use(1);
+			else	if(press & BT_USER3)	player_data.Binds.Use(2);
+			else	if(press & BT_USER4)	player_data.Binds.Use(3);
+		}";
+
+		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::Version::default());
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 }

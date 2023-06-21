@@ -13,13 +13,13 @@ pub enum Token {
 	#[regex(r"[0-9]*\.[0-9]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
 	#[regex(r"[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
 	FloatLit,
-	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 5)]
-	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 4)]
-	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 3)]
+	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 4)]
+	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 3)]
+	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 2)]
 	IntLit,
 	#[regex("'[^''\n]*'")]
 	NameLit,
-	#[regex(r#""(([\\]["])|[^"])*""#, priority = 2)]
+	#[regex(r#""(([\\]["])|[^"])*""#, priority = 3)]
 	StringLit,
 	// Keywords ////////////////////////////////////////////////////////////////
 	#[doc(hidden)]
@@ -260,6 +260,8 @@ pub enum Token {
 	AsteriskEq,
 	#[token("@")]
 	At,
+	#[token("\\")]
+	Backslash,
 	#[token("!")]
 	Bang,
 	#[token("!=")]
@@ -341,15 +343,8 @@ pub enum Token {
 	PoundInclude,
 	#[regex("#region[^\n]*\n")]
 	RegionStart,
-	#[regex("#endregion[^\n]*\n")]
+	#[regex("#endregion[^\n]*\n?")]
 	RegionEnd,
-	#[token("\"####\"")]
-	#[token("\"----\"")]
-	#[regex(r#"[0-9a-zA-Z_]{4}"#, priority = 2)]
-	StateSprite,
-	#[regex(r#""[a-zA-Z\[\]]*""#)]
-	#[regex(r#"[a-zA-Z\[\]\\]+"#, priority = 1)]
-	StateFrames,
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
 	/// A heterogenous span of any character between NUL and ASCII 32.

@@ -231,8 +231,9 @@ impl ParserBuilder {
 
 /// Builds a [`Syn::ClassDef`] node.
 pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwClass));
+	p.debug_assert_at(Token::KwClass);
 	let classdef = p.open();
+	p.advance(Syn::KwClass);
 	trivia_0plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
@@ -282,6 +283,7 @@ pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
 
 	while !p.at(Token::BraceR) && !p.eof() {
 		class_innard(p);
+		trivia_0plus(p);
 	}
 
 	trivia_0plus(p);
@@ -291,7 +293,7 @@ pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::MixinClassDef`] node.
 pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwMixin));
+	p.debug_assert_at(Token::KwMixin);
 	let mixindef = p.open();
 	p.advance(Syn::KwMixin);
 	trivia_0plus(p);
@@ -304,17 +306,17 @@ pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
 
 	while !p.at(Token::BraceR) && !p.eof() {
 		class_innard(p);
+		trivia_0plus(p);
 	}
 
 	trivia_0plus(p);
 	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
-
 	p.close(mixindef, Syn::MixinClassDef);
 }
 
 /// Builds a [`Syn::StructDef`] node.
 pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwStruct));
+	p.debug_assert_at(Token::KwStruct);
 	let structdef = p.open();
 	p.advance(Syn::KwStruct);
 	trivia_0plus(p);
@@ -342,6 +344,7 @@ pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
 
 	while !p.at(Token::BraceR) && !p.eof() {
 		struct_innard(p);
+		trivia_0plus(p);
 	}
 
 	trivia_0plus(p);
@@ -355,9 +358,9 @@ pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
 	p.close(structdef, Syn::StructDef);
 }
 
-/// Builds either a [`Syn::ClassExtend`] or [`Syn::StructExtend`] node.
+/// Builds a [`Syn::ClassExtend`] or [`Syn::StructExtend`] node.
 pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::KwExtend));
+	p.debug_assert_at(Token::KwExtend);
 	let extension = p.open();
 	p.advance(Syn::KwExtend);
 	trivia_0plus(p);
@@ -385,10 +388,12 @@ pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
 	if node_syn == Syn::ClassExtend {
 		while !p.at(Token::BraceR) && !p.eof() {
 			class_innard(p);
+			trivia_0plus(p);
 		}
 	} else if node_syn == Syn::StructExtend {
 		while !p.at(Token::BraceR) && !p.eof() {
 			struct_innard(p);
+			trivia_0plus(p);
 		}
 	}
 
@@ -402,15 +407,24 @@ pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
 fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 	let token = p.nth(0);
 
+	if token == Token::KwStatic
+		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::KwConst
+	{
+		static_const_stat(p);
+		return;
+	}
+
 	if in_type_ref_first_set(token) || in_decl_qual_first_set(token) {
 		member_decl(p);
+		trivia_0plus(p);
+		return;
 	}
 
 	match token {
+		Token::KwDefault => default_block(p),
+		Token::KwStates => states_block(p),
 		Token::KwConst => const_def(p),
 		Token::KwEnum => enum_def(p),
-		Token::KwStates => states_block(p),
-		Token::KwDefault => default_block(p),
 		Token::KwProperty => property_def(p),
 		Token::KwFlagDef => flag_def(p),
 		Token::KwMixin => {
@@ -446,8 +460,17 @@ fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
 	let token = p.nth(0);
 
+	if token == Token::KwStatic
+		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::KwConst
+	{
+		static_const_stat(p);
+		return;
+	}
+
 	if in_type_ref_first_set(token) || in_decl_qual_first_set(token) {
 		member_decl(p);
+		trivia_0plus(p);
+		return;
 	}
 
 	match token {
@@ -472,7 +495,7 @@ fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
 	trivia_0plus(p);
 }
 
-/// Builds either a [`Syn::FieldDecl`] node or [`Syn::FunctionDecl`] node.
+/// Builds a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`] node.
 fn member_decl(p: &mut crate::parser::Parser<Syn>) {
 	let member = p.open();
 
@@ -480,6 +503,17 @@ fn member_decl(p: &mut crate::parser::Parser<Syn>) {
 		match p.nth(0) {
 			Token::KwDeprecated => deprecation_qual(p),
 			Token::KwVersion => version_qual(p),
+			Token::KwAction => {
+				let action = p.open();
+				p.advance(Syn::KwAction);
+
+				if p.next_filtered(|token| !token.is_trivia()) == Token::ParenL {
+					trivia_0plus(p);
+					states_usage(p);
+				}
+
+				p.close(action, Syn::ActionQual);
+			}
 			other => p.advance(Syn::from(other)),
 		}
 
@@ -488,45 +522,68 @@ fn member_decl(p: &mut crate::parser::Parser<Syn>) {
 
 	type_ref(p);
 	trivia_0plus(p);
-	let multiple_idents = ident_list(p);
-	trivia_0plus(p);
 
-	if multiple_idents {
-		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-		p.close(member, Syn::FieldDecl);
+	if !p.at_if(is_ident_lax) {
+		p.advance_err_and_close(member, Syn::from(p.nth(0)), Syn::Error, &["an identifier"]);
 		return;
 	}
 
-	if p.eat(Token::Semicolon, Syn::Semicolon) {
-		p.close(member, Syn::FieldDecl);
-		return;
+	let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+
+	match peeked {
+		Token::BracketL | Token::Comma => {
+			trivia_0plus(p);
+
+			while !p.at(Token::Semicolon) && !p.eof() {
+				var_name(p);
+
+				if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+					trivia_0plus(p);
+					p.advance(Syn::Comma);
+					trivia_0plus(p);
+				} else {
+					break;
+				}
+			}
+
+			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.close(member, Syn::FieldDecl);
+		}
+		Token::ParenL => {
+			trivia_0plus(p);
+			ident_lax(p);
+			trivia_0plus(p);
+			param_list(p);
+			trivia_0plus(p);
+
+			if p.eat(Token::KwConst, Syn::KwConst) {
+				trivia_0plus(p);
+			}
+
+			if p.eat(Token::Semicolon, Syn::Semicolon) {
+				p.close(member, Syn::FunctionDecl);
+				return;
+			}
+
+			compound_stat(p);
+			p.close(member, Syn::FunctionDecl);
+		}
+		Token::Semicolon => {
+			trivia_0plus(p);
+			ident_lax(p);
+			trivia_0plus(p);
+			p.advance(Syn::Semicolon);
+			p.close(member, Syn::FieldDecl);
+		}
+		other => {
+			p.advance_err_and_close(member, Syn::from(other), Syn::Error, &["`[`", "`,`", "`(`"]);
+		}
 	}
-
-	if p.at(Token::ParenL) {
-		param_list(p);
-	} else {
-		p.advance_err_and_close(
-			member,
-			Syn::from(p.nth(0)),
-			Syn::FunctionDecl,
-			&["a parameter list"],
-		);
-	}
-
-	trivia_0plus(p);
-
-	if p.eat(Token::Semicolon, Syn::Semicolon) {
-		p.close(member, Syn::FunctionDecl);
-		return;
-	}
-
-	compound_stat(p);
-	p.close(member, Syn::FunctionDecl);
 }
 
 /// Builds a [`Syn::ParamList`] node. Includes delimiting parentheses.
 fn param_list(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at(Token::ParenL));
+	p.debug_assert_at(Token::ParenL);
 	let list = p.open();
 	p.advance(Syn::ParenL);
 	trivia_0plus(p);
@@ -538,16 +595,23 @@ fn param_list(p: &mut crate::parser::Parser<Syn>) {
 		return;
 	}
 
-	while !p.eof() {
+	while !p.at(Token::ParenR) && !p.eof() {
 		parameter(p);
 		trivia_0plus(p);
 
 		if p.eat(Token::Comma, Syn::Comma) {
 			trivia_0plus(p);
-			continue;
-		}
 
-		break;
+			if p.at(Token::ParenR) {
+				p.advance_err_and_close(
+					list,
+					Syn::from(p.nth(0)),
+					Syn::ParamList,
+					&["a parameter"],
+				);
+				return;
+			}
+		}
 	}
 
 	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
@@ -556,7 +620,7 @@ fn param_list(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::Parameter`] node.
 fn parameter(p: &mut crate::parser::Parser<Syn>) {
-	debug_assert!(p.at_if(Token::is_trivia));
+	p.debug_assert_at_if(|t| !t.is_trivia());
 	let param = p.open();
 
 	loop {
@@ -588,6 +652,7 @@ fn in_decl_qual_first_set(token: Token) -> bool {
 	matches!(
 		token,
 		Token::KwAbstract
+			| Token::KwAction
 			| Token::KwClearScope
 			| Token::KwDeprecated
 			| Token::KwFinal
@@ -607,4 +672,47 @@ fn in_decl_qual_first_set(token: Token) -> bool {
 			| Token::KwVirtual
 			| Token::KwVirtualScope
 	)
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	use crate::{testing::*, zdoom::zscript::ParseTree};
+
+	#[test]
+	fn smoke() {
+		const SOURCE: &str = r#####"
+
+class Rocketpack_Flare : Actor
+{
+	Default
+	{
+		RenderStyle "Add";
+		Scale 0.25;
+		Alpha 0.95;
+		+NOGRAVITY
+		+NOINTERACTION
+		+THRUGHOST
+		+DONTSPLASH
+		+NOTIMEFREEZE
+	}
+
+	States
+	{
+		Spawn:
+			FLER A 1 Bright NoDelay {
+				A_FadeOut(0.3);
+				A_SetScale(Scale.X - FRandom(0.005, 0.0075));
+				Return A_JumpIf(Scale.X <= 0.0, "Null");
+			}
+			Loop;
+	}
+}
+
+"#####;
+
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		assert_no_errors(&ptree);
+	}
 }

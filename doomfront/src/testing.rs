@@ -156,6 +156,12 @@ pub fn prettyprint<L: LangExt>(cursor: SyntaxNode<L>) {
 	}
 }
 
+pub fn prettyprint_maybe<L: LangExt>(cursor: SyntaxNode<L>) {
+	if std::env::var("DOOMFRONT_TEST_PRETTYPRINT").is_ok_and(|v| v == "1") {
+		prettyprint(cursor);
+	}
+}
+
 /// `Err` variants contain the reason the read failed. This can happen because:
 /// - the environment variable behind `env_var_name` could not be retrieved
 /// - the path at the environment variable is to a non-existent file

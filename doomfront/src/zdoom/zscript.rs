@@ -10,6 +10,7 @@ mod syn;
 
 pub use syn::Syn;
 
+pub type IncludeTree = super::inctree::IncludeTree<Syn>;
 pub type ParseTree = crate::ParseTree<Syn>;
 pub type SyntaxNode = rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = rowan::SyntaxToken<Syn>;
