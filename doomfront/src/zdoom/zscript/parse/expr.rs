@@ -630,38 +630,44 @@ pub(super) fn in_first_set(token: Token) -> bool {
 	)
 }
 
-fn arg_list(p: &mut crate::parser::Parser<Syn>) {
+/// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
+///
+pub fn arg_list(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at(Token::ParenL));
 	let arglist = p.open();
 	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
-		argument(p);
+		let arg = p.open();
+
+		if p.at_if(is_ident_lax) {
+			let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+
+			if peeked == Token::Colon {
+				p.advance(Syn::Ident);
+				trivia_0plus(p);
+				p.advance(Syn::Colon);
+				trivia_0plus(p);
+			}
+		}
+
+		expr(p);
+
+		p.close(arg, Syn::Argument);
+
+		if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+			trivia_0plus(p);
+			p.advance(Syn::Comma);
+			trivia_0plus(p);
+		} else {
+			break;
+		}
 	}
 
 	trivia_0plus(p);
 	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
 	p.close(arglist, Syn::ArgList);
-}
-
-fn argument(p: &mut crate::parser::Parser<Syn>) {
-	let arg = p.open();
-
-	if eat_ident(p) {
-		trivia_0plus(p);
-		p.expect(Token::Colon, Syn::Colon, &["`:`"]);
-		trivia_0plus(p);
-	}
-
-	expr(p);
-	trivia_0plus(p);
-
-	if !p.at(Token::ParenR) {
-		p.expect(Token::Comma, Syn::Comma, &["`,`"]);
-	}
-
-	p.close(arg, Syn::Argument);
 }
 
 #[must_use]

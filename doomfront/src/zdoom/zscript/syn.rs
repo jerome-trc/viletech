@@ -79,6 +79,8 @@ pub enum Syn {
 	RngSpec,
 	/// The top-level node, representing the whole file.
 	Root,
+	/// `'fail' | 'loop' | 'stop' | 'wait' ';'` or
+	/// `'goto' (scope '::')? identchain ('+' integer)?`
 	StateFlow,
 	/// For child nodes under a [`Syn::StatesDef`].
 	StateDef,
@@ -238,7 +240,7 @@ pub enum Syn {
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwFast,
 	KwFinal,
-	KwFlagdef,
+	KwFlagDef,
 	KwFloat,
 	KwForEach,
 	KwFor,
@@ -515,7 +517,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::FalseLit, // KwFalse
 			Syn::KwFast,
 			Syn::KwFinal,
-			Syn::KwFlagdef,
+			Syn::KwFlagDef,
 			Syn::KwFloat,
 			Syn::KwFor,
 			Syn::KwForEach,
@@ -645,6 +647,8 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::PoundInclude,
 			Syn::RegionStart,
 			Syn::RegionEnd,
+			Syn::StateSprite,
+			Syn::StateFrames,
 			Syn::Ident,
 			Syn::Whitespace,
 			Syn::DocComment,

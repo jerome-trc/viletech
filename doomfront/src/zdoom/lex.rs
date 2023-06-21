@@ -13,9 +13,9 @@ pub enum Token {
 	#[regex(r"[0-9]*\.[0-9]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
 	#[regex(r"[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
 	FloatLit,
-	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 4)]
-	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 3)]
-	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 2)]
+	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 5)]
+	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 4)]
+	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 3)]
 	IntLit,
 	#[regex("'[^''\n]*'")]
 	NameLit,
@@ -85,7 +85,7 @@ pub enum Token {
 	#[regex("(?i)final", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwFinal,
 	#[regex("(?i)flagdef", priority = 5, callback = Token::ident_pre3_7_0)]
-	KwFlagdef,
+	KwFlagDef,
 	#[regex("(?i)float", priority = 5)]
 	KwFloat,
 	#[regex("(?i)for", priority = 5)]
@@ -343,6 +343,13 @@ pub enum Token {
 	RegionStart,
 	#[regex("#endregion[^\n]*\n")]
 	RegionEnd,
+	#[token("\"####\"")]
+	#[token("\"----\"")]
+	#[regex(r#"[0-9a-zA-Z_]{4}"#, priority = 2)]
+	StateSprite,
+	#[regex(r#""[a-zA-Z\[\]]*""#)]
+	#[regex(r#"[a-zA-Z\[\]\\]+"#, priority = 1)]
+	StateFrames,
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
 	/// A heterogenous span of any character between NUL and ASCII 32.
