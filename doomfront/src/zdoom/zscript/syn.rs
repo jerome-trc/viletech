@@ -68,6 +68,9 @@ pub enum Syn {
 	LocalVarInit,
 	/// `'mixin' 'class' ident '{' innard* '}'`
 	MixinClassDef,
+	/// `typeref ident ('=' expr)?`
+	Parameter,
+	/// `'(' parameter* ')'`
 	ParamList,
 	/// `identchain expr* ';'`
 	PropertySetting,

@@ -179,8 +179,12 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 
 	trivia_0plus(p);
 	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
-	trivia_0plus(p);
-	p.eat(Token::Semicolon, Syn::Semicolon);
+
+	if p.next_filtered(|token| !token.is_trivia()) == Token::Semicolon {
+		trivia_0plus(p);
+		p.advance(Syn::Semicolon);
+	}
+
 	p.close(enumdef, Syn::EnumDef);
 }
 

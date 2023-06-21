@@ -66,6 +66,10 @@ pub fn file(p: &mut crate::parser::Parser<Syn>) {
 		}
 
 		match p.nth(0) {
+			Token::KwClass => class_def(p),
+			Token::KwStruct => struct_def(p),
+			Token::KwMixin => mixin_class_def(p),
+			Token::KwExtend => class_or_struct_extend(p),
 			Token::KwConst => const_def(p),
 			Token::KwEnum => enum_def(p),
 			Token::PoundInclude => include_directive(p),

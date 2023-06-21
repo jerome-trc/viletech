@@ -259,7 +259,7 @@ pub(super) fn array_len(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::DeprecationQual`] node.
-pub(super) fn _deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at(Token::KwDeprecated));
 	let qual = p.open();
 	p.advance(Syn::KwDeprecated);
@@ -376,7 +376,9 @@ pub fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a series of [`Syn::Ident`] tokens, separated by trivia and commas.
-pub fn ident_list(p: &mut crate::parser::Parser<Syn>) {
+/// Returns `true` if more than one identifier was parsed.
+pub fn ident_list(p: &mut crate::parser::Parser<Syn>) -> bool {
+	let mut ret = false;
 	ident(p);
 
 	while p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
@@ -384,7 +386,10 @@ pub fn ident_list(p: &mut crate::parser::Parser<Syn>) {
 		p.advance(Syn::Comma);
 		trivia_0plus(p);
 		ident(p);
+		ret = true;
 	}
+
+	ret
 }
 
 /// May or may not build a token tagged with one of the following:
@@ -571,6 +576,7 @@ pub fn type_ref(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// i.e. can `token` begin a [type reference](type_ref)?
+/// Note that this includes (non-lax) identifiers.
 #[must_use]
 pub(super) fn in_type_ref_first_set(token: Token) -> bool {
 	if is_ident(token) || is_primitive_type(token) {
@@ -624,7 +630,7 @@ pub(super) fn var_name(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::VersionQual`] node.
-pub(super) fn _version_qual(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn version_qual(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at(Token::KwVersion));
 	let qual = p.open();
 	p.advance(Syn::KwVersion);
@@ -650,7 +656,13 @@ mod test {
 	fn smoke_identlist() {
 		const SOURCE: &str = r#"temple, of, the, ancient, techlords"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, ident_list, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(
+			SOURCE,
+			|p| {
+				ident_list(p);
+			},
+			zdoom::Version::default(),
+		);
 		assert_no_errors(&ptree);
 	}
 
@@ -678,7 +690,7 @@ mod test {
 	fn smoke_version_qual() {
 		const SOURCE: &str = r#"version("3.7.1")"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, _version_qual, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, version_qual, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 
@@ -686,7 +698,7 @@ mod test {
 	fn smoke_deprecation_qual() {
 		const SOURCE: &str = r#"deprecated("2.4.0", "Don't use this please")"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, _deprecation_qual, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, deprecation_qual, zdoom::Version::default());
 		assert_no_errors(&ptree);
 	}
 }
