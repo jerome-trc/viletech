@@ -362,6 +362,8 @@ pub enum Token {
 	Unknown,
 	/// A dummy token for [`doomfront::LangExt`].
 	Eof,
+	#[doc(hidden)]
+	__Last,
 }
 
 impl Token {
