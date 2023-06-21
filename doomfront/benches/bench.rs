@@ -4,7 +4,7 @@ use criterion::Criterion;
 
 use doomfront::{
 	testing::read_sample_data,
-	zdoom::{self, decorate},
+	zdoom::{self, decorate, zscript},
 };
 
 fn decorate(crit: &mut Criterion) {
@@ -120,9 +120,30 @@ fn zscript(crit: &mut Criterion) {
 			bencher.iter(|| {
 				let _ = std::hint::black_box(doomfront::parse(
 					SOURCE,
-					zdoom::zscript::parse::expr,
+					zscript::parse::expr,
 					zdoom::Version::default(),
 				));
+			});
+		});
+	}
+
+	{
+		let (_, sample) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE") {
+			Ok(s) => s,
+			Err(err) => {
+				eprintln!("Skipping ZScript sample data-based benchmarks. Reason: {err}");
+				return;
+			}
+		};
+
+		grp.bench_function("Parse, Sample Data", |bencher| {
+			bencher.iter(|| {
+				let ptree: zscript::ParseTree = std::hint::black_box(doomfront::parse(
+					&sample,
+					zscript::parse::file,
+					zdoom::Version::default(),
+				));
+				assert!(ptree.errors.is_empty());
 			});
 		});
 	}
