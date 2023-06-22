@@ -6,7 +6,6 @@ use crate::{
 use super::common::*;
 
 /// Builds a node tagged with one of the following:
-/// - [`Syn::ArrayExpr`]
 /// - [`Syn::BinExpr`]
 /// - [`Syn::CallExpr`]
 /// - [`Syn::ClassCastExpr`]
@@ -263,7 +262,6 @@ pub(super) fn in_first_set(token: Token) -> bool {
 }
 
 /// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
-///
 pub fn arg_list(p: &mut crate::parser::Parser<Syn>) {
 	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();

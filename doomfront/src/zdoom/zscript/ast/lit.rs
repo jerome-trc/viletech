@@ -135,6 +135,12 @@ impl LitToken {
 		}
 	}
 
+	/// Returns `true` if this token's kind is [`Syn::NullLit`].
+	#[must_use]
+	pub fn is_null(&self) -> bool {
+		self.0.kind() == Syn::NullLit
+	}
+
 	#[must_use]
 	pub fn syntax(&self) -> &SyntaxToken {
 		&self.0

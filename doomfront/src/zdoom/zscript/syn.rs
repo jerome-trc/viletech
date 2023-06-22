@@ -133,7 +133,6 @@ pub enum Syn {
 	/// `'readonly' '<' (ident | nativetype) '>'`
 	ReadonlyType,
 	// Nodes: expressions //////////////////////////////////////////////////////
-	ArrayExpr,
 	BinExpr,
 	/// `primaryexpr '(' arglist? ')'`
 	CallExpr,
@@ -451,7 +450,6 @@ pub enum Syn {
 	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
 	StateSprite,
 	StateFrames,
-	// Tokens: foundational ////////////////////////////////////////////////////
 	/// ZScript comments use C++ syntax and are treated like whitespace.
 	Comment,
 	/// Single-line comments preceded by `///`. Non-standard; used only by
@@ -465,6 +463,16 @@ pub enum Syn {
 	Unknown,
 	#[doc(hidden)]
 	__Last,
+}
+
+impl Syn {
+	#[must_use]
+	pub fn is_trivia(self) -> bool {
+		matches!(
+			self,
+			Self::Whitespace | Self::Comment | Self::RegionStart | Self::RegionEnd
+		)
+	}
 }
 
 impl From<Syn> for rowan::SyntaxKind {

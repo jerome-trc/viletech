@@ -1,6 +1,7 @@
 //! Abstract syntax tree nodes.
 
 mod actor;
+mod expr;
 mod lit;
 mod structure;
 
@@ -12,7 +13,7 @@ use crate::{simple_astnode, zdoom};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{actor::*, lit::*, structure::*};
+pub use self::{actor::*, expr::*, lit::*, structure::*};
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
