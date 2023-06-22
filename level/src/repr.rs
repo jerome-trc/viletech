@@ -215,7 +215,7 @@ impl LevelDef {
 	}
 }
 
-/// Sub-structure for composing a [`Level`].
+/// Sub-structure for composing a [`LevelDef`].
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LevelGeom {
@@ -225,7 +225,7 @@ pub struct LevelGeom {
 	pub vertdefs: Vec<Vertex>,
 }
 
-/// Sub-structure for composing a [`Level`].
+/// Sub-structure for composing a [`LevelDef`].
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LevelBsp {
@@ -383,7 +383,7 @@ pub struct LineDef {
 	pub vert_end: usize,
 	pub flags: LineFlags,
 	pub special: i32,
-	/// Corresponds to the field of [`Sector`] with the same name.
+	/// Corresponds to the field of [`SectorDef`] with the same name.
 	pub trigger: u16,
 	/// Defined in UDMF.
 	pub args: [i32; 5],
@@ -460,7 +460,7 @@ pub struct SideDef {
 	pub tex_bottom: Option<Id8>,
 	/// The ID within maps to a TEXTURE1/2 entry.
 	pub tex_mid: Option<Id8>,
-	/// An index into [`Level::sectors`].
+	/// An index into [`LevelDef::sectors`].
 	pub sector: usize,
 	pub udmf: HashMap<SmallString, UdmfValue>,
 }

@@ -104,7 +104,7 @@ impl ConstDef {
 
 // EnumDef /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::EnuMDef`].
+/// Wraps a node tagged [`Syn::EnumDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumDef(SyntaxNode);

@@ -112,7 +112,7 @@ const IDENT_TOKENS_LAX: &[(Token, Syn)] = &[
 ];
 
 /// Builds a [`Syn::IdentChain`] node. Also see [`ident_chain_lax`].
-pub fn ident_chain(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident_chain(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at_if(is_ident));
 	let chain = p.open();
 	p.advance(Syn::Ident);
@@ -128,7 +128,7 @@ pub fn ident_chain(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Like [`ident_chain`] but backed by [`is_ident_lax`].
-pub fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
 	debug_assert!(p.at_if(is_ident_lax));
 	let chain = p.open();
 	p.advance(Syn::Ident);

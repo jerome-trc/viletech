@@ -28,7 +28,7 @@ impl Literal {
 pub struct LitToken(SyntaxToken);
 
 impl LitToken {
-	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
+	/// If this wraps a [`Syn::TrueLit`] or [`Syn::FalseLit`] token,
 	/// this returns the corresponding value. Otherwise this returns `None`.
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {

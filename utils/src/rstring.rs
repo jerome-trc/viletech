@@ -1,6 +1,6 @@
 //! A thin atomically reference-counted string type.
 
-/// Thin atomically reference-counted string using [`triomphe::ThingArc`].
+/// Thin atomically reference-counted string using [`triomphe::ThinArc`].
 ///
 /// Essentially a [`std::sync::Arc`], but occupies only one pointer-width and
 /// has no support for weak pointers (since strings cannot have circular references),

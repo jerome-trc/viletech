@@ -1,3 +1,5 @@
+//! [A plugin](TracingPlugin) for integrating [`tracing`] with the [console](crate::console).
+
 use bevy::prelude::*;
 use crossbeam::channel::Sender;
 use std::{

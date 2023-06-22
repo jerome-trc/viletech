@@ -400,7 +400,7 @@ impl PrefixExpr {
 
 // SuperExpr ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::`].
+/// Wraps a node tagged [`Syn::SuperExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SuperExpr(SyntaxNode);

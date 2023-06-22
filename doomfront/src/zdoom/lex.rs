@@ -362,7 +362,7 @@ pub enum Token {
 	Comment,
 	#[default]
 	Unknown,
-	/// A dummy token for [`doomfront::LangExt`].
+	/// A dummy token for [`LangExt`](crate::LangExt).
 	Eof,
 	#[doc(hidden)]
 	__Last,

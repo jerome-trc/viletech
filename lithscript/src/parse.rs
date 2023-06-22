@@ -1,6 +1,4 @@
-//! A [builder](ParserBuilder) for emitting parser combinators.
-//!
-//! To start you will likely want to use [`ParserBuilder::repl`] or [`ParserBuilder::file`].
+//! Functions for parsing Lith source code.
 
 use std::path::{Path, PathBuf};
 

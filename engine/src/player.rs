@@ -1,3 +1,5 @@
+//! Intermediary structures between the human (or bot) player and actors.
+
 use bitvec::vec::BitVec;
 
 use crate::sim::actor::Actor;

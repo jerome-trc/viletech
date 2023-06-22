@@ -1,3 +1,5 @@
+//! VileTech's [`egui`]-based two-pane developer graphical user interface.
+
 use bevy_egui::egui;
 
 /// State and functions for a two-panel egui window that sticks to the top of the

@@ -42,7 +42,7 @@ pub enum Syn {
 	FlagSetting,
 	/// The first part of a for loop opener.
 	ForInit,
-	/// The secnod part of a for loop opener.
+	/// The second part of a for loop opener.
 	ForCond,
 	/// The third part of a for loop opener.
 	ForIter,
@@ -58,13 +58,13 @@ pub enum Syn {
 	/// `':' ident`
 	InheritSpec,
 	/// Will have one of the following tokens as a child:
-	/// - [`Syn::LitFalse`]
-	/// - [`Syn::LitFloat`]
-	/// - [`Syn::LitInt`]
-	/// - [`Syn::LitName`]
-	/// - [`Syn::LitNull`]
-	/// - [`Syn::LitString`]
-	/// - [`Syn::LitTrue`]
+	/// - [`Syn::FalseLit`]
+	/// - [`Syn::KwFloat`]
+	/// - [`Syn::IntLit`]
+	/// - [`Syn::NameLit`]
+	/// - [`Syn::NullLit`]
+	/// - [`Syn::StringLit`]
+	/// - [`Syn::TrueLit`]
 	Literal,
 	LocalVar,
 	LocalVarInit,
@@ -87,7 +87,7 @@ pub enum Syn {
 	/// `'fail' | 'loop' | 'stop' | 'wait' ';'` or
 	/// `'goto' (scope '::')? identchain ('+' integer)?`
 	StateFlow,
-	/// For child nodes under a [`Syn::StatesDef`].
+	/// For child nodes under a [`Syn::StatesBlock`].
 	StateDef,
 	/// `ident ':'`
 	StateLabel,
