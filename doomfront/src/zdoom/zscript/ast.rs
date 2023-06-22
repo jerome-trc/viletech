@@ -1,6 +1,7 @@
 //! Abstract syntax tree nodes.
 
 mod actor;
+mod lit;
 mod structure;
 
 use std::num::IntErrorKind;
@@ -11,7 +12,7 @@ use crate::{simple_astnode, zdoom};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{actor::*, structure::*};
+pub use self::{actor::*, lit::*, structure::*};
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
