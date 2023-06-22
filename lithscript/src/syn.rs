@@ -16,6 +16,8 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `'#' '!'? '[' resolver arglist? ']'`
 	Annotation,
+	/// `'(' expr? (',' expr)* ')'`
+	ArgList,
 	/// `blocklabel? '{' statement* '}'`
 	Block,
 	/// `'::' ident '::'`
@@ -24,10 +26,16 @@ pub enum Syn {
 	Error,
 	/// A top-level node representing a whole file.
 	FileRoot,
-	/// `annotation* 'func' ident paramlist returntype? ('{' statement* '}' | ';')`
+	/// `annotation* 'func' ident paramlist returntype? (funcbody | ';')`
 	FuncDecl,
-	/// `'(' (ident ':' typeexpr)* ')'`
+	/// `'{' statement* '}'`
+	FuncBody,
+	/// `ident ('.' ident)*`
+	IdentChain,
+	/// `'(' param? (',' param)* ')'`
 	ParamList,
+	/// `ident typespec`
+	Parameter,
 	/// A top-level node representing a whole REPL submission.
 	ReplRoot,
 	/// `':' expr`
@@ -46,7 +54,10 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
 	BinExpr,
+	/// `expr arglist`
 	CallExpr,
+	/// `expr '.' ident`
+	FieldExpr,
 	/// `'(' expr ')'`
 	GroupExpr,
 	/// Is parent to only a [`Syn::Ident`] token.
@@ -59,6 +70,8 @@ pub enum Syn {
 	/// - [`Syn::StringLit`]
 	/// - [`Syn::TrueLit`]
 	Literal,
+	/// `expr '.' ident arglist`
+	MethodExpr,
 	StructExpr,
 	PostfixExpr,
 	PrefixExpr,
@@ -122,11 +135,35 @@ pub enum Syn {
 	KwStatic,
 	#[token("struct", priority = 5)]
 	KwStruct,
-	#[token("until", priority = 5)]
-	KwUntil,
 	#[token("while", priority = 5)]
 	KwWhile,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
+	#[token("&")]
+	Ampersand,
+	#[token("&&")]
+	Ampersand2,
+	#[token("&=")]
+	AmpersandEq,
+	#[token("<")]
+	AngleL,
+	#[token(">")]
+	AngleR,
+	#[token("<<")]
+	AngleL2,
+	#[token(">>")]
+	AngleR2,
+	#[token("<<=")]
+	AngleL2Eq,
+	#[token(">>=")]
+	AngleR2Eq,
+	#[token("<=")]
+	AngleLEq,
+	#[token(">=")]
+	AngleREq,
+	#[token("*")]
+	Asterisk,
+	#[token("*=")]
+	AsteriskEq,
 	#[token("!")]
 	Bang,
 	#[token("!=")]
@@ -139,6 +176,10 @@ pub enum Syn {
 	BracketL,
 	#[token("]")]
 	BracketR,
+	#[token("^")]
+	Caret,
+	#[token("^=")]
+	CaretEq,
 	#[token(":")]
 	Colon,
 	#[token("::")]
@@ -149,18 +190,40 @@ pub enum Syn {
 	Dot,
 	#[token("=")]
 	Eq,
+	#[token("==")]
+	Eq2,
 	#[token("-")]
 	Minus,
+	#[token("-=")]
+	MinusEq,
 	#[token("(")]
 	ParenL,
 	#[token(")")]
 	ParenR,
+	#[token("%")]
+	Percent,
+	#[token("%=")]
+	PercentEq,
+	#[token("|")]
+	Pipe,
+	#[token("||")]
+	Pipe2,
+	#[token("|=")]
+	PipeEq,
 	#[token("+")]
 	Plus,
+	#[token("+=")]
+	PlusEq,
 	#[token("#")]
 	Pound,
 	#[token(";")]
 	Semicolon,
+	#[token("/")]
+	Slash,
+	#[token("/=")]
+	SlashEq,
+	#[token("~")]
+	Tilde,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
@@ -183,6 +246,85 @@ pub enum Syn {
 	Eof,
 	#[doc(hidden)]
 	__Last,
+}
+
+impl Syn {
+	#[must_use]
+	pub fn is_trivia(self) -> bool {
+		matches!(self, Self::Whitespace | Self::Comment)
+	}
+
+	/// For parser error reporting. Likely to go away eventually.
+	pub(crate) fn pretty(self) -> &'static str {
+		match self {
+			// Literals ////////////////////////////////////////////////////////
+			Self::FalseLit => "`false`",
+			Self::FloatLit => "a floating-point number",
+			Self::IntLit => "an integer",
+			Self::StringLit => "a string",
+			Self::TrueLit => "`true`",
+			// Keywords ////////////////////////////////////////////////////////
+			Self::KwBreak => "`break`",
+			Self::KwCeval => "`ceval`",
+			Self::KwConst => "`const`",
+			Self::KwContinue => "`continue`",
+			Self::KwElse => "`else`",
+			Self::KwFor => "`for`",
+			Self::KwFunc => "`func`",
+			Self::KwIf => "`if`",
+			Self::KwLet => "`let`",
+			Self::KwReturn => "`return`",
+			Self::KwStatic => "`static`",
+			Self::KwStruct => "`struct`",
+			Self::KwWhile => "`while`",
+			// Glyphs //////////////////////////////////////////////////////////
+			Self::Ampersand => "`&`",
+			Self::Ampersand2 => "`&&`",
+			Self::AmpersandEq => "`&=`",
+			Self::AngleL => "`<`",
+			Self::AngleR => "`>`",
+			Self::AngleL2 => "`<<`",
+			Self::AngleR2 => "`>>`",
+			Self::AngleL2Eq => "`<<=`",
+			Self::AngleR2Eq => "`>>=`",
+			Self::AngleLEq => "`<=`",
+			Self::AngleREq => "`>=`",
+			Self::Asterisk => "`*`",
+			Self::AsteriskEq => "`*=`",
+			Self::Bang => "`!`",
+			Self::BangEq => "`!=`",
+			Self::BraceL => "`{`",
+			Self::BraceR => "`}`",
+			Self::BracketL => "`[`",
+			Self::BracketR => "`]`",
+			Self::Caret => "`^`",
+			Self::CaretEq => "`^=`",
+			Self::Colon => "`:`",
+			Self::Colon2 => "`::`",
+			Self::Comma => "`,`",
+			Self::Dot => "`.`",
+			Self::Eq => "`=`",
+			Self::Eq2 => "`==`",
+			Self::Minus => "`-`",
+			Self::MinusEq => "`-=`",
+			Self::ParenL => "`(`",
+			Self::ParenR => "`)`",
+			Self::Pipe => "`|`",
+			Self::Pipe2 => "`||`",
+			Self::Plus => "`+`",
+			Self::PlusEq => "`+=`",
+			Self::Pound => "`#`",
+			Self::Semicolon => "`;`",
+			Self::Slash => "`/`",
+			Self::SlashEq => "`/=`",
+			Self::Tilde => "`~`",
+			// Miscellaneous ///////////////////////////////////////////////////
+			Self::Ident | Self::IdentRaw => "an identifier",
+			Self::Comment => "a comment",
+			Self::Whitespace => "whitespace",
+			other => unreachable!("called `Syn::pretty` illegally: {other:#?}"),
+		}
+	}
 }
 
 impl From<Syn> for rowan::SyntaxKind {

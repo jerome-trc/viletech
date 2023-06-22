@@ -28,5 +28,7 @@ cranelift-jit.workspace = true
 cranelift-module.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
+impl-trait-for-tuples.workspace = true
 logos.workspace = true
+peg.workspace = true
 rustc-hash.workspace = true
