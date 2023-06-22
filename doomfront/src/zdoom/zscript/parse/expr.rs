@@ -122,6 +122,12 @@ fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
 		}
 		Token::StringLit => {
 			p.advance(Syn::StringLit);
+
+			while p.next_filtered(|token| !token.is_trivia()) == Token::StringLit {
+				trivia_0plus(p);
+				p.advance(Syn::StringLit);
+			}
+
 			p.close(ex, Syn::Literal)
 		}
 		Token::NameLit => {
@@ -391,6 +397,7 @@ mod test {
 
 		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]
@@ -399,6 +406,7 @@ mod test {
 
 		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]
@@ -407,5 +415,15 @@ mod test {
 
 		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_string_lit_concat() {
+		const SOURCE: &str = r#"n + "interstellar" "domine""nuclear waste processing facility""#;
+
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 }
