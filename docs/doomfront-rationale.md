@@ -14,13 +14,11 @@ DoomFront is meant to make it possible to handle all of these DSLs in a way that
 
 The [Rowan library](https://crates.io/crates/rowan) was originally developed by Alexey Kladov et al. to meet the specific needs of Rust language server development, although it was designed to be generic enough to work for any language. Seeing as how these needs were also my own, it seemed fitting to use it, especially considering that its performance characteristics are already thoroughly proven (I use rust-analyzer on a daily basis and it is more than fast enough). It is all the better that Rowan makes for a very ergonomic experience when traversing abstract syntax trees without compromising on its ability to represent malformed code.
 
-## Chumsky
+## Parsers
 
-Rust has no shortage of libraries with which to build parsers; I singled out [Chumsky](https://crates.io/crates/chumsky) after testing multiple other solutions on the basis of the following factors:
+All DoomFront parsers are hand-written LL recursive descent. The stability of all the languages in DoomFront's scope make this easy, and the other apparent benefits are in sheer speed and flexibility in error recovery. That said, there are multiple other factors which make it undesirable to use other solutions:
 
-1. Productivity. There are too many languages that need coverage by a project such as this to painstakingly hand-write a "local optimum" parser for each one. Combinators meet this need well; imperative code can be seamlessly mingled with constructs that are as easy to read as regular expressions.
-2. Performance. An IDE and its constituent parts should react to user changes fast, which means parsing can not do unnecessary work.
-3. Granularity. I wanted any given language frontend to offer the capability to parse syntax elements in isolation, to enable tools to work incrementally rather than having to re-parse an entire file whenever a user so much as changed a character. Again, combinators are well-suited to this. Every syntax element can be mapped to a function returning a combinator.
-4. Resilience. A parser for IDEs is of little use if it can not move past an error; Chumsky makes error recovery a headline feature.
-
-As a bonus, the organizational problems that tend to come with Rust's existing parser generator ecosystem are avoided; there is no obligation to create single massive procedural macro inputs or grammar files. Combinators can be spread over several modules according to sensible categories.
+- Parser generators harder for IDE tools to reconcile with and not very amenable to step-through debugging.
+- [`peg`] and [`pest`] in particular both have no native error recovery facilities, making them non-starters.
+- The Rust compiler is unfriendly towards combinator parsing libraries, due to the complexity of the created types; because of the depth of syntaxes like DECORATE and ZScript, combinator types can become so large as to make DoomFront the majority consumer of time in a full build of the VileTech project at best. At worst, rustc can use exponential memory and OOM.
+- LALR parsers are a non-option due to the significance of whitespace to lossless syntax trees, which introduces shift ambiguities.

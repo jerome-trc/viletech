@@ -24,18 +24,15 @@ umapinfo = []
 zdoom = []
 
 [dependencies]
-chumsky.workspace = true
 crossbeam = { workspace = true, optional = true }
 dashmap = { workspace = true, optional = true, features = ["raw-api"] }
 logos.workspace = true
 hashbrown.workspace = true
-impl-trait-for-tuples.workspace = true
 parking_lot = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 rowan.workspace = true
 rustc-hash.workspace = true
 serde = { workspace = true, optional = true }
-smallvec.workspace = true
 
 [[bench]]
 name = "bench"

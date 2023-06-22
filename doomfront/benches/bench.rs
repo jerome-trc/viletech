@@ -1,12 +1,11 @@
-use std::{borrow::Cow, path::Path};
-
 use criterion::Criterion;
 
 use doomfront::{
 	testing::read_sample_data,
-	zdoom::{self, decorate, zscript},
+	zdoom::{self, zscript},
 };
 
+#[cfg(any())]
 fn decorate(crit: &mut Criterion) {
 	let mut grp = crit.benchmark_group("DECORATE");
 
@@ -151,5 +150,5 @@ fn zscript(crit: &mut Criterion) {
 	grp.finish();
 }
 
-criterion::criterion_group!(benches, decorate, language, zscript);
+criterion::criterion_group!(benches, language, zscript);
 criterion::criterion_main!(benches);

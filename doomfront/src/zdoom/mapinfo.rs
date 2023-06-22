@@ -2,6 +2,6 @@
 //!
 //! [MAPINFO]: https://zdoom.org/wiki/MAPINFO
 
-pub mod syn;
+mod syn;
 
 pub use syn::Syn;

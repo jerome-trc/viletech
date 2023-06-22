@@ -20,14 +20,11 @@
 //! [rust-analyzer]: https://rust-analyzer.github.io/
 //! [overview]: https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md
 
-pub extern crate chumsky;
 pub extern crate logos;
 pub extern crate rowan;
 
-pub mod comb;
 pub mod gcache;
 pub mod parser;
-pub mod parsing;
 pub mod testing;
 
 #[cfg(feature = "zdoom")]
@@ -47,9 +44,6 @@ pub trait LangExt: rowan::Language {
 
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
 pub type ParseError<L> = parser::Error<L>;
-
-pub type _ParseError<'i, T> = parsing::Error<'i, T>;
-pub type _ParseState<'i> = parsing::State<'i>;
 
 pub struct ParseTree<L: LangExt> {
 	pub root: rowan::GreenNode,
@@ -92,139 +86,6 @@ pub fn parse<'i, L: LangExt>(
 	function(&mut parser);
 	let (root, errors) = parser.finish();
 	ParseTree::new(root, errors)
-}
-
-#[derive(Debug)]
-pub struct _ParseTree<'i, T, L>
-where
-	for<'input> T: logos::Logos<'i, Source = str> + Copy,
-	L: rowan::Language + Into<rowan::SyntaxKind>,
-{
-	pub root: rowan::GreenNode,
-	pub errors: Vec<_ParseError<'i, T>>,
-	phantom: std::marker::PhantomData<L>,
-}
-
-impl<'i, T, L> _ParseTree<'i, T, L>
-where
-	for<'input> T: logos::Logos<'input, Source = str> + Copy,
-	L: rowan::Language + Into<rowan::SyntaxKind>,
-{
-	#[must_use]
-	pub fn new(root: rowan::GreenNode, errors: Vec<_ParseError<'i, T>>) -> Self {
-		Self {
-			root,
-			errors,
-			phantom: std::marker::PhantomData,
-		}
-	}
-
-	/// Emits a "zipper" tree root that can be used for much more effective traversal
-	/// of the green tree (but which is `!Send` and `!Sync`).
-	#[must_use]
-	pub fn cursor(&self) -> rowan::SyntaxNode<L> {
-		rowan::SyntaxNode::new_root(self.root.clone())
-	}
-}
-
-/// Produces the input needed for [`parse`].
-///
-/// To developers looking to use DoomFront on their own language, note that
-/// `T`'s error type is also `T`. This allows Logos to emit either an "unknown"
-/// token type (which should correspond to the return value of `T::default()`),
-/// or leverage its `Extras` type to produce different output context-sensitively
-/// (e.g. adding more keywords with newer language versions).
-#[must_use]
-pub fn _scan<'i, T>(source: &'i str, extras: T::Extras) -> Vec<(T, logos::Span)>
-where
-	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
-{
-	let lexer = T::lexer_with_extras(source, extras)
-		.spanned()
-		.map(|(result, span)| {
-			(
-				match result {
-					Ok(t) | Err(t) => t,
-				},
-				span,
-			)
-		});
-
-	lexer.collect::<Vec<_>>()
-}
-
-/// Each language has a `parse` module filled with functions that emit a combinator-
-/// based parser. Pass one of these along with a source string into this function
-/// to consume that parser and emit a green tree.
-pub fn _parse<'i, T, L>(
-	parser: parser_t!(T, rowan::GreenNode),
-	source: &'i str,
-	tokens: &'i [(T, logos::Span)],
-) -> Result<_ParseTree<'i, T, L>, Vec<_ParseError<'i, T>>>
-where
-	T: 'i + logos::Logos<'i, Source = str, Error = T> + Eq + Copy + Default,
-	L: rowan::Language + Into<rowan::SyntaxKind>,
-{
-	use chumsky::input::Input;
-
-	let input = tokens.spanned(source.len()..source.len());
-
-	let mut state = _ParseState { source };
-
-	let (output, errors) = parser
-		.parse_with_state(input, &mut state)
-		.into_output_errors();
-
-	if let Some(root) = output {
-		Ok(_ParseTree {
-			root,
-			errors,
-			phantom: std::marker::PhantomData,
-		})
-	} else {
-		Err(errors)
-	}
-}
-
-/// A macro for writing the signatures of functions which return [`chumsky`]
-/// combinators in a more succinct and maintainable way.
-///
-/// The one-parameter overload assumes that the name `Token` (implementing
-/// [`logos::Logos`]) is already in scope for convenience.
-#[macro_export]
-macro_rules! parser_t {
-	($out_t:ty) => {
-		impl 'i + $crate::chumsky::Parser<
-			'i,
-			$crate::chumsky::input::SpannedInput<
-				Token,
-				logos::Span,
-				&'i [(Token, logos::Span)]
-			>,
-			$out_t,
-			$crate::chumsky::extra::Full<
-				$crate::chumsky::error::Rich<'i, Token, logos::Span>,
-				$crate::_ParseState<'i>,
-				()
-			>
-		> + Clone
-	};
-	($token_t:ty, $out_t:ty) => {
-		impl 'i + $crate::chumsky::Parser<
-			'i,
-			$crate::chumsky::input::SpannedInput<
-				$token_t,
-				logos::Span,
-				&'i [($token_t, logos::Span)]
-			>,
-			$out_t,
-			$crate::chumsky::extra::Full<
-				$crate::chumsky::error::Rich<'i, $token_t, logos::Span>,
-				$crate::_ParseState<'i>,
-				()
-			>
-		> + Clone
-	};
 }
 
 /// The most basic implementors of [`rowan::ast::AstNode`] are newtypes
