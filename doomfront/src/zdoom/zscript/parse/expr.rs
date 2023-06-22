@@ -257,7 +257,9 @@ pub(super) fn in_first_set(token: Token) -> bool {
 			| Token::Plus2
 			| Token::Minus
 			| Token::Plus
-			| Token::Tilde,
+			| Token::Tilde
+			| Token::KwAlignOf
+			| Token::KwSizeOf
 	)
 }
 
@@ -345,7 +347,14 @@ fn infix_right_stronger(left: Token, right: Token) -> bool {
 				Token::KwDot,
 			],
 			&[Token::Asterisk2],
-			&[Token::Minus2, Token::Plus2, Token::Bang, Token::Tilde],
+			&[
+				Token::Minus2,
+				Token::Plus2,
+				Token::Bang,
+				Token::Tilde,
+				Token::KwSizeOf,
+				Token::KwAlignOf,
+			],
 			&[Token::Dot],
 		];
 

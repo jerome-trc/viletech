@@ -160,7 +160,7 @@ pub enum Token {
 	#[regex("(?i)short", priority = 5)]
 	KwShort,
 	#[regex("(?i)sizeof", priority = 5)]
-	KwSizeof,
+	KwSizeOf,
 	#[regex("(?i)slow", priority = 5)]
 	KwSlow,
 	#[regex("(?i)sound", priority = 5)]
