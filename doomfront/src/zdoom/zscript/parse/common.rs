@@ -157,6 +157,24 @@ pub(super) fn ident_chain_lax(p: &mut Parser<Syn>) {
 	p.close(chain, Syn::IdentChain);
 }
 
+/// Like [`ident_chain`] but allows any identifier or keyword to be a part.
+pub(super) fn ident_chain_any(p: &mut Parser<Syn>) {
+	p.debug_assert_at_if(|token| matches!(token, Token::Ident | Token::Dot) || token.is_keyword());
+
+	let chain = p.open();
+	p.eat(Token::Dot, Syn::Dot);
+	p.advance(Syn::Ident);
+
+	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
+		trivia_0plus(p);
+		p.advance(Syn::Dot);
+		trivia_0plus(p);
+		p.advance(Syn::Ident);
+	}
+
+	p.close(chain, Syn::IdentChain);
+}
+
 /// Builds a series of [`Syn::Ident`] tokens, separated by trivia and commas.
 /// Returns `true` if more than one identifier was parsed.
 pub(super) fn ident_list(p: &mut Parser<Syn>) -> bool {

@@ -116,6 +116,15 @@ fn property_setting(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::StatesBlock`] node.
 pub fn states_block(p: &mut Parser<Syn>) {
+	#[must_use]
+	fn is_non_stateflow_keyword(token: Token) -> bool {
+		token.is_keyword()
+			&& !matches!(
+				token,
+				Token::KwGoto | Token::KwStop | Token::KwWait | Token::KwLoop | Token::KwFail
+			)
+	}
+
 	p.debug_assert_at(Token::KwStates);
 	let sblock = p.open();
 	p.advance(Syn::KwStates);
@@ -133,20 +142,17 @@ pub fn states_block(p: &mut Parser<Syn>) {
 
 		let token = p.nth(0);
 
-		if is_ident_lax(token) {
-			let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+		if is_ident_lax(token) || is_non_stateflow_keyword(token) {
+			let peeked = p.next_filtered(|token| {
+				!token.is_trivia() && !is_ident_lax(token) && !token.is_keyword()
+			});
 
 			if matches!(peeked, Token::Colon | Token::Dot) {
 				let label = p.open();
-				ident_chain(p);
+				ident_chain_any(p);
 				trivia_0plus(p);
 				p.advance(Syn::Colon);
 				p.close(label, Syn::StateLabel);
-			} else if p.current_slice().len() != 4 {
-				p.advance_with_error(
-					Syn::Ident,
-					&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
-				);
 			} else {
 				state_def(p);
 			}
@@ -156,50 +162,12 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		}
 
 		match token {
-			Token::StringLit => {
-				if p.current_slice().len() != 6 {
-					p.advance_with_error(
-						Syn::StringLit,
-						&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
-					);
-				} else {
-					state_def(p);
-				}
+			Token::StringLit | Token::IntLit | Token::Minus4 | Token::Pound4 => {
+				state_def(p);
 			}
-			Token::IntLit => {
-				if p.current_slice().len() != 4 {
-					p.advance_with_error(
-						Syn::IntLit,
-						&["exactly 4 ASCII characters", "`\"####\"`", "`\"----\"`"],
-					);
-				} else {
-					state_def(p);
-				}
-			}
-			Token::KwFail => {
+			t @ (Token::KwFail | Token::KwStop | Token::KwLoop | Token::KwWait) => {
 				let flow = p.open();
-				p.advance(Syn::KwFail);
-				trivia_0plus(p);
-				p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-				p.close(flow, Syn::StateFlow);
-			}
-			Token::KwStop => {
-				let flow = p.open();
-				p.advance(Syn::KwStop);
-				trivia_0plus(p);
-				p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-				p.close(flow, Syn::StateFlow);
-			}
-			Token::KwLoop => {
-				let flow = p.open();
-				p.advance(Syn::KwLoop);
-				trivia_0plus(p);
-				p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-				p.close(flow, Syn::StateFlow);
-			}
-			Token::KwWait => {
-				let flow = p.open();
-				p.advance(Syn::KwWait);
+				p.advance(Syn::from(t));
 				trivia_0plus(p);
 				p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 				p.close(flow, Syn::StateFlow);
