@@ -434,11 +434,13 @@ pub(super) fn version_qual(p: &mut Parser<Syn>) {
 
 #[cfg(test)]
 mod test {
+	use rowan::ast::AstNode;
+
 	use crate::{
 		testing::*,
 		zdoom::{
 			self,
-			zscript::{parse, ParseTree},
+			zscript::{ast, parse, ParseTree},
 		},
 	};
 
@@ -472,17 +474,11 @@ mod test {
 			"mapiterator<FishInABarrel, Neoplasm>",
 		];
 
-		let printout = std::env::var("DOOMFRONT_TEST_PRETTYPRINT").is_ok_and(|v| v == "1");
-
 		for source in SOURCES {
 			let ptree: ParseTree =
 				crate::parse(source, type_ref, zdoom::lex::Context::ZSCRIPT_LATEST);
 			assert_no_errors(&ptree);
-
-			if printout {
-				eprintln!();
-				prettyprint(ptree.cursor());
-			}
+			prettyprint_maybe(ptree.cursor());
 		}
 	}
 
@@ -493,6 +489,8 @@ mod test {
 		let ptree: ParseTree =
 			crate::parse(SOURCE, version_qual, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+		let qual = ast::VersionQual::cast(ptree.cursor()).unwrap();
+		assert_eq!(qual.version().text(), "\"3.7.1\"");
 	}
 
 	#[test]
@@ -504,6 +502,10 @@ mod test {
 			deprecation_qual,
 			zdoom::lex::Context::ZSCRIPT_LATEST,
 		);
+
 		assert_no_errors(&ptree);
+		let qual = ast::DeprecationQual::cast(ptree.cursor()).unwrap();
+		assert_eq!(qual.version().text(), "\"2.4.0\"");
+		assert_eq!(qual.message().unwrap().text(), "\"Don't use this please\"");
 	}
 }

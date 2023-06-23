@@ -247,3 +247,59 @@ impl IdentChain {
 			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syn::Ident))
 	}
 }
+
+// DeprecationQual /////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::DeprecationQual`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct DeprecationQual(SyntaxNode);
+
+simple_astnode!(Syn, DeprecationQual, Syn::DeprecationQual);
+
+impl DeprecationQual {
+	/// The returned token is always tagged [`Syn::StringLit`].
+	#[must_use]
+	pub fn version(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::StringLit)
+			})
+			.unwrap()
+	}
+
+	/// The returned token is always tagged [`Syn::StringLit`].
+	#[must_use]
+	pub fn message(&self) -> Option<SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.filter_map(|elem| elem.into_token())
+			.skip_while(|token| token.kind() != Syn::Comma)
+			.find_map(|token| (token.kind() == Syn::StringLit).then(|| token))
+	}
+}
+
+// VersionQual /////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::VersionQual`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct VersionQual(SyntaxNode);
+
+simple_astnode!(Syn, VersionQual, Syn::VersionQual);
+
+impl VersionQual {
+	/// The returned token is always tagged [`Syn::StringLit`].
+	#[must_use]
+	pub fn version(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::StringLit)
+			})
+			.unwrap()
+	}
+}
