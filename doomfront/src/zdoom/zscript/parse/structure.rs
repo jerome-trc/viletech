@@ -134,7 +134,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::Semicolon {
+	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
 		p.advance(Syn::Semicolon);
 	}
@@ -189,11 +189,9 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 // Innards /////////////////////////////////////////////////////////////////////
 
 fn class_innard(p: &mut Parser<Syn>) {
-	let token = p.next_filtered(|token| !token.is_trivia_or_doc());
+	let token = p.find(0, |token| !token.is_trivia_or_doc());
 
-	if token == Token::KwStatic
-		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::KwConst
-	{
+	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
 		static_const_stat(p);
 		return;
 	}
@@ -279,9 +277,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 fn struct_innard(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
-	if token == Token::KwStatic
-		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::KwConst
-	{
+	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
 		static_const_stat(p);
 		return;
 	}
@@ -328,7 +324,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 				let action = p.open();
 				p.advance(Syn::KwAction);
 
-				if p.next_filtered(|token| !token.is_trivia()) == Token::ParenL {
+				if p.find(0, |token| !token.is_trivia()) == Token::ParenL {
 					trivia_0plus(p);
 					states_usage(p);
 				}
@@ -345,7 +341,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 	let rettypes = p.open();
 	type_ref(p);
 
-	while p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+	while p.find(0, |token| !token.is_trivia()) == Token::Comma {
 		trivia_0plus(p);
 		p.advance(Syn::Comma);
 		trivia_0plus(p);
@@ -360,7 +356,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 		return;
 	}
 
-	let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+	let peeked = p.find(0, |token| !token.is_trivia() && !is_ident_lax(token));
 
 	match peeked {
 		Token::BracketL | Token::Comma => {
@@ -370,7 +366,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 			while !p.at(Token::Semicolon) && !p.eof() {
 				var_name(p);
 
-				if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+				if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 					trivia_0plus(p);
 					p.advance(Syn::Comma);
 					trivia_0plus(p);
@@ -472,7 +468,7 @@ fn parameter(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	ident_lax(p);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::Eq {
+	if p.find(0, |token| !token.is_trivia()) == Token::Eq {
 		trivia_0plus(p);
 		p.advance(Syn::Eq);
 		trivia_0plus(p);

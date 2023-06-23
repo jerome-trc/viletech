@@ -31,7 +31,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
 	if expr::in_first_set(token) {
-		let peeked = p.lookahead_filtered(|token| !token.is_trivia());
+		let peeked = p.find(1, |token| !token.is_trivia());
 
 		if in_type_ref_first_set(token) && is_ident_lax(peeked) {
 			declassign_or_local_stat(p);
@@ -100,7 +100,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 			trivia_0plus(p);
 			statement(p);
 
-			if p.next_filtered(|token| !token.is_trivia()) == Token::KwElse {
+			if p.find(0, |token| !token.is_trivia()) == Token::KwElse {
 				trivia_0plus(p);
 				p.advance(Syn::KwElse);
 				trivia_0plus(p);
@@ -185,7 +185,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 				let t = p.nth(0);
 
 				if expr::in_first_set(t) {
-					let peeked = p.lookahead_filtered(|token| !token.is_trivia());
+					let peeked = p.find(1, |token| !token.is_trivia());
 
 					if in_type_ref_first_set(t) && is_ident_lax(peeked) {
 						local_var(p);
@@ -199,7 +199,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 					p.advance_with_error(Syn::from(t), &["an expression", "a local variable"]);
 				}
 
-				if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+				if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 					trivia_0plus(p);
 					p.advance(Syn::Comma);
 					trivia_0plus(p);
@@ -239,7 +239,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 					p.advance_with_error(Syn::from(t), &["an expression"]);
 				}
 
-				if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+				if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 					trivia_0plus(p);
 					p.advance(Syn::Comma);
 					trivia_0plus(p);
@@ -381,7 +381,7 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 	type_ref(p);
 	trivia_0plus(p);
 
-	let t = p.next_filtered(|token| !token.is_trivia());
+	let t = p.find(0, |token| !token.is_trivia());
 
 	if is_ident(t) {
 		trivia_0plus(p);
@@ -419,9 +419,7 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 fn declassign_or_local_stat(p: &mut Parser<Syn>) {
 	let stat = p.open();
 
-	let syn = if p.at(Token::KwLet)
-		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::BracketL
-	{
+	let syn = if p.at(Token::KwLet) && p.find(1, |token| !token.is_trivia()) == Token::BracketL {
 		p.advance(Syn::KwLet);
 		trivia_0plus(p);
 		p.advance(Syn::BracketL);
@@ -453,7 +451,7 @@ fn local_var(p: &mut Parser<Syn>) {
 	while p.at_if(is_ident_lax) {
 		local_var_init(p);
 
-		if p.next_filtered(|token| !token.is_trivia()) != Token::Comma {
+		if p.find(0, |token| !token.is_trivia()) != Token::Comma {
 			break;
 		} else {
 			trivia_0plus(p);
@@ -476,7 +474,7 @@ fn local_var_init(p: &mut Parser<Syn>) {
 			trivia_0plus(p);
 			array_len(p);
 
-			if p.next_filtered(|token| !token.is_trivia()) == Token::Eq {
+			if p.find(0, |token| !token.is_trivia()) == Token::Eq {
 				trivia_0plus(p);
 				p.advance(Syn::Eq);
 				trivia_0plus(p);

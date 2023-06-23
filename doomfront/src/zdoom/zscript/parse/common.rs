@@ -129,7 +129,7 @@ pub(super) fn ident_chain(p: &mut Parser<Syn>) {
 	p.eat(Token::Dot, Syn::Dot);
 	p.advance(Syn::Ident);
 
-	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
+	while p.find(0, |token| !token.is_trivia()) == Token::Dot {
 		trivia_0plus(p);
 		p.advance(Syn::Dot);
 		trivia_0plus(p);
@@ -147,7 +147,7 @@ pub(super) fn ident_chain_lax(p: &mut Parser<Syn>) {
 	p.eat(Token::Dot, Syn::Dot);
 	p.advance(Syn::Ident);
 
-	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
+	while p.find(0, |token| !token.is_trivia()) == Token::Dot {
 		trivia_0plus(p);
 		p.advance(Syn::Dot);
 		trivia_0plus(p);
@@ -165,7 +165,7 @@ pub(super) fn ident_chain_any(p: &mut Parser<Syn>) {
 	p.eat(Token::Dot, Syn::Dot);
 	p.advance(Syn::Ident);
 
-	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
+	while p.find(0, |token| !token.is_trivia()) == Token::Dot {
 		trivia_0plus(p);
 		p.advance(Syn::Dot);
 		trivia_0plus(p);
@@ -181,7 +181,7 @@ pub(super) fn ident_list(p: &mut Parser<Syn>) -> bool {
 	let mut ret = false;
 	ident(p);
 
-	while p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+	while p.find(0, |token| !token.is_trivia()) == Token::Comma {
 		trivia_0plus(p);
 		p.advance(Syn::Comma);
 		trivia_0plus(p);
@@ -231,7 +231,7 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 	let tref = p.open();
 	core_type(p);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
+	if p.find(0, |token| !token.is_trivia()) == Token::BracketL {
 		trivia_0plus(p);
 		array_len(p);
 	}
@@ -282,7 +282,7 @@ pub fn core_type(p: &mut Parser<Syn>) {
 		Token::KwClass => {
 			p.advance(Syn::KwClass);
 
-			if p.next_filtered(|token| !token.is_trivia()) == Token::AngleL {
+			if p.find(0, |token| !token.is_trivia()) == Token::AngleL {
 				trivia_0plus(p);
 				p.advance(Syn::AngleL);
 				trivia_0plus(p);
@@ -433,7 +433,7 @@ pub(super) fn var_name(p: &mut Parser<Syn>) {
 	p.advance(Syn::Ident);
 
 	loop {
-		if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
+		if p.find(0, |token| !token.is_trivia()) == Token::BracketL {
 			trivia_0plus(p);
 			array_len(p);
 		} else {

@@ -122,7 +122,7 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 		Token::StringLit => {
 			p.advance(Syn::StringLit);
 
-			while p.next_filtered(|token| !token.is_trivia()) == Token::StringLit {
+			while p.find(0, |token| !token.is_trivia()) == Token::StringLit {
 				trivia_0plus(p);
 				p.advance(Syn::StringLit);
 			}
@@ -274,7 +274,7 @@ pub fn arg_list(p: &mut Parser<Syn>) {
 		let arg = p.open();
 
 		if p.at_if(is_ident_lax) {
-			let peeked = p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+			let peeked = p.find(0, |token| !token.is_trivia() && !is_ident_lax(token));
 
 			if peeked == Token::Colon {
 				p.advance(Syn::Ident);
@@ -288,7 +288,7 @@ pub fn arg_list(p: &mut Parser<Syn>) {
 
 		p.close(arg, Syn::Argument);
 
-		if p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+		if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 			trivia_0plus(p);
 			p.advance(Syn::Comma);
 			trivia_0plus(p);

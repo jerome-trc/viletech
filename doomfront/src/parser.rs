@@ -274,28 +274,15 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.raise(expected);
 	}
 
-	/// Finds the next token (which may be [`L::EOF`]) for which `predicate`
-	/// returns `true`.
-	pub fn next_filtered(&self, predicate: fn(L::Token) -> bool) -> L::Token {
-		self.tokens[self.pos..]
-			.iter()
-			.find_map(|t| {
-				if predicate(t.kind) {
-					Some(t.kind)
-				} else {
-					None
-				}
-			})
-			.unwrap_or(L::EOF)
-	}
-
-	/// Like [`Self::next_filtered`] but skips ahead of the current token if possible.
-	pub fn lookahead_filtered(&self, predicate: fn(L::Token) -> bool) -> L::Token {
+	/// Looks ahead for the next token (which may be [`L::EOF`]) for which `predicate`
+	/// returns `true`. If `0` is passed, this starts at the current token.
+	#[must_use]
+	pub fn find(&self, offset: usize, predicate: fn(L::Token) -> bool) -> L::Token {
 		if self.pos >= self.tokens.len() {
 			return L::EOF;
 		}
 
-		self.tokens[(self.pos + 1)..]
+		self.tokens[(self.pos + offset)..]
 			.iter()
 			.find_map(|t| {
 				if predicate(t.kind) {

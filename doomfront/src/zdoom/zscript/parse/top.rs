@@ -97,7 +97,7 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::Semicolon {
+	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
 		p.advance(Syn::Semicolon);
 	}

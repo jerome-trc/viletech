@@ -90,7 +90,7 @@ fn flag_setting(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	ident_chain_lax(p);
 
-	if p.next_filtered(|token| !token.is_trivia()) == Token::Semicolon {
+	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
 		p.advance(Syn::Semicolon);
 	}
@@ -143,7 +143,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		let token = p.nth(0);
 
 		if is_ident_lax(token) || is_non_stateflow_keyword(token) {
-			let peeked = p.next_filtered(|token| {
+			let peeked = p.find(0, |token| {
 				!token.is_trivia() && !is_ident_lax(token) && !token.is_keyword()
 			});
 
@@ -183,8 +183,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 					trivia_0plus(p);
 					ident_chain_lax(p);
 				} else if p.at_if(is_ident_lax) {
-					let peeked =
-						p.next_filtered(|token| !token.is_trivia() && !is_ident_lax(token));
+					let peeked = p.find(0, |token| !token.is_trivia() && !is_ident_lax(token));
 
 					match peeked {
 						Token::Dot => ident_chain(p),
@@ -207,7 +206,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 					p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`super`"]);
 				}
 
-				if p.next_filtered(|token| !token.is_trivia()) == Token::Plus {
+				if p.find(0, |token| !token.is_trivia()) == Token::Plus {
 					trivia_0plus(p);
 					p.advance(Syn::Plus);
 					trivia_0plus(p);

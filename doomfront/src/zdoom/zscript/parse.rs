@@ -19,7 +19,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			continue;
 		}
 
-		let token = p.next_filtered(|token| !token.is_trivia_or_doc());
+		let token = p.find(0, |token| !token.is_trivia_or_doc());
 
 		match token {
 			Token::KwClass => {
