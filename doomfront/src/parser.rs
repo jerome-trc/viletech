@@ -357,6 +357,22 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	}
 
 	/// See [`Self::debug_assert_at`].
+	pub fn debug_assert_at_any(&self, choices: &'static [L::Token])
+	where
+		L::Token: std::fmt::Debug,
+	{
+		debug_assert!(
+			self.at_any(choices),
+			"parser's current token did not pass a predicate (at `{t:#?}`)\r\n\
+			(position {pos}, span {span:?}, slice: `{slice}`)",
+			t = self.nth(0),
+			pos = self.pos,
+			span = self.current_span(),
+			slice = self.current_slice()
+		);
+	}
+
+	/// See [`Self::debug_assert_at`].
 	pub fn debug_assert_at_if(&self, predicate: fn(L::Token) -> bool)
 	where
 		L::Token: std::fmt::Debug,
@@ -385,8 +401,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		for event in self.events {
 			match event {
 				Event::Advance(syn) => {
-					let token = tokens.next().unwrap();
-					builder.token(syn, &self.source[token.span]);
+					let lexeme = tokens.next().unwrap();
+					builder.token(syn, &self.source[lexeme.span]);
 				}
 				Event::Open(syn) => {
 					builder.start_node(syn);
@@ -394,10 +410,16 @@ impl<'i, L: LangExt> Parser<'i, L> {
 				Event::Close => {
 					builder.finish_node();
 				}
+				Event::AdvanceN(syn, 1) => {
+					let lexeme = tokens.next().unwrap();
+					builder.token(syn, &self.source[lexeme.span]);
+				}
 				Event::AdvanceN(syn, n) => {
 					let start = tokens.next().unwrap().span.start;
 
-					for _ in 0..n {
+					// An unconditional assertion in `Self::advance_n` protects
+					// against `n` ever being less than one.
+					for _ in 0..(n - 1) {
 						let _ = tokens.next().unwrap();
 					}
 

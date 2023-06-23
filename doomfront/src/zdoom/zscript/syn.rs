@@ -409,6 +409,8 @@ pub enum Syn {
 	MinusEq,
 	/// `--`
 	Minus2,
+	/// `----` (for actor state sprite definitions.)
+	Minus4,
 	/// `(`
 	ParenL,
 	/// `)`
@@ -433,6 +435,8 @@ pub enum Syn {
 	PlusEq,
 	/// `#`
 	Pound,
+	/// `####` (for state sprites in actor definitions.)
+	Pound4,
 	/// `?`
 	Question,
 	/// `;`
@@ -643,6 +647,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::TildeEq2,
 			Syn::Minus,
 			Syn::Minus2,
+			Syn::Minus4,
 			Syn::MinusEq,
 			Syn::ParenL,
 			Syn::ParenR,
@@ -655,6 +660,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::Plus2,
 			Syn::PlusEq,
 			Syn::Pound,
+			Syn::Pound4,
 			Syn::Question,
 			Syn::Semicolon,
 			Syn::Slash,

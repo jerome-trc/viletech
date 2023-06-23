@@ -402,7 +402,7 @@ mod test {
 	fn smoke_1() {
 		const SOURCE: &str = "(a[1]() + --b.c) * ++d && (e << f) ~== ((((g /= h ? i : j))))";
 
-		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}
@@ -411,7 +411,7 @@ mod test {
 	fn smoke_2() {
 		const SOURCE: &str = r#"!multiplayer && (GetPlayerInput(INPUT_BUTTONS))"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}
@@ -420,7 +420,7 @@ mod test {
 	fn smoke_vector_bin() {
 		const SOURCE: &str = "(1.0, 2.0, 3.0) + (4.0, 5.0) - (6.0, 7.0, 8.0)";
 
-		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}
@@ -429,7 +429,7 @@ mod test {
 	fn smoke_string_lit_concat() {
 		const SOURCE: &str = r#"n + "interstellar" "domine""nuclear waste processing facility""#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}

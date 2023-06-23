@@ -359,8 +359,11 @@ pub(super) fn compound_stat(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::StaticConstStat`] node.
 pub(super) fn static_const_stat(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwStatic);
+	p.debug_assert_at_any(&[Token::KwStatic, Token::DocComment]);
 	let stat = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwStatic);
 	p.advance(Syn::KwStatic);
 	trivia_1plus(p);
 	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
@@ -519,7 +522,8 @@ mod test {
 		];
 
 		for source in SOURCES {
-			let ptree: ParseTree = crate::parse(source, statement, zdoom::Version::default());
+			let ptree: ParseTree =
+				crate::parse(source, statement, zdoom::lex::Context::ZSCRIPT_LATEST);
 			assert_no_errors(&ptree);
 			prettyprint_maybe(ptree.cursor());
 		}
@@ -537,7 +541,7 @@ mod test {
 			else	if(press & BT_USER4)	player_data.Binds.Use(3);
 		}";
 
-		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}

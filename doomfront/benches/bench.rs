@@ -101,7 +101,7 @@ fn language(crit: &mut Criterion) {
 			let _ = std::hint::black_box(doomfront::parse(
 				&sample,
 				zdoom::language::parse::file,
-				zdoom::Version::default(),
+				zdoom::lex::Context::NON_ZSCRIPT,
 			));
 		});
 	});
@@ -120,7 +120,7 @@ fn zscript(crit: &mut Criterion) {
 				let _ = std::hint::black_box(doomfront::parse(
 					SOURCE,
 					zscript::parse::expr,
-					zdoom::Version::default(),
+					zdoom::lex::Context::ZSCRIPT_LATEST,
 				));
 			});
 		});
@@ -140,7 +140,7 @@ fn zscript(crit: &mut Criterion) {
 				let ptree: zscript::ParseTree = std::hint::black_box(doomfront::parse(
 					&sample,
 					zscript::parse::file,
-					zdoom::Version::default(),
+					zdoom::lex::Context::ZSCRIPT_LATEST,
 				));
 				assert!(ptree.errors.is_empty());
 			});

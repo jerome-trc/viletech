@@ -6,7 +6,7 @@ use super::Version;
 
 #[derive(logos::Logos, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[logos(extras = Version, error = Token)]
+#[logos(extras = Context, error = Token)]
 pub enum Token {
 	// Literals ////////////////////////////////////////////////////////////////
 	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
@@ -304,6 +304,8 @@ pub enum Token {
 	Minus,
 	#[token("--")]
 	Minus2,
+	#[token("----")]
+	Minus4,
 	#[token("-=")]
 	MinusEq,
 	#[token("(")]
@@ -328,6 +330,8 @@ pub enum Token {
 	PlusEq,
 	#[token("#")]
 	Pound,
+	#[token("####")]
+	Pound4,
 	#[token("?")]
 	Question,
 	#[token(";")]
@@ -354,9 +358,8 @@ pub enum Token {
 	/// and non-standard, being defined by [zscdoc].
 	///
 	/// [zscdoc]: https://gitlab.com/Gutawer/zscdoc
-	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
-	#[regex("//[^\n]*\n*", priority = 1)]
+	#[regex("//[^\n]*\n*", priority = 1, callback = Token::try_doc_comment)]
 	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
@@ -383,11 +386,33 @@ impl Token {
 		)
 	}
 
+	#[must_use]
+	pub fn is_trivia_or_doc(self) -> bool {
+		self.is_trivia() || self == Self::DocComment
+	}
+
 	// Callbacks ///////////////////////////////////////////////////////////////////
 
 	#[allow(unused)]
+	fn try_doc_comment(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
+		if !lexer.extras.doc_comments {
+			return Ok(());
+		}
+
+		let mut chars = lexer.slice().chars().skip(2);
+
+		if chars.next().is_some_and(|c| c == '/')
+			&& chars.next().is_some_and(|c| !matches!(c, '/' | '\n'))
+		{
+			return Err(Self::DocComment);
+		}
+
+		Ok(())
+	}
+
+	#[allow(unused)]
 	fn ident_pre1_0_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V1_0_0 {
+		if lexer.extras.version >= Version::V1_0_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
@@ -396,7 +421,7 @@ impl Token {
 
 	#[allow(unused)]
 	fn ident_pre2_4_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V2_4_0 {
+		if lexer.extras.version >= Version::V2_4_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
@@ -405,7 +430,7 @@ impl Token {
 
 	#[allow(unused)]
 	fn ident_pre3_4_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V3_4_0 {
+		if lexer.extras.version >= Version::V3_4_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
@@ -414,7 +439,7 @@ impl Token {
 
 	#[allow(unused)]
 	fn ident_pre3_7_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V3_7_0 {
+		if lexer.extras.version >= Version::V3_7_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
@@ -423,7 +448,7 @@ impl Token {
 
 	#[allow(unused)]
 	fn ident_pre4_9_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V4_9_0 {
+		if lexer.extras.version >= Version::V4_9_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
@@ -432,12 +457,35 @@ impl Token {
 
 	#[allow(unused)]
 	fn ident_pre4_10_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if lexer.extras >= Version::V4_10_0 {
+		if lexer.extras.version >= Version::V4_10_0 {
 			Ok(())
 		} else {
 			Err(Self::Ident)
 		}
 	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Context {
+	pub version: super::Version,
+	/// See [`Token::DocComment`]. Only for use when parsing ZScript.
+	pub doc_comments: bool,
+}
+
+impl Context {
+	pub const ZSCRIPT_LATEST: Self = Self {
+		version: super::Version::V4_10_0,
+		doc_comments: true,
+	};
+
+	pub const NON_ZSCRIPT: Self = Self {
+		version: super::Version {
+			major: 0,
+			minor: 0,
+			rev: 0,
+		},
+		doc_comments: false,
+	};
 }
 
 #[cfg(test)]
@@ -472,7 +520,7 @@ States (actor, overlay) {
 
 	#[test]
 	fn smoke() {
-		let mut lexer = Token::lexer(SOURCE);
+		let mut lexer = Token::lexer_with_extras(SOURCE, Context::NON_ZSCRIPT);
 
 		while let Some(result) = lexer.next() {
 			let token = match result {
@@ -506,7 +554,7 @@ States (actor, overlay) {
 		let bytes = std::fs::read(path).unwrap();
 		let source = String::from_utf8(bytes).unwrap();
 
-		let mut lexer = Token::lexer(&source);
+		let mut lexer = Token::lexer_with_extras(&source, Context::NON_ZSCRIPT);
 
 		while let Some(result) = lexer.next() {
 			let token = match result {

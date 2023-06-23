@@ -7,8 +7,11 @@ use crate::zdoom::{
 
 /// Builds a [`Syn::FlagDef`] node.
 pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwFlagDef);
+	p.debug_assert_at_any(&[Token::KwFlagDef, Token::DocComment]);
 	let flagdef = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwFlagDef);
 	p.advance(Syn::KwFlagDef);
 	trivia_1plus(p);
 	ident_lax(p);
@@ -27,8 +30,11 @@ pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::PropertyDef`] node.
 pub fn property_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwProperty);
+	p.debug_assert_at_any(&[Token::KwProperty, Token::DocComment]);
 	let propdef = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwProperty);
 	p.advance(Syn::KwProperty);
 	trivia_1plus(p);
 	ident_lax(p);
@@ -299,13 +305,16 @@ pub fn states_usage(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::StateDef`] node.
 pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
-	#[cfg(debug_assertions)]
-	if !is_ident_lax(p.nth(0)) && !matches!(p.nth(0), Token::StringLit | Token::IntLit) {
-		panic!();
-	}
+	p.debug_assert_at_if(|token| {
+		is_ident_lax(token)
+			|| matches!(
+				token,
+				Token::StringLit | Token::IntLit | Token::Minus4 | Token::Pound4
+			)
+	});
 
 	let state = p.open();
-	p.advance(Syn::StateSprite);
+	state_sprite(p);
 	trivia_0plus(p);
 	state_frames(p);
 	trivia_0plus(p);
@@ -404,6 +413,53 @@ pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
 	p.close(state, Syn::StateDef);
 }
 
+fn state_sprite(p: &mut crate::parser::Parser<Syn>) {
+	const EXPECTED: &[&str] = &[
+		"a state sprite (4 ASCII letters/digits/underscores)",
+		"`####`",
+		"`----`",
+		"\"####\"",
+		"\"----\"",
+	];
+
+	if is_ident_lax(p.nth(0)) {
+		p.advance(Syn::StateSprite);
+		return;
+	}
+
+	match p.nth(0) {
+		Token::StringLit => {
+			p.advance(Syn::StateSprite);
+		}
+		Token::IntLit => {
+			if p.current_span().len() == 4 {
+				p.advance(Syn::StateSprite);
+				return;
+			}
+
+			// If dealing with a sprite token like `00DO`, the lexer will find
+			// an integer literal and a `do` keyword. If dealing with `0TNT`,
+			// the lexer will find an integer literal and an identifier. `0000`
+			// is just one integer literal. In any case, there can only be two
+			// tokens in a valid state sprite, so we only need to look 1 ahead.
+			let next = p.nth(1);
+
+			if is_ident_lax(next) || next.is_keyword() {
+				p.advance_n(Syn::StateSprite, 2);
+			} else {
+				p.advance(Syn::IntLit);
+				p.advance_with_error(Syn::from(next), EXPECTED);
+			}
+		}
+		Token::Pound4 | Token::Minus4 => {
+			p.advance(Syn::StateSprite);
+		}
+		other => {
+			p.advance_with_error(Syn::from(other), EXPECTED);
+		}
+	}
+}
+
 fn state_frames(p: &mut crate::parser::Parser<Syn>) {
 	let token = p.nth(0);
 
@@ -422,7 +478,7 @@ fn state_frames(p: &mut crate::parser::Parser<Syn>) {
 	while !p.at_if(Token::is_trivia) {
 		if !matches!(
 			p.nth(n),
-			Token::Ident | Token::IntLit | Token::BracketL | Token::BracketR | Token::Backslash
+			Token::Ident | Token::BracketL | Token::BracketR | Token::Backslash | Token::Pound
 		) {
 			break;
 		}
@@ -464,7 +520,8 @@ mod test {
 		const SOURCES: &[&str] = &["#### # 1;", "---- # 1;", "\"####\" \"#\" 1;"];
 
 		for source in SOURCES {
-			let ptree: ParseTree = crate::parse(source, state_def, zdoom::Version::default());
+			let ptree: ParseTree =
+				crate::parse(source, state_def, zdoom::lex::Context::ZSCRIPT_LATEST);
 			assert_no_errors(&ptree);
 			prettyprint_maybe(ptree.cursor());
 		}
@@ -476,7 +533,8 @@ mod test {
 	goto Super::FrameSetup;
 }"#####;
 
-		let ptree: ParseTree = crate::parse(SOURCE, states_block, zdoom::Version::default());
+		let ptree: ParseTree =
+			crate::parse(SOURCE, states_block, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}

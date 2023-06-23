@@ -28,7 +28,7 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 		path: impl AsRef<Path>,
 		mut filesystem: F,
 		parser: fn(&mut Parser<L>),
-		version: super::Version,
+		lex_ctx: super::lex::Context,
 		inc_directive: L::Kind,
 		string_lit: L::Kind,
 	) -> Self
@@ -49,7 +49,7 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 			};
 
 			let fptree = FileParseTree {
-				inner: crate::parse(source.as_ref(), parser, version),
+				inner: crate::parse(source.as_ref(), parser, lex_ctx),
 				path: queued,
 			};
 
@@ -88,7 +88,7 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 		path: impl AsRef<Path>,
 		filesystem: F,
 		parser: fn(&mut Parser<L>),
-		version: super::Version,
+		lex_ctx: super::lex::Context,
 		inc_directive: L::Kind,
 		string_lit: L::Kind,
 	) -> Self
@@ -120,7 +120,7 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 					};
 
 					let fptree = FileParseTree {
-						inner: crate::parse(source.as_ref(), parser, version),
+						inner: crate::parse(source.as_ref(), parser, lex_ctx),
 						path: queued,
 					};
 
@@ -221,7 +221,7 @@ mod test {
 			"file/a.zs",
 			inctree_lookup,
 			zscript::parse::file,
-			zdoom::Version::default(),
+			zdoom::lex::Context::ZSCRIPT_LATEST,
 			zscript::Syn::IncludeDirective,
 			zscript::Syn::StringLit,
 		);
@@ -235,7 +235,7 @@ mod test {
 			"file/a.zs",
 			inctree_lookup,
 			zscript::parse::file,
-			zdoom::Version::default(),
+			zdoom::lex::Context::ZSCRIPT_LATEST,
 			zscript::Syn::IncludeDirective,
 			zscript::Syn::StringLit,
 		);

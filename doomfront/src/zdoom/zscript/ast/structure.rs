@@ -35,6 +35,17 @@ impl ClassDef {
 		debug_assert_eq!(ret.kind(), Syn::Ident);
 		Some(ret)
 	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
 }
 
 // ClassExtend /////////////////////////////////////////////////////////////////
@@ -75,6 +86,17 @@ impl MixinClassDef {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
 }
 
 // StructDef ///////////////////////////////////////////////////////////////////
@@ -94,6 +116,17 @@ impl StructDef {
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
+	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
 	}
 }
 
@@ -126,6 +159,19 @@ pub struct FieldDecl(SyntaxNode);
 
 simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
 
+impl FieldDecl {
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
+}
+
 // FunctionDecl ////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::FunctionDecl`].
@@ -143,5 +189,16 @@ impl FunctionDecl {
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
+	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
 	}
 }

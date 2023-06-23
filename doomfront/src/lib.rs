@@ -31,6 +31,12 @@ pub mod testing;
 pub mod zdoom;
 
 /// Ties a [`rowan::Language`] to a [`logos::Logos`] token.
+///
+/// To developers looking to use DoomFront on their own language, note that `Token`'s
+/// error type is also `Token`. This allows Logos to emit either an "unknown"
+/// token type (which should correspond to the return value of `T::default()`),
+/// or leverage its `Extras` type to produce different output context-sensitively
+/// (e.g. adding more keywords with newer language versions).
 pub trait LangExt: rowan::Language {
 	type Token: 'static
 		+ for<'i> logos::Logos<'i, Source = str, Error = Self::Token>

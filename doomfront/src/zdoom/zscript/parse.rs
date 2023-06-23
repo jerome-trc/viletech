@@ -19,13 +19,43 @@ pub fn file(p: &mut crate::parser::Parser<Syn>) {
 			continue;
 		}
 
-		match p.nth(0) {
-			Token::KwClass => class_def(p),
-			Token::KwStruct => struct_def(p),
-			Token::KwMixin => mixin_class_def(p),
-			Token::KwExtend => class_or_struct_extend(p),
-			Token::KwConst => const_def(p),
-			Token::KwEnum => enum_def(p),
+		let token = p.next_filtered(|token| !token.is_trivia_or_doc());
+
+		match token {
+			Token::KwClass => {
+				class_def(p);
+				continue;
+			}
+			Token::KwStruct => {
+				struct_def(p);
+				continue;
+			}
+			Token::KwMixin => {
+				mixin_class_def(p);
+				continue;
+			}
+			Token::KwConst => {
+				const_def(p);
+				continue;
+			}
+			Token::KwEnum => {
+				enum_def(p);
+				continue;
+			}
+			_ => {}
+		}
+
+		if p.at(Token::DocComment) {
+			// Top-level items outside this set can not start with a doc comment.
+			p.advance_with_error(
+				Syn::from(p.nth(0)),
+				&["`const`", "`enum`", "`class`", "`struct`", "`mixin`"],
+			);
+
+			continue;
+		}
+
+		match token {
 			Token::PoundInclude => include_directive(p),
 			Token::KwVersion => version_directive(p),
 			_ => p.advance_with_error(
@@ -63,7 +93,7 @@ mod test {
 
 	#[test]
 	fn smoke_empty() {
-		let ptree: ParseTree = crate::parse("", file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse("", file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 
@@ -77,7 +107,7 @@ mod test {
 			}
 		};
 
-		let ptree: ParseTree = crate::parse(&sample, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(&sample, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}
@@ -116,7 +146,7 @@ mod test {
 				Some(Cow::Owned(source.as_ref().to_owned()))
 			},
 			file,
-			zdoom::Version::default(),
+			zdoom::lex::Context::ZSCRIPT_LATEST,
 			Syn::IncludeDirective,
 			Syn::StringLit,
 		);

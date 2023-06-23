@@ -6,8 +6,11 @@ use super::*;
 
 /// Builds a [`Syn::ClassDef`] node.
 pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwClass);
+	p.debug_assert_at_any(&[Token::KwClass, Token::DocComment]);
 	let classdef = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwClass);
 	p.advance(Syn::KwClass);
 	trivia_0plus(p);
 	ident_lax(p);
@@ -68,8 +71,11 @@ pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::MixinClassDef`] node.
 pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwMixin);
+	p.debug_assert_at_any(&[Token::KwMixin, Token::DocComment]);
 	let mixindef = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwMixin);
 	p.advance(Syn::KwMixin);
 	trivia_0plus(p);
 	p.expect(Token::KwClass, Syn::KwClass, &["`class`"]);
@@ -91,8 +97,11 @@ pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a [`Syn::StructDef`] node.
 pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwStruct);
+	p.debug_assert_at_any(&[Token::KwStruct, Token::DocComment]);
 	let structdef = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwStruct);
 	p.advance(Syn::KwStruct);
 	trivia_0plus(p);
 	ident_lax(p);
@@ -180,7 +189,7 @@ pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
 // Innards /////////////////////////////////////////////////////////////////////
 
 fn class_innard(p: &mut crate::parser::Parser<Syn>) {
-	let token = p.nth(0);
+	let token = p.next_filtered(|token| !token.is_trivia_or_doc());
 
 	if token == Token::KwStatic
 		&& p.lookahead_filtered(|token| !token.is_trivia()) == Token::KwConst
@@ -191,17 +200,53 @@ fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 
 	if in_type_ref_first_set(token) || in_decl_qual_first_set(token) {
 		member_decl(p);
-		trivia_0plus(p);
+		return;
+	}
+
+	match token {
+		Token::KwConst => {
+			const_def(p);
+			return;
+		}
+		Token::KwEnum => {
+			enum_def(p);
+			return;
+		}
+		Token::KwProperty => {
+			property_def(p);
+			return;
+		}
+		Token::KwFlagDef => {
+			flag_def(p);
+			return;
+		}
+		_ => {}
+	}
+
+	if p.at(Token::DocComment) {
+		// Class innards outside this set can not start with a doc comment.
+		p.advance_with_error(
+			Syn::from(p.nth(0)),
+			&[
+				"a type name",
+				"`const` or `enum`",
+				"`property` or `flagdef`",
+				"`play` or `ui` or `virtualscope` or `clearscope`",
+				"`deprecated` or `version`",
+				"`abstract` or `final` or `override` or `virtual`",
+				"`private` or `protected`",
+				"`internal` or `meta` or `native` or `transient`",
+				"`static` or `readonly`",
+				"`vararg`",
+			],
+		);
+
 		return;
 	}
 
 	match token {
 		Token::KwDefault => default_block(p),
 		Token::KwStates => states_block(p),
-		Token::KwConst => const_def(p),
-		Token::KwEnum => enum_def(p),
-		Token::KwProperty => property_def(p),
-		Token::KwFlagDef => flag_def(p),
 		Token::KwMixin => {
 			let mixin = p.open();
 			p.advance(Syn::KwMixin);
@@ -215,6 +260,7 @@ fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 			Syn::from(other),
 			&[
 				"a type name",
+				"`mixin`",
 				"`const` or `enum`",
 				"`states` or `default`",
 				"`property` or `flagdef`",
@@ -228,8 +274,6 @@ fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 			],
 		),
 	}
-
-	trivia_0plus(p);
 }
 
 fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
@@ -273,6 +317,8 @@ fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
 /// Builds a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`] node.
 fn member_decl(p: &mut crate::parser::Parser<Syn>) {
 	let member = p.open();
+	doc_comments(p);
+	trivia_0plus(p);
 
 	while p.at_if(in_decl_qual_first_set) && !p.eof() {
 		match p.nth(0) {
@@ -451,11 +497,16 @@ fn in_decl_qual_first_set(token: Token) -> bool {
 
 #[cfg(test)]
 mod test {
+	use rowan::ast::AstNode;
+
 	use super::*;
 
 	use crate::{
 		testing::*,
-		zdoom::{self, zscript::ParseTree},
+		zdoom::{
+			self,
+			zscript::{ast, ParseTree},
+		},
 	};
 
 	#[test]
@@ -490,7 +541,27 @@ class Rocketpack_Flare : Actor
 
 "#####;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn smoke_doc() {
+		const SOURCE: &str = r#"
+
+/// UAC Mines
+/// Sector 14-3
+class DevastationFixed {}
+
+"#;
+
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		let class = ast::ClassDef::cast(ptree.cursor().first_child().unwrap()).unwrap();
+		assert_eq!(class.name().text(), "DevastationFixed");
+		let mut docs = class.docs();
+		assert_eq!(docs.next().unwrap().text(), "/// UAC Mines\n");
+		assert_eq!(docs.next().unwrap().text(), "/// Sector 14-3\n");
+		assert!(docs.next().is_none());
 	}
 }

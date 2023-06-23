@@ -156,7 +156,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	"#;
 
-		let mut parser = Parser::new(SOURCE, zdoom::Version::default());
+		let mut parser = Parser::new(SOURCE, zdoom::lex::Context::NON_ZSCRIPT);
 		file(&mut parser);
 		let (root, errors) = parser.finish();
 		let ptree: ParseTree = ParseTree::new(root, vec![]);
@@ -196,7 +196,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	"#;
 
-		let mut parser = Parser::new(SOURCE, zdoom::Version::default());
+		let mut parser = Parser::new(SOURCE, zdoom::lex::Context::NON_ZSCRIPT);
 		file(&mut parser);
 		let (root, errors) = parser.finish();
 		let ptree: ParseTree = ParseTree::new(root, vec![]);

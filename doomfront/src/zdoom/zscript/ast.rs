@@ -100,6 +100,17 @@ impl ConstDef {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
 }
 
 // EnumDef /////////////////////////////////////////////////////////////////////
@@ -120,6 +131,62 @@ impl EnumDef {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	#[must_use]
+	pub fn type_spec(&self) -> Option<SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.filter_map(|elem| elem.into_token())
+			.find(|token| {
+				matches!(
+					token.kind(),
+					Syn::KwSByte
+						| Syn::KwByte | Syn::KwInt8
+						| Syn::KwUInt8 | Syn::KwShort
+						| Syn::KwUShort | Syn::KwInt16
+						| Syn::KwUInt16 | Syn::KwInt
+						| Syn::KwUInt
+				)
+			})
+	}
+
+	pub fn variants(&self) -> impl Iterator<Item = EnumVariant> {
+		self.0.children().map(|node| {
+			debug_assert_eq!(node.kind(), Syn::EnumVariant);
+			EnumVariant(node)
+		})
+	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
+}
+
+/// Wraps a node tagged [`Syn::EnumVariant`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct EnumVariant(SyntaxNode);
+
+simple_astnode!(Syn, EnumVariant, Syn::EnumVariant);
+
+impl EnumVariant {
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn name(&self) -> SyntaxToken {
+		self.0.first_token().unwrap()
+	}
+
+	#[must_use]
+	pub fn initializer(&self) -> Option<Expr> {
+		self.0.last_child().map(|node| Expr::cast(node).unwrap())
+	}
 }
 
 // IncludeDirective ////////////////////////////////////////////////////////////
@@ -130,6 +197,16 @@ impl EnumDef {
 pub struct IncludeDirective(SyntaxNode);
 
 simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
+
+impl IncludeDirective {
+	/// The returned token is always tagged [`Syn::StringLit`].
+	#[must_use]
+	pub fn argument(&self) -> SyntaxToken {
+		let ret = self.0.last_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::StringLit);
+		ret
+	}
+}
 
 // VersionDirective ////////////////////////////////////////////////////////////
 

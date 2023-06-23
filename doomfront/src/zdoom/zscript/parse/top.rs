@@ -10,9 +10,12 @@ use crate::zdoom::{
 
 /// Builds a [`Syn::ConstDef`] node.
 pub fn const_def(p: &mut crate::parser::Parser<Syn>) {
-	p.debug_assert_at(Token::KwConst);
+	p.debug_assert_at_any(&[Token::KwConst, Token::DocComment]);
 	let constdef = p.open();
-	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
+	doc_comments(p);
+	trivia_0plus(p);
+	p.debug_assert_at(Token::KwConst);
+	p.advance(Syn::KwConst);
 	trivia_1plus(p);
 	ident(p);
 	trivia_0plus(p);
@@ -39,9 +42,11 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 		p.close(var, Syn::EnumVariant);
 	}
 
-	p.debug_assert_at(Token::KwEnum);
+	p.debug_assert_at_any(&[Token::KwEnum, Token::DocComment]);
 	let enumdef = p.open();
-	p.expect(Token::KwEnum, Syn::KwEnum, &["`enum`"]);
+	doc_comments(p);
+	trivia_0plus(p);
+	p.advance(Syn::KwEnum);
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
@@ -53,8 +58,12 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 			&[
 				(Token::KwSByte, Syn::KwSByte),
 				(Token::KwByte, Syn::KwByte),
+				(Token::KwInt8, Syn::KwInt8),
+				(Token::KwUInt8, Syn::KwUInt8),
 				(Token::KwShort, Syn::KwShort),
 				(Token::KwUShort, Syn::KwUShort),
+				(Token::KwInt16, Syn::KwInt16),
+				(Token::KwUInt16, Syn::KwUInt16),
 				(Token::KwInt, Syn::KwInt),
 				(Token::KwUInt, Syn::KwUInt),
 			],
@@ -131,7 +140,7 @@ mod test {
 	fn smoke_constdef() {
 		const SOURCE: &str = r#"const GOLDEN_ANARCHY = BUSHFIRE >>> NONSPECIFIC_TECH_BASE;"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, const_def, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, const_def, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 
@@ -152,7 +161,7 @@ enum BrickAndRoot {
 }
 "#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 
@@ -167,7 +176,7 @@ version "3.7.1"
 
 "##;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 }

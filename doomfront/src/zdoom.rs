@@ -61,13 +61,6 @@ impl Version {
 	};
 }
 
-impl Default for Version {
-	/// Returns the current latest GZDoom version.
-	fn default() -> Self {
-		Self::V4_10_0
-	}
-}
-
 impl std::str::FromStr for Version {
 	type Err = IntErrorKind;
 

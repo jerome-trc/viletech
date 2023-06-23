@@ -41,6 +41,11 @@ pub(super) fn deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
 	p.close(qual, Syn::DeprecationQual);
 }
 
+/// Parse 0 or more [`Token::DocComment`]s.
+pub(super) fn doc_comments(p: &mut crate::parser::Parser<Syn>) {
+	while p.eat(Token::DocComment, Syn::DocComment) {}
+}
+
 pub(super) fn ident(p: &mut crate::parser::Parser<Syn>) {
 	p.expect_any(IDENT_TOKENS, &["an identifier"])
 }
@@ -145,7 +150,7 @@ pub(super) fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a series of [`Syn::Ident`] tokens, separated by trivia and commas.
 /// Returns `true` if more than one identifier was parsed.
-pub fn ident_list(p: &mut crate::parser::Parser<Syn>) -> bool {
+pub(super) fn ident_list(p: &mut crate::parser::Parser<Syn>) -> bool {
 	let mut ret = false;
 	ident(p);
 
@@ -426,23 +431,26 @@ pub(super) fn version_qual(p: &mut crate::parser::Parser<Syn>) {
 mod test {
 	use crate::{
 		testing::*,
-		zdoom::{self, zscript::ParseTree},
+		zdoom::{
+			self,
+			zscript::{parse, ParseTree},
+		},
 	};
 
 	use super::*;
 
 	#[test]
 	fn smoke_identlist() {
-		const SOURCE: &str = r#"temple, of, the, ancient, techlords"#;
+		const SOURCE: &str = r#"property temple: of, the, ancient, techlords;"#;
 
 		let ptree: ParseTree = crate::parse(
 			SOURCE,
-			|p| {
-				ident_list(p);
-			},
-			zdoom::Version::default(),
+			parse::property_def,
+			zdoom::lex::Context::ZSCRIPT_LATEST,
 		);
+
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]
@@ -462,7 +470,8 @@ mod test {
 		let printout = std::env::var("DOOMFRONT_TEST_PRETTYPRINT").is_ok_and(|v| v == "1");
 
 		for source in SOURCES {
-			let ptree: ParseTree = crate::parse(source, type_ref, zdoom::Version::default());
+			let ptree: ParseTree =
+				crate::parse(source, type_ref, zdoom::lex::Context::ZSCRIPT_LATEST);
 			assert_no_errors(&ptree);
 
 			if printout {
@@ -476,7 +485,8 @@ mod test {
 	fn smoke_version_qual() {
 		const SOURCE: &str = r#"version("3.7.1")"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, version_qual, zdoom::Version::default());
+		let ptree: ParseTree =
+			crate::parse(SOURCE, version_qual, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 
@@ -484,7 +494,11 @@ mod test {
 	fn smoke_deprecation_qual() {
 		const SOURCE: &str = r#"deprecated("2.4.0", "Don't use this please")"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, deprecation_qual, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(
+			SOURCE,
+			deprecation_qual,
+			zdoom::lex::Context::ZSCRIPT_LATEST,
+		);
 		assert_no_errors(&ptree);
 	}
 }

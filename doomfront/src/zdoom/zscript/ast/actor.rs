@@ -24,6 +24,17 @@ impl FlagDef {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
+	}
 }
 
 // PropertyDef /////////////////////////////////////////////////////////////////
@@ -43,6 +54,17 @@ impl PropertyDef {
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
+	}
+
+	/// All returned tokens are tagged [`Syn::DocComment`].
+	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.take_while(|elem| elem.kind() == Syn::DocComment)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::DocComment)
+			})
 	}
 }
 

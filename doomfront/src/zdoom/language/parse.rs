@@ -160,7 +160,7 @@ $ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
 MEGALOPOLIS = "The Omega";
 "#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
 		let mut ast = ptree.cursor().children();
 
@@ -202,7 +202,7 @@ ABDUCTION = ;
 $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::Version::default());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
 		let mut ast = ptree.cursor().children();
 
@@ -254,7 +254,8 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 			.unwrap();
 		let source = String::from_utf8_lossy(&bytes);
 
-		let ptree: ParseTree = crate::parse(source.as_ref(), file, zdoom::Version::default());
+		let ptree: ParseTree =
+			crate::parse(source.as_ref(), file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
 	}
 }

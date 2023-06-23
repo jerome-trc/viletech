@@ -310,7 +310,7 @@ actor BaronsBanquet {}
 			}
 		};
 
-		let tbuf = crate::_scan(&sample, zdoom::Version::default());
+		let tbuf = crate::_scan(&sample, zdoom::lex::Context::NON_ZSCRIPT);
 		let result = crate::_parse(file(), &sample, &tbuf);
 		let ptree: ParseTree = unwrap_parse_tree(result);
 		assert_no_errors(&ptree);
