@@ -1957,6 +1957,7 @@ dependencies = [
  "rowan",
  "rustc-hash",
  "serde",
+ "walkdir",
 ]
 
 [[package]]

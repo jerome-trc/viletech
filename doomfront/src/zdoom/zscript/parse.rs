@@ -113,8 +113,46 @@ mod test {
 	}
 
 	#[test]
+	fn with_sample_dir() {
+		let dir = match check_sample_dir("DOOMFRONT_ZSCRIPT_SAMPLE_DIR") {
+			Ok(p) => p,
+			Err(err) => {
+				eprintln!("Skipping ZScript sample data-based unit test. Reason: {err}");
+				return;
+			}
+		};
+
+		let walker = walkdir::WalkDir::new(&dir)
+			.follow_links(false)
+			.max_depth(8)
+			.same_file_system(true)
+			.into_iter()
+			.filter_map(|res| res.ok());
+
+		for dir_entry in walker {
+			if dir_entry.file_type().is_dir() {
+				continue;
+			}
+
+			let bytes = match std::fs::read(dir_entry.path()) {
+				Ok(b) => b,
+				Err(err) => {
+					eprintln!("Skipping `{}` ({err})", dir_entry.path().display());
+					continue;
+				}
+			};
+
+			let sample = String::from_utf8_lossy(&bytes).to_string();
+			let ptree: ParseTree = crate::parse(&sample, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+			eprintln!("Checking `{}`...", dir_entry.path().display());
+			assert_no_errors(&ptree);
+			prettyprint_maybe(ptree.cursor());
+		}
+	}
+
+	#[test]
 	fn inctree() {
-		let (root_path, _) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE") {
+		let (root_path, _) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE_INCTREE") {
 			Ok(s) => s,
 			Err(err) => {
 				eprintln!("Skipping ZScript include tree unit test. Reason: {err}");

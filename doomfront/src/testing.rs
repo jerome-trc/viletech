@@ -73,7 +73,6 @@ pub fn assert_token<L>(
 
 /// Unit testing helper; checks that [`rowan::WalkEvent::Enter`] events match
 /// the node or token data provided in `seq`.
-#[cfg(test)]
 pub fn assert_sequence<L>(seq: &'static [(L::Kind, Option<&'static str>)], cursor: SyntaxNode<L>)
 where
 	L: rowan::Language,
@@ -188,6 +187,31 @@ pub fn read_sample_data(env_var_name: &'static str) -> Result<(PathBuf, String),
 	let sample = String::from_utf8_lossy(&bytes).to_string();
 
 	Ok((path, sample))
+}
+
+/// `Err` variants contain the reason the read failed. This can happen because:
+/// - the environment variable behind `env_var_name` could not be retrieved
+/// - the path at the environment variable is to a non-existent directory
+/// - the path at the environment variable is to a non-directory entity
+pub fn check_sample_dir(env_var_name: &'static str) -> Result<PathBuf, String> {
+	let path = match std::env::var(env_var_name) {
+		Ok(p) => PathBuf::from(p),
+		Err(err) => {
+			return Err(format!(
+				"failed to get environment variable `{env_var_name}` ({err})"
+			))
+		}
+	};
+
+	if !path.exists() {
+		return Err(format!("directory `{}` does not exist", path.display()));
+	}
+
+	if !path.is_dir() {
+		return Err(format!("`{}` is not a directory", path.display()));
+	}
+
+	Ok(path)
 }
 
 // Details /////////////////////////////////////////////////////////////////////
