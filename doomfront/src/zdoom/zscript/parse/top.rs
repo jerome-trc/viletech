@@ -1,15 +1,18 @@
 //! Symbolic constants, enums, top-level directives.
 
-use crate::zdoom::{
-	zscript::{
-		parse::{common::*, expr},
-		Syn,
+use crate::{
+	parser::Parser,
+	zdoom::{
+		zscript::{
+			parse::{common::*, expr},
+			Syn,
+		},
+		Token,
 	},
-	Token,
 };
 
 /// Builds a [`Syn::ConstDef`] node.
-pub fn const_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn const_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwConst, Token::DocComment]);
 	let constdef = p.open();
 	doc_comments(p);
@@ -28,8 +31,8 @@ pub fn const_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::EnumDef`] node.
-pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
-	fn variant(p: &mut crate::parser::Parser<Syn>) {
+pub fn enum_def(p: &mut Parser<Syn>) {
+	fn variant(p: &mut Parser<Syn>) {
 		let var = p.open();
 		ident_lax(p);
 		trivia_0plus(p);
@@ -105,7 +108,7 @@ pub fn enum_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::IncludeDirective`] node.
-pub fn include_directive(p: &mut crate::parser::Parser<Syn>) {
+pub fn include_directive(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::PoundInclude);
 	let directive = p.open();
 	p.expect(Token::PoundInclude, Syn::PoundInclude, &["`#include`"]);
@@ -115,7 +118,7 @@ pub fn include_directive(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::VersionDirective`] node.
-pub fn version_directive(p: &mut crate::parser::Parser<Syn>) {
+pub fn version_directive(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwVersion);
 	let directive = p.open();
 	p.expect(Token::KwVersion, Syn::KwVersion, &["`version`"]);

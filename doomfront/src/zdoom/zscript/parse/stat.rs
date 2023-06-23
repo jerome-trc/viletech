@@ -1,6 +1,9 @@
 //! Statement parsers.
 
-use crate::zdoom::{zscript::Syn, Token};
+use crate::{
+	parser::Parser,
+	zdoom::{zscript::Syn, Token},
+};
 
 use super::{common::*, expr};
 
@@ -25,7 +28,7 @@ use super::{common::*, expr};
 /// - [`Syn::SwitchStat`]
 /// - [`Syn::UntilStat`]
 /// - [`Syn::WhileStat`]
-pub fn statement(p: &mut crate::parser::Parser<Syn>) {
+pub fn statement(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
 	if expr::in_first_set(token) {
@@ -337,7 +340,7 @@ pub fn statement(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::CompoundStat`] node.
-pub(super) fn compound_stat(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn compound_stat(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::BraceL);
 	let stat = p.open();
 	p.advance(Syn::BraceL);
@@ -358,7 +361,7 @@ pub(super) fn compound_stat(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::StaticConstStat`] node.
-pub(super) fn static_const_stat(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwStatic, Token::DocComment]);
 	let stat = p.open();
 	doc_comments(p);
@@ -406,7 +409,7 @@ pub(super) fn static_const_stat(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::DeclAssignStat`] or [`Syn::LocalStat`] node.
-fn assign_stat(p: &mut crate::parser::Parser<Syn>) {
+fn assign_stat(p: &mut Parser<Syn>) {
 	let stat = p.open();
 
 	let syn = if p.at(Token::KwLet)
@@ -435,7 +438,7 @@ fn assign_stat(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::LocalVar`] node. Does not expect a trailing semicolon.
-fn local_var(p: &mut crate::parser::Parser<Syn>) {
+fn local_var(p: &mut Parser<Syn>) {
 	let local = p.open();
 	type_ref(p);
 	trivia_0plus(p);
@@ -456,7 +459,7 @@ fn local_var(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::LocalVarInit`] node.
-fn local_var_init(p: &mut crate::parser::Parser<Syn>) {
+fn local_var_init(p: &mut Parser<Syn>) {
 	let init = p.open();
 	ident_lax(p);
 	trivia_0plus(p);

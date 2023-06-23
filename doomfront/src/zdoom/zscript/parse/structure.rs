@@ -1,11 +1,14 @@
 //! Parsers for definitions for classes, mixin classes, and structs.
 
-use crate::zdoom::{zscript::Syn, Token};
+use crate::{
+	parser::Parser,
+	zdoom::{zscript::Syn, Token},
+};
 
 use super::*;
 
 /// Builds a [`Syn::ClassDef`] node.
-pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn class_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwClass, Token::DocComment]);
 	let classdef = p.open();
 	doc_comments(p);
@@ -70,7 +73,7 @@ pub fn class_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::MixinClassDef`] node.
-pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn mixin_class_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwMixin, Token::DocComment]);
 	let mixindef = p.open();
 	doc_comments(p);
@@ -96,7 +99,7 @@ pub fn mixin_class_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::StructDef`] node.
-pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn struct_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwStruct, Token::DocComment]);
 	let structdef = p.open();
 	doc_comments(p);
@@ -143,7 +146,7 @@ pub fn struct_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::ClassExtend`] or [`Syn::StructExtend`] node.
-pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
+pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwExtend);
 	let extension = p.open();
 	p.advance(Syn::KwExtend);
@@ -188,7 +191,7 @@ pub fn class_or_struct_extend(p: &mut crate::parser::Parser<Syn>) {
 
 // Innards /////////////////////////////////////////////////////////////////////
 
-fn class_innard(p: &mut crate::parser::Parser<Syn>) {
+fn class_innard(p: &mut Parser<Syn>) {
 	let token = p.next_filtered(|token| !token.is_trivia_or_doc());
 
 	if token == Token::KwStatic
@@ -276,7 +279,7 @@ fn class_innard(p: &mut crate::parser::Parser<Syn>) {
 	}
 }
 
-fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
+fn struct_innard(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
 	if token == Token::KwStatic
@@ -315,7 +318,7 @@ fn struct_innard(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`] node.
-fn member_decl(p: &mut crate::parser::Parser<Syn>) {
+fn member_decl(p: &mut Parser<Syn>) {
 	let member = p.open();
 	doc_comments(p);
 	trivia_0plus(p);
@@ -403,7 +406,7 @@ fn member_decl(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::ParamList`] node. Includes delimiting parentheses.
-fn param_list(p: &mut crate::parser::Parser<Syn>) {
+fn param_list(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::ParenL);
 	let list = p.open();
 	p.advance(Syn::ParenL);
@@ -440,7 +443,7 @@ fn param_list(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::Parameter`] node.
-fn parameter(p: &mut crate::parser::Parser<Syn>) {
+fn parameter(p: &mut Parser<Syn>) {
 	p.debug_assert_at_if(|t| !t.is_trivia());
 	let param = p.open();
 

@@ -1,11 +1,14 @@
 //! Combinators applicable to multiple other parts of the syntax.
 
-use crate::zdoom::{zscript::Syn, Token};
+use crate::{
+	parser::Parser,
+	zdoom::{zscript::Syn, Token},
+};
 
 use super::expr;
 
 /// Builds a [`Syn::ArrayLen`] node.
-pub(super) fn array_len(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn array_len(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::BracketL);
 	let l = p.open();
 	p.advance(Syn::BracketL);
@@ -21,7 +24,7 @@ pub(super) fn array_len(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::DeprecationQual`] node.
-pub(super) fn deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn deprecation_qual(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwDeprecated);
 	let qual = p.open();
 	p.advance(Syn::KwDeprecated);
@@ -42,11 +45,11 @@ pub(super) fn deprecation_qual(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Parse 0 or more [`Token::DocComment`]s.
-pub(super) fn doc_comments(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn doc_comments(p: &mut Parser<Syn>) {
 	while p.eat(Token::DocComment, Syn::DocComment) {}
 }
 
-pub(super) fn ident(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident(p: &mut Parser<Syn>) {
 	p.expect_any(IDENT_TOKENS, &["an identifier"])
 }
 
@@ -57,12 +60,12 @@ pub(super) fn is_ident(token: Token) -> bool {
 
 #[must_use]
 #[allow(unused)]
-pub(super) fn eat_ident(p: &mut crate::parser::Parser<Syn>) -> bool {
+pub(super) fn eat_ident(p: &mut Parser<Syn>) -> bool {
 	p.eat_any(IDENT_TOKENS)
 }
 
 /// Like [`ident`] but allows [`Token::KwProperty`] and builtin type names.
-pub(super) fn ident_lax(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident_lax(p: &mut Parser<Syn>) {
 	p.expect_if(is_ident_lax, Syn::Ident, &["an identifier"])
 }
 
@@ -72,7 +75,7 @@ pub(super) fn is_ident_lax(token: Token) -> bool {
 }
 
 #[must_use]
-pub(super) fn eat_ident_lax(p: &mut crate::parser::Parser<Syn>) -> bool {
+pub(super) fn eat_ident_lax(p: &mut Parser<Syn>) -> bool {
 	p.eat_if(is_ident_lax, Syn::Ident)
 }
 
@@ -117,7 +120,7 @@ const IDENT_TOKENS_LAX: &[(Token, Syn)] = &[
 ];
 
 /// Builds a [`Syn::IdentChain`] node. Also see [`ident_chain_lax`].
-pub(super) fn ident_chain(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident_chain(p: &mut Parser<Syn>) {
 	debug_assert!(p.at_if(is_ident));
 	let chain = p.open();
 	p.advance(Syn::Ident);
@@ -133,7 +136,7 @@ pub(super) fn ident_chain(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Like [`ident_chain`] but backed by [`is_ident_lax`].
-pub(super) fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn ident_chain_lax(p: &mut Parser<Syn>) {
 	debug_assert!(p.at_if(is_ident_lax));
 	let chain = p.open();
 	p.advance(Syn::Ident);
@@ -150,7 +153,7 @@ pub(super) fn ident_chain_lax(p: &mut crate::parser::Parser<Syn>) {
 
 /// Builds a series of [`Syn::Ident`] tokens, separated by trivia and commas.
 /// Returns `true` if more than one identifier was parsed.
-pub(super) fn ident_list(p: &mut crate::parser::Parser<Syn>) -> bool {
+pub(super) fn ident_list(p: &mut Parser<Syn>) -> bool {
 	let mut ret = false;
 	ident(p);
 
@@ -170,7 +173,7 @@ pub(super) fn ident_list(p: &mut crate::parser::Parser<Syn>) -> bool {
 /// - [`Syn::Comment`]
 /// - [`Syn::RegionStart`]
 /// - [`Syn::RegionEnd`]
-pub(super) fn trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
+pub(super) fn trivia(p: &mut Parser<Syn>) -> bool {
 	p.eat_any(&[
 		(Token::Whitespace, Syn::Whitespace),
 		(Token::Comment, Syn::Comment),
@@ -180,12 +183,12 @@ pub(super) fn trivia(p: &mut crate::parser::Parser<Syn>) -> bool {
 }
 
 /// Shorthand for `while trivia(p) {}`.
-pub(super) fn trivia_0plus(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn trivia_0plus(p: &mut Parser<Syn>) {
 	while trivia(p) {}
 }
 
 /// Expects one [`trivia`] and then calls [`trivia_0plus`].
-pub(super) fn trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn trivia_1plus(p: &mut Parser<Syn>) {
 	p.expect_any(
 		&[
 			(Token::Whitespace, Syn::Whitespace),
@@ -208,8 +211,8 @@ pub(super) fn trivia_1plus(p: &mut crate::parser::Parser<Syn>) {
 /// - [`Syn::ReadonlyType`]
 /// - [`Syn::NativeType`]
 /// - [`Syn::LetType`]
-pub fn type_ref(p: &mut crate::parser::Parser<Syn>) {
-	fn tref_with_optional_arraylen(p: &mut crate::parser::Parser<Syn>) {
+pub fn type_ref(p: &mut Parser<Syn>) {
+	fn tref_with_optional_arraylen(p: &mut Parser<Syn>) {
 		type_ref(p);
 
 		if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
@@ -396,7 +399,7 @@ fn is_primitive_type(token: Token) -> bool {
 }
 
 /// Builds a [`Syn::VarName`] node.
-pub(super) fn var_name(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn var_name(p: &mut Parser<Syn>) {
 	p.debug_assert_at_if(is_ident_lax);
 	let name = p.open();
 	p.advance(Syn::Ident);
@@ -414,7 +417,7 @@ pub(super) fn var_name(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::VersionQual`] node.
-pub(super) fn version_qual(p: &mut crate::parser::Parser<Syn>) {
+pub(super) fn version_qual(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwVersion);
 	let qual = p.open();
 	p.advance(Syn::KwVersion);

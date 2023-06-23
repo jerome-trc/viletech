@@ -5,13 +5,13 @@ mod stat;
 mod structure;
 mod top;
 
-use crate::zdoom::Token;
+use crate::{parser::Parser, zdoom::Token};
 
 use super::Syn;
 
 pub use self::{actor::*, common::*, expr::*, stat::*, structure::*, top::*};
 
-pub fn file(p: &mut crate::parser::Parser<Syn>) {
+pub fn file(p: &mut Parser<Syn>) {
 	let root = p.open();
 
 	while !p.eof() {

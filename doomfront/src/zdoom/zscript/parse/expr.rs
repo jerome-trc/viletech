@@ -1,5 +1,5 @@
 use crate::{
-	parser::CloseMark,
+	parser::{CloseMark, Parser},
 	zdoom::{zscript::Syn, Token},
 };
 
@@ -17,11 +17,11 @@ use super::common::*;
 /// - [`Syn::SuperExpr`]
 /// - [`Syn::TernaryExpr`]
 /// - [`Syn::VectorExpr`]
-pub fn expr(p: &mut crate::parser::Parser<Syn>) {
+pub fn expr(p: &mut Parser<Syn>) {
 	recur(p, Token::Eof);
 }
 
-fn recur(p: &mut crate::parser::Parser<Syn>, left: Token) {
+fn recur(p: &mut Parser<Syn>, left: Token) {
 	let mut lhs = primary_expr(p);
 
 	loop {
@@ -87,7 +87,7 @@ fn recur(p: &mut crate::parser::Parser<Syn>, left: Token) {
 	}
 }
 
-fn primary_expr(p: &mut crate::parser::Parser<Syn>) -> CloseMark {
+fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 	let ex = p.open();
 
 	if eat_ident_lax(p) {
@@ -264,7 +264,7 @@ pub(super) fn in_first_set(token: Token) -> bool {
 }
 
 /// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
-pub fn arg_list(p: &mut crate::parser::Parser<Syn>) {
+pub fn arg_list(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();
 	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
@@ -374,7 +374,7 @@ fn infix_right_stronger(left: Token, right: Token) -> bool {
 }
 
 /// Expects the current position to be the start of at least one expression.
-pub fn expr_list(p: &mut crate::parser::Parser<Syn>) {
+pub fn expr_list(p: &mut Parser<Syn>) {
 	expr(p);
 	trivia_0plus(p);
 

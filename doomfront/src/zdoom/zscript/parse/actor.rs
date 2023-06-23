@@ -1,12 +1,15 @@
 //! Parsers for parts of definitions for classes inheriting from `Actor`.
 
-use crate::zdoom::{
-	zscript::{parse::*, Syn},
-	Token,
+use crate::{
+	parser::Parser,
+	zdoom::{
+		zscript::{parse::*, Syn},
+		Token,
+	},
 };
 
 /// Builds a [`Syn::FlagDef`] node.
-pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn flag_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwFlagDef, Token::DocComment]);
 	let flagdef = p.open();
 	doc_comments(p);
@@ -29,7 +32,7 @@ pub fn flag_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::PropertyDef`] node.
-pub fn property_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn property_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwProperty, Token::DocComment]);
 	let propdef = p.open();
 	doc_comments(p);
@@ -48,7 +51,7 @@ pub fn property_def(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::DefaultBlock`] node.
-pub fn default_block(p: &mut crate::parser::Parser<Syn>) {
+pub fn default_block(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwDefault);
 	let defblock = p.open();
 	p.advance(Syn::KwDefault);
@@ -76,7 +79,7 @@ pub fn default_block(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::FlagSetting`] node.
-fn flag_setting(p: &mut crate::parser::Parser<Syn>) {
+fn flag_setting(p: &mut Parser<Syn>) {
 	debug_assert!(p.at_any(&[Token::Plus, Token::Minus]));
 	let flag = p.open();
 
@@ -98,7 +101,7 @@ fn flag_setting(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::PropertySetting`] node.
-fn property_setting(p: &mut crate::parser::Parser<Syn>) {
+fn property_setting(p: &mut Parser<Syn>) {
 	debug_assert!(p.at_if(is_ident));
 	let prop = p.open();
 	ident_chain_lax(p);
@@ -114,7 +117,7 @@ fn property_setting(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::StatesBlock`] node.
-pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
+pub fn states_block(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwStates);
 	let sblock = p.open();
 	p.advance(Syn::KwStates);
@@ -271,8 +274,8 @@ pub fn states_block(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::StatesUsage`] node.
-pub fn states_usage(p: &mut crate::parser::Parser<Syn>) {
-	fn kw(p: &mut crate::parser::Parser<Syn>) {
+pub fn states_usage(p: &mut Parser<Syn>) {
+	fn kw(p: &mut Parser<Syn>) {
 		p.expect_any_str_nc(
 			&[
 				(Token::Ident, "actor", Syn::Ident),
@@ -304,7 +307,7 @@ pub fn states_usage(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::StateDef`] node.
-pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
+pub fn state_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_if(|token| {
 		is_ident_lax(token)
 			|| matches!(
@@ -413,7 +416,7 @@ pub fn state_def(p: &mut crate::parser::Parser<Syn>) {
 	p.close(state, Syn::StateDef);
 }
 
-fn state_sprite(p: &mut crate::parser::Parser<Syn>) {
+fn state_sprite(p: &mut Parser<Syn>) {
 	const EXPECTED: &[&str] = &[
 		"a state sprite (4 ASCII letters/digits/underscores)",
 		"`####`",
@@ -460,7 +463,7 @@ fn state_sprite(p: &mut crate::parser::Parser<Syn>) {
 	}
 }
 
-fn state_frames(p: &mut crate::parser::Parser<Syn>) {
+fn state_frames(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
 	if is_ident_lax(token) {
@@ -490,7 +493,7 @@ fn state_frames(p: &mut crate::parser::Parser<Syn>) {
 }
 
 /// Builds a [`Syn::ActionFunction`] node.
-fn action_function(p: &mut crate::parser::Parser<Syn>) {
+fn action_function(p: &mut Parser<Syn>) {
 	if p.at(Token::BraceL) {
 		compound_stat(p);
 	} else {
