@@ -12,7 +12,6 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwClass, Token::DocComment]);
 	let classdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwClass);
 	p.advance(Syn::KwClass);
 	trivia_0plus(p);
@@ -77,7 +76,6 @@ pub fn mixin_class_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwMixin, Token::DocComment]);
 	let mixindef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwMixin);
 	p.advance(Syn::KwMixin);
 	trivia_0plus(p);
@@ -103,7 +101,6 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwStruct, Token::DocComment]);
 	let structdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwStruct);
 	p.advance(Syn::KwStruct);
 	trivia_0plus(p);
@@ -321,7 +318,6 @@ fn struct_innard(p: &mut Parser<Syn>) {
 fn member_decl(p: &mut Parser<Syn>) {
 	let member = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 
 	while p.at_if(in_decl_qual_first_set) && !p.eof() {
 		match p.nth(0) {
@@ -566,5 +562,59 @@ class DevastationFixed {}
 		assert_eq!(docs.next().unwrap().text(), "/// UAC Mines\n");
 		assert_eq!(docs.next().unwrap().text(), "/// Sector 14-3\n");
 		assert!(docs.next().is_none());
+	}
+
+	#[test]
+	fn __temp__() {
+		const SOURCE: &str = r#"
+class CC_ZF_Element ui {
+	/// Draws a grid of images according to the size Vector2.
+	/// Scales the image instead of tiling if possible.
+	void drawTiledImage(Vector2 relPos, Vector2 size, string imageName, bool animate, Vector2 scale = (1, 1), double alpha = 1.0) {
+		if (scale.x == 0 || scale.y == 0) {
+			return;
+		}
+
+		Vector2 imageSize = texSize(imageName) * getScale();
+
+		// Abort if the image has an invalid resolution.
+		if (imageSize.x < 0 || imageSize.x ~== 0 || imageSize.y < 0 || imageSize.y ~== 0) {
+			return;
+		}
+
+		CC_ZF_AABB beforeClip = getClipAABB();
+		CC_ZF_AABB clipRect = boxToScreen().rectOfIntersection(beforeClip);
+		CC_ZF_AABB screenClip = new("CC_ZF_AABB");
+		screenClip.size = screenSize();
+		clipRect = clipRect.rectOfIntersection(screenClip);
+
+		Vector2 imageScale = scaleVec(imageSize, scale);
+		let absPos = relToScreen(relPos) * getScale();
+		let scaledSize = size * getScale();
+		if (scaledSize ~== (0, 0)) {
+			return;
+		}
+
+		let shape = new("Shape2D");
+		shape.clear();
+
+		double xSize = scaledSize.x / imageScale.x;
+		double ySize = scaledSize.y / imageScale.y;
+		int vertCount = 0;
+		shape2DAddQuad(shape, absPos, scaledSize, (0, 0), (xSize, ySize), vertCount);
+
+		let texID = TexMan.checkForTexture(imageName, TexMan.Type_Any);
+		Screen.drawShape(texID, animate, shape, DTA_Alpha, alpha * getAlpha(), DTA_ClipLeft, int(floor(clipRect.pos.x)), DTA_ClipTop, int(floor(clipRect.pos.y)), DTA_ClipRight, int(ceil(clipRect.pos.x + clipRect.size.x)), DTA_ClipBottom, int (ceil(clipRect.pos.y + clipRect.size.y)));
+
+		Screen.setClipRect(int(beforeClip.pos.x), int(beforeClip.pos.y), int(beforeClip.size.x), int(beforeClip.size.y));
+
+		shape.clear();
+		shape.destroy();
+	}
+}
+"#;
+
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
 	}
 }

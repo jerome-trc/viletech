@@ -16,7 +16,6 @@ pub fn const_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwConst, Token::DocComment]);
 	let constdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwConst);
 	p.advance(Syn::KwConst);
 	trivia_1plus(p);
@@ -48,7 +47,6 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwEnum, Token::DocComment]);
 	let enumdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.advance(Syn::KwEnum);
 	trivia_1plus(p);
 	ident_lax(p);

@@ -365,7 +365,6 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwStatic, Token::DocComment]);
 	let stat = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwStatic);
 	p.advance(Syn::KwStatic);
 	trivia_1plus(p);

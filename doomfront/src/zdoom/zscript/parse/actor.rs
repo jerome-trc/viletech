@@ -13,7 +13,6 @@ pub fn flag_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwFlagDef, Token::DocComment]);
 	let flagdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwFlagDef);
 	p.advance(Syn::KwFlagDef);
 	trivia_1plus(p);
@@ -36,7 +35,6 @@ pub fn property_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_any(&[Token::KwProperty, Token::DocComment]);
 	let propdef = p.open();
 	doc_comments(p);
-	trivia_0plus(p);
 	p.debug_assert_at(Token::KwProperty);
 	p.advance(Syn::KwProperty);
 	trivia_1plus(p);

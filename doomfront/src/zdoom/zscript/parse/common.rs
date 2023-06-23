@@ -44,9 +44,11 @@ pub(super) fn deprecation_qual(p: &mut Parser<Syn>) {
 	p.close(qual, Syn::DeprecationQual);
 }
 
-/// Parse 0 or more [`Token::DocComment`]s.
+/// Parse 0 or more [`Token::DocComment`]s, additionally consuming trailing trivia.
 pub(super) fn doc_comments(p: &mut Parser<Syn>) {
-	while p.eat(Token::DocComment, Syn::DocComment) {}
+	while p.eat(Token::DocComment, Syn::DocComment) {
+		trivia_0plus(p);
+	}
 }
 
 pub(super) fn ident(p: &mut Parser<Syn>) {
