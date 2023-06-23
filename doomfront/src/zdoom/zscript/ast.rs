@@ -3,6 +3,7 @@
 mod actor;
 mod expr;
 mod lit;
+mod stat;
 mod structure;
 
 use std::num::IntErrorKind;
@@ -13,7 +14,7 @@ use crate::{simple_astnode, zdoom};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{actor::*, expr::*, lit::*, structure::*};
+pub use self::{actor::*, expr::*, lit::*, stat::*, structure::*};
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -277,7 +278,7 @@ impl DeprecationQual {
 			.children_with_tokens()
 			.filter_map(|elem| elem.into_token())
 			.skip_while(|token| token.kind() != Syn::Comma)
-			.find_map(|token| (token.kind() == Syn::StringLit).then(|| token))
+			.find_map(|token| (token.kind() == Syn::StringLit).then_some(token))
 	}
 }
 
@@ -301,5 +302,56 @@ impl VersionQual {
 					.filter(|token| token.kind() == Syn::StringLit)
 			})
 			.unwrap()
+	}
+}
+
+// LocalVar ////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::LocalVar`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct LocalVar(pub(self) SyntaxNode);
+
+simple_astnode!(Syn, LocalVar, Syn::LocalVar);
+
+// VarName /////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::VarName`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct VarName(pub(self) SyntaxNode);
+
+simple_astnode!(Syn, VarName, Syn::VarName);
+
+impl VarName {
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn ident(&self) -> SyntaxToken {
+		let ret = self.0.first_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::Ident);
+		ret
+	}
+
+	pub fn array_lengths(&self) -> impl Iterator<Item = ArrayLen> {
+		self.0.children().map(|node| {
+			debug_assert_eq!(node.kind(), Syn::ArrayLen);
+			ArrayLen(node)
+		})
+	}
+}
+
+// ArrayLen ////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ArrayLen`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ArrayLen(pub(self) SyntaxNode);
+
+simple_astnode!(Syn, ArrayLen, Syn::ArrayLen);
+
+impl ArrayLen {
+	#[must_use]
+	pub fn expr(&self) -> Option<Expr> {
+		self.0.first_child().map(|node| Expr::cast(node).unwrap())
 	}
 }

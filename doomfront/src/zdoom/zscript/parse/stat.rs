@@ -22,7 +22,6 @@ use super::{common::*, expr};
 /// - [`Syn::ForStat`]
 /// - [`Syn::ForEachStat`]
 /// - [`Syn::LocalStat`]
-/// - [`Syn::MixinStat`]
 /// - [`Syn::ReturnStat`]
 /// - [`Syn::StaticConstStat`]
 /// - [`Syn::SwitchStat`]
@@ -35,7 +34,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 		let peeked = p.lookahead_filtered(|token| !token.is_trivia());
 
 		if in_type_ref_first_set(token) && is_ident_lax(peeked) {
-			assign_stat(p);
+			declassign_or_local_stat(p);
 			return;
 		}
 
@@ -47,7 +46,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 	}
 
 	if in_type_ref_first_set(token) {
-		assign_stat(p);
+		declassign_or_local_stat(p);
 		return;
 	}
 
@@ -180,6 +179,8 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 			// Initializers ////////////////////////////////////////////////////
 
+			let init = p.open();
+
 			while !p.at(Token::Semicolon) && !p.eof() {
 				let t = p.nth(0);
 
@@ -209,9 +210,12 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 			trivia_0plus(p);
 			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.close(init, Syn::ForLoopInit);
 			trivia_0plus(p);
 
 			// Condition ///////////////////////////////////////////////////////
+
+			let cond = p.open();
 
 			if p.at_if(expr::in_first_set) {
 				expr(p);
@@ -219,9 +223,12 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 			trivia_0plus(p);
 			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.close(cond, Syn::ForLoopCond);
 			trivia_0plus(p);
 
 			// "Bump" //////////////////////////////////////////////////////////
+
+			let iter = p.open();
 
 			while !p.at(Token::ParenR) && !p.eof() {
 				let t = p.nth(0);
@@ -241,6 +248,7 @@ pub fn statement(p: &mut Parser<Syn>) {
 				}
 			}
 
+			p.close(iter, Syn::ForLoopIter);
 			trivia_0plus(p);
 			p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
 			trivia_0plus(p);
@@ -408,7 +416,7 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 }
 
 /// Builds a [`Syn::DeclAssignStat`] or [`Syn::LocalStat`] node.
-fn assign_stat(p: &mut Parser<Syn>) {
+fn declassign_or_local_stat(p: &mut Parser<Syn>) {
 	let stat = p.open();
 
 	let syn = if p.at(Token::KwLet)
@@ -506,12 +514,61 @@ fn local_var_init(p: &mut Parser<Syn>) {
 
 #[cfg(test)]
 mod test {
+	use rowan::ast::AstNode;
+
 	use super::*;
 
 	use crate::{
 		testing::*,
-		zdoom::{self, zscript::ParseTree},
+		zdoom::{
+			self,
+			zscript::{ast, ParseTree},
+		},
 	};
+
+	#[test]
+	fn smoke_assign() {
+		const SOURCE: &str = r#"[x, y, z] = w;"#;
+		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+		let stat = ast::AssignStat::cast(ptree.cursor()).unwrap();
+		assert_eq!(
+			stat.assignee().into_ident_expr().unwrap().token().text(),
+			"w"
+		);
+		let mut assigned = stat.assigned();
+		assert_eq!(
+			assigned
+				.next()
+				.unwrap()
+				.into_ident_expr()
+				.unwrap()
+				.token()
+				.text(),
+			"x"
+		);
+		assert_eq!(
+			assigned
+				.next()
+				.unwrap()
+				.into_ident_expr()
+				.unwrap()
+				.token()
+				.text(),
+			"y"
+		);
+		assert_eq!(
+			assigned
+				.next()
+				.unwrap()
+				.into_ident_expr()
+				.unwrap()
+				.token()
+				.text(),
+			"z"
+		);
+	}
 
 	#[test]
 	fn smoke_for_loop() {

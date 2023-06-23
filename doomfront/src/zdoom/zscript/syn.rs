@@ -40,12 +40,12 @@ pub enum Syn {
 	FlagDef,
 	/// `('+' | '-') ident`
 	FlagSetting,
-	/// The first part of a for loop opener.
-	ForInit,
-	/// The second part of a for loop opener.
-	ForCond,
-	/// The third part of a for loop opener.
-	ForIter,
+	/// The first part of a `for` loop's opening "header".
+	ForLoopInit,
+	/// The second part of a `for` loop's opening "header".
+	ForLoopCond,
+	/// The third part of a `for` loop's opening "header".
+	ForLoopIter,
 	FunctionDecl,
 	/// `'goto' 'super::'? identchain ('+' integer)?`
 	GotoOffset,
