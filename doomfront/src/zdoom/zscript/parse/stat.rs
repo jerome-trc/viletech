@@ -475,6 +475,17 @@ fn local_var_init(p: &mut Parser<Syn>) {
 		Token::BracketL => {
 			trivia_0plus(p);
 			array_len(p);
+
+			if p.next_filtered(|token| !token.is_trivia()) == Token::Eq {
+				trivia_0plus(p);
+				p.advance(Syn::Eq);
+				trivia_0plus(p);
+				p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+				trivia_0plus(p);
+				expr::expr_list(p);
+				trivia_0plus(p);
+				p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+			}
 		}
 		Token::Eq => {
 			p.advance(Syn::Eq);
