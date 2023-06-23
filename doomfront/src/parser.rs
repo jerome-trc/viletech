@@ -424,7 +424,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 
 					// An unconditional assertion in `Self::advance_n` protects
 					// against `n` ever being less than one.
-					for _ in 0..(n - 1) {
+					for _ in 0..(n - 2) {
 						let _ = tokens.next().unwrap();
 					}
 
