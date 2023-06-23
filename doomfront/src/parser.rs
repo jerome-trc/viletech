@@ -65,6 +65,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		ret
 	}
 
+	/// Mind that this has to perform O(n) vector element shifting.
+	pub fn cancel(&mut self, mark: OpenMark) {
+		self.events.remove(mark.0);
+	}
+
 	pub fn advance(&mut self, syn: L::Kind) {
 		assert!(!self.eof());
 		self.fuel.set(256);

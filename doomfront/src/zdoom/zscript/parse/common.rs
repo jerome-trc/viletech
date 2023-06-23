@@ -123,8 +123,10 @@ const IDENT_TOKENS_LAX: &[(Token, Syn)] = &[
 
 /// Builds a [`Syn::IdentChain`] node. Also see [`ident_chain_lax`].
 pub(super) fn ident_chain(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_if(is_ident));
+	p.debug_assert_at_if(|token| is_ident(token) || token == Token::Dot);
+
 	let chain = p.open();
+	p.eat(Token::Dot, Syn::Dot);
 	p.advance(Syn::Ident);
 
 	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
@@ -139,8 +141,10 @@ pub(super) fn ident_chain(p: &mut Parser<Syn>) {
 
 /// Like [`ident_chain`] but backed by [`is_ident_lax`].
 pub(super) fn ident_chain_lax(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_if(is_ident_lax));
+	p.debug_assert_at_if(|token| is_ident_lax(token) || token == Token::Dot);
+
 	let chain = p.open();
+	p.eat(Token::Dot, Syn::Dot);
 	p.advance(Syn::Ident);
 
 	while p.next_filtered(|token| !token.is_trivia()) == Token::Dot {
@@ -204,59 +208,58 @@ pub(super) fn trivia_1plus(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 }
 
+/// Builds a [`Syn::TypeRef`] node.
+pub fn type_ref(p: &mut Parser<Syn>) {
+	let tref = p.open();
+	core_type(p);
+
+	if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
+		trivia_0plus(p);
+		array_len(p);
+	}
+
+	p.close(tref, Syn::TypeRef);
+}
+
 /// Builds a node tagged with one of the following:
 /// - [`Syn::ClassType`]
 /// - [`Syn::DynArrayType`]
 /// - [`Syn::IdentChainType`]
-/// - [`Syn::MapIterType`]
-/// - [`Syn::MapType`]
-/// - [`Syn::ReadonlyType`]
-/// - [`Syn::NativeType`]
 /// - [`Syn::LetType`]
-pub fn type_ref(p: &mut Parser<Syn>) {
-	fn tref_with_optional_arraylen(p: &mut Parser<Syn>) {
-		type_ref(p);
-
-		if p.next_filtered(|token| !token.is_trivia()) == Token::BracketL {
-			trivia_0plus(p);
-			p.advance(Syn::BracketL);
-			trivia_0plus(p);
-			expr(p);
-			trivia_0plus(p);
-			p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
-		}
-	}
-
-	let tref = p.open();
-
+/// - [`Syn::MapType`]
+/// - [`Syn::MapIterType`]
+/// - [`Syn::NativeType`]
+/// - [`Syn::ReadonlyType`]
+pub fn core_type(p: &mut Parser<Syn>) {
+	let cty = p.open();
 	let token = p.nth(0);
 
 	if is_ident(token) {
 		ident_chain(p);
-		p.close(tref, Syn::IdentChainType);
+		p.close(cty, Syn::IdentChainType);
 		return;
 	}
 
 	if is_primitive_type(token) {
 		p.advance(Syn::from(token));
-		p.close(tref, Syn::PrimitiveType);
+		p.close(cty, Syn::PrimitiveType);
 		return;
 	}
 
 	match token {
 		Token::KwLet => {
 			p.advance(Syn::KwLet);
-			p.close(tref, Syn::LetType);
+			p.close(cty, Syn::LetType);
 		}
 		Token::KwArray => {
 			p.advance(Syn::KwArray);
 			trivia_0plus(p);
 			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
 			trivia_0plus(p);
-			tref_with_optional_arraylen(p);
+			type_ref(p);
 			trivia_0plus(p);
 			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
-			p.close(tref, Syn::DynArrayType);
+			p.close(cty, Syn::DynArrayType);
 		}
 		Token::KwClass => {
 			p.advance(Syn::KwClass);
@@ -270,54 +273,54 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 				p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
 			}
 
-			p.close(tref, Syn::ClassType);
+			p.close(cty, Syn::ClassType);
 		}
 		Token::KwMap => {
 			p.advance(Syn::KwMap);
 			trivia_0plus(p);
 			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
 			trivia_0plus(p);
-			tref_with_optional_arraylen(p);
+			type_ref(p);
 			trivia_0plus(p);
 			p.expect(Token::Comma, Syn::Comma, &["`,`"]);
 			trivia_0plus(p);
-			tref_with_optional_arraylen(p);
+			type_ref(p);
 			trivia_0plus(p);
 			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
-			p.close(tref, Syn::MapType);
+			p.close(cty, Syn::MapType);
 		}
 		Token::KwMapIterator => {
 			p.advance(Syn::KwMapIterator);
 			trivia_0plus(p);
 			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
 			trivia_0plus(p);
-			tref_with_optional_arraylen(p);
+			type_ref(p);
 			trivia_0plus(p);
 			p.expect(Token::Comma, Syn::Comma, &["`,`"]);
 			trivia_0plus(p);
-			tref_with_optional_arraylen(p);
+			type_ref(p);
 			trivia_0plus(p);
 			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
-			p.close(tref, Syn::MapIterType);
+			p.close(cty, Syn::MapIterType);
 		}
-		Token::KwReadonly => {
-			p.advance(Syn::KwReadonly);
+		Token::KwReadOnly => {
+			p.advance(Syn::KwReadOnly);
 			trivia_0plus(p);
 			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
 			trivia_0plus(p);
 
 			let t = p.nth(0);
 
-			if is_ident(t) {
+			if is_ident(t) || t == Token::At {
 				ident(p);
 			} else if t == Token::At {
 				p.advance(Syn::At);
 				ident(p);
 			} else {
 				p.advance_err_and_close(
-					tref,
+					cty,
 					Syn::from(t),
-					Syn::ReadonlyType,
+					Syn::ReadOnlyType,
 					&["an identifier", "`@`"],
 				);
 				return;
@@ -325,17 +328,21 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 
 			trivia_0plus(p);
 			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
-			p.close(tref, Syn::ReadonlyType);
+			p.close(cty, Syn::ReadOnlyType);
 		}
 		Token::At => {
 			p.advance(Syn::At);
 			trivia_0plus(p);
 			ident(p);
-			p.close(tref, Syn::NativeType);
+			p.close(cty, Syn::NativeType);
+		}
+		Token::Dot => {
+			ident_chain(p);
+			p.close(cty, Syn::IdentChainType);
 		}
 		other => {
 			p.advance_err_and_close(
-				tref,
+				cty,
 				Syn::from(other),
 				Syn::Error,
 				&[
@@ -346,6 +353,7 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 					"`mapiterator`",
 					"`readonly`",
 					"`@`",
+					"`.`",
 					"an identifier",
 				],
 			);
@@ -368,7 +376,7 @@ pub(super) fn in_type_ref_first_set(token: Token) -> bool {
 			| Token::KwArray
 			| Token::KwMap
 			| Token::KwMapIterator
-			| Token::KwReadonly
+			| Token::KwReadOnly
 	)
 }
 
@@ -461,7 +469,7 @@ mod test {
 	}
 
 	#[test]
-	fn smoke_typeref() {
+	fn smoke_types() {
 		const SOURCES: &[&str] = &[
 			"TeenyLittleBase",
 			"Dead.On.Arrival",

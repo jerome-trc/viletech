@@ -5,6 +5,7 @@ mod expr;
 mod lit;
 mod stat;
 mod structure;
+mod types;
 
 use std::num::IntErrorKind;
 
@@ -14,7 +15,7 @@ use crate::{simple_astnode, zdoom};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{actor::*, expr::*, lit::*, stat::*, structure::*};
+pub use self::{actor::*, expr::*, lit::*, stat::*, structure::*, types::*};
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

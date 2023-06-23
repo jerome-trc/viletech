@@ -24,6 +24,8 @@ pub enum Syn {
 	ClassExtend,
 	/// `'static'? 'const' ident '=' expr ';'`
 	ConstDef,
+	/// Precedes a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`].
+	MemberQuals,
 	/// `'default' '{' (propertysetting | flagsetting)* '}'`
 	DefaultBlock,
 	/// `'deprecated' '(' string (',' string)? ')'`
@@ -49,7 +51,7 @@ pub enum Syn {
 	FunctionDecl,
 	/// `'goto' 'super::'? identchain ('+' integer)?`
 	GotoOffset,
-	/// `(ident) | (ident ('.' ident)?)`
+	/// `(ident) | ('.'? ident ('.' ident)*)`
 	///
 	/// Known in ZScript's Lemon grammar as a "dottable ID".
 	IdentChain,
@@ -79,6 +81,7 @@ pub enum Syn {
 	PropertyDef,
 	/// `'replaces' ident`
 	ReplacesClause,
+	/// `typeref (',' typeref)*`
 	ReturnTypes,
 	/// `'[' ident ']'`, between a call identifier and argument list.
 	RngSpec,
@@ -105,13 +108,17 @@ pub enum Syn {
 	StructExtend,
 	/// `'[' expr ']'`
 	Subscript,
+	/// `coretype arraylen?`
+	TypeRef,
 	/// ident arraylen*
 	VarName,
-	/// The `version` preprocessor directive and its string literal argument.
+	/// `'version' string`
 	VersionDirective,
 	/// `'version' '(' string ')'`
 	VersionQual,
-	// Nodes: type references //////////////////////////////////////////////////
+	// Nodes: core types ///////////////////////////////////////////////////////
+	/// `typeref arraylen?`
+	ArrayType,
 	/// `'class' ('<' identchain '>')?`
 	ClassType,
 	/// `'array' '<' typeref arraylen? '>'`
@@ -120,10 +127,10 @@ pub enum Syn {
 	IdentChainType,
 	/// `'let'`
 	LetType,
-	/// `'mapiterator' '<' typeref arraylen? ',' typeref arraylen? '>'`
-	MapIterType,
 	/// `'map' '<' typeref arraylen? ',' typeref arraylen? '>'`
 	MapType,
+	/// `'mapiterator' '<' typeref arraylen? ',' typeref arraylen? '>'`
+	MapIterType,
 	/// `'@' ident`
 	NativeType,
 	/// `'sbyte' | 'byte' | 'int8' | 'uint8' | 'short' | 'ushort' | 'int16' | 'uint16' |
@@ -131,7 +138,7 @@ pub enum Syn {
 	/// 'state' | 'color'`
 	PrimitiveType,
 	/// `'readonly' '<' (ident | nativetype) '>'`
-	ReadonlyType,
+	ReadOnlyType,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	BinExpr,
 	/// `primaryexpr '(' arglist? ')'`
@@ -280,7 +287,7 @@ pub enum Syn {
 	KwPrivate,
 	KwProperty,
 	KwProtected,
-	KwReadonly,
+	KwReadOnly,
 	KwReturn,
 	KwSByte,
 	KwShort,
@@ -569,7 +576,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::KwPrivate,
 			Syn::KwProperty,
 			Syn::KwProtected,
-			Syn::KwReadonly,
+			Syn::KwReadOnly,
 			Syn::KwReplaces,
 			Syn::KwReturn,
 			Syn::Ident,

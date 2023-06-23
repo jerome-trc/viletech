@@ -318,6 +318,7 @@ fn struct_innard(p: &mut Parser<Syn>) {
 fn member_decl(p: &mut Parser<Syn>) {
 	let member = p.open();
 	doc_comments(p);
+	let quals = p.open();
 
 	while p.at_if(in_decl_qual_first_set) && !p.eof() {
 		match p.nth(0) {
@@ -340,10 +341,21 @@ fn member_decl(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
+	p.close(quals, Syn::MemberQuals);
+	let rettypes = p.open();
 	type_ref(p);
+
+	while p.next_filtered(|token| !token.is_trivia()) == Token::Comma {
+		trivia_0plus(p);
+		p.advance(Syn::Comma);
+		trivia_0plus(p);
+		type_ref(p);
+	}
+
 	trivia_0plus(p);
 
 	if !p.at_if(is_ident_lax) {
+		p.cancel(rettypes);
 		p.advance_err_and_close(member, Syn::from(p.nth(0)), Syn::Error, &["an identifier"]);
 		return;
 	}
@@ -352,6 +364,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 
 	match peeked {
 		Token::BracketL | Token::Comma => {
+			p.cancel(rettypes);
 			trivia_0plus(p);
 
 			while !p.at(Token::Semicolon) && !p.eof() {
@@ -370,6 +383,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 			p.close(member, Syn::FieldDecl);
 		}
 		Token::ParenL => {
+			p.close(rettypes, Syn::ReturnTypes);
 			trivia_0plus(p);
 			ident_lax(p);
 			trivia_0plus(p);
@@ -389,6 +403,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 			p.close(member, Syn::FunctionDecl);
 		}
 		Token::Semicolon => {
+			p.cancel(rettypes);
 			trivia_0plus(p);
 			ident_lax(p);
 			trivia_0plus(p);
@@ -483,7 +498,7 @@ fn in_decl_qual_first_set(token: Token) -> bool {
 			| Token::KwPlay
 			| Token::KwPrivate
 			| Token::KwProtected
-			| Token::KwReadonly
+			| Token::KwReadOnly
 			| Token::KwStatic
 			| Token::KwTransient
 			| Token::KwUi
@@ -565,56 +580,20 @@ class DevastationFixed {}
 	}
 
 	#[test]
-	fn __temp__() {
-		const SOURCE: &str = r#"
-class CC_ZF_Element ui {
-	/// Draws a grid of images according to the size Vector2.
-	/// Scales the image instead of tiling if possible.
-	void drawTiledImage(Vector2 relPos, Vector2 size, string imageName, bool animate, Vector2 scale = (1, 1), double alpha = 1.0) {
-		if (scale.x == 0 || scale.y == 0) {
-			return;
-		}
+	fn smoke_field() {
+		const SOURCE: &str = r#"int corruption, three, nexus;"#;
 
-		Vector2 imageSize = texSize(imageName) * getScale();
-
-		// Abort if the image has an invalid resolution.
-		if (imageSize.x < 0 || imageSize.x ~== 0 || imageSize.y < 0 || imageSize.y ~== 0) {
-			return;
-		}
-
-		CC_ZF_AABB beforeClip = getClipAABB();
-		CC_ZF_AABB clipRect = boxToScreen().rectOfIntersection(beforeClip);
-		CC_ZF_AABB screenClip = new("CC_ZF_AABB");
-		screenClip.size = screenSize();
-		clipRect = clipRect.rectOfIntersection(screenClip);
-
-		Vector2 imageScale = scaleVec(imageSize, scale);
-		let absPos = relToScreen(relPos) * getScale();
-		let scaledSize = size * getScale();
-		if (scaledSize ~== (0, 0)) {
-			return;
-		}
-
-		let shape = new("Shape2D");
-		shape.clear();
-
-		double xSize = scaledSize.x / imageScale.x;
-		double ySize = scaledSize.y / imageScale.y;
-		int vertCount = 0;
-		shape2DAddQuad(shape, absPos, scaledSize, (0, 0), (xSize, ySize), vertCount);
-
-		let texID = TexMan.checkForTexture(imageName, TexMan.Type_Any);
-		Screen.drawShape(texID, animate, shape, DTA_Alpha, alpha * getAlpha(), DTA_ClipLeft, int(floor(clipRect.pos.x)), DTA_ClipTop, int(floor(clipRect.pos.y)), DTA_ClipRight, int(ceil(clipRect.pos.x + clipRect.size.x)), DTA_ClipBottom, int (ceil(clipRect.pos.y + clipRect.size.y)));
-
-		Screen.setClipRect(int(beforeClip.pos.x), int(beforeClip.pos.y), int(beforeClip.size.x), int(beforeClip.size.y));
-
-		shape.clear();
-		shape.destroy();
+		let ptree: ParseTree =
+			crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
 	}
-}
-"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+	#[test]
+	fn smoke_method() {
+		const SOURCE: &str = r#"int, int uac_genesis();"#;
+
+		let ptree: ParseTree =
+			crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 	}
 }

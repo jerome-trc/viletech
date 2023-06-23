@@ -6,6 +6,8 @@ use crate::simple_astnode;
 
 use super::{Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Statement {
 	Assign(AssignStat),
 	Break(BreakStat),

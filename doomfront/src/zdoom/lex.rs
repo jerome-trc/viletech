@@ -150,7 +150,7 @@ pub enum Token {
 	#[regex("(?i)protected", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwProtected,
 	#[regex("(?i)readonly", priority = 5, callback = Token::ident_pre1_0_0)]
-	KwReadonly,
+	KwReadOnly,
 	#[regex("(?i)replaces", priority = 5, callback = Token::ident_pre1_0_0)]
 	KwReplaces,
 	#[regex("(?i)return", priority = 5)]
