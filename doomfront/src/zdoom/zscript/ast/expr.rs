@@ -2,12 +2,9 @@
 
 use rowan::ast::AstNode;
 
-use crate::simple_astnode;
+use crate::{simple_astnode, zdoom::ast::LitToken};
 
-use super::{
-	super::{Syn, SyntaxNode, SyntaxToken},
-	lit::Literal,
-};
+use super::super::{Syn, SyntaxNode, SyntaxToken};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -353,6 +350,38 @@ impl IndexExpr {
 	#[must_use]
 	pub fn index(&self) -> Expr {
 		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	}
+}
+
+// Literal /////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::Literal`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Literal(SyntaxNode);
+
+simple_astnode!(Syn, Literal, Syn::Literal);
+
+impl Literal {
+	/// Mind that this may not be the real whole literal if dealing with strings.
+	/// See [`Self::strings`].
+	#[must_use]
+	pub fn token(&self) -> LitToken<Syn> {
+		LitToken::new(self.0.first_token().unwrap())
+	}
+
+	/// A ZScript string literal expression can be formed by writing multiple
+	/// string literals adjacently.
+	pub fn strings(&self) -> Option<impl Iterator<Item = LitToken<Syn>>> {
+		if self.0.first_token().unwrap().kind() == Syn::StringLit {
+			Some(self.0.children_with_tokens().filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::StringLit)
+					.map(LitToken::new)
+			}))
+		} else {
+			None
+		}
 	}
 }
 

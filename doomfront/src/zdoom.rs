@@ -2,6 +2,7 @@
 //!
 //! [ZDoom]: https://zdoom.org/index
 
+pub mod ast;
 pub mod inctree;
 pub mod lex;
 

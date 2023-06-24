@@ -16,7 +16,7 @@ pub enum Syn {
 	/// or which contained one or more tokens considered invalid by the lexer.
 	Error,
 	/// The set of flags qualifying a definition, scope specifiers included.
-	Flags,
+	DefFlags,
 	/// The top-level node, representing the whole file.
 	Root,
 	/// The type specifier is always followed by the identifier.

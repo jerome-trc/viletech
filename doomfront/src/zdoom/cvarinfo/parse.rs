@@ -2,6 +2,7 @@ use crate::{parser::Parser, zdoom::lex::Token};
 
 use super::syn::Syn;
 
+/// Builds a [`Syn::Root`] node.
 pub fn file(p: &mut Parser<Syn>) {
 	let root = p.open();
 
@@ -28,6 +29,7 @@ pub fn file(p: &mut Parser<Syn>) {
 	p.close(root, Syn::Root);
 }
 
+/// Builds a [`Syn::Definition`] node.
 pub fn definition(p: &mut Parser<Syn>) {
 	let def = p.open();
 	flag(p);
@@ -89,6 +91,7 @@ fn flag(p: &mut Parser<Syn>) {
 	)
 }
 
+/// Builds a [`Syn::DefaultDef`] node.
 fn default_def(p: &mut Parser<Syn>) {
 	debug_assert!(p.at(Token::Eq));
 	let default = p.open();
@@ -165,7 +168,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 		let cvars: Vec<_> = ptree
 			.cursor()
 			.children()
-			.map(|c| ast::CVar::cast(c).unwrap())
+			.map(|c| ast::Definition::cast(c).unwrap())
 			.collect();
 
 		assert_eq!(cvars[0].name().text(), "egghead_roundabout");
@@ -181,10 +184,11 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 		let default_2 = cvars[2].default().unwrap();
 
 		assert_eq!(default_0, None);
-		assert_eq!(default_1.literal().kind(), Syn::FloatLit);
-		assert_eq!(default_1.literal().text(), "0.4");
-		assert_eq!(default_2.literal().kind(), Syn::StringLit);
-		assert_eq!(default_2.literal().text(), r#""Welcome to the Company !""#);
+		assert_eq!(default_1.token().float().unwrap().unwrap(), 0.4);
+		assert_eq!(
+			default_2.token().string().unwrap(),
+			"Welcome to the Company !"
+		);
 	}
 
 	#[test]
@@ -202,7 +206,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 		let ptree: ParseTree = ParseTree::new(root, vec![]);
 		assert_eq!(errors.len(), 1);
 
-		let cvar = ast::CVar::cast(ptree.cursor().last_child().unwrap()).unwrap();
+		let cvar = ast::Definition::cast(ptree.cursor().last_child().unwrap()).unwrap();
 		assert_eq!(cvar.name().text(), "ICEANDFIRE3");
 	}
 }

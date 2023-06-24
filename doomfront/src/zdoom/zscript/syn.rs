@@ -205,7 +205,7 @@ pub enum Syn {
 	WhileStat,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// The exact string `false`.
-	FalseLit,
+	KwFalse,
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
 	/// See [`crate::zdoom::lex::Token::IntLit`].
@@ -215,7 +215,7 @@ pub enum Syn {
 	/// The exact string `null`.
 	NullLit,
 	/// The exact string `true`.
-	TrueLit,
+	KwTrue,
 	/// See [`crate::zdoom::lex::Token::StringLit`].
 	StringLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
@@ -541,7 +541,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::KwEnum,
 			Syn::KwExtend,
 			Syn::KwFail,
-			Syn::FalseLit, // KwFalse
+			Syn::KwFalse, // KwFalse
 			Syn::KwFast,
 			Syn::KwFinal,
 			Syn::KwFlagDef,
@@ -593,7 +593,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Syn::KwSuper,
 			Syn::KwSwitch,
 			Syn::KwTransient,
-			Syn::TrueLit, // KwTrue
+			Syn::KwTrue, // KwTrue
 			Syn::KwUi,
 			Syn::KwUInt,
 			Syn::KwUInt16,

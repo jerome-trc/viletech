@@ -112,11 +112,11 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 			p.close(ex, Syn::Literal)
 		}
 		Token::KwTrue => {
-			p.advance(Syn::TrueLit);
+			p.advance(Syn::KwTrue);
 			p.close(ex, Syn::Literal)
 		}
 		Token::KwFalse => {
-			p.advance(Syn::FalseLit);
+			p.advance(Syn::KwFalse);
 			p.close(ex, Syn::Literal)
 		}
 		Token::StringLit => {

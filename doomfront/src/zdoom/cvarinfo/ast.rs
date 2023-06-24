@@ -2,24 +2,24 @@
 
 use rowan::ast::AstNode;
 
-use crate::simple_astnode;
+use crate::{simple_astnode, zdoom::ast::LitToken};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-/// Abstract syntax tree node representing a whole CVar definition.
+/// Wraps a node tagged [`Syn::Definition`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct CVar(SyntaxNode);
+pub struct Definition(SyntaxNode);
 
-impl CVar {
+impl Definition {
 	/// Everything preceding the storage type specifier.
 	#[must_use]
-	pub fn flags(&self) -> Flags {
+	pub fn flags(&self) -> DefFlags {
 		self.0
 			.first_child()
 			.unwrap()
 			.children()
-			.find_map(Flags::cast)
+			.find_map(DefFlags::cast)
 			.unwrap()
 	}
 
@@ -59,19 +59,19 @@ impl CVar {
 	}
 
 	#[must_use]
-	pub fn default(&self) -> Option<Default> {
-		self.0.children().find_map(Default::cast)
+	pub fn default(&self) -> Option<DefaultDef> {
+		self.0.children().find_map(DefaultDef::cast)
 	}
 }
 
-simple_astnode!(Syn, CVar, Syn::Definition);
+simple_astnode!(Syn, Definition, Syn::Definition);
 
-/// Abstract syntax tree node representing the scope specifier and qualifiers.
+/// Wraps a node tagged [`Syn::DefFlags`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Flags(SyntaxNode);
+pub struct DefFlags(SyntaxNode);
 
-impl Flags {
+impl DefFlags {
 	/// The kind of the returned token will be one of the following:
 	/// - [`Syn::KwServer`]
 	/// - [`Syn::KwUser`]
@@ -101,23 +101,18 @@ impl Flags {
 	}
 }
 
-simple_astnode!(Syn, Flags, Syn::Flags);
+simple_astnode!(Syn, DefFlags, Syn::DefFlags);
 
+/// Wraps a node tagged [`Syn::DefaultDef`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Default(SyntaxNode);
+pub struct DefaultDef(SyntaxNode);
 
-impl Default {
-	/// The kind of the returned token will be one of the following:
-	/// [`Syn::FalseLit`]
-	/// [`Syn::TrueLit`]
-	/// [`Syn::IntLit`]
-	/// [`Syn::FloatLit`]
-	/// [`Syn::StringLit`]
+simple_astnode!(Syn, DefaultDef, Syn::DefaultDef);
+
+impl DefaultDef {
 	#[must_use]
-	pub fn literal(&self) -> SyntaxToken {
-		self.0.last_token().unwrap()
+	pub fn token(&self) -> LitToken<Syn> {
+		LitToken::new(self.0.last_token().unwrap())
 	}
 }
-
-simple_astnode!(Syn, Default, Syn::DefaultDef);
