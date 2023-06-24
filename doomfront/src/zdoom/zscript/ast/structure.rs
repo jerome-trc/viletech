@@ -4,7 +4,10 @@ use rowan::ast::AstNode;
 
 use crate::simple_astnode;
 
-use super::{Expr, Syn, SyntaxNode, SyntaxToken, TypeRef};
+use super::{
+	ActionQual, CompoundStat, ConstDef, DefaultBlock, DeprecationQual, EnumDef, Expr, FlagDef,
+	PropertyDef, StatesBlock, StaticConstStat, Syn, SyntaxNode, SyntaxToken, TypeRef, VersionQual,
+};
 
 // ClassDef ////////////////////////////////////////////////////////////////////
 
@@ -38,6 +41,31 @@ impl ClassDef {
 		Some(ret)
 	}
 
+	pub fn qualifiers(&self) -> impl Iterator<Item = ClassQual> {
+		let quals = self.0.first_child().unwrap();
+		debug_assert_eq!(quals.kind(), Syn::ClassQuals);
+
+		quals
+			.children_with_tokens()
+			.filter_map(|elem| match elem.kind() {
+				Syn::KwAbstract => Some(ClassQual::Abstract(elem.into_token().unwrap())),
+				Syn::KwNative => Some(ClassQual::Native(elem.into_token().unwrap())),
+				Syn::KwPlay => Some(ClassQual::Play(elem.into_token().unwrap())),
+				Syn::ReplacesClause => Some(ClassQual::Replaces(ReplacesClause(
+					elem.into_node().unwrap(),
+				))),
+				Syn::KwUi => Some(ClassQual::Ui(elem.into_token().unwrap())),
+				Syn::VersionQual => {
+					Some(ClassQual::Version(VersionQual(elem.into_node().unwrap())))
+				}
+				_ => None,
+			})
+	}
+
+	pub fn innards(&self) -> impl Iterator<Item = ClassInnard> {
+		ClassInnard::iter_from_node(self.0.clone())
+	}
+
 	/// All returned tokens are tagged [`Syn::DocComment`].
 	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
@@ -68,6 +96,10 @@ impl ClassExtend {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	pub fn innards(&self) -> impl Iterator<Item = ClassInnard> {
+		ClassInnard::iter_from_node(self.0.clone())
+	}
 }
 
 // MixinClassDef ///////////////////////////////////////////////////////////////
@@ -87,6 +119,10 @@ impl MixinClassDef {
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
+	}
+
+	pub fn innards(&self) -> impl Iterator<Item = ClassInnard> {
+		ClassInnard::iter_from_node(self.0.clone())
 	}
 
 	/// All returned tokens are tagged [`Syn::DocComment`].
@@ -120,6 +156,28 @@ impl StructDef {
 			.unwrap()
 	}
 
+	pub fn qualifiers(&self) -> impl Iterator<Item = StructQual> {
+		let quals = self.0.first_child().unwrap();
+		debug_assert_eq!(quals.kind(), Syn::ClassQuals);
+
+		quals
+			.children_with_tokens()
+			.filter_map(|elem| match elem.kind() {
+				Syn::KwClearScope => Some(StructQual::ClearScope(elem.into_token().unwrap())),
+				Syn::KwNative => Some(StructQual::Native(elem.into_token().unwrap())),
+				Syn::KwPlay => Some(StructQual::Play(elem.into_token().unwrap())),
+				Syn::KwUi => Some(StructQual::Ui(elem.into_token().unwrap())),
+				Syn::VersionQual => {
+					Some(StructQual::Version(VersionQual(elem.into_node().unwrap())))
+				}
+				_ => None,
+			})
+	}
+
+	pub fn innards(&self) -> impl Iterator<Item = StructInnard> {
+		StructInnard::iter_from_node(self.0.clone())
+	}
+
 	/// All returned tokens are tagged [`Syn::DocComment`].
 	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
@@ -150,6 +208,137 @@ impl StructExtend {
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.unwrap()
 	}
+
+	pub fn innards(&self) -> impl Iterator<Item = StructInnard> {
+		StructInnard::iter_from_node(self.0.clone())
+	}
+}
+
+// ClassQual ///////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum ClassQual {
+	Replaces(ReplacesClause),
+	Abstract(SyntaxToken),
+	Play(SyntaxToken),
+	Ui(SyntaxToken),
+	Native(SyntaxToken),
+	Version(VersionQual),
+}
+
+/// Wraps a node tagged [`Syn::ReplacesCause`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ReplacesClause(SyntaxNode);
+
+simple_astnode!(Syn, ReplacesClause, Syn::ReplacesClause);
+
+impl ReplacesClause {
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn replaced(&self) -> SyntaxToken {
+		let ret = self.0.last_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::Ident);
+		ret
+	}
+}
+
+// ClassInnard /////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum ClassInnard {
+	Const(ConstDef),
+	Enum(EnumDef),
+	StaticConst(StaticConstStat),
+	Function(FunctionDecl),
+	Field(FieldDecl),
+	Mixin(MixinStat),
+	Default(DefaultBlock),
+	States(StatesBlock),
+	Property(PropertyDef),
+	Flag(FlagDef),
+}
+
+impl ClassInnard {
+	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = ClassInnard> {
+		debug_assert!(matches!(
+			node.kind(),
+			Syn::ClassDef | Syn::ClassExtend | Syn::MixinClassDef
+		));
+
+		node.children().filter_map(|node| match node.kind() {
+			Syn::ConstDef => Some(ClassInnard::Const(ConstDef(node))),
+			Syn::EnumDef => Some(ClassInnard::Enum(EnumDef(node))),
+			Syn::StaticConstStat => Some(ClassInnard::StaticConst(StaticConstStat(node))),
+			Syn::FunctionDecl => Some(ClassInnard::Function(FunctionDecl(node))),
+			Syn::FieldDecl => Some(ClassInnard::Field(FieldDecl(node))),
+			Syn::MixinStat => Some(ClassInnard::Mixin(MixinStat(node))),
+			Syn::DefaultBlock => Some(ClassInnard::Default(DefaultBlock(node))),
+			Syn::StatesBlock => Some(ClassInnard::States(StatesBlock(node))),
+			Syn::PropertyDef => Some(ClassInnard::Property(PropertyDef(node))),
+			Syn::FlagDef => Some(ClassInnard::Flag(FlagDef(node))),
+			_ => None,
+		})
+	}
+}
+
+/// Wraps a node tagged [`Syn::MixinStat`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct MixinStat(SyntaxNode);
+
+simple_astnode!(Syn, MixinStat, Syn::MixinStat);
+
+impl MixinStat {
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn name(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.unwrap()
+	}
+}
+
+// StructQual //////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum StructQual {
+	Play(SyntaxToken),
+	Ui(SyntaxToken),
+	Native(SyntaxToken),
+	ClearScope(SyntaxToken),
+	Version(VersionQual),
+}
+
+// StructInnard ////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum StructInnard {
+	Const(ConstDef),
+	Enum(EnumDef),
+	StaticConst(StaticConstStat),
+	Function(FunctionDecl),
+	Field(FieldDecl),
+}
+
+impl StructInnard {
+	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = StructInnard> {
+		debug_assert!(matches!(node.kind(), Syn::StructDef | Syn::StructExtend));
+
+		node.children().filter_map(|node| match node.kind() {
+			Syn::ConstDef => Some(StructInnard::Const(ConstDef(node))),
+			Syn::EnumDef => Some(StructInnard::Enum(EnumDef(node))),
+			Syn::StaticConstStat => Some(StructInnard::StaticConst(StaticConstStat(node))),
+			Syn::FunctionDecl => Some(StructInnard::Function(FunctionDecl(node))),
+			Syn::FieldDecl => Some(StructInnard::Field(FieldDecl(node))),
+			_ => None,
+		})
+	}
 }
 
 // FieldDecl ///////////////////////////////////////////////////////////////////
@@ -162,6 +351,10 @@ pub struct FieldDecl(SyntaxNode);
 simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
 
 impl FieldDecl {
+	pub fn qualifiers(&self) -> impl Iterator<Item = MemberQual> {
+		MemberQual::iter_from_node(self.0.first_child().unwrap())
+	}
+
 	/// All returned tokens are tagged [`Syn::DocComment`].
 	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
@@ -185,32 +378,7 @@ simple_astnode!(Syn, FunctionDecl, Syn::FunctionDecl);
 
 impl FunctionDecl {
 	pub fn qualifiers(&self) -> impl Iterator<Item = MemberQual> {
-		let quals = self.0.first_child().unwrap();
-		debug_assert_eq!(quals.kind(), Syn::MemberQuals);
-
-		quals.children_with_tokens().map(|elem| match elem.kind() {
-			Syn::DeprecationQual => MemberQual::Deprecation(elem.into_node().unwrap()),
-			Syn::VersionQual => MemberQual::Version(elem.into_node().unwrap()),
-			Syn::ActionQual => MemberQual::Action(elem.into_node().unwrap()),
-			Syn::KwAbstract => MemberQual::Abstract(elem.into_token().unwrap()),
-			Syn::KwClearScope => MemberQual::ClearScope(elem.into_token().unwrap()),
-			Syn::KwFinal => MemberQual::Final(elem.into_token().unwrap()),
-			Syn::KwInternal => MemberQual::Internal(elem.into_token().unwrap()),
-			Syn::KwMeta => MemberQual::Meta(elem.into_token().unwrap()),
-			Syn::KwNative => MemberQual::Native(elem.into_token().unwrap()),
-			Syn::KwOverride => MemberQual::Override(elem.into_token().unwrap()),
-			Syn::KwPlay => MemberQual::Play(elem.into_token().unwrap()),
-			Syn::KwPrivate => MemberQual::Private(elem.into_token().unwrap()),
-			Syn::KwProtected => MemberQual::Protected(elem.into_token().unwrap()),
-			Syn::KwReadOnly => MemberQual::ReadOnly(elem.into_token().unwrap()),
-			Syn::KwStatic => MemberQual::Static(elem.into_token().unwrap()),
-			Syn::KwTransient => MemberQual::Transient(elem.into_token().unwrap()),
-			Syn::KwUi => MemberQual::Ui(elem.into_token().unwrap()),
-			Syn::KwVarArg => MemberQual::VarArg(elem.into_token().unwrap()),
-			Syn::KwVirtual => MemberQual::Virtual(elem.into_token().unwrap()),
-			Syn::KwVirtualScope => MemberQual::VirtualScope(elem.into_token().unwrap()),
-			_ => unreachable!(),
-		})
+		MemberQual::iter_from_node(self.0.first_child().unwrap())
 	}
 
 	pub fn return_types(&self) -> impl Iterator<Item = TypeRef> {
@@ -250,6 +418,11 @@ impl FunctionDecl {
 		})
 	}
 
+	#[must_use]
+	pub fn body(&self) -> Option<CompoundStat> {
+		CompoundStat::cast(self.0.last_child().unwrap())
+	}
+
 	/// All returned tokens are tagged [`Syn::DocComment`].
 	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
@@ -267,9 +440,9 @@ impl FunctionDecl {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum MemberQual {
-	Action(SyntaxNode),
-	Deprecation(SyntaxNode),
-	Version(SyntaxNode),
+	Action(ActionQual),
+	Deprecation(DeprecationQual),
+	Version(VersionQual),
 	Abstract(SyntaxToken),
 	ClearScope(SyntaxToken),
 	Final(SyntaxToken),
@@ -287,6 +460,41 @@ pub enum MemberQual {
 	VarArg(SyntaxToken),
 	Virtual(SyntaxToken),
 	VirtualScope(SyntaxToken),
+}
+
+impl MemberQual {
+	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = MemberQual> {
+		debug_assert_eq!(node.kind(), Syn::MemberQuals);
+
+		node.children_with_tokens()
+			.filter_map(|elem| match elem.kind() {
+				Syn::DeprecationQual => Some(MemberQual::Deprecation(DeprecationQual(
+					elem.into_node().unwrap(),
+				))),
+				Syn::VersionQual => {
+					Some(MemberQual::Version(VersionQual(elem.into_node().unwrap())))
+				}
+				Syn::ActionQual => Some(MemberQual::Action(ActionQual(elem.into_node().unwrap()))),
+				Syn::KwAbstract => Some(MemberQual::Abstract(elem.into_token().unwrap())),
+				Syn::KwClearScope => Some(MemberQual::ClearScope(elem.into_token().unwrap())),
+				Syn::KwFinal => Some(MemberQual::Final(elem.into_token().unwrap())),
+				Syn::KwInternal => Some(MemberQual::Internal(elem.into_token().unwrap())),
+				Syn::KwMeta => Some(MemberQual::Meta(elem.into_token().unwrap())),
+				Syn::KwNative => Some(MemberQual::Native(elem.into_token().unwrap())),
+				Syn::KwOverride => Some(MemberQual::Override(elem.into_token().unwrap())),
+				Syn::KwPlay => Some(MemberQual::Play(elem.into_token().unwrap())),
+				Syn::KwPrivate => Some(MemberQual::Private(elem.into_token().unwrap())),
+				Syn::KwProtected => Some(MemberQual::Protected(elem.into_token().unwrap())),
+				Syn::KwReadOnly => Some(MemberQual::ReadOnly(elem.into_token().unwrap())),
+				Syn::KwStatic => Some(MemberQual::Static(elem.into_token().unwrap())),
+				Syn::KwTransient => Some(MemberQual::Transient(elem.into_token().unwrap())),
+				Syn::KwUi => Some(MemberQual::Ui(elem.into_token().unwrap())),
+				Syn::KwVarArg => Some(MemberQual::VarArg(elem.into_token().unwrap())),
+				Syn::KwVirtual => Some(MemberQual::Virtual(elem.into_token().unwrap())),
+				Syn::KwVirtualScope => Some(MemberQual::VirtualScope(elem.into_token().unwrap())),
+				_ => None,
+			})
+	}
 }
 
 // Parameter ///////////////////////////////////////////////////////////////////

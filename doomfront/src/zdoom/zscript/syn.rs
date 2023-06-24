@@ -22,10 +22,9 @@ pub enum Syn {
 	ClassDef,
 	/// `'extend' 'class' ident '{' innard* '}'`
 	ClassExtend,
+	ClassQuals,
 	/// `'static'? 'const' ident '=' expr ';'`
 	ConstDef,
-	/// Precedes a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`].
-	MemberQuals,
 	/// `'default' '{' (propertysetting | flagsetting)* '}'`
 	DefaultBlock,
 	/// `'deprecated' '(' string (',' string)? ')'`
@@ -70,6 +69,8 @@ pub enum Syn {
 	Literal,
 	LocalVar,
 	LocalVarInit,
+	/// Precedes a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`].
+	MemberQuals,
 	/// `'mixin' 'class' ident '{' innard* '}'`
 	MixinClassDef,
 	/// `typeref ident ('=' expr)?`
@@ -98,6 +99,7 @@ pub enum Syn {
 	StateLight,
 	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,
+	StateQuals,
 	/// `'states' ident '{' innard* '}'`
 	StatesBlock,
 	/// `'(' ('actor' | 'item' | 'overlay' | 'weapon')+ ')'`
@@ -106,6 +108,7 @@ pub enum Syn {
 	StructDef,
 	/// `'extend' 'struct' ident '{' innard* '}'`
 	StructExtend,
+	StructQuals,
 	/// `'[' expr ']'`
 	Subscript,
 	/// `coretype arraylen?`
@@ -145,12 +148,15 @@ pub enum Syn {
 	CallExpr,
 	/// `'(' 'class' '<' ident '>' ')' '(' namedexprlist? ')'`
 	ClassCastExpr,
+	/// `'(' expr ')'`
 	GroupExpr,
 	/// `ident`
 	IdentExpr,
 	/// `primaryexpr '[' expr ']'`
 	IndexExpr,
+	/// `primaryexpr operator`
 	PostfixExpr,
+	/// `operator primaryexpr`
 	PrefixExpr,
 	/// `'super'`
 	SuperExpr,

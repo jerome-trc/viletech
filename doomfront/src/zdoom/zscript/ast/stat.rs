@@ -455,7 +455,7 @@ impl ReturnStat {
 /// Wraps a node tagged [`Syn::StaticConstStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct StaticConstStat(SyntaxNode);
+pub struct StaticConstStat(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, StaticConstStat, Syn::StaticConstStat);
 

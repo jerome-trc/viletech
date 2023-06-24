@@ -39,10 +39,28 @@ impl LitToken<zscript::Syn> {
 		}
 	}
 
+	#[must_use]
+	pub fn name(&self) -> Option<&str> {
+		match self.0.kind() {
+			zscript::Syn::NameLit => Some(self.get_name()),
+			_ => None,
+		}
+	}
+
 	/// Returns `true` if this token's kind is [`zscript::Syn::NullLit`].
 	#[must_use]
 	pub fn null(&self) -> bool {
 		self.0.kind() == zscript::Syn::NullLit
+	}
+
+	/// Note that this returns `Some` for both
+	/// [`zscript::Syn::StringLit`] and [`zscript::Syn::StateFrames`].
+	#[must_use]
+	pub fn string(&self) -> Option<&str> {
+		match self.0.kind() {
+			zscript::Syn::StringLit | zscript::Syn::StateFrames => Some(self.get_string()),
+			_ => None,
+		}
 	}
 }
 

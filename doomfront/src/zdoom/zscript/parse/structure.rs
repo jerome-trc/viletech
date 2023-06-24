@@ -27,6 +27,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
+	let quals = p.open();
 
 	while !p.at(Token::BraceL) && !p.eof() {
 		match p.nth(0) {
@@ -58,6 +59,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
+	p.close(quals, Syn::ClassQuals);
 	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
 	trivia_0plus(p);
 
@@ -106,6 +108,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
+	let quals = p.open();
 
 	while !p.at(Token::BraceL) && !p.eof() {
 		match p.nth(0) {
@@ -123,6 +126,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
+	p.close(quals, Syn::StructQuals);
 	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
 	trivia_0plus(p);
 

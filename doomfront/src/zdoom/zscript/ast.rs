@@ -102,6 +102,11 @@ impl ConstDef {
 			.unwrap()
 	}
 
+	#[must_use]
+	pub fn initializer(&self) -> Expr {
+		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	}
+
 	/// All returned tokens are tagged [`Syn::DocComment`].
 	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0

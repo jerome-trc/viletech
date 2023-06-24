@@ -289,6 +289,8 @@ pub fn state_def(p: &mut Parser<Syn>) {
 	expr(p);
 	trivia_0plus(p);
 
+	let quals = p.open();
+
 	loop {
 		if p.eof() {
 			break;
@@ -370,6 +372,7 @@ pub fn state_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
+	p.close(quals, Syn::StateQuals);
 	trivia_0plus(p);
 
 	if p.at(Token::Semicolon) {
@@ -459,6 +462,8 @@ fn state_frames(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::ActionFunction`] node.
 fn action_function(p: &mut Parser<Syn>) {
+	let action = p.open();
+
 	if p.at(Token::BraceL) {
 		compound_stat(p);
 	} else {
@@ -472,6 +477,8 @@ fn action_function(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 	}
+
+	p.close(action, Syn::ActionFunction);
 }
 
 #[cfg(test)]
