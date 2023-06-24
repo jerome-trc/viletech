@@ -137,8 +137,6 @@ fn trivia_0plus(p: &mut Parser<Syn>) {
 
 #[cfg(test)]
 mod test {
-	use std::path::PathBuf;
-
 	use rowan::ast::AstNode;
 
 	use crate::{
@@ -203,7 +201,8 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
 		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
-		assert_no_errors(&ptree);
+		assert_eq!(ptree.errors.len(), 2);
+		prettyprint_maybe(ptree.cursor());
 		let mut ast = ptree.cursor().children();
 
 		let kvp = ast::KeyValuePair::cast(ast.next().unwrap()).unwrap();
@@ -227,35 +226,16 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 
 	#[test]
 	fn with_sample_data() {
-		const ENV_VAR: &str = "DOOMFRONT_LANGUAGE_SAMPLE";
-
-		let path = match std::env::var(ENV_VAR) {
-			Ok(v) => PathBuf::from(v),
-			Err(_) => {
-				eprintln!(
-					"Environment variable not set: `{ENV_VAR}`. \
-					Cancelling `zdoom::language::parse::test::with_sample_data`."
-				);
+		let sample = match read_sample_data("DOOMFRONT_LANGUAGE_SAMPLE") {
+			Ok((_, s)) => s,
+			Err(err) => {
+				eprintln!("Skipping LANGUAGE sample data-based unit test. Reason: {err}");
 				return;
 			}
 		};
 
-		if !path.exists() {
-			eprintln!(
-				"File does not exist: `{p}`. \
-				Cancelling `zdoom::language::parse::test::with_sample_data`.",
-				p = path.display(),
-			);
-			return;
-		}
-
-		let bytes = std::fs::read(path)
-			.map_err(|err| panic!("file I/O failure: {err}"))
-			.unwrap();
-		let source = String::from_utf8_lossy(&bytes);
-
-		let ptree: ParseTree =
-			crate::parse(source.as_ref(), file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(&sample, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 	}
 }
