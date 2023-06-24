@@ -82,25 +82,33 @@ pub enum Syn {
 	NameLit,
 	/// See [`crate::zdoom::lex::Token::StringLit`].
 	StringLit,
-	// Tokens: keywords ////////////////////////////////////////////////////////
+	// Tokens: keywords, relevant //////////////////////////////////////////////
 	KwActor,
+	KwAction,
+	KwBreak,
 	KwBright,
 	KwCanRaise,
 	KwConst,
+	KwContinue,
 	KwDamageType,
+	KwDo,
+	KwElse,
 	KwEnum,
 	KwFail,
 	KwFalse,
 	KwFast,
 	KwFixed,
 	KwFloat,
+	KwFor,
 	KwGoto,
+	KwIf,
 	KwInt,
 	KwLight,
 	KwLoop,
 	KwNoDelay,
 	KwOffset,
 	KwReplaces,
+	KwReturn,
 	KwSlow,
 	KwStates,
 	KwStop,
@@ -108,7 +116,56 @@ pub enum Syn {
 	KwTrue,
 	KwVar,
 	KwWait,
-	// Tokens: glyphs //////////////////////////////////////////////////////////
+	// Tokens: keywords, irrelevant ////////////////////////////////////////////
+	KwAbstract,
+	KwAlignOf,
+	KwArray,
+	KwAuto,
+	KwBool,
+	KwByte,
+	KwCase,
+	KwChar,
+	KwClass,
+	KwColor,
+	KwCross,
+	KwDefault,
+	KwDot,
+	KwDouble,
+	KwIn,
+	KwInt16,
+	KwInt8,
+	KwIs,
+	KwLong,
+	KwMap,
+	KwMapIterator,
+	KwMixin,
+	KwNative,
+	KwNone,
+	KwNull,
+	KwProperty,
+	KwSByte,
+	KwShort,
+	KwSizeOf,
+	KwSound,
+	KwState,
+	KwStatic,
+	KwString,
+	KwStruct,
+	KwSwitch,
+	KwUntil,
+	KwUInt,
+	KwUInt16,
+	KwUInt8,
+	KwULong,
+	KwUShort,
+	KwVector2,
+	KwVector3,
+	KwVersion,
+	KwVirtualScope,
+	KwVoid,
+	KwVolatile,
+	KwWhile,
+	// Tokens: glyphs, relevant ////////////////////////////////////////////////
 	/// `&`
 	Ampersand,
 	/// `&&`
@@ -203,6 +260,31 @@ pub enum Syn {
 	Slash,
 	/// `/=`
 	SlashEq,
+	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
+	/// `<>=`
+	AngleLAngleREq,
+	/// `**`
+	Asterisk2,
+	/// `@`
+	At,
+	/// `\`
+	Backslash,
+	/// `$`
+	Dollar,
+	/// `..`
+	Dot2,
+	/// `...`
+	Dot3,
+	/// `----`
+	Minus4,
+	/// `#`
+	Pound,
+	/// `####`
+	Pound4,
+	/// `~==`
+	TildeEq2,
+	/// `->`
+	ThinArrow,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// The exact string `#include`, ASCII case-insensitive.
 	PoundInclude,
@@ -248,4 +330,185 @@ impl LangExt for Syn {
 	type Token = Token;
 	const EOF: Self::Token = Token::Eof;
 	const ERR_NODE: Self::Kind = Syn::Error;
+}
+
+impl From<crate::zdoom::Token> for Syn {
+	fn from(value: crate::zdoom::Token) -> Self {
+		match value {
+			Token::FloatLit => Self::FloatLit,
+			Token::IntLit => Self::IntLit,
+			Token::NameLit => Self::NameLit,
+			Token::StringLit => Self::StringLit,
+			// Keywords ////////////////////////////////////////////////////////
+			Token::KwAbstract => Self::KwAbstract,
+			Token::KwAction => Self::KwAction,
+			Token::KwAlignOf => Self::KwAlignOf,
+			Token::KwArray => Self::KwArray,
+			Token::KwAuto => Self::KwAuto,
+			Token::KwBool => Self::KwBool,
+			Token::KwBreak => Self::KwBreak,
+			Token::KwBright => Self::KwBright,
+			Token::KwByte => Self::KwByte,
+			Token::KwCanRaise => Self::KwCanRaise,
+			Token::KwCase => Self::KwCase,
+			Token::KwChar => Self::KwChar,
+			Token::KwClass => Self::KwClass,
+			Token::KwColor => Self::KwColor,
+			Token::KwConst => Self::KwConst,
+			Token::KwContinue => Self::KwContinue,
+			Token::KwCross => Self::KwCross,
+			Token::KwDefault => Self::KwDefault,
+			Token::KwDo => Self::KwDo,
+			Token::KwDot => Self::KwDot,
+			Token::KwDouble => Self::KwDouble,
+			Token::KwElse => Self::KwElse,
+			Token::KwEnum => Self::KwEnum,
+			Token::KwFail => Self::KwFail,
+			Token::KwFalse => Self::KwFalse,
+			Token::KwFast => Self::KwFast,
+			Token::KwFloat => Self::KwFloat,
+			Token::KwFor => Self::KwFor,
+			Token::KwGoto => Self::KwGoto,
+			Token::KwIn => Self::KwIn,
+			Token::KwIf => Self::KwIf,
+			Token::KwInt => Self::KwInt,
+			Token::KwInt16 => Self::KwInt16,
+			Token::KwInt8 => Self::KwInt8,
+			Token::KwIs => Self::KwIs,
+			Token::KwLight => Self::KwLight,
+			Token::KwLong => Self::KwLong,
+			Token::KwLoop => Self::KwLoop,
+			Token::KwMap => Self::KwMap,
+			Token::KwMapIterator => Self::KwMapIterator,
+			Token::KwMixin => Self::KwMixin,
+			Token::KwNative => Self::KwNative,
+			Token::KwNoDelay => Self::KwNoDelay,
+			Token::KwNone => Self::KwNone,
+			Token::KwNull => Self::KwNull,
+			Token::KwOffset => Self::KwOffset,
+			Token::KwProperty => Self::KwProperty,
+			Token::KwReplaces => Self::KwReplaces,
+			Token::KwReturn => Self::KwReturn,
+			Token::KwSByte => Self::KwSByte,
+			Token::KwShort => Self::KwShort,
+			Token::KwSizeOf => Self::KwSizeOf,
+			Token::KwSlow => Self::KwSlow,
+			Token::KwSound => Self::KwSound,
+			Token::KwState => Self::KwState,
+			Token::KwStates => Self::KwStates,
+			Token::KwStatic => Self::KwStatic,
+			Token::KwStop => Self::KwStop,
+			Token::KwString => Self::KwString,
+			Token::KwStruct => Self::KwStruct,
+			Token::KwSuper => Self::KwSuper,
+			Token::KwSwitch => Self::KwSwitch,
+			Token::KwTrue => Self::KwTrue,
+			Token::KwUInt => Self::KwUInt,
+			Token::KwUInt16 => Self::KwUInt16,
+			Token::KwUInt8 => Self::KwUInt8,
+			Token::KwULong => Self::KwULong,
+			Token::KwUntil => Self::KwUntil,
+			Token::KwUShort => Self::KwUShort,
+			Token::KwVar => Self::KwVar,
+			Token::KwVector2 => Self::KwVector2,
+			Token::KwVector3 => Self::KwVector3,
+			Token::KwVersion => Self::KwVersion,
+			Token::KwVirtualScope => Self::KwVirtualScope,
+			Token::KwVoid => Self::KwVoid,
+			Token::KwVolatile => Self::KwVolatile,
+			Token::KwWait => Self::KwWait,
+			Token::KwWhile => Self::KwWhile,
+			// Glyphs //////////////////////////////////////////////////////////
+			Token::Ampersand => Self::Ampersand,
+			Token::Ampersand2 => Self::Ampersand2,
+			Token::AmpersandEq => Self::AmpersandEq,
+			Token::AngleL => Self::AngleL,
+			Token::AngleL2 => Self::AngleL2,
+			Token::AngleLEq => Self::AngleLEq,
+			Token::AngleL2Eq => Self::AngleL2Eq,
+			Token::AngleR => Self::AngleR,
+			Token::AngleREq => Self::AngleREq,
+			Token::AngleR2 => Self::AngleR2,
+			Token::AngleR3 => Self::AngleR3,
+			Token::AngleR2Eq => Self::AngleR2Eq,
+			Token::AngleR3Eq => Self::AngleR3Eq,
+			Token::AngleLAngleREq => Self::AngleLAngleREq,
+			Token::Asterisk => Self::Asterisk,
+			Token::Asterisk2 => Self::Asterisk2,
+			Token::AsteriskEq => Self::AsteriskEq,
+			Token::At => Self::At,
+			Token::Backslash => Self::Backslash,
+			Token::Bang => Self::Bang,
+			Token::BangEq => Self::BangEq,
+			Token::BraceL => Self::BraceL,
+			Token::BraceR => Self::BraceR,
+			Token::BracketL => Self::BracketL,
+			Token::BracketR => Self::BracketR,
+			Token::Caret => Self::Caret,
+			Token::CaretEq => Self::CaretEq,
+			Token::Colon => Self::Colon,
+			Token::Colon2 => Self::Colon2,
+			Token::Comma => Self::Comma,
+			Token::Dollar => Self::Dollar,
+			Token::Dot => Self::Dot,
+			Token::Dot2 => Self::Dot2,
+			Token::Dot3 => Self::Dot3,
+			Token::Eq => Self::Eq,
+			Token::Eq2 => Self::Eq2,
+			Token::Tilde => Self::Tilde,
+			Token::TildeEq2 => Self::TildeEq2,
+			Token::Minus => Self::Minus,
+			Token::Minus2 => Self::Minus2,
+			Token::Minus4 => Self::Minus4,
+			Token::MinusEq => Self::MinusEq,
+			Token::ParenL => Self::ParenL,
+			Token::ParenR => Self::ParenR,
+			Token::Percent => Self::Percent,
+			Token::PercentEq => Self::PercentEq,
+			Token::Pipe => Self::Pipe,
+			Token::Pipe2 => Self::Pipe2,
+			Token::PipeEq => Self::PipeEq,
+			Token::Plus => Self::Plus,
+			Token::Plus2 => Self::Plus2,
+			Token::PlusEq => Self::PlusEq,
+			Token::Pound => Self::Pound,
+			Token::Pound4 => Self::Pound4,
+			Token::Question => Self::Question,
+			Token::Semicolon => Self::Semicolon,
+			Token::Slash => Self::Slash,
+			Token::SlashEq => Self::SlashEq,
+			Token::ThinArrow => Self::ThinArrow,
+			Token::PoundInclude => Self::PoundInclude,
+			Token::RegionStart => Self::RegionStart,
+			Token::RegionEnd => Self::RegionEnd,
+			Token::Ident
+			| Token::KwClearScope
+			| Token::KwDeprecated
+			| Token::KwExtend
+			| Token::KwFinal
+			| Token::KwFlagDef
+			| Token::KwForEach
+			| Token::KwInternal
+			| Token::KwLet
+			| Token::KwMeta
+			| Token::KwName
+			| Token::KwOut
+			| Token::KwOverride
+			| Token::KwPlay
+			| Token::KwPrivate
+			| Token::KwProtected
+			| Token::KwReadOnly
+			| Token::KwTransient
+			| Token::KwUi
+			| Token::KwVarArg
+			| Token::KwVirtual => Self::Ident,
+			Token::Whitespace => Self::Whitespace,
+			Token::Comment => Self::Comment,
+			Token::Unknown => Self::Unknown,
+			// Unreachable /////////////////////////////////////////////////////
+			Token::__Last | Token::__FirstKw | Token::__LastKw | Token::DocComment | Token::Eof => {
+				unreachable!()
+			}
+		}
+	}
 }

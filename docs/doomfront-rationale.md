@@ -22,3 +22,9 @@ All DoomFront parsers are hand-written LL recursive descent. The stability of al
 - [`peg`] and [`pest`] in particular both have no native error recovery facilities, making them non-starters.
 - The Rust compiler is unfriendly towards combinator parsing libraries, due to the complexity of the created types; because of the depth of syntaxes like DECORATE and ZScript, combinator types can become so large as to make DoomFront the majority consumer of time in a full build of the VileTech project at best. At worst, rustc can use exponential memory and OOM.
 - LALR parsers are a non-option due to the significance of whitespace to lossless syntax trees, which introduces shift ambiguities.
+
+## Token-to-Syntax Mapping
+
+(G)ZDoom uses [one lexer](https://github.com/ZDoom/gzdoom/blob/master/src/common/engine/sc_man_scanner.re) for all of its languages, and DoomFront [re-implements it internally](../doomfront/src/zdoom/lex.rs) in the interest of parity. Rowan, however, demands that every language built on it has one "syntax tag" type used for both tokens and higher-level "syntax nodes" (e.g. expressions).
+
+As such, the token type and syntax type can never be reconciled, but it is beneficial to have a direct (and fast) conversion from the lexed token to the correspdonding syntax token. As an example, it may be helpful for a diagnostic tool to recognize the presence of a foreign keyword so that it recommend to the user that the keyword in question is not supported by the language, and offer a different solution by inferring the user's possible intent. This is why every "`Syn`" type has a token-to-syntax mapping table; they are bulky and tedious to prepare but pay dividends.
