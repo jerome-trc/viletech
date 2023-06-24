@@ -32,8 +32,19 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 	if expr::in_first_set(token) {
 		let peeked = p.find(1, |token| !token.is_trivia());
+		let in_tref_1set = in_type_ref_first_set(token);
 
-		if in_type_ref_first_set(token) && is_ident_lax(peeked) {
+		// `class` is not in the identifier fallback set, so if looking at
+		// `array<class`, we know this isn't a less-than expression.
+		if in_tref_1set && (is_ident_lax(peeked) || peeked == Token::KwClass) {
+			declassign_or_local_stat(p);
+			return;
+		}
+
+		// When faced with the code: `int array = 0; int uint = 0; array<uint> c;`,
+		// GZDoom's parser resolves the ambiguity by trying to parse a generic
+		// array type anyway. We do the same.
+		if token == Token::KwArray && peeked == Token::AngleL {
 			declassign_or_local_stat(p);
 			return;
 		}
@@ -610,6 +621,25 @@ mod test {
 		}";
 
 		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_local_dynarray() {
+		const SOURCE: &str = "Array<Demoniacal> Overrun;";
+
+		let ptree: ParseTree = crate::parse(SOURCE, statement, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_local_dynarray_of_classes() {
+		const SOURCE: &str = r#"{ Array<Class<Vampire> > Castle; }"#;
+
+		let ptree: ParseTree =
+			crate::parse(SOURCE, compound_stat, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}
