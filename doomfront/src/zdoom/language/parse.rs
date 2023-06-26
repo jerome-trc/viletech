@@ -17,7 +17,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			header(p);
 		} else {
 			p.advance_with_error(
-				Syn::Unknown,
+				Syn::from(p.nth(0)),
 				&[
 					"a key-value pair (`$` or an identifier)",
 					"a header (`[`)",
@@ -110,13 +110,13 @@ pub fn header(p: &mut Parser<Syn>) {
 			Token::Tilde => p.advance(Syn::Tilde),
 			Token::KwDefault => p.advance(Syn::KwDefault),
 			Token::Asterisk => p.advance(Syn::Asterisk),
-			_ => {
+			t => {
 				if p.at_any(&[Token::Dollar]) {
 					break;
 				}
 
 				return p.advance_with_error(
-					Syn::Unknown,
+					Syn::from(t),
 					&["`~`", "`*`", "`default`", "an identifier"],
 				);
 			}
