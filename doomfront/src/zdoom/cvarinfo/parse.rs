@@ -15,7 +15,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			definition(p);
 		} else {
 			p.advance_with_error(
-				Syn::Unknown,
+				Syn::from(p.nth(0)),
 				&[
 					"`server` or `user` or `nosave`",
 					"`nosave` or `noarchive` or `cheat` or `latch`",
