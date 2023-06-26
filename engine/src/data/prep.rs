@@ -166,7 +166,7 @@ impl Catalog {
 				.iter()
 				.collect();
 
-			let _root_dir = match self.vfs.get(&root_dir_path) {
+			let root_dir = match self.vfs.get(&root_dir_path) {
 				Some(fref) => fref,
 				None => {
 					ctx.raise_error(PrepError {
@@ -182,22 +182,17 @@ impl Catalog {
 				return Outcome::Cancelled;
 			}
 
-			let inctree = lith::IncludeTree::new();
+			let mut inctree = lith::IncludeTree::new(root_dir);
 
 			if inctree.any_errors() {
 				let errors = &mut ctx.arts_w.lock().errors;
-				let ptrees = inctree.into_inner();
+				let parse_errs = inctree.drain_errors();
 
-				for ptree in ptrees {
-					let path = ptree.path().to_path_buf();
-					let ptree = ptree.into_inner();
-
-					for err in ptree.errors {
-						errors.push(PrepError {
-							path: path.clone(),
-							kind: PrepErrorKind::LithParse(err),
-						});
-					}
+				for (path, err) in parse_errs {
+					errors.push(PrepError {
+						path: path.clone(),
+						kind: PrepErrorKind::LithParse(err),
+					});
 				}
 			}
 

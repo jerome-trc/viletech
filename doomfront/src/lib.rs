@@ -42,7 +42,8 @@ pub trait LangExt: rowan::Language {
 		+ for<'i> logos::Logos<'i, Source = str, Error = Self::Token>
 		+ Eq
 		+ Copy
-		+ Default;
+		+ Default
+		+ std::hash::Hash;
 
 	const EOF: Self::Token;
 	const ERR_NODE: Self::Kind;
@@ -51,6 +52,7 @@ pub trait LangExt: rowan::Language {
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
 pub type ParseError<L> = parser::Error<L>;
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct ParseTree<L: LangExt> {
 	pub root: rowan::GreenNode,
 	pub errors: Vec<ParseError<L>>,

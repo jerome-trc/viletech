@@ -1,8 +1,8 @@
 //! # LithScript
 //!
-//! The LithSC toolchain; VileTech's fork of the [ZScript] programming language
-//! used by GZDoom and Raze, designed for being transpiled to from ZScript (and
-//! its predecessors), while not compromising on versatility as a game script,
+//! The LithSC toolchain; VileTech's answer to the [ZScript] programming language
+//! used by GZDoom and Raze, designed for being transpiled to from ZScript and
+//! other ZDoom languages, while not compromising on versatility as a game script,
 //! as ZScript did.
 //!
 //! [ZScript]: https://zdoom.org/wiki/ZScript
@@ -17,14 +17,13 @@ pub mod runtime;
 pub mod sym;
 mod syn;
 pub mod tsys;
+#[cfg(feature = "viletech")]
+pub mod viletech;
 
-pub use self::{
-	heap::TPtr,
-	parse::{FileParseTree, IncludeTree},
-	project::Project,
-	runtime::Runtime,
-	syn::Syn,
-};
+pub use self::{heap::TPtr, project::Project, runtime::Runtime, syn::Syn};
+
+#[cfg(feature = "viletech")]
+pub use viletech::IncludeTree;
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;

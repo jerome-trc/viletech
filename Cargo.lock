@@ -3042,8 +3042,11 @@ dependencies = [
  "doomfront",
  "impl-trait-for-tuples",
  "logos",
+ "parking_lot",
  "peg",
+ "rayon",
  "rustc-hash",
+ "viletech-fs",
  "viletech-utils",
 ]
 

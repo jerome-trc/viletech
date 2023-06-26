@@ -4,8 +4,6 @@ use std::{mem::MaybeUninit, sync::Arc};
 
 use cranelift_jit::JITBuilder;
 
-use crate::parse::{FileParseTree, IncludeTree};
-
 /// A single compilation unit, corresponding to one source file.
 #[derive(Debug)]
 pub struct Module {
@@ -21,24 +19,19 @@ pub struct Module {
 /// functions to be callable by scripts.
 pub struct Builder {
 	name: String,
-	source: Source,
 	_jit: JITBuilder,
 }
 
 impl Builder {
 	/// Also see [`JITBuilder::hotswap`].
 	#[must_use]
-	pub fn new(name: String, source: Source, hotswap: bool) -> Self {
+	pub fn new(name: String, hotswap: bool) -> Self {
 		let mut jit = JITBuilder::new(cranelift_module::default_libcall_names())
 			.expect("failed to construct a Cranelift `JITBuilder`");
 
 		jit.hotswap(hotswap);
 
-		Self {
-			name,
-			source,
-			_jit: jit,
-		}
+		Self { name, _jit: jit }
 	}
 }
 
@@ -46,19 +39,9 @@ impl std::fmt::Debug for Builder {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("Builder")
 			.field("name", &self.name)
-			.field("source", &self.source)
 			.field("jit", &"<cranelift_jit::JITBuilder>")
 			.finish()
 	}
-}
-
-/// LithScript supports compiling multiple source files into the same module,
-/// for niche use cases such as Doom's [WAD](https://doomwiki.org/wiki/WAD)
-/// file format, which has many more organizational limitations.
-#[derive(Debug)]
-pub enum Source {
-	Single(FileParseTree),
-	Multi(IncludeTree),
 }
 
 // Details /////////////////////////////////////////////////////////////////////

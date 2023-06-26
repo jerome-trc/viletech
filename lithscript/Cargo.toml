@@ -14,10 +14,12 @@ repository.workspace = true
 
 [features]
 default = []
+viletech = ["doomfront/zdoom", "vfs"]
 
 [dependencies]
 doomfront = { path = "../doomfront", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils" }
+vfs = { package = "viletech-fs", path = "../vfs", optional = true }
 
 ariadne.workspace = true
 bitflags.workspace = true
@@ -30,5 +32,7 @@ crossbeam.workspace = true
 dashmap.workspace = true
 impl-trait-for-tuples.workspace = true
 logos.workspace = true
+parking_lot.workspace = true
 peg.workspace = true
+rayon.workspace = true
 rustc-hash.workspace = true

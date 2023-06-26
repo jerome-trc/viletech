@@ -157,6 +157,11 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 			missing: missing.into_inner(),
 		}
 	}
+
+	#[must_use]
+	pub fn any_errors(&self) -> bool {
+		self.files.iter().any(|fptree| fptree.errors.is_empty())
+	}
 }
 
 #[derive(Debug)]

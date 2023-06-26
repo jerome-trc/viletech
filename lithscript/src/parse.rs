@@ -1,15 +1,14 @@
 //! Functions for parsing Lith source code.
 
-use std::path::{Path, PathBuf};
-
 use doomfront::{
 	rowan::{GreenNode, GreenToken, SyntaxKind},
 	GreenElement,
 };
+use logos::Logos;
 
-use crate::{ParseTree, Syn};
+use crate::Syn;
 
-pub type Error = doomfront::ParseError<Syn>;
+pub type Error = peg::error::ParseError<usize>;
 
 impl doomfront::LangExt for Syn {
 	type Token = Self;
@@ -17,70 +16,27 @@ impl doomfront::LangExt for Syn {
 	const ERR_NODE: Self::Kind = Self::Error;
 }
 
-/// Gets compiled into one [module](crate::module::Module).
-#[derive(Debug)]
-pub struct FileParseTree {
-	inner: ParseTree,
-	path: PathBuf,
-}
+pub fn file(source: &str) -> Result<GreenNode, Error> {
+	let lexer = Syn::lexer_with_extras(source, crate::Version::new(0, 0, 0))
+		.spanned()
+		.map(|(result, span)| match result {
+			Ok(t) => (t, span.start, span.end),
+			Err(t) => (t, span.start, span.end),
+		});
 
-impl FileParseTree {
-	#[must_use]
-	pub fn path(&self) -> &Path {
-		&self.path
-	}
-
-	#[must_use]
-	pub fn into_inner(self) -> ParseTree {
-		self.inner
-	}
-}
-
-impl std::ops::Deref for FileParseTree {
-	type Target = ParseTree;
-
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
-}
-
-/// Gets compiled into one [library](crate::library::Library).
-#[derive(Debug, Default)]
-pub struct IncludeTree {
-	pub files: Vec<FileParseTree>,
-}
-
-impl IncludeTree {
-	#[must_use]
-	pub fn new() -> Self {
-		unimplemented!("include tree parsing pending DoomFront's `Filesystem` trait")
-	}
-
-	#[must_use]
-	pub fn files(&self) -> &[FileParseTree] {
-		&self.files
-	}
-
-	#[must_use]
-	pub fn into_inner(self) -> Vec<FileParseTree> {
-		self.files
-	}
-
-	#[must_use]
-	pub fn any_errors(&self) -> bool {
-		self.files.iter().any(|ptree| !ptree.errors.is_empty())
-	}
+	let tokens = lexer.collect::<Vec<_>>();
+	experimental::file(&tokens, source)
 }
 
 peg::parser! {
 	pub grammar experimental(source: &'input str) for [(Syn, usize, usize)] {
-		pub rule file() -> GreenNode
+		pub(super) rule file() -> GreenNode
 			= items:(trivia() / annotation())* ![_]
 		{
 			GreenNode::new(Syn::FileRoot.into(), items)
 		}
 
-		pub rule annotation() -> GreenElement
+		pub(super) rule annotation() -> GreenElement
 			=	pound:token(Syn::Pound)
 				bang:token(Syn::Bang)?
 				bl:token(Syn::BracketL)
@@ -188,7 +144,7 @@ peg::parser! {
 
 		// Expressions /////////////////////////////////////////////////////////
 
-		pub rule expr() -> GreenNode = precedence! {
+		pub(super) rule expr() -> GreenNode = precedence! {
 			// Assignment //////////////////////////////////////////////////////
 			lhs:@ t0:trivia()* eq:token(Syn::Eq) t1:trivia()* rhs:(@) {
 				coalesce_node((lhs, t0, eq, t1, rhs), Syn::BinExpr)

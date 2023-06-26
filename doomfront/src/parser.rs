@@ -434,6 +434,7 @@ pub struct OpenMark(usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CloseMark(usize);
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct Error<L: LangExt> {
 	expected: &'static [&'static str],
 	found: Lexeme<L>,
