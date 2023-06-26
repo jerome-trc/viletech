@@ -118,7 +118,12 @@ fn default_def(p: &mut Parser<Syn>) {
 }
 
 fn trivia(p: &mut Parser<Syn>) -> bool {
-	p.eat(Token::Whitespace, Syn::Whitespace) || p.eat(Token::Comment, Syn::Comment)
+	p.eat_any(&[
+		(Token::Whitespace, Syn::Whitespace),
+		(Token::Comment, Syn::Comment),
+		(Token::RegionStart, Syn::RegionStart),
+		(Token::RegionEnd, Syn::RegionEnd),
+	])
 }
 
 fn trivia_0plus(p: &mut Parser<Syn>) {
@@ -130,6 +135,8 @@ fn trivia_1plus(p: &mut Parser<Syn>) {
 		&[
 			(Token::Whitespace, Syn::Whitespace),
 			(Token::Comment, Syn::Comment),
+			(Token::RegionStart, Syn::RegionStart),
+			(Token::RegionEnd, Syn::RegionEnd),
 		],
 		&["whitespace or a comment (one or more)"],
 	);
