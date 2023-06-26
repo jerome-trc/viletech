@@ -478,6 +478,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Slash => Self::Slash,
 			Token::SlashEq => Self::SlashEq,
 			Token::ThinArrow => Self::ThinArrow,
+			// Miscellaneous ///////////////////////////////////////////////////
 			Token::PoundInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
@@ -505,7 +506,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Whitespace => Self::Whitespace,
 			Token::Comment => Self::Comment,
 			Token::Unknown => Self::Unknown,
-			// Unreachable /////////////////////////////////////////////////////
 			Token::__Last | Token::__FirstKw | Token::__LastKw | Token::DocComment | Token::Eof => {
 				unreachable!()
 			}
