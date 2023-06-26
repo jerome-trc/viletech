@@ -59,6 +59,22 @@ impl PartialEq<str> for RString {
 
 impl Eq for RString {}
 
+impl PartialOrd for RString {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		let s0 = std::ops::Deref::deref(self);
+		let s1 = std::ops::Deref::deref(other);
+		s0.partial_cmp(s1)
+	}
+}
+
+impl Ord for RString {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		let s0 = std::ops::Deref::deref(self);
+		let s1 = std::ops::Deref::deref(other);
+		s0.cmp(s1)
+	}
+}
+
 impl std::hash::Hash for RString {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
 		self.0.as_ptr().hash(state)
