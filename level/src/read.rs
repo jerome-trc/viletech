@@ -51,7 +51,7 @@ impl From<&LineDefRaw> for LineDef {
 					Some(s as usize)
 				}
 			},
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		}
 	}
 }
@@ -208,7 +208,7 @@ impl From<&SectorRaw> for SectorDef {
 			light_level: u16::from_le(value.light_level) as i32,
 			special: value.special as i32,
 			trigger: u16::from_le(value.trigger),
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		}
 	}
 }
@@ -347,7 +347,7 @@ impl From<&SideDefRaw> for SideDef {
 			tex_bottom: read_id8(value.tex_bottom).filter(|id8| id8 != "-"),
 			tex_mid: read_id8(value.tex_mid).filter(|id8| id8 != "-"),
 			sector: u16::from_le(value.sector) as usize,
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		}
 	}
 }
@@ -517,7 +517,7 @@ impl From<&ThingRaw> for ThingDef {
 			},
 			special: 0,
 			args: [0, 0, 0, 0, 0],
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		}
 	}
 }
@@ -646,7 +646,7 @@ impl From<&ThingExtRaw> for ThingDef {
 				value.args[3] as i32,
 				value.args[4] as i32,
 			],
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		}
 	}
 }

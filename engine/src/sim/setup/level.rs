@@ -1,9 +1,6 @@
 //! Functions for assembling a level's compact datum representation into ECS form.
 
-use std::{
-	cmp::Ordering,
-	collections::{hash_map::RandomState, HashMap},
-};
+use std::{cmp::Ordering, collections::HashMap};
 
 use ::level::repr::{BspNodeChild, SegDirection, Vertex};
 use bevy::{
@@ -18,7 +15,7 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::dobj::{self},
+	data::dobj,
 	gfx::TerrainMaterial,
 	sim::level::VertIndex,
 	sim::{
@@ -92,7 +89,7 @@ fn spawn_children(base: &dobj::Handle<::level::LevelDef>, level: &mut ChildBuild
 	let mut sectors = IndexMap::with_capacity(base.geom.sectordefs.len());
 	let mut sides = SparseSet::with_capacity(base.geom.sidedefs.len(), base.geom.sidedefs.len());
 
-	let mut sectors_by_trigger: HashMap<_, _, RandomState> = HashMap::default();
+	let mut sectors_by_trigger = HashMap::new();
 
 	for linedef in &base.geom.linedefs {
 		let line_id = level.spawn(()).id();

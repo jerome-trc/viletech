@@ -272,7 +272,7 @@ impl<'i> Parser<'i> {
 			args: [0; 5],
 			side_right: usize::MAX,
 			side_left: None,
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -297,7 +297,7 @@ impl<'i> Parser<'i> {
 			flags: ThingFlags::empty(),
 			special: 0,
 			args: [0; 5],
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -323,7 +323,7 @@ impl<'i> Parser<'i> {
 			light_level: 0,
 			special: 0,
 			trigger: 0,
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {
@@ -346,7 +346,7 @@ impl<'i> Parser<'i> {
 			tex_bottom: None,
 			tex_mid: None,
 			sector: usize::MAX,
-			udmf: HashMap::default(),
+			udmf: HashMap::new(),
 		};
 
 		if self.one_of(&[Token::BraceL]).is_none() {

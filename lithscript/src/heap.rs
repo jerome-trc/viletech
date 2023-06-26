@@ -290,7 +290,7 @@ impl Default for Heap {
 			allocated: 0,
 			traced: vec![traced],
 			untraced: vec![untraced],
-			huge: HashMap::default(),
+			huge: HashMap::new(),
 			garbage_threshold: Arena::CHUNK_LAYOUT.size() * 4,
 		}
 	}

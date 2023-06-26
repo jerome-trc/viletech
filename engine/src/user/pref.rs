@@ -65,7 +65,7 @@ impl PrefPreset {
 		Self {
 			name,
 			namespaces: vec![],
-			map: HashMap::default(),
+			map: HashMap::new(),
 		}
 	}
 
