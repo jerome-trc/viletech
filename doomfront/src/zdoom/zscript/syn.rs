@@ -59,13 +59,13 @@ pub enum Syn {
 	/// `':' ident`
 	InheritSpec,
 	/// Will have one of the following tokens as a child:
-	/// - [`Syn::FalseLit`]
+	/// - [`Syn::KwFalse`]
 	/// - [`Syn::KwFloat`]
 	/// - [`Syn::IntLit`]
 	/// - [`Syn::NameLit`]
 	/// - [`Syn::NullLit`]
 	/// - [`Syn::StringLit`]
-	/// - [`Syn::TrueLit`]
+	/// - [`Syn::KwTrue`]
 	Literal,
 	LocalVar,
 	LocalVarInit,
@@ -210,8 +210,6 @@ pub enum Syn {
 	/// `'while' '(' expr ')' statement`
 	WhileStat,
 	// Tokens: literals ////////////////////////////////////////////////////////
-	/// The exact string `false`.
-	KwFalse,
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
 	/// See [`crate::zdoom::lex::Token::IntLit`].
@@ -220,8 +218,6 @@ pub enum Syn {
 	NameLit,
 	/// The exact string `null`.
 	NullLit,
-	/// The exact string `true`.
-	KwTrue,
 	/// See [`crate::zdoom::lex::Token::StringLit`].
 	StringLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
@@ -255,6 +251,7 @@ pub enum Syn {
 	KwExtend,
 	/// Only a keyword in [`Syn::StateFlow`] elements.
 	KwFail,
+	KwFalse,
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwFast,
 	KwFinal,
@@ -312,6 +309,7 @@ pub enum Syn {
 	KwSwitch,
 	KwReplaces,
 	KwTransient,
+	KwTrue,
 	KwUi,
 	KwUInt,
 	KwUInt16,

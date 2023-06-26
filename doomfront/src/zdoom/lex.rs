@@ -296,10 +296,6 @@ pub enum Token {
 	Eq,
 	#[token("==")]
 	Eq2,
-	#[token("~")]
-	Tilde,
-	#[token("~==")]
-	TildeEq2,
 	#[token("-")]
 	Minus,
 	#[token("--")]
@@ -340,6 +336,10 @@ pub enum Token {
 	Slash,
 	#[token("/=")]
 	SlashEq,
+	#[token("~")]
+	Tilde,
+	#[token("~==")]
+	TildeEq2,
 	#[token("->")]
 	ThinArrow,
 	// Miscellaneous ///////////////////////////////////////////////////////////
