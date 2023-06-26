@@ -162,7 +162,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		}
 
 		match token {
-			Token::StringLit | Token::IntLit | Token::Minus4 | Token::Pound4 => {
+			Token::StringLit | Token::IntLit | Token::Minus2 | Token::Pound4 => {
 				state_def(p);
 			}
 			t @ (Token::KwFail | Token::KwStop | Token::KwLoop | Token::KwWait) => {
@@ -277,7 +277,7 @@ pub fn state_def(p: &mut Parser<Syn>) {
 		is_ident_lax(token)
 			|| matches!(
 				token,
-				Token::StringLit | Token::IntLit | Token::Minus4 | Token::Pound4
+				Token::StringLit | Token::IntLit | Token::Minus2 | Token::Pound4
 			)
 	});
 
@@ -422,8 +422,15 @@ fn state_sprite(p: &mut Parser<Syn>) {
 				p.advance_with_error(Syn::from(next), EXPECTED);
 			}
 		}
-		Token::Pound4 | Token::Minus4 => {
+		Token::Pound4 => {
 			p.advance(Syn::StateSprite);
+		}
+		Token::Minus2 => {
+			if p.nth(1) == Token::Minus2 {
+				p.advance_n(Syn::StateSprite, 2);
+			} else {
+				p.advance_with_error(Syn::from(Token::Minus2), EXPECTED);
+			}
 		}
 		other => {
 			p.advance_with_error(Syn::from(other), EXPECTED);

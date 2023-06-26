@@ -300,8 +300,6 @@ pub enum Token {
 	Minus,
 	#[token("--")]
 	Minus2,
-	#[token("----")]
-	Minus4,
 	#[token("-=")]
 	MinusEq,
 	#[token("(")]

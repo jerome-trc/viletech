@@ -275,8 +275,6 @@ pub enum Syn {
 	Dot2,
 	/// `...`
 	Dot3,
-	/// `----`
-	Minus4,
 	/// `#`
 	Pound,
 	/// `####`
@@ -459,7 +457,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::TildeEq2 => Self::TildeEq2,
 			Token::Minus => Self::Minus,
 			Token::Minus2 => Self::Minus2,
-			Token::Minus4 => Self::Minus4,
 			Token::MinusEq => Self::MinusEq,
 			Token::ParenL => Self::ParenL,
 			Token::ParenR => Self::ParenR,
