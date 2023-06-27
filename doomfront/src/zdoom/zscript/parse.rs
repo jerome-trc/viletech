@@ -11,6 +11,7 @@ use super::Syn;
 
 pub use self::{actor::*, common::*, expr::*, stat::*, structure::*, top::*};
 
+/// Builds a [`Syn::Root`] node.
 pub fn file(p: &mut Parser<Syn>) {
 	let root = p.open();
 
@@ -143,8 +144,8 @@ mod test {
 			};
 
 			let sample = String::from_utf8_lossy(&bytes).to_string();
+			eprintln!("Parsing `{}`...", dir_entry.path().display());
 			let ptree: ParseTree = crate::parse(&sample, file, zdoom::lex::Context::ZSCRIPT_LATEST);
-			eprintln!("Checking `{}`...", dir_entry.path().display());
 			assert_no_errors(&ptree);
 			prettyprint_maybe(ptree.cursor());
 		}

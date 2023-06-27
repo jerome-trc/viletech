@@ -279,7 +279,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 }
 
 fn struct_innard(p: &mut Parser<Syn>) {
-	let token = p.nth(0);
+	let token = p.find(0, |token| !token.is_trivia_or_doc());
 
 	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
 		static_const_stat(p);

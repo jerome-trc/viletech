@@ -80,14 +80,16 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
 	trivia_0plus(p);
 
-	if p.at_if(is_ident_lax) {
+	if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
+		doc_comments(p);
 		variant(p);
 		trivia_0plus(p);
 
 		while !p.at(Token::BraceR) && !p.eof() {
 			if p.eat(Token::Comma, Syn::Comma) {
 				trivia_0plus(p);
-				if p.at_if(is_ident_lax) {
+				if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
+					doc_comments(p);
 					variant(p);
 				}
 			}
