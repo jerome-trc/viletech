@@ -54,8 +54,8 @@ pub type ParseError<L> = parser::Error<L>;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct ParseTree<L: LangExt> {
-	pub root: rowan::GreenNode,
-	pub errors: Vec<ParseError<L>>,
+	pub(crate) root: rowan::GreenNode,
+	pub(crate) errors: Vec<ParseError<L>>,
 }
 
 impl<L: LangExt> ParseTree<L> {
@@ -64,11 +64,31 @@ impl<L: LangExt> ParseTree<L> {
 		Self { root, errors }
 	}
 
+	#[must_use]
+	pub fn root(&self) -> &rowan::GreenNode {
+		&self.root
+	}
+
 	/// Emits a "zipper" tree root that can be used for much more effective traversal
 	/// of the green tree (but which is `!Send` and `!Sync`).
 	#[must_use]
 	pub fn cursor(&self) -> rowan::SyntaxNode<L> {
 		rowan::SyntaxNode::new_root(self.root.clone())
+	}
+
+	#[must_use]
+	pub fn any_errors(&self) -> bool {
+		!self.errors.is_empty()
+	}
+
+	#[must_use]
+	pub fn into_inner(self) -> rowan::GreenNode {
+		self.root
+	}
+
+	#[must_use]
+	pub fn into_errors(self) -> Vec<ParseError<L>> {
+		self.errors
 	}
 }
 

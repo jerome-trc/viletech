@@ -8,8 +8,11 @@
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
 pub mod ast;
+// mod codegen;
 mod heap;
+pub mod issue;
 pub mod library;
+pub mod lir;
 pub mod module;
 pub mod parse;
 pub mod project;

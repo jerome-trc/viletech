@@ -43,7 +43,10 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 			let source = match filesystem(&queued) {
 				Some(s) => s,
 				None => {
-					missing.push(queued);
+					if !missing.contains(&queued) {
+						missing.push(queued);
+					}
+
 					continue;
 				}
 			};
@@ -114,7 +117,12 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 					let source = match filesystem(&queued) {
 						Some(s) => s,
 						None => {
-							missing.lock().push(queued);
+							let mut m = missing.lock();
+
+							if !m.contains(&queued) {
+								m.push(queued);
+							}
+
 							return;
 						}
 					};

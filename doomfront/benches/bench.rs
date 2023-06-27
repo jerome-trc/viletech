@@ -142,7 +142,8 @@ fn zscript(crit: &mut Criterion) {
 					zscript::parse::file,
 					zdoom::lex::Context::ZSCRIPT_LATEST,
 				));
-				assert!(ptree.errors.is_empty());
+
+				assert!(!ptree.any_errors());
 			});
 		});
 	}

@@ -39,13 +39,13 @@ impl Ident {
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum FileRoot {
+pub enum TopLevel {
 	/// Only "inner" annotations are allowed in this position.
 	Annotation(Annotation),
 	FuncDecl(FuncDecl),
 }
 
-impl AstNode for FileRoot {
+impl AstNode for TopLevel {
 	type Language = Syn;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
@@ -74,7 +74,7 @@ impl AstNode for FileRoot {
 	}
 }
 
-impl FileRoot {
+impl TopLevel {
 	#[must_use]
 	pub fn into_func_decl(self) -> Option<FuncDecl> {
 		match self {

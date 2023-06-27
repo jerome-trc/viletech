@@ -36,3 +36,4 @@ parking_lot.workspace = true
 peg.workspace = true
 rayon.workspace = true
 rustc-hash.workspace = true
+smallvec.workspace = true
