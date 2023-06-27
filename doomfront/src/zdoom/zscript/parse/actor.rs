@@ -20,7 +20,17 @@ pub fn flag_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	p.expect(Token::Colon, Syn::Colon, &["`:`"]);
 	trivia_0plus(p);
-	ident_lax(p);
+
+	let name = p.nth(0);
+
+	if is_ident_lax(name) {
+		p.advance(Syn::Ident);
+	} else if name == Token::KwNone {
+		p.advance(Syn::KwNone);
+	} else {
+		p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`none`"])
+	}
+
 	trivia_0plus(p);
 	p.expect(Token::Comma, Syn::Comma, &["`,`"]);
 	trivia_0plus(p);
@@ -42,7 +52,17 @@ pub fn property_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	p.expect(Token::Colon, Syn::Colon, &["`:`"]);
 	trivia_0plus(p);
-	ident_list(p);
+
+	let name = p.nth(0);
+
+	if is_ident_lax(name) {
+		ident_list::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
+	} else if name == Token::KwNone {
+		p.advance(Syn::KwNone);
+	} else {
+		p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`none`"])
+	}
+
 	trivia_0plus(p);
 	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
 	p.close(propdef, Syn::PropertyDef);
@@ -60,12 +80,14 @@ pub fn default_block(p: &mut Parser<Syn>) {
 	while !p.at(Token::BraceR) && !p.eof() {
 		let token = p.nth(0);
 
-		if is_ident(token) {
+		if is_ident_lax(token) {
 			property_setting(p);
 		} else if matches!(token, Token::Plus | Token::Minus) {
 			flag_setting(p);
+		} else if token == Token::Semicolon {
+			p.advance(Syn::Semicolon);
 		} else {
-			p.advance_with_error(Syn::from(token), &["`+` or `-`", "an identifier"]);
+			p.advance_with_error(Syn::from(token), &["`+` or `-`", "an identifier", "`;`"]);
 		}
 
 		trivia_0plus(p);
@@ -88,7 +110,7 @@ fn flag_setting(p: &mut Parser<Syn>) {
 	});
 
 	trivia_0plus(p);
-	ident_chain_lax(p);
+	ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
@@ -100,9 +122,9 @@ fn flag_setting(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::PropertySetting`] node.
 fn property_setting(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_if(is_ident));
+	debug_assert!(p.at_if(is_ident_lax));
 	let prop = p.open();
-	ident_chain_lax(p);
+	ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 	trivia_0plus(p);
 
 	if !p.at(Token::Semicolon) {
@@ -116,15 +138,6 @@ fn property_setting(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::StatesBlock`] node.
 pub fn states_block(p: &mut Parser<Syn>) {
-	#[must_use]
-	fn is_non_stateflow_keyword(token: Token) -> bool {
-		token.is_keyword()
-			&& !matches!(
-				token,
-				Token::KwGoto | Token::KwStop | Token::KwWait | Token::KwLoop | Token::KwFail
-			)
-	}
-
 	p.debug_assert_at(Token::KwStates);
 	let sblock = p.open();
 	p.advance(Syn::KwStates);
@@ -142,14 +155,12 @@ pub fn states_block(p: &mut Parser<Syn>) {
 
 		let token = p.nth(0);
 
-		if is_ident_lax(token) || is_non_stateflow_keyword(token) {
-			let peeked = p.find(0, |token| {
-				!token.is_trivia() && !is_ident_lax(token) && !token.is_keyword()
-			});
+		if is_state_label_part(token) {
+			let peeked = p.find(1, |token| !token.is_trivia() && !is_state_label_part(token));
 
 			if matches!(peeked, Token::Colon | Token::Dot) {
 				let label = p.open();
-				ident_chain_any(p);
+				state_label_ident_chain(p);
 				trivia_0plus(p);
 				p.advance(Syn::Colon);
 				p.close(label, Syn::StateLabel);
@@ -162,7 +173,20 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		}
 
 		match token {
-			Token::StringLit | Token::IntLit | Token::Minus2 | Token::Pound4 => {
+			Token::StringLit => {
+				let peeked = p.find(1, |token| !token.is_trivia());
+
+				if matches!(peeked, Token::Colon | Token::Dot) {
+					let label = p.open();
+					p.advance(Syn::StringLit);
+					trivia_0plus(p);
+					p.advance(Syn::Colon);
+					p.close(label, Syn::StateLabel);
+				} else {
+					state_def(p);
+				}
+			}
+			Token::IntLit | Token::Minus2 | Token::Pound4 => {
 				state_def(p);
 			}
 			t @ (Token::KwFail | Token::KwStop | Token::KwLoop | Token::KwWait) => {
@@ -181,18 +205,18 @@ pub fn states_block(p: &mut Parser<Syn>) {
 					trivia_0plus(p);
 					p.expect(Token::Colon2, Syn::Colon2, &["`::`"]);
 					trivia_0plus(p);
-					ident_chain_lax(p);
+					ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 				} else if p.at_if(is_ident_lax) {
 					let peeked = p.find(0, |token| !token.is_trivia() && !is_ident_lax(token));
 
 					match peeked {
-						Token::Dot => ident_chain(p),
+						Token::Dot => ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p),
 						Token::Colon2 => {
 							p.advance(Syn::Ident);
 							trivia_0plus(p);
 							p.advance(Syn::Colon2);
 							trivia_0plus(p);
-							ident_chain(p);
+							ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 						}
 						Token::Semicolon | Token::Plus | Token::Eof => {
 							p.advance(Syn::Ident);
@@ -238,6 +262,57 @@ pub fn states_block(p: &mut Parser<Syn>) {
 	p.close(sblock, Syn::StatesBlock);
 }
 
+#[must_use]
+fn is_non_stateflow_keyword(token: Token) -> bool {
+	token.is_keyword()
+		&& !matches!(
+			token,
+			Token::KwGoto | Token::KwStop | Token::KwWait | Token::KwLoop | Token::KwFail
+		)
+}
+
+#[must_use]
+fn is_state_label_part(token: Token) -> bool {
+	is_ident::<{ ID_SQKW | ID_TYPES }>(token)
+		|| is_non_stateflow_keyword(token)
+		|| matches!(token, Token::IntLit | Token::NameLit)
+}
+
+/// Builds a [`Syn::IdentChain`] node.
+fn state_label_ident_chain(p: &mut Parser<Syn>) {
+	p.debug_assert_at_if(|token| is_state_label_part(token) || token == Token::Dot);
+
+	let chain = p.open();
+
+	if p.eat(Token::Dot, Syn::Dot) {
+		trivia_0plus(p);
+	}
+
+	p.merge(
+		Syn::Ident,
+		is_state_label_part,
+		Token::is_trivia,
+		Syn::from,
+		&["an identifier"],
+	);
+
+	while p.find(0, |token| !token.is_trivia()) == Token::Dot {
+		trivia_0plus(p);
+		p.advance(Syn::Dot);
+		trivia_0plus(p);
+
+		p.merge(
+			Syn::Ident,
+			is_state_label_part,
+			Token::is_trivia,
+			Syn::from,
+			&["an identifier"],
+		);
+	}
+
+	p.close(chain, Syn::IdentChain);
+}
+
 /// Builds a [`Syn::StatesUsage`] node.
 pub fn states_usage(p: &mut Parser<Syn>) {
 	fn kw(p: &mut Parser<Syn>) {
@@ -260,9 +335,10 @@ pub fn states_usage(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
-		if p.at(Token::Comma) {
+		if p.eat(Token::Comma, Syn::Comma) {
 			trivia_0plus(p);
 			kw(p);
+			trivia_0plus(p);
 		}
 	}
 
@@ -275,6 +351,7 @@ pub fn states_usage(p: &mut Parser<Syn>) {
 pub fn state_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at_if(|token| {
 		is_ident_lax(token)
+			|| token.is_keyword()
 			|| matches!(
 				token,
 				Token::StringLit | Token::IntLit | Token::Minus2 | Token::Pound4
@@ -393,12 +470,19 @@ fn state_sprite(p: &mut Parser<Syn>) {
 		"\"----\"",
 	];
 
-	if is_ident_lax(p.nth(0)) {
+	let token = p.nth(0);
+
+	if is_ident_lax(token) {
 		p.advance(Syn::StateSprite);
 		return;
 	}
 
-	match p.nth(0) {
+	if token.is_keyword() && p.current_slice().len() == 4 {
+		p.advance(Syn::StateSprite);
+		return;
+	}
+
+	match token {
 		Token::StringLit => {
 			p.advance(Syn::StateSprite);
 		}
@@ -408,19 +492,13 @@ fn state_sprite(p: &mut Parser<Syn>) {
 				return;
 			}
 
-			// If dealing with a sprite token like `00DO`, the lexer will find
-			// an integer literal and a `do` keyword. If dealing with `0TNT`,
-			// the lexer will find an integer literal and an identifier. `0000`
-			// is just one integer literal. In any case, there can only be two
-			// tokens in a valid state sprite, so we only need to look 1 ahead.
-			let next = p.nth(1);
-
-			if is_ident_lax(next) || next.is_keyword() {
-				p.advance_n(Syn::StateSprite, 2);
-			} else {
-				p.advance(Syn::IntLit);
-				p.advance_with_error(Syn::from(next), EXPECTED);
-			}
+			p.merge(
+				Syn::StateSprite,
+				|token| is_ident_lax(token) || token.is_keyword() || token == Token::IntLit,
+				Token::is_trivia,
+				Syn::from,
+				EXPECTED,
+			);
 		}
 		Token::Pound4 => {
 			p.advance(Syn::StateSprite);
@@ -441,11 +519,6 @@ fn state_sprite(p: &mut Parser<Syn>) {
 fn state_frames(p: &mut Parser<Syn>) {
 	let token = p.nth(0);
 
-	if is_ident_lax(token) {
-		p.advance(Syn::StateFrames);
-		return;
-	}
-
 	if token == Token::StringLit {
 		p.advance(Syn::StateFrames);
 		return;
@@ -454,17 +527,24 @@ fn state_frames(p: &mut Parser<Syn>) {
 	let mut n = 0;
 
 	while !p.at_if(Token::is_trivia) {
-		if !matches!(
-			p.nth(n),
-			Token::Ident | Token::BracketL | Token::BracketR | Token::Backslash | Token::Pound
-		) {
+		let token = p.nth(n);
+
+		if is_ident_lax(token)
+			|| matches!(
+				token,
+				Token::BracketL | Token::BracketR | Token::Backslash | Token::Pound | Token::Pound4
+			) {
+			n += 1;
+		} else {
 			break;
 		}
-
-		n += 1;
 	}
 
-	p.advance_n(Syn::StateFrames, n);
+	if n > 0 {
+		p.advance_n(Syn::StateFrames, n);
+	} else {
+		p.advance_with_error(Syn::from(p.nth(0)), &["a state frame list"]);
+	}
 }
 
 /// Builds a [`Syn::ActionFunction`] node.
@@ -474,7 +554,7 @@ fn action_function(p: &mut Parser<Syn>) {
 	if p.at(Token::BraceL) {
 		compound_stat(p);
 	} else {
-		ident(p);
+		ident_lax(p);
 		trivia_0plus(p);
 
 		if p.at(Token::ParenL) {
@@ -499,7 +579,7 @@ mod test {
 
 	#[test]
 	fn smoke_state_def() {
-		const SOURCES: &[&str] = &["#### # 1;", "---- # 1;", "\"####\" \"#\" 1;"];
+		const SOURCES: &[&str] = &["#### # 1;", "---- # 1;", "\"####\" \"#\" 1;", "4L4C A 0;"];
 
 		for source in SOURCES {
 			let ptree: ParseTree =

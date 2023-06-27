@@ -90,11 +90,14 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 	let ex = p.open();
 
-	if eat_ident_lax(p) {
+	let token = p.nth(0);
+
+	if is_ident_lax(token) {
+		p.advance(Syn::Ident);
 		return p.close(ex, Syn::IdentExpr);
 	}
 
-	match p.nth(0) {
+	match token {
 		Token::KwSuper => {
 			p.advance(Syn::KwSuper);
 			p.close(ex, Syn::SuperExpr)
@@ -146,7 +149,7 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 				trivia_0plus(p);
 				p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
 				trivia_0plus(p);
-				ident(p);
+				ident::<0>(p);
 				trivia_0plus(p);
 				p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
 				trivia_0plus(p);
@@ -179,34 +182,15 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error, &["`)`", "`,`"])
 			}
 		}
-		Token::Bang => {
-			p.advance(Syn::Bang);
-			recur(p, Token::Bang);
-			p.close(ex, Syn::PrefixExpr)
-		}
-		Token::Minus2 => {
-			p.advance(Syn::Minus2);
-			recur(p, Token::Minus2);
-			p.close(ex, Syn::PrefixExpr)
-		}
-		Token::Plus2 => {
-			p.advance(Syn::Plus2);
-			recur(p, Token::Plus2);
-			p.close(ex, Syn::PrefixExpr)
-		}
-		Token::Minus => {
-			p.advance(Syn::Minus);
-			recur(p, Token::Minus);
-			p.close(ex, Syn::PrefixExpr)
-		}
-		Token::Plus => {
-			p.advance(Syn::Plus);
-			recur(p, Token::Plus);
-			p.close(ex, Syn::PrefixExpr)
-		}
-		Token::Tilde => {
-			p.advance(Syn::Tilde);
-			recur(p, Token::Tilde);
+		t @ (Token::Bang
+		| Token::Minus2
+		| Token::Plus2
+		| Token::Minus
+		| Token::Plus
+		| Token::Tilde) => {
+			p.advance(Syn::from(t));
+			trivia_0plus(p);
+			recur(p, t);
 			p.close(ex, Syn::PrefixExpr)
 		}
 		_ => p.advance_err_and_close(
@@ -428,6 +412,15 @@ mod test {
 	#[test]
 	fn smoke_string_lit_concat() {
 		const SOURCE: &str = r#"n + "interstellar" "domine""nuclear waste processing facility""#;
+
+		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_unary_with_wsp() {
+		const SOURCE: &str = r#"lastenemy && ! lastenemy.tracer"#;
 
 		let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);

@@ -154,8 +154,14 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 
 	let node_syn = match p.nth(0) {
-		Token::KwClass => Syn::ClassExtend,
-		Token::KwStruct => Syn::StructExtend,
+		Token::KwClass => {
+			p.advance(Syn::KwClass);
+			Syn::ClassExtend
+		}
+		Token::KwStruct => {
+			p.advance(Syn::KwStruct);
+			Syn::StructExtend
+		}
 		other => {
 			p.advance_err_and_close(
 				extension,
@@ -222,6 +228,10 @@ fn class_innard(p: &mut Parser<Syn>) {
 			flag_def(p);
 			return;
 		}
+		Token::KwStruct => {
+			struct_def(p);
+			return;
+		}
 		_ => {}
 	}
 
@@ -231,7 +241,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 			Syn::from(p.nth(0)),
 			&[
 				"a type name",
-				"`const` or `enum`",
+				"`const` or `enum` or `struct`",
 				"`property` or `flagdef`",
 				"`play` or `ui` or `virtualscope` or `clearscope`",
 				"`deprecated` or `version`",
@@ -263,7 +273,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 			&[
 				"a type name",
 				"`mixin`",
-				"`const` or `enum`",
+				"`const` or `enum` or `struct`",
 				"`states` or `default`",
 				"`property` or `flagdef`",
 				"`play` or `ui` or `virtualscope` or `clearscope`",
@@ -437,7 +447,10 @@ fn param_list(p: &mut Parser<Syn>) {
 		if p.eat(Token::Comma, Syn::Comma) {
 			trivia_0plus(p);
 
-			if p.at(Token::ParenR) {
+			if p.at(Token::Dot3) {
+				p.advance(Syn::Dot3);
+				break;
+			} else if p.at(Token::ParenR) {
 				p.advance_err_and_close(
 					list,
 					Syn::from(p.nth(0)),
@@ -449,6 +462,7 @@ fn param_list(p: &mut Parser<Syn>) {
 		}
 	}
 
+	trivia_0plus(p);
 	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
 	p.close(list, Syn::ParamList);
 }

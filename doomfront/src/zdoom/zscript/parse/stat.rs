@@ -394,9 +394,9 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 
 	let t = p.find(0, |token| !token.is_trivia());
 
-	if is_ident(t) {
+	if is_ident_lax(t) {
 		trivia_0plus(p);
-		ident(p);
+		ident_lax(p);
 		trivia_0plus(p);
 		p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
 		trivia_0plus(p);
@@ -407,7 +407,7 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
 		trivia_0plus(p);
-		ident(p);
+		ident_lax(p);
 	} else {
 		p.advance_err_and_close(stat, Syn::from(t), Syn::Error, &["`[`", "an identifier"]);
 		return;
@@ -435,7 +435,7 @@ fn declassign_or_local_stat(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		p.advance(Syn::BracketL);
 		trivia_0plus(p);
-		ident_list(p);
+		ident_list::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 		trivia_0plus(p);
 		p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
 		trivia_0plus(p);

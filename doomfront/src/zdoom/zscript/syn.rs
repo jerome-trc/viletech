@@ -283,6 +283,7 @@ pub enum Syn {
 	/// Only a keyword in [`Syn::StateDef`] items.
 	KwNoDelay,
 	/// Only a keyword in [`Syn::StateOffset`] elements.
+	KwNone,
 	KwOffset,
 	KwOut,
 	KwOverride,
@@ -574,6 +575,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwName => Self::KwName,
 			Token::KwNative => Self::KwNative,
 			Token::KwNoDelay => Self::KwNoDelay,
+			Token::KwNone => Self::KwNone,
 			Token::KwNull => Self::NullLit,
 			Token::KwOffset => Self::KwOffset,
 			Token::KwOut => Self::KwOut,
@@ -681,7 +683,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::PoundInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
-			Token::Ident | Token::KwNone => Self::Ident,
+			Token::Ident => Self::Ident,
 			Token::Whitespace => Self::Whitespace,
 			Token::DocComment => Self::DocComment,
 			Token::Comment => Self::Comment,

@@ -277,11 +277,8 @@ pub struct StateLabel(SyntaxNode);
 simple_astnode!(Syn, StateLabel, Syn::StateLabel);
 
 impl StateLabel {
-	#[must_use]
-	pub fn name(&self) -> IdentChain {
-		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::IdentChain);
-		IdentChain(ret)
+	pub fn name(&self) -> ! {
+		unimplemented!()
 	}
 }
 

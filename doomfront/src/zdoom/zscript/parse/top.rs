@@ -19,7 +19,7 @@ pub fn const_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwConst);
 	p.advance(Syn::KwConst);
 	trivia_1plus(p);
-	ident(p);
+	ident_lax(p);
 	trivia_0plus(p);
 	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
 	trivia_0plus(p);
@@ -33,7 +33,7 @@ pub fn const_def(p: &mut Parser<Syn>) {
 pub fn enum_def(p: &mut Parser<Syn>) {
 	fn variant(p: &mut Parser<Syn>) {
 		let var = p.open();
-		ident_lax(p);
+		ident::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 		trivia_0plus(p);
 
 		if p.eat(Token::Eq, Syn::Eq) {

@@ -274,6 +274,33 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.raise(expected);
 	}
 
+	pub fn merge(
+		&mut self,
+		syn: L::Kind,
+		advance_if: fn(L::Token) -> bool,
+		until: fn(L::Token) -> bool,
+		fallback: fn(L::Token) -> L::Kind,
+		expected: &'static [&'static str],
+	) {
+		let mut n = 0;
+
+		while !self.at_if(until) {
+			let token = self.nth(n);
+
+			if advance_if(token) {
+				n += 1;
+			} else {
+				break;
+			}
+		}
+
+		if n > 0 {
+			self.advance_n(syn, n);
+		} else {
+			self.advance_with_error(fallback(self.nth(0)), expected);
+		}
+	}
+
 	/// Looks ahead for the next token (which may be [`L::EOF`]) for which `predicate`
 	/// returns `true`. If `0` is passed, this starts at the current token.
 	#[must_use]
