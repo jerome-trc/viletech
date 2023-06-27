@@ -3,6 +3,7 @@
 mod expr;
 mod item;
 mod lit;
+mod stat;
 
 use doomfront::rowan::{self, ast::AstNode};
 
@@ -10,7 +11,7 @@ use doomfront::simple_astnode;
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, item::*, lit::*};
+pub use self::{expr::*, item::*, lit::*, stat::*};
 
 /// Wraps a token tagged [`Syn::Ident`].
 /// Exists for the convenience of automatically handling raw identifiers.
