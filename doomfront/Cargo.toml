@@ -41,3 +41,4 @@ harness = false
 [dev-dependencies]
 criterion.workspace = true
 walkdir.workspace = true
+zscript_parser = "0.2.0"

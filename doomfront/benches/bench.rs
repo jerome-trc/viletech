@@ -146,6 +146,21 @@ fn zscript(crit: &mut Criterion) {
 				assert!(!ptree.any_errors());
 			});
 		});
+
+		grp.bench_function("Parse, Sample Data, Gutawer's", |bencher| {
+			use zscript_parser::filesystem as zspfs;
+
+			let mut files = zspfs::Files::default();
+			let fndx = files.add(zspfs::File::new(
+				"test.zs".to_string(),
+				sample.as_bytes().to_vec(),
+			));
+
+			bencher.iter(|| {
+				let result = zscript_parser::parser::Parser::new(fndx, &sample).parse();
+				assert!(result.errs.is_empty());
+			});
+		});
 	}
 
 	grp.finish();
