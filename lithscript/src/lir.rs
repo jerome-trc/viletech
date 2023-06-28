@@ -18,20 +18,20 @@ use util::rstring::RString;
 pub enum Name {
 	Var(RString),
 	Func(RString),
-	Module(RString),
+	Container(RString),
 }
 
 impl Name {
 	#[must_use]
 	pub fn as_str(&self) -> &str {
 		match self {
-			Self::Var(string) | Self::Func(string) | Self::Module(string) => string,
+			Self::Var(string) | Self::Func(string) | Self::Container(string) => string,
 		}
 	}
 }
 
 #[derive(Debug, Default)]
-pub struct Module {
+pub struct Container {
 	pub(crate) _symbols: HashMap<Name, Item>,
 }
 

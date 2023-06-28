@@ -14,7 +14,7 @@ There are other, more personal reasons too. Learning how to construct a programm
 
 ZScript uses a filesystem evocative of the C preprocessor; translation units are virtually inlined into a root file using `#include` directives.
 
-Lith instead opted to go the route of making the user define a root directory instead, and recursively including all files in the directory into one module, as long as they are text and use the path extension `.lith`. This has two benefits over ZS:
+Lith instead opted to go the route of making the user define a root directory instead, and recursively including all files in the directory into one library, as long as they are text and use the path extension `.lith`. This has two benefits over ZS:
 
 1. `#include` directives have proven redundant, since the average user keeps all their scripts in one directory and then includes them all anyway. Now this redundancy is gone. If a file needs to be excluded, it can be suffixed with an added extension.
 2. A file extension is enforced, promoting better organizational practises.

@@ -9,14 +9,14 @@ use std::{
 	collections::HashMap,
 	hash::Hasher,
 	marker::PhantomData,
-	mem::MaybeUninit,
 	path::{Path, PathBuf},
 	sync::Arc,
 };
 
-use crate::{issue::Issue, lir, parse, Version};
-use cranelift::prelude::settings::OptLevel;
-use cranelift_jit::{JITBuilder, JITModule};
+use crate::{
+	compile::{self, JitModule},
+	lir, parse, Syn, Version,
+};
 use dashmap::DashMap;
 use doomfront::{
 	rowan::GreenNode,
@@ -25,7 +25,6 @@ use doomfront::{
 };
 use parking_lot::Mutex;
 use rayon::prelude::*;
-use util::rstring::RString;
 use vfs::FileRef;
 
 pub struct FileParseTree<L: LangExt> {
@@ -41,6 +40,7 @@ impl<L: LangExt> std::ops::Deref for FileParseTree<L> {
 	}
 }
 
+/// For parsing from VileTech's [virtual file system](vfs).
 #[derive(Debug)]
 pub struct IncludeTree(HashMap<PathBuf, Result<GreenNode, parse::Error>>);
 
@@ -98,126 +98,114 @@ impl IncludeTree {
 	}
 }
 
-pub struct ModuleBuilder<L: LangExt> {
-	path: PathBuf,
-	root: GreenNode,
-	jit: JITBuilder,
-	phantom: PhantomData<L>,
-}
+/// Thin, strongly-typed wrapper around [`compile::ContainerSource`].
+#[repr(transparent)]
+pub struct ContainerSource<L: LangExt>(compile::ContainerSource, PhantomData<L>);
 
-impl<L: LangExt> ModuleBuilder<L> {
+impl<L: LangExt> ContainerSource<L> {
 	#[must_use]
-	pub fn new(ptree: ParseTree<L>, path: PathBuf, opt: OptLevel) -> Self {
-		assert!(!ptree.any_errors(), "one or more parse errors detected");
+	pub fn new(path: PathBuf, ptree: ParseTree<L>) -> Self {
+		assert!(
+			!ptree.any_errors(),
+			"encountered one or more parsing errors"
+		);
 
-		let o_lvl = match opt {
-			OptLevel::None => "none",
-			OptLevel::Speed => "speed",
-			OptLevel::SpeedAndSize => "speed_and_size",
-		};
-
-		Self {
-			path,
-			root: ptree.into_inner(),
-			jit: JITBuilder::with_flags(
-				&[
-					("use_colocated_libcalls", "false"),
-					("is_pic", "false"),
-					("opt_level", o_lvl),
-				],
-				cranelift_module::default_libcall_names(),
-			)
-			.expect("JIT module builder creation failed"),
-			phantom: PhantomData,
-		}
-	}
-
-	pub fn symbols<I, N>(&mut self, symbols: I)
-	where
-		I: IntoIterator<Item = (N, *const u8)>,
-		N: Into<String>,
-	{
-		self.jit.symbols(symbols);
-	}
-
-	pub fn finish(self) -> ModuleSource<L> {
-		ModuleSource {
-			path: self.path,
-			root: self.root,
-			_jit: Arc::new(JitModule(Mutex::new(MaybeUninit::new(JITModule::new(
-				self.jit,
-			))))),
-			phantom: PhantomData,
-		}
+		Self(
+			compile::ContainerSource {
+				path,
+				root: ptree.into_inner(),
+			},
+			PhantomData,
+		)
 	}
 }
 
-pub struct ModuleSource<L: LangExt> {
-	path: PathBuf,
-	root: GreenNode,
-	_jit: Arc<JitModule>,
-	phantom: PhantomData<L>,
+impl<L: LangExt> std::ops::Deref for ContainerSource<L> {
+	type Target = compile::ContainerSource;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
-pub struct LibSource {
-	// Metadata
-	pub name: String,
-	pub version: Version,
-
-	pub lith: Vec<ModuleSource<crate::Syn>>,
-
+/// A superset of [`compile::LibBuilder`].
+pub struct LibBuilder {
+	pub inner: compile::LibBuilder,
 	// (G)ZDoom
-	pub decorate: Vec<ModuleSource<Decorate>>,
-	pub zscript: Vec<ModuleSource<ZScript>>,
+	pub decorate: Vec<ContainerSource<Decorate>>,
+	pub zscript: Vec<ContainerSource<ZScript>>,
 }
 
-pub struct Precompile {
-	_ir: Vec<(lir::Module, Arc<JitModule>)>,
-	_issues: Vec<Issue>,
+impl LibBuilder {
+	#[must_use]
+	fn finish(self) -> LibSource {
+		let subset = self.inner.finish();
+
+		LibSource {
+			_name: subset.name,
+			_version: subset.version,
+			_jit: subset.jit,
+			// SAFETY: `ContainerSource<L>` is `repr(transparent)` over
+			// `compile::ContainerSource`.
+			lith: unsafe { std::mem::transmute::<_, _>(subset.sources) },
+			decorate: self.decorate,
+			zscript: self.zscript,
+		}
+	}
 }
 
-pub fn compile(sources: impl IntoIterator<Item = LibSource>) {
-	let modules = DashMap::new();
+/// A superset of [`compile::LibSource`].
+pub(crate) struct LibSource {
+	_name: String,
+	_version: Version,
+	_jit: Arc<JitModule>,
+
+	lith: Vec<ContainerSource<Syn>>,
+	decorate: Vec<ContainerSource<Decorate>>,
+	zscript: Vec<ContainerSource<ZScript>>,
+}
+
+pub fn compile(builders: impl IntoIterator<Item = LibBuilder>) {
+	let containers = DashMap::new();
 	let gex = DashMap::new();
-	let sources = sources.into_iter().collect::<Vec<_>>();
 
-	for source in &sources {
-		// Declare modules.
+	for source in builders.into_iter().map(|b| b.finish()) {
+		// Declare containers.
 
-		for mod_lith in &source.lith {
-			modules.insert(mod_lith.path.clone().into(), lir::Module::default());
+		for ctr_lith in &source.lith {
+			containers.insert(ctr_lith.path.clone().into(), lir::Container::default());
 		}
 
-		for mod_dec in &source.decorate {
-			modules.insert(mod_dec.path.clone().into(), lir::Module::default());
+		for ctr_dec in &source.decorate {
+			containers.insert(ctr_dec.path.clone().into(), lir::Container::default());
 		}
 
-		for mod_zs in &source.zscript {
-			modules.insert(mod_zs.path.clone().into(), lir::Module::default());
+		for ctr_zs in &source.zscript {
+			containers.insert(ctr_zs.path.clone().into(), lir::Container::default());
 		}
 
-		// Pass 1: declare module-level types.
+		// Pass 1: declare container-level types.
 
 		[lith::pass1, decorate::pass1, zscript::pass1]
 			.par_iter()
 			.for_each(|function| {
 				let pass1 = Pass1 {
-					src: source,
-					_modules: &modules,
+					src: &source,
+					_containers: &containers,
 				};
 
 				function(pass1);
 			});
 
-		// Pass 2: check module-level type declarations.
+		// Pass 2: check container-level type declarations.
 		// Pass 3: declare functions and data items.
 
 		[lith::pass3, decorate::pass3, zscript::pass3]
 			.par_iter()
 			.for_each(|function| {
 				let pass3 = Pass3 {
-					_src: source,
-					_modules: &modules,
+					_src: &source,
+					_containers: &containers,
 					_gex: &gex,
 				};
 
@@ -233,14 +221,14 @@ pub fn compile(sources: impl IntoIterator<Item = LibSource>) {
 
 pub(self) struct Pass1<'s> {
 	src: &'s LibSource,
-	_modules: &'s DashMap<Arc<Path>, lir::Module>,
+	_containers: &'s DashMap<Arc<Path>, lir::Container>,
 }
 
 // Pass 3 //////////////////////////////////////////////////////////////////////
 
 pub(self) struct Pass3<'s> {
 	_src: &'s LibSource,
-	_modules: &'s DashMap<Arc<Path>, lir::Module>,
+	_containers: &'s DashMap<Arc<Path>, lir::Container>,
 	/// When (G)ZDoom attempts to look up a symbol using just its unqualified name
 	/// ASCII case-insensitively, it goes through the global export table ("GEX").
 	_gex: &'s DashMap<ZName, Vec<(Arc<Path>, lir::Name)>>,
@@ -267,30 +255,17 @@ impl Pass3<'_> {
 /// A counterpart to [`lir::Name`] for (G)ZDoom,
 /// with ASCII case-insensitive equality comparison and hashing.
 #[derive(Debug, Eq)]
-pub(self) enum ZName {
-	Var(RString),
-	Func(RString),
-	Module(RString),
-}
+pub(self) struct ZName(lir::Name);
 
 impl PartialEq for ZName {
 	fn eq(&self, other: &Self) -> bool {
-		match (self, other) {
-			(Self::Var(lhs), Self::Var(rhs)) => lhs.eq_ignore_ascii_case(rhs),
-			(Self::Func(lhs), Self::Func(rhs)) => lhs.eq_ignore_ascii_case(rhs),
-			(Self::Module(lhs), Self::Module(rhs)) => lhs.eq_ignore_ascii_case(rhs),
-			_ => false,
-		}
+		self.0.as_str().eq_ignore_ascii_case(other.0.as_str())
 	}
 }
 
 impl std::hash::Hash for ZName {
 	fn hash<H: Hasher>(&self, state: &mut H) {
-		let string = match self {
-			ZName::Var(string) | ZName::Func(string) | ZName::Module(string) => string,
-		};
-
-		for c in string.chars() {
+		for c in self.0.as_str().chars() {
 			c.to_ascii_lowercase().hash(state);
 		}
 	}
@@ -298,37 +273,12 @@ impl std::hash::Hash for ZName {
 
 impl std::borrow::Borrow<str> for ZName {
 	fn borrow(&self) -> &str {
-		match self {
-			ZName::Var(string) | ZName::Func(string) | ZName::Module(string) => string.as_ref(),
-		}
+		self.0.as_str()
 	}
 }
 
 impl From<&lir::Name> for ZName {
 	fn from(value: &lir::Name) -> Self {
-		match value {
-			lir::Name::Var(string) => Self::Var(string.clone()),
-			lir::Name::Func(string) => Self::Func(string.clone()),
-			lir::Name::Module(string) => Self::Module(string.clone()),
-		}
+		Self(value.clone())
 	}
 }
-
-/// Ensures proper JIT code de-allocation (from behind an [`Arc`]).
-#[derive(Debug)]
-pub(crate) struct JitModule(pub(crate) Mutex<MaybeUninit<JITModule>>);
-
-impl Drop for JitModule {
-	fn drop(&mut self) {
-		unsafe {
-			std::mem::replace(&mut self.0, Mutex::new(MaybeUninit::uninit()))
-				.into_inner()
-				.assume_init()
-				.free_memory();
-		}
-	}
-}
-
-// TODO: Prove that this is safe when codegen machinery is in working order.
-unsafe impl Send for JitModule {}
-unsafe impl Sync for JitModule {}

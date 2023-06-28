@@ -57,7 +57,10 @@ import	"/in/search/of/an/answer.lith" : { necrocosmic , alchemical=>apparatus };
 			.map(|root| ast::TopLevel::cast(root).unwrap());
 
 		let import0 = ast.next().unwrap().into_import().unwrap();
-		assert_eq!(import0.module().unwrap().text(), "\"/digital/nomad.lith\"");
+		assert_eq!(
+			import0.file_path().unwrap().text(),
+			"\"/digital/nomad.lith\""
+		);
 		assert_eq!(import0.all_alias().unwrap().text(), "crawler");
 
 		let import1 = ast.next().unwrap().into_import().unwrap();

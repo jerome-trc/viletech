@@ -9,11 +9,10 @@
 
 pub mod ast;
 // mod codegen;
+pub mod compile;
 mod heap;
 pub mod issue;
-pub mod library;
 pub mod lir;
-pub mod module;
 pub mod parse;
 pub mod project;
 pub mod runtime;
@@ -95,10 +94,10 @@ pub enum Error {
 	/// Tried to parse a SemVer string without any numbers or periods in it.
 	EmptyVersion,
 	SemVerParse(std::num::ParseIntError),
-	/// Tried to retrieve a function from a module and found it, but failed to
+	/// Tried to retrieve a function from a library and found it, but failed to
 	/// pass the generic arguments matching its signature.
 	SignatureMismatch,
-	/// Tried to retrieve a symbol from a module using an identifier that didn't
+	/// Tried to retrieve a symbol from a library using an identifier that didn't
 	/// resolve to anything.
 	UnknownIdent,
 }

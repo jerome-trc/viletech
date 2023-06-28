@@ -158,7 +158,7 @@ impl Catalog {
 	}
 
 	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
-	/// DSLs all go into the same Lith module, regardless of which are present
+	/// DSLs all go into the same Lith library, regardless of which are present
 	/// and which are absent.
 	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<(), ()> {
 		if let Some(lithscript) = &ctx.arts.lithscript {

@@ -70,7 +70,7 @@ pub struct SymbolRef<'p, S: Symbol> {
 
 impl<'p, S: Symbol> SymbolRef<'p, S> {
 	#[must_use]
-	pub(super) fn new(project: &'p Project, arc: &'p Arc<dyn SymbolStore>) -> Self {
+	pub(super) fn _new(project: &'p Project, arc: &'p Arc<dyn SymbolStore>) -> Self {
 		Self {
 			project,
 			arc,

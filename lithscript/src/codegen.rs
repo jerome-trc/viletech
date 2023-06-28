@@ -11,7 +11,7 @@ use smallvec::{smallvec, SmallVec};
 
 use crate::{lir, viletech::JitModule};
 
-pub(crate) fn compile_module(ir: lir::Module, jit: &Arc<JitModule>) {
+pub(crate) fn compile_module(ir: lir::Container, jit: &Arc<JitModule>) {
 	let mut jit_guard = jit.0.lock();
 	let jit = unsafe { jit_guard.assume_init_mut() };
 
@@ -69,7 +69,7 @@ struct CodeGen<'j> {
 	jit: &'j mut JITModule,
 }
 
-fn translate_func(ir: &lir::Module, cg: &mut CodeGen, func: &lir::Function) {
+fn translate_func(ir: &lir::Container, cg: &mut CodeGen, func: &lir::Function) {
 	let mut builder = FunctionBuilder::new(&mut cg.cctx.func, &mut cg.fctx);
 	let entry = builder.create_block();
 
@@ -107,7 +107,7 @@ fn translate_func(ir: &lir::Module, cg: &mut CodeGen, func: &lir::Function) {
 }
 
 struct Translator<'fb> {
-	ir: &'fb lir::Module,
+	ir: &'fb lir::Container,
 	jit: &'fb mut JITModule,
 	builder: FunctionBuilder<'fb>,
 	scopes: Vec<Scope>,

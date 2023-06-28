@@ -92,7 +92,7 @@ simple_astnode!(Syn, ImportStat, Syn::ImportStat);
 
 impl ImportStat {
 	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn module(&self) -> AstResult<SyntaxToken> {
+	pub fn file_path(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
