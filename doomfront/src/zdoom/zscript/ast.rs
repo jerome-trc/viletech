@@ -319,6 +319,65 @@ pub struct LocalVar(pub(self) SyntaxNode);
 
 simple_astnode!(Syn, LocalVar, Syn::LocalVar);
 
+impl LocalVar {
+	pub fn type_ref(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
+	}
+
+	pub fn initializers(&self) -> impl Iterator<Item = LocalVarInit> {
+		self.0.children().filter_map(LocalVarInit::cast)
+	}
+}
+
+/// Wraps a node tagged [`Syn::LocalVarInit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct LocalVarInit(SyntaxNode);
+
+simple_astnode!(Syn, LocalVarInit, Syn::LocalVarInit);
+
+impl LocalVarInit {
+	/// The returned token is always tagged [`Syn::Ident`].
+	pub fn name(&self) -> AstResult<SyntaxToken> {
+		let Some(token) = self.0.first_token() else { return Err(AstError::Missing); };
+
+		match token.kind() {
+			Syn::Ident => Ok(token),
+			_ => Err(AstError::Incorrect),
+		}
+	}
+
+	#[must_use]
+	pub fn array_len(&self) -> Option<ArrayLen> {
+		let Some(node) = self.0.first_child() else { return None; };
+		ArrayLen::cast(node)
+	}
+
+	#[must_use]
+	pub fn single_init(&self) -> Option<Expr> {
+		let Some(last) = self.0.last_token() else { return None; };
+
+		if last.kind() == Syn::BraceR {
+			return None;
+		}
+
+		let Some(node) = self.0.last_child() else { return None; };
+		Expr::cast(node)
+	}
+
+	#[must_use]
+	pub fn braced_inits(&self) -> Option<impl Iterator<Item = Expr>> {
+		let Some(last) = self.0.last_token() else { return None; };
+
+		if last.kind() != Syn::BraceR {
+			return None;
+		}
+
+		Some(self.0.children().filter_map(Expr::cast))
+	}
+}
+
 // VarName /////////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::VarName`].
