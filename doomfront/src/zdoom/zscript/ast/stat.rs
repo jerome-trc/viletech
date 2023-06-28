@@ -2,7 +2,7 @@
 
 use rowan::ast::AstNode;
 
-use crate::simple_astnode;
+use crate::{simple_astnode, AstError, AstResult};
 
 use super::{Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
 
@@ -119,9 +119,9 @@ impl AssignStat {
 			.filter_map(|elem| elem.into_node().map(|node| Expr::cast(node).unwrap()))
 	}
 
-	#[must_use]
-	pub fn assignee(&self) -> Expr {
-		Expr::cast(self.0.children().last().unwrap()).unwrap()
+	pub fn assignee(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing) };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -144,9 +144,9 @@ pub struct CaseStat(SyntaxNode);
 simple_astnode!(Syn, CaseStat, Syn::CaseStat);
 
 impl CaseStat {
-	#[must_use]
-	pub fn expr(&self) -> Expr {
-		Expr::cast(self.0.first_child().unwrap()).unwrap()
+	pub fn expr(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -161,7 +161,7 @@ simple_astnode!(Syn, CompoundStat, Syn::CompoundStat);
 
 impl CompoundStat {
 	pub fn innards(&self) -> impl Iterator<Item = Statement> {
-		self.0.children().map(|node| Statement::cast(node).unwrap())
+		self.0.children().filter_map(Statement::cast)
 	}
 }
 
@@ -221,25 +221,29 @@ impl CondLoopStat {
 		matches!(self.0.kind(), Syn::UntilStat | Syn::DoUntilStat)
 	}
 
-	#[must_use]
-	pub fn condition(&self) -> Expr {
+	pub fn condition(&self) -> AstResult<Expr> {
 		match self.0.kind() {
 			Syn::DoUntilStat | Syn::DoWhileStat => {
-				Expr::cast(self.0.last_child().unwrap()).unwrap()
+				let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+				Expr::cast(node).ok_or(AstError::Incorrect)
 			}
-			Syn::WhileStat | Syn::UntilStat => Expr::cast(self.0.first_child().unwrap()).unwrap(),
+			Syn::WhileStat | Syn::UntilStat => {
+				let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+				Expr::cast(node).ok_or(AstError::Incorrect)
+			}
 			_ => unreachable!(),
 		}
 	}
 
-	#[must_use]
-	pub fn statement(&self) -> Statement {
+	pub fn statement(&self) -> AstResult<Statement> {
 		match self.0.kind() {
 			Syn::DoUntilStat | Syn::DoWhileStat => {
-				Statement::cast(self.0.first_child().unwrap()).unwrap()
+				let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			Syn::WhileStat | Syn::UntilStat => {
-				Statement::cast(self.0.last_child().unwrap()).unwrap()
+				let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			_ => unreachable!(),
 		}
@@ -274,8 +278,9 @@ impl DeclAssignStat {
 	}
 
 	#[must_use]
-	pub fn expr(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn expr(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -331,23 +336,23 @@ pub struct ForStat(SyntaxNode);
 simple_astnode!(Syn, ForStat, Syn::ForStat);
 
 impl ForStat {
-	#[must_use]
-	pub fn init(&self) -> ForLoopInit {
-		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::ForLoopInit);
-		ForLoopInit(ret)
+	pub fn init(&self) -> AstResult<ForLoopInit> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		ForLoopInit::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn condition(&self) -> ForLoopCond {
-		self.0.children().find_map(ForLoopCond::cast).unwrap()
+	pub fn condition(&self) -> AstResult<ForLoopCond> {
+		self.0
+			.children()
+			.find_map(ForLoopCond::cast)
+			.ok_or(AstError::Missing)
 	}
 
-	#[must_use]
-	pub fn iter(&self) -> ForLoopIter {
-		let ret = self.0.last_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::ForLoopIter);
-		ForLoopIter(ret)
+	pub fn iter(&self) -> AstResult<ForLoopIter> {
+		self.0
+			.children()
+			.find_map(ForLoopIter::cast)
+			.ok_or(AstError::Missing)
 	}
 }
 
@@ -395,25 +400,21 @@ pub struct ForEachStat(SyntaxNode);
 simple_astnode!(Syn, ForEachStat, Syn::ForEachStat);
 
 impl ForEachStat {
-	#[must_use]
-	pub fn variable(&self) -> VarName {
+	pub fn variable(&self) -> AstResult<VarName> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		VarName::cast(node).ok_or(AstError::Incorrect)
+	}
+
+	pub fn collection(&self) -> AstResult<Expr> {
 		self.0
-			.first_child()
-			.map(|node| {
-				debug_assert_eq!(node.kind(), Syn::VarName);
-				VarName(node)
-			})
-			.unwrap()
+			.children()
+			.find_map(Expr::cast)
+			.ok_or(AstError::Missing)
 	}
 
-	#[must_use]
-	pub fn collection(&self) -> Expr {
-		self.0.children().find_map(Expr::cast).unwrap()
-	}
-
-	#[must_use]
-	pub fn statement(&self) -> Statement {
-		Statement::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn statement(&self) -> AstResult<Statement> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		Statement::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -446,7 +447,7 @@ simple_astnode!(Syn, ReturnStat, Syn::ReturnStat);
 
 impl ReturnStat {
 	pub fn exprs(&self) -> impl Iterator<Item = Expr> {
-		self.0.children().map(|node| Expr::cast(node).unwrap())
+		self.0.children().filter_map(Expr::cast)
 	}
 }
 
@@ -482,13 +483,13 @@ pub struct SwitchStat(SyntaxNode);
 simple_astnode!(Syn, SwitchStat, Syn::SwitchStat);
 
 impl SwitchStat {
-	#[must_use]
-	pub fn expr(&self) -> Expr {
-		Expr::cast(self.0.first_child().unwrap()).unwrap()
+	pub fn expr(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn statement(&self) -> Statement {
-		Statement::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn statement(&self) -> AstResult<Statement> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		Statement::cast(node).ok_or(AstError::Incorrect)
 	}
 }

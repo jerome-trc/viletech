@@ -2,7 +2,7 @@
 
 use rowan::ast::AstNode;
 
-use crate::simple_astnode;
+use crate::{simple_astnode, AstError, AstResult};
 
 use super::{ArrayLen, IdentChain, Syn, SyntaxNode, SyntaxToken};
 
@@ -119,11 +119,9 @@ pub struct DynArrayType(SyntaxNode);
 simple_astnode!(Syn, DynArrayType, Syn::DynArrayType);
 
 impl DynArrayType {
-	#[must_use]
-	pub fn element_type(&self) -> TypeRef {
-		let ret = self.0.last_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
-		TypeRef(ret)
+	pub fn element_type(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing) };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -164,18 +162,14 @@ pub struct MapType(SyntaxNode);
 simple_astnode!(Syn, MapType, Syn::MapType);
 
 impl MapType {
-	#[must_use]
-	pub fn key_type(&self) -> TypeRef {
-		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
-		TypeRef(ret)
+	pub fn key_type(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn value_type(&self) -> TypeRef {
-		let ret = self.0.last_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
-		TypeRef(ret)
+	pub fn value_type(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -189,18 +183,14 @@ pub struct MapIterType(SyntaxNode);
 simple_astnode!(Syn, MapIterType, Syn::MapIterType);
 
 impl MapIterType {
-	#[must_use]
-	pub fn key_type(&self) -> TypeRef {
-		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
-		TypeRef(ret)
+	pub fn key_type(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn value_type(&self) -> TypeRef {
-		let ret = self.0.last_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
-		TypeRef(ret)
+	pub fn value_type(&self) -> AstResult<TypeRef> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -215,11 +205,13 @@ simple_astnode!(Syn, NativeType, Syn::NativeType);
 
 impl NativeType {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn ident(&self) -> SyntaxToken {
-		let ret = self.0.last_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
-		ret
+	pub fn ident(&self) -> AstResult<SyntaxToken> {
+		let ret = self.0.last_token().ok_or(AstError::Missing)?;
+
+		match ret.kind() {
+			Syn::Ident => Ok(ret),
+			_ => Err(AstError::Incorrect),
+		}
 	}
 }
 
@@ -250,12 +242,11 @@ simple_astnode!(Syn, ReadOnlyType, Syn::ReadOnlyType);
 
 impl ReadOnlyType {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn ident(&self) -> SyntaxToken {
+	pub fn ident(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// i.e. if the inner identifier is preceded with a [`Syn::At`].

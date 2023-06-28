@@ -534,7 +534,7 @@ mod test {
 			crate::parse(SOURCE, version_qual, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		let qual = ast::VersionQual::cast(ptree.cursor()).unwrap();
-		assert_eq!(qual.version().text(), "\"3.7.1\"");
+		assert_eq!(qual.version().unwrap().string().unwrap(), "3.7.1");
 	}
 
 	#[test]
@@ -549,7 +549,7 @@ mod test {
 
 		assert_no_errors(&ptree);
 		let qual = ast::DeprecationQual::cast(ptree.cursor()).unwrap();
-		assert_eq!(qual.version().text(), "\"2.4.0\"");
+		assert_eq!(qual.version().unwrap().string().unwrap(), "2.4.0");
 		assert_eq!(qual.message().unwrap().text(), "\"Don't use this please\"");
 	}
 }

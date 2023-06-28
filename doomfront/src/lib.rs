@@ -52,6 +52,32 @@ pub trait LangExt: rowan::Language {
 pub type GreenElement = rowan::NodeOrToken<rowan::GreenNode, rowan::GreenToken>;
 pub type ParseError<L> = parser::Error<L>;
 
+/// Used when dealing in fallible abstract syntax tree parts.
+///
+/// A resilient parser, by necessity, may produce an incomplete AST; for example,
+/// a function declaration may not have a parameter list, even if the grammar
+/// guarantees one. This type indicates where the language demands something
+/// that was not actually parsed, to differentiate from [`Option`].
+pub type AstResult<T> = Result<T, AstError>;
+
+/// See [`AstResult`].
+#[derive(Debug)]
+pub enum AstError {
+	Missing,
+	Incorrect,
+}
+
+impl std::error::Error for AstError {}
+
+impl std::fmt::Display for AstError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			AstError::Missing => write!(f, "unexpectedly missing syntax element"),
+			AstError::Incorrect => write!(f, "unexpected syntax element"),
+		}
+	}
+}
+
 #[derive(PartialEq, Eq, Hash)]
 pub struct ParseTree<L: LangExt> {
 	pub(crate) root: rowan::GreenNode,

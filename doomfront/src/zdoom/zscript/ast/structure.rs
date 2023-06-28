@@ -2,7 +2,7 @@
 
 use rowan::ast::AstNode;
 
-use crate::simple_astnode;
+use crate::{simple_astnode, AstError, AstResult};
 
 use super::{
 	ActionQual, CompoundStat, ConstDef, DefaultBlock, DeprecationQual, EnumDef, Expr, FlagDef,
@@ -21,11 +21,11 @@ simple_astnode!(Syn, ClassDef, Syn::ClassDef);
 impl ClassDef {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].

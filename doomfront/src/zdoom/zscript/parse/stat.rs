@@ -554,7 +554,12 @@ mod test {
 		prettyprint_maybe(ptree.cursor());
 		let stat = ast::AssignStat::cast(ptree.cursor()).unwrap();
 		assert_eq!(
-			stat.assignee().into_ident_expr().unwrap().token().text(),
+			stat.assignee()
+				.unwrap()
+				.into_ident_expr()
+				.unwrap()
+				.token()
+				.text(),
 			"w"
 		);
 		let mut assigned = stat.assigned();

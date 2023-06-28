@@ -586,7 +586,7 @@ class DevastationFixed {}
 		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		let class = ast::ClassDef::cast(ptree.cursor().first_child().unwrap()).unwrap();
-		assert_eq!(class.name().text(), "DevastationFixed");
+		assert_eq!(class.name().unwrap().text(), "DevastationFixed");
 		let mut docs = class.docs();
 		assert_eq!(docs.next().unwrap().text(), "/// UAC Mines\n");
 		assert_eq!(docs.next().unwrap().text(), "/// Sector 14-3\n");

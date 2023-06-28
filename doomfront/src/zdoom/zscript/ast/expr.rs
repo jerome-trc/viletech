@@ -2,7 +2,7 @@
 
 use rowan::ast::AstNode;
 
-use crate::{simple_astnode, zdoom::ast::LitToken};
+use crate::{simple_astnode, zdoom::ast::LitToken, AstError, AstResult};
 
 use super::super::{Syn, SyntaxNode, SyntaxToken};
 
@@ -461,14 +461,14 @@ impl TernaryExpr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
-	#[must_use]
-	pub fn if_expr(&self) -> Expr {
-		Expr::cast(self.0.children().nth(1).unwrap()).unwrap()
+	pub fn if_expr(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.children().nth(1) else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn else_expr(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn else_expr(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.children().nth(2) else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 

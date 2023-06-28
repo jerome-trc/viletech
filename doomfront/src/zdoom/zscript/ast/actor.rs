@@ -5,6 +5,7 @@ use rowan::ast::AstNode;
 use crate::{
 	simple_astnode,
 	zdoom::{ast::LitToken, decorate::ast::StateUsage},
+	AstError, AstResult,
 };
 
 use super::{ArgList, CompoundStat, Expr, IdentChain, Syn, SyntaxNode, SyntaxToken};
@@ -21,26 +22,26 @@ simple_astnode!(Syn, FlagDef, Syn::FlagDef);
 impl FlagDef {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn backing_field(&self) -> SyntaxToken {
+	pub fn backing_field(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.skip_while(|elem| elem.kind() != Syn::Colon)
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// The returned token is always tagged [`Syn::IntLit`].
 	#[must_use]
-	pub fn bit(&self) -> LitToken<Syn> {
+	pub fn bit(&self) -> AstResult<LitToken<Syn>> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
@@ -48,7 +49,7 @@ impl FlagDef {
 					.filter(|token| token.kind() == Syn::IntLit)
 					.map(LitToken::new)
 			})
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// All returned tokens are tagged [`Syn::DocComment`].
@@ -75,11 +76,11 @@ simple_astnode!(Syn, PropertyDef, Syn::PropertyDef);
 impl PropertyDef {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// Yielded tokens are always tagged [`Syn::Ident`].
@@ -179,9 +180,11 @@ impl FlagSetting {
 		self.0.first_token().unwrap().kind() == Syn::Minus
 	}
 
-	#[must_use]
-	pub fn name(&self) -> IdentChain {
-		IdentChain::cast(self.syntax().last_child().unwrap()).unwrap()
+	pub fn name(&self) -> AstResult<IdentChain> {
+		match self.syntax().last_child() {
+			Some(node) => IdentChain::cast(node).ok_or(AstError::Incorrect),
+			None => Err(AstError::Missing),
+		}
 	}
 }
 
@@ -364,8 +367,7 @@ impl StateDef {
 		}
 	}
 
-	#[must_use]
-	pub fn frames(&self) -> StateFrames {
+	pub fn frames(&self) -> AstResult<StateFrames> {
 		let token = self
 			.0
 			.children_with_tokens()
@@ -373,14 +375,14 @@ impl StateDef {
 				elem.into_token()
 					.filter(|token| token.kind() == Syn::StateFrames)
 			})
-			.unwrap();
+			.ok_or(AstError::Missing)?;
 
 		let text = token.text();
 
 		if text.starts_with('"') && text.ends_with('"') {
-			StateFrames::Quoted(LitToken::new(token))
+			Ok(StateFrames::Quoted(LitToken::new(token)))
 		} else {
-			StateFrames::Unquoted(token)
+			Ok(StateFrames::Unquoted(token))
 		}
 	}
 
@@ -405,14 +407,17 @@ impl StateDef {
 			})
 	}
 
-	#[must_use]
-	pub fn duration(&self) -> Expr {
-		self.0.children().find_map(Expr::cast).unwrap()
+	pub fn duration(&self) -> AstResult<Expr> {
+		self.0
+			.children()
+			.find_map(Expr::cast)
+			.ok_or(AstError::Missing)
 	}
 
 	#[must_use]
 	pub fn action(&self) -> Option<ActionFunction> {
-		ActionFunction::cast(self.0.last_child().unwrap())
+		let Some(node) = self.0.last_child() else { return None; };
+		ActionFunction::cast(node)
 	}
 }
 
@@ -456,14 +461,14 @@ pub struct StateOffset(SyntaxNode);
 simple_astnode!(Syn, StateOffset, Syn::StateOffset);
 
 impl StateOffset {
-	#[must_use]
-	pub fn x(&self) -> Expr {
-		Expr::cast(self.0.first_child().unwrap()).unwrap()
+	pub fn x(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	#[must_use]
-	pub fn y(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn y(&self) -> AstResult<Expr> {
+		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
 

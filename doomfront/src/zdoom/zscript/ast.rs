@@ -10,7 +10,11 @@ use std::num::IntErrorKind;
 
 use rowan::ast::AstNode;
 
-use crate::{simple_astnode, zdoom};
+use crate::{
+	simple_astnode,
+	zdoom::{self, ast::LitToken},
+	AstError, AstResult,
+};
 
 use super::{Syn, SyntaxNode, SyntaxToken};
 
@@ -94,17 +98,18 @@ simple_astnode!(Syn, ConstDef, Syn::ConstDef);
 
 impl ConstDef {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
-	#[must_use]
-	pub fn initializer(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn initializer(&self) -> AstResult<Expr> {
+		match self.0.last_child() {
+			Some(node) => Expr::cast(node).ok_or(AstError::Incorrect),
+			None => Err(AstError::Missing),
+		}
 	}
 
 	/// All returned tokens are tagged [`Syn::DocComment`].
@@ -130,12 +135,11 @@ simple_astnode!(Syn, EnumDef, Syn::EnumDef);
 
 impl EnumDef {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	#[must_use]
@@ -157,10 +161,7 @@ impl EnumDef {
 	}
 
 	pub fn variants(&self) -> impl Iterator<Item = EnumVariant> {
-		self.0.children().map(|node| {
-			debug_assert_eq!(node.kind(), Syn::EnumVariant);
-			EnumVariant(node)
-		})
+		self.0.children().filter_map(EnumVariant::cast)
 	}
 
 	/// All returned tokens are tagged [`Syn::DocComment`].
@@ -206,11 +207,12 @@ simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
 
 impl IncludeDirective {
 	/// The returned token is always tagged [`Syn::StringLit`].
-	#[must_use]
-	pub fn argument(&self) -> SyntaxToken {
-		let ret = self.0.last_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::StringLit);
-		ret
+	pub fn argument(&self) -> AstResult<LitToken<Syn>> {
+		self.0
+			.last_token()
+			.filter(|token| token.kind() == Syn::StringLit)
+			.map(LitToken::new)
+			.ok_or(AstError::Missing)
 	}
 }
 
@@ -224,9 +226,10 @@ pub struct VersionDirective(SyntaxNode);
 simple_astnode!(Syn, VersionDirective, Syn::VersionDirective);
 
 impl VersionDirective {
+	/// [`IntErrorKind::Empty`] is returned if the expected string literal is absent.
 	pub fn version(&self) -> Result<zdoom::Version, IntErrorKind> {
-		let lit = self.0.last_token().unwrap();
-		debug_assert_eq!(lit.kind(), Syn::StringLit);
+		let lit = self.0.last_token().ok_or(IntErrorKind::Empty)?;
+		let Syn::StringLit = lit.kind() else { return Err(IntErrorKind::Empty) };
 		let text = lit.text();
 		let start = text.chars().position(|c| c == '"').unwrap();
 		let end = text.chars().rev().position(|c| c == '"').unwrap();
@@ -265,15 +268,15 @@ simple_astnode!(Syn, DeprecationQual, Syn::DeprecationQual);
 
 impl DeprecationQual {
 	/// The returned token is always tagged [`Syn::StringLit`].
-	#[must_use]
-	pub fn version(&self) -> SyntaxToken {
+	pub fn version(&self) -> AstResult<LitToken<Syn>> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
 					.filter(|token| token.kind() == Syn::StringLit)
+					.map(LitToken::new)
 			})
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	/// The returned token is always tagged [`Syn::StringLit`].
@@ -298,15 +301,12 @@ simple_astnode!(Syn, VersionQual, Syn::VersionQual);
 
 impl VersionQual {
 	/// The returned token is always tagged [`Syn::StringLit`].
-	#[must_use]
-	pub fn version(&self) -> SyntaxToken {
+	pub fn version(&self) -> AstResult<LitToken<Syn>> {
 		self.0
-			.children_with_tokens()
-			.find_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::StringLit)
-			})
-			.unwrap()
+			.last_token()
+			.filter(|token| token.kind() == Syn::StringLit)
+			.map(LitToken::new)
+			.ok_or(AstError::Missing)
 	}
 }
 
