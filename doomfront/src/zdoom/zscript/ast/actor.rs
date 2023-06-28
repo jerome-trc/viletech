@@ -21,7 +21,6 @@ simple_astnode!(Syn, FlagDef, Syn::FlagDef);
 
 impl FlagDef {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
@@ -30,7 +29,6 @@ impl FlagDef {
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn backing_field(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
@@ -40,7 +38,6 @@ impl FlagDef {
 	}
 
 	/// The returned token is always tagged [`Syn::IntLit`].
-	#[must_use]
 	pub fn bit(&self) -> AstResult<LitToken<Syn>> {
 		self.0
 			.children_with_tokens()
@@ -75,7 +72,6 @@ simple_astnode!(Syn, PropertyDef, Syn::PropertyDef);
 
 impl PropertyDef {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()

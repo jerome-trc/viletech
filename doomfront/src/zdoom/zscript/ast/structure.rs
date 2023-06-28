@@ -20,7 +20,6 @@ simple_astnode!(Syn, ClassDef, Syn::ClassDef);
 
 impl ClassDef {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
@@ -227,7 +226,7 @@ pub enum ClassQual {
 	Version(VersionQual),
 }
 
-/// Wraps a node tagged [`Syn::ReplacesCause`].
+/// Wraps a node tagged [`Syn::ReplacesClause`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReplacesClause(SyntaxNode);

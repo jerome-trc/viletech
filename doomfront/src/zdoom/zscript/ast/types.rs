@@ -217,7 +217,7 @@ impl NativeType {
 
 // PrimitiveType ///////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::`].
+/// Wraps a node tagged [`Syn::PrimitiveType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PrimitiveType(SyntaxNode);
@@ -233,7 +233,7 @@ impl PrimitiveType {
 
 // ReadonlyType ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ReadonlyType`].
+/// Wraps a node tagged [`Syn::ReadOnlyType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReadOnlyType(SyntaxNode);

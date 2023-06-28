@@ -301,7 +301,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 	}
 
-	/// Looks ahead for the next token (which may be [`L::EOF`]) for which `predicate`
+	/// Looks ahead for the next token (which may be the EOF) for which `predicate`
 	/// returns `true`. If `0` is passed, this starts at the current token.
 	#[must_use]
 	pub fn find(&self, offset: usize, predicate: fn(L::Token) -> bool) -> L::Token {

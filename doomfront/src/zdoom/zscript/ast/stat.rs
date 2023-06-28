@@ -277,7 +277,6 @@ impl DeclAssignStat {
 			.filter_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 	}
 
-	#[must_use]
 	pub fn expr(&self) -> AstResult<Expr> {
 		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
 		Expr::cast(node).ok_or(AstError::Incorrect)
