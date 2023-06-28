@@ -196,17 +196,122 @@ impl BinExpr {
 	}
 
 	#[must_use]
-	pub fn operator(&self) -> SyntaxToken {
-		self.0
+	pub fn operator(&self) -> (SyntaxToken, BinOp) {
+		let ret0 = self
+			.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| !token.kind().is_trivia()))
-			.unwrap()
+			.unwrap();
+
+		let ret1 = match ret0.kind() {
+			Syn::Ampersand => BinOp::Ampersand,
+			Syn::Ampersand2 => BinOp::Ampersand2,
+			Syn::AmpersandEq => BinOp::AmpersandEq,
+			Syn::AngleL => BinOp::AngleL,
+			Syn::AngleL2 => BinOp::AngleL2,
+			Syn::AngleL2Eq => BinOp::AngleL2Eq,
+			Syn::AngleLAngleREq => BinOp::AngleLAngleREq,
+			Syn::AngleLEq => BinOp::AngleLEq,
+			Syn::AngleR => BinOp::AngleR,
+			Syn::AngleR2 => BinOp::AngleR2,
+			Syn::AngleR2Eq => BinOp::AngleR2Eq,
+			Syn::AngleR3 => BinOp::AngleR3,
+			Syn::AngleR3Eq => BinOp::AngleR3Eq,
+			Syn::AngleREq => BinOp::AngleREq,
+			Syn::Asterisk => BinOp::Asterisk,
+			Syn::Asterisk2 => BinOp::Asterisk2,
+			Syn::AsteriskEq => BinOp::AsteriskEq,
+			Syn::Bang => BinOp::Bang,
+			Syn::BangEq => BinOp::BangEq,
+			Syn::Caret => BinOp::Caret,
+			Syn::CaretEq => BinOp::CaretEq,
+			Syn::Dot => BinOp::Dot,
+			Syn::Dot2 => BinOp::Dot2,
+			Syn::Eq => BinOp::Eq,
+			Syn::Eq2 => BinOp::Eq2,
+			Syn::KwAlignOf => BinOp::KwAlignOf,
+			Syn::KwCross => BinOp::KwCross,
+			Syn::KwDot => BinOp::KwDot,
+			Syn::KwIs => BinOp::KwIs,
+			Syn::KwSizeOf => BinOp::KwSizeOf,
+			Syn::Minus => BinOp::Minus,
+			Syn::Minus2 => BinOp::Minus2,
+			Syn::MinusEq => BinOp::MinusEq,
+			Syn::Percent => BinOp::Percent,
+			Syn::PercentEq => BinOp::PercentEq,
+			Syn::Pipe => BinOp::Pipe,
+			Syn::Pipe2 => BinOp::Pipe2,
+			Syn::PipeEq => BinOp::PipeEq,
+			Syn::Plus => BinOp::Plus,
+			Syn::Plus2 => BinOp::Plus2,
+			Syn::PlusEq => BinOp::PlusEq,
+			Syn::Question => BinOp::Question,
+			Syn::Slash => BinOp::Slash,
+			Syn::SlashEq => BinOp::SlashEq,
+			Syn::Tilde => BinOp::Tilde,
+			Syn::TildeEq2 => BinOp::TildeEq2,
+			_ => unreachable!(),
+		};
+
+		(ret0, ret1)
 	}
 
 	#[must_use]
 	pub fn rhs(&self) -> Expr {
 		Expr::cast(self.0.last_child().unwrap()).unwrap()
 	}
+}
+
+/// See [`BinExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum BinOp {
+	Ampersand,
+	Ampersand2,
+	AmpersandEq,
+	AngleL,
+	AngleL2,
+	AngleL2Eq,
+	AngleLAngleREq,
+	AngleLEq,
+	AngleR,
+	AngleR2,
+	AngleR2Eq,
+	AngleR3,
+	AngleR3Eq,
+	AngleREq,
+	Asterisk,
+	Asterisk2,
+	AsteriskEq,
+	Bang,
+	BangEq,
+	Caret,
+	CaretEq,
+	Dot,
+	Dot2,
+	Eq,
+	Eq2,
+	KwAlignOf,
+	KwCross,
+	KwDot,
+	KwIs,
+	KwSizeOf,
+	Minus,
+	Minus2,
+	MinusEq,
+	Percent,
+	PercentEq,
+	Pipe,
+	Pipe2,
+	PipeEq,
+	Plus,
+	Plus2,
+	PlusEq,
+	Question,
+	Slash,
+	SlashEq,
+	Tilde,
+	TildeEq2,
 }
 
 // CallExpr ////////////////////////////////////////////////////////////////////
@@ -401,9 +506,25 @@ impl PostfixExpr {
 	}
 
 	#[must_use]
-	pub fn operator(&self) -> SyntaxToken {
-		self.0.last_token().unwrap()
+	pub fn operator(&self) -> (SyntaxToken, PostfixOp) {
+		let ret0 = self.0.last_token().unwrap();
+
+		let ret1 = match ret0.kind() {
+			Syn::Minus2 => PostfixOp::Minus2,
+			Syn::Plus2 => PostfixOp::Plus2,
+			_ => unreachable!(),
+		};
+
+		(ret0, ret1)
 	}
+}
+
+/// See [`PostfixExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum PostfixOp {
+	Minus2,
+	Plus2,
 }
 
 // PrefixExpr //////////////////////////////////////////////////////////////////
@@ -422,9 +543,33 @@ impl PrefixExpr {
 	}
 
 	#[must_use]
-	pub fn operator(&self) -> SyntaxToken {
-		self.0.first_token().unwrap()
+	pub fn operator(&self) -> (SyntaxToken, PrefixOp) {
+		let ret0 = self.0.first_token().unwrap();
+
+		let ret1 = match ret0.kind() {
+			Syn::Bang => PrefixOp::Bang,
+			Syn::Minus => PrefixOp::Minus,
+			Syn::Minus2 => PrefixOp::Minus2,
+			Syn::Plus => PrefixOp::Plus,
+			Syn::Plus2 => PrefixOp::Plus2,
+			Syn::Tilde => PrefixOp::Tilde,
+			_ => unreachable!(),
+		};
+
+		(ret0, ret1)
 	}
+}
+
+/// See [`PrefixExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum PrefixOp {
+	Bang,
+	Minus,
+	Minus2,
+	Plus,
+	Plus2,
+	Tilde,
 }
 
 // SuperExpr ///////////////////////////////////////////////////////////////////
