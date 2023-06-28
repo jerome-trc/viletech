@@ -382,6 +382,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	{
 		#[cfg(debug_assertions)]
 		self.assert_at(token);
+		#[cfg(not(debug_assertions))]
+		let _ = token;
 	}
 
 	/// See [`Self::assert_at`].
@@ -407,6 +409,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	{
 		#[cfg(debug_assertions)]
 		self.assert_at_any(choices);
+		#[cfg(not(debug_assertions))]
+		let _ = choices;
 	}
 
 	/// See [`Self::debug_assert_at`].
@@ -432,6 +436,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	{
 		#[cfg(debug_assertions)]
 		self.assert_at_if(predicate);
+		#[cfg(not(debug_assertions))]
+		let _ = predicate;
 	}
 
 	/// Panics if an [opened] subtree was never [closed], or if no sub-trees
