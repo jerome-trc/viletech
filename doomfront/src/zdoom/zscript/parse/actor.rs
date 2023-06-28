@@ -100,7 +100,7 @@ pub fn default_block(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::FlagSetting`] node.
 fn flag_setting(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_any(&[Token::Plus, Token::Minus]));
+	p.debug_assert_at_any(&[Token::Plus, Token::Minus]);
 	let flag = p.open();
 
 	p.advance(match p.nth(0) {
@@ -122,7 +122,7 @@ fn flag_setting(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::PropertySetting`] node.
 fn property_setting(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_if(is_ident_lax));
+	p.debug_assert_at_if(is_ident_lax);
 	let prop = p.open();
 	ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 	trivia_0plus(p);

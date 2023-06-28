@@ -93,9 +93,9 @@ fn flag(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::DefaultDef`] node.
 fn default_def(p: &mut Parser<Syn>) {
-	debug_assert!(p.at(Token::Eq));
+	p.debug_assert_at(Token::Eq);
 	let default = p.open();
-	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	p.advance(Syn::Eq);
 	trivia_0plus(p);
 
 	p.expect_any(

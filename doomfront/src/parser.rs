@@ -360,11 +360,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 
 	/// Use when getting ready to open a new node to validate that the parser
 	/// is currently at the first expected token of that node.
-	pub fn debug_assert_at(&self, token: L::Token)
+	pub fn assert_at(&self, token: L::Token)
 	where
 		L::Token: std::fmt::Debug,
 	{
-		debug_assert!(
+		assert!(
 			self.at(token),
 			"parser expected to be at a `{token:#?}`, but is at `{t:#?}`\r\n\
 			(position {pos}, span {span:?}, slice: `{slice}`)",
@@ -372,15 +372,24 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			pos = self.pos,
 			span = self.current_span(),
 			slice = self.current_slice()
-		);
+		)
 	}
 
-	/// See [`Self::debug_assert_at`].
-	pub fn debug_assert_at_any(&self, choices: &'static [L::Token])
+	/// Debug mode-only counterpart to [`Self::assert_at`].
+	pub fn debug_assert_at(&self, token: L::Token)
 	where
 		L::Token: std::fmt::Debug,
 	{
-		debug_assert!(
+		#[cfg(debug_assertions)]
+		self.assert_at(token);
+	}
+
+	/// See [`Self::assert_at`].
+	pub fn assert_at_any(&self, choices: &'static [L::Token])
+	where
+		L::Token: std::fmt::Debug,
+	{
+		assert!(
 			self.at_any(choices),
 			"parser's current token did not pass a predicate (at `{t:#?}`)\r\n\
 			(position {pos}, span {span:?}, slice: `{slice}`)",
@@ -391,12 +400,21 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		);
 	}
 
-	/// See [`Self::debug_assert_at`].
-	pub fn debug_assert_at_if(&self, predicate: fn(L::Token) -> bool)
+	/// Debug mode-only counterpart to [`Self::assert_at_any`].
+	pub fn debug_assert_at_any(&self, choices: &'static [L::Token])
 	where
 		L::Token: std::fmt::Debug,
 	{
-		debug_assert!(
+		#[cfg(debug_assertions)]
+		self.assert_at_any(choices);
+	}
+
+	/// See [`Self::debug_assert_at`].
+	pub fn assert_at_if(&self, predicate: fn(L::Token) -> bool)
+	where
+		L::Token: std::fmt::Debug,
+	{
+		assert!(
 			predicate(self.nth(0)),
 			"parser's current token did not pass a predicate (at `{t:#?}`)\r\n\
 			(position {pos}, span {span:?}, slice: `{slice}`)",
@@ -405,6 +423,15 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			span = self.current_span(),
 			slice = self.current_slice()
 		);
+	}
+
+	/// Debug mode-only counterpart to [`Self::assert_at_if`].
+	pub fn debug_assert_at_if(&self, predicate: fn(L::Token) -> bool)
+	where
+		L::Token: std::fmt::Debug,
+	{
+		#[cfg(debug_assertions)]
+		self.assert_at_if(predicate);
 	}
 
 	/// Panics if an [opened] subtree was never [closed], or if no sub-trees

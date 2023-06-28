@@ -33,7 +33,7 @@ pub fn file(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::KeyValuePair`] node.
 pub fn key_val_pair(p: &mut Parser<Syn>) {
-	debug_assert!(p.at_if(|t| matches!(t, Token::Ident | Token::Dollar)));
+	p.assert_at_if(|t| matches!(t, Token::Ident | Token::Dollar));
 	let kvp = p.open();
 
 	if p.at(Token::Dollar) {
@@ -69,9 +69,9 @@ fn string(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::GameQualifier`] node.
 fn ifgame(p: &mut Parser<Syn>) {
-	debug_assert!(p.at(Token::Dollar));
+	p.debug_assert_at(Token::Dollar);
 	let ifgame = p.open();
-	p.expect(Token::Dollar, Syn::Dollar, &["`$`"]);
+	p.advance(Syn::Dollar);
 	trivia_0plus(p);
 	p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &["`ifgame`"]);
 	trivia_0plus(p);
@@ -90,9 +90,9 @@ fn ifgame(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::Header`] node.
 pub fn header(p: &mut Parser<Syn>) {
-	debug_assert!(p.at(Token::BracketL));
+	p.assert_at(Token::BracketL);
 	let header = p.open();
-	p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
+	p.advance(Syn::BracketL);
 
 	while !p.at(Token::BracketR) && !p.eof() {
 		if trivia(p) {

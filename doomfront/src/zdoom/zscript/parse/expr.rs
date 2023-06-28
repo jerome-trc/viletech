@@ -248,10 +248,10 @@ pub(super) fn in_first_set(token: Token) -> bool {
 }
 
 /// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
-pub fn arg_list(p: &mut Parser<Syn>) {
+pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();
-	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	p.advance(Syn::ParenL);
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
