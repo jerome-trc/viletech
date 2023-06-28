@@ -44,6 +44,7 @@ pub enum TopLevel {
 	/// Only "inner" annotations are allowed in this position.
 	Annotation(Annotation),
 	FuncDecl(FuncDecl),
+	Import(ImportStat),
 }
 
 impl AstNode for TopLevel {
@@ -53,7 +54,7 @@ impl AstNode for TopLevel {
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::Annotation | Syn::FuncDecl)
+		matches!(kind, Syn::Annotation | Syn::FuncDecl | Syn::ImportStat)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -63,6 +64,7 @@ impl AstNode for TopLevel {
 		match node.kind() {
 			Syn::Annotation => Some(Self::Annotation(Annotation(node))),
 			Syn::FuncDecl => Some(Self::FuncDecl(FuncDecl(node))),
+			Syn::ImportStat => Some(Self::Import(ImportStat(node))),
 			_ => None,
 		}
 	}
@@ -71,6 +73,7 @@ impl AstNode for TopLevel {
 		match self {
 			Self::Annotation(inner) => inner.syntax(),
 			Self::FuncDecl(inner) => inner.syntax(),
+			Self::Import(inner) => inner.syntax(),
 		}
 	}
 }
@@ -80,6 +83,14 @@ impl TopLevel {
 	pub fn into_func_decl(self) -> Option<FuncDecl> {
 		match self {
 			Self::FuncDecl(inner) => Some(inner),
+			_ => None,
+		}
+	}
+
+	#[must_use]
+	pub fn into_import(self) -> Option<ImportStat> {
+		match self {
+			Self::Import(inner) => Some(inner),
 			_ => None,
 		}
 	}

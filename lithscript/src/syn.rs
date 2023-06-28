@@ -32,6 +32,12 @@ pub enum Syn {
 	FuncBody,
 	/// `ident ('.' ident)*`
 	IdentChain,
+	/// `ident ('=>' ident)?`
+	/// or
+	/// `'*' '=>' ident`
+	ImportEntry,
+	/// `'{' importentry* '}'`
+	ImportList,
 	/// `'(' param? (',' param)* ')'`
 	ParamList,
 	/// `ident typespec`
@@ -49,6 +55,8 @@ pub enum Syn {
 	ContinueStat,
 	/// `expr ';'`
 	ExprStat,
+	/// `'import' string ':' (importlist | importentry) ';'`
+	ImportStat,
 	/// `'return' expr? ';'`
 	ReturnStat,
 	// Nodes: expressions //////////////////////////////////////////////////////
@@ -127,6 +135,8 @@ pub enum Syn {
 	KwFunc,
 	#[token("if", priority = 5)]
 	KwIf,
+	#[token("import", priority = 5)]
+	KwImport,
 	#[token("let", priority = 5)]
 	KwLet,
 	#[token("return", priority = 5)]
@@ -222,6 +232,10 @@ pub enum Syn {
 	Slash,
 	#[token("/=")]
 	SlashEq,
+	#[token("=>")]
+	ThickArrow,
+	#[token("->")]
+	ThinArrow,
 	#[token("~")]
 	Tilde,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
@@ -272,6 +286,7 @@ impl Syn {
 			Self::KwFor => "`for`",
 			Self::KwFunc => "`func`",
 			Self::KwIf => "`if`",
+			Self::KwImport => "`import`",
 			Self::KwLet => "`let`",
 			Self::KwReturn => "`return`",
 			Self::KwStatic => "`static`",
@@ -318,6 +333,8 @@ impl Syn {
 			Self::Slash => "`/`",
 			Self::SlashEq => "`/=`",
 			Self::Tilde => "`~`",
+			Self::ThickArrow => "`=>`",
+			Self::ThinArrow => "`->`",
 			// Miscellaneous ///////////////////////////////////////////////////
 			Self::Ident | Self::IdentRaw => "an identifier",
 			Self::Comment => "a comment",

@@ -1,5 +1,7 @@
 //! Functions for parsing Lith source code.
 
+mod item;
+
 use doomfront::{
 	rowan::{GreenNode, GreenToken, SyntaxKind},
 	GreenElement,
@@ -31,7 +33,7 @@ pub fn file(source: &str) -> Result<GreenNode, Error> {
 peg::parser! {
 	pub grammar experimental(source: &'input str) for [(Syn, usize, usize)] {
 		pub(super) rule file() -> GreenNode
-			= items:(trivia() / annotation())* ![_]
+			= items:(trivia() / annotation() / stat_import())* ![_]
 		{
 			GreenNode::new(Syn::FileRoot.into(), items)
 		}
@@ -101,45 +103,108 @@ peg::parser! {
 		// Statements //////////////////////////////////////////////////////////
 
 		rule statement() -> GreenElement
-			= stat:(stat_break() / stat_continue() / stat_expr() / stat_return())
-		{
-			stat.into()
-		}
+			= (
+				stat_break() /
+				stat_continue() /
+				stat_expr() /
+				stat_import() /
+				stat_return()
+			)
 
-		rule stat_break() -> GreenNode
+		rule stat_break() -> GreenElement
 			=	br:token(Syn::KwBreak)
 				t0:trivia()*
 				label:block_label()?
 				t1:trivia()*
 				term:token(Syn::Semicolon)
 		{
-			coalesce_node((br, t0, label, t1, term), Syn::BreakStat)
+			coalesce_node((br, t0, label, t1, term), Syn::BreakStat).into()
 		}
 
-		rule stat_continue() -> GreenNode
+		rule stat_continue() -> GreenElement
 			= 	cont:token(Syn::KwContinue)
 				t0:trivia()*
 				label:block_label()?
 				t1:trivia()*
 				term:token(Syn::Semicolon)
 		{
-			coalesce_node((cont, t0, label, t1, term), Syn::ContinueStat)
+			coalesce_node((cont, t0, label, t1, term), Syn::ContinueStat).into()
 		}
 
-		rule stat_expr() -> GreenNode
+		rule stat_expr() -> GreenElement
 			= e:expr() triv:trivia()* term:token(Syn::Semicolon)
 		{
-			coalesce_node((e, triv, term), Syn::ExprStat)
+			coalesce_node((e, triv, term), Syn::ExprStat).into()
 		}
 
-		rule stat_return() -> GreenNode
+		rule stat_import() -> GreenElement
+			= 	import:token(Syn::KwImport)
+				t0:trivia()*
+				path:token(Syn::StringLit)
+				t1:trivia()*
+				colon:token(Syn::Colon)
+				t2:trivia()*
+				imps:(import_list() / import_entry() / import_all())
+				t3:trivia()*
+				term:token(Syn::Semicolon)
+		{
+			coalesce_node(
+				(import, t0, path, t1, colon, t2, imps, t3, term),
+				Syn::ImportStat
+			).into()
+		}
+
+		rule import_list() -> GreenNode
+			=	bl:token(Syn::BraceL)
+				t0:trivia()*
+				i0:import_entry()
+				successive:import_entry_successive()*
+				t1:trivia()*
+				br:token(Syn::BraceR)
+		{
+			coalesce_node((bl, t0, i0, successive, t1, br), Syn::ImportList)
+		}
+
+		rule import_entry_successive() -> Vec<GreenElement>
+			=	t0:trivia()*
+				comma:token(Syn::Comma)
+				t1:trivia()*
+				entry:import_entry()
+		{
+			coalesce_vec((t0, comma, t1, entry))
+		}
+
+		rule import_entry() -> GreenNode
+			=	name:ident()
+				rename:import_rename()?
+		{
+			coalesce_node((name, rename), Syn::ImportEntry)
+		}
+
+		rule import_rename() -> Vec<GreenElement>
+			=	t0:trivia()*
+				arrow:token(Syn::ThickArrow)
+				t1:trivia()*
+				rename:ident()
+		{
+			coalesce_vec((t0, arrow, t1, rename))
+		}
+
+		rule import_all() -> GreenNode
+			=	aster:token(Syn::Asterisk)
+				rename:import_rename()?
+		{
+			coalesce_node((aster, rename), Syn::ImportEntry)
+		}
+
+		rule stat_return() -> GreenElement
 			= 	ret:token(Syn::KwReturn)
 				t0:trivia()*
 				e:expr()?
 				t1:trivia()*
 				term:token(Syn::Semicolon)
 		{
-			coalesce_node((ret, t0, e, t1, term), Syn::ReturnStat)
+			coalesce_node((ret, t0, e, t1, term), Syn::ReturnStat).into()
 		}
 
 		// Expressions /////////////////////////////////////////////////////////
