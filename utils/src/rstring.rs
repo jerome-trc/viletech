@@ -18,6 +18,41 @@ impl RString {
 	}
 
 	#[must_use]
+	pub fn from_strs(strings: &[&str]) -> Self {
+		/// The type of `0` does not provide [`ExactSizeIterator`], but we
+		/// do in fact know the size, so just provide an impl ourselves.
+		struct Esi<I: Iterator<Item = u8>>(I, usize);
+
+		impl<I: Iterator<Item = u8>> Iterator for Esi<I> {
+			type Item = u8;
+
+			fn next(&mut self) -> Option<Self::Item> {
+				self.0.next()
+			}
+
+			fn size_hint(&self) -> (usize, Option<usize>) {
+				(self.1, Some(self.1))
+			}
+		}
+
+		impl<I: Iterator<Item = u8>> ExactSizeIterator for Esi<I> {
+			fn len(&self) -> usize {
+				self.1
+			}
+		}
+
+		// Yes, it really does take this kind of "language lawyering" to iterate
+		// over every byte in a slice of string slices.
+		let iter = strings.iter().flat_map(|s| s.as_bytes()).copied();
+		let total_len = strings.iter().fold(0, |acc, s| acc + s.len());
+
+		Self(triomphe::ThinArc::from_header_and_iter(
+			(),
+			Esi(iter, total_len),
+		))
+	}
+
+	#[must_use]
 	pub fn as_ptr(&self) -> *const str {
 		unsafe {
 			let s = std::str::from_utf8_unchecked(&self.0.slice);
@@ -50,10 +85,10 @@ impl PartialEq for RString {
 	}
 }
 
-impl PartialEq<str> for RString {
+impl PartialEq<&str> for RString {
 	/// Character-by-character string comparison.
-	fn eq(&self, other: &str) -> bool {
-		std::ops::Deref::deref(self) == other
+	fn eq(&self, other: &&str) -> bool {
+		std::ops::Deref::deref(self) == *other
 	}
 }
 
@@ -84,9 +119,11 @@ impl std::hash::Hash for RString {
 #[test]
 #[cfg(test)]
 fn soundness() {
+	use std::collections::HashSet;
+
 	let rstring = RString::new("hello world");
 
-	assert_eq!(rstring, *"hello world");
+	assert_eq!(rstring, "hello world");
 	assert!(rstring.eq_ignore_ascii_case("HELLO WORLD"));
 
 	unsafe {
@@ -96,4 +133,13 @@ fn soundness() {
 	}
 
 	assert_eq!(rstring.len(), 11);
+
+	let rstring = RString::from_strs(&["/lith/collect", "::TArray::element"]);
+	assert_eq!(rstring.len(), 30);
+	assert_eq!(rstring, "/lith/collect::TArray::element");
+	assert!(rstring.eq_ignore_ascii_case("/LITH/COLLECT::TARRAY::ELEMENT"));
+
+	let mut set = HashSet::new();
+	set.insert(rstring.clone());
+	assert!(set.contains(&rstring));
 }
