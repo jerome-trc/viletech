@@ -143,21 +143,24 @@ impl EnumDef {
 	}
 
 	#[must_use]
-	pub fn type_spec(&self) -> Option<SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.filter_map(|elem| elem.into_token())
-			.find(|token| {
-				matches!(
-					token.kind(),
-					Syn::KwSByte
-						| Syn::KwByte | Syn::KwInt8
-						| Syn::KwUInt8 | Syn::KwShort
-						| Syn::KwUShort | Syn::KwInt16
-						| Syn::KwUInt16 | Syn::KwInt
-						| Syn::KwUInt
-				)
-			})
+	pub fn type_spec(&self) -> Option<(SyntaxToken, EnumType)> {
+		self.0.children_with_tokens().find_map(|elem| {
+			let ret1 = match elem.kind() {
+				Syn::KwSByte => EnumType::KwSByte,
+				Syn::KwByte => EnumType::KwByte,
+				Syn::KwInt8 => EnumType::KwInt8,
+				Syn::KwUInt8 => EnumType::KwUInt8,
+				Syn::KwShort => EnumType::KwShort,
+				Syn::KwUShort => EnumType::KwUShort,
+				Syn::KwInt16 => EnumType::KwInt16,
+				Syn::KwUInt16 => EnumType::KwUInt16,
+				Syn::KwInt => EnumType::KwInt,
+				Syn::KwUInt => EnumType::KwUInt,
+				_ => return None,
+			};
+
+			Some((elem.into_token().unwrap(), ret1))
+		})
 	}
 
 	pub fn variants(&self) -> impl Iterator<Item = EnumVariant> {
@@ -174,6 +177,22 @@ impl EnumDef {
 					.filter(|token| token.kind() == Syn::DocComment)
 			})
 	}
+}
+
+/// See [`EnumDef::type_spec`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum EnumType {
+	KwSByte,
+	KwByte,
+	KwInt8,
+	KwUInt8,
+	KwShort,
+	KwUShort,
+	KwInt16,
+	KwUInt16,
+	KwInt,
+	KwUInt,
 }
 
 /// Wraps a node tagged [`Syn::EnumVariant`].
