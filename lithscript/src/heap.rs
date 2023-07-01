@@ -27,18 +27,13 @@
 #[cfg(target_pointer_width = "32")]
 std::compile_error!("Lith's heap does not yet support 32-bit architectures");
 
-use std::{
-	alloc::Layout, collections::HashMap, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull,
-};
+use std::{alloc::Layout, collections::HashMap, marker::PhantomData, ptr::NonNull};
 
 use bitvec::prelude::BitArray;
 
-use crate::{
-	runtime::Runtime,
-	sym::{Handle, Symbol, TypeHandle},
-};
+use crate::{rti, runtime::Runtime, tsys::TypeDef};
 
-use super::tsys::{self, TypeData, TypeGroup, TypeInfo};
+use super::tsys;
 
 // Public //////////////////////////////////////////////////////////////////////
 
@@ -49,24 +44,8 @@ pub struct Ptr(NonNull<RegionHeader>);
 
 impl Ptr {
 	#[must_use]
-	pub(super) unsafe fn typeinfo<T: TypeData>(&self) -> &Handle<TypeInfo<T>>
-	where
-		TypeInfo<T>: Symbol,
-	{
-		// SAFETY:
-		// - `TypeHandleUnion` always has identical representation to `TypeHandle`.
-		// - The handle's type is asserted to be correct using the union discriminant.
-		// - Pointer aliasing rules are not violated since the handle in a region
-		// header never gets modified.
-		let ptr = self.0.as_ptr();
-
-		assert_eq!(
-			(*ptr).tgrp,
-			T::GROUP,
-			"Mismatch between region type group and requested type group.",
-		);
-
-		std::mem::transmute::<_, _>(&(*ptr).tinfo)
+	pub(super) unsafe fn typeinfo(&self) -> &rti::Handle<TypeDef> {
+		&(*self.0.as_ptr()).typedef
 	}
 
 	#[must_use]
@@ -104,8 +83,8 @@ pub struct TPtr<T>(NonNull<RegionHeader>, PhantomData<T>);
 // Safety is guaranteed when going through these collections' interfaces.
 // It can be dereferenced as a raw pointer, but this is always unsafe, so the
 // responsibility to do so in a thread-safe way falls to the API consumer.
-unsafe impl<T> Send for TPtr<T> {}
-unsafe impl<T> Sync for TPtr<T> {}
+unsafe impl<T: Send> Send for TPtr<T> {}
+unsafe impl<T: Send + Sync> Sync for TPtr<T> {}
 
 #[derive(Debug)]
 pub(super) struct Heap {
@@ -128,51 +107,34 @@ pub(super) struct Heap {
 
 impl Runtime {
 	#[must_use]
-	pub(super) unsafe fn alloc_t(&mut self, tinfo: TypeHandle) -> Ptr {
-		let layout = layout_for(tinfo.layout());
+	pub(super) unsafe fn alloc_t(&mut self, typedef: rti::Handle<TypeDef>) -> Ptr {
+		let layout = layout_for(typedef.layout());
 
 		debug_assert_ne!(
 			layout.size(),
 			0,
 			"Tried to allocate a zero-sized type on the Lith heap: {}",
-			tinfo.name(),
+			typedef.name(),
 		);
 
 		debug_assert_eq!(
 			layout.align(),
 			16,
 			"Lith type is not 16-byte aligned: {}",
-			tinfo.name()
+			typedef.name()
 		);
 
 		debug_assert!(
 			layout.size() < HUGE_SIZE,
 			"Lith type is oversized: {}",
-			tinfo.name(),
+			typedef.name(),
 		);
 
 		let ptr = self.alloc(layout).cast::<RegionHeader>();
 
-		let tgrp = match tinfo {
-			TypeHandle::Void(_) => TypeGroup::Void,
-			TypeHandle::Numeric(_) => TypeGroup::Numeric,
-			TypeHandle::Array(_) => TypeGroup::Array,
-		};
-
 		let header = RegionHeader {
 			flags: RegionFlags::GRAY,
-			tinfo: match tinfo {
-				TypeHandle::Void(tinfo) => TypeHandleUnion {
-					void: ManuallyDrop::new(tinfo),
-				},
-				TypeHandle::Numeric(tinfo) => TypeHandleUnion {
-					num: ManuallyDrop::new(tinfo),
-				},
-				TypeHandle::Array(tinfo) => TypeHandleUnion {
-					array: ManuallyDrop::new(tinfo),
-				},
-			},
-			tgrp,
+			typedef,
 		};
 
 		std::ptr::write(ptr.as_ptr(), header);
@@ -492,9 +454,7 @@ impl ChunkHeader {
 #[repr(align(16))]
 struct RegionHeader {
 	flags: RegionFlags,
-	tinfo: TypeHandleUnion,
-	/// Discriminant for `tinfo`.
-	tgrp: TypeGroup,
+	typedef: rti::Handle<TypeDef>,
 }
 
 impl RegionHeader {
@@ -507,31 +467,6 @@ impl RegionHeader {
 
 		l.size()
 	};
-}
-
-impl std::fmt::Debug for RegionHeader {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("RegionHeader")
-			.field("flags", &self.flags)
-			.field("tinfo", unsafe {
-				match self.tgrp {
-					TypeGroup::Void => &self.tinfo.void,
-					TypeGroup::Numeric => &self.tinfo.num,
-					TypeGroup::Array => &self.tinfo.array,
-				}
-			})
-			.field("tgrp", &self.tgrp)
-			.finish()
-	}
-}
-
-/// Keep the type pointer in a union separate from its discriminant; using a
-/// [`TypeHandle`] would cause [`RegionHeader`] to go up to 4 heap words.
-/// TODO: Lith' destructor/drop semantics so refcounts are properly decremented.
-union TypeHandleUnion {
-	void: ManuallyDrop<Handle<TypeInfo<()>>>,
-	num: ManuallyDrop<Handle<TypeInfo<tsys::Numeric>>>,
-	array: ManuallyDrop<Handle<TypeInfo<tsys::Array>>>,
 }
 
 /// Not inlined into a huge allocation; kept in the [`Heap::huge`] hash table.

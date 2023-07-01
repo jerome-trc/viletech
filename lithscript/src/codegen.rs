@@ -1,55 +1,92 @@
 //! Translating [LIR](crate::lir) to Cranelift Intermediate Format.
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::VecDeque, ops::Deref};
 
 use cranelift::prelude::{
-	types, FunctionBuilder, FunctionBuilderContext, InstBuilder, Signature, Value, Variable,
+	types, FunctionBuilder, FunctionBuilderContext, InstBuilder, Signature, Type as CraneliftType,
+	Value, Variable,
 };
 use cranelift_jit::JITModule;
-use cranelift_module::{DataDescription, Module, Linkage};
+use cranelift_module::{DataDescription, Linkage, Module};
 use smallvec::{smallvec, SmallVec};
 
-use crate::{lir, viletech::JitModule};
+use crate::{
+	compile::{Precompile, QName, SymbolTable},
+	lir::{self, IxExpr},
+	project::Library,
+	rti,
+	tsys::{FuncType, NumType, TypeDef, TypeHandle, TypeInfo},
+	Project,
+};
 
-pub(crate) fn compile_module(ir: lir::Container, jit: &Arc<JitModule>) {
-	let mut jit_guard = jit.0.lock();
-	let jit = unsafe { jit_guard.assume_init_mut() };
+type ValVec = SmallVec<[Value; 1]>;
+
+/// Translates a compilation order's [LIR](crate::lir) to Cranelift Intermediate Format.
+#[must_use]
+pub fn compile(mut precomps: VecDeque<Precompile>, symtab: SymbolTable) -> Project {
+	let mut ret = Project::default();
+
+	for (i, precomp) in precomps.drain(..).rev().enumerate() {
+		assert!(!precomp.any_errors());
+		ret.libs.push(compile_module(i, precomp, &symtab));
+	}
+
+	// TODO: Populate project's RTI table. Probably has to happen deeper in this code.
+
+	ret
+}
+
+#[must_use]
+fn compile_module(ix_lib: usize, precomp: Precompile, symtab: &SymbolTable) -> Library {
+	let mut jit_g = precomp.module.0.lock();
+	// SAFETY: `JitModule` gets initialized upon construction
+	// and is untouched until being passed here.
+	let jit = unsafe { jit_g.assume_init_mut() };
 
 	let mut cg = CodeGen {
+		symtab,
 		fctx: FunctionBuilderContext::new(),
 		cctx: jit.make_context(),
-		// SAFETY: `JitModule` gets initialized upon construction and is untouched
-		// until being passed here.
 		jit,
 	};
 
-	for (name, sym) in &ir.symbols {
-		let lir::Name::Var(string) = name else { unreachable!() };
-		let lir::Item::Data(data) = sym else { continue; };
+	for kvp in &symtab.0 {
+		if kvp.value().ix_lib != ix_lib {
+			continue;
+		}
+
+		let sym_g = kvp.value().load();
+		let lir::Symbol::Data(data) = sym_g.as_ref() else { continue; };
+		let QName::Value(string) = kvp.key() else { unreachable!() };
 
 		let id = cg
 			.jit
-			.declare_data(string, data.linkage, data.mutable, false)
+			.declare_data(string.deref(), data.linkage, data.mutable, false)
 			.expect("JIT data declaration failed");
 
 		let mut desc = DataDescription::new();
 
-		desc.define(unimplemented!(
-			"compile-time evaluation not yet implemented"
-		));
+		desc.define(Box::new([/* TODO */]));
 
-		cg.jit.define_data(id, &desc);
+		cg.jit
+			.define_data(id, &desc)
+			.expect("JIT data definition failed");
 	}
 
-	for (name, sym) in &ir.symbols {
-		let lir::Name::Func(string) = name else { unreachable!() };
-		let lir::Item::Function(func) = sym else { continue; };
+	for kvp in &symtab.0 {
+		if kvp.value().ix_lib != ix_lib {
+			continue;
+		}
 
-		translate_func(&ir, &mut cg, func);
+		let sym_g = kvp.value().load();
+		let lir::Symbol::Function(func) = sym_g.as_ref() else { continue; };
+		let QName::Value(string) = kvp.key() else { unreachable!() };
+
+		cg.translate_func(func);
 
 		let id = cg
 			.jit
-			.declare_function(string, func.linkage, &cg.cctx.func.signature)
+			.declare_function(string.deref(), func.linkage, &cg.cctx.func.signature)
 			.expect("JIT function declaration failed");
 		cg.jit
 			.define_function(id, &mut cg.cctx)
@@ -61,296 +98,375 @@ pub(crate) fn compile_module(ir: lir::Container, jit: &Arc<JitModule>) {
 	cg.jit
 		.finalize_definitions()
 		.expect("JIT definition finalization failed");
+
+	drop(jit_g);
+
+	Library {
+		name: precomp.lib_name,
+		version: precomp.lib_vers,
+		module: precomp.module,
+	}
 }
 
 struct CodeGen<'j> {
+	symtab: &'j SymbolTable,
 	fctx: FunctionBuilderContext,
 	cctx: cranelift::codegen::Context,
 	jit: &'j mut JITModule,
 }
 
-fn translate_func(ir: &lir::Container, cg: &mut CodeGen, func: &lir::Function) {
-	let mut builder = FunctionBuilder::new(&mut cg.cctx.func, &mut cg.fctx);
-	let entry = builder.create_block();
+impl CodeGen<'_> {
+	fn translate_func(&mut self, func: &lir::Function) {
+		let mut builder = FunctionBuilder::new(&mut self.cctx.func, &mut self.fctx);
+		let entry = builder.create_block();
 
-	builder.append_block_params_for_function_params(entry);
-	builder.switch_to_block(entry);
-	builder.seal_block(entry);
+		builder.append_block_params_for_function_params(entry);
+		builder.switch_to_block(entry);
+		builder.seal_block(entry);
 
-	let mut tlat = Translator {
-		ir,
-		jit: &mut cg.jit,
-		builder,
-		scopes: vec![],
-	};
+		let mut tlat = Translator {
+			symtab: self.symtab,
+			jit: self.jit,
+			func,
+			builder,
+			vars: vec![],
+		};
 
-	tlat.builder.func.signature = tlat.signature_for(func);
+		tlat.builder.func.signature = tlat.signature_for_func(func);
 
-	for (i, param) in func.params.iter().enumerate() {
-		let vals = tlat.builder.block_params(entry);
-		let var = todo!();
+		for (_, _) in func.params.iter().enumerate() {
+			let _ = tlat.builder.block_params(entry);
+		}
+
+		tlat.declare_locals(&func.body);
+		let mut ret = smallvec![];
+
+		for expr in &func.body.0 {
+			ret = tlat.expr(expr);
+		}
+
+		tlat.builder.ins().return_(&ret);
+		tlat.builder.finalize();
 	}
-
-	tlat.decl_locals(&func.body);
-
-	for expr in &func.body.statements {
-		tlat.expr(expr);
-	}
-
-	let ret = match &func.body.ret {
-		Some(e) => tlat.expr(e),
-		None => smallvec![],
-	};
-
-	tlat.builder.ins().return_(&ret);
-	tlat.builder.finalize();
 }
 
 struct Translator<'fb> {
-	ir: &'fb lir::Container,
+	symtab: &'fb SymbolTable,
 	jit: &'fb mut JITModule,
+	func: &'fb lir::Function,
 	builder: FunctionBuilder<'fb>,
-	scopes: Vec<Scope>,
-}
-
-#[derive(Debug)]
-struct Scope {
-	vars: HashMap<String, Variable>,
+	vars: Vec<Variable>,
 }
 
 impl Translator<'_> {
-	fn decl_locals(&mut self, block: &lir::Block) {
-		todo!()
+	fn declare_locals(&mut self, block: &lir::Block) {
+		for stat in &block.0 {
+			if let lir::Expr::Local(types) = stat {
+				for t in types {
+					let var = Variable::from_u32(self.vars.len() as u32);
+					self.vars.push(var);
+					self.builder.declare_var(var, *t);
+				}
+			}
+		}
 	}
 
 	#[must_use]
-	fn expr(&mut self, expr: &lir::Expr) -> SmallVec<[Value; 1]> {
+	fn expr(&mut self, expr: &lir::Expr) -> ValVec {
 		match expr {
-			lir::Expr::Aggregate(exprs) => {
-				exprs
-					.iter()
-					.map(|e| self.expr(e))
-					.flatten()
-					.collect()
-			}
-			lir::Expr::Assign { expr } => {
-				todo!();
+			lir::Expr::Aggregate(exprs) => exprs
+				.iter()
+				.copied()
+				.flat_map(|e| self.expr(&self.func.body[e]))
+				.collect(),
+			lir::Expr::Assign { var, expr } => {
+				let val = self.expr(&self.func.body[*expr]);
+				assert_eq!(val.len(), 1);
+				self.builder.def_var(self.vars[*var], val[0]);
 				smallvec![]
 			}
-			lir::Expr::Bin { lhs, op, rhs } => {
-				let x = self.expr(lhs);
-				let y = self.expr(rhs);
+			lir::Expr::Bin { lhs, op, rhs } => self.translate_bin_expr(*lhs, *op, *rhs),
+			lir::Expr::Block(block) => {
+				let mut ret = smallvec![];
 
-				assert_eq!(x.len(), 1);
-				assert_eq!(y.len(), 1);
-
-				match op {
-					lir::BinOp::BAnd => smallvec![self.builder.ins().band(x[0], y[0])],
-					lir::BinOp::BAndNot => smallvec![self.builder.ins().band_not(x[0], y[0])],
-					lir::BinOp::BOr => smallvec![self.builder.ins().bor(x[0], y[0])],
-					lir::BinOp::BOrNot => smallvec![self.builder.ins().bor_not(x[0], y[0])],
-					lir::BinOp::BXor => smallvec![self.builder.ins().bxor(x[0], y[0])],
-					lir::BinOp::BXorNot => smallvec![self.builder.ins().bxor_not(x[0], y[0])],
-					lir::BinOp::FAdd => smallvec![self.builder.ins().fadd(x[0], y[0])],
-					lir::BinOp::FCmp(cc) => smallvec![self.builder.ins().fcmp(*cc, x[0], y[0])],
-					lir::BinOp::FCpySign => smallvec![self.builder.ins().fcopysign(x[0], y[0])],
-					lir::BinOp::FDiv => smallvec![self.builder.ins().fdiv(x[0], y[0])],
-					lir::BinOp::FMax => smallvec![self.builder.ins().fmax(x[0], y[0])],
-					lir::BinOp::FMin => smallvec![self.builder.ins().fmin(x[0], y[0])],
-					lir::BinOp::FMul => smallvec![self.builder.ins().fmul(x[0], y[0])],
-					lir::BinOp::FSub => smallvec![self.builder.ins().fsub(x[0], y[0])],
-					lir::BinOp::IAdd => smallvec![self.builder.ins().iadd(x[0], y[0])],
-					lir::BinOp::ICmp(cc) => smallvec![self.builder.ins().icmp(*cc, x[0], y[0])],
-					lir::BinOp::IConcat => smallvec![self.builder.ins().iconcat(x[0], y[0])],
-					lir::BinOp::IShl => smallvec![self.builder.ins().ishl(x[0], y[0])],
-					lir::BinOp::ISub => smallvec![self.builder.ins().isub(x[0], y[0])],
-					lir::BinOp::SAddSat => smallvec![self.builder.ins().sadd_sat(x[0], y[0])],
-					lir::BinOp::SAddOf => {
-						let (ret, _flowed) = self.builder.ins().sadd_overflow(x[0], y[0]);
-						smallvec![ret]
-					},
-					lir::BinOp::SDiv => smallvec![self.builder.ins().sdiv(x[0], y[0])],
-					lir::BinOp::SRem => smallvec![self.builder.ins().srem(x[0], y[0])],
-					lir::BinOp::SShr => smallvec![self.builder.ins().sshr(x[0], y[0])],
-					lir::BinOp::UAddSat => smallvec![self.builder.ins().uadd_sat(x[0], y[0])],
-					lir::BinOp::UAddOf => {
-						let (ret, _flowed) = self.builder.ins().uadd_overflow(x[0], y[0]);
-						smallvec![ret]
-					},
-					lir::BinOp::UDiv => smallvec![self.builder.ins().udiv(x[0], y[0])],
-					lir::BinOp::URem => smallvec![self.builder.ins().urem(x[0], y[0])],
-					lir::BinOp::UShr => smallvec![self.builder.ins().ushr(x[0], y[0])],
+				for expr in &block.0 {
+					ret = self.expr(expr);
 				}
+
+				ret
 			}
-			lir::Expr::Call { name, args } => {
-				let item = self.ir.symbols.get(name).unwrap();
-				let lir::Item::Function(func) = item else { unreachable!() };
-				let sig = self.signature_for(func);
-
-				let args = args
-					.iter().map(|arg| self.expr(arg))
-					.flatten()
-					.collect::<SmallVec<[Value; 4]>>();
-
-				let callee = self.jit.declare_function(name.as_str(), Linkage::Import, &sig).expect("failed to declare function for call");
-				let local_callee = self.jit.declare_func_in_func(callee, self.builder.func);
-				let inst = self.builder.ins().call(local_callee, &args);
-
-				self.builder
-					.inst_results(inst)
-					.into_iter()
-					.map(|v| *v)
-					.collect()
-			}
-			lir::Expr::CallIndirect { type_ix, lhs, args } => {
-				let sig = todo!();
-
-				let callee = self.expr(lhs);
-				assert_eq!(callee.len(), 1);
-
-				let args = args
-					.iter()
-					.map(|arg| self.expr(arg))
-					.flatten()
-					.collect::<Vec<_>>();
-
-				let inst = self.builder.ins().call_indirect(sig, callee[0], &args);
-
-				self.builder
-					.inst_results(inst)
-					.into_iter()
-					.map(|v| *v)
-					.collect()
-			}
+			lir::Expr::Call { name, args } => self.translate_call(name, args),
+			lir::Expr::CallIndirect(call) => self.translate_call_indirect(call),
 			lir::Expr::Continue => {
 				let cur = self.builder.current_block().unwrap();
-				let inst = self.builder.ins().jump(cur, &[]);
-
-				self.builder
-					.inst_results(inst)
-					.into_iter()
-					.map(|v| *v)
-					.collect()
-			}
-			lir::Expr::IfElse {
-				condition,
-				if_true: if_then,
-				if_false: else_then,
-			} => {
-				let cond = self.expr(condition);
-				assert_eq!(cond.len(), 1);
-
-				let blk_true = self.builder.create_block();
-				let blk_false = self.builder.create_block();
-				let blk_merge = self.builder.create_block();
-
-				let inst = self
-					.builder
-					.ins()
-					.brif(cond[0], blk_true, &[], blk_false, &[]);
-
-				self.builder.ins().jump(blk_merge, &[todo!()]);
-				self.builder.switch_to_block(blk_merge);
-				self.builder.seal_block(blk_merge);
-
-				let phi = self.builder.block_params(blk_merge);
-
-				phi
-					.into_iter()
-					.map(|v| *v)
-					.collect()
-			}
-			lir::Expr::Immediate(imm) => match imm {
-				lir::Immediate::I8(int) => {
-					smallvec![self.builder.ins().iconst(types::I8, *int as i64)]
-				}
-				lir::Immediate::I16(int) => {
-					smallvec![self.builder.ins().iconst(types::I16, *int as i64)]
-				}
-				lir::Immediate::I32(int) => {
-					smallvec![self.builder.ins().iconst(types::I32, *int as i64)]
-				}
-				lir::Immediate::I64(int) => {
-					smallvec![self.builder.ins().iconst(types::I64, *int as i64)]
-				}
-				lir::Immediate::F32(float) => smallvec![self.builder.ins().f32const(*float)],
-				lir::Immediate::F64(float) => smallvec![self.builder.ins().f64const(*float)],
-			},
-			lir::Expr::Local => smallvec![],
-			lir::Expr::Loop(block) => {
-				let blk = self.builder.create_block();
-				let _ = self.builder.ins().jump(blk, &[]);
-				self.builder.switch_to_block(blk);
-
-				for expr in &block.statements {
-					let _ = self.expr(expr);
-				}
-
-				self.builder.ins().jump(blk, &[]);
-
+				let _ = self.builder.ins().jump(cur, &[]);
 				smallvec![]
 			}
-			lir::Expr::Unary { operand, op } => {
-				let o = self.expr(operand);
-
-				assert_eq!(o.len(), 1);
-
-				match op {
-					lir::UnaryOp::BNot => smallvec![self.builder.ins().bnot(o[0])],
-					lir::UnaryOp::Ceil => smallvec![self.builder.ins().ceil(o[0])],
-					lir::UnaryOp::Cls => smallvec![self.builder.ins().cls(o[0])],
-					lir::UnaryOp::Clz => smallvec![self.builder.ins().clz(o[0])],
-					lir::UnaryOp::Ctz => smallvec![self.builder.ins().ctz(o[0])],
-					lir::UnaryOp::FAbs => smallvec![self.builder.ins().fabs(o[0])],
-					lir::UnaryOp::F32FromSInt => smallvec![self.builder.ins().fcvt_from_sint(types::F32, o[0])],
-					lir::UnaryOp::F32FromUInt => smallvec![self.builder.ins().fcvt_from_uint(types::F32, o[0])],
-					lir::UnaryOp::F64FromSInt => smallvec![self.builder.ins().fcvt_from_sint(types::F64, o[0])],
-					lir::UnaryOp::F64FromUInt => smallvec![self.builder.ins().fcvt_from_uint(types::F64, o[0])],
-					lir::UnaryOp::FToSInt(ty) => {
-						debug_assert!(ty.is_int());
-						smallvec![self.builder.ins().fcvt_to_sint(*ty, o[0])]
-					},
-					lir::UnaryOp::FToUInt(ty) => {
-						debug_assert!(ty.is_int());
-						smallvec![self.builder.ins().fcvt_to_uint(*ty, o[0])]
-					},
-					lir::UnaryOp::FDemote(ty) => {
-						debug_assert!(ty.is_float());
-						smallvec![self.builder.ins().fdemote(*ty, o[0])]
-					},
-					lir::UnaryOp::Floor => smallvec![self.builder.ins().floor(o[0])],
-					lir::UnaryOp::FNeg => smallvec![self.builder.ins().fneg(o[0])],
-					lir::UnaryOp::FPromote(ty) => {
-						debug_assert!(ty.is_float());
-						smallvec![self.builder.ins().fpromote(*ty, o[0])]
-					},
-					lir::UnaryOp::INeg => smallvec![self.builder.ins().ineg(o[0])],
-					lir::UnaryOp::ISplit => {
-						let (lo, hi) = self.builder.ins().isplit(o[0]);
-						smallvec![lo, hi]
-					},
-					lir::UnaryOp::Nearest => smallvec![self.builder.ins().nearest(o[0])],
-					lir::UnaryOp::PopCnt => smallvec![self.builder.ins().popcnt(o[0])],
-					lir::UnaryOp::SExtend(ty) => {
-						debug_assert!(ty.is_int());
-						smallvec![self.builder.ins().sextend(*ty, o[0])]
-					},
-					lir::UnaryOp::Sqrt => smallvec![self.builder.ins().sqrt(o[0])],
-					lir::UnaryOp::Trunc => smallvec![self.builder.ins().trunc(o[0])],
-				}
+			lir::Expr::IfElse(ie_e) => self.translate_if_else(ie_e),
+			lir::Expr::Immediate(imm) => smallvec![self.translate_immediate(*imm)],
+			lir::Expr::Local(_) => smallvec![],
+			lir::Expr::Loop(block) => {
+				self.translate_loop(block);
+				smallvec![]
 			}
-			lir::Expr::Var(names) => {
-				names.iter().map(|name| {
-					let lir::Name::Var(n) = name else { unreachable!() };
-					self.builder.use_var(todo!())
-				}).collect()
-			}
+			lir::Expr::Unary { operand, op } => self.translate_unary_expr(*operand, *op),
 			_ => unimplemented!(),
 		}
 	}
 
 	#[must_use]
-	fn signature_for(&self, func: &lir::Function) -> Signature {
-		todo!()
+	fn translate_bin_expr(&mut self, lhs: IxExpr, op: lir::BinOp, rhs: IxExpr) -> ValVec {
+		let x = self.expr(&self.func.body[lhs]);
+		let y = self.expr(&self.func.body[rhs]);
+
+		assert_eq!(x.len(), 1);
+		assert_eq!(y.len(), 1);
+
+		match op {
+			lir::BinOp::BAnd => [self.builder.ins().band(x[0], y[0])].into(),
+			lir::BinOp::BAndNot => [self.builder.ins().band_not(x[0], y[0])].into(),
+			lir::BinOp::BOr => [self.builder.ins().bor(x[0], y[0])].into(),
+			lir::BinOp::BOrNot => [self.builder.ins().bor_not(x[0], y[0])].into(),
+			lir::BinOp::BXor => [self.builder.ins().bxor(x[0], y[0])].into(),
+			lir::BinOp::BXorNot => [self.builder.ins().bxor_not(x[0], y[0])].into(),
+			lir::BinOp::FAdd => [self.builder.ins().fadd(x[0], y[0])].into(),
+			lir::BinOp::FCmp(cc) => [self.builder.ins().fcmp(cc, x[0], y[0])].into(),
+			lir::BinOp::FCpySign => [self.builder.ins().fcopysign(x[0], y[0])].into(),
+			lir::BinOp::FDiv => [self.builder.ins().fdiv(x[0], y[0])].into(),
+			lir::BinOp::FMax => [self.builder.ins().fmax(x[0], y[0])].into(),
+			lir::BinOp::FMin => [self.builder.ins().fmin(x[0], y[0])].into(),
+			lir::BinOp::FMul => [self.builder.ins().fmul(x[0], y[0])].into(),
+			lir::BinOp::FSub => [self.builder.ins().fsub(x[0], y[0])].into(),
+			lir::BinOp::IAdd => [self.builder.ins().iadd(x[0], y[0])].into(),
+			lir::BinOp::ICmp(cc) => [self.builder.ins().icmp(cc, x[0], y[0])].into(),
+			lir::BinOp::IConcat => [self.builder.ins().iconcat(x[0], y[0])].into(),
+			lir::BinOp::IShl => [self.builder.ins().ishl(x[0], y[0])].into(),
+			lir::BinOp::ISub => [self.builder.ins().isub(x[0], y[0])].into(),
+			lir::BinOp::SAddSat => [self.builder.ins().sadd_sat(x[0], y[0])].into(),
+			lir::BinOp::SAddOf => {
+				let (ret, _flowed) = self.builder.ins().sadd_overflow(x[0], y[0]);
+				[ret].into()
+			}
+			lir::BinOp::SDiv => [self.builder.ins().sdiv(x[0], y[0])].into(),
+			lir::BinOp::SRem => [self.builder.ins().srem(x[0], y[0])].into(),
+			lir::BinOp::SShr => [self.builder.ins().sshr(x[0], y[0])].into(),
+			lir::BinOp::UAddSat => [self.builder.ins().uadd_sat(x[0], y[0])].into(),
+			lir::BinOp::UAddOf => {
+				let (ret, _flowed) = self.builder.ins().uadd_overflow(x[0], y[0]);
+				[ret].into()
+			}
+			lir::BinOp::UDiv => [self.builder.ins().udiv(x[0], y[0])].into(),
+			lir::BinOp::URem => [self.builder.ins().urem(x[0], y[0])].into(),
+			lir::BinOp::UShr => [self.builder.ins().ushr(x[0], y[0])].into(),
+		}
+	}
+
+	#[must_use]
+	fn translate_call(&mut self, name: &QName, args: &[IxExpr]) -> ValVec {
+		let kvp = self.symtab.get(name).unwrap();
+		let sym_g = kvp.value().load();
+		let lir::Symbol::Function(func) = sym_g.as_ref() else { unreachable!() };
+		let sig = self.signature_for_func(func);
+
+		let args = args
+			.iter()
+			.copied()
+			.flat_map(|arg| self.expr(&self.func.body[arg]))
+			.collect::<SmallVec<[Value; 4]>>();
+
+		let callee = self
+			.jit
+			.declare_function(kvp.key().as_str(), Linkage::Import, &sig)
+			.expect("failed to declare function for call");
+		let local_callee = self.jit.declare_func_in_func(callee, self.builder.func);
+		let inst = self.builder.ins().call(local_callee, &args);
+
+		self.builder.inst_results(inst).iter().copied().collect()
+	}
+
+	#[must_use]
+	fn translate_call_indirect(&mut self, call: &lir::IndirectCall) -> ValVec {
+		let sig = self.signature_for_func_t(&call.typedef);
+		let sigref = self.builder.import_signature(sig);
+
+		let callee = self.expr(&self.func.body[call.lhs]);
+		assert_eq!(callee.len(), 1);
+
+		let args = call
+			.args
+			.iter()
+			.copied()
+			.flat_map(|arg| self.expr(&self.func.body[arg]))
+			.collect::<SmallVec<[Value; 4]>>();
+
+		let inst = self.builder.ins().call_indirect(sigref, callee[0], &args);
+
+		self.builder.inst_results(inst).iter().copied().collect()
+	}
+
+	#[must_use]
+	fn translate_if_else(&mut self, ifelse: &lir::IfElseExpr) -> ValVec {
+		let lir::IfElseExpr {
+			condition: cond,
+			if_true,
+			if_false,
+			out_t,
+			cold,
+		} = ifelse;
+
+		let condition = self.expr(&self.func.body[*cond]);
+		assert_eq!(condition.len(), 1);
+
+		let blk_true = self.builder.create_block();
+		let blk_false = self.builder.create_block();
+		let blk_merge = self.builder.create_block();
+
+		if let Some(ty) = out_t {
+			for t in Self::typedef_cltypes(ty) {
+				self.builder.append_block_param(blk_merge, t);
+			}
+		}
+
+		match cold {
+			lir::IfElseCold::Neither => {}
+			lir::IfElseCold::True => self.builder.set_cold_block(blk_true),
+			lir::IfElseCold::False => self.builder.set_cold_block(blk_false),
+		}
+
+		let _ = self
+			.builder
+			.ins()
+			.brif(condition[0], blk_true, &[], blk_false, &[]);
+
+		self.builder.switch_to_block(blk_true);
+		self.builder.seal_block(blk_true);
+		let true_eval = self.expr(&self.func.body[*if_true]);
+		self.builder.ins().jump(blk_merge, &true_eval);
+
+		self.builder.switch_to_block(blk_false);
+		self.builder.seal_block(blk_false);
+		let false_eval = self.expr(&self.func.body[*if_false]);
+		self.builder.ins().jump(blk_merge, &false_eval);
+
+		assert_eq!(true_eval.len(), false_eval.len());
+
+		self.builder.switch_to_block(blk_merge);
+		self.builder.seal_block(blk_merge);
+
+		let phi = self.builder.block_params(blk_merge);
+		phi.iter().copied().collect()
+	}
+
+	#[must_use]
+	fn translate_immediate(&mut self, imm: lir::Immediate) -> Value {
+		match imm {
+			lir::Immediate::I8(int) => self.builder.ins().iconst(types::I8, int as i64),
+			lir::Immediate::I16(int) => self.builder.ins().iconst(types::I16, int as i64),
+			lir::Immediate::I32(int) => self.builder.ins().iconst(types::I32, int as i64),
+			lir::Immediate::I64(int) => self.builder.ins().iconst(types::I64, int),
+			lir::Immediate::F32(float) => self.builder.ins().f32const(float),
+			lir::Immediate::F64(float) => self.builder.ins().f64const(float),
+		}
+	}
+
+	fn translate_loop(&mut self, block: &lir::Block) {
+		let blk = self.builder.create_block();
+		let _ = self.builder.ins().jump(blk, &[]);
+		self.builder.switch_to_block(blk);
+		self.builder.seal_block(blk);
+
+		for expr in &block.0 {
+			let _ = self.expr(expr);
+		}
+
+		self.builder.ins().jump(blk, &[]);
+	}
+
+	#[must_use]
+	fn translate_unary_expr(&mut self, operand: IxExpr, op: lir::UnaryOp) -> ValVec {
+		let o = self.expr(&self.func.body[operand]);
+
+		assert_eq!(o.len(), 1);
+
+		match op {
+			lir::UnaryOp::BNot => [self.builder.ins().bnot(o[0])].into(),
+			lir::UnaryOp::Ceil => [self.builder.ins().ceil(o[0])].into(),
+			lir::UnaryOp::Cls => [self.builder.ins().cls(o[0])].into(),
+			lir::UnaryOp::Clz => [self.builder.ins().clz(o[0])].into(),
+			lir::UnaryOp::Ctz => [self.builder.ins().ctz(o[0])].into(),
+			lir::UnaryOp::FAbs => [self.builder.ins().fabs(o[0])].into(),
+			lir::UnaryOp::F32FromSInt => {
+				[self.builder.ins().fcvt_from_sint(types::F32, o[0])].into()
+			}
+			lir::UnaryOp::F32FromUInt => {
+				[self.builder.ins().fcvt_from_uint(types::F32, o[0])].into()
+			}
+			lir::UnaryOp::F64FromSInt => {
+				[self.builder.ins().fcvt_from_sint(types::F64, o[0])].into()
+			}
+			lir::UnaryOp::F64FromUInt => {
+				[self.builder.ins().fcvt_from_uint(types::F64, o[0])].into()
+			}
+			lir::UnaryOp::FToSInt(ty) => {
+				debug_assert!(ty.is_int());
+				[self.builder.ins().fcvt_to_sint(ty, o[0])].into()
+			}
+			lir::UnaryOp::FToUInt(ty) => {
+				debug_assert!(ty.is_int());
+				[self.builder.ins().fcvt_to_uint(ty, o[0])].into()
+			}
+			lir::UnaryOp::FDemote(ty) => {
+				debug_assert!(ty.is_float());
+				[self.builder.ins().fdemote(ty, o[0])].into()
+			}
+			lir::UnaryOp::Floor => [self.builder.ins().floor(o[0])].into(),
+			lir::UnaryOp::FNeg => [self.builder.ins().fneg(o[0])].into(),
+			lir::UnaryOp::FPromote(ty) => {
+				debug_assert!(ty.is_float());
+				[self.builder.ins().fpromote(ty, o[0])].into()
+			}
+			lir::UnaryOp::INeg => [self.builder.ins().ineg(o[0])].into(),
+			lir::UnaryOp::ISplit => {
+				let (lo, hi) = self.builder.ins().isplit(o[0]);
+				smallvec![lo, hi]
+			}
+			lir::UnaryOp::Nearest => [self.builder.ins().nearest(o[0])].into(),
+			lir::UnaryOp::PopCnt => [self.builder.ins().popcnt(o[0])].into(),
+			lir::UnaryOp::SExtend(ty) => {
+				debug_assert!(ty.is_int());
+				[self.builder.ins().sextend(ty, o[0])].into()
+			}
+			lir::UnaryOp::Sqrt => [self.builder.ins().sqrt(o[0])].into(),
+			lir::UnaryOp::Trunc => [self.builder.ins().trunc(o[0])].into(),
+		}
+	}
+
+	// Helpers /////////////////////////////////////////////////////////////////
+
+	#[must_use]
+	fn typedef_cltypes(typedef: &rti::Handle<TypeDef>) -> SmallVec<[CraneliftType; 1]> {
+		match typedef.inner() {
+			TypeInfo::Array(_) | TypeInfo::Class(_) => unimplemented!(),
+			TypeInfo::Num(numeric) => match numeric {
+				NumType::I8 | NumType::U8 => [types::I8].into(),
+				NumType::I16 | NumType::U16 => [types::I16].into(),
+				NumType::I32 | NumType::U32 => [types::I32].into(),
+				NumType::I64 | NumType::U64 => [types::I64].into(),
+				NumType::F32 => [types::F32].into(),
+				NumType::F64 => [types::F64].into(),
+			},
+			TypeInfo::Void(_) => smallvec![],
+			TypeInfo::Function(_) | TypeInfo::TypeDef(_) => unreachable!(),
+		}
+	}
+
+	#[must_use]
+	fn signature_for_func(&self, _: &lir::Function) -> Signature {
+		unimplemented!()
+	}
+
+	#[must_use]
+	fn signature_for_func_t(&self, _: &TypeHandle<FuncType>) -> Signature {
+		unimplemented!()
 	}
 }

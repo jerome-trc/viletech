@@ -21,6 +21,7 @@ doomfront = { path = "../doomfront", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils" }
 vfs = { package = "viletech-fs", path = "../vfs", optional = true }
 
+arc-swap.workspace = true
 ariadne.workspace = true
 bitflags.workspace = true
 bitvec.workspace = true

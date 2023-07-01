@@ -6,7 +6,7 @@ mod decorate;
 mod zscript;
 
 use std::{
-	collections::HashMap,
+	collections::{HashMap, VecDeque},
 	hash::Hasher,
 	marker::PhantomData,
 	path::{Path, PathBuf},
@@ -14,10 +14,13 @@ use std::{
 };
 
 use crate::{
-	compile::{self, JitModule},
-	lir, parse, Syn, Version,
+	compile::{self, JitModule, Precompile, QName},
+	issue::{self, Issue, IssueLevel},
+	lir::AtomicSymbol,
+	parse, Syn, Version,
 };
-use dashmap::DashMap;
+use ariadne::{Report, ReportKind};
+use dashmap::{mapref::one::Ref, DashMap};
 use doomfront::{
 	rowan::GreenNode,
 	zdoom::{decorate::Syn as Decorate, zscript::Syn as ZScript},
@@ -26,19 +29,6 @@ use doomfront::{
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use vfs::FileRef;
-
-pub struct FileParseTree<L: LangExt> {
-	pub path: PathBuf,
-	pub inner: ParseTree<L>,
-}
-
-impl<L: LangExt> std::ops::Deref for FileParseTree<L> {
-	type Target = ParseTree<L>;
-
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
-}
 
 /// For parsing from VileTech's [virtual file system](vfs).
 #[derive(Debug)]
@@ -99,12 +89,13 @@ impl IncludeTree {
 }
 
 /// Thin, strongly-typed wrapper around [`compile::ContainerSource`].
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct ContainerSource<L: LangExt>(compile::ContainerSource, PhantomData<L>);
 
 impl<L: LangExt> ContainerSource<L> {
 	#[must_use]
-	pub fn new(path: PathBuf, ptree: ParseTree<L>) -> Self {
+	pub fn new(path: impl AsRef<Path>, ptree: ParseTree<L>) -> Self {
 		assert!(
 			!ptree.any_errors(),
 			"encountered one or more parsing errors"
@@ -112,7 +103,7 @@ impl<L: LangExt> ContainerSource<L> {
 
 		Self(
 			compile::ContainerSource {
-				path,
+				path: path.as_ref().to_string_lossy().to_string(),
 				root: ptree.into_inner(),
 			},
 			PhantomData,
@@ -142,9 +133,9 @@ impl LibBuilder {
 		let subset = self.inner.finish();
 
 		LibSource {
-			_name: subset.name,
-			_version: subset.version,
-			_jit: subset.jit,
+			name: subset.name,
+			version: subset.version,
+			jit: subset.jit,
 			// SAFETY: `ContainerSource<L>` is `repr(transparent)` over
 			// `compile::ContainerSource`.
 			lith: unsafe { std::mem::transmute::<_, _>(subset.sources) },
@@ -156,112 +147,189 @@ impl LibBuilder {
 
 /// A superset of [`compile::LibSource`].
 pub(crate) struct LibSource {
-	_name: String,
-	_version: Version,
-	_jit: Arc<JitModule>,
+	pub(self) name: String,
+	pub(self) version: Version,
+	pub(self) jit: Arc<JitModule>,
 
-	lith: Vec<ContainerSource<Syn>>,
-	decorate: Vec<ContainerSource<Decorate>>,
-	zscript: Vec<ContainerSource<ZScript>>,
+	pub(self) lith: Vec<ContainerSource<Syn>>,
+	pub(self) decorate: Vec<ContainerSource<Decorate>>,
+	pub(self) zscript: Vec<ContainerSource<ZScript>>,
 }
 
-pub fn compile(builders: impl IntoIterator<Item = LibBuilder>) {
-	let containers = DashMap::new();
-	let gex = DashMap::new();
+/// A superset of [`compile::SymbolTable`].
+#[derive(Debug, Default)]
+pub(self) struct SymbolTable {
+	pub(self) symbols: compile::SymbolTable,
+	pub(self) znames: DashMap<ZName, AtomicSymbol>,
+}
 
-	for source in builders.into_iter().map(|b| b.finish()) {
-		// Declare containers.
+#[derive(Debug)]
+#[must_use]
+pub enum Outcome {
+	Ok {
+		precomps: VecDeque<Precompile>,
+		symtab: compile::SymbolTable,
+	},
+	Fail {
+		lib_name: String,
+		issues: Vec<Issue>,
+	},
+}
 
-		for ctr_lith in &source.lith {
-			containers.insert(ctr_lith.path.clone().into(), lir::Container::default());
-		}
+pub fn compile(builders: impl IntoIterator<Item = LibBuilder>) -> Outcome {
+	let symtab = SymbolTable::default();
+	let mut precomps = VecDeque::new();
 
-		for ctr_dec in &source.decorate {
-			containers.insert(ctr_dec.path.clone().into(), lir::Container::default());
-		}
-
-		for ctr_zs in &source.zscript {
-			containers.insert(ctr_zs.path.clone().into(), lir::Container::default());
-		}
-
-		// Pass 1: declare container-level types.
+	for (i, source) in builders.into_iter().map(|b| b.finish()).enumerate() {
+		let issues = Mutex::new(vec![]);
 
 		[lith::pass1, decorate::pass1, zscript::pass1]
 			.par_iter()
 			.for_each(|function| {
-				let pass1 = Pass1 {
+				let pass = Pass1 {
 					src: &source,
-					_containers: &containers,
+					symtab: &symtab,
+					ix_lib: i,
 				};
 
-				function(pass1);
+				function(pass);
 			});
 
-		// Pass 2: check container-level type declarations.
-		// Pass 3: declare functions and data items.
+		[zscript::pass2].par_iter().for_each(|function| {
+			let pass = Pass2 {
+				src: &source,
+				symtab: &symtab,
+				issues: &issues,
+			};
 
-		[lith::pass3, decorate::pass3, zscript::pass3]
-			.par_iter()
-			.for_each(|function| {
-				let pass3 = Pass3 {
-					_src: &source,
-					_containers: &containers,
-					_gex: &gex,
-				};
+			function(pass);
+		});
 
-				function(pass3);
-			});
+		if issues.lock().iter().any(|iss| iss.is_error()) {
+			return Outcome::Fail {
+				lib_name: source.name,
+				issues: issues.into_inner(),
+			};
+		}
 
-		// Pass 4: check functions and data item declarations.
-		// Pass 5: check function bodies and data initializers. Lower to LIR.
+		precomps.push_front(Precompile {
+			module: source.jit,
+			lib_name: source.name,
+			lib_vers: source.version,
+			issues: issues.into_inner(),
+		});
 	}
+
+	Outcome::Ok {
+		precomps,
+		symtab: symtab.symbols,
+	}
+}
+
+#[must_use]
+pub fn report(issue: Issue) -> issue::Report {
+	let mut colorgen = ariadne::ColorGenerator::default();
+
+	let (kind, code) = match &issue.level {
+		IssueLevel::Error(err) => (ReportKind::Error, *err as u16),
+		IssueLevel::Warning(warn) => (ReportKind::Warning, *warn as u16),
+		IssueLevel::Lint(lint) => (ReportKind::Advice, *lint as u16),
+	};
+
+	let builder = Report::build(kind, &issue.id.path, 12).with_code(code);
+
+	let builder = if let Some(label) = issue.label {
+		builder.with_label(
+			ariadne::Label::new(label.id)
+				.with_color(colorgen.next())
+				.with_message(label.message),
+		)
+	} else {
+		builder
+	};
+
+	builder.finish()
 }
 
 // Pass 1 //////////////////////////////////////////////////////////////////////
 
+/// Context for the first pass of LithV compilation.
+///
+/// Pass 1 involves declaring all "ZDoom-reachable" names; this means:
+/// - container-level types and type aliases
+/// - types and type aliases nested within container-level types
+///
+/// Due to the weakness of the compilation models of ZScript and DECORATE, it is
+/// impossible to perform name resolution without completing these tables.
 pub(self) struct Pass1<'s> {
-	src: &'s LibSource,
-	_containers: &'s DashMap<Arc<Path>, lir::Container>,
+	pub(self) src: &'s LibSource,
+	pub(self) symtab: &'s SymbolTable,
+	pub(self) ix_lib: usize,
 }
 
-// Pass 3 //////////////////////////////////////////////////////////////////////
+impl Pass1<'_> {
+	pub(self) fn declare<'s>(
+		&self,
+		ctr_path: impl AsRef<str>,
+		resolver_parts: impl IntoIterator<Item = &'s str> + Copy,
+	) {
+		let name = QName::new_value_name(ctr_path.as_ref(), resolver_parts);
 
-pub(self) struct Pass3<'s> {
-	_src: &'s LibSource,
-	_containers: &'s DashMap<Arc<Path>, lir::Container>,
-	/// When (G)ZDoom attempts to look up a symbol using just its unqualified name
-	/// ASCII case-insensitively, it goes through the global export table ("GEX").
-	_gex: &'s DashMap<ZName, Vec<(Arc<Path>, lir::Name)>>,
+		let asym = self.symtab.symbols.declare(name, self.ix_lib);
+
+		self.symtab
+			.znames
+			.insert(ZName(QName::new_value_name("", resolver_parts)), asym);
+	}
 }
 
-impl Pass3<'_> {
-	pub(self) fn _gex_decl(&self, name: lir::Name, modpath: Arc<Path>) {
-		let zname = ZName::from(&name);
+/// Context for the second pass of LithV compilation.
+///
+/// Pass 2 contains all semantic checks. Now that all names are known, we can do
+/// things like sanity checking ZScript inheritance hierarchies and compile-time
+/// evaluation.
+pub(self) struct Pass2<'s> {
+	pub(self) src: &'s LibSource,
+	pub(self) symtab: &'s SymbolTable,
+	pub(self) issues: &'s Mutex<Vec<Issue>>,
+}
 
-		match self._gex.entry(zname) {
-			dashmap::mapref::entry::Entry::Occupied(mut occ) => {
-				occ.get_mut().push((modpath, name));
-			}
-			dashmap::mapref::entry::Entry::Vacant(vac) => {
-				let mut syms = vac.insert(vec![]);
-				syms.push((modpath, name));
-			}
-		}
+impl Pass2<'_> {
+	pub(self) fn get_z(&self, id_chain: &str) -> Option<Ref<ZName, AtomicSymbol>> {
+		let qname = QName::Value(id_chain.replace('.', "::").into_boxed_str());
+		self.symtab.znames.get(&ZName(qname))
+	}
+
+	pub(self) fn raise(&self, issue: Issue) {
+		self.issues.lock().push(issue);
 	}
 }
 
 // Details /////////////////////////////////////////////////////////////////////
 
-/// A counterpart to [`lir::Name`] for (G)ZDoom,
+/// A counterpart to [`QName`] for (G)ZDoom,
 /// with ASCII case-insensitive equality comparison and hashing.
-#[derive(Debug, Eq)]
-pub(self) struct ZName(lir::Name);
+///
+/// Note that these have different qualification rules names from ZScript and
+/// DECORATE have no container equivalent, so a class has only its identifier;
+/// if that class then declares an enum, the name is `::MyClass::MyEnum`.
+#[derive(Debug)]
+pub(self) struct ZName(QName);
+
+impl ZName {
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		self.0.as_str()
+	}
+}
 
 impl PartialEq for ZName {
 	fn eq(&self, other: &Self) -> bool {
 		self.0.as_str().eq_ignore_ascii_case(other.0.as_str())
 	}
 }
+
+impl Eq for ZName {}
 
 impl std::hash::Hash for ZName {
 	fn hash<H: Hasher>(&self, state: &mut H) {
@@ -277,8 +345,8 @@ impl std::borrow::Borrow<str> for ZName {
 	}
 }
 
-impl From<&lir::Name> for ZName {
-	fn from(value: &lir::Name) -> Self {
+impl From<&QName> for ZName {
+	fn from(value: &QName) -> Self {
 		Self(value.clone())
 	}
 }

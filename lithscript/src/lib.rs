@@ -7,16 +7,19 @@
 //!
 //! [ZScript]: https://zdoom.org/wiki/ZScript
 
+#![allow(unused)]
+#![allow(dead_code)]
+
 pub mod ast;
-// mod codegen;
+pub mod codegen;
 pub mod compile;
 mod heap;
 pub mod issue;
 pub mod lir;
 pub mod parse;
 pub mod project;
+pub mod rti;
 pub mod runtime;
-pub mod sym;
 mod syn;
 pub mod tsys;
 #[cfg(feature = "viletech")]

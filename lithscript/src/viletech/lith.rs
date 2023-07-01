@@ -2,7 +2,7 @@
 
 use crate::SyntaxNode;
 
-use super::{Pass1, Pass3};
+use super::Pass1;
 
 pub(super) fn pass1(pass: Pass1) {
 	for ctr in &pass.src.lith {
@@ -12,8 +12,4 @@ pub(super) fn pass1(pass: Pass1) {
 			// TODO: Declare types.
 		}
 	}
-}
-
-pub(super) fn pass3(_: Pass3) {
-	todo!()
 }

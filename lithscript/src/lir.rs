@@ -6,143 +6,172 @@
 //! Intermediate Format (CLIF). This provides a "lowest common denominator" for
 //! compilation so each language does not require its own backend (or AST
 //! transpilation to the yet-unstable Lith).
+//!
+//! In order to keep the toolchain simple and compact, LIR carries rich semantic
+//! information which is irrelevant to code generation in order to facilitate
+//! semantic checking without another IR layer.
 
-use std::collections::HashMap;
+use std::sync::Arc;
 
+use arc_swap::ArcSwap;
 use cranelift::prelude::{types::Type as CraneliftType, FloatCC, IntCC};
 use cranelift_module::Linkage;
 use smallvec::SmallVec;
-use util::rstring::RString;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Name {
-	Var(RString),
-	Func(RString),
-	Container(RString),
-}
-
-impl Name {
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		match self {
-			Self::Var(string) | Self::Func(string) | Self::Container(string) => string,
-		}
-	}
-}
+use crate::{
+	compile::QName,
+	rti,
+	tsys::{FuncType, TypeDef, TypeHandle},
+};
 
 #[derive(Debug, Default)]
-pub struct Container {
-	pub(crate) _symbols: HashMap<Name, Item>,
+pub(crate) enum Symbol {
+	Data(Data),
+	Function(Function),
+	/// Mind that this may also be a type alias.
+	Type(rti::Handle<TypeDef>),
+	/// A placeholder value used during compilation for symbols which
+	/// have been declared but have not yet been defined.
+	#[default]
+	Unknown,
 }
 
 #[derive(Debug)]
-pub enum Item {
-	/// A symbolic constant or static variable.
-	Data(Data),
-	Function(Function),
+pub struct LibSymbol {
+	pub(crate) inner: ArcSwap<Symbol>,
+	pub(crate) ix_lib: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct AtomicSymbol(pub(crate) Arc<LibSymbol>);
+
+impl AtomicSymbol {
+	#[must_use]
+	pub(crate) fn load(&self) -> arc_swap::Guard<Arc<Symbol>> {
+		self.0.inner.load()
+	}
+}
+
+impl std::ops::Deref for AtomicSymbol {
+	type Target = Arc<LibSymbol>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
 #[derive(Debug)]
 pub struct Data {
-	pub(crate) _linkage: Linkage,
-	pub(crate) _type_ix: IxTypeDef,
-	pub(crate) _init: Expr,
-	pub(crate) _mutable: bool,
+	pub(crate) linkage: Linkage,
+	pub(crate) typedef: rti::Handle<TypeDef>,
+	pub(crate) init: Block,
+	pub(crate) mutable: bool,
 }
 
 #[derive(Debug)]
 pub struct Function {
-	pub(crate) _linkage: Linkage,
-	pub(crate) _params: Vec<Parameter>,
-	pub(crate) _ret: IxTypeDef,
-	pub(crate) _body: Block,
+	pub(crate) linkage: Linkage,
+	pub(crate) params: Vec<Parameter>,
+	pub(crate) ret_t: rti::Handle<TypeDef>,
+	pub(crate) body: Block,
 }
 
 #[derive(Debug)]
 pub struct Parameter {
-	pub(crate) _type_ix: IxTypeDef,
-	pub(crate) _default: Option<Expr>,
+	pub(crate) _typedef: rti::Handle<TypeDef>,
+	pub(crate) _default: Option<Block>,
 }
 
+/// Thin wrapper around a [`Vec`] of [`Expr`]s.
 #[derive(Debug)]
-pub struct Block {
-	pub(crate) _cold: bool,
-	pub(crate) _statements: Vec<Expr>,
-	pub(crate) _ret: Option<Box<Expr>>,
+pub struct Block(pub(crate) Vec<Expr>);
+
+impl Block {
+	/// Convenience function for returning the index of a newly-added expression.
+	pub(crate) fn push(&mut self, node: Expr) -> usize {
+		let ret = self.0.len();
+		self.0.push(node);
+		ret
+	}
 }
 
-#[derive(Debug)]
-pub struct TypeDef {
-	pub(crate) _data: TypeData,
+impl std::ops::Index<IxExpr> for Block {
+	type Output = Expr;
+
+	fn index(&self, index: IxExpr) -> &Self::Output {
+		&self.0[index.0 as usize]
+	}
 }
 
-#[derive(Debug)]
-pub enum TypeData {
-	Void,
-	TypeDef,
-	Numeric(NumericType),
-}
-
-#[derive(Debug)]
-pub enum NumericType {
-	I8,
-	U8,
-	I16,
-	U16,
-	I32,
-	U32,
-	I64,
-	U64,
-	F32,
-	F64,
-}
-
+/// An element in a [`Block`].
 #[derive(Debug)]
 pub enum Expr {
 	/// Construction of a structure or array.
-	Aggregate(Vec<Self>),
+	Aggregate(Vec<IxExpr>),
 	/// Evaluation never emits any SSA values.
 	Assign {
-		expr: Box<Self>,
+		var: usize,
+		expr: IxExpr,
 	},
 	Bin {
-		lhs: Box<Self>,
+		lhs: IxExpr,
 		op: BinOp,
-		rhs: Box<Self>,
+		rhs: IxExpr,
 	},
 	Block(Block),
 	Break,
+	/// A call to a compile-time-known function.
 	Call {
-		name: Name,
-		args: Vec<Self>,
+		name: QName,
+		args: Vec<IxExpr>,
 	},
-	CallIndirect {
-		type_ix: IxTypeDef,
-		lhs: Box<Self>,
-		args: Vec<Self>,
-	},
+	/// A call to a function pointer (vtable calls included).
+	CallIndirect(IndirectCall),
 	/// Evaluation never emits any SSA values.
 	Continue,
-	IfElse {
-		condition: Box<Self>,
-		if_true: Box<Self>,
-		if_false: Box<Self>,
-	},
+	/// Always points to a [`Symbol::Data`].
+	Data(QName),
+	IfElse(IfElseExpr),
 	/// Evaluation only emits a single SSA value.
 	Immediate(Immediate),
 	/// Evaluation never emits any SSA values.
-	Local,
+	Local(SmallVec<[CraneliftType; 1]>),
 	/// An infinite loop. Never emits any SSA values.
 	Loop(Block),
+	/// Evaluation never emits any SSA values.
+	Ret(IxExpr),
 	Unary {
-		operand: Box<Self>,
+		operand: IxExpr,
 		op: UnaryOp,
 	},
 	/// A lone scalar/pointer/vector value, or an aggregate field.
-	Var(SmallVec<[Name; 1]>),
+	Var,
 }
 
 #[derive(Debug)]
+pub struct IfElseExpr {
+	pub(crate) condition: IxExpr,
+	pub(crate) if_true: IxExpr,
+	pub(crate) if_false: IxExpr,
+	pub(crate) out_t: Option<rti::Handle<TypeDef>>,
+	pub(crate) cold: IfElseCold,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IfElseCold {
+	True,
+	False,
+	Neither,
+}
+
+#[derive(Debug)]
+pub struct IndirectCall {
+	pub(crate) typedef: TypeHandle<FuncType>,
+	pub(crate) lhs: IxExpr,
+	pub(crate) args: Vec<IxExpr>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BinOp {
 	/// Bitwise and.
 	BAnd,
@@ -204,7 +233,7 @@ pub enum BinOp {
 	UShr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryOp {
 	/// Bitwise not.
 	BNot,
@@ -258,7 +287,7 @@ pub enum UnaryOp {
 	Trunc,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Immediate {
 	I8(i8),
 	I16(i16),
@@ -268,8 +297,6 @@ pub enum Immediate {
 	F64(f64),
 }
 
-// Strong index newtypes ///////////////////////////////////////////////////////
-
-/// Index to a [`TypeDef`].
+/// Strongly-typed index to an [`Expr`] in a [`Block`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct IxTypeDef(u32);
+pub struct IxExpr(pub(crate) u32);
