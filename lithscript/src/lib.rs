@@ -16,6 +16,7 @@ pub mod compile;
 mod heap;
 pub mod issue;
 pub mod lir;
+pub mod native;
 pub mod parse;
 pub mod project;
 pub mod rti;
@@ -25,19 +26,29 @@ pub mod tsys;
 #[cfg(feature = "viletech")]
 pub mod viletech;
 
-pub use self::{heap::TPtr, project::Project, runtime::Runtime, syn::Syn};
+pub use self::{
+	heap::TPtr,
+	project::{Library, Project},
+	runtime::Runtime,
+	syn::Syn,
+};
 
 #[cfg(feature = "viletech")]
 pub use viletech::IncludeTree;
+
+/// The enumeration used to compose machine representations for both Lith and native types.
+pub type BackendType = cranelift::codegen::ir::Type;
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
 
-/// Each library is declared as belonging to a version of the LithScript specification.
+/// Each [library] is declared as belonging to a version of the LithScript specification.
 ///
 /// The specification is versioned as per [Semantic Versioning](https://semver.org/).
+///
+/// [library]: project::Library
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Version {
 	pub major: u16,
@@ -91,7 +102,8 @@ impl Version {
 	}
 }
 
-/// Things that can go wrong when using this crate, excluding parse and compilation issues.
+/// Failure modes of this crate's operations, excluding
+/// [parse errors](parse::Error) and [compilation issues](issue).
 #[derive(Debug)]
 pub enum Error {
 	/// Tried to parse a SemVer string without any numbers or periods in it.

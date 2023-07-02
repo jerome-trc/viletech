@@ -3,8 +3,7 @@
 use std::{collections::VecDeque, ops::Deref};
 
 use cranelift::prelude::{
-	types, FunctionBuilder, FunctionBuilderContext, InstBuilder, Signature, Type as CraneliftType,
-	Value, Variable,
+	types, FunctionBuilder, FunctionBuilderContext, InstBuilder, Signature, Value, Variable,
 };
 use cranelift_jit::JITModule;
 use cranelift_module::{DataDescription, Linkage, Module};
@@ -16,7 +15,7 @@ use crate::{
 	project::Library,
 	rti,
 	tsys::{FuncType, NumType, TypeDef, TypeHandle, TypeInfo},
-	Project,
+	BackendType, Project,
 };
 
 type ValVec = SmallVec<[Value; 1]>;
@@ -38,16 +37,13 @@ pub fn compile(mut precomps: VecDeque<Precompile>, symtab: SymbolTable) -> Proje
 
 #[must_use]
 fn compile_module(ix_lib: usize, precomp: Precompile, symtab: &SymbolTable) -> Library {
-	let mut jit_g = precomp.module.0.lock();
-	// SAFETY: `JitModule` gets initialized upon construction
-	// and is untouched until being passed here.
-	let jit = unsafe { jit_g.assume_init_mut() };
+	let mut jit = precomp.module.lock();
 
 	let mut cg = CodeGen {
 		symtab,
 		fctx: FunctionBuilderContext::new(),
 		cctx: jit.make_context(),
-		jit,
+		jit: &mut jit,
 	};
 
 	for kvp in &symtab.0 {
@@ -99,7 +95,7 @@ fn compile_module(ix_lib: usize, precomp: Precompile, symtab: &SymbolTable) -> L
 		.finalize_definitions()
 		.expect("JIT definition finalization failed");
 
-	drop(jit_g);
+	drop(jit);
 
 	Library {
 		name: precomp.lib_name,
@@ -444,7 +440,7 @@ impl Translator<'_> {
 	// Helpers /////////////////////////////////////////////////////////////////
 
 	#[must_use]
-	fn typedef_cltypes(typedef: &rti::Handle<TypeDef>) -> SmallVec<[CraneliftType; 1]> {
+	fn typedef_cltypes(typedef: &rti::Handle<TypeDef>) -> SmallVec<[BackendType; 1]> {
 		match typedef.inner() {
 			TypeInfo::Array(_) | TypeInfo::Class(_) => unimplemented!(),
 			TypeInfo::Num(numeric) => match numeric {

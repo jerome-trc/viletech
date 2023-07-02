@@ -1,8 +1,13 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{any::TypeId, collections::HashMap, sync::Arc};
 
 use util::rstring::RString;
 
-use crate::{compile::JitModule, rti::Record, Version};
+use crate::{
+	compile::JitModule,
+	rti::{self, Record, RtInfo},
+	tsys::TypeDef,
+	Version,
+};
 
 #[derive(Debug, Default)]
 pub struct Project {
@@ -12,6 +17,25 @@ pub struct Project {
 }
 
 impl Project {
+	/// Note that `name` must be fully-qualified. See [`QName`](crate::compile::QName).
+	#[must_use]
+	pub fn get<R: RtInfo>(&self, name: impl AsRef<str>) -> Option<rti::Ref<R>> {
+		let typeid = TypeId::of::<R>();
+		let Some(record) = self.rti.get(name.as_ref()) else { return None; };
+
+		unsafe {
+			match record.tag {
+				rti::StoreTag::Function => (typeid == TypeId::of::<rti::Function>())
+					.then(|| rti::Ref::new(self, std::mem::transmute::<_, _>(&record.inner.func))),
+				rti::StoreTag::Data => (typeid == TypeId::of::<rti::Data>())
+					.then(|| rti::Ref::new(self, std::mem::transmute::<_, _>(&record.inner.data))),
+				rti::StoreTag::Type => (typeid == TypeId::of::<TypeDef>()).then(|| {
+					rti::Ref::new(self, std::mem::transmute::<_, _>(&record.inner.typedef))
+				}),
+			}
+		}
+	}
+
 	pub fn clear(&mut self) {
 		self.libs.clear();
 		self.rti.clear();

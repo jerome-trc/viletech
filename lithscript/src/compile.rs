@@ -5,9 +5,10 @@ use std::{collections::HashMap, mem::MaybeUninit, path::Path, sync::Arc};
 use arc_swap::ArcSwap;
 use cranelift::prelude::settings::OptLevel;
 use cranelift_jit::{JITBuilder, JITModule};
+use cranelift_module::Module;
 use dashmap::{mapref::one::Ref, DashMap};
 use doomfront::{rowan::GreenNode, ParseTree};
-use parking_lot::Mutex;
+use parking_lot::{Mutex, MutexGuard};
 
 use crate::{
 	issue::Issue,
@@ -138,9 +139,7 @@ impl LibBuilder {
 		LibSource {
 			name: self.name,
 			version: self.version,
-			jit: Arc::new(JitModule(Mutex::new(MaybeUninit::new(JITModule::new(
-				self.jit,
-			))))),
+			jit: JitModule::new(JITModule::new(self.jit)),
 			sources: self.sources,
 		}
 	}
@@ -249,15 +248,46 @@ impl Precompile {
 // JitModule ///////////////////////////////////////////////////////////////////
 
 /// Ensures proper JIT code de-allocation (from behind an [`Arc`]).
+///
+/// Also stores the pointer width in bits for the target platform, for use
+/// in providing runtime information.
 #[derive(Debug)]
-pub struct JitModule(pub(crate) Mutex<MaybeUninit<JITModule>>);
+pub struct JitModule {
+	inner: MaybeUninit<Mutex<JITModule>>,
+	ptr_bits: u16,
+}
+
+impl JitModule {
+	#[must_use]
+	pub(crate) fn new(inner: JITModule) -> Arc<Self> {
+		let ptr_bits = inner.target_config().pointer_bits() as u16;
+
+		Arc::new(Self {
+			inner: MaybeUninit::new(Mutex::new(inner)),
+			ptr_bits,
+		})
+	}
+
+	#[must_use]
+	pub(crate) fn ptr_bits(&self) -> u16 {
+		self.ptr_bits
+	}
+
+	pub(crate) fn lock(&self) -> MutexGuard<JITModule> {
+		// SAFETY: `Self::new` was the only safe way to initialize this, and the
+		// `MaybeUninit` itself has not been exposed. The only way to render it
+		// undefined would have been for a caller of this function to replace
+		// the memory behind the reference with an uninitialized instance.
+		unsafe { self.inner.assume_init_ref().lock() }
+	}
+}
 
 impl Drop for JitModule {
 	fn drop(&mut self) {
 		unsafe {
-			std::mem::replace(&mut self.0, Mutex::new(MaybeUninit::uninit()))
-				.into_inner()
+			std::mem::replace(&mut self.inner, MaybeUninit::uninit())
 				.assume_init()
+				.into_inner()
 				.free_memory();
 		}
 	}

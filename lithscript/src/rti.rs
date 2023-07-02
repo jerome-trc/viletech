@@ -2,14 +2,18 @@
 
 use std::{
 	any::{Any, TypeId},
+	hash::{Hash, Hasher},
+	marker::PhantomData,
 	mem::ManuallyDrop,
 	sync::{Arc, Weak},
 };
 
 use cranelift_module::{DataId, FuncId};
+use rustc_hash::FxHasher;
+use smallvec::SmallVec;
 use util::rstring::RString;
 
-use crate::{compile::JitModule, tsys::TypeDef};
+use crate::{compile::JitModule, native::Native, tsys::TypeDef, BackendType, Project};
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}
 
@@ -51,8 +55,9 @@ impl<R: RtInfo> Store<R> {
 
 #[derive(Debug)]
 pub struct Function {
-	_ptr: *const u8,
+	ptr: *const u8,
 	id: FuncId,
+	sighash: SignatureHash,
 	#[allow(unused)]
 	module: Arc<JitModule>,
 }
@@ -61,6 +66,77 @@ impl Function {
 	#[must_use]
 	pub fn id(&self) -> FuncId {
 		self.id
+	}
+
+	#[must_use]
+	pub fn downcast<A, R>(&self) -> Option<TFn<A, R>>
+	where
+		A: Native,
+		R: Native,
+	{
+		let ptr_bits = self.module.ptr_bits();
+
+		let a_repr = A::repr(ptr_bits);
+		let r_repr = A::repr(ptr_bits);
+		let h = SignatureHash::new(a_repr, r_repr);
+
+		if h != self.sighash {
+			return None;
+		}
+
+		Some(TFn(self, PhantomData))
+	}
+}
+
+/// A strongly-typed pointer to a compiled function.
+///
+/// See [`Function::downcast`].
+pub struct TFn<'f, A, R>(&'f Function, PhantomData<fn(A) -> R>)
+where
+	A: Native,
+	R: Native;
+
+impl<A, R> TFn<'_, A, R>
+where
+	A: Native,
+	R: Native,
+{
+	pub fn call(&self, args: A) -> R {
+		unsafe { std::mem::transmute::<_, fn(A) -> R>(self.0.ptr)(args) }
+	}
+}
+
+/// A strongly-typed [`Handle`] over a [`Function`].
+///
+/// Must be acquired using `Handle::<Function>::downcast`.
+pub struct TFnHandle<A, R>(Handle<Function>, PhantomData<fn(A) -> R>)
+where
+	A: Native,
+	R: Native;
+
+impl<A, R> TFnHandle<A, R>
+where
+	A: Native,
+	R: Native,
+{
+	pub fn call(&self, args: A) -> R {
+		unsafe { std::mem::transmute::<_, fn(A) -> R>(self.0.ptr)(args) }
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SignatureHash(u64);
+
+impl SignatureHash {
+	#[must_use]
+	pub(crate) fn new(
+		params: SmallVec<[BackendType; 1]>,
+		rets: SmallVec<[BackendType; 1]>,
+	) -> Self {
+		let mut fxh = FxHasher::default();
+		params.hash(&mut fxh);
+		rets.hash(&mut fxh);
+		Self(fxh.finish())
 	}
 }
 
@@ -75,9 +151,10 @@ pub struct Data {
 	ptr: *const u8,
 	size: usize,
 	id: DataId,
+	native_t: Option<TypeId>,
+	immutable: bool,
 	#[allow(unused)]
 	module: Arc<JitModule>,
-	native_t: Option<TypeId>,
 }
 
 impl Data {
@@ -103,7 +180,13 @@ impl Data {
 		}
 	}
 
+	/// Returns `None` if `T` is not the type of this data object,
+	/// or if the data object was declared to the backend as being immutable.
 	pub fn as_native_mut<T: 'static>(&mut self) -> Option<&mut T> {
+		if self.immutable {
+			return None;
+		}
+
 		if self
 			.native_t
 			.is_some_and(|typeid| typeid == TypeId::of::<T>())
@@ -144,7 +227,7 @@ impl<R: RtInfo> Handle<R> {
 }
 
 impl<R: RtInfo> PartialEq for Handle<R> {
-	/// Check that these are two pointers to the same symbol in the same module.
+	/// Check that these are two pointers to the same RTI object in the same module.
 	fn eq(&self, other: &Self) -> bool {
 		Arc::ptr_eq(&self.0, &other.0)
 	}
@@ -170,7 +253,21 @@ impl<R: RtInfo> From<Arc<Store<R>>> for Handle<R> {
 	}
 }
 
-/// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-symbol
+impl Handle<Function> {
+	#[must_use]
+	pub fn downcast<A, R>(&self) -> Option<TFnHandle<A, R>>
+	where
+		A: Native,
+		R: Native,
+	{
+		self.0
+			.inner
+			.downcast::<A, R>()
+			.map(|_| TFnHandle(self.clone(), PhantomData))
+	}
+}
+
+/// Internal handle. Like [`Handle`] but [`Weak`], allowing inter-RTI
 /// relationships (without preventing in-place removal) in a way that can't leak.
 #[derive(Debug)]
 pub struct InHandle<S: RtInfo>(Weak<Store<S>>);
@@ -178,7 +275,7 @@ pub struct InHandle<S: RtInfo>(Weak<Store<S>>);
 impl<R: RtInfo> InHandle<R> {
 	#[must_use]
 	pub fn upgrade(&self) -> Handle<R> {
-		Handle(Weak::upgrade(&self.0).expect("failed to upgrade a symbol ARC"))
+		Handle(Weak::upgrade(&self.0).expect("failed to upgrade an RTI ARC"))
 	}
 }
 
@@ -205,14 +302,14 @@ impl<R: RtInfo> Eq for InHandle<R> {}
 
 pub(crate) struct Record {
 	pub(crate) tag: StoreTag,
-	pub(crate) data: StoreUnion,
+	pub(crate) inner: StoreUnion,
 }
 
 /// Gets discriminated with [`StoreTag`].
 pub(crate) union StoreUnion {
-	func: ManuallyDrop<Arc<Store<Function>>>,
-	data: ManuallyDrop<Arc<Store<Data>>>,
-	typedef: ManuallyDrop<Arc<Store<TypeDef>>>,
+	pub(crate) func: ManuallyDrop<Arc<Store<Function>>>,
+	pub(crate) data: ManuallyDrop<Arc<Store<Data>>>,
+	pub(crate) typedef: ManuallyDrop<Arc<Store<TypeDef>>>,
 }
 
 /// Separated discriminant for [`StoreUnion`].
@@ -225,13 +322,13 @@ pub(crate) enum StoreTag {
 
 impl std::fmt::Debug for Record {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("S")
+		f.debug_struct("Record")
 			.field("tag", &self.tag)
 			.field("data", unsafe {
 				match self.tag {
-					StoreTag::Function => &self.data.func,
-					StoreTag::Data => &self.data.data,
-					StoreTag::Type => &self.data.typedef,
+					StoreTag::Function => &self.inner.func,
+					StoreTag::Data => &self.inner.data,
+					StoreTag::Type => &self.inner.typedef,
 				}
 			})
 			.finish()
@@ -242,10 +339,45 @@ impl Drop for Record {
 	fn drop(&mut self) {
 		unsafe {
 			match self.tag {
-				StoreTag::Function => ManuallyDrop::drop(&mut self.data.func),
-				StoreTag::Data => ManuallyDrop::drop(&mut self.data.data),
-				StoreTag::Type => ManuallyDrop::drop(&mut self.data.typedef),
+				StoreTag::Function => ManuallyDrop::drop(&mut self.inner.func),
+				StoreTag::Data => ManuallyDrop::drop(&mut self.inner.data),
+				StoreTag::Type => ManuallyDrop::drop(&mut self.inner.typedef),
 			}
 		}
+	}
+}
+
+/// The primary interface for reading runtime info. Get one using [`Project::get`].
+///
+/// Can be turned into a longer-lasting [`Handle`] (for the cost of one atomic
+/// reference count increment) using [`Self::handle`].
+#[derive(Debug)]
+pub struct Ref<'p, R: RtInfo> {
+	project: &'p Project,
+	store: &'p Arc<Store<R>>,
+}
+
+impl<'p, R: RtInfo> Ref<'p, R> {
+	#[must_use]
+	pub fn project(&self) -> &Project {
+		self.project
+	}
+
+	#[must_use]
+	pub fn handle(&self) -> Handle<R> {
+		self.store.into()
+	}
+
+	#[must_use]
+	pub(crate) fn new(project: &'p Project, store: &'p Arc<Store<R>>) -> Self {
+		Self { project, store }
+	}
+}
+
+impl<R: RtInfo> std::ops::Deref for Ref<'_, R> {
+	type Target = Store<R>;
+
+	fn deref(&self) -> &Self::Target {
+		self.store.deref()
 	}
 }
