@@ -2,6 +2,7 @@
 
 //! An error, warning, or lint emitted during compilation.
 
+use ariadne::ReportKind;
 use doomfront::rowan::TextRange;
 
 #[derive(Debug)]
@@ -47,6 +48,31 @@ impl Issue {
 	#[must_use]
 	pub fn is_error(&self) -> bool {
 		matches!(self.level, IssueLevel::Error(_))
+	}
+
+	#[must_use]
+	pub fn report(self) -> Report {
+		let mut colorgen = ariadne::ColorGenerator::default();
+
+		let (kind, code) = match self.level {
+			IssueLevel::Error(err) => (ReportKind::Error, err as u16),
+			IssueLevel::Warning(warn) => (ReportKind::Warning, warn as u16),
+			IssueLevel::Lint(lint) => (ReportKind::Advice, lint as u16),
+		};
+
+		let builder = Report::build(kind, self.id.path, 12).with_code(code);
+
+		let builder = if let Some(label) = self.label {
+			builder.with_label(
+				ariadne::Label::new(label.id)
+					.with_color(colorgen.next())
+					.with_message(label.message),
+			)
+		} else {
+			builder
+		};
+
+		builder.finish()
 	}
 }
 

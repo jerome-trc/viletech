@@ -226,31 +226,6 @@ pub fn compile(builders: impl IntoIterator<Item = LibBuilder>) -> Outcome {
 	}
 }
 
-#[must_use]
-pub fn report(issue: Issue) -> issue::Report {
-	let mut colorgen = ariadne::ColorGenerator::default();
-
-	let (kind, code) = match &issue.level {
-		IssueLevel::Error(err) => (ReportKind::Error, *err as u16),
-		IssueLevel::Warning(warn) => (ReportKind::Warning, *warn as u16),
-		IssueLevel::Lint(lint) => (ReportKind::Advice, *lint as u16),
-	};
-
-	let builder = Report::build(kind, &issue.id.path, 12).with_code(code);
-
-	let builder = if let Some(label) = issue.label {
-		builder.with_label(
-			ariadne::Label::new(label.id)
-				.with_color(colorgen.next())
-				.with_message(label.message),
-		)
-	} else {
-		builder
-	};
-
-	builder.finish()
-}
-
 // Pass 1 //////////////////////////////////////////////////////////////////////
 
 /// Context for the first pass of LithV compilation.
