@@ -116,6 +116,12 @@ impl std::hash::Hash for RString {
 	}
 }
 
+impl std::borrow::Borrow<str> for RString {
+	fn borrow(&self) -> &str {
+		self.as_ref()
+	}
+}
+
 #[test]
 #[cfg(test)]
 fn soundness() {
