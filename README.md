@@ -7,7 +7,7 @@ VileTech is a collection of Doom-related Rust technologies, oriented towards the
 The goals of the VileTech "project" are as follows, in descending order of priority:
 1. Build a (highly divergent) fork of the [GZDoom](https://zdoom.org) source port, implementing features which are impractical or which fall outside of its official scope.
 2. Expose functionality developed in the Doom open-source ecosystem which is currently unavailable (i.e. due to being tied up in existing applications) as a public API, first with a Rust interface and then with a C API.
-3. Facilitate the development of a catch-all [language server](https://github.com/jerome-trc/doom-lsp) for Doom content development.
+3. Facilitate the development of a catch-all [language server](https://github.com/jerome-trc/doom-ls) for Doom content development.
 
 ## Libraries
 
