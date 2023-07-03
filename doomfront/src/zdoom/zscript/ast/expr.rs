@@ -66,18 +66,18 @@ impl AstNode for Expr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
-			Expr::Binary(inner) => inner.syntax(),
-			Expr::Call(inner) => inner.syntax(),
-			Expr::ClassCast(inner) => inner.syntax(),
-			Expr::Group(inner) => inner.syntax(),
-			Expr::Ident(inner) => inner.syntax(),
-			Expr::Index(inner) => inner.syntax(),
-			Expr::Literal(inner) => inner.syntax(),
-			Expr::Postfix(inner) => inner.syntax(),
-			Expr::Prefix(inner) => inner.syntax(),
-			Expr::Super(inner) => inner.syntax(),
-			Expr::Ternary(inner) => inner.syntax(),
-			Expr::Vector(inner) => inner.syntax(),
+			Self::Binary(inner) => inner.syntax(),
+			Self::Call(inner) => inner.syntax(),
+			Self::ClassCast(inner) => inner.syntax(),
+			Self::Group(inner) => inner.syntax(),
+			Self::Ident(inner) => inner.syntax(),
+			Self::Index(inner) => inner.syntax(),
+			Self::Literal(inner) => inner.syntax(),
+			Self::Postfix(inner) => inner.syntax(),
+			Self::Prefix(inner) => inner.syntax(),
+			Self::Super(inner) => inner.syntax(),
+			Self::Ternary(inner) => inner.syntax(),
+			Self::Vector(inner) => inner.syntax(),
 		}
 	}
 }
@@ -487,6 +487,28 @@ impl Literal {
 		} else {
 			None
 		}
+	}
+}
+
+// MemberExpr //////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::MemberExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct MemberExpr(SyntaxNode);
+
+simple_astnode!(Syn, MemberExpr, Syn::MemberExpr);
+
+impl MemberExpr {
+	#[must_use]
+	pub fn lhs(&self) -> PrimaryExpr {
+		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
+	}
+
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn member_name(&self) -> AstResult<SyntaxToken> {
+		self.0.last_token().filter(|token| token.kind() == Syn::Ident).ok_or(AstError::Missing)
 	}
 }
 

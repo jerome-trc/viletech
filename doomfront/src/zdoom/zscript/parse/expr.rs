@@ -64,22 +64,32 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 		}
 
 		if infix_right_stronger(left, right) {
-			if right == Token::Question {
-				let m = p.open_before(lhs);
-				p.advance(Syn::Question);
-				trivia_0plus(p);
-				expr(p);
-				trivia_0plus(p);
-				p.expect(Token::Colon, Syn::Colon, &["`:`"]);
-				trivia_0plus(p);
-				expr(p);
-				lhs = p.close(m, Syn::TernaryExpr);
-			} else {
-				let m = p.open_before(lhs);
-				p.advance(Syn::from(right));
-				trivia_0plus(p);
-				recur(p, right);
-				lhs = p.close(m, Syn::BinExpr);
+			match right {
+				Token::Dot => {
+					let m = p.open_before(lhs);
+					p.advance(Syn::Dot);
+					trivia_0plus(p);
+					ident::<{ ID_SFKW | ID_SQKW | ID_TYPES | ID_DEFAULT }>(p);
+					lhs = p.close(m, Syn::MemberExpr);
+				}
+				Token::Question => {
+					let m = p.open_before(lhs);
+					p.advance(Syn::Question);
+					trivia_0plus(p);
+					expr(p);
+					trivia_0plus(p);
+					p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+					trivia_0plus(p);
+					expr(p);
+					lhs = p.close(m, Syn::TernaryExpr);
+				}
+				_ => {
+					let m = p.open_before(lhs);
+					p.advance(Syn::from(right));
+					trivia_0plus(p);
+					recur(p, right);
+					lhs = p.close(m, Syn::BinExpr);
+				}
 			}
 		} else {
 			break;

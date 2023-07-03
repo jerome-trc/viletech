@@ -29,6 +29,9 @@ pub(super) const ID_SQKW: u8 = 1 << 1;
 /// Allows [`Token::KwProperty`] and builtin type names.
 pub(super) const ID_TYPES: u8 = 1 << 2;
 
+/// Allows [`Token::KwDefault`].
+pub(super) const ID_DEFAULT: u8 = 1 << 3;
+
 const STATEFLOW_KWS: &[Token] = &[
 	Token::KwLoop,
 	Token::KwFail,
@@ -104,6 +107,10 @@ pub(super) fn is_ident<const CFG: u8>(token: Token) -> bool {
 	}
 
 	if (CFG & ID_TYPES) != 0 && PRIMTYPE_KWS.contains(&token) {
+		return true;
+	}
+
+	if (CFG & ID_DEFAULT) != 0 && token == Token::KwDefault {
 		return true;
 	}
 

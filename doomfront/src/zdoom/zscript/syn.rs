@@ -154,6 +154,8 @@ pub enum Syn {
 	IdentExpr,
 	/// `primaryexpr '[' expr ']'`
 	IndexExpr,
+	/// `primaryexpr '.' ident`
+	MemberExpr,
 	/// `primaryexpr operator`
 	PostfixExpr,
 	/// `operator primaryexpr`
