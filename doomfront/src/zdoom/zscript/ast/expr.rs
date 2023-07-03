@@ -180,6 +180,76 @@ impl Expr {
 	}
 }
 
+/// A subset of [`Expr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum PrimaryExpr {
+	ClassCast(ClassCastExpr),
+	Call(CallExpr),
+	Group(GroupExpr),
+	Ident(IdentExpr),
+	Index(IndexExpr),
+	Literal(Literal),
+	Member(MemberExpr),
+	Postfix(PostfixExpr),
+	Super(SuperExpr),
+	Vector(VectorExpr),
+}
+
+impl AstNode for PrimaryExpr {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		matches!(
+			kind,
+			Syn::CallExpr
+				| Syn::ClassCastExpr
+				| Syn::GroupExpr | Syn::IdentExpr
+				| Syn::IndexExpr | Syn::Literal
+				| Syn::MemberExpr
+				| Syn::PostfixExpr
+				| Syn::SuperExpr | Syn::VectorExpr
+		)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		match node.kind() {
+			Syn::CallExpr => Some(Self::Call(CallExpr(node))),
+			Syn::ClassCastExpr => Some(Self::ClassCast(ClassCastExpr(node))),
+			Syn::GroupExpr => Some(Self::Group(GroupExpr(node))),
+			Syn::IdentExpr => Some(Self::Ident(IdentExpr(node))),
+			Syn::IndexExpr => Some(Self::Index(IndexExpr(node))),
+			Syn::Literal => Some(Self::Literal(Literal(node))),
+			Syn::MemberExpr => Some(Self::Member(MemberExpr(node))),
+			Syn::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
+			Syn::SuperExpr => Some(Self::Super(SuperExpr(node))),
+			Syn::VectorExpr => Some(Self::Vector(VectorExpr(node))),
+			_ => None,
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Call(inner) => inner.syntax(),
+			Self::ClassCast(inner) => inner.syntax(),
+			Self::Group(inner) => inner.syntax(),
+			Self::Ident(inner) => inner.syntax(),
+			Self::Index(inner) => inner.syntax(),
+			Self::Literal(inner) => inner.syntax(),
+			Self::Member(inner) => inner.syntax(),
+			Self::Postfix(inner) => inner.syntax(),
+			Self::Super(inner) => inner.syntax(),
+			Self::Vector(inner) => inner.syntax(),
+		}
+	}
+}
+
 // BinExpr /////////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::BinExpr`].
@@ -325,8 +395,8 @@ simple_astnode!(Syn, CallExpr, Syn::CallExpr);
 
 impl CallExpr {
 	#[must_use]
-	pub fn called(&self) -> Expr {
-		Expr::cast(self.0.first_child().unwrap()).unwrap()
+	pub fn called(&self) -> PrimaryExpr {
+		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
 	#[must_use]
@@ -506,9 +576,11 @@ impl MemberExpr {
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn member_name(&self) -> AstResult<SyntaxToken> {
-		self.0.last_token().filter(|token| token.kind() == Syn::Ident).ok_or(AstError::Missing)
+		self.0
+			.last_token()
+			.filter(|token| token.kind() == Syn::Ident)
+			.ok_or(AstError::Missing)
 	}
 }
 
