@@ -18,7 +18,7 @@ pub enum Syn {
 	Argument,
 	/// `('[' expr? ']')+`
 	ArrayLen,
-	/// `'class' 'ident' inheritspec? replacesclause? '{' innard* '}'`
+	/// `'class' ident inheritspec? replacesclause? '{' innard* '}'`
 	ClassDef,
 	/// `'extend' 'class' ident '{' innard* '}'`
 	ClassExtend,
@@ -31,7 +31,7 @@ pub enum Syn {
 	DeprecationQual,
 	/// `'enum' ident enumtypespec? '{' variant* '}'`
 	EnumDef,
-	/// `':' ident`
+	/// `':' inttypename`
 	EnumTypeSpec,
 	/// `ident ('=' expr)?`
 	EnumVariant,
@@ -39,7 +39,7 @@ pub enum Syn {
 	Error,
 	FieldDecl,
 	FlagDef,
-	/// `('+' | '-') ident`
+	/// `('+' | '-') identchain`
 	FlagSetting,
 	/// The first part of a `for` loop's opening "header".
 	ForLoopInit,
@@ -84,8 +84,6 @@ pub enum Syn {
 	ReplacesClause,
 	/// `typeref (',' typeref)*`
 	ReturnTypes,
-	/// `'[' ident ']'`, between a call identifier and argument list.
-	RngSpec,
 	/// The top-level node, representing the whole file.
 	Root,
 	/// `'fail' | 'loop' | 'stop' | 'wait' ';'` or
@@ -93,14 +91,14 @@ pub enum Syn {
 	StateFlow,
 	/// For child nodes under a [`Syn::StatesBlock`].
 	StateDef,
-	/// `ident ':'`
+	/// `identchain ':'`
 	StateLabel,
 	/// `'light' '(' (string | name) (',' (string | name))* ')'`
 	StateLight,
 	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,
 	StateQuals,
-	/// `'states' ident '{' innard* '}'`
+	/// `'states' statesusage? '{' innard* '}'`
 	StatesBlock,
 	/// `'(' ('actor' | 'item' | 'overlay' | 'weapon')+ ')'`
 	StatesUsage,
