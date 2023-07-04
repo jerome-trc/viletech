@@ -48,11 +48,7 @@ pub fn file(p: &mut Parser<Syn>) {
 
 		if p.at(Token::DocComment) {
 			// Top-level items outside this set can not start with a doc comment.
-			p.advance_with_error(
-				Syn::from(p.nth(0)),
-				&["`const`", "`enum`", "`class`", "`struct`", "`mixin`"],
-			);
-
+			p.advance(Syn::Comment);
 			continue;
 		}
 

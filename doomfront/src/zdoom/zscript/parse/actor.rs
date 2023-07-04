@@ -149,6 +149,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 
 	trivia_0plus(p);
 	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
 		trivia_0plus(p);

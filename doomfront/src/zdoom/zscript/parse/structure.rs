@@ -237,22 +237,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 
 	if p.at(Token::DocComment) {
 		// Class innards outside this set can not start with a doc comment.
-		p.advance_with_error(
-			Syn::from(p.nth(0)),
-			&[
-				"a type name",
-				"`const` or `enum` or `struct`",
-				"`property` or `flagdef`",
-				"`play` or `ui` or `virtualscope` or `clearscope`",
-				"`deprecated` or `version`",
-				"`abstract` or `final` or `override` or `virtual`",
-				"`private` or `protected`",
-				"`internal` or `meta` or `native` or `transient`",
-				"`static` or `readonly`",
-				"`vararg`",
-			],
-		);
-
+		p.advance(Syn::Comment);
 		return;
 	}
 
@@ -344,6 +329,13 @@ fn member_decl(p: &mut Parser<Syn>) {
 				}
 
 				p.close(action, Syn::ActionQual);
+			}
+			Token::KwReadOnly => {
+				if p.find(1, |token| !token.is_trivia()) == Token::AngleL {
+					break; // We are likely looking at a `readonly<T>` return type.
+				}
+
+				p.advance(Syn::KwReadOnly);
 			}
 			other => p.advance(Syn::from(other)),
 		}
