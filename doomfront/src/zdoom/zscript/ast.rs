@@ -59,15 +59,15 @@ impl AstNode for TopLevel {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ClassDef => todo!(),
-			Syn::ClassExtend => todo!(),
-			Syn::ConstDef => todo!(),
-			Syn::EnumDef => todo!(),
-			Syn::MixinClassDef => todo!(),
-			Syn::IncludeDirective => todo!(),
-			Syn::StructDef => todo!(),
-			Syn::StructExtend => todo!(),
-			Syn::VersionDirective => todo!(),
+			Syn::ClassDef => Some(Self::ClassDef(ClassDef(node))),
+			Syn::ClassExtend => Some(Self::ClassExtend(ClassExtend(node))),
+			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
+			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
+			Syn::MixinClassDef => Some(Self::MixinClassDef(MixinClassDef(node))),
+			Syn::IncludeDirective => Some(Self::Include(IncludeDirective(node))),
+			Syn::StructDef => Some(Self::StructDef(StructDef(node))),
+			Syn::StructExtend => Some(Self::StructExtend(StructExtend(node))),
+			Syn::VersionDirective => Some(Self::Version(VersionDirective(node))),
 			_ => None,
 		}
 	}
