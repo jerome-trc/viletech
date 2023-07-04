@@ -223,6 +223,8 @@ pub enum Syn {
 	/// See [`crate::zdoom::lex::Token::StringLit`].
 	StringLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstKw,
 	KwAbstract,
 	KwAction,
 	KwAlignOf,
@@ -335,7 +337,11 @@ pub enum Syn {
 	// Tokens: keywords, irrelevant ////////////////////////////////////////////
 	KwAuto,
 	KwVolatile,
+	#[doc(hidden)]
+	__LastKw,
 	// Tokens: glyphs, composite glyphs ////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstGlyph,
 	/// `&`
 	Ampersand,
 	/// `&&`
@@ -463,6 +469,8 @@ pub enum Syn {
 	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
 	/// `->`
 	ThinArrow,
+	#[doc(hidden)]
+	__LastGlyph,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	/// The string `#include`, ASCII case insensitive.
 	PoundInclude,
@@ -494,6 +502,18 @@ impl Syn {
 			self,
 			Self::Whitespace | Self::Comment | Self::RegionStart | Self::RegionEnd
 		)
+	}
+
+	#[must_use]
+	pub fn is_keyword(self) -> bool {
+		let u = self as u16;
+		u > (Self::__FirstKw as u16) && u < (Self::__LastKw as u16)
+	}
+
+	#[must_use]
+	pub fn is_glyph(self) -> bool {
+		let u = self as u16;
+		u > (Self::__FirstGlyph as u16) && u < (Self::__LastGlyph as u16)
 	}
 }
 
