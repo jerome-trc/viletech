@@ -198,11 +198,11 @@ simple_astnode!(Syn, StructExtend, Syn::StructExtend);
 impl StructExtend {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	pub fn innards(&self) -> impl Iterator<Item = StructInnard> {
