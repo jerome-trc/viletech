@@ -177,7 +177,7 @@ impl ContainerSource {
 
 		Self {
 			path: p,
-			root: ptree.into_inner(),
+			root: ptree.into_green(),
 		}
 	}
 }

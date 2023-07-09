@@ -108,7 +108,12 @@ impl<L: LangExt> ParseTree<L> {
 	}
 
 	#[must_use]
-	pub fn into_inner(self) -> rowan::GreenNode {
+	pub fn into_inner(self) -> (rowan::GreenNode, Vec<ParseError<L>>) {
+		(self.root, self.errors)
+	}
+
+	#[must_use]
+	pub fn into_green(self) -> rowan::GreenNode {
 		self.root
 	}
 

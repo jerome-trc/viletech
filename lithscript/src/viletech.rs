@@ -104,7 +104,7 @@ impl<L: LangExt> ContainerSource<L> {
 		Self(
 			compile::ContainerSource {
 				path: path.as_ref().to_string_lossy().to_string(),
-				root: ptree.into_inner(),
+				root: ptree.into_green(),
 			},
 			PhantomData,
 		)
