@@ -336,7 +336,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
 		let ckpt = self.open();
 		self.raise(expected);
-		self.advance(syn);
+
+		if !self.eof() {
+			self.advance(syn);
+		}
+
 		self.close(ckpt, L::ERR_NODE);
 	}
 
