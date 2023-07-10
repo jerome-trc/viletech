@@ -86,11 +86,17 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 
 		while !p.at(Token::BraceR) && !p.eof() {
-			if p.eat(Token::Comma, Syn::Comma) {
-				trivia_0plus(p);
-				if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
-					doc_comments(p);
-					variant(p);
+			match p.nth(0) {
+				Token::Comma => {
+					p.advance(Syn::Comma);
+					trivia_0plus(p);
+					if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
+						doc_comments(p);
+						variant(p);
+					}
+				}
+				other => {
+					p.advance_with_error(Syn::from(other), &[",", "}"]);
 				}
 			}
 		}
@@ -166,6 +172,22 @@ enum BrickAndRoot {
 
 		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn enum_error_recovery() {
+		const SOURCE: &str = r"
+enum MyEnum {
+	ENUMVAL_0,
+	ENUMVAL_1,
+	ENUMVAL_2,
+	ENUM
+}
+";
+
+		let ptree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert!(ptree.any_errors());
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]
