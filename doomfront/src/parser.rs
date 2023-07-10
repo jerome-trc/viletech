@@ -7,7 +7,7 @@
 use std::cell::Cell;
 
 use logos::Logos;
-use rowan::{GreenNode, GreenNodeBuilder, SyntaxKind};
+use rowan::{GreenNode, GreenNodeBuilder, SyntaxKind, TextRange, TextSize};
 
 use crate::LangExt;
 
@@ -558,6 +558,27 @@ where
 pub struct Lexeme<L: LangExt> {
 	kind: L::Token,
 	span: logos::Span,
+}
+
+impl<L: LangExt> Lexeme<L> {
+	#[must_use]
+	pub fn token(&self) -> L::Token {
+		self.kind
+	}
+
+	#[must_use]
+	pub fn span(&self) -> logos::Span {
+		self.span.clone()
+	}
+
+	/// Like [`Self::span`] but narrows down the start and end scalars to [`u32`].
+	#[must_use]
+	pub fn text_range(&self) -> TextRange {
+		TextRange::new(
+			TextSize::from(self.span.start as u32),
+			TextSize::from(self.span.end as u32),
+		)
+	}
 }
 
 #[derive(Debug)]
