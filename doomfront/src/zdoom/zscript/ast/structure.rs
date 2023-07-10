@@ -197,7 +197,6 @@ simple_astnode!(Syn, StructExtend, Syn::StructExtend);
 
 impl StructExtend {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()

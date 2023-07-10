@@ -553,46 +553,15 @@ mod test {
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 		let stat = ast::AssignStat::cast(ptree.cursor()).unwrap();
-		assert_eq!(
-			stat.assignee()
-				.unwrap()
-				.into_ident_expr()
-				.unwrap()
-				.token()
-				.text(),
-			"w"
-		);
+		let ast::Expr::Ident(e_id) = stat.assignee().unwrap() else { panic!() };
+		assert_eq!(e_id.token().text(), "w");
 		let mut assigned = stat.assigned();
-		assert_eq!(
-			assigned
-				.next()
-				.unwrap()
-				.into_ident_expr()
-				.unwrap()
-				.token()
-				.text(),
-			"x"
-		);
-		assert_eq!(
-			assigned
-				.next()
-				.unwrap()
-				.into_ident_expr()
-				.unwrap()
-				.token()
-				.text(),
-			"y"
-		);
-		assert_eq!(
-			assigned
-				.next()
-				.unwrap()
-				.into_ident_expr()
-				.unwrap()
-				.token()
-				.text(),
-			"z"
-		);
+		let ast::Expr::Ident(e_id) = assigned.next().unwrap() else { panic!() };
+		assert_eq!(e_id.token().text(), "x");
+		let ast::Expr::Ident(e_id) = assigned.next().unwrap() else { panic!() };
+		assert_eq!(e_id.token().text(), "y");
+		let ast::Expr::Ident(e_id) = assigned.next().unwrap() else { panic!() };
+		assert_eq!(e_id.token().text(), "z");
 	}
 
 	#[test]

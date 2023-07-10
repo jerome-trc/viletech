@@ -16,6 +16,7 @@ pub enum Expr {
 	Ident(IdentExpr),
 	Index(IndexExpr),
 	Literal(Literal),
+	Member(MemberExpr),
 	Postfix(PostfixExpr),
 	Prefix(PrefixExpr),
 	Super(SuperExpr),
@@ -36,6 +37,7 @@ impl AstNode for Expr {
 				| Syn::CallExpr | Syn::ClassCastExpr
 				| Syn::GroupExpr | Syn::IdentExpr
 				| Syn::IndexExpr | Syn::Literal
+				| Syn::MemberExpr
 				| Syn::PostfixExpr
 				| Syn::PrefixExpr
 				| Syn::SuperExpr | Syn::TernaryExpr
@@ -55,6 +57,7 @@ impl AstNode for Expr {
 			Syn::IdentExpr => Some(Self::Ident(IdentExpr(node))),
 			Syn::IndexExpr => Some(Self::Index(IndexExpr(node))),
 			Syn::Literal => Some(Self::Literal(Literal(node))),
+			Syn::MemberExpr => Some(Self::Member(MemberExpr(node))),
 			Syn::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
 			Syn::PrefixExpr => Some(Self::Prefix(PrefixExpr(node))),
 			Syn::SuperExpr => Some(Self::Super(SuperExpr(node))),
@@ -73,109 +76,12 @@ impl AstNode for Expr {
 			Self::Ident(inner) => inner.syntax(),
 			Self::Index(inner) => inner.syntax(),
 			Self::Literal(inner) => inner.syntax(),
+			Self::Member(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
 			Self::Prefix(inner) => inner.syntax(),
 			Self::Super(inner) => inner.syntax(),
 			Self::Ternary(inner) => inner.syntax(),
 			Self::Vector(inner) => inner.syntax(),
-		}
-	}
-}
-
-impl Expr {
-	#[must_use]
-	pub fn into_bin_expr(self) -> Option<BinExpr> {
-		match self {
-			Self::Binary(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_call_expr(self) -> Option<CallExpr> {
-		match self {
-			Self::Call(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_class_cast_expr(self) -> Option<ClassCastExpr> {
-		match self {
-			Self::ClassCast(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_group_expr(self) -> Option<GroupExpr> {
-		match self {
-			Self::Group(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_ident_expr(self) -> Option<IdentExpr> {
-		match self {
-			Self::Ident(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_index_expr(self) -> Option<IndexExpr> {
-		match self {
-			Self::Index(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_lit_expr(self) -> Option<Literal> {
-		match self {
-			Self::Literal(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_postfix_expr(self) -> Option<PostfixExpr> {
-		match self {
-			Self::Postfix(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_prefix_expr(self) -> Option<PrefixExpr> {
-		match self {
-			Self::Prefix(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_super_expr(self) -> Option<SuperExpr> {
-		match self {
-			Self::Super(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_ternary_expr(self) -> Option<TernaryExpr> {
-		match self {
-			Self::Ternary(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_vector_expr(self) -> Option<VectorExpr> {
-		match self {
-			Self::Vector(inner) => Some(inner),
-			_ => None,
 		}
 	}
 }

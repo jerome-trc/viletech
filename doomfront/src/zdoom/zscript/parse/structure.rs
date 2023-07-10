@@ -413,7 +413,14 @@ fn member_decl(p: &mut Parser<Syn>) {
 			p.close(member, Syn::FieldDecl);
 		}
 		other => {
-			p.advance_err_and_close(member, Syn::from(other), Syn::Error, &["`[`", "`,`", "`(`"]);
+			p.cancel(rettypes);
+
+			p.advance_err_and_close(
+				member,
+				Syn::from(other),
+				Syn::Error,
+				&[";", "`[`", "`,`", "`(`"],
+			);
 		}
 	}
 }
@@ -530,7 +537,7 @@ mod test {
 	};
 
 	#[test]
-	fn smoke() {
+	fn smoke_class() {
 		const SOURCE: &str = r#####"
 
 class Rocketpack_Flare : Actor
@@ -563,6 +570,22 @@ class Rocketpack_Flare : Actor
 
 		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn mixin_class_error_recovery() {
+		const SOURCE: &str = r#"/// A mixin class that does something.
+mixin class df_Pickup {
+	Default {
+		+FLAGSET
+	}
+
+	meta Actor a
+}"#;
+
+		let ptree = crate::parse(SOURCE, mixin_class_def, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert!(ptree.any_errors());
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]

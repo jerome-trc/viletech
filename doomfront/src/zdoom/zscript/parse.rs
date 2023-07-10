@@ -96,6 +96,21 @@ mod test {
 	}
 
 	#[test]
+	fn smoke_stray_glyph() {
+		const SOURCE: &str = r#"/
+
+/// A mixin class that does something.
+mixin class df_Pickup {
+	Default {
+		+FLAGSET
+	}
+}
+"#;
+
+		let _ = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+	}
+
+	#[test]
 	fn with_sample_data() {
 		let (_, sample) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE") {
 			Ok(s) => s,

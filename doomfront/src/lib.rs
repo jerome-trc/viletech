@@ -45,6 +45,10 @@ pub trait LangExt: rowan::Language {
 		+ Default
 		+ std::hash::Hash;
 
+	/// As a simplification, end-of-file/end-of-input is treated as though it
+	/// were any other token, even though the parser will never actually advance
+	/// on such a token to put it into the emitted syntax tree. As such, your
+	/// chosen [`rowan::Language::Kind`] never needs to have a counterpart to this.
 	const EOF: Self::Token;
 	const ERR_NODE: Self::Kind;
 }

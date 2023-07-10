@@ -496,8 +496,8 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Ident => Self::Ident,
 			Token::Whitespace => Self::Whitespace,
 			Token::Comment => Self::Comment,
-			Token::Unknown => Self::Unknown,
-			Token::__Last | Token::__FirstKw | Token::__LastKw | Token::Eof | Token::DocComment => {
+			Token::Unknown | Token::Eof => Self::Unknown,
+			Token::__Last | Token::__FirstKw | Token::__LastKw | Token::DocComment => {
 				unreachable!()
 			}
 		}
