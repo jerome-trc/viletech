@@ -231,11 +231,11 @@ simple_astnode!(Syn, ReplacesClause, Syn::ReplacesClause);
 
 impl ReplacesClause {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn replaced(&self) -> SyntaxToken {
-		let ret = self.0.last_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
-		ret
+	pub fn replaced(&self) -> AstResult<SyntaxToken> {
+		self.0
+			.last_token()
+			.filter(|token| token.kind() == Syn::Ident)
+			.ok_or(AstError::Missing)
 	}
 }
 
@@ -288,12 +288,11 @@ simple_astnode!(Syn, MixinStat, Syn::MixinStat);
 
 impl MixinStat {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 }
 
@@ -510,12 +509,11 @@ impl Parameter {
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
+	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	#[must_use]

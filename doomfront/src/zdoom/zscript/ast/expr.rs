@@ -339,10 +339,10 @@ simple_astnode!(Syn, Argument, Syn::Argument);
 impl Argument {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn name(&self) -> SyntaxToken {
-		let token = self.0.first_token().unwrap();
-		debug_assert!(token.kind() == Syn::Ident);
-		token
+	pub fn name(&self) -> Option<SyntaxToken> {
+		self.0
+			.first_token()
+			.filter(|token| token.kind() == Syn::Ident)
 	}
 
 	#[must_use]
@@ -362,12 +362,11 @@ simple_astnode!(Syn, ClassCastExpr, Syn::ClassCastExpr);
 
 impl ClassCastExpr {
 	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn class_name(&self) -> SyntaxToken {
+	pub fn class_name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
-			.unwrap()
+			.ok_or(AstError::Missing)
 	}
 
 	#[must_use]
@@ -606,9 +605,29 @@ impl TernaryExpr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
+	/// The returned token is always tagged [`Syn::Question`].
+	#[must_use]
+	pub fn question_mark(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::Question)
+			})
+			.unwrap()
+	}
+
 	pub fn if_expr(&self) -> AstResult<Expr> {
 		let Some(node) = self.0.children().nth(1) else { return Err(AstError::Missing); };
 		Expr::cast(node).ok_or(AstError::Incorrect)
+	}
+
+	/// The returned token is always tagged [`Syn::Colon`].
+	pub fn colon(&self) -> AstResult<SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Colon))
+			.ok_or(AstError::Missing)
 	}
 
 	pub fn else_expr(&self) -> AstResult<Expr> {
