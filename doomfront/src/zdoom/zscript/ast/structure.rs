@@ -5,8 +5,9 @@ use rowan::ast::AstNode;
 use crate::{simple_astnode, AstError, AstResult};
 
 use super::{
-	ActionQual, CompoundStat, ConstDef, DefaultBlock, DeprecationQual, EnumDef, Expr, FlagDef,
-	PropertyDef, StatesBlock, StaticConstStat, Syn, SyntaxNode, SyntaxToken, TypeRef, VersionQual,
+	ActionQual, CompoundStat, ConstDef, DefaultBlock, DeprecationQual, DocComment, EnumDef, Expr,
+	FlagDef, PropertyDef, StatesBlock, StaticConstStat, Syn, SyntaxNode, SyntaxToken, TypeRef,
+	VarName, VersionQual,
 };
 
 // ClassDef ////////////////////////////////////////////////////////////////////
@@ -65,15 +66,8 @@ impl ClassDef {
 		ClassInnard::iter_from_node(self.0.clone())
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
@@ -122,15 +116,8 @@ impl MixinClassDef {
 		ClassInnard::iter_from_node(self.0.clone())
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
@@ -174,15 +161,8 @@ impl StructDef {
 		StructInnard::iter_from_node(self.0.clone())
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
@@ -345,19 +325,26 @@ pub struct FieldDecl(SyntaxNode);
 simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
 
 impl FieldDecl {
-	pub fn qualifiers(&self) -> impl Iterator<Item = MemberQual> {
-		MemberQual::iter_from_node(self.0.first_child().unwrap())
+	pub fn type_spec(&self) -> AstResult<TypeRef> {
+		self.0
+			.children()
+			.find_map(TypeRef::cast)
+			.ok_or(AstError::Missing)
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn names(&self) -> impl Iterator<Item = VarName> {
+		self.0.children().filter_map(VarName::cast)
+	}
+
+	#[must_use]
+	pub fn qualifiers(&self) -> MemberQuals {
+		let ret = self.0.first_child().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::MemberQuals);
+		MemberQuals(ret)
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
@@ -371,21 +358,24 @@ pub struct FunctionDecl(pub(super) SyntaxNode);
 simple_astnode!(Syn, FunctionDecl, Syn::FunctionDecl);
 
 impl FunctionDecl {
-	pub fn qualifiers(&self) -> impl Iterator<Item = MemberQual> {
-		MemberQual::iter_from_node(self.0.first_child().unwrap())
+	#[must_use]
+	pub fn qualifiers(&self) -> MemberQuals {
+		let ret = self.0.first_child().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::MemberQuals);
+		MemberQuals(ret)
 	}
 
-	pub fn return_types(&self) -> impl Iterator<Item = TypeRef> {
-		let rettypes = self
-			.0
-			.children()
-			.find(|node| node.kind() == Syn::ReturnTypes)
-			.unwrap();
+	#[must_use]
+	pub fn return_types(&self) -> ReturnTypes {
+		self.0.children().find_map(ReturnTypes::cast).unwrap()
+	}
 
-		rettypes.children().map(|node| {
-			debug_assert_eq!(node.kind(), Syn::TypeRef);
-			TypeRef(node)
-		})
+	#[must_use]
+	pub fn param_list(&self) -> AstResult<ParamList> {
+		self.0
+			.children()
+			.find_map(ParamList::cast)
+			.ok_or(AstError::Missing)
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].
@@ -397,70 +387,83 @@ impl FunctionDecl {
 			.unwrap()
 	}
 
-	/// Note that the returned iterator yields nothing if this function's
-	/// parameter list is just `(void)`.
-	pub fn params(&self) -> impl Iterator<Item = Parameter> {
-		let paramlist = self
-			.0
-			.children()
-			.find(|node| node.kind() == Syn::ParamList)
-			.unwrap();
-
-		paramlist.children().map(|node| {
-			debug_assert_eq!(node.kind(), Syn::Parameter);
-			Parameter(node)
-		})
-	}
-
 	#[must_use]
 	pub fn body(&self) -> Option<CompoundStat> {
 		CompoundStat::cast(self.0.last_child().unwrap())
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
+	#[must_use]
+	pub fn is_const(&self) -> bool {
 		self.0
 			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+			.skip_while(|elem| elem.kind() != Syn::ParamList)
+			.any(|elem| elem.kind() == Syn::KwConst)
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
-// MemberQual //////////////////////////////////////////////////////////////////
-
+/// Wraps a node tagged [`Syn::ReturnTypes`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum MemberQual {
-	Action(ActionQual),
-	Deprecation(DeprecationQual),
-	Version(VersionQual),
-	Abstract(SyntaxToken),
-	ClearScope(SyntaxToken),
-	Final(SyntaxToken),
-	Internal(SyntaxToken),
-	Meta(SyntaxToken),
-	Native(SyntaxToken),
-	Override(SyntaxToken),
-	Play(SyntaxToken),
-	Private(SyntaxToken),
-	Protected(SyntaxToken),
-	ReadOnly(SyntaxToken),
-	Static(SyntaxToken),
-	Transient(SyntaxToken),
-	Ui(SyntaxToken),
-	VarArg(SyntaxToken),
-	Virtual(SyntaxToken),
-	VirtualScope(SyntaxToken),
+pub struct ReturnTypes(SyntaxNode);
+
+simple_astnode!(Syn, ReturnTypes, Syn::ReturnTypes);
+
+impl ReturnTypes {
+	pub fn iter(&self) -> impl Iterator<Item = TypeRef> {
+		self.0.children().filter_map(TypeRef::cast)
+	}
 }
 
-impl MemberQual {
-	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = MemberQual> {
-		debug_assert_eq!(node.kind(), Syn::MemberQuals);
+/// Wraps a node tagged [`Syn::ParamList`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ParamList(SyntaxNode);
 
-		node.children_with_tokens()
+simple_astnode!(Syn, ParamList, Syn::ParamList);
+
+impl ParamList {
+	/// Note that the returned iterator yields nothing if this function's
+	/// parameter list is just `(void)`.
+	pub fn iter(&self) -> impl Iterator<Item = Parameter> {
+		self.0.children().filter_map(Parameter::cast)
+	}
+
+	/// Returns `true` if this parameter list is only parentheses.
+	#[must_use]
+	pub fn is_empty(&self) -> bool {
+		self.0.children().next().is_none()
+	}
+
+	/// Returns `true` if this parameter list is only the token [`Syn::KwVoid`]
+	/// enclosed by parentheses.
+	#[must_use]
+	pub fn is_void(&self) -> bool {
+		self.is_empty()
+			&& self
+				.0
+				.children_with_tokens()
+				.find(|elem| elem.kind() == Syn::KwVoid)
+				.is_some()
+	}
+}
+
+// MemberQuals /////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::MemberQuals`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct MemberQuals(SyntaxNode);
+
+simple_astnode!(Syn, MemberQuals, Syn::MemberQuals);
+
+impl MemberQuals {
+	pub fn iter(&self) -> impl Iterator<Item = MemberQual> {
+		self.0
+			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
 				Syn::DeprecationQual => Some(MemberQual::Deprecation(DeprecationQual(
 					elem.into_node().unwrap(),
@@ -489,6 +492,31 @@ impl MemberQual {
 				_ => None,
 			})
 	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum MemberQual {
+	Action(ActionQual),
+	Deprecation(DeprecationQual),
+	Version(VersionQual),
+	Abstract(SyntaxToken),
+	ClearScope(SyntaxToken),
+	Final(SyntaxToken),
+	Internal(SyntaxToken),
+	Meta(SyntaxToken),
+	Native(SyntaxToken),
+	Override(SyntaxToken),
+	Play(SyntaxToken),
+	Private(SyntaxToken),
+	Protected(SyntaxToken),
+	ReadOnly(SyntaxToken),
+	Static(SyntaxToken),
+	Transient(SyntaxToken),
+	Ui(SyntaxToken),
+	VarArg(SyntaxToken),
+	Virtual(SyntaxToken),
+	VirtualScope(SyntaxToken),
 }
 
 // Parameter ///////////////////////////////////////////////////////////////////

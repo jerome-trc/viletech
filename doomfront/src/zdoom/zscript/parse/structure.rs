@@ -407,7 +407,7 @@ fn member_decl(p: &mut Parser<Syn>) {
 		Token::Semicolon => {
 			p.cancel(rettypes);
 			trivia_0plus(p);
-			ident_lax(p);
+			var_name(p);
 			trivia_0plus(p);
 			p.advance(Syn::Semicolon);
 			p.close(member, Syn::FieldDecl);
@@ -603,26 +603,59 @@ class DevastationFixed {}
 		let class = ast::ClassDef::cast(ptree.cursor().first_child().unwrap()).unwrap();
 		assert_eq!(class.name().unwrap().text(), "DevastationFixed");
 		let mut docs = class.docs();
-		assert_eq!(docs.next().unwrap().text(), "/// UAC Mines\n");
-		assert_eq!(docs.next().unwrap().text(), "/// Sector 14-3\n");
+		assert_eq!(docs.next().unwrap().text_trimmed(), "UAC Mines");
+		assert_eq!(docs.next().unwrap().text_trimmed(), "Sector 14-3");
 		assert!(docs.next().is_none());
 	}
 
 	#[test]
 	fn smoke_field() {
-		const SOURCE: &str = r#"int corruption, three, nexus;"#;
+		const SOURCE: &str = r#"int corruption, three[], nexus[][1];"#;
 
 		let ptree: ParseTree =
 			crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+
+		let field = ast::FieldDecl::cast(ptree.cursor()).unwrap();
+
+		let ast::CoreType::Primitive(_) = field.type_spec().unwrap().core() else {
+			panic!("Expected primitive type specifier `int`.");
+		};
+
+		let mut names = field.names();
+
+		{
+			let name0 = names.next().unwrap();
+			assert_eq!(name0.ident().text(), "corruption");
+		}
+
+		{
+			let name1 = names.next().unwrap();
+			assert_eq!(name1.ident().text(), "three");
+			let mut lengths = name1.array_lengths();
+			assert!(lengths.next().unwrap().expr().is_none());
+		}
+
+		{
+			let name2 = names.next().unwrap();
+			assert_eq!(name2.ident().text(), "nexus");
+			let mut lengths = name2.array_lengths();
+			assert!(lengths.next().unwrap().expr().is_none());
+			assert!(lengths.next().unwrap().expr().is_some());
+		}
 	}
 
 	#[test]
 	fn smoke_method() {
-		const SOURCE: &str = r#"int, int uac_genesis();"#;
+		const SOURCE: &str = r#"int, int uac_genesis() const;"#;
 
 		let ptree: ParseTree =
 			crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+
+		let fndecl = ast::FunctionDecl::cast(ptree.cursor()).unwrap();
+		assert!(fndecl.is_const());
 	}
 }

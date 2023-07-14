@@ -40,6 +40,7 @@ pub enum CoreType {
 	Map(MapType),
 	MapIter(MapIterType),
 	Native(NativeType),
+	Primitive(PrimitiveType),
 	Readonly(ReadOnlyType),
 }
 
@@ -58,6 +59,7 @@ impl AstNode for CoreType {
 				| Syn::LetType | Syn::MapType
 				| Syn::MapIterType
 				| Syn::NativeType
+				| Syn::PrimitiveType
 				| Syn::ReadOnlyType
 		)
 	}
@@ -74,6 +76,7 @@ impl AstNode for CoreType {
 			Syn::MapType => Some(Self::Map(MapType(node))),
 			Syn::MapIterType => Some(Self::MapIter(MapIterType(node))),
 			Syn::NativeType => Some(Self::Native(NativeType(node))),
+			Syn::PrimitiveType => Some(Self::Primitive(PrimitiveType(node))),
 			Syn::ReadOnlyType => Some(Self::Readonly(ReadOnlyType(node))),
 			_ => None,
 		}
@@ -88,6 +91,7 @@ impl AstNode for CoreType {
 			Self::Map(inner) => inner.syntax(),
 			Self::MapIter(inner) => inner.syntax(),
 			Self::Native(inner) => inner.syntax(),
+			Self::Primitive(inner) => inner.syntax(),
 			Self::Readonly(inner) => inner.syntax(),
 		}
 	}

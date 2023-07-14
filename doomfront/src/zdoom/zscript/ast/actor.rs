@@ -8,7 +8,7 @@ use crate::{
 	AstError, AstResult,
 };
 
-use super::{ArgList, CompoundStat, Expr, IdentChain, Syn, SyntaxNode, SyntaxToken};
+use super::{ArgList, CompoundStat, DocComment, Expr, IdentChain, Syn, SyntaxNode, SyntaxToken};
 
 // FlagDef /////////////////////////////////////////////////////////////////////
 
@@ -49,15 +49,8 @@ impl FlagDef {
 			.ok_or(AstError::Missing)
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 
@@ -87,15 +80,8 @@ impl PropertyDef {
 			.filter_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 	}
 
-	/// All yielded tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 }
 

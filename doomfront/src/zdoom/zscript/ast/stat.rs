@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::{simple_astnode, AstError, AstResult};
 
-use super::{Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
+use super::{DocComment, Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -460,15 +460,8 @@ pub struct StaticConstStat(pub(super) SyntaxNode);
 simple_astnode!(Syn, StaticConstStat, Syn::StaticConstStat);
 
 impl StaticConstStat {
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
 	}
 
 	/// The returned token is always tagged [`Syn::Ident`].

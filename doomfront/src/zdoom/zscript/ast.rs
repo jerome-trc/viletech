@@ -112,15 +112,8 @@ impl ConstDef {
 		}
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(&self.0)
 	}
 }
 
@@ -167,20 +160,13 @@ impl EnumDef {
 		self.0.children().filter_map(EnumVariant::cast)
 	}
 
-	/// All returned tokens are tagged [`Syn::DocComment`].
-	pub fn docs(&self) -> impl Iterator<Item = SyntaxToken> {
-		self.0
-			.children_with_tokens()
-			.take_while(|elem| elem.kind() == Syn::DocComment)
-			.filter_map(|elem| {
-				elem.into_token()
-					.filter(|token| token.kind() == Syn::DocComment)
-			})
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(&self.0)
 	}
 }
 
 /// See [`EnumDef::type_spec`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum EnumType {
 	KwSByte,
@@ -193,6 +179,23 @@ pub enum EnumType {
 	KwUInt16,
 	KwInt,
 	KwUInt,
+}
+
+impl std::fmt::Display for EnumType {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::KwSByte => write!(f, "sbyte"),
+			Self::KwByte => write!(f, "byte"),
+			Self::KwInt8 => write!(f, "int8"),
+			Self::KwUInt8 => write!(f, "uint8"),
+			Self::KwShort => write!(f, "short"),
+			Self::KwUShort => write!(f, "ushort"),
+			Self::KwInt16 => write!(f, "int16"),
+			Self::KwUInt16 => write!(f, "uint16"),
+			Self::KwInt => write!(f, "int"),
+			Self::KwUInt => write!(f, "uint"),
+		}
+	}
 }
 
 /// Wraps a node tagged [`Syn::EnumVariant`].
@@ -212,6 +215,10 @@ impl EnumVariant {
 	#[must_use]
 	pub fn initializer(&self) -> Option<Expr> {
 		self.0.last_child().map(|node| Expr::cast(node).unwrap())
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(&self.0)
 	}
 }
 
@@ -437,4 +444,39 @@ impl ArrayLen {
 	pub fn expr(&self) -> Option<Expr> {
 		self.0.first_child().map(|node| Expr::cast(node).unwrap())
 	}
+}
+
+// DocComment //////////////////////////////////////////////////////////////////
+
+/// Wraps a [`Syn::DocComment`] token. Provides a convenience function for
+/// stripping preceding slashes and surrounding whitespace.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct DocComment(SyntaxToken);
+
+impl DocComment {
+	#[must_use]
+	pub fn text_trimmed(&self) -> &str {
+		self.0.text().trim_matches('/').trim()
+	}
+}
+
+impl std::ops::Deref for DocComment {
+	type Target = SyntaxToken;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+// Common AST helper functions /////////////////////////////////////////////////
+
+pub(self) fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
+	node.children_with_tokens()
+		.take_while(|elem| elem.kind() == Syn::DocComment)
+		.filter_map(|elem| {
+			elem.into_token()
+				.filter(|token| token.kind() == Syn::DocComment)
+				.map(DocComment)
+		})
 }
