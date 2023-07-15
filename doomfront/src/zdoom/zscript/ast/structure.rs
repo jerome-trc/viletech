@@ -42,8 +42,11 @@ impl ClassDef {
 	}
 
 	pub fn qualifiers(&self) -> impl Iterator<Item = ClassQual> {
-		let quals = self.0.first_child().unwrap();
-		debug_assert_eq!(quals.kind(), Syn::ClassQuals);
+		let quals = self
+			.0
+			.children()
+			.find(|node| node.kind() == Syn::ClassQuals)
+			.unwrap();
 
 		quals
 			.children_with_tokens()
