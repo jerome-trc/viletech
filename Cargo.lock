@@ -3060,6 +3060,7 @@ dependencies = [
  "peg",
  "rayon",
  "rustc-hash",
+ "sharded-slab",
  "smallvec",
  "viletech-fs",
  "viletech-utils",

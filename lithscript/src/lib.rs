@@ -26,6 +26,10 @@ pub mod tsys;
 #[cfg(feature = "viletech")]
 pub mod viletech;
 
+use std::hash::BuildHasherDefault;
+
+use rustc_hash::FxHasher;
+
 pub use self::{
 	heap::TPtr,
 	project::{Library, Project},
@@ -43,6 +47,9 @@ pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
+
+pub type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
+pub type FxDashSet<K> = dashmap::DashSet<K, BuildHasherDefault<FxHasher>>;
 
 /// Each [library] is declared as belonging to a version of the LithScript specification.
 ///

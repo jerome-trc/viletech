@@ -114,6 +114,7 @@ pub enum IssueLevel {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum Error {
+	BinExprTypeMismatch,
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
