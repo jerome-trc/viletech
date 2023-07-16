@@ -1,5 +1,7 @@
 //! A thin atomically reference-counted string type.
 
+use std::{borrow::Borrow, ops::Deref};
+
 /// Thin atomically reference-counted string using [`triomphe::ThinArc`].
 ///
 /// Essentially a [`std::sync::Arc`], but occupies only one pointer-width and
@@ -59,9 +61,15 @@ impl RString {
 			s as *const str
 		}
 	}
+
+	/// Checks if these are two equivalent pointers to the same string.
+	#[must_use]
+	pub fn ptr_eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self.0.as_ptr(), other.0.as_ptr())
+	}
 }
 
-impl std::ops::Deref for RString {
+impl Deref for RString {
 	type Target = str;
 
 	fn deref(&self) -> &Self::Target {
@@ -79,16 +87,16 @@ impl Clone for RString {
 }
 
 impl PartialEq for RString {
-	/// Checks if these are two equivalent pointers to the same string.
+	/// Character-by-character string comparison.
 	fn eq(&self, other: &Self) -> bool {
-		std::ptr::eq(self.0.as_ptr(), other.0.as_ptr())
+		self.deref() == other.deref()
 	}
 }
 
 impl PartialEq<&str> for RString {
 	/// Character-by-character string comparison.
 	fn eq(&self, other: &&str) -> bool {
-		std::ops::Deref::deref(self) == *other
+		Deref::deref(self) == *other
 	}
 }
 
@@ -96,27 +104,27 @@ impl Eq for RString {}
 
 impl PartialOrd for RString {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-		let s0 = std::ops::Deref::deref(self);
-		let s1 = std::ops::Deref::deref(other);
+		let s0 = Deref::deref(self);
+		let s1 = Deref::deref(other);
 		s0.partial_cmp(s1)
 	}
 }
 
 impl Ord for RString {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-		let s0 = std::ops::Deref::deref(self);
-		let s1 = std::ops::Deref::deref(other);
+		let s0 = Deref::deref(self);
+		let s1 = Deref::deref(other);
 		s0.cmp(s1)
 	}
 }
 
 impl std::hash::Hash for RString {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.0.as_ptr().hash(state)
+		Borrow::<str>::borrow(self).hash(state)
 	}
 }
 
-impl std::borrow::Borrow<str> for RString {
+impl Borrow<str> for RString {
 	fn borrow(&self) -> &str {
 		self.as_ref()
 	}
@@ -148,4 +156,5 @@ fn soundness() {
 	let mut set = HashSet::new();
 	set.insert(rstring.clone());
 	assert!(set.contains(&rstring));
+	assert!(set.contains("/lith/collect::TArray::element"));
 }
