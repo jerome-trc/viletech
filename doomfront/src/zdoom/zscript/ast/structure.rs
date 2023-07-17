@@ -373,7 +373,6 @@ impl FunctionDecl {
 		self.0.children().find_map(ReturnTypes::cast).unwrap()
 	}
 
-	#[must_use]
 	pub fn param_list(&self) -> AstResult<ParamList> {
 		self.0
 			.children()
@@ -449,8 +448,7 @@ impl ParamList {
 			&& self
 				.0
 				.children_with_tokens()
-				.find(|elem| elem.kind() == Syn::KwVoid)
-				.is_some()
+				.any(|elem| elem.kind() == Syn::KwVoid)
 	}
 }
 
