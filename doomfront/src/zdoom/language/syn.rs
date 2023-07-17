@@ -465,7 +465,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
 			// Miscellaneous ///////////////////////////////////////////////////
-			Token::PoundInclude => Self::PoundInclude,
+			Token::KwInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
 			Token::Ident | Token::KwNone => Self::Ident,

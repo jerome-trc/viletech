@@ -132,6 +132,8 @@ pub enum Syn {
 	KwDot,
 	KwDouble,
 	KwIn,
+	/// The exact string `#include`, ASCII case-insensitive.
+	KwInclude,
 	KwInt16,
 	KwInt8,
 	KwIs,
@@ -284,8 +286,6 @@ pub enum Syn {
 	/// `->`
 	ThinArrow,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
-	/// The exact string `#include`, ASCII case-insensitive.
-	PoundInclude,
 	RegionStart,
 	RegionEnd,
 	/// `"####"`, `"----"`,
@@ -368,6 +368,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwFor => Self::KwFor,
 			Token::KwGoto => Self::KwGoto,
 			Token::KwIn => Self::KwIn,
+			Token::KwInclude => Self::KwInclude,
 			Token::KwIf => Self::KwIf,
 			Token::KwInt => Self::KwInt,
 			Token::KwInt16 => Self::KwInt16,
@@ -476,7 +477,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::SlashEq => Self::SlashEq,
 			Token::ThinArrow => Self::ThinArrow,
 			// Miscellaneous ///////////////////////////////////////////////////
-			Token::PoundInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
 			Token::Ident

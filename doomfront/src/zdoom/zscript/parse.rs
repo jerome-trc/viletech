@@ -54,7 +54,7 @@ pub fn file(p: &mut Parser<Syn>) {
 
 		match token {
 			Token::KwExtend => class_or_struct_extend(p),
-			Token::PoundInclude => include_directive(p),
+			Token::KwInclude => include_directive(p),
 			Token::KwVersion => version_directive(p),
 			_ => p.advance_with_error(
 				Syn::from(p.nth(0)),

@@ -96,6 +96,8 @@ pub enum Token {
 	KwGoto,
 	#[regex("(?i)in", priority = 5)]
 	KwIn,
+	#[regex("(?i)#include")]
+	KwInclude,
 	#[regex("(?i)if", priority = 5)]
 	KwIf,
 	#[regex("(?i)int", priority = 5)]
@@ -341,8 +343,6 @@ pub enum Token {
 	#[token("->")]
 	ThinArrow,
 	// Miscellaneous ///////////////////////////////////////////////////////////
-	#[regex("(?i)#include")]
-	PoundInclude,
 	#[regex("#region[^\n]*\n")]
 	RegionStart,
 	#[regex("#endregion[^\n]*\n?")]

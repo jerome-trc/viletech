@@ -268,6 +268,8 @@ pub enum Syn {
 	KwInt8,
 	KwInternal,
 	KwIn,
+	/// The string `#include`, ASCII case insensitive.
+	KwInclude,
 	KwIs,
 	KwLatent,
 	KwLet,
@@ -470,8 +472,6 @@ pub enum Syn {
 	#[doc(hidden)]
 	__LastGlyph,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
-	/// The string `#include`, ASCII case insensitive.
-	PoundInclude,
 	RegionStart,
 	RegionEnd,
 	/// `####`, `----`,
@@ -577,9 +577,10 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwFor => Self::KwFor,
 			Token::KwForEach => Self::KwForEach,
 			Token::KwGoto => Self::KwGoto,
+			Token::KwIf => Self::KwIf,
 			Token::KwIn => Self::KwIn,
 			Token::KwInternal => Self::KwInternal,
-			Token::KwIf => Self::KwIf,
+			Token::KwInclude => Self::KwInclude,
 			Token::KwInt => Self::KwInt,
 			Token::KwInt16 => Self::KwInt16,
 			Token::KwInt8 => Self::KwInt8,
@@ -700,7 +701,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
 			// Miscellaneous ///////////////////////////////////////////////////
-			Token::PoundInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
 			Token::Ident => Self::Ident,

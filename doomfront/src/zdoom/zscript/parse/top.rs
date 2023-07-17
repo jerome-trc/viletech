@@ -115,9 +115,9 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::IncludeDirective`] node.
 pub fn include_directive(p: &mut Parser<Syn>) {
-	p.debug_assert_at(Token::PoundInclude);
+	p.debug_assert_at(Token::KwInclude);
 	let directive = p.open();
-	p.expect(Token::PoundInclude, Syn::PoundInclude, &["`#include`"]);
+	p.expect(Token::KwInclude, Syn::KwInclude, &["`#include`"]);
 	trivia_0plus(p);
 	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
 	p.close(directive, Syn::IncludeDirective);
