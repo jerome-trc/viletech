@@ -9,6 +9,7 @@ pub mod lex;
 pub mod cvarinfo;
 pub mod decorate;
 pub mod language;
+pub mod mapinfo;
 pub mod zscript;
 
 use std::num::IntErrorKind;
