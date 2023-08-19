@@ -413,7 +413,7 @@ pub(super) fn deprecation_qual(p: &mut Parser<Syn>) {
 /// Parse 0 or more [`Token::DocComment`]s, additionally consuming trailing trivia.
 pub(super) fn doc_comments(p: &mut Parser<Syn>) {
 	while p.eat(Token::DocComment, Syn::DocComment) {
-		trivia_0plus(p);
+		trivia_no_doc_0plus(p);
 	}
 }
 
@@ -422,10 +422,13 @@ pub(super) fn doc_comments(p: &mut Parser<Syn>) {
 /// - [`Syn::Comment`]
 /// - [`Syn::RegionStart`]
 /// - [`Syn::RegionEnd`]
+/// Note that [`Token::DocComment`] becomes [`Token::Comment`]. For positions
+/// where doc comments are valid, handle them with [`trivia_no_doc`].
 pub(super) fn trivia(p: &mut Parser<Syn>) -> bool {
 	p.eat_any(&[
 		(Token::Whitespace, Syn::Whitespace),
 		(Token::Comment, Syn::Comment),
+		(Token::DocComment, Syn::Comment),
 		(Token::RegionStart, Syn::RegionStart),
 		(Token::RegionEnd, Syn::RegionEnd),
 	])
@@ -442,6 +445,7 @@ pub(super) fn trivia_1plus(p: &mut Parser<Syn>) {
 		&[
 			(Token::Whitespace, Syn::Whitespace),
 			(Token::Comment, Syn::Comment),
+			(Token::DocComment, Syn::Comment),
 			(Token::RegionStart, Syn::RegionStart),
 			(Token::RegionEnd, Syn::RegionEnd),
 		],
@@ -449,6 +453,20 @@ pub(super) fn trivia_1plus(p: &mut Parser<Syn>) {
 	);
 
 	trivia_0plus(p);
+}
+
+pub(super) fn trivia_no_doc(p: &mut Parser<Syn>) -> bool {
+	p.eat_any(&[
+		(Token::Whitespace, Syn::Whitespace),
+		(Token::Comment, Syn::Comment),
+		(Token::RegionStart, Syn::RegionStart),
+		(Token::RegionEnd, Syn::RegionEnd),
+	])
+}
+
+/// Shorthand for `while trivia_no_doc(p) {}`.
+pub(super) fn trivia_no_doc_0plus(p: &mut Parser<Syn>) {
+	while trivia_no_doc(p) {}
 }
 
 /// Builds a [`Syn::VarName`] node.

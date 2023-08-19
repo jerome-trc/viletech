@@ -343,28 +343,28 @@ pub enum Token {
 	#[token("->")]
 	ThinArrow,
 	// Miscellaneous ///////////////////////////////////////////////////////////
-	#[regex("#region[^\n]*\n")]
-	RegionStart,
-	#[regex("#endregion[^\n]*\n?")]
-	RegionEnd,
-	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
-	Ident,
-	/// A heterogenous span of any character between NUL and ASCII 32.
-	#[regex("[\0- ]+")]
-	Whitespace,
+	#[regex("//[^\n]*\n*", priority = 1, callback = Token::try_doc_comment)]
+	#[regex("//")]
+	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
+	Comment,
 	/// Doc comments are applicable only to [ZScript](crate::zdoom::zscript),
 	/// and non-standard, being defined by [zscdoc].
 	///
 	/// [zscdoc]: https://gitlab.com/Gutawer/zscdoc
 	DocComment,
-	#[regex("//[^\n]*\n*", priority = 1, callback = Token::try_doc_comment)]
-	#[regex("//")]
-	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
-	Comment,
-	#[default]
-	Unknown,
 	/// A dummy token for [`LangExt`](crate::LangExt).
 	Eof,
+	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
+	Ident,
+	#[regex("#region[^\n]*\n")]
+	RegionStart,
+	#[regex("#endregion[^\n]*\n?")]
+	RegionEnd,
+	/// A heterogenous span of any character between NUL and ASCII 32.
+	#[regex("[\0- ]+")]
+	Whitespace,
+	#[default]
+	Unknown,
 	#[doc(hidden)]
 	__Last,
 }
@@ -380,13 +380,16 @@ impl Token {
 	pub fn is_trivia(self) -> bool {
 		matches!(
 			self,
-			Self::Whitespace | Self::Comment | Self::RegionStart | Self::RegionEnd
+			Self::Whitespace
+				| Self::Comment | Self::DocComment
+				| Self::RegionStart
+				| Self::RegionEnd
 		)
 	}
 
 	#[must_use]
-	pub fn is_trivia_or_doc(self) -> bool {
-		self.is_trivia() || self == Self::DocComment
+	pub fn is_trivia_no_doc(self) -> bool {
+		self.is_trivia() && self != Self::DocComment
 	}
 
 	// Callbacks ///////////////////////////////////////////////////////////////////

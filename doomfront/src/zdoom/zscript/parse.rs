@@ -16,11 +16,11 @@ pub fn file(p: &mut Parser<Syn>) {
 	let root = p.open();
 
 	while !p.eof() {
-		if trivia(p) {
+		if trivia_no_doc(p) {
 			continue;
 		}
 
-		let token = p.find(0, |token| !token.is_trivia_or_doc());
+		let token = p.find(0, |token| !token.is_trivia());
 
 		match token {
 			Token::KwClass => {

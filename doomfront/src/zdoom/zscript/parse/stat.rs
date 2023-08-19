@@ -360,9 +360,8 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 /// Builds a [`Syn::CompoundStat`] node.
 pub(super) fn compound_stat(p: &mut Parser<Syn>) {
-	p.debug_assert_at(Token::BraceL);
 	let stat = p.open();
-	p.advance(Syn::BraceL);
+	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
 
 	loop {
 		trivia_0plus(p);
@@ -389,7 +388,7 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 	trivia_1plus(p);
 	p.expect(Token::KwConst, Syn::KwConst, &["`const`"]);
 	trivia_0plus(p);
-	type_ref(p);
+	core_type(p);
 	trivia_0plus(p);
 
 	let t = p.find(0, |token| !token.is_trivia());
@@ -614,6 +613,21 @@ mod test {
 
 		let ptree: ParseTree =
 			crate::parse(SOURCE, compound_stat, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn smoke_static_const() {
+		const SOURCE: &str = "static const float[] SOME_FLOATS = {
+			-0.05, -0.2, -0.4, 0.3, 0.15, 0.1, 0.07, 0.03
+		};";
+
+		let ptree: ParseTree = crate::parse(
+			SOURCE,
+			static_const_stat,
+			zdoom::lex::Context::ZSCRIPT_LATEST,
+		);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}

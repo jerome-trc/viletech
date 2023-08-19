@@ -53,12 +53,10 @@ impl LitToken<zscript::Syn> {
 		self.0.kind() == zscript::Syn::NullLit
 	}
 
-	/// Note that this returns `Some` for both
-	/// [`zscript::Syn::StringLit`] and [`zscript::Syn::StateFrames`].
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {
-			zscript::Syn::StringLit | zscript::Syn::StateFrames => Some(self.get_string()),
+			zscript::Syn::StringLit => Some(self.get_string()),
 			_ => None,
 		}
 	}

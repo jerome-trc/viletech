@@ -274,17 +274,18 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.raise(expected);
 	}
 
+	/// Put together tokens into one `syn`.
+	/// If `advance_if` returns `false`, the merge loop breaks.
 	pub fn merge(
 		&mut self,
 		syn: L::Kind,
 		advance_if: fn(L::Token) -> bool,
-		until: fn(L::Token) -> bool,
 		fallback: fn(L::Token) -> L::Kind,
 		expected: &'static [&'static str],
 	) {
 		let mut n = 0;
 
-		while !self.at_if(until) {
+		loop {
 			let token = self.nth(n);
 
 			if advance_if(token) {

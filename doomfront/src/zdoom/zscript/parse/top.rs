@@ -120,6 +120,12 @@ pub fn include_directive(p: &mut Parser<Syn>) {
 	p.expect(Token::KwInclude, Syn::KwInclude, &["`#include`"]);
 	trivia_0plus(p);
 	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+
+	while p.find(0, |token| !token.is_trivia()) == Token::StringLit {
+		trivia_0plus(p);
+		p.advance(Syn::StringLit);
+	}
+
 	p.close(directive, Syn::IncludeDirective);
 }
 

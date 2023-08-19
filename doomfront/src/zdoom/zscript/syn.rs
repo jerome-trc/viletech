@@ -474,17 +474,18 @@ pub enum Syn {
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	RegionStart,
 	RegionEnd,
-	/// `####`, `----`,
-	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
-	StateSprite,
-	StateFrames,
 	/// ZScript comments use C++ syntax and are treated like whitespace.
 	Comment,
 	/// Single-line comments preceded by `///`. Non-standard; used only by
-	/// [zscdoc](https://gitlab.com/Gutawer/zscdoc).
+	/// [zscdoc](https://gitlab.com/Gutawer/zscdoc). These tokens only appear in
+	/// emitted syntax trees if in expected positions (i.e. above a type declaration,
+	/// member, enum variant, or mixin class). Otherwise, comments matching this
+	/// token pattern fall through to [`Syn::Comment`].
 	DocComment,
 	/// A C-style identifier.
 	Ident,
+	/// Used for state sprites, frames, and labels in DECORATE and ZScript.
+	NonWhitespace,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
 	/// Lexer input rolled up under [`Syn::Error`].

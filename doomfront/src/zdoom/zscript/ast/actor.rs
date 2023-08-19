@@ -336,36 +336,23 @@ pub struct StateDef(SyntaxNode);
 simple_astnode!(Syn, StateDef, Syn::StateDef);
 
 impl StateDef {
+	/// The returned token is always tagged [`Syn::NonWhitespace`].
 	#[must_use]
-	pub fn sprite(&self) -> StateSprite {
-		let token = self.0.first_token().unwrap();
-		debug_assert_eq!(token.kind(), Syn::StateSprite);
-		let text = token.text();
-
-		if text.starts_with('"') && text.ends_with('"') {
-			StateSprite::Quoted(LitToken::new(token))
-		} else {
-			StateSprite::Unquoted(token)
-		}
+	pub fn sprite(&self) -> SyntaxToken {
+		let ret = self.0.first_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::NonWhitespace);
+		ret
 	}
 
-	pub fn frames(&self) -> AstResult<StateFrames> {
-		let token = self
-			.0
+	pub fn frames(&self) -> AstResult<SyntaxToken> {
+		self.0
 			.children_with_tokens()
+			.skip(1)
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::StateFrames)
+					.filter(|token| token.kind() == Syn::NonWhitespace)
 			})
-			.ok_or(AstError::Missing)?;
-
-		let text = token.text();
-
-		if text.starts_with('"') && text.ends_with('"') {
-			Ok(StateFrames::Quoted(LitToken::new(token)))
-		} else {
-			Ok(StateFrames::Unquoted(token))
-		}
+			.ok_or(AstError::Missing)
 	}
 
 	pub fn quals(&self) -> impl Iterator<Item = StateQual> {
@@ -451,58 +438,6 @@ impl StateOffset {
 	pub fn y(&self) -> AstResult<Expr> {
 		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
 		Expr::cast(node).ok_or(AstError::Incorrect)
-	}
-}
-
-// StateSprite /////////////////////////////////////////////////////////////////
-
-/// Each variant wraps a token tagged [`Syn::StateSprite`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum StateSprite {
-	Quoted(LitToken<Syn>),
-	Unquoted(SyntaxToken),
-}
-
-impl StateSprite {
-	#[must_use]
-	pub fn hold(&self) -> bool {
-		match self {
-			Self::Quoted(lit) => lit.string().unwrap() == "----",
-			Self::Unquoted(token) => token.text() == "----",
-		}
-	}
-
-	#[must_use]
-	pub fn hold_selective(&self) -> bool {
-		match self {
-			Self::Quoted(lit) => lit.string().unwrap() == "####",
-			Self::Unquoted(token) => token.text() == "####",
-		}
-	}
-}
-
-// StateFrames /////////////////////////////////////////////////////////////////
-
-/// Each variant wraps a token tagged [`Syn::StateFrames`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum StateFrames {
-	/// Use [`LitToken::<zscript::Syn>::string`] to get the un-delimited content.
-	Quoted(LitToken<Syn>),
-	/// The text of the token within comprises an arbitrary combination of
-	/// ASCII letters, `[`, `]`, and `\`.
-	Unquoted(SyntaxToken),
-}
-
-impl StateFrames {
-	/// Returns `true` if the token's text is either `#` or `"#"`.
-	#[must_use]
-	pub fn hold_selective(&self) -> bool {
-		match self {
-			Self::Quoted(token) => token.string().unwrap() == "#",
-			Self::Unquoted(token) => token.text() == "#",
-		}
 	}
 }
 

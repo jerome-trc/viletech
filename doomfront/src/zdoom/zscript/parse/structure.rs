@@ -199,7 +199,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 // Innards /////////////////////////////////////////////////////////////////////
 
 fn class_innard(p: &mut Parser<Syn>) {
-	let token = p.find(0, |token| !token.is_trivia_or_doc());
+	let token = p.find(0, |token| !token.is_trivia());
 
 	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
 		static_const_stat(p);
@@ -274,7 +274,7 @@ fn class_innard(p: &mut Parser<Syn>) {
 }
 
 fn struct_innard(p: &mut Parser<Syn>) {
-	let token = p.find(0, |token| !token.is_trivia_or_doc());
+	let token = p.find(0, |token| !token.is_trivia());
 
 	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
 		static_const_stat(p);
@@ -570,6 +570,40 @@ class Rocketpack_Flare : Actor
 
 		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
+	}
+
+	#[test]
+	fn class_error_recovery() {
+		const SOURCE: &str = r#####"class df_SomeClass : Actor abstract
+{
+	protected action void A_DF_Action()
+}"#####;
+
+		let ptree = crate::parse(SOURCE, class_def, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert!(ptree.any_errors());
+		prettyprint_maybe(ptree.cursor());
+	}
+
+	#[test]
+	fn after_class_error_recovery() {
+		const SOURCE: &str = r#####"
+class df_SomeClass : Actor abstract
+{
+	protected action void A_DF_Action();
+}gl
+
+class df_AnotherClass : Actor
+{
+	Default
+	{
+
+	}
+}
+"#####;
+
+		let ptree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert!(ptree.any_errors());
+		prettyprint_maybe(ptree.cursor());
 	}
 
 	#[test]
