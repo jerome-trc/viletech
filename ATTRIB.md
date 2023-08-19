@@ -62,7 +62,7 @@ All symbols marked as originating from [ZMusic](https://github.com/ZDoom/ZMusic)
 
 ## MIDI SoundFonts
 
-The SoundFont file located at /data/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
+The SoundFont file located at /assets/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
 
 # Special Thanks
 

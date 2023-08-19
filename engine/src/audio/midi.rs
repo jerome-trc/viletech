@@ -552,7 +552,7 @@ impl kira::sound::Sound for Sound {
 impl AudioCore {
 	/// A fundamental part of engine initialization. Recursively read the contents of
 	/// `<executable_directory>/soundfonts`, determine their types, and store their
-	/// paths. Note that in the debug build, `<working_directory>/data/soundfonts`
+	/// paths. Note that in the debug build, `<working_directory>/assets/soundfonts`
 	/// will be walked instead.
 	///
 	/// If no SoundFont files whatsoever could be found, `Ok(())` still gets
@@ -721,7 +721,7 @@ impl AudioCore {
 		{
 			[
 				std::env::current_dir().expect("failed to get working directory"),
-				PathBuf::from("data/soundfonts"),
+				PathBuf::from("assets/soundfonts"),
 			]
 			.iter()
 			.collect()

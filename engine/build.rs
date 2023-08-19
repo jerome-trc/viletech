@@ -52,15 +52,15 @@ fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 	Ok(())
 }
 
-/// Compile the contents of `/data/viletech` into `/target/viletech.vpk3`.
+/// Compile the contents of `/assets/viletech` into `/target/viletech.vpk3`.
 /// Hash the bytes of that file, and store the stringifiedhash in an
 /// environment variable that gets compiled into the engine.
 fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
-	let data_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "data", "viletech"]
+	let assets_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "assets", "viletech"]
 		.iter()
 		.collect::<PathBuf>();
 
-	if !data_path.exists() {
+	if !assets_path.exists() {
 		panic!("base data directory not found");
 	}
 
@@ -78,7 +78,7 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 	let file = File::create(&pkg_path)?;
 	let mut zip = zip::ZipWriter::new(file);
 
-	let walker = walkdir::WalkDir::new::<&Path>(&data_path)
+	let walker = walkdir::WalkDir::new::<&Path>(&assets_path)
 		.follow_links(false)
 		.max_depth(16)
 		.same_file_system(true)
@@ -93,7 +93,7 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 
 		let path = dir_entry.path();
 
-		let path_rel = match path.strip_prefix(&data_path)?.to_str() {
+		let path_rel = match path.strip_prefix(&assets_path)?.to_str() {
 			Some(s) => s.to_string(),
 			None => {
 				let p = path.display();

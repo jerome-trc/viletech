@@ -753,7 +753,7 @@ mod test {
 	fn midi_with_sample_data() {
 		let sfpath: PathBuf = [
 			Path::new(env!("CARGO_WORKSPACE_DIR")),
-			Path::new("data/soundfonts/viletech.sf2"),
+			Path::new("assets/soundfonts/viletech.sf2"),
 		]
 		.iter()
 		.collect();

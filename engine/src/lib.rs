@@ -113,7 +113,7 @@ pub fn basedata_path() -> std::path::PathBuf {
 	{
 		path = [
 			std::env::current_dir().expect("failed to get working directory"),
-			PathBuf::from("data/viletech"),
+			PathBuf::from("assets/viletech"),
 		]
 		.iter()
 		.collect();
@@ -125,7 +125,7 @@ pub fn basedata_path() -> std::path::PathBuf {
 /// Returns an error if the engine's base data can't be found,
 /// or has been tampered with somehow since application installation.
 ///
-/// In the debug build, this looks for `$PWD/data/viletech`, and returns `Ok`
+/// In the debug build, this looks for `$PWD/assets/viletech`, and returns `Ok`
 /// simply if that directory is found.
 /// In the release build, this looks for `<exec dir>/viletech.zip`, and
 /// ensures it's present and matches a checksum.
