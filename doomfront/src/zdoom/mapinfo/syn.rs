@@ -8,40 +8,51 @@ use crate::{zdoom::Token, LangExt};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// `'automap' '{' kvp* '}'`
+	/// `('automap' | 'automap_overlay') '{' property* '}'`
 	AutomapDef,
 	/// [`Syn::KwClearEpisodes`] outside of a block.
 	ClearEpisodes,
-	/// `'cluster' '{' kvp* '}'`
+	/// `'cluster' '{' property* '}'`
 	ClusterDef,
-	/// `'conversationids' '{' kvp* '}'`
+	/// `'conversationids' '{' property* '}'`
 	ConversationDef,
+	/// `'damagetype' '{' property* '}'`
 	DamageTypeDef,
-	/// `'defaultmap' '{' kvp* '}'`
+	/// `'defaultmap' '{' property* '}'`
 	DefaultMapDef,
-	/// `'doomednums' '{' kvp* '}'`
+	/// `'doomednums' '{' property* '}'`
 	EdNumsDef,
-	/// `'episode' ident '{' kvp* '}'`
+	/// `'episode' ident '{' property* '}'`
 	EpisodeDef,
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
-	/// `'gameinfo' '{' kvp* '}'`
+	/// `'gamedefaults' '{' property* '}'`
+	GameDefaults,
+	/// `'gameinfo' '{' property* '}'`
 	GameInfoDef,
 	/// [`Syn::KwInclude`] followed by a [`Syn::StringLit`].
 	IncludeDirective,
-	/// `'intermission' '{' kvp* '}'`
+	/// `'intermission' '{' property* '}'`
 	IntermissionDef,
+	/// `'lookup' string`
+	StringLookup,
 	/// `ident ('=' value (, value)*)?`
 	/// Where `value` is a literal or identifier.
-	KeyValuePair,
-	/// `'map' ident ('lookup' string)? '{' kvp* '}'`
+	Property,
+	/// `'map' ident ('lookup' string)? '{' property* '}'`
 	MapDef,
 	/// The top-level node, representing the whole file.
 	Root,
-	/// `'skill' '{' kvp* '}'`
+	/// `'skill' '{' property* '}'`
 	SkillDef,
-	/// `'spawnnums' '{' kvp* '}'`
+	/// `'spawnnums' '{' property* '}'`
 	SpawnNumDefs,
+	/// `ident '{' property* '}'`
+	SubBlock,
+	/// `'teaser' ident`
+	TeaserDef,
+	/// `ident | string | int | float | 'true' | 'false'`
+	Value,
 	// Tokens: literals, relevant //////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::StringLit`].
 	StringLit,
@@ -55,7 +66,9 @@ pub enum Syn {
 	/// See [`crate::zdoom::lex::Token::KwNull`].
 	NullLit,
 	// Tokens: keywords, relevant //////////////////////////////////////////////
+	KwAddDefaultMap,
 	KwAutomap,
+	KwAutomapOverlay,
 	KwClearEpisodes,
 	KwCluster,
 	KwConversationIds,
@@ -64,6 +77,7 @@ pub enum Syn {
 	KwDoomEdNums,
 	KwEpisode,
 	KwFalse,
+	KwGameDefaults,
 	KwGameInfo,
 	KwLookup,
 	/// Note that this is not the same as [`Token::KwInclude`];
@@ -73,6 +87,7 @@ pub enum Syn {
 	KwMap,
 	KwSkill,
 	KwSpawnNums,
+	KwTeaser,
 	KwTrue,
 	// Tokens: keywords, irrelevant ////////////////////////////////////////////
 	#[doc(hidden)]
@@ -181,6 +196,8 @@ pub enum Syn {
 	Comma,
 	/// `=`
 	Eq,
+	/// `+`
+	Plus,
 	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
 	/// `&`
 	Ampersand,
@@ -280,8 +297,6 @@ pub enum Syn {
 	Pipe2,
 	/// `||=`
 	Pipe2Eq,
-	/// `+`
-	Plus,
 	/// `++`
 	Plus2,
 	/// `+=`

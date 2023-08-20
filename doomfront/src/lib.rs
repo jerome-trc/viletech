@@ -143,7 +143,7 @@ where
 pub fn parse<'i, L: LangExt>(
 	source: &'i str,
 	function: fn(&mut parser::Parser<L>),
-	lexer_ctx: <<L as LangExt>::Token as logos::Logos<'i>>::Extras,
+	lexer_ctx: <L::Token as logos::Logos<'i>>::Extras,
 ) -> ParseTree<L> {
 	let mut parser = parser::Parser::new(source, lexer_ctx);
 	function(&mut parser);
