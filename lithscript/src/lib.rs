@@ -1,14 +1,13 @@
 //! # LithScript
 //!
-//! The LithSC toolchain; VileTech's answer to the [ZScript] programming language
-//! used by GZDoom and Raze, designed for being transpiled to from ZScript and
-//! other ZDoom languages, while not compromising on versatility as a game script,
-//! as ZScript did.
-//!
-//! [ZScript]: https://zdoom.org/wiki/ZScript
+//! The LithScript Compiler Collection (LSCC). This is a programming language
+//! designed for foremostly for VileTech, meant to:
+//! - Be a versatile scripting languages for games, VileTech-based or otherwise
+//! - Be easy to transpile to from ZScript and other ZDoom languages
+//! - Bring the performance of JIT and static typing without the baggage of LLVM
 
 #![allow(unused)]
-#![allow(dead_code)]
+#![allow(dead_code)] // TODO: Disallow
 
 pub mod ast;
 pub mod codegen;

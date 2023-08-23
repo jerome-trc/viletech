@@ -5,7 +5,7 @@ edition.workspace = true
 
 categories = ["game-engines", "game-development"]
 description = "VileTech Engine command line utilities"
-keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
+keywords = ["bevy", "doom", "gamedev", "cli", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
 repository.workspace = true

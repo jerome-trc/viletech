@@ -5,9 +5,12 @@
 VileTech is a collection of Doom-related Rust technologies, oriented towards the building of new tools, game engines, and games descending from id Software's id Tech 1 engine.
 
 The goals of the VileTech "project" are as follows, in descending order of priority:
-1. Build a (highly divergent) fork of the [GZDoom](https://zdoom.org) source port, implementing features which are impractical or which fall outside of its official scope.
+1. Facilitate the development of a catch-all [language server](https://github.com/jerome-trc/doom-ls) for Doom content development.
 2. Expose functionality developed in the Doom open-source ecosystem which is currently unavailable (i.e. due to being tied up in existing applications) as a public API, first with a Rust interface and then with a C API.
-3. Facilitate the development of a catch-all [language server](https://github.com/jerome-trc/doom-ls) for Doom content development.
+3. Build a new Doom source port as an alternative to [GZDoom](https://zdoom.org), with the orthogonal goals of:
+	- Implementing improvements which are impractical for GZDoom due to technical debt.
+	- Adding features which fall outside GZDoom's scope.
+	- Eliminating compatibility for the 1% of legacy user content which GZDoom supports to its detriment.
 
 ## Libraries
 

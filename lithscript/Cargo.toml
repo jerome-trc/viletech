@@ -5,9 +5,9 @@ edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["compilers", "game-development"]
-description = "Fork of GZDoom's ZScript"
+description = "Statically-typed, JIT-compiled game scripting language"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/lithscript"
-keywords = ["compiler", "doom", "dsl", "viletech", "gamedev"]
+keywords = ["compiler", "dsl", "gamedev", "scripting", "viletech"]
 license = "MIT OR Apache-2.0"
 publish = false
 repository.workspace = true
