@@ -53,7 +53,7 @@ fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Compile the contents of `/assets/viletech` into `/target/viletech.vpk3`.
-/// Hash the bytes of that file, and store the stringifiedhash in an
+/// Hash the bytes of that file, and store the stringified hash in an
 /// environment variable that gets compiled into the engine.
 fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 	let assets_path: PathBuf = [env!("CARGO_WORKSPACE_DIR"), "assets", "viletech"]
