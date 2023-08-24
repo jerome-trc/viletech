@@ -4,7 +4,11 @@
 use std::sync::Arc;
 
 use bevy::{
-	input::{keyboard::KeyboardInput, ButtonState, InputSystem},
+	input::{
+		keyboard::KeyboardInput,
+		touchpad::{TouchpadMagnify, TouchpadRotate},
+		ButtonState, InputSystem,
+	},
 	prelude::*,
 };
 use bevy_egui::systems::InputEvents;
@@ -83,7 +87,7 @@ pub enum BindingTrigger {
 
 /// Copies [`bevy::input::InputPlugin`] but adds no input resources and no
 /// systems. Instead, [add systems](bevy::prelude::App::add_system) to the
-/// [`InputSystem`] set which feed [`InputEvents`] to an [`InputCore`].
+/// [`InputSystem`] set which feeds [`InputEvents`] to an [`InputCore`].
 #[derive(Debug, Default)]
 pub struct InputPlugin;
 
@@ -91,7 +95,7 @@ impl Plugin for InputPlugin {
 	fn build(&self, app: &mut App) {
 		use bevy::input::{gamepad::*, keyboard::*, mouse::*, touch::*};
 
-		app.configure_set(InputSystem.in_base_set(CoreSet::PreUpdate))
+		app.configure_set(PreUpdate, InputSystem)
 			// keyboard
 			.add_event::<KeyboardInput>()
 			.init_resource::<Input<KeyCode>>()
@@ -129,6 +133,10 @@ impl Plugin for InputPlugin {
 			.register_type::<MouseMotion>()
 			.register_type::<MouseScrollUnit>()
 			.register_type::<MouseWheel>();
+
+		// Register touchpad types
+		app.register_type::<TouchpadMagnify>()
+			.register_type::<TouchpadRotate>();
 
 		// Register touch types
 		app.register_type::<TouchInput>()

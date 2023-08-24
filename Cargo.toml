@@ -37,9 +37,9 @@ strip = false
 arc-swap = "1.6.0"
 ariadne = "0.3.0"
 arrayvec = { version = "0.7.2", features = ["serde"] }
-bevy = { version = "0.10.1", default-features = false }
-bevy_egui = "0.20.1"
-bevy_quinnet = "0.4.0"
+bevy = { version = "0.11.2", default-features = false }
+bevy_egui = "0.21.0"
+bevy_quinnet = "0.5.0"
 bitflags = "2.3.1"
 bitvec = { version = "1.0.1", features = ["serde"] }
 bytemuck = { version = "1.13.0", features = ["derive"] }
@@ -54,13 +54,13 @@ cranelift-interpreter = "0.96.3"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 # Must be compatible with `bevy_egui`.
-egui = "0.21.0"
+egui = "0.22.0"
 fixed = "1.23.1"
 fluidlite = "0.2.1"
 formatx = "0.2.1"
 # Same version as specified by `bevy_math`. Specified here
 # to add the `approx`, `mint`, and `debug-glam-assert` feature flags.
-glam = { version = "0.23.0", features = [
+glam = { version = "0.24.0", features = [
 	"approx",
 	"bytemuck",
 	"mint",

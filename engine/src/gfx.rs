@@ -6,7 +6,7 @@ use bevy::{
 	render::render_resource::{AsBindGroup, ShaderRef},
 };
 
-#[derive(AsBindGroup, Debug, Clone, TypeUuid)]
+#[derive(AsBindGroup, Reflect, Debug, Clone, TypeUuid)]
 #[uuid = "8754faf6-ee9a-11ed-a05b-0242ac120003"]
 pub struct TerrainMaterial {
 	#[texture(0)]

@@ -5,9 +5,9 @@ edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["game-engines", "game-development"]
-description = "Divergent GZDoom fork built on top of Bevy"
+description = "id Tech 1 source port built on top of Bevy"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/engine"
-keywords = ["bevy", "doom", "gamedev", "gzdoom", "viletech"]
+keywords = ["bevy", "doom", "gamedev", "game-engine", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
 repository.workspace = true

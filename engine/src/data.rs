@@ -18,7 +18,7 @@ use std::{
 };
 
 use bevy::{
-	asset::{AssetIo, AssetIoError},
+	asset::{AssetIo, AssetIoError, ChangeWatcher},
 	utils::BoxedFuture,
 };
 use bevy_egui::egui;
@@ -523,7 +523,7 @@ impl AssetIo for CatalogAssetIo {
 		unimplemented!()
 	}
 
-	fn watch_for_changes(&self) -> Result<(), AssetIoError> {
+	fn watch_for_changes(&self, _: &ChangeWatcher) -> Result<(), AssetIoError> {
 		unimplemented!()
 	}
 }

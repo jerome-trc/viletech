@@ -19,7 +19,7 @@ pub fn update(
 ) {
 	let mut cam_speed = 0.1;
 
-	if core.input.keys_virt.pressed(KeyCode::LShift) {
+	if core.input.keys_virt.pressed(KeyCode::ShiftLeft) {
 		cam_speed *= 5.0;
 	}
 

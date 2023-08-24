@@ -70,7 +70,7 @@ VileTech Client {c_vers}
 
 	// Common //////////////////////////////////////////////////////////////////
 
-	app.add_plugin(LogDiagnosticsPlugin::default());
+	app.add_plugins(LogDiagnosticsPlugin::default());
 
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 
@@ -130,11 +130,10 @@ VileTech Client {c_vers}
 					..Default::default()
 				}),
 		)
-		.add_plugin(WireframePlugin)
-		.add_plugin(EguiPlugin)
+		.add_plugins((WireframePlugin, EguiPlugin))
 		.add_asset::<TerrainMaterial>()
-		.add_system(common_updates)
-		.add_system(update_input.in_set(InputSystem));
+		.add_systems(Update, common_updates)
+		.add_systems(PreUpdate, update_input.in_set(InputSystem));
 
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();
@@ -158,35 +157,39 @@ VileTech Client {c_vers}
 
 	app.insert_resource(core);
 
-	app.add_system(init_on_enter.in_schedule(OnEnter(AppState::Init)));
+	app.add_systems(OnEnter(AppState::Init), init_on_enter);
 
 	// First-time startup //////////////////////////////////////////////////////
 
-	app.add_system(first_startup.in_set(OnUpdate(AppState::FirstStartup)));
+	app.add_systems(
+		Update,
+		first_startup.run_if(in_state(AppState::FirstStartup)),
+	);
 
-	// Frontend ////////////////////////////////////////////////////////////////
-
-	app.add_system(frontend::update.in_set(OnUpdate(AppState::Frontend)))
-		.add_system(frontend::on_enter.in_schedule(OnEnter(AppState::Frontend)))
-		.add_system(frontend::on_exit.in_schedule(OnExit(AppState::Frontend)));
+	app.add_systems(OnEnter(AppState::Frontend), frontend::on_enter);
+	app.add_systems(OnExit(AppState::Frontend), frontend::on_exit);
+	app.add_systems(
+		Update,
+		frontend::update.run_if(in_state(AppState::Frontend)),
+	);
 
 	// Load ////////////////////////////////////////////////////////////////////
 
-	app.add_system(load::update.in_set(OnUpdate(AppState::Load)))
-		.add_system(load::on_exit.in_schedule(OnExit(AppState::Load)));
+	app.add_systems(Update, load::update.run_if(in_state(AppState::Load)));
+	app.add_systems(OnExit(AppState::Load), load::on_exit);
 
 	// Game ////////////////////////////////////////////////////////////////////
 
-	app.add_system(game::update.in_set(OnUpdate(AppState::Game)))
-		.insert_resource(FixedTime::new_from_secs(1.0 / 35.0))
-		.add_system(game::on_enter.in_schedule(OnEnter(AppState::Game)))
-		.add_system(
-			viletech::sim::tick
-				.run_if(in_state(AppState::Game))
-				.run_if(|sim: Option<Res<viletech::sim::Sim>>| sim.is_some())
-				.in_schedule(CoreSchedule::FixedUpdate),
-		)
-		.add_system(game::on_exit.in_schedule(OnExit(AppState::Game)));
+	app.insert_resource(FixedTime::new_from_secs(1.0 / 35.0));
+	app.add_systems(Update, game::update.run_if(in_state(AppState::Game)));
+	app.add_systems(
+		FixedUpdate,
+		viletech::sim::tick.run_if(
+			in_state(AppState::Game).and_then(|sim: Option<Res<viletech::sim::Sim>>| sim.is_some()),
+		),
+	);
+	app.add_systems(OnEnter(AppState::Game), game::on_enter);
+	app.add_systems(OnExit(AppState::Game), game::on_exit);
 
 	// Run /////////////////////////////////////////////////////////////////////
 
