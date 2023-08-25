@@ -39,3 +39,6 @@ rayon.workspace = true
 rustc-hash.workspace = true
 sharded-slab.workspace = true
 smallvec.workspace = true
+
+# Temporary local path.
+mir = { package = "mircomp-sys", path = "../../mir-rs/sys", features = ["parallel"] }
