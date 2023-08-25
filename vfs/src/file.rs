@@ -55,7 +55,7 @@ pub(crate) enum Content {
 	Directory {
 		/// Boxed so as not to penalize the size of other files.
 		children: Box<IndexSet<FileKey>>,
-		kind: DirectoryKind,
+		_kind: DirectoryKind,
 	},
 	/// e.g. WAD marker lumps, or physical files with no bytes.
 	Empty,
@@ -170,7 +170,7 @@ impl File {
 		Self {
 			content: Content::Directory {
 				children: Box::new(indexmap::indexset! {}),
-				kind,
+				_kind: kind,
 			},
 		}
 	}

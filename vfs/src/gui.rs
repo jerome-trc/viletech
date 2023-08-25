@@ -41,7 +41,10 @@ impl VirtualFs {
 				Content::Empty => {
 					ui.label("Empty");
 				}
-				Content::Directory { children, kind } => {
+				Content::Directory {
+					children,
+					_kind: kind,
+				} => {
 					if children.len() != 1 {
 						ui.label(&format!("Directory: {} children ({kind})", children.len()));
 					} else {
