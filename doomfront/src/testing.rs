@@ -155,6 +155,8 @@ pub fn prettyprint<L: LangExt>(cursor: SyntaxNode<L>) {
 	}
 }
 
+/// If the environment variable `DOOMFRONT_TEST_PRETTYPRINT` has been set to "1",
+/// `cursor`'s syntax tree will be recursively printed to stdout.
 pub fn prettyprint_maybe<L: LangExt>(cursor: SyntaxNode<L>) {
 	if std::env::var("DOOMFRONT_TEST_PRETTYPRINT").is_ok_and(|v| v == "1") {
 		prettyprint(cursor);

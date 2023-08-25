@@ -166,7 +166,7 @@ impl Catalog {
 				.iter()
 				.collect();
 
-			let root_dir = match self.vfs.get(&root_dir_path) {
+			let _ = match self.vfs.get(&root_dir_path) {
 				Some(fref) => fref,
 				None => {
 					ctx.raise_error(PrepError {
@@ -182,6 +182,10 @@ impl Catalog {
 				return Outcome::Cancelled;
 			}
 
+			/*
+
+			TODO: Soon!
+
 			let mut inctree = lith::IncludeTree::new(root_dir);
 
 			if inctree.any_errors() {
@@ -195,6 +199,8 @@ impl Catalog {
 					});
 				}
 			}
+
+			*/
 
 			if ctx.is_cancelled() {
 				return Outcome::Cancelled;

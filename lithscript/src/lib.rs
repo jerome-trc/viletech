@@ -22,12 +22,10 @@ pub mod rti;
 pub mod runtime;
 mod syn;
 pub mod tsys;
-#[cfg(feature = "viletech")]
-pub mod viletech;
 
-use std::hash::BuildHasherDefault;
+use std::{hash::BuildHasherDefault, path::PathBuf};
 
-use rustc_hash::FxHasher;
+use rustc_hash::{FxHashMap, FxHasher};
 
 pub use self::{
 	heap::TPtr,
@@ -35,9 +33,6 @@ pub use self::{
 	runtime::Runtime,
 	syn::Syn,
 };
-
-#[cfg(feature = "viletech")]
-pub use viletech::IncludeTree;
 
 /// The enumeration used to compose machine representations for both Lith and native types.
 pub type BackendType = cranelift::codegen::ir::Type;
@@ -105,6 +100,21 @@ impl Version {
 				rev: 0,
 			}
 		)
+	}
+}
+
+#[derive(Debug)]
+pub struct IncludeTree(FxHashMap<PathBuf, ParseTree>);
+
+impl IncludeTree {
+	#[must_use]
+	pub fn any_errors(&self) -> bool {
+		self.0.values().any(|ptree| ptree.any_errors())
+	}
+
+	pub fn into_inner(self) -> impl Iterator<Item = (PathBuf, ParseTree)> {
+		assert!(!self.any_errors(), "encountered one or more parse errors");
+		self.0.into_iter()
 	}
 }
 

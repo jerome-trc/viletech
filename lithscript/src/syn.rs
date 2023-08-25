@@ -18,6 +18,8 @@ pub enum Syn {
 	Annotation,
 	/// `'(' expr? (',' expr)* ')'`
 	ArgList,
+	/// `(ident | namelit ':')? expr`
+	Argument,
 	/// `blocklabel? '{' statement* '}'`
 	Block,
 	/// `'::' ident '::'`
@@ -32,12 +34,14 @@ pub enum Syn {
 	FuncBody,
 	/// `ident ('.' ident)*`
 	IdentChain,
+	/// `'import' string ':' (importgroup | importentry) ';'`
+	Import,
 	/// `ident ('=>' ident)?`
 	/// or
 	/// `'*' '=>' ident`
 	ImportEntry,
 	/// `'{' importentry* '}'`
-	ImportList,
+	ImportGroup,
 	/// `'(' param? (',' param)* ')'`
 	ParamList,
 	/// `ident typespec`
@@ -47,7 +51,7 @@ pub enum Syn {
 	/// `':' expr`
 	TypeSpec,
 	// Nodes: statements ///////////////////////////////////////////////////////
-	/// `'ceval'? ('let' | 'const') 'ident' typespec? ('=' expr)? ';'`
+	/// `doc* 'ceval'? ('let' | 'const') 'ident' typespec? ('=' expr)? ';'`
 	BindStat,
 	/// `'break' blocklabel? ';'`
 	BreakStat,
@@ -55,17 +59,18 @@ pub enum Syn {
 	ContinueStat,
 	/// `expr ';'`
 	ExprStat,
-	/// `'import' string ':' (importlist | importentry) ';'`
-	ImportStat,
 	/// `'return' expr? ';'`
 	ReturnStat,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	ArrayExpr,
 	BinExpr,
+	/// `'{' statement* '}'`
+	BlockExpr,
 	/// `expr arglist`
 	CallExpr,
 	/// `expr '.' ident`
 	FieldExpr,
+	ForExpr,
 	/// `'(' expr ')'`
 	GroupExpr,
 	/// Is parent to only a [`Syn::Ident`] token.
@@ -78,11 +83,13 @@ pub enum Syn {
 	/// - [`Syn::StringLit`]
 	/// - [`Syn::TrueLit`]
 	Literal,
-	/// `expr '.' ident arglist`
-	MethodExpr,
-	StructExpr,
 	PostfixExpr,
 	PrefixExpr,
+	StructExpr,
+	/// `'struct' '{' field* '}'`
+	StructTypeExpr,
+	/// `'while' expr block`
+	WhileExpr,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	#[token("false")]
 	FalseLit,
@@ -116,6 +123,8 @@ pub enum Syn {
 		""##
 	)]
 	StringLit,
+	#[regex("'[^''\n\r\t]*'", priority = 6)]
+	NameLit,
 	#[token("true")]
 	TrueLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
@@ -198,6 +207,10 @@ pub enum Syn {
 	Comma,
 	#[token(".")]
 	Dot,
+	#[token("..")]
+	Dot2,
+	#[token("...")]
+	Dot3,
 	#[token("=")]
 	Eq,
 	#[token("==")]
@@ -241,14 +254,11 @@ pub enum Syn {
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
 	Ident,
-	#[regex("r#[a-zA-Z0-9_][a-zA-Z0-9_]*")]
-	IdentRaw,
 	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
-	/// Either single-line (C++-style) or multi-line (C-style).
+	/// Like Zig, Lith only has single-line comments in the C++/post-C99 style.
 	#[regex("//[^\n]*\n*", priority = 1)]
 	#[regex("//")]
-	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
 	/// Spaces, newlines, carriage returns, or tabs.
 	#[regex("[ \r\n\t]+")]
@@ -266,81 +276,6 @@ impl Syn {
 	#[must_use]
 	pub fn is_trivia(self) -> bool {
 		matches!(self, Self::Whitespace | Self::Comment)
-	}
-
-	/// For parser error reporting. Likely to go away eventually.
-	pub(crate) fn pretty(self) -> &'static str {
-		match self {
-			// Literals ////////////////////////////////////////////////////////
-			Self::FalseLit => "`false`",
-			Self::FloatLit => "a floating-point number",
-			Self::IntLit => "an integer",
-			Self::StringLit => "a string",
-			Self::TrueLit => "`true`",
-			// Keywords ////////////////////////////////////////////////////////
-			Self::KwBreak => "`break`",
-			Self::KwCeval => "`ceval`",
-			Self::KwConst => "`const`",
-			Self::KwContinue => "`continue`",
-			Self::KwElse => "`else`",
-			Self::KwFor => "`for`",
-			Self::KwFunc => "`func`",
-			Self::KwIf => "`if`",
-			Self::KwImport => "`import`",
-			Self::KwLet => "`let`",
-			Self::KwReturn => "`return`",
-			Self::KwStatic => "`static`",
-			Self::KwStruct => "`struct`",
-			Self::KwWhile => "`while`",
-			// Glyphs //////////////////////////////////////////////////////////
-			Self::Ampersand => "`&`",
-			Self::Ampersand2 => "`&&`",
-			Self::AmpersandEq => "`&=`",
-			Self::AngleL => "`<`",
-			Self::AngleR => "`>`",
-			Self::AngleL2 => "`<<`",
-			Self::AngleR2 => "`>>`",
-			Self::AngleL2Eq => "`<<=`",
-			Self::AngleR2Eq => "`>>=`",
-			Self::AngleLEq => "`<=`",
-			Self::AngleREq => "`>=`",
-			Self::Asterisk => "`*`",
-			Self::AsteriskEq => "`*=`",
-			Self::Bang => "`!`",
-			Self::BangEq => "`!=`",
-			Self::BraceL => "`{`",
-			Self::BraceR => "`}`",
-			Self::BracketL => "`[`",
-			Self::BracketR => "`]`",
-			Self::Caret => "`^`",
-			Self::CaretEq => "`^=`",
-			Self::Colon => "`:`",
-			Self::Colon2 => "`::`",
-			Self::Comma => "`,`",
-			Self::Dot => "`.`",
-			Self::Eq => "`=`",
-			Self::Eq2 => "`==`",
-			Self::Minus => "`-`",
-			Self::MinusEq => "`-=`",
-			Self::ParenL => "`(`",
-			Self::ParenR => "`)`",
-			Self::Pipe => "`|`",
-			Self::Pipe2 => "`||`",
-			Self::Plus => "`+`",
-			Self::PlusEq => "`+=`",
-			Self::Pound => "`#`",
-			Self::Semicolon => "`;`",
-			Self::Slash => "`/`",
-			Self::SlashEq => "`/=`",
-			Self::Tilde => "`~`",
-			Self::ThickArrow => "`=>`",
-			Self::ThinArrow => "`->`",
-			// Miscellaneous ///////////////////////////////////////////////////
-			Self::Ident | Self::IdentRaw => "an identifier",
-			Self::Comment => "a comment",
-			Self::Whitespace => "whitespace",
-			other => unreachable!("called `Syn::pretty` illegally: {other:#?}"),
-		}
 	}
 }
 
@@ -366,7 +301,7 @@ impl rowan::Language for Syn {
 #[cfg(test)]
 #[test]
 fn smoke() {
-	const SOURCE: &str = "typeof(9 + 10)";
+	const SOURCE: &str = "typeof(9 + '9a')";
 
 	const EXPECTED: &[Syn] = &[
 		Syn::Ident,
@@ -375,7 +310,7 @@ fn smoke() {
 		Syn::Whitespace,
 		Syn::Plus,
 		Syn::Whitespace,
-		Syn::IntLit,
+		Syn::NameLit,
 		Syn::ParenR,
 	];
 

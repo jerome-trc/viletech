@@ -37,15 +37,9 @@ The following characters are considered whitespace and are insignificant to the 
 
 ## Comments
 
-LithScript uses Rust-style comments. These are treated as whitespace by the compiler.
+LithScript uses C++/post-C99 single-line comments. These are treated as though they were whitespace by the compiler.
 
 `// This is a single-line comment.`
-`x = /* Block comments can be written between tokens.*/ y + z`
-```
-/*
-Block comments can span multiple lines.
-*/
-```
 
 ## Keywords
 

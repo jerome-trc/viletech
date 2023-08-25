@@ -1,84 +1,193 @@
 //! Function and structure declarations, enums, unions, symbolic constants, et cetera.
 
-#[cfg(test)]
-mod test {
-	use doomfront::{rowan::ast::AstNode, testing::*};
+use doomfront::parser::{OpenMark, Parser};
 
-	use crate::{ast, ParseTree};
+use crate::Syn;
 
-	#[test]
-	fn smoke_func_decl() {
-		const SOURCE: &str = r#"
-func conductor();
-func r#faultline():void{}
-func atmospheric_pressure():lith.int32;
-func untilted(): type(1) {}
-func liquid_luck(within: reach) {}
-func quicksilver(heliotrope: escape.velocity) {}
-func atomic(r#123: coal.r#yaw);
-"#;
+use super::common::*;
 
-		let root = crate::parse::file(SOURCE).unwrap();
-		let ptree = ParseTree::new(root, vec![]);
+pub(super) fn item(p: &mut Parser<Syn>) {
+	let mark = p.open();
 
-		assert_no_errors(&ptree);
-		prettyprint_maybe(ptree.cursor());
-
-		let mut ast = ptree
-			.cursor()
-			.children()
-			.map(|root| ast::TopLevel::cast(root).unwrap());
-
-		let fndecl0 = ast.next().unwrap().into_func_decl().unwrap();
-		assert_eq!(fndecl0.name().text(), "conductor");
-
-		let fndecl1 = ast.next().unwrap().into_func_decl().unwrap();
-		assert_eq!(fndecl1.name().text(), "faultline");
+	while !p.eof() && p.at_any(Annotation::FIRST_SET) {
+		Annotation::parse(p, false);
 	}
 
-	#[test]
-	fn smoke_import() {
-		const SOURCE: &str = r#"
-import "/digital/nomad.lith": * => crawler;
-import "pressure/cooker.lith": urchin;
-import "inhabitants.lith": {dream, dweller};
-import	"/in/search/of/an/answer.lith" : { necrocosmic , alchemical=>apparatus };
-"#;
+	trivia_0plus(p);
+	doc_comments(p);
+	trivia_0plus(p);
+	let token = p.nth(0);
 
-		let root = crate::parse::file(SOURCE).unwrap();
-		let ptree = ParseTree::new(root, vec![]);
+	if FuncDecl::FIRST_SET.contains(&token) {
+		FuncDecl::parse(p, mark);
+	} else if Import::FIRST_SET.contains(&token) {
+		Import::parse(p, mark)
+	} else {
+		p.advance_err_and_close(mark, token, Syn::Error, &["`func`", "`#`"]);
+	}
+}
 
-		assert_no_errors(&ptree);
-		prettyprint_maybe(ptree.cursor());
+#[must_use]
+pub(super) fn at_item(p: &mut Parser<Syn>) -> bool {
+	p.at_any(Annotation::FIRST_SET) || p.at_any(FuncDecl::FIRST_SET) || p.at_any(Import::FIRST_SET)
+}
 
-		let mut ast = ptree
-			.cursor()
-			.children()
-			.map(|root| ast::TopLevel::cast(root).unwrap());
+pub(super) struct FuncDecl;
 
-		let import0 = ast.next().unwrap().into_import().unwrap();
-		assert_eq!(
-			import0.file_path().unwrap().text(),
-			"\"/digital/nomad.lith\""
+impl FuncDecl {
+	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwFunc];
+
+	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
+		p.expect(Syn::KwFunc, Syn::KwFunc, &["`func`"]);
+		trivia_0plus(p);
+		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		trivia_0plus(p);
+		Self::param_list(p);
+		trivia_0plus(p);
+
+		if p.at_any(TypeSpec::FIRST_SET) {
+			TypeSpec::parse(p);
+			trivia_0plus(p);
+		}
+
+		if p.eat(Syn::Semicolon, Syn::Semicolon) {
+			p.close(mark, Syn::FuncDecl);
+			return;
+		}
+
+		let body = p.open();
+		block(p, body, Syn::FuncBody, false);
+		p.close(mark, Syn::FuncDecl);
+	}
+
+	fn param_list(p: &mut Parser<Syn>) {
+		let mark = p.open();
+		p.expect(Syn::ParenL, Syn::ParenR, &["`(`"]);
+		trivia_0plus(p);
+
+		while !p.at(Syn::ParenR) && !p.eof() {
+			Self::parameter(p);
+			trivia_0plus(p);
+
+			match p.nth(0) {
+				t @ Syn::Comma => {
+					p.advance(t);
+					trivia_0plus(p);
+				}
+				Syn::ParenR => break,
+				other => {
+					p.advance_with_error(other, &["`,`", "`)`"]);
+				}
+			}
+		}
+
+		p.expect(Syn::ParenR, Syn::ParenR, &["`)`"]);
+		p.close(mark, Syn::ParamList);
+	}
+
+	fn parameter(p: &mut Parser<Syn>) {
+		let mark = p.open();
+		p.expect(Syn::Ident, Syn::Ident, &["`an identifier`"]);
+		trivia_0plus(p);
+		TypeSpec::parse(p);
+		p.close(mark, Syn::Parameter);
+	}
+}
+
+pub(super) struct Import;
+
+impl Import {
+	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwImport];
+
+	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
+		p.expect(Syn::KwImport, Syn::KwImport, &["`import`"]);
+		trivia_0plus(p);
+		p.expect(Syn::StringLit, Syn::StringLit, &["a string"]);
+		trivia_0plus(p);
+		p.expect(Syn::Colon, Syn::Colon, &["`:`"]);
+		trivia_0plus(p);
+
+		match p.nth(0) {
+			Syn::BraceL => {
+				Self::group(p);
+			}
+			Syn::Ident | Syn::NameLit => {
+				Self::single(p);
+			}
+			Syn::Asterisk => {
+				Self::all(p);
+			}
+			other => {
+				p.advance_err_and_close(
+					mark,
+					other,
+					Syn::Error,
+					&["`{`", "`*`", "an identifier", "a name literal"],
+				);
+
+				return;
+			}
+		}
+
+		trivia_0plus(p);
+		p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.close(mark, Syn::Import);
+	}
+
+	fn single(p: &mut Parser<Syn>) {
+		let mark = p.open();
+
+		p.expect_any(
+			&[(Syn::Ident, Syn::Ident), (Syn::NameLit, Syn::NameLit)],
+			&["an identifier", "a name literal"],
 		);
-		assert_eq!(import0.all_alias().unwrap().text(), "crawler");
 
-		let import1 = ast.next().unwrap().into_import().unwrap();
-		assert!(import1.list().is_none());
-		assert_eq!(import1.single().unwrap().name().text(), "urchin");
+		if p.find(0, |token| !token.is_trivia()) == Syn::ThickArrow {
+			p.advance(p.nth(0));
+			trivia_0plus(p);
+			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		}
 
-		let import2 = ast.next().unwrap().into_import().unwrap();
-		let mut ilist2 = import2.list().unwrap().entries();
-		assert_eq!(ilist2.next().unwrap().name().text(), "dream");
-		assert_eq!(ilist2.next().unwrap().name().text(), "dweller");
+		p.close(mark, Syn::ImportEntry);
+	}
 
-		let import3 = ast.next().unwrap().into_import().unwrap();
-		let mut ilist3 = import3.list().unwrap().entries();
-		let import3_e0 = ilist3.next().unwrap();
-		assert_eq!(import3_e0.name().text(), "necrocosmic");
-		assert!(import3_e0.rename().is_none());
-		let import3_e1 = ilist3.next().unwrap();
-		assert_eq!(import3_e1.name().text(), "alchemical");
-		assert_eq!(import3_e1.rename().unwrap().text(), "apparatus");
+	fn group(p: &mut Parser<Syn>) {
+		p.debug_assert_at(Syn::BraceL);
+
+		let mark = p.open();
+		p.advance(p.nth(0));
+		trivia_0plus(p);
+
+		while !p.eof() && !p.at(Syn::BraceR) {
+			Self::single(p);
+			trivia_0plus(p);
+
+			match p.nth(0) {
+				t @ Syn::Comma => {
+					p.advance(t);
+					trivia_0plus(p);
+				}
+				Syn::BraceR => break,
+				other => {
+					p.advance_err_and_close(mark, other, Syn::Error, &["`}`", "`,`"]);
+					return;
+				}
+			}
+		}
+
+		p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+		p.close(mark, Syn::ImportGroup);
+	}
+
+	fn all(p: &mut Parser<Syn>) {
+		p.debug_assert_at(Syn::Asterisk);
+
+		let mark = p.open();
+		p.advance(p.nth(0));
+		trivia_0plus(p);
+		p.expect(Syn::ThickArrow, Syn::ThickArrow, &["`=>`"]);
+		trivia_0plus(p);
+		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.close(mark, Syn::ImportEntry);
 	}
 }
