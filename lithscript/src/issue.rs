@@ -41,6 +41,7 @@ impl ariadne::Span for FileSpan {
 pub struct Issue {
 	pub id: FileSpan,
 	pub level: IssueLevel,
+	pub message: String,
 	pub label: Option<Label>,
 }
 
@@ -60,7 +61,9 @@ impl Issue {
 			IssueLevel::Lint(lint) => (ReportKind::Advice, lint as u16),
 		};
 
-		let builder = Report::build(kind, self.id.path, 12).with_code(code);
+		let builder = Report::build(kind, self.id.path, 12)
+			.with_code(code)
+			.with_message(self.message);
 
 		let builder = if let Some(label) = self.label {
 			builder.with_label(
@@ -118,6 +121,8 @@ pub enum Error {
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	ImportNotFound,
+	SymbolNotFound,
 }
 
 impl std::fmt::Display for Error {

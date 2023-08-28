@@ -1,327 +1,228 @@
 //! A decoupled wing of LithScript for serving the VileTech Engine's specific needs.
 
-mod lith;
-
 mod decorate;
 mod zscript;
 
 use std::{
-	collections::{HashMap, VecDeque},
-	hash::Hasher,
-	marker::PhantomData,
-	path::{Path, PathBuf},
-	sync::Arc,
+	hash::{Hash, Hasher},
+	ops::Deref,
 };
 
 use crate::{
-	compile::{self, JitModule, Precompile, QName},
-	issue::{self, Issue, IssueLevel},
-	lir::AtomicSymbol,
-	parse, Syn, Version,
+	ast,
+	compile::{Compiler, IName, LibSource, Scope},
+	extend::CompExt,
 };
-use ariadne::{Report, ReportKind};
-use dashmap::{mapref::one::Ref, DashMap};
-use doomfront::{
-	rowan::GreenNode,
-	zdoom::{decorate::Syn as Decorate, zscript::Syn as ZScript},
-	LangExt, ParseTree,
-};
+use doomfront::rowan::GreenNode;
 use parking_lot::Mutex;
-use rayon::prelude::*;
-use vfs::FileRef;
+use rustc_hash::FxHashMap;
+use util::rstring::RString;
 
-/// For parsing from VileTech's [virtual file system](vfs).
 #[derive(Debug)]
-pub struct IncludeTree(HashMap<PathBuf, Result<GreenNode, parse::Error>>);
+pub enum CompilerExt {
+	Declaration(Mutex<ExtCrit>),
+	Import(ExtCrit),
+	Resolution(Mutex<ExtCrit>),
+	Checking(ExtCrit),
+	Nil,
+}
 
-impl IncludeTree {
-	/// Traverses a VFS directory, parsing every text file with the extension "lith".
-	/// Panics if `root` is not a directory.
-	#[must_use]
-	pub fn new(root: FileRef) -> Self {
-		fn recur(fref: FileRef, files: &Mutex<HashMap<PathBuf, Result<GreenNode, parse::Error>>>) {
-			fref.children().unwrap().par_bridge().for_each(|child| {
-				if child.is_dir() {
-					recur(child, files);
-				}
+#[derive(Debug, Default)]
+pub struct ExtCrit {
+	pub(crate) cur_lib: usize,
+	pub(crate) scopes: Vec<LibScope>,
+}
 
-				if !child.is_text() {
-					return;
-				}
+impl CompExt for CompilerExt {
+	type Input = LibInput;
 
-				if !child.path_extension().is_some_and(|ext| ext == "lith") {
-					return;
-				}
+	fn alt_import(compiler: &Compiler<Self>, imports: &mut Scope, ast: ast::Import) {
+		let CompilerExt::Import(crit) = &compiler.ext else {
+			unreachable!()
+		};
 
-				let result = parse::file(child.read_str());
-				files.lock().insert(child.path().to_path_buf(), result);
-			});
+		let path_tok = ast.file_path().unwrap();
+
+		let Some(lib) = crit.scopes.iter().find(|l| {
+			l.name == path_tok.text()
+		}) else {
+			return;
+		};
+	}
+
+	fn declare_symbols(compiler: &Compiler<Self>, input: &LibSource<Self>) {
+		assert!(
+			!input.ext.zscript.any_errors(),
+			"cannot compile due to ZScript parse errors"
+		);
+
+		assert!(
+			!input.ext.decorate.any_errors(),
+			"cannot compile due to DECORATE parse errors"
+		);
+
+		let CompilerExt::Declaration(mutex) = &compiler.ext else {
+			unreachable!()
+		};
+
+		let mut crit = mutex.lock();
+
+		crit.scopes.push(LibScope {
+			name: input.name.clone(),
+			scope: Scope::default(),
+			mixins: FxHashMap::default(),
+		});
+
+		for file in &input.ext.zscript.files {
+			let mut pass = zscript::DeclPass {
+				compiler,
+				ext: &mut crit,
+				ptree: file,
+				cur_path: &NIL_STRING,
+			};
+
+			pass.run();
 		}
 
-		assert!(
-			root.is_dir(),
-			"`IncludeTree::new` expects a virtual directory"
-		);
-
-		let ret = Mutex::new(HashMap::new());
-		recur(root, &ret);
-		Self(ret.into_inner())
+		for _ in &input.ext.decorate.files {}
 	}
 
-	#[must_use]
-	pub fn any_errors(&self) -> bool {
-		self.0.values().any(|result| result.is_err())
+	fn post_decl(&mut self) {
+		let inner = std::mem::replace(self, CompilerExt::Nil);
+
+		let CompilerExt::Declaration(mutex) = inner else {
+			unreachable!()
+		};
+
+		*self = CompilerExt::Import(mutex.into_inner());
 	}
 
-	pub fn drain_errors(&mut self) -> impl Iterator<Item = (PathBuf, parse::Error)> + '_ {
-		self.0
-			.drain()
-			.filter_map(|(path, result)| result.err().map(|err| (path, err)))
+	fn post_imports(&mut self) {
+		let inner = std::mem::replace(self, CompilerExt::Nil);
+
+		let CompilerExt::Import(crit) = inner else {
+			unreachable!()
+		};
+
+		*self = CompilerExt::Resolution(Mutex::new(crit));
 	}
 
-	pub fn into_inner(self) -> impl Iterator<Item = (PathBuf, GreenNode)> {
-		assert!(!self.any_errors(), "encountered one or more parse errors");
+	fn resolve_names(compiler: &Compiler<Self>, input: &LibSource<Self>) {
+		todo!()
+	}
 
-		self.0
-			.into_iter()
-			.map(|(path, result)| (path, result.unwrap()))
+	fn post_nameres(&mut self) {
+		let inner = std::mem::replace(self, CompilerExt::Nil);
+
+		let CompilerExt::Resolution(mutex) = inner else {
+			unreachable!()
+		};
+
+		*self = CompilerExt::Checking(mutex.into_inner());
+	}
+
+	fn semantic_checks(compiler: &Compiler<Self>, input: &LibSource<Self>) {
+		let CompilerExt::Checking(mutex) = &compiler.ext else {
+			unreachable!()
+		};
+
+		todo!();
+	}
+
+	fn post_checks(&mut self) {
+		let inner = std::mem::replace(self, CompilerExt::Nil);
+
+		let CompilerExt::Checking(mut crit) = inner else {
+			unreachable!()
+		};
+
+		crit.cur_lib += 1;
+		*self = CompilerExt::Declaration(Mutex::new(crit));
 	}
 }
 
-/// Thin, strongly-typed wrapper around [`compile::ContainerSource`].
+impl ExtCrit {
+	#[must_use]
+	#[allow(unused)]
+	pub(self) fn cur_scope(&self) -> &LibScope {
+		&self.scopes[self.cur_lib]
+	}
+
+	#[must_use]
+	#[allow(unused)]
+	pub(self) fn cur_scope_mut(&mut self) -> &mut LibScope {
+		&mut self.scopes[self.cur_lib]
+	}
+}
+
+impl Default for CompilerExt {
+	fn default() -> Self {
+		Self::Declaration(Mutex::default())
+	}
+}
+
+/// See [`crate::compile::Extension::Input`].
 #[derive(Debug)]
-#[repr(transparent)]
-pub struct ContainerSource<L: LangExt>(compile::ContainerSource, PhantomData<L>);
-
-impl<L: LangExt> ContainerSource<L> {
-	#[must_use]
-	pub fn new(path: impl AsRef<Path>, ptree: ParseTree<L>) -> Self {
-		assert!(
-			!ptree.any_errors(),
-			"encountered one or more parsing errors"
-		);
-
-		Self(
-			compile::ContainerSource {
-				path: path.as_ref().to_string_lossy().to_string(),
-				root: ptree.into_green(),
-			},
-			PhantomData,
-		)
-	}
+pub struct LibInput {
+	pub zscript: doomfront::zdoom::zscript::IncludeTree,
+	pub decorate: doomfront::zdoom::decorate::IncludeTree,
 }
 
-impl<L: LangExt> std::ops::Deref for ContainerSource<L> {
-	type Target = compile::ContainerSource;
+#[derive(Debug)]
+pub(crate) struct LibScope {
+	pub(crate) name: String,
+	pub(crate) scope: Scope<ZName>,
+	pub(crate) mixins: FxHashMap<ZName, GreenNode>,
+}
+
+// Details /////////////////////////////////////////////////////////////////////
+
+pub(self) const NIL_STRING: String = String::new();
+
+/// A counterpart to [`IName`] for (G)ZDoom with a namespace discriminant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum ZName {
+	Type(IName),
+	Value(IName),
+}
+
+/// A counterpart to [`RString`] for (G)ZDoom,
+/// with ASCII case-insensitive equality comparison and hashing.
+#[derive(Debug, Clone)]
+pub(crate) struct ZString(RString);
+
+impl Deref for ZString {
+	type Target = RString;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
 }
 
-/// A superset of [`compile::LibBuilder`].
-pub struct LibBuilder {
-	pub inner: compile::LibBuilder,
-	// (G)ZDoom
-	pub decorate: Vec<ContainerSource<Decorate>>,
-	pub zscript: Vec<ContainerSource<ZScript>>,
-}
-
-impl LibBuilder {
-	#[must_use]
-	fn finish(self) -> LibSource {
-		let subset = self.inner.finish();
-
-		LibSource {
-			name: subset.name,
-			version: subset.version,
-			jit: subset.jit,
-			// SAFETY: `ContainerSource<L>` is `repr(transparent)` over
-			// `compile::ContainerSource`.
-			lith: unsafe { std::mem::transmute::<_, _>(subset.sources) },
-			decorate: self.decorate,
-			zscript: self.zscript,
-		}
-	}
-}
-
-/// A superset of [`compile::LibSource`].
-pub(crate) struct LibSource {
-	pub(self) name: String,
-	pub(self) version: Version,
-	pub(self) jit: Arc<JitModule>,
-
-	pub(self) lith: Vec<ContainerSource<Syn>>,
-	pub(self) decorate: Vec<ContainerSource<Decorate>>,
-	pub(self) zscript: Vec<ContainerSource<ZScript>>,
-}
-
-/// A superset of [`compile::SymbolTable`].
-#[derive(Debug, Default)]
-pub(self) struct SymbolTable {
-	pub(self) symbols: compile::SymbolTable,
-	pub(self) znames: DashMap<ZName, AtomicSymbol>,
-}
-
-#[derive(Debug)]
-#[must_use]
-pub enum Outcome {
-	Ok {
-		precomps: VecDeque<Precompile>,
-		symtab: compile::SymbolTable,
-	},
-	Fail {
-		lib_name: String,
-		issues: Vec<Issue>,
-	},
-}
-
-pub fn compile(builders: impl IntoIterator<Item = LibBuilder>) -> Outcome {
-	let symtab = SymbolTable::default();
-	let mut precomps = VecDeque::new();
-
-	for (i, source) in builders.into_iter().map(|b| b.finish()).enumerate() {
-		let issues = Mutex::new(vec![]);
-
-		[lith::pass1, decorate::pass1, zscript::pass1]
-			.par_iter()
-			.for_each(|function| {
-				let pass = Pass1 {
-					src: &source,
-					symtab: &symtab,
-					ix_lib: i,
-				};
-
-				function(pass);
-			});
-
-		[zscript::pass2].par_iter().for_each(|function| {
-			let pass = Pass2 {
-				src: &source,
-				symtab: &symtab,
-				issues: &issues,
-			};
-
-			function(pass);
-		});
-
-		if issues.lock().iter().any(|iss| iss.is_error()) {
-			return Outcome::Fail {
-				lib_name: source.name,
-				issues: issues.into_inner(),
-			};
-		}
-
-		precomps.push_front(Precompile {
-			module: source.jit,
-			lib_name: source.name,
-			lib_vers: source.version,
-			issues: issues.into_inner(),
-		});
-	}
-
-	Outcome::Ok {
-		precomps,
-		symtab: symtab.symbols,
-	}
-}
-
-// Pass 1 //////////////////////////////////////////////////////////////////////
-
-/// Context for the first pass of LithV compilation.
-///
-/// Pass 1 involves declaring all "ZDoom-reachable" names; this means:
-/// - container-level types and type aliases
-/// - types and type aliases nested within container-level types
-///
-/// Due to the weakness of the compilation models of ZScript and DECORATE, it is
-/// impossible to perform name resolution without completing these tables.
-pub(self) struct Pass1<'s> {
-	pub(self) src: &'s LibSource,
-	pub(self) symtab: &'s SymbolTable,
-	pub(self) ix_lib: usize,
-}
-
-impl Pass1<'_> {
-	pub(self) fn declare<'s>(
-		&self,
-		ctr_path: impl AsRef<str>,
-		resolver_parts: impl IntoIterator<Item = &'s str> + Copy,
-	) {
-		let name = QName::new_value_name(ctr_path.as_ref(), resolver_parts);
-
-		let asym = self.symtab.symbols.declare(name, self.ix_lib);
-
-		self.symtab
-			.znames
-			.insert(ZName(QName::new_value_name("", resolver_parts)), asym);
-	}
-}
-
-/// Context for the second pass of LithV compilation.
-///
-/// Pass 2 contains all semantic checks. Now that all names are known, we can do
-/// things like sanity checking ZScript inheritance hierarchies and compile-time
-/// evaluation.
-pub(self) struct Pass2<'s> {
-	pub(self) src: &'s LibSource,
-	pub(self) symtab: &'s SymbolTable,
-	pub(self) issues: &'s Mutex<Vec<Issue>>,
-}
-
-impl Pass2<'_> {
-	pub(self) fn get_z(&self, id_chain: &str) -> Option<Ref<ZName, AtomicSymbol>> {
-		let qname = QName::Value(id_chain.replace('.', "::").into_boxed_str());
-		self.symtab.znames.get(&ZName(qname))
-	}
-
-	pub(self) fn raise(&self, issue: Issue) {
-		self.issues.lock().push(issue);
-	}
-}
-
-// Details /////////////////////////////////////////////////////////////////////
-
-/// A counterpart to [`QName`] for (G)ZDoom,
-/// with ASCII case-insensitive equality comparison and hashing.
-///
-/// Note that these have different qualification rules names from ZScript and
-/// DECORATE have no container equivalent, so a class has only its identifier;
-/// if that class then declares an enum, the name is `::MyClass::MyEnum`.
-#[derive(Debug)]
-pub(self) struct ZName(QName);
-
-impl ZName {
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		self.0.as_str()
-	}
-}
-
-impl PartialEq for ZName {
+impl PartialEq for ZString {
 	fn eq(&self, other: &Self) -> bool {
-		self.0.as_str().eq_ignore_ascii_case(other.0.as_str())
+		self.0.deref().eq_ignore_ascii_case(other.0.as_ref())
 	}
 }
 
-impl Eq for ZName {}
+impl Eq for ZString {}
 
-impl std::hash::Hash for ZName {
+impl Hash for ZString {
 	fn hash<H: Hasher>(&self, state: &mut H) {
-		for c in self.0.as_str().chars() {
+		for c in self.0.deref().chars() {
 			c.to_ascii_lowercase().hash(state);
 		}
 	}
 }
 
-impl std::borrow::Borrow<str> for ZName {
+impl std::borrow::Borrow<str> for ZString {
 	fn borrow(&self) -> &str {
-		self.0.as_str()
+		self.0.deref()
 	}
 }
 
-impl From<&QName> for ZName {
-	fn from(value: &QName) -> Self {
+impl From<&RString> for ZString {
+	fn from(value: &RString) -> Self {
 		Self(value.clone())
 	}
 }

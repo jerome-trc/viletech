@@ -13,7 +13,7 @@ use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use util::rstring::RString;
 
-use crate::{compile::JitModule, native::Native, tsys::TypeDef, BackendType, Project};
+use crate::{native::Native, tsys::TypeDef, BackendType, Project};
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}
 
@@ -58,8 +58,6 @@ pub struct Function {
 	ptr: *const u8,
 	id: FuncId,
 	sighash: SignatureHash,
-	#[allow(unused)]
-	module: Arc<JitModule>,
 }
 
 impl Function {
@@ -74,7 +72,13 @@ impl Function {
 		A: Native,
 		R: Native,
 	{
-		let ptr_bits = self.module.ptr_bits();
+		#[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
+		compiler_error!();
+
+		#[cfg(target_pointer_width = "32")]
+		let ptr_bits = 32;
+		#[cfg(target_pointer_width = "64")]
+		let ptr_bits = 64;
 
 		let a_repr = A::repr(ptr_bits);
 		let r_repr = A::repr(ptr_bits);
@@ -153,8 +157,6 @@ pub struct Data {
 	id: DataId,
 	native_t: Option<TypeId>,
 	immutable: bool,
-	#[allow(unused)]
-	module: Arc<JitModule>,
 }
 
 impl Data {

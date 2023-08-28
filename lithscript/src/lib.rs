@@ -6,15 +6,20 @@
 //! - Be easy to transpile to from ZScript and other ZDoom languages
 //! - Bring the performance of JIT and static typing without the baggage of LLVM
 
+#![allow(clippy::comparison_chain)]
+// TODO: Disallow
 #![allow(unused)]
-#![allow(dead_code)] // TODO: Disallow
+#![allow(dead_code)]
 
 pub mod ast;
-pub mod codegen;
+pub mod back;
+mod cmid;
 pub mod compile;
+pub mod extend;
+pub mod front;
 mod heap;
 pub mod issue;
-pub mod lir;
+// pub mod lir;
 pub mod native;
 pub mod parse;
 pub mod project;
@@ -22,9 +27,12 @@ pub mod rti;
 pub mod runtime;
 mod syn;
 pub mod tsys;
+#[cfg(feature = "viletech")]
+pub mod viletech;
 
-use std::{hash::BuildHasherDefault, path::PathBuf};
+use std::hash::BuildHasherDefault;
 
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHasher};
 
 pub use self::{
@@ -104,15 +112,19 @@ impl Version {
 }
 
 #[derive(Debug)]
-pub struct IncludeTree(FxHashMap<PathBuf, ParseTree>);
+pub struct FileTree(FxHashMap<String, ParseTree>);
 
-impl IncludeTree {
+impl FileTree {
+	pub fn par_iter(&self) -> impl ParallelIterator<Item = (&String, &ParseTree)> {
+		self.0.par_iter()
+	}
+
 	#[must_use]
 	pub fn any_errors(&self) -> bool {
 		self.0.values().any(|ptree| ptree.any_errors())
 	}
 
-	pub fn into_inner(self) -> impl Iterator<Item = (PathBuf, ParseTree)> {
+	pub fn into_inner(self) -> impl Iterator<Item = (String, ParseTree)> {
 		assert!(!self.any_errors(), "encountered one or more parse errors");
 		self.0.into_iter()
 	}

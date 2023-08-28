@@ -1,9 +1,8 @@
-use std::{any::TypeId, collections::HashMap, sync::Arc};
+use std::{any::TypeId, collections::HashMap};
 
 use util::rstring::RString;
 
 use crate::{
-	compile::JitModule,
 	rti::{self, Record, RtInfo},
 	tsys::TypeDef,
 	Version,
@@ -46,8 +45,6 @@ impl Project {
 pub struct Library {
 	pub(crate) name: String,
 	pub(crate) version: Version,
-	#[allow(unused)]
-	pub(crate) module: Arc<JitModule>,
 }
 
 impl Library {

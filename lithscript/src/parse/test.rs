@@ -51,10 +51,10 @@ func atomic(thecry: coal.yaw);
 		.map(|root| ast::TopLevel::cast(root).unwrap());
 
 	let fndecl0 = ast.next().unwrap().into_func_decl().unwrap();
-	assert_eq!(fndecl0.name().text(), "conductor");
+	assert_eq!(fndecl0.name().unwrap().text(), "conductor");
 
 	let fndecl1 = ast.next().unwrap().into_func_decl().unwrap();
-	assert_eq!(fndecl1.name().text(), "faultline");
+	assert_eq!(fndecl1.name().unwrap().text(), "faultline");
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn smoke_import() {
 	const SOURCE: &str = r#"
 import "/digital/nomad.lith": * => crawler;
 import "pressure/cooker.lith": urchin;
-import "inhabitants.lith": {dream, dweller};
+import "inhabitants.lith": {dream, 'dweller'};
 import	"/in/search/of/an/answer.lith" : { necrocosmic , alchemical=>apparatus };
 "#;
 
@@ -88,24 +88,24 @@ import	"/in/search/of/an/answer.lith" : { necrocosmic , alchemical=>apparatus };
 	{
 		let import = ast.next().unwrap().into_import().unwrap();
 		assert!(import.group().is_none());
-		assert_eq!(import.single().unwrap().name().text(), "urchin");
+		assert_eq!(import.single().unwrap().name().unwrap().text(), "urchin");
 	}
 
 	{
 		let import = ast.next().unwrap().into_import().unwrap();
 		let mut igrp = import.group().unwrap().entries();
-		assert_eq!(igrp.next().unwrap().name().text(), "dream");
-		assert_eq!(igrp.next().unwrap().name().text(), "dweller");
+		assert_eq!(igrp.next().unwrap().name().unwrap().text(), "dream");
+		assert_eq!(igrp.next().unwrap().name().unwrap().text(), "dweller");
 	}
 
 	{
 		let import = ast.next().unwrap().into_import().unwrap();
 		let mut igrp = import.group().unwrap().entries();
 		let e0 = igrp.next().unwrap();
-		assert_eq!(e0.name().text(), "necrocosmic");
+		assert_eq!(e0.name().unwrap().text(), "necrocosmic");
 		assert!(e0.rename().is_none());
 		let e1 = igrp.next().unwrap();
-		assert_eq!(e1.name().text(), "alchemical");
+		assert_eq!(e1.name().unwrap().text(), "alchemical");
 		assert_eq!(e1.rename().unwrap().text(), "apparatus");
 	}
 }

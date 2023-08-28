@@ -33,6 +33,7 @@ crossbeam.workspace = true
 dashmap.workspace = true
 logos.workspace = true
 parking_lot.workspace = true
+petgraph.workspace = true
 rayon.workspace = true
 rustc-hash.workspace = true
 sharded-slab.workspace = true
@@ -40,3 +41,10 @@ smallvec.workspace = true
 
 # Temporary local path.
 mir = { package = "mircomp-sys", path = "../../mir-rs/sys", features = ["parallel"] }
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true

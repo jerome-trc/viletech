@@ -19,7 +19,7 @@ use cranelift_module::Linkage;
 use smallvec::SmallVec;
 
 use crate::{
-	compile::QName,
+	compile::IName,
 	rti,
 	tsys::{FuncType, TypeDef, TypeHandle},
 };
@@ -84,7 +84,7 @@ pub struct Parameter {
 
 /// Thin wrapper around a [`Vec`] of [`Expr`]s.
 #[derive(Debug)]
-pub struct Block(pub(crate) Vec<Expr>);
+pub(crate) struct Block(pub(crate) Vec<Expr>);
 
 impl Block {
 	/// Convenience function for returning the index of a newly-added expression.
@@ -105,7 +105,7 @@ impl std::ops::Index<IxExpr> for Block {
 
 /// An element in a [`Block`].
 #[derive(Debug)]
-pub enum Expr {
+pub(crate) enum Expr {
 	/// Construction of a structure or array.
 	Aggregate(Vec<IxExpr>),
 	/// Evaluation never emits any SSA values.
@@ -122,7 +122,7 @@ pub enum Expr {
 	Break,
 	/// A call to a compile-time-known function.
 	Call {
-		name: QName,
+		name: IName,
 		args: Vec<IxExpr>,
 	},
 	/// A call to a function pointer (vtable calls included).
@@ -130,7 +130,7 @@ pub enum Expr {
 	/// Evaluation never emits any SSA values.
 	Continue,
 	/// Always points to a [`Symbol::Data`].
-	Data(QName),
+	Data(IName),
 	IfElse(IfElseExpr),
 	/// Evaluation only emits a single SSA value.
 	Immediate(Immediate),

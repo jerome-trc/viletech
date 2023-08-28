@@ -9,35 +9,9 @@ use doomfront::rowan::{self, ast::AstNode};
 
 use doomfront::{simple_astnode, AstError, AstResult};
 
-use crate::SyntaxElem;
-
 use super::{Syn, SyntaxNode, SyntaxToken};
 
 pub use self::{expr::*, item::*, lit::*, stat::*};
-
-/// Wraps a token tagged [`Syn::Ident`].
-/// Exists for the convenience of automatically handling raw identifiers.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Ident(pub(self) SyntaxToken);
-
-impl Ident {
-	#[must_use]
-	pub fn text(&self) -> &str {
-		let text = self.0.text();
-
-		if !text.starts_with("r#") {
-			text
-		} else {
-			&text[2..]
-		}
-	}
-
-	#[must_use]
-	pub fn is_raw(&self) -> bool {
-		self.0.text().starts_with("r#")
-	}
-}
 
 /// A top-level element in a source file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -129,6 +103,22 @@ impl AstNode for ReplRoot {
 	}
 }
 
+/// A convenience for positions which accept either [`Syn::Ident`] or [`Syn::NameLit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Name(SyntaxToken);
+
+impl Name {
+	#[must_use]
+	pub fn text(&self) -> &str {
+		match self.0.kind() {
+			Syn::Ident => self.0.text(),
+			Syn::NameLit => &self.0.text()[1..(self.0.text().len() - 1)],
+			_ => unreachable!(),
+		}
+	}
+}
+
 /// Wraps a node tagged [`Syn::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -182,7 +172,7 @@ impl Import {
 	/// If this is a `'*' => ident` import, return a [`Syn::Ident`] token
 	/// for that trailing identifier.
 	#[must_use]
-	pub fn all_alias(&self) -> Option<Ident> {
+	pub fn all_alias(&self) -> Option<SyntaxToken> {
 		let Some(node) = self.0.last_child() else { return None; };
 		let Syn::ImportEntry = node.kind() else { return None; };
 
@@ -190,9 +180,7 @@ impl Import {
 			.first_token()
 			.is_some_and(|token| token.kind() == Syn::Asterisk)
 		{
-			let ret = node.last_token().unwrap();
-			debug_assert_eq!(ret.kind(), Syn::Ident);
-			Some(Ident(ret))
+			node.last_token().filter(|token| token.kind() == Syn::Ident)
 		} else {
 			None
 		}
@@ -220,28 +208,22 @@ pub struct ImportEntry(SyntaxNode);
 simple_astnode!(Syn, ImportEntry, Syn::ImportEntry);
 
 impl ImportEntry {
-	#[must_use]
-	pub fn name(&self) -> Ident {
-		let ret = self.0.first_child_or_token().unwrap().into_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
-		Ident(ret)
+	pub fn name(&self) -> AstResult<Name> {
+		let token = self.0.first_token().ok_or(AstError::Missing)?;
+
+		match token.kind() {
+			Syn::Ident | Syn::NameLit => Ok(Name(token)),
+			_ => Err(AstError::Incorrect),
+		}
 	}
 
+	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
-	pub fn rename(&self) -> Option<Ident> {
-		if !self.0.children_with_tokens().any(|elem| {
-			elem.as_token()
-				.is_some_and(|token| token.kind() == Syn::ThickArrow)
-		}) {
-			return None;
-		}
-
-		match self.0.last_child_or_token() {
-			Some(SyntaxElem::Token(token)) => match token.kind() {
-				Syn::Ident => Some(Ident(token)),
-				_ => None,
-			},
-			_ => None,
-		}
+	pub fn rename(&self) -> Option<SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.filter_map(|elem| elem.into_token())
+			.skip_while(|token| token.kind() != Syn::ThickArrow)
+			.find(|token| token.kind() == Syn::Ident)
 	}
 }

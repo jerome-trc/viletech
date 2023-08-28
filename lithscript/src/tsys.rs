@@ -21,15 +21,15 @@ impl TypeDef {
 		self.layout
 	}
 
-	pub fn inner(&self) -> TypeInfo {
+	pub fn inner(&self) -> TypeRef {
 		unsafe {
 			match self.tag {
-				TypeTag::Array => TypeInfo::Array(&self.data.array),
-				TypeTag::Class => TypeInfo::Class(&self.data.class),
-				TypeTag::Function => TypeInfo::Function(&self.data.func),
-				TypeTag::Numeric => TypeInfo::Num(&self.data.numeric),
-				TypeTag::TypeDef => TypeInfo::TypeDef(&self.data.typedef),
-				TypeTag::Void => TypeInfo::Void(&self.data.void),
+				TypeTag::Array => TypeRef::Array(&self.data.array),
+				TypeTag::Function => TypeRef::Function(&self.data.func),
+				TypeTag::Numeric => TypeRef::Num(&self.data.numeric),
+				TypeTag::Struct => TypeRef::Struct(&self.data.structure),
+				TypeTag::TypeDef => TypeRef::TypeDef(&self.data.typedef),
+				TypeTag::Void => TypeRef::Void(&self.data.void),
 			}
 		}
 	}
@@ -49,11 +49,11 @@ impl TypeDef {
 	}
 
 	#[must_use]
-	pub(crate) fn new_class(class_t: ClassType) -> Self {
+	pub(crate) fn new_class(class_t: StructType) -> Self {
 		Self {
-			tag: TypeTag::Class,
+			tag: TypeTag::Struct,
 			data: TypeData {
-				class: ManuallyDrop::new(class_t),
+				structure: ManuallyDrop::new(class_t),
 			},
 			layout: unimplemented!(),
 		}
@@ -149,17 +149,18 @@ impl TypeDef {
 }
 
 #[derive(Debug)]
-pub enum TypeInfo<'td> {
+pub enum TypeRef<'td> {
 	Array(&'td ArrayType),
-	Class(&'td ClassType),
 	Function(&'td FuncType),
 	Num(&'td NumType),
+	Struct(&'td StructType),
 	TypeDef(&'td TypeDefType),
 	Void(&'td VoidType),
 }
 
 #[derive(Debug)]
 pub struct VoidType;
+
 #[derive(Debug)]
 pub struct TypeDefType;
 
@@ -184,12 +185,10 @@ pub struct ArrayType {
 }
 
 #[derive(Debug)]
-pub struct ClassType {
-	pub parent: Option<TypeInHandle<ClassType>>,
-}
+pub struct FuncType;
 
 #[derive(Debug)]
-pub struct FuncType;
+pub struct StructType;
 
 /// Specialization on [`crate::rti::Handle`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,14 +205,6 @@ impl std::ops::Deref for TypeHandle<ArrayType> {
 	}
 }
 
-impl std::ops::Deref for TypeHandle<ClassType> {
-	type Target = ClassType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.class }
-	}
-}
-
 impl std::ops::Deref for TypeHandle<FuncType> {
 	type Target = FuncType;
 
@@ -227,6 +218,14 @@ impl std::ops::Deref for TypeHandle<NumType> {
 
 	fn deref(&self) -> &Self::Target {
 		unsafe { &self.0.data.numeric }
+	}
+}
+
+impl std::ops::Deref for TypeHandle<StructType> {
+	type Target = StructType;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { &self.0.data.structure }
 	}
 }
 
@@ -252,9 +251,9 @@ pub struct TypeInHandle<T>(rti::InHandle<TypeDef>, PhantomData<T>);
 /// Gets discriminated with [`TypeTag`].
 union TypeData {
 	array: ManuallyDrop<ArrayType>,
-	class: ManuallyDrop<ClassType>,
 	func: ManuallyDrop<FuncType>,
 	numeric: ManuallyDrop<NumType>,
+	structure: ManuallyDrop<StructType>,
 	typedef: ManuallyDrop<TypeDefType>,
 	void: ManuallyDrop<VoidType>,
 }
@@ -263,9 +262,9 @@ union TypeData {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum TypeTag {
 	Array,
-	Class,
 	Function,
 	Numeric,
+	Struct,
 	TypeDef,
 	Void,
 }
@@ -275,9 +274,9 @@ impl Drop for TypeDef {
 		unsafe {
 			match self.tag {
 				TypeTag::Array => ManuallyDrop::drop(&mut self.data.array),
-				TypeTag::Class => ManuallyDrop::drop(&mut self.data.class),
 				TypeTag::Function => ManuallyDrop::drop(&mut self.data.func),
 				TypeTag::Numeric => ManuallyDrop::drop(&mut self.data.numeric),
+				TypeTag::Struct => ManuallyDrop::drop(&mut self.data.structure),
 				TypeTag::TypeDef => ManuallyDrop::drop(&mut self.data.typedef),
 				TypeTag::Void => ManuallyDrop::drop(&mut self.data.void),
 			}
@@ -294,9 +293,9 @@ impl std::fmt::Debug for TypeDef {
 					"data",
 					match &self.tag {
 						TypeTag::Array => &self.data.array,
-						TypeTag::Class => &self.data.class,
 						TypeTag::Function => &self.data.func,
 						TypeTag::Numeric => &self.data.numeric,
+						TypeTag::Struct => &self.data.structure,
 						TypeTag::TypeDef => &self.data.typedef,
 						TypeTag::Void => &self.data.void,
 					},
