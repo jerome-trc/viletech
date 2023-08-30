@@ -36,7 +36,7 @@ impl Catalog {
 	/// - `ctx.tracker` has already had its target number set.
 	pub(super) fn prep(&mut self, mut ctx: Context) -> Outcome<Output, Output> {
 		// Pass 1: determine how each mount needs to be processed.
-		// Compile Lith; transpile EDF and (G)ZDoom DSLs.
+		// Compile VZS; transpile EDF and (G)ZDoom DSLs.
 
 		for (i, mount) in self.vfs.mounts().iter().enumerate() {
 			if ctx.tracker.is_cancelled() {
@@ -157,12 +157,12 @@ impl Catalog {
 		Outcome::Ok(Context::rollup_errors(arts_working))
 	}
 
-	/// Try to compile non-ACS scripts from this package. Lith, EDF, and (G)ZDoom
-	/// DSLs all go into the same Lith library, regardless of which are present
+	/// Try to compile non-ACS scripts from this package. VZS, EDF, and (G)ZDoom
+	/// DSLs all go into the same VZS library, regardless of which are present
 	/// and which are absent.
 	fn prep_pass1_vpk(&self, ctx: &SubContext) -> Outcome<(), ()> {
-		if let Some(lithscript) = &ctx.arts.lithscript {
-			let root_dir_path: VPathBuf = [ctx.mntinfo.mount_point(), &lithscript.root_dir]
+		if let Some(vzscript) = &ctx.arts.vzscript {
+			let root_dir_path: VPathBuf = [ctx.mntinfo.mount_point(), &vzscript.root_dir]
 				.iter()
 				.collect();
 
@@ -170,8 +170,8 @@ impl Catalog {
 				Some(fref) => fref,
 				None => {
 					ctx.raise_error(PrepError {
-						path: ctx.mntinfo.mount_point().join(&lithscript.root_dir),
-						kind: PrepErrorKind::MissingLithDir,
+						path: ctx.mntinfo.mount_point().join(&vzscript.root_dir),
+						kind: PrepErrorKind::MissingVzsDir,
 					});
 
 					return Outcome::Err(());
@@ -186,7 +186,7 @@ impl Catalog {
 
 			TODO: Soon!
 
-			let mut inctree = lith::IncludeTree::new(root_dir);
+			let mut inctree = vzs::IncludeTree::new(root_dir);
 
 			if inctree.any_errors() {
 				let errors = &mut ctx.arts_w.lock().errors;
@@ -195,7 +195,7 @@ impl Catalog {
 				for (path, err) in parse_errs {
 					errors.push(PrepError {
 						path: path.clone(),
-						kind: PrepErrorKind::LithParse(err),
+						kind: PrepErrorKind::VzsParse(err),
 					});
 				}
 			}
@@ -224,7 +224,7 @@ impl Catalog {
 
 		if file
 			.path_extension()
-			.filter(|p_ext| p_ext.eq_ignore_ascii_case("lith"))
+			.filter(|p_ext| p_ext.eq_ignore_ascii_case("vzs"))
 			.is_some()
 		{
 			unimplemented!();
@@ -320,12 +320,12 @@ impl Catalog {
 			}
 		};
 
-		if let Some(mnf) = ingest.lithscript {
-			let version = match mnf.version.parse::<lith::Version>() {
+		if let Some(mnf) = ingest.vzscript {
+			let version = match mnf.version.parse::<vzs::Version>() {
 				Ok(v) => v,
 				Err(err) => {
 					warn!(
-						"Invalid `lithscript` table in meta.toml file: {p}\r\n\t\
+						"Invalid `vzscript` table in meta.toml file: {p}\r\n\t\
 						Details: {err}\r\n\t\
 						This mount's metadata may be incomplete.",
 						p = meta_path.display()
@@ -335,7 +335,7 @@ impl Catalog {
 				}
 			};
 
-			arts.lithscript = Some(LithManifest {
+			arts.vzscript = Some(VzsManifest {
 				root_dir: mnf.folder,
 				_namespace: mnf.namespace,
 				_version: version,
@@ -430,7 +430,7 @@ impl Context {
 #[derive(Debug, Default)]
 pub(self) struct Artifacts {
 	pub(self) kind: MountKind,
-	pub(self) lithscript: Option<LithManifest>,
+	pub(self) vzscript: Option<VzsManifest>,
 	pub(self) texturex: TextureX,
 	pub(self) pnames: PatchTable,
 	pub(self) colormap: Option<Box<ColorMap>>,
@@ -452,11 +452,11 @@ pub(self) struct WorkingArtifacts {
 }
 
 #[derive(Debug)]
-pub(self) struct LithManifest {
-	/// The base of the package's LithScript include tree.
+pub(self) struct VzsManifest {
+	/// The base of the package's VZScript include tree.
 	///
-	/// This is irrelevant to WADs, which can only use Lith through lumps named
-	/// `VILELITH`.
+	/// This is irrelevant to WADs, which can only use VZS through lumps named
+	/// `VZSCRIPT`.
 	///
 	/// Normally, the scripts can define manifest items used to direct loading,
 	/// but if there is no script root or manifests, ZDoom loading rules are used.
@@ -465,7 +465,7 @@ pub(self) struct LithManifest {
 	/// is always relative. `viletech.vpk3`'s script root, for example, is `scripts`.
 	pub(super) root_dir: VPathBuf,
 	pub(super) _namespace: Option<String>,
-	pub(super) _version: lith::Version,
+	pub(super) _version: vzs::Version,
 }
 
 /// Context relevant to operations on one mount.
@@ -566,11 +566,11 @@ pub(super) struct MountMetaIngest {
 	#[serde(default)]
 	pub links: Vec<String>,
 	#[serde(default)]
-	pub lithscript: Option<MountMetaIngestLith>,
+	pub vzscript: Option<MountMetaIngestVzs>,
 }
 
 #[derive(Debug, Deserialize)]
-pub(super) struct MountMetaIngestLith {
+pub(super) struct MountMetaIngestVzs {
 	pub folder: VPathBuf,
 	pub namespace: Option<String>,
 	pub version: String,

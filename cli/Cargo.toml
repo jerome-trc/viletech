@@ -27,7 +27,7 @@ level = { package = "subterra", path = "../level" }
 mus = { package = "mus2midi", path = "../mus2midi" }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
-lith = { package = "lithscript", path = "../lithscript" }
+vzs = { package = "vzscript", path = "../vzscript" }
 wadload.path = "../wadload"
 
 clap.workspace = true

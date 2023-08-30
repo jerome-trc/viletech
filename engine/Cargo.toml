@@ -42,7 +42,7 @@ mus = { package = "mus2midi", path = "../mus2midi" }
 level = { package = "subterra", path = "../level", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
-lith = { package = "lithscript", path = "../lithscript", features = ["viletech"] }
+vzs = { package = "vzscript", path = "../vzscript" }
 wadload.path = "../wadload"
 
 arrayvec.workspace = true

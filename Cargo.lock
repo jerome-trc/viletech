@@ -1763,20 +1763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cranelift-interpreter"
-version = "0.96.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4167fb267274c00c90b4f09fd33814f53e4ed17c06a46445f223cbbc42fd8823"
-dependencies = [
- "cranelift-codegen",
- "cranelift-entity",
- "libm",
- "log",
- "smallvec",
- "thiserror",
-]
-
-[[package]]
 name = "cranelift-isle"
 version = "0.96.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3120,44 +3106,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "libm"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
-
-[[package]]
-name = "lithscript"
-version = "0.0.0"
-dependencies = [
- "arc-swap",
- "ariadne",
- "bitflags 2.3.1",
- "bitvec",
- "cranelift",
- "cranelift-interpreter",
- "cranelift-jit",
- "cranelift-module",
- "criterion",
- "crossbeam",
- "dashmap",
- "doomfront",
- "logos",
- "mircomp-sys",
- "parking_lot 0.12.1",
- "petgraph",
- "rayon",
- "rustc-hash",
- "sharded-slab",
- "smallvec",
- "viletech-fs",
- "viletech-utils",
-]
 
 [[package]]
 name = "lock_api"
@@ -5423,7 +5375,6 @@ dependencies = [
  "indexmap 1.9.3",
  "indoc",
  "kira",
- "lithscript",
  "memoffset 0.8.0",
  "miette",
  "mus2midi",
@@ -5452,6 +5403,7 @@ dependencies = [
  "viletech-acs",
  "viletech-fs",
  "viletech-utils",
+ "vzscript",
  "wadload",
  "walkdir",
  "xml-rs",
@@ -5479,12 +5431,12 @@ dependencies = [
  "clap",
  "doomfront",
  "indoc",
- "lithscript",
  "mus2midi",
  "subterra",
  "viletech-acs",
  "viletech-fs",
  "viletech-utils",
+ "vzscript",
  "wadload",
 ]
 
@@ -5553,6 +5505,30 @@ dependencies = [
  "serde",
  "smartstring",
  "triomphe",
+]
+
+[[package]]
+name = "vzscript"
+version = "0.0.0"
+dependencies = [
+ "arc-swap",
+ "ariadne",
+ "bitflags 2.3.1",
+ "bitvec",
+ "criterion",
+ "crossbeam",
+ "dashmap",
+ "doomfront",
+ "logos",
+ "mircomp-sys",
+ "parking_lot 0.12.1",
+ "petgraph",
+ "rayon",
+ "rustc-hash",
+ "sharded-slab",
+ "smallvec",
+ "viletech-fs",
+ "viletech-utils",
 ]
 
 [[package]]

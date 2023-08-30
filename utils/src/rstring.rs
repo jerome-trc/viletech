@@ -148,13 +148,13 @@ fn soundness() {
 
 	assert_eq!(rstring.len(), 11);
 
-	let rstring = RString::from_strs(&["/lith/collect", "::TArray::element"]);
+	let rstring = RString::from_strs(&["/vzs/collect", "::TArray::element"]);
 	assert_eq!(rstring.len(), 30);
-	assert_eq!(rstring, "/lith/collect::TArray::element");
-	assert!(rstring.eq_ignore_ascii_case("/LITH/COLLECT::TARRAY::ELEMENT"));
+	assert_eq!(rstring, "/vzs/collect::TArray::element");
+	assert!(rstring.eq_ignore_ascii_case("/VZS/COLLECT::TARRAY::ELEMENT"));
 
 	let mut set = HashSet::new();
 	set.insert(rstring.clone());
 	assert!(set.contains(&rstring));
-	assert!(set.contains("/lith/collect::TArray::element"));
+	assert!(set.contains("/vzs/collect::TArray::element"));
 }

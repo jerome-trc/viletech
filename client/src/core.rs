@@ -11,7 +11,6 @@ use viletech::{
 	console::Console,
 	data::{CatalogAL, LoadOutcome},
 	input::InputCore,
-	lith,
 	rng::RngCore,
 	user::UserCore,
 	util::{duration_to_hhmmss, SendTracker},
@@ -28,7 +27,6 @@ pub struct ClientCore {
 	pub console: Console<ccmd::Command>,
 	pub devgui: DeveloperGui,
 	pub input: InputCore,
-	pub runtime: lith::Runtime,
 	pub rng: RngCore<WyRand>,
 	pub user: UserCore,
 }
@@ -52,7 +50,6 @@ impl ClientCore {
 				right: DevGuiStatus::Console,
 			},
 			input: InputCore::default(),
-			runtime: lith::Runtime::default(),
 			rng: RngCore::default(),
 			user,
 		};
@@ -157,7 +154,7 @@ impl ClientCore {
 							(DevGuiStatus::Audio, "Audio"),
 							(DevGuiStatus::Console, "Console"),
 							(DevGuiStatus::Catalog, "Data"),
-							(DevGuiStatus::LithRepl, "REPL"),
+							(DevGuiStatus::VzsRepl, "REPL"),
 							(DevGuiStatus::Vfs, "VFS"),
 						],
 					);
@@ -176,7 +173,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::LithRepl => {
+						DevGuiStatus::VzsRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -198,7 +195,7 @@ impl ClientCore {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::LithRepl => {
+						DevGuiStatus::VzsRepl => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -226,7 +223,7 @@ pub enum DevGuiStatus {
 	Audio,
 	Catalog,
 	Console,
-	LithRepl,
+	VzsRepl,
 	Vfs,
 }
 
@@ -236,7 +233,7 @@ impl std::fmt::Display for DevGuiStatus {
 			DevGuiStatus::Audio => write!(f, "Audio"),
 			DevGuiStatus::Catalog => write!(f, "Catalog"),
 			DevGuiStatus::Console => write!(f, "Console"),
-			DevGuiStatus::LithRepl => write!(f, "LithScript REPL"),
+			DevGuiStatus::VzsRepl => write!(f, "VZScript REPL"),
 			DevGuiStatus::Vfs => write!(f, "VFS"),
 		}
 	}

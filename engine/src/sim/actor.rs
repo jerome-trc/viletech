@@ -7,8 +7,8 @@ use std::{num::NonZeroI32, ptr::NonNull};
 
 use bevy::prelude::*;
 use bitflags::bitflags;
-use lith::TPtr;
 use serde::{Deserialize, Serialize};
+use vzs::heap::TPtr;
 
 use crate::data::dobj::{self, Blueprint};
 
@@ -16,16 +16,16 @@ use crate::data::dobj::{self, Blueprint};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Actor(Entity);
 
-pub type ActorPtr = TPtr<LithActor>;
+pub type ActorPtr = TPtr<ScriptActor>;
 
-/// An actor as understood by LithScript.
+/// An actor as understood by scripts.
 ///
 /// A class object, extensible like any other, principally made up of pointers to
 /// Bevy components. These get filled in at spawn time and left untouched by
 /// internal engine code, except when ECS storages are re-allocated, at which
 /// point they are all updated the start of the sim tick.
 #[derive(Debug)]
-pub struct LithActor {
+pub struct ScriptActor {
 	pub(crate) _readonly: NonNull<Readonly>,
 	pub(crate) _transform: NonNull<Transform>,
 
@@ -34,10 +34,10 @@ pub struct LithActor {
 }
 
 // SAFETY: Pointers are never dereferenced by native Rust, only set.
-// Only Lith modifies their contents, and this only happens when there is already
+// Only scripts modify their contents, and this only happens when there is already
 // an open Bevy query for mutating all components, so no other references can exist.
-unsafe impl Send for LithActor {}
-unsafe impl Sync for LithActor {}
+unsafe impl Send for ScriptActor {}
+unsafe impl Sync for ScriptActor {}
 
 // Monster /////////////////////////////////////////////////////////////////////
 

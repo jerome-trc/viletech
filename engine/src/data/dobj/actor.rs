@@ -9,7 +9,7 @@ use super::{Audio, Image, InHandle, PolyModel, VoxelModel};
 
 /// The prototype used to instantiate new entities.
 ///
-/// Maps to a LithScript class, which are used to define these.
+/// Maps to a VZScript class, which are used to define these.
 #[derive(Debug)]
 pub struct Blueprint {
 	pub base: Components,

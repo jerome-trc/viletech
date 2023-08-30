@@ -6,7 +6,7 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 ## daScript
 
-VileTech's SIMD code and LithScript embedded scripting language borrows from Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](./legal/dascript.txt).
+VileTech's SIMD code borrows from Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](./legal/dascript.txt).
 
 ## Doom
 
@@ -24,7 +24,7 @@ VileTech uses a function from the [enquote](https://crates.io/crates/enquote) cr
 
 All source code marked as originating from [GZDoom's](https://zdoom.org/index) original C and C++ source is provided under a [sic] ["BSD-like license"](./legal/gzdoom.txt).
 
-All source code marked as originating from GZDoom's ZScript source, whether adapted to native Rust or VileTech's LithScript, is provided under the [GNU General Public License v3.0](./LICENSE) unless explicitly stated to be otherwise.
+All source code marked as originating from GZDoom's ZScript source, whether adapted to native Rust or VileTech's VZScript, is provided under the [GNU General Public License v3.0](./LICENSE) unless explicitly stated to be otherwise.
 
 ## infer
 

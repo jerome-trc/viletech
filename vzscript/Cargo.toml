@@ -1,0 +1,42 @@
+[package]
+name = "vzscript"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["compilers", "game-development"]
+description = "VileTech's fork of GZDoom's ZScript language"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/vzscript"
+keywords = ["compiler", "doom", "dsl", "scripting", "viletech"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository.workspace = true
+
+[dependencies]
+doomfront = { path = "../doomfront", features = ["serde", "zdoom"] }
+util = { package = "viletech-utils", path = "../utils" }
+vfs = { package = "viletech-fs", path = "../vfs" }
+
+arc-swap.workspace = true
+ariadne.workspace = true
+bitflags.workspace = true
+bitvec.workspace = true
+crossbeam.workspace = true
+dashmap.workspace = true
+logos.workspace = true
+parking_lot.workspace = true
+petgraph.workspace = true
+rayon.workspace = true
+rustc-hash.workspace = true
+sharded-slab.workspace = true
+smallvec.workspace = true
+
+# Temporary local path.
+mir = { package = "mircomp-sys", path = "../../mir-rs/sys", features = ["parallel"] }
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true

@@ -42,9 +42,9 @@ viletech-utils is where small helper symbols which may not necessarily be relate
 
 viletech-fs is a "virtual file system"; an abstraction over the user's "real" or "physical" operating system's FS to ease usage for the engine and mod developers, as well as providing a layer of "information hiding".
 
-### lithscript
+### vzscript
 
-[lithscript](/lithscript/README.md), the LithSC toolchain, is the infrastructure powering LithScript, VileTech's bespoke embedded scripting language.
+[vzscript](/vzscript/README.md), the VZSC toolchain, is the infrastructure powering VZScript, VileTech's bespoke embedded scripting language.
 
 ### wadload
 

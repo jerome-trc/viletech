@@ -10,7 +10,7 @@ members = [
 	"server",
 	"utils",
 	"vfs",
-	"lithscript",
+	"vzscript",
 	"wadload",
 ]
 default-members = ["engine", "client"]

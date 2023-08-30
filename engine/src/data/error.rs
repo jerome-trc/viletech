@@ -32,9 +32,10 @@ pub struct PrepError {
 impl PrepError {
 	#[must_use]
 	pub fn is_fatal(&self) -> bool {
+		// TODO: VZS parse errors are fatal.
 		matches!(
 			self.kind,
-			PrepErrorKind::Io(_) | PrepErrorKind::MissingLithDir | PrepErrorKind::LithParse(_)
+			PrepErrorKind::Io(_) | PrepErrorKind::MissingVzsDir
 		)
 	}
 }
@@ -60,7 +61,7 @@ pub enum PrepErrorKind {
 	Image(ImageError),
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
-	MissingLithDir,
+	MissingVzsDir,
 	/// A [PNAMES] WAD lump is too short or an incorrect size.
 	///
 	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
@@ -77,7 +78,6 @@ pub enum PrepErrorKind {
 	/// A [virtual file](vfs::File) was expected to have some byte or string content,
 	/// but was instead empty or a directory.
 	Unreadable(VPathBuf),
-	LithParse(lith::parse::Error),
 	/// Failure to decode a FLAC, MP3, Ogg, or WAV file.
 	WaveformAudio(kira::sound::FromFileError),
 }
@@ -123,10 +123,10 @@ impl std::fmt::Display for PrepError {
 					p = self.path.display()
 				)
 			}
-			PrepErrorKind::MissingLithDir => {
+			PrepErrorKind::MissingVzsDir => {
 				write!(
 					f,
-					"LithScript root directory not found at path: {}",
+					"VZScript root directory not found at path: {}",
 					self.path.display()
 				)
 			}
@@ -156,7 +156,6 @@ impl std::fmt::Display for PrepError {
 					p = path.display()
 				)
 			}
-			PrepErrorKind::LithParse(_) => unimplemented!(),
 			PrepErrorKind::WaveformAudio(err) => write!(
 				f,
 				"failed to load audio file: `{p}` - details: {err}",

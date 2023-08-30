@@ -23,9 +23,9 @@ pub mod sim;
 pub mod sparse;
 pub mod terminal;
 pub mod user;
-pub extern crate lith;
 pub extern crate util;
 pub extern crate vfs;
+pub extern crate vzs;
 pub extern crate wadload;
 
 // Types ///////////////////////////////////////////////////////////////////////
@@ -168,16 +168,7 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 }
 
 pub const RESERVED_MOUNT_POINTS: &[&str] = &[
-	"vile",
-	"viletec",
-	"vt",
-	"vtec",
-	"vtech",
-	"viletech",
-	"lith",
-	"lithscript",
-	"zs",
-	"zscript",
+	"vile", "viletec", "vt", "vtec", "vtech", "viletech", "vzs", "vzscript", "zs", "zscript",
 ];
 
 #[derive(Debug)]
