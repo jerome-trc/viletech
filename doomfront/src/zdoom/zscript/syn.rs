@@ -400,7 +400,7 @@ pub enum Syn {
 	Caret,
 	/// `^^`
 	Caret2,
-	/// `^^`
+	/// `^^=`
 	Caret2Eq,
 	/// `^=`
 	CaretEq,
