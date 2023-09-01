@@ -167,7 +167,7 @@ simple_astnode!(Syn, BinExpr, Syn::BinExpr);
 
 impl BinExpr {
 	#[must_use]
-	pub fn lhs(&self) -> Expr {
+	pub fn left(&self) -> Expr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
@@ -232,9 +232,8 @@ impl BinExpr {
 		(ret0, ret1)
 	}
 
-	#[must_use]
-	pub fn rhs(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn right(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.children().nth(1).ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
 	}
 }
 
@@ -427,9 +426,11 @@ impl IndexExpr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
-	#[must_use]
-	pub fn index(&self) -> Expr {
-		Expr::cast(self.0.last_child().unwrap()).unwrap()
+	pub fn index(&self) -> AstResult<Expr> {
+		match self.0.children().nth(1) {
+			Some(node) => Expr::cast(node).ok_or(AstError::Incorrect),
+			None => Err(AstError::Missing),
+		}
 	}
 }
 
@@ -476,7 +477,7 @@ simple_astnode!(Syn, MemberExpr, Syn::MemberExpr);
 
 impl MemberExpr {
 	#[must_use]
-	pub fn lhs(&self) -> PrimaryExpr {
+	pub fn left(&self) -> PrimaryExpr {
 		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 

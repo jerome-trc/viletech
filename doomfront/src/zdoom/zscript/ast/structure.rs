@@ -229,6 +229,7 @@ impl ReplacesClause {
 pub enum ClassInnard {
 	Const(ConstDef),
 	Enum(EnumDef),
+	Struct(StructDef),
 	StaticConst(StaticConstStat),
 	Function(FunctionDecl),
 	Field(FieldDecl),
@@ -249,6 +250,7 @@ impl ClassInnard {
 		node.children().filter_map(|node| match node.kind() {
 			Syn::ConstDef => Some(ClassInnard::Const(ConstDef(node))),
 			Syn::EnumDef => Some(ClassInnard::Enum(EnumDef(node))),
+			Syn::StructDef => Some(ClassInnard::Struct(StructDef(node))),
 			Syn::StaticConstStat => Some(ClassInnard::StaticConst(StaticConstStat(node))),
 			Syn::FunctionDecl => Some(ClassInnard::Function(FunctionDecl(node))),
 			Syn::FieldDecl => Some(ClassInnard::Field(FieldDecl(node))),
@@ -396,10 +398,20 @@ impl FunctionDecl {
 
 	#[must_use]
 	pub fn is_const(&self) -> bool {
+		self.const_keyword().is_some()
+	}
+
+	/// The returned token is always tagged [`Syn::KwConst`].
+	#[must_use]
+	pub fn const_keyword(&self) -> Option<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.skip_while(|elem| elem.kind() != Syn::ParamList)
-			.any(|elem| elem.kind() == Syn::KwConst)
+			.take_while(|elem| matches!(elem.kind(), Syn::Semicolon | Syn::CompoundStat))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwConst)
+			})
 	}
 
 	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
