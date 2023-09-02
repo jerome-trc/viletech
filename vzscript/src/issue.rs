@@ -122,6 +122,8 @@ pub enum Error {
 	IllegalFnQual,
 	IllegalStructQual,
 	Redeclare,
+	/// e.g. script defines a class specifying inheritance from a struct.
+	SymbolKindMismatch,
 	SymbolNotFound,
 }
 

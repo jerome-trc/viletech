@@ -4,37 +4,7 @@ use doomfront::parser::{OpenMark, Parser};
 
 use crate::Syn;
 
-use super::common::*;
-
-/// Note that this also covers [annotations](Annotation).
-pub(super) fn item(p: &mut Parser<Syn>) {
-	if p.at_any(Annotation::FIRST_SET) {
-		Annotation::parse(p);
-		return;
-	}
-
-	let mark = p.open();
-
-	while !p.eof() && p.at_any(Attribute::FIRST_SET) {
-		Attribute::parse(p);
-	}
-
-	trivia_0plus(p);
-	doc_comments(p);
-	trivia_0plus(p);
-	let token = p.nth(0);
-
-	if FuncDecl::FIRST_SET.contains(&token) {
-		FuncDecl::parse(p, mark);
-	} else {
-		p.advance_err_and_close(mark, token, Syn::Error, &["`func`", "`#`"]);
-	}
-}
-
-#[must_use]
-pub(super) fn at_item(p: &mut Parser<Syn>) -> bool {
-	p.at_any(Attribute::FIRST_SET) || p.at_any(FuncDecl::FIRST_SET)
-}
+use super::{common::*, expr::*};
 
 pub(super) struct FuncDecl;
 
@@ -94,6 +64,14 @@ impl FuncDecl {
 		p.expect(Syn::Ident, Syn::Ident, &["`an identifier`"]);
 		trivia_0plus(p);
 		TypeSpec::parse(p);
+
+		if p.find(0, |token| !token.is_trivia()) == Syn::Eq {
+			trivia_0plus(p);
+			p.advance(Syn::Eq);
+			trivia_0plus(p);
+			let _ = Expression::parse(p);
+		}
+
 		p.close(mark, Syn::Parameter);
 	}
 }

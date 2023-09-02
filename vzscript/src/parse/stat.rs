@@ -12,8 +12,8 @@ pub(super) fn statement(p: &mut Parser<Syn>) {
 		return;
 	}
 
-	if at_item(p) {
-		item(p);
+	if super::at_item(p) {
+		super::item(p);
 		return;
 	}
 

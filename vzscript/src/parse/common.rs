@@ -97,18 +97,19 @@ impl ArgList {
 pub(super) struct Attribute;
 
 impl Attribute {
-	pub(super) const FIRST_SET: &[Syn] = &[Syn::PoundBang];
+	pub(super) const FIRST_SET: &[Syn] = &[Syn::PoundBracketL];
 
 	pub(super) fn parse(p: &mut Parser<Syn>) {
 		p.debug_assert_at_any(Self::FIRST_SET);
 		let mark = p.open();
-		p.advance(Syn::PoundBang);
+		p.advance(Syn::PoundBracketL);
 
-		p.expect(Syn::BracketL, Syn::BracketR, &["`[`"]);
 		trivia_0plus(p);
-		name_chain(p);
+		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		trivia_0plus(p);
 
 		if p.at_any(ArgList::FIRST_SET) {
+			trivia_0plus(p);
 			ArgList::parse(p);
 		}
 
@@ -184,8 +185,10 @@ impl TypeSpec {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::Colon];
 
 	pub(super) fn parse(p: &mut Parser<Syn>) {
+		let mark = p.open();
 		p.expect(Syn::Colon, Syn::Colon, &["`:`"]);
 		trivia_0plus(p);
 		Expression::parse(p);
+		p.close(mark, Syn::TypeSpec);
 	}
 }

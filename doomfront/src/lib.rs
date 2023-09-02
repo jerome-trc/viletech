@@ -111,6 +111,10 @@ impl<L: LangExt> ParseTree<L> {
 		!self.errors.is_empty()
 	}
 
+	pub fn errors(&self) -> impl Iterator<Item = &ParseError<L>> {
+		self.errors.iter()
+	}
+
 	#[must_use]
 	pub fn into_inner(self) -> (rowan::GreenNode, Vec<ParseError<L>>) {
 		(self.root, self.errors)

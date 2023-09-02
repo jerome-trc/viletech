@@ -10,13 +10,20 @@ pub(super) struct Expression;
 
 impl Expression {
 	pub(super) const FIRST_SET: &[Syn] = &[
+		Syn::AtParenL,
 		Syn::Bang,
 		Syn::BraceL,
+		Syn::DotBraceL,
 		Syn::FalseLit,
 		Syn::FloatLit,
 		Syn::Ident,
 		Syn::IntLit,
+		Syn::KwClass,
+		Syn::KwEnum,
 		Syn::KwFor,
+		Syn::KwStruct,
+		Syn::KwSwitch,
+		Syn::KwUnion,
 		Syn::KwWhile,
 		Syn::Minus,
 		Syn::NameLit,
@@ -107,7 +114,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.advance(t);
 			(p.close(mark, Syn::Literal), false)
 		}
-		t @ (Syn::Minus | Syn::Tilde) => {
+		t @ (Syn::Bang | Syn::Minus | Syn::Tilde) => {
 			p.advance(t);
 			trivia_0plus(p);
 			recur(p, t);
@@ -146,22 +153,41 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 		}
 		t @ Syn::KwClass => {
 			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::ClassExpr), true)
+		}
+		t @ Syn::KwEnum => {
+			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 		}
 		t @ Syn::KwStruct => {
 			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::StructExpr), true)
 		}
 		t @ Syn::KwUnion => {
 			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::UnionExpr), true)
 		}
 		t @ Syn::DotBraceL => {
 			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::ConstructExpr), true)
 		}
 		Syn::BraceL => (block(p, mark, Syn::BlockExpr, false), false),
@@ -194,7 +220,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 fn infix_right_stronger(left: Syn, right: Syn) -> bool {
 	const PREC_TABLE: &[&[Syn]] = &[
 		&[
-			Syn::Eq,
+			// `Eq` might go here, but it causes trouble for param. defaults.
 			Syn::AsteriskEq,
 			Syn::SlashEq,
 			Syn::PercentEq,
@@ -209,13 +235,21 @@ fn infix_right_stronger(left: Syn, right: Syn) -> bool {
 		&[Syn::Pipe2],
 		&[Syn::Ampersand2],
 		&[Syn::Eq2, Syn::BangEq, Syn::TildeEq2],
-		&[Syn::AngleL, Syn::AngleR, Syn::AngleLEq, Syn::AngleREq],
+		&[
+			Syn::AngleL,
+			Syn::AngleR,
+			Syn::AngleLEq,
+			Syn::AngleREq,
+			Syn::KwIs,
+			Syn::KwIsNot,
+		],
 		&[Syn::Pipe],
 		&[Syn::Caret],
 		&[Syn::Ampersand],
 		&[Syn::AngleL2, Syn::AngleR2],
 		&[Syn::Plus, Syn::Minus],
 		&[Syn::Asterisk, Syn::Slash, Syn::Percent],
+		&[Syn::Asterisk2],
 		&[Syn::Bang, Syn::Tilde],
 		&[Syn::Dot],
 	];

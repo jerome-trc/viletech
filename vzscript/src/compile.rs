@@ -42,9 +42,16 @@ pub enum Optimization {
 	L3,
 }
 
+impl Optimization {
+	/// Shorthand for `matches!(self, Self::L2 | Self::L3)`.
+	#[must_use]
+	pub fn is_release(self) -> bool {
+		matches!(self, Self::L2 | Self::L3)
+	}
+}
+
 #[derive(Debug)]
 pub struct Compiler {
-	pub(crate) cur_lib: usize,
 	pub(crate) stage: Stage,
 	pub(crate) names: Interner<NameKey, ZName>,
 	pub(crate) paths: Interner<PathKey, RString>,
@@ -57,19 +64,11 @@ pub struct Compiler {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {
 	/// A newly-constructed [`Compiler`] is in this state.
-	/// It should be passed to [`front::declare_symbols`].
+	/// It should be passed to [`crate::front::declare_symbols`].
 	Declaration,
-	/// The compiler is in this state after calling [`front::resolve_imports`].
-	/// It should be passed to [`front::resolve_names`]
-	Resolution,
-	/// The compiler is in this state after calling [`front::resolve_names`].
-	/// It should be passed to [`front::semantic_checks`].
-	/// After that, the compiler is reset to [`Stage::Declaration`]
-	/// to check the next library, if there are any left.
-	Checking,
-	/// The compiler is in this state after calling [`Compiler::seal`].
-	/// At this point, it should be given to a middle stage or a backend.
-	CodeGen,
+	/// The compiler is in this state after calling [`crate::front::declare_symbols`].
+	/// It should be passed to [`crate::front::finalize`].
+	Finalize,
 }
 
 impl Compiler {
@@ -93,7 +92,6 @@ impl Compiler {
 		);
 
 		Self {
-			cur_lib: 0,
 			stage: Stage::Declaration,
 			names: Interner::default(),
 			paths: Interner::default(),
@@ -104,43 +102,35 @@ impl Compiler {
 		}
 	}
 
-	/// Prepare a series of checked libraries for code-gen.
-	/// Will panic if not all libraries have been successfully checked.
-	pub fn seal(&mut self) {
-		assert!(self.cur_lib == self.sources.len());
-		assert!(self.stage == Stage::Declaration);
-		self.stage = Stage::CodeGen;
-	}
-
-	pub fn raise(&self, issue: Issue) {
-		self.issues.lock().push(issue);
-	}
-
 	#[must_use]
 	pub fn any_errors(&self) -> bool {
 		let guard = self.issues.lock();
 		guard.iter().any(|iss| iss.is_error())
 	}
 
-	/// If `Some` is returned, it gives back `symbol` along with the key to the
+	/// If `Err` is returned, it gives back `symbol` along with the key to the
 	/// symbol that would have been clobbered.
-	#[must_use]
 	pub(crate) fn declare(
 		&self,
 		scope: &mut Scope,
 		name_k: NameKey,
 		symbol: Symbol,
-	) -> Option<(Symbol, SymbolKey)> {
+	) -> Result<SymbolKey, (Symbol, SymbolKey)> {
 		use std::collections::hash_map;
 
 		match scope.entry(name_k) {
 			hash_map::Entry::Vacant(vac) => {
 				let ix = self.symbols.insert(SymbolPtr::from(symbol)).unwrap();
-				vac.insert(SymbolKey::from(ix));
-				None
+				let key = SymbolKey::from(ix);
+				vac.insert(key);
+				Ok(key)
 			}
-			hash_map::Entry::Occupied(occ) => Some((symbol, *occ.get())),
+			hash_map::Entry::Occupied(occ) => Err((symbol, *occ.get())),
 		}
+	}
+
+	pub(crate) fn raise(&self, issue: Issue) {
+		self.issues.lock().push(issue);
 	}
 
 	#[must_use]

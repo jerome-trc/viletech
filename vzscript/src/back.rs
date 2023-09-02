@@ -7,6 +7,7 @@
 
 use std::{
 	ffi::{c_char, c_int, c_void},
+	io::Cursor,
 	sync::Arc,
 };
 
@@ -48,24 +49,18 @@ pub fn compile(compiler: Compiler, opt: Optimization) -> (Project, Arc<RwLock<Ru
 		}
 	}
 
-	#[derive(Debug)]
-	struct Buffer {
-		pos: usize,
-		code: *const c_char,
-	}
+	unsafe extern "C" fn _getc_func(userd: *mut c_void) -> c_int {
+		let buf: *mut Cursor<String> = userd.cast();
+		let pos = (*buf).position();
+		let len = (*buf).get_ref().len() as u64;
 
-	unsafe extern "C" fn getc_func(userd: *mut c_void) -> c_int {
-		let buf: *mut Buffer = userd.cast();
-		let p = (*buf).pos;
-		let mut c = *(*buf).code.add(p);
-
-		if c == 0 {
-			c = -1; // libc's EOF
+		if pos >= len {
+			-1 // libc's EOF
 		} else {
-			(*buf).pos += 1;
+			let r = (*buf).get_ref().as_ptr().add(pos as usize);
+			(*buf).set_position((*buf).position() + 1);
+			*r as c_int
 		}
-
-		c as c_int
 	}
 
 	unsafe extern "C" fn import_resolver(_: *const c_char) -> *mut c_void {

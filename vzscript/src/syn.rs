@@ -14,13 +14,13 @@ use crate::Version;
 #[allow(clippy::manual_non_exhaustive)]
 pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// `'#' ident`
+	/// `'#' ident arglist?`
 	Annotation,
 	/// `'(' expr? (',' expr)* ')'`
 	ArgList,
 	/// `(ident ':')? expr`
 	Argument,
-	/// `'#' '[' resolver arglist? ']'`
+	/// `'#' '[' ident arglist? ']'`
 	Attribute,
 	/// `blocklabel? '{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
 	Block,
@@ -28,8 +28,6 @@ pub enum Syn {
 	BlockLabel,
 	/// `'class' ident typespec? typequals '{' structinnard* '}'`
 	ClassDef,
-	/// `'extend' 'class' ident '{' structinnard* '}'`
-	ClassExtend,
 	/// `'const' ident typespec? '=' expr ';'`
 	ConstDef,
 	/// `'enum' ident typespec? '{' variant? (',' variant)* ','? '}'`
@@ -46,8 +44,6 @@ pub enum Syn {
 	FuncDecl,
 	/// A top-level node representing a whole file.
 	FileRoot,
-	/// `'mixin' ident '{' structinnard '}'`
-	MixinDef,
 	/// `'.'? T | ('.'? T ('.' T)*)` where `T` is a [`Syn::Ident`] or [`Syn::NameLit`].
 	///
 	/// Counterpart to what is known in ZScript's grammar as a "dottable ID".
@@ -60,14 +56,14 @@ pub enum Syn {
 	ReturnType,
 	/// `'struct' ident typequals '{' structinnard* '}'`
 	StructDef,
-	/// `'extend' 'struct' ident '{' structinnard* '}'`
-	StructExtend,
-	/// `':' expr`
+	/// `'default' ':' block | 'case' expr ':' block`
+	SwitchCase,
+	/// A "type specifier". Grammar: `':' expr`
 	TypeSpec,
 	/// `'union' ident '{' unionfield* '}'`
 	UnionDef,
 	// Nodes: statements ///////////////////////////////////////////////////////
-	/// `'let' 'const'? 'ident' typespec? ('=' expr)? ';'`
+	/// `('let' | 'readonly') const? 'ident' typespec? ('=' expr)? ';'`
 	BindStat,
 	/// `'break' blocklabel? ';'`
 	BreakStat,
@@ -92,8 +88,12 @@ pub enum Syn {
 	ConstructExpr,
 	/// `'enum' typespec? '{' variant? (',' variant)* ','? '}'`
 	EnumExpr,
+	/// `'@' paramlist block`
+	FunctionExpr,
 	/// Is parent to only a [`Syn::Ident`] token.
 	IdentExpr,
+	/// `'if' expr block`
+	IfExpr,
 	/// `expr '.' ident`
 	FieldExpr,
 	/// `'for' ident ':' expr block`
@@ -117,20 +117,24 @@ pub enum Syn {
 	PrefixExpr,
 	/// `'struct' '{' structinnard* '}'`
 	StructExpr,
-	/// `'union' '{' unionfield* '}'`
+	/// `'switch' expr '{' switchcase* '}'`
+	SwitchExpr,
+	/// `'union' '{' unioninnard* '}'`
 	UnionExpr,
+	/// `@ namechain '{' unionfield* '}'`
+	VariantExpr,
 	/// `'while' expr block`
 	WhileExpr,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	#[token("false")]
 	FalseLit,
-	#[regex(r"[0-9]+([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
-	#[regex(r"[0-9]*\.[0-9]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
-	#[regex(r"[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
+	#[regex(r"[0-9][0-9_]*([Ee][+-]?[0-9]+)[fF]?", priority = 4)]
+	#[regex(r"[0-9]*\.[0-9_]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
+	#[regex(r"[0-9][0-9_]*\.[0-9_]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
 	FloatLit,
-	#[regex("0[xX][a-fA-F0-9]+[uUlL]?[uUlL]?", priority = 4)]
-	#[regex(r"0[0-9]+[uUlL]?[uUlL]?", priority = 3)]
-	#[regex(r"[0-9]+[uUlL]?[uUlL]?", priority = 2)]
+	#[regex("0[xX][a-fA-F0-9_]+[uUlL]?[uUlL]?", priority = 4)]
+	#[regex(r"0[0-9_]+[uUlL]?[uUlL]?", priority = 3)]
+	#[regex(r"[0-9][0-9_]*[uUlL]?[uUlL]?", priority = 2)]
 	IntLit,
 	#[regex("'[^''\n]*'")]
 	NameLit,
@@ -173,14 +177,16 @@ pub enum Syn {
 	KwIf,
 	#[token("is", priority = 5)]
 	KwIs,
+	#[token("isnot", priority = 5)]
+	KwIsNot,
 	#[token("in", priority = 5)]
 	KwIn,
-	#[token("include", priority = 5)]
-	KwInclude,
 	#[token("let", priority = 5)]
 	KwLet,
 	#[token("out", priority = 5)]
 	KwOut,
+	#[token("override", priority = 5)]
+	KwOverride,
 	#[token("private", priority = 5)]
 	KwPrivate,
 	#[token("protected", priority = 5)]
@@ -201,6 +207,8 @@ pub enum Syn {
 	KwUntil,
 	#[token("var", priority = 5)]
 	KwVar,
+	#[token("virtual", priority = 5)]
+	KwVirtual,
 	#[token("while", priority = 5)]
 	KwWhile,
 	// Tokens: glyphs //////////////////////////////////////////////////////////
@@ -236,6 +244,12 @@ pub enum Syn {
 	Asterisk2Eq,
 	#[token("*=")]
 	AsteriskEq,
+	#[token("@")]
+	At,
+	#[token("@[")]
+	AtBracketL,
+	#[token("@(")]
+	AtParenL,
 	#[token("!")]
 	Bang,
 	#[token("!=")]
@@ -262,6 +276,8 @@ pub enum Syn {
 	Dot,
 	#[token("..")]
 	Dot2,
+	#[token("..=")]
+	Dot2Eq,
 	#[token("...")]
 	Dot3,
 	#[token(".{")]
@@ -296,8 +312,8 @@ pub enum Syn {
 	PlusEq,
 	#[token("#")]
 	Pound,
-	#[token("#!")]
-	PoundBang,
+	#[token("#[")]
+	PoundBracketL,
 	#[token(";")]
 	Semicolon,
 	#[token("/")]
@@ -310,6 +326,8 @@ pub enum Syn {
 	ThinArrow,
 	#[token("~")]
 	Tilde,
+	#[token("~!=")]
+	TildeBangEq,
 	#[token("~==")]
 	TildeEq2,
 	// Tokens: miscellaenous ///////////////////////////////////////////////////
@@ -319,7 +337,7 @@ pub enum Syn {
 	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
 	/// Either single-line (C++-style) or multi-line (C-style).
-	#[regex("//[^\n]*\n*", priority = 1)]
+	#[regex("//[^/\n]*\n*", priority = 1)]
 	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
@@ -373,9 +391,13 @@ mod test {
 
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = "typeof(9 + '9a')";
+		const SOURCE: &str = "9_._0 .{ typeof(9 + '9a')";
 
 		const EXPECTED: &[Syn] = &[
+			Syn::FloatLit,
+			Syn::Whitespace,
+			Syn::DotBraceL,
+			Syn::Whitespace,
 			Syn::Ident,
 			Syn::ParenL,
 			Syn::IntLit,

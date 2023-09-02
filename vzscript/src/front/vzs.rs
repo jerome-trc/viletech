@@ -1,6 +1,7 @@
-//! Semantic checking and name resolution for VZScript.
+//! Name resolution and semantic checking for VZScript.
 
 use doomfront::rowan::{ast::AstNode, TextRange};
+use parking_lot::RwLock;
 
 use crate::{ast, compile::Compiler, ParseTree};
 
@@ -11,25 +12,6 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 		.cursor()
 		.children()
 		.map(|node| ast::TopLevel::cast(node).unwrap());
-
-	// A first pass to make mixins known, so that their contents
-	// can be exapnded into class and struct definitions by the second pass.
-
-	for top in ast.clone() {
-		let ast::TopLevel::MixinDef(mixindef) = top else {
-			continue;
-		};
-
-		let name_tok = mixindef.name().unwrap();
-		let name_k = ctx.names.intern(name_tok.text());
-
-		ctx.sym_q.push((
-			name_k,
-			Symbol::Mixin {
-				green: mixindef.syntax().green().into_owned(),
-			},
-		));
-	}
 
 	for top in ast.clone() {
 		match top {
@@ -48,29 +30,16 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 							span: TextRange::new(r_start, r_end),
 						},
 						kind: UndefKind::Function,
-						scope: Scope::default(),
+						scope: RwLock::new(Scope::default()),
 					},
 				));
 			}
-			ast::TopLevel::ClassDef(_) => todo!(),
-			ast::TopLevel::ConstDef(_) => todo!(),
-			ast::TopLevel::EnumDef(_) => todo!(),
-			ast::TopLevel::StructDef(_) => todo!(),
-			ast::TopLevel::UnionDef(_) => todo!(),
-			ast::TopLevel::Annotation(_)
-			| ast::TopLevel::ClassExtend(_)
-			| ast::TopLevel::MixinDef(_)
-			| ast::TopLevel::StructExtend(_) => continue,
-		}
-	}
-
-	// A third pass to take care of extensions.
-
-	for top in ast {
-		match top {
-			ast::TopLevel::ClassExtend(_) => todo!(),
-			ast::TopLevel::StructExtend(_) => todo!(),
-			_ => continue,
+			ast::TopLevel::ClassDef(_)
+			| ast::TopLevel::ConstDef(_)
+			| ast::TopLevel::EnumDef(_)
+			| ast::TopLevel::StructDef(_)
+			| ast::TopLevel::UnionDef(_) => unimplemented!(),
+			ast::TopLevel::Annotation(_) => continue,
 		}
 	}
 }

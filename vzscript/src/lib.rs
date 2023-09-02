@@ -22,6 +22,7 @@ pub mod rti;
 pub mod runtime;
 mod syn;
 pub mod tsys;
+pub mod vir;
 
 use std::hash::BuildHasherDefault;
 
