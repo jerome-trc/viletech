@@ -14,6 +14,7 @@ pub mod compile;
 pub mod front;
 pub mod heap;
 pub mod inctree;
+pub mod interpreter;
 pub mod issue;
 pub mod native;
 pub mod parse;

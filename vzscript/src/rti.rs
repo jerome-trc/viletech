@@ -9,11 +9,12 @@ use std::{
 	sync::{Arc, Weak},
 };
 
+use cranelift_module::{DataId, FuncId};
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use util::rstring::RString;
 
-use crate::{back::MirType, native::Native, project::Project, tsys::TypeDef};
+use crate::{back::SsaValues, native::Native, project::Project, tsys::TypeDef};
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}
 
@@ -56,7 +57,7 @@ impl<R: RtInfo> Store<R> {
 #[derive(Debug)]
 pub struct Function {
 	ptr: *const c_void,
-	item: mir::MIR_item_t,
+	id: FuncId,
 	sighash: SignatureHash,
 }
 
@@ -118,7 +119,7 @@ pub(crate) struct SignatureHash(u64);
 
 impl SignatureHash {
 	#[must_use]
-	pub(crate) fn new(params: SmallVec<[MirType; 1]>, rets: SmallVec<[MirType; 1]>) -> Self {
+	pub(crate) fn new(params: SsaValues, rets: SsaValues) -> Self {
 		let mut fxh = FxHasher::default();
 		params.hash(&mut fxh);
 		rets.hash(&mut fxh);
@@ -136,7 +137,7 @@ impl RtInfo for Function {}
 pub struct Data {
 	ptr: *const u8,
 	size: usize,
-	item: mir::MIR_item_t,
+	id: DataId,
 	native_t: Option<TypeId>,
 	immutable: bool,
 }

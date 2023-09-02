@@ -21,6 +21,10 @@ arc-swap.workspace = true
 ariadne.workspace = true
 bitflags.workspace = true
 bitvec.workspace = true
+cranelift.workspace = true
+cranelift-jit.workspace = true
+cranelift-module.workspace = true
+cranelift-interpreter.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
 logos.workspace = true
@@ -30,9 +34,6 @@ rayon.workspace = true
 rustc-hash.workspace = true
 sharded-slab.workspace = true
 smallvec.workspace = true
-
-# Temporary local path.
-mir = { package = "mircomp-sys", path = "../../mir-rs/sys", features = ["parallel"] }
 
 [[bench]]
 name = "bench"

@@ -24,32 +24,6 @@ pub struct LibSource {
 	pub decorate: Option<IncludeTree<decorate::Syn>>,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Optimization {
-	/// No optimization; only register allocation and machine code generation.
-	L0,
-	/// Additional code selection. Code is more compact and faster than [`Optimization::L0`],
-	/// with practically the same compilation speed.
-	L1,
-	/// Common sub-expression elimination and sparse conditional constant propagation.
-	/// Good for if the input MIR code is not pre-optimized.
-	/// [`Optimization::L1`] is about 50% faster to compile than this.
-	/// This is the default.
-	#[default]
-	L2,
-	/// Additional register renaming and loop invariant code motion.
-	/// [`Optimization::L2`] is about 50% faster to compile than this.
-	L3,
-}
-
-impl Optimization {
-	/// Shorthand for `matches!(self, Self::L2 | Self::L3)`.
-	#[must_use]
-	pub fn is_release(self) -> bool {
-		matches!(self, Self::L2 | Self::L3)
-	}
-}
-
 #[derive(Debug)]
 pub struct Compiler {
 	pub(crate) stage: Stage,
