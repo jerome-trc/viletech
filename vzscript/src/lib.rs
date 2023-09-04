@@ -21,9 +21,11 @@ pub mod parse;
 pub mod project;
 pub mod rti;
 pub mod runtime;
+pub mod sema;
 mod syn;
 pub mod tsys;
 pub mod vir;
+pub mod zname;
 
 use std::hash::BuildHasherDefault;
 

@@ -3,9 +3,11 @@
 //! A semantically-rich, high level common middle between VZScript's transpilation
 //! inputs and the backend.
 
-use crate::compile::{NameKey, SymbolKey};
+use util::rstring::RString;
 
-#[derive(Debug)]
+use crate::compile::SymbolPtr;
+
+#[derive(Debug, Clone)]
 pub(crate) struct Block(pub(crate) Vec<Node>);
 
 impl std::ops::Deref for Block {
@@ -22,11 +24,11 @@ impl std::ops::DerefMut for Block {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Node {
 	Aggregate(Vec<NodeIx>),
 	Assign {
-		name: NameKey,
+		name: RString,
 		expr: NodeIx,
 	},
 	Bin {
@@ -42,7 +44,7 @@ pub(crate) enum Node {
 	},
 	Break(/* ??? */),
 	Call {
-		function: SymbolKey,
+		function: SymbolPtr,
 		args: Vec<NodeIx>,
 	},
 	Continue(/* ??? */),
@@ -71,13 +73,29 @@ pub(crate) enum BinOp {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Immediate {
+pub(crate) enum Immediate {
 	I8(i8),
 	I16(i16),
 	I32(i32),
 	I64(i64),
+	I128(i128),
 	F32(f32),
 	F64(f64),
+	F32X4(f32, f32, f32, f32),
+}
+
+impl Immediate {
+	#[must_use]
+	#[cfg(target_pointer_width = "32")]
+	pub(crate) fn pointer(addr: i32) -> Self {
+		Self::I32(addr)
+	}
+
+	#[must_use]
+	#[cfg(target_pointer_width = "64")]
+	pub(crate) fn pointer(addr: i64) -> Self {
+		Self::I64(addr)
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

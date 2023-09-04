@@ -7,13 +7,14 @@ use doomfront::{
 	zdoom::zscript::{ast, ParseTree, SyntaxNode},
 };
 use parking_lot::RwLock;
+use util::SmallString;
 
 use crate::{
-	compile::{Compiler, SymbolKey},
+	compile::Compiler,
 	issue::{self, FileSpan, Issue, IssueLevel},
 };
 
-use super::{DeclContext, Location, Scope, Symbol, SymbolPtr, UndefKind};
+use super::{DeclContext, Location, Scope, Symbol, SymbolPtr, Undefined};
 
 pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 	let ast = ptree
@@ -21,8 +22,8 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 		.children()
 		.map(|node| ast::TopLevel::cast(node).unwrap());
 
-	// A first pass to make mixin classes known, so that their contents
-	// can be expanded into class definitions by the second pass.
+	// Pass 1 makes mixin classes known, so that their contents
+	// can be expanded into class definitions later.
 
 	for top in ast.clone() {
 		let ast::TopLevel::MixinClassDef(mixindef) = top else {
@@ -30,15 +31,15 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 		};
 
 		let name_tok = mixindef.name().unwrap();
-		let name_k = ctx.names.intern(name_tok.text());
+		let iname = ctx.intern_name(name_tok.text());
 		let r_start = mixindef.syntax().text_range().start();
 		let r_end = name_tok.text_range().end();
 
 		ctx.sym_q.push((
-			name_k,
+			iname,
 			Symbol::Mixin {
 				location: Location {
-					file: ctx.path_k,
+					file: ctx.ipath.clone(),
 					span: TextRange::new(r_start, r_end),
 				},
 				green: mixindef.syntax().green().into_owned(),
@@ -53,20 +54,17 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 			}
 			ast::TopLevel::ConstDef(constdef) => {
 				let name_tok = constdef.name().unwrap();
-				let name_k = ctx.names.intern(name_tok.text());
+				let iname = ctx.intern_name(name_tok.text());
 				let span = constdef.syntax().text_range();
 
 				ctx.sym_q.push((
-					name_k,
+					iname,
 					Symbol::Undefined {
 						location: Location {
-							file: ctx.path_k,
+							file: ctx.ipath.clone(),
 							span,
 						},
-						kind: UndefKind::Value {
-							comptime: true,
-							mutable: false,
-						},
+						kind: Undefined::Value,
 						scope: RwLock::new(Scope::default()),
 					},
 				));
@@ -85,7 +83,7 @@ pub(super) fn declare_symbols(ctx: DeclContext, ptree: &ParseTree) {
 		}
 	}
 
-	// A third pass to take care of extensions.
+	// Pass 3 takes care of extensions.
 
 	for top in ast.clone() {
 		match top {
@@ -110,20 +108,22 @@ fn declare_class(ctx: DeclContext, classdef: ast::ClassDef) {
 	let mut scope = Scope::default();
 
 	let name_tok = classdef.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
+	let iname = ctx.intern_name(name_tok.text());
 	let r_start = classdef.syntax().text_range().start();
 	let r_end = name_tok.text_range().end();
 
-	for innard in classdef.innards() {}
+	for innard in classdef.innards() {
+		declare_class_innard(ctx, &mut scope, innard);
+	}
 
 	ctx.sym_q.push((
-		name_k,
+		iname,
 		Symbol::Undefined {
 			location: Location {
-				file: ctx.path_k,
+				file: ctx.ipath.clone(),
 				span: TextRange::new(r_start, r_end),
 			},
-			kind: UndefKind::Class,
+			kind: Undefined::Class,
 			scope: RwLock::new(scope),
 		},
 	));
@@ -154,35 +154,73 @@ fn declare_class_innard(ctx: DeclContext, scope: &mut Scope, innard: ast::ClassI
 		}
 		ast::ClassInnard::Property(property) => {
 			let name_tok = property.name().unwrap();
-			let name_k = ctx.names.intern(name_tok.text());
+			let iname = ctx.intern_name(name_tok.text());
 
-			ctx.sym_q.push((
-				name_k,
+			if let Err((sym, sym_ix)) = ctx.declare(
+				scope,
+				iname,
 				Symbol::Undefined {
 					location: Location {
-						file: ctx.path_k,
+						file: ctx.ipath.clone(),
 						span: property.syntax().text_range(),
 					},
-					kind: UndefKind::Property,
+					kind: Undefined::Property,
 					scope: RwLock::new(Scope::default()),
 				},
-			));
+			) {
+				ctx.raise([Issue {
+					id: FileSpan::new(ctx.ipath.as_str(), property.syntax().text_range()),
+					level: IssueLevel::Error(issue::Error::Redeclare),
+					message: format!("attempt to re-declare property `{}`", name_tok.text()),
+					label: todo!(),
+				}]);
+
+				return;
+			}
 		}
 		ast::ClassInnard::Flag(flagdef) => {
 			let name_tok = flagdef.name().unwrap();
-			let name_k = ctx.names.intern(name_tok.text());
+			let iname = ctx.intern_name(name_tok.text());
 
-			ctx.sym_q.push((
-				name_k,
+			if let Err((sym, sym_ix)) = ctx.declare(
+				scope,
+				iname,
 				Symbol::Undefined {
 					location: Location {
-						file: ctx.path_k,
+						file: ctx.ipath.clone(),
 						span: flagdef.syntax().text_range(),
 					},
-					kind: UndefKind::FlagDef,
+					kind: Undefined::FlagDef,
 					scope: RwLock::new(Scope::default()),
 				},
-			));
+			) {
+				ctx.raise([Issue {
+					id: FileSpan::new(ctx.ipath.as_str(), flagdef.syntax().text_range()),
+					level: IssueLevel::Error(issue::Error::Redeclare),
+					message: format!("attempt to re-declare flag `{}`", name_tok.text()),
+					label: todo!(),
+				}]);
+
+				return;
+			}
+
+			let varname = SmallString::from_iter(["b", name_tok.text()].into_iter());
+			let iname = ctx.intern_name(&varname);
+
+			let _ = ctx
+				.declare(
+					scope,
+					iname,
+					Symbol::Undefined {
+						location: Location {
+							file: ctx.ipath.clone(),
+							span: flagdef.syntax().text_range(),
+						},
+						kind: Undefined::Value,
+						scope: RwLock::new(Scope::default()),
+					},
+				)
+				.unwrap();
 		}
 		ast::ClassInnard::States(_) | ast::ClassInnard::Default(_) => {}
 	}
@@ -214,36 +252,36 @@ fn declare_enum(ctx: DeclContext, mut outer: Option<&mut Scope>, enumdef: ast::E
 	let mut scope = Scope::default();
 
 	for variant in enumdef.variants() {
-		let name_k = ctx.names.intern(variant.name().text());
+		let iname = ctx.intern_name(variant.name().text());
 
-		let Ok(sym_ix) = ctx.declare(&mut scope, name_k, Symbol::Undefined {
+		let Ok(sym_ix) = ctx.declare(&mut scope, iname.clone(), Symbol::Undefined {
 				location: Location {
-					file: ctx.path_k,
+					file: ctx.ipath.clone(),
 					span: variant.syntax().text_range(),
 				},
-				kind: UndefKind::Value { comptime: true, mutable: false },
+				kind: Undefined::Value,
 				scope: RwLock::new(Scope::default()),
 			}) else {
 			unreachable!()
 		};
 
 		let Some(o_scope) = outer.as_deref_mut() else { continue; };
-		o_scope.insert(name_k, sym_ix);
+		o_scope.insert(iname, sym_ix);
 	}
 
 	let name_tok = enumdef.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
+	let iname = ctx.intern_name(name_tok.text());
 	let r_start = enumdef.syntax().text_range().start();
 	let r_end = name_tok.text_range().end();
 
 	ctx.sym_q.push((
-		name_k,
+		iname,
 		Symbol::Undefined {
 			location: Location {
-				file: ctx.path_k,
+				file: ctx.ipath.clone(),
 				span: TextRange::new(r_start, r_end),
 			},
-			kind: UndefKind::Enum,
+			kind: Undefined::Enum,
 			scope: RwLock::new(scope),
 		},
 	));
@@ -251,7 +289,7 @@ fn declare_enum(ctx: DeclContext, mut outer: Option<&mut Scope>, enumdef: ast::E
 
 fn declare_field(ctx: DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 	for name in field.names() {
-		let name_k = ctx.names.intern(name.ident().text());
+		let iname = ctx.intern_name(name.ident().text());
 		let mut comptime = false;
 		let mut mutable = true;
 
@@ -264,13 +302,13 @@ fn declare_field(ctx: DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 		}
 
 		ctx.sym_q.push((
-			name_k,
+			iname,
 			Symbol::Undefined {
 				location: Location {
-					file: ctx.path_k,
+					file: ctx.ipath.clone(),
 					span: name.syntax().text_range(),
 				},
-				kind: UndefKind::Value { comptime, mutable },
+				kind: Undefined::Value,
 				scope: RwLock::new(Scope::default()),
 			},
 		));
@@ -279,7 +317,7 @@ fn declare_field(ctx: DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 
 fn declare_function(ctx: DeclContext, scope: &mut Scope, fndecl: ast::FunctionDecl) {
 	let name_tok = fndecl.name();
-	let name_k = ctx.names.intern(name_tok.text());
+	let iname = ctx.intern_name(name_tok.text());
 
 	let r_start = fndecl.syntax().text_range().start();
 	let r_end = match fndecl.const_keyword() {
@@ -288,13 +326,13 @@ fn declare_function(ctx: DeclContext, scope: &mut Scope, fndecl: ast::FunctionDe
 	};
 
 	ctx.sym_q.push((
-		name_k,
+		iname,
 		Symbol::Undefined {
 			location: Location {
-				file: ctx.path_k,
+				file: ctx.ipath.clone(),
 				span: TextRange::new(r_start, r_end),
 			},
-			kind: UndefKind::Function,
+			kind: Undefined::Function,
 			scope: RwLock::new(Scope::default()),
 		},
 	));
@@ -319,18 +357,18 @@ fn declare_struct(ctx: DeclContext, mut outer: Option<&mut Scope>, structdef: as
 	let mut scope = Scope::default();
 
 	let name_tok = structdef.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
+	let iname = ctx.intern_name(name_tok.text());
 	let r_start = structdef.syntax().text_range().start();
 	let r_end = name_tok.text_range().end();
 
 	ctx.sym_q.push((
-		name_k,
+		iname,
 		Symbol::Undefined {
 			location: Location {
-				file: ctx.path_k,
+				file: ctx.ipath.clone(),
 				span: TextRange::new(r_start, r_end),
 			},
-			kind: UndefKind::Struct,
+			kind: Undefined::Struct,
 			scope: RwLock::new(scope),
 		},
 	));
@@ -344,16 +382,16 @@ fn declare_value(
 	comptime: bool,
 	mutable: bool,
 ) {
-	let name_k = ctx.names.intern(name);
+	let iname = ctx.intern_name(name);
 
 	ctx.sym_q.push((
-		name_k,
+		iname,
 		Symbol::Undefined {
 			location: Location {
-				file: ctx.path_k,
+				file: ctx.ipath.clone(),
 				span,
 			},
-			kind: UndefKind::Value { comptime, mutable },
+			kind: Undefined::Value,
 			scope: RwLock::new(Scope::default()),
 		},
 	));
@@ -361,29 +399,34 @@ fn declare_value(
 
 fn extend_class(ctx: DeclContext, classext: ast::ClassExtend) {
 	let name_tok = classext.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
 
-	let Some(sym_ix) = ctx.global.get(&name_k) else {
-		ctx.raise(Issue {
-			id: FileSpan::new(ctx.path, name_tok.text_range()),
-			level: IssueLevel::Error(issue::Error::SymbolNotFound),
-			message: format!("class `{}` not found in this scope", name_tok.text()),
-			label: None,
-		});
+	let Some(symptr) = ctx.globals.get(name_tok.text()) else {
+		ctx.raise([
+			Issue {
+				id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+				level: IssueLevel::Error(issue::Error::SymbolNotFound),
+				message: format!("class `{}` not found in this scope", name_tok.text()),
+				label: None,
+			}
+		]);
 
 		return;
 	};
 
-	let symptr = ctx.get_symbol(*sym_ix);
-
 	symptr.rcu(|undef| {
-		let Symbol::Undefined { location, kind: UndefKind::Class, scope } = undef.as_ref() else {
-			ctx.raise(Issue {
-				id: FileSpan::new(ctx.path, name_tok.text_range()),
-				level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
-				message: "can not use `extend class` on a non-class type".to_string(),
-				label: None,
-			});
+		let Symbol::Undefined {
+			location,
+			kind: Undefined::Class { .. },
+			scope
+		} = undef.as_ref() else {
+			ctx.raise([
+				Issue {
+					id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+					level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
+					message: "can not use `extend class` on a non-class type".to_string(),
+					label: None,
+				}
+			]);
 
 			return undef.clone();
 		};
@@ -400,29 +443,31 @@ fn extend_class(ctx: DeclContext, classext: ast::ClassExtend) {
 
 fn extend_struct(ctx: DeclContext, structext: ast::StructExtend) {
 	let name_tok = structext.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
+	let iname = ctx.intern_name(name_tok.text());
 
-	let Some(sym_ix) = ctx.global.get(&name_k) else {
-		ctx.raise(Issue {
-			id: FileSpan::new(ctx.path, name_tok.text_range()),
-			level: IssueLevel::Error(issue::Error::SymbolNotFound),
-			message: format!("struct `{}` not found in this scope", name_tok.text()),
-			label: None,
-		});
+	let Some(symptr) = ctx.globals.get(&iname) else {
+		ctx.raise([
+			Issue {
+				id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+				level: IssueLevel::Error(issue::Error::SymbolNotFound),
+				message: format!("struct `{}` not found in this scope", name_tok.text()),
+				label: None,
+			}
+		]);
 
 		return;
 	};
 
-	let symptr = ctx.get_symbol(*sym_ix);
-
 	symptr.rcu(|undef| {
-		let Symbol::Undefined { location, kind: UndefKind::Struct, scope } = undef.as_ref() else {
-			ctx.raise(Issue {
-				id: FileSpan::new(ctx.path, name_tok.text_range()),
-				level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
-				message: "can not use `extend struct` on a non-struct type".to_string(),
-				label: None,
-			});
+		let Symbol::Undefined { location, kind: Undefined::Struct, scope } = undef.as_ref() else {
+			ctx.raise([
+				Issue {
+					id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+					level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
+					message: "can not use `extend struct` on a non-struct type".to_string(),
+					label: None,
+				}
+			]);
 
 			return undef.clone();
 		};
@@ -439,29 +484,31 @@ fn extend_struct(ctx: DeclContext, structext: ast::StructExtend) {
 
 fn expand_mixin(ctx: DeclContext, scope: &mut Scope, mixin: ast::MixinStat) {
 	let name_tok = mixin.name().unwrap();
-	let name_k = ctx.names.intern(name_tok.text());
 
-	let Some(sym_ix) = ctx.global.get(&name_k) else {
-		ctx.raise(Issue {
-			id: FileSpan::new(ctx.path, name_tok.text_range()),
-			level: IssueLevel::Error(issue::Error::SymbolNotFound),
-			message: format!("mixin `{}` not found in this scope", name_tok.text()),
-			label: None,
-		});
+	let Some(symptr) = ctx.globals.get(name_tok.text()) else {
+		ctx.raise([
+			Issue {
+				id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+				level: IssueLevel::Error(issue::Error::SymbolNotFound),
+				message: format!("mixin `{}` not found in this scope", name_tok.text()),
+				label: None,
+			}
+		]);
 
 		return;
 	};
 
-	let symptr = ctx.get_symbol(*sym_ix);
 	let guard = symptr.load();
 
 	let Symbol::Mixin { location, green } = guard.as_ref() else {
-		ctx.raise(Issue {
-			id: FileSpan::new(ctx.path, name_tok.text_range()),
-			level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
-			message: format!("expected symbol `{}` to be a mixin", name_tok.text()),
-			label: None,
-		});
+		ctx.raise([
+			Issue {
+				id: FileSpan::new(ctx.ipath.as_str(), name_tok.text_range()),
+				level: IssueLevel::Error(issue::Error::SymbolKindMismatch),
+				message: format!("expected symbol `{}` to be a mixin", name_tok.text()),
+				label: None,
+			}
+		]);
 
 		return;
 	};

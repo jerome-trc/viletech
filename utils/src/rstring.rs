@@ -1,6 +1,6 @@
 //! A thin atomically reference-counted string type.
 
-use std::{borrow::Borrow, ops::Deref};
+use std::{borrow::Borrow, ffi::c_void, ops::Deref};
 
 /// Thin atomically reference-counted string using [`triomphe::ThinArc`].
 ///
@@ -60,6 +60,16 @@ impl RString {
 			let s = std::str::from_utf8_unchecked(&self.0.slice);
 			s as *const str
 		}
+	}
+
+	#[must_use]
+	pub fn as_thin_ptr(&self) -> *const c_void {
+		self.0.as_ptr()
+	}
+
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		self.deref()
 	}
 
 	/// Checks if these are two equivalent pointers to the same string.
@@ -127,6 +137,12 @@ impl std::hash::Hash for RString {
 impl Borrow<str> for RString {
 	fn borrow(&self) -> &str {
 		self.as_ref()
+	}
+}
+
+impl std::fmt::Display for RString {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		std::fmt::Display::fmt(self.deref(), f)
 	}
 }
 

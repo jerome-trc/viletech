@@ -5,6 +5,7 @@ use util::rstring::RString;
 use crate::{
 	rti::{self, Record, RtInfo},
 	tsys::TypeDef,
+	zname::ZName,
 	Version,
 };
 
@@ -12,11 +13,11 @@ use crate::{
 pub struct Project {
 	pub(crate) libs: Vec<Library>,
 	/// Names are fully-qualified.
-	pub(crate) rti: HashMap<RString, Record>,
+	pub(crate) rti: HashMap<ZName, Record>,
 }
 
 impl Project {
-	/// Note that `name` must be fully-qualified. See [`QName`](crate::compile::QName).
+	/// Note that `name` must be fully-qualified.
 	#[must_use]
 	pub fn get<R: RtInfo>(&self, name: impl AsRef<str>) -> Option<rti::Ref<R>> {
 		let typeid = TypeId::of::<R>();

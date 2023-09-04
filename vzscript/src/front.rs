@@ -7,9 +7,12 @@ mod deco;
 mod vzs;
 mod zs;
 
-use std::sync::{
-	atomic::{self, AtomicBool},
-	Arc,
+use std::{
+	any::Any,
+	sync::{
+		atomic::{self, AtomicBool},
+		Arc,
+	},
 };
 
 use arc_swap::ArcSwap;
@@ -19,13 +22,17 @@ use parking_lot::{Mutex, RwLock};
 use petgraph::prelude::DiGraph;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
+use util::rstring::RString;
 
 use crate::{
-	compile::{self, Compiler, LibSource, NameKey, PathKey, SymbolKey},
+	compile::{self, Compiler, LibSource, Scope, SymbolPtr},
 	inctree::SourceKind,
 	issue::{self, FileSpan, Issue, IssueLevel},
 	rti,
 	tsys::{ClassType, EnumType, FuncType, StructType, TypeDef, TypeHandle, UnionType},
+	vir,
+	zname::ZName,
+	FxDashMap,
 };
 
 #[derive(Debug)]
@@ -46,14 +53,13 @@ pub(crate) enum Symbol {
 	Function {
 		location: Location,
 		typedef: TypeHandle<FuncType>,
-		body: Option<DiGraph<Scope, ()>>,
+		body: Option<DiGraph<vir::Block, ()>>,
 	},
 	Mixin {
 		location: Location,
 		green: GreenNode,
 	},
 	Primitive {
-		location: Location,
 		scope: Scope,
 	},
 	Property {
@@ -76,27 +82,56 @@ pub(crate) enum Symbol {
 	},
 	Undefined {
 		location: Location,
-		kind: UndefKind,
+		kind: Undefined,
 		scope: RwLock<Scope>,
 	},
+	Busy,
 }
 
 impl Symbol {
 	#[must_use]
-	pub(crate) fn location(&self) -> Location {
+	pub(crate) fn location(&self) -> &Location {
 		match self {
 			Symbol::Class { location, .. }
 			| Symbol::Enum { location, .. }
 			| Symbol::FlagDef { location, .. }
 			| Symbol::Function { location, .. }
 			| Symbol::Mixin { location, .. }
-			| Symbol::Primitive { location, .. }
 			| Symbol::Property { location, .. }
 			| Symbol::Struct { location, .. }
 			| Symbol::Union { location, .. }
 			| Symbol::Value { location, .. }
-			| Symbol::Undefined { location, .. } => *location,
+			| Symbol::Undefined { location, .. } => location,
+			Symbol::Busy | Symbol::Primitive { .. } => panic!(),
 		}
+	}
+
+	#[must_use]
+	pub(crate) fn scope(&self) -> Option<&Scope> {
+		match self {
+			Symbol::Class { scope, .. }
+			| Symbol::Enum { scope, .. }
+			| Symbol::Primitive { scope, .. }
+			| Symbol::Struct { scope, .. }
+			| Symbol::Union { scope, .. } => Some(scope),
+			Symbol::Busy
+			| Symbol::Mixin { .. }
+			| Symbol::FlagDef { .. }
+			| Symbol::Function { .. }
+			| Symbol::Property { .. }
+			| Symbol::Undefined { .. }
+			| Symbol::Value { .. } => None,
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn is_undefined(&self) -> bool {
+		matches!(self, Self::Undefined { .. })
+	}
+
+	#[must_use]
+	pub(crate) fn is_busy(&self) -> bool {
+		matches!(self, Self::Busy)
 	}
 }
 
@@ -107,21 +142,21 @@ impl Clone for Symbol {
 		};
 
 		Self::Undefined {
-			location: *location,
-			kind: *kind,
+			location: location.clone(),
+			kind: kind.clone(),
 			scope: RwLock::new(scope.read().clone()),
 		}
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct Location {
-	pub(crate) file: PathKey,
+	pub(crate) file: RString,
 	pub(crate) span: TextRange,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum UndefKind {
+#[derive(Debug, Clone)]
+pub(crate) enum Undefined {
 	Class,
 	Enum,
 	FlagDef,
@@ -129,32 +164,29 @@ pub(crate) enum UndefKind {
 	Property,
 	Struct,
 	Union,
-	Value { comptime: bool, mutable: bool },
+	Value,
 }
-
-pub(crate) type SymbolPtr = ArcSwap<Symbol>;
-pub(crate) type Scope = FxHashMap<NameKey, SymbolKey>;
 
 impl From<Symbol> for SymbolPtr {
 	fn from(value: Symbol) -> Self {
-		ArcSwap::new(Arc::new(value))
+		Arc::new(ArcSwap::from_pointee(value))
 	}
 }
 
 pub fn declare_symbols(compiler: &mut Compiler) {
-	assert_eq!(compiler.stage, compile::Stage::Declaration);
+	assert!(!compiler.decl_done);
 	debug_assert!(!compiler.any_errors());
 
 	let sym_q = SegQueue::new();
 	let done = AtomicBool::new(false);
 
-	let (global, ()) = rayon::join(
+	let (globals, ()) = rayon::join(
 		|| global_symbol_funnel(compiler, &sym_q, &done),
 		|| walk_sources(compiler, &sym_q, &done),
 	);
 
-	compiler.global = global;
-	compiler.stage = compile::Stage::Finalize;
+	compiler.globals = globals;
+	compiler.decl_done = true;
 }
 
 // TODO: Using a concurrent queue here instead of directly inserting into
@@ -162,7 +194,7 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 // all later operations. Worth investigating in the future.
 fn global_symbol_funnel(
 	compiler: &Compiler,
-	queue: &SegQueue<(NameKey, Symbol)>,
+	queue: &SegQueue<(ZName, Symbol)>,
 	done: &AtomicBool,
 ) -> Scope {
 	let mut global = Scope::default();
@@ -171,57 +203,48 @@ fn global_symbol_funnel(
 	while !done.load(atomic::Ordering::Acquire) {
 		backoff.snooze();
 
-		while let Some((name_k, symbol)) = queue.pop() {
-			let Err((symbol, other_k)) = compiler.declare(
+		while let Some((iname, symbol)) = queue.pop() {
+			let Err((symbol, other)) = compiler.declare(
 				&mut global,
-				name_k, symbol
+				iname.clone(), symbol
 			) else {
 				continue;
 			};
 
+			let other = other.load();
 			let location = symbol.location();
+			let o_location = other.location();
 
-			let path_e = compiler.paths.resolve(location.file).unwrap();
-			let name_e = compiler.names.resolve(name_k).unwrap();
-			let path: &str = path_e.as_ref();
-			let name: &str = name_e.as_ref();
-
-			let other = compiler.get_symbol(other_k);
-			let o_location = other.load().location();
-			let o_path_e = compiler.paths.resolve(o_location.file).unwrap();
-			let o_path: &str = o_path_e.as_ref();
-
-			compiler.raise(Issue {
-				id: FileSpan::new(path, location.span),
+			compiler.raise([Issue {
+				id: FileSpan::new(location.file.as_str(), location.span),
 				level: IssueLevel::Error(issue::Error::Redeclare),
-				message: format!("attempt to re-declare `{}`", name),
+				message: format!("attempt to re-declare `{}`", iname),
 				label: Some(issue::Label {
-					id: FileSpan::new(o_path, o_location.span),
+					id: FileSpan::new(o_location.file.as_str(), o_location.span),
 					message: "original declaration is here".to_string(),
 				}),
-			});
+			}]);
 		}
 	}
 
 	global
 }
 
-fn walk_sources(compiler: &Compiler, sym_q: &SegQueue<(NameKey, Symbol)>, done: &AtomicBool) {
+fn walk_sources(compiler: &Compiler, sym_q: &SegQueue<(ZName, Symbol)>, done: &AtomicBool) {
 	for libsrc in &compiler.sources {
 		libsrc.inctree.files.par_iter().for_each(|pfile| {
 			// TODO: Regardless of what concurrent collection is being used here,
 			// this may still be subject to thundering herd effects. Investigate.
-			let _ = compiler.paths.intern(pfile.path());
+			let _ = compiler.intern_path(pfile.path());
 		});
 
 		libsrc.inctree.files.par_iter().for_each(|pfile| {
-			let path = pfile.path();
+			let ipath = compiler.intern_path(pfile.path());
 
 			let ctx = DeclContext {
 				compiler,
 				sym_q,
-				path,
-				path_k: compiler.paths.intern(path),
+				ipath: &ipath,
 			};
 
 			match pfile.inner() {
@@ -242,17 +265,11 @@ fn walk_sources(compiler: &Compiler, sym_q: &SegQueue<(NameKey, Symbol)>, done: 
 	done.store(true, atomic::Ordering::Release);
 }
 
-pub fn finalize(compiler: &mut Compiler) {
-	assert_eq!(compiler.stage, compile::Stage::Finalize);
-	assert!(!compiler.any_errors());
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(self) struct DeclContext<'c> {
 	pub(self) compiler: &'c Compiler,
-	pub(self) sym_q: &'c SegQueue<(NameKey, Symbol)>,
-	pub(self) path: &'c str,
-	pub(self) path_k: PathKey,
+	pub(self) sym_q: &'c SegQueue<(ZName, Symbol)>,
+	pub(self) ipath: &'c RString,
 }
 
 impl std::ops::Deref for DeclContext<'_> {

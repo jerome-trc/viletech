@@ -14,19 +14,29 @@ use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use util::rstring::RString;
 
-use crate::{back::SsaValues, native::Native, project::Project, tsys::TypeDef};
+use crate::{back::SsaValues, native::Native, project::Project, tsys::TypeDef, zname::ZName};
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}
 
+/// Corresponds to the concept of "scope" in ZScript (renamed to reduce name overloading).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Restriction {
+	Ui,
+	/// i.e. ZScript's "play" scope.
+	Sim,
+	/// i.e. ZScript's "clearscope".
+	Any,
+}
+
 #[derive(Debug)]
 pub struct Store<R: RtInfo> {
-	name: RString,
+	name: ZName,
 	inner: R,
 }
 
 impl<R: RtInfo> Store<R> {
 	#[must_use]
-	pub fn new(name: RString, symbol: R) -> Self {
+	pub(crate) fn new(name: ZName, symbol: R) -> Self {
 		Self {
 			name,
 			inner: symbol,
@@ -285,6 +295,56 @@ pub(crate) struct Record {
 	pub(crate) inner: StoreUnion,
 }
 
+impl Record {
+	#[must_use]
+	pub(crate) fn new_data(store: Store<Data>) -> Self {
+		Self {
+			tag: StoreTag::Data,
+			inner: StoreUnion {
+				data: ManuallyDrop::new(Arc::new(store)),
+			},
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn new_func(store: Store<Function>) -> Self {
+		Self {
+			tag: StoreTag::Function,
+			inner: StoreUnion {
+				func: ManuallyDrop::new(Arc::new(store)),
+			},
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn new_type(store: Store<TypeDef>) -> Self {
+		Self {
+			tag: StoreTag::Type,
+			inner: StoreUnion {
+				typedef: ManuallyDrop::new(Arc::new(store)),
+			},
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn handle_data(&self) -> Handle<Data> {
+		assert_eq!(self.tag, StoreTag::Data);
+		Handle(Arc::clone(unsafe { &self.inner.data }))
+	}
+
+	#[must_use]
+	pub(crate) fn handle_func(&self) -> Handle<Function> {
+		assert_eq!(self.tag, StoreTag::Function);
+		Handle(Arc::clone(unsafe { &self.inner.func }))
+	}
+
+	#[must_use]
+	pub(crate) fn handle_type(&self) -> Handle<TypeDef> {
+		assert_eq!(self.tag, StoreTag::Type);
+		Handle(Arc::clone(unsafe { &self.inner.typedef }))
+	}
+}
+
 /// Gets discriminated with [`StoreTag`].
 pub(crate) union StoreUnion {
 	pub(crate) func: ManuallyDrop<Arc<Store<Function>>>,
@@ -293,7 +353,7 @@ pub(crate) union StoreUnion {
 }
 
 /// Separated discriminant for [`StoreUnion`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum StoreTag {
 	Function,
 	Data,

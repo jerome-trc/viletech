@@ -2,7 +2,9 @@
 
 use std::{alloc::Layout, marker::PhantomData, mem::ManuallyDrop};
 
-use crate::rti;
+use util::rstring::RString;
+
+use crate::{rti, zname::ZName};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
@@ -27,10 +29,12 @@ impl TypeDef {
 				TypeTag::Array => TypeRef::Array(&self.data.array),
 				TypeTag::Class => TypeRef::Class(&self.data.class),
 				TypeTag::Function => TypeRef::Function(&self.data.func),
+				TypeTag::IName => TypeRef::IName(&self.data.iname),
 				TypeTag::Numeric => TypeRef::Num(&self.data.numeric),
+				TypeTag::String => TypeRef::String(&self.data.string),
 				TypeTag::Struct => TypeRef::Struct(&self.data.structure),
 				TypeTag::TypeDef => TypeRef::TypeDef(&self.data.typedef),
-				TypeTag::Union => TypeRef::Union(&self.data.union_),
+				TypeTag::Union => TypeRef::Union(&self.data.r#union),
 				TypeTag::Void => TypeRef::Void(&self.data.void),
 			}
 		}
@@ -61,93 +65,212 @@ impl TypeDef {
 		}
 	}
 
-	pub(crate) const BUILTINS: &[Self] = &[
-		Self {
-			tag: TypeTag::TypeDef,
-			data: TypeData {
-				typedef: ManuallyDrop::new(TypeDefType),
+	pub(crate) const BUILTINS: &[(&'static str, Self)] = &[
+		(
+			"vzscript::typedef",
+			Self {
+				tag: TypeTag::TypeDef,
+				data: TypeData {
+					typedef: ManuallyDrop::new(TypeDefType),
+				},
+				layout: Layout::new::<rti::Handle<TypeDef>>(),
 			},
-			layout: Layout::new::<()>(),
-		},
-		Self {
-			tag: TypeTag::Void,
-			data: TypeData {
-				void: ManuallyDrop::new(VoidType),
+		),
+		(
+			"vzscript::void",
+			Self {
+				tag: TypeTag::Void,
+				data: TypeData {
+					void: ManuallyDrop::new(VoidType),
+				},
+				layout: Layout::new::<()>(),
 			},
-			layout: Layout::new::<()>(),
-		},
+		),
 		// Numeric /////////////////////////////////////////////////////////////
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::I8),
+		(
+			"vzscript::int8",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Int8),
+				},
+				layout: Layout::new::<i8>(),
 			},
-			layout: Layout::new::<i8>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::U8),
+		),
+		(
+			"vzscript::uint8",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Uint8),
+				},
+				layout: Layout::new::<u8>(),
 			},
-			layout: Layout::new::<u8>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::I16),
+		),
+		(
+			"vzscript::int16",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Int16),
+				},
+				layout: Layout::new::<i16>(),
 			},
-			layout: Layout::new::<i16>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::U16),
+		),
+		(
+			"vzscript::uint16",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Uint16),
+				},
+				layout: Layout::new::<u16>(),
 			},
-			layout: Layout::new::<u16>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::I32),
+		),
+		(
+			"vzscript::int32",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Int32),
+				},
+				layout: Layout::new::<i32>(),
 			},
-			layout: Layout::new::<i32>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::U32),
+		),
+		(
+			"vzscript::uint32",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Uint32),
+				},
+				layout: Layout::new::<u32>(),
 			},
-			layout: Layout::new::<u32>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::I64),
+		),
+		(
+			"vzscript::int64",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Iint64),
+				},
+				layout: Layout::new::<i64>(),
 			},
-			layout: Layout::new::<i64>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::U64),
+		),
+		(
+			"vzscript::uint64",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Uint64),
+				},
+				layout: Layout::new::<u64>(),
 			},
-			layout: Layout::new::<u64>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::F32),
+		),
+		(
+			"vzscript::int128",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Int128),
+				},
+				layout: Layout::new::<i128>(),
 			},
-			layout: Layout::new::<f32>(),
-		},
-		Self {
-			tag: TypeTag::Numeric,
-			data: TypeData {
-				numeric: ManuallyDrop::new(NumType::F64),
+		),
+		(
+			"vzscript::uint128",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Uint128),
+				},
+				layout: Layout::new::<u128>(),
 			},
-			layout: Layout::new::<f64>(),
-		},
+		),
+		(
+			"vzscript::float",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Float32),
+				},
+				layout: Layout::new::<f32>(),
+			},
+		),
+		(
+			"vzscript::float64",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					numeric: ManuallyDrop::new(NumType::Float64),
+				},
+				layout: Layout::new::<f64>(),
+			},
+		),
+		(
+			"vzscript::string",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					string: ManuallyDrop::new(StringType),
+				},
+				layout: Layout::new::<RString>(),
+			},
+		),
+		(
+			"vzscript::iname",
+			Self {
+				tag: TypeTag::Numeric,
+				data: TypeData {
+					iname: ManuallyDrop::new(INameType),
+				},
+				layout: Layout::new::<ZName>(),
+			},
+		),
 	];
+}
+
+impl Clone for TypeDef {
+	fn clone(&self) -> Self {
+		Self {
+			tag: self.tag,
+			data: unsafe {
+				match self.tag {
+					TypeTag::Array => TypeData {
+						array: self.data.array.clone(),
+					},
+					TypeTag::Class => TypeData {
+						class: self.data.class.clone(),
+					},
+					TypeTag::Function => TypeData {
+						func: self.data.func.clone(),
+					},
+					TypeTag::IName => TypeData {
+						iname: self.data.iname.clone(),
+					},
+					TypeTag::Numeric => TypeData {
+						numeric: self.data.numeric,
+					},
+					TypeTag::String => TypeData {
+						string: self.data.string.clone(),
+					},
+					TypeTag::Struct => TypeData {
+						structure: self.data.structure.clone(),
+					},
+					TypeTag::TypeDef => TypeData {
+						typedef: self.data.typedef.clone(),
+					},
+					TypeTag::Union => TypeData {
+						r#union: self.data.union.clone(),
+					},
+					TypeTag::Void => TypeData {
+						void: self.data.void.clone(),
+					},
+				}
+			},
+			layout: self.layout,
+		}
+	}
 }
 
 #[derive(Debug)]
@@ -155,7 +278,9 @@ pub enum TypeRef<'td> {
 	Array(&'td ArrayType),
 	Class(&'td ClassType),
 	Function(&'td FuncType),
+	IName(&'td INameType),
 	Num(&'td NumType),
+	String(&'td StringType),
 	Struct(&'td StructType),
 	TypeDef(&'td TypeDefType),
 	Union(&'td UnionType),
@@ -169,20 +294,24 @@ union TypeData {
 	array: ManuallyDrop<ArrayType>,
 	class: ManuallyDrop<ClassType>,
 	func: ManuallyDrop<FuncType>,
+	iname: ManuallyDrop<INameType>,
 	numeric: ManuallyDrop<NumType>,
+	string: ManuallyDrop<StringType>,
 	structure: ManuallyDrop<StructType>,
 	typedef: ManuallyDrop<TypeDefType>,
-	union_: ManuallyDrop<UnionType>,
+	r#union: ManuallyDrop<UnionType>,
 	void: ManuallyDrop<VoidType>,
 }
 
 /// Separated discriminant for [`TypeData`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TypeTag {
 	Array,
 	Class,
 	Function,
+	IName,
 	Numeric,
+	String,
 	Struct,
 	TypeDef,
 	Union,
@@ -196,10 +325,12 @@ impl Drop for TypeDef {
 				TypeTag::Array => ManuallyDrop::drop(&mut self.data.array),
 				TypeTag::Class => ManuallyDrop::drop(&mut self.data.class),
 				TypeTag::Function => ManuallyDrop::drop(&mut self.data.func),
+				TypeTag::IName => ManuallyDrop::drop(&mut self.data.iname),
 				TypeTag::Numeric => ManuallyDrop::drop(&mut self.data.numeric),
 				TypeTag::Struct => ManuallyDrop::drop(&mut self.data.structure),
+				TypeTag::String => ManuallyDrop::drop(&mut self.data.string),
 				TypeTag::TypeDef => ManuallyDrop::drop(&mut self.data.typedef),
-				TypeTag::Union => ManuallyDrop::drop(&mut self.data.union_),
+				TypeTag::Union => ManuallyDrop::drop(&mut self.data.r#union),
 				TypeTag::Void => ManuallyDrop::drop(&mut self.data.void),
 			}
 		}
@@ -217,10 +348,12 @@ impl std::fmt::Debug for TypeDef {
 						TypeTag::Array => &self.data.array,
 						TypeTag::Class => &self.data.class,
 						TypeTag::Function => &self.data.func,
+						TypeTag::IName => &self.data.iname,
 						TypeTag::Numeric => &self.data.numeric,
+						TypeTag::String => &self.data.string,
 						TypeTag::Struct => &self.data.structure,
 						TypeTag::TypeDef => &self.data.typedef,
-						TypeTag::Union => &self.data.union_,
+						TypeTag::Union => &self.data.r#union,
 						TypeTag::Void => &self.data.void,
 					},
 				)
@@ -231,45 +364,55 @@ impl std::fmt::Debug for TypeDef {
 
 // TypeData's contents /////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayType {
 	pub len: usize,
 	pub elem: rti::InHandle<TypeDef>,
 }
 
-#[derive(Debug)]
-pub struct ClassType;
-
-#[derive(Debug)]
-pub struct EnumType;
-
-#[derive(Debug)]
-pub struct FuncType;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NumType {
-	I8,
-	U8,
-	I16,
-	U16,
-	I32,
-	U32,
-	I64,
-	U64,
-	F32,
-	F64,
+#[derive(Debug, Clone)]
+pub struct ClassType {
+	pub restrict: rti::Restriction,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct EnumType;
+
+#[derive(Debug, Clone)]
+pub struct FuncType;
+
+#[derive(Debug, Clone)]
+pub struct INameType;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NumType {
+	Int8,
+	Uint8,
+	Int16,
+	Uint16,
+	Int32,
+	Uint32,
+	Iint64,
+	Uint64,
+	Int128,
+	Uint128,
+	Float32,
+	Float64,
+}
+
+#[derive(Debug, Clone)]
+pub struct StringType;
+
+#[derive(Debug, Clone)]
 pub struct StructType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypeDefType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnionType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VoidType;
 
 // TypeHandle //////////////////////////////////////////////////////////////////
@@ -305,11 +448,27 @@ impl std::ops::Deref for TypeHandle<FuncType> {
 	}
 }
 
+impl std::ops::Deref for TypeHandle<INameType> {
+	type Target = INameType;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { &self.0.data.iname }
+	}
+}
+
 impl std::ops::Deref for TypeHandle<NumType> {
 	type Target = NumType;
 
 	fn deref(&self) -> &Self::Target {
 		unsafe { &self.0.data.numeric }
+	}
+}
+
+impl std::ops::Deref for TypeHandle<StringType> {
+	type Target = StringType;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { &self.0.data.string }
 	}
 }
 
@@ -333,7 +492,7 @@ impl std::ops::Deref for TypeHandle<UnionType> {
 	type Target = UnionType;
 
 	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.union_ }
+		unsafe { &self.0.data.r#union }
 	}
 }
 

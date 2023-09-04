@@ -205,6 +205,8 @@ pub enum Syn {
 	KwUnion,
 	#[token("until", priority = 5)]
 	KwUntil,
+	#[token("using", priority = 5)]
+	KwUsing,
 	#[token("var", priority = 5)]
 	KwVar,
 	#[token("virtual", priority = 5)]
@@ -246,6 +248,8 @@ pub enum Syn {
 	AsteriskEq,
 	#[token("@")]
 	At,
+	#[token("@@")]
+	At2,
 	#[token("@[")]
 	AtBracketL,
 	#[token("@(")]

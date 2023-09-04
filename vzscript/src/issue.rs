@@ -118,13 +118,19 @@ pub enum IssueLevel {
 #[repr(u16)]
 pub enum Error {
 	BinExprTypeMismatch,
+	FlagDefBitOverflow,
+	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	ParseFloat,
+	ParseInt,
 	Redeclare,
 	/// e.g. script defines a class specifying inheritance from a struct.
 	SymbolKindMismatch,
 	SymbolNotFound,
+	/// e.g. a null literal was provided in an ambiguous context.
+	UnknownExprType,
 }
 
 impl std::fmt::Display for Error {
