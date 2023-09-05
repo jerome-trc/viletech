@@ -45,7 +45,7 @@ impl LitToken {
 	}
 
 	#[must_use]
-	pub fn int(&self) -> Option<Result<u64, ParseIntError>> {
+	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		let Syn::IntLit = self.0.kind() else { return None; };
 
 		let text = self.0.text();
@@ -77,7 +77,39 @@ impl LitToken {
 			}
 		}
 
-		Some(u64::from_str_radix(&string, radix))
+		const INT_SUFFIXES: &[(&str, IntSuffix)] = &[
+			("u8", IntSuffix::U8),
+			("U8", IntSuffix::U8),
+			("u16", IntSuffix::U16),
+			("U16", IntSuffix::U16),
+			("u32", IntSuffix::U32),
+			("U32", IntSuffix::U32),
+			("u64", IntSuffix::U64),
+			("U64", IntSuffix::U64),
+			("u128", IntSuffix::U128),
+			("U128", IntSuffix::U128),
+			("i8", IntSuffix::I8),
+			("I8", IntSuffix::I8),
+			("i16", IntSuffix::I16),
+			("I16", IntSuffix::I16),
+			("i32", IntSuffix::I32),
+			("I32", IntSuffix::I32),
+			("i64", IntSuffix::I64),
+			("I64", IntSuffix::I64),
+			("i128", IntSuffix::I128),
+			("I128", IntSuffix::I128),
+		];
+
+		let mut suffix = IntSuffix::None;
+
+		for (suf_str, suf_v) in INT_SUFFIXES.iter().copied() {
+			if text.ends_with(suf_str) {
+				suffix = suf_v;
+				break;
+			}
+		}
+
+		Some(u64::from_str_radix(&string, radix).map(|u| (u, suffix)))
 	}
 
 	#[must_use]
@@ -113,4 +145,19 @@ impl std::ops::Deref for LitToken {
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntSuffix {
+	None,
+	I8,
+	U8,
+	I16,
+	U16,
+	I32,
+	U32,
+	I64,
+	U64,
+	I128,
+	U128,
 }

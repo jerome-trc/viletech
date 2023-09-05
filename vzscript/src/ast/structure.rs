@@ -1,8 +1,8 @@
 //! Structural items; classes, mixins, structs, unions.
 
-use doomfront::{simple_astnode, AstError, AstResult};
+use doomfront::simple_astnode;
 
-use crate::{Syn, SyntaxNode, SyntaxToken};
+use crate::{Syn, SyntaxNode};
 
 /// Wraps a node tagged [`Syn::ClassDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

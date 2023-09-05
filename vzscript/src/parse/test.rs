@@ -40,7 +40,7 @@ fn smoke_attribute() {
 		"#[ coal ]",
 	];
 
-	for (i, source) in SOURCES.iter().copied().enumerate() {
+	for (_, source) in SOURCES.iter().copied().enumerate() {
 		let ptree: ParseTree =
 			doomfront::parse(source, Attribute::parse, crate::Version::new(0, 0, 0));
 
@@ -154,7 +154,7 @@ fn smoke_func_decl() {
 				panic!()
 			};
 			let lit_tok = literal.token();
-			assert_eq!(lit_tok.int().unwrap(), Ok(9_0_9));
+			assert_eq!(lit_tok.int().unwrap(), Ok((9_0_9, ast::IntSuffix::None)));
 		},
 	];
 

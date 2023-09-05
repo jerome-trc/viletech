@@ -132,9 +132,9 @@ pub enum Syn {
 	#[regex(r"[0-9]*\.[0-9_]+([Ee][+-]?[0-9]+)?[fF]?", priority = 3)]
 	#[regex(r"[0-9][0-9_]*\.[0-9_]*([Ee][+-]?[0-9]+)?[fF]?", priority = 2)]
 	FloatLit,
-	#[regex("0[xX][a-fA-F0-9_]+[uUlL]?[uUlL]?", priority = 4)]
-	#[regex(r"0[0-9_]+[uUlL]?[uUlL]?", priority = 3)]
-	#[regex(r"[0-9][0-9_]*[uUlL]?[uUlL]?", priority = 2)]
+	#[regex("0[xX][a-fA-F0-9_]+([iIuU]8|16|32|64|128)?", priority = 4)]
+	#[regex(r"0[0-9_]+([iIuU]8|16|32|64|128)?", priority = 3)]
+	#[regex(r"[0-9][0-9_]*([iIuU]8|16|32|64|128)?", priority = 2)]
 	IntLit,
 	#[regex("'[^''\n]*'")]
 	NameLit,
@@ -395,10 +395,14 @@ mod test {
 
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = "9_._0 .{ typeof(9 + '9a')";
+		const SOURCE: &str = "9_._0.abs() .{ typeof(9_i8 + '9a')";
 
 		const EXPECTED: &[Syn] = &[
 			Syn::FloatLit,
+			Syn::Dot,
+			Syn::Ident,
+			Syn::ParenL,
+			Syn::ParenR,
 			Syn::Whitespace,
 			Syn::DotBraceL,
 			Syn::Whitespace,

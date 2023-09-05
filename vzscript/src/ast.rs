@@ -221,7 +221,7 @@ simple_astnode!(Syn, NameChain, Syn::NameChain);
 impl NameChain {
 	pub fn parts(&self) -> impl Iterator<Item = Name> {
 		self.0.children_with_tokens().filter_map(|elem| {
-			if (matches!(elem.kind(), Syn::Ident | Syn::NameLit)) {
+			if matches!(elem.kind(), Syn::Ident | Syn::NameLit) {
 				Some(Name(elem.into_token().unwrap()))
 			} else {
 				None
