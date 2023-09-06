@@ -1,234 +1,126 @@
 //! Semantic mid-section for ZScript.
 
+mod class;
+
 use std::sync::Arc;
 
-use crossbeam::utils::Backoff;
 use doomfront::{
-	rowan::{ast::AstNode, TextRange},
-	zdoom::{
-		ast::LitToken,
-		zscript::{ast, ParseTree},
-	},
+	rowan::ast::AstNode,
+	zdoom::zscript::{ast, SyntaxNode},
 };
+use parking_lot::RwLock;
 
 use crate::{
-	compile::Scope,
-	front::{Location, Symbol},
-	issue::{self, FileSpan, Issue, IssueLevel},
+	compile::{
+		symbol::{self, Definition, Location, Symbol, ValueDef},
+		Scope,
+	},
+	issue::{self, Issue},
 	vir,
 };
 
 use super::{ConstEval, SemaContext};
 
-pub(super) fn sema(ctx: &mut SemaContext, ptree: &ParseTree) {
-	let ast = ptree
-		.cursor()
-		.children()
-		.map(|node| ast::TopLevel::cast(node).unwrap());
+#[must_use]
+pub(super) fn define(ctx: &SemaContext, symbol: Arc<Symbol>) -> Option<Symbol> {
+	let symbol = Arc::into_inner(symbol).unwrap();
+	let green = symbol.source.unwrap();
+	let location = symbol.location.unwrap();
 
-	for top in ast {
-		match top {
-			ast::TopLevel::ClassDef(classdef) => {
-				define_class(ctx, classdef);
-			}
-			ast::TopLevel::ConstDef(constdef) => {
-				define_constant(ctx, constdef);
-			}
-			ast::TopLevel::EnumDef(_) => todo!(),
-			ast::TopLevel::StructDef(_) => todo!(),
-			ast::TopLevel::ClassExtend(_)
-			| ast::TopLevel::Include(_)
-			| ast::TopLevel::MixinClassDef(_)
-			| ast::TopLevel::StructExtend(_)
-			| ast::TopLevel::Version(_) => {}
-		}
-	}
+	let Definition::None { kind, extra } = symbol.def else {
+		return None;
+	};
+
+	let ret = match kind {
+		symbol::Undefined::Class => class::define(
+			ctx,
+			ast::ClassDef::cast(SyntaxNode::new_root(green)).unwrap(),
+			extra.downcast::<RwLock<Scope>>().unwrap().into_inner(),
+		),
+		symbol::Undefined::Enum => todo!(),
+		symbol::Undefined::FlagDef => todo!(),
+		symbol::Undefined::Function => todo!(),
+		symbol::Undefined::Property => todo!(),
+		symbol::Undefined::Struct => todo!(),
+		symbol::Undefined::Value => todo!(),
+		symbol::Undefined::Union => unreachable!(), // ZScript lacks these.
+	};
+
+	Some(ret)
 }
 
-fn define_class(ctx: &mut SemaContext, classdef: ast::ClassDef) {
-	let name_tok = classdef.name().unwrap();
-	let iname = ctx.intern_name(name_tok.text());
-	let symptr = ctx.scopes.lookup(&iname).unwrap().clone();
-	let symbol = symptr.load();
-
-	if !symbol.is_undefined() {
-		// Native-defined or a definition is in progress. Nothing to do here.
-		return;
-	}
-
-	drop(symbol);
-
-	for qual in classdef.qualifiers() {
-		match qual {
-			ast::ClassQual::Replaces(_) => todo!(),
-			ast::ClassQual::Abstract(_) => todo!(),
-			ast::ClassQual::Play(_) => todo!(),
-			ast::ClassQual::Ui(_) => todo!(),
-			ast::ClassQual::Native(token) => {
-				let r_start = classdef.syntax().text_range().start();
-				let r_end = name_tok.text_range().start();
-
-				ctx.raise([Issue {
-					id: FileSpan::new(ctx.ipath.as_str(), TextRange::new(r_start, r_end)),
-					level: IssueLevel::Error(issue::Error::IllegalClassQual),
-					message: "`native` ZScript symbols cannot be transpiled".to_string(),
-					label: None,
-				}]);
-
-				return;
-			}
-			ast::ClassQual::Version(_) => {}
-		}
-	}
-
-	symptr.rcu(|undef| {
-		let Symbol::Undefined { location, kind, scope } = undef.as_ref() else {
-			unreachable!()
-		};
-
-		let mut guard = scope.write();
-		let scope: &mut Scope = &mut guard;
-		let scope = std::mem::take(scope);
-
-		for innard in classdef.innards() {
-			match innard {
-				ast::ClassInnard::Const(constdef) => {
-					define_constant(ctx, constdef);
-				}
-				ast::ClassInnard::Enum(_) => todo!(),
-				ast::ClassInnard::Struct(_) => todo!(),
-				ast::ClassInnard::StaticConst(_) => todo!(),
-				ast::ClassInnard::Function(fndecl) => {}
-				ast::ClassInnard::Field(_) => todo!(),
-				ast::ClassInnard::Default(_) => todo!(),
-				ast::ClassInnard::States(_) => todo!(),
-				ast::ClassInnard::Property(_) => todo!(),
-				ast::ClassInnard::Flag(flagdef) => {
-					let backing_tok = flagdef.backing_field().unwrap();
-					let backing_iname = ctx.intern_name(backing_tok.text());
-					let backing = scope.get(&backing_iname).unwrap();
-
-					let bit_tok = flagdef.bit().unwrap();
-
-					let bit = match bit_tok.int().unwrap() {
-						Ok(b) => b,
-						Err(err) => {
-							ctx.raise([Issue {
-								id: FileSpan::new(
-									ctx.ipath.as_str(),
-									bit_tok.syntax().text_range(),
-								),
-								level: IssueLevel::Error(issue::Error::ParseInt),
-								message: format!("invalid integer: {err}"),
-								label: None,
-							}]);
-
-							return undef.clone();
-						}
-					};
-
-					if bit >= 32 {
-						ctx.raise([Issue {
-							id: FileSpan::new(ctx.ipath.as_str(), bit_tok.syntax().text_range()),
-							level: IssueLevel::Error(issue::Error::FlagDefBitOverflow),
-							message: format!("bit {bit} is out of range"),
-							label: None,
-						}]);
-
-						return undef.clone();
-					}
-				}
-				ast::ClassInnard::Mixin(_) => continue,
-			}
-		}
-
-		Arc::new(todo!())
-	});
-}
-
-fn define_constant(ctx: &mut SemaContext, constdef: ast::ConstDef) {
-	let iname = ctx.intern_name(constdef.name().unwrap().text());
-	let symptr = ctx.scopes.lookup(&iname).unwrap();
-	let symbol = symptr.load();
-
-	if !symbol.is_undefined() {
-		// Native-defined or a definition is in progress. Nothing to do here.
-		return;
-	}
-
-	drop(symbol);
-
-	symptr.rcu(|undef| {
-		let Symbol::Undefined { location, kind, scope } = undef.as_ref() else {
-			unreachable!()
-		};
-
+pub(self) fn define_constant(ctx: &SemaContext, constdef: ast::ConstDef) {
+	#[must_use]
+	fn define(ctx: &SemaContext, constdef: ast::ConstDef, location: Location) -> Symbol {
 		let expr = constdef.initializer().unwrap();
 
 		let consteval = match expr {
 			ast::Expr::Binary(e_bin) => match consteval_bin(ctx, e_bin) {
 				Ok(eval) => eval,
-				Err(()) => return undef.clone(),
+				Err(()) => {
+					return ctx.error_symbol(true);
+				}
 			},
 			ast::Expr::Call(e_call) => todo!(),
 			ast::Expr::ClassCast(e_cast) => {
-				ctx.raise([Issue {
-					id: FileSpan::new(ctx.ipath.as_str(), e_cast.syntax().text_range()),
-					level: IssueLevel::Error(issue::Error::IllegalConstInit),
-					message: "class cast expressions cannot be used to initialize constants"
-						.to_string(),
-					label: None,
-				}]);
+				ctx.raise(Issue::new(
+					ctx.path,
+					e_cast.syntax().text_range(),
+					"class cast expressions cannot be used to initialize constants".to_string(),
+					issue::Level::Error(issue::Error::IllegalConstInit),
+				));
 
-				return undef.clone();
+				return ctx.error_symbol(true);
 			}
 			ast::Expr::Group(e_grp) => todo!(),
 			ast::Expr::Ident(e_ident) => todo!(),
 			ast::Expr::Index(e_index) => todo!(),
 			ast::Expr::Literal(e_lit) => match consteval_lit(ctx, e_lit) {
 				Ok(eval) => eval,
-				Err(()) => return undef.clone(),
+				Err(()) => {
+					return ctx.error_symbol(true);
+				}
 			},
 			ast::Expr::Member(e_mem) => todo!(),
 			ast::Expr::Postfix(e_post) => todo!(),
 			ast::Expr::Prefix(e_pre) => todo!(),
 			ast::Expr::Super(e_super) => {
-				ctx.raise([Issue {
-					id: FileSpan::new(ctx.ipath.as_str(), e_super.syntax().text_range()),
-					level: IssueLevel::Error(issue::Error::IllegalConstInit),
-					message: "`super` expressions cannot be used to initialize constants"
-						.to_string(),
-					label: None,
-				}]);
+				ctx.raise(Issue::new(
+					ctx.path,
+					e_super.syntax().text_range(),
+					"`super` expressions cannot be used to initialize constants".to_string(),
+					issue::Level::Error(issue::Error::IllegalConstInit),
+				));
 
-				return undef.clone();
+				return ctx.error_symbol(true);
 			}
 			ast::Expr::Ternary(e_tern) => todo!(),
 			ast::Expr::Vector(e_vector) => todo!(),
 		};
 
 		let Some(typedef) = consteval.typedef else {
-			ctx.raise([Issue {
-				id: FileSpan::new(ctx.ipath.as_str(), constdef.syntax().text_range()),
-				level: IssueLevel::Error(issue::Error::UnknownExprType),
-				message: "type of expression could not be inferred".to_string(),
-				label: None,
-			}]);
+			ctx.raise(Issue::new(
+				ctx.path, constdef.syntax().text_range(),
+				"type of expression could not be inferred".to_string(),
+				issue::Level::Error(issue::Error::UnknownExprType),
+			));
 
-			return undef.clone();
+			return ctx.error_symbol(true);
 		};
 
-		Arc::new(Symbol::Value {
-			location: location.clone(),
-			typedef,
-			mutable: false,
-		})
-	});
+		Symbol {
+			location: Some(location),
+			source: None,
+			def: Definition::Value(Box::new(ValueDef {
+				typedef,
+				init: vir::Block::from(consteval.ir),
+			})),
+			zscript: true,
+		}
+	}
 }
 
 fn consteval_bin(ctx: &SemaContext, bin: ast::BinExpr) -> Result<ConstEval, ()> {
-	let lhs = bin.left();
-	let rhs = bin.right().unwrap();
 	todo!()
 }
 
@@ -252,12 +144,12 @@ fn consteval_lit(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstEval, 
 				ir: vir::Node::Immediate(vir::Immediate::I32(int)),
 			}),
 			Err(err) => {
-				ctx.raise([Issue {
-					id: FileSpan::new(ctx.ipath.as_str(), literal.syntax().text_range()),
-					level: IssueLevel::Error(issue::Error::ParseInt),
-					message: format!("invalid integer: {err}"),
-					label: None,
-				}]);
+				ctx.raise(Issue::new(
+					ctx.path,
+					literal.syntax().text_range(),
+					format!("invalid integer number: {err}"),
+					issue::Level::Error(issue::Error::ParseInt),
+				));
 
 				Err(())
 			}
@@ -269,12 +161,12 @@ fn consteval_lit(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstEval, 
 				ir: vir::Node::Immediate(vir::Immediate::F64(float)),
 			}),
 			Err(err) => {
-				ctx.raise([Issue {
-					id: FileSpan::new(ctx.ipath.as_str(), literal.syntax().text_range()),
-					level: IssueLevel::Error(issue::Error::ParseFloat),
-					message: format!("invalid floating-point number: {err}"),
-					label: None,
-				}]);
+				ctx.raise(Issue::new(
+					ctx.path,
+					literal.syntax().text_range(),
+					format!("invalid floating-point number: {err}"),
+					issue::Level::Error(issue::Error::ParseFloat),
+				));
 
 				Err(())
 			}
@@ -288,12 +180,11 @@ fn consteval_lit(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstEval, 
 			ir: todo!(),
 		})
 	} else if let Some(name) = token.name() {
-		let iname = ctx.intern_name(name);
-		let addr = iname.as_thin_ptr() as usize;
+		let name_ix = ctx.names.intern(name);
 
 		Ok(ConstEval {
 			typedef: Some(ctx.builtins.iname_t.clone()),
-			ir: todo!(),
+			ir: vir::Node::Immediate(vir::Immediate::I32(i32::from(name_ix))),
 		})
 	} else {
 		unreachable!()

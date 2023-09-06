@@ -5,9 +5,9 @@
 
 use util::rstring::RString;
 
-use crate::compile::SymbolPtr;
+use crate::compile::intern::SymbolIx;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Block(pub(crate) Vec<Node>);
 
 impl std::ops::Deref for Block {
@@ -21,6 +21,12 @@ impl std::ops::Deref for Block {
 impl std::ops::DerefMut for Block {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		&mut self.0
+	}
+}
+
+impl From<Node> for Block {
+	fn from(value: Node) -> Self {
+		Self(vec![value])
 	}
 }
 
@@ -44,7 +50,7 @@ pub(crate) enum Node {
 	},
 	Break(/* ??? */),
 	Call {
-		function: SymbolPtr,
+		function: SymbolIx,
 		args: Vec<NodeIx>,
 	},
 	Continue(/* ??? */),

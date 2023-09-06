@@ -4425,6 +4425,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "selfie"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a190b42f71800894d18c2f9aa867f587b6659ea78570ac8f5ae97505d054d2c0"
+dependencies = [
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.163"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5513,7 +5522,9 @@ dependencies = [
  "petgraph",
  "rayon",
  "rustc-hash",
+ "selfie",
  "smallvec",
+ "stable_deref_trait",
  "viletech-fs",
  "viletech-utils",
 ]

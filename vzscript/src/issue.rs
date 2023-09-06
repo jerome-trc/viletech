@@ -1,54 +1,77 @@
-//! Errors, warnings, or lints emitted during compilation.
-
-//! An error, warning, or lint emitted during compilation.
+//! Types for reporting compiler-emitted diagnostics not related to parsing.
 
 use ariadne::ReportKind;
 use doomfront::rowan::TextRange;
+use smallvec::SmallVec;
 
 #[derive(Debug)]
 pub struct FileSpan {
-	pub path: String,
-	pub span: logos::Span,
-}
-
-impl FileSpan {
-	#[must_use]
-	pub fn new(path: impl AsRef<str>, tr: TextRange) -> Self {
-		Self {
-			path: path.as_ref().to_owned(),
-			span: tr.start().into()..tr.end().into(),
-		}
-	}
+	pub path: Box<str>,
+	pub span: TextRange,
 }
 
 impl ariadne::Span for FileSpan {
-	type SourceId = String;
+	type SourceId = str;
 
 	fn source(&self) -> &Self::SourceId {
 		&self.path
 	}
 
 	fn start(&self) -> usize {
-		self.span.start
+		self.span.start().into()
 	}
 
 	fn end(&self) -> usize {
-		self.span.end
+		self.span.end().into()
 	}
 }
 
 #[derive(Debug)]
 pub struct Issue {
 	pub id: FileSpan,
-	pub level: IssueLevel,
-	pub message: String,
-	pub label: Option<Label>,
+	pub level: Level,
+	pub message: Box<str>,
+	pub labels: SmallVec<[Label; 1]>,
+	pub notes: SmallVec<[Box<str>; 1]>,
 }
 
 impl Issue {
 	#[must_use]
+	pub fn new(path: impl AsRef<str>, span: TextRange, message: String, level: Level) -> Self {
+		Self {
+			id: FileSpan {
+				path: path.as_ref().to_owned().into_boxed_str(),
+				span,
+			},
+			level,
+			message: message.into_boxed_str(),
+			labels: smallvec::smallvec![],
+			notes: smallvec::smallvec![],
+		}
+	}
+
+	#[must_use]
+	pub fn with_label(mut self, path: impl AsRef<str>, span: TextRange, message: String) -> Self {
+		self.labels.push(Label {
+			id: FileSpan {
+				path: path.as_ref().to_owned().into_boxed_str(),
+				span,
+			},
+			message: message.into_boxed_str(),
+		});
+
+		self
+	}
+
+	#[must_use]
+	pub fn with_note(mut self, message: String) -> Self {
+		self.notes.push(message.into_boxed_str());
+		self
+	}
+
+	#[must_use]
 	pub fn is_error(&self) -> bool {
-		matches!(self.level, IssueLevel::Error(_))
+		matches!(self.level, Level::Error(_))
 	}
 
 	#[must_use]
@@ -56,24 +79,26 @@ impl Issue {
 		let mut colorgen = ariadne::ColorGenerator::default();
 
 		let (kind, code) = match self.level {
-			IssueLevel::Error(err) => (ReportKind::Error, err as u16),
-			IssueLevel::Warning(warn) => (ReportKind::Warning, warn as u16),
-			IssueLevel::Lint(lint) => (ReportKind::Advice, lint as u16),
+			Level::Error(err) => (ReportKind::Error, err as u16),
+			Level::Warning(warn) => (ReportKind::Warning, warn as u16),
+			Level::Lint(lint) => (ReportKind::Advice, lint as u16),
 		};
 
-		let builder = Report::build(kind, self.id.path, 12)
+		let mut builder = Report::build(kind, self.id.path, 12)
 			.with_code(code)
 			.with_message(self.message);
 
-		let builder = if let Some(label) = self.label {
-			builder.with_label(
+		for label in self.labels {
+			builder = builder.with_label(
 				ariadne::Label::new(label.id)
 					.with_color(colorgen.next())
 					.with_message(label.message),
-			)
-		} else {
-			builder
-		};
+			);
+		}
+
+		for note in self.notes {
+			builder = builder.with_note(note)
+		}
 
 		builder.finish()
 	}
@@ -84,9 +109,9 @@ impl std::error::Error for Issue {}
 impl std::fmt::Display for Issue {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.level {
-			IssueLevel::Error(iss) => iss.fmt(f),
-			IssueLevel::Warning(iss) => iss.fmt(f),
-			IssueLevel::Lint(iss) => iss.fmt(f),
+			Level::Error(iss) => iss.fmt(f),
+			Level::Warning(iss) => iss.fmt(f),
+			Level::Lint(iss) => iss.fmt(f),
 		}
 	}
 }
@@ -94,21 +119,11 @@ impl std::fmt::Display for Issue {
 #[derive(Debug)]
 pub struct Label {
 	pub id: FileSpan,
-	pub message: String,
-}
-
-impl Label {
-	#[must_use]
-	pub fn new(path: impl AsRef<str>, tr: TextRange, message: String) -> Self {
-		Self {
-			id: FileSpan::new(path, tr),
-			message,
-		}
-	}
+	pub message: Box<str>,
 }
 
 #[derive(Debug)]
-pub enum IssueLevel {
+pub enum Level {
 	Error(Error),
 	Warning(Warning),
 	Lint(Lint),
@@ -123,8 +138,13 @@ pub enum Error {
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	/// Something went wrong with the compiler itself. The problem was either
+	/// in Rust, or an ill-formed native declaration in a script.
+	Internal,
 	ParseFloat,
 	ParseInt,
+	/// e.g. script marked a ZS class as `play` twice.
+	QualifierOverlap,
 	Redeclare,
 	/// e.g. script defines a class specifying inheritance from a struct.
 	SymbolKindMismatch,

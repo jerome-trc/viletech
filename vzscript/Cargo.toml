@@ -17,6 +17,7 @@ doomfront = { path = "../doomfront", features = ["serde", "zdoom"] }
 util = { package = "viletech-utils", path = "../utils" }
 vfs = { package = "viletech-fs", path = "../vfs" }
 
+append-only-vec.workspace = true
 arc-swap.workspace = true
 ariadne.workspace = true
 bitflags.workspace = true
@@ -34,10 +35,13 @@ rayon.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
 
+# Tentative; will get marked as workspace dependencies if they prove to be sound.
+stable_deref_trait = "1.2.0"
+selfie = "0.0.2"
+
 [[bench]]
 name = "bench"
 harness = false
 
 [dev-dependencies]
-append-only-vec = "0.1.3" # Temporary; up for consideration.
 criterion.workspace = true

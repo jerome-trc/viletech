@@ -4,7 +4,7 @@ use std::{alloc::Layout, marker::PhantomData, mem::ManuallyDrop};
 
 use util::rstring::RString;
 
-use crate::{rti, zname::ZName};
+use crate::{compile::intern::NameIx, rti};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
@@ -53,181 +53,6 @@ impl TypeDef {
 			},
 		}
 	}
-
-	#[must_use]
-	pub(crate) fn new_class(class_t: StructType) -> Self {
-		Self {
-			tag: TypeTag::Struct,
-			data: TypeData {
-				structure: ManuallyDrop::new(class_t),
-			},
-			layout: unimplemented!(),
-		}
-	}
-
-	pub(crate) const BUILTINS: &[(&'static str, Self)] = &[
-		(
-			"vzscript::typedef",
-			Self {
-				tag: TypeTag::TypeDef,
-				data: TypeData {
-					typedef: ManuallyDrop::new(TypeDefType),
-				},
-				layout: Layout::new::<rti::Handle<TypeDef>>(),
-			},
-		),
-		(
-			"vzscript::void",
-			Self {
-				tag: TypeTag::Void,
-				data: TypeData {
-					void: ManuallyDrop::new(VoidType),
-				},
-				layout: Layout::new::<()>(),
-			},
-		),
-		// Numeric /////////////////////////////////////////////////////////////
-		(
-			"vzscript::int8",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Int8),
-				},
-				layout: Layout::new::<i8>(),
-			},
-		),
-		(
-			"vzscript::uint8",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Uint8),
-				},
-				layout: Layout::new::<u8>(),
-			},
-		),
-		(
-			"vzscript::int16",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Int16),
-				},
-				layout: Layout::new::<i16>(),
-			},
-		),
-		(
-			"vzscript::uint16",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Uint16),
-				},
-				layout: Layout::new::<u16>(),
-			},
-		),
-		(
-			"vzscript::int32",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Int32),
-				},
-				layout: Layout::new::<i32>(),
-			},
-		),
-		(
-			"vzscript::uint32",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Uint32),
-				},
-				layout: Layout::new::<u32>(),
-			},
-		),
-		(
-			"vzscript::int64",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Iint64),
-				},
-				layout: Layout::new::<i64>(),
-			},
-		),
-		(
-			"vzscript::uint64",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Uint64),
-				},
-				layout: Layout::new::<u64>(),
-			},
-		),
-		(
-			"vzscript::int128",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Int128),
-				},
-				layout: Layout::new::<i128>(),
-			},
-		),
-		(
-			"vzscript::uint128",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Uint128),
-				},
-				layout: Layout::new::<u128>(),
-			},
-		),
-		(
-			"vzscript::float",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Float32),
-				},
-				layout: Layout::new::<f32>(),
-			},
-		),
-		(
-			"vzscript::float64",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					numeric: ManuallyDrop::new(NumType::Float64),
-				},
-				layout: Layout::new::<f64>(),
-			},
-		),
-		(
-			"vzscript::string",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					string: ManuallyDrop::new(StringType),
-				},
-				layout: Layout::new::<RString>(),
-			},
-		),
-		(
-			"vzscript::iname",
-			Self {
-				tag: TypeTag::Numeric,
-				data: TypeData {
-					iname: ManuallyDrop::new(INameType),
-				},
-				layout: Layout::new::<ZName>(),
-			},
-		),
-	];
 }
 
 impl Clone for TypeDef {
@@ -285,6 +110,18 @@ pub enum TypeRef<'td> {
 	TypeDef(&'td TypeDefType),
 	Union(&'td UnionType),
 	Void(&'td VoidType),
+}
+
+/// Corresponds to the concept of "scope" in ZScript (renamed to reduce name overloading).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Restrict {
+	Ui,
+	/// i.e. ZScript's "play" scope.
+	Sim,
+	/// ZScript's "virtual" scope.
+	Virtual,
+	/// i.e. ZScript's "clearscope".
+	None,
 }
 
 // TypeData ////////////////////////////////////////////////////////////////////
@@ -372,7 +209,8 @@ pub struct ArrayType {
 
 #[derive(Debug, Clone)]
 pub struct ClassType {
-	pub restrict: rti::Restriction,
+	pub is_abstract: bool,
+	pub restrict: Restrict,
 }
 
 #[derive(Debug, Clone)]
@@ -386,13 +224,14 @@ pub struct INameType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumType {
+	Bool,
 	Int8,
 	Uint8,
 	Int16,
 	Uint16,
 	Int32,
 	Uint32,
-	Iint64,
+	Int64,
 	Uint64,
 	Int128,
 	Uint128,
@@ -506,3 +345,146 @@ impl std::ops::Deref for TypeHandle<VoidType> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeInHandle<T>(rti::InHandle<TypeDef>, PhantomData<T>);
+
+/// Built-ins.
+impl TypeDef {
+	pub(crate) const BUILTIN_TYPEDEF: Self = Self {
+		tag: TypeTag::TypeDef,
+		data: TypeData {
+			typedef: ManuallyDrop::new(TypeDefType),
+		},
+		layout: Layout::new::<rti::Handle<Self>>(),
+	};
+
+	pub(crate) const BUILTIN_VOID: Self = Self {
+		tag: TypeTag::Void,
+		data: TypeData {
+			void: ManuallyDrop::new(VoidType),
+		},
+		layout: Layout::new::<()>(),
+	};
+
+	// Numeric /////////////////////////////////////////////////////////////////
+
+	pub(crate) const BUILTIN_BOOL: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Bool),
+		},
+		layout: Layout::new::<bool>(),
+	};
+
+	pub(crate) const BUILTIN_INT8: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Int8),
+		},
+		layout: Layout::new::<i8>(),
+	};
+
+	pub(crate) const BUILTIN_UINT8: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Uint8),
+		},
+		layout: Layout::new::<u8>(),
+	};
+
+	pub(crate) const BUILTIN_INT16: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Int16),
+		},
+		layout: Layout::new::<i16>(),
+	};
+
+	pub(crate) const BUILTIN_UINT16: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Uint16),
+		},
+		layout: Layout::new::<u16>(),
+	};
+
+	pub(crate) const BUILTIN_INT32: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Int32),
+		},
+		layout: Layout::new::<i32>(),
+	};
+
+	pub(crate) const BUILTIN_UINT32: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Uint32),
+		},
+		layout: Layout::new::<u32>(),
+	};
+
+	pub(crate) const BUILTIN_INT64: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Int64),
+		},
+		layout: Layout::new::<i64>(),
+	};
+
+	pub(crate) const BUILTIN_UINT64: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Uint64),
+		},
+		layout: Layout::new::<u64>(),
+	};
+
+	pub(crate) const BUILTIN_INT128: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Int128),
+		},
+		layout: Layout::new::<i128>(),
+	};
+
+	pub(crate) const BUILTIN_UINT128: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Uint128),
+		},
+		layout: Layout::new::<u128>(),
+	};
+
+	pub(crate) const BUILTIN_FLOAT32: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Float32),
+		},
+		layout: Layout::new::<f32>(),
+	};
+
+	pub(crate) const BUILTIN_FLOAT64: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			numeric: ManuallyDrop::new(NumType::Float64),
+		},
+		layout: Layout::new::<f64>(),
+	};
+
+	// String and IName ////////////////////////////////////////////////////////
+
+	pub(crate) const BUILTIN_STRING: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			string: ManuallyDrop::new(StringType),
+		},
+		layout: Layout::new::<RString>(),
+	};
+
+	pub(crate) const BUILTIN_INAME: Self = Self {
+		tag: TypeTag::Numeric,
+		data: TypeData {
+			iname: ManuallyDrop::new(INameType),
+		},
+		layout: Layout::new::<NameIx>(),
+	};
+}

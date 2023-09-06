@@ -1,4 +1,6 @@
-//! A slightly-modified [cranelift_interpreter::Interpreter].
+//! A slightly-modified [Cranelift Interpreter].
+//!
+//! [Cranelift Interpreter]: cranelift_interpreter::interpreter::Interpreter
 
 use cranelift::{
 	codegen::{data_value::DataValue, ir::Function},

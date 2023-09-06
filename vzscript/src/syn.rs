@@ -318,6 +318,14 @@ pub enum Syn {
 	Pound,
 	#[token("#[")]
 	PoundBracketL,
+	#[token("?")]
+	Question,
+	#[token("??")]
+	Question2,
+	#[token("??=")]
+	Question2Eq,
+	#[token("?.")]
+	QuestionDot,
 	#[token(";")]
 	Semicolon,
 	#[token("/")]

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use cranelift::prelude::types;
-use smallvec::{smallvec, SmallVec};
+use smallvec::smallvec;
 use util::rstring::RString;
 
 use crate::back::{SsaType, SsaValues};

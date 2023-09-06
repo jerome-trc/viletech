@@ -11,22 +11,16 @@ use std::{
 
 use cranelift_module::{DataId, FuncId};
 use rustc_hash::FxHasher;
-use smallvec::SmallVec;
-use util::rstring::RString;
 
-use crate::{back::SsaValues, native::Native, project::Project, tsys::TypeDef, zname::ZName};
+use crate::{
+	back::{JitModule, SsaValues},
+	native::Native,
+	project::Project,
+	tsys::TypeDef,
+	zname::ZName,
+};
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}
-
-/// Corresponds to the concept of "scope" in ZScript (renamed to reduce name overloading).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Restriction {
-	Ui,
-	/// i.e. ZScript's "play" scope.
-	Sim,
-	/// i.e. ZScript's "clearscope".
-	Any,
-}
 
 #[derive(Debug)]
 pub struct Store<R: RtInfo> {
@@ -69,6 +63,8 @@ pub struct Function {
 	ptr: *const c_void,
 	id: FuncId,
 	sighash: SignatureHash,
+	#[allow(unused)]
+	module: Arc<JitModule>,
 }
 
 impl Function {
@@ -150,6 +146,8 @@ pub struct Data {
 	id: DataId,
 	native_t: Option<TypeId>,
 	immutable: bool,
+	#[allow(unused)]
+	module: Arc<JitModule>,
 }
 
 impl Data {

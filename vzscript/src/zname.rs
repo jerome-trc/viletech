@@ -1,7 +1,6 @@
 //! [`RString`] but with case-insensitive comparison and hashing.
 
 use std::{
-	ffi::c_void,
 	hash::{Hash, Hasher},
 	ops::Deref,
 };
@@ -12,13 +11,6 @@ use util::rstring::RString;
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 pub(crate) struct ZName(RString);
-
-impl ZName {
-	#[must_use]
-	pub(crate) fn as_thin_ptr(&self) -> *const c_void {
-		self.0.as_thin_ptr()
-	}
-}
 
 impl PartialEq for ZName {
 	fn eq(&self, other: &Self) -> bool {

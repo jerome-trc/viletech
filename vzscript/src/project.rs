@@ -1,7 +1,5 @@
 use std::{any::TypeId, collections::HashMap};
 
-use util::rstring::RString;
-
 use crate::{
 	rti::{self, Record, RtInfo},
 	tsys::TypeDef,
