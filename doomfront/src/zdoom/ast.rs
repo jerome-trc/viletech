@@ -32,7 +32,7 @@ impl LitToken<zscript::Syn> {
 	}
 
 	#[must_use]
-	pub fn int(&self) -> Option<Result<i32, ParseIntError>> {
+	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
 			zscript::Syn::IntLit => Some(self.parse_int()),
 			_ => None,
@@ -81,7 +81,7 @@ impl LitToken<decorate::Syn> {
 	}
 
 	#[must_use]
-	pub fn int(&self) -> Option<Result<i32, ParseIntError>> {
+	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
 			decorate::Syn::IntLit => Some(self.parse_int()),
 			_ => None,
@@ -124,7 +124,7 @@ impl LitToken<cvarinfo::Syn> {
 	}
 
 	#[must_use]
-	pub fn int(&self) -> Option<Result<i32, ParseIntError>> {
+	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
 			cvarinfo::Syn::IntLit => Some(self.parse_int()),
 			_ => None,
@@ -166,7 +166,7 @@ impl<L: LangExt> LitToken<L> {
 		text[..end].parse::<f64>()
 	}
 
-	fn parse_int(&self) -> Result<i32, ParseIntError> {
+	fn parse_int(&self) -> Result<(u64, IntSuffix), ParseIntError> {
 		let text = self.0.text();
 
 		let radix = if text.len() > 2 {
@@ -188,7 +188,16 @@ impl<L: LangExt> LitToken<L> {
 				.position(|c| !(c.eq_ignore_ascii_case(&'u') || c.eq_ignore_ascii_case(&'l')))
 				.unwrap();
 
-		i32::from_str_radix(&text[start..end], radix)
+		let suffix = match &text[(text.len().saturating_sub(2))..] {
+			"uu" | "UU" | "uU" | "Uu" => IntSuffix::UU,
+			"ll" | "LL" | "lL" | "Ll" => IntSuffix::LL,
+			"ul" | "UL" | "uL" | "Ul" | "lu" | "LU" | "lU" | "Lu" => IntSuffix::UL,
+			"u" | "U" => IntSuffix::U,
+			"l" | "L" => IntSuffix::L,
+			_ => IntSuffix::None,
+		};
+
+		u64::from_str_radix(&text[start..end], radix).map(|u| (u, suffix))
 	}
 
 	#[must_use]
@@ -205,5 +214,51 @@ impl<L: LangExt> LitToken<L> {
 		let start = text.chars().position(|c| c == '"').unwrap();
 		let end = text.chars().rev().position(|c| c == '"').unwrap();
 		text.get((start + 1)..(text.len() - end - 1)).unwrap()
+	}
+}
+
+/// See [`LitToken::int`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntSuffix {
+	None,
+	U,
+	L,
+	UU,
+	LL,
+	UL,
+}
+
+#[cfg(test)]
+mod test {
+	use logos::Logos;
+	use rowan::{ast::AstNode, GreenNode, GreenToken};
+
+	use crate::zdoom::{
+		self,
+		zscript::{ast, Syn, SyntaxNode},
+	};
+
+	use super::*;
+
+	#[test]
+	fn smoke_int() {
+		const SOURCE: &str = "1234567890Lu";
+
+		let mut lexer =
+			zdoom::lex::Token::lexer_with_extras(SOURCE, zdoom::lex::Context::ZSCRIPT_LATEST);
+
+		let token = lexer.next().unwrap().unwrap();
+		assert_eq!(token, zdoom::Token::IntLit);
+
+		let green = GreenNode::new(
+			Syn::Literal.into(),
+			[GreenToken::new(Syn::IntLit.into(), SOURCE).into()],
+		);
+
+		let ast = SyntaxNode::new_root(green);
+		let lit = ast::Literal::cast(ast).unwrap();
+		let lit_tok = lit.token();
+
+		assert_eq!(lit_tok.int(), Some(Ok((1234567890, IntSuffix::UL))));
 	}
 }
