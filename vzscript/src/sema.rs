@@ -1,23 +1,18 @@
-//! The semantic "mid-section" of the compiler.
-//!
-//! Name resolution, semantic checks, and compile-time evaluation.
-
 mod vzs;
 mod zs;
 
-use std::{pin::Pin, sync::Arc};
-
 use crossbeam::utils::Backoff;
+use doomfront::rowan::cursor::SyntaxNode;
 use rayon::prelude::*;
-use stable_deref_trait::StableDeref;
 
 use crate::{
 	compile::{
 		self,
-		intern::{NsName, SymbolIx},
-		symbol::{Definition, Location, Symbol, SymbolPtr},
+		intern::NsName,
+		symbol::{DefIx, Location, Symbol},
 		Compiler, Scope,
 	},
+	inctree::{ParsedFile, SourceKind},
 	rti,
 	tsys::TypeDef,
 	vir,
@@ -27,67 +22,32 @@ pub fn sema(compiler: &mut Compiler) {
 	assert_eq!(compiler.stage, compile::Stage::Semantic);
 	assert!(!compiler.failed);
 
-	for (i, namespace) in compiler.namespaces.iter().enumerate() {
-		namespace.par_iter().for_each(|(_, &sym_ix)| {
-			let symptr = compiler.symbol(sym_ix);
+	for (i, libsrc) in compiler.sources.iter().enumerate() {
+		// TODO: Investigate if it's faster to clone the green node for each symbol.
+		// Maybe too much atomic contention?
+		libsrc
+			.inctree
+			.files
+			.par_iter()
+			.enumerate()
+			.for_each(|(ii, pfile)| {
+				match pfile.inner() {
+					SourceKind::Vzs(ptree) => {
+						let cursor = ptree.cursor();
 
-			let (is_undefined, is_from_zscript, location) = {
-				let g = symptr.load();
+						for_each_symbol(compiler, pfile, i, ii, |ctx, symbol| {
+							vzs::define(ctx, &cursor, symbol)
+						});
+					}
+					SourceKind::Zs(ptree) => {
+						let cursor = ptree.cursor();
 
-				let Some(location) = g.location else {
-					// This symbol was defined by the compiler itself.
-					// We can early out entirely here.
-					return;
+						for_each_symbol(compiler, pfile, i, ii, |ctx, symbol| {
+							zs::define(ctx, &cursor, symbol)
+						});
+					}
 				};
-
-				(g.is_undefined(), g.zscript, location)
-			};
-
-			if !is_undefined {
-				// Defined by the compiler itself, or pending a definition.
-				return;
-			}
-
-			let path = compiler.resolve_path(location);
-
-			let undef = symptr.swap(Arc::new(Symbol {
-				location: Some(location),
-				source: None,
-				def: Definition::Pending,
-				zscript: is_from_zscript,
-			}));
-
-			let maybe_defined = if is_from_zscript {
-				let ctx = SemaContext {
-					compiler,
-					location,
-					path,
-					namespace_ix: i,
-				};
-
-				zs::define(&ctx, undef)
-			} else {
-				let ctx = SemaContext {
-					compiler,
-					location,
-					path,
-					namespace_ix: i,
-				};
-
-				vzs::define(&ctx, undef)
-			};
-
-			let Some(defined) = maybe_defined else {
-				debug_assert!({
-					let g = symptr.load();
-					g.is_defined()
-				});
-
-				return;
-			};
-
-			symptr.store(Arc::new(defined));
-		});
+			});
 	}
 
 	compiler.stage = compile::Stage::CodeGen;
@@ -97,12 +57,51 @@ pub fn sema(compiler: &mut Compiler) {
 	}
 }
 
+fn for_each_symbol(
+	compiler: &Compiler,
+	pfile: &ParsedFile,
+	lib_ix: usize,
+	file_ix: usize,
+	function: impl Fn(&SemaContext, &Symbol) -> DefIx,
+) {
+	for symbol in compiler.symbols.iter() {
+		let Some(location) = symbol.location else {
+			continue;
+		};
+
+		if location.lib_ix as usize != lib_ix {
+			continue;
+		}
+
+		if location.file_ix as usize != file_ix {
+			continue;
+		}
+
+		if symbol
+			.definition
+			.compare_exchange(DefIx::None, DefIx::Pending)
+			.is_err()
+		{
+			continue;
+		}
+
+		let ctx = SemaContext {
+			compiler,
+			location,
+			path: pfile.path(),
+			zscript: symbol.zscript,
+		};
+
+		symbol.definition.store(function(&ctx, symbol));
+	}
+}
+
 #[derive(Debug)]
 pub(self) struct SemaContext<'c> {
 	pub(self) compiler: &'c Compiler,
 	pub(self) location: Location,
 	pub(self) path: &'c str,
-	pub(self) namespace_ix: usize,
+	pub(self) zscript: bool,
 }
 
 impl std::ops::Deref for SemaContext<'_> {
@@ -113,69 +112,47 @@ impl std::ops::Deref for SemaContext<'_> {
 	}
 }
 
-impl<'c> SemaContext<'c> {
-	#[must_use]
-	pub(self) fn clone_with<'o: 'c>(&'c self, location: Location) -> Self {
-		Self {
-			location,
-			path: self.resolve_path(location),
-			..*self
-		}
-	}
-
-	#[must_use]
-	pub(self) fn scope_stack(&self, zscript: bool) -> ScopeStack {
-		let mut scopes = ScopeStack(vec![], self.compiler);
-		scopes.push(StackedScope::Unguarded(&self.compiler.globals));
-
-		if zscript {
-			for (ii, ns) in self.namespaces.iter().enumerate() {
-				if ii == self.namespace_ix {
-					continue;
-				}
-
-				scopes.push(StackedScope::Unguarded(ns));
-			}
-		}
-
-		scopes.push(StackedScope::Unguarded(&self.namespaces[self.namespace_ix]));
-
-		scopes
-	}
-
-	#[must_use]
-	pub(self) fn global_backlookup(&self, nsname: NsName) -> Option<SymbolIx> {
-		self.namespaces[..self.namespace_ix]
-			.iter()
-			.rev()
-			.find_map(|ns| ns.get(&nsname).copied())
-	}
-
-	#[must_use]
-	pub(self) fn error_symbol(&self, zscript: bool) -> Symbol {
-		Symbol {
-			location: Some(self.location),
-			source: None,
-			def: Definition::Error,
-			zscript,
-		}
-	}
-}
-
+/// If `symbol` is defined, this is a no-op.
+/// If `symbol` is pending a definition, use exponential backoff to wait until
+/// that definition is complete.
+/// If `symbol` is undefined, lazily provide a definition for it.
 #[must_use]
-pub(self) fn swap_for_pending(
-	symptr: &SymbolPtr,
-	location: Location,
-	zscript: bool,
-) -> Arc<Symbol> {
-	symptr.swap(Arc::new(Symbol {
-		location: Some(location),
-		source: None,
-		def: Definition::Pending,
-		zscript,
-	}))
+pub(self) fn require(ctx: &SemaContext, root: SyntaxNode, symbol: &Symbol) -> DefIx {
+	if symbol
+		.definition
+		.compare_exchange(DefIx::None, DefIx::Pending)
+		.is_ok()
+	{
+		let new_ctx = SemaContext {
+			location: symbol.location.unwrap(),
+			zscript: symbol.zscript,
+			..*ctx
+		};
+
+		let def_ix = if symbol.zscript {
+			let root = root.into();
+			zs::define(&new_ctx, &root, symbol)
+		} else {
+			let root = root.into();
+			vzs::define(&new_ctx, &root, symbol)
+		};
+
+		symbol.definition.store(def_ix);
+		return def_ix;
+	}
+
+	let backoff = Backoff::new();
+	let mut definition = symbol.definition.load();
+
+	while definition == DefIx::Pending {
+		backoff.snooze();
+		definition = symbol.definition.load();
+	}
+
+	definition
 }
 
+#[derive(Debug)]
 pub(self) struct ConstEval {
 	/// `None` if the type cannot be known, such as when compile-time-evaluating
 	/// a null pointer literal.
@@ -183,63 +160,11 @@ pub(self) struct ConstEval {
 	pub(self) ir: vir::Node,
 }
 
-#[derive(Debug)]
-pub(self) enum StackedScope<'s> {
-	Unguarded(&'s Scope),
-	Guarded(selfie::Selfie<'s, SymbolGuard, ScopeRefProxy>),
-}
-
-impl StackedScope<'_> {
-	#[must_use]
-	pub(self) fn guarded(guard: arc_swap::Guard<Arc<Symbol>>) -> Self {
-		let sguard = SymbolGuard(guard);
-		let scope = sguard.scope().unwrap();
-
-		Self::Guarded(selfie::Selfie::new(Pin::new(sguard), |h| {
-			ScopeRef(h.scope().unwrap())
-		}))
-	}
-}
-
-impl std::ops::Deref for StackedScope<'_> {
-	type Target = Scope;
-
-	fn deref(&self) -> &Self::Target {
-		match self {
-			StackedScope::Unguarded(scope) => scope,
-			StackedScope::Guarded(selfref) => selfref.referential().0,
-		}
-	}
-}
-
-#[derive(Debug)]
-pub(self) struct SymbolGuard(arc_swap::Guard<Arc<Symbol>>);
-
-impl std::ops::Deref for SymbolGuard {
-	type Target = Arc<Symbol>;
-
-	fn deref(&self) -> &Self::Target {
-		std::ops::Deref::deref(&self.0)
-	}
-}
-
-unsafe impl StableDeref for SymbolGuard {}
-
-#[derive(Debug, Clone, Copy)]
-pub(self) struct ScopeRef<'s>(&'s Scope);
-
-#[derive(Debug, Clone, Copy)]
-pub(self) struct ScopeRefProxy;
-
-impl<'s> selfie::refs::RefType<'s> for ScopeRefProxy {
-	type Ref = ScopeRef<'s>;
-}
-
-#[derive(Debug)]
-pub(self) struct ScopeStack<'s>(Vec<StackedScope<'s>>, &'s Compiler);
+#[derive(Debug, Clone)]
+pub(self) struct ScopeStack<'s>(Vec<&'s Scope>, &'s Compiler);
 
 impl<'s> std::ops::Deref for ScopeStack<'s> {
-	type Target = Vec<StackedScope<'s>>;
+	type Target = Vec<&'s Scope>;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
@@ -254,29 +179,10 @@ impl std::ops::DerefMut for ScopeStack<'_> {
 
 impl ScopeStack<'_> {
 	#[must_use]
-	pub(crate) fn lookup(&self, nsname: NsName) -> Option<&SymbolPtr> {
+	pub(self) fn lookup(&self, nsname: NsName) -> Option<&Symbol> {
 		self.0
 			.iter()
 			.rev()
 			.find_map(|scope| scope.get(&nsname).map(|&sym_ix| self.1.symbol(sym_ix)))
 	}
-}
-
-pub(self) fn require(symptr: &SymbolPtr) {
-	let guard = symptr.load();
-
-	if guard.is_undefined() {
-		todo!("define")
-	}
-
-	let backoff = Backoff::new();
-
-	while guard.definition_pending() {
-		backoff.snooze();
-	}
-
-	debug_assert!({
-		let g = symptr.load();
-		g.is_defined()
-	});
 }

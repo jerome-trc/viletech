@@ -53,6 +53,17 @@ impl TypeDef {
 			},
 		}
 	}
+
+	#[must_use]
+	pub(crate) fn new_class(class_t: ClassType) -> Self {
+		Self {
+			layout: todo!(),
+			tag: TypeTag::Class,
+			data: TypeData {
+				class: ManuallyDrop::new(class_t),
+			},
+		}
+	}
 }
 
 impl Clone for TypeDef {

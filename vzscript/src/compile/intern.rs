@@ -48,9 +48,9 @@ where
 	}
 }
 
-/// An index into [`Compiler::names`].
+/// An index into [`crate::compile::Compiler::names`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct NameIx(pub(super) u32);
+pub(crate) struct NameIx(pub(crate) u32);
 
 impl From<u32> for NameIx {
 	fn from(value: u32) -> Self {
@@ -71,9 +71,9 @@ impl From<NameIx> for i32 {
 	}
 }
 
-/// An index into [`Compiler::symbols`].
+/// An index into [`crate::compile::Compiler::symbols`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct SymbolIx(pub(super) u32);
+pub(crate) struct SymbolIx(pub(crate) u32);
 
 /// A [`NameIx`] with an attached "symbol-space" discriminant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -4425,16 +4425,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "segvec"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c3ab3d9bc0d11482ed0019aa9c2cee94a0b4890a0eb21ce2153d88b1816f877"
-dependencies = [
- "either",
- "num-integer",
-]
-
-[[package]]
 name = "selfie"
 version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5532,7 +5522,6 @@ dependencies = [
  "petgraph",
  "rayon",
  "rustc-hash",
- "segvec",
  "selfie",
  "smallvec",
  "stable_deref_trait",

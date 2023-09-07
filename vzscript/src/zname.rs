@@ -10,7 +10,7 @@ use util::rstring::RString;
 /// [`RString`] but with case-insensitive comparison and hashing.
 #[derive(Debug, Clone)]
 #[repr(transparent)]
-pub(crate) struct ZName(RString);
+pub(crate) struct ZName(pub(crate) RString);
 
 impl PartialEq for ZName {
 	fn eq(&self, other: &Self) -> bool {

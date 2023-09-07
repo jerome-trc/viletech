@@ -10,17 +10,13 @@ use rustc_hash::FxHashMap;
 use util::rstring::RString;
 
 use crate::{
-	compile::{intern::Interner, symbol::SymbolPtr},
-	issue::Issue,
-	rti,
-	tsys::TypeDef,
-	zname::ZName,
-	FxDashSet, Project, Version,
+	compile::intern::Interner, issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project,
+	Version,
 };
 
 use self::{
 	intern::{NameIx, NsName, SymbolIx},
-	symbol::{Location, Symbol},
+	symbol::{Definition, Location, Symbol},
 };
 
 pub type NativeSymbolTable = FxHashMap<&'static str, *const u8>;
@@ -46,10 +42,11 @@ pub struct Compiler {
 	pub(crate) project: Project,
 	pub(crate) builtins: Builtins,
 	pub(crate) globals: Scope,
+	pub(crate) defs: AppendOnlyVec<Definition>,
 	pub(crate) native: FxHashMap<&'static str, NativePtr>,
 	/// One for each library, parallel to [`Self::sources`].
 	pub(crate) namespaces: Vec<Scope>,
-	pub(crate) symbols: AppendOnlyVec<SymbolPtr>,
+	pub(crate) symbols: AppendOnlyVec<Symbol>,
 	// Interning
 	pub(crate) strings: FxDashSet<RString>,
 	pub(crate) names: Interner<NameIx, ZName>,
@@ -114,6 +111,7 @@ impl Compiler {
 			project,
 			builtins,
 			globals: Scope::default(),
+			defs: AppendOnlyVec::new(),
 			native: FxHashMap::default(),
 			namespaces: vec![],
 			symbols: AppendOnlyVec::new(),
@@ -156,29 +154,8 @@ impl Compiler {
 		ret
 	}
 
-	/// If `Err` is returned, it gives back `symbol` along with the index to the
-	/// symbol that would have been clobbered.
-	pub(crate) fn declare(
-		&self,
-		scope: &mut Scope,
-		nsname: NsName,
-		symbol: Symbol,
-	) -> Result<SymbolIx, (Symbol, SymbolIx)> {
-		use std::collections::hash_map;
-
-		match scope.entry(nsname) {
-			hash_map::Entry::Vacant(vac) => {
-				let ptr = SymbolPtr::from(symbol);
-				let ix = SymbolIx(self.symbols.push(ptr) as u32);
-				vac.insert(ix);
-				Ok(ix)
-			}
-			hash_map::Entry::Occupied(occ) => Err((symbol, *occ.get())),
-		}
-	}
-
 	#[must_use]
-	pub(crate) fn get_corelib_type(&self, name: &str) -> &SymbolPtr {
+	pub(crate) fn get_corelib_type(&self, name: &str) -> &Symbol {
 		let nsname = NsName::Type(self.names.intern(name));
 		let &sym_ix = self.namespaces[0].get(&nsname).unwrap();
 		self.symbol(sym_ix)
@@ -191,7 +168,7 @@ impl Compiler {
 	}
 
 	#[must_use]
-	pub(crate) fn symbol(&self, ix: SymbolIx) -> &SymbolPtr {
+	pub(crate) fn symbol(&self, ix: SymbolIx) -> &Symbol {
 		&self.symbols[ix.0 as usize]
 	}
 
