@@ -32,10 +32,12 @@ pub fn codegen(
 	} = compiler;
 
 	let native_symbols = Arc::new(native);
+	let runtime = Runtime::new(strings);
+	let _ = runtime.data_ptr();
 
 	let _ = CodeGenUnit::new(native_symbols.clone(), opt, hotswap);
 
-	(project, Runtime::new(strings))
+	(project, runtime)
 }
 
 /// To wrap in an [`Arc`] so that JIT memory is freed properly.

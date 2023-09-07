@@ -48,7 +48,7 @@ pub fn sema(compiler: &mut Compiler) {
 				return;
 			}
 
-			let path = compiler.paths.resolve(location.file);
+			let path = compiler.resolve_path(location);
 
 			let undef = symptr.swap(Arc::new(Symbol {
 				location: Some(location),
@@ -61,7 +61,7 @@ pub fn sema(compiler: &mut Compiler) {
 				let ctx = SemaContext {
 					compiler,
 					location,
-					path: path.as_str(),
+					path,
 					namespace_ix: i,
 				};
 
@@ -70,7 +70,7 @@ pub fn sema(compiler: &mut Compiler) {
 				let ctx = SemaContext {
 					compiler,
 					location,
-					path: path.as_str(),
+					path,
 					namespace_ix: i,
 				};
 
@@ -116,15 +116,9 @@ impl std::ops::Deref for SemaContext<'_> {
 impl<'c> SemaContext<'c> {
 	#[must_use]
 	pub(self) fn clone_with<'o: 'c>(&'c self, location: Location) -> Self {
-		let path = if self.location.file != location.file {
-			self.paths.resolve(location.file)
-		} else {
-			self.path
-		};
-
 		Self {
 			location,
-			path,
+			path: self.resolve_path(location),
 			..*self
 		}
 	}
@@ -150,7 +144,7 @@ impl<'c> SemaContext<'c> {
 	}
 
 	#[must_use]
-	pub(self) fn zs_global_lookup(&self, nsname: NsName) -> Option<SymbolIx> {
+	pub(self) fn global_backlookup(&self, nsname: NsName) -> Option<SymbolIx> {
 		self.namespaces[..self.namespace_ix]
 			.iter()
 			.rev()

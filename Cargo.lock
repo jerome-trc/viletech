@@ -2069,9 +2069,9 @@ dependencies = [
 
 [[package]]
 name = "either"
-version = "1.7.0"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
+checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
 
 [[package]]
 name = "emath"
@@ -4425,6 +4425,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "segvec"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c3ab3d9bc0d11482ed0019aa9c2cee94a0b4890a0eb21ce2153d88b1816f877"
+dependencies = [
+ "either",
+ "num-integer",
+]
+
+[[package]]
 name = "selfie"
 version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5522,6 +5532,7 @@ dependencies = [
  "petgraph",
  "rayon",
  "rustc-hash",
+ "segvec",
  "selfie",
  "smallvec",
  "stable_deref_trait",

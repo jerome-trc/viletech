@@ -5,28 +5,6 @@ use doomfront::rowan::TextRange;
 use smallvec::SmallVec;
 
 #[derive(Debug)]
-pub struct FileSpan {
-	pub path: Box<str>,
-	pub span: TextRange,
-}
-
-impl ariadne::Span for FileSpan {
-	type SourceId = str;
-
-	fn source(&self) -> &Self::SourceId {
-		&self.path
-	}
-
-	fn start(&self) -> usize {
-		self.span.start().into()
-	}
-
-	fn end(&self) -> usize {
-		self.span.end().into()
-	}
-}
-
-#[derive(Debug)]
 pub struct Issue {
 	pub id: FileSpan,
 	pub level: Level,
@@ -181,6 +159,28 @@ pub enum Lint {
 impl std::fmt::Display for Lint {
 	fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		todo!()
+	}
+}
+
+#[derive(Debug)]
+pub struct FileSpan {
+	pub path: Box<str>,
+	pub span: TextRange,
+}
+
+impl ariadne::Span for FileSpan {
+	type SourceId = str;
+
+	fn source(&self) -> &Self::SourceId {
+		&self.path
+	}
+
+	fn start(&self) -> usize {
+		self.span.start().into()
+	}
+
+	fn end(&self) -> usize {
+		self.span.end().into()
 	}
 }
 

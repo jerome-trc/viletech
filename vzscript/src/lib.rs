@@ -32,6 +32,7 @@ use std::hash::BuildHasherDefault;
 use rustc_hash::FxHasher;
 
 pub use self::{inctree::IncludeTree, project::Project, runtime::Runtime, syn::Syn};
+pub use rustc_hash::FxHashMap;
 
 pub type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub type FxDashSet<K> = dashmap::DashSet<K, BuildHasherDefault<FxHasher>>;

@@ -40,7 +40,8 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 			NsName::Type(ctx.names.intern(name_tok.text())),
 			Symbol {
 				location: Some(Location {
-					file: ctx.path_ix,
+					lib_ix: ctx.lib_ix,
+					file_ix: ctx.file_ix,
 					span: TextRange::new(r_start, r_end),
 				}),
 				source: Some(mixindef.syntax().green().into_owned()),
@@ -111,7 +112,8 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 		NsName::Type(ctx.names.intern(name_tok.text())),
 		Symbol {
 			location: Some(Location {
-				file: ctx.path_ix,
+				lib_ix: ctx.lib_ix,
+				file_ix: ctx.file_ix,
 				span: TextRange::new(r_start, r_end),
 			}),
 			source: Some(classdef.syntax().green().into_owned()),
@@ -135,10 +137,10 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 		);
 
 		if let Some(o_loc) = guard.location {
-			let o_path = ctx.paths.resolve(o_loc.file);
+			let o_path = ctx.resolve_path(o_loc);
 
 			issue = issue.with_label(
-				o_path.as_str(),
+				o_path,
 				o_loc.span,
 				"previous declaration is here".to_string(),
 			);
@@ -183,7 +185,8 @@ fn declare_class_innard(
 				NsName::Property(ctx.names.intern(name_tok.text())),
 				Symbol {
 					location: Some(Location {
-						file: ctx.path_ix,
+						lib_ix: ctx.lib_ix,
+						file_ix: ctx.file_ix,
 						span: property.syntax().text_range(),
 					}),
 					source: Some(property.syntax().green().into_owned()),
@@ -200,7 +203,7 @@ fn declare_class_innard(
 				let guard = symptr.load();
 
 				let o_loc = guard.location.unwrap();
-				let o_path = ctx.paths.resolve(o_loc.file);
+				let o_path = ctx.resolve_path(o_loc);
 
 				ctx.raise(
 					Issue::new(
@@ -210,7 +213,7 @@ fn declare_class_innard(
 						issue::Level::Error(issue::Error::Redeclare),
 					)
 					.with_label(
-						o_path.as_str(),
+						o_path,
 						o_loc.span,
 						"previous property declaration is here".to_string(),
 					),
@@ -225,7 +228,8 @@ fn declare_class_innard(
 				NsName::FlagDef(ctx.names.intern(name_tok.text())),
 				Symbol {
 					location: Some(Location {
-						file: ctx.path_ix,
+						lib_ix: ctx.lib_ix,
+						file_ix: ctx.file_ix,
 						span: flagdef.syntax().text_range(),
 					}),
 					source: Some(flagdef.syntax().green().into_owned()),
@@ -242,7 +246,7 @@ fn declare_class_innard(
 				let guard = symptr.load();
 
 				let o_loc = guard.location.unwrap();
-				let o_path = ctx.paths.resolve(o_loc.file);
+				let o_path = ctx.resolve_path(o_loc);
 
 				ctx.raise(
 					Issue::new(
@@ -252,7 +256,7 @@ fn declare_class_innard(
 						issue::Level::Error(issue::Error::Redeclare),
 					)
 					.with_label(
-						o_path.as_str(),
+						o_path,
 						o_loc.span,
 						"previous flagdef declaration is here".to_string(),
 					),
@@ -271,7 +275,8 @@ fn declare_class_innard(
 				NsName::Value(ctx.names.intern(&varname)),
 				Symbol {
 					location: Some(Location {
-						file: ctx.path_ix,
+						lib_ix: ctx.lib_ix,
+						file_ix: ctx.file_ix,
 						span: flagdef.syntax().text_range(),
 					}),
 					source: Some(flagdef.syntax().green().into_owned()),
@@ -286,7 +291,7 @@ fn declare_class_innard(
 			if let Err((_, sym_ix)) = result {
 				let symptr = ctx.symbol(sym_ix);
 				let o_loc = symptr.load().location.unwrap();
-				let o_path = ctx.paths.resolve(o_loc.file);
+				let o_path = ctx.resolve_path(o_loc);
 
 				ctx.raise(
 					Issue::new(
@@ -295,11 +300,7 @@ fn declare_class_innard(
 						format!("flagdef's fake boolean `{varname}` shadows a field"),
 						issue::Level::Error(issue::Error::Redeclare),
 					)
-					.with_label(
-						o_path.as_str(),
-						o_loc.span,
-						"field is defined here".to_string(),
-					),
+					.with_label(o_path, o_loc.span, "field is defined here".to_string()),
 				);
 			}
 		}
@@ -342,7 +343,8 @@ fn declare_enum(ctx: &DeclContext, outer: &mut Scope, enumdef: ast::EnumDef) {
 			NsName::Value(name_ix),
 			Symbol {
 				location: Some(Location {
-					file: ctx.path_ix,
+					lib_ix: ctx.lib_ix,
+					file_ix: ctx.file_ix,
 					span: variant.syntax().text_range(),
 				}),
 				source: Some(variant.syntax().green().into_owned()),
@@ -387,7 +389,8 @@ fn declare_enum(ctx: &DeclContext, outer: &mut Scope, enumdef: ast::EnumDef) {
 		NsName::Type(ctx.names.intern(name_tok.text())),
 		Symbol {
 			location: Some(Location {
-				file: ctx.path_ix,
+				lib_ix: ctx.lib_ix,
+				file_ix: ctx.file_ix,
 				span: TextRange::new(r_start, r_end),
 			}),
 			source: Some(enumdef.syntax().green().into_owned()),
@@ -409,7 +412,8 @@ fn declare_field(ctx: &DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 			NsName::Value(ctx.names.intern(name.ident().text())),
 			Symbol {
 				location: Some(Location {
-					file: ctx.path_ix,
+					lib_ix: ctx.lib_ix,
+					file_ix: ctx.file_ix,
 					span: name.syntax().text_range(),
 				}),
 				source: Some(field.syntax().green().into_owned()),
@@ -439,7 +443,8 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FunctionD
 		NsName::Value(ctx.names.intern(name_tok.text())),
 		Symbol {
 			location: Some(Location {
-				file: ctx.path_ix,
+				lib_ix: ctx.lib_ix,
+				file_ix: ctx.file_ix,
 				span: TextRange::new(r_start, r_end),
 			}),
 			source: Some(fndecl.syntax().green().into_owned()),
@@ -484,7 +489,8 @@ fn declare_struct(ctx: &DeclContext, outer: &mut Scope, structdef: ast::StructDe
 		NsName::Type(ctx.names.intern(name_tok.text())),
 		Symbol {
 			location: Some(Location {
-				file: ctx.path_ix,
+				lib_ix: ctx.lib_ix,
+				file_ix: ctx.file_ix,
 				span: TextRange::new(r_start, r_end),
 			}),
 			source: Some(structdef.syntax().green().into_owned()),
@@ -511,7 +517,8 @@ fn declare_value(
 		NsName::Value(ctx.names.intern(name_str)),
 		Symbol {
 			location: Some(Location {
-				file: ctx.path_ix,
+				lib_ix: ctx.lib_ix,
+				file_ix: ctx.file_ix,
 				span,
 			}),
 			source: Some(source),
@@ -641,10 +648,10 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 		);
 
 		if let Some(o_loc) = guard.location {
-			let o_path = ctx.paths.resolve(o_loc.file);
+			let o_path = ctx.resolve_path(o_loc);
 
 			issue = issue.with_label(
-				o_path.as_str(),
+				o_path,
 				o_loc.span,
 				format!("found {} `{}` here", guard.def.user_facing_name(), name_tok.text())
 			);

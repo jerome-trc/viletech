@@ -12,7 +12,7 @@ use parking_lot::Mutex;
 use rayon::prelude::*;
 
 use crate::{
-	compile::{self, intern::PathIx, Compiler, Scope},
+	compile::{self, Compiler, Scope},
 	inctree::SourceKind,
 };
 
@@ -31,13 +31,12 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 		.for_each(|(i, libsrc)| {
 			let mut namespace = Scope::default();
 
-			for pfile in &libsrc.inctree.files {
-				let path_ix = compiler.paths.intern(pfile.path());
-
+			for (ii, pfile) in libsrc.inctree.files.iter().enumerate() {
 				let ctx = DeclContext {
 					compiler,
 					path: pfile.path(),
-					path_ix,
+					lib_ix: i as u16,
+					file_ix: ii as u16,
 				};
 
 				match pfile.inner() {
@@ -65,7 +64,8 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 pub(self) struct DeclContext<'c> {
 	pub(self) compiler: &'c Compiler,
 	pub(self) path: &'c str,
-	pub(self) path_ix: PathIx,
+	pub(self) lib_ix: u16,
+	pub(self) file_ix: u16,
 }
 
 impl std::ops::Deref for DeclContext<'_> {

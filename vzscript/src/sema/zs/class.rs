@@ -210,7 +210,7 @@ fn resolve_ancestry(
 	loop {
 		let nsname = NsName::Type(ctx.names.intern(parent.text()));
 
-		let Some(sym_ix) = ctx.zs_global_lookup(nsname) else {
+		let Some(sym_ix) = ctx.global_backlookup(nsname) else {
 			ctx.raise(Issue::new(
 				ctx.path,
 				parent.text_range(),

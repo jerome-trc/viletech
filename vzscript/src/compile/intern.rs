@@ -71,22 +71,6 @@ impl From<NameIx> for i32 {
 	}
 }
 
-/// An index into [`Compiler::paths`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct PathIx(pub(super) u32);
-
-impl From<u32> for PathIx {
-	fn from(value: u32) -> Self {
-		Self(value)
-	}
-}
-
-impl From<PathIx> for u32 {
-	fn from(value: PathIx) -> Self {
-		value.0
-	}
-}
-
 /// An index into [`Compiler::symbols`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SymbolIx(pub(super) u32);

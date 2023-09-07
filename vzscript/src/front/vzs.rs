@@ -38,7 +38,8 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 					NsName::Value(ctx.names.intern(name_tok.text())),
 					Symbol {
 						location: Some(Location {
-							file: ctx.path_ix,
+							lib_ix: ctx.lib_ix,
+							file_ix: ctx.file_ix,
 							span: TextRange::new(r_start, r_end),
 						}),
 						source: Some(fndecl.syntax().green().into_owned()),
@@ -55,7 +56,7 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 					let guard = symptr.load();
 
 					let o_loc = guard.location.unwrap();
-					let o_path = ctx.paths.resolve(o_loc.file);
+					let o_path = ctx.resolve_path(o_loc);
 
 					ctx.raise(
 						Issue::new(
@@ -65,7 +66,7 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 							issue::Level::Error(issue::Error::Redeclare),
 						)
 						.with_label(
-							o_path.as_str(),
+							o_path,
 							o_loc.span,
 							"previous declaration is here".to_string(),
 						),

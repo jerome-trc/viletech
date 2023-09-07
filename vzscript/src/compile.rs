@@ -12,15 +12,15 @@ use util::rstring::RString;
 use crate::{
 	compile::{intern::Interner, symbol::SymbolPtr},
 	issue::Issue,
-	rti::{self},
+	rti,
 	tsys::TypeDef,
 	zname::ZName,
 	FxDashSet, Project, Version,
 };
 
 use self::{
-	intern::{NameIx, NsName, PathIx, SymbolIx},
-	symbol::Symbol,
+	intern::{NameIx, NsName, SymbolIx},
+	symbol::{Location, Symbol},
 };
 
 pub type NativeSymbolTable = FxHashMap<&'static str, *const u8>;
@@ -53,7 +53,6 @@ pub struct Compiler {
 	// Interning
 	pub(crate) strings: FxDashSet<RString>,
 	pub(crate) names: Interner<NameIx, ZName>,
-	pub(crate) paths: Interner<PathIx, RString>,
 }
 
 impl Compiler {
@@ -120,7 +119,6 @@ impl Compiler {
 			symbols: AppendOnlyVec::new(),
 			strings: FxDashSet::default(),
 			names: Interner::default(),
-			paths: Interner::default(),
 		}
 	}
 
@@ -131,7 +129,8 @@ impl Compiler {
 	///
 	/// # Safety
 	///
-	/// TODO: Finalize this API, determine relevant invariants.
+	/// - Dereferencing a data object pointer or calling a function pointer must
+	/// never invoke any thread-unsafe behavior.
 	pub unsafe fn native(&mut self, symbols: NativeSymbolTable) {
 		// SAFETY: `NativePtr` is `repr(transparent)` over `*const u8`.
 		self.native = std::mem::transmute::<_, _>(symbols);
@@ -186,6 +185,12 @@ impl Compiler {
 	}
 
 	#[must_use]
+	pub(crate) fn resolve_path(&self, location: Location) -> &str {
+		let libsrc = &self.sources[location.lib_ix as usize];
+		libsrc.inctree.files[location.file_ix as usize].path()
+	}
+
+	#[must_use]
 	pub(crate) fn symbol(&self, ix: SymbolIx) -> &SymbolPtr {
 		&self.symbols[ix.0 as usize]
 	}
@@ -221,8 +226,7 @@ pub(crate) struct Builtins {
 #[repr(transparent)]
 pub(crate) struct NativePtr(pub(crate) *const u8);
 
-// SAFETY: Pointers are consumed directly by the Cranelift JIT.
-// `Compiler` never so much as dereferences any one of these.
+// SAFETY: Caller of `Compiler::native` provides guarantees about given pointers.
 unsafe impl Send for NativePtr {}
 unsafe impl Sync for NativePtr {}
 

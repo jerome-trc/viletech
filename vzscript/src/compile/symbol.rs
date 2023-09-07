@@ -11,10 +11,7 @@ use crate::{
 	vir,
 };
 
-use super::{
-	intern::{PathIx, SymbolIx},
-	Scope,
-};
+use super::{intern::SymbolIx, Scope};
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
@@ -31,7 +28,8 @@ pub(crate) struct Symbol {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Location {
-	pub(crate) file: PathIx,
+	pub(crate) lib_ix: u16,
+	pub(crate) file_ix: u16,
 	pub(crate) span: TextRange,
 }
 
@@ -74,7 +72,7 @@ pub(crate) struct EnumDef {
 #[derive(Debug)]
 pub(crate) struct FunctionDef {
 	pub(crate) tdef: TypeHandle<FuncType>,
-	pub(crate) code: vir::Block,
+	pub(crate) code: FunctionCode,
 }
 
 #[derive(Debug)]
@@ -103,7 +101,7 @@ pub(crate) struct ValueDef {
 
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
-	Native(Box<str>),
+	Native(&'static str),
 	Ir(vir::Block),
 }
 
