@@ -125,14 +125,14 @@ impl Compiler {
 
 	/// This is provided as a separate method from [`Self::new`] to:
 	/// - isolate unsafe behavior
-	/// - allow the caller to build the given map in parallel to another
-	/// step in the compilation pipeline
+	/// - allow building the given map in parallel to the declaration pass
 	///
 	/// # Safety
 	///
 	/// - Dereferencing a data object pointer or calling a function pointer must
 	/// never invoke any thread-unsafe behavior.
 	pub unsafe fn native(&mut self, symbols: NativeSymbolTable) {
+		assert!(matches!(self.stage, Stage::Declaration | Stage::Semantic));
 		// SAFETY: `NativePtr` is `repr(transparent)` over `*const u8`.
 		self.native = std::mem::transmute::<_, _>(symbols);
 	}
