@@ -64,7 +64,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
-		class_innard(p);
+		class_innard::<false>(p);
 		trivia_0plus(p);
 	}
 
@@ -89,7 +89,7 @@ pub fn mixin_class_def(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
-		class_innard(p);
+		class_innard::<true>(p);
 		trivia_0plus(p);
 	}
 
@@ -181,7 +181,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 
 	if node_syn == Syn::ClassExtend {
 		while !p.at(Token::BraceR) && !p.eof() {
-			class_innard(p);
+			class_innard::<false>(p);
 			trivia_0plus(p);
 		}
 	} else if node_syn == Syn::StructExtend {
@@ -198,7 +198,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 
 // Innards /////////////////////////////////////////////////////////////////////
 
-fn class_innard(p: &mut Parser<Syn>) {
+fn class_innard<const MIXIN: bool>(p: &mut Parser<Syn>) {
 	let token = p.find(0, |token| !token.is_trivia());
 
 	if token == Token::KwStatic && p.find(1, |token| !token.is_trivia()) == Token::KwConst {
@@ -241,36 +241,66 @@ fn class_innard(p: &mut Parser<Syn>) {
 		return;
 	}
 
-	match token {
-		Token::KwDefault => default_block(p),
-		Token::KwStates => states_block(p),
-		Token::KwMixin => {
-			let mixin = p.open();
-			p.advance(Syn::KwMixin);
-			trivia_0plus(p);
-			ident_lax(p);
-			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
-			p.close(mixin, Syn::MixinStat);
-		}
-		other => p.advance_with_error(
-			Syn::from(other),
-			&[
-				"a type name",
-				"`mixin`",
-				"`const` or `enum` or `struct`",
-				"`states` or `default`",
-				"`property` or `flagdef`",
-				"`play` or `ui` or `virtualscope` or `clearscope`",
-				"`deprecated` or `version`",
-				"`abstract` or `final` or `override` or `virtual`",
-				"`private` or `protected`",
-				"`internal` or `meta` or `native` or `transient`",
-				"`static` or `readonly`",
-				"`vararg`",
-			],
-		),
+	if p.at(Token::KwMixin) && !MIXIN {
+		let mixin = p.open();
+		p.advance(Syn::KwMixin);
+		trivia_0plus(p);
+		ident_lax(p);
+		trivia_0plus(p);
+		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.close(mixin, Syn::MixinStat);
+		return;
 	}
+
+	match token {
+		Token::KwDefault => {
+			default_block(p);
+			return;
+		}
+		Token::KwStates => {
+			states_block(p);
+			return;
+		}
+		_ => {}
+	}
+
+	const NONMIXIN_EXPECTED: &[&str] = &[
+		"a type name",
+		"`mixin`",
+		"`const` or `enum` or `struct`",
+		"`states` or `default`",
+		"`property` or `flagdef`",
+		"`play` or `ui` or `virtualscope` or `clearscope`",
+		"`deprecated` or `version`",
+		"`abstract` or `final` or `override` or `virtual`",
+		"`private` or `protected`",
+		"`internal` or `meta` or `native` or `transient`",
+		"`static` or `readonly`",
+		"`vararg`",
+	];
+
+	const MIXIN_EXPECTED: &[&str] = &[
+		"a type name",
+		"`const` or `enum` or `struct`",
+		"`states` or `default`",
+		"`property` or `flagdef`",
+		"`play` or `ui` or `virtualscope` or `clearscope`",
+		"`deprecated` or `version`",
+		"`abstract` or `final` or `override` or `virtual`",
+		"`private` or `protected`",
+		"`internal` or `meta` or `native` or `transient`",
+		"`static` or `readonly`",
+		"`vararg`",
+	];
+
+	p.advance_with_error(
+		Syn::from(p.nth(0)),
+		if !MIXIN {
+			NONMIXIN_EXPECTED
+		} else {
+			MIXIN_EXPECTED
+		},
+	)
 }
 
 fn struct_innard(p: &mut Parser<Syn>) {
