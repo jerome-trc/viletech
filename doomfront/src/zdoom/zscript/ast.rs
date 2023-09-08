@@ -329,9 +329,13 @@ impl VersionQual {
 	/// The returned token is always tagged [`Syn::StringLit`].
 	pub fn version(&self) -> AstResult<LitToken<Syn>> {
 		self.0
-			.last_token()
-			.filter(|token| token.kind() == Syn::StringLit)
-			.map(LitToken::new)
+			.children_with_tokens()
+			.skip_while(|elem| elem.kind() != Syn::ParenL)
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::StringLit)
+					.map(LitToken::new)
+			})
 			.ok_or(AstError::Missing)
 	}
 }

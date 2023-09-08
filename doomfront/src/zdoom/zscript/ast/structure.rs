@@ -407,7 +407,7 @@ impl FunctionDecl {
 		self.0
 			.children_with_tokens()
 			.skip_while(|elem| elem.kind() != Syn::ParamList)
-			.take_while(|elem| matches!(elem.kind(), Syn::Semicolon | Syn::CompoundStat))
+			.take_while(|elem| !matches!(elem.kind(), Syn::Semicolon | Syn::CompoundStat))
 			.find_map(|elem| {
 				elem.into_token()
 					.filter(|token| token.kind() == Syn::KwConst)
