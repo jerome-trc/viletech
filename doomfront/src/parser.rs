@@ -55,7 +55,9 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	pub fn close(&mut self, mark: OpenMark, syn: L::Kind) -> CloseMark {
 		self.events[mark.0] = Event::Open(L::kind_to_raw(syn));
 		self.events.push(Event::Close);
-		CloseMark(mark.0)
+		let ret = mark.0;
+		std::mem::forget(mark);
+		CloseMark(ret)
 	}
 
 	pub fn open_before(&mut self, mark: CloseMark) -> OpenMark {
@@ -67,7 +69,9 @@ impl<'i, L: LangExt> Parser<'i, L> {
 
 	/// Mind that this has to perform O(n) vector element shifting.
 	pub fn cancel(&mut self, mark: OpenMark) {
-		self.events.remove(mark.0);
+		let i = mark.0;
+		std::mem::forget(mark);
+		self.events.remove(i);
 	}
 
 	pub fn advance(&mut self, syn: L::Kind) {
@@ -492,8 +496,14 @@ impl<'i, L: LangExt> Parser<'i, L> {
 }
 
 /// See [`Parser::open`] and [`Parser::close`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct OpenMark(usize);
+
+impl Drop for OpenMark {
+	fn drop(&mut self) {
+		panic!("an `OpenMark` was not consumed")
+	}
+}
 
 /// See [`Parser::close`] and [`Parser::open_before`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
