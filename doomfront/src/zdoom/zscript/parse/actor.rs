@@ -445,35 +445,3 @@ fn action_function(p: &mut Parser<Syn>) {
 
 	p.close(action, Syn::ActionFunction);
 }
-
-#[cfg(test)]
-mod test {
-	use crate::{
-		testing::*,
-		zdoom::{self, zscript::ParseTree},
-	};
-
-	use super::*;
-
-	#[test]
-	fn smoke_states_block() {
-		const SOURCE: &str = "States { Spawn: XZW1 A 33; XZW1 B 2; Loop; }";
-
-		let ptree: ParseTree =
-			crate::parse(SOURCE, states_block, zdoom::lex::Context::ZSCRIPT_LATEST);
-		assert_no_errors(&ptree);
-		prettyprint_maybe(ptree.cursor());
-	}
-
-	#[test]
-	fn smoke_goto() {
-		const SOURCE: &str = r#####"States {
-	goto Super::FrameSetup;
-}"#####;
-
-		let ptree: ParseTree =
-			crate::parse(SOURCE, states_block, zdoom::lex::Context::ZSCRIPT_LATEST);
-		assert_no_errors(&ptree);
-		prettyprint_maybe(ptree.cursor());
-	}
-}
