@@ -34,11 +34,11 @@ pub(super) fn define(ctx: &SemaContext, symbol: &Symbol, classdef: ast::ClassDef
 			| ast::ClassInnard::Struct(_)
 			| ast::ClassInnard::StaticConst(_)
 			| ast::ClassInnard::Field(_)
-			| ast::ClassInnard::Mixin(_)
 			| ast::ClassInnard::Default(_)
 			| ast::ClassInnard::States(_)
 			| ast::ClassInnard::Property(_)
 			| ast::ClassInnard::Flag(_) => todo!(),
+			ast::ClassInnard::Mixin(_) => continue,
 		}
 	}
 

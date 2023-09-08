@@ -16,6 +16,7 @@ use crate::{
 pub type SsaType = cranelift::codegen::ir::Type;
 pub type SsaValues = smallvec::SmallVec<[SsaType; 1]>;
 
+#[must_use]
 pub fn codegen(
 	compiler: Compiler,
 	opt: OptLevel,

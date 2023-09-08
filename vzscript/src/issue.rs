@@ -111,11 +111,16 @@ pub enum Level {
 #[repr(u16)]
 pub enum Error {
 	BinExprTypeMismatch,
+	/// e.g., ZScript tried to use `super` at compile time.
+	ConstEval,
 	FlagDefBitOverflow,
 	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	/// e.g. attempt to implicitly narrow,
+	/// or to use a literal suffix which would narrow the literal's value.
+	IntConvert,
 	/// Something went wrong with the compiler itself. The problem was either
 	/// in Rust, or an ill-formed native declaration in a script.
 	Internal,

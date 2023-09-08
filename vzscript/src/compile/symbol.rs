@@ -96,17 +96,20 @@ impl SymbolKind {
 
 #[derive(Debug)]
 pub(crate) enum Definition {
+	Constant {
+		tdef: rti::Handle<TypeDef>,
+		init: vir::Block,
+	},
 	Data {
 		typedef: rti::Handle<TypeDef>,
 		init: vir::Block,
 	},
+	Field {
+		typedef: rti::Handle<TypeDef>,
+	},
 	Function {
 		tdef: TypeHandle<FuncType>,
 		code: FunctionCode,
-	},
-	Constant {
-		tdef: rti::Handle<TypeDef>,
-		init: vir::Block,
 	},
 	Type(rti::Record),
 }
