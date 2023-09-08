@@ -29,13 +29,9 @@ impl TypeDef {
 				TypeTag::Array => TypeRef::Array(&self.data.array),
 				TypeTag::Class => TypeRef::Class(&self.data.class),
 				TypeTag::Function => TypeRef::Function(&self.data.func),
-				TypeTag::IName => TypeRef::IName(&self.data.iname),
-				TypeTag::Numeric => TypeRef::Num(&self.data.numeric),
-				TypeTag::String => TypeRef::String(&self.data.string),
+				TypeTag::Primitive => TypeRef::Primitive(&self.data.primitive),
 				TypeTag::Struct => TypeRef::Struct(&self.data.structure),
-				TypeTag::TypeDef => TypeRef::TypeDef(&self.data.typedef),
 				TypeTag::Union => TypeRef::Union(&self.data.r#union),
-				TypeTag::Void => TypeRef::Void(&self.data.void),
 			}
 		}
 	}
@@ -81,26 +77,14 @@ impl Clone for TypeDef {
 					TypeTag::Function => TypeData {
 						func: self.data.func.clone(),
 					},
-					TypeTag::IName => TypeData {
-						iname: self.data.iname.clone(),
-					},
-					TypeTag::Numeric => TypeData {
-						numeric: self.data.numeric,
-					},
-					TypeTag::String => TypeData {
-						string: self.data.string.clone(),
+					TypeTag::Primitive => TypeData {
+						primitive: self.data.primitive,
 					},
 					TypeTag::Struct => TypeData {
 						structure: self.data.structure.clone(),
 					},
-					TypeTag::TypeDef => TypeData {
-						typedef: self.data.typedef.clone(),
-					},
 					TypeTag::Union => TypeData {
 						r#union: self.data.union.clone(),
-					},
-					TypeTag::Void => TypeData {
-						void: self.data.void.clone(),
 					},
 				}
 			},
@@ -114,13 +98,9 @@ pub enum TypeRef<'td> {
 	Array(&'td ArrayType),
 	Class(&'td ClassType),
 	Function(&'td FuncType),
-	IName(&'td INameType),
-	Num(&'td NumType),
-	String(&'td StringType),
+	Primitive(&'td PrimitiveType),
 	Struct(&'td StructType),
-	TypeDef(&'td TypeDefType),
 	Union(&'td UnionType),
-	Void(&'td VoidType),
 }
 
 /// Corresponds to the concept of "scope" in ZScript (renamed to reduce name overloading).
@@ -142,13 +122,9 @@ union TypeData {
 	array: ManuallyDrop<ArrayType>,
 	class: ManuallyDrop<ClassType>,
 	func: ManuallyDrop<FuncType>,
-	iname: ManuallyDrop<INameType>,
-	numeric: ManuallyDrop<NumType>,
-	string: ManuallyDrop<StringType>,
 	structure: ManuallyDrop<StructType>,
-	typedef: ManuallyDrop<TypeDefType>,
+	primitive: ManuallyDrop<PrimitiveType>,
 	r#union: ManuallyDrop<UnionType>,
-	void: ManuallyDrop<VoidType>,
 }
 
 /// Separated discriminant for [`TypeData`].
@@ -157,13 +133,9 @@ enum TypeTag {
 	Array,
 	Class,
 	Function,
-	IName,
-	Numeric,
-	String,
+	Primitive,
 	Struct,
-	TypeDef,
 	Union,
-	Void,
 }
 
 impl Drop for TypeDef {
@@ -173,13 +145,9 @@ impl Drop for TypeDef {
 				TypeTag::Array => ManuallyDrop::drop(&mut self.data.array),
 				TypeTag::Class => ManuallyDrop::drop(&mut self.data.class),
 				TypeTag::Function => ManuallyDrop::drop(&mut self.data.func),
-				TypeTag::IName => ManuallyDrop::drop(&mut self.data.iname),
-				TypeTag::Numeric => ManuallyDrop::drop(&mut self.data.numeric),
+				TypeTag::Primitive => ManuallyDrop::drop(&mut self.data.primitive),
 				TypeTag::Struct => ManuallyDrop::drop(&mut self.data.structure),
-				TypeTag::String => ManuallyDrop::drop(&mut self.data.string),
-				TypeTag::TypeDef => ManuallyDrop::drop(&mut self.data.typedef),
 				TypeTag::Union => ManuallyDrop::drop(&mut self.data.r#union),
-				TypeTag::Void => ManuallyDrop::drop(&mut self.data.void),
 			}
 		}
 	}
@@ -196,13 +164,9 @@ impl std::fmt::Debug for TypeDef {
 						TypeTag::Array => &self.data.array,
 						TypeTag::Class => &self.data.class,
 						TypeTag::Function => &self.data.func,
-						TypeTag::IName => &self.data.iname,
-						TypeTag::Numeric => &self.data.numeric,
-						TypeTag::String => &self.data.string,
+						TypeTag::Primitive => &self.data.primitive,
 						TypeTag::Struct => &self.data.structure,
-						TypeTag::TypeDef => &self.data.typedef,
 						TypeTag::Union => &self.data.r#union,
-						TypeTag::Void => &self.data.void,
 					},
 				)
 				.finish()
@@ -225,16 +189,13 @@ pub struct ClassType {
 }
 
 #[derive(Debug, Clone)]
-pub struct EnumType;
+pub struct EnumType {}
 
 #[derive(Debug, Clone)]
-pub struct FuncType;
+pub struct FuncType {}
 
-#[derive(Debug, Clone)]
-pub struct INameType;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NumType {
+#[derive(Debug, Clone, Copy)]
+pub enum PrimitiveType {
 	Bool,
 	Int8,
 	Uint8,
@@ -248,22 +209,18 @@ pub enum NumType {
 	Uint128,
 	Float32,
 	Float64,
+
+	IName,
+	String,
+	TypeDef,
+	Void,
 }
 
 #[derive(Debug, Clone)]
-pub struct StringType;
+pub struct StructType {}
 
 #[derive(Debug, Clone)]
-pub struct StructType;
-
-#[derive(Debug, Clone)]
-pub struct TypeDefType;
-
-#[derive(Debug, Clone)]
-pub struct UnionType;
-
-#[derive(Debug, Clone)]
-pub struct VoidType;
+pub struct UnionType {}
 
 // TypeHandle //////////////////////////////////////////////////////////////////
 
@@ -298,27 +255,11 @@ impl std::ops::Deref for TypeHandle<FuncType> {
 	}
 }
 
-impl std::ops::Deref for TypeHandle<INameType> {
-	type Target = INameType;
+impl std::ops::Deref for TypeHandle<PrimitiveType> {
+	type Target = PrimitiveType;
 
 	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.iname }
-	}
-}
-
-impl std::ops::Deref for TypeHandle<NumType> {
-	type Target = NumType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.numeric }
-	}
-}
-
-impl std::ops::Deref for TypeHandle<StringType> {
-	type Target = StringType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.string }
+		unsafe { &self.0.data.primitive }
 	}
 }
 
@@ -330,27 +271,11 @@ impl std::ops::Deref for TypeHandle<StructType> {
 	}
 }
 
-impl std::ops::Deref for TypeHandle<TypeDefType> {
-	type Target = TypeDefType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.typedef }
-	}
-}
-
 impl std::ops::Deref for TypeHandle<UnionType> {
 	type Target = UnionType;
 
 	fn deref(&self) -> &Self::Target {
 		unsafe { &self.0.data.r#union }
-	}
-}
-
-impl std::ops::Deref for TypeHandle<VoidType> {
-	type Target = VoidType;
-
-	fn deref(&self) -> &Self::Target {
-		unsafe { &self.0.data.void }
 	}
 }
 
@@ -360,17 +285,17 @@ pub struct TypeInHandle<T>(rti::InHandle<TypeDef>, PhantomData<T>);
 /// Built-ins.
 impl TypeDef {
 	pub(crate) const BUILTIN_TYPEDEF: Self = Self {
-		tag: TypeTag::TypeDef,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			typedef: ManuallyDrop::new(TypeDefType),
+			primitive: ManuallyDrop::new(PrimitiveType::TypeDef),
 		},
 		layout: Layout::new::<rti::Handle<Self>>(),
 	};
 
 	pub(crate) const BUILTIN_VOID: Self = Self {
-		tag: TypeTag::Void,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			void: ManuallyDrop::new(VoidType),
+			primitive: ManuallyDrop::new(PrimitiveType::Void),
 		},
 		layout: Layout::new::<()>(),
 	};
@@ -378,105 +303,105 @@ impl TypeDef {
 	// Numeric /////////////////////////////////////////////////////////////////
 
 	pub(crate) const BUILTIN_BOOL: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Bool),
+			primitive: ManuallyDrop::new(PrimitiveType::Bool),
 		},
 		layout: Layout::new::<bool>(),
 	};
 
 	pub(crate) const BUILTIN_INT8: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Int8),
+			primitive: ManuallyDrop::new(PrimitiveType::Int8),
 		},
 		layout: Layout::new::<i8>(),
 	};
 
 	pub(crate) const BUILTIN_UINT8: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Uint8),
+			primitive: ManuallyDrop::new(PrimitiveType::Uint8),
 		},
 		layout: Layout::new::<u8>(),
 	};
 
 	pub(crate) const BUILTIN_INT16: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Int16),
+			primitive: ManuallyDrop::new(PrimitiveType::Int16),
 		},
 		layout: Layout::new::<i16>(),
 	};
 
 	pub(crate) const BUILTIN_UINT16: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Uint16),
+			primitive: ManuallyDrop::new(PrimitiveType::Uint16),
 		},
 		layout: Layout::new::<u16>(),
 	};
 
 	pub(crate) const BUILTIN_INT32: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Int32),
+			primitive: ManuallyDrop::new(PrimitiveType::Int32),
 		},
 		layout: Layout::new::<i32>(),
 	};
 
 	pub(crate) const BUILTIN_UINT32: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Uint32),
+			primitive: ManuallyDrop::new(PrimitiveType::Uint32),
 		},
 		layout: Layout::new::<u32>(),
 	};
 
 	pub(crate) const BUILTIN_INT64: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Int64),
+			primitive: ManuallyDrop::new(PrimitiveType::Int64),
 		},
 		layout: Layout::new::<i64>(),
 	};
 
 	pub(crate) const BUILTIN_UINT64: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Uint64),
+			primitive: ManuallyDrop::new(PrimitiveType::Uint64),
 		},
 		layout: Layout::new::<u64>(),
 	};
 
 	pub(crate) const BUILTIN_INT128: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Int128),
+			primitive: ManuallyDrop::new(PrimitiveType::Int128),
 		},
 		layout: Layout::new::<i128>(),
 	};
 
 	pub(crate) const BUILTIN_UINT128: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Uint128),
+			primitive: ManuallyDrop::new(PrimitiveType::Uint128),
 		},
 		layout: Layout::new::<u128>(),
 	};
 
 	pub(crate) const BUILTIN_FLOAT32: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Float32),
+			primitive: ManuallyDrop::new(PrimitiveType::Float32),
 		},
 		layout: Layout::new::<f32>(),
 	};
 
 	pub(crate) const BUILTIN_FLOAT64: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			numeric: ManuallyDrop::new(NumType::Float64),
+			primitive: ManuallyDrop::new(PrimitiveType::Float64),
 		},
 		layout: Layout::new::<f64>(),
 	};
@@ -484,17 +409,17 @@ impl TypeDef {
 	// String and IName ////////////////////////////////////////////////////////
 
 	pub(crate) const BUILTIN_STRING: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			string: ManuallyDrop::new(StringType),
+			primitive: ManuallyDrop::new(PrimitiveType::String),
 		},
 		layout: Layout::new::<RString>(),
 	};
 
 	pub(crate) const BUILTIN_INAME: Self = Self {
-		tag: TypeTag::Numeric,
+		tag: TypeTag::Primitive,
 		data: TypeData {
-			iname: ManuallyDrop::new(INameType),
+			primitive: ManuallyDrop::new(PrimitiveType::IName),
 		},
 		layout: Layout::new::<NameIx>(),
 	};
