@@ -462,6 +462,14 @@ impl ParamList {
 				.children_with_tokens()
 				.any(|elem| elem.kind() == Syn::KwVoid)
 	}
+
+	#[must_use]
+	pub fn varargs(&self) -> bool {
+		self.0.children_with_tokens().any(|elem| {
+			elem.into_token()
+				.is_some_and(|token| token.kind() == Syn::Dot3)
+		})
+	}
 }
 
 // MemberQuals /////////////////////////////////////////////////////////////////

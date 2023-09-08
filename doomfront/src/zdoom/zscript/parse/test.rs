@@ -545,6 +545,19 @@ fn smoke_method() {
 	assert!(fndecl.is_const());
 }
 
+#[test]
+fn smoke_varargs() {
+	const SOURCE: &str = r#"void bashibozuk(int a, float b, ...) const {}"#;
+
+	let ptree: ParseTree = crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
+	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+
+	let fndecl = ast::FunctionDecl::cast(ptree.cursor()).unwrap();
+	let params = fndecl.param_list().unwrap();
+	assert!(params.varargs());
+}
+
 // Actor ///////////////////////////////////////////////////////////////////////
 
 #[test]
