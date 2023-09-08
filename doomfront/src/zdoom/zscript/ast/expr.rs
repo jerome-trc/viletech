@@ -156,6 +156,23 @@ impl AstNode for PrimaryExpr {
 	}
 }
 
+impl From<PrimaryExpr> for Expr {
+	fn from(value: PrimaryExpr) -> Self {
+		match value {
+			PrimaryExpr::ClassCast(inner) => Self::ClassCast(inner),
+			PrimaryExpr::Call(inner) => Self::Call(inner),
+			PrimaryExpr::Group(inner) => Self::Group(inner),
+			PrimaryExpr::Ident(inner) => Self::Ident(inner),
+			PrimaryExpr::Index(inner) => Self::Index(inner),
+			PrimaryExpr::Literal(inner) => Self::Literal(inner),
+			PrimaryExpr::Member(inner) => Self::Member(inner),
+			PrimaryExpr::Postfix(inner) => Self::Postfix(inner),
+			PrimaryExpr::Super(inner) => Self::Super(inner),
+			PrimaryExpr::Vector(inner) => Self::Vector(inner),
+		}
+	}
+}
+
 // BinExpr /////////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::BinExpr`].
