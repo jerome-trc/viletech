@@ -1,6 +1,4 @@
-//! A [syntax tag type] with a macro-generated lexer for its tokens.
-//!
-//! [syntax tag type]: Syn
+//! A [syntax tag type](Syn) with a macro-generated lexer for its tokens.
 
 use doomfront::rowan;
 use logos::Logos;
@@ -44,6 +42,8 @@ pub enum Syn {
 	FuncDecl,
 	/// A top-level node representing a whole file.
 	FileRoot,
+	/// TODO
+	MemberQuals,
 	/// `'.'? T | ('.'? T ('.' T)*)` where `T` is a [`Syn::Ident`] or [`Syn::NameLit`].
 	///
 	/// Counterpart to what is known in ZScript's grammar as a "dottable ID".
@@ -60,8 +60,10 @@ pub enum Syn {
 	SwitchCase,
 	/// A "type specifier". Grammar: `':' expr`
 	TypeSpec,
-	/// `'union' ident '{' unionfield* '}'`
+	/// `'union' ident '{' unioninnard* '}'`
 	UnionDef,
+	/// `ident '{' fielddecl* '}'`
+	UnionVariant,
 	// Nodes: statements ///////////////////////////////////////////////////////
 	/// `('let' | 'readonly') const? 'ident' typespec? ('=' expr)? ';'`
 	BindStat,
@@ -140,13 +142,17 @@ pub enum Syn {
 	NameLit,
 	#[token("null")]
 	NullLit,
-	#[regex(r#""(([\\]["])|[^"])*""#, priority = 3)]
+	/// `[gG]` for glob, `[xX]` for regex, `[fF]` for interpolated formatting.
+	// TODO: raw string literals?
+	#[regex(r#"[gGxX]?[fF]?"(([\\]["])|[^"])*""#, priority = 3)]
 	StringLit,
 	#[token("true")]
 	TrueLit,
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	#[token("abstract", priority = 5)]
 	KwAbstract,
+	#[token("auto", priority = 5)]
+	KwAuto,
 	#[token("break", priority = 5)]
 	KwBreak,
 	#[token("case", priority = 5)]
@@ -179,18 +185,16 @@ pub enum Syn {
 	KwIs,
 	#[token("isnot", priority = 5)]
 	KwIsNot,
-	#[token("in", priority = 5)]
-	KwIn,
 	#[token("let", priority = 5)]
 	KwLet,
-	#[token("out", priority = 5)]
-	KwOut,
 	#[token("override", priority = 5)]
 	KwOverride,
 	#[token("private", priority = 5)]
 	KwPrivate,
 	#[token("protected", priority = 5)]
 	KwProtected,
+	#[token("readonly", priority = 5)]
+	KwReadonly,
 	#[token("return", priority = 5)]
 	KwReturn,
 	#[token("static", priority = 5)]
@@ -201,14 +205,12 @@ pub enum Syn {
 	KwSuper,
 	#[token("switch", priority = 5)]
 	KwSwitch,
+	#[token("@type", priority = 5)]
+	KwType,
 	#[token("union", priority = 5)]
 	KwUnion,
-	#[token("until", priority = 5)]
-	KwUntil,
 	#[token("using", priority = 5)]
 	KwUsing,
-	#[token("var", priority = 5)]
-	KwVar,
 	#[token("virtual", priority = 5)]
 	KwVirtual,
 	#[token("while", priority = 5)]

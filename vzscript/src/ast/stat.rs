@@ -45,11 +45,11 @@ impl AstNode for Statement {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
-			Statement::Bind(inner) => inner.syntax(),
-			Statement::Break(inner) => inner.syntax(),
-			Statement::Continue(inner) => inner.syntax(),
-			Statement::Expr(inner) => inner.syntax(),
-			Statement::Return(inner) => inner.syntax(),
+			Self::Bind(inner) => inner.syntax(),
+			Self::Break(inner) => inner.syntax(),
+			Self::Continue(inner) => inner.syntax(),
+			Self::Expr(inner) => inner.syntax(),
+			Self::Return(inner) => inner.syntax(),
 		}
 	}
 }

@@ -37,7 +37,7 @@ pub(super) fn block(
 	trivia_0plus(p);
 
 	while !p.eof() && !p.at(Syn::BraceR) {
-		statement(p);
+		super::core_element::<false>(p);
 		trivia_0plus(p);
 	}
 
@@ -115,6 +115,13 @@ impl Attribute {
 
 		p.expect(Syn::BracketR, Syn::BracketR, &["`]`"]);
 		p.close(mark, Syn::Attribute);
+	}
+
+	pub(super) fn parse_0plus(p: &mut Parser<Syn>) {
+		while p.at_any(Self::FIRST_SET) && !p.eof() {
+			Self::parse(p);
+			trivia_0plus(p);
+		}
 	}
 }
 

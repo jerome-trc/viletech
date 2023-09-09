@@ -20,7 +20,7 @@ pub enum Expr {
 	Enum(EnumExpr),
 	Field(FieldExpr),
 	For(ForExpr),
-	GroupExpr(GroupExpr),
+	Group(GroupExpr),
 	Function(FunctionExpr),
 	Ident(IdentExpr),
 	Index(IndexExpr),
@@ -30,6 +30,7 @@ pub enum Expr {
 	Switch(SwitchExpr),
 	Union(UnionExpr),
 	Variant(VariantExpr),
+	While(WhileExpr),
 }
 
 impl AstNode for Expr {
@@ -46,8 +47,7 @@ impl AstNode for Expr {
 				| Syn::CallExpr | Syn::ClassExpr
 				| Syn::ConstructExpr
 				| Syn::EnumExpr | Syn::FieldExpr
-				| Syn::ForExpr | Syn::GroupExpr
-				| Syn::FunctionExpr
+				| Syn::GroupExpr | Syn::FunctionExpr
 				| Syn::IdentExpr | Syn::IndexExpr
 				| Syn::Literal | Syn::PrefixExpr
 				| Syn::StructExpr
@@ -70,7 +70,7 @@ impl AstNode for Expr {
 			Syn::EnumExpr => Some(Self::Enum(EnumExpr(node))),
 			Syn::FieldExpr => Some(Self::Field(FieldExpr(node))),
 			Syn::ForExpr => Some(Self::For(ForExpr(node))),
-			Syn::GroupExpr => Some(Self::GroupExpr(GroupExpr(node))),
+			Syn::GroupExpr => Some(Self::Group(GroupExpr(node))),
 			Syn::FunctionExpr => Some(Self::Function(FunctionExpr(node))),
 			Syn::IdentExpr => Some(Self::Ident(IdentExpr(node))),
 			Syn::IndexExpr => Some(Self::Index(IndexExpr(node))),
@@ -80,31 +80,33 @@ impl AstNode for Expr {
 			Syn::SwitchExpr => Some(Self::Switch(SwitchExpr(node))),
 			Syn::UnionExpr => Some(Self::Union(UnionExpr(node))),
 			Syn::VariantExpr => Some(Self::Variant(VariantExpr(node))),
+			Syn::WhileExpr => Some(Self::While(WhileExpr(node))),
 			_ => None,
 		}
 	}
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
-			Expr::Array(inner) => inner.syntax(),
-			Expr::Binary(inner) => inner.syntax(),
-			Expr::Block(inner) => inner.syntax(),
-			Expr::Call(inner) => inner.syntax(),
-			Expr::Class(inner) => inner.syntax(),
-			Expr::Construct(inner) => inner.syntax(),
-			Expr::Enum(inner) => inner.syntax(),
-			Expr::Field(inner) => inner.syntax(),
-			Expr::For(inner) => inner.syntax(),
-			Expr::GroupExpr(inner) => inner.syntax(),
-			Expr::Function(inner) => inner.syntax(),
-			Expr::Ident(inner) => inner.syntax(),
-			Expr::Index(inner) => inner.syntax(),
-			Expr::Literal(inner) => inner.syntax(),
-			Expr::Prefix(inner) => inner.syntax(),
-			Expr::Struct(inner) => inner.syntax(),
-			Expr::Switch(inner) => inner.syntax(),
-			Expr::Union(inner) => inner.syntax(),
-			Expr::Variant(inner) => inner.syntax(),
+			Self::Array(inner) => inner.syntax(),
+			Self::Binary(inner) => inner.syntax(),
+			Self::Block(inner) => inner.syntax(),
+			Self::Call(inner) => inner.syntax(),
+			Self::Class(inner) => inner.syntax(),
+			Self::Construct(inner) => inner.syntax(),
+			Self::Enum(inner) => inner.syntax(),
+			Self::Field(inner) => inner.syntax(),
+			Self::Group(inner) => inner.syntax(),
+			Self::For(inner) => inner.syntax(),
+			Self::Function(inner) => inner.syntax(),
+			Self::Ident(inner) => inner.syntax(),
+			Self::Index(inner) => inner.syntax(),
+			Self::Literal(inner) => inner.syntax(),
+			Self::Prefix(inner) => inner.syntax(),
+			Self::Struct(inner) => inner.syntax(),
+			Self::Switch(inner) => inner.syntax(),
+			Self::Union(inner) => inner.syntax(),
+			Self::Variant(inner) => inner.syntax(),
+			Self::While(inner) => inner.syntax(),
 		}
 	}
 }
@@ -201,6 +203,7 @@ impl FieldExpr {
 
 /// Wraps a node tagged [`Syn::ForExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForExpr(SyntaxNode);
 
 simple_astnode!(Syn, ForExpr, Syn::ForExpr);
@@ -349,3 +352,11 @@ simple_astnode!(Syn, UnionExpr, Syn::UnionExpr);
 pub struct VariantExpr(SyntaxNode);
 
 simple_astnode!(Syn, VariantExpr, Syn::VariantExpr);
+
+// While ///////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::WhileExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WhileExpr(SyntaxNode);
+
+simple_astnode!(Syn, WhileExpr, Syn::WhileExpr);

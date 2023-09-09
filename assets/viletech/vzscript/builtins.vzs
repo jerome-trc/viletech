@@ -1,0 +1,2 @@
+#[builtin("typeof")]
+function typeof(expr: auto): @type;

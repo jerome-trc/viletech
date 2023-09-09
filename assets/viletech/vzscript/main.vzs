@@ -1,0 +1,3 @@
+#include("vzscript/builtins.vzs")
+#include("vzscript/primitive.vzs")
+#include("vzscript/string.vzs")

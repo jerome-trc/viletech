@@ -1,0 +1,5 @@
+/// A pointer to an interned string.
+const String: @type = struct {
+	#[native("String.length")]
+	function length(): uint64;
+};

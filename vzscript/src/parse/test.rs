@@ -2,7 +2,7 @@ use doomfront::{rowan::ast::AstNode, testing::prettyprint_maybe};
 
 use crate::{ast, ParseTree, SyntaxNode};
 
-use super::{common::*, expr::*, file, item::*};
+use super::{common::*, expr::*, file, item::*, stat::*};
 
 fn assert_no_errors(ptree: &ParseTree, case: usize) {
 	assert!(
@@ -66,24 +66,7 @@ fn smoke_annotation() {
 	}
 }
 
-#[test]
-fn smoke_expr_for() {
-	const SOURCE: &str = r#"for conductor : faultline {}"#;
-
-	let ptree: ParseTree = doomfront::parse(
-		SOURCE,
-		|p| {
-			Expression::parse(p);
-		},
-		crate::Version::new(0, 0, 0),
-	);
-
-	assert_no_errors(&ptree, 0);
-
-	if prettyprint_maybe(ptree.cursor()) {
-		eprintln!()
-	}
-}
+// Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
 fn smoke_expr_field() {
@@ -103,6 +86,52 @@ fn smoke_expr_field() {
 		eprintln!()
 	}
 }
+
+#[test]
+fn smoke_expr_for() {
+	const SOURCE: &str = r#"for conductor : faultline {}"#;
+
+	let ptree: ParseTree = doomfront::parse(
+		SOURCE,
+		|p| {
+			let _ = Expression::parse(p);
+		},
+		crate::Version::new(0, 0, 0),
+	);
+
+	assert_no_errors(&ptree, 0);
+
+	if prettyprint_maybe(ptree.cursor()) {
+		eprintln!()
+	}
+}
+
+// Statements //////////////////////////////////////////////////////////////////
+
+#[test]
+fn smoke_stat_bind() {
+	const SOURCES: &[&str] = &[
+		"let petrichor;",
+		"readonly twilit: jungle;",
+		"#[allow(unused)] let vinefort = encased;",
+		"readonly enigma: stormwater = 'the night guard';",
+	];
+
+	for (i, source) in SOURCES.iter().copied().enumerate() {
+		let ptree = doomfront::parse(
+			source,
+			super::core_element::<false>,
+			crate::Version::new(0, 0, 0),
+		);
+		assert_no_errors(&ptree, 0);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!()
+		}
+	}
+}
+
+// Non-structural items ////////////////////////////////////////////////////////
 
 #[test]
 fn smoke_func_decl() {
@@ -159,7 +188,11 @@ fn smoke_func_decl() {
 	];
 
 	for (i, source) in SOURCES.iter().copied().enumerate() {
-		let ptree = doomfront::parse(source, super::item, crate::Version::new(0, 0, 0));
+		let ptree = doomfront::parse(
+			source,
+			super::core_element::<true>,
+			crate::Version::new(0, 0, 0),
+		);
 		assert_no_errors(&ptree, 0);
 
 		if prettyprint_maybe(ptree.cursor()) {
@@ -169,3 +202,5 @@ fn smoke_func_decl() {
 		TESTS[i](ptree.cursor());
 	}
 }
+
+// Structural items ////////////////////////////////////////////////////////////

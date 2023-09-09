@@ -1,23 +1,12 @@
 //! Statement parsers.
 
-use doomfront::parser::Parser;
+use doomfront::parser::{OpenMark, Parser};
 
 use crate::Syn;
 
 use super::{common::*, expr::*, item::*};
 
-pub(super) fn statement(p: &mut Parser<Syn>) {
-	if p.at_any(Annotation::FIRST_SET) {
-		Annotation::parse(p);
-		return;
-	}
-
-	if super::at_item(p) {
-		super::item(p);
-		return;
-	}
-
-	let mark = p.open();
+pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 	let token = p.nth(0);
 
 	if Expression::FIRST_SET.contains(&token) {
@@ -55,7 +44,7 @@ pub(super) fn statement(p: &mut Parser<Syn>) {
 			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
 			p.close(mark, Syn::ContinueStat);
 		}
-		t @ (Syn::KwConst | Syn::KwLet) => {
+		t @ (Syn::KwLet | Syn::KwReadonly) => {
 			p.advance(t);
 			trivia_0plus(p);
 			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
@@ -69,8 +58,10 @@ pub(super) fn statement(p: &mut Parser<Syn>) {
 			if p.eat(Syn::Eq, Syn::Eq) {
 				trivia_0plus(p);
 				Expression::parse(p);
+				trivia_0plus(p);
 			}
 
+			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
 			p.close(mark, Syn::BindStat);
 		}
 		t @ Syn::KwReturn => {
@@ -87,11 +78,7 @@ pub(super) fn statement(p: &mut Parser<Syn>) {
 				other,
 				Syn::Error,
 				&[
-					"`break`",
-					"`continue`",
-					"`const` or `let`",
-					"`return`",
-					"an expression",
+					// TODO
 				],
 			);
 		}

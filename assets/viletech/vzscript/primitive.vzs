@@ -1,0 +1,9 @@
+#[native("__native_fn__")]
+function __native_fn__(name: iname): auto;
+
+const int32: @type = {
+	#[native("__int32_t__")]
+	function __int32_t__(): @type;
+
+	return __int32_t__();
+};

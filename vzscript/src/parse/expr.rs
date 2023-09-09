@@ -34,7 +34,7 @@ impl Expression {
 		Syn::TrueLit,
 	];
 
-	/// Returns `true` if the parsed expression ends with a block.
+	/// Returns `true` if the expression that was parsed ends with a block.
 	pub(super) fn parse(p: &mut Parser<Syn>) -> bool {
 		recur(p, Syn::Eof)
 	}
@@ -165,6 +165,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
 			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			(p.close(mark, Syn::EnumExpr), true)
 		}
 		t @ Syn::KwStruct => {
 			p.advance(t);
@@ -197,18 +198,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				other,
 				Syn::Error,
 				&[
-					"an integer",
-					"a floating-point number",
-					"a string",
-					"a name literal",
-					"`true` or `false`",
-					"`null`",
-					"`(`",
-					"`{`",
-					"`!`",
-					"`-`",
-					"`~`",
-					"`class` or `struct` or `union`",
+					// TODO
 				],
 			),
 			false,
