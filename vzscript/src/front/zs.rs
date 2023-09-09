@@ -36,7 +36,7 @@ pub(super) fn declare_symbols_early(ctx: &DeclContext, namespace: &mut Scope, pt
 
 		let result = ctx.declare(
 			namespace,
-			NsName::Type(ctx.names.intern(name_tok.text())),
+			NsName::Type(ctx.names.intern(&name_tok)),
 			mixindef.syntax().text_range(),
 			short_end,
 			SymbolKind::Mixin,
@@ -84,7 +84,7 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 
 	let result = ctx.declare(
 		namespace,
-		NsName::Type(ctx.names.intern(name_tok.text())),
+		NsName::Type(ctx.names.intern(&name_tok)),
 		classdef.syntax().text_range(),
 		r_end,
 		SymbolKind::Class,
@@ -97,7 +97,7 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 		let mut issue = Issue::new(
 			ctx.path,
 			TextRange::new(r_start, r_end),
-			format!("attempt to re-declare symbol `{}`", name_tok.text()),
+			format!("attempt to re-declare symbol `{}`", &name_tok),
 			issue::Level::Error(issue::Error::Redeclare),
 		);
 
@@ -143,7 +143,7 @@ fn declare_field(ctx: &DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 	for name in field.names() {
 		let result = ctx.declare(
 			scope,
-			NsName::Value(ctx.names.intern(name.ident().text())),
+			NsName::Value(ctx.names.intern(&name.ident())),
 			name.syntax().text_range(),
 			name.syntax().text_range().end(),
 			SymbolKind::Field,
@@ -159,7 +159,7 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FunctionD
 
 	let result = ctx.declare(
 		scope,
-		NsName::Value(ctx.names.intern(name_tok.text())),
+		NsName::Value(ctx.names.intern(&name_tok)),
 		fndecl.syntax().text_range(),
 		match fndecl.const_keyword() {
 			Some(kw) => kw.text_range().end(),
@@ -174,7 +174,7 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FunctionD
 
 fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: ast::MixinStat) {
 	let name_tok = mixin.name().unwrap();
-	let nsname = NsName::Type(ctx.names.intern(name_tok.text()));
+	let nsname = NsName::Type(ctx.names.intern(&name_tok));
 
 	let lib_ix = ctx.lib_ix as usize;
 
@@ -184,7 +184,7 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 		ctx.raise(Issue::new(
 			ctx.path,
 			name_tok.text_range(),
-			format!("mixin `{}` not found", name_tok.text()),
+			format!("mixin `{}` not found", &name_tok),
 			issue::Level::Error(issue::Error::SymbolNotFound),
 		));
 
@@ -197,7 +197,7 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 		let mut issue = Issue::new(
 			ctx.path,
 			name_tok.text_range(),
-			format!("expected symbol `{}` to be a mixin", name_tok.text()),
+			format!("expected symbol `{}` to be a mixin", &name_tok),
 			issue::Level::Error(issue::Error::SymbolKindMismatch),
 		);
 
@@ -210,11 +210,11 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 				format!(
 					"found {} `{}` here",
 					symbol.kind.user_facing_name(),
-					name_tok.text()
+					&name_tok
 				),
 			);
 		} else {
-			issue = issue.with_note(format!("`{}` is a primitive type", name_tok.text()));
+			issue = issue.with_note(format!("`{}` is a primitive type", &name_tok));
 		}
 
 		ctx.raise(issue);

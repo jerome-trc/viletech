@@ -9,13 +9,10 @@ use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use util::rstring::RString;
 
-use crate::{
-	compile::intern::Interner, issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project,
-	Version,
-};
+use crate::{issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project, Version};
 
 use self::{
-	intern::{NameIx, NsName, SymbolIx},
+	intern::{NameInterner, NameIx, NsName, SymbolIx},
 	symbol::{Definition, Location, Symbol},
 };
 
@@ -49,7 +46,7 @@ pub struct Compiler {
 	pub(crate) symbols: AppendOnlyVec<Symbol>,
 	// Interning
 	pub(crate) strings: FxDashSet<RString>,
-	pub(crate) names: Interner<NameIx, ZName>,
+	pub(crate) names: NameInterner,
 }
 
 impl Compiler {
@@ -119,7 +116,7 @@ impl Compiler {
 			namespaces: vec![],
 			symbols: AppendOnlyVec::new(),
 			strings: FxDashSet::default(),
-			names: Interner::default(),
+			names: NameInterner::default(),
 		}
 	}
 
@@ -159,7 +156,7 @@ impl Compiler {
 
 	#[must_use]
 	pub(crate) fn get_corelib_type(&self, name: &str) -> &Symbol {
-		let nsname = NsName::Type(self.names.intern(name));
+		let nsname = NsName::Type(self.names.intern_str(name));
 		let &sym_ix = self.namespaces[0].get(&nsname).unwrap();
 		self.symbol(sym_ix)
 	}

@@ -280,7 +280,7 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 		// TODO: Not exactly sure what should go here yet.
 		todo!()
 	} else if let Some(text) = token.name() {
-		let name_ix = ctx.names.intern(text);
+		let name_ix = ctx.names.intern(token.syntax());
 
 		Ok(ConstEval {
 			typedef: Some(ctx.builtins.iname_t.clone()),

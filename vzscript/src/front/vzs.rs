@@ -30,7 +30,7 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 
 				let result = ctx.declare(
 					namespace,
-					NsName::Value(ctx.names.intern(name_tok.text())),
+					NsName::Value(ctx.names.intern(&name_tok)),
 					fndecl.syntax().text_range(),
 					short_end,
 					SymbolKind::Function,

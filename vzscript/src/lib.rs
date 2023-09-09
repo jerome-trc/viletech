@@ -29,6 +29,7 @@ pub mod zname;
 
 use std::hash::BuildHasherDefault;
 
+use doomfront::rowan::GreenNode;
 use rustc_hash::FxHasher;
 
 pub use self::{inctree::IncludeTree, project::Project, runtime::Runtime, syn::Syn};
