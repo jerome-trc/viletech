@@ -88,6 +88,14 @@ impl Annotation {
 			.next_token()
 			.ok_or(AstError::Missing)
 	}
+
+	#[must_use]
+	pub fn arg_list(&self) -> Option<ArgList> {
+		match self.0.last_child() {
+			Some(node) => ArgList::cast(node),
+			None => None,
+		}
+	}
 }
 
 // Argument and ArgList ////////////////////////////////////////////////////////

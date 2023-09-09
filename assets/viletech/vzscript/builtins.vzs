@@ -1,2 +1,8 @@
+#[builtin("builtin_t")]
+function builtin_t(name: iname): @type;
+
 #[builtin("typeof")]
-function typeof(expr: auto): @type;
+function type_of(expr: auto): @type;
+
+#[builtin("rtti_of")]
+function rtti_of(expr: auto): rtti;

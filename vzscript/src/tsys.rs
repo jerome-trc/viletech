@@ -192,7 +192,16 @@ pub struct ClassType {
 pub struct EnumType {}
 
 #[derive(Debug, Clone)]
-pub struct FuncType {}
+pub struct FuncType {
+	pub params: Vec<Parameter>,
+	pub ret: rti::InHandle<TypeDef>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Parameter {
+	pub typedef: rti::Handle<TypeDef>,
+	pub optional: bool,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum PrimitiveType {

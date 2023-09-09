@@ -1,15 +1,18 @@
 //! Information used by the semantic mid-section but not the backend.
 
+use std::any::Any;
+
 use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{TextRange, TextSize};
 
 use crate::{
+	back::SsaValues,
 	rti,
 	tsys::{FuncType, TypeDef, TypeHandle},
 	vir,
 };
 
-use super::{intern::SymbolIx, Scope};
+use super::{intern::SymbolIx, Compiler, Scope};
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
@@ -116,6 +119,8 @@ pub(crate) enum Definition {
 
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
+	Builtin(unsafe extern "C" fn(SsaValues) -> SsaValues),
+	BuiltinCEval(fn(&Compiler, &mut dyn Any)),
 	Native(&'static str),
 	Ir(vir::Block),
 }

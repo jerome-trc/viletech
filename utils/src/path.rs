@@ -19,6 +19,7 @@ pub trait PathExt: AsRef<Path> {
 	fn dir_empty(&self) -> bool {
 		self.dir_count() < 1
 	}
+	/// Note that `test` is compared ASCII case-insensitively.
 	#[must_use]
 	fn extension_is(&self, test: &str) -> bool;
 	/// Check if this path has no components at all.
@@ -60,14 +61,9 @@ impl<T: AsRef<Path>> PathExt for T {
 	}
 
 	fn extension_is(&self, test: &str) -> bool {
-		let ext = match self.as_ref().extension() {
-			Some(e) => e,
-			None => {
-				return false;
-			}
-		};
-
-		ext.eq_ignore_ascii_case(test)
+		self.as_ref()
+			.extension()
+			.is_some_and(|ext| ext.eq_ignore_ascii_case(test))
 	}
 
 	fn is_empty(&self) -> bool {

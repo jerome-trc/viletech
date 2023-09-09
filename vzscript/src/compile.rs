@@ -3,6 +3,9 @@
 pub(crate) mod intern;
 pub(crate) mod symbol;
 
+#[cfg(test)]
+mod test;
+
 use append_only_vec::AppendOnlyVec;
 use doomfront::zdoom::{decorate, inctree::IncludeTree};
 use parking_lot::Mutex;
@@ -15,8 +18,6 @@ use self::{
 	intern::{NameInterner, NameIx, NsName, SymbolIx},
 	symbol::{Definition, Location, Symbol},
 };
-
-pub type NativeSymbolTable = FxHashMap<&'static str, *const u8>;
 
 #[derive(Debug)]
 pub struct LibSource {
@@ -57,12 +58,7 @@ impl Compiler {
 			.map(|s| {
 				assert!(
 					!s.inctree.any_errors(),
-					"cannot compile due to parse errors"
-				);
-
-				assert!(
-					s.inctree.missing.is_empty(),
-					"cannot compile due to missing includes"
+					"cannot compile due to parse errors or include tree errors"
 				);
 
 				s
@@ -77,7 +73,7 @@ impl Compiler {
 		let mut project = Project::default();
 
 		#[must_use]
-		fn register_builtin(
+		fn core_t(
 			project: &mut Project,
 			qname: &'static str,
 			tdef: &TypeDef,
@@ -91,16 +87,16 @@ impl Compiler {
 		}
 
 		let builtins = Builtins {
-			void_t: register_builtin(&mut project, "vzs.void", &TypeDef::BUILTIN_VOID),
-			bool_t: register_builtin(&mut project, "vzs.bool", &TypeDef::BUILTIN_BOOL),
-			int32_t: register_builtin(&mut project, "vzs.int32", &TypeDef::BUILTIN_INT32),
-			uint32_t: register_builtin(&mut project, "vzs.uint32", &TypeDef::BUILTIN_UINT32),
-			int64_t: register_builtin(&mut project, "vzs.int64", &TypeDef::BUILTIN_INT64),
-			uint64_t: register_builtin(&mut project, "vzs.uint64", &TypeDef::BUILTIN_UINT64),
-			float32_t: register_builtin(&mut project, "vzs.float32", &TypeDef::BUILTIN_FLOAT32),
-			float64_t: register_builtin(&mut project, "vzs.float64", &TypeDef::BUILTIN_FLOAT64),
-			iname_t: register_builtin(&mut project, "vzs.iname", &TypeDef::BUILTIN_INAME),
-			string_t: register_builtin(&mut project, "vzs.string", &TypeDef::BUILTIN_STRING),
+			void_t: core_t(&mut project, "vzs.void", &TypeDef::BUILTIN_VOID),
+			bool_t: core_t(&mut project, "vzs.bool", &TypeDef::BUILTIN_BOOL),
+			int32_t: core_t(&mut project, "vzs.int32", &TypeDef::BUILTIN_INT32),
+			uint32_t: core_t(&mut project, "vzs.uint32", &TypeDef::BUILTIN_UINT32),
+			int64_t: core_t(&mut project, "vzs.int64", &TypeDef::BUILTIN_INT64),
+			uint64_t: core_t(&mut project, "vzs.uint64", &TypeDef::BUILTIN_UINT64),
+			float32_t: core_t(&mut project, "vzs.float32", &TypeDef::BUILTIN_FLOAT32),
+			float64_t: core_t(&mut project, "vzs.float64", &TypeDef::BUILTIN_FLOAT64),
+			iname_t: core_t(&mut project, "vzs.iname", &TypeDef::BUILTIN_INAME),
+			string_t: core_t(&mut project, "vzs.string", &TypeDef::BUILTIN_STRING),
 		};
 
 		Self {
@@ -128,7 +124,11 @@ impl Compiler {
 	///
 	/// - Dereferencing a data object pointer or calling a function pointer must
 	/// never invoke any thread-unsafe behavior.
-	pub unsafe fn native(&mut self, symbols: NativeSymbolTable) {
+	/// - For every value in `symbols`, one of the provided [`LibSource`]s must
+	/// contain a declaration (with no definition) with a `native` attribute,
+	/// with a single string argument matching the key in `symbols`. That
+	/// declaration must be ABI-compatible with the native function's raw pointer.
+	pub unsafe fn native(&mut self, symbols: FxHashMap<&'static str, *const u8>) {
 		assert!(matches!(self.stage, Stage::Declaration | Stage::Semantic));
 		// SAFETY: `NativePtr` is `repr(transparent)` over `*const u8`.
 		self.native = std::mem::transmute::<_, _>(symbols);

@@ -5521,6 +5521,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "petgraph",
  "rayon",
+ "regex",
  "rustc-hash",
  "selfie",
  "smallvec",

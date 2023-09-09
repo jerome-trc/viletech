@@ -2,4 +2,7 @@
 const String: @type = struct {
 	#[native("String.length")]
 	function length(): uint64;
+
+	#[native("String.char_length")]
+	function char_length(): uint64;
 };
