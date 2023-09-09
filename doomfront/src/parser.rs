@@ -592,6 +592,28 @@ impl<L: LangExt> Lexeme<L> {
 	}
 }
 
+/// A generic Pratt precedence checker.
+/// Returns `true` if `right` binds more strongly in an infix expression.
+#[must_use]
+pub fn pratt<L: LangExt>(left: L::Token, right: L::Token, precedence: &[&[L::Token]]) -> bool {
+	let strength = |token| precedence.iter().position(|level| level.contains(&token));
+
+	let Some(right_s) = strength(right) else {
+		return false;
+	};
+
+	let Some(left_s) = strength(left) else {
+		#[cfg(debug_assertions)]
+		if left != L::EOF {
+			panic!()
+		}
+
+		return true;
+	};
+
+	right_s > left_s
+}
+
 #[derive(Debug)]
 enum Event {
 	Open(SyntaxKind),

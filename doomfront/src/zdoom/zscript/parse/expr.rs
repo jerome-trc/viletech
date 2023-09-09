@@ -63,7 +63,7 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 			_ => {}
 		}
 
-		if infix_right_stronger(left, right) {
+		if crate::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
 			match right {
 				Token::Dot => {
 					let m = p.open_before(lhs);
@@ -296,77 +296,6 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	p.close(arglist, Syn::ArgList);
 }
 
-#[must_use]
-fn infix_right_stronger(left: Token, right: Token) -> bool {
-	#[must_use]
-	fn strength(token: Token) -> Option<usize> {
-		const PREC_TABLE: &[&[Token]] = &[
-			&[
-				Token::Eq,
-				Token::AsteriskEq,
-				Token::SlashEq,
-				Token::PercentEq,
-				Token::PlusEq,
-				Token::MinusEq,
-				Token::AngleL2Eq,
-				Token::AngleR2Eq,
-				Token::AmpersandEq,
-				Token::PipeEq,
-				Token::CaretEq,
-				Token::AngleR3Eq,
-			],
-			&[Token::Question],
-			&[Token::Pipe2],
-			&[Token::Ampersand2],
-			&[Token::Eq2, Token::BangEq, Token::TildeEq2],
-			&[
-				Token::AngleL,
-				Token::AngleR,
-				Token::AngleLEq,
-				Token::AngleREq,
-				Token::AngleLAngleREq,
-				Token::KwIs,
-			],
-			&[Token::Dot2],
-			&[Token::Pipe],
-			&[Token::Caret],
-			&[Token::Ampersand],
-			&[Token::AngleL2, Token::AngleR2, Token::AngleR3],
-			&[Token::Plus, Token::Minus],
-			&[
-				Token::Asterisk,
-				Token::Slash,
-				Token::Percent,
-				Token::KwCross,
-				Token::KwDot,
-			],
-			&[Token::Asterisk2],
-			&[
-				Token::Minus2,
-				Token::Plus2,
-				Token::Bang,
-				Token::Tilde,
-				Token::KwSizeOf,
-				Token::KwAlignOf,
-			],
-			&[Token::Dot],
-		];
-
-		PREC_TABLE.iter().position(|level| level.contains(&token))
-	}
-
-	let Some(right_s) = strength(right) else {
-		return false;
-	};
-
-	let Some(left_s) = strength(left) else {
-		debug_assert_eq!(left, Token::Eof);
-		return true;
-	};
-
-	right_s > left_s
-}
-
 /// Expects the current position to be the start of at least one expression.
 pub fn expr_list(p: &mut Parser<Syn>) {
 	expr(p);
@@ -382,3 +311,55 @@ pub fn expr_list(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 }
+
+const PRATT_PRECEDENCE: &[&[Token]] = &[
+	&[
+		Token::Eq,
+		Token::AsteriskEq,
+		Token::SlashEq,
+		Token::PercentEq,
+		Token::PlusEq,
+		Token::MinusEq,
+		Token::AngleL2Eq,
+		Token::AngleR2Eq,
+		Token::AmpersandEq,
+		Token::PipeEq,
+		Token::CaretEq,
+		Token::AngleR3Eq,
+	],
+	&[Token::Question],
+	&[Token::Pipe2],
+	&[Token::Ampersand2],
+	&[Token::Eq2, Token::BangEq, Token::TildeEq2],
+	&[
+		Token::AngleL,
+		Token::AngleR,
+		Token::AngleLEq,
+		Token::AngleREq,
+		Token::AngleLAngleREq,
+		Token::KwIs,
+	],
+	&[Token::Dot2],
+	&[Token::Pipe],
+	&[Token::Caret],
+	&[Token::Ampersand],
+	&[Token::AngleL2, Token::AngleR2, Token::AngleR3],
+	&[Token::Plus, Token::Minus],
+	&[
+		Token::Asterisk,
+		Token::Slash,
+		Token::Percent,
+		Token::KwCross,
+		Token::KwDot,
+	],
+	&[Token::Asterisk2],
+	&[
+		Token::Minus2,
+		Token::Plus2,
+		Token::Bang,
+		Token::Tilde,
+		Token::KwSizeOf,
+		Token::KwAlignOf,
+	],
+	&[Token::Dot],
+];

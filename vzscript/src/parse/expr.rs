@@ -70,7 +70,7 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 			_ => {}
 		}
 
-		if infix_right_stronger(left, right) {
+		if doomfront::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
 			match right {
 				Syn::Dot => {
 					let m = p.open_before(lhs);
@@ -206,57 +206,38 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 	}
 }
 
-#[must_use]
-fn infix_right_stronger(left: Syn, right: Syn) -> bool {
-	const PREC_TABLE: &[&[Syn]] = &[
-		&[
-			// `Eq` might go here, but it causes trouble for param. defaults.
-			Syn::AsteriskEq,
-			Syn::SlashEq,
-			Syn::PercentEq,
-			Syn::PlusEq,
-			Syn::MinusEq,
-			Syn::AngleL2Eq,
-			Syn::AngleR2Eq,
-			Syn::AmpersandEq,
-			Syn::PipeEq,
-			Syn::CaretEq,
-		],
-		&[Syn::Pipe2],
-		&[Syn::Ampersand2],
-		&[Syn::Eq2, Syn::BangEq, Syn::TildeEq2],
-		&[
-			Syn::AngleL,
-			Syn::AngleR,
-			Syn::AngleLEq,
-			Syn::AngleREq,
-			Syn::KwIs,
-			Syn::KwIsNot,
-		],
-		&[Syn::Pipe],
-		&[Syn::Caret],
-		&[Syn::Ampersand],
-		&[Syn::AngleL2, Syn::AngleR2],
-		&[Syn::Plus, Syn::Minus],
-		&[Syn::Asterisk, Syn::Slash, Syn::Percent],
-		&[Syn::Asterisk2],
-		&[Syn::Bang, Syn::Tilde],
-		&[Syn::Dot],
-	];
-
-	#[must_use]
-	fn strength(token: Syn) -> Option<usize> {
-		PREC_TABLE.iter().position(|level| level.contains(&token))
-	}
-
-	let Some(right_s) = strength(right) else {
-		return false;
-	};
-
-	let Some(left_s) = strength(left) else {
-		debug_assert_eq!(left, Syn::Eof);
-		return true;
-	};
-
-	right_s > left_s
-}
+const PRATT_PRECEDENCE: &[&[Syn]] = &[
+	&[
+		// `Eq` might go here, but it causes trouble for param. defaults.
+		Syn::AsteriskEq,
+		Syn::SlashEq,
+		Syn::PercentEq,
+		Syn::PlusEq,
+		Syn::MinusEq,
+		Syn::AngleL2Eq,
+		Syn::AngleR2Eq,
+		Syn::AmpersandEq,
+		Syn::PipeEq,
+		Syn::CaretEq,
+	],
+	&[Syn::Pipe2],
+	&[Syn::Ampersand2],
+	&[Syn::Eq2, Syn::BangEq, Syn::TildeEq2],
+	&[
+		Syn::AngleL,
+		Syn::AngleR,
+		Syn::AngleLEq,
+		Syn::AngleREq,
+		Syn::KwIs,
+		Syn::KwIsNot,
+	],
+	&[Syn::Pipe],
+	&[Syn::Caret],
+	&[Syn::Ampersand],
+	&[Syn::AngleL2, Syn::AngleR2],
+	&[Syn::Plus, Syn::Minus],
+	&[Syn::Asterisk, Syn::Slash, Syn::Percent],
+	&[Syn::Asterisk2],
+	&[Syn::Bang, Syn::Tilde],
+	&[Syn::Dot],
+];
