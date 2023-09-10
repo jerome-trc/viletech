@@ -28,6 +28,7 @@ pub enum Expr {
 	Prefix(PrefixExpr),
 	Struct(StructExpr),
 	Switch(SwitchExpr),
+	Type(TypeExpr),
 	Union(UnionExpr),
 	Variant(VariantExpr),
 	While(WhileExpr),
@@ -52,7 +53,8 @@ impl AstNode for Expr {
 				| Syn::Literal | Syn::PrefixExpr
 				| Syn::StructExpr
 				| Syn::SwitchExpr
-				| Syn::UnionExpr | Syn::VariantExpr
+				| Syn::TypeExpr | Syn::UnionExpr
+				| Syn::VariantExpr
 		)
 	}
 
@@ -78,6 +80,7 @@ impl AstNode for Expr {
 			Syn::PrefixExpr => Some(Self::Prefix(PrefixExpr(node))),
 			Syn::StructExpr => Some(Self::Struct(StructExpr(node))),
 			Syn::SwitchExpr => Some(Self::Switch(SwitchExpr(node))),
+			Syn::TypeExpr => Some(Self::Type(TypeExpr::cast(node).unwrap())),
 			Syn::UnionExpr => Some(Self::Union(UnionExpr(node))),
 			Syn::VariantExpr => Some(Self::Variant(VariantExpr(node))),
 			Syn::WhileExpr => Some(Self::While(WhileExpr(node))),
@@ -104,6 +107,7 @@ impl AstNode for Expr {
 			Self::Prefix(inner) => inner.syntax(),
 			Self::Struct(inner) => inner.syntax(),
 			Self::Switch(inner) => inner.syntax(),
+			Self::Type(inner) => inner.syntax(),
 			Self::Union(inner) => inner.syntax(),
 			Self::Variant(inner) => inner.syntax(),
 			Self::While(inner) => inner.syntax(),
@@ -242,9 +246,17 @@ impl IdentExpr {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
 	pub fn token(&self) -> SyntaxToken {
-		let ret = self.0.first_token().unwrap();
+		let ret = self.0.last_token().unwrap();
 		debug_assert_eq!(ret.kind(), Syn::Ident);
 		ret
+	}
+
+	/// The returned token is always tagged [`Syn::Dot`].
+	#[must_use]
+	pub fn leading_dot(&self) -> Option<SyntaxToken> {
+		self.0
+			.first_token()
+			.filter(|token| token.kind() == Syn::Dot)
 	}
 }
 
@@ -336,6 +348,161 @@ simple_astnode!(Syn, StructExpr, Syn::StructExpr);
 pub struct SwitchExpr(SyntaxNode);
 
 simple_astnode!(Syn, SwitchExpr, Syn::SwitchExpr);
+
+// Type ////////////////////////////////////////////////////////////////////////
+
+/// Each variant wraps a node tagged [`Syn::TypeExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TypeExpr {
+	Auto(AutoTypeExpr),
+	KwType(KwTypeExpr),
+	Prefixed(PrefixedTypeExpr),
+}
+
+impl AstNode for TypeExpr {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		kind == Syn::TypeExpr
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if node.kind() != Syn::TypeExpr {
+			return None;
+		}
+
+		match node.first_token().unwrap().kind() {
+			Syn::KwAuto => Some(Self::Auto(AutoTypeExpr(node))),
+			Syn::KwType => Some(Self::KwType(KwTypeExpr(node))),
+			_ => Some(Self::Prefixed(PrefixedTypeExpr(node))),
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Auto(inner) => inner.syntax(),
+			Self::KwType(inner) => inner.syntax(),
+			Self::Prefixed(inner) => inner.syntax(),
+		}
+	}
+}
+
+/// Wraps a node tagged [`Syn::TypeExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AutoTypeExpr(SyntaxNode);
+
+simple_astnode!(Syn, AutoTypeExpr, Syn::TypeExpr);
+
+/// Wraps a node tagged [`Syn::TypeExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KwTypeExpr(SyntaxNode);
+
+simple_astnode!(Syn, KwTypeExpr, Syn::TypeExpr);
+
+/// Wraps a node tagged [`Syn::TypeExpr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PrefixedTypeExpr(SyntaxNode);
+
+simple_astnode!(Syn, PrefixedTypeExpr, Syn::TypeExpr);
+
+impl PrefixedTypeExpr {
+	pub fn prefixes(&self) -> impl Iterator<Item = TypeExprPrefix> {
+		self.0.children().filter_map(TypeExprPrefix::cast)
+	}
+
+	pub fn expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TypeExprPrefix {
+	Array(ArrayPrefix),
+	Option(OptionPrefix),
+	Ref(RefPrefix),
+}
+
+impl AstNode for TypeExprPrefix {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		matches!(kind, Syn::ArrayPrefix | Syn::OptionPrefix | Syn::RefPrefix)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		match node.kind() {
+			Syn::ArrayPrefix => Some(Self::Array(ArrayPrefix(node))),
+			Syn::OptionPrefix => Some(Self::Option(OptionPrefix(node))),
+			Syn::RefPrefix => Some(Self::Ref(RefPrefix(node))),
+			_ => None,
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Array(inner) => inner.syntax(),
+			Self::Option(inner) => inner.syntax(),
+			Self::Ref(inner) => inner.syntax(),
+		}
+	}
+}
+
+/// Wraps a node tagged [`Syn::ArrayPrefix`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayPrefix(SyntaxNode);
+
+simple_astnode!(Syn, ArrayPrefix, Syn::ArrayPrefix);
+
+impl ArrayPrefix {
+	pub fn len_expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
+/// Wraps a node tagged [`Syn::OptionPrefix`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OptionPrefix(SyntaxNode);
+
+simple_astnode!(Syn, OptionPrefix, Syn::OptionPrefix);
+
+impl OptionPrefix {
+	/// The returned token is always tagged [`Syn::Question`].
+	#[must_use]
+	pub fn token(&self) -> SyntaxToken {
+		let ret = self.0.last_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::Question);
+		ret
+	}
+}
+
+/// Wraps a node tagged [`Syn::RefPrefix`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct RefPrefix(SyntaxNode);
+
+simple_astnode!(Syn, RefPrefix, Syn::RefPrefix);
+
+impl RefPrefix {
+	/// The returned token is always tagged [`Syn::Ampersand`].
+	#[must_use]
+	pub fn token(&self) -> SyntaxToken {
+		let ret = self.0.last_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::Ampersand);
+		ret
+	}
+}
 
 // Union ///////////////////////////////////////////////////////////////////////
 

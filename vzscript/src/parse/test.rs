@@ -40,11 +40,11 @@ fn smoke_attribute() {
 		"#[ coal ]",
 	];
 
-	for (_, source) in SOURCES.iter().copied().enumerate() {
+	for (i, source) in SOURCES.iter().copied().enumerate() {
 		let ptree: ParseTree =
 			doomfront::parse(source, Attribute::parse, crate::Version::new(0, 0, 0));
 
-		assert_no_errors(&ptree, 0);
+		assert_no_errors(&ptree, i);
 
 		if prettyprint_maybe(ptree.cursor()) {
 			eprintln!()
@@ -70,20 +70,22 @@ fn smoke_annotation() {
 
 #[test]
 fn smoke_expr_field() {
-	const SOURCE: &str = r#"mist.at.dawn"#;
+	const SOURCES: &[&str] = &["mist.at.dawn", ".deadly.town", "'geometry'.plutopia"];
 
-	let ptree: ParseTree = doomfront::parse(
-		SOURCE,
-		|p| {
-			let _ = Expression::parse(p);
-		},
-		crate::Version::new(0, 0, 0),
-	);
+	for (i, source) in SOURCES.iter().copied().enumerate() {
+		let ptree: ParseTree = doomfront::parse(
+			source,
+			|p| {
+				let _ = Expression::parse(p);
+			},
+			crate::Version::new(0, 0, 0),
+		);
 
-	assert_no_errors(&ptree, 0);
+		assert_no_errors(&ptree, i);
 
-	if prettyprint_maybe(ptree.cursor()) {
-		eprintln!()
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!()
+		}
 	}
 }
 
@@ -103,6 +105,34 @@ fn smoke_expr_for() {
 
 	if prettyprint_maybe(ptree.cursor()) {
 		eprintln!()
+	}
+}
+
+#[test]
+fn smoke_expr_type() {
+	const SOURCES: &[&str] = &[
+		"auto",
+		"@type",
+		"[0]battle.strategy",
+		"[2 + 2].slime.dweller",
+		"?[sanctified()]cataclysmic_impact()",
+		"&'silicon dust'",
+	];
+
+	for (i, source) in SOURCES.iter().copied().enumerate() {
+		let ptree: ParseTree = doomfront::parse(
+			source,
+			|p| {
+				let _ = Expression::parse(p);
+			},
+			crate::Version::new(0, 0, 0),
+		);
+
+		assert_no_errors(&ptree, i);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!()
+		}
 	}
 }
 
@@ -132,6 +162,24 @@ fn smoke_stat_bind() {
 }
 
 // Non-structural items ////////////////////////////////////////////////////////
+
+#[test]
+fn smoke_constdef() {
+	const SOURCES: &[&str] = &["const int32: @type = builtin_t('int32');"];
+
+	for (i, source) in SOURCES.iter().copied().enumerate() {
+		let ptree = doomfront::parse(
+			source,
+			super::core_element::<true>,
+			crate::Version::new(0, 0, 0),
+		);
+		assert_no_errors(&ptree, 0);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!()
+		}
+	}
+}
 
 #[test]
 fn smoke_func_decl() {

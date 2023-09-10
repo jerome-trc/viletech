@@ -45,7 +45,7 @@ pub(super) fn block(
 	p.close(mark, kind)
 }
 
-/// Common to call expressions and annotations.
+/// Common to call expressions, annotations, and attributes.
 pub(super) struct ArgList;
 
 impl ArgList {
@@ -185,7 +185,11 @@ pub(super) fn name_chain(p: &mut Parser<Syn>) {
 	p.close(mark, Syn::NameChain);
 }
 
-/// "Type specifier". Common to function declarations and parameters.
+/// "Type specifier". Common to
+/// - class definitions (inheritance specification)
+/// - enum definitions (underlying type specification)
+/// - field declarations
+/// - function declarations (return types, parameters)
 pub(super) struct TypeSpec;
 
 impl TypeSpec {
@@ -195,7 +199,11 @@ impl TypeSpec {
 		let mark = p.open();
 		p.expect(Syn::Colon, Syn::Colon, &["`:`"]);
 		trivia_0plus(p);
-		Expression::parse(p);
+
+		if !p.eat(Syn::KwAuto, Syn::KwAuto) {
+			let _ = Expression::parse(p);
+		}
+
 		p.close(mark, Syn::TypeSpec);
 	}
 }

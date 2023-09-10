@@ -24,6 +24,7 @@ impl ClassDef {
 
 		while !p.at(Syn::BraceR) && !p.eof() {
 			struct_innard(p);
+			trivia_0plus(p);
 		}
 
 		p.close(mark, Syn::ClassDef);
@@ -43,6 +44,7 @@ impl StructDef {
 
 		while !p.at(Syn::BraceR) && !p.eof() {
 			struct_innard(p);
+			trivia_0plus(p);
 		}
 
 		p.close(mark, Syn::StructDef);
@@ -68,7 +70,7 @@ impl UnionDef {
 	}
 }
 
-fn struct_innard(p: &mut Parser<Syn>) {
+pub(super) fn struct_innard(p: &mut Parser<Syn>) {
 	let mark = p.open();
 
 	Attribute::parse_0plus(p);

@@ -14,7 +14,11 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `'#' ident arglist?`
 	Annotation,
-	/// `'(' expr? (',' expr)* ')'`
+	/// `'[' nontypeexpr ']'`
+	///
+	/// Can start a [`Syn::TypeExpr`].
+	ArrayPrefix,
+	/// `'(' argument? (',' argument)* ')'`
 	ArgList,
 	/// `(ident ':')? expr`
 	Argument,
@@ -48,24 +52,32 @@ pub enum Syn {
 	///
 	/// Counterpart to what is known in ZScript's grammar as a "dottable ID".
 	NameChain,
+	/// `'?'`
+	///
+	/// Can start a [`Syn::TypeExpr`].
+	OptionPrefix,
 	/// `'(' param? (',' param)* ')'`
 	ParamList,
 	/// `ident typespec ('=' expr)?`
 	Parameter,
-	/// `'->' expr`
-	ReturnType,
+	/// `'&'`
+	///
+	/// Can start a [`Syn::TypeExpr`].
+	RefPrefix,
 	/// `'struct' ident typequals '{' structinnard* '}'`
 	StructDef,
 	/// `'default' ':' block | 'case' expr ':' block`
 	SwitchCase,
-	/// A "type specifier". Grammar: `':' expr`
+	/// `':' expr`
+	///
+	/// A "type specifier".
 	TypeSpec,
 	/// `'union' ident '{' unioninnard* '}'`
 	UnionDef,
 	/// `ident '{' fielddecl* '}'`
 	UnionVariant,
 	// Nodes: statements ///////////////////////////////////////////////////////
-	/// `('let' | 'readonly') const? 'ident' typespec? ('=' expr)? ';'`
+	/// `('let' | 'readonly') 'ident' typespec? ('=' expr)? ';'`
 	BindStat,
 	/// `'break' blocklabel? ';'`
 	BreakStat,
@@ -92,7 +104,7 @@ pub enum Syn {
 	EnumExpr,
 	/// `'@' paramlist block`
 	FunctionExpr,
-	/// Is parent to only a [`Syn::Ident`] token.
+	/// ident | ('.' ident)
 	IdentExpr,
 	/// `'if' expr block`
 	IfExpr,
@@ -123,6 +135,13 @@ pub enum Syn {
 	SwitchExpr,
 	/// `'union' '{' unioninnard* '}'`
 	UnionExpr,
+	/// Parent to only the token [`Syn::KwType`].
+	TypeKeywordExpr,
+	/// One of the following:
+	/// - [`Syn::KwType`]
+	/// - [`Syn::KwAuto`]
+	/// - One or more type expr. prefixes followed by any other kind of expression.
+	TypeExpr,
 	/// `@ namechain '{' unionfield* '}'`
 	VariantExpr,
 	/// `'while' expr block`

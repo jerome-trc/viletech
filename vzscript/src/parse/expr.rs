@@ -4,7 +4,7 @@ use doomfront::parser::{CloseMark, Parser};
 
 use crate::Syn;
 
-use super::common::*;
+use super::{common::*, structure::*};
 
 pub(super) struct Expression;
 
@@ -36,7 +36,50 @@ impl Expression {
 
 	/// Returns `true` if the expression that was parsed ends with a block.
 	pub(super) fn parse(p: &mut Parser<Syn>) -> bool {
-		recur(p, Syn::Eof)
+		let t0 = p.nth(0);
+
+		if matches!(t0, Syn::KwAuto | Syn::KwType) {
+			let mark = p.open();
+			p.advance(t0);
+			p.close(mark, Syn::TypeExpr);
+			false
+		} else if matches!(t0, Syn::BracketL | Syn::Question | Syn::Ampersand) {
+			let mut block_end = false;
+			let mark = p.open();
+
+			loop {
+				match p.nth(0) {
+					t @ Syn::BracketL => {
+						let pfx = p.open();
+						p.advance(t);
+						trivia_0plus(p);
+						let _ = recur(p, Syn::Eof);
+						trivia_0plus(p);
+						p.expect(Syn::BracketR, Syn::BracketR, &["`]`"]);
+						p.close(pfx, Syn::ArrayPrefix);
+					}
+					t @ Syn::Ampersand => {
+						let pfx = p.open();
+						p.advance(t);
+						p.close(pfx, Syn::RefPrefix);
+					}
+					t @ Syn::Question => {
+						let pfx = p.open();
+						p.advance(t);
+						p.close(pfx, Syn::OptionPrefix);
+					}
+					_ => {
+						block_end = recur(p, Syn::Eof);
+						break;
+					}
+				}
+			}
+
+			p.close(mark, Syn::TypeExpr);
+			block_end
+		} else {
+			recur(p, Syn::Eof)
+		}
 	}
 }
 
@@ -104,6 +147,11 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.advance(t);
 			(p.close(mark, Syn::IdentExpr), false)
 		}
+		t @ Syn::Dot => {
+			p.advance(t);
+			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+			(p.close(mark, Syn::IdentExpr), false)
+		}
 		t @ (Syn::FalseLit
 		| Syn::FloatLit
 		| Syn::IntLit
@@ -151,11 +199,31 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			block(p, body, Syn::Block, true);
 			(p.close(mark, Syn::WhileExpr), true)
 		}
-		t @ Syn::KwClass => {
+		t @ Syn::DotBraceL => {
 			p.advance(t);
 			trivia_0plus(p);
 			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
+			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			(p.close(mark, Syn::ConstructExpr), true)
+		}
+		t @ Syn::KwClass => {
+			p.advance(t);
+			trivia_0plus(p);
+
+			if p.at_any(TypeSpec::FIRST_SET) {
+				TypeSpec::parse(p);
+				trivia_0plus(p);
+			}
+
+			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			trivia_0plus(p);
+
+			while !p.at(Syn::BraceR) && !p.eof() {
+				struct_innard(p);
+				trivia_0plus(p);
+			}
+
 			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::ClassExpr), true)
 		}
@@ -171,7 +239,13 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.advance(t);
 			trivia_0plus(p);
 			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
-			todo!();
+			trivia_0plus(p);
+
+			while !p.at(Syn::BraceR) && !p.eof() {
+				struct_innard(p);
+				trivia_0plus(p);
+			}
+
 			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::StructExpr), true)
 		}
@@ -183,14 +257,6 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::UnionExpr), true)
 		}
-		t @ Syn::DotBraceL => {
-			p.advance(t);
-			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
-			todo!();
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
-			(p.close(mark, Syn::ConstructExpr), true)
-		}
 		Syn::BraceL => (block(p, mark, Syn::BlockExpr, false), false),
 		other => (
 			p.advance_err_and_close(
@@ -198,6 +264,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				other,
 				Syn::Error,
 				&[
+					"This is a placeholder error message!",
 					// TODO
 				],
 			),

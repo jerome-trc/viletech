@@ -1,10 +1,35 @@
-//! Non-structural items; enums, functions, symbolic constants, type aliases.
+//! Non-structural items; enums, functions, symbolic constants.
 
 use doomfront::parser::{OpenMark, Parser};
 
 use crate::Syn;
 
 use super::{common::*, expr::*};
+
+pub(super) struct ConstDef;
+
+impl ConstDef {
+	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwConst];
+
+	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
+		p.expect(Syn::KwConst, Syn::KwConst, &["`const`"]);
+		trivia_0plus(p);
+		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		trivia_0plus(p);
+
+		if p.at_any(TypeSpec::FIRST_SET) {
+			TypeSpec::parse(p);
+			trivia_0plus(p);
+		}
+
+		p.expect(Syn::Eq, Syn::Eq, &["`=`"]);
+		trivia_0plus(p);
+		Expression::parse(p);
+		trivia_0plus(p);
+		p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.close(mark, Syn::ConstDef);
+	}
+}
 
 pub(super) struct FuncDecl;
 
