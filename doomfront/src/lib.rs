@@ -111,8 +111,8 @@ impl<L: LangExt> ParseTree<L> {
 		!self.errors.is_empty()
 	}
 
-	pub fn errors(&self) -> impl Iterator<Item = &ParseError<L>> {
-		self.errors.iter()
+	pub fn errors(&self) -> &[ParseError<L>] {
+		&self.errors
 	}
 
 	#[must_use]
