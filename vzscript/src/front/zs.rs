@@ -97,7 +97,7 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 		let mut issue = Issue::new(
 			ctx.path,
 			TextRange::new(r_start, r_end),
-			format!("attempt to re-declare symbol `{}`", &name_tok),
+			format!("attempt to re-declare symbol `{}`", name_tok.text()),
 			issue::Level::Error(issue::Error::Redeclare),
 		);
 

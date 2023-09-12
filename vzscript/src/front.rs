@@ -21,8 +21,8 @@ use crate::{
 	compile::{
 		self,
 		intern::{NsName, SymbolIx},
-		symbol::{DefIx, Location, Symbol, SymbolKind},
-		Compiler, Scope,
+		symbol::{DefIx, Definition, Location, Symbol, SymbolKind},
+		Compiler, LibSource, Scope,
 	},
 	inctree::SourceKind,
 };
@@ -95,6 +95,7 @@ fn declaration_pass(
 			for (ii, pfile) in libsrc.inctree.files.iter().enumerate() {
 				let mut ctx = DeclContext {
 					compiler,
+					lib: libsrc,
 					path: pfile.path(),
 					lib_ix: i as u16,
 					file_ix: ii as u16,
@@ -119,6 +120,7 @@ fn declaration_pass(
 #[derive(Debug)]
 pub(self) struct DeclContext<'c> {
 	pub(self) compiler: &'c Compiler,
+	pub(self) lib: &'c LibSource,
 	pub(self) path: &'c str,
 	pub(self) lib_ix: u16,
 	pub(self) file_ix: u16,

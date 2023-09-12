@@ -110,7 +110,14 @@ pub enum Level {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum Error {
+	/// Wrong number of arguments passed to a function.
+	ArgCount,
+	/// Mismatch between argument and parameter types.
+	ArgType,
 	BinExprTypeMismatch,
+	/// An argument passed to a compiler built-in caused an error that otherwise
+	/// falls under no other error code.
+	Builtin,
 	/// e.g., ZScript tried to use `super` at compile time.
 	ConstEval,
 	FlagDefBitOverflow,

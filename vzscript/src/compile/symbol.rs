@@ -1,14 +1,20 @@
 //! Information used by the semantic mid-section but not the backend.
 
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
+use arc_swap::ArcSwap;
 use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{TextRange, TextSize};
+use smallvec::SmallVec;
 
 use crate::{
-	back::SsaValues,
+	ast,
+	back::AbiTypes,
 	rti,
-	tsys::{FuncType, TypeDef, TypeHandle},
+	sema::{CEval, CEvalVec},
+	tsys::{
+		ClassType, EnumType, FuncType, PrimitiveType, StructType, TypeDef, TypeHandle, UnionType,
+	},
 	vir,
 };
 
@@ -16,8 +22,8 @@ use super::{intern::SymbolIx, Compiler, Scope};
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
-	/// `None` for primitives and namespaces.
 	pub(crate) location: Option<Location>,
+	/// Dictates what kind of definition Sema. will try to provide this with.
 	pub(crate) kind: SymbolKind,
 	/// Determines whether name lookups need to happen through all namespaces
 	/// (to imitate the reference implementation's global namespace) or just
@@ -57,6 +63,7 @@ pub(crate) struct Location {
 	pub(crate) file_ix: u16,
 }
 
+/// See [`Symbol::kind`]; this isn't used for anything else.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SymbolKind {
 	Class,
@@ -111,16 +118,19 @@ pub(crate) enum Definition {
 		typedef: rti::Handle<TypeDef>,
 	},
 	Function {
-		tdef: TypeHandle<FuncType>,
+		typedef: TypeHandle<FuncType>,
 		code: FunctionCode,
 	},
-	Type(rti::Record),
+	Type {
+		record: rti::Record,
+	},
 }
 
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
-	Builtin(unsafe extern "C" fn(SsaValues) -> SsaValues),
-	BuiltinCEval(fn(&Compiler, &mut dyn Any)),
+	Builtin(unsafe extern "C" fn(AbiTypes) -> AbiTypes),
+	/// The string slice parameter is a path to the calling file.
+	BuiltinCEval(fn(&Compiler, &str, ast::ArgList) -> CEval),
 	Native(&'static str),
 	Ir(vir::Block),
 }

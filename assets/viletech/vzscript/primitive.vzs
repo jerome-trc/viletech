@@ -1,1 +1,16 @@
-const int32: @type = builtin_t('int32');
+#[core]
+mixin Integer {
+	/// Computes the absolute value of `self`.
+	function abs(): Self;
+}
+
+#[core]
+mixin UInteger {
+	function next_twos_power(): Self;
+}
+
+const int32: @type = int_t(32);
+const uint32: @type = uint_t(32);
+
+const int = int32;
+const uint = uint32;

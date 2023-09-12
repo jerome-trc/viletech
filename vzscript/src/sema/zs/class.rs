@@ -16,6 +16,7 @@ use crate::{
 #[must_use]
 pub(super) fn define(ctx: &SemaContext, symbol: &Symbol, classdef: ast::ClassDef) -> DefIx {
 	let mut typedef = ClassType {
+		parent: todo!(),
 		is_abstract: false,
 		restrict: tsys::Restrict::None,
 	};
@@ -46,11 +47,8 @@ pub(super) fn define(ctx: &SemaContext, symbol: &Symbol, classdef: ast::ClassDef
 		return DefIx::Error;
 	}
 
-	let zname = ZName(RString::new(classdef.name().unwrap().text()));
-	let store = rti::Store::new(zname, TypeDef::new_class(typedef));
-	let record = rti::Record::new_type(store);
-	let def_ix = ctx.defs.push(Definition::Type(record));
-	DefIx::Some(def_ix as u32)
+	ctx.define_type(todo!("fully-qualified name"), TypeDef::new_class(typedef))
+		.0
 }
 
 fn process_qualifiers(

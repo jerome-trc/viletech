@@ -147,6 +147,21 @@ impl std::ops::Deref for LitToken {
 	}
 }
 
+impl std::fmt::Display for LitToken {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self.0.kind() {
+			Syn::FalseLit => write!(f, "`false`"),
+			Syn::FloatLit => write!(f, "floating-point number {}", self.0.text()),
+			Syn::IntLit => write!(f, "integer {}", self.0.text()),
+			Syn::NameLit => write!(f, "name {}", self.0.text()),
+			Syn::NullLit => write!(f, "`null`"),
+			Syn::StringLit => write!(f, "string {}", self.0.text()),
+			Syn::TrueLit => write!(f, "`true`"),
+			_ => unreachable!(),
+		}
+	}
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntSuffix {
 	None,

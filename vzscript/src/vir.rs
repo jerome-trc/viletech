@@ -6,7 +6,7 @@ use cranelift::prelude::{FloatCC, IntCC};
 use util::rstring::RString;
 
 use crate::{
-	back::SsaType,
+	back::AbiType,
 	compile::{
 		intern::{NameIx, SymbolIx},
 		symbol::DefIx,
@@ -16,25 +16,19 @@ use crate::{
 };
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct Block(pub(crate) Vec<Node>);
+pub(crate) struct Block(pub(crate) Box<[Node]>);
 
 impl std::ops::Deref for Block {
-	type Target = Vec<Node>;
+	type Target = Box<[Node]>;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
 }
 
-impl std::ops::DerefMut for Block {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
-}
-
 impl From<Node> for Block {
 	fn from(value: Node) -> Self {
-		Self(vec![value])
+		Self(vec![value].into_boxed_slice())
 	}
 }
 
@@ -201,19 +195,19 @@ pub(crate) enum UnaryOp {
 	/// Convert a floating-point scalar to a signed integer.
 	///
 	/// The given type corresponds to the latter.
-	FToSInt(SsaType),
+	FToSInt(AbiType),
 	/// Convert a floating-point scalar to an unsigned integer.
 	///
 	/// The given type corresponds to the latter.
-	FToUInt(SsaType),
+	FToUInt(AbiType),
 	/// Convert a floating-point scalar to a smaller float type.
-	FDemote(SsaType),
+	FDemote(AbiType),
 	/// Floating point rounding to an integer, towards negative infinity.
 	Floor,
 	/// Floating-point negation.
 	FNeg,
 	/// Convert a floating-point scalar to a larger float type.
-	FPromote(SsaType),
+	FPromote(AbiType),
 	/// Integer negation.
 	INeg,
 	/// Split an integer into low and high parts.
@@ -223,7 +217,7 @@ pub(crate) enum UnaryOp {
 	/// Count the number of one bits in an integer.
 	PopCnt,
 	/// Convert an integer to a larger integral type via sign extension.
-	SExtend(SsaType),
+	SExtend(AbiType),
 	/// Floating-point square root.
 	Sqrt,
 	/// Floating-point rounding to an integer, towards zero.

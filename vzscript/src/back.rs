@@ -13,8 +13,10 @@ use crate::{
 	Project, Runtime,
 };
 
-pub type SsaType = cranelift::codegen::ir::Type;
-pub type SsaValues = smallvec::SmallVec<[SsaType; 1]>;
+pub type AbiType = cranelift::codegen::ir::Type;
+pub type AbiTypes = smallvec::SmallVec<[AbiType; 1]>;
+pub type SsaValue = cranelift::prelude::Value;
+pub type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
 
 #[must_use]
 pub fn codegen(
@@ -26,19 +28,18 @@ pub fn codegen(
 	assert!(!compiler.failed);
 
 	let Compiler {
-		project,
-		native,
+		native_ptrs,
 		strings,
 		..
 	} = compiler;
 
-	let native_symbols = Arc::new(native);
+	let native_ptrs = Arc::new(native_ptrs);
 	let runtime = Runtime::new(strings);
 	let _ = runtime.data_ptr();
 
-	let _ = CodeGenUnit::new(native_symbols.clone(), opt, hotswap);
+	let _ = CodeGenUnit::new(native_ptrs.clone(), opt, hotswap);
 
-	(project, runtime)
+	(Project::default(), runtime)
 }
 
 /// To wrap in an [`Arc`] so that JIT memory is freed properly.
@@ -94,7 +95,10 @@ impl CodeGenUnit {
 		builder.hotswap(hotswap);
 
 		builder.symbol_lookup_fn(Box::new(move |name_str| {
-			native.get(name_str).map(|np| np.0)
+			native.get(name_str).map(|np| match np {
+				NativePtr::Data { ptr, .. } => *ptr,
+				NativePtr::Function { ptr, .. } => *ptr,
+			})
 		}));
 
 		let module = Mutex::new(JITModule::new(builder));

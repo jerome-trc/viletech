@@ -184,6 +184,7 @@ pub struct ArrayType {
 
 #[derive(Debug, Clone)]
 pub struct ClassType {
+	pub parent: Option<TypeInHandle<ClassType>>,
 	pub is_abstract: bool,
 	pub restrict: Restrict,
 }
@@ -225,6 +226,26 @@ pub enum PrimitiveType {
 	Void,
 }
 
+impl PrimitiveType {
+	#[must_use]
+	pub fn int_bit_width(self) -> Option<u16> {
+		match self {
+			Self::Int8 | Self::Uint8 => Some(8),
+			Self::Int16 | Self::Uint16 => Some(16),
+			Self::Int32 | Self::Uint32 => Some(32),
+			Self::Int64 | Self::Uint64 => Some(64),
+			Self::Int128 | Self::Uint128 => Some(128),
+			Self::Float32
+			| Self::Float64
+			| Self::IName
+			| Self::String
+			| Self::TypeDef
+			| Self::Void
+			| Self::Bool => None,
+		}
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct StructType {}
 
@@ -235,7 +256,14 @@ pub struct UnionType {}
 
 /// Specialization on [`crate::rti::Handle`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeHandle<T>(rti::Handle<TypeDef>, PhantomData<T>);
+pub struct TypeHandle<T>(pub(crate) rti::Handle<TypeDef>, pub(crate) PhantomData<T>);
+
+impl<T> TypeHandle<T> {
+	#[must_use]
+	pub fn upcast(self) -> rti::Handle<TypeDef> {
+		self.0
+	}
+}
 
 // SAFETY: Whenever dereferencing `TypeHandle`, union accesses are guaranteed
 // to be sound because a handle can not be created for the wrong type.

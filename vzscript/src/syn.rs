@@ -96,7 +96,7 @@ pub enum Syn {
 	BlockExpr,
 	/// `expr arglist`
 	CallExpr,
-	/// `class '{' classinnard* '}'`
+	/// `class typespec? '{' classinnard* '}'`
 	ClassExpr,
 	/// `'.' '{' assignment* '}'`
 	ConstructExpr,
@@ -135,8 +135,6 @@ pub enum Syn {
 	SwitchExpr,
 	/// `'union' '{' unioninnard* '}'`
 	UnionExpr,
-	/// Parent to only the token [`Syn::KwType`].
-	TypeKeywordExpr,
 	/// One of the following:
 	/// - [`Syn::KwType`]
 	/// - [`Syn::KwAuto`]
@@ -228,8 +226,6 @@ pub enum Syn {
 	KwType,
 	#[token("union", priority = 5)]
 	KwUnion,
-	#[token("using", priority = 5)]
-	KwUsing,
 	#[token("virtual", priority = 5)]
 	KwVirtual,
 	#[token("while", priority = 5)]
@@ -313,6 +309,8 @@ pub enum Syn {
 	Eq2,
 	#[token("-")]
 	Minus,
+	#[token("--")]
+	Minus2,
 	#[token("-=")]
 	MinusEq,
 	#[token("(")]
@@ -333,6 +331,8 @@ pub enum Syn {
 	PipeEq,
 	#[token("+")]
 	Plus,
+	#[token("++")]
+	Plus2,
 	#[token("+=")]
 	PlusEq,
 	#[token("#")]

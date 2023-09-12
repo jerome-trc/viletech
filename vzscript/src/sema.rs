@@ -1,9 +1,10 @@
-mod vzs;
-mod zs;
+pub(crate) mod vzs;
+pub(crate) mod zs;
 
 use crossbeam::utils::Backoff;
 use doomfront::rowan::cursor::SyntaxNode;
 use rayon::prelude::*;
+use smallvec::SmallVec;
 
 use crate::{
 	compile::{
@@ -159,6 +160,29 @@ pub(self) struct ConstEval {
 	pub(self) typedef: Option<rti::Handle<TypeDef>>,
 	pub(self) ir: vir::Node,
 }
+
+/// The output of a compile-time evaluated expression.
+///
+/// Type definition handles will be `None` wherever type inference fails.
+#[derive(Debug, Clone)]
+pub(crate) enum CEval {
+	SelfPtr {
+		typedef: Option<rti::Handle<TypeDef>>,
+	},
+	SuperPtr {
+		typedef: Option<rti::Handle<TypeDef>>,
+	},
+	Type {
+		def: rti::Handle<TypeDef>,
+	},
+	Value {
+		typedef: Option<rti::Handle<TypeDef>>,
+		value: SmallVec<[vir::Immediate; 1]>,
+	},
+	Error,
+}
+
+pub(crate) type CEvalVec = SmallVec<[CEval; 1]>;
 
 #[derive(Debug, Clone)]
 pub(self) struct ScopeStack<'s>(Vec<&'s Scope>, &'s Compiler);

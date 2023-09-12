@@ -1,10 +1,13 @@
 //! Code that ties together the frontend, mid-section, and backend.
 
+pub(crate) mod builtins;
 pub(crate) mod intern;
 pub(crate) mod symbol;
 
 #[cfg(test)]
 mod test;
+
+use std::any::TypeId;
 
 use append_only_vec::AppendOnlyVec;
 use doomfront::zdoom::{decorate, inctree::IncludeTree};
@@ -12,11 +15,13 @@ use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use util::rstring::RString;
 
-use crate::{issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project, Version};
+use crate::{
+	back::AbiTypes, issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project, Version,
+};
 
 use self::{
 	intern::{NameInterner, NameIx, NsName, SymbolIx},
-	symbol::{Definition, Location, Symbol},
+	symbol::{DefIx, Definition, FunctionCode, Location, Symbol},
 };
 
 #[derive(Debug)]
@@ -29,6 +34,29 @@ pub struct LibSource {
 }
 
 #[derive(Debug)]
+pub enum NativePtr {
+	Data {
+		ptr: *const u8,
+		layout: AbiTypes,
+	},
+	Function {
+		ptr: *const u8,
+		params: AbiTypes,
+		returns: AbiTypes,
+	},
+}
+
+// SAFETY: Caller of `Compiler::native` provides guarantees about given pointers.
+unsafe impl Send for NativePtr {}
+unsafe impl Sync for NativePtr {}
+
+#[derive(Debug)]
+pub struct NativeType {
+	id: TypeId,
+	layout: AbiTypes,
+}
+
+#[derive(Debug)]
 pub struct Compiler {
 	// Input
 	pub(crate) sources: Vec<LibSource>,
@@ -37,11 +65,11 @@ pub struct Compiler {
 	pub(crate) issues: Mutex<Vec<Issue>>,
 	pub(crate) failed: bool,
 	// Storage
-	pub(crate) project: Project,
 	pub(crate) builtins: Builtins,
 	pub(crate) globals: Scope,
 	pub(crate) defs: AppendOnlyVec<Definition>,
-	pub(crate) native: FxHashMap<&'static str, NativePtr>,
+	pub(crate) native_ptrs: FxHashMap<&'static str, NativePtr>,
+	pub(crate) native_types: FxHashMap<&'static str, NativeType>,
 	/// One for each library, parallel to [`Self::sources`].
 	pub(crate) namespaces: Vec<Scope>,
 	pub(crate) symbols: AppendOnlyVec<Symbol>,
@@ -70,11 +98,9 @@ impl Compiler {
 			"`Compiler::new` needs at least one `LibSource`"
 		);
 
-		let mut project = Project::default();
-
 		#[must_use]
 		fn core_t(
-			project: &mut Project,
+			defs: &AppendOnlyVec<Definition>,
 			qname: &'static str,
 			tdef: &TypeDef,
 		) -> rti::Handle<TypeDef> {
@@ -82,21 +108,23 @@ impl Compiler {
 			let store = rti::Store::new(zname.clone(), tdef.clone());
 			let record = rti::Record::new_type(store);
 			let handle = record.handle_type();
-			project.rti.insert(zname, record);
+			let ix = defs.push(Definition::Type { record });
 			handle
 		}
 
+		let defs = AppendOnlyVec::new();
+
 		let builtins = Builtins {
-			void_t: core_t(&mut project, "vzs.void", &TypeDef::BUILTIN_VOID),
-			bool_t: core_t(&mut project, "vzs.bool", &TypeDef::BUILTIN_BOOL),
-			int32_t: core_t(&mut project, "vzs.int32", &TypeDef::BUILTIN_INT32),
-			uint32_t: core_t(&mut project, "vzs.uint32", &TypeDef::BUILTIN_UINT32),
-			int64_t: core_t(&mut project, "vzs.int64", &TypeDef::BUILTIN_INT64),
-			uint64_t: core_t(&mut project, "vzs.uint64", &TypeDef::BUILTIN_UINT64),
-			float32_t: core_t(&mut project, "vzs.float32", &TypeDef::BUILTIN_FLOAT32),
-			float64_t: core_t(&mut project, "vzs.float64", &TypeDef::BUILTIN_FLOAT64),
-			iname_t: core_t(&mut project, "vzs.iname", &TypeDef::BUILTIN_INAME),
-			string_t: core_t(&mut project, "vzs.string", &TypeDef::BUILTIN_STRING),
+			void_t: core_t(&defs, "vzs.void", &TypeDef::BUILTIN_VOID),
+			bool_t: core_t(&defs, "vzs.bool", &TypeDef::BUILTIN_BOOL),
+			int32_t: core_t(&defs, "vzs.int32", &TypeDef::BUILTIN_INT32),
+			uint32_t: core_t(&defs, "vzs.uint32", &TypeDef::BUILTIN_UINT32),
+			int64_t: core_t(&defs, "vzs.int64", &TypeDef::BUILTIN_INT64),
+			uint64_t: core_t(&defs, "vzs.uint64", &TypeDef::BUILTIN_UINT64),
+			float32_t: core_t(&defs, "vzs.float32", &TypeDef::BUILTIN_FLOAT32),
+			float64_t: core_t(&defs, "vzs.float64", &TypeDef::BUILTIN_FLOAT64),
+			iname_t: core_t(&defs, "vzs.iname", &TypeDef::BUILTIN_INAME),
+			string_t: core_t(&defs, "vzs.string", &TypeDef::BUILTIN_STRING),
 		};
 
 		Self {
@@ -104,11 +132,11 @@ impl Compiler {
 			issues: Mutex::default(),
 			stage: Stage::Declaration,
 			failed: false,
-			project,
 			builtins,
 			globals: Scope::default(),
-			defs: AppendOnlyVec::new(),
-			native: FxHashMap::default(),
+			defs,
+			native_ptrs: FxHashMap::default(),
+			native_types: FxHashMap::default(),
 			namespaces: vec![],
 			symbols: AppendOnlyVec::new(),
 			strings: FxDashSet::default(),
@@ -124,14 +152,18 @@ impl Compiler {
 	///
 	/// - Dereferencing a data object pointer or calling a function pointer must
 	/// never invoke any thread-unsafe behavior.
-	/// - For every value in `symbols`, one of the provided [`LibSource`]s must
+	/// - For every value in `ptrs`, one of the provided [`LibSource`]s must
 	/// contain a declaration (with no definition) with a `native` attribute,
-	/// with a single string argument matching the key in `symbols`. That
+	/// with a single string argument matching the key in `ptrs`. That
 	/// declaration must be ABI-compatible with the native function's raw pointer.
-	pub unsafe fn native(&mut self, symbols: FxHashMap<&'static str, *const u8>) {
+	pub unsafe fn register_native(
+		&mut self,
+		ptrs: FxHashMap<&'static str, NativePtr>,
+		types: FxHashMap<&'static str, NativeType>,
+	) {
 		assert!(matches!(self.stage, Stage::Declaration | Stage::Semantic));
-		// SAFETY: `NativePtr` is `repr(transparent)` over `*const u8`.
-		self.native = std::mem::transmute::<_, _>(symbols);
+		self.native_ptrs = ptrs;
+		self.native_types = types;
 	}
 
 	#[must_use]
@@ -172,6 +204,40 @@ impl Compiler {
 		&self.symbols[ix.0 as usize]
 	}
 
+	#[must_use]
+	pub(crate) fn define_type(&self, qname: &str, tdef: TypeDef) -> (DefIx, rti::Handle<TypeDef>) {
+		let zname = ZName::from(RString::new(qname));
+		let store = rti::Store::new(zname.clone(), TypeDef::BUILTIN_INT32.clone());
+		let record = rti::Record::new_type(store);
+		let handle = record.handle_type();
+		let ix = self.defs.push(Definition::Type { record });
+		debug_assert!(ix < (u32::MAX as usize));
+		(DefIx::Some(ix as u32), handle)
+	}
+
+	#[must_use]
+	pub(crate) fn define_function(
+		&self,
+		qname: &str,
+		tdef: TypeDef,
+		code: FunctionCode,
+	) -> (DefIx, rti::Handle<TypeDef>) {
+		let (_, ty_handle) = self.define_type(qname, tdef);
+		let ty_handle = ty_handle.downcast().unwrap();
+
+		let zname = ZName::from(RString::new(qname));
+		let store = rti::Store::new(zname.clone(), TypeDef::BUILTIN_INT32.clone());
+		let record = rti::Record::new_type(store);
+		let handle = record.handle_type();
+		let ix = self.defs.push(Definition::Function {
+			typedef: ty_handle,
+			code,
+		});
+
+		debug_assert!(ix < (u32::MAX as usize));
+		(DefIx::Some(ix as u32), handle)
+	}
+
 	pub(crate) fn raise(&self, issue: Issue) {
 		let mut guard = self.issues.lock();
 		guard.push(issue);
@@ -201,14 +267,6 @@ pub(crate) struct Builtins {
 	pub(crate) iname_t: rti::Handle<TypeDef>,
 	pub(crate) string_t: rti::Handle<TypeDef>,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub(crate) struct NativePtr(pub(crate) *const u8);
-
-// SAFETY: Caller of `Compiler::native` provides guarantees about given pointers.
-unsafe impl Send for NativePtr {}
-unsafe impl Sync for NativePtr {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {

@@ -13,10 +13,13 @@ use cranelift_module::{DataId, FuncId};
 use rustc_hash::FxHasher;
 
 use crate::{
-	back::{JitModule, SsaValues},
+	back::{AbiTypes, JitModule},
 	native::Native,
 	project::Project,
-	tsys::TypeDef,
+	tsys::{
+		ArrayType, ClassType, FuncType, PrimitiveType, StructType, TypeDef, TypeHandle, TypeRef,
+		UnionType,
+	},
 	zname::ZName,
 };
 
@@ -75,12 +78,7 @@ impl Function {
 		R: Native,
 	{
 		let h = SignatureHash::new(A::repr(), R::repr());
-
-		if h != self.sighash {
-			return None;
-		}
-
-		Some(TFn(self, PhantomData))
+		(h == self.sighash).then_some(TFn(self, PhantomData))
 	}
 }
 
@@ -125,7 +123,7 @@ pub(crate) struct SignatureHash(u64);
 
 impl SignatureHash {
 	#[must_use]
-	pub(crate) fn new(params: SsaValues, rets: SsaValues) -> Self {
+	pub(crate) fn new(params: AbiTypes, rets: AbiTypes) -> Self {
 		let mut fxh = FxHasher::default();
 		params.hash(&mut fxh);
 		rets.hash(&mut fxh);
@@ -252,6 +250,26 @@ impl Handle<Function> {
 			.inner
 			.downcast::<A, R>()
 			.map(|_| TFnHandle(self.clone(), PhantomData))
+	}
+}
+
+impl Handle<TypeDef> {
+	#[must_use]
+	pub fn downcast<T: 'static>(self) -> Option<TypeHandle<T>> {
+		match self.inner() {
+			TypeRef::Array(_) => (TypeId::of::<T>() == TypeId::of::<ArrayType>())
+				.then(|| TypeHandle(self, PhantomData)),
+			TypeRef::Class(_) => (TypeId::of::<T>() == TypeId::of::<ClassType>())
+				.then(|| TypeHandle(self, PhantomData)),
+			TypeRef::Function(_) => (TypeId::of::<T>() == TypeId::of::<FuncType>())
+				.then(|| TypeHandle(self, PhantomData)),
+			TypeRef::Primitive(_) => (TypeId::of::<T>() == TypeId::of::<PrimitiveType>())
+				.then(|| TypeHandle(self, PhantomData)),
+			TypeRef::Struct(_) => (TypeId::of::<T>() == TypeId::of::<StructType>())
+				.then(|| TypeHandle(self, PhantomData)),
+			TypeRef::Union(_) => (TypeId::of::<T>() == TypeId::of::<UnionType>())
+				.then(|| TypeHandle(self, PhantomData)),
+		}
 	}
 }
 
