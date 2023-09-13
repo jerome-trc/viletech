@@ -4,7 +4,7 @@ version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
-categories = [] # (RAT) Unsure.
+categories = [] # TODO
 description = "VileTech's virtual file system"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/vfs"
 keywords = ["doom", "gamedev", "viletech"]
@@ -22,6 +22,7 @@ serde = ["dep:serde"]
 util = { package = "viletech-utils", path = "../utils" }
 wadload.path = "../wadload"
 
+arc-swap.workspace = true
 dashmap.workspace = true
 bevy = { workspace = true, optional = true }
 egui = { workspace = true, optional = true }
@@ -30,7 +31,10 @@ indexmap.workspace = true
 parking_lot.workspace = true
 rayon.workspace = true
 regex.workspace = true
+rustc-hash.workspace = true
 serde = { workspace = true, optional = true }
+smallvec.workspace = true
+triomphe.workspace = true
 zip.workspace = true
 
 [[bench]]

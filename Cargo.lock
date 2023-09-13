@@ -5211,6 +5211,7 @@ version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1ee9bd9239c339d714d657fac840c6d2a4f9c45f4f9ec7b0975113458be78db"
 dependencies = [
+ "arc-swap",
  "serde",
  "stable_deref_trait",
 ]
@@ -5453,6 +5454,7 @@ dependencies = [
 name = "viletech-fs"
 version = "0.0.0"
 dependencies = [
+ "arc-swap",
  "bevy",
  "criterion",
  "dashmap",
@@ -5462,7 +5464,10 @@ dependencies = [
  "parking_lot 0.12.1",
  "rayon",
  "regex",
+ "rustc-hash",
  "serde",
+ "smallvec",
+ "triomphe",
  "viletech-utils",
  "wadload",
  "zip",
