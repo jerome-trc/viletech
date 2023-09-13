@@ -2,7 +2,7 @@
 
 use util::{id8_truncated, SmallString};
 
-use crate::{repr::SideDef, udmf::Value, LevelDef};
+use crate::level::{repr::SideDef, udmf::Value, LevelDef};
 
 use super::{parse_i32, parse_usize, Error, KeyValPair};
 

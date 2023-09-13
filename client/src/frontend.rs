@@ -5,7 +5,7 @@ use std::{path::PathBuf, sync::Arc, time::Instant};
 use bevy::{app::AppExit, prelude::*, window::WindowFocused};
 use bevy_egui::EguiContexts;
 use viletech::{
-	data::LoadRequest,
+	catalog::LoadRequest,
 	frontend::{FrontendMenu, Outcome},
 	util::SendTracker,
 	vfs::{MountRequest, VPathBuf},

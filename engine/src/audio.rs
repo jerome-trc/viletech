@@ -38,7 +38,7 @@ use nodi::midly;
 use rayon::prelude::*;
 use tracing::{debug, error, info, warn};
 
-use crate::data::Catalog;
+use crate::catalog::Catalog;
 
 use self::gui::DevGui;
 

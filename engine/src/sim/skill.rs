@@ -2,7 +2,7 @@
 
 use bitflags::bitflags;
 
-use crate::data::dobj;
+use crate::catalog::dobj;
 
 /// i.e., a difficulty setting.
 #[derive(Debug)]

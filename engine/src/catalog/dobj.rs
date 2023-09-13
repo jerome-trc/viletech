@@ -10,6 +10,7 @@ use std::{
 	sync::{Arc, Weak},
 };
 
+use data::level;
 use once_cell::sync::Lazy;
 
 pub use self::{actor::*, audio::*, visual::*};

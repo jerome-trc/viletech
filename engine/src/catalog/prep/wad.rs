@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use util::Outcome;
 
 use crate::{
-	data::{
+	catalog::{
 		dobj::{Audio, Image},
 		Catalog, PrepError, PrepErrorKind,
 	},
@@ -121,7 +121,7 @@ impl Catalog {
 					Ok(colormap) => {
 						ctx.arts_w.lock().colormap = Some(Box::new(colormap));
 					}
-					Err(err) => ctx.raise_error(*err),
+					Err(err) => ctx.raise_error(err),
 				}
 
 				return Some(());
@@ -135,16 +135,14 @@ impl Catalog {
 			}
 
 			if fstem == "PLAYPAL" {
-				match self.prep_playpal(ctx, bytes) {
-					Ok(palset) => {
+				match self.prep_playpal(ctx, child, bytes) {
+					Outcome::Ok(palset) => {
 						ctx.arts_w.lock().palset = Some(Box::new(palset));
 					}
-					Err(err) => {
-						ctx.raise_error(PrepError {
-							path: child.path().to_path_buf(),
-							kind: PrepErrorKind::Io(err),
-						});
+					Outcome::Err(err) => {
+						ctx.raise_error(err);
 					}
+					_ => unreachable!(),
 				}
 
 				return Some(());

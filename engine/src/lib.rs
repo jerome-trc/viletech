@@ -5,16 +5,15 @@
 //! user-generated content for GZDoom and the Eternity Engine with zero end-user
 //! overhead and minimal runtime overhead.
 
-use once_cell::sync::OnceCell;
-
 pub mod audio;
+pub mod catalog;
 pub mod console;
-pub mod data;
+pub extern crate data;
 pub mod devgui;
 pub mod frontend;
 pub mod gfx;
 pub mod input;
-pub extern crate level;
+pub use data::level;
 pub mod log;
 pub extern crate mus;
 pub mod player;
@@ -27,6 +26,8 @@ pub extern crate util;
 pub extern crate vfs;
 pub extern crate vzs;
 pub extern crate wadload;
+
+use once_cell::sync::OnceCell;
 
 // Types ///////////////////////////////////////////////////////////////////////
 

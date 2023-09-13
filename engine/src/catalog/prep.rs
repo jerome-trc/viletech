@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use bevy::prelude::{info, warn};
 use dashmap::DashMap;
+use data::gfx::{ColorMap, EnDoom, PaletteSet, PatchTable, TextureX};
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -19,13 +20,11 @@ use smallvec::{smallvec, SmallVec};
 use util::{EditorNum, Outcome, SendTracker, SpawnNum};
 use vfs::VPathBuf;
 
-use crate::{data::dobj::DATUM_TYPE_NAMES, vfs::MountFormat};
-
-use self::vanilla::{PatchTable, TextureX};
+use crate::{catalog::dobj::DATUM_TYPE_NAMES, vfs::MountFormat};
 
 use super::{
 	dobj::{DatumStore, Store},
-	Catalog, ColorMap, Datum, DatumKey, EnDoom, MountInfo, PaletteSet, PrepError, PrepErrorKind,
+	Catalog, Datum, DatumKey, MountInfo, PrepError, PrepErrorKind,
 };
 
 type Output = Vec<Vec<PrepError>>;

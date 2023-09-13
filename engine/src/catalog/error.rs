@@ -1,5 +1,6 @@
 //! Things that can go wrong during data management operations.
 
+use data::level;
 use image::ImageError;
 use vfs::VPathBuf;
 
@@ -44,14 +45,14 @@ impl PrepError {
 /// This covers the errors that can possibly happen during these operations.
 #[derive(Debug)]
 pub enum PrepErrorKind {
-	/// A [COLORMAP] WAD lump is the wrong size.
+	/// Failed to read a [COLORMAP] WAD lump.
 	///
 	/// [COLORMAP]: https://doomwiki.org/wiki/COLORMAP
-	ColorMap(usize),
-	/// An [ENDOOM] WAD lump is the wrong size.
+	ColorMap(data::Error),
+	/// Failed to read an [ENDOOM] WAD lump.
 	///
 	/// [ENDOOM]: https://doomwiki.org/wiki/ENDOOM
-	EnDoom(usize),
+	EnDoom(data::Error),
 	/// A file between the `F_START` and `F_END` markers was not 4096 bytes in size.
 	///
 	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
@@ -62,19 +63,19 @@ pub enum PrepErrorKind {
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
 	MissingVzsDir,
-	/// A [PNAMES] WAD lump is too short or an incorrect size.
+	/// Failed to read a [PNAMES] WAD lump.
 	///
 	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
-	PNames,
+	PNames(data::Error),
 	/// A file between the `S_START` and `S_END` markers is not in picture format,
 	/// or any other recognized image format.
 	///
 	/// See <https://doomwiki.org/wiki/WAD#Flats.2C_Sprites.2C_and_Patches>.
 	Sprite,
-	/// A [TEXTURE1 or TEXTURE2] WAD lump is too short or an incorrect size.
+	/// Failed to read a [TEXTURE1 or TEXTURE2] WAD lump.
 	///
 	/// [TEXTURE1 or TEXTURE2]: https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2
-	TextureX,
+	TextureX(data::Error),
 	/// A [virtual file](vfs::File) was expected to have some byte or string content,
 	/// but was instead empty or a directory.
 	Unreadable(VPathBuf),
@@ -87,19 +88,11 @@ impl std::error::Error for PrepError {}
 impl std::fmt::Display for PrepError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
-			PrepErrorKind::ColorMap(size) => {
-				write!(
-					f,
-					"`COLORMAP` lump is the wrong size: `{p}` - expected 8704, but found: {size}",
-					p = self.path.display()
-				)
+			PrepErrorKind::ColorMap(err) => {
+				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
 			}
-			PrepErrorKind::EnDoom(size) => {
-				write!(
-					f,
-					"`ENDOOM` lump is the wrong size: `{p}` - expected 4000, but found: {size}",
-					p = self.path.display()
-				)
+			PrepErrorKind::EnDoom(err) => {
+				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
 			}
 			PrepErrorKind::Flat => {
 				write!(
@@ -130,8 +123,8 @@ impl std::fmt::Display for PrepError {
 					self.path.display()
 				)
 			}
-			PrepErrorKind::PNames => {
-				write!(f, "malformed PNAMES lump: {}", self.path.display())
+			PrepErrorKind::PNames(err) => {
+				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
 			}
 			PrepErrorKind::Sprite => {
 				write!(
@@ -141,11 +134,11 @@ impl std::fmt::Display for PrepError {
 					self.path.display()
 				)
 			}
-			PrepErrorKind::TextureX => {
+			PrepErrorKind::TextureX(err) => {
 				write!(
 					f,
-					"malformed TEXTURE1 or TEXTURE2 lump: {}",
-					self.path.display()
+					"TEXTURE1/TEXTURE2 lump `{p}` is malformed: {err}",
+					p = self.path.display()
 				)
 			}
 			PrepErrorKind::Unreadable(path) => {

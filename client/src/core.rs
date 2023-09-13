@@ -8,8 +8,8 @@ use nanorand::WyRand;
 use parking_lot::Mutex;
 use viletech::{
 	audio::AudioCore,
+	catalog::{CatalogAL, LoadOutcome},
 	console::Console,
-	data::{CatalogAL, LoadOutcome},
 	input::InputCore,
 	rng::RngCore,
 	user::UserCore,

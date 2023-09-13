@@ -5,7 +5,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
-	data::{LoadOutcome, PrepError},
+	catalog::{LoadOutcome, PrepError},
 	util::duration_to_hhmmss,
 	vfs::MountError,
 };

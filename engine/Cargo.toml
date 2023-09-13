@@ -31,6 +31,7 @@ features = [
 
 [dependencies]
 acs = { package = "viletech-acs", path = "../acs" }
+data = { package = "viletech-data", path = "../data", features = ["serde"] }
 doomfront = { path = "../doomfront", features = [
 	"serde",
 	"acs",
@@ -39,7 +40,6 @@ doomfront = { path = "../doomfront", features = [
 	"zdoom",
 ] }
 mus = { package = "mus2midi", path = "../mus2midi" }
-level = { package = "subterra", path = "../level", features = ["serde"] }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
 vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
 vzs = { package = "vzscript", path = "../vzscript" }

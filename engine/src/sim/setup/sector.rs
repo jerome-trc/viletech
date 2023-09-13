@@ -1,7 +1,7 @@
 //! Functions providing ECS components to level sectors.
 
 use bevy::ecs::system::EntityCommands;
-use level::repr::{LevelFormat, UdmfNamespace};
+use data::level::repr::{LevelFormat, UdmfNamespace};
 
 use crate::{sim::sector, BaseGame};
 

@@ -2,11 +2,12 @@
 //!
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
-use level::LevelDef;
+use data::level;
 use util::Outcome;
 
 use crate::{
-	data::{dobj::Image, Catalog, PrepError, PrepErrorKind},
+	catalog::{dobj::Image, Catalog, PrepError, PrepErrorKind},
+	level::LevelDef,
 	vfs::FileRef,
 };
 
@@ -54,7 +55,7 @@ impl Catalog {
 			}
 		};
 
-		let mut level = match ::level::udmf::parse_textmap(source) {
+		let mut level = match level::udmf::parse_textmap(source) {
 			Ok(l) => l,
 			Err(errs) => {
 				let ctx_errs = &mut ctx.arts_w.lock().errors;
@@ -62,7 +63,7 @@ impl Catalog {
 				for err in errs {
 					ctx_errs.push(PrepError {
 						path: dir.path().to_path_buf(),
-						kind: PrepErrorKind::Level(::level::Error::Udmf(err)),
+						kind: PrepErrorKind::Level(level::Error::Udmf(err)),
 					})
 				}
 

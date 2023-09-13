@@ -2,7 +2,7 @@
 
 use util::Outcome;
 
-use crate::data::Catalog;
+use crate::catalog::Catalog;
 
 use super::SubContext;
 

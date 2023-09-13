@@ -1,10 +1,12 @@
 //! Entity-components making up lines (part of level geometry).
 
 use bevy::prelude::{Component, Entity};
-use level::repr::{LineFlags, LockDef};
 use serde::{Deserialize, Serialize};
 
-use crate::data::dobj;
+use crate::{
+	catalog::dobj,
+	data::level::repr::{LineFlags, LockDef},
+};
 
 use super::level::{SideIndex, VertIndex};
 

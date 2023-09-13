@@ -10,7 +10,7 @@ use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 use vzs::heap::TPtr;
 
-use crate::data::dobj::{self, Blueprint};
+use crate::catalog::dobj::{self, Blueprint};
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

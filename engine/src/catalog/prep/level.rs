@@ -1,11 +1,12 @@
 //! Functions for turning vanilla and UDMF lumps into levels.
 
-use ::level::{
+use crate::level::{
+	self,
 	repr::{LevelBsp, LevelFormat, LevelGeom},
 	LevelDef,
 };
 
-use crate::data::{dobj::Image, prep::*, Catalog, FileRef, PrepError, PrepErrorKind};
+use crate::catalog::{dobj::Image, prep::*, Catalog, FileRef, PrepError, PrepErrorKind};
 
 use super::SubContext;
 
@@ -80,7 +81,7 @@ impl Catalog {
 
 		let mut malformed = false;
 
-		let linedefs = match ::level::read::linedefs(linedefs.read_bytes()) {
+		let linedefs = match level::read::linedefs(linedefs.read_bytes()) {
 			Ok(ld) => ld,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -94,7 +95,7 @@ impl Catalog {
 			}
 		};
 
-		let nodes = match ::level::read::nodes(nodes.read_bytes()) {
+		let nodes = match level::read::nodes(nodes.read_bytes()) {
 			Ok(n) => n,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -108,7 +109,7 @@ impl Catalog {
 			}
 		};
 
-		let sectors = match ::level::read::sectors(sectors.read_bytes()) {
+		let sectors = match level::read::sectors(sectors.read_bytes()) {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -122,7 +123,7 @@ impl Catalog {
 			}
 		};
 
-		let segs = match ::level::read::segs(segs.read_bytes()) {
+		let segs = match level::read::segs(segs.read_bytes()) {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -136,7 +137,7 @@ impl Catalog {
 			}
 		};
 
-		let sidedefs = match ::level::read::sidedefs(sidedefs.read_bytes()) {
+		let sidedefs = match level::read::sidedefs(sidedefs.read_bytes()) {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -150,7 +151,7 @@ impl Catalog {
 			}
 		};
 
-		let subsectors = match ::level::read::ssectors(ssectors.read_bytes()) {
+		let subsectors = match level::read::ssectors(ssectors.read_bytes()) {
 			Ok(ss) => ss,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -164,7 +165,7 @@ impl Catalog {
 			}
 		};
 
-		let vertices = match ::level::read::vertexes(vertexes.read_bytes()) {
+		let vertices = match level::read::vertexes(vertexes.read_bytes()) {
 			Ok(v) => v,
 			Err(err) => {
 				ctx.raise_error(PrepError {
@@ -179,9 +180,9 @@ impl Catalog {
 		};
 
 		let things_result = if behavior.is_none() {
-			::level::read::things_doom(things.read_bytes())
+			level::read::things_doom(things.read_bytes())
 		} else {
-			::level::read::things_extended(things.read_bytes())
+			level::read::things_extended(things.read_bytes())
 		};
 
 		let things = match things_result {

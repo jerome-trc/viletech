@@ -1,6 +1,6 @@
 use util::EditorNum;
 
-use crate::{repr::BspNodeChild, Error, LevelDef, SideTexture};
+use super::{repr::BspNodeChild, Error, LevelDef, SideTexture};
 
 impl LevelDef {
 	/// Verifies:

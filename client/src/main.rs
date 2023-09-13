@@ -32,8 +32,8 @@ use clap::Parser;
 use indoc::printdoc;
 use parking_lot::RwLock;
 use viletech::{
+	catalog::{Catalog, CatalogAssetIo},
 	console::Console,
-	data::{Catalog, CatalogAssetIo},
 	gfx::TerrainMaterial,
 	log::TracingPlugin,
 	user::UserCore,

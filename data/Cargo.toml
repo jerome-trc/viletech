@@ -1,13 +1,13 @@
 [package]
-name = "subterra"
+name = "viletech-data"
 version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
-categories = ["game-engines", "game-development"]
-description = "VileTech's level representation, ZDBSP fork, UDMF support"
-homepage = "https://github.com/jerome-trc/viletech/tree/master/level"
-keywords = ["doom", "gamedev", "udmf", "viletech", "zdbsp"]
+categories = ["encoding", "game-development"]
+description = "VileTech's data representations"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/data"
+keywords = ["doom", "encoding", "gamedev"]
 license = "GPL-3.0-or-later"
 publish = false
 repository.workspace = true
@@ -22,7 +22,9 @@ util = { package = "viletech-utils", path = "../utils" }
 bitflags.workspace = true
 bitvec.workspace = true
 bytemuck.workspace = true
+byteorder.workspace = true
 glam.workspace = true
+image.workspace = true
 logos.workspace = true # For UDMF parsing.
 once_cell.workspace = true
 rayon.workspace = true

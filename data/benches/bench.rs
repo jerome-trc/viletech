@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 use criterion::Criterion;
+use viletech_data as data;
 
 fn udmf(crit: &mut Criterion) {
-	const ENV_VAR: &str = "SUBTERRA_UDMF_SAMPLE";
+	const ENV_VAR: &str = "VILEDATA_UDMF_SAMPLE";
 
 	let path = match std::env::var(ENV_VAR) {
 		Ok(v) => PathBuf::from(v),
@@ -27,7 +28,7 @@ fn udmf(crit: &mut Criterion) {
 
 	grp.bench_function("Parse, Hand-written", |bencher| {
 		bencher.iter(|| {
-			let result = subterra::udmf::parse_textmap(source.as_ref());
+			let result = data::level::udmf::parse_textmap(source.as_ref());
 			let _ = std::hint::black_box(result.unwrap());
 		});
 	});

@@ -2,7 +2,6 @@
 
 use std::{cmp::Ordering, collections::HashMap};
 
-use ::level::repr::{BspNodeChild, SegDirection, Vertex};
 use bevy::{
 	ecs::system::Insert,
 	prelude::*,
@@ -15,8 +14,9 @@ use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
 
 use crate::{
-	data::dobj,
+	catalog::dobj,
 	gfx::TerrainMaterial,
+	level::repr::{BspNodeChild, LevelDef, SegDirection, Vertex},
 	sim::level::VertIndex,
 	sim::{
 		level::{self, Side, SideIndex, Udmf},
@@ -28,7 +28,7 @@ use crate::{
 
 pub(crate) fn setup(
 	mut ctx: super::Context,
-	base: dobj::Handle<::level::LevelDef>,
+	base: dobj::Handle<LevelDef>,
 	level: &mut ChildBuilder,
 ) {
 	let level = Mutex::new(level);
@@ -84,7 +84,7 @@ struct SimState {
 }
 
 #[must_use]
-fn spawn_children(base: &dobj::Handle<::level::LevelDef>, level: &mut ChildBuilder) -> SimState {
+fn spawn_children(base: &dobj::Handle<LevelDef>, level: &mut ChildBuilder) -> SimState {
 	let mut lines = IndexMap::with_capacity(base.geom.linedefs.len());
 	let mut sectors = IndexMap::with_capacity(base.geom.sectordefs.len());
 	let mut sides = SparseSet::with_capacity(base.geom.sidedefs.len(), base.geom.sidedefs.len());
@@ -193,10 +193,7 @@ struct MeshParts {
 }
 
 #[must_use]
-fn build_mesh(
-	base: &dobj::Handle<::level::LevelDef>,
-	verts: &SparseSet<VertIndex, Vertex>,
-) -> Mesh {
+fn build_mesh(base: &dobj::Handle<LevelDef>, verts: &SparseSet<VertIndex, Vertex>) -> Mesh {
 	let mut parts = MeshParts {
 		verts: vec![],
 		indices: vec![],
@@ -223,7 +220,7 @@ fn build_mesh(
 }
 
 fn recur(
-	base: &dobj::Handle<::level::LevelDef>,
+	base: &dobj::Handle<LevelDef>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	mesh: &mut MeshParts,
 	bsp_lines: &mut Vec<Disp>,
@@ -294,7 +291,7 @@ struct SSectorPoly {
 
 #[must_use]
 fn subsector_to_poly(
-	base: &dobj::Handle<::level::LevelDef>,
+	base: &dobj::Handle<LevelDef>,
 	lverts: &SparseSet<VertIndex, Vertex>,
 	bsp_lines: &[Disp],
 	subsect_idx: usize,

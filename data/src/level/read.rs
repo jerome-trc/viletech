@@ -7,7 +7,7 @@ use std::{collections::HashMap, io::Cursor, mem::MaybeUninit};
 use rayon::prelude::*;
 use util::{io::CursorExt, read_id8};
 
-use crate::{
+use super::{
 	repr::{
 		BspNode, BspNodeChild, LineDef, LineFlags, SectorDef, Seg, SegDirection, SideDef,
 		SubSector, ThingDef, ThingFlags, Vertex,

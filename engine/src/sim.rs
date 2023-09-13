@@ -10,9 +10,10 @@ pub mod skill;
 use std::time::{Duration, Instant};
 
 use bevy::{pbr::wireframe::Wireframe, prelude::*};
+use data::level::LevelDef;
 use nanorand::WyRand;
 
-use crate::{data::dobj, rng::RngCore};
+use crate::{catalog::dobj, rng::RngCore};
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -90,7 +91,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 	}
 }
 
-pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<::level::LevelDef>) {
+pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<LevelDef>) {
 	let start_time = Instant::now();
 
 	let l = level.clone();

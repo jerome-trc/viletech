@@ -17,7 +17,7 @@ use std::{
 
 use logos::{Lexer, Logos};
 
-use crate::repr::{
+use super::repr::{
 	UdmfValue, Vertex,
 	{
 		LevelDef, LevelFormat, LineDef, LineFlags, SectorDef, SideDef, ThingDef, ThingFlags,
@@ -607,14 +607,14 @@ mod test {
 
 	#[test]
 	fn with_sample_data() {
-		const ENV_VAR: &str = "SUBTERRA_UDMF_SAMPLE";
+		const ENV_VAR: &str = "VILEDATA_UDMF_SAMPLE";
 
 		let path = match std::env::var(ENV_VAR) {
 			Ok(v) => PathBuf::from(v),
 			Err(_) => {
 				eprintln!(
 					"Environment variable not set: `{ENV_VAR}`. \
-					Cancelling `udmf::test::with_sample_data`."
+					Cancelling `level::udmf::test::with_sample_data`."
 				);
 				return;
 			}

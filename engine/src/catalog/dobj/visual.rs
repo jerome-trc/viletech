@@ -4,10 +4,11 @@ use std::io::Cursor;
 
 use bevy::prelude::Vec2;
 use byteorder::{LittleEndian, ReadBytesExt};
+use data::gfx::Palette;
 use image::{error::ImageFormatHint, ImageBuffer, ImageError, Rgba32FImage};
 
 use crate::{
-	data::{Palette, PrepError, PrepErrorKind},
+	catalog::{PrepError, PrepErrorKind},
 	vfs::FileRef,
 };
 

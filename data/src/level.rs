@@ -1,7 +1,4 @@
-//! # Subterra
-//!
-//! Subterra is the code used by the VileTech Engine for reading, storing,
-//! manipulating, and writing Doom levels, whether vanilla or UDMF.
+//! Code used for reading, storing, manipulating, and writing Doom levels.
 
 pub mod read;
 pub mod repr;

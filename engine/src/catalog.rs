@@ -3,7 +3,6 @@
 mod config;
 pub mod dobj;
 mod error;
-mod extras;
 mod gui;
 mod prep;
 
@@ -37,7 +36,7 @@ use self::{
 	gui::DevGui,
 };
 
-pub use self::{config::*, error::*, extras::*};
+pub use self::{config::*, error::*};
 
 /// The data catalog is the heart of file and game data management in VileTech.
 /// "Physical" files are "mounted" into one cohesive virtual file system (VFS)

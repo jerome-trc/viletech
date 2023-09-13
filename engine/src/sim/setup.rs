@@ -6,7 +6,7 @@ pub(super) mod sector;
 
 use bevy::prelude::*;
 
-use crate::{data::Catalog, gfx::TerrainMaterial};
+use crate::{catalog::Catalog, gfx::TerrainMaterial};
 
 pub struct Context<'w> {
 	pub catalog: &'w Catalog,

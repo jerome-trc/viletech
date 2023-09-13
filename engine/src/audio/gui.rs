@@ -11,7 +11,7 @@ use nodi::midly::Smf;
 use tracing::{error, info};
 use vfs::VPath;
 
-use crate::data::Catalog;
+use crate::catalog::Catalog;
 
 use super::{AudioCore, MidiData, MidiSettings, SoundSpace};
 

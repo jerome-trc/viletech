@@ -7,11 +7,11 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
-use level::repr::{UdmfValue, Vertex};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	data::dobj,
+	catalog::dobj,
+	level::repr::{LevelDef, UdmfValue, Vertex},
 	sparse::{SparseSet, SparseSetIndex},
 };
 
@@ -24,7 +24,7 @@ pub struct Level(Entity);
 /// The principal component in a level entity.
 #[derive(Component, Debug)]
 pub struct Core {
-	pub base: Option<dobj::Handle<level::LevelDef>>,
+	pub base: Option<dobj::Handle<LevelDef>>,
 	pub flags: Flags,
 	/// Time spent in this level thus far.
 	pub ticks_elapsed: u64,

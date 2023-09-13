@@ -2,7 +2,7 @@
 
 use util::SmallString;
 
-use crate::{
+use crate::level::{
 	repr::{LevelFormat, ThingDef, ThingFlags, UdmfNamespace},
 	udmf::Value,
 	LevelDef,
