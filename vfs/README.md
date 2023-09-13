@@ -1,4 +1,4 @@
-# VileTech FS
+# VileTechFS
 
 VileTech's virtual file system; an abstraction over the operating system's "physical" FS. Real files, directories, and various archives are all merged into one tree so that reading from them is more convenient at all other levels of the engine, without exposing any details of the user's underlying machine.
 
