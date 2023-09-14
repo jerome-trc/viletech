@@ -144,7 +144,23 @@ simple_astnode!(Syn, Parameter, Syn::Parameter);
 impl Parameter {
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
-		self.0.first_token().ok_or(AstError::Missing)
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.ok_or(AstError::Missing)
+	}
+
+	/// The returned token is always tagged [`Syn::KwConst`].
+	#[must_use]
+	pub fn const_kw(&self) -> Option<SyntaxToken> {
+		self.0
+			.first_token()
+			.filter(|token| token.kind() == Syn::KwConst)
+	}
+
+	#[must_use]
+	pub fn is_const(&self) -> bool {
+		self.const_kw().is_some()
 	}
 
 	pub fn type_spec(&self) -> AstResult<TypeSpec> {

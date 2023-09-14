@@ -202,7 +202,6 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 		t @ Syn::DotBraceL => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
 			todo!();
 			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
 			(p.close(mark, Syn::ConstructExpr), true)

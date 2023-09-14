@@ -8,7 +8,7 @@ use std::{
 
 use append_only_vec::AppendOnlyVec;
 use doomfront::{
-	rowan::{GreenToken, GreenTokenData, SyntaxToken},
+	rowan::{GreenToken, SyntaxToken},
 	LangExt,
 };
 use util::rstring::RString;
@@ -28,35 +28,9 @@ pub(crate) struct NameInterner {
 impl NameInterner {
 	#[must_use]
 	pub(crate) fn intern<L: LangExt>(&self, token: &SyntaxToken<L>) -> NameIx {
-		let green = INameData(token.green());
+		let green = unsafe { std::mem::transmute::<_, &GreenTokenData>(token.green()) };
 
-		#[repr(transparent)]
-		struct INameData<'g>(&'g GreenTokenData);
-
-		impl<'g> Borrow<INameData<'g>> for IName {
-			fn borrow(&self) -> &INameData<'g> {
-				// SAFETY: This type is `repr(transparent)` over `GreenTokenData`.
-				unsafe { std::mem::transmute::<_, _>(self.0.deref()) }
-			}
-		}
-
-		impl Hash for INameData<'_> {
-			fn hash<H: Hasher>(&self, state: &mut H) {
-				for c in self.0.text().chars() {
-					c.to_ascii_lowercase().hash(state);
-				}
-			}
-		}
-
-		impl PartialEq for INameData<'_> {
-			fn eq(&self, other: &Self) -> bool {
-				self.0.text().eq_ignore_ascii_case(other.0.text())
-			}
-		}
-
-		impl Eq for INameData<'_> {}
-
-		if let Some(kvp) = self.map.get(&green) {
+		if let Some(kvp) = self.map.get(green) {
 			return *kvp.value();
 		}
 
@@ -148,9 +122,39 @@ impl From<&GreenToken> for IName {
 	}
 }
 
+impl Borrow<GreenTokenData> for IName {
+	fn borrow(&self) -> &GreenTokenData {
+		unsafe {
+			std::mem::transmute::<&doomfront::rowan::GreenTokenData, &GreenTokenData>(
+				self.0.borrow(),
+			)
+		}
+	}
+}
+
 impl std::fmt::Display for IName {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.0.text().fmt(f)
+	}
+}
+
+#[derive(Debug)]
+#[repr(transparent)]
+struct GreenTokenData(doomfront::rowan::GreenTokenData);
+
+impl PartialEq for GreenTokenData {
+	fn eq(&self, other: &Self) -> bool {
+		self.0.text().eq_ignore_ascii_case(other.0.text())
+	}
+}
+
+impl Eq for GreenTokenData {}
+
+impl Hash for GreenTokenData {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		for c in self.0.text().chars() {
+			c.to_ascii_lowercase().hash(state);
+		}
 	}
 }
 

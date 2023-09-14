@@ -48,6 +48,8 @@ pub enum Syn {
 	FileRoot,
 	/// TODO
 	MemberQuals,
+	/// `'mixin' ident '{' structinnard* '}'`
+	MixinDef,
 	/// `'.'? T | ('.'? T ('.' T)*)` where `T` is a [`Syn::Ident`] or [`Syn::NameLit`].
 	///
 	/// Counterpart to what is known in ZScript's grammar as a "dottable ID".
@@ -204,6 +206,8 @@ pub enum Syn {
 	KwIsNot,
 	#[token("let", priority = 5)]
 	KwLet,
+	#[token("mixin", priority = 5)]
+	KwMixin,
 	#[token("override", priority = 5)]
 	KwOverride,
 	#[token("private", priority = 5)]

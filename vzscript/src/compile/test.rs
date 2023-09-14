@@ -11,6 +11,12 @@ use super::*;
 
 #[test]
 fn smoke() {
+	let Ok(zs_sample) = std::env::var("VZSCRIPT_SAMPLE_ZSCRIPT") else {
+		eprintln!("Env. var. `VZSCRIPT_SAMPLE_ZSCRIPT` not defined.");
+		eprintln!("Skipping end-to-end compilation smoke test.");
+		return;
+	};
+
 	let corelib = LibSource {
 		name: "vzscript".to_string(),
 		version: crate::Version::new(0, 0, 0),
@@ -24,13 +30,14 @@ fn smoke() {
 	};
 
 	let userlib = LibSource {
-		name: "my_mod".to_string(),
+		name: "userlib".to_string(),
 		version: crate::Version::new(0, 0, 0),
 		native: false,
-		inctree: IncludeTree {
-			files: vec![],
-			errors: vec![],
-		},
+		inctree: IncludeTree::from_fs(
+			Path::new(&zs_sample),
+			Path::new("ZSCRIPT.zs"),
+			Some(Version::new(0, 0, 0)),
+		),
 		decorate: None,
 	};
 

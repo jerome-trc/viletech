@@ -91,7 +91,7 @@ impl IncludeTree {
 		if root_path.extension_is("vzs") {
 			walker.recur_vzs(fd, full_path);
 		} else {
-			walker.recur_zs(fd, full_path);
+			walker.zs_root(fd, full_path);
 		}
 
 		Self {
@@ -254,7 +254,7 @@ impl VfsWalker<'_> {
 
 		let rgx = ZS_VERSION_RGX.get_or_init(zs_version_regex_init);
 
-		let Some(vers) = rgx.find(source) else {
+		let Some(caps) = rgx.captures(source) else {
 			self.errors.lock().push(Error::ZsVersion {
 				path: fref.path_str().to_owned(),
 			});
@@ -262,7 +262,15 @@ impl VfsWalker<'_> {
 			return;
 		};
 
-		let Ok(vers) = zdoom::Version::from_str(vers.as_str()) else {
+		let Some(cap0) = caps.get(1) else {
+			self.errors.lock().push(Error::ZsVersion {
+				path: fref.path_str().to_owned(),
+			});
+
+			return;
+		};
+
+		let Ok(vers) = zdoom::Version::from_str(cap0.as_str()) else {
 			self.errors.lock().push(Error::ZsVersion {
 				path: fref.path_str().to_owned(),
 			});
@@ -383,7 +391,7 @@ impl FsWalker<'_> {
 
 		let rgx = ZS_VERSION_RGX.get_or_init(zs_version_regex_init);
 
-		let Some(vers) = rgx.find(&buf) else {
+		let Some(caps) = rgx.captures(&buf) else {
 			self.errors.lock().push(Error::ZsVersion {
 				path: path_cow.into_owned(),
 			});
@@ -391,7 +399,15 @@ impl FsWalker<'_> {
 			return;
 		};
 
-		let Ok(vers) = zdoom::Version::from_str(vers.as_str()) else {
+		let Some(cap0) = caps.get(1) else {
+			self.errors.lock().push(Error::ZsVersion {
+				path: path_cow.into_owned(),
+			});
+
+			return;
+		};
+
+		let Ok(vers) = zdoom::Version::from_str(cap0.as_str()) else {
 			self.errors.lock().push(Error::ZsVersion {
 				path: path_cow.into_owned(),
 			});
@@ -442,7 +458,10 @@ impl FsWalker<'_> {
 			return;
 		}
 
-		let full_path = self.base_path.join(inc_path);
+		let full_path = Path::new(file_path.as_ref())
+			.parent()
+			.unwrap()
+			.join(inc_path);
 
 		let fd = match std::fs::File::open(&full_path) {
 			Ok(f) => f,
@@ -546,7 +565,13 @@ where
 			continue;
 		}
 
-		let inc_path = string.text();
+		let text = string.text();
+
+		let inc_path = if text.is_empty() {
+			""
+		} else {
+			&text[1..(text.len() - 1)]
+		};
 
 		callback(node, inc_path);
 	}
@@ -558,5 +583,5 @@ static ZS_VERSION_RGX: OnceLock<Regex> = OnceLock::new();
 
 #[must_use]
 fn zs_version_regex_init() -> Regex {
-	Regex::new("(?i)version[\0- ]*\"[0-9]+\\.[0-9]+(\\.[0-9]+)?\"").unwrap()
+	Regex::new("(?i)version[\0- ]*\"([0-9]+\\.[0-9]+(\\.[0-9]+)?)\"").unwrap()
 }

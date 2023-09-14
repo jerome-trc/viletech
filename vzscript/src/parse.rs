@@ -70,6 +70,8 @@ fn item(p: &mut Parser<Syn>, mark: OpenMark) {
 		ClassDef::parse(p, mark);
 	} else if ConstDef::FIRST_SET.contains(&token) {
 		ConstDef::parse(p, mark);
+	} else if MixinDef::FIRST_SET.contains(&token) {
+		MixinDef::parse(p, mark);
 	} else {
 		p.advance_err_and_close(
 			mark,
@@ -82,5 +84,8 @@ fn item(p: &mut Parser<Syn>, mark: OpenMark) {
 
 #[must_use]
 fn at_item(p: &Parser<Syn>) -> bool {
-	p.at_any(FuncDecl::FIRST_SET) || p.at_any(ClassDef::FIRST_SET) || p.at_any(ConstDef::FIRST_SET)
+	p.at_any(FuncDecl::FIRST_SET)
+		|| p.at_any(ClassDef::FIRST_SET)
+		|| p.at_any(ConstDef::FIRST_SET)
+		|| p.at_any(MixinDef::FIRST_SET)
 }

@@ -13,6 +13,7 @@ use crate::{
 	},
 	issue::{self, Issue},
 	rti,
+	tsys::TypeDef,
 	zname::ZName,
 	ParseTree, SyntaxToken,
 };

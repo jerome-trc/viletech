@@ -1,7 +1,61 @@
+use std::path::Path;
+
 use append_only_vec::AppendOnlyVec;
 use criterion::Criterion;
 use dashmap::{DashMap, DashSet};
 use util::rstring::RString;
+use vzscript::{
+	compile::{Compiler, LibSource},
+	IncludeTree,
+};
+
+fn frontend(crit: &mut Criterion) {
+	let mut grp = crit.benchmark_group("Frontend");
+
+	let Ok(zs_sample) = std::env::var("VZSCRIPT_SAMPLE_ZSCRIPT") else {
+		eprintln!("Env. var. `VZSCRIPT_SAMPLE_ZSCRIPT` not defined.");
+		eprintln!("Skipping frontend benchmarks.");
+		return;
+	};
+
+	grp.bench_function("Declaration", |bencher| {
+		bencher.iter_batched(
+			|| {
+				let _ = LibSource {
+					name: "vzscript".to_string(),
+					version: vzscript::Version::new(0, 0, 0),
+					native: true,
+					inctree: IncludeTree::from_fs(
+						&Path::new(env!("CARGO_WORKSPACE_DIR")).join("assets/viletech"),
+						Path::new("vzscript/main.vzs"),
+						Some(vzscript::Version::new(0, 0, 0)),
+					),
+					decorate: None,
+				};
+
+				let userlib = LibSource {
+					name: "userlib".to_string(),
+					version: vzscript::Version::new(0, 0, 0),
+					native: false,
+					inctree: IncludeTree::from_fs(
+						Path::new(&zs_sample),
+						Path::new("ZSCRIPT.zs"),
+						Some(vzscript::Version::new(0, 0, 0)),
+					),
+					decorate: None,
+				};
+
+				Compiler::new([/* TODO: add corelib */ userlib])
+			},
+			|mut compiler| {
+				vzscript::front::declare_symbols(&mut compiler);
+			},
+			criterion::BatchSize::LargeInput,
+		)
+	});
+
+	grp.finish();
+}
 
 fn interning(crit: &mut Criterion) {
 	let mut grp = crit.benchmark_group("Interning Insertion");
@@ -116,5 +170,5 @@ fn interning(crit: &mut Criterion) {
 	grp.finish();
 }
 
-criterion::criterion_group!(benches, interning);
+criterion::criterion_group!(benches, frontend, interning);
 criterion::criterion_main!(benches);

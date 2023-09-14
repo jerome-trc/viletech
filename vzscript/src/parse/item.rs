@@ -86,7 +86,12 @@ impl FuncDecl {
 
 	fn parameter(p: &mut Parser<Syn>) {
 		let mark = p.open();
-		p.expect(Syn::Ident, Syn::Ident, &["`an identifier`"]);
+
+		if p.eat(Syn::KwConst, Syn::KwConst) {
+			trivia_0plus(p);
+		}
+
+		p.expect(Syn::Ident, Syn::Ident, &["an identifier", "`const`"]);
 		trivia_0plus(p);
 		TypeSpec::parse(p);
 
