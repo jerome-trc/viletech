@@ -22,6 +22,7 @@ pub enum TopLevel {
 	ConstDef(ConstDef),
 	EnumDef(EnumDef),
 	FuncDecl(FuncDecl),
+	MixinDef(MixinDef),
 	StructDef(StructDef),
 	UnionDef(UnionDef),
 }
@@ -38,7 +39,8 @@ impl AstNode for TopLevel {
 			Syn::Annotation
 				| Syn::ClassDef | Syn::ConstDef
 				| Syn::EnumDef | Syn::FuncDecl
-				| Syn::StructDef | Syn::UnionDef
+				| Syn::MixinDef | Syn::StructDef
+				| Syn::UnionDef
 		)
 	}
 
@@ -52,6 +54,7 @@ impl AstNode for TopLevel {
 			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
 			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
 			Syn::FuncDecl => Some(Self::FuncDecl(FuncDecl(node))),
+			Syn::MixinDef => Some(Self::MixinDef(MixinDef(node))),
 			Syn::StructDef => Some(Self::StructDef(StructDef(node))),
 			Syn::UnionDef => Some(Self::UnionDef(UnionDef(node))),
 			_ => None,
@@ -60,13 +63,14 @@ impl AstNode for TopLevel {
 
 	fn syntax(&self) -> &rowan::SyntaxNode<Self::Language> {
 		match self {
-			TopLevel::Annotation(inner) => inner.syntax(),
-			TopLevel::ClassDef(inner) => inner.syntax(),
-			TopLevel::ConstDef(inner) => inner.syntax(),
-			TopLevel::EnumDef(inner) => inner.syntax(),
-			TopLevel::FuncDecl(inner) => inner.syntax(),
-			TopLevel::StructDef(inner) => inner.syntax(),
-			TopLevel::UnionDef(inner) => inner.syntax(),
+			Self::Annotation(inner) => inner.syntax(),
+			Self::ClassDef(inner) => inner.syntax(),
+			Self::ConstDef(inner) => inner.syntax(),
+			Self::EnumDef(inner) => inner.syntax(),
+			Self::FuncDecl(inner) => inner.syntax(),
+			Self::MixinDef(inner) => inner.syntax(),
+			Self::StructDef(inner) => inner.syntax(),
+			Self::UnionDef(inner) => inner.syntax(),
 		}
 	}
 }

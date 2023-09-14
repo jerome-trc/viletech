@@ -7,7 +7,10 @@ use doomfront::{
 use util::SmallString;
 
 use crate::{
-	compile::{intern::NsName, symbol::SymbolKind},
+	compile::{
+		intern::NsName,
+		symbol::{DefKind, Undefined},
+	},
 	issue::{self, Issue},
 };
 
@@ -36,14 +39,17 @@ pub(super) fn declare_symbols_early(ctx: &DeclContext, namespace: &mut Scope, pt
 
 		let result = ctx.declare(
 			namespace,
+			name_tok.text(),
 			NsName::Type(ctx.names.intern(&name_tok)),
 			mixindef.syntax().text_range(),
 			short_end,
-			SymbolKind::Mixin,
+			Undefined::Mixin,
 			scope,
 		);
 
-		if let Err(sym_ix) = result {}
+		if let Err(sym_ix) = result {
+			todo!()
+		}
 	}
 }
 
@@ -84,36 +90,30 @@ fn declare_class(ctx: &DeclContext, namespace: &mut Scope, classdef: ast::ClassD
 
 	let result = ctx.declare(
 		namespace,
+		name_tok.text(),
 		NsName::Type(ctx.names.intern(&name_tok)),
 		classdef.syntax().text_range(),
 		r_end,
-		SymbolKind::Class,
+		Undefined::Class,
 		scope,
 	);
 
 	if let Err(sym_ix) = result {
 		let other = ctx.symbol(sym_ix);
 
-		let mut issue = Issue::new(
-			ctx.path,
-			TextRange::new(r_start, r_end),
-			format!("attempt to re-declare symbol `{}`", name_tok.text()),
-			issue::Level::Error(issue::Error::Redeclare),
-		);
-
-		if let Some(o_loc) = other.location {
-			let o_path = ctx.resolve_path(o_loc);
-
-			issue = issue.with_label(
-				o_path,
-				o_loc.span,
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				TextRange::new(r_start, r_end),
+				format!("attempt to re-declare symbol `{}`", name_tok.text()),
+				issue::Level::Error(issue::Error::Redeclare),
+			)
+			.with_label(
+				ctx.resolve_path(other.location),
+				other.location.span,
 				"previous declaration is here".to_string(),
-			);
-		} else {
-			unreachable!()
-		}
-
-		ctx.raise(issue);
+			),
+		);
 	}
 }
 
@@ -141,12 +141,15 @@ fn declare_class_innard(
 
 fn declare_field(ctx: &DeclContext, scope: &mut Scope, field: ast::FieldDecl) {
 	for name in field.names() {
+		let ident = name.ident();
+
 		let result = ctx.declare(
 			scope,
-			NsName::Value(ctx.names.intern(&name.ident())),
+			ident.text(),
+			NsName::Value(ctx.names.intern(&ident)),
 			name.syntax().text_range(),
 			name.syntax().text_range().end(),
-			SymbolKind::Field,
+			Undefined::Field,
 			Scope::default(),
 		);
 
@@ -159,13 +162,14 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FunctionD
 
 	let result = ctx.declare(
 		scope,
+		name_tok.text(),
 		NsName::Value(ctx.names.intern(&name_tok)),
 		fndecl.syntax().text_range(),
 		match fndecl.const_keyword() {
 			Some(kw) => kw.text_range().end(),
 			None => fndecl.param_list().unwrap().syntax().text_range().end(),
 		},
-		SymbolKind::Function,
+		Undefined::Function,
 		Scope::default(),
 	);
 
@@ -178,7 +182,7 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 
 	let lib_ix = ctx.lib_ix as usize;
 
-	let Some(&sym_ix) = ctx.namespaces[..lib_ix].iter().rev().find_map(|ns| {
+	let Some(&sym_ix) = ctx.namespaces[..=lib_ix].iter().rev().find_map(|ns| {
 		ns.get(&nsname)
 	}) else {
 		ctx.raise(Issue::new(
@@ -191,50 +195,40 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 		return;
 	};
 
-	let symbol = ctx.symbol(sym_ix);
+	let mixin_sym = ctx.symbol(sym_ix);
+	let mixin_def = mixin_sym.def.load();
 
-	if symbol.kind != SymbolKind::Mixin {
-		let mut issue = Issue::new(
-			ctx.path,
-			name_tok.text_range(),
-			format!("expected symbol `{}` to be a mixin", &name_tok),
-			issue::Level::Error(issue::Error::SymbolKindMismatch),
-		);
-
-		if let Some(o_loc) = symbol.location {
-			let o_path = ctx.resolve_path(o_loc);
-
-			issue = issue.with_label(
-				o_path,
-				o_loc.span,
+	if !matches!(
+		mixin_def.kind,
+		DefKind::None {
+			kind: Undefined::Mixin,
+			..
+		}
+	) {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				name_tok.text_range(),
+				format!("expected symbol `{}` to be a mixin", &name_tok),
+				issue::Level::Error(issue::Error::SymbolKindMismatch),
+			)
+			.with_label(
+				ctx.resolve_path(mixin_sym.location),
+				mixin_sym.location.span,
 				format!(
 					"found {} `{}` here",
-					symbol.kind.user_facing_name(),
-					&name_tok
+					mixin_def.kind.user_facing_name(),
+					name_tok.text()
 				),
-			);
-		} else {
-			issue = issue.with_note(format!("`{}` is a primitive type", &name_tok));
-		}
-
-		ctx.raise(issue);
+			),
+		);
 
 		return;
 	};
 
-	for kvp in symbol.scope.iter() {
-		let mixin_sym = ctx.symbol(*kvp.1);
-		let location = mixin_sym.location.unwrap();
-
-		let result = ctx.declare(
-			scope,
-			*kvp.0,
-			location.span,
-			location.short_end,
-			mixin_sym.kind,
-			mixin_sym.scope.clone(),
-		);
-
-		if let Err(sym_ix) = result {}
-	}
+	*scope = scope
+		.clone()
+		.union_with(mixin_def.scope.clone(), |self_k, other_k| {
+			todo!("raise an issue")
+		});
 }

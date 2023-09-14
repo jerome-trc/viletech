@@ -1,7 +1,7 @@
 //! Parts of the frontend not concerned with [parsing] or [lexing].
 //!
 //! [parsing]: crate::parse
-//! [lexing]: crate::syn
+//! [lexing]: crate::Syn
 
 mod deco;
 mod vzs;
@@ -9,112 +9,132 @@ mod zs;
 
 use crossbeam::atomic::AtomicCell;
 use doomfront::{
-	rowan::{TextRange, TextSize},
+	rowan::{ast::AstNode, TextRange, TextSize},
 	zdoom::zscript,
 	ParseTree,
 };
 use parking_lot::Mutex;
 
 use rayon::prelude::*;
+use triomphe::Arc;
+use util::rstring::RString;
 
 use crate::{
+	ast,
 	compile::{
 		self,
 		intern::{NsName, SymbolIx},
-		symbol::{DefIx, Definition, Location, Symbol, SymbolKind},
-		Compiler, LibSource, Scope,
+		symbol::{DefKind, DefStatus, Definition, Location, Symbol, Undefined},
+		CEvalBuiltin, Compiler, LibSource, Scope,
 	},
 	inctree::SourceKind,
+	issue::{self, Issue},
+	sema::CEval,
+	zname::ZName,
+	ArcSwap, FxDashMap,
 };
 
 pub fn declare_symbols(compiler: &mut Compiler) {
 	assert_eq!(compiler.stage, compile::Stage::Declaration);
 	debug_assert!(!compiler.any_errors());
 
-	let mut namespaces = vec![];
-	namespaces.resize_with(compiler.sources.len(), Scope::default);
-	let namespaces = Mutex::new(namespaces);
+	for (i, libsrc) in compiler.sources.iter().enumerate() {
+		let namespace = libsrc
+			.inctree
+			.files
+			.par_iter()
+			.enumerate()
+			.fold(Scope::default, |mut scope, (ii, pfile)| {
+				let libname = libsrc.name.clone();
 
-	declaration_pass(
-		compiler,
-		&namespaces,
-		|_, _, _| {},
-		zs::declare_symbols_early,
-	);
+				let mut ctx = DeclContext {
+					compiler,
+					lib: libsrc,
+					path: &pfile.path,
+					lib_ix: i as u16,
+					file_ix: ii as u16,
+					zscript: false,
+					name_stack: vec![libsrc.name.clone()],
+				};
 
-	// Give the current symbol tables to the compiler so that the next pass
-	// can look up the early pass symbols across namespaces.
-	compiler.namespaces = namespaces.into_inner();
-	let mut namespaces = vec![];
-	namespaces.resize_with(compiler.sources.len(), Scope::default);
-	let namespaces = Mutex::new(namespaces);
+				match &pfile.inner {
+					SourceKind::Vzs(ptree) => vzs::declare_symbols_early(&ctx, &mut scope, ptree),
+					SourceKind::Zs(ptree) => {
+						ctx.zscript = true;
+						zs::declare_symbols_early(&ctx, &mut scope, ptree);
+					}
+				}
 
-	declaration_pass(
-		compiler,
-		&namespaces,
-		vzs::declare_symbols,
-		zs::declare_symbols,
-	);
+				scope
+			})
+			.reduce(Scope::default, |u1, u2| {
+				u1.union_with(u2, |u1_k, u2_k| {
+					report_redeclare(compiler, u1_k, u2_k);
+					u2_k
+				})
+			});
 
-	// Now, merge the early pass with the main pass.
+		compiler.namespaces.push(namespace);
+	}
 
-	let mut namespaces = std::mem::replace(&mut compiler.namespaces, namespaces.into_inner());
-	debug_assert_eq!(namespaces.len(), compiler.namespaces.len());
+	for (i, libsrc) in compiler.sources.iter().enumerate() {
+		let namespace = libsrc
+			.inctree
+			.files
+			.par_iter()
+			.enumerate()
+			.fold(Scope::default, |mut scope, (ii, pfile)| {
+				let mut ctx = DeclContext {
+					compiler,
+					lib: libsrc,
+					path: &pfile.path,
+					lib_ix: i as u16,
+					file_ix: ii as u16,
+					zscript: false,
+					name_stack: vec![libsrc.name.clone()],
+				};
 
-	namespaces
-		.iter_mut()
-		.zip(compiler.namespaces.iter_mut())
-		.par_bridge()
-		.for_each(|(ns_early, ns_compiler)| {
-			for kvp in ns_early.drain() {
-				let overwritten = ns_compiler.insert(kvp.0, kvp.1);
-				debug_assert!(overwritten.is_none());
-			}
+				match &pfile.inner {
+					SourceKind::Vzs(ptree) => vzs::declare_symbols(&ctx, &mut scope, ptree),
+					SourceKind::Zs(ptree) => {
+						ctx.zscript = true;
+						zs::declare_symbols(&ctx, &mut scope, ptree);
+					}
+				}
+
+				scope
+			})
+			.reduce(Scope::default, |u1, u2| {
+				u1.union_with(u2, |u1_k, u2_k| {
+					report_redeclare(compiler, u1_k, u2_k);
+					u2_k
+				})
+			});
+
+		let ns = std::mem::take(&mut compiler.namespaces[i]);
+
+		compiler.namespaces[i] = ns.union_with(namespace, |u1_k, u2_k| {
+			report_redeclare(compiler, u1_k, u2_k);
+			u2_k
 		});
+	}
+
+	for i in 0..compiler.namespaces.len() {
+		let mut u = compiler.namespaces[i].clone();
+		let background = &compiler.namespaces[..i];
+
+		for background in &compiler.namespaces[..i] {
+			u = u.union(background.clone());
+		}
+
+		compiler.namespaces[i] = u;
+	}
 
 	compiler.stage = compile::Stage::Semantic;
 
 	if compiler.any_errors() {
 		compiler.failed = true;
 	}
-}
-
-fn declaration_pass(
-	compiler: &Compiler,
-	namespaces: &Mutex<Vec<Scope>>,
-	vzs_function: fn(&DeclContext, &mut Scope, &crate::ParseTree),
-	zs_function: fn(&DeclContext, &mut Scope, &ParseTree<zscript::Syn>),
-) {
-	compiler
-		.sources
-		.par_iter()
-		.enumerate()
-		.for_each(|(i, libsrc)| {
-			let mut namespace = Scope::default();
-
-			for (ii, pfile) in libsrc.inctree.files.iter().enumerate() {
-				let mut ctx = DeclContext {
-					compiler,
-					lib: libsrc,
-					path: pfile.path(),
-					lib_ix: i as u16,
-					file_ix: ii as u16,
-					zscript: false,
-				};
-
-				match pfile.inner() {
-					SourceKind::Vzs(ptree) => {
-						vzs_function(&ctx, &mut namespace, ptree);
-					}
-					SourceKind::Zs(ptree) => {
-						ctx.zscript = true;
-						zs_function(&ctx, &mut namespace, ptree);
-					}
-				}
-			}
-
-			namespaces.lock()[i] = namespace;
-		});
 }
 
 #[derive(Debug)]
@@ -125,43 +145,95 @@ pub(self) struct DeclContext<'c> {
 	pub(self) lib_ix: u16,
 	pub(self) file_ix: u16,
 	pub(self) zscript: bool,
+	pub(self) name_stack: Vec<String>,
 }
 
 impl DeclContext<'_> {
 	/// If `Err` is returned, it contains the index
 	/// to the symbol that would have been overwritten.
+	#[allow(clippy::too_many_arguments)]
 	pub(self) fn declare(
 		&self,
 		outer: &mut Scope,
+		name_str: &str,
 		nsname: NsName,
 		span: TextRange,
 		short_end: TextSize,
-		kind: SymbolKind,
+		kind: Undefined,
 		scope: Scope,
 	) -> Result<SymbolIx, SymbolIx> {
-		use std::collections::hash_map;
-
-		let symbol = Symbol {
-			location: Some(Location {
-				lib_ix: self.lib_ix,
-				file_ix: self.file_ix,
-				span,
-				short_end,
-			}),
-			kind,
-			zscript: self.zscript,
-			scope,
-			definition: AtomicCell::new(DefIx::None),
-		};
-
 		match outer.entry(nsname) {
-			hash_map::Entry::Vacant(vac) => {
+			im::hashmap::Entry::Vacant(vac) => {
+				let name_str_arr = [name_str];
+
+				let str_iter = self
+					.name_stack
+					.iter()
+					.map(|s| s.as_str())
+					.chain(name_str_arr.iter().copied());
+
+				let qname = ZName(RString::from_str_iter(str_iter));
+
+				let symbol = Symbol {
+					name: nsname.index(),
+					location: Location {
+						lib_ix: self.lib_ix,
+						file_ix: self.file_ix,
+						span,
+						short_end,
+					},
+					zscript: self.zscript,
+					status: AtomicCell::new(DefStatus::None),
+					def: ArcSwap::new(triomphe::Arc::new(Definition {
+						kind: DefKind::None { kind, qname },
+						scope,
+					})),
+				};
+
 				let ix = SymbolIx(self.symbols.push(symbol) as u32);
 				vac.insert(ix);
+
 				Ok(ix)
 			}
-			hash_map::Entry::Occupied(occ) => Err(*occ.get()),
+			im::hashmap::Entry::Occupied(occ) => Err(*occ.get()),
 		}
+	}
+
+	pub(self) fn declare_builtin(
+		&self,
+		outer: &mut Scope,
+		fndecl: ast::FuncDecl,
+		qname: &'static str,
+		function: CEvalBuiltin,
+	) {
+		let short_end = if let Some(ret_t) = fndecl.return_type() {
+			ret_t.syntax().text_range().end()
+		} else {
+			fndecl.params().unwrap().syntax().text_range().end()
+		};
+
+		let name_ix = self.names.intern(&fndecl.name().unwrap());
+		let nsname = NsName::Value(name_ix);
+
+		let symbol = Symbol {
+			name: name_ix,
+			location: Location {
+				lib_ix: self.lib_ix,
+				file_ix: self.file_ix,
+				span: fndecl.syntax().text_range(),
+				short_end,
+			},
+			zscript: false,
+			status: AtomicCell::new(DefStatus::Ok),
+			def: ArcSwap::new(Arc::new(Definition {
+				kind: DefKind::Builtin { function },
+				scope: Scope::default(),
+			})),
+		};
+
+		let sym_ix = SymbolIx(self.symbols.push(symbol) as u32);
+		let clobbered = outer.insert(nsname, sym_ix);
+		assert!(clobbered.is_none());
 	}
 }
 
@@ -171,4 +243,24 @@ impl std::ops::Deref for DeclContext<'_> {
 	fn deref(&self) -> &Self::Target {
 		self.compiler
 	}
+}
+
+fn report_redeclare(compiler: &Compiler, u1_k: SymbolIx, u2_k: SymbolIx) {
+	let sym1 = compiler.symbol(u1_k);
+	let sym2 = compiler.symbol(u2_k);
+	let sym1_name_str = compiler.names.resolve(sym1.name);
+
+	compiler.raise(
+		Issue::new(
+			compiler.resolve_path(sym1.location),
+			TextRange::new(sym1.location.span.start(), sym1.location.short_end),
+			format!("attempt to re-declare symbol `{sym1_name_str}`"),
+			issue::Level::Error(issue::Error::Redeclare),
+		)
+		.with_label(
+			compiler.resolve_path(sym2.location),
+			TextRange::new(sym2.location.span.start(), sym2.location.short_end),
+			"previous declaration is here".to_string(),
+		),
+	);
 }

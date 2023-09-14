@@ -18,10 +18,22 @@ fn frontend(crit: &mut Criterion) {
 		return;
 	};
 
+	grp.bench_function("Include Tree, ZS", |bencher| {
+		bencher.iter(|| {
+			let inctree = IncludeTree::from_fs(
+				Path::new(&zs_sample),
+				Path::new("ZSCRIPT.zs"),
+				Some(vzscript::Version::new(0, 0, 0)),
+			);
+
+			let _ = std::hint::black_box(inctree);
+		});
+	});
+
 	grp.bench_function("Declaration", |bencher| {
 		bencher.iter_batched(
 			|| {
-				let _ = LibSource {
+				let corelib = LibSource {
 					name: "vzscript".to_string(),
 					version: vzscript::Version::new(0, 0, 0),
 					native: true,
@@ -45,7 +57,7 @@ fn frontend(crit: &mut Criterion) {
 					decorate: None,
 				};
 
-				Compiler::new([/* TODO: add corelib */ userlib])
+				Compiler::new([corelib, userlib])
 			},
 			|mut compiler| {
 				vzscript::front::declare_symbols(&mut compiler);

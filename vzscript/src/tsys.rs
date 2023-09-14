@@ -1,10 +1,10 @@
 //! Type information, used for compilation as well as RTTI.
 
-use std::{alloc::Layout, marker::PhantomData, mem::ManuallyDrop};
+use std::{marker::PhantomData, mem::ManuallyDrop};
 
 use util::rstring::RString;
 
-use crate::{compile::intern::NameIx, rti};
+use crate::{back::AbiTypes, compile::intern::NameIx, rti};
 
 /// No VZScript type is allowed to exceed this size in bytes.
 pub const MAX_SIZE: usize = 1024 * 2;
@@ -12,15 +12,29 @@ pub const MAX_SIZE: usize = 1024 * 2;
 pub struct TypeDef {
 	tag: TypeTag,
 	data: TypeData,
-	layout: Layout,
 }
 
 impl rti::RtInfo for TypeDef {}
 
 impl TypeDef {
 	#[must_use]
-	pub fn layout(&self) -> Layout {
-		self.layout
+	pub fn abi(&self) -> AbiTypes {
+		unsafe {
+			match self.tag {
+				TypeTag::Array => todo!(),
+				TypeTag::Class => todo!(),
+				TypeTag::Function => todo!(),
+				TypeTag::Primitive => todo!(),
+				TypeTag::Struct => todo!(),
+				TypeTag::Union => todo!(),
+			}
+		}
+	}
+
+	#[must_use]
+	pub fn layout(&self) -> std::alloc::Layout {
+		let _ = self.abi();
+		todo!()
 	}
 
 	pub fn inner(&self) -> TypeRef {
@@ -39,10 +53,6 @@ impl TypeDef {
 	#[must_use]
 	pub(crate) fn new_array(array_t: ArrayType) -> Self {
 		Self {
-			layout: {
-				let e_layout = array_t.elem.upgrade().layout();
-				Layout::from_size_align(e_layout.size() * array_t.len, 16).unwrap()
-			},
 			tag: TypeTag::Array,
 			data: TypeData {
 				array: ManuallyDrop::new(array_t),
@@ -53,7 +63,6 @@ impl TypeDef {
 	#[must_use]
 	pub(crate) fn new_class(class_t: ClassType) -> Self {
 		Self {
-			layout: todo!(),
 			tag: TypeTag::Class,
 			data: TypeData {
 				class: ManuallyDrop::new(class_t),
@@ -88,7 +97,6 @@ impl Clone for TypeDef {
 					},
 				}
 			},
-			layout: self.layout,
 		}
 	}
 }
@@ -319,145 +327,128 @@ impl std::ops::Deref for TypeHandle<UnionType> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeInHandle<T>(rti::InHandle<TypeDef>, PhantomData<T>);
 
-/// Built-ins.
+/// Primitives.
 impl TypeDef {
-	pub(crate) const BUILTIN_TYPEDEF: Self = Self {
+	pub(crate) const PRIMITIVE_TYPEDEF: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::TypeDef),
 		},
-		layout: Layout::new::<rti::Handle<Self>>(),
 	};
 
-	pub(crate) const BUILTIN_VOID: Self = Self {
+	pub(crate) const PRIMITIVE_VOID: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Void),
 		},
-		layout: Layout::new::<()>(),
 	};
 
 	// Numeric /////////////////////////////////////////////////////////////////
 
-	pub(crate) const BUILTIN_BOOL: Self = Self {
+	pub(crate) const PRIMITIVE_BOOL: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Bool),
 		},
-		layout: Layout::new::<bool>(),
 	};
 
-	pub(crate) const BUILTIN_INT8: Self = Self {
+	pub(crate) const PRIMITIVE_INT8: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Int8),
 		},
-		layout: Layout::new::<i8>(),
 	};
 
-	pub(crate) const BUILTIN_UINT8: Self = Self {
+	pub(crate) const PRIMITIVE_UINT8: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Uint8),
 		},
-		layout: Layout::new::<u8>(),
 	};
 
-	pub(crate) const BUILTIN_INT16: Self = Self {
+	pub(crate) const PRIMITIVE_INT16: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Int16),
 		},
-		layout: Layout::new::<i16>(),
 	};
 
-	pub(crate) const BUILTIN_UINT16: Self = Self {
+	pub(crate) const PRIMITIVE_UINT16: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Uint16),
 		},
-		layout: Layout::new::<u16>(),
 	};
 
-	pub(crate) const BUILTIN_INT32: Self = Self {
+	pub(crate) const PRIMITIVE_INT32: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Int32),
 		},
-		layout: Layout::new::<i32>(),
 	};
 
-	pub(crate) const BUILTIN_UINT32: Self = Self {
+	pub(crate) const PRIMITIVE_UINT32: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Uint32),
 		},
-		layout: Layout::new::<u32>(),
 	};
 
-	pub(crate) const BUILTIN_INT64: Self = Self {
+	pub(crate) const PRIMITIVE_INT64: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Int64),
 		},
-		layout: Layout::new::<i64>(),
 	};
 
-	pub(crate) const BUILTIN_UINT64: Self = Self {
+	pub(crate) const PRIMITIVE_UINT64: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Uint64),
 		},
-		layout: Layout::new::<u64>(),
 	};
 
-	pub(crate) const BUILTIN_INT128: Self = Self {
+	pub(crate) const PRIMITIVE_INT128: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Int128),
 		},
-		layout: Layout::new::<i128>(),
 	};
 
-	pub(crate) const BUILTIN_UINT128: Self = Self {
+	pub(crate) const PRIMITIVE_UINT128: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Uint128),
 		},
-		layout: Layout::new::<u128>(),
 	};
 
-	pub(crate) const BUILTIN_FLOAT32: Self = Self {
+	pub(crate) const PRIMITIVE_FLOAT32: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Float32),
 		},
-		layout: Layout::new::<f32>(),
 	};
 
-	pub(crate) const BUILTIN_FLOAT64: Self = Self {
+	pub(crate) const PRIMITIVE_FLOAT64: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::Float64),
 		},
-		layout: Layout::new::<f64>(),
 	};
 
 	// String and IName ////////////////////////////////////////////////////////
 
-	pub(crate) const BUILTIN_STRING: Self = Self {
+	pub(crate) const PRIMITIVE_STRING: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::String),
 		},
-		layout: Layout::new::<RString>(),
 	};
 
-	pub(crate) const BUILTIN_INAME: Self = Self {
+	pub(crate) const PRIMITIVE_INAME: Self = Self {
 		tag: TypeTag::Primitive,
 		data: TypeData {
 			primitive: ManuallyDrop::new(PrimitiveType::IName),
 		},
-		layout: Layout::new::<NameIx>(),
 	};
 }

@@ -61,6 +61,7 @@ impl IncludeTree {
 
 	/// `base_path` should be something like `/home/janedoe/Data/viletech/assets`.
 	/// `root_path` should be something like `/vzscript/main.vzs`.
+	/// Note that this blocks the [`rayon`] global thread pool.
 	#[must_use]
 	pub fn from_fs(base_path: &Path, root_path: &Path, vzs_version: Option<Version>) -> Self {
 		let pfiles = Mutex::new(vec![]);

@@ -1,8 +1,12 @@
 pub(crate) mod vzs;
 pub(crate) mod zs;
 
-use crossbeam::utils::Backoff;
+use std::sync::Arc;
+
+use arc_swap::Guard;
+use crossbeam::{atomic::AtomicCell, utils::Backoff};
 use doomfront::rowan::cursor::SyntaxNode;
+use parking_lot::RwLock;
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
@@ -10,18 +14,30 @@ use crate::{
 	compile::{
 		self,
 		intern::NsName,
-		symbol::{DefIx, Location, Symbol},
+		symbol::{DefStatus, Definition, Location, Symbol},
 		Compiler, Scope,
 	},
 	inctree::{ParsedFile, SourceKind},
 	rti,
-	tsys::TypeDef,
-	vir,
+	tsys::{PrimitiveType, TypeDef},
+	vir, ArcGuard,
 };
 
 pub fn sema(compiler: &mut Compiler) {
 	assert_eq!(compiler.stage, compile::Stage::Semantic);
 	assert!(!compiler.failed);
+
+	let tcache = TypeCache {
+		bool_t: vzs::define_primitive(compiler, "bool"),
+		int32_t: vzs::define_primitive(compiler, "int32"),
+		uint32_t: vzs::define_primitive(compiler, "uint32"),
+		int64_t: vzs::define_primitive(compiler, "int64"),
+		uint64_t: vzs::define_primitive(compiler, "uint64"),
+		float32_t: vzs::define_primitive(compiler, "float32"),
+		float64_t: vzs::define_primitive(compiler, "float64"),
+		string_t: vzs::define_primitive(compiler, "string"),
+		iname_t: vzs::define_primitive(compiler, "iname"),
+	};
 
 	for (i, libsrc) in compiler.sources.iter().enumerate() {
 		// TODO: Investigate if it's faster to clone the green node for each symbol.
@@ -36,14 +52,14 @@ pub fn sema(compiler: &mut Compiler) {
 					SourceKind::Vzs(ptree) => {
 						let cursor = ptree.cursor();
 
-						for_each_symbol(compiler, pfile, i, ii, |ctx, symbol| {
+						for_each_symbol(compiler, &tcache, pfile, i, ii, |ctx, symbol| {
 							vzs::define(ctx, &cursor, symbol)
 						});
 					}
 					SourceKind::Zs(ptree) => {
 						let cursor = ptree.cursor();
 
-						for_each_symbol(compiler, pfile, i, ii, |ctx, symbol| {
+						for_each_symbol(compiler, &tcache, pfile, i, ii, |ctx, symbol| {
 							zs::define(ctx, &cursor, symbol)
 						});
 					}
@@ -60,27 +76,24 @@ pub fn sema(compiler: &mut Compiler) {
 
 fn for_each_symbol(
 	compiler: &Compiler,
+	tcache: &TypeCache,
 	pfile: &ParsedFile,
 	lib_ix: usize,
 	file_ix: usize,
-	function: impl Fn(&SemaContext, &Symbol) -> DefIx,
+	function: impl Fn(&SemaContext, &Symbol) -> DefStatus,
 ) {
 	for symbol in compiler.symbols.iter() {
-		let Some(location) = symbol.location else {
-			continue;
-		};
-
-		if location.lib_ix as usize != lib_ix {
+		if symbol.location.lib_ix as usize != lib_ix {
 			continue;
 		}
 
-		if location.file_ix as usize != file_ix {
+		if symbol.location.file_ix as usize != file_ix {
 			continue;
 		}
 
 		if symbol
-			.definition
-			.compare_exchange(DefIx::None, DefIx::Pending)
+			.status
+			.compare_exchange(DefStatus::None, DefStatus::Pending)
 			.is_err()
 		{
 			continue;
@@ -88,21 +101,76 @@ fn for_each_symbol(
 
 		let ctx = SemaContext {
 			compiler,
-			location,
+			tcache: Some(tcache),
+			location: symbol.location,
 			path: pfile.path(),
 			zscript: symbol.zscript,
 		};
 
-		symbol.definition.store(function(&ctx, symbol));
+		symbol.status.store(function(&ctx, symbol));
 	}
 }
 
 #[derive(Debug)]
 pub(self) struct SemaContext<'c> {
 	pub(self) compiler: &'c Compiler,
+	pub(self) tcache: Option<&'c TypeCache>,
 	pub(self) location: Location,
 	pub(self) path: &'c str,
 	pub(self) zscript: bool,
+}
+
+impl SemaContext<'_> {
+	/// If `symbol` is defined, this is a no-op.
+	/// If `symbol` is pending a definition, use exponential backoff to wait until
+	/// that definition is complete.
+	/// If `symbol` is undefined, lazily provide a definition for it.
+	#[must_use]
+	pub(self) fn require(&self, symbol: &Symbol) -> DefStatus {
+		if symbol
+			.status
+			.compare_exchange(DefStatus::None, DefStatus::Pending)
+			.is_ok()
+		{
+			let new_ctx = SemaContext {
+				location: symbol.location,
+				zscript: symbol.zscript,
+				..*self
+			};
+
+			let libsrc = &self.sources[new_ctx.location.lib_ix as usize];
+			let pfile = &libsrc.inctree.files[new_ctx.location.file_ix as usize];
+
+			let status = match pfile.inner() {
+				SourceKind::Vzs(ptree) => {
+					let root = ptree.cursor();
+					vzs::define(&new_ctx, &root, symbol)
+				}
+				SourceKind::Zs(ptree) => {
+					let root = ptree.cursor();
+					zs::define(&new_ctx, &root, symbol)
+				}
+			};
+
+			symbol.status.store(status);
+			return status;
+		}
+
+		let backoff = Backoff::new();
+		let mut status = symbol.status.load();
+
+		while status == DefStatus::Pending {
+			backoff.snooze();
+			status = symbol.status.load();
+		}
+
+		status
+	}
+
+	#[must_use]
+	pub(self) fn tcache(&self) -> &TypeCache {
+		self.tcache.unwrap()
+	}
 }
 
 impl std::ops::Deref for SemaContext<'_> {
@@ -111,46 +179,6 @@ impl std::ops::Deref for SemaContext<'_> {
 	fn deref(&self) -> &Self::Target {
 		self.compiler
 	}
-}
-
-/// If `symbol` is defined, this is a no-op.
-/// If `symbol` is pending a definition, use exponential backoff to wait until
-/// that definition is complete.
-/// If `symbol` is undefined, lazily provide a definition for it.
-#[must_use]
-pub(self) fn require(ctx: &SemaContext, root: SyntaxNode, symbol: &Symbol) -> DefIx {
-	if symbol
-		.definition
-		.compare_exchange(DefIx::None, DefIx::Pending)
-		.is_ok()
-	{
-		let new_ctx = SemaContext {
-			location: symbol.location.unwrap(),
-			zscript: symbol.zscript,
-			..*ctx
-		};
-
-		let def_ix = if symbol.zscript {
-			let root = root.into();
-			zs::define(&new_ctx, &root, symbol)
-		} else {
-			let root = root.into();
-			vzs::define(&new_ctx, &root, symbol)
-		};
-
-		symbol.definition.store(def_ix);
-		return def_ix;
-	}
-
-	let backoff = Backoff::new();
-	let mut definition = symbol.definition.load();
-
-	while definition == DefIx::Pending {
-		backoff.snooze();
-		definition = symbol.definition.load();
-	}
-
-	definition
 }
 
 #[derive(Debug)]
@@ -164,7 +192,7 @@ pub(self) struct ConstEval {
 /// The output of a compile-time evaluated expression.
 ///
 /// Type definition handles will be `None` wherever type inference fails.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) enum CEval {
 	SelfPtr {
 		typedef: Option<rti::Handle<TypeDef>>,
@@ -173,40 +201,66 @@ pub(crate) enum CEval {
 		typedef: Option<rti::Handle<TypeDef>>,
 	},
 	Type {
-		def: rti::Handle<TypeDef>,
+		handle: rti::Handle<TypeDef>,
+	},
+	/// Attempting to consume a value of this kind is a compiler error
+	/// in non-native libraries.
+	TypeDef {
+		record: rti::Record,
 	},
 	Value {
 		typedef: Option<rti::Handle<TypeDef>>,
 		value: SmallVec<[vir::Immediate; 1]>,
 	},
-	Error,
+}
+
+impl Clone for CEval {
+	fn clone(&self) -> Self {
+		match self {
+			Self::SelfPtr { typedef } => Self::SelfPtr {
+				typedef: typedef.clone(),
+			},
+			Self::SuperPtr { typedef } => Self::SuperPtr {
+				typedef: typedef.clone(),
+			},
+			Self::Type { handle } => Self::Type {
+				handle: handle.clone(),
+			},
+			Self::Value { typedef, value } => Self::Value {
+				typedef: typedef.clone(),
+				value: value.clone(),
+			},
+			Self::TypeDef { .. } => unreachable!(),
+		}
+	}
 }
 
 pub(crate) type CEvalVec = SmallVec<[CEval; 1]>;
 
 #[derive(Debug, Clone)]
-pub(self) struct ScopeStack<'s>(Vec<&'s Scope>, &'s Compiler);
-
-impl<'s> std::ops::Deref for ScopeStack<'s> {
-	type Target = Vec<&'s Scope>;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
-
-impl std::ops::DerefMut for ScopeStack<'_> {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
+pub(self) struct ScopeStack<'s> {
+	compiler: &'s Compiler,
+	namespace: &'s Scope,
+	scopes: Scope,
 }
 
 impl ScopeStack<'_> {
 	#[must_use]
 	pub(self) fn lookup(&self, nsname: NsName) -> Option<&Symbol> {
-		self.0
-			.iter()
-			.rev()
-			.find_map(|scope| scope.get(&nsname).map(|&sym_ix| self.1.symbol(sym_ix)))
+		todo!()
 	}
+}
+
+/// Cache handles to types which will be commonly referenced to minimize lookups.
+#[derive(Debug)]
+pub(self) struct TypeCache {
+	bool_t: rti::Handle<TypeDef>,
+	int32_t: rti::Handle<TypeDef>,
+	uint32_t: rti::Handle<TypeDef>,
+	int64_t: rti::Handle<TypeDef>,
+	uint64_t: rti::Handle<TypeDef>,
+	float32_t: rti::Handle<TypeDef>,
+	float64_t: rti::Handle<TypeDef>,
+	string_t: rti::Handle<TypeDef>,
+	iname_t: rti::Handle<TypeDef>,
 }

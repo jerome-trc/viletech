@@ -4,14 +4,15 @@ use doomfront::{
 	rowan::ast::AstNode,
 	zdoom::{ast::IntSuffix, zscript::ast},
 };
+use smallvec::smallvec;
 
 use crate::{
 	issue::{self, Issue},
-	sema::{ConstEval, SemaContext},
+	sema::{CEval, SemaContext},
 	vir,
 };
 
-pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr) -> Result<ConstEval, ()> {
+pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr) -> Result<CEval, ()> {
 	match ast {
 		ast::Expr::Binary(e_bin) => bin_expr(ctx, e_bin),
 		ast::Expr::Call(e_call) => call_expr(ctx, e_call),
@@ -41,7 +42,7 @@ pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr) -> Result<ConstEval, ()> {
 	}
 }
 
-fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr) -> Result<ConstEval, ()> {
+fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr) -> Result<CEval, ()> {
 	let Ok(l_eval) = expr(ctx, ast.left()) else {
 		return Err(());
 	};
@@ -57,7 +58,7 @@ fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr) -> Result<ConstEval, ()> {
 	todo!()
 }
 
-fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<ConstEval, ()> {
+fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<CEval, ()> {
 	let Ok(called) = expr(ctx, ast::Expr::from(ast.called())) else {
 		return Err(());
 	};
@@ -76,7 +77,7 @@ fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<ConstEval, ()> {
 	todo!()
 }
 
-fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr) -> Result<ConstEval, ()> {
+fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr) -> Result<CEval, ()> {
 	let Ok(indexed) = expr(ctx, ast.indexed()) else {
 		return Err(());
 	};
@@ -89,10 +90,11 @@ fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr) -> Result<ConstEval, ()> {
 	// - Check if `index` can coerce to an integer
 	// - Check if `indexed` can actually be indexed
 	// - Bounds check
+	// - Remember to consider RNG tables
 	todo!()
 }
 
-fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr) -> Result<ConstEval, ()> {
+fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr) -> Result<CEval, ()> {
 	let Ok(operand) = expr(ctx, ast.operand()) else {
 		return Err(());
 	};
@@ -105,7 +107,7 @@ fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr) -> Result<ConstEval, (
 	}
 }
 
-fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr) -> Result<ConstEval, ()> {
+fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr) -> Result<CEval, ()> {
 	let Ok(operand) = expr(ctx, ast.operand()) else {
 		return Err(());
 	};
@@ -122,7 +124,7 @@ fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr) -> Result<ConstEval, ()>
 	}
 }
 
-fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr) -> Result<ConstEval, ()> {
+fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr) -> Result<CEval, ()> {
 	let Ok(cond_eval) = expr(ctx, ast.condition()) else {
 		return Err(());
 	};
@@ -131,45 +133,44 @@ fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr) -> Result<ConstEval, (
 	todo!()
 }
 
-fn vector_expr(ctx: &SemaContext, ast: ast::VectorExpr) -> Result<ConstEval, ()> {
-	let mut lanes = 2;
-
+fn vector_expr(ctx: &SemaContext, ast: ast::VectorExpr) -> Result<CEval, ()> {
 	let e_x = ast.x();
 	let e_y = ast.y();
 
-	if let Some(e_z) = ast.z() {
-		lanes += 1;
+	match (ast.z(), ast.w()) {
+		(None, None) => {
+			let (Ok(ce_x), Ok(ce_y)) = (expr(ctx, e_x), expr(ctx, e_y)) else {
+				return Err(());
+			};
+
+			let (Ok(f_x), Ok(f_y)) = (num_coerce(ctx, ce_x), num_coerce(ctx, ce_y)) else {
+				return Err(());
+			};
+		}
+		(Some(_), None) => {
+			todo!()
+		}
+		(Some(_), Some(_)) => {
+			todo!()
+		}
+		(None, Some(_)) => unreachable!(),
 	}
 
-	if let Some(e_w) = ast.w() {
-		lanes += 1;
-	}
-
-	let t = match lanes {
-		2 => todo!(),
-		3 => todo!(),
-		4 => todo!(),
-		_ => unreachable!(),
-	};
-
-	Ok(ConstEval {
-		typedef: Some(t),
-		ir: todo!(),
-	})
+	todo!()
 }
 
-pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstEval, ()> {
+pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<CEval, ()> {
 	let token = literal.token();
 
 	if token.null() {
-		Ok(ConstEval {
+		Ok(CEval::Value {
 			typedef: None,
-			ir: vir::Node::Immediate(vir::Immediate::Address(0)),
+			value: smallvec![vir::Immediate::Address(0)],
 		})
 	} else if let Some(boolean) = token.bool() {
-		Ok(ConstEval {
-			typedef: Some(ctx.builtins.bool_t.clone()),
-			ir: vir::Node::Immediate(vir::Immediate::I8(boolean as i8)),
+		Ok(CEval::Value {
+			typedef: Some(ctx.tcache().bool_t.clone()),
+			value: smallvec![vir::Immediate::I8(boolean as i8)],
 		})
 	} else if let Some(result) = token.int() {
 		match result {
@@ -195,7 +196,7 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 							}
 
 							(
-								ctx.builtins.int32_t.clone(),
+								ctx.tcache().int32_t.clone(),
 								vir::Immediate::I32(int as i32),
 							)
 						}
@@ -216,7 +217,7 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 							}
 
 							(
-								ctx.builtins.uint32_t.clone(),
+								ctx.tcache().uint32_t.clone(),
 								vir::Immediate::I32(int as i32),
 							)
 						}
@@ -241,19 +242,19 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 							}
 
 							(
-								ctx.builtins.int64_t.clone(),
+								ctx.tcache().int64_t.clone(),
 								vir::Immediate::I64(int as i64),
 							)
 						}
 						IntSuffix::UL => (
-							ctx.builtins.uint64_t.clone(),
+							ctx.tcache().uint64_t.clone(),
 							vir::Immediate::I64(int as i64),
 						),
 					};
 
-				Ok(ConstEval {
+				Ok(CEval::Value {
 					typedef: Some(int_t),
-					ir: vir::Node::Immediate(imm),
+					value: smallvec![imm],
 				})
 			}
 			Err(err) => {
@@ -269,9 +270,9 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 		}
 	} else if let Some(result) = token.float() {
 		match result {
-			Ok(float) => Ok(ConstEval {
-				typedef: Some(ctx.builtins.float64_t.clone()),
-				ir: vir::Node::Immediate(vir::Immediate::F64(float)),
+			Ok(float) => Ok(CEval::Value {
+				typedef: Some(ctx.tcache().float64_t.clone()),
+				value: smallvec![vir::Immediate::F64(float)],
 			}),
 			Err(err) => todo!(),
 		}
@@ -282,11 +283,21 @@ pub(super) fn literal(ctx: &SemaContext, literal: ast::Literal) -> Result<ConstE
 	} else if let Some(text) = token.name() {
 		let name_ix = ctx.names.intern(token.syntax());
 
-		Ok(ConstEval {
-			typedef: Some(ctx.builtins.iname_t.clone()),
-			ir: vir::Node::Immediate(vir::Immediate::I32(i32::from(name_ix))),
+		Ok(CEval::Value {
+			typedef: Some(ctx.tcache().bool_t.clone()),
+			value: smallvec![vir::Immediate::I32(i32::from(name_ix))],
 		})
 	} else {
 		unreachable!()
+	}
+}
+
+fn num_coerce(ctx: &SemaContext, ceval: CEval) -> Result<f32, ()> {
+	match ceval {
+		CEval::Value { typedef, value } => Err(()),
+		CEval::SelfPtr { typedef } => Err(()),
+		CEval::SuperPtr { typedef } => Err(()),
+		CEval::Type { handle } => Err(()),
+		CEval::TypeDef { record } => Err(()),
 	}
 }

@@ -1,4 +1,4 @@
-//! VZScript's memory model; a per-runtime managed heap and garbage collector.
+//! VZScript's per-runtime managed heap and garbage collector.
 //!
 //! This is based off Mike Pall's design for LuaJIT 3.0's GC, outlined here:
 //! <https://web.archive.org/web/20220826233802/http://wiki.luajit.org/New-Garbage-Collector>

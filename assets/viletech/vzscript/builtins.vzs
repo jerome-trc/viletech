@@ -1,11 +1,11 @@
-#[builtin("int_t")]
+#[builtin('int_t')]
 function int_t(const num_bits: auto): @type;
 
-#[builtin("uint_t")]
+#[builtin('uint_t')]
 function uint_t(const num_bits: auto): @type;
 
-#[builtin("type_of")]
+#[builtin('type_of')]
 function type_of(expr: auto): @type;
 
-#[builtin("rtti_of")]
+#[builtin('rtti_of')]
 function rtti_of(expr: auto): rtti;

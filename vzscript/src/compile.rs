@@ -7,21 +7,28 @@ pub(crate) mod symbol;
 #[cfg(test)]
 mod test;
 
-use std::any::TypeId;
+use std::{
+	any::TypeId,
+	hash::{BuildHasherDefault, Hash, Hasher},
+};
 
 use append_only_vec::AppendOnlyVec;
-use doomfront::zdoom::{decorate, inctree::IncludeTree};
+use doomfront::{
+	rowan::ast::AstNode,
+	zdoom::{decorate, inctree::IncludeTree},
+};
 use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHasher};
 use util::rstring::RString;
 
 use crate::{
-	back::AbiTypes, issue::Issue, rti, tsys::TypeDef, zname::ZName, FxDashSet, Project, Version,
+	ast, back::AbiTypes, issue::Issue, rti, sema::CEval, tsys::TypeDef, zname::ZName, ArcGuard,
+	FxDashMap, FxDashSet, FxHamt, Project, Version,
 };
 
 use self::{
 	intern::{NameInterner, NameIx, NsName, SymbolIx},
-	symbol::{DefIx, Definition, FunctionCode, Location, Symbol},
+	symbol::{Definition, FunctionCode, Location, Symbol},
 };
 
 #[derive(Debug)]
@@ -65,17 +72,16 @@ pub struct Compiler {
 	pub(crate) issues: Mutex<Vec<Issue>>,
 	pub(crate) failed: bool,
 	// Storage
-	pub(crate) builtins: Builtins,
-	pub(crate) globals: Scope,
-	pub(crate) defs: AppendOnlyVec<Definition>,
-	pub(crate) native_ptrs: FxHashMap<&'static str, NativePtr>,
-	pub(crate) native_types: FxHashMap<&'static str, NativeType>,
 	/// One for each library, parallel to [`Self::sources`].
 	pub(crate) namespaces: Vec<Scope>,
 	pub(crate) symbols: AppendOnlyVec<Symbol>,
+	pub(crate) native_ptrs: FxHashMap<&'static str, NativePtr>,
+	pub(crate) native_types: FxHashMap<&'static str, NativeType>,
 	// Interning
 	pub(crate) strings: FxDashSet<RString>,
 	pub(crate) names: NameInterner,
+	/// Memoized return values of compile-time-evaluated functions.
+	pub(crate) memo: FxDashMap<MemoHash, CEval>,
 }
 
 impl Compiler {
@@ -98,49 +104,18 @@ impl Compiler {
 			"`Compiler::new` needs at least one `LibSource`"
 		);
 
-		#[must_use]
-		fn core_t(
-			defs: &AppendOnlyVec<Definition>,
-			qname: &'static str,
-			tdef: &TypeDef,
-		) -> rti::Handle<TypeDef> {
-			let zname = ZName::from(RString::new(qname));
-			let store = rti::Store::new(zname.clone(), tdef.clone());
-			let record = rti::Record::new_type(store);
-			let handle = record.handle_type();
-			let ix = defs.push(Definition::Type { record });
-			handle
-		}
-
-		let defs = AppendOnlyVec::new();
-
-		let builtins = Builtins {
-			void_t: core_t(&defs, "vzs.void", &TypeDef::BUILTIN_VOID),
-			bool_t: core_t(&defs, "vzs.bool", &TypeDef::BUILTIN_BOOL),
-			int32_t: core_t(&defs, "vzs.int32", &TypeDef::BUILTIN_INT32),
-			uint32_t: core_t(&defs, "vzs.uint32", &TypeDef::BUILTIN_UINT32),
-			int64_t: core_t(&defs, "vzs.int64", &TypeDef::BUILTIN_INT64),
-			uint64_t: core_t(&defs, "vzs.uint64", &TypeDef::BUILTIN_UINT64),
-			float32_t: core_t(&defs, "vzs.float32", &TypeDef::BUILTIN_FLOAT32),
-			float64_t: core_t(&defs, "vzs.float64", &TypeDef::BUILTIN_FLOAT64),
-			iname_t: core_t(&defs, "vzs.iname", &TypeDef::BUILTIN_INAME),
-			string_t: core_t(&defs, "vzs.string", &TypeDef::BUILTIN_STRING),
-		};
-
 		Self {
 			sources,
 			issues: Mutex::default(),
 			stage: Stage::Declaration,
 			failed: false,
-			builtins,
-			globals: Scope::default(),
-			defs,
-			native_ptrs: FxHashMap::default(),
-			native_types: FxHashMap::default(),
 			namespaces: vec![],
 			symbols: AppendOnlyVec::new(),
+			native_ptrs: FxHashMap::default(),
+			native_types: FxHashMap::default(),
 			strings: FxDashSet::default(),
 			names: NameInterner::default(),
+			memo: FxDashMap::default(),
 		}
 	}
 
@@ -152,6 +127,7 @@ impl Compiler {
 	///
 	/// - Dereferencing a data object pointer or calling a function pointer must
 	/// never invoke any thread-unsafe behavior.
+	/// - Function pointers must be `unsafe extern "C"`.
 	/// - For every value in `ptrs`, one of the provided [`LibSource`]s must
 	/// contain a declaration (with no definition) with a `native` attribute,
 	/// with a single string argument matching the key in `ptrs`. That
@@ -204,40 +180,6 @@ impl Compiler {
 		&self.symbols[ix.0 as usize]
 	}
 
-	#[must_use]
-	pub(crate) fn define_type(&self, qname: &str, tdef: TypeDef) -> (DefIx, rti::Handle<TypeDef>) {
-		let zname = ZName::from(RString::new(qname));
-		let store = rti::Store::new(zname.clone(), TypeDef::BUILTIN_INT32.clone());
-		let record = rti::Record::new_type(store);
-		let handle = record.handle_type();
-		let ix = self.defs.push(Definition::Type { record });
-		debug_assert!(ix < (u32::MAX as usize));
-		(DefIx::Some(ix as u32), handle)
-	}
-
-	#[must_use]
-	pub(crate) fn define_function(
-		&self,
-		qname: &str,
-		tdef: TypeDef,
-		code: FunctionCode,
-	) -> (DefIx, rti::Handle<TypeDef>) {
-		let (_, ty_handle) = self.define_type(qname, tdef);
-		let ty_handle = ty_handle.downcast().unwrap();
-
-		let zname = ZName::from(RString::new(qname));
-		let store = rti::Store::new(zname.clone(), TypeDef::BUILTIN_INT32.clone());
-		let record = rti::Record::new_type(store);
-		let handle = record.handle_type();
-		let ix = self.defs.push(Definition::Function {
-			typedef: ty_handle,
-			code,
-		});
-
-		debug_assert!(ix < (u32::MAX as usize));
-		(DefIx::Some(ix as u32), handle)
-	}
-
 	pub(crate) fn raise(&self, issue: Issue) {
 		let mut guard = self.issues.lock();
 		guard.push(issue);
@@ -250,27 +192,39 @@ impl Compiler {
 	}
 }
 
-pub(crate) type Scope = FxHashMap<NsName, SymbolIx>;
-
-/// Cache handles to types which will be commonly referenced
-/// to keep hash table lookups down.
-#[derive(Debug)]
-pub(crate) struct Builtins {
-	pub(crate) void_t: rti::Handle<TypeDef>,
-	pub(crate) bool_t: rti::Handle<TypeDef>,
-	pub(crate) int32_t: rti::Handle<TypeDef>,
-	pub(crate) uint32_t: rti::Handle<TypeDef>,
-	pub(crate) int64_t: rti::Handle<TypeDef>,
-	pub(crate) uint64_t: rti::Handle<TypeDef>,
-	pub(crate) float32_t: rti::Handle<TypeDef>,
-	pub(crate) float64_t: rti::Handle<TypeDef>,
-	pub(crate) iname_t: rti::Handle<TypeDef>,
-	pub(crate) string_t: rti::Handle<TypeDef>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {
 	Declaration,
 	Semantic,
 	CodeGen,
+}
+
+pub(crate) type Scope = FxHamt<NsName, SymbolIx>;
+
+/// The string slice parameter is a path to the calling file,
+/// for error reporting purposes.
+pub(crate) type CEvalBuiltin = fn(&Compiler, &str, ast::ArgList) -> Result<CEval, ()>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct MemoHash {
+	func: u64,
+	args: u64,
+}
+
+impl MemoHash {
+	#[must_use]
+	pub(crate) fn new(func: &ArcGuard<Definition>, args: &ast::ArgList) -> Self {
+		Self {
+			func: {
+				let mut hasher = FxHasher::default();
+				func.as_ptr().hash(&mut hasher);
+				hasher.finish()
+			},
+			args: {
+				let mut hasher = FxHasher::default();
+				args.hash(&mut hasher);
+				hasher.finish()
+			},
+		}
+	}
 }

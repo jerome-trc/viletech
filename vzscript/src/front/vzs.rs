@@ -1,6 +1,8 @@
 //! Symbol declaration for VZScript.
 
+use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{ast::AstNode, TextRange, TextSize};
+use triomphe::Arc;
 use util::rstring::RString;
 
 use crate::{
@@ -8,17 +10,20 @@ use crate::{
 	compile::{
 		builtins,
 		intern::NsName,
-		symbol::{DefIx, Definition, FunctionCode, SymbolKind},
+		symbol::{DefKind, DefStatus, Definition, FunctionCode, Location, Symbol, Undefined},
 		Scope,
 	},
 	issue::{self, Issue},
 	rti,
 	tsys::TypeDef,
 	zname::ZName,
-	ParseTree, SyntaxToken,
+	ArcSwap, ParseTree, SyntaxToken,
 };
 
 use super::DeclContext;
+
+/// Make mixins known.
+pub(super) fn declare_symbols_early(ctx: &DeclContext, namespace: &mut Scope, ptree: &ParseTree) {}
 
 pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &ParseTree) {
 	let ast = ptree
@@ -37,6 +42,7 @@ pub(super) fn declare_symbols(ctx: &DeclContext, namespace: &mut Scope, ptree: &
 			ast::TopLevel::Annotation(_)
 			| ast::TopLevel::ClassDef(_)
 			| ast::TopLevel::EnumDef(_)
+			| ast::TopLevel::MixinDef(_)
 			| ast::TopLevel::StructDef(_)
 			| ast::TopLevel::UnionDef(_) => continue, // TODO
 		}
@@ -53,41 +59,45 @@ fn declare_constant(ctx: &DeclContext, scope: &mut Scope, constdef: ast::ConstDe
 
 	let result = ctx.declare(
 		scope,
+		name_tok.text(),
 		NsName::Value(ctx.names.intern(&name_tok)),
 		constdef.syntax().text_range(),
 		short_end,
-		SymbolKind::Value,
+		Undefined::Value,
 		Scope::default(),
 	);
 
 	if let Err(sym_ix) = result {
 		let other = ctx.symbol(sym_ix);
 
-		let mut issue = Issue::new(
-			ctx.path,
-			constdef.syntax().text_range(),
-			format!("attempt to re-declare symbol `{}`", name_tok.text()),
-			issue::Level::Error(issue::Error::Redeclare),
-		);
-
-		if let Some(o_loc) = other.location {
-			let o_path = ctx.resolve_path(o_loc);
-
-			issue = issue.with_label(
-				o_path,
-				o_loc.span,
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				constdef.syntax().text_range(),
+				format!("attempt to re-declare symbol `{}`", name_tok.text()),
+				issue::Level::Error(issue::Error::Redeclare),
+			)
+			.with_label(
+				ctx.resolve_path(other.location),
+				other.location.span,
 				"previous declaration is here".to_string(),
-			);
-		} else {
-			unreachable!()
-		}
-
-		ctx.raise(issue);
+			),
+		);
 	}
 }
 
 fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FuncDecl) {
 	let name_tok = fndecl.name().unwrap();
+
+	if ctx.lib.native {
+		if let Some(attr) = fndecl
+			.attributes()
+			.find(|attr| attr.name().unwrap().text() == "builtin")
+		{
+			register_builtin(ctx, scope, fndecl, attr);
+			return;
+		}
+	}
 
 	let short_end = if let Some(ret_t) = fndecl.return_type() {
 		ret_t.syntax().text_range().end()
@@ -95,30 +105,18 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FuncDecl)
 		fndecl.params().unwrap().syntax().text_range().end()
 	};
 
-	if ctx.lib.native {
-		if let Some(attr) = fndecl
-			.attributes()
-			.find(|attr| attr.name().unwrap().text() == "builtin")
-		{
-			let def_ix = register_builtin(ctx, attr);
-
-			return;
-		}
-	}
-
 	let result = ctx.declare(
 		scope,
+		name_tok.text(),
 		NsName::Value(ctx.names.intern(&name_tok)),
 		fndecl.syntax().text_range(),
 		short_end,
-		SymbolKind::Function,
+		Undefined::Function,
 		Scope::default(),
 	);
 
 	if let Err(o_sym_ix) = result {
 		let symbol = ctx.symbol(o_sym_ix);
-		let o_loc = symbol.location.unwrap();
-		let o_path = ctx.resolve_path(o_loc);
 
 		ctx.raise(
 			Issue::new(
@@ -128,21 +126,20 @@ fn declare_function(ctx: &DeclContext, scope: &mut Scope, fndecl: ast::FuncDecl)
 				issue::Level::Error(issue::Error::Redeclare),
 			)
 			.with_label(
-				o_path,
-				o_loc.span,
+				ctx.resolve_path(symbol.location),
+				symbol.location.span,
 				"previous declaration is here".to_string(),
 			),
 		);
 	}
 }
 
-#[must_use]
-fn register_builtin(ctx: &DeclContext, attr: ast::Attribute) -> DefIx {
-	#[must_use]
-	fn define_function(ctx: &DeclContext, qname: &'static str, code: FunctionCode) -> DefIx {
-		todo!()
-	}
-
+fn register_builtin(
+	ctx: &DeclContext,
+	scope: &mut Scope,
+	fndecl: ast::FuncDecl,
+	attr: ast::Attribute,
+) {
 	let arglist = attr.args().unwrap();
 	let mut args = arglist.iter();
 
@@ -154,30 +151,20 @@ fn register_builtin(ctx: &DeclContext, attr: ast::Attribute) -> DefIx {
 
 	let token = lit.token();
 
-	let def_ix = match token.string().unwrap() {
-		"int_t" => define_function(
-			ctx,
-			"vzs.int_t",
-			FunctionCode::BuiltinCEval(builtins::int_t),
-		),
-		"uint_t" => define_function(
-			ctx,
-			"vzs.uint_t",
-			FunctionCode::BuiltinCEval(builtins::uint_t),
-		),
-		"type_of" => define_function(
-			ctx,
-			"vzs.type_of",
-			FunctionCode::BuiltinCEval(builtins::type_of),
-		),
-		"rtti_of" => define_function(
-			ctx,
-			"vzs.rtti_of",
-			FunctionCode::BuiltinCEval(builtins::rtti_of),
-		),
+	match token.name().unwrap() {
+		"int_t" => {
+			ctx.declare_builtin(scope, fndecl, "vzs.int_t", builtins::int_t);
+		}
+		"uint_t" => {
+			ctx.declare_builtin(scope, fndecl, "vzs.uint_t", builtins::uint_t);
+		}
+		"type_of" => ctx.declare_builtin(scope, fndecl, "vzs.type_of", builtins::type_of),
+		"rtti_of" => ctx.declare_builtin(scope, fndecl, "vzs.rtti_of", builtins::rtti_of),
 		other => panic!("unknown builtin name: `{other}`"),
-	};
+	}
 
-	assert!(args.next().is_none());
-	def_ix
+	assert!(
+		args.next().is_none(),
+		"unexpected second argument to `builtin` attribute"
+	);
 }

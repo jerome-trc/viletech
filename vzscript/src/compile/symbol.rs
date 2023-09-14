@@ -1,11 +1,11 @@
 //! Information used by the semantic mid-section but not the backend.
 
-use std::{any::Any, sync::Arc};
+use std::any::Any;
 
-use arc_swap::ArcSwap;
 use crossbeam::atomic::AtomicCell;
-use doomfront::rowan::{TextRange, TextSize};
+use doomfront::rowan::{GreenNode, TextRange, TextSize};
 use smallvec::SmallVec;
+use triomphe::Arc;
 
 use crate::{
 	ast,
@@ -16,38 +16,31 @@ use crate::{
 		ClassType, EnumType, FuncType, PrimitiveType, StructType, TypeDef, TypeHandle, UnionType,
 	},
 	vir,
+	zname::ZName,
+	ArcSwap,
 };
 
-use super::{intern::SymbolIx, Compiler, Scope};
+use super::{
+	intern::{NameIx, SymbolIx},
+	CEvalBuiltin, Compiler, Scope,
+};
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
-	pub(crate) location: Option<Location>,
-	/// Dictates what kind of definition Sema. will try to provide this with.
-	pub(crate) kind: SymbolKind,
+	pub(crate) name: NameIx,
+	pub(crate) location: Location,
 	/// Determines whether name lookups need to happen through all namespaces
 	/// (to imitate the reference implementation's global namespace) or just
 	/// the library's own.
 	pub(crate) zscript: bool,
-	/// TODO: Test if boxing this leads to better end-to-end performance.
-	pub(crate) scope: Scope,
-	pub(crate) definition: AtomicCell<DefIx>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DefIx {
-	None,
-	Pending,
-	Error,
-	/// An index into [`crate::compile::Compiler::defs`].
-	Some(u32),
-}
-
-impl DefIx {
-	#[allow(unused)]
-	const STATIC_ASSERT_LOCK_FREE: () = {
-		assert!(AtomicCell::<Self>::is_lock_free());
-	};
+	/// Sema. treats this as a sort of lock over `def`, since the only other ways
+	/// for its "require" mechanism to properly wait would be to:
+	/// - Perform a load, check for non-defined and non-pending, and then
+	/// start an RCU, opening the way to data races, or
+	/// - Start an RCU and early-out if the symbol is defined or pending,
+	/// which is massively slower than a compare-swap on an integer value
+	pub(crate) status: AtomicCell<DefStatus>,
+	pub(crate) def: ArcSwap<Definition>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,74 +56,135 @@ pub(crate) struct Location {
 	pub(crate) file_ix: u16,
 }
 
-/// See [`Symbol::kind`]; this isn't used for anything else.
+/// See [`Symbol::status`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SymbolKind {
-	Class,
-	Enum,
-	Field,
-	FlagDef,
-	Function,
-	/// Index within is to an element in [`crate::compile::Compiler::namespaces`].
-	Import(u16),
-	Mixin,
-	Primitive,
-	Property,
-	/// Index within is to an element in [`crate::compile::Compiler::symbols`].
-	Rename(SymbolIx),
-	Struct,
-	Union,
-	Value,
+pub(crate) enum DefStatus {
+	None,
+	Pending,
+	Err,
+	Ok,
 }
 
-impl SymbolKind {
-	#[must_use]
-	pub(crate) fn user_facing_name(&self) -> &'static str {
-		match self {
-			Self::Class => "class",
-			Self::Enum => "enum",
-			Self::Field => "field",
-			Self::FlagDef => "flagDef",
-			Self::Function => "function",
-			Self::Import(_) => "namespace",
-			Self::Mixin => "mixin",
-			Self::Primitive => "primitive type",
-			Self::Property => "property",
-			Self::Rename(_) => "type alias",
-			Self::Struct => "struct",
-			Self::Union => "union",
-			Self::Value => "constant",
+impl DefStatus {
+	#[allow(unused)]
+	const STATIC_ASSERT_LOCK_FREE: () = {
+		assert!(AtomicCell::<Self>::is_lock_free());
+	};
+}
+
+impl From<&Result<Arc<Definition>, ()>> for DefStatus {
+	fn from(value: &Result<Arc<Definition>, ()>) -> Self {
+		match value {
+			Ok(_) => Self::Ok,
+			Err(_) => Self::Err,
 		}
 	}
 }
 
 #[derive(Debug)]
-pub(crate) enum Definition {
-	Constant {
-		tdef: rti::Handle<TypeDef>,
-		init: vir::Block,
+pub(crate) struct Definition {
+	pub(crate) kind: DefKind,
+	pub(crate) scope: Scope,
+}
+
+#[derive(Debug)]
+pub(crate) enum DefKind {
+	None {
+		kind: Undefined,
+		qname: ZName,
 	},
-	Data {
-		typedef: rti::Handle<TypeDef>,
-		init: vir::Block,
+	/// An index into [`Compiler::symbols`].
+	Rename(SymbolIx),
+	/// An index into [`Compiler::namespaces`].
+	Import(u16),
+	Pending,
+	Error,
+
+	Builtin {
+		function: CEvalBuiltin,
+	},
+	Class {
+		typedef: rti::Record,
+		handle: TypeHandle<ClassType>,
+	},
+	Enum {
+		typedef: rti::Record,
+		handle: TypeHandle<EnumType>,
 	},
 	Field {
 		typedef: rti::Handle<TypeDef>,
 	},
 	Function {
-		typedef: TypeHandle<FuncType>,
+		typedef: rti::Record,
+		handle: TypeHandle<FuncType>,
 		code: FunctionCode,
 	},
-	Type {
-		record: rti::Record,
+	Mixin {},
+	Primitive {
+		typedef: rti::Record,
+		handle: TypeHandle<PrimitiveType>,
 	},
+	Struct {
+		typedef: rti::Record,
+		handle: TypeHandle<StructType>,
+	},
+	Union {
+		typedef: rti::Record,
+		handle: TypeHandle<UnionType>,
+	},
+	Value(CEval),
+}
+
+impl DefKind {
+	#[must_use]
+	pub(crate) fn user_facing_name(&self) -> &'static str {
+		match self {
+			Self::None { kind, .. } => match kind {
+				Undefined::Class => "class",
+				Undefined::Enum => "enum",
+				Undefined::Field => "field",
+				Undefined::FlagDef => "flagDef",
+				Undefined::Function => "function",
+				Undefined::Property => "property",
+				Undefined::Mixin => "mixin",
+				Undefined::Struct => "struct",
+				Undefined::Union => "union",
+				Undefined::Value => "constant",
+			},
+			Self::Rename(_) => "type alias",
+			Self::Import(_) => "import",
+			Self::Builtin { .. } => "builtin",
+			Self::Class { .. } => "class",
+			Self::Enum { .. } => "enum",
+			Self::Field { .. } => "field",
+			Self::Function { .. } => "function",
+			Self::Mixin {} => "mixin",
+			Self::Primitive { .. } => "primitive type",
+			Self::Struct { .. } => "struct",
+			Self::Union { .. } => "union",
+			Self::Value { .. } => "constant",
+			Self::Error | Self::Pending => unreachable!(),
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Undefined {
+	Class,
+	Enum,
+	Field,
+	FlagDef,
+	Function,
+	Property,
+	Mixin,
+	Struct,
+	Union,
+	Value,
 }
 
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
 	Builtin(unsafe extern "C" fn(AbiTypes) -> AbiTypes),
-	/// The string slice parameter is a path to the calling file.
-	BuiltinCEval(fn(&Compiler, &str, ast::ArgList) -> CEval),
 	Native(&'static str),
 	Ir(vir::Block),
 }

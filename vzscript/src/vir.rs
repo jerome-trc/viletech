@@ -7,12 +7,10 @@ use util::rstring::RString;
 
 use crate::{
 	back::AbiType,
-	compile::{
-		intern::{NameIx, SymbolIx},
-		symbol::DefIx,
-	},
+	compile::intern::{NameIx, SymbolIx},
 	rti,
 	tsys::{FuncType, TypeDef, TypeHandle},
+	zname::ZName,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -53,7 +51,7 @@ pub(crate) enum Node {
 		levels: usize,
 	},
 	Call {
-		function: DefIx,
+		symbol: SymbolRef,
 		args: Vec<NodeIx>,
 	},
 	CallIndirect {
@@ -66,7 +64,9 @@ pub(crate) enum Node {
 		/// If continuing the containing loop, this is 0.
 		levels: usize,
 	},
-	Data(NameIx),
+	Data {
+		symbol: SymbolRef,
+	},
 	/// An infinite loop.
 	Loop(Block),
 	/// Evaluation only emits a single SSA value.
@@ -166,6 +166,7 @@ pub(crate) enum Immediate {
 	I128(i128),
 	F32(f32),
 	F64(f64),
+	F32X2(f32, f32),
 	F32X4(f32, f32, f32, f32),
 	Address(usize),
 }
@@ -226,3 +227,9 @@ pub(crate) enum UnaryOp {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NodeIx(u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SymbolRef {
+	Native(&'static str),
+	User(SymbolIx),
+}

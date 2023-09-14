@@ -1,6 +1,8 @@
 use std::any::Any;
 
-use doomfront::rowan::ast::AstNode;
+use crossbeam::atomic::AtomicCell;
+use doomfront::rowan::{ast::AstNode, TextRange, TextSize};
+use triomphe::Arc;
 use util::rstring::RString;
 
 use crate::{
@@ -10,9 +12,21 @@ use crate::{
 	sema::{self, CEval, CEvalVec},
 	tsys::TypeDef,
 	zname::ZName,
+	ArcSwap,
 };
 
-use super::{intern::NameIx, symbol::Definition, Compiler};
+use super::{
+	intern::NameIx,
+	symbol::{DefKind, DefStatus, Definition, Location, Symbol},
+	Compiler,
+};
+
+#[must_use]
+fn define_primitive(compiler: &Compiler, qname: &'static str, typedef: TypeDef) -> CEval {
+	let store = rti::Store::new(ZName(RString::new(qname)), typedef);
+	let record = rti::Record::new_type(store);
+	CEval::TypeDef { record }
+}
 
 fn validate_int_t_args(
 	compiler: &Compiler,
@@ -98,98 +112,58 @@ fn int_t_bit_width_error(path: &str, arglist: &ast::ArgList) -> Issue {
 	)
 }
 
-pub(crate) fn int_t(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> CEval {
+pub(crate) fn int_t(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> Result<CEval, ()> {
 	let num_bits = match validate_int_t_args(compiler, "int_t", path, &arglist) {
 		Ok(num_bits) => num_bits,
 		Err(issue) => {
 			compiler.raise(issue);
-			return CEval::Error;
+			return Err(());
 		}
 	};
 
-	let handle = match num_bits {
-		8 => {
-			compiler
-				.define_type("vzs.int8", TypeDef::BUILTIN_INT8.clone())
-				.1
-		}
-		16 => {
-			compiler
-				.define_type("vzs.int16", TypeDef::BUILTIN_INT16.clone())
-				.1
-		}
-		32 => {
-			compiler
-				.define_type("vzs.int32", TypeDef::BUILTIN_INT32.clone())
-				.1
-		}
-		64 => {
-			compiler
-				.define_type("vzs.int64", TypeDef::BUILTIN_INT64.clone())
-				.1
-		}
-		128 => {
-			compiler
-				.define_type("vzs.int128", TypeDef::BUILTIN_INT128.clone())
-				.1
-		}
+	let ce = match num_bits {
+		8 => define_primitive(compiler, "vzs.int8", TypeDef::PRIMITIVE_INT8.clone()),
+		16 => define_primitive(compiler, "vzs.int16", TypeDef::PRIMITIVE_INT16.clone()),
+		32 => define_primitive(compiler, "vzs.int32", TypeDef::PRIMITIVE_INT32.clone()),
+		64 => define_primitive(compiler, "vzs.int64", TypeDef::PRIMITIVE_INT64.clone()),
+		128 => define_primitive(compiler, "vzs.int128", TypeDef::PRIMITIVE_INT128.clone()),
 		_ => {
 			compiler.raise(int_t_bit_width_error(path, &arglist));
-			return CEval::Error;
+			return Err(());
 		}
 	};
 
-	CEval::Type { def: handle }
+	Ok(ce)
 }
 
-pub(crate) fn uint_t(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> CEval {
+pub(crate) fn uint_t(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> Result<CEval, ()> {
 	let num_bits = match validate_int_t_args(compiler, "uint_t", path, &arglist) {
 		Ok(num_bits) => num_bits,
 		Err(issue) => {
 			compiler.raise(issue);
-			return CEval::Error;
+			return Err(());
 		}
 	};
 
-	let handle = match num_bits {
-		8 => {
-			compiler
-				.define_type("vzs.uint8", TypeDef::BUILTIN_UINT8.clone())
-				.1
-		}
-		16 => {
-			compiler
-				.define_type("vzs.uint16", TypeDef::BUILTIN_UINT16.clone())
-				.1
-		}
-		32 => {
-			compiler
-				.define_type("vzs.uint32", TypeDef::BUILTIN_UINT32.clone())
-				.1
-		}
-		64 => {
-			compiler
-				.define_type("vzs.uint64", TypeDef::BUILTIN_UINT64.clone())
-				.1
-		}
-		128 => {
-			compiler
-				.define_type("vzs.uint128", TypeDef::BUILTIN_UINT128.clone())
-				.1
-		}
+	let ce = match num_bits {
+		8 => define_primitive(compiler, "vzs.uint8", TypeDef::PRIMITIVE_UINT8.clone()),
+		16 => define_primitive(compiler, "vzs.uint16", TypeDef::PRIMITIVE_UINT16.clone()),
+		32 => define_primitive(compiler, "vzs.uint32", TypeDef::PRIMITIVE_UINT32.clone()),
+		64 => define_primitive(compiler, "vzs.uint64", TypeDef::PRIMITIVE_UINT64.clone()),
+		128 => define_primitive(compiler, "vzs.uint128", TypeDef::PRIMITIVE_UINT128.clone()),
 		_ => {
 			compiler.raise(int_t_bit_width_error(path, &arglist));
-			return CEval::Error;
+			return Err(());
 		}
 	};
 
-	CEval::Type { def: handle }
+	Ok(ce)
 }
 
-pub(crate) fn type_of(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> CEval {
-	todo!()
+pub(crate) fn type_of(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> Result<CEval, ()> {
+	Err(())
 }
 
-pub(crate) fn rtti_of(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> CEval {
-	todo!()
+pub(crate) fn rtti_of(compiler: &Compiler, path: &str, arglist: ast::ArgList) -> Result<CEval, ()> {
+	Err(())
 }

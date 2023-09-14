@@ -4,11 +4,21 @@ use doomfront::simple_astnode;
 
 use crate::{Syn, SyntaxNode};
 
+// Class ///////////////////////////////////////////////////////////////////////
+
 /// Wraps a node tagged [`Syn::ClassDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClassDef(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, ClassDef, Syn::ClassDef);
+
+// Mixin ///////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::MixinDef`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MixinDef(pub(super) SyntaxNode);
+
+simple_astnode!(Syn, MixinDef, Syn::MixinDef);
 
 // Struct /////////////////////////////////////////////////////////////////////
 

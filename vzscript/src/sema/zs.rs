@@ -7,9 +7,13 @@ use doomfront::{
 	rowan::{ast::AstNode, TextRange},
 	zdoom::zscript::{ast, SyntaxNode},
 };
+use triomphe::Arc;
 
 use crate::{
-	compile::symbol::{DefIx, Definition, Symbol, SymbolKind},
+	compile::{
+		symbol::{DefKind, DefStatus, Definition, Symbol, Undefined},
+		Scope,
+	},
 	issue::{self, Issue},
 	vir,
 };
@@ -17,60 +21,76 @@ use crate::{
 use super::SemaContext;
 
 #[must_use]
-pub(super) fn define(ctx: &SemaContext, root: &SyntaxNode, symbol: &Symbol) -> DefIx {
-	let ast = root
-		.covering_element(ctx.location.span)
-		.into_node()
-		.unwrap();
+pub(super) fn define(ctx: &SemaContext, root: &SyntaxNode, symbol: &Symbol) -> DefStatus {
+	let mut ret = DefStatus::Err;
 
-	match symbol.kind {
-		SymbolKind::Class => class::define(ctx, symbol, ast::ClassDef::cast(ast).unwrap()),
-		// TODO: Implement all of these.
-		SymbolKind::Value => define_constant(ctx, symbol, ast::ConstDef::cast(ast).unwrap()),
-		SymbolKind::Enum
-		| SymbolKind::Field
-		| SymbolKind::FlagDef
-		| SymbolKind::Function
-		| SymbolKind::Mixin
-		| SymbolKind::Primitive
-		| SymbolKind::Property
-		| SymbolKind::Rename(_)
-		| SymbolKind::Struct => {
-			ctx.raise(Issue::new(
-				ctx.resolve_path(ctx.location),
-				TextRange::new(ctx.location.span.start(), ctx.location.short_end),
-				"not yet implemented".to_string(),
-				issue::Level::Error(issue::Error::Internal),
-			));
+	symbol.def.rcu(move |undef| {
+		let ast = root
+			.covering_element(ctx.location.span)
+			.into_node()
+			.unwrap();
 
-			DefIx::Error
-		}
-		SymbolKind::Import(_) | SymbolKind::Union => unreachable!(),
-	}
+		let DefKind::None { kind, qname } = &undef.kind else {
+			unreachable!()
+		};
+
+		let success = match kind {
+			Undefined::Class => {
+				match class::define(
+					ctx,
+					qname.clone(),
+					undef.scope.clone(),
+					ast::ClassDef::cast(ast).unwrap(),
+				) {
+					Ok(arc) => arc,
+					Err(()) => return undef.clone(),
+				}
+			}
+			Undefined::Value => {
+				match define_constant(ctx, undef, ast::ConstDef::cast(ast).unwrap()) {
+					Ok(arc) => arc,
+					Err(()) => return undef.clone(),
+				}
+			}
+			Undefined::Enum
+			| Undefined::Field
+			| Undefined::FlagDef
+			| Undefined::Function
+			| Undefined::Property
+			| Undefined::Mixin
+			| Undefined::Struct
+			| Undefined::Union => {
+				ctx.raise(Issue::new(
+					ctx.resolve_path(ctx.location),
+					TextRange::new(ctx.location.span.start(), ctx.location.short_end),
+					"not yet implemented".to_string(),
+					issue::Level::Error(issue::Error::Internal),
+				));
+
+				return undef.clone();
+			}
+		};
+
+		ret = DefStatus::Ok;
+		success
+	});
+
+	ret
 }
 
-#[must_use]
-fn define_constant(ctx: &SemaContext, symbol: &Symbol, constdef: ast::ConstDef) -> DefIx {
+fn define_constant(
+	ctx: &SemaContext,
+	symbol: &Arc<Definition>,
+	constdef: ast::ConstDef,
+) -> Result<Arc<Definition>, ()> {
 	let init = constdef.initializer().unwrap();
 
 	let Ok(consteval) = ceval::expr(ctx, init) else {
-		return DefIx::Error;
+		return Err(());
 	};
 
-	let Some(typedef) = consteval.typedef else {
-		ctx.raise(Issue::new(
-			ctx.path, constdef.syntax().text_range(),
-			"type of constant expression could not be inferred".to_string(),
-			issue::Level::Error(issue::Error::UnknownExprType),
-		));
-
-		return DefIx::Error;
-	};
-
-	let def_ix = ctx.defs.push(Definition::Constant {
-		tdef: typedef,
-		init: vir::Block::from(consteval.ir),
-	});
-
-	DefIx::Some(def_ix as u32)
+	Ok(Arc::new(Definition {
+		kind: DefKind::Value(consteval),
+		scope: Scope::default(),
+	}))
 }

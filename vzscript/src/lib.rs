@@ -8,6 +8,8 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+mod syn;
+
 pub mod ast;
 pub mod back;
 pub mod compile;
@@ -22,7 +24,6 @@ pub mod project;
 pub mod rti;
 pub mod runtime;
 pub mod sema;
-mod syn;
 pub mod tsys;
 pub mod vir;
 pub mod zname;
@@ -34,9 +35,6 @@ use rustc_hash::FxHasher;
 
 pub use self::{inctree::IncludeTree, project::Project, runtime::Runtime, syn::Syn};
 pub use rustc_hash::FxHashMap;
-
-pub type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
-pub type FxDashSet<K> = dashmap::DashSet<K, BuildHasherDefault<FxHasher>>;
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
@@ -122,3 +120,9 @@ impl std::fmt::Display for Error {
 
 #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
 compiler_error!("exotic pointer widths are not yet supported");
+
+pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
+pub(crate) type FxDashSet<T> = dashmap::DashSet<T, BuildHasherDefault<FxHasher>>;
+pub(crate) type FxHamt<K, V> = im::HashMap<K, V, BuildHasherDefault<FxHasher>>;
+pub(crate) type ArcSwap<T> = arc_swap::ArcSwapAny<triomphe::Arc<T>>;
+pub(crate) type ArcGuard<T> = arc_swap::Guard<triomphe::Arc<T>>;

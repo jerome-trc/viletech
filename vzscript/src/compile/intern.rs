@@ -47,6 +47,11 @@ impl NameInterner {
 	}
 
 	#[must_use]
+	pub(crate) fn resolve(&self, ix: NameIx) -> &str {
+		self.array[ix.0 as usize].0.text()
+	}
+
+	#[must_use]
 	fn add(&self, token: GreenToken) -> NameIx {
 		let v = IName(token);
 		let ix = self.array.push(v.clone());
@@ -172,7 +177,7 @@ impl From<NameIx> for i32 {
 }
 
 /// An index into [`crate::compile::Compiler::symbols`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct SymbolIx(pub(crate) u32);
 
 /// A [`NameIx`] with an attached "symbol-space" discriminant.
@@ -184,4 +189,13 @@ pub(crate) enum NsName {
 
 	FlagDef(NameIx),
 	Property(NameIx),
+}
+
+impl NsName {
+	#[must_use]
+	pub(crate) fn index(self) -> NameIx {
+		match self {
+			Self::Type(ix) | Self::Value(ix) | Self::FlagDef(ix) | Self::Property(ix) => ix,
+		}
+	}
 }

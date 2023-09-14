@@ -2,10 +2,14 @@ use doomfront::{
 	rowan::{ast::AstNode, TextRange},
 	zdoom::zscript::{ast, SyntaxToken},
 };
+use triomphe::Arc;
 use util::rstring::RString;
 
 use crate::{
-	compile::symbol::{DefIx, Definition, Symbol},
+	compile::{
+		symbol::{DefKind, DefStatus, Definition, Symbol},
+		Scope,
+	},
 	issue::{self, Issue},
 	rti,
 	sema::SemaContext,
@@ -13,25 +17,27 @@ use crate::{
 	zname::ZName,
 };
 
-#[must_use]
-pub(super) fn define(ctx: &SemaContext, symbol: &Symbol, classdef: ast::ClassDef) -> DefIx {
-	let mut typedef = ClassType {
-		parent: todo!(),
+pub(super) fn define(
+	ctx: &SemaContext,
+	qname: ZName,
+	scope: Scope,
+	classdef: ast::ClassDef,
+) -> Result<Arc<Definition>, ()> {
+	let mut class_t = ClassType {
+		parent: None,
 		is_abstract: false,
 		restrict: tsys::Restrict::None,
 	};
 
-	if let Err(()) = process_qualifiers(ctx, &classdef, &mut typedef) {
-		return DefIx::Error;
-	}
+	process_qualifiers(ctx, &classdef, &mut class_t)?;
 
 	let mut valid = true;
 
 	for innard in classdef.innards() {
 		match innard {
-			ast::ClassInnard::Function(fndecl) => todo!(),
 			ast::ClassInnard::Const(_)
 			| ast::ClassInnard::Enum(_)
+			| ast::ClassInnard::Function(_)
 			| ast::ClassInnard::Struct(_)
 			| ast::ClassInnard::StaticConst(_)
 			| ast::ClassInnard::Field(_)
@@ -44,11 +50,20 @@ pub(super) fn define(ctx: &SemaContext, symbol: &Symbol, classdef: ast::ClassDef
 	}
 
 	if !valid {
-		return DefIx::Error;
+		return Err(());
 	}
 
-	ctx.define_type(todo!("fully-qualified name"), TypeDef::new_class(typedef))
-		.0
+	let store = rti::Store::new(qname, TypeDef::new_class(class_t));
+	let record = rti::Record::new_type(store);
+	let handle = record.handle_type();
+
+	Ok(Arc::new(Definition {
+		kind: DefKind::Class {
+			typedef: record,
+			handle: handle.downcast().unwrap(),
+		},
+		scope,
+	}))
 }
 
 fn process_qualifiers(
