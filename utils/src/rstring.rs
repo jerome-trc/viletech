@@ -7,7 +7,6 @@ use std::{borrow::Borrow, ffi::c_void, ops::Deref};
 /// Essentially a [`std::sync::Arc`], but occupies only one pointer-width and
 /// has no support for weak pointers (since strings cannot have circular references),
 /// so it makes non-trivial space efficiency gains.
-#[derive(Debug)]
 pub struct RString(triomphe::ThinArc<(), u8>);
 
 impl RString {
@@ -21,36 +20,23 @@ impl RString {
 
 	#[must_use]
 	pub fn from_strs(strings: &[&str]) -> Self {
-		/// The type of `0` does not provide [`ExactSizeIterator`], but we
-		/// do in fact know the size, so just provide an impl ourselves.
-		struct Esi<I: Iterator<Item = u8>>(I, usize);
-
-		impl<I: Iterator<Item = u8>> Iterator for Esi<I> {
-			type Item = u8;
-
-			fn next(&mut self) -> Option<Self::Item> {
-				self.0.next()
-			}
-
-			fn size_hint(&self) -> (usize, Option<usize>) {
-				(self.1, Some(self.1))
-			}
-		}
-
-		impl<I: Iterator<Item = u8>> ExactSizeIterator for Esi<I> {
-			fn len(&self) -> usize {
-				self.1
-			}
-		}
-
-		// Yes, it really does take this kind of "language lawyering" to iterate
-		// over every byte in a slice of string slices.
 		let iter = strings.iter().flat_map(|s| s.as_bytes()).copied();
 		let total_len = strings.iter().fold(0, |acc, s| acc + s.len());
 
 		Self(triomphe::ThinArc::from_header_and_iter(
 			(),
-			Esi(iter, total_len),
+			ByteIter(iter, total_len),
+		))
+	}
+
+	#[must_use]
+	pub fn from_str_iter<'s>(strings: impl Iterator<Item = &'s str> + Clone) -> Self {
+		let iter = strings.clone().flat_map(|s| s.as_bytes()).copied();
+		let total_len = strings.fold(0, |acc, s| acc + s.len());
+
+		Self(triomphe::ThinArc::from_header_and_iter(
+			(),
+			ByteIter(iter, total_len),
 		))
 	}
 
@@ -146,31 +132,72 @@ impl std::fmt::Display for RString {
 	}
 }
 
+impl std::fmt::Debug for RString {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "\"{}\"", self.as_str())
+	}
+}
+
 #[test]
 #[cfg(test)]
 fn soundness() {
 	use std::collections::HashSet;
 
-	let rstring = RString::new("hello world");
+	let rstring = RString::new("atmospheric extinction");
 
-	assert_eq!(rstring, "hello world");
-	assert!(rstring.eq_ignore_ascii_case("HELLO WORLD"));
+	assert_eq!(rstring, "atmospheric extinction");
+	assert!(rstring.eq_ignore_ascii_case("ATMOSPHERIC EXTINCTION"));
 
 	unsafe {
 		let ptr = rstring.as_ptr();
 		let sref = &*ptr;
-		assert_eq!(sref, "hello world");
+		assert_eq!(sref, "atmospheric extinction");
 	}
 
-	assert_eq!(rstring.len(), 11);
+	assert_eq!(rstring.len(), 22);
 
-	let rstring = RString::from_strs(&["/vzs/collect", "::TArray::element"]);
-	assert_eq!(rstring.len(), 30);
-	assert_eq!(rstring, "/vzs/collect::TArray::element");
-	assert!(rstring.eq_ignore_ascii_case("/VZS/COLLECT::TARRAY::ELEMENT"));
+	let rstring = RString::from_str_iter(
+		["devour", ".", "and"]
+			.iter()
+			.map(|s| *s)
+			.chain([".", "saturate"]),
+	);
+	assert_eq!(rstring, "devour.and.saturate");
+
+	let rstring = RString::from_strs(&["/patience/is", "::a::virtue"]);
+	assert_eq!(rstring.len(), 23);
+	assert_eq!(rstring, "/patience/is::a::virtue");
+	assert!(rstring.eq_ignore_ascii_case("/PATIENCE/IS::A::VIRTUE"));
 
 	let mut set = HashSet::new();
 	set.insert(rstring.clone());
 	assert!(set.contains(&rstring));
-	assert!(set.contains("/vzs/collect::TArray::element"));
+	assert!(set.contains("/patience/is::a::virtue"));
+}
+
+// Details /////////////////////////////////////////////////////////////////////
+
+/// The type of `I` does not provide [`ExactSizeIterator`], but we
+/// do in fact know the size, so just provide an impl ourselves.
+///
+/// Yes, it really does take this kind of "language lawyering" to iterate
+/// over every byte in a slice of string slices.
+struct ByteIter<I: Iterator<Item = u8>>(I, usize);
+
+impl<I: Iterator<Item = u8>> Iterator for ByteIter<I> {
+	type Item = u8;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.0.next()
+	}
+
+	fn size_hint(&self) -> (usize, Option<usize>) {
+		(self.1, Some(self.1))
+	}
+}
+
+impl<I: Iterator<Item = u8>> ExactSizeIterator for ByteIter<I> {
+	fn len(&self) -> usize {
+		self.1
+	}
 }
