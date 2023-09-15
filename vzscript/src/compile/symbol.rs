@@ -186,5 +186,5 @@ pub(crate) enum Undefined {
 pub(crate) enum FunctionCode {
 	Builtin(unsafe extern "C" fn(AbiTypes) -> AbiTypes),
 	Native(&'static str),
-	Ir(vir::Block),
+	Ir(vir::Function),
 }

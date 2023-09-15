@@ -2,7 +2,10 @@
 //!
 //! A common middle ground between VZScript's transpilation inputs and the backend.
 
+use std::ops::Range;
+
 use cranelift::prelude::{FloatCC, IntCC};
+use smallvec::SmallVec;
 use util::rstring::RString;
 
 use crate::{
@@ -13,30 +16,35 @@ use crate::{
 	zname::ZName,
 };
 
-#[derive(Debug, Default, Clone)]
-pub(crate) struct Block(pub(crate) Box<[Node]>);
+#[derive(Debug)]
+pub(crate) struct Function {
+	pub(crate) body: Box<[Node]>,
+	pub(crate) vars: Box<[AbiType]>,
+}
 
-impl std::ops::Deref for Block {
-	type Target = Box<[Node]>;
+impl std::ops::Index<NodeIx> for Function {
+	type Output = Node;
 
-	fn deref(&self) -> &Self::Target {
-		&self.0
+	fn index(&self, index: NodeIx) -> &Self::Output {
+		&self.body[index.0 as usize]
 	}
 }
 
-impl From<Node> for Block {
-	fn from(value: Node) -> Self {
-		Self(vec![value].into_boxed_slice())
+impl std::ops::Index<&NodeIx> for Function {
+	type Output = Node;
+
+	fn index(&self, index: &NodeIx) -> &Self::Output {
+		&self.body[index.0 as usize]
 	}
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum Node {
-	/// Construction of a structure or array.
-	Aggregate(Vec<NodeIx>),
+	Arg(usize),
 	/// Evaluation never emits any SSA values.
 	Assign {
-		name: RString,
+		/// An index into [`Function::vars`].
+		var: usize,
 		expr: NodeIx,
 	},
 	Bin {
@@ -44,7 +52,8 @@ pub(crate) enum Node {
 		rhs: NodeIx,
 		op: BinOp,
 	},
-	Block(Block),
+	BlockOpen,
+	BlockClose,
 	Branch(Branch),
 	Break {
 		/// If breaking from the containing loop, this is 0.
@@ -67,8 +76,6 @@ pub(crate) enum Node {
 	Data {
 		symbol: SymbolRef,
 	},
-	/// An infinite loop.
-	Loop(Block),
 	/// Evaluation only emits a single SSA value.
 	Immediate(Immediate),
 	/// Evaluation never emits any SSA values.

@@ -123,6 +123,7 @@ compiler_error!("exotic pointer widths are not yet supported");
 
 pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxDashSet<T> = dashmap::DashSet<T, BuildHasherDefault<FxHasher>>;
+pub(crate) type FxDashMapView<K, V> = dashmap::ReadOnlyView<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxHamt<K, V> = im::HashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type ArcSwap<T> = arc_swap::ArcSwapAny<triomphe::Arc<T>>;
 pub(crate) type ArcGuard<T> = arc_swap::Guard<triomphe::Arc<T>>;

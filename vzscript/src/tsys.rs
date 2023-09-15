@@ -2,6 +2,8 @@
 
 use std::{marker::PhantomData, mem::ManuallyDrop};
 
+use cranelift::prelude::types as abi_t;
+use smallvec::smallvec;
 use util::rstring::RString;
 
 use crate::{back::AbiTypes, compile::intern::NameIx, rti};
@@ -23,8 +25,8 @@ impl TypeDef {
 			match self.tag {
 				TypeTag::Array => todo!(),
 				TypeTag::Class => todo!(),
-				TypeTag::Function => todo!(),
-				TypeTag::Primitive => todo!(),
+				TypeTag::Function => smallvec![],
+				TypeTag::Primitive => self.data.primitive.abi(),
 				TypeTag::Struct => todo!(),
 				TypeTag::Union => todo!(),
 			}
@@ -235,6 +237,22 @@ pub enum PrimitiveType {
 }
 
 impl PrimitiveType {
+	#[must_use]
+	pub fn abi(self) -> AbiTypes {
+		match self {
+			Self::Bool | Self::Int8 | Self::Uint8 => smallvec![abi_t::I8],
+			Self::Int16 | Self::Uint16 => smallvec![abi_t::I16],
+			Self::Int32 | Self::Uint32 => smallvec![abi_t::I32],
+			Self::Int64 | Self::Uint64 => smallvec![abi_t::I64],
+			Self::Int128 | Self::Uint128 => smallvec![abi_t::I128],
+			Self::Float32 => smallvec![abi_t::F32],
+			Self::Float64 => smallvec![abi_t::F64],
+			Self::TypeDef | Self::Void => smallvec![],
+			Self::IName => smallvec![abi_t::I32],
+			Self::String => todo!(),
+		}
+	}
+
 	#[must_use]
 	pub fn int_bit_width(self) -> Option<u16> {
 		match self {

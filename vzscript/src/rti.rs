@@ -13,7 +13,7 @@ use cranelift_module::{DataId, FuncId};
 use rustc_hash::FxHasher;
 
 use crate::{
-	back::{AbiTypes, JitModule},
+	back::{AbiType, AbiTypes, JitModule},
 	native::Native,
 	project::Project,
 	tsys::{
@@ -63,11 +63,11 @@ impl<R: RtInfo> Store<R> {
 
 #[derive(Debug)]
 pub struct Function {
-	ptr: *const c_void,
-	id: FuncId,
-	sighash: SignatureHash,
+	pub(crate) ptr: *const c_void,
+	pub(crate) id: FuncId,
+	pub(crate) sighash: SignatureHash,
 	#[allow(unused)]
-	module: Arc<JitModule>,
+	pub(crate) module: Arc<JitModule>,
 }
 
 impl Function {
@@ -77,7 +77,7 @@ impl Function {
 		A: Native,
 		R: Native,
 	{
-		let h = SignatureHash::new(A::repr(), R::repr());
+		let h = SignatureHash::new(A::REPR.iter().copied(), R::REPR.iter().copied());
 		(h == self.sighash).then_some(TFn(self, PhantomData))
 	}
 }
@@ -123,10 +123,20 @@ pub(crate) struct SignatureHash(u64);
 
 impl SignatureHash {
 	#[must_use]
-	pub(crate) fn new(params: AbiTypes, rets: AbiTypes) -> Self {
+	pub(crate) fn new(
+		params: impl Iterator<Item = AbiType>,
+		rets: impl Iterator<Item = AbiType>,
+	) -> Self {
 		let mut fxh = FxHasher::default();
-		params.hash(&mut fxh);
-		rets.hash(&mut fxh);
+
+		for param in params {
+			param.hash(&mut fxh);
+		}
+
+		for ret in rets {
+			ret.hash(&mut fxh);
+		}
+
 		Self(fxh.finish())
 	}
 }
@@ -213,7 +223,7 @@ impl<R: RtInfo> Handle<R> {
 }
 
 impl<R: RtInfo> PartialEq for Handle<R> {
-	/// Check that these are two pointers to the same RTI object in the same module.
+	/// Check that these are two pointers to the same RTI record.
 	fn eq(&self, other: &Self) -> bool {
 		Arc::ptr_eq(&self.0, &other.0)
 	}
@@ -298,7 +308,7 @@ impl<R: RtInfo> From<&Arc<Store<R>>> for InHandle<R> {
 }
 
 impl<R: RtInfo> PartialEq for InHandle<R> {
-	/// Check that these are two pointers to the same symbol in the same module.
+	/// Check that these are two pointers to the same RTI record.
 	fn eq(&self, other: &Self) -> bool {
 		Weak::ptr_eq(&self.0, &other.0)
 	}

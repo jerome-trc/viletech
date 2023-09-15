@@ -3,10 +3,9 @@
 use std::sync::Arc;
 
 use cranelift::prelude::types;
-use smallvec::smallvec;
 use util::rstring::RString;
 
-use crate::back::{AbiType, AbiTypes};
+use crate::back::AbiType;
 
 #[cfg(target_pointer_width = "32")]
 pub const POINTER_T: AbiType = types::I32;
@@ -17,85 +16,59 @@ pub const POINTER_T: AbiType = types::I64;
 ///
 /// # Safety
 ///
-/// The return value of `repr` must precisely match the memory layout of `Self`.
+/// The value of `REPR` must precisely match the memory layout of `Self`.
 pub unsafe trait Native {
-	fn repr() -> AbiTypes;
+	const REPR: &'static [AbiType];
 }
 
 unsafe impl Native for () {
-	fn repr() -> AbiTypes {
-		smallvec![]
-	}
+	const REPR: &'static [AbiType] = &[];
 }
 
 unsafe impl Native for i8 {
-	fn repr() -> AbiTypes {
-		[types::I8].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I8];
 }
 
 unsafe impl Native for u8 {
-	fn repr() -> AbiTypes {
-		[types::I8].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I8];
 }
 
 unsafe impl Native for i16 {
-	fn repr() -> AbiTypes {
-		[types::I16].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I16];
 }
 
 unsafe impl Native for u16 {
-	fn repr() -> AbiTypes {
-		[types::I16].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I16];
 }
 
 unsafe impl Native for i32 {
-	fn repr() -> AbiTypes {
-		[types::I32].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I32];
 }
 
 unsafe impl Native for u32 {
-	fn repr() -> AbiTypes {
-		[types::I32].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I32];
 }
 
 unsafe impl Native for i64 {
-	fn repr() -> AbiTypes {
-		[types::I64].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I64];
 }
 
 unsafe impl Native for u64 {
-	fn repr() -> AbiTypes {
-		[types::I64].into()
-	}
+	const REPR: &'static [AbiType] = &[types::I64];
 }
 
 unsafe impl<T> Native for *const T {
-	fn repr() -> AbiTypes {
-		smallvec![POINTER_T]
-	}
+	const REPR: &'static [AbiType] = &[POINTER_T];
 }
 
 unsafe impl<T> Native for *mut T {
-	fn repr() -> AbiTypes {
-		smallvec![POINTER_T]
-	}
+	const REPR: &'static [AbiType] = &[POINTER_T];
 }
 
 unsafe impl<T> Native for Arc<T> {
-	fn repr() -> AbiTypes {
-		smallvec![POINTER_T]
-	}
+	const REPR: &'static [AbiType] = &[POINTER_T];
 }
 
 unsafe impl Native for RString {
-	fn repr() -> AbiTypes {
-		smallvec![POINTER_T]
-	}
+	const REPR: &'static [AbiType] = &[POINTER_T];
 }
