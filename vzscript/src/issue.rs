@@ -118,6 +118,7 @@ pub enum Error {
 	/// An argument passed to a compiler built-in caused an error that otherwise
 	/// falls under no other error code.
 	Builtin,
+	CEvalRecursion,
 	/// e.g., ZScript tried to use `super` at compile time.
 	ConstEval,
 	FlagDefBitOverflow,

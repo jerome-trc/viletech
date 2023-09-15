@@ -85,7 +85,7 @@ fn define_constant(
 ) -> Result<Arc<Definition>, ()> {
 	let init = constdef.initializer().unwrap();
 
-	let Ok(consteval) = ceval::expr(ctx, init) else {
+	let Ok(consteval) = ceval::expr(ctx, init, 0) else {
 		return Err(());
 	};
 

@@ -12,18 +12,29 @@ use crate::{
 	vir,
 };
 
-pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr) -> Result<CEval, ()> {
+pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr, depth: u16) -> Result<CEval, ()> {
+	let Some(next_depth) = depth.checked_add(1) else {
+		ctx.raise(Issue::new(
+			ctx.path,
+			ast.syntax().text_range(),
+			"recursion limit reached during compile-time evaluation".to_string(),
+			issue::Level::Error(issue::Error::CEvalRecursion),
+		).with_note("try simplifying this expression".to_string()));
+
+		return Err(());
+	};
+
 	match ast {
-		ast::Expr::Binary(e_bin) => bin_expr(ctx, e_bin),
-		ast::Expr::Call(e_call) => call_expr(ctx, e_call),
+		ast::Expr::Binary(e_bin) => bin_expr(ctx, e_bin, next_depth),
+		ast::Expr::Call(e_call) => call_expr(ctx, e_call, next_depth),
 		ast::Expr::ClassCast(_) => todo!(),
-		ast::Expr::Group(e_grp) => expr(ctx, e_grp.inner()),
+		ast::Expr::Group(e_grp) => expr(ctx, e_grp.inner(), next_depth),
 		ast::Expr::Ident(_) => todo!(),
-		ast::Expr::Index(e_index) => index_expr(ctx, e_index),
+		ast::Expr::Index(e_index) => index_expr(ctx, e_index, next_depth),
 		ast::Expr::Literal(e_lit) => literal(ctx, e_lit),
 		ast::Expr::Member(_) => todo!(),
-		ast::Expr::Postfix(e_post) => postfix_expr(ctx, e_post),
-		ast::Expr::Prefix(e_pre) => prefix_expr(ctx, e_pre),
+		ast::Expr::Postfix(e_post) => postfix_expr(ctx, e_post, next_depth),
+		ast::Expr::Prefix(e_pre) => prefix_expr(ctx, e_pre, next_depth),
 		ast::Expr::Super(e_super) => {
 			ctx.raise(
 				Issue::new(
@@ -37,17 +48,17 @@ pub(super) fn expr(ctx: &SemaContext, ast: ast::Expr) -> Result<CEval, ()> {
 
 			Err(())
 		}
-		ast::Expr::Ternary(e_ternary) => ternary_expr(ctx, e_ternary),
-		ast::Expr::Vector(e_vector) => vector_expr(ctx, e_vector),
+		ast::Expr::Ternary(e_ternary) => ternary_expr(ctx, e_ternary, next_depth),
+		ast::Expr::Vector(e_vector) => vector_expr(ctx, e_vector, next_depth),
 	}
 }
 
-fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr) -> Result<CEval, ()> {
-	let Ok(l_eval) = expr(ctx, ast.left()) else {
+fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(l_eval) = expr(ctx, ast.left(), depth) else {
 		return Err(());
 	};
 
-	let Ok(r_eval) = expr(ctx, ast.right().unwrap()) else {
+	let Ok(r_eval) = expr(ctx, ast.right().unwrap(), depth) else {
 		return Err(());
 	};
 
@@ -58,8 +69,8 @@ fn bin_expr(ctx: &SemaContext, ast: ast::BinExpr) -> Result<CEval, ()> {
 	todo!()
 }
 
-fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<CEval, ()> {
-	let Ok(called) = expr(ctx, ast::Expr::from(ast.called())) else {
+fn call_expr(ctx: &SemaContext, ast: ast::CallExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(called) = expr(ctx, ast::Expr::from(ast.called()), depth) else {
 		return Err(());
 	};
 
@@ -68,7 +79,7 @@ fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<CEval, ()> {
 	let arg_list = ast.arg_list();
 
 	for arg in arg_list.args() {
-		let Ok(arg_eval) = expr(ctx, arg.expr()) else {
+		let Ok(arg_eval) = expr(ctx, arg.expr(), depth) else {
 			return Err(());
 		};
 	}
@@ -77,12 +88,12 @@ fn call_expr(ctx: &SemaContext, ast: ast::CallExpr) -> Result<CEval, ()> {
 	todo!()
 }
 
-fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr) -> Result<CEval, ()> {
-	let Ok(indexed) = expr(ctx, ast.indexed()) else {
+fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(indexed) = expr(ctx, ast.indexed(), depth) else {
 		return Err(());
 	};
 
-	let Ok(index) = expr(ctx, ast.index().unwrap()) else {
+	let Ok(index) = expr(ctx, ast.index().unwrap(), depth) else {
 		return Err(());
 	};
 
@@ -94,8 +105,8 @@ fn index_expr(ctx: &SemaContext, ast: ast::IndexExpr) -> Result<CEval, ()> {
 	todo!()
 }
 
-fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr) -> Result<CEval, ()> {
-	let Ok(operand) = expr(ctx, ast.operand()) else {
+fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(operand) = expr(ctx, ast.operand(), depth) else {
 		return Err(());
 	};
 
@@ -107,8 +118,8 @@ fn postfix_expr(ctx: &SemaContext, ast: ast::PostfixExpr) -> Result<CEval, ()> {
 	}
 }
 
-fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr) -> Result<CEval, ()> {
-	let Ok(operand) = expr(ctx, ast.operand()) else {
+fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(operand) = expr(ctx, ast.operand(), depth) else {
 		return Err(());
 	};
 
@@ -124,8 +135,8 @@ fn prefix_expr(ctx: &SemaContext, ast: ast::PrefixExpr) -> Result<CEval, ()> {
 	}
 }
 
-fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr) -> Result<CEval, ()> {
-	let Ok(cond_eval) = expr(ctx, ast.condition()) else {
+fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr, depth: u16) -> Result<CEval, ()> {
+	let Ok(cond_eval) = expr(ctx, ast.condition(), depth) else {
 		return Err(());
 	};
 
@@ -133,13 +144,13 @@ fn ternary_expr(ctx: &SemaContext, ast: ast::TernaryExpr) -> Result<CEval, ()> {
 	todo!()
 }
 
-fn vector_expr(ctx: &SemaContext, ast: ast::VectorExpr) -> Result<CEval, ()> {
+fn vector_expr(ctx: &SemaContext, ast: ast::VectorExpr, depth: u16) -> Result<CEval, ()> {
 	let e_x = ast.x();
 	let e_y = ast.y();
 
 	match (ast.z(), ast.w()) {
 		(None, None) => {
-			let (Ok(ce_x), Ok(ce_y)) = (expr(ctx, e_x), expr(ctx, e_y)) else {
+			let (Ok(ce_x), Ok(ce_y)) = (expr(ctx, e_x, depth), expr(ctx, e_y, depth)) else {
 				return Err(());
 			};
 
