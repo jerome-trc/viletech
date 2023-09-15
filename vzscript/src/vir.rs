@@ -2,11 +2,9 @@
 //!
 //! A common middle ground between VZScript's transpilation inputs and the backend.
 
-use std::ops::Range;
-
 use cranelift::prelude::{FloatCC, IntCC};
+use doomfront::rowan::TextSize;
 use smallvec::SmallVec;
-use util::rstring::RString;
 
 use crate::{
 	back::AbiType,
@@ -20,6 +18,7 @@ use crate::{
 pub(crate) struct Function {
 	pub(crate) body: Box<[Node]>,
 	pub(crate) vars: Box<[AbiType]>,
+	pub(crate) cold: bool,
 }
 
 impl std::ops::Index<NodeIx> for Function {
@@ -38,21 +37,23 @@ impl std::ops::Index<&NodeIx> for Function {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) enum Node {
 	Arg(usize),
-	/// Evaluation never emits any SSA values.
 	Assign {
 		/// An index into [`Function::vars`].
 		var: usize,
 		expr: NodeIx,
 	},
+	// Evaluation only emits a single SSA value.
 	Bin {
 		lhs: NodeIx,
 		rhs: NodeIx,
 		op: BinOp,
 	},
-	BlockOpen,
+	BlockOpen {
+		cold: bool,
+	},
 	BlockClose,
 	Branch(Branch),
 	Break {
@@ -61,12 +62,12 @@ pub(crate) enum Node {
 	},
 	Call {
 		symbol: SymbolRef,
-		args: Vec<NodeIx>,
+		args: Box<[NodeIx]>,
 	},
 	CallIndirect {
 		typedef: TypeHandle<FuncType>,
 		lhs: NodeIx,
-		args: Vec<NodeIx>,
+		args: Box<[NodeIx]>,
 	},
 	/// Evaluation never emits any SSA values.
 	Continue {
@@ -80,26 +81,29 @@ pub(crate) enum Node {
 	Immediate(Immediate),
 	/// Evaluation never emits any SSA values.
 	Ret(NodeIx),
+	// Evaluation only emits a single SSA value.
 	Unary {
 		operand: NodeIx,
 		op: UnaryOp,
 	},
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Branch {
+	/// [`Expr`] to test if non-zero.
 	pub(crate) condition: NodeIx,
+	/// [`Expr`] to evaluate and emit if [`Self::condition`] is non-zero.
 	pub(crate) if_true: NodeIx,
+	/// [`Expr`] to evaluate and emit if [`Self::condition`] is zero.
 	pub(crate) if_false: NodeIx,
-	pub(crate) out_t: Option<rti::Handle<TypeDef>>,
-	pub(crate) cold: IfElseCold,
+	pub(crate) cold: ColdBranch,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IfElseCold {
+pub enum ColdBranch {
+	Neither,
 	True,
 	False,
-	Neither,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -232,6 +236,7 @@ pub(crate) enum UnaryOp {
 	Trunc,
 }
 
+/// A strongly-typed index into [`Function::body`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NodeIx(u32);
 

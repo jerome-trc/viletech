@@ -1,3 +1,3 @@
-//! Name resolution and semantic checking for DECORATE.
+//! Symbol declaration for DECORATE.
 
 // ...soon!

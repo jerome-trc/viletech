@@ -288,13 +288,18 @@ impl Assembler<'_> {
 				assert_eq!(val.len(), 1);
 				self.builder.def_var(Variable::new(*var), val[0])
 			}
-			vir::Node::BlockOpen => {
+			vir::Node::BlockOpen { cold } => {
 				let b = self.builder.create_block();
+
+				if *cold {
+					self.builder.set_cold_block(b);
+				}
+
 				self.builder.switch_to_block(b);
 				self.blocks.push(b);
 			}
 			vir::Node::BlockClose => {
-				let b = self.blocks.pop().expect("dangling VIR block");
+				let b = self.blocks.pop().expect("unmatched VIR block close");
 				self.builder.seal_block(b);
 				self.builder.switch_to_block(*self.blocks.last().unwrap());
 			}
@@ -350,7 +355,9 @@ impl Assembler<'_> {
 				let (ret, _flowed) = self.builder.ins().sadd_overflow(x[0], y[0]);
 				ret
 			}
+			// TODO: Handle a zero divisor manually, or handle traps.
 			vir::BinOp::SDiv => self.builder.ins().sdiv(x[0], y[0]),
+			// TODO: Handle a zero divisor manually, or handle traps.
 			vir::BinOp::SRem => self.builder.ins().srem(x[0], y[0]),
 			vir::BinOp::SShr => self.builder.ins().sshr(x[0], y[0]),
 			vir::BinOp::UAddSat => self.builder.ins().uadd_sat(x[0], y[0]),
@@ -358,7 +365,9 @@ impl Assembler<'_> {
 				let (ret, _flowed) = self.builder.ins().uadd_overflow(x[0], y[0]);
 				ret
 			}
+			// TODO: Handle a zero divisor manually, or handle traps.
 			vir::BinOp::UDiv => self.builder.ins().udiv(x[0], y[0]),
+			// TODO: Handle a zero divisor manually, or handle traps.
 			vir::BinOp::URem => self.builder.ins().urem(x[0], y[0]),
 			vir::BinOp::UShr => self.builder.ins().ushr(x[0], y[0]),
 		};
