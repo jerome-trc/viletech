@@ -34,7 +34,7 @@ pub enum Syn {
 	GotoOffset,
 	/// `(ident) | (ident ('.' ident)?)`
 	IdentChain,
-	/// [`Syn::PoundInclude`] followed by a [`Syn::StringLit`].
+	/// [`Syn::KwInclude`] followed by a [`Syn::StringLit`].
 	IncludeDirective,
 	/// `':' actorident`
 	InheritSpec,

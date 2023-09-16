@@ -97,6 +97,7 @@ pub enum Syn {
 	KwFor,
 	KwGoto,
 	KwIf,
+	KwInclude,
 	KwInt,
 	KwInt16,
 	KwInt8,
@@ -270,7 +271,6 @@ pub enum Syn {
 	/// `->`
 	ThinArrow,
 
-	PoundInclude,
 	#[doc(hidden)]
 	__Last,
 }
@@ -344,6 +344,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwForEach => Self::KwForEach,
 			Token::KwGoto => Self::KwGoto,
 			Token::KwIn => Self::KwIn,
+			Token::KwInclude => Self::KwInclude,
 			Token::KwInternal => Self::KwInternal,
 			Token::KwIf => Self::KwIf,
 			Token::KwInt => Self::KwInt,
@@ -465,7 +466,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
 			// Miscellaneous ///////////////////////////////////////////////////
-			Token::KwInclude => Self::PoundInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
 			Token::Ident | Token::KwNone => Self::Ident,

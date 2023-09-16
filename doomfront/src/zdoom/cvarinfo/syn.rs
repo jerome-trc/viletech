@@ -92,6 +92,7 @@ pub enum Syn {
 	KwForEach,
 	KwFor,
 	KwGoto,
+	KwInclude,
 	KwIf,
 	KwInt16,
 	KwInt8,
@@ -292,9 +293,6 @@ pub enum Syn {
 	Unknown,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
-	// Tokens, miscellaneous, irrelevant ///////////////////////////////////////
-	/// The string `#include`, ASCII case insensitive.
-	PoundInclude,
 	#[doc(hidden)]
 	__Last,
 }
@@ -490,7 +488,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
 			// Miscellaneous ///////////////////////////////////////////////////
-			Token::KwInclude => Self::PoundInclude,
+			Token::KwInclude => Self::KwInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
 			Token::Ident => Self::Ident,
