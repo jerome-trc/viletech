@@ -65,7 +65,7 @@ fn with_sample_dir() {
 		.into_iter()
 		.filter_map(|res| res.ok());
 
-	for dir_entry in walker {
+	for (i, dir_entry) in walker.enumerate() {
 		if dir_entry.file_type().is_dir() {
 			continue;
 		}
@@ -79,7 +79,7 @@ fn with_sample_dir() {
 		};
 
 		let sample = String::from_utf8_lossy(&bytes).to_string();
-		eprintln!("Parsing `{}`...", dir_entry.path().display());
+		eprintln!("Parsing #{i}: `{}`...", dir_entry.path().display());
 		let ptree: ParseTree = crate::parse(&sample, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
