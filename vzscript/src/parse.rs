@@ -56,7 +56,7 @@ pub(self) fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 			mark,
 			p.nth(0),
 			Syn::Error,
-			&["This is a placeholder error message!"],
+			&[&["This is a placeholder error message!"]],
 		);
 	}
 }
@@ -77,7 +77,7 @@ fn item(p: &mut Parser<Syn>, mark: OpenMark) {
 			mark,
 			token,
 			Syn::Error,
-			&["This is a placeholder error message!"],
+			&[&["This is a placeholder error message!"]],
 		);
 	}
 }

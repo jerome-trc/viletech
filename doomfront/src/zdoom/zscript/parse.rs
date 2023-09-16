@@ -61,7 +61,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			Token::KwVersion => version_directive(p),
 			_ => p.advance_with_error(
 				Syn::from(p.nth(0)),
-				&[
+				&[&[
 					"`const`",
 					"`enum`",
 					"`class`",
@@ -70,7 +70,7 @@ pub fn file(p: &mut Parser<Syn>) {
 					"`extend`",
 					"`#include`",
 					"`version`",
-				],
+				]],
 			),
 		}
 	}

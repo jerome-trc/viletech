@@ -210,7 +210,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	}
 
 	/// If [`Self::eat`] fails to consume `token`, raise an error.
-	pub fn expect(&mut self, token: L::Token, syn: L::Kind, expected: &'static [&'static str]) {
+	pub fn expect(&mut self, token: L::Token, syn: L::Kind, expected: ExpectedSets) {
 		if self.eat(token, syn) {
 			return;
 		}
@@ -225,7 +225,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		token: L::Token,
 		string: &'static str,
 		syn: L::Kind,
-		expected: &'static [&'static str],
+		expected: ExpectedSets,
 	) {
 		if self.eat_str_nc(token, string, syn) {
 			return;
@@ -239,7 +239,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		&mut self,
 		predicate: fn(L::Token) -> bool,
 		syn: L::Kind,
-		expected: &'static [&'static str],
+		expected: ExpectedSets,
 	) {
 		if self.eat_if(predicate, syn) {
 			return;
@@ -249,11 +249,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	}
 
 	/// Composes [`Self::expect`] and [`Self::eat_any`].
-	pub fn expect_any(
-		&mut self,
-		choices: &'static [(L::Token, L::Kind)],
-		expected: &'static [&'static str],
-	) {
+	pub fn expect_any(&mut self, choices: &'static [(L::Token, L::Kind)], expected: ExpectedSets) {
 		for choice in choices {
 			if self.eat(choice.0, choice.1) {
 				return;
@@ -267,7 +263,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	pub fn expect_any_str_nc(
 		&mut self,
 		choices: &'static [(L::Token, &'static str, L::Kind)],
-		expected: &'static [&'static str],
+		expected: ExpectedSets,
 	) {
 		for choice in choices {
 			if self.eat_str_nc(choice.0, choice.1, choice.2) {
@@ -285,7 +281,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		syn: L::Kind,
 		advance_if: fn(L::Token) -> bool,
 		fallback: fn(L::Token) -> L::Kind,
-		expected: &'static [&'static str],
+		expected: ExpectedSets,
 	) {
 		let mut n = 0;
 
@@ -326,7 +322,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			.unwrap_or(L::EOF)
 	}
 
-	fn raise(&mut self, expected: &'static [&'static str]) {
+	fn raise(&mut self, expected: ExpectedSets) {
 		self.errors.push(Error {
 			expected,
 			found: self.tokens.get(self.pos).cloned().unwrap_or(Lexeme {
@@ -338,7 +334,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 
 	/// [Opens](Self::open) a new error node, [advances](Self::advance) it with
 	/// a `syn` token, and then [closes](Self::close) it.
-	pub fn advance_with_error(&mut self, syn: L::Kind, expected: &'static [&'static str]) {
+	pub fn advance_with_error(&mut self, syn: L::Kind, expected: ExpectedSets) {
 		let ckpt = self.open();
 		self.raise(expected);
 
@@ -356,7 +352,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		checkpoint: OpenMark,
 		token: L::Kind,
 		err: L::Kind,
-		expected: &'static [&'static str],
+		expected: ExpectedSets,
 	) -> CloseMark {
 		self.raise(expected);
 
@@ -509,16 +505,17 @@ impl Drop for OpenMark {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CloseMark(usize);
 
-#[derive(PartialEq, Eq, Hash)]
+/// A member of each [`Error`].
+pub type ExpectedSets = &'static [&'static [&'static str]];
+
 pub struct Error<L: LangExt> {
-	expected: &'static [&'static str],
+	expected: ExpectedSets,
 	found: Lexeme<L>,
 }
 
 impl<L: LangExt> Error<L> {
-	#[must_use]
-	pub fn expected(&self) -> &'static [&'static str] {
-		self.expected
+	pub fn expected(&self) -> impl Iterator<Item = &'static str> {
+		self.expected.iter().flat_map(|s| *s).copied()
 	}
 
 	#[must_use]
@@ -540,7 +537,7 @@ where
 			{
 				let mut out = String::new();
 
-				for e in self.expected {
+				for e in self.expected() {
 					out.push_str(e);
 					out.push('/');
 				}

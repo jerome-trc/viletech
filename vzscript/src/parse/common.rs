@@ -33,7 +33,7 @@ pub(super) fn block(
 		BlockLabel::parse(p);
 	}
 
-	p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.eof() && !p.at(Syn::BraceR) {
@@ -41,7 +41,7 @@ pub(super) fn block(
 		trivia_0plus(p);
 	}
 
-	p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(mark, kind)
 }
 
@@ -53,7 +53,7 @@ impl ArgList {
 
 	pub(super) fn parse(p: &mut Parser<Syn>) {
 		let mark = p.open();
-		p.expect(Syn::ParenL, Syn::ParenL, &["`(`"]);
+		p.expect(Syn::ParenL, Syn::ParenL, &[&["`(`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::ParenR) && !p.eof() {
@@ -83,13 +83,13 @@ impl ArgList {
 				}
 				Syn::ParenR => break,
 				other => {
-					p.advance_with_error(other, &["`,`", "`)`"]);
+					p.advance_with_error(other, &[&["`,`", "`)`"]]);
 				}
 			}
 		}
 
 		trivia_0plus(p);
-		p.expect(Syn::ParenR, Syn::ParenR, &["`)`"]);
+		p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 		p.close(mark, Syn::ArgList);
 	}
 }
@@ -105,7 +105,7 @@ impl Attribute {
 		p.advance(Syn::PoundBracketL);
 
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
 
 		if p.at_any(ArgList::FIRST_SET) {
@@ -113,7 +113,7 @@ impl Attribute {
 			ArgList::parse(p);
 		}
 
-		p.expect(Syn::BracketR, Syn::BracketR, &["`]`"]);
+		p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 		p.close(mark, Syn::Attribute);
 	}
 
@@ -134,7 +134,7 @@ impl Annotation {
 		p.debug_assert_at_any(Self::FIRST_SET);
 		let mark = p.open();
 		p.advance(Syn::Pound);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 
 		if p.find(0, |token| !token.is_trivia()) == Syn::ParenL {
 			trivia_0plus(p);
@@ -152,11 +152,11 @@ impl BlockLabel {
 
 	pub(super) fn parse(p: &mut Parser<Syn>) {
 		let mark = p.open();
-		p.expect(Syn::Colon2, Syn::Colon2, &["`::`"]);
+		p.expect(Syn::Colon2, Syn::Colon2, &[&["`::`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Colon2, Syn::Colon2, &["`::`"]);
+		p.expect(Syn::Colon2, Syn::Colon2, &[&["`::`"]]);
 		p.close(mark, Syn::BlockLabel);
 	}
 }
@@ -170,7 +170,7 @@ pub(super) fn name_chain(p: &mut Parser<Syn>) {
 
 	p.expect_any(
 		&[(Syn::Ident, Syn::Ident), (Syn::NameLit, Syn::NameLit)],
-		&["an identifier", "a name literal"],
+		&[&["an identifier", "a name literal"]],
 	);
 
 	while p.find(0, |token| !token.is_trivia()) == Syn::Dot {
@@ -178,7 +178,7 @@ pub(super) fn name_chain(p: &mut Parser<Syn>) {
 		p.advance(Syn::Dot);
 		p.expect_any(
 			&[(Syn::Ident, Syn::Ident), (Syn::NameLit, Syn::NameLit)],
-			&["an identifier", "a name literal"],
+			&[&["an identifier", "a name literal"]],
 		);
 	}
 
@@ -197,7 +197,7 @@ impl TypeSpec {
 
 	pub(super) fn parse(p: &mut Parser<Syn>) {
 		let mark = p.open();
-		p.expect(Syn::Colon, Syn::Colon, &["`:`"]);
+		p.expect(Syn::Colon, Syn::Colon, &[&["`:`"]]);
 		trivia_0plus(p);
 
 		if !p.eat(Syn::KwAuto, Syn::KwAuto) {

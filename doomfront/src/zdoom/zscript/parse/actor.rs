@@ -18,7 +18,7 @@ pub fn flag_def(p: &mut Parser<Syn>) {
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+	p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
 
 	let name = p.nth(0);
@@ -28,15 +28,15 @@ pub fn flag_def(p: &mut Parser<Syn>) {
 	} else if name == Token::KwNone {
 		p.advance(Syn::KwNone);
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`none`"])
+		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`none`"]])
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+	p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
 	trivia_0plus(p);
-	p.expect(Token::IntLit, Syn::IntLit, &["an integer"]);
+	p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(flagdef, Syn::FlagDef);
 }
 
@@ -50,7 +50,7 @@ pub fn property_def(p: &mut Parser<Syn>) {
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+	p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
 
 	let name = p.nth(0);
@@ -60,11 +60,11 @@ pub fn property_def(p: &mut Parser<Syn>) {
 	} else if name == Token::KwNone {
 		p.advance(Syn::KwNone);
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`none`"])
+		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`none`"]])
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(propdef, Syn::PropertyDef);
 }
 
@@ -74,7 +74,7 @@ pub fn default_block(p: &mut Parser<Syn>) {
 	let defblock = p.open();
 	p.advance(Syn::KwDefault);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -87,14 +87,14 @@ pub fn default_block(p: &mut Parser<Syn>) {
 		} else if token == Token::Semicolon {
 			p.advance(Syn::Semicolon);
 		} else {
-			p.advance_with_error(Syn::from(token), &["`+` or `-`", "an identifier", "`;`"]);
+			p.advance_with_error(Syn::from(token), &[&["`+` or `-`", "an identifier", "`;`"]]);
 		}
 
 		trivia_0plus(p);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(defblock, Syn::DefaultBlock);
 }
 
@@ -132,7 +132,7 @@ fn property_setting(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(prop, Syn::PropertySetting);
 }
 
@@ -148,7 +148,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -187,7 +187,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(sblock, Syn::StatesBlock);
 }
 
@@ -195,7 +195,7 @@ fn stateflow_simple(p: &mut Parser<Syn>) {
 	let flow = p.open();
 	p.advance(Syn::from(p.nth(0)));
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(flow, Syn::StateFlow);
 }
 
@@ -206,7 +206,7 @@ fn stateflow_goto(p: &mut Parser<Syn>) {
 
 	if p.eat(Token::KwSuper, Syn::KwSuper) {
 		trivia_0plus(p);
-		p.expect(Token::Colon2, Syn::Colon2, &["`::`"]);
+		p.expect(Token::Colon2, Syn::Colon2, &[&["`::`"]]);
 		trivia_0plus(p);
 		ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 	} else if p.at_if(is_ident_lax) {
@@ -226,22 +226,22 @@ fn stateflow_goto(p: &mut Parser<Syn>) {
 			}
 			other => p.advance_with_error(
 				Syn::from(other),
-				&["an identifier", "`.`", "`::`", "`+`", "`;`"],
+				&[&["an identifier", "`.`", "`::`", "`+`", "`;`"]],
 			),
 		}
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &["an identifier", "`super`"]);
+		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`super`"]]);
 	}
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Plus {
 		trivia_0plus(p);
 		p.advance(Syn::Plus);
 		trivia_0plus(p);
-		p.expect(Token::IntLit, Syn::IntLit, &["an integer"]);
+		p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(flow, Syn::StateFlow);
 }
 
@@ -250,7 +250,7 @@ fn non_whitespace(p: &mut Parser<Syn>) {
 		Syn::NonWhitespace,
 		|token| !token.is_trivia() && token != Token::Colon,
 		Syn::from,
-		&["any non-whitespace"],
+		&[&["any non-whitespace"]],
 	);
 }
 
@@ -264,7 +264,7 @@ pub(super) fn states_usage(p: &mut Parser<Syn>) {
 				(Token::Ident, "overlay", Syn::Ident),
 				(Token::Ident, "weapon", Syn::Ident),
 			],
-			&["`actor`", "`item`", "`overlay`", "`weapon`"],
+			&[&["`actor`", "`item`", "`overlay`", "`weapon`"]],
 		);
 	}
 
@@ -284,7 +284,7 @@ pub(super) fn states_usage(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	p.close(usage, Syn::StatesUsage);
 }
 
@@ -315,7 +315,7 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 				let light = p.open();
 				p.advance(Syn::KwLight);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 
 				p.expect_any(
@@ -323,41 +323,41 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 						(Token::StringLit, Syn::StringLit),
 						(Token::NameLit, Syn::NameLit),
 					],
-					&["a string", "a name"],
+					&[&["a string", "a name"]],
 				);
 
 				trivia_0plus(p);
 
 				while !p.at(Token::ParenR) && !p.eof() {
-					p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+					p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
 					trivia_0plus(p);
 					p.expect_any(
 						&[
 							(Token::StringLit, Syn::StringLit),
 							(Token::NameLit, Syn::NameLit),
 						],
-						&["a string", "a name"],
+						&[&["a string", "a name"]],
 					);
 					trivia_0plus(p);
 				}
 
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 				p.close(light, Syn::StateLight);
 			}
 			Token::KwOffset => {
 				let offset = p.open();
 				p.advance(Syn::KwOffset);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+				p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 				p.close(offset, Syn::StateOffset);
 			}
 			t @ (Token::KwBright
@@ -367,7 +367,7 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 			| Token::KwNoDelay) => p.advance(Syn::from(t)),
 			other => p.advance_with_error(
 				Syn::from(other),
-				&[
+				&[&[
 					"`bright`",
 					"`canraise`",
 					"`fast`",
@@ -375,7 +375,7 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 					"`nodelay`",
 					"`offset`",
 					"`slow`",
-				],
+				]],
 			),
 		}
 
@@ -421,7 +421,7 @@ fn state_frames(p: &mut Parser<Syn>) {
 	if n > 0 {
 		p.advance_n(Syn::NonWhitespace, n);
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &["a state frame list"]);
+		p.advance_with_error(Syn::from(p.nth(0)), &[&["a state frame list"]]);
 	}
 }
 
@@ -440,7 +440,7 @@ fn action_function(p: &mut Parser<Syn>) {
 		}
 
 		trivia_0plus(p);
-		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	}
 
 	p.close(action, Syn::ActionFunction);

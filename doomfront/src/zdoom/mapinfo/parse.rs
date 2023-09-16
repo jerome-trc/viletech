@@ -48,7 +48,7 @@ pub fn file(p: &mut Parser<Syn>) {
 		} else {
 			p.advance_with_error(
 				Syn::from(p.nth(0)),
-				&[
+				&[&[
 					"`automap`",
 					"`automap_overlay`",
 					"`clearepisodes`",
@@ -64,7 +64,7 @@ pub fn file(p: &mut Parser<Syn>) {
 					"`map`",
 					"`skill`",
 					"`spawnnums`",
-				],
+				]],
 			);
 		}
 	}
@@ -76,7 +76,7 @@ fn include_directive(p: &mut Parser<Syn>) {
 	let node = p.open();
 	p.advance(Syn::KwInclude);
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
 	p.close(node, Syn::IncludeDirective);
 }
 
@@ -87,7 +87,7 @@ fn post_kw_episodedef(p: &mut Parser<Syn>) {
 	if p.at_str_nc(Token::Ident, "teaser") {
 		p.advance(Syn::KwTeaser);
 		trivia_0plus(p);
-		p.expect(Token::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
 	}
 }
 
@@ -98,7 +98,7 @@ fn post_kw_mapdef(p: &mut Parser<Syn>) {
 	if p.at_str_nc(Token::Ident, "lookup") {
 		p.advance(Syn::KwLookup);
 		trivia_0plus(p);
-		p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+		p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
 	}
 }
 
@@ -110,7 +110,7 @@ fn block(p: &mut Parser<Syn>, node: Syn, kw: Syn, post_kw: fn(&mut Parser<Syn>))
 	trivia_0plus(p);
 	post_kw(p);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -125,16 +125,16 @@ fn block(p: &mut Parser<Syn>, node: Syn, kw: Syn, post_kw: fn(&mut Parser<Syn>))
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(marker, node);
 }
 
 fn post_kw_ident(p: &mut Parser<Syn>) {
-	p.expect(Token::Ident, Syn::Ident, &["an identifier"]);
+	p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
 }
 
 fn post_kw_intlit(p: &mut Parser<Syn>) {
-	p.expect(Token::IntLit, Syn::IntLit, &["an integer"]);
+	p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
 }
 
 fn property(p: &mut Parser<Syn>) {
@@ -145,7 +145,7 @@ fn property(p: &mut Parser<Syn>) {
 	} else {
 		p.expect_any(
 			&[(Token::Ident, Syn::Ident), (Token::IntLit, Syn::IntLit)],
-			&["an integer", "a string"],
+			&[&["an integer", "a string"]],
 		);
 	}
 
@@ -173,7 +173,7 @@ fn property_values(p: &mut Parser<Syn>) {
 					(Token::IntLit, Syn::IntLit),
 					(Token::FloatLit, Syn::FloatLit),
 				],
-				&["an integer", "a floating-point number"],
+				&[&["an integer", "a floating-point number"]],
 			);
 		} else {
 			p.expect_any(
@@ -186,14 +186,14 @@ fn property_values(p: &mut Parser<Syn>) {
 					(Token::KwTrue, Syn::KwTrue),
 					(Token::Plus, Syn::Plus),
 				],
-				&[
+				&[&[
 					"an identifier",
 					"a string",
 					"an integer",
 					"a floating-point number",
 					"`false`",
 					"`true`",
-				],
+				]],
 			);
 		}
 

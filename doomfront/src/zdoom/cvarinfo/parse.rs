@@ -16,12 +16,12 @@ pub fn file(p: &mut Parser<Syn>) {
 		} else {
 			p.advance_with_error(
 				Syn::from(p.nth(0)),
-				&[
+				&[&[
 					"`server` or `user` or `nosave`",
 					"`nosave` or `noarchive` or `cheat` or `latch`",
 					"whitespace",
 					"a comment",
-				],
+				]],
 			);
 		}
 	}
@@ -55,12 +55,12 @@ pub fn definition(p: &mut Parser<Syn>) {
 			(Token::KwColor, Syn::KwColor),
 			(Token::KwString, Syn::KwString),
 		],
-		&["`server` or `user` or `nosave`", "whitespace", "a comment"],
+		&[&["`server` or `user` or `nosave`", "whitespace", "a comment"]],
 	);
 
 	trivia_1plus(p);
 
-	p.expect(Token::Ident, Syn::Ident, &["an identifier"]);
+	p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
 
 	if p.at(Token::Eq) {
@@ -68,7 +68,7 @@ pub fn definition(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(def, Syn::Definition);
 }
 
@@ -82,12 +82,12 @@ fn flag(p: &mut Parser<Syn>) {
 			(Token::Ident, "cheat", Syn::KwCheat),
 			(Token::Ident, "latch", Syn::KwLatch),
 		],
-		&[
+		&[&[
 			"`server` or `user` or `nosave`",
 			"`nosave` or `noarchive` or `cheat` or `latch`",
 			"whitespace",
 			"a comment",
-		],
+		]],
 	)
 }
 
@@ -106,12 +106,12 @@ fn default_def(p: &mut Parser<Syn>) {
 			(Token::KwTrue, Syn::TrueLit),
 			(Token::StringLit, Syn::StringLit),
 		],
-		&[
+		&[&[
 			"an integer",
 			"a floating-point number",
 			"a string",
 			"`false` or `true`",
-		],
+		]],
 	);
 
 	p.close(default, Syn::DefaultDef);
@@ -138,7 +138,7 @@ fn trivia_1plus(p: &mut Parser<Syn>) {
 			(Token::RegionStart, Syn::RegionStart),
 			(Token::RegionEnd, Syn::RegionEnd),
 		],
-		&["whitespace or a comment (one or more)"],
+		&[&["whitespace or a comment (one or more)"]],
 	);
 
 	trivia_0plus(p)

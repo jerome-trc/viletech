@@ -12,9 +12,9 @@ impl ConstDef {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwConst];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwConst, Syn::KwConst, &["`const`"]);
+		p.expect(Syn::KwConst, Syn::KwConst, &[&["`const`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
 
 		if p.at_any(TypeSpec::FIRST_SET) {
@@ -22,11 +22,11 @@ impl ConstDef {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::Eq, Syn::Eq, &["`=`"]);
+		p.expect(Syn::Eq, Syn::Eq, &[&["`=`"]]);
 		trivia_0plus(p);
 		Expression::parse(p);
 		trivia_0plus(p);
-		p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 		p.close(mark, Syn::ConstDef);
 	}
 }
@@ -37,9 +37,9 @@ impl FuncDecl {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwFunction];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwFunction, Syn::KwFunction, &["`function`"]);
+		p.expect(Syn::KwFunction, Syn::KwFunction, &[&["`function`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
 		Self::param_list(p);
 		trivia_0plus(p);
@@ -61,7 +61,7 @@ impl FuncDecl {
 
 	fn param_list(p: &mut Parser<Syn>) {
 		let mark = p.open();
-		p.expect(Syn::ParenL, Syn::ParenR, &["`(`"]);
+		p.expect(Syn::ParenL, Syn::ParenR, &[&["`(`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::ParenR) && !p.eof() {
@@ -75,12 +75,12 @@ impl FuncDecl {
 				}
 				Syn::ParenR => break,
 				other => {
-					p.advance_with_error(other, &["`,`", "`)`"]);
+					p.advance_with_error(other, &[&["`,`", "`)`"]]);
 				}
 			}
 		}
 
-		p.expect(Syn::ParenR, Syn::ParenR, &["`)`"]);
+		p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 		p.close(mark, Syn::ParamList);
 	}
 
@@ -91,7 +91,7 @@ impl FuncDecl {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier", "`const`"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier", "`const`"]]);
 		trivia_0plus(p);
 		TypeSpec::parse(p);
 

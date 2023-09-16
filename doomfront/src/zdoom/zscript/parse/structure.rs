@@ -45,14 +45,14 @@ pub fn class_def(p: &mut Parser<Syn>) {
 			Token::KwVersion => version_qual(p),
 			other => p.advance_with_error(
 				Syn::from(other),
-				&[
+				&[&[
 					"`abstract`",
 					"`native`",
 					"`play`",
 					"`replaces`",
 					"`ui`",
 					"`version`",
-				],
+				]],
 			),
 		}
 
@@ -60,7 +60,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	}
 
 	p.close(quals, Syn::ClassQuals);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -69,7 +69,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(classdef, Syn::ClassDef);
 }
 
@@ -81,11 +81,11 @@ pub fn mixin_class_def(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwMixin);
 	p.advance(Syn::KwMixin);
 	trivia_0plus(p);
-	p.expect(Token::KwClass, Syn::KwClass, &["`class`"]);
+	p.expect(Token::KwClass, Syn::KwClass, &[&["`class`"]]);
 	trivia_0plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -94,7 +94,7 @@ pub fn mixin_class_def(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(mixindef, Syn::MixinClassDef);
 }
 
@@ -119,7 +119,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 			Token::KwVersion => version_qual(p),
 			other => p.advance_with_error(
 				Syn::from(other),
-				&["`clearscope`", "`native`", "`play`", "`ui`", "`version`"],
+				&[&["`clearscope`", "`native`", "`play`", "`ui`", "`version`"]],
 			),
 		}
 
@@ -127,7 +127,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 	}
 
 	p.close(quals, Syn::StructQuals);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -136,7 +136,7 @@ pub fn struct_def(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
@@ -167,7 +167,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 				extension,
 				Syn::from(other),
 				Syn::Unknown,
-				&["`class`", "`struct`"],
+				&[&["`class`", "`struct`"]],
 			);
 			return;
 		}
@@ -176,7 +176,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	if node_syn == Syn::ClassExtend {
@@ -192,7 +192,7 @@ pub fn class_or_struct_extend(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 	p.close(extension, node_syn);
 }
 
@@ -247,7 +247,7 @@ fn class_innard<const MIXIN: bool>(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		ident_lax(p);
 		trivia_0plus(p);
-		p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+		p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 		p.close(mixin, Syn::MixinStat);
 		return;
 	}
@@ -264,22 +264,7 @@ fn class_innard<const MIXIN: bool>(p: &mut Parser<Syn>) {
 		_ => {}
 	}
 
-	const NONMIXIN_EXPECTED: &[&str] = &[
-		"a type name",
-		"`mixin`",
-		"`const` or `enum` or `struct`",
-		"`states` or `default`",
-		"`property` or `flagdef`",
-		"`play` or `ui` or `virtualscope` or `clearscope`",
-		"`deprecated` or `version`",
-		"`abstract` or `final` or `override` or `virtual`",
-		"`private` or `protected`",
-		"`internal` or `meta` or `native` or `transient`",
-		"`static` or `readonly`",
-		"`vararg`",
-	];
-
-	const MIXIN_EXPECTED: &[&str] = &[
+	const EXPECTED: &[&str] = &[
 		"a type name",
 		"`const` or `enum` or `struct`",
 		"`states` or `default`",
@@ -296,9 +281,9 @@ fn class_innard<const MIXIN: bool>(p: &mut Parser<Syn>) {
 	p.advance_with_error(
 		Syn::from(p.nth(0)),
 		if !MIXIN {
-			NONMIXIN_EXPECTED
+			&[EXPECTED, &["`mixin`"]]
 		} else {
-			MIXIN_EXPECTED
+			&[EXPECTED]
 		},
 	)
 }
@@ -322,7 +307,7 @@ fn struct_innard(p: &mut Parser<Syn>) {
 		Token::KwEnum => enum_def(p),
 		other => p.advance_with_error(
 			Syn::from(other),
-			&[
+			&[&[
 				"a type name",
 				"`const` or `enum`",
 				"`play` or `ui` or `virtualscope` or `clearscope`",
@@ -332,7 +317,7 @@ fn struct_innard(p: &mut Parser<Syn>) {
 				"`internal` or `meta` or `native` or `transient`",
 				"`static` or `readonly`",
 				"`vararg`",
-			],
+			]],
 		),
 	}
 
@@ -388,7 +373,12 @@ pub(super) fn member_decl(p: &mut Parser<Syn>) {
 
 	if !p.at_if(is_ident_lax) {
 		p.cancel(rettypes);
-		p.advance_err_and_close(member, Syn::from(p.nth(0)), Syn::Error, &["an identifier"]);
+		p.advance_err_and_close(
+			member,
+			Syn::from(p.nth(0)),
+			Syn::Error,
+			&[&["an identifier"]],
+		);
 		return;
 	}
 
@@ -411,7 +401,7 @@ pub(super) fn member_decl(p: &mut Parser<Syn>) {
 				}
 			}
 
-			p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(member, Syn::FieldDecl);
 		}
 		Token::ParenL => {
@@ -449,7 +439,7 @@ pub(super) fn member_decl(p: &mut Parser<Syn>) {
 				member,
 				Syn::from(other),
 				Syn::Error,
-				&[";", "`[`", "`,`", "`(`"],
+				&[&[";", "`[`", "`,`", "`(`"]],
 			);
 		}
 	}
@@ -464,7 +454,7 @@ fn param_list(p: &mut Parser<Syn>) {
 
 	if p.eat(Token::KwVoid, Syn::KwVoid) {
 		trivia_0plus(p);
-		p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+		p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 		p.close(list, Syn::ParamList);
 		return;
 	}
@@ -484,7 +474,7 @@ fn param_list(p: &mut Parser<Syn>) {
 					list,
 					Syn::from(p.nth(0)),
 					Syn::ParamList,
-					&["a parameter"],
+					&[&["a parameter"]],
 				);
 				return;
 			}
@@ -492,7 +482,7 @@ fn param_list(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	p.close(list, Syn::ParamList);
 }
 

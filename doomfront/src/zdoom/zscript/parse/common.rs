@@ -87,7 +87,7 @@ pub(super) fn ident<const CFG: u8>(p: &mut Parser<Syn>) {
 	if is_ident::<CFG>(token) {
 		p.advance(Syn::Ident);
 	} else {
-		p.advance_with_error(Syn::from(token), &["an identifier"])
+		p.advance_with_error(Syn::from(token), &[&["an identifier"]])
 	}
 }
 
@@ -217,11 +217,11 @@ pub fn core_type(p: &mut Parser<Syn>) {
 		Token::KwArray => {
 			p.advance(Syn::KwArray);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 			p.close(cty, Syn::DynArrayType);
 		}
 		Token::KwClass => {
@@ -233,7 +233,7 @@ pub fn core_type(p: &mut Parser<Syn>) {
 				trivia_0plus(p);
 				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 				trivia_0plus(p);
-				p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+				p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 			}
 
 			p.close(cty, Syn::ClassType);
@@ -241,35 +241,35 @@ pub fn core_type(p: &mut Parser<Syn>) {
 		Token::KwMap => {
 			p.advance(Syn::KwMap);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+			p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 			p.close(cty, Syn::MapType);
 		}
 		Token::KwMapIterator => {
 			p.advance(Syn::KwMapIterator);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::Comma, Syn::Comma, &["`,`"]);
+			p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 			p.close(cty, Syn::MapIterType);
 		}
 		Token::KwReadOnly => {
 			p.advance(Syn::KwReadOnly);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 
 			let t = p.nth(0);
@@ -284,13 +284,13 @@ pub fn core_type(p: &mut Parser<Syn>) {
 					cty,
 					Syn::from(t),
 					Syn::ReadOnlyType,
-					&["an identifier", "`@`"],
+					&[&["an identifier", "`@`"]],
 				);
 				return;
 			}
 
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 			p.close(cty, Syn::ReadOnlyType);
 		}
 		Token::At => {
@@ -308,7 +308,7 @@ pub fn core_type(p: &mut Parser<Syn>) {
 				cty,
 				Syn::from(other),
 				Syn::Error,
-				&[
+				&[&[
 					"`let`",
 					"`class`",
 					"`array`",
@@ -318,7 +318,7 @@ pub fn core_type(p: &mut Parser<Syn>) {
 					"`@`",
 					"`.`",
 					"an identifier",
-				],
+				]],
 			);
 		}
 	}
@@ -385,7 +385,7 @@ pub(super) fn array_len(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+	p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
 	p.close(l, Syn::ArrayLen);
 }
 
@@ -395,18 +395,18 @@ pub(super) fn deprecation_qual(p: &mut Parser<Syn>) {
 	let qual = p.open();
 	p.advance(Syn::KwDeprecated);
 	trivia_0plus(p);
-	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a version string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a version string"]]);
 	trivia_0plus(p);
 
 	if p.eat(Token::Comma, Syn::Comma) {
 		trivia_0plus(p);
-		p.expect(Token::StringLit, Syn::StringLit, &["a reason string"]);
+		p.expect(Token::StringLit, Syn::StringLit, &[&["a reason string"]]);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	p.close(qual, Syn::DeprecationQual);
 }
 
@@ -449,7 +449,7 @@ pub(super) fn trivia_1plus(p: &mut Parser<Syn>) {
 			(Token::RegionStart, Syn::RegionStart),
 			(Token::RegionEnd, Syn::RegionEnd),
 		],
-		&["whitespace or a comment (one or more)"],
+		&[&["whitespace or a comment (one or more)"]],
 	);
 
 	trivia_0plus(p);
@@ -493,10 +493,10 @@ pub(super) fn version_qual(p: &mut Parser<Syn>) {
 	let qual = p.open();
 	p.advance(Syn::KwVersion);
 	trivia_0plus(p);
-	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a version string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a version string"]]);
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	p.close(qual, Syn::VersionQual);
 }

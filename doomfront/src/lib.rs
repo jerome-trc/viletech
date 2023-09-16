@@ -82,7 +82,6 @@ impl std::fmt::Display for AstError {
 	}
 }
 
-#[derive(PartialEq, Eq, Hash)]
 pub struct ParseTree<L: LangExt> {
 	pub(crate) root: rowan::GreenNode,
 	pub(crate) errors: Vec<ParseError<L>>,

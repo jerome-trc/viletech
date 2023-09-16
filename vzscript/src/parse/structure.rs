@@ -12,9 +12,9 @@ impl ClassDef {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwClass];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwClass, Syn::KwClass, &["`class`"]);
+		p.expect(Syn::KwClass, Syn::KwClass, &[&["`class`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
 
 		if p.at_any(TypeSpec::FIRST_SET) {
@@ -22,7 +22,7 @@ impl ClassDef {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+		p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::BraceR) && !p.eof() {
@@ -30,7 +30,7 @@ impl ClassDef {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+		p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 		p.close(mark, Syn::ClassDef);
 	}
 }
@@ -41,11 +41,11 @@ impl MixinDef {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwMixin];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwMixin, Syn::KwMixin, &["`mixin`"]);
+		p.expect(Syn::KwMixin, Syn::KwMixin, &[&["`mixin`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
-		p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+		p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::BraceR) && !p.eof() {
@@ -53,7 +53,7 @@ impl MixinDef {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+		p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 		p.close(mark, Syn::MixinDef);
 	}
 }
@@ -64,11 +64,11 @@ impl StructDef {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwStruct];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwStruct, Syn::KwStruct, &["`struct`"]);
+		p.expect(Syn::KwStruct, Syn::KwStruct, &[&["`struct`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
-		p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+		p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::BraceR) && !p.eof() {
@@ -76,7 +76,7 @@ impl StructDef {
 			trivia_0plus(p);
 		}
 
-		p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+		p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 		p.close(mark, Syn::StructDef);
 	}
 }
@@ -87,18 +87,18 @@ impl UnionDef {
 	pub(super) const FIRST_SET: &[Syn] = &[Syn::KwUnion];
 
 	pub(super) fn parse(p: &mut Parser<Syn>, mark: OpenMark) {
-		p.expect(Syn::KwUnion, Syn::KwUnion, &["`union`"]);
+		p.expect(Syn::KwUnion, Syn::KwUnion, &[&["`union`"]]);
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+		p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 		trivia_0plus(p);
-		p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+		p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 		trivia_0plus(p);
 
 		while !p.at(Syn::BraceR) && !p.eof() {
 			union_innard(p);
 		}
 
-		p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+		p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 		p.close(mark, Syn::UnionDef);
 	}
 }
@@ -160,7 +160,7 @@ fn union_innard(p: &mut Parser<Syn>) {
 		Syn::Ident => {
 			p.advance(Syn::Ident);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceR, &["`{`"]);
+			p.expect(Syn::BraceL, Syn::BraceR, &[&["`{`"]]);
 			trivia_0plus(p);
 
 			while !p.at(Syn::BraceR) && !p.eof() {
@@ -171,7 +171,7 @@ fn union_innard(p: &mut Parser<Syn>) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			p.close(mark, Syn::UnionVariant);
 		}
 		other => {
@@ -192,7 +192,7 @@ fn field_decl(p: &mut Parser<Syn>, mark: OpenMark) {
 	trivia_0plus(p);
 	TypeSpec::parse(p);
 	trivia_0plus(p);
-	p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(mark, Syn::FieldDecl);
 }
 

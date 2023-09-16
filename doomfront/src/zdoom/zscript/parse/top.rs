@@ -21,11 +21,11 @@ pub fn const_def(p: &mut Parser<Syn>) {
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
 	trivia_0plus(p);
 	expr(p);
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &["`;`"]);
+	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 	p.close(constdef, Syn::ConstDef);
 }
 
@@ -68,16 +68,16 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 				(Token::KwInt, Syn::KwInt),
 				(Token::KwUInt, Syn::KwUInt),
 			],
-			&[
+			&[&[
 				"`sbyte` or `byte` or `int8` or `uint8`",
 				"`short` or `ushort` or `int16` or `uint16`",
 				"`int` or `uint`",
-			],
+			]],
 		);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &["`{`"]);
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
@@ -96,14 +96,14 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 					}
 				}
 				other => {
-					p.advance_with_error(Syn::from(other), &[",", "}"]);
+					p.advance_with_error(Syn::from(other), &[&[",", "}"]]);
 				}
 			}
 		}
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &["`}`"]);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
@@ -117,9 +117,9 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 pub fn include_directive(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwInclude);
 	let directive = p.open();
-	p.expect(Token::KwInclude, Syn::KwInclude, &["`#include`"]);
+	p.expect(Token::KwInclude, Syn::KwInclude, &[&["`#include`"]]);
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
 
 	while p.find(0, |token| !token.is_trivia()) == Token::StringLit {
 		trivia_0plus(p);
@@ -133,8 +133,8 @@ pub fn include_directive(p: &mut Parser<Syn>) {
 pub fn version_directive(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwVersion);
 	let directive = p.open();
-	p.expect(Token::KwVersion, Syn::KwVersion, &["`version`"]);
+	p.expect(Token::KwVersion, Syn::KwVersion, &[&["`version`"]]);
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
 	p.close(directive, Syn::VersionDirective);
 }

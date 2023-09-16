@@ -55,7 +55,7 @@ impl Expression {
 						trivia_0plus(p);
 						let _ = recur(p, Syn::Eof);
 						trivia_0plus(p);
-						p.expect(Syn::BracketR, Syn::BracketR, &["`]`"]);
+						p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 						p.close(pfx, Syn::ArrayPrefix);
 					}
 					t @ Syn::Ampersand => {
@@ -106,7 +106,7 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 				trivia_0plus(p);
 				Expression::parse(p);
 				trivia_0plus(p);
-				p.expect(Syn::BracketR, Syn::BracketR, &["`]`"]);
+				p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 				lhs = p.close(m, Syn::IndexExpr);
 				continue;
 			}
@@ -119,7 +119,7 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 					let m = p.open_before(lhs);
 					p.advance(Syn::Dot);
 					trivia_0plus(p);
-					p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+					p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 					lhs = p.close(m, Syn::FieldExpr);
 				}
 				other => {
@@ -149,7 +149,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 		}
 		t @ Syn::Dot => {
 			p.advance(t);
-			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+			p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 			(p.close(mark, Syn::IdentExpr), false)
 		}
 		t @ (Syn::FalseLit
@@ -173,16 +173,16 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			trivia_0plus(p);
 			Expression::parse(p);
 			trivia_0plus(p);
-			p.expect(Syn::ParenR, Syn::ParenR, &["`)`"]);
+			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syn::GroupExpr), false)
 		}
 		t @ Syn::KwFor => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+			p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 			// TODO: Patterns?
 			trivia_0plus(p);
-			p.expect(Syn::Colon, Syn::Colon, &["`:`"]);
+			p.expect(Syn::Colon, Syn::Colon, &[&["`:`"]]);
 			trivia_0plus(p);
 			Expression::parse(p);
 			trivia_0plus(p);
@@ -203,7 +203,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 			p.advance(t);
 			trivia_0plus(p);
 			todo!();
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			(p.close(mark, Syn::ConstructExpr), true)
 		}
 		t @ Syn::KwClass => {
@@ -215,7 +215,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 			trivia_0plus(p);
 
 			while !p.at(Syn::BraceR) && !p.eof() {
@@ -223,21 +223,21 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			(p.close(mark, Syn::ClassExpr), true)
 		}
 		t @ Syn::KwEnum => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 			todo!();
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			(p.close(mark, Syn::EnumExpr), true)
 		}
 		t @ Syn::KwStruct => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 			trivia_0plus(p);
 
 			while !p.at(Syn::BraceR) && !p.eof() {
@@ -245,15 +245,15 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			(p.close(mark, Syn::StructExpr), true)
 		}
 		t @ Syn::KwUnion => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &["`{`"]);
+			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
 			todo!();
-			p.expect(Syn::BraceR, Syn::BraceR, &["`}`"]);
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
 			(p.close(mark, Syn::UnionExpr), true)
 		}
 		Syn::BraceL => (block(p, mark, Syn::BlockExpr, false), false),
@@ -263,7 +263,7 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 				other,
 				Syn::Error,
 				&[
-					"This is a placeholder error message!",
+					&["This is a placeholder error message!"],
 					// TODO
 				],
 			),

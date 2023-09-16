@@ -52,11 +52,11 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 			}
 			Token::BracketL => {
 				let m = p.open_before(lhs);
-				p.expect(Token::BracketL, Syn::BracketL, &["`[`"]);
+				p.expect(Token::BracketL, Syn::BracketL, &[&["`[`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+				p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
 				lhs = p.close(m, Syn::IndexExpr);
 				continue;
 			}
@@ -78,7 +78,7 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 					trivia_0plus(p);
 					expr(p);
 					trivia_0plus(p);
-					p.expect(Token::Colon, Syn::Colon, &["`:`"]);
+					p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
 					trivia_0plus(p);
 					expr(p);
 					lhs = p.close(m, Syn::TernaryExpr);
@@ -151,19 +151,19 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 			p.close(ex, Syn::Literal)
 		}
 		Token::ParenL => {
-			p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 
 			if p.eat(Token::KwClass, Syn::KwClass) {
 				// Class cast
 				trivia_0plus(p);
-				p.expect(Token::AngleL, Syn::AngleL, &["`<`"]);
+				p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
 				trivia_0plus(p);
 				ident::<0>(p);
 				trivia_0plus(p);
-				p.expect(Token::AngleR, Syn::AngleR, &["`>`"]);
+				p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 				trivia_0plus(p);
 				arg_list(p);
 				return p.close(ex, Syn::ClassCastExpr);
@@ -182,14 +182,14 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 					trivia_0plus(p);
 
 					if !p.eat(Token::Comma, Syn::Comma) {
-						p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+						p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 						break;
 					}
 				}
 
 				p.close(ex, Syn::VectorExpr)
 			} else {
-				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error, &["`)`", "`,`"])
+				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error, &[&["`)`", "`,`"]])
 			}
 		}
 		t @ (Token::Bang
@@ -207,7 +207,7 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 			ex,
 			Syn::Unknown,
 			Syn::Error,
-			&[
+			&[&[
 				"an integer",
 				"a floating-point number",
 				"a string",
@@ -223,7 +223,7 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 				"`-`",
 				"`+`",
 				"`~`",
-			],
+			]],
 		),
 	}
 }
@@ -292,7 +292,7 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	p.close(arglist, Syn::ArgList);
 }
 

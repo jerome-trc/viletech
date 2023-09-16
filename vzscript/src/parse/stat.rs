@@ -12,7 +12,7 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 	if Expression::FIRST_SET.contains(&token) {
 		if !Expression::parse(p) {
 			trivia_0plus(p);
-			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 		}
 
 		p.close(mark, Syn::ExprStat);
@@ -29,7 +29,7 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::BreakStat);
 		}
 		t @ Syn::KwContinue => {
@@ -41,13 +41,13 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::ContinueStat);
 		}
 		t @ (Syn::KwLet | Syn::KwReadonly) => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::Ident, Syn::Ident, &["an identifier"]);
+			p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 			trivia_0plus(p);
 
 			if p.at_any(TypeSpec::FIRST_SET) {
@@ -61,7 +61,7 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::BindStat);
 		}
 		t @ Syn::KwReturn => {
@@ -69,7 +69,7 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 			trivia_0plus(p);
 			Expression::parse(p);
 			trivia_0plus(p);
-			p.expect(Syn::Semicolon, Syn::Semicolon, &["`;`"]);
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::ReturnStat);
 		}
 		other => {

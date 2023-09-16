@@ -18,12 +18,12 @@ pub fn file(p: &mut Parser<Syn>) {
 		} else {
 			p.advance_with_error(
 				Syn::from(p.nth(0)),
-				&[
+				&[&[
 					"a key-value pair (`$` or an identifier)",
 					"a header (`[`)",
 					"whitespace",
 					"a comment",
-				],
+				]],
 			);
 		}
 	}
@@ -43,10 +43,10 @@ pub fn key_val_pair(p: &mut Parser<Syn>) {
 	p.expect_if(
 		|t| t == Token::Ident || t.is_keyword(),
 		Syn::Ident,
-		&["an identifier"],
+		&[&["an identifier"]],
 	);
 	trivia_0plus(p);
-	p.expect(Token::Eq, Syn::Eq, &["`=`"]);
+	p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
 	string(p);
 
 	loop {
@@ -64,7 +64,7 @@ pub fn key_val_pair(p: &mut Parser<Syn>) {
 
 fn string(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &["a string"]);
+	p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
 }
 
 /// Builds a [`Syn::GameQualifier`] node.
@@ -73,17 +73,17 @@ fn ifgame(p: &mut Parser<Syn>) {
 	let ifgame = p.open();
 	p.advance(Syn::Dollar);
 	trivia_0plus(p);
-	p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &["`ifgame`"]);
+	p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &[&["`ifgame`"]]);
 	trivia_0plus(p);
-	p.expect(Token::ParenL, Syn::ParenL, &["`(`"]);
+	p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
 	trivia_0plus(p);
 	p.expect_if(
 		|t| t == Token::Ident || t.is_keyword(),
 		Syn::Ident,
-		&["an identifier"],
+		&[&["an identifier"]],
 	);
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &["`)`"]);
+	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
 	trivia_0plus(p);
 	p.close(ifgame, Syn::GameQualifier);
 }
@@ -117,13 +117,13 @@ pub fn header(p: &mut Parser<Syn>) {
 
 				return p.advance_with_error(
 					Syn::from(t),
-					&["`~`", "`*`", "`default`", "an identifier"],
+					&[&["`~`", "`*`", "`default`", "an identifier"]],
 				);
 			}
 		}
 	}
 
-	p.expect(Token::BracketR, Syn::BracketR, &["`]`"]);
+	p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
 	p.close(header, Syn::Header);
 }
 
