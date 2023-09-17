@@ -547,10 +547,7 @@ where
 	let ptree = doomfront::parse(
 		source,
 		zscript::parse::file,
-		zdoom::lex::Context {
-			version,
-			doc_comments: true,
-		},
+		zdoom::lex::Context { version },
 	);
 
 	for elem in ptree.root().children() {

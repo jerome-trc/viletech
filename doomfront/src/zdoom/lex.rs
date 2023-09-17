@@ -343,7 +343,8 @@ pub enum Token {
 	#[token("->")]
 	ThinArrow,
 	// Miscellaneous ///////////////////////////////////////////////////////////
-	#[regex("//[^\n]*\n*", priority = 1, callback = Token::try_doc_comment)]
+	#[regex("//[^/\n][^\n]*\n*", priority = 1)]
+	#[regex("////[^\n]*\n*")]
 	#[regex("//")]
 	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
 	Comment,
@@ -351,6 +352,7 @@ pub enum Token {
 	/// and non-standard, being defined by [zscdoc].
 	///
 	/// [zscdoc]: https://gitlab.com/Gutawer/zscdoc
+	#[regex(r#"///([^/][^\n]*)?"#, priority = 2)]
 	DocComment,
 	/// A dummy token for [`LangExt`](crate::LangExt).
 	Eof,
@@ -393,23 +395,6 @@ impl Token {
 	}
 
 	// Callbacks ///////////////////////////////////////////////////////////////////
-
-	#[allow(unused)]
-	fn try_doc_comment(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
-		if !lexer.extras.doc_comments {
-			return Ok(());
-		}
-
-		let mut chars = lexer.slice().chars().skip(2);
-
-		if chars.next().is_some_and(|c| c == '/')
-			&& chars.next().is_some_and(|c| !matches!(c, '/' | '\n'))
-		{
-			return Err(Self::DocComment);
-		}
-
-		Ok(())
-	}
 
 	#[allow(unused)]
 	fn ident_pre1_0_0(lexer: &mut logos::Lexer<Self>) -> Result<(), Self> {
@@ -469,14 +454,11 @@ impl Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
 	pub version: super::Version,
-	/// See [`Token::DocComment`]. Only for use when parsing ZScript.
-	pub doc_comments: bool,
 }
 
 impl Context {
 	pub const ZSCRIPT_LATEST: Self = Self {
 		version: super::Version::V4_10_0,
-		doc_comments: true,
 	};
 
 	pub const NON_ZSCRIPT: Self = Self {
@@ -485,7 +467,6 @@ impl Context {
 			minor: 0,
 			rev: 0,
 		},
-		doc_comments: false,
 	};
 }
 
@@ -530,6 +511,15 @@ States (actor, overlay) {
 
 			println!("{token:?} ({:?}) : `{}`", lexer.span(), lexer.slice());
 		}
+	}
+
+	#[test]
+	fn doc_comment() {
+		const SOURCE: &str = "/// Hello \n/// world!";
+		let mut lexer = Token::lexer_with_extras(SOURCE, Context::NON_ZSCRIPT);
+		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);
+		assert_eq!(lexer.next().unwrap().unwrap(), Token::Whitespace);
+		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);
 	}
 
 	#[test]

@@ -477,7 +477,7 @@ impl std::ops::Deref for DocComment {
 
 pub(self) fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 	node.children_with_tokens()
-		.take_while(|elem| elem.kind() == Syn::DocComment)
+		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syn::DocComment)
 		.filter_map(|elem| {
 			elem.into_token()
 				.filter(|token| token.kind() == Syn::DocComment)

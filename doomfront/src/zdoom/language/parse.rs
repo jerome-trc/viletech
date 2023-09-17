@@ -131,6 +131,7 @@ fn trivia(p: &mut Parser<Syn>) -> bool {
 	p.eat_any(&[
 		(Token::Whitespace, Syn::Whitespace),
 		(Token::Comment, Syn::Comment),
+		(Token::DocComment, Syn::Comment),
 		(Token::RegionStart, Syn::RegionStart),
 		(Token::RegionEnd, Syn::RegionEnd),
 	])
