@@ -10,8 +10,12 @@ pub enum Syn {
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// `'actor' actorident? inheritspec? replacesclause? editornum? '{' innard* '}'`
 	ActorDef,
+	/// A stream of tokens for assigning properties and flags.
+	ActorSettings,
 	/// Optional part at the end of a [`Syn::StateDef`].
 	ActionFunction,
+	/// `'[' expr ']'`
+	ArrayLen,
 	/// `'(' exprs? ')'`
 	ArgList,
 	/// `'const' 'int'|'float'|'fixed' ident '=' expr ';'`
@@ -28,8 +32,6 @@ pub enum Syn {
 	EnumVariant,
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
-	/// `(+ | -) identchain`
-	FlagSetting,
 	/// `'+' integer`
 	GotoOffset,
 	/// `(ident) | (ident ('.' ident)?)`
@@ -38,11 +40,15 @@ pub enum Syn {
 	IncludeDirective,
 	/// `':' actorident`
 	InheritSpec,
-	PropertySettings,
+	/// Not an expression type like [`Syn::Literal`]. Wraps only a literal
+	/// token, optionally preceded by a [`Syn::Minus`] token.
+	SignLit,
 	/// `'states' '{' (statedef|stateflow|statelabel)* '}'`
 	StatesDef,
 	/// For child nods under a [`Syn::StatesDef`].
 	StateDef,
+	/// `signlit | 'random' arglist`
+	StateDuration,
 	StateFlow,
 	/// `ident ':'`
 	StateLabel,
@@ -50,6 +56,8 @@ pub enum Syn {
 	StateLight,
 	/// `'offset' '(' expr ',' expr ')'`
 	StateOffset,
+	/// `(stateoffset | statelight | 'bright' | 'nodelay' | 'fast' | 'slow' | 'canraise')*`
+	StateQuals,
 	/// `'(' ident+ ')'`, where `ident` is "actor", "item", "overlay", or "weapon"
 	/// (matched ASCII case-insensitively).
 	StatesUsage,
@@ -63,21 +71,47 @@ pub enum Syn {
 	Root,
 	/// `'var' ('int'|'float') ident ';'`
 	UserVar,
+	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `'{' statement* '}'` where `statement` cannot be another compound statement.
+	CompoundStat,
+	/// `'do' compoundstat 'while' '(' expr ')'`
+	DoWhileStat,
+	/// `expr ';'`
+	ExprStat,
+	ForStat,
+	/// `'while' '(' expr ')' compoundstat`
+	WhileStat,
 	// Nodes: expressions //////////////////////////////////////////////////////
 	BinExpr,
 	CallExpr,
+	/// Wraps a single [`Syn::HexLit`] token.
+	ColorExpr,
 	GroupExpr,
 	IdentExpr,
 	IndexExpr,
+	/// Will have one of the following tokens as a child:
+	/// - [`Syn::KwFalse`]
+	/// - [`Syn::KwFloat`]
+	/// - [`Syn::IntLit`]
+	/// - [`Syn::NameLit`]
+	/// - [`Syn::StringLit`]
+	/// - [`Syn::KwTrue`]
 	Literal,
+	/// Wraps a single [`Syn::KwNone`] token.
+	NoneExpr,
+	/// `expr operator`
 	PostfixExpr,
+	/// `operator expr`
 	PrefixExpr,
+	/// `expr '?' expr ':' expr`
 	TernaryExpr,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
 	/// See [`crate::zdoom::lex::Token::IntLit`].
 	IntLit,
+	/// A hexadecimal integer literal without the `0x` prefix.
+	HexLit,
 	/// See [`crate::zdoom::lex::Token::NameLit`].
 	NameLit,
 	/// See [`crate::zdoom::lex::Token::StringLit`].
@@ -102,10 +136,13 @@ pub enum Syn {
 	KwFor,
 	KwGoto,
 	KwIf,
+	/// The exact string `#include`, ASCII case-insensitive.
+	KwInclude,
 	KwInt,
 	KwLight,
 	KwLoop,
 	KwNoDelay,
+	KwNone,
 	KwOffset,
 	KwReplaces,
 	KwReturn,
@@ -132,8 +169,6 @@ pub enum Syn {
 	KwDot,
 	KwDouble,
 	KwIn,
-	/// The exact string `#include`, ASCII case-insensitive.
-	KwInclude,
 	KwInt16,
 	KwInt8,
 	KwIs,
@@ -142,7 +177,6 @@ pub enum Syn {
 	KwMapIterator,
 	KwMixin,
 	KwNative,
-	KwNone,
 	KwNull,
 	KwProperty,
 	KwSByte,
@@ -297,6 +331,8 @@ pub enum Syn {
 	Comment,
 	/// A C-style identifier.
 	Ident,
+	/// Used for actor identifiers and state sprites, frames, and labels.
+	NonWhitespace,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
 	/// Lexer input rolled up under [`Syn::Error`].

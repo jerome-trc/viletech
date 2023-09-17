@@ -126,6 +126,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			.map_or(L::EOF, |lexeme| lexeme.kind)
 	}
 
+	#[must_use]
+	pub fn nth_slice(&self, lookahead: usize) -> &str {
+		&self.source[self.tokens[self.pos + lookahead].span.clone()]
+	}
+
 	/// Shorthand for `self.nth(0) == token`.
 	#[must_use]
 	pub fn at(&self, token: L::Token) -> bool {

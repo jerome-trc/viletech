@@ -86,8 +86,7 @@ impl ActorDef {
 pub enum Innard {
 	ConstDef(ConstDef),
 	EnumDef(EnumDef),
-	FlagSetting(FlagSetting),
-	PropertySettings(PropertySettings),
+	Settings(ActorSettings),
 	StatesDef(StatesDef),
 	UserVar(UserVar),
 }
@@ -101,10 +100,7 @@ impl AstNode for Innard {
 	{
 		matches!(
 			kind,
-			Syn::ConstDef
-				| Syn::EnumDef | Syn::FlagSetting
-				| Syn::PropertySettings
-				| Syn::StatesDef | Syn::UserVar
+			Syn::ConstDef | Syn::EnumDef | Syn::ActorSettings | Syn::StatesDef | Syn::UserVar
 		)
 	}
 
@@ -115,8 +111,7 @@ impl AstNode for Innard {
 		match node.kind() {
 			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
 			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
-			Syn::FlagSetting => Some(Self::FlagSetting(FlagSetting(node))),
-			Syn::PropertySettings => Some(Self::PropertySettings(PropertySettings(node))),
+			Syn::ActorSettings => Some(Self::Settings(ActorSettings(node))),
 			Syn::StatesDef => Some(Self::StatesDef(StatesDef(node))),
 			Syn::UserVar => Some(Self::UserVar(UserVar(node))),
 			_ => None,
@@ -127,60 +122,9 @@ impl AstNode for Innard {
 		match self {
 			Self::ConstDef(inner) => inner.syntax(),
 			Self::EnumDef(inner) => inner.syntax(),
-			Self::FlagSetting(inner) => inner.syntax(),
-			Self::PropertySettings(inner) => inner.syntax(),
+			Self::Settings(inner) => inner.syntax(),
 			Self::StatesDef(inner) => inner.syntax(),
 			Self::UserVar(inner) => inner.syntax(),
-		}
-	}
-}
-
-impl Innard {
-	#[must_use]
-	pub fn into_constdef(self) -> Option<ConstDef> {
-		match self {
-			Self::ConstDef(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_enumdef(self) -> Option<EnumDef> {
-		match self {
-			Self::EnumDef(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_flagsetting(self) -> Option<FlagSetting> {
-		match self {
-			Self::FlagSetting(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_propsettings(self) -> Option<PropertySettings> {
-		match self {
-			Self::PropertySettings(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_statesdef(self) -> Option<StatesDef> {
-		match self {
-			Self::StatesDef(inner) => Some(inner),
-			_ => None,
-		}
-	}
-
-	#[must_use]
-	pub fn into_uservar(self) -> Option<UserVar> {
-		match self {
-			Self::UserVar(inner) => Some(inner),
-			_ => None,
 		}
 	}
 }
@@ -230,45 +174,14 @@ pub enum UserVarType {
 	Float,
 }
 
-// FlagSetting /////////////////////////////////////////////////////////////////
+// Settings ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::FlagSetting`].
+/// Wraps a node tagged [`Syn::ActorSettings`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct FlagSetting(pub(super) SyntaxNode);
+pub struct ActorSettings(SyntaxNode);
 
-simple_astnode!(Syn, FlagSetting, Syn::FlagSetting);
-
-impl FlagSetting {
-	#[must_use]
-	pub fn name(&self) -> IdentChain {
-		IdentChain::cast(self.syntax().last_child().unwrap()).unwrap()
-	}
-
-	#[must_use]
-	pub fn is_adding(&self) -> bool {
-		self.syntax().first_token().unwrap().text() == "+"
-	}
-
-	#[must_use]
-	pub fn is_removing(&self) -> bool {
-		self.syntax().first_token().unwrap().text() == "-"
-	}
-}
-
-// PropertySetting /////////////////////////////////////////////////////////////
-
-/// Wraps a node tagged [`Syn::PropertySettings`].
-///
-/// DECORATE has no established grammar. The reference implementation parses a
-/// single valid property setting by context-sensitively checking every token it
-/// reads. This is out of scope for DoomFront, so this node may encompass multiple
-/// valid property settings, and the client must decompose them accordingly.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct PropertySettings(pub(super) SyntaxNode);
-
-simple_astnode!(Syn, PropertySettings, Syn::PropertySettings);
+simple_astnode!(Syn, ActorSettings, Syn::ActorSettings);
 
 // StatesDef ///////////////////////////////////////////////////////////////////
 

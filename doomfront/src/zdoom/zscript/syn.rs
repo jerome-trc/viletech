@@ -484,7 +484,7 @@ pub enum Syn {
 	DocComment,
 	/// A C-style identifier.
 	Ident,
-	/// Used for state sprites, frames, and labels in DECORATE and ZScript.
+	/// Used for state sprites, frames, and labels.
 	NonWhitespace,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,

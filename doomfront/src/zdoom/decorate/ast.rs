@@ -118,8 +118,6 @@ impl ConstDef {
 
 				if tok.text().eq_ignore_ascii_case("int") {
 					Some(ConstType::Int)
-				} else if tok.text().eq_ignore_ascii_case("fixed") {
-					Some(ConstType::Fixed)
 				} else if tok.text().eq_ignore_ascii_case("float") {
 					Some(ConstType::Float)
 				} else {
@@ -139,7 +137,6 @@ impl ConstDef {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConstType {
 	Int,
-	Fixed,
 	Float,
 }
 
