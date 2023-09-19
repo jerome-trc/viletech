@@ -25,7 +25,7 @@ use bevy::{
 		RenderPlugin,
 	},
 	window::WindowMode,
-	winit::{UpdateMode, WinitSettings},
+	winit::{UpdateMode, WinitSettings, WinitWindows},
 };
 use bevy_egui::{egui, systems::InputEvents, EguiContexts, EguiPlugin};
 use clap::Parser;
@@ -130,6 +130,7 @@ VileTech Client {c_vers}
 					..Default::default()
 				}),
 		)
+		.add_systems(Startup, set_window_icon)
 		.add_plugins((WireframePlugin, EguiPlugin))
 		.add_asset::<TerrainMaterial>()
 		.add_systems(Update, common_updates)
@@ -348,6 +349,51 @@ fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
 
 	core.console
 		.key_input(up_pressed, down_pressed, esc_pressed, enter_pressed);
+}
+
+fn set_window_icon(
+	core: Res<ClientCore>,
+	winits: NonSend<WinitWindows>,
+	windows: Query<Entity, With<Window>>,
+) {
+	let catalog = core.catalog.read();
+	let window_ent = windows.single();
+	let window_id = winits.entity_to_winit.get(&window_ent).unwrap();
+	let window = winits.windows.get(window_id).unwrap();
+
+	let Some(fref) = catalog.vfs().get("/viletech/viletech.png") else {
+		error!("Window icon not found.");
+		return;
+	};
+
+	let bytes = match fref.try_read_bytes() {
+		Ok(b) => b,
+		Err(err) => {
+			error!("Failed to read window icon: {err}");
+			return;
+		}
+	};
+
+	let buf = match image::load_from_memory(bytes) {
+		Ok(b) => b.into_rgba8(),
+		Err(err) => {
+			error!("Failed to load window icon: {err}");
+			return;
+		}
+	};
+
+	let (w, h) = buf.dimensions();
+	let rgba = buf.into_raw();
+
+	let icon = match winit::window::Icon::from_rgba(rgba, w, h) {
+		Ok(i) => i,
+		Err(err) => {
+			error!("Failed to create window icon: {err}");
+			return;
+		}
+	};
+
+	window.set_window_icon(Some(icon));
 }
 
 #[derive(Debug, clap::Parser)]

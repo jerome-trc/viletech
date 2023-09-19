@@ -117,6 +117,8 @@ impl Plugin for InputPlugin {
 			.init_resource::<Axis<GamepadButton>>()
 			// touch
 			.add_event::<TouchInput>()
+			.add_event::<TouchpadMagnify>()
+			.add_event::<TouchpadRotate>()
 			.init_resource::<Touches>();
 
 		// Register common types

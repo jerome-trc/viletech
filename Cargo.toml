@@ -118,6 +118,8 @@ triangulate = "0.2.0"
 triomphe = { version = "0.1.8", features = ["arc-swap"] }
 unicode-ident = "1.0.6"
 walkdir = "2.3.2"
+# Must be compatible with `bevy_winit`.
+winit = "0.28.1"
 xml-rs = "0.8.14"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 # Developer only
