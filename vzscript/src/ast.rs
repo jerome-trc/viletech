@@ -258,7 +258,7 @@ impl TypeSpec {
 
 // Common AST helper functions /////////////////////////////////////////////////
 
-pub(self) fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
+fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 	node.children_with_tokens()
 		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syn::DocComment)
 		.filter_map(|elem| {

@@ -106,7 +106,7 @@ impl Context {
 }
 
 #[derive(Debug)]
-pub(self) struct NodeBuilder<'lvl> {
+struct NodeBuilder<'lvl> {
 	ctx: &'lvl mut Context,
 	level: &'lvl mut Level,
 	poly: PolySpots,
@@ -366,46 +366,46 @@ impl NodeBuilder<'_> {
 
 /// Two-axis 32-bit fixed-point vector.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(self) struct FixedXZ {
-	pub(self) x: Fixed32,
-	pub(self) z: Fixed32,
+struct FixedXZ {
+	x: Fixed32,
+	z: Fixed32,
 }
 
 impl FixedXZ {
 	#[must_use]
-	pub(self) fn new(x: Fixed32, z: Fixed32) -> Self {
+	fn new(x: Fixed32, z: Fixed32) -> Self {
 		Self { x, z }
 	}
 }
 
 /// "Fixed-point displacement line".
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(self) struct FxDisp {
-	pub(self) start: FixedXZ,
-	pub(self) disp: FixedXZ,
+struct FxDisp {
+	start: FixedXZ,
+	disp: FixedXZ,
 }
 
 /// The node builder's understanding of [`Vertex`](crate::sim::level::Vertex).
 #[derive(Debug, Clone, PartialEq)]
 #[repr(align(8))] // (GZ)
-pub(self) struct Vertex {
-	pub(self) x: Fixed32,
-	pub(self) z: Fixed32,
+struct Vertex {
+	x: Fixed32,
+	z: Fixed32,
 	/// Segs that use this vertex as a start.
-	pub(self) segs: usize,
+	segs: usize,
 	/// Segs that use this vertex as an end.
-	pub(self) segs2: usize,
+	segs2: usize,
 }
 
 impl Vertex {
 	#[must_use]
-	pub(self) fn to_point(&self) -> FixedXZ {
+	fn to_point(&self) -> FixedXZ {
 		FixedXZ::new(self.x, self.z)
 	}
 }
 
 #[derive(Debug)]
-pub(self) struct Seg {
+struct Seg {
 	v1: usize,
 	v2: usize,
 	sidedef: usize,
@@ -430,7 +430,7 @@ pub(self) struct Seg {
 
 /// 32-bit fixed-point bounding box.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub(self) struct BBox([Fixed32; 4]);
+struct BBox([Fixed32; 4]);
 
 impl BBox {
 	#[must_use]
@@ -455,16 +455,16 @@ impl BBox {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(self) struct PolyStart {
-	pub(self) polynum: u32,
-	pub(self) x: Fixed32,
-	pub(self) z: Fixed32,
+struct PolyStart {
+	polynum: u32,
+	x: Fixed32,
+	z: Fixed32,
 }
 
 #[derive(Debug)]
-pub(self) struct PolySpots {
-	pub(self) starts: Vec<PolyStart>,
-	pub(self) anchors: Vec<PolyStart>,
+struct PolySpots {
+	starts: Vec<PolyStart>,
+	anchors: Vec<PolyStart>,
 }
 
 #[must_use]
@@ -518,7 +518,7 @@ fn polyspots(level: &Level) -> PolySpots {
 }
 
 #[derive(Debug)]
-pub(self) struct BspNode {
+struct BspNode {
 	x: Fixed32,
 	z: Fixed32,
 	dx: Fixed32,
@@ -530,17 +530,17 @@ pub(self) struct BspNode {
 
 /// "Point-side relationship".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(self) enum PointSideRel {
+enum PointSideRel {
 	AheadOfLine,
 	OnLine,
 	BehindLine,
 }
 
 /// (GZ) Points within this distance of a line will be considered on the line.
-pub(self) const SIDE_EPSILON: f64 = 6.5536;
+const SIDE_EPSILON: f64 = 6.5536;
 
 #[must_use]
-pub(self) fn pt_side_rel(point: FixedXZ, start: FixedXZ, delta: FixedXZ) -> PointSideRel {
+fn pt_side_rel(point: FixedXZ, start: FixedXZ, delta: FixedXZ) -> PointSideRel {
 	let d_dx = delta.x.to_num::<f64>();
 	let d_dy = delta.z.to_num::<f64>();
 	let d_x = point.x.to_num::<f64>();

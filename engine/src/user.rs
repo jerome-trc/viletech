@@ -531,7 +531,7 @@ pub struct GlobalConfig {
 }
 
 /// Lives directly under the user info directory.
-pub(self) const GLOBALCFG_FILENAME: &str = "global.toml";
+const GLOBALCFG_FILENAME: &str = "global.toml";
 
 /// An error-mapping helper for brevity.
 fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {

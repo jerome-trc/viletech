@@ -274,7 +274,7 @@ impl VersionDirective {
 /// Wraps a node tagged [`Syn::IdentChain`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct IdentChain(pub(self) SyntaxNode);
+pub struct IdentChain(SyntaxNode);
 
 simple_astnode!(Syn, IdentChain, Syn::IdentChain);
 
@@ -349,7 +349,7 @@ impl VersionQual {
 /// Wraps a node tagged [`Syn::LocalVar`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct LocalVar(pub(self) SyntaxNode);
+pub struct LocalVar(SyntaxNode);
 
 simple_astnode!(Syn, LocalVar, Syn::LocalVar);
 
@@ -429,7 +429,7 @@ impl LocalVarInit {
 /// Wraps a node tagged [`Syn::VarName`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct VarName(pub(self) SyntaxNode);
+pub struct VarName(SyntaxNode);
 
 simple_astnode!(Syn, VarName, Syn::VarName);
 
@@ -455,7 +455,7 @@ impl VarName {
 /// Wraps a node tagged [`Syn::ArrayLen`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ArrayLen(pub(self) SyntaxNode);
+pub struct ArrayLen(SyntaxNode);
 
 simple_astnode!(Syn, ArrayLen, Syn::ArrayLen);
 
@@ -491,7 +491,7 @@ impl std::ops::Deref for DocComment {
 
 // Common AST helper functions /////////////////////////////////////////////////
 
-pub(self) fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
+fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 	node.children_with_tokens()
 		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syn::DocComment)
 		.filter_map(|elem| {

@@ -55,10 +55,10 @@ impl Context {
 }
 
 #[derive(Debug)]
-pub(self) struct SubContext<'ctx> {
-	pub(self) tracker: &'ctx Arc<SendTracker>,
-	pub(self) errors: &'ctx Mutex<Vec<MountError>>,
-	pub(self) files: DashMap<FileKey, File>,
+struct SubContext<'ctx> {
+	tracker: &'ctx Arc<SendTracker>,
+	errors: &'ctx Mutex<Vec<MountError>>,
+	files: DashMap<FileKey, File>,
 }
 
 impl SubContext<'_> {

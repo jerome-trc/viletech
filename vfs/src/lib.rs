@@ -310,12 +310,12 @@ impl MountOutcome {
 pub struct MountInfo {
 	/// Specified by `meta.toml` if one exists.
 	/// Otherwise, this comes from the file stem of the mount point.
-	pub(self) id: String,
-	pub(self) format: MountFormat,
+	id: String,
+	format: MountFormat,
 	/// Always canonicalized, but may not necessarily be valid UTF-8.
-	pub(self) real_path: PathBuf,
+	real_path: PathBuf,
 	/// Guaranteed to be valid UTF-8 at mount time.
-	pub(self) mount_point: VPathBuf,
+	mount_point: VPathBuf,
 }
 
 impl MountInfo {
@@ -355,7 +355,7 @@ pub enum MountFormat {
 
 #[derive(Debug, Default)]
 struct Config {
-	pub(self) reserved_mount_points: Vec<String>,
+	reserved_mount_points: Vec<String>,
 }
 
 /// Configuration methods are kept in a wrapper around a [`VirtualFs`] reference

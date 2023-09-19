@@ -31,7 +31,7 @@ use core::arch::x86_64::*;
 /// Utility function for SSE SIMD operations.
 /// [`core::arch::x86_64::_MM_SHUFFLE`] is unstable; use this in the meantime.
 #[must_use]
-pub(self) const fn mm_shuffle(e3: u32, e1: u32, e0: u32, e4: u32) -> i32 {
+const fn mm_shuffle(e3: u32, e1: u32, e0: u32, e4: u32) -> i32 {
 	((e3 << 6) | (e1 << 4) | (e0 << 2) | e4) as i32
 }
 
@@ -43,11 +43,11 @@ union UnionCast {
 	m128: __m128,
 }
 
-pub(self) const fn m128_from_f32x4(f32x4: [f32; 4]) -> __m128 {
+const fn m128_from_f32x4(f32x4: [f32; 4]) -> __m128 {
 	unsafe { UnionCast { f32x4 }.m128 }
 }
 
-pub(self) const fn m128_from_u32x4(u32x4: [u32; 4]) -> __m128 {
+const fn m128_from_u32x4(u32x4: [u32; 4]) -> __m128 {
 	unsafe { UnionCast { u32x4 }.m128 }
 }
 
@@ -55,7 +55,7 @@ const PS_INV_SIGN_MASK: __m128 = m128_from_u32x4([!0x8000_0000; 4]);
 const PS_NO_FRACTION: __m128 = m128_from_f32x4([8388608.0; 4]);
 
 #[inline]
-pub(self) unsafe fn m128_floor(v: __m128) -> __m128 {
+unsafe fn m128_floor(v: __m128) -> __m128 {
 	// Based on https://github.com/microsoft/DirectXMath `XMVectorFloor`
 	// To handle NAN, INF and numbers greater than 8388608, use masking.
 	let test = _mm_and_si128(_mm_castps_si128(v), _mm_castps_si128(PS_INV_SIGN_MASK));

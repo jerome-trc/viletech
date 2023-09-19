@@ -138,21 +138,21 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 }
 
 #[derive(Debug)]
-pub(self) struct DeclContext<'c> {
-	pub(self) compiler: &'c Compiler,
-	pub(self) lib: &'c LibSource,
-	pub(self) path: &'c str,
-	pub(self) lib_ix: u16,
-	pub(self) file_ix: u16,
-	pub(self) zscript: bool,
-	pub(self) name_stack: Vec<String>,
+struct DeclContext<'c> {
+	compiler: &'c Compiler,
+	lib: &'c LibSource,
+	path: &'c str,
+	lib_ix: u16,
+	file_ix: u16,
+	zscript: bool,
+	name_stack: Vec<String>,
 }
 
 impl DeclContext<'_> {
 	/// If `Err` is returned, it contains the index
 	/// to the symbol that would have been overwritten.
 	#[allow(clippy::too_many_arguments)]
-	pub(self) fn declare(
+	fn declare(
 		&self,
 		outer: &mut Scope,
 		name_str: &str,
@@ -199,7 +199,7 @@ impl DeclContext<'_> {
 		}
 	}
 
-	pub(self) fn declare_builtin(
+	fn declare_builtin(
 		&self,
 		outer: &mut Scope,
 		fndecl: ast::FuncDecl,

@@ -31,7 +31,7 @@ pub fn file(p: &mut Parser<Syn>) {
 }
 
 /// An annotation, item, or statement. If `ROOT`, statements are forbidden.
-pub(self) fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
+fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 	if p.at_any(Annotation::FIRST_SET) {
 		Annotation::parse(p);
 		return;

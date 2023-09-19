@@ -64,28 +64,28 @@ pub use self::{config::*, error::*};
 /// [pointers]: dobj::Handle
 #[derive(Debug)]
 pub struct Catalog {
-	pub(self) config: Config,
+	config: Config,
 	/// When the catalog is initialized, this is empty.
-	pub(self) vzs: vzs::Project,
+	vzs: vzs::Project,
 	/// See [`Self::new`]; mounts given as `basedata` through that function are
 	/// always present here.
-	pub(self) vfs: VirtualFs,
-	pub(self) dobjs: dashmap::ReadOnlyView<DatumKey, Arc<dyn DatumStore>>,
+	vfs: VirtualFs,
+	dobjs: dashmap::ReadOnlyView<DatumKey, Arc<dyn DatumStore>>,
 	/// Datum lookup table without namespacing. Thus, requesting `MAP01` returns
 	/// the last element in the array behind that key, as doom.exe would if
 	/// loading multiple WADs with similarly-named entries. Also contains names
 	/// assigned via [`SNDINFO`](https://zdoom.org/wiki/SNDINFO).
-	pub(self) nicknames: dashmap::ReadOnlyView<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	nicknames: dashmap::ReadOnlyView<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
 	/// See the key type's documentation for background details.
 	/// These are always backed by a [`Blueprint`]; they are only `dyn` for the
 	/// benefit of [`DataRef`].
-	pub(self) editor_nums: dashmap::ReadOnlyView<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	editor_nums: dashmap::ReadOnlyView<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
 	/// See the key type's documentation for background details.
 	/// These are always backed by a [`Blueprint`]; they are only `dyn` for the
 	/// benefit of [`DataRef`].
-	pub(self) spawn_nums: dashmap::ReadOnlyView<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
-	pub(self) gui: DevGui,
-	pub(self) populated: bool,
+	spawn_nums: dashmap::ReadOnlyView<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	gui: DevGui,
+	populated: bool,
 	// Q: FNV/aHash for maps using small key types?
 }
 
@@ -537,11 +537,11 @@ impl AssetIo for CatalogAssetIo {
 
 /// Field `1` is a hash of the datum's ID string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(self) struct DatumKey(TypeId, u64);
+struct DatumKey(TypeId, u64);
 
 impl DatumKey {
 	#[must_use]
-	pub(self) fn new<D: Datum>(id: &str) -> Self {
+	fn new<D: Datum>(id: &str) -> Self {
 		let mut hasher = FxHasher::default();
 		id.hash(&mut hasher);
 		Self(TypeId::of::<D>(), hasher.finish())

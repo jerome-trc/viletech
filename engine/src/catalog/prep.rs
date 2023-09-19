@@ -347,13 +347,13 @@ impl Catalog {
 
 #[derive(Debug)]
 pub(super) struct Context {
-	pub(self) tracker: Arc<SendTracker>,
-	pub(self) dobjs: DashMap<DatumKey, Arc<dyn DatumStore>>,
-	pub(self) nicknames: DashMap<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
-	pub(self) editor_nums: DashMap<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
-	pub(self) spawn_nums: DashMap<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
-	pub(self) arts_working: Vec<Mutex<WorkingArtifacts>>,
-	pub(self) arts: Vec<Artifacts>,
+	tracker: Arc<SendTracker>,
+	dobjs: DashMap<DatumKey, Arc<dyn DatumStore>>,
+	nicknames: DashMap<DatumKey, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	editor_nums: DashMap<EditorNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	spawn_nums: DashMap<SpawnNum, SmallVec<[Arc<dyn DatumStore>; 2]>>,
+	arts_working: Vec<Mutex<WorkingArtifacts>>,
+	arts: Vec<Artifacts>,
 }
 
 impl Context {
@@ -403,11 +403,11 @@ impl Context {
 	}
 
 	#[must_use]
-	pub(self) fn last_paletteset(&self) -> Option<&PaletteSet> {
+	fn last_paletteset(&self) -> Option<&PaletteSet> {
 		self.arts.iter().filter_map(|a| a.palset.as_deref()).last()
 	}
 
-	pub(self) fn post_pass2(&mut self) {
+	fn post_pass2(&mut self) {
 		for (w, a) in self.arts_working.iter().zip(self.arts.iter_mut()) {
 			let mut w = w.lock();
 
@@ -419,7 +419,7 @@ impl Context {
 		}
 	}
 
-	pub(self) fn post_pass3(&mut self) {
+	fn post_pass3(&mut self) {
 		// ???
 	}
 }
@@ -427,31 +427,31 @@ impl Context {
 /// Read-only prep artifacts that don't need to be behind a mutex.
 /// Associated with one mount. All get discarded when prep finishes.
 #[derive(Debug, Default)]
-pub(self) struct Artifacts {
-	pub(self) kind: MountKind,
-	pub(self) vzscript: Option<VzsManifest>,
-	pub(self) texturex: TextureX,
-	pub(self) pnames: PatchTable,
-	pub(self) colormap: Option<Box<ColorMap>>,
-	pub(self) palset: Option<Box<PaletteSet>>,
-	pub(self) endoom: Option<Box<EnDoom>>,
+struct Artifacts {
+	kind: MountKind,
+	vzscript: Option<VzsManifest>,
+	texturex: TextureX,
+	pnames: PatchTable,
+	colormap: Option<Box<ColorMap>>,
+	palset: Option<Box<PaletteSet>>,
+	endoom: Option<Box<EnDoom>>,
 }
 
 /// Working buffer for prep artifacts to put behind a mutex.
 /// Associated with one mount.
 #[derive(Debug, Default)]
-pub(self) struct WorkingArtifacts {
+struct WorkingArtifacts {
 	/// Preserved between passes; only discharged when prep finishes.
-	pub(self) errors: Vec<PrepError>,
-	pub(self) colormap: Option<Box<ColorMap>>,
-	pub(self) palset: Option<Box<PaletteSet>>,
-	pub(self) endoom: Option<Box<EnDoom>>,
-	pub(self) texturex: TextureX,
-	pub(self) pnames: PatchTable,
+	errors: Vec<PrepError>,
+	colormap: Option<Box<ColorMap>>,
+	palset: Option<Box<PaletteSet>>,
+	endoom: Option<Box<EnDoom>>,
+	texturex: TextureX,
+	pnames: PatchTable,
 }
 
 #[derive(Debug)]
-pub(self) struct VzsManifest {
+struct VzsManifest {
 	/// The base of the package's VZScript include tree.
 	///
 	/// This is irrelevant to WADs, which can only use VZS through lumps named
@@ -469,16 +469,16 @@ pub(self) struct VzsManifest {
 
 /// Context relevant to operations on one mount.
 #[derive(Debug)]
-pub(self) struct SubContext<'ctx> {
-	pub(self) higher: &'ctx Context,
-	pub(self) mntinfo: &'ctx MountInfo,
-	pub(self) arts: &'ctx Artifacts,
-	pub(self) arts_w: &'ctx Mutex<WorkingArtifacts>,
+struct SubContext<'ctx> {
+	higher: &'ctx Context,
+	mntinfo: &'ctx MountInfo,
+	arts: &'ctx Artifacts,
+	arts_w: &'ctx Mutex<WorkingArtifacts>,
 }
 
 /// Informs the rules used for preparing data from a mount.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(self) enum MountKind {
+enum MountKind {
 	/// If the mount's own root has an immediate child text file named `meta.toml`
 	/// (ASCII-case-ignored), that indicates that the mount is a VileTech package.
 	VileTech,
@@ -505,7 +505,7 @@ pub(self) enum MountKind {
 }
 
 impl SubContext<'_> {
-	pub(self) fn add_datum<D: Datum>(&self, datum: D, id_suffix: impl AsRef<str>) {
+	fn add_datum<D: Datum>(&self, datum: D, id_suffix: impl AsRef<str>) {
 		let id = format!("{}/{}", self.mntinfo.id(), id_suffix.as_ref());
 
 		let key = DatumKey::new::<D>(&id);
@@ -535,12 +535,12 @@ impl SubContext<'_> {
 		};
 	}
 
-	pub(self) fn raise_error(&self, err: PrepError) {
+	fn raise_error(&self, err: PrepError) {
 		self.arts_w.lock().errors.push(err);
 	}
 
 	#[must_use]
-	pub(self) fn is_cancelled(&self) -> bool {
+	fn is_cancelled(&self) -> bool {
 		self.higher.tracker.is_cancelled()
 	}
 }

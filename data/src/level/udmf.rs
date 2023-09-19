@@ -477,7 +477,7 @@ pub(crate) struct KeyValPair<'i> {
 }
 
 impl KeyValPair<'_> {
-	pub(self) fn to_map_value(&self) -> UdmfValue {
+	fn to_map_value(&self) -> UdmfValue {
 		match self.val {
 			Value::True => UdmfValue::Bool(true),
 			Value::False => UdmfValue::Bool(false),
@@ -504,7 +504,7 @@ pub(crate) enum Value<'i> {
 }
 
 /// An error mapping helper for convenience and brevity.
-pub(self) fn parse_u16(lit: &str) -> Result<u16, Error> {
+fn parse_u16(lit: &str) -> Result<u16, Error> {
 	lit.parse().map_err(|err| Error::ParseInt {
 		inner: err,
 		input: lit.to_string(),
@@ -512,7 +512,7 @@ pub(self) fn parse_u16(lit: &str) -> Result<u16, Error> {
 }
 
 /// An error mapping helper for convenience and brevity.
-pub(self) fn parse_i32(lit: &str) -> Result<i32, Error> {
+fn parse_i32(lit: &str) -> Result<i32, Error> {
 	lit.parse().map_err(|err| Error::ParseInt {
 		inner: err,
 		input: lit.to_string(),
@@ -520,7 +520,7 @@ pub(self) fn parse_i32(lit: &str) -> Result<i32, Error> {
 }
 
 /// An error mapping helper for convenience and brevity.
-pub(self) fn parse_u32(lit: &str) -> Result<u32, Error> {
+fn parse_u32(lit: &str) -> Result<u32, Error> {
 	lit.parse().map_err(|err| Error::ParseInt {
 		inner: err,
 		input: lit.to_string(),
@@ -528,7 +528,7 @@ pub(self) fn parse_u32(lit: &str) -> Result<u32, Error> {
 }
 
 /// An error mapping helper for convenience and brevity.
-pub(self) fn parse_usize(lit: &str) -> Result<usize, Error> {
+fn parse_usize(lit: &str) -> Result<usize, Error> {
 	lit.parse().map_err(|err| Error::ParseInt {
 		inner: err,
 		input: lit.to_string(),

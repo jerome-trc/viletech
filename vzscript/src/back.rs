@@ -98,14 +98,14 @@ impl Drop for JitModule {
 }
 
 #[derive(Debug)]
-pub(self) struct CodeGenUnit<'r> {
-	pub(self) module: Arc<JitModule>,
-	pub(self) rtinfo: &'r FxDashMap<ZName, rti::Record>,
+struct CodeGenUnit<'r> {
+	module: Arc<JitModule>,
+	rtinfo: &'r FxDashMap<ZName, rti::Record>,
 }
 
 impl<'r> CodeGenUnit<'r> {
 	#[must_use]
-	pub(self) fn new(
+	fn new(
 		runtime: &'r RuntimePtr,
 		rtinfo: &'r FxDashMap<ZName, rti::Record>,
 		native: Arc<FxHashMap<&'static str, NativePtr>>,
@@ -157,7 +157,7 @@ impl<'r> CodeGenUnit<'r> {
 		}
 	}
 
-	pub(self) fn run(&self, batch: Vec<&Symbol>) {
+	fn run(&self, batch: Vec<&Symbol>) {
 		let mut guard = self.module.inner.lock();
 		let jit = guard.as_mut().unwrap();
 

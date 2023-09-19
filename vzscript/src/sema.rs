@@ -112,12 +112,12 @@ fn for_each_symbol(
 }
 
 #[derive(Debug)]
-pub(self) struct SemaContext<'c> {
-	pub(self) compiler: &'c Compiler,
-	pub(self) tcache: Option<&'c TypeCache>,
-	pub(self) location: Location,
-	pub(self) path: &'c str,
-	pub(self) zscript: bool,
+struct SemaContext<'c> {
+	compiler: &'c Compiler,
+	tcache: Option<&'c TypeCache>,
+	location: Location,
+	path: &'c str,
+	zscript: bool,
 }
 
 impl SemaContext<'_> {
@@ -126,7 +126,7 @@ impl SemaContext<'_> {
 	/// that definition is complete.
 	/// If `symbol` is undefined, lazily provide a definition for it.
 	#[must_use]
-	pub(self) fn require(&self, symbol: &Symbol) -> DefStatus {
+	fn require(&self, symbol: &Symbol) -> DefStatus {
 		if symbol
 			.status
 			.compare_exchange(DefStatus::None, DefStatus::Pending)
@@ -168,7 +168,7 @@ impl SemaContext<'_> {
 	}
 
 	#[must_use]
-	pub(self) fn tcache(&self) -> &TypeCache {
+	fn tcache(&self) -> &TypeCache {
 		self.tcache.unwrap()
 	}
 }
@@ -182,11 +182,11 @@ impl std::ops::Deref for SemaContext<'_> {
 }
 
 #[derive(Debug)]
-pub(self) struct ConstEval {
+struct ConstEval {
 	/// `None` if the type cannot be known, such as when compile-time-evaluating
 	/// a null pointer literal.
-	pub(self) typedef: Option<rti::Handle<TypeDef>>,
-	pub(self) ir: vir::Node,
+	typedef: Option<rti::Handle<TypeDef>>,
+	ir: vir::Node,
 }
 
 /// The output of a compile-time evaluated expression.
@@ -238,7 +238,7 @@ impl Clone for CEval {
 pub(crate) type CEvalVec = SmallVec<[CEval; 1]>;
 
 #[derive(Debug, Clone)]
-pub(self) struct ScopeStack<'s> {
+struct ScopeStack<'s> {
 	compiler: &'s Compiler,
 	namespace: &'s Scope,
 	scopes: Scope,
@@ -246,14 +246,14 @@ pub(self) struct ScopeStack<'s> {
 
 impl ScopeStack<'_> {
 	#[must_use]
-	pub(self) fn lookup(&self, nsname: NsName) -> Option<&Symbol> {
+	fn lookup(&self, nsname: NsName) -> Option<&Symbol> {
 		todo!()
 	}
 }
 
 /// Cache handles to types which will be commonly referenced to minimize lookups.
 #[derive(Debug)]
-pub(self) struct TypeCache {
+struct TypeCache {
 	bool_t: rti::Handle<TypeDef>,
 	int32_t: rti::Handle<TypeDef>,
 	uint32_t: rti::Handle<TypeDef>,
