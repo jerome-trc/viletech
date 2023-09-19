@@ -28,3 +28,11 @@ regex.workspace = true
 serde = { workspace = true, optional = true }
 smartstring.workspace = true
 triomphe.workspace = true
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true
+slotmap.workspace = true
