@@ -302,7 +302,7 @@ impl StatesItem {
 									.parse::<u64>()
 									.ok();
 							} else if IdentChain::can_cast(elem.kind()) {
-								target = Some(IdentChain::cast(elem.into_node().unwrap())).unwrap();
+								target = IdentChain::cast(elem.into_node().unwrap());
 							}
 						}
 
