@@ -208,7 +208,9 @@ impl StatesBlock {
 			.filter(|node| node.kind() == Syn::StatesUsage)
 			.map(|node| {
 				node.children_with_tokens().filter_map(|elem| {
-					let Some(token) = elem.into_token() else { return None; };
+					let Some(token) = elem.into_token() else {
+						return None;
+					};
 
 					if token.text().eq_ignore_ascii_case("actor") {
 						Some(StateUsage::Actor)
@@ -385,7 +387,9 @@ impl StateDef {
 
 	#[must_use]
 	pub fn action(&self) -> Option<ActionFunction> {
-		let Some(node) = self.0.last_child() else { return None; };
+		let Some(node) = self.0.last_child() else {
+			return None;
+		};
 		ActionFunction::cast(node)
 	}
 }
@@ -431,12 +435,16 @@ simple_astnode!(Syn, StateOffset, Syn::StateOffset);
 
 impl StateOffset {
 	pub fn x(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
 	pub fn y(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }

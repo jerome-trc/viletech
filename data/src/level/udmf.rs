@@ -437,7 +437,7 @@ impl<'i> Parser<'i> {
 				Token::FloatLit,
 				Token::FalseLit,
 				Token::TrueLit,
-				Token::StringLit
+				Token::StringLit,
 			]) else {
 				self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
 				continue;

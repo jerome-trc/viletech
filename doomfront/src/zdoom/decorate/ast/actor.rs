@@ -144,7 +144,9 @@ impl UserVar {
 		self.syntax()
 			.children_with_tokens()
 			.find_map(|elem| {
-				let SyntaxElement::Token(token) = elem else { return None; };
+				let SyntaxElement::Token(token) = elem else {
+					return None;
+				};
 				(token.kind() == Syn::Ident).then_some(token)
 			})
 			.unwrap()
@@ -155,7 +157,9 @@ impl UserVar {
 		self.syntax()
 			.children_with_tokens()
 			.find_map(|elem| {
-				let SyntaxElement::Token(token) = elem else { return None; };
+				let SyntaxElement::Token(token) = elem else {
+					return None;
+				};
 
 				match token.kind() {
 					Syn::KwInt => Some(UserVarType::Int),
@@ -200,7 +204,9 @@ impl StatesDef {
 			.filter(|node| node.kind() == Syn::StatesUsage)
 			.map(|node| {
 				node.children_with_tokens().filter_map(|elem| {
-					let Some(token) = elem.into_token() else { return None; };
+					let Some(token) = elem.into_token() else {
+						return None;
+					};
 
 					if token.text().eq_ignore_ascii_case("actor") {
 						Some(StateUsage::Actor)

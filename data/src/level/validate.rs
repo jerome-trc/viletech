@@ -30,7 +30,9 @@ impl LevelDef {
 				ret += 1;
 			}
 
-			let Some(side_left) = linedef.side_left else { continue; };
+			let Some(side_left) = linedef.side_left else {
+				continue;
+			};
 
 			if side_left >= self.geom.sidedefs.len() {
 				err_handler(Error::InvalidLinedefSide {

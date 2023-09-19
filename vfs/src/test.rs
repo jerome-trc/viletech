@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn mount() {
-	let Some(req) = request() else { return; };
+	let Some(req) = request() else {
+		return;
+	};
 
 	let mut vfs = VirtualFs::default();
 
@@ -22,7 +24,9 @@ fn mount() {
 
 #[test]
 fn lookup() {
-	let Some(req) = request() else { return; };
+	let Some(req) = request() else {
+		return;
+	};
 
 	let mut vfs = VirtualFs::default();
 
@@ -52,7 +56,9 @@ fn lookup() {
 }
 #[test]
 fn dir_structure() {
-	let Some(req) = request() else { return; };
+	let Some(req) = request() else {
+		return;
+	};
 
 	let mut vfs = VirtualFs::default();
 
@@ -95,7 +101,9 @@ fn dir_structure() {
 
 #[test]
 fn glob() {
-	let Some(req) = request() else { return; };
+	let Some(req) = request() else {
+		return;
+	};
 
 	let mut vfs = VirtualFs::default();
 

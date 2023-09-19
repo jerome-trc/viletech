@@ -223,7 +223,9 @@ struct VfsWalker<'a> {
 impl VfsWalker<'_> {
 	fn recur_vzs(self, fref: vfs::FileRef) {
 		let Ok(source) = fref.try_read_str() else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: fref.path_str().to_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: fref.path_str().to_owned(),
+			});
 			return;
 		};
 
@@ -249,7 +251,9 @@ impl VfsWalker<'_> {
 
 	fn zs_root(mut self, fref: vfs::FileRef) {
 		let Ok(source) = fref.try_read_str() else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: fref.path_str().to_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: fref.path_str().to_owned(),
+			});
 			return;
 		};
 
@@ -293,7 +297,9 @@ impl VfsWalker<'_> {
 
 	fn recur_zs(self, fref: vfs::FileRef) {
 		let Ok(source) = fref.try_read_str() else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: fref.path_str().to_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: fref.path_str().to_owned(),
+			});
 			return;
 		};
 
@@ -322,13 +328,11 @@ impl VfsWalker<'_> {
 		let Some(next_fref) = self.vfs.get(inc_path) else {
 			let syn_node = SyntaxNode::new_root(node.to_owned());
 
-			self.errors.lock().push(
-				Error::Missing {
-					file: fref.path_str().to_owned(),
-					inc_path: inc_path.to_string(),
-					span: syn_node.text_range()
-				}
-			);
+			self.errors.lock().push(Error::Missing {
+				file: fref.path_str().to_owned(),
+				inc_path: inc_path.to_string(),
+				span: syn_node.text_range(),
+			});
 
 			return;
 		};
@@ -356,7 +360,9 @@ impl FsWalker<'_> {
 		let mut buf = String::with_capacity(fd.metadata().map(|md| md.len() as usize).unwrap_or(0));
 
 		let Ok(_) = fd.read_to_string(&mut buf) else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: path_cow.into_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: path_cow.into_owned(),
+			});
 			return;
 		};
 
@@ -386,7 +392,9 @@ impl FsWalker<'_> {
 		let mut buf = String::with_capacity(fd.metadata().map(|md| md.len() as usize).unwrap_or(0));
 
 		let Ok(_) = fd.read_to_string(&mut buf) else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: path_cow.into_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: path_cow.into_owned(),
+			});
 			return;
 		};
 
@@ -433,7 +441,9 @@ impl FsWalker<'_> {
 		let mut buf = String::with_capacity(fd.metadata().map(|md| md.len() as usize).unwrap_or(0));
 
 		let Ok(_) = fd.read_to_string(&mut buf) else {
-			self.errors.lock().push(Error::InvalidUtf8 { path: path_cow.into_owned() });
+			self.errors.lock().push(Error::InvalidUtf8 {
+				path: path_cow.into_owned(),
+			});
 			return;
 		};
 
@@ -551,7 +561,9 @@ where
 	);
 
 	for elem in ptree.root().children() {
-		let Some(node) = elem.into_node() else { continue; };
+		let Some(node) = elem.into_node() else {
+			continue;
+		};
 
 		if node.kind() != zscript::Syn::IncludeDirective.into() {
 			continue;

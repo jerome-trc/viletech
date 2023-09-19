@@ -51,7 +51,9 @@ fn smoke() {
 		}
 
 		for pfile in &corelib.inctree.files {
-			let SourceKind::Vzs(ptree) = pfile.inner() else { unreachable!() };
+			let SourceKind::Vzs(ptree) = pfile.inner() else {
+				unreachable!()
+			};
 
 			if ptree.any_errors() {
 				eprintln!("Parse errors in {}:", pfile.path());

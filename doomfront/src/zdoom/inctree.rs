@@ -57,7 +57,9 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 			};
 
 			for elem in fptree.root.children() {
-				let Some(node) = elem.into_node() else { continue; };
+				let Some(node) = elem.into_node() else {
+					continue;
+				};
 
 				if node.kind() != L::kind_to_raw(inc_directive) {
 					continue;
@@ -112,7 +114,9 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 			(0..rayon::current_num_threads())
 				.par_bridge()
 				.for_each(|_| {
-					let Some(queued) = queue.pop() else { return; };
+					let Some(queued) = queue.pop() else {
+						return;
+					};
 
 					let source = match filesystem(&queued) {
 						Some(s) => s,
@@ -133,7 +137,9 @@ impl<L: LangExt<Token = Token>> IncludeTree<L> {
 					};
 
 					for elem in fptree.root.children() {
-						let Some(node) = elem.into_node() else { continue; };
+						let Some(node) = elem.into_node() else {
+							continue;
+						};
 
 						if node.kind() != L::kind_to_raw(inc_directive) {
 							continue;

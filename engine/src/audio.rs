@@ -545,7 +545,9 @@ impl MusicController {
 	/// Logs an error if a layer fails to stop.
 	pub fn stop_all_layers(&mut self, tween: Option<Tween>) {
 		for (i, layer) in self.layers.iter_mut().enumerate() {
-			let Some(handle) = layer else { continue; };
+			let Some(handle) = layer else {
+				continue;
+			};
 
 			if let Err(err) = handle.stop(tween.unwrap_or_default()) {
 				error!("Failed to stop music layer: {i} ({err})");
@@ -559,7 +561,9 @@ impl MusicController {
 	/// Logs an error if a layer fails to pause.
 	pub fn pause_all_layers(&mut self, tween: Option<Tween>) {
 		for (i, layer) in self.layers.iter_mut().enumerate() {
-			let Some(handle) = layer else { continue; };
+			let Some(handle) = layer else {
+				continue;
+			};
 
 			if let Err(err) = handle.pause(tween.unwrap_or_default()) {
 				error!("Failed to pause music layer: {i} ({err})");

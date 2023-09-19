@@ -19,7 +19,9 @@ impl Project {
 	#[must_use]
 	pub fn get<R: RtInfo>(&self, name: impl AsRef<str>) -> Option<rti::Ref<R>> {
 		let typeid = TypeId::of::<R>();
-		let Some(record) = self.rti.get(name.as_ref()) else { return None; };
+		let Some(record) = self.rti.get(name.as_ref()) else {
+			return None;
+		};
 
 		unsafe {
 			match record.tag {

@@ -117,7 +117,9 @@ impl LevelDef {
 
 		self.geom.linedefs.par_iter().for_each(|linedef| {
 			used.set_aliased(linedef.side_right, true);
-			let Some(side_left) = linedef.side_left else { return; };
+			let Some(side_left) = linedef.side_left else {
+				return;
+			};
 			used.set_aliased(side_left, true);
 		});
 
@@ -149,7 +151,9 @@ impl LevelDef {
 
 			self.geom.linedefs.par_iter_mut().for_each(|linedef| {
 				linedef.side_right = remap[linedef.side_right];
-				let Some(side_left) = linedef.side_left.as_mut() else { return; };
+				let Some(side_left) = linedef.side_left.as_mut() else {
+					return;
+				};
 				*side_left = remap[*side_left];
 			});
 		}

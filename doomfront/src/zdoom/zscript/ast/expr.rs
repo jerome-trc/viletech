@@ -632,7 +632,9 @@ impl TernaryExpr {
 	}
 
 	pub fn if_expr(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.children().nth(1) else { return Err(AstError::Missing); };
+		let Some(node) = self.0.children().nth(1) else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
@@ -645,7 +647,9 @@ impl TernaryExpr {
 	}
 
 	pub fn else_expr(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.children().nth(2) else { return Err(AstError::Missing); };
+		let Some(node) = self.0.children().nth(2) else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }

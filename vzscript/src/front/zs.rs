@@ -182,9 +182,11 @@ fn expand_mixin(ctx: &DeclContext, namespace: &Scope, scope: &mut Scope, mixin: 
 
 	let lib_ix = ctx.lib_ix as usize;
 
-	let Some(&sym_ix) = ctx.namespaces[..=lib_ix].iter().rev().find_map(|ns| {
-		ns.get(&nsname)
-	}) else {
+	let Some(&sym_ix) = ctx.namespaces[..=lib_ix]
+		.iter()
+		.rev()
+		.find_map(|ns| ns.get(&nsname))
+	else {
 		ctx.raise(Issue::new(
 			ctx.path,
 			name_tok.text_range(),

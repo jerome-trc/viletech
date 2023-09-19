@@ -212,21 +212,29 @@ impl VirtualFs {
 	fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
 		assert!(!path.is_root(), "tried to remove the root node from a VFS");
 
-		let Some(removed) = self.files.remove(path.as_ref()) else { return; };
+		let Some(removed) = self.files.remove(path.as_ref()) else {
+			return;
+		};
 
 		let parent_path = path.as_ref().parent().unwrap();
 		let parent = self.files.get_mut(parent_path).unwrap();
 		Self::unparent(parent, path);
 
-		let Content::Directory { children, .. } = removed.content else { return; };
+		let Content::Directory { children, .. } = removed.content else {
+			return;
+		};
 
 		for child in children.iter() {
 			recur(self, child.as_ref());
 		}
 
 		fn recur(this: &mut VirtualFs, path: impl AsRef<VPath>) {
-			let Some(removed) = this.files.remove(path.as_ref()) else { unreachable!() };
-			let Content::Directory { children, .. } = removed.content else { return; };
+			let Some(removed) = this.files.remove(path.as_ref()) else {
+				unreachable!()
+			};
+			let Content::Directory { children, .. } = removed.content else {
+				return;
+			};
 
 			for child in children.iter() {
 				recur(this, child.as_ref());

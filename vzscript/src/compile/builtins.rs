@@ -37,14 +37,12 @@ fn validate_int_t_args(
 	let mut args = arglist.iter();
 
 	let Some(arg0) = args.next() else {
-		return Err(
-			Issue::new(
-				path,
-				arglist.syntax().text_range(),
-				format!("`{fn_name}` requires at least one argument"),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-		);
+		return Err(Issue::new(
+			path,
+			arglist.syntax().text_range(),
+			format!("`{fn_name}` requires at least one argument"),
+			issue::Level::Error(issue::Error::ArgCount),
+		));
 	};
 
 	if let Some(arg1) = args.next() {
@@ -57,27 +55,23 @@ fn validate_int_t_args(
 	};
 
 	let ast::Expr::Literal(lit) = arg0.expr().unwrap() else {
-		return Err(
-			Issue::new(
-				path,
-				arg0.syntax().text_range(),
-				format!("`{fn_name}` currently only supports literal arguments"),
-				issue::Level::Error(issue::Error::ArgType),
-			)
-		);
+		return Err(Issue::new(
+			path,
+			arg0.syntax().text_range(),
+			format!("`{fn_name}` currently only supports literal arguments"),
+			issue::Level::Error(issue::Error::ArgType),
+		));
 	};
 
 	let token = lit.token();
 
 	let Some(result) = token.int() else {
-		return Err(
-			Issue::new(
-				path,
-				token.text_range(),
-				format!("expected integer literal, found: {token}"),
-				issue::Level::Error(issue::Error::ArgType),
-			)
-		);
+		return Err(Issue::new(
+			path,
+			token.text_range(),
+			format!("expected integer literal, found: {token}"),
+			issue::Level::Error(issue::Error::ArgType),
+		));
 	};
 
 	let num_bits = match result {

@@ -71,7 +71,9 @@ impl Header {
 	/// - [`Syn::Tilde`]
 	pub fn contents(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0.children_with_tokens().filter_map(|elem| {
-			let Some(token) = elem.into_token() else { return None; };
+			let Some(token) = elem.into_token() else {
+				return None;
+			};
 
 			match token.kind() {
 				Syn::Ident | Syn::KwDefault | Syn::Asterisk | Syn::Tilde => Some(token),

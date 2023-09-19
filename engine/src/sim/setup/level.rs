@@ -329,7 +329,9 @@ fn subsector_to_poly(
 			let l1 = bsp_lines[node_i];
 			let l2 = bsp_lines[node_ii];
 
-			let Some(point) = l1.intersect_pt(l2) else { continue; };
+			let Some(point) = l1.intersect_pt(l2) else {
+				continue;
+			};
 
 			const BSP_TOLERANCE: f32 = 1e-3;
 			const SEG_TOLERANCE: f32 = 0.1;

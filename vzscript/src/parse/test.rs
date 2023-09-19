@@ -206,7 +206,9 @@ fn smoke_func_decl() {
 			assert_eq!(fndecl.name().unwrap().text(), "atmospheric_pressure");
 			let ret_t = fndecl.return_type().unwrap();
 			let ret_t_expr = ret_t.expr().unwrap();
-			let ast::Expr::Ident(e) = ret_t_expr else { panic!(); };
+			let ast::Expr::Ident(e) = ret_t_expr else {
+				panic!();
+			};
 			assert_eq!(e.token().text(), "void");
 		},
 		|node| {

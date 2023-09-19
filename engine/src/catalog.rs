@@ -259,7 +259,9 @@ impl Catalog {
 	/// [actor]: crate::sim::actor
 	#[must_use]
 	pub fn bp_by_ednum(&self, num: EditorNum) -> Option<DataRef<Blueprint>> {
-		let Some(stack) = self.editor_nums.get(&num) else { return None; };
+		let Some(stack) = self.editor_nums.get(&num) else {
+			return None;
+		};
 
 		let arc = stack
 			.last()
@@ -274,7 +276,9 @@ impl Catalog {
 	/// [actor]: crate::sim::actor
 	#[must_use]
 	pub fn bp_by_spawnnum(&self, num: SpawnNum) -> Option<DataRef<Blueprint>> {
-		let Some(stack) = self.spawn_nums.get(&num) else { return None; };
+		let Some(stack) = self.spawn_nums.get(&num) else {
+			return None;
+		};
 
 		let arc = stack
 			.last()
@@ -286,7 +290,9 @@ impl Catalog {
 	#[must_use]
 	pub fn last_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
-		let Some(stack) = self.nicknames.get(&key) else { return None; };
+		let Some(stack) = self.nicknames.get(&key) else {
+			return None;
+		};
 
 		let arc = stack
 			.last()
@@ -298,7 +304,9 @@ impl Catalog {
 	#[must_use]
 	pub fn first_by_nick<D: Datum>(&self, nick: &str) -> Option<DataRef<D>> {
 		let key = DatumKey::new::<D>(nick);
-		let Some(stack) = self.nicknames.get(&key) else { return None; };
+		let Some(stack) = self.nicknames.get(&key) else {
+			return None;
+		};
 
 		let arc = stack
 			.first()

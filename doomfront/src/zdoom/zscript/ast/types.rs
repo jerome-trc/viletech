@@ -124,7 +124,9 @@ simple_astnode!(Syn, DynArrayType, Syn::DynArrayType);
 
 impl DynArrayType {
 	pub fn element_type(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing) };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -167,12 +169,16 @@ simple_astnode!(Syn, MapType, Syn::MapType);
 
 impl MapType {
 	pub fn key_type(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 
 	pub fn value_type(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -188,12 +194,16 @@ simple_astnode!(Syn, MapIterType, Syn::MapIterType);
 
 impl MapIterType {
 	pub fn key_type(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 
 	pub fn value_type(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 }

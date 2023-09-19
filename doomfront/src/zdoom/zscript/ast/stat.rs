@@ -120,7 +120,9 @@ impl AssignStat {
 	}
 
 	pub fn assignee(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing) };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -145,7 +147,9 @@ simple_astnode!(Syn, CaseStat, Syn::CaseStat);
 
 impl CaseStat {
 	pub fn expr(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -224,11 +228,15 @@ impl CondLoopStat {
 	pub fn condition(&self) -> AstResult<Expr> {
 		match self.0.kind() {
 			Syn::DoUntilStat | Syn::DoWhileStat => {
-				let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+				let Some(node) = self.0.last_child() else {
+					return Err(AstError::Missing);
+				};
 				Expr::cast(node).ok_or(AstError::Incorrect)
 			}
 			Syn::WhileStat | Syn::UntilStat => {
-				let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+				let Some(node) = self.0.first_child() else {
+					return Err(AstError::Missing);
+				};
 				Expr::cast(node).ok_or(AstError::Incorrect)
 			}
 			_ => unreachable!(),
@@ -238,11 +246,15 @@ impl CondLoopStat {
 	pub fn statement(&self) -> AstResult<Statement> {
 		match self.0.kind() {
 			Syn::DoUntilStat | Syn::DoWhileStat => {
-				let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+				let Some(node) = self.0.first_child() else {
+					return Err(AstError::Missing);
+				};
 				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			Syn::WhileStat | Syn::UntilStat => {
-				let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+				let Some(node) = self.0.last_child() else {
+					return Err(AstError::Missing);
+				};
 				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			_ => unreachable!(),
@@ -278,7 +290,9 @@ impl DeclAssignStat {
 	}
 
 	pub fn expr(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -336,7 +350,9 @@ simple_astnode!(Syn, ForStat, Syn::ForStat);
 
 impl ForStat {
 	pub fn init(&self) -> AstResult<ForLoopInit> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		ForLoopInit::cast(node).ok_or(AstError::Incorrect)
 	}
 
@@ -400,7 +416,9 @@ simple_astnode!(Syn, ForEachStat, Syn::ForEachStat);
 
 impl ForEachStat {
 	pub fn variable(&self) -> AstResult<VarName> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		VarName::cast(node).ok_or(AstError::Incorrect)
 	}
 
@@ -412,7 +430,9 @@ impl ForEachStat {
 	}
 
 	pub fn statement(&self) -> AstResult<Statement> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		Statement::cast(node).ok_or(AstError::Incorrect)
 	}
 }
@@ -489,12 +509,16 @@ simple_astnode!(Syn, SwitchStat, Syn::SwitchStat);
 
 impl SwitchStat {
 	pub fn expr(&self) -> AstResult<Expr> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
 	pub fn statement(&self) -> AstResult<Statement> {
-		let Some(node) = self.0.last_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.last_child() else {
+			return Err(AstError::Missing);
+		};
 		Statement::cast(node).ok_or(AstError::Incorrect)
 	}
 }

@@ -214,7 +214,9 @@ impl AudioCore {
 		let mut paused = 0;
 
 		for channel in self.sounds.iter() {
-			let Some(sfx) = channel else { continue; };
+			let Some(sfx) = channel else {
+				continue;
+			};
 
 			if sfx.state() == PlaybackState::Playing {
 				playing += 1;

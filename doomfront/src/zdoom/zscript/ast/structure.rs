@@ -35,7 +35,9 @@ impl ClassDef {
 			.children()
 			.find_map(|node| Some(node).filter(|node| node.kind() == Syn::InheritSpec));
 
-		let Some(spec) = spec else { return None; };
+		let Some(spec) = spec else {
+			return None;
+		};
 		let ret = spec.last_token().unwrap();
 		debug_assert_eq!(ret.kind(), Syn::Ident);
 		Some(ret)

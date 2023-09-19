@@ -22,7 +22,9 @@ impl LitToken {
 
 	#[must_use]
 	pub fn float(&self) -> Option<Result<f64, ParseFloatError>> {
-		let Syn::FloatLit = self.0.kind() else { return None; };
+		let Syn::FloatLit = self.0.kind() else {
+			return None;
+		};
 
 		let text = self.0.text();
 
@@ -46,7 +48,9 @@ impl LitToken {
 
 	#[must_use]
 	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
-		let Syn::IntLit = self.0.kind() else { return None; };
+		let Syn::IntLit = self.0.kind() else {
+			return None;
+		};
 
 		let text = self.0.text();
 
@@ -114,7 +118,9 @@ impl LitToken {
 
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
-		let Syn::NameLit = self.0.kind() else { return None; };
+		let Syn::NameLit = self.0.kind() else {
+			return None;
+		};
 
 		let text = self.0.text();
 		let start = text.chars().position(|c| c == '\'').unwrap();
@@ -130,7 +136,9 @@ impl LitToken {
 
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
-		let Syn::StringLit = self.0.kind() else { return None; };
+		let Syn::StringLit = self.0.kind() else {
+			return None;
+		};
 
 		let text = self.0.text();
 		let start = text.chars().position(|c| c == '"').unwrap();

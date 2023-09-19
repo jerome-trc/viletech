@@ -114,7 +114,9 @@ impl ConstDef {
 		self.syntax()
 			.children_with_tokens()
 			.find_map(|elem| {
-				let NodeOrToken::Token(tok) = elem else { return None; };
+				let NodeOrToken::Token(tok) = elem else {
+					return None;
+				};
 
 				if tok.text().eq_ignore_ascii_case("int") {
 					Some(ConstType::Int)

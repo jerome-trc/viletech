@@ -255,12 +255,16 @@ impl VersionDirective {
 	/// [`IntErrorKind::Empty`] is returned if the expected string literal is absent.
 	pub fn version(&self) -> Result<zdoom::Version, IntErrorKind> {
 		let lit = self.0.last_token().ok_or(IntErrorKind::Empty)?;
-		let Syn::StringLit = lit.kind() else { return Err(IntErrorKind::Empty) };
+		let Syn::StringLit = lit.kind() else {
+			return Err(IntErrorKind::Empty);
+		};
 		let text = lit.text();
 		let start = text.chars().position(|c| c == '"').unwrap();
 		let end = text.chars().rev().position(|c| c == '"').unwrap();
 		let span = (start + 1)..(text.len() - end - 1);
-		let Some(content) = text.get(span) else { return Err(IntErrorKind::Empty); };
+		let Some(content) = text.get(span) else {
+			return Err(IntErrorKind::Empty);
+		};
 		content.parse()
 	}
 }
@@ -351,7 +355,9 @@ simple_astnode!(Syn, LocalVar, Syn::LocalVar);
 
 impl LocalVar {
 	pub fn type_ref(&self) -> AstResult<TypeRef> {
-		let Some(node) = self.0.first_child() else { return Err(AstError::Missing); };
+		let Some(node) = self.0.first_child() else {
+			return Err(AstError::Missing);
+		};
 		TypeRef::cast(node).ok_or(AstError::Incorrect)
 	}
 
@@ -370,7 +376,9 @@ simple_astnode!(Syn, LocalVarInit, Syn::LocalVarInit);
 impl LocalVarInit {
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
-		let Some(token) = self.0.first_token() else { return Err(AstError::Missing); };
+		let Some(token) = self.0.first_token() else {
+			return Err(AstError::Missing);
+		};
 
 		match token.kind() {
 			Syn::Ident => Ok(token),
@@ -380,25 +388,33 @@ impl LocalVarInit {
 
 	#[must_use]
 	pub fn array_len(&self) -> Option<ArrayLen> {
-		let Some(node) = self.0.first_child() else { return None; };
+		let Some(node) = self.0.first_child() else {
+			return None;
+		};
 		ArrayLen::cast(node)
 	}
 
 	#[must_use]
 	pub fn single_init(&self) -> Option<Expr> {
-		let Some(last) = self.0.last_token() else { return None; };
+		let Some(last) = self.0.last_token() else {
+			return None;
+		};
 
 		if last.kind() == Syn::BraceR {
 			return None;
 		}
 
-		let Some(node) = self.0.last_child() else { return None; };
+		let Some(node) = self.0.last_child() else {
+			return None;
+		};
 		Expr::cast(node)
 	}
 
 	#[must_use]
 	pub fn braced_inits(&self) -> Option<impl Iterator<Item = Expr>> {
-		let Some(last) = self.0.last_token() else { return None; };
+		let Some(last) = self.0.last_token() else {
+			return None;
+		};
 
 		if last.kind() != Syn::BraceR {
 			return None;
