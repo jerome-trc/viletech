@@ -121,6 +121,9 @@ impl std::fmt::Display for Error {
 #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
 compiler_error!("exotic pointer widths are not yet supported");
 
+#[cfg(not(target_arch = "x86_64"))]
+compiler_error!("only x86_64 architecture currently supported");
+
 pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxDashSet<T> = dashmap::DashSet<T, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxDashMapView<K, V> = dashmap::ReadOnlyView<K, V, BuildHasherDefault<FxHasher>>;

@@ -39,6 +39,8 @@ triomphe.workspace = true
 # All below are tentative. They will get marked as workspace dependencies if/as
 # they prove to be sound and more performant than alternatives.
 append-only-vec = "0.1.3"
+backtrace = "0.3.69"
+cee-scape = "0.1.6"
 im = "15.1.0"
 
 [[bench]]

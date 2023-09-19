@@ -121,6 +121,7 @@ impl<'r> CodeGenUnit<'r> {
 		let mut builder = JITBuilder::with_flags(
 			&[
 				("use_colocated_libcalls", "false"),
+				("preserve_frame_pointers", "true"),
 				("is_pic", if hotswap { "true" } else { "false" }),
 				("opt_level", o_lvl),
 				#[cfg(not(debug_assertions))]
