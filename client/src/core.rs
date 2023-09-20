@@ -144,7 +144,13 @@ impl ClientCore {
 				egui::menu::bar(ui, |ui| {
 					let uptime = viletech::START_TIME.get().unwrap().elapsed();
 					let (hh, mm, ss) = duration_to_hhmmss(uptime);
-					ui.label(format!("{hh:02}:{mm:02}:{ss:02}"));
+
+					ui.label(format!("{hh:02}:{mm:02}:{ss:02}"))
+						.on_hover_ui(|ui| {
+							ui.label(
+								format!("Engine has been running for {hh:02} hours, {mm:02} minutes, {ss:02} seconds")
+							);
+						});
 
 					ui.separator();
 
