@@ -221,62 +221,6 @@ pub fn is_png(bytes: &[u8]) -> bool {
 		)
 }
 
-/// Checks the header and total size. Ensure a slice over the entire lump is given.
-#[must_use]
-pub fn is_doom_gfx(bytes: &[u8]) -> bool {
-	const HEADER_SIZE: usize = 8;
-
-	if bytes.len() < HEADER_SIZE {
-		return false;
-	}
-
-	let width = LittleEndian::read_i16(&bytes[0..2]);
-	let height = LittleEndian::read_i16(&bytes[2..4]);
-	let left = LittleEndian::read_i16(&bytes[4..6]);
-	let top = LittleEndian::read_i16(&bytes[6..8]);
-
-	// Sanity check on dimensions.
-	if !(0..=4096).contains(&width) {
-		return false;
-	}
-
-	if !(0..=4096).contains(&height) {
-		return false;
-	}
-
-	if !(-2000..=2000).contains(&top) {
-		return false;
-	}
-
-	if !(-2000..=2000).contains(&left) {
-		return false;
-	}
-
-	if bytes.len() < (HEADER_SIZE + ((width as usize) * 4)) {
-		return false;
-	}
-
-	for col in 0..width {
-		let i = col as usize;
-		let start = HEADER_SIZE + i;
-		let end = start + 4;
-		let col_offs = LittleEndian::read_u32(&bytes[start..end]) as usize;
-
-		if col_offs > bytes.len() || col_offs < HEADER_SIZE {
-			return false;
-		}
-	}
-
-	let n_pix = ((height + 2) + (height % 2)) / 2;
-	let max_col_size = (4 + (n_pix * 5) + 1) as usize;
-
-	if bytes.len() > (HEADER_SIZE + (width as usize) * max_col_size) {
-		return false;
-	}
-
-	true
-}
-
 /// Source: <https://docs.rs/infer/latest/src/infer/matchers/archive.rs.html#59-67>
 #[must_use]
 pub fn is_7z(bytes: &[u8]) -> bool {

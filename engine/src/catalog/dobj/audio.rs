@@ -13,16 +13,6 @@ pub enum Audio {
 }
 
 impl Audio {
-	/// See <https://doomwiki.org/wiki/MUS>.
-	#[must_use]
-	pub fn is_dmxmus(bytes: &[u8]) -> bool {
-		if bytes.len() < 4 {
-			return false;
-		}
-
-		bytes[0] == b'M' && bytes[1] == b'U' && bytes[2] == b'S' && bytes[3] == 0x1A
-	}
-
 	/// Source: <https://docs.rs/infer/0.13.0/src/infer/matchers/audio.rs.html#50-52>
 	#[must_use]
 	pub fn is_flac(bytes: &[u8]) -> bool {

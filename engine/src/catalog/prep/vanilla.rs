@@ -73,7 +73,7 @@ impl Catalog {
 	#[must_use]
 	pub(super) fn prep_picture(&self, ctx: &SubContext, bytes: &[u8]) -> Option<Image> {
 		let palettes = ctx.higher.last_paletteset().unwrap();
-		let opt = Image::try_from_picture(bytes, &palettes.0[0]);
+		let opt = data::gfx::try_from_picture(bytes, &palettes.0[0]);
 		opt.map(|(ibuf, offs)| Image {
 			inner: ibuf,
 			offset: offs,

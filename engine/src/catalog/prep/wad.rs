@@ -263,7 +263,7 @@ impl Catalog {
 
 		if UNHANDLED.iter().any(|&name| fpfx == name)
 			|| Audio::is_pc_speaker_sound(bytes)
-			|| Audio::is_dmxmus(bytes)
+			|| mus::is_dmxmus(bytes)
 		{
 			return;
 		}
