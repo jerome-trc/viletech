@@ -2,6 +2,7 @@
 
 mod ccmd;
 mod core;
+mod editor;
 mod frontend;
 mod game;
 mod load;
@@ -192,6 +193,12 @@ VileTech Client {c_vers}
 	app.add_systems(OnEnter(AppState::Game), game::on_enter);
 	app.add_systems(OnExit(AppState::Game), game::on_exit);
 
+	// Editor //////////////////////////////////////////////////////////////////
+
+	app.add_systems(Update, editor::update.run_if(in_state(AppState::Editor)));
+	app.add_systems(OnEnter(AppState::Editor), editor::on_enter);
+	app.add_systems(OnExit(AppState::Editor), editor::on_exit);
+
 	// Run /////////////////////////////////////////////////////////////////////
 
 	viletech::log::init_diag(&version_string())?;
@@ -222,6 +229,7 @@ pub enum AppState {
 	/// - `sim` stays between intermissions, although much of its state is altered.
 	/// - `sim` is put back to `None` when the game finishes and the cast call starts.
 	Game,
+	Editor,
 }
 
 #[must_use]

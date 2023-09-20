@@ -1,4 +1,4 @@
-//! Functions run when entering, updating, and leaving [`crate::AppState::Frontend`].
+//! Functions run when entering, updating, and leaving [`AppState::Frontend`].
 
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
@@ -38,7 +38,7 @@ pub fn update(
 
 	match action {
 		Outcome::None => {}
-		Outcome::Start => {
+		Outcome::StartGame => {
 			let to_mount = frontend.to_mount();
 			let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
 
@@ -50,6 +50,10 @@ pub fn update(
 			);
 
 			next_state.set(AppState::Load);
+		}
+		Outcome::StartEditor => {
+			// TODO
+			next_state.set(AppState::Editor);
 		}
 		Outcome::Exit => {
 			exit.send(AppExit);

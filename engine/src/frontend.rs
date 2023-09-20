@@ -207,23 +207,35 @@ impl FrontendMenu {
 		let load_order_empty = self.load_order().is_empty();
 
 		let btn_start = ui.add_enabled_ui(!any_nonexistent && !load_order_empty, |ui| {
-			let btn_start = ui.button("Start");
+			let btn_start = ui.button("Start Game");
 
 			if btn_start.clicked() {
-				ret = Outcome::Start;
+				ret = Outcome::StartGame;
 			}
 
 			btn_start
 		});
 
+		ui.separator();
+
+		let btn_ed = ui.add_enabled_ui(!any_nonexistent && !load_order_empty, |ui| {
+			let btn = ui.button("Editor");
+
+			if btn.clicked() {
+				ret = Outcome::StartEditor;
+			}
+
+			btn
+		});
+
 		if load_order_empty {
-			btn_start
-				.response
-				.on_hover_text("A game can not be started without an IWAD.");
+			const T: &str = "A game can not be started without an IWAD.";
+			btn_start.response.on_hover_text(T);
+			btn_ed.response.on_hover_text(T);
 		} else if any_nonexistent {
-			btn_start
-				.response
-				.on_hover_text("One or more load order items have been deleted or moved.");
+			const T: &str = "One or more load order items have been deleted or moved.";
+			btn_start.response.on_hover_text(T);
+			btn_ed.response.on_hover_text(T);
 		}
 
 		ui.separator();
@@ -354,7 +366,8 @@ impl FrontendMenu {
 pub enum Outcome {
 	None,
 	Exit,
-	Start,
+	StartGame,
+	StartEditor,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

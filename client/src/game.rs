@@ -1,4 +1,4 @@
-//! Functions run when entering, updating, and leaving [`crate::AppState::Game`].
+//! Functions run when entering, updating, and leaving [`AppState::Game`].
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
