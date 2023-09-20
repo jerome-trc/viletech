@@ -240,15 +240,6 @@ impl std::fmt::Display for DevGuiStatus {
 }
 
 #[derive(Debug, Resource)]
-pub struct FirstStartup {
-	/// Radio button state. `true` is the default presented to the user.
-	/// `false` is not even an option if `home_path` is `None`.
-	pub portable: bool,
-	pub portable_path: PathBuf,
-	pub home_path: Option<PathBuf>,
-}
-
-#[derive(Debug, Resource)]
 pub struct GameLoad {
 	/// The mount thread takes a write guard to the catalog and another
 	/// pointer to `tracker`. This is `Some` from initialization up until it
