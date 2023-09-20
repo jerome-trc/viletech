@@ -35,4 +35,10 @@ harness = false
 
 [dev-dependencies]
 criterion.workspace = true
+
+arc-swap.workspace = true
+crossbeam.workspace = true
+haphazard = "0.1.5"
+hybrid-rc = "0.6.0"
+parking_lot.workspace = true
 slotmap.workspace = true
