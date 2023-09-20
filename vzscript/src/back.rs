@@ -33,11 +33,12 @@ pub type SsaValue = cranelift::prelude::Value;
 pub type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
 
 #[must_use]
-pub fn codegen(compiler: Compiler, opt: OptLevel, hotswap: bool) -> RuntimePtr {
+pub fn codegen(compiler: Compiler) -> RuntimePtr {
 	assert_eq!(compiler.stage, compile::Stage::CodeGen);
 	assert!(!compiler.failed);
 
 	let Compiler {
+		config,
 		native_ptrs,
 		strings,
 		symbols,
@@ -59,7 +60,13 @@ pub fn codegen(compiler: Compiler, opt: OptLevel, hotswap: bool) -> RuntimePtr {
 			},
 		)
 		.for_each(|mut batch| {
-			let cgu = CodeGenUnit::new(&rt, &rtinfo, native_ptrs.clone(), opt, hotswap);
+			let cgu = CodeGenUnit::new(
+				&rt,
+				&rtinfo,
+				native_ptrs.clone(),
+				config.opt,
+				config.hotswap,
+			);
 
 			cgu.run(batch)
 		});

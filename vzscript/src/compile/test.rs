@@ -90,7 +90,14 @@ fn smoke() {
 		panic!("failed to compose an include tree");
 	}
 
-	let mut compiler = Compiler::new([corelib, userlib]);
+	let mut compiler = Compiler::new(
+		Config {
+			opt: OptLevel::None,
+			pedantic: true,
+			hotswap: false,
+		},
+		[corelib, userlib],
+	);
 
 	crate::front::declare_symbols(&mut compiler);
 

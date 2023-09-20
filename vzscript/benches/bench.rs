@@ -1,11 +1,12 @@
 use std::path::Path;
 
 use append_only_vec::AppendOnlyVec;
+use cranelift::prelude::settings::OptLevel;
 use criterion::Criterion;
 use dashmap::{DashMap, DashSet};
 use util::rstring::RString;
 use vzscript::{
-	compile::{Compiler, LibSource},
+	compile::{self, Compiler, LibSource},
 	IncludeTree,
 };
 
@@ -57,7 +58,14 @@ fn frontend(crit: &mut Criterion) {
 					decorate: None,
 				};
 
-				Compiler::new([corelib, userlib])
+				Compiler::new(
+					compile::Config {
+						opt: OptLevel::None,
+						pedantic: true,
+						hotswap: false,
+					},
+					[corelib, userlib],
+				)
 			},
 			|mut compiler| {
 				vzscript::front::declare_symbols(&mut compiler);

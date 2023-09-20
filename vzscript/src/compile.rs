@@ -13,6 +13,7 @@ use std::{
 };
 
 use append_only_vec::AppendOnlyVec;
+use cranelift::prelude::settings::OptLevel;
 use doomfront::{
 	rowan::ast::AstNode,
 	zdoom::{decorate, inctree::IncludeTree},
@@ -66,6 +67,7 @@ pub struct NativeType {
 #[derive(Debug)]
 pub struct Compiler {
 	// Input
+	pub(crate) config: Config,
 	pub(crate) sources: Vec<LibSource>,
 	// State
 	pub(crate) stage: Stage,
@@ -84,9 +86,19 @@ pub struct Compiler {
 	pub(crate) memo: FxDashMap<MemoHash, CEval>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Config {
+	/// How much optimization is applied by the mid-section and backend?
+	pub opt: OptLevel,
+	/// Are lints emitted?
+	pub pedantic: bool,
+	/// Whether the JIT backend should allow function re-definition.
+	pub hotswap: bool,
+}
+
 impl Compiler {
 	#[must_use]
-	pub fn new(sources: impl IntoIterator<Item = LibSource>) -> Self {
+	pub fn new(config: Config, sources: impl IntoIterator<Item = LibSource>) -> Self {
 		let sources: Vec<_> = sources
 			.into_iter()
 			.map(|s| {
@@ -105,6 +117,7 @@ impl Compiler {
 		);
 
 		Self {
+			config,
 			sources,
 			issues: Mutex::default(),
 			stage: Stage::Declaration,
