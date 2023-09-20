@@ -1,4 +1,4 @@
-//! [`archery::SharedPointerKind`] implementation for [`triomphe::Arc`].
+//! [`archery::SharedPointerKind`] implementations.
 
 use std::{
 	mem::ManuallyDrop,
