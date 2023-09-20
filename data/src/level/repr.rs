@@ -66,23 +66,25 @@ impl LevelDef {
 				max.x = vert.x;
 			}
 
-			if vert.bottom() < min.y {
+			if vert.y < min.y {
 				min.y = vert.y;
-			} else if vert.bottom() > max.y {
+			} else if vert.y > max.y {
 				max.y = vert.y;
 			}
 
-			if vert.z < min.z {
-				min.z = vert.z;
-			} else if vert.z > max.z {
-				max.z = vert.z;
+			if vert.bottom() < min.z {
+				min.z = vert.bottom();
+			}
+
+			if vert.top() > max.z {
+				max.z = vert.top();
 			}
 		}
 
 		MinMaxBox { min, max }
 	}
 
-	/// (GZ) Collision detection againstlines with 0.0 length can cause zero-division,
+	/// (GZ) Collision detection against lines with 0.0 length can cause zero-division,
 	/// so use this to remove them. Returns the number of lines pruned.
 	pub fn prune_0len_lines(&mut self) -> usize {
 		let mut n = 0;
@@ -506,15 +508,15 @@ impl std::ops::DerefMut for Vertex {
 }
 
 impl Vertex {
-	/// a.k.a. "floor" or "ground". Corresponds to the vector's `y` component.
+	/// a.k.a. "floor" or "ground". Corresponds to the vector's `z` component.
 	#[must_use]
 	pub fn bottom(self) -> f32 {
-		self.0.y
+		self.0.z
 	}
 
 	#[must_use]
 	pub fn bottom_mut(&mut self) -> &mut f32 {
-		&mut self.0.y
+		&mut self.0.z
 	}
 
 	/// a.k.a. "ceiling" or "sky". Corresponds to the vector's `w` component.
@@ -534,8 +536,8 @@ impl Vertex {
 	}
 
 	#[must_use]
-	pub fn z_fixed(self) -> Fixed32 {
-		Fixed32::from_num(self.0.z)
+	pub fn y_fixed(self) -> Fixed32 {
+		Fixed32::from_num(self.0.y)
 	}
 }
 

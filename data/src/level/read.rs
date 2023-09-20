@@ -469,8 +469,8 @@ impl From<&ThingRaw> for ThingDef {
 			ed_num: u16::from_le(value.ednum),
 			pos: glam::vec3(
 				(i16::from_le(value.x) as f32) * VANILLA_SCALEDOWN,
-				0.0,
 				(i16::from_le(value.y) as f32) * VANILLA_SCALEDOWN,
+				0.0,
 			),
 			angle: u16::from_le(value.angle) as u32,
 			flags: {
@@ -584,8 +584,8 @@ impl From<&ThingExtRaw> for ThingDef {
 			ed_num: u16::from_le(value.ednum),
 			pos: glam::vec3(
 				(i16::from_le(value.x) as f32) * VANILLA_SCALEDOWN,
-				(i16::from_le(value.z) as f32) * VANILLA_SCALEDOWN,
 				(i16::from_le(value.y) as f32) * VANILLA_SCALEDOWN,
+				(i16::from_le(value.z) as f32) * VANILLA_SCALEDOWN,
 			),
 			angle: u16::from_le(value.angle) as u32,
 			flags: {
@@ -704,8 +704,8 @@ impl From<&VertexRaw> for Vertex {
 	fn from(value: &VertexRaw) -> Self {
 		Vertex(glam::vec4(
 			(i16::from_le(value.x) as f32) * VANILLA_SCALEDOWN,
-			0.0,
 			(i16::from_le(value.y) as f32) * VANILLA_SCALEDOWN,
+			0.0,
 			0.0,
 		))
 	}
