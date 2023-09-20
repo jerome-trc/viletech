@@ -1,12 +1,9 @@
 use criterion::Criterion;
 
-/// Leave this here even if it's empty, so there's a quick scaffold ready
-/// for one-off benchmarking experiments.
-fn misc(crit: &mut Criterion) {
-	#[allow(unused)]
-	let mut grp = crit.benchmark_group("Miscellaneous");
-	grp.finish();
+fn sim(_: &mut Criterion) {
+	// Dummy function that will probably get used later,
+	// so that `criterion_group` macro invocation doesn't fail.
 }
 
-criterion::criterion_group!(benches, misc);
+criterion::criterion_group!(benches, sim);
 criterion::criterion_main!(benches);
