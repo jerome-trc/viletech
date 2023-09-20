@@ -20,6 +20,11 @@
 //! [rust-analyzer]: https://rust-analyzer.github.io/
 //! [overview]: https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md
 
+#![doc(
+	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
+	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
+)]
+
 pub extern crate logos;
 pub extern crate rowan;
 

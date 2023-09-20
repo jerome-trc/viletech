@@ -10,3 +10,8 @@
 //!
 //! [Cranelift]: https://cranelift.dev/
 //! [Action Code Script]: https://doomwiki.org/wiki/ACS
+
+#![doc(
+	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
+	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
+)]

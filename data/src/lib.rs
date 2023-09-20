@@ -5,6 +5,11 @@
 //! that are relevant to anyone building id Tech 1-descendant technology, such as
 //! a Doom source port.
 
+#![doc(
+	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
+	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
+)]
+
 pub mod gfx;
 pub mod level;
 

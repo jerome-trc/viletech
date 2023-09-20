@@ -5,6 +5,11 @@
 //! into one tree so that reading from them is more convenient at all other levels
 //! of the engine, without exposing any details of the user's underlying machine.
 
+#![doc(
+	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
+	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
+)]
+
 mod error;
 mod file;
 #[cfg(feature = "egui")]

@@ -7,6 +7,11 @@
 //! [SLADE3]: https://slade.mancubus.net/
 //! [DMXMUS]: https://doomwiki.org/wiki/MUS
 
+#![doc(
+	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
+	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
+)]
+
 use std::io::Cursor;
 
 use byteorder::ReadBytesExt;
