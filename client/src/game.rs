@@ -10,7 +10,7 @@ use viletech::{
 
 use crate::{core::ClientCore, AppState};
 
-pub fn update(
+pub(crate) fn update(
 	mut core: ResMut<ClientCore>,
 	mut _next_state: ResMut<NextState<AppState>>,
 	mut _sim: Option<ResMut<Sim>>,
@@ -69,7 +69,7 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 }
 
-pub fn on_enter(
+pub(crate) fn on_enter(
 	core: ResMut<ClientCore>,
 	cmds: Commands,
 	meshes: ResMut<Assets<Mesh>>,
@@ -91,6 +91,6 @@ pub fn on_enter(
 	);
 }
 
-pub fn on_exit(mut cmds: Commands) {
+pub(crate) fn on_exit(mut cmds: Commands) {
 	cmds.remove_resource::<Sim>();
 }

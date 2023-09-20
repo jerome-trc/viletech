@@ -156,7 +156,7 @@ VileTech Client {c_vers}
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, States)]
-pub enum AppState {
+pub(crate) enum AppState {
 	/// Checks if it necessary to go to `FirstStartup`. Otherwise go to `Frontend`.
 	#[default]
 	Init,

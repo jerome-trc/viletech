@@ -16,7 +16,7 @@ use crate::{
 	AppState,
 };
 
-pub fn update(
+pub(crate) fn update(
 	mut cmds: Commands,
 	mut core: ResMut<ClientCore>,
 	mut next_state: ResMut<NextState<AppState>>,
@@ -65,7 +65,7 @@ pub fn update(
 	core.draw_devgui(egui.ctx_mut());
 }
 
-pub fn on_enter(mut cmds: Commands, core: Res<ClientCore>) {
+pub(crate) fn on_enter(mut cmds: Commands, core: Res<ClientCore>) {
 	let globalcfg = core.user.globalcfg();
 
 	cmds.insert_resource(FrontendMenu::new(
@@ -77,7 +77,7 @@ pub fn on_enter(mut cmds: Commands, core: Res<ClientCore>) {
 	));
 }
 
-pub fn on_exit(
+pub(crate) fn on_exit(
 	mut cmds: Commands,
 	mut frontend: ResMut<FrontendMenu>,
 	mut core: ResMut<ClientCore>,

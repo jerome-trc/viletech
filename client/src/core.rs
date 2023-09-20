@@ -18,21 +18,21 @@ use viletech::{
 
 use crate::ccmd;
 
-pub type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
+pub(crate) type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
 
 #[derive(Debug, Resource)]
-pub struct ClientCore {
-	pub audio: Mutex<AudioCore>,
-	pub catalog: CatalogAL,
-	pub console: Console<ccmd::Command>,
-	pub devgui: DeveloperGui,
-	pub input: InputCore,
-	pub rng: RngCore<WyRand>,
-	pub user: UserCore,
+pub(crate) struct ClientCore {
+	pub(crate) audio: Mutex<AudioCore>,
+	pub(crate) catalog: CatalogAL,
+	pub(crate) console: Console<ccmd::Command>,
+	pub(crate) devgui: DeveloperGui,
+	pub(crate) input: InputCore,
+	pub(crate) _rng: RngCore<WyRand>,
+	pub(crate) user: UserCore,
 }
 
 impl ClientCore {
-	pub fn new(
+	pub(crate) fn new(
 		catalog: CatalogAL,
 		console: Console<ccmd::Command>,
 		user: UserCore,
@@ -50,7 +50,7 @@ impl ClientCore {
 				right: DevGuiStatus::Console,
 			},
 			input: InputCore::default(),
-			rng: RngCore::default(),
+			_rng: RngCore::default(),
 			user,
 		};
 
@@ -120,7 +120,7 @@ impl ClientCore {
 			.register_alias("quit".to_string(), "exit".to_string());
 	}
 
-	pub fn draw_devgui(&mut self, ctx: &mut egui::Context) {
+	pub(crate) fn draw_devgui(&mut self, ctx: &mut egui::Context) {
 		// TODO:
 		// - Developer GUI toggle key-binding.
 		// - Localize these strings?
@@ -219,7 +219,7 @@ impl Drop for ClientCore {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DevGuiStatus {
+pub(crate) enum DevGuiStatus {
 	Audio,
 	Catalog,
 	Console,
@@ -240,16 +240,16 @@ impl std::fmt::Display for DevGuiStatus {
 }
 
 #[derive(Debug, Resource)]
-pub struct GameLoad {
+pub(crate) struct GameLoad {
 	/// The mount thread takes a write guard to the catalog and another
 	/// pointer to `tracker`. This is `Some` from initialization up until it
 	/// gets taken to be joined.
-	pub thread: Option<JoinHandle<LoadOutcome>>,
+	pub(crate) thread: Option<JoinHandle<LoadOutcome>>,
 	/// How far along the mount process is `thread`?
-	pub tracker_m: Arc<SendTracker>,
+	pub(crate) tracker_m: Arc<SendTracker>,
 	/// How far along the load prep process is `thread`?
-	pub tracker_p: Arc<SendTracker>,
+	pub(crate) tracker_p: Arc<SendTracker>,
 	/// Print to the log how long the mount takes for diagnostic purposes.
-	pub start_time: Instant,
-	pub load_order: Vec<(PathBuf, PathBuf)>,
+	pub(crate) start_time: Instant,
+	pub(crate) load_order: Vec<(PathBuf, PathBuf)>,
 }

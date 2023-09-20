@@ -11,7 +11,7 @@ use viletech::{
 
 use crate::core::ClientCore;
 
-pub enum Request {
+pub(crate) enum Request {
 	None,
 	Exit,
 	Callback(Box<dyn 'static + Fn(&mut ClientCore) + Send + Sync>),
@@ -27,8 +27,8 @@ impl std::fmt::Debug for Request {
 	}
 }
 
-pub struct Command {
-	pub func: fn(args: terminal::CommandArgs) -> Request,
+pub(crate) struct Command {
+	pub(crate) func: fn(args: terminal::CommandArgs) -> Request,
 }
 
 impl terminal::Command for Command {
@@ -47,7 +47,7 @@ impl std::fmt::Debug for Command {
 
 /// Creates a console alias from a contiguous string that expands into another
 /// string (whose contents can be anything, even if non-contiguous).
-pub fn ccmd_alias(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_alias(args: CommandArgs) -> Request {
 	if args.name_only() || args.help_requested() {
 		return req_console_write_help(formatdoc! {"
 Define an alias, or inspect existing ones.
@@ -82,7 +82,7 @@ the alias' associated string is expanded into the output, if that alias exists."
 }
 
 /// Echoes every launch argument given to the client.
-pub fn ccmd_args(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_args(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help("Prints out all of the program's launch arguments.");
 	}
@@ -112,7 +112,7 @@ pub fn ccmd_args(args: CommandArgs) -> Request {
 }
 
 /// Clears the console's message history.
-pub fn ccmd_clear(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_clear(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help("Clears the console's message history.");
 	}
@@ -122,7 +122,7 @@ pub fn ccmd_clear(args: CommandArgs) -> Request {
 	})
 }
 
-pub fn ccmd_exit(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_exit(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help("Instantly closes the client.");
 	}
@@ -131,7 +131,7 @@ pub fn ccmd_exit(args: CommandArgs) -> Request {
 }
 
 /// Clears the console's history of submitted input strings.
-pub fn ccmd_hclear(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_hclear(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help("Clear's the console's history of submitted input strings.");
 	}
@@ -145,7 +145,7 @@ pub fn ccmd_hclear(args: CommandArgs) -> Request {
 /// Prints a list of all available console commands if given no arguments.
 /// If the first argument is a command's name, it's equivalent to submitting
 /// `command --help`.
-pub fn ccmd_help(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_help(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
 			"If used without arguments, prints a list of all available commands.\r\n\
@@ -184,7 +184,7 @@ pub fn ccmd_help(args: CommandArgs) -> Request {
 }
 
 /// Prints the full version information of the engine and client.
-pub fn ccmd_version(args: CommandArgs) -> Request {
+pub(crate) fn ccmd_version(args: CommandArgs) -> Request {
 	if args.help_requested() {
 		return req_console_write_help(
 			"Prints the full version information of the engine and client.",

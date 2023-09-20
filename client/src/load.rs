@@ -15,7 +15,7 @@ use crate::{
 	AppState,
 };
 
-pub fn update(
+pub(crate) fn update(
 	mut core: ResMut<ClientCore>,
 	mut next_state: ResMut<NextState<AppState>>,
 	mut loader: ResMut<GameLoad>,
@@ -135,6 +135,6 @@ fn error_message(real_path: &Path, mount: &[MountError], prep: &[PrepError]) -> 
 	Some(msg)
 }
 
-pub fn on_exit(mut cmds: Commands) {
+pub(crate) fn on_exit(mut cmds: Commands) {
 	cmds.remove_resource::<GameLoad>();
 }
