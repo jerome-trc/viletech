@@ -16,8 +16,7 @@ use crate::{
 	issue::{self, Issue},
 	rti,
 	tsys::TypeDef,
-	zname::ZName,
-	ArcSwap, ParseTree, SyntaxToken,
+	ArcSwap, ParseTree, SyntaxToken, ZName,
 };
 
 use super::DeclContext;

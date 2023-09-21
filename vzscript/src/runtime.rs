@@ -4,7 +4,7 @@ use std::pin::Pin;
 
 use util::rstring::RString;
 
-use crate::{heap::Heap, rti, zname::ZName, FxDashMap, FxDashMapView, FxDashSet};
+use crate::{heap::Heap, rti, FxDashMap, FxDashMapView, FxDashSet, ZName};
 
 /// Context for VZScript execution.
 ///

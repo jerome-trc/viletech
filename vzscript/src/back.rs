@@ -22,9 +22,7 @@ use crate::{
 	rti::{self, SignatureHash},
 	runtime::RuntimePtr,
 	tsys::{FuncType, TypeHandle},
-	vir,
-	zname::ZName,
-	FxDashMap, Project, Runtime,
+	vir, FxDashMap, Project, Runtime, ZName,
 };
 
 pub type AbiType = cranelift::codegen::ir::Type;
@@ -200,7 +198,7 @@ impl<'r> CodeGenUnit<'r> {
 				continue;
 			};
 
-			let zname = ZName(RString::new(decl_name));
+			let zname = ZName::new(RString::new(decl_name));
 
 			let sighash = SignatureHash::new(
 				fn_decl

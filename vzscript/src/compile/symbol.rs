@@ -15,9 +15,7 @@ use crate::{
 	tsys::{
 		ClassType, EnumType, FuncType, PrimitiveType, StructType, TypeDef, TypeHandle, UnionType,
 	},
-	vir,
-	zname::ZName,
-	ArcSwap,
+	vir, ArcSwap, ZName,
 };
 
 use super::{

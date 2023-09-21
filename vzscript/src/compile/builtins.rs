@@ -11,8 +11,7 @@ use crate::{
 	rti,
 	sema::{self, CEval, CEvalVec},
 	tsys::TypeDef,
-	zname::ZName,
-	ArcSwap,
+	ArcSwap, ZName,
 };
 
 use super::{
@@ -23,7 +22,7 @@ use super::{
 
 #[must_use]
 fn define_primitive(compiler: &Compiler, qname: &'static str, typedef: TypeDef) -> CEval {
-	let store = rti::Store::new(ZName(RString::new(qname)), typedef);
+	let store = rti::Store::new(ZName::new(RString::new(qname)), typedef);
 	let record = rti::Record::new_type(store);
 	CEval::TypeDef { record }
 }

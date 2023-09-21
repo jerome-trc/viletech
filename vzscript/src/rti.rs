@@ -20,7 +20,7 @@ use crate::{
 		ArrayType, ClassType, FuncType, PrimitiveType, StructType, TypeDef, TypeHandle, TypeRef,
 		UnionType,
 	},
-	zname::ZName,
+	ZName,
 };
 
 pub trait RtInfo: 'static + Any + Send + Sync + std::fmt::Debug {}

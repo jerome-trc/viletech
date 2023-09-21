@@ -30,7 +30,6 @@ pub mod runtime;
 pub mod sema;
 pub mod tsys;
 pub mod vir;
-pub mod zname;
 
 use std::hash::BuildHasherDefault;
 
@@ -127,6 +126,9 @@ compiler_error!("exotic pointer widths are not yet supported");
 
 #[cfg(not(target_arch = "x86_64"))]
 compiler_error!("only x86_64 architecture currently supported");
+
+/// [`RString`] but with case-insensitive comparison and hashing.
+pub(crate) type ZName = util::string::ZString<util::rstring::RString>;
 
 pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxDashSet<T> = dashmap::DashSet<T, BuildHasherDefault<FxHasher>>;

@@ -30,8 +30,7 @@ use crate::{
 	inctree::SourceKind,
 	issue::{self, Issue},
 	sema::CEval,
-	zname::ZName,
-	ArcSwap, FxDashMap,
+	ArcSwap, FxDashMap, ZName,
 };
 
 pub fn declare_symbols(compiler: &mut Compiler) {
@@ -172,7 +171,7 @@ impl DeclContext<'_> {
 					.map(|s| s.as_str())
 					.chain(name_str_arr.iter().copied());
 
-				let qname = ZName(RString::from_str_iter(str_iter));
+				let qname = ZName::new(RString::from_str_iter(str_iter));
 
 				let symbol = Symbol {
 					name: nsname.index(),

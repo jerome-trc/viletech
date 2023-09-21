@@ -3,8 +3,7 @@ use std::{any::TypeId, collections::HashMap};
 use crate::{
 	rti::{self, Record, RtInfo},
 	tsys::TypeDef,
-	zname::ZName,
-	Version,
+	Version, ZName,
 };
 
 #[derive(Debug, Default)]
@@ -19,7 +18,9 @@ impl Project {
 	#[must_use]
 	pub fn get<R: RtInfo>(&self, name: impl AsRef<str>) -> Option<rti::Ref<R>> {
 		let typeid = TypeId::of::<R>();
-		let Some(record) = self.rti.get(name.as_ref()) else {
+		let s = name.as_ref();
+
+		let Some(record) = self.rti.get::<str>(s) else {
 			return None;
 		};
 

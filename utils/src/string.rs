@@ -1,8 +1,65 @@
 //! String inspection and manipulation tools.
 
+use std::{
+	borrow::Borrow,
+	hash::{Hash, Hasher},
+};
+
 use arrayvec::ArrayString;
 
 use crate::lazy_regex;
+
+/// A "ZDoom string", which compares and hashes case-insensitively.
+#[derive(Debug, Default, Clone)]
+#[repr(transparent)]
+pub struct ZString<T: Borrow<str>>(pub T);
+
+impl<T: Borrow<str>> ZString<T> {
+	/// This function does nothing special, but exists to allow succinct creation
+	/// of these objects when using type aliases, which cannot be used in constructors.
+	#[must_use]
+	pub fn new(inner: T) -> Self {
+		Self(inner)
+	}
+}
+
+impl<A, B> PartialEq<ZString<B>> for ZString<A>
+where
+	A: Borrow<str>,
+	B: Borrow<str>,
+{
+	fn eq(&self, other: &ZString<B>) -> bool {
+		let a: &str = std::borrow::Borrow::borrow(&self.0);
+		let b: &str = std::borrow::Borrow::borrow(&other.0);
+		a.eq_ignore_ascii_case(b)
+	}
+}
+
+impl<T: Borrow<str>> Eq for ZString<T> {}
+
+impl<T: Borrow<str>> Hash for ZString<T> {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		let s: &str = std::borrow::Borrow::borrow(&self.0);
+
+		for c in s.chars() {
+			c.to_ascii_lowercase().hash(state);
+		}
+	}
+}
+
+impl<T: Borrow<str>> Borrow<str> for ZString<T> {
+	fn borrow(&self) -> &str {
+		std::borrow::Borrow::borrow(&self.0)
+	}
+}
+
+impl<T: Borrow<str>> std::ops::Deref for ZString<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
 
 /// Shortcut for `string.get(..string.chars().count().min(chars)).unwrap()`.
 #[must_use]

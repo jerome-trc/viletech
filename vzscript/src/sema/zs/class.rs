@@ -14,7 +14,7 @@ use crate::{
 	rti,
 	sema::SemaContext,
 	tsys::{self, ClassType, TypeDef},
-	zname::ZName,
+	ZName,
 };
 
 pub(super) fn define(

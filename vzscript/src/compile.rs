@@ -23,8 +23,8 @@ use rustc_hash::{FxHashMap, FxHasher};
 use util::rstring::RString;
 
 use crate::{
-	ast, back::AbiTypes, issue::Issue, rti, sema::CEval, tsys::TypeDef, zname::ZName, ArcGuard,
-	FxDashMap, FxDashSet, FxHamt, Project, Version,
+	ast, back::AbiTypes, issue::Issue, rti, sema::CEval, tsys::TypeDef, ArcGuard, FxDashMap,
+	FxDashSet, FxHamt, Project, Version, ZName,
 };
 
 use self::{

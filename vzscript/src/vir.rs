@@ -11,7 +11,7 @@ use crate::{
 	compile::intern::{NameIx, SymbolIx},
 	rti,
 	tsys::{FuncType, TypeDef, TypeHandle},
-	zname::ZName,
+	ZName,
 };
 
 #[derive(Debug)]
