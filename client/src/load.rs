@@ -1,25 +1,41 @@
 //! Functions run when entering, updating, and leaving [`crate::AppState::Load`].
 
-use std::path::Path;
+use std::{
+	path::{Path, PathBuf},
+	sync::Arc,
+	thread::JoinHandle,
+	time::Instant,
+};
 
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::egui;
 use viletech::{
 	catalog::{LoadOutcome, PrepError},
-	util::duration_to_hhmmss,
+	util::{duration_to_hhmmss, SendTracker},
 	vfs::MountError,
 };
 
-use crate::{
-	core::{ClientCore, GameLoad},
-	AppState,
-};
+use crate::{common::ClientCommon, AppState};
+
+#[derive(Debug, Resource)]
+pub(crate) struct GameLoad {
+	/// The mount thread takes a write guard to the catalog and another
+	/// pointer to `tracker`. This is `Some` from initialization up until it
+	/// gets taken to be joined.
+	pub(crate) thread: Option<JoinHandle<LoadOutcome>>,
+	/// How far along the mount process is `thread`?
+	pub(crate) tracker_m: Arc<SendTracker>,
+	/// How far along the load prep process is `thread`?
+	pub(crate) tracker_p: Arc<SendTracker>,
+	/// Print to the log how long the mount takes for diagnostic purposes.
+	pub(crate) start_time: Instant,
+	pub(crate) load_order: Vec<(PathBuf, PathBuf)>,
+}
 
 pub(crate) fn update(
-	mut core: ResMut<ClientCore>,
-	mut next_state: ResMut<NextState<AppState>>,
+	mut core: ClientCommon,
 	mut loader: ResMut<GameLoad>,
-	mut egui: EguiContexts,
+	mut next_state: ResMut<NextState<AppState>>,
 ) {
 	// TODO: Localize these strings.
 
@@ -29,7 +45,7 @@ pub(crate) fn update(
 
 	egui::Window::new("Loading...")
 		.id(egui::Id::new("viletech_gameload"))
-		.show(egui.ctx_mut(), |ui| {
+		.show(core.egui.ctx_mut(), |ui| {
 			ui.label(&format!("File Mounting: {m_pct:.1}%"));
 			ui.label(&format!("Preparing: {p_pct:.1}%"));
 
@@ -38,7 +54,7 @@ pub(crate) fn update(
 			}
 		});
 
-	core.draw_devgui(egui.ctx_mut());
+	core.draw_devgui();
 
 	if cancelled {
 		loader.tracker_m.cancel();

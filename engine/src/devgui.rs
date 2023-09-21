@@ -1,11 +1,12 @@
 //! VileTech's [`egui`]-based two-pane developer graphical user interface.
 
+use bevy::prelude::Resource;
 use bevy_egui::egui;
 
 /// State and functions for a two-panel egui window that sticks to the top of the
 /// screen like GZDoom's console. `S` should be a simple untagged enum that
 /// informs the user what they should draw in each panel.
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct DeveloperGui<S>
 where
 	S: Eq + Copy + std::fmt::Display,

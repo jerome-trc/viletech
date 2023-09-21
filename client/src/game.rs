@@ -1,20 +1,19 @@
 //! Functions run when entering, updating, and leaving [`AppState::Game`].
 
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::egui;
 use viletech::{
 	gfx::TerrainMaterial,
 	level::LevelDef,
 	sim::{self, Sim},
 };
 
-use crate::{core::ClientCore, AppState};
+use crate::{common::ClientCommon, AppState};
 
 pub(crate) fn update(
-	mut core: ResMut<ClientCore>,
+	mut core: ClientCommon,
 	mut _next_state: ResMut<NextState<AppState>>,
 	mut _sim: Option<ResMut<Sim>>,
-	mut egui: EguiContexts,
 	mut cameras: Query<&mut Transform, With<Camera>>,
 ) {
 	let mut cam_speed = 0.1;
@@ -59,30 +58,29 @@ pub(crate) fn update(
 	egui::Window::new("")
 		.id("viletech_devoverlay_pos".into())
 		.title_bar(false)
-		.show(egui.ctx_mut(), |ui| {
+		.show(core.egui.ctx_mut(), |ui| {
 			ui.label(format!(
 				"{} {} {}",
 				camera.translation.x, camera.translation.y, camera.translation.z
 			));
 		});
 
-	core.draw_devgui(egui.ctx_mut());
+	core.draw_devgui();
 }
 
 pub(crate) fn on_enter(
-	core: ResMut<ClientCore>,
+	core: ClientCommon,
 	cmds: Commands,
 	meshes: ResMut<Assets<Mesh>>,
 	materials: ResMut<Assets<TerrainMaterial>>,
 	images: ResMut<Assets<Image>>,
 ) {
-	let catalog = core.catalog.read();
-	let level = catalog.get::<LevelDef>("DOOM/E1M1").unwrap().handle();
+	let level = core.catalog.get::<LevelDef>("DOOM/E1M1").unwrap().handle();
 
 	sim::start(
 		cmds,
 		sim::setup::Context {
-			catalog: &catalog,
+			catalog: &core.catalog,
 			meshes,
 			materials,
 			images,

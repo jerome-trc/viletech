@@ -9,12 +9,12 @@ use viletech::{
 	terminal::{self, CommandArgs},
 };
 
-use crate::core::ClientCore;
+use crate::common::ClientCommon;
 
 pub(crate) enum Request {
 	None,
 	Exit,
-	Callback(Box<dyn 'static + Fn(&mut ClientCore) + Send + Sync>),
+	Callback(Box<dyn 'static + Fn(&mut ClientCommon) + Send + Sync>),
 }
 
 impl std::fmt::Debug for Request {
@@ -227,6 +227,6 @@ fn req_console_write_help(message: impl Into<String>) -> Request {
 }
 
 #[must_use]
-fn req_callback<F: 'static + Fn(&mut ClientCore) + Send + Sync>(callback: F) -> Request {
+fn req_callback<F: 'static + Fn(&mut ClientCommon) + Send + Sync>(callback: F) -> Request {
 	Request::Callback(Box::new(callback))
 }

@@ -18,6 +18,7 @@ use std::{
 
 use bevy::{
 	asset::{AssetIo, AssetIoError, ChangeWatcher},
+	prelude::Resource,
 	utils::BoxedFuture,
 };
 use bevy_egui::egui;
@@ -62,7 +63,7 @@ pub use self::{config::*, error::*};
 /// `mymod`'s file tree.
 ///
 /// [pointers]: dobj::Handle
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Catalog {
 	config: Config,
 	/// When the catalog is initialized, this is empty.
@@ -459,16 +460,11 @@ impl LoadOutcome {
 	}
 }
 
-/// Newtype for trait impl coherence; pass to [`bevy::asset::AssetServer::new`].
-pub struct CatalogAssetIo(pub CatalogAL);
-
 /// Opens the catalog's VFS up to a [`bevy::asset::AssetServer`].
-impl AssetIo for CatalogAssetIo {
+impl AssetIo for Catalog {
 	fn load_path<'a>(&'a self, path: &'a VPath) -> BoxedFuture<'a, Result<Vec<u8>, AssetIoError>> {
 		Box::pin(async move {
-			let catalog = self.0.read();
-
-			match catalog.vfs.get(path) {
+			match self.vfs.get(path) {
 				Some(fref) => {
 					if !fref.is_readable() {
 						return Err(AssetIoError::Io(std::io::ErrorKind::Other.into()));
@@ -485,9 +481,7 @@ impl AssetIo for CatalogAssetIo {
 		&self,
 		path: &VPath,
 	) -> Result<Box<dyn Iterator<Item = VPathBuf>>, AssetIoError> {
-		let catalog = self.0.read();
-
-		match catalog.vfs.get(path) {
+		match self.vfs.get(path) {
 			Some(fref) => {
 				if !fref.is_dir() {
 					return Err(AssetIoError::Io(std::io::Error::from(
@@ -508,9 +502,7 @@ impl AssetIo for CatalogAssetIo {
 	}
 
 	fn get_metadata(&self, path: &VPath) -> Result<bevy::asset::Metadata, AssetIoError> {
-		let catalog = self.0.read();
-
-		match catalog.vfs.get(path) {
+		match self.vfs.get(path) {
 			Some(fref) => {
 				if fref.is_dir() {
 					Ok(bevy::asset::Metadata::new(bevy::asset::FileType::Directory))

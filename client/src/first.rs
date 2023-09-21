@@ -3,10 +3,10 @@
 use std::{borrow::Cow, path::PathBuf};
 
 use bevy::{app::AppExit, prelude::*};
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::egui;
 use viletech::user::UserCore;
 
-use crate::{core::ClientCore, AppState};
+use crate::{common::ClientCommon, AppState};
 
 #[derive(Debug, Resource)]
 pub(crate) struct FirstStartup {
@@ -30,15 +30,15 @@ pub(crate) fn init_on_enter(
 }
 
 pub(crate) fn first_startup(
+	mut cmds: Commands,
 	mut startup: ResMut<FirstStartup>,
-	mut core: ResMut<ClientCore>,
-	mut ctxs: EguiContexts,
+	mut core: ClientCommon,
 	mut next_state: ResMut<NextState<AppState>>,
 	mut exit: EventWriter<AppExit>,
 ) {
 	// TODO: Localize these strings.
 
-	egui::Window::new("Initial Setup").show(ctxs.ctx_mut(), |ui| {
+	egui::Window::new("Initial Setup").show(core.egui.ctx_mut(), |ui| {
 		ui.label(
 			"Select where you want user information \
 			- saved games, preferences, screenshots - \
@@ -99,8 +99,8 @@ pub(crate) fn first_startup(
 				// If the basic file IO needed to initialize user information
 				// is not even possible, there's no reason to go further.
 
-				core.user = match UserCore::new(path) {
-					Ok(u) => u,
+				match UserCore::new(path) {
+					Ok(u) => cmds.insert_resource(u),
 					Err(err) => panic!("user information setup failed: {err}"),
 				};
 

@@ -1,7 +1,7 @@
 //! # VileTech Client
 
 mod ccmd;
-mod core;
+mod common;
 mod editor;
 mod first;
 mod frontend;
@@ -9,7 +9,7 @@ mod game;
 mod load;
 mod setup;
 
-use std::{path::PathBuf, sync::Arc, time::Instant};
+use std::{path::PathBuf, time::Instant};
 
 use bevy::{
 	app::AppExit, diagnostic::LogDiagnosticsPlugin, input::InputSystem,
@@ -17,18 +17,17 @@ use bevy::{
 };
 use bevy_egui::{systems::InputEvents, EguiPlugin};
 use clap::Parser;
+use common::ClientCommon;
 use indoc::printdoc;
-use parking_lot::RwLock;
 use viletech::{
-	catalog::{Catalog, CatalogAssetIo},
-	console::Console,
-	gfx::TerrainMaterial,
-	user::UserCore,
+	audio::AudioCore, catalog::Catalog, gfx::TerrainMaterial, input::InputCore, user::UserCore,
 };
 
-use crate::{first::FirstStartup, setup::LaunchArgs};
-
-use self::core::*;
+use crate::{
+	common::{DevGuiStatus, DeveloperGui},
+	first::FirstStartup,
+	setup::LaunchArgs,
+};
 
 // TODO:
 // - Pause all audio when focus is lost, and resume when focus is regained.
@@ -60,8 +59,8 @@ VileTech Client {c_vers}
 	// Common //////////////////////////////////////////////////////////////////
 
 	app.add_plugins(LogDiagnosticsPlugin::default());
-
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
+	app.world.insert_resource(ExitHandler);
 
 	let mut catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
 
@@ -69,11 +68,8 @@ VileTech Client {c_vers}
 		catalog.config_set().reserve_mount_point(rmp.to_string());
 	}
 
+	app.world.insert_resource(catalog);
 	info!("Catalog initialized.");
-	let catalog = Arc::new(RwLock::new(catalog));
-
-	app.world
-		.insert_resource(AssetServer::new(CatalogAssetIo(catalog.clone())));
 
 	app.add_state::<AppState>()
 		.insert_resource(setup::winit_settings())
@@ -100,11 +96,23 @@ VileTech Client {c_vers}
 		UserCore::uninit()
 	};
 
+	app.insert_resource(user);
 	info!("User info initialized.");
+	app.insert_resource(setup::console(log_receiver));
+	info!("Developer console initialized.");
+	app.insert_resource(AudioCore::new(None)?);
+	info!("Audio manager initialized.");
+	app.insert_resource(InputCore::default());
+	info!("Input manager initialized.");
 
-	let core = ClientCore::new(catalog, Console::new(log_receiver), user)?;
-
-	app.insert_resource(core);
+	app.insert_resource(DeveloperGui {
+		#[cfg(debug_assertions)]
+		open: true,
+		#[cfg(not(debug_assertions))]
+		open: false,
+		left: DevGuiStatus::Vfs,
+		right: DevGuiStatus::Console,
+	});
 
 	app.add_systems(OnEnter(AppState::Init), first::init_on_enter);
 
@@ -179,13 +187,25 @@ pub(crate) enum AppState {
 	Editor,
 }
 
+#[derive(Debug, Resource)]
+struct ExitHandler;
+
+impl Drop for ExitHandler {
+	/// (RAT) In my experience, a runtime log is much more informative if it
+	/// states the duration for which the program executed. Messages are already
+	/// stamped with the current uptime, so just state that the program is closing.
+	fn drop(&mut self) {
+		info!("Shutting down.");
+	}
+}
+
 #[must_use]
 fn version_string() -> String {
 	format!("VileTech Client {}", env!("CARGO_PKG_VERSION"))
 }
 
-fn common_updates(mut core: ResMut<ClientCore>, mut exit: EventWriter<AppExit>) {
-	core.audio.lock().update();
+fn common_updates(mut core: ClientCommon, mut exit: EventWriter<AppExit>) {
+	core.audio.update();
 
 	while !core.console.requests.is_empty() {
 		match core.console.requests.pop_front().unwrap() {
@@ -200,7 +220,7 @@ fn common_updates(mut core: ResMut<ClientCore>, mut exit: EventWriter<AppExit>) 
 	}
 }
 
-fn update_input(mut core: ResMut<ClientCore>, input: InputEvents) {
+fn update_input(mut core: ClientCommon, input: InputEvents) {
 	core.input.update(input);
 
 	let up_pressed = core.input.keys_virt.just_pressed(KeyCode::Up);

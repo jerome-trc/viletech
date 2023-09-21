@@ -17,7 +17,7 @@ use crate::terminal::{self, Alias, Terminal};
 pub type Sender = crossbeam::channel::Sender<Message>;
 
 /// egui-based graphical shell for diagnosis, development, and debugging.
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Console<C: terminal::Command> {
 	/// Takes messages coming from the `log` crate's backend.
 	log_receiver: Receiver<Message>,

@@ -6,7 +6,7 @@ mod midi;
 use std::{io::Cursor, path::PathBuf};
 
 use arrayvec::ArrayVec;
-use bevy::prelude::Entity;
+use bevy::prelude::{Entity, Resource};
 use bevy_egui::egui;
 use crossbeam::channel::SendError;
 use kira::{
@@ -50,6 +50,7 @@ pub use self::midi::{
 pub const MUSIC_LAYERS: usize = 8;
 
 /// The centre for music and sound effect playback for any VileTech application.
+#[derive(Resource)]
 pub struct AudioCore {
 	manager: AudioManager,
 	soundfonts: Vec<SoundFont>,
@@ -64,6 +65,9 @@ pub struct AudioCore {
 
 	gui: DevGui,
 }
+
+unsafe impl Send for AudioCore {}
+unsafe impl Sync for AudioCore {}
 
 /// All played audio gets routed through one of these
 /// to enable separation of volume control by the end user.

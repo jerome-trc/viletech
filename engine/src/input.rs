@@ -15,7 +15,7 @@ use bevy_egui::systems::InputEvents;
 use parking_lot::{Mutex, RwLock};
 
 /// Stateful storage of user input.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Resource)]
 pub struct InputCore {
 	pub keys_virt: Input<KeyCode>,
 	pub keys_phys: Input<ScanCode>,

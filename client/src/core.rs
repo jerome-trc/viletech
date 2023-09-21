@@ -1,19 +1,12 @@
 //! The struct representing the application's state and its related symbols.
 
-use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
-
 use bevy::prelude::*;
 use bevy_egui::egui;
 use nanorand::WyRand;
 use parking_lot::Mutex;
 use viletech::{
-	audio::AudioCore,
-	catalog::{CatalogAL, LoadOutcome},
-	console::Console,
-	input::InputCore,
-	rng::RngCore,
-	user::UserCore,
-	util::{duration_to_hhmmss, SendTracker},
+	audio::AudioCore, catalog::CatalogAL, console::Console, input::InputCore, rng::RngCore,
+	user::UserCore, util::duration_to_hhmmss,
 };
 
 use crate::ccmd;
@@ -243,19 +236,4 @@ impl std::fmt::Display for DevGuiStatus {
 			DevGuiStatus::Vfs => write!(f, "VFS"),
 		}
 	}
-}
-
-#[derive(Debug, Resource)]
-pub(crate) struct GameLoad {
-	/// The mount thread takes a write guard to the catalog and another
-	/// pointer to `tracker`. This is `Some` from initialization up until it
-	/// gets taken to be joined.
-	pub(crate) thread: Option<JoinHandle<LoadOutcome>>,
-	/// How far along the mount process is `thread`?
-	pub(crate) tracker_m: Arc<SendTracker>,
-	/// How far along the load prep process is `thread`?
-	pub(crate) tracker_p: Arc<SendTracker>,
-	/// Print to the log how long the mount takes for diagnostic purposes.
-	pub(crate) start_time: Instant,
-	pub(crate) load_order: Vec<(PathBuf, PathBuf)>,
 }

@@ -13,10 +13,13 @@ use bevy::{
 	window::WindowMode,
 	winit::{UpdateMode, WinitSettings, WinitWindows},
 };
-use crossbeam::channel::Sender;
-use viletech::{console, log::TracingPlugin};
+use crossbeam::channel::{Receiver, Sender};
+use viletech::{
+	console::{self, Console},
+	log::TracingPlugin,
+};
 
-use crate::core::ClientCore;
+use crate::{ccmd, common::ClientCommon};
 
 #[derive(Debug, clap::Parser)]
 #[command(name = "VileTech Client")]
@@ -102,16 +105,15 @@ pub(crate) fn winit_settings() -> WinitSettings {
 }
 
 pub(crate) fn set_window_icon(
-	core: Res<ClientCore>,
+	core: ClientCommon,
 	winits: NonSend<WinitWindows>,
 	windows: Query<Entity, With<Window>>,
 ) {
-	let catalog = core.catalog.read();
 	let window_ent = windows.single();
 	let window_id = winits.entity_to_winit.get(&window_ent).unwrap();
 	let window = winits.windows.get(window_id).unwrap();
 
-	let Some(fref) = catalog.vfs().get("/viletech/viletech.png") else {
+	let Some(fref) = core.catalog.vfs().get("/viletech/viletech.png") else {
 		error!("Window icon not found.");
 		return;
 	};
@@ -144,4 +146,68 @@ pub(crate) fn set_window_icon(
 	};
 
 	window.set_window_icon(Some(icon));
+}
+
+#[must_use]
+pub(crate) fn console(receiver: Receiver<console::Message>) -> Console<ccmd::Command> {
+	let mut console = Console::new(receiver);
+	console.register_command(
+		"alias",
+		ccmd::Command {
+			func: ccmd::ccmd_alias,
+		},
+		true,
+	);
+
+	console.register_command(
+		"args",
+		ccmd::Command {
+			func: ccmd::ccmd_args,
+		},
+		true,
+	);
+
+	console.register_command(
+		"clear",
+		ccmd::Command {
+			func: ccmd::ccmd_clear,
+		},
+		true,
+	);
+
+	console.register_command(
+		"exit",
+		ccmd::Command {
+			func: ccmd::ccmd_exit,
+		},
+		true,
+	);
+
+	console.register_command(
+		"hclear",
+		ccmd::Command {
+			func: ccmd::ccmd_hclear,
+		},
+		true,
+	);
+
+	console.register_command(
+		"help",
+		ccmd::Command {
+			func: ccmd::ccmd_help,
+		},
+		true,
+	);
+
+	console.register_command(
+		"version",
+		ccmd::Command {
+			func: ccmd::ccmd_version,
+		},
+		true,
+	);
+
+	console.register_alias("quit".to_string(), "exit".to_string());
+
+	console
 }
