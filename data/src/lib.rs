@@ -13,6 +13,9 @@
 pub mod gfx;
 pub mod level;
 
+/// Failure modes for reading data.
+///
+/// Also see [`level::Error`].
 #[derive(Debug)]
 pub enum Error {
 	MissingHeader { expected: usize },

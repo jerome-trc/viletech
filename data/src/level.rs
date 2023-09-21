@@ -1,5 +1,6 @@
 //! Code used for reading, storing, manipulating, and writing Doom levels.
 
+pub mod _read;
 pub mod read;
 pub mod repr;
 pub mod udmf;
