@@ -1,20 +1,20 @@
 //! Symbols relating to pseudo-random number generation.
 
-use std::collections::HashMap;
-
 use bevy::prelude::Resource;
+use indexmap::IndexMap;
 use nanorand::{Rng, SeedableRng, WyRand};
+use util::string::ZString;
 
 /// Contains a map of named random number generators.
 #[derive(Debug, Resource)]
 pub struct RngCore<B: Prng> {
-	prngs: HashMap<String, B>,
+	prngs: IndexMap<ZString<String>, B>,
 }
 
 impl<B: Prng> Default for RngCore<B> {
 	fn default() -> Self {
 		RngCore {
-			prngs: HashMap::from([(String::default(), B::default())]),
+			prngs: IndexMap::from([(ZString::default(), B::default())]),
 		}
 	}
 }
@@ -28,7 +28,7 @@ impl<B: Prng> RngCore<B> {
 			"tried to overwrite PRNG with key: {key}"
 		);
 
-		self.prngs.insert(key, B::default());
+		self.prngs.insert(ZString(key), B::default());
 	}
 
 	/// Panics if there is already a PRNG under `key`.
@@ -39,7 +39,7 @@ impl<B: Prng> RngCore<B> {
 			"tried to overwrite PRNG with key: {key}"
 		);
 
-		self.prngs.insert(key, prng);
+		self.prngs.insert(ZString(key), prng);
 	}
 
 	pub fn try_get(&mut self, key: &str) -> Option<&mut B> {
@@ -61,6 +61,26 @@ impl<B: Prng> RngCore<B> {
 	#[must_use]
 	pub fn contains(&self, key: &str) -> bool {
 		self.prngs.contains_key(key)
+	}
+
+	pub fn clear(&mut self) {
+		self.prngs.clear();
+	}
+}
+
+impl<B: Prng> std::ops::Index<usize> for RngCore<B> {
+	type Output = B;
+
+	fn index(&self, index: usize) -> &Self::Output {
+		&self.prngs[index]
+	}
+}
+
+impl<B: Prng> std::ops::Index<u32> for RngCore<B> {
+	type Output = B;
+
+	fn index(&self, index: u32) -> &Self::Output {
+		&self.prngs[index as usize]
 	}
 }
 
