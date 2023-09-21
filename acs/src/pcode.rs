@@ -3,7 +3,7 @@
 //! Assume all code within originates from GZDoom-original source.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum PCode {
+pub enum PCode {
 	NoOp,
 	Terminate,
 	Suspend,
@@ -389,10 +389,4 @@ pub(super) enum PCode {
 	LSpec5ExResult,
 	TranslationRange4,
 	TranslationRange5,
-	#[doc(hidden)]
-	__Last,
-}
-
-impl PCode {
-	const COUNT: usize = Self::__Last as usize;
 }

@@ -18,7 +18,7 @@ use smallvec::smallvec;
 use util::rstring::RString;
 
 use crate::{
-	compile::{self, symbol::Symbol, Compiler, NativePtr},
+	compile::{self, symbol::Symbol, Compiler, NativeLookup, NativePtr},
 	rti::{self, SignatureHash},
 	runtime::RuntimePtr,
 	tsys::{FuncType, TypeHandle},
@@ -33,19 +33,18 @@ pub type SsaValue = cranelift::prelude::Value;
 pub type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
 
 #[must_use]
-pub fn codegen(compiler: Compiler) -> RuntimePtr {
+pub fn codegen(compiler: Compiler, acs_ext: ()) -> RuntimePtr {
 	assert_eq!(compiler.stage, compile::Stage::CodeGen);
 	assert!(!compiler.failed);
 
 	let Compiler {
 		config,
-		native_ptrs,
+		native,
 		strings,
 		symbols,
 		..
 	} = compiler;
 
-	let native_ptrs = Arc::new(native_ptrs);
 	let rtinfo = FxDashMap::default();
 	let mut rt = Runtime::new(strings);
 
@@ -60,13 +59,7 @@ pub fn codegen(compiler: Compiler) -> RuntimePtr {
 			},
 		)
 		.for_each(|mut batch| {
-			let cgu = CodeGenUnit::new(
-				&rt,
-				&rtinfo,
-				native_ptrs.clone(),
-				config.opt,
-				config.hotswap,
-			);
+			let cgu = CodeGenUnit::new(config, native, &rt, &rtinfo);
 
 			cgu.run(batch)
 		});
@@ -113,13 +106,12 @@ struct CodeGenUnit<'r> {
 impl<'r> CodeGenUnit<'r> {
 	#[must_use]
 	fn new(
+		config: compile::Config,
+		native: NativeLookup,
 		runtime: &'r RuntimePtr,
 		rtinfo: &'r FxDashMap<ZName, rti::Record>,
-		native: Arc<FxHashMap<&'static str, NativePtr>>,
-		opt_level: OptLevel,
-		hotswap: bool,
 	) -> Self {
-		let o_lvl = match opt_level {
+		let o_lvl = match config.opt {
 			OptLevel::None => "none",
 			OptLevel::Speed => "speed",
 			OptLevel::SpeedAndSize => "speed_and_size",
@@ -129,7 +121,7 @@ impl<'r> CodeGenUnit<'r> {
 			&[
 				("use_colocated_libcalls", "false"),
 				("preserve_frame_pointers", "true"),
-				("is_pic", if hotswap { "true" } else { "false" }),
+				("is_pic", if config.hotswap { "true" } else { "false" }),
 				("opt_level", o_lvl),
 				#[cfg(not(debug_assertions))]
 				("enable_verifier", "false"),
@@ -138,14 +130,9 @@ impl<'r> CodeGenUnit<'r> {
 		)
 		.expect("JIT module builder creation failed");
 
-		builder.hotswap(hotswap);
+		builder.hotswap(config.hotswap);
 
-		builder.symbol_lookup_fn(Box::new(move |name_str| {
-			native.get(name_str).map(|np| match np {
-				NativePtr::Data { ptr, .. } => *ptr,
-				NativePtr::Function { ptr, .. } => *ptr,
-			})
-		}));
+		builder.symbol_lookup_fn(Box::new(move |name_str| Some((native.ptr)(name_str))));
 
 		let rtptr = std::ptr::addr_of!(**runtime);
 		builder.symbol("__runtime__", rtptr.cast());

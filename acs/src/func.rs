@@ -4,7 +4,7 @@
 //! explicitly stated otherwise.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum Function {
+pub enum Function {
 	GetLineUdmfInt = 1,
 	GetLineUdmfFixed,
 	GetThingUdmfInt,

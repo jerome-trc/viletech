@@ -13,6 +13,7 @@ publish = false
 repository.workspace = true
 
 [dependencies]
+acs-read = { package = "viletech-acs", path = "../acs" }
 doomfront = { path = "../doomfront", features = ["serde", "zdoom"] }
 util = { package = "viletech-utils", path = "../utils" }
 vfs = { package = "viletech-fs", path = "../vfs" }

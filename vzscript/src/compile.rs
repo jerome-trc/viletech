@@ -68,6 +68,7 @@ pub struct NativeType {
 pub struct Compiler {
 	// Input
 	pub(crate) config: Config,
+	pub(crate) native: NativeLookup,
 	pub(crate) sources: Vec<LibSource>,
 	// State
 	pub(crate) stage: Stage,
@@ -77,8 +78,6 @@ pub struct Compiler {
 	/// One for each library, parallel to [`Self::sources`].
 	pub(crate) namespaces: Vec<Scope>,
 	pub(crate) symbols: AppendOnlyVec<Symbol>,
-	pub(crate) native_ptrs: FxHashMap<&'static str, NativePtr>,
-	pub(crate) native_types: FxHashMap<&'static str, NativeType>,
 	// Interning
 	pub(crate) strings: FxDashSet<RString>,
 	pub(crate) names: NameInterner,
@@ -94,6 +93,13 @@ pub struct Config {
 	pub pedantic: bool,
 	/// Whether the JIT backend should allow function re-definition.
 	pub hotswap: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NativeLookup {
+	pub ptr: fn(&str) -> *const u8,
+	pub acs_inst: fn(acs_read::pcode::PCode) -> *const u8,
+	pub acs_fn: fn(acs_read::func::Function) -> *const u8,
 }
 
 impl Compiler {
@@ -118,14 +124,17 @@ impl Compiler {
 
 		Self {
 			config,
+			native: NativeLookup {
+				ptr: |_| panic!("native lookup functions were not registered"),
+				acs_inst: |_| panic!("native lookup functions were not registered"),
+				acs_fn: |_| panic!("native lookup functions were not registered"),
+			},
 			sources,
 			issues: Mutex::default(),
 			stage: Stage::Declaration,
 			failed: false,
 			namespaces: vec![],
 			symbols: AppendOnlyVec::new(),
-			native_ptrs: FxHashMap::default(),
-			native_types: FxHashMap::default(),
 			strings: FxDashSet::default(),
 			names: NameInterner::default(),
 			memo: FxDashMap::default(),
@@ -134,25 +143,17 @@ impl Compiler {
 
 	/// This is provided as a separate method from [`Self::new`] to:
 	/// - isolate unsafe behavior
-	/// - allow building the given map in parallel to the declaration pass
+	/// - allow building a map in parallel to the declaration pass if desired
 	///
 	/// # Safety
 	///
 	/// - Dereferencing a data object pointer or calling a function pointer must
 	/// never invoke any thread-unsafe behavior.
 	/// - Function pointers must be `unsafe extern "C"`.
-	/// - For every value in `ptrs`, one of the provided [`LibSource`]s must
-	/// contain a declaration (with no definition) with a `native` attribute,
-	/// with a single string argument matching the key in `ptrs`. That
-	/// declaration must be ABI-compatible with the native function's raw pointer.
-	pub unsafe fn register_native(
-		&mut self,
-		ptrs: FxHashMap<&'static str, NativePtr>,
-		types: FxHashMap<&'static str, NativeType>,
-	) {
-		assert!(matches!(self.stage, Stage::Declaration | Stage::Semantic));
-		self.native_ptrs = ptrs;
-		self.native_types = types;
+	/// - Function pointers returned by `native` must be ABI-compatible with
+	/// the declarations in the provided [`LibSource`]s.
+	pub unsafe fn register_native(&mut self, native: NativeLookup) {
+		self.native = native;
 	}
 
 	#[must_use]

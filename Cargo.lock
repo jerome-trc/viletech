@@ -5635,9 +5635,6 @@ version = "0.0.0"
 dependencies = [
  "bytemuck",
  "byteorder",
- "cranelift",
- "cranelift-jit",
- "cranelift-module",
  "doomfront",
  "rayon",
  "viletech-utils",
@@ -5786,6 +5783,7 @@ dependencies = [
  "rustc-hash",
  "smallvec",
  "triomphe",
+ "viletech-acs",
  "viletech-fs",
  "viletech-utils",
 ]

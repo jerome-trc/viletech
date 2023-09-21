@@ -22,7 +22,4 @@ util = { package = "viletech-utils", path = "../utils" }
 
 bytemuck.workspace = true
 byteorder.workspace = true
-cranelift.workspace = true
-cranelift-jit.workspace = true
-cranelift-module.workspace = true
 rayon = { workspace = true, optional = true }
