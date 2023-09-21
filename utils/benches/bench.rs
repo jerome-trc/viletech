@@ -1,5 +1,6 @@
 use std::{
 	any::Any,
+	cell::RefCell,
 	sync::{atomic, Arc},
 };
 
@@ -11,7 +12,7 @@ use hybrid_rc::HybridRc;
 use parking_lot::RwLock;
 use slotmap::SlotMap;
 
-criterion::criterion_group!(benches, atomics, epoch, dereference, rt_poly);
+criterion::criterion_group!(benches, atomics, epoch, dereference, rt_poly, strings);
 criterion::criterion_main!(benches);
 
 fn atomics(crit: &mut Criterion) {
@@ -205,6 +206,50 @@ fn rt_poly(crit: &mut Criterion) {
 			let _ = std::hint::black_box(d.len());
 		});
 	});
+
+	grp.finish();
+}
+
+fn strings(crit: &mut Criterion) {
+	let mut grp = crit.benchmark_group("Strings");
+
+	// When building an extremely temporary string, is it faster to allocate anew
+	// or to use thread-local storage?
+
+	grp.bench_function("Temporary", |bencher| {
+		bencher.iter(|| {
+			let mut string = String::with_capacity(32);
+			string.push_str("This");
+			string.push_str(" fits");
+			string.push_str(" within");
+			string.push_str(" 31");
+			string.push_str(" characters.");
+			let _ = std::hint::black_box(string);
+		});
+	});
+
+	{
+		grp.bench_function("Temporary, TLS", |bencher| {
+			thread_local! {
+				static BUF: RefCell<String> = RefCell::new(
+					String::with_capacity(32)
+				);
+			}
+
+			bencher.iter(|| {
+				BUF.with(|refc| {
+					let mut r = refc.borrow_mut();
+					r.clear();
+					r.push_str("This");
+					r.push_str(" fits");
+					r.push_str(" within");
+					r.push_str(" 31");
+					r.push_str(" characters.");
+					let _ = std::hint::black_box(r);
+				});
+			});
+		});
+	}
 
 	grp.finish();
 }
