@@ -1,6 +1,6 @@
 use std::{
 	any::Any,
-	cell::RefCell,
+	cell::{Cell, RefCell},
 	sync::{atomic, Arc},
 };
 
@@ -229,7 +229,7 @@ fn strings(crit: &mut Criterion) {
 	});
 
 	{
-		grp.bench_function("Temporary, TLS", |bencher| {
+		grp.bench_function("Temporary, TLS, RefCell", |bencher| {
 			thread_local! {
 				static BUF: RefCell<String> = RefCell::new(
 					String::with_capacity(32)
@@ -246,6 +246,48 @@ fn strings(crit: &mut Criterion) {
 					r.push_str(" 31");
 					r.push_str(" characters.");
 					let _ = std::hint::black_box(r);
+				});
+			});
+		});
+	}
+
+	{
+		grp.bench_function("Temporary, TLS, Cell", |bencher| {
+			thread_local! {
+				static BUF: Cell<String> = Cell::new(String::with_capacity(32));
+			}
+
+			bencher.iter(|| {
+				BUF.with(|string| {
+					let mut s = string.take();
+					s.clear();
+					s.push_str("This");
+					s.push_str(" fits");
+					s.push_str(" within");
+					s.push_str(" 31");
+					s.push_str(" characters.");
+					let _ = std::hint::black_box(string.set(s));
+				});
+			});
+		});
+	}
+
+	{
+		grp.bench_function("Temporary, TLS, Unsafe", |bencher| {
+			thread_local! {
+				static BUF: String = String::with_capacity(32);
+			}
+
+			bencher.iter(|| {
+				BUF.with(|string| unsafe {
+					let ptr = std::ptr::addr_of!(*string).cast_mut();
+					(*ptr).clear();
+					(*ptr).push_str("This");
+					(*ptr).push_str(" fits");
+					(*ptr).push_str(" within");
+					(*ptr).push_str(" 31");
+					(*ptr).push_str(" characters.");
+					let _ = std::hint::black_box(ptr);
 				});
 			});
 		});
