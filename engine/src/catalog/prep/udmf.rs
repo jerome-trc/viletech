@@ -2,7 +2,6 @@
 //!
 //! [UDMF]: https://doomwiki.org/wiki/UDMF
 
-use data::level;
 use util::Outcome;
 
 use crate::{
@@ -20,6 +19,8 @@ impl Catalog {
 		ctx: &SubContext,
 		dir: FileRef,
 	) -> Outcome<LevelDef, ()> {
+		#![allow(unreachable_code)]
+
 		let mut _behavior = None;
 		let mut _dialogue = None;
 		let mut _scripts = None;
@@ -43,7 +44,7 @@ impl Catalog {
 			return Outcome::None;
 		};
 
-		let source = match textmap.try_read_str() {
+		let _ = match textmap.try_read_str() {
 			Ok(s) => s,
 			Err(_) => {
 				ctx.raise_error(PrepError {
@@ -55,24 +56,7 @@ impl Catalog {
 			}
 		};
 
-		let mut level = match level::udmf::parse_textmap(source) {
-			Ok(l) => l,
-			Err(errs) => {
-				let ctx_errs = &mut ctx.arts_w.lock().errors;
-
-				for err in errs {
-					ctx_errs.push(PrepError {
-						path: dir.path().to_path_buf(),
-						kind: PrepErrorKind::Level(level::Error::Udmf(err)),
-					})
-				}
-
-				return Outcome::Err(());
-			}
-		};
-
-		// As a placeholder in case map-info provides nothing.
-		level.meta.name = dir.file_prefix().to_string().into();
+		let mut _level: LevelDef = unimplemented!("new UDMF-to-ECS code upcoming");
 
 		let err_handler = |err| {
 			ctx.raise_error(PrepError {
@@ -81,7 +65,7 @@ impl Catalog {
 			});
 		};
 
-		if level.validate(
+		if _level.validate(
 			err_handler,
 			|texname| self.last_by_nick::<Image>(texname).is_none(),
 			|ednum| self.bp_by_ednum(ednum).is_none(),
@@ -90,6 +74,6 @@ impl Catalog {
 			return Outcome::Err(());
 		}
 
-		Outcome::Ok(level)
+		Outcome::Ok(_level)
 	}
 }

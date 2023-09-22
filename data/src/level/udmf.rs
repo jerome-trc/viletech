@@ -5,110 +5,82 @@
 // optimized to inline tests at `opt-level=3` as of 1.69.0. If you're reading this
 // a year or two from now, test again, and see if the GCC backend does the same.
 
-mod linedef;
-mod sectordef;
-mod sidedef;
-mod thingdef;
-
-use std::{
-	collections::HashMap,
-	num::{ParseFloatError, ParseIntError},
-};
-
 use logos::{Lexer, Logos};
 
-use super::repr::{
-	UdmfValue, Vertex,
-	{
-		LevelDef, LevelFormat, LineDef, LineFlags, SectorDef, SideDef, ThingDef, ThingFlags,
-		UdmfNamespace,
-	},
-};
+/// UDMF files are large by necessity, so this trait exists to allow users to
+/// define the most flexible and performant way to consume parsed input.
+///
+/// For consumption by [`parse`].
+pub trait Sink: Sized {
+	type Context: Sized;
 
+	type LineDef;
+	type SectorDef;
+	type SideDef;
+	type ThingDef;
+	type Vertex;
+
+	/// Returning `Err` will cause an early exit from parsing.
+	#[must_use]
+	fn with_namespace(string: &str, ctx: Self::Context) -> Result<Self, ()>;
+
+	#[must_use]
+	fn start_linedef(&mut self) -> Self::LineDef;
+	fn linedef_property(&mut self, linedef: &mut Self::LineDef, kvp: KeyVal);
+	fn finish_linedef(&mut self, linedef: Self::LineDef);
+
+	#[must_use]
+	fn start_sectordef(&mut self) -> Self::SectorDef;
+	fn sectordef_property(&mut self, sectordef: &mut Self::SectorDef, kvp: KeyVal);
+	fn finish_sectordef(&mut self, sectordef: Self::SectorDef);
+
+	#[must_use]
+	fn start_sidedef(&mut self) -> Self::SideDef;
+	fn sidedef_property(&mut self, sidedef: &mut Self::SideDef, kvp: KeyVal);
+	fn finish_sidedef(&mut self, sidedef: Self::SideDef);
+
+	#[must_use]
+	fn start_thingdef(&mut self) -> Self::ThingDef;
+	fn thingdef_property(&mut self, thingdef: &mut Self::ThingDef, kvp: KeyVal);
+	fn finish_thingdef(&mut self, thingdef: Self::ThingDef);
+
+	#[must_use]
+	fn start_vertex(&mut self) -> Self::Vertex;
+	fn vertex_property(&mut self, vertex: &mut Self::Vertex, kvp: KeyVal);
+	fn finish_vertex(&mut self, vertex: Self::Vertex);
+
+	fn parse_error(&mut self, error: Error);
+}
+
+/// See [`Sink`].
 #[derive(Debug)]
-pub enum Error {
-	InvalidNamespace(String),
-	Lex(logos::Span),
-	NoNamespace,
-	Parse {
-		found: Option<Token>,
-		span: logos::Span,
-		expected: &'static [Token],
-	},
-	ParseFloat {
-		inner: ParseFloatError,
-		input: String,
-	},
-	ParseInt {
-		inner: ParseIntError,
-		input: String,
-	},
-	TextmapEmpty,
-	TextmapTooShort,
-	UnknownVertDefField(String),
+pub struct KeyVal<'i> {
+	pub key: &'i str,
+	pub val: Value<'i>,
 }
 
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::InvalidNamespace(namespace) => {
-				write!(f, "`{namespace}` is not a valid UDMF namespace")
-			}
-			Self::Lex(span) => {
-				write!(f, "unrecognized token at {span:?}")
-			}
-			Self::NoNamespace => {
-				write!(f, "TEXTMAP is missing a UDMF namespace statement")
-			}
-			Self::Parse {
-				found,
-				span,
-				expected,
-			} => {
-				let fnd = if let Some(token) = found {
-					format!("`{token:?}`")
-				} else {
-					"end of input".to_string()
-				};
-
-				write!(
-					f,
-					"Found {fnd} at position: {span:?}; expected one of the following: {expected:#?}"
-				)
-			}
-			Self::ParseFloat { inner, input } => {
-				write!(f, "Failed to parse float from: `{input}` - reason: {inner}")
-			}
-			Self::ParseInt { inner, input } => {
-				write!(
-					f,
-					"Failed to parse integer from: `{input}` - reason: {inner}"
-				)
-			}
-			Self::TextmapEmpty => {
-				write!(f, "TEXTMAP is empty")
-			}
-			Self::TextmapTooShort => {
-				write!(f, "TEXTMAP is too short for any meaningful content")
-			}
-			Self::UnknownVertDefField(name) => {
-				write!(f, "TEXTMAP contains vertex with unknown field: `{name}`")
-			}
-		}
-	}
+/// See [`Sink`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Value<'i> {
+	True,
+	False,
+	String(&'i str),
+	Float(&'i str),
+	Int(&'i str),
 }
 
-pub fn parse_textmap(source: &str) -> Result<LevelDef, Vec<Error>> {
+pub fn parse<S: Sink>(source: &str, sink_ctx: S::Context) -> Result<S, Error> {
 	let mut lexer = Token::lexer(source);
-	let namespace = parse_namespace(&mut lexer).map_err(|err| vec![err])?;
+
+	let mut sink = match parse_namespace::<S>(&mut lexer, sink_ctx) {
+		Ok(s) => s,
+		Err(err) => return Err(err),
+	};
 
 	let mut parser = Parser {
-		level: LevelDef::new(LevelFormat::Udmf(namespace)),
+		sink: &mut sink,
 		lexer,
 		buf: None,
-		errors: vec![],
 	};
 
 	while let Some(token) = parser.advance() {
@@ -130,40 +102,77 @@ pub fn parse_textmap(source: &str) -> Result<LevelDef, Vec<Error>> {
 			}
 			other => {
 				let span = parser.lexer.span();
-				parser.skip_until(|token| token.is_top_level_keyword());
 
-				parser.errors.push(Error::Parse {
-					found: Some(other),
+				parser.sink.parse_error(Error::Parse {
+					found: other,
 					span,
 					expected: &[
 						Token::KwLineDef,
 						Token::KwSector,
 						Token::KwSideDef,
 						Token::KwSector,
+						Token::KwVertex,
 					],
 				});
 
+				parser.skip_until(|token| token.is_top_level_keyword());
 				continue;
 			}
 		}
 	}
 
-	let Parser {
-		mut level,
-		lexer: _,
-		buf: _,
-		errors,
-	} = parser;
+	Ok(sink)
+}
 
-	if errors.is_empty() {
-		level.bounds = LevelDef::bounds(&level.geom.vertdefs);
-		Ok(level)
-	} else {
-		Err(errors)
+#[derive(Debug)]
+pub enum Error {
+	InvalidNamespace(String),
+	Lex(logos::Span),
+	NoNamespace,
+	Parse {
+		found: Token,
+		span: logos::Span,
+		expected: &'static [Token],
+	},
+	TextmapEmpty,
+	TextmapTooShort,
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::InvalidNamespace(namespace) => {
+				write!(f, "`{namespace}` is not a valid UDMF namespace")
+			}
+			Self::Lex(span) => {
+				write!(f, "unrecognized token at {span:?}")
+			}
+			Self::NoNamespace => {
+				write!(f, "TEXTMAP is missing a UDMF namespace statement")
+			}
+			Self::Parse {
+				found,
+				span,
+				expected,
+			} => {
+				write!(
+					f,
+					"found {found} at position: {span:?}; expected one of the following: {expected:#?}"
+				)
+			}
+			Self::TextmapEmpty => {
+				write!(f, "TEXTMAP is empty")
+			}
+			Self::TextmapTooShort => {
+				write!(f, "TEXTMAP is too short for any meaningful content")
+			}
+		}
 	}
 }
 
-fn parse_namespace(lexer: &mut Lexer<Token>) -> Result<UdmfNamespace, Error> {
+fn parse_namespace<S: Sink>(lexer: &mut Lexer<Token>, ctx: S::Context) -> Result<S, Error> {
 	let _ = lexer
 		.find(|result| result.is_ok_and(|token| token == Token::KwNamespace))
 		.ok_or(Error::NoNamespace)?;
@@ -182,38 +191,17 @@ fn parse_namespace(lexer: &mut Lexer<Token>) -> Result<UdmfNamespace, Error> {
 
 	let ns_str = &lexer.source()[(span.start + 1)..(span.end - 1)];
 
-	let ns = if ns_str.eq_ignore_ascii_case("doom") {
-		UdmfNamespace::Doom
-	} else if ns_str.eq_ignore_ascii_case("heretic") {
-		UdmfNamespace::Heretic
-	} else if ns_str.eq_ignore_ascii_case("hexen") {
-		UdmfNamespace::Hexen
-	} else if ns_str.eq_ignore_ascii_case("strife") {
-		UdmfNamespace::Strife
-	} else if ns_str.eq_ignore_ascii_case("zdoom") {
-		UdmfNamespace::ZDoom
-	} else if ns_str.eq_ignore_ascii_case("eternity") {
-		UdmfNamespace::Eternity
-	} else if ns_str.eq_ignore_ascii_case("vavoom") {
-		UdmfNamespace::Vavoom
-	} else if ns_str.eq_ignore_ascii_case("zdoomtranslated") {
-		UdmfNamespace::ZDoomTranslated
-	} else {
-		return Err(Error::InvalidNamespace(ns_str.to_string()));
-	};
-
-	Ok(ns)
+	S::with_namespace(ns_str, ctx).map_err(|()| Error::InvalidNamespace(ns_str.to_owned()))
 }
 
 #[derive(Debug)]
-struct Parser<'i> {
-	level: LevelDef,
+struct Parser<'i, S: Sink> {
+	sink: &'i mut S,
 	lexer: logos::Lexer<'i, Token>,
 	buf: Option<Token>,
-	errors: Vec<Error>,
 }
 
-impl<'i> Parser<'i> {
+impl<'i, S: Sink> Parser<'i, S> {
 	#[must_use]
 	fn advance(&mut self) -> Option<Token> {
 		if self.buf.is_none() {
@@ -243,9 +231,20 @@ impl<'i> Parser<'i> {
 		ret
 	}
 
-	#[must_use]
-	fn one_of(&mut self, expected: &'static [Token]) -> Option<Token> {
-		self.advance().filter(|token| expected.contains(token))
+	fn expect(&mut self, expected: &'static [Token]) -> Result<Token, (Token, logos::Span)> {
+		match self.advance() {
+			Some(t) => {
+				if expected.contains(&t) {
+					Ok(t)
+				} else {
+					Err((t, self.lexer.span()))
+				}
+			}
+			None => Err((
+				Token::Eof,
+				self.lexer.source().len()..self.lexer.source().len(),
+			)),
+		}
 	}
 
 	fn skip_until<F: Fn(Token) -> bool>(&mut self, predicate: F) {
@@ -262,151 +261,138 @@ impl<'i> Parser<'i> {
 	}
 
 	fn linedef(&mut self) {
-		let mut linedef = LineDef {
-			udmf_id: -1,
-			vert_start: usize::MAX,
-			vert_end: usize::MAX,
-			flags: LineFlags::empty(),
-			special: 0,
-			trigger: 0,
-			args: [0; 5],
-			side_right: usize::MAX,
-			side_left: None,
-			udmf: HashMap::new(),
-		};
+		if let Err(err) = self.expect(&[Token::BraceL]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceL],
+				span: err.1,
+			});
 
-		if self.one_of(&[Token::BraceL]).is_none() {
 			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+			return;
 		}
 
-		self.fields(&mut linedef, linedef::read_linedef_field);
+		let mut linedef = self.sink.start_linedef();
+		self.fields(&mut linedef, S::linedef_property);
 
-		if self.one_of(&[Token::BraceR]).is_none() {
-			// Error reported; just proceed.
+		if let Err(err) = self.expect(&[Token::BraceR]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceR],
+				span: err.1,
+			});
 		}
 
-		self.level.geom.linedefs.push(linedef);
+		self.sink.finish_linedef(linedef);
 	}
 
 	fn thingdef(&mut self) {
-		let mut thingdef = ThingDef {
-			tid: 0,
-			ed_num: 0,
-			pos: glam::vec3(0.0, 0.0, 0.0),
-			angle: 0,
-			flags: ThingFlags::empty(),
-			special: 0,
-			args: [0; 5],
-			udmf: HashMap::new(),
-		};
+		if let Err(err) = self.expect(&[Token::BraceL]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceL],
+				span: err.1,
+			});
 
-		if self.one_of(&[Token::BraceL]).is_none() {
 			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+			return;
 		}
 
-		self.fields(&mut thingdef, thingdef::read_thingdef_field);
+		let mut thingdef = self.sink.start_thingdef();
+		self.fields(&mut thingdef, S::thingdef_property);
 
-		if self.one_of(&[Token::BraceR]).is_none() {
-			// Error reported; just proceed.
+		if let Err(err) = self.expect(&[Token::BraceR]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceR],
+				span: err.1,
+			});
 		}
 
-		self.level.thingdefs.push(thingdef);
+		self.sink.finish_thingdef(thingdef);
 	}
 
 	fn sectordef(&mut self) {
-		let mut sectordef = SectorDef {
-			udmf_id: i32::MAX,
-			height_floor: 0.0,
-			height_ceil: 0.0,
-			tex_floor: None,
-			tex_ceil: None,
-			light_level: 0,
-			special: 0,
-			trigger: 0,
-			udmf: HashMap::new(),
-		};
+		if let Err(err) = self.expect(&[Token::BraceL]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceL],
+				span: err.1,
+			});
 
-		if self.one_of(&[Token::BraceL]).is_none() {
 			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+			return;
 		}
 
-		self.fields(&mut sectordef, sectordef::read_sectordef_field);
+		let mut sectordef = self.sink.start_sectordef();
+		self.fields(&mut sectordef, S::sectordef_property);
 
-		if self.one_of(&[Token::BraceR]).is_none() {
-			// Error reported; just proceed.
+		if let Err(err) = self.expect(&[Token::BraceR]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceR],
+				span: err.1,
+			});
 		}
 
-		self.level.geom.sectordefs.push(sectordef);
+		self.sink.finish_sectordef(sectordef);
 	}
 
 	fn sidedef(&mut self) {
-		let mut sidedef = SideDef {
-			offset: glam::IVec2::default(),
-			tex_top: None,
-			tex_bottom: None,
-			tex_mid: None,
-			sector: usize::MAX,
-			udmf: HashMap::new(),
-		};
+		if let Err(err) = self.expect(&[Token::BraceL]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceL],
+				span: err.1,
+			});
 
-		if self.one_of(&[Token::BraceL]).is_none() {
 			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+			return;
 		}
 
-		self.fields(&mut sidedef, sidedef::read_sidedef_field);
+		let mut sidedef = self.sink.start_sidedef();
+		self.fields(&mut sidedef, S::sidedef_property);
 
-		if self.one_of(&[Token::BraceR]).is_none() {
-			// Error reported; just proceed.
+		if let Err(err) = self.expect(&[Token::BraceR]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceR],
+				span: err.1,
+			});
 		}
 
-		self.level.geom.sidedefs.push(sidedef);
+		self.sink.finish_sidedef(sidedef);
 	}
 
 	fn vertdef(&mut self) {
-		let mut vertex = Vertex(glam::Vec4::default());
+		if let Err(err) = self.expect(&[Token::BraceL]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceL],
+				span: err.1,
+			});
 
-		if self.one_of(&[Token::BraceL]).is_none() {
 			self.skip_until(|token| token == Token::BraceR || token.is_top_level_keyword());
+			return;
 		}
 
-		let mut err = None;
+		let mut vertex = self.sink.start_vertex();
+		self.fields(&mut vertex, S::vertex_property);
 
-		self.fields(&mut vertex, |kvp, vert, _| {
-			let float = match kvp.val {
-				Value::Float(lit) => parse_f64(lit)?,
-				_ => unimplemented!(),
-			};
-
-			// Recall that Y is up in VileTech.
-			if kvp.key.eq_ignore_ascii_case("x") {
-				vert.x = float as f32;
-			} else if kvp.key.eq_ignore_ascii_case("y") {
-				vert.z = float as f32;
-			} else if kvp.key.eq_ignore_ascii_case("zceiling") {
-				*vert.top_mut() = float as f32;
-			} else if kvp.key.eq_ignore_ascii_case("zfloor") {
-				*vert.bottom_mut() = float as f32;
-			} else {
-				err = Some(Error::UnknownVertDefField(kvp.key.to_string()));
-			}
-
-			Ok(())
-		});
-
-		if let Some(e) = err {
-			self.errors.push(e);
+		if let Err(err) = self.expect(&[Token::BraceR]) {
+			self.sink.parse_error(Error::Parse {
+				found: err.0,
+				expected: &[Token::BraceR],
+				span: err.1,
+			});
 		}
 
-		if self.one_of(&[Token::BraceR]).is_none() {
-			// Error reported; just proceed.
-		}
-
-		self.level.geom.vertdefs.push(vertex);
+		self.sink.finish_vertex(vertex);
 	}
 
-	fn fields<F, T>(&mut self, elem: &mut T, mut reader: F)
+	fn fields<F, T>(&mut self, obj: &mut T, mut callback: F)
 	where
-		F: FnMut(KeyValPair, &mut T, &LevelDef) -> Result<(), Error>,
+		F: FnMut(&mut S, &mut T, KeyVal),
 	{
 		loop {
 			if !self.buf.is_some_and(|token| {
@@ -425,22 +411,39 @@ impl<'i> Parser<'i> {
 
 			let _ = self.advance();
 
-			if self.one_of(&[Token::Eq]).is_none() {
+			if let Err(err) = self.expect(&[Token::Eq]) {
+				self.sink.parse_error(Error::Parse {
+					found: err.0,
+					span: err.1,
+					expected: &[Token::Eq],
+				});
+
 				self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
 				continue;
 			}
 
 			let val_span = self.lexer.span();
 
-			let Some(val_token) = self.one_of(&[
+			const EXPECTED: &[Token] = &[
 				Token::IntLit,
 				Token::FloatLit,
 				Token::FalseLit,
 				Token::TrueLit,
 				Token::StringLit,
-			]) else {
-				self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
-				continue;
+			];
+
+			let val_token = match self.expect(EXPECTED) {
+				Ok(t) => t,
+				Err(err) => {
+					self.sink.parse_error(Error::Parse {
+						found: err.0,
+						span: err.1,
+						expected: EXPECTED,
+					});
+
+					self.skip_until(|token| matches!(token, Token::Semicolon | Token::BraceR));
+					continue;
+				}
 			};
 
 			let value = match val_token {
@@ -452,95 +455,24 @@ impl<'i> Parser<'i> {
 				_ => unreachable!(),
 			};
 
-			if let Err(err) = reader(
-				KeyValPair {
+			callback(
+				self.sink,
+				obj,
+				KeyVal {
 					key: &self.lexer.source()[key_span],
 					val: value,
 				},
-				elem,
-				&self.level,
-			) {
-				self.errors.push(err);
-			}
+			);
 
-			if self.one_of(&[Token::Semicolon]).is_none() {
-				// Error reported; just proceed.
+			if let Err(err) = self.expect(&[Token::Semicolon]) {
+				self.sink.parse_error(Error::Parse {
+					found: err.0,
+					span: err.1,
+					expected: &[Token::Semicolon],
+				});
 			}
 		}
 	}
-}
-
-#[derive(Debug)]
-pub(crate) struct KeyValPair<'i> {
-	key: &'i str,
-	val: Value<'i>,
-}
-
-impl KeyValPair<'_> {
-	fn to_map_value(&self) -> UdmfValue {
-		match self.val {
-			Value::True => UdmfValue::Bool(true),
-			Value::False => UdmfValue::Bool(false),
-			Value::String(lit) => UdmfValue::String(lit.into()),
-			Value::Float(lit) => match lit.parse::<f64>() {
-				Ok(float) => UdmfValue::Float(float),
-				Err(_) => UdmfValue::String(lit.into()),
-			},
-			Value::Int(lit) => match lit.parse::<i32>() {
-				Ok(int) => UdmfValue::Int(int),
-				Err(_) => UdmfValue::String(lit.into()),
-			},
-		}
-	}
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum Value<'i> {
-	True,
-	False,
-	String(&'i str),
-	Float(&'i str),
-	Int(&'i str),
-}
-
-/// An error mapping helper for convenience and brevity.
-fn parse_u16(lit: &str) -> Result<u16, Error> {
-	lit.parse().map_err(|err| Error::ParseInt {
-		inner: err,
-		input: lit.to_string(),
-	})
-}
-
-/// An error mapping helper for convenience and brevity.
-fn parse_i32(lit: &str) -> Result<i32, Error> {
-	lit.parse().map_err(|err| Error::ParseInt {
-		inner: err,
-		input: lit.to_string(),
-	})
-}
-
-/// An error mapping helper for convenience and brevity.
-fn parse_u32(lit: &str) -> Result<u32, Error> {
-	lit.parse().map_err(|err| Error::ParseInt {
-		inner: err,
-		input: lit.to_string(),
-	})
-}
-
-/// An error mapping helper for convenience and brevity.
-fn parse_usize(lit: &str) -> Result<usize, Error> {
-	lit.parse().map_err(|err| Error::ParseInt {
-		inner: err,
-		input: lit.to_string(),
-	})
-}
-
-/// An error mapping helper for convenience and brevity.
-fn parse_f64(lit: &str) -> Result<f64, Error> {
-	lit.parse().map_err(|err| Error::ParseFloat {
-		inner: err,
-		input: lit.to_string(),
-	})
 }
 
 /// See the [UDMF spec](https://github.com/ZDoom/gzdoom/blob/master/specs/udmf.txt),
@@ -585,6 +517,8 @@ pub enum Token {
 	#[token(";")]
 	Semicolon,
 	// Miscellaneous ///////////////////////////////////////////////////////////
+	/// Only used for [`Error::Parse`].
+	Eof,
 	#[regex(r"[A-Za-z_]+[A-Za-z0-9_]*")]
 	Ident,
 	/// Input the lexer failed to recognize gets mapped to this.
@@ -599,48 +533,27 @@ impl Token {
 	}
 }
 
-#[cfg(test)]
-mod test {
-	use std::path::PathBuf;
-
-	use super::*;
-
-	#[test]
-	fn with_sample_data() {
-		const ENV_VAR: &str = "VILEDATA_UDMF_SAMPLE";
-
-		let path = match std::env::var(ENV_VAR) {
-			Ok(v) => PathBuf::from(v),
-			Err(_) => {
-				eprintln!(
-					"Environment variable not set: `{ENV_VAR}`. \
-					Cancelling `level::udmf::test::with_sample_data`."
-				);
-				return;
-			}
-		};
-
-		let bytes = std::fs::read(path)
-			.map_err(|err| panic!("File I/O failure: {err}"))
-			.unwrap();
-		let source = String::from_utf8_lossy(&bytes);
-
-		#[must_use]
-		fn format_errs(errors: Vec<Error>) -> String {
-			let mut output = String::new();
-
-			for error in errors {
-				output.push_str(&format!("\r\n{error:#?}"));
-			}
-
-			output
+impl std::fmt::Display for Token {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Token::FalseLit => write!(f, "`false`"),
+			Token::FloatLit => write!(f, "a floating-point number"),
+			Token::IntLit => write!(f, "an integer"),
+			Token::StringLit => write!(f, "a string"),
+			Token::TrueLit => write!(f, "`true`"),
+			Token::KwLineDef => write!(f, "`linedef`"),
+			Token::KwSector => write!(f, "`sector`"),
+			Token::KwSideDef => write!(f, "`sidedef`"),
+			Token::KwThing => write!(f, "`thing`"),
+			Token::KwVertex => write!(f, "`vertex`"),
+			Token::KwNamespace => write!(f, "`namespace`"),
+			Token::BraceL => write!(f, "`{{`"),
+			Token::BraceR => write!(f, "`}}`"),
+			Token::Eq => write!(f, "`=`"),
+			Token::Semicolon => write!(f, "`;`"),
+			Token::Eof => write!(f, "end of input"),
+			Token::Ident => write!(f, "an identifier"),
+			Token::Unknown => write!(f, "unknown"),
 		}
-
-		let _ = match parse_textmap(source.as_ref()) {
-			Ok(l) => l,
-			Err(errs) => {
-				panic!("Encountered errors: {}\r\n", format_errs(errs));
-			}
-		};
 	}
 }
