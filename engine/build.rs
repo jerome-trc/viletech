@@ -13,7 +13,7 @@ const BASEDATA_FILENAME: &str = "viletech.vpk3";
 /// - Injects the current Git hash and date and time of compilation
 /// into the environment before building.
 /// - Generates `viletech.vpk3` (a zip archive), known as the "base data".
-fn main() -> miette::Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let hash = match Command::new("git").args(["rev-parse", "HEAD"]).output() {
 		Ok(h) => h,
 		Err(err) => {

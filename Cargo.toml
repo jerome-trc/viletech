@@ -124,5 +124,3 @@ xml-rs = "0.8.14"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 # Developer only
 criterion = "0.5.1"
-# Build only
-miette = { version = "5.10.0", features = ["fancy"] }
