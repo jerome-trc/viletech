@@ -36,6 +36,7 @@ harness = false
 [dev-dependencies]
 criterion.workspace = true
 
+append-only-vec = "0.1.3"
 arc-swap.workspace = true
 crossbeam.workspace = true
 haphazard = "0.1.5"

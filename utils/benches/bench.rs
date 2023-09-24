@@ -4,6 +4,7 @@ use std::{
 	sync::{atomic, Arc},
 };
 
+use append_only_vec::AppendOnlyVec;
 use arc_swap::ArcSwap;
 use criterion::Criterion;
 use crossbeam::epoch;
@@ -33,6 +34,28 @@ fn atomics(crit: &mut Criterion) {
 			let _ = std::hint::black_box(Arc::clone(&arc));
 		});
 	});
+
+	{
+		grp.bench_function("AppendOnlyVec Push", |bencher| {
+			bencher.iter_batched(
+				|| AppendOnlyVec::new(),
+				|aov| {
+					let i = aov.push([0_usize, 0_usize, 0_usize]);
+					let _ = std::hint::black_box(i);
+				},
+				criterion::BatchSize::SmallInput,
+			);
+		});
+
+		grp.bench_function("AppendOnlyVec Access", |bencher| {
+			let aov = AppendOnlyVec::new();
+			let i = aov.push([0_usize, 0_usize, 0_usize]);
+
+			bencher.iter(|| {
+				let _ = std::hint::black_box(aov[i]);
+			});
+		});
+	}
 
 	{
 		grp.bench_function("ArcSwap Load", |bencher| {

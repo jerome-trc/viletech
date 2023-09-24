@@ -5617,6 +5617,7 @@ dependencies = [
 name = "viletech-utils"
 version = "0.0.0"
 dependencies = [
+ "append-only-vec",
  "arc-swap",
  "arrayvec",
  "bytemuck",
