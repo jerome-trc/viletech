@@ -1,0 +1,76 @@
+[package]
+name = "viletech-bench"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = []
+description = "VileTech-related (but third-party) microbenchmarks"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/bench"
+keywords = []
+license = "MIT OR Apache-2.0"
+publish = false
+repository.workspace = true
+
+[lib]
+bench = false
+
+[[bench]]
+name = "append_only_vec"
+harness = false
+
+[[bench]]
+name = "arc_swap"
+harness = false
+
+[[bench]]
+name = "deref"
+harness = false
+
+[[bench]]
+name = "epoch"
+harness = false
+
+[[bench]]
+name = "haphazard"
+harness = false
+
+[[bench]]
+name = "hybrid_rc"
+harness = false
+
+[[bench]]
+name = "locks"
+harness = false
+
+[[bench]]
+name = "rt_poly"
+harness = false
+
+[[bench]]
+name = "sharded_slab"
+harness = false
+
+[[bench]]
+name = "slotmap"
+harness = false
+
+[[bench]]
+name = "strings"
+harness = false
+
+[[bench]]
+name = "threading"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true
+
+append-only-vec = "0.1.3"
+arc-swap.workspace = true
+crossbeam.workspace = true
+haphazard = "0.1.5"
+hybrid-rc = "0.6.0"
+parking_lot.workspace = true
+sharded-slab = "0.1.4"
+slotmap.workspace = true

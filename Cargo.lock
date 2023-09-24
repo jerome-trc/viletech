@@ -5523,6 +5523,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "viletech-bench"
+version = "0.0.0"
+dependencies = [
+ "append-only-vec",
+ "arc-swap",
+ "criterion",
+ "crossbeam",
+ "haphazard",
+ "hybrid-rc",
+ "parking_lot 0.12.1",
+ "sharded-slab",
+ "slotmap",
+]
+
+[[package]]
 name = "viletech-cli"
 version = "0.0.0"
 dependencies = [
@@ -5617,23 +5632,16 @@ dependencies = [
 name = "viletech-utils"
 version = "0.0.0"
 dependencies = [
- "append-only-vec",
- "arc-swap",
  "arrayvec",
  "bytemuck",
  "byteorder",
  "criterion",
- "crossbeam",
  "fixed",
  "glam",
- "haphazard",
  "home",
- "hybrid-rc",
  "once_cell",
- "parking_lot 0.12.1",
  "regex",
  "serde",
- "slotmap",
  "smartstring",
  "triomphe",
 ]
