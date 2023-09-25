@@ -36,6 +36,10 @@ name = "haphazard"
 harness = false
 
 [[bench]]
+name = "hashing"
+harness = false
+
+[[bench]]
 name = "hybrid_rc"
 harness = false
 
@@ -84,10 +88,12 @@ haphazard = "0.1.5"
 hybrid-rc = "0.6.0"
 im = "15.1.0"
 im-rc = "15.1.0"
+md5.workspace = true
 nanorand.workspace = true
 parking_lot.workspace = true
 rand_core = "0.6.4"
 rpds = "1.0.1"
+rustc-hash.workspace = true
 sfmt = "0.7.0"
 sharded-slab = "0.1.4"
 slotmap.workspace = true
