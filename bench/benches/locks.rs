@@ -1,6 +1,6 @@
 //! Microbenchmarking the locks provided by [`std`], [`parking_lot`], and [`crossbeam`].
 
-use crossbeam::sync::ShardedLock;
+use crossbeam::{atomic::AtomicCell, sync::ShardedLock};
 
 criterion::criterion_group!(benches, std_sync, parking_lot, crossbeam,);
 criterion::criterion_main!(benches);
@@ -40,6 +40,16 @@ fn parking_lot(crit: &mut criterion::Criterion) {
 
 fn crossbeam(crit: &mut criterion::Criterion) {
 	let mut grp = crit.benchmark_group("crossbeam");
+
+	grp.bench_function("AtomicCell Load", |bencher| {
+		bencher.iter_batched_ref(
+			|| AtomicCell::new(0),
+			|cell| {
+				let _ = std::hint::black_box(cell.load());
+			},
+			criterion::BatchSize::SmallInput,
+		);
+	});
 
 	grp.bench_function("ShardedLock Read", |bencher| {
 		bencher.iter_batched_ref(

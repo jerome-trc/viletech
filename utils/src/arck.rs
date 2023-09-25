@@ -7,8 +7,9 @@ use std::{
 
 use triomphe::Arc;
 
+/// Newtype allowing [`triomphe::Arc`] to implement [`archery::SharedPointerKind`].
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct TArcK(ManuallyDrop<Arc<()>>);
+pub struct TArcK(ManuallyDrop<Arc<()>>);
 
 impl TArcK {
 	#[inline(always)]
@@ -45,11 +46,15 @@ impl TArcK {
 
 unsafe impl archery::SharedPointerKind for TArcK {
 	fn new<T>(v: T) -> Self {
-		Self({ ManuallyDrop::new(unsafe { std::mem::transmute(Arc::new(v)) }) })
+		Self(ManuallyDrop::new(unsafe {
+			std::mem::transmute(Arc::new(v))
+		}))
 	}
 
 	fn from_box<T>(v: Box<T>) -> Self {
-		Self({ ManuallyDrop::new(unsafe { std::mem::transmute(Arc::<T>::from(v)) }) })
+		Self(ManuallyDrop::new(unsafe {
+			std::mem::transmute(Arc::<T>::from(v))
+		}))
 	}
 
 	unsafe fn as_ptr<T>(&self) -> *const T {

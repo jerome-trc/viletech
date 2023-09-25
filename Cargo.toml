@@ -36,6 +36,7 @@ strip = false
 
 [workspace.dependencies]
 arc-swap = "1.6.0"
+archery = "1.0.0"
 ariadne = "0.3.0"
 arrayvec = { version = "0.7.2", features = ["serde"] }
 bevy = { version = "0.11.2", default-features = false }

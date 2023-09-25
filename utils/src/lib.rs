@@ -18,6 +18,9 @@ pub mod rstring;
 pub mod simd;
 pub mod string;
 
+#[cfg(feature = "archery")]
+pub extern crate archery;
+
 pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
 
 /// See <https://zdoom.org/wiki/Editor_number>. Used when populating levels.

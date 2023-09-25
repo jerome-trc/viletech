@@ -28,10 +28,10 @@ fn slab(crit: &mut criterion::Criterion) {
 				let slab = Slab::new();
 				let ix = slab.insert("???".to_string()).unwrap();
 				let _ = slab.insert("!!!".to_string()).unwrap();
+				let _ = slab.get(ix).unwrap();
 				(slab, ix)
 			},
 			|(slab, ix)| {
-				let _ = std::hint::black_box(slab.get(*ix).unwrap());
 				let _ = std::hint::black_box(slab.get(*ix).unwrap());
 			},
 			criterion::BatchSize::SmallInput,

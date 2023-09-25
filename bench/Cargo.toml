@@ -40,7 +40,15 @@ name = "hybrid_rc"
 harness = false
 
 [[bench]]
+name = "immut"
+harness = false
+
+[[bench]]
 name = "locks"
+harness = false
+
+[[bench]]
+name = "prng"
 harness = false
 
 [[bench]]
@@ -63,6 +71,9 @@ harness = false
 name = "threading"
 harness = false
 
+[dependencies]
+util = { package = "viletech-utils", path = "../utils", features = ["archery"] }
+
 [dev-dependencies]
 criterion.workspace = true
 
@@ -71,6 +82,12 @@ arc-swap.workspace = true
 crossbeam.workspace = true
 haphazard = "0.1.5"
 hybrid-rc = "0.6.0"
+im = "15.1.0"
+im-rc = "15.1.0"
+nanorand.workspace = true
 parking_lot.workspace = true
+rand_core = "0.6.4"
+rpds = "1.0.1"
+sfmt = "0.7.0"
 sharded-slab = "0.1.4"
 slotmap.workspace = true

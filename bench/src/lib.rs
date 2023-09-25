@@ -8,5 +8,4 @@
 //! These benchmarks naturally cannot be used to accurately gauge the performance
 //! of an entire system from end to end but they are also the only reasonable starting point.
 
-// Rust demands this boilerplate even for crates that are just benchmarks.
-// Maybe one day some common code will be needed here?
+pub extern crate util;
