@@ -93,6 +93,7 @@ md5.workspace = true
 nanorand.workspace = true
 parking_lot.workspace = true
 rand_core = "0.6.4"
+rayon.workspace = true
 rpds = "1.0.1"
 rustc-hash.workspace = true
 sfmt = "0.7.0"

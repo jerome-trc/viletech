@@ -23,5 +23,11 @@ fn threading(crit: &mut criterion::Criterion) {
 		});
 	});
 
+	grp.bench_function("rayon::spawn", |bencher| {
+		bencher.iter(|| {
+			let _ = std::hint::black_box(rayon::spawn(|| {}));
+		});
+	});
+
 	grp.finish();
 }

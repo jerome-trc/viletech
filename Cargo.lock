@@ -5620,6 +5620,7 @@ dependencies = [
  "nanorand",
  "parking_lot 0.12.1",
  "rand_core",
+ "rayon",
  "rpds",
  "rustc-hash",
  "sfmt",
