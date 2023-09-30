@@ -97,6 +97,18 @@ pub struct ConstDef(SyntaxNode);
 simple_astnode!(Syn, ConstDef, Syn::ConstDef);
 
 impl ConstDef {
+	/// The returned token is always tagged [`Syn::KwConst`].
+	#[must_use]
+	pub fn keyword(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwConst)
+			})
+			.unwrap()
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
@@ -127,6 +139,18 @@ pub struct EnumDef(SyntaxNode);
 simple_astnode!(Syn, EnumDef, Syn::EnumDef);
 
 impl EnumDef {
+	/// The returned token is always tagged [`Syn::KwEnum`].
+	#[must_use]
+	pub fn keyword(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwEnum)
+			})
+			.unwrap()
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0

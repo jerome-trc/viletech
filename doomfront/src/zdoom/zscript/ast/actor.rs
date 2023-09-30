@@ -264,8 +264,12 @@ pub struct StateLabel(SyntaxNode);
 simple_astnode!(Syn, StateLabel, Syn::StateLabel);
 
 impl StateLabel {
-	pub fn name(&self) -> ! {
-		unimplemented!()
+	/// The returned token is always tagged [`Syn::NonWhitespace`].
+	#[must_use]
+	pub fn name(&self) -> SyntaxToken {
+		let ret = self.0.first_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::NonWhitespace);
+		ret
 	}
 }
 

@@ -1,6 +1,6 @@
 //! AST nodes for representing classes, mixin classes, and structs.
 
-use rowan::ast::AstNode;
+use rowan::{ast::AstNode, TextRange};
 
 use crate::{simple_astnode, AstError, AstResult};
 
@@ -20,6 +20,18 @@ pub struct ClassDef(pub(super) SyntaxNode);
 simple_astnode!(Syn, ClassDef, Syn::ClassDef);
 
 impl ClassDef {
+	/// The returned token is always tagged [`Syn::KwClass`].
+	#[must_use]
+	pub fn keyword(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwClass)
+			})
+			.unwrap()
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
@@ -109,6 +121,30 @@ pub struct MixinClassDef(pub(super) SyntaxNode);
 simple_astnode!(Syn, MixinClassDef, Syn::MixinClassDef);
 
 impl MixinClassDef {
+	/// `0` is always tagged [`Syn::KwMixin`]; `1` is always tagged [`Syn::KwClass`].
+	#[must_use]
+	pub fn keywords(&self) -> (SyntaxToken, SyntaxToken) {
+		let ret0 = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwMixin)
+			})
+			.unwrap();
+
+		let ret1 = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwClass)
+			})
+			.unwrap();
+
+		(ret0, ret1)
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
@@ -136,6 +172,18 @@ pub struct StructDef(pub(super) SyntaxNode);
 simple_astnode!(Syn, StructDef, Syn::StructDef);
 
 impl StructDef {
+	/// The returned token is always tagged [`Syn::KwStruct`].
+	#[must_use]
+	pub fn keyword(&self) -> SyntaxToken {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwStruct)
+			})
+			.unwrap()
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
@@ -205,6 +253,19 @@ pub enum ClassQual {
 	Ui(SyntaxToken),
 	Native(SyntaxToken),
 	Version(VersionQual),
+}
+
+impl ClassQual {
+	#[must_use]
+	pub fn text_range(&self) -> TextRange {
+		match self {
+			Self::Abstract(inner) | Self::Play(inner) | Self::Ui(inner) | Self::Native(inner) => {
+				inner.text_range()
+			}
+			Self::Replaces(inner) => inner.syntax().text_range(),
+			Self::Version(inner) => inner.syntax().text_range(),
+		}
+	}
 }
 
 /// Wraps a node tagged [`Syn::ReplacesClause`].
@@ -293,6 +354,18 @@ pub enum StructQual {
 	Native(SyntaxToken),
 	ClearScope(SyntaxToken),
 	Version(VersionQual),
+}
+
+impl StructQual {
+	#[must_use]
+	pub fn text_range(&self) -> TextRange {
+		match self {
+			Self::Play(inner) | Self::Ui(inner) | Self::Native(inner) | Self::ClearScope(inner) => {
+				inner.text_range()
+			}
+			Self::Version(inner) => inner.syntax().text_range(),
+		}
+	}
 }
 
 // StructInnard ////////////////////////////////////////////////////////////////
@@ -523,23 +596,88 @@ pub enum MemberQual {
 	Action(ActionQual),
 	Deprecation(DeprecationQual),
 	Version(VersionQual),
+	/// Only applicable to [functions](FunctionDecl).
 	Abstract(SyntaxToken),
 	ClearScope(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	Final(SyntaxToken),
+	/// Only applicable to [fields](FieldDecl).
 	Internal(SyntaxToken),
+	/// Only applicable to [fields](FieldDecl).
 	Meta(SyntaxToken),
 	Native(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	Override(SyntaxToken),
 	Play(SyntaxToken),
 	Private(SyntaxToken),
 	Protected(SyntaxToken),
+	/// Only applicable to [fields](FieldDecl).
 	ReadOnly(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	Static(SyntaxToken),
+	/// Only applicable to [fields](FieldDecl).
 	Transient(SyntaxToken),
 	Ui(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	VarArg(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	Virtual(SyntaxToken),
+	/// Only applicable to [functions](FunctionDecl).
 	VirtualScope(SyntaxToken),
+}
+
+impl MemberQual {
+	#[must_use]
+	pub fn text_range(&self) -> TextRange {
+		match self {
+			Self::Action(inner) => inner.syntax().text_range(),
+			Self::Deprecation(inner) => inner.syntax().text_range(),
+			Self::Version(inner) => inner.syntax().text_range(),
+			Self::Abstract(inner)
+			| Self::ClearScope(inner)
+			| Self::Final(inner)
+			| Self::Internal(inner)
+			| Self::Meta(inner)
+			| Self::Native(inner)
+			| Self::Override(inner)
+			| Self::Play(inner)
+			| Self::Private(inner)
+			| Self::Protected(inner)
+			| Self::ReadOnly(inner)
+			| Self::Static(inner)
+			| Self::Transient(inner)
+			| Self::Ui(inner)
+			| Self::VarArg(inner)
+			| Self::Virtual(inner)
+			| Self::VirtualScope(inner) => inner.text_range(),
+		}
+	}
+
+	#[must_use]
+	pub fn kind(&self) -> Syn {
+		match self {
+			Self::Action(inner) => inner.syntax().kind(),
+			Self::Deprecation(inner) => inner.syntax().kind(),
+			Self::Version(inner) => inner.syntax().kind(),
+			Self::Abstract(inner)
+			| Self::ClearScope(inner)
+			| Self::Final(inner)
+			| Self::Internal(inner)
+			| Self::Meta(inner)
+			| Self::Native(inner)
+			| Self::Override(inner)
+			| Self::Play(inner)
+			| Self::Private(inner)
+			| Self::Protected(inner)
+			| Self::ReadOnly(inner)
+			| Self::Static(inner)
+			| Self::Transient(inner)
+			| Self::Ui(inner)
+			| Self::VarArg(inner)
+			| Self::Virtual(inner)
+			| Self::VirtualScope(inner) => inner.kind(),
+		}
+	}
 }
 
 // Parameter ///////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::{simple_astnode, AstError, AstResult};
 
-use super::{DocComment, Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
+use super::{CoreType, DocComment, Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -484,13 +484,40 @@ impl StaticConstStat {
 		super::doc_comments(&self.0)
 	}
 
+	/// `0` is always tagged [`Syn::KwStatic`]; `1` is always tagged [`Syn::KwConst`].
+	#[must_use]
+	pub fn keywords(&self) -> (SyntaxToken, SyntaxToken) {
+		let ret0 = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwStatic)
+			})
+			.unwrap();
+
+		let ret1 = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syn::KwConst)
+			})
+			.unwrap();
+
+		(ret0, ret1)
+	}
+
 	/// The returned token is always tagged [`Syn::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.skip_while(|elem| elem.kind() != Syn::TypeRef)
 			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
 			.ok_or(AstError::Missing)
+	}
+
+	pub fn type_spec(&self) -> AstResult<CoreType> {
+		CoreType::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
 	}
 
 	pub fn values(&self) -> impl Iterator<Item = Expr> {

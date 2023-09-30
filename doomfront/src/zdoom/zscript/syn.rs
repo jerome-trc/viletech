@@ -91,7 +91,7 @@ pub enum Syn {
 	StateFlow,
 	/// For child nodes under a [`Syn::StatesBlock`].
 	StateDef,
-	/// `identchain ':'`
+	/// `nonwhitespace ':'`
 	StateLabel,
 	/// `'light' '(' (string | name) (',' (string | name))* ')'`
 	StateLight,

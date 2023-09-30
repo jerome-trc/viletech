@@ -332,6 +332,10 @@ fn smoke_static_const() {
 	);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
+
+	let ast = ast::StaticConstStat::cast(ptree.cursor()).unwrap();
+	let name_tok = ast.name().unwrap();
+	assert_eq!(name_tok.text(), "SOME_FLOATS");
 }
 
 // Non-structural top-level ////////////////////////////////////////////////////
