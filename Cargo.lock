@@ -1270,6 +1270,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "boxcar"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ba452c13b606aecb546d1dbc0b256368e4187eb5740f08208f421d76f50825b"
+
+[[package]]
 name = "bstr"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5603,6 +5609,7 @@ version = "0.0.0"
 dependencies = [
  "append-only-vec",
  "arc-swap",
+ "boxcar",
  "criterion",
  "crossbeam",
  "haphazard",
