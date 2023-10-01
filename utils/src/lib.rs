@@ -12,7 +12,7 @@ pub mod arck;
 pub mod io;
 #[macro_use]
 pub mod macros;
-pub mod math;
+pub mod geom;
 pub mod path;
 pub mod rstring;
 pub mod simd;

@@ -8,7 +8,7 @@ use bitvec::{order::Lsb0, vec::BitVec};
 use glam::{IVec2, Vec2, Vec3, Vec4};
 use rayon::prelude::*;
 use util::{
-	math::{Fixed32, MinMaxBox},
+	geom::{Fixed32, MinMaxBox},
 	EditorNum, Id8, SmallString,
 };
 

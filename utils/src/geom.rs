@@ -1,3 +1,5 @@
+//! Geometry-related math utilities.
+
 use std::ops::{Add, AddAssign, Mul};
 
 use glam::{DQuat, DVec3, EulerRot, Quat, Vec3A};
