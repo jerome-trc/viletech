@@ -8,6 +8,12 @@ criterion::criterion_main!(benches);
 fn im(crit: &mut criterion::Criterion) {
 	let mut grp = crit.benchmark_group("im::HashMap");
 
+	grp.bench_function("New", |bencher| {
+		bencher.iter_with_large_drop(|| {
+			std::hint::black_box(im::HashMap::<&'static str, &'static str>::new())
+		});
+	});
+
 	grp.bench_function("Insert", |bencher| {
 		bencher.iter_batched_ref(
 			|| {
@@ -47,6 +53,12 @@ fn im_rc(crit: &mut criterion::Criterion) {
 
 fn rpds(crit: &mut criterion::Criterion) {
 	let mut grp = crit.benchmark_group("rpds::HashTrieMap");
+
+	grp.bench_function("New", |bencher| {
+		bencher.iter_with_large_drop(|| {
+			std::hint::black_box(rpds::HashTrieMap::<&'static str, &'static str>::new())
+		});
+	});
 
 	grp.bench_function("Insert", |bencher| {
 		bencher.iter_batched_ref(
