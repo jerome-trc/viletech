@@ -9,10 +9,11 @@
 
 #[cfg(feature = "archery")]
 pub mod arck;
+pub mod fixed;
+pub mod geom;
 pub mod io;
 #[macro_use]
 pub mod macros;
-pub mod geom;
 pub mod path;
 pub mod rstring;
 pub mod simd;

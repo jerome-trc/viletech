@@ -5,6 +5,7 @@ pub mod read;
 pub mod repr;
 pub mod udmf;
 pub mod validate;
+pub mod zdbsp;
 
 use util::{EditorNum, Id8};
 
@@ -13,6 +14,40 @@ pub use repr::LevelDef;
 /// All 16-bit integer position values get reduced by this
 /// to fit VileTech's floating-point space.
 pub const VANILLA_SCALEDOWN: f32 = 0.01;
+
+/// Exists only to bundle multiple raw level data types to simplify other interfaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RawLevel<'r> {
+	pub linedefs: &'r [read::LineDefRaw],
+	pub nodes: &'r [read::NodeRaw],
+	pub sectors: &'r [read::SectorRaw],
+	pub segs: &'r [read::SegRaw],
+	pub sidedefs: &'r [read::SideDefRaw],
+	pub subsectors: &'r [read::SSectorRaw],
+	pub things: ThingSlice<'r>,
+	pub vertices: &'r [read::VertexRaw],
+}
+
+/// See [`RawLevel`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThingSlice<'r> {
+	Doom(&'r [read::ThingRaw]),
+	Ext(&'r [read::ThingExtRaw]),
+}
+
+/// Certain important ["editor numbers"](https://zdoom.org/wiki/Editor_number).
+pub mod ednums {
+	use util::EditorNum;
+
+	pub const HEXEN_ANCHOR: EditorNum = 3000;
+	pub const HEXEN_SPAWN: EditorNum = 3001;
+	pub const HEXEN_SPAWNCRUSH: EditorNum = 3002;
+
+	pub const DOOM_ANCHOR: EditorNum = 9300;
+	pub const DOOM_SPAWN: EditorNum = 9301;
+	pub const DOOM_SPAWNCRUSH: EditorNum = 9302;
+	pub const DOOM_SPAWNHURT: EditorNum = 9303;
+}
 
 /// Possible failure modes of trying to process files into a [LevelDef].
 #[derive(Debug)]
