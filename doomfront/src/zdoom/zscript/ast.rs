@@ -8,7 +8,7 @@ mod types;
 
 use std::num::IntErrorKind;
 
-use rowan::ast::AstNode;
+use rowan::{ast::AstNode, Language};
 
 use crate::{
 	simple_astnode,
@@ -509,6 +509,49 @@ impl std::ops::Deref for DocComment {
 	type Target = SyntaxToken;
 
 	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+/// An "interface" for any syntax node supporting preceding [zscdoc] comments.
+///
+/// [zscdoc]: https://gitlab.com/Gutawer/zscdoc
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Documentable(SyntaxNode);
+
+impl Documentable {
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(&self.0)
+	}
+}
+
+impl rowan::ast::AstNode for Documentable {
+	type Language = Syn;
+
+	fn can_cast(kind: <Self::Language as Language>::Kind) -> bool
+	where
+		Self: Sized,
+	{
+		matches!(
+			kind,
+			Syn::ConstDef
+				| Syn::EnumDef | Syn::EnumVariant
+				| Syn::ClassDef | Syn::MixinClassDef
+				| Syn::StructDef | Syn::FieldDecl
+				| Syn::FunctionDecl
+				| Syn::PropertyDef
+		)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		Self::can_cast(node.kind()).then_some(Self(node))
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
 		&self.0
 	}
 }
