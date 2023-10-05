@@ -5,7 +5,7 @@ edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["encoding", "game-development", "parser-implementations"]
-description = "Frontends for Doom DSLs"
+description = "Pieces of compiler frontends for Doom DSLs"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/doomfront"
 keywords = ["doom", "dsl", "encoding", "gamedev", "parser"]
 license = "MIT OR Apache-2.0"
