@@ -81,7 +81,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.pos += 1;
 	}
 
-	pub fn advance_n(&mut self, syn: L::Kind, tokens: usize) {
+	pub fn advance_n(&mut self, syn: L::Kind, tokens: u8) {
 		assert!(
 			tokens >= 1,
 			"`advance_n` was passed 0 at {:?} (`{}`)",
@@ -92,7 +92,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		self.fuel.set(256);
 		self.events
 			.push(Event::AdvanceN(L::kind_to_raw(syn), tokens));
-		self.pos += tokens;
+		self.pos += tokens as usize;
 	}
 
 	#[must_use]
@@ -301,7 +301,7 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		}
 
 		if n > 0 {
-			self.advance_n(syn, n);
+			self.advance_n(syn, n as u8);
 		} else {
 			self.advance_with_error(fallback(self.nth(0)), expected);
 		}
@@ -621,5 +621,5 @@ enum Event {
 	Open(SyntaxKind),
 	Close,
 	Advance(SyntaxKind),
-	AdvanceN(SyntaxKind, usize),
+	AdvanceN(SyntaxKind, u8),
 }

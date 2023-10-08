@@ -419,7 +419,7 @@ fn state_frames(p: &mut Parser<Syn>) {
 	}
 
 	if n > 0 {
-		p.advance_n(Syn::NonWhitespace, n);
+		p.advance_n(Syn::NonWhitespace, n as u8);
 	} else {
 		p.advance_with_error(Syn::from(p.nth(0)), &[&["a state frame list"]]);
 	}
