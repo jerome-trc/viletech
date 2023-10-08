@@ -2,11 +2,7 @@
 
 use rowan::ast::AstNode;
 
-use crate::{
-	simple_astnode,
-	zdoom::{ast::LitToken, decorate::ast::StateUsage},
-	AstError, AstResult,
-};
+use crate::{simple_astnode, zdoom::ast::LitToken, AstError, AstResult};
 
 use super::{ArgList, CompoundStat, DocComment, Expr, IdentChain, Syn, SyntaxNode, SyntaxToken};
 
@@ -213,13 +209,13 @@ impl StatesBlock {
 					};
 
 					if token.text().eq_ignore_ascii_case("actor") {
-						Some(StateUsage::Actor)
+						Some(StateUsage::Actor(token))
 					} else if token.text().eq_ignore_ascii_case("item") {
-						Some(StateUsage::Item)
+						Some(StateUsage::Item(token))
 					} else if token.text().eq_ignore_ascii_case("overlay") {
-						Some(StateUsage::Overlay)
+						Some(StateUsage::Overlay(token))
 					} else if token.text().eq_ignore_ascii_case("weapon") {
-						Some(StateUsage::Weapon)
+						Some(StateUsage::Weapon(token))
 					} else {
 						None
 					}
@@ -243,6 +239,39 @@ impl StatesBlock {
 pub struct ActionQual(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, ActionQual, Syn::ActionQual);
+
+impl ActionQual {
+	/// All yielded tokens are tagged [`Syn::Ident`].
+	pub fn usages(&self) -> impl Iterator<Item = StateUsage> {
+		self.0.children_with_tokens().filter_map(|elem| {
+			let Some(token) = elem.into_token() else {
+				return None;
+			};
+
+			if token.text().eq_ignore_ascii_case("actor") {
+				Some(StateUsage::Actor(token))
+			} else if token.text().eq_ignore_ascii_case("item") {
+				Some(StateUsage::Item(token))
+			} else if token.text().eq_ignore_ascii_case("overlay") {
+				Some(StateUsage::Overlay(token))
+			} else if token.text().eq_ignore_ascii_case("weapon") {
+				Some(StateUsage::Weapon(token))
+			} else {
+				None
+			}
+		})
+	}
+}
+
+/// All wrapped tokens are always tagged [`Syn::Ident`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum StateUsage {
+	Actor(SyntaxToken),
+	Item(SyntaxToken),
+	Overlay(SyntaxToken),
+	Weapon(SyntaxToken),
+}
 
 // StatesInnard ////////////////////////////////////////////////////////////////
 

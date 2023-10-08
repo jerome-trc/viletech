@@ -209,13 +209,13 @@ impl StatesDef {
 					};
 
 					if token.text().eq_ignore_ascii_case("actor") {
-						Some(StateUsage::Actor)
+						Some(StateUsage::Actor(token))
 					} else if token.text().eq_ignore_ascii_case("item") {
-						Some(StateUsage::Item)
+						Some(StateUsage::Item(token))
 					} else if token.text().eq_ignore_ascii_case("overlay") {
-						Some(StateUsage::Overlay)
+						Some(StateUsage::Overlay(token))
 					} else if token.text().eq_ignore_ascii_case("weapon") {
-						Some(StateUsage::Weapon)
+						Some(StateUsage::Weapon(token))
 					} else {
 						None
 					}
@@ -228,13 +228,14 @@ impl StatesDef {
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// All wrapped tokens are always tagged [`Syn::Ident`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StateUsage {
-	Actor,
-	Item,
-	Overlay,
-	Weapon,
+	Actor(SyntaxToken),
+	Item(SyntaxToken),
+	Overlay(SyntaxToken),
+	Weapon(SyntaxToken),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
