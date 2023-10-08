@@ -19,12 +19,8 @@ impl TypeRef {
 		CoreType::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
-	#[must_use]
-	pub fn array_len(&self) -> Option<ArrayLen> {
-		self.0
-			.last_child()
-			.filter(|node| node.kind() == Syn::ArrayLen)
-			.map(ArrayLen)
+	pub fn array_lengths(&self) -> impl Iterator<Item = ArrayLen> {
+		self.0.children().filter_map(ArrayLen::cast)
 	}
 }
 

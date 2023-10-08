@@ -176,7 +176,7 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 	let tref = p.open();
 	core_type(p);
 
-	if p.find(0, |token| !token.is_trivia()) == Token::BracketL {
+	while p.find(0, |token| !token.is_trivia()) == Token::BracketL {
 		trivia_0plus(p);
 		array_len(p);
 	}

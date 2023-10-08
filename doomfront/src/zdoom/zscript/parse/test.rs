@@ -434,8 +434,21 @@ States
 
 "#####;
 
-	let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
+	let ptree: ParseTree = crate::parse(
+		SOURCE.trim(),
+		class_def,
+		zdoom::lex::Context::ZSCRIPT_LATEST,
+	);
 	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+}
+
+#[test]
+fn smoke_class_named_void() {
+	const SOURCE: &str = "class void {}";
+	let ptree: ParseTree = crate::parse(SOURCE, class_def, zdoom::lex::Context::ZSCRIPT_LATEST);
+	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
@@ -510,17 +523,26 @@ class DevastationFixed {}
 
 #[test]
 fn smoke_field() {
-	const SOURCE: &str = r#"int corruption, three[], nexus[][1];"#;
+	const SOURCE: &str = r#"int[1][] corruption, three[], nexus[][1];"#;
 
 	let ptree: ParseTree = crate::parse(SOURCE, member_decl, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 
 	let field = ast::FieldDecl::cast(ptree.cursor()).unwrap();
+	let type_spec = field.type_spec().unwrap();
 
-	let ast::CoreType::Primitive(_) = field.type_spec().unwrap().core() else {
+	let ast::CoreType::Primitive(_) = type_spec.core() else {
 		panic!("Expected primitive type specifier `int`.");
 	};
+
+	{
+		let mut arr_lens = type_spec.array_lengths();
+		let len0 = arr_lens.next().unwrap();
+		assert!(len0.expr().is_some());
+		let len1 = arr_lens.next().unwrap();
+		assert!(len1.expr().is_none());
+	}
 
 	let mut names = field.names();
 
