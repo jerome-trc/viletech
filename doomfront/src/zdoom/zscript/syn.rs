@@ -58,15 +58,6 @@ pub enum Syn {
 	IncludeDirective,
 	/// `':' ident`
 	InheritSpec,
-	/// Will have one of the following tokens as a child:
-	/// - [`Syn::KwFalse`]
-	/// - [`Syn::KwFloat`]
-	/// - [`Syn::IntLit`]
-	/// - [`Syn::NameLit`]
-	/// - [`Syn::NullLit`]
-	/// - [`Syn::StringLit`]
-	/// - [`Syn::KwTrue`]
-	Literal,
 	LocalVar,
 	LocalVarInit,
 	/// Precedes a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`].
@@ -152,6 +143,15 @@ pub enum Syn {
 	IdentExpr,
 	/// `primaryexpr '[' expr ']'`
 	IndexExpr,
+	/// Will have one of the following tokens as a child:
+	/// - [`Syn::KwFalse`]
+	/// - [`Syn::KwFloat`]
+	/// - [`Syn::IntLit`]
+	/// - [`Syn::NameLit`]
+	/// - [`Syn::NullLit`]
+	/// - [`Syn::StringLit`]
+	/// - [`Syn::KwTrue`]
+	Literal,
 	/// `primaryexpr '.' ident`
 	MemberExpr,
 	/// `primaryexpr operator`
