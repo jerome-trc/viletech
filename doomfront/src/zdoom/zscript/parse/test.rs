@@ -195,7 +195,16 @@ fn smoke_deprecation_qual() {
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_1() {
+fn smoke_expr_simple() {
+	const SOURCE: &str = r#"!multiplayer && (GetPlayerInput(INPUT_BUTTONS))"#;
+
+	let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
+	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+}
+
+#[test]
+fn smoke_expr_complex() {
 	const SOURCE: &str = "(a[1]() + --b.c) * ++d && (e << f) ~== ((((g /= h ? i : j))))";
 
 	let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
@@ -204,12 +213,21 @@ fn smoke_1() {
 }
 
 #[test]
-fn smoke_2() {
-	const SOURCE: &str = r#"!multiplayer && (GetPlayerInput(INPUT_BUTTONS))"#;
+fn smoke_sizeof_alignof() {
+	const SOURCES: &[&str] = &[
+		r#"sizeof a"#,
+		r#"sizeof(a)"#,
+		r#"alignof 0"#,
+		r#"alignof (0)"#,
+		r#"sizeof x + alignof y"#,
+	];
 
-	let ptree: ParseTree = crate::parse(SOURCE, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
-	assert_no_errors(&ptree);
-	prettyprint_maybe(ptree.cursor());
+	for source in SOURCES {
+		let ptree: ParseTree = crate::parse(source, expr, zdoom::lex::Context::ZSCRIPT_LATEST);
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
+		eprintln!();
+	}
 }
 
 #[test]

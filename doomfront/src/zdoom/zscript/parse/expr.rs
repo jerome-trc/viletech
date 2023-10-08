@@ -30,15 +30,9 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 		let right = p.nth(0);
 
 		match right {
-			Token::Minus2 => {
+			t @ (Token::Minus2 | Token::Plus2) => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::Minus2);
-				lhs = p.close(m, Syn::PostfixExpr);
-				continue;
-			}
-			Token::Plus2 => {
-				let m = p.open_before(lhs);
-				p.advance(Syn::Plus2);
+				p.advance(Syn::from(t));
 				lhs = p.close(m, Syn::PostfixExpr);
 				continue;
 			}
@@ -108,14 +102,6 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 	}
 
 	match token {
-		Token::KwSuper => {
-			p.advance(Syn::KwSuper);
-			p.close(ex, Syn::SuperExpr)
-		}
-		Token::KwDefault => {
-			p.advance(Syn::Ident);
-			p.close(ex, Syn::IdentExpr)
-		}
 		Token::IntLit => {
 			p.advance(Syn::IntLit);
 			p.close(ex, Syn::Literal)
@@ -149,6 +135,14 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 		Token::KwNull => {
 			p.advance(Syn::NullLit);
 			p.close(ex, Syn::Literal)
+		}
+		Token::KwSuper => {
+			p.advance(Syn::KwSuper);
+			p.close(ex, Syn::SuperExpr)
+		}
+		Token::KwDefault => {
+			p.advance(Syn::Ident);
+			p.close(ex, Syn::IdentExpr)
 		}
 		Token::ParenL => {
 			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
@@ -197,7 +191,9 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 		| Token::Plus2
 		| Token::Minus
 		| Token::Plus
-		| Token::Tilde) => {
+		| Token::Tilde
+		| Token::KwSizeOf
+		| Token::KwAlignOf) => {
 			p.advance(Syn::from(t));
 			trivia_0plus(p);
 			recur(p, t);
@@ -212,10 +208,10 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 				"a floating-point number",
 				"a string",
 				"a name literal",
-				"`true`",
-				"`false`",
+				"`true` or `false`",
 				"`null`",
 				"`super` or `default`",
+				"`sizeof` or `alignof`",
 				"`(`",
 				"`!`",
 				"`--`",
