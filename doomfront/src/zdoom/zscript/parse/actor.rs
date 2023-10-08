@@ -402,27 +402,20 @@ fn state_frames(p: &mut Parser<Syn>) {
 		return;
 	}
 
-	let mut n = 0;
-
-	while !p.at_if(Token::is_trivia) {
-		let token = p.nth(n);
-
-		if is_ident_lax(token)
-			|| matches!(
-				token,
-				Token::BracketL | Token::BracketR | Token::Backslash | Token::Pound | Token::Pound4
-			) {
-			n += 1;
-		} else {
-			break;
-		}
-	}
-
-	if n > 0 {
-		p.advance_n(Syn::NonWhitespace, n as u8);
-	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &[&["a state frame list"]]);
-	}
+	p.merge(
+		Syn::NonWhitespace,
+		|t| {
+			is_ident_lax(t)
+				|| matches!(
+					t,
+					Token::BracketL
+						| Token::BracketR | Token::Backslash
+						| Token::Pound | Token::Pound4
+				)
+		},
+		|t| Syn::from(t),
+		&[&["a state frame list"]],
+	);
 }
 
 /// Builds a [`Syn::ActionFunction`] node.
