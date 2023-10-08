@@ -6,7 +6,10 @@ mod stat;
 mod structure;
 mod types;
 
-use std::num::IntErrorKind;
+use std::{
+	num::IntErrorKind,
+	path::{Path, PathBuf},
+};
 
 use rowan::{ast::AstNode, Language};
 
@@ -256,13 +259,56 @@ pub struct IncludeDirective(SyntaxNode);
 simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
 
 impl IncludeDirective {
-	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn argument(&self) -> AstResult<LitToken<Syn>> {
+	/// Yielded tokens are always tagged [`Syn::StringLit`].
+	pub fn strings(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
-			.last_token()
-			.filter(|token| token.kind() == Syn::StringLit)
-			.map(LitToken::new)
-			.ok_or(AstError::Missing)
+			.children_with_tokens()
+			.filter(|elem| elem.kind() == Syn::StringLit)
+			.map(|elem| elem.into_token().unwrap())
+	}
+
+	/// Returns `None` if this include directive has no string arguments.
+	/// Beware that the returned path will not be canonicalized.
+	pub fn include_path<'p, F>(&self, root_dir: &Path, mut parent_path: F) -> Option<PathBuf>
+	where
+		F: FnMut() -> &'p Path,
+	{
+		let mut dstrings = self.strings();
+
+		let Some(string_0) = dstrings.next() else {
+			return None;
+		};
+
+		let path_0 = Path::new(string_0.text().trim_matches('"'));
+		let mut comps_0 = path_0.components();
+
+		let inc_path_absolute = matches!(comps_0.next(), Some(std::path::Component::RootDir));
+
+		if inc_path_absolute {
+			let mut full_path = root_dir.to_path_buf();
+
+			for comp in comps_0 {
+				full_path.push(comp);
+			}
+
+			for s in dstrings {
+				full_path.push(s.text().trim_matches('"'));
+			}
+
+			Some(full_path)
+		} else {
+			let mut full_path = parent_path().to_path_buf();
+
+			for comp in comps_0 {
+				full_path.push(comp);
+			}
+
+			for s in dstrings {
+				full_path.push(s.text().trim_matches('"'));
+			}
+
+			Some(full_path)
+		}
 	}
 }
 
@@ -566,4 +612,42 @@ fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 				.filter(|token| token.kind() == Syn::DocComment)
 				.map(DocComment)
 		})
+}
+
+#[cfg(test)]
+mod test {
+	use crate::zdoom;
+
+	use super::*;
+
+	#[test]
+	fn include_path_composition() {
+		const SAMPLES: &[&str] = &[
+			r##" #include "/doom-ls.zs" "##,
+			r##" #include "./" "doom-ls.zs" "##,
+		];
+
+		const EXPECTED: &[&str] = &[
+			"/home/user/zscript-mod/doom-ls.zs",
+			"/home/user/zscript-mod/zscript/subdir/doom-ls.zs",
+		];
+
+		for (i, sample) in SAMPLES.iter().copied().enumerate() {
+			let ptree = crate::parse(
+				sample.trim(),
+				zdoom::zscript::parse::include_directive,
+				zdoom::lex::Context::ZSCRIPT_LATEST,
+			);
+
+			let directive = IncludeDirective::cast(ptree.cursor()).unwrap();
+
+			let incpath = directive
+				.include_path(Path::new("/home/user/zscript-mod"), || {
+					Path::new("/home/user/zscript-mod/zscript/subdir")
+				})
+				.unwrap();
+
+			assert_eq!(incpath, Path::new(EXPECTED[i]));
+		}
+	}
 }
