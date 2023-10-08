@@ -680,6 +680,189 @@ impl MemberQual {
 	}
 }
 
+#[derive(Debug, Default)]
+pub struct MemberQualSet {
+	// Note that as of GZDoom 4.10.0, any and all repeats are accepted silently
+	// by the compiler, even if it's a repeated `version` or `action` qualifier.
+	pub q_action: Option<ActionQual>,
+	pub q_deprecation: Option<DeprecationQual>,
+	pub q_version: Option<VersionQual>,
+	pub q_abstract: Option<SyntaxToken>,
+	pub q_clearscope: Option<SyntaxToken>,
+	pub q_final: Option<SyntaxToken>,
+	pub q_internal: Option<SyntaxToken>,
+	pub q_meta: Option<SyntaxToken>,
+	pub q_native: Option<SyntaxToken>,
+	pub q_override: Option<SyntaxToken>,
+	pub q_play: Option<SyntaxToken>,
+	pub q_private: Option<SyntaxToken>,
+	pub q_protected: Option<SyntaxToken>,
+	pub q_readonly: Option<SyntaxToken>,
+	pub q_static: Option<SyntaxToken>,
+	pub q_transient: Option<SyntaxToken>,
+	pub q_ui: Option<SyntaxToken>,
+	pub q_vararg: Option<SyntaxToken>,
+	pub q_virtual: Option<SyntaxToken>,
+	pub q_virtualscope: Option<SyntaxToken>,
+}
+
+impl MemberQualSet {
+	/// The first argument to `F` is the text range of the previous qualifier.
+	pub fn new<F>(quals: &MemberQuals, mut repeat_handler: F) -> Self
+	where
+		F: FnMut(TextRange, &MemberQual),
+	{
+		let mut ret = Self::default();
+
+		for qual in quals.iter() {
+			match qual.clone() {
+				MemberQual::Action(inner) => {
+					if let Some(prev) = &ret.q_action {
+						repeat_handler(prev.syntax().text_range(), &qual)
+					}
+
+					ret.q_action = Some(inner);
+				}
+				MemberQual::Deprecation(inner) => {
+					if let Some(prev) = &ret.q_deprecation {
+						repeat_handler(prev.syntax().text_range(), &qual)
+					}
+
+					ret.q_deprecation = Some(inner);
+				}
+				MemberQual::Version(inner) => {
+					if let Some(prev) = &ret.q_version {
+						repeat_handler(prev.syntax().text_range(), &qual)
+					}
+
+					ret.q_version = Some(inner);
+				}
+				MemberQual::Abstract(inner) => {
+					if let Some(prev) = &ret.q_abstract {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_abstract = Some(inner);
+				}
+				MemberQual::ClearScope(inner) => {
+					if let Some(prev) = &ret.q_clearscope {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_clearscope = Some(inner);
+				}
+				MemberQual::Final(inner) => {
+					if let Some(prev) = &ret.q_final {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_final = Some(inner);
+				}
+				MemberQual::Internal(inner) => {
+					if let Some(prev) = &ret.q_internal {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_internal = Some(inner);
+				}
+				MemberQual::Meta(inner) => {
+					if let Some(prev) = &ret.q_meta {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_meta = Some(inner);
+				}
+				MemberQual::Native(inner) => {
+					if let Some(prev) = &ret.q_native {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_native = Some(inner);
+				}
+				MemberQual::Override(inner) => {
+					if let Some(prev) = &ret.q_override {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_override = Some(inner);
+				}
+				MemberQual::Play(inner) => {
+					if let Some(prev) = &ret.q_play {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_play = Some(inner);
+				}
+				MemberQual::Private(inner) => {
+					if let Some(prev) = &ret.q_private {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_private = Some(inner);
+				}
+				MemberQual::Protected(inner) => {
+					if let Some(prev) = &ret.q_protected {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_protected = Some(inner);
+				}
+				MemberQual::ReadOnly(inner) => {
+					if let Some(prev) = &ret.q_readonly {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_readonly = Some(inner);
+				}
+				MemberQual::Static(inner) => {
+					if let Some(prev) = &ret.q_static {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_static = Some(inner);
+				}
+				MemberQual::Transient(inner) => {
+					if let Some(prev) = &ret.q_transient {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_transient = Some(inner);
+				}
+				MemberQual::Ui(inner) => {
+					if let Some(prev) = &ret.q_ui {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_ui = Some(inner);
+				}
+				MemberQual::VarArg(inner) => {
+					if let Some(prev) = &ret.q_vararg {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_vararg = Some(inner);
+				}
+				MemberQual::Virtual(inner) => {
+					if let Some(prev) = &ret.q_virtual {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_virtual = Some(inner);
+				}
+				MemberQual::VirtualScope(inner) => {
+					if let Some(prev) = &ret.q_virtualscope {
+						repeat_handler(prev.text_range(), &qual)
+					}
+
+					ret.q_virtualscope = Some(inner);
+				}
+			}
+		}
+
+		ret
+	}
+}
+
 // Parameter ///////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::Parameter`].
