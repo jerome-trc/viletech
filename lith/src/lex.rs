@@ -9,9 +9,235 @@ use logos::Logos;
 #[logos(error = Syn)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum Syn {
-	// Nodes: high-level constructs ////////////////////////////////////////////
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
+	/// The top-level node representing a whole file.
+	FileRoot,
+	// Nodes: high-level constructs ////////////////////////////////////////////
+	/// `'[' nontypeexpr ']'`
+	///
+	/// Can start a [`Syn::ExprType`].
+	ArrayPrefix,
+	// Nodes: expressions //////////////////////////////////////////////////////
+	/// `expr operator expr`
+	ExprBin,
+	/// `primaryexpr '.' (ident | namelit)`
+	ExprField,
+	/// Parent to only a single [`Syn::Ident`] token.
+	ExprIdent,
+	/// If this is not a string literal, it is parent to only one token tagged as
+	/// one of the following:
+	/// - [`Syn::LitFalse`]
+	/// - [`Syn::LitFloat`]
+	/// - [`Syn::LitInt`]
+	/// - [`Syn::LitName`]
+	/// - [`Syn::LitString`]
+	/// - [`Syn::LitTrue`]
+	/// If this is a string literal, it is parent to one token tagged as
+	/// [`Syn::LitString`] which may be followed by a [`Syn::Ident`] suffix,
+	/// with no allowance for trivia in between.
+	ExprLit,
+	/// `'(' expr ')'`
+	ExprGroup,
+	/// `expr operator`
+	ExprPostfix,
+	/// `operator expr`
+	ExprPrefix,
+	/// `expr? ('..' | '..=') expr?`
+	ExprRange,
+	/// One of the following:
+	/// - [`Syn::KwTypedef`]
+	/// - [`Syn::KwAny`]
+	/// - One or more type expr. prefixes followed by any other kind of expression.
+	ExprType,
+	// Tokens: keywords ////////////////////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstKeyword,
+	/// `any`
+	#[token("any")]
+	KwAny,
+	/// `typedef`
+	#[token("typedef")]
+	KwTypedef,
+	#[doc(hidden)]
+	__LastKeyword,
+	// Tokens: glyphs //////////////////////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstGlyph,
+	/// `&`; the bit-wise AND [binary operator](Syn::ExprBin).
+	#[token("&")]
+	Ampersand,
+	/// `&&`; the logical AND comparison [binary operator](Syn::ExprBin).
+	#[token("&&")]
+	Ampersand2,
+	/// `&=`; the bit-wise AND compound assignment [binary operator](Syn::ExprBin).
+	#[token("&=")]
+	AmpersandEq,
+	/// `&&=`; the logical AND compound assignment [binary operator](Syn::ExprBin).
+	#[token("&&=")]
+	Ampersand2Eq,
+	/// `<`; the numeric less-than comparison [binary operator](Syn::ExprBin).
+	#[token("<")]
+	AngleL,
+	/// `<=`; the numeric less-than-or-equals comparison [binary operator](Syn::ExprBin).
+	#[token("<=")]
+	AngleLEq,
+	/// `>`; the numeric greater-than comparison [binary operator](Syn::ExprBin).
+	#[token(">")]
+	AngleR,
+	/// `>=`; the numeric greater-than-or-equals comparison [binary operator](Syn::ExprBin).
+	#[token(">=")]
+	AngleREq,
+	/// `<<`; the bit-wise leftwards shift [binary operator](Syn::ExprBin).
+	#[token("<<")]
+	AngleL2,
+	/// `<<=`; the bit-wise leftwards shift compound assignment [binary operator](Syn::ExprBin).
+	#[token("<<=")]
+	AngleL2Eq,
+	/// `>>`; the bit-wise rightwards shift [binary operator](Syn::ExprBin).
+	#[token(">>")]
+	AngleR2,
+	/// `>>=`; the bit-wise rightwards shift compound assignment [binary operator](Syn::ExprBin).
+	#[token(">>=")]
+	AngleR2Eq,
+	/// `*`; the multiplication [binary operator](Syn::ExprBin).
+	#[token("*")]
+	Asterisk,
+	/// `**`; the exponentiation [binary operator](Syn::ExprBin).
+	#[token("**")]
+	Asterisk2,
+	/// `**=`; the exponentation compound assignment [binary operator](Syn::ExprBin).
+	#[token("**=")]
+	Asterisk2Eq,
+	/// `**|`; the saturating exponentiation [binary operator](Syn::ExprBin).
+	#[token("**|")]
+	Asterisk2Pipe,
+	/// `**|=`; the saturating exponentiation compound assignment [binary operator](Syn::ExprBin).
+	#[token("**|=")]
+	Asterisk2PipeEq,
+	/// `*=`; the multiplication compound assignment [binary operator](Syn::ExprBin).
+	#[token("*=")]
+	AsteriskEq,
+	/// `@`, used for user-defined [binary operators](Syn::ExprBin).
+	#[token("@")]
+	At,
+	/// `!`; the logical negation [prefix operator](Syn::ExprPrefix).
+	#[token("!")]
+	Bang,
+	/// `!=`; the logical inequality comparison [binary operator](Syn::ExprBin).
+	#[token("!=")]
+	BangEq,
+	/// `[`; part of [annotations], [array expressions],
+	/// [index expressions], and [array type prefixes].
+	///
+	/// [annotations]: Syn::Annotation
+	/// [array expressions]: Syn::ExprArray
+	/// [index expressions]: Syn::ExprIndex
+	/// [array type prefixes]: Syn::ArrayPrefix
+	#[token("[")]
+	BracketL,
+	/// `]`; part of [annotations], [array expressions],
+	/// [index expressions], and [array type prefixes].
+	///
+	/// [annotations]: Syn::Annotation
+	/// [array expressions]: Syn::ExprArray
+	/// [index expressions]: Syn::ExprIndex
+	/// [array type prefixes]: Syn::ArrayPrefix
+	#[token("]")]
+	BracketR,
+	/// `^`; the bit-wise XOR [binary operator](Syn::ExprBin).
+	#[token("^")]
+	Caret,
+	/// `^=`; the bit-wise XOR compound assignment [binary operator](Syn::ExprBin).
+	#[token("^=")]
+	CaretEq,
+	/// `:=`; used to specify a default argument for a [parameter](Syn::Parameter).
+	#[token(":=")]
+	ColonEq,
+	/// `.`; part of [field expressions](Syn::ExprField).
+	#[token(".")]
+	Dot,
+	/// `..`; the [range expression](Syn::ExprRange) operator.
+	#[token("..")]
+	Dot2,
+	/// `..` the inclusive-end [range expression](Syn::ExprRange) operator.
+	#[token("..=")]
+	Dot2Eq,
+	/// `=`; the assignment [binary operator](Syn::ExprBin).
+	#[token("=")]
+	Eq,
+	/// `==`; the logical equality comparison [binary operator](Syn::ExprBin).
+	#[token("==")]
+	Eq2,
+	/// `-`; the subtraction [binary operator](Syn::ExprBin) as well as the
+	/// numeric negation [prefix operator](Syn::ExprPrefix).
+	#[token("-")]
+	Minus,
+	/// `-=`; the subtraction compound assignment [binary operator](Syn::ExprBin).
+	#[token("-=")]
+	MinusEq,
+	/// `-|`; the saturating subtraction [binary operator](Syn::ExprBin).
+	#[token("-|")]
+	MinusPipe,
+	/// `-|=`; the saturating subtraction compound assignment [binary operator](Syn::ExprBin).
+	#[token("-|=")]
+	MinusPipeEq,
+	/// `(`; part of [group expressions](Syn::ExprGroup).
+	#[token("(")]
+	ParenL,
+	/// `)`; part of [group expressions](Syn::ExprGroup).
+	#[token(")")]
+	ParenR,
+	/// `%`; the remainder [binary operator](Syn::ExprBin).
+	#[token("%")]
+	Percent,
+	/// `%=`; the remainder compound assigment [binary operator](Syn::ExprBin).
+	#[token("%=")]
+	PercentEq,
+	/// `|`; the bit-wise OR [binary operator](Syn::ExprBin).
+	#[token("|")]
+	Pipe,
+	/// `|=`; the bit-wise OR compound assignment [binary operator](Syn::ExprBin).
+	#[token("|=")]
+	PipeEq,
+	/// `||`; the logical OR [binary operator](Syn::ExprBin).
+	#[token("||")]
+	Pipe2,
+	/// `||=`; the logical OR compound assignment [binary operator](Syn::ExprBin).
+	#[token("||=")]
+	Pipe2Eq,
+	/// `+`; the addition [binary operator](Syn::ExprBin).
+	#[token("+")]
+	Plus,
+	/// `++`; the string concatenation [binary operator](Syn::ExprBin).
+	#[token("++")]
+	Plus2,
+	/// `++=`; the string concatenation compound assignment [binary operator](Syn::ExprBin).
+	#[token("++=")]
+	Plus2Eq,
+	/// `+=`; the addition compound assignment [binary operator](Syn::ExprBin).
+	#[token("+=")]
+	PlusEq,
+	/// `+|`; the saturating addition [binary operator](Syn::ExprBin).
+	#[token("+|")]
+	PlusPipe,
+	/// `+|=`; the saturating addition compound assignment [binary operator](Syn::ExprBin).
+	#[token("+|=")]
+	PlusPipeEq,
+	/// `/`; the division [binary operator](Syn::ExprBin).
+	#[token("/")]
+	Slash,
+	/// `/=`; the division compound assignment [binary operator](Syn::ExprBin).
+	#[token("/=")]
+	SlashEq,
+	/// `~`; the bitwise negation [prefix operator](Syn::ExprPrefix).
+	#[token("~")]
+	Tilde,
+	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syn::ExprBin).
+	#[token("~==")]
+	TildeEq2,
+	#[doc(hidden)]
+	__LastGlyph,
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// `false`
 	#[token("false")]
@@ -51,6 +277,9 @@ pub enum Syn {
 	/// `true`
 	#[token("true")]
 	LitTrue,
+	/// `|_|`
+	#[token("|_|")]
+	LitVoid,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// Same rules as C identifiers.
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
@@ -76,6 +305,18 @@ pub enum Syn {
 }
 
 impl Syn {
+	#[must_use]
+	pub fn is_glyph(self) -> bool {
+		let u = self as u16;
+		u > (Self::__FirstGlyph as u16) && u < (Self::__LastGlyph as u16)
+	}
+
+	#[must_use]
+	pub fn is_keyword(self) -> bool {
+		let u = self as u16;
+		u > (Self::__FirstKeyword as u16) && u < (Self::__LastKeyword as u16)
+	}
+
 	#[must_use]
 	pub fn is_trivia(self) -> bool {
 		matches!(self, Self::Whitespace | Self::Comment)
