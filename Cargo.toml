@@ -7,10 +7,12 @@ members = [
 	"data",
 	"doomfront",
 	"engine",
+	"lith",
 	"mus2midi",
 	"server",
 	"utils",
 	"vfs",
+	"vilify",
 	"vzscript",
 	"wadload",
 ]
@@ -49,10 +51,10 @@ byteorder = "1.4.3"
 clap = { version = "4.3.2", features = ["derive"] }
 # Same version as `kira`. Specified here since it's needed by MIDI code.
 cpal = "0.15.1"
-cranelift = "0.99.1"
-cranelift-jit = "0.99.1"
-cranelift-module = "0.99.1"
-cranelift-interpreter = "0.99.1"
+cranelift = "0.100.0"
+cranelift-jit = "0.100.0"
+cranelift-module = "0.100.0"
+cranelift-interpreter = "0.100.0"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 # Must be compatible with `bevy_egui`.

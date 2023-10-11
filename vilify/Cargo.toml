@@ -1,0 +1,15 @@
+[package]
+name = "vilify"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = []
+description = "VileTech backwards compatibility transformers"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/vilify"
+keywords = ["viletech"]
+license = "MIT OR Apache-2.0"
+publish = false
+repository.workspace = true
+
+[dependencies]
