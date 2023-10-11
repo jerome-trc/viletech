@@ -2,6 +2,7 @@
 
 pub(crate) mod intern;
 
+pub mod ast;
 pub mod lex;
 
 pub use lex::Syn;

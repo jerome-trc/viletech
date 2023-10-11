@@ -12,6 +12,45 @@ pub enum Syn {
 	// Nodes: high-level constructs ////////////////////////////////////////////
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
+	// Tokens: literals ////////////////////////////////////////////////////////
+	/// `false`
+	#[token("false")]
+	LitFalse,
+	/// Uses the same syntax as Rust floating-point literals.
+	#[regex(r#"[0-9][0-9_]*\.[^._\p{XID_Start}]*(f32|f64)?"#)]
+	#[regex(r#"[0-9][0-9_]*\.[0-9][0-9_]*(f32|f64)?"#)]
+	#[regex(r#"[0-9][0-9_]*(\.[0-9][0-9_]*)?[eE][+-]?[0-9_]*[0-9][0-9_]*(f32|f64)?"#)]
+	LitFloat,
+	/// Uses the same syntax as Rust integer literals.
+	#[regex("[0-9][0-9_]*(u8|u16|u32|u64|i8|i16|i32|i64)?")]
+	#[regex("0b[01_]*[01][01_]*(u8|u16|u32|u64|i8|i16|i32|i64)?")]
+	#[regex("0o[0-7_]*[0-7][0-7_]*(u8|u16|u32|u64|i8|i16|i32|i64)?")]
+	#[regex("0x[0-9a-fA-F_]*[0-9a-fA-F][0-9a-fA-F_]*(u8|u16|u32|u64|i8|i16|i32|i64)?")]
+	LitInt,
+	#[regex("'[^''\n]*'")]
+	LitName,
+	/// Uses the same syntax as Rust string literals.
+	#[regex(
+		r##"(?x)"
+		(
+			[^"\\]|
+			(\\')|
+			(\\")|
+			(\\n)|
+			(\\r)|
+			(\\t)|
+			(\\\\)|
+			(\\0)|
+			(\\x[0-8][0-9a-fA-F])|
+			(\\u\{([0-9a-fA-F]_*){1,6}\})|
+			(\\\n)
+		)*
+		""##
+	)]
+	LitString,
+	/// `true`
+	#[token("true")]
+	LitTrue,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// Same rules as C identifiers.
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]
