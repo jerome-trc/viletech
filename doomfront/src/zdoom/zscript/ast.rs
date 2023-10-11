@@ -322,20 +322,26 @@ pub struct VersionDirective(SyntaxNode);
 simple_astnode!(Syn, VersionDirective, Syn::VersionDirective);
 
 impl VersionDirective {
+	/// The returned token is always tagged [`Syn::StringLit`].
+	pub fn string(&self) -> AstResult<LitToken<Syn>> {
+		let token = self.0.last_token().ok_or(AstError::Missing)?;
+
+		match token.kind() {
+			Syn::StringLit => Ok(LitToken::new(token)),
+			_ => Err(AstError::Incorrect),
+		}
+	}
+
 	/// [`IntErrorKind::Empty`] is returned if the expected string literal is absent.
 	pub fn version(&self) -> Result<zdoom::Version, IntErrorKind> {
-		let lit = self.0.last_token().ok_or(IntErrorKind::Empty)?;
-		let Syn::StringLit = lit.kind() else {
+		let lit = self.string().map_err(|_| IntErrorKind::Empty)?;
+		let text = lit.string().unwrap();
+
+		if text.is_empty() {
 			return Err(IntErrorKind::Empty);
 		};
-		let text = lit.text();
-		let start = text.chars().position(|c| c == '"').unwrap();
-		let end = text.chars().rev().position(|c| c == '"').unwrap();
-		let span = (start + 1)..(text.len() - end - 1);
-		let Some(content) = text.get(span) else {
-			return Err(IntErrorKind::Empty);
-		};
-		content.parse()
+
+		text.parse()
 	}
 }
 
@@ -401,7 +407,7 @@ simple_astnode!(Syn, VersionQual, Syn::VersionQual);
 
 impl VersionQual {
 	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn version(&self) -> AstResult<LitToken<Syn>> {
+	pub fn string(&self) -> AstResult<LitToken<Syn>> {
 		self.0
 			.children_with_tokens()
 			.skip_while(|elem| elem.kind() != Syn::ParenL)
@@ -411,6 +417,18 @@ impl VersionQual {
 					.map(LitToken::new)
 			})
 			.ok_or(AstError::Missing)
+	}
+
+	/// [`IntErrorKind::Empty`] is returned if the expected string literal is absent.
+	pub fn version(&self) -> Result<zdoom::Version, IntErrorKind> {
+		let lit = self.string().map_err(|_| IntErrorKind::Empty)?;
+		let text = lit.string().unwrap();
+
+		if text.is_empty() {
+			return Err(IntErrorKind::Empty);
+		};
+
+		text.parse()
 	}
 }
 

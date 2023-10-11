@@ -222,11 +222,11 @@ fn stateflow_goto(p: &mut Parser<Syn>) {
 				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 			}
 			Token::Semicolon | Token::Plus | Token::Eof => {
-				p.advance(Syn::Ident);
+				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 			}
 			other => p.advance_with_error(
 				Syn::from(other),
-				&[&["an identifier", "`.`", "`::`", "`+`", "`;`"]],
+				&[&["an identifier", "`::`", "`+`", "`;`"]],
 			),
 		}
 	} else {
@@ -413,7 +413,7 @@ fn state_frames(p: &mut Parser<Syn>) {
 						| Token::Pound | Token::Pound4
 				)
 		},
-		|t| Syn::from(t),
+		Syn::from,
 		&[&["a state frame list"]],
 	);
 }

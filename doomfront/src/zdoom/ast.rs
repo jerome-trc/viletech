@@ -88,6 +88,7 @@ impl LitToken<decorate::Syn> {
 		}
 	}
 
+	/// A convenience function whichs trims off delimiting single quotes.
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
 		match self.0.kind() {
@@ -96,6 +97,7 @@ impl LitToken<decorate::Syn> {
 		}
 	}
 
+	/// A convenience function whichs trims off delimiting double quotes.
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {
@@ -131,6 +133,7 @@ impl LitToken<cvarinfo::Syn> {
 		}
 	}
 
+	/// A convenience function whichs trims off delimiting double quotes.
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {

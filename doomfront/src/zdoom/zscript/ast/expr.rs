@@ -352,9 +352,21 @@ impl Argument {
 	/// The returned token is always tagged [`Syn::Ident`].
 	#[must_use]
 	pub fn name(&self) -> Option<SyntaxToken> {
-		self.0
+		let Some(ret) = self
+			.0
 			.first_token()
 			.filter(|token| token.kind() == Syn::Ident)
+		else {
+			return None;
+		};
+
+		if let Expr::Ident(e_id) = self.expr() {
+			if e_id.token().index() == ret.index() {
+				return None;
+			}
+		}
+
+		Some(ret)
 	}
 
 	#[must_use]

@@ -154,6 +154,17 @@ pub struct LetType(SyntaxNode);
 
 simple_astnode!(Syn, LetType, Syn::LetType);
 
+impl LetType {
+	/// This is the only content of one of these nodes;
+	/// the returned token is always tagged [`Syn::KwLet`].
+	#[must_use]
+	pub fn keyword(&self) -> SyntaxToken {
+		let ret = self.0.first_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::KwLet);
+		ret
+	}
+}
+
 // MapType /////////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::MapType`].

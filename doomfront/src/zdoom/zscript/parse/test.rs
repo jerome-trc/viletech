@@ -173,7 +173,7 @@ fn smoke_version_qual() {
 	let ptree: ParseTree = crate::parse(SOURCE, version_qual, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
 	let qual = ast::VersionQual::cast(ptree.cursor()).unwrap();
-	assert_eq!(qual.version().unwrap().string().unwrap(), "3.7.1");
+	assert_eq!(qual.string().unwrap().string().unwrap(), "3.7.1");
 }
 
 #[test]
@@ -416,6 +416,29 @@ version "3.7.1"
 
 	let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+
+	let mut tops = ptree
+		.cursor()
+		.children()
+		.map(|node| ast::TopLevel::cast(node).unwrap());
+
+	{
+		let ast::TopLevel::Version(vers_directive) = tops.next().unwrap() else {
+			panic!()
+		};
+
+		assert_eq!(vers_directive.string().unwrap().string().unwrap(), "3.7.1");
+
+		assert_eq!(
+			vers_directive.version().unwrap(),
+			zdoom::Version {
+				major: 3,
+				minor: 7,
+				rev: 1
+			}
+		);
+	}
 }
 
 // Class/structure/etc. ////////////////////////////////////////////////////////
@@ -624,10 +647,66 @@ fn smoke_states_block() {
 #[test]
 fn smoke_goto() {
 	const SOURCE: &str = r#####"States {
-goto Super::FrameSetup;
+goto Super::LoremIpsum + 12345;
+goto Dolor::SitAmet;
+goto Consectetur;
 }"#####;
 
 	let ptree: ParseTree = crate::parse(SOURCE, states_block, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
+
+	let ast = ast::StatesBlock::cast(ptree.cursor()).unwrap();
+	let mut innards = ast.innards();
+
+	{
+		let innard = innards.next().unwrap();
+
+		let ast::StatesInnard::Flow(flow) = innard else {
+			panic!()
+		};
+
+		let ast::StateFlowKind::Goto {
+			scope,
+			name,
+			offset,
+		} = flow.kind()
+		else {
+			panic!()
+		};
+
+		assert_eq!(scope.unwrap().kind(), Syn::KwSuper);
+		assert_eq!(format!("{}", name.syntax().text()), "LoremIpsum");
+		assert_eq!(offset.unwrap().int().unwrap().unwrap().0, 12345);
+	}
+
+	{
+		let innard = innards.next().unwrap();
+
+		let ast::StatesInnard::Flow(flow) = innard else {
+			panic!()
+		};
+
+		let ast::StateFlowKind::Goto { scope, .. } = flow.kind() else {
+			panic!()
+		};
+
+		let s = scope.unwrap();
+		assert_eq!(s.kind(), Syn::Ident);
+		assert_eq!(s.text(), "Dolor");
+	}
+
+	{
+		let innard = innards.next().unwrap();
+
+		let ast::StatesInnard::Flow(flow) = innard else {
+			panic!()
+		};
+
+		let ast::StateFlowKind::Goto { name, .. } = flow.kind() else {
+			panic!()
+		};
+
+		assert_eq!(format!("{}", name.syntax().text()), "Consectetur");
+	}
 }

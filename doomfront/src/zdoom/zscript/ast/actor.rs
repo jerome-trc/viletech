@@ -273,6 +273,17 @@ pub enum StateUsage {
 	Weapon(SyntaxToken),
 }
 
+impl StateUsage {
+	#[must_use]
+	pub fn syntax(&self) -> &SyntaxToken {
+		match self {
+			Self::Actor(inner) | Self::Item(inner) | Self::Overlay(inner) | Self::Weapon(inner) => {
+				inner
+			}
+		}
+	}
+}
+
 // StatesInnard ////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -314,33 +325,42 @@ simple_astnode!(Syn, StateFlow, Syn::StateFlow);
 impl StateFlow {
 	#[must_use]
 	pub fn kind(&self) -> StateFlowKind {
-		let elem = self.0.first_child_or_token().unwrap();
+		let token0 = self.0.first_token().unwrap();
 
-		match elem.kind() {
-			Syn::KwGoto => {
-				let node = elem.into_node().unwrap();
-				let scope = node.children_with_tokens().find_map(|elem| {
-					elem.into_token()
-						.filter(|token| matches!(token.kind(), Syn::Ident | Syn::KwSuper))
-				});
-				let name = node.children().find_map(IdentChain::cast).unwrap();
-				let offset = node.children_with_tokens().find_map(|elem| {
-					elem.into_token()
-						.filter(|token| token.kind() == Syn::IntLit)
-						.map(LitToken::new)
-				});
-
-				StateFlowKind::Goto {
-					scope,
-					name,
-					offset,
-				}
-			}
-			Syn::KwFail => StateFlowKind::Fail(elem.into_token().unwrap()),
-			Syn::KwLoop => StateFlowKind::Loop(elem.into_token().unwrap()),
-			Syn::KwStop => StateFlowKind::Stop(elem.into_token().unwrap()),
-			Syn::KwWait => StateFlowKind::Wait(elem.into_token().unwrap()),
+		match self.0.first_token().unwrap().kind() {
+			Syn::KwGoto => {}
+			Syn::KwFail => return StateFlowKind::Fail(token0),
+			Syn::KwLoop => return StateFlowKind::Loop(token0),
+			Syn::KwStop => return StateFlowKind::Stop(token0),
+			Syn::KwWait => return StateFlowKind::Wait(token0),
 			_ => unreachable!(),
+		}
+
+		let name = self.0.children().find_map(IdentChain::cast).unwrap();
+
+		let mut prev = name
+			.syntax()
+			.siblings_with_tokens(rowan::Direction::Prev)
+			.skip_while(|elem| elem.kind() != Syn::Colon2);
+		let mut next = name
+			.syntax()
+			.siblings_with_tokens(rowan::Direction::Next)
+			.skip_while(|elem| elem.kind() != Syn::Plus);
+
+		let scope = prev.find_map(|elem| {
+			elem.into_token()
+				.filter(|token| matches!(token.kind(), Syn::Ident | Syn::KwSuper))
+		});
+
+		let offset = next.find_map(|elem| {
+			elem.into_token()
+				.filter(|token| token.kind() == Syn::IntLit)
+		});
+
+		StateFlowKind::Goto {
+			scope,
+			name,
+			offset: offset.map(LitToken::new),
 		}
 	}
 }

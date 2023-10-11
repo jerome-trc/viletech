@@ -21,6 +21,7 @@ pub enum Statement {
 	Expr(ExprStat),
 	For(ForStat),
 	ForEach(ForEachStat),
+	If(IfStat),
 	Local(LocalStat),
 	Return(ReturnStat),
 	StaticConst(StaticConstStat),
@@ -46,7 +47,8 @@ impl AstNode for Statement {
 				| Syn::DoWhileStat
 				| Syn::EmptyStat | Syn::ExprStat
 				| Syn::ForStat | Syn::ForEachStat
-				| Syn::LocalStat | Syn::ReturnStat
+				| Syn::IfStat | Syn::LocalStat
+				| Syn::ReturnStat
 				| Syn::StaticConstStat
 				| Syn::SwitchStat
 				| Syn::UntilStat | Syn::WhileStat
@@ -69,6 +71,7 @@ impl AstNode for Statement {
 			Syn::ExprStat => Some(Self::Expr(ExprStat(node))),
 			Syn::ForStat => Some(Self::For(ForStat(node))),
 			Syn::ForEachStat => Some(Self::ForEach(ForEachStat(node))),
+			Syn::IfStat => Some(Self::If(IfStat(node))),
 			Syn::LocalStat => Some(Self::Local(LocalStat(node))),
 			Syn::ReturnStat => Some(Self::Return(ReturnStat(node))),
 			Syn::StaticConstStat => Some(Self::StaticConst(StaticConstStat(node))),
@@ -94,6 +97,7 @@ impl AstNode for Statement {
 			Self::Expr(inner) => inner.syntax(),
 			Self::For(inner) => inner.syntax(),
 			Self::ForEach(inner) => inner.syntax(),
+			Self::If(inner) => inner.syntax(),
 			Self::Local(inner) => inner.syntax(),
 			Self::Return(inner) => inner.syntax(),
 			Self::StaticConst(inner) => inner.syntax(),
@@ -249,12 +253,14 @@ impl CondLoopStat {
 				let Some(node) = self.0.first_child() else {
 					return Err(AstError::Missing);
 				};
+
 				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			Syn::WhileStat | Syn::UntilStat => {
 				let Some(node) = self.0.last_child() else {
 					return Err(AstError::Missing);
 				};
+
 				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
 			_ => unreachable!(),
@@ -434,6 +440,25 @@ impl ForEachStat {
 			return Err(AstError::Missing);
 		};
 		Statement::cast(node).ok_or(AstError::Incorrect)
+	}
+}
+
+// IfStat //////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::IfStat`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct IfStat(SyntaxNode);
+
+simple_astnode!(Syn, IfStat, Syn::IfStat);
+
+impl IfStat {
+	pub fn condition(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+
+	pub fn statement(&self) -> AstResult<Statement> {
+		Statement::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
 	}
 }
 
