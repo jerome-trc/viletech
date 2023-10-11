@@ -109,12 +109,6 @@ pub enum Syn {
 	/// `**=`; the exponentation compound assignment [binary operator](Syn::ExprBin).
 	#[token("**=")]
 	Asterisk2Eq,
-	/// `**|`; the saturating exponentiation [binary operator](Syn::ExprBin).
-	#[token("**|")]
-	Asterisk2Pipe,
-	/// `**|=`; the saturating exponentiation compound assignment [binary operator](Syn::ExprBin).
-	#[token("**|=")]
-	Asterisk2PipeEq,
 	/// `*=`; the multiplication compound assignment [binary operator](Syn::ExprBin).
 	#[token("*=")]
 	AsteriskEq,
@@ -176,12 +170,6 @@ pub enum Syn {
 	/// `-=`; the subtraction compound assignment [binary operator](Syn::ExprBin).
 	#[token("-=")]
 	MinusEq,
-	/// `-|`; the saturating subtraction [binary operator](Syn::ExprBin).
-	#[token("-|")]
-	MinusPipe,
-	/// `-|=`; the saturating subtraction compound assignment [binary operator](Syn::ExprBin).
-	#[token("-|=")]
-	MinusPipeEq,
 	/// `(`; part of [group expressions](Syn::ExprGroup).
 	#[token("(")]
 	ParenL,
@@ -218,12 +206,6 @@ pub enum Syn {
 	/// `+=`; the addition compound assignment [binary operator](Syn::ExprBin).
 	#[token("+=")]
 	PlusEq,
-	/// `+|`; the saturating addition [binary operator](Syn::ExprBin).
-	#[token("+|")]
-	PlusPipe,
-	/// `+|=`; the saturating addition compound assignment [binary operator](Syn::ExprBin).
-	#[token("+|=")]
-	PlusPipeEq,
 	/// `/`; the division [binary operator](Syn::ExprBin).
 	#[token("/")]
 	Slash,
