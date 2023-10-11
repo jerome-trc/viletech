@@ -14,6 +14,7 @@ repository.workspace = true
 
 [dependencies]
 doomfront = { path = "../doomfront" } # Only used for its parsing code.
+util = { package = "viletech-utils", path = "../utils" }
 
 ariadne.workspace = true
 bitflags.workspace = true
@@ -37,3 +38,10 @@ bumpalo = "3.14.0"
 cee-scape = "0.1.6"
 im = "15.1.0"
 tiptoe = { version = "0.0.2", features = ["sync"] }
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion.workspace = true

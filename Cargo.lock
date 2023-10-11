@@ -3258,6 +3258,7 @@ dependencies = [
  "cranelift-interpreter",
  "cranelift-jit",
  "cranelift-module",
+ "criterion",
  "crossbeam",
  "dashmap",
  "doomfront",
@@ -3267,6 +3268,7 @@ dependencies = [
  "rustc-hash",
  "smallvec",
  "tiptoe",
+ "viletech-utils",
 ]
 
 [[package]]
