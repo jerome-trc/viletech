@@ -1,6 +1,9 @@
 //! Runtime information storage and handle types.
 
-use std::sync::atomic::{self, AtomicU32};
+use std::{
+	mem::ManuallyDrop,
+	sync::atomic::{self, AtomicU32},
+};
 
 use crate::arena::APtr;
 
@@ -38,5 +41,53 @@ impl<R> Clone for Handle<R> {
 impl<R> Drop for Handle<R> {
 	fn drop(&mut self) {
 		self.0.handles.fetch_sub(1, atomic::Ordering::Release);
+	}
+}
+
+pub(crate) struct Record {
+	pub(crate) tag: StoreTag,
+	pub(crate) inner: StoreUnion,
+}
+
+/// Gets discriminated with [`StoreTag`].
+pub(crate) union StoreUnion {
+	// TODO: determine backend.
+	pub(crate) func: ManuallyDrop<APtr<Store<()>>>,
+	pub(crate) data: ManuallyDrop<APtr<Store<()>>>,
+	pub(crate) typedef: ManuallyDrop<APtr<Store<()>>>,
+}
+
+/// Separated discriminant for [`StoreUnion`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StoreTag {
+	Function,
+	Data,
+	Type,
+}
+
+impl std::fmt::Debug for Record {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Record")
+			.field("tag", &self.tag)
+			.field("data", unsafe {
+				match self.tag {
+					StoreTag::Function => &self.inner.func,
+					StoreTag::Data => &self.inner.data,
+					StoreTag::Type => &self.inner.typedef,
+				}
+			})
+			.finish()
+	}
+}
+
+impl Drop for Record {
+	fn drop(&mut self) {
+		unsafe {
+			match self.tag {
+				StoreTag::Function => ManuallyDrop::drop(&mut self.inner.func),
+				StoreTag::Data => ManuallyDrop::drop(&mut self.inner.data),
+				StoreTag::Type => ManuallyDrop::drop(&mut self.inner.typedef),
+			}
+		}
 	}
 }

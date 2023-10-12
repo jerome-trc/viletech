@@ -2,11 +2,13 @@ use petgraph::prelude::DiGraph;
 
 use crate::ParseTree;
 
+pub type FileIx = petgraph::graph::DefaultIx;
+
 #[derive(Debug)]
 pub struct FileTree {
 	/// Edges run from parents ([`Node::Folder`]) to children ([`Node::File`]).
 	/// An invalid graph is always safe but will cause unexpected compiler errors.
-	pub files: DiGraph<Node, ()>,
+	pub files: DiGraph<Node, (), FileIx>,
 }
 
 #[derive(Debug)]
