@@ -5,12 +5,15 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+pub(crate) mod compile;
 pub(crate) mod intern;
 
+pub mod arena;
 pub mod ast;
 pub mod filetree;
 pub mod issue;
 pub mod parse;
+pub mod rti;
 pub mod syn;
 
 pub use syn::Syn;

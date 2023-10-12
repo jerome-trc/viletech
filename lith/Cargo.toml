@@ -39,7 +39,6 @@ backtrace = "0.3.69"
 bumpalo = "3.14.0"
 cee-scape = "0.1.6"
 im = "15.1.0"
-tiptoe = { version = "0.0.2", features = ["sync"] }
 
 [[bench]]
 name = "bench"
