@@ -60,7 +60,7 @@ fn smoke_literal_float() {
 
 #[test]
 fn smoke_literal_decimal() {
-	const SAMPLES: &[&str] = &["0", "0_", "0_u8"];
+	const SAMPLES: &[&str] = &["0", "0_", "0_u8", "0_i128"];
 
 	for sample in SAMPLES {
 		let ptree: ParseTree = doomfront::parse(

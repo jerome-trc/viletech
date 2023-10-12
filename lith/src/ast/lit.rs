@@ -25,7 +25,7 @@ impl LitToken {
 
 	/// Returns `None` if this is not tagged with [`Syn::LitFloat`].
 	#[must_use]
-	pub fn float(&self) -> Option<Result<f64, ParseFloatError>> {
+	pub fn float(&self) -> Option<Result<FloatLit, ParseFloatError>> {
 		if !matches!(self.0.kind(), Syn::LitFloat) {
 			return None;
 		}
@@ -45,14 +45,23 @@ impl LitToken {
 			temp.push(c);
 		}
 
-		Some(temp.parse::<f64>())
+		let num = match temp.parse::<f64>() {
+			Ok(n) => n,
+			Err(err) => return Some(Err(err)),
+		};
+
+		match text.get((text.len().saturating_sub(3))..) {
+			Some("f32") => Some(Ok(FloatLit::F32(num))),
+			Some("f64") => Some(Ok(FloatLit::F64(num))),
+			_ => Some(Ok(FloatLit::NoSuffix(num))),
+		}
 	}
 
 	/// Returns `None` if this is not tagged with [`Syn::LitInt`].
 	/// Returns `Some(Err)` if integer parsing fails,
-	/// such as if the written value is too large to fit into a `u64`.
+	/// such as if the written value is too large to fit into a `u128`.
 	#[must_use]
-	pub fn int(&self) -> Option<Result<u64, ParseIntError>> {
+	pub fn int(&self) -> Option<Result<IntLit, ParseIntError>> {
 		if !matches!(self.0.kind(), Syn::LitInt) {
 			return None;
 		}
@@ -84,7 +93,32 @@ impl LitToken {
 			temp.push(c);
 		}
 
-		Some(u64::from_str_radix(&temp, radix))
+		let num = match u128::from_str_radix(&temp, radix) {
+			Ok(n) => n,
+			Err(err) => return Some(Err(err)),
+		};
+
+		match text.get((text.len().saturating_sub(4))..) {
+			Some("i128") => return Some(Ok(IntLit::I128(num))),
+			Some("u128") => return Some(Ok(IntLit::U128(num))),
+			_ => {}
+		}
+
+		match text.get((text.len().saturating_sub(3))..) {
+			Some("i64") => return Some(Ok(IntLit::I64(num))),
+			Some("u64") => return Some(Ok(IntLit::U64(num))),
+			Some("i32") => return Some(Ok(IntLit::I32(num))),
+			Some("u32") => return Some(Ok(IntLit::U32(num))),
+			Some("i16") => return Some(Ok(IntLit::I16(num))),
+			Some("u16") => return Some(Ok(IntLit::U16(num))),
+			_ => {}
+		}
+
+		match text.get((text.len().saturating_sub(2))..) {
+			Some("i8") => Some(Ok(IntLit::I8(num))),
+			Some("u8") => Some(Ok(IntLit::U8(num))),
+			_ => Some(Ok(IntLit::NoSuffix(num))),
+		}
 	}
 
 	#[must_use]
@@ -119,4 +153,28 @@ impl std::ops::Deref for LitToken {
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
+}
+
+/// Attaches a suffix tag to the output of [`LitToken::int`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntLit {
+	NoSuffix(u128),
+	I8(u128),
+	I16(u128),
+	I32(u128),
+	I64(u128),
+	I128(u128),
+	U8(u128),
+	U16(u128),
+	U32(u128),
+	U64(u128),
+	U128(u128),
+}
+
+/// Attaches a suffix tag to the output of [`LitToken::float`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FloatLit {
+	NoSuffix(f64),
+	F32(f64),
+	F64(f64),
 }
