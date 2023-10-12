@@ -31,8 +31,8 @@ pub enum Syn {
 	/// - [`Syn::LitFloat`]
 	/// - [`Syn::LitInt`]
 	/// - [`Syn::LitName`]
-	/// - [`Syn::LitString`]
 	/// - [`Syn::LitTrue`]
+	/// - [`Syn::LitVoid`]
 	/// If this is a string literal, it is parent to one token tagged as
 	/// [`Syn::LitString`] which may be followed by a [`Syn::Ident`] suffix,
 	/// with no allowance for trivia in between.

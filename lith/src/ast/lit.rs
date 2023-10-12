@@ -9,7 +9,7 @@ use crate::{Syn, SyntaxToken};
 /// See [`Syn::Literal`]'s documentation to see possible token tags.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct LitToken(SyntaxToken);
+pub struct LitToken(pub(super) SyntaxToken);
 
 impl LitToken {
 	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
@@ -32,9 +32,13 @@ impl LitToken {
 
 		let text = self.0.text();
 
-		// Identify the position of the suffix.
-		let end = text.len() - text.chars().rev().position(|c| c != 'f').unwrap();
-		let inner = &text[0..end];
+		let inner = if text.ends_with("f32") || text.ends_with("f64") {
+			&text[0..(text.len() - 3)]
+		} else {
+			text
+		};
+
+		// TODO: consider `SmallString` here.
 		let mut temp = String::with_capacity(text.len());
 
 		for c in inner.chars().filter(|c| *c != '_') {
@@ -68,20 +72,31 @@ impl LitToken {
 
 		// Identify the span between the prefix and suffix.
 		let start = if radix != 10 { 2 } else { 0 };
-		let end = text.len()
-			- text
-				.chars()
-				.rev()
-				.position(|c| !matches!(c, 'i' | 'u'))
-				.unwrap();
+		let end = text
+			.chars()
+			.position(|c| matches!(c, 'i' | 'u'))
+			.unwrap_or(text.len());
 		let inner = &text[start..end];
 		let mut temp = String::with_capacity(inner.len());
 
+		// TODO: consider `SmallString` here.
 		for c in inner.chars().filter(|c| *c != '_') {
 			temp.push(c);
 		}
 
 		Some(u64::from_str_radix(&temp, radix))
+	}
+
+	#[must_use]
+	pub fn name(&self) -> Option<&str> {
+		if self.kind() != Syn::LitName {
+			return None;
+		}
+
+		let text = self.0.text();
+		let start = text.chars().position(|c| c == '\'').unwrap();
+		let end = text.chars().rev().position(|c| c == '\'').unwrap();
+		text.get((start + 1)..(text.len() - end - 1))
 	}
 
 	/// If this wraps a [`Syn::LitString`] token, this returns the string's
