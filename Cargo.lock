@@ -3265,6 +3265,8 @@ dependencies = [
  "im",
  "logos",
  "parking_lot 0.12.1",
+ "petgraph",
+ "rayon",
  "rustc-hash",
  "smallvec",
  "tiptoe",

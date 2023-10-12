@@ -27,6 +27,8 @@ crossbeam.workspace = true
 dashmap.workspace = true
 logos.workspace = true
 parking_lot.workspace = true
+petgraph.workspace = true
+rayon.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
 

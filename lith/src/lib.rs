@@ -8,6 +8,7 @@
 pub(crate) mod intern;
 
 pub mod ast;
+pub mod filetree;
 pub mod issue;
 pub mod parse;
 pub mod syn;
