@@ -13,11 +13,25 @@ pub enum Syn {
 	Error,
 	/// The top-level node representing a whole file.
 	FileRoot,
+
 	// Nodes: high-level constructs ////////////////////////////////////////////
 	/// `'[' nontypeexpr ']'`
 	///
 	/// Can start a [`Syn::ExprType`].
 	ArrayPrefix,
+	/// `'::' ident '::'`
+	BlockLabel,
+	/// `memberquals 'function' ident paramlist returntype? (block | ';')`
+	FunctionDecl,
+	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
+	FunctionBody,
+	/// `ident typespec (':=' expr)?`
+	Parameter,
+	/// `'(' param? (',' param)* ','? ')'`
+	ParamList,
+	/// `':' typeexpr`
+	TypeSpec,
+
 	// Nodes: expressions //////////////////////////////////////////////////////
 	/// `expr operator expr`
 	ExprBin,
@@ -50,20 +64,31 @@ pub enum Syn {
 	/// - [`Syn::KwAny`]
 	/// - One or more type expr. prefixes followed by any other kind of expression.
 	ExprType,
+
 	// Tokens: keywords ////////////////////////////////////////////////////////
 	#[doc(hidden)]
 	__FirstKeyword,
+
 	/// `any`
 	#[token("any")]
 	KwAny,
+	/// `const`
+	#[token("const")]
+	KwConst,
+	/// `function`
+	#[token("function")]
+	KwFunction,
 	/// `typedef`
 	#[token("typedef")]
 	KwTypedef,
+
 	#[doc(hidden)]
 	__LastKeyword,
+
 	// Tokens: glyphs //////////////////////////////////////////////////////////
 	#[doc(hidden)]
 	__FirstGlyph,
+
 	/// `&`; the bit-wise AND [binary operator](Syn::ExprBin).
 	#[token("&")]
 	Ampersand,
@@ -121,6 +146,12 @@ pub enum Syn {
 	/// `!=`; the logical inequality comparison [binary operator](Syn::ExprBin).
 	#[token("!=")]
 	BangEq,
+	/// `{`; used to open blocks.
+	#[token("{")]
+	BraceL,
+	/// `}`; used to close blocks.
+	#[token("}")]
+	BraceR,
 	/// `[`; part of [annotations], [array expressions],
 	/// [index expressions], and [array type prefixes].
 	///
@@ -145,9 +176,18 @@ pub enum Syn {
 	/// `^=`; the bit-wise XOR compound assignment [binary operator](Syn::ExprBin).
 	#[token("^=")]
 	CaretEq,
+	/// `:`; used in [type specifiers](Syn::TypeSpec).
+	#[token(":")]
+	Colon,
+	/// `::`; used in [block labels](Syn::BlockLabel).
+	#[token("::")]
+	Colon2,
 	/// `:=`; used to specify a default argument for a [parameter](Syn::Parameter).
 	#[token(":=")]
 	ColonEq,
+	/// `,`
+	#[token(",")]
+	Comma,
 	/// `.`; part of [field expressions](Syn::ExprField).
 	#[token(".")]
 	Dot,
@@ -206,6 +246,9 @@ pub enum Syn {
 	/// `+=`; the addition compound assignment [binary operator](Syn::ExprBin).
 	#[token("+=")]
 	PlusEq,
+	/// `;`; used as a terminator, like in C.
+	#[token(";")]
+	Semicolon,
 	/// `/`; the division [binary operator](Syn::ExprBin).
 	#[token("/")]
 	Slash,
@@ -218,8 +261,10 @@ pub enum Syn {
 	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syn::ExprBin).
 	#[token("~==")]
 	TildeEq2,
+
 	#[doc(hidden)]
 	__LastGlyph,
+
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// `false`
 	#[token("false")]
@@ -262,6 +307,7 @@ pub enum Syn {
 	/// `|_|`
 	#[token("|_|")]
 	LitVoid,
+
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
 	/// Same rules as C identifiers.
 	#[regex("[a-zA-Z_][a-zA-Z0-9_]*", priority = 4)]

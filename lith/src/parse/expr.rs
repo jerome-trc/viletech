@@ -4,7 +4,7 @@ use doomfront::parser::{CloseMark, Parser};
 
 use crate::Syn;
 
-use super::common::trivia_0plus;
+use super::common::*;
 
 pub const EXPR_FIRST_SET: &[Syn] = &[
 	Syn::Bang,
