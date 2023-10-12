@@ -150,9 +150,12 @@ fn trivia_1plus(p: &mut Parser<Syn>) {
 mod test {
 	use rowan::ast::AstNode;
 
-	use crate::zdoom::{
-		self,
-		cvarinfo::{ast, ParseTree},
+	use crate::{
+		testing::*,
+		zdoom::{
+			self,
+			cvarinfo::{ast, ParseTree},
+		},
 	};
 
 	use super::*;
@@ -168,11 +171,10 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	"#;
 
-		let mut parser = Parser::new(SOURCE, zdoom::lex::Context::NON_ZSCRIPT);
-		file(&mut parser);
-		let (root, errors) = parser.finish();
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-		assert!(errors.is_empty());
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+
+		assert_no_errors(&ptree);
+		prettyprint_maybe(ptree.cursor());
 
 		let cvars: Vec<_> = ptree
 			.cursor()
@@ -209,11 +211,10 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	"#;
 
-		let mut parser = Parser::new(SOURCE, zdoom::lex::Context::NON_ZSCRIPT);
-		file(&mut parser);
-		let (root, errors) = parser.finish();
-		let ptree: ParseTree = ParseTree::new(root, vec![]);
-		assert_eq!(errors.len(), 1);
+		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+
+		assert_eq!(ptree.errors().len(), 1);
+		prettyprint_maybe(ptree.cursor());
 
 		let cvar = ast::Definition::cast(ptree.cursor().last_child().unwrap()).unwrap();
 		assert_eq!(cvar.name().text(), "ICEANDFIRE3");

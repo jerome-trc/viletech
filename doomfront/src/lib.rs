@@ -94,11 +94,6 @@ pub struct ParseTree<L: LangExt> {
 
 impl<L: LangExt> ParseTree<L> {
 	#[must_use]
-	pub fn new(root: rowan::GreenNode, errors: Vec<ParseError<L>>) -> Self {
-		Self { root, errors }
-	}
-
-	#[must_use]
 	pub fn root(&self) -> &rowan::GreenNode {
 		&self.root
 	}
@@ -156,7 +151,8 @@ pub fn parse<'i, L: LangExt>(
 	let mut parser = parser::Parser::new(source, lexer_ctx);
 	function(&mut parser);
 	let (root, errors) = parser.finish();
-	ParseTree::new(root, errors)
+
+	ParseTree { root, errors }
 }
 
 /// The most basic implementors of [`rowan::ast::AstNode`] are newtypes
