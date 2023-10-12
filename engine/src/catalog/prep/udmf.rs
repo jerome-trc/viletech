@@ -5,7 +5,7 @@
 use util::Outcome;
 
 use crate::{
-	catalog::{dobj::Image, Catalog, PrepError, PrepErrorKind},
+	catalog::{Catalog, PrepError, PrepErrorKind},
 	level::LevelDef,
 	vfs::FileRef,
 };
@@ -56,24 +56,28 @@ impl Catalog {
 			}
 		};
 
-		let mut _level: LevelDef = unimplemented!("new UDMF-to-ECS code upcoming");
-
-		let err_handler = |err| {
-			ctx.raise_error(PrepError {
-				path: dir.path().to_path_buf(),
-				kind: PrepErrorKind::Level(err),
-			});
-		};
-
-		if _level.validate(
-			err_handler,
-			|texname| self.last_by_nick::<Image>(texname).is_none(),
-			|ednum| self.bp_by_ednum(ednum).is_none(),
-		) > 0
+		// TODO: new UDMF-to-ECS pipeline, new catalog code, new VFS...
+		#[cfg(any())]
 		{
-			return Outcome::Err(());
+			let mut _level;
+
+			let err_handler = |err| {
+				ctx.raise_error(PrepError {
+					path: dir.path().to_path_buf(),
+					kind: PrepErrorKind::Level(err),
+				});
+			};
+
+			if _level.validate(
+				err_handler,
+				|texname| self.last_by_nick::<Image>(texname).is_none(),
+				|ednum| self.bp_by_ednum(ednum).is_none(),
+			) > 0
+			{
+				return Outcome::Err(());
+			}
 		}
 
-		Outcome::Ok(_level)
+		Outcome::Ok(unimplemented!("new UDMF-to-ECS code upcoming"))
 	}
 }

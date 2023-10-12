@@ -68,6 +68,7 @@ struct SectorIx(u32);
 
 /// "Point-side relationship".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 enum PointSideRel {
 	AheadOfLine,
 	OnLine,

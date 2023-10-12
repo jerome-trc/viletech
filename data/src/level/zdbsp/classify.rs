@@ -82,12 +82,10 @@ pub(super) fn classify_line(node: BspNode, v1: FixedXY, v2: FixedXY) -> [LineKin
 			} else {
 				sidev0 = LineKind::One;
 			}
+		} else if s_num1 > 0.0 {
+			sidev0 = LineKind::NegOne;
 		} else {
-			if s_num1 > 0.0 {
-				sidev0 = LineKind::NegOne;
-			} else {
-				sidev0 = LineKind::One;
-			}
+			sidev0 = LineKind::One;
 		}
 
 		if (nears & 1) != 0 {
@@ -132,12 +130,10 @@ pub(super) fn classify_line(node: BspNode, v1: FixedXY, v2: FixedXY) -> [LineKin
 			} else {
 				return [LineKind::One, sidev0, sidev1];
 			}
+		} else if (node.dy > 0 && v2.y > v1.y) || (node.dy < 0 && v2.y < v1.y) {
+			return [LineKind::Zero, sidev0, sidev1];
 		} else {
-			if (node.dy > 0 && v2.y > v1.y) || (node.dy < 0 && v2.y < v1.y) {
-				return [LineKind::Zero, sidev0, sidev1];
-			} else {
-				return [LineKind::One, sidev0, sidev1];
-			}
+			return [LineKind::One, sidev0, sidev1];
 		}
 	} else if sidev0 != LineKind::One && sidev1 != LineKind::One {
 		return [LineKind::Zero, sidev0, sidev1];

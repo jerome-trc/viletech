@@ -20,9 +20,9 @@ pub trait Sink: Sized {
 	type ThingDef;
 	type Vertex;
 
-	/// Returning `Err` will cause an early exit from parsing.
+	/// Returning `None` is considered an error condition and will cause an early exit from parsing.
 	#[must_use]
-	fn with_namespace(string: &str, ctx: Self::Context) -> Result<Self, ()>;
+	fn with_namespace(string: &str, ctx: Self::Context) -> Option<Self>;
 
 	#[must_use]
 	fn start_linedef(&mut self) -> Self::LineDef;
@@ -191,7 +191,7 @@ fn parse_namespace<S: Sink>(lexer: &mut Lexer<Token>, ctx: S::Context) -> Result
 
 	let ns_str = &lexer.source()[(span.start + 1)..(span.end - 1)];
 
-	S::with_namespace(ns_str, ctx).map_err(|()| Error::InvalidNamespace(ns_str.to_owned()))
+	S::with_namespace(ns_str, ctx).ok_or_else(|| Error::InvalidNamespace(ns_str.to_owned()))
 }
 
 #[derive(Debug)]

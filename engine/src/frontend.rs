@@ -128,16 +128,14 @@ impl FrontendMenu {
 							}
 
 							if ui.button("\u{2B06}").clicked() {
-								// TODO: Shift all highlighted load order items up once.
+								// TODO: shift all highlighted load order items up once.
 							}
 
 							if ui.button("\u{2B07}").clicked() {
-								// TODO: Shift all highlighted load order items down once.
+								// TODO: shift all highlighted load order items down once.
 							}
 
-							if ui.button("To Top").clicked() {}
-
-							if ui.button("To Bottom").clicked() {}
+							// TODO: to-top and to-bottom buttons.
 						});
 
 						ui.separator();
@@ -240,11 +238,9 @@ impl FrontendMenu {
 
 		ui.separator();
 
-		if ui.button("Profiles").clicked() {}
+		// TODO: user information management (e.g. preferences) goes here.
 
-		ui.separator();
-
-		// TODO: Tooltip.
+		// TODO: tooltip.
 		ui.checkbox(&mut self.dev_mode, "Developer Mode");
 
 		ui.separator();
