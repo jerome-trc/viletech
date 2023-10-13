@@ -80,7 +80,7 @@ impl<F: JitFn> std::ops::Deref for TFn<'_, F> {
 	}
 }
 
-/// A strongly-typed handle to a [JIT function pointer](Function).
+/// A strongly-typed [handle](Handle) to a [JIT function pointer](Function).
 #[derive(Debug)]
 pub struct TFnHandle<F: JitFn>(Handle<Function>, PhantomData<F>);
 
@@ -124,9 +124,9 @@ pub(crate) struct Record {
 
 /// Gets discriminated with [`StoreTag`].
 pub(crate) union StoreUnion {
-	pub(crate) func: ManuallyDrop<APtr<Store<Function>>>,
-	pub(crate) data: ManuallyDrop<APtr<Store<Data>>>,
-	pub(crate) typedef: ManuallyDrop<APtr<Store<()>>>,
+	pub(crate) func: APtr<Store<Function>>,
+	pub(crate) data: APtr<Store<Data>>,
+	pub(crate) typedef: APtr<Store<()>>,
 }
 
 /// Separated discriminant for [`StoreUnion`].
@@ -156,9 +156,9 @@ impl Drop for Record {
 	fn drop(&mut self) {
 		unsafe {
 			match self.tag {
-				StoreTag::Function => ManuallyDrop::drop(&mut self.inner.func),
-				StoreTag::Data => ManuallyDrop::drop(&mut self.inner.data),
-				StoreTag::Type => ManuallyDrop::drop(&mut self.inner.typedef),
+				StoreTag::Function => self.inner.func.drop_in_place(),
+				StoreTag::Data => self.inner.data.drop_in_place(),
+				StoreTag::Type => self.inner.typedef.drop_in_place(),
 			}
 		}
 	}

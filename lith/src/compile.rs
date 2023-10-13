@@ -96,6 +96,10 @@ impl Compiler {
 
 		self.symbols.iter().for_each(|kvp| unsafe {
 			if let Some(sym_ptr) = kvp.value().as_ptr() {
+				if let Some(def_ptr) = sym_ptr.as_ref().def.as_ptr() {
+					std::ptr::drop_in_place(def_ptr.as_ptr());
+				}
+
 				std::ptr::drop_in_place(sym_ptr.as_ptr());
 			}
 		});

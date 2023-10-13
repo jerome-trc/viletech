@@ -5,6 +5,7 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+pub(crate) mod back;
 pub(crate) mod compile;
 pub(crate) mod data;
 pub(crate) mod front;

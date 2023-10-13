@@ -13,6 +13,12 @@ use crossbeam::atomic::AtomicCell;
 #[derive(Debug)]
 pub(crate) struct APtr<T>(NonNull<T>);
 
+impl<T> APtr<T> {
+	pub(crate) unsafe fn drop_in_place(self) {
+		std::ptr::drop_in_place(self.0.as_ptr());
+	}
+}
+
 impl<T> Clone for APtr<T> {
 	fn clone(&self) -> Self {
 		*self
