@@ -159,7 +159,6 @@ const PRATT_PRECEDENCE: &[&[Syn]] = &[
 		Syn::AsteriskEq,
 		Syn::Asterisk2Eq,
 		Syn::CaretEq,
-		Syn::Eq,
 		Syn::MinusEq,
 		Syn::PercentEq,
 		Syn::PipeEq,

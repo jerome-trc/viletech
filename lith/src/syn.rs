@@ -33,10 +33,15 @@ pub enum Syn {
 	ImportEntry,
 	/// `importentry (',' importentry)* ','?`
 	ImportList,
-	/// `ident typespec (':=' expr)?`
+	/// `'const'? ident typespec ('=' expr)?`
 	Parameter,
 	/// `'(' param? (',' param)* ','? ')'`
 	ParamList,
+	/// `'const' ident typespec '=' expr ';'`
+	///
+	/// A "symbolic constant". Semantically equivalent to an immutable compile-time
+	/// [binding statement](Syn::StmtBind) but permitted at container scope.
+	SymConst,
 	/// `':' typeexpr`
 	TypeSpec,
 
@@ -193,9 +198,6 @@ pub enum Syn {
 	/// `::`; used in [block labels](Syn::BlockLabel).
 	#[token("::")]
 	Colon2,
-	/// `:=`; used to specify a default argument for a [parameter](Syn::Parameter).
-	#[token(":=")]
-	ColonEq,
 	/// `,`
 	#[token(",")]
 	Comma,
@@ -208,7 +210,8 @@ pub enum Syn {
 	/// `..` the inclusive-end [range expression](Syn::ExprRange) operator.
 	#[token("..=")]
 	Dot2Eq,
-	/// `=`; the assignment [binary operator](Syn::ExprBin).
+	/// `=`; part of [assignment statements](Syn::StmtAssign)
+	/// and [symbolic constants](Syn::SymConst).
 	#[token("=")]
 	Eq,
 	/// `==`; the logical equality comparison [binary operator](Syn::ExprBin).

@@ -258,6 +258,10 @@ fn smoke_func_decl() {
 		r#"function lorem_ipsum();"#,
 		// Only a return type.
 		r#"function lorem_ipsum(): dolor;"#,
+		// One parameter.
+		r#"function lorem_ipsum(dolor: sit_amet);"#,
+		// One const parameter with a default.
+		r#"function lorem_ipsum(const dolor: sit = amet);"#,
 	];
 
 	const TESTS: &[fn(ast::FunctionDecl)] = &[
@@ -266,13 +270,31 @@ fn smoke_func_decl() {
 			assert!(ast.return_type().is_none());
 		},
 		|ast| {
-			assert_eq!(ast.name().unwrap().text(), "lorem_ipsum");
 			let ret_t = ast.return_type().unwrap();
 			let ret_t_expr = ret_t.expr().unwrap();
 			let ast::Expr::Ident(e) = ret_t_expr else {
 				panic!();
 			};
 			assert_eq!(e.token().text(), "dolor");
+		},
+		|ast| {
+			let param_list = ast.params().unwrap();
+			let mut params = param_list.iter();
+			let param = params.next().unwrap();
+			assert_eq!(param.name().unwrap().text(), "dolor");
+
+			assert!(matches!(
+				param.type_spec().unwrap().expr().unwrap(),
+				ast::Expr::Ident(_)
+			));
+		},
+		|ast| {
+			let param_list = ast.params().unwrap();
+			let mut params = param_list.iter();
+			let param = params.next().unwrap();
+			assert_eq!(param.name().unwrap().text(), "dolor");
+			assert!(param.is_const());
+			assert!(matches!(param.default().unwrap(), ast::Expr::Ident(_)));
 		},
 	];
 
@@ -286,5 +308,45 @@ fn smoke_func_decl() {
 		}
 
 		TESTS[i](ast::FunctionDecl::cast(ptree.cursor()).unwrap());
+	}
+}
+
+#[test]
+fn smoke_sym_const() {
+	const SAMPLES: &[&str] = &[r#"const LOREM_IPSUM: dolor = sit_amet;"#];
+
+	const TESTS: &[fn(ast::SymConst)] = &[|ast| {
+		let name = ast.name().unwrap();
+		let tspec = ast.type_spec().unwrap();
+		let expr = ast.expr().unwrap();
+
+		let ast::Expr::Ident(t) = tspec.expr().unwrap() else {
+			panic!()
+		};
+
+		let ast::Expr::Ident(e) = expr else { panic!() };
+
+		debug_assert_eq!(name.text(), "LOREM_IPSUM");
+		debug_assert_eq!(t.token().text(), "dolor");
+		debug_assert_eq!(e.token().text(), "sit_amet");
+	}];
+
+	for (i, sample) in SAMPLES.iter().copied().enumerate() {
+		let ptree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::symbolic_constant(p, mark);
+			},
+			(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!()
+		}
+
+		TESTS[i](ast::SymConst::cast(ptree.cursor()).unwrap());
 	}
 }

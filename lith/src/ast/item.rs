@@ -98,3 +98,54 @@ impl Parameter {
 		}
 	}
 }
+
+// SymConst ////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::SymConst`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct SymConst(SyntaxNode);
+
+simple_astnode!(Syn, SymConst, Syn::SymConst);
+
+impl SymConst {
+	/// The returned token is always tagged [`Syn::Ident`].
+	pub fn name(&self) -> AstResult<SyntaxToken> {
+		let mut ident = None;
+		let mut eq = None;
+
+		for elem in self.0.children_with_tokens() {
+			let Some(token) = elem.into_token() else {
+				continue;
+			};
+
+			match token.kind() {
+				Syn::Ident => ident = Some(token),
+				Syn::Eq => eq = Some(token),
+				_ => continue,
+			}
+		}
+
+		let Some(ident) = ident else {
+			return Err(AstError::Missing);
+		};
+
+		let Some(eq) = eq else {
+			return Err(AstError::Incorrect);
+		};
+
+		if ident.index() >= eq.index() {
+			return Err(AstError::Missing);
+		}
+
+		Ok(ident)
+	}
+
+	pub fn type_spec(&self) -> AstResult<TypeSpec> {
+		TypeSpec::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+
+	pub fn expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}

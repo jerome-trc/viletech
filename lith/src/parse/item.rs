@@ -1,4 +1,4 @@
-//! Function declarations.
+//! Function declarations and symbolic constants.
 
 use doomfront::parser::{OpenMark, Parser};
 
@@ -72,12 +72,32 @@ fn parameter(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 	type_spec(p);
 
-	if p.find(0, |token| !token.is_trivia()) == Syn::ColonEq {
+	if p.find(0, |token| !token.is_trivia()) == Syn::Eq {
 		trivia_0plus(p);
-		p.advance(Syn::ColonEq);
+		p.advance(Syn::Eq);
 		trivia_0plus(p);
 		let _ = super::expr(p);
 	}
 
 	p.close(mark, Syn::Parameter);
+}
+
+#[must_use]
+pub(super) fn at_symbolic_constant(p: &Parser<Syn>) -> bool {
+	p.at(Syn::KwConst)
+}
+
+pub(super) fn symbolic_constant(p: &mut Parser<Syn>, mark: OpenMark) {
+	p.expect(Syn::KwConst, Syn::KwConst, &[&["TODO"]]);
+	trivia_0plus(p);
+	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
+	trivia_0plus(p);
+	type_spec(p);
+	trivia_0plus(p);
+	p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+	trivia_0plus(p);
+	super::expr(p);
+	trivia_0plus(p);
+	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
+	p.close(mark, Syn::SymConst);
 }

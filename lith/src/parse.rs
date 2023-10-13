@@ -47,6 +47,8 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 
 	if parsed_docs || at_function_decl(p) {
 		function_decl(p, mark);
+	} else if at_symbolic_constant(p) {
+		symbolic_constant(p, mark);
 	} else if p.at(Syn::KwImport) {
 		import(p, mark);
 	} else if !ROOT {

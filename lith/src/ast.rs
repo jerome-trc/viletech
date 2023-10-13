@@ -100,7 +100,7 @@ impl Import {
 	}
 }
 
-/// Wraps a node tagged [`Syn::`].
+/// Wraps a node tagged [`Syn::ImportList`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ImportList(SyntaxNode);
