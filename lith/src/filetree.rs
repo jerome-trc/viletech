@@ -13,8 +13,8 @@ pub struct FileTree {
 
 #[derive(Debug)]
 pub enum Node {
-	File { ptree: ParseTree, name: String },
-	Folder { name: String },
+	File { ptree: ParseTree, path: String },
+	Folder { path: String },
 }
 
 impl FileTree {

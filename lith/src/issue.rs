@@ -157,7 +157,6 @@ pub enum Error {
 	/// falls under no other error code.
 	Builtin,
 	CEvalRecursion,
-	/// e.g., ZScript tried to use `super` at compile time.
 	ConstEval,
 	FlagDefBitOverflow,
 	IllegalClassQual,
@@ -172,13 +171,10 @@ pub enum Error {
 	Internal,
 	ParseFloat,
 	ParseInt,
-	/// e.g. script marked a ZS class as `play` twice.
 	QualifierOverlap,
 	Redeclare,
-	/// e.g. script defines a class specifying inheritance from a struct.
 	SymbolKindMismatch,
 	SymbolNotFound,
-	/// e.g. a null literal was provided in an ambiguous context.
 	UnknownExprType,
 }
 

@@ -6,6 +6,43 @@ use crate::{Syn, SyntaxNode, SyntaxToken};
 
 use super::*;
 
+/// Wraps a node tagged [`Syn::FunctionDecl`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum Item {
+	Function(FunctionDecl),
+	SymConst(SymConst),
+}
+
+impl AstNode for Item {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		matches!(kind, Syn::FunctionDecl | Syn::SymConst)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		match node.kind() {
+			Syn::FunctionDecl => Some(Self::Function(FunctionDecl(node))),
+			Syn::SymConst => Some(Self::SymConst(SymConst(node))),
+			_ => None,
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Function(inner) => inner.syntax(),
+			Self::SymConst(inner) => inner.syntax(),
+		}
+	}
+}
+
 // FunctionDecl ////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::FunctionDecl`].

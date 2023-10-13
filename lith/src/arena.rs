@@ -51,6 +51,14 @@ impl<T> CPtr<T> {
 		Self(AtomicCell::new(None))
 	}
 
+	#[must_use]
+	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
+		let m = arena.alloc(obj);
+		let ret = CPtr::<T>::null();
+		ret.store(NonNull::new(m as *mut T).unwrap());
+		ret
+	}
+
 	pub(crate) fn store(&self, new: NonNull<T>) {
 		self.0.store(Some(new));
 	}
@@ -80,11 +88,20 @@ impl<T> PartialEq for CPtr<T> {
 
 impl<T> Eq for CPtr<T> {}
 
+impl<T> Clone for CPtr<T> {
+	fn clone(&self) -> Self {
+		Self(AtomicCell::new(self.0.load()))
+	}
+}
+
 impl<T> Hash for CPtr<T> {
 	fn hash<H: Hasher>(&self, state: &mut H) {
 		self.0.load().hash(state);
 	}
 }
+
+unsafe impl<T: Send> Send for CPtr<T> {}
+unsafe impl<T: Send + Sync> Sync for CPtr<T> {}
 
 const _STATIC_ASSERT_APTR_CONSTRAINTS: () = {
 	assert!(std::mem::size_of::<APtr<()>>() == std::mem::size_of::<*mut ()>());
