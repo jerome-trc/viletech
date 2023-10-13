@@ -1,0 +1,11 @@
+#[builtin('intType')]
+function intType(const num_bits: any): typedef;
+
+#[builtin('uintType')]
+function uintType(const num_bits: any): typedef;
+
+#[builtin('typeOf')]
+function typeOf(expr: any): typedef;
+
+#[builtin('rttiOf')]
+function rttiOf(expr: any): rtti;

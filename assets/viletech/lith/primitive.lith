@@ -1,0 +1,4 @@
+import "/builtins": intType, uintType;
+
+const i32: typedef = intType(32);
+const u32: typedef = uintType(32);
