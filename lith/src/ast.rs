@@ -4,11 +4,123 @@ mod expr;
 mod item;
 mod lit;
 
-use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
+use doomfront::{
+	rowan::{ast::AstNode, Direction},
+	simple_astnode, AstError, AstResult,
+};
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
 pub use self::{expr::*, item::*, lit::*};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum TopLevel {
+	Annotation(Annotation),
+	Import(Import),
+	Item(Item),
+}
+
+impl AstNode for TopLevel {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		Item::can_cast(kind) || matches!(kind, Syn::Annotation | Syn::Import)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if let Some(item) = Item::cast(node.clone()) {
+			return Some(Self::Item(item));
+		}
+
+		if let Some(import) = Import::cast(node.clone()) {
+			return Some(Self::Import(import));
+		};
+
+		if let Some(anno) = Annotation::cast(node) {
+			return Some(Self::Annotation(anno));
+		}
+
+		None
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Annotation(inner) => inner.syntax(),
+			Self::Import(inner) => inner.syntax(),
+			Self::Item(inner) => inner.syntax(),
+		}
+	}
+}
+
+// Annotation //////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::Annotation`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Annotation(SyntaxNode);
+
+simple_astnode!(Syn, Annotation, Syn::Annotation);
+
+impl Annotation {
+	/// The returned token is always tagged [`Syn::Ident`].
+	pub fn name(&self) -> AstResult<SyntaxToken> {
+		let first_ident = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
+			.ok_or(AstError::Missing)?;
+
+		let mut dot_seen = false;
+
+		for elem in first_ident.siblings_with_tokens(Direction::Next) {
+			match elem.kind() {
+				Syn::Dot => dot_seen = true,
+				Syn::Ident => {
+					if dot_seen {
+						return Ok(elem.into_token().unwrap());
+					}
+				}
+				_ => continue,
+			}
+		}
+
+		Err(AstError::Missing)
+	}
+
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn namespace(&self) -> Option<SyntaxToken> {
+		let first_ident = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident));
+
+		let Some(first_ident) = first_ident else {
+			return None;
+		};
+
+		if first_ident
+			.siblings_with_tokens(Direction::Next)
+			.any(|e| e.kind() == Syn::Dot)
+		{
+			return Some(first_ident);
+		}
+
+		None
+	}
+
+	#[must_use]
+	pub fn arg_list(&self) -> Option<ArgList> {
+		self.0.last_child().and_then(ArgList::cast)
+	}
+}
 
 // ArgList, Argument ///////////////////////////////////////////////////////////
 

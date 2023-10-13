@@ -262,6 +262,10 @@ fn smoke_func_decl() {
 		r#"function lorem_ipsum(dolor: sit_amet);"#,
 		// One const parameter with a default.
 		r#"function lorem_ipsum(const dolor: sit = amet);"#,
+		// With an annotation.
+		r##"
+		#[dolor.sit_amet()]
+		function lorem_ipsum();"##,
 	];
 
 	const TESTS: &[fn(ast::FunctionDecl)] = &[
@@ -296,10 +300,16 @@ fn smoke_func_decl() {
 			assert!(param.is_const());
 			assert!(matches!(param.default().unwrap(), ast::Expr::Ident(_)));
 		},
+		|ast| {
+			let anno = ast.annotations().next().unwrap();
+			assert_eq!(anno.namespace().unwrap().text(), "dolor");
+			assert_eq!(anno.name().unwrap().text(), "sit_amet");
+			assert!(anno.arg_list().unwrap().iter().next().is_none());
+		},
 	];
 
 	for (i, sample) in SAMPLES.iter().copied().enumerate() {
-		let ptree = doomfront::parse(sample, super::core_element::<true>, ());
+		let ptree = doomfront::parse(sample.trim(), super::core_element::<true>, ());
 
 		assert_no_errors(&ptree);
 
@@ -313,33 +323,34 @@ fn smoke_func_decl() {
 
 #[test]
 fn smoke_sym_const() {
-	const SAMPLES: &[&str] = &[r#"const LOREM_IPSUM: dolor = sit_amet;"#];
+	const SAMPLES: &[&str] = &[
+		r#"const LOREM_IPSUM: dolor = sit_amet;"#,
+		r##"
+		#[consectetur]
+		const LOREM_IPSUM: dolor = sit + amet;"##,
+	];
 
-	const TESTS: &[fn(ast::SymConst)] = &[|ast| {
-		let name = ast.name().unwrap();
-		let tspec = ast.type_spec().unwrap();
-		let expr = ast.expr().unwrap();
+	const TESTS: &[fn(ast::SymConst)] = &[
+		|ast| {
+			let name = ast.name().unwrap();
+			let tspec = ast.type_spec().unwrap();
+			let expr = ast.expr().unwrap();
 
-		let ast::Expr::Ident(t) = tspec.expr().unwrap() else {
-			panic!()
-		};
+			let ast::Expr::Ident(t) = tspec.expr().unwrap() else {
+				panic!()
+			};
 
-		let ast::Expr::Ident(e) = expr else { panic!() };
+			let ast::Expr::Ident(e) = expr else { panic!() };
 
-		debug_assert_eq!(name.text(), "LOREM_IPSUM");
-		debug_assert_eq!(t.token().text(), "dolor");
-		debug_assert_eq!(e.token().text(), "sit_amet");
-	}];
+			debug_assert_eq!(name.text(), "LOREM_IPSUM");
+			debug_assert_eq!(t.token().text(), "dolor");
+			debug_assert_eq!(e.token().text(), "sit_amet");
+		},
+		|_| {},
+	];
 
 	for (i, sample) in SAMPLES.iter().copied().enumerate() {
-		let ptree = doomfront::parse(
-			sample,
-			|p| {
-				let mark = p.open();
-				super::symbolic_constant(p, mark);
-			},
-			(),
-		);
+		let ptree = doomfront::parse(sample.trim(), super::core_element::<true>, ());
 
 		assert_no_errors(&ptree);
 

@@ -73,6 +73,10 @@ impl FunctionDecl {
 		self.0.children().find_map(TypeSpec::cast)
 	}
 
+	pub fn annotations(&self) -> impl Iterator<Item = Annotation> {
+		self.0.children().filter_map(Annotation::cast)
+	}
+
 	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
 		doc_comments(&self.0)
 	}

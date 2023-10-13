@@ -33,7 +33,10 @@ pub fn file(p: &mut Parser<Syn>) {
 
 /// An inner annotation, import, item, or statement. If `ROOT`, statements are forbidden.
 fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
-	// TODO: if at an inner annotation, parse it and return here.
+	if at_inner_annotation(p) {
+		annotation(p, true);
+		return;
+	}
 
 	let mark = p.open();
 	let mut parsed_docs = false;
@@ -43,7 +46,10 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	// TODO: parse 0 or more outer annotations here.
+	while at_annotation(p) {
+		annotation(p, false);
+		trivia_0plus(p);
+	}
 
 	if parsed_docs || at_function_decl(p) {
 		function_decl(p, mark);

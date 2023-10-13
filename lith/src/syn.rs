@@ -15,6 +15,8 @@ pub enum Syn {
 	FileRoot,
 
 	// Nodes: high-level constructs ////////////////////////////////////////////
+	/// `'#' '!'? '[' (ident '.')? ident arglist? ']'`
+	Annotation,
 	/// `'(' argument (',' argument)* ','? ')'`
 	///
 	/// Common to [call expressions](Syn::ExprCall) and [annotations](Syn::Annotation).
@@ -270,6 +272,9 @@ pub enum Syn {
 	/// `+=`; the addition compound assignment [binary operator](Syn::ExprBin).
 	#[token("+=")]
 	PlusEq,
+	/// `#`; used to start [annotations](Syn::Annotation).
+	#[token("#")]
+	Pound,
 	/// `;`; used as a terminator, like in C.
 	#[token(";")]
 	Semicolon,

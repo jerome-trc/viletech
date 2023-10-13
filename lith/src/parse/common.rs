@@ -25,6 +25,43 @@ pub(super) fn _doc_comments(p: &mut Parser<Syn>) {
 	}
 }
 
+#[must_use]
+pub(super) fn at_annotation(p: &Parser<Syn>) -> bool {
+	p.at(Syn::Pound)
+}
+
+#[must_use]
+pub(super) fn at_inner_annotation(p: &Parser<Syn>) -> bool {
+	at_annotation(p) && p.nth(1) == Syn::Bang
+}
+
+pub(super) fn annotation(p: &mut Parser<Syn>, inner: bool) {
+	let mark = p.open();
+	p.expect(Syn::Pound, Syn::Pound, &[&["TODO"]]);
+
+	if inner {
+		p.expect(Syn::Bang, Syn::Bang, &[&["TODO"]]);
+	}
+
+	p.expect(Syn::BracketL, Syn::BracketL, &[&["TODO"]]);
+	trivia_0plus(p);
+	p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	trivia_0plus(p);
+
+	if p.eat(Syn::Dot, Syn::Dot) {
+		trivia_0plus(p);
+		p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	}
+
+	if p.at(Syn::ParenL) {
+		arg_list(p);
+		trivia_0plus(p);
+	}
+
+	p.expect(Syn::BracketR, Syn::BracketR, &[&["TODO"]]);
+	p.close(mark, Syn::Annotation);
+}
+
 pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	let mark = p.open();
 	p.expect(Syn::ParenL, Syn::ParenL, &[&["TODO"]]);
