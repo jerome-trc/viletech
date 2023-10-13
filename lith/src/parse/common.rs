@@ -25,6 +25,46 @@ pub(super) fn _doc_comments(p: &mut Parser<Syn>) {
 	}
 }
 
+pub(super) fn arg_list(p: &mut Parser<Syn>) {
+	let mark = p.open();
+	p.expect(Syn::ParenL, Syn::ParenL, &[&["TODO"]]);
+
+	while !p.at(Syn::ParenR) && !p.eof() {
+		let arg = p.open();
+
+		if p.at_any(&[Syn::Ident, Syn::LitName]) {
+			let peeked = p.find(0, |token| {
+				!token.is_trivia() && !matches!(token, Syn::Ident | Syn::LitName)
+			});
+
+			if peeked == Syn::Colon {
+				p.advance(p.nth(0));
+				trivia_0plus(p);
+				p.advance(Syn::Colon);
+				trivia_0plus(p);
+			}
+		}
+
+		super::expr(p);
+		p.close(arg, Syn::Argument);
+		trivia_0plus(p);
+
+		match p.nth(0) {
+			t @ Syn::Comma => {
+				p.advance(t);
+				trivia_0plus(p);
+			}
+			Syn::ParenR => break,
+			other => {
+				p.advance_with_error(other, &[&["`,`", "`)`"]]);
+			}
+		}
+	}
+
+	p.expect(Syn::ParenR, Syn::ParenR, &[&["TODO"]]);
+	p.close(mark, Syn::ArgList);
+}
+
 pub(super) fn block(
 	p: &mut Parser<Syn>,
 	mark: OpenMark,

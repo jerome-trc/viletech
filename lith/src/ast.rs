@@ -10,6 +10,57 @@ use crate::{Syn, SyntaxNode, SyntaxToken};
 
 pub use self::{expr::*, item::*, lit::*};
 
+// ArgList, Argument ///////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ArgList`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ArgList(SyntaxNode);
+
+simple_astnode!(Syn, ArgList, Syn::ArgList);
+
+impl ArgList {
+	pub fn iter(&self) -> impl Iterator<Item = Argument> {
+		self.0.children().filter_map(Argument::cast)
+	}
+}
+
+/// Wraps a node tagged [`Syn::Argument`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Argument(SyntaxNode);
+
+simple_astnode!(Syn, Argument, Syn::Argument);
+
+impl Argument {
+	pub fn expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+
+	#[must_use]
+	pub fn name(&self) -> Option<Name> {
+		let mut name = None;
+		let mut colon_seen = false;
+
+		for elem in self.0.children_with_tokens() {
+			match elem.kind() {
+				Syn::Colon => colon_seen = true,
+				Syn::Ident | Syn::LitName => {
+					name = Some(elem.into_token().unwrap());
+					break;
+				}
+				_ => {}
+			}
+		}
+
+		if colon_seen {
+			name.map(Name)
+		} else {
+			None
+		}
+	}
+}
+
 // DocComment //////////////////////////////////////////////////////////////////
 
 /// Wraps a [`Syn::DocComment`] token. Provides a convenience function for

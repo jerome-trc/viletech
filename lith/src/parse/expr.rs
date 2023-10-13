@@ -66,7 +66,27 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 
 		let right = p.nth(0);
 
-		// TODO: call and index expression parsing goes here.
+		match right {
+			Syn::ParenL => {
+				let m = p.open_before(lhs);
+				trivia_0plus(p);
+				arg_list(p);
+				trivia_0plus(p);
+				lhs = p.close(m, Syn::ExprCall);
+				continue;
+			}
+			Syn::BracketL => {
+				let m = p.open_before(lhs);
+				p.advance(Syn::BracketL);
+				trivia_0plus(p);
+				expr(p);
+				trivia_0plus(p);
+				p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
+				lhs = p.close(m, Syn::ExprIndex);
+				continue;
+			}
+			_ => {}
+		}
 
 		if doomfront::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
 			match right {

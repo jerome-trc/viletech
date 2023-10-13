@@ -15,6 +15,12 @@ pub enum Syn {
 	FileRoot,
 
 	// Nodes: high-level constructs ////////////////////////////////////////////
+	/// `'(' argument (',' argument)* ','? ')'`
+	///
+	/// Common to [call expressions](Syn::ExprCall) and [annotations](Syn::Annotation).
+	ArgList,
+	/// `((ident | namelit) ':')? expr`
+	Argument,
 	/// `'[' nontypeexpr ']'`
 	///
 	/// Can start a [`Syn::ExprType`].
@@ -48,10 +54,14 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	/// `expr operator expr`
 	ExprBin,
+	/// `primaryexpr arglist`
+	ExprCall,
 	/// `primaryexpr '.' (ident | namelit)`
 	ExprField,
 	/// Parent to only a single [`Syn::Ident`] token.
 	ExprIdent,
+	/// `primaryexpr '[' expr ']'`
+	ExprIndex,
 	/// If this is not a string literal, it is parent to only one token tagged as
 	/// one of the following:
 	/// - [`Syn::LitFalse`]

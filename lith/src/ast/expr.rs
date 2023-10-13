@@ -4,15 +4,17 @@ use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
-use super::{LitToken, Name};
+use super::{ArgList, LitToken, Name};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
 	Binary(ExprBin),
+	Call(ExprCall),
 	Field(ExprField),
 	Group(ExprGroup),
 	Ident(ExprIdent),
+	Index(ExprIndex),
 	Literal(ExprLit),
 	Postfix(ExprPostfix),
 	Prefix(ExprPrefix),
@@ -28,8 +30,9 @@ impl AstNode for Expr {
 		matches!(
 			kind,
 			Syn::ExprBin
-				| Syn::ExprField | Syn::ExprGroup
-				| Syn::ExprIdent | Syn::ExprLit
+				| Syn::ExprCall | Syn::ExprField
+				| Syn::ExprGroup | Syn::ExprIdent
+				| Syn::ExprIndex | Syn::ExprLit
 				| Syn::ExprPostfix
 				| Syn::ExprPrefix
 		)
@@ -41,9 +44,11 @@ impl AstNode for Expr {
 	{
 		match node.kind() {
 			Syn::ExprBin => Some(Self::Binary(ExprBin(node))),
+			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
 			Syn::ExprField => Some(Self::Field(ExprField(node))),
 			Syn::ExprGroup => Some(Self::Group(ExprGroup(node))),
 			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
+			Syn::ExprIndex => Some(Self::Index(ExprIndex(node))),
 			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
 			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
 			Syn::ExprPrefix => Some(Self::Prefix(ExprPrefix(node))),
@@ -53,10 +58,12 @@ impl AstNode for Expr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Call(inner) => inner.syntax(),
 			Self::Binary(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
 			Self::Group(inner) => inner.syntax(),
 			Self::Ident(inner) => inner.syntax(),
+			Self::Index(inner) => inner.syntax(),
 			Self::Literal(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
 			Self::Prefix(inner) => inner.syntax(),
@@ -68,8 +75,10 @@ impl AstNode for Expr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum PrimaryExpr {
+	Call(ExprCall),
 	Group(ExprGroup),
 	Ident(ExprIdent),
+	Index(ExprIndex),
 	Literal(ExprLit),
 	Field(ExprField),
 	Postfix(ExprPostfix),
@@ -78,8 +87,10 @@ pub enum PrimaryExpr {
 impl From<PrimaryExpr> for Expr {
 	fn from(value: PrimaryExpr) -> Self {
 		match value {
+			PrimaryExpr::Call(inner) => Self::Call(inner),
 			PrimaryExpr::Group(inner) => Self::Group(inner),
 			PrimaryExpr::Ident(inner) => Self::Ident(inner),
+			PrimaryExpr::Index(inner) => Self::Index(inner),
 			PrimaryExpr::Literal(inner) => Self::Literal(inner),
 			PrimaryExpr::Field(inner) => Self::Field(inner),
 			PrimaryExpr::Postfix(inner) => Self::Postfix(inner),
@@ -96,7 +107,10 @@ impl AstNode for PrimaryExpr {
 	{
 		matches!(
 			kind,
-			Syn::ExprField | Syn::ExprGroup | Syn::ExprIdent | Syn::ExprLit | Syn::ExprPostfix
+			Syn::ExprCall
+				| Syn::ExprField | Syn::ExprGroup
+				| Syn::ExprIdent | Syn::ExprIndex
+				| Syn::ExprLit | Syn::ExprPostfix
 		)
 	}
 
@@ -105,9 +119,11 @@ impl AstNode for PrimaryExpr {
 		Self: Sized,
 	{
 		match node.kind() {
+			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
 			Syn::ExprField => Some(Self::Field(ExprField(node))),
 			Syn::ExprGroup => Some(Self::Group(ExprGroup(node))),
 			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
+			Syn::ExprIndex => Some(Self::Index(ExprIndex(node))),
 			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
 			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
 			_ => None,
@@ -116,9 +132,11 @@ impl AstNode for PrimaryExpr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Call(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
 			Self::Group(inner) => inner.syntax(),
 			Self::Ident(inner) => inner.syntax(),
+			Self::Index(inner) => inner.syntax(),
 			Self::Literal(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
 		}
@@ -256,6 +274,26 @@ pub enum BinOp {
 	User { at: SyntaxToken, ident: SyntaxToken },
 }
 
+// Call ////////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ExprCall`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprCall(SyntaxNode);
+
+simple_astnode!(Syn, ExprCall, Syn::ExprCall);
+
+impl ExprCall {
+	#[must_use]
+	pub fn called(&self) -> PrimaryExpr {
+		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
+	}
+
+	pub fn arg_list(&self) -> AstResult<ArgList> {
+		ArgList::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
 // Field ///////////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::ExprField`].
@@ -313,6 +351,33 @@ impl ExprIdent {
 		let ret = self.0.first_token().unwrap();
 		debug_assert_eq!(ret.kind(), Syn::Ident);
 		ret
+	}
+}
+
+// Index ///////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ExprIndex`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprIndex(SyntaxNode);
+
+simple_astnode!(Syn, ExprIndex, Syn::ExprIndex);
+
+impl ExprIndex {
+	#[must_use]
+	pub fn called(&self) -> PrimaryExpr {
+		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
+	}
+
+	pub fn index(&self) -> AstResult<Expr> {
+		let last = self.0.last_child().ok_or(AstError::Missing)?;
+		let first = self.0.first_child().ok_or(AstError::Missing)?;
+
+		if last.index() != (first.index() + 1) {
+			return Err(AstError::Missing);
+		}
+
+		Expr::cast(last).ok_or(AstError::Incorrect)
 	}
 }
 
