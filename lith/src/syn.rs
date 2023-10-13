@@ -25,6 +25,14 @@ pub enum Syn {
 	FunctionDecl,
 	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
 	FunctionBody,
+	/// `'import' stringlit ':' (importlist | importall) ';'`
+	Import,
+	/// `'*' '=>' ident`
+	ImportAll,
+	/// `(ident | namelit) ('=>' ident)?`
+	ImportEntry,
+	/// `importentry (',' importentry)* ','?`
+	ImportList,
 	/// `ident typespec (':=' expr)?`
 	Parameter,
 	/// `'(' param? (',' param)* ','? ')'`
@@ -78,6 +86,9 @@ pub enum Syn {
 	/// `function`
 	#[token("function")]
 	KwFunction,
+	/// `import`
+	#[token("import")]
+	KwImport,
 	/// `typedef`
 	#[token("typedef")]
 	KwTypedef,
@@ -255,6 +266,9 @@ pub enum Syn {
 	/// `/=`; the division compound assignment [binary operator](Syn::ExprBin).
 	#[token("/=")]
 	SlashEq,
+	/// `=>`; used in [import syntax](Syn::Import) to rename symbols.
+	#[token("=>")]
+	ThickArrow,
 	/// `~`; the bitwise negation [prefix operator](Syn::ExprPrefix).
 	#[token("~")]
 	Tilde,

@@ -41,6 +41,98 @@ fn smoke_name() {
 	}
 }
 
+#[test]
+fn smoke_imports() {
+	const SAMPLES: &[&str] = &[
+		"import \"/lorem/ipsum\" : * => dolor;",
+		"import \"lorem/ipsum\" : dolor;",
+		"import \"./lorem/ipsum\" : dolor => sit_amet;",
+		"import \"lorem/../ipsum\" : 'dolor' => sit_amet, consectetur => adipiscing;",
+	];
+
+	const TESTS: &[fn(ast::Import)] = &[
+		|ast| {
+			assert_eq!(ast.path().unwrap().string().unwrap(), "/lorem/ipsum");
+
+			let ast::Import::All { inner, .. } = ast else {
+				panic!()
+			};
+
+			assert_eq!(inner.rename().unwrap().text(), "dolor");
+		},
+		|ast| {
+			assert_eq!(ast.path().unwrap().string().unwrap(), "lorem/ipsum");
+
+			let ast::Import::List { list, .. } = ast else {
+				panic!()
+			};
+
+			let mut entries = list.entries();
+
+			{
+				let entry = entries.next().unwrap();
+				assert_eq!(entry.name().unwrap().text(), "dolor");
+				assert!(entry.rename().is_none());
+			}
+		},
+		|ast| {
+			assert_eq!(ast.path().unwrap().string().unwrap(), "./lorem/ipsum");
+
+			let ast::Import::List { list, .. } = ast else {
+				panic!()
+			};
+
+			let mut entries = list.entries();
+
+			{
+				let entry = entries.next().unwrap();
+				assert_eq!(entry.name().unwrap().text(), "dolor");
+				assert_eq!(entry.rename().unwrap().text(), "sit_amet");
+			}
+		},
+		|ast| {
+			assert_eq!(ast.path().unwrap().string().unwrap(), "lorem/../ipsum");
+
+			let ast::Import::List { list, .. } = ast else {
+				panic!()
+			};
+
+			let mut entries = list.entries();
+
+			{
+				let entry = entries.next().unwrap();
+				assert_eq!(entry.name().unwrap().text(), "dolor");
+				assert_eq!(entry.rename().unwrap().text(), "sit_amet");
+			}
+
+			{
+				let entry = entries.next().unwrap();
+				assert_eq!(entry.name().unwrap().text(), "consectetur");
+				assert_eq!(entry.rename().unwrap().text(), "adipiscing");
+			}
+		},
+	];
+
+	for (i, sample) in SAMPLES.iter().copied().enumerate() {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::import(p, mark);
+			},
+			(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+
+		TESTS[i](ast::Import::cast(ptree.cursor()).unwrap());
+	}
+}
+
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
