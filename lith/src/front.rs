@@ -63,7 +63,7 @@ impl FrontendContext<'_> {
 	fn resolve_file(&self, sym: &Symbol) -> (&String, &ParseTree) {
 		let prev_lib = &self.sources[sym.location.lib_ix as usize];
 		let prev_ftn_ix = petgraph::graph::NodeIndex::new(sym.location.file_ix as usize);
-		let prev_ftn = &prev_lib.filetree.files[prev_ftn_ix];
+		let prev_ftn = &prev_lib.filetree.graph[prev_ftn_ix];
 
 		let filetree::Node::File { path, ptree } = prev_ftn else {
 			unreachable!()

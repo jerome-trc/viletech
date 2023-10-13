@@ -26,12 +26,12 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 		let scopes: Mutex<Vec<Scope>> = Mutex::default();
 
 		lib.filetree
-			.files
+			.graph
 			.node_indices()
 			.par_bridge()
 			.for_each(|node_ix| {
 				let arena = compiler.arenas[rayon::current_thread_index().unwrap()].lock();
-				let ftn = &lib.filetree.files[node_ix];
+				let ftn = &lib.filetree.graph[node_ix];
 
 				let filetree::Node::File { ptree, path } = ftn else {
 					return;
@@ -63,7 +63,7 @@ fn declare_container_symbols(ctx: &FrontendContext) -> Scope {
 	let cursor = ctx.ptree.cursor();
 	let mut scope = Scope::default();
 
-	for item in cursor.children().map(|node| ast::Item::cast(node).unwrap()) {
+	for item in cursor.children().filter_map(ast::Item::cast) {
 		match item {
 			ast::Item::Function(fndecl) => declare_function(ctx, &mut scope, fndecl),
 			ast::Item::SymConst(symconst) => declare_symconst(ctx, &mut scope, symconst),

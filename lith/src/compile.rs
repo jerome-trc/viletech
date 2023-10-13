@@ -1,7 +1,11 @@
 //! Code that ties together the frontend, mid-section, and backend.
 
+#[cfg(test)]
+mod test;
+
 use std::hash::BuildHasherDefault;
 
+use cranelift::prelude::settings::OptLevel;
 use parking_lot::Mutex;
 use rustc_hash::FxHasher;
 
@@ -35,8 +39,7 @@ pub struct Compiler {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Config {
-	/// Are lints emitted?
-	pub pedantic: bool,
+	pub opt: OptLevel,
 }
 
 #[derive(Debug)]
