@@ -13,6 +13,7 @@ pub(crate) mod intern;
 pub mod arena;
 pub mod ast;
 pub mod filetree;
+pub mod interop;
 pub mod issue;
 pub mod parse;
 pub mod rti;
@@ -102,6 +103,10 @@ impl std::fmt::Display for Error {
 		}
 	}
 }
+
+/// "Backend type".
+pub(crate) type _BType = cranelift::codegen::ir::Type;
+pub(crate) type _ValVec = smallvec::SmallVec<[cranelift::codegen::data_value::DataValue; 1]>;
 
 pub(crate) type FxDashMap<K, V> =
 	dashmap::DashMap<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;

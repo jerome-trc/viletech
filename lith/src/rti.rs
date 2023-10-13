@@ -1,25 +1,19 @@
 //! Runtime information storage and handle types.
 
 use std::{
+	ffi::c_void,
+	hash::Hasher,
+	marker::PhantomData,
 	mem::ManuallyDrop,
 	sync::atomic::{self, AtomicU32},
 };
 
-use crate::arena::APtr;
+use cranelift_module::{DataId, FuncId};
+use rustc_hash::FxHasher;
 
-/// A unit of runtime information (e.g. RTTI, pointer to a compiled function,
-/// pointer to a JIT data object) allocated in an arena.
-#[derive(Debug)]
-pub(crate) struct Store<R> {
-	pub(crate) inner: R,
-	pub(crate) handles: AtomicU32,
-}
+use crate::{arena::APtr, interop::JitFn};
 
-impl<R> Drop for Store<R> {
-	fn drop(&mut self) {
-		assert_eq!(self.handles.load(atomic::Ordering::Acquire), 0);
-	}
-}
+// Public interface ////////////////////////////////////////////////////////////
 
 /// A reference-counted handle to a unit of runtime information.
 ///
@@ -44,6 +38,85 @@ impl<R> Drop for Handle<R> {
 	}
 }
 
+impl std::ops::Deref for Handle<Function> {
+	type Target = Function;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0.inner
+	}
+}
+
+#[derive(Debug)]
+pub struct Function {
+	pub(crate) ptr: *const c_void,
+	pub(crate) id: FuncId,
+	pub(crate) sig_hash: u64,
+}
+
+impl Function {
+	#[must_use]
+	pub fn downcast<F: JitFn>(&self) -> Option<TFn<F>> {
+		let mut hasher = FxHasher::default();
+		F::sig_hash(&mut hasher);
+
+		if self.sig_hash == hasher.finish() {
+			return Some(TFn(self, PhantomData));
+		}
+
+		None
+	}
+}
+
+/// A strongly-typed reference to a [JIT function pointer](Function).
+#[derive(Debug)]
+pub struct TFn<'f, F: JitFn>(&'f Function, PhantomData<F>);
+
+impl<F: JitFn> std::ops::Deref for TFn<'_, F> {
+	type Target = F;
+
+	fn deref(&self) -> &Self::Target {
+		// SAFETY: the type of the function behind this reference was already verified.
+		unsafe { &*self.0.ptr.cast::<F>() }
+	}
+}
+
+/// A strongly-typed handle to a [JIT function pointer](Function).
+#[derive(Debug)]
+pub struct TFnHandle<F: JitFn>(Handle<Function>, PhantomData<F>);
+
+impl<F: JitFn> std::ops::Deref for TFnHandle<F> {
+	type Target = F;
+
+	fn deref(&self) -> &Self::Target {
+		// SAFETY: the type of the function behind this handle was already verified.
+		unsafe { &*self.0.ptr.cast::<F>() }
+	}
+}
+
+#[derive(Debug)]
+pub struct Data {
+	ptr: *const u8,
+	size: usize,
+	id: DataId,
+	immutable: bool,
+}
+
+// Private details /////////////////////////////////////////////////////////////
+
+/// A unit of runtime information (e.g. RTTI, pointer to a compiled function,
+/// pointer to a JIT data object) allocated in an arena.
+#[derive(Debug)]
+pub(crate) struct Store<R> {
+	pub(crate) inner: R,
+	pub(crate) handles: AtomicU32,
+}
+
+impl<R> Drop for Store<R> {
+	fn drop(&mut self) {
+		assert_eq!(self.handles.load(atomic::Ordering::Acquire), 0);
+	}
+}
+
 pub(crate) struct Record {
 	pub(crate) tag: StoreTag,
 	pub(crate) inner: StoreUnion,
@@ -51,9 +124,8 @@ pub(crate) struct Record {
 
 /// Gets discriminated with [`StoreTag`].
 pub(crate) union StoreUnion {
-	// TODO: determine backend.
-	pub(crate) func: ManuallyDrop<APtr<Store<()>>>,
-	pub(crate) data: ManuallyDrop<APtr<Store<()>>>,
+	pub(crate) func: ManuallyDrop<APtr<Store<Function>>>,
+	pub(crate) data: ManuallyDrop<APtr<Store<Data>>>,
 	pub(crate) typedef: ManuallyDrop<APtr<Store<()>>>,
 }
 
