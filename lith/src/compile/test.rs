@@ -6,38 +6,49 @@ use super::*;
 
 #[test]
 fn end_to_end() {
+	// Improve clarity of panic messages.
+	rayon::ThreadPoolBuilder::new()
+		.thread_name(|i| format!("lith_global{i}"))
+		.num_threads(1)
+		.build_global()
+		.unwrap();
+
 	let core_path = Path::new(env!("CARGO_WORKSPACE_DIR")).join("assets/viletech/lith");
 
-	let ftree = FileTree::from_fs(&core_path).unwrap();
+	let corelib = LibMeta {
+		name: "lith".to_string(),
+		version: Version::V0_0_0,
+		native: true,
+	};
 
-	if !ftree.valid() {
-		for (path, ptree) in ftree.files() {
-			eprintln!("Errors while parsing {path}:");
+	let mut compiler = Compiler::new(Config {
+		opt: OptLevel::None,
+		hotswap: false,
+	});
 
-			for err in ptree.errors() {
-				dbg!(err);
-				eprintln!();
-			}
+	let reg_result = compiler.register_lib(corelib, |ftree| ftree.add_from_fs(&core_path));
+
+	if let Err(errs) = reg_result {
+		for err in errs {
+			dbg!(err);
 		}
 
 		panic!();
 	}
 
-	let corelib_src = LibSource {
-		name: "lithica".to_string(),
-		version: Version::new(0, 0, 0),
-		native: true,
-		filetree: ftree,
-	};
-
-	let mut compiler = Compiler::new(
-		Config {
-			opt: OptLevel::None,
-		},
-		[corelib_src],
-	);
+	compiler.finish_registration();
 
 	crate::declare_symbols(&mut compiler);
+
+	if compiler.any_errors() {
+		for issue in compiler.drain_issues() {
+			dbg!(issue);
+		}
+
+		panic!();
+	}
+
+	crate::resolve_imports(&mut compiler);
 
 	if compiler.any_errors() {
 		for issue in compiler.drain_issues() {

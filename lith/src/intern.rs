@@ -8,7 +8,7 @@ use std::{
 use append_only_vec::AppendOnlyVec;
 use doomfront::rowan::GreenToken;
 
-use crate::{FxDashMap, Syn, SyntaxToken};
+use crate::{FxDashMap, SyntaxToken};
 
 /// An index into a [`NameInterner`]. Used for symbol lookup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,11 +26,6 @@ impl NameInterner {
 	#[must_use]
 	pub(crate) fn intern(&self, token: &SyntaxToken) -> NameIx {
 		self.add(token.green().to_owned())
-	}
-
-	#[must_use]
-	pub(crate) fn intern_str(&self, string: &str) -> NameIx {
-		self.add(GreenToken::new(Syn::Ident.into(), string))
 	}
 
 	#[must_use]

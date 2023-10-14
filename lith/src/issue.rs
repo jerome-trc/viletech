@@ -148,6 +148,9 @@ pub enum Level {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum Error {
+	/// An annotation expected one value from a specific set of possible values
+	/// for one of its arguments, but received something else.
+	AnnotationArg,
 	/// Wrong number of arguments passed to a function.
 	ArgCount,
 	/// Mismatch between argument and parameter types.
@@ -159,20 +162,28 @@ pub enum Error {
 	CEvalRecursion,
 	ConstEval,
 	FlagDefBitOverflow,
+	FolderImport,
+	/// A named argument was passed to an annotation that cannot accept names
+	/// on any of its arguments.
+	IllegalArgName,
 	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	ImportPath,
 	/// e.g. attempt to implicitly narrow,
 	/// or to use a literal suffix which would narrow the literal's value.
 	IntConvert,
 	/// Something went wrong with the compiler itself. The problem was either
 	/// in Rust, or an ill-formed native declaration in a script.
 	Internal,
+	/// An import entry using a name literal is missing its required rename identifier.
+	MissingImportRename,
 	ParseFloat,
 	ParseInt,
 	QualifierOverlap,
 	Redeclare,
+	SelfImport,
 	SymbolKindMismatch,
 	SymbolNotFound,
 	UnknownExprType,

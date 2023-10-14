@@ -21,86 +21,83 @@ pub mod rti;
 pub mod runtime;
 pub mod syn;
 
-pub use self::{compile::*, front::decl::*, syn::*};
+use std::string::FromUtf8Error;
+
+pub use self::{compile::*, front::*, syn::*};
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
 pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
 pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
 
-/// Each [library] is declared as belonging to a version of the Lithica
+/// Each Lithica library is declared as belonging to a version of the Lithica
 /// specification, which uses [SemVer](https://semver.org/).
-///
-/// [library]: project::Library
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Version {
-	pub major: u16,
-	pub minor: u16,
-	pub rev: u16,
+pub struct Version(u16, u16, u16);
+
+impl Version {
+	pub const V0_0_0: Self = Self(0, 0, 0);
 }
 
 impl std::str::FromStr for Version {
 	type Err = Error;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let mut parts = s.split('.');
-
-		let major = parts
-			.next()
-			.ok_or(Error::EmptyVersion)?
-			.parse()
-			.map_err(Error::SemVerParse)?;
-
-		let minor = parts
-			.next()
-			.map_or(Ok(0), |m| m.parse::<u16>().map_err(Error::SemVerParse))?;
-
-		let rev = if let Some(r) = parts.next() {
-			r.parse::<u16>().map_err(Error::SemVerParse)?
-		} else {
-			0
-		};
-
-		Ok(Self { major, minor, rev })
+		match s {
+			"0.0.0" => Ok(Self::V0_0_0),
+			"" => Err(Error::EmptyVersion),
+			_ => Err(Error::SemVerParse),
+		}
 	}
 }
 
-impl Version {
-	#[must_use]
-	pub const fn new(major: u16, minor: u16, rev: u16) -> Self {
-		Self { major, minor, rev }
-	}
-
-	/// Check if this version is equal to an existing Lithica spec version.
-	#[must_use]
-	pub fn is_valid(&self) -> bool {
-		matches!(
-			self,
-			Version {
-				major: 0,
-				minor: 0,
-				rev: 0,
-			}
-		)
-	}
-}
-
-/// Failure modes of this crate's operations, excluding
-/// [parse errors](parse::Error) and [compilation issues](issue).
+/// Failure modes of this crate's operations, excluding [frontend issues](issue).
 #[derive(Debug)]
 pub enum Error {
 	/// Tried to parse a SemVer string without any numbers or periods in it.
+	/// See [`Version::from_str`].
 	EmptyVersion,
-	SemVerParse(std::num::ParseIntError),
+	/// Can arise during [`filetree::FileTree::from_fs`].
+	FromUtf8(FromUtf8Error),
+	Parse,
+	/// Can arise during [`filetree::FileTree::from_fs`].
+	ReadDir(std::io::Error),
+	/// Can arise during [`filetree::FileTree::from_fs`].
+	ReadFile(std::io::Error),
+	/// See [`Version::from_str`].
+	SemVerParse,
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Error::EmptyVersion => None,
+			Error::FromUtf8(err) => Some(err),
+			Error::Parse => None,
+			Error::ReadDir(err) => Some(err),
+			Error::ReadFile(err) => Some(err),
+			Error::SemVerParse => None,
+		}
+	}
+}
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::EmptyVersion => write!(f, "tried to parse an empty version string"),
-			Self::SemVerParse(err) => write!(f, "SemVer parse error: {err}"),
+			Self::FromUtf8(err) => write!(
+				f,
+				"failed to convert file content to UTF-8 when building a file tree: {err}"
+			),
+			Self::Parse => write!(f, "library registration failed due to parsing errors"),
+			Self::ReadDir(err) => write!(
+				f,
+				"failed to read a directory when building a file tree: {err}"
+			),
+			Self::ReadFile(err) => {
+				write!(f, "failed to read a file when building a file tree: {err}")
+			}
+			Self::SemVerParse => write!(f, "SemVer parser could not match a known Lithica version"),
 		}
 	}
 }

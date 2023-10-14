@@ -39,10 +39,8 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 	}
 
 	let mark = p.open();
-	let mut parsed_docs = false;
 
 	while p.eat(Syn::DocComment, Syn::DocComment) && !p.eof() {
-		parsed_docs = true;
 		trivia_0plus(p);
 	}
 
@@ -51,7 +49,7 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	if parsed_docs || at_function_decl(p) {
+	if at_function_decl(p) {
 		function_decl(p, mark);
 	} else if at_symbolic_constant(p) {
 		symbolic_constant(p, mark);

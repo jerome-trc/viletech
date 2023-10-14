@@ -4,7 +4,6 @@ use std::{
 	ffi::c_void,
 	hash::Hasher,
 	marker::PhantomData,
-	mem::ManuallyDrop,
 	sync::atomic::{self, AtomicU32},
 };
 

@@ -69,6 +69,14 @@ impl<T> CPtr<T> {
 		self.0.store(Some(new));
 	}
 
+	pub(crate) fn compare_exchange(
+		&self,
+		current: Option<NonNull<T>>,
+		new: Option<NonNull<T>>,
+	) -> Result<Option<NonNull<T>>, Option<NonNull<T>>> {
+		self.0.compare_exchange(current, new)
+	}
+
 	/// Returns `None` if the pointer within is null.
 	#[must_use]
 	pub(crate) fn as_ref(&self) -> Option<&T> {

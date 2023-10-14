@@ -4,6 +4,7 @@
 //! [parsing]: crate::parse
 
 pub(crate) mod decl;
+pub(crate) mod import;
 
 use doomfront::rowan::{ast::AstNode, TextRange};
 
@@ -12,13 +13,14 @@ use crate::{
 	compile::Scope,
 	data::{DefPtr, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
-	Compiler, ParseTree, Syn, SyntaxNode, SyntaxToken,
+	Compiler, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
+
+pub use self::{decl::*, import::*};
 
 struct FrontendContext<'c> {
 	compiler: &'c Compiler,
 	arena: &'c bumpalo::Bump,
-	lib_ix: u16,
 	file_ix: FileIx,
 	path: &'c str,
 	ptree: &'c ParseTree,
@@ -32,7 +34,6 @@ impl FrontendContext<'_> {
 		node: &SyntaxNode,
 	) -> Result<SymPtr, SymPtr> {
 		let location = Location {
-			lib_ix: self.lib_ix,
 			file_ix: self.file_ix,
 			span: node.text_range(),
 		};
@@ -48,11 +49,16 @@ impl FrontendContext<'_> {
 
 				let sym_ptr = SymPtr::alloc(self.arena, sym);
 				self.symbols.insert(location, sym_ptr.clone());
-				vac.insert(sym_ptr.clone());
+
+				vac.insert(LutSym {
+					inner: sym_ptr.clone(),
+					imported: false,
+				});
+
 				sym_ptr
 			}
 			im::hashmap::Entry::Occupied(occ) => {
-				return Err(occ.get().clone());
+				return Err(occ.get().clone().inner);
 			}
 		};
 
@@ -61,9 +67,7 @@ impl FrontendContext<'_> {
 
 	#[must_use]
 	fn resolve_file(&self, sym: &Symbol) -> (&String, &ParseTree) {
-		let prev_lib = &self.sources[sym.location.lib_ix as usize];
-		let prev_ftn_ix = petgraph::graph::NodeIndex::new(sym.location.file_ix as usize);
-		let prev_ftn = &prev_lib.filetree.graph[prev_ftn_ix];
+		let prev_ftn = &self.ftree.graph[sym.location.file_ix];
 
 		let filetree::Node::File { path, ptree } = prev_ftn else {
 			unreachable!()

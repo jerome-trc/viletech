@@ -302,8 +302,13 @@ fn smoke_func_decl() {
 		},
 		|ast| {
 			let anno = ast.annotations().next().unwrap();
-			assert_eq!(anno.namespace().unwrap().text(), "dolor");
-			assert_eq!(anno.name().unwrap().text(), "sit_amet");
+
+			let ast::AnnotationName::Scoped(id0, id1) = anno.name().unwrap() else {
+				panic!()
+			};
+
+			assert_eq!(id0.text(), "dolor");
+			assert_eq!(id1.text(), "sit_amet");
 			assert!(anno.arg_list().unwrap().iter().next().is_none());
 		},
 	];

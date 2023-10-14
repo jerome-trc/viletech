@@ -189,4 +189,12 @@ impl SymConst {
 	pub fn expr(&self) -> AstResult<Expr> {
 		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
 	}
+
+	pub fn annotations(&self) -> impl Iterator<Item = Annotation> {
+		self.0.children().filter_map(Annotation::cast)
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(&self.0)
+	}
 }

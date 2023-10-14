@@ -1,27 +1,50 @@
 use std::path::Path;
 
 use parking_lot::Mutex;
-use petgraph::prelude::DiGraph;
+use petgraph::{
+	graph::{DefaultIx, NodeIndex},
+	prelude::DiGraph,
+};
 use rayon::prelude::*;
 
-use crate::{parse, ParseTree};
+use crate::{parse, Error, ParseTree};
 
-pub type FileIx = petgraph::graph::DefaultIx;
+pub type FileIx = petgraph::graph::NodeIndex<DefaultIx>;
 
 #[derive(Debug)]
 pub struct FileTree {
 	/// Edges run from parents ([`Node::Folder`]) to children ([`Node::File`]).
-	/// An invalid graph is always safe but will cause unexpected compiler errors.
-	pub graph: DiGraph<Node, (), FileIx>,
+	/// An invalid graph is always safe but will cause unexpected compiler errors
+	/// during import resolution.
+	pub graph: DiGraph<Node, (), DefaultIx>,
 }
 
 #[derive(Debug)]
 pub enum Node {
 	File { ptree: ParseTree, path: String },
 	Folder { path: String },
+	Root,
+}
+
+impl Node {
+	#[must_use]
+	pub fn path(&self) -> &str {
+		match self {
+			Self::File { path, .. } => path.as_str(),
+			Self::Folder { path } => path.as_str(),
+			Self::Root => "/",
+		}
+	}
+
+	#[must_use]
+	pub fn is_file(&self) -> bool {
+		matches!(self, Self::File { .. })
+	}
 }
 
 impl FileTree {
+	/// Returns `true` if none of the [parse trees](ParseTree) in this file tree
+	/// have any errors associated with them.
 	#[must_use]
 	pub fn valid(&self) -> bool {
 		for node in self.graph.node_weights() {
@@ -47,41 +70,129 @@ impl FileTree {
 		})
 	}
 
-	/// `root` can be a directory or file.
-	/// Blocks on the [`rayon`] global thread pool for parallelized parsing.
-	pub fn from_fs(root: &Path) -> std::io::Result<Self> {
-		if !root.is_dir() {
-			unimplemented!()
-		}
-
-		let files = Mutex::default();
-		Self::from_fs_recur(&files, root);
-
-		Ok(Self {
-			graph: files.into_inner(),
-		})
+	#[must_use]
+	pub fn root(&self) -> FileIx {
+		let ret = FileIx::new(0);
+		debug_assert!(matches!(&self.graph[ret], &Node::Root));
+		ret
 	}
 
-	fn from_fs_recur(files: &Mutex<DiGraph<Node, (), FileIx>>, dir: &Path) {
-		let Ok(dir_iter) = std::fs::read_dir(dir) else {
-			// TODO: accumulate and return errors.
-			return;
+	#[must_use]
+	pub fn parent_of(&self, index: NodeIndex) -> Option<NodeIndex> {
+		let mut neighbors = self
+			.graph
+			.neighbors_directed(index, petgraph::Direction::Incoming);
+
+		let ret = neighbors.next();
+
+		debug_assert!(
+			neighbors.next().is_none(),
+			"`FileTree` node has more than one parent"
+		);
+
+		ret
+	}
+
+	#[must_use]
+	pub fn find_child(&self, index: NodeIndex, name: &str) -> Option<NodeIndex> {
+		for child in self
+			.graph
+			.neighbors_directed(index, petgraph::Direction::Outgoing)
+		{
+			let ftn = &self.graph[child];
+
+			match ftn {
+				Node::File { path, .. } => {
+					let path = Path::new(path);
+
+					if path.file_stem().is_some_and(|fname| fname == name) {
+						return Some(child);
+					}
+				}
+				Node::Folder { path } => {
+					let path = Path::new(path);
+
+					if path.file_name().is_some_and(|fname| fname == name) {
+						return Some(child);
+					}
+				}
+				Node::Root => unreachable!(),
+			};
+		}
+
+		None
+	}
+
+	pub fn reset(&mut self) {
+		self.graph.clear();
+		self.graph.add_node(Node::Root);
+	}
+
+	/// `base` can be a directory or file.
+	/// Blocks on the [`rayon`] global thread pool for parallelized parsing.
+	pub fn add_from_fs(&mut self, base: &Path) -> Result<FileIx, Vec<Error>> {
+		if !base.is_dir() {
+			unimplemented!();
+		}
+
+		let parent = self.root();
+		let files = Mutex::new(self);
+		let errors = Mutex::default();
+		let option = Self::add_from_fs_recur(&files, &errors, base, parent);
+		let errors = errors.into_inner();
+
+		match option {
+			Some(base_ix) => {
+				if errors.is_empty() {
+					Ok(base_ix)
+				} else {
+					Err(errors)
+				}
+			}
+			None => Err(errors),
+		}
+	}
+
+	#[must_use]
+	fn add_from_fs_recur(
+		this: &Mutex<&mut Self>,
+		errors: &Mutex<Vec<Error>>,
+		dir: &Path,
+		parent: FileIx,
+	) -> Option<FileIx> {
+		let dir_iter = match std::fs::read_dir(dir) {
+			Ok(d_i) => d_i,
+			Err(err) => {
+				errors.lock().push(Error::ReadDir(err));
+				return None;
+			}
 		};
 
-		let dir_ix = files.lock().add_node(Node::Folder {
-			path: dir.to_string_lossy().into_owned(),
-		});
+		let dir_ix = {
+			let mut guard = this.lock();
+
+			let dir_ix = guard.graph.add_node(Node::Folder {
+				path: dir.to_string_lossy().into_owned(),
+			});
+
+			guard.graph.add_edge(parent, dir_ix, ());
+
+			dir_ix
+		};
 
 		dir_iter.par_bridge().for_each(|result| {
-			let Ok(dir_entry) = result else {
-				// TODO: accumulate and return errors.
-				return;
+			let dir_entry = match result {
+				Ok(d_e) => d_e,
+				Err(err) => {
+					errors.lock().push(Error::ReadFile(err));
+					return;
+				}
 			};
 
 			let path = dir_entry.path();
 
 			if path.is_dir() {
-				Self::from_fs_recur(files, &path);
+				let _ = Self::add_from_fs_recur(this, errors, &path, dir_ix);
 				return;
 			}
 
@@ -92,26 +203,44 @@ impl FileTree {
 				return;
 			}
 
-			let Ok(bytes) = std::fs::read(&path) else {
-				// TODO: accumulate and return errors.
-				return;
+			let bytes = match std::fs::read(&path) {
+				Ok(b) => b,
+				Err(err) => {
+					errors.lock().push(Error::ReadFile(err));
+					return;
+				}
 			};
 
-			let Ok(text) = String::from_utf8(bytes) else {
-				// TODO: accumulate and return errors.
-				return;
+			let text = match String::from_utf8(bytes) {
+				Ok(t) => t,
+				Err(err) => {
+					errors.lock().push(Error::FromUtf8(err));
+					return;
+				}
 			};
 
 			let ptree = doomfront::parse(&text, parse::file, ());
 
-			let mut guard = files.lock();
+			let mut guard = this.lock();
 
-			let file_ix = guard.add_node(Node::File {
+			let file_ix = guard.graph.add_node(Node::File {
 				ptree,
 				path: path.to_string_lossy().into_owned(),
 			});
 
-			guard.add_edge(dir_ix, file_ix, ());
+			guard.graph.add_edge(dir_ix, file_ix, ());
 		});
+
+		Some(dir_ix)
+	}
+}
+
+impl Default for FileTree {
+	fn default() -> Self {
+		let mut ret = Self {
+			graph: DiGraph::default(),
+		};
+		ret.reset();
+		ret
 	}
 }

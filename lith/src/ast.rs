@@ -69,57 +69,43 @@ pub struct Annotation(SyntaxNode);
 simple_astnode!(Syn, Annotation, Syn::Annotation);
 
 impl Annotation {
-	/// The returned token is always tagged [`Syn::Ident`].
-	pub fn name(&self) -> AstResult<SyntaxToken> {
-		let first_ident = self
+	pub fn name(&self) -> AstResult<AnnotationName> {
+		let ident0 = self
 			.0
 			.children_with_tokens()
 			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
 			.ok_or(AstError::Missing)?;
 
-		let mut dot_seen = false;
+		let dot_opt = ident0
+			.siblings_with_tokens(Direction::Next)
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot));
 
-		for elem in first_ident.siblings_with_tokens(Direction::Next) {
-			match elem.kind() {
-				Syn::Dot => dot_seen = true,
-				Syn::Ident => {
-					if dot_seen {
-						return Ok(elem.into_token().unwrap());
-					}
-				}
-				_ => continue,
-			}
-		}
-
-		Err(AstError::Missing)
-	}
-
-	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn namespace(&self) -> Option<SyntaxToken> {
-		let first_ident = self
-			.0
-			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident));
-
-		let Some(first_ident) = first_ident else {
-			return None;
+		let Some(dot) = dot_opt else {
+			return Ok(AnnotationName::Unscoped(ident0));
 		};
 
-		if first_ident
+		if let Some(ident1) = dot
 			.siblings_with_tokens(Direction::Next)
-			.any(|e| e.kind() == Syn::Dot)
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
 		{
-			return Some(first_ident);
+			return Ok(AnnotationName::Scoped(ident0, ident1));
 		}
 
-		None
+		Ok(AnnotationName::Unscoped(ident0))
 	}
 
 	#[must_use]
 	pub fn arg_list(&self) -> Option<ArgList> {
 		self.0.last_child().and_then(ArgList::cast)
 	}
+}
+
+/// All tokens herein are always tagged [`Syn::Ident`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum AnnotationName {
+	Unscoped(SyntaxToken),
+	Scoped(SyntaxToken, SyntaxToken),
 }
 
 // ArgList, Argument ///////////////////////////////////////////////////////////
@@ -226,6 +212,10 @@ impl AstNode for Import {
 	where
 		Self: Sized,
 	{
+		if node.kind() != Syn::Import {
+			return None;
+		}
+
 		let child = node.last_child().unwrap();
 
 		match child.kind() {
@@ -260,6 +250,14 @@ impl Import {
 					.map(LitToken)
 			})
 			.ok_or(AstError::Missing)
+	}
+
+	pub fn annotations(&self) -> impl Iterator<Item = Annotation> {
+		self.syntax().children().filter_map(Annotation::cast)
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		doc_comments(self.syntax())
 	}
 }
 
