@@ -94,9 +94,9 @@ pub enum Syn {
 	#[doc(hidden)]
 	__FirstKeyword,
 
-	/// `any`
+	/// `any_t`
 	#[token("any")]
-	KwAny,
+	KwAnyT,
 	/// `const`
 	#[token("const")]
 	KwConst,
@@ -106,9 +106,9 @@ pub enum Syn {
 	/// `import`
 	#[token("import")]
 	KwImport,
-	/// `typedef`
-	#[token("typedef")]
-	KwTypedef,
+	/// `type_t`
+	#[token("type_t")]
+	KwTypeT,
 
 	#[doc(hidden)]
 	__LastKeyword,

@@ -23,7 +23,7 @@ pub const EXPR_FIRST_SET: &[Syn] = &[
 pub fn expr(p: &mut Parser<Syn>) -> bool {
 	let t0 = p.nth(0);
 
-	if matches!(t0, Syn::KwAny | Syn::KwTypedef) {
+	if matches!(t0, Syn::KwAnyT | Syn::KwTypeT) {
 		let mark = p.open();
 		p.advance(t0);
 		p.close(mark, Syn::ExprType);

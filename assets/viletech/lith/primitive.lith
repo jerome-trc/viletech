@@ -1,4 +1,4 @@
 import "/lith/builtins" : intType, uintType;
 
-const i32: typedef = intType(32);
-const u32: typedef = uintType(32);
+const i32: type_t = intType(32);
+const u32: type_t = uintType(32);
