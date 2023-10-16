@@ -185,6 +185,24 @@ pub enum IntLit {
 	U128(u128),
 }
 
+impl From<IntLit> for u128 {
+	fn from(value: IntLit) -> Self {
+		match value {
+			IntLit::NoSuffix(i)
+			| IntLit::I8(i)
+			| IntLit::I16(i)
+			| IntLit::I32(i)
+			| IntLit::I64(i)
+			| IntLit::I128(i)
+			| IntLit::U8(i)
+			| IntLit::U16(i)
+			| IntLit::U32(i)
+			| IntLit::U64(i)
+			| IntLit::U128(i) => i,
+		}
+	}
+}
+
 /// Attaches a suffix tag to the output of [`LitToken::float`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FloatLit {
