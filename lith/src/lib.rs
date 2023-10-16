@@ -10,6 +10,7 @@ pub(crate) mod compile;
 pub(crate) mod data;
 pub(crate) mod front;
 pub(crate) mod intern;
+pub(crate) mod sema;
 
 pub mod arena;
 pub mod ast;
@@ -21,9 +22,7 @@ pub mod rti;
 pub mod runtime;
 pub mod syn;
 
-use std::string::FromUtf8Error;
-
-pub use self::{compile::*, front::*, syn::*};
+pub use self::{compile::*, front::*, sema::*, syn::*};
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
@@ -58,7 +57,7 @@ pub enum Error {
 	/// See [`Version::from_str`].
 	EmptyVersion,
 	/// Can arise during [`filetree::FileTree::from_fs`].
-	FromUtf8(FromUtf8Error),
+	FromUtf8(std::string::FromUtf8Error),
 	Parse,
 	/// Can arise during [`filetree::FileTree::from_fs`].
 	ReadDir(std::io::Error),
@@ -102,11 +101,17 @@ impl std::fmt::Display for Error {
 	}
 }
 
-/// "Backend type".
-pub(crate) type _BType = cranelift::codegen::ir::Type;
-pub(crate) type _ValVec = smallvec::SmallVec<[cranelift::codegen::data_value::DataValue; 1]>;
+pub type ValVec = smallvec::SmallVec<[cranelift::codegen::data_value::DataValue; 1]>;
+
+pub(crate) type AbiType = cranelift::codegen::ir::Type;
+pub(crate) type AbiTypes = smallvec::SmallVec<[AbiType; 1]>;
+pub(crate) type CEvalIntrin = fn(&SemaContext, ast::ArgList) -> CEval;
+pub(crate) type IrFunction = cranelift::codegen::ir::Function;
+pub(crate) type Scope =
+	im::HashMap<intern::NameIx, LutSym, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
 
 pub(crate) type FxDashMap<K, V> =
 	dashmap::DashMap<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
+#[allow(unused)]
 pub(crate) type FxDashView<K, V> =
 	dashmap::ReadOnlyView<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;

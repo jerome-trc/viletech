@@ -1,21 +1,26 @@
 //! Pieces of data declared and inspected by the frontend.
 
+use cranelift_module::FuncId;
 use doomfront::rowan::TextRange;
 
-use crate::{arena::CPtr, filetree::FileIx, intern::NameIx, Scope};
+use crate::{
+	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, CEvalIntrin, CEvalNative, IrFunction,
+	Scope,
+};
 
 pub(crate) type SymPtr = CPtr<Symbol>;
-pub(crate) type DefPtr = CPtr<Definition>;
+pub(crate) type DatumPtr = CPtr<Datum>;
+pub(crate) type CodePtr = CPtr<FunctionCode>;
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
 	pub(crate) location: Location,
-	pub(crate) def: DefPtr,
+	pub(crate) datum: DatumPtr,
 }
 
 impl Drop for Symbol {
 	fn drop(&mut self) {
-		if let Some(ptr) = self.def.as_ptr() {
+		if let Some(ptr) = self.datum.as_ptr() {
 			unsafe {
 				std::ptr::drop_in_place(ptr.as_ptr());
 			}
@@ -43,9 +48,11 @@ impl Location {
 }
 
 #[derive(Debug)]
-pub(crate) enum Definition {
+pub(crate) enum Datum {
 	Function(Function),
-	MassImport(Scope),
+	/// In a `* => rename` import, this is the type of `rename`.
+	Container(Scope),
+	Primitive(Primitive),
 	SymConst(SymConst),
 }
 
@@ -85,19 +92,50 @@ pub(crate) struct Function {
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
 	pub(crate) return_type: SymPtr,
+	pub(crate) code: CodePtr,
+}
+
+impl Drop for Function {
+	fn drop(&mut self) {
+		if let Some(ptr) = self.code.as_ptr() {
+			unsafe {
+				std::ptr::drop_in_place(ptr.as_ptr());
+			}
+		}
+	}
+}
+
+#[derive(Debug)]
+pub(crate) enum FunctionCode {
+	/// Function was defined entirely in Lith source.
+	Ir { ir: IrFunction, id: FuncId },
+	/// Function is Rust-defined, intrinsic to the compiler.
+	Builtin {
+		rt: Option<extern "C" fn(runtime::Context, ...)>,
+		ceval: Option<CEvalIntrin>,
+	},
+	/// Function is Rust-defined, registered externally.
+	Native {
+		rt: Option<extern "C" fn(runtime::Context, ...)>,
+		ceval: Option<CEvalNative>,
+	},
 }
 
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
 	pub(crate) type_spec: SymPtr,
+	pub(crate) consteval: bool,
 }
 
 bitflags::bitflags! {
 	#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 	pub(crate) struct FunctionFlags: u8 {
-		/// The script writer has hinted that the function is unlikely to be called.
+		/// An annotation has hinted that the function is unlikely to be called.
 		const COLD = 1 << 0;
+		/// If the return type is not `void`, do not emit a warning if this
+		/// function is called without explicit consumption of its return value.
+		const CAN_DISCARD = 1 << 1;
 	}
 }
 
@@ -111,6 +149,26 @@ pub(crate) enum Inlining {
 	More,
 	/// Corresponds to the annotation `#[inline(extra)]`.
 	Extra,
+}
+
+// Primitive ///////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Primitive {
+	Void,
+	Bool,
+	I8,
+	I16,
+	I32,
+	I64,
+	I128,
+	U8,
+	U16,
+	U32,
+	U64,
+	U128,
+	F32,
+	F64,
 }
 
 // SymConst ////////////////////////////////////////////////////////////////////

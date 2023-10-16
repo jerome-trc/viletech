@@ -7,8 +7,8 @@ use crate::{
 	ast,
 	compile::{self, Scope},
 	data::{
-		Confinement, DefPtr, Definition, Function, FunctionFlags, Inlining, Location, Parameter,
-		SymConst, SymPtr, Visibility,
+		CodePtr, Confinement, Datum, DatumPtr, Function, FunctionFlags, Inlining, Location,
+		Parameter, SymConst, SymPtr, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
@@ -105,6 +105,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		inlining: Inlining::default(),
 		params: vec![],
 		return_type: SymPtr::null(),
+		code: CodePtr::null(),
 	};
 
 	for anno in ast.annotations() {
@@ -130,12 +131,13 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		datum.params.push(Parameter {
 			name: ctx.names.intern(&param_ident),
 			type_spec: SymPtr::null(),
+			consteval: param.is_const(),
 		});
 	}
 
 	let sym = sym_ptr.as_ref();
-	let def_ptr = DefPtr::alloc(ctx.arena, Definition::Function(datum));
-	sym.def.store(def_ptr.as_ptr().unwrap());
+	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::Function(datum));
+	sym.datum.store(datum_ptr.as_ptr().unwrap());
 }
 
 fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst) {
@@ -156,8 +158,8 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 	};
 
 	let sym = sym_ptr.as_ref();
-	let def_ptr = DefPtr::alloc(ctx.arena, Definition::SymConst(datum));
-	sym.def.store(def_ptr.as_ptr().unwrap());
+	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::SymConst(datum));
+	sym.datum.store(datum_ptr.as_ptr().unwrap());
 }
 
 // Details /////////////////////////////////////////////////////////////////////

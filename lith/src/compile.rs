@@ -14,7 +14,7 @@ use crate::{
 	filetree::{self, FileIx, FileTree},
 	intern::{NameInterner, NameIx},
 	issue::Issue,
-	Error, FxDashMap, Version,
+	Error, FxDashMap, ValVec, Version,
 };
 
 /// State and context tying together the frontend, mid-section, and backend.
@@ -206,6 +206,8 @@ impl Drop for Compiler {
 		self.reset();
 	}
 }
+
+pub type CEvalNative = fn(ValVec) -> ValVec;
 
 /// "Look-up table symbol".
 #[derive(Debug, Clone, PartialEq, Eq)]

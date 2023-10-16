@@ -11,7 +11,7 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 use crate::{
 	ast,
 	compile::Scope,
-	data::{DefPtr, Location, SymPtr, Symbol},
+	data::{DatumPtr, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
@@ -45,7 +45,7 @@ impl FrontendContext<'_> {
 			im::hashmap::Entry::Vacant(vac) => {
 				let sym = Symbol {
 					location,
-					def: DefPtr::null(),
+					datum: DatumPtr::null(),
 				};
 
 				let sym_ptr = SymPtr::alloc(self.arena, sym);

@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use crate::{
 	ast, compile,
-	data::{DefPtr, Definition, Location, SymPtr, Symbol},
+	data::{Datum, DatumPtr, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
 	Compiler, LibMeta, LutSym, Scope, Syn,
@@ -303,7 +303,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	let imp_sym = Symbol {
 		location,
-		def: DefPtr::alloc(ctx.arena, Definition::MassImport(imports)),
+		datum: DatumPtr::alloc(ctx.arena, Datum::Container(imports)),
 	};
 
 	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
