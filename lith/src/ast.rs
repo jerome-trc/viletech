@@ -5,7 +5,7 @@ mod item;
 mod lit;
 
 use doomfront::{
-	rowan::{ast::AstNode, Direction},
+	rowan::{ast::AstNode, Direction, TextRange},
 	simple_astnode, AstError, AstResult,
 };
 
@@ -106,6 +106,26 @@ impl Annotation {
 pub enum AnnotationName {
 	Unscoped(SyntaxToken),
 	Scoped(SyntaxToken, SyntaxToken),
+}
+
+impl AnnotationName {
+	#[must_use]
+	pub fn text(&self) -> (&str, Option<&str>) {
+		match self {
+			Self::Unscoped(ident) => (ident.text(), None),
+			Self::Scoped(ident0, ident1) => (ident0.text(), Some(ident1.text())),
+		}
+	}
+
+	#[must_use]
+	pub fn text_range(&self) -> TextRange {
+		match self {
+			Self::Unscoped(ident) => ident.text_range(),
+			Self::Scoped(ident0, ident1) => {
+				TextRange::new(ident0.text_range().start(), ident1.text_range().end())
+			}
+		}
+	}
 }
 
 // ArgList, Argument ///////////////////////////////////////////////////////////
