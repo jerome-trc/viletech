@@ -29,6 +29,11 @@ impl NameInterner {
 	}
 
 	#[must_use]
+	pub(crate) fn resolve(&self, ix: NameIx) -> &str {
+		Borrow::borrow(&self.array[ix.0 as usize])
+	}
+
+	#[must_use]
 	fn add(&self, green: GreenToken) -> NameIx {
 		let iname = IName(green);
 
@@ -96,5 +101,37 @@ impl Borrow<str> for IName {
 impl std::fmt::Display for IName {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.0.text().fmt(f)
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use doomfront::rowan::GreenNode;
+
+	use crate::{Syn, SyntaxNode};
+
+	use super::*;
+
+	#[test]
+	fn smoke() {
+		let interner = NameInterner::default();
+
+		let node = GreenNode::new(
+			Syn::FileRoot.into(),
+			[
+				GreenToken::new(Syn::Ident.into(), "lorem").into(),
+				GreenToken::new(Syn::LitName.into(), "'ipsum'").into(),
+			],
+		);
+
+		let cursor = SyntaxNode::new_root(node);
+		let token0 = cursor.first_token().unwrap();
+		let token1 = cursor.last_token().unwrap();
+
+		let ix0 = interner.intern(&token0);
+		let ix1 = interner.intern(&token1);
+
+		assert_eq!(interner.resolve(ix0), "lorem");
+		assert_eq!(interner.resolve(ix1), "ipsum");
 	}
 }
