@@ -8,7 +8,7 @@ use crate::{
 	data::{DefPtr, Definition, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	Compiler, LutSym, Scope, Syn,
+	Compiler, LibMeta, LutSym, Scope, Syn,
 };
 
 use super::FrontendContext;
@@ -18,39 +18,51 @@ pub fn resolve_imports(compiler: &mut Compiler) {
 	assert!(!compiler.failed);
 	assert_eq!(compiler.stage, compile::Stage::Import);
 
-	compiler
-		.ftree
-		.graph
-		.node_indices()
-		.par_bridge()
-		.for_each(|file_ix| {
-			let ftn = &compiler.ftree.graph[file_ix];
-
-			let filetree::Node::File { ptree, path } = ftn else {
-				return;
-			};
-
-			let arena = compiler.arenas[rayon::current_thread_index().unwrap()].lock();
-
-			let ctx = FrontendContext {
-				compiler,
-				arena: &arena,
-				file_ix,
-				path: path.as_str(),
-				ptree,
-			};
-
-			let mut scope = compiler.containers.get(&file_ix).unwrap().clone();
-			resolve_container_imports(&ctx, &mut scope);
-			let overwritten = compiler.containers.insert(file_ix, scope);
-			debug_assert!(overwritten.is_some());
-		});
+	for (_, (lib, lib_root)) in compiler.libs.iter().enumerate() {
+		ftree_recur(compiler, lib, *lib_root);
+	}
 
 	if compiler.any_errors() {
 		compiler.failed = true;
 	} else {
 		compiler.stage = compile::Stage::Sema;
 	}
+}
+
+fn ftree_recur(compiler: &Compiler, lib: &LibMeta, file_ix: FileIx) {
+	compiler
+		.ftree
+		.graph
+		.neighbors_directed(file_ix, petgraph::Outgoing)
+		.par_bridge()
+		.for_each(|i| {
+			let ftn = &compiler.ftree.graph[i];
+
+			match ftn {
+				filetree::Node::File { ptree, path } => {
+					let arena = compiler.arenas[rayon::current_thread_index().unwrap()].lock();
+
+					let ctx = FrontendContext {
+						compiler,
+						arena: &arena,
+						lib,
+						file_ix: i,
+						path: path.as_str(),
+						ptree,
+					};
+
+					let scope_key = Location::full_file(i);
+					let mut scope = compiler.scopes.get(&scope_key).unwrap().clone();
+					resolve_container_imports(&ctx, &mut scope);
+					let overwritten = compiler.scopes.insert(scope_key, scope);
+					debug_assert!(overwritten.is_some());
+				}
+				filetree::Node::Folder { .. } => {
+					ftree_recur(compiler, lib, i);
+				}
+				filetree::Node::Root => unreachable!(),
+			}
+		});
 }
 
 fn resolve_container_imports(ctx: &FrontendContext, scope: &mut Scope) {
@@ -174,7 +186,13 @@ fn import_single(
 	importee: FileIx,
 	entry: ast::ImportEntry,
 ) {
-	let importee_scope = ctx.containers.get(&importee).unwrap();
+	let importee_scope = ctx
+		.scopes
+		.get(&Location::full_file(importee))
+		.unwrap_or_else(|| {
+			let path = ctx.ftree.graph[importee].path();
+			panic!("no scope registered for container: {path}")
+		});
 
 	let ident;
 	let orig_name = entry.name().unwrap();
@@ -209,7 +227,7 @@ fn import_single(
 			Issue::new(
 				ctx.path,
 				entry.syntax().text_range(),
-				issue::Level::Error(issue::Error::MissingImportRename),
+				issue::Level::Error(issue::Error::SymbolNotFound),
 			)
 			.with_message(format!(
 				"symbol `{n}` not found in container: {p}",
@@ -217,6 +235,11 @@ fn import_single(
 				p = ctx.ftree.graph[importee].path(),
 			)),
 		);
+
+		for kvp in importee_scope.iter() {
+			dbg!(ctx.names.resolve(*kvp.0));
+		}
+
 		return;
 	};
 
@@ -238,7 +261,7 @@ fn import_single(
 }
 
 fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner: ast::ImportAll) {
-	let importee_scope = ctx.containers.get(&importee).unwrap();
+	let importee_scope = ctx.scopes.get(&Location::full_file(importee)).unwrap();
 
 	let rename = inner.rename().unwrap();
 	let name_ix = ctx.names.intern(&rename);
@@ -273,22 +296,28 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 		);
 	}
 
+	let location = Location {
+		span: rename.text_range(),
+		file_ix: ctx.file_ix,
+	};
+
 	let imp_sym = Symbol {
-		location: Location {
-			span: rename.text_range(),
-			file_ix: ctx.file_ix,
-		},
+		location,
 		def: DefPtr::alloc(ctx.arena, Definition::MassImport(imports)),
 	};
 
+	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
+
+	ctx.symbols.insert(location, imp_sym_ptr.clone());
+
 	vac.insert(LutSym {
-		inner: SymPtr::alloc(ctx.arena, imp_sym),
+		inner: imp_sym_ptr,
 		imported: true,
 	});
 }
 
 fn shadow_error(ctx: &FrontendContext, prev_ptr: SymPtr, entry_span: TextRange, entry_name: &str) {
-	let prev = prev_ptr.as_ref();
+	let prev = prev_ptr.try_ref().unwrap();
 	let prev_file = ctx.resolve_file(prev);
 	let prev_file_cursor = prev_file.1.cursor();
 

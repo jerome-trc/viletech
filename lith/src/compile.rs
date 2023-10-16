@@ -31,7 +31,9 @@ pub struct Compiler {
 	// Storage
 	/// One arena per thread in the Rayon global pool.
 	pub(crate) arenas: Vec<Mutex<bumpalo::Bump>>,
-	pub(crate) containers: FxDashMap<FileIx, Scope>,
+	/// Scopes for symbols as well as containers.
+	/// Container scopes are keyed via [`Location::full_file`].
+	pub(crate) scopes: FxDashMap<Location, Scope>,
 	pub(crate) symbols: FxDashMap<Location, SymPtr>,
 	// Interning
 	pub(crate) names: NameInterner,
@@ -76,7 +78,7 @@ impl Compiler {
 				v.resize_with(rayon::current_num_threads(), Mutex::default);
 				v
 			},
-			containers: FxDashMap::default(),
+			scopes: FxDashMap::default(),
 			symbols: FxDashMap::default(),
 			names: NameInterner::default(),
 		}
@@ -168,7 +170,7 @@ impl Compiler {
 	pub fn reset(&mut self) {
 		self.ftree.reset();
 		self.libs.clear();
-		self.containers.clear();
+		self.scopes.clear();
 
 		self.symbols.iter().for_each(|kvp| unsafe {
 			if let Some(sym_ptr) = kvp.value().as_ptr() {

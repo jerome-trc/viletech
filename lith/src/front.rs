@@ -13,7 +13,7 @@ use crate::{
 	compile::Scope,
 	data::{DefPtr, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
-	Compiler, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
+	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
 pub use self::{decl::*, import::*};
@@ -21,6 +21,7 @@ pub use self::{decl::*, import::*};
 struct FrontendContext<'c> {
 	compiler: &'c Compiler,
 	arena: &'c bumpalo::Bump,
+	lib: &'c LibMeta,
 	file_ix: FileIx,
 	path: &'c str,
 	ptree: &'c ParseTree,

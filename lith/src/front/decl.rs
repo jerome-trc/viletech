@@ -7,13 +7,13 @@ use crate::{
 	ast,
 	compile::{self, Scope},
 	data::{
-		Confinement, DefPtr, Definition, Function, FunctionFlags, Inlining, Parameter, SymConst,
-		SymPtr, Visibility,
+		Confinement, DefPtr, Definition, Function, FunctionFlags, Inlining, Location, Parameter,
+		SymConst, SymPtr, Visibility,
 	},
-	filetree,
+	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	Compiler,
+	Compiler, LibMeta,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.
@@ -26,38 +26,49 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 	debug_assert!(!compiler.any_errors());
 	debug_assert!(!compiler.failed);
 
-	compiler
-		.ftree
-		.graph
-		.node_indices()
-		.par_bridge()
-		.for_each(|file_ix| {
-			let ftn = &compiler.ftree.graph[file_ix];
-
-			let filetree::Node::File { ptree, path } = ftn else {
-				return;
-			};
-
-			let arena = compiler.arenas[rayon::current_thread_index().unwrap()].lock();
-
-			let ctx = FrontendContext {
-				compiler,
-				arena: &arena,
-				file_ix,
-				path: path.as_str(),
-				ptree,
-			};
-
-			let scope = declare_container_symbols(&ctx);
-
-			compiler.containers.insert(file_ix, scope);
-		});
+	for (_, (lib, lib_root)) in compiler.libs.iter().enumerate() {
+		ftree_recur(compiler, lib, *lib_root);
+	}
 
 	if compiler.any_errors() {
 		compiler.failed = true;
 	} else {
 		compiler.stage = compile::Stage::Import;
 	}
+}
+
+fn ftree_recur(compiler: &Compiler, lib: &LibMeta, file_ix: FileIx) {
+	compiler
+		.ftree
+		.graph
+		.neighbors_directed(file_ix, petgraph::Outgoing)
+		.par_bridge()
+		.for_each(|i| {
+			let ftn = &compiler.ftree.graph[i];
+
+			match ftn {
+				filetree::Node::File { ptree, path } => {
+					let arena = compiler.arenas[rayon::current_thread_index().unwrap()].lock();
+
+					let ctx = FrontendContext {
+						compiler,
+						arena: &arena,
+						lib,
+						file_ix: i,
+						path: path.as_str(),
+						ptree,
+					};
+
+					let scope = declare_container_symbols(&ctx);
+					let overriden = compiler.scopes.insert(Location::full_file(i), scope);
+					debug_assert!(overriden.is_none());
+				}
+				filetree::Node::Folder { .. } => {
+					ftree_recur(compiler, lib, i);
+				}
+				filetree::Node::Root => unreachable!(),
+			}
+		});
 }
 
 #[must_use]

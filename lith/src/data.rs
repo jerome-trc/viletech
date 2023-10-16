@@ -32,6 +32,16 @@ pub(crate) struct Location {
 	pub(crate) file_ix: FileIx,
 }
 
+impl Location {
+	#[must_use]
+	pub(crate) fn full_file(file_ix: FileIx) -> Self {
+		Self {
+			span: TextRange::new(0.into(), 0.into()),
+			file_ix,
+		}
+	}
+}
+
 #[derive(Debug)]
 pub(crate) enum Definition {
 	Function(Function),
