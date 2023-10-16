@@ -178,6 +178,9 @@ pub enum Error {
 	IllegalConstInit,
 	IllegalFnQual,
 	IllegalStructQual,
+	/// A non-native library attempted to declare a symbol starting or ending
+	/// with `__`, which is reserved for internal/native use.
+	IllegalSymbolName,
 	ImportPath,
 	/// e.g. attempt to implicitly narrow,
 	/// or to use a literal suffix which would narrow the literal's value.

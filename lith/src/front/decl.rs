@@ -88,6 +88,11 @@ fn declare_container_symbols(ctx: &FrontendContext) -> Scope {
 
 fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::FunctionDecl) {
 	let ident = ast.name().unwrap();
+
+	if !ctx.check_name(&ident) {
+		return;
+	}
+
 	let result = ctx.declare(scope, &ident, ast.syntax());
 
 	let sym_ptr = match result {
@@ -142,6 +147,11 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 
 fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst) {
 	let ident = ast.name().unwrap();
+
+	if !ctx.check_name(&ident) {
+		return;
+	}
+
 	let result = ctx.declare(scope, &ident, ast.syntax());
 
 	let sym_ptr = match result {

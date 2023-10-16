@@ -13,6 +13,7 @@ use crate::{
 	compile::Scope,
 	data::{DatumPtr, Location, SymPtr, Symbol},
 	filetree::{self, FileIx},
+	issue::{self, Issue},
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
@@ -64,6 +65,29 @@ impl FrontendContext<'_> {
 		};
 
 		Ok(sym_ptr)
+	}
+
+	#[must_use]
+	fn check_name(&self, ident: &SyntaxToken) -> bool {
+		if self.lib.native {
+			return true;
+		}
+
+		if ident.text().starts_with("__") || ident.text().ends_with("__") {
+			self.raise(
+				Issue::new(
+					self.path,
+					ident.text_range(),
+					issue::Level::Error(issue::Error::IllegalSymbolName),
+				)
+				.with_message_static("user symbol names may not start or end with `__`")
+				.with_note_static("`__` prefix/suffix is reserved for internal use"),
+			);
+
+			return false;
+		}
+
+		true
 	}
 
 	#[must_use]
