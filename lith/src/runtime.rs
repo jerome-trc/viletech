@@ -10,12 +10,14 @@ pub struct Runtime {
 	pub(crate) rtinfo: FxDashView<String, rti::Record>,
 	/// Left untouched by the runtime; just needs to be here so that its
 	/// memory does not get freed until it has no more users.
+	#[allow(unused)]
 	pub(crate) module: JitModule,
 	/// Comes from [`crate::compile::Compiler::arenas`]. Every pointer in
 	/// [`Self::rtinfo`] references this memory.
 	///
 	/// Left untouched by the runtime; they just need to be here so that their
 	/// memory does not get freed until it has no more users.
+	#[allow(unused)]
 	pub(crate) arenas: Vec<Mutex<bumpalo::Bump>>,
 }
 
