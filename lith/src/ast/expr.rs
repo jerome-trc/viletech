@@ -473,7 +473,7 @@ pub enum PrefixOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum ExprType {
 	Any(ExprTypeAny),
-	Typedef(ExprTypeT),
+	TypeT(ExprTypeT),
 	Prefixed(ExprTypePrefixed),
 }
 
@@ -493,7 +493,7 @@ impl AstNode for ExprType {
 	{
 		match node.first_token().unwrap().kind() {
 			Syn::KwAnyT => Some(Self::Any(ExprTypeAny(node))),
-			Syn::KwTypeT => Some(Self::Typedef(ExprTypeT(node))),
+			Syn::KwTypeT => Some(Self::TypeT(ExprTypeT(node))),
 			_ => Some(Self::Prefixed(ExprTypePrefixed(node))),
 		}
 	}
@@ -501,7 +501,7 @@ impl AstNode for ExprType {
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::Any(inner) => inner.syntax(),
-			Self::Typedef(inner) => inner.syntax(),
+			Self::TypeT(inner) => inner.syntax(),
 			Self::Prefixed(inner) => inner.syntax(),
 		}
 	}

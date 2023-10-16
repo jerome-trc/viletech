@@ -1,7 +1,10 @@
 //! Pieces of data declared and inspected by the frontend.
 
+use std::sync::atomic::{self, AtomicUsize};
+
 use cranelift_module::FuncId;
 use doomfront::rowan::TextRange;
+use smallvec::SmallVec;
 
 use crate::{
 	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, CEvalIntrin, CEvalNative, IrFunction,
@@ -58,6 +61,48 @@ pub(crate) enum Datum {
 
 // Common details //////////////////////////////////////////////////////////////
 
+/// "Qualified type".
+#[derive(Debug)]
+pub(crate) enum QualType {
+	Normal {
+		inner: SymPtr,
+		array_dims: SmallVec<[ArrayLength; 0]>,
+		optional: bool,
+		reference: bool,
+	},
+	Any {
+		optional: bool,
+	},
+	Type {
+		array_dims: SmallVec<[ArrayLength; 0]>,
+		optional: bool,
+	},
+}
+
+#[derive(Debug)]
+pub(crate) struct ArrayLength(AtomicUsize);
+
+impl ArrayLength {
+	#[must_use]
+	pub(crate) fn get(&self) -> usize {
+		let ret = self.0.load(atomic::Ordering::Acquire);
+		debug_assert_ne!(ret, 0);
+		ret
+	}
+
+	pub(crate) fn set(&self, len: usize) {
+		debug_assert_eq!(self.0.load(atomic::Ordering::Acquire), 0);
+		debug_assert_ne!(len, 0);
+		self.0.store(len, atomic::Ordering::Release);
+	}
+}
+
+impl Default for ArrayLength {
+	fn default() -> Self {
+		Self(AtomicUsize::new(0))
+	}
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Visibility {
 	/// Visible to all libraries.
@@ -91,7 +136,7 @@ pub(crate) struct Function {
 	pub(crate) confine: Confinement,
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
-	pub(crate) return_type: SymPtr,
+	pub(crate) return_type: QualType,
 	pub(crate) code: CodePtr,
 }
 
@@ -124,7 +169,7 @@ pub(crate) enum FunctionCode {
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
-	pub(crate) type_spec: SymPtr,
+	pub(crate) qtype: QualType,
 	pub(crate) consteval: bool,
 }
 
@@ -176,5 +221,5 @@ pub(crate) enum Primitive {
 #[derive(Debug)]
 pub(crate) struct SymConst {
 	pub(crate) visibility: Visibility,
-	pub(crate) type_spec: SymPtr,
+	pub(crate) qtype: QualType,
 }

@@ -2,13 +2,14 @@
 
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
+use smallvec::SmallVec;
 
 use crate::{
 	ast,
 	compile::{self},
 	data::{
-		CodePtr, Confinement, Datum, DatumPtr, Function, FunctionFlags, Inlining, Location,
-		Parameter, SymConst, SymPtr, Visibility,
+		ArrayLength, CodePtr, Confinement, Datum, DatumPtr, Function, FunctionFlags, Inlining,
+		Location, Parameter, QualType, SymConst, SymPtr, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
@@ -109,18 +110,25 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		confine: Confinement::None,
 		inlining: Inlining::default(),
 		params: vec![],
-		return_type: SymPtr::null(),
+		return_type: if let Some(ret_tspec) = ast.return_type() {
+			process_type_spec(ctx, ret_tspec)
+		} else {
+			QualType::Normal {
+				inner: SymPtr::null(),
+				array_dims: SmallVec::default(),
+				optional: false,
+				reference: false,
+			}
+		},
 		code: CodePtr::null(),
 	};
 
 	let param_list = ast.params().unwrap();
 
 	for param in param_list.iter() {
-		let param_ident = param.name().unwrap();
-
 		datum.params.push(Parameter {
-			name: ctx.names.intern(&param_ident),
-			type_spec: SymPtr::null(),
+			name: ctx.names.intern(&ast.name().unwrap()),
+			qtype: process_type_spec(ctx, param.type_spec().unwrap()),
 			consteval: param.is_const(),
 		});
 	}
@@ -172,7 +180,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 
 	let datum = SymConst {
 		visibility: Visibility::default(),
-		type_spec: SymPtr::null(),
+		qtype: process_type_spec(ctx, ast.type_spec().unwrap()),
 	};
 
 	for anno in ast.annotations() {
@@ -204,6 +212,44 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 }
 
 // Details /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn process_type_spec(_: &FrontendContext, ast: ast::TypeSpec) -> QualType {
+	let texpr = ast.expr().unwrap();
+
+	let ast::Expr::Type(e_t) = texpr else {
+		return QualType::Normal {
+			inner: SymPtr::null(),
+			array_dims: SmallVec::default(),
+			optional: false,
+			reference: false,
+		};
+	};
+
+	match e_t {
+		ast::ExprType::Any(_) => QualType::Any { optional: false },
+		ast::ExprType::TypeT(_) => QualType::Type {
+			array_dims: SmallVec::default(),
+			optional: false,
+		},
+		ast::ExprType::Prefixed(e_t_pfx) => {
+			let mut array_dims = SmallVec::default();
+
+			for prefix in e_t_pfx.prefixes() {
+				match prefix {
+					ast::TypePrefix::Array(_) => array_dims.push(ArrayLength::default()),
+				}
+			}
+
+			QualType::Normal {
+				inner: SymPtr::null(),
+				array_dims,
+				optional: false,
+				reference: false,
+			}
+		}
+	}
+}
 
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {
 	let prev = prev_ptr.try_ref().unwrap();
