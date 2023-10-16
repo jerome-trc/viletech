@@ -22,7 +22,7 @@ pub struct Runtime {
 /// A pointer to a structure of this type gets weaved through all Lith calls.
 #[derive(Debug)]
 #[repr(C)]
-pub struct Context<U: Sized> {
+pub struct Context {
 	rt: *mut Runtime,
-	user: *mut U,
+	user: *mut (),
 }

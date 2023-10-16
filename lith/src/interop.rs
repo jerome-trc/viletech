@@ -1,31 +1,23 @@
 //! The code that facilitates Rust/Lithica interoperability.
 
-use std::{
-	any::TypeId,
-	hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
 
 use cranelift::prelude::types;
-
-use crate::runtime;
 
 /// A pointer to a JIT function.
 ///
 /// All implementors of this type are function pointers with only one return type,
 /// since returning a stable-layout structure from a JIT function is always sound,
 /// but passing an aggregate (struct, tuple, array) to one is never sound.
-pub trait JitFn {
+pub trait JitFn: 'static + Sized {
 	fn sig_hash<H: Hasher>(state: &mut H);
 }
 
-impl<CTX, RET> JitFn for fn(runtime::Context<CTX>) -> RET
+impl<RET> JitFn for fn() -> RET
 where
-	CTX: 'static,
 	RET: Native,
 {
 	fn sig_hash<H: Hasher>(state: &mut H) {
-		TypeId::of::<CTX>().hash(state);
-
 		RET::type_hash(state);
 	}
 }
@@ -33,15 +25,12 @@ where
 macro_rules! impl_jitfn {
 	($($($gen:ident),+);+) => {
 		$(
-			impl<CTX, RET, $($gen),+> JitFn for fn(runtime::Context<CTX>, $($gen),+) -> RET
+			impl<RET, $($gen),+> JitFn for fn($($gen),+) -> RET
 			where
-				CTX: 'static,
 				RET: Native,
 				$($gen: Native),+
 			{
 				fn sig_hash<H: Hasher>(state: &mut H) {
-					TypeId::of::<CTX>().hash(state);
-
 					RET::type_hash(state);
 
 					$(
@@ -69,7 +58,7 @@ impl_jitfn! {
 /// This type is not meant for implementation by user code, since only primitive
 /// types can be soundly passed between the Rust/Lithica ABI boundary, and any
 /// implementations you should need are already provided.
-pub unsafe trait Native {
+pub unsafe trait Native: 'static + Sized {
 	fn type_hash<H: Hasher>(state: &mut H);
 }
 
@@ -176,13 +165,13 @@ unsafe impl Native for f64 {
 	}
 }
 
-unsafe impl<T: Sized> Native for *mut T {
+unsafe impl<T: 'static + Sized> Native for *mut T {
 	fn type_hash<H: Hasher>(state: &mut H) {
 		isize::type_hash(state);
 	}
 }
 
-unsafe impl<T: Sized> Native for *const T {
+unsafe impl<T: 'static + Sized> Native for *const T {
 	fn type_hash<H: Hasher>(state: &mut H) {
 		isize::type_hash(state);
 	}
