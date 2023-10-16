@@ -14,10 +14,24 @@ use crossbeam::atomic::AtomicCell;
 pub(crate) struct APtr<T>(NonNull<T>);
 
 impl<T> APtr<T> {
+	#[must_use]
+	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
+		let m = arena.alloc(obj);
+		Self(NonNull::new(m as *mut T).unwrap())
+	}
+
 	pub(crate) unsafe fn drop_in_place(self) {
 		std::ptr::drop_in_place(self.0.as_ptr());
 	}
 }
+
+impl<T> PartialEq for APtr<T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
+	}
+}
+
+impl<T> Eq for APtr<T> {}
 
 impl<T> Clone for APtr<T> {
 	fn clone(&self) -> Self {
@@ -32,6 +46,12 @@ impl<T> std::ops::Deref for APtr<T> {
 
 	fn deref(&self) -> &Self::Target {
 		unsafe { self.0.as_ref() }
+	}
+}
+
+impl<T> From<CPtr<T>> for APtr<T> {
+	fn from(value: CPtr<T>) -> Self {
+		Self(value.0.load().unwrap())
 	}
 }
 
@@ -60,9 +80,9 @@ impl<T> CPtr<T> {
 	#[must_use]
 	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
 		let m = arena.alloc(obj);
-		let ret = CPtr::<T>::null();
-		ret.store(NonNull::new(m as *mut T).unwrap());
-		ret
+		let nn = NonNull::new(m as *mut T);
+		assert!(nn.is_some());
+		Self(AtomicCell::new(nn))
 	}
 
 	pub(crate) fn store(&self, new: NonNull<T>) {
@@ -79,18 +99,28 @@ impl<T> CPtr<T> {
 
 	/// Returns `None` if the pointer within is null.
 	#[must_use]
-	pub(crate) fn as_ref(&self) -> Option<&T> {
+	pub(crate) fn try_ref(&self) -> Option<&T> {
 		unsafe { self.0.load().map(|nn| nn.as_ref()) }
+	}
+
+	/// Panics if the pointer within is null.
+	#[must_use]
+	pub(crate) fn as_ref(&self) -> &T {
+		self.try_ref().unwrap()
+	}
+
+	/// Panics if the pointer within is null.
+	/// It is left null when this function returns; beware potential memory leaks.
+	pub(crate) unsafe fn take(&self) -> T {
+		let ptr = self.as_ptr().unwrap().as_ptr();
+		let ret = std::ptr::read(ptr);
+		self.0.store(None);
+		ret
 	}
 
 	#[must_use]
 	pub(crate) fn as_ptr(&self) -> Option<NonNull<T>> {
 		self.0.load()
-	}
-
-	#[must_use]
-	pub(crate) fn into_inner(self) -> APtr<T> {
-		APtr(self.0.load().unwrap())
 	}
 }
 

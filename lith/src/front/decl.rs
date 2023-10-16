@@ -122,7 +122,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		});
 	}
 
-	let sym = sym_ptr.as_ref().unwrap();
+	let sym = sym_ptr.as_ref();
 	let def_ptr = DefPtr::alloc(ctx.arena, Definition::Function(datum));
 	sym.def.store(def_ptr.as_ptr().unwrap());
 }
@@ -144,7 +144,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		type_spec: SymPtr::null(),
 	};
 
-	let sym = sym_ptr.as_ref().unwrap();
+	let sym = sym_ptr.as_ref();
 	let def_ptr = DefPtr::alloc(ctx.arena, Definition::SymConst(datum));
 	sym.def.store(def_ptr.as_ptr().unwrap());
 }
@@ -359,7 +359,7 @@ fn process_anno_inline(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mu
 }
 
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {
-	let prev = prev_ptr.as_ref().unwrap();
+	let prev = prev_ptr.as_ref();
 	let prev_file = ctx.resolve_file(prev);
 	let prev_file_cursor = prev_file.1.cursor();
 

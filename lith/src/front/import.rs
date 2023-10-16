@@ -288,7 +288,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 }
 
 fn shadow_error(ctx: &FrontendContext, prev_ptr: SymPtr, entry_span: TextRange, entry_name: &str) {
-	let prev = prev_ptr.as_ref().unwrap();
+	let prev = prev_ptr.as_ref();
 	let prev_file = ctx.resolve_file(prev);
 	let prev_file_cursor = prev_file.1.cursor();
 
