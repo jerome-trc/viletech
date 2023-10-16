@@ -96,8 +96,9 @@ impl Issue {
 
 		let (kind, code) = match self.level {
 			Level::Error(err) => (ReportKind::Error, err as u16),
-			Level::Warning(warn) => (ReportKind::Warning, warn as u16),
-			Level::Lint(lint) => (ReportKind::Advice, lint as u16),
+			Level::Deny(lint) => (ReportKind::Error, lint as u16),
+			Level::Warn(lint) => (ReportKind::Warning, lint as u16),
+			Level::Suggest(lint) => (ReportKind::Advice, lint as u16),
 		};
 
 		let mut builder = Report::build(kind, self.id.path, 12)
@@ -126,25 +127,32 @@ impl std::fmt::Display for Issue {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.level {
 			Level::Error(iss) => iss.fmt(f),
-			Level::Warning(iss) => iss.fmt(f),
-			Level::Lint(iss) => iss.fmt(f),
+			Level::Deny(iss) => iss.fmt(f),
+			Level::Warn(iss) => iss.fmt(f),
+			Level::Suggest(iss) => iss.fmt(f),
 		}
 	}
 }
 
+/// See [`Issue`].
 #[derive(Debug)]
 pub struct Label {
 	pub id: FileSpan,
 	pub message: Cow<'static, str>,
 }
 
+/// See [`Issue`].
 #[derive(Debug)]
 pub enum Level {
 	Error(Error),
-	Warning(Warning),
-	Lint(Lint),
+	Deny(Lint),
+	Warn(Lint),
+	Suggest(Lint),
 }
 
+/// Code numbers for diagnostics on Lithica that the compiler can never accept.
+///
+/// Also see [`Issue`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum Error {
@@ -195,23 +203,18 @@ impl std::fmt::Display for Error {
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u16)]
-pub enum Warning {
-	UnusedRetVal,
-}
-
-impl std::fmt::Display for Warning {
-	fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		todo!()
-	}
-}
-
+/// Code numbers for diagnostics which are not fatal unless user requests that they be.
+///
+/// For example, warnings about potentially incorrect or sub-optimal code go here,
+/// but so do suggestions about conformance to the official style guidelines.
+///
+/// Also see [`Issue`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum Lint {
 	/// i.e. code like `if x == true {}` or `if x == false {}`.
 	BoolCompare,
+	UnusedReturnValue,
 }
 
 impl std::fmt::Display for Lint {
@@ -220,6 +223,7 @@ impl std::fmt::Display for Lint {
 	}
 }
 
+/// See [`Issue`].
 #[derive(Debug)]
 pub struct FileSpan {
 	pub path: String,
@@ -242,4 +246,5 @@ impl ariadne::Span for FileSpan {
 	}
 }
 
+/// See [`Issue`].
 pub type Report = ariadne::Report<'static, FileSpan>;
