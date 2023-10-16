@@ -147,6 +147,20 @@ impl LitToken {
 	}
 }
 
+impl std::fmt::Display for LitToken {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self.0.kind() {
+			Syn::LitFalse => write!(f, "`false`"),
+			Syn::LitFloat => write!(f, "floating-point number {}", self.0.text()),
+			Syn::LitInt => write!(f, "integer {}", self.0.text()),
+			Syn::LitName => write!(f, "name {}", self.0.text()),
+			Syn::LitString => write!(f, "string {}", self.0.text()),
+			Syn::LitTrue => write!(f, "`true`"),
+			_ => unreachable!(),
+		}
+	}
+}
+
 impl std::ops::Deref for LitToken {
 	type Target = SyntaxToken;
 
