@@ -18,6 +18,7 @@ pub enum Expr {
 	Literal(ExprLit),
 	Postfix(ExprPostfix),
 	Prefix(ExprPrefix),
+	Type(ExprType),
 }
 
 impl AstNode for Expr {
@@ -35,6 +36,7 @@ impl AstNode for Expr {
 				| Syn::ExprIndex | Syn::ExprLit
 				| Syn::ExprPostfix
 				| Syn::ExprPrefix
+				| Syn::ExprType
 		)
 	}
 
@@ -52,6 +54,7 @@ impl AstNode for Expr {
 			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
 			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
 			Syn::ExprPrefix => Some(Self::Prefix(ExprPrefix(node))),
+			Syn::ExprType => ExprType::cast(node).map(Self::Type),
 			_ => None,
 		}
 	}
@@ -67,6 +70,7 @@ impl AstNode for Expr {
 			Self::Literal(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
 			Self::Prefix(inner) => inner.syntax(),
+			Self::Type(inner) => inner.syntax(),
 		}
 	}
 }
@@ -471,6 +475,36 @@ pub enum ExprType {
 	Any(ExprTypeAny),
 	Typedef(ExprTypeTypedef),
 	Prefixed(ExprTypePrefixed),
+}
+
+impl AstNode for ExprType {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		kind == Syn::ExprType
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		match node.first_token().unwrap().kind() {
+			Syn::KwAny => Some(Self::Any(ExprTypeAny(node))),
+			Syn::KwTypedef => Some(Self::Typedef(ExprTypeTypedef(node))),
+			_ => Some(Self::Prefixed(ExprTypePrefixed(node))),
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Any(inner) => inner.syntax(),
+			Self::Typedef(inner) => inner.syntax(),
+			Self::Prefixed(inner) => inner.syntax(),
+		}
+	}
 }
 
 /// Wraps a node tagged [`Syn::ExprType`].
