@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use crate::{
 	ast,
-	compile::{self, Scope},
+	compile::{self},
 	data::{
 		CodePtr, Confinement, Datum, DatumPtr, Function, FunctionFlags, Inlining, Location,
 		Parameter, SymConst, SymPtr, Visibility,
@@ -13,7 +13,7 @@ use crate::{
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	Compiler, LibMeta,
+	Compiler, LibMeta, Scope,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.
@@ -113,21 +113,6 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		code: CodePtr::null(),
 	};
 
-	for anno in ast.annotations() {
-		let ast::AnnotationName::Unscoped(n) = anno.name().unwrap() else {
-			continue;
-		};
-
-		match n.text() {
-			"builtin" => process_anno_builtin(ctx, &ast, anno),
-			"cold" => process_anno_cold(ctx, anno, &mut datum.flags),
-			"confine" => process_anno_confinement(ctx, anno, &mut datum.confine),
-			"inline" => process_anno_inline(ctx, anno, &mut datum.inlining),
-			"native" => {}
-			_ => continue,
-		} // TODO: a generalized system is needed for these.
-	}
-
 	let param_list = ast.params().unwrap();
 
 	for param in param_list.iter() {
@@ -140,7 +125,30 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		});
 	}
 
-	let sym = sym_ptr.as_ref();
+	for anno in ast.annotations() {
+		match anno.name().unwrap().text() {
+			("builtin", None) => {
+				// TODO
+			}
+			("cold", None) => {
+				super::anno::cold_fndecl(ctx, anno, &mut datum.flags);
+			}
+			("confine", None) => {
+				super::anno::confine(ctx, anno, &mut datum.confine);
+			}
+			("inline", None) => {
+				super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
+			}
+			("native", None) => {
+				// TODO
+			}
+			other => {
+				super::anno::unknown_annotation_error(ctx, anno, other);
+			}
+		} // TODO: a more generalized system for handling these.
+	}
+
+	let sym = sym_ptr.try_ref().unwrap();
 	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::Function(datum));
 	sym.datum.store(datum_ptr.as_ptr().unwrap());
 }
@@ -167,222 +175,38 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		type_spec: SymPtr::null(),
 	};
 
-	let sym = sym_ptr.as_ref();
+	for anno in ast.annotations() {
+		match anno.name().unwrap().text() {
+			("builtin", None) => {
+				super::anno::builtin_non_fndecl(ctx, anno);
+			}
+			("cold", None) => {
+				super::anno::cold_invalid(ctx, anno);
+			}
+			("confine", None) => {
+				// TODO: valid?
+			}
+			("inline", None) => {
+				super::anno::inline_non_fndecl(ctx, anno);
+			}
+			("native", None) => {
+				// TODO: valid?
+			}
+			other => {
+				super::anno::unknown_annotation_error(ctx, anno, other);
+			}
+		}
+	}
+
+	let sym = sym_ptr.try_ref().unwrap();
 	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::SymConst(datum));
 	sym.datum.store(datum_ptr.as_ptr().unwrap());
 }
 
 // Details /////////////////////////////////////////////////////////////////////
 
-fn process_anno_builtin(
-	_ctx: &FrontendContext,
-	_fndecl: &ast::FunctionDecl,
-	_anno: ast::Annotation,
-) {
-	// TODO: this is dependent on the frontend data structures representing functions,
-	// which is dependent on the backend and sema interpreter.
-}
-
-fn process_anno_cold(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut FunctionFlags) {
-	if let Some(arg_list) = anno.arg_list() {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				arg_list.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-			.with_message_static("`cold` annotation takes no arguments"),
-		);
-
-		return;
-	};
-
-	in_out.insert(FunctionFlags::COLD);
-}
-
-fn process_anno_confinement(
-	ctx: &FrontendContext,
-	anno: ast::Annotation,
-	in_out: &mut Confinement,
-) {
-	let Some(arg_list) = anno.arg_list() else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				anno.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-			.with_message_static("`confine` annotation requires exactly one argument"),
-		);
-
-		return;
-	};
-
-	let mut args = arg_list.iter();
-
-	let Some(arg0) = args.next() else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				arg_list.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-			.with_message_static("`confine` annotation requires exactly one argument"),
-		);
-
-		return;
-	};
-
-	if let Some(name) = arg0.name() {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				name.inner().text_range(),
-				issue::Level::Error(issue::Error::IllegalArgName),
-			)
-			.with_message_static("`confine` annotation does not accept named arguments"),
-		);
-
-		return;
-	};
-
-	let expr = arg0.expr().unwrap();
-
-	let ast::Expr::Ident(e_ident) = expr else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				expr.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgType),
-			)
-			.with_message_static("`confine` annotation argument must be an identifier"),
-		);
-
-		return;
-	};
-
-	let confine = match e_ident.token().text() {
-		"none" => Confinement::None,
-		"ui" => Confinement::Ui,
-		"sim" => Confinement::Sim,
-		_ => {
-			const MSG: &str = concat!(
-				"`confine` annotation argument must be one of the following:",
-				"\r\n- `none`",
-				"\r\n- `ui`",
-				"\r\n- `sim`"
-			);
-
-			ctx.raise(
-				Issue::new(
-					ctx.path,
-					e_ident.syntax().text_range(),
-					issue::Level::Error(issue::Error::AnnotationArg),
-				)
-				.with_message_static(MSG),
-			);
-
-			return;
-		}
-	};
-
-	if let Some(arg1) = args.next() {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				arg1.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-			.with_message_static("`confine` annotation can only accept one argument"),
-		);
-
-		return;
-	}
-
-	*in_out = confine;
-}
-
-fn process_anno_inline(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut Inlining) {
-	let Some(arg_list) = anno.arg_list() else {
-		*in_out = Inlining::More;
-		return;
-	};
-
-	let mut args = arg_list.iter();
-
-	let Some(arg0) = args.next() else {
-		return;
-	};
-
-	if let Some(name) = arg0.name() {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				name.inner().text_range(),
-				issue::Level::Error(issue::Error::IllegalArgName),
-			)
-			.with_message_static("`inline` annotation does not accept named arguments"),
-		);
-
-		return;
-	};
-
-	let expr = arg0.expr().unwrap();
-
-	let ast::Expr::Ident(e_ident) = expr else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				expr.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgType),
-			)
-			.with_message_static("`inline` annotation argument must be an identifier"),
-		);
-
-		return;
-	};
-
-	let policy = match e_ident.token().text() {
-		"never" => Inlining::Never,
-		"extra" => Inlining::Extra,
-		_ => {
-			const MSG: &str = concat!(
-				"`inline` annotation argument must be one of the following:",
-				"\r\n- `never`",
-				"\r\n- `extra`",
-			);
-
-			ctx.raise(
-				Issue::new(
-					ctx.path,
-					e_ident.syntax().text_range(),
-					issue::Level::Error(issue::Error::AnnotationArg),
-				)
-				.with_message_static(MSG),
-			);
-
-			return;
-		}
-	};
-
-	if let Some(arg1) = args.next() {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				arg1.syntax().text_range(),
-				issue::Level::Error(issue::Error::ArgCount),
-			)
-			.with_message_static("`inline` annotation can only accept one argument"),
-		);
-
-		return;
-	}
-
-	*in_out = policy;
-}
-
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {
-	let prev = prev_ptr.as_ref();
+	let prev = prev_ptr.try_ref().unwrap();
 	let prev_file = ctx.resolve_file(prev);
 	let prev_file_cursor = prev_file.1.cursor();
 

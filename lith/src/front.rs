@@ -3,6 +3,7 @@
 //! [lexing]: crate::syn
 //! [parsing]: crate::parse
 
+pub(crate) mod anno;
 pub(crate) mod decl;
 pub(crate) mod import;
 

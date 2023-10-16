@@ -159,6 +159,9 @@ pub enum Error {
 	/// An annotation expected one value from a specific set of possible values
 	/// for one of its arguments, but received something else.
 	AnnotationArg,
+	/// An annotation was used in an invalid position, e.g. `#[inline]`
+	/// on an AST element that it is not a function declaration.
+	AnnotationUsage,
 	/// Wrong number of arguments passed to a function.
 	ArgCount,
 	/// Mismatch between argument and parameter types.
@@ -188,8 +191,12 @@ pub enum Error {
 	/// Something went wrong with the compiler itself. The problem was either
 	/// in Rust, or an ill-formed native declaration in a script.
 	Internal,
+	/// An annotation was passed an anonymous argument that it expected to be named.
+	MissingArgName,
 	/// An import entry using a name literal is missing its required rename identifier.
 	MissingImportRename,
+	/// A non-native library tried to use the `builtin` or `native` annotation.
+	NonNative,
 	ParseFloat,
 	ParseInt,
 	QualifierOverlap,
@@ -197,6 +204,7 @@ pub enum Error {
 	SelfImport,
 	SymbolKindMismatch,
 	SymbolNotFound,
+	UnknownAnnotation,
 	UnknownExprType,
 }
 
