@@ -1,13 +1,16 @@
 use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 
-use crate::{back::JitModule, rti, FxDashView};
+use crate::{back::JitModule, rti};
 
 /// Context for Lithica execution.
 ///
 /// Fully re-entrant; Lith has no global state.
 #[derive(Debug)]
 pub struct Runtime {
-	pub(crate) rtinfo: FxDashView<String, rti::Record>,
+	pub(crate) function_rti: FxHashMap<String, rti::Store<rti::Function>>,
+	pub(crate) data_rti: FxHashMap<String, rti::Store<rti::DataObj>>,
+	pub(crate) type_rti: FxHashMap<String, rti::Store<rti::Rtti>>,
 	/// Left untouched by the runtime; just needs to be here so that its
 	/// memory does not get freed until it has no more users.
 	#[allow(unused)]
