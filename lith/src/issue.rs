@@ -195,6 +195,7 @@ pub enum Error {
 	MissingArgName,
 	/// An import entry using a name literal is missing its required rename identifier.
 	MissingImportRename,
+	MissingNative,
 	/// A non-native library tried to use the `builtin` or `native` annotation.
 	NonNative,
 	ParseFloat,

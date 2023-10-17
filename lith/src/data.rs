@@ -181,12 +181,12 @@ pub(crate) enum FunctionCode {
 	},
 	/// Function is Rust-defined, intrinsic to the compiler.
 	Builtin {
-		rt: Option<extern "C" fn(runtime::Context, ...)>,
+		rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
 		ceval: Option<CEvalIntrin>,
 	},
 	/// Function is Rust-defined, registered externally.
 	Native {
-		rt: Option<extern "C" fn(runtime::Context, ...)>,
+		rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
 		ceval: Option<CEvalNative>,
 	},
 }

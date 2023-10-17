@@ -116,7 +116,6 @@ fn resolve_import(ctx: &FrontendContext, scope: &mut Scope, import: ast::Import)
 			}
 			name => {
 				let Some(child) = ctx.ftree.find_child(importee, name) else {
-					// TODO: use Levenshtein edit distance to provide suggestions.
 					ctx.raise(
 						Issue::new(
 							ctx.path,
@@ -130,7 +129,7 @@ fn resolve_import(ctx: &FrontendContext, scope: &mut Scope, import: ast::Import)
 					);
 
 					return;
-				};
+				}; // TODO: use Levenshtein edit distance to provide suggestions.
 
 				importee = child;
 			}
@@ -235,11 +234,7 @@ fn import_single(
 				n = orig_name.text(),
 				p = ctx.ftree.graph[importee].path(),
 			)),
-		);
-
-		for kvp in importee_scope.iter() {
-			dbg!(ctx.names.resolve(*kvp.0));
-		}
+		); // TODO: use Levenshtein edit distance to provide suggestions.
 
 		return;
 	};

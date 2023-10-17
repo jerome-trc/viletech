@@ -2,8 +2,6 @@
 
 use std::sync::atomic::AtomicU32;
 
-use cranelift_module::FuncId;
-use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -154,7 +152,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
 			}
 			("native", None) => {
-				// TODO
+				super::anno::native_fndecl(ctx, anno, &mut datum);
 			}
 			other => {
 				super::anno::unknown_annotation_error(ctx, anno, other);

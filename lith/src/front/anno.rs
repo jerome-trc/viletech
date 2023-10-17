@@ -4,7 +4,7 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast::{self, LitToken},
-	data::{Confinement, FunctionFlags, Inlining},
+	data::{self, Confinement, FunctionCode, FunctionFlags, Inlining},
 	issue::{self, Issue},
 };
 
@@ -186,7 +186,57 @@ pub(super) fn inline_non_fndecl(ctx: &FrontendContext, anno: ast::Annotation) {
 
 // `#[native()]` ///////////////////////////////////////////////////////////////
 
-// TODO
+pub(super) fn native_fndecl(
+	ctx: &FrontendContext,
+	anno: ast::Annotation,
+	datum: &mut data::Function,
+) {
+	if !check_native_lib(ctx, "native", &anno) {
+		return;
+	}
+
+	let Some(arg_list) = check_arg_list(ctx, "native", &anno) else {
+		return;
+	};
+
+	let mut args = arg_list.iter();
+
+	let Some(arg0) = check_arg0_exactly(ctx, "native", &arg_list, &mut args) else {
+		return;
+	};
+
+	if !check_arg_anon(ctx, "native", &arg0) {
+		return;
+	}
+
+	let expr = arg0.expr().unwrap();
+
+	let Some(lit_string) = check_expr_lit_string(ctx, "native", expr) else {
+		return;
+	};
+
+	let string = lit_string.string().unwrap();
+
+	let Some(nfn) = ctx.compiler.native.functions.get(string) else {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				lit_string.text_range(),
+				issue::Level::Error(issue::Error::MissingNative),
+			)
+			.with_message(format!(
+				"native function `{string}` has not been registered"
+			)),
+		);
+
+		return;
+	};
+
+	datum.code = FunctionCode::Native {
+		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr),
+		ceval: nfn.ceval,
+	};
+}
 
 // Details /////////////////////////////////////////////////////////////////////
 
