@@ -2,7 +2,6 @@
 
 use std::{
 	cell::{Cell, UnsafeCell},
-	hash::{Hash, Hasher},
 	rc::Rc,
 	sync::{
 		atomic::{
@@ -13,7 +12,10 @@ use std::{
 	},
 };
 
-use cranelift::prelude::types;
+use cranelift::{
+	codegen::ir::{ArgumentExtension, ArgumentPurpose},
+	prelude::{types, AbiParam},
+};
 
 use crate::AbiType;
 
@@ -23,16 +25,21 @@ use crate::AbiType;
 /// since returning a stable-layout structure from a JIT function is always sound,
 /// but passing an aggregate (struct, tuple, array) to one is never sound.
 pub trait JitFn: 'static + Sized {
-	fn sig_hash<H: Hasher>(state: &mut H);
+	const PARAMS: &'static [AbiParam];
+	const RETURNS: &'static [AbiParam];
 }
 
 impl<RET> JitFn for fn() -> RET
 where
 	RET: Native,
 {
-	fn sig_hash<H: Hasher>(state: &mut H) {
-		RET::REPR.hash(state);
-	}
+	const PARAMS: &'static [AbiParam] = &[];
+
+	const RETURNS: &'static [AbiParam] = &[AbiParam {
+		value_type: RET::REPR,
+		purpose: ArgumentPurpose::Normal,
+		extension: ArgumentExtension::None,
+	}];
 }
 
 macro_rules! impl_jitfn {
@@ -40,11 +47,19 @@ macro_rules! impl_jitfn {
 		$(
 			impl<$($param),+> JitFn for fn($($param),+) -> ()
 			where
-				$($param: Param),+,
+				$($param: Native),+,
 			{
-				fn sig_hash<H: Hasher>(state: &mut H) {
-					$($param::sig_hash(state);)+
-				}
+				const PARAMS: &'static [AbiParam] = &[
+					$(
+						AbiParam {
+							value_type: $param::REPR,
+							purpose: ArgumentPurpose::Normal,
+							extension: ArgumentExtension::None,
+						}
+					),+
+				];
+
+				const RETURNS: &'static [AbiParam] = &[];
 			}
 		)+
 	};
@@ -52,14 +67,29 @@ macro_rules! impl_jitfn {
 		$(
 			impl<$($param),+, $($ret),+> JitFn for fn($($param),+) -> $tie<$($ret),+>
 			where
-				$($param: Param),+,
+				$($param: Native),+,
 				$tie<$($ret),+>: Return,
 				$($ret: Native),+,
 			{
-				fn sig_hash<H: Hasher>(state: &mut H) {
-					$($param::sig_hash(state);)+
-					$tie::sig_hash(state);
-				}
+				const PARAMS: &'static [AbiParam] = &[
+					$(
+						AbiParam {
+							value_type: $param::REPR,
+							purpose: ArgumentPurpose::Normal,
+							extension: ArgumentExtension::None,
+						}
+					),+
+				];
+
+				const RETURNS: &'static [AbiParam] = &[
+					$(
+						AbiParam {
+							value_type: $ret::REPR,
+							purpose: ArgumentPurpose::Normal,
+							extension: ArgumentExtension::None,
+						}
+					),+
+				];
 			}
 		)+
 	};
@@ -254,48 +284,18 @@ unsafe impl Native for core::arch::x86_64::__m256d {
 
 /// See any implementation of [`JitFn`].
 ///
-/// This is separate from [`Native`] and [`Return`] since a JIT function can return
+/// This is separate from [`Native`] and since a JIT function can return
 /// multiple values in a stable-layout aggregate but cannot be passed any aggregates.
 ///
 /// # Safety
 ///
 /// `sig_hash`'s output must precisely corresponds to `Self`'s ABI representation.
 /// Failure to do so will render all generated Lithica JIT code unsound.
-pub unsafe trait Param: 'static + Sized {
-	fn sig_hash<H: Hasher>(state: &mut H);
-}
+pub unsafe trait Return: 'static + Sized {}
 
-/// See any implementation of [`JitFn`].
-///
-/// This is separate from [`Native`] and [`Param`] since a JIT function can return
-/// multiple values in a stable-layout aggregate but cannot be passed any aggregates.
-///
-/// # Safety
-///
-/// `sig_hash`'s output must precisely corresponds to `Self`'s ABI representation.
-/// Failure to do so will render all generated Lithica JIT code unsound.
-pub unsafe trait Return: 'static + Sized {
-	fn sig_hash<H: Hasher>(state: &mut H);
-}
+unsafe impl<T: Native> Return for T {}
 
-unsafe impl<T: Native> Param for T {
-	fn sig_hash<H: Hasher>(state: &mut H) {
-		Self::REPR.hash(state);
-	}
-}
-
-unsafe impl<T: Native> Return for T {
-	fn sig_hash<H: Hasher>(state: &mut H) {
-		Self::REPR.hash(state);
-	}
-}
-
-unsafe impl<T: Native, const LEN: usize> Return for [T; LEN] {
-	fn sig_hash<H: Hasher>(state: &mut H) {
-		T::REPR.hash(state);
-		LEN.hash(state);
-	}
-}
+unsafe impl<T: Native, const LEN: usize> Return for [T; LEN] {}
 
 #[repr(C)]
 pub struct Ret2<A, B>
@@ -312,10 +312,6 @@ where
 	A: Native,
 	B: Native,
 {
-	fn sig_hash<H: Hasher>(state: &mut H) {
-		A::REPR.hash(state);
-		B::REPR.hash(state);
-	}
 }
 
 const _STATIC_ASSERT_RC_WIDTH: () = {

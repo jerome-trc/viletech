@@ -3,13 +3,10 @@
 #[cfg(test)]
 mod test;
 
-use std::{
-	cmp::Ordering,
-	hash::{BuildHasherDefault, Hasher},
-};
+use std::{cmp::Ordering, hash::BuildHasherDefault};
 
 use append_only_vec::AppendOnlyVec;
-use cranelift::prelude::{settings::OptLevel, TrapCode};
+use cranelift::prelude::{settings::OptLevel, AbiParam, TrapCode};
 use parking_lot::Mutex;
 use rustc_hash::FxHasher;
 
@@ -239,9 +236,15 @@ pub struct NativeSymbols {
 
 #[derive(Debug)]
 pub(crate) struct NativeFn {
-	pub(crate) rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
+	pub(crate) rt: Option<RuntimeNative>,
 	pub(crate) ceval: Option<CEvalNative>,
-	pub(crate) sig_hash: u64,
+}
+
+#[derive(Debug)]
+pub(crate) struct RuntimeNative {
+	pub(crate) ptr: extern "C" fn(*mut runtime::Context, ...),
+	pub(crate) params: &'static [AbiParam],
+	pub(crate) returns: &'static [AbiParam],
 }
 
 pub type CEvalNative = fn(ValVec) -> Result<ValVec, TrapCode>;
@@ -258,15 +261,19 @@ impl NativeSymbols {
 	) {
 		assert_eq!(std::mem::size_of::<F>(), std::mem::size_of::<fn()>());
 
-		let mut hasher = FxHasher::default();
-		F::sig_hash(&mut hasher);
-
 		self.functions.insert(
 			name,
 			NativeFn {
-				rt: runtime.map(|f| std::mem::transmute_copy(&f)),
+				rt: runtime.map(|f| {
+					let ptr = std::mem::transmute_copy(&f);
+
+					RuntimeNative {
+						ptr,
+						params: F::PARAMS,
+						returns: F::RETURNS,
+					}
+				}),
 				ceval,
-				sig_hash: hasher.finish(),
 			},
 		);
 	}

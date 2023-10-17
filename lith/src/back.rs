@@ -4,13 +4,13 @@ use std::mem::MaybeUninit;
 
 use cranelift::{
 	codegen::ir::{FuncRef, GlobalValue, UserExternalName},
-	prelude::{ExtFuncData, ExternalName, GlobalValueData, Imm64},
+	prelude::{settings::OptLevel, ExtFuncData, ExternalName, GlobalValueData, Imm64},
 };
-use cranelift_jit::JITModule;
+use cranelift_jit::{JITBuilder, JITModule};
 
-use cranelift_module::{DataId, FuncId, Module};
+use cranelift_module::{DataId, FuncId, Linkage, Module};
 
-use crate::IrFunction;
+use crate::{Compiler, IrFunction};
 
 /// Newtype providing `Send` and `Sync` implementations around a [`JITModule`],
 /// and ensure that JIT memory gets freed at the correct time.
@@ -18,6 +18,64 @@ use crate::IrFunction;
 pub(crate) struct JitModule(MaybeUninit<JITModule>);
 
 impl JitModule {
+	#[must_use]
+	pub(crate) fn new(compiler: &Compiler) -> Self {
+		let o_lvl = match compiler.cfg.opt {
+			OptLevel::None => "none",
+			OptLevel::Speed => "speed",
+			OptLevel::SpeedAndSize => "speed_and_size",
+		};
+
+		let mut builder = JITBuilder::with_flags(
+			&[
+				("use_colocated_libcalls", "false"),
+				("preserve_frame_pointers", "true"),
+				(
+					"is_pic",
+					if compiler.cfg.hotswap {
+						"true"
+					} else {
+						"false"
+					},
+				),
+				("opt_level", o_lvl),
+				#[cfg(not(debug_assertions))]
+				("enable_verifier", "false"),
+			],
+			cranelift_module::default_libcall_names(),
+		)
+		.expect("JIT module builder creation failed");
+
+		// TODO: runtime intrinsics need to be registered here.
+
+		for (name, nfn) in compiler.native.functions.iter() {
+			if let Some(rtn) = &nfn.rt {
+				builder.symbol(name.to_string(), rtn.ptr as *const u8);
+			};
+		}
+
+		let mut module = JITModule::new(builder);
+
+		for (name, nfn) in compiler.native.functions.iter() {
+			if let Some(rtn) = &nfn.rt {
+				let mut signature = module.make_signature();
+
+				signature.params = rtn.params.to_owned();
+				signature.returns = rtn.returns.to_owned();
+
+				let _ = module
+					.declare_function(name, Linkage::Import, &signature)
+					.expect("declaration of a native function to a JIT module failed");
+			}
+		}
+
+		// We want this off in debug builds and on otherwise.
+		// Assert accordingly in case Cranelift ever changes the default.
+		debug_assert!(module.isa().flags().enable_verifier());
+
+		Self(MaybeUninit::new(module))
+	}
+
 	/// Counterpart to [`Module::declare_func_in_func`] which better serves
 	/// the needs of Lithica's sema. pass and its CLIF interpreter.
 	#[must_use]

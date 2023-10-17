@@ -1,6 +1,9 @@
 //! Runtime function information.
 
-use std::{hash::Hasher, marker::PhantomData};
+use std::{
+	hash::{Hash, Hasher},
+	marker::PhantomData,
+};
 
 use cranelift_module::FuncId;
 use rustc_hash::FxHasher;
@@ -20,7 +23,9 @@ impl Function {
 	#[must_use]
 	pub fn downcast<F: JitFn>(&self) -> Option<TFn<F>> {
 		let mut hasher = FxHasher::default();
-		F::sig_hash(&mut hasher);
+
+		F::PARAMS.hash(&mut hasher);
+		F::RETURNS.hash(&mut hasher);
 
 		if self.sig_hash == hasher.finish() {
 			return Some(TFn(self, PhantomData));
