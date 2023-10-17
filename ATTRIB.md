@@ -4,6 +4,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 # Third-Party Licensing
 
+## append-only-vec
+
+All source marked as originating from the [append-only-vec](https://crates.io/crates/append-only-vec) crate by [David Roundy](https://github.com/droundy) is used under the MIT License.
+
 ## daScript
 
 VileTech's SIMD code borrows from Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](./legal/dascript.txt).

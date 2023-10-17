@@ -15,6 +15,7 @@ pub mod io;
 #[macro_use]
 pub mod macros;
 pub mod path;
+pub mod pushvec;
 pub mod rstring;
 pub mod simd;
 pub mod string;
