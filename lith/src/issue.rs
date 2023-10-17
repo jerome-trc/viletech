@@ -87,7 +87,7 @@ impl Issue {
 
 	#[must_use]
 	pub fn is_error(&self) -> bool {
-		matches!(self.level, Level::Error(_))
+		matches!(self.level, Level::Error(_) | Level::Deny(_))
 	}
 
 	#[must_use]
