@@ -12,7 +12,7 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 use crate::{
 	ast,
 	compile::Scope,
-	data::{DatumPtr, Location, SymPtr, Symbol},
+	data::{DatumPtr, Location, SymPtr, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
@@ -50,8 +50,9 @@ impl FrontendContext<'_> {
 					datum: DatumPtr::null(),
 				};
 
+				let id = SymbolId::new(sym.location);
 				let sym_ptr = SymPtr::alloc(self.arena, sym);
-				self.symbols.insert(location, sym_ptr.clone());
+				self.symbols.insert(id, sym_ptr.clone());
 
 				vac.insert(LutSym {
 					inner: sym_ptr.clone(),

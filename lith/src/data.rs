@@ -2,8 +2,10 @@
 
 use std::sync::atomic::{self, AtomicUsize};
 
+use cranelift::codegen::ir::UserExternalName;
 use cranelift_module::FuncId;
-use doomfront::rowan::TextRange;
+use crossbeam::atomic::AtomicCell;
+use doomfront::rowan::{TextRange, TextSize};
 use smallvec::SmallVec;
 
 use crate::{
@@ -13,7 +15,7 @@ use crate::{
 
 pub(crate) type SymPtr = CPtr<Symbol>;
 pub(crate) type DatumPtr = CPtr<Datum>;
-pub(crate) type CodePtr = CPtr<FunctionCode>;
+pub(crate) type IrPtr = CPtr<IrFunction>;
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
@@ -33,11 +35,11 @@ impl Drop for Symbol {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Location {
+	/// Index to an element in [`crate::filetree::FileTree::graph`].
+	pub(crate) file_ix: FileIx,
 	/// The start is always the very start of a symbol's highest node.
 	/// Use this to locate the part of the AST a symbol came from.
 	pub(crate) span: TextRange,
-	/// Index to an element in [`crate::filetree::FileTree::graph`].
-	pub(crate) file_ix: FileIx,
 }
 
 impl Location {
@@ -46,6 +48,30 @@ impl Location {
 		Self {
 			span: TextRange::new(0.into(), 0.into()),
 			file_ix,
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct SymbolId {
+	pub(crate) file_ix: FileIx,
+	pub(crate) offs: TextSize,
+}
+
+impl SymbolId {
+	#[must_use]
+	pub(crate) fn new(location: Location) -> Self {
+		Self {
+			file_ix: location.file_ix,
+			offs: location.span.start(),
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn ext_name(self) -> UserExternalName {
+		UserExternalName {
+			namespace: self.file_ix.index() as u32,
+			index: self.offs.into(),
 		}
 	}
 }
@@ -137,23 +163,13 @@ pub(crate) struct Function {
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
 	pub(crate) return_type: QualType,
-	pub(crate) code: CodePtr,
-}
-
-impl Drop for Function {
-	fn drop(&mut self) {
-		if let Some(ptr) = self.code.as_ptr() {
-			unsafe {
-				std::ptr::drop_in_place(ptr.as_ptr());
-			}
-		}
-	}
+	pub(crate) code: FunctionCode,
 }
 
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
 	/// Function was defined entirely in Lith source.
-	Ir { ir: IrFunction, id: FuncId },
+	Ir { ir: IrPtr, id: AtomicCell<FuncId> },
 	/// Function is Rust-defined, intrinsic to the compiler.
 	Builtin {
 		rt: Option<extern "C" fn(runtime::Context, ...)>,
@@ -164,6 +180,18 @@ pub(crate) enum FunctionCode {
 		rt: Option<extern "C" fn(runtime::Context, ...)>,
 		ceval: Option<CEvalNative>,
 	},
+}
+
+impl Drop for FunctionCode {
+	fn drop(&mut self) {
+		if let Self::Ir { ir, .. } = self {
+			if let Some(ptr) = ir.as_ptr() {
+				unsafe {
+					std::ptr::drop_in_place(ptr.as_ptr());
+				}
+			}
+		}
+	}
 }
 
 #[derive(Debug)]

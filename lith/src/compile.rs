@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 use rustc_hash::FxHasher;
 
 use crate::{
-	data::{Location, SymPtr},
+	data::{Location, SymPtr, SymbolId},
 	filetree::{self, FileIx, FileTree},
 	intern::{NameInterner, NameIx},
 	issue::Issue,
@@ -34,7 +34,7 @@ pub struct Compiler {
 	/// Scopes for symbols as well as containers.
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
-	pub(crate) symbols: FxDashMap<Location, SymPtr>,
+	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
 	// Interning
 	pub(crate) names: NameInterner,
 }

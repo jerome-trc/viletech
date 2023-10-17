@@ -1,5 +1,7 @@
 //! See [`declare_symbols`].
 
+use cranelift_module::FuncId;
+use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -8,8 +10,8 @@ use crate::{
 	ast,
 	compile::{self},
 	data::{
-		ArrayLength, CodePtr, Confinement, Datum, DatumPtr, Function, FunctionFlags, Inlining,
-		Location, Parameter, QualType, SymConst, SymPtr, Visibility,
+		ArrayLength, Confinement, Datum, DatumPtr, Function, FunctionCode, FunctionFlags, Inlining,
+		IrPtr, Location, Parameter, QualType, SymConst, SymPtr, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
@@ -120,7 +122,10 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				reference: false,
 			}
 		},
-		code: CodePtr::null(),
+		code: FunctionCode::Ir {
+			ir: IrPtr::null(),
+			id: AtomicCell::new(FuncId::from_bits(u32::MAX)),
+		},
 	};
 
 	let param_list = ast.params().unwrap();
@@ -155,6 +160,8 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			}
 		} // TODO: a more generalized system for handling these.
 	}
+
+	// TODO: if function is not native or builtin but has no body, raise an error.
 
 	let sym = sym_ptr.try_ref().unwrap();
 	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::Function(datum));

@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use crate::{
 	ast, compile,
-	data::{Datum, DatumPtr, Location, SymPtr, Symbol},
+	data::{Datum, DatumPtr, Location, SymPtr, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
 	Compiler, LibMeta, LutSym, Scope, Syn,
@@ -116,6 +116,7 @@ fn resolve_import(ctx: &FrontendContext, scope: &mut Scope, import: ast::Import)
 			}
 			name => {
 				let Some(child) = ctx.ftree.find_child(importee, name) else {
+					// TODO: use Levenshtein edit distance to provide suggestions.
 					ctx.raise(
 						Issue::new(
 							ctx.path,
@@ -308,7 +309,8 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
 
-	ctx.symbols.insert(location, imp_sym_ptr.clone());
+	ctx.symbols
+		.insert(SymbolId::new(location), imp_sym_ptr.clone());
 
 	vac.insert(LutSym {
 		inner: imp_sym_ptr,
