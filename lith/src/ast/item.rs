@@ -73,6 +73,12 @@ impl FunctionDecl {
 		self.0.children().find_map(TypeSpec::cast)
 	}
 
+	/// The returned node is always tagged [`Syn::FunctionBody`].
+	#[must_use]
+	pub fn body(&self) -> Option<FunctionBody> {
+		self.0.children().find_map(FunctionBody::cast)
+	}
+
 	pub fn annotations(&self) -> impl Iterator<Item = Annotation> {
 		self.0.children().filter_map(Annotation::cast)
 	}
@@ -137,6 +143,19 @@ impl Parameter {
 			Some(node) => Expr::cast(node),
 			None => None,
 		}
+	}
+}
+
+/// Wraps a node tagged [`Syn::FunctionBody`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct FunctionBody(SyntaxNode);
+
+simple_astnode!(Syn, FunctionBody, Syn::FunctionBody);
+
+impl FunctionBody {
+	pub fn innards(&self) -> impl Iterator<Item = CoreElement> {
+		self.0.children().filter_map(CoreElement::cast)
 	}
 }
 

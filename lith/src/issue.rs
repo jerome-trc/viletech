@@ -180,6 +180,8 @@ pub enum Error {
 	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
+	/// A function marked `native` has a body block.
+	IllegalFnBody,
 	IllegalStructQual,
 	/// A non-native library attempted to declare a symbol starting or ending
 	/// with `__`, which is reserved for internal/native use.
@@ -193,6 +195,8 @@ pub enum Error {
 	Internal,
 	/// An annotation was passed an anonymous argument that it expected to be named.
 	MissingArgName,
+	/// A function not marked `native` or `builtin` has no body block.
+	MissingFnBody,
 	/// An import entry using a name literal is missing its required rename identifier.
 	MissingImportRename,
 	MissingNative,

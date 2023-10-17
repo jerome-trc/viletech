@@ -59,6 +59,54 @@ impl AstNode for TopLevel {
 	}
 }
 
+/// Anything that can inhabit a [`FunctionBody`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum CoreElement {
+	Annotation(Annotation),
+	Import(Import),
+	Item(Item),
+	// TODO: statements
+}
+
+impl AstNode for CoreElement {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		Annotation::can_cast(kind) || Import::can_cast(kind) || Item::can_cast(kind)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if let Some(anno) = Annotation::cast(node.clone()) {
+			return Some(Self::Annotation(anno));
+		}
+
+		if let Some(import) = Import::cast(node.clone()) {
+			return Some(Self::Import(import));
+		}
+
+		if let Some(item) = Item::cast(node.clone()) {
+			return Some(Self::Item(item));
+		}
+
+		None
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Annotation(inner) => inner.syntax(),
+			Self::Import(inner) => inner.syntax(),
+			Self::Item(inner) => inner.syntax(),
+		}
+	}
+}
+
 // Annotation //////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged [`Syn::Annotation`].

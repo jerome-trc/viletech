@@ -160,7 +160,41 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		} // TODO: a more generalized system for handling these.
 	}
 
-	// TODO: if function is not native or builtin but has no body, raise an error.
+	match datum.code {
+		FunctionCode::Ir { .. } => {
+			if let Some(body) = ast.body() {
+				ctx.raise(Issue::new(
+					ctx.path,
+					body.syntax().text_range(),
+					issue::Level::Error(issue::Error::MissingFnBody)
+				).with_message(
+					format!("declaration of function `{}` has no body", ident.text())
+				).with_note_static("only functions marked `#[native]` and `#[builtin]` can be declared without a body"));
+			}
+		}
+		FunctionCode::Builtin { .. } => {
+			assert!(
+				ast.body().is_none(),
+				"declaration of intrinsic `{}` has body",
+				ident.text()
+			);
+		}
+		FunctionCode::Native { .. } => {
+			if let Some(body) = ast.body() {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						body.syntax().text_range(),
+						issue::Level::Error(issue::Error::IllegalFnBody),
+					)
+					.with_message(format!(
+						"declaration of native function `{}` has illegal body",
+						ident.text()
+					)),
+				);
+			}
+		}
+	}
 
 	let sym = sym_ptr.try_ref().unwrap();
 	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::Function(datum));
