@@ -115,3 +115,21 @@ pub(crate) type FxDashMap<K, V> =
 #[allow(unused)]
 pub(crate) type FxDashView<K, V> =
 	dashmap::ReadOnlyView<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
+
+/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
+/// for function lookups during CLIF interpretation.
+///
+/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
+pub(crate) const CLNS_LITH: u32 = u32::MAX - 2;
+
+/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
+/// for function lookups during CLIF interpretation.
+///
+/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
+pub(crate) const CLNS_NATIVE: u32 = u32::MAX - 1;
+
+/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
+/// for function lookups during CLIF interpretation.
+///
+/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
+pub(crate) const CLNS_BUILTIN: u32 = u32::MAX;
