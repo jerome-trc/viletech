@@ -24,7 +24,7 @@ pub mod rti;
 pub mod runtime;
 pub mod syn;
 
-pub use self::{compile::*, front::*, sema::*, syn::*};
+pub use self::{back::*, compile::*, front::*, sema::*, syn::*};
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;

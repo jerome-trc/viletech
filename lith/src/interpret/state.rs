@@ -79,7 +79,7 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 			unreachable!()
 		};
 
-		Some(&self.compiler.ir[ir_ix.load(atomic::Ordering::Acquire) as usize])
+		Some(&self.compiler.ir[ir_ix.load(atomic::Ordering::Acquire) as usize].1)
 	}
 
 	fn get_current_function(&self) -> &'c IrFunction {
@@ -271,7 +271,7 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 
 	fn get_function_from_address(&self, address: Address) -> Option<InterpreterFunctionRef<'c>> {
 		Some(InterpreterFunctionRef::Function(
-			&self.compiler.ir[address.offset as usize],
+			&self.compiler.ir[address.offset as usize].1,
 		))
 	}
 

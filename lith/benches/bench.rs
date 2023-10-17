@@ -1,6 +1,5 @@
-use append_only_vec::AppendOnlyVec;
 use dashmap::DashMap;
-use util::rstring::RString;
+use util::{pushvec::PushVec, rstring::RString};
 
 criterion::criterion_group!(benches, cranelift_ops, string_interning);
 criterion::criterion_main!(benches);
@@ -26,11 +25,11 @@ fn cranelift_ops(crit: &mut criterion::Criterion) {
 fn string_interning(crit: &mut criterion::Criterion) {
 	let mut grp = crit.benchmark_group("String Interning");
 
-	grp.bench_function("Insertion, DashMap + AppendOnlyVec (Entry)", |bencher| {
+	grp.bench_function("Insertion, DashMap + PushVec (Entry)", |bencher| {
 		bencher.iter_batched_ref(
 			|| {
 				let map = DashMap::new();
-				let aovec = AppendOnlyVec::new();
+				let aovec = PushVec::new();
 				let string = RString::new("Lorem ipsum");
 				let ix = aovec.push(string.clone());
 				map.insert(string, ix as u32);
@@ -51,12 +50,12 @@ fn string_interning(crit: &mut criterion::Criterion) {
 	});
 
 	grp.bench_function(
-		"Insertion, DashMap + AppendOnlyVec (Check -> Insert)",
+		"Insertion, DashMap + PushVec (Check -> Insert)",
 		|bencher| {
 			bencher.iter_batched_ref(
 				|| {
 					let map = DashMap::new();
-					let aovec = AppendOnlyVec::new();
+					let aovec = PushVec::new();
 					let string = RString::new("Lorem ipsum");
 					let ix = aovec.push(string.clone());
 					map.insert(string, ix as u32);

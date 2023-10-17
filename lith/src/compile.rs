@@ -5,12 +5,14 @@ mod test;
 
 use std::{cmp::Ordering, hash::BuildHasherDefault};
 
-use append_only_vec::AppendOnlyVec;
 use cranelift::prelude::{settings::OptLevel, AbiParam, TrapCode};
+use cranelift_module::FuncId;
 use parking_lot::Mutex;
 use rustc_hash::FxHasher;
+use util::pushvec::PushVec;
 
 use crate::{
+	back::JitModule,
 	data::{Location, SymPtr, SymbolId},
 	filetree::{self, FileIx, FileTree},
 	intern::{NameInterner, NameIx},
@@ -37,7 +39,9 @@ pub struct Compiler {
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
 	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
-	pub(crate) ir: AppendOnlyVec<IrFunction>,
+	/// Gets filled in upon success of the [sema phase](crate::sema).
+	pub(crate) module: Option<JitModule>,
+	pub(crate) ir: PushVec<(FuncId, IrFunction)>,
 	pub(crate) native: NativeSymbols,
 	// Interning
 	pub(crate) names: NameInterner,
@@ -86,7 +90,8 @@ impl Compiler {
 			},
 			scopes: FxDashMap::default(),
 			symbols: FxDashMap::default(),
-			ir: AppendOnlyVec::new(),
+			module: None,
+			ir: PushVec::new(),
 			native: NativeSymbols::default(),
 			names: NameInterner::default(),
 		}
@@ -198,7 +203,7 @@ impl Compiler {
 			}
 		});
 
-		self.ir = AppendOnlyVec::new();
+		self.ir = PushVec::new();
 
 		for arena in &mut self.arenas {
 			arena.get_mut().reset();

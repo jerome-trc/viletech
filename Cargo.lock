@@ -3241,7 +3241,6 @@ checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
 name = "lithica"
 version = "0.0.0"
 dependencies = [
- "append-only-vec",
  "ariadne",
  "backtrace",
  "bitflags 2.3.1",

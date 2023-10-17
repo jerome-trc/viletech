@@ -9,8 +9,43 @@ use cranelift::{
 use cranelift_jit::{JITBuilder, JITModule};
 
 use cranelift_module::{DataId, FuncId, Linkage, Module};
+use util::pushvec::PushVec;
 
-use crate::{Compiler, IrFunction};
+use crate::{runtime::Runtime, Compiler, IrFunction};
+
+pub fn finalize(mut compiler: Compiler) -> Runtime {
+	assert!(!compiler.failed);
+
+	let mut module = compiler.module.take().unwrap();
+	let arenas = std::mem::take(&mut compiler.arenas);
+	let ir = std::mem::take(&mut compiler.ir);
+
+	define_functions(&compiler, &mut module, ir);
+
+	module
+		.finalize_definitions()
+		.expect("JIT definition finalization failed");
+
+	todo!()
+}
+
+fn define_functions(
+	compiler: &Compiler,
+	module: &mut JitModule,
+	ir: PushVec<(FuncId, IrFunction)>,
+) {
+	let mut ctx = module.make_context();
+
+	for (id, clif) in ir.into_iter() {
+		ctx.func = clif;
+
+		module
+			.define_function(id, &mut ctx)
+			.expect("JIT function definition failed");
+
+		module.clear_context(&mut ctx);
+	}
+}
 
 /// Newtype providing `Send` and `Sync` implementations around a [`JITModule`],
 /// and ensure that JIT memory gets freed at the correct time.

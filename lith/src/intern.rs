@@ -5,8 +5,8 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
-use append_only_vec::AppendOnlyVec;
 use doomfront::rowan::GreenToken;
+use util::pushvec::PushVec;
 
 use crate::{FxDashMap, SyntaxToken};
 
@@ -16,9 +16,9 @@ pub(crate) struct NameIx(u32);
 
 /// A concurrent interner for [`IName`],
 /// allowing 32-bit indices to be used as map keys in place of pointers.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct NameInterner {
-	array: AppendOnlyVec<IName>,
+	array: PushVec<IName>,
 	map: FxDashMap<IName, NameIx>,
 }
 
@@ -47,15 +47,6 @@ impl NameInterner {
 		let ret = NameIx(ix as u32);
 		vac.insert(ret);
 		ret
-	}
-}
-
-impl Default for NameInterner {
-	fn default() -> Self {
-		Self {
-			array: AppendOnlyVec::new(),
-			map: FxDashMap::default(),
-		}
 	}
 }
 

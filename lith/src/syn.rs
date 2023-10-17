@@ -85,8 +85,8 @@ pub enum Syn {
 	/// `expr? ('..' | '..=') expr?`
 	ExprRange,
 	/// One of the following:
-	/// - [`Syn::KwTypedef`]
-	/// - [`Syn::KwAny`]
+	/// - [`Syn::KwTypeT`]
+	/// - [`Syn::KwAnyT`]
 	/// - One or more type expr. prefixes followed by any other kind of expression.
 	ExprType,
 
