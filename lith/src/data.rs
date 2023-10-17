@@ -1,21 +1,17 @@
 //! Pieces of data declared and inspected by the frontend.
 
-use std::sync::atomic::{self, AtomicUsize};
+use std::sync::atomic::{self, AtomicU32, AtomicUsize};
 
 use cranelift::codegen::ir::UserExternalName;
-use cranelift_module::FuncId;
-use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{TextRange, TextSize};
 use smallvec::SmallVec;
 
 use crate::{
-	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, CEvalIntrin, CEvalNative, IrFunction,
-	Scope,
+	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, CEvalIntrin, CEvalNative, Scope,
 };
 
 pub(crate) type SymPtr = CPtr<Symbol>;
 pub(crate) type DatumPtr = CPtr<Datum>;
-pub(crate) type IrPtr = CPtr<IrFunction>;
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
@@ -66,12 +62,22 @@ impl SymbolId {
 			offs: location.span.start(),
 		}
 	}
+}
 
-	#[must_use]
-	pub(crate) fn ext_name(self) -> UserExternalName {
-		UserExternalName {
-			namespace: self.file_ix.index() as u32,
-			index: self.offs.into(),
+impl From<SymbolId> for UserExternalName {
+	fn from(value: SymbolId) -> Self {
+		Self {
+			namespace: value.file_ix.index() as u32,
+			index: value.offs.into(),
+		}
+	}
+}
+
+impl From<UserExternalName> for SymbolId {
+	fn from(value: UserExternalName) -> Self {
+		Self {
+			file_ix: FileIx::new(value.namespace as usize),
+			offs: TextSize::from(value.index),
 		}
 	}
 }
@@ -169,7 +175,10 @@ pub(crate) struct Function {
 #[derive(Debug)]
 pub(crate) enum FunctionCode {
 	/// Function was defined entirely in Lith source.
-	Ir { ir: IrPtr, id: AtomicCell<FuncId> },
+	Ir {
+		/// An index into [`crate::compile::Compiler::ir`].
+		ir_ix: AtomicU32,
+	},
 	/// Function is Rust-defined, intrinsic to the compiler.
 	Builtin {
 		rt: Option<extern "C" fn(runtime::Context, ...)>,
@@ -180,18 +189,6 @@ pub(crate) enum FunctionCode {
 		rt: Option<extern "C" fn(runtime::Context, ...)>,
 		ceval: Option<CEvalNative>,
 	},
-}
-
-impl Drop for FunctionCode {
-	fn drop(&mut self) {
-		if let Self::Ir { ir, .. } = self {
-			if let Some(ptr) = ir.as_ptr() {
-				unsafe {
-					std::ptr::drop_in_place(ptr.as_ptr());
-				}
-			}
-		}
-	}
 }
 
 #[derive(Debug)]

@@ -1,5 +1,7 @@
 //! See [`declare_symbols`].
 
+use std::sync::atomic::AtomicU32;
+
 use cranelift_module::FuncId;
 use crossbeam::atomic::AtomicCell;
 use doomfront::rowan::{ast::AstNode, TextRange};
@@ -11,7 +13,7 @@ use crate::{
 	compile::{self},
 	data::{
 		ArrayLength, Confinement, Datum, DatumPtr, Function, FunctionCode, FunctionFlags, Inlining,
-		IrPtr, Location, Parameter, QualType, SymConst, SymPtr, Visibility,
+		Location, Parameter, QualType, SymConst, SymPtr, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
@@ -123,8 +125,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			}
 		},
 		code: FunctionCode::Ir {
-			ir: IrPtr::null(),
-			id: AtomicCell::new(FuncId::from_bits(u32::MAX)),
+			ir_ix: AtomicU32::new(u32::MAX),
 		},
 	};
 

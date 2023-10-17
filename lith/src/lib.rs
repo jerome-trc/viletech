@@ -6,10 +6,12 @@
 )]
 
 pub(crate) mod back;
+pub(crate) mod builtins;
 pub(crate) mod compile;
 pub(crate) mod data;
 pub(crate) mod front;
 pub(crate) mod intern;
+pub(crate) mod interpret;
 pub(crate) mod sema;
 
 pub mod arena;
@@ -110,26 +112,15 @@ pub(crate) type IrFunction = cranelift::codegen::ir::Function;
 pub(crate) type Scope =
 	im::HashMap<intern::NameIx, LutSym, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
 
+pub(crate) type FxIndexMap<K, V> =
+	indexmap::IndexMap<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
 pub(crate) type FxDashMap<K, V> =
 	dashmap::DashMap<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
 #[allow(unused)]
 pub(crate) type FxDashView<K, V> =
 	dashmap::ReadOnlyView<K, V, std::hash::BuildHasherDefault<rustc_hash::FxHasher>>;
 
-/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
-/// for function lookups during CLIF interpretation.
-///
-/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
-pub(crate) const CLNS_LITH: u32 = u32::MAX - 2;
+// These two constants are used in `UserExternalName::namespace`.
 
-/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
-/// for function lookups during CLIF interpretation.
-///
-/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
 pub(crate) const CLNS_NATIVE: u32 = u32::MAX - 1;
-
-/// "Cranelift namespace". Used in [`UserExternalName::namespace`]
-/// for function lookups during CLIF interpretation.
-///
-/// [`UserExternalName::namespace`]: cranelift::codegen::ir::UserExternalName
 pub(crate) const CLNS_BUILTIN: u32 = u32::MAX;

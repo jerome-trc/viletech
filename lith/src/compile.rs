@@ -3,9 +3,13 @@
 #[cfg(test)]
 mod test;
 
-use std::{cmp::Ordering, hash::BuildHasherDefault};
+use std::{
+	cmp::Ordering,
+	hash::{BuildHasherDefault, Hasher},
+};
 
-use cranelift::prelude::settings::OptLevel;
+use append_only_vec::AppendOnlyVec;
+use cranelift::prelude::{settings::OptLevel, TrapCode};
 use parking_lot::Mutex;
 use rustc_hash::FxHasher;
 
@@ -13,8 +17,9 @@ use crate::{
 	data::{Location, SymPtr, SymbolId},
 	filetree::{self, FileIx, FileTree},
 	intern::{NameInterner, NameIx},
+	interop::JitFn,
 	issue::Issue,
-	Error, FxDashMap, ValVec, Version,
+	runtime, Error, FxDashMap, FxIndexMap, IrFunction, ValVec, Version,
 };
 
 /// State and context tying together the frontend, mid-section, and backend.
@@ -35,6 +40,8 @@ pub struct Compiler {
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
 	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
+	pub(crate) ir: AppendOnlyVec<IrFunction>,
+	pub(crate) native: NativeSymbols,
 	// Interning
 	pub(crate) names: NameInterner,
 }
@@ -46,6 +53,8 @@ pub struct Config {
 	pub hotswap: bool,
 }
 
+/// Note that a Lithica library is *not* a compilation unit.
+/// An entire sequence of Lithica libraries is treated as one compilation unit.
 #[derive(Debug)]
 pub struct LibMeta {
 	pub name: String,
@@ -80,6 +89,8 @@ impl Compiler {
 			},
 			scopes: FxDashMap::default(),
 			symbols: FxDashMap::default(),
+			ir: AppendOnlyVec::new(),
+			native: NativeSymbols::default(),
 			names: NameInterner::default(),
 		}
 	}
@@ -146,6 +157,18 @@ impl Compiler {
 		self.stage = Stage::Declaration;
 	}
 
+	/// This is provided as a separate method from [`Self::new`] to:
+	/// - isolate unsafe behavior
+	/// - allow building a map in parallel to the library registration pass if desired
+	///
+	/// # Safety
+	///
+	/// See safety sections under [`NativeSymbols`].
+	pub unsafe fn register_native(&mut self, native: NativeSymbols) {
+		assert_eq!(self.stage, Stage::Declaration);
+		self.native = native;
+	}
+
 	/// Have any fatal [issues](Issue) been encountered thus far?
 	/// Attempting to send this compiler state to the next phase in the pipeline
 	/// will panic if this is `true`.
@@ -178,6 +201,8 @@ impl Compiler {
 			}
 		});
 
+		self.ir = AppendOnlyVec::new();
+
 		for arena in &mut self.arenas {
 			arena.get_mut().reset();
 		}
@@ -207,7 +232,45 @@ impl Drop for Compiler {
 	}
 }
 
-pub type CEvalNative = fn(ValVec) -> ValVec;
+#[derive(Debug, Default)]
+pub struct NativeSymbols {
+	pub(crate) functions: FxIndexMap<&'static str, NativeFn>,
+}
+
+#[derive(Debug)]
+pub(crate) struct NativeFn {
+	pub(crate) rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
+	pub(crate) ceval: Option<CEvalNative>,
+	pub(crate) sig_hash: u64,
+}
+
+pub type CEvalNative = fn(ValVec) -> Result<ValVec, TrapCode>;
+
+impl NativeSymbols {
+	/// # Safety
+	///
+	/// `runtime` must use the `extern "C"` ABI.
+	pub unsafe fn register<F: JitFn>(
+		&mut self,
+		name: &'static str,
+		runtime: Option<F>,
+		ceval: Option<CEvalNative>,
+	) {
+		assert_eq!(std::mem::size_of::<F>(), std::mem::size_of::<fn()>());
+
+		let mut hasher = FxHasher::default();
+		F::sig_hash(&mut hasher);
+
+		self.functions.insert(
+			name,
+			NativeFn {
+				rt: runtime.map(|f| std::mem::transmute_copy(&f)),
+				ceval,
+				sig_hash: hasher.finish(),
+			},
+		);
+	}
+}
 
 /// "Look-up table symbol".
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -3257,6 +3257,7 @@ dependencies = [
  "dashmap",
  "doomfront",
  "im",
+ "indexmap 1.9.3",
  "logos",
  "parking_lot 0.12.1",
  "petgraph",
