@@ -3,8 +3,8 @@
 use std::mem::MaybeUninit;
 
 use cranelift::{
-	codegen::ir::{FuncRef, GlobalValue, UserExternalName},
-	prelude::{settings::OptLevel, ExtFuncData, ExternalName, GlobalValueData, Imm64},
+	codegen::ir::{ArgumentExtension, ArgumentPurpose, FuncRef, GlobalValue, UserExternalName},
+	prelude::{settings::OptLevel, AbiParam, ExtFuncData, ExternalName, GlobalValueData, Imm64},
 };
 use cranelift_jit::{JITBuilder, JITModule};
 
@@ -90,12 +90,24 @@ impl JitModule {
 		}
 
 		let mut module = JITModule::new(builder);
+		let ptr_t = module.isa().pointer_type();
 
 		for (name, nfn) in compiler.native.functions.iter() {
 			if let Some(rtn) = &nfn.rt {
 				let mut signature = module.make_signature();
 
-				signature.params = rtn.params.to_owned();
+				// First, the `runtime::Context` pointer.
+				let mut params = vec![AbiParam {
+					value_type: ptr_t,
+					purpose: ArgumentPurpose::Normal,
+					extension: ArgumentExtension::None,
+				}];
+
+				for p in rtn.params {
+					params.push(*p);
+				}
+
+				signature.params = params;
 				signature.returns = rtn.returns.to_owned();
 
 				let _ = module
@@ -135,7 +147,7 @@ impl JitModule {
 		})
 	}
 
-	/// Counterpart to [`Module::declare_func_in_func`] which better serves
+	/// Counterpart to [`Module::declare_data_in_func`] which better serves
 	/// the needs of Lithica's sema. pass and its CLIF interpreter.
 	#[must_use]
 	pub(crate) fn declare_data_in_func(
