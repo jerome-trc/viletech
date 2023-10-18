@@ -3,6 +3,7 @@
 mod common;
 mod expr;
 mod item;
+mod pat;
 
 #[cfg(test)]
 mod test;
@@ -13,7 +14,7 @@ use crate::Syn;
 
 pub use self::expr::*;
 
-use self::{common::*, item::*};
+use self::{common::*, item::*, pat::*};
 
 pub type Error = doomfront::ParseError<Syn>;
 

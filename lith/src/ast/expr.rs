@@ -1,4 +1,4 @@
-//! Abstract syntax nodes for representing expressions.
+//! Abstract syntax tree nodes for representing expressions.
 
 use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 

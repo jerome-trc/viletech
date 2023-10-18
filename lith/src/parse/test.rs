@@ -249,6 +249,48 @@ fn smoke_expr_bin_userop() {
 	assert_eq!(ident.text(), "dot");
 }
 
+// Patterns ////////////////////////////////////////////////////////////////////
+
+#[test]
+fn smoke_pat_simple() {
+	const SAMPLES: &[&str] = &[
+		"_",
+		"lorem_ipsum",
+		"\"lorem ipsum\"",
+		"'lorem ipsum'",
+		"123",
+		"0.",
+		"-0_i128",
+		"- 09876.54321",
+		"(_)",
+	];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(sample, super::pattern, ());
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
+#[test]
+fn smoke_pat_slice() {
+	const SAMPLES: &[&str] = &["[ lorem, -2,_, ipsum ]"];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(sample, super::pattern, ());
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
 // Items ///////////////////////////////////////////////////////////////////////
 
 #[test]

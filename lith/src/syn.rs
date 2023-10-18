@@ -53,6 +53,21 @@ pub enum Syn {
 	/// `':' typeexpr`
 	TypeSpec,
 
+	// Nodes: patterns /////////////////////////////////////////////////////////
+	/// `'(' pattern ')'`
+	PatGrouped,
+	/// `ident`
+	PatIdent,
+	/// One of the following:
+	/// - `'-'? intlit` or `'-'? floatlit`
+	/// - `stringlit` or `namelit`
+	/// - `'true'` or `'false'`
+	PatLit,
+	/// `'[' (pattern (',' pattern)* ','?)? ']'`
+	PatSlice,
+	/// `'_'`
+	PatWildcard,
+
 	// Nodes: expressions //////////////////////////////////////////////////////
 	/// `expr operator expr`
 	ExprBin,
@@ -231,6 +246,7 @@ pub enum Syn {
 	Eq2,
 	/// `-`; the subtraction [binary operator](Syn::ExprBin) as well as the
 	/// numeric negation [prefix operator](Syn::ExprPrefix).
+	/// Can also be used in [number literal patterns](Syn::PatLit).
 	#[token("-")]
 	Minus,
 	/// `-=`; the subtraction compound assignment [binary operator](Syn::ExprBin).
@@ -293,6 +309,9 @@ pub enum Syn {
 	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syn::ExprBin).
 	#[token("~==")]
 	TildeEq2,
+	/// `_`; used in [wildcard patterns](Syn::PatWildcard).
+	#[token("_")]
+	Underscore,
 
 	#[doc(hidden)]
 	__LastGlyph,

@@ -3,6 +3,7 @@
 mod expr;
 mod item;
 mod lit;
+mod pat;
 
 use doomfront::{
 	rowan::{ast::AstNode, Direction, TextRange},
@@ -11,7 +12,7 @@ use doomfront::{
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, item::*, lit::*};
+pub use self::{expr::*, item::*, lit::*, pat::*};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
