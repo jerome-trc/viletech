@@ -50,8 +50,23 @@ pub enum Syn {
 	/// A "symbolic constant". Semantically equivalent to an immutable compile-time
 	/// [binding statement](Syn::StmtBind) but permitted at container scope.
 	SymConst,
-	/// `':' typeexpr`
+	/// `':' expr`
+	///
+	/// The expression is forbidden from using [`Syn::Eq`] as an infix operator.
 	TypeSpec,
+
+	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `('let' | 'var') 'const'? pattern typespec? ('=' expr)? ';'`
+	StmtBind,
+	/// `'continue' blocklabel? ';'`
+	StmtContinue,
+	/// `expr ';'`
+	///
+	/// The trailing semicolon is optional if the expression
+	/// ends with a curly-brace-delimited block.
+	StmtExpr,
+	/// `'return' expr? ';'`
+	StmtReturn,
 
 	// Nodes: patterns /////////////////////////////////////////////////////////
 	/// `'(' pattern ')'`
@@ -109,21 +124,36 @@ pub enum Syn {
 	#[doc(hidden)]
 	__FirstKeyword,
 
-	/// `any_t`
+	/// `any_t`; used in [type expressions](Syn::ExprType).
 	#[token("any")]
 	KwAnyT,
-	/// `const`
+	/// `const`; used in [parameters] and for [symbolic constants].
+	///
+	/// [parameters]: Syn::Parameter
+	/// [symbolic constants]: Syn::SymConst
 	#[token("const")]
 	KwConst,
-	/// `function`
+	/// `continue`; used in [continue statements](Syn::StmtContinue).
+	#[token("continue")]
+	KwContinue,
+	/// `function`; used in [function declarations](Syn::FunctionDecl).
 	#[token("function")]
 	KwFunction,
-	/// `import`
+	/// `import`; used in [imports](Syn::Import).
 	#[token("import")]
 	KwImport,
-	/// `type_t`
+	/// `let`; used in [binding statements](Syn::StmtBind).
+	#[token("let")]
+	KwLet,
+	/// `return`; used in [return statements](Syn::StmtReturn).
+	#[token("return")]
+	KwReturn,
+	/// `type_t`; used in [type expressions](Syn::ExprType).
 	#[token("type_t")]
 	KwTypeT,
+	/// `var`; used in [binding statements](Syn::StmtBind).
+	#[token("var")]
+	KwVar,
 
 	#[doc(hidden)]
 	__LastKeyword,

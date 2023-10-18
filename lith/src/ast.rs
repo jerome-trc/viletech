@@ -4,6 +4,7 @@ mod expr;
 mod item;
 mod lit;
 mod pat;
+mod stmt;
 
 use doomfront::{
 	rowan::{ast::AstNode, Direction, TextRange},
@@ -12,7 +13,7 @@ use doomfront::{
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, item::*, lit::*, pat::*};
+pub use self::{expr::*, item::*, lit::*, pat::*, stmt::*};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -67,7 +68,7 @@ pub enum CoreElement {
 	Annotation(Annotation),
 	Import(Import),
 	Item(Item),
-	// TODO: statements
+	Statement(Statement),
 }
 
 impl AstNode for CoreElement {
@@ -77,13 +78,24 @@ impl AstNode for CoreElement {
 	where
 		Self: Sized,
 	{
-		Annotation::can_cast(kind) || Import::can_cast(kind) || Item::can_cast(kind)
+		Statement::can_cast(kind)
+			|| Item::can_cast(kind)
+			|| Annotation::can_cast(kind)
+			|| Import::can_cast(kind)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
 	where
 		Self: Sized,
 	{
+		if let Some(statement) = Statement::cast(node.clone()) {
+			return Some(Self::Statement(statement));
+		}
+
+		if let Some(item) = Item::cast(node.clone()) {
+			return Some(Self::Item(item));
+		}
+
 		if let Some(anno) = Annotation::cast(node.clone()) {
 			return Some(Self::Annotation(anno));
 		}
@@ -92,18 +104,15 @@ impl AstNode for CoreElement {
 			return Some(Self::Import(import));
 		}
 
-		if let Some(item) = Item::cast(node.clone()) {
-			return Some(Self::Item(item));
-		}
-
 		None
 	}
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Statement(inner) => inner.syntax(),
+			Self::Item(inner) => inner.syntax(),
 			Self::Annotation(inner) => inner.syntax(),
 			Self::Import(inner) => inner.syntax(),
-			Self::Item(inner) => inner.syntax(),
 		}
 	}
 }
@@ -225,6 +234,37 @@ impl Argument {
 		} else {
 			None
 		}
+	}
+}
+
+// BlockLabel //////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::BlockLabel`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct BlockLabel(SyntaxNode);
+
+simple_astnode!(Syn, BlockLabel, Syn::BlockLabel);
+
+impl BlockLabel {
+	/// The returned token is always tagged [`Syn::Ident`].
+	pub fn ident(&self) -> AstResult<SyntaxToken> {
+		let Some(opener) = self.0.first_token() else {
+			return Err(AstError::Incorrect);
+		};
+
+		let Some(closer) = self.0.last_token() else {
+			return Err(AstError::Incorrect);
+		};
+
+		if opener.kind() != Syn::Colon2 || closer.kind() != Syn::Colon2 {
+			return Err(AstError::Incorrect);
+		}
+
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
+			.ok_or(AstError::Missing)
 	}
 }
 

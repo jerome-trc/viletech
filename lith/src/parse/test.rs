@@ -24,7 +24,7 @@ fn smoke_name() {
 		let ptree: ParseTree = doomfront::parse(
 			sample,
 			|p| {
-				super::expr(p);
+				super::expr(p, true);
 			},
 			(),
 		);
@@ -143,7 +143,7 @@ fn smoke_literal_float() {
 		let ptree: ParseTree = doomfront::parse(
 			sample,
 			|p| {
-				super::expr(p);
+				super::expr(p, true);
 			},
 			(),
 		);
@@ -175,7 +175,7 @@ fn smoke_literal_decimal() {
 		let ptree: ParseTree = doomfront::parse(
 			sample,
 			|p| {
-				super::expr(p);
+				super::expr(p, true);
 			},
 			(),
 		);
@@ -206,7 +206,7 @@ fn smoke_expr_lit_suffixed_string() {
 	let ptree: ParseTree = doomfront::parse(
 		SAMPLE,
 		|p| {
-			super::expr(p);
+			super::expr(p, true);
 		},
 		(),
 	);
@@ -229,7 +229,7 @@ fn smoke_expr_bin_userop() {
 	let ptree: ParseTree = doomfront::parse(
 		SAMPLE,
 		|p| {
-			super::expr(p);
+			super::expr(p, true);
 		},
 		(),
 	);
@@ -282,6 +282,89 @@ fn smoke_pat_slice() {
 
 	for sample in SAMPLES {
 		let ptree: ParseTree = doomfront::parse(sample, super::pattern, ());
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
+// Statements //////////////////////////////////////////////////////////////////
+
+#[test]
+fn smoke_stmt_continue() {
+	const SAMPLES: &[&str] = &[
+		"continue;",
+		"continue ;",
+		"continue::lorem::;",
+		"continue ::ipsum::;",
+		"continue::dolor:: ;",
+		"continue ::sit_amet:: ;",
+	];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::statement(p, mark);
+			},
+			(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
+#[test]
+fn smoke_stmt_bind() {
+	const SAMPLES: &[&str] = &[
+		"let lorem;",
+		"var ipsum ;",
+		"let const dolor;",
+		"var const amet=\"\";",
+		"let (consectetur) = 0;",
+		"var const-1 = -1;",
+		"let _= 'adipiscing';",
+	];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::statement(p, mark);
+			},
+			(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
+#[test]
+fn smoke_stmt_expr() {
+	const SAMPLES: &[&str] = &["lorem;", "ipsum();", "dolor = sit_amet;", "-1;", "(0);"];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::statement(p, mark);
+			},
+			(),
+		);
 
 		assert_no_errors(&ptree);
 

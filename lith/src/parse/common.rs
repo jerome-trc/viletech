@@ -82,7 +82,7 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 			}
 		}
 
-		super::expr(p);
+		super::expr(p, true);
 		p.close(arg, Syn::Argument);
 		trivia_0plus(p);
 
@@ -148,6 +148,6 @@ pub(super) fn type_spec(p: &mut Parser<Syn>) {
 	let mark = p.open();
 	p.expect(Syn::Colon, Syn::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
-	let _ = super::expr(p);
+	let _ = super::expr(p, false);
 	p.close(mark, Syn::TypeSpec);
 }

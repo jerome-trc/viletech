@@ -4,6 +4,7 @@ mod common;
 mod expr;
 mod item;
 mod pat;
+mod stmt;
 
 #[cfg(test)]
 mod test;
@@ -14,7 +15,7 @@ use crate::Syn;
 
 pub use self::expr::*;
 
-use self::{common::*, item::*, pat::*};
+use self::{common::*, item::*, pat::*, stmt::*};
 
 pub type Error = doomfront::ParseError<Syn>;
 
@@ -41,8 +42,11 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 
 	let mark = p.open();
 
+	let mut documented = false;
+
 	while p.eat(Syn::DocComment, Syn::DocComment) && !p.eof() {
 		trivia_0plus(p);
+		documented = true;
 	}
 
 	while at_annotation(p) {
@@ -52,15 +56,31 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 
 	if at_function_decl(p) {
 		function_decl(p, mark);
-	} else if at_symbolic_constant(p) {
-		symbolic_constant(p, mark);
-	} else if p.at(Syn::KwImport) {
-		import(p, mark);
-	} else if !ROOT {
-		todo!("statement parsing")
-	} else {
-		p.advance_err_and_close(mark, p.nth(0), Syn::Error, &[&["TODO"]]);
+		return;
 	}
+
+	if at_symbolic_constant(p) {
+		symbolic_constant(p, mark);
+		return;
+	}
+
+	// Doc comments cannot precede anything below.
+	if documented {
+		p.advance_err_and_close(mark, p.nth(0), Syn::Error, &[&["TODO"]]);
+		return;
+	}
+
+	if p.at(Syn::KwImport) {
+		import(p, mark);
+		return;
+	}
+
+	if !ROOT {
+		statement(p, mark);
+		return;
+	}
+
+	p.advance_err_and_close(mark, p.nth(0), Syn::Error, &[&["TODO"]]);
 }
 
 pub(super) fn import(p: &mut Parser<Syn>, mark: OpenMark) {

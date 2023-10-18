@@ -76,7 +76,7 @@ fn parameter(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		p.advance(Syn::Eq);
 		trivia_0plus(p);
-		let _ = super::expr(p);
+		let _ = super::expr(p, true);
 	}
 
 	p.close(mark, Syn::Parameter);
@@ -96,7 +96,7 @@ pub(super) fn symbolic_constant(p: &mut Parser<Syn>, mark: OpenMark) {
 	trivia_0plus(p);
 	p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
 	trivia_0plus(p);
-	super::expr(p);
+	super::expr(p, true);
 	trivia_0plus(p);
 	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
 	p.close(mark, Syn::SymConst);

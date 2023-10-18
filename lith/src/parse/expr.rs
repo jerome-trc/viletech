@@ -20,7 +20,8 @@ pub const EXPR_FIRST_SET: &[Syn] = &[
 ];
 
 /// Returns `true` if the expression that was parsed ends with a block.
-pub fn expr(p: &mut Parser<Syn>) -> bool {
+/// `eq_op` dictates whether [`Syn::Eq`] is a valid infix operator in this position.
+pub fn expr(p: &mut Parser<Syn>, eq_op: bool) -> bool {
 	let t0 = p.nth(0);
 
 	if matches!(t0, Syn::KwAnyT | Syn::KwTypeT) {
@@ -38,13 +39,13 @@ pub fn expr(p: &mut Parser<Syn>) -> bool {
 					let pfx = p.open();
 					p.advance(t);
 					trivia_0plus(p);
-					let _ = recur(p, Syn::Eof);
+					let _ = recur(p, eq_op, Syn::Eof);
 					trivia_0plus(p);
 					p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 					p.close(pfx, Syn::ArrayPrefix);
 				}
 				_ => {
-					block_end = recur(p, Syn::Eof);
+					block_end = recur(p, eq_op, Syn::Eof);
 					break;
 				}
 			}
@@ -53,13 +54,13 @@ pub fn expr(p: &mut Parser<Syn>) -> bool {
 		p.close(mark, Syn::ExprType);
 		block_end
 	} else {
-		recur(p, Syn::Eof)
+		recur(p, eq_op, Syn::Eof)
 	}
 }
 
 /// Returns `true` if the expression that was parsed ends with a block.
-fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
-	let (mut lhs, mut block_end) = primary(p);
+fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
+	let (mut lhs, mut block_end) = primary(p, eq_op);
 
 	loop {
 		trivia_0plus(p);
@@ -79,7 +80,7 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 				let m = p.open_before(lhs);
 				p.advance(Syn::BracketL);
 				trivia_0plus(p);
-				expr(p);
+				expr(p, eq_op);
 				trivia_0plus(p);
 				p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 				lhs = p.close(m, Syn::ExprIndex);
@@ -107,14 +108,25 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 					p.advance(Syn::At);
 					p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 					trivia_0plus(p);
-					block_end = recur(p, right);
+					block_end = recur(p, eq_op, right);
 					lhs = p.close(m, Syn::ExprBin);
+				}
+				t @ Syn::Eq => {
+					if eq_op {
+						let m = p.open_before(lhs);
+						p.advance(t);
+						trivia_0plus(p);
+						block_end = recur(p, eq_op, right);
+						lhs = p.close(m, Syn::ExprBin);
+					} else {
+						break;
+					}
 				}
 				other => {
 					let m = p.open_before(lhs);
 					p.advance(other);
 					trivia_0plus(p);
-					block_end = recur(p, right);
+					block_end = recur(p, eq_op, right);
 					lhs = p.close(m, Syn::ExprBin);
 				}
 			}
@@ -127,7 +139,7 @@ fn recur(p: &mut Parser<Syn>, left: Syn) -> bool {
 }
 
 /// Returns `true` if the expression that was parsed ends with a block.
-fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
+fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 	let mark = p.open();
 
 	match p.nth(0) {
@@ -152,13 +164,13 @@ fn primary(p: &mut Parser<Syn>) -> (CloseMark, bool) {
 		t @ (Syn::Bang | Syn::Minus | Syn::Tilde) => {
 			p.advance(t);
 			trivia_0plus(p);
-			recur(p, t);
+			recur(p, eq_op, t);
 			(p.close(mark, Syn::ExprPrefix), false)
 		}
 		t @ Syn::ParenL => {
 			p.advance(t);
 			trivia_0plus(p);
-			expr(p);
+			expr(p, eq_op);
 			trivia_0plus(p);
 			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syn::ExprGroup), false)
@@ -179,6 +191,7 @@ const PRATT_PRECEDENCE: &[&[Syn]] = &[
 		Syn::AsteriskEq,
 		Syn::Asterisk2Eq,
 		Syn::CaretEq,
+		Syn::Eq,
 		Syn::MinusEq,
 		Syn::PercentEq,
 		Syn::PipeEq,
