@@ -21,6 +21,11 @@ pub struct Function {
 
 impl Function {
 	#[must_use]
+	pub fn id(&self) -> FuncId {
+		self.id
+	}
+
+	#[must_use]
 	pub fn downcast<F: JitFn>(&self) -> Option<TFn<F>> {
 		let mut hasher = FxHasher::default();
 
