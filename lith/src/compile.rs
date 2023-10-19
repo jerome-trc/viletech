@@ -5,7 +5,10 @@ mod test;
 
 use std::{cmp::Ordering, hash::BuildHasherDefault};
 
-use cranelift::prelude::{settings::OptLevel, AbiParam, TrapCode};
+use cranelift::{
+	codegen::ir,
+	prelude::{settings::OptLevel, AbiParam, TrapCode},
+};
 use cranelift_module::FuncId;
 use parking_lot::Mutex;
 use rustc_hash::FxHasher;
@@ -18,7 +21,9 @@ use crate::{
 	intern::{NameInterner, NameIx},
 	interop::JitFn,
 	issue::Issue,
-	runtime, Error, FxDashMap, FxIndexMap, IrFunction, ValVec, Version,
+	runtime,
+	types::{FxDashMap, FxIndexMap},
+	Error, ValVec, Version,
 };
 
 /// State and context tying together the frontend, mid-section, and backend.
@@ -41,7 +46,7 @@ pub struct Compiler {
 	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
-	pub(crate) ir: PushVec<(FuncId, IrFunction)>,
+	pub(crate) ir: PushVec<(FuncId, ir::Function)>,
 	pub(crate) native: NativeSymbols,
 	// Interning
 	pub(crate) names: NameInterner,

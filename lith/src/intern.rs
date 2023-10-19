@@ -8,7 +8,7 @@ use std::{
 use doomfront::rowan::GreenToken;
 use util::pushvec::PushVec;
 
-use crate::{FxDashMap, SyntaxToken};
+use crate::{types::FxDashMap, SyntaxToken};
 
 /// An index into a [`NameInterner`]. Used for symbol lookup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

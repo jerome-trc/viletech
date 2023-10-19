@@ -7,7 +7,7 @@ use doomfront::rowan::{TextRange, TextSize};
 use smallvec::SmallVec;
 
 use crate::{
-	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, CEvalIntrin, CEvalNative, Scope,
+	arena::CPtr, filetree::FileIx, intern::NameIx, runtime, types::CEvalIntrin, CEvalNative, Scope,
 };
 
 pub(crate) type SymPtr = CPtr<Symbol>;

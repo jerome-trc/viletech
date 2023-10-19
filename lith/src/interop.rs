@@ -17,7 +17,7 @@ use cranelift::{
 	prelude::{types, AbiParam},
 };
 
-use crate::AbiType;
+use crate::types::AbiType;
 
 /// A pointer to a JIT function.
 ///

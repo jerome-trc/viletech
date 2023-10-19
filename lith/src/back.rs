@@ -3,7 +3,9 @@
 use std::mem::MaybeUninit;
 
 use cranelift::{
-	codegen::ir::{ArgumentExtension, ArgumentPurpose, FuncRef, GlobalValue, UserExternalName},
+	codegen::ir::{
+		self, ArgumentExtension, ArgumentPurpose, FuncRef, GlobalValue, UserExternalName,
+	},
 	prelude::{settings::OptLevel, AbiParam, ExtFuncData, ExternalName, GlobalValueData, Imm64},
 };
 use cranelift_jit::{JITBuilder, JITModule};
@@ -11,7 +13,7 @@ use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{DataId, FuncId, Linkage, Module};
 use util::pushvec::PushVec;
 
-use crate::{runtime::Runtime, Compiler, IrFunction};
+use crate::{runtime::Runtime, Compiler};
 
 pub fn finalize(mut compiler: Compiler) -> Runtime {
 	assert!(!compiler.failed);
@@ -32,7 +34,7 @@ pub fn finalize(mut compiler: Compiler) -> Runtime {
 fn define_functions(
 	compiler: &Compiler,
 	module: &mut JitModule,
-	ir: PushVec<(FuncId, IrFunction)>,
+	ir: PushVec<(FuncId, ir::Function)>,
 ) {
 	let mut ctx = module.make_context();
 
@@ -130,7 +132,7 @@ impl JitModule {
 		&mut self,
 		func_id: FuncId,
 		ext_name: UserExternalName,
-		func: &mut IrFunction,
+		func: &mut ir::Function,
 	) -> FuncRef {
 		let decl = self.declarations().get_function_decl(func_id);
 
@@ -154,7 +156,7 @@ impl JitModule {
 		&mut self,
 		data_id: DataId,
 		ext_name: UserExternalName,
-		func: &mut IrFunction,
+		func: &mut ir::Function,
 	) -> GlobalValue {
 		let decl = self.declarations().get_data_decl(data_id);
 

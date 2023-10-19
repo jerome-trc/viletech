@@ -3,7 +3,7 @@ use std::sync::atomic;
 use cranelift::{
 	codegen::{
 		data_value::DataValue,
-		ir::{ArgumentPurpose, Endianness, FuncRef, GlobalValue, LibCall, StackSlot},
+		ir::{self, ArgumentPurpose, Endianness, FuncRef, GlobalValue, LibCall, StackSlot},
 	},
 	prelude::{ExternalName, GlobalValueData, MemFlags, Type},
 };
@@ -17,7 +17,7 @@ use cranelift_interpreter::{
 
 use crate::{
 	data::{Datum, FunctionCode, SymbolId},
-	Compiler, IrFunction,
+	Compiler,
 };
 
 /// Adapted from [`cranelift_interpreter::interpreter::InterpreterState`].
@@ -55,7 +55,7 @@ impl<'c> Interpreter<'c> {
 }
 
 impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
-	fn get_function(&self, func_ref: FuncRef) -> Option<&'c IrFunction> {
+	fn get_function(&self, func_ref: FuncRef) -> Option<&'c ir::Function> {
 		let curr_ir = self.get_current_function();
 		let ext_data = curr_ir.stencil.dfg.ext_funcs.get(func_ref).unwrap();
 
@@ -82,7 +82,7 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		Some(&self.compiler.ir[ir_ix.load(atomic::Ordering::Acquire) as usize].1)
 	}
 
-	fn get_current_function(&self) -> &'c IrFunction {
+	fn get_current_function(&self) -> &'c ir::Function {
 		self.current_frame().function()
 	}
 
@@ -90,7 +90,7 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		super::help::handle_libcall
 	}
 
-	fn push_frame(&mut self, function: &'c IrFunction) {
+	fn push_frame(&mut self, function: &'c ir::Function) {
 		if let Some(frame) = self.frame_stack.iter().last() {
 			self.frame_offset += frame.function().fixed_stack_size() as usize;
 		}
