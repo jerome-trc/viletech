@@ -5,6 +5,7 @@ use std::sync::atomic::AtomicU32;
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
 use smallvec::SmallVec;
+use util::pushvec::PushVec;
 
 use crate::{
 	ast,
@@ -17,7 +18,7 @@ use crate::{
 	front::FrontendContext,
 	issue::{self, Issue},
 	types::Scope,
-	Compiler, LibMeta,
+	CEval, Compiler, LibMeta,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.
@@ -114,7 +115,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		inlining: Inlining::default(),
 		params: vec![],
 		return_type: if let Some(ret_tspec) = ast.return_type() {
-			process_type_spec(ctx, ret_tspec)
+			process_type_expr(ctx, ret_tspec.expr().unwrap())
 		} else {
 			QualType::Normal {
 				inner: SymPtr::null(),
@@ -133,7 +134,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 	for param in param_list.iter() {
 		datum.params.push(Parameter {
 			name: ctx.names.intern(&ast.name().unwrap()),
-			qtype: process_type_spec(ctx, param.type_spec().unwrap()),
+			qtype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
 			consteval: param.is_const(),
 		});
 	}
@@ -219,9 +220,29 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		}
 	};
 
+	let tspec = ast.type_spec().unwrap();
+	let qtype = process_type_expr(ctx, tspec.expr().unwrap());
+
+	if matches!(qtype, QualType::Any { .. }) {
+		ctx.raise(Issue::new(
+			ctx.path,
+			tspec.syntax().text_range(),
+			issue::Level::Error(issue::Error::ContainerValAnyType),
+		));
+
+		return;
+	}
+
+	let init = if matches!(qtype, QualType::Type { .. }) {
+		CEval::Type(SymPtr::null())
+	} else {
+		CEval::Value(PushVec::default())
+	};
+
 	let datum = SymConst {
 		visibility: Visibility::default(),
-		qtype: process_type_spec(ctx, ast.type_spec().unwrap()),
+		qtype,
+		init,
 	};
 
 	for anno in ast.annotations() {
@@ -255,9 +276,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 // Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn process_type_spec(_: &FrontendContext, ast: ast::TypeSpec) -> QualType {
-	let texpr = ast.expr().unwrap();
-
+fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> QualType {
 	let ast::Expr::Type(e_t) = texpr else {
 		return QualType::Normal {
 			inner: SymPtr::null(),

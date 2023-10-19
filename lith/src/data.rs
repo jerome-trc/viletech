@@ -12,7 +12,7 @@ use crate::{
 	intern::NameIx,
 	runtime,
 	types::{CEvalIntrin, Scope},
-	CEvalNative,
+	CEval, CEvalNative,
 };
 
 pub(crate) type SymPtr = CPtr<Symbol>;
@@ -254,4 +254,5 @@ pub(crate) enum Primitive {
 pub(crate) struct SymConst {
 	pub(crate) visibility: Visibility,
 	pub(crate) qtype: QualType,
+	pub(crate) init: CEval,
 }

@@ -170,6 +170,8 @@ pub enum Error {
 	BuiltinMisuse,
 	CEvalRecursion,
 	ConstEval,
+	/// Declared a symbolic constant or static variable with the type specifier `any_t`.
+	ContainerValAnyType,
 	FlagDefBitOverflow,
 	FolderImport,
 	/// A named argument was passed to an annotation that cannot accept names
