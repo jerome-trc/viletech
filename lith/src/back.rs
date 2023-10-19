@@ -193,6 +193,9 @@ impl std::ops::DerefMut for JitModule {
 
 impl Drop for JitModule {
 	fn drop(&mut self) {
+		// SAFETY: this object was initialized upon construction and never mutated.
+		// Freeing memory is safe because any handles left open that point into it
+		// would have caused a panic when the runtime carry RTI storage dropped.
 		unsafe {
 			let definitely_init = std::mem::replace(&mut self.0, MaybeUninit::uninit());
 			definitely_init.assume_init().free_memory();
