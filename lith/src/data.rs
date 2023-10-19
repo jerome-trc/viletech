@@ -103,7 +103,7 @@ pub(crate) enum Datum {
 pub(crate) enum QualType {
 	Normal {
 		inner: SymPtr,
-		array_dims: SmallVec<[ArrayLength; 0]>,
+		array_dims: SmallVec<[ArrayLength; 1]>,
 		optional: bool,
 		reference: bool,
 	},
@@ -111,7 +111,7 @@ pub(crate) enum QualType {
 		optional: bool,
 	},
 	Type {
-		array_dims: SmallVec<[ArrayLength; 0]>,
+		array_dims: SmallVec<[ArrayLength; 1]>,
 		optional: bool,
 	},
 }
