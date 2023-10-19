@@ -1,17 +1,18 @@
 use std::sync::atomic::{self, AtomicU32};
 
 use cranelift::{
-	codegen::ir::SourceLoc,
+	codegen::{data_value::DataValue, ir::SourceLoc},
 	prelude::{FunctionBuilderContext, Signature},
 };
 use parking_lot::Mutex;
+use util::pushvec::PushVec;
 
 use crate::{
 	back::JitModule,
 	data::SymPtr,
 	filetree::{self, FileIx},
 	types::Scope,
-	Compiler, ParseTree, ValVec,
+	Compiler, ParseTree,
 };
 
 /// The result of a [compile-time evaluated expression](ceval).
@@ -21,7 +22,7 @@ pub(crate) enum CEval {
 	Err,
 	Container(Scope),
 	Type(SymPtr),
-	Value(ValVec),
+	Value(PushVec<DataValue>),
 }
 
 #[derive(Clone, Copy)]
