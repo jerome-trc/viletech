@@ -107,10 +107,10 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 	};
 
 	let sym_ptr = SymPtr::alloc(
-		ctx.arena,
+		todo!(),
 		Symbol {
 			location,
-			datum: DatumPtr::alloc(ctx.arena, Datum::Primitive(datum)),
+			datum: DatumPtr::alloc(todo!(), Datum::Primitive(datum)),
 		},
 	);
 
