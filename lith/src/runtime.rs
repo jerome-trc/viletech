@@ -15,8 +15,8 @@ pub struct Runtime {
 	/// memory does not get freed until it has no more users.
 	#[allow(unused)]
 	pub(crate) module: JitModule,
-	/// Comes from [`crate::compile::Compiler::arenas`]. Every pointer in
-	/// [`Self::rtinfo`] references this memory.
+	/// Comes from [`crate::compile::Compiler::arenas`].
+	/// Every pointer in the RTI maps references this memory.
 	///
 	/// Left untouched by the runtime; they just need to be here so that their
 	/// memory does not get freed until it has no more users.
