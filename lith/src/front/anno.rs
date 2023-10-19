@@ -1,5 +1,6 @@
 //! Annotation processing helpers used by [`super::decl`].
 
+use cranelift::codegen::ir::UserExternalName;
 use doomfront::rowan::ast::AstNode;
 
 use crate::{
@@ -31,6 +32,43 @@ pub(super) fn unknown_annotation_error(
 }
 
 // `#[builtin()]` //////////////////////////////////////////////////////////////
+
+pub(super) fn builtin_fndecl(
+	ctx: &FrontendContext,
+	fndecl: &ast::FunctionDecl,
+	anno: ast::Annotation,
+	datum: &mut data::Function,
+) {
+	if !check_native_lib(ctx, "builtin", &anno) {
+		return;
+	}
+
+	if !check_no_arg_list(ctx, "builtin", &anno) {
+		return;
+	};
+
+	let ident = fndecl.name().unwrap();
+
+	match ident.text() {
+		"primitiveType" => {
+			datum.code = FunctionCode::Builtin {
+				uext_name: UserExternalName {
+					namespace: crate::CLNS_BUILTIN,
+					index: crate::builtins::UEXTIX_PRIMITIVETYPE,
+				},
+				rt: None,
+				ceval: Some(crate::builtins::primitive_type),
+			};
+		}
+		"typeOf" => {
+			// TODO
+		}
+		"rttiOf" => {
+			// TODO
+		}
+		other => panic!("unknown corelib builtin name: `{other}`"),
+	}
+}
 
 pub(super) fn builtin_non_fndecl(ctx: &FrontendContext, anno: ast::Annotation) {
 	ctx.raise(
@@ -217,7 +255,7 @@ pub(super) fn native_fndecl(
 
 	let string = lit_string.string().unwrap();
 
-	let Some(nfn) = ctx.compiler.native.functions.get(string) else {
+	let Some((ix, _qname, nfn)) = ctx.compiler.native.functions.get_full(string) else {
 		ctx.raise(
 			Issue::new(
 				ctx.path,
@@ -233,6 +271,10 @@ pub(super) fn native_fndecl(
 	};
 
 	datum.code = FunctionCode::Native {
+		uext_name: UserExternalName {
+			namespace: crate::CLNS_NATIVE,
+			index: ix as u32,
+		},
 		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr),
 		ceval: nfn.ceval,
 	};

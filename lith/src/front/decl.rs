@@ -140,7 +140,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 	for anno in ast.annotations() {
 		match anno.name().unwrap().text() {
 			("builtin", None) => {
-				// TODO
+				super::anno::builtin_fndecl(ctx, &ast, anno, &mut datum);
 			}
 			("cold", None) => {
 				super::anno::cold_fndecl(ctx, anno, &mut datum.flags);

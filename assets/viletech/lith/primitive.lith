@@ -1,4 +1,4 @@
-import "/lith/builtins" : intType, uintType;
+import "/lith/builtins" : primitiveType;
 
-const i32: type_t = intType(32);
-const u32: type_t = uintType(32);
+const i32: type_t = primitiveType('i32');
+const u32: type_t = primitiveType('u32');

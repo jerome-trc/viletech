@@ -361,7 +361,7 @@ pub(crate) fn step<'c>(
 
 					match u_map.namespace {
 						crate::CLNS_BUILTIN => match u_map.index {
-							crate::builtins::CLIX_GCUSAGE => {
+							crate::builtins::UEXTIX_GCUSAGE => {
 								return Ok(ControlFlow::Trap(CraneliftTrap::User(TRAP_NONCEVALFN)));
 							}
 							i => panic!("invalid builtin `UserExternalName::index`: {i}"),

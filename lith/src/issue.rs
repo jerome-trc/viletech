@@ -167,9 +167,7 @@ pub enum Error {
 	/// Mismatch between argument and parameter types.
 	ArgType,
 	BinExprTypeMismatch,
-	/// An argument passed to a compiler built-in caused an error that otherwise
-	/// falls under no other error code.
-	Builtin,
+	BuiltinMisuse,
 	CEvalRecursion,
 	ConstEval,
 	FlagDefBitOverflow,

@@ -1,11 +1,8 @@
-#[builtin]
-function intType(const num_bits: any_t): type_t;
+#[builtin('primitiveType')]
+function primitiveType(const name: any_t): type_t;
 
-#[builtin]
-function uintType(const num_bits: any_t): type_t;
-
-#[builtin]
+#[builtin('typeOf')]
 function typeOf(expr: any_t): type_t;
 
-#[builtin]
+#[builtin('rttiOf')]
 function rttiOf(expr: any_t): rtti;
