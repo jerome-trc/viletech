@@ -198,6 +198,12 @@ pub(crate) enum FunctionCode {
 	},
 }
 
+impl FunctionCode {
+	pub(crate) const IR_IX_UNDEFINED: u32 = u32::MAX;
+	pub(crate) const IR_IX_PENDING: u32 = u32::MAX - 1;
+	pub(crate) const IR_IX_FAILED: u32 = u32::MAX - 2;
+}
+
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,

@@ -125,7 +125,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			}
 		},
 		code: FunctionCode::Ir {
-			ir_ix: AtomicU32::new(u32::MAX),
+			ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
 		},
 	};
 
