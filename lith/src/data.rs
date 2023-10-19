@@ -2,16 +2,16 @@
 
 use std::sync::atomic::{self, AtomicU32, AtomicUsize};
 
-use cranelift::codegen::ir::UserExternalName;
+use cranelift::codegen::ir::{types as abi_t, UserExternalName};
 use doomfront::rowan::{TextRange, TextSize};
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
 use crate::{
 	arena::CPtr,
 	filetree::FileIx,
 	intern::NameIx,
 	runtime,
-	types::{CEvalIntrin, Scope},
+	types::{AbiTypes, CEvalIntrin, Scope},
 	CEval, CEvalNative,
 };
 
@@ -98,15 +98,16 @@ pub(crate) enum Datum {
 
 // Common details //////////////////////////////////////////////////////////////
 
-/// "Qualified type".
 #[derive(Debug)]
-pub(crate) enum QualType {
-	Normal {
-		inner: SymPtr,
-		array_dims: SmallVec<[ArrayLength; 1]>,
-		optional: bool,
-		reference: bool,
-	},
+pub(crate) struct SemaType {
+	pub(crate) inner: SymPtr,
+	pub(crate) array_dims: SmallVec<[ArrayLength; 1]>,
+	pub(crate) optional: bool,
+	pub(crate) reference: bool,
+}
+
+#[derive(Debug)]
+pub(crate) enum FrontendType {
 	Any {
 		optional: bool,
 	},
@@ -114,6 +115,7 @@ pub(crate) enum QualType {
 		array_dims: SmallVec<[ArrayLength; 1]>,
 		optional: bool,
 	},
+	Normal(SemaType),
 }
 
 #[derive(Debug)]
@@ -173,7 +175,7 @@ pub(crate) struct Function {
 	pub(crate) confine: Confinement,
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
-	pub(crate) return_type: QualType,
+	pub(crate) ret_type: FrontendType,
 	pub(crate) code: FunctionCode,
 }
 
@@ -207,7 +209,7 @@ impl FunctionCode {
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
-	pub(crate) qtype: QualType,
+	pub(crate) ftype: FrontendType,
 	pub(crate) consteval: bool,
 }
 
@@ -254,11 +256,27 @@ pub(crate) enum Primitive {
 	F64,
 }
 
+impl Primitive {
+	#[must_use]
+	pub(crate) fn abi(self) -> AbiTypes {
+		match self {
+			Self::Void => smallvec![],
+			Self::Bool | Self::I8 | Self::U8 => smallvec![abi_t::I8],
+			Self::I16 | Self::U16 => smallvec![abi_t::I16],
+			Self::I32 | Self::U32 => smallvec![abi_t::I32],
+			Self::I64 | Self::U64 => smallvec![abi_t::I64],
+			Self::I128 | Self::U128 => smallvec![abi_t::I128],
+			Self::F32 => smallvec![abi_t::F32],
+			Self::F64 => smallvec![abi_t::F64],
+		}
+	}
+}
+
 // SymConst ////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
 pub(crate) struct SymConst {
 	pub(crate) visibility: Visibility,
-	pub(crate) qtype: QualType,
+	pub(crate) ftype: FrontendType,
 	pub(crate) init: CEval,
 }

@@ -11,8 +11,8 @@ use crate::{
 	ast,
 	compile::{self},
 	data::{
-		ArrayLength, Confinement, Datum, DatumPtr, Function, FunctionCode, FunctionFlags, Inlining,
-		Location, Parameter, QualType, SymConst, SymPtr, Visibility,
+		ArrayLength, Confinement, Datum, DatumPtr, FrontendType, Function, FunctionCode,
+		FunctionFlags, Inlining, Location, Parameter, SemaType, SymConst, SymPtr, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
@@ -114,15 +114,15 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		confine: Confinement::None,
 		inlining: Inlining::default(),
 		params: vec![],
-		return_type: if let Some(ret_tspec) = ast.return_type() {
+		ret_type: if let Some(ret_tspec) = ast.return_type() {
 			process_type_expr(ctx, ret_tspec.expr().unwrap())
 		} else {
-			QualType::Normal {
-				inner: SymPtr::null(),
+			FrontendType::Normal(SemaType {
+				inner: SymPtr::null(), // Will point to the void primitive.
 				array_dims: SmallVec::default(),
 				optional: false,
 				reference: false,
-			}
+			})
 		},
 		code: FunctionCode::Ir {
 			ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
@@ -134,7 +134,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 	for param in param_list.iter() {
 		datum.params.push(Parameter {
 			name: ctx.names.intern(&ast.name().unwrap()),
-			qtype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
+			ftype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
 			consteval: param.is_const(),
 		});
 	}
@@ -221,9 +221,9 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 	};
 
 	let tspec = ast.type_spec().unwrap();
-	let qtype = process_type_expr(ctx, tspec.expr().unwrap());
+	let ftype = process_type_expr(ctx, tspec.expr().unwrap());
 
-	if matches!(qtype, QualType::Any { .. }) {
+	if matches!(ftype, FrontendType::Any { .. }) {
 		ctx.raise(Issue::new(
 			ctx.path,
 			tspec.syntax().text_range(),
@@ -233,7 +233,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		return;
 	}
 
-	let init = if matches!(qtype, QualType::Type { .. }) {
+	let init = if matches!(ftype, FrontendType::Type { .. }) {
 		CEval::Type(SymPtr::null())
 	} else {
 		CEval::Value(PushVec::default())
@@ -241,7 +241,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 
 	let datum = SymConst {
 		visibility: Visibility::default(),
-		qtype,
+		ftype,
 		init,
 	};
 
@@ -276,19 +276,19 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 // Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> QualType {
+fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 	let ast::Expr::Type(e_t) = texpr else {
-		return QualType::Normal {
+		return FrontendType::Normal(SemaType {
 			inner: SymPtr::null(),
 			array_dims: SmallVec::default(),
 			optional: false,
 			reference: false,
-		};
+		});
 	};
 
 	match e_t {
-		ast::ExprType::Any(_) => QualType::Any { optional: false },
-		ast::ExprType::TypeT(_) => QualType::Type {
+		ast::ExprType::Any(_) => FrontendType::Any { optional: false },
+		ast::ExprType::TypeT(_) => FrontendType::Type {
 			array_dims: SmallVec::default(),
 			optional: false,
 		},
@@ -301,12 +301,12 @@ fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> QualType {
 				}
 			}
 
-			QualType::Normal {
+			FrontendType::Normal(SemaType {
 				inner: SymPtr::null(),
 				array_dims,
 				optional: false,
 				reference: false,
-			}
+			})
 		}
 	}
 }
