@@ -13,10 +13,11 @@ use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{DataId, FuncId, Linkage, Module};
 use util::pushvec::PushVec;
 
-use crate::{runtime::Runtime, Compiler};
+use crate::{compile, runtime::Runtime, Compiler};
 
 pub fn finalize(mut compiler: Compiler) -> Runtime {
 	assert!(!compiler.failed);
+	assert_eq!(compiler.stage, compile::Stage::CodeGen);
 
 	let mut module = compiler.module.take().unwrap();
 	let arenas = std::mem::take(&mut compiler.arenas);
@@ -32,7 +33,7 @@ pub fn finalize(mut compiler: Compiler) -> Runtime {
 }
 
 fn define_functions(
-	compiler: &Compiler,
+	_: &Compiler,
 	module: &mut JitModule,
 	ir: PushVec<(FuncId, ir::Function)>,
 ) {
