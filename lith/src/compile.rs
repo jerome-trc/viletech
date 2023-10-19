@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod test;
 
-use std::{cmp::Ordering, hash::BuildHasherDefault};
+use std::cmp::Ordering;
 
 use cranelift::{
 	codegen::ir,
@@ -11,18 +11,17 @@ use cranelift::{
 };
 use cranelift_module::FuncId;
 use parking_lot::Mutex;
-use rustc_hash::FxHasher;
 use util::pushvec::PushVec;
 
 use crate::{
 	back::JitModule,
 	data::{Location, SymPtr, SymbolId},
 	filetree::{self, FileIx, FileTree},
-	intern::{NameInterner, NameIx},
+	intern::NameInterner,
 	interop::JitFn,
 	issue::Issue,
 	runtime,
-	types::{FxDashMap, FxIndexMap},
+	types::{FxDashMap, FxIndexMap, Scope},
 	Error, ValVec, Version,
 };
 
@@ -303,5 +302,3 @@ impl std::ops::Deref for LutSym {
 		&self.inner
 	}
 }
-
-pub(crate) type Scope = im::HashMap<NameIx, LutSym, BuildHasherDefault<FxHasher>>;

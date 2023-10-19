@@ -11,10 +11,10 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 
 use crate::{
 	ast,
-	compile::Scope,
 	data::{DatumPtr, Location, SymPtr, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
+	types::Scope,
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 

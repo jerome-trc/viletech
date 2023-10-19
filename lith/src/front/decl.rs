@@ -16,7 +16,8 @@ use crate::{
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	Compiler, LibMeta, Scope,
+	types::Scope,
+	Compiler, LibMeta,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.

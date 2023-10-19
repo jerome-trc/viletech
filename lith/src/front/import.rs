@@ -8,7 +8,8 @@ use crate::{
 	data::{Datum, DatumPtr, Location, SymPtr, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	Compiler, LibMeta, LutSym, Scope, Syn,
+	types::Scope,
+	Compiler, LibMeta, LutSym, Syn,
 };
 
 use super::FrontendContext;

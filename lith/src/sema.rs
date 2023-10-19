@@ -1,6 +1,8 @@
 use parking_lot::Mutex;
 
-use crate::{back::JitModule, data::SymPtr, filetree::FileIx, Compiler, ParseTree, Scope, ValVec};
+use crate::{
+	back::JitModule, data::SymPtr, filetree::FileIx, types::Scope, Compiler, ParseTree, ValVec,
+};
 
 /// The result of a [compile-time evaluated expression](ceval).
 #[derive(Debug)]
