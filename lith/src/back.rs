@@ -170,11 +170,7 @@ impl JitModule {
 				let mut signature = module.make_signature();
 
 				// First, the `runtime::Context` pointer.
-				let mut params = vec![AbiParam {
-					value_type: ptr_t,
-					purpose: ArgumentPurpose::Normal,
-					extension: ArgumentExtension::None,
-				}];
+				let mut params = vec![AbiParam::new(ptr_t)];
 
 				for p in rtn.params {
 					params.push(*p);
