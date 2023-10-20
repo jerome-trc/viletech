@@ -12,13 +12,14 @@ use crate::{
 	compile::{self},
 	data::{
 		ArrayLength, Confinement, Datum, DatumPtr, FrontendType, Function, FunctionCode,
-		FunctionFlags, Inlining, Location, Parameter, SemaType, SymConst, SymPtr, Visibility,
+		FunctionFlags, Inlining, Location, Parameter, SemaType, SymConst, SymConstInit, SymPtr,
+		Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
 	types::Scope,
-	CEval, Compiler, LibMeta,
+	Compiler, LibMeta,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.
@@ -237,9 +238,9 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 	}
 
 	let init = if matches!(ftype, FrontendType::Type { .. }) {
-		CEval::Type(SymPtr::null())
+		SymConstInit::Type(SymPtr::null())
 	} else {
-		CEval::Value(PushVec::default())
+		SymConstInit::Value(PushVec::default())
 	};
 
 	let datum = SymConst {

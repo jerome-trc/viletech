@@ -2,9 +2,13 @@
 
 use std::sync::atomic::{self, AtomicU32, AtomicUsize};
 
-use cranelift::codegen::ir::{types as abi_t, UserExternalName};
+use cranelift::codegen::{
+	data_value::DataValue,
+	ir::{types as abi_t, UserExternalName},
+};
 use doomfront::rowan::{TextRange, TextSize};
 use smallvec::{smallvec, SmallVec};
+use util::pushvec::PushVec;
 
 use crate::{
 	arena::CPtr,
@@ -12,7 +16,7 @@ use crate::{
 	intern::NameIx,
 	runtime,
 	types::{AbiTypes, CEvalIntrin, Scope},
-	CEval, CEvalNative,
+	CEvalNative,
 };
 
 pub(crate) type SymPtr = CPtr<Symbol>;
@@ -278,5 +282,11 @@ impl Primitive {
 pub(crate) struct SymConst {
 	pub(crate) visibility: Visibility,
 	pub(crate) ftype: FrontendType,
-	pub(crate) init: CEval,
+	pub(crate) init: SymConstInit,
+}
+
+#[derive(Debug)]
+pub(crate) enum SymConstInit {
+	Type(SymPtr),
+	Value(PushVec<DataValue>),
 }
