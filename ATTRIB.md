@@ -8,6 +8,10 @@ If you're aware of any attribution which is evidently missing from this list, or
 
 All source marked as originating from the [append-only-vec](https://crates.io/crates/append-only-vec) crate by [David Roundy](https://github.com/droundy) is used under the MIT License.
 
+## cranelift-interpreter
+
+All source marked as originating from the [cranelift-interpreter](https://crates.io/crates/cranelift-interpreter) crate by the [Bytecode Alliance](https://bytecodealliance.org/) is used under the [Apache License 2.0 with LLVM Exceptions](./legal/wasmtime.txt).
+
 ## daScript
 
 VileTech's SIMD code borrows from Gaijin Entertainment's [daScript](https://dascript.org/) language. All code derived from there is used under the [BSD 3-Clause License](./legal/dascript.txt).
