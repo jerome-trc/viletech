@@ -20,7 +20,7 @@ pub struct PushVec<T> {
 }
 
 impl<T> PushVec<T> {
-	/// Allocate a new empty array.
+	/// Construct a new, empty array. This function performs no heap allocation.
 	#[must_use]
 	pub const fn new() -> Self {
 		PushVec {
@@ -246,6 +246,9 @@ impl<T> IntoIterator for PushVec<T> {
 
 	type IntoIter = IntoIter<T>;
 
+	/// Consume the `PushVec` and yield all of its elements in the same order that
+	/// they were added. This function and the returned iterator are allocation-free
+	/// and copy-free.
 	fn into_iter(self) -> Self::IntoIter {
 		let len = self.len();
 
