@@ -16,7 +16,7 @@ use cranelift_interpreter::{
 };
 
 use crate::{
-	data::{Datum, FunctionCode, SymbolId},
+	data::{Datum, FunctionCode, Symbol, SymbolId},
 	Compiler,
 };
 
@@ -69,9 +69,9 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		let uen = curr_ir.params.user_named_funcs().get(uenr).unwrap();
 		let sym_id = SymbolId::from(uen.clone());
 		let map_ref = self.compiler.symbols.get(&sym_id).unwrap();
-		let sym = map_ref.as_ref();
+		let sym: &Symbol = map_ref.value();
 
-		let Datum::Function(d_fn) = sym.datum.as_ref() else {
+		let Datum::Function(d_fn) = &sym.datum else {
 			unreachable!()
 		};
 
@@ -238,9 +238,9 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 
 				let sym_id = SymbolId::from(uen.clone());
 				let map_ref = self.compiler.symbols.get(&sym_id).unwrap();
-				let sym = map_ref.as_ref();
+				let sym: &Symbol = map_ref.value();
 
-				let Datum::Function(d_fn) = sym.datum.as_ref() else {
+				let Datum::Function(d_fn) = &sym.datum else {
 					unreachable!()
 				};
 

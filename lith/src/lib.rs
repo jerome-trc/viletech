@@ -12,10 +12,10 @@ pub(crate) mod data;
 pub(crate) mod front;
 pub(crate) mod intern;
 pub(crate) mod interpret;
+pub(crate) mod mem;
 pub(crate) mod sema;
 pub(crate) mod types;
 
-pub mod arena;
 pub mod ast;
 pub mod filetree;
 pub mod interop;

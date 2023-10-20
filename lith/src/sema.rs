@@ -8,9 +8,8 @@ use parking_lot::Mutex;
 
 use crate::{
 	back::JitModule,
-	data::SymPtr,
 	filetree::{self, FileIx},
-	types::Scope,
+	types::{Scope, SymPtr},
 	Compiler, ParseTree, ValVec,
 };
 
@@ -36,6 +35,7 @@ pub(crate) struct SemaContext<'c> {
 pub(crate) struct ThreadContext<'c> {
 	pub(crate) thread_ix: usize,
 	pub(crate) compiler: &'c Compiler,
+	pub(crate) arena: &'c bumpalo::Bump,
 	pub(crate) module: &'c Mutex<JitModule>,
 	pub(crate) fctxs: &'c Vec<Mutex<FunctionBuilderContext>>,
 	pub(crate) cctxs: &'c Vec<Mutex<cranelift::codegen::Context>>,

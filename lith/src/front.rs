@@ -11,10 +11,10 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 
 use crate::{
 	ast,
-	data::{DatumPtr, Location, SymPtr, Symbol, SymbolId},
+	data::{Datum, Location, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	types::Scope,
+	types::{Scope, SymPtr},
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
@@ -30,12 +30,16 @@ struct FrontendContext<'c> {
 }
 
 impl FrontendContext<'_> {
-	fn declare(
+	fn declare<F>(
 		&self,
 		scope: &mut Scope,
 		name: &SyntaxToken,
 		node: &SyntaxNode,
-	) -> Result<SymPtr, SymPtr> {
+		mut init: F,
+	) -> Result<(), SymPtr>
+	where
+		F: FnMut() -> Option<Datum>,
+	{
 		let location = Location {
 			file_ix: self.file_ix,
 			span: node.text_range(),
@@ -43,30 +47,29 @@ impl FrontendContext<'_> {
 
 		let name = self.names.intern(name);
 
-		let sym_ptr = match scope.entry(name) {
+		match scope.entry(name) {
 			im::hashmap::Entry::Vacant(vac) => {
-				let sym = Symbol {
-					location,
-					datum: DatumPtr::null(),
+				let Some(datum) = init() else {
+					return Ok(());
 				};
+
+				let sym = Symbol { location, datum };
 
 				let id = SymbolId::new(sym.location);
 				let sym_ptr = SymPtr::alloc(self.arena, sym);
-				self.symbols.insert(id, sym_ptr.clone());
+				self.symbols.insert(id, sym_ptr);
 
 				vac.insert(LutSym {
-					inner: sym_ptr.clone(),
+					inner: sym_ptr,
 					imported: false,
 				});
-
-				sym_ptr
 			}
 			im::hashmap::Entry::Occupied(occ) => {
 				return Err(occ.get().clone().inner);
 			}
 		};
 
-		Ok(sym_ptr)
+		Ok(())
 	}
 
 	#[must_use]

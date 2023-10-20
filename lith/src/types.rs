@@ -6,7 +6,13 @@ use std::hash::BuildHasherDefault;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 
-use crate::{ast, intern::NameIx, CEval, LutSym, SemaContext};
+use crate::{
+	ast,
+	data::Symbol,
+	intern::NameIx,
+	mem::{APtr, NPtr},
+	CEval, LutSym, SemaContext,
+};
 
 pub(crate) type FxHamt<K, V> = im::HashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxIndexMap<K, V> = indexmap::IndexMap<K, V, BuildHasherDefault<FxHasher>>;
@@ -14,6 +20,9 @@ pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHa
 
 pub(crate) type AbiType = cranelift::codegen::ir::Type;
 pub(crate) type AbiTypes = SmallVec<[AbiType; 1]>;
+
+pub(crate) type SymPtr = APtr<Symbol>;
+pub(crate) type SymNPtr = NPtr<Symbol>;
 
 pub(crate) type CEvalIntrin = fn(&SemaContext, ast::ArgList) -> CEval;
 

@@ -6,13 +6,35 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast,
-	data::{self, Datum, DatumPtr, Location, SymPtr, Symbol, SymbolId},
+	data::{self, Datum, Location, Symbol},
 	issue::{self, Issue},
-	runtime, CEval, SemaContext,
+	runtime,
+	types::{SymNPtr, SymPtr},
+	CEval, SemaContext,
 };
 
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
-	let Some(caller) = arg_list.syntax().ancestors().find_map(ast::SymConst::cast) else {
+	#[must_use]
+	fn lazy_init(
+		ctx: &SemaContext,
+		ptr: &SymNPtr,
+		datum: data::Primitive,
+		location: Location,
+	) -> SymPtr {
+		let p = SymPtr::alloc(
+			ctx.arena,
+			Symbol {
+				location,
+				datum: Datum::Primitive(datum),
+			},
+		);
+
+		ptr.store(p);
+
+		p
+	}
+
+	let Some(sym_const) = arg_list.syntax().ancestors().find_map(ast::SymConst::cast) else {
 		ctx.raise(
 			Issue::new(
 				ctx.path,
@@ -25,11 +47,6 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 		);
 
 		return CEval::Err;
-	};
-
-	let location = Location {
-		file_ix: ctx.file_ix,
-		span: caller.syntax().text_range(),
 	};
 
 	let mut args = arg_list.iter();
@@ -77,21 +94,120 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 		return CEval::Err;
 	};
 
-	let datum = match iname {
-		"void" => data::Primitive::Void,
-		"bool" => data::Primitive::Bool,
-		"i8" => data::Primitive::I8,
-		"u8" => data::Primitive::U8,
-		"i16" => data::Primitive::I16,
-		"u16" => data::Primitive::U16,
-		"i32" => data::Primitive::I32,
-		"u32" => data::Primitive::U32,
-		"i64" => data::Primitive::I64,
-		"u64" => data::Primitive::U64,
-		"i128" => data::Primitive::I128,
-		"u128" => data::Primitive::U128,
-		"f32" => data::Primitive::F32,
-		"f64" => data::Primitive::F64,
+	let location = Location {
+		file_ix: ctx.file_ix,
+		span: sym_const.syntax().text_range(),
+	};
+
+	let type_ptr = match iname {
+		"void" => ctx
+			.sym_cache
+			.void_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.void_t, data::Primitive::Void, location)
+			}),
+		"bool" => ctx
+			.sym_cache
+			.bool_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.bool_t, data::Primitive::Bool, location)
+			}),
+		"i8" => ctx
+			.sym_cache
+			.i8_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i8_t, data::Primitive::I8, location)),
+		"u8" => ctx
+			.sym_cache
+			.u8_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u8_t, data::Primitive::U8, location)),
+		"i16" => ctx
+			.sym_cache
+			.i16_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i16_t, data::Primitive::I16, location)
+			}),
+		"u16" => ctx
+			.sym_cache
+			.u16_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u16_t, data::Primitive::U16, location)
+			}),
+		"i32" => ctx
+			.sym_cache
+			.i32_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i32_t, data::Primitive::I32, location)
+			}),
+		"u32" => ctx
+			.sym_cache
+			.u32_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u32_t, data::Primitive::U32, location)
+			}),
+		"i64" => ctx
+			.sym_cache
+			.i64_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i64_t, data::Primitive::I64, location)
+			}),
+		"u64" => ctx
+			.sym_cache
+			.u64_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u64_t, data::Primitive::U64, location)
+			}),
+		"i128" => ctx
+			.sym_cache
+			.i128_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i128_t, data::Primitive::I128, location)
+			}),
+		"u128" => ctx
+			.sym_cache
+			.u128_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u128_t, data::Primitive::U128, location)
+			}),
+		"f32" => ctx
+			.sym_cache
+			.f32_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.f32_t, data::Primitive::F32, location)
+			}),
+		"f64" => ctx
+			.sym_cache
+			.f64_t
+			.as_ptr()
+			.map(SymPtr::new)
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.f64_t, data::Primitive::F64, location)
+			}),
 		other => {
 			ctx.raise(
 				Issue::new(
@@ -106,19 +222,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 		}
 	};
 
-	let sym_ptr = SymPtr::alloc(
-		todo!(),
-		Symbol {
-			location,
-			datum: DatumPtr::alloc(todo!(), Datum::Primitive(datum)),
-		},
-	);
-
-	let overriden = ctx.symbols.insert(SymbolId::new(location), sym_ptr.clone());
-
-	debug_assert!(overriden.is_none());
-
-	CEval::Type(sym_ptr)
+	CEval::Type(type_ptr)
 }
 
 /// Returns the total memory used by the garbage collector.

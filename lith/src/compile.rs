@@ -15,13 +15,13 @@ use util::pushvec::PushVec;
 
 use crate::{
 	back::JitModule,
-	data::{Location, SymPtr, SymbolId},
+	data::{Location, SymbolId},
 	filetree::{self, FileIx, FileTree},
 	intern::NameInterner,
 	interop::JitFn,
 	issue::Issue,
 	runtime,
-	types::{FxDashMap, FxIndexMap, Scope},
+	types::{FxDashMap, FxIndexMap, Scope, SymNPtr, SymPtr},
 	Error, ValVec, Version,
 };
 
@@ -47,6 +47,7 @@ pub struct Compiler {
 	pub(crate) module: Option<JitModule>,
 	pub(crate) ir: PushVec<(FuncId, ir::Function)>,
 	pub(crate) native: NativeSymbols,
+	pub(crate) sym_cache: SymCache,
 	// Interning
 	pub(crate) names: NameInterner,
 }
@@ -97,6 +98,7 @@ impl Compiler {
 			module: None,
 			ir: PushVec::new(),
 			native: NativeSymbols::default(),
+			sym_cache: SymCache::default(),
 			names: NameInterner::default(),
 		}
 	}
@@ -202,9 +204,7 @@ impl Compiler {
 		self.scopes.clear();
 
 		self.symbols.iter().for_each(|kvp| unsafe {
-			if let Some(sym_ptr) = kvp.value().as_ptr() {
-				std::ptr::drop_in_place(sym_ptr.as_ptr());
-			}
+			kvp.drop_in_place();
 		});
 
 		self.ir = PushVec::new();
@@ -300,5 +300,45 @@ impl std::ops::Deref for LutSym {
 
 	fn deref(&self) -> &Self::Target {
 		&self.inner
+	}
+}
+
+/// For use by [`crate::sema`].
+#[derive(Debug)]
+pub(crate) struct SymCache {
+	pub(crate) void_t: SymNPtr,
+	pub(crate) bool_t: SymNPtr,
+	pub(crate) i8_t: SymNPtr,
+	pub(crate) u8_t: SymNPtr,
+	pub(crate) i16_t: SymNPtr,
+	pub(crate) u16_t: SymNPtr,
+	pub(crate) i32_t: SymNPtr,
+	pub(crate) u32_t: SymNPtr,
+	pub(crate) i64_t: SymNPtr,
+	pub(crate) u64_t: SymNPtr,
+	pub(crate) i128_t: SymNPtr,
+	pub(crate) u128_t: SymNPtr,
+	pub(crate) f32_t: SymNPtr,
+	pub(crate) f64_t: SymNPtr,
+}
+
+impl Default for SymCache {
+	fn default() -> Self {
+		Self {
+			void_t: SymNPtr::null(),
+			bool_t: SymNPtr::null(),
+			i8_t: SymNPtr::null(),
+			u8_t: SymNPtr::null(),
+			i16_t: SymNPtr::null(),
+			u16_t: SymNPtr::null(),
+			i32_t: SymNPtr::null(),
+			u32_t: SymNPtr::null(),
+			i64_t: SymNPtr::null(),
+			u64_t: SymNPtr::null(),
+			i128_t: SymNPtr::null(),
+			u128_t: SymNPtr::null(),
+			f32_t: SymNPtr::null(),
+			f64_t: SymNPtr::null(),
+		}
 	}
 }

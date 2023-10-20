@@ -11,31 +11,17 @@ use smallvec::{smallvec, SmallVec};
 use util::pushvec::PushVec;
 
 use crate::{
-	arena::CPtr,
 	filetree::FileIx,
 	intern::NameIx,
 	runtime,
-	types::{AbiTypes, CEvalIntrin, Scope},
+	types::{AbiTypes, CEvalIntrin, Scope, SymNPtr},
 	CEvalNative,
 };
-
-pub(crate) type SymPtr = CPtr<Symbol>;
-pub(crate) type DatumPtr = CPtr<Datum>;
 
 #[derive(Debug)]
 pub(crate) struct Symbol {
 	pub(crate) location: Location,
-	pub(crate) datum: DatumPtr,
-}
-
-impl Drop for Symbol {
-	fn drop(&mut self) {
-		if let Some(ptr) = self.datum.as_ptr() {
-			unsafe {
-				std::ptr::drop_in_place(ptr.as_ptr());
-			}
-		}
-	}
+	pub(crate) datum: Datum,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -104,12 +90,13 @@ pub(crate) enum Datum {
 
 #[derive(Debug)]
 pub(crate) struct SemaType {
-	pub(crate) inner: SymPtr,
+	pub(crate) inner: SymNPtr,
 	pub(crate) array_dims: SmallVec<[ArrayLength; 1]>,
 	pub(crate) optional: bool,
 	pub(crate) reference: bool,
 }
 
+/// Used for representing type specifications.
 #[derive(Debug)]
 pub(crate) enum FrontendType {
 	Any {
@@ -287,6 +274,6 @@ pub(crate) struct SymConst {
 
 #[derive(Debug)]
 pub(crate) enum SymConstInit {
-	Type(SymPtr),
+	Type(SemaType),
 	Value(PushVec<DataValue>),
 }

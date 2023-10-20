@@ -5,10 +5,10 @@ use rayon::prelude::*;
 
 use crate::{
 	ast, compile,
-	data::{Datum, DatumPtr, Location, SymPtr, Symbol, SymbolId},
+	data::{Datum, Location, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	types::Scope,
+	types::{Scope, SymPtr},
 	Compiler, LibMeta, LutSym, Syn,
 };
 
@@ -287,7 +287,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 		imports.insert(
 			*n,
 			LutSym {
-				inner: lut_sym.inner.clone(),
+				inner: lut_sym.inner,
 				imported: true,
 			},
 		);
@@ -300,13 +300,12 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	let imp_sym = Symbol {
 		location,
-		datum: DatumPtr::alloc(ctx.arena, Datum::Container(imports)),
+		datum: Datum::Container(imports),
 	};
 
 	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
 
-	ctx.symbols
-		.insert(SymbolId::new(location), imp_sym_ptr.clone());
+	ctx.symbols.insert(SymbolId::new(location), imp_sym_ptr);
 
 	vac.insert(LutSym {
 		inner: imp_sym_ptr,
@@ -315,12 +314,11 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 }
 
 fn shadow_error(ctx: &FrontendContext, prev_ptr: SymPtr, entry_span: TextRange, entry_name: &str) {
-	let prev = prev_ptr.try_ref().unwrap();
-	let prev_file = ctx.resolve_file(prev);
+	let prev_file = ctx.resolve_file(&prev_ptr);
 	let prev_file_cursor = prev_file.1.cursor();
 
 	let prev_node = prev_file_cursor
-		.covering_element(prev.location.span)
+		.covering_element(prev_ptr.location.span)
 		.into_node()
 		.unwrap();
 	let prev_span = prev_node.text_range();

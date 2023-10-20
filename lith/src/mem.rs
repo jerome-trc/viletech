@@ -9,11 +9,19 @@ use crossbeam::atomic::AtomicCell;
 
 /// An "arena pointer".
 ///
+/// This type has no safety guarantees on its own. Its soundness relies on the
+/// presumption of correct usage by the compiler code.
+///
 /// Benefits from null pointer optimization.
 #[derive(Debug)]
 pub(crate) struct APtr<T>(NonNull<T>);
 
 impl<T> APtr<T> {
+	#[must_use]
+	pub(crate) fn new(ptr: NonNull<T>) -> Self {
+		Self(ptr)
+	}
+
 	#[must_use]
 	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
 		let m = arena.alloc(obj);
@@ -49,8 +57,8 @@ impl<T> std::ops::Deref for APtr<T> {
 	}
 }
 
-impl<T> From<CPtr<T>> for APtr<T> {
-	fn from(value: CPtr<T>) -> Self {
+impl<T> From<NPtr<T>> for APtr<T> {
+	fn from(value: NPtr<T>) -> Self {
 		Self(value.0.load().unwrap())
 	}
 }
@@ -58,20 +66,20 @@ impl<T> From<CPtr<T>> for APtr<T> {
 unsafe impl<T: Send> Send for APtr<T> {}
 unsafe impl<T: Send + Sync> Sync for APtr<T> {}
 
-/// A "compiler pointer" to an allocation in an [arena](bumpalo::Bump).
+/// An atomic "nullable pointer" to an allocation in an [arena](bumpalo::Bump).
+///
+/// The multithreaded architecture used by LithC benefits heavily from immutability,
+/// but some deferral of initialization is sometimes necessary. These pointers
+/// facilitate that late initialization.
 ///
 /// This type has no safety guarantees on its own. Its soundness relies on the
 /// presumption of correct usage by the compiler code.
 ///
 /// Does not benefit from null pointer optimization.
 #[derive(Debug)]
-pub(crate) struct CPtr<T>(
-	// (RAT): It's weird that there's no way to get
-	// null-pointer optimization for an `AtomicPtr`, isn't it?
-	pub(crate) AtomicCell<Option<NonNull<T>>>,
-);
+pub(crate) struct NPtr<T>(AtomicCell<Option<NonNull<T>>>);
 
-impl<T> CPtr<T> {
+impl<T> NPtr<T> {
 	#[must_use]
 	pub(crate) fn null() -> Self {
 		Self(AtomicCell::new(None))
@@ -85,8 +93,8 @@ impl<T> CPtr<T> {
 		Self(AtomicCell::new(nn))
 	}
 
-	pub(crate) fn store(&self, new: NonNull<T>) {
-		self.0.store(Some(new));
+	pub(crate) fn store(&self, new: APtr<T>) {
+		self.0.store(Some(new.0));
 	}
 
 	pub(crate) fn compare_exchange(
@@ -124,30 +132,34 @@ impl<T> CPtr<T> {
 	}
 }
 
-impl<T> PartialEq for CPtr<T> {
+impl<T> PartialEq for NPtr<T> {
 	fn eq(&self, other: &Self) -> bool {
 		self.0.load() == other.0.load()
 	}
 }
 
-impl<T> Eq for CPtr<T> {}
+impl<T> Eq for NPtr<T> {}
 
-impl<T> Clone for CPtr<T> {
+impl<T> Clone for NPtr<T> {
 	fn clone(&self) -> Self {
 		Self(AtomicCell::new(self.0.load()))
 	}
 }
 
-impl<T> Hash for CPtr<T> {
+impl<T> Hash for NPtr<T> {
 	fn hash<H: Hasher>(&self, state: &mut H) {
 		self.0.load().hash(state);
 	}
 }
 
-unsafe impl<T: Send> Send for CPtr<T> {}
-unsafe impl<T: Send + Sync> Sync for CPtr<T> {}
+unsafe impl<T: Send> Send for NPtr<T> {}
+unsafe impl<T: Send + Sync> Sync for NPtr<T> {}
 
-const _STATIC_ASSERT_APTR_CONSTRAINTS: () = {
-	assert!(std::mem::size_of::<APtr<()>>() == std::mem::size_of::<*mut ()>());
-	assert!(AtomicCell::<Option<NonNull<()>>>::is_lock_free());
+const _STATIC_ASSERT_CONSTRAINTS: () = {
+	assert!(AtomicCell::<Option<NonNull<u8>>>::is_lock_free());
+
+	assert!(std::mem::size_of::<APtr<u8>>() == std::mem::size_of::<*mut u8>());
+	assert!(std::mem::size_of::<APtr<u8>>() == std::mem::size_of::<Option<APtr<u8>>>(),);
+
+	assert!(std::mem::size_of::<NPtr<u8>>() == std::mem::size_of::<*mut u8>());
 };

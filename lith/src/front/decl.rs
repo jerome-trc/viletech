@@ -11,14 +11,13 @@ use crate::{
 	ast,
 	compile::{self},
 	data::{
-		ArrayLength, Confinement, Datum, DatumPtr, FrontendType, Function, FunctionCode,
-		FunctionFlags, Inlining, Location, Parameter, SemaType, SymConst, SymConstInit, SymPtr,
-		Visibility,
+		ArrayLength, Confinement, Datum, FrontendType, Function, FunctionCode, FunctionFlags,
+		Inlining, Location, Parameter, SemaType, SymConst, SymConstInit, Symbol, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	types::Scope,
+	types::{Scope, SymNPtr, SymPtr},
 	Compiler, LibMeta,
 };
 
@@ -99,112 +98,108 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		return;
 	}
 
-	let result = ctx.declare(scope, &ident, ast.syntax());
+	let init = || {
+		let mut datum = Function {
+			flags: FunctionFlags::empty(),
+			visibility: Visibility::default(),
+			confine: Confinement::None,
+			inlining: Inlining::default(),
+			params: vec![],
+			ret_type: if let Some(ret_tspec) = ast.return_type() {
+				process_type_expr(ctx, ret_tspec.expr().unwrap())
+			} else {
+				FrontendType::Normal(SemaType {
+					inner: SymNPtr::null(), // Will point to the void primitive.
+					array_dims: SmallVec::default(),
+					optional: false,
+					reference: false,
+				})
+			},
+			code: FunctionCode::Ir {
+				ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
+			},
+		};
 
-	let sym_ptr = match result {
-		Ok(p) => p,
-		Err(prev) => {
-			redeclare_error(ctx, prev, super::crit_span(ast.syntax()), ident.text());
-			return;
+		let param_list = ast.params().unwrap();
+
+		for param in param_list.iter() {
+			datum.params.push(Parameter {
+				name: ctx.names.intern(&ast.name().unwrap()),
+				ftype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
+				consteval: param.is_const(),
+			});
 		}
-	};
 
-	let mut datum = Function {
-		flags: FunctionFlags::empty(),
-		visibility: Visibility::default(),
-		confine: Confinement::None,
-		inlining: Inlining::default(),
-		params: vec![],
-		ret_type: if let Some(ret_tspec) = ast.return_type() {
-			process_type_expr(ctx, ret_tspec.expr().unwrap())
-		} else {
-			FrontendType::Normal(SemaType {
-				inner: SymPtr::null(), // Will point to the void primitive.
-				array_dims: SmallVec::default(),
-				optional: false,
-				reference: false,
-			})
-		},
-		code: FunctionCode::Ir {
-			ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
-		},
-	};
-
-	let param_list = ast.params().unwrap();
-
-	for param in param_list.iter() {
-		datum.params.push(Parameter {
-			name: ctx.names.intern(&ast.name().unwrap()),
-			ftype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
-			consteval: param.is_const(),
-		});
-	}
-
-	for anno in ast.annotations() {
-		match anno.name().unwrap().text() {
-			("builtin", None) => {
-				super::anno::builtin_fndecl(ctx, &ast, anno, &mut datum);
-			}
-			("cold", None) => {
-				super::anno::cold_fndecl(ctx, anno, &mut datum.flags);
-			}
-			("confine", None) => {
-				super::anno::confine(ctx, anno, &mut datum.confine);
-			}
-			("crucial", None) => {
-				// Valid, but handled later by sema.
-			}
-			("inline", None) => {
-				super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
-			}
-			("native", None) => {
-				super::anno::native_fndecl(ctx, anno, &mut datum);
-			}
-			other => {
-				super::anno::unknown_annotation_error(ctx, anno, other);
-			}
-		} // TODO: a more generalized system for handling these.
-	}
-
-	match datum.code {
-		FunctionCode::Ir { .. } => {
-			if let Some(body) = ast.body() {
-				ctx.raise(Issue::new(
-					ctx.path,
-					body.syntax().text_range(),
-					issue::Level::Error(issue::Error::MissingFnBody)
-				).with_message(
-					format!("declaration of function `{}` has no body", ident.text())
-				).with_note_static("only functions marked `#[native]` and `#[builtin]` can be declared without a body"));
-			}
+		for anno in ast.annotations() {
+			match anno.name().unwrap().text() {
+				("builtin", None) => {
+					super::anno::builtin_fndecl(ctx, &ast, anno, &mut datum);
+				}
+				("cold", None) => {
+					super::anno::cold_fndecl(ctx, anno, &mut datum.flags);
+				}
+				("confine", None) => {
+					super::anno::confine(ctx, anno, &mut datum.confine);
+				}
+				("crucial", None) => {
+					// Valid, but handled later by sema.
+				}
+				("inline", None) => {
+					super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
+				}
+				("native", None) => {
+					super::anno::native_fndecl(ctx, anno, &mut datum);
+				}
+				other => {
+					super::anno::unknown_annotation_error(ctx, anno, other);
+				}
+			} // TODO: a more generalized system for handling these.
 		}
-		FunctionCode::Builtin { .. } => {
-			assert!(
-				ast.body().is_none(),
-				"declaration of intrinsic `{}` has body",
-				ident.text()
-			);
-		}
-		FunctionCode::Native { .. } => {
-			if let Some(body) = ast.body() {
-				ctx.raise(
-					Issue::new(
+
+		match datum.code {
+			FunctionCode::Ir { .. } => {
+				if let Some(body) = ast.body() {
+					ctx.raise(Issue::new(
 						ctx.path,
 						body.syntax().text_range(),
-						issue::Level::Error(issue::Error::IllegalFnBody),
-					)
-					.with_message(format!(
-						"declaration of native function `{}` has illegal body",
-						ident.text()
-					)),
+						issue::Level::Error(issue::Error::MissingFnBody)
+					).with_message(
+						format!("declaration of function `{}` has no body", ident.text())
+					).with_note_static("only functions marked `#[native]` and `#[builtin]` can be declared without a body"));
+				}
+			}
+			FunctionCode::Builtin { .. } => {
+				assert!(
+					ast.body().is_none(),
+					"declaration of intrinsic `{}` has body",
+					ident.text()
 				);
 			}
+			FunctionCode::Native { .. } => {
+				if let Some(body) = ast.body() {
+					ctx.raise(
+						Issue::new(
+							ctx.path,
+							body.syntax().text_range(),
+							issue::Level::Error(issue::Error::IllegalFnBody),
+						)
+						.with_message(format!(
+							"declaration of native function `{}` has illegal body",
+							ident.text()
+						)),
+					);
+				}
+			}
 		}
-	}
 
-	let sym = sym_ptr.try_ref().unwrap();
-	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::Function(datum));
-	sym.datum.store(datum_ptr.as_ptr().unwrap());
+		Some(Datum::Function(datum))
+	};
+
+	let result = ctx.declare(scope, &ident, ast.syntax(), init);
+
+	if let Err(prev) = result {
+		redeclare_error(ctx, prev, super::crit_span(ast.syntax()), ident.text());
+	}
 }
 
 fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst) {
@@ -214,70 +209,71 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		return;
 	}
 
-	let result = ctx.declare(scope, &ident, ast.syntax());
+	let init = || {
+		let tspec = ast.type_spec().unwrap();
+		let ftype = process_type_expr(ctx, tspec.expr().unwrap());
 
-	let sym_ptr = match result {
-		Ok(p) => p,
-		Err(prev) => {
-			redeclare_error(ctx, prev, super::crit_span(ast.syntax()), ident.text());
-			return;
+		if matches!(ftype, FrontendType::Any { .. }) {
+			ctx.raise(Issue::new(
+				ctx.path,
+				tspec.syntax().text_range(),
+				issue::Level::Error(issue::Error::ContainerValAnyType),
+			));
+
+			return None;
 		}
-	};
 
-	let tspec = ast.type_spec().unwrap();
-	let ftype = process_type_expr(ctx, tspec.expr().unwrap());
+		let init = if matches!(ftype, FrontendType::Type { .. }) {
+			SymConstInit::Type(SemaType {
+				inner: SymNPtr::null(),
+				array_dims: SmallVec::default(),
+				optional: false,
+				reference: false, // TODO?
+			})
+		} else {
+			SymConstInit::Value(PushVec::default())
+		};
 
-	if matches!(ftype, FrontendType::Any { .. }) {
-		ctx.raise(Issue::new(
-			ctx.path,
-			tspec.syntax().text_range(),
-			issue::Level::Error(issue::Error::ContainerValAnyType),
-		));
+		let datum = SymConst {
+			visibility: Visibility::default(),
+			ftype,
+			init,
+		};
 
-		return;
-	}
-
-	let init = if matches!(ftype, FrontendType::Type { .. }) {
-		SymConstInit::Type(SymPtr::null())
-	} else {
-		SymConstInit::Value(PushVec::default())
-	};
-
-	let datum = SymConst {
-		visibility: Visibility::default(),
-		ftype,
-		init,
-	};
-
-	for anno in ast.annotations() {
-		match anno.name().unwrap().text() {
-			("builtin", None) => {
-				super::anno::builtin_non_fndecl(ctx, anno);
-			}
-			("cold", None) => {
-				super::anno::cold_invalid(ctx, anno);
-			}
-			("confine", None) => {
-				// TODO: valid?
-			}
-			("crucial", None) => {
-				super::anno::crucial_nonfndecl(ctx, anno);
-			}
-			("inline", None) => {
-				super::anno::inline_non_fndecl(ctx, anno);
-			}
-			("native", None) => {
-				// TODO: valid?
-			}
-			other => {
-				super::anno::unknown_annotation_error(ctx, anno, other);
+		for anno in ast.annotations() {
+			match anno.name().unwrap().text() {
+				("builtin", None) => {
+					super::anno::builtin_non_fndecl(ctx, anno);
+				}
+				("cold", None) => {
+					super::anno::cold_invalid(ctx, anno);
+				}
+				("confine", None) => {
+					// TODO: valid?
+				}
+				("crucial", None) => {
+					super::anno::crucial_nonfndecl(ctx, anno);
+				}
+				("inline", None) => {
+					super::anno::inline_non_fndecl(ctx, anno);
+				}
+				("native", None) => {
+					// TODO: valid?
+				}
+				other => {
+					super::anno::unknown_annotation_error(ctx, anno, other);
+				}
 			}
 		}
-	}
 
-	let sym = sym_ptr.try_ref().unwrap();
-	let datum_ptr = DatumPtr::alloc(ctx.arena, Datum::SymConst(datum));
-	sym.datum.store(datum_ptr.as_ptr().unwrap());
+		Some(Datum::SymConst(datum))
+	};
+
+	let result = ctx.declare(scope, &ident, ast.syntax(), init);
+
+	if let Err(prev) = result {
+		redeclare_error(ctx, prev, super::crit_span(ast.syntax()), ident.text());
+	}
 }
 
 // Details /////////////////////////////////////////////////////////////////////
@@ -286,7 +282,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 	let ast::Expr::Type(e_t) = texpr else {
 		return FrontendType::Normal(SemaType {
-			inner: SymPtr::null(),
+			inner: SymNPtr::null(),
 			array_dims: SmallVec::default(),
 			optional: false,
 			reference: false,
@@ -309,7 +305,7 @@ fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 			}
 
 			FrontendType::Normal(SemaType {
-				inner: SymPtr::null(),
+				inner: SymNPtr::null(),
 				array_dims,
 				optional: false,
 				reference: false,
@@ -319,7 +315,7 @@ fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 }
 
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {
-	let prev = prev_ptr.try_ref().unwrap();
+	let prev: &Symbol = &prev_ptr;
 	let prev_file = ctx.resolve_file(prev);
 	let prev_file_cursor = prev_file.1.cursor();
 

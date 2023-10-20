@@ -6,7 +6,7 @@ mod types;
 
 use std::sync::atomic::{self, AtomicU32};
 
-use crate::arena::APtr;
+use crate::mem::APtr;
 
 pub use self::{data::*, func::*, types::*};
 
