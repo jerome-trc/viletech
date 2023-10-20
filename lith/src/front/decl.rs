@@ -150,6 +150,9 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			("confine", None) => {
 				super::anno::confine(ctx, anno, &mut datum.confine);
 			}
+			("crucial", None) => {
+				// Valid, but handled later by sema.
+			}
 			("inline", None) => {
 				super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
 			}
@@ -255,6 +258,9 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 			}
 			("confine", None) => {
 				// TODO: valid?
+			}
+			("crucial", None) => {
+				super::anno::crucial_nonfndecl(ctx, anno);
 			}
 			("inline", None) => {
 				super::anno::inline_non_fndecl(ctx, anno);

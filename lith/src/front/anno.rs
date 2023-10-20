@@ -159,6 +159,19 @@ pub(super) fn confine(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut
 	*in_out = confine;
 }
 
+// `#[crucial]` ////////////////////////////////////////////////////////////////
+
+pub(super) fn crucial_nonfndecl(ctx: &FrontendContext, anno: ast::Annotation) {
+	ctx.raise(
+		Issue::new(
+			ctx.path,
+			anno.syntax().text_range(),
+			issue::Level::Error(issue::Error::AnnotationUsage),
+		)
+		.with_message_static("`crucial` annotation can only be used on function declarations"),
+	);
+}
+
 // `#[inline()]` ///////////////////////////////////////////////////////////////
 
 pub(super) fn inline_fndecl(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut Inlining) {
