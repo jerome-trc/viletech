@@ -3,9 +3,7 @@
 use std::{hash::BuildHasherDefault, mem::MaybeUninit};
 
 use cranelift::{
-	codegen::ir::{
-		self, ArgumentExtension, ArgumentPurpose, FuncRef, GlobalValue, UserExternalName,
-	},
+	codegen::ir::{self, FuncRef, GlobalValue, UserExternalName},
 	prelude::{settings::OptLevel, AbiParam, ExtFuncData, ExternalName, GlobalValueData, Imm64},
 };
 use cranelift_jit::{JITBuilder, JITModule};
@@ -38,7 +36,6 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 	assert_eq!(compiler.stage, compile::Stage::CodeGen);
 
 	let mut module = compiler.module.take().unwrap();
-	let arenas = std::mem::take(&mut compiler.arenas);
 	let ir = std::mem::take(&mut compiler.ir);
 	let fn_count = ir.len();
 
@@ -74,11 +71,10 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 
 	Compilation {
 		runtime: Runtime {
-			function_rti: FxHashMap::default(),
-			data_rti: FxHashMap::default(),
-			type_rti: FxHashMap::default(),
+			_function_rti: FxHashMap::default(),
+			_data_rti: FxHashMap::default(),
+			_type_rti: FxHashMap::default(),
 			module,
-			arenas,
 		},
 		clif: clif_map,
 		disasm: disasm_map,
