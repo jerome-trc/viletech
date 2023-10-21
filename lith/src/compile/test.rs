@@ -57,4 +57,16 @@ fn end_to_end() {
 
 		panic!();
 	}
+
+	crate::semantic_check(&mut compiler);
+
+	if compiler.any_errors() {
+		for issue in compiler.drain_issues() {
+			dbg!(issue);
+		}
+
+		panic!();
+	}
+
+	let _ = crate::finalize(compiler, true, true);
 }

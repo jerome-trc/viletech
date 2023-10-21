@@ -4,14 +4,51 @@ use cranelift::{
 	codegen::ir::SourceLoc,
 	prelude::{FunctionBuilderContext, Signature},
 };
+use cranelift_module::Module;
 use parking_lot::Mutex;
 
 use crate::{
 	back::JitModule,
+	compile,
 	filetree::{self, FileIx},
 	types::{Scope, TypePtr},
 	Compiler, ParseTree, ValVec,
 };
+
+/// The "semantic mid-section" between Lith's frontend and backend.
+///
+/// Here:
+/// - types of function parameters and return types are computed
+/// - types of symbolic constants and static variables are computed
+/// - function bodies are checked and have IR generated
+/// - symbolic constant and static variable initializers are evaluated
+pub fn semantic_check(compiler: &mut Compiler) {
+	assert!(!compiler.failed);
+	assert_eq!(compiler.stage, compile::Stage::Sema);
+	assert_eq!(compiler.arenas.len(), rayon::current_num_threads());
+
+	let module = JitModule::new(compiler);
+	let mut fctxs = vec![];
+	let mut cctxs = vec![];
+	let next_src_loc = AtomicU32::new(0);
+
+	for _ in 0..rayon::current_num_threads() {
+		fctxs.push(Mutex::new(FunctionBuilderContext::new()));
+		cctxs.push(Mutex::new(module.make_context()));
+	}
+
+	let base_sig = module.make_signature();
+	let module = Mutex::new(module);
+
+	// TODO
+
+	if compiler.any_errors() {
+		compiler.failed = true;
+	} else {
+		compiler.module = Some(module.into_inner());
+		compiler.stage = compile::Stage::CodeGen;
+	}
+}
 
 /// The result of a [compile-time evaluated expression](ceval).
 #[derive(Debug)]
