@@ -105,7 +105,7 @@ impl FileTree {
 				Node::File { path, .. } => {
 					let path = Path::new(path);
 
-					if path.file_stem().is_some_and(|fname| fname == name) {
+					if path.file_stem().is_some_and(|fstem| fstem == name) {
 						return Some(child);
 					}
 				}

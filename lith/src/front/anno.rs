@@ -35,7 +35,6 @@ pub(super) fn unknown_annotation_error(
 
 pub(super) fn builtin_fndecl(
 	ctx: &FrontendContext,
-	fndecl: &ast::FunctionDecl,
 	anno: ast::Annotation,
 	datum: &mut data::Function,
 ) {
@@ -43,13 +42,29 @@ pub(super) fn builtin_fndecl(
 		return;
 	}
 
-	if !check_no_arg_list(ctx, "builtin", &anno) {
+	let Some(arg_list) = check_arg_list(ctx, "builtin", &anno) else {
 		return;
 	};
 
-	let ident = fndecl.name().unwrap();
+	let mut args = arg_list.iter();
 
-	match ident.text() {
+	let Some(arg0) = check_arg0_exactly(ctx, "builtin", &arg_list, &mut args) else {
+		return;
+	};
+
+	if !check_arg_anon(ctx, "builtin", &arg0) {
+		return;
+	}
+
+	let expr = arg0.expr().unwrap();
+
+	let Some(lit_name) = check_expr_lit_name(ctx, "builtin", expr) else {
+		return;
+	};
+
+	let string = lit_name.name().unwrap();
+
+	match string {
 		"primitiveType" => {
 			datum.code = FunctionCode::Builtin {
 				uext_name: UserExternalName {
@@ -262,17 +277,17 @@ pub(super) fn native_fndecl(
 
 	let expr = arg0.expr().unwrap();
 
-	let Some(lit_string) = check_expr_lit_string(ctx, "native", expr) else {
+	let Some(lit_name) = check_expr_lit_name(ctx, "native", expr) else {
 		return;
 	};
 
-	let string = lit_string.string().unwrap();
+	let string = lit_name.name().unwrap();
 
 	let Some((ix, _qname, nfn)) = ctx.compiler.native.functions.get_full(string) else {
 		ctx.raise(
 			Issue::new(
 				ctx.path,
-				lit_string.text_range(),
+				lit_name.text_range(),
 				issue::Level::Error(issue::Error::MissingNative),
 			)
 			.with_message(format!(
@@ -439,12 +454,55 @@ fn check_expr_ident(
 }
 
 #[must_use]
-fn check_expr_lit_string(
+fn check_expr_lit_name(
 	ctx: &FrontendContext,
 	name: &'static str,
 	expr: ast::Expr,
 ) -> Option<LitToken> {
-	let ast::Expr::Literal(e_lit) = expr else {
+	let ast::Expr::Literal(e_lit) = expr.clone() else {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				expr.syntax().text_range(),
+				issue::Level::Error(issue::Error::ArgType),
+			)
+			.with_message(format!(
+				"`{name}` annotation argument must be a name literal"
+			)),
+		);
+
+		return None;
+	};
+
+	let token = e_lit.token();
+
+	token
+		.clone()
+		.name()
+		.or_else(|| {
+			ctx.raise(
+				Issue::new(
+					ctx.path,
+					expr.syntax().text_range(),
+					issue::Level::Error(issue::Error::ArgType),
+				)
+				.with_message(format!(
+					"`{name}` annotation argument must be a name literal"
+				)),
+			);
+
+			None
+		})
+		.map(|_| token)
+}
+
+#[must_use]
+fn _check_expr_lit_string(
+	ctx: &FrontendContext,
+	name: &'static str,
+	expr: ast::Expr,
+) -> Option<LitToken> {
+	let ast::Expr::Literal(e_lit) = expr.clone() else {
 		ctx.raise(
 			Issue::new(
 				ctx.path,
@@ -460,5 +518,23 @@ fn check_expr_lit_string(
 	};
 
 	let token = e_lit.token();
-	token.string().is_some().then_some(token)
+
+	token
+		.clone()
+		.string()
+		.or_else(|| {
+			ctx.raise(
+				Issue::new(
+					ctx.path,
+					expr.syntax().text_range(),
+					issue::Level::Error(issue::Error::ArgType),
+				)
+				.with_message(format!(
+					"`{name}` annotation argument must be a string literal"
+				)),
+			);
+
+			None
+		})
+		.map(|_| token)
 }

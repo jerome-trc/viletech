@@ -88,7 +88,7 @@ pub(crate) enum Datum {
 
 // Common details //////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct SemaType {
 	pub(crate) inner: SymNPtr,
 	pub(crate) array_dims: SmallVec<[ArrayLength; 1]>,
@@ -107,6 +107,16 @@ pub(crate) enum FrontendType {
 		optional: bool,
 	},
 	Normal(SemaType),
+}
+
+impl PartialEq<SemaType> for FrontendType {
+	fn eq(&self, other: &SemaType) -> bool {
+		let Self::Normal(stype) = self else {
+			return false;
+		};
+
+		stype == other
+	}
 }
 
 #[derive(Debug)]
@@ -132,6 +142,14 @@ impl Default for ArrayLength {
 		Self(AtomicUsize::new(0))
 	}
 }
+
+impl PartialEq for ArrayLength {
+	fn eq(&self, other: &Self) -> bool {
+		self.get() == other.get()
+	}
+}
+
+impl Eq for ArrayLength {}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Visibility {

@@ -39,7 +39,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 			Issue::new(
 				ctx.path,
 				arg_list.syntax().parent().unwrap().text_range(),
-				issue::Level::Error(issue::Error::BuiltinMisuse),
+				issue::Level::Error(issue::Error::Builtin),
 			)
 			.with_message_static(
 				"`primitiveType` can only be used as an initializer for symbolic constants",
@@ -213,7 +213,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 				Issue::new(
 					ctx.path,
 					token.text_range(),
-					issue::Level::Error(issue::Error::BuiltinMisuse),
+					issue::Level::Error(issue::Error::Builtin),
 				)
 				.with_message(format!("invalid primitive type name: `{other}`")),
 			);

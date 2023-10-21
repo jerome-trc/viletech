@@ -167,9 +167,11 @@ pub enum Error {
 	/// Mismatch between argument and parameter types.
 	ArgType,
 	BinExprTypeMismatch,
-	BuiltinMisuse,
+	/// An argument passed to a compiler built-in caused an error that otherwise
+	/// falls under no other error code.
+	Builtin,
+	CEvalImpossible,
 	CEvalRecursion,
-	ConstEval,
 	/// Declared a symbolic constant or static variable with the type specifier `any_t`.
 	ContainerValAnyType,
 	FlagDefBitOverflow,
@@ -177,6 +179,7 @@ pub enum Error {
 	/// A named argument was passed to an annotation that cannot accept names
 	/// on any of its arguments.
 	IllegalArgName,
+	IllegalCall,
 	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
@@ -209,6 +212,8 @@ pub enum Error {
 	SelfImport,
 	SymbolKindMismatch,
 	SymbolNotFound,
+	/// A script attempted to use a feature that LithC does not support yet.
+	Unimplemented,
 	UnknownAnnotation,
 	UnknownExprType,
 }
