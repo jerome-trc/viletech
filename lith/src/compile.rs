@@ -79,6 +79,8 @@ pub(crate) enum Stage {
 }
 
 impl Compiler {
+	const TOTAL_ALLOC_LIMIT: usize = 1024 * 1024 * 64;
+
 	#[must_use]
 	pub fn new(config: Config) -> Self {
 		Self {
@@ -90,7 +92,16 @@ impl Compiler {
 			failed: false,
 			arenas: {
 				let mut v = vec![];
-				v.resize_with(rayon::current_num_threads(), Mutex::default);
+
+				let threads = rayon::current_num_threads();
+				let alloc_limit = Self::TOTAL_ALLOC_LIMIT / threads;
+
+				for _ in 0..threads {
+					let arena = bumpalo::Bump::new();
+					arena.set_allocation_limit(Some(alloc_limit));
+					v.push(Mutex::new(arena));
+				}
+
 				v
 			},
 			scopes: FxDashMap::default(),
