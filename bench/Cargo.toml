@@ -60,10 +60,6 @@ name = "rt_poly"
 harness = false
 
 [[bench]]
-name = "sharded_slab"
-harness = false
-
-[[bench]]
 name = "slotmap"
 harness = false
 
