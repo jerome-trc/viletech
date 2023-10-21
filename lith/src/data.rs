@@ -1,20 +1,17 @@
 //! Pieces of data declared and inspected by the frontend.
 
-use std::sync::atomic::{self, AtomicU32, AtomicUsize};
+use std::sync::atomic::AtomicU32;
 
-use cranelift::codegen::{
-	data_value::DataValue,
-	ir::{types as abi_t, UserExternalName},
-};
+use cranelift::codegen::{data_value::DataValue, ir::UserExternalName};
 use doomfront::rowan::{TextRange, TextSize};
-use smallvec::{smallvec, SmallVec};
 use util::pushvec::PushVec;
 
 use crate::{
 	filetree::FileIx,
 	intern::NameIx,
 	runtime,
-	types::{AbiTypes, CEvalIntrin, Scope, SymNPtr},
+	tsys::{FrontType, SemaType},
+	types::{CEvalIntrin, Scope},
 	CEvalNative,
 };
 
@@ -82,74 +79,10 @@ pub(crate) enum Datum {
 	Function(Function),
 	/// In a `* => rename` import, this is the type of `rename`.
 	Container(Scope),
-	Primitive(Primitive),
 	SymConst(SymConst),
 }
 
 // Common details //////////////////////////////////////////////////////////////
-
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct SemaType {
-	pub(crate) inner: SymNPtr,
-	pub(crate) array_dims: SmallVec<[ArrayLength; 1]>,
-	pub(crate) optional: bool,
-	pub(crate) reference: bool,
-}
-
-/// Used for representing type specifications.
-#[derive(Debug)]
-pub(crate) enum FrontendType {
-	Any {
-		optional: bool,
-	},
-	Type {
-		array_dims: SmallVec<[ArrayLength; 1]>,
-		optional: bool,
-	},
-	Normal(SemaType),
-}
-
-impl PartialEq<SemaType> for FrontendType {
-	fn eq(&self, other: &SemaType) -> bool {
-		let Self::Normal(stype) = self else {
-			return false;
-		};
-
-		stype == other
-	}
-}
-
-#[derive(Debug)]
-pub(crate) struct ArrayLength(AtomicUsize);
-
-impl ArrayLength {
-	#[must_use]
-	pub(crate) fn get(&self) -> usize {
-		let ret = self.0.load(atomic::Ordering::Acquire);
-		debug_assert_ne!(ret, 0);
-		ret
-	}
-
-	pub(crate) fn set(&self, len: usize) {
-		debug_assert_eq!(self.0.load(atomic::Ordering::Acquire), 0);
-		debug_assert_ne!(len, 0);
-		self.0.store(len, atomic::Ordering::Release);
-	}
-}
-
-impl Default for ArrayLength {
-	fn default() -> Self {
-		Self(AtomicUsize::new(0))
-	}
-}
-
-impl PartialEq for ArrayLength {
-	fn eq(&self, other: &Self) -> bool {
-		self.get() == other.get()
-	}
-}
-
-impl Eq for ArrayLength {}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Visibility {
@@ -184,7 +117,7 @@ pub(crate) struct Function {
 	pub(crate) confine: Confinement,
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
-	pub(crate) ret_type: FrontendType,
+	pub(crate) ret_type: FrontType,
 	pub(crate) code: FunctionCode,
 }
 
@@ -218,7 +151,7 @@ impl FunctionCode {
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
-	pub(crate) ftype: FrontendType,
+	pub(crate) ftype: FrontType,
 	pub(crate) consteval: bool,
 }
 
@@ -245,48 +178,12 @@ pub(crate) enum Inlining {
 	Extra,
 }
 
-// Primitive ///////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Primitive {
-	Void,
-	Bool,
-	I8,
-	I16,
-	I32,
-	I64,
-	I128,
-	U8,
-	U16,
-	U32,
-	U64,
-	U128,
-	F32,
-	F64,
-}
-
-impl Primitive {
-	#[must_use]
-	pub(crate) fn abi(self) -> AbiTypes {
-		match self {
-			Self::Void => smallvec![],
-			Self::Bool | Self::I8 | Self::U8 => smallvec![abi_t::I8],
-			Self::I16 | Self::U16 => smallvec![abi_t::I16],
-			Self::I32 | Self::U32 => smallvec![abi_t::I32],
-			Self::I64 | Self::U64 => smallvec![abi_t::I64],
-			Self::I128 | Self::U128 => smallvec![abi_t::I128],
-			Self::F32 => smallvec![abi_t::F32],
-			Self::F64 => smallvec![abi_t::F64],
-		}
-	}
-}
-
 // SymConst ////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
 pub(crate) struct SymConst {
 	pub(crate) visibility: Visibility,
-	pub(crate) ftype: FrontendType,
+	pub(crate) ftype: FrontType,
 	pub(crate) init: SymConstInit,
 }
 

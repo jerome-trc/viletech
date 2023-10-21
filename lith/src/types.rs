@@ -11,6 +11,7 @@ use crate::{
 	data::Symbol,
 	intern::NameIx,
 	mem::{APtr, NPtr},
+	tsys::TypeDef,
 	CEval, LutSym, SemaContext,
 };
 
@@ -23,6 +24,9 @@ pub(crate) type AbiTypes = SmallVec<[AbiType; 1]>;
 
 pub(crate) type SymPtr = APtr<Symbol>;
 pub(crate) type SymNPtr = NPtr<Symbol>;
+
+pub(crate) type TypePtr = APtr<TypeDef>;
+pub(crate) type TypeNPtr = NPtr<TypeDef>;
 
 pub(crate) type CEvalIntrin = fn(&SemaContext, ast::ArgList) -> CEval;
 

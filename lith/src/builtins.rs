@@ -6,48 +6,21 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast,
-	data::{self, Datum, Location, Symbol},
 	issue::{self, Issue},
 	runtime,
-	types::{SymNPtr, SymPtr},
+	tsys::{self},
+	types::{TypeNPtr, TypePtr},
 	CEval, SemaContext,
 };
 
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
-	fn lazy_init(
-		ctx: &SemaContext,
-		ptr: &SymNPtr,
-		datum: data::Primitive,
-		location: Location,
-	) -> SymPtr {
-		let p = SymPtr::alloc(
-			ctx.arena,
-			Symbol {
-				location,
-				datum: Datum::Primitive(datum),
-			},
-		);
-
+	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
+		let p = TypePtr::alloc(ctx.arena, tsys::TypeDef::Primitive(datum));
+		let _ = ctx.types.push(p);
 		ptr.store(p);
-
 		p
 	}
-
-	let Some(sym_const) = arg_list.syntax().ancestors().find_map(ast::SymConst::cast) else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				arg_list.syntax().parent().unwrap().text_range(),
-				issue::Level::Error(issue::Error::Builtin),
-			)
-			.with_message_static(
-				"`primitiveType` can only be used as an initializer for symbolic constants",
-			),
-		);
-
-		return CEval::Err;
-	};
 
 	let mut args = arg_list.iter();
 
@@ -94,120 +67,91 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 		return CEval::Err;
 	};
 
-	let location = Location {
-		file_ix: ctx.file_ix,
-		span: sym_const.syntax().text_range(),
-	};
-
 	let type_ptr = match iname {
 		"void" => ctx
 			.sym_cache
 			.void_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.void_t, data::Primitive::Void, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.void_t, tsys::Primitive::Void)),
 		"bool" => ctx
 			.sym_cache
 			.bool_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.bool_t, data::Primitive::Bool, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.bool_t, tsys::Primitive::Bool)),
 		"i8" => ctx
 			.sym_cache
 			.i8_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i8_t, data::Primitive::I8, location)),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i8_t, tsys::Primitive::I8)),
 		"u8" => ctx
 			.sym_cache
 			.u8_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u8_t, data::Primitive::U8, location)),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u8_t, tsys::Primitive::U8)),
 		"i16" => ctx
 			.sym_cache
 			.i16_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.i16_t, data::Primitive::I16, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i16_t, tsys::Primitive::I16)),
 		"u16" => ctx
 			.sym_cache
 			.u16_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.u16_t, data::Primitive::U16, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u16_t, tsys::Primitive::U16)),
 		"i32" => ctx
 			.sym_cache
 			.i32_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.i32_t, data::Primitive::I32, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i32_t, tsys::Primitive::I32)),
 		"u32" => ctx
 			.sym_cache
 			.u32_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.u32_t, data::Primitive::U32, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u32_t, tsys::Primitive::U32)),
 		"i64" => ctx
 			.sym_cache
 			.i64_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.i64_t, data::Primitive::I64, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i64_t, tsys::Primitive::I64)),
 		"u64" => ctx
 			.sym_cache
 			.u64_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.u64_t, data::Primitive::U64, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u64_t, tsys::Primitive::U64)),
 		"i128" => ctx
 			.sym_cache
 			.i128_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.i128_t, data::Primitive::I128, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i128_t, tsys::Primitive::I128)),
 		"u128" => ctx
 			.sym_cache
 			.u128_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.u128_t, data::Primitive::U128, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u128_t, tsys::Primitive::U128)),
 		"f32" => ctx
 			.sym_cache
 			.f32_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.f32_t, data::Primitive::F32, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f32_t, tsys::Primitive::F32)),
 		"f64" => ctx
 			.sym_cache
 			.f64_t
 			.as_ptr()
-			.map(SymPtr::new)
-			.unwrap_or_else(|| {
-				lazy_init(ctx, &ctx.sym_cache.f64_t, data::Primitive::F64, location)
-			}),
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f64_t, tsys::Primitive::F64)),
 		other => {
 			ctx.raise(
 				Issue::new(

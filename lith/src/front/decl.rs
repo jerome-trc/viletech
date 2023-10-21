@@ -11,13 +11,14 @@ use crate::{
 	ast,
 	compile::{self},
 	data::{
-		ArrayLength, Confinement, Datum, FrontendType, Function, FunctionCode, FunctionFlags,
-		Inlining, Location, Parameter, SemaType, SymConst, SymConstInit, Symbol, Visibility,
+		Confinement, Datum, Function, FunctionCode, FunctionFlags, Inlining, Location, Parameter,
+		SymConst, SymConstInit, Symbol, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	types::{Scope, SymNPtr, SymPtr},
+	tsys::{ArrayLength, FrontType, SemaType},
+	types::{Scope, SymPtr, TypeNPtr},
 	Compiler, LibMeta,
 };
 
@@ -108,8 +109,8 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			ret_type: if let Some(ret_tspec) = ast.return_type() {
 				process_type_expr(ctx, ret_tspec.expr().unwrap())
 			} else {
-				FrontendType::Normal(SemaType {
-					inner: SymNPtr::null(), // Will point to the void primitive.
+				FrontType::Normal(SemaType {
+					inner: TypeNPtr::null(), // Will point to the void primitive.
 					array_dims: SmallVec::default(),
 					optional: false,
 					reference: false,
@@ -213,7 +214,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		let tspec = ast.type_spec().unwrap();
 		let ftype = process_type_expr(ctx, tspec.expr().unwrap());
 
-		if matches!(ftype, FrontendType::Any { .. }) {
+		if matches!(ftype, FrontType::Any { .. }) {
 			ctx.raise(Issue::new(
 				ctx.path,
 				tspec.syntax().text_range(),
@@ -223,9 +224,9 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 			return None;
 		}
 
-		let init = if matches!(ftype, FrontendType::Type { .. }) {
+		let init = if matches!(ftype, FrontType::Type { .. }) {
 			SymConstInit::Type(SemaType {
-				inner: SymNPtr::null(),
+				inner: TypeNPtr::null(),
 				array_dims: SmallVec::default(),
 				optional: false,
 				reference: false, // TODO?
@@ -279,10 +280,10 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 // Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
+fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontType {
 	let ast::Expr::Type(e_t) = texpr else {
-		return FrontendType::Normal(SemaType {
-			inner: SymNPtr::null(),
+		return FrontType::Normal(SemaType {
+			inner: TypeNPtr::null(),
 			array_dims: SmallVec::default(),
 			optional: false,
 			reference: false,
@@ -290,8 +291,8 @@ fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 	};
 
 	match e_t {
-		ast::ExprType::Any(_) => FrontendType::Any { optional: false },
-		ast::ExprType::TypeT(_) => FrontendType::Type {
+		ast::ExprType::Any(_) => FrontType::Any { optional: false },
+		ast::ExprType::TypeT(_) => FrontType::Type {
 			array_dims: SmallVec::default(),
 			optional: false,
 		},
@@ -304,8 +305,8 @@ fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontendType {
 				}
 			}
 
-			FrontendType::Normal(SemaType {
-				inner: SymNPtr::null(),
+			FrontType::Normal(SemaType {
+				inner: TypeNPtr::null(),
 				array_dims,
 				optional: false,
 				reference: false,

@@ -9,7 +9,7 @@ use parking_lot::Mutex;
 use crate::{
 	back::JitModule,
 	filetree::{self, FileIx},
-	types::{Scope, SymPtr},
+	types::{Scope, TypePtr},
 	Compiler, ParseTree, ValVec,
 };
 
@@ -19,7 +19,7 @@ use crate::{
 pub(crate) enum CEval {
 	Err,
 	Container(Scope),
-	Type(SymPtr),
+	Type(TypePtr),
 	Value(ValVec),
 }
 

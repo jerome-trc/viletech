@@ -21,7 +21,7 @@ use crate::{
 	interop::JitFn,
 	issue::Issue,
 	runtime,
-	types::{FxDashMap, FxIndexMap, Scope, SymNPtr, SymPtr},
+	types::{FxDashMap, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
 	Error, ValVec, Version,
 };
 
@@ -43,6 +43,7 @@ pub struct Compiler {
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
 	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
+	pub(crate) types: PushVec<TypePtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
 	pub(crate) ir: PushVec<(FuncId, ir::Function)>,
@@ -106,6 +107,7 @@ impl Compiler {
 			},
 			scopes: FxDashMap::default(),
 			symbols: FxDashMap::default(),
+			types: PushVec::new(),
 			module: None,
 			ir: PushVec::new(),
 			native: NativeSymbols::default(),
@@ -214,11 +216,20 @@ impl Compiler {
 		self.libs.clear();
 		self.scopes.clear();
 
-		self.symbols.iter().for_each(|kvp| unsafe {
-			kvp.drop_in_place();
-		});
+		unsafe {
+			self.symbols.iter().for_each(|kvp| {
+				kvp.drop_in_place();
+			});
+
+			let types = std::mem::take(&mut self.types);
+
+			for tdef in types {
+				tdef.drop_in_place();
+			}
+		}
 
 		self.ir = PushVec::new();
+		self.sym_cache = SymCache::default();
 
 		for arena in &mut self.arenas {
 			arena.get_mut().reset();
@@ -317,39 +328,39 @@ impl std::ops::Deref for LutSym {
 /// For use by [`crate::sema`].
 #[derive(Debug)]
 pub(crate) struct SymCache {
-	pub(crate) void_t: SymNPtr,
-	pub(crate) bool_t: SymNPtr,
-	pub(crate) i8_t: SymNPtr,
-	pub(crate) u8_t: SymNPtr,
-	pub(crate) i16_t: SymNPtr,
-	pub(crate) u16_t: SymNPtr,
-	pub(crate) i32_t: SymNPtr,
-	pub(crate) u32_t: SymNPtr,
-	pub(crate) i64_t: SymNPtr,
-	pub(crate) u64_t: SymNPtr,
-	pub(crate) i128_t: SymNPtr,
-	pub(crate) u128_t: SymNPtr,
-	pub(crate) f32_t: SymNPtr,
-	pub(crate) f64_t: SymNPtr,
+	pub(crate) void_t: TypeNPtr,
+	pub(crate) bool_t: TypeNPtr,
+	pub(crate) i8_t: TypeNPtr,
+	pub(crate) u8_t: TypeNPtr,
+	pub(crate) i16_t: TypeNPtr,
+	pub(crate) u16_t: TypeNPtr,
+	pub(crate) i32_t: TypeNPtr,
+	pub(crate) u32_t: TypeNPtr,
+	pub(crate) i64_t: TypeNPtr,
+	pub(crate) u64_t: TypeNPtr,
+	pub(crate) i128_t: TypeNPtr,
+	pub(crate) u128_t: TypeNPtr,
+	pub(crate) f32_t: TypeNPtr,
+	pub(crate) f64_t: TypeNPtr,
 }
 
 impl Default for SymCache {
 	fn default() -> Self {
 		Self {
-			void_t: SymNPtr::null(),
-			bool_t: SymNPtr::null(),
-			i8_t: SymNPtr::null(),
-			u8_t: SymNPtr::null(),
-			i16_t: SymNPtr::null(),
-			u16_t: SymNPtr::null(),
-			i32_t: SymNPtr::null(),
-			u32_t: SymNPtr::null(),
-			i64_t: SymNPtr::null(),
-			u64_t: SymNPtr::null(),
-			i128_t: SymNPtr::null(),
-			u128_t: SymNPtr::null(),
-			f32_t: SymNPtr::null(),
-			f64_t: SymNPtr::null(),
+			void_t: TypeNPtr::null(),
+			bool_t: TypeNPtr::null(),
+			i8_t: TypeNPtr::null(),
+			u8_t: TypeNPtr::null(),
+			i16_t: TypeNPtr::null(),
+			u16_t: TypeNPtr::null(),
+			i32_t: TypeNPtr::null(),
+			u32_t: TypeNPtr::null(),
+			i64_t: TypeNPtr::null(),
+			u64_t: TypeNPtr::null(),
+			i128_t: TypeNPtr::null(),
+			u128_t: TypeNPtr::null(),
+			f32_t: TypeNPtr::null(),
+			f64_t: TypeNPtr::null(),
 		}
 	}
 }

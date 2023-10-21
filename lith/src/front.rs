@@ -6,6 +6,7 @@
 pub(crate) mod anno;
 pub(crate) mod decl;
 pub(crate) mod import;
+pub(crate) mod tsys;
 
 use doomfront::rowan::{ast::AstNode, TextRange};
 
