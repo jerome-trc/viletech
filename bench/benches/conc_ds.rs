@@ -3,12 +3,14 @@
 //! ...when under ideal, minimal-contention conditions.
 
 use append_only_vec::AppendOnlyVec;
+use crossbeam::queue::SegQueue;
 use sharded_slab::Slab;
 
 criterion::criterion_group!(
 	benches,
 	append_only_vec,
 	boxcar,
+	crossbeam_queues,
 	sharded_slab,
 	sharded_slab_pool
 );
@@ -61,6 +63,36 @@ fn boxcar(crit: &mut criterion::Criterion) {
 		bencher.iter(|| {
 			let _ = std::hint::black_box(aov[i]);
 		});
+	});
+
+	grp.finish();
+}
+
+fn crossbeam_queues(crit: &mut criterion::Criterion) {
+	let mut grp = crit.benchmark_group("crossbeam::SegQueue");
+
+	grp.bench_function("Push", |bencher| {
+		bencher.iter_batched_ref(
+			|| SegQueue::new(),
+			|q| {
+				let _ = std::hint::black_box(q.push([0_usize, 0_usize, 0_usize]));
+			},
+			criterion::BatchSize::SmallInput,
+		);
+	});
+
+	grp.bench_function("Pop", |bencher| {
+		bencher.iter_batched_ref(
+			|| {
+				let q = SegQueue::new();
+				q.push([0_usize, 0_usize, 0_usize]);
+				q
+			},
+			|q| {
+				let _ = std::hint::black_box(q.pop().unwrap());
+			},
+			criterion::BatchSize::SmallInput,
+		);
 	});
 
 	grp.finish();
