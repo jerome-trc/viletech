@@ -43,6 +43,7 @@ fn param_list(p: &mut Parser<Syn>) {
 
 	if p.eat(Syn::Dot3, Syn::Dot3) {
 		trivia_0plus(p);
+		p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 		p.close(mark, Syn::ParamList);
 		return;
 	}

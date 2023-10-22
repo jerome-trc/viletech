@@ -192,6 +192,21 @@ fn smoke_arglist() {
 	}
 }
 
+#[test]
+fn with_sample_data() {
+	let (_, sample) = match doomfront::testing::read_sample_data("LITHICA_PARSE_SAMPLE") {
+		Ok(s) => s,
+		Err(err) => {
+			eprintln!("Skipping sample data-based unit test. Reason: {err}");
+			return;
+		}
+	};
+
+	let ptree: ParseTree = doomfront::parse(&sample, super::file, LexContext::default());
+	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+}
+
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
