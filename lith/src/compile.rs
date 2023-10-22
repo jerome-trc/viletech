@@ -214,25 +214,35 @@ impl Compiler {
 		self.issues.get_mut().drain(..)
 	}
 
+	/// Frees all memory (excluding interned strings) and set the library back
+	/// to its file registration stage, bringing this state back to where it was
+	/// when [`Self::new`] was called. This allows repeated use of existing allocations
+	/// for re-try upon compiler error.
 	pub fn reset(&mut self) {
 		self.ftree.reset();
 		self.libs.clear();
-		self.scopes.clear();
 
 		unsafe {
 			self.symbols.iter().for_each(|kvp| {
 				kvp.drop_in_place();
 			});
 
-			let types = std::mem::take(&mut self.types);
+			self.symbols.clear();
 
-			for tdef in types {
-				tdef.drop_in_place();
-			}
+			self.types.iter().for_each(|kvp| {
+				kvp.drop_in_place();
+			});
+
+			self.types.clear();
+
+			// TODO: would a `rayon::join` be faster here?
 		}
 
+		self.scopes.clear();
+		self.module = None;
 		self.ir = PushVec::new();
 		self.sym_cache = SymCache::default();
+		self.native.functions.clear();
 
 		for arena in &mut self.arenas {
 			arena.get_mut().reset();
@@ -240,7 +250,7 @@ impl Compiler {
 
 		self.issues.get_mut().clear();
 		self.failed = false;
-		self.stage = Stage::Declaration;
+		self.stage = Stage::default();
 	}
 
 	#[must_use]
