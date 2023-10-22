@@ -59,11 +59,8 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		let curr_ir = self.get_current_function();
 		let ext_data = curr_ir.stencil.dfg.ext_funcs.get(func_ref).unwrap();
 
-		let uenr = match ext_data.name {
-			ExternalName::User(u) => u,
-			ExternalName::TestCase(_) | ExternalName::LibCall(_) | ExternalName::KnownSymbol(_) => {
-				unimplemented!()
-			}
+		let ExternalName::User(uenr) = ext_data.name else {
+			unimplemented!()
 		};
 
 		let uen = curr_ir.params.user_named_funcs().get(uenr).unwrap();

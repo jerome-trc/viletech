@@ -28,7 +28,7 @@ use smallvec::{smallvec, SmallVec};
 
 use crate::ValVec;
 
-use self::state::Interpreter;
+pub(crate) use self::state::Interpreter;
 
 /// Raised when the intepreter attempts to call a function which does not support
 /// compile-time execution, such as allocation via the garbage collector.
