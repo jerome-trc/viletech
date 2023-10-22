@@ -14,7 +14,7 @@ use crate::{
 
 use super::FrontendContext;
 
-/// The first stage in the Lith frontend; resolving imports.
+/// The second stage in the Lith frontend; resolving container-level imports.
 pub fn resolve_imports(compiler: &mut Compiler) {
 	assert!(!compiler.failed);
 	assert_eq!(compiler.stage, compile::Stage::Import);
