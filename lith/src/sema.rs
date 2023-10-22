@@ -8,8 +8,7 @@ use cranelift_module::Module;
 use parking_lot::Mutex;
 
 use crate::{
-	back::JitModule,
-	compile,
+	compile::{self, JitModule},
 	filetree::{self, FileIx},
 	tsys::TypeDef,
 	types::{Scope, TypePtr},

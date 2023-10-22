@@ -1,5 +1,7 @@
 //! Code that ties together the frontend, mid-section, and backend.
 
+mod module;
+
 #[cfg(test)]
 mod test;
 
@@ -14,7 +16,6 @@ use parking_lot::Mutex;
 use util::pushvec::PushVec;
 
 use crate::{
-	back::JitModule,
 	filetree::{self, FileIx, FileTree},
 	intern::NameInterner,
 	interop::JitFn,
@@ -24,6 +25,8 @@ use crate::{
 	types::{FxDashMap, FxDashSet, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
 	Error, ValVec, Version,
 };
+
+pub(crate) use module::*;
 
 /// State and context tying together the frontend, mid-section, and backend.
 #[derive(Debug)]

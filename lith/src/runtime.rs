@@ -1,6 +1,6 @@
 use rustc_hash::FxHashMap;
 
-use crate::{back::JitModule, rti};
+use crate::{compile::JitModule, rti};
 
 /// Context for Lithica execution.
 ///
