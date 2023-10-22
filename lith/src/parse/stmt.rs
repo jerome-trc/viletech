@@ -14,6 +14,23 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::StmtReturn);
 		}
+		t @ Syn::KwBreak => {
+			p.advance(t);
+			trivia_0plus(p);
+
+			if at_block_label(p) {
+				block_label(p);
+				trivia_0plus(p);
+			}
+
+			if !p.at(Syn::Semicolon) {
+				super::expr(p, true);
+				trivia_0plus(p);
+			}
+
+			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
+			p.close(mark, Syn::StmtBreak);
+		}
 		t @ (Syn::KwLet | Syn::KwVar) => {
 			p.advance(t);
 			trivia_0plus(p);

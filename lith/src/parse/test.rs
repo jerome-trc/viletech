@@ -427,6 +427,58 @@ fn smoke_stmt_bind() {
 }
 
 #[test]
+fn smoke_stmt_break() {
+	const SAMPLES: &[&str] = &[
+		"break ;",
+		"break ::lorem::;",
+		"break ::lorem:: ipsum ;",
+		"break ipsum ;",
+	];
+
+	const TESTS: &[fn(ast::StmtBreak)] = &[
+		|ast| {
+			assert!(ast.block_label().is_none());
+			assert!(ast.expr().is_none());
+		},
+		|ast| {
+			let label = ast.block_label().unwrap();
+			assert_eq!(label.ident().unwrap().text(), "lorem");
+			assert!(ast.expr().is_none());
+		},
+		|ast| {
+			let label = ast.block_label().unwrap();
+			assert_eq!(label.ident().unwrap().text(), "lorem");
+			let expr = ast.expr().unwrap();
+			assert_eq!(format!("{}", expr.syntax().text()), "ipsum");
+		},
+		|ast| {
+			assert!(ast.block_label().is_none());
+			let expr = ast.expr().unwrap();
+			assert_eq!(format!("{}", expr.syntax().text()), "ipsum");
+		},
+	];
+
+	for (i, sample) in SAMPLES.iter().copied().enumerate() {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::statement(p, mark);
+			},
+			LexContext::default(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+
+		TESTS[i](ast::StmtBreak::cast(ptree.cursor()).unwrap());
+	}
+}
+
+#[test]
 fn smoke_stmt_expr() {
 	const SAMPLES: &[&str] = &["lorem;", "ipsum();", "dolor = sit_amet;", "-1;", "(0);"];
 

@@ -59,6 +59,8 @@ pub enum Syn {
 	// Nodes: statements ///////////////////////////////////////////////////////
 	/// `('let' | 'var') 'const'? pattern typespec? ('=' expr)? ';'`
 	StmtBind,
+	/// `'break' blocklabel? expr? ';'`
+	StmtBreak,
 	/// `'continue' blocklabel? ';'`
 	StmtContinue,
 	/// `expr ';'`
@@ -125,6 +127,9 @@ pub enum Syn {
 	/// `any_t`; used in [type expressions](Syn::ExprType).
 	#[token("any")]
 	KwAnyT,
+	/// `break`; used in [break statements](Syn::StmtBreak).
+	#[token("break")]
+	KwBreak,
 	/// `const`; used in [parameters] and for [symbolic constants].
 	///
 	/// [parameters]: Syn::Parameter
@@ -272,8 +277,7 @@ pub enum Syn {
 	/// - [Argument lists](Syn::ArgList) to indicate that parameter defaults be used.
 	#[token("...")]
 	Dot3,
-	/// `=`; part of [assignment statements](Syn::StmtAssign)
-	/// and [symbolic constants](Syn::SymConst).
+	/// `=`; part of [binding statements](Syn::StmtBind) and [symbolic constants](Syn::SymConst).
 	#[token("=")]
 	Eq,
 	/// `==`; the logical equality comparison [binary operator](Syn::ExprBin).

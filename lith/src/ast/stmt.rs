@@ -10,6 +10,7 @@ use super::{BlockLabel, Expr, Pattern, TypeSpec};
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Statement {
 	Bind(StmtBind),
+	Break(StmtBreak),
 	Continue(StmtContinue),
 	Expr(StmtExpr),
 	Return(StmtReturn),
@@ -24,7 +25,7 @@ impl AstNode for Statement {
 	{
 		matches!(
 			kind,
-			Syn::StmtBind | Syn::StmtContinue | Syn::StmtExpr | Syn::StmtReturn
+			Syn::StmtBind | Syn::StmtBreak | Syn::StmtContinue | Syn::StmtExpr | Syn::StmtReturn
 		)
 	}
 
@@ -34,6 +35,7 @@ impl AstNode for Statement {
 	{
 		match node.kind() {
 			Syn::StmtBind => Some(Self::Bind(StmtBind(node))),
+			Syn::StmtBreak => Some(Self::Break(StmtBreak(node))),
 			Syn::StmtContinue => Some(Self::Continue(StmtContinue(node))),
 			Syn::StmtExpr => Some(Self::Expr(StmtExpr(node))),
 			Syn::StmtReturn => Some(Self::Return(StmtReturn(node))),
@@ -44,6 +46,7 @@ impl AstNode for Statement {
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::Bind(inner) => inner.syntax(),
+			Self::Break(inner) => inner.syntax(),
 			Self::Continue(inner) => inner.syntax(),
 			Self::Expr(inner) => inner.syntax(),
 			Self::Return(inner) => inner.syntax(),
@@ -109,6 +112,27 @@ impl StmtBind {
 pub enum BindKeyword {
 	Let(SyntaxToken),
 	Var(SyntaxToken),
+}
+
+// Break ///////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::StmtBreak`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct StmtBreak(SyntaxNode);
+
+simple_astnode!(Syn, StmtBreak, Syn::StmtBreak);
+
+impl StmtBreak {
+	#[must_use]
+	pub fn expr(&self) -> Option<Expr> {
+		self.0.children().find_map(Expr::cast)
+	}
+
+	#[must_use]
+	pub fn block_label(&self) -> Option<BlockLabel> {
+		self.0.children().find_map(BlockLabel::cast)
+	}
 }
 
 // Continue ////////////////////////////////////////////////////////////////////
