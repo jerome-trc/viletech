@@ -1,7 +1,11 @@
+use std::path::Path;
+
+use cranelift::prelude::settings::OptLevel;
 use dashmap::DashMap;
+use lithica::{Compiler, LibMeta};
 use util::{pushvec::PushVec, rstring::RString};
 
-criterion::criterion_group!(benches, cranelift_ops, string_interning);
+criterion::criterion_group!(benches, cranelift_ops, toolchain, string_interning);
 criterion::criterion_main!(benches);
 
 fn cranelift_ops(crit: &mut criterion::Criterion) {
@@ -72,6 +76,37 @@ fn string_interning(crit: &mut criterion::Criterion) {
 			);
 		},
 	);
+
+	grp.finish();
+}
+
+fn toolchain(crit: &mut criterion::Criterion) {
+	let mut grp = crit.benchmark_group("Toolchain");
+
+	grp.bench_function("End-to-End", |bencher| {
+		bencher.iter(|| {
+			let core_path = Path::new(env!("CARGO_WORKSPACE_DIR")).join("assets/viletech/lith");
+
+			let baselib = LibMeta {
+				name: "lith".to_string(),
+				version: lithica::Version::V0_0_0,
+				native: true,
+			};
+
+			let mut compiler = Compiler::new(lithica::Config {
+				opt: OptLevel::None,
+				hotswap: false,
+			});
+
+			let _ = compiler.register_lib(baselib, |ftree| ftree.add_from_fs(&core_path));
+			compiler.finish_registration();
+			lithica::declare_symbols(&mut compiler);
+			lithica::resolve_imports(&mut compiler);
+			lithica::semantic_check(&mut compiler);
+			let artifacts = lithica::finalize(compiler, false, false);
+			let _ = std::hint::black_box(artifacts);
+		});
+	});
 
 	grp.finish();
 }
