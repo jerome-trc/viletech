@@ -166,12 +166,19 @@ pub enum Error {
 	ArgCount,
 	/// Mismatch between argument and parameter types.
 	ArgType,
+	/// e.g. `const LOREM_IPSUM: type_t = 0_i32;`.
+	AssignTypeMismatch,
 	BinExprTypeMismatch,
 	/// An argument passed to a compiler built-in caused an error that otherwise
 	/// falls under no other error code.
 	Builtin,
 	CEvalImpossible,
 	CEvalRecursion,
+	/// Compile-time function interpretation ran out of "fuel"
+	/// due to either excessive complexity or an infinite loop.
+	CEvalRunaway,
+	/// Attempted to assign a renamed container (`* => ident`) as though it were a value.
+	ContainerAssign,
 	/// Declared a symbolic constant or static variable with the type specifier `any_t`.
 	ContainerValAnyType,
 	FlagDefBitOverflow,
@@ -179,13 +186,12 @@ pub enum Error {
 	/// A named argument was passed to an annotation that cannot accept names
 	/// on any of its arguments.
 	IllegalArgName,
+	/// Tried to call, for instance, a symbolic constant or renamed container mass import.
 	IllegalCall,
-	IllegalClassQual,
 	IllegalConstInit,
 	IllegalFnQual,
 	/// A function marked `native` has a body block.
 	IllegalFnBody,
-	IllegalStructQual,
 	/// A non-native library attempted to declare a symbol starting or ending
 	/// with `__`, which is reserved for internal/native use.
 	IllegalSymbolName,
