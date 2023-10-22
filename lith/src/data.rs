@@ -2,16 +2,19 @@
 
 use std::sync::atomic::AtomicU32;
 
-use cranelift::codegen::{data_value::DataValue, ir::UserExternalName};
+use cranelift::{
+	codegen::{data_value::DataValue, ir::UserExternalName},
+	prelude::Variable,
+};
 use doomfront::rowan::{TextRange, TextSize};
+use smallvec::SmallVec;
 use util::pushvec::PushVec;
 
 use crate::{
 	filetree::FileIx,
 	intern::NameIx,
 	runtime,
-	tsys::{FrontType, SemaType},
-	types::{CEvalIntrin, Scope},
+	types::{CEvalIntrin, Scope, TypeNPtr, TypePtr},
 	CEvalNative,
 };
 
@@ -76,15 +79,26 @@ impl From<UserExternalName> for SymbolId {
 
 #[derive(Debug)]
 pub(crate) enum Datum {
-	Function(Function),
 	/// In a `* => rename` import, this is the type of `rename`.
 	Container(Scope),
+	Function(Function),
+	Local(LocalVar),
 	SymConst(SymConst),
 }
 
 // Common details //////////////////////////////////////////////////////////////
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+/// The "confinement" system is designed for use in games which have both a
+/// single- and multi-player component and need some symbols to operate only
+/// "client-side" without affecting the gameplay simulation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum Confinement {
+	None,
+	Ui,
+	Sim,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Visibility {
 	/// Visible to all libraries.
 	/// Corresponds to the `public` keyword.
@@ -98,14 +112,11 @@ pub(crate) enum Visibility {
 	Hidden,
 }
 
-/// The "confinement" system is designed for use in games which have both a
-/// single- and multi-player component and need some symbols to operate only
-/// "client-side" without affecting the gameplay simulation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Confinement {
-	None,
-	Ui,
-	Sim,
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub(crate) enum TypeSpec {
+	Normal(TypeNPtr),
+	/// Corresponds to `: type_t`.
+	Type,
 }
 
 // Function ////////////////////////////////////////////////////////////////////
@@ -113,11 +124,11 @@ pub(crate) enum Confinement {
 #[derive(Debug)]
 pub(crate) struct Function {
 	pub(crate) flags: FunctionFlags,
-	pub(crate) visibility: Visibility,
+	pub(crate) _visibility: Visibility,
 	pub(crate) confine: Confinement,
 	pub(crate) inlining: Inlining,
 	pub(crate) params: Vec<Parameter>,
-	pub(crate) ret_type: FrontType,
+	pub(crate) ret_type: TypeSpec,
 	pub(crate) code: FunctionCode,
 }
 
@@ -149,10 +160,20 @@ impl FunctionCode {
 }
 
 #[derive(Debug)]
+pub(crate) enum ParamType {
+	Normal(TypeNPtr),
+	/// Corresponds to `: any_t`.
+	Any,
+	/// Corresponds to `: type_t`.
+	Type,
+}
+
+#[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
-	pub(crate) ftype: FrontType,
+	pub(crate) sigtype: ParamType,
 	pub(crate) consteval: bool,
+	pub(crate) reference: bool,
 }
 
 bitflags::bitflags! {
@@ -178,17 +199,26 @@ pub(crate) enum Inlining {
 	Extra,
 }
 
+// LocalVar ////////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub(crate) struct LocalVar {
+	pub(crate) abi_vars: SmallVec<[Variable; 1]>,
+	pub(crate) mutable: bool,
+	pub(crate) tspec: TypePtr,
+}
+
 // SymConst ////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
 pub(crate) struct SymConst {
-	pub(crate) visibility: Visibility,
-	pub(crate) ftype: FrontType,
+	pub(crate) _visibility: Visibility,
+	pub(crate) tspec: TypeSpec,
 	pub(crate) init: SymConstInit,
 }
 
 #[derive(Debug)]
 pub(crate) enum SymConstInit {
-	Type(SemaType),
+	Type(TypeNPtr),
 	Value(PushVec<DataValue>),
 }

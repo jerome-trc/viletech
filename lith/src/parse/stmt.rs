@@ -26,7 +26,7 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 			trivia_0plus(p);
 
 			if at_type_spec(p) {
-				type_spec(p);
+				type_spec(p, false);
 				trivia_0plus(p);
 			}
 

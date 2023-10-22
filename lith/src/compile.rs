@@ -21,7 +21,7 @@ use crate::{
 	interop::JitFn,
 	issue::Issue,
 	runtime,
-	types::{FxDashMap, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
+	types::{FxDashMap, FxDashSet, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
 	Error, ValVec, Version,
 };
 
@@ -43,7 +43,7 @@ pub struct Compiler {
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
 	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
-	pub(crate) types: PushVec<TypePtr>,
+	pub(crate) types: FxDashSet<TypePtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
 	pub(crate) ir: PushVec<(FuncId, ir::Function)>,
@@ -107,7 +107,7 @@ impl Compiler {
 			},
 			scopes: FxDashMap::default(),
 			symbols: FxDashMap::default(),
-			types: PushVec::new(),
+			types: FxDashSet::default(),
 			module: None,
 			ir: PushVec::new(),
 			native: NativeSymbols::default(),
@@ -250,9 +250,10 @@ impl Compiler {
 
 		ret
 	}
+}
 
-	// Internal ////////////////////////////////////////////////////////////////
-
+/// Internal details.
+impl Compiler {
 	pub(crate) fn raise(&self, issue: Issue) {
 		let mut guard = self.issues.lock();
 		guard.push(issue);
@@ -353,6 +354,7 @@ pub(crate) struct SymCache {
 	pub(crate) u128_t: TypeNPtr,
 	pub(crate) f32_t: TypeNPtr,
 	pub(crate) f64_t: TypeNPtr,
+	pub(crate) never_t: TypeNPtr,
 }
 
 impl Default for SymCache {
@@ -372,6 +374,7 @@ impl Default for SymCache {
 			u128_t: TypeNPtr::null(),
 			f32_t: TypeNPtr::null(),
 			f64_t: TypeNPtr::null(),
+			never_t: TypeNPtr::null(),
 		}
 	}
 }

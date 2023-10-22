@@ -130,6 +130,27 @@ impl Parameter {
 		self.const_kw().is_some()
 	}
 
+	#[must_use]
+	pub fn ref_spec(&self) -> ParamRefSpec {
+		let mut amp = None;
+		let mut kw_var = None;
+
+		for elem in self.0.children_with_tokens() {
+			match elem.kind() {
+				Syn::Ampersand => amp = elem.into_token(),
+				Syn::KwVar => kw_var = elem.into_token(),
+				Syn::Ident => break,
+				_ => continue,
+			}
+		}
+
+		match (amp, kw_var) {
+			(Some(t0), Some(t1)) => ParamRefSpec::RefVar(t0, t1),
+			(Some(t0), None) => ParamRefSpec::Ref(t0),
+			_ => ParamRefSpec::None,
+		}
+	}
+
 	pub fn type_spec(&self) -> AstResult<TypeSpec> {
 		self.0
 			.children()
@@ -144,6 +165,14 @@ impl Parameter {
 			None => None,
 		}
 	}
+}
+
+/// See [`Parameter::ref_spec`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ParamRefSpec {
+	None,
+	Ref(SyntaxToken),
+	RefVar(SyntaxToken, SyntaxToken),
 }
 
 /// Wraps a node tagged [`Syn::FunctionBody`].

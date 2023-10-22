@@ -22,7 +22,7 @@ pub(super) fn function_decl(p: &mut Parser<Syn>, mark: OpenMark) {
 	trivia_0plus(p);
 
 	if at_type_spec(p) {
-		type_spec(p);
+		type_spec(p, false);
 		trivia_0plus(p);
 	}
 
@@ -68,9 +68,18 @@ fn parameter(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier", "`const`"]]);
+	if p.eat(Syn::Ampersand, Syn::Ampersand) {
+		trivia_0plus(p);
+
+		if p.eat(Syn::KwVar, Syn::KwVar) {
+			trivia_0plus(p);
+		}
+	}
+
+	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"], &["TODO"]]);
+
 	trivia_0plus(p);
-	type_spec(p);
+	type_spec(p, true);
 
 	if p.find(0, |token| !token.is_trivia()) == Syn::Eq {
 		trivia_0plus(p);
@@ -92,7 +101,7 @@ pub(super) fn symbolic_constant(p: &mut Parser<Syn>, mark: OpenMark) {
 	trivia_0plus(p);
 	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
-	type_spec(p);
+	type_spec(p, false);
 	trivia_0plus(p);
 	p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
 	trivia_0plus(p);

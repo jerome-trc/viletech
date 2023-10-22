@@ -463,13 +463,55 @@ impl Name {
 
 /// Wraps a node tagged [`Syn::TypeSpec`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TypeSpec(SyntaxNode);
+pub enum TypeSpec {
+	AnyT(SyntaxNode),
+	TypeT(SyntaxNode),
+	Expr(SyntaxNode),
+}
 
-simple_astnode!(Syn, TypeSpec, Syn::TypeSpec);
+impl AstNode for TypeSpec {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		kind == Syn::TypeSpec
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if !Self::can_cast(node.kind()) {
+			return None;
+		}
+
+		let token_x = node.last_token().unwrap();
+
+		match token_x.kind() {
+			Syn::KwAnyT => return Some(Self::AnyT(node)),
+			Syn::KwTypeT => return Some(Self::TypeT(node)),
+			_ => {}
+		}
+
+		(node.last_child().is_some_and(|n| Expr::can_cast(n.kind()))).then(|| Self::Expr(node))
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::AnyT(node) | Self::TypeT(node) | Self::Expr(node) => node,
+		}
+	}
+}
 
 impl TypeSpec {
-	pub fn expr(&self) -> AstResult<Expr> {
-		Expr::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	#[must_use]
+	pub fn into_expr(&self) -> Option<Expr> {
+		match self {
+			Self::Expr(node) => node.first_child().and_then(Expr::cast),
+			_ => None,
+		}
 	}
 }
 

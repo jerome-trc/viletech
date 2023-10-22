@@ -144,10 +144,21 @@ pub(super) fn at_type_spec(p: &Parser<Syn>) -> bool {
 	p.at(Syn::Colon)
 }
 
-pub(super) fn type_spec(p: &mut Parser<Syn>) {
+pub(super) fn type_spec(p: &mut Parser<Syn>, param: bool) {
 	let mark = p.open();
 	p.expect(Syn::Colon, Syn::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
+
+	if p.eat(Syn::KwTypeT, Syn::KwTypeT) {
+		p.close(mark, Syn::TypeSpec);
+		return;
+	}
+
+	if param && p.eat(Syn::KwAnyT, Syn::KwAnyT) {
+		p.close(mark, Syn::TypeSpec);
+		return;
+	}
+
 	let _ = super::expr(p, false);
 	p.close(mark, Syn::TypeSpec);
 }

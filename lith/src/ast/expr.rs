@@ -471,64 +471,11 @@ pub enum PrefixOp {
 /// Wraps a node tagged [`Syn::ExprType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum ExprType {
-	Any(ExprTypeAny),
-	TypeT(ExprTypeT),
-	Prefixed(ExprTypePrefixed),
-}
+pub struct ExprType(SyntaxNode);
 
-impl AstNode for ExprType {
-	type Language = Syn;
+simple_astnode!(Syn, ExprType, Syn::ExprType);
 
-	fn can_cast(kind: Syn) -> bool
-	where
-		Self: Sized,
-	{
-		kind == Syn::ExprType
-	}
-
-	fn cast(node: SyntaxNode) -> Option<Self>
-	where
-		Self: Sized,
-	{
-		match node.first_token().unwrap().kind() {
-			Syn::KwAnyT => Some(Self::Any(ExprTypeAny(node))),
-			Syn::KwTypeT => Some(Self::TypeT(ExprTypeT(node))),
-			_ => Some(Self::Prefixed(ExprTypePrefixed(node))),
-		}
-	}
-
-	fn syntax(&self) -> &SyntaxNode {
-		match self {
-			Self::Any(inner) => inner.syntax(),
-			Self::TypeT(inner) => inner.syntax(),
-			Self::Prefixed(inner) => inner.syntax(),
-		}
-	}
-}
-
-/// Wraps a node tagged [`Syn::ExprType`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprTypeAny(SyntaxNode);
-
-simple_astnode!(Syn, ExprTypeAny, Syn::ExprType);
-
-/// Wraps a node tagged [`Syn::ExprType`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprTypeT(SyntaxNode);
-
-simple_astnode!(Syn, ExprTypeT, Syn::ExprType);
-
-/// Wraps a node tagged [`Syn::ExprType`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprTypePrefixed(SyntaxNode);
-
-simple_astnode!(Syn, ExprTypePrefixed, Syn::ExprType);
-
-impl ExprTypePrefixed {
+impl ExprType {
 	pub fn prefixes(&self) -> impl Iterator<Item = TypePrefix> {
 		self.0.children().filter_map(TypePrefix::cast)
 	}
@@ -571,7 +518,7 @@ impl AstNode for TypePrefix {
 	}
 }
 
-/// Wraps a node tagged [`Syn::`].
+/// Wraps a node tagged [`Syn::ArrayPrefix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ArrayPrefix(SyntaxNode);

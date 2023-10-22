@@ -11,6 +11,7 @@ use crate::{
 	back::JitModule,
 	compile,
 	filetree::{self, FileIx},
+	tsys::TypeDef,
 	types::{Scope, TypePtr},
 	Compiler, ParseTree, ValVec,
 };
@@ -98,12 +99,23 @@ impl<'c> std::ops::Deref for SemaContext<'c> {
 
 impl<'c> SemaContext<'c> {
 	#[must_use]
-	fn fetch_next_src_loc(&self) -> SourceLoc {
+	pub(crate) fn intern_type(&self, typedef: TypeDef) -> TypePtr {
+		if let Some(ptr) = self.types.get(&typedef) {
+			return *ptr.key();
+		}
+
+		let ptr = TypePtr::alloc(self.arena, typedef);
+		self.types.insert(ptr);
+		ptr
+	}
+
+	#[must_use]
+	pub(crate) fn fetch_next_src_loc(&self) -> SourceLoc {
 		SourceLoc::new(self.next_src_loc.fetch_add(1, atomic::Ordering::SeqCst))
 	}
 
 	#[must_use]
-	fn switch_file(&'c self, file_ix: FileIx) -> Self {
+	pub(crate) fn switch_file(&'c self, file_ix: FileIx) -> Self {
 		let filetree::Node::File { ptree, path } = &self.ftree.graph[file_ix] else {
 			unreachable!()
 		};

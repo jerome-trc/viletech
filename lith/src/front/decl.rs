@@ -4,20 +4,19 @@ use std::sync::atomic::AtomicU32;
 
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
-use smallvec::SmallVec;
+use smallvec::smallvec;
 use util::pushvec::PushVec;
 
 use crate::{
 	ast,
 	compile::{self},
 	data::{
-		Confinement, Datum, Function, FunctionCode, FunctionFlags, Inlining, Location, Parameter,
-		SymConst, SymConstInit, Symbol, Visibility,
+		self, Confinement, Datum, Function, FunctionCode, FunctionFlags, Inlining, Location,
+		ParamType, Parameter, SymConst, SymConstInit, Symbol, Visibility,
 	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
-	tsys::{ArrayLength, FrontType, SemaType},
 	types::{Scope, SymPtr, TypeNPtr},
 	Compiler, LibMeta,
 };
@@ -102,19 +101,14 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 	let init = || {
 		let mut datum = Function {
 			flags: FunctionFlags::empty(),
-			visibility: Visibility::default(),
+			_visibility: Visibility::default(),
 			confine: Confinement::None,
 			inlining: Inlining::default(),
 			params: vec![],
-			ret_type: if let Some(ret_tspec) = ast.return_type() {
-				process_type_expr(ctx, ret_tspec.expr().unwrap())
-			} else {
-				FrontType::Normal(SemaType {
-					inner: TypeNPtr::null(), // Will point to the void primitive.
-					array_dims: SmallVec::default(),
-					optional: false,
-					reference: false,
-				})
+			ret_type: match ast.return_type() {
+				Some(t) => process_type_spec(t),
+				// The void type will be filled in by sema.
+				None => data::TypeSpec::Normal(TypeNPtr::null()),
 			},
 			code: FunctionCode::Ir {
 				ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
@@ -126,8 +120,9 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		for param in param_list.iter() {
 			datum.params.push(Parameter {
 				name: ctx.names.intern(&ast.name().unwrap()),
-				ftype: process_type_expr(ctx, param.type_spec().unwrap().expr().unwrap()),
+				sigtype: process_param_type_spec(param.type_spec().unwrap()),
 				consteval: param.is_const(),
+				reference: todo!(),
 			});
 		}
 
@@ -211,33 +206,16 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 	}
 
 	let init = || {
-		let tspec = ast.type_spec().unwrap();
-		let ftype = process_type_expr(ctx, tspec.expr().unwrap());
+		let tspec = process_type_spec(ast.type_spec().unwrap());
 
-		if matches!(ftype, FrontType::Any { .. }) {
-			ctx.raise(Issue::new(
-				ctx.path,
-				tspec.syntax().text_range(),
-				issue::Level::Error(issue::Error::ContainerValAnyType),
-			));
-
-			return None;
-		}
-
-		let init = if matches!(ftype, FrontType::Type { .. }) {
-			SymConstInit::Type(SemaType {
-				inner: TypeNPtr::null(),
-				array_dims: SmallVec::default(),
-				optional: false,
-				reference: false, // TODO?
-			})
-		} else {
-			SymConstInit::Value(PushVec::default())
+		let init = match tspec {
+			data::TypeSpec::Type => SymConstInit::Type(TypeNPtr::null()),
+			data::TypeSpec::Normal(_) => SymConstInit::Value(PushVec::default()),
 		};
 
 		let datum = SymConst {
-			visibility: Visibility::default(),
-			ftype,
+			_visibility: Visibility::default(),
+			tspec,
 			init,
 		};
 
@@ -280,39 +258,13 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 // Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn process_type_expr(_: &FrontendContext, texpr: ast::Expr) -> FrontType {
-	let ast::Expr::Type(e_t) = texpr else {
-		return FrontType::Normal(SemaType {
-			inner: TypeNPtr::null(),
-			array_dims: SmallVec::default(),
-			optional: false,
-			reference: false,
-		});
-	};
+fn process_param_type_spec(tspec: ast::TypeSpec) -> ParamType {
+	todo!()
+}
 
-	match e_t {
-		ast::ExprType::Any(_) => FrontType::Any { optional: false },
-		ast::ExprType::TypeT(_) => FrontType::Type {
-			array_dims: SmallVec::default(),
-			optional: false,
-		},
-		ast::ExprType::Prefixed(e_t_pfx) => {
-			let mut array_dims = SmallVec::default();
-
-			for prefix in e_t_pfx.prefixes() {
-				match prefix {
-					ast::TypePrefix::Array(_) => array_dims.push(ArrayLength::default()),
-				}
-			}
-
-			FrontType::Normal(SemaType {
-				inner: TypeNPtr::null(),
-				array_dims,
-				optional: false,
-				reference: false,
-			})
-		}
-	}
+#[must_use]
+fn process_type_spec(tspec: ast::TypeSpec) -> data::TypeSpec {
+	todo!()
 }
 
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {

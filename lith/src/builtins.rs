@@ -7,8 +7,7 @@ use doomfront::rowan::ast::AstNode;
 use crate::{
 	ast,
 	issue::{self, Issue},
-	runtime,
-	tsys::{self},
+	runtime, tsys,
 	types::{TypeNPtr, TypePtr},
 	CEval, SemaContext,
 };
@@ -16,8 +15,7 @@ use crate::{
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
 	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
-		let p = TypePtr::alloc(ctx.arena, tsys::TypeDef::Primitive(datum));
-		let _ = ctx.types.push(p);
+		let p = ctx.intern_type(tsys::TypeDef::Primitive(datum));
 		ptr.store(p);
 		p
 	}
@@ -152,6 +150,12 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 			.as_ptr()
 			.map(TypePtr::new)
 			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f64_t, tsys::Primitive::F64)),
+		"never_t" => ctx
+			.sym_cache
+			.never_t
+			.as_ptr()
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.never_t, tsys::Primitive::Never)),
 		other => {
 			ctx.raise(
 				Issue::new(

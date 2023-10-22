@@ -391,6 +391,10 @@ fn smoke_func_decl() {
 		r##"
 		#[dolor.sit_amet()]
 		function lorem_ipsum();"##,
+		// Reference parameter.
+		r#"function lorem_ipsum(& dolor: sit = amet);"#,
+		// Mutable reference parameter.
+		r#"function lorem_ipsum(& var dolor: sit = amet);"#,
 	];
 
 	const TESTS: &[fn(ast::FunctionDecl)] = &[
@@ -400,7 +404,7 @@ fn smoke_func_decl() {
 		},
 		|ast| {
 			let ret_t = ast.return_type().unwrap();
-			let ret_t_expr = ret_t.expr().unwrap();
+			let ret_t_expr = ret_t.into_expr().unwrap();
 			let ast::Expr::Ident(e) = ret_t_expr else {
 				panic!();
 			};
@@ -413,7 +417,7 @@ fn smoke_func_decl() {
 			assert_eq!(param.name().unwrap().text(), "dolor");
 
 			assert!(matches!(
-				param.type_spec().unwrap().expr().unwrap(),
+				param.type_spec().unwrap().into_expr().unwrap(),
 				ast::Expr::Ident(_)
 			));
 		},
@@ -435,6 +439,20 @@ fn smoke_func_decl() {
 			assert_eq!(id0.text(), "dolor");
 			assert_eq!(id1.text(), "sit_amet");
 			assert!(anno.arg_list().unwrap().iter().next().is_none());
+		},
+		|ast| {
+			let param_list = ast.params().unwrap();
+			let mut params = param_list.iter();
+			let param = params.next().unwrap();
+
+			assert!(matches!(param.ref_spec(), ast::ParamRefSpec::Ref(_)),);
+		},
+		|ast| {
+			let param_list = ast.params().unwrap();
+			let mut params = param_list.iter();
+			let param = params.next().unwrap();
+
+			assert!(matches!(param.ref_spec(), ast::ParamRefSpec::RefVar(_, _)),);
 		},
 	];
 
@@ -466,7 +484,7 @@ fn smoke_sym_const() {
 			let tspec = ast.type_spec().unwrap();
 			let expr = ast.expr().unwrap();
 
-			let ast::Expr::Ident(t) = tspec.expr().unwrap() else {
+			let ast::Expr::Ident(t) = tspec.into_expr().unwrap() else {
 				panic!()
 			};
 

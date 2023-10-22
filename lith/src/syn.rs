@@ -41,7 +41,7 @@ pub enum Syn {
 	ImportEntry,
 	/// `importentry (',' importentry)* ','?`
 	ImportList,
-	/// `'const'? ident typespec ('=' expr)?`
+	/// `'const'? ('&' 'var'?)? ident typespec ('=' expr)?`
 	Parameter,
 	/// `'(' param? (',' param)* ','? ')'`
 	ParamList,
@@ -50,9 +50,10 @@ pub enum Syn {
 	/// A "symbolic constant". Semantically equivalent to an immutable compile-time
 	/// [binding statement](Syn::StmtBind) but permitted at container scope.
 	SymConst,
-	/// `':' expr`
+	/// `':' (expr | 'any_t' | 'type_t')`
 	///
-	/// The expression is forbidden from using [`Syn::Eq`] as an infix operator.
+	/// - Expressions in this position are forbidden from using [`Syn::Eq`] as an infix operator.
+	/// - `any_t` is only a valid parse in [parameters](Syn::Parameter).
 	TypeSpec,
 
 	// Nodes: statements ///////////////////////////////////////////////////////
@@ -114,10 +115,7 @@ pub enum Syn {
 	ExprPrefix,
 	/// `expr? ('..' | '..=') expr?`
 	ExprRange,
-	/// One of the following:
-	/// - [`Syn::KwTypeT`]
-	/// - [`Syn::KwAnyT`]
-	/// - One or more type expr. prefixes followed by any other kind of expression.
+	/// Another kind of expression preceded by one or more type expression prefixes.
 	ExprType,
 
 	// Tokens: keywords ////////////////////////////////////////////////////////
