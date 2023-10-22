@@ -3,12 +3,12 @@ use doomfront::{
 	testing::{assert_no_errors, prettyprint_maybe},
 };
 
-use crate::{ast, ParseTree};
+use crate::{ast, LexContext, ParseTree};
 
 /// Yes, seriously.
 #[test]
 fn smoke_nothing() {
-	let ptree: ParseTree = doomfront::parse("", super::file, ());
+	let ptree: ParseTree = doomfront::parse("", super::file, LexContext::default());
 	assert_no_errors(&ptree);
 
 	if prettyprint_maybe(ptree.cursor()) {
@@ -26,7 +26,7 @@ fn smoke_name() {
 			|p| {
 				super::expr(p, true);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -120,7 +120,7 @@ fn smoke_imports() {
 				let mark = p.open();
 				super::import(p, mark);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -145,7 +145,7 @@ fn smoke_literal_float() {
 			|p| {
 				super::expr(p, true);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -177,7 +177,7 @@ fn smoke_literal_decimal() {
 			|p| {
 				super::expr(p, true);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -208,7 +208,7 @@ fn smoke_expr_lit_suffixed_string() {
 		|p| {
 			super::expr(p, true);
 		},
-		(),
+		LexContext::default(),
 	);
 
 	assert_no_errors(&ptree);
@@ -231,7 +231,7 @@ fn smoke_expr_bin_userop() {
 		|p| {
 			super::expr(p, true);
 		},
-		(),
+		LexContext::default(),
 	);
 
 	assert_no_errors(&ptree);
@@ -266,7 +266,7 @@ fn smoke_pat_simple() {
 	];
 
 	for sample in SAMPLES {
-		let ptree: ParseTree = doomfront::parse(sample, super::pattern, ());
+		let ptree: ParseTree = doomfront::parse(sample, super::pattern, LexContext::default());
 
 		assert_no_errors(&ptree);
 
@@ -281,7 +281,7 @@ fn smoke_pat_slice() {
 	const SAMPLES: &[&str] = &["[ lorem, -2,_, ipsum ]"];
 
 	for sample in SAMPLES {
-		let ptree: ParseTree = doomfront::parse(sample, super::pattern, ());
+		let ptree: ParseTree = doomfront::parse(sample, super::pattern, LexContext::default());
 
 		assert_no_errors(&ptree);
 
@@ -311,7 +311,7 @@ fn smoke_stmt_continue() {
 				let mark = p.open();
 				super::statement(p, mark);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -341,7 +341,7 @@ fn smoke_stmt_bind() {
 				let mark = p.open();
 				super::statement(p, mark);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -363,7 +363,7 @@ fn smoke_stmt_expr() {
 				let mark = p.open();
 				super::statement(p, mark);
 			},
-			(),
+			LexContext::default(),
 		);
 
 		assert_no_errors(&ptree);
@@ -457,7 +457,11 @@ fn smoke_func_decl() {
 	];
 
 	for (i, sample) in SAMPLES.iter().copied().enumerate() {
-		let ptree = doomfront::parse(sample.trim(), super::core_element::<true>, ());
+		let ptree = doomfront::parse(
+			sample.trim(),
+			super::core_element::<true>,
+			LexContext::default(),
+		);
 
 		assert_no_errors(&ptree);
 
@@ -498,7 +502,11 @@ fn smoke_sym_const() {
 	];
 
 	for (i, sample) in SAMPLES.iter().copied().enumerate() {
-		let ptree = doomfront::parse(sample.trim(), super::core_element::<true>, ());
+		let ptree = doomfront::parse(
+			sample.trim(),
+			super::core_element::<true>,
+			LexContext::default(),
+		);
 
 		assert_no_errors(&ptree);
 

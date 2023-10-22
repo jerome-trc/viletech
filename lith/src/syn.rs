@@ -6,7 +6,7 @@ use logos::Logos;
 /// A stronger type over [`rowan::SyntaxKind`] representing all kinds of syntax elements.
 #[repr(u16)]
 #[derive(Logos, Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[logos(error = Syn)]
+#[logos(error = Syn, extras = LexContext)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum Syn {
 	/// A sequence of tokens that did not form a valid syntax element.
@@ -458,7 +458,8 @@ impl doomfront::LangExt for Syn {
 /// A placeholder type to prevent API breaks in the future if the lexer needs to,
 /// for instance, tokenize keywords version-sensitively.
 #[derive(Debug, Default)]
-pub struct Context {}
+#[non_exhaustive]
+pub struct LexContext;
 
 #[cfg(test)]
 mod test {

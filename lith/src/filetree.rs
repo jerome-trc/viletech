@@ -7,7 +7,7 @@ use petgraph::{
 };
 use rayon::prelude::*;
 
-use crate::{parse, Error, ParseTree};
+use crate::{parse, Error, LexContext, ParseTree};
 
 pub type FileIx = petgraph::graph::NodeIndex<DefaultIx>;
 
@@ -219,7 +219,7 @@ impl FileTree {
 				}
 			};
 
-			let ptree = doomfront::parse(&text, parse::file, ());
+			let ptree = doomfront::parse(&text, parse::file, LexContext::default());
 
 			let mut guard = this.lock();
 
