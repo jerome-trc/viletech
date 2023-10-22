@@ -57,6 +57,18 @@ impl<T> std::ops::Deref for APtr<T> {
 	}
 }
 
+impl<T> std::borrow::Borrow<T> for APtr<T> {
+	fn borrow(&self) -> &T {
+		std::ops::Deref::deref(self)
+	}
+}
+
+impl<T> Hash for APtr<T> {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.0.hash(state);
+	}
+}
+
 impl<T> From<NPtr<T>> for APtr<T> {
 	fn from(value: NPtr<T>) -> Self {
 		Self(value.0.load().unwrap())
@@ -81,16 +93,13 @@ pub(crate) struct NPtr<T>(AtomicCell<Option<NonNull<T>>>);
 
 impl<T> NPtr<T> {
 	#[must_use]
-	pub(crate) fn null() -> Self {
-		Self(AtomicCell::new(None))
+	pub(crate) fn new(aptr: APtr<T>) -> Self {
+		Self(AtomicCell::new(Some(aptr.0)))
 	}
 
 	#[must_use]
-	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
-		let m = arena.alloc(obj);
-		let nn = NonNull::new(m as *mut T);
-		assert!(nn.is_some());
-		Self(AtomicCell::new(nn))
+	pub(crate) fn null() -> Self {
+		Self(AtomicCell::new(None))
 	}
 
 	pub(crate) fn store(&self, new: APtr<T>) {
@@ -115,15 +124,6 @@ impl<T> NPtr<T> {
 	#[must_use]
 	pub(crate) fn as_ref(&self) -> &T {
 		self.try_ref().unwrap()
-	}
-
-	/// Panics if the pointer within is null.
-	/// It is left null when this function returns; beware potential memory leaks.
-	pub(crate) unsafe fn take(&self) -> T {
-		let ptr = self.as_ptr().unwrap().as_ptr();
-		let ret = std::ptr::read(ptr);
-		self.0.store(None);
-		ret
 	}
 
 	#[must_use]
