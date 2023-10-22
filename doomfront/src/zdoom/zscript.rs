@@ -5,6 +5,7 @@
 //! language, intended as a successor to (and superset of) ZDoom's DECORATE.
 
 pub mod ast;
+pub mod autofmt;
 pub mod parse;
 mod syn;
 

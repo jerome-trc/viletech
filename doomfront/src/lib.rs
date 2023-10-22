@@ -28,6 +28,7 @@
 pub extern crate logos;
 pub extern crate rowan;
 
+pub mod formatting;
 pub mod gcache;
 pub mod parser;
 pub mod testing;
