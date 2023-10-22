@@ -81,7 +81,7 @@ pub(super) fn builtin_fndecl(
 		"rttiOf" => {
 			// TODO
 		}
-		other => panic!("unknown corelib builtin name: `{other}`"),
+		other => panic!("unknown baselib builtin name: `{other}`"),
 	}
 }
 

@@ -15,7 +15,7 @@ fn end_to_end() {
 
 	let core_path = Path::new(env!("CARGO_WORKSPACE_DIR")).join("assets/viletech/lith");
 
-	let corelib = LibMeta {
+	let baselib = LibMeta {
 		name: "lith".to_string(),
 		version: Version::V0_0_0,
 		native: true,
@@ -26,7 +26,7 @@ fn end_to_end() {
 		hotswap: false,
 	});
 
-	let reg_result = compiler.register_lib(corelib, |ftree| ftree.add_from_fs(&core_path));
+	let reg_result = compiler.register_lib(baselib, |ftree| ftree.add_from_fs(&core_path));
 
 	if let Err(errs) = reg_result {
 		for err in errs {
