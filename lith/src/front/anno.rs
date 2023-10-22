@@ -46,10 +46,6 @@ pub(super) fn builtin_fndecl(
 		return;
 	};
 
-	if !check_non_acceding(ctx, "builtin", &anno, &arg_list) {
-		return;
-	}
-
 	let mut args = arg_list.iter();
 
 	let Some(arg0) = check_arg0_exactly(ctx, "builtin", &arg_list, &mut args) else {

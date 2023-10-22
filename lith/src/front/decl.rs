@@ -153,10 +153,10 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 
 		match datum.kind {
 			FunctionKind::Ir => {
-				if let Some(body) = ast.body() {
+				if ast.body().is_none() {
 					ctx.raise(Issue::new(
 						ctx.path,
-						body.syntax().text_range(),
+						ast.syntax().text_range(),
 						issue::Level::Error(issue::Error::MissingFnBody)
 					).with_message(
 						format!("declaration of function `{}` has no body", ident.text())

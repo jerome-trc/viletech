@@ -42,7 +42,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 				arg0.syntax().text_range(),
 				issue::Level::Error(issue::Error::ArgType),
 			)
-			.with_message_static("`primitiveType` argument 1 must be an integer literal"),
+			.with_message_static("`primitiveType` argument 1 must be a name literal"),
 		);
 
 		return CEval::Err;
@@ -58,7 +58,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 				issue::Level::Error(issue::Error::ArgType),
 			)
 			.with_message(format!(
-				"`primitiveType` argument 1 expected an integer literal, found: {token}"
+				"`primitiveType` argument 1 expected a name literal, found: {token}"
 			)),
 		);
 
