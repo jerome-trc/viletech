@@ -1,22 +1,19 @@
 //! See [`declare_symbols`].
 
-use std::sync::atomic::AtomicU32;
-
 use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
-use smallvec::smallvec;
 use util::pushvec::PushVec;
 
 use crate::{
 	ast,
 	compile::{self},
-	data::{
-		self, Confinement, Datum, Function, FunctionCode, FunctionFlags, Inlining, Location,
-		ParamType, Parameter, SymConst, SymConstInit, Symbol, Visibility,
-	},
 	filetree::{self, FileIx},
 	front::FrontendContext,
 	issue::{self, Issue},
+	sym::{
+		self, Confinement, Datum, Function, FunctionFlags, FunctionKind, Inlining, Location,
+		ParamRef, ParamType, Parameter, SymConst, SymConstInit, Symbol, Visibility,
+	},
 	types::{Scope, SymPtr, TypeNPtr},
 	Compiler, LibMeta,
 };
@@ -108,11 +105,9 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			ret_type: match ast.return_type() {
 				Some(t) => process_type_spec(t),
 				// The void type will be filled in by sema.
-				None => data::TypeSpec::Normal(TypeNPtr::null()),
+				None => sym::TypeSpec::Normal(TypeNPtr::null()),
 			},
-			code: FunctionCode::Ir {
-				ir_ix: AtomicU32::new(FunctionCode::IR_IX_UNDEFINED),
-			},
+			kind: FunctionKind::Ir,
 		};
 
 		let param_list = ast.params().unwrap();
@@ -122,7 +117,11 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				name: ctx.names.intern(&ast.name().unwrap()),
 				sigtype: process_param_type_spec(param.type_spec().unwrap()),
 				consteval: param.is_const(),
-				reference: todo!(),
+				reference: match param.ref_spec() {
+					ast::ParamRefSpec::None => ParamRef::None,
+					ast::ParamRefSpec::Ref(_) => ParamRef::Immutable,
+					ast::ParamRefSpec::RefVar(_, _) => ParamRef::Mutable,
+				},
 			});
 		}
 
@@ -152,8 +151,8 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			} // TODO: a more generalized system for handling these.
 		}
 
-		match datum.code {
-			FunctionCode::Ir { .. } => {
+		match datum.kind {
+			FunctionKind::Ir => {
 				if let Some(body) = ast.body() {
 					ctx.raise(Issue::new(
 						ctx.path,
@@ -164,14 +163,14 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 					).with_note_static("only functions marked `#[native]` and `#[builtin]` can be declared without a body"));
 				}
 			}
-			FunctionCode::Builtin { .. } => {
+			FunctionKind::Builtin { .. } => {
 				assert!(
 					ast.body().is_none(),
-					"declaration of intrinsic `{}` has body",
+					"declaration of intrinsic `{}` has illegal body",
 					ident.text()
 				);
 			}
-			FunctionCode::Native { .. } => {
+			FunctionKind::Native { .. } => {
 				if let Some(body) = ast.body() {
 					ctx.raise(
 						Issue::new(
@@ -209,8 +208,8 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		let tspec = process_type_spec(ast.type_spec().unwrap());
 
 		let init = match tspec {
-			data::TypeSpec::Type => SymConstInit::Type(TypeNPtr::null()),
-			data::TypeSpec::Normal(_) => SymConstInit::Value(PushVec::default()),
+			sym::TypeSpec::Type => SymConstInit::Type(TypeNPtr::null()),
+			sym::TypeSpec::Normal(_) => SymConstInit::Value(PushVec::default()),
 		};
 
 		let datum = SymConst {
@@ -259,12 +258,20 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 
 #[must_use]
 fn process_param_type_spec(tspec: ast::TypeSpec) -> ParamType {
-	todo!()
+	match tspec {
+		ast::TypeSpec::Expr(_) => ParamType::Normal(TypeNPtr::null()),
+		ast::TypeSpec::TypeT(_) => ParamType::Type,
+		ast::TypeSpec::AnyT(_) => ParamType::Any,
+	}
 }
 
 #[must_use]
-fn process_type_spec(tspec: ast::TypeSpec) -> data::TypeSpec {
-	todo!()
+fn process_type_spec(tspec: ast::TypeSpec) -> sym::TypeSpec {
+	match tspec {
+		ast::TypeSpec::Expr(_) => sym::TypeSpec::Normal(TypeNPtr::null()),
+		ast::TypeSpec::TypeT(_) => sym::TypeSpec::Type,
+		ast::TypeSpec::AnyT(_) => unreachable!(),
+	}
 }
 
 fn redeclare_error(ctx: &FrontendContext, prev_ptr: SymPtr, crit_span: TextRange, name_str: &str) {

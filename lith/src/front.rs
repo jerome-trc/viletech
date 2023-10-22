@@ -6,15 +6,16 @@
 pub(crate) mod anno;
 pub(crate) mod decl;
 pub(crate) mod import;
+pub(crate) mod sym;
 pub(crate) mod tsys;
 
 use doomfront::rowan::{ast::AstNode, TextRange};
 
 use crate::{
 	ast,
-	data::{Datum, Location, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
+	sym::{Datum, Location, Symbol, SymbolId},
 	types::{Scope, SymPtr},
 	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };

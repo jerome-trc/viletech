@@ -5,8 +5,8 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast::{self, LitToken},
-	data::{self, Confinement, FunctionCode, FunctionFlags, Inlining},
 	issue::{self, Issue},
+	sym::{self, Confinement, FunctionFlags, FunctionKind, Inlining},
 };
 
 use super::FrontendContext;
@@ -36,7 +36,7 @@ pub(super) fn unknown_annotation_error(
 pub(super) fn builtin_fndecl(
 	ctx: &FrontendContext,
 	anno: ast::Annotation,
-	datum: &mut data::Function,
+	datum: &mut sym::Function,
 ) {
 	if !check_native_lib(ctx, "builtin", &anno) {
 		return;
@@ -66,7 +66,7 @@ pub(super) fn builtin_fndecl(
 
 	match string {
 		"primitiveType" => {
-			datum.code = FunctionCode::Builtin {
+			datum.kind = FunctionKind::Builtin {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
 					index: crate::builtins::UEXTIX_PRIMITIVETYPE,
@@ -255,7 +255,7 @@ pub(super) fn inline_non_fndecl(ctx: &FrontendContext, anno: ast::Annotation) {
 pub(super) fn native_fndecl(
 	ctx: &FrontendContext,
 	anno: ast::Annotation,
-	datum: &mut data::Function,
+	datum: &mut sym::Function,
 ) {
 	if !check_native_lib(ctx, "native", &anno) {
 		return;
@@ -298,7 +298,7 @@ pub(super) fn native_fndecl(
 		return;
 	};
 
-	datum.code = FunctionCode::Native {
+	datum.kind = FunctionKind::Native {
 		uext_name: UserExternalName {
 			namespace: crate::CLNS_NATIVE,
 			index: ix as u32,

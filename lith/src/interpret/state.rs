@@ -1,5 +1,3 @@
-use std::sync::atomic;
-
 use cranelift::{
 	codegen::{
 		data_value::DataValue,
@@ -15,10 +13,7 @@ use cranelift_interpreter::{
 	value::DataValueExt,
 };
 
-use crate::{
-	data::{Datum, FunctionCode, Symbol, SymbolId},
-	Compiler,
-};
+use crate::Compiler;
 
 /// Adapted from [`cranelift_interpreter::interpreter::InterpreterState`].
 #[derive(Debug)]
@@ -64,19 +59,8 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		};
 
 		let uen = curr_ir.params.user_named_funcs().get(uenr).unwrap();
-		let sym_id = SymbolId::from(uen.clone());
-		let map_ref = self.compiler.symbols.get(&sym_id).unwrap();
-		let sym: &Symbol = map_ref.value();
 
-		let Datum::Function(d_fn) = &sym.datum else {
-			unreachable!()
-		};
-
-		let FunctionCode::Ir { ir_ix } = &d_fn.code else {
-			unreachable!()
-		};
-
-		Some(&self.compiler.ir[ir_ix.load(atomic::Ordering::Acquire) as usize].1)
+		Some(&self.compiler.ir[uen.index as usize].1)
 	}
 
 	fn get_current_function(&self) -> &'c ir::Function {
@@ -232,23 +216,7 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		let (entry, index) = match name {
 			ExternalName::User(username) => {
 				let uen = &curr_func.params.user_named_funcs()[*username];
-
-				let sym_id = SymbolId::from(uen.clone());
-				let map_ref = self.compiler.symbols.get(&sym_id).unwrap();
-				let sym: &Symbol = map_ref.value();
-
-				let Datum::Function(d_fn) = &sym.datum else {
-					unreachable!()
-				};
-
-				let FunctionCode::Ir { ir_ix } = &d_fn.code else {
-					unreachable!()
-				};
-
-				(
-					AddressFunctionEntry::UserFunction,
-					ir_ix.load(atomic::Ordering::Acquire),
-				)
+				(AddressFunctionEntry::UserFunction, uen.index)
 			}
 			ExternalName::LibCall(libcall) => {
 				// We don't properly have a "libcall" store, but we can use `LibCall::all()`

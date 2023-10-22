@@ -5,9 +5,9 @@ use rayon::prelude::*;
 
 use crate::{
 	ast, compile,
-	data::{Datum, Location, Symbol, SymbolId},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
+	sym::{Datum, Location, Symbol, SymbolId},
 	types::{Scope, SymPtr},
 	Compiler, LibMeta, LutSym, Syn,
 };

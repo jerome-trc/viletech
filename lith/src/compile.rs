@@ -15,12 +15,12 @@ use util::pushvec::PushVec;
 
 use crate::{
 	back::JitModule,
-	data::{Location, SymbolId},
 	filetree::{self, FileIx, FileTree},
 	intern::NameInterner,
 	interop::JitFn,
 	issue::Issue,
 	runtime,
+	sym::{Location, SymbolId},
 	types::{FxDashMap, FxDashSet, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
 	Error, ValVec, Version,
 };

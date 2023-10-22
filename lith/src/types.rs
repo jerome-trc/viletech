@@ -8,9 +8,9 @@ use smallvec::SmallVec;
 
 use crate::{
 	ast,
-	data::Symbol,
 	intern::NameIx,
 	mem::{APtr, NPtr},
+	sym::Symbol,
 	tsys::TypeDef,
 	CEval, LutSym, SemaContext,
 };

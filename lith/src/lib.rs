@@ -8,7 +8,6 @@
 pub(crate) mod back;
 pub(crate) mod builtins;
 pub(crate) mod compile;
-pub(crate) mod data;
 pub(crate) mod front;
 pub(crate) mod intern;
 pub(crate) mod interpret;

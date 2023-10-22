@@ -3,8 +3,8 @@
 use cranelift::codegen::ir::types as abi_t;
 
 use crate::{
-	data::Visibility,
 	intern::NameIx,
+	sym::Visibility,
 	types::{AbiType, TypeNPtr, TypePtr},
 };
 
