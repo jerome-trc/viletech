@@ -8,7 +8,7 @@ use std::{
 use cranelift_module::FuncId;
 use rustc_hash::FxHasher;
 
-use crate::interop::JitFn;
+use crate::interop::Interop;
 
 use super::Handle;
 
@@ -26,7 +26,7 @@ impl Function {
 	}
 
 	#[must_use]
-	pub fn downcast<F: JitFn>(&self) -> Option<TFn<F>> {
+	pub fn downcast<F: Interop>(&self) -> Option<TFn<F>> {
 		let mut hasher = FxHasher::default();
 
 		F::PARAMS.hash(&mut hasher);
@@ -42,9 +42,9 @@ impl Function {
 
 /// A strongly-typed reference to a [JIT function pointer](Function).
 #[derive(Debug)]
-pub struct TFn<'f, F: JitFn>(&'f Function, PhantomData<F>);
+pub struct TFn<'f, F: Interop>(&'f Function, PhantomData<F>);
 
-impl<F: JitFn> std::ops::Deref for TFn<'_, F> {
+impl<F: Interop> std::ops::Deref for TFn<'_, F> {
 	type Target = F;
 
 	fn deref(&self) -> &Self::Target {
@@ -55,9 +55,9 @@ impl<F: JitFn> std::ops::Deref for TFn<'_, F> {
 
 /// A strongly-typed [handle](Handle) to a [JIT function pointer](Function).
 #[derive(Debug)]
-pub struct TFnHandle<F: JitFn>(Handle<Function>, PhantomData<F>);
+pub struct TFnHandle<F: Interop>(Handle<Function>, PhantomData<F>);
 
-impl<F: JitFn> std::ops::Deref for TFnHandle<F> {
+impl<F: Interop> std::ops::Deref for TFnHandle<F> {
 	type Target = F;
 
 	fn deref(&self) -> &Self::Target {

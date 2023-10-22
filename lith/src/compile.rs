@@ -18,7 +18,7 @@ use util::pushvec::PushVec;
 use crate::{
 	filetree::{self, FileIx, FileTree},
 	intern::NameInterner,
-	interop::JitFn,
+	interop::Interop,
 	issue::Issue,
 	runtime,
 	sym::{Location, SymbolId},
@@ -309,7 +309,7 @@ impl NativeSymbols {
 	/// # Safety
 	///
 	/// `runtime` must use the `extern "C"` ABI.
-	pub unsafe fn register<F: JitFn>(
+	pub unsafe fn register<F: Interop>(
 		&mut self,
 		name: &'static str,
 		runtime: Option<F>,

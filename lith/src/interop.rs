@@ -9,17 +9,17 @@ use cranelift::{
 
 use crate::types::AbiType;
 
-/// A pointer to a JIT function.
+/// Trait for pointers to Lithica functions (JIT, native, or intrinsic).
 ///
 /// All implementors of this type are function pointers with only one return type,
 /// since returning a stable-layout structure from a JIT function is always sound,
 /// but passing an aggregate (struct, tuple, array) to one is never sound.
-pub trait JitFn: 'static + Sized {
+pub trait Interop: 'static + Sized {
 	const PARAMS: &'static [AbiParam];
 	const RETURNS: &'static [AbiParam];
 }
 
-impl<RET> JitFn for fn() -> RET
+impl<RET> Interop for fn() -> RET
 where
 	RET: Native,
 {
@@ -32,10 +32,10 @@ where
 	}];
 }
 
-macro_rules! impl_jitfn {
+macro_rules! impl_interop {
 	($( $($param:ident),+ -> () );+) => {
 		$(
-			impl<$($param),+> JitFn for fn($($param),+) -> ()
+			impl<$($param),+> Interop for fn($($param),+) -> ()
 			where
 				$($param: Native),+,
 			{
@@ -55,7 +55,7 @@ macro_rules! impl_jitfn {
 	};
 	($( $($param:ident),+ -> $tie:ident<$($ret:ident),+> );+) => {
 		$(
-			impl<$($param),+, $($ret),+> JitFn for fn($($param),+) -> $tie<$($ret),+>
+			impl<$($param),+, $($ret),+> Interop for fn($($param),+) -> $tie<$($ret),+>
 			where
 				$($param: Native),+,
 				$tie<$($ret),+>: Return,
@@ -85,13 +85,13 @@ macro_rules! impl_jitfn {
 	};
 }
 
-impl_jitfn! {
+impl_interop! {
 	AA -> ();
 	AA, AB -> ();
 	AA, AB, AC -> ()
 }
 
-impl_jitfn! {
+impl_interop! {
 	AA -> Ret2<RA, RB>;
 	AA, AB -> Ret2<RA, RB>;
 	AA, AB, AC -> Ret2<RA, RB>
@@ -109,7 +109,7 @@ pub unsafe trait Native: 'static + Sized {
 	const REPR: AbiType;
 }
 
-/// See any implementation of [`JitFn`].
+/// See any implementation of [`Interop`].
 ///
 /// This is separate from [`Native`] and since a JIT function can return
 /// multiple values in a stable-layout aggregate but cannot be passed any aggregates.
