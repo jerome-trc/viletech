@@ -1,8 +1,8 @@
 #[builtin('primitiveType')]
-function primitiveType(const name: any_t): type_t;
+function primitiveType(...): type_t;
 
 #[builtin('typeOf')]
-function typeOf(expr: any_t): type_t;
+function typeOf(...): type_t;
 
 #[builtin('rttiOf')]
-function rttiOf(expr: any_t): rtti;
+function rttiOf(...): rtti;

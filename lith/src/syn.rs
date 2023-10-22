@@ -17,7 +17,7 @@ pub enum Syn {
 	// Nodes: high-level constructs ////////////////////////////////////////////
 	/// `'#' '!'? '[' (ident '.')? ident arglist? ']'`
 	Annotation,
-	/// `'(' argument (',' argument)* ','? ')'`
+	/// `'(' argument (',' argument)* (',' | (',' '...'))? ')'` or `'(' '...' ')'`
 	///
 	/// Common to [call expressions](Syn::ExprCall) and [annotations](Syn::Annotation).
 	ArgList,
@@ -43,7 +43,7 @@ pub enum Syn {
 	ImportList,
 	/// `'const'? ('&' 'var'?)? ident typespec ('=' expr)?`
 	Parameter,
-	/// `'(' param? (',' param)* ','? ')'`
+	/// `'(' (param? (',' param)* ','?) | '...' ')'`
 	ParamList,
 	/// `'const' ident typespec '=' expr ';'`
 	///
@@ -262,9 +262,16 @@ pub enum Syn {
 	/// `..`; the [range expression](Syn::ExprRange) operator.
 	#[token("..")]
 	Dot2,
-	/// `..` the inclusive-end [range expression](Syn::ExprRange) operator.
+	/// `..=`; the inclusive-end [range expression](Syn::ExprRange) operator.
 	#[token("..=")]
 	Dot2Eq,
+	/// `...`; a.k.a. "ellipsis".
+	///
+	/// Used in:
+	/// - [Parameter lists](Syn::ParamList) of certain compiler intrinsic functions.
+	/// - [Argument lists](Syn::ArgList) to indicate that parameter defaults be used.
+	#[token("...")]
+	Dot3,
 	/// `=`; part of [assignment statements](Syn::StmtAssign)
 	/// and [symbolic constants](Syn::SymConst).
 	#[token("=")]

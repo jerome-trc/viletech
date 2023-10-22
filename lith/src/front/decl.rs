@@ -160,7 +160,17 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 						issue::Level::Error(issue::Error::MissingFnBody)
 					).with_message(
 						format!("declaration of function `{}` has no body", ident.text())
-					).with_note_static("only functions marked `#[native]` and `#[builtin]` can be declared without a body"));
+					).with_note_static("only functions marked `#[native]` or `#[builtin]` can be declared without a body"));
+				}
+
+				if param_list.intrinsic_params() {
+					ctx.raise(Issue::new(
+						ctx.path,
+						param_list.syntax().text_range(),
+						issue::Level::Error(issue::Error::IllegalOpaqueParams)
+					).with_message_static(
+						"only functions marked `#[builtin]` can be declared with a `...` parameter list"
+					));
 				}
 			}
 			FunctionKind::Builtin { .. } => {

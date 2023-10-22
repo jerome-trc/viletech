@@ -183,6 +183,9 @@ pub enum Error {
 	ContainerValAnyType,
 	FlagDefBitOverflow,
 	FolderImport,
+	/// Used the `...` to accede to parameter defaults in an argument list,
+	/// but the function does not support it.
+	IllegalAccede,
 	/// A named argument was passed to an annotation that cannot accept names
 	/// on any of its arguments.
 	IllegalArgName,
@@ -192,6 +195,8 @@ pub enum Error {
 	IllegalFnQual,
 	/// A function marked `native` has a body block.
 	IllegalFnBody,
+	/// A function not marked `builtin` has a `(...)` parameter list.
+	IllegalOpaqueParams,
 	/// A non-native library attempted to declare a symbol starting or ending
 	/// with `__`, which is reserved for internal/native use.
 	IllegalSymbolName,

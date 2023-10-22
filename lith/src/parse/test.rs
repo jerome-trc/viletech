@@ -133,6 +133,65 @@ fn smoke_imports() {
 	}
 }
 
+#[test]
+fn smoke_arglist() {
+	const SAMPLES: &[&str] = &[
+		"()",
+		"( lorem)",
+		"(lorem)",
+		"(lorem )",
+		"(lorem, ipsum)",
+		"(lorem: ipsum)",
+		"(lorem, ipsum: dolor)",
+		"(...)",
+		"(lorem, ...)",
+		"(lorem, ipsum: dolor, ...)",
+	];
+
+	const TESTS: &[fn(ast::ArgList)] = &[
+		|ast| {
+			assert!(ast.iter().next().is_none());
+			assert!(!ast.acceding());
+		},
+		|_| {},
+		|_| {},
+		|_| {},
+		|_| {},
+		|_| {},
+		|ast| {
+			let mut args = ast.iter();
+			let _ = args.next().unwrap();
+			let arg1 = args.next().unwrap();
+			let arg1_name = arg1.name().unwrap();
+			assert_eq!(arg1_name.text(), "ipsum");
+		},
+		|ast| {
+			assert!(ast.iter().next().is_none());
+			assert!(ast.acceding());
+		},
+		|ast| {
+			assert!(ast.iter().next().is_some());
+			assert!(ast.acceding());
+		},
+		|ast| {
+			assert!(ast.iter().next().is_some());
+			assert!(ast.acceding());
+		},
+	];
+
+	for (i, sample) in SAMPLES.iter().copied().enumerate() {
+		let ptree: ParseTree = doomfront::parse(sample, super::arg_list, LexContext::default());
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+
+		TESTS[i](ast::ArgList::cast(ptree.cursor()).unwrap());
+	}
+}
+
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
@@ -395,6 +454,8 @@ fn smoke_func_decl() {
 		r#"function lorem_ipsum(& dolor: sit = amet);"#,
 		// Mutable reference parameter.
 		r#"function lorem_ipsum(& var dolor: sit = amet);"#,
+		// Intrinsic.
+		r#"function lorem_ipsum(...);"#,
 	];
 
 	const TESTS: &[fn(ast::FunctionDecl)] = &[
@@ -453,6 +514,10 @@ fn smoke_func_decl() {
 			let param = params.next().unwrap();
 
 			assert!(matches!(param.ref_spec(), ast::ParamRefSpec::RefVar(_, _)),);
+		},
+		|ast| {
+			let param_list = ast.params().unwrap();
+			assert!(param_list.intrinsic_params());
 		},
 	];
 

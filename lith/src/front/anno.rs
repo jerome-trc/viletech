@@ -46,6 +46,10 @@ pub(super) fn builtin_fndecl(
 		return;
 	};
 
+	if !check_non_acceding(ctx, "builtin", &anno, &arg_list) {
+		return;
+	}
+
 	let mut args = arg_list.iter();
 
 	let Some(arg0) = check_arg0_exactly(ctx, "builtin", &arg_list, &mut args) else {
@@ -128,6 +132,10 @@ pub(super) fn confine(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut
 		return;
 	};
 
+	if !check_non_acceding(ctx, "confine", &anno, &arg_list) {
+		return;
+	}
+
 	let mut args = arg_list.iter();
 
 	let Some(arg0) = check_arg0_exactly(ctx, "confine", &arg_list, &mut args) else {
@@ -194,6 +202,10 @@ pub(super) fn inline_fndecl(ctx: &FrontendContext, anno: ast::Annotation, in_out
 		*in_out = Inlining::More;
 		return;
 	};
+
+	if !check_non_acceding(ctx, "inline", &anno, &arg_list) {
+		return;
+	}
 
 	let mut args = arg_list.iter();
 
@@ -264,6 +276,10 @@ pub(super) fn native_fndecl(
 	let Some(arg_list) = check_arg_list(ctx, "native", &anno) else {
 		return;
 	};
+
+	if !check_non_acceding(ctx, "native", &anno, &arg_list) {
+		return;
+	}
 
 	let mut args = arg_list.iter();
 
@@ -346,6 +362,31 @@ fn check_arg_list(
 
 		None
 	})
+}
+
+#[must_use]
+fn check_non_acceding(
+	ctx: &FrontendContext,
+	name: &'static str,
+	anno: &ast::Annotation,
+	arg_list: &ast::ArgList,
+) -> bool {
+	let ret = arg_list.acceding();
+
+	if ret {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				anno.syntax().text_range(),
+				issue::Level::Error(issue::Error::IllegalAccede),
+			)
+			.with_message(format!(
+				"`{name}` annotation does not support deference to parameter default arguments"
+			)),
+		);
+	}
+
+	ret
 }
 
 #[must_use]

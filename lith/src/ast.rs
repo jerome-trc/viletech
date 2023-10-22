@@ -196,6 +196,33 @@ pub struct ArgList(SyntaxNode);
 simple_astnode!(Syn, ArgList, Syn::ArgList);
 
 impl ArgList {
+	/// The returned token is always tagged [`Syn::Dot3`].
+	#[must_use]
+	pub fn dot3(&self) -> Option<SyntaxToken> {
+		let Some(ret) = self
+			.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot3))
+		else {
+			return None;
+		};
+
+		if ret
+			.next_sibling_or_token()
+			.is_some_and(|elem| matches!(elem.kind(), Syn::Argument | Syn::Error))
+		{
+			return None;
+		}
+
+		Some(ret)
+	}
+
+	/// Shorthand for `self.dot3.is_some()`.
+	#[must_use]
+	pub fn acceding(&self) -> bool {
+		self.dot3().is_some()
+	}
+
 	pub fn iter(&self) -> impl Iterator<Item = Argument> {
 		self.0.children().filter_map(Argument::cast)
 	}
@@ -223,7 +250,6 @@ impl Argument {
 				Syn::Colon => colon_seen = true,
 				Syn::Ident | Syn::LitName => {
 					name = Some(elem.into_token().unwrap());
-					break;
 				}
 				_ => {}
 			}

@@ -97,6 +97,23 @@ pub struct ParamList(pub(super) SyntaxNode);
 simple_astnode!(Syn, ParamList, Syn::ParamList);
 
 impl ParamList {
+	/// The returned token is always tagged [`Syn::Dot3`].
+	#[must_use]
+	pub fn dot3(&self) -> Option<SyntaxToken> {
+		if self.iter().next().is_some() {
+			return None;
+		}
+
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot3))
+	}
+
+	#[must_use]
+	pub fn intrinsic_params(&self) -> bool {
+		self.dot3().is_some()
+	}
+
 	pub fn iter(&self) -> impl Iterator<Item = Parameter> {
 		self.0.children().filter_map(Parameter::cast)
 	}

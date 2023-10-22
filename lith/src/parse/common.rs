@@ -65,6 +65,14 @@ pub(super) fn annotation(p: &mut Parser<Syn>, inner: bool) {
 pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	let mark = p.open();
 	p.expect(Syn::ParenL, Syn::ParenL, &[&["TODO"]]);
+	trivia_0plus(p);
+
+	if p.eat(Syn::Dot3, Syn::Dot3) {
+		trivia_0plus(p);
+		p.expect(Syn::ParenR, Syn::ParenR, &[&["TODO"]]);
+		p.close(mark, Syn::ArgList);
+		return;
+	}
 
 	while !p.at(Syn::ParenR) && !p.eof() {
 		let arg = p.open();
@@ -90,6 +98,10 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 			t @ Syn::Comma => {
 				p.advance(t);
 				trivia_0plus(p);
+
+				if p.eat(Syn::Dot3, Syn::Dot3) {
+					trivia_0plus(p);
+				}
 			}
 			Syn::ParenR => break,
 			other => {
