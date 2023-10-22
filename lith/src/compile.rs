@@ -240,6 +240,17 @@ impl Compiler {
 		self.stage = Stage::Declaration;
 	}
 
+	#[must_use]
+	pub fn arena_mem_usage(&self) -> usize {
+		let mut ret = 0;
+
+		for arena in &self.arenas {
+			ret += arena.lock().allocated_bytes_including_metadata();
+		}
+
+		ret
+	}
+
 	// Internal ////////////////////////////////////////////////////////////////
 
 	pub(crate) fn raise(&self, issue: Issue) {
