@@ -1,8 +1,6 @@
-use std::path::Path;
-
 use cranelift::prelude::settings::OptLevel;
 use dashmap::DashMap;
-use lithica::{Compiler, LibMeta};
+use lithica::Compiler;
 use util::{pushvec::PushVec, rstring::RString};
 
 criterion::criterion_group!(benches, cranelift_ops, toolchain, string_interning);
@@ -85,20 +83,11 @@ fn toolchain(crit: &mut criterion::Criterion) {
 
 	grp.bench_function("End-to-End", |bencher| {
 		bencher.iter(|| {
-			let core_path = Path::new(env!("CARGO_WORKSPACE_DIR")).join("assets/viletech/lith");
-
-			let baselib = LibMeta {
-				name: "lith".to_string(),
-				version: lithica::Version::V0_0_0,
-				native: true,
-			};
-
 			let mut compiler = Compiler::new(lithica::Config {
 				opt: OptLevel::None,
 				hotswap: false,
 			});
 
-			let _ = compiler.register_lib(baselib, |ftree| ftree.add_from_fs(&core_path));
 			compiler.finish_registration();
 			lithica::declare_symbols(&mut compiler);
 			lithica::resolve_imports(&mut compiler);

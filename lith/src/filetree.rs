@@ -7,7 +7,7 @@ use petgraph::{
 };
 use rayon::prelude::*;
 
-use crate::{parse, Error, LexContext, ParseTree};
+use crate::{compile::baselib, parse, Error, LexContext, ParseTree};
 
 pub type FileIx = petgraph::graph::NodeIndex<DefaultIx>;
 
@@ -16,7 +16,7 @@ pub struct FileTree {
 	/// Edges run from parents ([`Node::Folder`]) to children ([`Node::File`]).
 	/// An invalid graph is always safe but will cause unexpected compiler errors
 	/// during import resolution.
-	pub graph: DiGraph<Node, (), DefaultIx>,
+	pub(crate) graph: DiGraph<Node, (), DefaultIx>,
 }
 
 #[derive(Debug)]
@@ -124,8 +124,32 @@ impl FileTree {
 	}
 
 	pub fn reset(&mut self) {
+		#[must_use]
+		fn parse_baselib_file(text: &'static str) -> ParseTree {
+			let ptree = doomfront::parse(text, parse::file, LexContext::default());
+			debug_assert!(!ptree.any_errors());
+			ptree
+		}
+
 		self.graph.clear();
 		self.graph.add_node(Node::Root);
+
+		let folder_ix = self.graph.add_node(Node::Folder {
+			path: "lith".to_string(),
+		});
+		self.graph.add_edge(self.root(), folder_ix, ());
+
+		let builtins_ix = self.graph.add_node(Node::File {
+			ptree: parse_baselib_file(baselib::BUILTINS),
+			path: "builtins.lith".to_string(),
+		});
+		self.graph.add_edge(folder_ix, builtins_ix, ());
+
+		let primitive_ix = self.graph.add_node(Node::File {
+			ptree: parse_baselib_file(baselib::PRIMITIVE),
+			path: "primitive.lith".to_string(),
+		});
+		self.graph.add_edge(folder_ix, primitive_ix, ());
 	}
 
 	/// `base` can be a directory or file.
@@ -240,7 +264,9 @@ impl Default for FileTree {
 		let mut ret = Self {
 			graph: DiGraph::default(),
 		};
+
 		ret.reset();
+
 		ret
 	}
 }

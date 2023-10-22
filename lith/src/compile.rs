@@ -1,5 +1,6 @@
 //! Code that ties together the frontend, mid-section, and backend.
 
+pub(crate) mod baselib;
 mod module;
 
 #[cfg(test)]
@@ -87,7 +88,7 @@ impl Compiler {
 
 	#[must_use]
 	pub fn new(config: Config) -> Self {
-		Self {
+		let mut ret = Self {
 			cfg: config,
 			ftree: FileTree::default(),
 			libs: vec![],
@@ -116,7 +117,11 @@ impl Compiler {
 			native: NativeSymbols::default(),
 			sym_cache: SymCache::default(),
 			names: NameInterner::default(),
-		}
+		};
+
+		ret.libs.push(ret.baselib_meta());
+
+		ret
 	}
 
 	pub fn register_lib<F>(&mut self, meta: LibMeta, mut sourcer: F) -> Result<(), Vec<Error>>
@@ -126,6 +131,10 @@ impl Compiler {
 		assert_eq!(self.stage, Stage::Registration);
 
 		assert!(!meta.name.is_empty(), "`LibMeta::name` cannot be empty");
+
+		if meta.name.eq_ignore_ascii_case("lith") || meta.name.eq_ignore_ascii_case("lithica") {
+			panic!("`lithica` and `lith` are reserved library names");
+		}
 
 		let prev_ftn_count = self.ftree.graph.node_count();
 
@@ -221,6 +230,7 @@ impl Compiler {
 	pub fn reset(&mut self) {
 		self.ftree.reset();
 		self.libs.clear();
+		self.libs.push(self.baselib_meta());
 
 		unsafe {
 			self.symbols.iter().for_each(|kvp| {
@@ -276,6 +286,19 @@ impl Compiler {
 	pub(crate) fn any_errors(&self) -> bool {
 		let guard = self.issues.lock();
 		guard.iter().any(|iss| iss.is_error())
+	}
+
+	#[must_use]
+	pub(crate) fn baselib_meta(&self) -> (LibMeta, FileIx) {
+		let meta = LibMeta {
+			name: "lith".to_string(),
+			version: Version::V0_0_0,
+			native: true,
+		};
+
+		let file_ix = self.ftree.find_child(self.ftree.root(), "lith").unwrap();
+
+		(meta, file_ix)
 	}
 }
 
