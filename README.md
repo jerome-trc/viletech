@@ -51,10 +51,6 @@ The goals of the VileTech "project" are as follows, in descending order of prior
 
 [viletech-fs](/vfs/README.md) - VileTechFS - is a "virtual file system"; an abstraction over the user's "real" or "physical" operating system's FS to ease usage for the engine and mod developers, as well as providing a layer of "information hiding".
 
-### /vzscript
-
-[vzscript](/vzscript/README.md), the VZSC toolchain, is the infrastructure powering VZScript, VileTech's bespoke embedded scripting language.
-
 ### /wadload
 
 [wadload](/wadload/README.md) contains functionality for reading and writing files in the "Where's All the Data" (WAD) file format native to Doom.

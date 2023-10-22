@@ -33,10 +33,10 @@ pub struct PrepError {
 impl PrepError {
 	#[must_use]
 	pub fn is_fatal(&self) -> bool {
-		// TODO: VZS parse errors are fatal.
+		// TODO: Lith parse errors are fatal.
 		matches!(
 			self.kind,
-			PrepErrorKind::Io(_) | PrepErrorKind::MissingVzsDir
+			PrepErrorKind::Io(_) | PrepErrorKind::MissingLithRoot
 		)
 	}
 }
@@ -62,7 +62,7 @@ pub enum PrepErrorKind {
 	Image(ImageError),
 	Io(std::io::Error),
 	/// A mount declared a script root file that was not found in the VFS.
-	MissingVzsDir,
+	MissingLithRoot,
 	/// Failed to read a [PNAMES] WAD lump.
 	///
 	/// [PNAMES]: https://doomwiki.org/wiki/PNAMES
@@ -116,10 +116,10 @@ impl std::fmt::Display for PrepError {
 					p = self.path.display()
 				)
 			}
-			PrepErrorKind::MissingVzsDir => {
+			PrepErrorKind::MissingLithRoot => {
 				write!(
 					f,
-					"VZScript root directory not found at path: {}",
+					"Lithica root directory not found at path: {}",
 					self.path.display()
 				)
 			}

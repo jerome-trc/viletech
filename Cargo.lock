@@ -5581,6 +5581,7 @@ dependencies = [
  "indexmap 1.9.3",
  "indoc",
  "kira",
+ "lithica",
  "memoffset 0.8.0",
  "mus2midi",
  "nanorand",
@@ -5608,7 +5609,6 @@ dependencies = [
  "viletech-data",
  "viletech-fs",
  "viletech-utils",
- "vzscript",
  "wadload",
  "walkdir",
  "xml-rs",
@@ -5659,12 +5659,12 @@ dependencies = [
  "clap",
  "doomfront",
  "indoc",
+ "lithica",
  "mus2midi",
  "viletech-acs",
  "viletech-data",
  "viletech-fs",
  "viletech-utils",
- "vzscript",
  "wadload",
 ]
 
@@ -5765,39 +5765,6 @@ dependencies = [
 [[package]]
 name = "vilify"
 version = "0.0.0"
-
-[[package]]
-name = "vzscript"
-version = "0.0.0"
-dependencies = [
- "append-only-vec",
- "arc-swap",
- "ariadne",
- "backtrace",
- "bitflags 2.3.1",
- "bitvec",
- "cee-scape",
- "cranelift",
- "cranelift-interpreter",
- "cranelift-jit",
- "cranelift-module",
- "criterion",
- "crossbeam",
- "dashmap",
- "doomfront",
- "im",
- "logos",
- "parking_lot 0.12.1",
- "petgraph",
- "rayon",
- "regex",
- "rustc-hash",
- "smallvec",
- "triomphe",
- "viletech-acs",
- "viletech-fs",
- "viletech-utils",
-]
 
 [[package]]
 name = "wadload"

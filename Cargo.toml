@@ -13,7 +13,6 @@ members = [
 	"utils",
 	"vfs",
 	"vilify",
-	"vzscript",
 	"wadload",
 ]
 default-members = ["engine", "client"]

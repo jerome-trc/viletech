@@ -3,12 +3,11 @@
 //! In other words, the player, monsters, inventory items, decorations,
 //! and projectiles are all actors.
 
-use std::{num::NonZeroI32, ptr::NonNull};
+use std::num::NonZeroI32;
 
 use bevy::prelude::*;
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
-use vzs::heap::TPtr;
 
 use crate::catalog::dobj::{self, Blueprint};
 
@@ -16,35 +15,12 @@ use crate::catalog::dobj::{self, Blueprint};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Actor(Entity);
 
-pub type ActorPtr = TPtr<ScriptActor>;
-
-/// An actor as understood by scripts.
-///
-/// A class object, extensible like any other, principally made up of pointers to
-/// Bevy components. These get filled in at spawn time and left untouched by
-/// internal engine code, except when ECS storages are re-allocated, at which
-/// point they are all updated the start of the sim tick.
-#[derive(Debug)]
-pub struct ScriptActor {
-	pub(crate) _readonly: NonNull<Readonly>,
-	pub(crate) _transform: NonNull<Transform>,
-
-	pub(crate) _monster: Option<NonNull<Monster>>,
-	pub(crate) _projectile: Option<NonNull<Projectile>>,
-}
-
-// SAFETY: Pointers are never dereferenced by native Rust, only set.
-// Only scripts modify their contents, and this only happens when there is already
-// an open Bevy query for mutating all components, so no other references can exist.
-unsafe impl Send for ScriptActor {}
-unsafe impl Sync for ScriptActor {}
-
 // Monster /////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Component)]
 pub struct Monster {
 	pub flags: MonsterFlags,
-	pub goal: Option<ActorPtr>,
+	pub goal: Option<Actor>,
 	pub missile_threshold: f64,
 	pub reaction_time: i32,
 	pub tid_hated: Option<ThingId>,

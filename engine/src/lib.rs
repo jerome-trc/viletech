@@ -19,6 +19,7 @@ pub mod frontend;
 pub mod gfx;
 pub mod input;
 pub use data::level;
+pub extern crate lith;
 pub mod log;
 pub extern crate mus;
 pub mod player;
@@ -29,7 +30,6 @@ pub mod terminal;
 pub mod user;
 pub extern crate util;
 pub extern crate vfs;
-pub extern crate vzs;
 pub extern crate wadload;
 
 use once_cell::sync::OnceCell;
@@ -174,7 +174,7 @@ pub fn basedata_is_valid() -> Result<(), BaseDataError> {
 }
 
 pub const RESERVED_MOUNT_POINTS: &[&str] = &[
-	"vile", "viletec", "vt", "vtec", "vtech", "viletech", "vzs", "vzscript", "zs", "zscript",
+	"vile", "viletec", "vt", "vtec", "vtech", "viletech", "lith", "lithica", "zs", "zscript",
 ];
 
 #[derive(Debug)]

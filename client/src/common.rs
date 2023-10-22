@@ -59,7 +59,7 @@ impl ClientCommon<'_, '_> {
 							(DevGuiStatus::Audio, "Audio"),
 							(DevGuiStatus::Console, "Console"),
 							(DevGuiStatus::Catalog, "Data"),
-							(DevGuiStatus::VzsRepl, "REPL"),
+							(DevGuiStatus::Lith, "Lithica Playground"),
 							(DevGuiStatus::Vfs, "VFS"),
 						],
 					);
@@ -76,7 +76,7 @@ impl ClientCommon<'_, '_> {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::VzsRepl => {
+						DevGuiStatus::Lith => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -96,7 +96,7 @@ impl ClientCommon<'_, '_> {
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
 						}
-						DevGuiStatus::VzsRepl => {
+						DevGuiStatus::Lith => {
 							// Soon!
 						}
 						DevGuiStatus::Vfs => {
@@ -115,7 +115,7 @@ pub(crate) enum DevGuiStatus {
 	Audio,
 	Catalog,
 	Console,
-	VzsRepl,
+	Lith,
 	Vfs,
 }
 
@@ -125,7 +125,7 @@ impl std::fmt::Display for DevGuiStatus {
 			DevGuiStatus::Audio => write!(f, "Audio"),
 			DevGuiStatus::Catalog => write!(f, "Catalog"),
 			DevGuiStatus::Console => write!(f, "Console"),
-			DevGuiStatus::VzsRepl => write!(f, "VZScript REPL"),
+			DevGuiStatus::Lith => write!(f, "Lithica Playground"),
 			DevGuiStatus::Vfs => write!(f, "VFS"),
 		}
 	}
