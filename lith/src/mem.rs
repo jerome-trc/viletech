@@ -31,6 +31,11 @@ impl<T> APtr<T> {
 	pub(crate) unsafe fn drop_in_place(self) {
 		std::ptr::drop_in_place(self.0.as_ptr());
 	}
+
+	#[must_use]
+	pub(crate) unsafe fn read(self) -> T {
+		std::ptr::read(self.0.as_ptr())
+	}
 }
 
 impl<T> PartialEq for APtr<T> {
@@ -106,14 +111,6 @@ impl<T> NPtr<T> {
 		self.0.store(Some(new.0));
 	}
 
-	pub(crate) fn compare_exchange(
-		&self,
-		current: Option<NonNull<T>>,
-		new: Option<NonNull<T>>,
-	) -> Result<Option<NonNull<T>>, Option<NonNull<T>>> {
-		self.0.compare_exchange(current, new)
-	}
-
 	/// Returns `None` if the pointer within is null.
 	#[must_use]
 	pub(crate) fn try_ref(&self) -> Option<&T> {
@@ -135,6 +132,12 @@ impl<T> NPtr<T> {
 impl<T> PartialEq for NPtr<T> {
 	fn eq(&self, other: &Self) -> bool {
 		self.0.load() == other.0.load()
+	}
+}
+
+impl<T> PartialEq<APtr<T>> for NPtr<T> {
+	fn eq(&self, other: &APtr<T>) -> bool {
+		self.0.load().is_some_and(|nn| nn == other.0)
 	}
 }
 
