@@ -125,6 +125,24 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				(Some(_), ParamType::Type) => Some(ConstInit::Type(TypeNPtr::null())),
 			};
 
+			let consteval = param.is_const();
+
+			if matches!(&ptype, ParamType::Type) && !consteval {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						ast.syntax().text_range(),
+						issue::Level::Error(issue::Error::NonConstTypeParam),
+					)
+					.with_message(format!(
+						"`type_t` parameter `{}` must be `const`",
+						ident.text()
+					)),
+				); // TODO: show the change that would resolve this.
+
+				continue;
+			}
+
 			datum.params.push(Parameter {
 				name: ctx.names.intern(&ast.name().unwrap()),
 				ptype,

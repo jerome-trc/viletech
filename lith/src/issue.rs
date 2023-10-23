@@ -215,6 +215,8 @@ pub enum Error {
 	/// An import entry using a name literal is missing its required rename identifier.
 	MissingImportRename,
 	MissingNative,
+	/// A `type_t` parameter was not qualified with the `const` keyword.
+	NonConstTypeParam,
 	/// A non-native library tried to use the `builtin` or `native` annotation.
 	NonNative,
 	ParseFloat,
