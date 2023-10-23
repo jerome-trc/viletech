@@ -5,6 +5,7 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
+use cranelift::codegen::data_value::DataValue;
 use doomfront::rowan::GreenToken;
 use util::pushvec::PushVec;
 
@@ -13,6 +14,12 @@ use crate::{types::FxDashMap, SyntaxToken};
 /// An index into a [`NameInterner`]. Used for symbol lookup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct NameIx(u32);
+
+impl From<NameIx> for DataValue {
+	fn from(value: NameIx) -> Self {
+		Self::I32(value.0 as i32)
+	}
+}
 
 /// A concurrent interner for [`IName`],
 /// allowing 32-bit indices to be used as map keys in place of pointers.
