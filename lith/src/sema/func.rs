@@ -73,6 +73,7 @@ pub(super) fn lazy_define(
 
 		backoff.snooze();
 
+		#[cfg(debug_assertions)]
 		debug_assert!(
 			start_time.elapsed().as_secs() < 5,
 			"`sema::func::lazy_define` timed out"
