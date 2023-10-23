@@ -105,7 +105,8 @@ impl std::fmt::Display for Error {
 
 pub type ValVec = smallvec::SmallVec<[cranelift::codegen::data_value::DataValue; 1]>;
 
-// These two constants are used in `UserExternalName::namespace`.
+// These constants are used in `UserExternalName::namespace`.
 
+pub(crate) const CLNS_LIBCALL: u32 = u32::MAX - 2;
 pub(crate) const CLNS_NATIVE: u32 = u32::MAX - 1;
 pub(crate) const CLNS_BUILTIN: u32 = u32::MAX;
