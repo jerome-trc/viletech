@@ -30,7 +30,6 @@ pub fn semantic_check(compiler: &mut Compiler) {
 	let module = JitModule::new(compiler);
 	let mut fctxs = vec![];
 	let mut cctxs = vec![];
-	let next_src_loc = AtomicU32::new(0);
 
 	for _ in 0..rayon::current_num_threads() {
 		fctxs.push(Mutex::new(FunctionBuilderContext::new()));
@@ -77,7 +76,6 @@ pub(crate) struct ThreadContext<'c> {
 	pub(crate) fctxs: &'c Vec<Mutex<FunctionBuilderContext>>,
 	pub(crate) cctxs: &'c Vec<Mutex<cranelift::codegen::Context>>,
 	pub(crate) base_sig: &'c Signature,
-	pub(crate) next_src_loc: &'c AtomicU32,
 }
 
 impl std::ops::Deref for ThreadContext<'_> {
@@ -109,8 +107,18 @@ impl<'c> SemaContext<'c> {
 	}
 
 	#[must_use]
-	pub(crate) fn fetch_next_src_loc(&self) -> SourceLoc {
-		SourceLoc::new(self.next_src_loc.fetch_add(1, atomic::Ordering::SeqCst))
+	pub(crate) fn make_srcloc(&self, offs: TextSize) -> SourceLoc {
+		// 11 high bits are reserved for 2048 files.
+		// 21 low bits are reserved for 2,097,152 bytes per file.
+
+		// For reference, GZDoom b48caddb9 has 700 translation units
+		// and 784 header files (third-party code included).
+		// Its largest header (vk_mem_alloc.h) has 731,933 bytes in it.
+
+		let mut srcloc = 0;
+		srcloc |= (self.file_ix.index() as u32).overflowing_shl(21).0;
+		srcloc |= u32::from(offs) & 0x001FFFFF;
+		SourceLoc::new(srcloc)
 	}
 
 	#[must_use]
@@ -126,4 +134,20 @@ impl<'c> SemaContext<'c> {
 			ptree,
 		}
 	}
+}
+
+#[cfg(test)]
+#[test]
+fn srcloc_roundtrip() {
+	let file_ix: u32 = 700 + 784;
+	let offs: u32 = 731_933;
+
+	let mut srcloc = 0;
+	srcloc |= file_ix.overflowing_shl(21).0;
+	srcloc |= offs & 0x001FFFFF;
+
+	let file_ix = (srcloc & 0xFFE00000) >> 21;
+	let offs = srcloc & 0x001FFFFF;
+
+	assert_eq!((file_ix, offs), (700 + 784, 731_933));
 }
