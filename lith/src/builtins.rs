@@ -150,6 +150,12 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 			.as_ptr()
 			.map(TypePtr::new)
 			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f64_t, tsys::Primitive::F64)),
+		"iname_t" => ctx
+			.sym_cache
+			.iname_t
+			.as_ptr()
+			.map(TypePtr::new)
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.iname_t, tsys::Primitive::IName)),
 		"never_t" => ctx
 			.sym_cache
 			.never_t

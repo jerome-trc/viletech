@@ -34,6 +34,7 @@ pub(crate) enum Primitive {
 	U128,
 	F32,
 	F64,
+	IName,
 }
 
 impl Primitive {
@@ -43,7 +44,7 @@ impl Primitive {
 			Self::Never | Self::Void => None,
 			Self::Bool | Self::I8 | Self::U8 => Some(abi_t::I8),
 			Self::I16 | Self::U16 => Some(abi_t::I16),
-			Self::I32 | Self::U32 => Some(abi_t::I32),
+			Self::I32 | Self::U32 | Self::IName => Some(abi_t::I32),
 			Self::I64 | Self::U64 => Some(abi_t::I64),
 			Self::I128 | Self::U128 => Some(abi_t::I128),
 			Self::F32 => Some(abi_t::F32),

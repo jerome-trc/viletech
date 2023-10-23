@@ -390,6 +390,7 @@ pub(crate) struct SymCache {
 	pub(crate) u128_t: TypeNPtr,
 	pub(crate) f32_t: TypeNPtr,
 	pub(crate) f64_t: TypeNPtr,
+	pub(crate) iname_t: TypeNPtr,
 	pub(crate) never_t: TypeNPtr,
 }
 
@@ -410,6 +411,7 @@ impl Default for SymCache {
 			u128_t: TypeNPtr::null(),
 			f32_t: TypeNPtr::null(),
 			f64_t: TypeNPtr::null(),
+			iname_t: TypeNPtr::null(),
 			never_t: TypeNPtr::null(),
 		}
 	}
