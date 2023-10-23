@@ -12,7 +12,6 @@ use util::pushvec::PushVec;
 use crate::{
 	filetree::FileIx,
 	intern::NameIx,
-	runtime,
 	types::{CEvalIntrin, Scope, TypeNPtr, TypePtr},
 	CEvalNative,
 };
@@ -118,6 +117,12 @@ pub(crate) enum TypeSpec {
 	Type,
 }
 
+#[derive(Debug)]
+pub(crate) enum ConstInit {
+	Type(TypeNPtr),
+	Value(PushVec<DataValue>),
+}
+
 // Function ////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
@@ -131,6 +136,27 @@ pub(crate) struct Function {
 	pub(crate) kind: FunctionKind,
 }
 
+impl Function {
+	#[must_use]
+	pub(crate) fn signature_incomplete(&self) -> bool {
+		if let TypeSpec::Normal(type_ptr) = &self.ret_type {
+			return type_ptr.as_ptr().is_none();
+		};
+
+		for param in &self.params {
+			if let ParamType::Normal(type_ptr) = &param.ptype {
+				return type_ptr.as_ptr().is_none();
+			} else if let Some(ConstInit::Type(type_ptr)) = &param.default {
+				return type_ptr.as_ptr().is_none();
+			} else {
+				unreachable!()
+			}
+		}
+
+		false
+	}
+}
+
 #[derive(Debug)]
 pub(crate) enum FunctionKind {
 	/// Function was defined entirely in Lith source.
@@ -138,16 +164,19 @@ pub(crate) enum FunctionKind {
 	/// Function is Rust-defined, intrinsic to the compiler.
 	Builtin {
 		uext_name: UserExternalName,
-		rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
+		rt: Option<*const u8>,
 		ceval: Option<CEvalIntrin>,
 	},
 	/// Function is Rust-defined, registered externally.
 	Native {
 		uext_name: UserExternalName,
-		rt: Option<extern "C" fn(*mut runtime::Context, ...)>,
+		rt: Option<*const u8>,
 		ceval: Option<CEvalNative>,
 	},
 }
+
+unsafe impl Send for FunctionKind {}
+unsafe impl Sync for FunctionKind {}
 
 #[derive(Debug)]
 pub(crate) enum ParamType {
@@ -161,9 +190,10 @@ pub(crate) enum ParamType {
 #[derive(Debug)]
 pub(crate) struct Parameter {
 	pub(crate) name: NameIx,
-	pub(crate) sigtype: ParamType,
+	pub(crate) ptype: ParamType,
 	pub(crate) consteval: bool,
 	pub(crate) reference: ParamRef,
+	pub(crate) default: Option<ConstInit>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash)]
@@ -211,11 +241,5 @@ pub(crate) struct LocalVar {
 pub(crate) struct SymConst {
 	pub(crate) _visibility: Visibility,
 	pub(crate) tspec: TypeSpec,
-	pub(crate) init: SymConstInit,
-}
-
-#[derive(Debug)]
-pub(crate) enum SymConstInit {
-	Type(TypeNPtr),
-	Value(PushVec<DataValue>),
+	pub(crate) init: ConstInit,
 }

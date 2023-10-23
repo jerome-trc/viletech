@@ -173,6 +173,7 @@ pub enum Error {
 	/// falls under no other error code.
 	Builtin,
 	CEvalImpossible,
+	CEvalInterpret,
 	CEvalRecursion,
 	/// Compile-time function interpretation ran out of "fuel"
 	/// due to either excessive complexity or an infinite loop.

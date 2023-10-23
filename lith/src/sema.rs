@@ -1,17 +1,24 @@
-use std::sync::atomic::{self, AtomicU32};
+//! See [`semantic_check`].
+
+mod ceval;
+mod func;
 
 use cranelift::{
 	codegen::ir::SourceLoc,
 	prelude::{FunctionBuilderContext, Signature},
 };
 use cranelift_module::Module;
+use doomfront::rowan::{ast::AstNode, TextSize};
 use parking_lot::Mutex;
 
 use crate::{
+	ast,
 	compile::{self, JitModule},
 	filetree::{self, FileIx},
+	issue::{self, Issue},
+	sym::{self, ConstInit, Datum, Location, SymbolId},
 	tsys::TypeDef,
-	types::{Scope, TypePtr},
+	types::{Scope, SymPtr, TypePtr},
 	Compiler, ParseTree, ValVec,
 };
 
@@ -39,7 +46,46 @@ pub fn semantic_check(compiler: &mut Compiler) {
 	let base_sig = module.make_signature();
 	let module = Mutex::new(module);
 
-	// TODO
+	// First, define and cache primitive types.
+
+	{
+		let folder_corelib = compiler
+			.ftree
+			.find_child(compiler.ftree.root(), "lith")
+			.unwrap();
+		let file_prim = compiler
+			.ftree
+			.find_child(folder_corelib, "primitive")
+			.unwrap();
+
+		let ftn = &compiler.ftree.graph[file_prim];
+
+		let filetree::Node::File { ptree, path } = ftn else {
+			return;
+		};
+
+		let thread_ix = 0;
+		let arena = compiler.arenas[thread_ix].lock();
+
+		let ctx = SemaContext {
+			tctx: ThreadContext {
+				thread_ix,
+				compiler,
+				arena: &arena,
+				module: &module,
+				fctxs: &fctxs,
+				cctxs: &cctxs,
+				base_sig: &base_sig,
+			},
+			file_ix: file_prim,
+			path: path.as_str(),
+			ptree,
+		};
+
+		semantic_check_container(&ctx);
+	}
+
+	// Finally, start initializing container values and defining crucial functions.
 
 	if compiler.any_errors() {
 		compiler.failed = true;
@@ -49,14 +95,232 @@ pub fn semantic_check(compiler: &mut Compiler) {
 	}
 }
 
+fn semantic_check_container(ctx: &SemaContext) {
+	let cursor = ctx.ptree.cursor();
+
+	for item in cursor.children().filter_map(ast::Item::cast) {
+		let sym_id = SymbolId::new(Location {
+			file_ix: ctx.file_ix,
+			span: item.syntax().text_range(),
+		});
+
+		match item {
+			ast::Item::Function(fndecl) => {
+				for anno in fndecl.annotations() {
+					let ast::AnnotationName::Unscoped(ident) = anno.name().unwrap() else {
+						continue;
+					};
+
+					if ident.text() != "crucial" {
+						continue;
+					}
+
+					check_function(ctx, fndecl, sym_id);
+					break;
+				}
+			}
+			ast::Item::SymConst(symconst) => {
+				check_symconst(ctx, symconst, sym_id);
+			}
+		}
+	}
+}
+
+fn check_function(ctx: &SemaContext, ast: ast::FunctionDecl, sym_id: SymbolId) {
+	if let Some(ret_t) = ast.return_type() {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				ret_t.syntax().text_range(),
+				issue::Level::Error(issue::Error::Unimplemented),
+			)
+			.with_message_static("crucial functions do not support return values yet"),
+		);
+
+		return;
+	}
+
+	if let Some(param0) = ast.params().unwrap().iter().next() {
+		ctx.raise(
+			Issue::new(
+				ctx.path,
+				param0.syntax().text_range(),
+				issue::Level::Error(issue::Error::Unimplemented),
+			)
+			.with_message_static("crucial functions do not support parameters yet"),
+		);
+
+		return;
+	}
+
+	let mono_sig = MonoSig {
+		params: vec![],
+		ret_t: ctx.sym_cache.void_t.clone().into(),
+	};
+
+	let kvp = ctx.symbols.get(&sym_id).unwrap();
+
+	let Datum::Function(d_fn) = &kvp.datum else {
+		unreachable!()
+	};
+
+	let file_loc = Location::full_file(ctx.file_ix);
+	let ctr_env = ctx.scopes.get(&file_loc).unwrap();
+
+	let _ = func::eager_define(ctx, &ctr_env, kvp.value(), d_fn, ast, mono_sig);
+}
+
+fn check_symconst(ctx: &SemaContext, ast: ast::SymConst, sym_id: SymbolId) {
+	let kvp = ctx.symbols.get(&sym_id).unwrap();
+
+	let Datum::SymConst(d_const) = &kvp.datum else {
+		unreachable!()
+	};
+
+	let file_loc = Location::full_file(ctx.file_ix);
+	let ctr_env = ctx.scopes.get(&file_loc).unwrap();
+	let init_ast = ast.expr().unwrap();
+	let init_span = init_ast.syntax().text_range();
+	let init_eval = ceval::expr(ctx, 0, ctr_env.value(), init_ast);
+
+	match &d_const.init {
+		ConstInit::Type(init_ty) => match init_eval {
+			CEval::Err => {}
+			CEval::Container(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::ContainerAssign),
+					)
+					.with_message_static(
+						"cannot assign an imported container to a symbolic constant",
+					),
+				);
+			}
+			CEval::Function(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::AssignTypeMismatch),
+					)
+					.with_message_static(
+						"cannot assign a function to a symbolic constant of type `type_t`",
+					),
+				);
+			}
+			CEval::Type(t) => {
+				init_ty.store(t);
+			}
+			CEval::Value(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::AssignTypeMismatch),
+					)
+					.with_message_static(
+						"cannot assign values to a symbolic constant of type `type_t`",
+					),
+				);
+			}
+		},
+		ConstInit::Value(init_val) => match init_eval {
+			CEval::Err => {}
+			CEval::Container(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::ContainerAssign),
+					)
+					.with_message_static(
+						"cannot assign an imported container to a symbolic constant",
+					),
+				);
+			}
+			CEval::Function(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::Unimplemented),
+					)
+					.with_message_static("cannot assign a function to a symbolic constant")
+					.with_note_static("coercion to a function pointer is not yet implemented"),
+				);
+
+				// TODO: coerce to function pointer?
+			}
+			CEval::Type(_) => {
+				ctx.raise(
+					Issue::new(
+						ctx.path,
+						init_span,
+						issue::Level::Error(issue::Error::AssignTypeMismatch),
+					)
+					.with_message_static(
+						"can only assign a type to a symbolic constant of type `type_t`",
+					),
+				);
+			}
+			CEval::Value(cevalue) => {
+				let sym::TypeSpec::Normal(tspec) = &d_const.tspec else {
+					unreachable!()
+				};
+
+				if *tspec != cevalue.ftype {
+					ctx.raise(todo!());
+					return;
+				}
+
+				for val in cevalue.data {
+					let _ = init_val.push(val);
+				}
+			}
+		},
+	}
+}
+
+/// A key into [`Compiler::memo`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct MonoKey {
+	pub(crate) func: SymPtr,
+	pub(crate) sig: MonoSig,
+}
+
+/// "Monomorphized signature".
+/// The result of
+///
+/// - replacing `any_t` parameter types with real types, and
+/// - eliminating `type_t` parameters
+///
+/// at the call site.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct MonoSig {
+	pub(crate) params: Vec<TypePtr>,
+	pub(crate) ret_t: TypePtr,
+}
+
 /// The result of a [compile-time evaluated expression](ceval).
 #[derive(Debug)]
 #[must_use]
 pub(crate) enum CEval {
 	Err,
 	Container(Scope),
+	Function(SymPtr),
 	Type(TypePtr),
-	Value(ValVec),
+	Value(CeValue),
+}
+
+/// "Constant-evaluated value". Cranelift [`DataValue`]s with an attached type.
+///
+/// [`DataValue`]: cranelift::codegen::data_value::DataValue
+#[derive(Debug)]
+pub(crate) struct CeValue {
+	pub(crate) data: ValVec,
+	pub(crate) ftype: TypePtr,
 }
 
 #[derive(Clone, Copy)]

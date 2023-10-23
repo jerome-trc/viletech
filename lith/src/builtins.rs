@@ -12,6 +12,7 @@ use crate::{
 	CEval, SemaContext,
 };
 
+#[must_use]
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
 	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
@@ -179,12 +180,36 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 	CEval::Type(type_ptr)
 }
 
-/// Returns the total memory used by the garbage collector.
-pub(crate) extern "C" fn _gc_usage(_: *mut runtime::Context) -> usize {
-	// TODO: just a dummy function for proof-of-concept purposes at the moment.
-	123_456_789
+#[must_use]
+pub(crate) fn type_of(_: &SemaContext, _: ast::ArgList) -> CEval {
+	todo!()
 }
 
-// All constants below are used in `UserExternalName::index`.
-pub(crate) const UEXTIX_PRIMITIVETYPE: u32 = 0;
-pub(crate) const UEXTIX_GCUSAGE: u32 = 100;
+#[must_use]
+pub(crate) fn rtti_of(_: &SemaContext, _: ast::ArgList) -> CEval {
+	unimplemented!()
+}
+
+/// Returns the total memory used by the garbage collector.
+pub(crate) unsafe extern "C" fn gc_usage(_: *mut runtime::Context) -> usize {
+	// TODO: just a dummy function for proof-of-concept purposes at the moment.
+	unimplemented!()
+}
+
+/// Constants fed to [`cranelift::codegen::ir::UserExternalName::index`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub(crate) enum Index {
+	PrimitiveType,
+	TypeOf,
+	RttiOf,
+	GcUsage,
+	__Last,
+}
+
+impl From<u32> for Index {
+	fn from(value: u32) -> Self {
+		assert!(value < Self::__Last as u32);
+		unsafe { std::mem::transmute(value) }
+	}
+}

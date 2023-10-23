@@ -6,14 +6,17 @@ use cranelift::{
 	prelude::{ExternalName, GlobalValueData, MemFlags, Type},
 };
 use cranelift_interpreter::{
-	address::{Address, AddressFunctionEntry, AddressRegion, AddressSize},
+	address::{Address, AddressRegion, AddressSize},
 	frame::Frame,
 	interpreter::LibCallHandler,
 	state::{InterpreterFunctionRef, MemoryError},
 	value::DataValueExt,
 };
 
-use crate::Compiler;
+use crate::{
+	types::{IrNPtr, IrPtr},
+	Compiler,
+};
 
 /// Adapted from [`cranelift_interpreter::interpreter::InterpreterState`].
 #[derive(Debug)]
@@ -21,6 +24,7 @@ pub(crate) struct Interpreter<'c> {
 	pub(crate) compiler: &'c Compiler,
 	pub(crate) native_endianness: Endianness,
 
+	pub(crate) ir_ptr: IrNPtr,
 	pub(crate) frame_stack: Vec<Frame<'c>>,
 	/// Number of bytes from the bottom of the stack where the current frame's stack space is
 	pub(crate) frame_offset: usize,
@@ -30,7 +34,7 @@ pub(crate) struct Interpreter<'c> {
 
 impl<'c> Interpreter<'c> {
 	#[must_use]
-	pub(crate) fn new(compiler: &'c Compiler) -> Self {
+	pub(crate) fn new(compiler: &'c Compiler, function: IrPtr) -> Self {
 		let native_endianness = if cfg!(target_endian = "little") {
 			Endianness::Little
 		} else {
@@ -41,6 +45,7 @@ impl<'c> Interpreter<'c> {
 			compiler,
 			native_endianness,
 
+			ir_ptr: IrNPtr::new(function),
 			frame_stack: vec![],
 			frame_offset: 0,
 			stack: Vec::with_capacity(1024),
@@ -50,17 +55,40 @@ impl<'c> Interpreter<'c> {
 }
 
 impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
-	fn get_function(&self, func_ref: FuncRef) -> Option<&'c ir::Function> {
-		let curr_ir = self.get_current_function();
-		let ext_data = curr_ir.stencil.dfg.ext_funcs.get(func_ref).unwrap();
+	fn get_function(&self, _: FuncRef) -> Option<&'c ir::Function> {
+		unreachable!()
+	}
 
-		let ExternalName::User(uenr) = ext_data.name else {
-			unimplemented!()
+	fn get_function_from_address(&self, _: Address) -> Option<InterpreterFunctionRef<'c>> {
+		unreachable!()
+	}
+
+	fn function_address(
+		&self,
+		size: AddressSize,
+		name: &ExternalName,
+	) -> Result<Address, MemoryError> {
+		let curr_func = self.get_current_function();
+
+		let (entry, index) = match name {
+			ExternalName::User(username) => {
+				let uen = &curr_func.params.user_named_funcs()[*username];
+				(uen.namespace, uen.index)
+			}
+			ExternalName::LibCall(libcall) => {
+				// We don't properly have a "libcall" store,
+				// but we can use `LibCall::all()` and index into that.
+				let index = LibCall::all_libcalls()
+					.iter()
+					.position(|lc| lc == libcall)
+					.unwrap();
+
+				(crate::CLNS_LIBCALL, index as u32)
+			}
+			_ => unimplemented!("function_address: {:?}", name),
 		};
 
-		let uen = curr_ir.params.user_named_funcs().get(uenr).unwrap();
-
-		Some(&self.compiler.ir[uen.index as usize].1)
+		Address::from_parts(size, AddressRegion::Function, entry as u64, index as u64)
 	}
 
 	fn get_current_function(&self) -> &'c ir::Function {
@@ -204,40 +232,6 @@ impl<'c> cranelift_interpreter::state::State<'c> for Interpreter<'c> {
 		}
 
 		Ok(())
-	}
-
-	fn function_address(
-		&self,
-		size: AddressSize,
-		name: &ExternalName,
-	) -> Result<Address, MemoryError> {
-		let curr_func = self.get_current_function();
-
-		let (entry, index) = match name {
-			ExternalName::User(username) => {
-				let uen = &curr_func.params.user_named_funcs()[*username];
-				(AddressFunctionEntry::UserFunction, uen.index)
-			}
-			ExternalName::LibCall(libcall) => {
-				// We don't properly have a "libcall" store, but we can use `LibCall::all()`
-				// and index into that.
-				let index = LibCall::all_libcalls()
-					.iter()
-					.position(|lc| lc == libcall)
-					.unwrap();
-
-				(AddressFunctionEntry::LibCall, index as u32)
-			}
-			_ => unimplemented!("function_address: {:?}", name),
-		};
-
-		Address::from_parts(size, AddressRegion::Function, entry as u64, index as u64)
-	}
-
-	fn get_function_from_address(&self, address: Address) -> Option<InterpreterFunctionRef<'c>> {
-		Some(InterpreterFunctionRef::Function(
-			&self.compiler.ir[address.offset as usize].1,
-		))
 	}
 
 	/// Non-recursively resolves a global value until its address is found

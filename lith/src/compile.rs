@@ -9,12 +9,12 @@ mod test;
 use std::cmp::Ordering;
 
 use cranelift::{
-	codegen::ir,
+	codegen::ir::UserExternalName,
 	prelude::{settings::OptLevel, AbiParam, TrapCode},
 };
 use cranelift_module::FuncId;
+use crossbeam::channel::{Receiver, Sender};
 use parking_lot::Mutex;
-use util::pushvec::PushVec;
 
 use crate::{
 	filetree::{self, FileIx, FileTree},
@@ -23,8 +23,8 @@ use crate::{
 	issue::Issue,
 	runtime,
 	sym::{Location, SymbolId},
-	types::{FxDashMap, FxDashSet, FxIndexMap, Scope, SymPtr, TypeNPtr, TypePtr},
-	Error, ValVec, Version,
+	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymPtr, TypeNPtr, TypePtr},
+	CEval, Error, MonoKey, MonoSig, ValVec, Version,
 };
 
 pub(crate) use module::*;
@@ -50,7 +50,9 @@ pub struct Compiler {
 	pub(crate) types: FxDashSet<TypePtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
-	pub(crate) ir: PushVec<(FuncId, ir::Function)>,
+	pub(crate) ir: FxDashMap<UserExternalName, (FuncId, IrPtr)>,
+	pub(crate) mono: FxDashMap<MonoSig, (Sender<IrPtr>, Receiver<IrPtr>)>,
+	pub(crate) memo: FxDashMap<MonoKey, CEval>,
 	pub(crate) native: NativeSymbols,
 	pub(crate) sym_cache: SymCache,
 	// Interning
@@ -113,7 +115,9 @@ impl Compiler {
 			symbols: FxDashMap::default(),
 			types: FxDashSet::default(),
 			module: None,
-			ir: PushVec::new(),
+			ir: FxDashMap::default(),
+			memo: FxDashMap::default(),
+			mono: FxDashMap::default(),
 			native: NativeSymbols::default(),
 			sym_cache: SymCache::default(),
 			names: NameInterner::default(),
@@ -245,12 +249,19 @@ impl Compiler {
 
 			self.types.clear();
 
+			self.ir.iter().for_each(|kvp| {
+				kvp.1.drop_in_place();
+			});
+
+			self.ir.clear();
+
 			// TODO: would a `rayon::join` be faster here?
 		}
 
 		self.scopes.clear();
 		self.module = None;
-		self.ir = PushVec::new();
+		self.memo.clear();
+		self.mono.clear();
 		self.sym_cache = SymCache::default();
 		self.native.functions.clear();
 

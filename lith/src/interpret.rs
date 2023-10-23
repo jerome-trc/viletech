@@ -14,7 +14,7 @@ use cranelift::codegen::{
 	data_value::DataValue,
 	ir::{
 		condcodes::IntCC, types, AtomicRmwOp, BlockCall, Endianness, ExternalName, Function,
-		InstructionData, MemFlags, Opcode, TrapCode, Type,
+		InstructionData, LibCall, MemFlags, Opcode, TrapCode, Type,
 	},
 };
 use cranelift_interpreter::{
@@ -26,13 +26,13 @@ use cranelift_interpreter::{
 };
 use smallvec::{smallvec, SmallVec};
 
-use crate::ValVec;
+use crate::{builtins, ValVec};
 
 pub(crate) use self::state::Interpreter;
 
 /// Raised when the intepreter attempts to call a function which does not support
 /// compile-time execution, such as allocation via the garbage collector.
-pub(crate) const TRAP_NONCEVALFN: TrapCode = TrapCode::User(384);
+pub(crate) const TRAP_UNSUPPORTED: TrapCode = TrapCode::User(384);
 
 /// Interpret a single Cranelift instruction. Note that program traps and interpreter errors are
 /// distinct: a program trap results in `Ok(Flow::Trap(...))` whereas an interpretation error (e.g.
@@ -357,16 +357,23 @@ pub(crate) fn step<'c>(
 
 			let args = args();
 
-			let func = match ext_data.name {
+			match ext_data.name {
 				ExternalName::User(uenr) => {
 					let u_map = curr_func.params.user_named_funcs().get(uenr).unwrap();
 
 					match u_map.namespace {
-						crate::CLNS_BUILTIN => match u_map.index {
-							crate::builtins::UEXTIX_GCUSAGE => {
-								return Ok(ControlFlow::Trap(CraneliftTrap::User(TRAP_NONCEVALFN)));
+						crate::CLNS_BUILTIN => match builtins::Index::from(u_map.index) {
+							builtins::Index::RttiOf => todo!(),
+							builtins::Index::GcUsage => {
+								return Ok(ControlFlow::Trap(CraneliftTrap::User(TRAP_UNSUPPORTED)))
 							}
-							i => panic!("invalid builtin `UserExternalName::index`: {i}"),
+
+							// Functions which do not survive monomorphization.
+							builtins::Index::PrimitiveType | builtins::Index::TypeOf => {
+								unreachable!()
+							}
+
+							builtins::Index::__Last => unreachable!(),
 						},
 						crate::CLNS_NATIVE => {
 							let func = state
@@ -377,7 +384,9 @@ pub(crate) fn step<'c>(
 								.unwrap();
 
 							let Some(ceval_fn) = func.1.ceval else {
-								return Ok(ControlFlow::Trap(CraneliftTrap::User(TRAP_NONCEVALFN)));
+								return Ok(ControlFlow::Trap(CraneliftTrap::User(
+									TRAP_UNSUPPORTED,
+								)));
 							};
 
 							match ceval_fn(args) {
@@ -389,30 +398,62 @@ pub(crate) fn step<'c>(
 							}
 						}
 						_ => {
-							let function = state
-								.get_function(func_ref)
-								.ok_or(StepError::UnknownFunction(func_ref))?;
+							let curr_ir = state.get_current_function();
+							let ext_data = curr_ir.stencil.dfg.ext_funcs.get(func_ref).unwrap();
 
-							InterpreterFunctionRef::Function(function)
+							let ExternalName::User(uenr) = ext_data.name else {
+								unimplemented!()
+							};
+
+							let uen = curr_ir.params.user_named_funcs().get(uenr).unwrap();
+
+							let ir_ref = state.compiler.ir.get(uen).unwrap();
+
+							let make_control_flow = match inst.opcode() {
+								Opcode::Call => ControlFlow::Call,
+								Opcode::ReturnCall => ControlFlow::ReturnCall,
+								_ => unreachable!(),
+							};
+
+							state.ir_ptr.store(ir_ref.1);
+							let ir = state.ir_ptr.as_ref();
+							let ifnref = InterpreterFunctionRef::Function(ir);
+							call_func(ifnref, args, make_control_flow)?
 						}
 					}
 				}
-				ExternalName::LibCall(libcall) => InterpreterFunctionRef::LibCall(libcall),
+				ExternalName::LibCall(libcall) => {
+					let make_control_flow = match inst.opcode() {
+						Opcode::Call => ControlFlow::Call,
+						Opcode::ReturnCall => ControlFlow::ReturnCall,
+						_ => unreachable!(),
+					};
+
+					call_func(
+						InterpreterFunctionRef::LibCall(libcall),
+						args,
+						make_control_flow,
+					)?
+				}
 				ExternalName::TestCase(_) | ExternalName::KnownSymbol(_) => unimplemented!(),
-			};
-
-			let make_control_flow = match inst.opcode() {
-				Opcode::Call => ControlFlow::Call,
-				Opcode::ReturnCall => ControlFlow::ReturnCall,
-				_ => unreachable!(),
-			};
-
-			call_func(func, args, make_control_flow)?
+			}
 		}
 		Opcode::CallIndirect | Opcode::ReturnCallIndirect => {
 			let args = args();
 			let addr_dv = DataValue::I64(arg(0).into_int_unsigned()? as i64);
 			let addr = Address::try_from(addr_dv.clone()).map_err(StepError::MemoryError)?;
+
+			match addr.entry as u32 {
+				crate::CLNS_LIBCALL => {
+					let libcall = LibCall::all_libcalls()
+						.get(addr.offset as usize)
+						.copied()
+						.map(InterpreterFunctionRef::from);
+				}
+				crate::CLNS_BUILTIN => {}
+				crate::CLNS_NATIVE => {}
+				user => {}
+			}
 
 			let func = state
 				.get_function_from_address(addr)
@@ -441,6 +482,7 @@ pub(crate) fn step<'c>(
 				.ok_or(StepError::UnknownFunction(func_ref))?;
 
 			let addr_ty = ictx.controlling_type().unwrap();
+
 			assign_or_memtrap({
 				AddressSize::try_from(addr_ty).and_then(|addr_size| {
 					let addr = state.function_address(addr_size, &ext_data.name)?;

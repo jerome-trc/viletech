@@ -11,8 +11,8 @@ use crate::{
 	front::FrontendContext,
 	issue::{self, Issue},
 	sym::{
-		self, Confinement, Datum, Function, FunctionFlags, FunctionKind, Inlining, Location,
-		ParamRef, ParamType, Parameter, SymConst, SymConstInit, Symbol, Visibility,
+		self, Confinement, ConstInit, Datum, Function, FunctionFlags, FunctionKind, Inlining,
+		Location, ParamRef, ParamType, Parameter, SymConst, Symbol, Visibility,
 	},
 	types::{Scope, SymPtr, TypeNPtr},
 	Compiler, LibMeta,
@@ -113,15 +113,28 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 		let param_list = ast.params().unwrap();
 
 		for param in param_list.iter() {
+			let ptype = process_param_type_spec(param.type_spec().unwrap());
+
+			let default = match (param.default(), &ptype) {
+				(None, ParamType::Normal(_)) | (None, ParamType::Any) | (None, ParamType::Type) => {
+					None
+				}
+				(Some(_), ParamType::Normal(_)) | (Some(_), ParamType::Any) => {
+					Some(ConstInit::Value(PushVec::new()))
+				}
+				(Some(_), ParamType::Type) => Some(ConstInit::Type(TypeNPtr::null())),
+			};
+
 			datum.params.push(Parameter {
 				name: ctx.names.intern(&ast.name().unwrap()),
-				sigtype: process_param_type_spec(param.type_spec().unwrap()),
+				ptype,
 				consteval: param.is_const(),
 				reference: match param.ref_spec() {
 					ast::ParamRefSpec::None => ParamRef::None,
 					ast::ParamRefSpec::Ref(_) => ParamRef::Immutable,
 					ast::ParamRefSpec::RefVar(_, _) => ParamRef::Mutable,
 				},
+				default,
 			});
 		}
 
@@ -218,8 +231,8 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 		let tspec = process_type_spec(ast.type_spec().unwrap());
 
 		let init = match tspec {
-			sym::TypeSpec::Type => SymConstInit::Type(TypeNPtr::null()),
-			sym::TypeSpec::Normal(_) => SymConstInit::Value(PushVec::default()),
+			sym::TypeSpec::Type => ConstInit::Type(TypeNPtr::null()),
+			sym::TypeSpec::Normal(_) => ConstInit::Value(PushVec::default()),
 		};
 
 		let datum = SymConst {

@@ -3,6 +3,7 @@
 
 use std::hash::BuildHasherDefault;
 
+use cranelift::codegen::ir;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 
@@ -21,13 +22,18 @@ pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHa
 pub(crate) type FxDashSet<K> = dashmap::DashSet<K, BuildHasherDefault<FxHasher>>;
 
 pub(crate) type AbiType = cranelift::codegen::ir::Type;
+#[allow(unused)]
 pub(crate) type AbiTypes = SmallVec<[AbiType; 1]>;
 
 pub(crate) type SymPtr = APtr<Symbol>;
+#[allow(unused)]
 pub(crate) type SymNPtr = NPtr<Symbol>;
 
 pub(crate) type TypePtr = APtr<TypeDef>;
 pub(crate) type TypeNPtr = NPtr<TypeDef>;
+
+pub(crate) type IrPtr = APtr<ir::Function>;
+pub(crate) type IrNPtr = NPtr<ir::Function>;
 
 pub(crate) type CEvalIntrin = fn(&SemaContext, ast::ArgList) -> CEval;
 

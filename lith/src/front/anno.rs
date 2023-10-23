@@ -5,6 +5,7 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast::{self, LitToken},
+	builtins,
 	issue::{self, Issue},
 	sym::{self, Confinement, FunctionFlags, FunctionKind, Inlining},
 };
@@ -69,17 +70,41 @@ pub(super) fn builtin_fndecl(
 			datum.kind = FunctionKind::Builtin {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
-					index: crate::builtins::UEXTIX_PRIMITIVETYPE,
+					index: builtins::Index::PrimitiveType as u32,
 				},
 				rt: None,
-				ceval: Some(crate::builtins::primitive_type),
+				ceval: Some(builtins::primitive_type),
 			};
 		}
 		"typeOf" => {
-			// TODO
+			datum.kind = FunctionKind::Builtin {
+				uext_name: UserExternalName {
+					namespace: crate::CLNS_BUILTIN,
+					index: builtins::Index::TypeOf as u32,
+				},
+				rt: None,
+				ceval: Some(builtins::type_of),
+			};
 		}
 		"rttiOf" => {
-			// TODO
+			datum.kind = FunctionKind::Builtin {
+				uext_name: UserExternalName {
+					namespace: crate::CLNS_BUILTIN,
+					index: builtins::Index::RttiOf as u32,
+				},
+				rt: None,
+				ceval: Some(builtins::rtti_of),
+			};
+		}
+		"gcUsage" => {
+			datum.kind = FunctionKind::Builtin {
+				uext_name: UserExternalName {
+					namespace: crate::CLNS_BUILTIN,
+					index: builtins::Index::GcUsage as u32,
+				},
+				rt: Some(builtins::gc_usage as *const u8),
+				ceval: None,
+			};
 		}
 		other => panic!("unknown baselib builtin name: `{other}`"),
 	}
@@ -315,7 +340,7 @@ pub(super) fn native_fndecl(
 			namespace: crate::CLNS_NATIVE,
 			index: ix as u32,
 		},
-		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr),
+		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr as *const u8),
 		ceval: nfn.ceval,
 	};
 }

@@ -2,14 +2,14 @@
 
 use std::hash::BuildHasherDefault;
 
-use cranelift::codegen::ir;
+use cranelift::codegen::ir::UserExternalName;
 use cranelift_module::{FuncId, Module};
 use rustc_hash::FxHashMap;
-use util::pushvec::PushVec;
 
 use crate::{
 	compile::{self, JitModule},
 	runtime::Runtime,
+	types::{FxDashMap, IrPtr},
 	Compiler,
 };
 
@@ -56,7 +56,7 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 		None
 	};
 
-	define_functions(
+	jit_compile_functions(
 		&compiler,
 		&mut module,
 		ir,
@@ -80,17 +80,18 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 	}
 }
 
-fn define_functions(
+fn jit_compile_functions(
 	_: &Compiler,
 	module: &mut JitModule,
-	ir: PushVec<(FuncId, ir::Function)>,
+	ir: FxDashMap<UserExternalName, (FuncId, IrPtr)>,
 	mut clif_map: Option<&mut FxHashMap<FuncId, String>>,
 	mut disasm_map: Option<&mut FxHashMap<FuncId, String>>,
 ) {
 	let mut ctx = module.make_context();
 	let want_disasm = disasm_map.is_some();
 
-	for (id, clif) in ir.into_iter() {
+	for (_, (id, ir_ptr)) in ir.into_iter() {
+		let clif = unsafe { ir_ptr.read() };
 		ctx.set_disasm(want_disasm);
 
 		if let Some(m) = clif_map.as_mut() {
