@@ -2,7 +2,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::{egui, EguiContexts};
 use viletech::{audio::AudioCore, catalog::Catalog, console::Console, input::InputCore, util};
 
-use crate::ccmd;
+use crate::{ccmd, playground::Playground};
 
 pub(crate) type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
 
@@ -13,6 +13,7 @@ pub(crate) struct ClientCommon<'w, 's> {
 	pub(crate) audio: ResMut<'w, AudioCore>,
 	pub(crate) console: ResMut<'w, Console<ccmd::Command>>,
 	pub(crate) devgui: ResMut<'w, DeveloperGui>,
+	pub(crate) playground: ResMut<'w, Playground>,
 	pub(crate) egui: EguiContexts<'w, 's>,
 }
 
@@ -65,8 +66,9 @@ impl ClientCommon<'_, '_> {
 					);
 				});
 
-				self.devgui.panel_left(ctx).show_inside(ui, |ui| {
-					match self.devgui.left {
+				self.devgui
+					.panel_left(ctx)
+					.show_inside(ui, |ui| match self.devgui.left {
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui, &self.catalog);
 						}
@@ -77,16 +79,16 @@ impl ClientCommon<'_, '_> {
 							self.console.ui(ctx, ui);
 						}
 						DevGuiStatus::Lith => {
-							// Soon!
+							self.playground.ui(ctx, ui);
 						}
 						DevGuiStatus::Vfs => {
 							self.catalog.vfs_mut().ui(ctx, ui);
 						}
-					}
-				});
+					});
 
-				self.devgui.panel_right(ctx).show_inside(ui, |ui| {
-					match self.devgui.right {
+				self.devgui
+					.panel_right(ctx)
+					.show_inside(ui, |ui| match self.devgui.right {
 						DevGuiStatus::Audio => {
 							self.audio.ui(ctx, ui, &self.catalog);
 						}
@@ -97,13 +99,12 @@ impl ClientCommon<'_, '_> {
 							self.console.ui(ctx, ui);
 						}
 						DevGuiStatus::Lith => {
-							// Soon!
+							self.playground.ui(ctx, ui);
 						}
 						DevGuiStatus::Vfs => {
 							self.catalog.vfs_mut().ui(ctx, ui);
 						}
-					}
-				});
+					});
 			});
 
 		self.devgui.open = devgui_open;

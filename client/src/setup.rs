@@ -151,6 +151,7 @@ pub(crate) fn set_window_icon(
 #[must_use]
 pub(crate) fn console(receiver: Receiver<console::Message>) -> Console<ccmd::Command> {
 	let mut console = Console::new(receiver);
+
 	console.register_command(
 		"alias",
 		ccmd::Command {

@@ -7,6 +7,7 @@ mod first;
 mod frontend;
 mod game;
 mod load;
+mod playground;
 mod setup;
 
 use std::{path::PathBuf, time::Instant};
@@ -26,6 +27,7 @@ use viletech::{
 use crate::{
 	common::{DevGuiStatus, DeveloperGui},
 	first::FirstStartup,
+	playground::Playground,
 	setup::LaunchArgs,
 };
 
@@ -113,6 +115,8 @@ VileTech Client {c_vers}
 		left: DevGuiStatus::Vfs,
 		right: DevGuiStatus::Console,
 	});
+
+	app.insert_resource(Playground::default());
 
 	app.add_systems(OnEnter(AppState::Init), first::init_on_enter);
 
