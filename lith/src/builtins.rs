@@ -12,7 +12,6 @@ use crate::{
 	CEval, SemaContext,
 };
 
-#[must_use]
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
 	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
@@ -180,18 +179,16 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 	CEval::Type(type_ptr)
 }
 
-#[must_use]
 pub(crate) fn type_of(_: &SemaContext, _: ast::ArgList) -> CEval {
 	todo!()
 }
 
-#[must_use]
 pub(crate) fn rtti_of(_: &SemaContext, _: ast::ArgList) -> CEval {
 	unimplemented!()
 }
 
 /// Returns the total memory used by the garbage collector.
-pub(crate) unsafe extern "C" fn gc_usage(_: *mut runtime::Context) -> usize {
+pub(crate) unsafe extern "C" fn gc_usage(_: *mut runtime::InContext) -> usize {
 	// TODO: just a dummy function for proof-of-concept purposes at the moment.
 	unimplemented!()
 }

@@ -49,7 +49,7 @@ impl JitModule {
 
 		for (name, nfn) in compiler.native.functions.iter() {
 			if let Some(rtn) = &nfn.rt {
-				builder.symbol(name.to_string(), rtn.ptr as *const u8);
+				builder.symbol(name.to_string(), rtn.ptr);
 			};
 		}
 

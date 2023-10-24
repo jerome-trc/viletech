@@ -7,23 +7,42 @@ use cranelift::{
 	prelude::AbiParam,
 };
 
-use crate::types::AbiType;
+use crate::{runtime, types::AbiType};
+
+#[cfg(target_pointer_width = "64")]
+const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I64;
+#[cfg(target_pointer_width = "32")]
+const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I32;
 
 /// Trait for pointers to Lithica functions (JIT, native, or intrinsic).
 ///
 /// All implementors of this type are function pointers with only one return type,
 /// since returning a stable-layout structure from a JIT function is always sound,
 /// but passing an aggregate (struct, tuple, array) to one is never sound.
-pub trait Interop: 'static + Sized {
+pub trait Interop<U>: 'static + Sized {
 	const PARAMS: &'static [AbiParam];
 	const RETURNS: &'static [AbiParam];
 }
 
-impl<RET> Interop for fn() -> RET
+impl<U: 'static> Interop<U> for fn(*mut runtime::Context<U>) {
+	const PARAMS: &'static [AbiParam] = &[AbiParam {
+		value_type: PTR_T,
+		purpose: ArgumentPurpose::Normal,
+		extension: ArgumentExtension::None,
+	}];
+
+	const RETURNS: &'static [AbiParam] = &[];
+}
+
+impl<U: 'static, RET> Interop<U> for fn(*mut runtime::Context<U>) -> RET
 where
 	RET: Native,
 {
-	const PARAMS: &'static [AbiParam] = &[];
+	const PARAMS: &'static [AbiParam] = &[AbiParam {
+		value_type: PTR_T,
+		purpose: ArgumentPurpose::Normal,
+		extension: ArgumentExtension::None,
+	}];
 
 	const RETURNS: &'static [AbiParam] = &[AbiParam {
 		value_type: RET::REPR,
@@ -35,11 +54,16 @@ where
 macro_rules! impl_interop {
 	($( $($param:ident),+ -> () );+) => {
 		$(
-			impl<$($param),+> Interop for fn($($param),+) -> ()
+			impl<U: 'static, $($param),+> Interop<U> for fn(*mut runtime::Context<U>, $($param),+) -> ()
 			where
 				$($param: Native),+,
 			{
 				const PARAMS: &'static [AbiParam] = &[
+					AbiParam {
+						value_type: PTR_T,
+						purpose: ArgumentPurpose::Normal,
+						extension: ArgumentExtension::None,
+					},
 					$(
 						AbiParam {
 							value_type: $param::REPR,
@@ -55,13 +79,18 @@ macro_rules! impl_interop {
 	};
 	($( $($param:ident),+ -> $tie:ident<$($ret:ident),+> );+) => {
 		$(
-			impl<$($param),+, $($ret),+> Interop for fn($($param),+) -> $tie<$($ret),+>
+			impl<U: 'static, $($param),+, $($ret),+> Interop<U> for fn(*mut runtime::Context<U>, $($param),+) -> $tie<$($ret),+>
 			where
 				$($param: Native),+,
 				$tie<$($ret),+>: Return,
 				$($ret: Native),+,
 			{
 				const PARAMS: &'static [AbiParam] = &[
+					AbiParam {
+						value_type: PTR_T,
+						purpose: ArgumentPurpose::Normal,
+						extension: ArgumentExtension::None,
+					},
 					$(
 						AbiParam {
 							value_type: $param::REPR,

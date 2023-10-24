@@ -6,7 +6,7 @@ mod module;
 #[cfg(test)]
 mod test;
 
-use std::cmp::Ordering;
+use std::{any::TypeId, cmp::Ordering};
 
 use cranelift::{
 	codegen::ir::UserExternalName,
@@ -21,7 +21,6 @@ use crate::{
 	intern::NameInterner,
 	interop::Interop,
 	issue::Issue,
-	runtime,
 	sym::{Location, SymbolId},
 	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymPtr, TypeNPtr, TypePtr},
 	CEval, Error, MonoKey, MonoSig, ValVec, Version,
@@ -118,7 +117,10 @@ impl Compiler {
 			ir: FxDashMap::default(),
 			memo: FxDashMap::default(),
 			mono: FxDashMap::default(),
-			native: NativeSymbols::default(),
+			native: NativeSymbols {
+				user_ctx_t: TypeId::of::<()>(),
+				functions: FxIndexMap::default(),
+			},
 			sym_cache: SymCache::default(),
 			names: NameInterner::default(),
 		};
@@ -319,8 +321,9 @@ impl Drop for Compiler {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct NativeSymbols {
+	pub(crate) user_ctx_t: TypeId,
 	pub(crate) functions: FxIndexMap<&'static str, NativeFn>,
 }
 
@@ -332,23 +335,35 @@ pub(crate) struct NativeFn {
 
 #[derive(Debug)]
 pub(crate) struct RuntimeNative {
-	pub(crate) ptr: extern "C" fn(*mut runtime::Context, ...),
+	pub(crate) ptr: *const u8,
 	pub(crate) params: &'static [AbiParam],
 	pub(crate) returns: &'static [AbiParam],
 }
 
+unsafe impl Send for RuntimeNative {}
+unsafe impl Sync for RuntimeNative {}
+
 pub type CEvalNative = fn(ValVec) -> Result<ValVec, TrapCode>;
 
 impl NativeSymbols {
+	#[must_use]
+	pub fn new<U: 'static>() -> Self {
+		Self {
+			user_ctx_t: TypeId::of::<U>(),
+			functions: FxIndexMap::default(),
+		}
+	}
+
 	/// # Safety
 	///
 	/// `runtime` must use the `extern "C"` ABI.
-	pub unsafe fn register<F: Interop>(
+	pub unsafe fn register<U: 'static, F: Interop<U>>(
 		&mut self,
 		name: &'static str,
 		runtime: Option<F>,
 		ceval: Option<CEvalNative>,
 	) {
+		assert_eq!(TypeId::of::<U>(), self.user_ctx_t);
 		assert_eq!(std::mem::size_of::<F>(), std::mem::size_of::<fn()>());
 
 		self.functions.insert(

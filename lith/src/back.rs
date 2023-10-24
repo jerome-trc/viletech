@@ -74,6 +74,7 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 			_data_rti: FxHashMap::default(),
 			_type_rti: FxHashMap::default(),
 			module,
+			user_ctx_t: compiler.native.user_ctx_t,
 		},
 		clif: clif_map,
 		disasm: disasm_map,

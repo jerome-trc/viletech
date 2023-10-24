@@ -340,7 +340,7 @@ pub(super) fn native_fndecl(
 			namespace: crate::CLNS_NATIVE,
 			index: ix as u32,
 		},
-		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr as *const u8),
+		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr),
 		ceval: nfn.ceval,
 	};
 }
