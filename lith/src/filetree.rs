@@ -71,6 +71,11 @@ impl FileTree {
 	}
 
 	#[must_use]
+	pub fn get(&self, ix: FileIx) -> Option<&Node> {
+		self.graph.node_weight(ix)
+	}
+
+	#[must_use]
 	pub fn root(&self) -> FileIx {
 		let ret = FileIx::new(0);
 		debug_assert!(matches!(&self.graph[ret], &Node::Root));
@@ -150,6 +155,48 @@ impl FileTree {
 			path: "primitive.lith".to_string(),
 		});
 		self.graph.add_edge(folder_ix, primitive_ix, ());
+	}
+
+	#[must_use]
+	pub fn add_folder(&mut self, parent: FileIx, name: &str) -> FileIx {
+		assert!(!name.eq_ignore_ascii_case("lith") && !name.eq_ignore_ascii_case("lithica"));
+
+		let parent_node = &self.graph[parent];
+
+		let base_path = match parent_node {
+			Node::Folder { path } => path,
+			Node::Root => "/",
+			Node::File { .. } => panic!(),
+		};
+
+		let full_path = base_path.to_owned() + "/" + name;
+		let ix = self.graph.add_node(Node::Folder { path: full_path });
+		self.graph.add_edge(parent, ix, ());
+		ix
+	}
+
+	#[must_use]
+	pub fn add_file(&mut self, parent: FileIx, name: &str, text: &str) -> FileIx {
+		assert!(name
+			.split('.')
+			.last()
+			.is_some_and(|ext| ext.eq_ignore_ascii_case("lith")));
+
+		let ptree = doomfront::parse(text, parse::file, LexContext::default());
+
+		let parent_node = &self.graph[parent];
+
+		let Node::Folder { path } = parent_node else {
+			panic!()
+		};
+
+		let full_path = path.to_owned() + "/" + name;
+		let ix = self.graph.add_node(Node::File {
+			path: full_path,
+			ptree,
+		});
+		self.graph.add_edge(parent, ix, ());
+		ix
 	}
 
 	/// `base` can be a directory or file.

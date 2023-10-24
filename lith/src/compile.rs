@@ -138,6 +138,8 @@ impl Compiler {
 		ret
 	}
 
+	/// The file index returned by `sourcer` must be a [`filetree::Node::Folder`].
+	/// Otherwise, this function will panic.
 	pub fn register_lib<F>(&mut self, meta: LibMeta, mut sourcer: F) -> Result<(), Vec<Error>>
 	where
 		F: FnMut(&mut FileTree) -> Result<FileIx, Vec<Error>>,
@@ -159,6 +161,11 @@ impl Compiler {
 				return Err(errs);
 			}
 		};
+
+		assert!(matches!(
+			self.ftree.graph[lib_root],
+			filetree::Node::Folder { .. }
+		));
 
 		for i in prev_ftn_count..self.ftree.graph.node_count() {
 			let ix = FileIx::new(i);
@@ -235,6 +242,11 @@ impl Compiler {
 
 	pub fn drain_issues(&mut self) -> impl Iterator<Item = Issue> + '_ {
 		self.issues.get_mut().drain(..)
+	}
+
+	#[must_use]
+	pub fn file_tree(&self) -> &FileTree {
+		&self.ftree
 	}
 
 	/// Frees all memory (excluding interned strings) and set the library back
