@@ -162,6 +162,8 @@ pub enum Error {
 	/// An annotation was used in an invalid position, e.g. `#[inline]`
 	/// on an AST element that it is not a function declaration.
 	AnnotationUsage,
+	/// A parameter with an `any_t` type specifier was assigned a default argument.
+	AnyParamDefault,
 	/// Wrong number of arguments passed to a function.
 	ArgCount,
 	/// Mismatch between argument and parameter types.

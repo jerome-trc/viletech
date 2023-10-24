@@ -119,8 +119,21 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				(None, ParamType::Normal(_)) | (None, ParamType::Any) | (None, ParamType::Type) => {
 					None
 				}
-				(Some(_), ParamType::Normal(_)) | (Some(_), ParamType::Any) => {
-					Some(ConstInit::Value(PushVec::new()))
+				(Some(_), ParamType::Normal(_)) => Some(ConstInit::Value(PushVec::new())),
+				(Some(d), ParamType::Any) => {
+					ctx.raise(
+						Issue::new(
+							ctx.path,
+							d.syntax().text_range(),
+							issue::Level::Error(issue::Error::AnyParamDefault),
+						)
+						.with_message(format!(
+							"`any_t` parameter `{}` can not have a default argument",
+							param.name().unwrap().text()
+						)),
+					);
+
+					None
 				}
 				(Some(_), ParamType::Type) => Some(ConstInit::Type(TypeNPtr::null())),
 			};
