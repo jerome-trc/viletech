@@ -205,6 +205,10 @@ pub(super) fn confine(ctx: &FrontendContext, anno: ast::Annotation, in_out: &mut
 
 // `#[crucial]` ////////////////////////////////////////////////////////////////
 
+pub(super) fn crucial_fndecl(ctx: &FrontendContext, anno: ast::Annotation) {
+	let _ = check_no_arg_list(ctx, "crucial", &anno);
+}
+
 pub(super) fn crucial_nonfndecl(ctx: &FrontendContext, anno: ast::Annotation) {
 	ctx.raise(
 		Issue::new(

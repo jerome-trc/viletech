@@ -168,7 +168,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 					super::anno::confine(ctx, anno, &mut datum.confine);
 				}
 				("crucial", None) => {
-					// Valid, but handled later by sema.
+					super::anno::crucial_fndecl(ctx, anno);
 				}
 				("inline", None) => {
 					super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
