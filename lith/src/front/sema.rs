@@ -20,7 +20,7 @@ use crate::{
 use super::{
 	ceval, func,
 	sym::{self, ConstInit, Location, SymDatum, SymbolId},
-	tsys::TypeDatum,
+	tsys::{TypeDatum, TypeDef},
 };
 
 /// The "semantic mid-section" between Lith's frontend and backend.
@@ -361,7 +361,7 @@ impl<'c> std::ops::Deref for SemaContext<'c> {
 
 impl<'c> SemaContext<'c> {
 	#[must_use]
-	pub(crate) fn intern_type(&self, typedef: TypeDatum) -> TypePtr {
+	pub(crate) fn intern_type(&self, typedef: TypeDef) -> TypePtr {
 		if let Some(ptr) = self.types.get(&typedef) {
 			return *ptr.key();
 		}

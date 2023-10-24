@@ -21,7 +21,7 @@ use super::{
 	ceval,
 	sema::{CEval, MonoSig, SemaContext},
 	sym::{self, ParamType, Symbol},
-	tsys::TypeDatum,
+	tsys::{TypeDatum, TypeDef},
 };
 
 /// `env` is the scope which the function inhabits.
@@ -319,8 +319,8 @@ fn define(
 
 // Miscellaneous details ///////////////////////////////////////////////////////
 
-fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDatum) {
-	match tdef {
+fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
+	match &tdef.datum {
 		TypeDatum::Array { inner, len } => {
 			for _ in 0..*len {
 				get_abi_params(p, inner);

@@ -13,7 +13,7 @@ use crate::{
 	front::{
 		sema::{CEval, SemaContext},
 		sym::Symbol,
-		tsys::TypeDatum,
+		tsys::TypeDef,
 	},
 	intern::NameIx,
 	mem::{APtr, NPtr},
@@ -32,8 +32,8 @@ pub(crate) type SymPtr = APtr<Symbol>;
 #[allow(unused)]
 pub(crate) type SymNPtr = NPtr<Symbol>;
 
-pub(crate) type TypePtr = APtr<TypeDatum>;
-pub(crate) type TypeNPtr = NPtr<TypeDatum>;
+pub(crate) type TypePtr = APtr<TypeDef>;
+pub(crate) type TypeNPtr = NPtr<TypeDef>;
 
 pub(crate) type IrPtr = APtr<ir::Function>;
 pub(crate) type IrNPtr = NPtr<ir::Function>;

@@ -8,7 +8,8 @@ use crate::{
 	ast,
 	front::{
 		sema::{CEval, SemaContext},
-		tsys,
+		sym::{Location, SymbolId},
+		tsys::{self, TypeDef},
 	},
 	issue::{self, Issue},
 	runtime,
@@ -17,8 +18,29 @@ use crate::{
 
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
-	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
-		let p = ctx.intern_type(tsys::TypeDatum::Primitive(datum));
+	fn lazy_init(
+		ctx: &SemaContext,
+		ptr: &TypeNPtr,
+		arg_list: ast::ArgList,
+		datum: tsys::Primitive,
+	) -> TypePtr {
+		let Some(sym_const) = arg_list.syntax().ancestors().find_map(ast::SymConst::cast) else {
+			panic!("primitive type must be assigned to a symbolic constant")
+		};
+
+		let location = Location {
+			file_ix: ctx.file_ix,
+			span: sym_const.syntax().text_range(),
+		};
+
+		let sym_ptr = ctx.symbols.get(&SymbolId::new(location)).unwrap();
+
+		let tdef = TypeDef {
+			symbol: Some(*sym_ptr),
+			datum: tsys::TypeDatum::Primitive(datum),
+		};
+
+		let p = ctx.intern_type(tdef);
 		ptr.store(p);
 		p
 	}
@@ -74,97 +96,135 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 			.void_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.void_t, tsys::Primitive::Void)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.void_t, arg_list, tsys::Primitive::Void)
+			}),
 		"bool" => ctx
 			.sym_cache
 			.bool_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.bool_t, tsys::Primitive::Bool)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.bool_t, arg_list, tsys::Primitive::Bool)
+			}),
 		"i8" => ctx
 			.sym_cache
 			.i8_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i8_t, tsys::Primitive::I8)),
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i8_t, arg_list, tsys::Primitive::I8)),
 		"u8" => ctx
 			.sym_cache
 			.u8_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u8_t, tsys::Primitive::U8)),
+			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u8_t, arg_list, tsys::Primitive::U8)),
 		"i16" => ctx
 			.sym_cache
 			.i16_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i16_t, tsys::Primitive::I16)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i16_t, arg_list, tsys::Primitive::I16)
+			}),
 		"u16" => ctx
 			.sym_cache
 			.u16_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u16_t, tsys::Primitive::U16)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u16_t, arg_list, tsys::Primitive::U16)
+			}),
 		"i32" => ctx
 			.sym_cache
 			.i32_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i32_t, tsys::Primitive::I32)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i32_t, arg_list, tsys::Primitive::I32)
+			}),
 		"u32" => ctx
 			.sym_cache
 			.u32_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u32_t, tsys::Primitive::U32)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u32_t, arg_list, tsys::Primitive::U32)
+			}),
 		"i64" => ctx
 			.sym_cache
 			.i64_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i64_t, tsys::Primitive::I64)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i64_t, arg_list, tsys::Primitive::I64)
+			}),
 		"u64" => ctx
 			.sym_cache
 			.u64_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u64_t, tsys::Primitive::U64)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u64_t, arg_list, tsys::Primitive::U64)
+			}),
 		"i128" => ctx
 			.sym_cache
 			.i128_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.i128_t, tsys::Primitive::I128)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.i128_t, arg_list, tsys::Primitive::I128)
+			}),
 		"u128" => ctx
 			.sym_cache
 			.u128_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.u128_t, tsys::Primitive::U128)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.u128_t, arg_list, tsys::Primitive::U128)
+			}),
 		"f32" => ctx
 			.sym_cache
 			.f32_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f32_t, tsys::Primitive::F32)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.f32_t, arg_list, tsys::Primitive::F32)
+			}),
 		"f64" => ctx
 			.sym_cache
 			.f64_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.f64_t, tsys::Primitive::F64)),
+			.unwrap_or_else(|| {
+				lazy_init(ctx, &ctx.sym_cache.f64_t, arg_list, tsys::Primitive::F64)
+			}),
 		"iname_t" => ctx
 			.sym_cache
 			.iname_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.iname_t, tsys::Primitive::IName)),
+			.unwrap_or_else(|| {
+				lazy_init(
+					ctx,
+					&ctx.sym_cache.iname_t,
+					arg_list,
+					tsys::Primitive::IName,
+				)
+			}),
 		"never_t" => ctx
 			.sym_cache
 			.never_t
 			.as_ptr()
 			.map(TypePtr::new)
-			.unwrap_or_else(|| lazy_init(ctx, &ctx.sym_cache.never_t, tsys::Primitive::Never)),
+			.unwrap_or_else(|| {
+				lazy_init(
+					ctx,
+					&ctx.sym_cache.never_t,
+					arg_list,
+					tsys::Primitive::Never,
+				)
+			}),
 		other => {
 			ctx.raise(
 				Issue::new(

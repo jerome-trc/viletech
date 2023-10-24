@@ -4,10 +4,16 @@ use cranelift::codegen::ir::types as abi_t;
 
 use crate::{
 	intern::NameIx,
-	types::{AbiType, TypeNPtr, TypePtr},
+	types::{AbiType, SymPtr, TypeNPtr, TypePtr},
 };
 
 use super::sym::Visibility;
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub(crate) struct TypeDef {
+	pub(crate) symbol: Option<SymPtr>,
+	pub(crate) datum: TypeDatum,
+}
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum TypeDatum {
