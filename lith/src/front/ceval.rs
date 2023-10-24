@@ -111,7 +111,7 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 	let d_fn = match &callable_t.datum {
 		SymDatum::Function(d_fn) => d_fn,
-		SymDatum::Container(_) => {
+		SymDatum::Container(_, _) => {
 			ctx.raise(
 				Issue::new(
 					ctx.path,
@@ -178,7 +178,7 @@ fn expr_ident(ctx: &SemaContext, env: &Scope, ast: ast::ExprIdent) -> CEval {
 	};
 
 	match &sym_ptr.datum {
-		SymDatum::Container(scope) => CEval::Container(scope.clone()),
+		SymDatum::Container(_, scope) => CEval::Container(scope.clone()),
 		SymDatum::Function(_) => CEval::Function(sym_ptr.inner),
 		SymDatum::SymConst(_) => todo!("lazy define"),
 		SymDatum::Local(_) => unreachable!(),

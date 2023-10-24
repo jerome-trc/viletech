@@ -78,7 +78,7 @@ impl From<UserExternalName> for SymbolId {
 #[derive(Debug)]
 pub(crate) enum SymDatum {
 	/// In a `* => rename` import, this is the type of `rename`.
-	Container(Scope),
+	Container(FileIx, Scope),
 	Function(Function),
 	Local(LocalVar),
 	SymConst(SymConst),

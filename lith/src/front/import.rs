@@ -304,7 +304,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	let imp_sym = Symbol {
 		location,
-		datum: SymDatum::Container(imports),
+		datum: SymDatum::Container(importee, imports),
 	};
 
 	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
