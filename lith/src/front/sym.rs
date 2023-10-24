@@ -19,7 +19,7 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct Symbol {
 	pub(crate) location: Location,
-	pub(crate) datum: Datum,
+	pub(crate) datum: SymDatum,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -76,7 +76,7 @@ impl From<UserExternalName> for SymbolId {
 }
 
 #[derive(Debug)]
-pub(crate) enum Datum {
+pub(crate) enum SymDatum {
 	/// In a `* => rename` import, this is the type of `rename`.
 	Container(Scope),
 	Function(Function),

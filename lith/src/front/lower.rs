@@ -13,7 +13,7 @@ use super::{
 	ceval,
 	func::Translator,
 	sema::{CEval, SemaContext},
-	sym::{Datum, LocalVar, Location, Symbol, SymbolId},
+	sym::{LocalVar, Location, SymDatum, Symbol, SymbolId},
 };
 
 fn process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {
@@ -99,7 +99,7 @@ fn lower_stmt_bind(tlat: &mut Translator, ast: ast::StmtBind) {
 
 	let sym = Symbol {
 		location,
-		datum: Datum::Local(local),
+		datum: SymDatum::Local(local),
 	};
 
 	tlat.ctx

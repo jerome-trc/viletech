@@ -24,7 +24,7 @@ use crate::{
 	Compiler, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
-use self::sym::{Datum, Location, Symbol, SymbolId};
+use self::sym::{Location, SymDatum, Symbol, SymbolId};
 
 struct FrontendContext<'c> {
 	compiler: &'c Compiler,
@@ -44,7 +44,7 @@ impl FrontendContext<'_> {
 		mut init: F,
 	) -> Result<(), SymPtr>
 	where
-		F: FnMut() -> Option<Datum>,
+		F: FnMut() -> Option<SymDatum>,
 	{
 		let location = Location {
 			file_ix: self.file_ix,

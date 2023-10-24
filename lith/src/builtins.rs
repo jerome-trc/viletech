@@ -18,7 +18,7 @@ use crate::{
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
 	#[must_use]
 	fn lazy_init(ctx: &SemaContext, ptr: &TypeNPtr, datum: tsys::Primitive) -> TypePtr {
-		let p = ctx.intern_type(tsys::TypeDef::Primitive(datum));
+		let p = ctx.intern_type(tsys::TypeDatum::Primitive(datum));
 		ptr.store(p);
 		p
 	}

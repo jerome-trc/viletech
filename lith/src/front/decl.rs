@@ -15,8 +15,8 @@ use crate::{
 };
 
 use super::sym::{
-	self, Confinement, ConstInit, Datum, Function, FunctionFlags, FunctionKind, Inlining, ParamRef,
-	ParamType, Parameter, SymConst, Symbol, Visibility,
+	self, Confinement, ConstInit, Function, FunctionFlags, FunctionKind, Inlining, ParamRef,
+	ParamType, Parameter, SymConst, SymDatum, Symbol, Visibility,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.
@@ -242,7 +242,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			}
 		}
 
-		Some(Datum::Function(datum))
+		Some(SymDatum::Function(datum))
 	};
 
 	let result = ctx.declare(scope, &ident, ast.syntax(), init);
@@ -299,7 +299,7 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 			}
 		}
 
-		Some(Datum::SymConst(datum))
+		Some(SymDatum::SymConst(datum))
 	};
 
 	let result = ctx.declare(scope, &ident, ast.syntax(), init);

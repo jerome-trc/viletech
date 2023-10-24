@@ -19,8 +19,8 @@ use crate::{
 
 use super::{
 	ceval, func,
-	sym::{self, ConstInit, Datum, Location, SymbolId},
-	tsys::TypeDef,
+	sym::{self, ConstInit, Location, SymDatum, SymbolId},
+	tsys::TypeDatum,
 };
 
 /// The "semantic mid-section" between Lith's frontend and backend.
@@ -161,7 +161,7 @@ fn check_function(ctx: &SemaContext, ast: ast::FunctionDecl, sym_id: SymbolId) {
 
 	let kvp = ctx.symbols.get(&sym_id).unwrap();
 
-	let Datum::Function(d_fn) = &kvp.datum else {
+	let SymDatum::Function(d_fn) = &kvp.datum else {
 		unreachable!()
 	};
 
@@ -174,7 +174,7 @@ fn check_function(ctx: &SemaContext, ast: ast::FunctionDecl, sym_id: SymbolId) {
 fn check_symconst(ctx: &SemaContext, ast: ast::SymConst, sym_id: SymbolId) {
 	let kvp = ctx.symbols.get(&sym_id).unwrap();
 
-	let Datum::SymConst(d_const) = &kvp.datum else {
+	let SymDatum::SymConst(d_const) = &kvp.datum else {
 		unreachable!()
 	};
 
@@ -361,7 +361,7 @@ impl<'c> std::ops::Deref for SemaContext<'c> {
 
 impl<'c> SemaContext<'c> {
 	#[must_use]
-	pub(crate) fn intern_type(&self, typedef: TypeDef) -> TypePtr {
+	pub(crate) fn intern_type(&self, typedef: TypeDatum) -> TypePtr {
 		if let Some(ptr) = self.types.get(&typedef) {
 			return *ptr.key();
 		}

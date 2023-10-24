@@ -25,7 +25,7 @@ use crate::{
 use super::{
 	func,
 	sema::{CEval, CeValue, SemaContext},
-	sym::{self, Datum, FunctionKind, Symbol},
+	sym::{self, FunctionKind, SymDatum, Symbol},
 };
 
 // Expression evaluation ///////////////////////////////////////////////////////
@@ -110,8 +110,8 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 	};
 
 	let d_fn = match &callable_t.datum {
-		Datum::Function(d_fn) => d_fn,
-		Datum::Container(_) => {
+		SymDatum::Function(d_fn) => d_fn,
+		SymDatum::Container(_) => {
 			ctx.raise(
 				Issue::new(
 					ctx.path,
@@ -125,7 +125,7 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 			return CEval::Err;
 		}
-		Datum::Local(_) => {
+		SymDatum::Local(_) => {
 			ctx.raise(
 				Issue::new(
 					ctx.path,
@@ -137,7 +137,7 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 			return CEval::Err;
 		}
-		Datum::SymConst(_) => {
+		SymDatum::SymConst(_) => {
 			ctx.raise(
 				Issue::new(
 					ctx.path,
@@ -178,10 +178,10 @@ fn expr_ident(ctx: &SemaContext, env: &Scope, ast: ast::ExprIdent) -> CEval {
 	};
 
 	match &sym_ptr.datum {
-		Datum::Container(scope) => CEval::Container(scope.clone()),
-		Datum::Function(_) => CEval::Function(sym_ptr.inner),
-		Datum::SymConst(_) => todo!("lazy define"),
-		Datum::Local(_) => unreachable!(),
+		SymDatum::Container(scope) => CEval::Container(scope.clone()),
+		SymDatum::Function(_) => CEval::Function(sym_ptr.inner),
+		SymDatum::SymConst(_) => todo!("lazy define"),
+		SymDatum::Local(_) => unreachable!(),
 	}
 }
 

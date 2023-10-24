@@ -10,7 +10,7 @@ use crate::{
 use super::sym::Visibility;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub(crate) enum TypeDef {
+pub(crate) enum TypeDatum {
 	Array { inner: TypePtr, len: usize },
 	Primitive(Primitive),
 	Structure(Structure),

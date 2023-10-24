@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-	sym::{Datum, Symbol, SymbolId},
+	sym::{SymDatum, Symbol, SymbolId},
 	FrontendContext,
 };
 
@@ -304,7 +304,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	let imp_sym = Symbol {
 		location,
-		datum: Datum::Container(imports),
+		datum: SymDatum::Container(imports),
 	};
 
 	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
