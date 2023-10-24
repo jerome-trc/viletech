@@ -5,6 +5,8 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+pub extern crate ariadne;
+
 pub(crate) mod back;
 pub(crate) mod builtins;
 pub(crate) mod front;
