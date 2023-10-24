@@ -6,10 +6,13 @@ use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast,
+	front::{
+		sema::{CEval, SemaContext},
+		tsys,
+	},
 	issue::{self, Issue},
-	runtime, tsys,
+	runtime,
 	types::{TypeNPtr, TypePtr},
-	CEval, SemaContext,
 };
 
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {

@@ -6,16 +6,17 @@ use util::pushvec::PushVec;
 
 use crate::{
 	ast,
-	compile::{self},
+	compile::{self, LibMeta},
 	filetree::{self, FileIx},
-	front::FrontendContext,
+	front::{sym::Location, FrontendContext},
 	issue::{self, Issue},
-	sym::{
-		self, Confinement, ConstInit, Datum, Function, FunctionFlags, FunctionKind, Inlining,
-		Location, ParamRef, ParamType, Parameter, SymConst, Symbol, Visibility,
-	},
 	types::{Scope, SymPtr, TypeNPtr},
-	Compiler, LibMeta,
+	Compiler,
+};
+
+use super::sym::{
+	self, Confinement, ConstInit, Datum, Function, FunctionFlags, FunctionKind, Inlining, ParamRef,
+	ParamType, Parameter, SymConst, Symbol, Visibility,
 };
 
 /// The first stage in the Lith frontend; declaring symbols.

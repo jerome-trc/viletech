@@ -9,21 +9,24 @@
 //! - a compiler builtin will be passed the argument list's AST
 //! - a native-registered function will be passed the argument list's AST
 
-use cranelift::codegen::{data_value::DataValue, ir};
+use cranelift::codegen::data_value::DataValue;
 use cranelift_interpreter::{instruction::DfgInstructionContext, step::ControlFlow};
 use doomfront::rowan::ast::AstNode;
 use smallvec::smallvec;
 
 use crate::{
 	ast,
+	compile::CEvalNative,
 	interpret::{self, Interpreter},
 	issue::{self, Issue},
-	sym::{self, Datum, FunctionKind, Symbol},
 	types::{CEvalIntrin, Scope},
-	CEval, CEvalNative, CeValue, SemaContext,
 };
 
-use super::func;
+use super::{
+	func,
+	sema::{CEval, CeValue, SemaContext},
+	sym::{self, Datum, FunctionKind, Symbol},
+};
 
 // Expression evaluation ///////////////////////////////////////////////////////
 

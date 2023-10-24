@@ -18,15 +18,23 @@ use parking_lot::Mutex;
 
 use crate::{
 	filetree::{self, FileIx, FileTree},
+	front::{
+		sema::{CEval, MonoKey, MonoSig},
+		sym::{Location, SymbolId},
+	},
 	intern::NameInterner,
 	interop::Interop,
 	issue::Issue,
-	sym::{Location, SymbolId},
 	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymPtr, TypeNPtr, TypePtr},
-	CEval, Error, MonoKey, MonoSig, ValVec, Version,
+	Error, ValVec, Version,
 };
 
 pub(crate) use module::*;
+
+pub use crate::{
+	back::finalize,
+	front::{decl::declare_symbols, import::resolve_imports, sema::semantic_check},
+};
 
 /// State and context tying together the frontend, mid-section, and backend.
 #[derive(Debug)]

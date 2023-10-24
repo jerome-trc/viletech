@@ -1,8 +1,5 @@
 //! See [`semantic_check`].
 
-mod ceval;
-mod func;
-
 use cranelift::{
 	codegen::ir::SourceLoc,
 	prelude::{FunctionBuilderContext, Signature},
@@ -16,10 +13,14 @@ use crate::{
 	compile::{self, JitModule},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	sym::{self, ConstInit, Datum, Location, SymbolId},
-	tsys::TypeDef,
 	types::{Scope, SymPtr, TypePtr},
 	Compiler, ParseTree, ValVec,
+};
+
+use super::{
+	ceval, func,
+	sym::{self, ConstInit, Datum, Location, SymbolId},
+	tsys::TypeDef,
 };
 
 /// The "semantic mid-section" between Lith's frontend and backend.

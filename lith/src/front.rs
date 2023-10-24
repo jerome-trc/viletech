@@ -4,8 +4,12 @@
 //! [parsing]: crate::parse
 
 pub(crate) mod anno;
+pub(crate) mod ceval;
 pub(crate) mod decl;
+pub(crate) mod func;
 pub(crate) mod import;
+pub(crate) mod lower;
+pub(crate) mod sema;
 pub(crate) mod sym;
 pub(crate) mod tsys;
 
@@ -13,14 +17,14 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 
 use crate::{
 	ast,
+	compile::{LibMeta, LutSym},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	sym::{Datum, Location, Symbol, SymbolId},
 	types::{Scope, SymPtr},
-	Compiler, LibMeta, LutSym, ParseTree, Syn, SyntaxNode, SyntaxToken,
+	Compiler, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
-pub use self::{decl::*, import::*};
+use self::sym::{Datum, Location, Symbol, SymbolId};
 
 struct FrontendContext<'c> {
 	compiler: &'c Compiler,

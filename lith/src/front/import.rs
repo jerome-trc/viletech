@@ -4,15 +4,19 @@ use doomfront::rowan::{ast::AstNode, TextRange};
 use rayon::prelude::*;
 
 use crate::{
-	ast, compile,
+	ast,
+	compile::{self, LibMeta, LutSym},
 	filetree::{self, FileIx},
+	front::sym::Location,
 	issue::{self, Issue},
-	sym::{Datum, Location, Symbol, SymbolId},
 	types::{Scope, SymPtr},
-	Compiler, LibMeta, LutSym, Syn,
+	Compiler, Syn,
 };
 
-use super::FrontendContext;
+use super::{
+	sym::{Datum, Symbol, SymbolId},
+	FrontendContext,
+};
 
 /// The second stage in the Lith frontend; resolving container-level imports.
 pub fn resolve_imports(compiler: &mut Compiler) {

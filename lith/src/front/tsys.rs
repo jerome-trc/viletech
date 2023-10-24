@@ -4,9 +4,10 @@ use cranelift::codegen::ir::types as abi_t;
 
 use crate::{
 	intern::NameIx,
-	sym::Visibility,
 	types::{AbiType, TypeNPtr, TypePtr},
 };
+
+use super::sym::Visibility;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum TypeDef {

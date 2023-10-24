@@ -9,11 +9,14 @@ use smallvec::SmallVec;
 
 use crate::{
 	ast,
+	compile::LutSym,
+	front::{
+		sema::{CEval, SemaContext},
+		sym::Symbol,
+		tsys::TypeDef,
+	},
 	intern::NameIx,
 	mem::{APtr, NPtr},
-	sym::Symbol,
-	tsys::TypeDef,
-	CEval, LutSym, SemaContext,
 };
 
 pub(crate) type FxHamt<K, V> = im::HashMap<K, V, BuildHasherDefault<FxHasher>>;

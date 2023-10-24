@@ -10,10 +10,10 @@ use smallvec::SmallVec;
 use util::pushvec::PushVec;
 
 use crate::{
+	compile::CEvalNative,
 	filetree::FileIx,
 	intern::NameIx,
 	types::{CEvalIntrin, Scope, TypeNPtr, TypePtr},
-	CEvalNative,
 };
 
 #[derive(Debug)]

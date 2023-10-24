@@ -1,4 +1,4 @@
-//! Lowering routines from Lith ASTs to Cranelift Intermediate Format (CLIF).
+//! Interface between [`super::sema`] and [`super::lower`].
 
 use cranelift::{
 	codegen::ir::{self, UserExternalName},
@@ -8,16 +8,20 @@ use cranelift_module::Module;
 use crossbeam::utils::Backoff;
 use doomfront::rowan::ast::AstNode;
 use petgraph::prelude::DiGraph;
-use smallvec::smallvec;
 
 use crate::{
 	ast,
+	front::{lower, sym::FunctionKind},
 	issue::{self, Issue},
-	sema::ceval,
-	sym::{self, Datum, FunctionKind, LocalVar, Location, ParamType, Symbol, SymbolId},
+	types::{IrPtr, Scope, TypePtr},
+	SyntaxNode,
+};
+
+use super::{
+	ceval,
+	sema::{CEval, MonoSig, SemaContext},
+	sym::{self, ParamType, Symbol},
 	tsys::TypeDef,
-	types::{IrPtr, Scope, SymPtr, TypePtr},
-	CEval, MonoSig, SemaContext, SyntaxNode,
 };
 
 /// `env` is the scope which the function inhabits.
@@ -248,7 +252,7 @@ fn define(
 			ast::CoreElement::Statement(stmt) => {
 				tlat.builder
 					.set_srcloc(ctx.make_srcloc(stmt.syntax().text_range().start()));
-				lower_statement(&mut tlat, stmt);
+				lower::statement(&mut tlat, stmt);
 			}
 			ast::CoreElement::Item(item) => {
 				ctx.raise(
@@ -313,129 +317,6 @@ fn define(
 	Ok(ir_ptr)
 }
 
-fn process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {
-	let ast::Expr::Ident(e_id) = ast else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				ast.syntax().text_range(),
-				issue::Level::Error(issue::Error::Unimplemented),
-			)
-			.with_message_static("only identifiers are currently supported in type expressions"),
-		);
-
-		return Err(());
-	};
-
-	todo!()
-}
-
-fn lower_statement(tlat: &mut Translator, ast: ast::Statement) {
-	match ast {
-		ast::Statement::Bind(s_bind) => {
-			lower_stmt_bind(tlat, s_bind);
-		}
-		ast::Statement::Break(_)
-		| ast::Statement::Expr(_)
-		| ast::Statement::Continue(_)
-		| ast::Statement::Return(_) => todo!(),
-	}
-}
-
-fn lower_stmt_bind(tlat: &mut Translator, ast: ast::StmtBind) {
-	let Some(ast_tspec) = ast.type_spec() else {
-		tlat.ctx.raise(
-			Issue::new(
-				tlat.ctx.path,
-				ast.syntax().text_range(),
-				issue::Level::Error(issue::Error::Unimplemented),
-			)
-			.with_message_static("binding statement is missing a type specifier")
-			.with_note_static("type inference for binding statements is not yet implemented"),
-		);
-
-		tlat.failed = true;
-		return;
-	};
-
-	let Some(texpr) = ast_tspec.into_expr() else {
-		tlat.ctx.raise(todo!());
-		return;
-	};
-
-	let tspec = match ceval::expr(tlat.ctx, 0, todo!(), texpr) {
-		CEval::Type(t_ptr) => t_ptr,
-		CEval::Container(_) => {
-			tlat.ctx.raise(todo!());
-			return;
-		}
-		CEval::Function(_) => {
-			tlat.ctx.raise(todo!());
-			return;
-		}
-		CEval::Value(_) => {
-			tlat.ctx.raise(todo!());
-			return;
-		}
-		CEval::Err => return,
-	};
-
-	let mut local = LocalVar {
-		abi_vars: smallvec![],
-		mutable: match ast.keyword() {
-			ast::BindKeyword::Let(_) => false,
-			ast::BindKeyword::Var(_) => true,
-		},
-		tspec,
-	};
-
-	let location = Location {
-		file_ix: tlat.ctx.file_ix,
-		span: ast.syntax().text_range(),
-	};
-
-	let sym = Symbol {
-		location,
-		datum: Datum::Local(local),
-	};
-
-	tlat.ctx
-		.symbols
-		.insert(SymbolId::new(location), SymPtr::alloc(tlat.ctx.arena, sym));
-}
-
-type BlockIx = petgraph::graph::NodeIndex<petgraph::graph::DefaultIx>;
-
-type SsaValue = cranelift::prelude::Value;
-type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
-
-struct Translator<'c> {
-	ctx: &'c SemaContext<'c>,
-	failed: bool,
-	builder: FunctionBuilder<'c>,
-	cflow: DiGraph<FlowBlock, Flow>,
-	outer_scope: Scope,
-	next_var: u32,
-}
-
-#[derive(Debug)]
-enum FlowBlock {
-	Normal,
-	If,
-	Else,
-	For,
-	While,
-	Case,
-}
-
-#[derive(Debug)]
-enum Flow {
-	Pass,
-	Continue { to: BlockIx },
-	Break { to: BlockIx, break_t: TypePtr },
-	Return { ret_t: TypePtr },
-}
-
 // Miscellaneous details ///////////////////////////////////////////////////////
 
 fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
@@ -456,4 +337,36 @@ fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
 			}
 		}
 	}
+}
+
+pub(super) type BlockIx = petgraph::graph::NodeIndex<petgraph::graph::DefaultIx>;
+
+pub(super) type SsaValue = cranelift::prelude::Value;
+pub(super) type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
+
+pub(super) struct Translator<'c> {
+	pub(super) ctx: &'c SemaContext<'c>,
+	pub(super) failed: bool,
+	pub(super) builder: FunctionBuilder<'c>,
+	pub(super) cflow: DiGraph<FlowBlock, Flow>,
+	pub(super) outer_scope: Scope,
+	pub(super) next_var: u32,
+}
+
+#[derive(Debug)]
+pub(super) enum FlowBlock {
+	Normal,
+	If,
+	Else,
+	For,
+	While,
+	Case,
+}
+
+#[derive(Debug)]
+pub(super) enum Flow {
+	Pass,
+	Continue { to: BlockIx },
+	Break { to: BlockIx, break_t: TypePtr },
+	Return { ret_t: TypePtr },
 }

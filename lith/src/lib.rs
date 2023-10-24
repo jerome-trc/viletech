@@ -7,15 +7,14 @@
 
 pub(crate) mod back;
 pub(crate) mod builtins;
-pub(crate) mod compile;
 pub(crate) mod front;
 pub(crate) mod intern;
 pub(crate) mod interpret;
 pub(crate) mod mem;
-pub(crate) mod sema;
 pub(crate) mod types;
 
 pub mod ast;
+pub mod compile;
 pub mod filetree;
 pub mod interop;
 pub mod issue;
@@ -24,7 +23,9 @@ pub mod rti;
 pub mod runtime;
 pub mod syn;
 
-pub use self::{back::*, compile::*, front::*, sema::*, syn::*};
+pub use self::{compile::Compiler, syn::*};
+
+pub use cranelift::codegen::settings::OptLevel;
 
 pub type ParseTree = doomfront::ParseTree<Syn>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;

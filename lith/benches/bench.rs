@@ -1,6 +1,6 @@
 use cranelift::prelude::settings::OptLevel;
 use dashmap::DashMap;
-use lithica::Compiler;
+use lithica::{compile, Compiler};
 use util::{pushvec::PushVec, rstring::RString};
 
 criterion::criterion_group!(benches, cranelift_ops, toolchain, string_interning);
@@ -83,16 +83,16 @@ fn toolchain(crit: &mut criterion::Criterion) {
 
 	grp.bench_function("End-to-End", |bencher| {
 		bencher.iter(|| {
-			let mut compiler = Compiler::new(lithica::Config {
+			let mut compiler = Compiler::new(compile::Config {
 				opt: OptLevel::None,
 				hotswap: false,
 			});
 
 			compiler.finish_registration();
-			lithica::declare_symbols(&mut compiler);
-			lithica::resolve_imports(&mut compiler);
-			lithica::semantic_check(&mut compiler);
-			let artifacts = lithica::finalize(compiler, false, false);
+			compile::declare_symbols(&mut compiler);
+			compile::resolve_imports(&mut compiler);
+			compile::semantic_check(&mut compiler);
+			let artifacts = compile::finalize(compiler, false, false);
 			let _ = std::hint::black_box(artifacts);
 		});
 	});

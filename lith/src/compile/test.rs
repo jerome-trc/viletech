@@ -18,7 +18,7 @@ fn end_to_end() {
 
 	compiler.finish_registration();
 
-	crate::declare_symbols(&mut compiler);
+	crate::compile::declare_symbols(&mut compiler);
 
 	if compiler.any_errors() {
 		for issue in compiler.drain_issues() {
@@ -28,7 +28,7 @@ fn end_to_end() {
 		panic!();
 	}
 
-	crate::resolve_imports(&mut compiler);
+	crate::compile::resolve_imports(&mut compiler);
 
 	if compiler.any_errors() {
 		for issue in compiler.drain_issues() {
@@ -38,7 +38,7 @@ fn end_to_end() {
 		panic!();
 	}
 
-	crate::semantic_check(&mut compiler);
+	crate::compile::semantic_check(&mut compiler);
 
 	if compiler.any_errors() {
 		for issue in compiler.drain_issues() {
@@ -48,5 +48,5 @@ fn end_to_end() {
 		panic!();
 	}
 
-	let _ = crate::finalize(compiler, true, true);
+	let _ = crate::compile::finalize(compiler, true, true);
 }

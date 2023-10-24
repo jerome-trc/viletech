@@ -7,10 +7,12 @@ use crate::{
 	ast::{self, LitToken},
 	builtins,
 	issue::{self, Issue},
-	sym::{self, Confinement, FunctionFlags, FunctionKind, Inlining},
 };
 
-use super::FrontendContext;
+use super::{
+	sym::{self, Confinement, FunctionFlags, FunctionKind, Inlining},
+	FrontendContext,
+};
 
 pub(super) fn unknown_annotation_error(
 	ctx: &FrontendContext,
