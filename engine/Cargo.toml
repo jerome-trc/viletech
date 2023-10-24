@@ -27,6 +27,9 @@ features = [
 	"bevy_winit",
 	"x11",
 	"png",
+
+	# TODO: Disable this for release builds.
+	"dynamic_linking"
 ]
 
 [dependencies]
