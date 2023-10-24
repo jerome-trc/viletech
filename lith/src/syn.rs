@@ -441,6 +441,12 @@ impl Syn {
 	}
 }
 
+/// A placeholder type to prevent API breaks in the future if the lexer needs to,
+/// for instance, tokenize keywords version-sensitively.
+#[derive(Debug, Default)]
+#[non_exhaustive]
+pub struct LexContext;
+
 impl From<Syn> for rowan::SyntaxKind {
 	fn from(value: Syn) -> Self {
 		Self(value as u16)
@@ -466,11 +472,134 @@ impl doomfront::LangExt for Syn {
 	const ERR_NODE: Self::Kind = Self::Error;
 }
 
-/// A placeholder type to prevent API breaks in the future if the lexer needs to,
-/// for instance, tokenize keywords version-sensitively.
-#[derive(Debug, Default)]
-#[non_exhaustive]
-pub struct LexContext;
+impl std::fmt::Display for Syn {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Error => write!(f, "<error>"),
+			Self::FileRoot => write!(f, "file"),
+			Self::Annotation => write!(f, "annotation"),
+			Self::ArgList => write!(f, "argument list"),
+			Self::Argument => write!(f, "argument"),
+			Self::ArrayPrefix => write!(f, "array prefix"),
+			Self::BlockLabel => write!(f, "block label"),
+			Self::FunctionDecl => write!(f, "function declaration"),
+			Self::FunctionBody => write!(f, "function body"),
+			Self::Import => write!(f, "import"),
+			Self::ImportAll => write!(f, "mass import"),
+			Self::ImportEntry => write!(f, "import entry"),
+			Self::ImportList => write!(f, "import entry list"),
+			Self::Parameter => write!(f, "parameter"),
+			Self::ParamList => write!(f, "parameter list"),
+			Self::SymConst => write!(f, "symbolic constant"),
+			Self::TypeSpec => write!(f, "type specifier"),
+			Self::StmtBind => write!(f, "binding statement"),
+			Self::StmtBreak => write!(f, "`break` statement"),
+			Self::StmtContinue => write!(f, "`continue` statement"),
+			Self::StmtExpr => write!(f, "expression statement"),
+			Self::StmtReturn => write!(f, "`return` statement"),
+			Self::PatGrouped => write!(f, "grouped pattern"),
+			Self::PatIdent => write!(f, "identifier pattern"),
+			Self::PatLit => write!(f, "literal pattern"),
+			Self::PatSlice => write!(f, "slice pattern"),
+			Self::PatWildcard => write!(f, "wildcard pattern"),
+			Self::ExprBin => write!(f, "binary expression"),
+			Self::ExprCall => write!(f, "call expression"),
+			Self::ExprField => write!(f, "field expression"),
+			Self::ExprIdent => write!(f, "identifier expression"),
+			Self::ExprIndex => write!(f, "index expression"),
+			Self::ExprLit => write!(f, "literal expression"),
+			Self::ExprGroup => write!(f, "group expression"),
+			Self::ExprPostfix => write!(f, "postfix expression"),
+			Self::ExprPrefix => write!(f, "prefix expression"),
+			Self::ExprRange => write!(f, "range expression"),
+			Self::ExprType => write!(f, "type expression"),
+			Self::KwAnyT => write!(f, "`any_t`"),
+			Self::KwBreak => write!(f, "`break`"),
+			Self::KwConst => write!(f, "`const`"),
+			Self::KwContinue => write!(f, "`continue`"),
+			Self::KwFunction => write!(f, "`function`"),
+			Self::KwImport => write!(f, "`import`"),
+			Self::KwLet => write!(f, "`let`"),
+			Self::KwReturn => write!(f, "`return`"),
+			Self::KwTypeT => write!(f, "`type_t`"),
+			Self::KwVar => write!(f, "`var`"),
+			Self::Ampersand => write!(f, "`&`"),
+			Self::Ampersand2 => write!(f, "`&&`"),
+			Self::AmpersandEq => write!(f, "`&=`"),
+			Self::Ampersand2Eq => write!(f, "`&&=`"),
+			Self::AngleL => write!(f, "`<`"),
+			Self::AngleLEq => write!(f, "`<=`"),
+			Self::AngleR => write!(f, "`>`"),
+			Self::AngleREq => write!(f, "`>=`"),
+			Self::AngleL2 => write!(f, "`<<`"),
+			Self::AngleL2Eq => write!(f, "`<<=`"),
+			Self::AngleR2 => write!(f, "`>>`"),
+			Self::AngleR2Eq => write!(f, "`>>=`"),
+			Self::Asterisk => write!(f, "`*`"),
+			Self::Asterisk2 => write!(f, "`**`"),
+			Self::Asterisk2Eq => write!(f, "`**=`"),
+			Self::AsteriskEq => write!(f, "`*=`"),
+			Self::At => write!(f, "`@`"),
+			Self::Bang => write!(f, "`!`"),
+			Self::BangEq => write!(f, "`!=`"),
+			Self::BraceL => write!(f, "`{{`"),
+			Self::BraceR => write!(f, "`}}`"),
+			Self::BracketL => write!(f, "`[`"),
+			Self::BracketR => write!(f, "`]`"),
+			Self::Caret => write!(f, "`^`"),
+			Self::CaretEq => write!(f, "`^=`"),
+			Self::Colon => write!(f, "`:`"),
+			Self::Colon2 => write!(f, "`::`"),
+			Self::Comma => write!(f, "`,`"),
+			Self::Dot => write!(f, "`.`"),
+			Self::Dot2 => write!(f, "`..`"),
+			Self::Dot2Eq => write!(f, "`..=`"),
+			Self::Dot3 => write!(f, "`...`"),
+			Self::Eq => write!(f, "`=`"),
+			Self::Eq2 => write!(f, "`==`"),
+			Self::Minus => write!(f, "`-`"),
+			Self::MinusEq => write!(f, "`-=`"),
+			Self::ParenL => write!(f, "`(`"),
+			Self::ParenR => write!(f, "`)`"),
+			Self::Percent => write!(f, "`%`"),
+			Self::PercentEq => write!(f, "`%=`"),
+			Self::Pipe => write!(f, "`|`"),
+			Self::PipeEq => write!(f, "`|=`"),
+			Self::Pipe2 => write!(f, "`||`"),
+			Self::Pipe2Eq => write!(f, "`||=`"),
+			Self::Plus => write!(f, "`+`"),
+			Self::Plus2 => write!(f, "`++`"),
+			Self::Plus2Eq => write!(f, "`++=`"),
+			Self::PlusEq => write!(f, "`+=`"),
+			Self::Pound => write!(f, "`#`"),
+			Self::Semicolon => write!(f, "`;`"),
+			Self::Slash => write!(f, "`/`"),
+			Self::SlashEq => write!(f, "`/=`"),
+			Self::ThickArrow => write!(f, "`=>`"),
+			Self::Tilde => write!(f, "~"),
+			Self::TildeEq2 => write!(f, "~=="),
+			Self::Underscore => write!(f, "`_`"),
+			Self::LitFalse => write!(f, "`false`"),
+			Self::LitFloat => write!(f, "floating-point literal"),
+			Self::LitInt => write!(f, "integer literal"),
+			Self::LitName => write!(f, "name literal"),
+			Self::LitString => write!(f, "string literal"),
+			Self::LitTrue => write!(f, "`true`"),
+			Self::LitVoid => write!(f, "`|_|`"),
+			Self::Ident => write!(f, "identifier"),
+			Self::DocComment => write!(f, "doc comment"),
+			Self::Comment => write!(f, "comment"),
+			Self::Whitespace => write!(f, "whitespace"),
+			Self::Unknown => write!(f, "unknown token"),
+			Self::Eof => write!(f, "end-of-input"),
+			Self::__FirstKeyword
+			| Self::__LastKeyword
+			| Self::__FirstGlyph
+			| Self::__LastGlyph
+			| Self::__Last => unreachable!(),
+		}
+	}
+}
 
 #[cfg(test)]
 mod test {

@@ -134,8 +134,7 @@ impl Playground {
 					let mut src = Source(ariadne::Source::from(self.code.clone()));
 
 					for err in ptree.errors() {
-						// TODO: `impl std::fmt::Display for Syn`
-						let mut msg = format!("parser found: {:?}\r\n", err.found().token());
+						let mut msg = format!("parser found: {}\r\n", err.found().token());
 						msg.push_str("expected one of the following:");
 
 						for expected in err.expected() {
