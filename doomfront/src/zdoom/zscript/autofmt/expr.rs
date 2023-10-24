@@ -15,8 +15,8 @@ pub fn expr(f: &mut AutoFormatter, ast: ast::Expr) -> GreenNode {
 		ast::Expr::Index(_) => todo!(),
 		ast::Expr::Literal(e_lit) => e_lit.syntax().green().into_owned(),
 		ast::Expr::Member(_) => todo!(),
-		ast::Expr::Postfix(_) => todo!(),
-		ast::Expr::Prefix(_) => todo!(),
+		ast::Expr::Postfix(e_post) => expr_postfix(f, e_post),
+		ast::Expr::Prefix(e_pre) => expr_prefix(f, e_pre),
 		ast::Expr::Super(_) => todo!(),
 		ast::Expr::Ternary(_) => todo!(),
 		ast::Expr::Vector(_) => todo!(),
@@ -55,6 +55,66 @@ pub fn expr_bin(f: &mut AutoFormatter, ast: ast::BinExpr) -> GreenNode {
 
 				if space_needed {
 					children.push(f.ctx.space());
+				}
+			}
+		}
+	}
+
+	GreenNode::new(ast.syntax().kind().into(), children)
+}
+
+#[must_use]
+pub fn expr_postfix(f: &mut AutoFormatter, ast: ast::PostfixExpr) -> GreenNode {
+	let mut children = vec![expr(f, ast.operand()).into()];
+
+	for elem in ast.syntax().children_with_tokens() {
+		match elem {
+			rowan::NodeOrToken::Token(token) => {
+				if token.kind() == Syn::Whitespace {
+					continue;
+				}
+
+				if token.kind() == Syn::Comment {
+					children.push(f.ctx.space());
+					children.push(token.green().to_owned().into());
+					children.push(f.ctx.space());
+				} else {
+					children.push(token.green().to_owned().into());
+				}
+			}
+			rowan::NodeOrToken::Node(node) => {
+				if node.kind() == Syn::Error {
+					children.push(node.green().into_owned().into());
+				}
+			}
+		}
+	}
+
+	GreenNode::new(ast.syntax().kind().into(), children)
+}
+
+#[must_use]
+pub fn expr_prefix(f: &mut AutoFormatter, ast: ast::PrefixExpr) -> GreenNode {
+	let mut children = vec![ast.operator().0.green().to_owned().into()];
+
+	for elem in ast.syntax().children_with_tokens() {
+		match elem {
+			rowan::NodeOrToken::Token(token) => {
+				if token.kind() == Syn::Whitespace {
+					continue;
+				}
+
+				if token.kind() == Syn::Comment {
+					children.push(f.ctx.space());
+					children.push(token.green().to_owned().into());
+					children.push(f.ctx.space());
+				}
+			}
+			rowan::NodeOrToken::Node(node) => {
+				if let Some(e) = ast::Expr::cast(node.clone()) {
+					children.push(expr(f, e).into());
+				} else {
+					children.push(node.green().into_owned().into());
 				}
 			}
 		}

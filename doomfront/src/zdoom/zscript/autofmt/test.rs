@@ -66,3 +66,67 @@ fn smoke_expr_bin() {
 		},
 	);
 }
+
+#[test]
+fn expr_postfix_smoke() {
+	const SAMPLE: &str = "1 ++";
+	const EXPECTED: &str = "1++";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::PostfixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_postfix,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_postfix_comment() {
+	const SAMPLE: &str = "1  /**/++";
+	const EXPECTED: &str = "1 /**/ ++";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::PostfixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_postfix,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_prefix_smoke() {
+	const SAMPLE: &str = "~  1";
+	const EXPECTED: &str = "~1";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::PrefixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_prefix,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_prefix_comment() {
+	const SAMPLE: &str = "!/* */1";
+	const EXPECTED: &str = "! /* */ 1";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::PrefixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_prefix,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
