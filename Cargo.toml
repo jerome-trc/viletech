@@ -85,7 +85,6 @@ indoc = "2.0.0"
 itertools = "0.10.5"
 kira = "0.8.3"
 logos = "0.13.0"
-md5 = "0.7.0"
 memoffset = "0.8.0"
 # Must be compatible with `nodi`.
 midly = "0.5.2"
