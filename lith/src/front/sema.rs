@@ -13,7 +13,7 @@ use crate::{
 	compile::{self, JitModule},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	types::{Scope, SymPtr, TypePtr},
+	types::{Scope, SymPtr, TypeOPtr, TypePtr},
 	Compiler, ParseTree, ValVec,
 };
 
@@ -363,12 +363,13 @@ impl<'c> SemaContext<'c> {
 	#[must_use]
 	pub(crate) fn intern_type(&self, typedef: TypeDef) -> TypePtr {
 		if let Some(ptr) = self.types.get(&typedef) {
-			return *ptr.key();
+			return TypePtr::from(ptr.key());
 		}
 
-		let ptr = TypePtr::alloc(self.arena, typedef);
+		let ptr = TypeOPtr::alloc(self.arena, typedef);
+		let ret = TypePtr::from(&ptr);
 		self.types.insert(ptr);
-		ptr
+		ret
 	}
 
 	#[must_use]

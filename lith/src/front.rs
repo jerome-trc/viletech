@@ -20,7 +20,7 @@ use crate::{
 	compile::{LibMeta, LutSym},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
-	types::{Scope, SymPtr},
+	types::{Scope, SymOPtr, SymPtr},
 	Compiler, ParseTree, Syn, SyntaxNode, SyntaxToken,
 };
 
@@ -62,11 +62,12 @@ impl FrontendContext<'_> {
 				let sym = Symbol { location, datum };
 
 				let id = SymbolId::new(sym.location);
-				let sym_ptr = SymPtr::alloc(self.arena, sym);
+				let sym_ptr = SymOPtr::alloc(self.arena, sym);
+				let lut_ptr = (&sym_ptr).into();
 				self.symbols.insert(id, sym_ptr);
 
 				vac.insert(LutSym {
-					inner: sym_ptr,
+					inner: lut_ptr,
 					imported: false,
 				});
 			}

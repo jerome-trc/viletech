@@ -13,7 +13,7 @@ use crate::{
 	},
 	issue::{self, Issue},
 	runtime,
-	types::{TypeNPtr, TypePtr},
+	types::{SymPtr, TypeNPtr, TypePtr},
 };
 
 pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
@@ -36,7 +36,7 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 		let sym_ptr = ctx.symbols.get(&SymbolId::new(location)).unwrap();
 
 		let tdef = TypeDef {
-			symbol: Some(*sym_ptr),
+			symbol: Some(SymPtr::from(sym_ptr.value())),
 			datum: tsys::TypeDatum::Primitive(datum),
 		};
 

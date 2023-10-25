@@ -9,7 +9,7 @@ use crate::{
 	filetree::{self, FileIx},
 	front::sym::Location,
 	issue::{self, Issue},
-	types::{Scope, SymPtr},
+	types::{Scope, SymOPtr, SymPtr},
 	Compiler, Syn,
 };
 
@@ -307,12 +307,13 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 		datum: SymDatum::Container(importee, imports),
 	};
 
-	let imp_sym_ptr = SymPtr::alloc(ctx.arena, imp_sym);
+	let imp_sym_ptr = SymOPtr::alloc(ctx.arena, imp_sym);
+	let lut_ptr = SymPtr::from(&imp_sym_ptr);
 
 	ctx.symbols.insert(SymbolId::new(location), imp_sym_ptr);
 
 	vac.insert(LutSym {
-		inner: imp_sym_ptr,
+		inner: lut_ptr,
 		imported: true,
 	});
 }

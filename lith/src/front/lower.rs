@@ -6,7 +6,7 @@ use smallvec::smallvec;
 use crate::{
 	ast,
 	issue::{self, Issue},
-	types::{SymPtr, TypePtr},
+	types::{SymOPtr, SymPtr, TypePtr},
 };
 
 use super::{
@@ -104,5 +104,5 @@ fn lower_stmt_bind(tlat: &mut Translator, ast: ast::StmtBind) {
 
 	tlat.ctx
 		.symbols
-		.insert(SymbolId::new(location), SymPtr::alloc(tlat.ctx.arena, sym));
+		.insert(SymbolId::new(location), SymOPtr::alloc(tlat.ctx.arena, sym));
 }

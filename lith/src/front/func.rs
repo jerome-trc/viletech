@@ -13,7 +13,7 @@ use crate::{
 	ast,
 	front::{lower, sym::FunctionKind},
 	issue::{self, Issue},
-	types::{IrPtr, Scope, TypePtr},
+	types::{IrOPtr, IrPtr, Scope, TypePtr},
 	SyntaxNode,
 };
 
@@ -311,10 +311,11 @@ fn define(
 	};
 
 	let ir = std::mem::replace(&mut cctx.func, ir::Function::new());
-	let ir_ptr = IrPtr::alloc(ctx.arena, ir);
+	let ir_ptr = IrOPtr::alloc(ctx.arena, ir);
+	let ret = IrPtr::from(&ir_ptr);
 	ctx.ir.insert(uextname, (fn_id, ir_ptr));
 
-	Ok(ir_ptr)
+	Ok(ret)
 }
 
 // Miscellaneous details ///////////////////////////////////////////////////////

@@ -21,21 +21,6 @@ impl<T> APtr<T> {
 	pub(crate) fn new(ptr: NonNull<T>) -> Self {
 		Self(ptr)
 	}
-
-	#[must_use]
-	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
-		let m = arena.alloc(obj);
-		Self(NonNull::new(m as *mut T).unwrap())
-	}
-
-	pub(crate) unsafe fn drop_in_place(self) {
-		std::ptr::drop_in_place(self.0.as_ptr());
-	}
-
-	#[must_use]
-	pub(crate) unsafe fn read(self) -> T {
-		std::ptr::read(self.0.as_ptr())
-	}
 }
 
 impl<T> PartialEq for APtr<T> {
@@ -157,6 +142,80 @@ impl<T> Hash for NPtr<T> {
 
 unsafe impl<T: Send> Send for NPtr<T> {}
 unsafe impl<T: Send + Sync> Sync for NPtr<T> {}
+
+/// Like [`APtr`] but "owning".
+#[derive(Debug)]
+pub(crate) struct OPtr<T>(NonNull<T>);
+
+impl<T> OPtr<T> {
+	#[must_use]
+	pub(crate) fn alloc(arena: &bumpalo::Bump, obj: T) -> Self {
+		let m = arena.alloc(obj);
+		Self(NonNull::new(m as *mut T).unwrap())
+	}
+
+	#[must_use]
+	pub(crate) unsafe fn read(self) -> T {
+		std::ptr::read(self.0.as_ptr())
+	}
+}
+
+impl<T> std::ops::Deref for OPtr<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { self.0.as_ref() }
+	}
+}
+
+impl<T> std::borrow::Borrow<T> for OPtr<T> {
+	fn borrow(&self) -> &T {
+		std::ops::Deref::deref(self)
+	}
+}
+
+impl<'p, T> From<&'p OPtr<T>> for APtr<T> {
+	fn from(value: &'p OPtr<T>) -> Self {
+		Self(value.0)
+	}
+}
+
+impl<T> From<APtr<T>> for OPtr<T> {
+	fn from(value: APtr<T>) -> Self {
+		Self(value.0)
+	}
+}
+
+impl<T> PartialEq for OPtr<T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0
+	}
+}
+
+impl<T> PartialEq<APtr<T>> for OPtr<T> {
+	fn eq(&self, other: &APtr<T>) -> bool {
+		self.0 == other.0
+	}
+}
+
+impl<T> Eq for OPtr<T> {}
+
+impl<T> Hash for OPtr<T> {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.0.hash(state);
+	}
+}
+
+impl<T> Drop for OPtr<T> {
+	fn drop(&mut self) {
+		unsafe {
+			std::ptr::drop_in_place(self.0.as_ptr());
+		}
+	}
+}
+
+unsafe impl<T> Send for OPtr<T> {}
+unsafe impl<T> Sync for OPtr<T> {}
 
 const _STATIC_ASSERT_CONSTRAINTS: () = {
 	assert!(AtomicCell::<Option<NonNull<u8>>>::is_lock_free());

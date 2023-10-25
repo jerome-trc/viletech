@@ -415,7 +415,7 @@ pub(crate) fn step<'c>(
 								_ => unreachable!(),
 							};
 
-							state.ir_ptr.store(ir_ref.1);
+							state.ir_ptr.store((&ir_ref.1).into());
 							let ir = state.ir_ptr.as_ref();
 							let ifnref = InterpreterFunctionRef::Function(ir);
 							call_func(ifnref, args, make_control_flow)?

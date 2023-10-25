@@ -25,7 +25,9 @@ use crate::{
 	intern::NameInterner,
 	interop::Interop,
 	issue::Issue,
-	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymPtr, TypeNPtr, TypePtr},
+	types::{
+		FxDashMap, FxDashSet, FxIndexMap, IrOPtr, IrPtr, Scope, SymOPtr, SymPtr, TypeNPtr, TypeOPtr,
+	},
 	Error, ValVec, Version,
 };
 
@@ -53,11 +55,11 @@ pub struct Compiler {
 	/// Scopes for symbols as well as containers.
 	/// Container scopes are keyed via [`Location::full_file`].
 	pub(crate) scopes: FxDashMap<Location, Scope>,
-	pub(crate) symbols: FxDashMap<SymbolId, SymPtr>,
-	pub(crate) types: FxDashSet<TypePtr>,
+	pub(crate) symbols: FxDashMap<SymbolId, SymOPtr>,
+	pub(crate) types: FxDashSet<TypeOPtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
-	pub(crate) ir: FxDashMap<UserExternalName, (FuncId, IrPtr)>,
+	pub(crate) ir: FxDashMap<UserExternalName, (FuncId, IrOPtr)>,
 	pub(crate) mono: FxDashMap<MonoSig, (Sender<IrPtr>, Receiver<IrPtr>)>,
 	pub(crate) memo: FxDashMap<MonoKey, CEval>,
 	pub(crate) native: NativeSymbols,
@@ -254,32 +256,14 @@ impl Compiler {
 	/// when [`Self::new`] was called. This allows repeated use of existing allocations
 	/// for re-try upon compiler error.
 	pub fn reset(&mut self) {
+		// TODO: Check if parallelizing the heaviest `clear` calls would be
+		// faster in the general case here.
 		self.ftree.reset();
 		self.libs.clear();
 		self.libs.push(self.baselib_meta());
-
-		unsafe {
-			self.symbols.iter().for_each(|kvp| {
-				kvp.drop_in_place();
-			});
-
-			self.symbols.clear();
-
-			self.types.iter().for_each(|kvp| {
-				kvp.drop_in_place();
-			});
-
-			self.types.clear();
-
-			self.ir.iter().for_each(|kvp| {
-				kvp.1.drop_in_place();
-			});
-
-			self.ir.clear();
-
-			// TODO: would a `rayon::join` be faster here?
-		}
-
+		self.symbols.clear();
+		self.types.clear();
+		self.ir.clear();
 		self.scopes.clear();
 		self.module = None;
 		self.memo.clear();

@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 use crate::{
 	compile::{self, JitModule},
 	runtime::Runtime,
-	types::{FxDashMap, IrPtr},
+	types::{FxDashMap, IrOPtr},
 	Compiler,
 };
 
@@ -84,7 +84,7 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 fn jit_compile_functions(
 	_: &Compiler,
 	module: &mut JitModule,
-	ir: FxDashMap<UserExternalName, (FuncId, IrPtr)>,
+	ir: FxDashMap<UserExternalName, (FuncId, IrOPtr)>,
 	mut clif_map: Option<&mut FxHashMap<FuncId, String>>,
 	mut disasm_map: Option<&mut FxHashMap<FuncId, String>>,
 ) {
