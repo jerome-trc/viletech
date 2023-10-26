@@ -52,6 +52,7 @@ pub(super) fn expr(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::Expr) ->
 		ast::Expr::Ident(e_ident) => expr_ident(ctx, env, e_ident),
 		ast::Expr::Literal(e_lit) => expr_literal(ctx, e_lit),
 		ast::Expr::Binary(_)
+		| ast::Expr::Block(_)
 		| ast::Expr::Field(_)
 		| ast::Expr::Group(_)
 		| ast::Expr::Index(_)

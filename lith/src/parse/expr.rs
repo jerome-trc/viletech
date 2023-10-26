@@ -170,6 +170,7 @@ fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syn::ExprGroup), false)
 		}
+		Syn::BraceL => (block(p, mark, Syn::ExprBlock, true), true),
 		other => (
 			p.advance_err_and_close(mark, other, Syn::Error, &[&["TODO"]]),
 			false,

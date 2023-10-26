@@ -89,6 +89,8 @@ pub enum Syn {
 	// Nodes: expressions //////////////////////////////////////////////////////
 	/// `expr operator expr`
 	ExprBin,
+	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
+	ExprBlock,
 	/// `primaryexpr arglist`
 	ExprCall,
 	/// `primaryexpr '.' (ident | namelit)`
@@ -503,6 +505,7 @@ impl std::fmt::Display for Syn {
 			Self::PatSlice => write!(f, "slice pattern"),
 			Self::PatWildcard => write!(f, "wildcard pattern"),
 			Self::ExprBin => write!(f, "binary expression"),
+			Self::ExprBlock => write!(f, "block expression"),
 			Self::ExprCall => write!(f, "call expression"),
 			Self::ExprField => write!(f, "field expression"),
 			Self::ExprIdent => write!(f, "identifier expression"),

@@ -323,6 +323,49 @@ fn smoke_expr_bin_userop() {
 	assert_eq!(ident.text(), "dot");
 }
 
+#[test]
+fn expr_block_smoke() {
+	const SAMPLE: &str = "{ let i = 0; break i; }";
+
+	let ptree: ParseTree = doomfront::parse(
+		SAMPLE,
+		|p| {
+			super::expr(p, true);
+		},
+		LexContext::default(),
+	);
+
+	assert_no_errors(&ptree);
+
+	if prettyprint_maybe(ptree.cursor()) {
+		eprintln!();
+	}
+
+	let _ = ast::Expr::cast(ptree.cursor()).unwrap();
+	let _ = ast::PrimaryExpr::cast(ptree.cursor()).unwrap();
+}
+
+#[test]
+fn expr_block_as_primary() {
+	const SAMPLE: &str = "{ break i; }.abs()";
+
+	let ptree: ParseTree = doomfront::parse(
+		SAMPLE,
+		|p| {
+			super::expr(p, true);
+		},
+		LexContext::default(),
+	);
+
+	assert_no_errors(&ptree);
+
+	if prettyprint_maybe(ptree.cursor()) {
+		eprintln!();
+	}
+
+	let _ = ast::Expr::cast(ptree.cursor()).unwrap();
+}
+
 // Patterns ////////////////////////////////////////////////////////////////////
 
 #[test]
