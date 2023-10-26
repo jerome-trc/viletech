@@ -121,9 +121,9 @@ impl std::ops::Deref for Config {
 /// of your application's run-time.
 #[derive(Debug)]
 pub struct Cache {
-	_cr: GreenElement,
-	_crlf: GreenElement,
-	_lf: GreenElement,
+	cr: GreenElement,
+	crlf: GreenElement,
+	lf: GreenElement,
 	spaces: [GreenElement; 3],
 	_tabs: [GreenElement; 3],
 
@@ -157,9 +157,9 @@ impl Cache {
 impl Default for Cache {
 	fn default() -> Self {
 		Self {
-			_cr: GreenToken::new(Syn::Whitespace.into(), "\r").into(),
-			_crlf: GreenToken::new(Syn::Whitespace.into(), "\r\n").into(),
-			_lf: GreenToken::new(Syn::Whitespace.into(), "\n").into(),
+			cr: GreenToken::new(Syn::Whitespace.into(), "\r").into(),
+			crlf: GreenToken::new(Syn::Whitespace.into(), "\r\n").into(),
+			lf: GreenToken::new(Syn::Whitespace.into(), "\n").into(),
 			spaces: [
 				GreenToken::new(Syn::Whitespace.into(), " ").into(),
 				GreenToken::new(Syn::Whitespace.into(), "  ").into(),
@@ -189,5 +189,16 @@ impl Default for Cache {
 			_question: GreenToken::new(Syn::Question.into(), "?").into(),
 			_semicolon: GreenToken::new(Syn::Semicolon.into(), ";").into(),
 		}
+	}
+}
+
+// Helpers /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn newline(f: &AutoFormatter) -> GreenElement {
+	match f.cfg.line_ends {
+		LineEnds::Cr => f.ctx.cr.clone(),
+		LineEnds::CrLf => f.ctx.crlf.clone(),
+		LineEnds::Lf => f.ctx.lf.clone(),
 	}
 }

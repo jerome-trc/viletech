@@ -1,24 +1,27 @@
-use rowan::{ast::AstNode, GreenNode};
+use rowan::{ast::AstNode, GreenNode, NodeOrToken};
 
-use crate::zdoom::zscript::{ast, Syn};
+use crate::{
+	zdoom::zscript::{ast, Syn},
+	GreenElement,
+};
 
 use super::AutoFormatter;
 
 #[must_use]
-pub fn expr(f: &mut AutoFormatter, ast: ast::Expr) -> GreenNode {
+pub fn expr(f: &mut AutoFormatter, ast: ast::Expr) -> GreenElement {
 	match ast {
-		ast::Expr::Binary(e_bin) => expr_bin(f, e_bin),
+		ast::Expr::Binary(e_bin) => expr_bin(f, e_bin).into(),
 		ast::Expr::Call(_) => todo!(),
 		ast::Expr::ClassCast(_) => todo!(),
 		ast::Expr::Group(_) => todo!(),
-		ast::Expr::Ident(_) => todo!(),
+		ast::Expr::Ident(e_ident) => e_ident.token().green().to_owned().into(),
 		ast::Expr::Index(_) => todo!(),
-		ast::Expr::Literal(e_lit) => e_lit.syntax().green().into_owned(),
+		ast::Expr::Literal(e_lit) => e_lit.syntax().green().into_owned().into(),
 		ast::Expr::Member(_) => todo!(),
-		ast::Expr::Postfix(e_post) => expr_postfix(f, e_post),
-		ast::Expr::Prefix(e_pre) => expr_prefix(f, e_pre),
-		ast::Expr::Super(_) => todo!(),
-		ast::Expr::Ternary(_) => todo!(),
+		ast::Expr::Postfix(e_post) => expr_postfix(f, e_post).into(),
+		ast::Expr::Prefix(e_pre) => expr_prefix(f, e_pre).into(),
+		ast::Expr::Super(e_super) => e_super.token().green().to_owned().into(),
+		ast::Expr::Ternary(e_ternary) => expr_ternary(f, e_ternary).into(),
 		ast::Expr::Vector(_) => todo!(),
 	}
 }
@@ -31,18 +34,18 @@ pub fn expr_bin(f: &mut AutoFormatter, ast: ast::BinExpr) -> GreenNode {
 
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
-			rowan::NodeOrToken::Node(node) => {
+			NodeOrToken::Node(node) => {
 				let is_rhs = ast.syntax().last_child().is_some_and(|c| c == node);
 
 				if let Some(e) = ast::Expr::cast(node) {
-					children.push(expr(f, e).into());
+					children.push(expr(f, e));
 				}
 
 				if !is_rhs {
 					children.push(f.ctx.space());
 				}
 			}
-			rowan::NodeOrToken::Token(token) => {
+			NodeOrToken::Token(token) => {
 				if token.kind() == Syn::Whitespace {
 					continue;
 				}
@@ -65,11 +68,11 @@ pub fn expr_bin(f: &mut AutoFormatter, ast: ast::BinExpr) -> GreenNode {
 
 #[must_use]
 pub fn expr_postfix(f: &mut AutoFormatter, ast: ast::PostfixExpr) -> GreenNode {
-	let mut children = vec![expr(f, ast.operand()).into()];
+	let mut children = vec![expr(f, ast.operand())];
 
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
-			rowan::NodeOrToken::Token(token) => {
+			NodeOrToken::Token(token) => {
 				if token.kind() == Syn::Whitespace {
 					continue;
 				}
@@ -82,7 +85,7 @@ pub fn expr_postfix(f: &mut AutoFormatter, ast: ast::PostfixExpr) -> GreenNode {
 					children.push(token.green().to_owned().into());
 				}
 			}
-			rowan::NodeOrToken::Node(node) => {
+			NodeOrToken::Node(node) => {
 				if node.kind() == Syn::Error {
 					children.push(node.green().into_owned().into());
 				}
@@ -99,7 +102,7 @@ pub fn expr_prefix(f: &mut AutoFormatter, ast: ast::PrefixExpr) -> GreenNode {
 
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
-			rowan::NodeOrToken::Token(token) => {
+			NodeOrToken::Token(token) => {
 				if token.kind() == Syn::Whitespace {
 					continue;
 				}
@@ -110,9 +113,50 @@ pub fn expr_prefix(f: &mut AutoFormatter, ast: ast::PrefixExpr) -> GreenNode {
 					children.push(f.ctx.space());
 				}
 			}
-			rowan::NodeOrToken::Node(node) => {
+			NodeOrToken::Node(node) => {
 				if let Some(e) = ast::Expr::cast(node.clone()) {
-					children.push(expr(f, e).into());
+					children.push(expr(f, e));
+				} else {
+					children.push(node.green().into_owned().into());
+				}
+			}
+		}
+	}
+
+	GreenNode::new(ast.syntax().kind().into(), children)
+}
+
+#[must_use]
+pub fn expr_ternary(f: &mut AutoFormatter, ast: ast::TernaryExpr) -> GreenNode {
+	let mut children = vec![];
+	let mut on_newline = false;
+
+	for elem in ast.syntax().children_with_tokens() {
+		match elem {
+			NodeOrToken::Token(token) => {
+				if token.kind() == Syn::Whitespace {
+					continue;
+				}
+
+				let need_newline = matches!(token.kind(), Syn::RegionStart | Syn::RegionEnd);
+
+				if need_newline {
+					children.push(super::newline(f));
+				} else if !on_newline {
+					children.push(f.ctx.space());
+				}
+
+				children.push(token.green().to_owned().into());
+
+				on_newline = need_newline;
+			}
+			NodeOrToken::Node(node) => {
+				if !on_newline && node.prev_sibling_or_token().is_some() {
+					children.push(f.ctx.space());
+				}
+
+				if let Some(e) = ast::Expr::cast(node.clone()) {
+					children.push(expr(f, e));
 				} else {
 					children.push(node.green().into_owned().into());
 				}

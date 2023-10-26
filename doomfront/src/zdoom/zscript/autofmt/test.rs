@@ -43,7 +43,7 @@ fn assert_text_eq(expected: &'static str, formatted: GreenNode) {
 
 	if fmt_txt != expected {
 		panic!(
-			"Expected: {nl2}{expected}{nl2} but formatting produced {nl2}{fmt_txt}{nl2}",
+			"Expected: {nl2}`{expected}`{nl2} but formatting produced {nl2}`{fmt_txt}`{nl2}",
 			nl2 = "\r\n\r\n"
 		);
 	}
@@ -127,6 +127,64 @@ fn expr_prefix_comment() {
 		expr_prefix,
 		|formatted| {
 			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_ternary_smoke() {
+	const SAMPLE: &str = "0?lorem:ipsum";
+	const EXPECTED: &str = "0 ? lorem : ipsum";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::TernaryExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_ternary,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_ternary_comments() {
+	const SAMPLE: &str = "0?/**/lorem:/**/ipsum";
+	const EXPECTED: &str = "0 ? /**/ lorem : /**/ ipsum";
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::TernaryExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_ternary,
+		|formatted| {
+			assert_text_eq(EXPECTED, formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_ternary_regions() {
+	const SAMPLE: &str = r"
+0
+#region
+?
+#endregion
+lorem
+#region
+:
+#endregion
+ipsum";
+
+	const EXPECTED: &str = SAMPLE;
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::TernaryExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_ternary,
+		|formatted| {
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
