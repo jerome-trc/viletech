@@ -45,6 +45,7 @@ bevy_egui = "0.21.0"
 bevy_quinnet = "0.5.0"
 bitflags = "2.3.1"
 bitvec = { version = "1.0.1", features = ["serde"] }
+bumpalo = "3.14.0"
 bytemuck = { version = "1.13.0", features = ["derive"] }
 byteorder = "1.4.3"
 clap = { version = "4.3.2", features = ["derive"] }
@@ -73,6 +74,7 @@ glam = { version = "0.24.0", features = [
 globset = "0.4.10"
 hashbrown = "0.12"
 home = "0.5.5"
+im = "15.1.0"
 image = { version = "0.24.6", default-features = false, features = [
 	"dds",
 	"jpeg",

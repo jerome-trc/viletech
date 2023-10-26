@@ -13,3 +13,17 @@ publish = false
 repository.workspace = true
 
 [dependencies]
+doomfront = { path = "../doomfront", features = ["zdoom"] }
+util = { package = "viletech-utils", path = "../utils" }
+
+ariadne.workspace = true
+crossbeam.workspace = true
+dashmap.workspace = true
+bitflags.workspace = true
+im.workspace = true
+parking_lot.workspace = true
+petgraph.workspace = true
+rayon.workspace = true
+regex.workspace = true
+rustc-hash.workspace = true
+smallvec.workspace = true

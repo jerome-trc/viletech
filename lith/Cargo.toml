@@ -19,12 +19,14 @@ util = { package = "viletech-utils", path = "../utils" }
 ariadne.workspace = true
 bitflags.workspace = true
 bitvec.workspace = true
+bumpalo.workspace = true
 cranelift.workspace = true
 cranelift-jit.workspace = true
 cranelift-module.workspace = true
 cranelift-interpreter.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
+im.workspace = true
 indexmap.workspace = true
 logos.workspace = true
 parking_lot.workspace = true
@@ -33,12 +35,9 @@ rayon.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
 
-# All below are tentative. They will get marked as workspace dependencies if/as
-# they prove to be sound and more performant than alternatives.
+# All dependencies specified below are tentative.
 backtrace = "0.3.69"
-bumpalo = "3.14.0"
 cee-scape = "0.1.6"
-im = "15.1.0"
 
 [[bench]]
 name = "bench"
