@@ -4612,6 +4612,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "seize"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e5739de653b129b0a59da381599cf17caf24bc586f6a797c52d3d6147c5b85a"
+dependencies = [
+ "num_cpus",
+ "once_cell",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.163"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5608,6 +5618,7 @@ dependencies = [
  "rayon",
  "rpds",
  "rustc-hash",
+ "seize",
  "sfmt",
  "sharded-slab",
  "slotmap",

@@ -28,14 +28,6 @@ name = "deref"
 harness = false
 
 [[bench]]
-name = "epoch"
-harness = false
-
-[[bench]]
-name = "haphazard"
-harness = false
-
-[[bench]]
 name = "hashing"
 harness = false
 
@@ -53,6 +45,10 @@ harness = false
 
 [[bench]]
 name = "prng"
+harness = false
+
+[[bench]]
+name = "reclamation"
 harness = false
 
 [[bench]]
@@ -92,6 +88,7 @@ rand_core = "0.6.4"
 rayon.workspace = true
 rpds = "1.0.1"
 rustc-hash.workspace = true
+seize = "0.2.5"
 sfmt = "0.7.0"
 sharded-slab = "0.1.4"
 slotmap.workspace = true
