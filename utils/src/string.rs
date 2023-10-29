@@ -9,6 +9,20 @@ use arrayvec::ArrayString;
 
 use crate::lazy_regex;
 
+/// A generic helper for providing a [`std::fmt::Display`] implementation to `T`
+/// when `T` requires context (`C`) to be formatted.
+pub struct AnyDisplay<'t, 'c, T, C>(
+	pub &'t T,
+	pub &'c C,
+	pub fn(&T, &C, &mut std::fmt::Formatter) -> std::fmt::Result,
+);
+
+impl<'t, 'c, T, C> std::fmt::Display for AnyDisplay<'t, 'c, T, C> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		(self.2)(self.0, self.1, f)
+	}
+}
+
 /// A "ZDoom string", which compares and hashes case-insensitively.
 #[derive(Debug, Default, Clone)]
 #[repr(transparent)]
