@@ -11,6 +11,12 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 		t @ Syn::KwReturn => {
 			p.advance(t);
 			trivia_0plus(p);
+
+			if !p.at(Syn::Semicolon) {
+				super::expr(p, true);
+				trivia_0plus(p);
+			}
+
 			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
 			p.close(mark, Syn::StmtReturn);
 		}

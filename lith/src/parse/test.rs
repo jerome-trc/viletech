@@ -543,6 +543,28 @@ fn smoke_stmt_expr() {
 	}
 }
 
+#[test]
+fn stmt_return_smoke() {
+	const SAMPLES: &[&str] = &["return;", "return ;", "return 0;", "return 0 ;"];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample,
+			|p| {
+				let mark = p.open();
+				super::statement(p, mark);
+			},
+			LexContext::default(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+	}
+}
+
 // Items ///////////////////////////////////////////////////////////////////////
 
 #[test]
