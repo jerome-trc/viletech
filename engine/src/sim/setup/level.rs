@@ -12,6 +12,7 @@ use indexmap::IndexMap;
 use parking_lot::Mutex;
 use smallvec::SmallVec;
 use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
+use util::sparseset::SparseSet;
 
 use crate::{
 	catalog::dobj,
@@ -23,7 +24,6 @@ use crate::{
 		line::{self, Line},
 		sector::{self, Sector},
 	},
-	sparse::SparseSet,
 };
 
 pub(crate) fn setup(

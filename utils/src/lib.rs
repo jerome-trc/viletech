@@ -18,6 +18,8 @@ pub mod path;
 pub mod pushvec;
 pub mod rstring;
 pub mod simd;
+#[cfg(feature = "sparseset")]
+pub mod sparseset;
 pub mod string;
 
 #[cfg(feature = "archery")]

@@ -8,11 +8,11 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use util::sparseset::{SparseSet, SparseSetIndex};
 
 use crate::{
 	catalog::dobj,
 	level::repr::{LevelDef, UdmfValue, Vertex},
-	sparse::{SparseSet, SparseSetIndex},
 };
 
 use super::{line, sector::Sector};

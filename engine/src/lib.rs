@@ -25,7 +25,6 @@ pub extern crate mus;
 pub mod player;
 pub mod rng;
 pub mod sim;
-pub mod sparse;
 pub mod terminal;
 pub mod user;
 pub extern crate util;
