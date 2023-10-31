@@ -372,7 +372,7 @@ pub enum Syn {
 	#[regex("0o[0-7_]*[0-7][0-7_]*((?:u|i)(?:8|16|32|64|128))?")]
 	#[regex("0x[0-9a-fA-F_]*[0-9a-fA-F][0-9a-fA-F_]*((?:u|i)(?:8|16|32|64|128))?")]
 	LitInt,
-	#[regex("'[^''\n]*'")]
+	#[regex("'[^'\n]*'")]
 	LitName,
 	/// Uses the same syntax as Rust string literals.
 	#[regex(
