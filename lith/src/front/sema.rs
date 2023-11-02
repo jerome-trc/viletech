@@ -1,5 +1,7 @@
 //! See [`semantic_check`].
 
+use std::cell::RefCell;
+
 use cranelift::{
 	codegen::ir::SourceLoc,
 	prelude::{FunctionBuilderContext, Signature},
@@ -20,7 +22,7 @@ use crate::{
 use super::{
 	ceval, func,
 	sym::{self, ConstInit, Location, SymDatum, SymbolId},
-	tsys::{TypeDatum, TypeDef},
+	tsys::TypeDef,
 };
 
 /// The "semantic mid-section" between Lith's frontend and backend.
@@ -36,15 +38,16 @@ pub fn semantic_check(compiler: &mut Compiler) {
 	assert_eq!(compiler.arenas.len(), rayon::current_num_threads());
 
 	let module = JitModule::new(compiler);
-	let mut fctxs = vec![];
-	let mut cctxs = vec![];
+	let mut lctxs = vec![];
 
 	for _ in 0..rayon::current_num_threads() {
-		fctxs.push(Mutex::new(FunctionBuilderContext::new()));
-		cctxs.push(Mutex::new(module.make_context()));
+		lctxs.push(Mutex::new(LowerContext {
+			fctx: RefCell::new(FunctionBuilderContext::new()),
+			cctx: RefCell::new(module.make_context()),
+			sig: RefCell::new(module.make_signature()),
+		}));
 	}
 
-	let base_sig = module.make_signature();
 	let module = Mutex::new(module);
 
 	// First, define and cache primitive types.
@@ -74,9 +77,7 @@ pub fn semantic_check(compiler: &mut Compiler) {
 				compiler,
 				arena: &arena,
 				module: &module,
-				fctxs: &fctxs,
-				cctxs: &cctxs,
-				base_sig: &base_sig,
+				lctxs: &lctxs,
 			},
 			file_ix: file_prim,
 			path: path.as_str(),
@@ -338,9 +339,13 @@ pub(crate) struct ThreadContext<'c> {
 	pub(crate) compiler: &'c Compiler,
 	pub(crate) arena: &'c bumpalo::Bump,
 	pub(crate) module: &'c Mutex<JitModule>,
-	pub(crate) fctxs: &'c Vec<Mutex<FunctionBuilderContext>>,
-	pub(crate) cctxs: &'c Vec<Mutex<cranelift::codegen::Context>>,
-	pub(crate) base_sig: &'c Signature,
+	pub(crate) lctxs: &'c Vec<Mutex<LowerContext>>,
+}
+
+pub(crate) struct LowerContext {
+	pub(crate) fctx: RefCell<FunctionBuilderContext>,
+	pub(crate) cctx: RefCell<cranelift::codegen::Context>,
+	pub(crate) sig: RefCell<Signature>,
 }
 
 impl std::ops::Deref for ThreadContext<'_> {

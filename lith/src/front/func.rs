@@ -1,6 +1,9 @@
 //! Interface between [`super::sema`] and [`super::lower`].
 
-use std::hash::{Hash, Hasher};
+use std::{
+	cell::RefCell,
+	hash::{Hash, Hasher},
+};
 
 use cranelift::{
 	codegen::ir::{self, UserExternalName},
@@ -196,21 +199,23 @@ fn define(
 ) -> Result<IrPtr, ()> {
 	debug_assert!(matches!(&datum.kind, FunctionKind::Ir));
 
-	let mut fctx = ctx.fctxs[ctx.thread_ix].lock();
-	let mut cctx = ctx.cctxs[ctx.thread_ix].lock();
+	let lctx = ctx.lctxs[ctx.thread_ix].lock();
+	let mut fctx = RefCell::borrow_mut(&lctx.fctx);
+	let mut cctx = RefCell::borrow_mut(&lctx.cctx);
+	let mut signature = lctx.sig.borrow_mut();
 
-	let ptr_t;
-
+	#[cfg(debug_assertions)]
 	{
-		let guard = ctx.module.lock();
-		ptr_t = guard.isa().pointer_type();
-		guard.clear_context(&mut cctx);
+		#[cfg(target_pointer_width = "32")]
+		let ptr_t = cranelift::codegen::ir::types::I32;
+		#[cfg(target_pointer_width = "64")]
+		let ptr_t = cranelift::codegen::ir::types::I64;
+
+		debug_assert!(signature
+			.params
+			.first()
+			.is_some_and(|abi_param| { abi_param.value_type == ptr_t }));
 	}
-
-	let mut signature = ctx.base_sig.clone();
-
-	// First, the `runtime::Context` pointer.
-	signature.params.push(AbiParam::new(ptr_t));
 
 	for mono_param in mono_sig.params {
 		get_abi_params(&mut signature.params, &mono_param);
@@ -306,16 +311,36 @@ fn define(
 
 	tlat.builder.finalize();
 
+	let ir = std::mem::replace(&mut cctx.func, ir::Function::new());
+	let ir_ptr = IrOPtr::alloc(ctx.arena, ir);
+
+	let sig_hash = {
+		let mut hasher = FxHasher::default();
+		signature.params.hash(&mut hasher);
+		signature.returns.hash(&mut hasher);
+		hasher.finish()
+	};
+
 	let fn_id = {
 		let mut guard = ctx.module.lock();
 
-		guard
+		let fn_id = guard
 			.declare_anonymous_function(&signature)
-			.expect("JIT function declaration failed")
+			.expect("JIT function declaration failed");
+
+		guard.clear_context(&mut cctx);
+
+		signature.params.truncate(1); // Ensure the runtime pointer param remains.
+		signature.returns.clear();
+
+		fn_id
 	};
 
-	let ir = std::mem::replace(&mut cctx.func, ir::Function::new());
-	let ir_ptr = IrOPtr::alloc(ctx.arena, ir);
+	drop(cctx);
+	drop(fctx);
+	drop(signature);
+	drop(lctx);
+
 	let ret = IrPtr::from(&ir_ptr);
 
 	ctx.ir.insert(
@@ -323,12 +348,7 @@ fn define(
 		FunctionIr {
 			id: fn_id,
 			ptr: ir_ptr,
-			sig_hash: {
-				let mut hasher = FxHasher::default();
-				signature.params.hash(&mut hasher);
-				signature.returns.hash(&mut hasher);
-				hasher.finish()
-			},
+			sig_hash,
 		},
 	);
 
