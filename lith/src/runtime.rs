@@ -1,12 +1,8 @@
-use std::{
-	any::TypeId,
-	hash::{Hash, Hasher},
-	marker::PhantomData,
-};
+use std::any::TypeId;
 
-use rustc_hash::{FxHashMap, FxHasher};
+use rustc_hash::FxHashMap;
 
-use crate::{compile::JitModule, interop::Interop, rti};
+use crate::{compile::JitModule, rti};
 
 /// Context for Lithica execution.
 ///
@@ -20,47 +16,42 @@ pub struct Runtime {
 	/// memory does not get freed until it has no more users.
 	#[allow(unused)]
 	pub(crate) module: JitModule,
-	pub(crate) user_ctx_t: TypeId,
+
+	pub(crate) userdata: *mut (),
+	pub(crate) userdata_t: TypeId,
 }
+
+// SAFETY: these impls are only needed for `userdata`, which is never dereferenced
+// by the runtime state itself. The caller provides guarantees that dereferencing
+// the pointer is thread-safe.
+unsafe impl Send for Runtime {}
+unsafe impl Sync for Runtime {}
 
 impl Runtime {
-	/// `U` must be the same type as the one passed to [`crate::finalize`]
-	/// or else `None` will be returned.
-	pub fn downcast<'f, U: 'static, F: Interop<U>>(
-		&self,
-		function: &'f rti::Function,
-	) -> Option<rti::TFn<'f, U, F>> {
-		let typeid = TypeId::of::<U>();
-
-		if typeid != self.user_ctx_t {
-			return None;
-		}
-
-		let mut hasher = FxHasher::default();
-
-		F::PARAMS.hash(&mut hasher);
-		F::RETURNS.hash(&mut hasher);
-
-		if function.sig_hash == hasher.finish() {
-			return Some(rti::TFn(function, PhantomData));
-		}
-
-		None
+	/// Panics if `T` is not the current type of the userdata pointer stored using
+	/// [`Self::set_userdata`].
+	#[must_use]
+	pub fn userdata<T: 'static>(&self) -> *mut T {
+		assert_eq!(TypeId::of::<T>(), self.userdata_t);
+		self.userdata.cast()
 	}
-}
 
-/// A pointer to a structure of this type gets weaved through all Lith calls.
-#[derive(Debug)]
-#[repr(C)]
-pub struct Context<U> {
-	pub rt: *mut Runtime,
-	pub user: *mut U,
-}
+	/// # Safety
+	///
+	/// The most recent call to [`Self::set_userdata`] must have provided a
+	/// pointer to a `T`. Panics if `T` is not the current type of the userdata
+	/// pointer stored using [`Self::set_userdata`], but only in debug mode.
+	#[must_use]
+	pub unsafe fn userdata_unchecked<T: 'static>(&self) -> *mut T {
+		debug_assert_eq!(TypeId::of::<T>(), self.userdata_t);
+		self.userdata.cast()
+	}
 
-/// Type-erased counterpart of [`Context`] for internal use.
-#[derive(Debug)]
-#[repr(C)]
-pub(crate) struct InContext {
-	pub(crate) rt: *mut Runtime,
-	user: *mut (),
+	/// If this method has not yet been called for this `Runtime` instance,
+	/// the userdata type will for the unit type (`()`) and the pointer will
+	/// be null (and thus unsound to dereference!).
+	pub fn set_userdata<T: 'static>(&mut self, ptr: *mut T) {
+		self.userdata = ptr.cast();
+		self.userdata_t = TypeId::of::<T>();
+	}
 }

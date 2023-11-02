@@ -7,7 +7,7 @@ use cranelift::{
 	prelude::AbiParam,
 };
 
-use crate::{runtime, types::AbiType};
+use crate::{runtime::Runtime, types::AbiType};
 
 #[cfg(target_pointer_width = "64")]
 const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I64;
@@ -19,12 +19,12 @@ const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I32;
 /// All implementors of this type are function pointers with only one return type,
 /// since returning a stable-layout structure from a JIT function is always sound,
 /// but passing an aggregate (struct, tuple, array) to one is never sound.
-pub trait Interop<U>: 'static + Sized {
+pub trait Interop: 'static + Sized {
 	const PARAMS: &'static [AbiParam];
 	const RETURNS: &'static [AbiParam];
 }
 
-impl<U: 'static> Interop<U> for fn(*mut runtime::Context<U>) {
+impl Interop for fn(*mut Runtime) {
 	const PARAMS: &'static [AbiParam] = &[AbiParam {
 		value_type: PTR_T,
 		purpose: ArgumentPurpose::Normal,
@@ -34,7 +34,7 @@ impl<U: 'static> Interop<U> for fn(*mut runtime::Context<U>) {
 	const RETURNS: &'static [AbiParam] = &[];
 }
 
-impl<U: 'static, RET> Interop<U> for fn(*mut runtime::Context<U>) -> RET
+impl<RET> Interop for fn(*mut Runtime) -> RET
 where
 	RET: Native,
 {
@@ -54,7 +54,7 @@ where
 macro_rules! impl_interop {
 	($( $($param:ident),+ -> () );+) => {
 		$(
-			impl<U: 'static, $($param),+> Interop<U> for fn(*mut runtime::Context<U>, $($param),+) -> ()
+			impl<$($param),+> Interop for fn(*mut Runtime, $($param),+) -> ()
 			where
 				$($param: Native),+,
 			{
@@ -79,7 +79,7 @@ macro_rules! impl_interop {
 	};
 	($( $($param:ident),+ -> $tie:ident<$($ret:ident),+> );+) => {
 		$(
-			impl<U: 'static, $($param),+, $($ret),+> Interop<U> for fn(*mut runtime::Context<U>, $($param),+) -> $tie<$($ret),+>
+			impl<$($param),+, $($ret),+> Interop for fn(*mut Runtime, $($param),+) -> $tie<$($ret),+>
 			where
 				$($param: Native),+,
 				$tie<$($ret),+>: Return,

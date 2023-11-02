@@ -1,6 +1,6 @@
 //! Details of Lithica's [Cranelift](cranelift)-based backend.
 
-use std::hash::BuildHasherDefault;
+use std::{any::TypeId, hash::BuildHasherDefault};
 
 use cranelift::codegen::ir::UserExternalName;
 use cranelift_module::{FuncId, Module};
@@ -74,7 +74,9 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 			_data_rti: FxHashMap::default(),
 			_type_rti: FxHashMap::default(),
 			module,
-			user_ctx_t: compiler.native.user_ctx_t,
+
+			userdata: std::ptr::null_mut(),
+			userdata_t: TypeId::of::<()>(),
 		},
 		clif: clif_map,
 		disasm: disasm_map,
@@ -84,15 +86,15 @@ pub fn finalize(mut compiler: Compiler, emit_clif: bool, disasm: bool) -> Compil
 fn jit_compile_functions(
 	_: &Compiler,
 	module: &mut JitModule,
-	ir: FxDashMap<UserExternalName, (FuncId, IrOPtr)>,
+	ir: FxDashMap<UserExternalName, FunctionIr>,
 	mut clif_map: Option<&mut FxHashMap<FuncId, String>>,
 	mut disasm_map: Option<&mut FxHashMap<FuncId, String>>,
 ) {
 	let mut ctx = module.make_context();
 	let want_disasm = disasm_map.is_some();
 
-	for (_, (id, ir_ptr)) in ir.into_iter() {
-		let clif = unsafe { ir_ptr.read() };
+	for (_, FunctionIr { id, ptr, .. }) in ir.into_iter() {
+		let clif = unsafe { ptr.read() };
 		ctx.set_disasm(want_disasm);
 
 		if let Some(m) = clif_map.as_mut() {
@@ -115,4 +117,11 @@ fn jit_compile_functions(
 
 		module.clear_context(&mut ctx);
 	}
+}
+
+#[derive(Debug)]
+pub(crate) struct FunctionIr {
+	pub(crate) id: FuncId,
+	pub(crate) ptr: IrOPtr,
+	pub(crate) sig_hash: u64,
 }

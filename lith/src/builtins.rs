@@ -12,7 +12,7 @@ use crate::{
 		tsys::{self, TypeDef},
 	},
 	issue::{self, Issue},
-	runtime,
+	runtime::Runtime,
 	types::{SymPtr, TypeNPtr, TypePtr},
 };
 
@@ -251,7 +251,7 @@ pub(crate) fn rtti_of(_: &SemaContext, _: ast::ArgList) -> CEval {
 }
 
 /// Returns the total memory used by the garbage collector.
-pub(crate) unsafe extern "C" fn gc_usage(_: *mut runtime::InContext) -> usize {
+pub(crate) unsafe extern "C" fn gc_usage(_: *mut Runtime) -> usize {
 	// TODO: just a dummy function for proof-of-concept purposes at the moment.
 	unimplemented!()
 }

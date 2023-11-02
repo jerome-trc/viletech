@@ -1,5 +1,7 @@
 //! Interface between [`super::sema`] and [`super::lower`].
 
+use std::hash::{Hash, Hasher};
+
 use cranelift::{
 	codegen::ir::{self, UserExternalName},
 	prelude::{AbiParam, FunctionBuilder},
@@ -8,9 +10,11 @@ use cranelift_module::Module;
 use crossbeam::utils::Backoff;
 use doomfront::rowan::ast::AstNode;
 use petgraph::prelude::DiGraph;
+use rustc_hash::FxHasher;
 
 use crate::{
 	ast,
+	back::FunctionIr,
 	front::{lower, sym::FunctionKind},
 	issue::{self, Issue},
 	types::{IrOPtr, IrPtr, Scope, TypePtr},
@@ -313,7 +317,20 @@ fn define(
 	let ir = std::mem::replace(&mut cctx.func, ir::Function::new());
 	let ir_ptr = IrOPtr::alloc(ctx.arena, ir);
 	let ret = IrPtr::from(&ir_ptr);
-	ctx.ir.insert(uextname, (fn_id, ir_ptr));
+
+	ctx.ir.insert(
+		uextname,
+		FunctionIr {
+			id: fn_id,
+			ptr: ir_ptr,
+			sig_hash: {
+				let mut hasher = FxHasher::default();
+				signature.params.hash(&mut hasher);
+				signature.returns.hash(&mut hasher);
+				hasher.finish()
+			},
+		},
+	);
 
 	Ok(ret)
 }

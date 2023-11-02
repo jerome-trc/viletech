@@ -12,11 +12,11 @@ use cranelift::{
 	codegen::ir::UserExternalName,
 	prelude::{settings::OptLevel, AbiParam, TrapCode},
 };
-use cranelift_module::FuncId;
 use crossbeam::channel::{Receiver, Sender};
 use parking_lot::Mutex;
 
 use crate::{
+	back::FunctionIr,
 	filetree::{self, FileIx, FileTree},
 	front::{
 		sema::{CEval, MonoKey, MonoSig},
@@ -25,9 +25,7 @@ use crate::{
 	intern::NameInterner,
 	interop::Interop,
 	issue::Issue,
-	types::{
-		FxDashMap, FxDashSet, FxIndexMap, IrOPtr, IrPtr, Scope, SymOPtr, SymPtr, TypeNPtr, TypeOPtr,
-	},
+	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymOPtr, SymPtr, TypeNPtr, TypeOPtr},
 	Error, ValVec, Version,
 };
 
@@ -59,7 +57,7 @@ pub struct Compiler {
 	pub(crate) types: FxDashSet<TypeOPtr>,
 	/// Gets filled in upon success of the [sema phase](crate::sema).
 	pub(crate) module: Option<JitModule>,
-	pub(crate) ir: FxDashMap<UserExternalName, (FuncId, IrOPtr)>,
+	pub(crate) ir: FxDashMap<UserExternalName, FunctionIr>,
 	pub(crate) mono: FxDashMap<MonoSig, (Sender<IrPtr>, Receiver<IrPtr>)>,
 	pub(crate) memo: FxDashMap<MonoKey, CEval>,
 	pub(crate) native: NativeSymbols,
@@ -361,7 +359,7 @@ impl NativeSymbols {
 	/// # Safety
 	///
 	/// `runtime` must use the `extern "C"` ABI.
-	pub unsafe fn register<U: 'static, F: Interop<U>>(
+	pub unsafe fn register<U: 'static, F: Interop>(
 		&mut self,
 		name: &'static str,
 		runtime: Option<F>,
