@@ -100,9 +100,7 @@ impl Eq for RString {}
 
 impl PartialOrd for RString {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-		let s0 = Deref::deref(self);
-		let s1 = Deref::deref(other);
-		s0.partial_cmp(s1)
+		Some(self.cmp(other))
 	}
 }
 
