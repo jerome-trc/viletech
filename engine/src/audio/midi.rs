@@ -781,26 +781,16 @@ impl Renderer {
 		let bufsize = (tick_len.mul_f64(1.59369747899).as_micros() as usize) / 18;
 
 		let mode = match sample_format {
-			SampleFormat::F32 => {
-				let mut v = vec![];
-				v.resize(bufsize, 0.0);
-
-				match channels {
-					1 => RenderMode::F32X1(v),
-					2 => RenderMode::F32X2(v),
-					_ => unreachable!(),
-				}
-			}
-			SampleFormat::I16 | SampleFormat::U16 => {
-				let mut v = vec![];
-				v.resize(bufsize, 0);
-
-				match channels {
-					1 => RenderMode::I16X1(v),
-					2 => RenderMode::I16X2(v),
-					_ => unreachable!(),
-				}
-			}
+			SampleFormat::F32 => match channels {
+				1 => RenderMode::F32X1(vec![0.0; bufsize]),
+				2 => RenderMode::F32X2(vec![0.0; bufsize]),
+				_ => unreachable!(),
+			},
+			SampleFormat::I16 | SampleFormat::U16 => match channels {
+				1 => RenderMode::I16X1(vec![0; bufsize]),
+				2 => RenderMode::I16X2(vec![0; bufsize]),
+				_ => unreachable!(),
+			},
 			other => unimplemented!("unexpected sample format: {other:#?}"),
 		};
 
