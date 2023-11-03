@@ -1,8 +1,11 @@
 //! Code that ties together the frontend, mid-section, and backend.
 
 pub(crate) mod baselib;
-mod module;
+pub(crate) mod intern;
+pub(crate) mod mem;
+pub(crate) mod module;
 
+mod detail;
 #[cfg(test)]
 mod test;
 
@@ -10,31 +13,33 @@ use std::{any::TypeId, cmp::Ordering};
 
 use cranelift::{
 	codegen::ir::UserExternalName,
-	prelude::{settings::OptLevel, AbiParam, TrapCode},
+	prelude::{settings::OptLevel, TrapCode},
 };
 use crossbeam::channel::{Receiver, Sender};
 use parking_lot::Mutex;
 
 use crate::{
 	back::FunctionIr,
+	compile::detail::{NativeFn, RuntimeNative},
 	filetree::{self, FileIx, FileTree},
 	front::{
 		sema::{CEval, MonoKey, MonoSig},
 		sym::{Location, SymbolId},
 	},
-	intern::NameInterner,
 	interop::Interop,
 	issue::Issue,
-	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymOPtr, SymPtr, TypeNPtr, TypeOPtr},
+	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymOPtr, TypeOPtr},
 	Error, ValVec, Version,
 };
-
-pub(crate) use module::*;
 
 pub use crate::{
 	back::finalize,
 	front::{decl::declare_symbols, import::resolve_imports, sema::semantic_check},
 };
+
+pub(crate) use self::detail::*;
+
+use self::{detail::SymCache, intern::NameInterner, module::JitModule};
 
 /// State and context tying together the frontend, mid-section, and backend.
 #[derive(Debug)]
@@ -80,16 +85,6 @@ pub struct LibMeta {
 	pub name: String,
 	pub version: Version,
 	pub native: bool,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Stage {
-	#[default]
-	Registration,
-	Declaration,
-	Import,
-	Sema,
-	CodeGen,
 }
 
 impl Compiler {
@@ -329,22 +324,6 @@ pub struct NativeSymbols {
 	pub(crate) functions: FxIndexMap<&'static str, NativeFn>,
 }
 
-#[derive(Debug)]
-pub(crate) struct NativeFn {
-	pub(crate) rt: Option<RuntimeNative>,
-	pub(crate) ceval: Option<CEvalNative>,
-}
-
-#[derive(Debug)]
-pub(crate) struct RuntimeNative {
-	pub(crate) ptr: *const u8,
-	pub(crate) params: &'static [AbiParam],
-	pub(crate) returns: &'static [AbiParam],
-}
-
-unsafe impl Send for RuntimeNative {}
-unsafe impl Sync for RuntimeNative {}
-
 pub type CEvalNative = fn(ValVec) -> Result<ValVec, TrapCode>;
 
 impl NativeSymbols {
@@ -383,64 +362,5 @@ impl NativeSymbols {
 				ceval,
 			},
 		);
-	}
-}
-
-/// "Look-up table symbol".
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct LutSym {
-	pub(crate) inner: SymPtr,
-	pub(crate) imported: bool,
-}
-
-impl std::ops::Deref for LutSym {
-	type Target = SymPtr;
-
-	fn deref(&self) -> &Self::Target {
-		&self.inner
-	}
-}
-
-/// For use by [`crate::sema`].
-#[derive(Debug)]
-pub(crate) struct SymCache {
-	pub(crate) void_t: TypeNPtr,
-	pub(crate) bool_t: TypeNPtr,
-	pub(crate) i8_t: TypeNPtr,
-	pub(crate) u8_t: TypeNPtr,
-	pub(crate) i16_t: TypeNPtr,
-	pub(crate) u16_t: TypeNPtr,
-	pub(crate) i32_t: TypeNPtr,
-	pub(crate) u32_t: TypeNPtr,
-	pub(crate) i64_t: TypeNPtr,
-	pub(crate) u64_t: TypeNPtr,
-	pub(crate) i128_t: TypeNPtr,
-	pub(crate) u128_t: TypeNPtr,
-	pub(crate) f32_t: TypeNPtr,
-	pub(crate) f64_t: TypeNPtr,
-	pub(crate) iname_t: TypeNPtr,
-	pub(crate) never_t: TypeNPtr,
-}
-
-impl Default for SymCache {
-	fn default() -> Self {
-		Self {
-			void_t: TypeNPtr::null(),
-			bool_t: TypeNPtr::null(),
-			i8_t: TypeNPtr::null(),
-			u8_t: TypeNPtr::null(),
-			i16_t: TypeNPtr::null(),
-			u16_t: TypeNPtr::null(),
-			i32_t: TypeNPtr::null(),
-			u32_t: TypeNPtr::null(),
-			i64_t: TypeNPtr::null(),
-			u64_t: TypeNPtr::null(),
-			i128_t: TypeNPtr::null(),
-			u128_t: TypeNPtr::null(),
-			f32_t: TypeNPtr::null(),
-			f64_t: TypeNPtr::null(),
-			iname_t: TypeNPtr::null(),
-			never_t: TypeNPtr::null(),
-		}
 	}
 }

@@ -7,7 +7,7 @@ use cranelift_module::{FuncId, Module};
 use rustc_hash::FxHashMap;
 
 use crate::{
-	compile::{self, JitModule},
+	compile::{self, module::JitModule},
 	runtime::Runtime,
 	types::{FxDashMap, IrOPtr},
 	Compiler,

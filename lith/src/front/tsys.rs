@@ -3,7 +3,7 @@
 use cranelift::codegen::ir::types as abi_t;
 
 use crate::{
-	intern::NameIx,
+	compile::intern::NameIx,
 	types::{AbiType, SymPtr, TypeNPtr, TypePtr},
 };
 

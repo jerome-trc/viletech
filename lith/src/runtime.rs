@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use rustc_hash::FxHashMap;
 
-use crate::{compile::JitModule, rti};
+use crate::{compile::module::JitModule, rti};
 
 /// Context for Lithica execution.
 ///

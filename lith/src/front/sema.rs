@@ -12,7 +12,7 @@ use parking_lot::Mutex;
 
 use crate::{
 	ast,
-	compile::{self, JitModule},
+	compile::{self, module::JitModule},
 	filetree::{self, FileIx},
 	issue::{self, Issue},
 	types::{Scope, SymPtr, TypeOPtr, TypePtr},

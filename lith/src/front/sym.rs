@@ -10,9 +10,8 @@ use smallvec::SmallVec;
 use util::pushvec::PushVec;
 
 use crate::{
-	compile::CEvalNative,
+	compile::{intern::NameIx, CEvalNative},
 	filetree::FileIx,
-	intern::NameIx,
 	types::{CEvalIntrin, Scope, TypeNPtr, TypePtr},
 };
 
