@@ -183,8 +183,7 @@ impl<R: Read + Seek> Iterator for Reader<R> {
 					.seek(SeekFrom::Start(entry.span.start as u64))
 					.expect("failed to walk back `Reader`");
 
-				let mut buf = vec![];
-				buf.resize(entry.span.len(), 0);
+				let mut buf = vec![0; entry.span.len()];
 
 				match self.inner.reader.read_exact(&mut buf) {
 					Ok(()) => {}
