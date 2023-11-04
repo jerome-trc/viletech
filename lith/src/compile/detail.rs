@@ -1,6 +1,9 @@
 use cranelift::prelude::AbiParam;
 
-use crate::types::{SymPtr, TypeNPtr};
+use crate::{
+	front::sym::Symbol,
+	types::{SymOPtr, SymPtr, TypeNPtr},
+};
 
 use super::CEvalNative;
 
@@ -14,18 +17,72 @@ pub(crate) enum Stage {
 	CodeGen,
 }
 
-/// "Look-up table symbol".
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct LutSym {
-	pub(crate) inner: SymPtr,
-	pub(crate) imported: bool,
+/// "Look-up table symbol". See [`crate::types::Scope`].
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum LutSym {
+	/// Exclusively for local variables, which don't need to be inserted
+	/// into [`super::Compiler::symbols`].
+	Owned {
+		ptr: SymOPtr,
+		imported: bool,
+	},
+	Unowned {
+		ptr: SymPtr,
+		imported: bool,
+	},
+}
+
+impl LutSym {
+	/// Separate from [`Self::non_owning_ptr`] to protect against accidentally
+	/// misusing a `Self::Owned`.
+	#[must_use]
+	pub(crate) fn to_unowned(&self) -> Option<SymPtr> {
+		match self {
+			Self::Owned { ptr, .. } => None,
+			Self::Unowned { ptr, .. } => Some(*ptr),
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn non_owning_ptr(&self) -> SymPtr {
+		match self {
+			Self::Owned { ptr, .. } => SymPtr::from(ptr),
+			Self::Unowned { ptr, .. } => *ptr,
+		}
+	}
+
+	#[must_use]
+	pub(crate) fn is_imported(&self) -> bool {
+		match self {
+			Self::Owned { imported, .. } => *imported,
+			Self::Unowned { imported, .. } => *imported,
+		}
+	}
 }
 
 impl std::ops::Deref for LutSym {
-	type Target = SymPtr;
+	type Target = Symbol;
 
 	fn deref(&self) -> &Self::Target {
-		&self.inner
+		match self {
+			Self::Owned { ptr, .. } => ptr,
+			Self::Unowned { ptr, .. } => ptr,
+		}
+	}
+}
+
+impl Clone for LutSym {
+	fn clone(&self) -> Self {
+		match self {
+			Self::Owned { ptr, imported } => Self::Unowned {
+				ptr: SymPtr::from(ptr),
+				imported: *imported,
+			},
+			Self::Unowned { ptr, imported } => Self::Unowned {
+				ptr: *ptr,
+				imported: *imported,
+			},
+		}
 	}
 }
 

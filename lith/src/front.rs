@@ -66,13 +66,13 @@ impl FrontendContext<'_> {
 				let lut_ptr = (&sym_ptr).into();
 				self.symbols.insert(id, sym_ptr);
 
-				vac.insert(LutSym {
-					inner: lut_ptr,
+				vac.insert(LutSym::Unowned {
+					ptr: lut_ptr,
 					imported: false,
 				});
 			}
 			im::hashmap::Entry::Occupied(occ) => {
-				return Err(occ.get().clone().inner);
+				return Err(occ.get().clone().non_owning_ptr());
 			}
 		};
 

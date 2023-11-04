@@ -226,7 +226,6 @@ fn define(
 	let mut tlat = Translator {
 		ctx,
 		failed: false,
-		outer_scope: outer_scope.clone(),
 		builder: FunctionBuilder::new(&mut cctx.func, &mut fctx),
 		cflow: DiGraph::default(),
 		next_var: 0,
@@ -256,12 +255,15 @@ fn define(
 	tlat.builder.switch_to_block(blk_entry);
 	tlat.builder.seal_block(blk_entry);
 
+	let mut body_scope = outer_scope.clone();
+
 	for innard in body.innards() {
 		match innard {
 			ast::CoreElement::Statement(stmt) => {
 				tlat.builder
 					.set_srcloc(ctx.make_srcloc(stmt.syntax().text_range().start()));
-				lower::statement(&mut tlat, stmt);
+
+				lower::statement(&mut tlat, &mut body_scope, stmt);
 			}
 			ast::CoreElement::Item(item) => {
 				ctx.raise(
@@ -387,7 +389,6 @@ pub(super) struct Translator<'c> {
 	pub(super) failed: bool,
 	pub(super) builder: FunctionBuilder<'c>,
 	pub(super) cflow: DiGraph<FlowBlock, Flow>,
-	pub(super) outer_scope: Scope,
 	pub(super) next_var: u32,
 }
 

@@ -180,7 +180,7 @@ fn expr_ident(ctx: &SemaContext, env: &Scope, ast: ast::ExprIdent) -> CEval {
 
 	match &sym_ptr.datum {
 		SymDatum::Container(_, scope) => CEval::Container(scope.clone()),
-		SymDatum::Function(_) => CEval::Function(sym_ptr.inner),
+		SymDatum::Function(_) => CEval::Function(sym_ptr.non_owning_ptr()),
 		SymDatum::SymConst(_) => todo!("lazy define"),
 		SymDatum::Local(_) => unreachable!(),
 	}

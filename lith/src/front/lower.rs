@@ -5,8 +5,9 @@ use smallvec::smallvec;
 
 use crate::{
 	ast,
+	compile::LutSym,
 	issue::{self, Issue},
-	types::{SymOPtr, SymPtr, TypePtr},
+	types::{Scope, SymOPtr, SymPtr, TypePtr},
 };
 
 use super::{
@@ -33,10 +34,10 @@ fn process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {
 	todo!()
 }
 
-pub(super) fn statement(tlat: &mut Translator, ast: ast::Statement) {
+pub(super) fn statement(tlat: &mut Translator, scope: &mut Scope, ast: ast::Statement) {
 	match ast {
 		ast::Statement::Bind(s_bind) => {
-			lower_stmt_bind(tlat, s_bind);
+			lower_stmt_bind(tlat, scope, s_bind);
 		}
 		ast::Statement::Break(_)
 		| ast::Statement::Expr(_)
@@ -45,7 +46,29 @@ pub(super) fn statement(tlat: &mut Translator, ast: ast::Statement) {
 	}
 }
 
-fn lower_stmt_bind(tlat: &mut Translator, ast: ast::StmtBind) {
+fn lower_stmt_bind(tlat: &mut Translator, scope: &mut Scope, ast: ast::StmtBind) {
+	let pat = ast.pattern().unwrap();
+
+	let ident = match &pat {
+		ast::Pattern::Ident(id) => id.token(),
+		ast::Pattern::Grouped(_)
+		| ast::Pattern::Literal(_)
+		| ast::Pattern::Slice(_)
+		| ast::Pattern::Wildcard(_) => {
+			tlat.ctx.raise(
+				Issue::new(
+					tlat.ctx.path,
+					pat.syntax().text_range(),
+					issue::Level::Error(issue::Error::Unimplemented),
+				)
+				.with_message_static("only identifier pattern bindings are currently supported"),
+			);
+
+			tlat.failed = true;
+			return;
+		}
+	};
+
 	let Some(ast_tspec) = ast.type_spec() else {
 		tlat.ctx.raise(
 			Issue::new(
@@ -102,7 +125,11 @@ fn lower_stmt_bind(tlat: &mut Translator, ast: ast::StmtBind) {
 		datum: SymDatum::Local(local),
 	};
 
-	tlat.ctx
-		.symbols
-		.insert(SymbolId::new(location), SymOPtr::alloc(tlat.ctx.arena, sym));
+	scope.insert(
+		tlat.ctx.names.intern(&ident),
+		LutSym::Owned {
+			ptr: SymOPtr::alloc(tlat.ctx.arena, sym),
+			imported: false,
+		},
+	);
 }

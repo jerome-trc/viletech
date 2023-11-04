@@ -226,7 +226,7 @@ fn import_single(
 
 	let Some(imp_sym) = importee_scope
 		.get(&o_name_ix)
-		.filter(|lutsym| !lutsym.imported)
+		.filter(|lutsym| !lutsym.is_imported())
 	else {
 		ctx.raise(
 			Issue::new(
@@ -253,7 +253,7 @@ fn import_single(
 		im::hashmap::Entry::Occupied(occ) => {
 			shadow_error(
 				ctx,
-				occ.get().clone().inner,
+				occ.get().clone().to_unowned().unwrap(),
 				ident.text_range(),
 				ident.text(),
 			);
@@ -272,7 +272,7 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 		im::hashmap::Entry::Occupied(occ) => {
 			shadow_error(
 				ctx,
-				occ.get().clone().inner,
+				occ.get().clone().to_unowned().unwrap(),
 				rename.text_range(),
 				rename.text(),
 			);
@@ -284,14 +284,14 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 	let mut imports = Scope::default();
 
 	for (n, lut_sym) in importee_scope.value() {
-		if lut_sym.imported {
+		if lut_sym.is_imported() {
 			continue;
 		}
 
 		imports.insert(
 			*n,
-			LutSym {
-				inner: lut_sym.inner,
+			LutSym::Unowned {
+				ptr: lut_sym.to_unowned().unwrap(),
 				imported: true,
 			},
 		);
@@ -312,8 +312,8 @@ fn import_all(ctx: &FrontendContext, scope: &mut Scope, importee: FileIx, inner:
 
 	ctx.symbols.insert(SymbolId::new(location), imp_sym_ptr);
 
-	vac.insert(LutSym {
-		inner: lut_ptr,
+	vac.insert(LutSym::Unowned {
+		ptr: lut_ptr,
 		imported: true,
 	});
 }
