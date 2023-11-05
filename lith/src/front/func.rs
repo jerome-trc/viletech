@@ -204,18 +204,7 @@ fn define(
 	let mut cctx = RefCell::borrow_mut(&lctx.cctx);
 	let mut signature = lctx.sig.borrow_mut();
 
-	#[cfg(debug_assertions)]
-	{
-		#[cfg(target_pointer_width = "32")]
-		let ptr_t = cranelift::codegen::ir::types::I32;
-		#[cfg(target_pointer_width = "64")]
-		let ptr_t = cranelift::codegen::ir::types::I64;
-
-		debug_assert!(signature
-			.params
-			.first()
-			.is_some_and(|abi_param| { abi_param.value_type == ptr_t }));
-	}
+	signature.params.push(AbiParam::new(ctx.ptr_t));
 
 	for mono_param in mono_sig.params {
 		get_abi_params(&mut signature.params, &mono_param);
@@ -332,7 +321,7 @@ fn define(
 
 		guard.clear_context(&mut cctx);
 
-		signature.params.truncate(1); // Ensure the runtime pointer param remains.
+		signature.params.clear();
 		signature.returns.clear();
 
 		fn_id

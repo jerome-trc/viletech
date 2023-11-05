@@ -48,6 +48,7 @@ pub fn semantic_check(compiler: &mut Compiler) {
 		}));
 	}
 
+	let ptr_t = module.isa().pointer_type();
 	let module = Mutex::new(module);
 
 	// First, define and cache primitive types.
@@ -78,6 +79,7 @@ pub fn semantic_check(compiler: &mut Compiler) {
 				arena: &arena,
 				module: &module,
 				lctxs: &lctxs,
+				ptr_t,
 			},
 			file_ix: file_prim,
 			path: path.as_str(),
@@ -340,6 +342,7 @@ pub(crate) struct ThreadContext<'c> {
 	pub(crate) arena: &'c bumpalo::Bump,
 	pub(crate) module: &'c Mutex<JitModule>,
 	pub(crate) lctxs: &'c Vec<Mutex<LowerContext>>,
+	pub(crate) ptr_t: cranelift::codegen::ir::Type,
 }
 
 pub(crate) struct LowerContext {
