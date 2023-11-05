@@ -40,6 +40,12 @@ The regular expressions for a Lithica non-documenting comment shall be:
 
 Lithica non-documenting comments shall be treated like whitespace and thus be insignificant to the Lithica syntax.
 
+## Identifiers
+
+Lithica identifiers shall consist of an underscore or ASCII letter followed by zero or more underscores, ASCII letters, or ASCII digits (a special exception is given to a single underscore, which is not a valid Lithica identifier). Lithica identifiers are case-sensitive.
+
+Identifiers which begin with an underscore shall be taken by the implementation to indicate that the symbol is going intentionally unused, with lints suppressed accordingly.
+
 ## Type System
 
 ### Primitives
