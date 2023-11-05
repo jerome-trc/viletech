@@ -1,3 +1,5 @@
+//! "Compile-time function execution".
+//!
 //! An interpreter for Cranelift's CLIF IR adapted from [`cranelift_interpreter`].
 //!
 //! For licensing information, see the repository's ATTRIB.md file.

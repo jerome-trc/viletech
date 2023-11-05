@@ -17,12 +17,12 @@ use smallvec::smallvec;
 use crate::{
 	ast,
 	compile::CEvalNative,
-	interpret::{self, Interpreter},
 	issue::{self, Issue},
 	types::{CEvalIntrin, Scope},
 };
 
 use super::{
+	ctfe::{self, Interpreter},
 	func,
 	sema::{CEval, CeValue, SemaContext},
 	sym::{self, FunctionKind, SymDatum, Symbol},
@@ -261,7 +261,7 @@ fn try_call_ir(
 			fuel -= 1;
 		}
 
-		let cflow = match interpret::step(&mut istate, inst_ctx) {
+		let cflow = match ctfe::step(&mut istate, inst_ctx) {
 			Ok(f) => f,
 			Err(err) => {
 				ctx.raise(

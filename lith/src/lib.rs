@@ -10,7 +10,6 @@ pub extern crate ariadne;
 pub(crate) mod back;
 pub(crate) mod builtins;
 pub(crate) mod front;
-pub(crate) mod interpret;
 pub(crate) mod types;
 
 pub mod ast;

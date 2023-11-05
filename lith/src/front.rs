@@ -5,6 +5,7 @@
 
 pub(crate) mod anno;
 pub(crate) mod ceval;
+pub(crate) mod ctfe;
 pub(crate) mod decl;
 pub(crate) mod func;
 pub(crate) mod import;
