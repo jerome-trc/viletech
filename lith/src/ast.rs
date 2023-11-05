@@ -122,7 +122,7 @@ impl AstNode for CoreElement {
 /// Wraps a node tagged [`Syn::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Annotation(SyntaxNode);
+pub struct Annotation(pub(super) SyntaxNode);
 
 simple_astnode!(Syn, Annotation, Syn::Annotation);
 

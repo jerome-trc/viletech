@@ -29,6 +29,13 @@ pub enum Syn {
 	ArrayPrefix,
 	/// `'::' ident '::'`
 	BlockLabel,
+	/// `ident typespec ';'`
+	///
+	/// Part of [struct expressions] and [union expressions].
+	///
+	/// [struct expressions]: Syn::ExprStruct
+	/// [union expressions]: Syn::ExprUnion
+	FieldDecl,
 	/// `memberquals 'function' ident paramlist returntype? (block | ';')`
 	FunctionDecl,
 	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
@@ -119,6 +126,8 @@ pub enum Syn {
 	ExprPrefix,
 	/// `expr? ('..' | '..=') expr?`
 	ExprRange,
+	/// `'struct' '{' coreelement* '}'`
+	ExprStruct,
 	/// Another kind of expression preceded by one or more type expression prefixes.
 	ExprType,
 
@@ -153,6 +162,9 @@ pub enum Syn {
 	/// `return`; used in [return statements](Syn::StmtReturn).
 	#[token("return")]
 	KwReturn,
+	/// `struct`; used in [structure expressions](Syn::ExprStruct).
+	#[token("struct")]
+	KwStruct,
 	/// `type_t`; used in [type expressions](Syn::ExprType).
 	#[token("type_t")]
 	KwTypeT,
@@ -484,6 +496,7 @@ impl std::fmt::Display for Syn {
 			Self::Argument => write!(f, "argument"),
 			Self::ArrayPrefix => write!(f, "array prefix"),
 			Self::BlockLabel => write!(f, "block label"),
+			Self::FieldDecl => write!(f, "field declaration"),
 			Self::FunctionDecl => write!(f, "function declaration"),
 			Self::FunctionBody => write!(f, "function body"),
 			Self::Import => write!(f, "import"),
@@ -515,6 +528,7 @@ impl std::fmt::Display for Syn {
 			Self::ExprPostfix => write!(f, "postfix expression"),
 			Self::ExprPrefix => write!(f, "prefix expression"),
 			Self::ExprRange => write!(f, "range expression"),
+			Self::ExprStruct => write!(f, "structure expression"),
 			Self::ExprType => write!(f, "type expression"),
 			Self::KwAnyT => write!(f, "`any_t`"),
 			Self::KwBreak => write!(f, "`break`"),
@@ -524,6 +538,7 @@ impl std::fmt::Display for Syn {
 			Self::KwImport => write!(f, "`import`"),
 			Self::KwLet => write!(f, "`let`"),
 			Self::KwReturn => write!(f, "`return`"),
+			Self::KwStruct => write!(f, "`struct`"),
 			Self::KwTypeT => write!(f, "`type_t`"),
 			Self::KwVar => write!(f, "`var`"),
 			Self::Ampersand => write!(f, "`&`"),

@@ -58,6 +58,7 @@ pub(super) fn expr(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::Expr) ->
 		| ast::Expr::Index(_)
 		| ast::Expr::Postfix(_)
 		| ast::Expr::Prefix(_)
+		| ast::Expr::Struct(_)
 		| ast::Expr::Type(_) => unimplemented!(),
 	}
 }

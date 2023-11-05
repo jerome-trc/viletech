@@ -366,6 +366,49 @@ fn expr_block_as_primary() {
 	let _ = ast::Expr::cast(ptree.cursor()).unwrap();
 }
 
+#[test]
+fn expr_struct_smoke() {
+	const SAMPLE: &str = r#"struct {
+		const LOREM_IPSUM: dolor = sit_amet;
+
+		lorem: ipsum;
+
+		function lorem_ipsum();
+	}"#;
+
+	let ptree: ParseTree = doomfront::parse(
+		SAMPLE.trim(),
+		|p| {
+			super::expr(p, true);
+		},
+		LexContext::default(),
+	);
+
+	assert_no_errors(&ptree);
+
+	if prettyprint_maybe(ptree.cursor()) {
+		eprintln!();
+	}
+
+	let ast::Expr::Struct(e_struct) = ast::Expr::cast(ptree.cursor()).unwrap() else {
+		panic!()
+	};
+
+	let mut innards = e_struct.innards();
+
+	let ast::StructInnard::Item(_) = innards.next().unwrap() else {
+		panic!()
+	};
+
+	let ast::StructInnard::Field(_) = innards.next().unwrap() else {
+		panic!()
+	};
+
+	let ast::StructInnard::Item(_) = innards.next().unwrap() else {
+		panic!()
+	};
+}
+
 // Patterns ////////////////////////////////////////////////////////////////////
 
 #[test]

@@ -170,12 +170,41 @@ fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syn::ExprGroup), false)
 		}
+		t @ Syn::KwStruct => {
+			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
+			trivia_0plus(p);
+
+			while !p.at(Syn::BraceR) && !p.eof() {
+				if p.at(Syn::Ident) {
+					field_decl(p);
+				} else {
+					super::core_element::<false>(p);
+				}
+
+				trivia_0plus(p);
+			}
+
+			p.expect(Syn::BraceR, Syn::BraceR, &[&["TODO"]]);
+			(p.close(mark, Syn::ExprStruct), true)
+		}
 		Syn::BraceL => (block(p, mark, Syn::ExprBlock, true), true),
 		other => (
 			p.advance_err_and_close(mark, other, Syn::Error, &[&["TODO"]]),
 			false,
 		),
 	}
+}
+
+fn field_decl(p: &mut Parser<Syn>) {
+	let mark = p.open();
+	p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	trivia_0plus(p);
+	type_spec(p, false);
+	trivia_0plus(p);
+	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
+	p.close(mark, Syn::FieldDecl);
 }
 
 const PRATT_PRECEDENCE: &[&[Syn]] = &[

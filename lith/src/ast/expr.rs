@@ -4,7 +4,7 @@ use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
-use super::{ArgList, CoreElement, LitToken, Name};
+use super::{Annotation, ArgList, CoreElement, Import, Item, LitToken, Name, TypeSpec};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -19,6 +19,7 @@ pub enum Expr {
 	Literal(ExprLit),
 	Postfix(ExprPostfix),
 	Prefix(ExprPrefix),
+	Struct(ExprStruct),
 	Type(ExprType),
 }
 
@@ -37,6 +38,7 @@ impl AstNode for Expr {
 				| Syn::ExprIdent | Syn::ExprIndex
 				| Syn::ExprLit | Syn::ExprPostfix
 				| Syn::ExprPrefix
+				| Syn::ExprStruct
 				| Syn::ExprType
 		)
 	}
@@ -56,6 +58,7 @@ impl AstNode for Expr {
 			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
 			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
 			Syn::ExprPrefix => Some(Self::Prefix(ExprPrefix(node))),
+			Syn::ExprStruct => Some(Self::Struct(ExprStruct(node))),
 			Syn::ExprType => ExprType::cast(node).map(Self::Type),
 			_ => None,
 		}
@@ -73,6 +76,7 @@ impl AstNode for Expr {
 			Self::Literal(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
 			Self::Prefix(inner) => inner.syntax(),
+			Self::Struct(inner) => inner.syntax(),
 			Self::Type(inner) => inner.syntax(),
 		}
 	}
@@ -90,6 +94,7 @@ pub enum PrimaryExpr {
 	Literal(ExprLit),
 	Field(ExprField),
 	Postfix(ExprPostfix),
+	Struct(ExprStruct),
 }
 
 impl From<PrimaryExpr> for Expr {
@@ -103,6 +108,7 @@ impl From<PrimaryExpr> for Expr {
 			PrimaryExpr::Literal(inner) => Self::Literal(inner),
 			PrimaryExpr::Field(inner) => Self::Field(inner),
 			PrimaryExpr::Postfix(inner) => Self::Postfix(inner),
+			PrimaryExpr::Struct(inner) => Self::Struct(inner),
 		}
 	}
 }
@@ -121,6 +127,7 @@ impl AstNode for PrimaryExpr {
 				| Syn::ExprGroup | Syn::ExprIdent
 				| Syn::ExprIndex | Syn::ExprLit
 				| Syn::ExprPostfix
+				| Syn::ExprStruct
 		)
 	}
 
@@ -137,6 +144,7 @@ impl AstNode for PrimaryExpr {
 			Syn::ExprIndex => Some(Self::Index(ExprIndex(node))),
 			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
 			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
+			Syn::ExprStruct => Some(Self::Struct(ExprStruct(node))),
 			_ => None,
 		}
 	}
@@ -151,6 +159,7 @@ impl AstNode for PrimaryExpr {
 			Self::Index(inner) => inner.syntax(),
 			Self::Literal(inner) => inner.syntax(),
 			Self::Postfix(inner) => inner.syntax(),
+			Self::Struct(inner) => inner.syntax(),
 		}
 	}
 }
@@ -487,6 +496,99 @@ pub enum PrefixOp {
 	Bang(SyntaxToken),
 	Minus(SyntaxToken),
 	Tilde(SyntaxToken),
+}
+
+// Struct //////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ExprStruct`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprStruct(SyntaxNode);
+
+simple_astnode!(Syn, ExprStruct, Syn::ExprStruct);
+
+impl ExprStruct {
+	pub fn innards(&self) -> impl Iterator<Item = StructInnard> {
+		self.0.children().filter_map(StructInnard::cast)
+	}
+}
+
+/// Wraps a node tagged [`Syn::FieldDecl`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct FieldDecl(SyntaxNode);
+
+simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
+
+impl FieldDecl {
+	/// The returned token is always tagged [`Syn::Ident`].
+	#[must_use]
+	pub fn name(&self) -> SyntaxToken {
+		let ret = self.0.first_token().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::Ident);
+		ret
+	}
+
+	#[must_use]
+	pub fn type_spec(&self) -> TypeSpec {
+		TypeSpec::cast(self.0.last_child().unwrap()).unwrap()
+	}
+}
+
+/// Anything that can inhabit a [struct expression](ExprStruct).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum StructInnard {
+	Annotation(Annotation),
+	Field(FieldDecl),
+	Import(Import),
+	Item(Item),
+}
+
+impl AstNode for StructInnard {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		if Import::can_cast(kind) {
+			return true;
+		}
+
+		if Item::can_cast(kind) {
+			return true;
+		}
+
+		matches!(kind, Syn::Annotation | Syn::FieldDecl)
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if let Some(import) = Import::cast(node.clone()) {
+			return Some(Self::Import(import));
+		}
+
+		if let Some(item) = Item::cast(node.clone()) {
+			return Some(Self::Item(item));
+		}
+
+		match node.kind() {
+			Syn::Annotation => Some(Self::Annotation(Annotation(node))),
+			Syn::FieldDecl => Some(Self::Field(FieldDecl(node))),
+			_ => None,
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Annotation(inner) => inner.syntax(),
+			Self::Field(inner) => inner.syntax(),
+			Self::Import(inner) => inner.syntax(),
+			Self::Item(inner) => inner.syntax(),
+		}
+	}
 }
 
 // Type ////////////////////////////////////////////////////////////////////////
