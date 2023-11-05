@@ -187,8 +187,14 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 				("inline", None) => {
 					super::anno::inline_fndecl(ctx, anno, &mut datum.inlining);
 				}
+				("likely", None) => {
+					super::anno::likely_invalid(ctx, anno);
+				}
 				("native", None) => {
 					super::anno::native_fndecl(ctx, anno, &mut datum);
+				}
+				("unlikely", None) => {
+					super::anno::unlikely_invalid(ctx, anno);
 				}
 				other => {
 					super::anno::unknown_annotation_error(ctx, anno, other);
@@ -290,8 +296,14 @@ fn declare_symconst(ctx: &FrontendContext, scope: &mut Scope, ast: ast::SymConst
 				("inline", None) => {
 					super::anno::inline_non_fndecl(ctx, anno);
 				}
+				("likely", None) => {
+					super::anno::likely_invalid(ctx, anno);
+				}
 				("native", None) => {
 					// TODO: valid?
+				}
+				("unlikely", None) => {
+					super::anno::unlikely_invalid(ctx, anno);
 				}
 				other => {
 					super::anno::unknown_annotation_error(ctx, anno, other);

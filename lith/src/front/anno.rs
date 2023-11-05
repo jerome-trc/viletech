@@ -289,6 +289,44 @@ pub(super) fn inline_non_fndecl(ctx: &FrontendContext, anno: ast::Annotation) {
 	);
 }
 
+// `#[likely]` and `#[unlikely]` ///////////////////////////////////////////////////////////////////
+
+pub(super) fn likely_invalid(ctx: &FrontendContext, anno: ast::Annotation) {
+	const MSG: &str = concat!(
+		"`likely` annotation can only be used inside:",
+		"\r\n- `if` blocks",
+		"\r\n- `else` blocks",
+		"\r\n- `match` cases"
+	);
+
+	ctx.raise(
+		Issue::new(
+			ctx.path,
+			anno.syntax().text_range(),
+			issue::Level::Error(issue::Error::AnnotationUsage),
+		)
+		.with_message_static(MSG),
+	);
+}
+
+pub(super) fn unlikely_invalid(ctx: &FrontendContext, anno: ast::Annotation) {
+	const MSG: &str = concat!(
+		"`unlikely` annotation can only be used inside:",
+		"\r\n- `if` blocks",
+		"\r\n- `else` blocks",
+		"\r\n- `match` cases"
+	);
+
+	ctx.raise(
+		Issue::new(
+			ctx.path,
+			anno.syntax().text_range(),
+			issue::Level::Error(issue::Error::AnnotationUsage),
+		)
+		.with_message_static(MSG),
+	);
+}
+
 // `#[native()]` ///////////////////////////////////////////////////////////////
 
 pub(super) fn native_fndecl(
