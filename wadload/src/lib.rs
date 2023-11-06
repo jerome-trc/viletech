@@ -72,6 +72,22 @@ impl<R: Read + Seek> DirReader<R> {
 		})
 	}
 
+	/// Gets a reference to the underlying reader.
+	///
+	/// It is inadvisable to directly read from the underlying reader.
+	#[must_use]
+	pub fn get_ref(&self) -> &R {
+		&self.reader
+	}
+
+	/// Gets a mutable reference to the underlying reader.
+	///
+	/// It is inadvisable to directly read from the underlying reader.
+	#[must_use]
+	pub fn get_mut(&mut self) -> &mut R {
+		&mut self.reader
+	}
+
 	/// Is this an IWAD or a PWAD?
 	#[must_use]
 	pub fn wad_kind(&self) -> WadKind {
@@ -156,6 +172,22 @@ impl<R: Read + Seek> Reader<R> {
 	/// See [`DirReader::new`] for caveats; this just wraps that function.
 	pub fn new(reader: R) -> Result<Self, Error> {
 		DirReader::new(reader).map(|r| Self { inner: r })
+	}
+
+	/// Gets a reference to the underlying reader.
+	///
+	/// It is inadvisable to directly read from the underlying reader.
+	#[must_use]
+	pub fn get_ref(&self) -> &R {
+		self.inner.get_ref()
+	}
+
+	/// Gets a mutable reference to the underlying reader.
+	///
+	/// It is inadvisable to directly read from the underlying reader.
+	#[must_use]
+	pub fn get_mut(&mut self) -> &mut R {
+		self.inner.get_mut()
 	}
 
 	/// Is this an IWAD or a PWAD?
