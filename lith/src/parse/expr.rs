@@ -1,6 +1,6 @@
 //! Expression parsers.
 
-use doomfront::parser::{CloseMark, Parser};
+use doomfront::parser::{CloseMark, OpenMark, Parser};
 
 use crate::Syn;
 
@@ -79,6 +79,12 @@ fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
 				trivia_0plus(p);
 				p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
 				lhs = p.close(m, Syn::ExprIndex);
+				continue;
+			}
+			Syn::BraceL => {
+				let m = p.open_before(lhs);
+				p.advance(Syn::BraceL);
+				lhs = init_list(p, m, Syn::ExprConstruct);
 				continue;
 			}
 			_ => {}
@@ -170,6 +176,11 @@ fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syn::ExprGroup), false)
 		}
+		t @ Syn::DotBraceL => {
+			p.advance(t);
+			let ret = init_list(p, mark, Syn::ExprAggregate);
+			(ret, true)
+		}
 		t @ Syn::KwStruct => {
 			p.advance(t);
 			trivia_0plus(p);
@@ -195,6 +206,62 @@ fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 			false,
 		),
 	}
+}
+
+#[must_use]
+fn init_list(p: &mut Parser<Syn>, mark: OpenMark, kind: Syn) -> CloseMark {
+	trivia_0plus(p);
+
+	while !p.eof() {
+		if p.at(Syn::BraceR) {
+			break;
+		}
+
+		aggregate_init(p);
+		trivia_0plus(p);
+
+		if !p.eat(Syn::Comma, Syn::Comma) {
+			trivia_0plus(p);
+			break;
+		} else {
+			trivia_0plus(p);
+		}
+	}
+
+	p.expect(Syn::BraceR, Syn::BraceR, &[&["TODO"]]);
+	p.close(mark, kind)
+}
+
+fn aggregate_init(p: &mut Parser<Syn>) {
+	let mark = p.open();
+
+	match p.nth(0) {
+		t @ Syn::Dot => {
+			p.advance(t);
+			trivia_0plus(p);
+			p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+			trivia_0plus(p);
+			p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+			trivia_0plus(p);
+			let _ = expr(p, true);
+		}
+		t @ Syn::BracketL => {
+			p.advance(t);
+			trivia_0plus(p);
+			let _ = expr(p, true);
+			trivia_0plus(p);
+			p.expect(Syn::BracketR, Syn::BracketR, &[&["TODO"]]);
+			trivia_0plus(p);
+			p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+			trivia_0plus(p);
+			let _ = expr(p, true);
+		}
+		_ => {
+			let _ = expr(p, true);
+		}
+	}
+
+	p.close(mark, Syn::AggregateInit);
 }
 
 fn field_decl(p: &mut Parser<Syn>) {

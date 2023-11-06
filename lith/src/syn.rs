@@ -15,6 +15,11 @@ pub enum Syn {
 	FileRoot,
 
 	// Nodes: high-level constructs ////////////////////////////////////////////
+	/// Any of the following:
+	/// `'.' ident '=' expr`
+	/// `'[' expr ']' '=' expr`
+	/// `expr`
+	AggregateInit,
 	/// `'#' '!'? '[' (ident '.')? ident arglist? ']'`
 	Annotation,
 	/// `'(' argument (',' argument)* (',' | (',' '...'))? ')'` or `'(' '...' ')'`
@@ -94,12 +99,16 @@ pub enum Syn {
 	PatWildcard,
 
 	// Nodes: expressions //////////////////////////////////////////////////////
+	/// `'.{' aggregateinit? (',' aggregateinit)* ','? '}'`
+	ExprAggregate,
 	/// `expr operator expr`
 	ExprBin,
 	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
 	ExprBlock,
 	/// `primaryexpr arglist`
 	ExprCall,
+	/// `expr '{' aggregateinit? (',' aggregateinit)* ','? '}'`
+	ExprConstruct,
 	/// `primaryexpr '.' (ident | namelit)`
 	ExprField,
 	/// Parent to only a single [`Syn::Ident`] token.
@@ -278,6 +287,9 @@ pub enum Syn {
 	/// `.`; part of [field expressions](Syn::ExprField).
 	#[token(".")]
 	Dot,
+	/// `.{`; part of [aggregate expressions](Syn::ExprAggregate).
+	#[token(".{")]
+	DotBraceL,
 	/// `..`; the [range expression](Syn::ExprRange) operator.
 	#[token("..")]
 	Dot2,
@@ -491,6 +503,7 @@ impl std::fmt::Display for Syn {
 		match self {
 			Self::Error => write!(f, "<error>"),
 			Self::FileRoot => write!(f, "file"),
+			Self::AggregateInit => write!(f, "aggregate initializer"),
 			Self::Annotation => write!(f, "annotation"),
 			Self::ArgList => write!(f, "argument list"),
 			Self::Argument => write!(f, "argument"),
@@ -517,9 +530,11 @@ impl std::fmt::Display for Syn {
 			Self::PatLit => write!(f, "literal pattern"),
 			Self::PatSlice => write!(f, "slice pattern"),
 			Self::PatWildcard => write!(f, "wildcard pattern"),
+			Self::ExprAggregate => write!(f, "aggregate expression"),
 			Self::ExprBin => write!(f, "binary expression"),
 			Self::ExprBlock => write!(f, "block expression"),
 			Self::ExprCall => write!(f, "call expression"),
+			Self::ExprConstruct => write!(f, "construction expression"),
 			Self::ExprField => write!(f, "field expression"),
 			Self::ExprIdent => write!(f, "identifier expression"),
 			Self::ExprIndex => write!(f, "index expression"),
@@ -570,6 +585,7 @@ impl std::fmt::Display for Syn {
 			Self::Colon2 => write!(f, "`::`"),
 			Self::Comma => write!(f, "`,`"),
 			Self::Dot => write!(f, "`.`"),
+			Self::DotBraceL => write!(f, "`.{{`"),
 			Self::Dot2 => write!(f, "`..`"),
 			Self::Dot2Eq => write!(f, "`..=`"),
 			Self::Dot3 => write!(f, "`...`"),

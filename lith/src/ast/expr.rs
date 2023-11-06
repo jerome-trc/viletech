@@ -1,6 +1,9 @@
 //! Abstract syntax tree nodes for representing expressions.
 
-use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
+use doomfront::{
+	rowan::{ast::AstNode, Direction},
+	simple_astnode, AstError, AstResult,
+};
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
@@ -9,9 +12,11 @@ use super::{Annotation, ArgList, CoreElement, Import, Item, LitToken, Name, Type
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
+	Aggregate(ExprAggregate),
 	Binary(ExprBin),
 	Block(ExprBlock),
 	Call(ExprCall),
+	Construct(ExprConstruct),
 	Field(ExprField),
 	Group(ExprGroup),
 	Ident(ExprIdent),
@@ -32,8 +37,9 @@ impl AstNode for Expr {
 	{
 		matches!(
 			kind,
-			Syn::ExprBin
-				| Syn::ExprBlock | Syn::ExprCall
+			Syn::ExprAggregate
+				| Syn::ExprBin | Syn::ExprBlock
+				| Syn::ExprCall | Syn::ExprConstruct
 				| Syn::ExprField | Syn::ExprGroup
 				| Syn::ExprIdent | Syn::ExprIndex
 				| Syn::ExprLit | Syn::ExprPostfix
@@ -48,9 +54,11 @@ impl AstNode for Expr {
 		Self: Sized,
 	{
 		match node.kind() {
+			Syn::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
 			Syn::ExprBin => Some(Self::Binary(ExprBin(node))),
 			Syn::ExprBlock => Some(Self::Block(ExprBlock(node))),
 			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
+			Syn::ExprConstruct => Some(Self::Construct(ExprConstruct(node))),
 			Syn::ExprField => Some(Self::Field(ExprField(node))),
 			Syn::ExprGroup => Some(Self::Group(ExprGroup(node))),
 			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
@@ -66,7 +74,9 @@ impl AstNode for Expr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Aggregate(inner) => inner.syntax(),
 			Self::Call(inner) => inner.syntax(),
+			Self::Construct(inner) => inner.syntax(),
 			Self::Binary(inner) => inner.syntax(),
 			Self::Block(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
@@ -86,6 +96,7 @@ impl AstNode for Expr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum PrimaryExpr {
+	Aggregate(ExprAggregate),
 	Block(ExprBlock),
 	Call(ExprCall),
 	Group(ExprGroup),
@@ -100,6 +111,7 @@ pub enum PrimaryExpr {
 impl From<PrimaryExpr> for Expr {
 	fn from(value: PrimaryExpr) -> Self {
 		match value {
+			PrimaryExpr::Aggregate(inner) => Self::Aggregate(inner),
 			PrimaryExpr::Block(inner) => Self::Block(inner),
 			PrimaryExpr::Call(inner) => Self::Call(inner),
 			PrimaryExpr::Group(inner) => Self::Group(inner),
@@ -136,6 +148,7 @@ impl AstNode for PrimaryExpr {
 		Self: Sized,
 	{
 		match node.kind() {
+			Syn::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
 			Syn::ExprBlock => Some(Self::Block(ExprBlock(node))),
 			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
 			Syn::ExprField => Some(Self::Field(ExprField(node))),
@@ -151,6 +164,7 @@ impl AstNode for PrimaryExpr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Aggregate(inner) => inner.syntax(),
 			Self::Block(inner) => inner.syntax(),
 			Self::Call(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
@@ -161,6 +175,130 @@ impl AstNode for PrimaryExpr {
 			Self::Postfix(inner) => inner.syntax(),
 			Self::Struct(inner) => inner.syntax(),
 		}
+	}
+}
+
+// Aggregate ///////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ExprAggregate`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprAggregate(SyntaxNode);
+
+simple_astnode!(Syn, ExprAggregate, Syn::ExprAggregate);
+
+impl ExprAggregate {
+	pub fn initializers(&self) -> impl Iterator<Item = AggregateInit> {
+		self.0.children().filter_map(AggregateInit::cast)
+	}
+}
+
+/// Wraps a node tagged [`Syn::AggregateInit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub enum AggregateInit {
+	Anon(AnonInit),
+	Field(FieldInit),
+	Index(IndexInit),
+}
+
+impl AstNode for AggregateInit {
+	type Language = Syn;
+
+	fn can_cast(kind: Syn) -> bool
+	where
+		Self: Sized,
+	{
+		kind == Syn::AggregateInit
+	}
+
+	fn cast(node: SyntaxNode) -> Option<Self>
+	where
+		Self: Sized,
+	{
+		if node.kind() != Syn::AggregateInit {
+			return None;
+		}
+
+		match node.first_token().map(|t| t.kind()) {
+			Some(Syn::Dot) => Some(Self::Field(FieldInit(node))),
+			Some(Syn::BracketL) => Some(Self::Index(IndexInit(node))),
+			Some(_) => Some(Self::Anon(AnonInit(node))),
+			None => None,
+		}
+	}
+
+	fn syntax(&self) -> &SyntaxNode {
+		match self {
+			Self::Anon(inner) => &inner.0,
+			Self::Field(inner) => &inner.0,
+			Self::Index(inner) => &inner.0,
+		}
+	}
+}
+
+/// Wraps a node tagged [`Syn::AggregateInit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct AnonInit(SyntaxNode);
+
+impl AnonInit {
+	pub fn expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
+/// Wraps a node tagged [`Syn::AggregateInit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct FieldInit(SyntaxNode);
+
+impl FieldInit {
+	pub fn name(&self) -> AstResult<Name> {
+		let dot = self.0.first_token().unwrap();
+		debug_assert_eq!(dot.kind(), Syn::Dot);
+
+		dot.siblings_with_tokens(Direction::Next)
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|t| matches!(t.kind(), Syn::Ident | Syn::LitName))
+			})
+			.map(Name)
+			.ok_or(AstError::Missing)
+	}
+
+	pub fn expr(&self) -> AstResult<Expr> {
+		Expr::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
+/// Wraps a node tagged [`Syn::AggregateInit`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct IndexInit(SyntaxNode);
+
+impl IndexInit {
+	pub fn index(&self) -> AstResult<Expr> {
+		self.eq_token()?
+			.siblings_with_tokens(Direction::Prev)
+			.filter_map(|elem| elem.into_node())
+			.find_map(Expr::cast)
+			.ok_or(AstError::Missing)
+	}
+
+	pub fn expr(&self) -> AstResult<Expr> {
+		self.eq_token()?
+			.siblings_with_tokens(Direction::Next)
+			.filter_map(|elem| elem.into_node())
+			.find_map(Expr::cast)
+			.ok_or(AstError::Missing)
+	}
+
+	fn eq_token(&self) -> AstResult<SyntaxToken> {
+		self.0
+			.children_with_tokens()
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Eq))
+			.ok_or(AstError::Incorrect)
 	}
 }
 
@@ -327,6 +465,25 @@ impl ExprCall {
 
 	pub fn arg_list(&self) -> AstResult<ArgList> {
 		ArgList::cast(self.0.last_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+}
+
+// Construct ///////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syn::ExprConstruct`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprConstruct(SyntaxNode);
+
+simple_astnode!(Syn, ExprConstruct, Syn::ExprConstruct);
+
+impl ExprConstruct {
+	pub fn aggregate_type(&self) -> AstResult<PrimaryExpr> {
+		PrimaryExpr::cast(self.0.first_child().ok_or(AstError::Missing)?).ok_or(AstError::Incorrect)
+	}
+
+	pub fn initializers(&self) -> impl Iterator<Item = AggregateInit> {
+		self.0.children().filter_map(AggregateInit::cast)
 	}
 }
 

@@ -324,6 +324,38 @@ fn smoke_expr_bin_userop() {
 }
 
 #[test]
+fn expr_aggregate_smoke() {
+	const SAMPLES: &[&str] = &[
+		".{}",
+		".{ }",
+		".{ [0] = lorem }",
+		".{ [0] = lorem, }",
+		".{ [0] = lorem, .ipsum = dolor, sit_amet }",
+		".{ [0] = lorem, .ipsum = dolor, sit_amet, }",
+	];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample.trim(),
+			|p| {
+				super::expr(p, true);
+			},
+			LexContext::default(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+
+		let ast::Expr::Aggregate(_) = ast::Expr::cast(ptree.cursor()).unwrap() else {
+			panic!()
+		};
+	}
+}
+
+#[test]
 fn expr_block_smoke() {
 	const SAMPLE: &str = "{ let i = 0; break i; }";
 
@@ -364,6 +396,38 @@ fn expr_block_as_primary() {
 	}
 
 	let _ = ast::Expr::cast(ptree.cursor()).unwrap();
+}
+
+#[test]
+fn expr_construct_smoke() {
+	const SAMPLES: &[&str] = &[
+		"Black.Quartz {}",
+		"Black.Quartz { }",
+		"Black.Quartz { [0] = lorem }",
+		"Black.Quartz { [0] = lorem, }",
+		"Black.Quartz { [0] = lorem, .ipsum = dolor, sit_amet }",
+		"Black.Quartz { [0] = lorem, .ipsum = dolor, sit_amet, }",
+	];
+
+	for sample in SAMPLES {
+		let ptree: ParseTree = doomfront::parse(
+			sample.trim(),
+			|p| {
+				super::expr(p, true);
+			},
+			LexContext::default(),
+		);
+
+		assert_no_errors(&ptree);
+
+		if prettyprint_maybe(ptree.cursor()) {
+			eprintln!();
+		}
+
+		let ast::Expr::Construct(_) = ast::Expr::cast(ptree.cursor()).unwrap() else {
+			panic!()
+		};
+	}
 }
 
 #[test]

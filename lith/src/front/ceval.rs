@@ -42,8 +42,10 @@ pub(super) fn expr(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::Expr) ->
 		ast::Expr::Call(e_call) => expr_call(ctx, next_depth, env, e_call),
 		ast::Expr::Ident(e_ident) => expr_ident(ctx, env, e_ident),
 		ast::Expr::Literal(e_lit) => expr_literal(ctx, e_lit),
-		ast::Expr::Binary(_)
+		ast::Expr::Aggregate(_)
+		| ast::Expr::Binary(_)
 		| ast::Expr::Block(_)
+		| ast::Expr::Construct(_)
 		| ast::Expr::Field(_)
 		| ast::Expr::Group(_)
 		| ast::Expr::Index(_)
