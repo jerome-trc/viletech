@@ -2,11 +2,11 @@
 
 use std::env;
 
-use bevy::prelude::{error, info};
 use indoc::formatdoc;
 use viletech::{
 	console::MessageKind,
 	terminal::{self, CommandArgs},
+	tracing::{error, info},
 };
 
 use crate::common::ClientCommon;

@@ -10,13 +10,13 @@ mod wad;
 
 use std::sync::Arc;
 
-use bevy::prelude::{info, warn};
 use dashmap::DashMap;
 use data::gfx::{ColorMap, EnDoom, PaletteSet, PatchTable, TextureX};
 use parking_lot::Mutex;
 use rayon::prelude::*;
 use serde::Deserialize;
 use smallvec::{smallvec, SmallVec};
+use tracing::{info, warn};
 use util::{EditorNum, Outcome, SendTracker, SpawnNum};
 use vfs::VPathBuf;
 

@@ -10,7 +10,10 @@ mod load;
 mod playground;
 mod setup;
 
-use std::{path::PathBuf, time::Instant};
+use std::{
+	path::PathBuf,
+	time::{Duration, Instant},
+};
 
 use bevy::{
 	app::AppExit, diagnostic::LogDiagnosticsPlugin, input::InputSystem,
@@ -21,7 +24,7 @@ use clap::Parser;
 use common::ClientCommon;
 use indoc::printdoc;
 use viletech::{
-	audio::AudioCore, catalog::Catalog, gfx::TerrainMaterial, input::InputCore, user::UserCore,
+	audio::AudioCore, catalog::Catalog, input::InputCore, tracing::info, user::UserCore,
 };
 
 use crate::{
@@ -78,7 +81,6 @@ VileTech Client {c_vers}
 		.add_plugins(setup::default_plugins(&args, log_sender))
 		.add_systems(Startup, setup::set_window_icon)
 		.add_plugins((WireframePlugin, EguiPlugin))
-		.add_asset::<TerrainMaterial>()
 		.add_systems(Update, common_updates)
 		.add_systems(PreUpdate, update_input.in_set(InputSystem));
 
@@ -141,7 +143,9 @@ VileTech Client {c_vers}
 
 	// Game ////////////////////////////////////////////////////////////////////
 
-	app.insert_resource(FixedTime::new_from_secs(1.0 / 35.0));
+	app.insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f32(
+		1.0 / 35.0,
+	)));
 	app.add_systems(Update, game::update.run_if(in_state(AppState::Game)));
 	app.add_systems(
 		FixedUpdate,

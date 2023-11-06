@@ -34,7 +34,7 @@ impl InputCore {
 		self.mouse_buttons.clear();
 		self.gamepad_buttons.clear();
 
-		for event in events.ev_keyboard_input.iter() {
+		for event in events.ev_keyboard_input.read() {
 			let KeyboardInput {
 				scan_code, state, ..
 			} = event;
@@ -52,7 +52,7 @@ impl InputCore {
 			}
 		}
 
-		for event in events.ev_mouse_button_input.iter() {
+		for event in events.ev_mouse_button_input.read() {
 			match event.state {
 				ButtonState::Pressed => self.mouse_buttons.press(event.button),
 				ButtonState::Released => self.mouse_buttons.release(event.button),
@@ -61,7 +61,7 @@ impl InputCore {
 
 		self.cursor_pos_prev = self.cursor_pos;
 
-		for event in events.ev_cursor.iter() {
+		for event in events.ev_cursor.read() {
 			self.cursor_pos = event.position;
 		}
 	}
@@ -95,7 +95,7 @@ impl Plugin for InputPlugin {
 	fn build(&self, app: &mut App) {
 		use bevy::input::{gamepad::*, keyboard::*, mouse::*, touch::*};
 
-		app.configure_set(PreUpdate, InputSystem)
+		app.configure_sets(PreUpdate, InputSystem)
 			// keyboard
 			.add_event::<KeyboardInput>()
 			.init_resource::<Input<KeyCode>>()

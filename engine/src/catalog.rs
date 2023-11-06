@@ -16,11 +16,7 @@ use std::{
 	sync::Arc,
 };
 
-use bevy::{
-	asset::{AssetIo, AssetIoError, ChangeWatcher},
-	prelude::Resource,
-	utils::BoxedFuture,
-};
+use bevy::prelude::Resource;
 use bevy_egui::egui;
 use dashmap::DashMap;
 use parking_lot::{Mutex, RwLock};
@@ -28,7 +24,7 @@ use rayon::prelude::*;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 use util::{EditorNum, Outcome, SendTracker, SpawnNum};
-use vfs::{VPath, VPathBuf};
+use vfs::VPathBuf;
 
 use crate::vfs::{FileRef, MountError, MountInfo, MountOutcome, MountRequest, VirtualFs};
 
@@ -455,7 +451,7 @@ impl LoadOutcome {
 		}
 	}
 }
-
+/*
 /// Opens the catalog's VFS up to a [`bevy::asset::AssetServer`].
 impl AssetIo for Catalog {
 	fn load_path<'a>(&'a self, path: &'a VPath) -> BoxedFuture<'a, Result<Vec<u8>, AssetIoError>> {
@@ -522,7 +518,7 @@ impl AssetIo for Catalog {
 		unimplemented!()
 	}
 }
-
+ */
 /// Field `1` is a hash of the datum's ID string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct DatumKey(TypeId, u64);

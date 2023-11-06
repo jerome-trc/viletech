@@ -19,7 +19,6 @@ features = [
 	# Default
 	"bevy_asset",
 	"bevy_scene",
-	"filesystem_watcher",
 
 	# Optional
 	"serialize",

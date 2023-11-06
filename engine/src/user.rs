@@ -16,9 +16,10 @@ use std::{
 	sync::Arc,
 };
 
-use bevy::prelude::{warn, Resource};
+use bevy::prelude::Resource;
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use crate::frontend::LoadOrderPreset;
 

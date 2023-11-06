@@ -21,7 +21,7 @@ pub(crate) fn update(
 ) {
 	// When re-focusing the window, check to ensure the end user has not deleted
 	// or moved any of their load order items.
-	for event in focus.iter() {
+	for event in focus.read() {
 		if event.focused {
 			frontend.validate();
 			break;

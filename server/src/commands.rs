@@ -1,9 +1,9 @@
 use std::env;
 
-use bevy::prelude::{error, info};
 use indoc::formatdoc;
 use viletech::{
 	terminal::{self, CommandArgs},
+	tracing::{error, info},
 	util::duration_to_hhmmss,
 };
 

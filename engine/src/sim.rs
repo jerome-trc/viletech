@@ -74,7 +74,7 @@ impl Default for Timing {
 pub struct ActiveMarker;
 
 /// Intended to be run on a fixed-time update loop, 35 Hz by default.
-pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
+pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<Time<Fixed>>) {
 	let deadline = Instant::now() + sim.timing.tick_interval();
 
 	sim.ticks_elapsed += 1;
@@ -87,7 +87,7 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<FixedTime>) {
 			sim.timing.tweak_real = (sim.timing.tweak_real + 1).min(10);
 		}
 
-		fixed_time.period = sim.timing.tick_interval();
+		fixed_time.set_timestep(sim.timing.tick_interval());
 	}
 }
 
@@ -98,7 +98,8 @@ pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<Le
 
 	cmds.spawn((
 		GlobalTransform::default(),
-		ComputedVisibility::default(),
+		InheritedVisibility::default(),
+		ViewVisibility::default(),
 		Wireframe,
 		ActiveMarker,
 	))

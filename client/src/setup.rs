@@ -7,7 +7,7 @@ use bevy::{
 	log::LogPlugin,
 	prelude::*,
 	render::{
-		settings::{WgpuFeatures, WgpuSettings},
+		settings::{RenderCreation, WgpuFeatures, WgpuSettings},
 		RenderPlugin,
 	},
 	window::WindowMode,
@@ -76,10 +76,10 @@ pub(crate) fn default_plugins(
 			)),
 		})
 		.set(RenderPlugin {
-			wgpu_settings: WgpuSettings {
+			render_creation: RenderCreation::Automatic(WgpuSettings {
 				features: WgpuFeatures::default() | WgpuFeatures::POLYGON_MODE_LINE,
 				..default()
-			},
+			}),
 		})
 		.disable::<LogPlugin>()
 		.disable::<bevy::input::InputPlugin>()
@@ -96,10 +96,10 @@ pub(crate) fn winit_settings() -> WinitSettings {
 	WinitSettings {
 		return_from_run: false,
 		focused_mode: UpdateMode::Reactive {
-			max_wait: Duration::from_secs_f64(1.0 / 60.0),
+			wait: Duration::from_secs_f64(1.0 / 60.0),
 		},
 		unfocused_mode: UpdateMode::ReactiveLowPower {
-			max_wait: Duration::from_secs_f64(1.0 / 30.0),
+			wait: Duration::from_secs_f64(1.0 / 30.0),
 		},
 	}
 }

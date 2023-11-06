@@ -54,9 +54,9 @@ pub(crate) fn setup(
 		entity: level.parent_entity(),
 		bundle: MaterialMeshBundle {
 			mesh: mesh.clone(),
-			material: Handle::<TerrainMaterial>::weak(bevy::asset::HandleId::default::<
-				TerrainMaterial,
-			>()),
+			material: Handle::<TerrainMaterial>::Weak(AssetId::<TerrainMaterial>::Uuid {
+				uuid: AssetId::<TerrainMaterial>::DEFAULT_UUID,
+			}),
 			..default()
 		},
 	});
