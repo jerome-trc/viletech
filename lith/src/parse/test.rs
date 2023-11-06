@@ -502,10 +502,11 @@ fn smoke_pat_simple() {
 
 #[test]
 fn smoke_pat_slice() {
-	const SAMPLES: &[&str] = &["[ lorem, -2,_, ipsum ]"];
+	const SAMPLES: &[&str] = &["[]", "[ ]", "[ lorem, -2,_, ipsum ]"];
 
 	for sample in SAMPLES {
-		let ptree: ParseTree = doomfront::parse(sample, super::pattern, LexContext::default());
+		let ptree: ParseTree =
+			doomfront::parse(sample.trim(), super::pattern, LexContext::default());
 
 		assert_no_errors(&ptree);
 

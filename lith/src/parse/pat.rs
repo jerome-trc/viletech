@@ -39,14 +39,18 @@ pub(super) fn pattern(p: &mut Parser<Syn>) {
 			trivia_0plus(p);
 
 			while !p.eof() {
+				if p.at(Syn::BracketR) {
+					break;
+				}
+
 				pattern(p);
 				trivia_0plus(p);
 
-				if p.eat(Syn::Comma, Syn::Comma) {
+				if !p.eat(Syn::Comma, Syn::Comma) {
 					trivia_0plus(p);
-					continue;
-				} else {
 					break;
+				} else {
+					trivia_0plus(p);
 				}
 			}
 
