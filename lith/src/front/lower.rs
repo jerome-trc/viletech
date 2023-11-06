@@ -7,14 +7,14 @@ use crate::{
 	ast,
 	compile::LutSym,
 	issue::{self, Issue},
-	types::{Scope, SymOPtr, SymPtr, TypePtr},
+	types::{Scope, SymOPtr, TypePtr},
 };
 
 use super::{
 	ceval,
 	func::Translator,
 	sema::{CEval, SemaContext},
-	sym::{LocalVar, Location, SymDatum, Symbol, SymbolId},
+	sym::{LocalVar, Location, SymDatum, Symbol},
 };
 
 fn process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {

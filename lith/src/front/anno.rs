@@ -6,6 +6,7 @@ use doomfront::rowan::ast::AstNode;
 use crate::{
 	ast::{self, LitToken},
 	builtins,
+	compile::{CompileTimeNativeFunc, NativeFunc},
 	issue::{self, Issue},
 };
 
@@ -69,43 +70,41 @@ pub(super) fn builtin_fndecl(
 
 	match string {
 		"primitiveType" => {
-			datum.kind = FunctionKind::Builtin {
+			datum.kind = FunctionKind::Internal {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
 					index: builtins::Index::PrimitiveType as u32,
 				},
-				rt: None,
-				ceval: Some(builtins::primitive_type),
+				inner: NativeFunc::CompileTime(CompileTimeNativeFunc::Static(
+					builtins::primitive_type,
+				)),
 			};
 		}
 		"typeOf" => {
-			datum.kind = FunctionKind::Builtin {
+			datum.kind = FunctionKind::Internal {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
 					index: builtins::Index::TypeOf as u32,
 				},
-				rt: None,
-				ceval: Some(builtins::type_of),
+				inner: NativeFunc::CompileTime(CompileTimeNativeFunc::Static(builtins::type_of)),
 			};
 		}
 		"rttiOf" => {
-			datum.kind = FunctionKind::Builtin {
+			datum.kind = FunctionKind::Internal {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
 					index: builtins::Index::RttiOf as u32,
 				},
-				rt: None,
-				ceval: Some(builtins::rtti_of),
+				inner: NativeFunc::CompileTime(CompileTimeNativeFunc::Static(builtins::rtti_of)),
 			};
 		}
 		"gcUsage" => {
-			datum.kind = FunctionKind::Builtin {
+			datum.kind = FunctionKind::Internal {
 				uext_name: UserExternalName {
 					namespace: crate::CLNS_BUILTIN,
 					index: builtins::Index::GcUsage as u32,
 				},
-				rt: Some(builtins::gc_usage as *const u8),
-				ceval: None,
+				inner: NativeFunc::RunTime(builtins::GC_USAGE),
 			};
 		}
 		other => panic!("unknown baselib builtin name: `{other}`"),
@@ -379,13 +378,12 @@ pub(super) fn native_fndecl(
 		return;
 	};
 
-	datum.kind = FunctionKind::Native {
+	datum.kind = FunctionKind::Internal {
 		uext_name: UserExternalName {
 			namespace: crate::CLNS_NATIVE,
 			index: ix as u32,
 		},
-		rt: nfn.rt.as_ref().map(|rtn| rtn.ptr),
-		ceval: nfn.ceval,
+		inner: nfn.clone(),
 	};
 }
 

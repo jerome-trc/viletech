@@ -2,21 +2,32 @@
 //!
 //! Some are runtime-only, some are const-eval only, some support both.
 
+use cranelift::{
+	codegen::ir::{ArgumentExtension, ArgumentPurpose},
+	prelude::AbiParam,
+};
 use doomfront::rowan::ast::AstNode;
 
 use crate::{
 	ast,
+	compile::RunTimeNativeFunc,
 	front::{
 		sema::{CEval, SemaContext},
-		sym::{Location, SymbolId},
+		sym::{self, Location, Symbol, SymbolId},
 		tsys::{self, TypeDef},
 	},
+	interop,
 	issue::{self, Issue},
 	runtime::Runtime,
 	types::{SymPtr, TypeNPtr, TypePtr},
 };
 
-pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval {
+pub(crate) fn primitive_type(
+	ctx: &SemaContext,
+	arg_list: ast::ArgList,
+	_: &Symbol,
+	_: &sym::Function,
+) -> CEval {
 	#[must_use]
 	fn lazy_init(
 		ctx: &SemaContext,
@@ -242,11 +253,11 @@ pub(crate) fn primitive_type(ctx: &SemaContext, arg_list: ast::ArgList) -> CEval
 	CEval::Type(type_ptr)
 }
 
-pub(crate) fn type_of(_: &SemaContext, _: ast::ArgList) -> CEval {
+pub(crate) fn type_of(_: &SemaContext, _: ast::ArgList, _: &Symbol, _: &sym::Function) -> CEval {
 	todo!()
 }
 
-pub(crate) fn rtti_of(_: &SemaContext, _: ast::ArgList) -> CEval {
+pub(crate) fn rtti_of(_: &SemaContext, _: ast::ArgList, _: &Symbol, _: &sym::Function) -> CEval {
 	unimplemented!()
 }
 
@@ -255,6 +266,20 @@ pub(crate) unsafe extern "C" fn gc_usage(_: *mut Runtime) -> usize {
 	// TODO: just a dummy function for proof-of-concept purposes at the moment.
 	unimplemented!()
 }
+
+pub(crate) const GC_USAGE: RunTimeNativeFunc = RunTimeNativeFunc::Static {
+	ptr: gc_usage as *const u8,
+	params: &[AbiParam {
+		value_type: interop::PTR_T,
+		purpose: ArgumentPurpose::Normal,
+		extension: ArgumentExtension::Uext,
+	}],
+	returns: &[AbiParam {
+		value_type: <usize as interop::Native>::REPR,
+		purpose: ArgumentPurpose::Normal,
+		extension: ArgumentExtension::Uext,
+	}],
+};
 
 /// Constants fed to [`cranelift::codegen::ir::UserExternalName::index`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

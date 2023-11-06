@@ -1,13 +1,4 @@
-//! Compile-time evaluation routines.
-//!
-//! "Naked expressions" - i.e. `const SYMCONST: i32 = 2 + 2;` - are computed by
-//! interpreting the AST, since in the general case these will be too trivial
-//! to justify anything more sophisticated.
-//!
-//! Any time a function is called, one of three things will happen:
-//! - a script-defined function will be lazily lowered to CLIF and interpreted
-//! - a compiler builtin will be passed the argument list's AST
-//! - a native-registered function will be passed the argument list's AST
+//! **C**ompile-time **eval**uation routines.
 
 use cranelift::codegen::data_value::DataValue;
 use cranelift_interpreter::{instruction::DfgInstructionContext, step::ControlFlow};
@@ -16,9 +7,9 @@ use smallvec::smallvec;
 
 use crate::{
 	ast,
-	compile::CEvalNative,
+	compile::{CompileTimeNativeFunc, NativeFunc},
 	issue::{self, Issue},
-	types::{CEvalIntrin, Scope},
+	types::Scope,
 };
 
 use super::{
@@ -68,7 +59,8 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 	let span = e_called.syntax().text_range();
 	let callable = expr(ctx, depth, env, e_called);
 
-	let callable_t = match callable {
+	let callable_sym = match callable {
+		CEval::Function(f) => f,
 		CEval::Container(_) => {
 			ctx.raise(
 				Issue::new(
@@ -83,7 +75,6 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 			return CEval::Err;
 		}
-		CEval::Function(f) => f,
 		CEval::Type(_) => {
 			ctx.raise(
 				Issue::new(
@@ -111,7 +102,7 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 		CEval::Err => return CEval::Err,
 	};
 
-	let d_fn = match &callable_t.datum {
+	let d_fn = match &callable_sym.datum {
 		SymDatum::Function(d_fn) => d_fn,
 		SymDatum::Container(_, _) => {
 			ctx.raise(
@@ -156,9 +147,10 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 	};
 
 	match &d_fn.kind {
-		FunctionKind::Ir => try_call_ir(ctx, env, &callable_t, d_fn, ast),
-		FunctionKind::Builtin { ceval, .. } => try_call_builtin(ctx, *ceval, ast),
-		FunctionKind::Native { ceval, .. } => try_call_native(ctx, *ceval, ast),
+		FunctionKind::Ir => try_call_ir(ctx, env, &callable_sym, d_fn, ast),
+		FunctionKind::Internal { uext_name, inner } => {
+			try_call_internal(ctx, &callable_sym, d_fn, ast, inner)
+		}
 	}
 }
 
@@ -296,46 +288,25 @@ fn try_call_ir(
 	todo!()
 }
 
-fn try_call_builtin(
+fn try_call_internal(
 	ctx: &SemaContext,
-	fn_opt: Option<CEvalIntrin>,
+	sym: &Symbol,
+	d_fn: &sym::Function,
 	e_call: ast::ExprCall,
+	nfn: &NativeFunc,
 ) -> CEval {
-	let Some(func) = fn_opt else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				e_call.syntax().text_range(),
-				issue::Level::Error(issue::Error::CEvalImpossible),
-			)
-			.with_message(format!(
-				"built-in function `{}` cannot be called in a compile-time context",
-				e_call.called().syntax().text()
-			)),
-		);
-
-		return CEval::Err;
-	};
-
-	func(ctx, e_call.arg_list().unwrap())
-}
-
-fn try_call_native(ctx: &SemaContext, fn_opt: Option<CEvalNative>, e_call: ast::ExprCall) -> CEval {
-	let Some(func) = fn_opt else {
-		ctx.raise(
-			Issue::new(
-				ctx.path,
-				e_call.syntax().text_range(),
-				issue::Level::Error(issue::Error::CEvalImpossible),
-			)
-			.with_message(format!(
-				"native function `{}` cannot be called in a compile-time context",
-				e_call.called().syntax().text()
-			)),
-		);
-
-		return CEval::Err;
-	};
-
-	todo!()
+	match nfn {
+		NativeFunc::CompileTime(ctf) => match ctf {
+			CompileTimeNativeFunc::Static(func) => func(ctx, e_call.arg_list().unwrap(), sym, d_fn),
+			CompileTimeNativeFunc::Dyn(func) => func(ctx, e_call.arg_list().unwrap(), sym, d_fn),
+		},
+		NativeFunc::CompileOrRunTime(ctf, _) => match ctf {
+			CompileTimeNativeFunc::Static(func) => func(ctx, e_call.arg_list().unwrap(), sym, d_fn),
+			CompileTimeNativeFunc::Dyn(func) => func(ctx, e_call.arg_list().unwrap(), sym, d_fn),
+		},
+		NativeFunc::RunTime(_) => {
+			ctx.raise(todo!());
+			return CEval::Err;
+		}
+	}
 }

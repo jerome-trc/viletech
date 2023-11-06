@@ -127,11 +127,6 @@ pub(super) fn monomorphize(
 	datum: &sym::Function,
 	e_call: &ast::ExprCall,
 ) -> Result<MonoSig, ()> {
-	let mut ret = MonoSig {
-		params: vec![],
-		ret_t: todo!(),
-	};
-
 	if datum.signature_incomplete() {
 		let new_ctx = ctx.switch_file(sym.location.file_ix);
 
@@ -169,7 +164,7 @@ pub(super) fn monomorphize(
 					ctx.raise(todo!());
 					continue;
 				}
-				CEval::Type(_) => match param.ptype {
+				CEval::Type(_) => match &param.ptype {
 					ParamType::Any => {
 						ctx.raise(todo!());
 						continue;
@@ -177,7 +172,7 @@ pub(super) fn monomorphize(
 					ParamType::Type => todo!(),
 					ParamType::Normal(t_nptr) => todo!(),
 				},
-				CEval::Value(_) => match param.ptype {
+				CEval::Value(_) => match &param.ptype {
 					ParamType::Any => todo!(),
 					ParamType::Type => todo!(),
 					ParamType::Normal(t_nptr) => todo!(),
@@ -186,7 +181,7 @@ pub(super) fn monomorphize(
 		}
 	}
 
-	Ok(ret)
+	todo!()
 }
 
 fn define(
@@ -312,19 +307,24 @@ fn define(
 		hasher.finish()
 	};
 
-	let fn_id = {
+	let fn_id;
+
+	{
 		let mut guard = ctx.module.lock();
 
-		let fn_id = guard
+		// TODO: eventually this can become debug-only.
+		cranelift::codegen::verify_function(&cctx.func, guard.isa())
+			.expect("CLIF function did not pass verification");
+
+		fn_id = guard
 			.declare_anonymous_function(&signature)
 			.expect("JIT function declaration failed");
 
 		guard.clear_context(&mut cctx);
+		drop(guard);
 
 		signature.params.clear();
 		signature.returns.clear();
-
-		fn_id
 	};
 
 	drop(cctx);

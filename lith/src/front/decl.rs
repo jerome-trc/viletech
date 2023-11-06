@@ -202,7 +202,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			} // TODO: a more generalized system for handling these.
 		}
 
-		match datum.kind {
+		match &datum.kind {
 			FunctionKind::Ir => {
 				if ast.body().is_none() {
 					ctx.raise(Issue::new(
@@ -220,18 +220,17 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 						param_list.syntax().text_range(),
 						issue::Level::Error(issue::Error::IllegalOpaqueParams)
 					).with_message_static(
-						"only functions marked `#[builtin]` can be declared with a `...` parameter list"
+						"only functions marked `#[builtin]` or `#[native]` can be declared with a `...` parameter list"
 					));
 				}
 			}
-			FunctionKind::Builtin { .. } => {
-				assert!(
-					ast.body().is_none(),
-					"declaration of intrinsic `{}` has illegal body",
-					ident.text()
-				);
-			}
-			FunctionKind::Native { .. } => {
+			FunctionKind::Internal { uext_name, .. } => {
+				let m = match uext_name.namespace {
+					crate::CLNS_BUILTIN => "builtin",
+					crate::CLNS_NATIVE => "native",
+					_ => unreachable!(),
+				};
+
 				if let Some(body) = ast.body() {
 					ctx.raise(
 						Issue::new(
@@ -240,7 +239,7 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 							issue::Level::Error(issue::Error::IllegalFnBody),
 						)
 						.with_message(format!(
-							"declaration of native function `{}` has illegal body",
+							"internal compiler error: declaration of {m} function `{}` has illegal body",
 							ident.text()
 						)),
 					);

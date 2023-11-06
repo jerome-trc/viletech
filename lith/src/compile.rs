@@ -9,27 +9,27 @@ mod detail;
 #[cfg(test)]
 mod test;
 
-use std::{any::TypeId, cmp::Ordering};
+use std::{cmp::Ordering, sync::Arc};
 
 use cranelift::{
 	codegen::ir::UserExternalName,
-	prelude::{settings::OptLevel, TrapCode},
+	prelude::{settings::OptLevel, AbiParam},
 };
 use crossbeam::channel::{Receiver, Sender};
 use parking_lot::Mutex;
 
 use crate::{
+	ast,
 	back::FunctionIr,
-	compile::detail::{NativeFn, RuntimeNative},
 	filetree::{self, FileIx, FileTree},
 	front::{
-		sema::{CEval, MonoKey, MonoSig},
-		sym::{Location, SymbolId},
+		sema::{CEval, MonoKey, MonoSig, SemaContext},
+		sym::{self, Location, Symbol, SymbolId},
 	},
 	interop::Interop,
 	issue::Issue,
 	types::{FxDashMap, FxDashSet, FxIndexMap, IrPtr, Scope, SymOPtr, TypeOPtr},
-	Error, ValVec, Version,
+	Error, Version,
 };
 
 pub use crate::{
@@ -121,7 +121,6 @@ impl Compiler {
 			memo: FxDashMap::default(),
 			mono: FxDashMap::default(),
 			native: NativeSymbols {
-				user_ctx_t: TypeId::of::<()>(),
 				functions: FxIndexMap::default(),
 			},
 			sym_cache: SymCache::default(),
@@ -318,49 +317,77 @@ impl Drop for Compiler {
 	}
 }
 
-#[derive(Debug)]
+/// Short for "internal compile-time function".
+pub type InternalCtf = fn(&SemaContext, ast::ArgList, &Symbol, &sym::Function) -> CEval;
+
+/// Short for "internal compile-time function [`Arc`]".
+pub type InternalCtfArc = Arc<
+	dyn 'static + Send + Sync + Fn(&SemaContext, ast::ArgList, &Symbol, &sym::Function) -> CEval,
+>;
+
+#[derive(Debug, Default)]
 pub struct NativeSymbols {
-	pub(crate) user_ctx_t: TypeId,
-	pub(crate) functions: FxIndexMap<&'static str, NativeFn>,
+	pub(crate) functions: FxIndexMap<&'static str, NativeFunc>,
 }
 
-pub type CEvalNative = fn(ValVec) -> Result<ValVec, TrapCode>;
-
 impl NativeSymbols {
-	#[must_use]
-	pub fn new<U: 'static>() -> Self {
-		Self {
-			user_ctx_t: TypeId::of::<U>(),
-			functions: FxIndexMap::default(),
-		}
-	}
-
 	/// # Safety
 	///
-	/// `runtime` must use the `extern "C"` ABI.
-	pub unsafe fn register<U: 'static, F: Interop>(
-		&mut self,
-		name: &'static str,
-		runtime: Option<F>,
-		ceval: Option<CEvalNative>,
-	) {
-		assert_eq!(TypeId::of::<U>(), self.user_ctx_t);
+	/// Any [`RunTimeNativeFunc`] pointer must be to an implementor of [`Interop`].
+	pub unsafe fn register_function(&mut self, name: &'static str, func: NativeFunc) {
+		self.functions.insert(name, func);
+	}
+}
+
+#[derive(Debug, Clone)]
+pub enum NativeFunc {
+	CompileTime(CompileTimeNativeFunc),
+	CompileOrRunTime(CompileTimeNativeFunc, RunTimeNativeFunc),
+	RunTime(RunTimeNativeFunc),
+}
+
+#[derive(Debug, Clone)]
+pub enum RunTimeNativeFunc {
+	Static {
+		ptr: *const u8,
+		params: &'static [AbiParam],
+		returns: &'static [AbiParam],
+	},
+	// TODO: allow `Box<dyn Interop>` via a trampoline.
+}
+
+impl RunTimeNativeFunc {
+	#[must_use]
+	pub fn new_static<F: Interop>(ptr: F) -> Self {
 		assert_eq!(std::mem::size_of::<F>(), std::mem::size_of::<fn()>());
 
-		self.functions.insert(
-			name,
-			NativeFn {
-				rt: runtime.map(|f| {
-					let ptr = std::mem::transmute_copy(&f);
+		unsafe {
+			Self::Static {
+				ptr: std::mem::transmute_copy(&ptr),
+				params: F::PARAMS,
+				returns: F::RETURNS,
+			}
+		}
+	}
+}
 
-					RuntimeNative {
-						ptr,
-						params: F::PARAMS,
-						returns: F::RETURNS,
-					}
-				}),
-				ceval,
-			},
-		);
+unsafe impl Send for RunTimeNativeFunc {}
+unsafe impl Sync for RunTimeNativeFunc {}
+
+#[derive(Clone)]
+pub enum CompileTimeNativeFunc {
+	Static(InternalCtf),
+	Dyn(InternalCtfArc),
+}
+
+impl std::fmt::Debug for CompileTimeNativeFunc {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Static(arg0) => f.debug_tuple("Static").field(arg0).finish(),
+			Self::Dyn(_) => f
+				.debug_tuple("Dyn")
+				.field(&"<debug formatting unavailable>")
+				.finish(),
+		}
 	}
 }

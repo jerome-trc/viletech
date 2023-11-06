@@ -10,7 +10,7 @@ use crate::{
 use super::sym::Visibility;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub(crate) struct TypeDef {
+pub struct TypeDef {
 	pub(crate) symbol: Option<SymPtr>,
 	pub(crate) datum: TypeDatum,
 }

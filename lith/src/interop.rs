@@ -10,9 +10,9 @@ use cranelift::{
 use crate::{runtime::Runtime, types::AbiType};
 
 #[cfg(target_pointer_width = "64")]
-const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I64;
+pub(crate) const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I64;
 #[cfg(target_pointer_width = "32")]
-const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I32;
+pub(crate) const PTR_T: cranelift::codegen::ir::Type = cranelift::codegen::ir::types::I32;
 
 /// Trait for pointers to Lithica functions (JIT, native, or intrinsic).
 ///

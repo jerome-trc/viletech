@@ -1,11 +1,7 @@
-use cranelift::prelude::AbiParam;
-
 use crate::{
 	front::sym::Symbol,
 	types::{SymOPtr, SymPtr, TypeNPtr},
 };
-
-use super::CEvalNative;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {
@@ -19,7 +15,7 @@ pub(crate) enum Stage {
 
 /// "Look-up table symbol". See [`crate::types::Scope`].
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum LutSym {
+pub enum LutSym {
 	/// Exclusively for local variables, which don't need to be inserted
 	/// into [`super::Compiler::symbols`].
 	Owned {
@@ -38,7 +34,7 @@ impl LutSym {
 	#[must_use]
 	pub(crate) fn to_unowned(&self) -> Option<SymPtr> {
 		match self {
-			Self::Owned { ptr, .. } => None,
+			Self::Owned { .. } => None,
 			Self::Unowned { ptr, .. } => Some(*ptr),
 		}
 	}
@@ -129,19 +125,3 @@ impl Default for SymCache {
 		}
 	}
 }
-
-#[derive(Debug)]
-pub(crate) struct NativeFn {
-	pub(crate) rt: Option<RuntimeNative>,
-	pub(crate) ceval: Option<CEvalNative>,
-}
-
-#[derive(Debug)]
-pub(crate) struct RuntimeNative {
-	pub(crate) ptr: *const u8,
-	pub(crate) params: &'static [AbiParam],
-	pub(crate) returns: &'static [AbiParam],
-}
-
-unsafe impl Send for RuntimeNative {}
-unsafe impl Sync for RuntimeNative {}

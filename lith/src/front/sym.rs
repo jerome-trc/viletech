@@ -10,13 +10,13 @@ use smallvec::SmallVec;
 use util::pushvec::PushVec;
 
 use crate::{
-	compile::{intern::NameIx, CEvalNative},
+	compile::{intern::NameIx, NativeFunc},
 	filetree::FileIx,
-	types::{CEvalIntrin, Scope, TypeNPtr, TypePtr},
+	types::{Scope, TypeNPtr, TypePtr},
 };
 
 #[derive(Debug)]
-pub(crate) struct Symbol {
+pub struct Symbol {
 	pub(crate) location: Location,
 	pub(crate) datum: SymDatum,
 }
@@ -125,7 +125,7 @@ pub(crate) enum ConstInit {
 // Function ////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub(crate) struct Function {
+pub struct Function {
 	pub(crate) flags: FunctionFlags,
 	pub(crate) _visibility: Visibility,
 	pub(crate) confine: Confinement,
@@ -160,17 +160,11 @@ impl Function {
 pub(crate) enum FunctionKind {
 	/// Function was defined entirely in Lith source.
 	Ir,
-	/// Function is Rust-defined, intrinsic to the compiler.
-	Builtin {
+	/// Function is Rust-defined and either intrinsic to the compiler
+	/// or registered externally by the embedder.
+	Internal {
 		uext_name: UserExternalName,
-		rt: Option<*const u8>,
-		ceval: Option<CEvalIntrin>,
-	},
-	/// Function is Rust-defined, registered externally.
-	Native {
-		uext_name: UserExternalName,
-		rt: Option<*const u8>,
-		ceval: Option<CEvalNative>,
+		inner: NativeFunc,
 	},
 }
 

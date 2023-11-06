@@ -9,7 +9,10 @@ use cranelift::{
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{DataId, FuncId, Linkage, Module};
 
-use crate::Compiler;
+use crate::{
+	compile::{NativeFunc, RunTimeNativeFunc},
+	Compiler,
+};
 
 /// Newtype providing `Send` and `Sync` implementations around a [`JITModule`],
 /// and ensure that JIT memory gets freed at the correct time.
@@ -38,7 +41,8 @@ impl JitModule {
 					},
 				),
 				("opt_level", o_lvl),
-				#[cfg(not(debug_assertions))]
+				// The responsibility to run the CLIF verifier falls to
+				// the semantic pass in the frontend, not the backend.
 				("enable_verifier", "false"),
 			],
 			cranelift_module::default_libcall_names(),
@@ -48,37 +52,57 @@ impl JitModule {
 		// TODO: runtime intrinsics need to be registered here.
 
 		for (name, nfn) in compiler.native.functions.iter() {
-			if let Some(rtn) = &nfn.rt {
-				builder.symbol(name.to_string(), rtn.ptr);
-			};
+			match nfn {
+				NativeFunc::RunTime(rt) => {
+					let RunTimeNativeFunc::Static { ptr, .. } = rt;
+					builder.symbol(name.to_string(), *ptr);
+				}
+				NativeFunc::CompileOrRunTime(_, rt) => {
+					let RunTimeNativeFunc::Static { ptr, .. } = rt;
+					builder.symbol(name.to_string(), *ptr);
+				}
+				NativeFunc::CompileTime(_) => continue,
+			}
 		}
 
 		let mut module = JITModule::new(builder);
 		let ptr_t = module.isa().pointer_type();
+		let mut signature = module.make_signature();
 
 		for (name, nfn) in compiler.native.functions.iter() {
-			if let Some(rtn) = &nfn.rt {
-				let mut signature = module.make_signature();
-
-				// First, the `runtime::Context` pointer.
-				let mut params = vec![AbiParam::new(ptr_t)];
-
-				for p in rtn.params {
-					params.push(*p);
+			let (params, returns) = match nfn {
+				NativeFunc::CompileOrRunTime(_, rt) => {
+					let RunTimeNativeFunc::Static {
+						params, returns, ..
+					} = rt;
+					(params, returns)
 				}
+				NativeFunc::RunTime(rt) => {
+					let RunTimeNativeFunc::Static {
+						params, returns, ..
+					} = rt;
+					(params, returns)
+				}
+				NativeFunc::CompileTime(_) => continue,
+			};
 
-				signature.params = params;
-				signature.returns = rtn.returns.to_owned();
+			// First the `Runtime` pointer.
+			signature.params.push(AbiParam::new(ptr_t));
 
-				let _ = module
-					.declare_function(name, Linkage::Import, &signature)
-					.expect("declaration of a native function to a JIT module failed");
+			for param in params.iter() {
+				signature.params.push(*param);
 			}
-		}
 
-		// We want this off in debug builds and on otherwise.
-		// Assert accordingly in case Cranelift ever changes the default.
-		debug_assert!(module.isa().flags().enable_verifier());
+			for ret in returns.iter() {
+				signature.returns.push(*ret);
+			}
+
+			let _ = module
+				.declare_function(name, Linkage::Import, &signature)
+				.expect("declaration of a native function to a JIT module failed");
+
+			module.clear_signature(&mut signature);
+		}
 
 		Self(MaybeUninit::new(module))
 	}

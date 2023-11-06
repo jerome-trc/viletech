@@ -34,7 +34,7 @@ pub(crate) use self::state::Interpreter;
 
 /// Raised when the intepreter attempts to call a function which does not support
 /// compile-time execution, such as allocation via the garbage collector.
-pub(crate) const TRAP_UNSUPPORTED: TrapCode = TrapCode::User(384);
+pub(crate) const TRAP_UNSUPPORTED: TrapCode = TrapCode::User(0451);
 
 /// Interpret a single Cranelift instruction. Note that program traps and interpreter errors are
 /// distinct: a program trap results in `Ok(Flow::Trap(...))` whereas an interpretation error (e.g.
@@ -365,17 +365,8 @@ pub(crate) fn step<'c>(
 
 					match u_map.namespace {
 						crate::CLNS_BUILTIN => match builtins::Index::from(u_map.index) {
-							builtins::Index::RttiOf => todo!(),
-							builtins::Index::GcUsage => {
-								return Ok(ControlFlow::Trap(CraneliftTrap::User(TRAP_UNSUPPORTED)))
-							}
-
-							// Functions which do not survive monomorphization.
-							builtins::Index::PrimitiveType | builtins::Index::TypeOf => {
-								unreachable!()
-							}
-
 							builtins::Index::__Last => unreachable!(),
+							_ => unimplemented!(),
 						},
 						crate::CLNS_NATIVE => {
 							let func = state
@@ -385,19 +376,7 @@ pub(crate) fn step<'c>(
 								.get_index(u_map.index as usize)
 								.unwrap();
 
-							let Some(ceval_fn) = func.1.ceval else {
-								return Ok(ControlFlow::Trap(CraneliftTrap::User(
-									TRAP_UNSUPPORTED,
-								)));
-							};
-
-							match ceval_fn(args) {
-								Ok(rets) => return Ok(ControlFlow::Assign(rets)),
-								// TODO: control what trap codes crate clients can emit.
-								Err(trapcode) => {
-									return Ok(ControlFlow::Trap(CraneliftTrap::User(trapcode)))
-								}
-							}
+							unimplemented!()
 						}
 						_ => {
 							let curr_ir = state.get_current_function();

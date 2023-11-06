@@ -14,7 +14,7 @@ use crossbeam::atomic::AtomicCell;
 ///
 /// Benefits from null pointer optimization.
 #[derive(Debug)]
-pub(crate) struct APtr<T>(NonNull<T>);
+pub struct APtr<T>(NonNull<T>);
 
 impl<T> APtr<T> {
 	#[must_use]
@@ -145,7 +145,7 @@ unsafe impl<T: Send + Sync> Sync for NPtr<T> {}
 
 /// Like [`APtr`] but "owning".
 #[derive(Debug)]
-pub(crate) struct OPtr<T>(NonNull<T>);
+pub struct OPtr<T>(NonNull<T>);
 
 impl<T> OPtr<T> {
 	#[must_use]

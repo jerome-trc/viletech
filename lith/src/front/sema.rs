@@ -307,10 +307,10 @@ pub(crate) struct MonoSig {
 	pub(crate) ret_t: TypePtr,
 }
 
-/// The result of a [compile-time evaluated expression](ceval).
+/// The result of a [**c**ompile-time **eval**uated expression](ceval).
 #[derive(Debug)]
 #[must_use]
-pub(crate) enum CEval {
+pub enum CEval {
 	Err,
 	Container(Scope),
 	Function(SymPtr),
@@ -318,17 +318,17 @@ pub(crate) enum CEval {
 	Value(CeValue),
 }
 
-/// "Constant-evaluated value". Cranelift [`DataValue`]s with an attached type.
+/// "**C**onstant-**e**valuated **value**". Cranelift [`DataValue`]s with an attached type.
 ///
 /// [`DataValue`]: cranelift::codegen::data_value::DataValue
 #[derive(Debug)]
-pub(crate) struct CeValue {
+pub struct CeValue {
 	pub(crate) data: ValVec,
 	pub(crate) ftype: TypePtr,
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct SemaContext<'c> {
+pub struct SemaContext<'c> {
 	pub(crate) tctx: ThreadContext<'c>,
 	pub(crate) file_ix: FileIx,
 	pub(crate) path: &'c str,
@@ -336,7 +336,7 @@ pub(crate) struct SemaContext<'c> {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct ThreadContext<'c> {
+pub struct ThreadContext<'c> {
 	pub(crate) thread_ix: usize,
 	pub(crate) compiler: &'c Compiler,
 	pub(crate) arena: &'c bumpalo::Bump,
