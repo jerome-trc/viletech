@@ -117,6 +117,7 @@ pub(crate) enum TypeSpec {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)] // TODO: revisit.
 pub(crate) enum ConstInit {
 	Type(TypeNPtr),
 	Value(PushVec<DataValue>),
