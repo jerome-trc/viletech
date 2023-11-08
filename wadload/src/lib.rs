@@ -340,7 +340,9 @@ impl std::fmt::Display for Error {
 			Error::Oversize => {
 				write!(f, "WAD file is larger than prescribed by its header")
 			}
-			Error::DataMalformed(_) => todo!(),
+			Error::DataMalformed(_) => {
+				write!(f, "disparity between WAD size and header information")
+			}
 		}
 	}
 }
