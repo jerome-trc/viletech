@@ -2,13 +2,13 @@
 //!
 //! ...when under ideal, minimal-contention conditions.
 
-use append_only_vec::AppendOnlyVec;
 use crossbeam::queue::SegQueue;
 use sharded_slab::Slab;
+use util::pushvec::PushVec;
 
 criterion::criterion_group!(
 	benches,
-	append_only_vec,
+	pushvec,
 	boxcar,
 	crossbeam_queues,
 	sharded_slab,
@@ -16,12 +16,12 @@ criterion::criterion_group!(
 );
 criterion::criterion_main!(benches);
 
-fn append_only_vec(crit: &mut criterion::Criterion) {
-	let mut grp = crit.benchmark_group("AppendOnlyVec");
+fn pushvec(crit: &mut criterion::Criterion) {
+	let mut grp = crit.benchmark_group("PushVec");
 
 	grp.bench_function("Push", |bencher| {
 		bencher.iter_batched_ref(
-			|| AppendOnlyVec::new(),
+			|| PushVec::new(),
 			|aov| {
 				let i = aov.push([0_usize, 0_usize, 0_usize]);
 				let _ = std::hint::black_box(i);
@@ -31,7 +31,7 @@ fn append_only_vec(crit: &mut criterion::Criterion) {
 	});
 
 	grp.bench_function("Access", |bencher| {
-		let aov = AppendOnlyVec::new();
+		let aov = PushVec::new();
 		let i = aov.push([0_usize, 0_usize, 0_usize]);
 
 		bencher.iter(|| {
