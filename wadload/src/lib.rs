@@ -36,8 +36,8 @@ pub fn validate<R: Read + Seek>(reader: &mut R) -> Result<(), Error> {
 	validate_impl(reader).map(|_| ())
 }
 
-/// A stream that wraps a [`std::io::Read`] implementation and yields full list
-/// of entries in the directory part of a WAD file's header.
+/// A stream that wraps a [`std::io::Read`] implementation and yields a
+/// full list of the entries in the directory part of a WAD file's header.
 #[derive(Debug)]
 pub struct DirReader<R: Read + Seek> {
 	reader: R,
