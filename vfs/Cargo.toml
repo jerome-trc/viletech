@@ -22,7 +22,6 @@ serde = ["dep:serde"]
 util = { package = "viletech-utils", path = "../utils" }
 wadload.path = "../wadload"
 
-arc-swap.workspace = true
 dashmap.workspace = true
 bevy = { workspace = true, optional = true }
 egui = { workspace = true, optional = true }
@@ -33,9 +32,14 @@ rayon.workspace = true
 regex.workspace = true
 rustc-hash.workspace = true
 serde = { workspace = true, optional = true }
+slotmap.workspace = true
 smallvec.workspace = true
 triomphe.workspace = true
 zip.workspace = true
+
+# Tentative.
+flate2 = "1.0.28"
+zip_structs = "0.2.1"
 
 [[bench]]
 name = "bench"

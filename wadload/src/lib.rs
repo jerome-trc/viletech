@@ -88,6 +88,12 @@ impl<R: Read + Seek> DirReader<R> {
 		&mut self.reader
 	}
 
+	/// Consumes this directory reader, returning the underlying value.
+	#[must_use]
+	pub fn into_inner(self) -> R {
+		self.reader
+	}
+
 	/// Is this an IWAD or a PWAD?
 	#[must_use]
 	pub fn wad_kind(&self) -> WadKind {
@@ -188,6 +194,12 @@ impl<R: Read + Seek> Reader<R> {
 	#[must_use]
 	pub fn get_mut(&mut self) -> &mut R {
 		self.inner.get_mut()
+	}
+
+	/// Consumes this reader, returning the underlying value.
+	#[must_use]
+	pub fn into_inner(self) -> R {
+		self.inner.reader
 	}
 
 	/// Is this an IWAD or a PWAD?
