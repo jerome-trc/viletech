@@ -80,7 +80,6 @@ image = { version = "0.24.6", default-features = false, features = [
 	"png",
 	"tga",
 ] }
-impl-trait-for-tuples = "0.2.2"
 indexmap = { version = "1.9.3", features = ["rayon", "serde"] }
 indoc = "2.0.0"
 itertools = "0.10.5"
