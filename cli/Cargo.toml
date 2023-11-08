@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 acs = { package = "viletech-acs", path = "../acs" }
-data = { package = "viletech-data", path = "../data", features = ["serde"] }
+data = { package = "subterra", path = "../subterra", features = ["serde"] }
 doomfront = { path = "../doomfront", features = [
 	"serde",
 	"acs",

@@ -4899,6 +4899,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
+name = "subterra"
+version = "0.0.0"
+dependencies = [
+ "bitflags 2.3.1",
+ "bitvec",
+ "bytemuck",
+ "byteorder",
+ "criterion",
+ "glam",
+ "image",
+ "logos",
+ "once_cell",
+ "rayon",
+ "regex",
+ "serde",
+ "viletech-utils",
+]
+
+[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5594,6 +5613,7 @@ dependencies = [
  "sha3",
  "smallvec",
  "smartstring",
+ "subterra",
  "time",
  "toml 0.7.4",
  "tracing",
@@ -5602,7 +5622,6 @@ dependencies = [
  "tracing-subscriber",
  "triangulate",
  "viletech-acs",
- "viletech-data",
  "viletech-fs",
  "viletech-utils",
  "wadload",
@@ -5658,8 +5677,8 @@ dependencies = [
  "indoc",
  "lithica",
  "mus2midi",
+ "subterra",
  "viletech-acs",
- "viletech-data",
  "viletech-fs",
  "viletech-utils",
  "wadload",
@@ -5681,25 +5700,6 @@ dependencies = [
  "parking_lot 0.12.1",
  "viletech",
  "winit",
-]
-
-[[package]]
-name = "viletech-data"
-version = "0.0.0"
-dependencies = [
- "bitflags 2.3.1",
- "bitvec",
- "bytemuck",
- "byteorder",
- "criterion",
- "glam",
- "image",
- "logos",
- "once_cell",
- "rayon",
- "regex",
- "serde",
- "viletech-utils",
 ]
 
 [[package]]

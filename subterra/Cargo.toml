@@ -1,11 +1,11 @@
 [package]
-name = "viletech-data"
+name = "subterra"
 version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["encoding", "game-development"]
-description = "VileTech's data representations"
+description = "id Tech 1 (and adjacent) data representations"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/data"
 keywords = ["doom", "encoding", "gamedev"]
 license = "GPL-3.0-or-later"
