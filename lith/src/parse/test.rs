@@ -193,6 +193,7 @@ fn smoke_arglist() {
 }
 
 #[test]
+#[ignore]
 fn with_sample_data() {
 	let (_, sample) = match doomfront::testing::read_sample_data("LITHICA_PARSE_SAMPLE") {
 		Ok(s) => s,

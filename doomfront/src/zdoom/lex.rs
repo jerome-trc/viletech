@@ -523,6 +523,7 @@ States (actor, overlay) {
 	}
 
 	#[test]
+	#[ignore]
 	fn with_sample_data() {
 		const ENV_VAR: &str = "DOOMFRONT_ZDOOM_LEX_SAMPLE";
 

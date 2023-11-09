@@ -253,6 +253,7 @@ DoomEdNums
 	}
 
 	#[test]
+	#[ignore]
 	fn with_sample_data() {
 		let (_, sample) = match read_sample_data("DOOMFRONT_MAPINFO_SAMPLE") {
 			Ok(s) => s,

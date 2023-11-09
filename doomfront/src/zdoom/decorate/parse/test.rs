@@ -9,6 +9,7 @@ use crate::{
 };
 
 #[test]
+#[ignore]
 fn with_sample_dir() {
 	let dir = match check_sample_dir("DOOMFRONT_DECORATE_SAMPLE_DIR") {
 		Ok(p) => p,

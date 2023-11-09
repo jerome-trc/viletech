@@ -231,6 +231,7 @@ $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 	}
 
 	#[test]
+	#[ignore]
 	fn with_sample_data() {
 		let sample = match read_sample_data("DOOMFRONT_LANGUAGE_SAMPLE") {
 			Ok((_, s)) => s,

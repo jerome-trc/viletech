@@ -739,6 +739,7 @@ mod test {
 	}
 
 	#[test]
+	#[ignore]
 	fn waveform_with_sample_data() {
 		let path = match read_sample_data("VILETECH_WAVESND_SAMPLE") {
 			Ok(b) => b.0,
@@ -758,6 +759,7 @@ mod test {
 	}
 
 	#[test]
+	#[ignore]
 	fn midi_with_sample_data() {
 		let sfpath: PathBuf = [
 			Path::new(env!("CARGO_WORKSPACE_DIR")),

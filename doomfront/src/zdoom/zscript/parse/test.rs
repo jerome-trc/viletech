@@ -34,6 +34,7 @@ Default {
 }
 
 #[test]
+#[ignore]
 fn with_sample_data() {
 	let (_, sample) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE") {
 		Ok(s) => s,
@@ -49,6 +50,7 @@ fn with_sample_data() {
 }
 
 #[test]
+#[ignore]
 fn with_sample_dir() {
 	let dir = match check_sample_dir("DOOMFRONT_ZSCRIPT_SAMPLE_DIR") {
 		Ok(p) => p,
