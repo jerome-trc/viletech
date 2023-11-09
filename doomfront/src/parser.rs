@@ -7,7 +7,7 @@
 use std::cell::Cell;
 
 use logos::Logos;
-use rowan::{GreenNode, GreenNodeBuilder, SyntaxKind, TextRange, TextSize};
+use rowan::{GreenNode, GreenNodeBuilder, NodeCache, SyntaxKind, TextRange, TextSize};
 
 use crate::LangExt;
 
@@ -451,9 +451,13 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	/// [opened]: Self::open
 	/// [closed]: Self::close
 	#[must_use]
-	pub fn finish(self) -> (GreenNode, Vec<Error<L>>) {
+	pub fn finish(self, cache: Option<&mut NodeCache>) -> (GreenNode, Vec<Error<L>>) {
 		let mut tokens = self.tokens.into_iter();
-		let mut builder = GreenNodeBuilder::new();
+
+		let mut builder = match cache {
+			Some(c) => GreenNodeBuilder::with_cache(c),
+			None => GreenNodeBuilder::new(),
+		};
 
 		for event in self.events {
 			match event {

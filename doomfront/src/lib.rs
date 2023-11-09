@@ -151,7 +151,21 @@ pub fn parse<'i, L: LangExt>(
 ) -> ParseTree<L> {
 	let mut parser = parser::Parser::new(source, lexer_ctx);
 	function(&mut parser);
-	let (root, errors) = parser.finish();
+	let (root, errors) = parser.finish(None);
+
+	ParseTree { root, errors }
+}
+
+#[must_use]
+pub fn parse_with_cache<'i, L: LangExt>(
+	source: &'i str,
+	function: fn(&mut parser::Parser<L>),
+	lexer_ctx: <L::Token as logos::Logos<'i>>::Extras,
+	cache: &mut rowan::NodeCache,
+) -> ParseTree<L> {
+	let mut parser = parser::Parser::new(source, lexer_ctx);
+	function(&mut parser);
+	let (root, errors) = parser.finish(Some(cache));
 
 	ParseTree { root, errors }
 }
