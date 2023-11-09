@@ -33,6 +33,7 @@ pub fn const_def(p: &mut Parser<Syn>) {
 pub fn enum_def(p: &mut Parser<Syn>) {
 	fn variant(p: &mut Parser<Syn>) {
 		let var = p.open();
+		doc_comments(p);
 		ident::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 		trivia_0plus(p);
 
@@ -78,18 +79,17 @@ pub fn enum_def(p: &mut Parser<Syn>) {
 
 	trivia_0plus(p);
 	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
-	trivia_0plus(p);
+	trivia_no_doc_0plus(p);
 
 	if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
-		doc_comments(p);
 		variant(p);
-		trivia_0plus(p);
+		trivia_no_doc_0plus(p);
 
 		while !p.at(Token::BraceR) && !p.eof() {
 			match p.nth(0) {
 				Token::Comma => {
 					p.advance(Syn::Comma);
-					trivia_0plus(p);
+					trivia_no_doc_0plus(p);
 					if p.at_if(|token| is_ident_lax(token) || token == Token::DocComment) {
 						doc_comments(p);
 						variant(p);

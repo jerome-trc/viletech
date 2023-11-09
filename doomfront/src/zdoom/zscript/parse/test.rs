@@ -374,7 +374,8 @@ fn smoke_enumdef() {
 enum SepticTank {};
 
 enum BeyondTimesGate {
-ELEMENTAL,
+	/// Lorem ipsum dolor sit amet
+	ELEMENTAL,
 }
 
 enum BrickAndRoot {
@@ -387,6 +388,31 @@ COLOURS_OF_DOOM = "Ascent",
 
 	let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+
+	let mut ast = ptree
+		.cursor()
+		.children()
+		.map(|node| ast::TopLevel::cast(node).unwrap());
+
+	{
+		let ast::TopLevel::EnumDef(_) = ast.next().unwrap() else {
+			panic!()
+		};
+	}
+
+	{
+		let ast::TopLevel::EnumDef(enumdef) = ast.next().unwrap() else {
+			panic!()
+		};
+
+		let mut variants = enumdef.variants();
+
+		let var0 = variants.next().unwrap();
+		let doc = var0.docs().next().unwrap();
+
+		assert_eq!(doc.text_trimmed(), "Lorem ipsum dolor sit amet");
+	}
 }
 
 #[test]

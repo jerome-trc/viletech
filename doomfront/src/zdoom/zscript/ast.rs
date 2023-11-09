@@ -563,6 +563,7 @@ impl ArrayLen {
 pub struct DocComment(SyntaxToken);
 
 impl DocComment {
+	/// Shorthand for `self.text().trim_matches('/').trim()`.
 	#[must_use]
 	pub fn text_trimmed(&self) -> &str {
 		self.0.text().trim_matches('/').trim()
