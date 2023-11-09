@@ -5620,7 +5620,6 @@ dependencies = [
  "viletech-utils",
  "wadload",
  "walkdir",
- "xml-rs",
  "zip",
 ]
 

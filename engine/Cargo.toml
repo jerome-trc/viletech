@@ -93,7 +93,6 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 triangulate.workspace = true
 walkdir.workspace = true
-xml-rs.workspace = true
 zip.workspace = true
 
 [[bench]]
