@@ -176,10 +176,10 @@ fn mount_wad_blob(
 	parent_slot: FolderSlot,
 	bytes: Vec<u8>,
 ) -> Result<FolderSlot, Error> {
-	let arc = Arc::new(RwLock::new(Reader::_Memory(bytes)));
+	let arc = Arc::new(RwLock::new(Reader::Memory(bytes)));
 	let guard = arc.read();
 
-	let Reader::_Memory(blob) = std::ops::Deref::deref(&guard) else {
+	let Reader::Memory(blob) = std::ops::Deref::deref(&guard) else {
 		unreachable!()
 	};
 

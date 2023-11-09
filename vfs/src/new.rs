@@ -234,6 +234,54 @@ impl VirtualFs {
 		}))
 	}
 
+	/// Each virtual file backed by a physical file reads its slice into a buffer
+	/// belonging exclusively to that virtual file.
+	pub fn ingest_all(&mut self) {
+		#[must_use]
+		fn ingest(reader: &mut Reader, orig_span: Range<usize>, compression: Compression) -> Option<Vec<u8>> {
+			let result = match reader {
+				Reader::File(fh) => Reader::read_from_file(fh, orig_span),
+				Reader::Memory(_) => return None,
+				Reader::_Super(_) => unimplemented!(),
+			};
+
+			result.and_then(|b| detail::decompress(b, compression)).ok()
+		}
+
+		let mut vfiles = self.files.values_mut();
+
+		let Some(vfile0) = vfiles.next() else {
+			return;
+		};
+
+		let mut guard = vfile0.reader.write_arc();
+		let mut prev_arc = Arc::as_ptr(&vfile0.reader);
+
+		if let Some(bytes) = ingest(&mut guard, vfile0.span(), vfile0.compression) {
+			vfile0.span = 0..(bytes.len() as u32);
+			vfile0.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+			vfile0.compression = Compression::None;
+		}
+
+		for vfile in vfiles {
+			// If the new lock is the same as the previous lock,
+			// don't waste time on another re-open.
+			let arc_ptr = Arc::as_ptr(&vfile.reader);
+
+			if !std::ptr::eq(arc_ptr, prev_arc) {
+				guard = vfile.reader.write_arc();
+			};
+
+			prev_arc = arc_ptr;
+
+			if let Some(bytes) = ingest(&mut guard, vfile.span(), vfile.compression) {
+				vfile.span = 0..(bytes.len() as u32);
+				vfile.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+				vfile.compression = Compression::None;
+			}
+		}
+	}
+
 	#[must_use]
 	pub fn mounts(&self) -> &[MountInfo] {
 		&self.mounts
@@ -649,7 +697,7 @@ impl std::fmt::Display for Error {
 pub(crate) enum Reader {
 	/// e.g. lump in a WAD, or entry in a zip archive.
 	File(File),
-	_Memory(Vec<u8>),
+	Memory(Vec<u8>),
 	/// e.g. entry in a zip archive nested within another zip archive.
 	_Super(ReaderLayer),
 }
@@ -657,14 +705,8 @@ pub(crate) enum Reader {
 impl Reader {
 	fn read(&mut self, span: Range<usize>, compression: Compression) -> Result<Vec<u8>, Error> {
 		let bytes = match self {
-			Self::File(ref mut fh) => {
-				fh.seek(SeekFrom::Start(span.start as u64))
-					.map_err(Error::Seek)?;
-				let mut bytes = vec![0; span.len()];
-				fh.read_exact(&mut bytes).map_err(Error::FileRead)?;
-				bytes
-			}
-			Self::_Memory(bytes) => bytes[span].to_vec(),
+			Self::File(ref mut fh) => Self::read_from_file(fh, span)?,
+			Self::Memory(bytes) => bytes[span].to_vec(),
 			Self::_Super(layer) => {
 				let mut guard = layer.parent.write();
 				guard.read(layer.span.clone(), layer.compression)?
@@ -672,6 +714,14 @@ impl Reader {
 		};
 
 		detail::decompress(bytes, compression)
+	}
+
+	fn read_from_file(fh: &mut File, span: Range<usize>) -> Result<Vec<u8>, Error> {
+		fh.seek(SeekFrom::Start(span.start as u64))
+			.map_err(Error::Seek)?;
+		let mut bytes = vec![0; span.len()];
+		fh.read_exact(&mut bytes).map_err(Error::FileRead)?;
+		Ok(bytes)
 	}
 }
 
