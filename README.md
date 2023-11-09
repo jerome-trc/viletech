@@ -35,6 +35,10 @@ The goals of the VileTech "project" are as follows, in descending order of prior
 
 [viletech](/engine/README.md) is a crate for backing the client and the dedicated server by rolling up all the other constituent parts of this repository and adding features needed to run games, like physics simulation.
 
+### /lith
+
+[lithica](/lith/READMEm.md) is the bespoke scripting language that gets embedded into the VileTech Engine (although it is agnostic to the software it underpins).
+
 ### /mus2midi
 
 [mus2midi](/mus2midi/README.md) is a small library containing only a Rust port of a DMXMUS-to-MIDI converter.
