@@ -3,7 +3,9 @@
 //! ## About
 //!
 //! Comprehensive suite of frontends for domain-specific languages written for
-//! Doom's source ports.
+//! Doom's source ports. To get started using this API, you will probably want to
+//! find a parsing function (e.g. [`zdoom::zscript::parse::file`]) and pass it to
+//! [`parse`] (with, in this case, a [`zdoom::lex::Context`]).
 //!
 //! Within this documentation, the term "lump" is used as a catch-all term for
 //! a filesystem entry of some kind, whether that be a real file, a WAD archive
@@ -143,6 +145,7 @@ where
 	}
 }
 
+/// Also see [`parse_with_cache`].
 #[must_use]
 pub fn parse<'i, L: LangExt>(
 	source: &'i str,
@@ -156,6 +159,8 @@ pub fn parse<'i, L: LangExt>(
 	ParseTree { root, errors }
 }
 
+/// Like [`parse`], but has the potential to save some memory if re-using the
+/// same [`rowan::NodeCache`] between parses.
 #[must_use]
 pub fn parse_with_cache<'i, L: LangExt>(
 	source: &'i str,
