@@ -2,13 +2,15 @@
 
 use std::path::PathBuf;
 
-use bevy::{app::AppExit, prelude::*, window::WindowFocused};
+use bevy::{app::AppExit, prelude::*};
 use viletech::{
-	frontend::{FrontendMenu, Outcome},
+	frontend::{FrontendMenu, LoadOrderEntryKind, Outcome},
 	user::UserCore,
 };
 
 use crate::{common::ClientCommon, load::GameLoad, AppState};
+
+// Bevy systems ////////////////////////////////////////////////////////////////
 
 pub(crate) fn update(
 	mut cmds: Commands,
@@ -17,36 +19,30 @@ pub(crate) fn update(
 	mut frontend: ResMut<FrontendMenu>,
 	user: ResMut<UserCore>,
 	mut exit: EventWriter<AppExit>,
-	mut focus: EventReader<WindowFocused>,
 ) {
-	// When re-focusing the window, check to ensure the end user has not deleted
-	// or moved any of their load order items.
-	for event in focus.read() {
-		if event.focused {
-			frontend.validate();
-			break;
-		}
-	}
-
 	let action = frontend.ui(core.egui.ctx_mut());
 
 	match action {
 		Outcome::None => {}
 		Outcome::StartGame => {
-			let to_mount = frontend.to_mount();
-			let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
+			if validate_load_order(&frontend) {
+				let to_mount = frontend.to_mount();
+				let to_mount = to_mount.into_iter().map(|p| p.to_path_buf()).collect();
 
-			cmds.insert_resource(
-				start_load(&core, to_mount, frontend.dev_mode()).unwrap_or_else(|_| {
-					unimplemented!("handling load order errors is currently unimplemented")
-				}),
-			);
+				cmds.insert_resource(
+					start_load(&core, to_mount, frontend.dev_mode()).unwrap_or_else(|_| {
+						unimplemented!("handling load order errors is currently unimplemented")
+					}),
+				);
 
-			next_state.set(AppState::Load);
+				next_state.set(AppState::Load);
+			}
 		}
 		Outcome::StartEditor => {
-			// TODO
-			next_state.set(AppState::Editor);
+			if validate_load_order(&frontend) {
+				// TODO
+				next_state.set(AppState::Editor);
+			}
 		}
 		Outcome::Exit => {
 			exit.send(AppExit);
@@ -90,6 +86,33 @@ pub(crate) fn on_exit(
 			p = user.globalcfg_path().display()
 		);
 	}
+}
+
+// Details /////////////////////////////////////////////////////////////////////
+
+#[must_use]
+fn validate_load_order(frontend: &FrontendMenu) -> bool {
+	let mut all_valid = true;
+
+	for loi in frontend.load_order().iter() {
+		let LoadOrderEntryKind::Item { path, enabled } = &loi.kind else {
+			continue;
+		};
+
+		if !*enabled {
+			continue;
+		}
+
+		if !path.exists() {
+			all_valid = false;
+			info!(
+				"`{}` does not exist; it may have been moved or deleted.",
+				path.display()
+			);
+		}
+	}
+
+	all_valid
 }
 
 fn start_load(_: &ClientCommon, _: Vec<PathBuf>, _: bool) -> Result<GameLoad, String> {

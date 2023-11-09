@@ -23,7 +23,6 @@ pub struct FrontendMenu {
 	dev_mode: bool,
 }
 
-/// Public interface.
 impl FrontendMenu {
 	#[must_use]
 	pub fn new(presets: Option<(VecDeque<LoadOrderPreset>, usize)>, dev_mode: bool) -> Self {
@@ -93,7 +92,6 @@ impl FrontendMenu {
 										kind: LoadOrderEntryKind::Item {
 											path: file,
 											enabled: true,
-											exists: true,
 										},
 									})
 								}
@@ -114,7 +112,6 @@ impl FrontendMenu {
 										kind: LoadOrderEntryKind::Item {
 											path: dir,
 											enabled: true,
-											exists: true,
 										},
 									})
 								}
@@ -170,16 +167,8 @@ impl FrontendMenu {
 		ret
 	}
 
-	pub fn validate(&mut self) {
-		for entry in self.load_order_mut().iter_mut() {
-			if let LoadOrderEntryKind::Item { path, exists, .. } = &mut entry.kind {
-				*exists = path.exists();
-			}
-		}
-	}
-
 	#[must_use]
-	fn load_order(&self) -> &LoadOrderPreset {
+	pub fn load_order(&self) -> &LoadOrderPreset {
 		&self.presets[self.cur_preset]
 	}
 
@@ -195,16 +184,16 @@ impl FrontendMenu {
 		let presets = std::mem::take(&mut self.presets);
 		(presets, self.cur_preset)
 	}
+}
 
-	// Internal UI drawing helpers /////////////////////////////////////////////
-
+/// Internal helpers.
+impl FrontendMenu {
 	fn ui_menu_bar(&mut self, ui: &mut egui::Ui) -> Outcome {
 		let mut ret = Outcome::None;
 
-		let any_nonexistent = self.any_nonexistent_items();
 		let load_order_empty = self.load_order().is_empty();
 
-		let btn_start = ui.add_enabled_ui(!any_nonexistent && !load_order_empty, |ui| {
+		let btn_start = ui.add_enabled_ui(!load_order_empty, |ui| {
 			let btn_start = ui.button("Start Game");
 
 			if btn_start.clicked() {
@@ -216,7 +205,7 @@ impl FrontendMenu {
 
 		ui.separator();
 
-		let btn_ed = ui.add_enabled_ui(!any_nonexistent && !load_order_empty, |ui| {
+		let btn_ed = ui.add_enabled_ui(!load_order_empty, |ui| {
 			let btn = ui.button("Editor");
 
 			if btn.clicked() {
@@ -228,10 +217,6 @@ impl FrontendMenu {
 
 		if load_order_empty {
 			const T: &str = "A game can not be started without an IWAD.";
-			btn_start.response.on_hover_text(T);
-			btn_ed.response.on_hover_text(T);
-		} else if any_nonexistent {
-			const T: &str = "One or more load order items have been deleted or moved.";
 			btn_start.response.on_hover_text(T);
 			btn_ed.response.on_hover_text(T);
 		}
@@ -316,7 +301,7 @@ impl FrontendMenu {
 		}
 	}
 
-	// Internal non-UI helpers /////////////////////////////////////////////////
+	// Non-UI //////////////////////////////////////////////////////////////////
 
 	fn remove_selected(&mut self) {
 		let mut i = 0;
@@ -342,17 +327,6 @@ impl FrontendMenu {
 	#[must_use]
 	fn load_order_mut(&mut self) -> &mut LoadOrderPreset {
 		&mut self.presets[self.cur_preset]
-	}
-
-	#[must_use]
-	fn any_nonexistent_items(&self) -> bool {
-		self.load_order().iter().any(|entry| {
-			if let LoadOrderEntryKind::Item { exists, .. } = entry.kind {
-				return !exists;
-			}
-
-			false
-		})
 	}
 }
 
@@ -398,9 +372,9 @@ impl std::ops::DerefMut for LoadOrderPreset {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadOrderEntry {
-	selected: bool,
+	pub selected: bool,
 	#[serde(flatten)]
-	kind: LoadOrderEntryKind,
+	pub kind: LoadOrderEntryKind,
 }
 
 impl LoadOrderEntry {
@@ -438,9 +412,6 @@ pub enum LoadOrderEntryKind {
 	Item {
 		path: PathBuf,
 		enabled: bool,
-		/// Gets set by [`FrontendMenu::validate`].
-		#[serde(skip)]
-		exists: bool,
 	},
 	Group {
 		name: String,
