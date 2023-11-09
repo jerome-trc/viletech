@@ -280,7 +280,7 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 		// 4 character-long action function name. This will be correct in 99.9% of cases,
 		// since no gzdoom.pk3 action functions have names of less than 5 characters.
 		// (The shortest are `A_Die`, `A_Log`, and `A_Saw`).
-		if !((p.find(1, |t| !t.is_trivia()) == Token::Colon) || (p.current_span().len() == 4)) {
+		if !((p.find(1, |t| !t.is_trivia()) == Token::Colon) || (p.nth_span(0).len() == 4)) {
 			action_function(p);
 		}
 	}

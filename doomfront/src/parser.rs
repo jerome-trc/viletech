@@ -85,8 +85,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 		assert!(
 			tokens >= 1,
 			"`advance_n` was passed 0 at {:?} (`{}`)",
-			self.current_span(),
-			self.current_slice()
+			self.nth_span(0),
+			self.nth_slice(0)
 		);
 
 		self.fuel.set(256);
@@ -98,16 +98,6 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	#[must_use]
 	pub fn eof(&self) -> bool {
 		self.pos == self.tokens.len()
-	}
-
-	#[must_use]
-	pub fn current_slice(&self) -> &str {
-		&self.source[self.tokens[self.pos].span.clone()]
-	}
-
-	#[must_use]
-	pub fn current_span(&self) -> logos::Span {
-		self.tokens[self.pos].span.clone()
 	}
 
 	#[must_use]
@@ -129,6 +119,11 @@ impl<'i, L: LangExt> Parser<'i, L> {
 	#[must_use]
 	pub fn nth_slice(&self, lookahead: usize) -> &str {
 		&self.source[self.tokens[self.pos + lookahead].span.clone()]
+	}
+
+	#[must_use]
+	pub fn nth_span(&self, lookahead: usize) -> logos::Span {
+		self.tokens[self.pos + lookahead].span.clone()
 	}
 
 	/// Shorthand for `self.nth(0) == token`.
@@ -380,8 +375,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			(position {pos}, span {span:?}, slice: `{slice}`)",
 			t = self.nth(0),
 			pos = self.pos,
-			span = self.current_span(),
-			slice = self.current_slice()
+			span = self.nth_span(0),
+			slice = self.nth_slice(0)
 		)
 	}
 
@@ -407,8 +402,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			(position {pos}, span {span:?}, slice: `{slice}`)",
 			t = self.nth(0),
 			pos = self.pos,
-			span = self.current_span(),
-			slice = self.current_slice()
+			span = self.nth_span(0),
+			slice = self.nth_slice(0)
 		);
 	}
 
@@ -434,8 +429,8 @@ impl<'i, L: LangExt> Parser<'i, L> {
 			(position {pos}, span {span:?}, slice: `{slice}`)",
 			t = self.nth(0),
 			pos = self.pos,
-			span = self.current_span(),
-			slice = self.current_slice()
+			span = self.nth_span(0),
+			slice = self.nth_slice(0)
 		);
 	}
 
