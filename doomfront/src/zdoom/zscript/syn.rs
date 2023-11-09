@@ -98,8 +98,6 @@ pub enum Syn {
 	/// `'extend' 'struct' ident '{' innard* '}'`
 	StructExtend,
 	StructQuals,
-	/// `'[' expr ']'`
-	Subscript,
 	/// `coretype arraylen?`
 	TypeRef,
 	/// ident arraylen*
