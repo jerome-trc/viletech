@@ -1,19 +1,10 @@
 //! Functions run when entering, updating, and leaving [`crate::AppState::Load`].
 
-use std::{
-	path::{Path, PathBuf},
-	sync::Arc,
-	thread::JoinHandle,
-	time::Instant,
-};
+use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
 
 use bevy::prelude::*;
 use bevy_egui::egui;
-use viletech::{
-	catalog::{LoadOutcome, PrepError},
-	util::{duration_to_hhmmss, SendTracker},
-	vfs::MountError,
-};
+use viletech::util::SendTracker;
 
 use crate::{common::ClientCommon, AppState};
 
@@ -22,20 +13,20 @@ pub(crate) struct GameLoad {
 	/// The mount thread takes a write guard to the catalog and another
 	/// pointer to `tracker`. This is `Some` from initialization up until it
 	/// gets taken to be joined.
-	pub(crate) thread: Option<JoinHandle<LoadOutcome>>,
+	pub(crate) _thread: Option<JoinHandle<()>>,
 	/// How far along the mount process is `thread`?
 	pub(crate) tracker_m: Arc<SendTracker>,
 	/// How far along the load prep process is `thread`?
 	pub(crate) tracker_p: Arc<SendTracker>,
 	/// Print to the log how long the mount takes for diagnostic purposes.
-	pub(crate) start_time: Instant,
-	pub(crate) load_order: Vec<(PathBuf, PathBuf)>,
+	pub(crate) _start_time: Instant,
+	pub(crate) _load_order: Vec<(PathBuf, PathBuf)>,
 }
 
 pub(crate) fn update(
 	mut core: ClientCommon,
-	mut loader: ResMut<GameLoad>,
-	mut next_state: ResMut<NextState<AppState>>,
+	loader: ResMut<GameLoad>,
+	_: ResMut<NextState<AppState>>,
 ) {
 	// TODO: Localize these strings.
 
@@ -63,6 +54,8 @@ pub(crate) fn update(
 		return;
 	}
 
+	/*
+
 	let res_join = loader.thread.take().unwrap().join();
 
 	let mut res_load = match res_join {
@@ -75,7 +68,6 @@ pub(crate) fn update(
 	};
 
 	res_load.sort_errors();
-
 	let go_to_frontend = match &res_load {
 		LoadOutcome::Ok { mount, prep } => {
 			for (i, (real_path, _)) in loader.load_order.iter().enumerate() {
@@ -118,8 +110,10 @@ pub(crate) fn update(
 		next_state.set(AppState::Frontend);
 	} else {
 		next_state.set(AppState::Game);
-	}
+	} */
 }
+
+/*
 
 #[must_use]
 fn error_message(real_path: &Path, mount: &[MountError], prep: &[PrepError]) -> Option<String> {
@@ -150,6 +144,8 @@ fn error_message(real_path: &Path, mount: &[MountError], prep: &[PrepError]) -> 
 
 	Some(msg)
 }
+
+*/
 
 pub(crate) fn on_exit(mut cmds: Commands) {
 	cmds.remove_resource::<GameLoad>();

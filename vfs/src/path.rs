@@ -184,3 +184,9 @@ impl ToOwned for VPath {
 		VPathBuf::new(self.0.to_owned())
 	}
 }
+
+impl std::fmt::Display for VPath {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}

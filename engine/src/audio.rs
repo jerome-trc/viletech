@@ -37,8 +37,7 @@ use kira::{
 use nodi::midly;
 use rayon::prelude::*;
 use tracing::{debug, error, info, warn};
-
-use crate::catalog::Catalog;
+use vfs::VirtualFs;
 
 use self::gui::DevGui;
 
@@ -376,8 +375,8 @@ impl AudioCore {
 
 	/// Draw the egui-based developer/debug/diagnosis menu, and perform any
 	/// state mutations requested through it by the user.
-	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, catalog: &Catalog) {
-		self.ui_impl(ctx, ui, catalog);
+	pub fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, vfs: &VirtualFs) {
+		self.ui_impl(ctx, ui, vfs);
 	}
 }
 

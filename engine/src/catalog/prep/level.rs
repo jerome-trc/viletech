@@ -1,5 +1,7 @@
 //! Functions for turning vanilla and UDMF lumps into levels.
 
+use vfs::VPath;
+
 use crate::level::{
 	self,
 	repr::{LevelBsp, LevelFormat, LevelGeom},
@@ -71,8 +73,8 @@ impl Catalog {
 			// will no longer be mandatory.
 			if !lump.is_readable() {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
-					kind: PrepErrorKind::Unreadable(lump.path().to_path_buf()),
+					path: dir.path(),
+					kind: PrepErrorKind::Unreadable(lump.path()),
 				});
 
 				return Outcome::Err(());
@@ -85,7 +87,7 @@ impl Catalog {
 			Ok(ld) => ld,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -99,7 +101,7 @@ impl Catalog {
 			Ok(n) => n,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -113,7 +115,7 @@ impl Catalog {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -127,7 +129,7 @@ impl Catalog {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -141,7 +143,7 @@ impl Catalog {
 			Ok(s) => s,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -155,7 +157,7 @@ impl Catalog {
 			Ok(ss) => ss,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -169,7 +171,7 @@ impl Catalog {
 			Ok(v) => v,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -189,7 +191,7 @@ impl Catalog {
 			Ok(t) => t,
 			Err(err) => {
 				ctx.raise_error(PrepError {
-					path: dir.path().to_path_buf(),
+					path: dir.path(),
 					kind: PrepErrorKind::Level(err),
 				});
 
@@ -206,7 +208,7 @@ impl Catalog {
 		});
 
 		// As a placeholder in case map-info provides nothing.
-		level.meta.name = dir.file_prefix().to_string().into();
+		level.meta.name = VPath::new(dir.name()).file_prefix().unwrap().to_string().into();
 
 		level.geom = LevelGeom {
 			linedefs,
@@ -226,7 +228,7 @@ impl Catalog {
 
 		let err_handler = |err| {
 			ctx.raise_error(PrepError {
-				path: dir.path().to_path_buf(),
+				path: dir.path(),
 				kind: PrepErrorKind::Level(err),
 			});
 		};

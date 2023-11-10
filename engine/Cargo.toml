@@ -48,7 +48,7 @@ util = { package = "viletech-utils", path = "../utils", features = [
 	"serde",
 	"sparseset",
 ] }
-vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
+vfs = { package = "viletech-fs", path = "../vfs", features = ["serde"] }
 wadload.path = "../wadload"
 
 arrayvec.workspace = true

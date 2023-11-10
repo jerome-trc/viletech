@@ -9,14 +9,12 @@ use kira::{
 };
 use nodi::midly::Smf;
 use tracing::{error, info};
-use vfs::VPath;
-
-use crate::catalog::Catalog;
+use vfs::{VPath, VirtualFs};
 
 use super::{AudioCore, MidiData, MidiSettings, SoundSpace};
 
 impl AudioCore {
-	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, catalog: &Catalog) {
+	pub(super) fn ui_impl(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, vfs: &VirtualFs) {
 		egui::ScrollArea::vertical().show(ui, |ui| {
 			// Music ///////////////////////////////////////////////////////////
 
@@ -107,7 +105,7 @@ impl AudioCore {
 					.add_enabled(!self.gui.id_buf.is_empty(), btn_play)
 					.clicked()
 				{
-					self.ui_impl_try_play(catalog);
+					self.ui_impl_try_play(vfs);
 				}
 
 				if ui
@@ -135,28 +133,31 @@ impl AudioCore {
 		});
 	}
 
-	fn ui_impl_try_play(&mut self, catalog: &Catalog) {
-		let path = VPath::new(&self.gui.id_buf).to_path_buf();
+	fn ui_impl_try_play(&mut self, vfs: &VirtualFs) {
+		let path = VPath::new(&self.gui.id_buf).to_owned();
 
-		let fref = match catalog.vfs().get(&path) {
+		let mut fref = match vfs.get(&path) {
 			Some(f) => f,
 			None => {
-				info!("No file under virtual path: {}", path.display());
+				info!("No file under virtual path: {path}");
 				return;
 			}
 		};
 
 		if !fref.is_readable() {
-			info!(
-				"File can not be read (not binary or text): {}",
-				path.display()
-			);
+			info!("File can not be read (not binary or text): {path}");
 			return;
 		}
 
-		let bytes = fref.read_bytes();
+		let bytes = match fref.read() {
+			Ok(b) => b,
+			Err(err) => {
+				error!("Failed to read file: {err}");
+				return;
+			}
+		};
 
-		if let Ok(midi) = Smf::parse(bytes) {
+		if let Ok(midi) = Smf::parse(&bytes) {
 			let sf_path = PathBuf::from(self.gui.soundfont_buf.clone());
 
 			if !sf_path.exists() {
@@ -171,11 +172,7 @@ impl AudioCore {
 
 			match res {
 				Ok(()) => {
-					info!(
-						"Playing: {p} (volume {vol})",
-						p = path.display(),
-						vol = self.gui.volume,
-					);
+					info!("Playing: {path} (volume {vol})", vol = self.gui.volume,);
 				}
 				Err(err) => {
 					info!("Failed to play MIDI `{}` - {err}", sf_path.display());
@@ -190,21 +187,14 @@ impl AudioCore {
 
 			match res {
 				Ok(()) => {
-					info!(
-						"Playing: {p} (volume {vol})",
-						p = path.display(),
-						vol = self.gui.volume
-					);
+					info!("Playing: {path} (volume {vol})", vol = self.gui.volume);
 				}
 				Err(err) => {
-					info!("Failed to play `{}` - {err}", path.display());
+					info!("Failed to play `{path}` - {err}");
 				}
 			};
 		} else {
-			info!(
-				"Given file is neither waveform nor MIDI audio: `{}`",
-				path.display()
-			);
+			info!("Given file is neither waveform nor MIDI audio: `{path}`",);
 		}
 	}
 

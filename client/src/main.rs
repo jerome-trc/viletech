@@ -10,10 +10,7 @@ mod load;
 mod playground;
 mod setup;
 
-use std::{
-	path::PathBuf,
-	time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use bevy::{
 	app::AppExit, diagnostic::LogDiagnosticsPlugin, input::InputSystem,
@@ -24,7 +21,12 @@ use clap::Parser;
 use common::ClientCommon;
 use indoc::printdoc;
 use viletech::{
-	audio::AudioCore, catalog::Catalog, input::InputCore, tracing::info, user::UserCore,
+	audio::AudioCore,
+	input::InputCore,
+	tracing::info,
+	user::UserCore,
+	vfs::{self, VPath},
+	VirtualFs,
 };
 
 use crate::{
@@ -67,14 +69,10 @@ VileTech Client {c_vers}
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 	app.world.insert_resource(ExitHandler);
 
-	let mut catalog = Catalog::new([(viletech::basedata::path(), PathBuf::from("/viletech"))]);
-
-	for rmp in viletech::basedata::RESERVED_MOUNT_POINTS {
-		catalog.config_set().reserve_mount_point(rmp.to_string());
-	}
-
-	app.world.insert_resource(catalog);
-	info!("Catalog initialized.");
+	let mut vfs = VirtualFs(vfs::VirtualFs::default());
+	vfs.mount(&viletech::basedata::path(), VPath::new("viletech"))?;
+	app.world.insert_resource(vfs);
+	info!("Virtual file system initialized.");
 
 	app.add_state::<AppState>()
 		.insert_resource(setup::winit_settings())
@@ -147,12 +145,16 @@ VileTech Client {c_vers}
 		1.0 / 35.0,
 	)));
 	app.add_systems(Update, game::update.run_if(in_state(AppState::Game)));
+
+	/*
 	app.add_systems(
 		FixedUpdate,
 		viletech::sim::tick.run_if(
 			in_state(AppState::Game).and_then(|sim: Option<Res<viletech::sim::Sim>>| sim.is_some()),
 		),
 	);
+	*/
+
 	app.add_systems(OnEnter(AppState::Game), game::on_enter);
 	app.add_systems(OnExit(AppState::Game), game::on_exit);
 

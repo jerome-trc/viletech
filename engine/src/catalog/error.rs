@@ -89,70 +89,61 @@ impl std::fmt::Display for PrepError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match &self.kind {
 			PrepErrorKind::ColorMap(err) => {
-				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
+				write!(f, "failed to read `{p}`: {err}", p = self.path)
 			}
 			PrepErrorKind::EnDoom(err) => {
-				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
+				write!(f, "failed to read `{p}`: {err}", p = self.path)
 			}
 			PrepErrorKind::Flat => {
 				write!(
 					f,
 					"lump {} is between `F_START` and `F_END` but is not a flat",
-					self.path.display()
+					self.path
 				)
 			}
 			PrepErrorKind::Io(err) => err.fmt(f),
 			PrepErrorKind::Level(err) => {
-				write!(
-					f,
-					"level `{}` is invalid. Reason: {err}",
-					self.path.display()
-				)
+				write!(f, "level `{}` is invalid. Reason: {err}", self.path)
 			}
 			PrepErrorKind::Image(err) => {
 				write!(
 					f,
 					"failed to decode image: `{p}` - details: {err}",
-					p = self.path.display()
+					p = self.path
 				)
 			}
 			PrepErrorKind::MissingLithRoot => {
-				write!(
-					f,
-					"Lithica root directory not found at path: {}",
-					self.path.display()
-				)
+				write!(f, "Lithica root directory not found at path: {}", self.path)
 			}
 			PrepErrorKind::PNames(err) => {
-				write!(f, "failed to read `{p}`: {err}", p = self.path.display())
+				write!(f, "failed to read `{p}`: {err}", p = self.path)
 			}
 			PrepErrorKind::Sprite => {
 				write!(
 					f,
 					"lump {} is between `S_START` and `S_END` \
 					but is not a recognized sprite format",
-					self.path.display()
+					self.path
 				)
 			}
 			PrepErrorKind::TextureX(err) => {
 				write!(
 					f,
 					"TEXTURE1/TEXTURE2 lump `{p}` is malformed: {err}",
-					p = self.path.display()
+					p = self.path
 				)
 			}
 			PrepErrorKind::Unreadable(path) => {
 				write!(
 					f,
-					"virtual file {p} was expected to have bytes or text content, \
+					"virtual file {path} was expected to have bytes or text content, \
 					but it is empty or a directory",
-					p = path.display()
 				)
 			}
 			PrepErrorKind::WaveformAudio(err) => write!(
 				f,
 				"failed to load audio file: `{p}` - details: {err}",
-				p = self.path.display()
+				p = self.path
 			),
 		}
 	}

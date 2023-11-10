@@ -2,18 +2,12 @@
 
 use bevy::prelude::*;
 use bevy_egui::egui;
-use viletech::{
-	gfx::TerrainMaterial,
-	level::LevelDef,
-	sim::{self, Sim},
-};
 
 use crate::{common::ClientCommon, AppState};
 
 pub(crate) fn update(
 	mut core: ClientCommon,
 	mut _next_state: ResMut<NextState<AppState>>,
-	mut _sim: Option<ResMut<Sim>>,
 	mut cameras: Query<&mut Transform, With<Camera>>,
 ) {
 	let mut cam_speed = 0.1;
@@ -68,27 +62,10 @@ pub(crate) fn update(
 	core.draw_devgui();
 }
 
-pub(crate) fn on_enter(
-	core: ClientCommon,
-	cmds: Commands,
-	meshes: ResMut<Assets<Mesh>>,
-	materials: ResMut<Assets<TerrainMaterial>>,
-	images: ResMut<Assets<Image>>,
-) {
-	let level = core.catalog.get::<LevelDef>("DOOM/E1M1").unwrap().handle();
-
-	sim::start(
-		cmds,
-		sim::setup::Context {
-			catalog: &core.catalog,
-			meshes,
-			materials,
-			images,
-		},
-		level,
-	);
+pub(crate) fn on_enter() {
+	// TODO: add `Sim` resource.
 }
 
-pub(crate) fn on_exit(mut cmds: Commands) {
-	cmds.remove_resource::<Sim>();
+pub(crate) fn on_exit(_: Commands) {
+	// TODO: remove `Sim` resource.
 }

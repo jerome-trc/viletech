@@ -12,7 +12,7 @@
 
 pub mod audio;
 pub mod basedata;
-pub mod catalog;
+// pub mod catalog;
 pub mod console;
 pub extern crate data;
 pub mod devgui;
@@ -25,7 +25,7 @@ pub mod log;
 pub extern crate mus;
 pub mod player;
 pub mod rng;
-pub mod sim;
+// pub mod sim;
 pub mod terminal;
 pub extern crate tracing;
 pub mod user;
@@ -57,6 +57,12 @@ pub enum BaseGame {
 	Strife,
 	ChexQuest,
 }
+
+/// Newtype around [`vfs::VirtualFs`] which implements [`Resource`].
+///
+/// [`Resource`]: bevy::ecs::system::system_param::Resource
+#[derive(bevy::prelude::Resource, bevy::prelude::Deref, bevy::prelude::DerefMut)]
+pub struct VirtualFs(pub vfs::VirtualFs);
 
 // Constants ///////////////////////////////////////////////////////////////////
 

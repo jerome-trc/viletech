@@ -27,7 +27,7 @@ doomfront = { path = "../doomfront", features = [
 lith = { package = "lithica", path = "../lith" }
 mus = { package = "mus2midi", path = "../mus2midi" }
 util = { package = "viletech-utils", path = "../utils", features = ["serde"] }
-vfs = { package = "viletech-fs", path = "../vfs", features = ["egui", "serde"] }
+vfs = { package = "viletech-fs", path = "../vfs", features = ["serde"] }
 wadload.path = "../wadload"
 
 clap.workspace = true

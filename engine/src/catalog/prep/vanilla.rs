@@ -17,7 +17,7 @@ impl Catalog {
 		match ColorMap::new(bytes) {
 			Ok(cmap) => Ok(cmap),
 			Err(err) => Err(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::ColorMap(err),
 			}),
 		}
@@ -31,7 +31,7 @@ impl Catalog {
 		match EnDoom::new(bytes) {
 			Ok(endoom) => Ok(endoom),
 			Err(err) => Err(Box::new(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::EnDoom(err),
 			})),
 		}
@@ -45,7 +45,7 @@ impl Catalog {
 	) -> Result<Image, Box<PrepError>> {
 		if bytes.len() != (64 * 64) {
 			return Err(Box::new(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::Flat,
 			}));
 		}
@@ -89,7 +89,7 @@ impl Catalog {
 		match PaletteSet::new(bytes) {
 			Ok(palset) => Outcome::Ok(palset),
 			Err(err) => Outcome::Err(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::PNames(err),
 			}),
 		}
@@ -109,7 +109,7 @@ impl Catalog {
 				None => Outcome::None,
 			},
 			Err(err) => Outcome::Err(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::PNames(err),
 			}),
 		}
@@ -127,7 +127,7 @@ impl Catalog {
 				None => Outcome::None,
 			},
 			Err(err) => Outcome::Err(PrepError {
-				path: lump.path().to_path_buf(),
+				path: lump.path(),
 				kind: PrepErrorKind::TextureX(err),
 			}),
 		}

@@ -1,170 +1,144 @@
 use super::*;
 
 #[test]
-fn mount() {
-	let Some(req) = request() else {
+fn vpath_smoke() {
+	let root_vpb = VPathBuf::from("/");
+
+	assert_eq!(root_vpb, VPathBuf::from("/"));
+	assert_eq!(root_vpb, VPath::new("/"));
+	assert!(root_vpb.components().next().is_none());
+
+	let vpb = VPathBuf::from("/lorem/ipsum/dolor/sit.amet");
+
+	let mut components = vpb.components();
+	assert_eq!(components.next(), Some(VPath::new("lorem")));
+	assert_eq!(components.next(), Some(VPath::new("ipsum")));
+	assert_eq!(components.next(), Some(VPath::new("dolor")));
+	assert_eq!(components.next(), Some(VPath::new("sit.amet")));
+	assert_eq!(components.next(), None);
+
+	let lmp = VPathBuf::from("/somewad/LuMp.A.b");
+	assert_eq!(lmp.file_prefix().unwrap().as_str(), "LuMp");
+	assert_eq!(lmp.file_stem().unwrap().as_str(), "LuMp.A");
+	assert_eq!(lmp.extension().unwrap(), "b");
+	assert_eq!(lmp.lump_name().unwrap().as_str(), "LUMP.A");
+
+	let Some(vfs) = sample_vfs() else {
 		return;
 	};
 
-	let mut vfs = VirtualFs::default();
+	let lump = vfs.get(VPath::new("/freedoom2/FCGRATE2")).unwrap();
 
-	let outcome = vfs.mount(req);
+	let lmp_path = lump.path();
+	assert_eq!(lmp_path, VPathBuf::from("/freedoom2/fcgrate2"));
+	assert!(lmp_path.extension().is_none());
+}
 
-	match outcome {
-		MountOutcome::Ok(errors) => {
-			assert_eq!(vfs.mounts.len(), 2);
-			assert_eq!(errors.len(), 2);
-			assert!(errors[0].is_empty());
-		}
-		other => {
-			panic!("unexpected mount outcome: {other:#?}");
-		}
+#[test]
+fn mount_smoke() {
+	let Some(_) = sample_vfs() else {
+		return;
+	};
+}
+
+#[test]
+fn lookup_smoke() {
+	let Some(vfs) = sample_vfs() else {
+		return;
+	};
+
+	{
+		let r = vfs.get(VPath::new("/")).unwrap();
+		assert_eq!(r.into_folder().unwrap(), vfs.root());
+	}
+
+	{
+		let r = vfs.get(VPath::new("//")).unwrap();
+		assert_eq!(r.into_folder().unwrap(), vfs.root());
+	}
+
+	const SAMPLES: &[&str] = &[
+		"freedoom2",
+		"/freedoom2",
+		"FREEDOOM2",
+		"/FREEDOOM2",
+		"/freedoom2/fcgrate2",
+		"/freedoom2/FCGRATE2",
+		"/FREEDOOM2/fcgrate2",
+	];
+
+	for sample in SAMPLES {
+		let r = vfs.get(VPath::new(sample));
+		assert!(r.is_some(), "failed to look up `{sample}`");
 	}
 }
 
 #[test]
-fn lookup() {
-	let Some(req) = request() else {
+fn read_smoke() {
+	let Some(vfs) = sample_vfs() else {
 		return;
 	};
 
-	let mut vfs = VirtualFs::default();
+	assert!(vfs.get(VPath::new("/viletech.sf2")).is_some());
+	assert!(vfs.get(VPath::new("/viletech/viletech.png")).is_some());
 
-	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS lookup unit test encountered mount errors");
-	}
+	let mut lump = vfs.get(VPath::new("/freedoom2/FCGRATE2")).unwrap();
+	let bytes = lump.read().unwrap();
 
-	assert!(vfs.get("/").is_some(), "root lookup failed");
-	assert!(vfs.get("//").is_some(), "`//` lookup failed"); // Should return root.
-
-	assert!(
-		vfs.get("/freedoom2").is_some(),
-		"`/freedoom2` lookup failed."
-	);
-	assert!(
-		vfs.get("/freedoom2/").is_some(),
-		"`/freedoom2/` lookup failed."
-	);
-	assert!(
-		vfs.get("/freedoom2/FCGRATE2").is_some(),
-		"`/freedoom2/FCGRATE2` lookup failed."
-	);
-	assert!(
-		vfs.get("/freedoom2/FCGRATE2/").is_some(),
-		"`/freedoom2/FCGRATE2/` lookup failed."
-	);
-}
-#[test]
-fn dir_structure() {
-	let Some(req) = request() else {
-		return;
-	};
-
-	let mut vfs = VirtualFs::default();
-
-	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS directory structure unit test encountered mount errors");
-	}
-
-	let root = vfs.get("/").unwrap();
+	assert_eq!(bytes.len(), 4096);
 
 	assert_eq!(
-		root.child_count(),
-		2,
-		"expected root to have 2 children, but it has {}",
-		root.child_count()
+		&bytes[..8],
+		&[0x68, 0x6C, 0x6E, 0x6E, 0x6E, 0x6E, 0x6E, 0x6E]
 	);
 
-	const EXPECTED_CHILDREN: &[&str] = &[
-		"/freedoom2/MAP01/THINGS",
-		"/freedoom2/MAP01/LINEDEFS",
-		"/freedoom2/MAP01/SIDEDEFS",
-		"/freedoom2/MAP01/VERTEXES",
-		"/freedoom2/MAP01/SEGS",
-		"/freedoom2/MAP01/SSECTORS",
-		"/freedoom2/MAP01/NODES",
-		"/freedoom2/MAP01/SECTORS",
-		"/freedoom2/MAP01/REJECT",
-		"/freedoom2/MAP01/BLOCKMAP",
-	];
-
-	for (index, child) in vfs
-		.get("/freedoom2/MAP01")
-		.expect("`/freedoom2/MAP01` was not found")
-		.children()
-		.expect("`/freedoom2/MAP01` is not a directory")
-		.enumerate()
-	{
-		assert_eq!(child.path_str(), EXPECTED_CHILDREN[index]);
-	}
+	assert_eq!(
+		&bytes[4088..],
+		&[0x6F, 0x6F, 0x6F, 0x05, 0x05, 0x6E, 0x68, 0x66]
+	);
 }
-
-#[test]
-fn glob() {
-	let Some(req) = request() else {
-		return;
-	};
-
-	let mut vfs = VirtualFs::default();
-
-	if vfs.mount(req).total_err_count() > 0 {
-		panic!("VFS glob unit test encountered mount errors");
-	}
-
-	{
-		let glob = globset::Glob::new("/freedoom2/FCGRATE*").unwrap();
-		let count = vfs.glob_par(glob).count();
-		assert_eq!(
-			count, 2,
-			"expected 2 entries matching glob `/freedoom2/FCGRATE*`, found: {}",
-			count
-		);
-	}
-
-	{
-		let glob = globset::Glob::new("/freedoom1/E*M[0123456789]").unwrap();
-		let count = vfs.glob_par(glob).count();
-		assert_eq!(count, 36, "expected 36 maps, found: {}", count);
-	}
-
-	{
-		let glob = globset::Glob::new("/freedoom2/MAP*").unwrap();
-		let count = vfs.glob_par(glob).count();
-		assert_eq!(
-			count, 352,
-			"expected 352 maps and sub-entries, found: {}",
-			count
-		);
-	}
-}
-
-// Details /////////////////////////////////////////////////////////////////////
 
 #[must_use]
-fn request() -> Option<MountRequest> {
-	let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample");
+fn sample_vfs() -> Option<VirtualFs> {
+	let mut vfs = VirtualFs::default();
 
-	let load_order = vec![
-		(base.join("freedoom1.wad"), VPathBuf::from("/freedoom1")),
-		(base.join("freedoom2.wad"), VPathBuf::from("/freedoom2")),
-	];
+	let base = Path::new(env!("CARGO_MANIFEST_DIR"));
 
-	for (real_path, _) in &load_order {
-		if !real_path.exists() {
+	{
+		let sf2 = base.join("../assets/soundfonts/viletech.sf2");
+		vfs.mount(&sf2, VPath::new("viletech.sf2")).unwrap();
+	}
+
+	{
+		let basedata = base.join("../assets/viletech");
+		vfs.mount(&basedata, VPath::new("viletech")).unwrap();
+	}
+
+	{
+		let Some(freedoom2) = freedoom2_path() else {
+			return None;
+		};
+
+		if !freedoom2.exists() {
 			eprintln!(
-				"VFS testing depends on the following files of sample data:\r\n\t\
-				- `$CARGO_MANIFEST_DIR/sample/freedoom1.wad`\r\n\t\
-				- `$CARGO_MANIFEST_DIR/sample/freedoom2.wad`\r\n\t\
-				They can be acquired from https://freedoom.github.io/."
+				"`{}` not found on the disk; skipping a test.",
+				freedoom2.display()
 			);
 
 			return None;
 		}
+
+		vfs.mount(&freedoom2, VPath::new("freedoom2")).unwrap();
 	}
 
-	Some(MountRequest {
-		load_order,
-		tracker: None,
-		basedata: true,
-	})
+	Some(vfs)
+}
+
+#[must_use]
+fn freedoom2_path() -> Option<PathBuf> {
+	let Ok(evar) = std::env::var("VILETECHFS_SAMPLE_DIR") else {
+		return None;
+	};
+
+	Some(Path::new(&evar).join("freedoom2.wad"))
 }

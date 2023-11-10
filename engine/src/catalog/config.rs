@@ -25,8 +25,5 @@ impl ConfigGet<'_> {
 pub struct ConfigSet<'cat>(pub(super) &'cat mut Catalog);
 
 impl ConfigSet<'_> {
-	pub fn reserve_mount_point(self, mp: String) -> Self {
-		self.0.vfs.config_set().reserve_mount_point(mp);
-		self
-	}
+	// ???
 }

@@ -35,13 +35,13 @@ impl Image {
 					}
 
 					Some(Err(PrepError {
-						path: file.path().to_path_buf(),
+						path: file.path(),
 						kind: PrepErrorKind::Image(err),
 					}))
 				}
 			},
 			Err(err) => Some(Err(PrepError {
-				path: file.path().to_path_buf(),
+				path: file.path(),
 				kind: PrepErrorKind::Io(err),
 			})),
 		}

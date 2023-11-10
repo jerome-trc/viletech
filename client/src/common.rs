@@ -1,6 +1,6 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::{egui, EguiContexts};
-use viletech::{audio::AudioCore, catalog::Catalog, console::Console, input::InputCore, util};
+use viletech::{audio::AudioCore, console::Console, input::InputCore, util, VirtualFs};
 
 use crate::{ccmd, playground::Playground};
 
@@ -8,7 +8,7 @@ pub(crate) type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
 
 #[derive(SystemParam)]
 pub(crate) struct ClientCommon<'w, 's> {
-	pub(crate) catalog: ResMut<'w, Catalog>,
+	pub(crate) vfs: ResMut<'w, VirtualFs>,
 	pub(crate) input: ResMut<'w, InputCore>,
 	pub(crate) audio: ResMut<'w, AudioCore>,
 	pub(crate) console: ResMut<'w, Console<ccmd::Command>>,
@@ -70,10 +70,10 @@ impl ClientCommon<'_, '_> {
 					.panel_left(ctx)
 					.show_inside(ui, |ui| match self.devgui.left {
 						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui, &self.catalog);
+							self.audio.ui(ctx, ui, &self.vfs);
 						}
 						DevGuiStatus::Catalog => {
-							self.catalog.ui(ctx, ui);
+							// TODO
 						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
@@ -82,7 +82,7 @@ impl ClientCommon<'_, '_> {
 							self.playground.ui(ctx, ui);
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.vfs_mut().ui(ctx, ui);
+							// TODO
 						}
 					});
 
@@ -90,10 +90,10 @@ impl ClientCommon<'_, '_> {
 					.panel_right(ctx)
 					.show_inside(ui, |ui| match self.devgui.right {
 						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui, &self.catalog);
+							self.audio.ui(ctx, ui, &self.vfs);
 						}
 						DevGuiStatus::Catalog => {
-							self.catalog.ui(ctx, ui);
+							// TODO
 						}
 						DevGuiStatus::Console => {
 							self.console.ui(ctx, ui);
@@ -102,7 +102,7 @@ impl ClientCommon<'_, '_> {
 							self.playground.ui(ctx, ui);
 						}
 						DevGuiStatus::Vfs => {
-							self.catalog.vfs_mut().ui(ctx, ui);
+							// TODO
 						}
 					});
 			});

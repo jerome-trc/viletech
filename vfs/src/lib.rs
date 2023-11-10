@@ -5,139 +5,285 @@
 //! into one tree so that reading from them is more convenient at all other levels
 //! of the engine, without exposing any details of the user's underlying machine.
 
-#![doc(
-	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
-	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
-)]
-
-mod error;
-mod file;
-#[cfg(feature = "egui")]
-mod gui;
+mod detail;
 mod mount;
+mod path;
 
 #[cfg(test)]
-pub mod test;
+mod test;
 
 use std::{
-	collections::HashMap,
+	fs::File,
+	io::{Read, Seek, SeekFrom},
+	ops::Range,
 	path::{Path, PathBuf},
+	string::FromUtf8Error,
 	sync::Arc,
 };
 
-use file::DirectoryKind;
-use globset::Glob;
+use parking_lot::{RwLock, RwLockWriteGuard};
 use rayon::prelude::*;
-use regex::Regex;
-use util::{Outcome, SendTracker};
+use slotmap::{new_key_type, HopSlotMap};
+use util::SmallString;
+use zip_structs::zip_error::ZipReadError;
 
-use crate::file::Content;
-
-pub use self::{
-	error::MountError,
-	error::VfsError,
-	file::{File, FileRef},
-};
-
-/// Disambiguates between real FS paths and virtual FS paths.
-pub type VPath = std::path::Path;
-/// Disambiguates between real FS paths and virtual FS paths.
-pub type VPathBuf = std::path::PathBuf;
-
-/// [`Arc`] over [`VPath`] is used instead of a plain [`VPathBuf`] to slightly
-/// reduce duplication between the file map and directory sets.
-pub(crate) type FileKey = Arc<VPath>;
+pub use self::path::{VPath, VPathBuf};
 
 #[derive(Debug)]
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct VirtualFs {
-	/// Always contains the root node, under virtual path `/`.
-	files: HashMap<FileKey, File>,
-	mounts: Vec<MountInfo>,
-	#[cfg(feature = "egui")]
-	gui: gui::DevGui,
-	config: Config,
+	pub(crate) root: FolderSlot,
+	pub(crate) mounts: Vec<MountInfo>,
+	pub(crate) files: HopSlotMap<FileSlot, VFile>,
+	pub(crate) folders: HopSlotMap<FolderSlot, VFolder>,
 }
 
 impl VirtualFs {
-	// Accessors ///////////////////////////////////////////////////////////////
-
 	#[must_use]
-	pub fn root(&self) -> FileRef {
-		self.get("/").unwrap()
-	}
-
-	#[must_use]
-	pub fn get(&self, path: impl AsRef<VPath>) -> Option<FileRef> {
-		self.files
-			.get_key_value(path.as_ref())
-			.map(|(path, file)| FileRef {
-				vfs: self,
-				path,
-				file,
-			})
-	}
-
-	#[must_use]
-	pub fn contains(&self, path: impl AsRef<VPath>) -> bool {
-		self.files.contains_key(path.as_ref())
-	}
-
-	#[must_use]
-	pub fn is_dir(&self, path: impl AsRef<VPath>) -> bool {
-		self.files
-			.get(path.as_ref())
-			.filter(|f| f.is_dir())
-			.is_some()
-	}
-
-	/// The total number of entries in this virtual file system, root included.
-	#[must_use]
-	pub fn file_count(&self) -> usize {
-		self.files.len()
-	}
-
-	/// Yields every file, root included, in an unspecified order.
-	pub fn iter(&self) -> impl Iterator<Item = FileRef> {
-		self.files.iter().map(|(path, file)| FileRef {
+	pub fn root(&self) -> FolderRef {
+		FolderRef {
 			vfs: self,
-			path,
-			file,
-		})
+			slot: self.root,
+			vfolder: &self.folders[self.root],
+		}
 	}
 
-	/// Shorthand for `all_files().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn par_iter(&self) -> impl ParallelIterator<Item = FileRef> {
-		self.iter().par_bridge()
+	pub fn mount(&mut self, real_path: &Path, mount_point: &VPath) -> Result<(), Error> {
+		if mount_point.byte_len() == 0 {
+			return Err(Error::MountPointEmpty);
+		}
+
+		if mount_point.as_str().contains(['/', '\\', '*']) {
+			return Err(Error::MountPointInvalidChars);
+		}
+
+		if self.mounts.iter().any(|mntinfo| {
+			mntinfo
+				.mount_point
+				.as_str()
+				.eq_ignore_ascii_case(mount_point.as_str())
+		}) {
+			return Err(Error::MountPointDuplicate);
+		}
+
+		let canon = real_path.canonicalize().map_err(Error::Canonicalize)?;
+
+		match mount::mount(self, &canon, mount_point.as_str()) {
+			Ok(mntinfo) => {
+				self.mounts.push(mntinfo);
+				Ok(())
+			}
+			Err(err) => {
+				let to_clean = match self.get(mount_point) {
+					Some(Ref::File(iref)) => Some(Slot::File(iref.slot)),
+					Some(Ref::Folder(oref)) => Some(Slot::Folder(oref.slot)),
+					None => None,
+				};
+
+				match to_clean {
+					Some(Slot::File(islot)) => {
+						self.remove_file_by_slot(islot);
+					}
+					Some(Slot::Folder(oslot)) => {
+						self.remove_folder_by_slot(oslot);
+					}
+					None => {}
+				}
+
+				Err(err)
+			}
+		}
 	}
 
-	/// Yields every file whose path matches `pattern`, potentially including the root,
-	/// in an unspecified order.
-	pub fn glob(&self, pattern: Glob) -> impl Iterator<Item = FileRef> {
-		let glob = pattern.compile_matcher();
-
-		self.iter()
-			.filter(move |file| glob.is_match(file.path_str()))
+	#[must_use]
+	pub fn exists(&self, vpath: &VPath) -> bool {
+		self.get(vpath).is_some()
 	}
 
-	/// Shorthand for `glob().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn glob_par(&self, pattern: Glob) -> impl ParallelIterator<Item = FileRef> {
-		self.glob(pattern).par_bridge()
+	#[must_use]
+	pub fn file_exists(&self, slot: FileSlot) -> bool {
+		self.files.contains_key(slot)
 	}
 
-	/// Yields every file whose path matches `pattern`, potentially including the root,
-	/// in an unspecified order.
-	pub fn regex(&self, pattern: Regex) -> impl Iterator<Item = FileRef> {
-		self.iter()
-			.filter(move |file| pattern.is_match(file.path_str()))
+	#[must_use]
+	pub fn folder_exists(&self, slot: FolderSlot) -> bool {
+		self.folders.contains_key(slot)
 	}
 
-	/// Shorthand for `regex().par_bridge()`.
-	#[must_use = "iterators are lazy and do nothing unless consumed"]
-	pub fn regex_par(&self, pattern: Regex) -> impl ParallelIterator<Item = FileRef> {
-		self.regex(pattern).par_bridge()
+	/// Returns `true` if a file was removed.
+	pub fn remove_file_by_slot(&mut self, slot: FileSlot) -> bool {
+		let ret = self.files.remove(slot).is_some();
+
+		if let Some(p) = self.mounts.iter().position(|mntinfo| mntinfo.root == slot) {
+			self.mounts.remove(p);
+		}
+
+		ret
+	}
+
+	pub fn remove_folder_by_slot(&mut self, slot: FolderSlot) {
+		assert_ne!(slot, self.root, "root folder cannot be removed");
+		self.remove_folder_recur(slot);
+
+		if let Some(p) = self.mounts.iter().position(|mntinfo| mntinfo.root == slot) {
+			self.mounts.remove(p);
+		}
+	}
+
+	fn remove_folder_recur(&mut self, oslot: FolderSlot) {
+		let subfolders = std::mem::take(&mut self.folders[oslot].subfolders);
+
+		for slot in subfolders {
+			self.remove_folder_recur(slot);
+			let removed = self.folders.remove(slot);
+			debug_assert!(removed.is_some());
+		}
+
+		for islot in self.folders[oslot].files.iter().copied() {
+			let removed = self.files.remove(islot);
+			debug_assert!(removed.is_some());
+		}
+	}
+
+	pub fn retain<F>(&mut self, mut predicate: F) -> Result<(), Error>
+	where
+		F: FnMut(&MountInfo) -> bool,
+	{
+		let mut to_unmount = vec![];
+
+		self.mounts.retain(|mntinfo| {
+			if predicate(mntinfo) {
+				true
+			} else {
+				to_unmount.push(mntinfo.root);
+				false
+			}
+		});
+
+		for root in to_unmount {
+			match root {
+				Slot::File(islot) => {
+					let removed = self.files.remove(islot);
+					debug_assert!(removed.is_some());
+				}
+				Slot::Folder(oslot) => {
+					self.remove_folder_recur(oslot);
+				}
+			}
+		}
+
+		Ok(())
+	}
+
+	pub fn get<'vfs: 'p, 'p>(&'vfs self, vpath: &'p VPath) -> Option<Ref<'vfs>> {
+		self.lookup_recur(self.root, &self.folders[self.root], vpath.components())
+	}
+
+	fn lookup_recur<'vfs: 'p, 'p>(
+		&'vfs self,
+		slot: FolderSlot,
+		folder: &'vfs VFolder,
+		mut components: impl Iterator<Item = &'p VPath>,
+	) -> Option<Ref<'vfs>> {
+		let Some(pcomp) = components.next() else {
+			return Some(Ref::Folder(FolderRef {
+				vfs: self,
+				slot,
+				vfolder: folder,
+			}));
+		};
+
+		if let Some((sfslot, subfold)) = folder.subfolders.iter().copied().find_map(|s| {
+			let fold = &self.folders[s];
+
+			fold.name
+				.eq_ignore_ascii_case(pcomp.as_str())
+				.then_some((s, fold))
+		}) {
+			return self.lookup_recur(sfslot, subfold, components);
+		}
+
+		let option = match folder.files.len() {
+			// TODO: tweak the parallel search threshold to determine an optima.
+			0..=4096 => folder.files.iter().copied().find_map(|slot| {
+				let file = &self.files[slot];
+
+				file.name
+					.eq_ignore_ascii_case(pcomp.as_str())
+					.then_some((slot, file))
+			}),
+			_ => folder.files.par_iter().copied().find_map_any(|slot| {
+				let file = &self.files[slot];
+
+				file.name
+					.eq_ignore_ascii_case(pcomp.as_str())
+					.then_some((slot, file))
+			}),
+		};
+
+		let Some((slot, file)) = option else {
+			return None;
+		};
+
+		let guard = file.reader.write();
+
+		Some(Ref::File(FileRef {
+			vfs: self,
+			slot,
+			vfile: file,
+			guard,
+		}))
+	}
+
+	/// Each virtual file backed by a physical file reads its slice into a buffer
+	/// belonging exclusively to that virtual file.
+	pub fn ingest_all(&mut self) {
+		#[must_use]
+		fn ingest(
+			reader: &mut Reader,
+			orig_span: Range<usize>,
+			compression: Compression,
+		) -> Option<Vec<u8>> {
+			let result = match reader {
+				Reader::File(fh) => Reader::read_from_file(fh, orig_span),
+				Reader::Memory(_) => return None,
+				Reader::_Super(_) => unimplemented!(),
+			};
+
+			result.and_then(|b| detail::decompress(b, compression)).ok()
+		}
+
+		let mut vfiles = self.files.values_mut();
+
+		let Some(vfile0) = vfiles.next() else {
+			return;
+		};
+
+		let mut guard = vfile0.reader.write_arc();
+		let mut prev_arc = Arc::as_ptr(&vfile0.reader);
+
+		if let Some(bytes) = ingest(&mut guard, vfile0.span(), vfile0.compression) {
+			vfile0.span = 0..(bytes.len() as u32);
+			vfile0.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+			vfile0.compression = Compression::None;
+		}
+
+		for vfile in vfiles {
+			// If the new lock is the same as the previous lock,
+			// don't waste time on another re-open.
+			let arc_ptr = Arc::as_ptr(&vfile.reader);
+
+			if !std::ptr::eq(arc_ptr, prev_arc) {
+				guard = vfile.reader.write_arc();
+			};
+
+			prev_arc = arc_ptr;
+
+			if let Some(bytes) = ingest(&mut guard, vfile.span(), vfile.compression) {
+				vfile.span = 0..(bytes.len() as u32);
+				vfile.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+				vfile.compression = Compression::None;
+			}
+		}
 	}
 
 	#[must_use]
@@ -145,240 +291,466 @@ impl VirtualFs {
 		&self.mounts
 	}
 
-	// Mutators ////////////////////////////////////////////////////////////////
-
-	pub fn mount(&mut self, request: MountRequest) -> MountOutcome {
-		if request.load_order.is_empty() {
-			return MountOutcome::NoOp;
-		}
-
-		let mnt_ctx =
-			mount::Context::new(request.tracker, request.load_order.len(), request.basedata);
-
-		// Note to reader: check `./mount.rs`.
-		match self.mount_impl(&request.load_order, mnt_ctx) {
-			Outcome::Ok(output) => MountOutcome::Ok(output),
-			Outcome::Err(errors) => MountOutcome::Errs(errors),
-			Outcome::Cancelled => MountOutcome::Cancelled,
-			Outcome::None => unreachable!(),
-		}
-	}
-
-	/// Note that this is with regards to the mount array, not the file tree,
-	/// although all removed mounts will have their subtrees removed.
-	pub fn truncate(&mut self, len: usize) {
-		for i in (len + 1)..self.mounts.len() {
-			let mp = self.mounts[i].mount_point().to_path_buf();
-			self.remove_recursive(&mp);
-		}
-
-		self.mounts.truncate(len);
+	/// Computes in `O(1)` time.
+	#[must_use]
+	pub fn file_count(&self) -> usize {
+		self.files.len()
 	}
 
 	#[must_use]
-	pub fn config_set(&mut self) -> ConfigSet {
-		ConfigSet(self)
+	pub fn folder_count(&self) -> usize {
+		self.folders.len()
 	}
 
-	// Miscellaneous ///////////////////////////////////////////////////////////
-
-	#[cfg(feature = "egui")]
-	pub fn ui(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui) {
-		self.ui_impl(ui);
-	}
-}
-
-/// Internals.
-impl VirtualFs {
-	/// Panics if attempting to remove the root node (path `/` or an empty path),
-	/// or attempting to remove a directory which still has children.
-	fn _remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
-		assert_ne!(
-			path.as_ref(),
-			VPath::new("/"),
-			"tried to remove the root node from a VFS"
-		);
-
-		let removed = self.files.remove(path.as_ref());
-
-		if let Some(r) = &removed {
-			assert_eq!(
-				r.child_count(),
-				0,
-				"tried to remove VFS directory with children: {}",
-				path.as_ref().display()
-			);
-			let parent_path = path.as_ref().parent().unwrap();
-			let parent = self.files.get_mut(parent_path).unwrap();
-			Self::unparent(parent, path)
-		}
-
-		removed
+	pub fn files(&self) -> impl Iterator<Item = FileRef> {
+		self.files.iter().map(|(k, v)| FileRef {
+			vfs: self,
+			slot: k,
+			vfile: v,
+			guard: v.reader.write(),
+		})
 	}
 
-	/// Panics if attempting to remove the root node (path `/` or an empty path).
-	/// Trying to remove a non-existent file is valid.
-	fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
-		assert_ne!(
-			path.as_ref(),
-			VPath::new("/"),
-			"tried to remove the root node from a VFS"
-		);
-
-		let Some(removed) = self.files.remove(path.as_ref()) else {
-			return;
-		};
-
-		let parent_path = path.as_ref().parent().unwrap();
-		let parent = self.files.get_mut(parent_path).unwrap();
-		Self::unparent(parent, path);
-
-		let Content::Directory { children, .. } = removed.content else {
-			return;
-		};
-
-		for child in children.iter() {
-			recur(self, child.as_ref());
-		}
-
-		fn recur(this: &mut VirtualFs, path: impl AsRef<VPath>) {
-			let Some(removed) = this.files.remove(path.as_ref()) else {
-				unreachable!()
-			};
-			let Content::Directory { children, .. } = removed.content else {
-				return;
-			};
-
-			for child in children.iter() {
-				recur(this, child.as_ref());
-			}
-		}
+	pub fn folders(&self) -> impl Iterator<Item = FolderRef> {
+		self.folders.iter().map(|(k, v)| FolderRef {
+			vfs: self,
+			slot: k,
+			vfolder: v,
+		})
 	}
 
-	fn unparent(parent: &mut File, child_path: impl AsRef<VPath>) {
-		if let Content::Directory { children, .. } = &mut parent.content {
-			children.remove(child_path.as_ref());
-		} else {
-			unreachable!()
-		}
+	pub fn clear(&mut self) {
+		let root = self.folders.remove(self.root).unwrap();
+		self.folders.clear();
+		self.files.clear();
+		self.root = self.folders.insert(root);
 	}
 }
 
 impl Default for VirtualFs {
 	fn default() -> Self {
-		let path = VPathBuf::from("/").into();
-		let root = File::new_dir(DirectoryKind::Misc);
+		let mut folders = HopSlotMap::default();
+
+		let root = folders.insert(VFolder {
+			name: SmallString::from("/"),
+			parent: None,
+			files: vec![],
+			subfolders: vec![],
+		});
 
 		Self {
-			files: HashMap::from([(path, root)]),
+			root,
 			mounts: vec![],
-			#[cfg(feature = "egui")]
-			gui: gui::DevGui::default(),
-			config: Config::default(),
+			files: HopSlotMap::default(),
+			folders,
 		}
 	}
 }
 
-/// Also make sure to read [`VirtualFs::mount`].
-#[derive(Debug)]
-pub struct MountRequest {
-	/// This can be empty; it makes the mount operation into a no-op.
-	///
-	/// With regards to mount points (`MP`):
-	/// - `mymount` and `/mymount` both put the mount on the root.
-	/// - An empty path and `/` are both invalid mount points.
-	pub load_order: Vec<(PathBuf, VPathBuf)>,
-	/// Only pass a `Some` if you need to report to the end user on the progress of
-	/// a mount operation (e.g. a loading screen) or provide the ability to cancel.
-	pub tracker: Option<Arc<SendTracker>>,
-	/// If true, checks for reserved mount points are bypassed.
-	pub basedata: bool,
-}
-
-#[derive(Debug)]
-#[must_use = "mounting may return errors which should be handled"]
-pub enum MountOutcome {
-	NoOp,
-	Cancelled,
-	/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
-	Errs(Vec<Vec<MountError>>),
-	/// Mounting was successful, but non-fatal errors or warnings may have arisen.
-	///
-	/// Every *new* mount gets a sub-vec, but that sub-vec may be empty.
-	Ok(Vec<Vec<MountError>>),
-}
-
-impl MountOutcome {
-	#[must_use]
-	pub fn total_err_count(&self) -> usize {
-		match self {
-			MountOutcome::NoOp | MountOutcome::Cancelled => 0,
-			MountOutcome::Errs(errors) => errors.iter().fold(0, |acc, subvec| acc + subvec.len()),
-			MountOutcome::Ok(errors) => errors.iter().fold(0, |acc, subvec| acc + subvec.len()),
-		}
-	}
-}
-
+/// Metadata for a file subtree registered using [`VirtualFs::mount`].
 #[derive(Debug)]
 pub struct MountInfo {
-	/// Specified by `meta.toml` if one exists.
-	/// Otherwise, this comes from the file stem of the mount point.
-	id: String,
-	format: MountFormat,
-	/// Always canonicalized, but may not necessarily be valid UTF-8.
-	real_path: PathBuf,
-	/// Guaranteed to be valid UTF-8 at mount time.
-	mount_point: VPathBuf,
+	pub real_path: PathBuf,
+	pub mount_point: VPathBuf,
+	pub root: Slot,
+	pub format: MountFormat,
 }
 
-impl MountInfo {
-	#[must_use]
-	pub fn id(&self) -> &str {
-		&self.id
-	}
-
-	#[must_use]
-	pub fn format(&self) -> MountFormat {
-		self.format
-	}
-
-	#[must_use]
-	pub fn real_path(&self) -> &Path {
-		&self.real_path
-	}
-
-	#[must_use]
-	pub fn mount_point(&self) -> &VPath {
-		&self.mount_point
-	}
-}
-
-/// Primarily serves to specify the type of compression used, if any.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MountFormat {
-	PlainFile,
+	Uncompressed,
 	Directory,
 	Wad,
 	Zip,
-	// TODO: Support LZMA, XZ, GRP, PAK, RFF, SSI
 }
 
-// Config //////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Default)]
-struct Config {
-	reserved_mount_points: Vec<String>,
-}
-
-/// Configuration methods are kept in a wrapper around a [`VirtualFs`] reference
-/// to prevent bloat in the interface of the VFS itself.
 #[derive(Debug)]
-pub struct ConfigSet<'vfs>(&'vfs mut VirtualFs);
+pub enum Ref<'vfs> {
+	File(FileRef<'vfs>),
+	Folder(FolderRef<'vfs>),
+}
 
-impl ConfigSet<'_> {
-	pub fn reserve_mount_point(self, mp: String) -> Self {
-		self.0.config.reserved_mount_points.push(mp);
-		self
+impl<'vfs> Ref<'vfs> {
+	#[must_use]
+	pub fn vfs(&self) -> &'vfs VirtualFs {
+		match self {
+			Self::File(iref) => iref.vfs,
+			Self::Folder(oref) => oref.vfs,
+		}
 	}
+
+	#[must_use]
+	pub fn name(&self) -> &str {
+		match self {
+			Self::File(iref) => iref.name(),
+			Self::Folder(oref) => oref.name(),
+		}
+	}
+
+	pub fn into_file(self) -> Option<FileRef<'vfs>> {
+		match self {
+			Self::File(iref) => Some(iref),
+			Self::Folder(_) => None,
+		}
+	}
+
+	#[must_use]
+	pub fn into_folder(self) -> Option<FolderRef<'vfs>> {
+		match self {
+			Self::Folder(oref) => Some(oref),
+			Self::File(_) => None,
+		}
+	}
+
+	/// Only returns `None` if this is a reference to the root folder.
+	#[must_use]
+	pub fn parent(&self) -> Option<FolderRef> {
+		match self {
+			Self::File(iref) => Some(FolderRef {
+				vfs: iref.vfs,
+				slot: iref.vfile.parent,
+				vfolder: &iref.vfs.folders[iref.vfile.parent],
+			}),
+			Self::Folder(oref) => oref.vfolder.parent.map(|slot| FolderRef {
+				vfs: oref.vfs,
+				slot,
+				vfolder: &oref.vfs.folders[slot],
+			}),
+		}
+	}
+
+	#[must_use]
+	pub fn path(&self) -> VPathBuf {
+		match self {
+			Self::File(iref) => iref.path(),
+			Self::Folder(oref) => oref.path(),
+		}
+	}
+
+	#[must_use]
+	pub fn is_readable(&self) -> bool {
+		match self {
+			Self::File(iref) => !iref.is_empty(),
+			Self::Folder(_) => false,
+		}
+	}
+
+	pub fn read(&mut self) -> Result<Vec<u8>, Error> {
+		let Self::File(FileRef {
+			vfile,
+			ref mut guard,
+			..
+		}) = self
+		else {
+			return Err(Error::VFolderRead);
+		};
+
+		guard.read(vfile.span(), vfile.compression)
+	}
+
+	pub fn read_text(&mut self) -> Result<String, Error> {
+		let bytes = self.read()?;
+		String::from_utf8(bytes).map_err(Error::Utf8)
+	}
+}
+
+#[derive(Debug)]
+pub struct FileRef<'vfs> {
+	pub(crate) vfs: &'vfs VirtualFs,
+	pub(crate) slot: FileSlot,
+	pub(crate) vfile: &'vfs VFile,
+	pub(crate) guard: RwLockWriteGuard<'vfs, Reader>,
+}
+
+impl FileRef<'_> {
+	#[must_use]
+	pub fn name(&self) -> &str {
+		self.name.as_str()
+	}
+
+	#[must_use]
+	pub fn path(&self) -> VPathBuf {
+		let mut buf = String::from('/');
+		buf.push_str(self.name());
+		detail::path_append(self.vfs, &mut buf, self.parent);
+		VPathBuf::new(buf)
+	}
+
+	/// Prefer this to taking a new reference out of the [`VirtualFs`] since it
+	/// will re-use the same [`RwLock`] guard if the same reader underlies this
+	/// ref's file and the file behind `slot`.
+	pub fn change_ref_by_slot(self, slot: FileSlot) -> Result<Self, Self> {
+		match self.vfs.files.get(slot) {
+			Some(vfile) => {
+				let guard = if Arc::ptr_eq(&self.vfile.reader, &vfile.reader) {
+					self.guard
+				} else {
+					vfile.reader.write()
+				};
+
+				Ok(Self {
+					vfs: self.vfs,
+					slot,
+					vfile,
+					guard,
+				})
+			}
+			None => Err(self),
+		}
+	}
+
+	#[must_use]
+	pub fn is_empty(&self) -> bool {
+		self.vfile.span.is_empty()
+	}
+}
+
+impl std::ops::Deref for FileRef<'_> {
+	type Target = VFile;
+
+	fn deref(&self) -> &Self::Target {
+		self.vfile
+	}
+}
+
+impl PartialEq for FileRef<'_> {
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self.vfs, other.vfs) && std::ptr::eq(self.vfile, other.vfile)
+	}
+}
+
+impl Eq for FileRef<'_> {}
+
+impl<'vfs> From<FileRef<'vfs>> for Ref<'vfs> {
+	fn from(value: FileRef<'vfs>) -> Self {
+		Self::File(value)
+	}
+}
+
+#[derive(Debug)]
+pub struct FolderRef<'vfs> {
+	pub(crate) vfs: &'vfs VirtualFs,
+	pub(crate) slot: FolderSlot,
+	pub(crate) vfolder: &'vfs VFolder,
+}
+
+impl FolderRef<'_> {
+	#[must_use]
+	pub fn name(&self) -> &str {
+		self.name.as_str()
+	}
+
+	#[must_use]
+	pub fn path(&self) -> VPathBuf {
+		let mut buf = String::new();
+
+		buf.push_str(self.name());
+
+		if let Some(p) = self.parent {
+			detail::path_append(self.vfs, &mut buf, p);
+		}
+
+		VPathBuf::new(buf)
+	}
+}
+
+impl std::ops::Deref for FolderRef<'_> {
+	type Target = VFolder;
+
+	fn deref(&self) -> &Self::Target {
+		self.vfolder
+	}
+}
+
+impl PartialEq for FolderRef<'_> {
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::eq(self.vfs, other.vfs) && std::ptr::eq(self.vfolder, other.vfolder)
+	}
+}
+
+impl Eq for FolderRef<'_> {}
+
+impl<'vfs> From<FolderRef<'vfs>> for Ref<'vfs> {
+	fn from(value: FolderRef<'vfs>) -> Self {
+		Self::Folder(value)
+	}
+}
+
+#[derive(Debug)]
+pub struct VFile {
+	pub(crate) name: SmallString,
+	pub(crate) parent: FolderSlot,
+	pub(crate) reader: Arc<RwLock<Reader>>,
+	pub(crate) span: Range<u32>,
+	pub(crate) compression: Compression,
+}
+
+impl VFile {
+	#[must_use]
+	pub fn name(&self) -> &VPath {
+		VPath::new(self.name.as_str())
+	}
+
+	#[must_use]
+	fn span(&self) -> Range<usize> {
+		(self.span.start as usize)..(self.span.end as usize)
+	}
+}
+
+#[derive(Debug)]
+pub struct VFolder {
+	pub(crate) name: SmallString,
+	/// Only `None` for the root.
+	pub(crate) parent: Option<FolderSlot>,
+	pub(crate) files: Vec<FileSlot>,
+	pub(crate) subfolders: Vec<FolderSlot>,
+}
+
+new_key_type! {
+	/// A unique identifier for a virtual file. This is always valid for the
+	/// VFS which emitted it, regardless of what mounts/unmounts/insertions/removals
+	/// take place.
+	///
+	/// Using this in a VFS other than the one that emitted it will yield
+	/// unexpected results but is safe.
+	///
+	/// Also see [`Slot`].
+	pub struct FileSlot;
+	/// A unique identifier for a virtual folder. This is always valid for the
+	/// VFS which emitted it, regardless of what mounts/unmounts/insertions/removals
+	/// take place.
+	///
+	/// Using this in a VFS other than the one that emitted it will yield
+	/// unexpected results but is safe.
+	///
+	/// Also see [`Slot`].
+	pub struct FolderSlot;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Slot {
+	File(FileSlot),
+	Folder(FolderSlot),
+}
+
+impl PartialEq<FileSlot> for Slot {
+	fn eq(&self, other: &FileSlot) -> bool {
+		match self {
+			Self::File(islot) => *islot == *other,
+			Self::Folder(_) => false,
+		}
+	}
+}
+
+impl PartialEq<FolderSlot> for Slot {
+	fn eq(&self, other: &FolderSlot) -> bool {
+		match self {
+			Self::Folder(oslot) => *oslot == *other,
+			Self::File(_) => false,
+		}
+	}
+}
+
+#[derive(Debug)]
+pub enum Error {
+	Canonicalize(std::io::Error),
+	Decompress(std::io::Error),
+	DirRead(std::io::Error),
+	EmptyRead,
+	FileHandleClone(std::io::Error),
+	FileOpen(std::io::Error),
+	FileRead(std::io::Error),
+	Metadata(std::io::Error),
+	MountPointDuplicate,
+	MountPointEmpty,
+	MountPointInvalidChars,
+	NotFound,
+	Seek(std::io::Error),
+	Utf8(FromUtf8Error),
+	VFolderRead,
+	Wad(wadload::Error),
+	Zip(ZipReadError),
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Canonicalize(err) => write!(f, "failed to canonicalize a mount path: {err}"),
+			Self::Decompress(err) => write!(f, "failed to decompress an archive entry: {err}"),
+			Self::DirRead(err) => write!(
+				f,
+				"failed to get the contents of a physical directory: {err}"
+			),
+			Self::EmptyRead => write!(f, "attempted to read the byte content of an empty entry"),
+			Self::FileHandleClone(err) => {
+				write!(f, "failed to clone a physical file handle: {err}")
+			}
+			Self::FileOpen(err) => write!(f, "failed to open a physical file handle: {err}"),
+			Self::FileRead(err) => write!(f, "failed to read a physical file: {err}"),
+			Self::Metadata(err) => write!(f, "failed to retrieve physical file metadata: {err}"),
+			Self::MountPointDuplicate => {
+				write!(f, "attempt a mount using an already-present mount point")
+			}
+			Self::MountPointEmpty => write!(f, "given mount point is empty"),
+			Self::MountPointInvalidChars => write!(f, "given mount point has invalid characters"),
+			Self::NotFound => write!(f, "no entry found by the given path"),
+			Self::Seek(err) => write!(f, "failed to seek a physical file handle: {err}"),
+			Self::Utf8(err) => write!(f, "failed to read UTF-8 text from a virtual file: {err}"),
+			Self::VFolderRead => write!(f, "attempted to read byte content of a virtual folder"),
+			Self::Wad(err) => write!(f, "WAD read error: {err}"),
+			Self::Zip(err) => write!(f, "zip archive read error: {err}"),
+		}
+	}
+}
+
+#[derive(Debug)]
+pub(crate) enum Reader {
+	/// e.g. lump in a WAD, or entry in a zip archive.
+	File(File),
+	Memory(Vec<u8>),
+	/// e.g. entry in a zip archive nested within another zip archive.
+	_Super(ReaderLayer),
+}
+
+impl Reader {
+	fn read(&mut self, span: Range<usize>, compression: Compression) -> Result<Vec<u8>, Error> {
+		let bytes = match self {
+			Self::File(ref mut fh) => Self::read_from_file(fh, span)?,
+			Self::Memory(bytes) => bytes[span].to_vec(),
+			Self::_Super(layer) => {
+				let mut guard = layer.parent.write();
+				guard.read(layer.span.clone(), layer.compression)?
+			}
+		};
+
+		detail::decompress(bytes, compression)
+	}
+
+	fn read_from_file(fh: &mut File, span: Range<usize>) -> Result<Vec<u8>, Error> {
+		fh.seek(SeekFrom::Start(span.start as u64))
+			.map_err(Error::Seek)?;
+		let mut bytes = vec![0; span.len()];
+		fh.read_exact(&mut bytes).map_err(Error::FileRead)?;
+		Ok(bytes)
+	}
+}
+
+#[derive(Debug)]
+pub(crate) struct ReaderLayer {
+	pub(crate) parent: Arc<RwLock<Reader>>,
+	pub(crate) span: Range<usize>,
+	pub(crate) compression: Compression,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Compression {
+	/// Always the case for WAD lumps.
+	None,
+	Bzip2,
+	Deflate,
+	Lzma,
+	Xz,
+	Zstd,
 }

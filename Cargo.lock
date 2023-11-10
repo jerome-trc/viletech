@@ -5696,24 +5696,14 @@ dependencies = [
 name = "viletech-fs"
 version = "0.0.0"
 dependencies = [
- "bevy",
  "criterion",
- "dashmap",
- "egui",
  "flate2",
- "globset",
- "indexmap 1.9.3",
  "parking_lot 0.12.1",
  "rayon",
- "regex",
- "rustc-hash",
  "serde",
  "slotmap",
- "smallvec",
- "triomphe",
  "viletech-utils",
  "wadload",
- "zip",
  "zip_structs",
 ]
 
