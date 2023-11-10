@@ -1,8 +1,9 @@
+use std::path::Path;
+
 use globset::Glob;
 use indexmap::IndexSet;
 use rayon::prelude::*;
 use regex::Regex;
-use util::path::PathExt;
 
 use crate::{FileKey, VPath, VfsError, VirtualFs};
 
@@ -233,7 +234,7 @@ impl<'vfs> FileRef<'vfs> {
 	/// Panics if this is the root.
 	#[must_use]
 	pub fn file_name(&self) -> &str {
-		if self.path.is_root() {
+		if self.path.as_ref() == Path::new("/") {
 			return "/";
 		}
 
@@ -252,7 +253,7 @@ impl<'vfs> FileRef<'vfs> {
 	/// Panics if this is the root.
 	#[must_use]
 	pub fn file_stem(&self) -> &str {
-		if self.path.is_root() {
+		if self.path.as_ref() == Path::new("/") {
 			return "/";
 		}
 
@@ -270,7 +271,7 @@ impl<'vfs> FileRef<'vfs> {
 	///
 	/// Panics if this is the root.
 	pub fn file_prefix(&self) -> &str {
-		if self.path.is_root() {
+		if self.path.as_ref() == Path::new("/") {
 			return "/";
 		}
 

@@ -20,7 +20,7 @@ use tracing::{info, warn};
 use util::{EditorNum, Outcome, SendTracker, SpawnNum};
 use vfs::VPathBuf;
 
-use crate::{catalog::dobj::DATUM_TYPE_NAMES, vfs::MountFormat};
+use crate::{catalog::dobj::datum_type_name, vfs::MountFormat};
 
 use super::{
 	dobj::{DatumStore, Store},
@@ -492,7 +492,7 @@ impl SubContext<'_> {
 				info!(
 					"Overwriting: {} ({})",
 					store.id(),
-					DATUM_TYPE_NAMES.get(&store.type_id()).unwrap(),
+					datum_type_name(store.type_id()),
 				);
 
 				occu.insert(store.clone());

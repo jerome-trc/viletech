@@ -33,8 +33,6 @@ pub extern crate util;
 pub extern crate vfs;
 pub extern crate wadload;
 
-use once_cell::sync::OnceCell;
-
 // Types ///////////////////////////////////////////////////////////////////////
 
 /// See [`bevy::render::color::Color::Rgba`].
@@ -70,7 +68,7 @@ pub const COMPILE_DATETIME: &str = env!("COMPILE_DATETIME");
 
 /// Ideally setting this is the first operation your application makes.
 /// Used by the [`log::TracingPlugin`] for formatting time in log messages.
-pub static START_TIME: OnceCell<std::time::Instant> = OnceCell::new();
+pub static START_TIME: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
 /// Prepares the rayon global thread pool. See [`rayon::ThreadPoolBuilder`].
 /// If `num_threads` is `None` then rayon chooses it automatically.

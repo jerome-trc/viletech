@@ -1,7 +1,5 @@
 use std::ops::Deref;
 
-use util::path::PathExt;
-
 use crate::{file::Content, FileRef};
 
 use super::{VPath, VPathBuf, VirtualFs};
@@ -82,7 +80,9 @@ impl VirtualFs {
 		let mut new_sel_file = None;
 
 		ui.horizontal(|ui| {
-			ui.add_enabled_ui(!fref.path().is_root(), |ui| {
+			let is_root = fref.path() == VPath::new("/");
+
+			ui.add_enabled_ui(!is_root, |ui| {
 				if ui
 					.button("\u{2B06}")
 					.on_hover_text("Go to Parent")

@@ -26,7 +26,6 @@ byteorder.workspace = true
 glam.workspace = true
 image.workspace = true
 logos.workspace = true # For UDMF parsing.
-once_cell.workspace = true
 rayon.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }

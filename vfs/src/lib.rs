@@ -29,7 +29,7 @@ use file::DirectoryKind;
 use globset::Glob;
 use rayon::prelude::*;
 use regex::Regex;
-use util::{path::PathExt, Outcome, SendTracker};
+use util::{Outcome, SendTracker};
 
 use crate::file::Content;
 
@@ -193,7 +193,11 @@ impl VirtualFs {
 	/// Panics if attempting to remove the root node (path `/` or an empty path),
 	/// or attempting to remove a directory which still has children.
 	fn _remove(&mut self, path: impl AsRef<VPath>) -> Option<File> {
-		assert!(!path.is_root(), "tried to remove the root node from a VFS");
+		assert_ne!(
+			path.as_ref(),
+			VPath::new("/"),
+			"tried to remove the root node from a VFS"
+		);
 
 		let removed = self.files.remove(path.as_ref());
 
@@ -215,7 +219,11 @@ impl VirtualFs {
 	/// Panics if attempting to remove the root node (path `/` or an empty path).
 	/// Trying to remove a non-existent file is valid.
 	fn remove_recursive(&mut self, path: impl AsRef<VPath>) {
-		assert!(!path.is_root(), "tried to remove the root node from a VFS");
+		assert_ne!(
+			path.as_ref(),
+			VPath::new("/"),
+			"tried to remove the root node from a VFS"
+		);
 
 		let Some(removed) = self.files.remove(path.as_ref()) else {
 			return;

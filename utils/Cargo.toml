@@ -26,7 +26,6 @@ byteorder.workspace = true
 fixed.workspace = true
 glam.workspace = true
 home.workspace = true
-once_cell.workspace = true
 regex.workspace = true
 serde = { workspace = true, optional = true }
 smartstring.workspace = true

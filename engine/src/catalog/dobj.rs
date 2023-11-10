@@ -6,12 +6,10 @@ mod visual;
 
 use std::{
 	any::{Any, TypeId},
-	collections::HashMap,
 	sync::{Arc, Weak},
 };
 
 use data::level;
-use once_cell::sync::Lazy;
 
 pub use self::{actor::*, audio::*, visual::*};
 
@@ -224,13 +222,16 @@ macro_rules! impl_datum {
 			impl Datum for $datum_t {}
 		)+
 
-		pub(super) static DATUM_TYPE_NAMES: Lazy<HashMap<TypeId, &'static str>> = Lazy::new(|| {
-			HashMap::from([
-				$(
-					(TypeId::of::<$datum_t>(), $tname),
-				)+
-			])
-		});
+		#[must_use]
+		pub(super) fn datum_type_name(type_id: TypeId) -> &'static str {
+			$(
+				if type_id == TypeId::of::<$datum_t>() {
+					return $tname;
+				}
+			)+
+
+			unreachable!()
+		}
 	};
 }
 

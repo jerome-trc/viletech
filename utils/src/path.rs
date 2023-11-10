@@ -5,12 +5,6 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use once_cell::sync::Lazy;
-
-use crate::lazy_regex;
-
-static ROOT_PATH: Lazy<&'static Path> = Lazy::new(|| Path::new("/"));
-
 /// Extension trait for anything fulfilling `impl AsRef<std::path::Path>`.
 pub trait PathExt: AsRef<Path> {
 	#[must_use]
@@ -25,8 +19,6 @@ pub trait PathExt: AsRef<Path> {
 	/// Check if this path has no components at all.
 	#[must_use]
 	fn is_empty(&self) -> bool;
-	#[must_use]
-	fn is_root(&self) -> bool;
 	/// Results are only valid for absolute paths; will always return `false` if
 	/// `self` or `other` is relative. A path can not be a child of itself; giving
 	/// two equal paths will also return `false`.
@@ -68,10 +60,6 @@ impl<T: AsRef<Path>> PathExt for T {
 
 	fn is_empty(&self) -> bool {
 		self.comp_len() == 0
-	}
-
-	fn is_root(&self) -> bool {
-		self.as_ref() == *ROOT_PATH
 	}
 
 	fn is_child_of(&self, other: impl AsRef<Path>) -> bool {
@@ -176,7 +164,7 @@ pub fn nice_path(path: impl AsRef<Path>) -> PathBuf {
 	}
 
 	#[cfg(not(target_os = "windows"))]
-	if p.is_root() {
+	if p == Path::new("/") {
 		return PathBuf::from("/");
 	}
 

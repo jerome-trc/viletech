@@ -73,7 +73,6 @@ kira.workspace = true
 memoffset.workspace = true
 nanorand.workspace = true
 nodi.workspace = true
-once_cell.workspace = true
 parking_lot.workspace = true
 pollster.workspace = true
 raw-cpuid.workspace = true

@@ -3,7 +3,7 @@
 use bevy_egui::egui::{self, TextStyle};
 use regex::Regex;
 
-use super::{dobj::DATUM_TYPE_NAMES, Catalog};
+use super::{dobj::datum_type_name, Catalog};
 
 /// State storage for the catalog's developer GUI.
 #[derive(Debug)]
@@ -70,8 +70,7 @@ impl Catalog {
 
 						resp.on_hover_ui_at_pointer(|ui| {
 							egui::Area::new("viletech_datum_tt").show(ctx, |_| {
-								let &type_name =
-									DATUM_TYPE_NAMES.get(&store.datum_typeid()).unwrap();
+								let type_name = datum_type_name(store.datum_typeid());
 								ui.label(type_name);
 							});
 						});

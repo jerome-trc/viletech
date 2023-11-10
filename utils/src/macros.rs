@@ -24,7 +24,7 @@ macro_rules! replace_expr {
 #[macro_export]
 macro_rules! lazy_regex {
 	($re:literal $(,)?) => {{
-		static RGX: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
+		static RGX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
 
 		RGX.get_or_init(|| {
 			regex::Regex::new($re).expect(concat!(
@@ -43,7 +43,7 @@ macro_rules! lazy_regex {
 #[macro_export]
 macro_rules! lazy_regexset {
 	($($re:literal),+) => {{
-		static RGXSET: once_cell::sync::OnceCell<regex::RegexSet> = once_cell::sync::OnceCell::new();
+		static RGXSET: std::sync::OnceLock<regex::RegexSet> = std::sync::OnceLock::new();
 
 		RGXSET.get_or_init(|| regex::RegexSet::new([$($re),+]).expect(
 			concat!(
