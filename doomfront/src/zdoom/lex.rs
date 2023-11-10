@@ -346,7 +346,7 @@ pub enum Token {
 	#[regex("//[^/\n][^\n]*\n*", priority = 1)]
 	#[regex("////[^\n]*\n*")]
 	#[regex("//")]
-	#[regex(r"/[*]([^*]|([*][^/]))*[*]+/")]
+	#[regex(r"/[*]([^*]|([*][^/]))*(?:[*]+/)?")]
 	Comment,
 	/// Doc comments are applicable only to [ZScript](crate::zdoom::zscript),
 	/// and non-standard, being defined by [zscdoc].
@@ -520,6 +520,13 @@ States (actor, overlay) {
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::Whitespace);
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);
+	}
+
+	#[test]
+	fn unterminated_multiline_comment() {
+		const SAMPLE: &str = "/*";
+		let mut lexer = Token::lexer_with_extras(SAMPLE, Context::ZSCRIPT_LATEST);
+		assert_eq!(lexer.next().unwrap().unwrap(), Token::Comment);
 	}
 
 	#[test]
