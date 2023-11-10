@@ -5,7 +5,7 @@ use crate::{
 	zdoom::{zscript::Syn, Token},
 };
 
-use super::{common::*, expr};
+use super::{common::*, expr, types::*};
 
 /// Builds a node tagged with one of the following:
 /// - [`Syn::AssignStat`]

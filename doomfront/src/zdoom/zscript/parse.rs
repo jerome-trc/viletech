@@ -4,6 +4,7 @@ mod expr;
 mod stat;
 mod structure;
 mod top;
+mod types;
 
 #[cfg(test)]
 mod test;
@@ -12,7 +13,9 @@ use crate::{parser::Parser, zdoom::Token};
 
 use super::Syn;
 
-pub use self::{actor::*, common::*, expr::*, stat::*, structure::*, top::*};
+use self::common::*;
+
+pub use self::{actor::*, expr::*, stat::*, structure::*, top::*, types::*};
 
 /// Builds a [`Syn::Root`] node.
 pub fn file(p: &mut Parser<Syn>) {
