@@ -67,6 +67,10 @@ impl VirtualFs {
 
 		let canon = real_path.canonicalize().map_err(Error::Canonicalize)?;
 
+		if canon.is_symlink() {
+			return Err(Error::MountSymlink);
+		}
+
 		match mount::mount(self, &canon, mount_point.as_str()) {
 			Ok(mntinfo) => {
 				self.mounts.push(mntinfo);
@@ -664,6 +668,7 @@ pub enum Error {
 	MountPointDuplicate,
 	MountPointEmpty,
 	MountPointInvalidChars,
+	MountSymlink,
 	NotFound,
 	Seek(std::io::Error),
 	Utf8(FromUtf8Error),
@@ -697,6 +702,7 @@ impl std::fmt::Display for Error {
 			Self::MountPointInvalidChars => write!(f, "given mount point has invalid characters"),
 			Self::NotFound => write!(f, "no entry found by the given path"),
 			Self::Seek(err) => write!(f, "failed to seek a physical file handle: {err}"),
+			Self::MountSymlink => write!(f, "attempted to mount a symbolic link"),
 			Self::Utf8(err) => write!(f, "failed to read UTF-8 text from a virtual file: {err}"),
 			Self::VFolderRead => write!(f, "attempted to read byte content of a virtual folder"),
 			Self::Wad(err) => write!(f, "WAD read error: {err}"),
