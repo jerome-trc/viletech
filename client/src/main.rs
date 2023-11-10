@@ -67,9 +67,9 @@ VileTech Client {c_vers}
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
 	app.world.insert_resource(ExitHandler);
 
-	let mut catalog = Catalog::new([(viletech::basedata_path(), PathBuf::from("/viletech"))]);
+	let mut catalog = Catalog::new([(viletech::basedata::path(), PathBuf::from("/viletech"))]);
 
-	for rmp in viletech::RESERVED_MOUNT_POINTS {
+	for rmp in viletech::basedata::RESERVED_MOUNT_POINTS {
 		catalog.config_set().reserve_mount_point(rmp.to_string());
 	}
 
