@@ -238,7 +238,11 @@ impl VirtualFs {
 	/// belonging exclusively to that virtual file.
 	pub fn ingest_all(&mut self) {
 		#[must_use]
-		fn ingest(reader: &mut Reader, orig_span: Range<usize>, compression: Compression) -> Option<Vec<u8>> {
+		fn ingest(
+			reader: &mut Reader,
+			orig_span: Range<usize>,
+			compression: Compression,
+		) -> Option<Vec<u8>> {
 			let result = match reader {
 				Reader::File(fh) => Reader::read_from_file(fh, orig_span),
 				Reader::Memory(_) => return None,

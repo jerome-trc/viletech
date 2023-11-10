@@ -103,6 +103,27 @@ impl VPath {
 		self.0.rsplit('/').next().map(Self::new)
 	}
 
+	/// The same functionality as [`std::path::Path::file_prefix`].
+	#[must_use]
+	pub fn file_prefix(&self) -> Option<&Self> {
+		self.file_name()
+			.and_then(|fname| fname.as_str().split('.').next().map(Self::new))
+	}
+
+	/// The same functionality as [`std::path::Path::file_stem`].
+	#[must_use]
+	pub fn file_stem(&self) -> Option<&Self> {
+		let Some(name) = self.file_name() else {
+			return None;
+		};
+
+		let Some((stem, _ext)) = name.as_str().rsplit_once('.') else {
+			return None;
+		};
+
+		Some(Self::new(stem))
+	}
+
 	/// The same functionality as [`std::path::Path::extension`].
 	#[must_use]
 	pub fn extension(&self) -> Option<&str> {
@@ -125,17 +146,13 @@ impl VPath {
 	/// truncated to the first 8 characters, converted to ASCII uppercase.
 	#[must_use]
 	pub fn lump_name(&self) -> Option<Id8> {
-		let Some(name) = self.file_name() else {
-			return None;
-		};
-
-		let Some((stem, _ext)) = name.as_str().rsplit_once('.') else {
+		let Some(stem) = self.file_stem() else {
 			return None;
 		};
 
 		let mut ret = Id8::new();
 
-		for c in stem.chars().take(8) {
+		for c in stem.as_str().chars().take(8) {
 			ret.push(c.to_ascii_uppercase());
 		}
 

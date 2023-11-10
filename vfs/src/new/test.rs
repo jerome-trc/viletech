@@ -18,8 +18,10 @@ fn vpath_smoke() {
 	assert_eq!(components.next(), None);
 
 	let lmp = VPathBuf::from("/somewad/LuMp.A.b");
-	assert_eq!(lmp.lump_name().unwrap().as_str(), "LUMP.A");
+	assert_eq!(lmp.file_prefix().unwrap().as_str(), "LuMp");
+	assert_eq!(lmp.file_stem().unwrap().as_str(), "LuMp.A");
 	assert_eq!(lmp.extension().unwrap(), "b");
+	assert_eq!(lmp.lump_name().unwrap().as_str(), "LUMP.A");
 
 	let Some(vfs) = sample_vfs() else {
 		return;
