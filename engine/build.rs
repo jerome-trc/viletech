@@ -134,7 +134,9 @@ fn build_basedata() -> Result<(), Box<dyn std::error::Error>> {
 	let mut string = String::with_capacity(checksum.len());
 
 	for byte in checksum {
-		string.push_str(&byte.to_string());
+		use std::fmt::Write;
+
+		write!(string, "{byte}").unwrap();
 	}
 
 	println!("cargo:rustc-env=BASEDATA_CHECKSUM={string}");
