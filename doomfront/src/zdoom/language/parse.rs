@@ -157,14 +157,14 @@ mod test {
 
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = r#"
+		const SAMPLE: &str = r#"
 [enu * ~ default]
 
 $ifgame(harmony) THE_UNDERWATER_LAB = "Echidna";
 MEGALOPOLIS = "The Omega";
 "#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
 		let mut ast = ptree.cursor().children();
 
@@ -200,13 +200,13 @@ MEGALOPOLIS = "The Omega";
 
 	#[test]
 	fn error_recovery() {
-		const SOURCE: &str = r#"
+		const SAMPLE: &str = r#"
 ABDUCTION = ;
 [eng
 $ifgame(harmony) HARMS_WAY = "Operation Rescue";
 "#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_eq!(ptree.errors.len(), 2);
 		prettyprint_maybe(ptree.cursor());
 		let mut ast = ptree.cursor().children();

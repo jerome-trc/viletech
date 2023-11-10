@@ -50,41 +50,41 @@ fn with_sample_dir() {
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_expr() {
-	const SOURCE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
+fn expr_smoke() {
+	const SAMPLE: &str = "x ^ ((a * b) + (c / d)) | y & z && foo";
 
 	let ptree: ParseTree =
-		crate::parse(SOURCE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
+		crate::parse(SAMPLE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
-fn color_expr() {
-	const SOURCE: &str = "72e0f1";
+fn expr_color() {
+	const SAMPLE: &str = "72e0f1";
 
 	let ptree: ParseTree =
-		crate::parse(SOURCE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
+		crate::parse(SAMPLE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
-fn call_no_args() {
-	const SOURCE: &str = "nobody_told_me_about_decorate()";
+fn expr_call_no_args() {
+	const SAMPLE: &str = "nobody_told_me_about_decorate()";
 
 	let ptree: ParseTree =
-		crate::parse(SOURCE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
+		crate::parse(SAMPLE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
-fn call_with_rng() {
-	const SOURCE: &str = "set_random_seed[rngtbl](1234567890)";
+fn expr_call_rng() {
+	const SAMPLE: &str = "set_random_seed[rngtbl](1234567890)";
 
 	let ptree: ParseTree =
-		crate::parse(SOURCE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
+		crate::parse(SAMPLE, parse::expr::expr, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
@@ -92,10 +92,10 @@ fn call_with_rng() {
 // Statements //////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_for() {
-	const SOURCE: &str = "for (user_int; --user_int; user_int++) {}";
+fn stat_for_smoke() {
+	const SAMPLE: &str = "for (user_int; --user_int; user_int++) {}";
 
-	let ptree: ParseTree = crate::parse(SOURCE, parse::statement, zdoom::lex::Context::NON_ZSCRIPT);
+	let ptree: ParseTree = crate::parse(SAMPLE, parse::statement, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
@@ -103,8 +103,8 @@ fn smoke_for() {
 // Non-actor top level /////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_damagetype() {
-	const SOURCE: &str = r#"DamageType NullDamage
+fn damagetype_smoke() {
+	const SAMPLE: &str = r#"DamageType NullDamage
 	{
 	   Factor 0
 	   NoArmor
@@ -112,7 +112,7 @@ fn smoke_damagetype() {
 	}"#;
 
 	let ptree: ParseTree = crate::parse(
-		SOURCE.trim(),
+		SAMPLE.trim(),
 		parse::damage_type,
 		zdoom::lex::Context::NON_ZSCRIPT,
 	);
@@ -121,8 +121,8 @@ fn smoke_damagetype() {
 }
 
 #[test]
-fn smoke_enum_def() {
-	const SOURCE: &str = r#"enum {
+fn enumdef_smoke() {
+	const SAMPLE: &str = r#"enum {
 	LIMBO,
 	DIS = LIMBO,
 	WARRENS = 0,
@@ -132,7 +132,7 @@ fn smoke_enum_def() {
 };"#;
 
 	let ptree: ParseTree = crate::parse(
-		SOURCE.trim(),
+		SAMPLE.trim(),
 		parse::enum_def,
 		zdoom::lex::Context::NON_ZSCRIPT,
 	);
@@ -178,11 +178,11 @@ fn smoke_enum_def() {
 }
 
 #[test]
-fn smoke_include_directive() {
-	const SOURCE: &str = "#InClUdE \"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\"";
+fn include_directive_smoke() {
+	const SAMPLE: &str = "#InClUdE \"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\"";
 
 	let ptree: ParseTree = crate::parse(
-		SOURCE,
+		SAMPLE,
 		parse::include_directive,
 		zdoom::lex::Context::NON_ZSCRIPT,
 	);
@@ -213,15 +213,15 @@ fn smoke_include_directive() {
 }
 
 #[test]
-fn smoke_constants() {
-	const SOURCE: &str = r##"
+fn constdef_smoke() {
+	const SAMPLE: &str = r##"
 
 const /* bools are */ int KNEE_DEEP = 1234567890;
 const float SHORES_INFERNO /* forbidden */ = 0.9999999;
 
 "##;
 
-	let ptree: ParseTree = crate::parse(SOURCE, parse::file, zdoom::lex::Context::NON_ZSCRIPT);
+	let ptree: ParseTree = crate::parse(SAMPLE, parse::file, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 	let cursor = ptree.cursor();
@@ -271,8 +271,8 @@ const float SHORES_INFERNO /* forbidden */ = 0.9999999;
 // Actors //////////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_actor() {
-	const SOURCE: &str = r#####"
+fn actordef_smoke() {
+	const SAMPLE: &str = r#####"
 aCtOr hangar : nuclearplant replaces toxinrefinery 10239 {
 enum {
 	CMDCTRL,
@@ -308,7 +308,7 @@ States(Actor, overlay, ITEM, WeapoN) {
 	"#####;
 
 	let ptree: ParseTree = crate::parse(
-		SOURCE.trim(),
+		SAMPLE.trim(),
 		parse::actor_def,
 		zdoom::lex::Context::NON_ZSCRIPT,
 	);
@@ -354,16 +354,16 @@ States(Actor, overlay, ITEM, WeapoN) {
 
 #[test]
 fn actor_identifiers() {
-	const SOURCE: &str = "ACTOR SpiderBullets:Inventory{Inventory.MaxAmount 30}";
+	const SAMPLE: &str = "ACTOR SpiderBullets:Inventory{Inventory.MaxAmount 30}";
 
-	let ptree: ParseTree = crate::parse(SOURCE, parse::actor_def, zdoom::lex::Context::NON_ZSCRIPT);
+	let ptree: ParseTree = crate::parse(SAMPLE, parse::actor_def, zdoom::lex::Context::NON_ZSCRIPT);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
-fn smoke_states() {
-	const SOURCE: &str = r#####"
+fn statesblock_smoke() {
+	const SAMPLE: &str = r#####"
 	States
 	{
 	ClearTarget:
@@ -377,7 +377,7 @@ fn smoke_states() {
 	"#####;
 
 	let ptree: ParseTree = crate::parse(
-		SOURCE.trim(),
+		SAMPLE.trim(),
 		parse::actor::states_block,
 		zdoom::lex::Context::NON_ZSCRIPT,
 	);

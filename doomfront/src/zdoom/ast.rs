@@ -244,18 +244,18 @@ mod test {
 	use super::*;
 
 	#[test]
-	fn smoke_int() {
-		const SOURCE: &str = "1234567890Lu";
+	fn literal_int_smoke() {
+		const SAMPLE: &str = "1234567890Lu";
 
 		let mut lexer =
-			zdoom::lex::Token::lexer_with_extras(SOURCE, zdoom::lex::Context::ZSCRIPT_LATEST);
+			zdoom::lex::Token::lexer_with_extras(SAMPLE, zdoom::lex::Context::ZSCRIPT_LATEST);
 
 		let token = lexer.next().unwrap().unwrap();
 		assert_eq!(token, zdoom::Token::IntLit);
 
 		let green = GreenNode::new(
 			Syn::Literal.into(),
-			[GreenToken::new(Syn::IntLit.into(), SOURCE).into()],
+			[GreenToken::new(Syn::IntLit.into(), SAMPLE).into()],
 		);
 
 		let ast = SyntaxNode::new_root(green);

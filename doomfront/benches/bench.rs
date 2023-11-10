@@ -113,12 +113,12 @@ fn zscript(crit: &mut Criterion) {
 	let mut grp = crit.benchmark_group("ZScript");
 
 	{
-		const SOURCE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
+		const SAMPLE: &str = "(a[1]() + b.c) * d && (e << f) ~== ((((g >>> h))))";
 
 		grp.bench_function("Expressions", |bencher| {
 			bencher.iter(|| {
 				let _ = std::hint::black_box(doomfront::parse(
-					SOURCE,
+					SAMPLE,
 					zscript::parse::expr,
 					zdoom::lex::Context::ZSCRIPT_LATEST,
 				));

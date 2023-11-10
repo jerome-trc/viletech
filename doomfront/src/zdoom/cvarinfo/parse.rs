@@ -162,7 +162,7 @@ mod test {
 
 	#[test]
 	fn smoke() {
-		const SOURCE: &str = r#"
+		const SAMPLE: &str = r#"
 
 // Rue des Acacias
 server int egghead_roundabout;
@@ -171,7 +171,7 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::NON_ZSCRIPT);
 
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
@@ -204,14 +204,14 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 
 	#[test]
 	fn err_recovery() {
-		const SOURCE: &str = r#"
+		const SAMPLE: &str = r#"
 
 	server int theumpteenthcircle = ;
 	user float ICEANDFIRE3 = 0.4;
 
 	"#;
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::NON_ZSCRIPT);
 
 		assert_eq!(ptree.errors().len(), 1);
 		prettyprint_maybe(ptree.cursor());

@@ -478,7 +478,7 @@ mod test {
 
 	use super::*;
 
-	const SOURCE: &str = r#"
+	const SAMPLE_COMMON: &str = r#"
 
 States (actor, overlay) {
 	Spawn:
@@ -502,7 +502,7 @@ States (actor, overlay) {
 
 	#[test]
 	fn smoke() {
-		let mut lexer = Token::lexer_with_extras(SOURCE, Context::NON_ZSCRIPT);
+		let mut lexer = Token::lexer_with_extras(SAMPLE_COMMON, Context::NON_ZSCRIPT);
 
 		while let Some(result) = lexer.next() {
 			let token = match result {
@@ -515,8 +515,9 @@ States (actor, overlay) {
 
 	#[test]
 	fn doc_comment() {
-		const SOURCE: &str = "/// Hello \n/// world!";
-		let mut lexer = Token::lexer_with_extras(SOURCE, Context::NON_ZSCRIPT);
+		const SAMPLE: &str = "/// Hello \n/// world!";
+
+		let mut lexer = Token::lexer_with_extras(SAMPLE, Context::NON_ZSCRIPT);
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::Whitespace);
 		assert_eq!(lexer.next().unwrap().unwrap(), Token::DocComment);

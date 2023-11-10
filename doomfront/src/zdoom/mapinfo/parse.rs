@@ -240,14 +240,14 @@ mod test {
 
 	#[test]
 	fn smoke_commented_property() {
-		const SOURCE: &str = r"
+		const SAMPLE: &str = r"
 DoomEdNums
 {
 	9875 = None	// ZDRay light probe
 }
 ";
 
-		let ptree: ParseTree = crate::parse(SOURCE, file, zdoom::lex::Context::NON_ZSCRIPT);
+		let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::NON_ZSCRIPT);
 		assert_no_errors(&ptree);
 		prettyprint_maybe(ptree.cursor());
 	}

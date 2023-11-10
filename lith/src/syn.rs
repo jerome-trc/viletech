@@ -641,10 +641,10 @@ mod test {
 
 	#[test]
 	fn comments() {
-		const SOURCES: &[&str] = &["//", "// ", "////"];
+		const SAMPLES: &[&str] = &["//", "// ", "////"];
 
-		for source in SOURCES {
-			let mut lexer = Syn::lexer(source);
+		for sample in SAMPLES {
+			let mut lexer = Syn::lexer(sample);
 			let t0 = lexer.next().unwrap().unwrap();
 			assert_eq!(t0, Syn::Comment);
 		}
@@ -652,10 +652,10 @@ mod test {
 
 	#[test]
 	fn doc_comments() {
-		const SOURCES: &[&str] = &["///", "/// ", "/// lorem ipsum"];
+		const SAMPLES: &[&str] = &["///", "/// ", "/// lorem ipsum"];
 
-		for source in SOURCES {
-			let mut lexer = Syn::lexer(source);
+		for sample in SAMPLES {
+			let mut lexer = Syn::lexer(sample);
 			let t0 = lexer.next().unwrap().unwrap();
 			assert_eq!(t0, Syn::DocComment);
 		}

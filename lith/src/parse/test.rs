@@ -7,7 +7,7 @@ use crate::{ast, LexContext, ParseTree};
 
 /// Yes, seriously.
 #[test]
-fn smoke_nothing() {
+fn empty() {
 	let ptree: ParseTree = doomfront::parse("", super::file, LexContext::default());
 	assert_no_errors(&ptree);
 
@@ -17,7 +17,7 @@ fn smoke_nothing() {
 }
 
 #[test]
-fn smoke_name() {
+fn name_smoke() {
 	const SAMPLES: &[&str] = &["'lorem_ipsum'", "lorem_ipsum"];
 
 	for sample in SAMPLES {
@@ -42,7 +42,7 @@ fn smoke_name() {
 }
 
 #[test]
-fn smoke_imports() {
+fn imports_smoke() {
 	const SAMPLES: &[&str] = &[
 		"import \"/lorem/ipsum\" : * => dolor;",
 		"import \"lorem/ipsum\" : dolor;",
@@ -134,7 +134,7 @@ fn smoke_imports() {
 }
 
 #[test]
-fn smoke_arglist() {
+fn arglist_smoke() {
 	const SAMPLES: &[&str] = &[
 		"()",
 		"( lorem)",
@@ -211,7 +211,7 @@ fn with_sample_data() {
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_literal_float() {
+fn expr_lit_float_smoke() {
 	const SAMPLES: &[&str] = &["0.", "0.1", "0_.", "0_.1", "0_.1_", "0_.1_f32"];
 
 	for sample in SAMPLES {
@@ -243,7 +243,7 @@ fn smoke_literal_float() {
 }
 
 #[test]
-fn smoke_literal_decimal() {
+fn expr_lit_decimal_smoke() {
 	const SAMPLES: &[&str] = &["0", "0_", "0_u8", "0_i128"];
 
 	for sample in SAMPLES {
@@ -275,7 +275,7 @@ fn smoke_literal_decimal() {
 }
 
 #[test]
-fn smoke_expr_lit_suffixed_string() {
+fn expr_lit_suffixed_string_smoke() {
 	const SAMPLE: &str = "\"lorem ipsum\"_dolor_sit_amet";
 
 	let ptree: ParseTree = doomfront::parse(
@@ -298,7 +298,7 @@ fn smoke_expr_lit_suffixed_string() {
 }
 
 #[test]
-fn smoke_expr_bin_userop() {
+fn expr_bin_userop_smoke() {
 	const SAMPLE: &str = "a @dot b";
 
 	let ptree: ParseTree = doomfront::parse(
@@ -477,7 +477,7 @@ fn expr_struct_smoke() {
 // Patterns ////////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_pat_simple() {
+fn pat_smoke() {
 	const SAMPLES: &[&str] = &[
 		"_",
 		"lorem_ipsum",
@@ -502,7 +502,7 @@ fn smoke_pat_simple() {
 }
 
 #[test]
-fn smoke_pat_slice() {
+fn pat_slice_smoke() {
 	const SAMPLES: &[&str] = &["[]", "[ ]", "[ lorem, -2,_, ipsum ]"];
 
 	for sample in SAMPLES {
@@ -520,7 +520,7 @@ fn smoke_pat_slice() {
 // Statements //////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_stmt_continue() {
+fn stmt_continue_smoke() {
 	const SAMPLES: &[&str] = &[
 		"continue;",
 		"continue ;",
@@ -549,7 +549,7 @@ fn smoke_stmt_continue() {
 }
 
 #[test]
-fn smoke_stmt_bind() {
+fn stmt_bind_smoke() {
 	const SAMPLES: &[&str] = &[
 		"let lorem;",
 		"var ipsum ;",
@@ -579,7 +579,7 @@ fn smoke_stmt_bind() {
 }
 
 #[test]
-fn smoke_stmt_break() {
+fn stmt_break_smoke() {
 	const SAMPLES: &[&str] = &[
 		"break ;",
 		"break ::lorem::;",
@@ -631,7 +631,7 @@ fn smoke_stmt_break() {
 }
 
 #[test]
-fn smoke_stmt_expr() {
+fn stmt_expr_smoke() {
 	const SAMPLES: &[&str] = &["lorem;", "ipsum();", "dolor = sit_amet;", "-1;", "(0);"];
 
 	for sample in SAMPLES {
@@ -677,7 +677,7 @@ fn stmt_return_smoke() {
 // Items ///////////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_func_decl() {
+fn func_decl_smoke() {
 	const SAMPLES: &[&str] = &[
 		// Nothing extraneous.
 		r#"function lorem_ipsum();"#,
@@ -780,7 +780,7 @@ fn smoke_func_decl() {
 }
 
 #[test]
-fn smoke_sym_const() {
+fn sym_const_smoke() {
 	const SAMPLES: &[&str] = &[
 		r#"const LOREM_IPSUM: dolor = sit_amet;"#,
 		r##"

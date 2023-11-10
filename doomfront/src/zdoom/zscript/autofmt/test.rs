@@ -52,7 +52,7 @@ fn assert_text_eq(expected: &'static str, formatted: GreenNode) {
 // Expressions /////////////////////////////////////////////////////////////////
 
 #[test]
-fn smoke_expr_bin() {
+fn expr_bin_smoke() {
 	const SAMPLE: &str = "2/* */+  2";
 	const EXPECTED: &str = "2 /* */ + 2";
 
