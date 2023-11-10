@@ -28,6 +28,66 @@ fn im(crit: &mut criterion::Criterion) {
 		);
 	});
 
+	grp.bench_function("Lookup", |bencher| {
+		bencher.iter_batched_ref(
+			|| {
+				let mut map = im::HashMap::new();
+
+				for i in 10_000..(10_000 + 1000) {
+					map.insert(i.to_string(), i);
+				}
+
+				map
+			},
+			|map| {
+				let _ = std::hint::black_box(map.contains_key("10000"));
+			},
+			criterion::BatchSize::SmallInput,
+		);
+	});
+
+	grp.finish();
+
+	let mut grp = crit.benchmark_group("im::OrdMap");
+
+	grp.bench_function("New", |bencher| {
+		bencher.iter_with_large_drop(|| {
+			std::hint::black_box(im::OrdMap::<&'static str, &'static str>::new())
+		});
+	});
+
+	grp.bench_function("Insert", |bencher| {
+		bencher.iter_batched_ref(
+			|| {
+				let map = im::OrdMap::new();
+				(map, "lorem_ipsum".to_string())
+			},
+			|(map, value)| {
+				let new_map = map.insert("dolor_sit_amet", std::mem::take(value));
+				let _ = std::hint::black_box(new_map);
+			},
+			criterion::BatchSize::SmallInput,
+		);
+	});
+
+	grp.bench_function("Lookup", |bencher| {
+		bencher.iter_batched_ref(
+			|| {
+				let mut map = im::OrdMap::new();
+
+				for i in 10_000..(10_000 + 1000) {
+					map.insert(i.to_string(), i);
+				}
+
+				map
+			},
+			|map| {
+				let _ = std::hint::black_box(map.contains_key("10000"));
+			},
+			criterion::BatchSize::SmallInput,
+		);
+	});
+
 	grp.finish();
 }
 
