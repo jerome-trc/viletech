@@ -160,6 +160,10 @@ fn types_smoke() {
 		"array<class<TheOssuary> >",
 		"map<Corruption[1], Mortem[2]>",
 		"mapiterator<FishInABarrel, Neoplasm>",
+		"@LoremIpsum",
+		"readonly<@LoremIpsum>",
+		"@ LoremIpsum",
+		"readonly < @ LoremIpsum >",
 	];
 
 	for sample in SAMPLES {

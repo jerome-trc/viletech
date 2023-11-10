@@ -274,10 +274,11 @@ pub fn core_type(p: &mut Parser<Syn>) {
 
 			let t = p.nth(0);
 
-			if is_ident::<0>(t) || t == Token::At {
+			if is_ident::<0>(t) {
 				ident::<0>(p);
 			} else if t == Token::At {
 				p.advance(Syn::At);
+				trivia_0plus(p);
 				ident::<0>(p);
 			} else {
 				p.advance_err_and_close(
@@ -286,6 +287,7 @@ pub fn core_type(p: &mut Parser<Syn>) {
 					Syn::ReadOnlyType,
 					&[&["an identifier", "`@`"]],
 				);
+
 				return;
 			}
 
