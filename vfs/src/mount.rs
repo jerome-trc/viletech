@@ -92,8 +92,7 @@ fn mount_dir(
 		let path = d_ent.path();
 
 		if path.is_dir() {
-			let s = mount_dir(vfs, &path, oslot)?;
-			vfs.folders[oslot].subfolders.push(s);
+			let _ = mount_dir(vfs, &path, oslot)?;
 			continue;
 		}
 
@@ -106,8 +105,7 @@ fn mount_dir(
 		if wad_extension(name.as_str()) && wad_magic(&magic) {
 			let mut bytes = vec![];
 			fh.read_to_end(&mut bytes).map_err(Error::FileRead)?;
-			let s = mount_wad_blob(vfs, name.as_str(), oslot, bytes)?;
-			vfs.folders[oslot].subfolders.push(s);
+			let _ = mount_wad_blob(vfs, name.as_str(), oslot, bytes)?;
 			continue;
 		}
 
