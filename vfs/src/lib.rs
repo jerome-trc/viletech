@@ -672,6 +672,18 @@ impl PartialEq<FolderSlot> for Slot {
 	}
 }
 
+impl From<FileSlot> for Slot {
+	fn from(value: FileSlot) -> Self {
+		Self::File(value)
+	}
+}
+
+impl From<FolderSlot> for Slot {
+	fn from(value: FolderSlot) -> Self {
+		Self::Folder(value)
+	}
+}
+
 #[derive(Debug)]
 pub enum Error {
 	Canonicalize(std::io::Error),
