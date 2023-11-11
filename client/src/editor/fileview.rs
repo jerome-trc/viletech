@@ -110,8 +110,9 @@ fn ui_folder(
 	body.row(row_height, |mut row| {
 		let _ = row.col(|ui| {
 			let btn_icon = if folded { "\u{23F5}" } else { "\u{23F7}" };
-
 			let btn = egui::Button::new(btn_icon).frame(false);
+
+			ui.add_space((depth as f32) * 8.0);
 
 			if ui.add(btn).clicked() {
 				if folded {
@@ -124,17 +125,7 @@ fn ui_folder(
 			}
 
 			let mut label = String::new();
-
-			for _ in 0..depth {
-				label.push('\t');
-			}
-
 			label.push_str(vfolder.name());
-
-			if vfolder.name() != "/" {
-				label.push('/');
-			}
-
 			ui.label(&label);
 		});
 
@@ -183,13 +174,8 @@ fn ui_file(
 	body.row(row_height, |mut row| {
 		let (_, _) = row.col(|ui| {
 			let mut label = String::new();
-
-			for _ in 0..depth {
-				label.push('\t');
-			}
-
 			label.push_str(vfile.name());
-
+			ui.add_space((depth as f32) * 16.0);
 			ui.label(&label);
 		});
 
