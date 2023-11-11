@@ -632,6 +632,8 @@ impl<'vfs> From<FolderRef<'vfs>> for Ref<'vfs> {
 	}
 }
 
+/// Short for "virtual file".
+/// May represent a real file or an entry in an archive.
 #[derive(Debug)]
 pub struct VFile {
 	pub(crate) name: SmallString,
@@ -645,6 +647,13 @@ impl VFile {
 	#[must_use]
 	pub fn name(&self) -> &VPath {
 		VPath::new(self.name.as_str())
+	}
+
+	/// How many bytes are represented by this virtual file?
+	/// Beware that this is pre-compression, if any.
+	#[must_use]
+	pub fn size(&self) -> usize {
+		self.span().len()
 	}
 
 	#[must_use]
