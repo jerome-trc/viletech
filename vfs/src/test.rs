@@ -40,9 +40,11 @@ fn vpath_smoke() {
 
 #[test]
 fn mount_smoke() {
-	let Some(_) = sample_vfs() else {
+	let Some(vfs) = sample_vfs() else {
 		return;
 	};
+
+	assert_eq!(vfs.root().children().count(), 3);
 }
 
 #[test]

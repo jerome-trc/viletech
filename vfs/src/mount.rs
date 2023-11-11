@@ -122,7 +122,7 @@ fn mount_dir(
 		vfs.folders[oslot].files.push(islot);
 	}
 
-	vfs.folders[vfs.root].subfolders.push(oslot);
+	vfs.folders[parent_slot].subfolders.push(oslot);
 
 	Ok(oslot)
 }
