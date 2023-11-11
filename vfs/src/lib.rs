@@ -480,6 +480,11 @@ impl FileRef<'_> {
 	}
 
 	#[must_use]
+	pub fn slot(&self) -> FileSlot {
+		self.slot
+	}
+
+	#[must_use]
 	pub fn path(&self) -> VPathBuf {
 		let mut buf = String::from('/');
 		buf.push_str(self.name());
@@ -549,6 +554,11 @@ impl FolderRef<'_> {
 	#[must_use]
 	pub fn name(&self) -> &str {
 		self.name.as_str()
+	}
+
+	#[must_use]
+	pub fn slot(&self) -> FolderSlot {
+		self.slot
 	}
 
 	#[must_use]
