@@ -118,7 +118,7 @@ impl VPath {
 		};
 
 		let Some((stem, _ext)) = name.as_str().rsplit_once('.') else {
-			return None;
+			return Some(name);
 		};
 
 		Some(Self::new(stem))

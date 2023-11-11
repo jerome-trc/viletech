@@ -8,6 +8,10 @@ fn vpath_smoke() {
 	assert_eq!(root_vpb, VPath::new("/"));
 	assert!(root_vpb.components().next().is_none());
 
+	let single = VPathBuf::from("linedefs");
+	assert_eq!(single.file_stem().unwrap().as_str(), "linedefs");
+	assert_eq!(single.file_prefix().unwrap().as_str(), "linedefs");
+
 	let vpb = VPathBuf::from("/lorem/ipsum/dolor/sit.amet");
 
 	let mut components = vpb.components();
