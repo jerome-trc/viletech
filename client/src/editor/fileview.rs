@@ -111,7 +111,9 @@ fn ui_folder(
 		let _ = row.col(|ui| {
 			let btn_icon = if folded { "\u{23F5}" } else { "\u{23F7}" };
 
-			if ui.button(btn_icon).clicked() {
+			let btn = egui::Button::new(btn_icon).frame(false);
+
+			if ui.add(btn).clicked() {
 				if folded {
 					let was_present = ed.file_viewer.folded.remove(&vfolder.slot());
 					debug_assert!(was_present);
