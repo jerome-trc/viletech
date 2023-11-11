@@ -526,6 +526,14 @@ impl FileRef<'_> {
 	}
 
 	#[must_use]
+	pub fn as_memory(&self) -> Option<&[u8]> {
+		match std::ops::Deref::deref(&self.guard) {
+			Reader::Memory(bytes) => Some(bytes.as_slice()),
+			_ => None,
+		}
+	}
+
+	#[must_use]
 	pub fn is_empty(&self) -> bool {
 		self.vfile.span.is_empty()
 	}
