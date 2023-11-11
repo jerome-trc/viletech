@@ -662,6 +662,8 @@ impl VFile {
 	}
 }
 
+/// Short for "virtual folder".
+/// May represent a real directory or a logical directory in a (non-WAD) archive.
 #[derive(Debug)]
 pub struct VFolder {
 	pub(crate) name: SmallString,
@@ -669,6 +671,14 @@ pub struct VFolder {
 	pub(crate) parent: Option<FolderSlot>,
 	pub(crate) files: Vec<FileSlot>,
 	pub(crate) subfolders: Vec<FolderSlot>,
+}
+
+impl VFolder {
+	/// Only returns `None` if this is the root folder.
+	#[must_use]
+	pub fn parent(&self) -> Option<FolderSlot> {
+		self.parent
+	}
 }
 
 new_key_type! {
