@@ -330,6 +330,16 @@ impl VirtualFs {
 		})
 	}
 
+	#[must_use]
+	pub fn file_is_mount(&self, slot: FileSlot) -> bool {
+		self.mounts.iter().any(|mntinfo| mntinfo.root == slot)
+	}
+
+	#[must_use]
+	pub fn folder_is_mount(&self, slot: FolderSlot) -> bool {
+		self.mounts.iter().any(|mntinfo| mntinfo.root == slot)
+	}
+
 	pub fn clear(&mut self) {
 		let root = self.folders.remove(self.root).unwrap();
 		self.folders.clear();
