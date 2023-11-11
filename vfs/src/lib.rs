@@ -648,7 +648,7 @@ new_key_type! {
 	pub struct FolderSlot;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Slot {
 	File(FileSlot),
 	Folder(FolderSlot),
