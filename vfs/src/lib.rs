@@ -616,6 +616,32 @@ impl<'vfs> FolderRef<'vfs> {
 			}
 		})
 	}
+
+	/// Yields [`Ref::Folder`]s to all subfolders
+	/// and then [`Ref::File`]s to all child files.
+	pub fn children(&self) -> impl Iterator<Item = Ref<'vfs>> {
+		self.vfolder
+			.subfolders
+			.iter()
+			.copied()
+			.map(|sfslot| {
+				Ref::Folder(FolderRef {
+					vfs: self.vfs,
+					slot: sfslot,
+					vfolder: &self.vfs.folders[sfslot],
+				})
+			})
+			.chain(self.vfolder.files.iter().copied().map(|fslot| {
+				let vfile = &self.vfs.files[fslot];
+
+				Ref::File(FileRef {
+					vfs: self.vfs,
+					slot: fslot,
+					vfile,
+					guard: vfile.reader.write(),
+				})
+			}))
+	}
 }
 
 impl std::ops::Deref for FolderRef<'_> {
