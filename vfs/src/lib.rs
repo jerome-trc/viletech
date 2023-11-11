@@ -301,9 +301,16 @@ impl VirtualFs {
 		self.files.len()
 	}
 
+	/// Computes in `O(1)` time.
 	#[must_use]
 	pub fn folder_count(&self) -> usize {
 		self.folders.len()
+	}
+
+	/// Shorthand for adding [`Self::file_count`] to [`Self::folder_count`].
+	#[must_use]
+	pub fn total_count(&self) -> usize {
+		self.file_count() + self.folder_count()
 	}
 
 	pub fn files(&self) -> impl Iterator<Item = FileRef> {
