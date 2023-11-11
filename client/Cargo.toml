@@ -38,10 +38,13 @@ bevy_egui.workspace = true
 bitflags.workspace = true
 clap.workspace = true
 crossbeam.workspace = true
+egui_extras.workspace = true
 image.workspace = true
 indoc.workspace = true
 kira.workspace = true
 nanorand.workspace = true
 parking_lot.workspace = true
+regex.workspace = true
+rustc-hash.workspace = true
 winit.workspace = true
 

@@ -6,6 +6,7 @@ use bevy::{app::AppExit, prelude::*};
 use viletech::{
 	frontend::{FrontendMenu, LoadOrderEntryKind, Outcome},
 	user::UserCore,
+	vfs::VPath,
 };
 
 use crate::{common::ClientCommon, load::GameLoad, AppState};
@@ -40,7 +41,18 @@ pub(crate) fn update(
 		}
 		Outcome::StartEditor => {
 			if validate_load_order(&frontend) {
-				// TODO
+				let to_mount = frontend.to_mount();
+
+				for path in to_mount {
+					let fname = path.file_name().unwrap(/* TODO */);
+					let s = fname.to_string_lossy();
+					let mpoint = VPath::new(s.as_ref());
+					core.vfs.mount(path, mpoint).unwrap(/* TODO */);
+					info!("Mounted `{}` to `/{mpoint}`.", path.display());
+				}
+
+				core.vfs.ingest_all();
+
 				next_state.set(AppState::Editor);
 			}
 		}

@@ -58,6 +58,7 @@ crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 # Must be compatible with `bevy_egui`.
 egui = "0.23.0"
+egui_extras = "0.23.0"
 fixed = "1.23.1"
 fluidlite = "0.2.1"
 formatx = "0.2.1"

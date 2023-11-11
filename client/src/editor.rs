@@ -1,12 +1,16 @@
 //! Functions run when entering, updating, and leaving [`AppState::Editor`].
 
-#![allow(unused)]
-#![allow(dead_code)] // TODO: disallow
+mod contentid;
+mod fileview;
+mod inspector;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use viletech::VirtualFs;
 
 use crate::AppState;
+
+use self::fileview::FileViewer;
 
 #[derive(Resource, Debug)]
 pub(crate) struct Editor {
@@ -14,6 +18,8 @@ pub(crate) struct Editor {
 	panel_r: Option<Dialog>,
 	panel_m: Dialog,
 	panel_b: Option<Dialog>,
+
+	file_viewer: FileViewer,
 }
 
 /// What content is occupying a panel?
@@ -37,9 +43,10 @@ impl std::fmt::Display for Dialog {
 }
 
 pub(crate) fn update(
-	mut ed: ResMut<Editor>,
 	mut next_state: ResMut<NextState<AppState>>,
+	mut ed: ResMut<Editor>,
 	mut egui: EguiContexts,
+	mut vfs: ResMut<VirtualFs>,
 ) {
 	let guictx = egui.ctx_mut();
 
@@ -61,56 +68,87 @@ pub(crate) fn update(
 		});
 	});
 
-	if let Some(panel_l) = ed.panel_l.as_mut() {
+	if let Some(panel_l) = ed.panel_l {
 		egui::SidePanel::left("viletech_ed_panel_l").show(guictx, |ui| {
 			egui::menu::bar(ui, |ui| {
-				dialog_combo(ui, panel_l);
+				ed.panel_l = Some(dialog_combo(ui, panel_l));
 			});
+
+			match panel_l {
+				Dialog::DecoViz => {}
+				Dialog::Files => fileview::ui(&mut ed, ui, &mut vfs),
+				Dialog::Inspector => inspector::ui(&mut ed, ui),
+				Dialog::Messages => {}
+			}
 		});
 	}
 
-	if let Some(panel_r) = ed.panel_r.as_mut() {
+	if let Some(panel_r) = ed.panel_r {
 		egui::SidePanel::right("viletech_ed_panel_r").show(guictx, |ui| {
 			egui::menu::bar(ui, |ui| {
-				dialog_combo(ui, panel_r);
+				ed.panel_r = Some(dialog_combo(ui, panel_r));
 			});
+
+			match panel_r {
+				Dialog::DecoViz => {}
+				Dialog::Files => fileview::ui(&mut ed, ui, &mut vfs),
+				Dialog::Inspector => inspector::ui(&mut ed, ui),
+				Dialog::Messages => {}
+			}
 		});
 	}
 
-	if let Some(panel_b) = ed.panel_b.as_mut() {
+	if let Some(panel_b) = ed.panel_b {
 		egui::TopBottomPanel::bottom("viletech_ed_panel_b").show(guictx, |ui| {
 			egui::menu::bar(ui, |ui| {
-				dialog_combo(ui, panel_b);
+				ed.panel_b = Some(dialog_combo(ui, panel_b));
 			});
+
+			match panel_b {
+				Dialog::DecoViz => {}
+				Dialog::Files => fileview::ui(&mut ed, ui, &mut vfs),
+				Dialog::Inspector => inspector::ui(&mut ed, ui),
+				Dialog::Messages => {}
+			}
 		});
 	}
 
 	egui::CentralPanel::default().show(guictx, |ui| {
 		egui::menu::bar(ui, |ui| {
-			dialog_combo(ui, &mut ed.panel_m);
+			ed.panel_m = dialog_combo(ui, ed.panel_m);
 		});
+
+		match ed.panel_m {
+			Dialog::DecoViz => {}
+			Dialog::Files => fileview::ui(&mut ed, ui, &mut vfs),
+			Dialog::Inspector => inspector::ui(&mut ed, ui),
+			Dialog::Messages => {}
+		}
 	});
 }
 
-fn dialog_combo(ui: &mut egui::Ui, dialog: &mut Dialog) {
+#[must_use]
+fn dialog_combo(ui: &mut egui::Ui, mut dialog: Dialog) -> Dialog {
 	egui::ComboBox::new("viletech_ed_dialog_combo", "")
 		.selected_text(format!("{}", dialog))
 		.show_ui(ui, |ui| {
-			let cur = *dialog;
-
-			ui.selectable_value(dialog, Dialog::Files, "\u{1F5C0} Files");
-			ui.selectable_value(dialog, Dialog::Inspector, "\u{1F50E} Inspector");
-			ui.selectable_value(dialog, Dialog::Messages, "\u{1F4E7} Message Log");
-			ui.selectable_value(dialog, Dialog::DecoViz, "\u{1F500} DecoViz");
+			ui.selectable_value(&mut dialog, Dialog::Files, "\u{1F5C0} Files");
+			ui.selectable_value(&mut dialog, Dialog::Inspector, "\u{1F50E} Inspector");
+			ui.selectable_value(&mut dialog, Dialog::Messages, "\u{1F4E7} Message Log");
+			ui.selectable_value(&mut dialog, Dialog::DecoViz, "\u{1F500} DecoViz");
 		});
+
+	dialog
 }
 
-pub(crate) fn on_enter(mut cmds: Commands) {
+pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 	cmds.insert_resource(Editor {
 		panel_l: Some(Dialog::Files),
 		panel_r: None,
 		panel_m: Dialog::Inspector,
 		panel_b: Some(Dialog::Messages),
+
+		file_viewer: FileViewer::new(&vfs),
 	});
 }
 
