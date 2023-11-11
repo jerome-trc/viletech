@@ -560,7 +560,7 @@ pub struct FolderRef<'vfs> {
 	pub(crate) vfolder: &'vfs VFolder,
 }
 
-impl FolderRef<'_> {
+impl<'vfs> FolderRef<'vfs> {
 	#[must_use]
 	pub fn name(&self) -> &str {
 		self.name.as_str()
@@ -582,6 +582,31 @@ impl FolderRef<'_> {
 		}
 
 		VPathBuf::new(buf)
+	}
+
+	pub fn subfolders(&self) -> impl Iterator<Item = FolderRef<'vfs>> {
+		self.vfolder
+			.subfolders
+			.iter()
+			.copied()
+			.map(|sfslot| FolderRef {
+				vfs: self.vfs,
+				slot: sfslot,
+				vfolder: &self.vfs.folders[sfslot],
+			})
+	}
+
+	pub fn files(&self) -> impl Iterator<Item = FileRef<'vfs>> {
+		self.vfolder.files.iter().copied().map(|fslot| {
+			let vfile = &self.vfs.files[fslot];
+
+			FileRef {
+				vfs: self.vfs,
+				slot: fslot,
+				vfile,
+				guard: vfile.reader.write(),
+			}
+		})
 	}
 }
 
