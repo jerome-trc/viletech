@@ -181,6 +181,7 @@ fn ui_file(
 		}
 	}
 
+	let slot = vfs::Slot::File(vfile.slot());
 	let mut guard = vfile.lock();
 	let bytes = guard
 		.read()
@@ -192,22 +193,53 @@ fn ui_file(
 		.entry(vfile.slot())
 		.or_insert(ContentId::deduce(&vfile, &bytes, markers));
 
+	let mut row_rect = egui::Rect::NOTHING;
+
 	body.row(row_height, |mut row| {
-		let (_, _) = row.col(|ui| {
+		let mut ctrl_held = false;
+
+		let (_, resp0) = row.col(|ui| {
 			let mut label = String::new();
 			label.push_str(vfile.name());
 			ui.add_space((depth as f32) * 16.0);
 			ui.label(&label);
+			ctrl_held = ui.input(|inps| inps.modifiers.ctrl);
 		});
 
-		let (_, _) = row.col(|ui| {
+		if resp0.interact(egui::Sense::click()).clicked() {
+			if ctrl_held {
+				if ed.file_viewer.selected.contains(&slot) {
+					ed.file_viewer.selected.remove(&slot);
+				} else {
+					ed.file_viewer.selected.insert(slot);
+				}
+			} else {
+				ed.file_viewer.selected.clear();
+				ed.file_viewer.selected.insert(slot);
+			}
+		}
+
+		row.col(|ui| {
 			ui.label(&format!("{id}"));
 		});
 
-		let (_, _) = row.col(|ui| {
+		let (_, resp2) = row.col(|ui| {
 			ui.label(&subdivide_file_len(vfile.size()));
 		});
+
+		row_rect.set_top(resp0.rect.top());
+		row_rect.set_bottom(resp0.rect.bottom());
+		row_rect.set_left(resp0.rect.left());
+		row_rect.set_right(resp2.rect.right());
 	});
+
+	if ed.file_viewer.selected.contains(&slot) {
+		body.ui_mut().painter().rect_filled(
+			row_rect,
+			egui::Rounding::ZERO,
+			egui::Color32::from_rgba_unmultiplied(127, 224, 255, 7),
+		);
+	}
 }
 
 #[must_use]
