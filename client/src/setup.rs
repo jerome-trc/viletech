@@ -116,7 +116,7 @@ pub(crate) fn set_window_icon(
 
 	let path = VPath::new("/viletech/viletech.png");
 
-	let Some(r) = core.vfs.get(path) else {
+	let Some(r) = core.vfs.lookup(path) else {
 		error!("Window icon not found.");
 		return;
 	};

@@ -31,7 +31,7 @@ fn vpath_smoke() {
 		return;
 	};
 
-	let lump = vfs.get(VPath::new("/freedoom2/FCGRATE2")).unwrap();
+	let lump = vfs.lookup(VPath::new("/freedoom2/FCGRATE2")).unwrap();
 
 	let lmp_path = lump.path();
 	assert_eq!(lmp_path, VPathBuf::from("/freedoom2/fcgrate2"));
@@ -54,12 +54,12 @@ fn lookup_smoke() {
 	};
 
 	{
-		let r = vfs.get(VPath::new("/")).unwrap();
+		let r = vfs.lookup(VPath::new("/")).unwrap();
 		assert_eq!(r.into_folder().unwrap(), vfs.root());
 	}
 
 	{
-		let r = vfs.get(VPath::new("//")).unwrap();
+		let r = vfs.lookup(VPath::new("//")).unwrap();
 		assert_eq!(r.into_folder().unwrap(), vfs.root());
 	}
 
@@ -74,7 +74,7 @@ fn lookup_smoke() {
 	];
 
 	for sample in SAMPLES {
-		let r = vfs.get(VPath::new(sample));
+		let r = vfs.lookup(VPath::new(sample));
 		assert!(r.is_some(), "failed to look up `{sample}`");
 	}
 }
@@ -85,11 +85,11 @@ fn read_smoke() {
 		return;
 	};
 
-	assert!(vfs.get(VPath::new("/viletech.sf2")).is_some());
-	assert!(vfs.get(VPath::new("/viletech/viletech.png")).is_some());
+	assert!(vfs.lookup(VPath::new("/viletech.sf2")).is_some());
+	assert!(vfs.lookup(VPath::new("/viletech/viletech.png")).is_some());
 
 	let lump = vfs
-		.get(VPath::new("/freedoom2/FCGRATE2"))
+		.lookup(VPath::new("/freedoom2/FCGRATE2"))
 		.unwrap()
 		.into_file()
 		.unwrap();

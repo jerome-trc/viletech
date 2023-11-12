@@ -136,7 +136,7 @@ impl AudioCore {
 	fn ui_impl_try_play(&mut self, vfs: &VirtualFs) {
 		let path = VPath::new(&self.gui.id_buf).to_owned();
 
-		let fref = match vfs.get(&path) {
+		let fref = match vfs.lookup(&path) {
 			Some(vfs::Ref::File(r)) => r,
 			Some(vfs::Ref::Folder(_)) => {
 				info!("`{path}` is a folder and can not be played.");

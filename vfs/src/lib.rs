@@ -80,7 +80,7 @@ impl VirtualFs {
 				Ok(())
 			}
 			Err(err) => {
-				let to_clean = match self.get(mount_point) {
+				let to_clean = match self.lookup(mount_point) {
 					Some(Ref::File(iref)) => Some(Slot::File(iref.slot)),
 					Some(Ref::Folder(oref)) => Some(Slot::Folder(oref.slot)),
 					None => None,
@@ -103,7 +103,7 @@ impl VirtualFs {
 
 	#[must_use]
 	pub fn exists(&self, vpath: &VPath) -> bool {
-		self.get(vpath).is_some()
+		self.lookup(vpath).is_some()
 	}
 
 	#[must_use]
@@ -181,8 +181,26 @@ impl VirtualFs {
 		Ok(())
 	}
 
-	pub fn get<'vfs: 'p, 'p>(&'vfs self, vpath: &'p VPath) -> Option<Ref<'vfs>> {
+	pub fn lookup<'vfs: 'p, 'p>(&'vfs self, vpath: &'p VPath) -> Option<Ref<'vfs>> {
 		self.lookup_recur(self.root, &self.folders[self.root], vpath.components())
+	}
+
+	#[must_use]
+	pub fn get_file(&self, slot: FileSlot) -> Option<FileRef> {
+		self.files.get(slot).map(|vfile| FileRef {
+			vfs: self,
+			slot,
+			vfile,
+		})
+	}
+
+	#[must_use]
+	pub fn get_folder(&self, slot: FolderSlot) -> Option<FolderRef> {
+		self.folders.get(slot).map(|vfolder| FolderRef {
+			vfs: self,
+			slot,
+			vfolder,
+		})
 	}
 
 	fn lookup_recur<'vfs: 'p, 'p>(

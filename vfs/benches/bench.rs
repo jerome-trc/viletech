@@ -31,7 +31,7 @@ fn operations(crit: &mut criterion::Criterion) {
 		vfs.mount(&freedoom2, VPath::new("freedoom2")).unwrap();
 
 		bencher.iter(|| {
-			let _ = std::hint::black_box(vfs.get(VPath::new("/freedoom2/MAP01")).unwrap());
+			let _ = std::hint::black_box(vfs.lookup(VPath::new("/freedoom2/MAP01")).unwrap());
 		});
 	});
 
@@ -40,7 +40,7 @@ fn operations(crit: &mut criterion::Criterion) {
 		vfs.mount(&freedoom2, VPath::new("freedoom2")).unwrap();
 
 		bencher.iter(|| {
-			let _ = std::hint::black_box(vfs.get(VPath::new("/freedoom2/FCGRATE2")).unwrap());
+			let _ = std::hint::black_box(vfs.lookup(VPath::new("/freedoom2/FCGRATE2")).unwrap());
 		});
 	});
 
