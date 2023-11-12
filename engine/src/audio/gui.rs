@@ -180,7 +180,7 @@ impl AudioCore {
 				}
 			}
 		} else if let Ok(mut sdat) =
-			super::sound_from_bytes(bytes.to_owned(), StaticSoundSettings::default())
+			super::sound_from_bytes(bytes.clone(), StaticSoundSettings::default())
 		{
 			sdat.settings.volume = tween::Value::Fixed(Volume::Amplitude(self.gui.volume));
 
