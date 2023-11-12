@@ -33,7 +33,10 @@ features = [
 ]
 
 [dependencies]
-data = { package = "subterra", path = "../subterra", features = ["serde"] }
+data = { package = "subterra", path = "../subterra", features = [
+	"acs",
+	"serde",
+] }
 doomfront = { path = "../doomfront", features = [
 	"serde",
 	"acs",

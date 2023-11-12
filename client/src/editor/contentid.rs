@@ -388,6 +388,10 @@ impl ContentId {
 			return Self::Png;
 		}
 
+		if viletech::data::acs::is_object(bytes) {
+			return Self::AcsObject;
+		}
+
 		Self::Unknown
 	}
 }
