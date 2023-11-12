@@ -151,87 +151,6 @@ pub(super) enum ContentId {
 	ZScript,
 }
 
-impl ContentId {
-	/// TODO: might be worthwhile to make this a hashmap.
-	const FILE_STEMS: &[(&'static str, Self)] = &[
-		("ALTHUDCF", Self::AltHudCf),
-		("ANIMATED", Self::Animated),
-		("ANIMDEFS", Self::AnimDefs),
-		("BEHAVIOR", Self::Behavior),
-		("BLOCKMAP", Self::Blockmap),
-		("COLORMAP", Self::Colormap),
-		("CVARINFO", Self::CVarInfo),
-		("DECALDEF", Self::DecalDef),
-		("DECORATE", Self::Decorate),
-		("DEFBINDS", Self::DefBinds),
-		("DEFCVARS", Self::DefCVars),
-		("DMXGUS", Self::DmxGus),
-		("DMXGUSC", Self::DmxGus),
-		("EMAPINFO", Self::EMapInfo),
-		("ENDOOM", Self::AnsiText),
-		("FONTDEFS", Self::FontDefs),
-		("FSGLOBAL", Self::FsGlobal),
-		("GAMEINFO", Self::GameInfo),
-		("GENMIDI", Self::GenMidi),
-		("GLDEFS", Self::GlDefs),
-		("IWADINFO", Self::IWadInfo),
-		("KEYCONF", Self::KeyConf),
-		("LINEDEFS", Self::LineDefs),
-		("LOADACS", Self::LoadAcs),
-		("LOCKDEFS", Self::LockDefs),
-		("MAPINFO", Self::MapInfo),
-		("MODELDEF", Self::ModelDef),
-		("MUSINFO", Self::MusInfo),
-		("NODES", Self::Nodes),
-		("PALVERS", Self::PalVers),
-		("PLAYPAL", Self::PlayPal),
-		("PNAMES", Self::PNames),
-		("REJECT", Self::Reject),
-		("SBARINFO", Self::SBarInfo),
-		("SECTORS", Self::Sectors),
-		("SEGS", Self::Segs),
-		("SIDEDEFS", Self::SideDefs),
-		("SNDINFO", Self::SndInfo),
-		("SNDSEQ", Self::SndSeq),
-		("SSECTORS", Self::SSectors),
-		("SWITCHES", Self::Switches),
-		("TERRAIN", Self::Terrain),
-		("TEXTCOLO", Self::TextColo),
-		("TEXTMAP", Self::TextMap),
-		("TEXTURE1", Self::TextureX),
-		("TEXTURE2", Self::TextureX),
-		("THINGS", Self::Things),
-		("TRNSLATE", Self::Trnslate),
-		("UMAPINFO", Self::UMapInfo),
-		("VERTEXES", Self::Vertexes),
-		("VOXELDEF", Self::VoxelDef),
-		("X11R6RGB", Self::X11R6RGB),
-		("XHAIRS", Self::XHairs),
-		("ZMAPINFO", Self::ZMapInfo),
-		("ZSCRIPT", Self::ZScript),
-	];
-
-	const FILE_STEM_MARKER_PREFIXES: &[&'static str] = &[
-		"A_", "F_", "F1_", "F2_", "HI_", "P_", "PP_", "P1_", "P2_", "P3_", "S_", "SS_", "T_", "TX_",
-	];
-
-	const EXTENSIONS: &[(&'static str, Self)] = &[
-		("acs", Self::Acs),
-		("bex", Self::DeHackEdBex),
-		("dec", Self::Decorate),
-		("deh", Self::DeHackEd),
-		("edf", Self::Edf),
-		("glsl", Self::Glsl),
-		("hlsl", Self::Hlsl),
-		("lith", Self::Lith),
-		("md", Self::Markdown),
-		("txt", Self::PlainText),
-		("wgsl", Self::Wgsl),
-		("zs", Self::ZScript),
-		("zsc", Self::ZScript),
-	];
-}
-
 impl std::fmt::Display for ContentId {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
@@ -314,6 +233,167 @@ impl std::fmt::Display for ContentId {
 }
 
 impl ContentId {
+	/// TODO: might be worthwhile to make this a hashmap.
+	const FILE_STEMS: &[(&'static str, Self)] = &[
+		("ALTHUDCF", Self::AltHudCf),
+		("ANIMATED", Self::Animated),
+		("ANIMDEFS", Self::AnimDefs),
+		("BEHAVIOR", Self::Behavior),
+		("BLOCKMAP", Self::Blockmap),
+		("COLORMAP", Self::Colormap),
+		("CVARINFO", Self::CVarInfo),
+		("DECALDEF", Self::DecalDef),
+		("DECORATE", Self::Decorate),
+		("DEFBINDS", Self::DefBinds),
+		("DEFCVARS", Self::DefCVars),
+		("DMXGUS", Self::DmxGus),
+		("DMXGUSC", Self::DmxGus),
+		("EMAPINFO", Self::EMapInfo),
+		("ENDOOM", Self::AnsiText),
+		("FONTDEFS", Self::FontDefs),
+		("FSGLOBAL", Self::FsGlobal),
+		("GAMEINFO", Self::GameInfo),
+		("GENMIDI", Self::GenMidi),
+		("GLDEFS", Self::GlDefs),
+		("IWADINFO", Self::IWadInfo),
+		("KEYCONF", Self::KeyConf),
+		("LINEDEFS", Self::LineDefs),
+		("LOADACS", Self::LoadAcs),
+		("LOCKDEFS", Self::LockDefs),
+		("MAPINFO", Self::MapInfo),
+		("MODELDEF", Self::ModelDef),
+		("MUSINFO", Self::MusInfo),
+		("NODES", Self::Nodes),
+		("PALVERS", Self::PalVers),
+		("PLAYPAL", Self::PlayPal),
+		("PNAMES", Self::PNames),
+		("REJECT", Self::Reject),
+		("SBARINFO", Self::SBarInfo),
+		("SECTORS", Self::Sectors),
+		("SEGS", Self::Segs),
+		("SIDEDEFS", Self::SideDefs),
+		("SNDINFO", Self::SndInfo),
+		("SNDSEQ", Self::SndSeq),
+		("SSECTORS", Self::SSectors),
+		("SWITCHES", Self::Switches),
+		("TERRAIN", Self::Terrain),
+		("TEXTCOLO", Self::TextColo),
+		("TEXTMAP", Self::TextMap),
+		("TEXTURE1", Self::TextureX),
+		("TEXTURE2", Self::TextureX),
+		("THINGS", Self::Things),
+		("TRNSLATE", Self::Trnslate),
+		("UMAPINFO", Self::UMapInfo),
+		("VERTEXES", Self::Vertexes),
+		("VOXELDEF", Self::VoxelDef),
+		("X11R6RGB", Self::X11R6RGB),
+		("XHAIRS", Self::XHairs),
+		("ZMAPINFO", Self::ZMapInfo),
+		("ZSCRIPT", Self::ZScript),
+	];
+
+	const FILE_STEM_MARKER_PREFIXES: &[&'static str] = &[
+		"A_", "F_", "F1_", "F2_", "HI_", "P_", "PP_", "P1_", "P2_", "P3_", "S_", "SS_", "T_", "TX_",
+	];
+
+	const EXTENSIONS: &[(&'static str, Self)] = &[
+		("acs", Self::Acs),
+		("bex", Self::DeHackEdBex),
+		("dec", Self::Decorate),
+		("deh", Self::DeHackEd),
+		("edf", Self::Edf),
+		("glsl", Self::Glsl),
+		("hlsl", Self::Hlsl),
+		("lith", Self::Lith),
+		("md", Self::Markdown),
+		("txt", Self::PlainText),
+		("wgsl", Self::Wgsl),
+		("zs", Self::ZScript),
+		("zsc", Self::ZScript),
+	];
+
+	#[must_use]
+	pub(super) fn is_text(self) -> bool {
+		// Don't change this to use `matches`.
+		// We want a compiler error to get raised if new, unhandled variants are added.
+
+		match self {
+			Self::PlainText
+			| Self::Acs
+			| Self::AltHudCf
+			| Self::CVarInfo
+			| Self::DecalDef
+			| Self::Decorate
+			| Self::DefBinds
+			| Self::DefCVars
+			| Self::DeHackEd
+			| Self::DeHackEdBex
+			| Self::Edf
+			| Self::EMapInfo
+			| Self::FontDefs
+			| Self::FsGlobal
+			| Self::GameInfo
+			| Self::GenMidi
+			| Self::GlDefs
+			| Self::Glsl
+			| Self::Hlsl
+			| Self::IWadInfo
+			| Self::KeyConf
+			| Self::Lith
+			| Self::LoadAcs
+			| Self::LockDefs
+			| Self::MapInfo
+			| Self::Markdown
+			| Self::ModelDef
+			| Self::MusInfo
+			| Self::PalVers
+			| Self::PkgMeta
+			| Self::SBarInfo
+			| Self::SndInfo
+			| Self::Terrain
+			| Self::TextColo
+			| Self::TextMap
+			| Self::Trnslate
+			| Self::UMapInfo
+			| Self::VoxelDef
+			| Self::Wgsl
+			| Self::X11R6RGB
+			| Self::XHairs
+			| Self::ZMapInfo
+			| Self::ZScript => true,
+			Self::AnimDefs
+			| Self::Unknown
+			| Self::AcsObject
+			| Self::Animated
+			| Self::AnsiText
+			| Self::Behavior
+			| Self::Blockmap
+			| Self::Colormap
+			| Self::Demo
+			| Self::DmxGus
+			| Self::DmxMus
+			| Self::Flat
+			| Self::LineDefs
+			| Self::MapMarker
+			| Self::Marker
+			| Self::Midi
+			| Self::Nodes
+			| Self::PlayPal
+			| Self::PNames
+			| Self::Png
+			| Self::Reject
+			| Self::Sectors
+			| Self::Segs
+			| Self::SideDefs
+			| Self::SndSeq
+			| Self::SSectors
+			| Self::Switches
+			| Self::TextureX
+			| Self::Things
+			| Self::Vertexes => false,
+		}
+	}
+
 	#[must_use]
 	pub(super) fn deduce(vfile: &FileRef, bytes: &[u8], markers: WadMarkers) -> Self {
 		if let Some(next) = vfile.next_sibling() {

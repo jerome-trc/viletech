@@ -5753,6 +5753,7 @@ dependencies = [
  "kira",
  "nanorand",
  "parking_lot 0.12.1",
+ "rayon",
  "regex",
  "rustc-hash",
  "viletech",

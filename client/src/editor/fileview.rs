@@ -9,7 +9,7 @@ use viletech::{
 
 use super::{
 	contentid::{ContentId, WadMarkers},
-	Editor,
+	Editor, EditorCommon,
 };
 
 #[derive(Debug)]
@@ -48,7 +48,7 @@ impl FileViewer {
 	}
 }
 
-pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, vfs: &mut VirtualFs) {
+pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
 	ui.horizontal(|ui| {
 		ui.label("Filter:");
 
@@ -96,7 +96,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, vfs: &mut VirtualFs) {
 		})
 		.body(|mut body| {
 			// TODO: row culling.
-			ui_folder(ed, vfs.root(), &mut body, 0, row_height);
+			ui_folder(ed, core.vfs.root(), &mut body, 0, row_height);
 		});
 }
 
