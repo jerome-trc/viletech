@@ -35,6 +35,7 @@ features = [
 [dependencies]
 data = { package = "subterra", path = "../subterra", features = [
 	"acs",
+	"graphics",
 	"serde",
 ] }
 doomfront = { path = "../doomfront", features = [
