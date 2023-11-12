@@ -3,7 +3,7 @@ use egui_extras::TableBody;
 use regex::{Regex, RegexBuilder};
 use rustc_hash::{FxHashMap, FxHashSet};
 use viletech::{
-	vfs::{self, FileRef, FileSlot, FolderRef, FolderSlot},
+	vfs::{self, FileRef, FileSlot, FolderKind, FolderRef, FolderSlot},
 	VirtualFs,
 };
 
@@ -129,8 +129,16 @@ fn ui_folder(
 			ui.label(&label);
 		});
 
-		let _ = row.col(|_| {
-			// TODO: `vfs::FolderKind`.
+		let _ = row.col(|ui| {
+			let label = match vfolder.kind() {
+				FolderKind::Directory => "directory",
+				FolderKind::Root => "VFS root",
+				FolderKind::Wad => "WAD archive",
+				FolderKind::Zip => "zip archive",
+				FolderKind::ZipDir => "zip directory",
+			};
+
+			ui.label(label);
 		});
 
 		let _ = row.col(|_| {

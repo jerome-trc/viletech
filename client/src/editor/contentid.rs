@@ -142,8 +142,6 @@ pub(super) enum ContentId {
 	Vertexes,
 	/// See <https://zdoom.org/wiki/VOXELDEF>.
 	VoxelDef,
-	/// See <https://doomwiki.org/wiki/WAD>.
-	Wad,
 	/// See <https://www.w3.org/TR/WGSL/>.
 	Wgsl,
 	/// See <https://zdoom.org/wiki/X11R6RGB>.
@@ -309,7 +307,6 @@ impl std::fmt::Display for ContentId {
 			Self::UMapInfo => write!(f, "Universal map info"),
 			Self::Vertexes => write!(f, "Map vertices"),
 			Self::VoxelDef => write!(f, "ZDoom voxel config."),
-			Self::Wad => write!(f, "WAD archive"),
 			Self::Wgsl => write!(f, "WebGPU shader"),
 			Self::X11R6RGB => write!(f, "ZDoom X11R6RGB"),
 			Self::XHairs => write!(f, "ZDoom crosshair config."),
@@ -322,6 +319,14 @@ impl std::fmt::Display for ContentId {
 impl ContentId {
 	#[must_use]
 	pub(super) fn deduce(_: &VirtualFs, vfile: &FileRef, bytes: &[u8]) -> Self {
+		if let Some(next) = vfile.next_sibling() {
+			if next.name().eq_ignore_ascii_case("THINGS")
+				|| next.name().eq_ignore_ascii_case("TEXTMAP")
+			{
+				return Self::MapMarker;
+			}
+		}
+
 		let fname = VPath::new(vfile.name());
 
 		if let Some(ext) = fname.extension() {
