@@ -6,4 +6,6 @@ VileData is a library providing data structures for representing (and procedures
 
 ## Feature Flags
 
+`acs` - Enables support for reading the compiled bytecode object files of Raven Software's [Action Code Script](https://doomwiki.org/wiki/ACS).
+
 `serde` - Enables `Serialize`/`Deserialize` implementations for VileData's structures to allow usage with the [Serde](https://serde.rs/) crate.

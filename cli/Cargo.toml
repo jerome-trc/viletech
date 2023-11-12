@@ -15,7 +15,6 @@ name = "viletools"
 path = "src/main.rs"
 
 [dependencies]
-acs = { package = "viletech-acs", path = "../acs" }
 data = { package = "subterra", path = "../subterra", features = ["serde"] }
 doomfront = { path = "../doomfront", features = [
 	"serde",

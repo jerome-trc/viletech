@@ -5690,23 +5690,11 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "triangulate",
- "viletech-acs",
  "viletech-fs",
  "viletech-utils",
  "wadload",
  "walkdir",
  "zip",
-]
-
-[[package]]
-name = "viletech-acs"
-version = "0.0.0"
-dependencies = [
- "bytemuck",
- "byteorder",
- "doomfront",
- "rayon",
- "viletech-utils",
 ]
 
 [[package]]
@@ -5745,7 +5733,6 @@ dependencies = [
  "lithica",
  "mus2midi",
  "subterra",
- "viletech-acs",
  "viletech-fs",
  "viletech-utils",
  "wadload",

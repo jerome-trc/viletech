@@ -10,6 +10,8 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+#[cfg(feature = "acs")]
+pub mod acs;
 pub mod gfx;
 pub mod level;
 
