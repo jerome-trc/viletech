@@ -148,6 +148,11 @@ impl<'vfs> FileRef<'vfs> {
 	pub fn is_empty(&self) -> bool {
 		self.vfile.span.is_empty()
 	}
+
+	#[must_use]
+	pub fn vfs(&self) -> &VirtualFs {
+		self.vfs
+	}
 }
 
 impl std::ops::Deref for FileRef<'_> {
@@ -245,6 +250,11 @@ impl<'vfs> FolderRef<'vfs> {
 					vfile: &self.vfs.files[fslot],
 				})
 			}))
+	}
+
+	#[must_use]
+	pub fn vfs(&self) -> &VirtualFs {
+		self.vfs
 	}
 }
 
