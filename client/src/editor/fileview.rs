@@ -7,7 +7,10 @@ use viletech::{
 	VirtualFs,
 };
 
-use super::{contentid::ContentId, Editor};
+use super::{
+	contentid::{ContentId, WadMarkers},
+	Editor,
+};
 
 #[derive(Debug)]
 pub(super) struct FileViewer {
@@ -93,13 +96,12 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, vfs: &mut VirtualFs) {
 		})
 		.body(|mut body| {
 			// TODO: row culling.
-			ui_folder(ed, vfs, vfs.root(), &mut body, 0, row_height);
+			ui_folder(ed, vfs.root(), &mut body, 0, row_height);
 		});
 }
 
 fn ui_folder(
 	ed: &mut Editor,
-	vfs: &VirtualFs,
 	vfolder: FolderRef,
 	body: &mut TableBody,
 	depth: u32,
@@ -148,22 +150,30 @@ fn ui_folder(
 
 	if !folded {
 		for subfolder in vfolder.subfolders() {
-			ui_folder(ed, vfs, subfolder, body, depth + 1, row_height);
+			ui_folder(ed, subfolder, body, depth + 1, row_height);
 		}
 
+		let mut markers = WadMarkers::None;
+
 		for file in vfolder.files() {
-			ui_file(ed, vfs, file, body, depth + 1, row_height);
+			if file.name().eq_ignore_ascii_case("F_START") {
+				markers = WadMarkers::Flats;
+			} else if file.name().eq_ignore_ascii_case("F_END") {
+				markers = WadMarkers::None;
+			} // TODO: expand on this system.
+
+			ui_file(ed, file, body, depth + 1, row_height, markers);
 		}
 	}
 }
 
 fn ui_file(
 	ed: &mut Editor,
-	vfs: &VirtualFs,
 	vfile: FileRef,
 	body: &mut TableBody,
 	depth: u32,
 	row_height: f32,
+	markers: WadMarkers,
 ) {
 	if let Ok(rgx) = ed.file_viewer.filter.as_ref() {
 		if !rgx.is_match(vfile.name()) {
@@ -180,7 +190,7 @@ fn ui_file(
 		.file_viewer
 		.content_id
 		.entry(vfile.slot())
-		.or_insert(ContentId::deduce(vfs, &vfile, &bytes));
+		.or_insert(ContentId::deduce(&vfile, &bytes, markers));
 
 	body.row(row_height, |mut row| {
 		let (_, _) = row.col(|ui| {

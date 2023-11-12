@@ -1,7 +1,4 @@
-use viletech::{
-	vfs::{FileRef, VPath},
-	VirtualFs,
-};
+use viletech::vfs::{FileRef, VPath};
 
 /// The editor's best guess at the content in a file.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -262,7 +259,7 @@ impl std::fmt::Display for ContentId {
 			Self::DmxGus => write!(f, "DMX GUS config."),
 			Self::Edf => write!(f, "Eternity definitions"),
 			Self::EMapInfo => write!(f, "Eternity map info."),
-			Self::Flat => write!(f, "Flat graphic"),
+			Self::Flat => write!(f, "Graphic (Flat)"),
 			Self::FontDefs => write!(f, "ZDoom font config."),
 			Self::FsGlobal => write!(f, "Global FraggleScript"),
 			Self::GameInfo => write!(f, "ZDoom game config."),
@@ -318,7 +315,7 @@ impl std::fmt::Display for ContentId {
 
 impl ContentId {
 	#[must_use]
-	pub(super) fn deduce(_: &VirtualFs, vfile: &FileRef, bytes: &[u8]) -> Self {
+	pub(super) fn deduce(vfile: &FileRef, bytes: &[u8], markers: WadMarkers) -> Self {
 		if let Some(next) = vfile.next_sibling() {
 			if next.name().eq_ignore_ascii_case("THINGS")
 				|| next.name().eq_ignore_ascii_case("TEXTMAP")
@@ -392,6 +389,21 @@ impl ContentId {
 			return Self::AcsObject;
 		}
 
+		match markers {
+			WadMarkers::None => {}
+			WadMarkers::Flats => {
+				if bytes.len() == 4096 {
+					return Self::Flat;
+				}
+			}
+		}
+
 		Self::Unknown
 	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum WadMarkers {
+	None,
+	Flats,
 }
