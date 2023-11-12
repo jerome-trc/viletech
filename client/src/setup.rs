@@ -17,7 +17,7 @@ use crossbeam::channel::{Receiver, Sender};
 use viletech::{
 	console::{self, Console},
 	log::TracingPlugin,
-	vfs::VPath,
+	vfs::{self, VPath},
 };
 
 use crate::{ccmd, common::ClientCommon};
@@ -114,12 +114,21 @@ pub(crate) fn set_window_icon(
 	let window_id = winits.entity_to_winit.get(&window_ent).unwrap();
 	let window = winits.windows.get(window_id).unwrap();
 
-	let Some(mut fref) = core.vfs.get(VPath::new("/viletech/viletech.png")) else {
+	let path = VPath::new("/viletech/viletech.png");
+
+	let Some(r) = core.vfs.get(path) else {
 		error!("Window icon not found.");
 		return;
 	};
 
-	let bytes = match fref.read() {
+	let vfs::Ref::File(fref) = r else {
+		error!("`{path}` is unexpectedly a VFS folder.");
+		return;
+	};
+
+	let mut guard = fref.lock();
+
+	let bytes = match guard.read() {
 		Ok(b) => b,
 		Err(err) => {
 			error!("Failed to read window icon: {err}");

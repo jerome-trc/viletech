@@ -1,8 +1,8 @@
 //! [`Ref`], [`FileRef`], and [`FolderRef`].
 
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
-use parking_lot::RwLockWriteGuard;
+use parking_lot::MutexGuard;
 
 use crate::{
 	detail::{self, Reader},
@@ -80,24 +80,6 @@ impl<'vfs> Ref<'vfs> {
 			Self::Folder(_) => false,
 		}
 	}
-
-	pub fn read(&mut self) -> Result<Vec<u8>, Error> {
-		let Self::File(FileRef {
-			vfile,
-			ref mut guard,
-			..
-		}) = self
-		else {
-			return Err(Error::VFolderRead);
-		};
-
-		guard.read(vfile.span(), vfile.compression)
-	}
-
-	pub fn read_text(&mut self) -> Result<String, Error> {
-		let bytes = self.read()?;
-		String::from_utf8(bytes).map_err(Error::Utf8)
-	}
 }
 
 /// A reference to a [`VFile`].
@@ -106,10 +88,9 @@ pub struct FileRef<'vfs> {
 	pub(crate) vfs: &'vfs VirtualFs,
 	pub(crate) slot: FileSlot,
 	pub(crate) vfile: &'vfs VFile,
-	pub(crate) guard: RwLockWriteGuard<'vfs, Reader>,
 }
 
-impl FileRef<'_> {
+impl<'vfs> FileRef<'vfs> {
 	#[must_use]
 	pub fn name(&self) -> &str {
 		self.name.as_str()
@@ -128,34 +109,38 @@ impl FileRef<'_> {
 		VPathBuf::new(buf)
 	}
 
-	/// Prefer this to taking a new reference out of the [`VirtualFs`] since it
-	/// will re-use the same [`RwLock`] guard if the same reader underlies this
-	/// ref's file and the file behind `slot`.
-	pub fn change_ref_by_slot(self, slot: FileSlot) -> Result<Self, Self> {
-		match self.vfs.files.get(slot) {
-			Some(vfile) => {
-				let guard = if Arc::ptr_eq(&self.vfile.reader, &vfile.reader) {
-					self.guard
-				} else {
-					vfile.reader.write()
-				};
-
-				Ok(Self {
-					vfs: self.vfs,
-					slot,
-					vfile,
-					guard,
-				})
-			}
-			None => Err(self),
-		}
+	#[must_use]
+	pub fn next_sibling(&self) -> Option<FileRef<'vfs>> {
+		self.sibling(1)
 	}
 
 	#[must_use]
-	pub fn as_memory(&self) -> Option<&[u8]> {
-		match std::ops::Deref::deref(&self.guard) {
-			Reader::Memory(bytes) => Some(bytes.as_slice()),
-			_ => None,
+	pub fn prev_sibling(&self) -> Option<FileRef<'vfs>> {
+		self.sibling(-1)
+	}
+
+	#[must_use]
+	fn sibling(&self, offset: isize) -> Option<FileRef<'vfs>> {
+		let parent = &self.vfs.folders[self.parent];
+		let ix = parent.files.get_index_of(&self.slot).unwrap() as isize;
+
+		parent
+			.files
+			.get_index((ix + offset) as usize)
+			.copied()
+			.map(|islot| FileRef {
+				vfs: self.vfs,
+				slot: islot,
+				vfile: &self.vfs.files[islot],
+			})
+	}
+
+	#[must_use]
+	pub fn lock(&self) -> Guard {
+		Guard {
+			vfs: self.vfs,
+			vfile: self.vfile,
+			inner: self.vfile.reader.lock(),
 		}
 	}
 
@@ -232,15 +217,10 @@ impl<'vfs> FolderRef<'vfs> {
 	}
 
 	pub fn files(&self) -> impl Iterator<Item = FileRef<'vfs>> {
-		self.vfolder.files.iter().copied().map(|fslot| {
-			let vfile = &self.vfs.files[fslot];
-
-			FileRef {
-				vfs: self.vfs,
-				slot: fslot,
-				vfile,
-				guard: vfile.reader.write(),
-			}
+		self.vfolder.files.iter().copied().map(|fslot| FileRef {
+			vfs: self.vfs,
+			slot: fslot,
+			vfile: &self.vfs.files[fslot],
 		})
 	}
 
@@ -259,13 +239,10 @@ impl<'vfs> FolderRef<'vfs> {
 				})
 			})
 			.chain(self.vfolder.files.iter().copied().map(|fslot| {
-				let vfile = &self.vfs.files[fslot];
-
 				Ref::File(FileRef {
 					vfs: self.vfs,
 					slot: fslot,
-					vfile,
-					guard: vfile.reader.write(),
+					vfile: &self.vfs.files[fslot],
 				})
 			}))
 	}
@@ -290,5 +267,48 @@ impl Eq for FolderRef<'_> {}
 impl<'vfs> From<FolderRef<'vfs>> for Ref<'vfs> {
 	fn from(value: FolderRef<'vfs>) -> Self {
 		Self::Folder(value)
+	}
+}
+
+/// Acquired from [`VFile::read`] to gain access to the content it represents.
+///
+/// Beware that this wraps a mutex guard,
+/// so the same caveats about possible deadlocks apply.
+#[derive(Debug)]
+pub struct Guard<'vfs> {
+	vfs: &'vfs VirtualFs,
+	vfile: &'vfs VFile,
+	inner: MutexGuard<'vfs, Reader>,
+}
+
+impl Guard<'_> {
+	pub fn read(&mut self) -> Result<Cow<[u8]>, Error> {
+		self.inner.read(self.vfile.span(), self.vfile.compression)
+	}
+
+	/// Acquires the lock on a different file.
+	///
+	/// Prefer this to taking out a new [`FileRef`] and calling [`FileRef::lock`]
+	/// if possible, since it will re-use the same guard if both virtual files are
+	/// backed by the same reader.
+	///
+	/// If `slot` does not correspond to an existing virtual file, the `Err` variant
+	/// will return `self` so it can be used for something else.
+	pub fn transfer_by_slot(self, slot: FileSlot) -> Result<Self, Self> {
+		let Some(f) = self.vfs.files.get(slot) else {
+			return Err(self);
+		};
+
+		let guard = if Arc::ptr_eq(&f.reader, &self.vfile.reader) {
+			self.inner
+		} else {
+			f.reader.lock()
+		};
+
+		Ok(Self {
+			vfs: self.vfs,
+			vfile: f,
+			inner: guard,
+		})
 	}
 }

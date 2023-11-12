@@ -1,15 +1,18 @@
 //! Implementation details of [`VirtualFs::mount`].
 
 use std::{
+	borrow::Cow,
 	fs::File,
 	io::{Cursor, Read, Seek, SeekFrom},
 	path::Path,
 	sync::Arc,
 };
 
-use parking_lot::RwLock;
+use parking_lot::Mutex;
 use util::SmallString;
 use zip_structs::{zip_central_directory::ZipCDEntry, zip_eocd::ZipEOCD};
+
+use crate::FolderKind;
 
 use super::{
 	detail, Compression, Error, FolderSlot, MountFormat, MountInfo, Reader, Slot, VFile, VFolder,
@@ -58,12 +61,12 @@ pub(super) fn mount(vfs: &mut VirtualFs, real: &Path, mpoint: &str) -> Result<Mo
 	let islot = vfs.files.insert(VFile {
 		name: real.file_name().unwrap().to_string_lossy().into(),
 		parent: vfs.root,
-		reader: Arc::new(RwLock::new(Reader::File(fh))),
+		reader: Arc::new(Mutex::new(Reader::File(fh))),
 		span: 0..(len as u32),
 		compression: Compression::None,
 	});
 
-	vfs.folders[vfs.root].files.push(islot);
+	vfs.folders[vfs.root].files.insert(islot);
 
 	Ok(MountInfo {
 		real_path: real.to_path_buf(),
@@ -83,8 +86,9 @@ fn mount_dir(
 	let oslot = vfs.folders.insert(VFolder {
 		name: real.file_name().unwrap().to_string_lossy().into(),
 		parent: Some(parent_slot),
-		files: vec![],
-		subfolders: vec![],
+		files: indexmap::indexset![],
+		subfolders: indexmap::indexset![],
+		kind: FolderKind::Directory,
 	});
 
 	for result in d_reader {
@@ -112,15 +116,15 @@ fn mount_dir(
 		let islot = vfs.files.insert(VFile {
 			name,
 			parent: oslot,
-			reader: Arc::new(RwLock::new(Reader::File(fh))),
+			reader: Arc::new(Mutex::new(Reader::File(fh))),
 			span: 0..(len as u32),
 			compression: Compression::None,
 		});
 
-		vfs.folders[oslot].files.push(islot);
+		vfs.folders[oslot].files.insert(islot);
 	}
 
-	vfs.folders[parent_slot].subfolders.push(oslot);
+	vfs.folders[parent_slot].subfolders.insert(oslot);
 
 	Ok(oslot)
 }
@@ -136,13 +140,14 @@ fn mount_wad_file(
 		.try_clone()
 		.map_err(Error::FileHandleClone)?;
 
-	let arc = Arc::new(RwLock::new(Reader::File(rfh)));
+	let arc = Arc::new(Mutex::new(Reader::File(rfh)));
 
 	let oslot = vfs.folders.insert(VFolder {
 		name: SmallString::from(mpoint),
 		parent: Some(parent_slot),
-		files: vec![],
-		subfolders: vec![],
+		files: indexmap::indexset![],
+		subfolders: indexmap::indexset![],
+		kind: FolderKind::Wad,
 	});
 
 	let folder = &mut vfs.folders[oslot];
@@ -161,10 +166,10 @@ fn mount_wad_file(
 			compression: Compression::None,
 		});
 
-		folder.files.push(islot);
+		folder.files.insert(islot);
 	}
 
-	vfs.folders[parent_slot].subfolders.push(oslot);
+	vfs.folders[parent_slot].subfolders.insert(oslot);
 
 	Ok(oslot)
 }
@@ -175,8 +180,8 @@ fn mount_wad_blob(
 	parent_slot: FolderSlot,
 	bytes: Vec<u8>,
 ) -> Result<FolderSlot, Error> {
-	let arc = Arc::new(RwLock::new(Reader::Memory(bytes)));
-	let guard = arc.read();
+	let arc = Arc::new(Mutex::new(Reader::Memory(bytes)));
+	let guard = arc.lock();
 
 	let Reader::Memory(blob) = std::ops::Deref::deref(&guard) else {
 		unreachable!()
@@ -188,8 +193,9 @@ fn mount_wad_blob(
 	let oslot = vfs.folders.insert(VFolder {
 		name: SmallString::from(mpoint),
 		parent: Some(parent_slot),
-		files: vec![],
-		subfolders: vec![],
+		files: indexmap::indexset![],
+		subfolders: indexmap::indexset![],
+		kind: FolderKind::Wad,
 	});
 
 	let folder = &mut vfs.folders[oslot];
@@ -208,10 +214,10 @@ fn mount_wad_blob(
 			compression: Compression::None,
 		});
 
-		folder.files.push(islot);
+		folder.files.insert(islot);
 	}
 
-	vfs.folders[parent_slot].subfolders.push(oslot);
+	vfs.folders[parent_slot].subfolders.insert(oslot);
 
 	Ok(oslot)
 }
@@ -224,7 +230,7 @@ fn mount_zip_file(
 ) -> Result<FolderSlot, Error> {
 	let rfh = fh.try_clone().map_err(Error::FileHandleClone)?;
 
-	let arc = Arc::new(RwLock::new(Reader::File(rfh)));
+	let arc = Arc::new(Mutex::new(Reader::File(rfh)));
 
 	let eocd = ZipEOCD::from_reader(&mut fh).map_err(Error::Zip)?;
 	let entries = ZipCDEntry::all_from_eocd(&mut fh, &eocd).map_err(Error::Zip)?;
@@ -232,8 +238,9 @@ fn mount_zip_file(
 	let oslot = vfs.folders.insert(VFolder {
 		name: SmallString::from(mpoint),
 		parent: Some(vfs.root),
-		files: vec![],
-		subfolders: vec![],
+		files: indexmap::indexset![],
+		subfolders: indexmap::indexset![],
+		kind: FolderKind::Zip,
 	});
 
 	for entry in entries {
@@ -271,11 +278,11 @@ fn mount_zip_file(
 			fh.seek(SeekFrom::Start(start as u64))
 				.map_err(Error::Seek)?;
 			fh.read_exact(&mut compressed).map_err(Error::FileRead)?;
-			let bytes = detail::decompress(compressed, compression)?;
+			let bytes = detail::decompress(Cow::Owned(compressed), compression)?;
 
 			if wad_magic(&bytes[0..8]) {
-				let s = mount_wad_blob(vfs, name, eparent, bytes)?;
-				vfs.folders[eparent].subfolders.push(s);
+				let s = mount_wad_blob(vfs, name, eparent, bytes.into_owned())?;
+				vfs.folders[eparent].subfolders.insert(s);
 				continue;
 			}
 		}
@@ -288,10 +295,10 @@ fn mount_zip_file(
 			compression,
 		});
 
-		vfs.folders[eparent].files.push(islot);
+		vfs.folders[eparent].files.insert(islot);
 	}
 
-	vfs.folders[parent_slot].subfolders.push(oslot);
+	vfs.folders[parent_slot].subfolders.insert(oslot);
 
 	Ok(oslot)
 }
@@ -320,11 +327,12 @@ fn build_zip_dir_structure<'s>(
 			let s = vfs.folders.insert(VFolder {
 				name: SmallString::from(comp),
 				parent: Some(eparent),
-				files: vec![],
-				subfolders: vec![],
+				files: indexmap::indexset![],
+				subfolders: indexmap::indexset![],
+				kind: FolderKind::ZipDir,
 			});
 
-			vfs.folders[eparent].subfolders.push(s);
+			vfs.folders[eparent].subfolders.insert(s);
 
 			s
 		});

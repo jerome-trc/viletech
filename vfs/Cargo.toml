@@ -21,6 +21,7 @@ util = { package = "viletech-utils", path = "../utils" }
 wadload.path = "../wadload"
 
 flate2 = "1.0.28"
+indexmap.workspace = true
 parking_lot.workspace = true
 rayon.workspace = true
 serde = { workspace = true, optional = true }

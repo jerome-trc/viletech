@@ -88,8 +88,13 @@ fn read_smoke() {
 	assert!(vfs.get(VPath::new("/viletech.sf2")).is_some());
 	assert!(vfs.get(VPath::new("/viletech/viletech.png")).is_some());
 
-	let mut lump = vfs.get(VPath::new("/freedoom2/FCGRATE2")).unwrap();
-	let bytes = lump.read().unwrap();
+	let lump = vfs
+		.get(VPath::new("/freedoom2/FCGRATE2"))
+		.unwrap()
+		.into_file()
+		.unwrap();
+	let mut guard = lump.lock();
+	let bytes = guard.read().unwrap();
 
 	assert_eq!(bytes.len(), 4096);
 

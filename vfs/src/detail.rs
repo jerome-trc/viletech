@@ -1,6 +1,7 @@
 //! Internal implementation details not related to mounting.
 
 use std::{
+	borrow::Cow,
 	fs::File,
 	io::{Read, Seek, SeekFrom},
 	ops::Range,
@@ -22,16 +23,18 @@ pub(super) fn path_append(vfs: &VirtualFs, buf: &mut String, slot: FolderSlot) {
 	}
 }
 
-pub(super) fn decompress(bytes: Vec<u8>, compression: Compression) -> Result<Vec<u8>, Error> {
+pub(super) fn decompress(bytes: Cow<[u8]>, compression: Compression) -> Result<Cow<[u8]>, Error> {
 	match compression {
 		Compression::None => Ok(bytes),
 		Compression::Deflate => {
 			let mut deflater = DeflateDecoder::new(&bytes[..]);
 			let mut decompressed = vec![];
+
 			deflater
 				.read_to_end(&mut decompressed)
 				.map_err(Error::Decompress)?;
-			Ok(decompressed)
+
+			Ok(Cow::Owned(decompressed))
 		}
 		Compression::Bzip2 | Compression::Lzma | Compression::Xz | Compression::Zstd => {
 			unimplemented!()
@@ -53,13 +56,14 @@ impl Reader {
 		&mut self,
 		span: Range<usize>,
 		compression: Compression,
-	) -> Result<Vec<u8>, Error> {
+	) -> Result<Cow<[u8]>, Error> {
 		let bytes = match self {
-			Self::File(ref mut fh) => Self::read_from_file(fh, span)?,
-			Self::Memory(bytes) => bytes[span].to_vec(),
+			Self::File(ref mut fh) => Cow::Owned(Self::read_from_file(fh, span)?),
+			Self::Memory(bytes) => Cow::Borrowed(bytes.as_slice()),
 			Self::_Super(layer) => {
 				let mut guard = layer.parent.write();
-				guard.read(layer.span.clone(), layer.compression)?
+				let cow = guard.read(layer.span.clone(), layer.compression)?;
+				Cow::Owned(cow.into_owned())
 			}
 		};
 

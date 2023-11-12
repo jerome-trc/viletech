@@ -136,20 +136,21 @@ impl AudioCore {
 	fn ui_impl_try_play(&mut self, vfs: &VirtualFs) {
 		let path = VPath::new(&self.gui.id_buf).to_owned();
 
-		let mut fref = match vfs.get(&path) {
-			Some(f) => f,
+		let fref = match vfs.get(&path) {
+			Some(vfs::Ref::File(r)) => r,
+			Some(vfs::Ref::Folder(_)) => {
+				info!("`{path}` is a folder and can not be played.");
+				return;
+			}
 			None => {
 				info!("No file under virtual path: {path}");
 				return;
 			}
 		};
 
-		if !fref.is_readable() {
-			info!("File can not be read (not binary or text): {path}");
-			return;
-		}
+		let mut guard = fref.lock();
 
-		let bytes = match fref.read() {
+		let bytes = match guard.read() {
 			Ok(b) => b,
 			Err(err) => {
 				error!("Failed to read file: {err}");

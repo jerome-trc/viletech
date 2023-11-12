@@ -14,13 +14,15 @@ mod refs;
 mod test;
 
 use std::{
+	borrow::Cow,
 	ops::Range,
 	path::{Path, PathBuf},
 	string::FromUtf8Error,
 	sync::Arc,
 };
 
-use parking_lot::RwLock;
+use indexmap::IndexSet;
+use parking_lot::Mutex;
 use rayon::prelude::*;
 use slotmap::{new_key_type, HopSlotMap};
 use util::SmallString;
@@ -229,13 +231,10 @@ impl VirtualFs {
 			return None;
 		};
 
-		let guard = file.reader.write();
-
 		Some(Ref::File(FileRef {
 			vfs: self,
 			slot,
 			vfile: file,
-			guard,
 		}))
 	}
 
@@ -254,7 +253,10 @@ impl VirtualFs {
 				Reader::_Super(_) => unimplemented!(),
 			};
 
-			result.and_then(|b| detail::decompress(b, compression)).ok()
+			result
+				.and_then(|b| detail::decompress(Cow::Owned(b), compression))
+				.ok()
+				.map(|cow| cow.into_owned())
 		}
 
 		let mut vfiles = self.files.values_mut();
@@ -263,12 +265,12 @@ impl VirtualFs {
 			return;
 		};
 
-		let mut guard = vfile0.reader.write_arc();
+		let mut guard = vfile0.reader.lock_arc();
 		let mut prev_arc = Arc::as_ptr(&vfile0.reader);
 
 		if let Some(bytes) = ingest(&mut guard, vfile0.span(), vfile0.compression) {
 			vfile0.span = 0..(bytes.len() as u32);
-			vfile0.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+			vfile0.reader = Arc::new(Mutex::new(Reader::Memory(bytes)));
 			vfile0.compression = Compression::None;
 		}
 
@@ -278,14 +280,14 @@ impl VirtualFs {
 			let arc_ptr = Arc::as_ptr(&vfile.reader);
 
 			if !std::ptr::eq(arc_ptr, prev_arc) {
-				guard = vfile.reader.write_arc();
+				guard = vfile.reader.lock_arc();
 			};
 
 			prev_arc = arc_ptr;
 
 			if let Some(bytes) = ingest(&mut guard, vfile.span(), vfile.compression) {
 				vfile.span = 0..(bytes.len() as u32);
-				vfile.reader = Arc::new(RwLock::new(Reader::Memory(bytes)));
+				vfile.reader = Arc::new(Mutex::new(Reader::Memory(bytes)));
 				vfile.compression = Compression::None;
 			}
 		}
@@ -319,7 +321,6 @@ impl VirtualFs {
 			vfs: self,
 			slot: k,
 			vfile: v,
-			guard: v.reader.write(),
 		})
 	}
 
@@ -356,8 +357,9 @@ impl Default for VirtualFs {
 		let root = folders.insert(VFolder {
 			name: SmallString::from("/"),
 			parent: None,
-			files: vec![],
-			subfolders: vec![],
+			files: indexmap::indexset![],
+			subfolders: indexmap::indexset![],
+			kind: FolderKind::Root,
 		});
 
 		Self {
@@ -392,7 +394,7 @@ pub enum MountFormat {
 pub struct VFile {
 	pub(crate) name: SmallString,
 	pub(crate) parent: FolderSlot,
-	pub(crate) reader: Arc<RwLock<Reader>>,
+	pub(crate) reader: Arc<Mutex<Reader>>,
 	pub(crate) span: Range<u32>,
 	pub(crate) compression: Compression,
 }
@@ -423,8 +425,18 @@ pub struct VFolder {
 	pub(crate) name: SmallString,
 	/// Only `None` for the root.
 	pub(crate) parent: Option<FolderSlot>,
-	pub(crate) files: Vec<FileSlot>,
-	pub(crate) subfolders: Vec<FolderSlot>,
+	pub(crate) files: IndexSet<FileSlot>,
+	pub(crate) subfolders: IndexSet<FolderSlot>,
+	pub(crate) kind: FolderKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FolderKind {
+	Directory,
+	Root,
+	Wad,
+	Zip,
+	ZipDir,
 }
 
 impl VFolder {
@@ -432,6 +444,11 @@ impl VFolder {
 	#[must_use]
 	pub fn parent(&self) -> Option<FolderSlot> {
 		self.parent
+	}
+
+	#[must_use]
+	pub fn kind(&self) -> FolderKind {
+		self.kind
 	}
 }
 

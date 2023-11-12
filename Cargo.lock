@@ -5778,6 +5778,7 @@ version = "0.0.0"
 dependencies = [
  "criterion",
  "flate2",
+ "indexmap 1.9.3",
  "parking_lot 0.12.1",
  "rayon",
  "serde",

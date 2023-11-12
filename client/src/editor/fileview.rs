@@ -163,13 +163,16 @@ fn ui_file(
 		}
 	}
 
-	let bytes = vfile.as_memory().unwrap();
+	let mut guard = vfile.lock();
+	let bytes = guard
+		.read()
+		.expect("failed to read from VFS in-memory file");
 
 	let id = *ed
 		.file_viewer
 		.content_id
 		.entry(vfile.slot())
-		.or_insert(ContentId::deduce(vfs, &vfile, bytes));
+		.or_insert(ContentId::deduce(vfs, &vfile, &bytes));
 
 	body.row(row_height, |mut row| {
 		let (_, _) = row.col(|ui| {
