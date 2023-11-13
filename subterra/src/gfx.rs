@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use glam::{IVec2, UVec2};
-use image::{ImageBuffer, Rgb, RgbImage, Rgba, Rgba32FImage};
+use image::{ImageBuffer, Rgb, RgbImage, Rgba, Rgba32FImage, RgbaImage};
 use util::{io::CursorExt, Id8};
 
 use crate::Error;
@@ -427,13 +427,21 @@ impl<'a> PictureReader<'a> {
 		})
 	}
 
+	pub fn read_rgba(self) -> Result<RgbaImage, Error> {
+		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
+
+		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
+			imgbuf.put_pixel(row, col, Rgba([pixel[0], pixel[1], pixel[2], 255]));
+		})
+	}
+
 	pub fn read_rgba32(self) -> Result<Rgba32FImage, Error> {
 		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
 
 		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
-			let r = (pixel.0[0] as f32) / 255.0;
-			let g = (pixel.0[1] as f32) / 255.0;
-			let b = (pixel.0[2] as f32) / 255.0;
+			let r = (pixel[0] as f32) / 255.0;
+			let g = (pixel[1] as f32) / 255.0;
+			let b = (pixel[2] as f32) / 255.0;
 			imgbuf.put_pixel(row, col, Rgba([r, g, b, 1.0]));
 		})
 	}

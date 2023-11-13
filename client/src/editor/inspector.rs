@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bevy_egui::egui;
 use viletech::{
-	data::gfx::PaletteSet,
+	data::gfx::{PaletteSet, PictureReader},
 	vfs::{self, FileSlot},
 };
 
@@ -38,15 +38,13 @@ fn ui_inspect(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot:
 
 	match content_id {
 		ContentId::Flat => ui_inspect_flat(ed, ui, core, slot),
+		ContentId::Picture => ui_inspect_picture(ed, ui, core, slot),
 		ContentId::PlayPal => ui_inspect_playpal(ed, ui, core, slot),
 		_ => {}
 	}
 }
 
 fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
-	let vfile = core.vfs.get_file(slot).unwrap();
-	let uri = format!("vfs:/{}", vfile.path());
-
 	let wbuf = ed.workbufs.entry(slot).or_insert({
 		let Some(palset) = ed.palset.as_ref() else {
 			// TODO: VTEd should ship palettes of its own.
@@ -66,21 +64,25 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 			return;
 		};
 
+		let vfile = core.vfs.get_file(slot).unwrap();
 		let mut guard = vfile.lock();
 		let bytes = guard.read().expect("VFS memory read failed");
 
 		if bytes.len() < 4096 {
-			// TODO: report an error.
+			ui.centered_and_justified(|ui| {
+				ui.label("This flat is invalid (should be 4096 bytes).");
+			});
+
 			return;
 		}
 
-		let palette = &palset[0];
-		let colormap = &colormaps[0];
-
-		let texname = uri.clone();
+		let uri = format!("vfs:/{}", vfile.path());
 		let texman_arc = ui.ctx().tex_manager();
 		let mut texman = texman_arc.write();
 		let mut color_img = egui::ColorImage::new([64, 64], egui::Color32::TEMPORARY_COLOR);
+
+		let palette = &palset[0];
+		let colormap = &colormaps[0];
 
 		for y in 0..64 {
 			for x in 0..64 {
@@ -93,7 +95,7 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 		}
 
 		let texid = texman.alloc(
-			texname,
+			uri,
 			egui::ImageData::Color(Arc::new(color_img)),
 			egui::TextureOptions::NEAREST,
 		);
@@ -108,6 +110,97 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 	let imgsrc = egui::ImageSource::Texture(egui::load::SizedTexture {
 		id: *texid,
 		size: egui::Vec2::new(64.0, 64.0),
+	});
+
+	ui.centered_and_justified(|ui| {
+		// TODO: upscaling, even with `NEAREST` filtering, uses linear filtering.
+		// Is this intentional behavior or a bug?
+		ui.add(egui::Image::new(imgsrc).texture_options(egui::TextureOptions::NEAREST));
+	});
+}
+
+fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
+	let wbuf = ed.workbufs.entry(slot).or_insert({
+		let Some(palset) = ed.palset.as_ref() else {
+			// TODO: VTEd should ship palettes of its own.
+			ui.centered_and_justified(|ui| {
+				ui.label("No palette available; cannot display this graphic.");
+			});
+
+			return;
+		};
+
+		let Some(colormaps) = ed.colormap.as_ref() else {
+			// TODO: VTEd should ship a colormap of its own.
+			ui.centered_and_justified(|ui| {
+				ui.label("No colormap available; cannot display this graphic.");
+			});
+
+			return;
+		};
+
+		let vfile = core.vfs.get_file(slot).unwrap();
+		let mut guard = vfile.lock();
+		let bytes = guard.read().expect("VFS memory read failed");
+
+		let palette = &palset[0];
+		let colormap = &colormaps[0];
+
+		let pic_reader = match PictureReader::new(bytes.as_ref(), palette, colormap) {
+			Ok(pr) => pr,
+			Err(err) => {
+				ui.centered_and_justified(|ui| {
+					ui.label(&format!("This graphic is invalid: {err}"));
+				});
+
+				return;
+			}
+		};
+
+		let dims = [pic_reader.width() as usize, pic_reader.height() as usize];
+
+		let img_buf = match pic_reader.read_rgba() {
+			Ok(b) => b,
+			Err(err) => {
+				ui.centered_and_justified(|ui| {
+					ui.label(&format!("This graphic is invalid: {err}"));
+				});
+
+				return;
+			}
+		};
+
+		let mut color_img = egui::ColorImage::new(dims, egui::Color32::TEMPORARY_COLOR);
+
+		for (i, pixel) in img_buf.pixels().enumerate() {
+			color_img.pixels[i] =
+				egui::Color32::from_rgba_unmultiplied(pixel[0], pixel[1], pixel[2], pixel[3]);
+		}
+
+		let uri = format!("vfs:/{}", vfile.path());
+		let texman_arc = ui.ctx().tex_manager();
+		let mut texman = texman_arc.write();
+
+		let texid = texman.alloc(
+			uri,
+			egui::ImageData::Color(Arc::new(color_img)),
+			egui::TextureOptions::NEAREST,
+		);
+
+		WorkBuf::Image(texid)
+	});
+
+	let WorkBuf::Image(texid) = wbuf else {
+		unreachable!()
+	};
+
+	let texman_arc = ui.ctx().tex_manager();
+	let texman = texman_arc.read();
+	let tex_meta = texman.meta(*texid).unwrap();
+
+	let imgsrc = egui::ImageSource::Texture(egui::load::SizedTexture {
+		id: *texid,
+		size: egui::Vec2::new(tex_meta.size[0] as f32, tex_meta.size[1] as f32),
 	});
 
 	ui.centered_and_justified(|ui| {

@@ -1,4 +1,7 @@
-use viletech::vfs::{FileRef, VPath};
+use viletech::{
+	data::gfx::PictureReader,
+	vfs::{FileRef, VPath},
+};
 
 /// The editor's best guess at the content in a file.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -95,10 +98,12 @@ pub(super) enum ContentId {
 	Nodes,
 	/// See <https://zdoom.org/wiki/PALVERS>.
 	PalVers,
-	/// See <https://doomwiki.org/wiki/PLAYPAL>.
-	PlayPal,
+	/// See <https://doomwiki.org/wiki/Picture_format>.
+	Picture,
 	/// A VileTech package metadata text file.
 	PkgMeta,
+	/// See <https://doomwiki.org/wiki/PLAYPAL>.
+	PlayPal,
 	/// See <https://doomwiki.org/wiki/PNAMES>.
 	PNames,
 	/// See <https://en.wikipedia.org/wiki/PNG>.
@@ -201,6 +206,7 @@ impl std::fmt::Display for ContentId {
 			Self::ModelDef => write!(f, "ZDoom model config."),
 			Self::Nodes => write!(f, "Map BSP nodes"),
 			Self::PalVers => write!(f, "ZDoom palette versioning"),
+			Self::Picture => write!(f, "Graphic (picture)"),
 			Self::PkgMeta => write!(f, "VileTech package metadata"),
 			Self::PlayPal => write!(f, "Color palette"),
 			Self::PNames => write!(f, "Patch table"),
@@ -378,6 +384,7 @@ impl ContentId {
 			| Self::Marker
 			| Self::Midi
 			| Self::Nodes
+			| Self::Picture
 			| Self::PlayPal
 			| Self::PNames
 			| Self::Png
@@ -476,6 +483,10 @@ impl ContentId {
 					return Self::Flat;
 				}
 			}
+		}
+
+		if PictureReader::validate(bytes).is_ok() {
+			return Self::Picture;
 		}
 
 		Self::Unknown
