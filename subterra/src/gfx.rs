@@ -3,43 +3,67 @@
 use std::io::Cursor;
 
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use glam::{IVec2, UVec2, Vec2};
-use image::{ImageBuffer, Rgba, Rgba32FImage};
+use glam::{IVec2, UVec2};
+use image::{ImageBuffer, Rgb, RgbImage, Rgba, Rgba32FImage};
 use util::{io::CursorExt, Id8};
 
 use crate::Error;
 
+/// See <https://doomwiki.org/wiki/COLORMAP> (and [`ColorMapSet`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ColorMap(pub [u8; 256]);
+
+impl std::ops::Deref for ColorMap {
+	type Target = [u8; 256];
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl std::ops::DerefMut for ColorMap {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
 /// See <https://doomwiki.org/wiki/COLORMAP>.
 #[derive(Debug, Clone)]
-pub struct ColorMap(
-	/// A canonical COLORMAP has 34 elements in this slice.
-	pub Box<[[u8; 256]]>,
-);
+pub enum ColorMapSet<'b> {
+	Borrowed(&'b [ColorMap; 34]),
+	Owned(Box<[ColorMap; 34]>),
+}
 
-impl ColorMap {
+impl ColorMapSet<'_> {
+	/// This returns a [`Self::Borrowed`] by casting the bytes directly,
+	/// so it is allocation-free and very cheap.
 	pub fn new(bytes: &[u8]) -> Result<Self, Error> {
-		if bytes.len() != (34 * 256) {
+		#[repr(C)]
+		#[derive(Clone, Copy, bytemuck::AnyBitPattern)]
+		struct Raw([[u8; 256]; 34]);
+
+		if bytes.len() < (256 * 34) {
 			return Err(Error::SizeMismatch {
-				expected: 34 * 256,
+				expected: 256 * 34,
 				actual: bytes.len(),
 			});
 		}
 
-		let mut ret = vec![];
-		let mut i = 0;
+		let raw = bytemuck::from_bytes::<Raw>(bytes);
 
-		for _ in 0..34 {
-			let mut subarr = [0; 256];
+		// SAFETY: `Raw` and `[ColorMap; 34]` have identical representations.
+		unsafe { Ok(Self::Borrowed(std::mem::transmute(raw))) }
+	}
+}
 
-			for byte in subarr.iter_mut() {
-				*byte = bytes[i];
-				i += 1;
-			}
+impl std::ops::Index<usize> for ColorMapSet<'_> {
+	type Output = ColorMap;
 
-			ret.push(subarr);
+	fn index(&self, index: usize) -> &Self::Output {
+		match self {
+			Self::Borrowed(r) => &r[index],
+			Self::Owned(b) => &b[index],
 		}
-
-		Ok(Self(ret.into_boxed_slice()))
 	}
 }
 
@@ -84,53 +108,71 @@ impl EnDoom {
 	}
 }
 
-#[derive(Debug)]
-pub struct Palette(pub [Rgba<f32>; 256]);
+/// See <https://doomwiki.org/wiki/PLAYPAL> (and [`PaletteSet`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Palette(pub [Rgb<u8>; 256]);
 
-impl Palette {
-	/// A sensible default for internal use. All colors are `0.0 0.0 0.0 1.0`.
-	#[must_use]
-	fn black() -> Self {
-		Self([Rgba([0.0, 0.0, 0.0, 1.0]); 256])
+impl std::ops::Deref for Palette {
+	type Target = [Rgb<u8>; 256];
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
 	}
 }
 
+impl std::ops::DerefMut for Palette {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+/// See <https://doomwiki.org/wiki/PLAYPAL>.
+///
+/// This is meant to resemble a [`std::borrow::Cow`], since
 #[derive(Debug)]
-pub struct PaletteSet(
-	/// A canonical PLAYPAL set has 14 elements in this slice.
-	pub Box<[Palette]>,
-);
+pub enum PaletteSet<'b> {
+	Borrowed(&'b [Palette; 14]),
+	Owned(Box<[Palette; 14]>),
+}
 
-impl PaletteSet {
+impl PaletteSet<'_> {
+	/// This returns a [`Self::Borrowed`] by casting the bytes directly to
+	/// [`Palette`]s, so it is allocation-free and very cheap.
 	pub fn new(bytes: &[u8]) -> Result<Self, Error> {
-		let mut palettes = vec![];
-		let mut cursor = Cursor::new(bytes);
+		#[repr(C)]
+		#[derive(Clone, Copy, bytemuck::AnyBitPattern)]
+		struct Raw([[[u8; 3]; 256]; 14]);
 
-		for _ in 0..14 {
-			let mut pal = Palette::black();
-			let expected = (cursor.position() + 3) as usize;
-
-			for ii in 0..256 {
-				let r = (cursor.read_u8().map_err(|_| Error::MissingRecord {
-					expected,
-					actual: bytes.len(),
-				})? as f32) / 255.0;
-				let g = (cursor.read_u8().map_err(|_| Error::MissingRecord {
-					expected,
-					actual: bytes.len(),
-				})? as f32) / 255.0;
-				let b = (cursor.read_u8().map_err(|_| Error::MissingRecord {
-					expected,
-					actual: bytes.len(),
-				})? as f32) / 255.0;
-
-				pal.0[ii] = Rgba([r, g, b, 255.0]);
-			}
-
-			palettes.push(pal);
+		if bytes.len() < (256 * 3 * 14) {
+			return Err(Error::SizeMismatch {
+				expected: 256 * 3 * 14,
+				actual: bytes.len(),
+			});
 		}
 
-		Ok(PaletteSet(palettes.into_boxed_slice()))
+		let raw = bytemuck::from_bytes::<Raw>(bytes);
+
+		// SAFETY: `Raw` and `[Palette; 14]` have identical representations.
+		unsafe { Ok(Self::Borrowed(std::mem::transmute(raw))) }
+	}
+
+	#[must_use]
+	pub fn into_owned(self) -> [Palette; 14] {
+		match self {
+			Self::Borrowed(b) => b.to_owned(),
+			Self::Owned(o) => *o,
+		}
+	}
+}
+
+impl std::ops::Index<usize> for PaletteSet<'_> {
+	type Output = Palette;
+
+	fn index(&self, index: usize) -> &Self::Output {
+		match self {
+			Self::Borrowed(r) => &r[index],
+			Self::Owned(b) => &b[index],
+		}
 	}
 }
 
@@ -197,96 +239,215 @@ impl PatchTable {
 }
 
 /// See <https://doomwiki.org/wiki/Picture_format>.
+///
 /// Partially adapted from SLADE's `DoomGfxDataFormat::isThisFormat`.
-/// Ensure that `bytes` is the entire lump.
-/// Does not allocate until reasonably certain that `bytes` is a picture,
-/// so `try_from_picture.is_some()` can be used as a fairly cheap check.
-#[must_use]
-pub fn try_from_picture(bytes: &[u8], palette: &Palette) -> Option<(Rgba32FImage, Vec2)> {
+#[derive(Debug)]
+pub struct PictureReader<'a> {
+	bytes: &'a [u8],
+	/// Short for "header cursor".
+	cursor_h: Cursor<&'a [u8]>,
+	/// The position just past the header.
+	checkpoint: u64,
+	palette: &'a Palette,
+	colormap: &'a ColorMap,
+	width: u16,
+	height: u16,
+	left: i16,
+	top: i16,
+}
+
+impl<'a> PictureReader<'a> {
 	const HEADER_SIZE: usize = std::mem::size_of::<u16>() * 4;
 
-	if bytes.len() < HEADER_SIZE {
-		return None;
+	/// Ensure that `bytes` is the entire lump.
+	/// This does not allocate, so `PictureReader::new.is_ok()` is a suitable
+	/// way to check if a WAD entry is a picture-format graphic.
+	pub fn new(
+		bytes: &'a [u8],
+		palette: &'a Palette,
+		colormap: &'a ColorMap,
+	) -> Result<PictureReader<'a>, Error> {
+		let c = Self::validate_impl(bytes)?;
+
+		Ok(Self {
+			bytes,
+			cursor_h: c.cursor_h,
+			checkpoint: c.checkpoint,
+			palette,
+			colormap,
+			width: c.width,
+			height: c.height,
+			left: c.left,
+			top: c.top,
+		})
 	}
 
-	let mut cursor_h = Cursor::new(bytes);
-
-	let width = cursor_h.read_u16::<LittleEndian>().unwrap();
-	let height = cursor_h.read_u16::<LittleEndian>().unwrap();
-	let left = cursor_h.read_i16::<LittleEndian>().unwrap();
-	let top = cursor_h.read_i16::<LittleEndian>().unwrap();
-
-	// (SLADE) Sanity checks on dimensions and offsets.
-
-	if width >= 4096 || height >= 4096 {
-		return None;
+	/// An implementation detail of [`Self::new`], exposed to allow checking if
+	/// a byte array is a picture graphic without needing a [`Palette`] and [`ColorMap`].
+	pub fn validate(bytes: &[u8]) -> Result<(), Error> {
+		Self::validate_impl(bytes).map(|_| {})
 	}
 
-	if left <= -2000 || left >= 2000 {
-		return None;
-	}
-
-	if top <= -2000 || top >= 2000 {
-		return None;
-	}
-
-	if bytes.len() < (HEADER_SIZE + (width as usize * 4)) {
-		return None;
-	}
-
-	let checkpoint = cursor_h.position(); // Just after the header.
-
-	for _ in 0..width {
-		let col_offs = cursor_h.read_u32::<LittleEndian>().unwrap() as usize;
-
-		if col_offs > bytes.len() || col_offs < (HEADER_SIZE) {
-			return None;
+	fn validate_impl(bytes: &[u8]) -> Result<PictureCursor, Error> {
+		if bytes.len() < Self::HEADER_SIZE {
+			return Err(Error::MissingHeader {
+				expected: Self::HEADER_SIZE,
+			});
 		}
 
-		// (SLADE) Check if total size is reasonable; this computation corresponds
-		// to the most inefficient possible use of space by the format
-		// (horizontal stripes of 1 pixel, 1 pixel apart).
-		let num_pixels = ((height + 2 + height % 2) / 2) as usize;
-		let max_col_size = std::mem::size_of::<u32>() + (num_pixels * 5) + 1;
+		let mut cursor_h = Cursor::new(bytes);
 
-		if bytes.len() > HEADER_SIZE + (width as usize * max_col_size) {
-			// Q: Unlikely, but possible. Should we try?
-			return None;
+		let width = cursor_h.read_u16::<LittleEndian>().unwrap();
+		let height = cursor_h.read_u16::<LittleEndian>().unwrap();
+		let left = cursor_h.read_i16::<LittleEndian>().unwrap();
+		let top = cursor_h.read_i16::<LittleEndian>().unwrap();
+
+		// (SLADE) Sanity checks on dimensions and offsets.
+
+		if width >= 4096 || height >= 4096 {
+			return Err(Error::InvalidHeader {
+				details: "width or height is >= 4096",
+			});
 		}
-	}
 
-	let mut ret = ImageBuffer::new(width as u32, height as u32);
-	let mut cursor_pix = Cursor::new(bytes);
-	cursor_h.set_position(checkpoint);
+		if left <= -2000 || left >= 2000 {
+			return Err(Error::InvalidHeader {
+				details: "left <= -2000 or >= 2000",
+			});
+		}
 
-	for i in 0..width {
-		let col_offs = cursor_h.read_u32::<LittleEndian>().unwrap() as u64;
-		cursor_pix.set_position(col_offs);
-		let mut row_start = 0;
+		if top <= -2000 || top >= 2000 {
+			return Err(Error::InvalidHeader {
+				details: "top <= -2000 or >= 2000",
+			});
+		}
 
-		while row_start != 255 {
-			row_start = cursor_pix.read_u8().unwrap();
+		if bytes.len() < (Self::HEADER_SIZE + (width as usize * 4)) {
+			return Err(Error::InvalidHeader {
+				details: "lump length < (header size + width)",
+			});
+		}
 
-			if row_start == 255 {
-				break;
+		let checkpoint = cursor_h.position(); // Just after the header.
+
+		for _ in 0..width {
+			let col_offs = cursor_h.read_u32::<LittleEndian>().unwrap() as usize;
+
+			if col_offs > bytes.len() || col_offs < (Self::HEADER_SIZE) {
+				return Err(Error::InvalidHeader {
+					details: "column offset > lump length OR column offset < header size",
+				});
 			}
 
-			let pixel_count = cursor_pix.read_u8().unwrap();
-			let _ = cursor_pix.read_u8().unwrap(); // Dummy
+			// (SLADE) Check if total size is reasonable; this computation corresponds
+			// to the most inefficient possible use of space by the format
+			// (horizontal stripes of 1 pixel, 1 pixel apart).
+			let num_pixels = ((height + 2 + height % 2) / 2) as usize;
+			let max_col_size = std::mem::size_of::<u32>() + (num_pixels * 5) + 1;
 
-			for ii in 0..(pixel_count as usize) {
-				let pal_entry = cursor_pix.read_u8().unwrap();
-				let pixel = palette.0[pal_entry as usize];
-				let row = i as u32;
-				let col = (ii as u32) + (row_start as u32);
-				ret.put_pixel(row, col, pixel);
+			if bytes.len() > Self::HEADER_SIZE + (width as usize * max_col_size) {
+				// Q: Unlikely, but possible. Should we try?
+				return Err(Error::InvalidHeader {
+					details: "lump length > (header size + (width times maximum column size))",
+				});
 			}
-
-			let _ = cursor_pix.read_u8().unwrap(); // Dummy
 		}
+
+		Ok(PictureCursor {
+			cursor_h,
+			checkpoint,
+			width,
+			height,
+			left,
+			top,
+		})
 	}
 
-	Some((ret, Vec2::new(left as f32, top as f32)))
+	#[must_use]
+	pub fn width(&self) -> u16 {
+		self.width
+	}
+
+	#[must_use]
+	pub fn height(&self) -> u16 {
+		self.height
+	}
+
+	/// The first element is the offset in pixels to the left of the origin;
+	/// the second element is the offset below the origin.
+	#[must_use]
+	pub fn offset(&self) -> (i16, i16) {
+		(self.left, self.top)
+	}
+
+	fn read_impl<I>(
+		mut self,
+		mut imgbuf: I,
+		put_pixel: fn(u32, u32, Rgb<u8>, &mut I),
+	) -> Result<I, Error> {
+		let mut cursor_pix = Cursor::new(self.bytes);
+		self.cursor_h.set_position(self.checkpoint);
+
+		for i in 0..self.width {
+			let col_offs = self.cursor_h.read_u32::<LittleEndian>().unwrap() as u64;
+			cursor_pix.set_position(col_offs);
+			let mut row_start = 0;
+
+			while row_start != 255 {
+				row_start = cursor_pix.read_u8().unwrap();
+
+				if row_start == 255 {
+					break;
+				}
+
+				let pixel_count = cursor_pix.read_u8().unwrap();
+				let _ = cursor_pix.read_u8().unwrap(); // Dummy
+
+				for ii in 0..(pixel_count as usize) {
+					let map_entry = cursor_pix.read_u8().unwrap();
+					let pal_entry = self.colormap[map_entry as usize];
+					let pixel = self.palette[pal_entry as usize];
+					let row = i as u32;
+					let col = (ii as u32) + (row_start as u32);
+					put_pixel(row, col, pixel, &mut imgbuf)
+				}
+
+				let _ = cursor_pix.read_u8().unwrap(); // Dummy
+			}
+		}
+
+		Ok(imgbuf)
+	}
+
+	pub fn read_rgb(self) -> Result<RgbImage, Error> {
+		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
+
+		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
+			imgbuf.put_pixel(row, col, pixel);
+		})
+	}
+
+	pub fn read_rgba32(self) -> Result<Rgba32FImage, Error> {
+		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
+
+		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
+			let r = (pixel.0[0] as f32) / 255.0;
+			let g = (pixel.0[1] as f32) / 255.0;
+			let b = (pixel.0[2] as f32) / 255.0;
+			imgbuf.put_pixel(row, col, Rgba([r, g, b, 1.0]));
+		})
+	}
+}
+
+struct PictureCursor<'a> {
+	/// Short for "header cursor".
+	cursor_h: Cursor<&'a [u8]>,
+	/// The position just past the header.
+	checkpoint: u64,
+	width: u16,
+	height: u16,
+	left: i16,
+	top: i16,
 }
 
 /// See <https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2>.

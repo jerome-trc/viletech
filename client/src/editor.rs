@@ -14,7 +14,7 @@ use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 use viletech::{
 	audio::AudioCore,
-	data::gfx::{ColorMap, PaletteSet},
+	data::gfx::{ColorMapSet, PaletteSet},
 	input::InputCore,
 	vfs::FileSlot,
 	VirtualFs,
@@ -40,8 +40,8 @@ pub(crate) struct Editor {
 	panel_b: Option<Dialog>,
 
 	workbufs: FxHashMap<FileSlot, WorkBuf>,
-	palset: Option<PaletteSet>,
-	colormap: Option<ColorMap>,
+	palset: Option<PaletteSet<'static>>,
+	colormap: Option<ColorMapSet<'static>>,
 
 	file_viewer: FileViewer,
 }
@@ -183,7 +183,7 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 		} else if vfile.name().eq_ignore_ascii_case("COLORMAP") {
 			let mut guard = vfile.lock();
 			let bytes = guard.read().expect("VFS memory read failed");
-			*colormap.lock() = ColorMap::new(bytes.as_ref()).ok();
+			*colormap.lock() = ColorMapSet::new(bytes.as_ref()).ok();
 		}
 	});
 

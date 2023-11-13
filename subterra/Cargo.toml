@@ -23,7 +23,7 @@ util = { package = "viletech-utils", path = "../utils" }
 
 bitflags.workspace = true
 bitvec.workspace = true
-bytemuck.workspace = true
+bytemuck = { workspace = true, features = ["min_const_generics"] }
 byteorder.workspace = true
 glam.workspace = true
 image = { workspace = true, optional = true }

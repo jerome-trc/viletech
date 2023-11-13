@@ -50,11 +50,19 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 	let wbuf = ed.workbufs.entry(slot).or_insert({
 		let Some(palset) = ed.palset.as_ref() else {
 			// TODO: VTEd should ship palettes of its own.
+			ui.centered_and_justified(|ui| {
+				ui.label("No palette available; cannot display this graphic.");
+			});
+
 			return;
 		};
 
-		let Some(colormap) = ed.colormap.as_ref() else {
+		let Some(colormaps) = ed.colormap.as_ref() else {
 			// TODO: VTEd should ship a colormap of its own.
+			ui.centered_and_justified(|ui| {
+				ui.label("No colormap available; cannot display this graphic.");
+			});
+
 			return;
 		};
 
@@ -66,7 +74,9 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 			return;
 		}
 
-		let palette = &palset.0[0];
+		let palette = &palset[0];
+		let colormap = &colormaps[0];
+
 		let texname = uri.clone();
 		let texman_arc = ui.ctx().tex_manager();
 		let mut texman = texman_arc.write();
@@ -76,12 +86,9 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 			for x in 0..64 {
 				let i = (y * 64) + x;
 				let map_entry = bytes[i];
-				let pal_entry = colormap.0[0][map_entry as usize];
-				let pixel = palette.0[pal_entry as usize];
-				let r = (pixel.0[0] * 255.0) as u8;
-				let g = (pixel.0[1] * 255.0) as u8;
-				let b = (pixel.0[2] * 255.0) as u8;
-				color_img.pixels[i] = egui::Color32::from_rgb(r, g, b);
+				let pal_entry = colormap[map_entry as usize];
+				let pixel = palette[pal_entry as usize];
+				color_img.pixels[i] = egui::Color32::from_rgb(pixel.0[0], pixel.0[1], pixel.0[2]);
 			}
 		}
 
@@ -110,8 +117,6 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 	});
 }
 
-/// TODO: this is dreadfully inefficient, but it can't be improved until VTEd's
-/// architecture crystallizes further.
 fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
 	let vfile = core.vfs.get_file(slot).unwrap();
 	let mut guard = vfile.lock();
@@ -123,18 +128,14 @@ fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon
 	};
 
 	ui.horizontal_wrapped(|ui| {
-		for color in palset.0[0].0.iter() {
+		for color in palset[0].0.iter() {
 			let (rect, _resp) =
 				ui.allocate_at_least(egui::Vec2::new(32.0, 32.0), egui::Sense::hover());
-
-			let r = (color.0[0] * 255.0) as u8;
-			let g = (color.0[1] * 255.0) as u8;
-			let b = (color.0[2] * 255.0) as u8;
 
 			ui.painter().rect(
 				rect,
 				1.0,
-				egui::Color32::from_rgb(r, g, b),
+				egui::Color32::from_rgb(color.0[0], color.0[1], color.0[2]),
 				egui::Stroke::new(0.0, egui::Color32::TRANSPARENT),
 			);
 		}

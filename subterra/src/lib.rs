@@ -24,6 +24,7 @@ pub mod level;
 /// Also see [`level::Error`].
 #[derive(Debug)]
 pub enum Error {
+	InvalidHeader { details: &'static str },
 	MissingHeader { expected: usize },
 	MissingRecord { expected: usize, actual: usize },
 	SizeMismatch { expected: usize, actual: usize },
@@ -34,6 +35,9 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
+			Self::InvalidHeader { details } => {
+				write!(f, "data header is malformed: {details}")
+			}
 			Self::MissingHeader { expected } => {
 				write!(f, "expected at least {expected} bytes for a header")
 			}
