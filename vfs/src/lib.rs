@@ -473,6 +473,24 @@ impl VFolder {
 	pub fn kind(&self) -> FolderKind {
 		self.kind
 	}
+
+	/// Computes in `O(1)` time.
+	#[must_use]
+	pub fn file_count(&self) -> usize {
+		self.files.len()
+	}
+
+	/// Computes in `O(1)` time.
+	#[must_use]
+	pub fn subfolder_count(&self) -> usize {
+		self.subfolders.len()
+	}
+
+	/// Shorthand for `self.file_count() + self.subfolder_count()`.
+	#[must_use]
+	pub fn child_count(&self) -> usize {
+		self.files.len() + self.subfolders.len()
+	}
 }
 
 new_key_type! {

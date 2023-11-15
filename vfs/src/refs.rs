@@ -6,11 +6,11 @@ use parking_lot::MutexGuard;
 
 use crate::{
 	detail::{self, Reader},
-	Error, FileSlot, FolderSlot, VFile, VFolder, VPathBuf, VirtualFs,
+	Error, FileSlot, FolderSlot, Slot, VFile, VFolder, VPathBuf, VirtualFs,
 };
 
 /// A reference to a [`VFile`] or [`VFolder`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Ref<'vfs> {
 	File(FileRef<'vfs>),
 	Folder(FolderRef<'vfs>),
@@ -30,6 +30,14 @@ impl<'vfs> Ref<'vfs> {
 		match self {
 			Self::File(iref) => iref.name(),
 			Self::Folder(oref) => oref.name(),
+		}
+	}
+
+	#[must_use]
+	pub fn slot(&self) -> Slot {
+		match self {
+			Self::File(iref) => Slot::File(iref.slot()),
+			Self::Folder(oref) => Slot::Folder(oref.slot()),
 		}
 	}
 
@@ -74,16 +82,34 @@ impl<'vfs> Ref<'vfs> {
 	}
 
 	#[must_use]
+	pub fn is_file(&self) -> bool {
+		matches!(self, Self::File(_))
+	}
+
+	#[must_use]
+	pub fn is_folder(&self) -> bool {
+		matches!(self, Self::Folder(_))
+	}
+
+	#[must_use]
 	pub fn is_readable(&self) -> bool {
 		match self {
 			Self::File(iref) => !iref.is_empty(),
 			Self::Folder(_) => false,
 		}
 	}
+
+	#[must_use]
+	pub fn is_root(&self) -> bool {
+		match self {
+			Self::Folder(oref) => oref.slot() == self.vfs().root,
+			Self::File(_) => false,
+		}
+	}
 }
 
 /// A reference to a [`VFile`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FileRef<'vfs> {
 	pub(crate) vfs: &'vfs VirtualFs,
 	pub(crate) slot: FileSlot,
@@ -109,11 +135,13 @@ impl<'vfs> FileRef<'vfs> {
 		VPathBuf::new(buf)
 	}
 
+	/// Be aware that this requires a hash map lookup.
 	#[must_use]
 	pub fn next_sibling(&self) -> Option<FileRef<'vfs>> {
 		self.sibling(1)
 	}
 
+	/// Be aware that this requires a hash map lookup.
 	#[must_use]
 	pub fn prev_sibling(&self) -> Option<FileRef<'vfs>> {
 		self.sibling(-1)
@@ -178,7 +206,7 @@ impl<'vfs> From<FileRef<'vfs>> for Ref<'vfs> {
 }
 
 /// A reference to a [`VFolder`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FolderRef<'vfs> {
 	pub(crate) vfs: &'vfs VirtualFs,
 	pub(crate) slot: FolderSlot,

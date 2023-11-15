@@ -67,6 +67,31 @@ impl std::fmt::Display for VPathBuf {
 	}
 }
 
+impl<'s> FromIterator<&'s str> for VPathBuf {
+	fn from_iter<T: IntoIterator<Item = &'s str>>(iter: T) -> Self {
+		let mut buf = String::new();
+
+		for comp in iter {
+			buf.push('/');
+			buf.push_str(comp);
+		}
+
+		Self(buf)
+	}
+}
+
+impl<'s> FromIterator<&'s VPath> for VPathBuf {
+	fn from_iter<T: IntoIterator<Item = &'s VPath>>(iter: T) -> Self {
+		let mut buf = String::new();
+
+		for comp in iter {
+			buf.push('/');
+			buf.push_str(comp.as_str());
+		}
+
+		Self(buf)
+	}
+}
 /// [`VPathBuf`]'s counterpart to [`std::path::Path`].
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
