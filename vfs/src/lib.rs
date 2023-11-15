@@ -137,6 +137,11 @@ impl VirtualFs {
 	}
 
 	fn remove_folder_recur(&mut self, oslot: FolderSlot) {
+		let parent_slot = self.folders[oslot].parent.unwrap();
+		let parent = &mut self.folders[parent_slot];
+		let did_remove = parent.subfolders.remove(&oslot);
+		debug_assert!(did_remove);
+
 		let subfolders = std::mem::take(&mut self.folders[oslot].subfolders);
 
 		for slot in subfolders {
