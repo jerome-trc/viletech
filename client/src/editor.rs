@@ -5,7 +5,7 @@ pub(crate) mod fileview;
 pub(crate) mod inspector;
 pub(crate) mod leveled;
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
 use bevy_egui::{
 	egui::{self, TextureId},
 	EguiContexts,
@@ -89,36 +89,100 @@ pub(crate) fn update(
 	mut ed: ResMut<Editor>,
 	mut egui: EguiContexts,
 	mut params: ParamSet<(fileview::SysParam, inspector::SysParam, leveled::SysParam)>,
+	windows: Query<Entity, With<Window>>,
 ) {
-	let guictx = egui.ctx_mut();
+	for window in &windows {
+		let guictx = egui.ctx_for_window_mut(window);
 
-	egui::TopBottomPanel::top("viletech_ed_panel_t").show(guictx, |ui| {
-		ui.horizontal_wrapped(|ui| {
-			ui.visuals_mut().button_frame = false;
+		egui::TopBottomPanel::top("viletech_ed_panel_t").show(guictx, |ui| {
+			ui.horizontal_wrapped(|ui| {
+				ui.visuals_mut().button_frame = false;
 
-			if ui
-				.button("Back")
-				.on_hover_text("Return to the frontend.")
-				.clicked()
-			{
-				next_state.set(AppState::Frontend);
-				return;
-			}
+				egui::widgets::global_dark_light_mode_switch(ui);
 
-			ui.separator();
-			egui::widgets::global_dark_light_mode_switch(ui);
+				ui.separator();
+
+				if ui
+					.button("Back")
+					.on_hover_text("Return to the frontend.")
+					.clicked()
+				{
+					next_state.set(AppState::Frontend);
+					return;
+				}
+
+				ui.separator();
+
+				if ui.button("New Window").clicked() {
+					params.p2().cmds.spawn(Window {
+						title: "VileTech Client".to_string(),
+						..Default::default()
+					});
+				}
+			});
 		});
-	});
 
-	if let Some(panel_l) = ed.panel_l {
-		egui::SidePanel::left("viletech_ed_panel_l")
-			.frame(panel_frame(guictx.style().as_ref(), panel_l, false))
+		if let Some(panel_l) = ed.panel_l {
+			egui::SidePanel::left("viletech_ed_panel_l")
+				.frame(panel_frame(guictx.style().as_ref(), panel_l, false))
+				.show(guictx, |ui| {
+					egui::menu::bar(ui, |ui| {
+						ed.panel_l = Some(dialog_combo(ui, panel_l));
+					});
+
+					match panel_l {
+						Dialog::DecoViz => {}
+						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
+						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
+						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
+						Dialog::Messages => {}
+					}
+				});
+		}
+		if let Some(panel_r) = ed.panel_r {
+			egui::SidePanel::right("viletech_ed_panel_r")
+				.frame(panel_frame(guictx.style().as_ref(), panel_r, false))
+				.show(guictx, |ui| {
+					egui::menu::bar(ui, |ui| {
+						ed.panel_r = Some(dialog_combo(ui, panel_r));
+					});
+
+					match panel_r {
+						Dialog::DecoViz => {}
+						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
+						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
+						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
+						Dialog::Messages => {}
+					}
+				});
+		}
+
+		if let Some(panel_b) = ed.panel_b {
+			egui::TopBottomPanel::bottom("viletech_ed_panel_b")
+				.frame(panel_frame(guictx.style().as_ref(), panel_b, false))
+				.show(guictx, |ui| {
+					egui::menu::bar(ui, |ui| {
+						ed.panel_b = Some(dialog_combo(ui, panel_b));
+					});
+
+					match panel_b {
+						Dialog::DecoViz => {}
+						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
+						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
+						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
+						Dialog::Messages => {}
+					}
+				});
+		}
+
+		egui::CentralPanel::default()
+			.frame(panel_frame(guictx.style().as_ref(), ed.panel_m, true))
 			.show(guictx, |ui| {
 				egui::menu::bar(ui, |ui| {
-					ed.panel_l = Some(dialog_combo(ui, panel_l));
+					ed.panel_m = dialog_combo(ui, ed.panel_m);
 				});
 
-				match panel_l {
+				match ed.panel_m {
 					Dialog::DecoViz => {}
 					Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
 					Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
@@ -127,57 +191,6 @@ pub(crate) fn update(
 				}
 			});
 	}
-	if let Some(panel_r) = ed.panel_r {
-		egui::SidePanel::right("viletech_ed_panel_r")
-			.frame(panel_frame(guictx.style().as_ref(), panel_r, false))
-			.show(guictx, |ui| {
-				egui::menu::bar(ui, |ui| {
-					ed.panel_r = Some(dialog_combo(ui, panel_r));
-				});
-
-				match panel_r {
-					Dialog::DecoViz => {}
-					Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
-					Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
-					Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-					Dialog::Messages => {}
-				}
-			});
-	}
-
-	if let Some(panel_b) = ed.panel_b {
-		egui::TopBottomPanel::bottom("viletech_ed_panel_b")
-			.frame(panel_frame(guictx.style().as_ref(), panel_b, false))
-			.show(guictx, |ui| {
-				egui::menu::bar(ui, |ui| {
-					ed.panel_b = Some(dialog_combo(ui, panel_b));
-				});
-
-				match panel_b {
-					Dialog::DecoViz => {}
-					Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
-					Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
-					Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-					Dialog::Messages => {}
-				}
-			});
-	}
-
-	egui::CentralPanel::default()
-		.frame(panel_frame(guictx.style().as_ref(), ed.panel_m, true))
-		.show(guictx, |ui| {
-			egui::menu::bar(ui, |ui| {
-				ed.panel_m = dialog_combo(ui, ed.panel_m);
-			});
-
-			match ed.panel_m {
-				Dialog::DecoViz => {}
-				Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
-				Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
-				Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-				Dialog::Messages => {}
-			}
-		});
 }
 
 pub(crate) fn post_update(
@@ -263,11 +276,16 @@ pub(crate) fn on_exit(
 	mut cmds: Commands,
 	mut vfs: ResMut<VirtualFs>,
 	cameras: Query<Entity, Or<(With<Camera2d>, With<Camera3d>)>>,
+	windows: Query<Entity, (With<Window>, Without<PrimaryWindow>)>,
 ) {
 	cmds.remove_resource::<Editor>();
 
 	for camera in &cameras {
 		cmds.entity(camera).despawn();
+	}
+
+	for window in &windows {
+		cmds.entity(window).despawn();
 	}
 
 	if let Err(err) = vfs.retain(|mntinfo| mntinfo.mount_point.as_str().ends_with("viletech")) {
