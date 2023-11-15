@@ -85,7 +85,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 	let overlay = egui::Window::new("")
 		.id("vted_leveled_overlay".into())
 		.title_bar(false)
-		.anchor(egui::Align2::RIGHT_BOTTOM, [txt_height, txt_height]);
+		.anchor(egui::Align2::RIGHT_TOP, [txt_height, txt_height]);
 
 	match ed.level_editor.viewpoint {
 		Viewpoint::TopDown => {
@@ -223,8 +223,6 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 }
 
 pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) {
-	// TODO: error messaging to the editor's own log.
-
 	let marker = param.vfs.get_file(marker_slot).unwrap();
 
 	let sky1_opt = marker.vfs().files().par_bridge().find_map_any(|vfile| {
@@ -258,6 +256,9 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	});
 
 	let Some(sky1) = sky1_opt else {
+		ed.messages
+			.push("Level load failed: sky texture loading is currently limited.".into());
+
 		return;
 	};
 
@@ -267,7 +268,9 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("THINGS"))
 	else {
-		info!("Level load failed: THINGS lump not found.");
+		ed.messages
+			.push("Level load failed: THINGS lump not found.".into());
+
 		return;
 	};
 
@@ -275,7 +278,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(thingdefs) = viletech::level::read::things(bytes.as_ref()) else {
-		info!("Level load failed: error during things reading.");
+		ed.messages
+			.push("Level load failed: error during things reading.".into());
 		return;
 	};
 
@@ -283,7 +287,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("LINEDEFS"))
 	else {
-		info!("Level load failed: LINEDEFS lump not found.");
+		ed.messages
+			.push("Level load failed: LINEDEFS lump not found.".into());
 		return;
 	};
 
@@ -291,7 +296,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(linedefs) = viletech::level::read::linedefs(bytes.as_ref()) else {
-		info!("Level load failed: error during linedef reading.");
+		ed.messages
+			.push("Level load failed: error during linedef reading.".into());
 		return;
 	};
 
@@ -299,7 +305,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("SIDEDEFS"))
 	else {
-		info!("Level load failed: SIDEDEFS lump not found.");
+		ed.messages
+			.push("Level load failed: SIDEDEFS lump not found.".into());
 		return;
 	};
 
@@ -307,7 +314,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(sidedefs) = viletech::level::read::sidedefs(bytes.as_ref()) else {
-		info!("Level load failed: error during sidedef reading.");
+		ed.messages
+			.push("Level load failed: error during sidedef reading.".into());
 		return;
 	};
 
@@ -315,7 +323,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("VERTEXES"))
 	else {
-		info!("Level load failed: VERTEXES lump not found.");
+		ed.messages
+			.push("Level load failed: VERTEXES lump not found.".into());
 		return;
 	};
 
@@ -323,7 +332,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(vertdefs) = viletech::level::read::vertexes(bytes.as_ref()) else {
-		info!("Level load failed: error during vertex reading.");
+		ed.messages
+			.push("Level load failed: error during vertex reading.".into());
 		return;
 	};
 
@@ -331,7 +341,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("SEGS"))
 	else {
-		info!("Level load failed: SEGS lump not found.");
+		ed.messages
+			.push("Level load failed: SEGS lump not found.".into());
 		return;
 	};
 
@@ -339,7 +350,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(segdefs) = viletech::level::read::segs(bytes.as_ref()) else {
-		info!("Level load failed: error during segs reading.");
+		ed.messages
+			.push("Level load failed: error during segs reading.".into());
 		return;
 	};
 
@@ -347,7 +359,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("SSECTORS"))
 	else {
-		info!("Level load failed: SSECTORS lump not found.");
+		ed.messages
+			.push("Level load failed: SSECTORS lump not found.".into());
 		return;
 	};
 
@@ -355,7 +368,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(ssectordefs) = viletech::level::read::ssectors(bytes.as_ref()) else {
-		info!("Level load failed: error during sub-sector reading.");
+		ed.messages
+			.push("Level load failed: error during sub-sector reading.".into());
 		return;
 	};
 
@@ -363,7 +377,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("NODES"))
 	else {
-		info!("Level load failed: NODES lump not found.");
+		ed.messages
+			.push("Level load failed: NODES lump not found.".into());
 		return;
 	};
 
@@ -371,7 +386,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(nodedefs) = viletech::level::read::nodes(bytes.as_ref()) else {
-		info!("Level load failed: error during BSP node reading.");
+		ed.messages
+			.push("Level load failed: error during BSP node reading.".into());
 		return;
 	};
 
@@ -379,7 +395,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		.next_sibling()
 		.filter(|f| f.name().eq_ignore_ascii_case("SECTORS"))
 	else {
-		info!("Level load failed: SECTORS lump not found.");
+		ed.messages
+			.push("Level load failed: SECTORS lump not found.".into());
 		return;
 	};
 
@@ -387,7 +404,8 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let bytes = guard.read().expect("VFS memory read failed");
 
 	let Ok(sectordefs) = viletech::level::read::sectors(bytes.as_ref()) else {
-		info!("Level load failed: error during sector reading.");
+		ed.messages
+			.push("Level load failed: error during sector reading.".into());
 		return;
 	};
 

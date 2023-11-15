@@ -5,6 +5,8 @@ pub(crate) mod fileview;
 pub(crate) mod inspector;
 pub(crate) mod leveled;
 
+use std::borrow::Cow;
+
 use bevy::{
 	ecs::system::SystemParam,
 	prelude::*,
@@ -45,6 +47,7 @@ pub(crate) struct Editor {
 
 	file_viewer: FileViewer,
 	level_editor: LevelEditor,
+	messages: Vec<Cow<'static, str>>,
 }
 
 /// What content is occupying a panel?
@@ -54,7 +57,6 @@ pub(crate) enum Dialog {
 	Files,
 	Inspector,
 	LevelEd,
-	Messages,
 }
 
 impl Editor {
@@ -77,7 +79,6 @@ impl std::fmt::Display for Dialog {
 			Self::Files => write!(f, "\u{1F5C0} Files"),
 			Self::Inspector => write!(f, "\u{1F50E} Inspector"),
 			Self::LevelEd => write!(f, "\u{1F5FA} Level Editor"),
-			Self::Messages => write!(f, "\u{1F4E7} Message Log"),
 		}
 	}
 }
@@ -145,7 +146,6 @@ pub(crate) fn update(
 						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
 						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
 						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-						Dialog::Messages => {}
 					}
 				});
 		}
@@ -162,7 +162,6 @@ pub(crate) fn update(
 						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
 						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
 						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-						Dialog::Messages => {}
 					}
 				});
 		}
@@ -180,7 +179,6 @@ pub(crate) fn update(
 						Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
 						Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
 						Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-						Dialog::Messages => {}
 					}
 				});
 		}
@@ -197,9 +195,29 @@ pub(crate) fn update(
 					Dialog::Files => fileview::ui(&mut ed, ui, params.p0()),
 					Dialog::Inspector => inspector::ui(&mut ed, ui, params.p1()),
 					Dialog::LevelEd => leveled::ui(&mut ed, ui, params.p2()),
-					Dialog::Messages => {}
 				}
 			});
+
+		if !ed.messages.is_empty() {
+			let txt_height = 2.0
+				* guictx.fonts(|f| f.row_height(&egui::TextStyle::Body.resolve(&guictx.style())));
+
+			egui::Window::new("viletech_ed_messages")
+				.title_bar(false)
+				.auto_sized()
+				.anchor(egui::Align2::RIGHT_BOTTOM, [txt_height, txt_height])
+				.show(guictx, |ui| {
+					ed.messages.retain(|msg| {
+						let inner_resp = ui.horizontal(|ui| {
+							ui.label(msg.as_ref());
+							ui.separator();
+							ui.button("\u{2716}").on_hover_text("Dismiss").clicked()
+						});
+
+						!inner_resp.inner
+					});
+				});
+		}
 	}
 }
 
@@ -224,21 +242,6 @@ pub(crate) fn post_update(
 	}
 }
 
-#[must_use]
-fn dialog_combo(ui: &mut egui::Ui, mut dialog: Dialog) -> Dialog {
-	egui::ComboBox::new("viletech_ed_dialog_combo", "")
-		.selected_text(format!("{}", dialog))
-		.show_ui(ui, |ui| {
-			ui.selectable_value(&mut dialog, Dialog::Files, "\u{1F5C0} Files");
-			ui.selectable_value(&mut dialog, Dialog::Inspector, "\u{1F50E} Inspector");
-			ui.selectable_value(&mut dialog, Dialog::Messages, "\u{1F4E7} Message Log");
-			ui.selectable_value(&mut dialog, Dialog::DecoViz, "\u{1F500} DecoViz");
-			ui.selectable_value(&mut dialog, Dialog::LevelEd, "\u{1F5FA} Level Editor");
-		});
-
-	dialog
-}
-
 // Transitions /////////////////////////////////////////////////////////////////
 
 pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
@@ -261,7 +264,7 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 		panel_l: Some(Dialog::Files),
 		panel_r: None,
 		panel_m: Dialog::Inspector,
-		panel_b: Some(Dialog::Messages),
+		panel_b: None,
 
 		workbufs: FxHashMap::default(),
 		palset: palset.into_inner(),
@@ -269,6 +272,7 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 
 		file_viewer: FileViewer::new(&vfs),
 		level_editor: LevelEditor::default(),
+		messages: Vec::new(),
 	});
 
 	cmds.spawn(Camera3dBundle {
@@ -317,4 +321,18 @@ fn panel_frame(style: &egui::Style, dialog: Dialog, central: bool) -> egui::Fram
 	} else {
 		frame
 	}
+}
+
+#[must_use]
+fn dialog_combo(ui: &mut egui::Ui, mut dialog: Dialog) -> Dialog {
+	egui::ComboBox::new("viletech_ed_dialog_combo", "")
+		.selected_text(format!("{}", dialog))
+		.show_ui(ui, |ui| {
+			ui.selectable_value(&mut dialog, Dialog::Files, "\u{1F5C0} Files");
+			ui.selectable_value(&mut dialog, Dialog::Inspector, "\u{1F50E} Inspector");
+			ui.selectable_value(&mut dialog, Dialog::DecoViz, "\u{1F500} DecoViz");
+			ui.selectable_value(&mut dialog, Dialog::LevelEd, "\u{1F5FA} Level Editor");
+		});
+
+	dialog
 }
