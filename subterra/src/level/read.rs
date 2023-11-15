@@ -2,11 +2,20 @@
 //!
 //! ["map lumps"]: https://doomwiki.org/wiki/Lump#Standard_lumps
 
+use std::ops::Range;
+
 use util::{read_id8, Id8};
 
 use super::Error;
 
 // TODO: Serde support for raw structs with correct endianness.
+
+pub mod prelude {
+	pub use super::{
+		BspNodeChild, LineDefRaw, NodeRaw, SSectorRaw, SectorRaw, SegDirection, SegRaw, SideDefRaw,
+		ThingExtRaw, ThingFlags, ThingRaw, VertexRaw,
+	};
+}
 
 // LINEDEFS ////////////////////////////////////////////////////////////////////
 
@@ -75,11 +84,18 @@ bitflags::bitflags! {
 }
 
 impl LineDefRaw {
+	/// A possible value for [`Self::special`].
+	pub const POBJ_LINE_START: u16 = 1;
+	/// A possible value for [`Self::special`].
+	pub const POBJ_LINE_EXPLICIT: u16 = 5;
+
+	/// To be used as an index into a slice of [`VertexRaw`].
 	#[must_use]
 	pub fn start_vertex(&self) -> u16 {
 		u16::from_le(self.v_start)
 	}
 
+	/// To be used as an index into a slice of [`VertexRaw`].
 	#[must_use]
 	pub fn end_vertex(&self) -> u16 {
 		u16::from_le(self.v_end)
@@ -100,11 +116,13 @@ impl LineDefRaw {
 		u16::from_le(self.trigger)
 	}
 
+	/// a.k.a. the linedef's "front". To be used as an index into a slice of [`SideDefRaw`].
 	#[must_use]
 	pub fn right_side(&self) -> u16 {
 		u16::from_le(self.right)
 	}
 
+	/// a.k.a. the linedef's "back". To be used as an index into a slice of [`SideDefRaw`].
 	/// Returns `None` if the LE bytes of this value match the bit pattern `0xFFFF`.
 	#[must_use]
 	pub fn left_side(&self) -> Option<u16> {
@@ -145,6 +163,11 @@ impl NodeRaw {
 	#[must_use]
 	pub fn seg_start(&self) -> [i16; 2] {
 		[i16::from_le(self.x), i16::from_le(self.y)]
+	}
+
+	#[must_use]
+	pub fn seg_delta(&self) -> [i16; 2] {
+		[i16::from_le(self.delta_x), i16::from_le(self.delta_y)]
 	}
 
 	#[must_use]
@@ -245,6 +268,7 @@ impl SectorRaw {
 		u16::from_le(self.special)
 	}
 
+	/// Corresponds to [`LineDefRaw::trigger`].
 	#[must_use]
 	pub fn trigger(&self) -> u16 {
 		u16::from_le(self.trigger)
@@ -277,11 +301,13 @@ pub struct SegRaw {
 }
 
 impl SegRaw {
+	/// To be used as an index into a slice of [`VertexRaw`].
 	#[must_use]
 	pub fn start_vertex(&self) -> u16 {
 		u16::from_le(self.v_start)
 	}
 
+	/// To be used as an index into a slice of [`VertexRaw`].
 	#[must_use]
 	pub fn end_vertex(&self) -> u16 {
 		u16::from_le(self.v_end)
@@ -292,6 +318,12 @@ impl SegRaw {
 	#[must_use]
 	pub fn angle(&self) -> i16 {
 		i16::from_le(self.angle)
+	}
+
+	/// To be used as an index into a slice of [`LineDefRaw`].
+	#[must_use]
+	pub fn linedef(&self) -> u16 {
+		u16::from_le(self.linedef)
 	}
 
 	#[must_use]
@@ -350,6 +382,7 @@ impl SideDefRaw {
 		[i16::from_le(self.offs_x), i16::from_le(self.offs_y)]
 	}
 
+	/// To be used as an index into a slice of [`SectorRaw`].
 	#[must_use]
 	pub fn sector(&self) -> u16 {
 		u16::from_le(self.sector)
@@ -397,13 +430,21 @@ pub struct SSectorRaw {
 
 impl SSectorRaw {
 	#[must_use]
-	pub fn seg_count(&self) -> u16 {
+	pub fn seg_count(self) -> u16 {
 		u16::from_le(self.seg_count)
 	}
 
+	/// To be used as an index into a slice of [`SegRaw`].
 	#[must_use]
-	pub fn seg_0(&self) -> u16 {
+	pub fn first_seg(self) -> u16 {
 		u16::from_le(self.seg)
+	}
+
+	/// To be used to take a part of a slice of [`SegRaw`].
+	#[must_use]
+	pub fn segs(self) -> Range<usize> {
+		let seg0 = self.first_seg() as usize;
+		seg0..(seg0 + self.seg_count() as usize)
 	}
 }
 
@@ -647,6 +688,29 @@ pub struct VertexRaw {
 }
 
 impl VertexRaw {
+	/// Returns a "minimum" and "maximum" corner, respectively.
+	#[must_use]
+	pub fn bounds(verts: &[Self]) -> ([i16; 2], [i16; 2]) {
+		let mut min = [0, 0];
+		let mut max = [0, 0];
+
+		for vert in verts {
+			if vert.x < min[0] {
+				min[0] = vert.x;
+			} else if vert.x > max[0] {
+				max[0] = vert.x;
+			}
+
+			if vert.y < min[1] {
+				min[1] = vert.y;
+			} else if vert.y > max[1] {
+				max[1] = vert.y;
+			}
+		}
+
+		(min, max)
+	}
+
 	#[must_use]
 	pub fn position(&self) -> [i16; 2] {
 		[i16::from_le(self.x), i16::from_le(self.y)]

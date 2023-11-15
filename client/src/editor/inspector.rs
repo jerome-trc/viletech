@@ -1,14 +1,21 @@
 use std::sync::Arc;
 
+use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
 use viletech::{
 	data::gfx::{PaletteSet, PictureReader},
 	vfs::{self, FileSlot},
+	VirtualFs,
 };
 
-use super::{contentid::ContentId, Editor, EditorCommon, WorkBuf};
+use super::{contentid::ContentId, Editor, WorkBuf};
 
-pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
+#[derive(SystemParam)]
+pub(crate) struct SysParam<'w> {
+	pub(crate) vfs: ResMut<'w, VirtualFs>,
+}
+
+pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam) {
 	match ed.file_viewer.selected.len() {
 		0 => {}
 		1 => {
@@ -18,7 +25,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
 				return;
 			};
 
-			ui_inspect(ed, ui, core, islot);
+			ui_inspect(ed, ui, param, islot);
 		}
 		n => {
 			ui.centered_and_justified(|ui| {
@@ -28,23 +35,23 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
 	}
 }
 
-fn ui_inspect(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
+fn ui_inspect(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: FileSlot) {
 	let content_id = ed.file_viewer.content_id.get(&slot).unwrap();
 
 	if content_id.is_text() {
-		ui_inspect_text(ed, ui, core, slot);
+		ui_inspect_text(ed, ui, param, slot);
 		return;
 	}
 
 	match content_id {
-		ContentId::Flat => ui_inspect_flat(ed, ui, core, slot),
-		ContentId::Picture => ui_inspect_picture(ed, ui, core, slot),
-		ContentId::PlayPal => ui_inspect_playpal(ed, ui, core, slot),
+		ContentId::Flat => ui_inspect_flat(ed, ui, param, slot),
+		ContentId::Picture => ui_inspect_picture(ed, ui, param, slot),
+		ContentId::PlayPal => ui_inspect_playpal(ed, ui, param, slot),
 		_ => {}
 	}
 }
 
-fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
+fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: FileSlot) {
 	let wbuf = ed.workbufs.entry(slot).or_insert({
 		let Some(palset) = ed.palset.as_ref() else {
 			// TODO: VTEd should ship palettes of its own.
@@ -55,7 +62,7 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 			return;
 		};
 
-		let Some(colormaps) = ed.colormap.as_ref() else {
+		let Some(colormaps) = ed.colormaps.as_ref() else {
 			// TODO: VTEd should ship a colormap of its own.
 			ui.centered_and_justified(|ui| {
 				ui.label("No colormap available; cannot display this graphic.");
@@ -64,7 +71,7 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 			return;
 		};
 
-		let vfile = core.vfs.get_file(slot).unwrap();
+		let vfile = param.vfs.get_file(slot).unwrap();
 		let mut guard = vfile.lock();
 		let bytes = guard.read().expect("VFS memory read failed");
 
@@ -119,7 +126,7 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, 
 	});
 }
 
-fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
+fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: FileSlot) {
 	let wbuf = ed.workbufs.entry(slot).or_insert({
 		let Some(palset) = ed.palset.as_ref() else {
 			// TODO: VTEd should ship palettes of its own.
@@ -130,7 +137,7 @@ fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommo
 			return;
 		};
 
-		let Some(colormaps) = ed.colormap.as_ref() else {
+		let Some(colormaps) = ed.colormaps.as_ref() else {
 			// TODO: VTEd should ship a colormap of its own.
 			ui.centered_and_justified(|ui| {
 				ui.label("No colormap available; cannot display this graphic.");
@@ -139,7 +146,7 @@ fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommo
 			return;
 		};
 
-		let vfile = core.vfs.get_file(slot).unwrap();
+		let vfile = param.vfs.get_file(slot).unwrap();
 		let mut guard = vfile.lock();
 		let bytes = guard.read().expect("VFS memory read failed");
 
@@ -210,8 +217,8 @@ fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommo
 	});
 }
 
-fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
-	let vfile = core.vfs.get_file(slot).unwrap();
+fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: FileSlot) {
+	let vfile = param.vfs.get_file(slot).unwrap();
 	let mut guard = vfile.lock();
 	let bytes = guard.read().expect("VFS memory read failed");
 
@@ -235,14 +242,14 @@ fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon
 	});
 }
 
-fn ui_inspect_text(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon, slot: FileSlot) {
+fn ui_inspect_text(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: FileSlot) {
 	// TODO:
 	// - Save and revert functionality.
 	// - egui's TextEdit widget isn't good enough here. It will gladly eat up
 	// multiple gigabytes of RAM to hold the content of a UDMF TEXTMAP file containing
 	// a few megabytes.
 	let wbuf = ed.workbufs.entry(slot).or_insert(WorkBuf::Text({
-		let vfile = core.vfs.get_file(slot).unwrap();
+		let vfile = param.vfs.get_file(slot).unwrap();
 		let mut guard = vfile.lock();
 		let bytes = guard.read().expect("VFS memory read failed");
 		String::from_utf8_lossy(bytes.as_ref()).into_owned()

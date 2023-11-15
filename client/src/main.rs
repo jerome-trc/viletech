@@ -22,6 +22,7 @@ use common::ClientCommon;
 use indoc::printdoc;
 use viletech::{
 	audio::AudioCore,
+	gfx::Sky2dMaterial,
 	input::InputCore,
 	tracing::info,
 	user::UserCore,
@@ -80,7 +81,9 @@ VileTech Client {c_vers}
 		.add_systems(Startup, setup::set_window_icon)
 		.add_plugins((WireframePlugin, EguiPlugin))
 		.add_systems(Update, common_updates)
-		.add_systems(PreUpdate, update_input.in_set(InputSystem));
+		.add_systems(PreUpdate, update_input.in_set(InputSystem))
+		.add_plugins(MaterialPlugin::<Sky2dMaterial>::default())
+		.add_event::<editor::fileview::Event>();
 
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();
@@ -161,6 +164,10 @@ VileTech Client {c_vers}
 	// Editor //////////////////////////////////////////////////////////////////
 
 	app.add_systems(Update, editor::update.run_if(in_state(AppState::Editor)));
+	app.add_systems(
+		PostUpdate,
+		editor::post_update.run_if(in_state(AppState::Editor)),
+	);
 	app.add_systems(OnEnter(AppState::Editor), editor::on_enter);
 	app.add_systems(OnExit(AppState::Editor), editor::on_exit);
 

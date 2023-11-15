@@ -85,6 +85,7 @@ rfd.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true
 sha3.workspace = true
+slotmap.workspace = true
 smallvec.workspace = true
 smartstring.workspace = true
 time.workspace = true

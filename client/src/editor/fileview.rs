@@ -1,3 +1,4 @@
+use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
 use egui_extras::TableBody;
 use regex::{Regex, RegexBuilder};
@@ -9,11 +10,18 @@ use viletech::{
 
 use super::{
 	contentid::{ContentId, WadMarkers},
-	Editor, EditorCommon,
+	Editor,
 };
 
+#[derive(Debug, Clone)]
+pub(crate) enum Event {
+	EditLevel(FileSlot),
+}
+
+impl bevy::ecs::event::Event for Event {}
+
 #[derive(Debug)]
-pub(super) struct FileViewer {
+pub(crate) struct FileViewer {
 	pub(super) filter_buf: String,
 	pub(super) filter_regex: bool,
 	pub(super) filter: Result<Regex, regex::Error>,
@@ -48,7 +56,13 @@ impl FileViewer {
 	}
 }
 
-pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
+#[derive(SystemParam)]
+pub(crate) struct SysParam<'w> {
+	pub(crate) vfs: ResMut<'w, VirtualFs>,
+	pub(crate) ewriter: EventWriter<'w, Event>,
+}
+
+pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 	ui.horizontal(|ui| {
 		ui.label("Filter:");
 
@@ -96,12 +110,20 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, core: &mut EditorCommon) {
 		})
 		.body(|mut body| {
 			// TODO: row culling.
-			ui_folder(ed, core.vfs.root(), &mut body, 0, row_height);
+			ui_folder(
+				ed,
+				&mut param.ewriter,
+				param.vfs.root(),
+				&mut body,
+				0,
+				row_height,
+			);
 		});
 }
 
 fn ui_folder(
 	ed: &mut Editor,
+	ewriter: &mut EventWriter<Event>,
 	vfolder: FolderRef,
 	body: &mut TableBody,
 	depth: u32,
@@ -150,7 +172,7 @@ fn ui_folder(
 
 	if !folded {
 		for subfolder in vfolder.subfolders() {
-			ui_folder(ed, subfolder, body, depth + 1, row_height);
+			ui_folder(ed, ewriter, subfolder, body, depth + 1, row_height);
 		}
 
 		let mut markers = WadMarkers::None;
@@ -162,13 +184,14 @@ fn ui_folder(
 				markers = WadMarkers::None;
 			} // TODO: expand on this system.
 
-			ui_file(ed, file, body, depth + 1, row_height, markers);
+			ui_file(ed, ewriter, file, body, depth + 1, row_height, markers);
 		}
 	}
 }
 
 fn ui_file(
 	ed: &mut Editor,
+	ewriter: &mut EventWriter<Event>,
 	vfile: FileRef,
 	body: &mut TableBody,
 	depth: u32,
@@ -187,7 +210,7 @@ fn ui_file(
 		.read()
 		.expect("failed to read from VFS in-memory file");
 
-	let id = *ed
+	let content_id = *ed
 		.file_viewer
 		.content_id
 		.entry(vfile.slot())
@@ -206,7 +229,20 @@ fn ui_file(
 			ctrl_held = ui.input(|inps| inps.modifiers.ctrl);
 		});
 
-		if resp0.interact(egui::Sense::click()).clicked() {
+		let (_, resp1) = row.col(|ui| {
+			ui.label(&format!("{content_id}"));
+		});
+
+		let (_, resp2) = row.col(|ui| {
+			ui.label(&subdivide_file_len(vfile.size()));
+		});
+
+		let resp = resp0
+			.interact(egui::Sense::click())
+			.union(resp1.interact(egui::Sense::click()))
+			.union(resp2.interact(egui::Sense::click()));
+
+		if resp.clicked() {
 			if ctrl_held {
 				if ed.file_viewer.selected.contains(&slot) {
 					ed.file_viewer.selected.remove(&slot);
@@ -217,15 +253,11 @@ fn ui_file(
 				ed.file_viewer.selected.clear();
 				ed.file_viewer.selected.insert(slot);
 			}
+		} else {
+			resp.context_menu(|ui| {
+				context_menu(ed, ewriter, ui, &vfile, content_id);
+			});
 		}
-
-		row.col(|ui| {
-			ui.label(&format!("{id}"));
-		});
-
-		let (_, resp2) = row.col(|ui| {
-			ui.label(&subdivide_file_len(vfile.size()));
-		});
 
 		row_rect.set_top(resp0.rect.top());
 		row_rect.set_bottom(resp0.rect.bottom());
@@ -241,6 +273,36 @@ fn ui_file(
 		);
 	}
 }
+
+fn context_menu(
+	ed: &mut Editor,
+	ewriter: &mut EventWriter<Event>,
+	ui: &mut egui::Ui,
+	vfile: &FileRef,
+	content_id: ContentId,
+) {
+	const LEVELEDIT_BTN_TXT: &str = "\u{1F5FA} Edit";
+	const INSPECT_BTN_TXT: &str = "\u{1F50E} Inspect";
+
+	match content_id {
+		ContentId::MapMarker => {
+			if ui.button(LEVELEDIT_BTN_TXT).clicked() {
+				ewriter.send(Event::EditLevel(vfile.slot()));
+			}
+		}
+		ContentId::Picture | ContentId::Flat => {
+			if ui.button(INSPECT_BTN_TXT).clicked() {
+				ed.file_viewer.selected.clear();
+				ed.file_viewer
+					.selected
+					.insert(vfs::Slot::File(vfile.slot()));
+			}
+		}
+		_ => {}
+	}
+}
+
+// Helpers /////////////////////////////////////////////////////////////////////
 
 #[must_use]
 fn subdivide_file_len(len: usize) -> String {

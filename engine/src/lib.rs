@@ -10,6 +10,7 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+pub mod asset;
 pub mod audio;
 pub mod basedata;
 // pub mod catalog;
@@ -32,6 +33,7 @@ pub mod user;
 pub extern crate util;
 pub extern crate vfs;
 pub extern crate wadload;
+pub mod world;
 
 // Types ///////////////////////////////////////////////////////////////////////
 

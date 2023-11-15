@@ -22,3 +22,31 @@ impl Material for TerrainMaterial {
 		"/viletech/shaders/terrain.wgsl".into()
 	}
 }
+
+#[derive(AsBindGroup, Reflect, Asset, Debug, Clone, TypeUuid)]
+#[uuid = "8754faf6-ee9a-11ed-a05b-0242ac120003"]
+pub struct Sky2dMaterial {
+	#[texture(200)]
+	#[sampler(201)]
+	pub texture: Handle<Image>,
+	#[uniform(202)]
+	pub tiled_band_size: f32,
+}
+
+impl Material for Sky2dMaterial {
+	fn vertex_shader() -> ShaderRef {
+		concat!(
+			env!("CARGO_MANIFEST_DIR"),
+			"/../assets/viletech/shaders/sky.wgsl"
+		)
+		.into()
+	}
+
+	fn fragment_shader() -> ShaderRef {
+		concat!(
+			env!("CARGO_MANIFEST_DIR"),
+			"/../assets/viletech/shaders/sky.wgsl"
+		)
+		.into()
+	}
+}
