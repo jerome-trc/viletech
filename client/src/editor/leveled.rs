@@ -226,9 +226,15 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 	let marker = param.vfs.get_file(marker_slot).unwrap();
 
 	let sky1_opt = marker.vfs().files().par_bridge().find_map_any(|vfile| {
-		if !vfile.name().eq_ignore_ascii_case("SKY1") {
+		const SKY_TEXNAMES: &[&str] = &["SKY1", "SKY2", "SKY3", "RSKY1", "RSKY2", "RSKY3"];
+
+		let Some(texname) = SKY_TEXNAMES
+			.iter()
+			.copied()
+			.find(|t| t.eq_ignore_ascii_case(vfile.name()))
+		else {
 			return None;
-		}
+		};
 
 		let mut guard = vfile.lock();
 		let bytes = guard.read().expect("VFS memory read failed");
@@ -247,7 +253,7 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 			bytes.as_ref(),
 			&palset[0],
 			&colormaps[0],
-			Some("SKY1".to_string()),
+			Some(texname.to_string()),
 		) else {
 			return None;
 		};
