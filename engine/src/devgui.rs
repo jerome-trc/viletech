@@ -29,7 +29,7 @@ where
 		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
 		egui::Window::new("Developer Tools")
-			.id(egui::Id::new("viletech_devgui"))
+			.id(egui::Id::new("viletech_dgui"))
 			.anchor(egui::Align2::CENTER_TOP, [0.0, 0.0])
 			.fixed_pos([0.0, 0.0])
 			.collapsible(false)
@@ -42,7 +42,7 @@ where
 	pub fn panel_left(&self, ctx: &egui::Context) -> egui::SidePanel {
 		let screen_rect = ctx.input(|inps| inps.screen_rect);
 
-		egui::SidePanel::left("viletech_devgui_left")
+		egui::SidePanel::left("viletech_dgui_left")
 			.default_width(screen_rect.width() * 0.5)
 			.resizable(true)
 			.width_range((screen_rect.width() * 0.1)..=(screen_rect.width() * 0.9))
@@ -60,7 +60,7 @@ where
 	/// which menu is being drawn in each pane. A menu cannot replace itself, but
 	/// the left and right side can be swapped.
 	pub fn selectors(&mut self, ui: &mut egui::Ui, choices: &[(S, &str)]) {
-		egui::ComboBox::new("viletech_devgui_selector_left", "Left")
+		egui::ComboBox::new("viletech_dgui_selector_left", "Left")
 			.selected_text(format!("{}", self.left))
 			.show_ui(ui, |ui| {
 				let cur = self.left;
@@ -76,7 +76,7 @@ where
 
 		ui.separator();
 
-		egui::ComboBox::new("viletech_devgui_selector_right", "Right")
+		egui::ComboBox::new("viletech_dgui_selector_right", "Right")
 			.selected_text(format!("{}", self.right))
 			.show_ui(ui, |ui| {
 				let cur = self.right;

@@ -108,80 +108,80 @@ impl<C: terminal::Command> Console<C> {
 			ui.add(DragValue::new(&mut self.input_history_cap).clamp_range(0..=1024));
 		});
 
-		ui.separator();
-
 		let mut layout = *ui.layout();
 		layout.main_dir = egui::Direction::BottomUp;
 
 		ui.set_min_height(ui.spacing().interact_size.y * 4.0);
+		let txt_style_height = ui.text_style_height(&egui::TextStyle::Body);
 
-		ui.with_layout(layout, |ui| {
-			ui.horizontal(|ui| {
-				let input_len = self.input.len();
-				let edit_id = egui::Id::new("viletech_console_text_edit");
-				let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
-				let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+		ui.separator();
 
-				if self.cursor_to_end {
-					self.cursor_to_end = false;
-					let range = CCursorRange::one(CCursor::new(input_len));
-					tes.set_ccursor_range(Some(range));
-					TextEditState::store(tes, ctx, edit_id);
-				}
+		let scroll_area = ScrollArea::horizontal()
+			.id_source("viletech_dgui_console_log")
+			.auto_shrink([false, false])
+			.max_height(ui.available_height() - (txt_style_height * 2.5))
+			.stick_to_bottom(true);
 
-				if self.defocus_textedit {
-					self.defocus_textedit = false;
-					resp_edit.surrender_focus();
-				}
-
-				if ui.add(egui::widgets::Button::new("Submit")).clicked() {
-					self.try_submit();
-				}
-			});
-
-			ui.separator();
-
-			let scroll_area = ScrollArea::both()
-				.id_source("viletech_devgui_console_log")
-				.auto_shrink([false, false])
-				.stick_to_bottom(true);
-
-			scroll_area.show(ui, |ui| {
-				ui.vertical(|ui| {
-					for item in &self.messages {
-						match item.kind {
-							MessageKind::Toast => {
-								if !self.draw_toast {
-									continue;
-								}
-
-								for line in item.string.lines() {
-									Self::draw_line(ui, line);
-								}
+		scroll_area.show(ui, |ui| {
+			ui.vertical(|ui| {
+				for item in &self.messages {
+					match item.kind {
+						MessageKind::Toast => {
+							if !self.draw_toast {
+								continue;
 							}
-							MessageKind::Log => {
-								if !self.draw_log {
-									continue;
-								}
 
-								for line in item.string.lines() {
-									Self::draw_line_log(ui, line);
-								}
+							for line in item.string.lines() {
+								Self::draw_line(ui, line);
 							}
-							MessageKind::Help => {
-								for line in item.string.lines() {
-									Self::draw_line(ui, line);
-								}
+						}
+						MessageKind::Log => {
+							if !self.draw_log {
+								continue;
+							}
+
+							for line in item.string.lines() {
+								Self::draw_line_log(ui, line);
+							}
+						}
+						MessageKind::Help => {
+							for line in item.string.lines() {
+								Self::draw_line(ui, line);
 							}
 						}
 					}
-				});
-
-				if self.scroll_to_bottom {
-					self.scroll_to_bottom = false;
-					ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
 				}
 			});
+
+			if self.scroll_to_bottom {
+				self.scroll_to_bottom = false;
+				ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+			}
+		});
+
+		ui.separator();
+
+		ui.horizontal(|ui| {
+			let input_len = self.input.len();
+			let edit_id = egui::Id::new("viletech_console_txedit");
+			let resp_edit = ui.add(egui::TextEdit::singleline(&mut self.input).id(edit_id));
+			let mut tes = egui::TextEdit::load_state(ctx, edit_id).unwrap_or_default();
+
+			if self.cursor_to_end {
+				self.cursor_to_end = false;
+				let range = CCursorRange::one(CCursor::new(input_len));
+				tes.set_ccursor_range(Some(range));
+				TextEditState::store(tes, ctx, edit_id);
+			}
+
+			if self.defocus_textedit {
+				self.defocus_textedit = false;
+				resp_edit.surrender_focus();
+			}
+
+			if ui.add(egui::widgets::Button::new("Submit")).clicked() {
+				self.try_submit();
+			}
 		});
 	}
 

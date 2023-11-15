@@ -2,6 +2,7 @@
 
 mod ccmd;
 mod common;
+mod dgui;
 mod editor;
 mod first;
 mod frontend;
@@ -13,12 +14,11 @@ mod setup;
 use std::time::{Duration, Instant};
 
 use bevy::{
-	app::AppExit, diagnostic::LogDiagnosticsPlugin, input::InputSystem,
+	diagnostic::LogDiagnosticsPlugin, ecs::schedule::Condition, input::InputSystem,
 	pbr::wireframe::WireframePlugin, prelude::*,
 };
-use bevy_egui::{systems::InputEvents, EguiPlugin};
+use bevy_egui::EguiPlugin;
 use clap::Parser;
-use common::ClientCommon;
 use indoc::printdoc;
 use viletech::{
 	audio::AudioCore,
@@ -30,12 +30,7 @@ use viletech::{
 	VirtualFs,
 };
 
-use crate::{
-	common::{DevGuiStatus, DeveloperGui},
-	first::FirstStartup,
-	playground::Playground,
-	setup::LaunchArgs,
-};
+use crate::{first::FirstStartup, playground::Playground, setup::LaunchArgs};
 
 // TODO:
 // - Pause all audio when focus is lost, and resume when focus is regained.
@@ -72,18 +67,18 @@ VileTech Client {c_vers}
 
 	let mut vfs = VirtualFs(vfs::VirtualFs::default());
 	vfs.mount(&viletech::basedata::path(), VPath::new("viletech"))?;
+	let vfs_root_slot = vfs.root().slot();
 	app.world.insert_resource(vfs);
 	info!("Virtual file system initialized.");
 
 	app.add_state::<AppState>()
 		.insert_resource(setup::winit_settings())
 		.add_plugins(setup::default_plugins(&args, log_sender))
-		.add_systems(Startup, setup::set_window_icon)
 		.add_plugins((WireframePlugin, EguiPlugin))
-		.add_systems(Update, common_updates)
-		.add_systems(PreUpdate, update_input.in_set(InputSystem))
-		.add_plugins(MaterialPlugin::<Sky2dMaterial>::default())
-		.add_event::<editor::fileview::Event>();
+		.add_plugins(MaterialPlugin::<Sky2dMaterial>::default());
+
+	app.add_event::<editor::fileview::Event>()
+		.add_event::<common::NewWindow>();
 
 	let user_dir_portable = viletech::user::user_dir_portable();
 	let user_dir_home = viletech::user::user_dir_home();
@@ -101,6 +96,10 @@ VileTech Client {c_vers}
 		UserCore::uninit()
 	};
 
+	app.insert_resource(dgui::State {
+		vfs_selection: vfs::Slot::Folder(vfs_root_slot),
+	});
+
 	app.insert_resource(user);
 	info!("User info initialized.");
 	app.insert_resource(setup::console(log_receiver));
@@ -109,19 +108,24 @@ VileTech Client {c_vers}
 	info!("Audio manager initialized.");
 	app.insert_resource(InputCore::default());
 	info!("Input manager initialized.");
-
-	app.insert_resource(DeveloperGui {
-		#[cfg(debug_assertions)]
-		open: true,
-		#[cfg(not(debug_assertions))]
-		open: false,
-		left: DevGuiStatus::Vfs,
-		right: DevGuiStatus::Console,
-	});
-
 	app.insert_resource(Playground::default());
+	info!("Lithica scripting playground initialized.");
 
-	app.add_systems(OnEnter(AppState::Init), first::init_on_enter);
+	app.add_systems(Startup, dgui::on_app_startup)
+		.add_systems(Update, common::update)
+		.add_systems(PreUpdate, common::pre_update.in_set(InputSystem))
+		.add_systems(PostUpdate, common::post_update)
+		.add_systems(OnEnter(AppState::Init), first::init_on_enter)
+		.add_systems(
+			Update,
+			dgui::draw
+				.run_if(
+					not(in_state(AppState::Init)).and_then(not(in_state(AppState::FirstStartup))),
+				)
+				.after(frontend::update)
+				.after(game::update)
+				.after(editor::update),
+		);
 
 	// First-time startup //////////////////////////////////////////////////////
 
@@ -129,6 +133,8 @@ VileTech Client {c_vers}
 		Update,
 		first::first_startup.run_if(in_state(AppState::FirstStartup)),
 	);
+
+	// Frontend ////////////////////////////////////////////////////////////////
 
 	app.add_systems(OnEnter(AppState::Frontend), frontend::on_enter);
 	app.add_systems(OnExit(AppState::Frontend), frontend::on_exit);
@@ -219,32 +225,4 @@ impl Drop for ExitHandler {
 #[must_use]
 fn version_string() -> String {
 	format!("VileTech Client {}", env!("CARGO_PKG_VERSION"))
-}
-
-fn common_updates(mut core: ClientCommon, mut exit: EventWriter<AppExit>) {
-	core.audio.update();
-
-	while !core.console.requests.is_empty() {
-		match core.console.requests.pop_front().unwrap() {
-			ccmd::Request::Callback(func) => {
-				(func)(&mut core);
-			}
-			ccmd::Request::Exit => {
-				exit.send(AppExit);
-			}
-			ccmd::Request::None => {}
-		}
-	}
-}
-
-fn update_input(mut core: ClientCommon, input: InputEvents) {
-	core.input.update(input);
-
-	let up_pressed = core.input.keys_virt.just_pressed(KeyCode::Up);
-	let down_pressed = core.input.keys_virt.just_pressed(KeyCode::Down);
-	let esc_pressed = core.input.keys_virt.just_pressed(KeyCode::Escape);
-	let enter_pressed = core.input.keys_virt.just_pressed(KeyCode::Return);
-
-	core.console
-		.key_input(up_pressed, down_pressed, esc_pressed, enter_pressed);
 }

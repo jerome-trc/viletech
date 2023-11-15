@@ -75,6 +75,37 @@ impl<T: Borrow<str>> std::ops::Deref for ZString<T> {
 	}
 }
 
+/// e.g. 999 bytes becomes `999 B`, while 1536 bytes becomes `1.5 KB`, and so on.
+/// Will only subdivide into gigabytes and no further.
+#[must_use]
+pub fn subdivide_file_len(len: usize) -> String {
+	if len == 0 {
+		return "0 B".to_string();
+	}
+
+	let mut len = len as f32;
+	let mut unit = "B";
+
+	if len > 1024.0 {
+		len /= 1024.0;
+		unit = "KB";
+	} else {
+		return format!("{len:.2} {unit}");
+	}
+
+	if len > 1024.0 {
+		len /= 1024.0;
+		unit = "MB";
+	}
+
+	if len > 1024.0 {
+		len /= 1024.0;
+		unit = "GB";
+	}
+
+	format!("{len:.2} {unit}")
+}
+
 /// Shortcut for `string.get(..string.chars().count().min(chars)).unwrap()`.
 #[must_use]
 pub fn subslice(string: &str, chars: usize) -> &str {

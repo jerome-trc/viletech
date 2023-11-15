@@ -11,16 +11,15 @@ use bevy::{
 		RenderPlugin,
 	},
 	window::WindowMode,
-	winit::{UpdateMode, WinitSettings, WinitWindows},
+	winit::{UpdateMode, WinitSettings},
 };
 use crossbeam::channel::{Receiver, Sender};
 use viletech::{
 	console::{self, Console},
 	log::TracingPlugin,
-	vfs::{self, VPath},
 };
 
-use crate::{ccmd, common::ClientCommon};
+use crate::ccmd;
 
 #[derive(Debug, clap::Parser)]
 #[command(name = "VileTech Client")]
@@ -103,59 +102,6 @@ pub(crate) fn winit_settings() -> WinitSettings {
 			wait: Duration::from_secs_f64(1.0 / 30.0),
 		},
 	}
-}
-
-pub(crate) fn set_window_icon(
-	core: ClientCommon,
-	winits: NonSend<WinitWindows>,
-	windows: Query<Entity, With<Window>>,
-) {
-	let window_ent = windows.single();
-	let window_id = winits.entity_to_winit.get(&window_ent).unwrap();
-	let window = winits.windows.get(window_id).unwrap();
-
-	let path = VPath::new("/viletech/viletech.png");
-
-	let Some(r) = core.vfs.lookup(path) else {
-		error!("Window icon not found.");
-		return;
-	};
-
-	let vfs::Ref::File(fref) = r else {
-		error!("`{path}` is unexpectedly a VFS folder.");
-		return;
-	};
-
-	let mut guard = fref.lock();
-
-	let bytes = match guard.read() {
-		Ok(b) => b,
-		Err(err) => {
-			error!("Failed to read window icon: {err}");
-			return;
-		}
-	};
-
-	let buf = match image::load_from_memory(&bytes) {
-		Ok(b) => b.into_rgba8(),
-		Err(err) => {
-			error!("Failed to load window icon: {err}");
-			return;
-		}
-	};
-
-	let (w, h) = buf.dimensions();
-	let rgba = buf.into_raw();
-
-	let icon = match winit::window::Icon::from_rgba(rgba, w, h) {
-		Ok(i) => i,
-		Err(err) => {
-			error!("Failed to create window icon: {err}");
-			return;
-		}
-	};
-
-	window.set_window_icon(Some(icon));
 }
 
 #[must_use]

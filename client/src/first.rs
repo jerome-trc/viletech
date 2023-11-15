@@ -2,11 +2,14 @@
 
 use std::{borrow::Cow, path::PathBuf};
 
-use bevy::{app::AppExit, prelude::*};
+use bevy::{app::AppExit, prelude::*, winit::WinitWindows};
 use bevy_egui::egui;
-use viletech::user::UserCore;
+use viletech::{user::UserCore, VirtualFs};
 
-use crate::{common::ClientCommon, AppState};
+use crate::{
+	common::{set_window_icon, ClientCommon},
+	AppState,
+};
 
 #[derive(Debug, Resource)]
 pub(crate) struct FirstStartup {
@@ -21,7 +24,15 @@ pub(crate) struct FirstStartup {
 pub(crate) fn init_on_enter(
 	startup: Option<Res<FirstStartup>>,
 	mut next_state: ResMut<NextState<AppState>>,
+	winits: NonSend<WinitWindows>,
+	windows: Query<Entity, With<Window>>,
+	vfs: Res<VirtualFs>,
 ) {
+	let e_window = windows.single();
+	let window_id = winits.entity_to_winit.get(&e_window).unwrap();
+	let window = winits.windows.get(window_id).unwrap();
+	set_window_icon(&vfs, window);
+
 	if startup.is_none() {
 		next_state.set(AppState::Frontend);
 	} else {

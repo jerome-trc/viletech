@@ -4,6 +4,7 @@ use egui_extras::TableBody;
 use regex::{Regex, RegexBuilder};
 use rustc_hash::{FxHashMap, FxHashSet};
 use viletech::{
+	util::string::subdivide_file_len,
 	vfs::{self, FileRef, FileSlot, FolderKind, FolderRef, FolderSlot},
 	VirtualFs,
 };
@@ -13,12 +14,10 @@ use super::{
 	Editor,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Event, Debug, Clone)]
 pub(crate) enum Event {
 	EditLevel(FileSlot),
 }
-
-impl bevy::ecs::event::Event for Event {}
 
 #[derive(Debug)]
 pub(crate) struct FileViewer {
@@ -300,35 +299,4 @@ fn context_menu(
 		}
 		_ => {}
 	}
-}
-
-// Helpers /////////////////////////////////////////////////////////////////////
-
-#[must_use]
-fn subdivide_file_len(len: usize) -> String {
-	if len == 0 {
-		return "0 B".to_string();
-	}
-
-	let mut len = len as f32;
-	let mut unit = "B";
-
-	if len > 1024.0 {
-		len /= 1024.0;
-		unit = "KB";
-	} else {
-		return format!("{len} {unit}");
-	}
-
-	if len > 1024.0 {
-		len /= 1024.0;
-		unit = "MB";
-	}
-
-	if len > 1024.0 {
-		len /= 1024.0;
-		unit = "GB";
-	}
-
-	format!("{len:.2} {unit}")
 }

@@ -45,8 +45,6 @@ pub(crate) fn update(
 			}
 		});
 
-	core.draw_devgui();
-
 	if cancelled {
 		loader.tracker_m.cancel();
 		loader.tracker_p.cancel();

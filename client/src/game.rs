@@ -58,8 +58,6 @@ pub(crate) fn update(
 				camera.translation.x, camera.translation.y, camera.translation.z
 			));
 		});
-
-	core.draw_devgui();
 }
 
 pub(crate) fn on_enter() {

@@ -59,11 +59,8 @@ pub(crate) fn update(
 		Outcome::Exit => {
 			exit.send(AppExit);
 			on_exit(cmds, frontend, user);
-			return;
 		}
 	}
-
-	core.draw_devgui();
 }
 
 pub(crate) fn on_enter(mut cmds: Commands, user: ResMut<UserCore>) {

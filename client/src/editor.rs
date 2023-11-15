@@ -5,7 +5,11 @@ pub(crate) mod fileview;
 pub(crate) mod inspector;
 pub(crate) mod leveled;
 
-use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
+use bevy::{
+	ecs::system::SystemParam,
+	prelude::*,
+	window::{PrimaryWindow, WindowMode},
+};
 use bevy_egui::{
 	egui::{self, TextureId},
 	EguiContexts,
@@ -19,7 +23,7 @@ use viletech::{
 	VirtualFs,
 };
 
-use crate::AppState;
+use crate::{common::NewWindow, AppState};
 
 use self::{fileview::FileViewer, leveled::LevelEditor};
 
@@ -90,6 +94,7 @@ pub(crate) fn update(
 	mut egui: EguiContexts,
 	mut params: ParamSet<(fileview::SysParam, inspector::SysParam, leveled::SysParam)>,
 	windows: Query<Entity, With<Window>>,
+	mut new_windows: EventWriter<NewWindow>,
 ) {
 	for window in &windows {
 		let guictx = egui.ctx_for_window_mut(window);
@@ -114,10 +119,15 @@ pub(crate) fn update(
 				ui.separator();
 
 				if ui.button("New Window").clicked() {
-					params.p2().cmds.spawn(Window {
+					let mut param = params.p2();
+
+					let ecmds = param.cmds.spawn(Window {
 						title: "VileTech Client".to_string(),
+						mode: WindowMode::Windowed,
 						..Default::default()
 					});
+
+					new_windows.send(NewWindow(ecmds.id()));
 				}
 			});
 		});
@@ -295,7 +305,6 @@ pub(crate) fn on_exit(
 
 // Helpers /////////////////////////////////////////////////////////////////////
 
-#[must_use]
 fn panel_frame(style: &egui::Style, dialog: Dialog, central: bool) -> egui::Frame {
 	let frame = if central {
 		egui::Frame::central_panel(style)

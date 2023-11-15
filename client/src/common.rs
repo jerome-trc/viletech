@@ -1,10 +1,14 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
-use bevy_egui::{egui, EguiContexts};
-use viletech::{audio::AudioCore, console::Console, input::InputCore, util, VirtualFs};
+use bevy::{app::AppExit, ecs::system::SystemParam, prelude::*, winit::WinitWindows};
+use bevy_egui::{systems::InputEvents, EguiContexts};
+use viletech::{
+	audio::AudioCore,
+	console::Console,
+	input::InputCore,
+	vfs::{self, VPath},
+	VirtualFs,
+};
 
-use crate::{ccmd, playground::Playground};
-
-pub(crate) type DeveloperGui = viletech::devgui::DeveloperGui<DevGuiStatus>;
+use crate::{ccmd, dgui};
 
 #[derive(SystemParam)]
 pub(crate) struct ClientCommon<'w, 's> {
@@ -12,122 +16,100 @@ pub(crate) struct ClientCommon<'w, 's> {
 	pub(crate) input: ResMut<'w, InputCore>,
 	pub(crate) audio: ResMut<'w, AudioCore>,
 	pub(crate) console: ResMut<'w, Console<ccmd::Command>>,
-	pub(crate) devgui: ResMut<'w, DeveloperGui>,
-	pub(crate) playground: ResMut<'w, Playground>,
 	pub(crate) egui: EguiContexts<'w, 's>,
 }
 
-impl ClientCommon<'_, '_> {
-	pub(crate) fn draw_devgui(&mut self) {
-		let ctx = self.egui.ctx_mut();
+#[derive(Event, Debug, Clone)]
+pub(crate) struct NewWindow(pub(crate) Entity);
 
-		// TODO:
-		// - Developer GUI toggle key-binding.
-		// - Localize these strings?
-		if self.input.keys_virt.just_pressed(KeyCode::Grave) {
-			self.devgui.open = !self.devgui.open;
+pub(crate) fn update(
+	mut cmds: Commands,
+	mut core: ClientCommon,
+	mut exit: EventWriter<AppExit>,
+	mut new_windows: EventReader<NewWindow>,
+	winits: NonSend<WinitWindows>,
+) {
+	core.audio.update();
+
+	while let Some(req) = core.console.requests.pop_front() {
+		match req {
+			ccmd::Request::Callback(func) => {
+				(func)(&mut core);
+			}
+			ccmd::Request::Exit => {
+				exit.send(AppExit);
+				return;
+			}
+			ccmd::Request::None => {}
 		}
+	}
 
-		if !self.devgui.open {
+	for new_window in new_windows.read() {
+		dgui::add_to_window(cmds.entity(new_window.0));
+		let window_id = winits.entity_to_winit.get(&new_window.0).unwrap();
+		let window = winits.windows.get(window_id).unwrap();
+		set_window_icon(&core.vfs, window);
+	}
+}
+
+pub(crate) fn pre_update(
+	mut console: ResMut<Console<ccmd::Command>>,
+	mut input: ResMut<InputCore>,
+	events: InputEvents,
+) {
+	input.update(events);
+
+	let up_pressed = input.keys_virt.just_pressed(KeyCode::Up);
+	let down_pressed = input.keys_virt.just_pressed(KeyCode::Down);
+	let esc_pressed = input.keys_virt.just_pressed(KeyCode::Escape);
+	let enter_pressed = input.keys_virt.just_pressed(KeyCode::Return);
+
+	console.key_input(up_pressed, down_pressed, esc_pressed, enter_pressed);
+}
+
+pub(crate) fn post_update() {}
+
+pub(crate) fn set_window_icon(vfs: &VirtualFs, window: &winit::window::Window) {
+	let path = VPath::new("/viletech/viletech.png");
+
+	let Some(r) = vfs.lookup(path) else {
+		error!("Window icon not found.");
+		return;
+	};
+
+	let vfs::Ref::File(fref) = r else {
+		error!("`{path}` is unexpectedly a VFS folder.");
+		return;
+	};
+
+	let mut guard = fref.lock();
+
+	let bytes = match guard.read() {
+		Ok(b) => b,
+		Err(err) => {
+			error!("Failed to read window icon: {err}");
 			return;
 		}
+	};
 
-		let mut devgui_open = true;
-		let screen_rect = ctx.input(|inps| inps.screen_rect);
-
-		DeveloperGui::window(ctx)
-			.open(&mut devgui_open)
-			.show(ctx, |ui| {
-				// Prevent window from overflowing off the screen's sides.
-				ui.set_max_width(screen_rect.width());
-
-				egui::menu::bar(ui, |ui| {
-					let uptime = viletech::START_TIME.get().unwrap().elapsed();
-					let (hh, mm, ss) = util::duration_to_hhmmss(uptime);
-
-					ui.label(format!("{hh:02}:{mm:02}:{ss:02}"))
-						.on_hover_ui(|ui| {
-							ui.label(
-								format!("Engine has been running for {hh:02} hours, {mm:02} minutes, {ss:02} seconds")
-							);
-						});
-
-					ui.separator();
-
-					self.devgui.selectors(
-						ui,
-						&[
-							(DevGuiStatus::Audio, "Audio"),
-							(DevGuiStatus::Console, "Console"),
-							(DevGuiStatus::Catalog, "Data"),
-							(DevGuiStatus::Lith, "Lithica Playground"),
-							(DevGuiStatus::Vfs, "VFS"),
-						],
-					);
-				});
-
-				self.devgui
-					.panel_left(ctx)
-					.show_inside(ui, |ui| match self.devgui.left {
-						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui, &self.vfs);
-						}
-						DevGuiStatus::Catalog => {
-							// TODO
-						}
-						DevGuiStatus::Console => {
-							self.console.ui(ctx, ui);
-						}
-						DevGuiStatus::Lith => {
-							self.playground.ui(ctx, ui);
-						}
-						DevGuiStatus::Vfs => {
-							// TODO
-						}
-					});
-
-				self.devgui
-					.panel_right(ctx)
-					.show_inside(ui, |ui| match self.devgui.right {
-						DevGuiStatus::Audio => {
-							self.audio.ui(ctx, ui, &self.vfs);
-						}
-						DevGuiStatus::Catalog => {
-							// TODO
-						}
-						DevGuiStatus::Console => {
-							self.console.ui(ctx, ui);
-						}
-						DevGuiStatus::Lith => {
-							self.playground.ui(ctx, ui);
-						}
-						DevGuiStatus::Vfs => {
-							// TODO
-						}
-					});
-			});
-
-		self.devgui.open = devgui_open;
-	}
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DevGuiStatus {
-	Audio,
-	Catalog,
-	Console,
-	Lith,
-	Vfs,
-}
-
-impl std::fmt::Display for DevGuiStatus {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			DevGuiStatus::Audio => write!(f, "Audio"),
-			DevGuiStatus::Catalog => write!(f, "Catalog"),
-			DevGuiStatus::Console => write!(f, "Console"),
-			DevGuiStatus::Lith => write!(f, "Lithica Playground"),
-			DevGuiStatus::Vfs => write!(f, "VFS"),
+	let buf = match image::load_from_memory(&bytes) {
+		Ok(b) => b.into_rgba8(),
+		Err(err) => {
+			error!("Failed to load window icon: {err}");
+			return;
 		}
-	}
+	};
+
+	let (w, h) = buf.dimensions();
+	let rgba = buf.into_raw();
+
+	let icon = match winit::window::Icon::from_rgba(rgba, w, h) {
+		Ok(i) => i,
+		Err(err) => {
+			error!("Failed to create window icon: {err}");
+			return;
+		}
+	};
+
+	window.set_window_icon(Some(icon));
 }
