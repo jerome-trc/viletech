@@ -95,8 +95,9 @@ fn recur<F: FnMut(SubSectorPoly)>(
 			recur(raw, callback, bsp_lines, subnode_ix);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			let poly = subsector_to_poly(raw, bsp_lines, subsect_idx);
-			callback(poly);
+			if let Some(poly) = subsector_to_poly(raw, bsp_lines, subsect_idx) {
+				callback(poly);
+			}
 		}
 	}
 
@@ -108,8 +109,9 @@ fn recur<F: FnMut(SubSectorPoly)>(
 			recur(raw, callback, bsp_lines, subnode_ix);
 		}
 		BspNodeChild::SubSector(subsect_idx) => {
-			let poly = subsector_to_poly(raw, bsp_lines, subsect_idx);
-			callback(poly);
+			if let Some(poly) = subsector_to_poly(raw, bsp_lines, subsect_idx) {
+				callback(poly);
+			}
 		}
 	}
 
@@ -117,9 +119,12 @@ fn recur<F: FnMut(SubSectorPoly)>(
 }
 
 #[must_use]
-fn subsector_to_poly(raw: RawLevel, bsp_lines: &[Disp], subsect_ix: usize) -> SubSectorPoly {
+fn subsector_to_poly(
+	raw: RawLevel,
+	bsp_lines: &[Disp],
+	subsect_ix: usize,
+) -> Option<SubSectorPoly> {
 	let mut mverts = vec![];
-	let mut indices = vec![];
 
 	let subsect = &raw.subsectors[subsect_ix];
 	let seg0_ix = subsect.first_seg() as usize;
@@ -197,7 +202,11 @@ fn subsector_to_poly(raw: RawLevel, bsp_lines: &[Disp], subsect_ix: usize) -> Su
 		}
 	}
 
-	let mut verts = points_to_poly(mverts);
+	let Some(mut verts) = points_to_poly(mverts) else {
+		return None;
+	};
+
+	let mut indices = vec![];
 
 	let format = IndexedListFormat::new(&mut indices).into_fan_format();
 
@@ -229,19 +238,24 @@ fn subsector_to_poly(raw: RawLevel, bsp_lines: &[Disp], subsect_ix: usize) -> Su
 		indices.push(vndx);
 	}
 
-	SubSectorPoly {
+	Some(SubSectorPoly {
 		subsector: subsect_ix as u32,
 		verts,
 		indices,
 		top_verts: v_len as u32,
 		top_indices: i_len as u32,
-	}
+	})
 }
 
 // Triangulation ///////////////////////////////////////////////////////////////
 
 #[must_use]
-fn points_to_poly(mut points: Vec<Vec3>) -> Vec<Vec3> {
+fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
+	debug_assert!(
+		points.len() >= 3,
+		"`points_to_poly` received less than 3 points."
+	);
+
 	// Sort points in polygonal CCW order around their center.
 	let center = poly_center(&points);
 
@@ -306,10 +320,9 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Vec<Vec3> {
 
 	simplified.push(points[points.len() - 1]);
 
-	debug_assert!(
-		simplified.len() >= 3,
-		"Degenerate polygon created during level init."
-	);
+	if simplified.len() < 3 {
+		return None;
+	}
 
 	while (simplified[0] - simplified[simplified.len() - 1])
 		.xy()
@@ -328,7 +341,7 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Vec<Vec3> {
 		*point += (*point - center).normalize_or_zero() * POLY_BIAS;
 	}
 
-	simplified
+	Some(simplified)
 }
 
 #[must_use]
