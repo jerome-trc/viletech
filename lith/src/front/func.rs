@@ -149,7 +149,7 @@ pub(super) fn monomorphize(
 				}
 				(None, Some(e_default)) => ceval::expr(ctx, 0, env, e_default),
 				(None, None) => {
-					ctx.raise(todo!());
+					// TODO: raise an error.
 					continue;
 				}
 			};
@@ -157,25 +157,25 @@ pub(super) fn monomorphize(
 			match cev {
 				CEval::Err => continue,
 				CEval::Container(_) => {
-					ctx.raise(todo!());
+					// TODO: raise an error.
 					continue;
 				}
 				CEval::Function(_) => {
-					ctx.raise(todo!());
+					// TODO: raise an error.
 					continue;
 				}
 				CEval::Type(_) => match &param.ptype {
 					ParamType::Any => {
-						ctx.raise(todo!());
+						// TODO: raise an error.
 						continue;
 					}
 					ParamType::Type => todo!(),
-					ParamType::Normal(t_nptr) => todo!(),
+					ParamType::Normal(_) => todo!(),
 				},
 				CEval::Value(_) => match &param.ptype {
 					ParamType::Any => todo!(),
 					ParamType::Type => todo!(),
-					ParamType::Normal(t_nptr) => todo!(),
+					ParamType::Normal(_) => todo!(),
 				},
 			}
 		}
@@ -211,8 +211,8 @@ fn define(
 		ctx,
 		failed: false,
 		builder: FunctionBuilder::new(&mut cctx.func, &mut fctx),
-		cflow: DiGraph::default(),
-		next_var: 0,
+		_cflow: DiGraph::default(),
+		_next_var: 0,
 	};
 
 	let body = ast.body().unwrap();
@@ -339,7 +339,7 @@ fn define(
 		FunctionIr {
 			id: fn_id,
 			ptr: ir_ptr,
-			sig_hash,
+			_sig_hash: sig_hash,
 		},
 	);
 
@@ -350,7 +350,7 @@ fn define(
 
 fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
 	match &tdef.datum {
-		TypeDatum::Array { inner, len } => {
+		TypeDatum::_Array { inner, len } => {
 			for _ in 0..*len {
 				get_abi_params(p, inner);
 			}
@@ -360,7 +360,7 @@ fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
 				p.push(AbiParam::new(abi_t));
 			}
 		}
-		TypeDatum::Structure(structure) => {
+		TypeDatum::_Structure(structure) => {
 			for field in &structure.fields {
 				get_abi_params(p, field.tspec.as_ref());
 			}
@@ -370,31 +370,31 @@ fn get_abi_params(p: &mut Vec<AbiParam>, tdef: &TypeDef) {
 
 pub(super) type BlockIx = petgraph::graph::NodeIndex<petgraph::graph::DefaultIx>;
 
-pub(super) type SsaValue = cranelift::prelude::Value;
-pub(super) type SsaValues = smallvec::SmallVec<[SsaValue; 1]>;
+pub(super) type _SsaValue = cranelift::prelude::Value;
+pub(super) type _SsaValues = smallvec::SmallVec<[_SsaValue; 1]>;
 
 pub(super) struct Translator<'c> {
 	pub(super) ctx: &'c SemaContext<'c>,
 	pub(super) failed: bool,
 	pub(super) builder: FunctionBuilder<'c>,
-	pub(super) cflow: DiGraph<FlowBlock, Flow>,
-	pub(super) next_var: u32,
+	pub(super) _cflow: DiGraph<FlowBlock, Flow>,
+	pub(super) _next_var: u32,
 }
 
 #[derive(Debug)]
 pub(super) enum FlowBlock {
-	Normal,
-	If,
-	Else,
-	For,
-	While,
-	Case,
+	_Normal,
+	_If,
+	_Else,
+	_For,
+	_While,
+	_Case,
 }
 
 #[derive(Debug)]
 pub(super) enum Flow {
-	Pass,
-	Continue { to: BlockIx },
-	Break { to: BlockIx, break_t: TypePtr },
-	Return { ret_t: TypePtr },
+	_Pass,
+	_Continue { to: BlockIx },
+	_Break { to: BlockIx, break_t: TypePtr },
+	_Return { ret_t: TypePtr },
 }

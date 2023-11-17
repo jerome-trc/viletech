@@ -17,8 +17,8 @@ use super::{
 	sym::{LocalVar, Location, SymDatum, Symbol},
 };
 
-fn process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {
-	let ast::Expr::Ident(e_id) = ast else {
+fn _process_type_expr(ctx: &SemaContext, ast: ast::Expr) -> Result<TypePtr, ()> {
+	let ast::Expr::Ident(_) = ast else {
 		ctx.raise(
 			Issue::new(
 				ctx.path,
@@ -49,7 +49,7 @@ pub(super) fn statement(tlat: &mut Translator, scope: &mut Scope, ast: ast::Stat
 fn lower_stmt_bind(tlat: &mut Translator, scope: &mut Scope, ast: ast::StmtBind) {
 	let pat = ast.pattern().unwrap();
 
-	let ident = match &pat {
+	let _ident = match &pat {
 		ast::Pattern::Ident(id) => id.token(),
 		ast::Pattern::Grouped(_)
 		| ast::Pattern::Literal(_)
@@ -85,34 +85,34 @@ fn lower_stmt_bind(tlat: &mut Translator, scope: &mut Scope, ast: ast::StmtBind)
 	};
 
 	let Some(texpr) = ast_tspec.into_expr() else {
-		tlat.ctx.raise(todo!());
+		// TODO: raise an error.
 		return;
 	};
 
-	let tspec = match ceval::expr(tlat.ctx, 0, todo!(), texpr) {
+	let tspec = match ceval::expr(tlat.ctx, 0, scope, texpr) {
 		CEval::Type(t_ptr) => t_ptr,
 		CEval::Container(_) => {
-			tlat.ctx.raise(todo!());
+			// TODO: raise an error.
 			return;
 		}
 		CEval::Function(_) => {
-			tlat.ctx.raise(todo!());
+			// TODO: raise an error.
 			return;
 		}
 		CEval::Value(_) => {
-			tlat.ctx.raise(todo!());
+			// TODO: raise an error.
 			return;
 		}
 		CEval::Err => return,
 	};
 
-	let mut local = LocalVar {
-		abi_vars: smallvec![],
-		mutable: match ast.keyword() {
+	let local = LocalVar {
+		_abi_vars: smallvec![],
+		_mutable: match ast.keyword() {
 			ast::BindKeyword::Let(_) => false,
 			ast::BindKeyword::Var(_) => true,
 		},
-		tspec,
+		_tspec: tspec,
 	};
 
 	let location = Location {
@@ -126,7 +126,7 @@ fn lower_stmt_bind(tlat: &mut Translator, scope: &mut Scope, ast: ast::StmtBind)
 	};
 
 	scope.insert(
-		tlat.ctx.names.intern(&ident),
+		tlat.ctx.names.intern(&_ident),
 		LutSym::Owned {
 			ptr: SymOPtr::alloc(tlat.ctx.arena, sym),
 			imported: false,

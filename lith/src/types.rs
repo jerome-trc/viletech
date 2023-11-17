@@ -5,7 +5,6 @@ use std::hash::BuildHasherDefault;
 
 use cranelift::codegen::ir;
 use rustc_hash::FxHasher;
-use smallvec::SmallVec;
 
 use crate::{
 	compile::{
@@ -22,13 +21,9 @@ pub(crate) type FxDashMap<K, V> = dashmap::DashMap<K, V, BuildHasherDefault<FxHa
 pub(crate) type FxDashSet<K> = dashmap::DashSet<K, BuildHasherDefault<FxHasher>>;
 
 pub(crate) type AbiType = cranelift::codegen::ir::Type;
-#[allow(unused)]
-pub(crate) type AbiTypes = SmallVec<[AbiType; 1]>;
 
 pub(crate) type SymPtr = APtr<Symbol>;
 pub(crate) type SymOPtr = OPtr<Symbol>;
-#[allow(unused)]
-pub(crate) type SymNPtr = NPtr<Symbol>;
 
 pub(crate) type TypePtr = APtr<TypeDef>;
 pub(crate) type TypeOPtr = OPtr<TypeDef>;
@@ -36,6 +31,5 @@ pub(crate) type TypeNPtr = NPtr<TypeDef>;
 
 pub(crate) type IrPtr = APtr<ir::Function>;
 pub(crate) type IrOPtr = OPtr<ir::Function>;
-pub(crate) type IrNPtr = NPtr<ir::Function>;
 
 pub(crate) type Scope = FxHamt<NameIx, LutSym>;

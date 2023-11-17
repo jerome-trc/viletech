@@ -1,7 +1,6 @@
 //! **C**ompile-time **eval**uation routines.
 
 use cranelift::codegen::data_value::DataValue;
-use cranelift_interpreter::{instruction::DfgInstructionContext, step::ControlFlow};
 use doomfront::rowan::ast::AstNode;
 use smallvec::smallvec;
 
@@ -13,7 +12,6 @@ use crate::{
 };
 
 use super::{
-	ctfe::{self, Interpreter},
 	func,
 	sema::{CEval, CeValue, SemaContext},
 	sym::{self, FunctionKind, SymDatum, Symbol},
@@ -150,7 +148,7 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 	match &d_fn.kind {
 		FunctionKind::Ir => try_call_ir(ctx, env, &callable_sym, d_fn, ast),
-		FunctionKind::Internal { uext_name, inner } => {
+		FunctionKind::Internal { inner, .. } => {
 			try_call_internal(ctx, &callable_sym, d_fn, ast, inner)
 		}
 	}
@@ -204,7 +202,7 @@ fn expr_literal(ctx: &SemaContext, ast: ast::ExprLit) -> CEval {
 			data: smallvec![DataValue::from(ctx.names.intern(&token))],
 			ftype: ctx.sym_cache.iname_t.clone().into(),
 		})
-	} else if let Some(string) = token.string() {
+	} else if token.string().is_some() {
 		unimplemented!("string interning")
 	} else {
 		unreachable!()
@@ -228,14 +226,14 @@ fn try_call_ir(
 		return CEval::Err;
 	};
 
-	let mut istate = Interpreter::new(ctx.compiler, ir_ptr);
-	let mut fuel = 10_000_u32;
+	let _ = 10_000_u32;
 
-	let inst = ir_ptr
+	let _ = ir_ptr
 		.layout
 		.first_inst(ir_ptr.layout.entry_block().unwrap())
 		.unwrap();
 
+	#[cfg(any())]
 	loop {
 		let inst_ctx = DfgInstructionContext::new(inst, &ir_ptr.dfg);
 
@@ -307,8 +305,17 @@ fn try_call_internal(
 			CompileTimeNativeFunc::Dyn(func) => func(ctx, e_call.arg_list().unwrap(), sym, d_fn),
 		},
 		NativeFunc::RunTime(_) => {
-			ctx.raise(todo!());
-			return CEval::Err;
+			ctx.raise(
+				Issue::new(
+					ctx.path,
+					e_call.syntax().text_range(),
+					issue::Level::Error(issue::Error::CEvalImpossible),
+				)
+				.with_message_static("this function cannot be called at compile time"),
+			);
+			// TODO: symbols need to know their own name for a better report here.
+
+			CEval::Err
 		}
 	}
 }

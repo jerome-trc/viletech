@@ -36,7 +36,7 @@ impl NameInterner {
 	}
 
 	#[must_use]
-	pub(crate) fn resolve(&self, ix: NameIx) -> &str {
+	pub(crate) fn _resolve(&self, ix: NameIx) -> &str {
 		Borrow::borrow(&self.array[ix.0 as usize])
 	}
 
@@ -129,7 +129,7 @@ mod test {
 		let ix0 = interner.intern(&token0);
 		let ix1 = interner.intern(&token1);
 
-		assert_eq!(interner.resolve(ix0), "lorem");
-		assert_eq!(interner.resolve(ix1), "ipsum");
+		assert_eq!(interner._resolve(ix0), "lorem");
+		assert_eq!(interner._resolve(ix1), "ipsum");
 	}
 }

@@ -123,5 +123,5 @@ fn jit_compile_functions(
 pub(crate) struct FunctionIr {
 	pub(crate) id: FuncId,
 	pub(crate) ptr: IrOPtr,
-	pub(crate) sig_hash: u64,
+	pub(crate) _sig_hash: u64,
 }

@@ -17,9 +17,9 @@ pub struct TypeDef {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum TypeDatum {
-	Array { inner: TypePtr, len: usize },
+	_Array { inner: TypePtr, len: usize },
 	Primitive(Primitive),
-	Structure(Structure),
+	_Structure(Structure),
 }
 
 // Primitive ///////////////////////////////////////////////////////////////////

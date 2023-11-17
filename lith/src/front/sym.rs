@@ -99,14 +99,14 @@ pub(crate) enum Confinement {
 pub(crate) enum Visibility {
 	/// Visible to all libraries.
 	/// Corresponds to the `public` keyword.
-	Export,
+	_Export,
 	/// Visible only to declaring library.
 	/// Corresponds to the absence of a visibility specifier.
 	#[default]
 	Default,
 	/// Visible within container only.
 	/// Corresponds to the `private` keyword.
-	Hidden,
+	_Hidden,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -143,17 +143,17 @@ impl Function {
 			return type_ptr.as_ptr().is_none();
 		};
 
-		for param in &self.params {
-			if let ParamType::Normal(type_ptr) = &param.ptype {
-				return type_ptr.as_ptr().is_none();
-			} else if let Some(ConstInit::Type(type_ptr)) = &param.default {
-				return type_ptr.as_ptr().is_none();
-			} else {
-				unreachable!()
-			}
-		}
+		let Some(param) = self.params.first() else {
+			return false;
+		};
 
-		false
+		if let ParamType::Normal(type_ptr) = &param.ptype {
+			type_ptr.as_ptr().is_none()
+		} else if let Some(ConstInit::Type(type_ptr)) = &param.default {
+			type_ptr.as_ptr().is_none()
+		} else {
+			unreachable!()
+		}
 	}
 }
 
@@ -183,10 +183,10 @@ pub(crate) enum ParamType {
 
 #[derive(Debug)]
 pub(crate) struct Parameter {
-	pub(crate) name: NameIx,
+	pub(crate) _name: NameIx,
 	pub(crate) ptype: ParamType,
-	pub(crate) consteval: bool,
-	pub(crate) reference: ParamRef,
+	pub(crate) _consteval: bool,
+	pub(crate) _reference: ParamRef,
 	pub(crate) default: Option<ConstInit>,
 }
 
@@ -224,9 +224,9 @@ pub(crate) enum Inlining {
 
 #[derive(Debug)]
 pub(crate) struct LocalVar {
-	pub(crate) abi_vars: SmallVec<[Variable; 1]>,
-	pub(crate) mutable: bool,
-	pub(crate) tspec: TypePtr,
+	pub(crate) _abi_vars: SmallVec<[Variable; 1]>,
+	pub(crate) _mutable: bool,
+	pub(crate) _tspec: TypePtr,
 }
 
 // SymConst ////////////////////////////////////////////////////////////////////

@@ -158,10 +158,10 @@ fn declare_function(ctx: &FrontendContext, scope: &mut Scope, ast: ast::Function
 			}
 
 			datum.params.push(Parameter {
-				name: ctx.names.intern(&ast.name().unwrap()),
+				_name: ctx.names.intern(&ast.name().unwrap()),
 				ptype,
-				consteval: param.is_const(),
-				reference: match param.ref_spec() {
+				_consteval: param.is_const(),
+				_reference: match param.ref_spec() {
 					ast::ParamRefSpec::None => ParamRef::None,
 					ast::ParamRefSpec::Ref(_) => ParamRef::Immutable,
 					ast::ParamRefSpec::RefVar(_, _) => ParamRef::Mutable,

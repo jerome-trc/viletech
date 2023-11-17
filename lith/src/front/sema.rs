@@ -275,7 +275,7 @@ fn check_symconst(ctx: &SemaContext, ast: ast::SymConst, sym_id: SymbolId) {
 				};
 
 				if *tspec != cevalue.ftype {
-					ctx.raise(todo!());
+					// TODO: raise an error.
 					return;
 				}
 

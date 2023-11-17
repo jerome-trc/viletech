@@ -110,7 +110,7 @@ impl JitModule {
 	/// Counterpart to [`Module::declare_func_in_func`] which better serves
 	/// the needs of Lithica's sema. pass and its CLIF interpreter.
 	#[must_use]
-	pub(crate) fn declare_func_in_func(
+	pub(crate) fn _declare_func_in_func(
 		&mut self,
 		func_id: FuncId,
 		ext_name: UserExternalName,
@@ -134,7 +134,7 @@ impl JitModule {
 	/// Counterpart to [`Module::declare_data_in_func`] which better serves
 	/// the needs of Lithica's sema. pass and its CLIF interpreter.
 	#[must_use]
-	pub(crate) fn declare_data_in_func(
+	pub(crate) fn _declare_data_in_func(
 		&mut self,
 		data_id: DataId,
 		ext_name: UserExternalName,

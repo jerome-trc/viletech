@@ -83,7 +83,7 @@ pub(crate) struct NPtr<T>(AtomicCell<Option<NonNull<T>>>);
 
 impl<T> NPtr<T> {
 	#[must_use]
-	pub(crate) fn new(aptr: APtr<T>) -> Self {
+	pub(crate) fn _new(aptr: APtr<T>) -> Self {
 		Self(AtomicCell::new(Some(aptr.0)))
 	}
 

@@ -13,8 +13,8 @@ impl Rtti {
 	pub fn inner(&self) -> RttiRef {
 		unsafe {
 			match self.tag {
-				RttiTag::Primitive => RttiRef::Primitive(&self.data.primitive),
-				RttiTag::Struct => RttiRef::Struct(&self.data.structure),
+				RttiTag::_Primitive => RttiRef::Primitive(&self.data.primitive),
+				RttiTag::_Struct => RttiRef::Struct(&self.data.structure),
 			}
 		}
 	}
@@ -26,10 +26,10 @@ impl Clone for Rtti {
 			tag: self.tag,
 			data: unsafe {
 				match self.tag {
-					RttiTag::Primitive => RttiData {
+					RttiTag::_Primitive => RttiData {
 						primitive: self.data.primitive,
 					},
-					RttiTag::Struct => RttiData {
+					RttiTag::_Struct => RttiData {
 						structure: self.data.structure.clone(),
 					},
 				}
@@ -55,16 +55,16 @@ union RttiData {
 /// Separated discriminant for [`RttiData`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RttiTag {
-	Primitive,
-	Struct,
+	_Primitive,
+	_Struct,
 }
 
 impl Drop for Rtti {
 	fn drop(&mut self) {
 		unsafe {
 			match self.tag {
-				RttiTag::Primitive => ManuallyDrop::drop(&mut self.data.primitive),
-				RttiTag::Struct => ManuallyDrop::drop(&mut self.data.structure),
+				RttiTag::_Primitive => ManuallyDrop::drop(&mut self.data.primitive),
+				RttiTag::_Struct => ManuallyDrop::drop(&mut self.data.structure),
 			}
 		}
 	}
@@ -78,8 +78,8 @@ impl std::fmt::Debug for Rtti {
 				.field(
 					"data",
 					match &self.tag {
-						RttiTag::Primitive => &self.data.primitive,
-						RttiTag::Struct => &self.data.structure,
+						RttiTag::_Primitive => &self.data.primitive,
+						RttiTag::_Struct => &self.data.structure,
 					},
 				)
 				.finish()
