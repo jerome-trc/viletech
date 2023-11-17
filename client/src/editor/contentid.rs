@@ -240,7 +240,7 @@ impl std::fmt::Display for ContentId {
 
 impl ContentId {
 	/// TODO: might be worthwhile to make this a hashmap.
-	const FILE_STEMS: &[(&'static str, Self)] = &[
+	const FILE_STEMS: &'static [(&'static str, Self)] = &[
 		("ALTHUDCF", Self::AltHudCf),
 		("ANIMATED", Self::Animated),
 		("ANIMDEFS", Self::AnimDefs),
@@ -298,11 +298,11 @@ impl ContentId {
 		("ZSCRIPT", Self::ZScript),
 	];
 
-	const FILE_STEM_MARKER_PREFIXES: &[&'static str] = &[
+	const FILE_STEM_MARKER_PREFIXES: &'static [&'static str] = &[
 		"A_", "F_", "F1_", "F2_", "HI_", "P_", "PP_", "P1_", "P2_", "P3_", "S_", "SS_", "T_", "TX_",
 	];
 
-	const EXTENSIONS: &[(&'static str, Self)] = &[
+	const EXTENSIONS: &'static [(&'static str, Self)] = &[
 		("acs", Self::Acs),
 		("bex", Self::DeHackEdBex),
 		("dec", Self::Decorate),
