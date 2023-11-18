@@ -144,6 +144,8 @@ pub(super) enum ContentId {
 	Vertexes,
 	/// See <https://zdoom.org/wiki/VOXELDEF>.
 	VoxelDef,
+	/// An informal standard for level pack metadata.
+	WadInfo,
 	/// See <https://www.w3.org/TR/WGSL/>.
 	Wgsl,
 	/// See <https://zdoom.org/wiki/X11R6RGB>.
@@ -229,6 +231,7 @@ impl std::fmt::Display for ContentId {
 			Self::UMapInfo => write!(f, "Universal map info"),
 			Self::Vertexes => write!(f, "Map vertices"),
 			Self::VoxelDef => write!(f, "ZDoom voxel config."),
+			Self::WadInfo => write!(f, "WAD metadata"),
 			Self::Wgsl => write!(f, "WebGPU shader"),
 			Self::X11R6RGB => write!(f, "ZDoom X11R6RGB"),
 			Self::XHairs => write!(f, "ZDoom crosshair config."),
@@ -292,6 +295,7 @@ impl ContentId {
 		("UMAPINFO", Self::UMapInfo),
 		("VERTEXES", Self::Vertexes),
 		("VOXELDEF", Self::VoxelDef),
+		("WADINFO", Self::WadInfo),
 		("X11R6RGB", Self::X11R6RGB),
 		("XHAIRS", Self::XHairs),
 		("ZMAPINFO", Self::ZMapInfo),
@@ -362,6 +366,7 @@ impl ContentId {
 			| Self::Trnslate
 			| Self::UMapInfo
 			| Self::VoxelDef
+			| Self::WadInfo
 			| Self::Wgsl
 			| Self::X11R6RGB
 			| Self::XHairs
