@@ -26,7 +26,7 @@ impl<'t, 'c, T, C> std::fmt::Display for AnyDisplay<'t, 'c, T, C> {
 /// A "ZDoom string", which compares and hashes case-insensitively.
 #[derive(Debug, Default, Clone)]
 #[repr(transparent)]
-pub struct ZString<T: Borrow<str>>(pub T);
+pub struct ZString<T>(pub T);
 
 impl<T: Borrow<str>> ZString<T> {
 	/// This function does nothing special, but exists to allow succinct creation
