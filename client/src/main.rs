@@ -19,7 +19,6 @@ use bevy::{
 };
 use bevy_egui::EguiPlugin;
 use clap::Parser;
-use indoc::printdoc;
 use viletech::{
 	audio::AudioCore,
 	gfx::Sky2dMaterial,
@@ -44,14 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	if args.version_full {
 		let c_vers = env!("CARGO_PKG_VERSION");
 		let [e_vers, commit, comp_datetime] = viletech::version_info();
-
-		printdoc! {"
-VileTech Client {c_vers}
-{e_vers}
-{commit}
-{comp_datetime}
-"};
-
+		print!("VileTech Client {c_vers}\n{e_vers}\n{commit}\n{comp_datetime}\n",);
 		return Ok(());
 	}
 
