@@ -8,7 +8,10 @@ use viletech::{
 	VirtualFs,
 };
 
-use crate::{ccmd, dgui};
+use crate::{
+	ccmd,
+	dgui::{self, DevGui},
+};
 
 #[derive(SystemParam)]
 pub(crate) struct ClientCommon<'w, 's> {
@@ -53,11 +56,19 @@ pub(crate) fn update(
 }
 
 pub(crate) fn pre_update(
+	windows: Query<(&Window, &DevGui)>,
 	mut console: ResMut<Console<ccmd::Command>>,
 	mut input: ResMut<InputCore>,
 	events: InputEvents,
 ) {
 	input.update(events);
+
+	if !windows
+		.iter()
+		.any(|(window, dgui)| window.focused && dgui.open)
+	{
+		return;
+	}
 
 	let up_pressed = input.keys_virt.just_pressed(KeyCode::Up);
 	let down_pressed = input.keys_virt.just_pressed(KeyCode::Down);
