@@ -55,7 +55,6 @@ vfs = { package = "viletech-fs", path = "../vfs", features = ["serde"] }
 wadload.path = "../wadload"
 
 arrayvec.workspace = true
-ariadne.workspace = true
 bevy_egui.workspace = true
 bitflags.workspace = true
 bitvec.workspace = true
