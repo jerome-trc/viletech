@@ -16,7 +16,6 @@ pub mod basedata;
 // pub mod catalog;
 pub mod console;
 pub extern crate data;
-pub mod devgui;
 pub mod frontend;
 pub mod gfx;
 pub mod input;
