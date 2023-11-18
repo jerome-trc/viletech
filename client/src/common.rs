@@ -1,9 +1,11 @@
-use bevy::{app::AppExit, ecs::system::SystemParam, prelude::*, winit::WinitWindows};
+use bevy::{
+	app::AppExit, ecs::system::SystemParam, input::mouse::MouseMotion, prelude::*,
+	winit::WinitWindows,
+};
 use bevy_egui::{systems::InputEvents, EguiContexts};
 use viletech::{
 	audio::AudioCore,
 	console::Console,
-	input::InputCore,
 	vfs::{self, VPath},
 	VirtualFs,
 };
@@ -14,9 +16,17 @@ use crate::{
 };
 
 #[derive(SystemParam)]
+pub(crate) struct InputParam<'w, 's> {
+	pub(crate) keys: Res<'w, Input<KeyCode>>,
+	pub(crate) mouse: Res<'w, Input<MouseButton>>,
+	pub(crate) events: InputEvents<'w, 's>,
+	pub(crate) mouse_motion: EventReader<'w, 's, MouseMotion>,
+}
+
+#[derive(SystemParam)]
 pub(crate) struct ClientCommon<'w, 's> {
 	pub(crate) vfs: ResMut<'w, VirtualFs>,
-	pub(crate) input: ResMut<'w, InputCore>,
+	pub(crate) _input: InputParam<'w, 's>,
 	pub(crate) audio: ResMut<'w, AudioCore>,
 	pub(crate) console: ResMut<'w, Console<ccmd::Command>>,
 	pub(crate) egui: EguiContexts<'w, 's>,
@@ -58,11 +68,8 @@ pub(crate) fn update(
 pub(crate) fn pre_update(
 	windows: Query<(&Window, &DevGui)>,
 	mut console: ResMut<Console<ccmd::Command>>,
-	mut input: ResMut<InputCore>,
-	events: InputEvents,
+	input: InputParam,
 ) {
-	input.update(events);
-
 	if !windows
 		.iter()
 		.any(|(window, dgui)| window.focused && dgui.open)
@@ -70,10 +77,10 @@ pub(crate) fn pre_update(
 		return;
 	}
 
-	let up_pressed = input.keys_virt.just_pressed(KeyCode::Up);
-	let down_pressed = input.keys_virt.just_pressed(KeyCode::Down);
-	let esc_pressed = input.keys_virt.just_pressed(KeyCode::Escape);
-	let enter_pressed = input.keys_virt.just_pressed(KeyCode::Return);
+	let up_pressed = input.keys.just_pressed(KeyCode::Up);
+	let down_pressed = input.keys.just_pressed(KeyCode::Down);
+	let esc_pressed = input.keys.just_pressed(KeyCode::Escape);
+	let enter_pressed = input.keys.just_pressed(KeyCode::Return);
 
 	console.key_input(up_pressed, down_pressed, esc_pressed, enter_pressed);
 }

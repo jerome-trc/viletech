@@ -22,7 +22,6 @@ use clap::Parser;
 use viletech::{
 	audio::AudioCore,
 	gfx::Sky2dMaterial,
-	input::InputCore,
 	tracing::info,
 	user::UserCore,
 	vfs::{self, VPath},
@@ -98,8 +97,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	info!("Developer console initialized.");
 	app.insert_resource(AudioCore::new(None)?);
 	info!("Audio manager initialized.");
-	app.insert_resource(InputCore::default());
-	info!("Input manager initialized.");
 	app.insert_resource(Playground::default());
 	info!("Lithica scripting playground initialized.");
 

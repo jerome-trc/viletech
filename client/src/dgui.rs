@@ -7,13 +7,12 @@ use bevy::{
 use bevy_egui::{egui, EguiContexts};
 use viletech::{
 	audio::AudioCore,
-	input::InputCore,
 	util::{self, string::subdivide_file_len},
 	vfs::{self, VPathBuf},
 	VirtualFs,
 };
 
-use crate::{ccmd, playground::Playground};
+use crate::{ccmd, common::InputParam, playground::Playground};
 
 pub(crate) type Console = viletech::console::Console<ccmd::Command>;
 
@@ -54,13 +53,13 @@ pub(crate) struct SysParam<'w, 's> {
 
 	pub(crate) audio: ResMut<'w, AudioCore>,
 	pub(crate) console: ResMut<'w, Console>,
-	pub(crate) input: ResMut<'w, InputCore>,
+	pub(crate) input: InputParam<'w, 's>,
 	pub(crate) playground: ResMut<'w, Playground>,
 	pub(crate) vfs: ResMut<'w, VirtualFs>,
 }
 
 pub(crate) fn draw(mut param: SysParam, mut state: ResMut<State>) {
-	let toggle_key = param.input.keys_virt.just_pressed(KeyCode::Grave);
+	let toggle_key = param.input.keys.just_pressed(KeyCode::Grave);
 
 	for (e_window, window, mut dgui) in &mut param.dguis {
 		if window.focused && toggle_key {

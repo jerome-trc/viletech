@@ -18,7 +18,6 @@ pub mod console;
 pub extern crate data;
 pub mod frontend;
 pub mod gfx;
-pub mod input;
 pub use data::level;
 pub extern crate lith;
 pub mod log;

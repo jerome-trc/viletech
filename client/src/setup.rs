@@ -82,8 +82,6 @@ pub(crate) fn default_plugins(
 			}),
 		})
 		.disable::<LogPlugin>()
-		.disable::<bevy::input::InputPlugin>()
-		.add_before::<WindowPlugin, _>(viletech::input::InputPlugin)
 		.add_before::<TaskPoolPlugin, _>(TracingPlugin {
 			console_sender: Some(log_sender),
 			level: args.verbosity,

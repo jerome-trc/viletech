@@ -1,6 +1,5 @@
 use bevy::{
 	ecs::system::SystemParam,
-	input::mouse::{MouseMotion, MouseWheel},
 	prelude::*,
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
@@ -9,14 +8,13 @@ use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 use viletech::{
 	gfx::Sky2dMaterial,
-	input::InputCore,
 	level::{read::prelude::*, RawLevel, RawThings},
 	tracing::info,
 	vfs::FileSlot,
 	VirtualFs,
 };
 
-use crate::editor::contentid::ContentId;
+use crate::{common::InputParam, editor::contentid::ContentId};
 
 use super::Editor;
 
@@ -55,9 +53,7 @@ pub(crate) struct EdSector(Handle<Mesh>);
 pub(crate) struct SysParam<'w, 's> {
 	pub(crate) cmds: Commands<'w, 's>,
 	pub(crate) vfs: ResMut<'w, VirtualFs>,
-	pub(crate) input: ResMut<'w, InputCore>,
-	pub(crate) mouse_motion: EventReader<'w, 's, MouseMotion>,
-	pub(crate) mouse_wheel: EventReader<'w, 's, MouseWheel>,
+	pub(crate) input: InputParam<'w, 's>,
 	pub(crate) time: Res<'w, Time>,
 	pub(crate) cameras: Query<'w, 's, &'static mut Transform, With<Camera>>,
 	pub(crate) _gizmos: bevy::gizmos::gizmos::Gizmos<'s>,
@@ -115,7 +111,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 		return;
 	}
 
-	if param.input.keys_virt.just_released(KeyCode::F) {
+	if param.input.keys.just_released(KeyCode::F) {
 		ed.level_editor.viewpoint = match ed.level_editor.viewpoint {
 			Viewpoint::TopDown => Viewpoint::Free,
 			Viewpoint::Free => Viewpoint::TopDown,
@@ -126,8 +122,9 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 
 	match ed.level_editor.viewpoint {
 		Viewpoint::TopDown => {
-			if param.input.mouse_buttons.pressed(MouseButton::Middle) {
+			if param.input.mouse.pressed(MouseButton::Middle) {
 				let mouse_delta = param
+					.input
 					.mouse_motion
 					.read()
 					.fold(Vec2::ZERO, |v, mm| v + mm.delta);
@@ -136,56 +133,56 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 				camera.translation.y -= dt * mouse_delta.y;
 			}
 
-			let speed = if param.input.keys_virt.pressed(KeyCode::ShiftLeft) {
+			let speed = if param.input.keys.pressed(KeyCode::ShiftLeft) {
 				12.0
 			} else {
 				6.0
 			};
 
-			if param.input.keys_virt.pressed(KeyCode::Up) {
+			if param.input.keys.pressed(KeyCode::Up) {
 				camera.translation.y += dt * speed;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::Down) {
+			if param.input.keys.pressed(KeyCode::Down) {
 				camera.translation.y -= dt * speed;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::Right) {
+			if param.input.keys.pressed(KeyCode::Right) {
 				camera.translation.x += dt * speed;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::Left) {
+			if param.input.keys.pressed(KeyCode::Left) {
 				camera.translation.x -= dt * speed;
 			}
 
-			for ev_mwheel in param.mouse_wheel.read() {
+			for ev_mwheel in param.input.events.ev_mouse_wheel.read() {
 				camera.translation.z -= ev_mwheel.y * 2.0;
 			}
 		}
 		Viewpoint::Free => {
 			let mut axis_input = Vec3::ZERO;
 
-			if param.input.keys_virt.pressed(KeyCode::W) {
+			if param.input.keys.pressed(KeyCode::W) {
 				axis_input.z += 1.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::S) {
+			if param.input.keys.pressed(KeyCode::S) {
 				axis_input.z -= 1.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::D) {
+			if param.input.keys.pressed(KeyCode::D) {
 				axis_input.x += 1.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::A) {
+			if param.input.keys.pressed(KeyCode::A) {
 				axis_input.x -= 1.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::Q) {
+			if param.input.keys.pressed(KeyCode::Q) {
 				axis_input.y += 1.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::E) {
+			if param.input.keys.pressed(KeyCode::E) {
 				axis_input.y -= 1.0;
 			}
 
@@ -195,7 +192,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 				vel = axis_input.normalize() * 2.0;
 			}
 
-			if param.input.keys_virt.pressed(KeyCode::ShiftLeft) {
+			if param.input.keys.pressed(KeyCode::ShiftLeft) {
 				vel *= 2.0;
 			}
 
@@ -207,7 +204,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 
 			let mut mouse_delta = Vec2::ZERO;
 
-			for mouse_event in param.mouse_motion.read() {
+			for mouse_event in param.input.mouse_motion.read() {
 				mouse_delta += mouse_event.delta;
 			}
 
