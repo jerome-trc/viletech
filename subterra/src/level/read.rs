@@ -23,7 +23,7 @@ pub mod prelude {
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct LineDefRaw {
 	v_start: u16,
 	v_end: u16,
@@ -131,6 +131,7 @@ impl LineDefRaw {
 	}
 }
 
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 14.
 pub fn linedefs(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
 	if (lump.len() % std::mem::size_of::<LineDefRaw>()) != 0 {
@@ -140,13 +141,42 @@ pub fn linedefs(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`linedefs`].
+pub fn linedefs_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
+	if (lump.len() % std::mem::size_of::<LineDefRaw>()) != 0 {
+		return Err(Error::MalformedFile("LINEDEFS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`linedefs`], but any bytes at the end of slice which do not fit into
+/// another [`LineDefRaw`] are truncated.
+#[must_use]
+pub fn linedefs_lossy(lump: &[u8]) -> &[LineDefRaw] {
+	let sz = std::mem::size_of::<LineDefRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`linedefs_mut`], but any bytes at the end of slice which do not fit into
+/// another [`LineDefRaw`] are truncated.
+#[must_use]
+pub fn linedefs_lossy_mut(lump: &mut [u8]) -> &mut [LineDefRaw] {
+	let sz = std::mem::size_of::<LineDefRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // NODES ///////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Node>. Acquired via [`nodes`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct NodeRaw {
 	x: i16,
 	y: i16,
@@ -209,6 +239,7 @@ pub enum BspNodeChild {
 	SubNode(usize),
 }
 
+/// Casts a slice of raw bytes to node definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 28.
 pub fn nodes(lump: &[u8]) -> Result<&[NodeRaw], Error> {
 	if (lump.len() % std::mem::size_of::<NodeRaw>()) != 0 {
@@ -218,13 +249,42 @@ pub fn nodes(lump: &[u8]) -> Result<&[NodeRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`nodes`].
+pub fn nodes_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
+	if (lump.len() % std::mem::size_of::<NodeRaw>()) != 0 {
+		return Err(Error::MalformedFile("NODES"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`nodes`], but any bytes at the end of slice which do not fit into
+/// another [`NodeRaw`] are truncated.
+#[must_use]
+pub fn nodes_lossy(lump: &[u8]) -> &[NodeRaw] {
+	let sz = std::mem::size_of::<NodeRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`nodes_mut`], but any bytes at the end of slice which do not fit into
+/// another [`NodeRaw`] are truncated.
+#[must_use]
+pub fn nodes_lossy_mut(lump: &mut [u8]) -> &mut [NodeRaw] {
+	let sz = std::mem::size_of::<NodeRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // SECTORS /////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Sector>. Acquired via [`sectors`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct SectorRaw {
 	height_floor: i16,
 	height_ceil: i16,
@@ -275,6 +335,7 @@ impl SectorRaw {
 	}
 }
 
+/// Casts a slice of raw bytes to sector definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 26.
 pub fn sectors(lump: &[u8]) -> Result<&[SectorRaw], Error> {
 	if (lump.len() % std::mem::size_of::<SectorRaw>()) != 0 {
@@ -284,13 +345,42 @@ pub fn sectors(lump: &[u8]) -> Result<&[SectorRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`sectors`].
+pub fn sectors_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
+	if (lump.len() % std::mem::size_of::<SectorRaw>()) != 0 {
+		return Err(Error::MalformedFile("SECTORS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`sectors`], but any bytes at the end of slice which do not fit into
+/// another [`SectorRaw`] are truncated.
+#[must_use]
+pub fn sectors_lossy(lump: &[u8]) -> &[SectorRaw] {
+	let sz = std::mem::size_of::<SectorRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`sectors_mut`], but any bytes at the end of slice which do not fit into
+/// another [`SectorRaw`] are truncated.
+#[must_use]
+pub fn sectors_lossy_mut(lump: &mut [u8]) -> &mut [SectorRaw] {
+	let sz = std::mem::size_of::<SectorRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // SEGS ////////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Seg>. Acquired via [`segs`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct SegRaw {
 	v_start: u16,
 	v_end: u16,
@@ -351,6 +441,7 @@ pub enum SegDirection {
 	Back,
 }
 
+/// Casts a slice of raw bytes to segment definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 12.
 pub fn segs(lump: &[u8]) -> Result<&[SegRaw], Error> {
 	if (lump.len() % std::mem::size_of::<SegRaw>()) != 0 {
@@ -360,13 +451,42 @@ pub fn segs(lump: &[u8]) -> Result<&[SegRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`segs`].
+pub fn segs_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
+	if (lump.len() % std::mem::size_of::<SegRaw>()) != 0 {
+		return Err(Error::MalformedFile("SEGS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`segs`], but any bytes at the end of slice which do not fit into
+/// another [`SegRaw`] are truncated.
+#[must_use]
+pub fn segs_lossy(lump: &[u8]) -> &[SegRaw] {
+	let sz = std::mem::size_of::<SegRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`segs_mut`], but any bytes at the end of slice which do not fit into
+/// another [`SegRaw`] are truncated.
+#[must_use]
+pub fn segs_lossy_mut(lump: &mut [u8]) -> &mut [SegRaw] {
+	let sz = std::mem::size_of::<SegRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // SIDEDEFS ////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Sidedef>. Acquired via [`sidedefs`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct SideDefRaw {
 	offs_x: i16,
 	offs_y: i16,
@@ -407,6 +527,7 @@ impl SideDefRaw {
 	}
 }
 
+/// Casts a slice of raw bytes to side definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 30.
 pub fn sidedefs(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
 	if (lump.len() % std::mem::size_of::<SideDefRaw>()) != 0 {
@@ -416,13 +537,42 @@ pub fn sidedefs(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`sidedefs`].
+pub fn sidedefs_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
+	if (lump.len() % std::mem::size_of::<SideDefRaw>()) != 0 {
+		return Err(Error::MalformedFile("SIDEDEFS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`sidedefs`], but any bytes at the end of slice which do not fit into
+/// another [`SideDefRaw`] are truncated.
+#[must_use]
+pub fn sidedefs_lossy(lump: &[u8]) -> &[SideDefRaw] {
+	let sz = std::mem::size_of::<SideDefRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`sidedefs_mut`], but any bytes at the end of slice which do not fit into
+/// another [`SideDefRaw`] are truncated.
+#[must_use]
+pub fn sidedefs_lossy_mut(lump: &mut [u8]) -> &mut [SideDefRaw] {
+	let sz = std::mem::size_of::<SideDefRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // SSECTORS ////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Subsector>. Acquired via [`ssectors`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct SSectorRaw {
 	seg_count: u16,
 	seg: u16,
@@ -448,6 +598,7 @@ impl SSectorRaw {
 	}
 }
 
+/// Casts a slice of raw bytes to sub-sector definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 4.
 pub fn ssectors(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
 	if (lump.len() % std::mem::size_of::<SSectorRaw>()) != 0 {
@@ -457,13 +608,42 @@ pub fn ssectors(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`ssectors`].
+pub fn ssectors_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
+	if (lump.len() % std::mem::size_of::<SSectorRaw>()) != 0 {
+		return Err(Error::MalformedFile("SSECTORS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`ssectors`], but any bytes at the end of slice which do not fit into
+/// another [`SSectorRaw`] are truncated.
+#[must_use]
+pub fn ssectors_lossy(lump: &[u8]) -> &[SSectorRaw] {
+	let sz = std::mem::size_of::<SSectorRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`ssectors_mut`], but any bytes at the end of slice which do not fit into
+/// another [`SSectorRaw`] are truncated.
+#[must_use]
+pub fn ssectors_lossy_mut(lump: &mut [u8]) -> &mut [SSectorRaw] {
+	let sz = std::mem::size_of::<SSectorRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // THINGS //////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Thing>. Acquired via [`things`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct ThingRaw {
 	x: i16,
 	y: i16,
@@ -559,6 +739,7 @@ bitflags::bitflags! {
 	}
 }
 
+/// Casts a slice of raw bytes to thing definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 10.
 pub fn things(lump: &[u8]) -> Result<&[ThingRaw], Error> {
 	if (lump.len() % std::mem::size_of::<ThingRaw>()) != 0 {
@@ -568,11 +749,42 @@ pub fn things(lump: &[u8]) -> Result<&[ThingRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// See [`things`].
+pub fn things_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
+	if (lump.len() % std::mem::size_of::<ThingRaw>()) != 0 {
+		return Err(Error::MalformedFile("THINGS"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`things`], but any bytes at the end of slice which do not fit into
+/// another [`ThingRaw`] are truncated.
+#[must_use]
+pub fn things_lossy(lump: &[u8]) -> &[ThingRaw] {
+	let sz = std::mem::size_of::<ThingRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`things_mut`], but any bytes at the end of slice which do not fit into
+/// another [`ThingRaw`] are truncated.
+#[must_use]
+pub fn things_lossy_mut(lump: &mut [u8]) -> &mut [ThingRaw] {
+	let sz = std::mem::size_of::<ThingRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
+}
+
 // THINGS, extended ////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Thing#Hexen_format>. Acquired via [`things`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
+///
+/// Please note that due to padding, this type cannot be cast to mutable slices.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
 pub struct ThingExtRaw {
@@ -666,7 +878,8 @@ impl ThingExtRaw {
 	}
 }
 
-/// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 20.
+/// Casts a slice of raw bytes to extended thing definitions (without allocating).
+/// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 160.
 pub fn things_ext(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
 	if (lump.len() % std::mem::size_of::<ThingExtRaw>()) != 0 {
 		return Err(Error::MalformedFile("THINGS (extended)"));
@@ -675,13 +888,23 @@ pub fn things_ext(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
 	Ok(bytemuck::cast_slice(lump))
 }
 
+/// Like [`things_ext`], but any bytes at the end of slice which do not fit into
+/// another [`ThingExtRaw`] are truncated.
+#[must_use]
+pub fn things_ext_lossy(lump: &[u8]) -> &[ThingExtRaw] {
+	let sz = std::mem::size_of::<ThingExtRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
 // VERTEXES ////////////////////////////////////////////////////////////////////
 
 /// See <https://doomwiki.org/wiki/Vertex>. Acquired via [`vertexes`].
 /// These are cast directly from the bytes of a WAD's lump;
 /// attached methods automatically convert from Little Endian.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::AnyBitPattern)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct VertexRaw {
 	x: i16,
 	y: i16,
@@ -717,6 +940,7 @@ impl VertexRaw {
 	}
 }
 
+/// Casts a slice of raw bytes to vertex definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 10.
 pub fn vertexes(lump: &[u8]) -> Result<&[VertexRaw], Error> {
 	if (lump.len() % std::mem::size_of::<VertexRaw>()) != 0 {
@@ -724,4 +948,33 @@ pub fn vertexes(lump: &[u8]) -> Result<&[VertexRaw], Error> {
 	}
 
 	Ok(bytemuck::cast_slice(lump))
+}
+
+/// See [`vertexes`].
+pub fn vertexes_mut(lump: &mut [u8]) -> Result<&mut [VertexRaw], Error> {
+	if (lump.len() % std::mem::size_of::<VertexRaw>()) != 0 {
+		return Err(Error::MalformedFile("VERTEXES"));
+	}
+
+	Ok(bytemuck::cast_slice_mut(lump))
+}
+
+/// Like [`vertexes`], but any bytes at the end of slice which do not fit into
+/// another [`VertexRaw`] are truncated.
+#[must_use]
+pub fn vertexes_lossy(lump: &[u8]) -> &[VertexRaw] {
+	let sz = std::mem::size_of::<VertexRaw>();
+	let count = lump.len() / sz;
+	let subslice = &lump[..(count * sz)];
+	bytemuck::cast_slice(subslice)
+}
+
+/// Like [`vertexes_mut`], but any bytes at the end of slice which do not fit into
+/// another [`VertexRaw`] are truncated.
+#[must_use]
+pub fn vertexes_lossy_mut(lump: &mut [u8]) -> &mut [VertexRaw] {
+	let sz = std::mem::size_of::<VertexRaw>();
+	let count = lump.len() / sz;
+	let subslice = &mut lump[..(count * sz)];
+	bytemuck::cast_slice_mut(subslice)
 }
