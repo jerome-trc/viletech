@@ -77,7 +77,28 @@ pub fn is_valid() -> Result<(), Error> {
 }
 
 pub const RESERVED_MOUNT_POINTS: &[&str] = &[
-	"vile", "viletec", "vt", "vtec", "vtech", "viletech", "lith", "lithica", "zs", "zscript",
+	"vile",
+	"viletec",
+	"vt",
+	"vtec",
+	"vtech",
+	"viletech",
+	"lith",
+	"lithica",
+	"lithscript",
+	"vz",
+	"vzs",
+	"zd",
+	"zdoom",
+	"gz",
+	"gzd",
+	"gzdoom",
+	"decorate",
+	"zs",
+	"zscript",
+	"eternity",
+	"zandro",
+	"zandronum",
 ];
 
 /// See [`basedata_is_valid`].
