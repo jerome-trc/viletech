@@ -32,7 +32,7 @@ pub(crate) struct FileViewer {
 
 impl FileViewer {
 	#[must_use]
-	pub fn new(vfs: &VirtualFs) -> Self {
+	pub(crate) fn new(vfs: &VirtualFs) -> Self {
 		let mut ret = Self {
 			filter_buf: String::new(),
 			filter_regex: false,
@@ -53,6 +53,16 @@ impl FileViewer {
 
 		ret
 	}
+
+	fn update_filter(&mut self) {
+		if !self.filter_regex {
+			let pattern = regex::escape(&self.filter_buf);
+			self.filter = RegexBuilder::new(&pattern).case_insensitive(true).build();
+			debug_assert!(self.filter.is_ok());
+		} else {
+			self.filter = Regex::new(&self.filter_buf);
+		}
+	}
 }
 
 #[derive(SystemParam)]
@@ -68,17 +78,23 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 		let resp = ui.text_edit_singleline(&mut ed.file_viewer.filter_buf);
 
 		if resp.changed() {
-			if !ed.file_viewer.filter_regex {
-				let pattern = regex::escape(&ed.file_viewer.filter_buf);
-				ed.file_viewer.filter = RegexBuilder::new(&pattern).case_insensitive(true).build();
-				debug_assert!(ed.file_viewer.filter.is_ok());
-			} else {
-				ed.file_viewer.filter = Regex::new(&ed.file_viewer.filter_buf);
-			}
+			ed.file_viewer.update_filter();
+		}
+
+		let clear_btn = egui::Button::new("\u{2716}");
+
+		if ui
+			.add_enabled(!ed.file_viewer.filter_buf.is_empty(), clear_btn)
+			.on_hover_text("Clear")
+			.clicked()
+		{
+			ed.file_viewer.filter_buf.clear();
+			ed.file_viewer.update_filter();
 		}
 
 		if ui.button(".*").on_hover_text("Regex").clicked() {
 			ed.file_viewer.filter_regex = !ed.file_viewer.filter_regex;
+			ed.file_viewer.update_filter();
 		}
 	});
 
