@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use bevy::{
 	ecs::system::SystemParam,
 	prelude::*,
@@ -220,6 +222,9 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 }
 
 pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) {
+	let start_time = Instant::now();
+	let prev_mtr_count = param.mtrs_std.len();
+
 	let marker = param.vfs.get_file(marker_slot).unwrap();
 
 	let sky1_opt = marker.vfs().files().par_bridge().find_map_any(|vfile| {
@@ -560,7 +565,17 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		ecmds.insert(EdSector(mesh_handle));
 	}
 
-	info!("Loaded level for editing: {}", marker.path());
+	info!(
+		concat!(
+			"Loaded level for editing: {}\n",
+			"Stats:\n",
+			"\tTook {}ms\n",
+			"\tNew materials: {}"
+		),
+		marker.path(),
+		start_time.elapsed().as_millis(),
+		param.mtrs_std.len() - prev_mtr_count
+	);
 
 	if !ed.level_editor_open() {
 		ed.panel_m = super::Dialog::LevelEd;
