@@ -1,3 +1,5 @@
+//! Code bridging [`data`] and [`bevy::asset`].
+
 use bevy::{
 	prelude::*,
 	render::{
@@ -72,7 +74,7 @@ pub fn picture_to_image(
 	let mut buf = vec![[[0_u8; 4]; 4]; width * height];
 
 	pic_reader.read(|row, col, pixel| {
-		buf[row as usize * height + col as usize] = [
+		buf[col as usize * width + row as usize] = [
 			((pixel.r as f32) / 255.0).to_ne_bytes(),
 			((pixel.g as f32) / 255.0).to_ne_bytes(),
 			((pixel.b as f32) / 255.0).to_ne_bytes(),
