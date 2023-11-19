@@ -315,45 +315,48 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 			continue;
 		};
 
-		let material = ed.level_editor.materials.entry(tex_slot).or_insert({
-			let vfile = param.vfs.get_file(tex_slot).unwrap();
-			let mut guard = vfile.lock();
-			let bytes = guard.read().expect("VFS memory read failed");
-			let palset = ed.palset.as_ref().unwrap();
-			let colormaps = ed.colormaps.as_ref().unwrap();
-			let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
+		let material = match ed.level_editor.materials.entry(tex_slot) {
+			std::collections::hash_map::Entry::Occupied(occ) => occ.get().clone(),
+			std::collections::hash_map::Entry::Vacant(vac) => {
+				let vfile = param.vfs.get_file(tex_slot).unwrap();
+				let mut guard = vfile.lock();
+				let bytes = guard.read().expect("VFS memory read failed");
+				let palset = ed.palset.as_ref().unwrap();
+				let colormaps = ed.colormaps.as_ref().unwrap();
+				let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
 
-			let result = match content_id {
-				ContentId::Flat => Ok(viletech::asset::flat_to_image(
-					bytes.as_ref(),
-					&palset[0],
-					&colormaps[0],
-					Some(floor_tex_fname.to_string()),
-				)),
-				ContentId::Picture => viletech::asset::picture_to_image(
-					bytes.as_ref(),
-					&palset[0],
-					&colormaps[0],
-					Some(floor_tex_fname.to_string()),
-				),
-				_ => unimplemented!(),
-			};
+				let result = match content_id {
+					ContentId::Flat => Ok(viletech::asset::flat_to_image(
+						bytes.as_ref(),
+						&palset[0],
+						&colormaps[0],
+						Some(floor_tex_fname.to_string()),
+					)),
+					ContentId::Picture => viletech::asset::picture_to_image(
+						bytes.as_ref(),
+						&palset[0],
+						&colormaps[0],
+						Some(floor_tex_fname.to_string()),
+					),
+					_ => unimplemented!(),
+				};
 
-			let Ok(img) = result else {
-				continue;
-			};
+				let Ok(img) = result else {
+					continue;
+				};
 
-			let img_handle = param.images.add(img);
+				let img_handle = param.images.add(img);
 
-			let mtr = StandardMaterial {
-				base_color_texture: Some(img_handle.clone()),
-				emissive_texture: Some(img_handle),
-				emissive: Color::WHITE,
-				..Default::default()
-			};
+				let mtr = StandardMaterial {
+					base_color_texture: Some(img_handle.clone()),
+					emissive_texture: Some(img_handle),
+					emissive: Color::WHITE,
+					..Default::default()
+				};
 
-			param.mtrs_std.add(mtr)
-		});
+				vac.insert(param.mtrs_std.add(mtr)).clone()
+			}
+		};
 
 		let normals = vec![Vec3::Z; mesh_parts.verts.len()];
 		let mut uvs = Vec::with_capacity(mesh_parts.verts.len());
@@ -373,7 +376,7 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 
 		let mut ecmds = param.cmds.spawn(MaterialMeshBundle {
 			mesh: mesh_handle.clone(),
-			material: material.clone(),
+			material,
 			transform: Transform {
 				translation: Vec3::new(
 					(min_raw[0] as f32) * viletech::world::FSCALE,
@@ -393,7 +396,7 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 			"Loaded level for editing: {}\n",
 			"Stats:\n",
 			"\tTook {}ms\n",
-			"\tNew materials: {}"
+			"\tMaterials: {}"
 		),
 		marker.path(),
 		start_time.elapsed().as_millis(),
