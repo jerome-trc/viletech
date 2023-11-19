@@ -49,6 +49,13 @@ where
 	}
 }
 
+impl<T: Borrow<str>> PartialEq<str> for ZString<T> {
+	fn eq(&self, other: &str) -> bool {
+		let a: &str = std::borrow::Borrow::borrow(&self.0);
+		a.eq_ignore_ascii_case(other)
+	}
+}
+
 impl<T: Borrow<str>> Eq for ZString<T> {}
 
 impl<T: Borrow<str>> Hash for ZString<T> {
@@ -72,6 +79,12 @@ impl<T: Borrow<str>> std::ops::Deref for ZString<T> {
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
+	}
+}
+
+impl<T: Borrow<str>> std::fmt::Display for ZString<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", std::borrow::Borrow::borrow(&self.0))
 	}
 }
 
