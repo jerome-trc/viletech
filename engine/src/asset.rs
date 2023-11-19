@@ -6,7 +6,6 @@ use bevy::{
 	},
 };
 use data::gfx::{ColorMap, Palette, PictureReader};
-use image::{ImageBuffer, Rgba, Rgba32FImage};
 
 pub fn flat_to_image(
 	bytes: &[u8],
@@ -16,7 +15,7 @@ pub fn flat_to_image(
 ) -> Image {
 	debug_assert_eq!(bytes.len(), 4096);
 
-	let mut img_buf = Rgba32FImage::new(64, 64);
+	let mut buf = Vec::with_capacity(64 * 64);
 
 	for y in 0..64 {
 		for x in 0..64 {
@@ -25,31 +24,23 @@ pub fn flat_to_image(
 			let pal_entry = colormap[map_entry as usize];
 			let pixel = palette[pal_entry as usize];
 
-			img_buf.put_pixel(
-				x as u32,
-				y as u32,
-				Rgba([
-					(pixel.r as f32) / 255.0,
-					(pixel.g as f32) / 255.0,
-					(pixel.b as f32) / 255.0,
-					1.0,
-				]),
-			);
+			buf.push([
+				((pixel.r as f32) / 255.0).to_ne_bytes(),
+				((pixel.g as f32) / 255.0).to_ne_bytes(),
+				((pixel.b as f32) / 255.0).to_ne_bytes(),
+				1.0_f32.to_ne_bytes(),
+			]);
 		}
 	}
 
 	let mut img = Image::new(
 		Extent3d {
-			width: img_buf.width(),
-			height: img_buf.height(),
+			width: 64,
+			height: 64,
 			depth_or_array_layers: 1,
 		},
 		TextureDimension::D2,
-		img_buf
-			.into_vec()
-			.into_iter()
-			.flat_map(|float| float.to_ne_bytes())
-			.collect(), // TODO: can we avoid re-allocating here?
+		bytemuck::cast_vec(buf),
 		TextureFormat::Rgba32Float,
 	);
 
@@ -75,33 +66,28 @@ pub fn picture_to_image(
 	label: Option<String>,
 ) -> Result<Image, data::Error> {
 	let pic_reader = PictureReader::new(bytes, palette, colormap)?;
-	let mut img_buf = ImageBuffer::new(pic_reader.width() as u32, pic_reader.height() as u32);
+
+	let width = pic_reader.width() as usize;
+	let height = pic_reader.height() as usize;
+	let mut buf = vec![[[0_u8; 4]; 4]; width * height];
 
 	pic_reader.read(|row, col, pixel| {
-		img_buf.put_pixel(
-			row,
-			col,
-			Rgba([
-				(pixel.r as f32) / 255.0,
-				(pixel.g as f32) / 255.0,
-				(pixel.b as f32) / 255.0,
-				1.0,
-			]),
-		);
+		buf[row as usize * height + col as usize] = [
+			((pixel.r as f32) / 255.0).to_ne_bytes(),
+			((pixel.g as f32) / 255.0).to_ne_bytes(),
+			((pixel.b as f32) / 255.0).to_ne_bytes(),
+			1.0_f32.to_ne_bytes(),
+		];
 	});
 
 	let mut img = Image::new(
 		Extent3d {
-			width: img_buf.width(),
-			height: img_buf.height(),
+			width: width as u32,
+			height: height as u32,
 			depth_or_array_layers: 1,
 		},
 		TextureDimension::D2,
-		img_buf
-			.into_vec()
-			.into_iter()
-			.flat_map(|float| float.to_ne_bytes())
-			.collect(), // TODO: can we avoid re-allocating here?
+		bytemuck::cast_vec(buf),
 		TextureFormat::Rgba32Float,
 	);
 
