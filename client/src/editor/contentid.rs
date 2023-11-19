@@ -252,6 +252,7 @@ impl ContentId {
 		("DECORATE", Self::Decorate),
 		("DEFBINDS", Self::DefBinds),
 		("DEFCVARS", Self::DefCVars),
+		("DEHACKED", Self::DeHackEd),
 		("DMXGUS", Self::DmxGus),
 		("DMXGUSC", Self::DmxGus),
 		("EMAPINFO", Self::EMapInfo),
