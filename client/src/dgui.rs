@@ -161,31 +161,59 @@ pub(crate) fn add_to_window(mut ecmds: EntityCommands) {
 
 fn ui_vfs(ui: &mut egui::Ui, state: &mut State, vfs: &mut VirtualFs) {
 	fn nav(ui: &mut egui::Ui, state: &mut State, fref: vfs::Ref) {
+		fn component_label(
+			ui: &mut egui::Ui,
+			fref: vfs::Ref,
+			index: usize,
+			comp: &str,
+			sel: &mut vfs::Slot,
+		) {
+			let label = egui::Label::new(comp).sense(egui::Sense::click());
+
+			let mut resp = ui.add(label);
+
+			if resp.hovered() {
+				resp = resp.highlight()
+			}
+
+			if resp.clicked() {
+				let p: VPathBuf = fref.path().components().take(index + 1).collect();
+				*sel = fref.vfs().lookup(&p).unwrap().slot();
+			}
+
+			resp.on_hover_text("Go to");
+		}
+
 		if fref.slot() == fref.vfs().root().slot() {
 			ui.label("/");
 			return;
 		}
 
 		ui.horizontal(|ui| {
-			for (i, comp) in fref.path().components().enumerate() {
-				ui.label("/");
+			let path = fref.path();
+			let mut components = path.components().enumerate();
 
-				let label = egui::Label::new(comp.as_str()).sense(egui::Sense::click());
+			if let Some((i, comp)) = components.next() {
+				let label = egui::Label::new("/").sense(egui::Sense::click());
 
-				let resp = ui.add(label);
+				let mut resp = ui.add(label);
 
-				let resp = if resp.hovered() {
-					resp.highlight()
-				} else {
-					resp
-				};
+				if resp.hovered() {
+					resp = resp.highlight()
+				}
 
 				if resp.clicked() {
-					let p: VPathBuf = fref.path().components().take(i + 1).collect();
-					state.vfs_selection = fref.vfs().lookup(&p).unwrap().slot();
+					state.vfs_selection = vfs::Slot::Folder(fref.vfs().root().slot());
 				}
 
 				resp.on_hover_text("Go to");
+
+				component_label(ui, fref, i, comp.as_str(), &mut state.vfs_selection);
+			};
+
+			for (i, comp) in components {
+				ui.label("/");
+				component_label(ui, fref, i, comp.as_str(), &mut state.vfs_selection);
 			}
 		});
 	}
