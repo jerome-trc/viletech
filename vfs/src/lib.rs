@@ -436,6 +436,11 @@ impl VFile {
 	}
 
 	#[must_use]
+	pub fn is_empty(&self) -> bool {
+		self.span.is_empty()
+	}
+
+	#[must_use]
 	fn span(&self) -> Range<usize> {
 		(self.span.start as usize)..(self.span.end as usize)
 	}
@@ -463,6 +468,11 @@ pub enum FolderKind {
 }
 
 impl VFolder {
+	#[must_use]
+	pub fn name(&self) -> &VPath {
+		VPath::new(self.name.as_str())
+	}
+
 	/// Only returns `None` if this is the root folder.
 	#[must_use]
 	pub fn parent(&self) -> Option<FolderSlot> {

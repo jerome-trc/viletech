@@ -28,8 +28,8 @@ impl<'vfs> Ref<'vfs> {
 	#[must_use]
 	pub fn name(&self) -> &str {
 		match self {
-			Self::File(iref) => iref.name(),
-			Self::Folder(oref) => oref.name(),
+			Self::File(iref) => iref.name().as_str(),
+			Self::Folder(oref) => oref.name().as_str(),
 		}
 	}
 
@@ -118,11 +118,6 @@ pub struct FileRef<'vfs> {
 
 impl<'vfs> FileRef<'vfs> {
 	#[must_use]
-	pub fn name(&self) -> &str {
-		self.name.as_str()
-	}
-
-	#[must_use]
 	pub fn slot(&self) -> FileSlot {
 		self.slot
 	}
@@ -130,7 +125,7 @@ impl<'vfs> FileRef<'vfs> {
 	#[must_use]
 	pub fn path(&self) -> VPathBuf {
 		let mut buf = String::from('/');
-		buf.push_str(self.name());
+		buf.push_str(self.name().as_str());
 		detail::path_append(self.vfs, &mut buf, self.parent);
 		VPathBuf::new(buf)
 	}
@@ -173,11 +168,6 @@ impl<'vfs> FileRef<'vfs> {
 	}
 
 	#[must_use]
-	pub fn is_empty(&self) -> bool {
-		self.vfile.span.is_empty()
-	}
-
-	#[must_use]
 	pub fn vfs(&self) -> &VirtualFs {
 		self.vfs
 	}
@@ -215,11 +205,6 @@ pub struct FolderRef<'vfs> {
 
 impl<'vfs> FolderRef<'vfs> {
 	#[must_use]
-	pub fn name(&self) -> &str {
-		self.name.as_str()
-	}
-
-	#[must_use]
 	pub fn slot(&self) -> FolderSlot {
 		self.slot
 	}
@@ -228,7 +213,7 @@ impl<'vfs> FolderRef<'vfs> {
 	pub fn path(&self) -> VPathBuf {
 		let mut buf = String::new();
 
-		buf.push_str(self.name());
+		buf.push_str(self.name().as_str());
 
 		if let Some(p) = self.parent {
 			detail::path_append(self.vfs, &mut buf, p);

@@ -164,7 +164,7 @@ fn ui_folder(
 			}
 
 			let mut label = String::new();
-			label.push_str(vfolder.name());
+			label.push_str(vfolder.name().as_str());
 			ui.label(&label);
 		});
 
@@ -214,7 +214,7 @@ fn ui_file(
 	markers: WadMarkers,
 ) {
 	if let Ok(rgx) = ed.file_viewer.filter.as_ref() {
-		if !rgx.is_match(vfile.name()) {
+		if !rgx.is_match(vfile.name().as_str()) {
 			return;
 		}
 	}
@@ -238,7 +238,7 @@ fn ui_file(
 
 		let (_, resp0) = row.col(|ui| {
 			let mut label = String::new();
-			label.push_str(vfile.name());
+			label.push_str(vfile.name().as_str());
 			ui.add_space((depth as f32) * 16.0);
 			ui.label(&label);
 			ctrl_held = ui.input(|inps| inps.modifiers.ctrl);

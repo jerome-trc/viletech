@@ -188,6 +188,11 @@ impl VPath {
 	pub fn as_str(&self) -> &str {
 		&self.0
 	}
+
+	#[must_use]
+	pub fn eq_ignore_ascii_case(&self, s: impl AsRef<str>) -> bool {
+		self.as_str().eq_ignore_ascii_case(s.as_ref())
+	}
 }
 
 impl PartialEq<VPathBuf> for VPath {

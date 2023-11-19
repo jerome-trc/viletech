@@ -1,7 +1,4 @@
-use viletech::{
-	data::gfx::PictureReader,
-	vfs::{FileRef, VPath},
-};
+use viletech::{data::gfx::PictureReader, vfs::FileRef};
 
 /// The editor's best guess at the content in a file.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -416,12 +413,12 @@ impl ContentId {
 			}
 		}
 
-		let fname = VPath::new(vfile.name());
+		let fname = vfile.name();
 
 		if let Some(ext) = fname.extension() {
 			if fname
 				.file_prefix()
-				.is_some_and(|p| p.as_str().eq_ignore_ascii_case("meta"))
+				.is_some_and(|p| p.eq_ignore_ascii_case("meta"))
 				&& ext.eq_ignore_ascii_case("toml")
 			{
 				return Self::PkgMeta;

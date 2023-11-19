@@ -228,7 +228,7 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		let Some(texname) = SKY_TEXNAMES
 			.iter()
 			.copied()
-			.find(|t| t.eq_ignore_ascii_case(vfile.name()))
+			.find(|t| vfile.name().eq_ignore_ascii_case(t))
 		else {
 			return None;
 		};
