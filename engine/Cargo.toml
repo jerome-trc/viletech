@@ -72,7 +72,6 @@ image.workspace = true
 indexmap.workspace = true
 indoc.workspace = true
 kira.workspace = true
-memoffset.workspace = true
 nanorand.workspace = true
 nodi.workspace = true
 parking_lot.workspace = true
