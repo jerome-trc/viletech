@@ -9,15 +9,12 @@ use viletech::{
 	VirtualFs,
 };
 
+use crate::editor;
+
 use super::{
 	contentid::{ContentId, WadMarkers},
 	Editor,
 };
-
-#[derive(Event, Debug, Clone)]
-pub(crate) enum Event {
-	EditLevel(FileSlot),
-}
 
 #[derive(Debug)]
 pub(crate) struct FileViewer {
@@ -68,7 +65,7 @@ impl FileViewer {
 #[derive(SystemParam)]
 pub(crate) struct SysParam<'w> {
 	pub(crate) vfs: ResMut<'w, VirtualFs>,
-	pub(crate) ewriter: EventWriter<'w, Event>,
+	pub(crate) ewriter: EventWriter<'w, editor::Event>,
 }
 
 pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
@@ -138,7 +135,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 
 fn ui_folder(
 	ed: &mut Editor,
-	ewriter: &mut EventWriter<Event>,
+	ewriter: &mut EventWriter<editor::Event>,
 	vfolder: FolderRef,
 	body: &mut TableBody,
 	depth: u32,
@@ -206,7 +203,7 @@ fn ui_folder(
 
 fn ui_file(
 	ed: &mut Editor,
-	ewriter: &mut EventWriter<Event>,
+	ewriter: &mut EventWriter<editor::Event>,
 	vfile: FileRef,
 	body: &mut TableBody,
 	depth: u32,
@@ -267,6 +264,23 @@ fn ui_file(
 			} else {
 				ed.file_viewer.selected.clear();
 				ed.file_viewer.selected.insert(slot);
+
+				if !ed.currently_inspecting(vfile.slot()) {
+					ewriter.send(editor::Event::Inspect {
+						file: vfile.slot(),
+						transient: true,
+					});
+				}
+			}
+		} else if resp.double_clicked() {
+			ed.file_viewer.selected.clear();
+			ed.file_viewer.selected.insert(slot);
+
+			if !ed.currently_inspecting(vfile.slot()) {
+				ewriter.send(editor::Event::Inspect {
+					file: vfile.slot(),
+					transient: true,
+				});
 			}
 		} else {
 			resp.context_menu(|ui| {
@@ -291,7 +305,7 @@ fn ui_file(
 
 fn context_menu(
 	ed: &mut Editor,
-	ewriter: &mut EventWriter<Event>,
+	ewriter: &mut EventWriter<editor::Event>,
 	ui: &mut egui::Ui,
 	vfile: &FileRef,
 	content_id: ContentId,
@@ -302,15 +316,23 @@ fn context_menu(
 	match content_id {
 		ContentId::MapMarker => {
 			if ui.button(LEVELEDIT_BTN_TXT).clicked() {
-				ewriter.send(Event::EditLevel(vfile.slot()));
+				ewriter.send(editor::Event::EditLevel {
+					marker: vfile.slot(),
+				});
 			}
 		}
 		ContentId::Picture | ContentId::Flat => {
 			if ui.button(INSPECT_BTN_TXT).clicked() {
 				ed.file_viewer.selected.clear();
+
 				ed.file_viewer
 					.selected
 					.insert(vfs::Slot::File(vfile.slot()));
+
+				ewriter.send(editor::Event::Inspect {
+					file: vfile.slot(),
+					transient: false,
+				});
 			}
 		}
 		_ => {}

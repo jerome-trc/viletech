@@ -8,17 +8,12 @@ pub(crate) mod leveled;
 use std::borrow::Cow;
 
 use bevy::{
-	ecs::system::SystemParam,
 	prelude::*,
 	window::{PrimaryWindow, WindowMode},
 };
-use bevy_egui::{
-	egui::{self, TextureId},
-	EguiContexts,
-};
+use bevy_egui::{egui, EguiContexts};
 use parking_lot::Mutex;
 use rayon::prelude::*;
-use rustc_hash::FxHashMap;
 use viletech::{
 	data::gfx::{ColorMapSet, PaletteSet},
 	vfs::FileSlot,
@@ -27,11 +22,13 @@ use viletech::{
 
 use crate::{common::NewWindow, AppState};
 
-use self::{fileview::FileViewer, leveled::LevelEditor};
+use self::{fileview::FileViewer, inspector::Inspector, leveled::LevelEditor};
 
-#[derive(SystemParam)]
-pub(crate) struct EventReaders<'w, 's> {
-	pub(crate) fileview: EventReader<'w, 's, fileview::Event>,
+#[derive(Event, Debug, Clone)]
+pub(crate) enum Event {
+	CloseInspector { index: usize },
+	EditLevel { marker: FileSlot },
+	Inspect { file: FileSlot, transient: bool },
 }
 
 #[derive(Resource, Debug)]
@@ -41,11 +38,13 @@ pub(crate) struct Editor {
 	panel_m: Dialog,
 	panel_b: Option<Dialog>,
 
-	workbufs: FxHashMap<FileSlot, WorkBuf>,
 	palset: Option<PaletteSet<'static>>,
 	colormaps: Option<ColorMapSet<'static>>,
 
 	file_viewer: FileViewer,
+	inspectors: Vec<Inspector>,
+	/// If `self.inspectors` is not empty, this is always `Some`.
+	cur_inspector: Option<usize>,
 	level_editor: LevelEditor,
 	messages: Vec<Cow<'static, str>>,
 }
@@ -60,6 +59,22 @@ pub(crate) enum Dialog {
 }
 
 impl Editor {
+	#[must_use]
+	#[allow(unused)]
+	pub(crate) fn current_inspector(&self) -> &Inspector {
+		&self.inspectors[self.cur_inspector.unwrap()]
+	}
+
+	#[must_use]
+	pub(crate) fn current_inspector_mut(&mut self) -> &mut Inspector {
+		&mut self.inspectors[self.cur_inspector.unwrap()]
+	}
+
+	#[must_use]
+	pub(crate) fn currently_inspecting(&self, slot: FileSlot) -> bool {
+		self.inspectors.iter().any(|insp| insp.file == slot)
+	}
+
 	#[must_use]
 	pub(crate) fn level_editor_open(&self) -> bool {
 		if self.panel_m == Dialog::LevelEd {
@@ -81,12 +96,6 @@ impl std::fmt::Display for Dialog {
 			Self::LevelEd => write!(f, "\u{1F5FA} Level Editor"),
 		}
 	}
-}
-
-#[derive(Debug)]
-pub(crate) enum WorkBuf {
-	Image(TextureId),
-	Text(String),
 }
 
 pub(crate) fn update(
@@ -223,20 +232,27 @@ pub(crate) fn update(
 
 pub(crate) fn post_update(
 	mut ed: ResMut<Editor>,
+	mut egui: EguiContexts,
 	mut params: ParamSet<(
 		fileview::SysParam,
 		inspector::SysParam,
 		leveled::SysParam,
-		EventReaders,
+		EventReader<Event>,
 	)>,
 ) {
-	let mut ereaders = params.p3();
-	let events_fv: Vec<_> = ereaders.fileview.read().cloned().collect();
+	let mut ereader = params.p3();
+	let events_fv: Vec<_> = ereader.read().cloned().collect();
 
 	for e_fv in events_fv {
 		match e_fv {
-			fileview::Event::EditLevel(islot) => {
-				leveled::load(&mut ed, params.p2(), islot);
+			Event::EditLevel { marker } => {
+				leveled::load(&mut ed, params.p2(), marker);
+			}
+			Event::Inspect { file, transient } => {
+				inspector::open(&mut ed, &mut egui, params.p1(), file, transient);
+			}
+			Event::CloseInspector { index } => {
+				inspector::close(&mut ed, &mut egui, &mut params.p1(), index);
 			}
 		}
 	}
@@ -266,11 +282,12 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 		panel_m: Dialog::Inspector,
 		panel_b: None,
 
-		workbufs: FxHashMap::default(),
 		palset: palset.into_inner(),
 		colormaps: colormap.into_inner(),
 
 		file_viewer: FileViewer::new(&vfs),
+		inspectors: vec![],
+		cur_inspector: None,
 		level_editor: LevelEditor::default(),
 		messages: Vec::new(),
 	});

@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.add_plugins(setup::default_plugins(&args, log_sender))
 		.add_plugins((WireframePlugin, viletech::gfx::GraphicsPlugin, EguiPlugin));
 
-	app.add_event::<editor::fileview::Event>()
+	app.add_event::<editor::Event>()
 		.add_event::<common::NewWindow>();
 
 	let user_dir_portable = viletech::user::user_dir_portable();
