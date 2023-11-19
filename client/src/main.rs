@@ -21,7 +21,6 @@ use bevy_egui::EguiPlugin;
 use clap::Parser;
 use viletech::{
 	audio::AudioCore,
-	gfx::Sky2dMaterial,
 	tracing::info,
 	user::UserCore,
 	vfs::{self, VPath},
@@ -65,8 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	app.add_state::<AppState>()
 		.insert_resource(setup::winit_settings())
 		.add_plugins(setup::default_plugins(&args, log_sender))
-		.add_plugins((WireframePlugin, EguiPlugin))
-		.add_plugins(MaterialPlugin::<Sky2dMaterial>::default());
+		.add_plugins((WireframePlugin, viletech::gfx::GraphicsPlugin, EguiPlugin));
 
 	app.add_event::<editor::fileview::Event>()
 		.add_event::<common::NewWindow>();

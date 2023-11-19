@@ -6,6 +6,17 @@ use bevy::{
 	render::render_resource::{AsBindGroup, ShaderRef},
 };
 
+/// An implementation of [`bevy::app::Plugin`] which configures a Bevy app
+/// for VileTech-relevant rendering.
+#[derive(Default)]
+pub struct GraphicsPlugin;
+
+impl bevy::app::Plugin for GraphicsPlugin {
+	fn build(&self, app: &mut App) {
+		app.add_plugins((MaterialPlugin::<Sky2dMaterial>::default(),));
+	}
+}
+
 #[derive(AsBindGroup, Reflect, Asset, Debug, Clone, TypeUuid)]
 #[uuid = "8754faf6-ee9a-11ed-a05b-0242ac120003"]
 pub struct TerrainMaterial {
