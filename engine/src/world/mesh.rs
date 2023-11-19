@@ -202,7 +202,7 @@ fn subsector_to_poly(
 		}
 	}
 
-	let Some(mut verts) = points_to_poly(mverts) else {
+	let Some(mut verts) = points_to_poly(mverts).filter(|v| v.len() >= 3) else {
 		return None;
 	};
 
@@ -211,12 +211,10 @@ fn subsector_to_poly(
 	let format = IndexedListFormat::new(&mut indices).into_fan_format();
 
 	// SAFETY: `TmutVert` is `repr(transparent)` over `glam::vec3`.
-	unsafe {
-		let v = std::mem::transmute::<_, &Vec<TmutVert>>(&verts);
+	let v = unsafe { std::mem::transmute::<_, &Vec<TmutVert>>(&verts) };
 
-		if let Err(err) = v.triangulate(format) {
-			warn!("Failed to triangulate subsector {subsect_ix}: {err}");
-		}
+	if let Err(err) = v.triangulate(format) {
+		warn!("Failed to triangulate subsector {subsect_ix}: {err}");
 	}
 
 	let v_len = verts.len();
