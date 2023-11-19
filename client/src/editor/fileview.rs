@@ -171,10 +171,10 @@ fn ui_folder(
 		let _ = row.col(|ui| {
 			let label = match vfolder.kind() {
 				FolderKind::Directory => "directory",
-				FolderKind::Root => "VFS root",
 				FolderKind::Wad => "WAD archive",
-				FolderKind::Zip => "zip archive",
 				FolderKind::ZipDir => "zip directory",
+				FolderKind::Zip => "zip archive",
+				FolderKind::Root => "",
 			};
 
 			ui.label(label);
