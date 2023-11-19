@@ -4,10 +4,17 @@ use std::io::Cursor;
 
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use glam::{IVec2, UVec2};
-use image::{ImageBuffer, Rgb, RgbImage, Rgba, Rgba32FImage, RgbaImage};
 use util::{io::CursorExt, Id8};
 
 use crate::Error;
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Zeroable, bytemuck::Pod)]
+pub struct Rgb8 {
+	pub r: u8,
+	pub g: u8,
+	pub b: u8,
+}
 
 /// See <https://doomwiki.org/wiki/COLORMAP> (and [`ColorMapSet`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,10 +117,10 @@ impl EnDoom {
 
 /// See <https://doomwiki.org/wiki/PLAYPAL> (and [`PaletteSet`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Palette(pub [Rgb<u8>; 256]);
+pub struct Palette(pub [Rgb8; 256]);
 
 impl std::ops::Deref for Palette {
-	type Target = [Rgb<u8>; 256];
+	type Target = [Rgb8; 256];
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
@@ -380,11 +387,11 @@ impl<'a> PictureReader<'a> {
 		(self.left, self.top)
 	}
 
-	fn read_impl<I>(
-		mut self,
-		mut imgbuf: I,
-		put_pixel: fn(u32, u32, Rgb<u8>, &mut I),
-	) -> Result<I, Error> {
+	/// `callback`'s first two parameters are a row and column index respectively.
+	pub fn read<F>(mut self, mut callback: F)
+	where
+		F: FnMut(u32, u32, Rgb8),
+	{
 		let mut cursor_pix = Cursor::new(self.bytes);
 		self.cursor_h.set_position(self.checkpoint);
 
@@ -409,41 +416,12 @@ impl<'a> PictureReader<'a> {
 					let pixel = self.palette[pal_entry as usize];
 					let row = i as u32;
 					let col = (ii as u32) + (row_start as u32);
-					put_pixel(row, col, pixel, &mut imgbuf)
+					callback(row, col, pixel);
 				}
 
 				let _ = cursor_pix.read_u8().unwrap(); // Dummy
 			}
 		}
-
-		Ok(imgbuf)
-	}
-
-	pub fn read_rgb(self) -> Result<RgbImage, Error> {
-		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
-
-		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
-			imgbuf.put_pixel(row, col, pixel);
-		})
-	}
-
-	pub fn read_rgba(self) -> Result<RgbaImage, Error> {
-		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
-
-		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
-			imgbuf.put_pixel(row, col, Rgba([pixel[0], pixel[1], pixel[2], 255]));
-		})
-	}
-
-	pub fn read_rgba32(self) -> Result<Rgba32FImage, Error> {
-		let imgbuf = ImageBuffer::new(self.width as u32, self.height as u32);
-
-		self.read_impl(imgbuf, |row, col, pixel, imgbuf| {
-			let r = (pixel[0] as f32) / 255.0;
-			let g = (pixel[1] as f32) / 255.0;
-			let b = (pixel[2] as f32) / 255.0;
-			imgbuf.put_pixel(row, col, Rgba([r, g, b, 1.0]));
-		})
 	}
 }
 

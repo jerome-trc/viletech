@@ -6,7 +6,7 @@ use bevy::{
 	},
 };
 use data::gfx::{ColorMap, Palette, PictureReader};
-use image::{Rgba, Rgba32FImage};
+use image::{ImageBuffer, Rgba, Rgba32FImage};
 
 pub fn flat_to_image(
 	bytes: &[u8],
@@ -29,9 +29,9 @@ pub fn flat_to_image(
 				x as u32,
 				y as u32,
 				Rgba([
-					(pixel[0] as f32) / 255.0,
-					(pixel[1] as f32) / 255.0,
-					(pixel[2] as f32) / 255.0,
+					(pixel.r as f32) / 255.0,
+					(pixel.g as f32) / 255.0,
+					(pixel.b as f32) / 255.0,
 					1.0,
 				]),
 			);
@@ -75,7 +75,20 @@ pub fn picture_to_image(
 	label: Option<String>,
 ) -> Result<Image, data::Error> {
 	let pic_reader = PictureReader::new(bytes, palette, colormap)?;
-	let img_buf = pic_reader.read_rgba32()?;
+	let mut img_buf = ImageBuffer::new(pic_reader.width() as u32, pic_reader.height() as u32);
+
+	pic_reader.read(|row, col, pixel| {
+		img_buf.put_pixel(
+			row,
+			col,
+			Rgba([
+				(pixel.r as f32) / 255.0,
+				(pixel.g as f32) / 255.0,
+				(pixel.b as f32) / 255.0,
+				1.0,
+			]),
+		);
+	});
 
 	let mut img = Image::new(
 		Extent3d {

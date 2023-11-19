@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
+use image::{ImageBuffer, Rgba};
 use viletech::{
 	data::gfx::{PaletteSet, PictureReader},
 	vfs::{self, FileSlot},
@@ -97,7 +98,7 @@ fn ui_inspect_flat(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: Fi
 				let map_entry = bytes[i];
 				let pal_entry = colormap[map_entry as usize];
 				let pixel = palette[pal_entry as usize];
-				color_img.pixels[i] = egui::Color32::from_rgb(pixel.0[0], pixel.0[1], pixel.0[2]);
+				color_img.pixels[i] = egui::Color32::from_rgb(pixel.r, pixel.g, pixel.b);
 			}
 		}
 
@@ -165,17 +166,11 @@ fn ui_inspect_picture(ed: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot:
 		};
 
 		let dims = [pic_reader.width() as usize, pic_reader.height() as usize];
+		let mut img_buf = ImageBuffer::new(dims[0] as u32, dims[1] as u32);
 
-		let img_buf = match pic_reader.read_rgba() {
-			Ok(b) => b,
-			Err(err) => {
-				ui.centered_and_justified(|ui| {
-					ui.label(&format!("This graphic is invalid: {err}"));
-				});
-
-				return;
-			}
-		};
+		pic_reader.read(|row, col, pixel| {
+			img_buf.put_pixel(row, col, Rgba([pixel.r, pixel.g, pixel.b, 255]))
+		});
 
 		let mut color_img = egui::ColorImage::new(dims, egui::Color32::TEMPORARY_COLOR);
 
@@ -235,7 +230,7 @@ fn ui_inspect_playpal(_: &mut Editor, ui: &mut egui::Ui, param: SysParam, slot: 
 			ui.painter().rect(
 				rect,
 				1.0,
-				egui::Color32::from_rgb(color.0[0], color.0[1], color.0[2]),
+				egui::Color32::from_rgb(color.r, color.g, color.b),
 				egui::Stroke::new(0.0, egui::Color32::TRANSPARENT),
 			);
 		}

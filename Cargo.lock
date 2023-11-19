@@ -5001,7 +5001,6 @@ dependencies = [
  "byteorder",
  "criterion",
  "glam",
- "image",
  "logos",
  "rayon",
  "regex",

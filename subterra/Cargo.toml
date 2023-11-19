@@ -15,7 +15,7 @@ repository.workspace = true
 [features]
 default = []
 acs = []
-graphics = ["dep:image"]
+graphics = []
 serde = ["dep:serde", "bitflags/serde"]
 
 [dependencies]
@@ -26,7 +26,6 @@ bitvec.workspace = true
 bytemuck = { workspace = true, features = ["min_const_generics"] }
 byteorder.workspace = true
 glam.workspace = true
-image = { workspace = true, optional = true }
 logos.workspace = true # For UDMF parsing.
 rayon.workspace = true
 regex.workspace = true
