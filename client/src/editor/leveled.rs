@@ -12,11 +12,12 @@ use viletech::{
 	gfx::Sky2dMaterial,
 	level::{read::prelude::*, RawLevel, RawThings},
 	tracing::info,
+	util::{string::ZString, SmallString},
 	vfs::FileSlot,
 	VirtualFs,
 };
 
-use crate::{common::InputParam, editor::contentid::ContentId};
+use crate::{common::InputParam, editor::contentid::ContentId, types::FxDashMap};
 
 use super::Editor;
 
@@ -448,47 +449,67 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		indices: Vec<u32>,
 	}
 
-	let mut mesh_parts_map = FxHashMap::default();
+	let (textures, mesh_parts_map) = rayon::join(
+		|| {
+			let textures = FxDashMap::default();
 
-	viletech::world::mesh::subsectors_to_polygons(raw, |poly| {
-		let subsect = &raw.subsectors[poly.subsector()];
-		let seg = &raw.segs[subsect.first_seg() as usize];
-		let line = &raw.linedefs[seg.linedef() as usize];
+			ed.file_viewer
+				.content_id
+				.iter()
+				.par_bridge()
+				.for_each(|(slot, content_id)| {
+					if matches!(content_id, ContentId::Picture | ContentId::Flat) {
+						let vfile = param.vfs.get_file(*slot).unwrap();
+						let smallstr = SmallString::from(vfile.name().as_str());
+						let _ = textures.insert(ZString(smallstr), *slot);
+					}
+				});
 
-		let side = match seg.direction() {
-			SegDirection::Front => &raw.sidedefs[line.right_side() as usize],
-			SegDirection::Back => &raw.sidedefs[line.left_side().unwrap() as usize],
-		};
+			textures.into_read_only()
+		},
+		|| {
+			let mut mesh_parts_map = FxHashMap::default();
 
-		let mesh_parts = mesh_parts_map
-			.entry(side.sector() as usize)
-			.or_insert(MeshParts::default());
+			viletech::world::mesh::subsectors_to_polygons(raw, |poly| {
+				let subsect = &raw.subsectors[poly.subsector()];
+				let seg = &raw.segs[subsect.first_seg() as usize];
+				let line = &raw.linedefs[seg.linedef() as usize];
 
-		let (poly_verts, poly_ixs) = poly.floor();
+				let side = match seg.direction() {
+					SegDirection::Front => &raw.sidedefs[line.right_side() as usize],
+					SegDirection::Back => &raw.sidedefs[line.left_side().unwrap() as usize],
+				};
 
-		for i in poly_ixs {
-			mesh_parts
-				.indices
-				.push((*i + mesh_parts.verts.len()) as u32);
-		}
+				let mesh_parts = mesh_parts_map
+					.entry(side.sector() as usize)
+					.or_insert(MeshParts::default());
 
-		for v in poly_verts {
-			mesh_parts.verts.push(*v);
-		}
-	});
+				let (poly_verts, poly_ixs) = poly.floor();
+
+				for i in poly_ixs {
+					mesh_parts
+						.indices
+						.push((*i + mesh_parts.verts.len()) as u32);
+				}
+
+				for v in poly_verts {
+					mesh_parts.verts.push(*v);
+				}
+			});
+
+			mesh_parts_map
+		},
+	);
 
 	for (sector_ix, mesh_parts) in mesh_parts_map {
 		let sector = &raw.sectors[sector_ix];
-		let floor_tex_lmpname = sector.floor_texture().unwrap();
+		let floor_tex_fname = ZString(SmallString::from(sector.floor_texture().unwrap().as_str()));
 
-		let tex_slot_opt = param.vfs.files().par_bridge().find_map_last(|vfile| {
-			(vfile
-				.name()
-				.eq_ignore_ascii_case(floor_tex_lmpname.as_str()))
-			.then_some(vfile.slot())
-		});
+		let Some(tex_slot) = textures.get(&floor_tex_fname).copied() else {
+			ed.messages.push(
+				format!("Sector {sector_ix} references unknown texture: {floor_tex_fname}").into(),
+			);
 
-		let Some(tex_slot) = tex_slot_opt else {
 			continue;
 		};
 
@@ -505,13 +526,13 @@ pub(super) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 					bytes.as_ref(),
 					&palset[0],
 					&colormaps[0],
-					Some(floor_tex_lmpname.to_string()),
+					Some(floor_tex_fname.to_string()),
 				)),
 				ContentId::Picture => viletech::asset::picture_to_image(
 					bytes.as_ref(),
 					&palset[0],
 					&colormaps[0],
-					Some(floor_tex_lmpname.to_string()),
+					Some(floor_tex_fname.to_string()),
 				),
 				_ => unimplemented!(),
 			};
