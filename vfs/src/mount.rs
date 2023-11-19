@@ -103,8 +103,7 @@ fn mount_dir(
 		let mut fh = std::fs::File::open(&path).map_err(Error::FileOpen)?;
 		let (magic, len) = magic_and_length(&mut fh)?;
 
-		let mut name = SmallString::from(path.file_name().unwrap().to_string_lossy());
-		name.make_ascii_lowercase();
+		let name = SmallString::from(path.file_name().unwrap().to_string_lossy());
 
 		if wad_extension(name.as_str()) && wad_magic(&magic) {
 			let mut bytes = vec![];
@@ -155,11 +154,8 @@ fn mount_wad_file(
 	for result in w_reader {
 		let w_ent = result.map_err(Error::Wad)?;
 
-		let mut name = SmallString::from(w_ent.name.as_str());
-		name.make_ascii_lowercase();
-
 		let islot = vfs.files.insert(VFile {
-			name,
+			name: SmallString::from(w_ent.name.as_str()),
 			parent: oslot,
 			reader: arc.clone(),
 			span: (w_ent.span.start as u32)..(w_ent.span.end as u32),
@@ -203,11 +199,8 @@ fn mount_wad_blob(
 	for result in w_reader {
 		let w_ent = result.map_err(Error::Wad)?;
 
-		let mut name = SmallString::from(w_ent.name.as_str());
-		name.make_ascii_lowercase();
-
 		let islot = vfs.files.insert(VFile {
-			name,
+			name: SmallString::from(w_ent.name.as_str()),
 			parent: oslot,
 			reader: arc.clone(),
 			span: (w_ent.span.start as u32)..(w_ent.span.end as u32),
