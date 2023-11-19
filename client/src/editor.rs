@@ -304,22 +304,33 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn on_exit(
-	mut cmds: Commands,
-	mut vfs: ResMut<VirtualFs>,
+	mut ed: ResMut<Editor>,
+	mut params: ParamSet<(
+		fileview::SysParam,
+		inspector::SysParam,
+		leveled::SysParam,
+		EventReader<Event>,
+	)>,
 	cameras: Query<Entity, Or<(With<Camera2d>, With<Camera3d>)>>,
 	windows: Query<Entity, (With<Window>, Without<PrimaryWindow>)>,
 ) {
-	cmds.remove_resource::<Editor>();
+	leveled::unload(&mut ed, params.p2());
+
+	params.p2().cmds.remove_resource::<Editor>();
 
 	for camera in &cameras {
-		cmds.entity(camera).despawn();
+		params.p2().cmds.entity(camera).despawn();
 	}
 
 	for window in &windows {
-		cmds.entity(window).despawn();
+		params.p2().cmds.entity(window).despawn();
 	}
 
-	if let Err(err) = vfs.retain(|mntinfo| mntinfo.mount_point.as_str().ends_with("viletech")) {
+	if let Err(err) = params
+		.p2()
+		.vfs
+		.retain(|mntinfo| mntinfo.mount_point.as_str().ends_with("viletech"))
+	{
 		error!("Mass unmount error during editor exit: {err}");
 	}
 }

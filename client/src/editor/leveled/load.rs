@@ -220,10 +220,6 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		return;
 	};
 
-	ed.level_editor.current = Some(EditedLevel::Vanilla {
-		_marker: marker_slot,
-	});
-
 	let mut camera = param.cameras.single_mut();
 
 	let (min_raw, _max_raw) = VertexRaw::bounds(vertdefs);
@@ -303,93 +299,99 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		},
 	);
 
-	for (sector_ix, mesh_parts) in mesh_parts_map {
-		let sector = &raw.sectors[sector_ix];
-		let floor_tex_fname = ZString(SmallString::from(sector.floor_texture().unwrap().as_str()));
+	let mut lcmds = param.cmds.spawn(viletech::world::level_bundle_base());
 
-		let Some(tex_slot) = textures.get(&floor_tex_fname).copied() else {
-			ed.messages.push(
-				format!("Sector {sector_ix} references unknown texture: {floor_tex_fname}").into(),
-			);
+	lcmds.with_children(|cbuilder| {
+		for (sector_ix, mesh_parts) in mesh_parts_map {
+			let sector = &raw.sectors[sector_ix];
+			let floor_tex_fname =
+				ZString(SmallString::from(sector.floor_texture().unwrap().as_str()));
 
-			continue;
-		};
+			let Some(tex_slot) = textures.get(&floor_tex_fname).copied() else {
+				ed.messages.push(
+					format!("Sector {sector_ix} references unknown texture: {floor_tex_fname}")
+						.into(),
+				);
 
-		let material = match ed.level_editor.materials.entry(tex_slot) {
-			std::collections::hash_map::Entry::Occupied(occ) => occ.get().clone(),
-			std::collections::hash_map::Entry::Vacant(vac) => {
-				let vfile = param.vfs.get_file(tex_slot).unwrap();
-				let mut guard = vfile.lock();
-				let bytes = guard.read().expect("VFS memory read failed");
-				let palset = ed.palset.as_ref().unwrap();
-				let colormaps = ed.colormaps.as_ref().unwrap();
-				let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
+				continue;
+			};
 
-				let result = match content_id {
-					ContentId::Flat => Ok(viletech::asset::flat_to_image(
-						bytes.as_ref(),
-						&palset[0],
-						&colormaps[0],
-						Some(floor_tex_fname.to_string()),
-					)),
-					ContentId::Picture => viletech::asset::picture_to_image(
-						bytes.as_ref(),
-						&palset[0],
-						&colormaps[0],
-						Some(floor_tex_fname.to_string()),
-					),
-					_ => unimplemented!(),
-				};
+			let material = match ed.level_editor.materials.entry(tex_slot) {
+				std::collections::hash_map::Entry::Occupied(occ) => occ.get().clone(),
+				std::collections::hash_map::Entry::Vacant(vac) => {
+					let vfile = param.vfs.get_file(tex_slot).unwrap();
+					let mut guard = vfile.lock();
+					let bytes = guard.read().expect("VFS memory read failed");
+					let palset = ed.palset.as_ref().unwrap();
+					let colormaps = ed.colormaps.as_ref().unwrap();
+					let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
 
-				let Ok(img) = result else {
-					continue;
-				};
+					let result = match content_id {
+						ContentId::Flat => Ok(viletech::asset::flat_to_image(
+							bytes.as_ref(),
+							&palset[0],
+							&colormaps[0],
+							Some(floor_tex_fname.to_string()),
+						)),
+						ContentId::Picture => viletech::asset::picture_to_image(
+							bytes.as_ref(),
+							&palset[0],
+							&colormaps[0],
+							Some(floor_tex_fname.to_string()),
+						),
+						_ => unimplemented!(),
+					};
 
-				let img_handle = param.images.add(img);
+					let Ok(img) = result else {
+						continue;
+					};
 
-				let mtr = StandardMaterial {
-					base_color_texture: Some(img_handle.clone()),
-					emissive_texture: Some(img_handle),
-					emissive: Color::WHITE,
-					..Default::default()
-				};
+					let img_handle = param.images.add(img);
 
-				vac.insert(param.mtrs_std.add(mtr)).clone()
+					let mtr = StandardMaterial {
+						base_color_texture: Some(img_handle.clone()),
+						emissive_texture: Some(img_handle),
+						emissive: Color::WHITE,
+						..Default::default()
+					};
+
+					vac.insert(param.mtrs_std.add(mtr)).clone()
+				}
+			};
+
+			let normals = vec![Vec3::Z; mesh_parts.verts.len()];
+			let mut uvs = Vec::with_capacity(mesh_parts.verts.len());
+
+			for v in &mesh_parts.verts {
+				// TODO: this needs to correctly align flats, but it doesn't yet.
+				uvs.push(Vec2::new(-v.x, -v.y));
 			}
-		};
 
-		let normals = vec![Vec3::Z; mesh_parts.verts.len()];
-		let mut uvs = Vec::with_capacity(mesh_parts.verts.len());
+			let mesh = Mesh::new(PrimitiveTopology::TriangleList)
+				.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_parts.verts)
+				.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+				.with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+				.with_indices(Some(Indices::U32(mesh_parts.indices)));
 
-		for v in &mesh_parts.verts {
-			// TODO: this needs to correctly align flats, but it doesn't yet.
-			uvs.push(Vec2::new(-v.x, -v.y));
-		}
+			let mesh_handle = param.meshes.add(mesh);
 
-		let mesh = Mesh::new(PrimitiveTopology::TriangleList)
-			.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_parts.verts)
-			.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-			.with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-			.with_indices(Some(Indices::U32(mesh_parts.indices)));
-
-		let mesh_handle = param.meshes.add(mesh);
-
-		let mut ecmds = param.cmds.spawn(MaterialMeshBundle {
-			mesh: mesh_handle.clone(),
-			material,
-			transform: Transform {
-				translation: Vec3::new(
-					(min_raw[0] as f32) * viletech::world::FSCALE,
-					(min_raw[1] as f32) * viletech::world::FSCALE,
-					0.0,
-				),
+			let mut ecmds = cbuilder.spawn(MaterialMeshBundle {
+				mesh: mesh_handle.clone(),
+				material,
+				transform: Transform {
+					translation: Vec3::new(
+						(min_raw[0] as f32) * viletech::world::FSCALE,
+						(min_raw[1] as f32) * viletech::world::FSCALE,
+						0.0,
+					),
+					..Default::default()
+				},
 				..Default::default()
-			},
-			..Default::default()
-		});
+			});
 
-		ecmds.insert(EdSector(mesh_handle));
-	}
+			ecmds.insert(EdSector(mesh_handle));
+		}
+	});
 
 	info!(
 		concat!(
@@ -403,7 +405,24 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		param.mtrs_std.len() - prev_mtr_count
 	);
 
+	ed.level_editor.current = Some(EditedLevel::Vanilla {
+		entity: lcmds.id(),
+		_marker: marker_slot,
+	});
+
 	if !ed.level_editor_open() {
 		ed.panel_m = editor::Dialog::LevelEd;
+	}
+}
+
+pub(crate) fn unload(ed: &mut Editor, mut param: SysParam) {
+	match ed.level_editor.current {
+		Some(EditedLevel::Vanilla { entity, .. }) => {
+			param.cmds.entity(entity).despawn_recursive();
+		}
+		Some(EditedLevel::_Udmf { entity, .. }) => {
+			param.cmds.entity(entity).despawn_recursive();
+		}
+		None => {}
 	}
 }

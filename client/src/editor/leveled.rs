@@ -21,8 +21,8 @@ pub(crate) struct LevelEditor {
 
 #[derive(Debug)]
 pub(crate) enum EditedLevel {
-	Vanilla { _marker: FileSlot },
-	_Udmf { _marker: FileSlot },
+	Vanilla { entity: Entity, _marker: FileSlot },
+	_Udmf { entity: Entity, _marker: FileSlot },
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
