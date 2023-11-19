@@ -61,6 +61,14 @@ impl ColorMapSet<'_> {
 		// SAFETY: `Raw` and `[ColorMap; 34]` have identical representations.
 		unsafe { Ok(Self::Borrowed(std::mem::transmute(raw))) }
 	}
+
+	#[must_use]
+	pub fn into_owned(self) -> [ColorMap; 34] {
+		match self {
+			Self::Borrowed(b) => b.to_owned(),
+			Self::Owned(o) => *o,
+		}
+	}
 }
 
 impl std::ops::Index<usize> for ColorMapSet<'_> {
