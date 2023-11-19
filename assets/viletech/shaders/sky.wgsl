@@ -32,9 +32,9 @@ fn sky2d_vertex(vertex: VertexInput) -> VertexOutput {
 // Fragment ////////////////////////////////////////////////////////////////////
 
 @group(1) @binding(200)
-var texture: texture_2d<f32>;
+var t_sky: texture_2d<f32>;
 @group(1) @binding(201)
-var texture_sampler: sampler;
+var s_sky: sampler;
 
 @group(1) @binding(202)
 var<uniform> tiled_band_size: f32;
@@ -57,5 +57,5 @@ fn sky2d_fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 		uv.y = 1.0 - uv.y;
 	}
 
-	return textureSample(texture, texture_sampler, uv);
+	return textureSample(t_sky, s_sky, uv);
 }
