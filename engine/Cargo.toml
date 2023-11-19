@@ -63,6 +63,7 @@ byteorder.workspace = true
 cpal.workspace = true
 crossbeam.workspace = true
 dashmap.workspace = true
+earcutr.workspace = true
 fixed.workspace = true
 fluidlite.workspace = true
 glam.workspace = true
@@ -92,7 +93,6 @@ tracing.workspace = true
 tracing-appender.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
-triangulate.workspace = true
 walkdir.workspace = true
 zip.workspace = true
 

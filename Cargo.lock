@@ -1956,7 +1956,7 @@ dependencies = [
  "clap",
  "criterion-plot",
  "is-terminal",
- "itertools",
+ "itertools 0.10.5",
  "num-traits",
  "once_cell",
  "oorandom",
@@ -1977,7 +1977,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -2183,6 +2183,16 @@ name = "downcast-rs"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
+name = "earcutr"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79127ed59a85d7687c409e9978547cffb7dc79675355ed22da6b66fd5f6ead01"
+dependencies = [
+ "itertools 0.11.0",
+ "num-traits",
+]
 
 [[package]]
 name = "ecolor"
@@ -3168,6 +3178,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3943,15 +3962,6 @@ dependencies = [
  "redox_syscall 0.2.13",
  "wasm-bindgen",
  "web-sys",
-]
-
-[[package]]
-name = "ordered-float"
-version = "2.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7940cf2ca942593318d07fcf2596cdca60a85c9e7fab408a5e21a4f9dcd40d87"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -5538,20 +5548,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "triangulate"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f737ed9bcc496b67fd1e24f63c14eace0cb9216d14bca000fd5934fddc6af7f6"
-dependencies = [
- "backtrace",
- "num-traits",
- "ordered-float",
- "rand",
- "smallvec",
- "zot",
-]
-
-[[package]]
 name = "triomphe"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5705,6 +5701,7 @@ dependencies = [
  "crossbeam",
  "dashmap",
  "doomfront",
+ "earcutr",
  "fixed",
  "fluidlite",
  "glam",
@@ -5737,7 +5734,6 @@ dependencies = [
  "tracing-appender",
  "tracing-log",
  "tracing-subscriber",
- "triangulate",
  "viletech-fs",
  "viletech-utils",
  "wadload",
@@ -6623,12 +6619,6 @@ dependencies = [
  "bytesize",
  "thiserror",
 ]
-
-[[package]]
-name = "zot"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12a5c04eac01d1f630aa1b7375984fbbc6c3b28b0975fc90bfa3e2c58caaa727"
 
 [[package]]
 name = "zscript_parser"

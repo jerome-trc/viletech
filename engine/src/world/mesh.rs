@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 
 use bevy::prelude::*;
 use data::level::{read::prelude::*, RawLevel};
-use triangulate::{formats::IndexedListFormat, ListFormat, Polygon};
+use smallvec::SmallVec;
 
 use super::FSCALE;
 
@@ -59,7 +59,6 @@ pub fn subsectors_to_polygons<F: FnMut(SubSectorPoly)>(raw: RawLevel, mut callba
 
 TODO:
 - Faster vertex sort?
-- Faster triangulation (e.g. Earcut)?
 - Using SIMD to find node line intersections?
 - Converting subsectors to polygons in parallel?
 - Stack-safe node tree recursion?
@@ -206,16 +205,16 @@ fn subsector_to_poly(
 		return None;
 	};
 
-	let mut indices = vec![];
+	let mut verts2d = SmallVec::<[f32; 8]>::new();
 
-	let format = IndexedListFormat::new(&mut indices).into_fan_format();
-
-	// SAFETY: `TmutVert` is `repr(transparent)` over `glam::vec3`.
-	let v = unsafe { std::mem::transmute::<_, &Vec<TmutVert>>(&verts) };
-
-	if let Err(err) = v.triangulate(format) {
-		warn!("Failed to triangulate subsector {subsect_ix}: {err}");
+	for v in verts.iter().copied() {
+		verts2d.push(v.x);
+		verts2d.push(v.y);
 	}
+
+	let Ok(mut indices) = earcutr::earcut(&verts2d, &[], 2) else {
+		return None;
+	};
 
 	let v_len = verts.len();
 
@@ -355,23 +354,6 @@ fn poly_center(verts: &[Vec3]) -> Vec3 {
 	// Move the center slightly so that the angles are not all equal
 	// if the polygon is a perfect quadrilateral.
 	glam::vec3(center.x + f32::EPSILON, center.y + f32::EPSILON, center.z)
-}
-
-/// Fake type for impl trait coherence.
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(transparent)]
-struct TmutVert(Vec3);
-
-impl triangulate::Vertex for TmutVert {
-	type Coordinate = f32;
-
-	fn x(&self) -> Self::Coordinate {
-		self.0.x
-	}
-
-	fn y(&self) -> Self::Coordinate {
-		self.0.y
-	}
 }
 
 // Disp ////////////////////////////////////////////////////////////////////////
