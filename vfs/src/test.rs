@@ -36,6 +36,9 @@ fn vpath_smoke() {
 	let lmp_path = lump.path();
 	assert_eq!(lmp_path, VPathBuf::from("/freedoom2/fcgrate2"));
 	assert!(lmp_path.extension().is_none());
+
+	let folder = vfs.lookup(VPath::new("/viletech/shaders")).unwrap();
+	assert_eq!(folder.path(), VPathBuf::from("/viletech/shaders"));
 }
 
 #[test]

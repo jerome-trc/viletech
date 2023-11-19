@@ -124,7 +124,7 @@ impl<'vfs> FileRef<'vfs> {
 
 	#[must_use]
 	pub fn path(&self) -> VPathBuf {
-		let mut buf = String::from('/');
+		let mut buf = String::new();
 		buf.push_str(self.name().as_str());
 		detail::path_append(self.vfs, &mut buf, self.parent);
 		VPathBuf::new(buf)

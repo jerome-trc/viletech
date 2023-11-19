@@ -16,6 +16,10 @@ use super::{Error, FolderSlot, VirtualFs};
 pub(super) fn path_append(vfs: &VirtualFs, buf: &mut String, slot: FolderSlot) {
 	let folder = &vfs.folders[slot];
 
+	if slot != vfs.root {
+		buf.insert(0, '/');
+	}
+
 	buf.insert_str(0, &folder.name);
 
 	if let Some(p) = folder.parent {
