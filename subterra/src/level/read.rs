@@ -133,7 +133,12 @@ impl LineDefRaw {
 
 /// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 14.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn linedefs(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("LINEDEFS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<LineDefRaw>()) != 0 {
 		return Err(Error::MalformedFile("LINEDEFS"));
 	}
@@ -143,6 +148,10 @@ pub fn linedefs(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
 
 /// See [`linedefs`].
 pub fn linedefs_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("LINEDEFS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<LineDefRaw>()) != 0 {
 		return Err(Error::MalformedFile("LINEDEFS"));
 	}
@@ -152,22 +161,32 @@ pub fn linedefs_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
 
 /// Like [`linedefs`], but any bytes at the end of slice which do not fit into
 /// another [`LineDefRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn linedefs_lossy(lump: &[u8]) -> &[LineDefRaw] {
+pub fn linedefs_lossy(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("LINEDEFS"));
+	}
+
 	let sz = std::mem::size_of::<LineDefRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`linedefs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`LineDefRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn linedefs_lossy_mut(lump: &mut [u8]) -> &mut [LineDefRaw] {
+pub fn linedefs_lossy_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("LINEDEFS"));
+	}
+
 	let sz = std::mem::size_of::<LineDefRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // NODES ///////////////////////////////////////////////////////////////////////
@@ -239,9 +258,14 @@ pub enum BspNodeChild {
 	SubNode(usize),
 }
 
-/// Casts a slice of raw bytes to node definitions (without allocating).
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 28.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn nodes(lump: &[u8]) -> Result<&[NodeRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("NODES"));
+	}
+
 	if (lump.len() % std::mem::size_of::<NodeRaw>()) != 0 {
 		return Err(Error::MalformedFile("NODES"));
 	}
@@ -251,6 +275,10 @@ pub fn nodes(lump: &[u8]) -> Result<&[NodeRaw], Error> {
 
 /// See [`nodes`].
 pub fn nodes_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("NODES"));
+	}
+
 	if (lump.len() % std::mem::size_of::<NodeRaw>()) != 0 {
 		return Err(Error::MalformedFile("NODES"));
 	}
@@ -260,22 +288,32 @@ pub fn nodes_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
 
 /// Like [`nodes`], but any bytes at the end of slice which do not fit into
 /// another [`NodeRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn nodes_lossy(lump: &[u8]) -> &[NodeRaw] {
+pub fn nodes_lossy(lump: &[u8]) -> Result<&[NodeRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("NODES"));
+	}
+
 	let sz = std::mem::size_of::<NodeRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`nodes_mut`], but any bytes at the end of slice which do not fit into
 /// another [`NodeRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn nodes_lossy_mut(lump: &mut [u8]) -> &mut [NodeRaw] {
+pub fn nodes_lossy_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("NODES"));
+	}
+
 	let sz = std::mem::size_of::<NodeRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // SECTORS /////////////////////////////////////////////////////////////////////
@@ -335,9 +373,14 @@ impl SectorRaw {
 	}
 }
 
-/// Casts a slice of raw bytes to sector definitions (without allocating).
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 26.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn sectors(lump: &[u8]) -> Result<&[SectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SECTORS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SectorRaw>()) != 0 {
 		return Err(Error::MalformedFile("SECTORS"));
 	}
@@ -347,6 +390,10 @@ pub fn sectors(lump: &[u8]) -> Result<&[SectorRaw], Error> {
 
 /// See [`sectors`].
 pub fn sectors_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SECTORS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SectorRaw>()) != 0 {
 		return Err(Error::MalformedFile("SECTORS"));
 	}
@@ -356,22 +403,32 @@ pub fn sectors_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
 
 /// Like [`sectors`], but any bytes at the end of slice which do not fit into
 /// another [`SectorRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn sectors_lossy(lump: &[u8]) -> &[SectorRaw] {
+pub fn sectors_lossy(lump: &[u8]) -> Result<&[SectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SECTORS"));
+	}
+
 	let sz = std::mem::size_of::<SectorRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`sectors_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SectorRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn sectors_lossy_mut(lump: &mut [u8]) -> &mut [SectorRaw] {
+pub fn sectors_lossy_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SECTORS"));
+	}
+
 	let sz = std::mem::size_of::<SectorRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // SEGS ////////////////////////////////////////////////////////////////////////
@@ -442,8 +499,13 @@ pub enum SegDirection {
 }
 
 /// Casts a slice of raw bytes to segment definitions (without allocating).
-/// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 12.
+/// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 12,
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn segs(lump: &[u8]) -> Result<&[SegRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SEGS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SegRaw>()) != 0 {
 		return Err(Error::MalformedFile("SEGS"));
 	}
@@ -453,6 +515,10 @@ pub fn segs(lump: &[u8]) -> Result<&[SegRaw], Error> {
 
 /// See [`segs`].
 pub fn segs_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SEGS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SegRaw>()) != 0 {
 		return Err(Error::MalformedFile("SEGS"));
 	}
@@ -462,22 +528,32 @@ pub fn segs_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
 
 /// Like [`segs`], but any bytes at the end of slice which do not fit into
 /// another [`SegRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn segs_lossy(lump: &[u8]) -> &[SegRaw] {
+pub fn segs_lossy(lump: &[u8]) -> Result<&[SegRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SEGS"));
+	}
+
 	let sz = std::mem::size_of::<SegRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`segs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SegRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn segs_lossy_mut(lump: &mut [u8]) -> &mut [SegRaw] {
+pub fn segs_lossy_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SEGS"));
+	}
+
 	let sz = std::mem::size_of::<SegRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // SIDEDEFS ////////////////////////////////////////////////////////////////////
@@ -527,9 +603,14 @@ impl SideDefRaw {
 	}
 }
 
-/// Casts a slice of raw bytes to side definitions (without allocating).
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 30.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn sidedefs(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SIDEDEFS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SideDefRaw>()) != 0 {
 		return Err(Error::MalformedFile("SIDEDEFS"));
 	}
@@ -539,6 +620,10 @@ pub fn sidedefs(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
 
 /// See [`sidedefs`].
 pub fn sidedefs_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SIDEDEFS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SideDefRaw>()) != 0 {
 		return Err(Error::MalformedFile("SIDEDEFS"));
 	}
@@ -548,22 +633,32 @@ pub fn sidedefs_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
 
 /// Like [`sidedefs`], but any bytes at the end of slice which do not fit into
 /// another [`SideDefRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn sidedefs_lossy(lump: &[u8]) -> &[SideDefRaw] {
+pub fn sidedefs_lossy(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SIDEDEFS"));
+	}
+
 	let sz = std::mem::size_of::<SideDefRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`sidedefs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SideDefRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn sidedefs_lossy_mut(lump: &mut [u8]) -> &mut [SideDefRaw] {
+pub fn sidedefs_lossy_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SIDEDEFS"));
+	}
+
 	let sz = std::mem::size_of::<SideDefRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // SSECTORS ////////////////////////////////////////////////////////////////////
@@ -598,9 +693,14 @@ impl SSectorRaw {
 	}
 }
 
-/// Casts a slice of raw bytes to sub-sector definitions (without allocating).
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 4.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn ssectors(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SSECTORS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SSectorRaw>()) != 0 {
 		return Err(Error::MalformedFile("SSECTORS"));
 	}
@@ -610,6 +710,10 @@ pub fn ssectors(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
 
 /// See [`ssectors`].
 pub fn ssectors_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SSECTORS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<SSectorRaw>()) != 0 {
 		return Err(Error::MalformedFile("SSECTORS"));
 	}
@@ -619,22 +723,32 @@ pub fn ssectors_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
 
 /// Like [`ssectors`], but any bytes at the end of slice which do not fit into
 /// another [`SSectorRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn ssectors_lossy(lump: &[u8]) -> &[SSectorRaw] {
+pub fn ssectors_lossy(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SSECTORS"));
+	}
+
 	let sz = std::mem::size_of::<SSectorRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`ssectors_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SSectorRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn ssectors_lossy_mut(lump: &mut [u8]) -> &mut [SSectorRaw] {
+pub fn ssectors_lossy_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("SSECTORS"));
+	}
+
 	let sz = std::mem::size_of::<SSectorRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // THINGS //////////////////////////////////////////////////////////////////////
@@ -739,9 +853,14 @@ bitflags::bitflags! {
 	}
 }
 
-/// Casts a slice of raw bytes to thing definitions (without allocating).
+/// Casts a slice of raw bytes to line definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 10.
+/// or [`Error::EmptyFile`] if the length of `lump` is zero.
 pub fn things(lump: &[u8]) -> Result<&[ThingRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<ThingRaw>()) != 0 {
 		return Err(Error::MalformedFile("THINGS"));
 	}
@@ -751,6 +870,10 @@ pub fn things(lump: &[u8]) -> Result<&[ThingRaw], Error> {
 
 /// See [`things`].
 pub fn things_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS"));
+	}
+
 	if (lump.len() % std::mem::size_of::<ThingRaw>()) != 0 {
 		return Err(Error::MalformedFile("THINGS"));
 	}
@@ -760,22 +883,32 @@ pub fn things_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
 
 /// Like [`things`], but any bytes at the end of slice which do not fit into
 /// another [`ThingRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn things_lossy(lump: &[u8]) -> &[ThingRaw] {
+pub fn things_lossy(lump: &[u8]) -> Result<&[ThingRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS"));
+	}
+
 	let sz = std::mem::size_of::<ThingRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 /// Like [`things_mut`], but any bytes at the end of slice which do not fit into
 /// another [`ThingRaw`] are truncated.
+/// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
 #[must_use]
-pub fn things_lossy_mut(lump: &mut [u8]) -> &mut [ThingRaw] {
+pub fn things_lossy_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS"));
+	}
+
 	let sz = std::mem::size_of::<ThingRaw>();
 	let count = lump.len() / sz;
 	let subslice = &mut lump[..(count * sz)];
-	bytemuck::cast_slice_mut(subslice)
+	Ok(bytemuck::cast_slice_mut(subslice))
 }
 
 // THINGS, extended ////////////////////////////////////////////////////////////
@@ -881,6 +1014,10 @@ impl ThingExtRaw {
 /// Casts a slice of raw bytes to extended thing definitions (without allocating).
 /// Returns [`Error::MalformedFile`] if the length of `lump` is not divisible by 160.
 pub fn things_ext(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS (extended)"));
+	}
+
 	if (lump.len() % std::mem::size_of::<ThingExtRaw>()) != 0 {
 		return Err(Error::MalformedFile("THINGS (extended)"));
 	}
@@ -891,11 +1028,15 @@ pub fn things_ext(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
 /// Like [`things_ext`], but any bytes at the end of slice which do not fit into
 /// another [`ThingExtRaw`] are truncated.
 #[must_use]
-pub fn things_ext_lossy(lump: &[u8]) -> &[ThingExtRaw] {
+pub fn things_ext_lossy(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
+	if lump.is_empty() {
+		return Err(Error::EmptyFile("THINGS"));
+	}
+
 	let sz = std::mem::size_of::<ThingExtRaw>();
 	let count = lump.len() / sz;
 	let subslice = &lump[..(count * sz)];
-	bytemuck::cast_slice(subslice)
+	Ok(bytemuck::cast_slice(subslice))
 }
 
 // VERTEXES ////////////////////////////////////////////////////////////////////

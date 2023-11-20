@@ -45,6 +45,7 @@ pub mod ednums {
 /// Possible failure modes of trying to process files into a [LevelDef].
 #[derive(Debug)]
 pub enum Error {
+	EmptyFile(&'static str),
 	/// A line tried to reference a non-existent side.
 	InvalidLinedefSide {
 		linedef: usize,
@@ -117,6 +118,9 @@ pub enum Error {
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
+			Self::EmptyFile(name) => {
+				write!(f, "`{name}` has no content")
+			}
 			Self::InvalidLinedefSide {
 				linedef,
 				left,
