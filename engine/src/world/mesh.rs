@@ -130,7 +130,7 @@ fn subsector_to_poly(
 			};
 
 			const BSP_TOLERANCE: f32 = 1e-3;
-			const SEG_TOLERANCE: f32 = 0.1;
+			const SEG_TOLERANCE: f32 = 0.05;
 
 			let inside_bsp = bsp_lines
 				.iter()
