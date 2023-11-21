@@ -2,9 +2,9 @@
 
 use std::{borrow::Cow, path::PathBuf};
 
-use bevy::{app::AppExit, prelude::*, winit::WinitWindows};
+use bevy::{app::AppExit, prelude::*, render::renderer::RenderDevice, winit::WinitWindows};
 use bevy_egui::egui;
-use viletech::{user::UserCore, VirtualFs};
+use viletech::{tracing::info, user::UserCore, VirtualFs};
 
 use crate::{
 	common::{set_window_icon, ClientCommon},
@@ -27,11 +27,32 @@ pub(crate) fn init_on_enter(
 	winits: NonSend<WinitWindows>,
 	windows: Query<Entity, With<Window>>,
 	vfs: Res<VirtualFs>,
+	rdevice: Res<RenderDevice>,
 ) {
 	let e_window = windows.single();
 	let window_id = winits.entity_to_winit.get(&e_window).unwrap();
 	let window = winits.windows.get(window_id).unwrap();
 	set_window_icon(&vfs, window);
+
+	{
+		let rdev_limits = rdevice.limits();
+
+		info!(
+			concat!(
+				"WGPU render device information:\n",
+				"\t- Max. vertex attributes: {vattrs}\n",
+				"\t- Max. 2D texture width and height: {tex2d_dim}\n",
+				"\t- Max. texture array layers: {tex_arr_layers}\n",
+				"\t- Max. samplers per shader stage: {samplers}\n",
+				"\t- Max. sampled textures per shader stage: {sampled_tex}",
+			),
+			vattrs = rdev_limits.max_vertex_attributes,
+			tex2d_dim = rdev_limits.max_texture_dimension_2d,
+			tex_arr_layers = rdev_limits.max_texture_array_layers,
+			samplers = rdev_limits.max_samplers_per_shader_stage,
+			sampled_tex = rdev_limits.max_sampled_textures_per_shader_stage,
+		);
+	}
 
 	if startup.is_none() {
 		next_state.set(AppState::Frontend);
