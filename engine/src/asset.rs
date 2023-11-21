@@ -67,13 +67,13 @@ pub fn picture_to_image(
 	colormap: &ColorMap,
 	label: Option<String>,
 ) -> Result<Image, data::Error> {
-	let pic_reader = PictureReader::new(bytes, palette, colormap)?;
+	let pic_reader = PictureReader::new(bytes)?;
 
 	let width = pic_reader.width() as usize;
 	let height = pic_reader.height() as usize;
 	let mut buf = vec![[[0_u8; 4]; 4]; width * height];
 
-	pic_reader.read(|row, col, pixel| {
+	pic_reader.read(palette, colormap, |row, col, pixel| {
 		buf[col as usize * width + row as usize] = [
 			((pixel.r as f32) / 255.0).to_ne_bytes(),
 			((pixel.g as f32) / 255.0).to_ne_bytes(),

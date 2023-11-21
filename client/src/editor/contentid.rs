@@ -488,7 +488,7 @@ impl ContentId {
 			}
 		}
 
-		if PictureReader::validate(bytes).is_ok() {
+		if PictureReader::new(bytes).is_ok() {
 			return Self::Picture;
 		}
 

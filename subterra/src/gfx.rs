@@ -263,8 +263,6 @@ pub struct PictureReader<'a> {
 	cursor_h: Cursor<&'a [u8]>,
 	/// The position just past the header.
 	checkpoint: u64,
-	palette: &'a Palette,
-	colormap: &'a ColorMap,
 	width: u16,
 	height: u16,
 	left: i16,
@@ -277,33 +275,7 @@ impl<'a> PictureReader<'a> {
 	/// Ensure that `bytes` is the entire lump.
 	/// This does not allocate, so `PictureReader::new.is_ok()` is a suitable
 	/// way to check if a WAD entry is a picture-format graphic.
-	pub fn new(
-		bytes: &'a [u8],
-		palette: &'a Palette,
-		colormap: &'a ColorMap,
-	) -> Result<PictureReader<'a>, Error> {
-		let c = Self::validate_impl(bytes)?;
-
-		Ok(Self {
-			bytes,
-			cursor_h: c.cursor_h,
-			checkpoint: c.checkpoint,
-			palette,
-			colormap,
-			width: c.width,
-			height: c.height,
-			left: c.left,
-			top: c.top,
-		})
-	}
-
-	/// An implementation detail of [`Self::new`], exposed to allow checking if
-	/// a byte array is a picture graphic without needing a [`Palette`] and [`ColorMap`].
-	pub fn validate(bytes: &[u8]) -> Result<(), Error> {
-		Self::validate_impl(bytes).map(|_| {})
-	}
-
-	fn validate_impl(bytes: &[u8]) -> Result<PictureCursor, Error> {
+	pub fn new(bytes: &'a [u8]) -> Result<PictureReader<'a>, Error> {
 		if bytes.len() < Self::HEADER_SIZE {
 			return Err(Error::MissingHeader {
 				expected: Self::HEADER_SIZE,
@@ -368,7 +340,8 @@ impl<'a> PictureReader<'a> {
 			}
 		}
 
-		Ok(PictureCursor {
+		Ok(Self {
+			bytes,
 			cursor_h,
 			checkpoint,
 			width,
@@ -396,7 +369,7 @@ impl<'a> PictureReader<'a> {
 	}
 
 	/// `callback`'s first two parameters are a row and column index respectively.
-	pub fn read<F>(mut self, mut callback: F)
+	pub fn read<F>(mut self, palette: &Palette, colormap: &ColorMap, mut callback: F)
 	where
 		F: FnMut(u32, u32, Rgb8),
 	{
@@ -420,8 +393,8 @@ impl<'a> PictureReader<'a> {
 
 				for ii in 0..(pixel_count as usize) {
 					let map_entry = cursor_pix.read_u8().unwrap();
-					let pal_entry = self.colormap[map_entry as usize];
-					let pixel = self.palette[pal_entry as usize];
+					let pal_entry = colormap[map_entry as usize];
+					let pixel = palette[pal_entry as usize];
 					let row = i as u32;
 					let col = (ii as u32) + (row_start as u32);
 					callback(row, col, pixel);
@@ -431,17 +404,6 @@ impl<'a> PictureReader<'a> {
 			}
 		}
 	}
-}
-
-struct PictureCursor<'a> {
-	/// Short for "header cursor".
-	cursor_h: Cursor<&'a [u8]>,
-	/// The position just past the header.
-	checkpoint: u64,
-	width: u16,
-	height: u16,
-	left: i16,
-	top: i16,
 }
 
 /// See <https://doomwiki.org/wiki/TEXTURE1_and_TEXTURE2>.
