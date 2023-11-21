@@ -35,6 +35,9 @@ impl std::ops::DerefMut for ColorMap {
 }
 
 /// See <https://doomwiki.org/wiki/COLORMAP>.
+///
+/// This type is meant to resemble a [`std::borrow::Cow`], since its content
+/// can be cheaply cast directly from raw bytes and used thus.
 #[derive(Debug, Clone)]
 pub enum ColorMapSet<'b> {
 	Borrowed(&'b [ColorMap; 34]),
@@ -143,7 +146,8 @@ impl std::ops::DerefMut for Palette {
 
 /// See <https://doomwiki.org/wiki/PLAYPAL>.
 ///
-/// This is meant to resemble a [`std::borrow::Cow`], since
+/// This type is meant to resemble a [`std::borrow::Cow`], since its content
+/// can be cheaply cast directly from raw bytes and used thus.
 #[derive(Debug)]
 pub enum PaletteSet<'b> {
 	Borrowed(&'b [Palette; 14]),
