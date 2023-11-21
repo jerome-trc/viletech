@@ -5,6 +5,7 @@ use bevy::{
 	reflect::TypeUuid,
 	render::render_resource::{AsBindGroup, ShaderRef},
 };
+use vfs::FileSlot;
 
 /// An implementation of [`bevy::app::Plugin`] which configures a Bevy app
 /// for VileTech-relevant rendering.
@@ -15,6 +16,14 @@ impl bevy::app::Plugin for GraphicsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_plugins((MaterialPlugin::<Sky2dMaterial>::default(),));
 	}
+}
+
+/// A unique identifier for an image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ImageSlot {
+	pub file: FileSlot,
+	/// `0` is a minimum coordinate in a rectangle; `1` is a maximum coordinate.
+	pub rect: Option<([u16; 2], [u16; 2])>,
 }
 
 #[derive(AsBindGroup, Reflect, Asset, Debug, Clone, TypeUuid)]

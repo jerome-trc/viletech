@@ -4,7 +4,9 @@
 //! this module sub-tree is only for symbols that are useful to both the sim
 //! and the level editor.
 
+pub mod line;
 pub mod mesh;
+pub mod sector;
 
 use bevy::prelude::*;
 use data::level::read::VertexRaw;
@@ -48,13 +50,17 @@ pub const FSCALE: f32 = 1.0;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ELevel(Entity);
 
-/// A strongly-typed [`Entity`] wrapper.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ESector(Entity);
+impl From<Entity> for ELevel {
+	fn from(value: Entity) -> Self {
+		Self(value)
+	}
+}
 
-/// A strongly-typed [`Entity`] wrapper.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ELine(Entity);
+impl From<ELevel> for Entity {
+	fn from(value: ELevel) -> Self {
+		value.0
+	}
+}
 
 /// A "flag" component for marking entities as being part of an active level.
 ///
