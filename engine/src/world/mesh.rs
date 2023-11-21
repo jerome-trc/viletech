@@ -261,6 +261,7 @@ fn points_to_poly(mut points: Vec<Vec2>) -> Option<Vec<Vec2>> {
 
 	for point in &mut simplified {
 		*point += (*point - center).normalize_or_zero() * POLY_BIAS;
+		*point *= -1.0;
 	}
 
 	Some(simplified)
