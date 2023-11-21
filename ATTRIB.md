@@ -28,6 +28,10 @@ See [here](./LICENSE) or https://www.gnu.org/licenses/quick-guide-gplv3.en.html.
 
 VileTech uses a function from the [enquote](https://crates.io/crates/enquote) crate, provided under [The Unlicense](./legal/enquote.txt).
 
+## Freedoom
+
+All assets used as sample data which originate from the [Freedoom project](https://freedoom.github.io/) are provided under [its license](./legal/freedoom.txt).
+
 ## GZDoom
 
 All source code marked as originating from [GZDoom's](https://zdoom.org/index) original C and C++ source is provided under a [sic] ["BSD-like license"](./legal/gzdoom.txt).

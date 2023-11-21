@@ -544,3 +544,16 @@ impl TextureX {
 		Ok(Some(Self(ret)))
 	}
 }
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn picture_reader() {
+		let pic = include_bytes!("../../sample/freedoom/STFST01.lmp");
+		let reader = PictureReader::new(pic).unwrap();
+		assert_eq!(reader.width(), 24);
+		assert_eq!(reader.height(), 29);
+	}
+}
