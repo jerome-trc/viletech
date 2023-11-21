@@ -294,7 +294,7 @@ pub(crate) fn on_enter(mut cmds: Commands, vfs: Res<VirtualFs>) {
 
 	cmds.spawn(Camera3dBundle {
 		transform: Transform {
-			translation: Vec3::new(0.0, 0.0, 50.0),
+			translation: Vec3::new(0.0, 0.0, 5000.0),
 			rotation: Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0),
 			..Default::default()
 		},

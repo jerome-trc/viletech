@@ -220,11 +220,11 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 
 	let mut camera = param.cameras.single_mut();
 
-	let (min_raw, _max_raw) = VertexRaw::bounds(vertdefs);
+	let ([min_raw_x, min_raw_y], [max_raw_x, max_raw_y]) = VertexRaw::bounds(vertdefs);
 
 	camera.translation = Vec3::new(
-		(min_raw[0] as f32) * viletech::world::FSCALE,
-		(min_raw[1] as f32) * viletech::world::FSCALE,
+		(((max_raw_x + min_raw_x) / 2) as f32) * viletech::world::FSCALE,
+		(((max_raw_y + min_raw_y) / 2) as f32) * viletech::world::FSCALE,
 		camera.translation.z,
 	);
 
@@ -364,8 +364,7 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 			let mut uvs = Vec::with_capacity(mesh_parts.verts.len());
 
 			for v in &mesh_parts.verts {
-				// TODO: this needs to correctly align flats, but it doesn't yet.
-				uvs.push(Vec2::new(-v.x, -v.y));
+				uvs.push(Vec2::new(-v.x / 64.0, -v.y / 64.0));
 			}
 
 			let mesh = Mesh::new(PrimitiveTopology::TriangleList)
@@ -381,8 +380,8 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 				material,
 				transform: Transform {
 					translation: Vec3::new(
-						(min_raw[0] as f32) * viletech::world::FSCALE,
-						(min_raw[1] as f32) * viletech::world::FSCALE,
+						(min_raw_x as f32) * viletech::world::FSCALE,
+						(min_raw_y as f32) * viletech::world::FSCALE,
 						0.0,
 					),
 					..Default::default()

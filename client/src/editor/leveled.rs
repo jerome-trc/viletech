@@ -122,14 +122,14 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 					.read()
 					.fold(Vec2::ZERO, |v, mm| v + mm.delta);
 
-				camera.translation.x += dt * mouse_delta.x;
-				camera.translation.y -= dt * mouse_delta.y;
+				camera.translation.x += dt * mouse_delta.x * 100.0;
+				camera.translation.y -= dt * mouse_delta.y * 100.0;
 			}
 
 			let speed = if param.input.keys.pressed(KeyCode::ShiftLeft) {
-				12.0
+				1200.0
 			} else {
-				6.0
+				600.0
 			};
 
 			if param.input.keys.pressed(KeyCode::Up) {
@@ -149,7 +149,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 			}
 
 			for ev_mwheel in param.input.events.ev_mouse_wheel.read() {
-				camera.translation.z -= ev_mwheel.y * 2.0;
+				camera.translation.z -= ev_mwheel.y * 200.0;
 			}
 		}
 		Viewpoint::Free => {
@@ -202,7 +202,7 @@ pub(super) fn ui(ed: &mut Editor, ui: &mut egui::Ui, mut param: SysParam) {
 			}
 
 			if mouse_delta != Vec2::ZERO {
-				pitch = (pitch - mouse_delta.y * 0.05 * dt)
+				pitch = (pitch - mouse_delta.y * dt)
 					.clamp(-std::f32::consts::PI / 2.0, std::f32::consts::PI / 2.0);
 				yaw -= mouse_delta.x * 0.1 * dt;
 

@@ -39,7 +39,10 @@ pub enum UdmfNamespace {
 
 /// All 16-bit integer position values get cast to `f32` and then reduced by this
 /// to fit VileTech's floating-point space.
-pub const FSCALE: f32 = 0.01;
+///
+/// Currently this does nothing, but ensure it remains and gets used so that
+/// it can be changed at will if necessary.
+pub const FSCALE: f32 = 1.0;
 
 /// A strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
