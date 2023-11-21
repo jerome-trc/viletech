@@ -7,50 +7,24 @@ use std::cmp::Ordering;
 
 use bevy::prelude::*;
 use data::level::{read::prelude::*, RawLevel};
-use smallvec::SmallVec;
 
 use super::FSCALE;
 
-/// The pair of convex polygons derived from one [`SSectorRaw`].
+/// A triangulated convex polygon derived from a [sub-sector](SSectorRaw).
 ///
-/// Both have identical geometry, but one is at the height of the subsector's
-/// floor level, and the other is at the height of the subsector's ceiling level.
+/// See [`triangulate`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubSectorPoly {
-	subsector: u32,
-	verts: Vec<Vec3>,
-	indices: Vec<usize>,
-	top_verts: u32,
-	top_indices: u32,
+	pub subsector: usize,
+	pub verts: Vec<Vec2>,
+	pub indices: Vec<usize>,
 }
 
-impl SubSectorPoly {
-	/// To which subsector does this polygon belong?
-	#[must_use]
-	pub fn subsector(&self) -> usize {
-		self.subsector as usize
-	}
-
-	/// Returns a slice of vertices and indices, respectively.
-	#[must_use]
-	pub fn floor(&self) -> (&[Vec3], &[usize]) {
-		(
-			&self.verts[..(self.top_verts as usize)],
-			&self.indices[..(self.top_indices as usize)],
-		)
-	}
-
-	/// Returns a slice of vertices and indices, respectively.
-	#[must_use]
-	pub fn ceiling(&self) -> (&[Vec3], &[usize]) {
-		(
-			&self.verts[(self.top_verts as usize)..],
-			&self.indices[(self.top_indices as usize)..],
-		)
-	}
-}
-
-pub fn subsectors_to_polygons<F: FnMut(SubSectorPoly)>(raw: RawLevel, mut callback: F) {
+/// Walk the binary space partition (BSP) tree of `raw` to
+///
+/// This assumes that [`RawLevel::nodes`], [`RawLevel::segs`], and
+/// [`RawLevel::subsectors`] are all non-empty with coherent content.
+pub fn triangulate<F: FnMut(SubSectorPoly)>(raw: RawLevel, mut callback: F) {
 	let mut bsp_lines = vec![];
 	recur(raw, &mut callback, &mut bsp_lines, raw.nodes.len() - 1);
 }
@@ -123,21 +97,8 @@ fn subsector_to_poly(
 	bsp_lines: &[Disp],
 	subsect_ix: usize,
 ) -> Option<SubSectorPoly> {
-	let mut mverts = vec![];
-
+	let mut points = vec![];
 	let subsect = &raw.subsectors[subsect_ix];
-	let seg0_ix = subsect.first_seg() as usize;
-	let seg_count = subsect.seg_count() as usize;
-	let seg0 = &raw.segs[seg0_ix + (seg_count - 1)];
-	let linedef = &raw.linedefs[seg0.linedef() as usize];
-
-	let sidedef = match seg0.direction() {
-		SegDirection::Front => &raw.sidedefs[linedef.right_side() as usize],
-		SegDirection::Back => &raw.sidedefs[linedef.left_side().unwrap() as usize],
-	};
-
-	let sector = &raw.sectors[sidedef.sector() as usize];
-
 	let mut last_seg_vert = 0;
 
 	for i in subsect.segs() {
@@ -146,20 +107,15 @@ fn subsector_to_poly(
 		let v_start_raw = &raw.vertices[seg_i.start_vertex() as usize];
 		let v_end_raw = &raw.vertices[seg_i.end_vertex() as usize];
 
-		let v_start = super::Vertex::from(*v_start_raw);
-		let v_end = super::Vertex::from(*v_end_raw);
+		points.push(Vec2 {
+			x: -((v_start_raw.position()[1] as f32) * FSCALE),
+			y: -((v_start_raw.position()[0] as f32) * FSCALE),
+		});
 
-		mverts.push(glam::vec3(
-			-v_start.y,
-			-v_start.x,
-			(sector.floor_height() as f32) * FSCALE,
-		));
-
-		mverts.push(glam::vec3(
-			-v_end.y,
-			-v_end.x,
-			(sector.floor_height() as f32) * FSCALE,
-		));
+		points.push(Vec2 {
+			x: -((v_end_raw.position()[1] as f32) * FSCALE),
+			y: -((v_end_raw.position()[0] as f32) * FSCALE),
+		});
 
 		last_seg_vert += 2;
 	}
@@ -184,70 +140,43 @@ fn subsector_to_poly(
 				.step_by(2)
 				.map(|vi| {
 					Disp::new(
-						glam::vec2(mverts[vi].x, mverts[vi].y),
-						glam::vec2(mverts[vi + 1].x, mverts[vi + 1].y),
+						glam::vec2(points[vi].x, points[vi].y),
+						glam::vec2(points[vi + 1].x, points[vi + 1].y),
 					)
 					.signed_distance(point)
 				})
 				.all(|d| d <= SEG_TOLERANCE);
 
 			if inside_bsp && inside_segs {
-				mverts.push(glam::vec3(
-					point.x,
-					point.y,
-					(sector.floor_height() as f32) * FSCALE,
-				));
+				points.push(Vec2 {
+					x: point.x,
+					y: point.y,
+				});
 			}
 		}
 	}
 
-	let Some(mut verts) = points_to_poly(mverts).filter(|v| v.len() >= 3) else {
+	let Some(verts) = points_to_poly(points).filter(|v| v.len() >= 3) else {
 		return None;
 	};
 
-	let mut verts2d = SmallVec::<[f32; 8]>::new();
+	let verts_flat = bytemuck::cast_vec::<_, f32>(verts);
 
-	for v in verts.iter().copied() {
-		verts2d.push(v.x);
-		verts2d.push(v.y);
-	}
-
-	let Ok(mut indices) = earcutr::earcut(&verts2d, &[], 2) else {
+	let Ok(indices) = earcutr::earcut(&verts_flat, &[], 2) else {
 		return None;
 	};
-
-	let v_len = verts.len();
-
-	for i in 0..v_len {
-		let vert = verts[i];
-
-		verts.push(glam::vec3(
-			vert.x,
-			vert.y,
-			(sector.ceiling_height() as f32) * FSCALE,
-		));
-	}
-
-	let i_len = indices.len();
-
-	for i in (0..i_len).rev() {
-		let vndx = indices[i];
-		indices.push(vndx);
-	}
 
 	Some(SubSectorPoly {
-		subsector: subsect_ix as u32,
-		verts,
+		subsector: subsect_ix,
+		verts: bytemuck::cast_vec(verts_flat),
 		indices,
-		top_verts: v_len as u32,
-		top_indices: i_len as u32,
 	})
 }
 
 // Triangulation ///////////////////////////////////////////////////////////////
 
 #[must_use]
-fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
+fn points_to_poly(mut points: Vec<Vec2>) -> Option<Vec<Vec2>> {
 	debug_assert!(
 		points.len() >= 3,
 		"`points_to_poly` received less than 3 points."
@@ -284,7 +213,7 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
 			};
 		}
 
-		if ac.xy().perp_dot(bc.xy()) < 0.0 {
+		if ac.perp_dot(bc) < 0.0 {
 			Ordering::Less
 		} else {
 			Ordering::Greater
@@ -300,8 +229,8 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
 	for next_point in points.iter().skip(2).copied() {
 		let prev_point = simplified[simplified.len() - 1];
 
-		let new = (next_point - current_point).xy();
-		let new_area = new.perp_dot((current_point - prev_point).xy()) * 0.5;
+		let new = next_point - current_point;
+		let new_area = new.perp_dot(current_point - prev_point) * 0.5;
 
 		if new_area >= 0.0 {
 			if area + new_area > 1.024e-5 {
@@ -321,11 +250,7 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
 		return None;
 	}
 
-	while (simplified[0] - simplified[simplified.len() - 1])
-		.xy()
-		.length()
-		< 0.0032
-	{
+	while (simplified[0] - simplified[simplified.len() - 1]).length() < 0.0032 {
 		simplified.pop();
 	}
 
@@ -342,7 +267,7 @@ fn points_to_poly(mut points: Vec<Vec3>) -> Option<Vec<Vec3>> {
 }
 
 #[must_use]
-fn poly_center(verts: &[Vec3]) -> Vec3 {
+fn poly_center(verts: &[Vec2]) -> Vec2 {
 	let sum = verts
 		.iter()
 		.cloned()
@@ -353,7 +278,10 @@ fn poly_center(verts: &[Vec3]) -> Vec3 {
 
 	// Move the center slightly so that the angles are not all equal
 	// if the polygon is a perfect quadrilateral.
-	glam::vec3(center.x + f32::EPSILON, center.y + f32::EPSILON, center.z)
+	Vec2 {
+		x: center.x + f32::EPSILON,
+		y: center.y + f32::EPSILON,
+	}
 }
 
 // Disp ////////////////////////////////////////////////////////////////////////

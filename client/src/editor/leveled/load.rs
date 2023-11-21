@@ -266,8 +266,8 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		|| {
 			let mut mesh_parts_map = FxHashMap::default();
 
-			viletech::world::mesh::subsectors_to_polygons(raw, |poly| {
-				let subsect = &raw.subsectors[poly.subsector()];
+			viletech::world::mesh::triangulate(raw, |ss_poly| {
+				let subsect = &raw.subsectors[ss_poly.subsector];
 				let seg = &raw.segs[subsect.first_seg() as usize];
 				let line = &raw.linedefs[seg.linedef() as usize];
 
@@ -276,20 +276,23 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 					SegDirection::Back => &raw.sidedefs[line.left_side().unwrap() as usize],
 				};
 
+				let sectordef = &raw.sectors[side.sector() as usize];
+
 				let mesh_parts = mesh_parts_map
 					.entry(side.sector() as usize)
 					.or_insert(MeshParts::default());
 
-				let (poly_verts, poly_ixs) = poly.floor();
-
-				for i in poly_ixs {
-					mesh_parts
-						.indices
-						.push((*i + mesh_parts.verts.len()) as u32);
+				for i in ss_poly.indices {
+					let idx = (i + mesh_parts.verts.len()) as u32;
+					mesh_parts.indices.push(idx);
 				}
 
-				for v in poly_verts {
-					mesh_parts.verts.push(*v);
+				for v in ss_poly.verts {
+					mesh_parts.verts.push(Vec3::new(
+						v.x,
+						v.y,
+						(sectordef.floor_height() as f32) * viletech::world::FSCALE,
+					));
 				}
 			});
 
