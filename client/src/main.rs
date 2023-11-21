@@ -10,7 +10,6 @@ mod game;
 mod load;
 mod playground;
 mod setup;
-mod types;
 
 use std::time::{Duration, Instant};
 

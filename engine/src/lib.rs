@@ -27,6 +27,7 @@ pub mod rng;
 // pub mod sim;
 pub mod terminal;
 pub extern crate tracing;
+pub mod types;
 pub mod user;
 pub extern crate util;
 pub extern crate vfs;

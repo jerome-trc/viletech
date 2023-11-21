@@ -8,18 +8,16 @@ use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 use viletech::{
 	level::{read::prelude::*, RawLevel, RawThings},
+	types::FxDashMap,
 	util::{string::ZString, SmallString},
 	vfs::FileSlot,
 };
 
-use crate::{
-	editor::{
-		self,
-		contentid::ContentId,
-		leveled::{EdSector, EditedLevel},
-		Editor,
-	},
-	types::FxDashMap,
+use crate::editor::{
+	self,
+	contentid::ContentId,
+	leveled::{EdSector, EditedLevel},
+	Editor,
 };
 
 use super::SysParam;
