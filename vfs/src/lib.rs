@@ -317,7 +317,6 @@ impl VirtualFs {
 	}
 
 	/// Changes the names of all files and folders to be ASCII lowercase.
-	#[must_use]
 	pub fn normalize_names(&mut self) {
 		self.files.values_mut().par_bridge().for_each(|vfile| {
 			vfile.name.make_ascii_lowercase();

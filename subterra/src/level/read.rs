@@ -162,7 +162,6 @@ pub fn linedefs_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
 /// Like [`linedefs`], but any bytes at the end of slice which do not fit into
 /// another [`LineDefRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn linedefs_lossy(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("LINEDEFS"));
@@ -177,7 +176,6 @@ pub fn linedefs_lossy(lump: &[u8]) -> Result<&[LineDefRaw], Error> {
 /// Like [`linedefs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`LineDefRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn linedefs_lossy_mut(lump: &mut [u8]) -> Result<&mut [LineDefRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("LINEDEFS"));
@@ -289,7 +287,6 @@ pub fn nodes_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
 /// Like [`nodes`], but any bytes at the end of slice which do not fit into
 /// another [`NodeRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn nodes_lossy(lump: &[u8]) -> Result<&[NodeRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("NODES"));
@@ -304,7 +301,6 @@ pub fn nodes_lossy(lump: &[u8]) -> Result<&[NodeRaw], Error> {
 /// Like [`nodes_mut`], but any bytes at the end of slice which do not fit into
 /// another [`NodeRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn nodes_lossy_mut(lump: &mut [u8]) -> Result<&mut [NodeRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("NODES"));
@@ -404,7 +400,6 @@ pub fn sectors_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
 /// Like [`sectors`], but any bytes at the end of slice which do not fit into
 /// another [`SectorRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn sectors_lossy(lump: &[u8]) -> Result<&[SectorRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SECTORS"));
@@ -419,7 +414,6 @@ pub fn sectors_lossy(lump: &[u8]) -> Result<&[SectorRaw], Error> {
 /// Like [`sectors_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SectorRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn sectors_lossy_mut(lump: &mut [u8]) -> Result<&mut [SectorRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SECTORS"));
@@ -529,7 +523,6 @@ pub fn segs_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
 /// Like [`segs`], but any bytes at the end of slice which do not fit into
 /// another [`SegRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn segs_lossy(lump: &[u8]) -> Result<&[SegRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SEGS"));
@@ -544,7 +537,6 @@ pub fn segs_lossy(lump: &[u8]) -> Result<&[SegRaw], Error> {
 /// Like [`segs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SegRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn segs_lossy_mut(lump: &mut [u8]) -> Result<&mut [SegRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SEGS"));
@@ -634,7 +626,6 @@ pub fn sidedefs_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
 /// Like [`sidedefs`], but any bytes at the end of slice which do not fit into
 /// another [`SideDefRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn sidedefs_lossy(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SIDEDEFS"));
@@ -649,7 +640,6 @@ pub fn sidedefs_lossy(lump: &[u8]) -> Result<&[SideDefRaw], Error> {
 /// Like [`sidedefs_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SideDefRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn sidedefs_lossy_mut(lump: &mut [u8]) -> Result<&mut [SideDefRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SIDEDEFS"));
@@ -724,7 +714,6 @@ pub fn ssectors_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
 /// Like [`ssectors`], but any bytes at the end of slice which do not fit into
 /// another [`SSectorRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn ssectors_lossy(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SSECTORS"));
@@ -739,7 +728,6 @@ pub fn ssectors_lossy(lump: &[u8]) -> Result<&[SSectorRaw], Error> {
 /// Like [`ssectors_mut`], but any bytes at the end of slice which do not fit into
 /// another [`SSectorRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn ssectors_lossy_mut(lump: &mut [u8]) -> Result<&mut [SSectorRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("SSECTORS"));
@@ -884,7 +872,6 @@ pub fn things_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
 /// Like [`things`], but any bytes at the end of slice which do not fit into
 /// another [`ThingRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn things_lossy(lump: &[u8]) -> Result<&[ThingRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("THINGS"));
@@ -899,7 +886,6 @@ pub fn things_lossy(lump: &[u8]) -> Result<&[ThingRaw], Error> {
 /// Like [`things_mut`], but any bytes at the end of slice which do not fit into
 /// another [`ThingRaw`] are truncated.
 /// Returns [`Error::EmptyFile`] if the length of `lump` is zero.
-#[must_use]
 pub fn things_lossy_mut(lump: &mut [u8]) -> Result<&mut [ThingRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("THINGS"));
@@ -1027,7 +1013,6 @@ pub fn things_ext(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
 
 /// Like [`things_ext`], but any bytes at the end of slice which do not fit into
 /// another [`ThingExtRaw`] are truncated.
-#[must_use]
 pub fn things_ext_lossy(lump: &[u8]) -> Result<&[ThingExtRaw], Error> {
 	if lump.is_empty() {
 		return Err(Error::EmptyFile("THINGS"));
@@ -1102,7 +1087,6 @@ pub fn vertexes_mut(lump: &mut [u8]) -> Result<&mut [VertexRaw], Error> {
 
 /// Like [`vertexes`], but any bytes at the end of slice which do not fit into
 /// another [`VertexRaw`] are truncated.
-#[must_use]
 pub fn vertexes_lossy(lump: &[u8]) -> &[VertexRaw] {
 	let sz = std::mem::size_of::<VertexRaw>();
 	let count = lump.len() / sz;
@@ -1112,7 +1096,6 @@ pub fn vertexes_lossy(lump: &[u8]) -> &[VertexRaw] {
 
 /// Like [`vertexes_mut`], but any bytes at the end of slice which do not fit into
 /// another [`VertexRaw`] are truncated.
-#[must_use]
 pub fn vertexes_lossy_mut(lump: &mut [u8]) -> &mut [VertexRaw] {
 	let sz = std::mem::size_of::<VertexRaw>();
 	let count = lump.len() / sz;
