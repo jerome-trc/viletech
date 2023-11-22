@@ -4,10 +4,10 @@ use bevy::{
 	prelude::*,
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use rayon::prelude::*;
-use rustc_hash::FxHashMap;
 use viletech::{
 	level::{read::prelude::*, RawLevel, RawThings},
+	rayon::{self, prelude::*},
+	rustc_hash::FxHashMap,
 	types::FxDashMap,
 	util::{string::ZString, SmallString},
 	vfs::FileSlot,

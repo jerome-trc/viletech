@@ -1,9 +1,9 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
 use egui_extras::TableBody;
-use regex::{Regex, RegexBuilder};
-use rustc_hash::{FxHashMap, FxHashSet};
 use viletech::{
+	regex::{self, Regex, RegexBuilder},
+	rustc_hash::{FxHashMap, FxHashSet},
 	util::string::subdivide_file_len,
 	vfs::{self, FileRef, FileSlot, FolderKind, FolderRef, FolderSlot},
 	VirtualFs,

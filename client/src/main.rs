@@ -21,6 +21,7 @@ use bevy_egui::EguiPlugin;
 use clap::Parser;
 use viletech::{
 	audio::AudioCore,
+	crossbeam,
 	tracing::info,
 	user::UserCore,
 	vfs::{self, VPath},

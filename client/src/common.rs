@@ -6,6 +6,7 @@ use bevy_egui::{systems::InputEvents, EguiContexts};
 use viletech::{
 	audio::AudioCore,
 	console::Console,
+	image,
 	vfs::{self, VPath},
 	VirtualFs,
 };

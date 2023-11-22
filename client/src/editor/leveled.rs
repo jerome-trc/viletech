@@ -2,8 +2,7 @@ pub(crate) mod load;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
-use rustc_hash::FxHashMap;
-use viletech::{gfx::Sky2dMaterial, vfs::FileSlot, VirtualFs};
+use viletech::{gfx::Sky2dMaterial, rustc_hash::FxHashMap, vfs::FileSlot, VirtualFs};
 
 use crate::common::InputParam;
 

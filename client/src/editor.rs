@@ -13,9 +13,9 @@ use bevy::{
 };
 use bevy_egui::{egui, EguiContexts};
 use parking_lot::Mutex;
-use rayon::prelude::*;
 use viletech::{
 	data::gfx::{ColorMapSet, PaletteSet},
+	rayon::prelude::*,
 	vfs::FileSlot,
 	VirtualFs,
 };

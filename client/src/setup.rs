@@ -13,9 +13,9 @@ use bevy::{
 	window::WindowMode,
 	winit::{UpdateMode, WinitSettings},
 };
-use crossbeam::channel::{Receiver, Sender};
 use viletech::{
 	console::{self, Console},
+	crossbeam::channel::{Receiver, Sender},
 	log::TracingPlugin,
 };
 
