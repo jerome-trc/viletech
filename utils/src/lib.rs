@@ -26,6 +26,7 @@ pub mod string;
 pub extern crate archery;
 
 pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
+pub type SmallZString = string::ZString<SmallString>;
 
 /// Note that minutes and seconds are both remainders, not totals.
 #[must_use]
