@@ -3,7 +3,6 @@
 use std::io::Cursor;
 
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use glam::{IVec2, UVec2};
 use util::{io::CursorExt, Id8};
 
 use crate::Error;
@@ -432,15 +431,18 @@ impl std::ops::DerefMut for TextureX {
 #[derive(Debug)]
 pub struct PatchedTex {
 	pub name: Id8,
-	pub size: UVec2,
+	pub size_x: u32,
+	pub size_y: u32,
 	pub patches: Vec<TexPatch>,
 }
 
 /// See [`PatchedTex`].
 #[derive(Debug)]
 pub struct TexPatch {
-	/// Offset of this patch relative to the upper-left of the whole texture.
-	pub origin: IVec2,
+	/// X-offset of this patch relative to the upper-left of the whole texture.
+	pub origin_x: i32,
+	/// Y-offset of this patch relative to the upper-left of the whole texture.
+	pub origin_y: i32,
 	/// Index into [`PatchTable`].
 	pub index: usize,
 }
@@ -531,7 +533,8 @@ impl TextureX {
 				let raw_patch = bytemuck::from_bytes::<RawMapPatch>(&bytes[range]);
 
 				patches.push(TexPatch {
-					origin: glam::ivec2(raw_patch.origin_x as i32, raw_patch.origin_y as i32),
+					origin_x: raw_patch.origin_x as i32,
+					origin_y: raw_patch.origin_y as i32,
 					index: raw_patch.patch as usize,
 				});
 
@@ -540,7 +543,8 @@ impl TextureX {
 
 			ret.push(PatchedTex {
 				name: util::read_id8(raw_tex.name).unwrap_or_default(),
-				size: glam::uvec2(raw_tex.width as u32, raw_tex.height as u32),
+				size_x: raw_tex.width as u32,
+				size_y: raw_tex.height as u32,
 				patches,
 			});
 		}

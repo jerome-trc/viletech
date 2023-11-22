@@ -5004,13 +5004,10 @@ name = "subterra"
 version = "0.0.0"
 dependencies = [
  "bitflags 2.3.1",
- "bitvec",
  "bytemuck",
  "byteorder",
  "criterion",
- "glam",
  "logos",
- "rayon",
  "regex",
  "serde",
  "viletech-utils",
