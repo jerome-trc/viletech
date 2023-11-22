@@ -1,19 +1,20 @@
 //! Home of all gameplay code.
+//!
+//! Note that this does not include [actor] or [world] component definitions
+//! (which are used by the level editor as well as the gameplay simulation);
+//! it is strictly reserved for ECS systems and their implementation details.
+//!
+//! [actor]: crate::actor
+//! [world]: crate::world
 
-pub mod actor;
-pub mod level;
-pub mod line;
-pub mod sector;
-pub mod setup;
 pub mod skill;
 
 use std::time::{Duration, Instant};
 
-use bevy::{pbr::wireframe::Wireframe, prelude::*};
-use data::level::LevelDef;
+use bevy::prelude::*;
 use nanorand::WyRand;
 
-use crate::{catalog::dobj, rng::RngCore};
+use crate::rng::RngCore;
 
 /// All gameplay simulation state.
 #[derive(Resource, Debug)]
@@ -89,38 +90,4 @@ pub fn tick(mut sim: ResMut<Sim>, mut fixed_time: ResMut<Time<Fixed>>) {
 
 		fixed_time.set_timestep(sim.timing.tick_interval());
 	}
-}
-
-pub fn start(mut cmds: Commands, context: setup::Context, level: dobj::Handle<LevelDef>) {
-	let start_time = Instant::now();
-
-	let l = level.clone();
-
-	cmds.spawn((
-		GlobalTransform::default(),
-		InheritedVisibility::default(),
-		ViewVisibility::default(),
-		Wireframe,
-		ActiveMarker,
-	))
-	.with_children(|cbuilder| {
-		for thingdef in &level.thingdefs {
-			if thingdef.ed_num == 1 {
-				cbuilder.spawn(Camera3dBundle {
-					transform: Transform::from_xyz(thingdef.pos.x, 0.001, thingdef.pos.z),
-					..default()
-				});
-
-				break;
-			}
-		}
-
-		setup::level::setup(context, level, cbuilder);
-	});
-
-	info!(
-		"Sim setup complete ({}) in {}ms.",
-		&l.id(),
-		start_time.elapsed().as_millis()
-	);
 }

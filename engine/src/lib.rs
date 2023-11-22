@@ -10,6 +10,7 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
+pub mod actor;
 pub mod asset;
 pub mod audio;
 pub mod basedata;
@@ -34,7 +35,7 @@ pub extern crate rayon;
 pub extern crate regex;
 pub mod rng;
 pub extern crate rustc_hash;
-// pub mod sim;
+pub mod sim;
 pub mod terminal;
 pub extern crate tracing;
 pub mod types;

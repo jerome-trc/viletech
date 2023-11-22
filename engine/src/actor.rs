@@ -3,13 +3,15 @@
 //! In other words, the player, monsters, inventory items, decorations,
 //! and projectiles are all actors.
 
+pub mod blueprint;
+
 use std::num::NonZeroI32;
 
 use bevy::prelude::*;
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::dobj::{self, Blueprint};
+pub use blueprint::Blueprint;
 
 /// Strongly-typed [`Entity`] wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -52,7 +54,7 @@ bitflags! {
 #[derive(Debug, Component)]
 pub struct Readonly {
 	/// The blueprint off which this actor is based.
-	pub blueprint: dobj::Handle<Blueprint>,
+	pub blueprint: Handle<Blueprint>,
 	/// Universally unique.
 	pub id: Actor,
 	/// From GZ; affects render order somehow. VileTech may cull.
