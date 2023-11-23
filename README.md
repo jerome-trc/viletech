@@ -13,6 +13,10 @@ The goals of the VileTech "project" are as follows, in descending order of prior
 	- Adding features which fall outside GZDoom's scope.
 	- Eliminating compatibility for the 1% of legacy user content which GZDoom supports to its detriment.
 
+Beware that this project:
+- is deep in development. None of these crates are published for good reason; nothing is feature complete or rigorously-tested. You should not assume that an interface which isn't marked `unsafe` is safe.
+- is strictly a solo hobby project. The code within this repository is going to be deeply disorganized for the foreseeable future.
+
 ## Contents
 
 ### /cli
