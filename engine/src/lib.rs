@@ -56,11 +56,6 @@ pub struct RgbaF32 {
 	pub alpha: f32,
 }
 
-/// Type alias for Bevy's two-point rectangle to disambiguate from VileTech's [4-point counterpart].
-///
-/// [4-point counterpart]: util::math::Rect4
-pub type Rect2 = bevy::math::Rect;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum BaseGame {
 	Doom,
