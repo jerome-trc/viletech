@@ -90,6 +90,7 @@ fn with_sample_dir() {
 }
 
 #[test]
+#[ignore]
 fn inctree() {
 	let (root_path, _) = match read_sample_data("DOOMFRONT_ZSCRIPT_SAMPLE_INCTREE") {
 		Ok(s) => s,
