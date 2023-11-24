@@ -1,6 +1,6 @@
 use bevy::{
 	app::AppExit, ecs::system::SystemParam, input::mouse::MouseMotion, prelude::*,
-	winit::WinitWindows,
+	window::ApplicationLifetime, winit::WinitWindows,
 };
 use bevy_egui::{systems::InputEvents, EguiContexts};
 use viletech::{
@@ -41,6 +41,7 @@ pub(crate) fn update(
 	mut core: ClientCommon,
 	mut exit: EventWriter<AppExit>,
 	mut new_windows: EventReader<NewWindow>,
+	mut app_events: EventReader<ApplicationLifetime>,
 	winits: NonSend<WinitWindows>,
 ) {
 	core.audio.update();
@@ -63,6 +64,14 @@ pub(crate) fn update(
 		let window_id = winits.entity_to_winit.get(&new_window.0).unwrap();
 		let window = winits.windows.get(window_id).unwrap();
 		set_window_icon(&core.vfs, window);
+	}
+
+	for app_event in app_events.read() {
+		match app_event {
+			ApplicationLifetime::Suspended => info!("Application suspended..."),
+			ApplicationLifetime::Resumed => info!("Application resumed..."),
+			ApplicationLifetime::Started => {}
+		}
 	}
 }
 

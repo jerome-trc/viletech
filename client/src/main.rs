@@ -30,10 +30,7 @@ use viletech::{
 
 use crate::{first::FirstStartup, playground::Playground, setup::LaunchArgs};
 
-// TODO:
-// - Pause all audio when focus is lost, and resume when focus is regained.
-// - Write log messages when Winit reports application suspension or resume,
-// for the benefit of diagnostics.
+// TODO: pause all audio when focus is lost, and resume when focus is regained.
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let start_time = Instant::now();
