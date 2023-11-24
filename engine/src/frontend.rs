@@ -271,11 +271,25 @@ impl FrontendMenu {
 						Cow::Borrowed("<unnamed file>")
 					};
 
+					let mut text = egui::RichText::new(name.as_ref());
+
+					let item_exists = path.exists();
+
+					if !item_exists {
+						text = text.strikethrough();
+					}
+
 					ui.checkbox(enabled, "");
 
-					let name_label = egui::Label::new(name.as_ref()).sense(egui::Sense::click());
+					let name_label = egui::Label::new(text).sense(egui::Sense::click());
 
-					if ui.add(name_label).clicked() {
+					let mut resp = ui.add(name_label);
+
+					if !item_exists {
+						resp = resp.on_hover_text("This file or folder does not exist.");
+					}
+
+					if resp.clicked() {
 						to_select = i;
 					}
 				}
