@@ -1,6 +1,6 @@
 //! Functions for setting up the Bevy app before any meaningful execution starts.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bevy::{
 	app::PluginGroupBuilder,
@@ -54,6 +54,7 @@ pub(crate) struct LaunchArgs {
 
 #[must_use]
 pub(crate) fn default_plugins(
+	start_time: Instant,
 	args: &LaunchArgs,
 	log_sender: Sender<console::Message>,
 ) -> PluginGroupBuilder {
@@ -83,9 +84,10 @@ pub(crate) fn default_plugins(
 		})
 		.disable::<LogPlugin>()
 		.add_before::<TaskPoolPlugin, _>(TracingPlugin {
+			start_time,
 			console_sender: Some(log_sender),
 			level: args.verbosity,
-			..Default::default()
+			filter: "wgpu=error".to_string(),
 		})
 }
 

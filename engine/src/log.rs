@@ -23,6 +23,9 @@ pub use tracing::Level;
 
 #[derive(Debug)]
 pub struct TracingPlugin {
+	/// Uptime stamps will be relative to this. The closer it is to the start time
+	/// of the application installing this plugin, the better.
+	pub start_time: Instant,
 	/// Filters logs using the [`tracing_subscriber::EnvFilter`] format.
 	pub filter: String,
 	/// Filters out logs that are "less than" the given level.
@@ -58,16 +61,6 @@ impl TracingPlugin {
 	}
 }
 
-impl Default for TracingPlugin {
-	fn default() -> Self {
-		Self {
-			filter: "wgpu=error".to_string(),
-			level: tracing::Level::INFO,
-			console_sender: None,
-		}
-	}
-}
-
 impl bevy::prelude::Plugin for TracingPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		use tracing_subscriber::fmt;
@@ -88,22 +81,18 @@ impl bevy::prelude::Plugin for TracingPlugin {
 			}
 		}
 
-		let start_time = crate::START_TIME
-			.get()
-			.expect("`viletech::START_TIME` must be set to use `TracingPlugin`");
-
 		let logger_set = LogTracer::init().is_err();
 
 		let (fwriter, guard) = Self::file_writer();
 
 		app.insert_resource(FileAppenderWorkerGuard(guard));
 
-		let layer_stdout = fmt::Layer::default().with_timer(Uptime(*start_time));
+		let layer_stdout = fmt::Layer::default().with_timer(Uptime(self.start_time));
 
 		let layer_file = fmt::Layer::default()
 			.with_ansi(false)
 			.with_target(false)
-			.with_timer(Uptime(*start_time))
+			.with_timer(Uptime(self.start_time))
 			.with_writer(fwriter);
 
 		let subscriber_set = if let Some(sender) = &self.console_sender {
@@ -115,7 +104,7 @@ impl bevy::prelude::Plugin for TracingPlugin {
 			let layer_console = fmt::Layer::default()
 				.with_ansi(false)
 				.with_target(false)
-				.with_timer(Uptime(*start_time))
+				.with_timer(Uptime(self.start_time))
 				.with_writer(cwriter);
 
 			let collector = tracing_subscriber::registry()

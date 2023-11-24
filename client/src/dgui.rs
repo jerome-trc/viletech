@@ -12,7 +12,7 @@ use viletech::{
 	VirtualFs,
 };
 
-use crate::{ccmd, common::InputParam, playground::Playground};
+use crate::{ccmd, common::InputParam, playground::Playground, AppUptime};
 
 pub(crate) type Console = viletech::console::Console<ccmd::Command>;
 
@@ -48,6 +48,7 @@ impl std::fmt::Display for SideMenu {
 
 #[derive(SystemParam)]
 pub(crate) struct SysParam<'w, 's> {
+	pub(crate) uptime: Res<'w, AppUptime>,
 	pub(crate) egui: EguiContexts<'w, 's>,
 	pub(crate) dguis: Query<'w, 's, (Entity, &'static Window, &'static mut DevGui)>,
 
@@ -89,7 +90,7 @@ pub(crate) fn draw(mut param: SysParam, mut state: ResMut<State>) {
 				ui.set_max_width(screen_rect.width());
 
 				egui::menu::bar(ui, |ui| {
-					let uptime = viletech::START_TIME.get().unwrap().elapsed();
+					let uptime = param.uptime.elapsed();
 					let (hh, mm, ss) = util::duration_to_hhmmss(uptime);
 
 					ui.label(format!("{hh:02}:{mm:02}:{ss:02}"))

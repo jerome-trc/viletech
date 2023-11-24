@@ -36,7 +36,7 @@ use crate::{first::FirstStartup, playground::Playground, setup::LaunchArgs};
 // for the benefit of diagnostics.
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	viletech::START_TIME.set(Instant::now()).unwrap();
+	let start_time = Instant::now();
 	let args = LaunchArgs::parse();
 
 	if args.version_full {
@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	app.add_plugins(LogDiagnosticsPlugin::default());
 	let (log_sender, log_receiver) = crossbeam::channel::unbounded();
-	app.world.insert_resource(ExitHandler);
+	app.world.insert_resource(AppUptime(start_time));
 
 	let mut vfs = VirtualFs(vfs::VirtualFs::default());
 	vfs.mount(&viletech::basedata::path(), VPath::new("viletech"))?;
@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	app.add_state::<AppState>()
 		.insert_resource(setup::winit_settings())
-		.add_plugins(setup::default_plugins(&args, log_sender))
+		.add_plugins(setup::default_plugins(start_time, &args, log_sender))
 		.add_plugins((WireframePlugin, viletech::gfx::GraphicsPlugin, EguiPlugin));
 
 	app.add_event::<editor::Event>()
@@ -198,10 +198,10 @@ pub(crate) enum AppState {
 	Editor,
 }
 
-#[derive(Debug, Resource)]
-struct ExitHandler;
+#[derive(Debug, Resource, Deref)]
+struct AppUptime(Instant);
 
-impl Drop for ExitHandler {
+impl Drop for AppUptime {
 	/// (RAT) In my experience, a runtime log is much more informative if it
 	/// states the duration for which the program executed. Messages are already
 	/// stamped with the current uptime, so just state that the program is closing.

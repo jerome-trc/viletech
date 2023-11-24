@@ -59,7 +59,7 @@ struct LaunchArgs {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	viletech::START_TIME.set(Instant::now()).unwrap();
+	let start_time = Instant::now();
 	let args = LaunchArgs::parse();
 
 	if args.version_full {
@@ -81,7 +81,7 @@ VileTech Server {s_vers}
 
 	// (RAT) In my experience, a runtime log is much more informative if it
 	// states the duration for which the program executed.
-	let uptime = viletech::START_TIME.get().unwrap().elapsed();
+	let uptime = start_time.elapsed();
 	let (hh, mm, ss) = duration_to_hhmmss(uptime);
 	info!("Uptime: {hh:02}:{mm:02}:{ss:02}");
 
