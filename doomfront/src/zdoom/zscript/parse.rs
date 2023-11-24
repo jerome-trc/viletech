@@ -30,7 +30,11 @@ pub fn file(p: &mut Parser<Syn>) {
 
 		match token {
 			Token::KwClass => {
-				class_def(p);
+				if class_def(p) {
+					p.close(root, Syn::Root);
+					return;
+				}
+
 				continue;
 			}
 			Token::KwStruct => {

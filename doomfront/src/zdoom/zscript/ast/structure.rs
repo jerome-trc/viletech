@@ -20,6 +20,30 @@ pub struct ClassDef(pub(super) SyntaxNode);
 simple_astnode!(Syn, ClassDef, Syn::ClassDef);
 
 impl ClassDef {
+	#[must_use]
+	pub fn head(&self) -> ClassHead {
+		let ret = self.0.first_child().unwrap();
+		debug_assert_eq!(ret.kind(), Syn::ClassHead);
+		ClassHead(ret)
+	}
+
+	pub fn innards(&self) -> impl Iterator<Item = ClassInnard> {
+		ClassInnard::iter_from_node(self.0.clone())
+	}
+
+	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
+		super::doc_comments(&self.0)
+	}
+}
+
+/// Wraps a node tagged [`Syn::ClassHead`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ClassHead(SyntaxNode);
+
+simple_astnode!(Syn, ClassHead, Syn::ClassHead);
+
+impl ClassHead {
 	/// The returned token is always tagged [`Syn::KwClass`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
@@ -56,13 +80,7 @@ impl ClassDef {
 	}
 
 	pub fn qualifiers(&self) -> impl Iterator<Item = ClassQual> {
-		let quals = self
-			.0
-			.children()
-			.find(|node| node.kind() == Syn::ClassQuals)
-			.unwrap();
-
-		quals
+		self.0
 			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
 				Syn::KwAbstract => Some(ClassQual::Abstract(elem.into_token().unwrap())),
@@ -77,14 +95,6 @@ impl ClassDef {
 				}
 				_ => None,
 			})
-	}
-
-	pub fn innards(&self) -> impl Iterator<Item = ClassInnard> {
-		ClassInnard::iter_from_node(self.0.clone())
-	}
-
-	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
-		super::doc_comments(&self.0)
 	}
 }
 

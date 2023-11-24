@@ -510,17 +510,60 @@ States
 
 	let ptree: ParseTree = crate::parse(
 		SAMPLE.trim(),
-		class_def,
+		|p| {
+			let _ = class_def(p);
+		},
 		zdoom::lex::Context::ZSCRIPT_LATEST,
 	);
+
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
 
 #[test]
+fn class_file_smoke() {
+	const SAMPLE: &str = r"
+// ???
+
+class Lorem : Ipsum abstract;
+
+int dolor;
+
+void sitAmet() {}
+
+class Consectetur; // This is a field, not a class head.
+
+// !!!
+";
+
+	let ptree: ParseTree = crate::parse(
+		SAMPLE.trim(),
+		|p| {
+			let _ = file(p);
+		},
+		zdoom::lex::Context::ZSCRIPT_LATEST,
+	);
+
+	assert_no_errors(&ptree);
+	prettyprint_maybe(ptree.cursor());
+
+	let ast::TopLevel::ClassDef(_) =
+		ast::TopLevel::cast(ptree.cursor().first_child().unwrap()).unwrap()
+	else {
+		panic!()
+	};
+}
+
+#[test]
 fn class_named_void() {
 	const SAMPLE: &str = "class void {}";
-	let ptree: ParseTree = crate::parse(SAMPLE, class_def, zdoom::lex::Context::ZSCRIPT_LATEST);
+	let ptree: ParseTree = crate::parse(
+		SAMPLE,
+		|p| {
+			let _ = class_def(p);
+		},
+		zdoom::lex::Context::ZSCRIPT_LATEST,
+	);
 	assert_no_errors(&ptree);
 	prettyprint_maybe(ptree.cursor());
 }
@@ -532,7 +575,13 @@ fn class_error_recovery() {
 protected action void A_DF_Action()
 }"#####;
 
-	let ptree = crate::parse(SAMPLE, class_def, zdoom::lex::Context::ZSCRIPT_LATEST);
+	let ptree = crate::parse(
+		SAMPLE,
+		|p| {
+			let _ = class_def(p);
+		},
+		zdoom::lex::Context::ZSCRIPT_LATEST,
+	);
 	assert!(ptree.any_errors());
 	prettyprint_maybe(ptree.cursor());
 }
@@ -588,7 +637,8 @@ class DevastationFixed {}
 	let ptree: ParseTree = crate::parse(SAMPLE, file, zdoom::lex::Context::ZSCRIPT_LATEST);
 	assert_no_errors(&ptree);
 	let class = ast::ClassDef::cast(ptree.cursor().first_child().unwrap()).unwrap();
-	assert_eq!(class.name().unwrap().text(), "DevastationFixed");
+	let head = class.head();
+	assert_eq!(head.name().unwrap().text(), "DevastationFixed");
 	let mut docs = class.docs();
 	assert_eq!(docs.next().unwrap().text_trimmed(), "UAC Mines");
 	assert_eq!(docs.next().unwrap().text_trimmed(), "Sector 14-3");

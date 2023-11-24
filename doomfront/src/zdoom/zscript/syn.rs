@@ -7,6 +7,11 @@ use crate::{zdoom::Token, LangExt};
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Syn {
+	/// A sequence of tokens that did not form a valid syntax element.
+	Error,
+	/// The top-level node, representing the whole file.
+	Root,
+
 	// Nodes: high-level composites ////////////////////////////////////////////
 	/// Optional part at the end of a [`Syn::StateDef`].
 	ActionFunction,
@@ -18,12 +23,13 @@ pub enum Syn {
 	Argument,
 	/// `('[' expr? ']')+`
 	ArrayLen,
-	/// `'class' ident inheritspec? replacesclause? '{' innard* '}'`
+	/// `classhead '{' innard* '}'`
 	ClassDef,
 	/// `'extend' 'class' ident '{' innard* '}'`
 	ClassExtend,
-	ClassQuals,
-	/// `'static'? 'const' ident '=' expr ';'`
+	/// `'class' ident ancestry? qualifiers`
+	ClassHead,
+	/// `'const' ident '=' expr ';'`
 	ConstDef,
 	/// `'default' '{' (propertysetting | flagsetting)* '}'`
 	DefaultBlock,
@@ -35,8 +41,6 @@ pub enum Syn {
 	EnumTypeSpec,
 	/// `ident ('=' expr)?`
 	EnumVariant,
-	/// A sequence of tokens that did not form a valid syntax element.
-	Error,
 	FieldDecl,
 	FlagDef,
 	/// `('+' | '-') identchain`
@@ -75,8 +79,6 @@ pub enum Syn {
 	ReplacesClause,
 	/// `typeref (',' typeref)*`
 	ReturnTypes,
-	/// The top-level node, representing the whole file.
-	Root,
 	/// `'fail' | 'loop' | 'stop' | 'wait' ';'` or
 	/// `'goto' (scope '::')? identchain ('+' integer)?`
 	StateFlow,

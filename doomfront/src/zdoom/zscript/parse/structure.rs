@@ -8,11 +8,44 @@ use crate::{
 use super::*;
 
 /// Builds a [`Syn::ClassDef`] node.
-pub fn class_def(p: &mut Parser<Syn>) {
+///
+/// Returns `true` if a full-file class was parsed.
+#[must_use]
+pub fn class_def(p: &mut Parser<Syn>) -> bool {
 	p.debug_assert_at_any(&[Token::KwClass, Token::DocComment]);
 	let classdef = p.open();
 	doc_comments(p);
+	class_head(p);
+
+	if p.eat(Token::Semicolon, Syn::Semicolon) {
+		trivia_0plus(p);
+
+		while !p.eof() {
+			class_innard::<false>(p);
+			trivia_0plus(p);
+		}
+
+		p.close(classdef, Syn::ClassDef);
+		return true;
+	}
+
+	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	trivia_0plus(p);
+
+	while !p.at(Token::BraceR) && !p.eof() {
+		class_innard::<false>(p);
+		trivia_0plus(p);
+	}
+
+	trivia_0plus(p);
+	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+	p.close(classdef, Syn::ClassDef);
+	false
+}
+
+fn class_head(p: &mut Parser<Syn>) {
 	p.debug_assert_at(Token::KwClass);
+	let mark = p.open();
 	p.advance(Syn::KwClass);
 	trivia_0plus(p);
 	ident_lax(p);
@@ -27,9 +60,8 @@ pub fn class_def(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	let quals = p.open();
 
-	while !p.at(Token::BraceL) && !p.eof() {
+	while !p.at_any(&[Token::BraceL, Token::Semicolon]) && !p.eof() {
 		match p.nth(0) {
 			Token::KwReplaces => {
 				let replaces = p.open();
@@ -59,18 +91,7 @@ pub fn class_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.close(quals, Syn::ClassQuals);
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
-	trivia_0plus(p);
-
-	while !p.at(Token::BraceR) && !p.eof() {
-		class_innard::<false>(p);
-		trivia_0plus(p);
-	}
-
-	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
-	p.close(classdef, Syn::ClassDef);
+	p.close(mark, Syn::ClassHead);
 }
 
 /// Builds a [`Syn::MixinClassDef`] node.
