@@ -13,6 +13,7 @@ publish = false
 repository.workspace = true
 
 [dependencies]
+lith = { package = "lithica", path = "../lith" }
 doomfront = { path = "../doomfront", features = ["zdoom"] }
 util = { package = "viletech-utils", path = "../utils" }
 
