@@ -75,12 +75,3 @@ All symbols marked as originating from [ZMusic](https://github.com/ZDoom/ZMusic)
 ## MIDI SoundFonts
 
 The SoundFont file located at /assets/soundfonts/viletech.sf2 is courtesy of [deemster](https://www.vogons.org/viewtopic.php?p=599227#p599227).
-
-# Special Thanks
-
-- Alison "Marrub" Watson
-- Christoph "Graf Zahl" Oelckers
-- Jessica "Russell" Gutawer
-- Marisa "Randi" Heit
-- Ricardo Luis
-- Yholl
