@@ -58,6 +58,10 @@ doc
 
 # perf output
 **/*perf.data*
+
+# not-perf output
+*.nperf
+
 # flamegraph-rs output
 **/flamegraph.svg
 
