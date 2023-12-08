@@ -12,6 +12,7 @@
 )]
 
 pub extern crate ariadne;
+pub extern crate cwal;
 
 pub(crate) mod back;
 pub(crate) mod builtins;

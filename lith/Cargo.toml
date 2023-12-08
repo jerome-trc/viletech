@@ -13,7 +13,10 @@ publish = false
 repository.workspace = true
 
 [dependencies]
-doomfront = { path = "../doomfront" } # Only used for its parsing code.
+# TODO: eventually replace with Git/crates.io.
+cwal = { path = "../../cwal-rs" }
+# Only used for its parsing code.
+doomfront = { path = "../doomfront" }
 util = { package = "viletech-utils", path = "../utils" }
 
 ariadne.workspace = true
