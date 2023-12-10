@@ -14,12 +14,10 @@ repository.workspace = true
 
 [features]
 default = []
-archery = ["dep:archery"]
 serde = ["dep:serde"]
 sparseset = []
 
 [dependencies]
-archery = { workspace = true, optional = true }
 arrayvec.workspace = true
 bytemuck.workspace = true
 byteorder.workspace = true

@@ -1,6 +1,5 @@
 [workspace]
 members = [
-	"bench",
 	"cli",
 	"client",
 	"doomfront",
@@ -35,7 +34,6 @@ debug = true
 strip = false
 
 [workspace.dependencies]
-archery = "1.0.0"
 ariadne = "0.3.0"
 arrayvec = { version = "0.7.2", features = ["serde"] }
 bevy = { version = "0.12.0", default-features = false }
@@ -55,8 +53,8 @@ cranelift-module = "0.100.0"
 cranelift-interpreter = "0.100.0"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
-# Must be compatible with `bevy_egui`.
 earcutr = "0.4.3"
+# Must be compatible with `bevy_egui`.
 egui = "0.23.0"
 egui_extras = "0.23.0"
 fixed = "1.23.1"

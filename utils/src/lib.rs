@@ -7,8 +7,6 @@
 	html_logo_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png"
 )]
 
-#[cfg(feature = "archery")]
-pub mod arck;
 pub mod fixed;
 pub mod geom;
 pub mod io;
@@ -21,9 +19,6 @@ pub mod simd;
 #[cfg(feature = "sparseset")]
 pub mod sparseset;
 pub mod string;
-
-#[cfg(feature = "archery")]
-pub extern crate archery;
 
 pub type SmallString = smartstring::SmartString<smartstring::LazyCompact>;
 pub type SmallZString = string::ZString<SmallString>;
