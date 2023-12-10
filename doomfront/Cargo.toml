@@ -15,7 +15,7 @@ repository.workspace = true
 [features]
 default = []
 
-parallel = ["crossbeam", "dashmap", "parking_lot", "rayon"]
+parallel = ["crossbeam", "parking_lot", "rayon"]
 serde = ["dep:serde", "rowan/serde1"]
 
 acs = []
@@ -25,9 +25,7 @@ zdoom = []
 
 [dependencies]
 crossbeam = { workspace = true, optional = true }
-dashmap = { workspace = true, optional = true, features = ["raw-api"] }
 logos.workspace = true
-hashbrown.workspace = true
 parking_lot = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 rowan.workspace = true

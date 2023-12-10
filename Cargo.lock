@@ -2204,8 +2204,6 @@ version = "0.0.0"
 dependencies = [
  "criterion",
  "crossbeam",
- "dashmap",
- "hashbrown 0.12.3",
  "logos",
  "parking_lot 0.12.1",
  "rayon",
@@ -2982,9 +2980,6 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash 0.7.6",
-]
 
 [[package]]
 name = "hashbrown"
