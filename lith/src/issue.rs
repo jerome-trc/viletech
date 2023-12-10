@@ -198,6 +198,8 @@ pub enum Error {
 	IllegalFnQual,
 	/// A function marked `native` has a body block.
 	IllegalFnBody,
+	/// A non-native library tried to mark a symbol as native.
+	IllegalNative,
 	/// A function not marked `builtin` has a `(...)` parameter list.
 	IllegalOpaqueParams,
 	/// A non-native library attempted to declare a symbol starting or ending
@@ -219,8 +221,6 @@ pub enum Error {
 	MissingNative,
 	/// A `type_t` parameter was not qualified with the `const` keyword.
 	NonConstTypeParam,
-	/// A non-native library tried to use the `builtin` or `native` annotation.
-	NonNative,
 	ParseFloat,
 	ParseInt,
 	QualifierOverlap,
