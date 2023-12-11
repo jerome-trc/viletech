@@ -21,16 +21,17 @@ edition = "2021"
 repository = "https://github.com/jerome-trc/viletech"
 
 [profile.release]
-strip = true
-opt-level = 3
-# TODO: `lto = true` later.
 codegen-units = 4
+lto = true
+opt-level = 3
+strip = true
 
 [profile.dev.package."*"]
 opt-level = 3
 
 [profile.bench]
 debug = true
+lto = "thin"
 strip = false
 
 [workspace.dependencies]
