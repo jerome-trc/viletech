@@ -44,7 +44,7 @@ bitvec = { version = "1.0.1", features = ["serde"] }
 bumpalo = "3.14.0"
 bytemuck = { version = "1.13.0", features = ["derive"] }
 byteorder = "1.4.3"
-clap = { version = "4.3.2", features = ["derive"] }
+clap = { version = "4.4.11", features = ["derive"] }
 # Same version as `kira`. Specified here since it's needed by MIDI code.
 cpal = "0.15.1"
 cranelift = "0.102.1"
