@@ -4,7 +4,7 @@ use crate::{
 	testing::*,
 	zdoom::{
 		self,
-		decorate::{ast, parse, ParseTree, Syn},
+		decorate::{ast, parse, ParseTree, Syntax},
 	},
 };
 
@@ -193,11 +193,11 @@ fn include_directive_smoke() {
 
 	assert_sequence(
 		&[
-			(Syn::IncludeDirective, None),
-			(Syn::KwInclude, Some("#InClUdE")),
-			(Syn::Whitespace, Some(" ")),
+			(Syntax::IncludeDirective, None),
+			(Syntax::KwInclude, Some("#InClUdE")),
+			(Syntax::Whitespace, Some(" ")),
 			(
-				Syn::StringLit,
+				Syntax::StringLit,
 				Some("\"actors/misc/DevelopersDevelopersDevelopersDevelopers.txt\""),
 			),
 		],

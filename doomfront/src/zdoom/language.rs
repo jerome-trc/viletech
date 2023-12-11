@@ -4,11 +4,11 @@
 
 pub mod ast;
 pub mod parse;
-mod syn;
+mod syntax;
 
-pub use syn::Syn;
+pub use syntax::Syntax;
 
-pub type ParseTree = crate::ParseTree<Syn>;
-pub type SyntaxNode = rowan::SyntaxNode<Syn>;
-pub type SyntaxToken = rowan::SyntaxToken<Syn>;
-pub type SyntaxElem = rowan::SyntaxElement<Syn>;
+pub type ParseTree = crate::ParseTree<Syntax>;
+pub type SyntaxNode = rowan::SyntaxNode<Syntax>;
+pub type SyntaxToken = rowan::SyntaxToken<Syntax>;
+pub type SyntaxElem = rowan::SyntaxElement<Syntax>;

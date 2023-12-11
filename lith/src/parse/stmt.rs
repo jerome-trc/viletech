@@ -2,25 +2,25 @@
 
 use doomfront::parser::{OpenMark, Parser};
 
-use crate::Syn;
+use crate::Syntax;
 
 use super::common::*;
 
-pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
+pub(super) fn statement(p: &mut Parser<Syntax>, mark: OpenMark) {
 	match p.nth(0) {
-		t @ Syn::KwReturn => {
+		t @ Syntax::KwReturn => {
 			p.advance(t);
 			trivia_0plus(p);
 
-			if !p.at(Syn::Semicolon) {
+			if !p.at(Syntax::Semicolon) {
 				super::expr(p, true);
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(mark, Syn::StmtReturn);
+			p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(mark, Syntax::StmtReturn);
 		}
-		t @ Syn::KwBreak => {
+		t @ Syntax::KwBreak => {
 			p.advance(t);
 			trivia_0plus(p);
 
@@ -29,19 +29,19 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			if !p.at(Syn::Semicolon) {
+			if !p.at(Syntax::Semicolon) {
 				super::expr(p, true);
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
-			p.close(mark, Syn::StmtBreak);
+			p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["TODO"]]);
+			p.close(mark, Syntax::StmtBreak);
 		}
-		t @ (Syn::KwLet | Syn::KwVar) => {
+		t @ (Syntax::KwLet | Syntax::KwVar) => {
 			p.advance(t);
 			trivia_0plus(p);
 
-			if p.eat(Syn::KwConst, Syn::KwConst) {
+			if p.eat(Syntax::KwConst, Syntax::KwConst) {
 				trivia_0plus(p);
 			}
 
@@ -53,16 +53,16 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			if p.eat(Syn::Eq, Syn::Eq) {
+			if p.eat(Syntax::Eq, Syntax::Eq) {
 				trivia_0plus(p);
 				super::expr(p, true);
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(mark, Syn::StmtBind);
+			p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(mark, Syntax::StmtBind);
 		}
-		t @ Syn::KwContinue => {
+		t @ Syntax::KwContinue => {
 			p.advance(t);
 			trivia_0plus(p);
 
@@ -71,18 +71,18 @@ pub(super) fn statement(p: &mut Parser<Syn>, mark: OpenMark) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(mark, Syn::StmtContinue);
+			p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(mark, Syntax::StmtContinue);
 		}
 		_ => {
 			let block_end = super::expr(p, true);
 
 			if !block_end {
 				trivia_0plus(p);
-				p.expect(Syn::Semicolon, Syn::Semicolon, &[&["`;`"]])
+				p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["`;`"]])
 			}
 
-			p.close(mark, Syn::StmtExpr);
+			p.close(mark, Syntax::StmtExpr);
 		}
 	}
 }

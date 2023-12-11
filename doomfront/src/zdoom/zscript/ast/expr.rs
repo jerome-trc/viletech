@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::{simple_astnode, zdoom::ast::LitToken, AstError, AstResult};
 
-use super::super::{Syn, SyntaxNode, SyntaxToken};
+use super::super::{Syntax, SyntaxNode, SyntaxToken};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -25,23 +25,27 @@ pub enum Expr {
 }
 
 impl AstNode for Expr {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::BinExpr
-				| Syn::CallExpr | Syn::ClassCastExpr
-				| Syn::GroupExpr | Syn::IdentExpr
-				| Syn::IndexExpr | Syn::Literal
-				| Syn::MemberExpr
-				| Syn::PostfixExpr
-				| Syn::PrefixExpr
-				| Syn::SuperExpr | Syn::TernaryExpr
-				| Syn::VectorExpr
+			Syntax::BinExpr
+				| Syntax::CallExpr
+				| Syntax::ClassCastExpr
+				| Syntax::GroupExpr
+				| Syntax::IdentExpr
+				| Syntax::IndexExpr
+				| Syntax::Literal
+				| Syntax::MemberExpr
+				| Syntax::PostfixExpr
+				| Syntax::PrefixExpr
+				| Syntax::SuperExpr
+				| Syntax::TernaryExpr
+				| Syntax::VectorExpr
 		)
 	}
 
@@ -50,19 +54,19 @@ impl AstNode for Expr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::BinExpr => Some(Self::Binary(BinExpr(node))),
-			Syn::CallExpr => Some(Self::Call(CallExpr(node))),
-			Syn::ClassCastExpr => Some(Self::ClassCast(ClassCastExpr(node))),
-			Syn::GroupExpr => Some(Self::Group(GroupExpr(node))),
-			Syn::IdentExpr => Some(Self::Ident(IdentExpr(node))),
-			Syn::IndexExpr => Some(Self::Index(IndexExpr(node))),
-			Syn::Literal => Some(Self::Literal(Literal(node))),
-			Syn::MemberExpr => Some(Self::Member(MemberExpr(node))),
-			Syn::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
-			Syn::PrefixExpr => Some(Self::Prefix(PrefixExpr(node))),
-			Syn::SuperExpr => Some(Self::Super(SuperExpr(node))),
-			Syn::TernaryExpr => Some(Self::Ternary(TernaryExpr(node))),
-			Syn::VectorExpr => Some(Self::Vector(VectorExpr(node))),
+			Syntax::BinExpr => Some(Self::Binary(BinExpr(node))),
+			Syntax::CallExpr => Some(Self::Call(CallExpr(node))),
+			Syntax::ClassCastExpr => Some(Self::ClassCast(ClassCastExpr(node))),
+			Syntax::GroupExpr => Some(Self::Group(GroupExpr(node))),
+			Syntax::IdentExpr => Some(Self::Ident(IdentExpr(node))),
+			Syntax::IndexExpr => Some(Self::Index(IndexExpr(node))),
+			Syntax::Literal => Some(Self::Literal(Literal(node))),
+			Syntax::MemberExpr => Some(Self::Member(MemberExpr(node))),
+			Syntax::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
+			Syntax::PrefixExpr => Some(Self::Prefix(PrefixExpr(node))),
+			Syntax::SuperExpr => Some(Self::Super(SuperExpr(node))),
+			Syntax::TernaryExpr => Some(Self::Ternary(TernaryExpr(node))),
+			Syntax::VectorExpr => Some(Self::Vector(VectorExpr(node))),
 			_ => None,
 		}
 	}
@@ -103,21 +107,24 @@ pub enum PrimaryExpr {
 }
 
 impl AstNode for PrimaryExpr {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::CallExpr
-				| Syn::ClassCastExpr
-				| Syn::GroupExpr | Syn::IdentExpr
-				| Syn::IndexExpr | Syn::Literal
-				| Syn::MemberExpr
-				| Syn::PostfixExpr
-				| Syn::SuperExpr | Syn::VectorExpr
+			Syntax::CallExpr
+				| Syntax::ClassCastExpr
+				| Syntax::GroupExpr
+				| Syntax::IdentExpr
+				| Syntax::IndexExpr
+				| Syntax::Literal
+				| Syntax::MemberExpr
+				| Syntax::PostfixExpr
+				| Syntax::SuperExpr
+				| Syntax::VectorExpr
 		)
 	}
 
@@ -126,16 +133,16 @@ impl AstNode for PrimaryExpr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::CallExpr => Some(Self::Call(CallExpr(node))),
-			Syn::ClassCastExpr => Some(Self::ClassCast(ClassCastExpr(node))),
-			Syn::GroupExpr => Some(Self::Group(GroupExpr(node))),
-			Syn::IdentExpr => Some(Self::Ident(IdentExpr(node))),
-			Syn::IndexExpr => Some(Self::Index(IndexExpr(node))),
-			Syn::Literal => Some(Self::Literal(Literal(node))),
-			Syn::MemberExpr => Some(Self::Member(MemberExpr(node))),
-			Syn::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
-			Syn::SuperExpr => Some(Self::Super(SuperExpr(node))),
-			Syn::VectorExpr => Some(Self::Vector(VectorExpr(node))),
+			Syntax::CallExpr => Some(Self::Call(CallExpr(node))),
+			Syntax::ClassCastExpr => Some(Self::ClassCast(ClassCastExpr(node))),
+			Syntax::GroupExpr => Some(Self::Group(GroupExpr(node))),
+			Syntax::IdentExpr => Some(Self::Ident(IdentExpr(node))),
+			Syntax::IndexExpr => Some(Self::Index(IndexExpr(node))),
+			Syntax::Literal => Some(Self::Literal(Literal(node))),
+			Syntax::MemberExpr => Some(Self::Member(MemberExpr(node))),
+			Syntax::PostfixExpr => Some(Self::Postfix(PostfixExpr(node))),
+			Syntax::SuperExpr => Some(Self::Super(SuperExpr(node))),
+			Syntax::VectorExpr => Some(Self::Vector(VectorExpr(node))),
 			_ => None,
 		}
 	}
@@ -175,12 +182,12 @@ impl From<PrimaryExpr> for Expr {
 
 // BinExpr /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::BinExpr`].
+/// Wraps a node tagged [`Syntax::BinExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct BinExpr(SyntaxNode);
 
-simple_astnode!(Syn, BinExpr, Syn::BinExpr);
+simple_astnode!(Syntax, BinExpr, Syntax::BinExpr);
 
 impl BinExpr {
 	#[must_use]
@@ -197,50 +204,50 @@ impl BinExpr {
 			.unwrap();
 
 		let ret1 = match ret0.kind() {
-			Syn::Ampersand => BinOp::Ampersand,
-			Syn::Ampersand2 => BinOp::Ampersand2,
-			Syn::AmpersandEq => BinOp::AmpersandEq,
-			Syn::AngleL => BinOp::AngleL,
-			Syn::AngleL2 => BinOp::AngleL2,
-			Syn::AngleL2Eq => BinOp::AngleL2Eq,
-			Syn::AngleLAngleREq => BinOp::AngleLAngleREq,
-			Syn::AngleLEq => BinOp::AngleLEq,
-			Syn::AngleR => BinOp::AngleR,
-			Syn::AngleR2 => BinOp::AngleR2,
-			Syn::AngleR2Eq => BinOp::AngleR2Eq,
-			Syn::AngleR3 => BinOp::AngleR3,
-			Syn::AngleR3Eq => BinOp::AngleR3Eq,
-			Syn::AngleREq => BinOp::AngleREq,
-			Syn::Asterisk => BinOp::Asterisk,
-			Syn::Asterisk2 => BinOp::Asterisk2,
-			Syn::AsteriskEq => BinOp::AsteriskEq,
-			Syn::Bang => BinOp::Bang,
-			Syn::BangEq => BinOp::BangEq,
-			Syn::Caret => BinOp::Caret,
-			Syn::CaretEq => BinOp::CaretEq,
-			Syn::Dot2 => BinOp::Dot2,
-			Syn::Eq => BinOp::Eq,
-			Syn::Eq2 => BinOp::Eq2,
-			Syn::KwAlignOf => BinOp::KwAlignOf,
-			Syn::KwCross => BinOp::KwCross,
-			Syn::KwDot => BinOp::KwDot,
-			Syn::KwIs => BinOp::KwIs,
-			Syn::KwSizeOf => BinOp::KwSizeOf,
-			Syn::Minus => BinOp::Minus,
-			Syn::Minus2 => BinOp::Minus2,
-			Syn::MinusEq => BinOp::MinusEq,
-			Syn::Percent => BinOp::Percent,
-			Syn::PercentEq => BinOp::PercentEq,
-			Syn::Pipe => BinOp::Pipe,
-			Syn::Pipe2 => BinOp::Pipe2,
-			Syn::PipeEq => BinOp::PipeEq,
-			Syn::Plus => BinOp::Plus,
-			Syn::Plus2 => BinOp::Plus2,
-			Syn::PlusEq => BinOp::PlusEq,
-			Syn::Slash => BinOp::Slash,
-			Syn::SlashEq => BinOp::SlashEq,
-			Syn::Tilde => BinOp::Tilde,
-			Syn::TildeEq2 => BinOp::TildeEq2,
+			Syntax::Ampersand => BinOp::Ampersand,
+			Syntax::Ampersand2 => BinOp::Ampersand2,
+			Syntax::AmpersandEq => BinOp::AmpersandEq,
+			Syntax::AngleL => BinOp::AngleL,
+			Syntax::AngleL2 => BinOp::AngleL2,
+			Syntax::AngleL2Eq => BinOp::AngleL2Eq,
+			Syntax::AngleLAngleREq => BinOp::AngleLAngleREq,
+			Syntax::AngleLEq => BinOp::AngleLEq,
+			Syntax::AngleR => BinOp::AngleR,
+			Syntax::AngleR2 => BinOp::AngleR2,
+			Syntax::AngleR2Eq => BinOp::AngleR2Eq,
+			Syntax::AngleR3 => BinOp::AngleR3,
+			Syntax::AngleR3Eq => BinOp::AngleR3Eq,
+			Syntax::AngleREq => BinOp::AngleREq,
+			Syntax::Asterisk => BinOp::Asterisk,
+			Syntax::Asterisk2 => BinOp::Asterisk2,
+			Syntax::AsteriskEq => BinOp::AsteriskEq,
+			Syntax::Bang => BinOp::Bang,
+			Syntax::BangEq => BinOp::BangEq,
+			Syntax::Caret => BinOp::Caret,
+			Syntax::CaretEq => BinOp::CaretEq,
+			Syntax::Dot2 => BinOp::Dot2,
+			Syntax::Eq => BinOp::Eq,
+			Syntax::Eq2 => BinOp::Eq2,
+			Syntax::KwAlignOf => BinOp::KwAlignOf,
+			Syntax::KwCross => BinOp::KwCross,
+			Syntax::KwDot => BinOp::KwDot,
+			Syntax::KwIs => BinOp::KwIs,
+			Syntax::KwSizeOf => BinOp::KwSizeOf,
+			Syntax::Minus => BinOp::Minus,
+			Syntax::Minus2 => BinOp::Minus2,
+			Syntax::MinusEq => BinOp::MinusEq,
+			Syntax::Percent => BinOp::Percent,
+			Syntax::PercentEq => BinOp::PercentEq,
+			Syntax::Pipe => BinOp::Pipe,
+			Syntax::Pipe2 => BinOp::Pipe2,
+			Syntax::PipeEq => BinOp::PipeEq,
+			Syntax::Plus => BinOp::Plus,
+			Syntax::Plus2 => BinOp::Plus2,
+			Syntax::PlusEq => BinOp::PlusEq,
+			Syntax::Slash => BinOp::Slash,
+			Syntax::SlashEq => BinOp::SlashEq,
+			Syntax::Tilde => BinOp::Tilde,
+			Syntax::TildeEq2 => BinOp::TildeEq2,
 			_ => unreachable!(),
 		};
 
@@ -304,12 +311,12 @@ pub enum BinOp {
 
 // CallExpr ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::CallExpr`].
+/// Wraps a node tagged [`Syntax::CallExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CallExpr(SyntaxNode);
 
-simple_astnode!(Syn, CallExpr, Syn::CallExpr);
+simple_astnode!(Syntax, CallExpr, Syntax::CallExpr);
 
 impl CallExpr {
 	#[must_use]
@@ -320,42 +327,42 @@ impl CallExpr {
 	#[must_use]
 	pub fn arg_list(&self) -> ArgList {
 		let node = self.0.last_child().unwrap();
-		debug_assert!(node.kind() == Syn::ArgList);
+		debug_assert!(node.kind() == Syntax::ArgList);
 		ArgList(node)
 	}
 }
 
-/// Wraps a node tagged [`Syn::ArgList`].
+/// Wraps a node tagged [`Syntax::ArgList`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ArgList(SyntaxNode);
 
-simple_astnode!(Syn, ArgList, Syn::ArgList);
+simple_astnode!(Syntax, ArgList, Syntax::ArgList);
 
 impl ArgList {
 	pub fn args(&self) -> impl Iterator<Item = Argument> {
 		self.0.children().filter_map(|node| match node.kind() {
-			Syn::Argument => Some(Argument(node)),
+			Syntax::Argument => Some(Argument(node)),
 			_ => None,
 		})
 	}
 }
 
-/// Wraps a node tagged [`Syn::Argument`].
+/// Wraps a node tagged [`Syntax::Argument`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Argument(SyntaxNode);
 
-simple_astnode!(Syn, Argument, Syn::Argument);
+simple_astnode!(Syntax, Argument, Syntax::Argument);
 
 impl Argument {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn name(&self) -> Option<SyntaxToken> {
 		let Some(ret) = self
 			.0
 			.first_token()
-			.filter(|token| token.kind() == Syn::Ident)
+			.filter(|token| token.kind() == Syntax::Ident)
 		else {
 			return None;
 		};
@@ -377,38 +384,41 @@ impl Argument {
 
 // ClassCastExpr ///////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ClassCastExpr`].
+/// Wraps a node tagged [`Syntax::ClassCastExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ClassCastExpr(SyntaxNode);
 
-simple_astnode!(Syn, ClassCastExpr, Syn::ClassCastExpr);
+simple_astnode!(Syntax, ClassCastExpr, Syntax::ClassCastExpr);
 
 impl ClassCastExpr {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn class_name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
 	#[must_use]
 	pub fn arg_list(&self) -> ArgList {
 		let node = self.0.last_child().unwrap();
-		debug_assert!(node.kind() == Syn::ArgList);
+		debug_assert!(node.kind() == Syntax::ArgList);
 		ArgList(node)
 	}
 }
 
 // GroupExpr ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::GroupExpr`].
+/// Wraps a node tagged [`Syntax::GroupExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GroupExpr(SyntaxNode);
 
-simple_astnode!(Syn, GroupExpr, Syn::GroupExpr);
+simple_astnode!(Syntax, GroupExpr, Syntax::GroupExpr);
 
 impl GroupExpr {
 	#[must_use]
@@ -419,31 +429,31 @@ impl GroupExpr {
 
 // IdentExpr ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IdentExpr`].
+/// Wraps a node tagged [`Syntax::IdentExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IdentExpr(SyntaxNode);
 
-simple_astnode!(Syn, IdentExpr, Syn::IdentExpr);
+simple_astnode!(Syntax, IdentExpr, Syntax::IdentExpr);
 
 impl IdentExpr {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn token(&self) -> SyntaxToken {
 		let token = self.0.first_token().unwrap();
-		debug_assert_eq!(token.kind(), Syn::Ident);
+		debug_assert_eq!(token.kind(), Syntax::Ident);
 		token
 	}
 }
 
 // IndexExpr ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IndexExpr`].
+/// Wraps a node tagged [`Syntax::IndexExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IndexExpr(SyntaxNode);
 
-simple_astnode!(Syn, IndexExpr, Syn::IndexExpr);
+simple_astnode!(Syntax, IndexExpr, Syntax::IndexExpr);
 
 impl IndexExpr {
 	#[must_use]
@@ -461,28 +471,28 @@ impl IndexExpr {
 
 // Literal /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::Literal`].
+/// Wraps a node tagged [`Syntax::Literal`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Literal(SyntaxNode);
 
-simple_astnode!(Syn, Literal, Syn::Literal);
+simple_astnode!(Syntax, Literal, Syntax::Literal);
 
 impl Literal {
 	/// Mind that this may not be the real whole literal if dealing with strings.
 	/// See [`Self::strings`].
 	#[must_use]
-	pub fn token(&self) -> LitToken<Syn> {
+	pub fn token(&self) -> LitToken<Syntax> {
 		LitToken::new(self.0.first_token().unwrap())
 	}
 
 	/// A ZScript string literal expression can be formed by writing multiple
 	/// string literals adjacently.
-	pub fn strings(&self) -> Option<impl Iterator<Item = LitToken<Syn>>> {
-		if self.0.first_token().unwrap().kind() == Syn::StringLit {
+	pub fn strings(&self) -> Option<impl Iterator<Item = LitToken<Syntax>>> {
+		if self.0.first_token().unwrap().kind() == Syntax::StringLit {
 			Some(self.0.children_with_tokens().filter_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::StringLit)
+					.filter(|token| token.kind() == Syntax::StringLit)
 					.map(LitToken::new)
 			}))
 		} else {
@@ -493,12 +503,12 @@ impl Literal {
 
 // MemberExpr //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::MemberExpr`].
+/// Wraps a node tagged [`Syntax::MemberExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MemberExpr(SyntaxNode);
 
-simple_astnode!(Syn, MemberExpr, Syn::MemberExpr);
+simple_astnode!(Syntax, MemberExpr, Syntax::MemberExpr);
 
 impl MemberExpr {
 	#[must_use]
@@ -506,23 +516,23 @@ impl MemberExpr {
 		PrimaryExpr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn member_name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.last_token()
-			.filter(|token| token.kind() == Syn::Ident)
+			.filter(|token| token.kind() == Syntax::Ident)
 			.ok_or(AstError::Missing)
 	}
 }
 
 // PostfixExpr /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::PostfixExpr`].
+/// Wraps a node tagged [`Syntax::PostfixExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PostfixExpr(SyntaxNode);
 
-simple_astnode!(Syn, PostfixExpr, Syn::PostfixExpr);
+simple_astnode!(Syntax, PostfixExpr, Syntax::PostfixExpr);
 
 impl PostfixExpr {
 	#[must_use]
@@ -535,8 +545,8 @@ impl PostfixExpr {
 		let ret0 = self.0.last_token().unwrap();
 
 		let ret1 = match ret0.kind() {
-			Syn::Minus2 => PostfixOp::Minus2,
-			Syn::Plus2 => PostfixOp::Plus2,
+			Syntax::Minus2 => PostfixOp::Minus2,
+			Syntax::Plus2 => PostfixOp::Plus2,
 			_ => unreachable!(),
 		};
 
@@ -554,12 +564,12 @@ pub enum PostfixOp {
 
 // PrefixExpr //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::PrefixExpr`].
+/// Wraps a node tagged [`Syntax::PrefixExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PrefixExpr(SyntaxNode);
 
-simple_astnode!(Syn, PrefixExpr, Syn::PrefixExpr);
+simple_astnode!(Syntax, PrefixExpr, Syntax::PrefixExpr);
 
 impl PrefixExpr {
 	#[must_use]
@@ -572,12 +582,12 @@ impl PrefixExpr {
 		let ret0 = self.0.first_token().unwrap();
 
 		let ret1 = match ret0.kind() {
-			Syn::Bang => PrefixOp::Bang,
-			Syn::Minus => PrefixOp::Minus,
-			Syn::Minus2 => PrefixOp::Minus2,
-			Syn::Plus => PrefixOp::Plus,
-			Syn::Plus2 => PrefixOp::Plus2,
-			Syn::Tilde => PrefixOp::Tilde,
+			Syntax::Bang => PrefixOp::Bang,
+			Syntax::Minus => PrefixOp::Minus,
+			Syntax::Minus2 => PrefixOp::Minus2,
+			Syntax::Plus => PrefixOp::Plus,
+			Syntax::Plus2 => PrefixOp::Plus2,
+			Syntax::Tilde => PrefixOp::Tilde,
 			_ => unreachable!(),
 		};
 
@@ -599,31 +609,31 @@ pub enum PrefixOp {
 
 // SuperExpr ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::SuperExpr`].
+/// Wraps a node tagged [`Syntax::SuperExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SuperExpr(SyntaxNode);
 
-simple_astnode!(Syn, SuperExpr, Syn::SuperExpr);
+simple_astnode!(Syntax, SuperExpr, Syntax::SuperExpr);
 
 impl SuperExpr {
-	/// The returned token is always tagged [`Syn::KwSuper`].
+	/// The returned token is always tagged [`Syntax::KwSuper`].
 	#[must_use]
 	pub fn token(&self) -> SyntaxToken {
 		let token = self.0.first_token().unwrap();
-		debug_assert_eq!(token.kind(), Syn::KwSuper);
+		debug_assert_eq!(token.kind(), Syntax::KwSuper);
 		token
 	}
 }
 
 // TernaryExpr /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::TernaryExpr`].
+/// Wraps a node tagged [`Syntax::TernaryExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct TernaryExpr(SyntaxNode);
 
-simple_astnode!(Syn, TernaryExpr, Syn::TernaryExpr);
+simple_astnode!(Syntax, TernaryExpr, Syntax::TernaryExpr);
 
 impl TernaryExpr {
 	#[must_use]
@@ -631,14 +641,14 @@ impl TernaryExpr {
 		Expr::cast(self.0.first_child().unwrap()).unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Question`].
+	/// The returned token is always tagged [`Syntax::Question`].
 	#[must_use]
 	pub fn question_mark(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::Question)
+					.filter(|token| token.kind() == Syntax::Question)
 			})
 			.unwrap()
 	}
@@ -650,11 +660,14 @@ impl TernaryExpr {
 		Expr::cast(node).ok_or(AstError::Incorrect)
 	}
 
-	/// The returned token is always tagged [`Syn::Colon`].
+	/// The returned token is always tagged [`Syntax::Colon`].
 	pub fn colon(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Colon))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Colon)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -668,12 +681,12 @@ impl TernaryExpr {
 
 // VectorExpr //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::VectorExpr`].
+/// Wraps a node tagged [`Syntax::VectorExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct VectorExpr(SyntaxNode);
 
-simple_astnode!(Syn, VectorExpr, Syn::VectorExpr);
+simple_astnode!(Syntax, VectorExpr, Syntax::VectorExpr);
 
 impl VectorExpr {
 	/// The first element. Alternatively `a`, for the alpha component in a color.

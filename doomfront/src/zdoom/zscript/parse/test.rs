@@ -125,8 +125,8 @@ fn inctree() {
 		},
 		file,
 		zdoom::lex::Context::ZSCRIPT_LATEST,
-		Syn::IncludeDirective,
-		Syn::StringLit,
+		Syntax::IncludeDirective,
+		Syntax::StringLit,
 	);
 
 	assert!(inctree.missing.is_empty());
@@ -759,7 +759,7 @@ goto Consectetur;
 			panic!()
 		};
 
-		assert_eq!(scope.unwrap().kind(), Syn::KwSuper);
+		assert_eq!(scope.unwrap().kind(), Syntax::KwSuper);
 		assert_eq!(format!("{}", name.syntax().text()), "LoremIpsum");
 		assert_eq!(offset.unwrap().int().unwrap().unwrap().0, 12345);
 	}
@@ -776,7 +776,7 @@ goto Consectetur;
 		};
 
 		let s = scope.unwrap();
-		assert_eq!(s.kind(), Syn::Ident);
+		assert_eq!(s.kind(), Syntax::Ident);
 		assert_eq!(s.text(), "Dolor");
 	}
 

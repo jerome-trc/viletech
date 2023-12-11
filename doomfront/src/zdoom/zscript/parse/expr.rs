@@ -1,27 +1,27 @@
 use crate::{
 	parser::{CloseMark, Parser},
-	zdoom::{zscript::Syn, Token},
+	zdoom::{zscript::Syntax, Token},
 };
 
 use super::common::*;
 
 /// Builds a node tagged with one of the following:
-/// - [`Syn::BinExpr`]
-/// - [`Syn::CallExpr`]
-/// - [`Syn::ClassCastExpr`]
-/// - [`Syn::GroupExpr`]
-/// - [`Syn::IdentExpr`]
-/// - [`Syn::IndexExpr`]
-/// - [`Syn::PostfixExpr`]
-/// - [`Syn::PrefixExpr`]
-/// - [`Syn::SuperExpr`]
-/// - [`Syn::TernaryExpr`]
-/// - [`Syn::VectorExpr`]
-pub fn expr(p: &mut Parser<Syn>) {
+/// - [`Syntax::BinExpr`]
+/// - [`Syntax::CallExpr`]
+/// - [`Syntax::ClassCastExpr`]
+/// - [`Syntax::GroupExpr`]
+/// - [`Syntax::IdentExpr`]
+/// - [`Syntax::IndexExpr`]
+/// - [`Syntax::PostfixExpr`]
+/// - [`Syntax::PrefixExpr`]
+/// - [`Syntax::SuperExpr`]
+/// - [`Syntax::TernaryExpr`]
+/// - [`Syntax::VectorExpr`]
+pub fn expr(p: &mut Parser<Syntax>) {
 	recur(p, Token::Eof);
 }
 
-fn recur(p: &mut Parser<Syn>, left: Token) {
+fn recur(p: &mut Parser<Syntax>, left: Token) {
 	let mut lhs = primary_expr(p);
 
 	loop {
@@ -32,8 +32,8 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 		match right {
 			t @ (Token::Minus2 | Token::Plus2) => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::from(t));
-				lhs = p.close(m, Syn::PostfixExpr);
+				p.advance(Syntax::from(t));
+				lhs = p.close(m, Syntax::PostfixExpr);
 				continue;
 			}
 			Token::ParenL => {
@@ -41,48 +41,48 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 				trivia_0plus(p);
 				arg_list(p);
 				trivia_0plus(p);
-				lhs = p.close(m, Syn::CallExpr);
+				lhs = p.close(m, Syntax::CallExpr);
 				continue;
 			}
 			Token::BracketL => {
 				let m = p.open_before(lhs);
-				p.expect(Token::BracketL, Syn::BracketL, &[&["`[`"]]);
+				p.expect(Token::BracketL, Syntax::BracketL, &[&["`[`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
-				lhs = p.close(m, Syn::IndexExpr);
+				p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
+				lhs = p.close(m, Syntax::IndexExpr);
 				continue;
 			}
 			_ => {}
 		}
 
-		if crate::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
+		if crate::parser::pratt::<Syntax>(left, right, PRATT_PRECEDENCE) {
 			match right {
 				Token::Dot => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::Dot);
+					p.advance(Syntax::Dot);
 					trivia_0plus(p);
 					ident::<{ ID_SFKW | ID_SQKW | ID_TYPES | ID_DEFAULT }>(p);
-					lhs = p.close(m, Syn::MemberExpr);
+					lhs = p.close(m, Syntax::MemberExpr);
 				}
 				Token::Question => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::Question);
+					p.advance(Syntax::Question);
 					trivia_0plus(p);
 					expr(p);
 					trivia_0plus(p);
-					p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
+					p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
 					trivia_0plus(p);
 					expr(p);
-					lhs = p.close(m, Syn::TernaryExpr);
+					lhs = p.close(m, Syntax::TernaryExpr);
 				}
 				_ => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::from(right));
+					p.advance(Syntax::from(right));
 					trivia_0plus(p);
 					recur(p, right);
-					lhs = p.close(m, Syn::BinExpr);
+					lhs = p.close(m, Syntax::BinExpr);
 				}
 			}
 		} else {
@@ -91,99 +91,104 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 	}
 }
 
-fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
+fn primary_expr(p: &mut Parser<Syntax>) -> CloseMark {
 	let ex = p.open();
 
 	let token = p.nth(0);
 
 	if is_ident_lax(token) {
-		p.advance(Syn::Ident);
-		return p.close(ex, Syn::IdentExpr);
+		p.advance(Syntax::Ident);
+		return p.close(ex, Syntax::IdentExpr);
 	}
 
 	match token {
 		Token::IntLit => {
-			p.advance(Syn::IntLit);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::IntLit);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::FloatLit => {
-			p.advance(Syn::FloatLit);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::FloatLit);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::KwTrue => {
-			p.advance(Syn::KwTrue);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::KwTrue);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::KwFalse => {
-			p.advance(Syn::KwFalse);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::KwFalse);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::StringLit => {
-			p.advance(Syn::StringLit);
+			p.advance(Syntax::StringLit);
 
 			while p.find(0, |token| !token.is_trivia()) == Token::StringLit {
 				trivia_0plus(p);
-				p.advance(Syn::StringLit);
+				p.advance(Syntax::StringLit);
 			}
 
-			p.close(ex, Syn::Literal)
+			p.close(ex, Syntax::Literal)
 		}
 		Token::NameLit => {
-			p.advance(Syn::NameLit);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::NameLit);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::KwNull => {
-			p.advance(Syn::NullLit);
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::NullLit);
+			p.close(ex, Syntax::Literal)
 		}
 		Token::KwSuper => {
-			p.advance(Syn::KwSuper);
-			p.close(ex, Syn::SuperExpr)
+			p.advance(Syntax::KwSuper);
+			p.close(ex, Syntax::SuperExpr)
 		}
 		Token::KwDefault => {
-			p.advance(Syn::Ident);
-			p.close(ex, Syn::IdentExpr)
+			p.advance(Syntax::Ident);
+			p.close(ex, Syntax::IdentExpr)
 		}
 		Token::ParenL => {
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 
-			if p.eat(Token::KwClass, Syn::KwClass) {
+			if p.eat(Token::KwClass, Syntax::KwClass) {
 				// Class cast
 				trivia_0plus(p);
-				p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
+				p.expect(Token::AngleL, Syntax::AngleL, &[&["`<`"]]);
 				trivia_0plus(p);
 				ident::<0>(p);
 				trivia_0plus(p);
-				p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
+				p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+				p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 				trivia_0plus(p);
 				arg_list(p);
-				return p.close(ex, Syn::ClassCastExpr);
+				return p.close(ex, Syntax::ClassCastExpr);
 			}
 
 			expr(p);
 			trivia_0plus(p);
 
-			if p.eat(Token::ParenR, Syn::ParenR) {
-				p.close(ex, Syn::GroupExpr)
-			} else if p.eat(Token::Comma, Syn::Comma) {
+			if p.eat(Token::ParenR, Syntax::ParenR) {
+				p.close(ex, Syntax::GroupExpr)
+			} else if p.eat(Token::Comma, Syntax::Comma) {
 				// Vector
 				for _ in 0..3 {
 					trivia_0plus(p);
 					expr(p);
 					trivia_0plus(p);
 
-					if !p.eat(Token::Comma, Syn::Comma) {
-						p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+					if !p.eat(Token::Comma, Syntax::Comma) {
+						p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 						break;
 					}
 				}
 
-				p.close(ex, Syn::VectorExpr)
+				p.close(ex, Syntax::VectorExpr)
 			} else {
-				p.advance_err_and_close(ex, Syn::from(p.nth(0)), Syn::Error, &[&["`)`", "`,`"]])
+				p.advance_err_and_close(
+					ex,
+					Syntax::from(p.nth(0)),
+					Syntax::Error,
+					&[&["`)`", "`,`"]],
+				)
 			}
 		}
 		t @ (Token::Bang
@@ -194,15 +199,15 @@ fn primary_expr(p: &mut Parser<Syn>) -> CloseMark {
 		| Token::Tilde
 		| Token::KwSizeOf
 		| Token::KwAlignOf) => {
-			p.advance(Syn::from(t));
+			p.advance(Syntax::from(t));
 			trivia_0plus(p);
 			recur(p, t);
-			p.close(ex, Syn::PrefixExpr)
+			p.close(ex, Syntax::PrefixExpr)
 		}
 		_ => p.advance_err_and_close(
 			ex,
-			Syn::Unknown,
-			Syn::Error,
+			Syntax::Unknown,
+			Syntax::Error,
 			&[&[
 				"an integer",
 				"a floating-point number",
@@ -253,11 +258,11 @@ pub(super) fn in_first_set(token: Token) -> bool {
 	)
 }
 
-/// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
-pub(super) fn arg_list(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::ArgList`] node. Includes delimiting parentheses.
+pub(super) fn arg_list(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();
-	p.advance(Syn::ParenL);
+	p.advance(Syntax::ParenL);
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
@@ -267,20 +272,20 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 			let peeked = p.find(0, |token| !token.is_trivia() && !is_ident_lax(token));
 
 			if peeked == Token::Colon {
-				p.advance(Syn::Ident);
+				p.advance(Syntax::Ident);
 				trivia_0plus(p);
-				p.advance(Syn::Colon);
+				p.advance(Syntax::Colon);
 				trivia_0plus(p);
 			}
 		}
 
 		expr(p);
 
-		p.close(arg, Syn::Argument);
+		p.close(arg, Syntax::Argument);
 
 		if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 			trivia_0plus(p);
-			p.advance(Syn::Comma);
+			p.advance(Syntax::Comma);
 			trivia_0plus(p);
 		} else {
 			break;
@@ -288,17 +293,17 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-	p.close(arglist, Syn::ArgList);
+	p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+	p.close(arglist, Syntax::ArgList);
 }
 
 /// Expects the current position to be the start of at least one expression.
-pub fn expr_list(p: &mut Parser<Syn>) {
+pub fn expr_list(p: &mut Parser<Syntax>) {
 	expr(p);
 	trivia_0plus(p);
 
 	while !p.eof() {
-		if !p.eat(Token::Comma, Syn::Comma) {
+		if !p.eat(Token::Comma, Syntax::Comma) {
 			break;
 		}
 

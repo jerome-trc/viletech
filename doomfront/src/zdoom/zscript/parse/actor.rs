@@ -3,54 +3,54 @@
 use crate::{
 	parser::{OpenMark, Parser},
 	zdoom::{
-		zscript::{parse::*, Syn},
+		zscript::{parse::*, Syntax},
 		Token,
 	},
 };
 
-/// Builds a [`Syn::FlagDef`] node.
-pub fn flag_def(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::FlagDef`] node.
+pub fn flag_def(p: &mut Parser<Syntax>) {
 	p.debug_assert_at_any(&[Token::KwFlagDef, Token::DocComment]);
 	let flagdef = p.open();
 	doc_comments(p);
 	p.debug_assert_at(Token::KwFlagDef);
-	p.advance(Syn::KwFlagDef);
+	p.advance(Syntax::KwFlagDef);
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
+	p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
 
 	let name = p.nth(0);
 
 	if is_ident_lax(name) {
-		p.advance(Syn::Ident);
+		p.advance(Syntax::Ident);
 	} else if name == Token::KwNone {
-		p.advance(Syn::KwNone);
+		p.advance(Syntax::KwNone);
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`none`"]])
+		p.advance_with_error(Syntax::from(p.nth(0)), &[&["an identifier", "`none`"]])
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+	p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
 	trivia_0plus(p);
-	p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
+	p.expect(Token::IntLit, Syntax::IntLit, &[&["an integer"]]);
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(flagdef, Syn::FlagDef);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(flagdef, Syntax::FlagDef);
 }
 
-/// Builds a [`Syn::PropertyDef`] node.
-pub fn property_def(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::PropertyDef`] node.
+pub fn property_def(p: &mut Parser<Syntax>) {
 	p.debug_assert_at_any(&[Token::KwProperty, Token::DocComment]);
 	let propdef = p.open();
 	doc_comments(p);
 	p.debug_assert_at(Token::KwProperty);
-	p.advance(Syn::KwProperty);
+	p.advance(Syntax::KwProperty);
 	trivia_1plus(p);
 	ident_lax(p);
 	trivia_0plus(p);
-	p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
+	p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
 
 	let name = p.nth(0);
@@ -58,23 +58,23 @@ pub fn property_def(p: &mut Parser<Syn>) {
 	if is_ident_lax(name) {
 		ident_list::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 	} else if name == Token::KwNone {
-		p.advance(Syn::KwNone);
+		p.advance(Syntax::KwNone);
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`none`"]])
+		p.advance_with_error(Syntax::from(p.nth(0)), &[&["an identifier", "`none`"]])
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(propdef, Syn::PropertyDef);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(propdef, Syntax::PropertyDef);
 }
 
-/// Builds a [`Syn::DefaultBlock`] node.
-pub fn default_block(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::DefaultBlock`] node.
+pub fn default_block(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::KwDefault);
 	let defblock = p.open();
-	p.advance(Syn::KwDefault);
+	p.advance(Syntax::KwDefault);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -85,27 +85,30 @@ pub fn default_block(p: &mut Parser<Syn>) {
 		} else if matches!(token, Token::Plus | Token::Minus) {
 			flag_setting(p);
 		} else if token == Token::Semicolon {
-			p.advance(Syn::Semicolon);
+			p.advance(Syntax::Semicolon);
 		} else {
-			p.advance_with_error(Syn::from(token), &[&["`+` or `-`", "an identifier", "`;`"]]);
+			p.advance_with_error(
+				Syntax::from(token),
+				&[&["`+` or `-`", "an identifier", "`;`"]],
+			);
 		}
 
 		trivia_0plus(p);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
-	p.close(defblock, Syn::DefaultBlock);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
+	p.close(defblock, Syntax::DefaultBlock);
 }
 
-/// Builds a [`Syn::FlagSetting`] node.
-fn flag_setting(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::FlagSetting`] node.
+fn flag_setting(p: &mut Parser<Syntax>) {
 	p.debug_assert_at_any(&[Token::Plus, Token::Minus]);
 	let flag = p.open();
 
 	p.advance(match p.nth(0) {
-		Token::Plus => Syn::Plus,
-		Token::Minus => Syn::Minus,
+		Token::Plus => Syntax::Plus,
+		Token::Minus => Syntax::Minus,
 		_ => unreachable!(),
 	});
 
@@ -114,14 +117,14 @@ fn flag_setting(p: &mut Parser<Syn>) {
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Semicolon {
 		trivia_0plus(p);
-		p.advance(Syn::Semicolon);
+		p.advance(Syntax::Semicolon);
 	}
 
-	p.close(flag, Syn::FlagSetting);
+	p.close(flag, Syntax::FlagSetting);
 }
 
-/// Builds a [`Syn::PropertySetting`] node.
-fn property_setting(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::PropertySetting`] node.
+fn property_setting(p: &mut Parser<Syntax>) {
 	p.debug_assert_at_if(is_ident_lax);
 	let prop = p.open();
 	ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
@@ -132,15 +135,15 @@ fn property_setting(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(prop, Syn::PropertySetting);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(prop, Syntax::PropertySetting);
 }
 
-/// Builds a [`Syn::StatesBlock`] node.
-pub fn states_block(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::StatesBlock`] node.
+pub fn states_block(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::KwStates);
 	let sblock = p.open();
-	p.advance(Syn::KwStates);
+	p.advance(Syntax::KwStates);
 	trivia_0plus(p);
 
 	if p.at(Token::ParenL) {
@@ -148,7 +151,7 @@ pub fn states_block(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -177,9 +180,9 @@ pub fn states_block(p: &mut Parser<Syn>) {
 
 		if p.find(0, |token| !token.is_trivia()) == Token::Colon {
 			trivia_0plus(p);
-			p.advance(Syn::Colon);
+			p.advance(Syntax::Colon);
 			trivia_0plus(p);
-			p.close(label_or_def, Syn::StateLabel);
+			p.close(label_or_def, Syntax::StateLabel);
 			continue;
 		}
 
@@ -187,26 +190,26 @@ pub fn states_block(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
-	p.close(sblock, Syn::StatesBlock);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
+	p.close(sblock, Syntax::StatesBlock);
 }
 
-fn stateflow_simple(p: &mut Parser<Syn>) {
+fn stateflow_simple(p: &mut Parser<Syntax>) {
 	let flow = p.open();
-	p.advance(Syn::from(p.nth(0)));
+	p.advance(Syntax::from(p.nth(0)));
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(flow, Syn::StateFlow);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(flow, Syntax::StateFlow);
 }
 
-fn stateflow_goto(p: &mut Parser<Syn>) {
+fn stateflow_goto(p: &mut Parser<Syntax>) {
 	let flow = p.open();
-	p.advance(Syn::KwGoto);
+	p.advance(Syntax::KwGoto);
 	trivia_0plus(p);
 
-	if p.eat(Token::KwSuper, Syn::KwSuper) {
+	if p.eat(Token::KwSuper, Syntax::KwSuper) {
 		trivia_0plus(p);
-		p.expect(Token::Colon2, Syn::Colon2, &[&["`::`"]]);
+		p.expect(Token::Colon2, Syntax::Colon2, &[&["`::`"]]);
 		trivia_0plus(p);
 		ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 	} else if p.at_if(is_ident_lax) {
@@ -215,9 +218,9 @@ fn stateflow_goto(p: &mut Parser<Syn>) {
 		match peeked {
 			Token::Dot => ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p),
 			Token::Colon2 => {
-				p.advance(Syn::Ident);
+				p.advance(Syntax::Ident);
 				trivia_0plus(p);
-				p.advance(Syn::Colon2);
+				p.advance(Syntax::Colon2);
 				trivia_0plus(p);
 				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 			}
@@ -225,44 +228,44 @@ fn stateflow_goto(p: &mut Parser<Syn>) {
 				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 			}
 			other => p.advance_with_error(
-				Syn::from(other),
+				Syntax::from(other),
 				&[&["an identifier", "`::`", "`+`", "`;`"]],
 			),
 		}
 	} else {
-		p.advance_with_error(Syn::from(p.nth(0)), &[&["an identifier", "`super`"]]);
+		p.advance_with_error(Syntax::from(p.nth(0)), &[&["an identifier", "`super`"]]);
 	}
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Plus {
 		trivia_0plus(p);
-		p.advance(Syn::Plus);
+		p.advance(Syntax::Plus);
 		trivia_0plus(p);
-		p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
+		p.expect(Token::IntLit, Syntax::IntLit, &[&["an integer"]]);
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(flow, Syn::StateFlow);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(flow, Syntax::StateFlow);
 }
 
-fn non_whitespace(p: &mut Parser<Syn>) {
+fn non_whitespace(p: &mut Parser<Syntax>) {
 	p.merge(
-		Syn::NonWhitespace,
+		Syntax::NonWhitespace,
 		|token| !token.is_trivia() && token != Token::Colon,
-		Syn::from,
+		Syntax::from,
 		&[&["any non-whitespace"]],
 	);
 }
 
-/// Builds a [`Syn::StatesUsage`] node.
-pub(super) fn states_usage(p: &mut Parser<Syn>) {
-	fn kw(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::StatesUsage`] node.
+pub(super) fn states_usage(p: &mut Parser<Syntax>) {
+	fn kw(p: &mut Parser<Syntax>) {
 		p.expect_any_str_nc(
 			&[
-				(Token::Ident, "actor", Syn::Ident),
-				(Token::Ident, "item", Syn::Ident),
-				(Token::Ident, "overlay", Syn::Ident),
-				(Token::Ident, "weapon", Syn::Ident),
+				(Token::Ident, "actor", Syntax::Ident),
+				(Token::Ident, "item", Syntax::Ident),
+				(Token::Ident, "overlay", Syntax::Ident),
+				(Token::Ident, "weapon", Syntax::Ident),
 			],
 			&[&["`actor`", "`item`", "`overlay`", "`weapon`"]],
 		);
@@ -270,13 +273,13 @@ pub(super) fn states_usage(p: &mut Parser<Syn>) {
 
 	p.debug_assert_at(Token::ParenL);
 	let usage = p.open();
-	p.advance(Syn::ParenL);
+	p.advance(Syntax::ParenL);
 	trivia_0plus(p);
 	kw(p);
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
-		if p.eat(Token::Comma, Syn::Comma) {
+		if p.eat(Token::Comma, Syntax::Comma) {
 			trivia_0plus(p);
 			kw(p);
 			trivia_0plus(p);
@@ -284,13 +287,13 @@ pub(super) fn states_usage(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-	p.close(usage, Syn::StatesUsage);
+	p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+	p.close(usage, Syntax::StatesUsage);
 }
 
-/// Builds a [`Syn::StateDef`] node.
+/// Builds a [`Syntax::StateDef`] node.
 /// Note that this starts at the trivia after the sprite.
-fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
+fn state_def(p: &mut Parser<Syntax>, state: OpenMark) {
 	p.assert_at_if(|token| token.is_trivia());
 
 	trivia_0plus(p);
@@ -313,15 +316,15 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 		match p.nth(0) {
 			Token::KwLight => {
 				let light = p.open();
-				p.advance(Syn::KwLight);
+				p.advance(Syntax::KwLight);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+				p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 
 				p.expect_any(
 					&[
-						(Token::StringLit, Syn::StringLit),
-						(Token::NameLit, Syn::NameLit),
+						(Token::StringLit, Syntax::StringLit),
+						(Token::NameLit, Syntax::NameLit),
 					],
 					&[&["a string", "a name"]],
 				);
@@ -329,12 +332,12 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 				trivia_0plus(p);
 
 				while !p.at(Token::ParenR) && !p.eof() {
-					p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+					p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
 					trivia_0plus(p);
 					p.expect_any(
 						&[
-							(Token::StringLit, Syn::StringLit),
-							(Token::NameLit, Syn::NameLit),
+							(Token::StringLit, Syntax::StringLit),
+							(Token::NameLit, Syntax::NameLit),
 						],
 						&[&["a string", "a name"]],
 					);
@@ -342,31 +345,31 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 				}
 
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-				p.close(light, Syn::StateLight);
+				p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+				p.close(light, Syntax::StateLight);
 			}
 			Token::KwOffset => {
 				let offset = p.open();
-				p.advance(Syn::KwOffset);
+				p.advance(Syntax::KwOffset);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
-				trivia_0plus(p);
-				expr(p);
-				trivia_0plus(p);
-				p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+				p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-				p.close(offset, Syn::StateOffset);
+				p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
+				trivia_0plus(p);
+				expr(p);
+				trivia_0plus(p);
+				p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+				p.close(offset, Syntax::StateOffset);
 			}
 			t @ (Token::KwBright
 			| Token::KwCanRaise
 			| Token::KwFast
 			| Token::KwSlow
-			| Token::KwNoDelay) => p.advance(Syn::from(t)),
+			| Token::KwNoDelay) => p.advance(Syntax::from(t)),
 			other => p.advance_with_error(
-				Syn::from(other),
+				Syntax::from(other),
 				&[&[
 					"`bright`",
 					"`canraise`",
@@ -382,28 +385,28 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 		trivia_0plus(p);
 	}
 
-	p.close(quals, Syn::StateQuals);
+	p.close(quals, Syntax::StateQuals);
 	trivia_0plus(p);
 
 	if p.at(Token::Semicolon) {
-		p.advance(Syn::Semicolon);
+		p.advance(Syntax::Semicolon);
 	} else {
 		action_function(p);
 	}
 
-	p.close(state, Syn::StateDef);
+	p.close(state, Syntax::StateDef);
 }
 
-fn state_frames(p: &mut Parser<Syn>) {
+fn state_frames(p: &mut Parser<Syntax>) {
 	let token = p.nth(0);
 
 	if token == Token::StringLit {
-		p.advance(Syn::NonWhitespace);
+		p.advance(Syntax::NonWhitespace);
 		return;
 	}
 
 	p.merge(
-		Syn::NonWhitespace,
+		Syntax::NonWhitespace,
 		|t| {
 			is_ident_lax(t)
 				|| matches!(
@@ -413,13 +416,13 @@ fn state_frames(p: &mut Parser<Syn>) {
 						| Token::Pound | Token::Pound4
 				)
 		},
-		Syn::from,
+		Syntax::from,
 		&[&["a state frame list"]],
 	);
 }
 
-/// Builds a [`Syn::ActionFunction`] node.
-fn action_function(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::ActionFunction`] node.
+fn action_function(p: &mut Parser<Syntax>) {
 	let action = p.open();
 
 	if p.at(Token::BraceL) {
@@ -433,8 +436,8 @@ fn action_function(p: &mut Parser<Syn>) {
 		}
 
 		trivia_0plus(p);
-		p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
+		p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
 	}
 
-	p.close(action, Syn::ActionFunction);
+	p.close(action, Syntax::ActionFunction);
 }

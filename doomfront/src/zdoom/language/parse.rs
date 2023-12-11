@@ -1,9 +1,9 @@
 use crate::{parser::Parser, zdoom::lex::Token};
 
-use super::Syn;
+use super::Syntax;
 
-/// Builds a [`Syn::Root`] node.
-pub fn file(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Root`] node.
+pub fn file(p: &mut Parser<Syntax>) {
 	let root = p.open();
 
 	while !p.eof() {
@@ -17,7 +17,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			header(p);
 		} else {
 			p.advance_with_error(
-				Syn::from(p.nth(0)),
+				Syntax::from(p.nth(0)),
 				&[&[
 					"a key-value pair (`$` or an identifier)",
 					"a header (`[`)",
@@ -28,11 +28,11 @@ pub fn file(p: &mut Parser<Syn>) {
 		}
 	}
 
-	p.close(root, Syn::Root);
+	p.close(root, Syntax::Root);
 }
 
-/// Builds a [`Syn::KeyValuePair`] node.
-pub fn key_val_pair(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::KeyValuePair`] node.
+pub fn key_val_pair(p: &mut Parser<Syntax>) {
 	p.assert_at_if(|t| matches!(t, Token::Ident | Token::Dollar));
 	let kvp = p.open();
 
@@ -42,11 +42,11 @@ pub fn key_val_pair(p: &mut Parser<Syn>) {
 
 	p.expect_if(
 		|t| t == Token::Ident || t.is_keyword(),
-		Syn::Ident,
+		Syntax::Ident,
 		&[&["an identifier"]],
 	);
 	trivia_0plus(p);
-	p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
+	p.expect(Token::Eq, Syntax::Eq, &[&["`=`"]]);
 	string(p);
 
 	loop {
@@ -58,41 +58,41 @@ pub fn key_val_pair(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.eat(Token::Semicolon, Syn::Semicolon);
-	p.close(kvp, Syn::KeyValuePair);
+	p.eat(Token::Semicolon, Syntax::Semicolon);
+	p.close(kvp, Syntax::KeyValuePair);
 }
 
-fn string(p: &mut Parser<Syn>) {
+fn string(p: &mut Parser<Syntax>) {
 	trivia_0plus(p);
-	p.expect(Token::StringLit, Syn::StringLit, &[&["a string"]]);
+	p.expect(Token::StringLit, Syntax::StringLit, &[&["a string"]]);
 }
 
-/// Builds a [`Syn::GameQualifier`] node.
-fn ifgame(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::GameQualifier`] node.
+fn ifgame(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::Dollar);
 	let ifgame = p.open();
-	p.advance(Syn::Dollar);
+	p.advance(Syntax::Dollar);
 	trivia_0plus(p);
-	p.expect_str_nc(Token::Ident, "ifgame", Syn::KwIfGame, &[&["`ifgame`"]]);
+	p.expect_str_nc(Token::Ident, "ifgame", Syntax::KwIfGame, &[&["`ifgame`"]]);
 	trivia_0plus(p);
-	p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+	p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 	trivia_0plus(p);
 	p.expect_if(
 		|t| t == Token::Ident || t.is_keyword(),
-		Syn::Ident,
+		Syntax::Ident,
 		&[&["an identifier"]],
 	);
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+	p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 	trivia_0plus(p);
-	p.close(ifgame, Syn::GameQualifier);
+	p.close(ifgame, Syntax::GameQualifier);
 }
 
-/// Builds a [`Syn::Header`] node.
-pub fn header(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Header`] node.
+pub fn header(p: &mut Parser<Syntax>) {
 	p.assert_at(Token::BracketL);
 	let header = p.open();
-	p.advance(Syn::BracketL);
+	p.advance(Syntax::BracketL);
 
 	while !p.at(Token::BracketR) && !p.eof() {
 		if trivia(p) {
@@ -102,42 +102,42 @@ pub fn header(p: &mut Parser<Syn>) {
 		let token = p.nth(0);
 
 		if token == Token::Ident || token.is_keyword() {
-			p.advance(Syn::Ident);
+			p.advance(Syntax::Ident);
 			continue;
 		}
 
 		match token {
-			Token::Tilde => p.advance(Syn::Tilde),
-			Token::KwDefault => p.advance(Syn::KwDefault),
-			Token::Asterisk => p.advance(Syn::Asterisk),
+			Token::Tilde => p.advance(Syntax::Tilde),
+			Token::KwDefault => p.advance(Syntax::KwDefault),
+			Token::Asterisk => p.advance(Syntax::Asterisk),
 			t => {
 				if p.at_any(&[Token::Dollar]) {
 					break;
 				}
 
 				return p.advance_with_error(
-					Syn::from(t),
+					Syntax::from(t),
 					&[&["`~`", "`*`", "`default`", "an identifier"]],
 				);
 			}
 		}
 	}
 
-	p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
-	p.close(header, Syn::Header);
+	p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
+	p.close(header, Syntax::Header);
 }
 
-fn trivia(p: &mut Parser<Syn>) -> bool {
+fn trivia(p: &mut Parser<Syntax>) -> bool {
 	p.eat_any(&[
-		(Token::Whitespace, Syn::Whitespace),
-		(Token::Comment, Syn::Comment),
-		(Token::DocComment, Syn::Comment),
-		(Token::RegionStart, Syn::RegionStart),
-		(Token::RegionEnd, Syn::RegionEnd),
+		(Token::Whitespace, Syntax::Whitespace),
+		(Token::Comment, Syntax::Comment),
+		(Token::DocComment, Syntax::Comment),
+		(Token::RegionStart, Syntax::RegionStart),
+		(Token::RegionEnd, Syntax::RegionEnd),
 	])
 }
 
-fn trivia_0plus(p: &mut Parser<Syn>) {
+fn trivia_0plus(p: &mut Parser<Syntax>) {
 	while trivia(p) {}
 }
 

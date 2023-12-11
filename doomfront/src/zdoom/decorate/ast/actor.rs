@@ -2,17 +2,17 @@ use rowan::{ast::AstNode, SyntaxElement};
 
 use crate::{
 	simple_astnode,
-	zdoom::decorate::{Syn, SyntaxElem, SyntaxNode, SyntaxToken},
+	zdoom::decorate::{Syntax, SyntaxElem, SyntaxNode, SyntaxToken},
 };
 
 use super::{ConstDef, EnumDef, IdentChain};
 
-/// Wraps a node tagged [`Syn::ActorDef`].
+/// Wraps a node tagged [`Syntax::ActorDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ActorDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ActorDef, Syn::ActorDef);
+simple_astnode!(Syntax, ActorDef, Syntax::ActorDef);
 
 impl ActorDef {
 	#[must_use]
@@ -20,7 +20,7 @@ impl ActorDef {
 		self.syntax()
 			.children_with_tokens()
 			.find_map(|elem| {
-				if elem.kind() == Syn::Ident {
+				if elem.kind() == Syntax::Ident {
 					Some(elem.into_token().unwrap())
 				} else {
 					None
@@ -32,7 +32,7 @@ impl ActorDef {
 	#[must_use]
 	pub fn base_class(&self) -> Option<SyntaxToken> {
 		for node in self.syntax().children() {
-			if node.kind() == Syn::InheritSpec {
+			if node.kind() == Syntax::InheritSpec {
 				return Some(node.last_token().unwrap());
 			}
 
@@ -47,7 +47,7 @@ impl ActorDef {
 	#[must_use]
 	pub fn replaced_class(&self) -> Option<SyntaxToken> {
 		for node in self.syntax().children() {
-			if node.kind() == Syn::ReplacesClause {
+			if node.kind() == Syntax::ReplacesClause {
 				return Some(node.last_token().unwrap());
 			}
 
@@ -62,7 +62,7 @@ impl ActorDef {
 	#[must_use]
 	pub fn editor_number(&self) -> Option<SyntaxToken> {
 		for node in self.syntax().children() {
-			if node.kind() == Syn::EditorNumber {
+			if node.kind() == Syntax::EditorNumber {
 				return Some(node.last_token().unwrap());
 			}
 
@@ -92,7 +92,7 @@ pub enum Innard {
 }
 
 impl AstNode for Innard {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
 	where
@@ -100,7 +100,11 @@ impl AstNode for Innard {
 	{
 		matches!(
 			kind,
-			Syn::ConstDef | Syn::EnumDef | Syn::ActorSettings | Syn::StatesDef | Syn::UserVar
+			Syntax::ConstDef
+				| Syntax::EnumDef
+				| Syntax::ActorSettings
+				| Syntax::StatesDef
+				| Syntax::UserVar
 		)
 	}
 
@@ -109,11 +113,11 @@ impl AstNode for Innard {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
-			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
-			Syn::ActorSettings => Some(Self::Settings(ActorSettings(node))),
-			Syn::StatesDef => Some(Self::StatesDef(StatesDef(node))),
-			Syn::UserVar => Some(Self::UserVar(UserVar(node))),
+			Syntax::ConstDef => Some(Self::ConstDef(ConstDef(node))),
+			Syntax::EnumDef => Some(Self::EnumDef(EnumDef(node))),
+			Syntax::ActorSettings => Some(Self::Settings(ActorSettings(node))),
+			Syntax::StatesDef => Some(Self::StatesDef(StatesDef(node))),
+			Syntax::UserVar => Some(Self::UserVar(UserVar(node))),
 			_ => None,
 		}
 	}
@@ -131,12 +135,12 @@ impl AstNode for Innard {
 
 // UserVar /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::UserVar`].
+/// Wraps a node tagged [`Syntax::UserVar`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct UserVar(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, UserVar, Syn::UserVar);
+simple_astnode!(Syntax, UserVar, Syntax::UserVar);
 
 impl UserVar {
 	#[must_use]
@@ -147,7 +151,7 @@ impl UserVar {
 				let SyntaxElement::Token(token) = elem else {
 					return None;
 				};
-				(token.kind() == Syn::Ident).then_some(token)
+				(token.kind() == Syntax::Ident).then_some(token)
 			})
 			.unwrap()
 	}
@@ -162,8 +166,8 @@ impl UserVar {
 				};
 
 				match token.kind() {
-					Syn::KwInt => Some(UserVarType::Int),
-					Syn::KwFloat => Some(UserVarType::Float),
+					Syntax::KwInt => Some(UserVarType::Int),
+					Syntax::KwFloat => Some(UserVarType::Float),
 					_ => None,
 				}
 			})
@@ -180,28 +184,28 @@ pub enum UserVarType {
 
 // Settings ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ActorSettings`].
+/// Wraps a node tagged [`Syntax::ActorSettings`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ActorSettings(SyntaxNode);
 
-simple_astnode!(Syn, ActorSettings, Syn::ActorSettings);
+simple_astnode!(Syntax, ActorSettings, Syntax::ActorSettings);
 
 // StatesDef ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StatesDef`].
+/// Wraps a node tagged [`Syntax::StatesDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StatesDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StatesDef, Syn::StatesDef);
+simple_astnode!(Syntax, StatesDef, Syntax::StatesDef);
 
 impl StatesDef {
 	#[must_use]
 	pub fn usage_quals(&self) -> Option<impl Iterator<Item = StateUsage>> {
 		self.syntax()
 			.first_child()
-			.filter(|node| node.kind() == Syn::StatesUsage)
+			.filter(|node| node.kind() == Syntax::StatesUsage)
 			.map(|node| {
 				node.children_with_tokens().filter_map(|elem| {
 					let Some(token) = elem.into_token() else {
@@ -228,7 +232,7 @@ impl StatesDef {
 	}
 }
 
-/// All wrapped tokens are always tagged [`Syn::Ident`].
+/// All wrapped tokens are always tagged [`Syntax::Ident`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StateUsage {
@@ -247,13 +251,16 @@ pub enum StatesItem {
 }
 
 impl AstNode for StatesItem {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::StateDef | Syn::StateLabel | Syn::StateFlow)
+		matches!(
+			kind,
+			Syntax::StateDef | Syntax::StateLabel | Syntax::StateFlow
+		)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -261,9 +268,9 @@ impl AstNode for StatesItem {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::StateDef => Some(Self::State(StateDef(node))),
-			Syn::StateLabel => Some(Self::Label(StateLabel(node))),
-			Syn::StateFlow => Some(Self::Flow(node)),
+			Syntax::StateDef => Some(Self::State(StateDef(node))),
+			Syntax::StateLabel => Some(Self::Label(StateLabel(node))),
+			Syntax::StateFlow => Some(Self::Flow(node)),
 			_ => None,
 		}
 	}
@@ -285,15 +292,15 @@ impl StatesItem {
 				let tok1 = inner.first_token().unwrap();
 
 				match tok1.kind() {
-					Syn::KwGoto => {
+					Syntax::KwGoto => {
 						let mut target = None;
 						let mut scope = None;
 						let mut offset = None;
 
 						for elem in inner.children_with_tokens() {
-							if elem.kind() == Syn::Ident || elem.kind() == Syn::KwSuper {
+							if elem.kind() == Syntax::Ident || elem.kind() == Syntax::KwSuper {
 								scope = Some(elem.into_token().unwrap());
-							} else if elem.kind() == Syn::GotoOffset {
+							} else if elem.kind() == Syntax::GotoOffset {
 								offset = elem
 									.into_node()
 									.unwrap()
@@ -313,10 +320,10 @@ impl StatesItem {
 							scope,
 						}
 					}
-					Syn::KwLoop => StateFlow::Loop,
-					Syn::KwStop => StateFlow::Stop,
-					Syn::KwWait => StateFlow::Wait,
-					Syn::KwFail => StateFlow::Fail,
+					Syntax::KwLoop => StateFlow::Loop,
+					Syntax::KwStop => StateFlow::Stop,
+					Syntax::KwWait => StateFlow::Wait,
+					Syntax::KwFail => StateFlow::Fail,
 					_ => unreachable!(),
 				}
 			}),
@@ -341,15 +348,15 @@ impl StatesItem {
 	}
 }
 
-/// Wraps a node tagged [`Syn::StateDef`].
+/// Wraps a node tagged [`Syntax::StateDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StateDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StateDef, Syn::StateDef);
+simple_astnode!(Syntax, StateDef, Syntax::StateDef);
 
 impl StateDef {
-	/// The returned token is always tagged [`Syn::StateSprite`].
+	/// The returned token is always tagged [`Syntax::StateSprite`].
 	///
 	/// Its text content may resemble an identifier or a string literal.
 	#[must_use]
@@ -357,26 +364,28 @@ impl StateDef {
 		self.syntax().first_token().unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::StateFrames`].
+	/// The returned token is always tagged [`Syntax::StateFrames`].
 	///
 	/// Its text content content may resemble an identifier or a string literal.
 	#[must_use]
 	pub fn frames(&self) -> SyntaxToken {
 		self.syntax()
 			.children_with_tokens()
-			.find_map(|elem| (elem.kind() == Syn::StateFrames).then(|| elem.into_token().unwrap()))
+			.find_map(|elem| {
+				(elem.kind() == Syntax::StateFrames).then(|| elem.into_token().unwrap())
+			})
 			.unwrap()
 	}
 
 	/// If the returned value is [`rowan::NodeOrToken::Token`], its contained value
-	/// is tagged [`Syn::IntLit`] (and may have a negative number in it). If it
-	/// is [`rowan::NodeOrToken::Node`], its contained value is a [`Syn::CallExpr`].
+	/// is tagged [`Syntax::IntLit`] (and may have a negative number in it). If it
+	/// is [`rowan::NodeOrToken::Node`], its contained value is a [`Syntax::CallExpr`].
 	#[must_use]
 	pub fn duration(&self) -> SyntaxElem {
 		for elem in self.syntax().children_with_tokens() {
 			match elem.kind() {
-				Syn::IntLit => return SyntaxElem::Token(elem.into_token().unwrap()),
-				Syn::CallExpr => return SyntaxElem::Node(elem.into_node().unwrap()),
+				Syntax::IntLit => return SyntaxElem::Token(elem.into_token().unwrap()),
+				Syntax::CallExpr => return SyntaxElem::Node(elem.into_node().unwrap()),
 				_ => continue,
 			}
 		}
@@ -388,27 +397,28 @@ impl StateDef {
 		self.syntax()
 			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
-				Syn::KwBright => Some(StateQual::Bright),
-				Syn::KwCanRaise => Some(StateQual::CanRaise),
-				Syn::KwFast => Some(StateQual::Fast),
-				Syn::KwNoDelay => Some(StateQual::NoDelay),
-				Syn::KwSlow => Some(StateQual::Slow),
-				Syn::StateLight => Some(StateQual::Light({
+				Syntax::KwBright => Some(StateQual::Bright),
+				Syntax::KwCanRaise => Some(StateQual::CanRaise),
+				Syntax::KwFast => Some(StateQual::Fast),
+				Syntax::KwNoDelay => Some(StateQual::NoDelay),
+				Syntax::KwSlow => Some(StateQual::Slow),
+				Syntax::StateLight => Some(StateQual::Light({
 					elem.into_node()
 						.unwrap()
 						.children_with_tokens()
 						.find_map(|e| {
-							e.into_token()
-								.filter(|tok| matches!(tok.kind(), Syn::StringLit | Syn::NameLit))
+							e.into_token().filter(|tok| {
+								matches!(tok.kind(), Syntax::StringLit | Syntax::NameLit)
+							})
 						})
 						.unwrap()
 				})),
-				Syn::StateOffset => {
+				Syntax::StateOffset => {
 					let mut x = None;
 					let mut y = None;
 
 					for e in elem.into_node().unwrap().children_with_tokens() {
-						if e.kind() == Syn::IntLit {
+						if e.kind() == Syntax::IntLit {
 							if x.is_none() {
 								x = Some(e.into_token().unwrap());
 							} else if y.is_none() {
@@ -425,16 +435,16 @@ impl StateDef {
 			})
 	}
 
-	/// The returned token is tagged [`Syn::NameLit`] or [`Syn::StringLit`].
+	/// The returned token is tagged [`Syntax::NameLit`] or [`Syntax::StringLit`].
 	/// If multiple `light` qualifiers are present, the last one is returned.
 	#[must_use]
 	pub fn light(&self) -> Option<SyntaxToken> {
 		for node in self.syntax().children() {
-			if node.kind() == Syn::StateLight {
+			if node.kind() == Syntax::StateLight {
 				return node
 					.children_with_tokens()
 					.find_map(|elem| {
-						(matches!(elem.kind(), Syn::StringLit | Syn::NameLit))
+						(matches!(elem.kind(), Syntax::StringLit | Syntax::NameLit))
 							.then(|| elem.into_token())
 					})
 					.unwrap();
@@ -453,21 +463,21 @@ pub enum StateQual {
 	Fast,
 	NoDelay,
 	Slow,
-	/// The contained token is tagged [`Syn::NameLit`] or [`Syn::StringLit`].
+	/// The contained token is tagged [`Syntax::NameLit`] or [`Syntax::StringLit`].
 	Light(SyntaxToken),
-	/// Each contained token is tagged [`Syn::IntLit`].
+	/// Each contained token is tagged [`Syntax::IntLit`].
 	Offset(SyntaxToken, SyntaxToken),
 }
 
-/// Wraps a node tagged [`Syn::StateLabel`].
+/// Wraps a node tagged [`Syntax::StateLabel`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StateLabel(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StateLabel, Syn::StateLabel);
+simple_astnode!(Syntax, StateLabel, Syntax::StateLabel);
 
 impl StateLabel {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn token(&self) -> SyntaxToken {
 		self.syntax().first_token().unwrap()
@@ -485,7 +495,7 @@ pub enum StateFlow {
 		target: IdentChain,
 		/// Will be `None` if the integer literal can not fit into a [`u64`].
 		offset: Option<u64>,
-		/// Tagged either [`Syn::KwSuper`] or [`Syn::Ident`].
+		/// Tagged either [`Syntax::KwSuper`] or [`Syntax::Ident`].
 		scope: Option<SyntaxToken>,
 	},
 }

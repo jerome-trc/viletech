@@ -1,9 +1,9 @@
 use crate::{parser::Parser, zdoom::lex::Token};
 
-use super::syn::Syn;
+use super::syntax::Syntax;
 
-/// Builds a [`Syn::Root`] node.
-pub fn file(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Root`] node.
+pub fn file(p: &mut Parser<Syntax>) {
 	let root = p.open();
 
 	while !p.eof() {
@@ -15,7 +15,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			definition(p);
 		} else {
 			p.advance_with_error(
-				Syn::from(p.nth(0)),
+				Syntax::from(p.nth(0)),
 				&[&[
 					"`server` or `user` or `nosave`",
 					"`nosave` or `noarchive` or `cheat` or `latch`",
@@ -26,11 +26,11 @@ pub fn file(p: &mut Parser<Syn>) {
 		}
 	}
 
-	p.close(root, Syn::Root);
+	p.close(root, Syntax::Root);
 }
 
-/// Builds a [`Syn::Definition`] node.
-pub fn definition(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Definition`] node.
+pub fn definition(p: &mut Parser<Syntax>) {
 	let def = p.open();
 	flag(p);
 	trivia_1plus(p);
@@ -49,18 +49,18 @@ pub fn definition(p: &mut Parser<Syn>) {
 
 	p.expect_any(
 		&[
-			(Token::KwInt, Syn::KwInt),
-			(Token::KwFloat, Syn::KwFloat),
-			(Token::KwBool, Syn::KwBool),
-			(Token::KwColor, Syn::KwColor),
-			(Token::KwString, Syn::KwString),
+			(Token::KwInt, Syntax::KwInt),
+			(Token::KwFloat, Syntax::KwFloat),
+			(Token::KwBool, Syntax::KwBool),
+			(Token::KwColor, Syntax::KwColor),
+			(Token::KwString, Syntax::KwString),
 		],
 		&[&["`server` or `user` or `nosave`", "whitespace", "a comment"]],
 	);
 
 	trivia_1plus(p);
 
-	p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
+	p.expect(Token::Ident, Syntax::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
 
 	if p.at(Token::Eq) {
@@ -68,19 +68,19 @@ pub fn definition(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(def, Syn::Definition);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(def, Syntax::Definition);
 }
 
-fn flag(p: &mut Parser<Syn>) {
+fn flag(p: &mut Parser<Syntax>) {
 	p.expect_any_str_nc(
 		&[
-			(Token::Ident, "server", Syn::KwServer),
-			(Token::Ident, "user", Syn::KwUser),
-			(Token::Ident, "nosave", Syn::KwNoSave),
-			(Token::Ident, "noarchive", Syn::KwNoArchive),
-			(Token::Ident, "cheat", Syn::KwCheat),
-			(Token::Ident, "latch", Syn::KwLatch),
+			(Token::Ident, "server", Syntax::KwServer),
+			(Token::Ident, "user", Syntax::KwUser),
+			(Token::Ident, "nosave", Syntax::KwNoSave),
+			(Token::Ident, "noarchive", Syntax::KwNoArchive),
+			(Token::Ident, "cheat", Syntax::KwCheat),
+			(Token::Ident, "latch", Syntax::KwLatch),
 		],
 		&[&[
 			"`server` or `user` or `nosave`",
@@ -91,20 +91,20 @@ fn flag(p: &mut Parser<Syn>) {
 	)
 }
 
-/// Builds a [`Syn::DefaultDef`] node.
-fn default_def(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::DefaultDef`] node.
+fn default_def(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::Eq);
 	let default = p.open();
-	p.advance(Syn::Eq);
+	p.advance(Syntax::Eq);
 	trivia_0plus(p);
 
 	p.expect_any(
 		&[
-			(Token::FloatLit, Syn::FloatLit),
-			(Token::IntLit, Syn::IntLit),
-			(Token::KwFalse, Syn::FalseLit),
-			(Token::KwTrue, Syn::TrueLit),
-			(Token::StringLit, Syn::StringLit),
+			(Token::FloatLit, Syntax::FloatLit),
+			(Token::IntLit, Syntax::IntLit),
+			(Token::KwFalse, Syntax::FalseLit),
+			(Token::KwTrue, Syntax::TrueLit),
+			(Token::StringLit, Syntax::StringLit),
 		],
 		&[&[
 			"an integer",
@@ -114,31 +114,31 @@ fn default_def(p: &mut Parser<Syn>) {
 		]],
 	);
 
-	p.close(default, Syn::DefaultDef);
+	p.close(default, Syntax::DefaultDef);
 }
 
-fn trivia(p: &mut Parser<Syn>) -> bool {
+fn trivia(p: &mut Parser<Syntax>) -> bool {
 	p.eat_any(&[
-		(Token::Whitespace, Syn::Whitespace),
-		(Token::Comment, Syn::Comment),
-		(Token::DocComment, Syn::Comment),
-		(Token::RegionStart, Syn::RegionStart),
-		(Token::RegionEnd, Syn::RegionEnd),
+		(Token::Whitespace, Syntax::Whitespace),
+		(Token::Comment, Syntax::Comment),
+		(Token::DocComment, Syntax::Comment),
+		(Token::RegionStart, Syntax::RegionStart),
+		(Token::RegionEnd, Syntax::RegionEnd),
 	])
 }
 
-fn trivia_0plus(p: &mut Parser<Syn>) {
+fn trivia_0plus(p: &mut Parser<Syntax>) {
 	while trivia(p) {}
 }
 
-fn trivia_1plus(p: &mut Parser<Syn>) {
+fn trivia_1plus(p: &mut Parser<Syntax>) {
 	p.expect_any(
 		&[
-			(Token::Whitespace, Syn::Whitespace),
-			(Token::Comment, Syn::Comment),
-			(Token::DocComment, Syn::Comment),
-			(Token::RegionStart, Syn::RegionStart),
-			(Token::RegionEnd, Syn::RegionEnd),
+			(Token::Whitespace, Syntax::Whitespace),
+			(Token::Comment, Syntax::Comment),
+			(Token::DocComment, Syntax::Comment),
+			(Token::RegionStart, Syntax::RegionStart),
+			(Token::RegionEnd, Syntax::RegionEnd),
 		],
 		&[&["whitespace or a comment (one or more)"]],
 	);
@@ -186,9 +186,9 @@ cheat noarchive nosave string /* comment? */ BONELESS_VENTURES = "Welcome to the
 		assert_eq!(cvars[1].name().text(), "acidSurge");
 		assert_eq!(cvars[2].name().text(), "BONELESS_VENTURES");
 
-		assert_eq!(cvars[0].type_spec().kind(), Syn::KwInt);
-		assert_eq!(cvars[1].type_spec().kind(), Syn::KwFloat);
-		assert_eq!(cvars[2].type_spec().kind(), Syn::KwString);
+		assert_eq!(cvars[0].type_spec().kind(), Syntax::KwInt);
+		assert_eq!(cvars[1].type_spec().kind(), Syntax::KwFloat);
+		assert_eq!(cvars[2].type_spec().kind(), Syntax::KwString);
 
 		let default_0 = cvars[0].default();
 		let default_1 = cvars[1].default().unwrap();

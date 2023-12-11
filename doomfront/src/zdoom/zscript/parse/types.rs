@@ -1,12 +1,12 @@
 use crate::{
 	parser::Parser,
-	zdoom::{zscript::Syn, Token},
+	zdoom::{zscript::Syntax, Token},
 };
 
 use super::common::*;
 
-/// Builds a [`Syn::TypeRef`] node.
-pub fn type_ref(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::TypeRef`] node.
+pub fn type_ref(p: &mut Parser<Syntax>) {
 	let tref = p.open();
 	core_type(p);
 
@@ -15,95 +15,95 @@ pub fn type_ref(p: &mut Parser<Syn>) {
 		array_len(p);
 	}
 
-	p.close(tref, Syn::TypeRef);
+	p.close(tref, Syntax::TypeRef);
 }
 
 /// Builds a node tagged with one of the following:
-/// - [`Syn::ClassType`]
-/// - [`Syn::DynArrayType`]
-/// - [`Syn::IdentChainType`]
-/// - [`Syn::LetType`]
-/// - [`Syn::MapType`]
-/// - [`Syn::MapIterType`]
-/// - [`Syn::NativeType`]
-/// - [`Syn::ReadOnlyType`]
-pub fn core_type(p: &mut Parser<Syn>) {
+/// - [`Syntax::ClassType`]
+/// - [`Syntax::DynArrayType`]
+/// - [`Syntax::IdentChainType`]
+/// - [`Syntax::LetType`]
+/// - [`Syntax::MapType`]
+/// - [`Syntax::MapIterType`]
+/// - [`Syntax::NativeType`]
+/// - [`Syntax::ReadOnlyType`]
+pub fn core_type(p: &mut Parser<Syntax>) {
 	let cty = p.open();
 	let token = p.nth(0);
 
 	if is_ident::<0>(token) {
 		ident_chain::<0>(p);
-		p.close(cty, Syn::IdentChainType);
+		p.close(cty, Syntax::IdentChainType);
 		return;
 	}
 
 	if is_primitive_type(token) {
-		p.advance(Syn::from(token));
-		p.close(cty, Syn::PrimitiveType);
+		p.advance(Syntax::from(token));
+		p.close(cty, Syntax::PrimitiveType);
 		return;
 	}
 
 	match token {
 		Token::KwLet => {
-			p.advance(Syn::KwLet);
-			p.close(cty, Syn::LetType);
+			p.advance(Syntax::KwLet);
+			p.close(cty, Syntax::LetType);
 		}
 		Token::KwArray => {
-			p.advance(Syn::KwArray);
+			p.advance(Syntax::KwArray);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
+			p.expect(Token::AngleL, Syntax::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
-			p.close(cty, Syn::DynArrayType);
+			p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
+			p.close(cty, Syntax::DynArrayType);
 		}
 		Token::KwClass => {
-			p.advance(Syn::KwClass);
+			p.advance(Syntax::KwClass);
 
 			if p.find(0, |token| !token.is_trivia()) == Token::AngleL {
 				trivia_0plus(p);
-				p.advance(Syn::AngleL);
+				p.advance(Syntax::AngleL);
 				trivia_0plus(p);
 				ident_chain::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 				trivia_0plus(p);
-				p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
+				p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
 			}
 
-			p.close(cty, Syn::ClassType);
+			p.close(cty, Syntax::ClassType);
 		}
 		Token::KwMap => {
-			p.advance(Syn::KwMap);
+			p.advance(Syntax::KwMap);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
-			trivia_0plus(p);
-			type_ref(p);
-			trivia_0plus(p);
-			p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+			p.expect(Token::AngleL, Syntax::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
-			p.close(cty, Syn::MapType);
+			p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
+			trivia_0plus(p);
+			type_ref(p);
+			trivia_0plus(p);
+			p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
+			p.close(cty, Syntax::MapType);
 		}
 		Token::KwMapIterator => {
-			p.advance(Syn::KwMapIterator);
+			p.advance(Syntax::KwMapIterator);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
-			trivia_0plus(p);
-			type_ref(p);
-			trivia_0plus(p);
-			p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+			p.expect(Token::AngleL, Syntax::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 			type_ref(p);
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
-			p.close(cty, Syn::MapIterType);
+			p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
+			trivia_0plus(p);
+			type_ref(p);
+			trivia_0plus(p);
+			p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
+			p.close(cty, Syntax::MapIterType);
 		}
 		Token::KwReadOnly => {
-			p.advance(Syn::KwReadOnly);
+			p.advance(Syntax::KwReadOnly);
 			trivia_0plus(p);
-			p.expect(Token::AngleL, Syn::AngleL, &[&["`<`"]]);
+			p.expect(Token::AngleL, Syntax::AngleL, &[&["`<`"]]);
 			trivia_0plus(p);
 
 			let t = p.nth(0);
@@ -111,14 +111,14 @@ pub fn core_type(p: &mut Parser<Syn>) {
 			if is_ident::<0>(t) {
 				ident::<0>(p);
 			} else if t == Token::At {
-				p.advance(Syn::At);
+				p.advance(Syntax::At);
 				trivia_0plus(p);
 				ident::<0>(p);
 			} else {
 				p.advance_err_and_close(
 					cty,
-					Syn::from(t),
-					Syn::ReadOnlyType,
+					Syntax::from(t),
+					Syntax::ReadOnlyType,
 					&[&["an identifier", "`@`"]],
 				);
 
@@ -126,24 +126,24 @@ pub fn core_type(p: &mut Parser<Syn>) {
 			}
 
 			trivia_0plus(p);
-			p.expect(Token::AngleR, Syn::AngleR, &[&["`>`"]]);
-			p.close(cty, Syn::ReadOnlyType);
+			p.expect(Token::AngleR, Syntax::AngleR, &[&["`>`"]]);
+			p.close(cty, Syntax::ReadOnlyType);
 		}
 		Token::At => {
-			p.advance(Syn::At);
+			p.advance(Syntax::At);
 			trivia_0plus(p);
 			ident::<0>(p);
-			p.close(cty, Syn::NativeType);
+			p.close(cty, Syntax::NativeType);
 		}
 		Token::Dot => {
 			ident_chain::<0>(p);
-			p.close(cty, Syn::IdentChainType);
+			p.close(cty, Syntax::IdentChainType);
 		}
 		other => {
 			p.advance_err_and_close(
 				cty,
-				Syn::from(other),
-				Syn::Error,
+				Syntax::from(other),
+				Syntax::Error,
 				&[&[
 					"`let`",
 					"`class`",

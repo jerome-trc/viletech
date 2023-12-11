@@ -2,7 +2,7 @@
 
 use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 
-use crate::{Syn, SyntaxNode, SyntaxToken};
+use crate::{Syntax, SyntaxNode, SyntaxToken};
 
 use super::{BlockLabel, Expr, Pattern, TypeSpec};
 
@@ -17,15 +17,19 @@ pub enum Statement {
 }
 
 impl AstNode for Statement {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::StmtBind | Syn::StmtBreak | Syn::StmtContinue | Syn::StmtExpr | Syn::StmtReturn
+			Syntax::StmtBind
+				| Syntax::StmtBreak
+				| Syntax::StmtContinue
+				| Syntax::StmtExpr
+				| Syntax::StmtReturn
 		)
 	}
 
@@ -34,11 +38,11 @@ impl AstNode for Statement {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::StmtBind => Some(Self::Bind(StmtBind(node))),
-			Syn::StmtBreak => Some(Self::Break(StmtBreak(node))),
-			Syn::StmtContinue => Some(Self::Continue(StmtContinue(node))),
-			Syn::StmtExpr => Some(Self::Expr(StmtExpr(node))),
-			Syn::StmtReturn => Some(Self::Return(StmtReturn(node))),
+			Syntax::StmtBind => Some(Self::Bind(StmtBind(node))),
+			Syntax::StmtBreak => Some(Self::Break(StmtBreak(node))),
+			Syntax::StmtContinue => Some(Self::Continue(StmtContinue(node))),
+			Syntax::StmtExpr => Some(Self::Expr(StmtExpr(node))),
+			Syntax::StmtReturn => Some(Self::Return(StmtReturn(node))),
 			_ => None,
 		}
 	}
@@ -56,12 +60,12 @@ impl AstNode for Statement {
 
 // Bind ////////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StmtBind`].
+/// Wraps a node tagged [`Syntax::StmtBind`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StmtBind(SyntaxNode);
 
-simple_astnode!(Syn, StmtBind, Syn::StmtBind);
+simple_astnode!(Syntax, StmtBind, Syntax::StmtBind);
 
 impl StmtBind {
 	#[must_use]
@@ -69,8 +73,8 @@ impl StmtBind {
 		let token = self.0.first_token().unwrap();
 
 		match token.kind() {
-			Syn::KwLet => BindKeyword::Let(token),
-			Syn::KwVar => BindKeyword::Var(token),
+			Syntax::KwLet => BindKeyword::Let(token),
+			Syntax::KwVar => BindKeyword::Var(token),
 			_ => unreachable!(),
 		}
 	}
@@ -79,8 +83,8 @@ impl StmtBind {
 	pub fn const_kw(&self) -> Option<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.take_while(|elem| !Pattern::can_cast(elem.kind()) && elem.kind() != Syn::Error)
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::KwConst))
+			.take_while(|elem| !Pattern::can_cast(elem.kind()) && elem.kind() != Syntax::Error)
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::KwConst))
 	}
 
 	#[must_use]
@@ -116,12 +120,12 @@ pub enum BindKeyword {
 
 // Break ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StmtBreak`].
+/// Wraps a node tagged [`Syntax::StmtBreak`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StmtBreak(SyntaxNode);
 
-simple_astnode!(Syn, StmtBreak, Syn::StmtBreak);
+simple_astnode!(Syntax, StmtBreak, Syntax::StmtBreak);
 
 impl StmtBreak {
 	#[must_use]
@@ -137,19 +141,19 @@ impl StmtBreak {
 
 // Continue ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StmtContinue`].
+/// Wraps a node tagged [`Syntax::StmtContinue`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StmtContinue(SyntaxNode);
 
-simple_astnode!(Syn, StmtContinue, Syn::StmtContinue);
+simple_astnode!(Syntax, StmtContinue, Syntax::StmtContinue);
 
 impl StmtContinue {
-	/// The returned token is always tagged [`Syn::KwContinue`].
+	/// The returned token is always tagged [`Syntax::KwContinue`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		let ret = self.0.first_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::KwContinue);
+		debug_assert_eq!(ret.kind(), Syntax::KwContinue);
 		ret
 	}
 
@@ -161,12 +165,12 @@ impl StmtContinue {
 
 // Expression //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StmtExpr`].
+/// Wraps a node tagged [`Syntax::StmtExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StmtExpr(SyntaxNode);
 
-simple_astnode!(Syn, StmtExpr, Syn::StmtExpr);
+simple_astnode!(Syntax, StmtExpr, Syntax::StmtExpr);
 
 impl StmtExpr {
 	pub fn expr(&self) -> AstResult<Expr> {
@@ -176,12 +180,12 @@ impl StmtExpr {
 
 // Return //////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StmtReturn`].
+/// Wraps a node tagged [`Syntax::StmtReturn`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StmtReturn(SyntaxNode);
 
-simple_astnode!(Syn, StmtReturn, Syn::StmtReturn);
+simple_astnode!(Syntax, StmtReturn, Syntax::StmtReturn);
 
 impl StmtReturn {
 	pub fn expr(&self) -> AstResult<Expr> {

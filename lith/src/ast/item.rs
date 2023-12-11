@@ -2,11 +2,11 @@
 
 use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 
-use crate::{Syn, SyntaxNode, SyntaxToken};
+use crate::{Syntax, SyntaxNode, SyntaxToken};
 
 use super::*;
 
-/// Wraps a node tagged [`Syn::FunctionDecl`].
+/// Wraps a node tagged [`Syntax::FunctionDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Item {
@@ -15,13 +15,13 @@ pub enum Item {
 }
 
 impl AstNode for Item {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::FunctionDecl | Syn::SymConst)
+		matches!(kind, Syntax::FunctionDecl | Syntax::SymConst)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -29,8 +29,8 @@ impl AstNode for Item {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::FunctionDecl => Some(Self::Function(FunctionDecl(node))),
-			Syn::SymConst => Some(Self::SymConst(SymConst(node))),
+			Syntax::FunctionDecl => Some(Self::Function(FunctionDecl(node))),
+			Syntax::SymConst => Some(Self::SymConst(SymConst(node))),
 			_ => None,
 		}
 	}
@@ -45,19 +45,22 @@ impl AstNode for Item {
 
 // FunctionDecl ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::FunctionDecl`].
+/// Wraps a node tagged [`Syntax::FunctionDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FunctionDecl(SyntaxNode);
 
-simple_astnode!(Syn, FunctionDecl, Syn::FunctionDecl);
+simple_astnode!(Syntax, FunctionDecl, Syntax::FunctionDecl);
 
 impl FunctionDecl {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -73,7 +76,7 @@ impl FunctionDecl {
 		self.0.children().find_map(TypeSpec::cast)
 	}
 
-	/// The returned node is always tagged [`Syn::FunctionBody`].
+	/// The returned node is always tagged [`Syntax::FunctionBody`].
 	#[must_use]
 	pub fn body(&self) -> Option<FunctionBody> {
 		self.0.children().find_map(FunctionBody::cast)
@@ -90,14 +93,14 @@ impl FunctionDecl {
 
 // ParamList, Parameter ////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ParamList`].
+/// Wraps a node tagged [`Syntax::ParamList`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ParamList(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ParamList, Syn::ParamList);
+simple_astnode!(Syntax, ParamList, Syntax::ParamList);
 
 impl ParamList {
-	/// The returned token is always tagged [`Syn::Dot3`].
+	/// The returned token is always tagged [`Syntax::Dot3`].
 	#[must_use]
 	pub fn dot3(&self) -> Option<SyntaxToken> {
 		if self.iter().next().is_some() {
@@ -106,7 +109,7 @@ impl ParamList {
 
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot3))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Dot3))
 	}
 
 	#[must_use]
@@ -119,27 +122,30 @@ impl ParamList {
 	}
 }
 
-/// Wraps a node tagged [`Syn::Parameter`].
+/// Wraps a node tagged [`Syntax::Parameter`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Parameter(SyntaxNode);
 
-simple_astnode!(Syn, Parameter, Syn::Parameter);
+simple_astnode!(Syntax, Parameter, Syntax::Parameter);
 
 impl Parameter {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
-	/// The returned token is always tagged [`Syn::KwConst`].
+	/// The returned token is always tagged [`Syntax::KwConst`].
 	#[must_use]
 	pub fn const_kw(&self) -> Option<SyntaxToken> {
 		self.0
 			.first_token()
-			.filter(|token| token.kind() == Syn::KwConst)
+			.filter(|token| token.kind() == Syntax::KwConst)
 	}
 
 	#[must_use]
@@ -154,9 +160,9 @@ impl Parameter {
 
 		for elem in self.0.children_with_tokens() {
 			match elem.kind() {
-				Syn::Ampersand => amp = elem.into_token(),
-				Syn::KwVar => kw_var = elem.into_token(),
-				Syn::Ident => break,
+				Syntax::Ampersand => amp = elem.into_token(),
+				Syntax::KwVar => kw_var = elem.into_token(),
+				Syntax::Ident => break,
 				_ => continue,
 			}
 		}
@@ -192,12 +198,12 @@ pub enum ParamRefSpec {
 	RefVar(SyntaxToken, SyntaxToken),
 }
 
-/// Wraps a node tagged [`Syn::FunctionBody`].
+/// Wraps a node tagged [`Syntax::FunctionBody`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FunctionBody(SyntaxNode);
 
-simple_astnode!(Syn, FunctionBody, Syn::FunctionBody);
+simple_astnode!(Syntax, FunctionBody, Syntax::FunctionBody);
 
 impl FunctionBody {
 	pub fn innards(&self) -> impl Iterator<Item = CoreElement> {
@@ -207,15 +213,15 @@ impl FunctionBody {
 
 // SymConst ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::SymConst`].
+/// Wraps a node tagged [`Syntax::SymConst`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SymConst(SyntaxNode);
 
-simple_astnode!(Syn, SymConst, Syn::SymConst);
+simple_astnode!(Syntax, SymConst, Syntax::SymConst);
 
 impl SymConst {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		let mut ident = None;
 		let mut eq = None;
@@ -226,8 +232,8 @@ impl SymConst {
 			};
 
 			match token.kind() {
-				Syn::Ident => ident = Some(token),
-				Syn::Eq => eq = Some(token),
+				Syntax::Ident => ident = Some(token),
+				Syntax::Eq => eq = Some(token),
 				_ => continue,
 			}
 		}

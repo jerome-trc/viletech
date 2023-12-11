@@ -2,32 +2,32 @@
 
 use crate::{
 	parser::Parser,
-	zdoom::{zscript::Syn, Token},
+	zdoom::{zscript::Syntax, Token},
 };
 
 use super::{common::*, expr, types::*};
 
 /// Builds a node tagged with one of the following:
-/// - [`Syn::AssignStat`]
-/// - [`Syn::BreakStat`]
-/// - [`Syn::CaseStat`]
-/// - [`Syn::CompoundStat`]
-/// - [`Syn::ContinueStat`]
-/// - [`Syn::DeclAssignStat`]
-/// - [`Syn::DefaultStat`]
-/// - [`Syn::DoUntilStat`]
-/// - [`Syn::DoWhileStat`]
-/// - [`Syn::EmptyStat`]
-/// - [`Syn::ExprStat`]
-/// - [`Syn::ForStat`]
-/// - [`Syn::ForEachStat`]
-/// - [`Syn::LocalStat`]
-/// - [`Syn::ReturnStat`]
-/// - [`Syn::StaticConstStat`]
-/// - [`Syn::SwitchStat`]
-/// - [`Syn::UntilStat`]
-/// - [`Syn::WhileStat`]
-pub fn statement(p: &mut Parser<Syn>) {
+/// - [`Syntax::AssignStat`]
+/// - [`Syntax::BreakStat`]
+/// - [`Syntax::CaseStat`]
+/// - [`Syntax::CompoundStat`]
+/// - [`Syntax::ContinueStat`]
+/// - [`Syntax::DeclAssignStat`]
+/// - [`Syntax::DefaultStat`]
+/// - [`Syntax::DoUntilStat`]
+/// - [`Syntax::DoWhileStat`]
+/// - [`Syntax::EmptyStat`]
+/// - [`Syntax::ExprStat`]
+/// - [`Syntax::ForStat`]
+/// - [`Syntax::ForEachStat`]
+/// - [`Syntax::LocalStat`]
+/// - [`Syntax::ReturnStat`]
+/// - [`Syntax::StaticConstStat`]
+/// - [`Syntax::SwitchStat`]
+/// - [`Syntax::UntilStat`]
+/// - [`Syntax::WhileStat`]
+pub fn statement(p: &mut Parser<Syntax>) {
 	let token = p.nth(0);
 
 	if expr::in_first_set(token) {
@@ -51,8 +51,8 @@ pub fn statement(p: &mut Parser<Syn>) {
 
 		let stat = p.open();
 		expr(p);
-		p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-		p.close(stat, Syn::ExprStat);
+		p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+		p.close(stat, Syntax::ExprStat);
 		return;
 	}
 
@@ -64,107 +64,107 @@ pub fn statement(p: &mut Parser<Syn>) {
 	match token {
 		Token::Semicolon => {
 			let stat = p.open();
-			p.advance(Syn::Semicolon);
-			p.close(stat, Syn::EmptyStat);
+			p.advance(Syntax::Semicolon);
+			p.close(stat, Syntax::EmptyStat);
 		}
 		Token::KwCase => {
 			let stat = p.open();
-			p.advance(Syn::KwCase);
+			p.advance(Syntax::KwCase);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
-			p.close(stat, Syn::CaseStat);
+			p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
+			p.close(stat, Syntax::CaseStat);
 		}
 		Token::KwDefault => {
 			let stat = p.open();
-			p.advance(Syn::KwDefault);
+			p.advance(Syntax::KwDefault);
 			trivia_0plus(p);
-			p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
-			p.close(stat, Syn::DefaultStat);
+			p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
+			p.close(stat, Syntax::DefaultStat);
 		}
 		Token::BraceL => {
 			compound_stat(p);
 		}
 		Token::KwSwitch => {
 			let stat = p.open();
-			p.advance(Syn::KwSwitch);
+			p.advance(Syntax::KwSwitch);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			statement(p);
-			p.close(stat, Syn::SwitchStat);
+			p.close(stat, Syntax::SwitchStat);
 		}
 		Token::KwIf => {
 			let stat = p.open();
-			p.advance(Syn::KwIf);
+			p.advance(Syntax::KwIf);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			statement(p);
 
 			if p.find(0, |token| !token.is_trivia()) == Token::KwElse {
 				trivia_0plus(p);
-				p.advance(Syn::KwElse);
+				p.advance(Syntax::KwElse);
 				trivia_0plus(p);
 				statement(p);
 			}
 
-			p.close(stat, Syn::IfStat);
+			p.close(stat, Syntax::IfStat);
 		}
 		t @ (Token::KwWhile | Token::KwUntil) => {
 			let stat = p.open();
 			p.advance(if t == Token::KwWhile {
-				Syn::KwWhile
+				Syntax::KwWhile
 			} else {
-				Syn::KwUntil
+				Syntax::KwUntil
 			});
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			statement(p);
 			p.close(
 				stat,
 				if t == Token::KwWhile {
-					Syn::WhileStat
+					Syntax::WhileStat
 				} else {
-					Syn::UntilStat
+					Syntax::UntilStat
 				},
 			);
 		}
 		Token::KwDo => {
 			let stat = p.open();
-			p.advance(Syn::KwDo);
+			p.advance(Syntax::KwDo);
 			trivia_0plus(p);
 			statement(p);
 			trivia_0plus(p);
 
 			let node_syn = match p.nth(0) {
 				Token::KwWhile => {
-					p.advance(Syn::KwWhile);
-					Syn::DoWhileStat
+					p.advance(Syntax::KwWhile);
+					Syntax::DoWhileStat
 				}
 				Token::KwUntil => {
-					p.advance(Syn::KwUntil);
-					Syn::DoUntilStat
+					p.advance(Syntax::KwUntil);
+					Syntax::DoUntilStat
 				}
 				t => {
 					p.advance_err_and_close(
 						stat,
-						Syn::from(t),
-						Syn::Error,
+						Syntax::from(t),
+						Syntax::Error,
 						&[&["`until`", "`while`"]],
 					);
 					return;
@@ -172,20 +172,20 @@ pub fn statement(p: &mut Parser<Syn>) {
 			};
 
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
 
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			p.close(stat, node_syn);
 		}
 		Token::KwFor => {
 			let stat = p.open();
-			p.advance(Syn::KwFor);
+			p.advance(Syntax::KwFor);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 
 			// Initializers ////////////////////////////////////////////////////
@@ -207,12 +207,15 @@ pub fn statement(p: &mut Parser<Syn>) {
 				} else if in_type_ref_first_set(t) {
 					local_var(p);
 				} else {
-					p.advance_with_error(Syn::from(t), &[&["an expression", "a local variable"]]);
+					p.advance_with_error(
+						Syntax::from(t),
+						&[&["an expression", "a local variable"]],
+					);
 				}
 
 				if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 					trivia_0plus(p);
-					p.advance(Syn::Comma);
+					p.advance(Syntax::Comma);
 					trivia_0plus(p);
 				} else {
 					break;
@@ -220,8 +223,8 @@ pub fn statement(p: &mut Parser<Syn>) {
 			}
 
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(init, Syn::ForLoopInit);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(init, Syntax::ForLoopInit);
 			trivia_0plus(p);
 
 			// Condition ///////////////////////////////////////////////////////
@@ -233,8 +236,8 @@ pub fn statement(p: &mut Parser<Syn>) {
 			}
 
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(cond, Syn::ForLoopCond);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(cond, Syntax::ForLoopCond);
 			trivia_0plus(p);
 
 			// "Bump" //////////////////////////////////////////////////////////
@@ -247,63 +250,63 @@ pub fn statement(p: &mut Parser<Syn>) {
 				if expr::in_first_set(t) {
 					expr(p);
 				} else {
-					p.advance_with_error(Syn::from(t), &[&["an expression"]]);
+					p.advance_with_error(Syntax::from(t), &[&["an expression"]]);
 				}
 
 				if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 					trivia_0plus(p);
-					p.advance(Syn::Comma);
+					p.advance(Syntax::Comma);
 					trivia_0plus(p);
 				} else {
 					break;
 				}
 			}
 
-			p.close(iter, Syn::ForLoopIter);
+			p.close(iter, Syntax::ForLoopIter);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			statement(p);
-			p.close(stat, Syn::ForStat);
+			p.close(stat, Syntax::ForStat);
 		}
 		Token::KwForEach => {
 			let stat = p.open();
-			p.advance(Syn::KwForEach);
+			p.advance(Syntax::KwForEach);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 
 			trivia_0plus(p);
 			var_name(p);
 			trivia_0plus(p);
 
-			p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
+			p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
 
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
 
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			statement(p);
-			p.close(stat, Syn::ForEachStat);
+			p.close(stat, Syntax::ForEachStat);
 		}
 		Token::KwContinue => {
 			let stat = p.open();
-			p.advance(Syn::KwContinue);
+			p.advance(Syntax::KwContinue);
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(stat, Syn::ContinueStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(stat, Syntax::ContinueStat);
 		}
 		Token::KwBreak => {
 			let stat = p.open();
-			p.advance(Syn::KwBreak);
+			p.advance(Syntax::KwBreak);
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(stat, Syn::BreakStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(stat, Syntax::BreakStat);
 		}
 		Token::KwReturn => {
 			let stat = p.open();
-			p.advance(Syn::KwReturn);
+			p.advance(Syntax::KwReturn);
 			trivia_0plus(p);
 
 			if expr::in_first_set(p.nth(0)) {
@@ -311,30 +314,30 @@ pub fn statement(p: &mut Parser<Syn>) {
 			}
 
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(stat, Syn::ReturnStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(stat, Syntax::ReturnStat);
 		}
 		Token::BracketL => {
 			let stat = p.open();
-			p.advance(Syn::BracketL);
+			p.advance(Syntax::BracketL);
 			trivia_0plus(p);
 			expr::expr_list(p);
 			trivia_0plus(p);
-			p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
+			p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
 			trivia_0plus(p);
-			p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
+			p.expect(Token::Eq, Syntax::Eq, &[&["`=`"]]);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(stat, Syn::AssignStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(stat, Syntax::AssignStat);
 		}
 		Token::KwStatic => {
 			static_const_stat(p);
 		}
 		other => {
 			p.advance_with_error(
-				Syn::from(other),
+				Syntax::from(other),
 				&[&[
 					"`;`",
 					"`case`",
@@ -358,10 +361,10 @@ pub fn statement(p: &mut Parser<Syn>) {
 	}
 }
 
-/// Builds a [`Syn::CompoundStat`] node.
-pub(super) fn compound_stat(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::CompoundStat`] node.
+pub(super) fn compound_stat(p: &mut Parser<Syntax>) {
 	let stat = p.open();
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 
 	loop {
 		trivia_0plus(p);
@@ -374,19 +377,19 @@ pub(super) fn compound_stat(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`", "a statement"]]);
-	p.close(stat, Syn::CompoundStat);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`", "a statement"]]);
+	p.close(stat, Syntax::CompoundStat);
 }
 
-/// Builds a [`Syn::StaticConstStat`] node.
-pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::StaticConstStat`] node.
+pub(super) fn static_const_stat(p: &mut Parser<Syntax>) {
 	p.debug_assert_at_any(&[Token::KwStatic, Token::DocComment]);
 	let stat = p.open();
 	doc_comments(p);
 	p.debug_assert_at(Token::KwStatic);
-	p.advance(Syn::KwStatic);
+	p.advance(Syntax::KwStatic);
 	trivia_1plus(p);
-	p.expect(Token::KwConst, Syn::KwConst, &[&["`const`"]]);
+	p.expect(Token::KwConst, Syntax::KwConst, &[&["`const`"]]);
 	trivia_0plus(p);
 	core_type(p);
 	trivia_0plus(p);
@@ -397,63 +400,68 @@ pub(super) fn static_const_stat(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 		ident_lax(p);
 		trivia_0plus(p);
-		p.expect(Token::BracketL, Syn::BracketL, &[&["`[`"]]);
+		p.expect(Token::BracketL, Syntax::BracketL, &[&["`[`"]]);
 		trivia_0plus(p);
-		p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
+		p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
 	} else if t == Token::BracketL {
 		trivia_0plus(p);
-		p.advance(Syn::BracketL);
+		p.advance(Syntax::BracketL);
 		trivia_0plus(p);
-		p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
+		p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
 		trivia_0plus(p);
 		ident_lax(p);
 	} else {
-		p.advance_err_and_close(stat, Syn::from(t), Syn::Error, &[&["`[`", "an identifier"]]);
+		p.advance_err_and_close(
+			stat,
+			Syntax::from(t),
+			Syntax::Error,
+			&[&["`[`", "an identifier"]],
+		);
 		return;
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
+	p.expect(Token::Eq, Syntax::Eq, &[&["`=`"]]);
 	trivia_0plus(p);
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 	expr::expr_list(p);
 	trivia_0plus(p);
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
 	trivia_0plus(p);
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-	p.close(stat, Syn::StaticConstStat);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+	p.close(stat, Syntax::StaticConstStat);
 }
 
-/// Builds a [`Syn::DeclAssignStat`] or [`Syn::LocalStat`] node.
-fn declassign_or_local_stat(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::DeclAssignStat`] or [`Syntax::LocalStat`] node.
+fn declassign_or_local_stat(p: &mut Parser<Syntax>) {
 	let stat = p.open();
 
 	let syn = if p.at(Token::KwLet) && p.find(1, |token| !token.is_trivia()) == Token::BracketL {
-		p.advance(Syn::KwLet);
+		p.advance(Syntax::KwLet);
 		trivia_0plus(p);
-		p.advance(Syn::BracketL);
+		p.advance(Syntax::BracketL);
 		trivia_0plus(p);
 		ident_list::<{ ID_SFKW | ID_SQKW | ID_TYPES }>(p);
 		trivia_0plus(p);
-		p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
+		p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
 		trivia_0plus(p);
-		p.expect(Token::Eq, Syn::Eq, &[&["`=`"]]);
+		p.expect(Token::Eq, Syntax::Eq, &[&["`=`"]]);
 		trivia_0plus(p);
 		expr(p);
 		trivia_0plus(p);
-		Syn::DeclAssignStat
+		Syntax::DeclAssignStat
 	} else {
 		local_var(p);
-		Syn::LocalStat
+		Syntax::LocalStat
 	};
 
-	p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
+	p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
 	p.close(stat, syn);
 }
 
-/// Builds a [`Syn::LocalVar`] node. Does not expect a trailing semicolon.
-fn local_var(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::LocalVar`] node. Does not expect a trailing semicolon.
+fn local_var(p: &mut Parser<Syntax>) {
 	let local = p.open();
 	type_ref(p);
 	trivia_0plus(p);
@@ -465,16 +473,16 @@ fn local_var(p: &mut Parser<Syn>) {
 			break;
 		} else {
 			trivia_0plus(p);
-			p.advance(Syn::Comma);
+			p.advance(Syntax::Comma);
 			trivia_0plus(p);
 		}
 	}
 
-	p.close(local, Syn::LocalVar);
+	p.close(local, Syntax::LocalVar);
 }
 
-/// Builds a [`Syn::LocalVarInit`] node.
-fn local_var_init(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::LocalVarInit`] node.
+fn local_var_init(p: &mut Parser<Syntax>) {
 	let init = p.open();
 	ident_lax(p);
 	trivia_0plus(p);
@@ -486,47 +494,47 @@ fn local_var_init(p: &mut Parser<Syn>) {
 
 			if p.find(0, |token| !token.is_trivia()) == Token::Eq {
 				trivia_0plus(p);
-				p.advance(Syn::Eq);
+				p.advance(Syntax::Eq);
 				trivia_0plus(p);
-				p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+				p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 				trivia_0plus(p);
 				expr::expr_list(p);
 				trivia_0plus(p);
-				p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+				p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
 			}
 		}
 		Token::Eq => {
-			p.advance(Syn::Eq);
+			p.advance(Syntax::Eq);
 			trivia_0plus(p);
 
 			if p.at(Token::BraceL) {
-				p.advance(Syn::BraceL);
+				p.advance(Syntax::BraceL);
 				trivia_0plus(p);
 				expr::expr_list(p);
 				trivia_0plus(p);
-				p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+				p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
 			} else {
 				expr(p);
 			}
 		}
 		Token::BraceL => {
-			p.advance(Syn::BraceL);
+			p.advance(Syntax::BraceL);
 			trivia_0plus(p);
 			expr::expr_list(p);
 			trivia_0plus(p);
-			p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+			p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
 		}
 		Token::Semicolon | Token::Comma => {} // No initializer; valid.
 		other => {
 			p.advance_err_and_close(
 				init,
-				Syn::from(other),
-				Syn::LocalVarInit,
+				Syntax::from(other),
+				Syntax::LocalVarInit,
 				&[&["`[`", "`=`", "`{`"]],
 			);
 			return;
 		}
 	}
 
-	p.close(init, Syn::LocalVarInit);
+	p.close(init, Syntax::LocalVarInit);
 }

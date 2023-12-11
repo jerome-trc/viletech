@@ -6,14 +6,14 @@ use crate::{zdoom::Token, LangExt};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Syn {
+pub enum Syntax {
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
 	/// The top-level node, representing the whole file.
 	Root,
 
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// Optional part at the end of a [`Syn::StateDef`].
+	/// Optional part at the end of a [`Syntax::StateDef`].
 	ActionFunction,
 	/// `'action' statesusage?`
 	ActionQual,
@@ -64,7 +64,7 @@ pub enum Syn {
 	InheritSpec,
 	LocalVar,
 	LocalVarInit,
-	/// Precedes a [`Syn::FieldDecl`] or [`Syn::FunctionDecl`].
+	/// Precedes a [`Syntax::FieldDecl`] or [`Syntax::FunctionDecl`].
 	MemberQuals,
 	/// `'mixin' 'class' ident '{' innard* '}'`
 	MixinClassDef,
@@ -82,7 +82,7 @@ pub enum Syn {
 	/// `'fail' | 'loop' | 'stop' | 'wait' ';'` or
 	/// `'goto' (scope '::')? identchain ('+' integer)?`
 	StateFlow,
-	/// For child nodes under a [`Syn::StatesBlock`].
+	/// For child nodes under a [`Syntax::StatesBlock`].
 	StateDef,
 	/// `nonwhitespace ':'`
 	StateLabel,
@@ -144,13 +144,13 @@ pub enum Syn {
 	/// `primaryexpr '[' expr ']'`
 	IndexExpr,
 	/// Will have one of the following tokens as a child:
-	/// - [`Syn::KwFalse`]
-	/// - [`Syn::KwFloat`]
-	/// - [`Syn::IntLit`]
-	/// - [`Syn::NameLit`]
-	/// - [`Syn::NullLit`]
-	/// - [`Syn::StringLit`]
-	/// - [`Syn::KwTrue`]
+	/// - [`Syntax::KwFalse`]
+	/// - [`Syntax::KwFloat`]
+	/// - [`Syntax::IntLit`]
+	/// - [`Syntax::NameLit`]
+	/// - [`Syntax::NullLit`]
+	/// - [`Syntax::StringLit`]
+	/// - [`Syntax::KwTrue`]
 	Literal,
 	/// `primaryexpr '.' ident`
 	MemberExpr,
@@ -229,10 +229,10 @@ pub enum Syn {
 	KwArray,
 	KwBool,
 	KwBreak,
-	/// Only a keyword in [`Syn::StateDef`] elements.
+	/// Only a keyword in [`Syntax::StateDef`] elements.
 	KwBright,
 	KwByte,
-	/// Only a keyword in [`Syn::StateDef`] items.
+	/// Only a keyword in [`Syntax::StateDef`] items.
 	KwCanRaise,
 	KwCase,
 	KwChar,
@@ -242,7 +242,7 @@ pub enum Syn {
 	KwConst,
 	KwContinue,
 	KwCross,
-	/// Context-sensitive. Only a keyword within a [`Syn::ClassDef`].
+	/// Context-sensitive. Only a keyword within a [`Syntax::ClassDef`].
 	KwDefault,
 	KwDeprecated,
 	KwDo,
@@ -251,10 +251,10 @@ pub enum Syn {
 	KwElse,
 	KwEnum,
 	KwExtend,
-	/// Only a keyword in [`Syn::StateFlow`] elements.
+	/// Only a keyword in [`Syntax::StateFlow`] elements.
 	KwFail,
 	KwFalse,
-	/// Only a keyword in [`Syn::StateDef`] items.
+	/// Only a keyword in [`Syntax::StateDef`] items.
 	KwFast,
 	KwFinal,
 	KwFlagDef,
@@ -273,10 +273,10 @@ pub enum Syn {
 	KwIs,
 	KwLatent,
 	KwLet,
-	/// Only a keyword in [`Syn::StateLight`] elements.
+	/// Only a keyword in [`Syntax::StateLight`] elements.
 	KwLight,
 	KwLong,
-	/// Only a keyword in [`Syn::StateFlow`] elements.
+	/// Only a keyword in [`Syntax::StateFlow`] elements.
 	KwLoop,
 	KwMap,
 	KwMapIterator,
@@ -284,9 +284,9 @@ pub enum Syn {
 	KwMixin,
 	KwName,
 	KwNative,
-	/// Only a keyword in [`Syn::StateDef`] items.
+	/// Only a keyword in [`Syntax::StateDef`] items.
 	KwNoDelay,
-	/// Only a keyword in [`Syn::StateOffset`] elements.
+	/// Only a keyword in [`Syntax::StateOffset`] elements.
 	KwNone,
 	KwOffset,
 	KwOut,
@@ -300,13 +300,13 @@ pub enum Syn {
 	KwSByte,
 	KwShort,
 	KwSizeOf,
-	/// Only a keyword in [`Syn::StateDef`] items.
+	/// Only a keyword in [`Syntax::StateDef`] items.
 	KwSlow,
 	KwSound,
 	KwState,
 	KwStates,
 	KwStatic,
-	/// Only a keyword in [`Syn::StateFlow`] elements.
+	/// Only a keyword in [`Syntax::StateFlow`] elements.
 	KwStop,
 	KwString,
 	KwStruct,
@@ -326,12 +326,12 @@ pub enum Syn {
 	KwVarArg,
 	KwVector2,
 	KwVector3,
-	/// Always child to a [`Syn::VersionQual`] node.
+	/// Always child to a [`Syntax::VersionQual`] node.
 	KwVersion,
 	KwVirtual,
 	KwVirtualScope,
 	KwVoid,
-	/// Only a keyword in [`Syn::StateFlow`] elements.
+	/// Only a keyword in [`Syntax::StateFlow`] elements.
 	KwWait,
 	KwWhile,
 	// Tokens: keywords, irrelevant ////////////////////////////////////////////
@@ -480,7 +480,7 @@ pub enum Syn {
 	/// [zscdoc](https://gitlab.com/Gutawer/zscdoc). These tokens only appear in
 	/// emitted syntax trees if in expected positions (i.e. above a type declaration,
 	/// member, enum variant, or mixin class). Otherwise, comments matching this
-	/// token pattern fall through to [`Syn::Comment`].
+	/// token pattern fall through to [`Syntax::Comment`].
 	DocComment,
 	/// A C-style identifier.
 	Ident,
@@ -488,13 +488,13 @@ pub enum Syn {
 	NonWhitespace,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
-	/// Lexer input rolled up under [`Syn::Error`].
+	/// Lexer input rolled up under [`Syntax::Error`].
 	Unknown,
 	#[doc(hidden)]
 	__Last,
 }
 
-impl Syn {
+impl Syntax {
 	#[must_use]
 	pub fn is_trivia(self) -> bool {
 		matches!(
@@ -516,18 +516,18 @@ impl Syn {
 	}
 }
 
-impl From<Syn> for rowan::SyntaxKind {
-	fn from(value: Syn) -> Self {
+impl From<Syntax> for rowan::SyntaxKind {
+	fn from(value: Syntax) -> Self {
 		Self(value as u16)
 	}
 }
 
-impl rowan::Language for Syn {
+impl rowan::Language for Syntax {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
 		assert!(raw.0 < Self::__Last as u16);
-		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
+		unsafe { std::mem::transmute::<u16, Syntax>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
@@ -535,7 +535,7 @@ impl rowan::Language for Syn {
 	}
 }
 
-impl From<crate::zdoom::Token> for Syn {
+impl From<crate::zdoom::Token> for Syntax {
 	fn from(value: crate::zdoom::Token) -> Self {
 		match value {
 			Token::FloatLit => Self::FloatLit,
@@ -716,8 +716,8 @@ impl From<crate::zdoom::Token> for Syn {
 	}
 }
 
-impl LangExt for Syn {
+impl LangExt for Syntax {
 	type Token = Token;
 	const EOF: Self::Token = Token::Eof;
-	const ERR_NODE: Self::Kind = Syn::Error;
+	const ERR_NODE: Self::Kind = Syntax::Error;
 }

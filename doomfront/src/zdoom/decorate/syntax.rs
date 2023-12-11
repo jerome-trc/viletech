@@ -6,205 +6,206 @@ use crate::{zdoom::Token, LangExt};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Syn {
+pub enum Syntax {
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// `('automap' | 'automap_overlay') '{' property* '}'`
-	AutomapDef,
-	/// [`Syn::KwClearEpisodes`] outside of a block.
-	ClearEpisodes,
-	/// `'cluster' '{' property* '}'`
-	ClusterDef,
-	/// `'conversationids' '{' property* '}'`
-	ConversationDef,
-	/// `'damagetype' '{' property* '}'`
+	/// `'actor' actorident? inheritspec? replacesclause? editornum? '{' innard* '}'`
+	ActorDef,
+	/// A stream of tokens for assigning properties and flags.
+	ActorSettings,
+	/// Optional part at the end of a [`Syntax::StateDef`].
+	ActionFunction,
+	/// `'[' expr ']'`
+	ArrayLen,
+	/// `'(' exprs? ')'`
+	ArgList,
+	/// `'const' 'int'|'float'|'fixed' ident '=' expr ';'`
+	ConstDef,
+	/// `'damagetype' '{' damagetypekvkp* '}'`
 	DamageTypeDef,
-	/// `'defaultmap' '{' property* '}'`
-	DefaultMapDef,
-	/// `'doomednums' '{' property* '}'`
-	EdNumsDef,
-	/// `'episode' ident '{' property* '}'`
-	EpisodeDef,
+	/// `ident (int | float | string)?`
+	DamageTypeKvp,
+	/// Wraps a [`Syntax::IntLit`].
+	EditorNumber,
+	/// `'enum' '{' variant* '}' ';'`
+	EnumDef,
+	/// `ident ('=' expr)?`
+	EnumVariant,
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
-	/// `'gamedefaults' '{' property* '}'`
-	GameDefaults,
-	/// `'gameinfo' '{' property* '}'`
-	GameInfoDef,
-	/// [`Syn::KwInclude`] followed by a [`Syn::StringLit`].
+	/// `'+' integer`
+	GotoOffset,
+	/// `(ident) | (ident ('.' ident)?)`
+	IdentChain,
+	/// [`Syntax::KwInclude`] followed by a [`Syntax::StringLit`].
 	IncludeDirective,
-	/// `'intermission' '{' property* '}'`
-	IntermissionDef,
-	/// `'lookup' string`
-	StringLookup,
-	/// `ident ('=' value (, value)*)?`
-	/// Where `value` is a literal or identifier.
-	Property,
-	/// `'map' ident ('lookup' string)? '{' property* '}'`
-	MapDef,
+	/// `':' actorident`
+	InheritSpec,
+	/// Not an expression type like [`Syntax::Literal`]. Wraps only a literal
+	/// token, optionally preceded by a [`Syntax::Minus`] token.
+	SignLit,
+	/// `'states' '{' (statedef|stateflow|statelabel)* '}'`
+	StatesDef,
+	/// For child nods under a [`Syntax::StatesDef`].
+	StateDef,
+	/// `signlit | 'random' arglist`
+	StateDuration,
+	StateFlow,
+	/// `ident ':'`
+	StateLabel,
+	/// `'light' '(' string ')'`
+	StateLight,
+	/// `'offset' '(' expr ',' expr ')'`
+	StateOffset,
+	/// `(stateoffset | statelight | 'bright' | 'nodelay' | 'fast' | 'slow' | 'canraise')*`
+	StateQuals,
+	/// `'(' ident+ ')'`, where `ident` is "actor", "item", "overlay", or "weapon"
+	/// (matched ASCII case-insensitively).
+	StatesUsage,
+	/// `'[' expr ']'`
+	Subscript,
+	/// `'replaces' actorident`
+	ReplacesClause,
+	/// `'[' ident ']'`, between a call identifier and argument list.
+	RngSpec,
 	/// The top-level node, representing the whole file.
 	Root,
-	/// `'skill' '{' property* '}'`
-	SkillDef,
-	/// `'spawnnums' '{' property* '}'`
-	SpawnNumDefs,
-	/// `ident '{' property* '}'`
-	SubBlock,
-	/// `'teaser' ident`
-	TeaserDef,
-	/// `ident | string | int | float | 'true' | 'false'`
-	Value,
-	// Tokens: literals, relevant //////////////////////////////////////////////
-	/// See [`crate::zdoom::lex::Token::StringLit`].
-	StringLit,
-	/// See [`crate::zdoom::lex::Token::IntLit`].
-	IntLit,
+	/// `'var' ('int'|'float') ident ';'`
+	UserVar,
+	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `'{' statement* '}'` where `statement` cannot be another compound statement.
+	CompoundStat,
+	/// `'do' compoundstat 'while' '(' expr ')'`
+	DoWhileStat,
+	/// `expr ';'`
+	ExprStat,
+	ForStat,
+	/// `'while' '(' expr ')' compoundstat`
+	WhileStat,
+	// Nodes: expressions //////////////////////////////////////////////////////
+	BinExpr,
+	CallExpr,
+	/// Wraps a single [`Syntax::HexLit`] token.
+	ColorExpr,
+	GroupExpr,
+	IdentExpr,
+	IndexExpr,
+	/// Will have one of the following tokens as a child:
+	/// - [`Syntax::KwFalse`]
+	/// - [`Syntax::KwFloat`]
+	/// - [`Syntax::IntLit`]
+	/// - [`Syntax::NameLit`]
+	/// - [`Syntax::StringLit`]
+	/// - [`Syntax::KwTrue`]
+	Literal,
+	/// Wraps a single [`Syntax::KwNone`] token.
+	NoneExpr,
+	/// `expr operator`
+	PostfixExpr,
+	/// `operator expr`
+	PrefixExpr,
+	/// `expr '?' expr ':' expr`
+	TernaryExpr,
+	// Tokens: literals ////////////////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
-	// Tokens: literals, irrelevant ////////////////////////////////////////////
+	/// See [`crate::zdoom::lex::Token::IntLit`].
+	IntLit,
+	/// A hexadecimal integer literal without the `0x` prefix.
+	HexLit,
 	/// See [`crate::zdoom::lex::Token::NameLit`].
 	NameLit,
-	/// See [`crate::zdoom::lex::Token::KwNull`].
-	NullLit,
+	/// See [`crate::zdoom::lex::Token::StringLit`].
+	StringLit,
 	// Tokens: keywords, relevant //////////////////////////////////////////////
-	KwAddDefaultMap,
-	KwAutomap,
-	KwAutomapOverlay,
-	KwClearEpisodes,
-	KwCluster,
-	KwConversationIds,
-	KwDamageType,
-	KwDefaultMap,
-	KwDoomEdNums,
-	KwEpisode,
-	KwFalse,
-	KwGameDefaults,
-	KwGameInfo,
-	KwLookup,
-	/// Note that this is not the same as [`Token::KwInclude`];
-	/// this is the string `include`, ASCII case-insensitive.
-	KwInclude,
-	KwIntermission,
-	KwMap,
-	KwSkill,
-	KwSpawnNums,
-	KwTeaser,
-	KwTrue,
-	// Tokens: keywords, irrelevant ////////////////////////////////////////////
-	#[doc(hidden)]
-	__FirstKw,
-	KwAbstract,
+	KwActor,
 	KwAction,
+	KwBreak,
+	KwBright,
+	KwCanRaise,
+	KwConst,
+	KwContinue,
+	KwDamageType,
+	KwDo,
+	KwElse,
+	KwEnum,
+	KwFail,
+	KwFalse,
+	KwFast,
+	KwFixed,
+	KwFloat,
+	KwFor,
+	KwGoto,
+	KwIf,
+	/// The exact string `#include`, ASCII case-insensitive.
+	KwInclude,
+	KwInt,
+	KwLight,
+	KwLoop,
+	KwNoDelay,
+	KwNone,
+	KwOffset,
+	KwReplaces,
+	KwReturn,
+	KwSlow,
+	KwStates,
+	KwStop,
+	KwSuper,
+	KwTrue,
+	KwVar,
+	KwWait,
+	// Tokens: keywords, irrelevant ////////////////////////////////////////////
+	KwAbstract,
 	KwAlignOf,
 	KwArray,
 	KwAuto,
 	KwBool,
-	KwBreak,
-	KwBright,
 	KwByte,
-	KwCanRaise,
 	KwCase,
 	KwChar,
 	KwClass,
-	KwClearScope,
 	KwColor,
-	KwConst,
-	KwContinue,
 	KwCross,
 	KwDefault,
-	KwDeprecated,
-	KwDo,
 	KwDot,
 	KwDouble,
-	KwElse,
-	KwEnum,
-	KwExtend,
-	KwFail,
-	KwFast,
-	KwFinal,
-	KwFlagDef,
-	KwFloat,
-	KwForEach,
-	KwFor,
-	KwGoto,
-	KwIf,
-	KwInt,
+	KwIn,
 	KwInt16,
 	KwInt8,
-	KwInternal,
-	KwIn,
 	KwIs,
-	KwLatent,
-	KwLet,
-	KwLight,
 	KwLong,
-	KwLoop,
+	KwMap,
 	KwMapIterator,
-	KwMeta,
 	KwMixin,
-	KwName,
 	KwNative,
-	KwNoDelay,
-	KwNone,
-	KwOffset,
-	KwOut,
-	KwOverride,
-	KwPlay,
-	KwPrivate,
+	KwNull,
 	KwProperty,
-	KwProtected,
-	KwReadOnly,
-	KwReturn,
 	KwSByte,
 	KwShort,
 	KwSizeOf,
-	KwSlow,
 	KwSound,
 	KwState,
-	KwStates,
 	KwStatic,
-	KwStop,
 	KwString,
 	KwStruct,
-	KwSuper,
 	KwSwitch,
-	KwReplaces,
-	KwTransient,
-	KwUi,
+	KwUntil,
 	KwUInt,
 	KwUInt16,
 	KwUInt8,
 	KwULong,
-	KwUntil,
 	KwUShort,
-	KwVar,
-	KwVarArg,
 	KwVector2,
 	KwVector3,
 	KwVersion,
-	KwVirtual,
 	KwVirtualScope,
 	KwVoid,
 	KwVolatile,
-	KwWait,
 	KwWhile,
 	// Tokens: glyphs, relevant ////////////////////////////////////////////////
-	/// `{`
-	BraceL,
-	/// `}`
-	BraceR,
-	/// `,`
-	Comma,
-	/// `=`
-	Eq,
-	/// `+`
-	Plus,
-	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
 	/// `&`
 	Ampersand,
 	/// `&&`
 	Ampersand2,
-	/// `&&=`
-	Ampersand2Eq,
 	/// `&=`
 	AmpersandEq,
 	/// `<`
@@ -215,96 +216,78 @@ pub enum Syn {
 	AngleL2Eq,
 	/// `<=`
 	AngleLEq,
-	/// `<>=`
-	AngleLAngleREq,
 	/// `>`
 	AngleR,
 	/// `>>`
 	AngleR2,
-	/// `>>=`
-	AngleR2Eq,
 	/// `>>>`
 	AngleR3,
+	/// `>>=`
+	AngleR2Eq,
 	/// `>>>=`
 	AngleR3Eq,
 	/// `>=`
 	AngleREq,
 	/// `*`
 	Asterisk,
-	/// `**`
-	Asterisk2,
-	/// `**=`
-	Asterisk2Eq,
 	/// `*=`
 	AsteriskEq,
-	/// `@`
-	At,
-	/// `\`
-	Backslash,
 	/// `!`
 	Bang,
 	/// `!=`
 	BangEq,
+	/// `{`
+	BraceL,
+	/// `}`
+	BraceR,
 	/// `[`
 	BracketL,
 	/// `]`
 	BracketR,
 	/// `^`
 	Caret,
-	/// `^^`
-	Caret2,
-	/// `^^`
-	Caret2Eq,
 	/// `^=`
 	CaretEq,
 	/// `:`
 	Colon,
 	/// `::`
 	Colon2,
-	/// `$`
-	Dollar,
+	/// `,`
+	Comma,
 	/// `.`
 	Dot,
-	/// `..`
-	Dot2,
-	/// `...`, a.k.a. ellipsis.
-	Dot3,
+	/// `=`
+	Eq,
 	/// `==`
 	Eq2,
 	/// `~`
 	Tilde,
-	/// `~==`
-	TildeEq2,
 	/// `-`
 	Minus,
-	/// `-=`
-	MinusEq,
 	/// `--`
 	Minus2,
+	/// `-=`
+	MinusEq,
 	/// `(`
 	ParenL,
 	/// `)`
 	ParenR,
 	/// `%`
 	Percent,
-	/// `|`
-	Pipe,
-	/// `|=`
-	PipeEq,
 	/// `%=`
 	PercentEq,
+	/// `|`
+	Pipe,
 	/// `||`
 	Pipe2,
-	/// `||=`
-	Pipe2Eq,
+	/// `|=`
+	PipeEq,
+	/// `+`
+	Plus,
 	/// `++`
 	Plus2,
 	/// `+=`
 	PlusEq,
-	/// `#`
-	Pound,
-	/// `####` (for state sprites in actor definitions.)
-	Pound4,
 	/// `?`
 	Question,
 	/// `;`
@@ -313,37 +296,63 @@ pub enum Syn {
 	Slash,
 	/// `/=`
 	SlashEq,
+	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
+	/// `<>=`
+	AngleLAngleREq,
+	/// `**`
+	Asterisk2,
+	/// `@`
+	At,
+	/// `\`
+	Backslash,
+	/// `$`
+	Dollar,
+	/// `..`
+	Dot2,
+	/// `...`
+	Dot3,
+	/// `#`
+	Pound,
+	/// `####`
+	Pound4,
+	/// `~==`
+	TildeEq2,
 	/// `->`
 	ThinArrow,
 	// Tokens: miscellaneous ///////////////////////////////////////////////////
+	RegionStart,
+	RegionEnd,
+	/// `"####"`, `"----"`,
+	/// or a combination of exactly 4 ASCII digits, ASCII letters, and underscores.
+	StateSprite,
+	StateFrames,
+	// Tokens: foundational ////////////////////////////////////////////////////
 	/// Either single-line or multi-line.
 	Comment,
 	/// A C-style identifier.
 	Ident,
-	/// See [`Token::RegionStart`].
-	RegionStart,
-	/// See [`Token::RegionEnd`].
-	RegionEnd,
-	/// Lexer input rolled up under [`Syn::Error`].
-	Unknown,
+	/// Used for actor identifiers and state sprites, frames, and labels.
+	NonWhitespace,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
+	/// Lexer input rolled up under [`Syntax::Error`].
+	Unknown,
 	#[doc(hidden)]
 	__Last,
 }
 
-impl From<Syn> for rowan::SyntaxKind {
-	fn from(value: Syn) -> Self {
+impl From<Syntax> for rowan::SyntaxKind {
+	fn from(value: Syntax) -> Self {
 		Self(value as u16)
 	}
 }
 
-impl rowan::Language for Syn {
+impl rowan::Language for Syntax {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
 		assert!(raw.0 < Self::__Last as u16);
-		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
+		unsafe { std::mem::transmute::<u16, Syntax>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
@@ -351,19 +360,20 @@ impl rowan::Language for Syn {
 	}
 }
 
-impl LangExt for Syn {
+impl LangExt for Syntax {
 	type Token = Token;
 	const EOF: Self::Token = Token::Eof;
-	const ERR_NODE: Self::Kind = Self::Error;
+	const ERR_NODE: Self::Kind = Syntax::Error;
 }
 
-impl From<crate::zdoom::Token> for Syn {
+impl From<crate::zdoom::Token> for Syntax {
 	fn from(value: crate::zdoom::Token) -> Self {
 		match value {
 			Token::FloatLit => Self::FloatLit,
 			Token::IntLit => Self::IntLit,
 			Token::NameLit => Self::NameLit,
 			Token::StringLit => Self::StringLit,
+			// Keywords ////////////////////////////////////////////////////////
 			Token::KwAbstract => Self::KwAbstract,
 			Token::KwAction => Self::KwAction,
 			Token::KwAlignOf => Self::KwAlignOf,
@@ -376,28 +386,22 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwCanRaise => Self::KwCanRaise,
 			Token::KwCase => Self::KwCase,
 			Token::KwChar => Self::KwChar,
-			Token::KwClearScope => Self::KwClearScope,
 			Token::KwClass => Self::KwClass,
 			Token::KwColor => Self::KwColor,
 			Token::KwConst => Self::KwConst,
 			Token::KwContinue => Self::KwContinue,
 			Token::KwCross => Self::KwCross,
 			Token::KwDefault => Self::KwDefault,
-			Token::KwDeprecated => Self::KwDeprecated,
 			Token::KwDo => Self::KwDo,
 			Token::KwDot => Self::KwDot,
 			Token::KwDouble => Self::KwDouble,
 			Token::KwElse => Self::KwElse,
 			Token::KwEnum => Self::KwEnum,
-			Token::KwExtend => Self::KwExtend,
 			Token::KwFail => Self::KwFail,
 			Token::KwFalse => Self::KwFalse,
 			Token::KwFast => Self::KwFast,
-			Token::KwFinal => Self::KwFinal,
-			Token::KwFlagDef => Self::KwFlagDef,
 			Token::KwFloat => Self::KwFloat,
 			Token::KwFor => Self::KwFor,
-			Token::KwForEach => Self::KwForEach,
 			Token::KwGoto => Self::KwGoto,
 			Token::KwIn => Self::KwIn,
 			Token::KwInclude => Self::KwInclude,
@@ -405,29 +409,19 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwInt => Self::KwInt,
 			Token::KwInt16 => Self::KwInt16,
 			Token::KwInt8 => Self::KwInt8,
-			Token::KwInternal => Self::KwInternal,
 			Token::KwIs => Self::KwIs,
-			Token::KwLet => Self::KwLet,
 			Token::KwLight => Self::KwLight,
 			Token::KwLong => Self::KwLong,
 			Token::KwLoop => Self::KwLoop,
 			Token::KwMap => Self::KwMap,
 			Token::KwMapIterator => Self::KwMapIterator,
-			Token::KwMeta => Self::KwMeta,
 			Token::KwMixin => Self::KwMixin,
-			Token::KwName => Self::KwName,
 			Token::KwNative => Self::KwNative,
 			Token::KwNoDelay => Self::KwNoDelay,
 			Token::KwNone => Self::KwNone,
-			Token::KwNull => Self::NullLit,
+			Token::KwNull => Self::KwNull,
 			Token::KwOffset => Self::KwOffset,
-			Token::KwOut => Self::KwOut,
-			Token::KwOverride => Self::KwOverride,
-			Token::KwPlay => Self::KwPlay,
-			Token::KwPrivate => Self::KwPrivate,
 			Token::KwProperty => Self::KwProperty,
-			Token::KwProtected => Self::KwProtected,
-			Token::KwReadOnly => Self::KwReadOnly,
 			Token::KwReplaces => Self::KwReplaces,
 			Token::KwReturn => Self::KwReturn,
 			Token::KwSByte => Self::KwSByte,
@@ -443,9 +437,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwStruct => Self::KwStruct,
 			Token::KwSuper => Self::KwSuper,
 			Token::KwSwitch => Self::KwSwitch,
-			Token::KwTransient => Self::KwTransient,
 			Token::KwTrue => Self::KwTrue,
-			Token::KwUi => Self::KwUi,
 			Token::KwUInt => Self::KwUInt,
 			Token::KwUInt16 => Self::KwUInt16,
 			Token::KwUInt8 => Self::KwUInt8,
@@ -453,16 +445,15 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwUntil => Self::KwUntil,
 			Token::KwUShort => Self::KwUShort,
 			Token::KwVar => Self::KwVar,
-			Token::KwVarArg => Self::KwVarArg,
 			Token::KwVector2 => Self::KwVector2,
 			Token::KwVector3 => Self::KwVector3,
 			Token::KwVersion => Self::KwVersion,
-			Token::KwVirtual => Self::KwVirtual,
 			Token::KwVirtualScope => Self::KwVirtualScope,
 			Token::KwVoid => Self::KwVoid,
 			Token::KwVolatile => Self::KwVolatile,
 			Token::KwWait => Self::KwWait,
 			Token::KwWhile => Self::KwWhile,
+			// Glyphs //////////////////////////////////////////////////////////
 			Token::Ampersand => Self::Ampersand,
 			Token::Ampersand2 => Self::Ampersand2,
 			Token::AmpersandEq => Self::AmpersandEq,
@@ -499,6 +490,8 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Dot3 => Self::Dot3,
 			Token::Eq => Self::Eq,
 			Token::Eq2 => Self::Eq2,
+			Token::Tilde => Self::Tilde,
+			Token::TildeEq2 => Self::TildeEq2,
 			Token::Minus => Self::Minus,
 			Token::Minus2 => Self::Minus2,
 			Token::MinusEq => Self::MinusEq,
@@ -518,16 +511,37 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Semicolon => Self::Semicolon,
 			Token::Slash => Self::Slash,
 			Token::SlashEq => Self::SlashEq,
-			Token::Tilde => Self::Tilde,
-			Token::TildeEq2 => Self::TildeEq2,
 			Token::ThinArrow => Self::ThinArrow,
-			Token::Comment | Token::DocComment => Self::Comment,
-			Token::Ident => Self::Ident,
+			// Miscellaneous ///////////////////////////////////////////////////
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
+			Token::Ident
+			| Token::KwClearScope
+			| Token::KwDeprecated
+			| Token::KwExtend
+			| Token::KwFinal
+			| Token::KwFlagDef
+			| Token::KwForEach
+			| Token::KwInternal
+			| Token::KwLet
+			| Token::KwMeta
+			| Token::KwName
+			| Token::KwOut
+			| Token::KwOverride
+			| Token::KwPlay
+			| Token::KwPrivate
+			| Token::KwProtected
+			| Token::KwReadOnly
+			| Token::KwTransient
+			| Token::KwUi
+			| Token::KwVarArg
+			| Token::KwVirtual => Self::Ident,
 			Token::Whitespace => Self::Whitespace,
+			Token::Comment | Token::DocComment => Self::Comment,
 			Token::Unknown | Token::Eof => Self::Unknown,
-			Token::__FirstKw | Token::__LastKw | Token::__Last => unreachable!(),
+			Token::__Last | Token::__FirstKw | Token::__LastKw => {
+				unreachable!()
+			}
 		}
 	}
 }

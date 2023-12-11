@@ -3,46 +3,46 @@ use crate::{
 	zdoom::{
 		decorate::{
 			parse::{common::*, top::*},
-			Syn,
+			Syntax,
 		},
 		Token,
 	},
 };
 
-pub(super) fn actor_def(p: &mut Parser<Syn>) {
+pub(super) fn actor_def(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::Ident);
 	let mark = p.open();
-	p.advance(Syn::KwActor);
+	p.advance(Syntax::KwActor);
 	trivia_0plus(p);
 	actor_ident(p);
 	trivia_0plus(p);
 
 	if p.at(Token::Colon) {
 		let ancestor = p.open();
-		p.advance(Syn::Colon);
+		p.advance(Syntax::Colon);
 		trivia_0plus(p);
 		actor_ident(p);
-		p.close(ancestor, Syn::InheritSpec);
+		p.close(ancestor, Syntax::InheritSpec);
 		trivia_0plus(p);
 	}
 
 	if p.at_str_nc(Token::Ident, "replaces") {
 		let replaces = p.open();
-		p.advance(Syn::KwReplaces);
+		p.advance(Syntax::KwReplaces);
 		trivia_0plus(p);
 		actor_ident(p);
-		p.close(replaces, Syn::ReplacesClause);
+		p.close(replaces, Syntax::ReplacesClause);
 		trivia_0plus(p);
 	}
 
 	if p.at(Token::IntLit) {
 		let ednum = p.open();
-		p.advance(Syn::IntLit);
-		p.close(ednum, Syn::EditorNumber);
+		p.advance(Syntax::IntLit);
+		p.close(ednum, Syntax::EditorNumber);
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -50,11 +50,11 @@ pub(super) fn actor_def(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
-	p.close(mark, Syn::ActorDef);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
+	p.close(mark, Syntax::ActorDef);
 }
 
-fn innard(p: &mut Parser<Syn>) {
+fn innard(p: &mut Parser<Syntax>) {
 	let token = match p.nth(0) {
 		Token::KwStates => {
 			states_block(p);
@@ -76,7 +76,7 @@ fn innard(p: &mut Parser<Syn>) {
 	};
 
 	if !is_ident_lax(token) && !matches!(token, Token::Plus | Token::Minus) {
-		p.advance_with_error(Syn::from(token), &[&["an identifier", "`+` or `-`"]]);
+		p.advance_with_error(Syntax::from(token), &[&["an identifier", "`+` or `-`"]]);
 		return;
 	}
 
@@ -100,23 +100,26 @@ fn innard(p: &mut Parser<Syn>) {
 			break;
 		}
 
-		p.advance(Syn::from(token));
+		p.advance(Syntax::from(token));
 	}
 
-	p.close(mark, Syn::ActorSettings);
+	p.close(mark, Syntax::ActorSettings);
 }
 
-fn user_var(p: &mut Parser<Syn>) {
+fn user_var(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::KwVar);
 	let mark = p.open();
-	p.advance(Syn::KwVar);
+	p.advance(Syntax::KwVar);
 	trivia_0plus(p);
 
-	if !p.eat_any(&[(Token::KwInt, Syn::KwInt), (Token::KwFloat, Syn::KwFloat)]) {
+	if !p.eat_any(&[
+		(Token::KwInt, Syntax::KwInt),
+		(Token::KwFloat, Syntax::KwFloat),
+	]) {
 		p.advance_err_and_close(
 			mark,
-			Syn::from(p.nth(0)),
-			Syn::Error,
+			Syntax::from(p.nth(0)),
+			Syntax::Error,
 			&[&["`int`", "`float`"]],
 		);
 
@@ -124,7 +127,7 @@ fn user_var(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
+	p.expect(Token::Ident, Syntax::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
 
 	let mut is_array = false;
@@ -132,17 +135,17 @@ fn user_var(p: &mut Parser<Syn>) {
 	if p.at(Token::BracketL) {
 		is_array = true;
 		let arrlen = p.open();
-		p.advance(Syn::BracketL);
+		p.advance(Syntax::BracketL);
 		trivia_0plus(p);
 		super::expr::expr(p);
 		trivia_0plus(p);
-		p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
-		p.close(arrlen, Syn::ArrayLen);
+		p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
+		p.close(arrlen, Syntax::ArrayLen);
 	}
 
 	p.expect(
 		Token::Semicolon,
-		Syn::Semicolon,
+		Syntax::Semicolon,
 		if is_array {
 			&[&["`;`"]]
 		} else {
@@ -150,20 +153,20 @@ fn user_var(p: &mut Parser<Syn>) {
 		},
 	);
 
-	p.close(mark, Syn::UserVar);
+	p.close(mark, Syntax::UserVar);
 }
 
-pub(super) fn states_block(p: &mut Parser<Syn>) {
+pub(super) fn states_block(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::KwStates);
 	let mark = p.open();
-	p.advance(Syn::KwStates);
+	p.advance(Syntax::KwStates);
 	trivia_0plus(p);
 
 	if p.at(Token::ParenL) {
 		states_usage(p);
 	}
 
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -175,8 +178,8 @@ pub(super) fn states_block(p: &mut Parser<Syn>) {
 			Token::KwFail | Token::KwStop | Token::KwLoop | Token::KwWait
 		) {
 			let flow = p.open();
-			p.advance(Syn::from(token));
-			p.close(flow, Syn::StateFlow);
+			p.advance(Syntax::from(token));
+			p.close(flow, Syntax::StateFlow);
 			trivia_0plus(p);
 			continue;
 		}
@@ -192,8 +195,8 @@ pub(super) fn states_block(p: &mut Parser<Syn>) {
 
 		if p.find(0, |token| !token.is_trivia()) == Token::Colon {
 			trivia_0plus(p);
-			p.advance(Syn::Colon);
-			p.close(label_or_def, Syn::StateLabel);
+			p.advance(Syntax::Colon);
+			p.close(label_or_def, Syntax::StateLabel);
 			trivia_0plus(p);
 			continue;
 		}
@@ -202,23 +205,23 @@ pub(super) fn states_block(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
-	p.close(mark, Syn::StatesDef);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
+	p.close(mark, Syntax::StatesDef);
 }
 
-fn states_usage(p: &mut Parser<Syn>) {
+fn states_usage(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::ParenL);
 	let mark = p.open();
-	p.advance(Syn::ParenL);
+	p.advance(Syntax::ParenL);
 	trivia_0plus(p);
 
-	fn actor_item_overlay_weapon(p: &mut Parser<Syn>) {
+	fn actor_item_overlay_weapon(p: &mut Parser<Syntax>) {
 		p.expect_any_str_nc(
 			&[
-				(Token::Ident, "actor", Syn::Ident),
-				(Token::Ident, "item", Syn::Ident),
-				(Token::Ident, "overlay", Syn::Ident),
-				(Token::Ident, "weapon", Syn::Ident),
+				(Token::Ident, "actor", Syntax::Ident),
+				(Token::Ident, "item", Syntax::Ident),
+				(Token::Ident, "overlay", Syntax::Ident),
+				(Token::Ident, "weapon", Syntax::Ident),
 			],
 			&[&["`actor`", "`item`", "`overlay`", "`weapon`"]],
 		);
@@ -228,36 +231,36 @@ fn states_usage(p: &mut Parser<Syn>) {
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
-		p.expect(Token::Comma, Syn::Comma, &[&["`,`", "`)`"]]);
+		p.expect(Token::Comma, Syntax::Comma, &[&["`,`", "`)`"]]);
 		trivia_0plus(p);
 		actor_item_overlay_weapon(p);
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-	p.close(mark, Syn::StatesUsage);
+	p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+	p.close(mark, Syntax::StatesUsage);
 	trivia_0plus(p);
 }
 
-fn stateflow_goto(p: &mut Parser<Syn>) {
+fn stateflow_goto(p: &mut Parser<Syntax>) {
 	let flow = p.open();
-	p.advance(Syn::KwGoto);
+	p.advance(Syntax::KwGoto);
 	trivia_0plus(p);
 	non_whitespace(p);
 
 	if p.find(0, |token| !token.is_trivia()) == Token::Plus {
 		trivia_0plus(p);
-		p.advance(Syn::Plus);
+		p.advance(Syntax::Plus);
 		trivia_0plus(p);
-		p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
+		p.expect(Token::IntLit, Syntax::IntLit, &[&["an integer"]]);
 	}
 
-	p.close(flow, Syn::StateFlow);
+	p.close(flow, Syntax::StateFlow);
 }
 
-/// Builds a [`Syn::StateDef`] node.
+/// Builds a [`Syntax::StateDef`] node.
 /// Note that this starts at the trivia after the sprite.
-fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
+fn state_def(p: &mut Parser<Syntax>, state: OpenMark) {
 	p.assert_at_if(|token| token.is_trivia());
 
 	trivia_0plus(p);
@@ -285,19 +288,19 @@ fn state_def(p: &mut Parser<Syn>, state: OpenMark) {
 		}
 	}
 
-	p.close(state, Syn::StateDef);
+	p.close(state, Syntax::StateDef);
 }
 
-fn state_frames(p: &mut Parser<Syn>) {
+fn state_frames(p: &mut Parser<Syntax>) {
 	let token = p.nth(0);
 
 	if token == Token::StringLit {
-		p.advance(Syn::NonWhitespace);
+		p.advance(Syntax::NonWhitespace);
 		return;
 	}
 
 	p.merge(
-		Syn::NonWhitespace,
+		Syntax::NonWhitespace,
 		|token| {
 			is_ident_lax(token)
 				|| matches!(
@@ -307,26 +310,26 @@ fn state_frames(p: &mut Parser<Syn>) {
 						| Token::Pound | Token::Pound4
 				)
 		},
-		Syn::from,
+		Syntax::from,
 		&[&["a state frame list"]],
 	);
 }
 
-fn state_duration(p: &mut Parser<Syn>) {
+fn state_duration(p: &mut Parser<Syntax>) {
 	let mark = p.open();
 
 	if p.at_str_nc(Token::Ident, "random") {
-		p.advance(Syn::Ident);
+		p.advance(Syntax::Ident);
 		trivia_0plus(p);
 		super::expr::arg_list(p);
 	} else {
 		sign_lit(p);
 	}
 
-	p.close(mark, Syn::StateDuration);
+	p.close(mark, Syntax::StateDuration);
 }
 
-fn state_quals(p: &mut Parser<Syn>) {
+fn state_quals(p: &mut Parser<Syntax>) {
 	let quals = p.open();
 
 	loop {
@@ -353,15 +356,15 @@ fn state_quals(p: &mut Parser<Syn>) {
 		match p.nth(0) {
 			Token::KwLight => {
 				let light = p.open();
-				p.advance(Syn::KwLight);
+				p.advance(Syntax::KwLight);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+				p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 
 				p.expect_any(
 					&[
-						(Token::StringLit, Syn::StringLit),
-						(Token::NameLit, Syn::NameLit),
+						(Token::StringLit, Syntax::StringLit),
+						(Token::NameLit, Syntax::NameLit),
 					],
 					&[&["a string", "a name"]],
 				);
@@ -369,12 +372,12 @@ fn state_quals(p: &mut Parser<Syn>) {
 				trivia_0plus(p);
 
 				while !p.at(Token::ParenR) && !p.eof() {
-					p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+					p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
 					trivia_0plus(p);
 					p.expect_any(
 						&[
-							(Token::StringLit, Syn::StringLit),
-							(Token::NameLit, Syn::NameLit),
+							(Token::StringLit, Syntax::StringLit),
+							(Token::NameLit, Syntax::NameLit),
 						],
 						&[&["a string", "a name"]],
 					);
@@ -382,31 +385,31 @@ fn state_quals(p: &mut Parser<Syn>) {
 				}
 
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-				p.close(light, Syn::StateLight);
+				p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+				p.close(light, Syntax::StateLight);
 			}
 			Token::KwOffset => {
 				let offset = p.open();
-				p.advance(Syn::KwOffset);
+				p.advance(Syntax::KwOffset);
 				trivia_0plus(p);
-				p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
-				trivia_0plus(p);
-				sign_lit(p);
-				trivia_0plus(p);
-				p.expect(Token::Comma, Syn::Comma, &[&["`,`"]]);
+				p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 				trivia_0plus(p);
 				sign_lit(p);
 				trivia_0plus(p);
-				p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-				p.close(offset, Syn::StateOffset);
+				p.expect(Token::Comma, Syntax::Comma, &[&["`,`"]]);
+				trivia_0plus(p);
+				sign_lit(p);
+				trivia_0plus(p);
+				p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+				p.close(offset, Syntax::StateOffset);
 			}
 			t @ (Token::KwBright
 			| Token::KwCanRaise
 			| Token::KwFast
 			| Token::KwSlow
-			| Token::KwNoDelay) => p.advance(Syn::from(t)),
+			| Token::KwNoDelay) => p.advance(Syntax::from(t)),
 			other => p.advance_with_error(
-				Syn::from(other),
+				Syntax::from(other),
 				&[&[
 					"`bright`",
 					"`canraise`",
@@ -424,16 +427,16 @@ fn state_quals(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.close(quals, Syn::StateQuals);
+	p.close(quals, Syntax::StateQuals);
 }
 
-fn action_function(p: &mut Parser<Syn>) {
+fn action_function(p: &mut Parser<Syntax>) {
 	let mark = p.open();
 
 	if p.at(Token::BraceL) {
 		compound_statement(p);
 	} else {
-		p.expect(Token::Ident, Syn::Ident, &[&["an identifier"]]);
+		p.expect(Token::Ident, Syntax::Ident, &[&["an identifier"]]);
 
 		if p.find(0, |t| !t.is_trivia()) == Token::ParenL {
 			trivia_0plus(p);
@@ -441,80 +444,80 @@ fn action_function(p: &mut Parser<Syn>) {
 		}
 	}
 
-	p.close(mark, Syn::ActionFunction);
+	p.close(mark, Syntax::ActionFunction);
 }
 
-pub(super) fn statement(p: &mut Parser<Syn>) {
+pub(super) fn statement(p: &mut Parser<Syntax>) {
 	match p.nth(0) {
 		Token::KwFor => {
 			let mark = p.open();
-			p.advance(Syn::KwFor);
+			p.advance(Syntax::KwFor);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 
 			trivia_0plus(p);
 			super::expr(p);
 			trivia_0plus(p);
 
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
 
 			trivia_0plus(p);
 			super::expr(p);
 			trivia_0plus(p);
 
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
 
 			trivia_0plus(p);
 			super::expr(p);
 			trivia_0plus(p);
 
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			compound_statement(p);
-			p.close(mark, Syn::ForStat);
+			p.close(mark, Syntax::ForStat);
 		}
 		Token::KwWhile => {
 			let mark = p.open();
-			p.advance(Syn::KwWhile);
+			p.advance(Syntax::KwWhile);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			super::expr::expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
 			compound_statement(p);
-			p.close(mark, Syn::WhileStat);
+			p.close(mark, Syntax::WhileStat);
 		}
 		Token::KwDo => {
 			let mark = p.open();
-			p.advance(Syn::KwDo);
+			p.advance(Syntax::KwDo);
 			trivia_0plus(p);
 			compound_statement(p);
 			trivia_0plus(p);
-			p.expect(Token::KwWhile, Syn::KwWhile, &[&["`while`"]]);
+			p.expect(Token::KwWhile, Syntax::KwWhile, &[&["`while`"]]);
 			trivia_0plus(p);
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			super::expr::expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(mark, Syn::DoWhileStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(mark, Syntax::DoWhileStat);
 		}
 		_ => {
 			let mark = p.open();
 			super::expr::expr(p);
 			trivia_0plus(p);
-			p.expect(Token::Semicolon, Syn::Semicolon, &[&["`;`"]]);
-			p.close(mark, Syn::ExprStat);
+			p.expect(Token::Semicolon, Syntax::Semicolon, &[&["`;`"]]);
+			p.close(mark, Syntax::ExprStat);
 		}
 	}
 }
 
-fn compound_statement(p: &mut Parser<Syn>) {
-	p.expect(Token::BraceL, Syn::BraceL, &[&["`{`"]]);
+fn compound_statement(p: &mut Parser<Syntax>) {
+	p.expect(Token::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
 	while !p.at(Token::BraceR) && !p.eof() {
@@ -522,35 +525,35 @@ fn compound_statement(p: &mut Parser<Syn>) {
 		trivia_0plus(p);
 	}
 
-	p.expect(Token::BraceR, Syn::BraceR, &[&["`}`"]]);
+	p.expect(Token::BraceR, Syntax::BraceR, &[&["`}`"]]);
 }
 
-/// Builds a token tagged [`Syn::NonWhitespace`].
-pub(super) fn actor_ident(p: &mut Parser<Syn>) {
+/// Builds a token tagged [`Syntax::NonWhitespace`].
+pub(super) fn actor_ident(p: &mut Parser<Syntax>) {
 	p.merge(
-		Syn::NonWhitespace,
+		Syntax::NonWhitespace,
 		|token| !token.is_trivia() && !matches!(token, Token::BraceL | Token::Colon),
-		Syn::from,
+		Syntax::from,
 		&[&["any non-whitespace"]],
 	);
 }
 
 /// Gets used for state duration and offset qualifiers.
-fn sign_lit(p: &mut Parser<Syn>) {
+fn sign_lit(p: &mut Parser<Syntax>) {
 	let lit = p.open();
 
-	if p.eat(Token::Minus, Syn::Minus) {
-		p.expect(Token::IntLit, Syn::IntLit, &[&["an integer"]]);
+	if p.eat(Token::Minus, Syntax::Minus) {
+		p.expect(Token::IntLit, Syntax::IntLit, &[&["an integer"]]);
 	} else {
 		p.expect_any(
 			&[
-				(Token::IntLit, Syn::IntLit),
-				(Token::StringLit, Syn::StringLit),
+				(Token::IntLit, Syntax::IntLit),
+				(Token::StringLit, Syntax::StringLit),
 			],
 			&[&["an integer", "a string", "`-`"]],
 		);
 	}
 
-	p.close(lit, Syn::SignLit);
+	p.close(lit, Syntax::SignLit);
 	trivia_0plus(p);
 }

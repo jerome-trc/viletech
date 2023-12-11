@@ -2,31 +2,31 @@
 
 use std::num::{ParseFloatError, ParseIntError};
 
-use crate::{Syn, SyntaxToken};
+use crate::{Syntax, SyntaxToken};
 
 /// Wrapper around a [`SyntaxToken`] with convenience functions.
 /// Returned from calling [`Literal::token`].
-/// See [`Syn::Literal`]'s documentation to see possible token tags.
+/// See [`Syntax::Literal`]'s documentation to see possible token tags.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LitToken(pub(super) SyntaxToken);
 
 impl LitToken {
-	/// If this wraps a [`Syn::LitTrue`] or [`Syn::LitFalse`] token,
+	/// If this wraps a [`Syntax::LitTrue`] or [`Syntax::LitFalse`] token,
 	/// this returns the corresponding value. Otherwise this returns `None`.
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {
 		match self.0.kind() {
-			Syn::LitTrue => Some(true),
-			Syn::LitFalse => Some(false),
+			Syntax::LitTrue => Some(true),
+			Syntax::LitFalse => Some(false),
 			_ => None,
 		}
 	}
 
-	/// Returns `None` if this is not tagged with [`Syn::LitFloat`].
+	/// Returns `None` if this is not tagged with [`Syntax::LitFloat`].
 	#[must_use]
 	pub fn float(&self) -> Option<Result<FloatLit, ParseFloatError>> {
-		if !matches!(self.0.kind(), Syn::LitFloat) {
+		if !matches!(self.0.kind(), Syntax::LitFloat) {
 			return None;
 		}
 
@@ -57,12 +57,12 @@ impl LitToken {
 		}
 	}
 
-	/// Returns `None` if this is not tagged with [`Syn::LitInt`].
+	/// Returns `None` if this is not tagged with [`Syntax::LitInt`].
 	/// Returns `Some(Err)` if integer parsing fails,
 	/// such as if the written value is too large to fit into a `u128`.
 	#[must_use]
 	pub fn int(&self) -> Option<Result<IntLit, ParseIntError>> {
-		if !matches!(self.0.kind(), Syn::LitInt) {
+		if !matches!(self.0.kind(), Syntax::LitInt) {
 			return None;
 		}
 
@@ -123,7 +123,7 @@ impl LitToken {
 
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
-		if self.kind() != Syn::LitName {
+		if self.kind() != Syntax::LitName {
 			return None;
 		}
 
@@ -133,12 +133,12 @@ impl LitToken {
 		text.get((start + 1)..(text.len() - end - 1))
 	}
 
-	/// If this wraps a [`Syn::LitString`] token, this returns the string's
+	/// If this wraps a [`Syntax::LitString`] token, this returns the string's
 	/// content with the delimiting quotation marks stripped away.
 	/// Otherwise this returns `None`.
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
-		if self.0.kind() == Syn::LitString {
+		if self.0.kind() == Syntax::LitString {
 			let text = self.0.text();
 			text.get(1..(text.len() - 1))
 		} else {
@@ -150,12 +150,12 @@ impl LitToken {
 impl std::fmt::Display for LitToken {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self.0.kind() {
-			Syn::LitFalse => write!(f, "`false`"),
-			Syn::LitFloat => write!(f, "floating-point number {}", self.0.text()),
-			Syn::LitInt => write!(f, "integer {}", self.0.text()),
-			Syn::LitName => write!(f, "name {}", self.0.text()),
-			Syn::LitString => write!(f, "string {}", self.0.text()),
-			Syn::LitTrue => write!(f, "`true`"),
+			Syntax::LitFalse => write!(f, "`false`"),
+			Syntax::LitFloat => write!(f, "floating-point number {}", self.0.text()),
+			Syntax::LitInt => write!(f, "integer {}", self.0.text()),
+			Syntax::LitName => write!(f, "name {}", self.0.text()),
+			Syntax::LitString => write!(f, "string {}", self.0.text()),
+			Syntax::LitTrue => write!(f, "`true`"),
 			_ => unreachable!(),
 		}
 	}

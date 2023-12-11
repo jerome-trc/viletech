@@ -236,13 +236,13 @@ mod test {
 
 	#[test]
 	fn smoke_include_tree() {
-		let inctree = IncludeTree::<zscript::Syn>::new(
+		let inctree = IncludeTree::<zscript::Syntax>::new(
 			"file/a.zs",
 			inctree_lookup,
 			zscript::parse::file,
 			zdoom::lex::Context::ZSCRIPT_LATEST,
-			zscript::Syn::IncludeDirective,
-			zscript::Syn::StringLit,
+			zscript::Syntax::IncludeDirective,
+			zscript::Syntax::StringLit,
 		);
 
 		assert!(inctree.missing.is_empty());
@@ -250,13 +250,13 @@ mod test {
 
 	#[test]
 	fn smoke_include_tree_par() {
-		let inctree = IncludeTree::<zscript::Syn>::new_par(
+		let inctree = IncludeTree::<zscript::Syntax>::new_par(
 			"file/a.zs",
 			inctree_lookup,
 			zscript::parse::file,
 			zdoom::lex::Context::ZSCRIPT_LATEST,
-			zscript::Syn::IncludeDirective,
-			zscript::Syn::StringLit,
+			zscript::Syntax::IncludeDirective,
+			zscript::Syntax::StringLit,
 		);
 
 		assert!(inctree.missing.is_empty());

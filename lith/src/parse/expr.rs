@@ -2,59 +2,59 @@
 
 use doomfront::parser::{CloseMark, OpenMark, Parser};
 
-use crate::Syn;
+use crate::Syntax;
 
 use super::common::*;
 
-pub const EXPR_FIRST_SET: &[Syn] = &[
-	Syn::Bang,
-	Syn::Ident,
-	Syn::LitFalse,
-	Syn::LitFloat,
-	Syn::LitInt,
-	Syn::LitName,
-	Syn::LitString,
-	Syn::LitTrue,
-	Syn::ParenL,
-	Syn::Tilde,
+pub const EXPR_FIRST_SET: &[Syntax] = &[
+	Syntax::Bang,
+	Syntax::Ident,
+	Syntax::LitFalse,
+	Syntax::LitFloat,
+	Syntax::LitInt,
+	Syntax::LitName,
+	Syntax::LitString,
+	Syntax::LitTrue,
+	Syntax::ParenL,
+	Syntax::Tilde,
 ];
 
 /// Returns `true` if the expression that was parsed ends with a block.
-/// `eq_op` dictates whether [`Syn::Eq`] is a valid infix operator in this position.
-pub fn expr(p: &mut Parser<Syn>, eq_op: bool) -> bool {
+/// `eq_op` dictates whether [`Syntax::Eq`] is a valid infix operator in this position.
+pub fn expr(p: &mut Parser<Syntax>, eq_op: bool) -> bool {
 	let t0 = p.nth(0);
 
-	if matches!(t0, Syn::BracketL) {
+	if matches!(t0, Syntax::BracketL) {
 		let block_end;
 		let mark = p.open();
 
 		loop {
 			match p.nth(0) {
-				t @ Syn::BracketL => {
+				t @ Syntax::BracketL => {
 					let pfx = p.open();
 					p.advance(t);
 					trivia_0plus(p);
-					let _ = recur(p, eq_op, Syn::Eof);
+					let _ = recur(p, eq_op, Syntax::Eof);
 					trivia_0plus(p);
-					p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
-					p.close(pfx, Syn::ArrayPrefix);
+					p.expect(Syntax::BracketR, Syntax::BracketR, &[&["`]`"]]);
+					p.close(pfx, Syntax::ArrayPrefix);
 				}
 				_ => {
-					block_end = recur(p, eq_op, Syn::Eof);
+					block_end = recur(p, eq_op, Syntax::Eof);
 					break;
 				}
 			}
 		}
 
-		p.close(mark, Syn::ExprType);
+		p.close(mark, Syntax::ExprType);
 		block_end
 	} else {
-		recur(p, eq_op, Syn::Eof)
+		recur(p, eq_op, Syntax::Eof)
 	}
 }
 
 /// Returns `true` if the expression that was parsed ends with a block.
-fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
+fn recur(p: &mut Parser<Syntax>, eq_op: bool, left: Syntax) -> bool {
 	let (mut lhs, mut block_end) = primary(p, eq_op);
 
 	loop {
@@ -63,62 +63,65 @@ fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
 		let right = p.nth(0);
 
 		match right {
-			Syn::ParenL => {
+			Syntax::ParenL => {
 				let m = p.open_before(lhs);
 				trivia_0plus(p);
 				arg_list(p);
 				trivia_0plus(p);
-				lhs = p.close(m, Syn::ExprCall);
+				lhs = p.close(m, Syntax::ExprCall);
 				continue;
 			}
-			Syn::BracketL => {
+			Syntax::BracketL => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::BracketL);
+				p.advance(Syntax::BracketL);
 				trivia_0plus(p);
 				expr(p, eq_op);
 				trivia_0plus(p);
-				p.expect(Syn::BracketR, Syn::BracketR, &[&["`]`"]]);
-				lhs = p.close(m, Syn::ExprIndex);
+				p.expect(Syntax::BracketR, Syntax::BracketR, &[&["`]`"]]);
+				lhs = p.close(m, Syntax::ExprIndex);
 				continue;
 			}
-			Syn::BraceL => {
+			Syntax::BraceL => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::BraceL);
-				lhs = init_list(p, m, Syn::ExprConstruct);
+				p.advance(Syntax::BraceL);
+				lhs = init_list(p, m, Syntax::ExprConstruct);
 				continue;
 			}
 			_ => {}
 		}
 
-		if doomfront::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
+		if doomfront::parser::pratt::<Syntax>(left, right, PRATT_PRECEDENCE) {
 			match right {
-				Syn::Dot => {
+				Syntax::Dot => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::Dot);
+					p.advance(Syntax::Dot);
 					trivia_0plus(p);
 
 					p.expect_any(
-						&[(Syn::Ident, Syn::Ident), (Syn::LitName, Syn::LitName)],
+						&[
+							(Syntax::Ident, Syntax::Ident),
+							(Syntax::LitName, Syntax::LitName),
+						],
 						&[&["an identifier", "a name literal"]],
 					);
 
-					lhs = p.close(m, Syn::ExprField);
+					lhs = p.close(m, Syntax::ExprField);
 				}
-				Syn::At => {
+				Syntax::At => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::At);
-					p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
+					p.advance(Syntax::At);
+					p.expect(Syntax::Ident, Syntax::Ident, &[&["an identifier"]]);
 					trivia_0plus(p);
 					block_end = recur(p, eq_op, right);
-					lhs = p.close(m, Syn::ExprBin);
+					lhs = p.close(m, Syntax::ExprBin);
 				}
-				t @ Syn::Eq => {
+				t @ Syntax::Eq => {
 					if eq_op {
 						let m = p.open_before(lhs);
 						p.advance(t);
 						trivia_0plus(p);
 						block_end = recur(p, eq_op, right);
-						lhs = p.close(m, Syn::ExprBin);
+						lhs = p.close(m, Syntax::ExprBin);
 					} else {
 						break;
 					}
@@ -128,7 +131,7 @@ fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
 					p.advance(other);
 					trivia_0plus(p);
 					block_end = recur(p, eq_op, right);
-					lhs = p.close(m, Syn::ExprBin);
+					lhs = p.close(m, Syntax::ExprBin);
 				}
 			}
 		} else {
@@ -140,55 +143,59 @@ fn recur(p: &mut Parser<Syn>, eq_op: bool, left: Syn) -> bool {
 }
 
 /// Returns `true` if the expression that was parsed ends with a block.
-fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
+fn primary(p: &mut Parser<Syntax>, eq_op: bool) -> (CloseMark, bool) {
 	let mark = p.open();
 
 	match p.nth(0) {
-		t @ Syn::Ident => {
+		t @ Syntax::Ident => {
 			p.advance(t);
-			(p.close(mark, Syn::ExprIdent), false)
+			(p.close(mark, Syntax::ExprIdent), false)
 		}
-		t @ Syn::Dot => {
+		t @ Syntax::Dot => {
 			p.advance(t);
-			p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
-			(p.close(mark, Syn::ExprIdent), false)
+			p.expect(Syntax::Ident, Syntax::Ident, &[&["an identifier"]]);
+			(p.close(mark, Syntax::ExprIdent), false)
 		}
-		t @ (Syn::LitFalse | Syn::LitFloat | Syn::LitInt | Syn::LitName | Syn::LitTrue) => {
+		t @ (Syntax::LitFalse
+		| Syntax::LitFloat
+		| Syntax::LitInt
+		| Syntax::LitName
+		| Syntax::LitTrue) => {
 			p.advance(t);
-			(p.close(mark, Syn::ExprLit), false)
+			(p.close(mark, Syntax::ExprLit), false)
 		}
-		t @ Syn::LitString => {
+		t @ Syntax::LitString => {
 			p.advance(t);
-			p.eat(Syn::Ident, Syn::Ident);
-			(p.close(mark, Syn::ExprLit), false)
+			p.eat(Syntax::Ident, Syntax::Ident);
+			(p.close(mark, Syntax::ExprLit), false)
 		}
-		t @ (Syn::Bang | Syn::Minus | Syn::Tilde) => {
+		t @ (Syntax::Bang | Syntax::Minus | Syntax::Tilde) => {
 			p.advance(t);
 			trivia_0plus(p);
 			recur(p, eq_op, t);
-			(p.close(mark, Syn::ExprPrefix), false)
+			(p.close(mark, Syntax::ExprPrefix), false)
 		}
-		t @ Syn::ParenL => {
+		t @ Syntax::ParenL => {
 			p.advance(t);
 			trivia_0plus(p);
 			expr(p, eq_op);
 			trivia_0plus(p);
-			p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
-			(p.close(mark, Syn::ExprGroup), false)
+			p.expect(Syntax::ParenR, Syntax::ParenR, &[&["`)`"]]);
+			(p.close(mark, Syntax::ExprGroup), false)
 		}
-		t @ Syn::DotBraceL => {
+		t @ Syntax::DotBraceL => {
 			p.advance(t);
-			let ret = init_list(p, mark, Syn::ExprAggregate);
+			let ret = init_list(p, mark, Syntax::ExprAggregate);
 			(ret, true)
 		}
-		t @ Syn::KwStruct => {
+		t @ Syntax::KwStruct => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
+			p.expect(Syntax::BraceL, Syntax::BraceL, &[&["`{`"]]);
 			trivia_0plus(p);
 
-			while !p.at(Syn::BraceR) && !p.eof() {
-				if p.at(Syn::Ident) {
+			while !p.at(Syntax::BraceR) && !p.eof() {
+				if p.at(Syntax::Ident) {
 					field_decl(p);
 				} else {
 					super::core_element::<false>(p);
@@ -197,30 +204,30 @@ fn primary(p: &mut Parser<Syn>, eq_op: bool) -> (CloseMark, bool) {
 				trivia_0plus(p);
 			}
 
-			p.expect(Syn::BraceR, Syn::BraceR, &[&["TODO"]]);
-			(p.close(mark, Syn::ExprStruct), true)
+			p.expect(Syntax::BraceR, Syntax::BraceR, &[&["TODO"]]);
+			(p.close(mark, Syntax::ExprStruct), true)
 		}
-		Syn::BraceL => (block(p, mark, Syn::ExprBlock, true), true),
+		Syntax::BraceL => (block(p, mark, Syntax::ExprBlock, true), true),
 		other => (
-			p.advance_err_and_close(mark, other, Syn::Error, &[&["TODO"]]),
+			p.advance_err_and_close(mark, other, Syntax::Error, &[&["TODO"]]),
 			false,
 		),
 	}
 }
 
 #[must_use]
-fn init_list(p: &mut Parser<Syn>, mark: OpenMark, kind: Syn) -> CloseMark {
+fn init_list(p: &mut Parser<Syntax>, mark: OpenMark, kind: Syntax) -> CloseMark {
 	trivia_0plus(p);
 
 	while !p.eof() {
-		if p.at(Syn::BraceR) {
+		if p.at(Syntax::BraceR) {
 			break;
 		}
 
 		aggregate_init(p);
 		trivia_0plus(p);
 
-		if !p.eat(Syn::Comma, Syn::Comma) {
+		if !p.eat(Syntax::Comma, Syntax::Comma) {
 			trivia_0plus(p);
 			break;
 		} else {
@@ -228,31 +235,31 @@ fn init_list(p: &mut Parser<Syn>, mark: OpenMark, kind: Syn) -> CloseMark {
 		}
 	}
 
-	p.expect(Syn::BraceR, Syn::BraceR, &[&["TODO"]]);
+	p.expect(Syntax::BraceR, Syntax::BraceR, &[&["TODO"]]);
 	p.close(mark, kind)
 }
 
-fn aggregate_init(p: &mut Parser<Syn>) {
+fn aggregate_init(p: &mut Parser<Syntax>) {
 	let mark = p.open();
 
 	match p.nth(0) {
-		t @ Syn::Dot => {
+		t @ Syntax::Dot => {
 			p.advance(t);
 			trivia_0plus(p);
-			p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+			p.expect(Syntax::Ident, Syntax::Ident, &[&["TODO"]]);
 			trivia_0plus(p);
-			p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+			p.expect(Syntax::Eq, Syntax::Eq, &[&["TODO"]]);
 			trivia_0plus(p);
 			let _ = expr(p, true);
 		}
-		t @ Syn::BracketL => {
+		t @ Syntax::BracketL => {
 			p.advance(t);
 			trivia_0plus(p);
 			let _ = expr(p, true);
 			trivia_0plus(p);
-			p.expect(Syn::BracketR, Syn::BracketR, &[&["TODO"]]);
+			p.expect(Syntax::BracketR, Syntax::BracketR, &[&["TODO"]]);
 			trivia_0plus(p);
-			p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+			p.expect(Syntax::Eq, Syntax::Eq, &[&["TODO"]]);
 			trivia_0plus(p);
 			let _ = expr(p, true);
 		}
@@ -261,49 +268,54 @@ fn aggregate_init(p: &mut Parser<Syn>) {
 		}
 	}
 
-	p.close(mark, Syn::AggregateInit);
+	p.close(mark, Syntax::AggregateInit);
 }
 
-fn field_decl(p: &mut Parser<Syn>) {
+fn field_decl(p: &mut Parser<Syntax>) {
 	let mark = p.open();
-	p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	p.expect(Syntax::Ident, Syntax::Ident, &[&["TODO"]]);
 	trivia_0plus(p);
 	type_spec(p, false);
 	trivia_0plus(p);
-	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
-	p.close(mark, Syn::FieldDecl);
+	p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["TODO"]]);
+	p.close(mark, Syntax::FieldDecl);
 }
 
-const PRATT_PRECEDENCE: &[&[Syn]] = &[
+const PRATT_PRECEDENCE: &[&[Syntax]] = &[
 	&[
-		Syn::AmpersandEq,
-		Syn::Ampersand2Eq,
-		Syn::AngleL2Eq,
-		Syn::AngleR2Eq,
-		Syn::AsteriskEq,
-		Syn::Asterisk2Eq,
-		Syn::CaretEq,
-		Syn::Eq,
-		Syn::MinusEq,
-		Syn::PercentEq,
-		Syn::PipeEq,
-		Syn::Pipe2Eq,
-		Syn::PlusEq,
-		Syn::Plus2Eq,
-		Syn::SlashEq,
+		Syntax::AmpersandEq,
+		Syntax::Ampersand2Eq,
+		Syntax::AngleL2Eq,
+		Syntax::AngleR2Eq,
+		Syntax::AsteriskEq,
+		Syntax::Asterisk2Eq,
+		Syntax::CaretEq,
+		Syntax::Eq,
+		Syntax::MinusEq,
+		Syntax::PercentEq,
+		Syntax::PipeEq,
+		Syntax::Pipe2Eq,
+		Syntax::PlusEq,
+		Syntax::Plus2Eq,
+		Syntax::SlashEq,
 	],
-	&[Syn::Pipe2],
-	&[Syn::Ampersand2],
-	&[Syn::BangEq, Syn::Eq2, Syn::TildeEq2],
-	&[Syn::AngleL, Syn::AngleR, Syn::AngleLEq, Syn::AngleREq],
-	&[Syn::Plus2],
-	&[Syn::Pipe],
-	&[Syn::Caret],
-	&[Syn::Ampersand],
-	&[Syn::AngleL2, Syn::AngleR2],
-	&[Syn::Plus, Syn::Minus, Syn::At],
-	&[Syn::Asterisk, Syn::Slash, Syn::Percent],
-	&[Syn::Asterisk2],
-	&[Syn::Bang, Syn::Tilde],
-	&[Syn::Dot],
+	&[Syntax::Pipe2],
+	&[Syntax::Ampersand2],
+	&[Syntax::BangEq, Syntax::Eq2, Syntax::TildeEq2],
+	&[
+		Syntax::AngleL,
+		Syntax::AngleR,
+		Syntax::AngleLEq,
+		Syntax::AngleREq,
+	],
+	&[Syntax::Plus2],
+	&[Syntax::Pipe],
+	&[Syntax::Caret],
+	&[Syntax::Ampersand],
+	&[Syntax::AngleL2, Syntax::AngleR2],
+	&[Syntax::Plus, Syntax::Minus, Syntax::At],
+	&[Syntax::Asterisk, Syntax::Slash, Syntax::Percent],
+	&[Syntax::Asterisk2],
+	&[Syntax::Bang, Syntax::Tilde],
+	&[Syntax::Dot],
 ];

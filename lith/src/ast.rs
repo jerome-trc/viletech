@@ -11,7 +11,7 @@ use doomfront::{
 	simple_astnode, AstError, AstResult,
 };
 
-use crate::{Syn, SyntaxNode, SyntaxToken};
+use crate::{Syntax, SyntaxNode, SyntaxToken};
 
 pub use self::{expr::*, item::*, lit::*, pat::*, stmt::*};
 
@@ -23,13 +23,13 @@ pub enum TopLevel {
 }
 
 impl AstNode for TopLevel {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
-		Item::can_cast(kind) || matches!(kind, Syn::Annotation)
+		Item::can_cast(kind) || matches!(kind, Syntax::Annotation)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -65,9 +65,9 @@ pub enum CoreElement {
 }
 
 impl AstNode for CoreElement {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
@@ -104,24 +104,24 @@ impl AstNode for CoreElement {
 
 // Annotation //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::Annotation`].
+/// Wraps a node tagged [`Syntax::Annotation`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Annotation(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, Annotation, Syn::Annotation);
+simple_astnode!(Syntax, Annotation, Syntax::Annotation);
 
 impl Annotation {
 	pub fn name(&self) -> AstResult<AnnotationName> {
 		let ident0 = self
 			.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Ident))
 			.ok_or(AstError::Missing)?;
 
 		let dot_opt = ident0
 			.siblings_with_tokens(Direction::Next)
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot));
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Dot));
 
 		let Some(dot) = dot_opt else {
 			return Ok(AnnotationName::Unscoped(ident0));
@@ -129,7 +129,7 @@ impl Annotation {
 
 		if let Some(ident1) = dot
 			.siblings_with_tokens(Direction::Next)
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Ident))
 		{
 			return Ok(AnnotationName::Scoped(ident0, ident1));
 		}
@@ -143,7 +143,7 @@ impl Annotation {
 	}
 }
 
-/// All tokens herein are always tagged [`Syn::Ident`].
+/// All tokens herein are always tagged [`Syntax::Ident`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum AnnotationName {
@@ -173,28 +173,28 @@ impl AnnotationName {
 
 // ArgList, Argument ///////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ArgList`].
+/// Wraps a node tagged [`Syntax::ArgList`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ArgList(SyntaxNode);
 
-simple_astnode!(Syn, ArgList, Syn::ArgList);
+simple_astnode!(Syntax, ArgList, Syntax::ArgList);
 
 impl ArgList {
-	/// The returned token is always tagged [`Syn::Dot3`].
+	/// The returned token is always tagged [`Syntax::Dot3`].
 	#[must_use]
 	pub fn dot3(&self) -> Option<SyntaxToken> {
 		let Some(ret) = self
 			.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Dot3))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Dot3))
 		else {
 			return None;
 		};
 
 		if ret
 			.next_sibling_or_token()
-			.is_some_and(|elem| matches!(elem.kind(), Syn::Argument | Syn::Error))
+			.is_some_and(|elem| matches!(elem.kind(), Syntax::Argument | Syntax::Error))
 		{
 			return None;
 		}
@@ -213,12 +213,12 @@ impl ArgList {
 	}
 }
 
-/// Wraps a node tagged [`Syn::Argument`].
+/// Wraps a node tagged [`Syntax::Argument`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Argument(SyntaxNode);
 
-simple_astnode!(Syn, Argument, Syn::Argument);
+simple_astnode!(Syntax, Argument, Syntax::Argument);
 
 impl Argument {
 	pub fn expr(&self) -> AstResult<Expr> {
@@ -232,8 +232,8 @@ impl Argument {
 
 		for elem in self.0.children_with_tokens() {
 			match elem.kind() {
-				Syn::Colon => colon_seen = true,
-				Syn::Ident | Syn::LitName => {
+				Syntax::Colon => colon_seen = true,
+				Syntax::Ident | Syntax::LitName => {
 					name = Some(elem.into_token().unwrap());
 				}
 				_ => {}
@@ -250,15 +250,15 @@ impl Argument {
 
 // BlockLabel //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::BlockLabel`].
+/// Wraps a node tagged [`Syntax::BlockLabel`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct BlockLabel(SyntaxNode);
 
-simple_astnode!(Syn, BlockLabel, Syn::BlockLabel);
+simple_astnode!(Syntax, BlockLabel, Syntax::BlockLabel);
 
 impl BlockLabel {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn ident(&self) -> AstResult<SyntaxToken> {
 		let Some(opener) = self.0.first_token() else {
 			return Err(AstError::Incorrect);
@@ -268,20 +268,20 @@ impl BlockLabel {
 			return Err(AstError::Incorrect);
 		};
 
-		if opener.kind() != Syn::Colon2 || closer.kind() != Syn::Colon2 {
+		if opener.kind() != Syntax::Colon2 || closer.kind() != Syntax::Colon2 {
 			return Err(AstError::Incorrect);
 		}
 
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Ident))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Ident))
 			.ok_or(AstError::Missing)
 	}
 }
 
 // DocComment //////////////////////////////////////////////////////////////////
 
-/// Wraps a [`Syn::DocComment`] token. Provides a convenience function for
+/// Wraps a [`Syntax::DocComment`] token. Provides a convenience function for
 /// stripping preceding slashes and surrounding whitespace.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DocComment(SyntaxToken);
@@ -303,7 +303,7 @@ impl std::ops::Deref for DocComment {
 
 // Name ////////////////////////////////////////////////////////////////////////
 
-/// A convenience for positions which accept either [`Syn::Ident`] or [`Syn::LitName`].
+/// A convenience for positions which accept either [`Syntax::Ident`] or [`Syntax::LitName`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Name(pub(super) SyntaxToken);
@@ -312,8 +312,8 @@ impl Name {
 	#[must_use]
 	pub fn text(&self) -> &str {
 		match self.0.kind() {
-			Syn::Ident => self.0.text(),
-			Syn::LitName => &self.0.text()[1..(self.0.text().len() - 1)],
+			Syntax::Ident => self.0.text(),
+			Syntax::LitName => &self.0.text()[1..(self.0.text().len() - 1)],
 			_ => unreachable!(),
 		}
 	}
@@ -326,7 +326,7 @@ impl Name {
 
 // TypeSpec ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::TypeSpec`].
+/// Wraps a node tagged [`Syntax::TypeSpec`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeSpec {
 	AnyT(SyntaxNode),
@@ -335,13 +335,13 @@ pub enum TypeSpec {
 }
 
 impl AstNode for TypeSpec {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
-		kind == Syn::TypeSpec
+		kind == Syntax::TypeSpec
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -355,8 +355,8 @@ impl AstNode for TypeSpec {
 		let token_x = node.last_token().unwrap();
 
 		match token_x.kind() {
-			Syn::KwAnyT => return Some(Self::AnyT(node)),
-			Syn::KwTypeT => return Some(Self::TypeT(node)),
+			Syntax::KwAnyT => return Some(Self::AnyT(node)),
+			Syntax::KwTypeT => return Some(Self::TypeT(node)),
 			_ => {}
 		}
 
@@ -384,10 +384,10 @@ impl TypeSpec {
 
 fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 	node.children_with_tokens()
-		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syn::DocComment)
+		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syntax::DocComment)
 		.filter_map(|elem| {
 			elem.into_token()
-				.filter(|token| token.kind() == Syn::DocComment)
+				.filter(|token| token.kind() == Syntax::DocComment)
 				.map(DocComment)
 		})
 }

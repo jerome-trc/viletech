@@ -6,66 +6,98 @@ use crate::{zdoom::Token, LangExt};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Syn {
+pub enum Syntax {
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// A whole CVar definition.
-	Definition,
-	/// An `=` followed by a literal to optionally set a custom default value.
-	DefaultDef,
-	/// A sequence of tokens that either did not form a valid syntax element,
-	/// or which contained one or more tokens considered invalid by the lexer.
+	/// `('automap' | 'automap_overlay') '{' property* '}'`
+	AutomapDef,
+	/// [`Syntax::KwClearEpisodes`] outside of a block.
+	ClearEpisodes,
+	/// `'cluster' '{' property* '}'`
+	ClusterDef,
+	/// `'conversationids' '{' property* '}'`
+	ConversationDef,
+	/// `'damagetype' '{' property* '}'`
+	DamageTypeDef,
+	/// `'defaultmap' '{' property* '}'`
+	DefaultMapDef,
+	/// `'doomednums' '{' property* '}'`
+	EdNumsDef,
+	/// `'episode' ident '{' property* '}'`
+	EpisodeDef,
+	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
-	/// The set of flags qualifying a definition, scope specifiers included.
-	DefFlags,
+	/// `'gamedefaults' '{' property* '}'`
+	GameDefaults,
+	/// `'gameinfo' '{' property* '}'`
+	GameInfoDef,
+	/// [`Syntax::KwInclude`] followed by a [`Syntax::StringLit`].
+	IncludeDirective,
+	/// `'intermission' '{' property* '}'`
+	IntermissionDef,
+	/// `'lookup' string`
+	StringLookup,
+	/// `ident ('=' value (, value)*)?`
+	/// Where `value` is a literal or identifier.
+	Property,
+	/// `'map' ident ('lookup' string)? '{' property* '}'`
+	MapDef,
 	/// The top-level node, representing the whole file.
 	Root,
-	/// The type specifier is always followed by the identifier.
-	TypeSpec,
-	// Tokens: literals ////////////////////////////////////////////////////////
-	/// The exact string `false`.
-	FalseLit,
-	/// See [`crate::zdoom::lex::Token::FloatLit`].
-	FloatLit,
+	/// `'skill' '{' property* '}'`
+	SkillDef,
+	/// `'spawnnums' '{' property* '}'`
+	SpawnNumDefs,
+	/// `ident '{' property* '}'`
+	SubBlock,
+	/// `'teaser' ident`
+	TeaserDef,
+	/// `ident | string | int | float | 'true' | 'false'`
+	Value,
+	// Tokens: literals, relevant //////////////////////////////////////////////
+	/// See [`crate::zdoom::lex::Token::StringLit`].
+	StringLit,
 	/// See [`crate::zdoom::lex::Token::IntLit`].
 	IntLit,
-	/// See [`crate::zdoom::lex::Token::StringLit`].
-	/// Also used for providing defaults to color CVars.
-	StringLit,
-	/// The exact string `true`.
-	TrueLit,
+	/// See [`crate::zdoom::lex::Token::FloatLit`].
+	FloatLit,
 	// Tokens: literals, irrelevant ////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::NameLit`].
 	NameLit,
-	// Tokens: keywords ////////////////////////////////////////////////////////
-	/// The type specifier `bool`.
-	KwBool,
-	/// The type specifier `color`.
-	KwColor,
-	/// The type specifier `float`.
-	KwFloat,
-	/// The type specifier `int`.
-	KwInt,
-	/// The type specifier `string`.
-	KwString,
-
-	/// The configuration flag `cheat`.
-	KwCheat,
-	/// The configuration flag `noarchive`.
-	KwNoArchive,
-	/// The scope specifier `nosave`.
-	KwNoSave,
-	/// The configuration flag `latch`.
-	KwLatch,
-	/// The scope specifier `server`.
-	KwServer,
-	/// The scope specifier `user`.
-	KwUser,
+	/// See [`crate::zdoom::lex::Token::KwNull`].
+	NullLit,
+	// Tokens: keywords, relevant //////////////////////////////////////////////
+	KwAddDefaultMap,
+	KwAutomap,
+	KwAutomapOverlay,
+	KwClearEpisodes,
+	KwCluster,
+	KwConversationIds,
+	KwDamageType,
+	KwDefaultMap,
+	KwDoomEdNums,
+	KwEpisode,
+	KwFalse,
+	KwGameDefaults,
+	KwGameInfo,
+	KwLookup,
+	/// Note that this is not the same as [`Token::KwInclude`];
+	/// this is the string `include`, ASCII case-insensitive.
+	KwInclude,
+	KwIntermission,
+	KwMap,
+	KwSkill,
+	KwSpawnNums,
+	KwTeaser,
+	KwTrue,
 	// Tokens: keywords, irrelevant ////////////////////////////////////////////
+	#[doc(hidden)]
+	__FirstKw,
 	KwAbstract,
 	KwAction,
 	KwAlignOf,
 	KwArray,
 	KwAuto,
+	KwBool,
 	KwBreak,
 	KwBright,
 	KwByte,
@@ -74,6 +106,7 @@ pub enum Syn {
 	KwChar,
 	KwClass,
 	KwClearScope,
+	KwColor,
 	KwConst,
 	KwContinue,
 	KwCross,
@@ -89,11 +122,12 @@ pub enum Syn {
 	KwFast,
 	KwFinal,
 	KwFlagDef,
+	KwFloat,
 	KwForEach,
 	KwFor,
 	KwGoto,
-	KwInclude,
 	KwIf,
+	KwInt,
 	KwInt16,
 	KwInt8,
 	KwInternal,
@@ -104,7 +138,6 @@ pub enum Syn {
 	KwLight,
 	KwLong,
 	KwLoop,
-	KwMap,
 	KwMapIterator,
 	KwMeta,
 	KwMixin,
@@ -112,7 +145,6 @@ pub enum Syn {
 	KwNative,
 	KwNoDelay,
 	KwNone,
-	KwNull,
 	KwOffset,
 	KwOut,
 	KwOverride,
@@ -131,6 +163,7 @@ pub enum Syn {
 	KwStates,
 	KwStatic,
 	KwStop,
+	KwString,
 	KwStruct,
 	KwSuper,
 	KwSwitch,
@@ -154,11 +187,17 @@ pub enum Syn {
 	KwVolatile,
 	KwWait,
 	KwWhile,
-	// Tokens: glyphs //////////////////////////////////////////////////////////
+	// Tokens: glyphs, relevant ////////////////////////////////////////////////
+	/// `{`
+	BraceL,
+	/// `}`
+	BraceR,
+	/// `,`
+	Comma,
 	/// `=`
 	Eq,
-	/// `;`
-	Semicolon,
+	/// `+`
+	Plus,
 	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
 	/// `&`
 	Ampersand,
@@ -206,10 +245,6 @@ pub enum Syn {
 	Bang,
 	/// `!=`
 	BangEq,
-	/// `{`
-	BraceL,
-	/// `}`
-	BraceR,
 	/// `[`
 	BracketL,
 	/// `]`
@@ -226,8 +261,6 @@ pub enum Syn {
 	Colon,
 	/// `::`
 	Colon2,
-	/// `,`
-	Comma,
 	/// `$`
 	Dollar,
 	/// `.`
@@ -264,8 +297,6 @@ pub enum Syn {
 	Pipe2,
 	/// `||=`
 	Pipe2Eq,
-	/// `+`
-	Plus,
 	/// `++`
 	Plus2,
 	/// `+=`
@@ -276,20 +307,24 @@ pub enum Syn {
 	Pound4,
 	/// `?`
 	Question,
+	/// `;`
+	Semicolon,
 	/// `/`
 	Slash,
 	/// `/=`
 	SlashEq,
 	/// `->`
 	ThinArrow,
-	// Tokens: miscellaenous ///////////////////////////////////////////////////
-	RegionStart,
-	RegionEnd,
-	/// A name for a defined CVar.
-	Ident,
-	/// Either single-line (C++-style) or multi-line (C-style).
+	// Tokens: miscellaneous ///////////////////////////////////////////////////
+	/// Either single-line or multi-line.
 	Comment,
-	/// Input that the lexer considered to be invalid.
+	/// A C-style identifier.
+	Ident,
+	/// See [`Token::RegionStart`].
+	RegionStart,
+	/// See [`Token::RegionEnd`].
+	RegionEnd,
+	/// Lexer input rolled up under [`Syntax::Error`].
 	Unknown,
 	/// Spaces, newlines, carriage returns, or tabs.
 	Whitespace,
@@ -297,18 +332,18 @@ pub enum Syn {
 	__Last,
 }
 
-impl From<Syn> for rowan::SyntaxKind {
-	fn from(value: Syn) -> Self {
+impl From<Syntax> for rowan::SyntaxKind {
+	fn from(value: Syntax) -> Self {
 		Self(value as u16)
 	}
 }
 
-impl rowan::Language for Syn {
+impl rowan::Language for Syntax {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
 		assert!(raw.0 < Self::__Last as u16);
-		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
+		unsafe { std::mem::transmute::<u16, Syntax>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
@@ -316,20 +351,19 @@ impl rowan::Language for Syn {
 	}
 }
 
-impl LangExt for Syn {
+impl LangExt for Syntax {
 	type Token = Token;
 	const EOF: Self::Token = Token::Eof;
-	const ERR_NODE: Self::Kind = Syn::Error;
+	const ERR_NODE: Self::Kind = Self::Error;
 }
 
-impl From<crate::zdoom::Token> for Syn {
+impl From<crate::zdoom::Token> for Syntax {
 	fn from(value: crate::zdoom::Token) -> Self {
 		match value {
 			Token::FloatLit => Self::FloatLit,
 			Token::IntLit => Self::IntLit,
 			Token::NameLit => Self::NameLit,
 			Token::StringLit => Self::StringLit,
-			// Keywords ////////////////////////////////////////////////////////
 			Token::KwAbstract => Self::KwAbstract,
 			Token::KwAction => Self::KwAction,
 			Token::KwAlignOf => Self::KwAlignOf,
@@ -342,8 +376,8 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwCanRaise => Self::KwCanRaise,
 			Token::KwCase => Self::KwCase,
 			Token::KwChar => Self::KwChar,
-			Token::KwClass => Self::KwClass,
 			Token::KwClearScope => Self::KwClearScope,
+			Token::KwClass => Self::KwClass,
 			Token::KwColor => Self::KwColor,
 			Token::KwConst => Self::KwConst,
 			Token::KwContinue => Self::KwContinue,
@@ -357,7 +391,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwEnum => Self::KwEnum,
 			Token::KwExtend => Self::KwExtend,
 			Token::KwFail => Self::KwFail,
-			Token::KwFalse => Self::FalseLit,
+			Token::KwFalse => Self::KwFalse,
 			Token::KwFast => Self::KwFast,
 			Token::KwFinal => Self::KwFinal,
 			Token::KwFlagDef => Self::KwFlagDef,
@@ -366,11 +400,12 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwForEach => Self::KwForEach,
 			Token::KwGoto => Self::KwGoto,
 			Token::KwIn => Self::KwIn,
-			Token::KwInternal => Self::KwInternal,
+			Token::KwInclude => Self::KwInclude,
 			Token::KwIf => Self::KwIf,
 			Token::KwInt => Self::KwInt,
 			Token::KwInt16 => Self::KwInt16,
 			Token::KwInt8 => Self::KwInt8,
+			Token::KwInternal => Self::KwInternal,
 			Token::KwIs => Self::KwIs,
 			Token::KwLet => Self::KwLet,
 			Token::KwLight => Self::KwLight,
@@ -384,7 +419,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwNative => Self::KwNative,
 			Token::KwNoDelay => Self::KwNoDelay,
 			Token::KwNone => Self::KwNone,
-			Token::KwNull => Self::KwNull,
+			Token::KwNull => Self::NullLit,
 			Token::KwOffset => Self::KwOffset,
 			Token::KwOut => Self::KwOut,
 			Token::KwOverride => Self::KwOverride,
@@ -409,7 +444,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwSuper => Self::KwSuper,
 			Token::KwSwitch => Self::KwSwitch,
 			Token::KwTransient => Self::KwTransient,
-			Token::KwTrue => Self::TrueLit,
+			Token::KwTrue => Self::KwTrue,
 			Token::KwUi => Self::KwUi,
 			Token::KwUInt => Self::KwUInt,
 			Token::KwUInt16 => Self::KwUInt16,
@@ -428,7 +463,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwVolatile => Self::KwVolatile,
 			Token::KwWait => Self::KwWait,
 			Token::KwWhile => Self::KwWhile,
-			// Glyphs //////////////////////////////////////////////////////////
 			Token::Ampersand => Self::Ampersand,
 			Token::Ampersand2 => Self::Ampersand2,
 			Token::AmpersandEq => Self::AmpersandEq,
@@ -484,20 +518,16 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Semicolon => Self::Semicolon,
 			Token::Slash => Self::Slash,
 			Token::SlashEq => Self::SlashEq,
-			Token::ThinArrow => Self::ThinArrow,
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
-			// Miscellaneous ///////////////////////////////////////////////////
-			Token::KwInclude => Self::KwInclude,
+			Token::ThinArrow => Self::ThinArrow,
+			Token::Comment | Token::DocComment => Self::Comment,
+			Token::Ident => Self::Ident,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
-			Token::Ident => Self::Ident,
 			Token::Whitespace => Self::Whitespace,
-			Token::Comment | Token::DocComment => Self::Comment,
 			Token::Unknown | Token::Eof => Self::Unknown,
-			Token::__Last | Token::__FirstKw | Token::__LastKw => {
-				unreachable!()
-			}
+			Token::__FirstKw | Token::__LastKw | Token::__Last => unreachable!(),
 		}
 	}
 }

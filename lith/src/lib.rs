@@ -27,16 +27,16 @@ pub mod issue;
 pub mod parse;
 pub mod rti;
 pub mod runtime;
-pub mod syn;
+pub mod syntax;
 
-pub use self::{compile::Compiler, syn::*};
+pub use self::{compile::Compiler, syntax::*};
 
 pub use cranelift::codegen::settings::OptLevel;
 
-pub type ParseTree = doomfront::ParseTree<Syn>;
-pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syn>;
-pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syn>;
-pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syn>;
+pub type ParseTree = doomfront::ParseTree<Syntax>;
+pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syntax>;
+pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syntax>;
+pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syntax>;
 
 /// Each Lithica library is declared as belonging to a version of the Lithica
 /// specification, which uses [SemVer](https://semver.org/).

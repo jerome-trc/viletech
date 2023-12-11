@@ -106,7 +106,7 @@ impl std::fmt::Display for IName {
 mod test {
 	use doomfront::rowan::GreenNode;
 
-	use crate::{Syn, SyntaxNode};
+	use crate::{Syntax, SyntaxNode};
 
 	use super::*;
 
@@ -115,10 +115,10 @@ mod test {
 		let interner = NameInterner::default();
 
 		let node = GreenNode::new(
-			Syn::FileRoot.into(),
+			Syntax::FileRoot.into(),
 			[
-				GreenToken::new(Syn::Ident.into(), "lorem").into(),
-				GreenToken::new(Syn::LitName.into(), "'ipsum'").into(),
+				GreenToken::new(Syntax::Ident.into(), "lorem").into(),
+				GreenToken::new(Syntax::LitName.into(), "'ipsum'").into(),
 			],
 		);
 

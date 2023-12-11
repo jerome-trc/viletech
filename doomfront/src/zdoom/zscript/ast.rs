@@ -19,7 +19,7 @@ use crate::{
 	AstError, AstResult,
 };
 
-use super::{Syn, SyntaxNode, SyntaxToken};
+use super::{Syntax, SyntaxNode, SyntaxToken};
 
 pub use self::{actor::*, expr::*, stat::*, structure::*, types::*};
 
@@ -39,7 +39,7 @@ pub enum TopLevel {
 }
 
 impl AstNode for TopLevel {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
 	where
@@ -47,13 +47,15 @@ impl AstNode for TopLevel {
 	{
 		matches!(
 			kind,
-			Syn::ClassDef
-				| Syn::ClassExtend
-				| Syn::ConstDef | Syn::EnumDef
-				| Syn::MixinClassDef
-				| Syn::IncludeDirective
-				| Syn::StructDef | Syn::StructExtend
-				| Syn::VersionDirective
+			Syntax::ClassDef
+				| Syntax::ClassExtend
+				| Syntax::ConstDef
+				| Syntax::EnumDef
+				| Syntax::MixinClassDef
+				| Syntax::IncludeDirective
+				| Syntax::StructDef
+				| Syntax::StructExtend
+				| Syntax::VersionDirective
 		)
 	}
 
@@ -62,15 +64,15 @@ impl AstNode for TopLevel {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ClassDef => Some(Self::ClassDef(ClassDef(node))),
-			Syn::ClassExtend => Some(Self::ClassExtend(ClassExtend(node))),
-			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
-			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
-			Syn::MixinClassDef => Some(Self::MixinClassDef(MixinClassDef(node))),
-			Syn::IncludeDirective => Some(Self::Include(IncludeDirective(node))),
-			Syn::StructDef => Some(Self::StructDef(StructDef(node))),
-			Syn::StructExtend => Some(Self::StructExtend(StructExtend(node))),
-			Syn::VersionDirective => Some(Self::Version(VersionDirective(node))),
+			Syntax::ClassDef => Some(Self::ClassDef(ClassDef(node))),
+			Syntax::ClassExtend => Some(Self::ClassExtend(ClassExtend(node))),
+			Syntax::ConstDef => Some(Self::ConstDef(ConstDef(node))),
+			Syntax::EnumDef => Some(Self::EnumDef(EnumDef(node))),
+			Syntax::MixinClassDef => Some(Self::MixinClassDef(MixinClassDef(node))),
+			Syntax::IncludeDirective => Some(Self::Include(IncludeDirective(node))),
+			Syntax::StructDef => Some(Self::StructDef(StructDef(node))),
+			Syntax::StructExtend => Some(Self::StructExtend(StructExtend(node))),
+			Syntax::VersionDirective => Some(Self::Version(VersionDirective(node))),
 			_ => None,
 		}
 	}
@@ -92,31 +94,34 @@ impl AstNode for TopLevel {
 
 // ConstDef ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ConstDef`].
+/// Wraps a node tagged [`Syntax::ConstDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ConstDef(SyntaxNode);
 
-simple_astnode!(Syn, ConstDef, Syn::ConstDef);
+simple_astnode!(Syntax, ConstDef, Syntax::ConstDef);
 
 impl ConstDef {
-	/// The returned token is always tagged [`Syn::KwConst`].
+	/// The returned token is always tagged [`Syntax::KwConst`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwConst)
+					.filter(|token| token.kind() == Syntax::KwConst)
 			})
 			.unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -134,31 +139,34 @@ impl ConstDef {
 
 // EnumDef /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::EnumDef`].
+/// Wraps a node tagged [`Syntax::EnumDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumDef(SyntaxNode);
 
-simple_astnode!(Syn, EnumDef, Syn::EnumDef);
+simple_astnode!(Syntax, EnumDef, Syntax::EnumDef);
 
 impl EnumDef {
-	/// The returned token is always tagged [`Syn::KwEnum`].
+	/// The returned token is always tagged [`Syntax::KwEnum`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwEnum)
+					.filter(|token| token.kind() == Syntax::KwEnum)
 			})
 			.unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -166,16 +174,16 @@ impl EnumDef {
 	pub fn type_spec(&self) -> Option<(SyntaxToken, EnumType)> {
 		self.0.children_with_tokens().find_map(|elem| {
 			let ret1 = match elem.kind() {
-				Syn::KwSByte => EnumType::KwSByte,
-				Syn::KwByte => EnumType::KwByte,
-				Syn::KwInt8 => EnumType::KwInt8,
-				Syn::KwUInt8 => EnumType::KwUInt8,
-				Syn::KwShort => EnumType::KwShort,
-				Syn::KwUShort => EnumType::KwUShort,
-				Syn::KwInt16 => EnumType::KwInt16,
-				Syn::KwUInt16 => EnumType::KwUInt16,
-				Syn::KwInt => EnumType::KwInt,
-				Syn::KwUInt => EnumType::KwUInt,
+				Syntax::KwSByte => EnumType::KwSByte,
+				Syntax::KwByte => EnumType::KwByte,
+				Syntax::KwInt8 => EnumType::KwInt8,
+				Syntax::KwUInt8 => EnumType::KwUInt8,
+				Syntax::KwShort => EnumType::KwShort,
+				Syntax::KwUShort => EnumType::KwUShort,
+				Syntax::KwInt16 => EnumType::KwInt16,
+				Syntax::KwUInt16 => EnumType::KwUInt16,
+				Syntax::KwInt => EnumType::KwInt,
+				Syntax::KwUInt => EnumType::KwUInt,
 				_ => return None,
 			};
 
@@ -225,15 +233,15 @@ impl std::fmt::Display for EnumType {
 	}
 }
 
-/// Wraps a node tagged [`Syn::EnumVariant`].
+/// Wraps a node tagged [`Syntax::EnumVariant`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumVariant(SyntaxNode);
 
-simple_astnode!(Syn, EnumVariant, Syn::EnumVariant);
+simple_astnode!(Syntax, EnumVariant, Syntax::EnumVariant);
 
 impl EnumVariant {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn name(&self) -> SyntaxToken {
 		self.0.first_token().unwrap()
@@ -251,19 +259,19 @@ impl EnumVariant {
 
 // IncludeDirective ////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IncludeDirective`].
+/// Wraps a node tagged [`Syntax::IncludeDirective`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IncludeDirective(SyntaxNode);
 
-simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
+simple_astnode!(Syntax, IncludeDirective, Syntax::IncludeDirective);
 
 impl IncludeDirective {
-	/// Yielded tokens are always tagged [`Syn::StringLit`].
+	/// Yielded tokens are always tagged [`Syntax::StringLit`].
 	pub fn strings(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.filter(|elem| elem.kind() == Syn::StringLit)
+			.filter(|elem| elem.kind() == Syntax::StringLit)
 			.map(|elem| elem.into_token().unwrap())
 	}
 
@@ -314,20 +322,20 @@ impl IncludeDirective {
 
 // VersionDirective ////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::VersionDirective`].
+/// Wraps a node tagged [`Syntax::VersionDirective`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct VersionDirective(SyntaxNode);
 
-simple_astnode!(Syn, VersionDirective, Syn::VersionDirective);
+simple_astnode!(Syntax, VersionDirective, Syntax::VersionDirective);
 
 impl VersionDirective {
-	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn string(&self) -> AstResult<LitToken<Syn>> {
+	/// The returned token is always tagged [`Syntax::StringLit`].
+	pub fn string(&self) -> AstResult<LitToken<Syntax>> {
 		let token = self.0.last_token().ok_or(AstError::Missing)?;
 
 		match token.kind() {
-			Syn::StringLit => Ok(LitToken::new(token)),
+			Syntax::StringLit => Ok(LitToken::new(token)),
 			_ => Err(AstError::Incorrect),
 		}
 	}
@@ -347,73 +355,73 @@ impl VersionDirective {
 
 // IdentChain //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IdentChain`].
+/// Wraps a node tagged [`Syntax::IdentChain`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IdentChain(SyntaxNode);
 
-simple_astnode!(Syn, IdentChain, Syn::IdentChain);
+simple_astnode!(Syntax, IdentChain, Syntax::IdentChain);
 
 impl IdentChain {
-	/// Each yielded token is tagged [`Syn::Ident`].
+	/// Each yielded token is tagged [`Syntax::Ident`].
 	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.syntax()
 			.children_with_tokens()
-			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syn::Ident))
+			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syntax::Ident))
 	}
 }
 
 // DeprecationQual /////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::DeprecationQual`].
+/// Wraps a node tagged [`Syntax::DeprecationQual`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct DeprecationQual(SyntaxNode);
 
-simple_astnode!(Syn, DeprecationQual, Syn::DeprecationQual);
+simple_astnode!(Syntax, DeprecationQual, Syntax::DeprecationQual);
 
 impl DeprecationQual {
-	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn version(&self) -> AstResult<LitToken<Syn>> {
+	/// The returned token is always tagged [`Syntax::StringLit`].
+	pub fn version(&self) -> AstResult<LitToken<Syntax>> {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::StringLit)
+					.filter(|token| token.kind() == Syntax::StringLit)
 					.map(LitToken::new)
 			})
 			.ok_or(AstError::Missing)
 	}
 
-	/// The returned token is always tagged [`Syn::StringLit`].
+	/// The returned token is always tagged [`Syntax::StringLit`].
 	#[must_use]
 	pub fn message(&self) -> Option<SyntaxToken> {
 		self.0
 			.children_with_tokens()
 			.filter_map(|elem| elem.into_token())
-			.skip_while(|token| token.kind() != Syn::Comma)
-			.find_map(|token| (token.kind() == Syn::StringLit).then_some(token))
+			.skip_while(|token| token.kind() != Syntax::Comma)
+			.find_map(|token| (token.kind() == Syntax::StringLit).then_some(token))
 	}
 }
 
 // VersionQual /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::VersionQual`].
+/// Wraps a node tagged [`Syntax::VersionQual`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct VersionQual(SyntaxNode);
 
-simple_astnode!(Syn, VersionQual, Syn::VersionQual);
+simple_astnode!(Syntax, VersionQual, Syntax::VersionQual);
 
 impl VersionQual {
-	/// The returned token is always tagged [`Syn::StringLit`].
-	pub fn string(&self) -> AstResult<LitToken<Syn>> {
+	/// The returned token is always tagged [`Syntax::StringLit`].
+	pub fn string(&self) -> AstResult<LitToken<Syntax>> {
 		self.0
 			.children_with_tokens()
-			.skip_while(|elem| elem.kind() != Syn::ParenL)
+			.skip_while(|elem| elem.kind() != Syntax::ParenL)
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::StringLit)
+					.filter(|token| token.kind() == Syntax::StringLit)
 					.map(LitToken::new)
 			})
 			.ok_or(AstError::Missing)
@@ -434,12 +442,12 @@ impl VersionQual {
 
 // LocalVar ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::LocalVar`].
+/// Wraps a node tagged [`Syntax::LocalVar`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LocalVar(SyntaxNode);
 
-simple_astnode!(Syn, LocalVar, Syn::LocalVar);
+simple_astnode!(Syntax, LocalVar, Syntax::LocalVar);
 
 impl LocalVar {
 	pub fn type_ref(&self) -> AstResult<TypeRef> {
@@ -454,22 +462,22 @@ impl LocalVar {
 	}
 }
 
-/// Wraps a node tagged [`Syn::LocalVarInit`].
+/// Wraps a node tagged [`Syntax::LocalVarInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LocalVarInit(SyntaxNode);
 
-simple_astnode!(Syn, LocalVarInit, Syn::LocalVarInit);
+simple_astnode!(Syntax, LocalVarInit, Syntax::LocalVarInit);
 
 impl LocalVarInit {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		let Some(token) = self.0.first_token() else {
 			return Err(AstError::Missing);
 		};
 
 		match token.kind() {
-			Syn::Ident => Ok(token),
+			Syntax::Ident => Ok(token),
 			_ => Err(AstError::Incorrect),
 		}
 	}
@@ -488,7 +496,7 @@ impl LocalVarInit {
 			return None;
 		};
 
-		if last.kind() == Syn::BraceR {
+		if last.kind() == Syntax::BraceR {
 			return None;
 		}
 
@@ -504,7 +512,7 @@ impl LocalVarInit {
 			return None;
 		};
 
-		if last.kind() != Syn::BraceR {
+		if last.kind() != Syntax::BraceR {
 			return None;
 		}
 
@@ -514,25 +522,25 @@ impl LocalVarInit {
 
 // VarName /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::VarName`].
+/// Wraps a node tagged [`Syntax::VarName`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct VarName(SyntaxNode);
 
-simple_astnode!(Syn, VarName, Syn::VarName);
+simple_astnode!(Syntax, VarName, Syntax::VarName);
 
 impl VarName {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn ident(&self) -> SyntaxToken {
 		let ret = self.0.first_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
+		debug_assert_eq!(ret.kind(), Syntax::Ident);
 		ret
 	}
 
 	pub fn array_lengths(&self) -> impl Iterator<Item = ArrayLen> {
 		self.0.children().map(|node| {
-			debug_assert_eq!(node.kind(), Syn::ArrayLen);
+			debug_assert_eq!(node.kind(), Syntax::ArrayLen);
 			ArrayLen(node)
 		})
 	}
@@ -540,12 +548,12 @@ impl VarName {
 
 // ArrayLen ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ArrayLen`].
+/// Wraps a node tagged [`Syntax::ArrayLen`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ArrayLen(SyntaxNode);
 
-simple_astnode!(Syn, ArrayLen, Syn::ArrayLen);
+simple_astnode!(Syntax, ArrayLen, Syntax::ArrayLen);
 
 impl ArrayLen {
 	#[must_use]
@@ -556,7 +564,7 @@ impl ArrayLen {
 
 // DocComment //////////////////////////////////////////////////////////////////
 
-/// Wraps a [`Syn::DocComment`] token. Provides a convenience function for
+/// Wraps a [`Syntax::DocComment`] token. Provides a convenience function for
 /// stripping preceding slashes and surrounding whitespace.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -592,7 +600,7 @@ impl Documentable {
 }
 
 impl rowan::ast::AstNode for Documentable {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as Language>::Kind) -> bool
 	where
@@ -600,12 +608,15 @@ impl rowan::ast::AstNode for Documentable {
 	{
 		matches!(
 			kind,
-			Syn::ConstDef
-				| Syn::EnumDef | Syn::EnumVariant
-				| Syn::ClassDef | Syn::MixinClassDef
-				| Syn::StructDef | Syn::FieldDecl
-				| Syn::FunctionDecl
-				| Syn::PropertyDef
+			Syntax::ConstDef
+				| Syntax::EnumDef
+				| Syntax::EnumVariant
+				| Syntax::ClassDef
+				| Syntax::MixinClassDef
+				| Syntax::StructDef
+				| Syntax::FieldDecl
+				| Syntax::FunctionDecl
+				| Syntax::PropertyDef
 		)
 	}
 
@@ -625,10 +636,10 @@ impl rowan::ast::AstNode for Documentable {
 
 fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
 	node.children_with_tokens()
-		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syn::DocComment)
+		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syntax::DocComment)
 		.filter_map(|elem| {
 			elem.into_token()
-				.filter(|token| token.kind() == Syn::DocComment)
+				.filter(|token| token.kind() == Syntax::DocComment)
 				.map(DocComment)
 		})
 }

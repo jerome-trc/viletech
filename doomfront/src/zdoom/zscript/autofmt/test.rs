@@ -13,7 +13,7 @@ use super::*;
 
 fn harness<E>(
 	sample: &str,
-	parse_fn: fn(&mut Parser<Syn>),
+	parse_fn: fn(&mut Parser<Syntax>),
 	conv_fn: fn(GreenNode) -> E,
 	format_fn: fn(&mut AutoFormatter, E) -> GreenNode,
 	callback: fn(formatted: GreenNode),

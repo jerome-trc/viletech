@@ -20,7 +20,7 @@ use crate::{
 	filetree::{self, FileIx},
 	issue::{self, Issue},
 	types::{Scope, SymOPtr, SymPtr},
-	Compiler, ParseTree, Syn, SyntaxNode, SyntaxToken,
+	Compiler, ParseTree, Syntax, SyntaxNode, SyntaxToken,
 };
 
 use self::sym::{Location, SymDatum, Symbol, SymbolId};
@@ -132,7 +132,7 @@ pub(crate) fn crit_span(node: &SyntaxNode) -> TextRange {
 		let start = fndecl
 			.syntax()
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() != Syn::DocComment))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() != Syntax::DocComment))
 			.unwrap()
 			.text_range()
 			.start();
@@ -152,7 +152,7 @@ pub(crate) fn crit_span(node: &SyntaxNode) -> TextRange {
 		let start = symconst
 			.syntax()
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() != Syn::DocComment))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() != Syntax::DocComment))
 			.unwrap()
 			.text_range()
 			.start();

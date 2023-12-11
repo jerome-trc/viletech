@@ -12,7 +12,7 @@ use crate::{
 	GreenElement,
 };
 
-use super::Syn;
+use super::Syntax;
 
 pub use self::expr::*;
 
@@ -157,37 +157,37 @@ impl Cache {
 impl Default for Cache {
 	fn default() -> Self {
 		Self {
-			cr: GreenToken::new(Syn::Whitespace.into(), "\r").into(),
-			crlf: GreenToken::new(Syn::Whitespace.into(), "\r\n").into(),
-			lf: GreenToken::new(Syn::Whitespace.into(), "\n").into(),
+			cr: GreenToken::new(Syntax::Whitespace.into(), "\r").into(),
+			crlf: GreenToken::new(Syntax::Whitespace.into(), "\r\n").into(),
+			lf: GreenToken::new(Syntax::Whitespace.into(), "\n").into(),
 			spaces: [
-				GreenToken::new(Syn::Whitespace.into(), " ").into(),
-				GreenToken::new(Syn::Whitespace.into(), "  ").into(),
-				GreenToken::new(Syn::Whitespace.into(), "    ").into(),
+				GreenToken::new(Syntax::Whitespace.into(), " ").into(),
+				GreenToken::new(Syntax::Whitespace.into(), "  ").into(),
+				GreenToken::new(Syntax::Whitespace.into(), "    ").into(),
 			],
 			_tabs: [
-				GreenToken::new(Syn::Whitespace.into(), "\t").into(),
-				GreenToken::new(Syn::Whitespace.into(), "\t\t").into(),
-				GreenToken::new(Syn::Whitespace.into(), "\t\t\t\t").into(),
+				GreenToken::new(Syntax::Whitespace.into(), "\t").into(),
+				GreenToken::new(Syntax::Whitespace.into(), "\t\t").into(),
+				GreenToken::new(Syntax::Whitespace.into(), "\t\t\t\t").into(),
 			],
-			_angle_l: GreenToken::new(Syn::AngleL.into(), "<").into(),
-			_angle_r: GreenToken::new(Syn::AngleR.into(), ">").into(),
-			_at: GreenToken::new(Syn::At.into(), "@").into(),
-			_brace_l: GreenToken::new(Syn::BraceL.into(), "{").into(),
-			_brace_r: GreenToken::new(Syn::BraceR.into(), "}").into(),
-			_bracket_l: GreenToken::new(Syn::BracketL.into(), "[").into(),
-			_bracket_r: GreenToken::new(Syn::BracketR.into(), "]").into(),
-			_colon: GreenToken::new(Syn::Colon.into(), ":").into(),
-			_colon2: GreenToken::new(Syn::Colon2.into(), "::").into(),
-			_comma: GreenToken::new(Syn::Comma.into(), ",").into(),
-			_dot: GreenToken::new(Syn::Dot.into(), ".").into(),
-			_eq: GreenToken::new(Syn::Eq.into(), "=").into(),
-			_minus: GreenToken::new(Syn::Minus.into(), "-").into(),
-			_paren_l: GreenToken::new(Syn::ParenL.into(), "(").into(),
-			_paren_r: GreenToken::new(Syn::ParenR.into(), ")").into(),
-			_plus: GreenToken::new(Syn::Plus.into(), "+").into(),
-			_question: GreenToken::new(Syn::Question.into(), "?").into(),
-			_semicolon: GreenToken::new(Syn::Semicolon.into(), ";").into(),
+			_angle_l: GreenToken::new(Syntax::AngleL.into(), "<").into(),
+			_angle_r: GreenToken::new(Syntax::AngleR.into(), ">").into(),
+			_at: GreenToken::new(Syntax::At.into(), "@").into(),
+			_brace_l: GreenToken::new(Syntax::BraceL.into(), "{").into(),
+			_brace_r: GreenToken::new(Syntax::BraceR.into(), "}").into(),
+			_bracket_l: GreenToken::new(Syntax::BracketL.into(), "[").into(),
+			_bracket_r: GreenToken::new(Syntax::BracketR.into(), "]").into(),
+			_colon: GreenToken::new(Syntax::Colon.into(), ":").into(),
+			_colon2: GreenToken::new(Syntax::Colon2.into(), "::").into(),
+			_comma: GreenToken::new(Syntax::Comma.into(), ",").into(),
+			_dot: GreenToken::new(Syntax::Dot.into(), ".").into(),
+			_eq: GreenToken::new(Syntax::Eq.into(), "=").into(),
+			_minus: GreenToken::new(Syntax::Minus.into(), "-").into(),
+			_paren_l: GreenToken::new(Syntax::ParenL.into(), "(").into(),
+			_paren_r: GreenToken::new(Syntax::ParenR.into(), ")").into(),
+			_plus: GreenToken::new(Syntax::Plus.into(), "+").into(),
+			_question: GreenToken::new(Syntax::Question.into(), "?").into(),
+			_semicolon: GreenToken::new(Syntax::Semicolon.into(), ";").into(),
 		}
 	}
 }

@@ -2,175 +2,175 @@
 
 use doomfront::parser::{CloseMark, OpenMark, Parser};
 
-use crate::Syn;
+use crate::Syntax;
 
 /// May or may not build a token tagged with one of the following:
-/// - [`Syn::Whitespace`]
-/// - [`Syn::Comment`]
-pub(super) fn trivia(p: &mut Parser<Syn>) -> bool {
+/// - [`Syntax::Whitespace`]
+/// - [`Syntax::Comment`]
+pub(super) fn trivia(p: &mut Parser<Syntax>) -> bool {
 	p.eat_any(&[
-		(Syn::Whitespace, Syn::Whitespace),
-		(Syn::Comment, Syn::Comment),
+		(Syntax::Whitespace, Syntax::Whitespace),
+		(Syntax::Comment, Syntax::Comment),
 	])
 }
 
 /// Shorthand for `while trivia(p) {}`.
-pub(super) fn trivia_0plus(p: &mut Parser<Syn>) {
+pub(super) fn trivia_0plus(p: &mut Parser<Syntax>) {
 	while trivia(p) {}
 }
 
-pub(super) fn _doc_comments(p: &mut Parser<Syn>) {
-	while p.eat(Syn::DocComment, Syn::DocComment) {
+pub(super) fn _doc_comments(p: &mut Parser<Syntax>) {
+	while p.eat(Syntax::DocComment, Syntax::DocComment) {
 		trivia_0plus(p);
 	}
 }
 
 #[must_use]
-pub(super) fn at_annotation(p: &Parser<Syn>) -> bool {
-	p.at(Syn::Pound)
+pub(super) fn at_annotation(p: &Parser<Syntax>) -> bool {
+	p.at(Syntax::Pound)
 }
 
 #[must_use]
-pub(super) fn at_inner_annotation(p: &Parser<Syn>) -> bool {
-	at_annotation(p) && p.nth(1) == Syn::Bang
+pub(super) fn at_inner_annotation(p: &Parser<Syntax>) -> bool {
+	at_annotation(p) && p.nth(1) == Syntax::Bang
 }
 
-pub(super) fn annotation(p: &mut Parser<Syn>, inner: bool) {
+pub(super) fn annotation(p: &mut Parser<Syntax>, inner: bool) {
 	let mark = p.open();
-	p.expect(Syn::Pound, Syn::Pound, &[&["TODO"]]);
+	p.expect(Syntax::Pound, Syntax::Pound, &[&["TODO"]]);
 
 	if inner {
-		p.expect(Syn::Bang, Syn::Bang, &[&["TODO"]]);
+		p.expect(Syntax::Bang, Syntax::Bang, &[&["TODO"]]);
 	}
 
-	p.expect(Syn::BracketL, Syn::BracketL, &[&["TODO"]]);
+	p.expect(Syntax::BracketL, Syntax::BracketL, &[&["TODO"]]);
 	trivia_0plus(p);
-	p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	p.expect(Syntax::Ident, Syntax::Ident, &[&["TODO"]]);
 	trivia_0plus(p);
 
-	if p.eat(Syn::Dot, Syn::Dot) {
+	if p.eat(Syntax::Dot, Syntax::Dot) {
 		trivia_0plus(p);
-		p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+		p.expect(Syntax::Ident, Syntax::Ident, &[&["TODO"]]);
 	}
 
-	if p.at(Syn::ParenL) {
+	if p.at(Syntax::ParenL) {
 		arg_list(p);
 		trivia_0plus(p);
 	}
 
-	p.expect(Syn::BracketR, Syn::BracketR, &[&["TODO"]]);
-	p.close(mark, Syn::Annotation);
+	p.expect(Syntax::BracketR, Syntax::BracketR, &[&["TODO"]]);
+	p.close(mark, Syntax::Annotation);
 }
 
-pub(super) fn arg_list(p: &mut Parser<Syn>) {
+pub(super) fn arg_list(p: &mut Parser<Syntax>) {
 	let mark = p.open();
-	p.expect(Syn::ParenL, Syn::ParenL, &[&["TODO"]]);
+	p.expect(Syntax::ParenL, Syntax::ParenL, &[&["TODO"]]);
 	trivia_0plus(p);
 
-	if p.eat(Syn::Dot3, Syn::Dot3) {
+	if p.eat(Syntax::Dot3, Syntax::Dot3) {
 		trivia_0plus(p);
-		p.expect(Syn::ParenR, Syn::ParenR, &[&["TODO"]]);
-		p.close(mark, Syn::ArgList);
+		p.expect(Syntax::ParenR, Syntax::ParenR, &[&["TODO"]]);
+		p.close(mark, Syntax::ArgList);
 		return;
 	}
 
-	while !p.at(Syn::ParenR) && !p.eof() {
+	while !p.at(Syntax::ParenR) && !p.eof() {
 		let arg = p.open();
 
-		if p.at_any(&[Syn::Ident, Syn::LitName]) {
+		if p.at_any(&[Syntax::Ident, Syntax::LitName]) {
 			let peeked = p.find(0, |token| {
-				!token.is_trivia() && !matches!(token, Syn::Ident | Syn::LitName)
+				!token.is_trivia() && !matches!(token, Syntax::Ident | Syntax::LitName)
 			});
 
-			if peeked == Syn::Colon {
+			if peeked == Syntax::Colon {
 				p.advance(p.nth(0));
 				trivia_0plus(p);
-				p.advance(Syn::Colon);
+				p.advance(Syntax::Colon);
 				trivia_0plus(p);
 			}
 		}
 
 		super::expr(p, true);
-		p.close(arg, Syn::Argument);
+		p.close(arg, Syntax::Argument);
 		trivia_0plus(p);
 
 		match p.nth(0) {
-			t @ Syn::Comma => {
+			t @ Syntax::Comma => {
 				p.advance(t);
 				trivia_0plus(p);
 
-				if p.eat(Syn::Dot3, Syn::Dot3) {
+				if p.eat(Syntax::Dot3, Syntax::Dot3) {
 					trivia_0plus(p);
 				}
 			}
-			Syn::ParenR => break,
+			Syntax::ParenR => break,
 			other => {
 				p.advance_with_error(other, &[&["`,`", "`)`"]]);
 			}
 		}
 	}
 
-	p.expect(Syn::ParenR, Syn::ParenR, &[&["TODO"]]);
-	p.close(mark, Syn::ArgList);
+	p.expect(Syntax::ParenR, Syntax::ParenR, &[&["TODO"]]);
+	p.close(mark, Syntax::ArgList);
 }
 
 pub(super) fn block(
-	p: &mut Parser<Syn>,
+	p: &mut Parser<Syntax>,
 	mark: OpenMark,
-	kind: Syn,
+	kind: Syntax,
 	allow_label: bool,
 ) -> CloseMark {
 	if allow_label && at_block_label(p) {
 		block_label(p);
 	}
 
-	p.expect(Syn::BraceL, Syn::BraceL, &[&["`{`"]]);
+	p.expect(Syntax::BraceL, Syntax::BraceL, &[&["`{`"]]);
 	trivia_0plus(p);
 
-	while !p.eof() && !p.at(Syn::BraceR) {
+	while !p.eof() && !p.at(Syntax::BraceR) {
 		super::core_element::<false>(p);
 		trivia_0plus(p);
 	}
 
-	p.expect(Syn::BraceR, Syn::BraceR, &[&["`}`"]]);
+	p.expect(Syntax::BraceR, Syntax::BraceR, &[&["`}`"]]);
 	p.close(mark, kind)
 }
 
 #[must_use]
-pub(super) fn at_block_label(p: &Parser<Syn>) -> bool {
-	p.at(Syn::Colon2)
+pub(super) fn at_block_label(p: &Parser<Syntax>) -> bool {
+	p.at(Syntax::Colon2)
 }
 
-pub(super) fn block_label(p: &mut Parser<Syn>) {
+pub(super) fn block_label(p: &mut Parser<Syntax>) {
 	let mark = p.open();
-	p.expect(Syn::Colon2, Syn::Colon2, &[&["`::`"]]);
+	p.expect(Syntax::Colon2, Syntax::Colon2, &[&["`::`"]]);
 	trivia_0plus(p);
-	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
+	p.expect(Syntax::Ident, Syntax::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
-	p.expect(Syn::Colon2, Syn::Colon2, &[&["`::`"]]);
-	p.close(mark, Syn::BlockLabel);
+	p.expect(Syntax::Colon2, Syntax::Colon2, &[&["`::`"]]);
+	p.close(mark, Syntax::BlockLabel);
 }
 
 #[must_use]
-pub(super) fn at_type_spec(p: &Parser<Syn>) -> bool {
-	p.at(Syn::Colon)
+pub(super) fn at_type_spec(p: &Parser<Syntax>) -> bool {
+	p.at(Syntax::Colon)
 }
 
-pub(super) fn type_spec(p: &mut Parser<Syn>, param: bool) {
+pub(super) fn type_spec(p: &mut Parser<Syntax>, param: bool) {
 	let mark = p.open();
-	p.expect(Syn::Colon, Syn::Colon, &[&["`:`"]]);
+	p.expect(Syntax::Colon, Syntax::Colon, &[&["`:`"]]);
 	trivia_0plus(p);
 
-	if p.eat(Syn::KwTypeT, Syn::KwTypeT) {
-		p.close(mark, Syn::TypeSpec);
+	if p.eat(Syntax::KwTypeT, Syntax::KwTypeT) {
+		p.close(mark, Syntax::TypeSpec);
 		return;
 	}
 
-	if param && p.eat(Syn::KwAnyT, Syn::KwAnyT) {
-		p.close(mark, Syn::TypeSpec);
+	if param && p.eat(Syntax::KwAnyT, Syntax::KwAnyT) {
+		p.close(mark, Syntax::TypeSpec);
 		return;
 	}
 
 	let _ = super::expr(p, false);
-	p.close(mark, Syn::TypeSpec);
+	p.close(mark, Syntax::TypeSpec);
 }

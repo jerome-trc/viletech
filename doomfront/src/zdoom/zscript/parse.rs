@@ -11,14 +11,14 @@ mod test;
 
 use crate::{parser::Parser, zdoom::Token};
 
-use super::Syn;
+use super::Syntax;
 
 use self::common::*;
 
 pub use self::{actor::*, expr::*, stat::*, structure::*, top::*, types::*};
 
-/// Builds a [`Syn::Root`] node.
-pub fn file(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Root`] node.
+pub fn file(p: &mut Parser<Syntax>) {
 	let root = p.open();
 
 	while !p.eof() {
@@ -31,7 +31,7 @@ pub fn file(p: &mut Parser<Syn>) {
 		match token {
 			Token::KwClass => {
 				if class_def(p) {
-					p.close(root, Syn::Root);
+					p.close(root, Syntax::Root);
 					return;
 				}
 
@@ -58,7 +58,7 @@ pub fn file(p: &mut Parser<Syn>) {
 
 		if p.at(Token::DocComment) {
 			// Top-level items outside this set can not start with a doc comment.
-			p.advance(Syn::Comment);
+			p.advance(Syntax::Comment);
 			continue;
 		}
 
@@ -67,7 +67,7 @@ pub fn file(p: &mut Parser<Syn>) {
 			Token::KwInclude => include_directive(p),
 			Token::KwVersion => version_directive(p),
 			_ => p.advance_with_error(
-				Syn::from(p.nth(0)),
+				Syntax::from(p.nth(0)),
 				&[&[
 					"`const`",
 					"`enum`",
@@ -82,5 +82,5 @@ pub fn file(p: &mut Parser<Syn>) {
 		}
 	}
 
-	p.close(root, Syn::Root);
+	p.close(root, Syntax::Root);
 }

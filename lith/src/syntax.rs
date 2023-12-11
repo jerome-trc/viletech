@@ -1,4 +1,4 @@
-//! A [syntax tag type](Syn) with a macro-generated lexer for its tokens.
+//! A [syntax tag type](Syntax) with a macro-generated lexer for its tokens.
 
 use doomfront::rowan;
 use logos::Logos;
@@ -6,9 +6,9 @@ use logos::Logos;
 /// A stronger type over [`rowan::SyntaxKind`] representing all kinds of syntax elements.
 #[repr(u16)]
 #[derive(Logos, Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[logos(error = Syn, extras = LexContext)]
+#[logos(error = Syntax, extras = LexContext)]
 #[allow(clippy::manual_non_exhaustive)]
-pub enum Syn {
+pub enum Syntax {
 	/// A sequence of tokens that did not form a valid syntax element.
 	Error,
 	/// The top-level node representing a whole file.
@@ -24,13 +24,13 @@ pub enum Syn {
 	Annotation,
 	/// `'(' argument (',' argument)* (',' | (',' '...'))? ')'` or `'(' '...' ')'`
 	///
-	/// Common to [call expressions](Syn::ExprCall) and [annotations](Syn::Annotation).
+	/// Common to [call expressions](Syntax::ExprCall) and [annotations](Syntax::Annotation).
 	ArgList,
 	/// `((ident | namelit) ':')? expr`
 	Argument,
 	/// `'[' nontypeexpr ']'`
 	///
-	/// Can start a [`Syn::ExprType`].
+	/// Can start a [`Syntax::ExprType`].
 	ArrayPrefix,
 	/// `'::' ident '::'`
 	BlockLabel,
@@ -38,12 +38,12 @@ pub enum Syn {
 	///
 	/// Part of [struct expressions] and [union expressions].
 	///
-	/// [struct expressions]: Syn::ExprStruct
-	/// [union expressions]: Syn::ExprUnion
+	/// [struct expressions]: Syntax::ExprStruct
+	/// [union expressions]: Syntax::ExprUnion
 	FieldDecl,
 	/// `memberquals 'function' ident paramlist returntype? (block | ';')`
 	FunctionDecl,
-	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
+	/// `'{' T* '}'` where `T` is a statement, [`Syntax::Annotation`], or item.
 	FunctionBody,
 
 	/// `'const'? ('&' 'var'?)? ident typespec ('=' expr)?`
@@ -53,12 +53,12 @@ pub enum Syn {
 	/// `'const' ident typespec '=' expr ';'`
 	///
 	/// A "symbolic constant". Semantically equivalent to an immutable compile-time
-	/// [binding statement](Syn::StmtBind) but permitted at container scope.
+	/// [binding statement](Syntax::StmtBind) but permitted at container scope.
 	SymConst,
 	/// `':' (expr | 'any_t' | 'type_t')`
 	///
-	/// - Expressions in this position are forbidden from using [`Syn::Eq`] as an infix operator.
-	/// - `any_t` is only a valid parse in [parameters](Syn::Parameter).
+	/// - Expressions in this position are forbidden from using [`Syntax::Eq`] as an infix operator.
+	/// - `any_t` is only a valid parse in [parameters](Syntax::Parameter).
 	TypeSpec,
 
 	// Nodes: statements ///////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ pub enum Syn {
 	ExprAggregate,
 	/// `expr operator expr`
 	ExprBin,
-	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
+	/// `'{' T* '}'` where `T` is a statement, [`Syntax::Annotation`], or item.
 	ExprBlock,
 	/// `primaryexpr arglist`
 	ExprCall,
@@ -104,20 +104,20 @@ pub enum Syn {
 	ExprConstruct,
 	/// `primaryexpr '.' (ident | namelit)`
 	ExprField,
-	/// Parent to only a single [`Syn::Ident`] token.
+	/// Parent to only a single [`Syntax::Ident`] token.
 	ExprIdent,
 	/// `primaryexpr '[' expr ']'`
 	ExprIndex,
 	/// If this is not a string literal, it is parent to only one token tagged as
 	/// one of the following:
-	/// - [`Syn::LitFalse`]
-	/// - [`Syn::LitFloat`]
-	/// - [`Syn::LitInt`]
-	/// - [`Syn::LitName`]
-	/// - [`Syn::LitTrue`]
-	/// - [`Syn::LitVoid`]
+	/// - [`Syntax::LitFalse`]
+	/// - [`Syntax::LitFloat`]
+	/// - [`Syntax::LitInt`]
+	/// - [`Syntax::LitName`]
+	/// - [`Syntax::LitTrue`]
+	/// - [`Syntax::LitVoid`]
 	/// If this is a string literal, it is parent to one token tagged as
-	/// [`Syn::LitString`] which may be followed by a [`Syn::Ident`] suffix,
+	/// [`Syntax::LitString`] which may be followed by a [`Syntax::Ident`] suffix,
 	/// with no allowance for trivia in between.
 	ExprLit,
 	/// `'(' expr ')'`
@@ -137,37 +137,37 @@ pub enum Syn {
 	#[doc(hidden)]
 	__FirstKeyword,
 
-	/// `any_t`; used in [type expressions](Syn::ExprType).
+	/// `any_t`; used in [type expressions](Syntax::ExprType).
 	#[token("any")]
 	KwAnyT,
-	/// `break`; used in [break statements](Syn::StmtBreak).
+	/// `break`; used in [break statements](Syntax::StmtBreak).
 	#[token("break")]
 	KwBreak,
 	/// `const`; used in [parameters] and for [symbolic constants].
 	///
-	/// [parameters]: Syn::Parameter
-	/// [symbolic constants]: Syn::SymConst
+	/// [parameters]: Syntax::Parameter
+	/// [symbolic constants]: Syntax::SymConst
 	#[token("const")]
 	KwConst,
-	/// `continue`; used in [continue statements](Syn::StmtContinue).
+	/// `continue`; used in [continue statements](Syntax::StmtContinue).
 	#[token("continue")]
 	KwContinue,
-	/// `function`; used in [function declarations](Syn::FunctionDecl).
+	/// `function`; used in [function declarations](Syntax::FunctionDecl).
 	#[token("function")]
 	KwFunction,
-	/// `let`; used in [binding statements](Syn::StmtBind).
+	/// `let`; used in [binding statements](Syntax::StmtBind).
 	#[token("let")]
 	KwLet,
-	/// `return`; used in [return statements](Syn::StmtReturn).
+	/// `return`; used in [return statements](Syntax::StmtReturn).
 	#[token("return")]
 	KwReturn,
-	/// `struct`; used in [structure expressions](Syn::ExprStruct).
+	/// `struct`; used in [structure expressions](Syntax::ExprStruct).
 	#[token("struct")]
 	KwStruct,
-	/// `type_t`; used in [type expressions](Syn::ExprType).
+	/// `type_t`; used in [type expressions](Syntax::ExprType).
 	#[token("type_t")]
 	KwTypeT,
-	/// `var`; used in [binding statements](Syn::StmtBind).
+	/// `var`; used in [binding statements](Syntax::StmtBind).
 	#[token("var")]
 	KwVar,
 
@@ -178,61 +178,61 @@ pub enum Syn {
 	#[doc(hidden)]
 	__FirstGlyph,
 
-	/// `&`; the bit-wise AND [binary operator](Syn::ExprBin).
+	/// `&`; the bit-wise AND [binary operator](Syntax::ExprBin).
 	#[token("&")]
 	Ampersand,
-	/// `&&`; the logical AND comparison [binary operator](Syn::ExprBin).
+	/// `&&`; the logical AND comparison [binary operator](Syntax::ExprBin).
 	#[token("&&")]
 	Ampersand2,
-	/// `&=`; the bit-wise AND compound assignment [binary operator](Syn::ExprBin).
+	/// `&=`; the bit-wise AND compound assignment [binary operator](Syntax::ExprBin).
 	#[token("&=")]
 	AmpersandEq,
-	/// `&&=`; the logical AND compound assignment [binary operator](Syn::ExprBin).
+	/// `&&=`; the logical AND compound assignment [binary operator](Syntax::ExprBin).
 	#[token("&&=")]
 	Ampersand2Eq,
-	/// `<`; the numeric less-than comparison [binary operator](Syn::ExprBin).
+	/// `<`; the numeric less-than comparison [binary operator](Syntax::ExprBin).
 	#[token("<")]
 	AngleL,
-	/// `<=`; the numeric less-than-or-equals comparison [binary operator](Syn::ExprBin).
+	/// `<=`; the numeric less-than-or-equals comparison [binary operator](Syntax::ExprBin).
 	#[token("<=")]
 	AngleLEq,
-	/// `>`; the numeric greater-than comparison [binary operator](Syn::ExprBin).
+	/// `>`; the numeric greater-than comparison [binary operator](Syntax::ExprBin).
 	#[token(">")]
 	AngleR,
-	/// `>=`; the numeric greater-than-or-equals comparison [binary operator](Syn::ExprBin).
+	/// `>=`; the numeric greater-than-or-equals comparison [binary operator](Syntax::ExprBin).
 	#[token(">=")]
 	AngleREq,
-	/// `<<`; the bit-wise leftwards shift [binary operator](Syn::ExprBin).
+	/// `<<`; the bit-wise leftwards shift [binary operator](Syntax::ExprBin).
 	#[token("<<")]
 	AngleL2,
-	/// `<<=`; the bit-wise leftwards shift compound assignment [binary operator](Syn::ExprBin).
+	/// `<<=`; the bit-wise leftwards shift compound assignment [binary operator](Syntax::ExprBin).
 	#[token("<<=")]
 	AngleL2Eq,
-	/// `>>`; the bit-wise rightwards shift [binary operator](Syn::ExprBin).
+	/// `>>`; the bit-wise rightwards shift [binary operator](Syntax::ExprBin).
 	#[token(">>")]
 	AngleR2,
-	/// `>>=`; the bit-wise rightwards shift compound assignment [binary operator](Syn::ExprBin).
+	/// `>>=`; the bit-wise rightwards shift compound assignment [binary operator](Syntax::ExprBin).
 	#[token(">>=")]
 	AngleR2Eq,
-	/// `*`; the multiplication [binary operator](Syn::ExprBin).
+	/// `*`; the multiplication [binary operator](Syntax::ExprBin).
 	#[token("*")]
 	Asterisk,
-	/// `**`; the exponentiation [binary operator](Syn::ExprBin).
+	/// `**`; the exponentiation [binary operator](Syntax::ExprBin).
 	#[token("**")]
 	Asterisk2,
-	/// `**=`; the exponentation compound assignment [binary operator](Syn::ExprBin).
+	/// `**=`; the exponentation compound assignment [binary operator](Syntax::ExprBin).
 	#[token("**=")]
 	Asterisk2Eq,
-	/// `*=`; the multiplication compound assignment [binary operator](Syn::ExprBin).
+	/// `*=`; the multiplication compound assignment [binary operator](Syntax::ExprBin).
 	#[token("*=")]
 	AsteriskEq,
-	/// `@`, used for user-defined [binary operators](Syn::ExprBin).
+	/// `@`, used for user-defined [binary operators](Syntax::ExprBin).
 	#[token("@")]
 	At,
-	/// `!`; the logical negation [prefix operator](Syn::ExprPrefix).
+	/// `!`; the logical negation [prefix operator](Syntax::ExprPrefix).
 	#[token("!")]
 	Bang,
-	/// `!=`; the logical inequality comparison [binary operator](Syn::ExprBin).
+	/// `!=`; the logical inequality comparison [binary operator](Syntax::ExprBin).
 	#[token("!=")]
 	BangEq,
 	/// `{`; used to open blocks.
@@ -244,127 +244,127 @@ pub enum Syn {
 	/// `[`; part of [annotations], [array expressions],
 	/// [index expressions], and [array type prefixes].
 	///
-	/// [annotations]: Syn::Annotation
-	/// [array expressions]: Syn::ExprArray
-	/// [index expressions]: Syn::ExprIndex
-	/// [array type prefixes]: Syn::ArrayPrefix
+	/// [annotations]: Syntax::Annotation
+	/// [array expressions]: Syntax::ExprArray
+	/// [index expressions]: Syntax::ExprIndex
+	/// [array type prefixes]: Syntax::ArrayPrefix
 	#[token("[")]
 	BracketL,
 	/// `]`; part of [annotations], [array expressions],
 	/// [index expressions], and [array type prefixes].
 	///
-	/// [annotations]: Syn::Annotation
-	/// [array expressions]: Syn::ExprArray
-	/// [index expressions]: Syn::ExprIndex
-	/// [array type prefixes]: Syn::ArrayPrefix
+	/// [annotations]: Syntax::Annotation
+	/// [array expressions]: Syntax::ExprArray
+	/// [index expressions]: Syntax::ExprIndex
+	/// [array type prefixes]: Syntax::ArrayPrefix
 	#[token("]")]
 	BracketR,
-	/// `^`; the bit-wise XOR [binary operator](Syn::ExprBin).
+	/// `^`; the bit-wise XOR [binary operator](Syntax::ExprBin).
 	#[token("^")]
 	Caret,
-	/// `^=`; the bit-wise XOR compound assignment [binary operator](Syn::ExprBin).
+	/// `^=`; the bit-wise XOR compound assignment [binary operator](Syntax::ExprBin).
 	#[token("^=")]
 	CaretEq,
-	/// `:`; used in [type specifiers](Syn::TypeSpec).
+	/// `:`; used in [type specifiers](Syntax::TypeSpec).
 	#[token(":")]
 	Colon,
-	/// `::`; used in [block labels](Syn::BlockLabel).
+	/// `::`; used in [block labels](Syntax::BlockLabel).
 	#[token("::")]
 	Colon2,
 	/// `,`
 	#[token(",")]
 	Comma,
-	/// `.`; part of [field expressions](Syn::ExprField).
+	/// `.`; part of [field expressions](Syntax::ExprField).
 	#[token(".")]
 	Dot,
-	/// `.{`; part of [aggregate expressions](Syn::ExprAggregate).
+	/// `.{`; part of [aggregate expressions](Syntax::ExprAggregate).
 	#[token(".{")]
 	DotBraceL,
-	/// `..`; the [range expression](Syn::ExprRange) operator.
+	/// `..`; the [range expression](Syntax::ExprRange) operator.
 	#[token("..")]
 	Dot2,
-	/// `..=`; the inclusive-end [range expression](Syn::ExprRange) operator.
+	/// `..=`; the inclusive-end [range expression](Syntax::ExprRange) operator.
 	#[token("..=")]
 	Dot2Eq,
 	/// `...`; a.k.a. "ellipsis".
 	///
 	/// Used in:
-	/// - [Parameter lists](Syn::ParamList) of certain compiler intrinsic functions.
-	/// - [Argument lists](Syn::ArgList) to indicate that parameter defaults be used.
+	/// - [Parameter lists](Syntax::ParamList) of certain compiler intrinsic functions.
+	/// - [Argument lists](Syntax::ArgList) to indicate that parameter defaults be used.
 	#[token("...")]
 	Dot3,
-	/// `=`; part of [binding statements](Syn::StmtBind) and [symbolic constants](Syn::SymConst).
+	/// `=`; part of [binding statements](Syntax::StmtBind) and [symbolic constants](Syntax::SymConst).
 	#[token("=")]
 	Eq,
-	/// `==`; the logical equality comparison [binary operator](Syn::ExprBin).
+	/// `==`; the logical equality comparison [binary operator](Syntax::ExprBin).
 	#[token("==")]
 	Eq2,
-	/// `-`; the subtraction [binary operator](Syn::ExprBin) as well as the
-	/// numeric negation [prefix operator](Syn::ExprPrefix).
-	/// Can also be used in [number literal patterns](Syn::PatLit).
+	/// `-`; the subtraction [binary operator](Syntax::ExprBin) as well as the
+	/// numeric negation [prefix operator](Syntax::ExprPrefix).
+	/// Can also be used in [number literal patterns](Syntax::PatLit).
 	#[token("-")]
 	Minus,
-	/// `-=`; the subtraction compound assignment [binary operator](Syn::ExprBin).
+	/// `-=`; the subtraction compound assignment [binary operator](Syntax::ExprBin).
 	#[token("-=")]
 	MinusEq,
-	/// `(`; part of [group expressions](Syn::ExprGroup).
+	/// `(`; part of [group expressions](Syntax::ExprGroup).
 	#[token("(")]
 	ParenL,
-	/// `)`; part of [group expressions](Syn::ExprGroup).
+	/// `)`; part of [group expressions](Syntax::ExprGroup).
 	#[token(")")]
 	ParenR,
-	/// `%`; the remainder [binary operator](Syn::ExprBin).
+	/// `%`; the remainder [binary operator](Syntax::ExprBin).
 	#[token("%")]
 	Percent,
-	/// `%=`; the remainder compound assigment [binary operator](Syn::ExprBin).
+	/// `%=`; the remainder compound assigment [binary operator](Syntax::ExprBin).
 	#[token("%=")]
 	PercentEq,
-	/// `|`; the bit-wise OR [binary operator](Syn::ExprBin).
+	/// `|`; the bit-wise OR [binary operator](Syntax::ExprBin).
 	#[token("|")]
 	Pipe,
-	/// `|=`; the bit-wise OR compound assignment [binary operator](Syn::ExprBin).
+	/// `|=`; the bit-wise OR compound assignment [binary operator](Syntax::ExprBin).
 	#[token("|=")]
 	PipeEq,
-	/// `||`; the logical OR [binary operator](Syn::ExprBin).
+	/// `||`; the logical OR [binary operator](Syntax::ExprBin).
 	#[token("||")]
 	Pipe2,
-	/// `||=`; the logical OR compound assignment [binary operator](Syn::ExprBin).
+	/// `||=`; the logical OR compound assignment [binary operator](Syntax::ExprBin).
 	#[token("||=")]
 	Pipe2Eq,
-	/// `+`; the addition [binary operator](Syn::ExprBin).
+	/// `+`; the addition [binary operator](Syntax::ExprBin).
 	#[token("+")]
 	Plus,
-	/// `++`; the string concatenation [binary operator](Syn::ExprBin).
+	/// `++`; the string concatenation [binary operator](Syntax::ExprBin).
 	#[token("++")]
 	Plus2,
-	/// `++=`; the string concatenation compound assignment [binary operator](Syn::ExprBin).
+	/// `++=`; the string concatenation compound assignment [binary operator](Syntax::ExprBin).
 	#[token("++=")]
 	Plus2Eq,
-	/// `+=`; the addition compound assignment [binary operator](Syn::ExprBin).
+	/// `+=`; the addition compound assignment [binary operator](Syntax::ExprBin).
 	#[token("+=")]
 	PlusEq,
-	/// `#`; used to start [annotations](Syn::Annotation).
+	/// `#`; used to start [annotations](Syntax::Annotation).
 	#[token("#")]
 	Pound,
 	/// `;`; used as a terminator, like in C.
 	#[token(";")]
 	Semicolon,
-	/// `/`; the division [binary operator](Syn::ExprBin).
+	/// `/`; the division [binary operator](Syntax::ExprBin).
 	#[token("/")]
 	Slash,
-	/// `/=`; the division compound assignment [binary operator](Syn::ExprBin).
+	/// `/=`; the division compound assignment [binary operator](Syntax::ExprBin).
 	#[token("/=")]
 	SlashEq,
 	/// `=>`; currently unused.
 	#[token("=>")]
 	ThickArrow,
-	/// `~`; the bitwise negation [prefix operator](Syn::ExprPrefix).
+	/// `~`; the bitwise negation [prefix operator](Syntax::ExprPrefix).
 	#[token("~")]
 	Tilde,
-	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syn::ExprBin).
+	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syntax::ExprBin).
 	#[token("~==")]
 	TildeEq2,
-	/// `_`; used in [wildcard patterns](Syn::PatWildcard).
+	/// `_`; used in [wildcard patterns](Syntax::PatWildcard).
 	#[token("_")]
 	Underscore,
 
@@ -438,7 +438,7 @@ pub enum Syn {
 	__Last, // Only in service of `kind_from_raw`.
 }
 
-impl Syn {
+impl Syntax {
 	#[must_use]
 	pub fn is_glyph(self) -> bool {
 		let u = self as u16;
@@ -463,18 +463,18 @@ impl Syn {
 #[non_exhaustive]
 pub struct LexContext;
 
-impl From<Syn> for rowan::SyntaxKind {
-	fn from(value: Syn) -> Self {
+impl From<Syntax> for rowan::SyntaxKind {
+	fn from(value: Syntax) -> Self {
 		Self(value as u16)
 	}
 }
 
-impl rowan::Language for Syn {
+impl rowan::Language for Syntax {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
 		assert!(raw.0 < Self::__Last as u16);
-		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
+		unsafe { std::mem::transmute::<u16, Syntax>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
@@ -482,13 +482,13 @@ impl rowan::Language for Syn {
 	}
 }
 
-impl doomfront::LangExt for Syn {
+impl doomfront::LangExt for Syntax {
 	type Token = Self;
 	const EOF: Self::Token = Self::Eof;
 	const ERR_NODE: Self::Kind = Self::Error;
 }
 
-impl std::fmt::Display for Syn {
+impl std::fmt::Display for Syntax {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Error => write!(f, "<error>"),
@@ -629,9 +629,9 @@ mod test {
 		const SAMPLES: &[&str] = &["//", "// ", "////"];
 
 		for sample in SAMPLES {
-			let mut lexer = Syn::lexer(sample);
+			let mut lexer = Syntax::lexer(sample);
 			let t0 = lexer.next().unwrap().unwrap();
-			assert_eq!(t0, Syn::Comment);
+			assert_eq!(t0, Syntax::Comment);
 		}
 	}
 
@@ -640,9 +640,9 @@ mod test {
 		const SAMPLES: &[&str] = &["///", "/// ", "/// lorem ipsum"];
 
 		for sample in SAMPLES {
-			let mut lexer = Syn::lexer(sample);
+			let mut lexer = Syntax::lexer(sample);
 			let t0 = lexer.next().unwrap().unwrap();
-			assert_eq!(t0, Syn::DocComment);
+			assert_eq!(t0, Syntax::DocComment);
 		}
 	}
 }

@@ -6,24 +6,24 @@ use crate::{simple_astnode, AstError, AstResult};
 
 use super::{
 	ActionQual, CompoundStat, ConstDef, DefaultBlock, DeprecationQual, DocComment, EnumDef, Expr,
-	FlagDef, PropertyDef, StatesBlock, StaticConstStat, Syn, SyntaxNode, SyntaxToken, TypeRef,
+	FlagDef, PropertyDef, StatesBlock, StaticConstStat, Syntax, SyntaxNode, SyntaxToken, TypeRef,
 	VarName, VersionQual,
 };
 
 // ClassDef ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ClassDef`].
+/// Wraps a node tagged [`Syntax::ClassDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ClassDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ClassDef, Syn::ClassDef);
+simple_astnode!(Syntax, ClassDef, Syntax::ClassDef);
 
 impl ClassDef {
 	#[must_use]
 	pub fn head(&self) -> ClassHead {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::ClassHead);
+		debug_assert_eq!(ret.kind(), Syntax::ClassHead);
 		ClassHead(ret)
 	}
 
@@ -36,46 +36,49 @@ impl ClassDef {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ClassHead`].
+/// Wraps a node tagged [`Syntax::ClassHead`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ClassHead(SyntaxNode);
 
-simple_astnode!(Syn, ClassHead, Syn::ClassHead);
+simple_astnode!(Syntax, ClassHead, Syntax::ClassHead);
 
 impl ClassHead {
-	/// The returned token is always tagged [`Syn::KwClass`].
+	/// The returned token is always tagged [`Syntax::KwClass`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwClass)
+					.filter(|token| token.kind() == Syntax::KwClass)
 			})
 			.unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn parent_class(&self) -> Option<SyntaxToken> {
 		let spec = self
 			.0
 			.children()
-			.find_map(|node| Some(node).filter(|node| node.kind() == Syn::InheritSpec));
+			.find_map(|node| Some(node).filter(|node| node.kind() == Syntax::InheritSpec));
 
 		let Some(spec) = spec else {
 			return None;
 		};
 		let ret = spec.last_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
+		debug_assert_eq!(ret.kind(), Syntax::Ident);
 		Some(ret)
 	}
 
@@ -83,14 +86,14 @@ impl ClassHead {
 		self.0
 			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
-				Syn::KwAbstract => Some(ClassQual::Abstract(elem.into_token().unwrap())),
-				Syn::KwNative => Some(ClassQual::Native(elem.into_token().unwrap())),
-				Syn::KwPlay => Some(ClassQual::Play(elem.into_token().unwrap())),
-				Syn::ReplacesClause => Some(ClassQual::Replaces(ReplacesClause(
+				Syntax::KwAbstract => Some(ClassQual::Abstract(elem.into_token().unwrap())),
+				Syntax::KwNative => Some(ClassQual::Native(elem.into_token().unwrap())),
+				Syntax::KwPlay => Some(ClassQual::Play(elem.into_token().unwrap())),
+				Syntax::ReplacesClause => Some(ClassQual::Replaces(ReplacesClause(
 					elem.into_node().unwrap(),
 				))),
-				Syn::KwUi => Some(ClassQual::Ui(elem.into_token().unwrap())),
-				Syn::VersionQual => {
+				Syntax::KwUi => Some(ClassQual::Ui(elem.into_token().unwrap())),
+				Syntax::VersionQual => {
 					Some(ClassQual::Version(VersionQual(elem.into_node().unwrap())))
 				}
 				_ => None,
@@ -100,19 +103,22 @@ impl ClassHead {
 
 // ClassExtend /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ClassExtend`].
+/// Wraps a node tagged [`Syntax::ClassExtend`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ClassExtend(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ClassExtend, Syn::ClassExtend);
+simple_astnode!(Syntax, ClassExtend, Syntax::ClassExtend);
 
 impl ClassExtend {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -123,15 +129,15 @@ impl ClassExtend {
 
 // MixinClassDef ///////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::MixinClassDef`].
+/// Wraps a node tagged [`Syntax::MixinClassDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MixinClassDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, MixinClassDef, Syn::MixinClassDef);
+simple_astnode!(Syntax, MixinClassDef, Syntax::MixinClassDef);
 
 impl MixinClassDef {
-	/// `0` is always tagged [`Syn::KwMixin`]; `1` is always tagged [`Syn::KwClass`].
+	/// `0` is always tagged [`Syntax::KwMixin`]; `1` is always tagged [`Syntax::KwClass`].
 	#[must_use]
 	pub fn keywords(&self) -> (SyntaxToken, SyntaxToken) {
 		let ret0 = self
@@ -139,7 +145,7 @@ impl MixinClassDef {
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwMixin)
+					.filter(|token| token.kind() == Syntax::KwMixin)
 			})
 			.unwrap();
 
@@ -148,18 +154,21 @@ impl MixinClassDef {
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwClass)
+					.filter(|token| token.kind() == Syntax::KwClass)
 			})
 			.unwrap();
 
 		(ret0, ret1)
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -174,46 +183,49 @@ impl MixinClassDef {
 
 // StructDef ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StructDef`].
+/// Wraps a node tagged [`Syntax::StructDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StructDef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StructDef, Syn::StructDef);
+simple_astnode!(Syntax, StructDef, Syntax::StructDef);
 
 impl StructDef {
-	/// The returned token is always tagged [`Syn::KwStruct`].
+	/// The returned token is always tagged [`Syntax::KwStruct`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwStruct)
+					.filter(|token| token.kind() == Syntax::KwStruct)
 			})
 			.unwrap()
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
 	pub fn qualifiers(&self) -> impl Iterator<Item = StructQual> {
 		let quals = self.0.first_child().unwrap();
-		debug_assert_eq!(quals.kind(), Syn::StructQuals);
+		debug_assert_eq!(quals.kind(), Syntax::StructQuals);
 
 		quals
 			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
-				Syn::KwClearScope => Some(StructQual::ClearScope(elem.into_token().unwrap())),
-				Syn::KwNative => Some(StructQual::Native(elem.into_token().unwrap())),
-				Syn::KwPlay => Some(StructQual::Play(elem.into_token().unwrap())),
-				Syn::KwUi => Some(StructQual::Ui(elem.into_token().unwrap())),
-				Syn::VersionQual => {
+				Syntax::KwClearScope => Some(StructQual::ClearScope(elem.into_token().unwrap())),
+				Syntax::KwNative => Some(StructQual::Native(elem.into_token().unwrap())),
+				Syntax::KwPlay => Some(StructQual::Play(elem.into_token().unwrap())),
+				Syntax::KwUi => Some(StructQual::Ui(elem.into_token().unwrap())),
+				Syntax::VersionQual => {
 					Some(StructQual::Version(VersionQual(elem.into_node().unwrap())))
 				}
 				_ => None,
@@ -231,19 +243,22 @@ impl StructDef {
 
 // StructExtend ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StructExtend`].
+/// Wraps a node tagged [`Syntax::StructExtend`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StructExtend(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StructExtend, Syn::StructExtend);
+simple_astnode!(Syntax, StructExtend, Syntax::StructExtend);
 
 impl StructExtend {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -278,19 +293,19 @@ impl ClassQual {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ReplacesClause`].
+/// Wraps a node tagged [`Syntax::ReplacesClause`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReplacesClause(SyntaxNode);
 
-simple_astnode!(Syn, ReplacesClause, Syn::ReplacesClause);
+simple_astnode!(Syntax, ReplacesClause, Syntax::ReplacesClause);
 
 impl ReplacesClause {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn replaced(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.last_token()
-			.filter(|token| token.kind() == Syn::Ident)
+			.filter(|token| token.kind() == Syntax::Ident)
 			.ok_or(AstError::Missing)
 	}
 }
@@ -317,39 +332,42 @@ impl ClassInnard {
 	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = ClassInnard> {
 		debug_assert!(matches!(
 			node.kind(),
-			Syn::ClassDef | Syn::ClassExtend | Syn::MixinClassDef
+			Syntax::ClassDef | Syntax::ClassExtend | Syntax::MixinClassDef
 		));
 
 		node.children().filter_map(|node| match node.kind() {
-			Syn::ConstDef => Some(ClassInnard::Const(ConstDef(node))),
-			Syn::EnumDef => Some(ClassInnard::Enum(EnumDef(node))),
-			Syn::StructDef => Some(ClassInnard::Struct(StructDef(node))),
-			Syn::StaticConstStat => Some(ClassInnard::StaticConst(StaticConstStat(node))),
-			Syn::FunctionDecl => Some(ClassInnard::Function(FunctionDecl(node))),
-			Syn::FieldDecl => Some(ClassInnard::Field(FieldDecl(node))),
-			Syn::MixinStat => Some(ClassInnard::Mixin(MixinStat(node))),
-			Syn::DefaultBlock => Some(ClassInnard::Default(DefaultBlock(node))),
-			Syn::StatesBlock => Some(ClassInnard::States(StatesBlock(node))),
-			Syn::PropertyDef => Some(ClassInnard::Property(PropertyDef(node))),
-			Syn::FlagDef => Some(ClassInnard::Flag(FlagDef(node))),
+			Syntax::ConstDef => Some(ClassInnard::Const(ConstDef(node))),
+			Syntax::EnumDef => Some(ClassInnard::Enum(EnumDef(node))),
+			Syntax::StructDef => Some(ClassInnard::Struct(StructDef(node))),
+			Syntax::StaticConstStat => Some(ClassInnard::StaticConst(StaticConstStat(node))),
+			Syntax::FunctionDecl => Some(ClassInnard::Function(FunctionDecl(node))),
+			Syntax::FieldDecl => Some(ClassInnard::Field(FieldDecl(node))),
+			Syntax::MixinStat => Some(ClassInnard::Mixin(MixinStat(node))),
+			Syntax::DefaultBlock => Some(ClassInnard::Default(DefaultBlock(node))),
+			Syntax::StatesBlock => Some(ClassInnard::States(StatesBlock(node))),
+			Syntax::PropertyDef => Some(ClassInnard::Property(PropertyDef(node))),
+			Syntax::FlagDef => Some(ClassInnard::Flag(FlagDef(node))),
 			_ => None,
 		})
 	}
 }
 
-/// Wraps a node tagged [`Syn::MixinStat`].
+/// Wraps a node tagged [`Syntax::MixinStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MixinStat(SyntaxNode);
 
-simple_astnode!(Syn, MixinStat, Syn::MixinStat);
+simple_astnode!(Syntax, MixinStat, Syntax::MixinStat);
 
 impl MixinStat {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 }
@@ -392,14 +410,17 @@ pub enum StructInnard {
 
 impl StructInnard {
 	fn iter_from_node(node: SyntaxNode) -> impl Iterator<Item = StructInnard> {
-		debug_assert!(matches!(node.kind(), Syn::StructDef | Syn::StructExtend));
+		debug_assert!(matches!(
+			node.kind(),
+			Syntax::StructDef | Syntax::StructExtend
+		));
 
 		node.children().filter_map(|node| match node.kind() {
-			Syn::ConstDef => Some(StructInnard::Const(ConstDef(node))),
-			Syn::EnumDef => Some(StructInnard::Enum(EnumDef(node))),
-			Syn::StaticConstStat => Some(StructInnard::StaticConst(StaticConstStat(node))),
-			Syn::FunctionDecl => Some(StructInnard::Function(FunctionDecl(node))),
-			Syn::FieldDecl => Some(StructInnard::Field(FieldDecl(node))),
+			Syntax::ConstDef => Some(StructInnard::Const(ConstDef(node))),
+			Syntax::EnumDef => Some(StructInnard::Enum(EnumDef(node))),
+			Syntax::StaticConstStat => Some(StructInnard::StaticConst(StaticConstStat(node))),
+			Syntax::FunctionDecl => Some(StructInnard::Function(FunctionDecl(node))),
+			Syntax::FieldDecl => Some(StructInnard::Field(FieldDecl(node))),
 			_ => None,
 		})
 	}
@@ -407,12 +428,12 @@ impl StructInnard {
 
 // FieldDecl ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::FieldDecl`].
+/// Wraps a node tagged [`Syntax::FieldDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FieldDecl(SyntaxNode);
 
-simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
+simple_astnode!(Syntax, FieldDecl, Syntax::FieldDecl);
 
 impl FieldDecl {
 	pub fn type_spec(&self) -> AstResult<TypeRef> {
@@ -429,7 +450,7 @@ impl FieldDecl {
 	#[must_use]
 	pub fn qualifiers(&self) -> MemberQuals {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::MemberQuals);
+		debug_assert_eq!(ret.kind(), Syntax::MemberQuals);
 		MemberQuals(ret)
 	}
 
@@ -440,18 +461,18 @@ impl FieldDecl {
 
 // FunctionDecl ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::FunctionDecl`].
+/// Wraps a node tagged [`Syntax::FunctionDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FunctionDecl(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, FunctionDecl, Syn::FunctionDecl);
+simple_astnode!(Syntax, FunctionDecl, Syntax::FunctionDecl);
 
 impl FunctionDecl {
 	#[must_use]
 	pub fn qualifiers(&self) -> MemberQuals {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::MemberQuals);
+		debug_assert_eq!(ret.kind(), Syntax::MemberQuals);
 		MemberQuals(ret)
 	}
 
@@ -467,12 +488,15 @@ impl FunctionDecl {
 			.ok_or(AstError::Missing)
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn name(&self) -> SyntaxToken {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.unwrap()
 	}
 
@@ -486,16 +510,16 @@ impl FunctionDecl {
 		self.const_keyword().is_some()
 	}
 
-	/// The returned token is always tagged [`Syn::KwConst`].
+	/// The returned token is always tagged [`Syntax::KwConst`].
 	#[must_use]
 	pub fn const_keyword(&self) -> Option<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.skip_while(|elem| elem.kind() != Syn::ParamList)
-			.take_while(|elem| !matches!(elem.kind(), Syn::Semicolon | Syn::CompoundStat))
+			.skip_while(|elem| elem.kind() != Syntax::ParamList)
+			.take_while(|elem| !matches!(elem.kind(), Syntax::Semicolon | Syntax::CompoundStat))
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwConst)
+					.filter(|token| token.kind() == Syntax::KwConst)
 			})
 	}
 
@@ -504,12 +528,12 @@ impl FunctionDecl {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ReturnTypes`].
+/// Wraps a node tagged [`Syntax::ReturnTypes`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReturnTypes(SyntaxNode);
 
-simple_astnode!(Syn, ReturnTypes, Syn::ReturnTypes);
+simple_astnode!(Syntax, ReturnTypes, Syntax::ReturnTypes);
 
 impl ReturnTypes {
 	pub fn iter(&self) -> impl Iterator<Item = TypeRef> {
@@ -517,12 +541,12 @@ impl ReturnTypes {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ParamList`].
+/// Wraps a node tagged [`Syntax::ParamList`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ParamList(SyntaxNode);
 
-simple_astnode!(Syn, ParamList, Syn::ParamList);
+simple_astnode!(Syntax, ParamList, Syntax::ParamList);
 
 impl ParamList {
 	/// Note that the returned iterator yields nothing if this function's
@@ -537,7 +561,7 @@ impl ParamList {
 		self.0.children().next().is_none()
 	}
 
-	/// Returns `true` if this parameter list is only the token [`Syn::KwVoid`]
+	/// Returns `true` if this parameter list is only the token [`Syntax::KwVoid`]
 	/// enclosed by parentheses.
 	#[must_use]
 	pub fn is_void(&self) -> bool {
@@ -545,56 +569,60 @@ impl ParamList {
 			&& self
 				.0
 				.children_with_tokens()
-				.any(|elem| elem.kind() == Syn::KwVoid)
+				.any(|elem| elem.kind() == Syntax::KwVoid)
 	}
 
 	#[must_use]
 	pub fn varargs(&self) -> bool {
 		self.0.children_with_tokens().any(|elem| {
 			elem.into_token()
-				.is_some_and(|token| token.kind() == Syn::Dot3)
+				.is_some_and(|token| token.kind() == Syntax::Dot3)
 		})
 	}
 }
 
 // MemberQuals /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::MemberQuals`].
+/// Wraps a node tagged [`Syntax::MemberQuals`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MemberQuals(SyntaxNode);
 
-simple_astnode!(Syn, MemberQuals, Syn::MemberQuals);
+simple_astnode!(Syntax, MemberQuals, Syntax::MemberQuals);
 
 impl MemberQuals {
 	pub fn iter(&self) -> impl Iterator<Item = MemberQual> {
 		self.0
 			.children_with_tokens()
 			.filter_map(|elem| match elem.kind() {
-				Syn::DeprecationQual => Some(MemberQual::Deprecation(DeprecationQual(
+				Syntax::DeprecationQual => Some(MemberQual::Deprecation(DeprecationQual(
 					elem.into_node().unwrap(),
 				))),
-				Syn::VersionQual => {
+				Syntax::VersionQual => {
 					Some(MemberQual::Version(VersionQual(elem.into_node().unwrap())))
 				}
-				Syn::ActionQual => Some(MemberQual::Action(ActionQual(elem.into_node().unwrap()))),
-				Syn::KwAbstract => Some(MemberQual::Abstract(elem.into_token().unwrap())),
-				Syn::KwClearScope => Some(MemberQual::ClearScope(elem.into_token().unwrap())),
-				Syn::KwFinal => Some(MemberQual::Final(elem.into_token().unwrap())),
-				Syn::KwInternal => Some(MemberQual::Internal(elem.into_token().unwrap())),
-				Syn::KwMeta => Some(MemberQual::Meta(elem.into_token().unwrap())),
-				Syn::KwNative => Some(MemberQual::Native(elem.into_token().unwrap())),
-				Syn::KwOverride => Some(MemberQual::Override(elem.into_token().unwrap())),
-				Syn::KwPlay => Some(MemberQual::Play(elem.into_token().unwrap())),
-				Syn::KwPrivate => Some(MemberQual::Private(elem.into_token().unwrap())),
-				Syn::KwProtected => Some(MemberQual::Protected(elem.into_token().unwrap())),
-				Syn::KwReadOnly => Some(MemberQual::ReadOnly(elem.into_token().unwrap())),
-				Syn::KwStatic => Some(MemberQual::Static(elem.into_token().unwrap())),
-				Syn::KwTransient => Some(MemberQual::Transient(elem.into_token().unwrap())),
-				Syn::KwUi => Some(MemberQual::Ui(elem.into_token().unwrap())),
-				Syn::KwVarArg => Some(MemberQual::VarArg(elem.into_token().unwrap())),
-				Syn::KwVirtual => Some(MemberQual::Virtual(elem.into_token().unwrap())),
-				Syn::KwVirtualScope => Some(MemberQual::VirtualScope(elem.into_token().unwrap())),
+				Syntax::ActionQual => {
+					Some(MemberQual::Action(ActionQual(elem.into_node().unwrap())))
+				}
+				Syntax::KwAbstract => Some(MemberQual::Abstract(elem.into_token().unwrap())),
+				Syntax::KwClearScope => Some(MemberQual::ClearScope(elem.into_token().unwrap())),
+				Syntax::KwFinal => Some(MemberQual::Final(elem.into_token().unwrap())),
+				Syntax::KwInternal => Some(MemberQual::Internal(elem.into_token().unwrap())),
+				Syntax::KwMeta => Some(MemberQual::Meta(elem.into_token().unwrap())),
+				Syntax::KwNative => Some(MemberQual::Native(elem.into_token().unwrap())),
+				Syntax::KwOverride => Some(MemberQual::Override(elem.into_token().unwrap())),
+				Syntax::KwPlay => Some(MemberQual::Play(elem.into_token().unwrap())),
+				Syntax::KwPrivate => Some(MemberQual::Private(elem.into_token().unwrap())),
+				Syntax::KwProtected => Some(MemberQual::Protected(elem.into_token().unwrap())),
+				Syntax::KwReadOnly => Some(MemberQual::ReadOnly(elem.into_token().unwrap())),
+				Syntax::KwStatic => Some(MemberQual::Static(elem.into_token().unwrap())),
+				Syntax::KwTransient => Some(MemberQual::Transient(elem.into_token().unwrap())),
+				Syntax::KwUi => Some(MemberQual::Ui(elem.into_token().unwrap())),
+				Syntax::KwVarArg => Some(MemberQual::VarArg(elem.into_token().unwrap())),
+				Syntax::KwVirtual => Some(MemberQual::Virtual(elem.into_token().unwrap())),
+				Syntax::KwVirtualScope => {
+					Some(MemberQual::VirtualScope(elem.into_token().unwrap()))
+				}
 				_ => None,
 			})
 	}
@@ -664,7 +692,7 @@ impl MemberQual {
 	}
 
 	#[must_use]
-	pub fn kind(&self) -> Syn {
+	pub fn kind(&self) -> Syntax {
 		match self {
 			Self::Action(inner) => inner.syntax().kind(),
 			Self::Deprecation(inner) => inner.syntax().kind(),
@@ -875,26 +903,29 @@ impl MemberQualSet {
 
 // Parameter ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::Parameter`].
+/// Wraps a node tagged [`Syntax::Parameter`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Parameter(SyntaxNode);
 
-simple_astnode!(Syn, Parameter, Syn::Parameter);
+simple_astnode!(Syntax, Parameter, Syntax::Parameter);
 
 impl Parameter {
 	#[must_use]
 	pub fn type_spec(&self) -> TypeRef {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::TypeRef);
+		debug_assert_eq!(ret.kind(), Syntax::TypeRef);
 		TypeRef(ret)
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -908,13 +939,13 @@ impl Parameter {
 	pub fn is_in(&self) -> bool {
 		self.0
 			.children_with_tokens()
-			.any(|elem| elem.kind() == Syn::KwIn)
+			.any(|elem| elem.kind() == Syntax::KwIn)
 	}
 
 	#[must_use]
 	pub fn is_out(&self) -> bool {
 		self.0
 			.children_with_tokens()
-			.any(|elem| elem.kind() == Syn::KwOut)
+			.any(|elem| elem.kind() == Syntax::KwOut)
 	}
 }

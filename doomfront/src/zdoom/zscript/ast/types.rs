@@ -4,14 +4,14 @@ use rowan::ast::AstNode;
 
 use crate::{simple_astnode, AstError, AstResult};
 
-use super::{ArrayLen, IdentChain, Syn, SyntaxNode, SyntaxToken};
+use super::{ArrayLen, IdentChain, Syntax, SyntaxNode, SyntaxToken};
 
-/// Wraps a node tagged [`Syn::TypeRef`].
+/// Wraps a node tagged [`Syntax::TypeRef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct TypeRef(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, TypeRef, Syn::TypeRef);
+simple_astnode!(Syntax, TypeRef, Syntax::TypeRef);
 
 impl TypeRef {
 	#[must_use]
@@ -41,22 +41,23 @@ pub enum CoreType {
 }
 
 impl AstNode for CoreType {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::ClassType
-				| Syn::DynArrayType
-				| Syn::IdentChainType
-				| Syn::LetType | Syn::MapType
-				| Syn::MapIterType
-				| Syn::NativeType
-				| Syn::PrimitiveType
-				| Syn::ReadOnlyType
+			Syntax::ClassType
+				| Syntax::DynArrayType
+				| Syntax::IdentChainType
+				| Syntax::LetType
+				| Syntax::MapType
+				| Syntax::MapIterType
+				| Syntax::NativeType
+				| Syntax::PrimitiveType
+				| Syntax::ReadOnlyType
 		)
 	}
 
@@ -65,15 +66,15 @@ impl AstNode for CoreType {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ClassType => Some(Self::Class(ClassType(node))),
-			Syn::DynArrayType => Some(Self::DynArray(DynArrayType(node))),
-			Syn::IdentChainType => Some(Self::IdentChain(IdentChainType(node))),
-			Syn::LetType => Some(Self::Let(LetType(node))),
-			Syn::MapType => Some(Self::Map(MapType(node))),
-			Syn::MapIterType => Some(Self::MapIter(MapIterType(node))),
-			Syn::NativeType => Some(Self::Native(NativeType(node))),
-			Syn::PrimitiveType => Some(Self::Primitive(PrimitiveType(node))),
-			Syn::ReadOnlyType => Some(Self::Readonly(ReadOnlyType(node))),
+			Syntax::ClassType => Some(Self::Class(ClassType(node))),
+			Syntax::DynArrayType => Some(Self::DynArray(DynArrayType(node))),
+			Syntax::IdentChainType => Some(Self::IdentChain(IdentChainType(node))),
+			Syntax::LetType => Some(Self::Let(LetType(node))),
+			Syntax::MapType => Some(Self::Map(MapType(node))),
+			Syntax::MapIterType => Some(Self::MapIter(MapIterType(node))),
+			Syntax::NativeType => Some(Self::Native(NativeType(node))),
+			Syntax::PrimitiveType => Some(Self::Primitive(PrimitiveType(node))),
+			Syntax::ReadOnlyType => Some(Self::Readonly(ReadOnlyType(node))),
 			_ => None,
 		}
 	}
@@ -95,12 +96,12 @@ impl AstNode for CoreType {
 
 // ClassType ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ClassType`].
+/// Wraps a node tagged [`Syntax::ClassType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ClassType(SyntaxNode);
 
-simple_astnode!(Syn, ClassType, Syn::ClassType);
+simple_astnode!(Syntax, ClassType, Syntax::ClassType);
 
 impl ClassType {
 	#[must_use]
@@ -111,12 +112,12 @@ impl ClassType {
 
 // DynArrayType ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::DynArrayType`].
+/// Wraps a node tagged [`Syntax::DynArrayType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct DynArrayType(SyntaxNode);
 
-simple_astnode!(Syn, DynArrayType, Syn::DynArrayType);
+simple_astnode!(Syntax, DynArrayType, Syntax::DynArrayType);
 
 impl DynArrayType {
 	pub fn element_type(&self) -> AstResult<TypeRef> {
@@ -129,50 +130,50 @@ impl DynArrayType {
 
 // IdentChainType //////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IdentChainType`].
+/// Wraps a node tagged [`Syntax::IdentChainType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IdentChainType(SyntaxNode);
 
-simple_astnode!(Syn, IdentChainType, Syn::IdentChainType);
+simple_astnode!(Syntax, IdentChainType, Syntax::IdentChainType);
 
 impl IdentChainType {
 	#[must_use]
 	pub fn inner(&self) -> IdentChain {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::IdentChain);
+		debug_assert_eq!(ret.kind(), Syntax::IdentChain);
 		IdentChain(ret)
 	}
 }
 
 // LetType /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::LetType`].
+/// Wraps a node tagged [`Syntax::LetType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LetType(SyntaxNode);
 
-simple_astnode!(Syn, LetType, Syn::LetType);
+simple_astnode!(Syntax, LetType, Syntax::LetType);
 
 impl LetType {
 	/// This is the only content of one of these nodes;
-	/// the returned token is always tagged [`Syn::KwLet`].
+	/// the returned token is always tagged [`Syntax::KwLet`].
 	#[must_use]
 	pub fn keyword(&self) -> SyntaxToken {
 		let ret = self.0.first_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::KwLet);
+		debug_assert_eq!(ret.kind(), Syntax::KwLet);
 		ret
 	}
 }
 
 // MapType /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::MapType`].
+/// Wraps a node tagged [`Syntax::MapType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MapType(SyntaxNode);
 
-simple_astnode!(Syn, MapType, Syn::MapType);
+simple_astnode!(Syntax, MapType, Syntax::MapType);
 
 impl MapType {
 	pub fn key_type(&self) -> AstResult<TypeRef> {
@@ -192,12 +193,12 @@ impl MapType {
 
 // MapIterType /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::MapIterType`].
+/// Wraps a node tagged [`Syntax::MapIterType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct MapIterType(SyntaxNode);
 
-simple_astnode!(Syn, MapIterType, Syn::MapIterType);
+simple_astnode!(Syntax, MapIterType, Syntax::MapIterType);
 
 impl MapIterType {
 	pub fn key_type(&self) -> AstResult<TypeRef> {
@@ -217,20 +218,20 @@ impl MapIterType {
 
 // NativeType //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::NativeType`].
+/// Wraps a node tagged [`Syntax::NativeType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct NativeType(SyntaxNode);
 
-simple_astnode!(Syn, NativeType, Syn::NativeType);
+simple_astnode!(Syntax, NativeType, Syntax::NativeType);
 
 impl NativeType {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn ident(&self) -> AstResult<SyntaxToken> {
 		let ret = self.0.last_token().ok_or(AstError::Missing)?;
 
 		match ret.kind() {
-			Syn::Ident => Ok(ret),
+			Syntax::Ident => Ok(ret),
 			_ => Err(AstError::Incorrect),
 		}
 	}
@@ -238,15 +239,15 @@ impl NativeType {
 
 // PrimitiveType ///////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::PrimitiveType`].
+/// Wraps a node tagged [`Syntax::PrimitiveType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PrimitiveType(SyntaxNode);
 
-simple_astnode!(Syn, PrimitiveType, Syn::PrimitiveType);
+simple_astnode!(Syntax, PrimitiveType, Syntax::PrimitiveType);
 
 impl PrimitiveType {
-	/// See [`Syn::PrimitiveType`] for the range of possible token tags.
+	/// See [`Syntax::PrimitiveType`] for the range of possible token tags.
 	pub fn token(&self) -> SyntaxToken {
 		self.0.first_token().unwrap()
 	}
@@ -254,28 +255,31 @@ impl PrimitiveType {
 
 // ReadonlyType ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ReadOnlyType`].
+/// Wraps a node tagged [`Syntax::ReadOnlyType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReadOnlyType(SyntaxNode);
 
-simple_astnode!(Syn, ReadOnlyType, Syn::ReadOnlyType);
+simple_astnode!(Syntax, ReadOnlyType, Syntax::ReadOnlyType);
 
 impl ReadOnlyType {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn ident(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
-	/// i.e. if the inner identifier is preceded with a [`Syn::At`].
+	/// i.e. if the inner identifier is preceded with a [`Syntax::At`].
 	#[must_use]
 	pub fn is_native(&self) -> bool {
 		self.0.children_with_tokens().any(|elem| {
 			elem.into_token()
-				.is_some_and(|token| token.kind() == Syn::At)
+				.is_some_and(|token| token.kind() == Syntax::At)
 		})
 	}
 }

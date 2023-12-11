@@ -13,12 +13,12 @@ use super::{cvarinfo, decorate, zscript};
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LitToken<L: LangExt>(SyntaxToken<L>);
 
-impl LitToken<zscript::Syn> {
+impl LitToken<zscript::Syntax> {
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {
 		match self.0.kind() {
-			zscript::Syn::KwTrue => Some(true),
-			zscript::Syn::KwFalse => Some(false),
+			zscript::Syntax::KwTrue => Some(true),
+			zscript::Syntax::KwFalse => Some(false),
 			_ => None,
 		}
 	}
@@ -26,7 +26,7 @@ impl LitToken<zscript::Syn> {
 	#[must_use]
 	pub fn float(&self) -> Option<Result<f64, ParseFloatError>> {
 		match self.0.kind() {
-			zscript::Syn::FloatLit => Some(self.parse_float()),
+			zscript::Syntax::FloatLit => Some(self.parse_float()),
 			_ => None,
 		}
 	}
@@ -34,7 +34,7 @@ impl LitToken<zscript::Syn> {
 	#[must_use]
 	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
-			zscript::Syn::IntLit => Some(self.parse_int()),
+			zscript::Syntax::IntLit => Some(self.parse_int()),
 			_ => None,
 		}
 	}
@@ -42,32 +42,32 @@ impl LitToken<zscript::Syn> {
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
 		match self.0.kind() {
-			zscript::Syn::NameLit => Some(self.get_name()),
+			zscript::Syntax::NameLit => Some(self.get_name()),
 			_ => None,
 		}
 	}
 
-	/// Returns `true` if this token's kind is [`zscript::Syn::NullLit`].
+	/// Returns `true` if this token's kind is [`zscript::Syntax::NullLit`].
 	#[must_use]
 	pub fn null(&self) -> bool {
-		self.0.kind() == zscript::Syn::NullLit
+		self.0.kind() == zscript::Syntax::NullLit
 	}
 
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {
-			zscript::Syn::StringLit => Some(self.get_string()),
+			zscript::Syntax::StringLit => Some(self.get_string()),
 			_ => None,
 		}
 	}
 }
 
-impl LitToken<decorate::Syn> {
+impl LitToken<decorate::Syntax> {
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {
 		match self.0.kind() {
-			decorate::Syn::KwTrue => Some(true),
-			decorate::Syn::KwFalse => Some(false),
+			decorate::Syntax::KwTrue => Some(true),
+			decorate::Syntax::KwFalse => Some(false),
 			_ => None,
 		}
 	}
@@ -75,7 +75,7 @@ impl LitToken<decorate::Syn> {
 	#[must_use]
 	pub fn float(&self) -> Option<Result<f64, ParseFloatError>> {
 		match self.0.kind() {
-			decorate::Syn::FloatLit => Some(self.parse_float()),
+			decorate::Syntax::FloatLit => Some(self.parse_float()),
 			_ => None,
 		}
 	}
@@ -83,7 +83,7 @@ impl LitToken<decorate::Syn> {
 	#[must_use]
 	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
-			decorate::Syn::IntLit => Some(self.parse_int()),
+			decorate::Syntax::IntLit => Some(self.parse_int()),
 			_ => None,
 		}
 	}
@@ -92,7 +92,7 @@ impl LitToken<decorate::Syn> {
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
 		match self.0.kind() {
-			decorate::Syn::NameLit => Some(self.get_name()),
+			decorate::Syntax::NameLit => Some(self.get_name()),
 			_ => None,
 		}
 	}
@@ -101,18 +101,18 @@ impl LitToken<decorate::Syn> {
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {
-			decorate::Syn::StringLit => Some(self.get_string()),
+			decorate::Syntax::StringLit => Some(self.get_string()),
 			_ => None,
 		}
 	}
 }
 
-impl LitToken<cvarinfo::Syn> {
+impl LitToken<cvarinfo::Syntax> {
 	#[must_use]
 	pub fn bool(&self) -> Option<bool> {
 		match self.0.kind() {
-			cvarinfo::Syn::TrueLit => Some(true),
-			cvarinfo::Syn::FalseLit => Some(false),
+			cvarinfo::Syntax::TrueLit => Some(true),
+			cvarinfo::Syntax::FalseLit => Some(false),
 			_ => None,
 		}
 	}
@@ -120,7 +120,7 @@ impl LitToken<cvarinfo::Syn> {
 	#[must_use]
 	pub fn float(&self) -> Option<Result<f64, ParseFloatError>> {
 		match self.0.kind() {
-			cvarinfo::Syn::FloatLit => Some(self.parse_float()),
+			cvarinfo::Syntax::FloatLit => Some(self.parse_float()),
 			_ => None,
 		}
 	}
@@ -128,7 +128,7 @@ impl LitToken<cvarinfo::Syn> {
 	#[must_use]
 	pub fn int(&self) -> Option<Result<(u64, IntSuffix), ParseIntError>> {
 		match self.0.kind() {
-			cvarinfo::Syn::IntLit => Some(self.parse_int()),
+			cvarinfo::Syntax::IntLit => Some(self.parse_int()),
 			_ => None,
 		}
 	}
@@ -137,7 +137,7 @@ impl LitToken<cvarinfo::Syn> {
 	#[must_use]
 	pub fn string(&self) -> Option<&str> {
 		match self.0.kind() {
-			cvarinfo::Syn::StringLit => Some(self.get_string()),
+			cvarinfo::Syntax::StringLit => Some(self.get_string()),
 			_ => None,
 		}
 	}
@@ -238,7 +238,7 @@ mod test {
 
 	use crate::zdoom::{
 		self,
-		zscript::{ast, Syn, SyntaxNode},
+		zscript::{ast, Syntax, SyntaxNode},
 	};
 
 	use super::*;
@@ -254,8 +254,8 @@ mod test {
 		assert_eq!(token, zdoom::Token::IntLit);
 
 		let green = GreenNode::new(
-			Syn::Literal.into(),
-			[GreenToken::new(Syn::IntLit.into(), SAMPLE).into()],
+			Syntax::Literal.into(),
+			[GreenToken::new(Syntax::IntLit.into(), SAMPLE).into()],
 		);
 
 		let ast = SyntaxNode::new_root(green);

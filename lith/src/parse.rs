@@ -11,15 +11,15 @@ mod test;
 
 use doomfront::parser::{OpenMark, Parser};
 
-use crate::Syn;
+use crate::Syntax;
 
 pub use self::expr::*;
 
 use self::{common::*, item::*, pat::*, stmt::*};
 
-pub type Error = doomfront::ParseError<Syn>;
+pub type Error = doomfront::ParseError<Syntax>;
 
-pub fn file(p: &mut Parser<Syn>) {
+pub fn file(p: &mut Parser<Syntax>) {
 	let root = p.open();
 
 	while !p.eof() {
@@ -30,11 +30,11 @@ pub fn file(p: &mut Parser<Syn>) {
 		core_element::<true>(p);
 	}
 
-	p.close(root, Syn::FileRoot);
+	p.close(root, Syntax::FileRoot);
 }
 
 /// An inner annotation, item, or statement. If `ROOT`, statements are forbidden.
-fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
+fn core_element<const ROOT: bool>(p: &mut Parser<Syntax>) {
 	if at_inner_annotation(p) {
 		annotation(p, true);
 		return;
@@ -44,7 +44,7 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 
 	let mut documented = false;
 
-	while p.eat(Syn::DocComment, Syn::DocComment) && !p.eof() {
+	while p.eat(Syntax::DocComment, Syntax::DocComment) && !p.eof() {
 		trivia_0plus(p);
 		documented = true;
 	}
@@ -66,7 +66,7 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 
 	// Doc comments cannot precede anything below.
 	if documented {
-		p.advance_err_and_close(mark, p.nth(0), Syn::Error, &[&["TODO"]]);
+		p.advance_err_and_close(mark, p.nth(0), Syntax::Error, &[&["TODO"]]);
 		return;
 	}
 
@@ -75,5 +75,5 @@ fn core_element<const ROOT: bool>(p: &mut Parser<Syn>) {
 		return;
 	}
 
-	p.advance_err_and_close(mark, p.nth(0), Syn::Error, &[&["TODO"]]);
+	p.advance_err_and_close(mark, p.nth(0), Syntax::Error, &[&["TODO"]]);
 }

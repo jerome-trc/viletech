@@ -5,7 +5,7 @@ use rowan::ast::AstNode;
 use crate::simple_astnode;
 
 use super::{
-	super::{Syn, SyntaxNode, SyntaxToken},
+	super::{Syntax, SyntaxNode, SyntaxToken},
 	lit::Literal,
 };
 
@@ -18,13 +18,13 @@ pub enum Expr {
 }
 
 impl AstNode for Expr {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::CallExpr | Syn::IdentExpr | Syn::Literal)
+		matches!(kind, Syntax::CallExpr | Syntax::IdentExpr | Syntax::Literal)
 	}
 
 	fn cast(node: rowan::SyntaxNode<Self::Language>) -> Option<Self>
@@ -32,9 +32,9 @@ impl AstNode for Expr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::CallExpr => Some(Self::Call(ExprCall(node))),
-			Syn::IdentExpr => Some(Self::Ident(ExprIdent(node))),
-			Syn::Literal => Some(Self::Literal(Literal(node))),
+			Syntax::CallExpr => Some(Self::Call(ExprCall(node))),
+			Syntax::IdentExpr => Some(Self::Ident(ExprIdent(node))),
+			Syntax::Literal => Some(Self::Literal(Literal(node))),
 			_ => None,
 		}
 	}
@@ -66,27 +66,27 @@ impl Expr {
 	}
 }
 
-/// Wraps a node tagged [`Syn::CallExpr`].
+/// Wraps a node tagged [`Syntax::CallExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprCall(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ExprCall, Syn::CallExpr);
+simple_astnode!(Syntax, ExprCall, Syntax::CallExpr);
 
 impl ExprCall {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn name(&self) -> SyntaxToken {
 		self.syntax().first_token().unwrap()
 	}
 }
 
-/// Wraps a node tagged [`Syn::IdentExpr`].
+/// Wraps a node tagged [`Syntax::IdentExpr`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprIdent(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, ExprIdent, Syn::IdentExpr);
+simple_astnode!(Syntax, ExprIdent, Syntax::IdentExpr);
 
 impl ExprIdent {
 	#[must_use]

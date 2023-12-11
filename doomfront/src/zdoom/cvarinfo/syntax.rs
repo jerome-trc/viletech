@@ -6,68 +6,66 @@ use crate::{zdoom::Token, LangExt};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Syn {
+pub enum Syntax {
 	// Nodes: high-level composites ////////////////////////////////////////////
-	/// A sequence of tokens that did not form a valid syntax element.
+	/// A whole CVar definition.
+	Definition,
+	/// An `=` followed by a literal to optionally set a custom default value.
+	DefaultDef,
+	/// A sequence of tokens that either did not form a valid syntax element,
+	/// or which contained one or more tokens considered invalid by the lexer.
 	Error,
-	/// `'$' 'ifgame' `
-	GameQualifier,
-	/// `ident '=' string ';'`
-	KeyValuePair,
-	/// `'[' (locale | 'default' | '*' '~')+ ']'`
-	Header,
+	/// The set of flags qualifying a definition, scope specifiers included.
+	DefFlags,
 	/// The top-level node, representing the whole file.
 	Root,
-	// Tokens //////////////////////////////////////////////////////////////////
-	/// See [`crate::zdoom::lex::Token::StringLit`].
-	StringLit,
-
-	KwDefault,
-	KwIfGame,
-
-	/// `*`
-	Asterisk,
-	/// `[`
-	BracketL,
-	/// `]`
-	BracketR,
-	/// `$`
-	Dollar,
-	/// `=`
-	Eq,
-	/// `(`
-	ParenL,
-	/// `)`
-	ParenR,
-	/// `;`
-	Semicolon,
-	/// `~`
-	Tilde,
-	// Tokens: miscellaneous ///////////////////////////////////////////////////
-	RegionStart,
-	RegionEnd,
-	/// Either single-line or multi-line.
-	Comment,
-	/// A C-style identifier.
-	Ident,
-	/// Spaces, newlines, carriage returns, or tabs.
-	Whitespace,
-	/// Lexer input rolled up under [`Syn::Error`].
-	Unknown,
-	// Tokens: irrelevant //////////////////////////////////////////////////////
+	/// The type specifier is always followed by the identifier.
+	TypeSpec,
+	// Tokens: literals ////////////////////////////////////////////////////////
+	/// The exact string `false`.
+	FalseLit,
 	/// See [`crate::zdoom::lex::Token::FloatLit`].
 	FloatLit,
 	/// See [`crate::zdoom::lex::Token::IntLit`].
 	IntLit,
+	/// See [`crate::zdoom::lex::Token::StringLit`].
+	/// Also used for providing defaults to color CVars.
+	StringLit,
+	/// The exact string `true`.
+	TrueLit,
+	// Tokens: literals, irrelevant ////////////////////////////////////////////
 	/// See [`crate::zdoom::lex::Token::NameLit`].
 	NameLit,
+	// Tokens: keywords ////////////////////////////////////////////////////////
+	/// The type specifier `bool`.
+	KwBool,
+	/// The type specifier `color`.
+	KwColor,
+	/// The type specifier `float`.
+	KwFloat,
+	/// The type specifier `int`.
+	KwInt,
+	/// The type specifier `string`.
+	KwString,
 
+	/// The configuration flag `cheat`.
+	KwCheat,
+	/// The configuration flag `noarchive`.
+	KwNoArchive,
+	/// The scope specifier `nosave`.
+	KwNoSave,
+	/// The configuration flag `latch`.
+	KwLatch,
+	/// The scope specifier `server`.
+	KwServer,
+	/// The scope specifier `user`.
+	KwUser,
+	// Tokens: keywords, irrelevant ////////////////////////////////////////////
 	KwAbstract,
 	KwAction,
 	KwAlignOf,
 	KwArray,
 	KwAuto,
-	KwBool,
 	KwBreak,
 	KwBright,
 	KwByte,
@@ -78,8 +76,8 @@ pub enum Syn {
 	KwClearScope,
 	KwConst,
 	KwContinue,
-	KwColor,
 	KwCross,
+	KwDefault,
 	KwDeprecated,
 	KwDo,
 	KwDot,
@@ -88,17 +86,14 @@ pub enum Syn {
 	KwEnum,
 	KwExtend,
 	KwFail,
-	KwFalse,
 	KwFast,
 	KwFinal,
 	KwFlagDef,
-	KwFloat,
 	KwForEach,
 	KwFor,
 	KwGoto,
-	KwIf,
 	KwInclude,
-	KwInt,
+	KwIf,
 	KwInt16,
 	KwInt8,
 	KwInternal,
@@ -136,13 +131,11 @@ pub enum Syn {
 	KwStates,
 	KwStatic,
 	KwStop,
-	KwString,
 	KwStruct,
 	KwSuper,
 	KwSwitch,
 	KwReplaces,
 	KwTransient,
-	KwTrue,
 	KwUi,
 	KwUInt,
 	KwUInt16,
@@ -161,7 +154,12 @@ pub enum Syn {
 	KwVolatile,
 	KwWait,
 	KwWhile,
-
+	// Tokens: glyphs //////////////////////////////////////////////////////////
+	/// `=`
+	Eq,
+	/// `;`
+	Semicolon,
+	// Tokens: glyphs, irrelevant //////////////////////////////////////////////
 	/// `&`
 	Ampersand,
 	/// `&&`
@@ -192,6 +190,8 @@ pub enum Syn {
 	AngleR3Eq,
 	/// `>=`
 	AngleREq,
+	/// `*`
+	Asterisk,
 	/// `**`
 	Asterisk2,
 	/// `**=`
@@ -210,6 +210,10 @@ pub enum Syn {
 	BraceL,
 	/// `}`
 	BraceR,
+	/// `[`
+	BracketL,
+	/// `]`
+	BracketR,
 	/// `^`
 	Caret,
 	/// `^^`
@@ -224,6 +228,8 @@ pub enum Syn {
 	Colon2,
 	/// `,`
 	Comma,
+	/// `$`
+	Dollar,
 	/// `.`
 	Dot,
 	/// `..`
@@ -232,6 +238,8 @@ pub enum Syn {
 	Dot3,
 	/// `==`
 	Eq2,
+	/// `~`
+	Tilde,
 	/// `~==`
 	TildeEq2,
 	/// `-`
@@ -240,6 +248,10 @@ pub enum Syn {
 	MinusEq,
 	/// `--`
 	Minus2,
+	/// `(`
+	ParenL,
+	/// `)`
+	ParenR,
 	/// `%`
 	Percent,
 	/// `|`
@@ -270,23 +282,33 @@ pub enum Syn {
 	SlashEq,
 	/// `->`
 	ThinArrow,
-
+	// Tokens: miscellaenous ///////////////////////////////////////////////////
+	RegionStart,
+	RegionEnd,
+	/// A name for a defined CVar.
+	Ident,
+	/// Either single-line (C++-style) or multi-line (C-style).
+	Comment,
+	/// Input that the lexer considered to be invalid.
+	Unknown,
+	/// Spaces, newlines, carriage returns, or tabs.
+	Whitespace,
 	#[doc(hidden)]
 	__Last,
 }
 
-impl From<Syn> for rowan::SyntaxKind {
-	fn from(value: Syn) -> Self {
+impl From<Syntax> for rowan::SyntaxKind {
+	fn from(value: Syntax) -> Self {
 		Self(value as u16)
 	}
 }
 
-impl rowan::Language for Syn {
+impl rowan::Language for Syntax {
 	type Kind = Self;
 
 	fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
 		assert!(raw.0 < Self::__Last as u16);
-		unsafe { std::mem::transmute::<u16, Syn>(raw.0) }
+		unsafe { std::mem::transmute::<u16, Syntax>(raw.0) }
 	}
 
 	fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
@@ -294,13 +316,13 @@ impl rowan::Language for Syn {
 	}
 }
 
-impl LangExt for Syn {
+impl LangExt for Syntax {
 	type Token = Token;
 	const EOF: Self::Token = Token::Eof;
-	const ERR_NODE: Self::Kind = Syn::Error;
+	const ERR_NODE: Self::Kind = Syntax::Error;
 }
 
-impl From<crate::zdoom::Token> for Syn {
+impl From<crate::zdoom::Token> for Syntax {
 	fn from(value: crate::zdoom::Token) -> Self {
 		match value {
 			Token::FloatLit => Self::FloatLit,
@@ -335,7 +357,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwEnum => Self::KwEnum,
 			Token::KwExtend => Self::KwExtend,
 			Token::KwFail => Self::KwFail,
-			Token::KwFalse => Self::KwFalse,
+			Token::KwFalse => Self::FalseLit,
 			Token::KwFast => Self::KwFast,
 			Token::KwFinal => Self::KwFinal,
 			Token::KwFlagDef => Self::KwFlagDef,
@@ -344,7 +366,6 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwForEach => Self::KwForEach,
 			Token::KwGoto => Self::KwGoto,
 			Token::KwIn => Self::KwIn,
-			Token::KwInclude => Self::KwInclude,
 			Token::KwInternal => Self::KwInternal,
 			Token::KwIf => Self::KwIf,
 			Token::KwInt => Self::KwInt,
@@ -362,6 +383,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwName => Self::KwName,
 			Token::KwNative => Self::KwNative,
 			Token::KwNoDelay => Self::KwNoDelay,
+			Token::KwNone => Self::KwNone,
 			Token::KwNull => Self::KwNull,
 			Token::KwOffset => Self::KwOffset,
 			Token::KwOut => Self::KwOut,
@@ -387,7 +409,7 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::KwSuper => Self::KwSuper,
 			Token::KwSwitch => Self::KwSwitch,
 			Token::KwTransient => Self::KwTransient,
-			Token::KwTrue => Self::KwTrue,
+			Token::KwTrue => Self::TrueLit,
 			Token::KwUi => Self::KwUi,
 			Token::KwUInt => Self::KwUInt,
 			Token::KwUInt16 => Self::KwUInt16,
@@ -466,9 +488,10 @@ impl From<crate::zdoom::Token> for Syn {
 			Token::Tilde => Self::Tilde,
 			Token::TildeEq2 => Self::TildeEq2,
 			// Miscellaneous ///////////////////////////////////////////////////
+			Token::KwInclude => Self::KwInclude,
 			Token::RegionStart => Self::RegionStart,
 			Token::RegionEnd => Self::RegionEnd,
-			Token::Ident | Token::KwNone => Self::Ident,
+			Token::Ident => Self::Ident,
 			Token::Whitespace => Self::Whitespace,
 			Token::Comment | Token::DocComment => Self::Comment,
 			Token::Unknown | Token::Eof => Self::Unknown,

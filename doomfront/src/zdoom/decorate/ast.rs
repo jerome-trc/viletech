@@ -8,7 +8,7 @@ use rowan::{ast::AstNode, NodeOrToken};
 
 use crate::simple_astnode;
 
-use super::{syn::Syn, SyntaxNode, SyntaxToken};
+use super::{syntax::Syntax, SyntaxNode, SyntaxToken};
 
 pub use self::{actor::*, expr::*, lit::*};
 
@@ -22,7 +22,7 @@ pub enum TopLevel {
 }
 
 impl AstNode for TopLevel {
-	type Language = Syn;
+	type Language = Syntax;
 
 	fn can_cast(kind: <Self::Language as rowan::Language>::Kind) -> bool
 	where
@@ -30,7 +30,7 @@ impl AstNode for TopLevel {
 	{
 		matches!(
 			kind,
-			Syn::ActorDef | Syn::ConstDef | Syn::EnumDef | Syn::IncludeDirective
+			Syntax::ActorDef | Syntax::ConstDef | Syntax::EnumDef | Syntax::IncludeDirective
 		)
 	}
 
@@ -39,10 +39,10 @@ impl AstNode for TopLevel {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ActorDef => Some(Self::ActorDef(ActorDef(node))),
-			Syn::ConstDef => Some(Self::ConstDef(ConstDef(node))),
-			Syn::EnumDef => Some(Self::EnumDef(EnumDef(node))),
-			Syn::IncludeDirective => Some(Self::IncludeDirective(IncludeDirective(node))),
+			Syntax::ActorDef => Some(Self::ActorDef(ActorDef(node))),
+			Syntax::ConstDef => Some(Self::ConstDef(ConstDef(node))),
+			Syntax::EnumDef => Some(Self::EnumDef(EnumDef(node))),
+			Syntax::IncludeDirective => Some(Self::IncludeDirective(IncludeDirective(node))),
 			_ => None,
 		}
 	}
@@ -93,19 +93,19 @@ impl TopLevel {
 
 // ConstDef ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ConstDef`].
+/// Wraps a node tagged [`Syntax::ConstDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ConstDef(SyntaxNode);
 
-simple_astnode!(Syn, ConstDef, Syn::ConstDef);
+simple_astnode!(Syntax, ConstDef, Syntax::ConstDef);
 
 impl ConstDef {
 	#[must_use]
 	pub fn name(&self) -> SyntaxToken {
 		self.syntax()
 			.children_with_tokens()
-			.find_map(|elem| (elem.kind() == Syn::Ident).then(|| elem.into_token().unwrap()))
+			.find_map(|elem| (elem.kind() == Syntax::Ident).then(|| elem.into_token().unwrap()))
 			.unwrap()
 	}
 
@@ -144,12 +144,12 @@ pub enum ConstType {
 
 // EnumDef /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::EnumDef`].
+/// Wraps a node tagged [`Syntax::EnumDef`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumDef(SyntaxNode);
 
-simple_astnode!(Syn, EnumDef, Syn::EnumDef);
+simple_astnode!(Syntax, EnumDef, Syntax::EnumDef);
 
 impl EnumDef {
 	pub fn variants(&self) -> impl Iterator<Item = EnumVariant> {
@@ -157,12 +157,12 @@ impl EnumDef {
 	}
 }
 
-/// Wraps a node tagged [`Syn::EnumVariant`].
+/// Wraps a node tagged [`Syntax::EnumVariant`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumVariant(SyntaxNode);
 
-simple_astnode!(Syn, EnumVariant, Syn::EnumVariant);
+simple_astnode!(Syntax, EnumVariant, Syntax::EnumVariant);
 
 impl EnumVariant {
 	#[must_use]
@@ -180,12 +180,12 @@ impl EnumVariant {
 
 // IncludeDirective ////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IncludeDirective`].
+/// Wraps a node tagged [`Syntax::IncludeDirective`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IncludeDirective(SyntaxNode);
 
-simple_astnode!(Syn, IncludeDirective, Syn::IncludeDirective);
+simple_astnode!(Syntax, IncludeDirective, Syntax::IncludeDirective);
 
 impl IncludeDirective {
 	#[must_use]
@@ -196,18 +196,18 @@ impl IncludeDirective {
 
 // IdentChain //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IdentChain`].
+/// Wraps a node tagged [`Syntax::IdentChain`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IdentChain(SyntaxNode);
 
-simple_astnode!(Syn, IdentChain, Syn::IdentChain);
+simple_astnode!(Syntax, IdentChain, Syntax::IdentChain);
 
 impl IdentChain {
-	/// Each yielded token is tagged [`Syn::Ident`].
+	/// Each yielded token is tagged [`Syntax::Ident`].
 	pub fn parts(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.syntax()
 			.children_with_tokens()
-			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syn::Ident))
+			.filter_map(|elem| elem.into_token().filter(|tok| tok.kind() == Syntax::Ident))
 	}
 }

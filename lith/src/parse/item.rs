@@ -2,21 +2,21 @@
 
 use doomfront::parser::{OpenMark, Parser};
 
-use crate::Syn;
+use crate::Syntax;
 
 use super::common::*;
 
 #[must_use]
-pub(super) fn at_function_decl(p: &Parser<Syn>) -> bool {
-	p.at(Syn::KwFunction)
+pub(super) fn at_function_decl(p: &Parser<Syntax>) -> bool {
+	p.at(Syntax::KwFunction)
 }
 
-pub(super) fn function_decl(p: &mut Parser<Syn>, mark: OpenMark) {
+pub(super) fn function_decl(p: &mut Parser<Syntax>, mark: OpenMark) {
 	debug_assert!(at_function_decl(p));
 
-	p.expect(Syn::KwFunction, Syn::KwFunction, &[&["TODO"]]);
+	p.expect(Syntax::KwFunction, Syntax::KwFunction, &[&["TODO"]]);
 	trivia_0plus(p);
-	p.expect(Syn::Ident, Syn::Ident, &[&["TODO"]]);
+	p.expect(Syntax::Ident, Syntax::Ident, &[&["TODO"]]);
 	trivia_0plus(p);
 	param_list(p);
 	trivia_0plus(p);
@@ -26,94 +26,98 @@ pub(super) fn function_decl(p: &mut Parser<Syn>, mark: OpenMark) {
 		trivia_0plus(p);
 	}
 
-	if p.eat(Syn::Semicolon, Syn::Semicolon) {
-		p.close(mark, Syn::FunctionDecl);
+	if p.eat(Syntax::Semicolon, Syntax::Semicolon) {
+		p.close(mark, Syntax::FunctionDecl);
 		return;
 	}
 
 	let body = p.open();
-	block(p, body, Syn::FunctionBody, false);
-	p.close(mark, Syn::FunctionDecl);
+	block(p, body, Syntax::FunctionBody, false);
+	p.close(mark, Syntax::FunctionDecl);
 }
 
-fn param_list(p: &mut Parser<Syn>) {
+fn param_list(p: &mut Parser<Syntax>) {
 	let mark = p.open();
-	p.expect(Syn::ParenL, Syn::ParenR, &[&["`(`"]]);
+	p.expect(Syntax::ParenL, Syntax::ParenR, &[&["`(`"]]);
 	trivia_0plus(p);
 
-	if p.eat(Syn::Dot3, Syn::Dot3) {
+	if p.eat(Syntax::Dot3, Syntax::Dot3) {
 		trivia_0plus(p);
-		p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
-		p.close(mark, Syn::ParamList);
+		p.expect(Syntax::ParenR, Syntax::ParenR, &[&["`)`"]]);
+		p.close(mark, Syntax::ParamList);
 		return;
 	}
 
-	while !p.at(Syn::ParenR) && !p.eof() {
+	while !p.at(Syntax::ParenR) && !p.eof() {
 		parameter(p);
 		trivia_0plus(p);
 
 		match p.nth(0) {
-			t @ Syn::Comma => {
+			t @ Syntax::Comma => {
 				p.advance(t);
 				trivia_0plus(p);
 			}
-			Syn::ParenR => break,
+			Syntax::ParenR => break,
 			other => {
 				p.advance_with_error(other, &[&["`,`", "`)`"]]);
 			}
 		}
 	}
 
-	p.expect(Syn::ParenR, Syn::ParenR, &[&["`)`"]]);
-	p.close(mark, Syn::ParamList);
+	p.expect(Syntax::ParenR, Syntax::ParenR, &[&["`)`"]]);
+	p.close(mark, Syntax::ParamList);
 }
 
-fn parameter(p: &mut Parser<Syn>) {
+fn parameter(p: &mut Parser<Syntax>) {
 	let mark = p.open();
 
-	if p.eat(Syn::KwConst, Syn::KwConst) {
+	if p.eat(Syntax::KwConst, Syntax::KwConst) {
 		trivia_0plus(p);
 	}
 
-	if p.eat(Syn::Ampersand, Syn::Ampersand) {
+	if p.eat(Syntax::Ampersand, Syntax::Ampersand) {
 		trivia_0plus(p);
 
-		if p.eat(Syn::KwVar, Syn::KwVar) {
+		if p.eat(Syntax::KwVar, Syntax::KwVar) {
 			trivia_0plus(p);
 		}
 	}
 
-	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"], &["TODO"]]);
+	p.expect(
+		Syntax::Ident,
+		Syntax::Ident,
+		&[&["an identifier"], &["TODO"]],
+	);
 
 	trivia_0plus(p);
 	type_spec(p, true);
 
-	if p.find(0, |token| !token.is_trivia()) == Syn::Eq {
+	if p.find(0, |token| !token.is_trivia()) == Syntax::Eq {
 		trivia_0plus(p);
-		p.advance(Syn::Eq);
+		p.advance(Syntax::Eq);
 		trivia_0plus(p);
 		let _ = super::expr(p, true);
 	}
 
-	p.close(mark, Syn::Parameter);
+	p.close(mark, Syntax::Parameter);
 }
 
 #[must_use]
-pub(super) fn at_symbolic_constant(p: &Parser<Syn>) -> bool {
-	p.at(Syn::KwConst)
+pub(super) fn at_symbolic_constant(p: &Parser<Syntax>) -> bool {
+	p.at(Syntax::KwConst)
 }
 
-pub(super) fn symbolic_constant(p: &mut Parser<Syn>, mark: OpenMark) {
-	p.expect(Syn::KwConst, Syn::KwConst, &[&["TODO"]]);
+pub(super) fn symbolic_constant(p: &mut Parser<Syntax>, mark: OpenMark) {
+	p.expect(Syntax::KwConst, Syntax::KwConst, &[&["TODO"]]);
 	trivia_0plus(p);
-	p.expect(Syn::Ident, Syn::Ident, &[&["an identifier"]]);
+	p.expect(Syntax::Ident, Syntax::Ident, &[&["an identifier"]]);
 	trivia_0plus(p);
 	type_spec(p, false);
 	trivia_0plus(p);
-	p.expect(Syn::Eq, Syn::Eq, &[&["TODO"]]);
+	p.expect(Syntax::Eq, Syntax::Eq, &[&["TODO"]]);
 	trivia_0plus(p);
 	super::expr(p, true);
 	trivia_0plus(p);
-	p.expect(Syn::Semicolon, Syn::Semicolon, &[&["TODO"]]);
-	p.close(mark, Syn::SymConst);
+	p.expect(Syntax::Semicolon, Syntax::Semicolon, &[&["TODO"]]);
+	p.close(mark, Syntax::SymConst);
 }

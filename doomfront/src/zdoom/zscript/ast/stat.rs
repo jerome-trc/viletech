@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::{simple_astnode, AstError, AstResult};
 
-use super::{CoreType, DocComment, Expr, LocalVar, Syn, SyntaxNode, SyntaxToken, VarName};
+use super::{CoreType, DocComment, Expr, LocalVar, Syntax, SyntaxNode, SyntaxToken, VarName};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -29,29 +29,33 @@ pub enum Statement {
 }
 
 impl AstNode for Statement {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::AssignStat
-				| Syn::BreakStat | Syn::CaseStat
-				| Syn::CompoundStat
-				| Syn::ContinueStat
-				| Syn::DeclAssignStat
-				| Syn::DefaultStat
-				| Syn::DoUntilStat
-				| Syn::DoWhileStat
-				| Syn::EmptyStat | Syn::ExprStat
-				| Syn::ForStat | Syn::ForEachStat
-				| Syn::IfStat | Syn::LocalStat
-				| Syn::ReturnStat
-				| Syn::StaticConstStat
-				| Syn::SwitchStat
-				| Syn::UntilStat | Syn::WhileStat
+			Syntax::AssignStat
+				| Syntax::BreakStat
+				| Syntax::CaseStat
+				| Syntax::CompoundStat
+				| Syntax::ContinueStat
+				| Syntax::DeclAssignStat
+				| Syntax::DefaultStat
+				| Syntax::DoUntilStat
+				| Syntax::DoWhileStat
+				| Syntax::EmptyStat
+				| Syntax::ExprStat
+				| Syntax::ForStat
+				| Syntax::ForEachStat
+				| Syntax::IfStat | Syntax::LocalStat
+				| Syntax::ReturnStat
+				| Syntax::StaticConstStat
+				| Syntax::SwitchStat
+				| Syntax::UntilStat
+				| Syntax::WhileStat
 		)
 	}
 
@@ -60,23 +64,23 @@ impl AstNode for Statement {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::AssignStat => Some(Self::Assign(AssignStat(node))),
-			Syn::BreakStat => Some(Self::Break(BreakStat(node))),
-			Syn::CaseStat => Some(Self::Case(CaseStat(node))),
-			Syn::CompoundStat => Some(Self::Compound(CompoundStat(node))),
-			Syn::ContinueStat => Some(Self::Continue(ContinueStat(node))),
-			Syn::DeclAssignStat => Some(Self::DeclAssign(DeclAssignStat(node))),
-			Syn::DefaultStat => Some(Self::Default(DefaultStat(node))),
-			Syn::EmptyStat => Some(Self::Empty(EmptyStat(node))),
-			Syn::ExprStat => Some(Self::Expr(ExprStat(node))),
-			Syn::ForStat => Some(Self::For(ForStat(node))),
-			Syn::ForEachStat => Some(Self::ForEach(ForEachStat(node))),
-			Syn::IfStat => Some(Self::If(IfStat(node))),
-			Syn::LocalStat => Some(Self::Local(LocalStat(node))),
-			Syn::ReturnStat => Some(Self::Return(ReturnStat(node))),
-			Syn::StaticConstStat => Some(Self::StaticConst(StaticConstStat(node))),
-			Syn::SwitchStat => Some(Self::Switch(SwitchStat(node))),
-			Syn::DoUntilStat | Syn::DoWhileStat | Syn::UntilStat | Syn::WhileStat => {
+			Syntax::AssignStat => Some(Self::Assign(AssignStat(node))),
+			Syntax::BreakStat => Some(Self::Break(BreakStat(node))),
+			Syntax::CaseStat => Some(Self::Case(CaseStat(node))),
+			Syntax::CompoundStat => Some(Self::Compound(CompoundStat(node))),
+			Syntax::ContinueStat => Some(Self::Continue(ContinueStat(node))),
+			Syntax::DeclAssignStat => Some(Self::DeclAssign(DeclAssignStat(node))),
+			Syntax::DefaultStat => Some(Self::Default(DefaultStat(node))),
+			Syntax::EmptyStat => Some(Self::Empty(EmptyStat(node))),
+			Syntax::ExprStat => Some(Self::Expr(ExprStat(node))),
+			Syntax::ForStat => Some(Self::For(ForStat(node))),
+			Syntax::ForEachStat => Some(Self::ForEach(ForEachStat(node))),
+			Syntax::IfStat => Some(Self::If(IfStat(node))),
+			Syntax::LocalStat => Some(Self::Local(LocalStat(node))),
+			Syntax::ReturnStat => Some(Self::Return(ReturnStat(node))),
+			Syntax::StaticConstStat => Some(Self::StaticConst(StaticConstStat(node))),
+			Syntax::SwitchStat => Some(Self::Switch(SwitchStat(node))),
+			Syntax::DoUntilStat | Syntax::DoWhileStat | Syntax::UntilStat | Syntax::WhileStat => {
 				Some(Self::CondLoop(CondLoopStat(node)))
 			}
 			_ => None,
@@ -108,18 +112,18 @@ impl AstNode for Statement {
 
 // AssignStat //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::AssignStat`].
+/// Wraps a node tagged [`Syntax::AssignStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct AssignStat(SyntaxNode);
 
-simple_astnode!(Syn, AssignStat, Syn::AssignStat);
+simple_astnode!(Syntax, AssignStat, Syntax::AssignStat);
 
 impl AssignStat {
 	pub fn assigned(&self) -> impl Iterator<Item = Expr> {
 		self.0
 			.children_with_tokens()
-			.take_while(|elem| elem.kind() != Syn::Eq)
+			.take_while(|elem| elem.kind() != Syntax::Eq)
 			.filter_map(|elem| elem.into_node().map(|node| Expr::cast(node).unwrap()))
 	}
 
@@ -133,21 +137,21 @@ impl AssignStat {
 
 // BreakStat ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::BreakStat`].
+/// Wraps a node tagged [`Syntax::BreakStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct BreakStat(SyntaxNode);
 
-simple_astnode!(Syn, BreakStat, Syn::BreakStat);
+simple_astnode!(Syntax, BreakStat, Syntax::BreakStat);
 
 // CaseStat ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::CaseStat`].
+/// Wraps a node tagged [`Syntax::CaseStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CaseStat(SyntaxNode);
 
-simple_astnode!(Syn, CaseStat, Syn::CaseStat);
+simple_astnode!(Syntax, CaseStat, Syntax::CaseStat);
 
 impl CaseStat {
 	pub fn expr(&self) -> AstResult<Expr> {
@@ -160,12 +164,12 @@ impl CaseStat {
 
 // CompoundStat ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::CompoundStat`].
+/// Wraps a node tagged [`Syntax::CompoundStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CompoundStat(SyntaxNode);
 
-simple_astnode!(Syn, CompoundStat, Syn::CompoundStat);
+simple_astnode!(Syntax, CompoundStat, Syntax::CompoundStat);
 
 impl CompoundStat {
 	pub fn innards(&self) -> impl Iterator<Item = Statement> {
@@ -176,24 +180,24 @@ impl CompoundStat {
 // CondLoopStat ////////////////////////////////////////////////////////////////
 
 /// Wraps a node tagged with one of the following:
-/// - [`Syn::DoUntilStat`]
-/// - [`Syn::DoWhileStat`]
-/// - [`Syn::UntilStat`]
-/// - [`Syn::WhileStat`]
+/// - [`Syntax::DoUntilStat`]
+/// - [`Syntax::DoWhileStat`]
+/// - [`Syntax::UntilStat`]
+/// - [`Syntax::WhileStat`]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CondLoopStat(SyntaxNode);
 
 impl AstNode for CondLoopStat {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::DoUntilStat | Syn::DoWhileStat | Syn::UntilStat | Syn::WhileStat
+			Syntax::DoUntilStat | Syntax::DoWhileStat | Syntax::UntilStat | Syntax::WhileStat
 		)
 	}
 
@@ -216,28 +220,28 @@ impl AstNode for CondLoopStat {
 impl CondLoopStat {
 	#[must_use]
 	pub fn is_do_loop(&self) -> bool {
-		matches!(self.0.kind(), Syn::DoUntilStat | Syn::DoWhileStat)
+		matches!(self.0.kind(), Syntax::DoUntilStat | Syntax::DoWhileStat)
 	}
 
 	#[must_use]
 	pub fn is_while_loop(&self) -> bool {
-		matches!(self.0.kind(), Syn::WhileStat | Syn::DoWhileStat)
+		matches!(self.0.kind(), Syntax::WhileStat | Syntax::DoWhileStat)
 	}
 
 	#[must_use]
 	pub fn is_until_loop(&self) -> bool {
-		matches!(self.0.kind(), Syn::UntilStat | Syn::DoUntilStat)
+		matches!(self.0.kind(), Syntax::UntilStat | Syntax::DoUntilStat)
 	}
 
 	pub fn condition(&self) -> AstResult<Expr> {
 		match self.0.kind() {
-			Syn::DoUntilStat | Syn::DoWhileStat => {
+			Syntax::DoUntilStat | Syntax::DoWhileStat => {
 				let Some(node) = self.0.last_child() else {
 					return Err(AstError::Missing);
 				};
 				Expr::cast(node).ok_or(AstError::Incorrect)
 			}
-			Syn::WhileStat | Syn::UntilStat => {
+			Syntax::WhileStat | Syntax::UntilStat => {
 				let Some(node) = self.0.first_child() else {
 					return Err(AstError::Missing);
 				};
@@ -249,14 +253,14 @@ impl CondLoopStat {
 
 	pub fn statement(&self) -> AstResult<Statement> {
 		match self.0.kind() {
-			Syn::DoUntilStat | Syn::DoWhileStat => {
+			Syntax::DoUntilStat | Syntax::DoWhileStat => {
 				let Some(node) = self.0.first_child() else {
 					return Err(AstError::Missing);
 				};
 
 				Statement::cast(node).ok_or(AstError::Incorrect)
 			}
-			Syn::WhileStat | Syn::UntilStat => {
+			Syntax::WhileStat | Syntax::UntilStat => {
 				let Some(node) = self.0.last_child() else {
 					return Err(AstError::Missing);
 				};
@@ -270,29 +274,32 @@ impl CondLoopStat {
 
 // ContinueStat ////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ContinueStat`].
+/// Wraps a node tagged [`Syntax::ContinueStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ContinueStat(SyntaxNode);
 
-simple_astnode!(Syn, ContinueStat, Syn::ContinueStat);
+simple_astnode!(Syntax, ContinueStat, Syntax::ContinueStat);
 
 // DeclAssignStat //////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::DeclAssignStat`].
+/// Wraps a node tagged [`Syntax::DeclAssignStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct DeclAssignStat(SyntaxNode);
 
-simple_astnode!(Syn, DeclAssignStat, Syn::DeclAssignStat);
+simple_astnode!(Syntax, DeclAssignStat, Syntax::DeclAssignStat);
 
 impl DeclAssignStat {
-	/// Yielded tokens are always tagged [`Syn::Ident`].
+	/// Yielded tokens are always tagged [`Syntax::Ident`].
 	pub fn idents(&self) -> impl Iterator<Item = SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.take_while(|elem| elem.kind() != Syn::Eq)
-			.filter_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.take_while(|elem| elem.kind() != Syntax::Eq)
+			.filter_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 	}
 
 	pub fn expr(&self) -> AstResult<Expr> {
@@ -305,24 +312,24 @@ impl DeclAssignStat {
 
 // DefaultStat /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::DefaultStat`].
+/// Wraps a node tagged [`Syntax::DefaultStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct DefaultStat(SyntaxNode);
 
-simple_astnode!(Syn, DefaultStat, Syn::DefaultStat);
+simple_astnode!(Syntax, DefaultStat, Syntax::DefaultStat);
 
 // EmptyStat ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::EmptyStat`].
+/// Wraps a node tagged [`Syntax::EmptyStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EmptyStat(SyntaxNode);
 
-simple_astnode!(Syn, EmptyStat, Syn::EmptyStat);
+simple_astnode!(Syntax, EmptyStat, Syntax::EmptyStat);
 
 impl EmptyStat {
-	/// The returned token is always tagged [`Syn::Semicolon`].
+	/// The returned token is always tagged [`Syntax::Semicolon`].
 	#[must_use]
 	pub fn semicolon(&self) -> SyntaxToken {
 		self.0.first_token().unwrap()
@@ -331,12 +338,12 @@ impl EmptyStat {
 
 // ExprStat ////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprStat`].
+/// Wraps a node tagged [`Syntax::ExprStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprStat(SyntaxNode);
 
-simple_astnode!(Syn, ExprStat, Syn::ExprStat);
+simple_astnode!(Syntax, ExprStat, Syntax::ExprStat);
 
 impl ExprStat {
 	#[must_use]
@@ -347,12 +354,12 @@ impl ExprStat {
 
 // ForStat /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ForStat`].
+/// Wraps a node tagged [`Syntax::ForStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForStat(SyntaxNode);
 
-simple_astnode!(Syn, ForStat, Syn::ForStat);
+simple_astnode!(Syntax, ForStat, Syntax::ForStat);
 
 impl ForStat {
 	pub fn init(&self) -> AstResult<ForLoopInit> {
@@ -377,19 +384,19 @@ impl ForStat {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ForLoopInit`].
+/// Wraps a node tagged [`Syntax::ForLoopInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForLoopInit(SyntaxNode);
 
-simple_astnode!(Syn, ForLoopInit, Syn::ForLoopInit);
+simple_astnode!(Syntax, ForLoopInit, Syntax::ForLoopInit);
 
-/// Wraps a node tagged [`Syn::ForLoopCond`].
+/// Wraps a node tagged [`Syntax::ForLoopCond`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForLoopCond(SyntaxNode);
 
-simple_astnode!(Syn, ForLoopCond, Syn::ForLoopCond);
+simple_astnode!(Syntax, ForLoopCond, Syntax::ForLoopCond);
 
 impl ForLoopCond {
 	#[must_use]
@@ -398,12 +405,12 @@ impl ForLoopCond {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ForLoopIter`].
+/// Wraps a node tagged [`Syntax::ForLoopIter`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForLoopIter(SyntaxNode);
 
-simple_astnode!(Syn, ForLoopIter, Syn::ForLoopIter);
+simple_astnode!(Syntax, ForLoopIter, Syntax::ForLoopIter);
 
 impl ForLoopIter {
 	pub fn exprs(&self) -> impl Iterator<Item = Expr> {
@@ -413,12 +420,12 @@ impl ForLoopIter {
 
 // ForEachStat /////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ForEachStat`].
+/// Wraps a node tagged [`Syntax::ForEachStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ForEachStat(SyntaxNode);
 
-simple_astnode!(Syn, ForEachStat, Syn::ForEachStat);
+simple_astnode!(Syntax, ForEachStat, Syntax::ForEachStat);
 
 impl ForEachStat {
 	pub fn variable(&self) -> AstResult<VarName> {
@@ -445,12 +452,12 @@ impl ForEachStat {
 
 // IfStat //////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::IfStat`].
+/// Wraps a node tagged [`Syntax::IfStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IfStat(SyntaxNode);
 
-simple_astnode!(Syn, IfStat, Syn::IfStat);
+simple_astnode!(Syntax, IfStat, Syntax::IfStat);
 
 impl IfStat {
 	pub fn condition(&self) -> AstResult<Expr> {
@@ -464,30 +471,30 @@ impl IfStat {
 
 // LocalStat ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::LocalStat`].
+/// Wraps a node tagged [`Syntax::LocalStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LocalStat(SyntaxNode);
 
-simple_astnode!(Syn, LocalStat, Syn::LocalStat);
+simple_astnode!(Syntax, LocalStat, Syntax::LocalStat);
 
 impl LocalStat {
 	#[must_use]
 	pub fn var(&self) -> LocalVar {
 		let ret = self.0.first_child().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::LocalVar);
+		debug_assert_eq!(ret.kind(), Syntax::LocalVar);
 		LocalVar(ret)
 	}
 }
 
 // ReturnStat //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ReturnStat`].
+/// Wraps a node tagged [`Syntax::ReturnStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ReturnStat(SyntaxNode);
 
-simple_astnode!(Syn, ReturnStat, Syn::ReturnStat);
+simple_astnode!(Syntax, ReturnStat, Syntax::ReturnStat);
 
 impl ReturnStat {
 	pub fn exprs(&self) -> impl Iterator<Item = Expr> {
@@ -497,19 +504,19 @@ impl ReturnStat {
 
 // StaticConstStat /////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::StaticConstStat`].
+/// Wraps a node tagged [`Syntax::StaticConstStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct StaticConstStat(pub(super) SyntaxNode);
 
-simple_astnode!(Syn, StaticConstStat, Syn::StaticConstStat);
+simple_astnode!(Syntax, StaticConstStat, Syntax::StaticConstStat);
 
 impl StaticConstStat {
 	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
 		super::doc_comments(&self.0)
 	}
 
-	/// `0` is always tagged [`Syn::KwStatic`]; `1` is always tagged [`Syn::KwConst`].
+	/// `0` is always tagged [`Syntax::KwStatic`]; `1` is always tagged [`Syntax::KwConst`].
 	#[must_use]
 	pub fn keywords(&self) -> (SyntaxToken, SyntaxToken) {
 		let ret0 = self
@@ -517,7 +524,7 @@ impl StaticConstStat {
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwStatic)
+					.filter(|token| token.kind() == Syntax::KwStatic)
 			})
 			.unwrap();
 
@@ -526,18 +533,21 @@ impl StaticConstStat {
 			.children_with_tokens()
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|token| token.kind() == Syn::KwConst)
+					.filter(|token| token.kind() == Syntax::KwConst)
 			})
 			.unwrap();
 
 		(ret0, ret1)
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	pub fn name(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|token| token.kind() == Syn::Ident))
+			.find_map(|elem| {
+				elem.into_token()
+					.filter(|token| token.kind() == Syntax::Ident)
+			})
 			.ok_or(AstError::Missing)
 	}
 
@@ -552,12 +562,12 @@ impl StaticConstStat {
 
 // SwitchStat //////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::SwitchStat`].
+/// Wraps a node tagged [`Syntax::SwitchStat`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SwitchStat(SyntaxNode);
 
-simple_astnode!(Syn, SwitchStat, Syn::SwitchStat);
+simple_astnode!(Syntax, SwitchStat, Syntax::SwitchStat);
 
 impl SwitchStat {
 	pub fn expr(&self) -> AstResult<Expr> {

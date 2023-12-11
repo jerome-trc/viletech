@@ -5,7 +5,7 @@ use doomfront::{
 	simple_astnode, AstError, AstResult,
 };
 
-use crate::{Syn, SyntaxNode, SyntaxToken};
+use crate::{Syntax, SyntaxNode, SyntaxToken};
 
 use super::{Annotation, ArgList, CoreElement, Item, LitToken, Name, TypeSpec};
 
@@ -29,23 +29,28 @@ pub enum Expr {
 }
 
 impl AstNode for Expr {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::ExprAggregate
-				| Syn::ExprBin | Syn::ExprBlock
-				| Syn::ExprCall | Syn::ExprConstruct
-				| Syn::ExprField | Syn::ExprGroup
-				| Syn::ExprIdent | Syn::ExprIndex
-				| Syn::ExprLit | Syn::ExprPostfix
-				| Syn::ExprPrefix
-				| Syn::ExprStruct
-				| Syn::ExprType
+			Syntax::ExprAggregate
+				| Syntax::ExprBin
+				| Syntax::ExprBlock
+				| Syntax::ExprCall
+				| Syntax::ExprConstruct
+				| Syntax::ExprField
+				| Syntax::ExprGroup
+				| Syntax::ExprIdent
+				| Syntax::ExprIndex
+				| Syntax::ExprLit
+				| Syntax::ExprPostfix
+				| Syntax::ExprPrefix
+				| Syntax::ExprStruct
+				| Syntax::ExprType
 		)
 	}
 
@@ -54,20 +59,20 @@ impl AstNode for Expr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
-			Syn::ExprBin => Some(Self::Binary(ExprBin(node))),
-			Syn::ExprBlock => Some(Self::Block(ExprBlock(node))),
-			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
-			Syn::ExprConstruct => Some(Self::Construct(ExprConstruct(node))),
-			Syn::ExprField => Some(Self::Field(ExprField(node))),
-			Syn::ExprGroup => Some(Self::Group(ExprGroup(node))),
-			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
-			Syn::ExprIndex => Some(Self::Index(ExprIndex(node))),
-			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
-			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
-			Syn::ExprPrefix => Some(Self::Prefix(ExprPrefix(node))),
-			Syn::ExprStruct => Some(Self::Struct(ExprStruct(node))),
-			Syn::ExprType => ExprType::cast(node).map(Self::Type),
+			Syntax::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
+			Syntax::ExprBin => Some(Self::Binary(ExprBin(node))),
+			Syntax::ExprBlock => Some(Self::Block(ExprBlock(node))),
+			Syntax::ExprCall => Some(Self::Call(ExprCall(node))),
+			Syntax::ExprConstruct => Some(Self::Construct(ExprConstruct(node))),
+			Syntax::ExprField => Some(Self::Field(ExprField(node))),
+			Syntax::ExprGroup => Some(Self::Group(ExprGroup(node))),
+			Syntax::ExprIdent => Some(Self::Ident(ExprIdent(node))),
+			Syntax::ExprIndex => Some(Self::Index(ExprIndex(node))),
+			Syntax::ExprLit => Some(Self::Literal(ExprLit(node))),
+			Syntax::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
+			Syntax::ExprPrefix => Some(Self::Prefix(ExprPrefix(node))),
+			Syntax::ExprStruct => Some(Self::Struct(ExprStruct(node))),
+			Syntax::ExprType => ExprType::cast(node).map(Self::Type),
 			_ => None,
 		}
 	}
@@ -126,20 +131,23 @@ impl From<PrimaryExpr> for Expr {
 }
 
 impl AstNode for PrimaryExpr {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
 		matches!(
 			kind,
-			Syn::ExprBlock
-				| Syn::ExprCall | Syn::ExprField
-				| Syn::ExprGroup | Syn::ExprIdent
-				| Syn::ExprIndex | Syn::ExprLit
-				| Syn::ExprPostfix
-				| Syn::ExprStruct
+			Syntax::ExprBlock
+				| Syntax::ExprCall
+				| Syntax::ExprField
+				| Syntax::ExprGroup
+				| Syntax::ExprIdent
+				| Syntax::ExprIndex
+				| Syntax::ExprLit
+				| Syntax::ExprPostfix
+				| Syntax::ExprStruct
 		)
 	}
 
@@ -148,16 +156,16 @@ impl AstNode for PrimaryExpr {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
-			Syn::ExprBlock => Some(Self::Block(ExprBlock(node))),
-			Syn::ExprCall => Some(Self::Call(ExprCall(node))),
-			Syn::ExprField => Some(Self::Field(ExprField(node))),
-			Syn::ExprGroup => Some(Self::Group(ExprGroup(node))),
-			Syn::ExprIdent => Some(Self::Ident(ExprIdent(node))),
-			Syn::ExprIndex => Some(Self::Index(ExprIndex(node))),
-			Syn::ExprLit => Some(Self::Literal(ExprLit(node))),
-			Syn::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
-			Syn::ExprStruct => Some(Self::Struct(ExprStruct(node))),
+			Syntax::ExprAggregate => Some(Self::Aggregate(ExprAggregate(node))),
+			Syntax::ExprBlock => Some(Self::Block(ExprBlock(node))),
+			Syntax::ExprCall => Some(Self::Call(ExprCall(node))),
+			Syntax::ExprField => Some(Self::Field(ExprField(node))),
+			Syntax::ExprGroup => Some(Self::Group(ExprGroup(node))),
+			Syntax::ExprIdent => Some(Self::Ident(ExprIdent(node))),
+			Syntax::ExprIndex => Some(Self::Index(ExprIndex(node))),
+			Syntax::ExprLit => Some(Self::Literal(ExprLit(node))),
+			Syntax::ExprPostfix => Some(Self::Postfix(ExprPostfix(node))),
+			Syntax::ExprStruct => Some(Self::Struct(ExprStruct(node))),
 			_ => None,
 		}
 	}
@@ -180,12 +188,12 @@ impl AstNode for PrimaryExpr {
 
 // Aggregate ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprAggregate`].
+/// Wraps a node tagged [`Syntax::ExprAggregate`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprAggregate(SyntaxNode);
 
-simple_astnode!(Syn, ExprAggregate, Syn::ExprAggregate);
+simple_astnode!(Syntax, ExprAggregate, Syntax::ExprAggregate);
 
 impl ExprAggregate {
 	pub fn initializers(&self) -> impl Iterator<Item = AggregateInit> {
@@ -193,7 +201,7 @@ impl ExprAggregate {
 	}
 }
 
-/// Wraps a node tagged [`Syn::AggregateInit`].
+/// Wraps a node tagged [`Syntax::AggregateInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum AggregateInit {
@@ -203,26 +211,26 @@ pub enum AggregateInit {
 }
 
 impl AstNode for AggregateInit {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
-		kind == Syn::AggregateInit
+		kind == Syntax::AggregateInit
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
 	where
 		Self: Sized,
 	{
-		if node.kind() != Syn::AggregateInit {
+		if node.kind() != Syntax::AggregateInit {
 			return None;
 		}
 
 		match node.first_token().map(|t| t.kind()) {
-			Some(Syn::Dot) => Some(Self::Field(FieldInit(node))),
-			Some(Syn::BracketL) => Some(Self::Index(IndexInit(node))),
+			Some(Syntax::Dot) => Some(Self::Field(FieldInit(node))),
+			Some(Syntax::BracketL) => Some(Self::Index(IndexInit(node))),
 			Some(_) => Some(Self::Anon(AnonInit(node))),
 			None => None,
 		}
@@ -237,7 +245,7 @@ impl AstNode for AggregateInit {
 	}
 }
 
-/// Wraps a node tagged [`Syn::AggregateInit`].
+/// Wraps a node tagged [`Syntax::AggregateInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct AnonInit(SyntaxNode);
@@ -248,7 +256,7 @@ impl AnonInit {
 	}
 }
 
-/// Wraps a node tagged [`Syn::AggregateInit`].
+/// Wraps a node tagged [`Syntax::AggregateInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FieldInit(SyntaxNode);
@@ -256,12 +264,12 @@ pub struct FieldInit(SyntaxNode);
 impl FieldInit {
 	pub fn name(&self) -> AstResult<Name> {
 		let dot = self.0.first_token().unwrap();
-		debug_assert_eq!(dot.kind(), Syn::Dot);
+		debug_assert_eq!(dot.kind(), Syntax::Dot);
 
 		dot.siblings_with_tokens(Direction::Next)
 			.find_map(|elem| {
 				elem.into_token()
-					.filter(|t| matches!(t.kind(), Syn::Ident | Syn::LitName))
+					.filter(|t| matches!(t.kind(), Syntax::Ident | Syntax::LitName))
 			})
 			.map(Name)
 			.ok_or(AstError::Missing)
@@ -272,7 +280,7 @@ impl FieldInit {
 	}
 }
 
-/// Wraps a node tagged [`Syn::AggregateInit`].
+/// Wraps a node tagged [`Syntax::AggregateInit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct IndexInit(SyntaxNode);
@@ -297,19 +305,19 @@ impl IndexInit {
 	fn eq_token(&self) -> AstResult<SyntaxToken> {
 		self.0
 			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::Eq))
+			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syntax::Eq))
 			.ok_or(AstError::Incorrect)
 	}
 }
 
 // Binary //////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprBin`].
+/// Wraps a node tagged [`Syntax::ExprBin`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprBin(SyntaxNode);
 
-simple_astnode!(Syn, ExprBin, Syn::ExprBin);
+simple_astnode!(Syntax, ExprBin, Syntax::ExprBin);
 
 impl ExprBin {
 	#[must_use]
@@ -335,52 +343,52 @@ impl ExprBin {
 			.find_map(|elem| elem.into_token().filter(|t| t.kind().is_glyph()))
 			.unwrap();
 
-		if op.kind() == Syn::At {
+		if op.kind() == Syntax::At {
 			let ident = op.next_token().ok_or(AstError::Missing)?;
 
 			return Ok(BinOp::User { at: op, ident });
 		}
 
 		let ret = match op.kind() {
-			Syn::Ampersand => BinOp::Ampersand(op),
-			Syn::Ampersand2 => BinOp::Ampersand2(op),
-			Syn::Ampersand2Eq => BinOp::Ampersand2Eq(op),
-			Syn::AmpersandEq => BinOp::AmpersandEq(op),
-			Syn::AngleL => BinOp::AngleL(op),
-			Syn::AngleL2 => BinOp::AngleL2(op),
-			Syn::AngleL2Eq => BinOp::AngleL2Eq(op),
-			Syn::AngleLEq => BinOp::AngleLEq(op),
-			Syn::AngleR => BinOp::AngleR(op),
-			Syn::AngleR2 => BinOp::AngleR2(op),
-			Syn::AngleR2Eq => BinOp::AngleR2Eq(op),
-			Syn::AngleREq => BinOp::AngleREq(op),
-			Syn::Asterisk => BinOp::Asterisk(op),
-			Syn::Asterisk2 => BinOp::Asterisk2(op),
-			Syn::Asterisk2Eq => BinOp::Asterisk2Eq(op),
-			Syn::AsteriskEq => BinOp::AsteriskEq(op),
-			Syn::At => BinOp::At(op),
-			Syn::Bang => BinOp::Bang(op),
-			Syn::BangEq => BinOp::BangEq(op),
-			Syn::Caret => BinOp::Caret(op),
-			Syn::CaretEq => BinOp::CaretEq(op),
-			Syn::Eq => BinOp::Eq(op),
-			Syn::Eq2 => BinOp::Eq2(op),
-			Syn::Minus => BinOp::Minus(op),
-			Syn::MinusEq => BinOp::MinusEq(op),
-			Syn::Percent => BinOp::Percent(op),
-			Syn::PercentEq => BinOp::PercentEq(op),
-			Syn::Pipe => BinOp::Pipe(op),
-			Syn::Pipe2 => BinOp::Pipe2(op),
-			Syn::Pipe2Eq => BinOp::Pipe2Eq(op),
-			Syn::PipeEq => BinOp::PipeEq(op),
-			Syn::Plus => BinOp::Plus(op),
-			Syn::Plus2 => BinOp::Plus2(op),
-			Syn::Plus2Eq => BinOp::Plus2Eq(op),
-			Syn::PlusEq => BinOp::PlusEq(op),
-			Syn::Slash => BinOp::Slash(op),
-			Syn::SlashEq => BinOp::SlashEq(op),
-			Syn::Tilde => BinOp::Tilde(op),
-			Syn::TildeEq2 => BinOp::TildeEq2(op),
+			Syntax::Ampersand => BinOp::Ampersand(op),
+			Syntax::Ampersand2 => BinOp::Ampersand2(op),
+			Syntax::Ampersand2Eq => BinOp::Ampersand2Eq(op),
+			Syntax::AmpersandEq => BinOp::AmpersandEq(op),
+			Syntax::AngleL => BinOp::AngleL(op),
+			Syntax::AngleL2 => BinOp::AngleL2(op),
+			Syntax::AngleL2Eq => BinOp::AngleL2Eq(op),
+			Syntax::AngleLEq => BinOp::AngleLEq(op),
+			Syntax::AngleR => BinOp::AngleR(op),
+			Syntax::AngleR2 => BinOp::AngleR2(op),
+			Syntax::AngleR2Eq => BinOp::AngleR2Eq(op),
+			Syntax::AngleREq => BinOp::AngleREq(op),
+			Syntax::Asterisk => BinOp::Asterisk(op),
+			Syntax::Asterisk2 => BinOp::Asterisk2(op),
+			Syntax::Asterisk2Eq => BinOp::Asterisk2Eq(op),
+			Syntax::AsteriskEq => BinOp::AsteriskEq(op),
+			Syntax::At => BinOp::At(op),
+			Syntax::Bang => BinOp::Bang(op),
+			Syntax::BangEq => BinOp::BangEq(op),
+			Syntax::Caret => BinOp::Caret(op),
+			Syntax::CaretEq => BinOp::CaretEq(op),
+			Syntax::Eq => BinOp::Eq(op),
+			Syntax::Eq2 => BinOp::Eq2(op),
+			Syntax::Minus => BinOp::Minus(op),
+			Syntax::MinusEq => BinOp::MinusEq(op),
+			Syntax::Percent => BinOp::Percent(op),
+			Syntax::PercentEq => BinOp::PercentEq(op),
+			Syntax::Pipe => BinOp::Pipe(op),
+			Syntax::Pipe2 => BinOp::Pipe2(op),
+			Syntax::Pipe2Eq => BinOp::Pipe2Eq(op),
+			Syntax::PipeEq => BinOp::PipeEq(op),
+			Syntax::Plus => BinOp::Plus(op),
+			Syntax::Plus2 => BinOp::Plus2(op),
+			Syntax::Plus2Eq => BinOp::Plus2Eq(op),
+			Syntax::PlusEq => BinOp::PlusEq(op),
+			Syntax::Slash => BinOp::Slash(op),
+			Syntax::SlashEq => BinOp::SlashEq(op),
+			Syntax::Tilde => BinOp::Tilde(op),
+			Syntax::TildeEq2 => BinOp::TildeEq2(op),
 			_ => unreachable!(),
 		};
 
@@ -435,12 +443,12 @@ pub enum BinOp {
 
 // Block ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprBlock`].
+/// Wraps a node tagged [`Syntax::ExprBlock`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprBlock(SyntaxNode);
 
-simple_astnode!(Syn, ExprBlock, Syn::ExprBlock);
+simple_astnode!(Syntax, ExprBlock, Syntax::ExprBlock);
 
 impl ExprBlock {
 	pub fn innards(&self) -> impl Iterator<Item = CoreElement> {
@@ -450,12 +458,12 @@ impl ExprBlock {
 
 // Call ////////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprCall`].
+/// Wraps a node tagged [`Syntax::ExprCall`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprCall(SyntaxNode);
 
-simple_astnode!(Syn, ExprCall, Syn::ExprCall);
+simple_astnode!(Syntax, ExprCall, Syntax::ExprCall);
 
 impl ExprCall {
 	#[must_use]
@@ -470,12 +478,12 @@ impl ExprCall {
 
 // Construct ///////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprConstruct`].
+/// Wraps a node tagged [`Syntax::ExprConstruct`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprConstruct(SyntaxNode);
 
-simple_astnode!(Syn, ExprConstruct, Syn::ExprConstruct);
+simple_astnode!(Syntax, ExprConstruct, Syntax::ExprConstruct);
 
 impl ExprConstruct {
 	pub fn aggregate_type(&self) -> AstResult<PrimaryExpr> {
@@ -489,12 +497,12 @@ impl ExprConstruct {
 
 // Field ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprField`].
+/// Wraps a node tagged [`Syntax::ExprField`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprField(SyntaxNode);
 
-simple_astnode!(Syn, ExprField, Syn::ExprField);
+simple_astnode!(Syntax, ExprField, Syntax::ExprField);
 
 impl ExprField {
 	#[must_use]
@@ -506,8 +514,8 @@ impl ExprField {
 		let ret = self.0.last_token().unwrap();
 
 		match ret.kind() {
-			Syn::Ident | Syn::LitName => Ok(Name(ret)),
-			Syn::Dot => Err(AstError::Missing),
+			Syntax::Ident | Syntax::LitName => Ok(Name(ret)),
+			Syntax::Dot => Err(AstError::Missing),
 			_ => Err(AstError::Incorrect),
 		}
 	}
@@ -515,12 +523,12 @@ impl ExprField {
 
 // Group ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprGroup`].
+/// Wraps a node tagged [`Syntax::ExprGroup`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprGroup(SyntaxNode);
 
-simple_astnode!(Syn, ExprGroup, Syn::ExprGroup);
+simple_astnode!(Syntax, ExprGroup, Syntax::ExprGroup);
 
 impl ExprGroup {
 	#[must_use]
@@ -531,30 +539,30 @@ impl ExprGroup {
 
 // Ident ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprIdent`].
+/// Wraps a node tagged [`Syntax::ExprIdent`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprIdent(SyntaxNode);
 
-simple_astnode!(Syn, ExprIdent, Syn::ExprIdent);
+simple_astnode!(Syntax, ExprIdent, Syntax::ExprIdent);
 
 impl ExprIdent {
 	#[must_use]
 	pub fn token(&self) -> SyntaxToken {
 		let ret = self.0.first_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
+		debug_assert_eq!(ret.kind(), Syntax::Ident);
 		ret
 	}
 }
 
 // Index ///////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprIndex`].
+/// Wraps a node tagged [`Syntax::ExprIndex`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprIndex(SyntaxNode);
 
-simple_astnode!(Syn, ExprIndex, Syn::ExprIndex);
+simple_astnode!(Syntax, ExprIndex, Syntax::ExprIndex);
 
 impl ExprIndex {
 	#[must_use]
@@ -576,12 +584,12 @@ impl ExprIndex {
 
 // Literal /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprLit`].
+/// Wraps a node tagged [`Syntax::ExprLit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprLit(SyntaxNode);
 
-simple_astnode!(Syn, ExprLit, Syn::ExprLit);
+simple_astnode!(Syntax, ExprLit, Syntax::ExprLit);
 
 impl ExprLit {
 	#[must_use]
@@ -589,17 +597,17 @@ impl ExprLit {
 		LitToken(self.0.first_token().unwrap())
 	}
 
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn string_suffix(&self) -> Option<SyntaxToken> {
 		let lit = self.0.first_token().unwrap();
 		let suffix = self.0.last_token().unwrap();
 
-		if lit.kind() != Syn::LitString {
+		if lit.kind() != Syntax::LitString {
 			return None;
 		}
 
-		if suffix.kind() != Syn::Ident {
+		if suffix.kind() != Syntax::Ident {
 			return None;
 		}
 
@@ -613,21 +621,21 @@ impl ExprLit {
 
 // Postfix /////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprPostfix`].
+/// Wraps a node tagged [`Syntax::ExprPostfix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprPostfix(SyntaxNode);
 
-simple_astnode!(Syn, ExprPostfix, Syn::ExprPostfix);
+simple_astnode!(Syntax, ExprPostfix, Syntax::ExprPostfix);
 
 // Prefix //////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprPrefix`].
+/// Wraps a node tagged [`Syntax::ExprPrefix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprPrefix(SyntaxNode);
 
-simple_astnode!(Syn, ExprPrefix, Syn::ExprPrefix);
+simple_astnode!(Syntax, ExprPrefix, Syntax::ExprPrefix);
 
 impl ExprPrefix {
 	pub fn operand(&self) -> AstResult<Expr> {
@@ -639,9 +647,9 @@ impl ExprPrefix {
 		let ret = self.0.first_token().unwrap();
 
 		match ret.kind() {
-			Syn::Bang => PrefixOp::Bang(ret),
-			Syn::Minus => PrefixOp::Minus(ret),
-			Syn::Tilde => PrefixOp::Tilde(ret),
+			Syntax::Bang => PrefixOp::Bang(ret),
+			Syntax::Minus => PrefixOp::Minus(ret),
+			Syntax::Tilde => PrefixOp::Tilde(ret),
 			other => unreachable!("unexpected prefix op kind {other:?}"),
 		}
 	}
@@ -657,12 +665,12 @@ pub enum PrefixOp {
 
 // Struct //////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprStruct`].
+/// Wraps a node tagged [`Syntax::ExprStruct`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprStruct(SyntaxNode);
 
-simple_astnode!(Syn, ExprStruct, Syn::ExprStruct);
+simple_astnode!(Syntax, ExprStruct, Syntax::ExprStruct);
 
 impl ExprStruct {
 	pub fn innards(&self) -> impl Iterator<Item = StructInnard> {
@@ -670,19 +678,19 @@ impl ExprStruct {
 	}
 }
 
-/// Wraps a node tagged [`Syn::FieldDecl`].
+/// Wraps a node tagged [`Syntax::FieldDecl`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FieldDecl(SyntaxNode);
 
-simple_astnode!(Syn, FieldDecl, Syn::FieldDecl);
+simple_astnode!(Syntax, FieldDecl, Syntax::FieldDecl);
 
 impl FieldDecl {
-	/// The returned token is always tagged [`Syn::Ident`].
+	/// The returned token is always tagged [`Syntax::Ident`].
 	#[must_use]
 	pub fn name(&self) -> SyntaxToken {
 		let ret = self.0.first_token().unwrap();
-		debug_assert_eq!(ret.kind(), Syn::Ident);
+		debug_assert_eq!(ret.kind(), Syntax::Ident);
 		ret
 	}
 
@@ -701,9 +709,9 @@ pub enum StructInnard {
 }
 
 impl AstNode for StructInnard {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
@@ -711,7 +719,7 @@ impl AstNode for StructInnard {
 			return true;
 		}
 
-		matches!(kind, Syn::Annotation | Syn::FieldDecl)
+		matches!(kind, Syntax::Annotation | Syntax::FieldDecl)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -723,8 +731,8 @@ impl AstNode for StructInnard {
 		}
 
 		match node.kind() {
-			Syn::Annotation => Some(Self::Annotation(Annotation(node))),
-			Syn::FieldDecl => Some(Self::Field(FieldDecl(node))),
+			Syntax::Annotation => Some(Self::Annotation(Annotation(node))),
+			Syntax::FieldDecl => Some(Self::Field(FieldDecl(node))),
 			_ => None,
 		}
 	}
@@ -740,12 +748,12 @@ impl AstNode for StructInnard {
 
 // Type ////////////////////////////////////////////////////////////////////////
 
-/// Wraps a node tagged [`Syn::ExprType`].
+/// Wraps a node tagged [`Syntax::ExprType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ExprType(SyntaxNode);
 
-simple_astnode!(Syn, ExprType, Syn::ExprType);
+simple_astnode!(Syntax, ExprType, Syntax::ExprType);
 
 impl ExprType {
 	pub fn prefixes(&self) -> impl Iterator<Item = TypePrefix> {
@@ -764,13 +772,13 @@ pub enum TypePrefix {
 }
 
 impl AstNode for TypePrefix {
-	type Language = Syn;
+	type Language = Syntax;
 
-	fn can_cast(kind: Syn) -> bool
+	fn can_cast(kind: Syntax) -> bool
 	where
 		Self: Sized,
 	{
-		matches!(kind, Syn::ArrayPrefix)
+		matches!(kind, Syntax::ArrayPrefix)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -778,7 +786,7 @@ impl AstNode for TypePrefix {
 		Self: Sized,
 	{
 		match node.kind() {
-			Syn::ArrayPrefix => Some(Self::Array(ArrayPrefix(node))),
+			Syntax::ArrayPrefix => Some(Self::Array(ArrayPrefix(node))),
 			_ => None,
 		}
 	}
@@ -790,12 +798,12 @@ impl AstNode for TypePrefix {
 	}
 }
 
-/// Wraps a node tagged [`Syn::ArrayPrefix`].
+/// Wraps a node tagged [`Syntax::ArrayPrefix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ArrayPrefix(SyntaxNode);
 
-simple_astnode!(Syn, ArrayPrefix, Syn::ArrayPrefix);
+simple_astnode!(Syntax, ArrayPrefix, Syntax::ArrayPrefix);
 
 impl ArrayPrefix {
 	pub fn length(&self) -> AstResult<Expr> {

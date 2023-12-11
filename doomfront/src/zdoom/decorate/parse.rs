@@ -8,12 +8,12 @@ mod test;
 
 use crate::{parser::Parser, zdoom::Token};
 
-use super::Syn;
+use super::Syntax;
 
 use self::{actor::*, common::*, expr::*, top::*};
 
-/// Builds a [`Syn::Root`] node.
-pub fn file(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::Root`] node.
+pub fn file(p: &mut Parser<Syntax>) {
 	let root = p.open();
 
 	while !p.eof() {
@@ -44,12 +44,12 @@ pub fn file(p: &mut Parser<Syn>) {
 			}
 			t => {
 				p.advance_with_error(
-					Syn::from(t),
+					Syntax::from(t),
 					&[&["`actor`", "`const`", "`damagetype`", "`enum`", "`#include`"]],
 				);
 			}
 		}
 	}
 
-	p.close(root, Syn::Root);
+	p.close(root, Syntax::Root);
 }

@@ -1,16 +1,16 @@
 use crate::{
 	parser::{CloseMark, Parser},
 	zdoom::{
-		decorate::{parse::common::*, Syn},
+		decorate::{parse::common::*, Syntax},
 		Token,
 	},
 };
 
-pub(super) fn expr(p: &mut Parser<Syn>) {
+pub(super) fn expr(p: &mut Parser<Syntax>) {
 	recur(p, Token::Eof);
 }
 
-fn recur(p: &mut Parser<Syn>, left: Token) {
+fn recur(p: &mut Parser<Syntax>, left: Token) {
 	let mut lhs = primary(p);
 
 	loop {
@@ -21,14 +21,14 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 		match right {
 			Token::Minus2 => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::Minus2);
-				lhs = p.close(m, Syn::PostfixExpr);
+				p.advance(Syntax::Minus2);
+				lhs = p.close(m, Syntax::PostfixExpr);
 				continue;
 			}
 			Token::Plus2 => {
 				let m = p.open_before(lhs);
-				p.advance(Syn::Plus2);
-				lhs = p.close(m, Syn::PostfixExpr);
+				p.advance(Syntax::Plus2);
+				lhs = p.close(m, Syntax::PostfixExpr);
 				continue;
 			}
 			Token::ParenL => {
@@ -36,41 +36,41 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 				trivia_0plus(p);
 				arg_list(p);
 				trivia_0plus(p);
-				lhs = p.close(m, Syn::CallExpr);
+				lhs = p.close(m, Syntax::CallExpr);
 				continue;
 			}
 			Token::BracketL => {
 				let m = p.open_before(lhs);
-				p.expect(Token::BracketL, Syn::BracketL, &[&["`[`"]]);
+				p.expect(Token::BracketL, Syntax::BracketL, &[&["`[`"]]);
 				trivia_0plus(p);
 				expr(p);
 				trivia_0plus(p);
-				p.expect(Token::BracketR, Syn::BracketR, &[&["`]`"]]);
-				lhs = p.close(m, Syn::IndexExpr);
+				p.expect(Token::BracketR, Syntax::BracketR, &[&["`]`"]]);
+				lhs = p.close(m, Syntax::IndexExpr);
 				continue;
 			}
 			_ => {}
 		}
 
-		if crate::parser::pratt::<Syn>(left, right, PRATT_PRECEDENCE) {
+		if crate::parser::pratt::<Syntax>(left, right, PRATT_PRECEDENCE) {
 			match right {
 				Token::Question => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::Question);
+					p.advance(Syntax::Question);
 					trivia_0plus(p);
 					expr(p);
 					trivia_0plus(p);
-					p.expect(Token::Colon, Syn::Colon, &[&["`:`"]]);
+					p.expect(Token::Colon, Syntax::Colon, &[&["`:`"]]);
 					trivia_0plus(p);
 					expr(p);
-					lhs = p.close(m, Syn::TernaryExpr);
+					lhs = p.close(m, Syntax::TernaryExpr);
 				}
 				_ => {
 					let m = p.open_before(lhs);
-					p.advance(Syn::from(right));
+					p.advance(Syntax::from(right));
 					trivia_0plus(p);
 					recur(p, right);
-					lhs = p.close(m, Syn::BinExpr);
+					lhs = p.close(m, Syntax::BinExpr);
 				}
 			}
 		} else {
@@ -79,14 +79,14 @@ fn recur(p: &mut Parser<Syn>, left: Token) {
 	}
 }
 
-fn primary(p: &mut Parser<Syn>) -> CloseMark {
+fn primary(p: &mut Parser<Syntax>) -> CloseMark {
 	let ex = p.open();
 
 	let token = p.nth(0);
 
 	if is_ident_lax(token) {
-		p.advance(Syn::Ident);
-		return p.close(ex, Syn::IdentExpr);
+		p.advance(Syntax::Ident);
+		return p.close(ex, Syntax::IdentExpr);
 	}
 
 	match token {
@@ -95,29 +95,29 @@ fn primary(p: &mut Parser<Syn>) -> CloseMark {
 				let s = p.nth_slice(1);
 
 				if s.chars().all(|c| c.is_ascii_hexdigit()) {
-					p.advance_n(Syn::HexLit, 2);
-					return p.close(ex, Syn::ColorExpr);
+					p.advance_n(Syntax::HexLit, 2);
+					return p.close(ex, Syntax::ColorExpr);
 				}
 			}
 
-			p.advance(Syn::from(t));
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::from(t));
+			p.close(ex, Syntax::Literal)
 		}
 		t @ (Token::KwTrue | Token::KwFalse | Token::StringLit | Token::NameLit) => {
-			p.advance(Syn::from(t));
-			p.close(ex, Syn::Literal)
+			p.advance(Syntax::from(t));
+			p.close(ex, Syntax::Literal)
 		}
 		Token::KwNone => {
-			p.advance(Syn::KwNone);
-			p.close(ex, Syn::NoneExpr)
+			p.advance(Syntax::KwNone);
+			p.close(ex, Syntax::NoneExpr)
 		}
 		Token::ParenL => {
-			p.expect(Token::ParenL, Syn::ParenL, &[&["`(`"]]);
+			p.expect(Token::ParenL, Syntax::ParenL, &[&["`(`"]]);
 			trivia_0plus(p);
 			expr(p);
 			trivia_0plus(p);
-			p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-			p.close(ex, Syn::GroupExpr)
+			p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+			p.close(ex, Syntax::GroupExpr)
 		}
 		t @ (Token::Bang
 		| Token::Minus2
@@ -125,15 +125,15 @@ fn primary(p: &mut Parser<Syn>) -> CloseMark {
 		| Token::Minus
 		| Token::Plus
 		| Token::Tilde) => {
-			p.advance(Syn::from(t));
+			p.advance(Syntax::from(t));
 			trivia_0plus(p);
 			recur(p, t);
-			p.close(ex, Syn::PrefixExpr)
+			p.close(ex, Syntax::PrefixExpr)
 		}
 		other => p.advance_err_and_close(
 			ex,
-			Syn::from(other),
-			Syn::Error,
+			Syntax::from(other),
+			Syntax::Error,
 			&[&[
 				"an integer",
 				"a floating-point number",
@@ -150,11 +150,11 @@ fn primary(p: &mut Parser<Syn>) -> CloseMark {
 	}
 }
 
-/// Builds a [`Syn::ArgList`] node. Includes delimiting parentheses.
-pub(super) fn arg_list(p: &mut Parser<Syn>) {
+/// Builds a [`Syntax::ArgList`] node. Includes delimiting parentheses.
+pub(super) fn arg_list(p: &mut Parser<Syntax>) {
 	p.debug_assert_at(Token::ParenL);
 	let arglist = p.open();
-	p.advance(Syn::ParenL);
+	p.advance(Syntax::ParenL);
 	trivia_0plus(p);
 
 	while !p.at(Token::ParenR) && !p.eof() {
@@ -162,7 +162,7 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 
 		if p.find(0, |token| !token.is_trivia()) == Token::Comma {
 			trivia_0plus(p);
-			p.advance(Syn::Comma);
+			p.advance(Syntax::Comma);
 			trivia_0plus(p);
 		} else {
 			break;
@@ -170,8 +170,8 @@ pub(super) fn arg_list(p: &mut Parser<Syn>) {
 	}
 
 	trivia_0plus(p);
-	p.expect(Token::ParenR, Syn::ParenR, &[&["`)`"]]);
-	p.close(arglist, Syn::ArgList);
+	p.expect(Token::ParenR, Syntax::ParenR, &[&["`)`"]]);
+	p.close(arglist, Syntax::ArgList);
 }
 
 const PRATT_PRECEDENCE: &[&[Token]] = &[

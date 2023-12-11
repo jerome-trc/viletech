@@ -1,7 +1,7 @@
 use rowan::{ast::AstNode, GreenNode, NodeOrToken};
 
 use crate::{
-	zdoom::zscript::{ast, Syn},
+	zdoom::zscript::{ast, Syntax},
 	GreenElement,
 };
 
@@ -46,12 +46,12 @@ pub fn expr_bin(f: &mut AutoFormatter, ast: ast::BinExpr) -> GreenNode {
 				}
 			}
 			NodeOrToken::Token(token) => {
-				if token.kind() == Syn::Whitespace {
+				if token.kind() == Syntax::Whitespace {
 					continue;
 				}
 
 				let mut space_needed = false;
-				space_needed |= token.kind() == Syn::Comment;
+				space_needed |= token.kind() == Syntax::Comment;
 				space_needed |= token.index() == operator.index();
 
 				children.push(token.green().to_owned().into());
@@ -73,11 +73,11 @@ pub fn expr_postfix(f: &mut AutoFormatter, ast: ast::PostfixExpr) -> GreenNode {
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
 			NodeOrToken::Token(token) => {
-				if token.kind() == Syn::Whitespace {
+				if token.kind() == Syntax::Whitespace {
 					continue;
 				}
 
-				if token.kind() == Syn::Comment {
+				if token.kind() == Syntax::Comment {
 					children.push(f.ctx.space());
 					children.push(token.green().to_owned().into());
 					children.push(f.ctx.space());
@@ -86,7 +86,7 @@ pub fn expr_postfix(f: &mut AutoFormatter, ast: ast::PostfixExpr) -> GreenNode {
 				}
 			}
 			NodeOrToken::Node(node) => {
-				if node.kind() == Syn::Error {
+				if node.kind() == Syntax::Error {
 					children.push(node.green().into_owned().into());
 				}
 			}
@@ -103,11 +103,11 @@ pub fn expr_prefix(f: &mut AutoFormatter, ast: ast::PrefixExpr) -> GreenNode {
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
 			NodeOrToken::Token(token) => {
-				if token.kind() == Syn::Whitespace {
+				if token.kind() == Syntax::Whitespace {
 					continue;
 				}
 
-				if token.kind() == Syn::Comment {
+				if token.kind() == Syntax::Comment {
 					children.push(f.ctx.space());
 					children.push(token.green().to_owned().into());
 					children.push(f.ctx.space());
@@ -134,11 +134,11 @@ pub fn expr_ternary(f: &mut AutoFormatter, ast: ast::TernaryExpr) -> GreenNode {
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
 			NodeOrToken::Token(token) => {
-				if token.kind() == Syn::Whitespace {
+				if token.kind() == Syntax::Whitespace {
 					continue;
 				}
 
-				let need_newline = matches!(token.kind(), Syn::RegionStart | Syn::RegionEnd);
+				let need_newline = matches!(token.kind(), Syntax::RegionStart | Syntax::RegionEnd);
 
 				if need_newline {
 					children.push(super::newline(f));
