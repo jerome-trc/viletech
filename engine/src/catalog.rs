@@ -532,6 +532,74 @@ impl DatumKey {
 	}
 }
 
+/// Expands `~` on Unix and performs environment variable substitution.
+/// Deliberately designed to mimic `NicePath` in
+/// <https://github.com/ZDoom/gzdoom/blob/master/src/common/utility/cmdlib.cpp>.
+#[must_use]
+pub fn nice_path(path: impl AsRef<Path>) -> PathBuf {
+	let p = path.as_ref();
+
+	if p.is_empty() {
+		return PathBuf::from(".");
+	}
+
+	#[cfg(not(target_os = "windows"))]
+	if p == Path::new("/") {
+		return PathBuf::from("/");
+	}
+
+	let mut string = p.to_string_lossy().to_string();
+
+	#[cfg(not(target_os = "windows"))]
+	{
+		let home = home::home_dir().unwrap_or_default();
+		let home = home.to_string_lossy();
+		string = string.replace('~', &home);
+	}
+
+	let matches = lazy_regex!(r"\$[[:word:]]+").find_iter(&string);
+	let mut ret = string.clone();
+
+	for m in matches {
+		match env::var(m.as_str()) {
+			Ok(v) => {
+				ret.replace_range(m.range(), &v);
+			}
+			Err(_) => {
+				ret.replace_range(m.range(), "");
+			}
+		}
+	}
+
+	PathBuf::from(string)
+}
+
+/// Extracts a version string from what will almost always be a file stem,
+/// using a search pattern based off the most common versioning conventions used
+/// in ZDoom modding. If the returned option is `None`, the given string is unmodified.
+#[must_use]
+pub fn version_from_string(string: &mut String) -> Option<String> {
+	match lazy_regex!(
+		r"(?x)
+		(?:[VR]|[\s\-_][VvRr]|[\s\-_\.])\d{1,}
+		(?:[\._\-]\d{1,})*
+		(?:[\._\-]\d{1,})*
+		[A-Za-z]*[\._\-]*
+		[A-Za-z0-9]*
+		$"
+	)
+	.find(string)
+	{
+		Some(m) => {
+			const TO_TRIM: [char; 3] = [' ', '_', '-'];
+			let ret = m.as_str().trim_matches(&TO_TRIM[..]).to_string();
+			string.replace_range(m.range(), "");
+			Some(ret)
+		}
+		None => None,
+	}
+}
+
 // (RAT) If you're reading this, congratulations! You've found something special.
 // This module sub-tree is, historically speaking, the most tortured code in VileTech.
 // The Git history doesn't even reflect half of the reworks the VFS has undergone.

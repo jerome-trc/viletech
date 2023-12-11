@@ -113,23 +113,22 @@ impl<T: AsRef<Path>> PathExt for T {
 	}
 
 	fn has_wad_extension(&self) -> bool {
-		lazy_regex!(r"^(?i)[pi]?wad$").is_match(
-			self.as_ref()
-				.extension()
-				.unwrap_or_default()
-				.to_str()
-				.unwrap_or_default(),
-		)
+		self.as_ref().extension().is_some_and(|ext| {
+			let lossy = ext.to_string_lossy();
+			lossy.eq_ignore_ascii_case("wad")
+				|| lossy.eq_ignore_ascii_case("pwad")
+				|| lossy.eq_ignore_ascii_case("iwad")
+		})
 	}
 
 	fn has_gzdoom_extension(&self) -> bool {
-		lazy_regex!(r"^(?i)i?pk[37]$").is_match(
-			self.as_ref()
-				.extension()
-				.unwrap_or_default()
-				.to_str()
-				.unwrap_or_default(),
-		)
+		const EXTS: &'static [&'static str] = &["pk3", "pk7", "ipk3", "ipk7"];
+
+		self.as_ref().extension().is_some_and(|ext| {
+			let lossy = ext.to_string_lossy();
+
+			EXTS.iter().copied().any(|e| ext.eq_ignore_ascii_case(e))
+		})
 	}
 
 	fn has_eternity_extension(&self) -> bool {
@@ -150,46 +149,4 @@ pub fn exe_dir() -> PathBuf {
 	let mut ret = env::current_exe().expect("failed to get executable's directory");
 	ret.pop();
 	ret
-}
-
-/// Expands `~` on Unix and performs environment variable substitution.
-/// Deliberately designed to mimic `NicePath` in
-/// <https://github.com/ZDoom/gzdoom/blob/master/src/common/utility/cmdlib.cpp>.
-#[must_use]
-pub fn nice_path(path: impl AsRef<Path>) -> PathBuf {
-	let p = path.as_ref();
-
-	if p.is_empty() {
-		return PathBuf::from(".");
-	}
-
-	#[cfg(not(target_os = "windows"))]
-	if p == Path::new("/") {
-		return PathBuf::from("/");
-	}
-
-	let mut string = p.to_string_lossy().to_string();
-
-	#[cfg(not(target_os = "windows"))]
-	{
-		let home = home::home_dir().unwrap_or_default();
-		let home = home.to_string_lossy();
-		string = string.replace('~', &home);
-	}
-
-	let matches = lazy_regex!(r"\$[[:word:]]+").find_iter(&string);
-	let mut ret = string.clone();
-
-	for m in matches {
-		match env::var(m.as_str()) {
-			Ok(v) => {
-				ret.replace_range(m.range(), &v);
-			}
-			Err(_) => {
-				ret.replace_range(m.range(), "");
-			}
-		}
-	}
-
-	PathBuf::from(string)
 }

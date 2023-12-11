@@ -19,7 +19,7 @@ macro_rules! replace_expr {
 	};
 }
 
-/// Creates an anonymous block with a lazy-initialised static [`regex::Regex`].
+/// Creates an anonymous block with a lazy-initialised static regular expression.
 /// From <https://docs.rs/once_cell/latest/once_cell/index.html#lazily-compiled-regex>.
 #[macro_export]
 macro_rules! lazy_regex {
