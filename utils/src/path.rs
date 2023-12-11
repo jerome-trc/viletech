@@ -114,21 +114,18 @@ impl<T: AsRef<Path>> PathExt for T {
 
 	fn has_wad_extension(&self) -> bool {
 		self.as_ref().extension().is_some_and(|ext| {
-			let lossy = ext.to_string_lossy();
-			lossy.eq_ignore_ascii_case("wad")
-				|| lossy.eq_ignore_ascii_case("pwad")
-				|| lossy.eq_ignore_ascii_case("iwad")
+			ext.eq_ignore_ascii_case("wad")
+				|| ext.eq_ignore_ascii_case("pwad")
+				|| ext.eq_ignore_ascii_case("iwad")
 		})
 	}
 
 	fn has_gzdoom_extension(&self) -> bool {
-		const EXTS: &'static [&'static str] = &["pk3", "pk7", "ipk3", "ipk7"];
+		const EXTS: &[&'static str] = &["pk3", "pk7", "ipk3", "ipk7"];
 
-		self.as_ref().extension().is_some_and(|ext| {
-			let lossy = ext.to_string_lossy();
-
-			EXTS.iter().copied().any(|e| ext.eq_ignore_ascii_case(e))
-		})
+		self.as_ref()
+			.extension()
+			.is_some_and(|ext| EXTS.iter().copied().any(|e| ext.eq_ignore_ascii_case(e)))
 	}
 
 	fn has_eternity_extension(&self) -> bool {
