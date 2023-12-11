@@ -91,10 +91,6 @@ fn lower_stmt_bind(tlat: &mut Translator, scope: &mut Scope, ast: ast::StmtBind)
 
 	let tspec = match ceval::expr(tlat.ctx, 0, scope, texpr) {
 		CEval::Type(t_ptr) => t_ptr,
-		CEval::Container(_) => {
-			// TODO: raise an error.
-			return;
-		}
 		CEval::Function(_) => {
 			// TODO: raise an error.
 			return;

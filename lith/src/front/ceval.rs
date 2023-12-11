@@ -61,20 +61,6 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 	let callable_sym = match callable {
 		CEval::Function(f) => f,
-		CEval::Container(_) => {
-			ctx.raise(
-				Issue::new(
-					ctx.path,
-					span,
-					issue::Level::Error(issue::Error::IllegalCall),
-				)
-				.with_message_static(
-					"call expressions require a function; found a container reference",
-				),
-			);
-
-			return CEval::Err;
-		}
 		CEval::Type(_) => {
 			ctx.raise(
 				Issue::new(
@@ -104,20 +90,6 @@ fn expr_call(ctx: &SemaContext, depth: u8, env: &Scope, ast: ast::ExprCall) -> C
 
 	let d_fn = match &callable_sym.datum {
 		SymDatum::Function(d_fn) => d_fn,
-		SymDatum::Container(_, _) => {
-			ctx.raise(
-				Issue::new(
-					ctx.path,
-					ast.syntax().text_range(),
-					issue::Level::Error(issue::Error::IllegalCall),
-				)
-				.with_message_static(
-					"call expressions require a function; found a container reference",
-				),
-			);
-
-			return CEval::Err;
-		}
 		SymDatum::Local(_) => {
 			ctx.raise(
 				Issue::new(
@@ -172,7 +144,6 @@ fn expr_ident(ctx: &SemaContext, env: &Scope, ast: ast::ExprIdent) -> CEval {
 	};
 
 	match &sym_ptr.datum {
-		SymDatum::Container(_, scope) => CEval::Container(scope.clone()),
 		SymDatum::Function(_) => CEval::Function(sym_ptr.non_owning_ptr()),
 		SymDatum::SymConst(_) => todo!("lazy define"),
 		SymDatum::Local(_) => unreachable!(),

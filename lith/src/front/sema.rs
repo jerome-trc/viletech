@@ -190,18 +190,6 @@ fn check_symconst(ctx: &SemaContext, ast: ast::SymConst, sym_id: SymbolId) {
 	match &d_const.init {
 		ConstInit::Type(init_ty) => match init_eval {
 			CEval::Err => {}
-			CEval::Container(_) => {
-				ctx.raise(
-					Issue::new(
-						ctx.path,
-						init_span,
-						issue::Level::Error(issue::Error::ContainerAssign),
-					)
-					.with_message_static(
-						"cannot assign an imported container to a symbolic constant",
-					),
-				);
-			}
 			CEval::Function(_) => {
 				ctx.raise(
 					Issue::new(
@@ -232,18 +220,6 @@ fn check_symconst(ctx: &SemaContext, ast: ast::SymConst, sym_id: SymbolId) {
 		},
 		ConstInit::Value(init_val) => match init_eval {
 			CEval::Err => {}
-			CEval::Container(_) => {
-				ctx.raise(
-					Issue::new(
-						ctx.path,
-						init_span,
-						issue::Level::Error(issue::Error::ContainerAssign),
-					)
-					.with_message_static(
-						"cannot assign an imported container to a symbolic constant",
-					),
-				);
-			}
 			CEval::Function(_) => {
 				ctx.raise(
 					Issue::new(
@@ -312,7 +288,6 @@ pub(crate) struct MonoSig {
 #[must_use]
 pub enum CEval {
 	Err,
-	Container(Scope),
 	Function(SymPtr),
 	Type(TypePtr),
 	Value(CeValue),

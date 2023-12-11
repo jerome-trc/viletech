@@ -45,14 +45,7 @@ pub enum Syn {
 	FunctionDecl,
 	/// `'{' T* '}'` where `T` is a statement, [`Syn::Annotation`], or item.
 	FunctionBody,
-	/// `'import' stringlit ':' (importlist | importall) ';'`
-	Import,
-	/// `'*' '=>' ident`
-	ImportAll,
-	/// `(ident | namelit) ('=>' ident)?`
-	ImportEntry,
-	/// `importentry (',' importentry)* ','?`
-	ImportList,
+
 	/// `'const'? ('&' 'var'?)? ident typespec ('=' expr)?`
 	Parameter,
 	/// `'(' (param? (',' param)* ','?) | '...' ')'`
@@ -162,9 +155,6 @@ pub enum Syn {
 	/// `function`; used in [function declarations](Syn::FunctionDecl).
 	#[token("function")]
 	KwFunction,
-	/// `import`; used in [imports](Syn::Import).
-	#[token("import")]
-	KwImport,
 	/// `let`; used in [binding statements](Syn::StmtBind).
 	#[token("let")]
 	KwLet,
@@ -365,7 +355,7 @@ pub enum Syn {
 	/// `/=`; the division compound assignment [binary operator](Syn::ExprBin).
 	#[token("/=")]
 	SlashEq,
-	/// `=>`; used in [import syntax](Syn::Import) to rename symbols.
+	/// `=>`; currently unused.
 	#[token("=>")]
 	ThickArrow,
 	/// `~`; the bitwise negation [prefix operator](Syn::ExprPrefix).
@@ -512,10 +502,6 @@ impl std::fmt::Display for Syn {
 			Self::FieldDecl => write!(f, "field declaration"),
 			Self::FunctionDecl => write!(f, "function declaration"),
 			Self::FunctionBody => write!(f, "function body"),
-			Self::Import => write!(f, "import"),
-			Self::ImportAll => write!(f, "mass import"),
-			Self::ImportEntry => write!(f, "import entry"),
-			Self::ImportList => write!(f, "import entry list"),
 			Self::Parameter => write!(f, "parameter"),
 			Self::ParamList => write!(f, "parameter list"),
 			Self::SymConst => write!(f, "symbolic constant"),
@@ -550,7 +536,6 @@ impl std::fmt::Display for Syn {
 			Self::KwConst => write!(f, "`const`"),
 			Self::KwContinue => write!(f, "`continue`"),
 			Self::KwFunction => write!(f, "`function`"),
-			Self::KwImport => write!(f, "`import`"),
 			Self::KwLet => write!(f, "`let`"),
 			Self::KwReturn => write!(f, "`return`"),
 			Self::KwStruct => write!(f, "`struct`"),

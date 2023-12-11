@@ -7,7 +7,6 @@ pub(crate) mod anno;
 pub(crate) mod ceval;
 pub(crate) mod decl;
 pub(crate) mod func;
-pub(crate) mod import;
 pub(crate) mod lower;
 pub(crate) mod sema;
 pub(crate) mod sym;

@@ -156,10 +156,6 @@ pub(super) fn monomorphize(
 
 			match cev {
 				CEval::Err => continue,
-				CEval::Container(_) => {
-					// TODO: raise an error.
-					continue;
-				}
 				CEval::Function(_) => {
 					// TODO: raise an error.
 					continue;
@@ -271,18 +267,6 @@ fn define(
 						issue::Level::Error(issue::Error::Unimplemented),
 					)
 					.with_message_static("annotations in function bodies are not yet supported"),
-				);
-
-				tlat.failed = true;
-			}
-			ast::CoreElement::Import(import) => {
-				ctx.raise(
-					Issue::new(
-						ctx.path,
-						import.syntax().text_range(),
-						issue::Level::Error(issue::Error::Unimplemented),
-					)
-					.with_message_static("imports in function bodies are not yet supported"),
 				);
 
 				tlat.failed = true;

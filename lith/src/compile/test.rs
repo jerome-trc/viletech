@@ -28,16 +28,6 @@ fn end_to_end() {
 		panic!();
 	}
 
-	crate::compile::resolve_imports(&mut compiler);
-
-	if compiler.any_errors() {
-		for issue in compiler.drain_issues() {
-			dbg!(issue);
-		}
-
-		panic!();
-	}
-
 	crate::compile::semantic_check(&mut compiler);
 
 	if compiler.any_errors() {

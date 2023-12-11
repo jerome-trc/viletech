@@ -1,4 +1,4 @@
-import "/lith/builtins" : primitiveType;
+let primitiveType = import("/lith/builtins").primitiveType;
 
 const void: type_t = primitiveType('void');
 const bool: type_t = primitiveType('bool');

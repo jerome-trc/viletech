@@ -178,13 +178,6 @@ impl Playground {
 			return;
 		}
 
-		compile::resolve_imports(&mut compiler);
-
-		if compiler.failed() {
-			self.generate_reports(compiler);
-			return;
-		}
-
 		compile::semantic_check(&mut compiler);
 
 		if compiler.failed() {

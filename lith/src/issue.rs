@@ -185,14 +185,13 @@ pub enum Error {
 	/// Declared a symbolic constant or static variable with the type specifier `any_t`.
 	ContainerValAnyType,
 	FlagDefBitOverflow,
-	FolderImport,
 	/// Used the `...` to accede to parameter defaults in an argument list,
 	/// but the function does not support it.
 	IllegalAccede,
 	/// A named argument was passed to an annotation that cannot accept names
 	/// on any of its arguments.
 	IllegalArgName,
-	/// Tried to call, for instance, a symbolic constant or renamed container mass import.
+	/// Tried to call, for instance, a symbolic constant.
 	IllegalCall,
 	IllegalConstInit,
 	IllegalFnQual,
@@ -205,7 +204,6 @@ pub enum Error {
 	/// A non-native library attempted to declare a symbol starting or ending
 	/// with `__`, which is reserved for internal/native use.
 	IllegalSymbolName,
-	ImportPath,
 	/// e.g. attempt to implicitly narrow,
 	/// or to use a literal suffix which would narrow the literal's value.
 	IntConvert,
@@ -216,8 +214,6 @@ pub enum Error {
 	MissingArgName,
 	/// A function not marked `native` or `builtin` has no body block.
 	MissingFnBody,
-	/// An import entry using a name literal is missing its required rename identifier.
-	MissingImportRename,
 	MissingNative,
 	/// A `type_t` parameter was not qualified with the `const` keyword.
 	NonConstTypeParam,
@@ -225,7 +221,6 @@ pub enum Error {
 	ParseInt,
 	QualifierOverlap,
 	Redeclare,
-	SelfImport,
 	SymbolKindMismatch,
 	SymbolNotFound,
 	/// A script attempted to use a feature that LithC does not support yet.

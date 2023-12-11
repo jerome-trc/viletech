@@ -36,7 +36,7 @@ pub fn declare_symbols(compiler: &mut Compiler) {
 	if compiler.any_errors() {
 		compiler.failed = true;
 	} else {
-		compiler.stage = compile::Stage::Import;
+		compiler.stage = compile::Stage::Sema;
 	}
 }
 

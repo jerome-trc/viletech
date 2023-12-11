@@ -7,7 +7,7 @@ use doomfront::{
 
 use crate::{Syn, SyntaxNode, SyntaxToken};
 
-use super::{Annotation, ArgList, CoreElement, Import, Item, LitToken, Name, TypeSpec};
+use super::{Annotation, ArgList, CoreElement, Item, LitToken, Name, TypeSpec};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -697,7 +697,6 @@ impl FieldDecl {
 pub enum StructInnard {
 	Annotation(Annotation),
 	Field(FieldDecl),
-	Import(Import),
 	Item(Item),
 }
 
@@ -708,10 +707,6 @@ impl AstNode for StructInnard {
 	where
 		Self: Sized,
 	{
-		if Import::can_cast(kind) {
-			return true;
-		}
-
 		if Item::can_cast(kind) {
 			return true;
 		}
@@ -723,10 +718,6 @@ impl AstNode for StructInnard {
 	where
 		Self: Sized,
 	{
-		if let Some(import) = Import::cast(node.clone()) {
-			return Some(Self::Import(import));
-		}
-
 		if let Some(item) = Item::cast(node.clone()) {
 			return Some(Self::Item(item));
 		}
@@ -742,7 +733,6 @@ impl AstNode for StructInnard {
 		match self {
 			Self::Annotation(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
-			Self::Import(inner) => inner.syntax(),
 			Self::Item(inner) => inner.syntax(),
 		}
 	}

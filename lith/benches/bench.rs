@@ -90,7 +90,6 @@ fn toolchain(crit: &mut criterion::Criterion) {
 
 			compiler.finish_registration();
 			compile::declare_symbols(&mut compiler);
-			compile::resolve_imports(&mut compiler);
 			compile::semantic_check(&mut compiler);
 			let artifacts = compile::finalize(compiler, false, false);
 			let _ = std::hint::black_box(artifacts);

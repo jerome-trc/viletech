@@ -396,7 +396,7 @@ fn check_native_lib(ctx: &FrontendContext, name: &'static str, anno: &ast::Annot
 			Issue::new(
 				ctx.path,
 				anno.syntax().text_range(),
-				issue::Level::Error(issue::Error::NonNative),
+				issue::Level::Error(issue::Error::IllegalNative),
 			)
 			.with_message(format!(
 				"`{name}` annotation can only be used by native libraries"

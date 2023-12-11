@@ -34,7 +34,7 @@ use crate::{
 
 pub use crate::{
 	back::finalize,
-	front::{decl::declare_symbols, import::resolve_imports, sema::semantic_check},
+	front::{decl::declare_symbols, sema::semantic_check},
 };
 
 pub(crate) use self::detail::*;

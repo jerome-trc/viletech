@@ -8,7 +8,6 @@ pub(crate) enum Stage {
 	#[default]
 	Registration,
 	Declaration,
-	Import,
 	Sema,
 	CodeGen,
 }

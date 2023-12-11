@@ -19,7 +19,6 @@ pub use self::{expr::*, item::*, lit::*, pat::*, stmt::*};
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum TopLevel {
 	Annotation(Annotation),
-	Import(Import),
 	Item(Item),
 }
 
@@ -30,7 +29,7 @@ impl AstNode for TopLevel {
 	where
 		Self: Sized,
 	{
-		Item::can_cast(kind) || matches!(kind, Syn::Annotation | Syn::Import)
+		Item::can_cast(kind) || matches!(kind, Syn::Annotation)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -40,10 +39,6 @@ impl AstNode for TopLevel {
 		if let Some(item) = Item::cast(node.clone()) {
 			return Some(Self::Item(item));
 		}
-
-		if let Some(import) = Import::cast(node.clone()) {
-			return Some(Self::Import(import));
-		};
 
 		if let Some(anno) = Annotation::cast(node) {
 			return Some(Self::Annotation(anno));
@@ -55,7 +50,6 @@ impl AstNode for TopLevel {
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::Annotation(inner) => inner.syntax(),
-			Self::Import(inner) => inner.syntax(),
 			Self::Item(inner) => inner.syntax(),
 		}
 	}
@@ -66,7 +60,6 @@ impl AstNode for TopLevel {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum CoreElement {
 	Annotation(Annotation),
-	Import(Import),
 	Item(Item),
 	Statement(Statement),
 }
@@ -78,10 +71,7 @@ impl AstNode for CoreElement {
 	where
 		Self: Sized,
 	{
-		Statement::can_cast(kind)
-			|| Item::can_cast(kind)
-			|| Annotation::can_cast(kind)
-			|| Import::can_cast(kind)
+		Statement::can_cast(kind) || Item::can_cast(kind) || Annotation::can_cast(kind)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -100,10 +90,6 @@ impl AstNode for CoreElement {
 			return Some(Self::Annotation(anno));
 		}
 
-		if let Some(import) = Import::cast(node.clone()) {
-			return Some(Self::Import(import));
-		}
-
 		None
 	}
 
@@ -112,7 +98,6 @@ impl AstNode for CoreElement {
 			Self::Statement(inner) => inner.syntax(),
 			Self::Item(inner) => inner.syntax(),
 			Self::Annotation(inner) => inner.syntax(),
-			Self::Import(inner) => inner.syntax(),
 		}
 	}
 }
@@ -313,152 +298,6 @@ impl std::ops::Deref for DocComment {
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
-	}
-}
-
-// Import //////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum Import {
-	List {
-		/// Tagged [`Syn::Import`].
-		node: SyntaxNode,
-		list: ImportList,
-	},
-	All {
-		/// Tagged [`Syn::Import`].
-		node: SyntaxNode,
-		inner: ImportAll,
-	},
-}
-
-impl AstNode for Import {
-	type Language = Syn;
-
-	fn can_cast(kind: Syn) -> bool
-	where
-		Self: Sized,
-	{
-		kind == Syn::Import
-	}
-
-	fn cast(node: SyntaxNode) -> Option<Self>
-	where
-		Self: Sized,
-	{
-		if node.kind() != Syn::Import {
-			return None;
-		}
-
-		let child = node.last_child().unwrap();
-
-		match child.kind() {
-			Syn::ImportList => Some(Self::List {
-				node,
-				list: ImportList(child),
-			}),
-			Syn::ImportAll => Some(Self::All {
-				node,
-				inner: ImportAll(child),
-			}),
-			_ => unreachable!(),
-		}
-	}
-
-	fn syntax(&self) -> &SyntaxNode {
-		match self {
-			Self::List { node, .. } => node,
-			Self::All { node, .. } => node,
-		}
-	}
-}
-
-impl Import {
-	/// The returned token is always tagged [`Syn::LitString`].
-	pub fn path(&self) -> AstResult<LitToken> {
-		self.syntax()
-			.children_with_tokens()
-			.find_map(|elem| {
-				elem.into_token()
-					.filter(|t| t.kind() == Syn::LitString)
-					.map(LitToken)
-			})
-			.ok_or(AstError::Missing)
-	}
-
-	pub fn annotations(&self) -> impl Iterator<Item = Annotation> {
-		self.syntax().children().filter_map(Annotation::cast)
-	}
-
-	pub fn docs(&self) -> impl Iterator<Item = DocComment> {
-		doc_comments(self.syntax())
-	}
-}
-
-/// Wraps a node tagged [`Syn::ImportList`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ImportList(SyntaxNode);
-
-simple_astnode!(Syn, ImportList, Syn::ImportList);
-
-impl ImportList {
-	pub fn entries(&self) -> impl Iterator<Item = ImportEntry> {
-		self.0.children().filter_map(ImportEntry::cast)
-	}
-}
-
-/// Wraps a node tagged [`Syn::ImportEntry`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ImportEntry(SyntaxNode);
-
-simple_astnode!(Syn, ImportEntry, Syn::ImportEntry);
-
-impl ImportEntry {
-	pub fn name(&self) -> AstResult<Name> {
-		self.0
-			.first_token()
-			.filter(|t| matches!(t.kind(), Syn::Ident | Syn::LitName))
-			.map(Name)
-			.ok_or(AstError::Missing)
-	}
-
-	/// The returned token is always tagged [`Syn::Ident`].
-	#[must_use]
-	pub fn rename(&self) -> Option<SyntaxToken> {
-		let Some(ret) = self.0.last_token().filter(|t| t.kind() == Syn::Ident) else {
-			return None;
-		};
-
-		let Some(arrow) = self
-			.0
-			.children_with_tokens()
-			.find_map(|elem| elem.into_token().filter(|t| t.kind() == Syn::ThickArrow))
-		else {
-			return None;
-		};
-
-		(ret.index() > arrow.index()).then_some(ret)
-	}
-}
-
-/// Wraps a node tagged [`Syn::ImportAll`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ImportAll(SyntaxNode);
-
-simple_astnode!(Syn, ImportAll, Syn::ImportAll);
-
-impl ImportAll {
-	/// The returned token is always tagged [`Syn::Ident`].
-	pub fn rename(&self) -> AstResult<SyntaxToken> {
-		let ret = self.0.last_token().ok_or(AstError::Missing)?;
-
-		(ret.kind() == Syn::Ident)
-			.then_some(ret)
-			.ok_or(AstError::Incorrect)
 	}
 }
 
