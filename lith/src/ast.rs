@@ -1,12 +1,13 @@
 //! Structures for representing Lithica abstract syntax trees.
 
+mod expr;
 mod lit;
 
 use doomfront::{simple_astnode, AstError, AstResult};
 
 use crate::{Syntax, SyntaxNode, SyntaxToken};
 
-pub use self::lit::*;
+pub use self::{expr::*, lit::*};
 
 // BlockLabel //////////////////////////////////////////////////////////////////
 
