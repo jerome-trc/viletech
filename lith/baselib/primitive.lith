@@ -1,7 +1,0 @@
-let primitiveType = import("/lith/builtins").primitiveType;
-
-const void: type_t = primitiveType('void');
-const bool: type_t = primitiveType('bool');
-
-const i32: type_t = primitiveType('i32');
-const u32: type_t = primitiveType('u32');

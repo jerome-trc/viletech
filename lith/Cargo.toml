@@ -12,35 +12,29 @@ license = "MIT OR Apache-2.0"
 publish = false
 repository.workspace = true
 
+[features]
+default = []
+jit = ["dep:cranelift-jit"]
+
 [dependencies]
-# TODO: eventually replace with Git/crates.io.
-cwal = { path = "../../cwal-rs" }
 # Only used for its parsing code.
 doomfront = { path = "../doomfront" }
 util = { package = "viletech-utils", path = "../utils" }
 
 ariadne.workspace = true
 bitflags.workspace = true
-bitvec.workspace = true
-bumpalo.workspace = true
 cranelift.workspace = true
-cranelift-jit.workspace = true
+cranelift-jit = { workspace = true, optional = true }
 cranelift-module.workspace = true
-cranelift-interpreter.workspace = true
 crossbeam.workspace = true
-dashmap.workspace = true
-im.workspace = true
-indexmap.workspace = true
 logos.workspace = true
-parking_lot.workspace = true
-petgraph.workspace = true
-rayon.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
 
 # All dependencies specified below are tentative.
 backtrace = "0.3.69"
 cee-scape = "0.1.6"
+gc-arena = "0.4.0"
 
 [[bench]]
 name = "bench"

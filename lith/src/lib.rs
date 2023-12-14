@@ -2,9 +2,17 @@
 //!
 //! ## About
 //!
-//! Lithica is a statically-typed, performance-oriented, JIT-compiled, garbage-collected
-//! scripting language with powerful compile-time programming capabilities inspired
-//! by those of Zig.
+//! Lithica is a hybrid statically- and dynamically-typed scripting language that
+//! takes after [Lua], [Terra], and [Zig]. It is designed for use in projects which:
+//! - benefit from being able to quickly write dynamic scripts
+//! - sometimes need to drop down to lower-level, statically-typed, JIT-compiled
+//! functions to meet performance requirements (e.g. video games)
+//! - have use for staged programming to performantly and flexibly modify the
+//! behavior of the non-dynamic code at compile time
+//!
+//! [Lua]: https://www.lua.org/
+//! [Terra]: https://terralang.org/
+//! [Zig]: https://ziglang.org/
 
 #![doc(
 	html_favicon_url = "https://media.githubusercontent.com/media/jerome-trc/viletech/master/assets/viletech/viletech.png",
@@ -12,34 +20,9 @@
 )]
 
 pub extern crate ariadne;
-pub extern crate cwal;
 
-pub(crate) mod back;
-pub(crate) mod builtins;
-pub(crate) mod front;
-pub(crate) mod types;
-
-pub mod ast;
-pub mod compile;
-pub mod filetree;
-pub mod interop;
-pub mod issue;
-pub mod parse;
-pub mod rti;
-pub mod runtime;
-pub mod syntax;
-
-pub use self::{compile::Compiler, syntax::*};
-
-pub use cranelift::codegen::settings::OptLevel;
-
-pub type ParseTree = doomfront::ParseTree<Syntax>;
-pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syntax>;
-pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syntax>;
-pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syntax>;
-
-/// Each Lithica library is declared as belonging to a version of the Lithica
-/// specification, which uses [SemVer](https://semver.org/).
+/// Each Lithica chunk is compiled against a specific version of the Lithica
+/// standard, which uses [SemVer](https://semver.org/).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Version(u16, u16, u16);
 
@@ -65,13 +48,6 @@ pub enum Error {
 	/// Tried to parse a SemVer string without any numbers or periods in it.
 	/// See [`Version::from_str`].
 	EmptyVersion,
-	/// Can arise during [`filetree::FileTree::from_fs`].
-	FromUtf8(std::string::FromUtf8Error),
-	Parse,
-	/// Can arise during [`filetree::FileTree::from_fs`].
-	ReadDir(std::io::Error),
-	/// Can arise during [`filetree::FileTree::from_fs`].
-	ReadFile(std::io::Error),
 	/// See [`Version::from_str`].
 	SemVerParse,
 }
@@ -80,10 +56,6 @@ impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
 		match self {
 			Error::EmptyVersion => None,
-			Error::FromUtf8(err) => Some(err),
-			Error::Parse => None,
-			Error::ReadDir(err) => Some(err),
-			Error::ReadFile(err) => Some(err),
 			Error::SemVerParse => None,
 		}
 	}
@@ -93,27 +65,7 @@ impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::EmptyVersion => write!(f, "tried to parse an empty version string"),
-			Self::FromUtf8(err) => write!(
-				f,
-				"failed to convert file content to UTF-8 when building a file tree: {err}"
-			),
-			Self::Parse => write!(f, "library registration failed due to parsing errors"),
-			Self::ReadDir(err) => write!(
-				f,
-				"failed to read a directory when building a file tree: {err}"
-			),
-			Self::ReadFile(err) => {
-				write!(f, "failed to read a file when building a file tree: {err}")
-			}
 			Self::SemVerParse => write!(f, "SemVer parser could not match a known Lithica version"),
 		}
 	}
 }
-
-pub type ValVec = smallvec::SmallVec<[cranelift::codegen::data_value::DataValue; 1]>;
-
-// These constants are used in `UserExternalName::namespace`.
-
-pub(crate) const _CLNS_LIBCALL: u32 = u32::MAX - 2;
-pub(crate) const CLNS_NATIVE: u32 = u32::MAX - 1;
-pub(crate) const CLNS_BUILTIN: u32 = u32::MAX;

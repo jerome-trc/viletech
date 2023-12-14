@@ -1,8 +1,0 @@
-#[builtin('primitiveType')]
-function primitiveType(...): type_t;
-
-#[builtin('typeOf')]
-function typeOf(...): type_t;
-
-#[builtin('rttiOf')]
-function rttiOf(...): rtti;

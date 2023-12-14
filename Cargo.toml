@@ -1,19 +1,10 @@
 [workspace]
 members = [
-	"cli",
-	"client",
 	"doomfront",
-	"engine",
 	"lith",
-	"mus2midi",
-	"server",
-	"subterra",
 	"utils",
-	"vfs",
-	"vilify",
-	"wadload",
 ]
-default-members = ["engine", "client"]
+default-members = ["lith"]
 resolver = "2" # Needed for WGPU and Bevy.
 
 [workspace.package]
