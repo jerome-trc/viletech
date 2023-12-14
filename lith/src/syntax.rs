@@ -15,12 +15,48 @@ pub enum Syntax {
 	Chunk,
 
 	// Nodes: high-level ///////////////////////////////////////////////////////
+	/// `'[' expr ']'`
+	ArrayPrefix,
 	/// `'::' ident '::'`
 	BlockLabel,
+	/// `*`
+	PointerPrefix,
 
 	// Nodes: patterns /////////////////////////////////////////////////////////
 
 	// Nodes: expressions //////////////////////////////////////////////////////
+	/// `expr operator expr`
+	ExprBin,
+	/// `'{' T* '}'` where `T` is a statement or [inner annotation](Syntax::Annotation).
+	ExprBlock,
+	/// `primaryexpr '.' (ident | namelit)`
+	ExprField,
+	/// `'(' expr ')'`
+	ExprGroup,
+	/// Parent to only a single [`Syntax::Ident`] token.
+	ExprIdent,
+	/// If this is not a string literal, it is parent to only one token tagged as
+	/// one of the following:
+	/// - [`Syntax::LitFalse`]
+	/// - [`Syntax::LitFloat`]
+	/// - [`Syntax::LitInt`]
+	/// - [`Syntax::LitName`]
+	/// - [`Syntax::LitTrue`]
+	/// - [`Syntax::LitNull`]
+	/// - [`Syntax::LitVoid`]
+	/// If this is a string literal, it is parent to one token tagged as
+	/// [`Syntax::LitString`] which may be followed by a [`Syntax::Ident`] suffix,
+	/// with no allowance for trivia in between.
+	ExprLit,
+	/// `expr operator`
+	ExprPostfix,
+	/// `operator expr`
+	ExprPrefix,
+	/// Always contains one other type of expression, prefixed by zero or more of
+	/// the following:
+	/// - [`Syntax::ArrayPrefix`]
+	/// - [`Syntax::PointerPrefix`]
+	ExprType,
 
 	// Tokens: literals ////////////////////////////////////////////////////////
 	/// `false`
@@ -39,6 +75,10 @@ pub enum Syntax {
 	LitInt,
 	#[regex("'[^'\n]*'")]
 	LitName,
+	/// `null`
+	#[token("null")]
+	LitNull,
+
 	/// Uses the same syntax as Rust string literals.
 	#[regex(
 		r##"(?x)"
@@ -375,7 +415,26 @@ impl std::fmt::Display for Syntax {
 		match self {
 			Self::Error => write!(f, "<error>"),
 			Self::Chunk => write!(f, "chunk"),
+			Self::ArrayPrefix => write!(f, "array prefix"),
 			Self::BlockLabel => write!(f, "block label"),
+			Self::PointerPrefix => write!(f, "pointer prefix"),
+			Self::ExprBin => write!(f, "binary expression"),
+			Self::ExprBlock => write!(f, "block expression"),
+			Self::ExprField => write!(f, "field expression"),
+			Self::ExprGroup => write!(f, "group expression"),
+			Self::ExprIdent => write!(f, "identifier expression"),
+			Self::ExprLit => write!(f, "literal expression"),
+			Self::ExprPostfix => write!(f, "postfix expression"),
+			Self::ExprPrefix => write!(f, "prefix expression"),
+			Self::ExprType => write!(f, "type expression"),
+			Self::LitFalse => write!(f, "`false`"),
+			Self::LitFloat => write!(f, "floating-point literal"),
+			Self::LitInt => write!(f, "integer literal"),
+			Self::LitName => write!(f, "name literal"),
+			Self::LitNull => write!(f, "`null`"),
+			Self::LitString => write!(f, "string literal"),
+			Self::LitTrue => write!(f, "`true`"),
+			Self::LitVoid => write!(f, "`|_|`"),
 			Self::KwBreak => write!(f, "`break`"),
 			Self::KwConst => write!(f, "`const`"),
 			Self::KwContinue => write!(f, "`continue`"),
@@ -440,13 +499,6 @@ impl std::fmt::Display for Syntax {
 			Self::SlashEq => write!(f, "`/=`"),
 			Self::Tilde => write!(f, "`~`"),
 			Self::TildeEq2 => write!(f, "`~==`"),
-			Self::LitFalse => write!(f, "`false`"),
-			Self::LitFloat => write!(f, "floating-point literal"),
-			Self::LitInt => write!(f, "integer literal"),
-			Self::LitName => write!(f, "name literal"),
-			Self::LitString => write!(f, "string literal"),
-			Self::LitTrue => write!(f, "`true`"),
-			Self::LitVoid => write!(f, "`|_|`"),
 			Self::Ident => write!(f, "identifier"),
 			Self::DocComment => write!(f, "doc comment"),
 			Self::Comment => write!(f, "comment"),
