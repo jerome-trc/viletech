@@ -21,10 +21,16 @@
 
 pub extern crate ariadne;
 
+pub mod ast;
 pub mod parse;
 pub mod syntax;
 
 pub use syntax::Syntax;
+
+pub type ParseTree = doomfront::ParseTree<Syntax>;
+pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syntax>;
+pub type SyntaxNode = doomfront::rowan::SyntaxNode<Syntax>;
+pub type SyntaxToken = doomfront::rowan::SyntaxToken<Syntax>;
 
 /// Each Lithica chunk is compiled against a specific version of the Lithica
 /// standard, which uses [SemVer](https://semver.org/).
