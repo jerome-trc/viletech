@@ -25,7 +25,7 @@ pub mod ast;
 pub mod parse;
 pub mod syntax;
 
-pub use syntax::Syntax;
+pub use syntax::*;
 
 pub type ParseTree = doomfront::ParseTree<Syntax>;
 pub type SyntaxElem = doomfront::rowan::SyntaxElement<Syntax>;
