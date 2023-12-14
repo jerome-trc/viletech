@@ -15,6 +15,8 @@ pub enum Syntax {
 	Chunk,
 
 	// Nodes: high-level ///////////////////////////////////////////////////////
+	/// `'::' ident '::'`
+	BlockLabel,
 
 	// Nodes: patterns /////////////////////////////////////////////////////////
 
@@ -373,6 +375,7 @@ impl std::fmt::Display for Syntax {
 		match self {
 			Self::Error => write!(f, "<error>"),
 			Self::Chunk => write!(f, "chunk"),
+			Self::BlockLabel => write!(f, "block label"),
 			Self::KwBreak => write!(f, "`break`"),
 			Self::KwConst => write!(f, "`const`"),
 			Self::KwContinue => write!(f, "`continue`"),

@@ -21,7 +21,10 @@
 
 pub extern crate ariadne;
 
+pub mod parse;
 pub mod syntax;
+
+pub use syntax::Syntax;
 
 /// Each Lithica chunk is compiled against a specific version of the Lithica
 /// standard, which uses [SemVer](https://semver.org/).
