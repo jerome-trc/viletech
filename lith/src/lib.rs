@@ -21,6 +21,8 @@
 
 pub extern crate ariadne;
 
+pub(crate) mod lines;
+
 pub mod ast;
 pub mod parse;
 pub mod syntax;
@@ -51,6 +53,15 @@ impl std::str::FromStr for Version {
 			_ => Err(Error::SemVerParse),
 		}
 	}
+}
+
+/// `(line, column)` information in the native, UTF-8 encoding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LineCol {
+	/// Zero-based.
+	pub line: u32,
+	/// Zero-based UTF-8 offset.
+	pub col: u32,
 }
 
 /// Failure modes of this crate's operations, excluding [frontend issues](issue).
