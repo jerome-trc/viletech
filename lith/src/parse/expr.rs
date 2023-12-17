@@ -108,6 +108,7 @@ fn primary(p: &mut Parser<Syntax>) -> (CloseMark, bool) {
 		| Syntax::LitFloat
 		| Syntax::LitInt
 		| Syntax::LitName
+		| Syntax::LitNull
 		| Syntax::LitTrue) => {
 			p.advance(t);
 			(p.close(mark, Syntax::ExprLit), false)

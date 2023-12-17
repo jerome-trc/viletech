@@ -121,6 +121,7 @@ impl LitToken {
 		}
 	}
 
+	/// Returns `None` if this is not tagged with [`Syntax::LitName`].
 	#[must_use]
 	pub fn name(&self) -> Option<&str> {
 		if self.kind() != Syntax::LitName {
@@ -131,6 +132,12 @@ impl LitToken {
 		let start = text.chars().position(|c| c == '\'').unwrap();
 		let end = text.chars().rev().position(|c| c == '\'').unwrap();
 		text.get((start + 1)..(text.len() - end - 1))
+	}
+
+	/// Returns `true` if this wraps a [`Syntax::LitNull`].
+	#[must_use]
+	pub fn null(&self) -> bool {
+		self.kind() == Syntax::LitNull
 	}
 
 	/// If this wraps a [`Syntax::LitString`] token, this returns the string's
