@@ -249,6 +249,7 @@ mod test {
 	}
 
 	#[test]
+	#[cfg(feature = "parallel")]
 	fn smoke_include_tree_par() {
 		let inctree = IncludeTree::<zscript::Syntax>::new_par(
 			"file/a.zs",
