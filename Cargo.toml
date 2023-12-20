@@ -1,11 +1,8 @@
 [workspace]
-members = [
-	"doomfront",
-	"lith",
-	"utils",
-]
+members = ["doomfront", "lith", "utils"]
 default-members = ["lith"]
-resolver = "2" # Needed for WGPU and Bevy.
+# Needed for WGPU and Bevy.
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
@@ -39,10 +36,6 @@ byteorder = "1.4.3"
 clap = { version = "4.4.11", features = ["derive"] }
 # Same version as `kira`. Specified here since it's needed by MIDI code.
 cpal = "0.15.1"
-cranelift = "0.102.1"
-cranelift-jit = "0.102.1"
-cranelift-module = "0.102.1"
-cranelift-interpreter = "0.102.1"
 crossbeam = "0.8.2"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 earcutr = "0.4.3"
@@ -78,6 +71,7 @@ kira = "0.8.3"
 logos = "0.13.0"
 # Must be compatible with `nodi`.
 midly = "0.5.2"
+mir = { git = "https://github.com/jerome-trc/mir-rs", package = "mircomp", rev = "7f5b1cd8" }
 nanorand = { version = "0.7.0", default-features = false, features = [
 	"std",
 	"wyrand",

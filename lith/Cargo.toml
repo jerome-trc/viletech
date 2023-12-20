@@ -14,7 +14,7 @@ repository.workspace = true
 
 [features]
 default = []
-jit = ["dep:cranelift-jit"]
+jit = ["dep:mir"]
 
 [dependencies]
 # Only used for its parsing code.
@@ -23,11 +23,9 @@ util = { package = "viletech-utils", path = "../utils" }
 
 ariadne.workspace = true
 bitflags.workspace = true
-cranelift.workspace = true
-cranelift-jit = { workspace = true, optional = true }
-cranelift-module.workspace = true
 crossbeam.workspace = true
 logos.workspace = true
+mir = { workspace = true, optional = true }
 rustc-hash.workspace = true
 smallvec.workspace = true
 
