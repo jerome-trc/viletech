@@ -24,8 +24,10 @@ pub extern crate ariadne;
 pub(crate) mod lines;
 
 pub mod ast;
+pub mod dynval;
 pub mod parse;
 pub mod syntax;
+pub mod table;
 
 pub use syntax::*;
 
