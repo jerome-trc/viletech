@@ -139,7 +139,7 @@ fn primary(p: &mut Parser<Syntax>) -> (CloseMark, bool) {
 	}
 }
 
-const PRATT_PRECEDENCE: &'static [&'static [Syntax]] = &[
+const PRATT_PRECEDENCE: &[&[Syntax]] = &[
 	&[
 		Syntax::AmpersandEq,
 		Syntax::Ampersand2Eq,

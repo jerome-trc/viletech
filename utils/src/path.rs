@@ -121,7 +121,7 @@ impl<T: AsRef<Path>> PathExt for T {
 	}
 
 	fn has_gzdoom_extension(&self) -> bool {
-		const EXTS: &[&'static str] = &["pk3", "pk7", "ipk3", "ipk7"];
+		const EXTS: &[&str] = &["pk3", "pk7", "ipk3", "ipk7"];
 
 		self.as_ref()
 			.extension()
