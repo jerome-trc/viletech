@@ -124,9 +124,9 @@ pub enum Syntax {
 	/// `dyn`; used in dynamically-typed [function declarations](Syntax::FunctionDecl).
 	#[token("dyn")]
 	KwDyn,
-	/// `function`; used in statically-typed [function declarations](Syntax::FunctionDecl).
-	#[token("function")]
-	KwFunction,
+	/// `proc`; used in statically-typed [function declarations](Syntax::FunctionDecl).
+	#[token("proc")]
+	KwProc,
 	/// `let`; used in immutable [binding statements](Syntax::StmtBind).
 	#[token("let")]
 	KwLet,
@@ -439,7 +439,7 @@ impl std::fmt::Display for Syntax {
 			Self::KwConst => write!(f, "`const`"),
 			Self::KwContinue => write!(f, "`continue`"),
 			Self::KwDyn => write!(f, "`dyn`"),
-			Self::KwFunction => write!(f, "`function`"),
+			Self::KwProc => write!(f, "`function`"),
 			Self::KwLet => write!(f, "`let`"),
 			Self::KwReturn => write!(f, "`return`"),
 			Self::KwStruct => write!(f, "`struct`"),
