@@ -626,7 +626,7 @@ dependencies = [
  "doomfront",
  "gc-arena",
  "logos",
- "mircomp",
+ "mirjit",
  "nohash-hasher",
  "rustc-hash",
  "smallvec",
@@ -753,17 +753,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
 
 [[package]]
-name = "mircomp"
+name = "mirjit"
 version = "0.0.0"
-source = "git+https://github.com/jerome-trc/mir-rs?rev=7f5b1cd8#7f5b1cd8d854eedc2287cae5f2124f124bddb8e8"
+source = "git+https://github.com/jerome-trc/mir-rs?rev=8ab331d6#8ab331d65439b562c0c99692505333581883f8c6"
 dependencies = [
- "mircomp-sys",
+ "mirjit-sys",
 ]
 
 [[package]]
-name = "mircomp-sys"
+name = "mirjit-sys"
 version = "0.0.0"
-source = "git+https://github.com/jerome-trc/mir-rs?rev=7f5b1cd8#7f5b1cd8d854eedc2287cae5f2124f124bddb8e8"
+source = "git+https://github.com/jerome-trc/mir-rs?rev=8ab331d6#8ab331d65439b562c0c99692505333581883f8c6"
 dependencies = [
  "bindgen",
  "cc",

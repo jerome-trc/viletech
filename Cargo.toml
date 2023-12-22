@@ -71,7 +71,7 @@ kira = "0.8.3"
 logos = "0.13.0"
 # Must be compatible with `nodi`.
 midly = "0.5.2"
-mir = { git = "https://github.com/jerome-trc/mir-rs", package = "mircomp", rev = "7f5b1cd8" }
+mir = { git = "https://github.com/jerome-trc/mir-rs", package = "mirjit", rev = "8ab331d6" }
 nanorand = { version = "0.7.0", default-features = false, features = [
 	"std",
 	"wyrand",
