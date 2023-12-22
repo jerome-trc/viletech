@@ -44,13 +44,15 @@ pub(crate) fn init_on_enter(
 				"\t- Max. 2D texture width and height: {tex2d_dim}\n",
 				"\t- Max. texture array layers: {tex_arr_layers}\n",
 				"\t- Max. samplers per shader stage: {samplers}\n",
-				"\t- Max. sampled textures per shader stage: {sampled_tex}",
+				"\t- Max. sampled textures per shader stage: {sampled_tex}\n",
+				"\t- Max. push constant size: {pushconst} bytes\n",
 			),
 			vattrs = rdev_limits.max_vertex_attributes,
 			tex2d_dim = rdev_limits.max_texture_dimension_2d,
 			tex_arr_layers = rdev_limits.max_texture_array_layers,
 			samplers = rdev_limits.max_samplers_per_shader_stage,
 			sampled_tex = rdev_limits.max_sampled_textures_per_shader_stage,
+			pushconst = rdev_limits.max_push_constant_size,
 		);
 	}
 
