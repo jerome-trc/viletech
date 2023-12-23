@@ -82,6 +82,7 @@ pub(crate) fn default_plugins(
 				..default()
 			}),
 		})
+		.set(ImagePlugin::default_nearest())
 		.disable::<LogPlugin>()
 		.add_before::<TaskPoolPlugin, _>(TracingPlugin {
 			start_time,
