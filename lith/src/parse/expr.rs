@@ -132,6 +132,7 @@ fn primary(p: &mut Parser<Syntax>) -> (CloseMark, bool) {
 			p.expect(Syntax::ParenR, Syntax::ParenR, &[&["`)`"]]);
 			(p.close(mark, Syntax::ExprGroup), false)
 		}
+		Syntax::BraceL => (block(p, mark, Syntax::ExprBlock, true), true),
 		other => (
 			p.advance_err_and_close(mark, other, Syntax::Error, &[&["TODO"]]),
 			false,

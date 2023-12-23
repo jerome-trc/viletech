@@ -26,16 +26,28 @@ pub fn chunk(p: &mut Parser<Syntax>) {
 			continue;
 		}
 
-		// TODO: inner annotations
-
-		let mark = p.open();
-
-		while p.eat(Syntax::DocComment, Syntax::DocComment) && !p.eof() {
-			trivia_0plus(p);
-		}
-
-		statement(p, mark);
+		top_level(p);
 	}
 
 	p.close(root, Syntax::Chunk);
+}
+
+fn top_level(p: &mut Parser<Syntax>) {
+	if at_inner_annotation(p) {
+		annotation(p, true);
+		return;
+	}
+
+	let mark = p.open();
+
+	while p.eat(Syntax::DocComment, Syntax::DocComment) && !p.eof() {
+		trivia_0plus(p);
+	}
+
+	while at_annotation(p) {
+		annotation(p, false);
+		trivia_0plus(p);
+	}
+
+	statement(p, mark);
 }

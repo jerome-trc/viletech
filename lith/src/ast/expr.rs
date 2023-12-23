@@ -4,12 +4,13 @@ use doomfront::{rowan::ast::AstNode, simple_astnode, AstError, AstResult};
 
 use crate::{Syntax, SyntaxNode, SyntaxToken};
 
-use super::{LitToken, Name};
+use super::{LitToken, Name, TopLevel};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Expr {
 	Binary(ExprBin),
+	Block(ExprBlock),
 	Field(ExprField),
 	Group(ExprGroup),
 	Ident(ExprIdent),
@@ -26,14 +27,18 @@ impl AstNode for Expr {
 	where
 		Self: Sized,
 	{
-		matches!(kind, |Syntax::ExprBin| Syntax::ExprBlock
-			| Syntax::ExprField
-			| Syntax::ExprGroup
-			| Syntax::ExprIdent
-			| Syntax::ExprLit
-			| Syntax::ExprPostfix
-			| Syntax::ExprPrefix
-			| Syntax::ExprType)
+		matches!(
+			kind,
+			Syntax::ExprBin
+				| Syntax::ExprBlock
+				| Syntax::ExprField
+				| Syntax::ExprGroup
+				| Syntax::ExprIdent
+				| Syntax::ExprLit
+				| Syntax::ExprPostfix
+				| Syntax::ExprPrefix
+				| Syntax::ExprType
+		)
 	}
 
 	fn cast(node: SyntaxNode) -> Option<Self>
@@ -42,6 +47,7 @@ impl AstNode for Expr {
 	{
 		match node.kind() {
 			Syntax::ExprBin => Some(Self::Binary(ExprBin(node))),
+			Syntax::ExprBlock => Some(Self::Block(ExprBlock(node))),
 			Syntax::ExprField => Some(Self::Field(ExprField(node))),
 			Syntax::ExprGroup => Some(Self::Group(ExprGroup(node))),
 			Syntax::ExprIdent => Some(Self::Ident(ExprIdent(node))),
@@ -56,6 +62,7 @@ impl AstNode for Expr {
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
 			Self::Binary(inner) => inner.syntax(),
+			Self::Block(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
 			Self::Group(inner) => inner.syntax(),
 			Self::Ident(inner) => inner.syntax(),
@@ -71,6 +78,7 @@ impl AstNode for Expr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum PrimaryExpr {
+	Block(ExprBlock),
 	Group(ExprGroup),
 	Ident(ExprIdent),
 	Literal(ExprLit),
@@ -81,6 +89,7 @@ pub enum PrimaryExpr {
 impl From<PrimaryExpr> for Expr {
 	fn from(value: PrimaryExpr) -> Self {
 		match value {
+			PrimaryExpr::Block(inner) => Self::Block(inner),
 			PrimaryExpr::Group(inner) => Self::Group(inner),
 			PrimaryExpr::Ident(inner) => Self::Ident(inner),
 			PrimaryExpr::Literal(inner) => Self::Literal(inner),
@@ -113,6 +122,7 @@ impl AstNode for PrimaryExpr {
 		Self: Sized,
 	{
 		match node.kind() {
+			Syntax::ExprBlock => Some(Self::Block(ExprBlock(node))),
 			Syntax::ExprField => Some(Self::Field(ExprField(node))),
 			Syntax::ExprGroup => Some(Self::Group(ExprGroup(node))),
 			Syntax::ExprIdent => Some(Self::Ident(ExprIdent(node))),
@@ -124,6 +134,7 @@ impl AstNode for PrimaryExpr {
 
 	fn syntax(&self) -> &SyntaxNode {
 		match self {
+			Self::Block(inner) => inner.syntax(),
 			Self::Field(inner) => inner.syntax(),
 			Self::Group(inner) => inner.syntax(),
 			Self::Ident(inner) => inner.syntax(),
@@ -262,6 +273,21 @@ pub enum BinOp {
 	Tilde(SyntaxToken),
 	TildeEq2(SyntaxToken),
 	User { at: SyntaxToken, ident: SyntaxToken },
+}
+
+// Block ///////////////////////////////////////////////////////////////////////
+
+/// Wraps a node tagged [`Syntax::ExprBlock`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ExprBlock(SyntaxNode);
+
+simple_astnode!(Syntax, ExprBlock, Syntax::ExprBlock);
+
+impl ExprBlock {
+	pub fn innards(&self) -> impl Iterator<Item = TopLevel> {
+		self.0.children().filter_map(TopLevel::cast)
+	}
 }
 
 // Field ///////////////////////////////////////////////////////////////////////

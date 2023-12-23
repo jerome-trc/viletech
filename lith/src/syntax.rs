@@ -15,6 +15,14 @@ pub enum Syntax {
 	Chunk,
 
 	// Nodes: high-level ///////////////////////////////////////////////////////
+	/// `('#[' | '#![') (ident '.')? ident arglist? ']'`
+	Annotation,
+	/// `'(' argument (',' argument)* (',' | (',' '...'))? ')'` or `'(' '...' ')'`
+	///
+	/// Common to [call expressions](Syntax::ExprCall) and [annotations](Syntax::Annotation).
+	ArgList,
+	/// `((ident | namelit) ':')? expr`
+	Argument,
 	/// `'[' expr ']'`
 	ArrayPrefix,
 	/// `'::' ident '::'`
@@ -344,9 +352,12 @@ pub enum Syntax {
 	/// `+=`; the addition compound assignment [binary operator](Syntax::ExprBin).
 	#[token("+=")]
 	PlusEq,
-	/// `#`; used to start [annotations](Syntax::Annotation).
-	#[token("#")]
-	Pound,
+	/// `#[`; used to start [outer annotations](Syntax::Annotation).
+	#[token("#[")]
+	PoundBracketL,
+	/// `#![`; used to start [inner annotations](Syntax::Annotation).
+	#[token("#![")]
+	PoundBangBracketL,
 	/// `;`; used as a terminator, like in C.
 	#[token(";")]
 	Semicolon,
@@ -448,6 +459,9 @@ impl std::fmt::Display for Syntax {
 		match self {
 			Self::Error => write!(f, "<error>"),
 			Self::Chunk => write!(f, "chunk"),
+			Self::Annotation => write!(f, "annotation"),
+			Self::ArgList => write!(f, "argument list"),
+			Self::Argument => write!(f, "argument"),
 			Self::ArrayPrefix => write!(f, "array prefix"),
 			Self::BlockLabel => write!(f, "block label"),
 			Self::PointerPrefix => write!(f, "pointer prefix"),
@@ -537,7 +551,8 @@ impl std::fmt::Display for Syntax {
 			Self::Plus2 => write!(f, "`++`"),
 			Self::Plus2Eq => write!(f, "`++=`"),
 			Self::PlusEq => write!(f, "`+=`"),
-			Self::Pound => write!(f, "`#`"),
+			Self::PoundBracketL => write!(f, "`#[`"),
+			Self::PoundBangBracketL => write!(f, "`#![`"),
 			Self::Semicolon => write!(f, "`;`"),
 			Self::Slash => write!(f, "`/`"),
 			Self::SlashEq => write!(f, "`/=`"),
