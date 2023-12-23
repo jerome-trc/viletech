@@ -190,9 +190,13 @@ fn ui_folder(
 		let mut markers = WadMarkers::None;
 
 		for file in vfolder.files() {
-			if file.name().eq_ignore_ascii_case("F_START") {
+			if file.name().eq_ignore_ascii_case("F_START")
+				|| file.name().eq_ignore_ascii_case("FF_START")
+			{
 				markers = WadMarkers::Flats;
-			} else if file.name().eq_ignore_ascii_case("F_END") {
+			} else if file.name().eq_ignore_ascii_case("F_END")
+				|| file.name().eq_ignore_ascii_case("FF_END")
+			{
 				markers = WadMarkers::None;
 			} // TODO: expand on this system.
 
