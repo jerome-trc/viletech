@@ -1,68 +1,51 @@
-// From https://github.com/bevyengine/bevy/blob/latest/examples/shader/array_texture.rs.
+#import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
 
-#import bevy_pbr::mesh_view_bindings
-#import bevy_pbr::mesh_bindings
+// Vertex //////////////////////////////////////////////////////////////////////
 
-#import bevy_pbr::pbr_types
-#import bevy_pbr::utils
-#import bevy_pbr::clustered_forward
-#import bevy_pbr::lighting
-#import bevy_pbr::shadows
-#import bevy_pbr::fog
-#import bevy_pbr::pbr_functions
-#import bevy_pbr::pbr_ambient
-
-@group(1) @binding(0)
-var atlas: texture_2d<f32>;
-@group(1) @binding(1)
-var atlas_sampler: sampler;
-
-@group(1) @binding(2)
-var colormap: texture_2d<f32>;
-@group(1) @binding(3)
-var colormap_sampler: sampler;
-
-struct FragmentInput {
-    @builtin(front_facing) is_front: bool,
-    @builtin(position) frag_coord: vec4<f32>,
-
-	// Occupies locations 0 through 4.
-	#import bevy_pbr::mesh_vertex_output
+struct Vertex {
+	@builtin(instance_index) inst_ix: u32,
+    @location(0) position: vec3<f32>,
+	@location(1) normal: vec3<f32>,
+	@location(2) uv: vec2<f32>,
+	@location(3) tex_ix: u32,
 };
 
+struct VertexOutput {
+    @builtin(position) clip_pos: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+	@location(1) tex_ix: u32,
+};
+
+@vertex
+fn vertex(vertex: Vertex) -> VertexOutput {
+    var out: VertexOutput;
+
+    out.clip_pos = mesh_position_local_to_clip(
+        get_model_matrix(vertex.inst_ix),
+        vec4<f32>(vertex.position, 1.0),
+    );
+
+	out.uv = vertex.uv;
+	out.tex_ix = vertex.tex_ix;
+    return out;
+}
+
+// Fragment ////////////////////////////////////////////////////////////////////
+
+@group(1) @binding(0)
+var textures: binding_array<texture_2d<f32>>;
+@group(1) @binding(1)
+var nearest_sampler: sampler;
+
+struct FragmentInput {
+	@location(0) uv: vec2<f32>,
+	@location(1) tex_ix: u32,
+}
+
 @fragment
-fn fragment(in: FragmentInput) -> @location(0) vec4<f32> {
-    // Prepare a 'processed' StandardMaterial by sampling all textures to resolve
-    // the material members.
-    var pbr_input: PbrInput = pbr_input_new();
-
-	pbr_input.materials.base_color = textureSample(atlas, atlas_sampler, in.uv);
-#ifdef VERTEX_COLORS
-    pbr_input.material.base_color = pbr_input.material.base_color * in.color;
-#endif
-
-    pbr_input.frag_coord = in.frag_coord;
-    pbr_input.world_position = in.world_position;
-    pbr_input.world_normal = prepare_world_normal(
-        in.world_normal,
-        (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u,
-        in.is_front,
-    );
-
-    pbr_input.is_orthographic = view.projection[3].w == 1.0;
-
-    pbr_input.N = apply_normal_mapping(
-        pbr_input.material.flags,
-        pbr_input.world_normal,
-#ifdef VERTEX_TANGENTS
-#ifdef STANDARDMATERIAL_NORMAL_MAP
-        in.world_tangent,
-#endif
-#endif
-        in.uv,
-    );
-
-    pbr_input.V = calculate_view(in.world_position, pbr_input.is_orthographic);
-
-    return tone_mapping(pbr(pbr_input));
+fn fragment(input: FragmentInput) -> @location(0) vec4<f32> {
+    // Select the texture to sample from using non-uniform UV coordinates.
+    let coords = clamp(vec2<u32>(input.uv), vec2<u32>(0u), vec2<u32>(3u));
+    let inner_uv = fract(input.uv);
+    return textureSample(textures[input.tex_ix], nearest_sampler, inner_uv);
 }

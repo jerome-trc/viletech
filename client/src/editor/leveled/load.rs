@@ -5,26 +5,20 @@ use bevy::{
 	render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use viletech::{
+	gfx::{self, ImageSlot, TerrainMaterial},
 	level::{read::prelude::*, RawLevel, RawThings},
-	rayon::{self, prelude::*},
-	rustc_hash::FxHashMap,
+	rayon::prelude::*,
 	types::FxDashMap,
 	util::{string::ZString, SmallString},
 	vfs::FileSlot,
 };
 
-use crate::editor::{
-	self,
-	contentid::ContentId,
-	leveled::{EdSector, EditedLevel},
-	Editor,
-};
+use crate::editor::{self, contentid::ContentId, leveled::EditedLevel, Editor};
 
 use super::SysParam;
 
 pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) {
 	let start_time = Instant::now();
-	let prev_mtr_count = param.mtrs_std.len();
 
 	let marker = param.vfs.get_file(marker_slot).unwrap();
 
@@ -239,170 +233,164 @@ pub(crate) fn load(ed: &mut Editor, mut param: SysParam, marker_slot: FileSlot) 
 		vertices: vertdefs,
 	};
 
-	#[derive(Default)]
-	struct MeshParts {
-		verts: Vec<Vec3>,
-		indices: Vec<u32>,
-	}
+	let textures = FxDashMap::default();
 
-	let (textures, mesh_parts_map) = rayon::join(
-		|| {
-			let textures = FxDashMap::default();
-
-			ed.file_viewer
-				.content_id
-				.iter()
-				.par_bridge()
-				.for_each(|(slot, content_id)| {
-					if matches!(content_id, ContentId::Picture | ContentId::Flat) {
-						let vfile = param.vfs.get_file(*slot).unwrap();
-						let smallstr = SmallString::from(vfile.name().as_str());
-						let _ = textures.insert(ZString(smallstr), *slot);
-					}
-				});
-
-			textures.into_read_only()
-		},
-		|| {
-			let mut mesh_parts_map = FxHashMap::default();
-
-			viletech::world::mesh::triangulate(raw, |ss_poly| {
-				let subsect = &raw.subsectors[ss_poly.subsector];
-				let seg = &raw.segs[subsect.first_seg() as usize];
-				let line = &raw.linedefs[seg.linedef() as usize];
-
-				let side = match seg.direction() {
-					SegDirection::Front => &raw.sidedefs[line.right_side() as usize],
-					SegDirection::Back => &raw.sidedefs[line.left_side().unwrap() as usize],
-				};
-
-				let sectordef = &raw.sectors[side.sector() as usize];
-
-				let mesh_parts = mesh_parts_map
-					.entry(side.sector() as usize)
-					.or_insert(MeshParts::default());
-
-				for i in ss_poly.indices {
-					let idx = (i + mesh_parts.verts.len()) as u32;
-					mesh_parts.indices.push(idx);
-				}
-
-				for v in ss_poly.verts {
-					mesh_parts.verts.push(Vec3::new(
-						v.x,
-						v.y,
-						(sectordef.floor_height() as f32) * viletech::world::FSCALE,
-					));
-				}
-			});
-
-			mesh_parts_map
-		},
-	);
-
-	let mut lcmds = param.cmds.spawn(viletech::world::level_bundle_base());
-
-	lcmds.with_children(|cbuilder| {
-		for (sector_ix, mesh_parts) in mesh_parts_map {
-			let sector = &raw.sectors[sector_ix];
-			let floor_tex_fname =
-				ZString(SmallString::from(sector.floor_texture().unwrap().as_str()));
-
-			let Some(tex_slot) = textures.get(&floor_tex_fname).copied() else {
-				ed.messages.push(
-					format!("Sector {sector_ix} references unknown texture: {floor_tex_fname}")
-						.into(),
-				);
-
-				continue;
-			};
-
-			let material = match ed.level_editor.materials.entry(tex_slot) {
-				std::collections::hash_map::Entry::Occupied(occ) => occ.get().clone(),
-				std::collections::hash_map::Entry::Vacant(vac) => {
-					let vfile = param.vfs.get_file(tex_slot).unwrap();
-					let mut guard = vfile.lock();
-					let bytes = guard.read().expect("VFS memory read failed");
-					let palset = ed.palset.as_ref().unwrap();
-					let colormaps = ed.colormaps.as_ref().unwrap();
-					let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
-
-					let result = match content_id {
-						ContentId::Flat => Ok(viletech::asset::flat_to_image(
-							bytes.as_ref(),
-							&palset[0],
-							&colormaps[0],
-							Some(floor_tex_fname.to_string()),
-						)),
-						ContentId::Picture => viletech::asset::picture_to_image(
-							bytes.as_ref(),
-							&palset[0],
-							&colormaps[0],
-							Some(floor_tex_fname.to_string()),
-						),
-						_ => unimplemented!(),
-					};
-
-					let Ok(img) = result else {
-						continue;
-					};
-
-					let img_handle = param.images.add(img);
-
-					let mtr = StandardMaterial {
-						base_color_texture: Some(img_handle.clone()),
-						emissive_texture: Some(img_handle),
-						emissive: Color::WHITE,
-						..Default::default()
-					};
-
-					vac.insert(param.mtrs_std.add(mtr)).clone()
-				}
-			};
-
-			let normals = vec![Vec3::Z; mesh_parts.verts.len()];
-			let mut uvs = Vec::with_capacity(mesh_parts.verts.len());
-
-			for v in &mesh_parts.verts {
-				uvs.push(Vec2::new(-v.x / 64.0, -v.y / 64.0));
+	ed.file_viewer
+		.content_id
+		.iter()
+		.par_bridge()
+		.for_each(|(slot, content_id)| {
+			if matches!(content_id, ContentId::Picture | ContentId::Flat) {
+				let vfile = param.vfs.get_file(*slot).unwrap();
+				let smallstr = SmallString::from(vfile.name().as_str());
+				let _ = textures.insert(ZString(smallstr), *slot);
 			}
+		});
 
-			let mesh = Mesh::new(PrimitiveTopology::TriangleList)
-				.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_parts.verts)
-				.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-				.with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-				.with_indices(Some(Indices::U32(mesh_parts.indices)));
+	let all_textures = textures.into_read_only();
 
-			let mesh_handle = param.meshes.add(mesh);
+	let mut terrain_mtr = TerrainMaterial::default();
+	let mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
-			let mut ecmds = cbuilder.spawn(MaterialMeshBundle {
-				mesh: mesh_handle.clone(),
-				material,
-				transform: Transform {
-					translation: Vec3::new(
-						(min_raw_x as f32) * viletech::world::FSCALE,
-						(min_raw_y as f32) * viletech::world::FSCALE,
-						0.0,
-					),
-					..Default::default()
-				},
-				..Default::default()
-			});
+	let mut verts = vec![];
+	let mut tex_ixs = vec![];
 
-			ecmds.insert(EdSector(mesh_handle));
+	let mut indices = vec![];
+
+	viletech::world::mesh::triangulate(raw, |ss_poly| {
+		let subsect = &raw.subsectors[ss_poly.subsector];
+		let seg = &raw.segs[subsect.first_seg() as usize];
+		let line = &raw.linedefs[seg.linedef() as usize];
+
+		let side = match seg.direction() {
+			SegDirection::Front => &raw.sidedefs[line.right_side() as usize],
+			SegDirection::Back => &raw.sidedefs[line.left_side().unwrap() as usize],
+		};
+
+		let sector_ix = side.sector() as usize;
+		let sectordef = &raw.sectors[sector_ix];
+
+		let floor_tex_fname = ZString(SmallString::from(
+			sectordef.floor_texture().unwrap().as_str(),
+		));
+
+		let Some(tex_slot) = all_textures.get(&floor_tex_fname).copied() else {
+			ed.messages.push(
+				format!("Sector {sector_ix} references unknown texture: {floor_tex_fname}").into(),
+			);
+
+			unimplemented!()
+		};
+
+		let img_slot = ImageSlot {
+			file: tex_slot,
+			rect: None,
+		};
+
+		let tex_ix = match terrain_mtr.set.get_index_of(&img_slot) {
+			Some(ix) => ix,
+			None => terrain_mtr.set.insert_full(img_slot).0,
+		};
+
+		for i in ss_poly.indices {
+			let idx = (i + verts.len()) as u32;
+			indices.push(idx);
+		}
+
+		for v in ss_poly.verts {
+			verts.push(Vec3::new(
+				v.x,
+				v.y,
+				(sectordef.floor_height() as f32) * viletech::world::FSCALE,
+			));
+
+			tex_ixs.push(tex_ix as u32);
 		}
 	});
 
+	let normals = vec![Vec3::Z; verts.len()];
+
+	let mut uvs = Vec::with_capacity(verts.len());
+
+	for v in &verts {
+		uvs.push(Vec2::new(-v.x / 64.0, -v.y / 64.0));
+	}
+
+	let mesh = mesh
+		.with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, verts)
+		.with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+		.with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+		.with_inserted_attribute(gfx::ATTRIBUTE_TEXINDEX, tex_ixs)
+		.with_indices(Some(Indices::U32(indices)));
+
+	let mut lcmds = param.cmds.spawn(viletech::world::level_bundle_base());
+
+	for img_slot in terrain_mtr.set.iter().copied() {
+		let tex_slot = img_slot.file;
+		let vfile = param.vfs.get_file(tex_slot).unwrap();
+		let mut guard = vfile.lock();
+		let bytes = guard.read().expect("VFS memory read failed");
+		let palset = ed.palset.as_ref().unwrap();
+		let colormaps = ed.colormaps.as_ref().unwrap();
+		let content_id = ed.file_viewer.content_id.get(&tex_slot).unwrap();
+
+		let result = match content_id {
+			ContentId::Flat => Ok(viletech::asset::flat_to_image(
+				bytes.as_ref(),
+				&palset[0],
+				&colormaps[0],
+				None, // TODO
+			)),
+			ContentId::Picture => viletech::asset::picture_to_image(
+				bytes.as_ref(),
+				&palset[0],
+				&colormaps[0],
+				None, // TODO
+			),
+			_ => unimplemented!(),
+		};
+
+		let img = match result {
+			Ok(img) => img,
+			Err(err) => {
+				error!("Failed to load image: {} ({err})", vfile.path());
+				continue;
+			}
+		};
+
+		assert!(
+			img.width() > 0 && img.height() > 0,
+			"{} ({content_id}) is an invalid image",
+			vfile.path()
+		);
+
+		let img_handle = param.images.add(img);
+		terrain_mtr.textures.push(img_handle);
+	}
+
+	let mtr_handle = param.mtrs_terrain.add(terrain_mtr);
+	let mesh_handle = param.meshes.add(mesh);
+
+	lcmds.with_children(|cbuilder| {
+		cbuilder.spawn(MaterialMeshBundle {
+			mesh: mesh_handle.clone(),
+			material: mtr_handle,
+			transform: Transform {
+				translation: Vec3::new(
+					(min_raw_x as f32) * viletech::world::FSCALE,
+					(min_raw_y as f32) * viletech::world::FSCALE,
+					0.0,
+				),
+				..Default::default()
+			},
+			..Default::default()
+		});
+	});
+
 	info!(
-		concat!(
-			"Loaded level for editing: {}\n",
-			"Stats:\n",
-			"\tTook {}ms\n",
-			"\tMaterials: {}"
-		),
+		concat!("Loaded level for editing: {}\n", "Stats:\n", "\tTook {}ms"),
 		marker.path(),
 		start_time.elapsed().as_millis(),
-		param.mtrs_std.len() - prev_mtr_count
 	);
 
 	ed.level_editor.current = Some(EditedLevel::Vanilla {

@@ -2,7 +2,11 @@ pub(crate) mod load;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_egui::egui;
-use viletech::{gfx::Sky2dMaterial, rustc_hash::FxHashMap, vfs::FileSlot, VirtualFs};
+use viletech::{
+	gfx::{Sky2dMaterial, TerrainMaterial},
+	vfs::FileSlot,
+	VirtualFs,
+};
 
 use crate::common::InputParam;
 
@@ -14,8 +18,6 @@ pub(super) use load::*;
 pub(crate) struct LevelEditor {
 	pub(crate) current: Option<EditedLevel>,
 	pub(crate) viewpoint: Viewpoint,
-
-	pub(crate) materials: FxHashMap<FileSlot, Handle<StandardMaterial>>,
 }
 
 #[derive(Debug)]
@@ -52,7 +54,7 @@ pub(crate) struct SysParam<'w, 's> {
 
 	pub(crate) meshes: ResMut<'w, Assets<Mesh>>,
 	pub(crate) images: ResMut<'w, Assets<Image>>,
-	pub(crate) mtrs_std: ResMut<'w, Assets<StandardMaterial>>,
+	pub(crate) mtrs_terrain: ResMut<'w, Assets<TerrainMaterial>>,
 	pub(crate) _mtrs_sky: ResMut<'w, Assets<Sky2dMaterial>>,
 }
 
