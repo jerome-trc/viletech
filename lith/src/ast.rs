@@ -2,12 +2,13 @@
 
 mod expr;
 mod lit;
+mod pat;
 
 use doomfront::{simple_astnode, AstError, AstResult};
 
 use crate::{Syntax, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, lit::*};
+pub use self::{expr::*, lit::*, pat::*};
 
 // BlockLabel //////////////////////////////////////////////////////////////////
 

@@ -23,6 +23,19 @@ pub enum Syntax {
 	PointerPrefix,
 
 	// Nodes: patterns /////////////////////////////////////////////////////////
+	/// `'(' pattern ')'`
+	PatGrouped,
+	/// `ident`
+	PatIdent,
+	/// One of the following:
+	/// - `'-'? intlit` or `'-'? floatlit`
+	/// - `stringlit` or `namelit`
+	/// - `'true'` or `'false'`
+	PatLit,
+	/// `'[' (pattern (',' pattern)* ','?)? ']'`
+	PatSlice,
+	/// `'_'`
+	PatWildcard,
 
 	// Nodes: expressions //////////////////////////////////////////////////////
 	/// `expr operator expr`
@@ -332,6 +345,9 @@ pub enum Syntax {
 	/// `~==`; the ASCII case-insensitive string comparison [binary operator](Syntax::ExprBin).
 	#[token("~==")]
 	TildeEq2,
+	/// `_`; used in [wildcard patterns](Syntax::PatWildcard).
+	#[token("_")]
+	Underscore,
 
 	#[doc(hidden)]
 	__LastGlyph,
@@ -418,6 +434,11 @@ impl std::fmt::Display for Syntax {
 			Self::ArrayPrefix => write!(f, "array prefix"),
 			Self::BlockLabel => write!(f, "block label"),
 			Self::PointerPrefix => write!(f, "pointer prefix"),
+			Self::PatGrouped => write!(f, "grouped pattern"),
+			Self::PatIdent => write!(f, "identifier pattern"),
+			Self::PatLit => write!(f, "literal pattern"),
+			Self::PatSlice => write!(f, "slice pattern"),
+			Self::PatWildcard => write!(f, "wildcard pattern"),
 			Self::ExprBin => write!(f, "binary expression"),
 			Self::ExprBlock => write!(f, "block expression"),
 			Self::ExprField => write!(f, "field expression"),
@@ -499,6 +520,7 @@ impl std::fmt::Display for Syntax {
 			Self::SlashEq => write!(f, "`/=`"),
 			Self::Tilde => write!(f, "`~`"),
 			Self::TildeEq2 => write!(f, "`~==`"),
+			Self::Underscore => write!(f, "`_`"),
 			Self::Ident => write!(f, "identifier"),
 			Self::DocComment => write!(f, "doc comment"),
 			Self::Comment => write!(f, "comment"),

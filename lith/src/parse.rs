@@ -2,6 +2,7 @@
 
 mod common;
 mod expr;
+mod pat;
 
 #[cfg(test)]
 mod test;
