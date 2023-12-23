@@ -54,7 +54,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	app.world.insert_resource(AppUptime(start_time));
 
 	let mut vfs = VirtualFs(vfs::VirtualFs::default());
-	vfs.mount(&viletech::basedata::path(), VPath::new("viletech"))?;
+
+	{
+		let bdp = viletech::basedata::path();
+
+		if let Err(err) = vfs.mount(&bdp, VPath::new("viletech")) {
+			eprintln!("Failed to mount basedata ({}): {err}", bdp.display());
+			return Err(Box::new(err));
+		}
+	}
+
 	let vfs_root_slot = vfs.root().slot();
 	app.world.insert_resource(vfs);
 	info!("Virtual file system initialized.");
