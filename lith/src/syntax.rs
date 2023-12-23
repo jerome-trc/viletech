@@ -21,6 +21,23 @@ pub enum Syntax {
 	BlockLabel,
 	/// `*`
 	PointerPrefix,
+	/// `':' typeexpr`
+	TypeSpec,
+
+	// Nodes: statements ///////////////////////////////////////////////////////
+	/// `('let' | 'var') 'const'? pattern typespec? ('=' expr)? ';'`
+	StmtBind,
+	/// `'break' blocklabel? expr? ';'`
+	StmtBreak,
+	/// `'continue' blocklabel? ';'`
+	StmtContinue,
+	/// `expr ';'`
+	///
+	/// The trailing semicolon is optional if the expression
+	/// ends with a curly-brace-delimited block.
+	StmtExpr,
+	/// `'return' expr? ';'`
+	StmtReturn,
 
 	// Nodes: patterns /////////////////////////////////////////////////////////
 	/// `'(' pattern ')'`
@@ -434,6 +451,12 @@ impl std::fmt::Display for Syntax {
 			Self::ArrayPrefix => write!(f, "array prefix"),
 			Self::BlockLabel => write!(f, "block label"),
 			Self::PointerPrefix => write!(f, "pointer prefix"),
+			Self::TypeSpec => write!(f, "type specifier"),
+			Self::StmtBind => write!(f, "binding statement"),
+			Self::StmtBreak => write!(f, "`break` statement"),
+			Self::StmtContinue => write!(f, "`continue` statement"),
+			Self::StmtExpr => write!(f, "expression statement"),
+			Self::StmtReturn => write!(f, "`return` statement"),
 			Self::PatGrouped => write!(f, "grouped pattern"),
 			Self::PatIdent => write!(f, "identifier pattern"),
 			Self::PatLit => write!(f, "literal pattern"),

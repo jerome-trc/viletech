@@ -138,7 +138,7 @@ impl AstNode for PrimaryExpr {
 /// Wraps a node tagged [`Syntax::ExprBin`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprBin(SyntaxNode);
+pub struct ExprBin(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprBin, Syntax::ExprBin);
 
@@ -269,7 +269,7 @@ pub enum BinOp {
 /// Wraps a node tagged [`Syntax::ExprField`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprField(SyntaxNode);
+pub struct ExprField(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprField, Syntax::ExprField);
 
@@ -295,7 +295,7 @@ impl ExprField {
 /// Wraps a node tagged [`Syntax::ExprGroup`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprGroup(SyntaxNode);
+pub struct ExprGroup(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprGroup, Syntax::ExprGroup);
 
@@ -311,7 +311,7 @@ impl ExprGroup {
 /// Wraps a node tagged [`Syntax::ExprIdent`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprIdent(SyntaxNode);
+pub struct ExprIdent(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprIdent, Syntax::ExprIdent);
 
@@ -329,7 +329,7 @@ impl ExprIdent {
 /// Wraps a node tagged [`Syntax::ExprLit`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprLit(SyntaxNode);
+pub struct ExprLit(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprLit, Syntax::ExprLit);
 
@@ -366,7 +366,7 @@ impl ExprLit {
 /// Wraps a node tagged [`Syntax::ExprPostfix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprPostfix(SyntaxNode);
+pub struct ExprPostfix(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprPostfix, Syntax::ExprPostfix);
 
@@ -375,7 +375,7 @@ simple_astnode!(Syntax, ExprPostfix, Syntax::ExprPostfix);
 /// Wraps a node tagged [`Syntax::ExprPrefix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprPrefix(SyntaxNode);
+pub struct ExprPrefix(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprPrefix, Syntax::ExprPrefix);
 
@@ -410,7 +410,7 @@ pub enum PrefixOp {
 /// Wraps a node tagged [`Syntax::ExprType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ExprType(SyntaxNode);
+pub struct ExprType(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ExprType, Syntax::ExprType);
 
@@ -460,7 +460,7 @@ impl AstNode for TypePrefix {
 /// Wraps a node tagged [`Syntax::ArrayPrefix`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct ArrayPrefix(SyntaxNode);
+pub struct ArrayPrefix(pub(super) SyntaxNode);
 
 simple_astnode!(Syntax, ArrayPrefix, Syntax::ArrayPrefix);
 

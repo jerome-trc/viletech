@@ -3,12 +3,13 @@
 mod expr;
 mod lit;
 mod pat;
+mod stmt;
 
 use doomfront::{simple_astnode, AstError, AstResult};
 
 use crate::{Syntax, SyntaxNode, SyntaxToken};
 
-pub use self::{expr::*, lit::*, pat::*};
+pub use self::{expr::*, lit::*, pat::*, stmt::*};
 
 // BlockLabel //////////////////////////////////////////////////////////////////
 
@@ -86,14 +87,20 @@ impl Name {
 	}
 }
 
-// Common AST helper functions /////////////////////////////////////////////////
+// TypeSpec ////////////////////////////////////////////////////////////////////
 
-fn doc_comments(node: &SyntaxNode) -> impl Iterator<Item = DocComment> {
-	node.children_with_tokens()
-		.take_while(|elem| elem.kind().is_trivia() || elem.kind() == Syntax::DocComment)
-		.filter_map(|elem| {
-			elem.into_token()
-				.filter(|token| token.kind() == Syntax::DocComment)
-				.map(DocComment)
-		})
+/// Wraps a node tagged [`Syntax::TypeSpec`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct TypeSpec(SyntaxNode);
+
+simple_astnode!(Syntax, TypeSpec, Syntax::TypeSpec);
+
+impl TypeSpec {
+	#[must_use]
+	pub fn expr(&self) -> ExprType {
+		let ret = self.0.first_child().unwrap();
+		debug_assert_eq!(ret.kind(), Syntax::ExprType);
+		ExprType(ret)
+	}
 }
