@@ -20,7 +20,7 @@ pub struct SubSectorPoly {
 	pub indices: Vec<usize>,
 }
 
-/// Walk the binary space partition (BSP) tree of `raw` to
+/// Walk the binary space partition (BSP) tree of `raw` to produce convex triangles.
 ///
 /// This assumes that [`RawLevel::nodes`], [`RawLevel::segs`], and
 /// [`RawLevel::subsectors`] are all non-empty with coherent content.
@@ -156,7 +156,13 @@ fn subsector_to_poly(
 		}
 	}
 
+	if points.len() < 3 {
+		// TODO: are there any fixups that can be applied here?
+		return None;
+	}
+
 	let Some(verts) = points_to_poly(points).filter(|v| v.len() >= 3) else {
+		// TODO: are there any fixups that can be applied here?
 		return None;
 	};
 
@@ -177,11 +183,6 @@ fn subsector_to_poly(
 
 #[must_use]
 fn points_to_poly(mut points: Vec<Vec2>) -> Option<Vec<Vec2>> {
-	debug_assert!(
-		points.len() >= 3,
-		"`points_to_poly` received less than 3 points."
-	);
-
 	// Sort points in polygonal CCW order around their center.
 	let center = poly_center(&points);
 
