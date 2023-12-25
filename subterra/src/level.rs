@@ -240,6 +240,8 @@ impl std::fmt::Display for Error {
 	}
 }
 
+impl std::error::Error for Error {}
+
 /// See [`Error::UnknownSideTex`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SideTexture {
