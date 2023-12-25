@@ -71,7 +71,6 @@ glam = { version = "0.24.0", features = [
 	"debug-glam-assert",
 ] }
 globset = "0.4.10"
-hashbrown = "0.12"
 home = "0.5.5"
 im = "15.1.0"
 image = { version = "0.24.6", default-features = false, features = [
@@ -93,9 +92,7 @@ nanorand = { version = "0.7.0", default-features = false, features = [
 ] }
 nodi = "0.19.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
-paste = "1.0.12"
 petgraph = { version = "0.6.4", default-features = false }
-pollster = "0.3.0"
 raw-cpuid = "11.0.1"
 rayon = "1.8.0"
 regex = "1.9.5"

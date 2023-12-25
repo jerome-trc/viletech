@@ -76,7 +76,6 @@ kira.workspace = true
 nanorand.workspace = true
 nodi.workspace = true
 parking_lot.workspace = true
-pollster.workspace = true
 raw-cpuid.workspace = true
 rayon.workspace = true
 regex.workspace = true
