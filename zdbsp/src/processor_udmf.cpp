@@ -340,7 +340,7 @@ void FProcessor::ParseMapProperties()
 void FProcessor::ParseTextMap(int lump)
 {
 	char *buffer;
-	int buffersize;
+	size_t buffersize;
 	TArray<WideVertex> Vertices;
 
 	ReadLump<char> (Wad, lump, buffer, buffersize);
@@ -440,7 +440,7 @@ void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
 void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
 {
 	out.AddToLump("thing", 5);
-	if (WriteComments)
+	if (this->write_comments)
 	{
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
@@ -460,7 +460,7 @@ void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
 void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
 {
 	out.AddToLump("linedef", 7);
-	if (WriteComments)
+	if (this->write_comments)
 	{
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
@@ -484,7 +484,7 @@ void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
 void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
 {
 	out.AddToLump("sidedef", 7);
-	if (WriteComments)
+	if (this->write_comments)
 	{
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
@@ -505,7 +505,7 @@ void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
 void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
 {
 	out.AddToLump("sector", 6);
-	if (WriteComments)
+	if (this->write_comments)
 	{
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
@@ -525,7 +525,7 @@ void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
 void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
 {
 	out.AddToLump("vertex", 6);
-	if (WriteComments)
+	if (this->write_comments)
 	{
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
@@ -588,7 +588,7 @@ void FProcessor::WriteUDMF(FWadWriter &out)
 {
 	out.CopyLump (Wad, Lump);
 	WriteTextMap(out);
-	if (ForceCompression) WriteGLBSPZ (out, "ZNODES");
+	if (this->force_compression) WriteGLBSPZ (out, "ZNODES");
 	else WriteGLBSPX (out, "ZNODES");
 
 	// copy everything except existing nodes, blockmap and reject

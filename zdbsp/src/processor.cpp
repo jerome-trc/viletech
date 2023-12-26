@@ -19,7 +19,7 @@
 */
 
 #include "processor.hpp"
-//#include "rejectbuilder.hpp"
+#include "blockmapbuilder.hpp"
 
 extern void ShowView (FLevel *level);
 
@@ -88,13 +88,13 @@ FProcessor::FProcessor (FWadReader &inwad, int lump)
 	{
 		// Removing extra vertices is done by the node builder.
 		Level.RemoveExtraLines ();
-		if (!NoPrune)
+		if (!this->no_prune)
 		{
 			Level.RemoveExtraSides ();
 			Level.RemoveExtraSectors ();
 		}
 
-		if (BuildNodes)
+		if (this->build_nodes)
 		{
 			GetPolySpots ();
 		}
@@ -105,7 +105,7 @@ FProcessor::FProcessor (FWadReader &inwad, int lump)
 
 void FProcessor::LoadThings ()
 {
-	int NumThings;
+	size_t NumThings;
 
 	if (Extended)
 	{
@@ -113,7 +113,7 @@ void FProcessor::LoadThings ()
 		ReadMapLump<MapThing2> (Wad, "THINGS", Lump, Things, NumThings);
 
 		Level.Things.Resize(NumThings);
-		for (int i = 0; i < NumThings; ++i)
+		for (uint32_t i = 0; i < NumThings; ++i)
 		{
 			Level.Things[i].thingid = Things[i].thingid;
 			Level.Things[i].x = LittleShort(Things[i].x) << FRACBITS;
@@ -137,7 +137,7 @@ void FProcessor::LoadThings ()
 		ReadMapLump<MapThing> (Wad, "THINGS", Lump, mt, NumThings);
 
 		Level.Things.Resize(NumThings);
-		for (int i = 0; i < NumThings; ++i)
+		for (uint32_t i = 0; i < NumThings; ++i)
 		{
 			Level.Things[i].x = LittleShort(mt[i].x) << FRACBITS;
 			Level.Things[i].y = LittleShort(mt[i].y) << FRACBITS;
@@ -158,7 +158,7 @@ void FProcessor::LoadThings ()
 
 void FProcessor::LoadLines ()
 {
-	int NumLines;
+	size_t NumLines;
 
 	if (Extended)
 	{
@@ -167,7 +167,7 @@ void FProcessor::LoadLines ()
 		ReadMapLump<MapLineDef2> (Wad, "LINEDEFS", Lump, Lines, NumLines);
 
 		Level.Lines.Resize(NumLines);
-		for (int i = 0; i < NumLines; ++i)
+		for (uint32_t i = 0; i < NumLines; ++i)
 		{
 			Level.Lines[i].special = Lines[i].special;
 			Level.Lines[i].args[0] = Lines[i].args[0];
@@ -191,7 +191,7 @@ void FProcessor::LoadLines ()
 		ReadMapLump<MapLineDef> (Wad, "LINEDEFS", Lump, ml, NumLines);
 
 		Level.Lines.Resize(NumLines);
-		for (int i = 0; i < NumLines; ++i)
+		for (uint32_t i = 0; i < NumLines; ++i)
 		{
 			Level.Lines[i].v1 = LittleShort(ml[i].v1);
 			Level.Lines[i].v2 = LittleShort(ml[i].v2);
@@ -228,11 +228,11 @@ void FProcessor::LoadVertices ()
 void FProcessor::LoadSides ()
 {
 	MapSideDef *Sides;
-	int NumSides;
+	size_t NumSides;
 	ReadMapLump<MapSideDef> (Wad, "SIDEDEFS", Lump, Sides, NumSides);
 
 	Level.Sides.Resize(NumSides);
-	for (int i = 0; i < NumSides; ++i)
+	for (uint32_t i = 0; i < NumSides; ++i)
 	{
 		Level.Sides[i].textureoffset = Sides[i].textureoffset;
 		Level.Sides[i].rowoffset = Sides[i].rowoffset;
@@ -249,7 +249,7 @@ void FProcessor::LoadSides ()
 void FProcessor::LoadSectors ()
 {
 	MapSector *Sectors;
-	int NumSectors;
+	size_t NumSectors;
 
 	ReadMapLump<MapSector> (Wad, "SECTORS", Lump, Sectors, NumSectors);
 	Level.Sectors.Resize(NumSectors);
@@ -283,7 +283,7 @@ void FLevel::FindMapBounds ()
 
 void FLevel::RemoveExtraLines ()
 {
-	int i, newNumLines;
+	uint32_t i, newNumLines;
 
 	// Extra lines are those with 0 length. Collision detection against
 	// one of those could cause a divide by 0, so it's best to remove them.
@@ -302,7 +302,7 @@ void FLevel::RemoveExtraLines ()
 	}
 	if (newNumLines < NumLines())
 	{
-		int diff = NumLines() - newNumLines;
+		uint32_t diff = NumLines() - newNumLines;
 
 		printf ("   Removed %d line%s with 0 length.\n", diff, diff > 1 ? "s" : "");
 	}
@@ -313,11 +313,11 @@ void FLevel::RemoveExtraSides ()
 {
 	BYTE *used;
 	int *remap;
-	int i, newNumSides;
+	uint32_t i, newNumSides;
 
 	// Extra sides are those that aren't referenced by any lines.
 	// They just waste space, so get rid of them.
-	int NumSides = this->NumSides();
+	uint32_t NumSides = this->NumSides();
 
 	used = new BYTE[NumSides];
 	memset (used, 0, NumSides*sizeof(*used));
@@ -457,7 +457,7 @@ void FLevel::RemoveExtraSectors ()
 
 void FProcessor::GetPolySpots ()
 {
-	if (Extended && CheckPolyobjs)
+	if (Extended && this->check_poly_objs)
 	{
 		int spot1, spot2, anchor, i;
 
@@ -508,6 +508,170 @@ void FProcessor::GetPolySpots ()
 	}
 }
 
+void FProcessor::Process(const zdbsp_NodeConfig* const config) {
+	if (Level.NumLines() == 0 || Level.NumSides() == 0 || Level.NumSectors() == 0 ||
+		Level.NumVertices == 0) {
+		return;
+	}
+
+	if (this->build_nodes)
+	{
+		FNodeBuilder *builder = NULL;
+
+		// ZDoom's UDMF spec requires compressed GL nodes.
+		// No other UDMF spec has defined anything regarding nodes yet.
+		if (isUDMF)
+		{
+			this->build_gl_nodes = true;
+			this->conform_nodes = false;
+			this->gl_only = true;
+			this->compress_gl_nodes = true;
+		}
+
+		try
+		{
+			builder = new FNodeBuilder (Level, PolyStarts, PolyAnchors, Wad.LumpName (Lump), this->build_gl_nodes);
+
+			if (builder == NULL)
+			{
+				throw std::runtime_error("   Not enough memory to build nodes!");
+			}
+
+			if (config != nullptr) {
+				builder->aa_pref = config->aa_preference;
+				builder->max_segs = config->max_segs;
+				builder->split_cost = config->split_cost;
+			}
+
+			delete[] Level.Vertices;
+			builder->GetVertices (Level.Vertices, Level.NumVertices);
+
+			if (this->conform_nodes)
+			{
+				// When the nodes are "conformed", the normal and GL nodes use the same
+				// basic information. This creates normal nodes that are less "good" than
+				// possible, but it makes it easier to compare the two sets of nodes to
+				// determine the correctness of the GL nodes.
+				builder->GetNodes (Level.Nodes, Level.NumNodes,
+					Level.Segs, Level.NumSegs,
+					Level.Subsectors, Level.NumSubsectors);
+				builder->GetVertices (Level.GLVertices, Level.NumGLVertices);
+				builder->GetGLNodes (Level.GLNodes, Level.NumGLNodes,
+					Level.GLSegs, Level.NumGLSegs,
+					Level.GLSubsectors, Level.NumGLSubsectors);
+			}
+			else
+			{
+				if (this->build_gl_nodes)
+				{
+					builder->GetVertices (Level.GLVertices, Level.NumGLVertices);
+					builder->GetGLNodes (Level.GLNodes, Level.NumGLNodes,
+						Level.GLSegs, Level.NumGLSegs,
+						Level.GLSubsectors, Level.NumGLSubsectors);
+
+					if (!this->gl_only)
+					{
+						// Now repeat the process to obtain regular nodes
+						delete builder;
+						builder = new FNodeBuilder (Level, PolyStarts, PolyAnchors, Wad.LumpName (Lump), false);
+
+						if (builder == NULL)
+						{
+							throw std::runtime_error("   Not enough memory to build regular nodes!");
+						}
+
+						if (config != nullptr) {
+							builder->aa_pref = config->aa_preference;
+							builder->max_segs = config->max_segs;
+							builder->split_cost = config->split_cost;
+						}
+
+						delete[] Level.Vertices;
+						builder->GetVertices (Level.Vertices, Level.NumVertices);
+					}
+				}
+				if (!this->gl_only)
+				{
+					builder->GetNodes (Level.Nodes, Level.NumNodes,
+						Level.Segs, Level.NumSegs,
+						Level.Subsectors, Level.NumSubsectors);
+				}
+			}
+			delete builder;
+			builder = NULL;
+		}
+		catch (...)
+		{
+			if (builder != NULL)
+			{
+				delete builder;
+			}
+			throw;
+		}
+	}
+
+	if (!isUDMF)
+	{
+		FBlockmapBuilder bbuilder (Level);
+		WORD *blocks = bbuilder.GetBlockmap (Level.BlockmapSize);
+		Level.Blockmap = new WORD[Level.BlockmapSize];
+		memcpy (Level.Blockmap, blocks, Level.BlockmapSize*sizeof(WORD));
+
+		Level.RejectSize = (Level.NumSectors()*Level.NumSectors() + 7) / 8;
+		Level.Reject = NULL;
+
+		switch (this->reject_mode)
+		{
+		case ZDBSP_ERM_REBUILD:
+#if 0
+			FRejectBuilder reject(Level);
+			Level.Reject = reject.GetReject();
+#endif
+			printf ("   Rebuilding the reject is unsupported.\n");
+			// Intentional fall-through
+		case ZDBSP_ERM_DONTTOUCH:
+			{
+				int lump = Wad.FindMapLump ("REJECT", Lump);
+
+				if (lump >= 0)
+				{
+					ReadLump<BYTE> (Wad, lump, Level.Reject, Level.RejectSize);
+
+					if (Level.RejectSize != (Level.NumOrgSectors*Level.NumOrgSectors + 7) / 8)
+					{
+						// If the reject is the wrong size, don't use it.
+						delete[] Level.Reject;
+						Level.Reject = NULL;
+
+						if (Level.RejectSize != 0) {
+							// Do not warn about 0-length rejects
+							printf ("   REJECT is the wrong size, so it will be removed.\n");
+						}
+						Level.RejectSize = 0;
+					}
+					else if (Level.NumOrgSectors != Level.NumSectors())
+					{
+						// Some sectors have been removed, so fix the reject.
+						BYTE *newreject = FixReject (Level.Reject);
+						delete[] Level.Reject;
+						Level.Reject = newreject;
+						Level.RejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
+					}
+				}
+			}
+			break;
+
+		case ZDBSP_ERM_CREATE0:
+			break;
+
+		case ZDBSP_ERM_CREATEZEROES:
+			Level.Reject = new BYTE[Level.RejectSize];
+			memset (Level.Reject, 0, Level.RejectSize);
+			break;
+		}
+	}
+}
+
 void FProcessor::Write (FWadWriter &out)
 {
 	if (Level.NumLines() == 0 || Level.NumSides() == 0 || Level.NumSectors() == 0 || Level.NumVertices == 0)
@@ -540,6 +704,7 @@ void FProcessor::Write (FWadWriter &out)
 			}
 			out.CreateLabel("ENDMAP");
 		}
+
 		return;
 	}
 
@@ -561,184 +726,16 @@ void FProcessor::Write (FWadWriter &out)
 	}
 #endif
 
-	if (BuildNodes)
-	{
-		FNodeBuilder *builder = NULL;
-
-		// ZDoom's UDMF spec requires compressed GL nodes.
-		// No other UDMF spec has defined anything regarding nodes yet.
-		if (isUDMF)
-		{
-			BuildGLNodes = true;
-			ConformNodes = false;
-			GLOnly = true;
-			CompressGLNodes = true;
-		}
-
-		try
-		{
-			if (HaveSSE2)
-			{
-				SSELevel = 2;
-			}
-			else if (HaveSSE1)
-			{
-				SSELevel = 1;
-			}
-			else
-			{
-				SSELevel = 0;
-			}
-			builder = new FNodeBuilder (Level, PolyStarts, PolyAnchors, Wad.LumpName (Lump), BuildGLNodes);
-			if (builder == NULL)
-			{
-				throw std::runtime_error("   Not enough memory to build nodes!");
-			}
-
-			delete[] Level.Vertices;
-			builder->GetVertices (Level.Vertices, Level.NumVertices);
-
-			if (ConformNodes)
-			{
-				// When the nodes are "conformed", the normal and GL nodes use the same
-				// basic information. This creates normal nodes that are less "good" than
-				// possible, but it makes it easier to compare the two sets of nodes to
-				// determine the correctness of the GL nodes.
-				builder->GetNodes (Level.Nodes, Level.NumNodes,
-					Level.Segs, Level.NumSegs,
-					Level.Subsectors, Level.NumSubsectors);
-				builder->GetVertices (Level.GLVertices, Level.NumGLVertices);
-				builder->GetGLNodes (Level.GLNodes, Level.NumGLNodes,
-					Level.GLSegs, Level.NumGLSegs,
-					Level.GLSubsectors, Level.NumGLSubsectors);
-			}
-			else
-			{
-				if (BuildGLNodes)
-				{
-					builder->GetVertices (Level.GLVertices, Level.NumGLVertices);
-					builder->GetGLNodes (Level.GLNodes, Level.NumGLNodes,
-						Level.GLSegs, Level.NumGLSegs,
-						Level.GLSubsectors, Level.NumGLSubsectors);
-
-					if (!GLOnly)
-					{
-						// Now repeat the process to obtain regular nodes
-						delete builder;
-						builder = new FNodeBuilder (Level, PolyStarts, PolyAnchors, Wad.LumpName (Lump), false);
-						if (builder == NULL)
-						{
-							throw std::runtime_error("   Not enough memory to build regular nodes!");
-						}
-						delete[] Level.Vertices;
-						builder->GetVertices (Level.Vertices, Level.NumVertices);
-					}
-				}
-				if (!GLOnly)
-				{
-					builder->GetNodes (Level.Nodes, Level.NumNodes,
-						Level.Segs, Level.NumSegs,
-						Level.Subsectors, Level.NumSubsectors);
-				}
-			}
-			delete builder;
-			builder = NULL;
-		}
-		catch (...)
-		{
-			if (builder != NULL)
-			{
-				delete builder;
-			}
-			throw;
-		}
-	}
-
 	if (!isUDMF)
 	{
-		FBlockmapBuilder bbuilder (Level);
-		WORD *blocks = bbuilder.GetBlockmap (Level.BlockmapSize);
-		Level.Blockmap = new WORD[Level.BlockmapSize];
-		memcpy (Level.Blockmap, blocks, Level.BlockmapSize*sizeof(WORD));
-
-		Level.RejectSize = (Level.NumSectors()*Level.NumSectors() + 7) / 8;
-		Level.Reject = NULL;
-
-		switch (RejectMode)
-		{
-		case ERM_Rebuild:
-			//FRejectBuilder reject (Level);
-			//Level.Reject = reject.GetReject ();
-			printf ("   Rebuilding the reject is unsupported.\n");
-			// Intentional fall-through
-
-		case ERM_DontTouch:
-			{
-				int lump = Wad.FindMapLump ("REJECT", Lump);
-
-				if (lump >= 0)
-				{
-					ReadLump<BYTE> (Wad, lump, Level.Reject, Level.RejectSize);
-					if (Level.RejectSize != (Level.NumOrgSectors*Level.NumOrgSectors + 7) / 8)
-					{
-						// If the reject is the wrong size, don't use it.
-						delete[] Level.Reject;
-						Level.Reject = NULL;
-						if (Level.RejectSize != 0)
-						{ // Do not warn about 0-length rejects
-							printf ("   REJECT is the wrong size, so it will be removed.\n");
-						}
-						Level.RejectSize = 0;
-					}
-					else if (Level.NumOrgSectors != Level.NumSectors())
-					{
-						// Some sectors have been removed, so fix the reject.
-						BYTE *newreject = FixReject (Level.Reject);
-						delete[] Level.Reject;
-						Level.Reject = newreject;
-						Level.RejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
-					}
-				}
-			}
-			break;
-
-		case ERM_Create0:
-			break;
-
-		case ERM_CreateZeroes:
-			Level.Reject = new BYTE[Level.RejectSize];
-			memset (Level.Reject, 0, Level.RejectSize);
-			break;
-		}
-	}
-
-	if (ShowMap)
-	{
-#ifndef NO_MAP_VIEWER
-		if(BuildNodes||BuildGLNodes)
-		{
-			ShowView (&Level);
-		}
-		else
-		{
-			puts("  ERROR: You can't view the nodes (-v) if you don't build them! (-N).");
-		}
-#else
-		puts ("  This version of ZDBSP was not compiled with the map viewer enabled.");
-#endif
-	}
-
-	if (!isUDMF)
-	{
-
 		if (Level.GLNodes != NULL )
 		{
-			gl5 = V5GLNodes ||
+			gl5 = this->v5gl ||
 				  (Level.NumGLVertices > 32767) ||
 				  (Level.NumGLSegs > 65534) ||
 				  (Level.NumGLNodes > 32767) ||
 				  (Level.NumGLSubsectors > 32767);
-			compressGL = CompressGLNodes || (Level.NumVertices > 32767);
+			compressGL = this->compress_gl_nodes || (Level.NumVertices > 32767);
 		}
 		else
 		{
@@ -746,7 +743,7 @@ void FProcessor::Write (FWadWriter &out)
 		}
 
 		// If the GL nodes are compressed, then the regular nodes must also be compressed.
-		compress = CompressNodes || compressGL ||
+		compress = this->compress_nodes || compressGL ||
 			(Level.NumVertices > 65535) ||
 			(Level.NumSegs > 65535) ||
 			(Level.NumSubsectors > 32767) ||
@@ -756,12 +753,12 @@ void FProcessor::Write (FWadWriter &out)
 		out.CopyLump (Wad, Wad.FindMapLump ("THINGS", Lump));
 		WriteLines (out);
 		WriteSides (out);
-		WriteVertices (out, compress || GLOnly ? Level.NumOrgVerts : Level.NumVertices);
-		if (BuildNodes)
+		WriteVertices (out, compress || this->gl_only ? Level.NumOrgVerts : Level.NumVertices);
+		if (this->build_nodes)
 		{
 			if (!compress)
 			{
-				if (!GLOnly)
+				if (!this->gl_only)
 				{
 					WriteSegs (out);
 					WriteSSectors (out);
@@ -779,16 +776,16 @@ void FProcessor::Write (FWadWriter &out)
 				out.CreateLabel ("SEGS");
 				if (compressGL)
 				{
-					if (ForceCompression) WriteGLBSPZ (out, "SSECTORS");
+					if (this->force_compression) WriteGLBSPZ (out, "SSECTORS");
 					else WriteGLBSPX (out, "SSECTORS");
 				}
 				else
 				{
 					out.CreateLabel ("SSECTORS");
 				}
-				if (!GLOnly)
+				if (!this->gl_only)
 				{
-					if (ForceCompression) WriteBSPZ (out, "NODES");
+					if (this->force_compression) WriteBSPZ (out, "NODES");
 					else WriteBSPX (out, "NODES");
 				}
 				else
@@ -859,14 +856,14 @@ BYTE *FProcessor::FixReject (const BYTE *oldreject)
 	return newreject;
 }
 
-MapNodeEx *FProcessor::NodesToEx (const MapNode *nodes, int count)
+zdbsp_MapNodeEx *FProcessor::NodesToEx (const zdbsp_MapNode *nodes, int count)
 {
 	if (count == 0)
 	{
 		return NULL;
 	}
 
-	MapNodeEx *Nodes = new MapNodeEx[Level.NumNodes];
+	zdbsp_MapNodeEx *Nodes = new zdbsp_MapNodeEx[Level.NumNodes];
 	int x;
 
 	for (x = 0; x < count; ++x)
@@ -1107,12 +1104,12 @@ void FProcessor::WriteNodes (FWadWriter &out) const
 	WriteNodes2 (out, "NODES", Level.Nodes, Level.NumNodes);
 }
 
-void FProcessor::WriteNodes2 (FWadWriter &out, const char *name, const MapNodeEx *zaNodes, int count) const
+void FProcessor::WriteNodes2 (FWadWriter &out, const char *name, const zdbsp_MapNodeEx *zaNodes, int count) const
 {
 	int i, j;
 	short *onodes, *nodes;
 
-	nodes = onodes = new short[count * sizeof(MapNode)/2];
+	nodes = onodes = new short[count * sizeof(zdbsp_MapNode)/2];
 
 	for (i = 0; i < count; ++i)
 	{
@@ -1140,7 +1137,7 @@ void FProcessor::WriteNodes2 (FWadWriter &out, const char *name, const MapNodeEx
 			}
 		}
 	}
-	out.WriteLump (name, onodes, count * sizeof(MapNode));
+	out.WriteLump (name, onodes, count * sizeof(zdbsp_MapNode));
 	delete[] onodes;
 
 	if (count >= 32768)
@@ -1149,10 +1146,10 @@ void FProcessor::WriteNodes2 (FWadWriter &out, const char *name, const MapNodeEx
 	}
 }
 
-void FProcessor::WriteNodes5 (FWadWriter &out, const char *name, const MapNodeEx *zaNodes, int count) const
+void FProcessor::WriteNodes5 (FWadWriter &out, const char *name, const zdbsp_MapNodeEx *zaNodes, int count) const
 {
 	int i, j;
-	MapNodeExO *const nodes = new MapNodeExO[count * sizeof(MapNodeEx)];
+	MapNodeExO *const nodes = new MapNodeExO[count * sizeof(zdbsp_MapNodeEx)];
 
 	for (i = 0; i < count; ++i)
 	{
@@ -1171,13 +1168,13 @@ void FProcessor::WriteNodes5 (FWadWriter &out, const char *name, const MapNodeEx
 			nodes[i].children[j] = LittleLong(zaNodes[i].children[j]);
 		}
 	}
-	out.WriteLump (name, nodes, count * sizeof(MapNodeEx));
+	out.WriteLump (name, nodes, count * sizeof(zdbsp_MapNodeEx));
 	delete[] nodes;
 }
 
 void FProcessor::WriteBlockmap (FWadWriter &out)
 {
-	if (BlockmapMode == EBM_Create0)
+	if (this->blockmap_mode == ZDBSP_EBM_CREATE0)
 	{
 		out.CreateLabel ("BLOCKMAP");
 		return;
@@ -1223,7 +1220,7 @@ void FProcessor::WriteBlockmap (FWadWriter &out)
 
 void FProcessor::WriteReject (FWadWriter &out)
 {
-	if (RejectMode == ERM_Create0 || Level.Reject == NULL)
+	if (this->reject_mode == ZDBSP_ERM_CREATE0 || Level.Reject == NULL)
 	{
 		out.CreateLabel ("REJECT");
 	}
@@ -1369,7 +1366,7 @@ void FProcessor::WriteBSPZ (FWadWriter &out, const char *label)
 {
 	ZLibOut zout (out);
 
-	if (!CompressNodes)
+	if (!this->compress_nodes)
 	{
 		printf ("   Nodes are so big that compression has been forced.\n");
 	}
@@ -1388,7 +1385,7 @@ void FProcessor::WriteGLBSPZ (FWadWriter &out, const char *label)
 	bool fracsplitters = CheckForFracSplitters(Level.GLNodes, Level.NumGLNodes);
 	int nodever;
 
-	if (!CompressGLNodes)
+	if (!this->compress_gl_nodes)
 	{
 		printf ("   GL Nodes are so big that compression has been forced.\n");
 	}
@@ -1474,7 +1471,7 @@ void FProcessor::WriteGLSegsZ (ZLibOut &out, const MapSegGLEx *segs, int numsegs
 	}
 }
 
-void FProcessor::WriteNodesZ (ZLibOut &out, const MapNodeEx *nodes, int numnodes, int nodever)
+void FProcessor::WriteNodesZ (ZLibOut &out, const zdbsp_MapNodeEx *nodes, int numnodes, int nodever)
 {
 	out << (DWORD)numnodes;
 
@@ -1508,7 +1505,7 @@ void FProcessor::WriteNodesZ (ZLibOut &out, const MapNodeEx *nodes, int numnodes
 
 void FProcessor::WriteBSPX (FWadWriter &out, const char *label)
 {
-	if (!CompressNodes)
+	if (!this->compress_nodes)
 	{
 		printf ("   Nodes are so big that extended format has been forced.\n");
 	}
@@ -1526,7 +1523,7 @@ void FProcessor::WriteGLBSPX (FWadWriter &out, const char *label)
 	bool fracsplitters = CheckForFracSplitters(Level.GLNodes, Level.NumGLNodes);
 	int nodever;
 
-	if (!CompressGLNodes)
+	if (!this->compress_gl_nodes)
 	{
 		printf ("   GL Nodes are so big that extended format has been forced.\n");
 	}
@@ -1612,7 +1609,7 @@ void FProcessor::WriteGLSegsX (FWadWriter &out, const MapSegGLEx *segs, int nums
 	}
 }
 
-void FProcessor::WriteNodesX (FWadWriter &out, const MapNodeEx *nodes, int numnodes, int nodever)
+void FProcessor::WriteNodesX (FWadWriter &out, const zdbsp_MapNodeEx *nodes, int numnodes, int nodever)
 {
 	out << (DWORD)numnodes;
 
@@ -1644,7 +1641,7 @@ void FProcessor::WriteNodesX (FWadWriter &out, const MapNodeEx *nodes, int numno
 	}
 }
 
-bool FProcessor::CheckForFracSplitters(const MapNodeEx *nodes, int numnodes)
+bool FProcessor::CheckForFracSplitters(const zdbsp_MapNodeEx *nodes, int numnodes)
 {
 	for (int i = 0; i < numnodes; ++i)
 	{

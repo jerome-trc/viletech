@@ -6,6 +6,9 @@
 #endif
 
 #include "tarray.hpp"
+#include "common.hpp"
+
+#include "zdbsp.h"
 
 enum
 {
@@ -160,23 +163,9 @@ struct MapSegGLEx
 #define NF_SUBSECTOR	0x8000
 #define NFX_SUBSECTOR	0x80000000
 
-struct MapNode
-{
-	short 	x,y,dx,dy;
-	short 	bbox[2][4];
-	WORD	children[2];
-};
-
 struct MapNodeExO
 {
 	short	x,y,dx,dy;
-	short	bbox[2][4];
-	DWORD	children[2];
-};
-
-struct MapNodeEx
-{
-	int		x,y,dx,dy;
 	short	bbox[2][4];
 	DWORD	children[2];
 };
@@ -229,23 +218,23 @@ struct FLevel
 	FLevel ();
 	~FLevel ();
 
-	WideVertex *Vertices;		int NumVertices;
+	WideVertex *Vertices;		size_t NumVertices;
 	TArray<IntVertex>			VertexProps;
 	TArray<IntSideDef>			Sides;
 	TArray<IntLineDef>			Lines;
 	TArray<IntSector>			Sectors;
 	TArray<IntThing>			Things;
-	MapSubsectorEx *Subsectors;	int NumSubsectors;
-	MapSegEx *Segs;				int NumSegs;
-	MapNodeEx *Nodes;			int NumNodes;
-	WORD *Blockmap;				int BlockmapSize;
-	BYTE *Reject;				int RejectSize;
+	MapSubsectorEx *Subsectors;	size_t NumSubsectors;
+	MapSegEx *Segs;				size_t NumSegs;
+	zdbsp_MapNodeEx *Nodes;			size_t NumNodes;
+	WORD *Blockmap;				size_t BlockmapSize;
+	BYTE *Reject;				size_t RejectSize;
 
-	MapSubsectorEx *GLSubsectors;	int NumGLSubsectors;
-	MapSegGLEx *GLSegs;				int NumGLSegs;
-	MapNodeEx *GLNodes;				int NumGLNodes;
-	WideVertex *GLVertices;			int NumGLVertices;
-	BYTE *GLPVS;					int GLPVSSize;
+	MapSubsectorEx *GLSubsectors;	size_t NumGLSubsectors;
+	MapSegGLEx *GLSegs;				size_t NumGLSegs;
+	zdbsp_MapNodeEx *GLNodes;				size_t NumGLNodes;
+	WideVertex *GLVertices;			size_t NumGLVertices;
+	BYTE *GLPVS;					size_t GLPVSSize;
 
 	int NumOrgVerts;
 
@@ -260,10 +249,10 @@ struct FLevel
 	void RemoveExtraSides ();
 	void RemoveExtraSectors ();
 
-	int NumSides() const { return Sides.Size(); }
-	int NumLines() const { return Lines.Size(); }
-	int NumSectors() const { return Sectors.Size(); }
-	int NumThings() const { return Things.Size(); }
+	uint32_t NumSides() const { return Sides.Size(); }
+	uint32_t NumLines() const { return Lines.Size(); }
+	uint32_t NumSectors() const { return Sectors.Size(); }
+	uint32_t NumThings() const { return Things.Size(); }
 };
 
 const int BLOCKSIZE = 128;

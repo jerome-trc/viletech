@@ -17,8 +17,11 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
-#include "wad.hpp"
+
 #include <cstring>
+
+#include "wad.hpp"
+#include "common.hpp"
 
 static const char MapLumpNames[12][9] =
 {
@@ -61,47 +64,40 @@ static const char GLLumpNames[5][9] =
 	"GL_PVS"
 };
 
-FWadReader::FWadReader (const char *filename)
-	: Lumps (NULL), File (NULL)
-{
-	File = fopen (filename, "rb");
-	if (File == NULL)
-	{
-		throw std::runtime_error("Could not open input file");
+FWadReader::FWadReader(const uint8_t* const bytes): bytes(bytes), Lumps(nullptr), cursor(0) {
+	if (bytes == nullptr) {
+		throw std::runtime_error("Received a null pointer illegally");
 	}
 
-	SafeRead (&Header, sizeof(Header));
-	if (Header.Magic[0] != 'P' && Header.Magic[0] != 'I' &&
-		Header.Magic[1] != 'W' &&
-		Header.Magic[2] != 'A' &&
-		Header.Magic[3] != 'D')
+	auto header = reinterpret_cast<const WadHeader*>(bytes);
+
+	if (header->Magic[0] != 'P' && header->Magic[0] != 'I' &&
+		header->Magic[1] != 'W' &&
+		header->Magic[2] != 'A' &&
+		header->Magic[3] != 'D')
 	{
-		fclose (File);
-		File = NULL;
-		throw std::runtime_error("Input file is not a wad");
+		throw std::runtime_error("Input buffer is not a WAD");
 	}
 
-	Header.NumLumps = LittleLong(Header.NumLumps);
-	Header.Directory = LittleLong(Header.Directory);
+	auto lmp_count = (size_t)LittleLong(header->NumLumps);
+	auto dir_offs = (size_t)LittleLong(header->Directory);
+	auto directory = reinterpret_cast<const WadLump*>(bytes + dir_offs);
 
-	if (fseek (File, Header.Directory, SEEK_SET))
+	this->Lumps = new WadLump[lmp_count];
+	this->Header.NumLumps = lmp_count;
+	this->Header.Directory = dir_offs;
+	std::memcpy(this->Lumps, directory, lmp_count * sizeof(WadLump));
+
+	for (size_t i = 0; i < lmp_count; ++i)
 	{
-		throw std::runtime_error("Could not read wad directory");
-	}
-
-	Lumps = new WadLump[Header.NumLumps];
-	SafeRead (Lumps, Header.NumLumps * sizeof(*Lumps));
-
-	for (int i = 0; i < Header.NumLumps; ++i)
-	{
-		Lumps[i].FilePos = LittleLong(Lumps[i].FilePos);
-		Lumps[i].Size = LittleLong(Lumps[i].Size);
+		auto lmp = &this->Lumps[i];
+		lmp->FilePos = LittleLong(lmp->FilePos);
+		lmp->Size = LittleLong(lmp->Size);
 	}
 }
 
 FWadReader::~FWadReader ()
 {
-	if (File)	fclose (File);
 	if (Lumps)	delete[] Lumps;
 }
 
@@ -327,10 +323,8 @@ int FWadReader::LumpAfterMap (int i) const
 
 void FWadReader::SafeRead (void *buffer, size_t size)
 {
-	if (fread (buffer, 1, size, File) != size)
-	{
-		throw std::runtime_error("Failed to read");
-	}
+	std::memcpy(buffer, this->bytes + this->cursor, size);
+	this->cursor += size;
 }
 
 const char *FWadReader::LumpName (int lump)
@@ -341,15 +335,7 @@ const char *FWadReader::LumpName (int lump)
 	return name;
 }
 
-FWadWriter::FWadWriter (const char *filename, bool iwad)
-	: File (NULL)
-{
-	File = fopen (filename, "wb");
-	if (File == NULL)
-	{
-		throw std::runtime_error("Could not open output file");
-	}
-
+FWadWriter::FWadWriter(uint8_t* dest, bool iwad) : dest(dest), cursor(0) {
 	WadHeader head;
 
 	if (iwad)
@@ -360,36 +346,18 @@ FWadWriter::FWadWriter (const char *filename, bool iwad)
 	{
 		head.Magic[0] = 'P';
 	}
+
 	head.Magic[1] = 'W';
 	head.Magic[2] = 'A';
 	head.Magic[3] = 'D';
 
-	SafeWrite (&head, sizeof(head));
+	this->SafeWrite(dest, sizeof(WadHeader));
 }
 
-FWadWriter::~FWadWriter ()
-{
-	if (File)
-	{
-		Close ();
-	}
-}
+FWadWriter::~FWadWriter () { }
 
 void FWadWriter::Close ()
 {
-	if (File)
-	{
-		int32_t head[2];
-
-		head[0] = LittleLong(Lumps.Size());
-		head[1] = LittleLong(ftell (File));
-
-		SafeWrite (&Lumps[0], sizeof(WadLump)*Lumps.Size());
-		fseek (File, 4, SEEK_SET);
-		SafeWrite (head, 8);
-		fclose (File);
-		File = NULL;
-	}
 }
 
 void FWadWriter::CreateLabel (const char *name)
@@ -397,7 +365,7 @@ void FWadWriter::CreateLabel (const char *name)
 	WadLump lump;
 
 	strncpy (lump.Name, name, 8);
-	lump.FilePos = LittleLong(ftell (File));
+	lump.FilePos = LittleLong(this->cursor);
 	lump.Size = 0;
 	Lumps.Push (lump);
 }
@@ -407,7 +375,7 @@ void FWadWriter::WriteLump (const char *name, const void *data, int len)
 	WadLump lump;
 
 	strncpy (lump.Name, name, 8);
-	lump.FilePos = LittleLong(ftell (File));
+	lump.FilePos = LittleLong(this->cursor);
 	lump.Size = LittleLong(len);
 	Lumps.Push (lump);
 
@@ -416,10 +384,10 @@ void FWadWriter::WriteLump (const char *name, const void *data, int len)
 
 void FWadWriter::CopyLump (FWadReader &wad, int lump)
 {
-	BYTE *data;
-	int size;
+	uint8_t *data;
+	size_t size;
 
-	ReadLump<BYTE> (wad, lump, data, size);
+	ReadLump<uint8_t> (wad, lump, data, size);
 	if (data != NULL)
 	{
 		WriteLump (wad.LumpName (lump), data, size);
@@ -440,14 +408,8 @@ void FWadWriter::AddToLump (const void *data, int len)
 
 void FWadWriter::SafeWrite (const void *buffer, size_t size)
 {
-	if (fwrite (buffer, 1, size, File) != size)
-	{
-		fclose (File);
-		File = NULL;
-		throw std::runtime_error(
-			"Failed to write. Check that this directory is writable and\n"
-			"that you have enough free disk space.");
-	}
+	std::memcpy(this->dest, buffer, size);
+	this->cursor += size;
 }
 
 FWadWriter &FWadWriter::operator << (BYTE val)

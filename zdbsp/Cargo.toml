@@ -12,7 +12,8 @@ publish = false
 repository.workspace = true
 
 [build-dependencies]
-cxx-build.workspace = true
+bindgen = "0.69.1"
+cbindgen = "0.26.0"
+cc = { version = "1.0.83", features = ["parallel"] }
 
 [dependencies]
-cxx.workspace = true

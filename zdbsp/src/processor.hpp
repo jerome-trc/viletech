@@ -5,13 +5,13 @@
 #pragma once
 #endif
 
+#include <zlib.h>
+
 #include "wad.hpp"
 #include "doomdata.hpp"
-#include "workdata.hpp"
 #include "tarray.hpp"
 #include "nodebuild.hpp"
-#include "blockmapbuilder.hpp"
-#include <zlib.h>
+#include "zdbsp.h"
 
 class ZLibOut
 {
@@ -39,8 +39,21 @@ class FProcessor
 {
 public:
 	FProcessor (FWadReader &inwad, int lump);
-
+	void Process(const zdbsp_NodeConfig* config);
 	void Write (FWadWriter &out);
+
+	bool build_nodes = true, build_gl_nodes = false;
+	bool conform_nodes = false, gl_only = false;
+	bool check_poly_objs = true, no_prune = false;
+	bool write_comments = false, v5gl = false;
+	bool compress_nodes = false, compress_gl_nodes = false, force_compression = false;
+
+	zdbsp_RejectMode reject_mode = ZDBSP_ERM_DONTTOUCH;
+	zdbsp_BlockmapMode blockmap_mode = ZDBSP_EBM_REBUILD;
+
+	[[nodiscard]] const FLevel& get_level() const {
+		return this->Level;
+	}
 
 private:
 	void LoadUDMF();
@@ -51,12 +64,12 @@ private:
 	void LoadSectors ();
 	void GetPolySpots ();
 
-	MapNodeEx *NodesToEx (const MapNode *nodes, int count);
+	zdbsp_MapNodeEx *NodesToEx (const zdbsp_MapNode *nodes, int count);
 	MapSubsectorEx *SubsectorsToEx (const MapSubsector *ssec, int count);
 	MapSegGLEx *SegGLsToEx (const MapSegGL *segs, int count);
 
 	BYTE *FixReject (const BYTE *oldreject);
-	bool CheckForFracSplitters(const MapNodeEx *nodes, int count);
+	bool CheckForFracSplitters(const zdbsp_MapNodeEx *nodes, int count);
 
 	void WriteLines (FWadWriter &out);
 	void WriteVertices (FWadWriter &out, int count);
@@ -81,7 +94,7 @@ private:
 	void WriteSubsectorsZ (ZLibOut &out, const MapSubsectorEx *subs, int numsubs);
 	void WriteSegsZ (ZLibOut &out, const MapSegEx *segs, int numsegs);
 	void WriteGLSegsZ (ZLibOut &out, const MapSegGLEx *segs, int numsegs, int nodever);
-	void WriteNodesZ (ZLibOut &out, const MapNodeEx *nodes, int numnodes, int nodever);
+	void WriteNodesZ (ZLibOut &out, const zdbsp_MapNodeEx *nodes, int numnodes, int nodever);
 
 	void WriteBSPX (FWadWriter &out, const char *label);
 	void WriteGLBSPX (FWadWriter &out, const char *label);
@@ -90,11 +103,11 @@ private:
 	void WriteSubsectorsX (FWadWriter &out, const MapSubsectorEx *subs, int numsubs);
 	void WriteSegsX (FWadWriter &out, const MapSegEx *segs, int numsegs);
 	void WriteGLSegsX (FWadWriter &out, const MapSegGLEx *segs, int numsegs, int nodever);
-	void WriteNodesX (FWadWriter &out, const MapNodeEx *nodes, int numnodes, int nodever);
+	void WriteNodesX (FWadWriter &out, const zdbsp_MapNodeEx *nodes, int numnodes, int nodever);
 
-	void WriteNodes2 (FWadWriter &out, const char *name, const MapNodeEx *zaNodes, int count) const;
+	void WriteNodes2 (FWadWriter &out, const char *name, const zdbsp_MapNodeEx *zaNodes, int count) const;
 	void WriteSSectors2 (FWadWriter &out, const char *name, const MapSubsectorEx *zaSubs, int count) const;
-	void WriteNodes5 (FWadWriter &out, const char *name, const MapNodeEx *zaNodes, int count) const;
+	void WriteNodes5 (FWadWriter &out, const char *name, const zdbsp_MapNodeEx *zaNodes, int count) const;
 	void WriteSSectors5 (FWadWriter &out, const char *name, const MapSubsectorEx *zaSubs, int count) const;
 
 	const char *ParseKey(const char *&value);

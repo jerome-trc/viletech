@@ -82,7 +82,7 @@ DWORD FNodeBuilder::CreateNode (DWORD set, unsigned int count, fixed_t bbox[4])
 	// When building GL nodes, count may not be an exact count of the number of segs
 	// in this set. That's okay, because we just use it to get a skip count, so an
 	// estimate is fine.
-	skip = int(count / MaxSegs);
+	skip = int(count / this->max_segs);
 
 	if ((selstat = SelectSplitter (set, node, splitseg, skip, true)) > 0 ||
 		(skip > 0 && (selstat = SelectSplitter (set, node, splitseg, 1, true)) > 0) ||
@@ -576,12 +576,12 @@ int FNodeBuilder::Heuristic (node_t &node, DWORD set, bool honorNoSplit)
 					specialSegs[side]++;
 				}
 				// Add some weight to the score for unsplit lines
-				score += SplitCost;
+				score += this->split_cost;
 			}
 			else
 			{
 				// Minisegs don't count quite as much for nosplitting
-				score += SplitCost / 4;
+				score += this->split_cost / 4;
 			}
 			break;
 
@@ -724,7 +724,7 @@ int FNodeBuilder::Heuristic (node_t &node, DWORD set, bool honorNoSplit)
 		}
 		else
 		{
-			score += segsInSet/AAPreference;
+			score += segsInSet / this->aa_pref;
 		}
 	}
 
@@ -1056,93 +1056,3 @@ void FNodeBuilder::PrintSet (int l, DWORD set)
 	}
 	Printf ("*\n");
 }
-
-#ifdef BACKPATCH
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#include <limits.h>
-#endif
-
-#ifdef __GNUC__
-extern "C" int ClassifyLineBackpatch (node_t &node, const FSimpleVert *v1, const FSimpleVert *v2, int sidev[2])
-#else
-static int *CallerOffset;
-int ClassifyLineBackpatchC (node_t &node, const FSimpleVert *v1, const FSimpleVert *v2, int sidev[2])
-#endif
-{
-	// Select the routine based on SSELevel and patch the caller so that
-	// they call that routine directly next time instead of going through here.
-	int *calleroffset;
-	int diff;
-	int (*func)(node_t &, const FSimpleVert *, const FSimpleVert *, int[2]);
-	DWORD oldprotect;
-
-#ifdef __GNUC__
-	calleroffset = (int *)__builtin_return_address(0);
-#else
-	calleroffset = CallerOffset;
-#endif
-//	printf ("Patching for SSE %d @ %p %d\n", SSELevel, calleroffset, *calleroffset);
-
-	if (SSELevel == 2)
-	{
-		func = ClassifyLineSSE2;
-		diff = (char *)ClassifyLineSSE2 - (char *)calleroffset;
-	}
-	else if (SSELevel == 1)
-	{
-		func = ClassifyLineSSE1;
-		diff = (char *)ClassifyLineSSE1 - (char *)calleroffset;
-	}
-	else
-	{
-		func = ClassifyLine2;
-		diff = (char *)ClassifyLine2 - (char *)calleroffset;
-	}
-
-	// Patch the caller.
-	calleroffset--;
-#ifdef _WIN32
-	if (VirtualProtect (calleroffset, sizeof(void*), PAGE_EXECUTE_READWRITE, &oldprotect))
-#else
-	// must make this page-aligned for mprotect
-	long pagesize = sysconf(_SC_PAGESIZE);
-	char *callerpage = (char *)((intptr_t)calleroffset & ~(pagesize - 1));
-	size_t protectlen = (intptr_t)calleroffset + sizeof(void*) - (intptr_t)callerpage;
-	int ptect;
-	if (!(ptect = mprotect(callerpage, protectlen, PROT_READ|PROT_WRITE|PROT_EXEC)))
-#endif
-	{
-		*calleroffset = diff;
-#ifdef _WIN32
-		VirtualProtect (calleroffset, sizeof(void*), oldprotect, &oldprotect);
-#else
-		mprotect(callerpage, protectlen, PROT_READ|PROT_EXEC);
-#endif
-	}
-
-	// And return by calling the real function.
-	return func (node, v1, v2, sidev);
-}
-
-#ifndef __GNUC__
-// The ClassifyLineBackpatch() function here is a stub that uses inline assembly and nakedness
-// to retrieve the return address of the stack before sending control to the real
-// ClassifyLineBackpatchC() function. Since BACKPATCH shouldn't be defined on 64-bit builds,
-// we're okay that VC++ can't do inline assembly on that target.
-
-extern "C" __declspec(noinline) __declspec(naked) int ClassifyLineBackpatch (node_t &node, const FSimpleVert *v1, const FSimpleVert *v2, int sidev[2])
-{
-	// We store the return address in a global, so as not to need to mess with the parameter list.
-	__asm
-	{
-		mov eax, [esp]
-		mov CallerOffset, eax
-		jmp ClassifyLineBackpatchC
-	}
-}
-#endif
-#endif

@@ -205,12 +205,14 @@ void FNodeBuilder::AddMinisegs (const node_t &node, DWORD splitseg, DWORD &fset,
 					fsector != Segs[fseg1].backsector &&
 					bsector != Segs[bseg1].backsector)
 				{
+					#if 0 // TODO: emit warnings some other way.
 					Warn ("Sectors %d at (%d,%d) and %d at (%d,%d) don't match.\n",
 						Segs[fseg1].frontsector,
 						Vertices[prev->Info.Vertex].x>>FRACBITS, Vertices[prev->Info.Vertex].y>>FRACBITS,
 						Segs[bseg1].frontsector,
 						Vertices[event->Info.Vertex].x>>FRACBITS, Vertices[event->Info.Vertex].y>>FRACBITS
 						);
+						#endif
 				}
 
 				D(Printf ("**Minisegs** %d/%d added %d(%d,%d)->%d(%d,%d)\n", fnseg, bnseg,

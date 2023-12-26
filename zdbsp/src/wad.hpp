@@ -1,6 +1,7 @@
 #ifndef __WAD_H__
 #define __WAD_H__
 
+#include <memory>
 #ifdef _MSC_VER
 #pragma once
 #endif
@@ -28,7 +29,7 @@ struct WadLump
 class FWadReader
 {
 public:
-	FWadReader (const char *filename);
+	FWadReader(const uint8_t* bytes);
 	~FWadReader ();
 
 	bool IsIWAD () const;
@@ -49,17 +50,17 @@ public:
 
 // VC++ 6 does not support template member functions in non-template classes!
 	template<class T>
-	friend void ReadLump (FWadReader &wad, int index, T *&data, int &size);
+	friend void ReadLump (FWadReader &wad, int index, T *&data, size_t &size);
 
 private:
+	const uint8_t* bytes;
 	WadHeader Header;
 	WadLump *Lumps;
-	FILE *File;
+	size_t cursor;
 };
 
-
 template<class T>
-void ReadLump (FWadReader &wad, int index, T *&data, int &size)
+void ReadLump (FWadReader &wad, int index, T *&data, size_t &size)
 {
 	if ((unsigned)index >= (unsigned)wad.Header.NumLumps)
 	{
@@ -67,26 +68,23 @@ void ReadLump (FWadReader &wad, int index, T *&data, int &size)
 		size = 0;
 		return;
 	}
-	if (fseek (wad.File, wad.Lumps[index].FilePos, SEEK_SET))
-	{
-		throw std::runtime_error("Failed to seek");
-	}
+
+	wad.cursor = (size_t)wad.Lumps[index].FilePos;
 	size = wad.Lumps[index].Size / sizeof(T);
 	data = new T[size];
 	wad.SafeRead (data, size*sizeof(T));
 }
 
 template<class T>
-void ReadMapLump (FWadReader &wad, const char *name, int index, T *&data, int &size)
+void ReadMapLump (FWadReader &wad, const char *name, int index, T *&data, size_t &size)
 {
 	ReadLump (wad, wad.FindMapLump (name, index), data, size);
 }
 
-
 class FWadWriter
 {
 public:
-	FWadWriter (const char *filename, bool iwad);
+	FWadWriter(uint8_t* dest, bool iwad);
 	~FWadWriter ();
 
 	void CreateLabel (const char *name);
@@ -106,7 +104,8 @@ public:
 
 private:
 	TArray<WadLump> Lumps;
-	FILE *File;
+	uint8_t* dest;
+	size_t cursor;
 
 	void SafeWrite (const void *buffer, size_t size);
 };

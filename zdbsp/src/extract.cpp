@@ -33,19 +33,19 @@
 #undef DD
 #endif
 
-void FNodeBuilder::GetGLNodes (MapNodeEx *&outNodes, int &nodeCount,
-	MapSegGLEx *&outSegs, int &segCount,
-	MapSubsectorEx *&outSubs, int &subCount)
+void FNodeBuilder::GetGLNodes (zdbsp_MapNodeEx *&outNodes, size_t &nodeCount,
+	MapSegGLEx *&outSegs, size_t &segCount,
+	MapSubsectorEx *&outSubs, size_t &subCount)
 {
 	TArray<MapSegGLEx> segs (Segs.Size()*5/4);
 	int i, j, k;
 
 	nodeCount = Nodes.Size ();
-	outNodes = new MapNodeEx[nodeCount];
+	outNodes = new zdbsp_MapNodeEx[nodeCount];
 	for (i = 0; i < nodeCount; ++i)
 	{
 		const node_t *orgnode = &Nodes[i];
-		MapNodeEx *newnode = &outNodes[i];
+		zdbsp_MapNodeEx *newnode = &outNodes[i];
 
 		newnode->x = orgnode->x;
 		newnode->y = orgnode->y;
@@ -364,9 +364,11 @@ void FNodeBuilder::PushConnectingGLSeg (int subsector, TArray<MapSegGLEx> &segs,
 {
 	MapSegGLEx newseg;
 
+#if 0 // TODO: emit warnings some other way.
 	Warn ("Unclosed subsector %d, from (%d,%d) to (%d,%d)\n", subsector,
 		Vertices[v1].x >> FRACBITS, Vertices[v1].y >> FRACBITS,
 		Vertices[v2].x >> FRACBITS, Vertices[v2].y >> FRACBITS);
+#endif
 
 	newseg.v1 = v1;
 	newseg.v2 = v2;
@@ -376,7 +378,7 @@ void FNodeBuilder::PushConnectingGLSeg (int subsector, TArray<MapSegGLEx> &segs,
 	segs.Push (newseg);
 }
 
-void FNodeBuilder::GetVertices (WideVertex *&verts, int &count)
+void FNodeBuilder::GetVertices (WideVertex *&verts, size_t &count)
 {
 	count = Vertices.Size ();
 	verts = new WideVertex[count];
@@ -389,9 +391,9 @@ void FNodeBuilder::GetVertices (WideVertex *&verts, int &count)
 	}
 }
 
-void FNodeBuilder::GetNodes (MapNodeEx *&outNodes, int &nodeCount,
-	MapSegEx *&outSegs, int &segCount,
-	MapSubsectorEx *&outSubs, int &subCount)
+void FNodeBuilder::GetNodes (zdbsp_MapNodeEx *&outNodes, size_t &nodeCount,
+	MapSegEx *&outSegs, size_t &segCount,
+	MapSubsectorEx *&outSubs, size_t &subCount)
 {
 	short bbox[4];
 	TArray<MapSegEx> segs (Segs.Size());
@@ -403,7 +405,7 @@ void FNodeBuilder::GetNodes (MapNodeEx *&outNodes, int &nodeCount,
 	// not the minisegs.
 
 	nodeCount = Nodes.Size ();
-	outNodes = new MapNodeEx[nodeCount];
+	outNodes = new zdbsp_MapNodeEx[nodeCount];
 
 	subCount = Subsectors.Size ();
 	outSubs = new MapSubsectorEx[subCount];
@@ -423,7 +425,7 @@ void FNodeBuilder::GetNodes (MapNodeEx *&outNodes, int &nodeCount,
 #endif
 }
 
-int FNodeBuilder::RemoveMinisegs (MapNodeEx *nodes,
+int FNodeBuilder::RemoveMinisegs (zdbsp_MapNodeEx *nodes,
 	TArray<MapSegEx> &segs, MapSubsectorEx *subs, int node, short bbox[4])
 {
 	if (node & NFX_SUBSECTOR)
@@ -437,7 +439,7 @@ int FNodeBuilder::RemoveMinisegs (MapNodeEx *nodes,
 	else
 	{
 		const node_t *orgnode = &Nodes[node];
-		MapNodeEx *newnode = &nodes[node];
+		zdbsp_MapNodeEx *newnode = &nodes[node];
 
 		int child0 = RemoveMinisegs (nodes, segs, subs, orgnode->intchildren[0], newnode->bbox[0]);
 		int child1 = RemoveMinisegs (nodes, segs, subs, orgnode->intchildren[1], newnode->bbox[1]);
@@ -549,7 +551,7 @@ void FNodeBuilder::AddSegToShortBBox (short bbox[4], const FPrivSeg *seg)
 	if (v2y > bbox[BOXTOP])		bbox[BOXTOP] = v2y;
 }
 
-void FNodeBuilder::DumpNodes(MapNodeEx *outNodes, int nodeCount)
+void FNodeBuilder::DumpNodes(zdbsp_MapNodeEx *outNodes, int nodeCount)
 {
 	for (unsigned int i = 0; i < Nodes.Size(); ++i)
 	{

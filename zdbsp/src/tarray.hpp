@@ -119,6 +119,7 @@ public:
 	{
 		return Array[index];
 	}
+
 	// Returns the value of an element
 	TT operator() (unsigned int index) const
 	{
@@ -327,7 +328,7 @@ public:
 	{
 		for (unsigned int i = 0; i < TArray<T,TT>::Size(); ++i)
 		{
-			if ((*this)[i] != NULL) 
+			if ((*this)[i] != NULL)
 				delete (*this)[i];
 		}
 	}

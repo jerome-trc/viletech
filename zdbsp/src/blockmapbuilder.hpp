@@ -1,12 +1,13 @@
+#pragma once
+
 #include "doomdata.hpp"
-#include "workdata.hpp"
 #include "tarray.hpp"
 
 class FBlockmapBuilder
 {
 public:
 	FBlockmapBuilder (FLevel &level);
-	WORD *GetBlockmap (int &size);
+	WORD *GetBlockmap (size_t &size);
 
 private:
 	FLevel &Level;

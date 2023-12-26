@@ -88,6 +88,7 @@ class FNodeBuilder
 		bool planefront;
 		FPrivSeg *hashnext;
 	};
+
 	struct FPrivVert : FSimpleVert
 	{
 		DWORD segs;		// segs that use this vertex as v1
@@ -100,15 +101,18 @@ class FNodeBuilder
 			return x == other.x && y == other.y;
 		}
 	};
+
 	struct FSimpleLine
 	{
 		fixed_t x, y, dx, dy;
 	};
+
 	union USegPtr
 	{
 		DWORD SegNum;
 		FPrivSeg *SegPtr;
 	};
+
 	struct FSplitSharer
 	{
 		double Distance;
@@ -149,7 +153,6 @@ class FNodeBuilder
 
 	friend class FVertexMap;
 
-
 public:
 	struct FPolyStart
 	{
@@ -157,19 +160,22 @@ public:
 		fixed_t x, y;
 	};
 
+	int max_segs = 64, split_cost = 8, aa_pref = 16;
+
 	FNodeBuilder (FLevel &level,
 		TArray<FPolyStart> &polyspots, TArray<FPolyStart> &anchors,
 		const char *name, bool makeGLnodes);
+
 	~FNodeBuilder ();
 
-	void GetVertices (WideVertex *&verts, int &count);
-	void GetNodes (MapNodeEx *&nodes, int &nodeCount,
-		MapSegEx *&segs, int &segCount,
-		MapSubsectorEx *&ssecs, int &subCount);
+	void GetVertices (WideVertex *&verts, size_t &count);
+	void GetNodes (zdbsp_MapNodeEx *&nodes, size_t &nodeCount,
+		MapSegEx *&segs, size_t &segCount,
+		MapSubsectorEx *&ssecs, size_t &subCount);
 
-	void GetGLNodes (MapNodeEx *&nodes, int &nodeCount,
-		MapSegGLEx *&segs, int &segCount,
-		MapSubsectorEx *&ssecs, int &subCount);
+	void GetGLNodes (zdbsp_MapNodeEx *&nodes, size_t &nodeCount,
+		MapSegGLEx *&segs, size_t &segCount,
+		MapSubsectorEx *&ssecs, size_t &subCount);
 
 	//  < 0 : in front of line
 	// == 0 : on line
@@ -241,7 +247,7 @@ private:
 	DWORD AddMiniseg (int v1, int v2, DWORD partner, DWORD seg1, DWORD splitseg);
 	void SetNodeFromSeg (node_t &node, const FPrivSeg *pseg) const;
 
-	int RemoveMinisegs (MapNodeEx *nodes, TArray<MapSegEx> &segs, MapSubsectorEx *subs, int node, short bbox[4]);
+	int RemoveMinisegs (zdbsp_MapNodeEx *nodes, TArray<MapSegEx> &segs, MapSubsectorEx *subs, int node, short bbox[4]);
 	int StripMinisegs (TArray<MapSegEx> &segs, int subsector, short bbox[4]);
 	void AddSegToShortBBox (short bbox[4], const FPrivSeg *seg);
 	int CloseSubsector (TArray<MapSegGLEx> &segs, int subsector);
@@ -254,7 +260,7 @@ private:
 	double InterceptVector (const node_t &splitter, const FPrivSeg &seg);
 
 	void PrintSet (int l, DWORD set);
-	void DumpNodes(MapNodeEx *outNodes, int nodeCount);
+	void DumpNodes(zdbsp_MapNodeEx *outNodes, int nodeCount);
 };
 
 // Points within this distance of a line will be considered on the line.
@@ -293,27 +299,5 @@ inline int FNodeBuilder::PointOnSide (int x, int y, int x1, int y1, int dx, int 
 
 inline int FNodeBuilder::ClassifyLine (node_t &node, const FPrivVert *v1, const FPrivVert *v2, int sidev[2])
 {
-#ifdef DISABLE_SSE
 	return ClassifyLine2 (node, v1, v2, sidev);
-#else
-#if defined(__SSE2__) || defined(_M_X64)
-	// If compiling with SSE2 support everywhere, just use the SSE2 version.
-	return ClassifyLineSSE2 (node, v1, v2, sidev);
-#elif defined(_MSC_VER) && _MSC_VER < 1300
-	// VC 6 does not support SSE optimizations.
-	return ClassifyLine2 (node, v1, v2, sidev);
-#else
-	// Select the routine based on our flag.
-#ifdef BACKPATCH
-	return ClassifyLineBackpatch (node, v1, v2, sidev);
-#else
-	if (SSELevel == 2)
-		return ClassifyLineSSE2 (node, v1, v2, sidev);
-	else if (SSELevel == 1)
-		return ClassifyLineSSE1 (node, v1, v2, sidev);
-	else
-		return ClassifyLine2 (node, v1, v2, sidev);
-#endif
-#endif
-#endif
 }

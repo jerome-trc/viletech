@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <exception>
 #include <stdexcept>
+#include <math.h>
 
 #ifdef _MSC_VER
 typedef unsigned __int32 uint32_t;
@@ -16,38 +17,13 @@ typedef __int32 int32_t;
 #include <stdint.h>
 #endif
 
-#define ZDBSP_VERSION	"1.19"
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
 
-enum EBlockmapMode
-{
-	EBM_Rebuild,
-	EBM_Create0
-};
-
-enum ERejectMode
-{
-	ERM_DontTouch,
-	ERM_CreateZeroes,
-	ERM_Create0,
-	ERM_Rebuild
-};
-
-extern const char		*Map;
-extern const char		*InName;
-extern const char		*OutName;
-extern bool				 BuildNodes, BuildGLNodes, ConformNodes, GLOnly, WriteComments;
-extern bool				 NoPrune;
-extern EBlockmapMode	 BlockmapMode;
-extern ERejectMode		 RejectMode;
-extern int				 MaxSegs;
-extern int				 SplitCost;
-extern int				 AAPreference;
-extern bool				 CheckPolyobjs;
-extern bool				 ShowMap;
-extern bool				 CompressNodes, CompressGLNodes, ForceCompression, V5GLNodes;
-extern bool				 HaveSSE1, HaveSSE2;
-extern int				 SSELevel;
-
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
 
 #define FIXED_MAX		INT_MAX
 #define FIXED_MIN		INT_MIN
@@ -65,7 +41,13 @@ typedef uint32_t DWORD;
 #endif
 typedef uint32_t angle_t;
 
-angle_t PointToAngle (fixed_t x, fixed_t y);
+[[nodiscard]] inline angle_t PointToAngle(fixed_t x, fixed_t y) {
+	double ang = atan2(double(y), double(x));
+	const double rad2bam = double(1 << 30) / M_PI;
+	double dbam = ang * rad2bam;
+	// Convert to signed first since negative double to unsigned is undefined.
+	return angle_t(int(dbam)) << 1;
+}
 
 static const WORD NO_MAP_INDEX = 0xffff;
 static const DWORD NO_INDEX = 0xffffffff;
@@ -73,8 +55,6 @@ static const angle_t ANGLE_MAX = 0xffffffff;
 static const DWORD DWORD_MAX = 0xffffffff;
 static const angle_t ANGLE_180 = (1u<<31);
 static const angle_t ANGLE_EPSILON = 5000;
-
-void Warn (const char *format, ...);
 
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
 
