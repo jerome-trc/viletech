@@ -1,0 +1,18 @@
+[package]
+name = "zdbsp"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "Rust wrapper around forked ZDBSP"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/zdbsp"
+keywords = ["doom", "gamedev"]
+publish = false
+repository.workspace = true
+
+[build-dependencies]
+cxx-build.workspace = true
+
+[dependencies]
+cxx.workspace = true

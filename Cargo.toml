@@ -1,20 +1,8 @@
 [workspace]
-members = [
-	"cli",
-	"client",
-	"doomfront",
-	"engine",
-	"lith",
-	"mus2midi",
-	"server",
-	"subterra",
-	"utils",
-	"vfs",
-	"vilify",
-	"wadload",
-]
-default-members = ["engine", "client"]
-resolver = "2" # Needed for WGPU and Bevy.
+members = ["zdbsp"]
+default-members = ["zdbsp"]
+# Resolver version 2 is needed for WGPU and Bevy.
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
@@ -53,6 +41,7 @@ cranelift-jit = "0.102.1"
 cranelift-module = "0.102.1"
 cranelift-interpreter = "0.102.1"
 crossbeam = "0.8.2"
+cxx = "1.0.111"
 dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
 earcutr = "0.4.3"
 # Must be compatible with `bevy_egui`.
@@ -118,3 +107,5 @@ winit = "0.28.1"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 # Developer only
 criterion = "0.5.1"
+# Build-only
+cxx-build = "1.0.111"
