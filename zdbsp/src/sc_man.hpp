@@ -3,40 +3,54 @@
 
 #pragma once
 
-void SC_Open(const char* name);
-void SC_OpenFile(const char* name);
-void SC_OpenMem(const char* name, char* buffer, int size);
-void SC_OpenLumpNum(int lump, const char* name);
-void SC_Close();
-void SC_SetCMode(bool cmode);
-void SC_SetEscape(bool esc);
-void SC_SavePos();
-void SC_RestorePos();
-bool SC_GetString();
-void SC_MustGetString();
-void SC_MustGetStringName(const char* name);
-bool SC_CheckString(const char* name);
-bool SC_GetNumber();
-void SC_MustGetNumber();
-bool SC_CheckNumber();
-bool SC_CheckFloat();
-bool SC_GetFloat();
-void SC_MustGetFloat();
-void SC_UnGet();
-bool SC_Compare(const char* text);
-int SC_MatchString(const char** strings);
-int SC_MustMatchString(const char** strings);
-void SC_ScriptError(const char* message, ...);
-void SC_SaveScriptState();
-void SC_RestoreScriptState();
+#include <cstddef>
 
-extern char* sc_String;
-extern int sc_StringLen;
-extern int sc_Number;
-extern double sc_Float;
-extern int sc_Line;
-extern bool sc_End;
-extern bool sc_Crossed;
-extern bool sc_FileScripts;
-extern bool sc_StringQuoted;
-extern char* sc_ScriptsDir;
+struct Scanner final {
+	static constexpr size_t MAX_STRING_SIZE = 40960;
+
+	char* string = NULL;
+	int string_len = 0;
+	int number = 0;
+	double flnum = 0.0;
+	int line = 0;
+	bool end = false;
+	bool crossed = false;
+	bool file_scripts = false;
+	bool string_quoted = false;
+	char* scripts_dir = NULL;
+
+	char* script_buf = NULL;
+	char* script_ptr = NULL;
+	char* script_end_ptr = NULL;
+	char string_buf[MAX_STRING_SIZE];
+	bool script_open = false;
+	int script_size = 0;
+	bool already_got = false;
+	char* saved_script_ptr = NULL;
+	int saved_script_line = 0;
+	bool c_mode = false;
+
+	void open(const char* name);
+	void open_mem(const char* name, char* buffer, int size);
+	void close();
+	void set_c_mode(bool cmode);
+	void save_pos();
+	void restore_pos();
+	bool get_string();
+	void must_get_string();
+	void must_get_string_name(const char* name);
+	bool check_string(const char* name);
+	bool get_number();
+	void must_get_number();
+	bool check_number();
+	bool check_float();
+	bool get_float();
+	void must_get_float();
+	void unget();
+	bool compare(const char* text);
+	int match_string(const char** strings);
+	int must_match_string(const char** strings);
+	void script_err(const char* message, ...);
+	void prepare_script();
+	void check_open();
+};

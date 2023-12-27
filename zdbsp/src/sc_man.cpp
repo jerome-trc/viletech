@@ -28,6 +28,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <stdio.h>
 #include <stdarg.h>
 #include <limits.h>
+
 #include "sc_man.hpp"
 
 #ifdef _MSC_VER
@@ -39,182 +40,155 @@ static constexpr char ASCII_QUOTE = 34;
 static constexpr char C_COMMENT = '*';
 static constexpr char CPP_COMMENT = '/';
 
-static constexpr size_t MAX_STRING_SIZE = 40960;
-
-static void SC_PrepareScript();
-static void CheckOpen();
-
-char* sc_String;
-int sc_StringLen;
-int sc_Number;
-double sc_Float;
-int sc_Line;
-bool sc_End;
-bool sc_Crossed;
-bool sc_StringQuoted;
-bool sc_FileScripts = false;
-
-// PRIVATE DATA DEFINITIONS ------------------------------------------------
-
-static char* ScriptBuffer;
-static char* ScriptPtr;
-static char* ScriptEndPtr;
-static char StringBuffer[MAX_STRING_SIZE];
-static bool ScriptOpen = false;
-static int ScriptSize;
-static bool AlreadyGot = false;
-static char* SavedScriptPtr;
-static int SavedScriptLine;
-static bool CMode;
-
-void SC_OpenMem([[maybe_unused]] const char* name, char* buffer, int len) {
-	SC_Close();
-	ScriptSize = len;
-	ScriptBuffer = buffer;
-	SC_PrepareScript();
+void Scanner::open_mem([[maybe_unused]] const char* name, char* buffer, int len) {
+	this->close();
+	this->script_size = len;
+	this->script_buf = buffer;
+	this->prepare_script();
 }
 
-static void SC_PrepareScript(void) {
-	ScriptPtr = ScriptBuffer;
-	ScriptEndPtr = ScriptPtr + ScriptSize;
-	sc_Line = 1;
-	sc_End = false;
-	ScriptOpen = true;
-	sc_String = StringBuffer;
-	AlreadyGot = false;
-	SavedScriptPtr = NULL;
-	CMode = false;
+void Scanner::prepare_script() {
+	this->script_ptr = this->script_buf;
+	this->script_end_ptr = this->script_ptr + this->script_size;
+	this->line = 1;
+	this->end = false;
+	this->script_open = true;
+	this->string = this->string_buf;
+	this->already_got = false;
+	this->saved_script_ptr = NULL;
+	this->c_mode = false;
 }
 
-void SC_Close(void) {
-	if (ScriptOpen) {
-		ScriptBuffer = NULL;
-		ScriptOpen = false;
+void Scanner::close() {
+	if (this->script_open) {
+		this->script_buf = NULL;
+		this->script_open = false;
 	}
 }
 
-void SC_SavePos(void) {
-	CheckOpen();
-	if (sc_End) {
-		SavedScriptPtr = NULL;
+void Scanner::save_pos() {
+this->check_open();
+
+	if (this->end) {
+		this->saved_script_ptr = NULL;
 	} else {
-		SavedScriptPtr = ScriptPtr;
-		SavedScriptLine = sc_Line;
+		this->saved_script_ptr = this->script_ptr;
+		this->saved_script_line = this->line;
 	}
 }
 
-void SC_RestorePos(void) {
-	if (SavedScriptPtr) {
-		ScriptPtr = SavedScriptPtr;
-		sc_Line = SavedScriptLine;
-		sc_End = false;
-		AlreadyGot = false;
+void Scanner::restore_pos() {
+	if (this->saved_script_ptr) {
+		this->script_ptr = this->saved_script_ptr;
+		this->line = this->saved_script_line;
+		this->end = false;
+		this->already_got = false;
 	}
 }
 
 /// Enables/disables C mode. In C mode, more characters are considered to
 /// be whole words than in non-C mode.
-void SC_SetCMode(bool cmode) {
-	CMode = cmode;
+void Scanner::set_c_mode(bool cmode) {
+	this->c_mode = cmode;
 }
 
-bool SC_GetString() {
+bool Scanner::get_string() {
 	char* text;
 	bool foundToken;
 
-	CheckOpen();
-	if (AlreadyGot) {
-		AlreadyGot = false;
+this->check_open();
+	if (this->already_got) {
+		this->already_got = false;
 		return true;
 	}
 	foundToken = false;
-	sc_Crossed = false;
-	sc_StringQuoted = false;
-	if (ScriptPtr >= ScriptEndPtr) {
-		sc_End = true;
+	this->crossed = false;
+	this->string_quoted = false;
+	if (this->script_ptr >= this->script_end_ptr) {
+		this->end = true;
 		return false;
 	}
 	while (foundToken == false) {
-		while (ScriptPtr < ScriptEndPtr && *ScriptPtr <= ' ') {
-			if (*ScriptPtr++ == '\n') {
-				sc_Line++;
-				sc_Crossed = true;
+		while (this->script_ptr < this->script_end_ptr && *this->script_ptr <= ' ') {
+			if (*this->script_ptr++ == '\n') {
+				this->line++;
+				this->crossed = true;
 			}
 		}
-		if (ScriptPtr >= ScriptEndPtr) {
-			sc_End = true;
+		if (this->script_ptr >= this->script_end_ptr) {
+			this->end = true;
 			return false;
 		}
-		if ((CMode || *ScriptPtr != ASCII_COMMENT) &&
-			!(ScriptPtr[0] == CPP_COMMENT && ScriptPtr < ScriptEndPtr - 1 &&
-			  (ScriptPtr[1] == CPP_COMMENT || ScriptPtr[1] == C_COMMENT))) { // Found a token
+		if ((this->c_mode || *this->script_ptr != ASCII_COMMENT) &&
+			!(this->script_ptr[0] == CPP_COMMENT && this->script_ptr < this->script_end_ptr - 1 &&
+			  (this->script_ptr[1] == CPP_COMMENT || this->script_ptr[1] == C_COMMENT))) { // Found a token
 			foundToken = true;
 		} else { // Skip comment
-			if (ScriptPtr[0] == CPP_COMMENT && ScriptPtr[1] == C_COMMENT) { // C comment
-				while (ScriptPtr[0] != C_COMMENT || ScriptPtr[1] != CPP_COMMENT) {
-					if (ScriptPtr[0] == '\n') {
-						sc_Line++;
-						sc_Crossed = true;
+			if (this->script_ptr[0] == CPP_COMMENT && this->script_ptr[1] == C_COMMENT) { // C comment
+				while (this->script_ptr[0] != C_COMMENT || this->script_ptr[1] != CPP_COMMENT) {
+					if (this->script_ptr[0] == '\n') {
+						this->line++;
+						this->crossed = true;
 					}
-					//					fputc(ScriptPtr[0], sc_Out);
-					ScriptPtr++;
-					if (ScriptPtr >= ScriptEndPtr - 1) {
-						sc_End = true;
+					//					fputc(ScriptPtr[0], this->sc_Out);
+					this->script_ptr++;
+					if (this->script_ptr >= this->script_end_ptr - 1) {
+						this->end = true;
 						return false;
 					}
-					//					fputs("*/", sc_Out);
+					//					fputs("*/", this->sc_Out);
 				}
-				ScriptPtr += 2;
+				this->script_ptr += 2;
 			} else { // C++ comment
-				while (*ScriptPtr++ != '\n') {
-					//					fputc(ScriptPtr[-1], sc_Out);
-					if (ScriptPtr >= ScriptEndPtr) {
-						sc_End = true;
+				while (*this->script_ptr++ != '\n') {
+					//					fputc(ScriptPtr[-1], this->sc_Out);
+					if (this->script_ptr >= this->script_end_ptr) {
+						this->end = true;
 						return false;
 					}
 				}
-				sc_Line++;
-				sc_Crossed = true;
-				//				fputc('\n', sc_Out);
+				this->line++;
+				this->crossed = true;
+				//				fputc('\n', this->sc_Out);
 			}
 		}
 	}
-	text = sc_String;
-	if (*ScriptPtr == ASCII_QUOTE) { // Quoted string - return string including the quotes
-		*text++ = *ScriptPtr++;
-		sc_StringQuoted = true;
-		while (*ScriptPtr != ASCII_QUOTE) {
-			if (*ScriptPtr >= 0 && *ScriptPtr < ' ') {
-				ScriptPtr++;
-			} else if (*ScriptPtr == '\\') {
+	text = this->string;
+	if (*this->script_ptr == ASCII_QUOTE) { // Quoted string - return string including the quotes
+		*text++ = *this->script_ptr++;
+		this->string_quoted = true;
+		while (*this->script_ptr != ASCII_QUOTE) {
+			if (*this->script_ptr >= 0 && *this->script_ptr < ' ') {
+				this->script_ptr++;
+			} else if (*this->script_ptr == '\\') {
 				// Add the backslash character and the following chararcter to the text.
 				// We do not translate the escape sequence in any way, since the only
 				// thing that will happen to this string is that it will be written back
 				// out to disk. Basically, we just need this special case here so that
 				// string reading won't terminate prematurely when a \" sequence is
 				// used to embed a quote mark in the string.
-				*text++ = *ScriptPtr++;
-				*text++ = *ScriptPtr++;
+				*text++ = *this->script_ptr++;
+				*text++ = *this->script_ptr++;
 			} else {
-				*text++ = *ScriptPtr++;
+				*text++ = *this->script_ptr++;
 			}
-			if (ScriptPtr == ScriptEndPtr || text == &sc_String[MAX_STRING_SIZE - 1]) {
+			if (this->script_ptr == this->script_end_ptr || text == &this->string[MAX_STRING_SIZE - 1]) {
 				break;
 			}
 		}
 		*text++ = '"';
-		ScriptPtr++;
+		this->script_ptr++;
 	} else { // Normal string
 		static const char* stopchars;
 
-		if (CMode) {
+		if (this->c_mode) {
 			stopchars = "`~!@#$%^&*(){}[]/=\?+|;:<>,";
 
 			// '-' can be its own token, or it can be part of a negative number
-			if (*ScriptPtr == '-') {
+			if (*this->script_ptr == '-') {
 				*text++ = '-';
-				ScriptPtr++;
-				if (ScriptPtr < ScriptEndPtr || (*ScriptPtr >= '0' && *ScriptPtr <= '9')) {
+				this->script_ptr++;
+				if (this->script_ptr < this->script_end_ptr || (*this->script_ptr >= '0' && *this->script_ptr <= '9')) {
 					goto grabtoken;
 				}
 				goto gottoken;
@@ -222,16 +196,16 @@ bool SC_GetString() {
 		} else {
 			stopchars = "{}|=";
 		}
-		if (strchr(stopchars, *ScriptPtr)) {
-			*text++ = *ScriptPtr++;
+		if (strchr(stopchars, *this->script_ptr)) {
+			*text++ = *this->script_ptr++;
 		} else {
 grabtoken:
-			while ((*ScriptPtr > ' ') && (strchr(stopchars, *ScriptPtr) == NULL) &&
-				   (CMode || *ScriptPtr != ASCII_COMMENT) &&
-				   !(ScriptPtr[0] == CPP_COMMENT && (ScriptPtr < ScriptEndPtr - 1) &&
-					 (ScriptPtr[1] == CPP_COMMENT || ScriptPtr[1] == C_COMMENT))) {
-				*text++ = *ScriptPtr++;
-				if (ScriptPtr == ScriptEndPtr || text == &sc_String[MAX_STRING_SIZE - 1]) {
+			while ((*this->script_ptr > ' ') && (strchr(stopchars, *this->script_ptr) == NULL) &&
+				   (this->c_mode || *this->script_ptr != ASCII_COMMENT) &&
+				   !(this->script_ptr[0] == CPP_COMMENT && (this->script_ptr < this->script_end_ptr - 1) &&
+					 (this->script_ptr[1] == CPP_COMMENT || this->script_ptr[1] == C_COMMENT))) {
+				*text++ = *this->script_ptr++;
+				if (this->script_ptr == this->script_end_ptr || text == &this->string[MAX_STRING_SIZE - 1]) {
 					break;
 				}
 			}
@@ -239,78 +213,80 @@ grabtoken:
 	}
 gottoken:
 	*text = 0;
-	sc_StringLen = int(text - sc_String);
+	this->string_len = int(text - this->string);
 	return true;
 }
 
-void SC_MustGetString(void) {
-	if (SC_GetString() == false) {
-		SC_ScriptError("Missing string (unexpected end of file).");
+void Scanner::must_get_string() {
+	if (this->get_string() == false) {
+		this->script_err("Missing string (unexpected end of file).");
 	}
 }
 
-void SC_MustGetStringName(const char* name) {
-	SC_MustGetString();
-	if (SC_Compare(name) == false) {
-		SC_ScriptError("Expected '%s', got '%s'.", name, sc_String);
+void Scanner::must_get_string_name(const char* name) {
+	this->must_get_string();
+	if (this->compare(name) == false) {
+		this->script_err("Expected '%s', got '%s'.", name, this->string);
 	}
 }
 
 /// Checks if the next token matches the specified string. Returns true if
 /// it does. If it doesn't, it ungets it and returns false.
-bool SC_CheckString(const char* name) {
-	if (SC_GetString()) {
-		if (SC_Compare(name)) {
+bool Scanner::check_string(const char* name) {
+	if (this->get_string()) {
+		if (this->compare(name)) {
 			return true;
 		}
-		SC_UnGet();
+		this->unget();
 	}
 	return false;
 }
 
-bool SC_GetNumber(void) {
+bool Scanner::get_number() {
 	char* stopper;
 
-	CheckOpen();
-	if (SC_GetString()) {
-		if (strcmp(sc_String, "MAXINT") == 0) {
-			sc_Number = INT_MAX;
+	this->check_open();
+	if (this->get_string()) {
+		if (strcmp(this->string, "MAXINT") == 0) {
+			this->number = INT_MAX;
 		} else {
-			sc_Number = strtol(sc_String, &stopper, 0);
+			this->number = strtol(this->string, &stopper, 0);
+
 			if (*stopper != 0) {
-				SC_ScriptError("SC_GetNumber: Bad numeric constant \"%s\".", sc_String);
+				this->script_err("SC_GetNumber: Bad numeric constant \"%s\".", this->string);
 			}
 		}
-		sc_Float = sc_Number;
+		this->flnum = this->number;
 		return true;
 	} else {
 		return false;
 	}
 }
 
-void SC_MustGetNumber(void) {
-	if (SC_GetNumber() == false) {
-		SC_ScriptError("Missing integer (unexpected end of file).");
+void Scanner::must_get_number() {
+	if (this->get_number() == false) {
+		this->script_err("Missing integer (unexpected end of file).");
 	}
 }
 
 /// Similar to SC_GetNumber but ungets the token if it isn't a number
 /// and does not print an error.
-bool SC_CheckNumber(void) {
+bool Scanner::check_number() {
 	char* stopper;
 
 	// CheckOpen ();
-	if (SC_GetString()) {
-		if (strcmp(sc_String, "MAXINT") == 0) {
-			sc_Number = INT_MAX;
+	if (this->get_string()) {
+		if (strcmp(this->string, "MAXINT") == 0) {
+			this->number = INT_MAX;
 		} else {
-			sc_Number = strtol(sc_String, &stopper, 0);
+			this->number = strtol(this->string, &stopper, 0);
+
 			if (*stopper != 0) {
-				SC_UnGet();
+				this->unget();
 				return false;
 			}
 		}
-		sc_Float = sc_Number;
+		this->flnum = this->number;
 		return true;
 	} else {
 		return false;
@@ -318,15 +294,15 @@ bool SC_CheckNumber(void) {
 }
 
 /// [GRB] Same as SC_CheckNumber, only for floats.
-bool SC_CheckFloat(void) {
+bool Scanner::check_float() {
 	char* stopper;
 
 	// CheckOpen ();
-	if (SC_GetString()) {
-		sc_Float = strtod(sc_String, &stopper);
-		sc_Number = (int)sc_Float;
+	if (this->get_string()) {
+		this->flnum = strtod(this->string, &stopper);
+		this->number = (int)this->flnum;
 		if (*stopper != 0) {
-			SC_UnGet();
+			this->unget();
 			return false;
 		}
 		return true;
@@ -335,65 +311,65 @@ bool SC_CheckFloat(void) {
 	}
 }
 
-bool SC_GetFloat(void) {
+bool Scanner::get_float() {
 	char* stopper;
 
-	CheckOpen();
-	if (SC_GetString()) {
-		sc_Float = strtod(sc_String, &stopper);
+	this->check_open();
+	if (this->get_string()) {
+		this->flnum = strtod(this->string, &stopper);
 		if (*stopper != 0) {
-			SC_ScriptError("SC_GetFloat: Bad numeric constant \"%s\".\n", sc_String);
+			this->script_err("SC_GetFloat: Bad numeric constant \"%s\".\n", this->string);
 		}
-		sc_Number = (int)sc_Float;
+		this->number = (int)this->flnum;
 		return true;
 	} else {
 		return false;
 	}
 }
 
-void SC_MustGetFloat(void) {
-	if (SC_GetFloat() == false) {
-		SC_ScriptError("Missing floating-point number (unexpected end of file).");
+void Scanner::must_get_float() {
+	if (this->get_float() == false) {
+		this->script_err("Missing floating-point number (unexpected end of file).");
 	}
 }
 
-/// Assumes there is a valid string in `sc_String`.
-void SC_UnGet(void) {
-	AlreadyGot = true;
+/// Assumes there is a valid string in `this->sc_String`.
+void Scanner::unget() {
+	this->already_got = true;
 }
 
-/// Returns the index of the first match to sc_String from the passed
+/// Returns the index of the first match to this->sc_String from the passed
 /// array of strings, or -1 if not found.
-int SC_MatchString(const char** strings) {
+int Scanner::match_string(const char** strings) {
 	int i;
 
 	for (i = 0; *strings != NULL; i++) {
-		if (SC_Compare(*strings++)) {
+		if (this->compare(*strings++)) {
 			return i;
 		}
 	}
 	return -1;
 }
 
-int SC_MustMatchString(const char** strings) {
+int Scanner::must_match_string(const char** strings) {
 	int i;
 
-	i = SC_MatchString(strings);
+	i = Scanner::match_string(strings);
 	if (i == -1) {
-		SC_ScriptError(NULL);
+		this->script_err(NULL);
 	}
 	return i;
 }
 
-bool SC_Compare(const char* text) {
+bool Scanner::compare(const char* text) {
 #ifdef _MSC_VER
-	return (_stricmp(text, sc_String) == 0);
+	return (_stricmp(text, this->sc_String) == 0);
 #else
-	return (strcasecmp(text, sc_String) == 0);
+	return (strcasecmp(text, this->string) == 0);
 #endif
 }
 
-void SC_ScriptError(const char* message, ...) {
+void Scanner::script_err(const char* message, ...) {
 	char composed[2048];
 	if (message == NULL) {
 		message = "Bad syntax.";
@@ -404,10 +380,10 @@ void SC_ScriptError(const char* message, ...) {
 	vsprintf(composed, message, arglist);
 	va_end(arglist);
 
-	printf("Script error, line %d:\n%s\n", sc_Line, composed);
+	printf("Script error, line %d:\n%s\n", this->line, composed);
 	exit(1);
 }
 
-static void CheckOpen(void) {
-	assert(ScriptOpen && "SC_ call before SC_Open().\n");
+void Scanner::check_open() {
+	assert(this->script_open && "SC_ call before SC_Open().\n");
 }

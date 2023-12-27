@@ -1,6 +1,7 @@
 #ifndef __PROCESSOR_H__
 #define __PROCESSOR_H__
 
+#include "sc_man.hpp"
 #ifdef _MSC_VER
 #pragma once
 #endif
@@ -35,6 +36,41 @@ private:
 	FWadWriter &Out;
 };
 
+class StringBuffer
+{
+	const static size_t BLOCK_SIZE = 100000;
+	const static size_t BLOCK_ALIGN = sizeof(size_t);
+
+	TDeletingArray<char *> blocks;
+	size_t currentindex;
+
+	char *Alloc(size_t size)
+	{
+		if (currentindex + size >= BLOCK_SIZE)
+		{
+			// Block is full - get a new one!
+			char *newblock = new char[BLOCK_SIZE];
+			blocks.Push(newblock);
+			currentindex = 0;
+		}
+		size = (size + BLOCK_ALIGN-1) &~ (BLOCK_ALIGN-1);
+		char *p = blocks[blocks.Size()-1] + currentindex;
+		currentindex += size;
+		return p;
+	}
+public:
+
+	StringBuffer()
+	{
+		currentindex = BLOCK_SIZE;
+	}
+
+	char * Copy(const char * p)
+	{
+		return p != NULL? strcpy(Alloc(strlen(p)+1) , p) : NULL;
+	}
+};
+
 class FProcessor
 {
 public:
@@ -51,7 +87,7 @@ public:
 	zdbsp_RejectMode reject_mode = ZDBSP_ERM_DONTTOUCH;
 	zdbsp_BlockmapMode blockmap_mode = ZDBSP_EBM_REBUILD;
 
-	[[nodiscard]] const FLevel& get_level() const {
+	const FLevel& get_level() const {
 		return this->Level;
 	}
 
@@ -120,6 +156,10 @@ private:
 	void ParseMapProperties();
 	void ParseTextMap(int lump);
 
+	int CheckInt(const char *key);
+	double CheckFloat(const char *key);
+	fixed_t CheckFixed(const char *key);
+
 	void WriteProps(FWadWriter &out, TArray<UDMFKey> &props);
 	void WriteIntProp(FWadWriter &out, const char *key, int value);
 	void WriteThingUDMF(FWadWriter &out, IntThing *th, int num);
@@ -139,6 +179,8 @@ private:
 	bool isUDMF;
 
 	FWadReader &Wad;
+	Scanner scanner;
+	StringBuffer stbuf;
 	int Lump;
 };
 

@@ -1,147 +1,105 @@
+/// @file
+/// @brief UDMF map reading and writing.
+
 /*
-    Reads and writes UDMF maps
-    Copyright (C) 2009 Christoph Oelckers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+Copyright (C) 2009 Christoph Oelckers
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
-
 #include <float.h>
+
 #include "processor.hpp"
 #include "sc_man.hpp"
 
 typedef double real64;
 typedef unsigned int uint32;
 typedef signed int int32;
+
 #include "xs_Float.hpp"
 
-
-class StringBuffer
-{
-	const static size_t BLOCK_SIZE = 100000;
-	const static size_t BLOCK_ALIGN = sizeof(size_t);
-
-	TDeletingArray<char *> blocks;
-	size_t currentindex;
-
-	char *Alloc(size_t size)
-	{
-		if (currentindex + size >= BLOCK_SIZE)
-		{
-			// Block is full - get a new one!
-			char *newblock = new char[BLOCK_SIZE];
-			blocks.Push(newblock);
-			currentindex = 0;
-		}
-		size = (size + BLOCK_ALIGN-1) &~ (BLOCK_ALIGN-1);
-		char *p = blocks[blocks.Size()-1] + currentindex;
-		currentindex += size;
-		return p;
-	}
-public:
-
-	StringBuffer()
-	{
-		currentindex = BLOCK_SIZE;
-	}
-
-	char * Copy(const char * p)
-	{
-		return p != NULL? strcpy(Alloc(strlen(p)+1) , p) : NULL;
-	}
-};
-
-StringBuffer stbuf;
-
-
-//===========================================================================
-//
-// Parses a 'key = value;' line of the map
-//
-//===========================================================================
-
+/// Parses a 'key = value;' line of the TEXTMAP lump.
 const char *FProcessor::ParseKey(const char *&value)
 {
-	SC_MustGetString();
-	const char *key = stbuf.Copy(sc_String);
-	SC_MustGetStringName("=");
+	this->scanner.must_get_string();
+	const char *key = stbuf.Copy(this->scanner.string);
+	this->scanner.must_get_string_name("=");
 
-	sc_Number = INT_MIN;
-	sc_Float = DBL_MIN;
-	if (!SC_CheckFloat())
+	this->scanner.number = INT_MIN;
+	this->scanner.flnum = DBL_MIN;
+
+	if (!this->scanner.check_float())
 	{
-		SC_MustGetString();
+		this->scanner.must_get_string();
 	}
-	value = stbuf.Copy(sc_String);
-	SC_MustGetStringName(";");
+
+	value = stbuf.Copy(this->scanner.string);
+	this->scanner.must_get_string_name(";");
 	return key;
 }
 
 bool FProcessor::CheckKey(const char *&key, const char *&value)
 {
-	SC_SavePos();
-	SC_MustGetString();
-	if (SC_CheckString("="))
+	this->scanner.save_pos();
+	this->scanner.must_get_string();
+	if (this->scanner.check_string("="))
 	{
-		SC_RestorePos();
+		this->scanner.restore_pos();
 		key = ParseKey(value);
 		return true;
 	}
-	SC_RestorePos();
+	this->scanner.restore_pos();
 	return false;
 }
 
-int CheckInt(const char *key)
+int FProcessor::CheckInt(const char *key)
 {
-	if (sc_Number == INT_MIN)
+	if (this->scanner.number == INT_MIN)
 	{
-		SC_ScriptError("Integer value expected for key '%s'", key);
+		this->scanner.script_err("Integer value expected for key '%s'", key);
 	}
-	return sc_Number;
+
+	return this->scanner.number;
 }
 
-double CheckFloat(const char *key)
+double FProcessor::CheckFloat(const char *key)
 {
-	if (sc_Float == DBL_MIN)
+	if (this->scanner.flnum == DBL_MIN)
 	{
-		SC_ScriptError("Floating point value expected for key '%s'", key);
+		this->scanner.script_err("Floating point value expected for key '%s'", key);
 	}
-	return sc_Float;
+
+	return this->scanner.flnum;
 }
 
-fixed_t CheckFixed(const char *key)
+fixed_t FProcessor::CheckFixed(const char *key)
 {
 	double val = CheckFloat(key);
 	if (val < -32768 || val > 32767)
 	{
-		SC_ScriptError("Fixed point value is out of range for key '%s'\n\t%.2f should be within [-32768,32767]", key, val / 65536);
+		this->scanner.script_err("Fixed point value is out of range for key '%s'\n\t%.2f should be within [-32768,32767]", key, val / 65536);
 	}
 	return xs_Fix<16>::ToFix(val);
 }
 
-//===========================================================================
-//
-// Parse a thing block
-//
-//===========================================================================
-
 void FProcessor::ParseThing(IntThing *th)
 {
-	SC_MustGetStringName("{");
-	while (!SC_CheckString("}"))
+	this->scanner.must_get_string_name("{");
+	while (!this->scanner.check_string("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
@@ -172,18 +130,12 @@ void FProcessor::ParseThing(IntThing *th)
 	}
 }
 
-//===========================================================================
-//
-// Parse a linedef block
-//
-//===========================================================================
-
 void FProcessor::ParseLinedef(IntLineDef *ld)
 {
-	SC_MustGetStringName("{");
+	this->scanner.must_get_string_name("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
 	ld->special = 0;
-	while (!SC_CheckString("}"))
+	while (!this->scanner.check_string("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
@@ -223,17 +175,11 @@ void FProcessor::ParseLinedef(IntLineDef *ld)
 	}
 }
 
-//===========================================================================
-//
-// Parse a sidedef block
-//
-//===========================================================================
-
 void FProcessor::ParseSidedef(IntSideDef *sd)
 {
-	SC_MustGetStringName("{");
+	this->scanner.must_get_string_name("{");
 	sd->sector = NO_INDEX;
-	while (!SC_CheckString("}"))
+	while (!this->scanner.check_string("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
@@ -250,16 +196,10 @@ void FProcessor::ParseSidedef(IntSideDef *sd)
 	}
 }
 
-//===========================================================================
-//
-// Parse a sidedef block
-//
-//===========================================================================
-
 void FProcessor::ParseSector(IntSector *sec)
 {
-	SC_MustGetStringName("{");
-	while (!SC_CheckString("}"))
+	this->scanner.must_get_string_name("{");
+	while (!this->scanner.check_string("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
@@ -273,17 +213,11 @@ void FProcessor::ParseSector(IntSector *sec)
 	}
 }
 
-//===========================================================================
-//
-// parse a vertex block
-//
-//===========================================================================
-
 void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
 {
 	vt->x = vt->y = 0;
-	SC_MustGetStringName("{");
-	while (!SC_CheckString("}"))
+	this->scanner.must_get_string_name("{");
+	while (!this->scanner.check_string("}"))
 	{
 		const char *value;
 		const char *key = ParseKey(value);
@@ -303,13 +237,7 @@ void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
 	}
 }
 
-
-//===========================================================================
-//
-// parses global map properties
-//
-//===========================================================================
-
+/// Parses global map properties.
 void FProcessor::ParseMapProperties()
 {
 	const char *key, *value;
@@ -330,13 +258,6 @@ void FProcessor::ParseMapProperties()
 	}
 }
 
-
-//===========================================================================
-//
-// Main parsing function
-//
-//===========================================================================
-
 void FProcessor::ParseTextMap(int lump)
 {
 	char *buffer;
@@ -344,34 +265,34 @@ void FProcessor::ParseTextMap(int lump)
 	TArray<WideVertex> Vertices;
 
 	ReadLump<char> (Wad, lump, buffer, buffersize);
-	SC_OpenMem("TEXTMAP", buffer, buffersize);
+	this->scanner.open_mem("TEXTMAP", buffer, buffersize);
 
-	SC_SetCMode(true);
+	this->scanner.set_c_mode(true);
 	ParseMapProperties();
 
-	while (SC_GetString())
+	while (this->scanner.get_string())
 	{
-		if (SC_Compare("thing"))
+		if (this->scanner.compare("thing"))
 		{
 			IntThing *th = &Level.Things[Level.Things.Reserve(1)];
 			ParseThing(th);
 		}
-		else if (SC_Compare("linedef"))
+		else if (this->scanner.compare("linedef"))
 		{
 			IntLineDef *ld = &Level.Lines[Level.Lines.Reserve(1)];
 			ParseLinedef(ld);
 		}
-		else if (SC_Compare("sidedef"))
+		else if (this->scanner.compare("sidedef"))
 		{
 			IntSideDef *sd = &Level.Sides[Level.Sides.Reserve(1)];
 			ParseSidedef(sd);
 		}
-		else if (SC_Compare("sector"))
+		else if (this->scanner.compare("sector"))
 		{
 			IntSector *sec = &Level.Sectors[Level.Sectors.Reserve(1)];
 			ParseSector(sec);
 		}
-		else if (SC_Compare("vertex"))
+		else if (this->scanner.compare("vertex"))
 		{
 			WideVertex *vt = &Vertices[Vertices.Reserve(1)];
 			IntVertex *vtp = &Level.VertexProps[Level.VertexProps.Reserve(1)];
@@ -382,28 +303,17 @@ void FProcessor::ParseTextMap(int lump)
 	Level.Vertices = new WideVertex[Vertices.Size()];
 	Level.NumVertices = Vertices.Size();
 	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(WideVertex));
-	SC_Close();
+	this->scanner.close();
 	delete[] buffer;
 }
 
-
-//===========================================================================
-//
-// parse an UDMF map
-//
-//===========================================================================
-
+/// Parse a whole UDMF map.
 void FProcessor::LoadUDMF()
 {
 	ParseTextMap(Lump+1);
 }
 
-//===========================================================================
-//
-// writes a property list
-//
-//===========================================================================
-
+/// Write a property list.
 void FProcessor::WriteProps(FWadWriter &out, TArray<UDMFKey> &props)
 {
 	for(unsigned i=0; i< props.Size(); i++)
@@ -415,12 +325,6 @@ void FProcessor::WriteProps(FWadWriter &out, TArray<UDMFKey> &props)
 	}
 }
 
-//===========================================================================
-//
-// writes an integer property
-//
-//===========================================================================
-
 void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
 {
 	char buffer[20];
@@ -430,12 +334,6 @@ void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
 	sprintf(buffer, "%d;\n", value);
 	out.AddToLump(buffer, (int)strlen(buffer));
 }
-
-//===========================================================================
-//
-// writes a UDMF thing
-//
-//===========================================================================
 
 void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
 {
@@ -450,12 +348,6 @@ void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
 	WriteProps(out, th->props);
 	out.AddToLump("}\n\n", 3);
 }
-
-//===========================================================================
-//
-// writes a UDMF linedef
-//
-//===========================================================================
 
 void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
 {
@@ -475,12 +367,6 @@ void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-//===========================================================================
-//
-// writes a UDMF sidedef
-//
-//===========================================================================
-
 void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
 {
 	out.AddToLump("sidedef", 7);
@@ -496,12 +382,6 @@ void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-//===========================================================================
-//
-// writes a UDMF sector
-//
-//===========================================================================
-
 void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
 {
 	out.AddToLump("sector", 6);
@@ -516,12 +396,6 @@ void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-//===========================================================================
-//
-// writes a UDMF vertex
-//
-//===========================================================================
-
 void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
 {
 	out.AddToLump("vertex", 6);
@@ -535,12 +409,6 @@ void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
 	WriteProps(out, vt->props);
 	out.AddToLump("}\n\n", 3);
 }
-
-//===========================================================================
-//
-// writes a UDMF text map
-//
-//===========================================================================
 
 void FProcessor::WriteTextMap(FWadWriter &out)
 {
@@ -577,12 +445,6 @@ void FProcessor::WriteTextMap(FWadWriter &out)
 		WriteSectorUDMF(out, &Level.Sectors[i], i);
 	}
 }
-
-//===========================================================================
-//
-// writes an UDMF map
-//
-//===========================================================================
 
 void FProcessor::WriteUDMF(FWadWriter &out)
 {
