@@ -20,6 +20,7 @@
 
 #include "processor.hpp"
 #include "blockmapbuilder.hpp"
+#include "zdbsp.h"
 
 extern void ShowView(FLevel* level);
 
@@ -105,12 +106,12 @@ void FProcessor::LoadThings() {
 	size_t NumThings;
 
 	if (Extended) {
-		MapThing2* Things;
-		ReadMapLump<MapThing2>(Wad, "THINGS", Lump, Things, NumThings);
+		zdbsp_Thing2* Things;
+		ReadMapLump<zdbsp_Thing2>(Wad, "THINGS", Lump, Things, NumThings);
 
 		Level.Things.Resize(NumThings);
 		for (uint32_t i = 0; i < NumThings; ++i) {
-			Level.Things[i].thingid = Things[i].thingid;
+			Level.Things[i].thingid = Things[i].thing_id;
 			Level.Things[i].x = LittleShort(Things[i].x) << FRACBITS;
 			Level.Things[i].y = LittleShort(Things[i].y) << FRACBITS;
 			Level.Things[i].z = LittleShort(Things[i].z);
@@ -126,8 +127,8 @@ void FProcessor::LoadThings() {
 		}
 		delete[] Things;
 	} else {
-		MapThing* mt;
-		ReadMapLump<MapThing>(Wad, "THINGS", Lump, mt, NumThings);
+		zdbsp_ThingRaw* mt;
+		ReadMapLump<zdbsp_ThingRaw>(Wad, "THINGS", Lump, mt, NumThings);
 
 		Level.Things.Resize(NumThings);
 		for (uint32_t i = 0; i < NumThings; ++i) {
@@ -201,10 +202,10 @@ void FProcessor::LoadLines() {
 }
 
 void FProcessor::LoadVertices() {
-	MapVertex* verts;
-	ReadMapLump<MapVertex>(Wad, "VERTEXES", Lump, verts, Level.NumVertices);
+	zdbsp_VertexRaw* verts;
+	ReadMapLump<zdbsp_VertexRaw>(Wad, "VERTEXES", Lump, verts, Level.NumVertices);
 
-	Level.Vertices = new WideVertex[Level.NumVertices];
+	Level.Vertices = new zdbsp_VertexWide[Level.NumVertices];
 
 	for (int i = 0; i < Level.NumVertices; ++i) {
 		Level.Vertices[i].x = LittleShort(verts[i].x) << FRACBITS;
@@ -745,12 +746,12 @@ BYTE* FProcessor::FixReject(const BYTE* oldreject) {
 	return newreject;
 }
 
-zdbsp_MapNodeEx* FProcessor::NodesToEx(const zdbsp_MapNode* nodes, int count) {
+zdbsp_NodeEx* FProcessor::NodesToEx(const zdbsp_NodeRaw* nodes, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	zdbsp_MapNodeEx* Nodes = new zdbsp_MapNodeEx[Level.NumNodes];
+	zdbsp_NodeEx* Nodes = new zdbsp_NodeEx[Level.NumNodes];
 	int x;
 
 	for (x = 0; x < count; ++x) {
@@ -772,28 +773,28 @@ zdbsp_MapNodeEx* FProcessor::NodesToEx(const zdbsp_MapNode* nodes, int count) {
 	return Nodes;
 }
 
-MapSubsectorEx* FProcessor::SubsectorsToEx(const MapSubsector* ssec, int count) {
+zdbsp_SubsectorEx* FProcessor::SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	MapSubsectorEx* out = new MapSubsectorEx[Level.NumSubsectors];
+	zdbsp_SubsectorEx* out = new zdbsp_SubsectorEx[Level.NumSubsectors];
 	int x;
 
 	for (x = 0; x < count; ++x) {
-		out[x].numlines = LittleShort(ssec[x].numlines);
-		out[x].firstline = LittleShort(ssec[x].firstline);
+		out[x].num_lines = LittleShort(ssec[x].num_lines);
+		out[x].first_line = LittleShort(ssec[x].first_line);
 	}
 
 	return out;
 }
 
-MapSegGLEx* FProcessor::SegGLsToEx(const MapSegGL* segs, int count) {
+zdbsp_SegGlEx* FProcessor::SegGLsToEx(const zdbsp_SegGl* segs, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	MapSegGLEx* out = new MapSegGLEx[count];
+	zdbsp_SegGlEx* out = new zdbsp_SegGlEx[count];
 	int x;
 
 	for (x = 0; x < count; ++x) {
@@ -809,7 +810,7 @@ MapSegGLEx* FProcessor::SegGLsToEx(const MapSegGL* segs, int count) {
 
 void FProcessor::WriteVertices(FWadWriter& out, int count) {
 	int i;
-	WideVertex* vertdata = Level.Vertices;
+	zdbsp_VertexWide* vertdata = Level.Vertices;
 
 	short* verts = new short[count * 2];
 
@@ -891,11 +892,11 @@ void FProcessor::WriteSectors(FWadWriter& out) {
 
 void FProcessor::WriteSegs(FWadWriter& out) {
 	int i;
-	MapSeg* segdata;
+	zdbsp_SegRaw* segdata;
 
 	assert(Level.NumVertices < 65536);
 
-	segdata = new MapSeg[Level.NumSegs];
+	segdata = new zdbsp_SegRaw[Level.NumSegs];
 
 	for (i = 0; i < Level.NumSegs; ++i) {
 		segdata[i].v1 = LittleShort(WORD(Level.Segs[i].v1));
@@ -919,16 +920,16 @@ void FProcessor::WriteSSectors(FWadWriter& out) const {
 }
 
 void FProcessor::WriteSSectors2(
-	FWadWriter& out, const char* name, const MapSubsectorEx* subs, int count
+	FWadWriter& out, const char* name, const zdbsp_SubsectorEx* subs, int count
 ) const {
 	int i;
-	MapSubsector* ssec;
+	zdbsp_SubsectorRaw* ssec;
 
-	ssec = new MapSubsector[count];
+	ssec = new zdbsp_SubsectorRaw[count];
 
 	for (i = 0; i < count; ++i) {
-		ssec[i].firstline = LittleShort((WORD)subs[i].firstline);
-		ssec[i].numlines = LittleShort((WORD)subs[i].numlines);
+		ssec[i].first_line = LittleShort((WORD)subs[i].first_line);
+		ssec[i].num_lines = LittleShort((WORD)subs[i].num_lines);
 	}
 	out.WriteLump(name, ssec, sizeof(*ssec) * count);
 	delete[] ssec;
@@ -939,16 +940,16 @@ void FProcessor::WriteSSectors2(
 }
 
 void FProcessor::WriteSSectors5(
-	FWadWriter& out, const char* name, const MapSubsectorEx* subs, int count
+	FWadWriter& out, const char* name, const zdbsp_SubsectorEx* subs, int count
 ) const {
 	int i;
-	MapSubsectorEx* ssec;
+	zdbsp_SubsectorEx* ssec;
 
-	ssec = new MapSubsectorEx[count];
+	ssec = new zdbsp_SubsectorEx[count];
 
 	for (i = 0; i < count; ++i) {
-		ssec[i].firstline = LittleLong(subs[i].firstline);
-		ssec[i].numlines = LittleLong(subs[i].numlines);
+		ssec[i].first_line = LittleLong(subs[i].first_line);
+		ssec[i].num_lines = LittleLong(subs[i].num_lines);
 	}
 	out.WriteLump(name, ssec, sizeof(*ssec) * count);
 	delete[] ssec;
@@ -959,12 +960,12 @@ void FProcessor::WriteNodes(FWadWriter& out) const {
 }
 
 void FProcessor::WriteNodes2(
-	FWadWriter& out, const char* name, const zdbsp_MapNodeEx* zaNodes, int count
+	FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count
 ) const {
 	int i, j;
 	short *onodes, *nodes;
 
-	nodes = onodes = new short[count * sizeof(zdbsp_MapNode) / 2];
+	nodes = onodes = new short[count * sizeof(zdbsp_NodeRaw) / 2];
 
 	for (i = 0; i < count; ++i) {
 		nodes[0] = LittleShort(zaNodes[i].x >> 16);
@@ -986,7 +987,7 @@ void FProcessor::WriteNodes2(
 			}
 		}
 	}
-	out.WriteLump(name, onodes, count * sizeof(zdbsp_MapNode));
+	out.WriteLump(name, onodes, count * sizeof(zdbsp_NodeRaw));
 	delete[] onodes;
 
 	if (count >= 32768) {
@@ -995,10 +996,10 @@ void FProcessor::WriteNodes2(
 }
 
 void FProcessor::WriteNodes5(
-	FWadWriter& out, const char* name, const zdbsp_MapNodeEx* zaNodes, int count
+	FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count
 ) const {
 	int i, j;
-	MapNodeExO* const nodes = new MapNodeExO[count * sizeof(zdbsp_MapNodeEx)];
+	zdbsp_NodeEx0* const nodes = new zdbsp_NodeEx0[count * sizeof(zdbsp_NodeEx)];
 
 	for (i = 0; i < count; ++i) {
 		const short* inodes = &zaNodes[i].bbox[0][0];
@@ -1014,7 +1015,7 @@ void FProcessor::WriteNodes5(
 			nodes[i].children[j] = LittleLong(zaNodes[i].children[j]);
 		}
 	}
-	out.WriteLump(name, nodes, count * sizeof(zdbsp_MapNodeEx));
+	out.WriteLump(name, nodes, count * sizeof(zdbsp_NodeEx));
 	delete[] nodes;
 }
 
@@ -1066,7 +1067,7 @@ void FProcessor::WriteReject(FWadWriter& out) {
 
 void FProcessor::WriteGLVertices(FWadWriter& out, bool v5) {
 	int i, count = (Level.NumGLVertices - Level.NumOrgVerts);
-	WideVertex* vertdata = Level.GLVertices + Level.NumOrgVerts;
+	zdbsp_VertexWide* vertdata = Level.GLVertices + Level.NumOrgVerts;
 
 	fixed_t* verts = new fixed_t[count * 2 + 1];
 	char* magic = (char*)verts;
@@ -1093,10 +1094,10 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 		return;
 	}
 	int i, count;
-	MapSegGL* segdata;
+	zdbsp_SegGl* segdata;
 
 	count = Level.NumGLSegs;
-	segdata = new MapSegGL[count];
+	segdata = new zdbsp_SegGl[count];
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (DWORD)Level.NumOrgVerts) {
@@ -1113,7 +1114,7 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 		segdata[i].side = LittleShort(Level.GLSegs[i].side);
 		segdata[i].partner = LittleShort((WORD)Level.GLSegs[i].partner);
 	}
-	out.WriteLump("GL_SEGS", segdata, sizeof(MapSegGL) * count);
+	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGl) * count);
 	delete[] segdata;
 
 	if (count >= 65536) {
@@ -1125,10 +1126,10 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 
 void FProcessor::WriteGLSegs5(FWadWriter& out) {
 	int i, count;
-	MapSegGLEx* segdata;
+	zdbsp_SegGlEx* segdata;
 
 	count = Level.NumGLSegs;
-	segdata = new MapSegGLEx[count];
+	segdata = new zdbsp_SegGlEx[count];
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (DWORD)Level.NumOrgVerts) {
@@ -1145,7 +1146,7 @@ void FProcessor::WriteGLSegs5(FWadWriter& out) {
 		segdata[i].side = LittleShort(Level.GLSegs[i].side);
 		segdata[i].partner = LittleLong(Level.GLSegs[i].partner);
 	}
-	out.WriteLump("GL_SEGS", segdata, sizeof(MapSegGLEx) * count);
+	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGlEx) * count);
 	delete[] segdata;
 }
 
@@ -1212,7 +1213,7 @@ void FProcessor::WriteGLBSPZ(FWadWriter& out, const char* label) {
 	WriteNodesZ(zout, Level.GLNodes, Level.NumGLNodes, nodever);
 }
 
-void FProcessor::WriteVerticesZ(ZLibOut& out, const WideVertex* verts, int orgverts, int newverts) {
+void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexWide* verts, int orgverts, int newverts) {
 	out << (DWORD)orgverts << (DWORD)newverts;
 
 	for (int i = 0; i < newverts; ++i) {
@@ -1220,15 +1221,15 @@ void FProcessor::WriteVerticesZ(ZLibOut& out, const WideVertex* verts, int orgve
 	}
 }
 
-void FProcessor::WriteSubsectorsZ(ZLibOut& out, const MapSubsectorEx* subs, int numsubs) {
+void FProcessor::WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs) {
 	out << (DWORD)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
-		out << (DWORD)subs[i].numlines;
+		out << (DWORD)subs[i].num_lines;
 	}
 }
 
-void FProcessor::WriteSegsZ(ZLibOut& out, const MapSegEx* segs, int numsegs) {
+void FProcessor::WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs) {
 	out << (DWORD)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
@@ -1237,7 +1238,7 @@ void FProcessor::WriteSegsZ(ZLibOut& out, const MapSegEx* segs, int numsegs) {
 	}
 }
 
-void FProcessor::WriteGLSegsZ(ZLibOut& out, const MapSegGLEx* segs, int numsegs, int nodever) {
+void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
 	out << (DWORD)numsegs;
 
 	if (nodever < 2) {
@@ -1254,7 +1255,7 @@ void FProcessor::WriteGLSegsZ(ZLibOut& out, const MapSegGLEx* segs, int numsegs,
 }
 
 void FProcessor::WriteNodesZ(
-	ZLibOut& out, const zdbsp_MapNodeEx* nodes, int numnodes, int nodever
+	ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
 ) {
 	out << (DWORD)numnodes;
 
@@ -1320,7 +1321,7 @@ void FProcessor::WriteGLBSPX(FWadWriter& out, const char* label) {
 }
 
 void FProcessor::WriteVerticesX(
-	FWadWriter& out, const WideVertex* verts, int orgverts, int newverts
+	FWadWriter& out, const zdbsp_VertexWide* verts, int orgverts, int newverts
 ) {
 	out << (DWORD)orgverts << (DWORD)newverts;
 
@@ -1329,15 +1330,15 @@ void FProcessor::WriteVerticesX(
 	}
 }
 
-void FProcessor::WriteSubsectorsX(FWadWriter& out, const MapSubsectorEx* subs, int numsubs) {
+void FProcessor::WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs) {
 	out << (DWORD)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
-		out << (DWORD)subs[i].numlines;
+		out << (DWORD)subs[i].num_lines;
 	}
 }
 
-void FProcessor::WriteSegsX(FWadWriter& out, const MapSegEx* segs, int numsegs) {
+void FProcessor::WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs) {
 	out << (DWORD)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
@@ -1346,7 +1347,7 @@ void FProcessor::WriteSegsX(FWadWriter& out, const MapSegEx* segs, int numsegs) 
 	}
 }
 
-void FProcessor::WriteGLSegsX(FWadWriter& out, const MapSegGLEx* segs, int numsegs, int nodever) {
+void FProcessor::WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
 	out << (DWORD)numsegs;
 
 	if (nodever < 2) {
@@ -1363,7 +1364,7 @@ void FProcessor::WriteGLSegsX(FWadWriter& out, const MapSegGLEx* segs, int numse
 }
 
 void FProcessor::WriteNodesX(
-	FWadWriter& out, const zdbsp_MapNodeEx* nodes, int numnodes, int nodever
+	FWadWriter& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
 ) {
 	out << (DWORD)numnodes;
 
@@ -1384,7 +1385,7 @@ void FProcessor::WriteNodesX(
 	}
 }
 
-bool FProcessor::CheckForFracSplitters(const zdbsp_MapNodeEx* nodes, int numnodes) {
+bool FProcessor::CheckForFracSplitters(const zdbsp_NodeEx* nodes, int numnodes) {
 	for (int i = 0; i < numnodes; ++i) {
 		if (0 != ((nodes[i].x | nodes[i].y | nodes[i].dx | nodes[i].dy) & 0x0000FFFF)) {
 			return true;

@@ -7,7 +7,11 @@
 #include "processor.hpp"
 #include "wad.hpp"
 
-#define ZDBSP_VERSION "1.19"
+// Upstream ZDBSP aliased `DWORD` to `unsigned long` on win32 and `uint32_t`
+// everywhere else. These check that using fixed-width types everywhere is sound.
+static_assert(sizeof(unsigned char) == sizeof(uint8_t));
+static_assert(sizeof(unsigned short) == sizeof(uint16_t));
+static_assert(sizeof(unsigned int) == sizeof(uint32_t));
 
 zdbsp_WadReaderPtr zdbsp_wadreader_new(const uint8_t* bytes) {
 	auto wad = std::make_unique<FWadReader>(bytes);
@@ -55,7 +59,7 @@ void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVi
 	auto& level = p->get_level();
 
 	for (size_t i = 0; i < level.NumNodes; ++i) {
-		zdbsp_MapNode node = {};
+		zdbsp_NodeRaw node = {};
 		node.x = LittleShort(level.Nodes[i].x >> 16);
 		node.y = LittleShort(level.Nodes[i].y >> 16);
 		node.dx = LittleShort(level.Nodes[i].dx >> 16);

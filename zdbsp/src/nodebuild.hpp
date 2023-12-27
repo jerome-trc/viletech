@@ -1,6 +1,5 @@
 #include <math.h>
 #include "doomdata.hpp"
-#include "workdata.hpp"
 #include "tarray.hpp"
 
 struct FEventInfo {
@@ -55,17 +54,17 @@ struct FSimpleVert {
 };
 
 extern "C" {
-int ClassifyLine2(node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int ClassifyLine2(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
 #ifndef DISABLE_SSE
-int ClassifyLineSSE1(node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
-int ClassifyLineSSE2(node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int ClassifyLineSSE1(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int ClassifyLineSSE2(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
 #ifdef BACKPATCH
 #ifdef __GNUC__
-int ClassifyLineBackpatch(node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2])
+int ClassifyLineBackpatch(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2])
 	__attribute__((noinline));
 #else
 int __declspec(noinline)
-	ClassifyLineBackpatch(node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+	ClassifyLineBackpatch(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
 #endif
 #endif
 #endif
@@ -172,22 +171,22 @@ public:
 
 	~FNodeBuilder();
 
-	void GetVertices(WideVertex*& verts, size_t& count);
+	void GetVertices(zdbsp_VertexWide*& verts, size_t& count);
 	void GetNodes(
-		zdbsp_MapNodeEx*& nodes,
+		zdbsp_NodeEx*& nodes,
 		size_t& nodeCount,
-		MapSegEx*& segs,
+		zdbsp_SegEx*& segs,
 		size_t& segCount,
-		MapSubsectorEx*& ssecs,
+		zdbsp_SubsectorEx*& ssecs,
 		size_t& subCount
 	);
 
 	void GetGLNodes(
-		zdbsp_MapNodeEx*& nodes,
+		zdbsp_NodeEx*& nodes,
 		size_t& nodeCount,
-		MapSegGLEx*& segs,
+		zdbsp_SegGlEx*& segs,
 		size_t& segCount,
-		MapSubsectorEx*& ssecs,
+		zdbsp_SubsectorEx*& ssecs,
 		size_t& subCount
 	);
 
@@ -200,8 +199,8 @@ public:
 private:
 	FVertexMap* VertexMap;
 
-	TArray<node_t> Nodes;
-	TArray<subsector_t> Subsectors;
+	TArray<zdbsp_NodeFxp> Nodes;
+	TArray<zdbsp_SubsectorEx> Subsectors;
 	TArray<DWORD> SubsectorSets;
 	TArray<FPrivSeg> Segs;
 	TArray<FPrivVert> Vertices;
@@ -224,7 +223,7 @@ private:
 	int SegsStuffed;
 	const char* MapName;
 
-	void FindUsedVertices(WideVertex* vertices, int max);
+	void FindUsedVertices(zdbsp_VertexWide* vertices, int max);
 	void BuildTree();
 	void MakeSegsFromSides();
 	int CreateSeg(int linenum, int sidenum);
@@ -236,13 +235,13 @@ private:
 	DWORD CreateNode(DWORD set, unsigned int count, fixed_t bbox[4]);
 	DWORD CreateSubsector(DWORD set, fixed_t bbox[4]);
 	void CreateSubsectorsForReal();
-	bool CheckSubsector(DWORD set, node_t& node, DWORD& splitseg);
-	bool CheckSubsectorOverlappingSegs(DWORD set, node_t& node, DWORD& splitseg);
-	bool ShoveSegBehind(DWORD set, node_t& node, DWORD seg, DWORD mate);
-	int SelectSplitter(DWORD set, node_t& node, DWORD& splitseg, int step, bool nosplit);
+	bool CheckSubsector(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
+	bool CheckSubsectorOverlappingSegs(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
+	bool ShoveSegBehind(DWORD set, zdbsp_NodeFxp& node, DWORD seg, DWORD mate);
+	int SelectSplitter(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg, int step, bool nosplit);
 	void SplitSegs(
 		DWORD set,
-		node_t& node,
+		zdbsp_NodeFxp& node,
 		DWORD splitseg,
 		DWORD& outset0,
 		DWORD& outset1,
@@ -250,47 +249,47 @@ private:
 		unsigned int& count1
 	);
 	DWORD SplitSeg(DWORD segnum, int splitvert, int v1InFront);
-	int Heuristic(node_t& node, DWORD set, bool honorNoSplit);
+	int Heuristic(zdbsp_NodeFxp& node, DWORD set, bool honorNoSplit);
 
 	// Returns:
 	//	0 = seg is in front
 	//  1 = seg is in back
 	// -1 = seg cuts the node
 
-	inline int ClassifyLine(node_t& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]);
+	inline int ClassifyLine(zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]);
 
 	void FixSplitSharers();
-	double AddIntersection(const node_t& node, int vertex);
-	void AddMinisegs(const node_t& node, DWORD splitseg, DWORD& fset, DWORD& rset);
+	double AddIntersection(const zdbsp_NodeFxp& node, int vertex);
+	void AddMinisegs(const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& rset);
 	DWORD CheckLoopStart(fixed_t dx, fixed_t dy, int vertex1, int vertex2);
 	DWORD CheckLoopEnd(fixed_t dx, fixed_t dy, int vertex2);
 	void RemoveSegFromVert1(DWORD segnum, int vertnum);
 	void RemoveSegFromVert2(DWORD segnum, int vertnum);
 	DWORD AddMiniseg(int v1, int v2, DWORD partner, DWORD seg1, DWORD splitseg);
-	void SetNodeFromSeg(node_t& node, const FPrivSeg* pseg) const;
+	void SetNodeFromSeg(zdbsp_NodeFxp& node, const FPrivSeg* pseg) const;
 
 	int RemoveMinisegs(
-		zdbsp_MapNodeEx* nodes,
-		TArray<MapSegEx>& segs,
-		MapSubsectorEx* subs,
+		zdbsp_NodeEx* nodes,
+		TArray<zdbsp_SegEx>& segs,
+		zdbsp_SubsectorEx* subs,
 		int node,
 		short bbox[4]
 	);
-	int StripMinisegs(TArray<MapSegEx>& segs, int subsector, short bbox[4]);
+	int StripMinisegs(TArray<zdbsp_SegEx>& segs, int subsector, short bbox[4]);
 	void AddSegToShortBBox(short bbox[4], const FPrivSeg* seg);
-	int CloseSubsector(TArray<MapSegGLEx>& segs, int subsector);
-	DWORD PushGLSeg(TArray<MapSegGLEx>& segs, const FPrivSeg* seg);
-	void PushConnectingGLSeg(int subsector, TArray<MapSegGLEx>& segs, int v1, int v2);
+	int CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector);
+	DWORD PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg);
+	void PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& segs, int v1, int v2);
 	int OutputDegenerateSubsector(
-		TArray<MapSegGLEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
+		TArray<zdbsp_SegGlEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
 	);
 
 	static int SortSegs(const void* a, const void* b);
 
-	double InterceptVector(const node_t& splitter, const FPrivSeg& seg);
+	double InterceptVector(const zdbsp_NodeFxp& splitter, const FPrivSeg& seg);
 
 	void PrintSet(int l, DWORD set);
-	void DumpNodes(zdbsp_MapNodeEx* outNodes, int nodeCount);
+	void DumpNodes(zdbsp_NodeEx* outNodes, int nodeCount);
 };
 
 // Points within this distance of a line will be considered on the line.
@@ -327,7 +326,7 @@ inline int FNodeBuilder::PointOnSide(int x, int y, int x1, int y1, int dx, int d
 }
 
 inline int FNodeBuilder::ClassifyLine(
-	node_t& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
+	zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
 ) {
 	return ClassifyLine2(node, v1, v2, sidev);
 }

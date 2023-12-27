@@ -78,7 +78,6 @@ const RERUN_IF_CHANGED: &[&str] = &[
 	"src/utility.cpp",
 	"src/wad.cpp",
 	"src/wad.hpp",
-	"src/workdata.hpp",
 	"src/xs_Float.hpp",
 ];
 

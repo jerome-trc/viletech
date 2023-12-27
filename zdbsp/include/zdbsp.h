@@ -16,6 +16,13 @@
 extern "C" {
 #endif
 
+#define ZDBSP_VERSION "1.19"
+
+/// A 32-bit fixed-point decimal type,
+/// comprising a 16-bit integral component and a 16-bit fractional component.
+typedef int32_t zdbsp_I16F16;
+typedef uint32_t zdbsp_Angle;
+
 typedef enum {
 	/// If no configuration is provided, this is the default.
 	ZDBSP_EBM_REBUILD,
@@ -70,23 +77,103 @@ typedef struct {
 } zdbsp_NodeConfig;
 
 typedef struct {
+	int16_t x, y;
+} zdbsp_VertexRaw;
+
+typedef struct {
+	zdbsp_I16F16 x, y;
+} zdbsp_VertexFxp;
+
+typedef struct {
+	zdbsp_I16F16 x, y;
+	uint32_t index;
+} zdbsp_VertexWide;
+
+typedef struct {
 	int16_t x, y, dx, dy;
 	int16_t bbox[2][4];
 	uint16_t children[2];
-} zdbsp_MapNode;
+} zdbsp_NodeRaw;
 
 typedef struct {
 	int32_t x, y, dx, dy;
 	int16_t bbox[2][4];
 	uint32_t children[2];
-} zdbsp_MapNodeEx;
+} zdbsp_NodeEx;
+
+typedef struct {
+	int16_t x, y, dx, dy;
+	int16_t bbox[2][4];
+	uint32_t children[2];
+} zdbsp_NodeEx0;
+
+typedef struct {
+	zdbsp_I16F16 x, y, dx, dy;
+	zdbsp_I16F16 bbox[2][4];
+	uint32_t int_children[2];
+} zdbsp_NodeFxp;
+
+typedef struct {
+	uint16_t v1, v2;
+	uint16_t angle, linedef;
+	int16_t side, offset;
+} zdbsp_SegRaw;
+
+typedef struct {
+	uint32_t v1, v2;
+	uint16_t angle, linedef;
+	int16_t side, offset;
+} zdbsp_SegEx;
+
+typedef struct {
+	uint16_t v1, v2;
+	uint16_t linedef, side, partner;
+} zdbsp_SegGl;
+
+typedef struct {
+	uint32_t v1, v2;
+	uint32_t linedef;
+	uint16_t side;
+	uint32_t partner;
+} zdbsp_SegGlEx;
+
+typedef struct {
+	int16_t x, y;
+	int16_t angle;
+	int16_t type;
+	int16_t flags;
+} zdbsp_ThingRaw;
+
+typedef struct {
+	uint16_t thing_id;
+	int16_t x, y, z;
+	int16_t angle;
+	int16_t type;
+	int16_t flags;
+	int8_t special;
+	int8_t args[5];
+} zdbsp_Thing2;
+
+typedef struct {
+	uint16_t num_lines;
+	uint16_t first_line;
+} zdbsp_SubsectorRaw;
+
+typedef struct {
+	uint32_t num_lines;
+	uint32_t first_line;
+} zdbsp_SubsectorEx;
+
+typedef struct {
+	const char *key, *value;
+} zdbsp_UdmfKey;
 
 typedef struct FLevel* zdbsp_LevelPtr;
 typedef struct FWadReader* zdbsp_WadReaderPtr;
 typedef struct FProcessor* zdbsp_ProcessorPtr;
 
-typedef void (*zdbsp_NodeVisitor)(void*, const zdbsp_MapNode*);
-typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_MapNodeEx*);
+typedef void (*zdbsp_NodeVisitor)(void*, const zdbsp_NodeRaw*);
+typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_NodeEx*);
 
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_wadreader_destroy`.

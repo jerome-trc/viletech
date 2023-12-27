@@ -17,20 +17,6 @@ enum {
 	BOXRIGHT
 };
 
-struct UDMFKey {
-	const char* key;
-	const char* value;
-};
-
-struct MapVertex {
-	short x, y;
-};
-
-struct WideVertex {
-	fixed_t x, y;
-	int index;
-};
-
 struct MapSideDef {
 	short textureoffset;
 	short rowoffset;
@@ -50,7 +36,7 @@ struct IntSideDef {
 
 	int sector;
 
-	TArray<UDMFKey> props;
+	TArray<zdbsp_UdmfKey> props;
 };
 
 struct MapLineDef {
@@ -79,7 +65,7 @@ struct IntLineDef {
 	int args[5];
 	DWORD sidenum[2];
 
-	TArray<UDMFKey> props;
+	TArray<zdbsp_UdmfKey> props;
 };
 
 struct MapSector {
@@ -99,81 +85,11 @@ struct IntSector {
 	// empty is enough
 	MapSector data;
 
-	TArray<UDMFKey> props;
-};
-
-struct MapSubsector {
-	WORD numlines;
-	WORD firstline;
-};
-
-struct MapSubsectorEx {
-	DWORD numlines;
-	DWORD firstline;
-};
-
-struct MapSeg {
-	WORD v1;
-	WORD v2;
-	WORD angle;
-	WORD linedef;
-	short side;
-	short offset;
-};
-
-struct MapSegEx {
-	DWORD v1;
-	DWORD v2;
-	WORD angle;
-	WORD linedef;
-	short side;
-	short offset;
-};
-
-struct MapSegGL {
-	WORD v1;
-	WORD v2;
-	WORD linedef;
-	WORD side;
-	WORD partner;
-};
-
-struct MapSegGLEx {
-	DWORD v1;
-	DWORD v2;
-	DWORD linedef;
-	WORD side;
-	DWORD partner;
+	TArray<zdbsp_UdmfKey> props;
 };
 
 #define NF_SUBSECTOR 0x8000
 #define NFX_SUBSECTOR 0x80000000
-
-struct MapNodeExO {
-	short x, y, dx, dy;
-	short bbox[2][4];
-	DWORD children[2];
-};
-
-struct MapThing {
-	short x;
-	short y;
-	short angle;
-	short type;
-	short flags;
-};
-
-struct MapThing2 {
-	unsigned short thingid;
-	short x;
-	short y;
-	short z;
-	short angle;
-	short type;
-	short flags;
-	char special;
-	char args[5];
-};
 
 struct IntThing {
 	unsigned short thingid;
@@ -187,42 +103,42 @@ struct IntThing {
 	char special;
 	char args[5];
 
-	TArray<UDMFKey> props;
+	TArray<zdbsp_UdmfKey> props;
 };
 
 struct IntVertex {
-	TArray<UDMFKey> props;
+	TArray<zdbsp_UdmfKey> props;
 };
 
 struct FLevel {
 	FLevel();
 	~FLevel();
 
-	WideVertex* Vertices;
+	zdbsp_VertexWide* Vertices;
 	size_t NumVertices;
 	TArray<IntVertex> VertexProps;
 	TArray<IntSideDef> Sides;
 	TArray<IntLineDef> Lines;
 	TArray<IntSector> Sectors;
 	TArray<IntThing> Things;
-	MapSubsectorEx* Subsectors;
+	zdbsp_SubsectorEx* Subsectors;
 	size_t NumSubsectors;
-	MapSegEx* Segs;
+	zdbsp_SegEx* Segs;
 	size_t NumSegs;
-	zdbsp_MapNodeEx* Nodes;
+	zdbsp_NodeEx* Nodes;
 	size_t NumNodes;
 	WORD* Blockmap;
 	size_t BlockmapSize;
 	BYTE* Reject;
 	size_t RejectSize;
 
-	MapSubsectorEx* GLSubsectors;
+	zdbsp_SubsectorEx* GLSubsectors;
 	size_t NumGLSubsectors;
-	MapSegGLEx* GLSegs;
+	zdbsp_SegGlEx* GLSegs;
 	size_t NumGLSegs;
-	zdbsp_MapNodeEx* GLNodes;
+	zdbsp_NodeEx* GLNodes;
 	size_t NumGLNodes;
-	WideVertex* GLVertices;
+	zdbsp_VertexWide* GLVertices;
 	size_t NumGLVertices;
 	BYTE* GLPVS;
 	size_t GLPVSSize;
@@ -234,7 +150,7 @@ struct FLevel {
 
 	fixed_t MinX, MinY, MaxX, MaxY;
 
-	TArray<UDMFKey> props;
+	TArray<zdbsp_UdmfKey> props;
 
 	void FindMapBounds();
 	void RemoveExtraLines();

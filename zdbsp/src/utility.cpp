@@ -48,7 +48,7 @@ static const int PO_LINE_EXPLICIT = 5;
 	} while (0)
 #endif
 
-void FNodeBuilder::FindUsedVertices(WideVertex* oldverts, int max) {
+void FNodeBuilder::FindUsedVertices(zdbsp_VertexWide* oldverts, int max) {
 	int* map = new int[max];
 	int i;
 	FPrivVert newvert;
@@ -248,8 +248,8 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 			}
 
 			if (j < anchors.Size()) {
-				vertex_t mid;
-				vertex_t center;
+				zdbsp_VertexFxp mid;
+				zdbsp_VertexFxp center;
 
 				mid.x = bbox[BOXLEFT] + (bbox[BOXRIGHT] - bbox[BOXLEFT]) / 2;
 				mid.y = bbox[BOXBOTTOM] + (bbox[BOXTOP] - bbox[BOXBOTTOM]) / 2;
@@ -369,7 +369,7 @@ bool FNodeBuilder::GetPolyExtents(int polynum, fixed_t bbox[4]) {
 	}
 
 	if (i < Segs.Size()) {
-		vertex_t start;
+		zdbsp_VertexFxp start;
 		unsigned int vert;
 		unsigned int count =
 			Segs.Size(); // to prevent endless loops. Stop when this reaches the number of segs.

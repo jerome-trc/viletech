@@ -34,11 +34,13 @@ typedef int fixed_t;
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
 typedef signed short SWORD;
+
 #ifdef _WIN32
 typedef unsigned long DWORD;
 #else
 typedef uint32_t DWORD;
 #endif
+
 typedef uint32_t angle_t;
 
 [[nodiscard]] inline angle_t PointToAngle(fixed_t x, fixed_t y) {

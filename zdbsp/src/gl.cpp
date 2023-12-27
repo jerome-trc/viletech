@@ -36,7 +36,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 	} while (0)
 #endif
 
-double FNodeBuilder::AddIntersection(const node_t& node, int vertex) {
+double FNodeBuilder::AddIntersection(const zdbsp_NodeFxp& node, int vertex) {
 	static const FEventInfo defaultInfo = { -1, DWORD_MAX };
 
 	// Calculate signed distance of intersection vertex from start of splitter.
@@ -141,7 +141,7 @@ void FNodeBuilder::FixSplitSharers() {
 	}
 }
 
-void FNodeBuilder::AddMinisegs(const node_t& node, DWORD splitseg, DWORD& fset, DWORD& bset) {
+void FNodeBuilder::AddMinisegs(const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& bset) {
 	FEvent *event = Events.GetMinimum(), *prev = NULL;
 
 	while (event != NULL) {

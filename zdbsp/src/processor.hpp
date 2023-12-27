@@ -95,12 +95,12 @@ private:
 	void LoadSectors();
 	void GetPolySpots();
 
-	zdbsp_MapNodeEx* NodesToEx(const zdbsp_MapNode* nodes, int count);
-	MapSubsectorEx* SubsectorsToEx(const MapSubsector* ssec, int count);
-	MapSegGLEx* SegGLsToEx(const MapSegGL* segs, int count);
+	zdbsp_NodeEx* NodesToEx(const zdbsp_NodeRaw* nodes, int count);
+	zdbsp_SubsectorEx* SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count);
+	zdbsp_SegGlEx* SegGLsToEx(const zdbsp_SegGl* segs, int count);
 
 	BYTE* FixReject(const BYTE* oldreject);
-	bool CheckForFracSplitters(const zdbsp_MapNodeEx* nodes, int count);
+	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count);
 
 	void WriteLines(FWadWriter& out);
 	void WriteVertices(FWadWriter& out, int count);
@@ -121,28 +121,28 @@ private:
 	void WriteBSPZ(FWadWriter& out, const char* label);
 	void WriteGLBSPZ(FWadWriter& out, const char* label);
 
-	void WriteVerticesZ(ZLibOut& out, const WideVertex* verts, int orgverts, int newverts);
-	void WriteSubsectorsZ(ZLibOut& out, const MapSubsectorEx* subs, int numsubs);
-	void WriteSegsZ(ZLibOut& out, const MapSegEx* segs, int numsegs);
-	void WriteGLSegsZ(ZLibOut& out, const MapSegGLEx* segs, int numsegs, int nodever);
-	void WriteNodesZ(ZLibOut& out, const zdbsp_MapNodeEx* nodes, int numnodes, int nodever);
+	void WriteVerticesZ(ZLibOut& out, const zdbsp_VertexWide* verts, int orgverts, int newverts);
+	void WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs);
+	void WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs);
+	void WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
+	void WriteNodesZ(ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever);
 
 	void WriteBSPX(FWadWriter& out, const char* label);
 	void WriteGLBSPX(FWadWriter& out, const char* label);
 
-	void WriteVerticesX(FWadWriter& out, const WideVertex* verts, int orgverts, int newverts);
-	void WriteSubsectorsX(FWadWriter& out, const MapSubsectorEx* subs, int numsubs);
-	void WriteSegsX(FWadWriter& out, const MapSegEx* segs, int numsegs);
-	void WriteGLSegsX(FWadWriter& out, const MapSegGLEx* segs, int numsegs, int nodever);
-	void WriteNodesX(FWadWriter& out, const zdbsp_MapNodeEx* nodes, int numnodes, int nodever);
+	void WriteVerticesX(FWadWriter& out, const zdbsp_VertexWide* verts, int orgverts, int newverts);
+	void WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs);
+	void WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs);
+	void WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
+	void WriteNodesX(FWadWriter& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever);
 
-	void WriteNodes2(FWadWriter& out, const char* name, const zdbsp_MapNodeEx* zaNodes, int count)
+	void WriteNodes2(FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count)
 		const;
-	void WriteSSectors2(FWadWriter& out, const char* name, const MapSubsectorEx* zaSubs, int count)
+	void WriteSSectors2(FWadWriter& out, const char* name, const zdbsp_SubsectorEx* zaSubs, int count)
 		const;
-	void WriteNodes5(FWadWriter& out, const char* name, const zdbsp_MapNodeEx* zaNodes, int count)
+	void WriteNodes5(FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count)
 		const;
-	void WriteSSectors5(FWadWriter& out, const char* name, const MapSubsectorEx* zaSubs, int count)
+	void WriteSSectors5(FWadWriter& out, const char* name, const zdbsp_SubsectorEx* zaSubs, int count)
 		const;
 
 	const char* ParseKey(const char*& value);
@@ -151,7 +151,7 @@ private:
 	void ParseLinedef(IntLineDef* ld);
 	void ParseSidedef(IntSideDef* sd);
 	void ParseSector(IntSector* sec);
-	void ParseVertex(WideVertex* vt, IntVertex* vtp);
+	void ParseVertex(zdbsp_VertexWide* vt, IntVertex* vtp);
 	void ParseMapProperties();
 	void ParseTextMap(int lump);
 
@@ -159,7 +159,7 @@ private:
 	double CheckFloat(const char* key);
 	fixed_t CheckFixed(const char* key);
 
-	void WriteProps(FWadWriter& out, TArray<UDMFKey>& props);
+	void WriteProps(FWadWriter& out, TArray<zdbsp_UdmfKey>& props);
 	void WriteIntProp(FWadWriter& out, const char* key, int value);
 	void WriteThingUDMF(FWadWriter& out, IntThing* th, int num);
 	void WriteLinedefUDMF(FWadWriter& out, IntLineDef* ld, int num);

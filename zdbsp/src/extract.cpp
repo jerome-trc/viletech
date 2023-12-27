@@ -40,21 +40,21 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #endif
 
 void FNodeBuilder::GetGLNodes(
-	zdbsp_MapNodeEx*& outNodes,
+	zdbsp_NodeEx*& outNodes,
 	size_t& nodeCount,
-	MapSegGLEx*& outSegs,
+	zdbsp_SegGlEx*& outSegs,
 	size_t& segCount,
-	MapSubsectorEx*& outSubs,
+	zdbsp_SubsectorEx*& outSubs,
 	size_t& subCount
 ) {
-	TArray<MapSegGLEx> segs(Segs.Size() * 5 / 4);
+	TArray<zdbsp_SegGlEx> segs(Segs.Size() * 5 / 4);
 	int i, j, k;
 
 	nodeCount = Nodes.Size();
-	outNodes = new zdbsp_MapNodeEx[nodeCount];
+	outNodes = new zdbsp_NodeEx[nodeCount];
 	for (i = 0; i < nodeCount; ++i) {
-		const node_t* orgnode = &Nodes[i];
-		zdbsp_MapNodeEx* newnode = &outNodes[i];
+		const zdbsp_NodeFxp* orgnode = &Nodes[i];
+		zdbsp_NodeEx* newnode = &outNodes[i];
 
 		newnode->x = orgnode->x;
 		newnode->y = orgnode->y;
@@ -65,21 +65,21 @@ void FNodeBuilder::GetGLNodes(
 			for (k = 0; k < 4; ++k) {
 				newnode->bbox[j][k] = orgnode->bbox[j][k] >> FRACBITS;
 			}
-			newnode->children[j] = orgnode->intchildren[j];
+			newnode->children[j] = orgnode->int_children[j];
 		}
 	}
 
 	subCount = Subsectors.Size();
-	outSubs = new MapSubsectorEx[subCount];
+	outSubs = new zdbsp_SubsectorEx[subCount];
 	for (i = 0; i < subCount; ++i) {
 		int numsegs = CloseSubsector(segs, i);
-		outSubs[i].numlines = numsegs;
-		outSubs[i].firstline = segs.Size() - numsegs;
+		outSubs[i].num_lines = numsegs;
+		outSubs[i].first_line = segs.Size() - numsegs;
 	}
 
 	segCount = segs.Size();
-	outSegs = new MapSegGLEx[segCount];
-	memcpy(outSegs, &segs[0], segCount * sizeof(MapSegGLEx));
+	outSegs = new zdbsp_SegGlEx[segCount];
+	memcpy(outSegs, &segs[0], segCount * sizeof(zdbsp_SegGlEx));
 
 	for (i = 0; i < segCount; ++i) {
 		if (outSegs[i].partner != DWORD_MAX) {
@@ -90,7 +90,7 @@ void FNodeBuilder::GetGLNodes(
 	D(DumpNodes(outNodes, nodeCount));
 }
 
-int FNodeBuilder::CloseSubsector(TArray<MapSegGLEx>& segs, int subsector) {
+int FNodeBuilder::CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector) {
 	FPrivSeg *seg, *prev;
 	angle_t prevAngle;
 	double accumx, accumy;
@@ -99,8 +99,8 @@ int FNodeBuilder::CloseSubsector(TArray<MapSegGLEx>& segs, int subsector) {
 	bool diffplanes;
 	int firstplane;
 
-	first = Subsectors[subsector].firstline;
-	max = first + Subsectors[subsector].numlines;
+	first = Subsectors[subsector].first_line;
+	max = first + Subsectors[subsector].num_lines;
 	count = 0;
 
 	accumx = accumy = 0.0;
@@ -237,7 +237,7 @@ int FNodeBuilder::CloseSubsector(TArray<MapSegGLEx>& segs, int subsector) {
 }
 
 int FNodeBuilder::OutputDegenerateSubsector(
-	TArray<MapSegGLEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
+	TArray<zdbsp_SegGlEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
 ) {
 	static const double bestinit[2] = { -DBL_MAX, DBL_MAX };
 	FPrivSeg* seg;
@@ -245,8 +245,8 @@ int FNodeBuilder::OutputDegenerateSubsector(
 	double dot, x1, y1, dx, dy, dx2, dy2;
 	bool wantside;
 
-	first = Subsectors[subsector].firstline;
-	max = first + Subsectors[subsector].numlines;
+	first = Subsectors[subsector].first_line;
+	max = first + Subsectors[subsector].num_lines;
 	count = 0;
 
 	seg = &Segs[SegList[first].SegNum];
@@ -294,8 +294,8 @@ int FNodeBuilder::OutputDegenerateSubsector(
 	return count;
 }
 
-DWORD FNodeBuilder::PushGLSeg(TArray<MapSegGLEx>& segs, const FPrivSeg* seg) {
-	MapSegGLEx newseg;
+DWORD FNodeBuilder::PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg) {
+	zdbsp_SegGlEx newseg;
 
 	newseg.v1 = seg->v1;
 	newseg.v2 = seg->v2;
@@ -311,9 +311,9 @@ DWORD FNodeBuilder::PushGLSeg(TArray<MapSegGLEx>& segs, const FPrivSeg* seg) {
 			// When both sidedefs are the same a quick check doesn't work so this
 			// has to be done by comparing the distances of the seg's end point to
 			// the line's start.
-			WideVertex* lv1 = &Level.Vertices[ld->v1];
-			WideVertex* sv1 = &Level.Vertices[seg->v1];
-			WideVertex* sv2 = &Level.Vertices[seg->v2];
+			zdbsp_VertexWide* lv1 = &Level.Vertices[ld->v1];
+			zdbsp_VertexWide* sv1 = &Level.Vertices[seg->v1];
+			zdbsp_VertexWide* sv2 = &Level.Vertices[seg->v2];
 
 			double dist1sq = double(sv1->x - lv1->x) * (sv1->x - lv1->x) +
 							 double(sv1->y - lv1->y) * (sv1->y - lv1->y);
@@ -332,8 +332,8 @@ DWORD FNodeBuilder::PushGLSeg(TArray<MapSegGLEx>& segs, const FPrivSeg* seg) {
 	return segs.Push(newseg);
 }
 
-void FNodeBuilder::PushConnectingGLSeg(int subsector, TArray<MapSegGLEx>& segs, int v1, int v2) {
-	MapSegGLEx newseg;
+void FNodeBuilder::PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& segs, int v1, int v2) {
+	zdbsp_SegGlEx newseg;
 
 #if 0 // TODO: emit warnings some other way.
 	Warn ("Unclosed subsector %d, from (%d,%d) to (%d,%d)\n", subsector,
@@ -349,9 +349,9 @@ void FNodeBuilder::PushConnectingGLSeg(int subsector, TArray<MapSegGLEx>& segs, 
 	segs.Push(newseg);
 }
 
-void FNodeBuilder::GetVertices(WideVertex*& verts, size_t& count) {
+void FNodeBuilder::GetVertices(zdbsp_VertexWide*& verts, size_t& count) {
 	count = Vertices.Size();
-	verts = new WideVertex[count];
+	verts = new zdbsp_VertexWide[count];
 
 	for (int i = 0; i < count; ++i) {
 		verts[i].x = Vertices[i].x;
@@ -361,15 +361,15 @@ void FNodeBuilder::GetVertices(WideVertex*& verts, size_t& count) {
 }
 
 void FNodeBuilder::GetNodes(
-	zdbsp_MapNodeEx*& outNodes,
+	zdbsp_NodeEx*& outNodes,
 	size_t& nodeCount,
-	MapSegEx*& outSegs,
+	zdbsp_SegEx*& outSegs,
 	size_t& segCount,
-	MapSubsectorEx*& outSubs,
+	zdbsp_SubsectorEx*& outSubs,
 	size_t& subCount
 ) {
 	short bbox[4];
-	TArray<MapSegEx> segs(Segs.Size());
+	TArray<zdbsp_SegEx> segs(Segs.Size());
 
 	// Walk the BSP and create a new BSP with only the information
 	// suitable for a standard tree. At a minimum, this means removing
@@ -378,16 +378,16 @@ void FNodeBuilder::GetNodes(
 	// not the minisegs.
 
 	nodeCount = Nodes.Size();
-	outNodes = new zdbsp_MapNodeEx[nodeCount];
+	outNodes = new zdbsp_NodeEx[nodeCount];
 
 	subCount = Subsectors.Size();
-	outSubs = new MapSubsectorEx[subCount];
+	outSubs = new zdbsp_SubsectorEx[subCount];
 
 	RemoveMinisegs(outNodes, segs, outSubs, Nodes.Size() - 1, bbox);
 
 	segCount = segs.Size();
-	outSegs = new MapSegEx[segCount];
-	memcpy(outSegs, &segs[0], segCount * sizeof(MapSegEx));
+	outSegs = new zdbsp_SegEx[segCount];
+	memcpy(outSegs, &segs[0], segCount * sizeof(zdbsp_SegEx));
 
 	D(DumpNodes(outNodes, nodeCount));
 #ifdef DD
@@ -398,20 +398,20 @@ void FNodeBuilder::GetNodes(
 }
 
 int FNodeBuilder::RemoveMinisegs(
-	zdbsp_MapNodeEx* nodes, TArray<MapSegEx>& segs, MapSubsectorEx* subs, int node, short bbox[4]
+	zdbsp_NodeEx* nodes, TArray<zdbsp_SegEx>& segs, zdbsp_SubsectorEx* subs, int node, short bbox[4]
 ) {
 	if (node & NFX_SUBSECTOR) {
 		int subnum = node == -1 ? 0 : node & ~NFX_SUBSECTOR;
 		int numsegs = StripMinisegs(segs, subnum, bbox);
-		subs[subnum].numlines = numsegs;
-		subs[subnum].firstline = segs.Size() - numsegs;
+		subs[subnum].num_lines = numsegs;
+		subs[subnum].first_line = segs.Size() - numsegs;
 		return NFX_SUBSECTOR | subnum;
 	} else {
-		const node_t* orgnode = &Nodes[node];
-		zdbsp_MapNodeEx* newnode = &nodes[node];
+		const zdbsp_NodeFxp* orgnode = &Nodes[node];
+		zdbsp_NodeEx* newnode = &nodes[node];
 
-		int child0 = RemoveMinisegs(nodes, segs, subs, orgnode->intchildren[0], newnode->bbox[0]);
-		int child1 = RemoveMinisegs(nodes, segs, subs, orgnode->intchildren[1], newnode->bbox[1]);
+		int child0 = RemoveMinisegs(nodes, segs, subs, orgnode->int_children[0], newnode->bbox[0]);
+		int child1 = RemoveMinisegs(nodes, segs, subs, orgnode->int_children[1], newnode->bbox[1]);
 
 		newnode->x = orgnode->x;
 		newnode->y = orgnode->y;
@@ -429,7 +429,7 @@ int FNodeBuilder::RemoveMinisegs(
 	}
 }
 
-int FNodeBuilder::StripMinisegs(TArray<MapSegEx>& segs, int subsector, short bbox[4]) {
+int FNodeBuilder::StripMinisegs(TArray<zdbsp_SegEx>& segs, int subsector, short bbox[4]) {
 	int count, i, max;
 
 	// The bounding box is recomputed to only cover the real segs and not the
@@ -439,8 +439,8 @@ int FNodeBuilder::StripMinisegs(TArray<MapSegEx>& segs, int subsector, short bbo
 	bbox[BOXLEFT] = 32767;
 	bbox[BOXRIGHT] = -32768;
 
-	i = Subsectors[subsector].firstline;
-	max = Subsectors[subsector].numlines + i;
+	i = Subsectors[subsector].first_line;
+	max = Subsectors[subsector].num_lines + i;
 
 	for (count = 0; i < max; ++i) {
 		const FPrivSeg* org = &Segs[SegList[i].SegNum];
@@ -451,7 +451,7 @@ int FNodeBuilder::StripMinisegs(TArray<MapSegEx>& segs, int subsector, short bbo
 		if (org->linedef == -1) {
 			break;
 		} else {
-			MapSegEx newseg;
+			zdbsp_SegEx newseg;
 
 			AddSegToShortBBox(bbox, org);
 
@@ -470,9 +470,9 @@ int FNodeBuilder::StripMinisegs(TArray<MapSegEx>& segs, int subsector, short bbo
 				// When both sidedefs are the same a quick check doesn't work so this
 				// has to be done by comparing the distances of the seg's end point to
 				// the line's start.
-				WideVertex* lv1 = &Level.Vertices[ld->v1];
-				WideVertex* sv1 = &Level.Vertices[org->v1];
-				WideVertex* sv2 = &Level.Vertices[org->v2];
+				zdbsp_VertexWide* lv1 = &Level.Vertices[ld->v1];
+				zdbsp_VertexWide* sv1 = &Level.Vertices[org->v1];
+				zdbsp_VertexWide* sv2 = &Level.Vertices[org->v2];
 
 				double dist1sq = double(sv1->x - lv1->x) * (sv1->x - lv1->x) +
 								 double(sv1->y - lv1->y) * (sv1->y - lv1->y);
@@ -520,7 +520,7 @@ void FNodeBuilder::AddSegToShortBBox(short bbox[4], const FPrivSeg* seg) {
 		bbox[BOXTOP] = v2y;
 }
 
-void FNodeBuilder::DumpNodes(zdbsp_MapNodeEx* outNodes, int nodeCount) {
+void FNodeBuilder::DumpNodes(zdbsp_NodeEx* outNodes, int nodeCount) {
 	for (unsigned int i = 0; i < Nodes.Size(); ++i) {
 		printf(
 			"Node %d:  Splitter[%08x,%08x] [%08x,%08x]\n", i, outNodes[i].x, outNodes[i].y,
