@@ -70,7 +70,6 @@ const RERUN_IF_CHANGED: &[&str] = &[
 	"src/nodebuild.hpp",
 	"src/processor_udmf.hpp",
 	"src/processor.hpp",
-	"src/resource.hpp",
 	"src/sc_man.cpp",
 	"src/sc_man.hpp",
 	"src/tarray.hpp",
