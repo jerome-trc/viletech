@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	bindgen::Builder::default()
 		.header("include/zdbsp.h")
+		.allowlist_item("^zdbsp_.+")
 		.parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
 		.generate()?
 		.write_to_file(PathBuf::from(std::env::var("OUT_DIR")?).join("bindings.rs"))?;
