@@ -36,8 +36,8 @@ mod test {
 
 			*visited = true;
 
-			assert_eq!((*node).x, 1704);
-			assert_eq!((*node).y, -384);
+			assert_eq!([(*node).x, (*node).y], [1704, -384]);
+			assert_eq!([(*node).dx, (*node).dy], [32, 0]);
 		}
 
 		unsafe extern "C" fn nodex_callback(
@@ -52,8 +52,7 @@ mod test {
 
 			*visited = true;
 
-			assert_eq!((*node).x, 111673344);
-			assert_eq!((*node).y, -25165824);
+			assert_eq!([(*node).x, (*node).y], [111673344, -25165824]);
 		}
 
 		unsafe {
@@ -74,6 +73,45 @@ mod test {
 			let mut visited_nodex = false;
 
 			sys::zdbsp_processor_nodesx_foreach(
+				p,
+				std::ptr::addr_of_mut!(visited_nodex).cast(),
+				Some(nodex_callback),
+			);
+
+			sys::zdbsp_processor_destroy(p);
+			sys::zdbsp_wadreader_destroy(reader);
+		}
+	}
+
+	#[test]
+	fn smoke_udmf() {
+		unsafe extern "C" fn nodex_callback(
+			ctx: *mut std::ffi::c_void,
+			node: *const sys::zdbsp_MapNodeEx,
+		) {
+			let visited = ctx.cast::<bool>();
+
+			if *visited {
+				return;
+			}
+
+			*visited = true;
+
+			assert_eq!([(*node).x, (*node).y], [0, 6291456]);
+			assert_eq!([(*node).dx, (*node).dy], [12582912, 6291456]);
+		}
+
+		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/udmf.wad");
+		let bytes = std::fs::read(&path).unwrap();
+
+		unsafe {
+			let reader = sys::zdbsp_wadreader_new(bytes.as_ptr());
+			let p = sys::zdbsp_processor_new(reader, std::ptr::null());
+			sys::zdbsp_processor_run(p, std::ptr::null());
+
+			let mut visited_nodex = false;
+
+			sys::zdbsp_processor_glnodes_foreach(
 				p,
 				std::ptr::addr_of_mut!(visited_nodex).cast(),
 				Some(nodex_callback),

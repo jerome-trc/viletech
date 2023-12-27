@@ -18,7 +18,9 @@ void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad) {
 	auto w = std::unique_ptr<FWadReader>(wad);
 }
 
-zdbsp_ProcessorPtr zdbsp_processor_new(zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* const config) {
+zdbsp_ProcessorPtr zdbsp_processor_new(
+	zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* const config
+) {
 	auto p = std::make_unique<FProcessor>(*wad, 0);
 
 	if (config != nullptr) {
@@ -49,23 +51,39 @@ size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p) {
 	return p->get_level().NumNodes;
 }
 
-void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void *ctx, zdbsp_NodeVisitor callback) {
+void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor callback) {
 	auto& level = p->get_level();
 
 	for (size_t i = 0; i < level.NumNodes; ++i) {
-		zdbsp_MapNode node = {0};
+		zdbsp_MapNode node = {};
 		node.x = LittleShort(level.Nodes[i].x >> 16);
 		node.y = LittleShort(level.Nodes[i].y >> 16);
+		node.dx = LittleShort(level.Nodes[i].dx >> 16);
+		node.dy = LittleShort(level.Nodes[i].dy >> 16);
+
+		for (size_t ii = 0; ii < 2; ++ii) {
+			for (size_t iii = 0; iii < 4; ++iii) {
+				node.bbox[ii][iii] = LittleShort(level.Nodes[i].bbox[ii][iii] >> 16);
+			}
+		}
 
 		callback(ctx, &node);
 	}
 }
 
-void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void *ctx, zdbsp_NodeExVisitor callback) {
+void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback) {
 	auto& level = p->get_level();
 
 	for (size_t i = 0; i < level.NumNodes; ++i) {
 		callback(ctx, &level.Nodes[i]);
+	}
+}
+
+void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback) {
+	auto& level = p->get_level();
+
+	for (size_t i = 0; i < level.NumGLNodes; ++i) {
+		callback(ctx, &level.GLNodes[i]);
 	}
 }
 

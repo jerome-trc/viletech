@@ -109,6 +109,7 @@ nodiscard size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
+void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
 
