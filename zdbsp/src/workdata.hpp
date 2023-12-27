@@ -7,23 +7,19 @@
 
 #include "common.hpp"
 
-struct vertex_t
-{
+struct vertex_t {
 	fixed_t x, y;
 };
 
-struct node_t
-{
+struct node_t {
 	fixed_t x, y, dx, dy;
 	fixed_t bbox[2][4];
 	unsigned int intchildren[2];
 };
 
-struct subsector_t
-{
+struct subsector_t {
 	DWORD numlines;
 	DWORD firstline;
 };
-
 
 #endif //__WORKDATA_H__

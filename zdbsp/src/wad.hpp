@@ -12,58 +12,53 @@
 #include "common.hpp"
 #include "tarray.hpp"
 
-struct WadHeader
-{
-	char	Magic[4];
+struct WadHeader {
+	char Magic[4];
 	int32_t NumLumps;
 	int32_t Directory;
 };
 
-struct WadLump
-{
+struct WadLump {
 	int32_t FilePos;
 	int32_t Size;
-	char	Name[8];
+	char Name[8];
 };
 
-class FWadReader
-{
+class FWadReader {
 public:
 	FWadReader(const uint8_t* bytes);
-	~FWadReader ();
+	~FWadReader();
 
-	bool IsIWAD () const;
+	bool IsIWAD() const;
 	bool isUDMF(int lump) const;
-	int FindLump (const char *name, int index=0) const;
-	int FindMapLump (const char *name, int map) const;
-	int FindGLLump (const char *name, int glheader) const;
-	const char *LumpName (int lump);
-	bool IsMap (int index) const;
-	bool IsGLNodes (int index) const;
-	int SkipGLNodes (int index) const;
-	bool MapHasBehavior (int map) const;
-	int NextMap (int startindex) const;
-	int LumpAfterMap (int map) const;
-	int NumLumps () const;
+	int FindLump(const char* name, int index = 0) const;
+	int FindMapLump(const char* name, int map) const;
+	int FindGLLump(const char* name, int glheader) const;
+	const char* LumpName(int lump);
+	bool IsMap(int index) const;
+	bool IsGLNodes(int index) const;
+	int SkipGLNodes(int index) const;
+	bool MapHasBehavior(int map) const;
+	int NextMap(int startindex) const;
+	int LumpAfterMap(int map) const;
+	int NumLumps() const;
 
-	void SafeRead (void *buffer, size_t size);
+	void SafeRead(void* buffer, size_t size);
 
-// VC++ 6 does not support template member functions in non-template classes!
+	// VC++ 6 does not support template member functions in non-template classes!
 	template<class T>
-	friend void ReadLump (FWadReader &wad, int index, T *&data, size_t &size);
+	friend void ReadLump(FWadReader& wad, int index, T*& data, size_t& size);
 
 private:
 	const uint8_t* bytes;
 	WadHeader Header;
-	WadLump *Lumps;
+	WadLump* Lumps;
 	size_t cursor;
 };
 
 template<class T>
-void ReadLump (FWadReader &wad, int index, T *&data, size_t &size)
-{
-	if ((unsigned)index >= (unsigned)wad.Header.NumLumps)
-	{
+void ReadLump(FWadReader& wad, int index, T*& data, size_t& size) {
+	if ((unsigned)index >= (unsigned)wad.Header.NumLumps) {
 		data = NULL;
 		size = 0;
 		return;
@@ -72,42 +67,40 @@ void ReadLump (FWadReader &wad, int index, T *&data, size_t &size)
 	wad.cursor = (size_t)wad.Lumps[index].FilePos;
 	size = wad.Lumps[index].Size / sizeof(T);
 	data = new T[size];
-	wad.SafeRead (data, size*sizeof(T));
+	wad.SafeRead(data, size * sizeof(T));
 }
 
 template<class T>
-void ReadMapLump (FWadReader &wad, const char *name, int index, T *&data, size_t &size)
-{
-	ReadLump (wad, wad.FindMapLump (name, index), data, size);
+void ReadMapLump(FWadReader& wad, const char* name, int index, T*& data, size_t& size) {
+	ReadLump(wad, wad.FindMapLump(name, index), data, size);
 }
 
-class FWadWriter
-{
+class FWadWriter {
 public:
 	FWadWriter(uint8_t* dest, bool iwad);
-	~FWadWriter ();
+	~FWadWriter();
 
-	void CreateLabel (const char *name);
-	void WriteLump (const char *name, const void *data, int len);
-	void CopyLump (FWadReader &wad, int lump);
-	void Close ();
+	void CreateLabel(const char* name);
+	void WriteLump(const char* name, const void* data, int len);
+	void CopyLump(FWadReader& wad, int lump);
+	void Close();
 
 	// Routines to write a lump in segments.
-	void StartWritingLump (const char *name);
-	void AddToLump (const void *data, int len);
+	void StartWritingLump(const char* name);
+	void AddToLump(const void* data, int len);
 
-	FWadWriter &operator << (BYTE);
-	FWadWriter &operator << (WORD);
-	FWadWriter &operator << (SWORD);
-	FWadWriter &operator << (DWORD);
-	FWadWriter &operator << (fixed_t);
+	FWadWriter& operator<<(BYTE);
+	FWadWriter& operator<<(WORD);
+	FWadWriter& operator<<(SWORD);
+	FWadWriter& operator<<(DWORD);
+	FWadWriter& operator<<(fixed_t);
 
 private:
 	TArray<WadLump> Lumps;
 	uint8_t* dest;
 	size_t cursor;
 
-	void SafeWrite (const void *buffer, size_t size);
+	void SafeWrite(const void* buffer, size_t size);
 };
 
 #endif //__WAD_H__

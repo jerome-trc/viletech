@@ -10,74 +10,68 @@
 
 #include "zdbsp.h"
 
-enum
-{
-	BOXTOP, BOXBOTTOM, BOXLEFT, BOXRIGHT
+enum {
+	BOXTOP,
+	BOXBOTTOM,
+	BOXLEFT,
+	BOXRIGHT
 };
 
-struct UDMFKey
-{
-	const char *key;
-	const char *value;
+struct UDMFKey {
+	const char* key;
+	const char* value;
 };
 
-struct MapVertex
-{
+struct MapVertex {
 	short x, y;
 };
 
-struct WideVertex
-{
+struct WideVertex {
 	fixed_t x, y;
 	int index;
 };
 
-struct MapSideDef
-{
-	short	textureoffset;
-	short	rowoffset;
-	char	toptexture[8];
-	char	bottomtexture[8];
-	char	midtexture[8];
-	WORD	sector;
+struct MapSideDef {
+	short textureoffset;
+	short rowoffset;
+	char toptexture[8];
+	char bottomtexture[8];
+	char midtexture[8];
+	WORD sector;
 };
 
-struct IntSideDef
-{
+struct IntSideDef {
 	// the first 5 values are only used for binary format maps
-	short	textureoffset;
-	short	rowoffset;
-	char	toptexture[8];
-	char	bottomtexture[8];
-	char	midtexture[8];
+	short textureoffset;
+	short rowoffset;
+	char toptexture[8];
+	char bottomtexture[8];
+	char midtexture[8];
 
 	int sector;
 
 	TArray<UDMFKey> props;
 };
 
-struct MapLineDef
-{
-	WORD	v1;
-	WORD	v2;
-	short	flags;
-	short	special;
-	short	tag;
-	WORD	sidenum[2];
+struct MapLineDef {
+	WORD v1;
+	WORD v2;
+	short flags;
+	short special;
+	short tag;
+	WORD sidenum[2];
 };
 
-struct MapLineDef2
-{
-	WORD	v1;
-	WORD	v2;
-	short	flags;
-	unsigned char	special;
-	unsigned char	args[5];
-	WORD	sidenum[2];
+struct MapLineDef2 {
+	WORD v1;
+	WORD v2;
+	short flags;
+	unsigned char special;
+	unsigned char args[5];
+	WORD sidenum[2];
 };
 
-struct IntLineDef
-{
+struct IntLineDef {
 	DWORD v1;
 	DWORD v2;
 	int flags;
@@ -88,19 +82,17 @@ struct IntLineDef
 	TArray<UDMFKey> props;
 };
 
-struct MapSector
-{
-	short	floorheight;
-	short	ceilingheight;
-	char	floorpic[8];
-	char	ceilingpic[8];
-	short	lightlevel;
-	short	special;
-	short	tag;
+struct MapSector {
+	short floorheight;
+	short ceilingheight;
+	char floorpic[8];
+	char ceilingpic[8];
+	short lightlevel;
+	short special;
+	short tag;
 };
 
-struct IntSector
-{
+struct IntSector {
 	// none of the sector properties are used by the node builder
 	// so there's no need to store them in their expanded form for
 	// UDMF. Just storing the UDMF keys and leaving the binary fields
@@ -110,154 +102,162 @@ struct IntSector
 	TArray<UDMFKey> props;
 };
 
-struct MapSubsector
-{
-	WORD	numlines;
-	WORD	firstline;
+struct MapSubsector {
+	WORD numlines;
+	WORD firstline;
 };
 
-struct MapSubsectorEx
-{
-	DWORD	numlines;
-	DWORD	firstline;
+struct MapSubsectorEx {
+	DWORD numlines;
+	DWORD firstline;
 };
 
-struct MapSeg
-{
-	WORD	v1;
-	WORD	v2;
-	WORD	angle;
-	WORD	linedef;
-	short	side;
-	short	offset;
+struct MapSeg {
+	WORD v1;
+	WORD v2;
+	WORD angle;
+	WORD linedef;
+	short side;
+	short offset;
 };
 
-struct MapSegEx
-{
-	DWORD	v1;
-	DWORD	v2;
-	WORD	angle;
-	WORD	linedef;
-	short	side;
-	short	offset;
+struct MapSegEx {
+	DWORD v1;
+	DWORD v2;
+	WORD angle;
+	WORD linedef;
+	short side;
+	short offset;
 };
 
-struct MapSegGL
-{
-	WORD	v1;
-	WORD	v2;
-	WORD	linedef;
-	WORD	side;
-	WORD	partner;
+struct MapSegGL {
+	WORD v1;
+	WORD v2;
+	WORD linedef;
+	WORD side;
+	WORD partner;
 };
 
-struct MapSegGLEx
-{
-	DWORD	v1;
-	DWORD	v2;
-	DWORD	linedef;
-	WORD	side;
-	DWORD	partner;
+struct MapSegGLEx {
+	DWORD v1;
+	DWORD v2;
+	DWORD linedef;
+	WORD side;
+	DWORD partner;
 };
 
-#define NF_SUBSECTOR	0x8000
-#define NFX_SUBSECTOR	0x80000000
+#define NF_SUBSECTOR 0x8000
+#define NFX_SUBSECTOR 0x80000000
 
-struct MapNodeExO
-{
-	short	x,y,dx,dy;
-	short	bbox[2][4];
-	DWORD	children[2];
+struct MapNodeExO {
+	short x, y, dx, dy;
+	short bbox[2][4];
+	DWORD children[2];
 };
 
-struct MapThing
-{
-	short		x;
-	short		y;
-	short		angle;
-	short		type;
-	short		flags;
+struct MapThing {
+	short x;
+	short y;
+	short angle;
+	short type;
+	short flags;
 };
 
-struct MapThing2
-{
+struct MapThing2 {
 	unsigned short thingid;
-	short		x;
-	short		y;
-	short		z;
-	short		angle;
-	short		type;
-	short		flags;
-	char		special;
-	char		args[5];
+	short x;
+	short y;
+	short z;
+	short angle;
+	short type;
+	short flags;
+	char special;
+	char args[5];
 };
 
-struct IntThing
-{
+struct IntThing {
 	unsigned short thingid;
-	fixed_t		x;	// full precision coordinates for UDMF support
-	fixed_t		y;
+	fixed_t x; // full precision coordinates for UDMF support
+	fixed_t y;
 	// everything else is not needed or has no extended form in UDMF
-	short		z;
-	short		angle;
-	short		type;
-	short		flags;
-	char		special;
-	char		args[5];
+	short z;
+	short angle;
+	short type;
+	short flags;
+	char special;
+	char args[5];
 
 	TArray<UDMFKey> props;
 };
 
-struct IntVertex
-{
+struct IntVertex {
 	TArray<UDMFKey> props;
 };
 
-struct FLevel
-{
-	FLevel ();
-	~FLevel ();
+struct FLevel {
+	FLevel();
+	~FLevel();
 
-	WideVertex *Vertices;		size_t NumVertices;
-	TArray<IntVertex>			VertexProps;
-	TArray<IntSideDef>			Sides;
-	TArray<IntLineDef>			Lines;
-	TArray<IntSector>			Sectors;
-	TArray<IntThing>			Things;
-	MapSubsectorEx *Subsectors;	size_t NumSubsectors;
-	MapSegEx *Segs;				size_t NumSegs;
-	zdbsp_MapNodeEx *Nodes;			size_t NumNodes;
-	WORD *Blockmap;				size_t BlockmapSize;
-	BYTE *Reject;				size_t RejectSize;
+	WideVertex* Vertices;
+	size_t NumVertices;
+	TArray<IntVertex> VertexProps;
+	TArray<IntSideDef> Sides;
+	TArray<IntLineDef> Lines;
+	TArray<IntSector> Sectors;
+	TArray<IntThing> Things;
+	MapSubsectorEx* Subsectors;
+	size_t NumSubsectors;
+	MapSegEx* Segs;
+	size_t NumSegs;
+	zdbsp_MapNodeEx* Nodes;
+	size_t NumNodes;
+	WORD* Blockmap;
+	size_t BlockmapSize;
+	BYTE* Reject;
+	size_t RejectSize;
 
-	MapSubsectorEx *GLSubsectors;	size_t NumGLSubsectors;
-	MapSegGLEx *GLSegs;				size_t NumGLSegs;
-	zdbsp_MapNodeEx *GLNodes;				size_t NumGLNodes;
-	WideVertex *GLVertices;			size_t NumGLVertices;
-	BYTE *GLPVS;					size_t GLPVSSize;
+	MapSubsectorEx* GLSubsectors;
+	size_t NumGLSubsectors;
+	MapSegGLEx* GLSegs;
+	size_t NumGLSegs;
+	zdbsp_MapNodeEx* GLNodes;
+	size_t NumGLNodes;
+	WideVertex* GLVertices;
+	size_t NumGLVertices;
+	BYTE* GLPVS;
+	size_t GLPVSSize;
 
 	int NumOrgVerts;
 
-	DWORD *OrgSectorMap;			int NumOrgSectors;
+	DWORD* OrgSectorMap;
+	int NumOrgSectors;
 
 	fixed_t MinX, MinY, MaxX, MaxY;
 
 	TArray<UDMFKey> props;
 
-	void FindMapBounds ();
-	void RemoveExtraLines ();
-	void RemoveExtraSides ();
-	void RemoveExtraSectors ();
+	void FindMapBounds();
+	void RemoveExtraLines();
+	void RemoveExtraSides();
+	void RemoveExtraSectors();
 
-	uint32_t NumSides() const { return Sides.Size(); }
-	uint32_t NumLines() const { return Lines.Size(); }
-	uint32_t NumSectors() const { return Sectors.Size(); }
-	uint32_t NumThings() const { return Things.Size(); }
+	uint32_t NumSides() const {
+		return Sides.Size();
+	}
+	uint32_t NumLines() const {
+		return Lines.Size();
+	}
+	uint32_t NumSectors() const {
+		return Sectors.Size();
+	}
+	uint32_t NumThings() const {
+		return Things.Size();
+	}
 };
 
 const int BLOCKSIZE = 128;
-const int BLOCKFRACSIZE = BLOCKSIZE<<FRACBITS;
+const int BLOCKFRACSIZE = BLOCKSIZE << FRACBITS;
 const int BLOCKBITS = 7;
-const int BLOCKFRACBITS = FRACBITS+7;
+const int BLOCKFRACBITS = FRACBITS + 7;
 
 #endif //__DOOMDATA_H__

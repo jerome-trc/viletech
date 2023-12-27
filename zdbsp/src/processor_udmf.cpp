@@ -28,17 +28,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "xs_Float.hpp"
 
 /// Parses a 'key = value;' line of the TEXTMAP lump.
-const char *FProcessor::ParseKey(const char *&value)
-{
+const char* FProcessor::ParseKey(const char*& value) {
 	this->scanner.must_get_string();
-	const char *key = stbuf.Copy(this->scanner.string);
+	const char* key = stbuf.Copy(this->scanner.string);
 	this->scanner.must_get_string_name("=");
 
 	this->scanner.number = INT_MIN;
 	this->scanner.flnum = DBL_MIN;
 
-	if (!this->scanner.check_float())
-	{
+	if (!this->scanner.check_float()) {
 		this->scanner.must_get_string();
 	}
 
@@ -47,12 +45,10 @@ const char *FProcessor::ParseKey(const char *&value)
 	return key;
 }
 
-bool FProcessor::CheckKey(const char *&key, const char *&value)
-{
+bool FProcessor::CheckKey(const char*& key, const char*& value) {
 	this->scanner.save_pos();
 	this->scanner.must_get_string();
-	if (this->scanner.check_string("="))
-	{
+	if (this->scanner.check_string("=")) {
 		this->scanner.restore_pos();
 		key = ParseKey(value);
 		return true;
@@ -61,236 +57,192 @@ bool FProcessor::CheckKey(const char *&key, const char *&value)
 	return false;
 }
 
-int FProcessor::CheckInt(const char *key)
-{
-	if (this->scanner.number == INT_MIN)
-	{
+int FProcessor::CheckInt(const char* key) {
+	if (this->scanner.number == INT_MIN) {
 		this->scanner.script_err("Integer value expected for key '%s'", key);
 	}
 
 	return this->scanner.number;
 }
 
-double FProcessor::CheckFloat(const char *key)
-{
-	if (this->scanner.flnum == DBL_MIN)
-	{
+double FProcessor::CheckFloat(const char* key) {
+	if (this->scanner.flnum == DBL_MIN) {
 		this->scanner.script_err("Floating point value expected for key '%s'", key);
 	}
 
 	return this->scanner.flnum;
 }
 
-fixed_t FProcessor::CheckFixed(const char *key)
-{
+fixed_t FProcessor::CheckFixed(const char* key) {
 	double val = CheckFloat(key);
-	if (val < -32768 || val > 32767)
-	{
-		this->scanner.script_err("Fixed point value is out of range for key '%s'\n\t%.2f should be within [-32768,32767]", key, val / 65536);
+	if (val < -32768 || val > 32767) {
+		this->scanner.script_err(
+			"Fixed point value is out of range for key '%s'\n\t%.2f should be within "
+			"[-32768,32767]",
+			key, val / 65536
+		);
 	}
 	return xs_Fix<16>::ToFix(val);
 }
 
-void FProcessor::ParseThing(IntThing *th)
-{
+void FProcessor::ParseThing(IntThing* th) {
 	this->scanner.must_get_string_name("{");
-	while (!this->scanner.check_string("}"))
-	{
-		const char *value;
-		const char *key = ParseKey(value);
+	while (!this->scanner.check_string("}")) {
+		const char* value;
+		const char* key = ParseKey(value);
 
 		// The only properties we need from a thing are
 		// x, y, angle and type.
 
-		if (!stricmp(key, "x"))
-		{
+		if (!stricmp(key, "x")) {
 			th->x = CheckFixed(key);
-		}
-		else if (!stricmp(key, "y"))
-		{
+		} else if (!stricmp(key, "y")) {
 			th->y = CheckFixed(key);
 		}
-		if (!stricmp(key, "angle"))
-		{
+		if (!stricmp(key, "angle")) {
 			th->angle = (short)CheckInt(key);
 		}
-		if (!stricmp(key, "type"))
-		{
+		if (!stricmp(key, "type")) {
 			th->type = (short)CheckInt(key);
 		}
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		th->props.Push(k);
 	}
 }
 
-void FProcessor::ParseLinedef(IntLineDef *ld)
-{
+void FProcessor::ParseLinedef(IntLineDef* ld) {
 	this->scanner.must_get_string_name("{");
 	ld->v1 = ld->v2 = ld->sidenum[0] = ld->sidenum[1] = NO_INDEX;
 	ld->special = 0;
-	while (!this->scanner.check_string("}"))
-	{
-		const char *value;
-		const char *key = ParseKey(value);
+	while (!this->scanner.check_string("}")) {
+		const char* value;
+		const char* key = ParseKey(value);
 
-		if (!stricmp(key, "v1"))
-		{
+		if (!stricmp(key, "v1")) {
 			ld->v1 = CheckInt(key);
-			continue;	// do not store in props
-		}
-		else if (!stricmp(key, "v2"))
-		{
+			continue; // do not store in props
+		} else if (!stricmp(key, "v2")) {
 			ld->v2 = CheckInt(key);
-			continue;	// do not store in props
-		}
-		else if (Extended && !stricmp(key, "special"))
-		{
+			continue; // do not store in props
+		} else if (Extended && !stricmp(key, "special")) {
 			ld->special = CheckInt(key);
-		}
-		else if (Extended && !stricmp(key, "arg0"))
-		{
+		} else if (Extended && !stricmp(key, "arg0")) {
 			ld->args[0] = CheckInt(key);
 		}
-		if (!stricmp(key, "sidefront"))
-		{
+		if (!stricmp(key, "sidefront")) {
 			ld->sidenum[0] = CheckInt(key);
-			continue;	// do not store in props
-		}
-		else if (!stricmp(key, "sideback"))
-		{
+			continue; // do not store in props
+		} else if (!stricmp(key, "sideback")) {
 			ld->sidenum[1] = CheckInt(key);
-			continue;	// do not store in props
+			continue; // do not store in props
 		}
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		ld->props.Push(k);
 	}
 }
 
-void FProcessor::ParseSidedef(IntSideDef *sd)
-{
+void FProcessor::ParseSidedef(IntSideDef* sd) {
 	this->scanner.must_get_string_name("{");
 	sd->sector = NO_INDEX;
-	while (!this->scanner.check_string("}"))
-	{
-		const char *value;
-		const char *key = ParseKey(value);
+	while (!this->scanner.check_string("}")) {
+		const char* value;
+		const char* key = ParseKey(value);
 
-		if (!stricmp(key, "sector"))
-		{
+		if (!stricmp(key, "sector")) {
 			sd->sector = CheckInt(key);
-			continue;	// do not store in props
+			continue; // do not store in props
 		}
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		sd->props.Push(k);
 	}
 }
 
-void FProcessor::ParseSector(IntSector *sec)
-{
+void FProcessor::ParseSector(IntSector* sec) {
 	this->scanner.must_get_string_name("{");
-	while (!this->scanner.check_string("}"))
-	{
-		const char *value;
-		const char *key = ParseKey(value);
+	while (!this->scanner.check_string("}")) {
+		const char* value;
+		const char* key = ParseKey(value);
 
 		// No specific sector properties are ever used by the node builder
 		// so everything can go directly to the props array.
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		sec->props.Push(k);
 	}
 }
 
-void FProcessor::ParseVertex(WideVertex *vt, IntVertex *vtp)
-{
+void FProcessor::ParseVertex(WideVertex* vt, IntVertex* vtp) {
 	vt->x = vt->y = 0;
 	this->scanner.must_get_string_name("{");
-	while (!this->scanner.check_string("}"))
-	{
-		const char *value;
-		const char *key = ParseKey(value);
+	while (!this->scanner.check_string("}")) {
+		const char* value;
+		const char* key = ParseKey(value);
 
-		if (!stricmp(key, "x"))
-		{
+		if (!stricmp(key, "x")) {
 			vt->x = CheckFixed(key);
-		}
-		else if (!stricmp(key, "y"))
-		{
+		} else if (!stricmp(key, "y")) {
 			vt->y = CheckFixed(key);
 		}
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		vtp->props.Push(k);
 	}
 }
 
 /// Parses global map properties.
-void FProcessor::ParseMapProperties()
-{
+void FProcessor::ParseMapProperties() {
 	const char *key, *value;
 
 	// all global keys must come before the first map element.
 
-	while (CheckKey(key, value))
-	{
-		if (!stricmp(key, "namespace"))
-		{
+	while (CheckKey(key, value)) {
+		if (!stricmp(key, "namespace")) {
 			// all unknown namespaces are assumed to be standard.
-			Extended = !stricmp(value, "\"ZDoom\"") || !stricmp(value, "\"Hexen\"") || !stricmp(value, "\"Vavoom\"");
+			Extended = !stricmp(value, "\"ZDoom\"") || !stricmp(value, "\"Hexen\"") ||
+					   !stricmp(value, "\"Vavoom\"");
 		}
 
 		// now store the key in its unprocessed form
-		UDMFKey k = {key, value};
+		UDMFKey k = { key, value };
 		Level.props.Push(k);
 	}
 }
 
-void FProcessor::ParseTextMap(int lump)
-{
-	char *buffer;
+void FProcessor::ParseTextMap(int lump) {
+	char* buffer;
 	size_t buffersize;
 	TArray<WideVertex> Vertices;
 
-	ReadLump<char> (Wad, lump, buffer, buffersize);
+	ReadLump<char>(Wad, lump, buffer, buffersize);
 	this->scanner.open_mem("TEXTMAP", buffer, buffersize);
 
 	this->scanner.set_c_mode(true);
 	ParseMapProperties();
 
-	while (this->scanner.get_string())
-	{
-		if (this->scanner.compare("thing"))
-		{
-			IntThing *th = &Level.Things[Level.Things.Reserve(1)];
+	while (this->scanner.get_string()) {
+		if (this->scanner.compare("thing")) {
+			IntThing* th = &Level.Things[Level.Things.Reserve(1)];
 			ParseThing(th);
-		}
-		else if (this->scanner.compare("linedef"))
-		{
-			IntLineDef *ld = &Level.Lines[Level.Lines.Reserve(1)];
+		} else if (this->scanner.compare("linedef")) {
+			IntLineDef* ld = &Level.Lines[Level.Lines.Reserve(1)];
 			ParseLinedef(ld);
-		}
-		else if (this->scanner.compare("sidedef"))
-		{
-			IntSideDef *sd = &Level.Sides[Level.Sides.Reserve(1)];
+		} else if (this->scanner.compare("sidedef")) {
+			IntSideDef* sd = &Level.Sides[Level.Sides.Reserve(1)];
 			ParseSidedef(sd);
-		}
-		else if (this->scanner.compare("sector"))
-		{
-			IntSector *sec = &Level.Sectors[Level.Sectors.Reserve(1)];
+		} else if (this->scanner.compare("sector")) {
+			IntSector* sec = &Level.Sectors[Level.Sectors.Reserve(1)];
 			ParseSector(sec);
-		}
-		else if (this->scanner.compare("vertex"))
-		{
-			WideVertex *vt = &Vertices[Vertices.Reserve(1)];
-			IntVertex *vtp = &Level.VertexProps[Level.VertexProps.Reserve(1)];
+		} else if (this->scanner.compare("vertex")) {
+			WideVertex* vt = &Vertices[Vertices.Reserve(1)];
+			IntVertex* vtp = &Level.VertexProps[Level.VertexProps.Reserve(1)];
 			vt->index = Vertices.Size();
 			ParseVertex(vt, vtp);
 		}
@@ -303,16 +255,13 @@ void FProcessor::ParseTextMap(int lump)
 }
 
 /// Parse a whole UDMF map.
-void FProcessor::LoadUDMF()
-{
-	ParseTextMap(Lump+1);
+void FProcessor::LoadUDMF() {
+	ParseTextMap(Lump + 1);
 }
 
 /// Write a property list.
-void FProcessor::WriteProps(FWadWriter &out, TArray<UDMFKey> &props)
-{
-	for(unsigned i=0; i< props.Size(); i++)
-	{
+void FProcessor::WriteProps(FWadWriter& out, TArray<UDMFKey>& props) {
+	for (unsigned i = 0; i < props.Size(); i++) {
 		out.AddToLump(props[i].key, (int)strlen(props[i].key));
 		out.AddToLump(" = ", 3);
 		out.AddToLump(props[i].value, (int)strlen(props[i].value));
@@ -320,8 +269,7 @@ void FProcessor::WriteProps(FWadWriter &out, TArray<UDMFKey> &props)
 	}
 }
 
-void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
-{
+void FProcessor::WriteIntProp(FWadWriter& out, const char* key, int value) {
 	char buffer[20];
 
 	out.AddToLump(key, (int)strlen(key));
@@ -330,11 +278,9 @@ void FProcessor::WriteIntProp(FWadWriter &out, const char *key, int value)
 	out.AddToLump(buffer, (int)strlen(buffer));
 }
 
-void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
-{
+void FProcessor::WriteThingUDMF(FWadWriter& out, IntThing* th, int num) {
 	out.AddToLump("thing", 5);
-	if (this->write_comments)
-	{
+	if (this->write_comments) {
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
 		out.AddToLump(buffer, len);
@@ -344,11 +290,9 @@ void FProcessor::WriteThingUDMF(FWadWriter &out, IntThing *th, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
-{
+void FProcessor::WriteLinedefUDMF(FWadWriter& out, IntLineDef* ld, int num) {
 	out.AddToLump("linedef", 7);
-	if (this->write_comments)
-	{
+	if (this->write_comments) {
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
 		out.AddToLump(buffer, len);
@@ -356,17 +300,17 @@ void FProcessor::WriteLinedefUDMF(FWadWriter &out, IntLineDef *ld, int num)
 	out.AddToLump("\n{\n", 3);
 	WriteIntProp(out, "v1", ld->v1);
 	WriteIntProp(out, "v2", ld->v2);
-	if (ld->sidenum[0] != NO_INDEX) WriteIntProp(out, "sidefront", ld->sidenum[0]);
-	if (ld->sidenum[1] != NO_INDEX) WriteIntProp(out, "sideback", ld->sidenum[1]);
+	if (ld->sidenum[0] != NO_INDEX)
+		WriteIntProp(out, "sidefront", ld->sidenum[0]);
+	if (ld->sidenum[1] != NO_INDEX)
+		WriteIntProp(out, "sideback", ld->sidenum[1]);
 	WriteProps(out, ld->props);
 	out.AddToLump("}\n\n", 3);
 }
 
-void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
-{
+void FProcessor::WriteSidedefUDMF(FWadWriter& out, IntSideDef* sd, int num) {
 	out.AddToLump("sidedef", 7);
-	if (this->write_comments)
-	{
+	if (this->write_comments) {
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
 		out.AddToLump(buffer, len);
@@ -377,11 +321,9 @@ void FProcessor::WriteSidedefUDMF(FWadWriter &out, IntSideDef *sd, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
-{
+void FProcessor::WriteSectorUDMF(FWadWriter& out, IntSector* sec, int num) {
 	out.AddToLump("sector", 6);
-	if (this->write_comments)
-	{
+	if (this->write_comments) {
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
 		out.AddToLump(buffer, len);
@@ -391,11 +333,9 @@ void FProcessor::WriteSectorUDMF(FWadWriter &out, IntSector *sec, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
-{
+void FProcessor::WriteVertexUDMF(FWadWriter& out, IntVertex* vt, int num) {
 	out.AddToLump("vertex", 6);
-	if (this->write_comments)
-	{
+	if (this->write_comments) {
 		char buffer[32];
 		int len = sprintf(buffer, " // %d", num);
 		out.AddToLump(buffer, len);
@@ -405,57 +345,48 @@ void FProcessor::WriteVertexUDMF(FWadWriter &out, IntVertex *vt, int num)
 	out.AddToLump("}\n\n", 3);
 }
 
-void FProcessor::WriteTextMap(FWadWriter &out)
-{
+void FProcessor::WriteTextMap(FWadWriter& out) {
 	out.StartWritingLump("TEXTMAP");
 	WriteProps(out, Level.props);
-	for(int i = 0; i < Level.NumThings(); i++)
-	{
+	for (int i = 0; i < Level.NumThings(); i++) {
 		WriteThingUDMF(out, &Level.Things[i], i);
 	}
 
-	for(int i = 0; i < Level.NumOrgVerts; i++)
-	{
-		WideVertex *vt = &Level.Vertices[i];
-		if (vt->index <= 0)
-		{
+	for (int i = 0; i < Level.NumOrgVerts; i++) {
+		WideVertex* vt = &Level.Vertices[i];
+		if (vt->index <= 0) {
 			// not valid!
 			throw std::runtime_error("Invalid vertex data.");
 		}
-		WriteVertexUDMF(out, &Level.VertexProps[vt->index-1], i);
+		WriteVertexUDMF(out, &Level.VertexProps[vt->index - 1], i);
 	}
 
-	for(int i = 0; i < Level.NumLines(); i++)
-	{
+	for (int i = 0; i < Level.NumLines(); i++) {
 		WriteLinedefUDMF(out, &Level.Lines[i], i);
 	}
 
-	for(int i = 0; i < Level.NumSides(); i++)
-	{
+	for (int i = 0; i < Level.NumSides(); i++) {
 		WriteSidedefUDMF(out, &Level.Sides[i], i);
 	}
 
-	for(int i = 0; i < Level.NumSectors(); i++)
-	{
+	for (int i = 0; i < Level.NumSectors(); i++) {
 		WriteSectorUDMF(out, &Level.Sectors[i], i);
 	}
 }
 
-void FProcessor::WriteUDMF(FWadWriter &out)
-{
-	out.CopyLump (Wad, Lump);
+void FProcessor::WriteUDMF(FWadWriter& out) {
+	out.CopyLump(Wad, Lump);
 	WriteTextMap(out);
-	if (this->force_compression) WriteGLBSPZ (out, "ZNODES");
-	else WriteGLBSPX (out, "ZNODES");
+	if (this->force_compression)
+		WriteGLBSPZ(out, "ZNODES");
+	else
+		WriteGLBSPX(out, "ZNODES");
 
 	// copy everything except existing nodes, blockmap and reject
-	for(int i=Lump+2; stricmp(Wad.LumpName(i), "ENDMAP") && i < Wad.NumLumps(); i++)
-	{
-		const char *lumpname = Wad.LumpName(i);
-		if (stricmp(lumpname, "ZNODES") &&
-			stricmp(lumpname, "BLOCKMAP") &&
-			stricmp(lumpname, "REJECT"))
-		{
+	for (int i = Lump + 2; stricmp(Wad.LumpName(i), "ENDMAP") && i < Wad.NumLumps(); i++) {
+		const char* lumpname = Wad.LumpName(i);
+		if (stricmp(lumpname, "ZNODES") && stricmp(lumpname, "BLOCKMAP") &&
+			stricmp(lumpname, "REJECT")) {
 			out.CopyLump(Wad, i);
 		}
 	}

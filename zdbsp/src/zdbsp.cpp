@@ -79,7 +79,9 @@ void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeE
 	}
 }
 
-void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback) {
+void zdbsp_processor_glnodes_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback
+) {
 	auto& level = p->get_level();
 
 	for (size_t i = 0; i < level.NumGLNodes; ++i) {

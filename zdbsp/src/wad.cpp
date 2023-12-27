@@ -1,20 +1,23 @@
+/// @file
+/// @brief WAD-handling routines.
+
 /*
-    WAD-handling routines.
-    Copyright (C) 2002-2006 Randy Heit
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+Copyright (C) 2002-2006 Randy Heit
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
@@ -23,59 +26,36 @@
 #include "wad.hpp"
 #include "common.hpp"
 
-static const char MapLumpNames[12][9] =
-{
-	"THINGS",
-	"LINEDEFS",
-	"SIDEDEFS",
-	"VERTEXES",
-	"SEGS",
-	"SSECTORS",
-	"NODES",
-	"SECTORS",
-	"REJECT",
-	"BLOCKMAP",
-	"BEHAVIOR",
-	"SCRIPTS"
+static const char MapLumpNames[12][9] = { "THINGS", "LINEDEFS", "SIDEDEFS", "VERTEXES",
+										  "SEGS",	"SSECTORS", "NODES",	"SECTORS",
+										  "REJECT", "BLOCKMAP", "BEHAVIOR", "SCRIPTS" };
+
+static const bool MapLumpRequired[12] = {
+	true, // THINGS
+	true, // LINEDEFS
+	true, // SIDEDEFS
+	true, // VERTEXES
+	false, // SEGS
+	false, // SSECTORS
+	false, // NODES
+	true, // SECTORS
+	false, // REJECT
+	false, // BLOCKMAP
+	false, // BEHAVIOR
+	false // SCRIPTS
 };
 
-static const bool MapLumpRequired[12] =
-{
-	true,	// THINGS
-	true,	// LINEDEFS
-	true,	// SIDEDEFS
-	true,	// VERTEXES
-	false,	// SEGS
-	false,	// SSECTORS
-	false,	// NODES
-	true,	// SECTORS
-	false,	// REJECT
-	false,	// BLOCKMAP
-	false,	// BEHAVIOR
-	false	// SCRIPTS
-};
+static const char GLLumpNames[5][9] = { "GL_VERT", "GL_SEGS", "GL_SSECT", "GL_NODES", "GL_PVS" };
 
-static const char GLLumpNames[5][9] =
-{
-	"GL_VERT",
-	"GL_SEGS",
-	"GL_SSECT",
-	"GL_NODES",
-	"GL_PVS"
-};
-
-FWadReader::FWadReader(const uint8_t* const bytes): bytes(bytes), Lumps(nullptr), cursor(0) {
+FWadReader::FWadReader(const uint8_t* const bytes) : bytes(bytes), Lumps(nullptr), cursor(0) {
 	if (bytes == nullptr) {
 		throw std::runtime_error("Received a null pointer illegally");
 	}
 
 	auto header = reinterpret_cast<const WadHeader*>(bytes);
 
-	if (header->Magic[0] != 'P' && header->Magic[0] != 'I' &&
-		header->Magic[1] != 'W' &&
-		header->Magic[2] != 'A' &&
-		header->Magic[3] != 'D')
-	{
+	if (header->Magic[0] != 'P' && header->Magic[0] != 'I' && header->Magic[1] != 'W' &&
+		header->Magic[2] != 'A' && header->Magic[3] != 'D') {
 		throw std::runtime_error("Input buffer is not a WAD");
 	}
 
@@ -88,69 +68,55 @@ FWadReader::FWadReader(const uint8_t* const bytes): bytes(bytes), Lumps(nullptr)
 	this->Header.Directory = dir_offs;
 	std::memcpy(this->Lumps, directory, lmp_count * sizeof(WadLump));
 
-	for (size_t i = 0; i < lmp_count; ++i)
-	{
+	for (size_t i = 0; i < lmp_count; ++i) {
 		auto lmp = &this->Lumps[i];
 		lmp->FilePos = LittleLong(lmp->FilePos);
 		lmp->Size = LittleLong(lmp->Size);
 	}
 }
 
-FWadReader::~FWadReader ()
-{
-	if (Lumps)	delete[] Lumps;
+FWadReader::~FWadReader() {
+	if (Lumps)
+		delete[] Lumps;
 }
 
-bool FWadReader::IsIWAD () const
-{
+bool FWadReader::IsIWAD() const {
 	return Header.Magic[0] == 'I';
 }
 
-int FWadReader::NumLumps () const
-{
+int FWadReader::NumLumps() const {
 	return Header.NumLumps;
 }
 
-int FWadReader::FindLump (const char *name, int index) const
-{
-	if (index < 0)
-	{
+int FWadReader::FindLump(const char* name, int index) const {
+	if (index < 0) {
 		index = 0;
 	}
-	for (; index < Header.NumLumps; ++index)
-	{
-		if (strnicmp (Lumps[index].Name, name, 8) == 0)
-		{
+	for (; index < Header.NumLumps; ++index) {
+		if (strnicmp(Lumps[index].Name, name, 8) == 0) {
 			return index;
 		}
 	}
 	return -1;
 }
 
-int FWadReader::FindMapLump (const char *name, int map) const
-{
+int FWadReader::FindMapLump(const char* name, int map) const {
 	int i, j, k;
 	++map;
 
-	for (i = 0; i < 12; ++i)
-	{
-		if (strnicmp (MapLumpNames[i], name, 8) == 0)
-		{
+	for (i = 0; i < 12; ++i) {
+		if (strnicmp(MapLumpNames[i], name, 8) == 0) {
 			break;
 		}
 	}
-	if (i == 12)
-	{
+	if (i == 12) {
 		return -1;
 	}
 
-	for (j = k = 0; j < 12; ++j)
-	{
-		if (strnicmp (Lumps[map+k].Name, MapLumpNames[j], 8) == 0)
-		{
-			if (i == j)
-			{
-				return map+k;
+	for (j = k = 0; j < 12; ++j) {
+		if (strnicmp(Lumps[map + k].Name, MapLumpNames[j], 8) == 0) {
+			if (i == j) {
+				return map + k;
 			}
 			k++;
 		}
@@ -158,68 +124,53 @@ int FWadReader::FindMapLump (const char *name, int map) const
 	return -1;
 }
 
-bool FWadReader::isUDMF (int index) const
-{
+bool FWadReader::isUDMF(int index) const {
 	index++;
 
-	if (strnicmp(Lumps[index].Name, "TEXTMAP", 8) == 0)
-	{
+	if (strnicmp(Lumps[index].Name, "TEXTMAP", 8) == 0) {
 		// UDMF map
 		return true;
 	}
 	return false;
 }
 
-
-bool FWadReader::IsMap (int index) const
-{
+bool FWadReader::IsMap(int index) const {
 	int i, j;
 
-	if (isUDMF(index)) return true;
+	if (isUDMF(index))
+		return true;
 
 	index++;
 
-	for (i = j = 0; i < 12; ++i)
-	{
-		if (strnicmp (Lumps[index+j].Name, MapLumpNames[i], 8) != 0)
-		{
-			if (MapLumpRequired[i])
-			{
+	for (i = j = 0; i < 12; ++i) {
+		if (strnicmp(Lumps[index + j].Name, MapLumpNames[i], 8) != 0) {
+			if (MapLumpRequired[i]) {
 				return false;
 			}
-		}
-		else
-		{
+		} else {
 			j++;
 		}
 	}
 	return true;
 }
 
-int FWadReader::FindGLLump (const char *name, int glheader) const
-{
+int FWadReader::FindGLLump(const char* name, int glheader) const {
 	int i, j, k;
 	++glheader;
 
-	for (i = 0; i < 5; ++i)
-	{
-		if (strnicmp (Lumps[glheader+i].Name, name, 8) == 0)
-		{
+	for (i = 0; i < 5; ++i) {
+		if (strnicmp(Lumps[glheader + i].Name, name, 8) == 0) {
 			break;
 		}
 	}
-	if (i == 5)
-	{
+	if (i == 5) {
 		return -1;
 	}
 
-	for (j = k = 0; j < 5; ++j)
-	{
-		if (strnicmp (Lumps[glheader+k].Name, GLLumpNames[j], 8) == 0)
-		{
-			if (i == j)
-			{
-				return glheader+k;
+	for (j = k = 0; j < 5; ++j) {
+		if (strnicmp(Lumps[glheader + k].Name, GLLumpNames[j], 8) == 0) {
+			if (i == j) {
+				return glheader + k;
 			}
 			k++;
 		}
@@ -227,110 +178,83 @@ int FWadReader::FindGLLump (const char *name, int glheader) const
 	return -1;
 }
 
-bool FWadReader::IsGLNodes (int index) const
-{
-	if (index + 4 >= Header.NumLumps)
-	{
+bool FWadReader::IsGLNodes(int index) const {
+	if (index + 4 >= Header.NumLumps) {
 		return false;
 	}
-	if (Lumps[index].Name[0] != 'G' ||
-		Lumps[index].Name[1] != 'L' ||
-		Lumps[index].Name[2] != '_')
-	{
+	if (Lumps[index].Name[0] != 'G' || Lumps[index].Name[1] != 'L' || Lumps[index].Name[2] != '_') {
 		return false;
 	}
 	index++;
-	for (int i = 0; i < 4; ++i)
-	{
-		if (strnicmp (Lumps[i+index].Name, GLLumpNames[i], 8) != 0)
-		{
+	for (int i = 0; i < 4; ++i) {
+		if (strnicmp(Lumps[i + index].Name, GLLumpNames[i], 8) != 0) {
 			return false;
 		}
 	}
 	return true;
 }
 
-int FWadReader::SkipGLNodes (int index) const
-{
+int FWadReader::SkipGLNodes(int index) const {
 	index++;
-	for (int i = 0; i < 5 && index < Header.NumLumps; ++i, ++index)
-	{
-		if (strnicmp (Lumps[index].Name, GLLumpNames[i], 8) != 0)
-		{
+	for (int i = 0; i < 5 && index < Header.NumLumps; ++i, ++index) {
+		if (strnicmp(Lumps[index].Name, GLLumpNames[i], 8) != 0) {
 			break;
 		}
 	}
 	return index;
 }
 
-bool FWadReader::MapHasBehavior (int map) const
-{
-	return FindMapLump ("BEHAVIOR", map) != -1;
+bool FWadReader::MapHasBehavior(int map) const {
+	return FindMapLump("BEHAVIOR", map) != -1;
 }
 
-int FWadReader::NextMap (int index) const
-{
-	if (index < 0)
-	{
+int FWadReader::NextMap(int index) const {
+	if (index < 0) {
 		index = 0;
-	}
-	else
-	{
+	} else {
 		index++;
 	}
-	for (; index < Header.NumLumps; ++index)
-	{
-		if (IsMap (index))
-		{
+	for (; index < Header.NumLumps; ++index) {
+		if (IsMap(index)) {
 			return index;
 		}
 	}
 	return -1;
 }
 
-int FWadReader::LumpAfterMap (int i) const
-{
+int FWadReader::LumpAfterMap(int i) const {
 	int j, k;
 
-	if (isUDMF(i))
-	{
+	if (isUDMF(i)) {
 		// UDMF map
 		i += 2;
-		while (strnicmp(Lumps[i].Name, "ENDMAP", 8) != 0 && i < Header.NumLumps)
-		{
+		while (strnicmp(Lumps[i].Name, "ENDMAP", 8) != 0 && i < Header.NumLumps) {
 			i++;
 		}
-		return i+1;	// one lump after ENDMAP
+		return i + 1; // one lump after ENDMAP
 	}
 
 	i++;
-	for (j = k = 0; j < 12; ++j)
-	{
-		if (strnicmp (Lumps[i+k].Name, MapLumpNames[j], 8) != 0)
-		{
-			if (MapLumpRequired[j])
-			{
+	for (j = k = 0; j < 12; ++j) {
+		if (strnicmp(Lumps[i + k].Name, MapLumpNames[j], 8) != 0) {
+			if (MapLumpRequired[j]) {
 				break;
 			}
-		}
-		else
-		{
+		} else {
 			k++;
 		}
 	}
-	return i+k;
+	return i + k;
 }
 
-void FWadReader::SafeRead (void *buffer, size_t size)
-{
+void FWadReader::SafeRead(void* buffer, size_t size) {
 	std::memcpy(buffer, this->bytes + this->cursor, size);
 	this->cursor += size;
 }
 
-const char *FWadReader::LumpName (int lump)
-{
+const char* FWadReader::LumpName(int lump) {
 	static char name[9];
-	strncpy (name, Lumps[lump].Name, 8);
+	strncpy(name, Lumps[lump].Name, 8);
 	name[8] = 0;
 	return name;
 }
@@ -338,12 +262,9 @@ const char *FWadReader::LumpName (int lump)
 FWadWriter::FWadWriter(uint8_t* dest, bool iwad) : dest(dest), cursor(0) {
 	WadHeader head;
 
-	if (iwad)
-	{
+	if (iwad) {
 		head.Magic[0] = 'I';
-	}
-	else
-	{
+	} else {
 		head.Magic[0] = 'P';
 	}
 
@@ -354,94 +275,80 @@ FWadWriter::FWadWriter(uint8_t* dest, bool iwad) : dest(dest), cursor(0) {
 	this->SafeWrite(dest, sizeof(WadHeader));
 }
 
-FWadWriter::~FWadWriter () { }
+FWadWriter::~FWadWriter() { }
 
-void FWadWriter::Close ()
-{
-}
+void FWadWriter::Close() { }
 
-void FWadWriter::CreateLabel (const char *name)
-{
+void FWadWriter::CreateLabel(const char* name) {
 	WadLump lump;
 
-	strncpy (lump.Name, name, 8);
+	strncpy(lump.Name, name, 8);
 	lump.FilePos = LittleLong(this->cursor);
 	lump.Size = 0;
-	Lumps.Push (lump);
+	Lumps.Push(lump);
 }
 
-void FWadWriter::WriteLump (const char *name, const void *data, int len)
-{
+void FWadWriter::WriteLump(const char* name, const void* data, int len) {
 	WadLump lump;
 
-	strncpy (lump.Name, name, 8);
+	strncpy(lump.Name, name, 8);
 	lump.FilePos = LittleLong(this->cursor);
 	lump.Size = LittleLong(len);
-	Lumps.Push (lump);
+	Lumps.Push(lump);
 
-	SafeWrite (data, len);
+	SafeWrite(data, len);
 }
 
-void FWadWriter::CopyLump (FWadReader &wad, int lump)
-{
-	uint8_t *data;
+void FWadWriter::CopyLump(FWadReader& wad, int lump) {
+	uint8_t* data;
 	size_t size;
 
-	ReadLump<uint8_t> (wad, lump, data, size);
-	if (data != NULL)
-	{
-		WriteLump (wad.LumpName (lump), data, size);
+	ReadLump<uint8_t>(wad, lump, data, size);
+	if (data != NULL) {
+		WriteLump(wad.LumpName(lump), data, size);
 		delete[] data;
 	}
 }
 
-void FWadWriter::StartWritingLump (const char *name)
-{
-	CreateLabel (name);
+void FWadWriter::StartWritingLump(const char* name) {
+	CreateLabel(name);
 }
 
-void FWadWriter::AddToLump (const void *data, int len)
-{
-	SafeWrite (data, len);
-	Lumps[Lumps.Size()-1].Size += len;
+void FWadWriter::AddToLump(const void* data, int len) {
+	SafeWrite(data, len);
+	Lumps[Lumps.Size() - 1].Size += len;
 }
 
-void FWadWriter::SafeWrite (const void *buffer, size_t size)
-{
+void FWadWriter::SafeWrite(const void* buffer, size_t size) {
 	std::memcpy(this->dest, buffer, size);
 	this->cursor += size;
 }
 
-FWadWriter &FWadWriter::operator << (BYTE val)
-{
-	AddToLump (&val, 1);
+FWadWriter& FWadWriter::operator<<(BYTE val) {
+	AddToLump(&val, 1);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (WORD val)
-{
+FWadWriter& FWadWriter::operator<<(WORD val) {
 	val = LittleShort(val);
-	AddToLump ((BYTE *)&val, 2);
+	AddToLump((BYTE*)&val, 2);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (SWORD val)
-{
+FWadWriter& FWadWriter::operator<<(SWORD val) {
 	val = LittleShort(val);
-	AddToLump ((BYTE *)&val, 2);
+	AddToLump((BYTE*)&val, 2);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (DWORD val)
-{
+FWadWriter& FWadWriter::operator<<(DWORD val) {
 	val = LittleLong(val);
-	AddToLump ((BYTE *)&val, 4);
+	AddToLump((BYTE*)&val, 4);
 	return *this;
 }
 
-FWadWriter &FWadWriter::operator << (fixed_t val)
-{
+FWadWriter& FWadWriter::operator<<(fixed_t val) {
 	val = LittleLong(val);
-	AddToLump ((BYTE *)&val, 4);
+	AddToLump((BYTE*)&val, 4);
 	return *this;
 }

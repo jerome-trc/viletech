@@ -1,30 +1,35 @@
+/// @file
+/// @brief Determine what side of a splitter a seg lies on.
+
 /*
-    Determine what side of a splitter a seg lies on.
-    Copyright (C) 2002-2006 Randy Heit
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+Copyright (C) 2002-2006 Randy Heit
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
 #include "common.hpp"
 #include "nodebuild.hpp"
 
-#define FAR_ENOUGH 17179869184.f		// 4<<32
+/// i.e. `4 << 32`.
+#define FAR_ENOUGH 17179869184.f
 
-extern "C" int ClassifyLine2 (node_t &node, const FSimpleVert *v1, const FSimpleVert *v2, int sidev[2])
-{
+extern "C" int ClassifyLine2(
+	node_t& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+) {
 	double d_x1 = double(node.x);
 	double d_y1 = double(node.y);
 	double d_dx = double(node.dx);
@@ -39,117 +44,80 @@ extern "C" int ClassifyLine2 (node_t &node, const FSimpleVert *v1, const FSimple
 
 	int nears = 0;
 
-	if (s_num1 <= -FAR_ENOUGH)
-	{
-		if (s_num2 <= -FAR_ENOUGH)
-		{
+	if (s_num1 <= -FAR_ENOUGH) {
+		if (s_num2 <= -FAR_ENOUGH) {
 			sidev[0] = sidev[1] = 1;
 			return 1;
 		}
-		if (s_num2 >= FAR_ENOUGH)
-		{
+		if (s_num2 >= FAR_ENOUGH) {
 			sidev[0] = 1;
 			sidev[1] = -1;
 			return -1;
 		}
 		nears = 1;
-	}
-	else if (s_num1 >= FAR_ENOUGH)
-	{
-		if (s_num2 >= FAR_ENOUGH)
-		{
+	} else if (s_num1 >= FAR_ENOUGH) {
+		if (s_num2 >= FAR_ENOUGH) {
 			sidev[0] = sidev[1] = -1;
 			return 0;
 		}
-		if (s_num2 <= -FAR_ENOUGH)
-		{
+		if (s_num2 <= -FAR_ENOUGH) {
 			sidev[0] = -1;
 			sidev[1] = 1;
 			return -1;
 		}
 		nears = 1;
-	}
-	else
-	{
+	} else {
 		nears = 2 | int(fabs(s_num2) < FAR_ENOUGH);
 	}
 
-	if (nears)
-	{
-		double l = 1.f / (d_dx*d_dx + d_dy*d_dy);
-		if (nears & 2)
-		{
+	if (nears) {
+		double l = 1.f / (d_dx * d_dx + d_dy * d_dy);
+		if (nears & 2) {
 			double dist = s_num1 * s_num1 * l;
-			if (dist < SIDE_EPSILON*SIDE_EPSILON)
-			{
+			if (dist < SIDE_EPSILON * SIDE_EPSILON) {
 				sidev[0] = 0;
-			}
-			else
-			{
+			} else {
 				sidev[0] = s_num1 > 0.0 ? -1 : 1;
 			}
-		}
-		else
-		{
+		} else {
 			sidev[0] = s_num1 > 0.0 ? -1 : 1;
 		}
-		if (nears & 1)
-		{
+		if (nears & 1) {
 			double dist = s_num2 * s_num2 * l;
-			if (dist < SIDE_EPSILON*SIDE_EPSILON)
-			{
+			if (dist < SIDE_EPSILON * SIDE_EPSILON) {
 				sidev[1] = 0;
-			}
-			else
-			{
+			} else {
 				sidev[1] = s_num2 > 0.0 ? -1 : 1;
 			}
-		}
-		else
-		{
+		} else {
 			sidev[1] = s_num2 > 0.0 ? -1 : 1;
 		}
-	}
-	else
-	{
+	} else {
 		sidev[0] = s_num1 > 0.0 ? -1 : 1;
 		sidev[1] = s_num2 > 0.0 ? -1 : 1;
 	}
 
-	if ((sidev[0] | sidev[1]) == 0)
-	{ // seg is coplanar with the splitter, so use its orientation to determine
-	  // which child it ends up in. If it faces the same direction as the splitter,
-	  // it goes in front. Otherwise, it goes in back.
+	if ((sidev[0] | sidev[1]) ==
+		0) { // seg is coplanar with the splitter, so use its orientation to determine
+			 // which child it ends up in. If it faces the same direction as the splitter,
+			 // it goes in front. Otherwise, it goes in back.
 
-		if (node.dx != 0)
-		{
-			if ((node.dx > 0 && v2->x > v1->x) || (node.dx < 0 && v2->x < v1->x))
-			{
+		if (node.dx != 0) {
+			if ((node.dx > 0 && v2->x > v1->x) || (node.dx < 0 && v2->x < v1->x)) {
 				return 0;
+			} else {
+				return 1;
 			}
-			else
-			{
+		} else {
+			if ((node.dy > 0 && v2->y > v1->y) || (node.dy < 0 && v2->y < v1->y)) {
+				return 0;
+			} else {
 				return 1;
 			}
 		}
-		else
-		{
-			if ((node.dy > 0 && v2->y > v1->y) || (node.dy < 0 && v2->y < v1->y))
-			{
-				return 0;
-			}
-			else
-			{
-				return 1;
-			}
-		}
-	}
-	else if (sidev[0] <= 0 && sidev[1] <= 0)
-	{
+	} else if (sidev[0] <= 0 && sidev[1] <= 0) {
 		return 0;
-	}
-	else if (sidev[0] >= 0 && sidev[1] >= 0)
-	{
+	} else if (sidev[0] >= 0 && sidev[1] >= 0) {
 		return 1;
 	}
 	return -1;
