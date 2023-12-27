@@ -12,8 +12,13 @@
 // xs_RoundToInt:   Round toward nearest, but ties round up
 // ====================================================================================================================
 // ====================================================================================================================
+
 #ifndef _xs_FLOAT_H_
 #define _xs_FLOAT_H_
+
+typedef double real64;
+typedef unsigned int uint32;
+typedef signed int int32;
 
 // ====================================================================================================================
 //  Defines
@@ -91,8 +96,6 @@ public:
     finline static real64    ToReal      (Fix f)        {return real64(f)/real64(1<<N);}
     finline static int32     ToInt       (Fix f)        {return f>>N;}
 
-
-
 protected:
     // ====================================================================================================================
     // Helper function - mainly to preserve _xs_DEFAULT_CONVERSION
@@ -106,10 +109,6 @@ protected:
     #endif
     }
 };
-
-
-
-
 
 // ====================================================================================================================
 // ====================================================================================================================
@@ -126,7 +125,6 @@ finline static int32 xs_CRoundToInt(real64 val, real64 dmr)
     return int32(floor(val+.5));
 #endif
 }
-
 
 // ====================================================================================================================
 finline static int32 xs_ToInt(real64 val, real64 dme)
@@ -146,14 +144,13 @@ finline static int32 xs_ToInt(real64 val, real64 dme)
 	return int32(val);
 #else
 #if _xs_DEFAULT_CONVERSION==0
-	return (val<0) ?   xs_CRoundToInt(val-dme) : 
+	return (val<0) ?   xs_CRoundToInt(val-dme) :
 					   xs_CRoundToInt(val+dme);
 #else
     return int32(val);
 #endif
 #endif
 }
-
 
 // ====================================================================================================================
 finline static int32 xs_FloorToInt(real64 val, real64 dme)
@@ -165,7 +162,6 @@ finline static int32 xs_FloorToInt(real64 val, real64 dme)
 #endif
 }
 
-
 // ====================================================================================================================
 finline static int32 xs_CeilToInt(real64 val, real64 dme)
 {
@@ -175,7 +171,6 @@ finline static int32 xs_CeilToInt(real64 val, real64 dme)
     return ceil(val);
 #endif
 }
-
 
 // ====================================================================================================================
 finline static int32 xs_RoundToInt(real64 val)
@@ -189,8 +184,6 @@ finline static int32 xs_RoundToInt(real64 val)
     return floor(val+.5);
 #endif
 }
-
-
 
 // ====================================================================================================================
 // ====================================================================================================================
@@ -217,8 +210,4 @@ finline static uint32 xs_RoundToUInt(real64 val)
 	return (uint32)xs_RoundToInt(val);
 }
 
-
-
-// ====================================================================================================================
-// ====================================================================================================================
 #endif // _xs_FLOAT_H_

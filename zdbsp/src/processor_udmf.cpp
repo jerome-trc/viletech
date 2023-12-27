@@ -25,11 +25,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "processor.hpp"
 #include "sc_man.hpp"
-
-typedef double real64;
-typedef unsigned int uint32;
-typedef signed int int32;
-
 #include "xs_Float.hpp"
 
 /// Parses a 'key = value;' line of the TEXTMAP lump.
