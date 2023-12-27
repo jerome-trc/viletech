@@ -11,9 +11,12 @@ keywords = ["doom", "gamedev"]
 publish = false
 repository.workspace = true
 
+[dependencies]
+
 [build-dependencies]
 bindgen = "0.69.1"
 cbindgen = "0.26.0"
 cc = { version = "1.0.83", features = ["parallel"] }
 
-[dependencies]
+[dev-dependencies]
+md5 = "0.7.0"

@@ -67,9 +67,37 @@ void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVi
 
 		for (size_t ii = 0; ii < 2; ++ii) {
 			for (size_t iii = 0; iii < 4; ++iii) {
-				node.bbox[ii][iii] = LittleShort(level.Nodes[i].bbox[ii][iii] >> 16);
+				node.bbox[ii][iii] = LittleShort(level.Nodes[i].bbox[ii][iii]);
 			}
 		}
+
+		auto o = reinterpret_cast<int16_t*>(&node.children[0]);
+
+		for (size_t ii = 0; ii < 2; ++ii) {
+			uint32_t child = level.Nodes[i].children[ii];
+
+			if (child & NFX_SUBSECTOR) {
+				*o++ = LittleShort(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+			} else {
+				*o++ = LittleShort((uint16_t)child);
+			}
+		}
+
+		// uint32_t child0 = level.Nodes[i].children[0];
+
+		// if (child0 & NFX_SUBSECTOR) {
+		// 	node.children[0] = LittleShort(uint16_t(child0 - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+		// } else {
+		// 	node.children[0] = LittleShort((uint16_t)child0);
+		// }
+
+		// uint32_t child1 = level.Nodes[i].children[1];
+
+		// if (child0 & NFX_SUBSECTOR) {
+		// 	node.children[1] = LittleShort(uint16_t(child1 - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+		// } else {
+		// 	node.children[1] = LittleShort((uint16_t)child1);
+		// }
 
 		callback(ctx, &node);
 	}
