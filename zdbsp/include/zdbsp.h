@@ -6,6 +6,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if __STDC_VERSION__ >= 202000L || (defined(__cplusplus) && __cplusplus >= 201703L)
+#define nodiscard [[nodiscard]]
+#else
+#define nodiscard
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -85,7 +91,7 @@ typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_MapNodeEx*);
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_wadreader_destroy`.
 /// `bytes` must live at least as long as the reader.
-zdbsp_WadReaderPtr zdbsp_wadreader_new(const uint8_t* bytes);
+nodiscard zdbsp_WadReaderPtr zdbsp_wadreader_new(const uint8_t* bytes);
 
 void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad);
 
@@ -93,17 +99,20 @@ void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad);
 /// `zdbsp_processor_destroy`.
 /// `wad` must live at least as long as the processor.
 /// Note that passing in a `NULL` `config` is valid here.
-zdbsp_ProcessorPtr zdbsp_processor_new(zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* config);
+nodiscard zdbsp_ProcessorPtr
+	zdbsp_processor_new(zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* config);
 
 /// Note that passing in a `NULL` `config` is valid here.
 void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 
-size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
+
+#undef nodiscard
 
 #ifdef __cplusplus
 }
