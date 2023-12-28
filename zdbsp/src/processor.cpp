@@ -22,8 +22,6 @@
 #include "blockmapbuilder.hpp"
 #include "zdbsp.h"
 
-extern void ShowView(FLevel* level);
-
 enum {
 	// Thing numbers used in Hexen maps
 	PO_HEX_ANCHOR_TYPE = 3000,
