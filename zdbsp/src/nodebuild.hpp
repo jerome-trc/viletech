@@ -1,6 +1,7 @@
 #include <math.h>
 #include "doomdata.hpp"
 #include "tarray.hpp"
+#include "zdbsp.h"
 
 struct FEventInfo {
 	int Vertex;
@@ -56,15 +57,21 @@ struct FSimpleVert {
 extern "C" {
 int ClassifyLine2(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
 #ifndef DISABLE_SSE
-int ClassifyLineSSE1(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
-int ClassifyLineSSE2(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int ClassifyLineSSE1(
+	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+);
+int ClassifyLineSSE2(
+	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+);
 #ifdef BACKPATCH
 #ifdef __GNUC__
-int ClassifyLineBackpatch(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2])
-	__attribute__((noinline));
+int ClassifyLineBackpatch(
+	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+) __attribute__((noinline));
 #else
-int __declspec(noinline)
-	ClassifyLineBackpatch(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int __declspec(noinline) ClassifyLineBackpatch(
+	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+);
 #endif
 #endif
 #endif
@@ -212,6 +219,7 @@ private:
 	TArray<int> Touched; // Loops a splitter touches on a vertex
 	TArray<int> Colinear; // Loops with edges colinear to a splitter
 	FEventTree Events; // Vertices intersected by the current splitter
+	TArray<uint32_t> UnsetSegs; // Segs with no definitive side in current splitter
 	TArray<FSplitSharer> SplitSharers; // Segs collinear with the current splitter
 
 	DWORD HackSeg; // Seg to force to back of splitter
@@ -237,6 +245,17 @@ private:
 	void CreateSubsectorsForReal();
 	bool CheckSubsector(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
 	bool CheckSubsectorOverlappingSegs(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
+	void DoGLSegSplit(
+		uint32_t set,
+		zdbsp_NodeFxp& node,
+		uint32_t splitseg,
+		uint32_t& outset0,
+		uint32_t& outset1,
+		int side,
+		int sidev0,
+		int sidev1,
+		bool hack
+	);
 	bool ShoveSegBehind(DWORD set, zdbsp_NodeFxp& node, DWORD seg, DWORD mate);
 	int SelectSplitter(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg, int step, bool nosplit);
 	void SplitSegs(
@@ -256,9 +275,11 @@ private:
 	//  1 = seg is in back
 	// -1 = seg cuts the node
 
-	inline int ClassifyLine(zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]);
+	inline int ClassifyLine(
+		zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
+	);
 
-	void FixSplitSharers();
+	void FixSplitSharers(const zdbsp_NodeFxp& node);
 	double AddIntersection(const zdbsp_NodeFxp& node, int vertex);
 	void AddMinisegs(const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& rset);
 	DWORD CheckLoopStart(fixed_t dx, fixed_t dy, int vertex1, int vertex2);

@@ -24,6 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <assert.h>
 #include "common.hpp"
 #include "nodebuild.hpp"
+#include "zdbsp.h"
 
 #define Printf printf
 
@@ -62,11 +63,14 @@ double FNodeBuilder::AddIntersection(const zdbsp_NodeFxp& node, int vertex) {
 // having overlapping lines. If we skip this step, these segs will still be
 // split later, but minisegs will erroneously be added for them, and partner
 // seg information will be messed up in the generated tree.
-void FNodeBuilder::FixSplitSharers() {
-	D(printf("events:\n"));
-	D(Events.PrintTree());
+// If there are any segs on the splitter that span more than two events, they
+// must be split. Alien Vendetta is one example wad that is quite bad about
+// having overlapping lines. If we skip this step, these segs will still be
+// split later, but minisegs will erroneously be added for them, and partner
+// seg information will be messed up in the generated tree.
+void FNodeBuilder::FixSplitSharers([[maybe_unused]] const zdbsp_NodeFxp& node) {
 	for (unsigned int i = 0; i < SplitSharers.Size(); ++i) {
-		DWORD seg = SplitSharers[i].Seg;
+		uint32_t seg = SplitSharers[i].Seg;
 		int v2 = Segs[seg].v2;
 		FEvent* event = Events.FindEvent(SplitSharers[i].Distance);
 		FEvent* next;
@@ -74,13 +78,6 @@ void FNodeBuilder::FixSplitSharers() {
 		if (event == NULL) { // Should not happen
 			continue;
 		}
-
-		D(printf(
-			"Considering events on seg %d(%d[%d,%d]->%d[%d,%d]) [%g:%g]\n", seg, Segs[seg].v1,
-			Vertices[Segs[seg].v1].x >> 16, Vertices[Segs[seg].v1].y >> 16, Segs[seg].v2,
-			Vertices[Segs[seg].v2].x >> 16, Vertices[Segs[seg].v2].y >> 16,
-			SplitSharers[i].Distance, event->Distance
-		));
 
 		if (SplitSharers[i].Forward) {
 			event = Events.GetSuccessor(event);
@@ -97,36 +94,20 @@ void FNodeBuilder::FixSplitSharers() {
 		}
 
 		while (event != NULL && next != NULL && event->Info.Vertex != v2) {
-			D(printf(
-				"Forced split of seg %d(%d[%d,%d]->%d[%d,%d]) at %d(%d,%d):%g\n", seg, Segs[seg].v1,
-				Vertices[Segs[seg].v1].x >> 16, Vertices[Segs[seg].v1].y >> 16, Segs[seg].v2,
-				Vertices[Segs[seg].v2].x >> 16, Vertices[Segs[seg].v2].y >> 16, event->Info.Vertex,
-				Vertices[event->Info.Vertex].x >> 16, Vertices[event->Info.Vertex].y >> 16,
-				event->Distance
-			));
-
-			DWORD newseg = SplitSeg(seg, event->Info.Vertex, 1);
+			uint32_t newseg = SplitSeg(seg, event->Info.Vertex, 1);
 
 			Segs[newseg].next = Segs[seg].next;
 			Segs[seg].next = newseg;
 
-			DWORD partner = Segs[seg].partner;
-			if (partner != DWORD_MAX) {
+			uint32_t partner = Segs[seg].partner;
+			if (partner != UINT_MAX) {
 				int endpartner = SplitSeg(partner, event->Info.Vertex, 1);
 
 				Segs[endpartner].next = Segs[partner].next;
 				Segs[partner].next = endpartner;
 
 				Segs[seg].partner = endpartner;
-				// Segs[endpartner].partner = seg;
 				Segs[partner].partner = newseg;
-
-				assert(Segs[Segs[seg].partner].partner == seg);
-				assert(Segs[Segs[newseg].partner].partner == newseg);
-				assert(Segs[seg].v1 == Segs[endpartner].v2);
-				assert(Segs[seg].v2 == Segs[endpartner].v1);
-				assert(Segs[partner].v1 == Segs[newseg].v2);
-				assert(Segs[partner].v2 == Segs[newseg].v1);
 			}
 
 			seg = newseg;
@@ -141,7 +122,9 @@ void FNodeBuilder::FixSplitSharers() {
 	}
 }
 
-void FNodeBuilder::AddMinisegs(const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& bset) {
+void FNodeBuilder::AddMinisegs(
+	const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& bset
+) {
 	FEvent *event = Events.GetMinimum(), *prev = NULL;
 
 	while (event != NULL) {
