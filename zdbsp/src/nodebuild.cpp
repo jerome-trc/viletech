@@ -37,7 +37,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define Printf printf
 #define STACK_ARGS
 
-#if 0
+#ifdef ZDBSP_DEBUG_VERBOSE
 #define D(x) x
 #else
 #define D(x) \
@@ -71,12 +71,10 @@ FNodeBuilder::~FNodeBuilder() {
 void FNodeBuilder::BuildTree() {
 	fixed_t bbox[4];
 
-	fprintf(stderr, "   BSP:   0.0%%\r");
 	HackSeg = DWORD_MAX;
 	HackMate = DWORD_MAX;
 	CreateNode(0, Segs.Size(), bbox);
 	CreateSubsectorsForReal();
-	fprintf(stderr, "   BSP: 100.0%%\n");
 }
 
 DWORD FNodeBuilder::CreateNode(DWORD set, unsigned int count, fixed_t bbox[4]) {
@@ -164,10 +162,6 @@ DWORD FNodeBuilder::CreateSubsector(DWORD set, fixed_t bbox[4]) {
 	}
 
 	SegsStuffed += count;
-	if ((SegsStuffed & ~63) != ((SegsStuffed - count) & ~63)) {
-		int percent = (int)(SegsStuffed * 1000.0 / Segs.Size());
-		fprintf(stderr, "   BSP: %3d.%d%%\r", percent / 10, percent % 10);
-	}
 
 	D(Printf(
 		"bbox (%d,%d)-(%d,%d)\n", bbox[BOXLEFT] >> 16, bbox[BOXBOTTOM] >> 16, bbox[BOXRIGHT] >> 16,

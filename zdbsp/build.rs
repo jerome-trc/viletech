@@ -15,7 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	gen_header(&mut config, "", "src/lib.rs.hpp", &[])?;
 
-	cc::Build::new()
+	let mut ccbuild = cc::Build::new();
+
+	ccbuild
 		.includes(&["include", "src"])
 		.cpp(true)
 		.flag_if_supported("-Wall")
@@ -39,8 +41,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			"src/utility.cpp",
 			"src/wad.cpp",
 			"src/zdbsp.cpp",
-		])
-		.compile("zdbsp");
+		]);
+
+	if std::env::var("CARGO_FEATURE_XVERBOSE").is_ok() {
+		ccbuild.define("ZDBSP_DEBUG_VERBOSE", None);
+	}
+
+	ccbuild.compile("zdbsp");
 
 	bindgen::Builder::default()
 		.header("include/zdbsp.h")

@@ -65,8 +65,6 @@ FLevel::~FLevel() {
 }
 
 FProcessor::FProcessor(FWadReader& inwad, int lump) : Wad(inwad), Lump(lump) {
-	printf("----%s----\n", Wad.LumpName(Lump));
-
 	isUDMF = Wad.isUDMF(lump);
 
 	if (isUDMF) {

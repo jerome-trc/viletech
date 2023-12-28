@@ -28,7 +28,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #define Printf printf
 
-#if 0
+#ifdef ZDBSP_DEBUG_VERBOSE
 #include <stdio.h>
 #define D(x) x
 #else

@@ -31,7 +31,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 static const int PO_LINE_START = 1;
 static const int PO_LINE_EXPLICIT = 5;
 
-#if 0
+#ifdef ZDBSP_DEBUG_VERBOSE
 #define D(x) x
 #else
 #define D(x) \
@@ -39,7 +39,7 @@ static const int PO_LINE_EXPLICIT = 5;
 	} while (0)
 #endif
 
-#if 0
+#ifdef ZDBSP_DEBUG_VERBOSE
 #define P(x) x
 #define Printf printf
 #else

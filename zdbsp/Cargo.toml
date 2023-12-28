@@ -11,6 +11,10 @@ keywords = ["doom", "gamedev"]
 publish = false
 repository.workspace = true
 
+[features]
+default = []
+xverbose = []
+
 [dependencies]
 
 [build-dependencies]

@@ -196,12 +196,16 @@ void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeE
 	}
 }
 
-void zdbsp_processor_ssectorsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor callback) {
+void zdbsp_processor_ssectorsx_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor callback
+) {
 	auto& level = p->get_level();
 	processor_ssectorsx_foreach(ctx, callback, level.GLSubsectors, level.NumGLSubsectors);
 }
 
-void zdbsp_processor_segsglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor callback) {
+void zdbsp_processor_segsglx_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor callback
+) {
 	auto& level = p->get_level();
 
 	for (size_t i = 0; i < level.NumGLSegs; ++i) {

@@ -29,7 +29,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "nodebuild.hpp"
 #include "templates.hpp"
 
-#if 0
+#ifdef ZDBSP_DEBUG_VERBOSE
 #define D(x) x
 #define DD 1
 #else
