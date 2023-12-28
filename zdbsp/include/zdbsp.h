@@ -174,6 +174,13 @@ typedef struct FProcessor* zdbsp_ProcessorPtr;
 
 typedef void (*zdbsp_NodeVisitor)(void*, const zdbsp_NodeRaw*);
 typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_NodeEx*);
+typedef void (*zdbsp_SegVisitor)(void*, const zdbsp_SegRaw*);
+typedef void (*zdbsp_SegGlVisitor)(void*, const zdbsp_SegGl*);
+typedef void (*zdbsp_SubsectorVisitor)(void*, const zdbsp_SubsectorRaw*);
+
+nodiscard zdbsp_ProcessFlags zdbsp_processflags_default(void);
+nodiscard zdbsp_RejectMode zdbsp_rejectmode_default(void);
+nodiscard zdbsp_BlockmapMode zdbsp_blockmapmode_default(void);
 
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_wadreader_destroy`.
@@ -195,8 +202,12 @@ void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 nodiscard size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
-void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
+void zdbsp_processor_segs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
+void zdbsp_processor_ssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
+
+void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
+void zdbsp_processor_glsegs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
+void zdbsp_processor_glssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
 
