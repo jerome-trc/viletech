@@ -48,7 +48,7 @@ static const int PO_LINE_EXPLICIT = 5;
 	} while (0)
 #endif
 
-void FNodeBuilder::FindUsedVertices(zdbsp_VertexWide* oldverts, int max) {
+void FNodeBuilder::FindUsedVertices(zdbsp_VertexEx* oldverts, int max) {
 	int* map = new int[max];
 	int i;
 	FPrivVert newvert;

@@ -166,7 +166,7 @@ public:
 		fixed_t x, y;
 	};
 
-	int max_segs = 64, split_cost = 8, aa_pref = 16;
+	int32_t max_segs = 64, split_cost = 8, aa_pref = 16;
 
 	FNodeBuilder(
 		FLevel& level,
@@ -178,23 +178,23 @@ public:
 
 	~FNodeBuilder();
 
-	void GetVertices(zdbsp_VertexWide*& verts, size_t& count);
+	void GetVertices(zdbsp_VertexEx*& verts, int32_t& count);
 	void GetNodes(
 		zdbsp_NodeEx*& nodes,
-		size_t& nodeCount,
+		int32_t& nodeCount,
 		zdbsp_SegEx*& segs,
-		size_t& segCount,
+		int32_t& segCount,
 		zdbsp_SubsectorEx*& ssecs,
-		size_t& subCount
+		int32_t& subCount
 	);
 
 	void GetGLNodes(
 		zdbsp_NodeEx*& nodes,
-		size_t& nodeCount,
+		int32_t& nodeCount,
 		zdbsp_SegGlEx*& segs,
-		size_t& segCount,
+		int32_t& segCount,
 		zdbsp_SubsectorEx*& ssecs,
-		size_t& subCount
+		int32_t& subCount
 	);
 
 	// < 0 : in front of line
@@ -231,7 +231,7 @@ private:
 	int SegsStuffed;
 	const char* MapName;
 
-	void FindUsedVertices(zdbsp_VertexWide* vertices, int max);
+	void FindUsedVertices(zdbsp_VertexEx* vertices, int max);
 	void BuildTree();
 	void MakeSegsFromSides();
 	int CreateSeg(int linenum, int sidenum);

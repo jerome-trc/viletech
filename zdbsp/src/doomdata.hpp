@@ -114,34 +114,34 @@ struct FLevel {
 	FLevel();
 	~FLevel();
 
-	zdbsp_VertexWide* Vertices;
-	size_t NumVertices;
+	zdbsp_VertexEx* Vertices;
+	int32_t NumVertices;
 	TArray<IntVertex> VertexProps;
 	TArray<IntSideDef> Sides;
 	TArray<IntLineDef> Lines;
 	TArray<IntSector> Sectors;
 	TArray<IntThing> Things;
 	zdbsp_SubsectorEx* Subsectors;
-	size_t NumSubsectors;
+	int32_t NumSubsectors;
 	zdbsp_SegEx* Segs;
-	size_t NumSegs;
+	int32_t NumSegs;
 	zdbsp_NodeEx* Nodes;
-	size_t NumNodes;
+	int32_t NumNodes;
 	WORD* Blockmap;
-	size_t BlockmapSize;
+	int32_t BlockmapSize;
 	BYTE* Reject;
-	size_t RejectSize;
+	int32_t RejectSize;
 
 	zdbsp_SubsectorEx* GLSubsectors;
-	size_t NumGLSubsectors;
+	int32_t NumGLSubsectors;
 	zdbsp_SegGlEx* GLSegs;
-	size_t NumGLSegs;
+	int32_t NumGLSegs;
 	zdbsp_NodeEx* GLNodes;
-	size_t NumGLNodes;
-	zdbsp_VertexWide* GLVertices;
-	size_t NumGLVertices;
+	int32_t NumGLNodes;
+	zdbsp_VertexEx* GLVertices;
+	int32_t NumGLVertices;
 	BYTE* GLPVS;
-	size_t GLPVSSize;
+	int32_t GLPVSSize;
 
 	int NumOrgVerts;
 

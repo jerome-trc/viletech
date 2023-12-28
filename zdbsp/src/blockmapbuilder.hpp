@@ -9,7 +9,7 @@
 class FBlockmapBuilder {
 public:
 	FBlockmapBuilder(FLevel& level);
-	WORD* GetBlockmap(size_t& size);
+	WORD* GetBlockmap(int32_t& size);
 
 private:
 	FLevel& Level;

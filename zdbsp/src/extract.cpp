@@ -41,11 +41,11 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 void FNodeBuilder::GetGLNodes(
 	zdbsp_NodeEx*& outNodes,
-	size_t& nodeCount,
+	int32_t& nodeCount,
 	zdbsp_SegGlEx*& outSegs,
-	size_t& segCount,
+	int32_t& segCount,
 	zdbsp_SubsectorEx*& outSubs,
-	size_t& subCount
+	int32_t& subCount
 ) {
 	TArray<zdbsp_SegGlEx> segs(Segs.Size() * 5 / 4);
 	int i, j, k;
@@ -311,9 +311,9 @@ DWORD FNodeBuilder::PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg) 
 			// When both sidedefs are the same a quick check doesn't work so this
 			// has to be done by comparing the distances of the seg's end point to
 			// the line's start.
-			zdbsp_VertexWide* lv1 = &Level.Vertices[ld->v1];
-			zdbsp_VertexWide* sv1 = &Level.Vertices[seg->v1];
-			zdbsp_VertexWide* sv2 = &Level.Vertices[seg->v2];
+			zdbsp_VertexEx* lv1 = &Level.Vertices[ld->v1];
+			zdbsp_VertexEx* sv1 = &Level.Vertices[seg->v1];
+			zdbsp_VertexEx* sv2 = &Level.Vertices[seg->v2];
 
 			double dist1sq = double(sv1->x - lv1->x) * (sv1->x - lv1->x) +
 							 double(sv1->y - lv1->y) * (sv1->y - lv1->y);
@@ -349,9 +349,9 @@ void FNodeBuilder::PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& seg
 	segs.Push(newseg);
 }
 
-void FNodeBuilder::GetVertices(zdbsp_VertexWide*& verts, size_t& count) {
+void FNodeBuilder::GetVertices(zdbsp_VertexEx*& verts, int32_t& count) {
 	count = Vertices.Size();
-	verts = new zdbsp_VertexWide[count];
+	verts = new zdbsp_VertexEx[count];
 
 	for (int i = 0; i < count; ++i) {
 		verts[i].x = Vertices[i].x;
@@ -362,11 +362,11 @@ void FNodeBuilder::GetVertices(zdbsp_VertexWide*& verts, size_t& count) {
 
 void FNodeBuilder::GetNodes(
 	zdbsp_NodeEx*& outNodes,
-	size_t& nodeCount,
+	int32_t& nodeCount,
 	zdbsp_SegEx*& outSegs,
-	size_t& segCount,
+	int32_t& segCount,
 	zdbsp_SubsectorEx*& outSubs,
-	size_t& subCount
+	int32_t& subCount
 ) {
 	short bbox[4];
 	TArray<zdbsp_SegEx> segs(Segs.Size());
@@ -470,9 +470,9 @@ int FNodeBuilder::StripMinisegs(TArray<zdbsp_SegEx>& segs, int subsector, short 
 				// When both sidedefs are the same a quick check doesn't work so this
 				// has to be done by comparing the distances of the seg's end point to
 				// the line's start.
-				zdbsp_VertexWide* lv1 = &Level.Vertices[ld->v1];
-				zdbsp_VertexWide* sv1 = &Level.Vertices[org->v1];
-				zdbsp_VertexWide* sv2 = &Level.Vertices[org->v2];
+				zdbsp_VertexEx* lv1 = &Level.Vertices[ld->v1];
+				zdbsp_VertexEx* sv1 = &Level.Vertices[org->v1];
+				zdbsp_VertexEx* sv2 = &Level.Vertices[org->v2];
 
 				double dist1sq = double(sv1->x - lv1->x) * (sv1->x - lv1->x) +
 								 double(sv1->y - lv1->y) * (sv1->y - lv1->y);

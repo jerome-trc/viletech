@@ -301,7 +301,7 @@ void FWadWriter::WriteLump(const char* name, const void* data, int len) {
 
 void FWadWriter::CopyLump(FWadReader& wad, int lump) {
 	uint8_t* data;
-	size_t size;
+	int32_t size;
 
 	ReadLump<uint8_t>(wad, lump, data, size);
 	if (data != NULL) {

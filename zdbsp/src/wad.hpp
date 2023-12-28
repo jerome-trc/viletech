@@ -47,7 +47,7 @@ public:
 
 	// VC++ 6 does not support template member functions in non-template classes!
 	template<class T>
-	friend void ReadLump(FWadReader& wad, int index, T*& data, size_t& size);
+	friend void ReadLump(FWadReader& wad, int index, T*& data, int32_t& size);
 
 private:
 	const uint8_t* bytes;
@@ -57,7 +57,7 @@ private:
 };
 
 template<class T>
-void ReadLump(FWadReader& wad, int index, T*& data, size_t& size) {
+void ReadLump(FWadReader& wad, int index, T*& data, int32_t& size) {
 	if ((unsigned)index >= (unsigned)wad.Header.NumLumps) {
 		data = NULL;
 		size = 0;
@@ -71,7 +71,7 @@ void ReadLump(FWadReader& wad, int index, T*& data, size_t& size) {
 }
 
 template<class T>
-void ReadMapLump(FWadReader& wad, const char* name, int index, T*& data, size_t& size) {
+void ReadMapLump(FWadReader& wad, const char* name, int index, T*& data, int32_t& size) {
 	ReadLump(wad, wad.FindMapLump(name, index), data, size);
 }
 

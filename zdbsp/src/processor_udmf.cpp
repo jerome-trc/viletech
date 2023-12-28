@@ -178,7 +178,7 @@ void FProcessor::ParseSector(IntSector* sec) {
 	}
 }
 
-void FProcessor::ParseVertex(zdbsp_VertexWide* vt, IntVertex* vtp) {
+void FProcessor::ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp) {
 	vt->x = vt->y = 0;
 	this->scanner.must_get_string_name("{");
 	while (!this->scanner.check_string("}")) {
@@ -218,8 +218,8 @@ void FProcessor::ParseMapProperties() {
 
 void FProcessor::ParseTextMap(int lump) {
 	char* buffer;
-	size_t buffersize;
-	TArray<zdbsp_VertexWide> Vertices;
+	int32_t buffersize;
+	TArray<zdbsp_VertexEx> Vertices;
 
 	ReadLump<char>(Wad, lump, buffer, buffersize);
 	this->scanner.open_mem("TEXTMAP", buffer, buffersize);
@@ -241,15 +241,15 @@ void FProcessor::ParseTextMap(int lump) {
 			IntSector* sec = &Level.Sectors[Level.Sectors.Reserve(1)];
 			ParseSector(sec);
 		} else if (this->scanner.compare("vertex")) {
-			zdbsp_VertexWide* vt = &Vertices[Vertices.Reserve(1)];
+			zdbsp_VertexEx* vt = &Vertices[Vertices.Reserve(1)];
 			IntVertex* vtp = &Level.VertexProps[Level.VertexProps.Reserve(1)];
 			vt->index = Vertices.Size();
 			ParseVertex(vt, vtp);
 		}
 	}
-	Level.Vertices = new zdbsp_VertexWide[Vertices.Size()];
+	Level.Vertices = new zdbsp_VertexEx[Vertices.Size()];
 	Level.NumVertices = Vertices.Size();
-	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(zdbsp_VertexWide));
+	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(zdbsp_VertexEx));
 	this->scanner.close();
 	delete[] buffer;
 }
@@ -353,7 +353,7 @@ void FProcessor::WriteTextMap(FWadWriter& out) {
 	}
 
 	for (int i = 0; i < Level.NumOrgVerts; i++) {
-		zdbsp_VertexWide* vt = &Level.Vertices[i];
+		zdbsp_VertexEx* vt = &Level.Vertices[i];
 		if (vt->index <= 0) {
 			// not valid!
 			throw std::runtime_error("Invalid vertex data.");

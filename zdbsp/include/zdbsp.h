@@ -23,12 +23,14 @@ extern "C" {
 typedef int32_t zdbsp_I16F16;
 typedef uint32_t zdbsp_Angle;
 
+/// @see zdbsp_ProcessConfig
 typedef enum {
 	/// If no configuration is provided, this is the default.
 	ZDBSP_EBM_REBUILD,
 	ZDBSP_EBM_CREATE0,
 } zdbsp_BlockmapMode;
 
+/// @see zdbsp_ProcessConfig
 typedef enum {
 	/// If no configuration is provided, this is the default.
 	ZDBSP_ERM_DONTTOUCH,
@@ -37,6 +39,7 @@ typedef enum {
 	ZDBSP_ERM_REBUILD
 } zdbsp_RejectMode;
 
+/// @see zdbsp_ProcessConfig
 typedef enum {
 	/// Enabled by default.
 	ZDBSP_PROCF_BUILDNODES = 1 << 0,
@@ -71,24 +74,30 @@ typedef struct {
 } zdbsp_ProcessConfig;
 
 typedef struct {
+	/// The cost for avoiding diagonal splitters (16 by default).
 	int32_t aa_preference;
+	/// The maximum number of segs to consider at each node (64 by default).
 	int32_t max_segs;
+	/// The cost to split a seg (8 by default).
 	int32_t split_cost;
 } zdbsp_NodeConfig;
 
+/// A level vertex as per the original WAD format.
 typedef struct {
 	int16_t x, y;
 } zdbsp_VertexRaw;
 
+/// A level vertex in terms of 32-bit fixed-point numbers.
 typedef struct {
 	zdbsp_I16F16 x, y;
 } zdbsp_VertexFxp;
 
 typedef struct {
 	zdbsp_I16F16 x, y;
-	uint32_t index;
-} zdbsp_VertexWide;
+	int32_t index;
+} zdbsp_VertexEx;
 
+/// A binary space partition tree node as per the original WAD format.
 typedef struct {
 	int16_t x, y, dx, dy;
 	int16_t bbox[2][4];
@@ -107,6 +116,7 @@ typedef struct {
 	uint32_t children[2];
 } zdbsp_NodeEx0;
 
+/// A binary space partition tree node in terms of 32-bit fixed-point numbers.
 typedef struct {
 	zdbsp_I16F16 x, y, dx, dy;
 	zdbsp_I16F16 bbox[2][4];
@@ -168,6 +178,12 @@ typedef struct {
 	const char *key, *value;
 } zdbsp_UdmfKey;
 
+typedef enum {
+	ZDBSP_NODEVERS_1,
+	ZDBSP_NODEVERS_2,
+	ZDBSP_NODEVERS_3,
+} zdbsp_NodeVersion;
+
 typedef struct FLevel* zdbsp_LevelPtr;
 typedef struct FWadReader* zdbsp_WadReaderPtr;
 typedef struct FProcessor* zdbsp_ProcessorPtr;
@@ -176,7 +192,10 @@ typedef void (*zdbsp_NodeVisitor)(void*, const zdbsp_NodeRaw*);
 typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_NodeEx*);
 typedef void (*zdbsp_SegVisitor)(void*, const zdbsp_SegRaw*);
 typedef void (*zdbsp_SegGlVisitor)(void*, const zdbsp_SegGl*);
+typedef void (*zdbsp_SegGlExVisitor)(void*, const zdbsp_SegGlEx*);
 typedef void (*zdbsp_SubsectorVisitor)(void*, const zdbsp_SubsectorRaw*);
+typedef void (*zdbsp_SubsectorExVisitor)(void*, const zdbsp_SubsectorEx*);
+typedef void (*zdbsp_VertexExVisitor)(void*, const zdbsp_VertexEx*);
 
 nodiscard zdbsp_ProcessFlags zdbsp_processflags_default(void);
 nodiscard zdbsp_RejectMode zdbsp_rejectmode_default(void);
@@ -196,20 +215,55 @@ void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad);
 nodiscard zdbsp_ProcessorPtr
 	zdbsp_processor_new(zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* config);
 
+void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
+
 /// Note that passing in a `NULL` `config` is valid here.
 void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 
+/// Note that if the processor has not been run yet,
+/// this function is sound to call but its result is undefined.
+nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
 nodiscard size_t zdbsp_processor_nodesx_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_nodesgl_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_ssectorsgl_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_segsglx_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_vertsorig_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_vertsgl_count(zdbsp_ProcessorPtr p);
+
+/// Beware that if this number is going to be written to a WAD entry,
+/// it should be serialized into a `uint32_t`.
+nodiscard size_t zdbsp_processor_vertsnew_count(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_segs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
 void zdbsp_processor_ssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
 
-void zdbsp_processor_glnodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_glsegs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
-void zdbsp_processor_glssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
+void zdbsp_processor_nodesgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
+void zdbsp_processor_segsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
+void zdbsp_processor_ssectorsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
 
-void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
+void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
+void zdbsp_processor_ssectorsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor);
+void zdbsp_processor_segsglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
+void zdbsp_processor_vertsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
 
 #undef nodiscard
 

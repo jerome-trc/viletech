@@ -101,7 +101,7 @@ FProcessor::FProcessor(FWadReader& inwad, int lump) : Wad(inwad), Lump(lump) {
 }
 
 void FProcessor::LoadThings() {
-	size_t NumThings;
+	int32_t NumThings;
 
 	if (Extended) {
 		zdbsp_Thing2* Things;
@@ -148,7 +148,7 @@ void FProcessor::LoadThings() {
 }
 
 void FProcessor::LoadLines() {
-	size_t NumLines;
+	int32_t NumLines;
 
 	if (Extended) {
 		MapLineDef2* Lines;
@@ -203,7 +203,7 @@ void FProcessor::LoadVertices() {
 	zdbsp_VertexRaw* verts;
 	ReadMapLump<zdbsp_VertexRaw>(Wad, "VERTEXES", Lump, verts, Level.NumVertices);
 
-	Level.Vertices = new zdbsp_VertexWide[Level.NumVertices];
+	Level.Vertices = new zdbsp_VertexEx[Level.NumVertices];
 
 	for (int i = 0; i < Level.NumVertices; ++i) {
 		Level.Vertices[i].x = LittleShort(verts[i].x) << FRACBITS;
@@ -214,7 +214,7 @@ void FProcessor::LoadVertices() {
 
 void FProcessor::LoadSides() {
 	MapSideDef* Sides;
-	size_t NumSides;
+	int32_t NumSides;
 	ReadMapLump<MapSideDef>(Wad, "SIDEDEFS", Lump, Sides, NumSides);
 
 	Level.Sides.Resize(NumSides);
@@ -234,7 +234,7 @@ void FProcessor::LoadSides() {
 
 void FProcessor::LoadSectors() {
 	MapSector* Sectors;
-	size_t NumSectors;
+	int32_t NumSectors;
 
 	ReadMapLump<MapSector>(Wad, "SECTORS", Lump, Sectors, NumSectors);
 	Level.Sectors.Resize(NumSectors);
@@ -721,6 +721,21 @@ void FProcessor::Write(FWadWriter& out) {
 	}
 }
 
+int32_t FProcessor::NodeVersion() const {
+	bool frac_splitters = this->CheckForFracSplitters(
+		this->Level.GLNodes,
+		this->Level.NumGLNodes
+	);
+
+	if (frac_splitters) {
+		return 3;
+	} else if (this->Level.NumLines() < 65'535) {
+		return 1;
+	} else {
+		return 2;
+	}
+}
+
 //
 BYTE* FProcessor::FixReject(const BYTE* oldreject) {
 	int x, y, ox, oy, pnum, opnum;
@@ -808,7 +823,7 @@ zdbsp_SegGlEx* FProcessor::SegGLsToEx(const zdbsp_SegGl* segs, int count) {
 
 void FProcessor::WriteVertices(FWadWriter& out, int count) {
 	int i;
-	zdbsp_VertexWide* vertdata = Level.Vertices;
+	zdbsp_VertexEx* vertdata = Level.Vertices;
 
 	short* verts = new short[count * 2];
 
@@ -1065,7 +1080,7 @@ void FProcessor::WriteReject(FWadWriter& out) {
 
 void FProcessor::WriteGLVertices(FWadWriter& out, bool v5) {
 	int i, count = (Level.NumGLVertices - Level.NumOrgVerts);
-	zdbsp_VertexWide* vertdata = Level.GLVertices + Level.NumOrgVerts;
+	zdbsp_VertexEx* vertdata = Level.GLVertices + Level.NumOrgVerts;
 
 	fixed_t* verts = new fixed_t[count * 2 + 1];
 	char* magic = (char*)verts;
@@ -1211,7 +1226,7 @@ void FProcessor::WriteGLBSPZ(FWadWriter& out, const char* label) {
 	WriteNodesZ(zout, Level.GLNodes, Level.NumGLNodes, nodever);
 }
 
-void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexWide* verts, int orgverts, int newverts) {
+void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts) {
 	out << (DWORD)orgverts << (DWORD)newverts;
 
 	for (int i = 0; i < newverts; ++i) {
@@ -1319,7 +1334,7 @@ void FProcessor::WriteGLBSPX(FWadWriter& out, const char* label) {
 }
 
 void FProcessor::WriteVerticesX(
-	FWadWriter& out, const zdbsp_VertexWide* verts, int orgverts, int newverts
+	FWadWriter& out, const zdbsp_VertexEx* verts, int orgverts, int newverts
 ) {
 	out << (DWORD)orgverts << (DWORD)newverts;
 
@@ -1383,7 +1398,7 @@ void FProcessor::WriteNodesX(
 	}
 }
 
-bool FProcessor::CheckForFracSplitters(const zdbsp_NodeEx* nodes, int numnodes) {
+bool FProcessor::CheckForFracSplitters(const zdbsp_NodeEx* nodes, int numnodes) const {
 	for (int i = 0; i < numnodes; ++i) {
 		if (0 != ((nodes[i].x | nodes[i].y | nodes[i].dx | nodes[i].dy) & 0x0000FFFF)) {
 			return true;

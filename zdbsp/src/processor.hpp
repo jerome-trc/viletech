@@ -72,6 +72,7 @@ public:
 	FProcessor(FWadReader& inwad, int lump);
 	void Process(const zdbsp_NodeConfig* config);
 	void Write(FWadWriter& out);
+	int32_t NodeVersion() const;
 
 	bool build_nodes = true, build_gl_nodes = false;
 	bool conform_nodes = false, gl_only = false;
@@ -100,7 +101,7 @@ private:
 	zdbsp_SegGlEx* SegGLsToEx(const zdbsp_SegGl* segs, int count);
 
 	BYTE* FixReject(const BYTE* oldreject);
-	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count);
+	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count) const;
 
 	void WriteLines(FWadWriter& out);
 	void WriteVertices(FWadWriter& out, int count);
@@ -121,7 +122,7 @@ private:
 	void WriteBSPZ(FWadWriter& out, const char* label);
 	void WriteGLBSPZ(FWadWriter& out, const char* label);
 
-	void WriteVerticesZ(ZLibOut& out, const zdbsp_VertexWide* verts, int orgverts, int newverts);
+	void WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts);
 	void WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs);
 	void WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs);
 	void WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
@@ -130,7 +131,7 @@ private:
 	void WriteBSPX(FWadWriter& out, const char* label);
 	void WriteGLBSPX(FWadWriter& out, const char* label);
 
-	void WriteVerticesX(FWadWriter& out, const zdbsp_VertexWide* verts, int orgverts, int newverts);
+	void WriteVerticesX(FWadWriter& out, const zdbsp_VertexEx* verts, int orgverts, int newverts);
 	void WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs);
 	void WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs);
 	void WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
@@ -151,7 +152,7 @@ private:
 	void ParseLinedef(IntLineDef* ld);
 	void ParseSidedef(IntSideDef* sd);
 	void ParseSector(IntSector* sec);
-	void ParseVertex(zdbsp_VertexWide* vt, IntVertex* vtp);
+	void ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp);
 	void ParseMapProperties();
 	void ParseTextMap(int lump);
 

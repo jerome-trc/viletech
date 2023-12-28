@@ -61,7 +61,7 @@ int BoxOnSide(int bx1, int by1, int bx2, int by2, int lx1, int ly1, int lx2, int
 }
 #endif
 
-WORD* FBlockmapBuilder::GetBlockmap(size_t& size) {
+WORD* FBlockmapBuilder::GetBlockmap(int32_t& size) {
 #ifdef BLOCK_TEST
 	FILE* f = fopen("blockmap.lmp", "rb");
 	if (f) {
