@@ -290,7 +290,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 
 						if (dist < closestdist && dist >= 0) {
 							closestdist = dist;
-							closestseg = (long)j;
+							closestseg = j;
 						}
 					}
 				}
