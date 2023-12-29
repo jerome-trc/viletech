@@ -62,6 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 const RERUN_IF_CHANGED: &[&str] = &[
 	// Rust
 	"src/lib.rs",
+	"src/sys.rs",
 	// Public C
 	"include/zdbsp.h",
 	// Implementation
