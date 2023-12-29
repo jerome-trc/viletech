@@ -294,7 +294,7 @@ void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 /// Notes:
 /// - If the processor has not been run yet, it will always return `ZDBSP_NODEVERS_UNKNOWN`.
 /// - It will also return `ZDBSP_NODEVERS_UNKNOWN` if the last run did not build any GL nodes.
-nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p);
+nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(const zdbsp_ProcessorPtr p);
 
 /// Returns a (static) string containing the 4 bytes needed to be written into
 /// a combined nodes/subsectors/segs WAD entry if possible.
@@ -302,39 +302,39 @@ nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p);
 /// Be aware that if the node version is unknown (i.e. a run has not yet been completed,
 /// or no GL nodes were built in the last run) and `compress` is false then no
 /// magic number is applicable, and this function will return a null pointer.
-nodiscard const char* zdbsp_processor_magicnumber(zdbsp_ProcessorPtr p, zdbsp_Bool compress);
+nodiscard const char* zdbsp_processor_magicnumber(const zdbsp_ProcessorPtr p, zdbsp_Bool compress);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_nodes_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_nodes_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_nodesgl_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_nodesgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_segs_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_segs_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_segsglx_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_segsglx_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_ssectors_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_ssectors_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_ssectorsgl_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_ssectorsgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsorig_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_vertsorig_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsgl_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_vertsgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
@@ -342,33 +342,43 @@ nodiscard size_t zdbsp_processor_vertsnewx_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsnewgl_count(zdbsp_ProcessorPtr p);
+nodiscard size_t zdbsp_processor_vertsnewgl_count(const zdbsp_ProcessorPtr p);
 
-nodiscard zdbsp_BlockmapSlice zdbsp_processor_blockmap(zdbsp_ProcessorPtr p);
-nodiscard zdbsp_RejectSlice zdbsp_processor_reject(zdbsp_ProcessorPtr p);
+nodiscard zdbsp_BlockmapSlice zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p);
+nodiscard zdbsp_RejectSlice zdbsp_processor_reject(const zdbsp_ProcessorPtr p);
 
-void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
-void zdbsp_processor_nodesgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_nodesglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
-void zdbsp_processor_nodesx_v5_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExOVisitor);
+void zdbsp_processor_nodes_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
+void zdbsp_processor_nodesx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
+void zdbsp_processor_nodesgl_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
+void zdbsp_processor_nodesglx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
+void zdbsp_processor_nodesx_v5_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExOVisitor);
 
-void zdbsp_processor_segs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
-void zdbsp_processor_segsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegExVisitor);
-void zdbsp_processor_segsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
-void zdbsp_processor_segsglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
-void zdbsp_processor_segsglx_v5_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
-
-void zdbsp_processor_ssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
-void zdbsp_processor_ssectorsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
-void zdbsp_processor_ssectorsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor);
-void zdbsp_processor_ssectorsglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor);
-void zdbsp_processor_ssectorsx_v5_foreach(
-	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor
+void zdbsp_processor_segs_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
+void zdbsp_processor_segsx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegExVisitor);
+void zdbsp_processor_segsgl_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
+void zdbsp_processor_segsglx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
+void zdbsp_processor_segsglx_v5_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor
 );
 
-void zdbsp_processor_vertsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
-void zdbsp_processor_vertsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
+void zdbsp_processor_ssectors_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor
+);
+void zdbsp_processor_ssectorsgl_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor
+);
+void zdbsp_processor_ssectorsx_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor
+);
+void zdbsp_processor_ssectorsglx_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor
+);
+void zdbsp_processor_ssectorsx_v5_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor
+);
+
+void zdbsp_processor_vertsx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
+void zdbsp_processor_vertsgl_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
 
 #undef nodiscard
 
