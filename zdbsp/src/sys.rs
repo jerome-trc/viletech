@@ -118,6 +118,100 @@ mod test {
 	}
 
 	#[test]
+	fn glnodes_conform() {
+		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
+		let bytes = std::fs::read(&path).unwrap();
+		let mut hash_in = HashInput::default();
+
+		unsafe {
+			let pcfg = zdbsp_ProcessConfig {
+				flags: zdbsp_processflags_default()
+					| zdbsp_ProcessFlags_ZDBSP_PROCF_BUILDGLNODES
+					| zdbsp_ProcessFlags_ZDBSP_PROCF_CONFORMNODES,
+				reject_mode: zdbsp_rejectmode_default(),
+				blockmap_mode: zdbsp_blockmapmode_default(),
+			};
+
+			let reader = zdbsp_wadreader_new(bytes.as_ptr());
+			let p = zdbsp_processor_new(reader, std::ptr::addr_of!(pcfg));
+			zdbsp_processor_run(p, std::ptr::null());
+
+			zdbsp_processor_nodes_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(node_callback),
+			);
+
+			zdbsp_processor_segs_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(seg_callback),
+			);
+
+			zdbsp_processor_ssectors_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(ssector_callback),
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.nodes.as_slice())),
+				"885acd04ba60856b66b7446099e1930b"
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.segs.as_slice())),
+				"6c0c2c5b9620731ee41f62ba02950fb7"
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.subsectors.as_slice())),
+				"1a4e5ddf72e0a54899a0d6019a07aa5c"
+			);
+
+			hash_in.nodes.clear();
+			hash_in.segs.clear();
+			hash_in.subsectors.clear();
+
+			zdbsp_processor_nodesgl_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(node_callback),
+			);
+
+			zdbsp_processor_segsgl_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(seggl_callback),
+			);
+
+			zdbsp_processor_ssectorsgl_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(ssector_callback),
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.nodes.as_slice())),
+				"f1d971b1b0188c4cdbd32b7b4d1123f1"
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.segs.as_slice())),
+				"dfed7b623c2136bc727562d958a4c9b3"
+			);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(hash_in.subsectors.as_slice())),
+				"8aa841c49b27f02232bede64205c8790"
+			);
+
+			zdbsp_processor_destroy(p);
+			zdbsp_wadreader_destroy(reader);
+		}
+	}
+
+	#[test]
 	fn glv5_smoke() {
 		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
 		let bytes = std::fs::read(&path).unwrap();

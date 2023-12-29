@@ -43,9 +43,17 @@ typedef enum {
 typedef enum {
 	/// Enabled by default.
 	ZDBSP_PROCF_BUILDNODES = 1 << 0,
-	/// Disabled by default.
+	/// Disabled by default. "Conforming" GL nodes are those which use the same
+	/// basic information as non-GL nodes. This results in sub-optimal non-GL nodes
+	/// but makes it easier to compare the two sets of nodes to verify the correctness
+	/// of the GL nodes.
 	ZDBSP_PROCF_CONFORMNODES = 1 << 2,
-	/// Disabled by default.
+	/// Disabled by default. "Pruning" is the process by which the node builder:
+	/// - removes 0-length lines
+	/// - removes sides not referenced by any lines
+	/// - removes sectors not referenced by any sides
+	/// 0-length line removal cannot be disabled, but setting this flag prevents
+	/// removal of extraneous sides and sectors.
 	ZDBSP_PROCF_NOPRUNE = 1 << 3,
 	/// Enabled by default.
 	ZDBSP_PROCF_CHECKPOLYOBJS = 1 << 4,
