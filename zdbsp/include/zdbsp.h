@@ -24,16 +24,18 @@ typedef int32_t zdbsp_I16F16;
 typedef uint32_t zdbsp_Angle;
 typedef uint8_t zdbsp_Bool;
 
+/// If no configuration is provided, `ZDBSP_EBM_REBUILD` is the default.
+///
 /// @see zdbsp_ProcessConfig
 typedef enum {
-	/// If no configuration is provided, this is the default.
 	ZDBSP_EBM_REBUILD,
 	ZDBSP_EBM_CREATE0,
 } zdbsp_BlockmapMode;
 
+/// If no configuration is provided, `ZDBSP_ERM_DONTTOUCH` is the default.
+///
 /// @see zdbsp_ProcessConfig
 typedef enum {
-	/// If no configuration is provided, this is the default.
 	ZDBSP_ERM_DONTTOUCH,
 	ZDBSP_ERM_CREATEZEROES,
 	ZDBSP_ERM_CREATE0,
@@ -230,6 +232,18 @@ typedef struct {
 	uint8_t side;
 } zdbsp_SegGlXV2V3;
 
+/// @see zdbsp_processor_blockmap
+typedef struct {
+	const uint16_t* blocks;
+	size_t len;
+} zdbsp_BlockmapSlice;
+
+/// @see zdbsp_processor_reject
+typedef struct {
+	const uint8_t* bytes;
+	size_t len;
+} zdbsp_RejectSlice;
+
 typedef struct FLevel* zdbsp_LevelPtr;
 typedef struct FWadReader* zdbsp_WadReaderPtr;
 typedef struct FProcessor* zdbsp_ProcessorPtr;
@@ -307,6 +321,9 @@ nodiscard size_t zdbsp_processor_vertsgl_count(zdbsp_ProcessorPtr p);
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
 nodiscard size_t zdbsp_processor_vertsnew_count(zdbsp_ProcessorPtr p);
+
+nodiscard zdbsp_BlockmapSlice zdbsp_processor_blockmap(zdbsp_ProcessorPtr p);
+nodiscard zdbsp_RejectSlice zdbsp_processor_reject(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_nodesgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);

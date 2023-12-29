@@ -61,6 +61,23 @@ mod test {
 				"41496992928328ea481f60f1cbb13dc5"
 			);
 
+			let blockmap = zdbsp_processor_blockmap(p);
+			let blockmap = std::slice::from_raw_parts(blockmap.blocks, blockmap.len);
+			let blockmap_bytes = blockmap.align_to();
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(blockmap_bytes.1)),
+				"ca8320b3126bf740d558220f802a3f71"
+			);
+
+			let reject = zdbsp_processor_reject(p);
+			let reject = std::slice::from_raw_parts(reject.bytes, reject.len);
+
+			assert_eq!(
+				format!("{:#?}", md5::compute(reject)),
+				"901c2990c493f21c670f0f231df7ef31"
+			);
+
 			zdbsp_processor_destroy(p);
 			zdbsp_wadreader_destroy(reader);
 		}

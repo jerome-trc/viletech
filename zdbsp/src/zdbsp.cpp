@@ -140,6 +140,16 @@ size_t zdbsp_processor_vertsnew_count(const zdbsp_ProcessorPtr p) {
 	return level.NumGLVertices - level.NumOrgVerts;
 }
 
+zdbsp_BlockmapSlice zdbsp_processor_blockmap(zdbsp_ProcessorPtr p) {
+	return { .blocks = p->get_level().Blockmap,
+			 .len = static_cast<size_t>(p->get_level().BlockmapSize) };
+}
+
+zdbsp_RejectSlice zdbsp_processor_reject(zdbsp_ProcessorPtr p) {
+	return { .bytes = p->get_level().Reject,
+			 .len = static_cast<size_t>(p->get_level().RejectSize) };
+}
+
 // Node iterators //////////////////////////////////////////////////////////////
 
 void zdbsp_processor_nodes_foreach(
