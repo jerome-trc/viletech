@@ -24,6 +24,10 @@ mod test {
 			let p = zdbsp_processor_new(reader, std::ptr::null());
 			zdbsp_processor_run(p, std::ptr::null());
 
+			let magic_ptr = zdbsp_processor_magicnumber(p, true as u8);
+			let magic = std::ptr::read::<[i8; 4]>(magic_ptr.cast());
+			assert_eq!(magic, [b'Z' as i8, b'N' as i8, b'O' as i8, b'D' as i8]);
+
 			zdbsp_processor_nodes_foreach(
 				p,
 				std::ptr::addr_of_mut!(hash_in).cast(),
@@ -327,6 +331,9 @@ mod test {
 				Some(nodex_callback),
 			);
 
+			let magic_ptr = zdbsp_processor_magicnumber(p, false as u8);
+			let magic = std::ptr::read::<[i8; 4]>(magic_ptr.cast());
+			assert_eq!(magic, [b'X' as i8, b'G' as i8, b'L' as i8, b'N' as i8]);
 			let mut all_bytes = vec![b'X', b'G', b'L', b'N'];
 
 			all_bytes.append(&mut hash_in.verts);

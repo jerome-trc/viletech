@@ -22,6 +22,7 @@ extern "C" {
 /// comprising a 16-bit integral component and a 16-bit fractional component.
 typedef int32_t zdbsp_I16F16;
 typedef uint32_t zdbsp_Angle;
+typedef uint8_t zdbsp_Bool;
 
 /// @see zdbsp_ProcessConfig
 typedef enum {
@@ -270,6 +271,14 @@ void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 /// - If the processor has not been run yet, it will always return `ZDBSP_NODEVERS_UNKNOWN`.
 /// - It will also return `ZDBSP_NODEVERS_UNKNOWN` if the last run did not build any GL nodes.
 nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p);
+
+/// Returns a (static) string containing the 4 bytes needed to be written into
+/// a combined nodes/subsectors/segs WAD entry if possible.
+///
+/// Be aware that if the node version is unknown (i.e. a run has not yet been completed,
+/// or no GL nodes were built in the last run) and `compress` is false then no
+/// magic number is applicable, and this function will return a null pointer.
+nodiscard const char* zdbsp_processor_magicnumber(zdbsp_ProcessorPtr p, zdbsp_Bool compress);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.

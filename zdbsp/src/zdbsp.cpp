@@ -82,6 +82,35 @@ zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p) {
 	return p->NodeVersion();
 }
 
+const char* zdbsp_processor_magicnumber(zdbsp_ProcessorPtr p, zdbsp_Bool compress) {
+	switch (p->NodeVersion()) {
+	case ZDBSP_NODEVERS_1:
+		if (compress) {
+			return "ZGLN";
+		} else {
+			return "XGLN";
+		}
+	case ZDBSP_NODEVERS_2:
+		if (compress) {
+			return "ZGL2";
+		} else {
+			return "XGL2";
+		}
+	case ZDBSP_NODEVERS_3:
+		if (compress) {
+			return "ZGL3";
+		} else {
+			return "XGL3";
+		}
+	default:
+		if (compress) {
+			return "ZNOD";
+		} else {
+			return NULL;
+		}
+	}
+}
+
 size_t zdbsp_processor_nodesgl_count(const zdbsp_ProcessorPtr p) {
 	return p->get_level().NumGLNodes;
 }
