@@ -23,4 +23,9 @@ cbindgen = "0.26.0"
 cc = { version = "1.0.83", features = ["parallel"] }
 
 [dev-dependencies]
+criterion.workspace = true
 md5 = "0.7.0"
+
+[[bench]]
+name = "bench"
+harness = false
