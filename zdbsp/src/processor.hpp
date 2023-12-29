@@ -72,7 +72,7 @@ public:
 	FProcessor(FWadReader& inwad, int lump);
 	void Process(const zdbsp_NodeConfig* config);
 	void Write(FWadWriter& out);
-	int32_t NodeVersion() const;
+	zdbsp_NodeVersion NodeVersion() const;
 
 	bool build_nodes = true, build_gl_nodes = false;
 	bool conform_nodes = false, gl_only = false;
@@ -177,6 +177,7 @@ private:
 
 	bool Extended;
 	bool isUDMF;
+	zdbsp_NodeVersion node_version = ZDBSP_NODEVERS_UNKNOWN;
 
 	FWadReader& Wad;
 	Scanner scanner;

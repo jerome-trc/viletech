@@ -54,14 +54,32 @@ typedef enum {
 	ZDBSP_PROCF_BUILDGLNODES = 1 << 5,
 	/// Disabled by default.
 	ZDBSP_PROCF_GLONLY = 1 << 6,
-	/// Disabled by default.
+	/// Disabled by default. Note that this will be forced anyway if one of the
+	/// following conditions is met during a processor run:
+	/// - there is a combined total of more than 32767 vertices between
+	/// raw input and generated GL vertices
+	/// - more than 65534 GL segs get built
+	/// - more than 32767 GL nodes get built
+	/// - more than 32767 GL subsectors get built
 	ZDBSP_PROCF_V5GL = 1 << 7,
 	/// Disabled by default.
 	ZDBSP_PROCF_WRITECOMMENTS = 1 << 8,
 
-	/// Disabled by default.
+	/// Disabled by default. Note that this will be forced anyway if one of the
+	/// following conditions is met during a processor run:
+	/// - the processor determines that GL nodes need to be compressed
+	/// - there is a combined total of more than 65535 vertices between
+	/// raw input and generated GL vertices
+	/// - more than 65535 segs get built
+	/// - more than 32767 subsectors get built
+	/// - more than 32767 nodes get built
+	///
+	/// @see ZDBSP_PROCF_COMPRESSGLNODES
 	ZDBSP_PROCF_COMPRESSNODES = 1 << 9,
-	/// Disabled by default.
+	/// Disabled by default. Note that this will be forced anyway if one of the
+	/// following conditions is met during a processor run:
+	/// - there is a combined total of more than 32767 vertices between
+	/// raw input and generated GL vertices
 	ZDBSP_PROCF_COMPRESSGLNODES = 1 << 10,
 	/// Disabled by default.
 	ZDBSP_PROCF_FORCECOMPRESSION = 1 << 11,
@@ -114,7 +132,7 @@ typedef struct {
 	int16_t x, y, dx, dy;
 	int16_t bbox[2][4];
 	uint32_t children[2];
-} zdbsp_NodeEx0;
+} zdbsp_NodeExO;
 
 /// A binary space partition tree node in terms of 32-bit fixed-point numbers.
 typedef struct {
@@ -179,10 +197,29 @@ typedef struct {
 } zdbsp_UdmfKey;
 
 typedef enum {
+	ZDBSP_NODEVERS_UNKNOWN,
 	ZDBSP_NODEVERS_1,
 	ZDBSP_NODEVERS_2,
 	ZDBSP_NODEVERS_3,
 } zdbsp_NodeVersion;
+
+/// If a processor reports a version below `ZDBSP_NODEVERS_2`,
+/// you should be serializing these to WAD entries.
+typedef struct {
+	uint32_t v1;
+	uint32_t partner;
+	uint16_t linedef;
+	uint8_t side;
+} zdbsp_SegGlXV1;
+
+/// If a processor reports a version at or above `ZDBSP_NODEVERS_2`,
+/// you should be serializing these to WAD entries.
+typedef struct {
+	uint32_t v1;
+	uint32_t partner;
+	uint32_t linedef;
+	uint8_t side;
+} zdbsp_SegGlXV2V3;
 
 typedef struct FLevel* zdbsp_LevelPtr;
 typedef struct FWadReader* zdbsp_WadReaderPtr;
@@ -190,6 +227,7 @@ typedef struct FProcessor* zdbsp_ProcessorPtr;
 
 typedef void (*zdbsp_NodeVisitor)(void*, const zdbsp_NodeRaw*);
 typedef void (*zdbsp_NodeExVisitor)(void*, const zdbsp_NodeEx*);
+typedef void (*zdbsp_NodeExOVisitor)(void*, const zdbsp_NodeExO*);
 typedef void (*zdbsp_SegVisitor)(void*, const zdbsp_SegRaw*);
 typedef void (*zdbsp_SegGlVisitor)(void*, const zdbsp_SegGl*);
 typedef void (*zdbsp_SegGlExVisitor)(void*, const zdbsp_SegGlEx*);
@@ -220,8 +258,9 @@ void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
 /// Note that passing in a `NULL` `config` is valid here.
 void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 
-/// Note that if the processor has not been run yet,
-/// this function is sound to call but its result is undefined.
+/// Notes:
+/// - If the processor has not been run yet, it will always return `ZDBSP_NODEVERS_UNKNOWN`.
+/// - It will also return `ZDBSP_NODEVERS_UNKNOWN` if the last run did not build any GL nodes.
 nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
@@ -253,16 +292,22 @@ nodiscard size_t zdbsp_processor_vertsgl_count(zdbsp_ProcessorPtr p);
 nodiscard size_t zdbsp_processor_vertsnew_count(zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_segs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
-void zdbsp_processor_ssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
-
 void zdbsp_processor_nodesgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
-void zdbsp_processor_segsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
-void zdbsp_processor_ssectorsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
-
 void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
-void zdbsp_processor_ssectorsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor);
+void zdbsp_processor_nodesx_v5_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExOVisitor);
+
+void zdbsp_processor_segs_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor);
+void zdbsp_processor_segsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlVisitor);
 void zdbsp_processor_segsglx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
+void zdbsp_processor_segsglx_v5_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor);
+
+void zdbsp_processor_ssectors_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
+void zdbsp_processor_ssectorsgl_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor);
+void zdbsp_processor_ssectorsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor);
+void zdbsp_processor_ssectorsx_v5_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor
+);
+
 void zdbsp_processor_vertsx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
 
 #undef nodiscard

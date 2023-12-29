@@ -592,6 +592,23 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 			break;
 		}
 	}
+
+	this->node_version = ZDBSP_NODEVERS_UNKNOWN;
+
+	if (this->Level.GLNodes != nullptr && this->Level.NumGLNodes > 0) {
+		bool frac_splitters = this->CheckForFracSplitters(
+			this->Level.GLNodes,
+			this->Level.NumGLNodes
+		);
+
+		if (frac_splitters) {
+			this->node_version = ZDBSP_NODEVERS_3;
+		} else if (this->Level.NumLines() < 65'535) {
+			this->node_version = ZDBSP_NODEVERS_1;
+		} else {
+			this->node_version = ZDBSP_NODEVERS_2;
+		}
+	}
 }
 
 void FProcessor::Write(FWadWriter& out) {
@@ -719,19 +736,8 @@ void FProcessor::Write(FWadWriter& out) {
 	}
 }
 
-int32_t FProcessor::NodeVersion() const {
-	bool frac_splitters = this->CheckForFracSplitters(
-		this->Level.GLNodes,
-		this->Level.NumGLNodes
-	);
-
-	if (frac_splitters) {
-		return 3;
-	} else if (this->Level.NumLines() < 65'535) {
-		return 1;
-	} else {
-		return 2;
-	}
+zdbsp_NodeVersion FProcessor::NodeVersion() const {
+	return this->node_version;
 }
 
 //
@@ -1010,7 +1016,7 @@ void FProcessor::WriteNodes5(
 	FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count
 ) const {
 	int i, j;
-	zdbsp_NodeEx0* const nodes = new zdbsp_NodeEx0[count * sizeof(zdbsp_NodeEx)];
+	zdbsp_NodeExO* const nodes = new zdbsp_NodeExO[count * sizeof(zdbsp_NodeEx)];
 
 	for (i = 0; i < count; ++i) {
 		const short* inodes = &zaNodes[i].bbox[0][0];

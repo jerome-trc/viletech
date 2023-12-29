@@ -79,7 +79,7 @@ void zdbsp_processor_run(const zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* con
 }
 
 zdbsp_NodeVersion zdbsp_processor_nodeversion(zdbsp_ProcessorPtr p) {
-	return zdbsp_NodeVersion(p->NodeVersion());
+	return p->NodeVersion();
 }
 
 size_t zdbsp_processor_nodesgl_count(const zdbsp_ProcessorPtr p) {
@@ -111,12 +111,60 @@ size_t zdbsp_processor_vertsnew_count(const zdbsp_ProcessorPtr p) {
 	return level.NumGLVertices - level.NumOrgVerts;
 }
 
+// Node iterators //////////////////////////////////////////////////////////////
+
 void zdbsp_processor_nodes_foreach(
 	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor callback
 ) {
 	auto& level = p->get_level();
 	processor_nodes_foreach(ctx, callback, level.Nodes, level.NumNodes);
 }
+
+void zdbsp_processor_nodesgl_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor callback
+) {
+	auto& level = p->get_level();
+	processor_nodes_foreach(ctx, callback, level.GLNodes, level.NumGLNodes);
+}
+
+void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback) {
+	auto& level = p->get_level();
+
+	for (size_t i = 0; i < level.NumGLNodes; ++i) {
+		callback(ctx, &level.GLNodes[i]);
+	}
+}
+
+void zdbsp_processor_nodesx_v5_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExOVisitor callback
+) {
+	auto& level = p->get_level();
+
+	for (size_t i = 0; i < level.NumGLNodes; ++i) {
+		const auto& n = level.GLNodes[i];
+		zdbsp_NodeExO node = {};
+
+		const short* inodes = &n.bbox[0][0];
+		short* coord = &node.bbox[0][0];
+
+		for (size_t j = 0; j < 2 * 4; ++j) {
+			coord[j] = LittleShort(inodes[j]);
+		}
+
+		node.x = LittleShort(n.x >> 16);
+		node.y = LittleShort(n.y >> 16);
+		node.dx = LittleShort(n.dx >> 16);
+		node.dy = LittleShort(n.dy >> 16);
+
+		for (size_t j = 0; j < 2; ++j) {
+			node.children[j] = LittleLong(n.children[j]);
+		}
+
+		callback(ctx, &node);
+	}
+}
+
+// Seg iterators ///////////////////////////////////////////////////////////////
 
 void zdbsp_processor_segs_foreach(
 	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegVisitor callback
@@ -136,20 +184,6 @@ void zdbsp_processor_segs_foreach(
 
 		callback(ctx, &seg);
 	}
-}
-
-void zdbsp_processor_ssectors_foreach(
-	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor callback
-) {
-	auto& level = p->get_level();
-	processor_ssectors_foreach(ctx, callback, level.Subsectors, level.NumSubsectors);
-}
-
-void zdbsp_processor_nodesgl_foreach(
-	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor callback
-) {
-	auto& level = p->get_level();
-	processor_nodes_foreach(ctx, callback, level.GLNodes, level.NumGLNodes);
 }
 
 void zdbsp_processor_segsgl_foreach(
@@ -181,28 +215,6 @@ void zdbsp_processor_segsgl_foreach(
 	}
 }
 
-void zdbsp_processor_ssectorsgl_foreach(
-	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor callback
-) {
-	auto& level = p->get_level();
-	processor_ssectors_foreach(ctx, callback, level.GLSubsectors, level.NumGLSubsectors);
-}
-
-void zdbsp_processor_nodesx_foreach(zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor callback) {
-	auto& level = p->get_level();
-
-	for (size_t i = 0; i < level.NumGLNodes; ++i) {
-		callback(ctx, &level.GLNodes[i]);
-	}
-}
-
-void zdbsp_processor_ssectorsx_foreach(
-	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor callback
-) {
-	auto& level = p->get_level();
-	processor_ssectorsx_foreach(ctx, callback, level.GLSubsectors, level.NumGLSubsectors);
-}
-
 void zdbsp_processor_segsglx_foreach(
 	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor callback
 ) {
@@ -212,6 +224,73 @@ void zdbsp_processor_segsglx_foreach(
 		callback(ctx, &level.GLSegs[i]);
 	}
 }
+
+void zdbsp_processor_segsglx_v5_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SegGlExVisitor callback
+) {
+	auto& level = p->get_level();
+
+	for (size_t i = 0; i < level.NumGLSegs; ++i) {
+		const auto& s = level.GLSegs[i];
+		zdbsp_SegGlEx seg = {};
+
+		if (s.v1 < (uint32_t)level.NumOrgVerts) {
+			seg.v1 = LittleLong(s.v1);
+		} else {
+			seg.v1 = LittleLong(0x80000000u | ((int32_t)s.v1 - level.NumOrgVerts));
+		}
+
+		if (s.v2 < (uint32_t)level.NumOrgVerts) {
+			seg.v2 = LittleLong(s.v2);
+		} else {
+			seg.v2 = LittleLong(0x80000000u | ((int32_t)s.v2 - level.NumOrgVerts));
+		}
+
+		seg.linedef = LittleShort(s.linedef);
+		seg.side = LittleShort(s.side);
+		seg.partner = LittleShort(s.partner);
+
+		callback(ctx, &seg);
+	}
+}
+
+// Subsector iterators /////////////////////////////////////////////////////////
+
+void zdbsp_processor_ssectors_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor callback
+) {
+	auto& level = p->get_level();
+	processor_ssectors_foreach(ctx, callback, level.Subsectors, level.NumSubsectors);
+}
+
+void zdbsp_processor_ssectorsgl_foreach(
+	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorVisitor callback
+) {
+	auto& level = p->get_level();
+	processor_ssectors_foreach(ctx, callback, level.GLSubsectors, level.NumGLSubsectors);
+}
+
+void zdbsp_processor_ssectorsx_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor callback
+) {
+	auto& level = p->get_level();
+	processor_ssectorsx_foreach(ctx, callback, level.GLSubsectors, level.NumGLSubsectors);
+}
+
+void zdbsp_processor_ssectorsx_v5_foreach(
+	zdbsp_ProcessorPtr p, void* ctx, zdbsp_SubsectorExVisitor callback
+) {
+	auto& level = p->get_level();
+
+	for (size_t i = 0; i < level.NumGLSubsectors; ++i) {
+		zdbsp_SubsectorEx ss = {};
+		ss.first_line = LittleLong(level.GLSubsectors[i].first_line);
+		ss.num_lines = LittleLong(level.GLSubsectors[i].num_lines);
+		callback(ctx, &ss);
+	}
+}
+
+// Vertex iterators ////////////////////////////////////////////////////////////
 
 void zdbsp_processor_vertsx_foreach(
 	const zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor callback
