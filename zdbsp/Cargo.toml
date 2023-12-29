@@ -1,11 +1,11 @@
 [package]
-name = "zdbsp"
+name = "zdbsp-sys"
 version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["game-development"]
-description = "Rust wrapper around forked ZDBSP"
+description = "FFI bindings to a forked ZDBSP"
 homepage = "https://github.com/jerome-trc/viletech/tree/master/zdbsp"
 keywords = ["doom", "gamedev"]
 publish = false
@@ -15,16 +15,13 @@ repository.workspace = true
 default = []
 xverbose = []
 
-[dependencies]
-
 [build-dependencies]
-bindgen = "0.69.1"
-cbindgen = "0.26.0"
-cc = { version = "1.0.83", features = ["parallel"] }
+bindgen.workspace = true
+cc.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
-md5 = "0.7.0"
+md5.workspace = true
 
 [[bench]]
 name = "bench"

@@ -1,0 +1,1 @@
+VileTech may one day grow its own BSP tree node builder, by forking ZDBSP and incrementally rewriting it into Rust, with modifications taking place during and after the translation process. For now, this directory contains vestigial code snippets which might become part of this hypothetical new crate, left over from prior experiments.

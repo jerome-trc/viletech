@@ -6,7 +6,7 @@ criterion::criterion_group!(benches, end_to_end);
 criterion::criterion_main!(benches);
 
 fn end_to_end(crit: &mut criterion::Criterion) {
-	let mut grp = crit.benchmark_group("Wrapperless");
+	let mut grp = crit.benchmark_group("End-to-End");
 
 	grp.sample_size(10);
 

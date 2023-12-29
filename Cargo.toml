@@ -1,5 +1,5 @@
 [workspace]
-members = ["zdbsp"]
+members = ["subterra", "zdbsp"]
 default-members = ["zdbsp"]
 # Resolver version 2 is needed for WGPU and Bevy.
 resolver = "2"
@@ -104,5 +104,10 @@ walkdir = "2.3.2"
 # Must be compatible with `bevy_winit`.
 winit = "0.28.1"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
+# Build only
+bindgen = "0.69.1"
+cbindgen = "0.26.0"
+cc = { version = "1.0.83", features = ["parallel"] }
 # Developer only
 criterion = "0.5.1"
+md5 = "0.7.0"
