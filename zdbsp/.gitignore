@@ -1,1 +1,3 @@
+# Ignore C and C++ headers generated using cbindgen.
+src/*.rs.h
 src/*.rs.hpp
