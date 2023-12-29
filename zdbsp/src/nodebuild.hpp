@@ -1,11 +1,13 @@
 #include <math.h>
+
 #include "doomdata.hpp"
 #include "tarray.hpp"
+
 #include "zdbsp.h"
 
 struct FEventInfo {
 	int Vertex;
-	DWORD FrontSeg;
+	uint32_t FrontSeg;
 };
 
 struct FEvent {
@@ -51,7 +53,7 @@ private:
 };
 
 struct FSimpleVert {
-	fixed_t x, y;
+	zdbsp_I16F16 x, y;
 };
 
 extern "C" {
@@ -80,18 +82,18 @@ int __declspec(noinline) ClassifyLineBackpatch(
 class FNodeBuilder {
 	struct FPrivSeg {
 		int v1, v2;
-		DWORD sidedef;
+		uint32_t sidedef;
 		int linedef;
 		int frontsector;
 		int backsector;
-		DWORD next;
-		DWORD nextforvert;
-		DWORD nextforvert2;
+		uint32_t next;
+		uint32_t nextforvert;
+		uint32_t nextforvert2;
 		int loopnum; // loop number for split avoidance (0 means splitting is okay)
-		DWORD partner; // seg on back side
-		DWORD storedseg; // seg # in the GL_SEGS lump
-		angle_t angle;
-		fixed_t offset;
+		uint32_t partner; // seg on back side
+		uint32_t storedseg; // seg # in the GL_SEGS lump
+		zdbsp_Angle angle;
+		zdbsp_I16F16 offset;
 
 		int planenum;
 		bool planefront;
@@ -99,8 +101,8 @@ class FNodeBuilder {
 	};
 
 	struct FPrivVert : FSimpleVert {
-		DWORD segs; // segs that use this vertex as v1
-		DWORD segs2; // segs that use this vertex as v2
+		uint32_t segs; // segs that use this vertex as v1
+		uint32_t segs2; // segs that use this vertex as v2
 		int index;
 		int pad; // This structure must be 8-byte aligned.
 
@@ -110,24 +112,24 @@ class FNodeBuilder {
 	};
 
 	struct FSimpleLine {
-		fixed_t x, y, dx, dy;
+		zdbsp_I16F16 x, y, dx, dy;
 	};
 
 	union USegPtr {
-		DWORD SegNum;
+		uint32_t SegNum;
 		FPrivSeg* SegPtr;
 	};
 
 	struct FSplitSharer {
 		double Distance;
-		DWORD Seg;
+		uint32_t Seg;
 		bool Forward;
 	};
 
 	// Like a blockmap, but for vertices instead of lines
 	class FVertexMap {
 	public:
-		FVertexMap(FNodeBuilder& builder, fixed_t minx, fixed_t miny, fixed_t maxx, fixed_t maxy);
+		FVertexMap(FNodeBuilder& builder, zdbsp_I16F16 minx, zdbsp_I16F16 miny, zdbsp_I16F16 maxx, zdbsp_I16F16 maxy);
 		~FVertexMap();
 
 		int SelectVertexExact(FPrivVert& vert);
@@ -137,7 +139,7 @@ class FNodeBuilder {
 		FNodeBuilder& MyBuilder;
 		TArray<int>* VertexGrid;
 
-		fixed_t MinX, MinY, MaxX, MaxY;
+		zdbsp_I16F16 MinX, MinY, MaxX, MaxY;
 		int BlocksWide, BlocksTall;
 
 		enum {
@@ -148,7 +150,7 @@ class FNodeBuilder {
 		};
 
 		int InsertVertex(FPrivVert& vert);
-		inline int GetBlock(fixed_t x, fixed_t y) {
+		inline int GetBlock(zdbsp_I16F16 x, zdbsp_I16F16 y) {
 			assert(x >= MinX);
 			assert(y >= MinY);
 			assert(x <= MaxX);
@@ -163,7 +165,7 @@ class FNodeBuilder {
 public:
 	struct FPolyStart {
 		int polynum;
-		fixed_t x, y;
+		zdbsp_I16F16 x, y;
 	};
 
 	int32_t max_segs = 64, split_cost = 8, aa_pref = 16;
@@ -208,11 +210,11 @@ private:
 
 	TArray<zdbsp_NodeFxp> Nodes;
 	TArray<zdbsp_SubsectorEx> Subsectors;
-	TArray<DWORD> SubsectorSets;
+	TArray<uint32_t> SubsectorSets;
 	TArray<FPrivSeg> Segs;
 	TArray<FPrivVert> Vertices;
 	TArray<USegPtr> SegList;
-	TArray<BYTE> PlaneChecked;
+	TArray<uint8_t> PlaneChecked;
 	TArray<FSimpleLine> Planes;
 	size_t InitialVertices; // Number of vertices in a map that are connected to linedefs
 
@@ -222,8 +224,8 @@ private:
 	TArray<uint32_t> UnsetSegs; // Segs with no definitive side in current splitter
 	TArray<FSplitSharer> SplitSharers; // Segs collinear with the current splitter
 
-	DWORD HackSeg; // Seg to force to back of splitter
-	DWORD HackMate; // Seg to use in front of hack seg
+	uint32_t HackSeg; // Seg to force to back of splitter
+	uint32_t HackMate; // Seg to use in front of hack seg
 	FLevel& Level;
 	bool GLNodes;
 
@@ -237,14 +239,14 @@ private:
 	int CreateSeg(int linenum, int sidenum);
 	void GroupSegPlanes();
 	void FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolyStart>& anchors);
-	bool GetPolyExtents(int polynum, fixed_t bbox[4]);
-	int MarkLoop(DWORD firstseg, int loopnum);
-	void AddSegToBBox(fixed_t bbox[4], const FPrivSeg* seg);
-	DWORD CreateNode(DWORD set, unsigned int count, fixed_t bbox[4]);
-	DWORD CreateSubsector(DWORD set, fixed_t bbox[4]);
+	bool GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]);
+	int MarkLoop(uint32_t firstseg, int loopnum);
+	void AddSegToBBox(zdbsp_I16F16 bbox[4], const FPrivSeg* seg);
+	uint32_t CreateNode(uint32_t set, unsigned int count, zdbsp_I16F16 bbox[4]);
+	uint32_t CreateSubsector(uint32_t set, zdbsp_I16F16 bbox[4]);
 	void CreateSubsectorsForReal();
-	bool CheckSubsector(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
-	bool CheckSubsectorOverlappingSegs(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg);
+	bool CheckSubsector(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg);
+	bool CheckSubsectorOverlappingSegs(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg);
 	void DoGLSegSplit(
 		uint32_t set,
 		zdbsp_NodeFxp& node,
@@ -256,19 +258,19 @@ private:
 		int sidev1,
 		bool hack
 	);
-	bool ShoveSegBehind(DWORD set, zdbsp_NodeFxp& node, DWORD seg, DWORD mate);
-	int SelectSplitter(DWORD set, zdbsp_NodeFxp& node, DWORD& splitseg, int step, bool nosplit);
+	bool ShoveSegBehind(uint32_t set, zdbsp_NodeFxp& node, uint32_t seg, uint32_t mate);
+	int SelectSplitter(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg, int step, bool nosplit);
 	void SplitSegs(
-		DWORD set,
+		uint32_t set,
 		zdbsp_NodeFxp& node,
-		DWORD splitseg,
-		DWORD& outset0,
-		DWORD& outset1,
+		uint32_t splitseg,
+		uint32_t& outset0,
+		uint32_t& outset1,
 		unsigned int& count0,
 		unsigned int& count1
 	);
-	DWORD SplitSeg(DWORD segnum, int splitvert, int v1InFront);
-	int Heuristic(zdbsp_NodeFxp& node, DWORD set, bool honorNoSplit);
+	uint32_t SplitSeg(uint32_t segnum, int splitvert, int v1InFront);
+	int Heuristic(zdbsp_NodeFxp& node, uint32_t set, bool honorNoSplit);
 
 	// Returns:
 	//	0 = seg is in front
@@ -281,12 +283,12 @@ private:
 
 	void FixSplitSharers(const zdbsp_NodeFxp& node);
 	double AddIntersection(const zdbsp_NodeFxp& node, int vertex);
-	void AddMinisegs(const zdbsp_NodeFxp& node, DWORD splitseg, DWORD& fset, DWORD& rset);
-	DWORD CheckLoopStart(fixed_t dx, fixed_t dy, int vertex1, int vertex2);
-	DWORD CheckLoopEnd(fixed_t dx, fixed_t dy, int vertex2);
-	void RemoveSegFromVert1(DWORD segnum, int vertnum);
-	void RemoveSegFromVert2(DWORD segnum, int vertnum);
-	DWORD AddMiniseg(int v1, int v2, DWORD partner, DWORD seg1, DWORD splitseg);
+	void AddMinisegs(const zdbsp_NodeFxp& node, uint32_t splitseg, uint32_t& fset, uint32_t& rset);
+	uint32_t CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex1, int vertex2);
+	uint32_t CheckLoopEnd(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex2);
+	void RemoveSegFromVert1(uint32_t segnum, int vertnum);
+	void RemoveSegFromVert2(uint32_t segnum, int vertnum);
+	uint32_t AddMiniseg(int v1, int v2, uint32_t partner, uint32_t seg1, uint32_t splitseg);
 	void SetNodeFromSeg(zdbsp_NodeFxp& node, const FPrivSeg* pseg) const;
 
 	int RemoveMinisegs(
@@ -299,7 +301,7 @@ private:
 	int StripMinisegs(TArray<zdbsp_SegEx>& segs, int subsector, short bbox[4]);
 	void AddSegToShortBBox(short bbox[4], const FPrivSeg* seg);
 	int CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector);
-	DWORD PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg);
+	uint32_t PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg);
 	void PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& segs, int v1, int v2);
 	int OutputDegenerateSubsector(
 		TArray<zdbsp_SegGlEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
@@ -309,16 +311,17 @@ private:
 
 	double InterceptVector(const zdbsp_NodeFxp& splitter, const FPrivSeg& seg);
 
-	void PrintSet(int l, DWORD set);
+	void PrintSet(int l, uint32_t set);
 	void DumpNodes(zdbsp_NodeEx* outNodes, int nodeCount);
 };
 
 // Points within this distance of a line will be considered on the line.
-// Units are in fixed_ts.
+// Units are in zdbsp_I16F16s.
 const double SIDE_EPSILON = 6.5536;
 
-// Vertices within this distance of each other will be considered as the same vertex.
-#define VERTEX_EPSILON 6 // This is a fixed_t value
+/// Vertices within this distance of each other will be considered as the same vertex.
+/// Note that this is i16f16.
+#define VERTEX_EPSILON 6
 
 inline int FNodeBuilder::PointOnSide(int x, int y, int x1, int y1, int dx, int dy) {
 	// For most cases, a simple dot product is enough.

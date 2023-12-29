@@ -61,7 +61,7 @@ int BoxOnSide(int bx1, int by1, int bx2, int by2, int lx1, int ly1, int lx2, int
 }
 #endif
 
-WORD* FBlockmapBuilder::GetBlockmap(int32_t& size) {
+uint16_t* FBlockmapBuilder::GetBlockmap(int32_t& size) {
 #ifdef BLOCK_TEST
 	FILE* f = fopen("blockmap.lmp", "rb");
 	if (f) {
@@ -73,15 +73,15 @@ WORD* FBlockmapBuilder::GetBlockmap(int32_t& size) {
 		fread(stuff, 2, fsize / 2, f);
 		fclose(f);
 
-		if ((WORD)stuff[0] != BlockMap[0] || (WORD)stuff[1] != BlockMap[1] ||
-			(WORD)stuff[2] != BlockMap[2] || (WORD)stuff[3] != BlockMap[3]) {
+		if ((uint16_t)stuff[0] != BlockMap[0] || (uint16_t)stuff[1] != BlockMap[1] ||
+			(uint16_t)stuff[2] != BlockMap[2] || (uint16_t)stuff[3] != BlockMap[3]) {
 			printf("different blockmap sizes\n");
 			goto notest;
 		}
 		int i, x, y;
 
 		for (i = 0; i < stuff[2] * stuff[3]; ++i) {
-			WORD i1, i2;
+			uint16_t i1, i2;
 			i1 = stuff[4 + i] + 1;
 			while (stuff[i1] != -1) {
 				i2 = BlockMap[4 + i] + 1;
@@ -116,7 +116,7 @@ WORD* FBlockmapBuilder::GetBlockmap(int32_t& size) {
 			while (BlockMap[i1] != 0xffff) {
 				i2 = stuff[4 + i] + 1;
 				while (stuff[i2] != -1) {
-					if ((WORD)stuff[i2] == BlockMap[i1])
+					if ((uint16_t)stuff[i2] == BlockMap[i1])
 						break;
 					i2++;
 				}
@@ -149,11 +149,11 @@ notest:
 }
 
 void FBlockmapBuilder::BuildBlockmap() {
-	TArray<WORD>*BlockLists, *block, *endblock;
-	WORD adder;
+	TArray<uint16_t>*BlockLists, *block, *endblock;
+	uint16_t adder;
 	int bmapwidth, bmapheight;
 	int minx, maxx, miny, maxy;
-	WORD line;
+	uint16_t line;
 
 	if (Level.NumVertices <= 0)
 		return;
@@ -180,16 +180,16 @@ void FBlockmapBuilder::BuildBlockmap() {
 	bmapwidth = ((maxx - minx) >> BLOCKBITS) + 1;
 	bmapheight = ((maxy - miny) >> BLOCKBITS) + 1;
 
-	adder = WORD(minx);
+	adder = uint16_t(minx);
 	BlockMap.Push(adder);
-	adder = WORD(miny);
+	adder = uint16_t(miny);
 	BlockMap.Push(adder);
-	adder = WORD(bmapwidth);
+	adder = uint16_t(bmapwidth);
 	BlockMap.Push(adder);
-	adder = WORD(bmapheight);
+	adder = uint16_t(bmapheight);
 	BlockMap.Push(adder);
 
-	BlockLists = new TArray<WORD>[bmapwidth * bmapheight];
+	BlockLists = new TArray<uint16_t>[bmapwidth * bmapheight];
 
 	for (line = 0; line < Level.NumLines(); ++line) {
 		int x1 = Level.Vertices[Level.Lines[line].v1].x >> FRACBITS;
@@ -299,13 +299,13 @@ void FBlockmapBuilder::BuildBlockmap() {
 	delete[] BlockLists;
 }
 
-void FBlockmapBuilder::CreateUnpackedBlockmap(TArray<WORD>* blocks, int bmapwidth, int bmapheight) {
-	TArray<WORD>* block;
-	WORD zero = 0;
-	WORD terminator = 0xffff;
+void FBlockmapBuilder::CreateUnpackedBlockmap(TArray<uint16_t>* blocks, int bmapwidth, int bmapheight) {
+	TArray<uint16_t>* block;
+	uint16_t zero = 0;
+	uint16_t terminator = 0xffff;
 
 	for (int i = 0; i < bmapwidth * bmapheight; ++i) {
-		BlockMap[4 + i] = WORD(BlockMap.Size());
+		BlockMap[4 + i] = uint16_t(BlockMap.Size());
 		BlockMap.Push(zero);
 		block = &blocks[i];
 		for (unsigned int j = 0; j < block->Size(); ++j) {
@@ -315,16 +315,16 @@ void FBlockmapBuilder::CreateUnpackedBlockmap(TArray<WORD>* blocks, int bmapwidt
 	}
 }
 
-static unsigned int BlockHash(TArray<WORD>* block) {
+static unsigned int BlockHash(TArray<uint16_t>* block) {
 	int hash = 0;
-	WORD* ar = &(*block)[0];
+	uint16_t* ar = &(*block)[0];
 	for (size_t i = 0; i < block->Size(); ++i) {
 		hash = hash * 12235 + ar[i];
 	}
 	return hash & 0x7fffffff;
 }
 
-static bool BlockCompare(TArray<WORD>* block1, TArray<WORD>* block2) {
+static bool BlockCompare(TArray<uint16_t>* block1, TArray<uint16_t>* block2) {
 	size_t size = block1->Size();
 
 	if (size != block2->Size()) {
@@ -333,8 +333,8 @@ static bool BlockCompare(TArray<WORD>* block1, TArray<WORD>* block2) {
 	if (size == 0) {
 		return true;
 	}
-	WORD* ar1 = &(*block1)[0];
-	WORD* ar2 = &(*block2)[0];
+	uint16_t* ar1 = &(*block1)[0];
+	uint16_t* ar2 = &(*block2)[0];
 	for (size_t i = 0; i < size; ++i) {
 		if (ar1[i] != ar2[i]) {
 			return false;
@@ -343,19 +343,19 @@ static bool BlockCompare(TArray<WORD>* block1, TArray<WORD>* block2) {
 	return true;
 }
 
-void FBlockmapBuilder::CreatePackedBlockmap(TArray<WORD>* blocks, int bmapwidth, int bmapheight) {
-	WORD buckets[4096];
-	WORD *hashes, hashblock;
-	TArray<WORD>* block;
-	WORD zero = 0;
-	WORD terminator = 0xffff;
-	WORD* array;
+void FBlockmapBuilder::CreatePackedBlockmap(TArray<uint16_t>* blocks, int bmapwidth, int bmapheight) {
+	uint16_t buckets[4096];
+	uint16_t *hashes, hashblock;
+	TArray<uint16_t>* block;
+	uint16_t zero = 0;
+	uint16_t terminator = 0xffff;
+	uint16_t* array;
 	int i, hash;
 	int hashed = 0, nothashed = 0;
 
-	hashes = new WORD[bmapwidth * bmapheight];
+	hashes = new uint16_t[bmapwidth * bmapheight];
 
-	memset(hashes, 0xff, sizeof(WORD) * bmapwidth * bmapheight);
+	memset(hashes, 0xff, sizeof(uint16_t) * bmapwidth * bmapheight);
 	memset(buckets, 0xff, sizeof(buckets));
 
 	for (i = 0; i < bmapwidth * bmapheight; ++i) {
@@ -373,8 +373,8 @@ void FBlockmapBuilder::CreatePackedBlockmap(TArray<WORD>* blocks, int bmapwidth,
 			hashed++;
 		} else {
 			hashes[i] = buckets[hash];
-			buckets[hash] = WORD(i);
-			BlockMap[4 + i] = WORD(BlockMap.Size());
+			buckets[hash] = uint16_t(i);
+			BlockMap[4 + i] = uint16_t(BlockMap.Size());
 			BlockMap.Push(zero);
 			array = &(*block)[0];
 			for (size_t j = 0; j < block->Size(); ++j) {

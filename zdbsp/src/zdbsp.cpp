@@ -1,8 +1,6 @@
 /// @file
 /// @brief Bridge between the C interface and the internal C++.
 
-#include "zdbsp.h"
-
 #include "common.hpp"
 #include "processor.hpp"
 #include "wad.hpp"
@@ -287,7 +285,7 @@ void zdbsp_processor_segsgl_foreach(
 			seg.v1 = LittleShort(0x8000 | (uint16_t)(s.v1 - level.NumOrgVerts));
 		}
 
-		if (s.v2 < (DWORD)level.NumOrgVerts) {
+		if (s.v2 < (uint32_t)level.NumOrgVerts) {
 			seg.v2 = (uint16_t)LittleShort(s.v2);
 		} else {
 			seg.v2 = LittleShort(0x8000 | (uint16_t)(s.v2 - level.NumOrgVerts));

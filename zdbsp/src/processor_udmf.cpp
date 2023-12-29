@@ -73,7 +73,7 @@ double FProcessor::CheckFloat(const char* key) {
 	return this->scanner.flnum;
 }
 
-fixed_t FProcessor::CheckFixed(const char* key) {
+zdbsp_I16F16 FProcessor::CheckFixed(const char* key) {
 	double val = CheckFloat(key);
 	if (val < -32768 || val > 32767) {
 		this->scanner.script_err(

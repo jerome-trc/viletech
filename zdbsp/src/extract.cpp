@@ -82,7 +82,7 @@ void FNodeBuilder::GetGLNodes(
 	memcpy(outSegs, &segs[0], segCount * sizeof(zdbsp_SegGlEx));
 
 	for (i = 0; i < segCount; ++i) {
-		if (outSegs[i].partner != DWORD_MAX) {
+		if (outSegs[i].partner != UINT_MAX) {
 			outSegs[i].partner = Segs[outSegs[i].partner].storedseg;
 		}
 	}
@@ -92,9 +92,9 @@ void FNodeBuilder::GetGLNodes(
 
 int FNodeBuilder::CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector) {
 	FPrivSeg *seg, *prev;
-	angle_t prevAngle;
+	zdbsp_Angle prevAngle;
 	double accumx, accumy;
-	fixed_t midx, midy;
+	zdbsp_I16F16 midx, midy;
 	int i, j, first, max, count, firstVert;
 	bool diffplanes;
 	int firstplane;
@@ -121,8 +121,8 @@ int FNodeBuilder::CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector) {
 		}
 	}
 
-	midx = fixed_t(accumx / (max - first) / 2);
-	midy = fixed_t(accumy / (max - first) / 2);
+	midx = zdbsp_I16F16(accumx / (max - first) / 2);
+	midy = zdbsp_I16F16(accumy / (max - first) / 2);
 
 	seg = &Segs[SegList[first].SegNum];
 	prevAngle = PointToAngle(Vertices[seg->v1].x - midx, Vertices[seg->v1].y - midy);
@@ -135,7 +135,7 @@ int FNodeBuilder::CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector) {
 	printf("--%d--\n", subsector);
 	for (j = first; j < max; ++j) {
 		seg = &Segs[SegList[j].SegNum];
-		angle_t ang = PointToAngle(Vertices[seg->v1].x - midx, Vertices[seg->v1].y - midy);
+		zdbsp_Angle ang = PointToAngle(Vertices[seg->v1].x - midx, Vertices[seg->v1].y - midy);
 		printf(
 			"%d%c %5d(%5d,%5d)->%5d(%5d,%5d) - %3.5f  %d,%d  [%08x,%08x]-[%08x,%08x]\n", j,
 			seg->linedef == -1 ? '+' : ':', seg->v1, Vertices[seg->v1].x >> 16,
@@ -152,13 +152,13 @@ int FNodeBuilder::CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector) {
 
 		D(printf("Well behaved subsector\n"));
 		for (i = first + 1; i < max; ++i) {
-			angle_t bestdiff = ANGLE_MAX;
+			zdbsp_Angle bestdiff = ANGLE_MAX;
 			FPrivSeg* bestseg = NULL;
 			int bestj = -1;
 			for (j = first; j < max; ++j) {
 				seg = &Segs[SegList[j].SegNum];
-				angle_t ang = PointToAngle(Vertices[seg->v1].x - midx, Vertices[seg->v1].y - midy);
-				angle_t diff = prevAngle - ang;
+				zdbsp_Angle ang = PointToAngle(Vertices[seg->v1].x - midx, Vertices[seg->v1].y - midy);
+				zdbsp_Angle diff = prevAngle - ang;
 				if (seg->v1 == prev->v2) {
 					bestdiff = diff;
 					bestseg = seg;
@@ -294,7 +294,7 @@ int FNodeBuilder::OutputDegenerateSubsector(
 	return count;
 }
 
-DWORD FNodeBuilder::PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg) {
+uint32_t FNodeBuilder::PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg) {
 	zdbsp_SegGlEx newseg;
 
 	newseg.v1 = seg->v1;
@@ -345,7 +345,7 @@ void FNodeBuilder::PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& seg
 	newseg.v2 = v2;
 	newseg.linedef = NO_INDEX;
 	newseg.side = 0;
-	newseg.partner = DWORD_MAX;
+	newseg.partner = UINT_MAX;
 	segs.Push(newseg);
 }
 

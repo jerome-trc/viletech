@@ -243,7 +243,7 @@ void FProcessor::LoadSectors() {
 }
 
 void FLevel::FindMapBounds() {
-	fixed_t minx, maxx, miny, maxy;
+	zdbsp_I16F16 minx, maxx, miny, maxy;
 
 	minx = maxx = Vertices[0].x;
 	miny = maxy = Vertices[0].y;
@@ -289,7 +289,7 @@ void FLevel::RemoveExtraLines() {
 }
 
 void FLevel::RemoveExtraSides() {
-	BYTE* used;
+	uint8_t* used;
 	int* remap;
 	uint32_t i, newNumSides;
 
@@ -297,7 +297,7 @@ void FLevel::RemoveExtraSides() {
 	// They just waste space, so get rid of them.
 	uint32_t NumSides = this->NumSides();
 
-	used = new BYTE[NumSides];
+	used = new uint8_t[NumSides];
 	memset(used, 0, NumSides * sizeof(*used));
 	remap = new int[NumSides];
 
@@ -346,21 +346,21 @@ void FLevel::RemoveExtraSides() {
 }
 
 void FLevel::RemoveExtraSectors() {
-	BYTE* used;
-	DWORD* remap;
+	uint8_t* used;
+	uint32_t* remap;
 	int i, newNumSectors;
 
 	// Extra sectors are those that aren't referenced by any sides.
 	// They just waste space, so get rid of them.
 
 	NumOrgSectors = NumSectors();
-	used = new BYTE[NumSectors()];
+	used = new uint8_t[NumSectors()];
 	memset(used, 0, NumSectors() * sizeof(*used));
-	remap = new DWORD[NumSectors()];
+	remap = new uint32_t[NumSectors()];
 
 	// Mark all used sectors
 	for (i = 0; i < NumSides(); ++i) {
-		if ((DWORD)Sides[i].sector != NO_INDEX) {
+		if ((uint32_t)Sides[i].sector != NO_INDEX) {
 			used[Sides[i].sector] = 1;
 		} else {
 			printf("   Sidedef %d needs a front sector before it will run with ZDoom.\n", i);
@@ -385,12 +385,12 @@ void FLevel::RemoveExtraSectors() {
 
 		// Renumber sector references in sides
 		for (i = 0; i < NumSides(); ++i) {
-			if ((DWORD)Sides[i].sector != NO_INDEX) {
+			if ((uint32_t)Sides[i].sector != NO_INDEX) {
 				Sides[i].sector = remap[Sides[i].sector];
 			}
 		}
 		// Make a reverse map for fixing reject lumps
-		OrgSectorMap = new DWORD[newNumSectors];
+		OrgSectorMap = new uint32_t[newNumSectors];
 		for (i = 0; i < NumSectors(); ++i) {
 			if (remap[i] != NO_INDEX) {
 				OrgSectorMap[remap[i]] = i;
@@ -555,9 +555,9 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 
 	if (!isUDMF) {
 		FBlockmapBuilder bbuilder(Level);
-		WORD* blocks = bbuilder.GetBlockmap(Level.BlockmapSize);
-		Level.Blockmap = new WORD[Level.BlockmapSize];
-		memcpy(Level.Blockmap, blocks, Level.BlockmapSize * sizeof(WORD));
+		uint16_t* blocks = bbuilder.GetBlockmap(Level.BlockmapSize);
+		Level.Blockmap = new uint16_t[Level.BlockmapSize];
+		memcpy(Level.Blockmap, blocks, Level.BlockmapSize * sizeof(uint16_t));
 
 		Level.RejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
 		Level.Reject = NULL;
@@ -574,7 +574,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 			int lump = Wad.FindMapLump("REJECT", Lump);
 
 			if (lump >= 0) {
-				ReadLump<BYTE>(Wad, lump, Level.Reject, Level.RejectSize);
+				ReadLump<uint8_t>(Wad, lump, Level.Reject, Level.RejectSize);
 
 				if (Level.RejectSize != (Level.NumOrgSectors * Level.NumOrgSectors + 7) / 8) {
 					// If the reject is the wrong size, don't use it.
@@ -588,7 +588,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 					Level.RejectSize = 0;
 				} else if (Level.NumOrgSectors != Level.NumSectors()) {
 					// Some sectors have been removed, so fix the reject.
-					BYTE* newreject = FixReject(Level.Reject);
+					uint8_t* newreject = FixReject(Level.Reject);
 					delete[] Level.Reject;
 					Level.Reject = newreject;
 					Level.RejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
@@ -600,7 +600,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 			break;
 
 		case ZDBSP_ERM_CREATEZEROES:
-			Level.Reject = new BYTE[Level.RejectSize];
+			Level.Reject = new uint8_t[Level.RejectSize];
 			memset(Level.Reject, 0, Level.RejectSize);
 			break;
 		}
@@ -658,8 +658,8 @@ void FProcessor::Write(FWadWriter& out) {
 
 #ifdef BLOCK_TEST
 	int size;
-	BYTE* blockmap;
-	ReadLump<BYTE>(Wad, Wad.FindMapLump("BLOCKMAP", Lump), blockmap, size);
+	uint8_t* blockmap;
+	ReadLump<uint8_t>(Wad, Wad.FindMapLump("BLOCKMAP", Lump), blockmap, size);
 	if (blockmap) {
 		FILE* f = fopen("blockmap.lmp", "wb");
 		if (f) {
@@ -754,10 +754,10 @@ zdbsp_NodeVersion FProcessor::NodeVersion() const {
 }
 
 //
-BYTE* FProcessor::FixReject(const BYTE* oldreject) {
+uint8_t* FProcessor::FixReject(const uint8_t* oldreject) {
 	int x, y, ox, oy, pnum, opnum;
 	int rejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
-	BYTE* newreject = new BYTE[rejectSize];
+	uint8_t* newreject = new uint8_t[rejectSize];
 
 	memset(newreject, 0, rejectSize);
 
@@ -785,11 +785,11 @@ zdbsp_NodeEx* FProcessor::NodesToEx(const zdbsp_NodeRaw* nodes, int count) {
 	int x;
 
 	for (x = 0; x < count; ++x) {
-		WORD child;
+		uint16_t child;
 		int i;
 
 		for (i = 0; i < 4 + 2 * 4; ++i) {
-			*((WORD*)&Nodes[x] + i) = LittleShort(*((WORD*)&nodes[x] + i));
+			*((uint16_t*)&Nodes[x] + i) = LittleShort(*((uint16_t*)&nodes[x] + i));
 		}
 		for (i = 0; i < 2; ++i) {
 			child = LittleShort(nodes[x].children[i]);
@@ -868,11 +868,11 @@ void FProcessor::WriteLines(FWadWriter& out) {
 			Lines[i].args[2] = Level.Lines[i].args[2];
 			Lines[i].args[3] = Level.Lines[i].args[3];
 			Lines[i].args[4] = Level.Lines[i].args[4];
-			Lines[i].v1 = LittleShort(WORD(Level.Lines[i].v1));
-			Lines[i].v2 = LittleShort(WORD(Level.Lines[i].v2));
-			Lines[i].flags = LittleShort(WORD(Level.Lines[i].flags));
-			Lines[i].sidenum[0] = LittleShort(WORD(Level.Lines[i].sidenum[0]));
-			Lines[i].sidenum[1] = LittleShort(WORD(Level.Lines[i].sidenum[1]));
+			Lines[i].v1 = LittleShort(uint16_t(Level.Lines[i].v1));
+			Lines[i].v2 = LittleShort(uint16_t(Level.Lines[i].v2));
+			Lines[i].flags = LittleShort(uint16_t(Level.Lines[i].flags));
+			Lines[i].sidenum[0] = LittleShort(uint16_t(Level.Lines[i].sidenum[0]));
+			Lines[i].sidenum[1] = LittleShort(uint16_t(Level.Lines[i].sidenum[1]));
 		}
 		out.WriteLump("LINEDEFS", Lines, Level.NumLines() * sizeof(*Lines));
 		delete[] Lines;
@@ -880,13 +880,13 @@ void FProcessor::WriteLines(FWadWriter& out) {
 		MapLineDef* ld = new MapLineDef[Level.NumLines()];
 
 		for (i = 0; i < Level.NumLines(); ++i) {
-			ld[i].v1 = LittleShort(WORD(Level.Lines[i].v1));
-			ld[i].v2 = LittleShort(WORD(Level.Lines[i].v2));
-			ld[i].flags = LittleShort(WORD(Level.Lines[i].flags));
-			ld[i].sidenum[0] = LittleShort(WORD(Level.Lines[i].sidenum[0]));
-			ld[i].sidenum[1] = LittleShort(WORD(Level.Lines[i].sidenum[1]));
-			ld[i].special = LittleShort(WORD(Level.Lines[i].args[0]));
-			ld[i].tag = LittleShort(WORD(Level.Lines[i].args[1]));
+			ld[i].v1 = LittleShort(uint16_t(Level.Lines[i].v1));
+			ld[i].v2 = LittleShort(uint16_t(Level.Lines[i].v2));
+			ld[i].flags = LittleShort(uint16_t(Level.Lines[i].flags));
+			ld[i].sidenum[0] = LittleShort(uint16_t(Level.Lines[i].sidenum[0]));
+			ld[i].sidenum[1] = LittleShort(uint16_t(Level.Lines[i].sidenum[1]));
+			ld[i].special = LittleShort(uint16_t(Level.Lines[i].args[0]));
+			ld[i].tag = LittleShort(uint16_t(Level.Lines[i].args[1]));
 		}
 		out.WriteLump("LINEDEFS", ld, Level.NumLines() * sizeof(*ld));
 		delete[] ld;
@@ -929,8 +929,8 @@ void FProcessor::WriteSegs(FWadWriter& out) {
 	segdata = new zdbsp_SegRaw[Level.NumSegs];
 
 	for (i = 0; i < Level.NumSegs; ++i) {
-		segdata[i].v1 = LittleShort(WORD(Level.Segs[i].v1));
-		segdata[i].v2 = LittleShort(WORD(Level.Segs[i].v2));
+		segdata[i].v1 = LittleShort(uint16_t(Level.Segs[i].v1));
+		segdata[i].v2 = LittleShort(uint16_t(Level.Segs[i].v2));
 		segdata[i].angle = LittleShort(Level.Segs[i].angle);
 		segdata[i].linedef = LittleShort(Level.Segs[i].linedef);
 		segdata[i].side = LittleShort(Level.Segs[i].side);
@@ -958,8 +958,8 @@ void FProcessor::WriteSSectors2(
 	ssec = new zdbsp_SubsectorRaw[count];
 
 	for (i = 0; i < count; ++i) {
-		ssec[i].first_line = LittleShort((WORD)subs[i].first_line);
-		ssec[i].num_lines = LittleShort((WORD)subs[i].num_lines);
+		ssec[i].first_line = LittleShort((uint16_t)subs[i].first_line);
+		ssec[i].num_lines = LittleShort((uint16_t)subs[i].num_lines);
 	}
 	out.WriteLump(name, ssec, sizeof(*ssec) * count);
 	delete[] ssec;
@@ -1009,11 +1009,11 @@ void FProcessor::WriteNodes2(
 		}
 		nodes += j;
 		for (j = 0; j < 2; ++j) {
-			DWORD child = zaNodes[i].children[j];
+			uint32_t child = zaNodes[i].children[j];
 			if (child & NFX_SUBSECTOR) {
-				*nodes++ = LittleShort(WORD(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+				*nodes++ = LittleShort(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
 			} else {
-				*nodes++ = LittleShort((WORD)child);
+				*nodes++ = LittleShort((uint16_t)child);
 			}
 		}
 	}
@@ -1056,7 +1056,7 @@ void FProcessor::WriteBlockmap(FWadWriter& out) {
 	}
 
 	size_t i, count;
-	WORD* blocks;
+	uint16_t* blocks;
 
 	count = Level.BlockmapSize;
 	blocks = Level.Blockmap;
@@ -1099,7 +1099,7 @@ void FProcessor::WriteGLVertices(FWadWriter& out, bool v5) {
 	int i, count = (Level.NumGLVertices - Level.NumOrgVerts);
 	zdbsp_VertexEx* vertdata = Level.GLVertices + Level.NumOrgVerts;
 
-	fixed_t* verts = new fixed_t[count * 2 + 1];
+	zdbsp_I16F16* verts = new zdbsp_I16F16[count * 2 + 1];
 	char* magic = (char*)verts;
 	magic[0] = 'g';
 	magic[1] = 'N';
@@ -1130,19 +1130,19 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 	segdata = new zdbsp_SegGl[count];
 
 	for (i = 0; i < count; ++i) {
-		if (Level.GLSegs[i].v1 < (DWORD)Level.NumOrgVerts) {
-			segdata[i].v1 = LittleShort((WORD)Level.GLSegs[i].v1);
+		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
+			segdata[i].v1 = LittleShort((uint16_t)Level.GLSegs[i].v1);
 		} else {
-			segdata[i].v1 = LittleShort(0x8000 | (WORD)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
+			segdata[i].v1 = LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
 		}
-		if (Level.GLSegs[i].v2 < (DWORD)Level.NumOrgVerts) {
-			segdata[i].v2 = (WORD)LittleShort(Level.GLSegs[i].v2);
+		if (Level.GLSegs[i].v2 < (uint32_t)Level.NumOrgVerts) {
+			segdata[i].v2 = (uint16_t)LittleShort(Level.GLSegs[i].v2);
 		} else {
-			segdata[i].v2 = LittleShort(0x8000 | (WORD)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
+			segdata[i].v2 = LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
 		}
-		segdata[i].linedef = LittleShort((WORD)Level.GLSegs[i].linedef);
+		segdata[i].linedef = LittleShort((uint16_t)Level.GLSegs[i].linedef);
 		segdata[i].side = LittleShort(Level.GLSegs[i].side);
-		segdata[i].partner = LittleShort((WORD)Level.GLSegs[i].partner);
+		segdata[i].partner = LittleShort((uint16_t)Level.GLSegs[i].partner);
 	}
 	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGl) * count);
 	delete[] segdata;
@@ -1162,12 +1162,12 @@ void FProcessor::WriteGLSegs5(FWadWriter& out) {
 	segdata = new zdbsp_SegGlEx[count];
 
 	for (i = 0; i < count; ++i) {
-		if (Level.GLSegs[i].v1 < (DWORD)Level.NumOrgVerts) {
+		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
 			segdata[i].v1 = LittleLong(Level.GLSegs[i].v1);
 		} else {
 			segdata[i].v1 = LittleLong(0x80000000u | ((int)Level.GLSegs[i].v1 - Level.NumOrgVerts));
 		}
-		if (Level.GLSegs[i].v2 < (DWORD)Level.NumOrgVerts) {
+		if (Level.GLSegs[i].v2 < (uint32_t)Level.NumOrgVerts) {
 			segdata[i].v2 = LittleLong(Level.GLSegs[i].v2);
 		} else {
 			segdata[i].v2 = LittleLong(0x80000000u | ((int)Level.GLSegs[i].v2 - Level.NumOrgVerts));
@@ -1244,7 +1244,7 @@ void FProcessor::WriteGLBSPZ(FWadWriter& out, const char* label) {
 }
 
 void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts) {
-	out << (DWORD)orgverts << (DWORD)newverts;
+	out << (uint32_t)orgverts << (uint32_t)newverts;
 
 	for (int i = 0; i < newverts; ++i) {
 		out << verts[i].x << verts[i].y;
@@ -1252,34 +1252,34 @@ void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int o
 }
 
 void FProcessor::WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs) {
-	out << (DWORD)numsubs;
+	out << (uint32_t)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
-		out << (DWORD)subs[i].num_lines;
+		out << (uint32_t)subs[i].num_lines;
 	}
 }
 
 void FProcessor::WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs) {
-	out << (DWORD)numsegs;
+	out << (uint32_t)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
-		out << (DWORD)segs[i].v1 << (DWORD)segs[i].v2 << (WORD)segs[i].linedef
-			<< (BYTE)segs[i].side;
+		out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].v2 << (uint16_t)segs[i].linedef
+			<< (uint8_t)segs[i].side;
 	}
 }
 
 void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
-	out << (DWORD)numsegs;
+	out << (uint32_t)numsegs;
 
 	if (nodever < 2) {
 		for (int i = 0; i < numsegs; ++i) {
-			out << (DWORD)segs[i].v1 << (DWORD)segs[i].partner << (WORD)segs[i].linedef
-				<< (BYTE)segs[i].side;
+			out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].partner << (uint16_t)segs[i].linedef
+				<< (uint8_t)segs[i].side;
 		}
 	} else {
 		for (int i = 0; i < numsegs; ++i) {
-			out << (DWORD)segs[i].v1 << (DWORD)segs[i].partner << (DWORD)segs[i].linedef
-				<< (BYTE)segs[i].side;
+			out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].partner << (uint32_t)segs[i].linedef
+				<< (uint8_t)segs[i].side;
 		}
 	}
 }
@@ -1287,22 +1287,22 @@ void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numse
 void FProcessor::WriteNodesZ(
 	ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
 ) {
-	out << (DWORD)numnodes;
+	out << (uint32_t)numnodes;
 
 	for (int i = 0; i < numnodes; ++i) {
 		if (nodever < 3) {
-			out << (SWORD)(nodes[i].x >> 16) << (SWORD)(nodes[i].y >> 16)
-				<< (SWORD)(nodes[i].dx >> 16) << (SWORD)(nodes[i].dy >> 16);
+			out << (int16_t)(nodes[i].x >> 16) << (int16_t)(nodes[i].y >> 16)
+				<< (int16_t)(nodes[i].dx >> 16) << (int16_t)(nodes[i].dy >> 16);
 		} else {
-			out << (DWORD)nodes[i].x << (DWORD)nodes[i].y << (DWORD)nodes[i].dx
-				<< (DWORD)nodes[i].dy;
+			out << (uint32_t)nodes[i].x << (uint32_t)nodes[i].y << (uint32_t)nodes[i].dx
+				<< (uint32_t)nodes[i].dy;
 		}
 		for (int j = 0; j < 2; ++j) {
 			for (int k = 0; k < 4; ++k) {
-				out << (SWORD)nodes[i].bbox[j][k];
+				out << (int16_t)nodes[i].bbox[j][k];
 			}
 		}
-		out << (DWORD)nodes[i].children[0] << (DWORD)nodes[i].children[1];
+		out << (uint32_t)nodes[i].children[0] << (uint32_t)nodes[i].children[1];
 	}
 }
 
@@ -1353,7 +1353,7 @@ void FProcessor::WriteGLBSPX(FWadWriter& out, const char* label) {
 void FProcessor::WriteVerticesX(
 	FWadWriter& out, const zdbsp_VertexEx* verts, int orgverts, int newverts
 ) {
-	out << (DWORD)orgverts << (DWORD)newverts;
+	out << (uint32_t)orgverts << (uint32_t)newverts;
 
 	for (int i = 0; i < newverts; ++i) {
 		out << verts[i].x << verts[i].y;
@@ -1361,34 +1361,34 @@ void FProcessor::WriteVerticesX(
 }
 
 void FProcessor::WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs) {
-	out << (DWORD)numsubs;
+	out << (uint32_t)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
-		out << (DWORD)subs[i].num_lines;
+		out << (uint32_t)subs[i].num_lines;
 	}
 }
 
 void FProcessor::WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs) {
-	out << (DWORD)numsegs;
+	out << (uint32_t)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
-		out << (DWORD)segs[i].v1 << (DWORD)segs[i].v2 << (WORD)segs[i].linedef
-			<< (BYTE)segs[i].side;
+		out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].v2 << (uint16_t)segs[i].linedef
+			<< (uint8_t)segs[i].side;
 	}
 }
 
 void FProcessor::WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
-	out << (DWORD)numsegs;
+	out << (uint32_t)numsegs;
 
 	if (nodever < 2) {
 		for (int i = 0; i < numsegs; ++i) {
-			out << (DWORD)segs[i].v1 << (DWORD)segs[i].partner << (WORD)segs[i].linedef
-				<< (BYTE)segs[i].side;
+			out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].partner << (uint16_t)segs[i].linedef
+				<< (uint8_t)segs[i].side;
 		}
 	} else {
 		for (int i = 0; i < numsegs; ++i) {
-			out << (DWORD)segs[i].v1 << (DWORD)segs[i].partner << (DWORD)segs[i].linedef
-				<< (BYTE)segs[i].side;
+			out << (uint32_t)segs[i].v1 << (uint32_t)segs[i].partner << (uint32_t)segs[i].linedef
+				<< (uint8_t)segs[i].side;
 		}
 	}
 }
@@ -1396,22 +1396,22 @@ void FProcessor::WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int nu
 void FProcessor::WriteNodesX(
 	FWadWriter& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
 ) {
-	out << (DWORD)numnodes;
+	out << (uint32_t)numnodes;
 
 	for (int i = 0; i < numnodes; ++i) {
 		if (nodever < 3) {
-			out << (SWORD)(nodes[i].x >> 16) << (SWORD)(nodes[i].y >> 16)
-				<< (SWORD)(nodes[i].dx >> 16) << (SWORD)(nodes[i].dy >> 16);
+			out << (int16_t)(nodes[i].x >> 16) << (int16_t)(nodes[i].y >> 16)
+				<< (int16_t)(nodes[i].dx >> 16) << (int16_t)(nodes[i].dy >> 16);
 		} else {
-			out << (DWORD)nodes[i].x << (DWORD)nodes[i].y << (DWORD)nodes[i].dx
-				<< (DWORD)nodes[i].dy;
+			out << (uint32_t)nodes[i].x << (uint32_t)nodes[i].y << (uint32_t)nodes[i].dx
+				<< (uint32_t)nodes[i].dy;
 		}
 		for (int j = 0; j < 2; ++j) {
 			for (int k = 0; k < 4; ++k) {
-				out << (SWORD)nodes[i].bbox[j][k];
+				out << (int16_t)nodes[i].bbox[j][k];
 			}
 		}
-		out << (DWORD)nodes[i].children[0] << (DWORD)nodes[i].children[1];
+		out << (uint32_t)nodes[i].children[0] << (uint32_t)nodes[i].children[1];
 	}
 }
 
@@ -1464,7 +1464,7 @@ ZLibOut::~ZLibOut() {
 	Out.AddToLump(Buffer, BUFFER_SIZE - Stream.avail_out);
 }
 
-void ZLibOut::Write(BYTE* data, int len) {
+void ZLibOut::Write(uint8_t* data, int len) {
 	int err;
 
 	Stream.next_in = data;
@@ -1483,31 +1483,31 @@ void ZLibOut::Write(BYTE* data, int len) {
 	}
 }
 
-ZLibOut& ZLibOut::operator<<(BYTE val) {
+ZLibOut& ZLibOut::operator<<(uint8_t val) {
 	Write(&val, 1);
 	return *this;
 }
 
-ZLibOut& ZLibOut::operator<<(WORD val) {
+ZLibOut& ZLibOut::operator<<(uint16_t val) {
 	val = LittleShort(val);
-	Write((BYTE*)&val, 2);
+	Write((uint8_t*)&val, 2);
 	return *this;
 }
 
-ZLibOut& ZLibOut::operator<<(SWORD val) {
+ZLibOut& ZLibOut::operator<<(int16_t val) {
 	val = LittleShort(val);
-	Write((BYTE*)&val, 2);
+	Write((uint8_t*)&val, 2);
 	return *this;
 }
 
-ZLibOut& ZLibOut::operator<<(DWORD val) {
+ZLibOut& ZLibOut::operator<<(uint32_t val) {
 	val = LittleLong(val);
-	Write((BYTE*)&val, 4);
+	Write((uint8_t*)&val, 4);
 	return *this;
 }
 
-ZLibOut& ZLibOut::operator<<(fixed_t val) {
+ZLibOut& ZLibOut::operator<<(zdbsp_I16F16 val) {
 	val = LittleLong(val);
-	Write((BYTE*)&val, 4);
+	Write((uint8_t*)&val, 4);
 	return *this;
 }

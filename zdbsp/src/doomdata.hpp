@@ -8,8 +8,6 @@
 #include "tarray.hpp"
 #include "common.hpp"
 
-#include "zdbsp.h"
-
 enum {
 	BOXTOP,
 	BOXBOTTOM,
@@ -23,7 +21,7 @@ struct MapSideDef {
 	char toptexture[8];
 	char bottomtexture[8];
 	char midtexture[8];
-	WORD sector;
+	uint16_t sector;
 };
 
 struct IntSideDef {
@@ -40,30 +38,30 @@ struct IntSideDef {
 };
 
 struct MapLineDef {
-	WORD v1;
-	WORD v2;
+	uint16_t v1;
+	uint16_t v2;
 	short flags;
 	short special;
 	short tag;
-	WORD sidenum[2];
+	uint16_t sidenum[2];
 };
 
 struct MapLineDef2 {
-	WORD v1;
-	WORD v2;
+	uint16_t v1;
+	uint16_t v2;
 	short flags;
 	unsigned char special;
 	unsigned char args[5];
-	WORD sidenum[2];
+	uint16_t sidenum[2];
 };
 
 struct IntLineDef {
-	DWORD v1;
-	DWORD v2;
+	uint32_t v1;
+	uint32_t v2;
 	int flags;
 	int special;
 	int args[5];
-	DWORD sidenum[2];
+	uint32_t sidenum[2];
 
 	TArray<zdbsp_UdmfKey> props;
 };
@@ -93,8 +91,8 @@ struct IntSector {
 
 struct IntThing {
 	unsigned short thingid;
-	fixed_t x; // full precision coordinates for UDMF support
-	fixed_t y;
+	zdbsp_I16F16 x; // full precision coordinates for UDMF support
+	zdbsp_I16F16 y;
 	// everything else is not needed or has no extended form in UDMF
 	short z;
 	short angle;
@@ -127,9 +125,9 @@ struct FLevel {
 	int32_t NumSegs;
 	zdbsp_NodeEx* Nodes;
 	int32_t NumNodes;
-	WORD* Blockmap;
+	uint16_t* Blockmap;
 	int32_t BlockmapSize;
-	BYTE* Reject;
+	uint8_t* Reject;
 	int32_t RejectSize;
 
 	zdbsp_SubsectorEx* GLSubsectors;
@@ -140,15 +138,15 @@ struct FLevel {
 	int32_t NumGLNodes;
 	zdbsp_VertexEx* GLVertices;
 	int32_t NumGLVertices;
-	BYTE* GLPVS;
+	uint8_t* GLPVS;
 	int32_t GLPVSSize;
 
 	int NumOrgVerts;
 
-	DWORD* OrgSectorMap;
+	uint32_t* OrgSectorMap;
 	int NumOrgSectors;
 
-	fixed_t MinX, MinY, MaxX, MaxY;
+	zdbsp_I16F16 MinX, MinY, MaxX, MaxY;
 
 	TArray<zdbsp_UdmfKey> props;
 

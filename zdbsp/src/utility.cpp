@@ -104,17 +104,17 @@ void FNodeBuilder::MakeSegsFromSides() {
 
 int FNodeBuilder::CreateSeg(int linenum, int sidenum) {
 	FPrivSeg seg;
-	DWORD backside;
+	uint32_t backside;
 	int segnum;
 
-	seg.next = DWORD_MAX;
+	seg.next = UINT_MAX;
 	seg.loopnum = 0;
 	seg.offset = 0;
-	seg.partner = DWORD_MAX;
+	seg.partner = UINT_MAX;
 	seg.hashnext = NULL;
 	seg.planefront = false;
-	seg.planenum = DWORD_MAX;
-	seg.storedseg = DWORD_MAX;
+	seg.planenum = UINT_MAX;
+	seg.storedseg = UINT_MAX;
 
 	if (sidenum == 0) { // front
 		seg.v1 = Level.Lines[linenum].v1;
@@ -161,15 +161,15 @@ void FNodeBuilder::GroupSegPlanes() {
 		seg->hashnext = NULL;
 	}
 
-	Segs[Segs.Size() - 1].next = DWORD_MAX;
+	Segs[Segs.Size() - 1].next = UINT_MAX;
 
 	for (i = planenum = 0; i < (int)Segs.Size(); ++i) {
 		FPrivSeg* seg = &Segs[i];
-		fixed_t x1 = Vertices[seg->v1].x;
-		fixed_t y1 = Vertices[seg->v1].y;
-		fixed_t x2 = Vertices[seg->v2].x;
-		fixed_t y2 = Vertices[seg->v2].y;
-		angle_t ang = PointToAngle(x2 - x1, y2 - y1);
+		zdbsp_I16F16 x1 = Vertices[seg->v1].x;
+		zdbsp_I16F16 y1 = Vertices[seg->v1].y;
+		zdbsp_I16F16 x2 = Vertices[seg->v2].x;
+		zdbsp_I16F16 y2 = Vertices[seg->v2].y;
+		zdbsp_Angle ang = PointToAngle(x2 - x1, y2 - y1);
 
 		if (ang >= 1u << 31)
 			ang += 1u << 31;
@@ -177,10 +177,10 @@ void FNodeBuilder::GroupSegPlanes() {
 		FPrivSeg* check = buckets[ang >>= 31 - bucketbits];
 
 		while (check != NULL) {
-			fixed_t cx1 = Vertices[check->v1].x;
-			fixed_t cy1 = Vertices[check->v1].y;
-			fixed_t cdx = Vertices[check->v2].x - cx1;
-			fixed_t cdy = Vertices[check->v2].y - cy1;
+			zdbsp_I16F16 cx1 = Vertices[check->v1].x;
+			zdbsp_I16F16 cy1 = Vertices[check->v1].y;
+			zdbsp_I16F16 cdx = Vertices[check->v2].x - cx1;
+			zdbsp_I16F16 cdy = Vertices[check->v2].y - cy1;
 			if (PointOnSide(x1, y1, cx1, cy1, cdx, cdy) == 0 &&
 				PointOnSide(x2, y2, cx1, cy1, cdx, cdy) == 0) {
 				break;
@@ -234,7 +234,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 
 	for (unsigned int i = 0; i < spots.Size(); ++i) {
 		FPolyStart* spot = &spots[i];
-		fixed_t bbox[4];
+		zdbsp_I16F16 bbox[4];
 
 		if (GetPolyExtents(spot->polynum, bbox)) {
 			FPolyStart* anchor;
@@ -259,8 +259,8 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 
 				// Scan right for the seg closest to the polyobject's center after it
 				// gets moved to its start spot.
-				fixed_t closestdist = FIXED_MAX;
-				DWORD closestseg = 0;
+				zdbsp_I16F16 closestdist = FIXED_MAX;
+				uint32_t closestseg = 0;
 
 				P(Printf(
 					"start %d,%d -- center %d, %d\n", spot->x >> 16, spot->y >> 16, center.x >> 16,
@@ -271,7 +271,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 					FPrivSeg* seg = &Segs[j];
 					FPrivVert* v1 = &Vertices[seg->v1];
 					FPrivVert* v2 = &Vertices[seg->v2];
-					fixed_t dy = v2->y - v1->y;
+					zdbsp_I16F16 dy = v2->y - v1->y;
 
 					if (dy == 0) { // Horizontal, so skip it
 						continue;
@@ -281,12 +281,12 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 						continue;
 					}
 
-					fixed_t dx = v2->x - v1->x;
+					zdbsp_I16F16 dx = v2->x - v1->x;
 
 					if (PointOnSide(center.x, center.y, v1->x, v1->y, dx, dy) <= 0) {
-						fixed_t t = DivScale30(center.y - v1->y, dy);
-						fixed_t sx = v1->x + MulScale30(dx, t);
-						fixed_t dist = sx - spot->x;
+						zdbsp_I16F16 t = DivScale30(center.y - v1->y, dy);
+						zdbsp_I16F16 sx = v1->x + MulScale30(dx, t);
+						zdbsp_I16F16 dist = sx - spot->x;
 
 						if (dist < closestdist && dist >= 0) {
 							closestdist = dist;
@@ -306,7 +306,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 	}
 }
 
-int FNodeBuilder::MarkLoop(DWORD firstseg, int loopnum) {
+int FNodeBuilder::MarkLoop(uint32_t firstseg, int loopnum) {
 	int seg;
 	int sec = Segs[firstseg].frontsector;
 
@@ -326,17 +326,17 @@ int FNodeBuilder::MarkLoop(DWORD firstseg, int loopnum) {
 			Vertices[s1->v1].y >> 16, Vertices[s1->v2].x >> 16, Vertices[s1->v2].y >> 16
 		));
 
-		DWORD bestseg = DWORD_MAX;
-		DWORD tryseg = Vertices[s1->v2].segs;
-		angle_t bestang = ANGLE_MAX;
-		angle_t ang1 = s1->angle;
+		uint32_t bestseg = UINT_MAX;
+		uint32_t tryseg = Vertices[s1->v2].segs;
+		zdbsp_Angle bestang = ANGLE_MAX;
+		zdbsp_Angle ang1 = s1->angle;
 
-		while (tryseg != DWORD_MAX) {
+		while (tryseg != UINT_MAX) {
 			FPrivSeg* s2 = &Segs[tryseg];
 
 			if (s2->frontsector == sec) {
-				angle_t ang2 = s2->angle + ANGLE_180;
-				angle_t angdiff = ang2 - ang1;
+				zdbsp_Angle ang2 = s2->angle + ANGLE_180;
+				zdbsp_Angle angdiff = ang2 - ang1;
 
 				if (angdiff < bestang && angdiff > 0) {
 					bestang = angdiff;
@@ -347,14 +347,14 @@ int FNodeBuilder::MarkLoop(DWORD firstseg, int loopnum) {
 		}
 
 		seg = bestseg;
-	} while (seg != (int)DWORD_MAX && Segs[seg].loopnum == 0);
+	} while (seg != (int)UINT_MAX && Segs[seg].loopnum == 0);
 
 	return loopnum + 1;
 }
 
 // Find the bounding box for a specific polyobject.
 
-bool FNodeBuilder::GetPolyExtents(int polynum, fixed_t bbox[4]) {
+bool FNodeBuilder::GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]) {
 	unsigned int i;
 
 	bbox[BOXLEFT] = bbox[BOXBOTTOM] = FIXED_MAX;
@@ -383,7 +383,7 @@ bool FNodeBuilder::GetPolyExtents(int polynum, fixed_t bbox[4]) {
 			AddSegToBBox(bbox, &Segs[i]);
 			vert = Segs[i].v2;
 			i = Vertices[vert].segs;
-		} while (--count && i != DWORD_MAX &&
+		} while (--count && i != UINT_MAX &&
 				 (Vertices[vert].x != start.x || Vertices[vert].y != start.y));
 
 		return true;
@@ -402,7 +402,7 @@ bool FNodeBuilder::GetPolyExtents(int polynum, fixed_t bbox[4]) {
 	return found;
 }
 
-void FNodeBuilder::AddSegToBBox(fixed_t bbox[4], const FPrivSeg* seg) {
+void FNodeBuilder::AddSegToBBox(zdbsp_I16F16 bbox[4], const FPrivSeg* seg) {
 	FPrivVert* v1 = &Vertices[seg->v1];
 	FPrivVert* v2 = &Vertices[seg->v2];
 
@@ -426,7 +426,7 @@ void FNodeBuilder::AddSegToBBox(fixed_t bbox[4], const FPrivSeg* seg) {
 }
 
 FNodeBuilder::FVertexMap::FVertexMap(
-	FNodeBuilder& builder, fixed_t minx, fixed_t miny, fixed_t maxx, fixed_t maxy
+	FNodeBuilder& builder, zdbsp_I16F16 minx, zdbsp_I16F16 miny, zdbsp_I16F16 maxx, zdbsp_I16F16 maxy
 )
 	: MyBuilder(builder) {
 	MinX = minx;
@@ -481,17 +481,17 @@ int FNodeBuilder::FVertexMap::SelectVertexClose(FNodeBuilder::FPrivVert& vert) {
 int FNodeBuilder::FVertexMap::InsertVertex(FNodeBuilder::FPrivVert& vert) {
 	int vertnum;
 
-	vert.segs = DWORD_MAX;
-	vert.segs2 = DWORD_MAX;
+	vert.segs = UINT_MAX;
+	vert.segs2 = UINT_MAX;
 	vertnum = (int)MyBuilder.Vertices.Push(vert);
 
 	// If a vertex is near a block boundary, then it will be inserted on
 	// both sides of the boundary so that SelectVertexClose can find
 	// it by checking in only one block.
-	fixed_t minx = MAX(MinX, vert.x - VERTEX_EPSILON);
-	fixed_t maxx = MIN(MaxX, vert.x + VERTEX_EPSILON);
-	fixed_t miny = MAX(MinY, vert.y - VERTEX_EPSILON);
-	fixed_t maxy = MIN(MaxY, vert.y + VERTEX_EPSILON);
+	zdbsp_I16F16 minx = MAX(MinX, vert.x - VERTEX_EPSILON);
+	zdbsp_I16F16 maxx = MIN(MaxX, vert.x + VERTEX_EPSILON);
+	zdbsp_I16F16 miny = MAX(MinY, vert.y - VERTEX_EPSILON);
+	zdbsp_I16F16 maxy = MIN(MaxY, vert.y + VERTEX_EPSILON);
 
 	int blk[4] = { GetBlock(minx, miny), GetBlock(maxx, miny), GetBlock(minx, maxy),
 				   GetBlock(maxx, maxy) };

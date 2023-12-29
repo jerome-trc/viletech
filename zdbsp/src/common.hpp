@@ -25,56 +25,46 @@ typedef __int32 int32_t;
 #define strnicmp strncasecmp
 #endif
 
+#include "zdbsp.h"
+
 #define FIXED_MAX INT_MAX
 #define FIXED_MIN INT_MIN
 
 #define FRACBITS 16
 
-typedef int fixed_t;
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
-typedef signed short SWORD;
+static_assert(UINT_MAX == 0xffffffff);
 
-#ifdef _WIN32
-typedef unsigned long DWORD;
-#else
-typedef uint32_t DWORD;
-#endif
-
-typedef uint32_t angle_t;
-
-[[nodiscard]] inline angle_t PointToAngle(fixed_t x, fixed_t y) {
+[[nodiscard]] inline zdbsp_Angle PointToAngle(zdbsp_I16F16 x, zdbsp_I16F16 y) {
 	double ang = atan2(double(y), double(x));
 	const double rad2bam = double(1 << 30) / M_PI;
 	double dbam = ang * rad2bam;
 	// Convert to signed first since negative double to unsigned is undefined.
-	return angle_t(int(dbam)) << 1;
+	return zdbsp_Angle(int(dbam)) << 1;
 }
 
-static const WORD NO_MAP_INDEX = 0xffff;
-static const DWORD NO_INDEX = 0xffffffff;
-static const angle_t ANGLE_MAX = 0xffffffff;
-static const DWORD DWORD_MAX = 0xffffffff;
-static const angle_t ANGLE_180 = (1u << 31);
-static const angle_t ANGLE_EPSILON = 5000;
+static const uint16_t NO_MAP_INDEX = 0xffff;
+static const uint32_t NO_INDEX = 0xffffffff;
+static const zdbsp_Angle ANGLE_MAX = 0xffffffff;
+static const zdbsp_Angle ANGLE_180 = (1u << 31);
+static const zdbsp_Angle ANGLE_EPSILON = 5000;
 
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
 
 #pragma warning(disable : 4035)
 
-inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
+inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
 	__asm mov eax, a __asm mov ecx, c __asm imul b __asm idiv ecx
 }
 
-inline fixed_t DivScale30(fixed_t a, fixed_t b) {
+inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
 	__asm mov edx, a __asm sar edx, 2 __asm mov eax, a __asm shl eax, 30 __asm idiv b
 }
 
-inline fixed_t MulScale30(fixed_t a, fixed_t b) {
+inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
 	__asm mov eax, a __asm imul b __asm shrd eax, edx, 30
 }
 
-inline fixed_t DMulScale32(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
+inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
 	__asm mov eax, a __asm imul b __asm mov ebx, eax __asm mov eax, c __asm mov esi,
 		edx __asm imul d __asm add eax, ebx __asm adc edx, esi __asm mov eax, edx
 }
@@ -84,8 +74,8 @@ inline fixed_t DMulScale32(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
 #elif defined(__GNUC__) && defined(__i386__)
 
 #ifdef __clang__
-inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
-	fixed_t result, dummy;
+inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
+	zdbsp_I16F16 result, dummy;
 
 	asm volatile("imull %3\n\t"
 				 "idivl %4"
@@ -96,8 +86,8 @@ inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
 	return result;
 }
 
-inline fixed_t DivScale30(fixed_t a, fixed_t b) {
-	fixed_t result, dummy;
+inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+	zdbsp_I16F16 result, dummy;
 	asm volatile("idivl %4"
 				 : "=a"(result), "=d"(dummy)
 				 : "a"(a << 30), "d"(a >> 2), "r"(b)
@@ -105,8 +95,8 @@ inline fixed_t DivScale30(fixed_t a, fixed_t b) {
 	return result;
 }
 #else
-inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
-	fixed_t result, dummy;
+inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
+	zdbsp_I16F16 result, dummy;
 
 	asm volatile("imull %3\n\t"
 				 "idivl %4"
@@ -117,8 +107,8 @@ inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
 	return result;
 }
 
-inline fixed_t DivScale30(fixed_t a, fixed_t b) {
-	fixed_t result, dummy;
+inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+	zdbsp_I16F16 result, dummy;
 	asm volatile("idivl %4"
 				 : "=a,a"(result), "=d,d"(dummy)
 				 : "a,a"(a << 30), "d,d"(a >> 2), "r,m"(b)
@@ -127,38 +117,38 @@ inline fixed_t DivScale30(fixed_t a, fixed_t b) {
 }
 #endif
 
-inline fixed_t MulScale30(fixed_t a, fixed_t b) {
+inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
 	return ((int64_t)a * b) >> 30;
 }
 
-inline fixed_t DMulScale30(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
+inline zdbsp_I16F16 DMulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
 	return (((int64_t)a * b) + ((int64_t)c * d)) >> 30;
 }
 
-inline fixed_t DMulScale32(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
+inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
 	return (((int64_t)a * b) + ((int64_t)c * d)) >> 32;
 }
 
 #else
 
-inline fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
-	return (fixed_t)(double(a) * double(b) / double(c));
+inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
+	return (zdbsp_I16F16)(double(a) * double(b) / double(c));
 }
 
-inline fixed_t DivScale30(fixed_t a, fixed_t b) {
-	return (fixed_t)(double(a) / double(b) * double(1 << 30));
+inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+	return (zdbsp_I16F16)(double(a) / double(b) * double(1 << 30));
 }
 
-inline fixed_t MulScale30(fixed_t a, fixed_t b) {
-	return (fixed_t)(double(a) * double(b) / double(1 << 30));
+inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+	return (zdbsp_I16F16)(double(a) * double(b) / double(1 << 30));
 }
 
-inline fixed_t DMulScale30(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
-	return (fixed_t)((double(a) * double(b) + double(c) * double(d)) / double(1 << 30));
+inline zdbsp_I16F16 DMulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
+	return (zdbsp_I16F16)((double(a) * double(b) + double(c) * double(d)) / double(1 << 30));
 }
 
-inline fixed_t DMulScale32(fixed_t a, fixed_t b, fixed_t c, fixed_t d) {
-	return (fixed_t)((double(a) * double(b) + double(c) * double(d)) / 4294967296.0);
+inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
+	return (zdbsp_I16F16)((double(a) * double(b) + double(c) * double(d)) / 4294967296.0);
 }
 
 #endif

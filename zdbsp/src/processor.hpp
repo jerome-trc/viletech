@@ -1,13 +1,14 @@
 #ifndef __PROCESSOR_H__
 #define __PROCESSOR_H__
 
-#include "sc_man.hpp"
+
 #ifdef _MSC_VER
 #pragma once
 #endif
 
 #include <zlib.h>
 
+#include "sc_man.hpp"
 #include "wad.hpp"
 #include "doomdata.hpp"
 #include "tarray.hpp"
@@ -19,12 +20,12 @@ public:
 	ZLibOut(FWadWriter& out);
 	~ZLibOut();
 
-	ZLibOut& operator<<(BYTE);
-	ZLibOut& operator<<(WORD);
-	ZLibOut& operator<<(SWORD);
-	ZLibOut& operator<<(DWORD);
-	ZLibOut& operator<<(fixed_t);
-	void Write(BYTE* data, int len);
+	ZLibOut& operator<<(uint8_t);
+	ZLibOut& operator<<(uint16_t);
+	ZLibOut& operator<<(int16_t);
+	ZLibOut& operator<<(uint32_t);
+	ZLibOut& operator<<(zdbsp_I16F16);
+	void Write(uint8_t* data, int len);
 
 private:
 	enum {
@@ -32,7 +33,7 @@ private:
 	};
 
 	z_stream Stream;
-	BYTE Buffer[BUFFER_SIZE];
+	uint8_t Buffer[BUFFER_SIZE];
 
 	FWadWriter& Out;
 };
@@ -100,7 +101,7 @@ private:
 	zdbsp_SubsectorEx* SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count);
 	zdbsp_SegGlEx* SegGLsToEx(const zdbsp_SegGl* segs, int count);
 
-	BYTE* FixReject(const BYTE* oldreject);
+	uint8_t* FixReject(const uint8_t* oldreject);
 	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count) const;
 
 	void WriteLines(FWadWriter& out);
@@ -158,7 +159,7 @@ private:
 
 	int CheckInt(const char* key);
 	double CheckFloat(const char* key);
-	fixed_t CheckFixed(const char* key);
+	zdbsp_I16F16 CheckFixed(const char* key);
 
 	void WriteProps(FWadWriter& out, TArray<zdbsp_UdmfKey>& props);
 	void WriteIntProp(FWadWriter& out, const char* key, int value);
