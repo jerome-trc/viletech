@@ -84,6 +84,76 @@ mod test {
 	}
 
 	#[test]
+	fn extended_smoke() {
+		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
+		let bytes = std::fs::read(&path).unwrap();
+		let mut hash_in = HashInput::default();
+
+		unsafe {
+			let reader = zdbsp_wadreader_new(bytes.as_ptr());
+			let p = zdbsp_processor_new(reader, std::ptr::null());
+			zdbsp_processor_run(p, std::ptr::null());
+
+			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			for b in (zdbsp_processor_vertsnewx_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			zdbsp_processor_vertsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(vertx_callback),
+			);
+
+			for b in (zdbsp_processor_ssectors_count(p) as u32).to_le_bytes() {
+				hash_in.subsectors.push(b);
+			}
+
+			zdbsp_processor_ssectorsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(ssectorx_callback),
+			);
+
+			for b in (zdbsp_processor_segs_count(p) as u32).to_le_bytes() {
+				hash_in.subsectors.push(b);
+			}
+
+			zdbsp_processor_segsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(segx_callback),
+			);
+
+			for b in (zdbsp_processor_nodes_count(p) as u32).to_le_bytes() {
+				hash_in.nodes.push(b);
+			}
+
+			zdbsp_processor_nodesx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(nodex_callback),
+			);
+
+			let mut all_bytes = vec![b'X', b'N', b'O', b'D'];
+
+			all_bytes.append(&mut hash_in.verts);
+			all_bytes.append(&mut hash_in.subsectors);
+			all_bytes.append(&mut hash_in.segs);
+			all_bytes.append(&mut hash_in.nodes);
+
+			let checksum = format!("{:#?}", md5::compute(all_bytes.as_slice()));
+			assert_eq!(checksum, "30025de1f1cf2a091cd7e2c92ea0af88");
+
+			zdbsp_processor_destroy(p);
+			zdbsp_wadreader_destroy(reader);
+		}
+	}
+
+	#[test]
 	fn glnodes_smoke() {
 		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
 		let bytes = std::fs::read(&path).unwrap();
@@ -308,11 +378,11 @@ mod test {
 				hash_in.verts.push(b);
 			}
 
-			for b in (zdbsp_processor_vertsnew_count(p) as u32).to_le_bytes() {
+			for b in (zdbsp_processor_vertsnewgl_count(p) as u32).to_le_bytes() {
 				hash_in.verts.push(b);
 			}
 
-			zdbsp_processor_vertsx_foreach(
+			zdbsp_processor_vertsgl_foreach(
 				p,
 				std::ptr::addr_of_mut!(hash_in).cast(),
 				Some(vertx_callback),
@@ -322,7 +392,7 @@ mod test {
 				hash_in.subsectors.push(b);
 			}
 
-			zdbsp_processor_ssectorsx_foreach(
+			zdbsp_processor_ssectorsglx_foreach(
 				p,
 				std::ptr::addr_of_mut!(hash_in).cast(),
 				Some(ssectorx_callback),
@@ -342,7 +412,7 @@ mod test {
 				hash_in.nodes.push(b);
 			}
 
-			zdbsp_processor_nodesx_foreach(
+			zdbsp_processor_nodesglx_foreach(
 				p,
 				std::ptr::addr_of_mut!(hash_in).cast(),
 				Some(nodex_callback),
@@ -455,12 +525,9 @@ mod test {
 	}
 
 	unsafe extern "C" fn ssectorx_callback(ctx: *mut c_void, ptr: *const zdbsp_SubsectorEx) {
-		const RECORD_SIZE: usize = std::mem::size_of::<u32>();
 		let hash_in = ctx.cast::<HashInput>();
-		let r = std::ptr::read(ptr);
-		let bytes = std::mem::transmute::<_, [u8; RECORD_SIZE]>(r.num_lines);
 
-		for b in bytes {
+		for b in (*ptr).num_lines.to_le_bytes() {
 			(*hash_in).subsectors.push(b);
 		}
 	}
@@ -473,6 +540,26 @@ mod test {
 
 		for b in bytes {
 			(*hash_in).subsectors.push(b);
+		}
+	}
+
+	unsafe extern "C" fn segx_callback(ctx: *mut c_void, ptr: *const zdbsp_SegEx) {
+		let hash_in = ctx.cast::<HashInput>();
+
+		for b in (*ptr).v1.to_le_bytes() {
+			(*hash_in).segs.push(b);
+		}
+
+		for b in (*ptr).v2.to_le_bytes() {
+			(*hash_in).segs.push(b);
+		}
+
+		for b in ((*ptr).linedef as u16).to_le_bytes() {
+			(*hash_in).segs.push(b);
+		}
+
+		for b in ((*ptr).side as u8).to_le_bytes() {
+			(*hash_in).segs.push(b);
 		}
 	}
 

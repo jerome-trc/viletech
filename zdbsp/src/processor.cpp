@@ -474,6 +474,19 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 				builder->aa_pref = config->aa_preference;
 				builder->max_segs = config->max_segs;
 				builder->split_cost = config->split_cost;
+
+				if (builder->aa_pref < 1) {
+					builder->aa_pref = 1;
+				}
+
+				if (builder->max_segs < 3) {
+					builder->max_segs = 3;
+				}
+
+				if (builder->split_cost < 1) {
+					// 1 means to add no extra weight at all.
+					builder->split_cost = 1;
+				}
 			}
 
 			delete[] Level.Vertices;
