@@ -25,7 +25,7 @@ mod test {
 
 	#[test]
 	fn vanilla_smoke() {
-		let level = load_level(freedoom2_map01_path());
+		let level = load_level(None);
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -84,7 +84,7 @@ mod test {
 
 	#[test]
 	fn extended_smoke() {
-		let level = load_level(freedoom2_map01_path());
+		let level = load_level(None);
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -151,7 +151,7 @@ mod test {
 
 	#[test]
 	fn glnodes_smoke() {
-		let level = load_level(freedoom2_map01_path());
+		let level = load_level(None);
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -204,7 +204,7 @@ mod test {
 
 	#[test]
 	fn glnodes_conform() {
-		let level = load_level(freedoom2_map01_path());
+		let level = load_level(None);
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -296,7 +296,7 @@ mod test {
 
 	#[test]
 	fn glv5_smoke() {
-		let level = load_level(freedoom2_map01_path());
+		let level = load_level(None);
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -427,18 +427,27 @@ mod test {
 	/// on levels which push the upper boundaries of non-UDMF node-building.
 	#[test]
 	#[ignore]
-	fn with_sample() {
+	fn user_sample() {
 		let Ok(wad_path) = std::env::var("ZDBSP_SAMPLE_WAD") else {
 			eprintln!("Env. var. `ZDBSP_SAMPLE_WAD` not set; skipping user sample test.");
 			return;
 		};
 
-		let level = load_level(PathBuf::from(wad_path));
-		let mut hash_in = HashInput::default();
+		let level = load_level(Some(PathBuf::from(wad_path)));
 
 		unsafe {
 			let p = zdbsp_processor_new_vanilla(level);
+
+			let pcfg = zdbsp_ProcessConfig {
+				flags: zdbsp_processflags_default() | zdbsp_ProcessFlags_ZDBSP_PROCF_BUILDGLNODES,
+				reject_mode: zdbsp_rejectmode_default(),
+				blockmap_mode: zdbsp_blockmapmode_default(),
+			};
+
+			zdbsp_processor_configure(p, std::ptr::addr_of!(pcfg));
 			zdbsp_processor_run(p, std::ptr::null());
+
+			let mut hash_in = HashInput::default();
 
 			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
 				hash_in.verts.push(b);
@@ -495,6 +504,63 @@ mod test {
 				assert_eq!(format!("{:#?}", md5::compute(all_bytes.as_slice())), cksum,);
 			}
 
+			let mut hash_in = HashInput::default();
+
+			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			for b in (zdbsp_processor_vertsnewgl_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			zdbsp_processor_vertsgl_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(vertx_callback),
+			);
+
+			for b in (zdbsp_processor_ssectorsgl_count(p) as u32).to_le_bytes() {
+				hash_in.subsectors.push(b);
+			}
+
+			zdbsp_processor_ssectorsglx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(ssectorx_callback),
+			);
+
+			for b in (zdbsp_processor_segsglx_count(p) as u32).to_le_bytes() {
+				hash_in.segs.push(b);
+			}
+
+			zdbsp_processor_segsglx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(segglx_callback),
+			);
+
+			for b in (zdbsp_processor_nodesgl_count(p) as u32).to_le_bytes() {
+				hash_in.nodes.push(b);
+			}
+
+			zdbsp_processor_nodesglx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(nodex_callback),
+			);
+
+			let mut all_bytes = vec![b'X', b'G', b'L', b'N'];
+
+			all_bytes.append(&mut hash_in.verts);
+			all_bytes.append(&mut hash_in.subsectors);
+			all_bytes.append(&mut hash_in.segs);
+			all_bytes.append(&mut hash_in.nodes);
+
+			if let Ok(cksum) = std::env::var("ZDBSP_SAMPLE_CHECKSUM_NODESGL") {
+				assert_eq!(format!("{:#?}", md5::compute(all_bytes.as_slice())), cksum,);
+			}
+
 			zdbsp_processor_destroy(p);
 		}
 	}
@@ -502,12 +568,11 @@ mod test {
 	// Details and helpers /////////////////////////////////////////////////////
 
 	#[must_use]
-	fn freedoom2_map01_path() -> PathBuf {
-		Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad")
-	}
+	fn load_level(path: Option<PathBuf>) -> zdbsp_Level {
+		let path = path.unwrap_or_else(|| {
+			Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad")
+		});
 
-	#[must_use]
-	fn load_level(path: PathBuf) -> zdbsp_Level {
 		let wad_bytes = std::fs::read(&path).unwrap();
 		let mut reader = wadload::Reader::new(Cursor::new(wad_bytes)).unwrap();
 
