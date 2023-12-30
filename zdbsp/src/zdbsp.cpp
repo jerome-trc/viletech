@@ -224,16 +224,16 @@ void zdbsp_processor_nodesx_v5_foreach(
 		short* coord = &node.bbox[0][0];
 
 		for (size_t j = 0; j < 2 * 4; ++j) {
-			coord[j] = LittleShort(inodes[j]);
+			coord[j] = little_short(inodes[j]);
 		}
 
-		node.x = LittleShort(n.x >> 16);
-		node.y = LittleShort(n.y >> 16);
-		node.dx = LittleShort(n.dx >> 16);
-		node.dy = LittleShort(n.dy >> 16);
+		node.x = little_short(n.x >> 16);
+		node.y = little_short(n.y >> 16);
+		node.dx = little_short(n.dx >> 16);
+		node.dy = little_short(n.dy >> 16);
 
 		for (size_t j = 0; j < 2; ++j) {
-			node.children[j] = LittleLong(n.children[j]);
+			node.children[j] = little_long(n.children[j]);
 		}
 
 		callback(ctx, &node);
@@ -251,12 +251,12 @@ void zdbsp_processor_segs_foreach(
 		const auto& s = level.Segs[i];
 		zdbsp_SegRaw seg = {};
 
-		seg.v1 = LittleShort(uint16_t(s.v1));
-		seg.v2 = LittleShort(uint16_t(s.v2));
-		seg.angle = LittleShort(s.angle);
-		seg.linedef = LittleShort(s.linedef);
-		seg.side = LittleShort(s.side);
-		seg.offset = LittleShort(s.offset);
+		seg.v1 = little_short(uint16_t(s.v1));
+		seg.v2 = little_short(uint16_t(s.v2));
+		seg.angle = little_short(s.angle);
+		seg.linedef = little_short(s.linedef);
+		seg.side = little_short(s.side);
+		seg.offset = little_short(s.offset);
 
 		callback(ctx, &seg);
 	}
@@ -282,20 +282,20 @@ void zdbsp_processor_segsgl_foreach(
 		zdbsp_SegGl seg = {};
 
 		if (s.v1 < (uint32_t)level.NumOrgVerts) {
-			seg.v1 = LittleShort((uint16_t)s.v1);
+			seg.v1 = little_short((uint16_t)s.v1);
 		} else {
-			seg.v1 = LittleShort(0x8000 | (uint16_t)(s.v1 - level.NumOrgVerts));
+			seg.v1 = little_short(0x8000 | (uint16_t)(s.v1 - level.NumOrgVerts));
 		}
 
 		if (s.v2 < (uint32_t)level.NumOrgVerts) {
-			seg.v2 = (uint16_t)LittleShort(s.v2);
+			seg.v2 = (uint16_t)little_short(s.v2);
 		} else {
-			seg.v2 = LittleShort(0x8000 | (uint16_t)(s.v2 - level.NumOrgVerts));
+			seg.v2 = little_short(0x8000 | (uint16_t)(s.v2 - level.NumOrgVerts));
 		}
 
-		seg.linedef = LittleShort((uint16_t)s.linedef);
-		seg.side = LittleShort(s.side);
-		seg.partner = LittleShort((uint16_t)s.partner);
+		seg.linedef = little_short((uint16_t)s.linedef);
+		seg.side = little_short(s.side);
+		seg.partner = little_short((uint16_t)s.partner);
 
 		callback(ctx, &seg);
 	}
@@ -321,20 +321,20 @@ void zdbsp_processor_segsglx_v5_foreach(
 		zdbsp_SegGlEx seg = {};
 
 		if (s.v1 < (uint32_t)level.NumOrgVerts) {
-			seg.v1 = LittleLong(s.v1);
+			seg.v1 = little_long(s.v1);
 		} else {
-			seg.v1 = LittleLong(0x80000000u | ((int32_t)s.v1 - level.NumOrgVerts));
+			seg.v1 = little_long(0x80000000u | ((int32_t)s.v1 - level.NumOrgVerts));
 		}
 
 		if (s.v2 < (uint32_t)level.NumOrgVerts) {
-			seg.v2 = LittleLong(s.v2);
+			seg.v2 = little_long(s.v2);
 		} else {
-			seg.v2 = LittleLong(0x80000000u | ((int32_t)s.v2 - level.NumOrgVerts));
+			seg.v2 = little_long(0x80000000u | ((int32_t)s.v2 - level.NumOrgVerts));
 		}
 
-		seg.linedef = LittleShort(s.linedef);
-		seg.side = LittleShort(s.side);
-		seg.partner = LittleShort(s.partner);
+		seg.linedef = little_short(s.linedef);
+		seg.side = little_short(s.side);
+		seg.partner = little_short(s.partner);
 
 		callback(ctx, &seg);
 	}
@@ -377,8 +377,8 @@ void zdbsp_processor_ssectorsx_v5_foreach(
 
 	for (size_t i = 0; i < level.NumGLSubsectors; ++i) {
 		zdbsp_SubsectorEx ss = {};
-		ss.first_line = LittleLong(level.GLSubsectors[i].first_line);
-		ss.num_lines = LittleLong(level.GLSubsectors[i].num_lines);
+		ss.first_line = little_long(level.GLSubsectors[i].first_line);
+		ss.num_lines = little_long(level.GLSubsectors[i].num_lines);
 		callback(ctx, &ss);
 	}
 }
@@ -417,14 +417,14 @@ static void processor_nodes_foreach(
 		auto& n = node_array[i];
 
 		zdbsp_NodeRaw node = {};
-		node.x = LittleShort(n.x >> 16);
-		node.y = LittleShort(n.y >> 16);
-		node.dx = LittleShort(n.dx >> 16);
-		node.dy = LittleShort(n.dy >> 16);
+		node.x = little_short(n.x >> 16);
+		node.y = little_short(n.y >> 16);
+		node.dx = little_short(n.dx >> 16);
+		node.dy = little_short(n.dy >> 16);
 
 		for (size_t ii = 0; ii < 2; ++ii) {
 			for (size_t iii = 0; iii < 4; ++iii) {
-				node.bbox[ii][iii] = LittleShort(n.bbox[ii][iii]);
+				node.bbox[ii][iii] = little_short(n.bbox[ii][iii]);
 			}
 		}
 
@@ -434,9 +434,9 @@ static void processor_nodes_foreach(
 			uint32_t child = n.children[ii];
 
 			if (child & NFX_SUBSECTOR) {
-				*o++ = LittleShort(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+				*o++ = little_short(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
 			} else {
-				*o++ = LittleShort((uint16_t)child);
+				*o++ = little_short((uint16_t)child);
 			}
 		}
 
@@ -465,8 +465,8 @@ static void processor_ssectors_foreach(
 		const auto& ss = array[i];
 		zdbsp_SubsectorRaw subsect = {};
 
-		subsect.first_line = LittleShort((uint16_t)ss.first_line);
-		subsect.num_lines = LittleShort((uint16_t)ss.num_lines);
+		subsect.first_line = little_short((uint16_t)ss.first_line);
+		subsect.num_lines = little_short((uint16_t)ss.num_lines);
 
 		callback(ctx, &subsect);
 	}

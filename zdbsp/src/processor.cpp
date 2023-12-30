@@ -109,11 +109,11 @@ void FProcessor::load_things(zdbsp_SliceU8 slice) {
 	this->Level.Things.Resize(thing_count);
 
 	for (uint32_t i = 0; i < thing_count; ++i) {
-		this->Level.Things[i].x = LittleShort(mt[i].x) << FRACBITS;
-		this->Level.Things[i].y = LittleShort(mt[i].y) << FRACBITS;
-		this->Level.Things[i].angle = LittleShort(mt[i].angle);
-		this->Level.Things[i].type = LittleShort(mt[i].type);
-		this->Level.Things[i].flags = LittleShort(mt[i].flags);
+		this->Level.Things[i].x = little_short(mt[i].x) << FRACBITS;
+		this->Level.Things[i].y = little_short(mt[i].y) << FRACBITS;
+		this->Level.Things[i].angle = little_short(mt[i].angle);
+		this->Level.Things[i].type = little_short(mt[i].type);
+		this->Level.Things[i].flags = little_short(mt[i].flags);
 		this->Level.Things[i].z = 0;
 		this->Level.Things[i].special = 0;
 		this->Level.Things[i].args[0] = 0;
@@ -135,12 +135,12 @@ void FProcessor::load_things_ext(zdbsp_SliceU8 slice) {
 
 	for (uint32_t i = 0; i < thing_count; ++i) {
 		this->Level.Things[i].thingid = things[i].thing_id;
-		this->Level.Things[i].x = LittleShort(things[i].x) << FRACBITS;
-		this->Level.Things[i].y = LittleShort(things[i].y) << FRACBITS;
-		this->Level.Things[i].z = LittleShort(things[i].z);
-		this->Level.Things[i].angle = LittleShort(things[i].angle);
-		this->Level.Things[i].type = LittleShort(things[i].type);
-		this->Level.Things[i].flags = LittleShort(things[i].flags);
+		this->Level.Things[i].x = little_short(things[i].x) << FRACBITS;
+		this->Level.Things[i].y = little_short(things[i].y) << FRACBITS;
+		this->Level.Things[i].z = little_short(things[i].z);
+		this->Level.Things[i].angle = little_short(things[i].angle);
+		this->Level.Things[i].type = little_short(things[i].type);
+		this->Level.Things[i].flags = little_short(things[i].flags);
 		this->Level.Things[i].special = things[i].special;
 		this->Level.Things[i].args[0] = things[i].args[0];
 		this->Level.Things[i].args[1] = things[i].args[1];
@@ -183,11 +183,11 @@ void FProcessor::load_lines(zdbsp_SliceU8 slice) {
 	this->Level.Lines.Resize(line_count);
 
 	for (uint32_t i = 0; i < line_count; ++i) {
-		this->Level.Lines[i].v1 = LittleShort(data[i].v1);
-		this->Level.Lines[i].v2 = LittleShort(data[i].v2);
-		this->Level.Lines[i].flags = LittleShort(data[i].flags);
-		this->Level.Lines[i].sidenum[0] = LittleShort(data[i].sidenum[0]);
-		this->Level.Lines[i].sidenum[1] = LittleShort(data[i].sidenum[1]);
+		this->Level.Lines[i].v1 = little_short(data[i].v1);
+		this->Level.Lines[i].v2 = little_short(data[i].v2);
+		this->Level.Lines[i].flags = little_short(data[i].flags);
+		this->Level.Lines[i].sidenum[0] = little_short(data[i].sidenum[0]);
+		this->Level.Lines[i].sidenum[1] = little_short(data[i].sidenum[1]);
 
 		if (this->Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
 			this->Level.Lines[i].sidenum[0] = NO_INDEX;
@@ -196,8 +196,8 @@ void FProcessor::load_lines(zdbsp_SliceU8 slice) {
 
 		// Store the special and tag in the args array so we don't lose them
 		this->Level.Lines[i].special = 0;
-		this->Level.Lines[i].args[0] = LittleShort(data[i].special);
-		this->Level.Lines[i].args[1] = LittleShort(data[i].tag);
+		this->Level.Lines[i].args[0] = little_short(data[i].special);
+		this->Level.Lines[i].args[1] = little_short(data[i].tag);
 	}
 
 	delete[] data;
@@ -218,11 +218,11 @@ void FProcessor::load_lines_ext(zdbsp_SliceU8 slice) {
 		this->Level.Lines[i].args[2] = data[i].args[2];
 		this->Level.Lines[i].args[3] = data[i].args[3];
 		this->Level.Lines[i].args[4] = data[i].args[4];
-		this->Level.Lines[i].v1 = LittleShort(data[i].v1);
-		this->Level.Lines[i].v2 = LittleShort(data[i].v2);
-		this->Level.Lines[i].flags = LittleShort(data[i].flags);
-		this->Level.Lines[i].sidenum[0] = LittleShort(data[i].sidenum[0]);
-		this->Level.Lines[i].sidenum[1] = LittleShort(data[i].sidenum[1]);
+		this->Level.Lines[i].v1 = little_short(data[i].v1);
+		this->Level.Lines[i].v2 = little_short(data[i].v2);
+		this->Level.Lines[i].flags = little_short(data[i].flags);
+		this->Level.Lines[i].sidenum[0] = little_short(data[i].sidenum[0]);
+		this->Level.Lines[i].sidenum[1] = little_short(data[i].sidenum[1]);
 
 		if (this->Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
 			this->Level.Lines[i].sidenum[0] = NO_INDEX;
@@ -239,8 +239,8 @@ void FProcessor::load_vertices(zdbsp_SliceU8 slice) {
 	this->Level.Vertices = new zdbsp_VertexEx[this->Level.NumVertices];
 
 	for (int i = 0; i < this->Level.NumVertices; ++i) {
-		this->Level.Vertices[i].x = LittleShort(data[i].x) << FRACBITS;
-		this->Level.Vertices[i].y = LittleShort(data[i].y) << FRACBITS;
+		this->Level.Vertices[i].x = little_short(data[i].x) << FRACBITS;
+		this->Level.Vertices[i].y = little_short(data[i].y) << FRACBITS;
 		this->Level.Vertices[i].index = 0; // we don't need this value for non-UDMF maps
 	}
 }
@@ -259,7 +259,7 @@ void FProcessor::load_sides(zdbsp_SliceU8 slice) {
 		memcpy(this->Level.Sides[i].bottomtexture, data[i].bottomtexture, 8);
 		memcpy(this->Level.Sides[i].midtexture, data[i].midtexture, 8);
 
-		this->Level.Sides[i].sector = LittleShort(data[i].sector);
+		this->Level.Sides[i].sector = little_short(data[i].sector);
 
 		if (this->Level.Sides[i].sector == NO_MAP_INDEX)
 			this->Level.Sides[i].sector = NO_INDEX;
@@ -678,10 +678,10 @@ zdbsp_NodeEx* FProcessor::NodesToEx(const zdbsp_NodeRaw* nodes, int count) {
 		int i;
 
 		for (i = 0; i < 4 + 2 * 4; ++i) {
-			*((uint16_t*)&Nodes[x] + i) = LittleShort(*((uint16_t*)&nodes[x] + i));
+			*((uint16_t*)&Nodes[x] + i) = little_short(*((uint16_t*)&nodes[x] + i));
 		}
 		for (i = 0; i < 2; ++i) {
-			child = LittleShort(nodes[x].children[i]);
+			child = little_short(nodes[x].children[i]);
 			if (child & NF_SUBSECTOR) {
 				Nodes[x].children[i] = child + (NFX_SUBSECTOR - NF_SUBSECTOR);
 			} else {
@@ -701,8 +701,8 @@ zdbsp_SubsectorEx* FProcessor::SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, in
 	int x;
 
 	for (x = 0; x < count; ++x) {
-		out[x].num_lines = LittleShort(ssec[x].num_lines);
-		out[x].first_line = LittleShort(ssec[x].first_line);
+		out[x].num_lines = little_short(ssec[x].num_lines);
+		out[x].first_line = little_short(ssec[x].first_line);
 	}
 
 	return out;
@@ -717,11 +717,11 @@ zdbsp_SegGlEx* FProcessor::SegGLsToEx(const zdbsp_SegGl* segs, int count) {
 	int x;
 
 	for (x = 0; x < count; ++x) {
-		out[x].v1 = LittleShort(segs[x].v1);
-		out[x].v2 = LittleShort(segs[x].v2);
-		out[x].linedef = LittleShort(segs[x].linedef);
-		out[x].side = LittleShort(segs[x].side);
-		out[x].partner = LittleShort(segs[x].partner);
+		out[x].v1 = little_short(segs[x].v1);
+		out[x].v2 = little_short(segs[x].v2);
+		out[x].linedef = little_short(segs[x].linedef);
+		out[x].side = little_short(segs[x].side);
+		out[x].partner = little_short(segs[x].partner);
 	}
 
 	return out;
@@ -734,8 +734,8 @@ void FProcessor::WriteVertices(FWadWriter& out, int count) {
 	short* verts = new short[count * 2];
 
 	for (i = 0; i < count; ++i) {
-		verts[i * 2] = LittleShort(vertdata[i].x >> FRACBITS);
-		verts[i * 2 + 1] = LittleShort(vertdata[i].y >> FRACBITS);
+		verts[i * 2] = little_short(vertdata[i].x >> FRACBITS);
+		verts[i * 2 + 1] = little_short(vertdata[i].y >> FRACBITS);
 	}
 	out.WriteLump("VERTEXES", verts, sizeof(*verts) * count * 2);
 	delete[] verts;
@@ -757,11 +757,11 @@ void FProcessor::WriteLines(FWadWriter& out) {
 			Lines[i].args[2] = Level.Lines[i].args[2];
 			Lines[i].args[3] = Level.Lines[i].args[3];
 			Lines[i].args[4] = Level.Lines[i].args[4];
-			Lines[i].v1 = LittleShort(uint16_t(Level.Lines[i].v1));
-			Lines[i].v2 = LittleShort(uint16_t(Level.Lines[i].v2));
-			Lines[i].flags = LittleShort(uint16_t(Level.Lines[i].flags));
-			Lines[i].sidenum[0] = LittleShort(uint16_t(Level.Lines[i].sidenum[0]));
-			Lines[i].sidenum[1] = LittleShort(uint16_t(Level.Lines[i].sidenum[1]));
+			Lines[i].v1 = little_short(uint16_t(Level.Lines[i].v1));
+			Lines[i].v2 = little_short(uint16_t(Level.Lines[i].v2));
+			Lines[i].flags = little_short(uint16_t(Level.Lines[i].flags));
+			Lines[i].sidenum[0] = little_short(uint16_t(Level.Lines[i].sidenum[0]));
+			Lines[i].sidenum[1] = little_short(uint16_t(Level.Lines[i].sidenum[1]));
 		}
 		out.WriteLump("LINEDEFS", Lines, Level.NumLines() * sizeof(*Lines));
 		delete[] Lines;
@@ -769,13 +769,13 @@ void FProcessor::WriteLines(FWadWriter& out) {
 		MapLineDef* ld = new MapLineDef[Level.NumLines()];
 
 		for (i = 0; i < Level.NumLines(); ++i) {
-			ld[i].v1 = LittleShort(uint16_t(Level.Lines[i].v1));
-			ld[i].v2 = LittleShort(uint16_t(Level.Lines[i].v2));
-			ld[i].flags = LittleShort(uint16_t(Level.Lines[i].flags));
-			ld[i].sidenum[0] = LittleShort(uint16_t(Level.Lines[i].sidenum[0]));
-			ld[i].sidenum[1] = LittleShort(uint16_t(Level.Lines[i].sidenum[1]));
-			ld[i].special = LittleShort(uint16_t(Level.Lines[i].args[0]));
-			ld[i].tag = LittleShort(uint16_t(Level.Lines[i].args[1]));
+			ld[i].v1 = little_short(uint16_t(Level.Lines[i].v1));
+			ld[i].v2 = little_short(uint16_t(Level.Lines[i].v2));
+			ld[i].flags = little_short(uint16_t(Level.Lines[i].flags));
+			ld[i].sidenum[0] = little_short(uint16_t(Level.Lines[i].sidenum[0]));
+			ld[i].sidenum[1] = little_short(uint16_t(Level.Lines[i].sidenum[1]));
+			ld[i].special = little_short(uint16_t(Level.Lines[i].args[0]));
+			ld[i].tag = little_short(uint16_t(Level.Lines[i].args[1]));
 		}
 		out.WriteLump("LINEDEFS", ld, Level.NumLines() * sizeof(*ld));
 		delete[] ld;
@@ -792,7 +792,7 @@ void FProcessor::WriteSides(FWadWriter& out) {
 		memcpy(Sides[i].toptexture, Level.Sides[i].toptexture, 8);
 		memcpy(Sides[i].bottomtexture, Level.Sides[i].bottomtexture, 8);
 		memcpy(Sides[i].midtexture, Level.Sides[i].midtexture, 8);
-		Sides[i].sector = LittleShort(Level.Sides[i].sector);
+		Sides[i].sector = little_short(Level.Sides[i].sector);
 	}
 	out.WriteLump("SIDEDEFS", Sides, Level.NumSides() * sizeof(*Sides));
 	delete[] Sides;
@@ -818,12 +818,12 @@ void FProcessor::WriteSegs(FWadWriter& out) {
 	segdata = new zdbsp_SegRaw[Level.NumSegs];
 
 	for (i = 0; i < Level.NumSegs; ++i) {
-		segdata[i].v1 = LittleShort(uint16_t(Level.Segs[i].v1));
-		segdata[i].v2 = LittleShort(uint16_t(Level.Segs[i].v2));
-		segdata[i].angle = LittleShort(Level.Segs[i].angle);
-		segdata[i].linedef = LittleShort(Level.Segs[i].linedef);
-		segdata[i].side = LittleShort(Level.Segs[i].side);
-		segdata[i].offset = LittleShort(Level.Segs[i].offset);
+		segdata[i].v1 = little_short(uint16_t(Level.Segs[i].v1));
+		segdata[i].v2 = little_short(uint16_t(Level.Segs[i].v2));
+		segdata[i].angle = little_short(Level.Segs[i].angle);
+		segdata[i].linedef = little_short(Level.Segs[i].linedef);
+		segdata[i].side = little_short(Level.Segs[i].side);
+		segdata[i].offset = little_short(Level.Segs[i].offset);
 	}
 	out.WriteLump("SEGS", segdata, sizeof(*segdata) * Level.NumSegs);
 
@@ -847,8 +847,8 @@ void FProcessor::WriteSSectors2(
 	ssec = new zdbsp_SubsectorRaw[count];
 
 	for (i = 0; i < count; ++i) {
-		ssec[i].first_line = LittleShort((uint16_t)subs[i].first_line);
-		ssec[i].num_lines = LittleShort((uint16_t)subs[i].num_lines);
+		ssec[i].first_line = little_short((uint16_t)subs[i].first_line);
+		ssec[i].num_lines = little_short((uint16_t)subs[i].num_lines);
 	}
 	out.WriteLump(name, ssec, sizeof(*ssec) * count);
 	delete[] ssec;
@@ -867,8 +867,8 @@ void FProcessor::WriteSSectors5(
 	ssec = new zdbsp_SubsectorEx[count];
 
 	for (i = 0; i < count; ++i) {
-		ssec[i].first_line = LittleLong(subs[i].first_line);
-		ssec[i].num_lines = LittleLong(subs[i].num_lines);
+		ssec[i].first_line = little_long(subs[i].first_line);
+		ssec[i].num_lines = little_long(subs[i].num_lines);
 	}
 	out.WriteLump(name, ssec, sizeof(*ssec) * count);
 	delete[] ssec;
@@ -887,22 +887,22 @@ void FProcessor::WriteNodes2(
 	nodes = onodes = new short[count * sizeof(zdbsp_NodeRaw) / 2];
 
 	for (i = 0; i < count; ++i) {
-		nodes[0] = LittleShort(zaNodes[i].x >> 16);
-		nodes[1] = LittleShort(zaNodes[i].y >> 16);
-		nodes[2] = LittleShort(zaNodes[i].dx >> 16);
-		nodes[3] = LittleShort(zaNodes[i].dy >> 16);
+		nodes[0] = little_short(zaNodes[i].x >> 16);
+		nodes[1] = little_short(zaNodes[i].y >> 16);
+		nodes[2] = little_short(zaNodes[i].dx >> 16);
+		nodes[3] = little_short(zaNodes[i].dy >> 16);
 		nodes += 4;
 		const short* inodes = (short*)&zaNodes[i].bbox[0][0];
 		for (j = 0; j < 2 * 4; ++j) {
-			nodes[j] = LittleShort(inodes[j]);
+			nodes[j] = little_short(inodes[j]);
 		}
 		nodes += j;
 		for (j = 0; j < 2; ++j) {
 			uint32_t child = zaNodes[i].children[j];
 			if (child & NFX_SUBSECTOR) {
-				*nodes++ = LittleShort(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
+				*nodes++ = little_short(uint16_t(child - (NFX_SUBSECTOR + NF_SUBSECTOR)));
 			} else {
-				*nodes++ = LittleShort((uint16_t)child);
+				*nodes++ = little_short((uint16_t)child);
 			}
 		}
 	}
@@ -924,14 +924,14 @@ void FProcessor::WriteNodes5(
 		const short* inodes = &zaNodes[i].bbox[0][0];
 		short* coord = &nodes[i].bbox[0][0];
 		for (j = 0; j < 2 * 4; ++j) {
-			coord[j] = LittleShort(inodes[j]);
+			coord[j] = little_short(inodes[j]);
 		}
-		nodes[i].x = LittleShort(zaNodes[i].x >> 16);
-		nodes[i].y = LittleShort(zaNodes[i].y >> 16);
-		nodes[i].dx = LittleShort(zaNodes[i].dx >> 16);
-		nodes[i].dy = LittleShort(zaNodes[i].dy >> 16);
+		nodes[i].x = little_short(zaNodes[i].x >> 16);
+		nodes[i].y = little_short(zaNodes[i].y >> 16);
+		nodes[i].dx = little_short(zaNodes[i].dx >> 16);
+		nodes[i].dy = little_short(zaNodes[i].dy >> 16);
 		for (j = 0; j < 2; ++j) {
-			nodes[i].children[j] = LittleLong(zaNodes[i].children[j]);
+			nodes[i].children[j] = little_long(zaNodes[i].children[j]);
 		}
 	}
 	out.WriteLump(name, nodes, count * sizeof(zdbsp_NodeEx));
@@ -951,7 +951,7 @@ void FProcessor::WriteBlockmap(FWadWriter& out) {
 	blocks = Level.Blockmap;
 
 	for (i = 0; i < count; ++i) {
-		blocks[i] = LittleShort(blocks[i]);
+		blocks[i] = little_short(blocks[i]);
 	}
 	out.WriteLump("BLOCKMAP", blocks, int(sizeof(*blocks) * count));
 
@@ -964,7 +964,7 @@ void FProcessor::WriteBlockmap(FWadWriter& out) {
 #endif
 
 	for (i = 0; i < count; ++i) {
-		blocks[i] = LittleShort(blocks[i]);
+		blocks[i] = little_short(blocks[i]);
 	}
 
 	if (count >= 65536) {
@@ -996,8 +996,8 @@ void FProcessor::WriteGLVertices(FWadWriter& out, bool v5) {
 	magic[3] = v5 ? '5' : '2';
 
 	for (i = 0; i < count; ++i) {
-		verts[i * 2 + 1] = LittleShort(vertdata[i].x);
-		verts[i * 2 + 2] = LittleShort(vertdata[i].y);
+		verts[i * 2 + 1] = little_short(vertdata[i].x);
+		verts[i * 2 + 2] = little_short(vertdata[i].y);
 	}
 	out.WriteLump("GL_VERT", verts, sizeof(*verts) * (count * 2 + 1));
 	delete[] verts;
@@ -1020,20 +1020,20 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
-			segdata[i].v1 = LittleShort((uint16_t)Level.GLSegs[i].v1);
+			segdata[i].v1 = little_short((uint16_t)Level.GLSegs[i].v1);
 		} else {
 			segdata[i].v1 =
-				LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
+				little_short(0x8000 | (uint16_t)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
 		}
 		if (Level.GLSegs[i].v2 < (uint32_t)Level.NumOrgVerts) {
-			segdata[i].v2 = (uint16_t)LittleShort(Level.GLSegs[i].v2);
+			segdata[i].v2 = (uint16_t)little_short(Level.GLSegs[i].v2);
 		} else {
 			segdata[i].v2 =
-				LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
+				little_short(0x8000 | (uint16_t)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
 		}
-		segdata[i].linedef = LittleShort((uint16_t)Level.GLSegs[i].linedef);
-		segdata[i].side = LittleShort(Level.GLSegs[i].side);
-		segdata[i].partner = LittleShort((uint16_t)Level.GLSegs[i].partner);
+		segdata[i].linedef = little_short((uint16_t)Level.GLSegs[i].linedef);
+		segdata[i].side = little_short(Level.GLSegs[i].side);
+		segdata[i].partner = little_short((uint16_t)Level.GLSegs[i].partner);
 	}
 	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGl) * count);
 	delete[] segdata;
@@ -1054,18 +1054,18 @@ void FProcessor::WriteGLSegs5(FWadWriter& out) {
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
-			segdata[i].v1 = LittleLong(Level.GLSegs[i].v1);
+			segdata[i].v1 = little_long(Level.GLSegs[i].v1);
 		} else {
-			segdata[i].v1 = LittleLong(0x80000000u | ((int)Level.GLSegs[i].v1 - Level.NumOrgVerts));
+			segdata[i].v1 = little_long(0x80000000u | ((int)Level.GLSegs[i].v1 - Level.NumOrgVerts));
 		}
 		if (Level.GLSegs[i].v2 < (uint32_t)Level.NumOrgVerts) {
-			segdata[i].v2 = LittleLong(Level.GLSegs[i].v2);
+			segdata[i].v2 = little_long(Level.GLSegs[i].v2);
 		} else {
-			segdata[i].v2 = LittleLong(0x80000000u | ((int)Level.GLSegs[i].v2 - Level.NumOrgVerts));
+			segdata[i].v2 = little_long(0x80000000u | ((int)Level.GLSegs[i].v2 - Level.NumOrgVerts));
 		}
-		segdata[i].linedef = LittleShort(Level.GLSegs[i].linedef);
-		segdata[i].side = LittleShort(Level.GLSegs[i].side);
-		segdata[i].partner = LittleLong(Level.GLSegs[i].partner);
+		segdata[i].linedef = little_short(Level.GLSegs[i].linedef);
+		segdata[i].side = little_short(Level.GLSegs[i].side);
+		segdata[i].partner = little_long(Level.GLSegs[i].partner);
 	}
 	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGlEx) * count);
 	delete[] segdata;
@@ -1382,25 +1382,25 @@ ZLibOut& ZLibOut::operator<<(uint8_t val) {
 }
 
 ZLibOut& ZLibOut::operator<<(uint16_t val) {
-	val = LittleShort(val);
+	val = little_short(val);
 	Write((uint8_t*)&val, 2);
 	return *this;
 }
 
 ZLibOut& ZLibOut::operator<<(int16_t val) {
-	val = LittleShort(val);
+	val = little_short(val);
 	Write((uint8_t*)&val, 2);
 	return *this;
 }
 
 ZLibOut& ZLibOut::operator<<(uint32_t val) {
-	val = LittleLong(val);
+	val = little_long(val);
 	Write((uint8_t*)&val, 4);
 	return *this;
 }
 
 ZLibOut& ZLibOut::operator<<(zdbsp_I16F16 val) {
-	val = LittleLong(val);
+	val = little_long(val);
 	Write((uint8_t*)&val, 4);
 	return *this;
 }

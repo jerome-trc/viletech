@@ -59,8 +59,8 @@ FWadReader::FWadReader(const uint8_t* const bytes) : bytes(bytes), Lumps(nullptr
 		throw std::runtime_error("Input buffer is not a WAD");
 	}
 
-	auto lmp_count = (size_t)LittleLong(header->NumLumps);
-	auto dir_offs = (size_t)LittleLong(header->Directory);
+	auto lmp_count = (size_t)little_long(header->NumLumps);
+	auto dir_offs = (size_t)little_long(header->Directory);
 	auto directory = reinterpret_cast<const WadLump*>(bytes + dir_offs);
 
 	this->Lumps = new WadLump[lmp_count];
@@ -70,8 +70,8 @@ FWadReader::FWadReader(const uint8_t* const bytes) : bytes(bytes), Lumps(nullptr
 
 	for (size_t i = 0; i < lmp_count; ++i) {
 		auto lmp = &this->Lumps[i];
-		lmp->FilePos = LittleLong(lmp->FilePos);
-		lmp->Size = LittleLong(lmp->Size);
+		lmp->FilePos = little_long(lmp->FilePos);
+		lmp->Size = little_long(lmp->Size);
 	}
 }
 
@@ -283,7 +283,7 @@ void FWadWriter::CreateLabel(const char* name) {
 	WadLump lump;
 
 	strncpy(lump.Name, name, 8);
-	lump.FilePos = LittleLong(this->cursor);
+	lump.FilePos = little_long(this->cursor);
 	lump.Size = 0;
 	Lumps.Push(lump);
 }
@@ -292,8 +292,8 @@ void FWadWriter::WriteLump(const char* name, const void* data, int len) {
 	WadLump lump;
 
 	strncpy(lump.Name, name, 8);
-	lump.FilePos = LittleLong(this->cursor);
-	lump.Size = LittleLong(len);
+	lump.FilePos = little_long(this->cursor);
+	lump.Size = little_long(len);
 	Lumps.Push(lump);
 
 	SafeWrite(data, len);
@@ -330,25 +330,25 @@ FWadWriter& FWadWriter::operator<<(uint8_t val) {
 }
 
 FWadWriter& FWadWriter::operator<<(uint16_t val) {
-	val = LittleShort(val);
+	val = little_short(val);
 	AddToLump((uint8_t*)&val, 2);
 	return *this;
 }
 
 FWadWriter& FWadWriter::operator<<(int16_t val) {
-	val = LittleShort(val);
+	val = little_short(val);
 	AddToLump((uint8_t*)&val, 2);
 	return *this;
 }
 
 FWadWriter& FWadWriter::operator<<(uint32_t val) {
-	val = LittleLong(val);
+	val = little_long(val);
 	AddToLump((uint8_t*)&val, 4);
 	return *this;
 }
 
 FWadWriter& FWadWriter::operator<<(zdbsp_I16F16 val) {
-	val = LittleLong(val);
+	val = little_long(val);
 	AddToLump((uint8_t*)&val, 4);
 	return *this;
 }
