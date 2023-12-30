@@ -239,17 +239,28 @@ typedef struct {
 	uint8_t side;
 } zdbsp_SegGlXV2V3;
 
+typedef struct {
+	const uint8_t* ptr;
+	size_t len;
+} zdbsp_SliceU8;
+
 /// @see zdbsp_processor_blockmap
 typedef struct {
-	const uint16_t* blocks;
+	const uint16_t* ptr;
 	size_t len;
-} zdbsp_BlockmapSlice;
+} zdbsp_SliceU16;
 
-/// @see zdbsp_processor_reject
 typedef struct {
-	const uint8_t* bytes;
-	size_t len;
-} zdbsp_RejectSlice;
+	/// This is expected to be null-terminated.
+	char name[9];
+	zdbsp_SliceU8 things, vertices, linedefs, sidedefs, sectors;
+} zdbsp_Level;
+
+typedef struct {
+	/// This is expected to be null-terminated.
+	char name[9];
+	zdbsp_SliceU8 textmap;
+} zdbsp_LevelUdmf;
 
 typedef struct FLevel* zdbsp_LevelPtr;
 typedef struct FWadReader* zdbsp_WadReaderPtr;
@@ -273,18 +284,25 @@ nodiscard zdbsp_BlockmapMode zdbsp_blockmapmode_default(void);
 void zdbsp_pcfg_extended(zdbsp_ProcessConfig*);
 
 /// The returned object is owned by the caller, and should be freed using
-/// `zdbsp_wadreader_destroy`.
-/// `bytes` must live at least as long as the reader.
-nodiscard zdbsp_WadReaderPtr zdbsp_wadreader_new(const uint8_t* bytes);
-
-void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad);
+/// `zdbsp_processor_destroy`.
+/// Ownership of `level`'s bytes are not taken by this function; the caller
+/// should free those bytes themselves.
+nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_vanilla(zdbsp_Level level);
 
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_processor_destroy`.
-/// `wad` must live at least as long as the processor.
-/// Note that passing in a `NULL` `config` is valid here.
-nodiscard zdbsp_ProcessorPtr
-	zdbsp_processor_new(zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* config);
+/// Ownership of `level`'s bytes are not taken by this function; the caller
+/// should free those bytes themselves.
+nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_extended(zdbsp_Level level);
+
+/// The returned object is owned by the caller, and should be freed using
+/// `zdbsp_processor_destroy`.
+/// Ownership of `level`'s bytes are not taken by this function; the caller
+/// should free those bytes themselves.
+nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_udmf(zdbsp_LevelUdmf level);
+
+/// Calling with a `NULL` `config` is a valid no-op here.
+nodiscard void zdbsp_processor_configure(zdbsp_ProcessorPtr p, const zdbsp_ProcessConfig* config);
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
 
@@ -344,8 +362,7 @@ nodiscard size_t zdbsp_processor_vertsnewx_count(const zdbsp_ProcessorPtr p);
 /// it should be serialized into a `uint32_t`.
 nodiscard size_t zdbsp_processor_vertsnewgl_count(const zdbsp_ProcessorPtr p);
 
-nodiscard zdbsp_BlockmapSlice zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p);
-nodiscard zdbsp_RejectSlice zdbsp_processor_reject(const zdbsp_ProcessorPtr p);
+nodiscard zdbsp_SliceU16 zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_nodesx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);

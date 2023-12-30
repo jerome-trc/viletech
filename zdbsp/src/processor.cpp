@@ -1,26 +1,31 @@
+/// @file
+/// @brief Reads wad files, builds nodes, and saves new wad files.
+
 /*
-	Reads wad files, builds nodes, and saves new wad files.
-	Copyright (C) 2002-2006 Randy Heit
 
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
+Copyright (C) 2002-2006 Randy Heit
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 */
 
 #include "processor.hpp"
 #include "blockmapbuilder.hpp"
+#include "wad.hpp"
 #include "zdbsp.h"
+#include <cstring>
 
 enum {
 	// Thing numbers used in Hexen maps
@@ -64,185 +69,217 @@ FLevel::~FLevel() {
 		delete[] OrgSectorMap;
 }
 
-FProcessor::FProcessor(FWadReader& inwad, int lump) : Wad(inwad), Lump(lump) {
-	isUDMF = Wad.isUDMF(lump);
+FProcessor::FProcessor(zdbsp_Level level, bool extended) {
+	this->is_udmf = false;
 
-	if (isUDMF) {
-		Extended = false;
-		LoadUDMF();
+	if (!extended) {
+		this->is_extended = false;
+
+		this->load_things(level.things);
+		this->load_vertices(level.vertices);
+		this->load_lines(level.linedefs);
+		this->load_sides(level.sidedefs);
+		this->load_sectors(level.sectors);
 	} else {
-		Extended = Wad.MapHasBehavior(lump);
-		LoadThings();
-		LoadVertices();
-		LoadLines();
-		LoadSides();
-		LoadSectors();
+		this->is_extended = true;
+
+		this->load_things_ext(level.things);
+		this->load_vertices(level.vertices);
+		this->load_lines_ext(level.linedefs);
+		this->load_sides(level.sidedefs);
+		this->load_sectors(level.sectors);
 	}
 
-	if (Level.NumLines() == 0 || Level.NumVertices == 0 || Level.NumSides() == 0 ||
-		Level.NumSectors() == 0) {
-		printf("   Map is incomplete\n");
-	} else {
+	strcpy(this->level_name, level.name);
+	this->finish_load();
+}
+
+FProcessor::FProcessor(zdbsp_LevelUdmf level) {
+	this->is_udmf = true;
+	strcpy(this->level_name, level.name);
+	this->ParseTextMap(level.textmap);
+	this->finish_load();
+}
+
+void FProcessor::load_things(zdbsp_SliceU8 slice) {
+	zdbsp_ThingRaw* mt;
+	int32_t thing_count;
+	read_lump(slice, mt, thing_count);
+
+	this->Level.Things.Resize(thing_count);
+
+	for (uint32_t i = 0; i < thing_count; ++i) {
+		this->Level.Things[i].x = LittleShort(mt[i].x) << FRACBITS;
+		this->Level.Things[i].y = LittleShort(mt[i].y) << FRACBITS;
+		this->Level.Things[i].angle = LittleShort(mt[i].angle);
+		this->Level.Things[i].type = LittleShort(mt[i].type);
+		this->Level.Things[i].flags = LittleShort(mt[i].flags);
+		this->Level.Things[i].z = 0;
+		this->Level.Things[i].special = 0;
+		this->Level.Things[i].args[0] = 0;
+		this->Level.Things[i].args[1] = 0;
+		this->Level.Things[i].args[2] = 0;
+		this->Level.Things[i].args[3] = 0;
+		this->Level.Things[i].args[4] = 0;
+	}
+
+	delete[] mt;
+}
+
+void FProcessor::load_things_ext(zdbsp_SliceU8 slice) {
+	zdbsp_Thing2* things;
+	int32_t thing_count;
+	read_lump(slice, things, thing_count);
+
+	this->Level.Things.Resize(thing_count);
+
+	for (uint32_t i = 0; i < thing_count; ++i) {
+		this->Level.Things[i].thingid = things[i].thing_id;
+		this->Level.Things[i].x = LittleShort(things[i].x) << FRACBITS;
+		this->Level.Things[i].y = LittleShort(things[i].y) << FRACBITS;
+		this->Level.Things[i].z = LittleShort(things[i].z);
+		this->Level.Things[i].angle = LittleShort(things[i].angle);
+		this->Level.Things[i].type = LittleShort(things[i].type);
+		this->Level.Things[i].flags = LittleShort(things[i].flags);
+		this->Level.Things[i].special = things[i].special;
+		this->Level.Things[i].args[0] = things[i].args[0];
+		this->Level.Things[i].args[1] = things[i].args[1];
+		this->Level.Things[i].args[2] = things[i].args[2];
+		this->Level.Things[i].args[3] = things[i].args[3];
+		this->Level.Things[i].args[4] = things[i].args[4];
+	}
+
+	delete[] things;
+}
+
+void FProcessor::finish_load() {
+	if (this->Level.NumLines() == 0 || this->Level.NumVertices == 0 ||
+		this->Level.NumSides() == 0 || this->Level.NumSectors() == 0) {
+		return;
+	}
+
+	{
 		// Removing extra vertices is done by the node builder.
-		Level.RemoveExtraLines();
+		this->Level.remove_extra_lines();
+
 		if (!this->no_prune) {
-			Level.RemoveExtraSides();
-			Level.RemoveExtraSectors();
+			this->Level.RemoveExtraSides();
+			this->Level.remove_extra_sectors();
 		}
 
 		if (this->build_nodes) {
-			GetPolySpots();
+			get_poly_spots();
 		}
 
-		Level.FindMapBounds();
+		this->Level.find_map_bounds();
 	}
 }
 
-void FProcessor::LoadThings() {
-	int32_t NumThings;
+void FProcessor::load_lines(zdbsp_SliceU8 slice) {
+	int32_t line_count;
+	MapLineDef* data;
+	read_lump<MapLineDef>(slice, data, line_count);
 
-	if (Extended) {
-		zdbsp_Thing2* Things;
-		ReadMapLump<zdbsp_Thing2>(Wad, "THINGS", Lump, Things, NumThings);
+	this->Level.Lines.Resize(line_count);
 
-		Level.Things.Resize(NumThings);
-		for (uint32_t i = 0; i < NumThings; ++i) {
-			Level.Things[i].thingid = Things[i].thing_id;
-			Level.Things[i].x = LittleShort(Things[i].x) << FRACBITS;
-			Level.Things[i].y = LittleShort(Things[i].y) << FRACBITS;
-			Level.Things[i].z = LittleShort(Things[i].z);
-			Level.Things[i].angle = LittleShort(Things[i].angle);
-			Level.Things[i].type = LittleShort(Things[i].type);
-			Level.Things[i].flags = LittleShort(Things[i].flags);
-			Level.Things[i].special = Things[i].special;
-			Level.Things[i].args[0] = Things[i].args[0];
-			Level.Things[i].args[1] = Things[i].args[1];
-			Level.Things[i].args[2] = Things[i].args[2];
-			Level.Things[i].args[3] = Things[i].args[3];
-			Level.Things[i].args[4] = Things[i].args[4];
-		}
-		delete[] Things;
-	} else {
-		zdbsp_ThingRaw* mt;
-		ReadMapLump<zdbsp_ThingRaw>(Wad, "THINGS", Lump, mt, NumThings);
+	for (uint32_t i = 0; i < line_count; ++i) {
+		this->Level.Lines[i].v1 = LittleShort(data[i].v1);
+		this->Level.Lines[i].v2 = LittleShort(data[i].v2);
+		this->Level.Lines[i].flags = LittleShort(data[i].flags);
+		this->Level.Lines[i].sidenum[0] = LittleShort(data[i].sidenum[0]);
+		this->Level.Lines[i].sidenum[1] = LittleShort(data[i].sidenum[1]);
 
-		Level.Things.Resize(NumThings);
-		for (uint32_t i = 0; i < NumThings; ++i) {
-			Level.Things[i].x = LittleShort(mt[i].x) << FRACBITS;
-			Level.Things[i].y = LittleShort(mt[i].y) << FRACBITS;
-			Level.Things[i].angle = LittleShort(mt[i].angle);
-			Level.Things[i].type = LittleShort(mt[i].type);
-			Level.Things[i].flags = LittleShort(mt[i].flags);
-			Level.Things[i].z = 0;
-			Level.Things[i].special = 0;
-			Level.Things[i].args[0] = 0;
-			Level.Things[i].args[1] = 0;
-			Level.Things[i].args[2] = 0;
-			Level.Things[i].args[3] = 0;
-			Level.Things[i].args[4] = 0;
-		}
-		delete[] mt;
+		if (this->Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
+			this->Level.Lines[i].sidenum[0] = NO_INDEX;
+		if (this->Level.Lines[i].sidenum[1] == NO_MAP_INDEX)
+			this->Level.Lines[i].sidenum[1] = NO_INDEX;
+
+		// Store the special and tag in the args array so we don't lose them
+		this->Level.Lines[i].special = 0;
+		this->Level.Lines[i].args[0] = LittleShort(data[i].special);
+		this->Level.Lines[i].args[1] = LittleShort(data[i].tag);
+	}
+
+	delete[] data;
+}
+
+void FProcessor::load_lines_ext(zdbsp_SliceU8 slice) {
+	int32_t line_count;
+	MapLineDef2* data;
+
+	read_lump<MapLineDef2>(slice, data, line_count);
+
+	this->Level.Lines.Resize(line_count);
+
+	for (uint32_t i = 0; i < line_count; ++i) {
+		this->Level.Lines[i].special = data[i].special;
+		this->Level.Lines[i].args[0] = data[i].args[0];
+		this->Level.Lines[i].args[1] = data[i].args[1];
+		this->Level.Lines[i].args[2] = data[i].args[2];
+		this->Level.Lines[i].args[3] = data[i].args[3];
+		this->Level.Lines[i].args[4] = data[i].args[4];
+		this->Level.Lines[i].v1 = LittleShort(data[i].v1);
+		this->Level.Lines[i].v2 = LittleShort(data[i].v2);
+		this->Level.Lines[i].flags = LittleShort(data[i].flags);
+		this->Level.Lines[i].sidenum[0] = LittleShort(data[i].sidenum[0]);
+		this->Level.Lines[i].sidenum[1] = LittleShort(data[i].sidenum[1]);
+
+		if (this->Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
+			this->Level.Lines[i].sidenum[0] = NO_INDEX;
+		if (this->Level.Lines[i].sidenum[1] == NO_MAP_INDEX)
+			this->Level.Lines[i].sidenum[1] = NO_INDEX;
+	}
+
+	delete[] data;
+}
+
+void FProcessor::load_vertices(zdbsp_SliceU8 slice) {
+	zdbsp_VertexRaw* data;
+	read_lump(slice, data, this->Level.NumVertices);
+	this->Level.Vertices = new zdbsp_VertexEx[this->Level.NumVertices];
+
+	for (int i = 0; i < this->Level.NumVertices; ++i) {
+		this->Level.Vertices[i].x = LittleShort(data[i].x) << FRACBITS;
+		this->Level.Vertices[i].y = LittleShort(data[i].y) << FRACBITS;
+		this->Level.Vertices[i].index = 0; // we don't need this value for non-UDMF maps
 	}
 }
 
-void FProcessor::LoadLines() {
-	int32_t NumLines;
+void FProcessor::load_sides(zdbsp_SliceU8 slice) {
+	MapSideDef* data;
+	int32_t side_count;
+	read_lump(slice, data, side_count);
 
-	if (Extended) {
-		MapLineDef2* Lines;
+	this->Level.Sides.Resize(side_count);
 
-		ReadMapLump<MapLineDef2>(Wad, "LINEDEFS", Lump, Lines, NumLines);
+	for (uint32_t i = 0; i < side_count; ++i) {
+		this->Level.Sides[i].textureoffset = data[i].textureoffset;
+		this->Level.Sides[i].rowoffset = data[i].rowoffset;
+		memcpy(this->Level.Sides[i].toptexture, data[i].toptexture, 8);
+		memcpy(this->Level.Sides[i].bottomtexture, data[i].bottomtexture, 8);
+		memcpy(this->Level.Sides[i].midtexture, data[i].midtexture, 8);
 
-		Level.Lines.Resize(NumLines);
-		for (uint32_t i = 0; i < NumLines; ++i) {
-			Level.Lines[i].special = Lines[i].special;
-			Level.Lines[i].args[0] = Lines[i].args[0];
-			Level.Lines[i].args[1] = Lines[i].args[1];
-			Level.Lines[i].args[2] = Lines[i].args[2];
-			Level.Lines[i].args[3] = Lines[i].args[3];
-			Level.Lines[i].args[4] = Lines[i].args[4];
-			Level.Lines[i].v1 = LittleShort(Lines[i].v1);
-			Level.Lines[i].v2 = LittleShort(Lines[i].v2);
-			Level.Lines[i].flags = LittleShort(Lines[i].flags);
-			Level.Lines[i].sidenum[0] = LittleShort(Lines[i].sidenum[0]);
-			Level.Lines[i].sidenum[1] = LittleShort(Lines[i].sidenum[1]);
-			if (Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
-				Level.Lines[i].sidenum[0] = NO_INDEX;
-			if (Level.Lines[i].sidenum[1] == NO_MAP_INDEX)
-				Level.Lines[i].sidenum[1] = NO_INDEX;
-		}
-		delete[] Lines;
-	} else {
-		MapLineDef* ml;
-		ReadMapLump<MapLineDef>(Wad, "LINEDEFS", Lump, ml, NumLines);
+		this->Level.Sides[i].sector = LittleShort(data[i].sector);
 
-		Level.Lines.Resize(NumLines);
-		for (uint32_t i = 0; i < NumLines; ++i) {
-			Level.Lines[i].v1 = LittleShort(ml[i].v1);
-			Level.Lines[i].v2 = LittleShort(ml[i].v2);
-			Level.Lines[i].flags = LittleShort(ml[i].flags);
-			Level.Lines[i].sidenum[0] = LittleShort(ml[i].sidenum[0]);
-			Level.Lines[i].sidenum[1] = LittleShort(ml[i].sidenum[1]);
-			if (Level.Lines[i].sidenum[0] == NO_MAP_INDEX)
-				Level.Lines[i].sidenum[0] = NO_INDEX;
-			if (Level.Lines[i].sidenum[1] == NO_MAP_INDEX)
-				Level.Lines[i].sidenum[1] = NO_INDEX;
+		if (this->Level.Sides[i].sector == NO_MAP_INDEX)
+			this->Level.Sides[i].sector = NO_INDEX;
+	}
 
-			// Store the special and tag in the args array so we don't lose them
-			Level.Lines[i].special = 0;
-			Level.Lines[i].args[0] = LittleShort(ml[i].special);
-			Level.Lines[i].args[1] = LittleShort(ml[i].tag);
-		}
-		delete[] ml;
+	delete[] data;
+}
+
+void FProcessor::load_sectors(zdbsp_SliceU8 slice) {
+	MapSector* data;
+	int32_t sector_count;
+	read_lump(slice, data, sector_count);
+	this->Level.Sectors.Resize(sector_count);
+
+	for (int i = 0; i < sector_count; ++i) {
+		this->Level.Sectors[i].data = data[i];
 	}
 }
 
-void FProcessor::LoadVertices() {
-	zdbsp_VertexRaw* verts;
-	ReadMapLump<zdbsp_VertexRaw>(Wad, "VERTEXES", Lump, verts, Level.NumVertices);
-
-	Level.Vertices = new zdbsp_VertexEx[Level.NumVertices];
-
-	for (int i = 0; i < Level.NumVertices; ++i) {
-		Level.Vertices[i].x = LittleShort(verts[i].x) << FRACBITS;
-		Level.Vertices[i].y = LittleShort(verts[i].y) << FRACBITS;
-		Level.Vertices[i].index = 0; // we don't need this value for non-UDMF maps
-	}
-}
-
-void FProcessor::LoadSides() {
-	MapSideDef* Sides;
-	int32_t NumSides;
-	ReadMapLump<MapSideDef>(Wad, "SIDEDEFS", Lump, Sides, NumSides);
-
-	Level.Sides.Resize(NumSides);
-	for (uint32_t i = 0; i < NumSides; ++i) {
-		Level.Sides[i].textureoffset = Sides[i].textureoffset;
-		Level.Sides[i].rowoffset = Sides[i].rowoffset;
-		memcpy(Level.Sides[i].toptexture, Sides[i].toptexture, 8);
-		memcpy(Level.Sides[i].bottomtexture, Sides[i].bottomtexture, 8);
-		memcpy(Level.Sides[i].midtexture, Sides[i].midtexture, 8);
-
-		Level.Sides[i].sector = LittleShort(Sides[i].sector);
-		if (Level.Sides[i].sector == NO_MAP_INDEX)
-			Level.Sides[i].sector = NO_INDEX;
-	}
-	delete[] Sides;
-}
-
-void FProcessor::LoadSectors() {
-	MapSector* Sectors;
-	int32_t NumSectors;
-
-	ReadMapLump<MapSector>(Wad, "SECTORS", Lump, Sectors, NumSectors);
-	Level.Sectors.Resize(NumSectors);
-
-	for (int i = 0; i < NumSectors; ++i) {
-		Level.Sectors[i].data = Sectors[i];
-	}
-}
-
-void FLevel::FindMapBounds() {
+void FLevel::find_map_bounds() {
 	zdbsp_I16F16 minx, maxx, miny, maxy;
 
 	minx = maxx = Vertices[0].x;
@@ -265,7 +302,7 @@ void FLevel::FindMapBounds() {
 	MaxY = maxy;
 }
 
-void FLevel::RemoveExtraLines() {
+void FLevel::remove_extra_lines() {
 	uint32_t i, newNumLines;
 
 	// Extra lines are those with 0 length. Collision detection against
@@ -345,7 +382,7 @@ void FLevel::RemoveExtraSides() {
 	delete[] remap;
 }
 
-void FLevel::RemoveExtraSectors() {
+void FLevel::remove_extra_sectors() {
 	uint8_t* used;
 	uint32_t* remap;
 	int i, newNumSectors;
@@ -353,13 +390,13 @@ void FLevel::RemoveExtraSectors() {
 	// Extra sectors are those that aren't referenced by any sides.
 	// They just waste space, so get rid of them.
 
-	NumOrgSectors = NumSectors();
-	used = new uint8_t[NumSectors()];
-	memset(used, 0, NumSectors() * sizeof(*used));
-	remap = new uint32_t[NumSectors()];
+	NumOrgSectors = this->NumSectors();
+	used = new uint8_t[this->NumSectors()];
+	memset(used, 0, this->NumSectors() * sizeof(*used));
+	remap = new uint32_t[this->NumSectors()];
 
 	// Mark all used sectors
-	for (i = 0; i < NumSides(); ++i) {
+	for (i = 0; i < this->NumSides(); ++i) {
 		if ((uint32_t)Sides[i].sector != NO_INDEX) {
 			used[Sides[i].sector] = 1;
 		} else {
@@ -379,19 +416,19 @@ void FLevel::RemoveExtraSectors() {
 		}
 	}
 
-	if (newNumSectors < NumSectors()) {
-		int diff = NumSectors() - newNumSectors;
+	if (newNumSectors < this->NumSectors()) {
+		int diff = this->NumSectors() - newNumSectors;
 		printf("   Removed %d unused sector%s.\n", diff, diff > 1 ? "s" : "");
 
 		// Renumber sector references in sides
-		for (i = 0; i < NumSides(); ++i) {
+		for (i = 0; i < this->NumSides(); ++i) {
 			if ((uint32_t)Sides[i].sector != NO_INDEX) {
 				Sides[i].sector = remap[Sides[i].sector];
 			}
 		}
 		// Make a reverse map for fixing reject lumps
 		OrgSectorMap = new uint32_t[newNumSectors];
-		for (i = 0; i < NumSectors(); ++i) {
+		for (i = 0; i < this->NumSectors(); ++i) {
 			if (remap[i] != NO_INDEX) {
 				OrgSectorMap[remap[i]] = i;
 			}
@@ -404,8 +441,8 @@ void FLevel::RemoveExtraSectors() {
 	delete[] remap;
 }
 
-void FProcessor::GetPolySpots() {
-	if (Extended && this->check_poly_objs) {
+void FProcessor::get_poly_spots() {
+	if (is_extended && this->check_poly_objs) {
 		int spot1, spot2, anchor, i;
 
 		// Determine if this is a Hexen map by looking for things of type 3000
@@ -434,9 +471,9 @@ void FProcessor::GetPolySpots() {
 				newvert.y = Level.Things[i].y;
 				newvert.polynum = Level.Things[i].angle;
 				if (Level.Things[i].type == anchor) {
-					PolyAnchors.Push(newvert);
+					poly_anchors.Push(newvert);
 				} else {
-					PolyStarts.Push(newvert);
+					poly_starts.Push(newvert);
 				}
 			}
 		}
@@ -454,7 +491,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 
 		// ZDoom's UDMF spec requires compressed GL nodes.
 		// No other UDMF spec has defined anything regarding nodes yet.
-		if (isUDMF) {
+		if (is_udmf) {
 			this->build_gl_nodes = true;
 			this->conform_nodes = false;
 			this->gl_only = true;
@@ -463,7 +500,8 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 
 		try {
 			builder = new FNodeBuilder(
-				Level, PolyStarts, PolyAnchors, Wad.LumpName(Lump), this->build_gl_nodes
+				this->Level, this->poly_starts, this->poly_anchors, this->level_name,
+				this->build_gl_nodes
 			);
 
 			if (builder == NULL) {
@@ -515,10 +553,11 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 					);
 
 					if (!this->gl_only) {
-						// Now repeat the process to obtain regular nodes
+						// Now repeat the process to obtain regular nodes.
 						delete builder;
+
 						builder = new FNodeBuilder(
-							Level, PolyStarts, PolyAnchors, Wad.LumpName(Lump), false
+							Level, poly_starts, poly_anchors, this->level_name, false
 						);
 
 						if (builder == NULL) {
@@ -553,7 +592,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 		}
 	}
 
-	if (!isUDMF) {
+	if (!is_udmf) {
 		FBlockmapBuilder bbuilder(Level);
 		uint16_t* blocks = bbuilder.GetBlockmap(Level.BlockmapSize);
 		Level.Blockmap = new uint16_t[Level.BlockmapSize];
@@ -571,29 +610,7 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 			printf("   Rebuilding the reject is unsupported.\n");
 			// Intentional fall-through
 		case ZDBSP_ERM_DONTTOUCH: {
-			int lump = Wad.FindMapLump("REJECT", Lump);
-
-			if (lump >= 0) {
-				ReadLump<uint8_t>(Wad, lump, Level.Reject, Level.RejectSize);
-
-				if (Level.RejectSize != (Level.NumOrgSectors * Level.NumOrgSectors + 7) / 8) {
-					// If the reject is the wrong size, don't use it.
-					delete[] Level.Reject;
-					Level.Reject = NULL;
-
-					if (Level.RejectSize != 0) {
-						// Do not warn about 0-length rejects
-						printf("   REJECT is the wrong size, so it will be removed.\n");
-					}
-					Level.RejectSize = 0;
-				} else if (Level.NumOrgSectors != Level.NumSectors()) {
-					// Some sectors have been removed, so fix the reject.
-					uint8_t* newreject = FixReject(Level.Reject);
-					delete[] Level.Reject;
-					Level.Reject = newreject;
-					Level.RejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
-				}
-			}
+#warning "TODO: handle this case"
 		} break;
 
 		case ZDBSP_ERM_CREATE0:
@@ -609,10 +626,8 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 	this->node_version = ZDBSP_NODEVERS_UNKNOWN;
 
 	if (this->Level.GLNodes != nullptr && this->Level.NumGLNodes > 0) {
-		bool frac_splitters = this->CheckForFracSplitters(
-			this->Level.GLNodes,
-			this->Level.NumGLNodes
-		);
+		bool frac_splitters =
+			this->CheckForFracSplitters(this->Level.GLNodes, this->Level.NumGLNodes);
 
 		if (frac_splitters) {
 			this->node_version = ZDBSP_NODEVERS_3;
@@ -624,137 +639,11 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 	}
 }
 
-void FProcessor::Write(FWadWriter& out) {
-	if (Level.NumLines() == 0 || Level.NumSides() == 0 || Level.NumSectors() == 0 ||
-		Level.NumVertices == 0) {
-		if (!isUDMF) {
-			// Map is empty, so just copy it as-is
-			out.CopyLump(Wad, Lump);
-			out.CopyLump(Wad, Wad.FindMapLump("THINGS", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("LINEDEFS", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("SIDEDEFS", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("VERTEXES", Lump));
-			out.CreateLabel("SEGS");
-			out.CreateLabel("SSECTORS");
-			out.CreateLabel("NODES");
-			out.CopyLump(Wad, Wad.FindMapLump("SECTORS", Lump));
-			out.CreateLabel("REJECT");
-			out.CreateLabel("BLOCKMAP");
-			if (Extended) {
-				out.CopyLump(Wad, Wad.FindMapLump("BEHAVIOR", Lump));
-				out.CopyLump(Wad, Wad.FindMapLump("SCRIPTS", Lump));
-			}
-		} else {
-			for (int i = Lump; stricmp(Wad.LumpName(i), "ENDMAP") && i < Wad.NumLumps(); i++) {
-				out.CopyLump(Wad, i);
-			}
-			out.CreateLabel("ENDMAP");
-		}
-
-		return;
-	}
-
-	bool compress, compressGL, gl5 = false;
-
-#ifdef BLOCK_TEST
-	int size;
-	uint8_t* blockmap;
-	ReadLump<uint8_t>(Wad, Wad.FindMapLump("BLOCKMAP", Lump), blockmap, size);
-	if (blockmap) {
-		FILE* f = fopen("blockmap.lmp", "wb");
-		if (f) {
-			fwrite(blockmap, 1, size, f);
-			fclose(f);
-		}
-		delete[] blockmap;
-	}
-#endif
-
-	if (!isUDMF) {
-		if (Level.GLNodes != NULL) {
-			gl5 = this->v5gl || (Level.NumGLVertices > 32767) || (Level.NumGLSegs > 65534) ||
-				  (Level.NumGLNodes > 32767) || (Level.NumGLSubsectors > 32767);
-			compressGL = this->compress_gl_nodes || (Level.NumVertices > 32767);
-		} else {
-			compressGL = false;
-		}
-
-		// If the GL nodes are compressed, then the regular nodes must also be compressed.
-		compress = this->compress_nodes || compressGL || (Level.NumVertices > 65535) ||
-				   (Level.NumSegs > 65535) || (Level.NumSubsectors > 32767) ||
-				   (Level.NumNodes > 32767);
-
-		out.CopyLump(Wad, Lump);
-		out.CopyLump(Wad, Wad.FindMapLump("THINGS", Lump));
-		WriteLines(out);
-		WriteSides(out);
-		WriteVertices(out, compress || this->gl_only ? Level.NumOrgVerts : Level.NumVertices);
-		if (this->build_nodes) {
-			if (!compress) {
-				if (!this->gl_only) {
-					WriteSegs(out);
-					WriteSSectors(out);
-					WriteNodes(out);
-				} else {
-					out.CreateLabel("SEGS");
-					out.CreateLabel("SSECTORS");
-					out.CreateLabel("NODES");
-				}
-			} else {
-				out.CreateLabel("SEGS");
-				if (compressGL) {
-					if (this->force_compression)
-						WriteGLBSPZ(out, "SSECTORS");
-					else
-						WriteGLBSPX(out, "SSECTORS");
-				} else {
-					out.CreateLabel("SSECTORS");
-				}
-				if (!this->gl_only) {
-					if (this->force_compression)
-						WriteBSPZ(out, "NODES");
-					else
-						WriteBSPX(out, "NODES");
-				} else {
-					out.CreateLabel("NODES");
-				}
-			}
-		} else {
-			out.CopyLump(Wad, Wad.FindMapLump("SEGS", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("SSECTORS", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("NODES", Lump));
-		}
-		WriteSectors(out);
-		WriteReject(out);
-		WriteBlockmap(out);
-		if (Extended) {
-			out.CopyLump(Wad, Wad.FindMapLump("BEHAVIOR", Lump));
-			out.CopyLump(Wad, Wad.FindMapLump("SCRIPTS", Lump));
-		}
-		if (Level.GLNodes != NULL && !compressGL) {
-			char glname[9];
-			glname[0] = 'G';
-			glname[1] = 'L';
-			glname[2] = '_';
-			glname[8] = 0;
-			strncpy(glname + 3, Wad.LumpName(Lump), 5);
-			out.CreateLabel(glname);
-			WriteGLVertices(out, gl5);
-			WriteGLSegs(out, gl5);
-			WriteGLSSect(out, gl5);
-			WriteGLNodes(out, gl5);
-		}
-	} else {
-		WriteUDMF(out);
-	}
-}
-
-zdbsp_NodeVersion FProcessor::NodeVersion() const {
+zdbsp_NodeVersion FProcessor::get_node_version() const {
 	return this->node_version;
 }
 
-//
-uint8_t* FProcessor::FixReject(const uint8_t* oldreject) {
+uint8_t* FProcessor::fix_reject(const uint8_t* oldreject) {
 	int x, y, ox, oy, pnum, opnum;
 	int rejectSize = (Level.NumSectors() * Level.NumSectors() + 7) / 8;
 	uint8_t* newreject = new uint8_t[rejectSize];
@@ -859,7 +748,7 @@ void FProcessor::WriteVertices(FWadWriter& out, int count) {
 void FProcessor::WriteLines(FWadWriter& out) {
 	int i;
 
-	if (Extended) {
+	if (is_extended) {
 		MapLineDef2* Lines = new MapLineDef2[Level.NumLines()];
 		for (i = 0; i < Level.NumLines(); ++i) {
 			Lines[i].special = Level.Lines[i].special;
@@ -1133,12 +1022,14 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
 			segdata[i].v1 = LittleShort((uint16_t)Level.GLSegs[i].v1);
 		} else {
-			segdata[i].v1 = LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
+			segdata[i].v1 =
+				LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v1 - Level.NumOrgVerts));
 		}
 		if (Level.GLSegs[i].v2 < (uint32_t)Level.NumOrgVerts) {
 			segdata[i].v2 = (uint16_t)LittleShort(Level.GLSegs[i].v2);
 		} else {
-			segdata[i].v2 = LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
+			segdata[i].v2 =
+				LittleShort(0x8000 | (uint16_t)(Level.GLSegs[i].v2 - Level.NumOrgVerts));
 		}
 		segdata[i].linedef = LittleShort((uint16_t)Level.GLSegs[i].linedef);
 		segdata[i].side = LittleShort(Level.GLSegs[i].side);
@@ -1243,7 +1134,9 @@ void FProcessor::WriteGLBSPZ(FWadWriter& out, const char* label) {
 	WriteNodesZ(zout, Level.GLNodes, Level.NumGLNodes, nodever);
 }
 
-void FProcessor::WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts) {
+void FProcessor::WriteVerticesZ(
+	ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts
+) {
 	out << (uint32_t)orgverts << (uint32_t)newverts;
 
 	for (int i = 0; i < newverts; ++i) {
@@ -1284,9 +1177,7 @@ void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numse
 	}
 }
 
-void FProcessor::WriteNodesZ(
-	ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
-) {
+void FProcessor::WriteNodesZ(ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever) {
 	out << (uint32_t)numnodes;
 
 	for (int i = 0; i < numnodes; ++i) {
@@ -1377,7 +1268,9 @@ void FProcessor::WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numseg
 	}
 }
 
-void FProcessor::WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
+void FProcessor::WriteGLSegsX(
+	FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever
+) {
 	out << (uint32_t)numsegs;
 
 	if (nodever < 2) {

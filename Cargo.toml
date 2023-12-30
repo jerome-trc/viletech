@@ -1,5 +1,5 @@
 [workspace]
-members = ["subterra", "zdbsp"]
+members = ["subterra", "wadload", "zdbsp"]
 default-members = ["zdbsp"]
 # Resolver version 2 is needed for WGPU and Bevy.
 resolver = "2"

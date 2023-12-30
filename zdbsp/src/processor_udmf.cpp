@@ -126,9 +126,9 @@ void FProcessor::ParseLinedef(IntLineDef* ld) {
 		} else if (!stricmp(key, "v2")) {
 			ld->v2 = CheckInt(key);
 			continue; // do not store in props
-		} else if (Extended && !stricmp(key, "special")) {
+		} else if (is_extended && !stricmp(key, "special")) {
 			ld->special = CheckInt(key);
-		} else if (Extended && !stricmp(key, "arg0")) {
+		} else if (is_extended && !stricmp(key, "arg0")) {
 			ld->args[0] = CheckInt(key);
 		}
 		if (!stricmp(key, "sidefront")) {
@@ -206,7 +206,7 @@ void FProcessor::ParseMapProperties() {
 	while (CheckKey(key, value)) {
 		if (!stricmp(key, "namespace")) {
 			// all unknown namespaces are assumed to be standard.
-			Extended = !stricmp(value, "\"ZDoom\"") || !stricmp(value, "\"Hexen\"") ||
+			is_extended = !stricmp(value, "\"ZDoom\"") || !stricmp(value, "\"Hexen\"") ||
 					   !stricmp(value, "\"Vavoom\"");
 		}
 
@@ -216,13 +216,12 @@ void FProcessor::ParseMapProperties() {
 	}
 }
 
-void FProcessor::ParseTextMap(int lump) {
+void FProcessor::ParseTextMap(zdbsp_SliceU8 slice) {
 	char* buffer;
-	int32_t buffersize;
+	int32_t bufsz;
 	TArray<zdbsp_VertexEx> Vertices;
-
-	ReadLump<char>(Wad, lump, buffer, buffersize);
-	this->scanner.open_mem("TEXTMAP", buffer, buffersize);
+	read_lump(slice, buffer, bufsz);
+	this->scanner.open_mem("TEXTMAP", buffer, bufsz);
 
 	this->scanner.set_c_mode(true);
 	ParseMapProperties();
@@ -247,16 +246,12 @@ void FProcessor::ParseTextMap(int lump) {
 			ParseVertex(vt, vtp);
 		}
 	}
+
 	Level.Vertices = new zdbsp_VertexEx[Vertices.Size()];
 	Level.NumVertices = Vertices.Size();
 	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(zdbsp_VertexEx));
 	this->scanner.close();
 	delete[] buffer;
-}
-
-/// Parse a whole UDMF map.
-void FProcessor::LoadUDMF() {
-	ParseTextMap(Lump + 1);
 }
 
 /// Write a property list.
@@ -372,23 +367,4 @@ void FProcessor::WriteTextMap(FWadWriter& out) {
 	for (int i = 0; i < Level.NumSectors(); i++) {
 		WriteSectorUDMF(out, &Level.Sectors[i], i);
 	}
-}
-
-void FProcessor::WriteUDMF(FWadWriter& out) {
-	out.CopyLump(Wad, Lump);
-	WriteTextMap(out);
-	if (this->force_compression)
-		WriteGLBSPZ(out, "ZNODES");
-	else
-		WriteGLBSPX(out, "ZNODES");
-
-	// copy everything except existing nodes, blockmap and reject
-	for (int i = Lump + 2; stricmp(Wad.LumpName(i), "ENDMAP") && i < Wad.NumLumps(); i++) {
-		const char* lumpname = Wad.LumpName(i);
-		if (stricmp(lumpname, "ZNODES") && stricmp(lumpname, "BLOCKMAP") &&
-			stricmp(lumpname, "REJECT")) {
-			out.CopyLump(Wad, i);
-		}
-	}
-	out.CreateLabel("ENDMAP");
 }

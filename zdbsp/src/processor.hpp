@@ -69,11 +69,14 @@ public:
 };
 
 class FProcessor {
+	DELETE_COPIERS(FProcessor)
+
 public:
-	FProcessor(FWadReader& inwad, int lump);
+	FProcessor(zdbsp_Level, bool extended);
+	FProcessor(zdbsp_LevelUdmf);
+
 	void Process(const zdbsp_NodeConfig* config);
-	void Write(FWadWriter& out);
-	zdbsp_NodeVersion NodeVersion() const;
+	zdbsp_NodeVersion get_node_version() const;
 
 	bool build_nodes = true, build_gl_nodes = false;
 	bool conform_nodes = false, gl_only = false;
@@ -89,19 +92,25 @@ public:
 	}
 
 private:
-	void LoadUDMF();
-	void LoadThings();
-	void LoadLines();
-	void LoadVertices();
-	void LoadSides();
-	void LoadSectors();
-	void GetPolySpots();
+	explicit FProcessor();
+
+	void load_lines(zdbsp_SliceU8);
+	void load_lines_ext(zdbsp_SliceU8);
+	void load_sectors(zdbsp_SliceU8);
+	void load_sides(zdbsp_SliceU8);
+	void load_things(zdbsp_SliceU8);
+	void load_things_ext(zdbsp_SliceU8);
+	void load_vertices(zdbsp_SliceU8);
+
+	void finish_load();
+
+	void get_poly_spots();
 
 	zdbsp_NodeEx* NodesToEx(const zdbsp_NodeRaw* nodes, int count);
 	zdbsp_SubsectorEx* SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count);
 	zdbsp_SegGlEx* SegGLsToEx(const zdbsp_SegGl* segs, int count);
 
-	uint8_t* FixReject(const uint8_t* oldreject);
+	uint8_t* fix_reject(const uint8_t* oldreject);
 	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count) const;
 
 	void WriteLines(FWadWriter& out);
@@ -155,7 +164,7 @@ private:
 	void ParseSector(IntSector* sec);
 	void ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp);
 	void ParseMapProperties();
-	void ParseTextMap(int lump);
+	void ParseTextMap(zdbsp_SliceU8);
 
 	int CheckInt(const char* key);
 	double CheckFloat(const char* key);
@@ -169,21 +178,19 @@ private:
 	void WriteSectorUDMF(FWadWriter& out, IntSector* sec, int num);
 	void WriteVertexUDMF(FWadWriter& out, IntVertex* vt, int num);
 	void WriteTextMap(FWadWriter& out);
-	void WriteUDMF(FWadWriter& out);
 
+	char level_name[9];
 	FLevel Level;
 
-	TArray<FNodeBuilder::FPolyStart> PolyStarts;
-	TArray<FNodeBuilder::FPolyStart> PolyAnchors;
+	TArray<FNodeBuilder::FPolyStart> poly_starts;
+	TArray<FNodeBuilder::FPolyStart> poly_anchors;
 
-	bool Extended;
-	bool isUDMF;
+	bool is_extended = false;
+	bool is_udmf = false;
 	zdbsp_NodeVersion node_version = ZDBSP_NODEVERS_UNKNOWN;
 
-	FWadReader& Wad;
 	Scanner scanner;
 	StringBuffer stbuf;
-	int Lump;
 };
 
 #endif //__PROCESSOR_H__

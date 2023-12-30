@@ -15,19 +15,17 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 /// as well the correctness of the wrapper defined by zdbsp.cpp.
 #[cfg(test)]
 mod test {
-	use std::{ffi::c_void, path::Path};
+	use std::{ffi::c_void, io::Cursor, path::Path};
 
 	use super::*;
 
 	#[test]
 	fn vanilla_smoke() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::null());
+			let p = zdbsp_processor_new_vanilla(level);
 			zdbsp_processor_run(p, std::ptr::null());
 
 			let magic_ptr = zdbsp_processor_magicnumber(p, true as u8);
@@ -68,7 +66,7 @@ mod test {
 			);
 
 			let blockmap = zdbsp_processor_blockmap(p);
-			let blockmap = std::slice::from_raw_parts(blockmap.blocks, blockmap.len);
+			let blockmap = std::slice::from_raw_parts(blockmap.ptr, blockmap.len);
 			let blockmap_bytes = blockmap.align_to();
 
 			assert_eq!(
@@ -76,28 +74,17 @@ mod test {
 				"ca8320b3126bf740d558220f802a3f71"
 			);
 
-			let reject = zdbsp_processor_reject(p);
-			let reject = std::slice::from_raw_parts(reject.bytes, reject.len);
-
-			assert_eq!(
-				format!("{:#?}", md5::compute(reject)),
-				"901c2990c493f21c670f0f231df7ef31"
-			);
-
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
 		}
 	}
 
 	#[test]
 	fn extended_smoke() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::null());
+			let p = zdbsp_processor_new_vanilla(level);
 			zdbsp_processor_run(p, std::ptr::null());
 
 			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
@@ -155,14 +142,12 @@ mod test {
 			assert_eq!(checksum, "30025de1f1cf2a091cd7e2c92ea0af88");
 
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
 		}
 	}
 
 	#[test]
 	fn glnodes_smoke() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -172,8 +157,8 @@ mod test {
 				blockmap_mode: zdbsp_blockmapmode_default(),
 			};
 
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::addr_of!(pcfg));
+			let p = zdbsp_processor_new_vanilla(level);
+			zdbsp_processor_configure(p, std::ptr::addr_of!(pcfg));
 			zdbsp_processor_run(p, std::ptr::null());
 
 			zdbsp_processor_nodesgl_foreach(
@@ -210,14 +195,12 @@ mod test {
 			);
 
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
 		}
 	}
 
 	#[test]
 	fn glnodes_conform() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -229,8 +212,8 @@ mod test {
 				blockmap_mode: zdbsp_blockmapmode_default(),
 			};
 
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::addr_of!(pcfg));
+			let p = zdbsp_processor_new_vanilla(level);
+			zdbsp_processor_configure(p, std::ptr::addr_of!(pcfg));
 			zdbsp_processor_run(p, std::ptr::null());
 
 			zdbsp_processor_nodes_foreach(
@@ -304,14 +287,12 @@ mod test {
 			);
 
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
 		}
 	}
 
 	#[test]
 	fn glv5_smoke() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -323,8 +304,8 @@ mod test {
 				blockmap_mode: zdbsp_blockmapmode_default(),
 			};
 
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::addr_of!(pcfg));
+			let p = zdbsp_processor_new_vanilla(level);
+			zdbsp_processor_configure(p, std::ptr::addr_of!(pcfg));
 			zdbsp_processor_run(p, std::ptr::null());
 
 			zdbsp_processor_nodesx_v5_foreach(
@@ -365,19 +346,16 @@ mod test {
 			);
 
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
 		}
 	}
 
 	#[test]
 	fn udmf_smoke() {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/udmf.wad");
-		let bytes = std::fs::read(&path).unwrap();
+		let level = load_level_udmf();
 		let mut hash_in = HashInput::default();
 
 		unsafe {
-			let reader = zdbsp_wadreader_new(bytes.as_ptr());
-			let p = zdbsp_processor_new(reader, std::ptr::null());
+			let p = zdbsp_processor_new_udmf(level);
 			zdbsp_processor_run(p, std::ptr::null());
 
 			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
@@ -438,7 +416,99 @@ mod test {
 			assert_eq!(checksum, "39ed77ca24155506b2455a887243c3ef");
 
 			zdbsp_processor_destroy(p);
-			zdbsp_wadreader_destroy(reader);
+		}
+	}
+
+	// Details and helpers /////////////////////////////////////////////////////
+
+	#[must_use]
+	fn load_level() -> zdbsp_Level {
+		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
+		let wad_bytes = std::fs::read(&path).unwrap();
+		let mut reader = wadload::Reader::new(Cursor::new(wad_bytes)).unwrap();
+
+		while reader
+			.next()
+			.is_some_and(|result| result.is_ok_and(|(d, _)| !d.name.eq_ignore_ascii_case("MAP01")))
+		{}
+
+		let b_things = reader.next().unwrap().unwrap();
+		let b_linedefs = reader.next().unwrap().unwrap();
+		let b_sidedefs = reader.next().unwrap().unwrap();
+		let b_vertexes = reader.next().unwrap().unwrap();
+		let _b_segs = reader.next().unwrap().unwrap();
+		let _b_ssectors = reader.next().unwrap().unwrap();
+		let _b_nodes = reader.next().unwrap().unwrap();
+		let b_sectors = reader.next().unwrap().unwrap();
+
+		let s_things = zdbsp_SliceU8 {
+			ptr: b_things.1.as_ptr(),
+			len: b_things.1.len(),
+		};
+
+		let s_linedefs = zdbsp_SliceU8 {
+			ptr: b_linedefs.1.as_ptr(),
+			len: b_linedefs.1.len(),
+		};
+
+		let s_sidedefs = zdbsp_SliceU8 {
+			ptr: b_sidedefs.1.as_ptr(),
+			len: b_sidedefs.1.len(),
+		};
+
+		let s_vertices = zdbsp_SliceU8 {
+			ptr: b_vertexes.1.as_ptr(),
+			len: b_vertexes.1.len(),
+		};
+
+		let s_sectors = zdbsp_SliceU8 {
+			ptr: b_sectors.1.as_ptr(),
+			len: b_sectors.1.len(),
+		};
+
+		std::mem::forget(b_things.1);
+		std::mem::forget(b_linedefs.1);
+		std::mem::forget(b_sidedefs.1);
+		std::mem::forget(b_vertexes.1);
+		std::mem::forget(b_sectors.1);
+
+		zdbsp_Level {
+			name: [
+				b'M' as i8, b'A' as i8, b'P' as i8, b'0' as i8, b'1' as i8, 0, 0, 0, 0,
+			],
+			things: s_things,
+			vertices: s_vertices,
+			linedefs: s_linedefs,
+			sidedefs: s_sidedefs,
+			sectors: s_sectors,
+		}
+	}
+
+	#[must_use]
+	fn load_level_udmf() -> zdbsp_LevelUdmf {
+		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/udmf.wad");
+		let wad_bytes = std::fs::read(&path).unwrap();
+		let mut reader = wadload::Reader::new(Cursor::new(wad_bytes)).unwrap();
+
+		while reader
+			.next()
+			.is_some_and(|result| result.is_ok_and(|(d, _)| !d.name.eq_ignore_ascii_case("MAP01")))
+		{}
+
+		let b_textmap = reader.next().unwrap().unwrap();
+
+		let s_textmap = zdbsp_SliceU8 {
+			ptr: b_textmap.1.as_ptr(),
+			len: b_textmap.1.len(),
+		};
+
+		std::mem::forget(b_textmap.1);
+
+		zdbsp_LevelUdmf {
+			name: [
+				b'M' as i8, b'A' as i8, b'P' as i8, b'0' as i8, b'1' as i8, 0, 0, 0, 0,
+			],
+			textmap: s_textmap,
 		}
 	}
 

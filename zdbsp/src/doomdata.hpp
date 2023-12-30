@@ -150,10 +150,10 @@ struct FLevel {
 
 	TArray<zdbsp_UdmfKey> props;
 
-	void FindMapBounds();
-	void RemoveExtraLines();
+	void find_map_bounds();
+	void remove_extra_lines();
 	void RemoveExtraSides();
-	void RemoveExtraSectors();
+	void remove_extra_sectors();
 
 	uint32_t NumSides() const {
 		return Sides.Size();

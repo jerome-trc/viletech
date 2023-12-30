@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 #include "processor.hpp"
-#include "wad.hpp"
+#include "zdbsp.h"
 
 // Upstream ZDBSP aliased `DWORD` to `unsigned long` on win32 and `uint32_t`
 // everywhere else. These check that using fixed-width types everywhere is sound.
@@ -42,20 +42,23 @@ void zdbsp_pcfg_extended(zdbsp_ProcessConfig* pcfg) {
 	pcfg->flags = static_cast<zdbsp_ProcessFlags>(i);
 }
 
-zdbsp_WadReaderPtr zdbsp_wadreader_new(const uint8_t* bytes) {
-	auto wad = std::make_unique<FWadReader>(bytes);
-	return wad.release();
+zdbsp_ProcessorPtr zdbsp_processor_new_vanilla(zdbsp_Level level) {
+	return std::make_unique<FProcessor>(
+		level, false
+	).release();
 }
 
-void zdbsp_wadreader_destroy(zdbsp_WadReaderPtr wad) {
-	auto _ = std::unique_ptr<FWadReader>(wad);
+zdbsp_ProcessorPtr zdbsp_processor_new_extended(zdbsp_Level level) {
+	return std::make_unique<FProcessor>(
+		level, true
+	).release();
 }
 
-zdbsp_ProcessorPtr zdbsp_processor_new(
-	zdbsp_WadReaderPtr wad, const zdbsp_ProcessConfig* const config
-) {
-	auto p = std::make_unique<FProcessor>(*wad, 0);
+zdbsp_ProcessorPtr zdbsp_processor_new_udmf(zdbsp_LevelUdmf level) {
+	return std::make_unique<FProcessor>(level).release();
+}
 
+void zdbsp_processor_configure(zdbsp_ProcessorPtr p, const zdbsp_ProcessConfig *config) {
 	if (config != nullptr) {
 		p->blockmap_mode = config->blockmap_mode;
 		p->reject_mode = config->reject_mode;
@@ -80,8 +83,6 @@ zdbsp_ProcessorPtr zdbsp_processor_new(
 	if (p->gl_only) {
 		p->conform_nodes = false;
 	}
-
-	return p.release();
 }
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p) {
@@ -93,11 +94,11 @@ void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* const con
 }
 
 zdbsp_NodeVersion zdbsp_processor_nodeversion(const zdbsp_ProcessorPtr p) {
-	return p->NodeVersion();
+	return p->get_node_version();
 }
 
 const char* zdbsp_processor_magicnumber(const zdbsp_ProcessorPtr p, zdbsp_Bool compress) {
-	switch (p->NodeVersion()) {
+	switch (p->get_node_version()) {
 	case ZDBSP_NODEVERS_1:
 		if (compress) {
 			return "ZGLN";
@@ -167,14 +168,11 @@ size_t zdbsp_processor_vertsnewgl_count(const zdbsp_ProcessorPtr p) {
 	return level.NumGLVertices - level.NumOrgVerts;
 }
 
-zdbsp_BlockmapSlice zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p) {
-	return { .blocks = p->get_level().Blockmap,
-			 .len = static_cast<size_t>(p->get_level().BlockmapSize) };
-}
-
-zdbsp_RejectSlice zdbsp_processor_reject(const zdbsp_ProcessorPtr p) {
-	return { .bytes = p->get_level().Reject,
-			 .len = static_cast<size_t>(p->get_level().RejectSize) };
+zdbsp_SliceU16 zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p) {
+	zdbsp_SliceU16 slice = {};
+	slice.ptr = p->get_level().Blockmap;
+	slice.len = static_cast<size_t>(p->get_level().BlockmapSize);
+	return slice;
 }
 
 // Node iterators //////////////////////////////////////////////////////////////

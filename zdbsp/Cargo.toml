@@ -22,6 +22,7 @@ cc.workspace = true
 [dev-dependencies]
 criterion.workspace = true
 md5.workspace = true
+wadload = { path = "../wadload" }
 
 [[bench]]
 name = "bench"

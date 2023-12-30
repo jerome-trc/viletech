@@ -821,6 +821,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wadload"
+version = "0.0.0"
+dependencies = [
+ "byteorder",
+ "serde",
+ "viletech-utils",
+]
+
+[[package]]
 name = "walkdir"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1011,4 +1020,5 @@ dependencies = [
  "cc",
  "criterion",
  "md5",
+ "wadload",
 ]
