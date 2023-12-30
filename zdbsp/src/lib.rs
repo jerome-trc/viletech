@@ -561,6 +561,13 @@ mod test {
 				assert_eq!(format!("{:#?}", md5::compute(all_bytes.as_slice())), cksum,);
 			}
 
+			if let Ok(cksum) = std::env::var("ZDBSP_SAMPLE_CHECKSUM_BLOCKMAP") {
+				let blockmap = zdbsp_processor_blockmap(p);
+				let blockmap = std::slice::from_raw_parts(blockmap.ptr, blockmap.len);
+				let blockmap_bytes = blockmap.align_to();
+				assert_eq!(format!("{:#?}", md5::compute(blockmap_bytes.1)), cksum,);
+			}
+
 			zdbsp_processor_destroy(p);
 		}
 	}
