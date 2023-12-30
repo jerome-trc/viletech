@@ -486,10 +486,19 @@ impl SegRaw {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SegDirection {
-	/// This seg runs along the right of a linedef.
-	Front,
 	/// This seg runs along the left of a linedef.
 	Back,
+	/// This seg runs along the right of a linedef.
+	Front,
+}
+
+impl std::fmt::Display for SegDirection {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Back => write!(f, "back"),
+			Self::Front => write!(f, "front"),
+		}
+	}
 }
 
 /// Casts a slice of raw bytes to segment definitions (without allocating).
