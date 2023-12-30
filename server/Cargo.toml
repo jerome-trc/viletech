@@ -25,7 +25,7 @@ features = [
 ]
 
 [dependencies]
-viletech = { path = "../engine" }
+viletech = { package = "viletech-engine", path = "../engine" }
 
 bevy_quinnet.workspace = true
 bitflags.workspace = true

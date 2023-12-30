@@ -1,5 +1,5 @@
 [package]
-name = "viletech"
+name = "viletech-engine"
 version = "0.0.0"
 edition.workspace = true
 

@@ -1,6 +1,20 @@
 [workspace]
-members = ["subterra", "wadload", "zdbsp"]
-default-members = ["zdbsp"]
+members = [
+	"cli",
+	"client",
+	"doomfront",
+	"engine",
+	"lith",
+	"mus2midi",
+	"server",
+	"subterra",
+	"utils",
+	"vfs",
+	"vilify",
+	"wadload",
+	"zdbsp",
+]
+default-members = ["client"]
 # Resolver version 2 is needed for WGPU and Bevy.
 resolver = "2"
 

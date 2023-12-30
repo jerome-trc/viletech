@@ -1,5 +1,5 @@
 [package]
-name = "viletech-client"
+name = "viletech"
 version = "0.0.0"
 edition.workspace = true
 
@@ -34,7 +34,7 @@ features = [
 ]
 
 [dependencies]
-viletech = { path = "../engine" }
+viletech = { package = "viletech-engine", path = "../engine" }
 
 bevy_egui.workspace = true
 bitflags.workspace = true

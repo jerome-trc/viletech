@@ -1,5 +1,5 @@
 [package]
-name = "viletech-cli"
+name = "viletools"
 version = "0.0.0"
 edition.workspace = true
 
@@ -9,10 +9,6 @@ keywords = ["bevy", "doom", "gamedev", "cli", "viletech"]
 license = "GPL-3.0-or-later"
 publish = false
 repository.workspace = true
-
-[[bin]]
-name = "viletools"
-path = "src/main.rs"
 
 [dependencies]
 data = { package = "subterra", path = "../subterra", features = ["serde"] }
