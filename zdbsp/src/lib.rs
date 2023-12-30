@@ -15,13 +15,17 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 /// as well the correctness of the wrapper defined by zdbsp.cpp.
 #[cfg(test)]
 mod test {
-	use std::{ffi::c_void, io::Cursor, path::Path};
+	use std::{
+		ffi::c_void,
+		io::Cursor,
+		path::{Path, PathBuf},
+	};
 
 	use super::*;
 
 	#[test]
 	fn vanilla_smoke() {
-		let level = load_level();
+		let level = load_level(freedoom2_map01_path());
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -80,7 +84,7 @@ mod test {
 
 	#[test]
 	fn extended_smoke() {
-		let level = load_level();
+		let level = load_level(freedoom2_map01_path());
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -147,7 +151,7 @@ mod test {
 
 	#[test]
 	fn glnodes_smoke() {
-		let level = load_level();
+		let level = load_level(freedoom2_map01_path());
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -200,7 +204,7 @@ mod test {
 
 	#[test]
 	fn glnodes_conform() {
-		let level = load_level();
+		let level = load_level(freedoom2_map01_path());
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -292,7 +296,7 @@ mod test {
 
 	#[test]
 	fn glv5_smoke() {
-		let level = load_level();
+		let level = load_level(freedoom2_map01_path());
 		let mut hash_in = HashInput::default();
 
 		unsafe {
@@ -419,11 +423,91 @@ mod test {
 		}
 	}
 
+	/// This always assumes extended format, since it is for testing correctness
+	/// on levels which push the upper boundaries of non-UDMF node-building.
+	#[test]
+	#[ignore]
+	fn with_sample() {
+		let Ok(wad_path) = std::env::var("ZDBSP_SAMPLE_WAD") else {
+			eprintln!("Env. var. `ZDBSP_SAMPLE_WAD` not set; skipping user sample test.");
+			return;
+		};
+
+		let level = load_level(PathBuf::from(wad_path));
+		let mut hash_in = HashInput::default();
+
+		unsafe {
+			let p = zdbsp_processor_new_vanilla(level);
+			zdbsp_processor_run(p, std::ptr::null());
+
+			for b in (zdbsp_processor_vertsorig_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			for b in (zdbsp_processor_vertsnewx_count(p) as u32).to_le_bytes() {
+				hash_in.verts.push(b);
+			}
+
+			zdbsp_processor_vertsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(vertx_callback),
+			);
+
+			for b in (zdbsp_processor_ssectors_count(p) as u32).to_le_bytes() {
+				hash_in.subsectors.push(b);
+			}
+
+			zdbsp_processor_ssectorsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(ssectorx_callback),
+			);
+
+			for b in (zdbsp_processor_segs_count(p) as u32).to_le_bytes() {
+				hash_in.subsectors.push(b);
+			}
+
+			zdbsp_processor_segsx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(segx_callback),
+			);
+
+			for b in (zdbsp_processor_nodes_count(p) as u32).to_le_bytes() {
+				hash_in.nodes.push(b);
+			}
+
+			zdbsp_processor_nodesx_foreach(
+				p,
+				std::ptr::addr_of_mut!(hash_in).cast(),
+				Some(nodex_callback),
+			);
+
+			let mut all_bytes = vec![b'X', b'N', b'O', b'D'];
+
+			all_bytes.append(&mut hash_in.verts);
+			all_bytes.append(&mut hash_in.subsectors);
+			all_bytes.append(&mut hash_in.segs);
+			all_bytes.append(&mut hash_in.nodes);
+
+			if let Ok(cksum) = std::env::var("ZDBSP_SAMPLE_CHECKSUM_NODES") {
+				assert_eq!(format!("{:#?}", md5::compute(all_bytes.as_slice())), cksum,);
+			}
+
+			zdbsp_processor_destroy(p);
+		}
+	}
+
 	// Details and helpers /////////////////////////////////////////////////////
 
 	#[must_use]
-	fn load_level() -> zdbsp_Level {
-		let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad");
+	fn freedoom2_map01_path() -> PathBuf {
+		Path::new(env!("CARGO_MANIFEST_DIR")).join("../sample/freedoom2/map01.wad")
+	}
+
+	#[must_use]
+	fn load_level(path: PathBuf) -> zdbsp_Level {
 		let wad_bytes = std::fs::read(&path).unwrap();
 		let mut reader = wadload::Reader::new(Cursor::new(wad_bytes)).unwrap();
 

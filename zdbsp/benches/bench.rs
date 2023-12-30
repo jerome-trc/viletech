@@ -10,8 +10,8 @@ fn end_to_end(crit: &mut criterion::Criterion) {
 
 	grp.sample_size(10);
 
-	let Ok(sample) = std::env::var("ZDBSP_SAMPLE") else {
-		eprintln!("Env. var. `ZDBSP_SAMPLE` not set; skipping benchmarks.");
+	let Ok(sample) = std::env::var("ZDBSP_SAMPLE_WAD") else {
+		eprintln!("Env. var. `ZDBSP_SAMPLE_WAD` not set; skipping benchmarks.");
 		return;
 	};
 
