@@ -7,9 +7,9 @@
 #include <stdint.h>
 
 #if __STDC_VERSION__ >= 202000L || (defined(__cplusplus) && __cplusplus >= 201703L)
-#define nodiscard [[nodiscard]]
+#define ZDBSP_NODISCARD [[nodiscard]]
 #else
-#define nodiscard
+#define ZDBSP_NODISCARD
 #endif
 
 #ifdef __cplusplus
@@ -277,9 +277,9 @@ typedef void (*zdbsp_SubsectorVisitor)(void*, const zdbsp_SubsectorRaw*);
 typedef void (*zdbsp_SubsectorExVisitor)(void*, const zdbsp_SubsectorEx*);
 typedef void (*zdbsp_VertexExVisitor)(void*, const zdbsp_VertexEx*);
 
-nodiscard zdbsp_ProcessFlags zdbsp_processflags_default(void);
-nodiscard zdbsp_RejectMode zdbsp_rejectmode_default(void);
-nodiscard zdbsp_BlockmapMode zdbsp_blockmapmode_default(void);
+ZDBSP_NODISCARD zdbsp_ProcessFlags zdbsp_processflags_default(void);
+ZDBSP_NODISCARD zdbsp_RejectMode zdbsp_rejectmode_default(void);
+ZDBSP_NODISCARD zdbsp_BlockmapMode zdbsp_blockmapmode_default(void);
 
 void zdbsp_pcfg_extended(zdbsp_ProcessConfig*);
 
@@ -287,22 +287,22 @@ void zdbsp_pcfg_extended(zdbsp_ProcessConfig*);
 /// `zdbsp_processor_destroy`.
 /// Ownership of `level`'s bytes are not taken by this function; the caller
 /// should free those bytes themselves.
-nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_vanilla(zdbsp_Level level);
+ZDBSP_NODISCARD zdbsp_ProcessorPtr zdbsp_processor_new_vanilla(zdbsp_Level level);
 
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_processor_destroy`.
 /// Ownership of `level`'s bytes are not taken by this function; the caller
 /// should free those bytes themselves.
-nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_extended(zdbsp_Level level);
+ZDBSP_NODISCARD zdbsp_ProcessorPtr zdbsp_processor_new_extended(zdbsp_Level level);
 
 /// The returned object is owned by the caller, and should be freed using
 /// `zdbsp_processor_destroy`.
 /// Ownership of `level`'s bytes are not taken by this function; the caller
 /// should free those bytes themselves.
-nodiscard zdbsp_ProcessorPtr zdbsp_processor_new_udmf(zdbsp_LevelUdmf level);
+ZDBSP_NODISCARD zdbsp_ProcessorPtr zdbsp_processor_new_udmf(zdbsp_LevelUdmf level);
 
 /// Calling with a `NULL` `config` is a valid no-op here.
-nodiscard void zdbsp_processor_configure(zdbsp_ProcessorPtr p, const zdbsp_ProcessConfig* config);
+void zdbsp_processor_configure(zdbsp_ProcessorPtr p, const zdbsp_ProcessConfig* config);
 
 void zdbsp_processor_destroy(zdbsp_ProcessorPtr p);
 
@@ -312,7 +312,7 @@ void zdbsp_processor_run(zdbsp_ProcessorPtr p, const zdbsp_NodeConfig* config);
 /// Notes:
 /// - If the processor has not been run yet, it will always return `ZDBSP_NODEVERS_UNKNOWN`.
 /// - It will also return `ZDBSP_NODEVERS_UNKNOWN` if the last run did not build any GL nodes.
-nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD zdbsp_NodeVersion zdbsp_processor_nodeversion(const zdbsp_ProcessorPtr p);
 
 /// Returns a (static) string containing the 4 bytes needed to be written into
 /// a combined nodes/subsectors/segs WAD entry if possible.
@@ -320,49 +320,49 @@ nodiscard zdbsp_NodeVersion zdbsp_processor_nodeversion(const zdbsp_ProcessorPtr
 /// Be aware that if the node version is unknown (i.e. a run has not yet been completed,
 /// or no GL nodes were built in the last run) and `compress` is false then no
 /// magic number is applicable, and this function will return a null pointer.
-nodiscard const char* zdbsp_processor_magicnumber(const zdbsp_ProcessorPtr p, zdbsp_Bool compress);
+ZDBSP_NODISCARD const char* zdbsp_processor_magicnumber(const zdbsp_ProcessorPtr p, zdbsp_Bool compress);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_nodes_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_nodes_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_nodesgl_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_nodesgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_segs_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_segs_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_segsglx_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_segsglx_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_ssectors_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_ssectors_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_ssectorsgl_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_ssectorsgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsorig_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_vertsorig_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsgl_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_vertsgl_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsnewx_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_vertsnewx_count(const zdbsp_ProcessorPtr p);
 
 /// Beware that if this number is going to be written to a WAD entry,
 /// it should be serialized into a `uint32_t`.
-nodiscard size_t zdbsp_processor_vertsnewgl_count(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD size_t zdbsp_processor_vertsnewgl_count(const zdbsp_ProcessorPtr p);
 
-nodiscard zdbsp_SliceU16 zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p);
+ZDBSP_NODISCARD zdbsp_SliceU16 zdbsp_processor_blockmap(const zdbsp_ProcessorPtr p);
 
 void zdbsp_processor_nodes_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeVisitor);
 void zdbsp_processor_nodesx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_NodeExVisitor);
@@ -396,8 +396,6 @@ void zdbsp_processor_ssectorsx_v5_foreach(
 
 void zdbsp_processor_vertsx_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
 void zdbsp_processor_vertsgl_foreach(const zdbsp_ProcessorPtr p, void* ctx, zdbsp_VertexExVisitor);
-
-#undef nodiscard
 
 #ifdef __cplusplus
 }
