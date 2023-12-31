@@ -19,7 +19,7 @@ graphics = []
 serde = ["dep:serde", "bitflags/serde"]
 
 [dependencies]
-zdbsp-sys = { path = "../zdbsp" }
+znbx-sys = { path = "../znbx" }
 util = { package = "viletech-utils", path = "../utils" }
 
 bitflags.workspace = true

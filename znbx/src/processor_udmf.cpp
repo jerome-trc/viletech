@@ -73,7 +73,7 @@ double FProcessor::CheckFloat(const char* key) {
 	return this->scanner.flnum;
 }
 
-zdbsp_I16F16 FProcessor::CheckFixed(const char* key) {
+znbx_I16F16 FProcessor::CheckFixed(const char* key) {
 	double val = CheckFloat(key);
 	if (val < -32768 || val > 32767) {
 		this->scanner.script_err(
@@ -107,7 +107,7 @@ void FProcessor::ParseThing(IntThing* th) {
 		}
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		th->props.Push(k);
 	}
 }
@@ -140,7 +140,7 @@ void FProcessor::ParseLinedef(IntLineDef* ld) {
 		}
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		ld->props.Push(k);
 	}
 }
@@ -158,7 +158,7 @@ void FProcessor::ParseSidedef(IntSideDef* sd) {
 		}
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		sd->props.Push(k);
 	}
 }
@@ -173,12 +173,12 @@ void FProcessor::ParseSector(IntSector* sec) {
 		// so everything can go directly to the props array.
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		sec->props.Push(k);
 	}
 }
 
-void FProcessor::ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp) {
+void FProcessor::ParseVertex(znbx_VertexEx* vt, IntVertex* vtp) {
 	vt->x = vt->y = 0;
 	this->scanner.must_get_string_name("{");
 	while (!this->scanner.check_string("}")) {
@@ -192,7 +192,7 @@ void FProcessor::ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp) {
 		}
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		vtp->props.Push(k);
 	}
 }
@@ -211,15 +211,15 @@ void FProcessor::ParseMapProperties() {
 		}
 
 		// now store the key in its unprocessed form
-		zdbsp_UdmfKey k = { key, value };
+		znbx_UdmfKey k = { key, value };
 		Level.props.Push(k);
 	}
 }
 
-void FProcessor::ParseTextMap(zdbsp_SliceU8 slice) {
+void FProcessor::ParseTextMap(znbx_SliceU8 slice) {
 	char* buffer;
 	int32_t bufsz;
-	TArray<zdbsp_VertexEx> Vertices;
+	TArray<znbx_VertexEx> Vertices;
 	read_lump(slice, buffer, bufsz);
 	this->scanner.open_mem("TEXTMAP", buffer, bufsz);
 
@@ -240,22 +240,22 @@ void FProcessor::ParseTextMap(zdbsp_SliceU8 slice) {
 			IntSector* sec = &Level.Sectors[Level.Sectors.Reserve(1)];
 			ParseSector(sec);
 		} else if (this->scanner.compare("vertex")) {
-			zdbsp_VertexEx* vt = &Vertices[Vertices.Reserve(1)];
+			znbx_VertexEx* vt = &Vertices[Vertices.Reserve(1)];
 			IntVertex* vtp = &Level.VertexProps[Level.VertexProps.Reserve(1)];
 			vt->index = Vertices.Size();
 			ParseVertex(vt, vtp);
 		}
 	}
 
-	Level.Vertices = new zdbsp_VertexEx[Vertices.Size()];
+	Level.Vertices = new znbx_VertexEx[Vertices.Size()];
 	Level.NumVertices = Vertices.Size();
-	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(zdbsp_VertexEx));
+	memcpy(Level.Vertices, &Vertices[0], Vertices.Size() * sizeof(znbx_VertexEx));
 	this->scanner.close();
 	delete[] buffer;
 }
 
 /// Write a property list.
-void FProcessor::WriteProps(FWadWriter& out, TArray<zdbsp_UdmfKey>& props) {
+void FProcessor::WriteProps(FWadWriter& out, TArray<znbx_UdmfKey>& props) {
 	for (unsigned i = 0; i < props.Size(); i++) {
 		out.AddToLump(props[i].key, (int)strlen(props[i].key));
 		out.AddToLump(" = ", 3);
@@ -348,7 +348,7 @@ void FProcessor::WriteTextMap(FWadWriter& out) {
 	}
 
 	for (int i = 0; i < Level.NumOrgVerts; i++) {
-		zdbsp_VertexEx* vt = &Level.Vertices[i];
+		znbx_VertexEx* vt = &Level.Vertices[i];
 		if (vt->index <= 0) {
 			// not valid!
 			throw std::runtime_error("Invalid vertex data.");

@@ -30,18 +30,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			"src/sc_man.cpp",
 			"src/utility.cpp",
 			"src/wad.cpp",
-			"src/zdbsp.cpp",
+			"src/znbx.cpp",
 		]);
 
 	if std::env::var("CARGO_FEATURE_XVERBOSE").is_ok() {
-		ccbuild.define("ZDBSP_DEBUG_VERBOSE", None);
+		ccbuild.define("ZNBX_DEBUG_VERBOSE", None);
 	}
 
-	ccbuild.compile("zdbsp");
+	ccbuild.compile("znbx");
 
 	bindgen::Builder::default()
-		.header("include/zdbsp.h")
-		.allowlist_item("^zdbsp_.+")
+		.header("include/znbx.h")
+		.allowlist_item("^znbx_.+")
 		.parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
 		.generate()?
 		.write_to_file(PathBuf::from(std::env::var("OUT_DIR")?).join("bindings.rs"))?;
@@ -53,7 +53,7 @@ const RERUN_IF_CHANGED: &[&str] = &[
 	// Rust
 	"src/lib.rs",
 	// Public C
-	"include/zdbsp.h",
+	"include/znbx.h",
 	// Implementation
 	"src/blockmapbuilder.cpp",
 	"src/blockmapbuilder.hpp",
@@ -76,5 +76,5 @@ const RERUN_IF_CHANGED: &[&str] = &[
 	"src/wad.cpp",
 	"src/wad.hpp",
 	"src/xs_Float.hpp",
-	"src/zdbsp.cpp",
+	"src/znbx.cpp",
 ];

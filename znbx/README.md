@@ -1,6 +1,6 @@
-# WadLoad
+# znbx-sys
 
-A Rust wrapper around a fork of (G)ZDoom's internal binary space partition node tree builder, [ZDBSP](https://zdoom.org/wiki/ZDBSP).
+Automatically-generated FFI bindings for ZNBX, a fork of (G)ZDoom's internal binary space partition node tree builder, [ZDBSP](https://zdoom.org/wiki/ZDBSP).
 
 ## Feature Flags
 

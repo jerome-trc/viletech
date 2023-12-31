@@ -28,7 +28,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #define Printf printf
 
-#ifdef ZDBSP_DEBUG_VERBOSE
+#ifdef ZNBX_DEBUG_VERBOSE
 #include <stdio.h>
 #define D(x) x
 #else
@@ -37,7 +37,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 	} while (0)
 #endif
 
-double FNodeBuilder::AddIntersection(const zdbsp_NodeFxp& node, int vertex) {
+double FNodeBuilder::AddIntersection(const znbx_NodeFxp& node, int vertex) {
 	static const FEventInfo defaultInfo = { -1, UINT_MAX };
 
 	// Calculate signed distance of intersection vertex from start of splitter.
@@ -68,7 +68,7 @@ double FNodeBuilder::AddIntersection(const zdbsp_NodeFxp& node, int vertex) {
 // having overlapping lines. If we skip this step, these segs will still be
 // split later, but minisegs will erroneously be added for them, and partner
 // seg information will be messed up in the generated tree.
-void FNodeBuilder::FixSplitSharers([[maybe_unused]] const zdbsp_NodeFxp& node) {
+void FNodeBuilder::FixSplitSharers([[maybe_unused]] const znbx_NodeFxp& node) {
 	for (unsigned int i = 0; i < SplitSharers.Size(); ++i) {
 		uint32_t seg = SplitSharers[i].Seg;
 		int v2 = Segs[seg].v2;
@@ -123,7 +123,7 @@ void FNodeBuilder::FixSplitSharers([[maybe_unused]] const zdbsp_NodeFxp& node) {
 }
 
 void FNodeBuilder::AddMinisegs(
-	const zdbsp_NodeFxp& node, uint32_t splitseg, uint32_t& fset, uint32_t& bset
+	const znbx_NodeFxp& node, uint32_t splitseg, uint32_t& fset, uint32_t& bset
 ) {
 	FEvent *event = Events.GetMinimum(), *prev = NULL;
 
@@ -236,11 +236,11 @@ uint32_t FNodeBuilder::AddMiniseg(int v1, int v2, uint32_t partner, uint32_t seg
 	return nseg;
 }
 
-uint32_t FNodeBuilder::CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex, int vertex2) {
+uint32_t FNodeBuilder::CheckLoopStart(znbx_I16F16 dx, znbx_I16F16 dy, int vertex, int vertex2) {
 	FPrivVert* v = &Vertices[vertex];
-	zdbsp_Angle splitAngle = PointToAngle(dx, dy);
+	znbx_Angle splitAngle = PointToAngle(dx, dy);
 	uint32_t segnum;
-	zdbsp_Angle bestang;
+	znbx_Angle bestang;
 	uint32_t bestseg;
 
 	// Find the seg ending at this vertex that forms the smallest angle
@@ -250,8 +250,8 @@ uint32_t FNodeBuilder::CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vert
 	bestseg = UINT_MAX;
 	while (segnum != UINT_MAX) {
 		FPrivSeg* seg = &Segs[segnum];
-		zdbsp_Angle segAngle = PointToAngle(Vertices[seg->v1].x - v->x, Vertices[seg->v1].y - v->y);
-		zdbsp_Angle diff = splitAngle - segAngle;
+		znbx_Angle segAngle = PointToAngle(Vertices[seg->v1].x - v->x, Vertices[seg->v1].y - v->y);
+		znbx_Angle diff = splitAngle - segAngle;
 
 		if (diff < ANGLE_EPSILON &&
 			PointOnSide(Vertices[seg->v1].x, Vertices[seg->v1].y, v->x, v->y, dx, dy) == 0) {
@@ -275,8 +275,8 @@ uint32_t FNodeBuilder::CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vert
 		if (seg->v2 == vertex2) {
 			return UINT_MAX;
 		}
-		zdbsp_Angle segAngle = PointToAngle(Vertices[seg->v2].x - v->x, Vertices[seg->v2].y - v->y);
-		zdbsp_Angle diff = splitAngle - segAngle;
+		znbx_Angle segAngle = PointToAngle(Vertices[seg->v2].x - v->x, Vertices[seg->v2].y - v->y);
+		znbx_Angle diff = splitAngle - segAngle;
 		if (diff < bestang && seg->partner != bestseg) {
 			return UINT_MAX;
 		}
@@ -285,11 +285,11 @@ uint32_t FNodeBuilder::CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vert
 	return bestseg;
 }
 
-uint32_t FNodeBuilder::CheckLoopEnd(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex) {
+uint32_t FNodeBuilder::CheckLoopEnd(znbx_I16F16 dx, znbx_I16F16 dy, int vertex) {
 	FPrivVert* v = &Vertices[vertex];
-	zdbsp_Angle splitAngle = PointToAngle(dx, dy) + ANGLE_180;
+	znbx_Angle splitAngle = PointToAngle(dx, dy) + ANGLE_180;
 	uint32_t segnum;
-	zdbsp_Angle bestang;
+	znbx_Angle bestang;
 	uint32_t bestseg;
 
 	// Find the seg starting at this vertex that forms the smallest angle
@@ -299,8 +299,8 @@ uint32_t FNodeBuilder::CheckLoopEnd(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex
 	bestseg = UINT_MAX;
 	while (segnum != UINT_MAX) {
 		FPrivSeg* seg = &Segs[segnum];
-		zdbsp_Angle segAngle = PointToAngle(Vertices[seg->v2].x - v->x, Vertices[seg->v2].y - v->y);
-		zdbsp_Angle diff = segAngle - splitAngle;
+		znbx_Angle segAngle = PointToAngle(Vertices[seg->v2].x - v->x, Vertices[seg->v2].y - v->y);
+		znbx_Angle diff = segAngle - splitAngle;
 
 		if (diff < ANGLE_EPSILON &&
 			PointOnSide(Vertices[seg->v1].x, Vertices[seg->v1].y, v->x, v->y, dx, dy) == 0) {
@@ -321,8 +321,8 @@ uint32_t FNodeBuilder::CheckLoopEnd(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex
 	segnum = v->segs2;
 	while (segnum != UINT_MAX) {
 		FPrivSeg* seg = &Segs[segnum];
-		zdbsp_Angle segAngle = PointToAngle(Vertices[seg->v1].x - v->x, Vertices[seg->v1].y - v->y);
-		zdbsp_Angle diff = segAngle - splitAngle;
+		znbx_Angle segAngle = PointToAngle(Vertices[seg->v1].x - v->x, Vertices[seg->v1].y - v->y);
+		znbx_Angle diff = segAngle - splitAngle;
 		if (diff < bestang && seg->partner != bestseg) {
 			return UINT_MAX;
 		}

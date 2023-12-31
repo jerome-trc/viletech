@@ -347,7 +347,7 @@ FWadWriter& FWadWriter::operator<<(uint32_t val) {
 	return *this;
 }
 
-FWadWriter& FWadWriter::operator<<(zdbsp_I16F16 val) {
+FWadWriter& FWadWriter::operator<<(znbx_I16F16 val) {
 	val = little_long(val);
 	AddToLump((uint8_t*)&val, 4);
 	return *this;

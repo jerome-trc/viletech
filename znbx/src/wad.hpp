@@ -46,7 +46,7 @@ public:
 	void SafeRead(void* buffer, size_t size);
 
 	template<class T>
-	friend void ReadLump(zdbsp_SliceU8 slice, T*& data, int32_t& size);
+	friend void ReadLump(znbx_SliceU8 slice, T*& data, int32_t& size);
 
 	// VC++ 6 does not support template member functions in non-template classes!
 	template<class T>
@@ -60,7 +60,7 @@ private:
 };
 
 template<class T>
-void read_lump(zdbsp_SliceU8 slice, T*& data, int32_t& size) {
+void read_lump(znbx_SliceU8 slice, T*& data, int32_t& size) {
 	size = slice.len / sizeof(T);
 	data = new T[size];
 	memcpy(data, slice.ptr, size * sizeof(T));
@@ -103,7 +103,7 @@ public:
 	FWadWriter& operator<<(uint16_t);
 	FWadWriter& operator<<(int16_t);
 	FWadWriter& operator<<(uint32_t);
-	FWadWriter& operator<<(zdbsp_I16F16);
+	FWadWriter& operator<<(znbx_I16F16);
 
 private:
 	TArray<WadLump> Lumps;

@@ -3,7 +3,7 @@
 #include "doomdata.hpp"
 #include "tarray.hpp"
 
-#include "zdbsp.h"
+#include "znbx.h"
 
 struct FEventInfo {
 	int Vertex;
@@ -53,26 +53,26 @@ private:
 };
 
 struct FSimpleVert {
-	zdbsp_I16F16 x, y;
+	znbx_I16F16 x, y;
 };
 
 extern "C" {
-int ClassifyLine2(zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
+int ClassifyLine2(znbx_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]);
 #ifndef DISABLE_SSE
 int ClassifyLineSSE1(
-	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+	znbx_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
 );
 int ClassifyLineSSE2(
-	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+	znbx_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
 );
 #ifdef BACKPATCH
 #ifdef __GNUC__
 int ClassifyLineBackpatch(
-	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+	znbx_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
 ) __attribute__((noinline));
 #else
 int __declspec(noinline) ClassifyLineBackpatch(
-	zdbsp_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
+	znbx_NodeFxp& node, const FSimpleVert* v1, const FSimpleVert* v2, int sidev[2]
 );
 #endif
 #endif
@@ -92,8 +92,8 @@ class FNodeBuilder {
 		int loopnum; // loop number for split avoidance (0 means splitting is okay)
 		uint32_t partner; // seg on back side
 		uint32_t storedseg; // seg # in the GL_SEGS lump
-		zdbsp_Angle angle;
-		zdbsp_I16F16 offset;
+		znbx_Angle angle;
+		znbx_I16F16 offset;
 
 		int planenum;
 		bool planefront;
@@ -112,7 +112,7 @@ class FNodeBuilder {
 	};
 
 	struct FSimpleLine {
-		zdbsp_I16F16 x, y, dx, dy;
+		znbx_I16F16 x, y, dx, dy;
 	};
 
 	union USegPtr {
@@ -129,7 +129,7 @@ class FNodeBuilder {
 	// Like a blockmap, but for vertices instead of lines
 	class FVertexMap {
 	public:
-		FVertexMap(FNodeBuilder& builder, zdbsp_I16F16 minx, zdbsp_I16F16 miny, zdbsp_I16F16 maxx, zdbsp_I16F16 maxy);
+		FVertexMap(FNodeBuilder& builder, znbx_I16F16 minx, znbx_I16F16 miny, znbx_I16F16 maxx, znbx_I16F16 maxy);
 		~FVertexMap();
 
 		int SelectVertexExact(FPrivVert& vert);
@@ -139,7 +139,7 @@ class FNodeBuilder {
 		FNodeBuilder& MyBuilder;
 		TArray<int>* VertexGrid;
 
-		zdbsp_I16F16 MinX, MinY, MaxX, MaxY;
+		znbx_I16F16 MinX, MinY, MaxX, MaxY;
 		int BlocksWide, BlocksTall;
 
 		enum {
@@ -150,7 +150,7 @@ class FNodeBuilder {
 		};
 
 		int InsertVertex(FPrivVert& vert);
-		inline int GetBlock(zdbsp_I16F16 x, zdbsp_I16F16 y) {
+		inline int GetBlock(znbx_I16F16 x, znbx_I16F16 y) {
 			assert(x >= MinX);
 			assert(y >= MinY);
 			assert(x <= MaxX);
@@ -165,7 +165,7 @@ class FNodeBuilder {
 public:
 	struct FPolyStart {
 		int polynum;
-		zdbsp_I16F16 x, y;
+		znbx_I16F16 x, y;
 	};
 
 	int32_t max_segs = 64, split_cost = 8, aa_pref = 16;
@@ -180,22 +180,22 @@ public:
 
 	~FNodeBuilder();
 
-	void GetVertices(zdbsp_VertexEx*& verts, int32_t& count);
+	void GetVertices(znbx_VertexEx*& verts, int32_t& count);
 	void GetNodes(
-		zdbsp_NodeEx*& nodes,
+		znbx_NodeEx*& nodes,
 		int32_t& nodeCount,
-		zdbsp_SegEx*& segs,
+		znbx_SegEx*& segs,
 		int32_t& segCount,
-		zdbsp_SubsectorEx*& ssecs,
+		znbx_SubsectorEx*& ssecs,
 		int32_t& subCount
 	);
 
 	void GetGLNodes(
-		zdbsp_NodeEx*& nodes,
+		znbx_NodeEx*& nodes,
 		int32_t& nodeCount,
-		zdbsp_SegGlEx*& segs,
+		znbx_SegGlEx*& segs,
 		int32_t& segCount,
-		zdbsp_SubsectorEx*& ssecs,
+		znbx_SubsectorEx*& ssecs,
 		int32_t& subCount
 	);
 
@@ -208,8 +208,8 @@ public:
 private:
 	FVertexMap* VertexMap;
 
-	TArray<zdbsp_NodeFxp> Nodes;
-	TArray<zdbsp_SubsectorEx> Subsectors;
+	TArray<znbx_NodeFxp> Nodes;
+	TArray<znbx_SubsectorEx> Subsectors;
 	TArray<uint32_t> SubsectorSets;
 	TArray<FPrivSeg> Segs;
 	TArray<FPrivVert> Vertices;
@@ -233,23 +233,23 @@ private:
 	int SegsStuffed;
 	const char* MapName;
 
-	void FindUsedVertices(zdbsp_VertexEx* vertices, int max);
+	void FindUsedVertices(znbx_VertexEx* vertices, int max);
 	void BuildTree();
 	void MakeSegsFromSides();
 	int CreateSeg(int linenum, int sidenum);
 	void GroupSegPlanes();
 	void FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolyStart>& anchors);
-	bool GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]);
+	bool GetPolyExtents(int polynum, znbx_I16F16 bbox[4]);
 	int MarkLoop(uint32_t firstseg, int loopnum);
-	void AddSegToBBox(zdbsp_I16F16 bbox[4], const FPrivSeg* seg);
-	uint32_t CreateNode(uint32_t set, unsigned int count, zdbsp_I16F16 bbox[4]);
-	uint32_t CreateSubsector(uint32_t set, zdbsp_I16F16 bbox[4]);
+	void AddSegToBBox(znbx_I16F16 bbox[4], const FPrivSeg* seg);
+	uint32_t CreateNode(uint32_t set, unsigned int count, znbx_I16F16 bbox[4]);
+	uint32_t CreateSubsector(uint32_t set, znbx_I16F16 bbox[4]);
 	void CreateSubsectorsForReal();
-	bool CheckSubsector(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg);
-	bool CheckSubsectorOverlappingSegs(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg);
+	bool CheckSubsector(uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg);
+	bool CheckSubsectorOverlappingSegs(uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg);
 	void DoGLSegSplit(
 		uint32_t set,
-		zdbsp_NodeFxp& node,
+		znbx_NodeFxp& node,
 		uint32_t splitseg,
 		uint32_t& outset0,
 		uint32_t& outset1,
@@ -258,11 +258,11 @@ private:
 		int sidev1,
 		bool hack
 	);
-	bool ShoveSegBehind(uint32_t set, zdbsp_NodeFxp& node, uint32_t seg, uint32_t mate);
-	int SelectSplitter(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg, int step, bool nosplit);
+	bool ShoveSegBehind(uint32_t set, znbx_NodeFxp& node, uint32_t seg, uint32_t mate);
+	int SelectSplitter(uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg, int step, bool nosplit);
 	void SplitSegs(
 		uint32_t set,
-		zdbsp_NodeFxp& node,
+		znbx_NodeFxp& node,
 		uint32_t splitseg,
 		uint32_t& outset0,
 		uint32_t& outset1,
@@ -270,7 +270,7 @@ private:
 		unsigned int& count1
 	);
 	uint32_t SplitSeg(uint32_t segnum, int splitvert, int v1InFront);
-	int Heuristic(zdbsp_NodeFxp& node, uint32_t set, bool honorNoSplit);
+	int Heuristic(znbx_NodeFxp& node, uint32_t set, bool honorNoSplit);
 
 	// Returns:
 	//	0 = seg is in front
@@ -278,45 +278,45 @@ private:
 	// -1 = seg cuts the node
 
 	inline int ClassifyLine(
-		zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
+		znbx_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
 	);
 
-	void FixSplitSharers(const zdbsp_NodeFxp& node);
-	double AddIntersection(const zdbsp_NodeFxp& node, int vertex);
-	void AddMinisegs(const zdbsp_NodeFxp& node, uint32_t splitseg, uint32_t& fset, uint32_t& rset);
-	uint32_t CheckLoopStart(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex1, int vertex2);
-	uint32_t CheckLoopEnd(zdbsp_I16F16 dx, zdbsp_I16F16 dy, int vertex2);
+	void FixSplitSharers(const znbx_NodeFxp& node);
+	double AddIntersection(const znbx_NodeFxp& node, int vertex);
+	void AddMinisegs(const znbx_NodeFxp& node, uint32_t splitseg, uint32_t& fset, uint32_t& rset);
+	uint32_t CheckLoopStart(znbx_I16F16 dx, znbx_I16F16 dy, int vertex1, int vertex2);
+	uint32_t CheckLoopEnd(znbx_I16F16 dx, znbx_I16F16 dy, int vertex2);
 	void RemoveSegFromVert1(uint32_t segnum, int vertnum);
 	void RemoveSegFromVert2(uint32_t segnum, int vertnum);
 	uint32_t AddMiniseg(int v1, int v2, uint32_t partner, uint32_t seg1, uint32_t splitseg);
-	void SetNodeFromSeg(zdbsp_NodeFxp& node, const FPrivSeg* pseg) const;
+	void SetNodeFromSeg(znbx_NodeFxp& node, const FPrivSeg* pseg) const;
 
 	int RemoveMinisegs(
-		zdbsp_NodeEx* nodes,
-		TArray<zdbsp_SegEx>& segs,
-		zdbsp_SubsectorEx* subs,
+		znbx_NodeEx* nodes,
+		TArray<znbx_SegEx>& segs,
+		znbx_SubsectorEx* subs,
 		int node,
 		short bbox[4]
 	);
-	int StripMinisegs(TArray<zdbsp_SegEx>& segs, int subsector, short bbox[4]);
+	int StripMinisegs(TArray<znbx_SegEx>& segs, int subsector, short bbox[4]);
 	void AddSegToShortBBox(short bbox[4], const FPrivSeg* seg);
-	int CloseSubsector(TArray<zdbsp_SegGlEx>& segs, int subsector);
-	uint32_t PushGLSeg(TArray<zdbsp_SegGlEx>& segs, const FPrivSeg* seg);
-	void PushConnectingGLSeg(int subsector, TArray<zdbsp_SegGlEx>& segs, int v1, int v2);
+	int CloseSubsector(TArray<znbx_SegGlEx>& segs, int subsector);
+	uint32_t PushGLSeg(TArray<znbx_SegGlEx>& segs, const FPrivSeg* seg);
+	void PushConnectingGLSeg(int subsector, TArray<znbx_SegGlEx>& segs, int v1, int v2);
 	int OutputDegenerateSubsector(
-		TArray<zdbsp_SegGlEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
+		TArray<znbx_SegGlEx>& segs, int subsector, bool bForward, double lastdot, FPrivSeg*& prev
 	);
 
 	static int SortSegs(const void* a, const void* b);
 
-	double InterceptVector(const zdbsp_NodeFxp& splitter, const FPrivSeg& seg);
+	double InterceptVector(const znbx_NodeFxp& splitter, const FPrivSeg& seg);
 
 	void PrintSet(int l, uint32_t set);
-	void DumpNodes(zdbsp_NodeEx* outNodes, int nodeCount);
+	void DumpNodes(znbx_NodeEx* outNodes, int nodeCount);
 };
 
 // Points within this distance of a line will be considered on the line.
-// Units are in zdbsp_I16F16s.
+// Units are in znbx_I16F16s.
 const double SIDE_EPSILON = 6.5536;
 
 /// Vertices within this distance of each other will be considered as the same vertex.
@@ -350,7 +350,7 @@ inline int FNodeBuilder::PointOnSide(int x, int y, int x1, int y1, int dx, int d
 }
 
 inline int FNodeBuilder::ClassifyLine(
-	zdbsp_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
+	znbx_NodeFxp& node, const FPrivVert* v1, const FPrivVert* v2, int sidev[2]
 ) {
 	return ClassifyLine2(node, v1, v2, sidev);
 }

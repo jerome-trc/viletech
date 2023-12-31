@@ -12,7 +12,7 @@ members = [
 	"vfs",
 	"vilify",
 	"wadload",
-	"zdbsp",
+	"znbx",
 ]
 default-members = ["client"]
 # Resolver version 2 is needed for WGPU and Bevy.

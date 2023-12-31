@@ -24,7 +24,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "processor.hpp"
 #include "blockmapbuilder.hpp"
 #include "wad.hpp"
-#include "zdbsp.h"
+#include "znbx.h"
 #include <cstring>
 
 enum {
@@ -69,7 +69,7 @@ FLevel::~FLevel() {
 		delete[] OrgSectorMap;
 }
 
-FProcessor::FProcessor(zdbsp_Level level, bool extended) {
+FProcessor::FProcessor(znbx_Level level, bool extended) {
 	this->is_udmf = false;
 
 	if (!extended) {
@@ -94,15 +94,15 @@ FProcessor::FProcessor(zdbsp_Level level, bool extended) {
 	this->finish_load();
 }
 
-FProcessor::FProcessor(zdbsp_LevelUdmf level) {
+FProcessor::FProcessor(znbx_LevelUdmf level) {
 	this->is_udmf = true;
 	strcpy(this->level_name, level.name);
 	this->ParseTextMap(level.textmap);
 	this->finish_load();
 }
 
-void FProcessor::load_things(zdbsp_SliceU8 slice) {
-	zdbsp_ThingRaw* mt;
+void FProcessor::load_things(znbx_SliceU8 slice) {
+	znbx_ThingRaw* mt;
 	int32_t thing_count;
 	read_lump(slice, mt, thing_count);
 
@@ -126,8 +126,8 @@ void FProcessor::load_things(zdbsp_SliceU8 slice) {
 	delete[] mt;
 }
 
-void FProcessor::load_things_ext(zdbsp_SliceU8 slice) {
-	zdbsp_Thing2* things;
+void FProcessor::load_things_ext(znbx_SliceU8 slice) {
+	znbx_Thing2* things;
 	int32_t thing_count;
 	read_lump(slice, things, thing_count);
 
@@ -175,7 +175,7 @@ void FProcessor::finish_load() {
 	}
 }
 
-void FProcessor::load_lines(zdbsp_SliceU8 slice) {
+void FProcessor::load_lines(znbx_SliceU8 slice) {
 	int32_t line_count;
 	MapLineDef* data;
 	read_lump<MapLineDef>(slice, data, line_count);
@@ -203,7 +203,7 @@ void FProcessor::load_lines(zdbsp_SliceU8 slice) {
 	delete[] data;
 }
 
-void FProcessor::load_lines_ext(zdbsp_SliceU8 slice) {
+void FProcessor::load_lines_ext(znbx_SliceU8 slice) {
 	int32_t line_count;
 	MapLineDef2* data;
 
@@ -233,10 +233,10 @@ void FProcessor::load_lines_ext(zdbsp_SliceU8 slice) {
 	delete[] data;
 }
 
-void FProcessor::load_vertices(zdbsp_SliceU8 slice) {
-	zdbsp_VertexRaw* data;
+void FProcessor::load_vertices(znbx_SliceU8 slice) {
+	znbx_VertexRaw* data;
 	read_lump(slice, data, this->Level.NumVertices);
-	this->Level.Vertices = new zdbsp_VertexEx[this->Level.NumVertices];
+	this->Level.Vertices = new znbx_VertexEx[this->Level.NumVertices];
 
 	for (int i = 0; i < this->Level.NumVertices; ++i) {
 		this->Level.Vertices[i].x = little_short(data[i].x) << FRACBITS;
@@ -245,7 +245,7 @@ void FProcessor::load_vertices(zdbsp_SliceU8 slice) {
 	}
 }
 
-void FProcessor::load_sides(zdbsp_SliceU8 slice) {
+void FProcessor::load_sides(znbx_SliceU8 slice) {
 	MapSideDef* data;
 	int32_t side_count;
 	read_lump(slice, data, side_count);
@@ -268,7 +268,7 @@ void FProcessor::load_sides(zdbsp_SliceU8 slice) {
 	delete[] data;
 }
 
-void FProcessor::load_sectors(zdbsp_SliceU8 slice) {
+void FProcessor::load_sectors(znbx_SliceU8 slice) {
 	MapSector* data;
 	int32_t sector_count;
 	read_lump(slice, data, sector_count);
@@ -280,7 +280,7 @@ void FProcessor::load_sectors(zdbsp_SliceU8 slice) {
 }
 
 void FLevel::find_map_bounds() {
-	zdbsp_I16F16 minx, maxx, miny, maxy;
+	znbx_I16F16 minx, maxx, miny, maxy;
 
 	minx = maxx = Vertices[0].x;
 	miny = maxy = Vertices[0].y;
@@ -480,7 +480,7 @@ void FProcessor::get_poly_spots() {
 	}
 }
 
-void FProcessor::Process(const zdbsp_NodeConfig* const config) {
+void FProcessor::Process(const znbx_NodeConfig* const config) {
 	if (Level.NumLines() == 0 || Level.NumSides() == 0 || Level.NumSectors() == 0 ||
 		Level.NumVertices == 0) {
 		return;
@@ -602,44 +602,44 @@ void FProcessor::Process(const zdbsp_NodeConfig* const config) {
 		Level.Reject = NULL;
 
 		switch (this->reject_mode) {
-		case ZDBSP_ERM_REBUILD:
+		case ZNBX_ERM_REBUILD:
 #if 0
 			FRejectBuilder reject(Level);
 			Level.Reject = reject.GetReject();
 #endif
 			printf("   Rebuilding the reject is unsupported.\n");
 			// Intentional fall-through
-		case ZDBSP_ERM_DONTTOUCH: {
+		case ZNBX_ERM_DONTTOUCH: {
 #warning "TODO: handle this case"
 		} break;
 
-		case ZDBSP_ERM_CREATE0:
+		case ZNBX_ERM_CREATE0:
 			break;
 
-		case ZDBSP_ERM_CREATEZEROES:
+		case ZNBX_ERM_CREATEZEROES:
 			Level.Reject = new uint8_t[Level.RejectSize];
 			memset(Level.Reject, 0, Level.RejectSize);
 			break;
 		}
 	}
 
-	this->node_version = ZDBSP_NODEVERS_UNKNOWN;
+	this->node_version = ZNBX_NODEVERS_UNKNOWN;
 
 	if (this->Level.GLNodes != nullptr && this->Level.NumGLNodes > 0) {
 		bool frac_splitters =
 			this->CheckForFracSplitters(this->Level.GLNodes, this->Level.NumGLNodes);
 
 		if (frac_splitters) {
-			this->node_version = ZDBSP_NODEVERS_3;
+			this->node_version = ZNBX_NODEVERS_3;
 		} else if (this->Level.NumLines() < 65'535) {
-			this->node_version = ZDBSP_NODEVERS_1;
+			this->node_version = ZNBX_NODEVERS_1;
 		} else {
-			this->node_version = ZDBSP_NODEVERS_2;
+			this->node_version = ZNBX_NODEVERS_2;
 		}
 	}
 }
 
-zdbsp_NodeVersion FProcessor::get_node_version() const {
+znbx_NodeVersion FProcessor::get_node_version() const {
 	return this->node_version;
 }
 
@@ -665,12 +665,12 @@ uint8_t* FProcessor::fix_reject(const uint8_t* oldreject) {
 	return newreject;
 }
 
-zdbsp_NodeEx* FProcessor::NodesToEx(const zdbsp_NodeRaw* nodes, int count) {
+znbx_NodeEx* FProcessor::NodesToEx(const znbx_NodeRaw* nodes, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	zdbsp_NodeEx* Nodes = new zdbsp_NodeEx[Level.NumNodes];
+	znbx_NodeEx* Nodes = new znbx_NodeEx[Level.NumNodes];
 	int x;
 
 	for (x = 0; x < count; ++x) {
@@ -692,12 +692,12 @@ zdbsp_NodeEx* FProcessor::NodesToEx(const zdbsp_NodeRaw* nodes, int count) {
 	return Nodes;
 }
 
-zdbsp_SubsectorEx* FProcessor::SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count) {
+znbx_SubsectorEx* FProcessor::SubsectorsToEx(const znbx_SubsectorRaw* ssec, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	zdbsp_SubsectorEx* out = new zdbsp_SubsectorEx[Level.NumSubsectors];
+	znbx_SubsectorEx* out = new znbx_SubsectorEx[Level.NumSubsectors];
 	int x;
 
 	for (x = 0; x < count; ++x) {
@@ -708,12 +708,12 @@ zdbsp_SubsectorEx* FProcessor::SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, in
 	return out;
 }
 
-zdbsp_SegGlEx* FProcessor::SegGLsToEx(const zdbsp_SegGl* segs, int count) {
+znbx_SegGlEx* FProcessor::SegGLsToEx(const znbx_SegGl* segs, int count) {
 	if (count == 0) {
 		return NULL;
 	}
 
-	zdbsp_SegGlEx* out = new zdbsp_SegGlEx[count];
+	znbx_SegGlEx* out = new znbx_SegGlEx[count];
 	int x;
 
 	for (x = 0; x < count; ++x) {
@@ -729,7 +729,7 @@ zdbsp_SegGlEx* FProcessor::SegGLsToEx(const zdbsp_SegGl* segs, int count) {
 
 void FProcessor::WriteVertices(FWadWriter& out, int count) {
 	int i;
-	zdbsp_VertexEx* vertdata = Level.Vertices;
+	znbx_VertexEx* vertdata = Level.Vertices;
 
 	short* verts = new short[count * 2];
 
@@ -811,11 +811,11 @@ void FProcessor::WriteSectors(FWadWriter& out) {
 
 void FProcessor::WriteSegs(FWadWriter& out) {
 	int i;
-	zdbsp_SegRaw* segdata;
+	znbx_SegRaw* segdata;
 
 	assert(Level.NumVertices < 65536);
 
-	segdata = new zdbsp_SegRaw[Level.NumSegs];
+	segdata = new znbx_SegRaw[Level.NumSegs];
 
 	for (i = 0; i < Level.NumSegs; ++i) {
 		segdata[i].v1 = little_short(uint16_t(Level.Segs[i].v1));
@@ -839,12 +839,12 @@ void FProcessor::WriteSSectors(FWadWriter& out) const {
 }
 
 void FProcessor::WriteSSectors2(
-	FWadWriter& out, const char* name, const zdbsp_SubsectorEx* subs, int count
+	FWadWriter& out, const char* name, const znbx_SubsectorEx* subs, int count
 ) const {
 	int i;
-	zdbsp_SubsectorRaw* ssec;
+	znbx_SubsectorRaw* ssec;
 
-	ssec = new zdbsp_SubsectorRaw[count];
+	ssec = new znbx_SubsectorRaw[count];
 
 	for (i = 0; i < count; ++i) {
 		ssec[i].first_line = little_short((uint16_t)subs[i].first_line);
@@ -859,12 +859,12 @@ void FProcessor::WriteSSectors2(
 }
 
 void FProcessor::WriteSSectors5(
-	FWadWriter& out, const char* name, const zdbsp_SubsectorEx* subs, int count
+	FWadWriter& out, const char* name, const znbx_SubsectorEx* subs, int count
 ) const {
 	int i;
-	zdbsp_SubsectorEx* ssec;
+	znbx_SubsectorEx* ssec;
 
-	ssec = new zdbsp_SubsectorEx[count];
+	ssec = new znbx_SubsectorEx[count];
 
 	for (i = 0; i < count; ++i) {
 		ssec[i].first_line = little_long(subs[i].first_line);
@@ -879,12 +879,12 @@ void FProcessor::WriteNodes(FWadWriter& out) const {
 }
 
 void FProcessor::WriteNodes2(
-	FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count
+	FWadWriter& out, const char* name, const znbx_NodeEx* zaNodes, int count
 ) const {
 	int i, j;
 	short *onodes, *nodes;
 
-	nodes = onodes = new short[count * sizeof(zdbsp_NodeRaw) / 2];
+	nodes = onodes = new short[count * sizeof(znbx_NodeRaw) / 2];
 
 	for (i = 0; i < count; ++i) {
 		nodes[0] = little_short(zaNodes[i].x >> 16);
@@ -906,7 +906,7 @@ void FProcessor::WriteNodes2(
 			}
 		}
 	}
-	out.WriteLump(name, onodes, count * sizeof(zdbsp_NodeRaw));
+	out.WriteLump(name, onodes, count * sizeof(znbx_NodeRaw));
 	delete[] onodes;
 
 	if (count >= 32768) {
@@ -915,10 +915,10 @@ void FProcessor::WriteNodes2(
 }
 
 void FProcessor::WriteNodes5(
-	FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count
+	FWadWriter& out, const char* name, const znbx_NodeEx* zaNodes, int count
 ) const {
 	int i, j;
-	zdbsp_NodeExO* const nodes = new zdbsp_NodeExO[count * sizeof(zdbsp_NodeEx)];
+	znbx_NodeExO* const nodes = new znbx_NodeExO[count * sizeof(znbx_NodeEx)];
 
 	for (i = 0; i < count; ++i) {
 		const short* inodes = &zaNodes[i].bbox[0][0];
@@ -934,12 +934,12 @@ void FProcessor::WriteNodes5(
 			nodes[i].children[j] = little_long(zaNodes[i].children[j]);
 		}
 	}
-	out.WriteLump(name, nodes, count * sizeof(zdbsp_NodeEx));
+	out.WriteLump(name, nodes, count * sizeof(znbx_NodeEx));
 	delete[] nodes;
 }
 
 void FProcessor::WriteBlockmap(FWadWriter& out) {
-	if (this->blockmap_mode == ZDBSP_EBM_CREATE0) {
+	if (this->blockmap_mode == ZNBX_EBM_CREATE0) {
 		out.CreateLabel("BLOCKMAP");
 		return;
 	}
@@ -977,7 +977,7 @@ void FProcessor::WriteBlockmap(FWadWriter& out) {
 }
 
 void FProcessor::WriteReject(FWadWriter& out) {
-	if (this->reject_mode == ZDBSP_ERM_CREATE0 || Level.Reject == NULL) {
+	if (this->reject_mode == ZNBX_ERM_CREATE0 || Level.Reject == NULL) {
 		out.CreateLabel("REJECT");
 	} else {
 		out.WriteLump("REJECT", Level.Reject, Level.RejectSize);
@@ -986,9 +986,9 @@ void FProcessor::WriteReject(FWadWriter& out) {
 
 void FProcessor::WriteGLVertices(FWadWriter& out, bool v5) {
 	int i, count = (Level.NumGLVertices - Level.NumOrgVerts);
-	zdbsp_VertexEx* vertdata = Level.GLVertices + Level.NumOrgVerts;
+	znbx_VertexEx* vertdata = Level.GLVertices + Level.NumOrgVerts;
 
-	zdbsp_I16F16* verts = new zdbsp_I16F16[count * 2 + 1];
+	znbx_I16F16* verts = new znbx_I16F16[count * 2 + 1];
 	char* magic = (char*)verts;
 	magic[0] = 'g';
 	magic[1] = 'N';
@@ -1013,10 +1013,10 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 		return;
 	}
 	int i, count;
-	zdbsp_SegGl* segdata;
+	znbx_SegGl* segdata;
 
 	count = Level.NumGLSegs;
-	segdata = new zdbsp_SegGl[count];
+	segdata = new znbx_SegGl[count];
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
@@ -1035,7 +1035,7 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 		segdata[i].side = little_short(Level.GLSegs[i].side);
 		segdata[i].partner = little_short((uint16_t)Level.GLSegs[i].partner);
 	}
-	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGl) * count);
+	out.WriteLump("GL_SEGS", segdata, sizeof(znbx_SegGl) * count);
 	delete[] segdata;
 
 	if (count >= 65536) {
@@ -1047,10 +1047,10 @@ void FProcessor::WriteGLSegs(FWadWriter& out, bool v5) {
 
 void FProcessor::WriteGLSegs5(FWadWriter& out) {
 	int i, count;
-	zdbsp_SegGlEx* segdata;
+	znbx_SegGlEx* segdata;
 
 	count = Level.NumGLSegs;
-	segdata = new zdbsp_SegGlEx[count];
+	segdata = new znbx_SegGlEx[count];
 
 	for (i = 0; i < count; ++i) {
 		if (Level.GLSegs[i].v1 < (uint32_t)Level.NumOrgVerts) {
@@ -1067,7 +1067,7 @@ void FProcessor::WriteGLSegs5(FWadWriter& out) {
 		segdata[i].side = little_short(Level.GLSegs[i].side);
 		segdata[i].partner = little_long(Level.GLSegs[i].partner);
 	}
-	out.WriteLump("GL_SEGS", segdata, sizeof(zdbsp_SegGlEx) * count);
+	out.WriteLump("GL_SEGS", segdata, sizeof(znbx_SegGlEx) * count);
 	delete[] segdata;
 }
 
@@ -1135,7 +1135,7 @@ void FProcessor::WriteGLBSPZ(FWadWriter& out, const char* label) {
 }
 
 void FProcessor::WriteVerticesZ(
-	ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts
+	ZLibOut& out, const znbx_VertexEx* verts, int orgverts, int newverts
 ) {
 	out << (uint32_t)orgverts << (uint32_t)newverts;
 
@@ -1144,7 +1144,7 @@ void FProcessor::WriteVerticesZ(
 	}
 }
 
-void FProcessor::WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs) {
+void FProcessor::WriteSubsectorsZ(ZLibOut& out, const znbx_SubsectorEx* subs, int numsubs) {
 	out << (uint32_t)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
@@ -1152,7 +1152,7 @@ void FProcessor::WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, i
 	}
 }
 
-void FProcessor::WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs) {
+void FProcessor::WriteSegsZ(ZLibOut& out, const znbx_SegEx* segs, int numsegs) {
 	out << (uint32_t)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
@@ -1161,7 +1161,7 @@ void FProcessor::WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs) 
 	}
 }
 
-void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever) {
+void FProcessor::WriteGLSegsZ(ZLibOut& out, const znbx_SegGlEx* segs, int numsegs, int nodever) {
 	out << (uint32_t)numsegs;
 
 	if (nodever < 2) {
@@ -1177,7 +1177,7 @@ void FProcessor::WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numse
 	}
 }
 
-void FProcessor::WriteNodesZ(ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever) {
+void FProcessor::WriteNodesZ(ZLibOut& out, const znbx_NodeEx* nodes, int numnodes, int nodever) {
 	out << (uint32_t)numnodes;
 
 	for (int i = 0; i < numnodes; ++i) {
@@ -1242,7 +1242,7 @@ void FProcessor::WriteGLBSPX(FWadWriter& out, const char* label) {
 }
 
 void FProcessor::WriteVerticesX(
-	FWadWriter& out, const zdbsp_VertexEx* verts, int orgverts, int newverts
+	FWadWriter& out, const znbx_VertexEx* verts, int orgverts, int newverts
 ) {
 	out << (uint32_t)orgverts << (uint32_t)newverts;
 
@@ -1251,7 +1251,7 @@ void FProcessor::WriteVerticesX(
 	}
 }
 
-void FProcessor::WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs) {
+void FProcessor::WriteSubsectorsX(FWadWriter& out, const znbx_SubsectorEx* subs, int numsubs) {
 	out << (uint32_t)numsubs;
 
 	for (int i = 0; i < numsubs; ++i) {
@@ -1259,7 +1259,7 @@ void FProcessor::WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs
 	}
 }
 
-void FProcessor::WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs) {
+void FProcessor::WriteSegsX(FWadWriter& out, const znbx_SegEx* segs, int numsegs) {
 	out << (uint32_t)numsegs;
 
 	for (int i = 0; i < numsegs; ++i) {
@@ -1269,7 +1269,7 @@ void FProcessor::WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numseg
 }
 
 void FProcessor::WriteGLSegsX(
-	FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever
+	FWadWriter& out, const znbx_SegGlEx* segs, int numsegs, int nodever
 ) {
 	out << (uint32_t)numsegs;
 
@@ -1287,7 +1287,7 @@ void FProcessor::WriteGLSegsX(
 }
 
 void FProcessor::WriteNodesX(
-	FWadWriter& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever
+	FWadWriter& out, const znbx_NodeEx* nodes, int numnodes, int nodever
 ) {
 	out << (uint32_t)numnodes;
 
@@ -1308,7 +1308,7 @@ void FProcessor::WriteNodesX(
 	}
 }
 
-bool FProcessor::CheckForFracSplitters(const zdbsp_NodeEx* nodes, int numnodes) const {
+bool FProcessor::CheckForFracSplitters(const znbx_NodeEx* nodes, int numnodes) const {
 	for (int i = 0; i < numnodes; ++i) {
 		if (0 != ((nodes[i].x | nodes[i].y | nodes[i].dx | nodes[i].dy) & 0x0000FFFF)) {
 			return true;
@@ -1399,7 +1399,7 @@ ZLibOut& ZLibOut::operator<<(uint32_t val) {
 	return *this;
 }
 
-ZLibOut& ZLibOut::operator<<(zdbsp_I16F16 val) {
+ZLibOut& ZLibOut::operator<<(znbx_I16F16 val) {
 	val = little_long(val);
 	Write((uint8_t*)&val, 4);
 	return *this;

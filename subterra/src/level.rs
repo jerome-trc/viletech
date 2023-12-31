@@ -2,7 +2,7 @@
 
 pub mod read;
 pub mod udmf;
-pub mod zdbsp;
+pub mod znbx;
 
 use util::Id8;
 

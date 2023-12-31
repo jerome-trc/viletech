@@ -37,7 +37,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define Printf printf
 #define STACK_ARGS
 
-#ifdef ZDBSP_DEBUG_VERBOSE
+#ifdef ZNBX_DEBUG_VERBOSE
 #define D(x) x
 #else
 #define D(x) \
@@ -69,7 +69,7 @@ FNodeBuilder::~FNodeBuilder() {
 }
 
 void FNodeBuilder::BuildTree() {
-	zdbsp_I16F16 bbox[4];
+	znbx_I16F16 bbox[4];
 
 	HackSeg = UINT_MAX;
 	HackMate = UINT_MAX;
@@ -77,8 +77,8 @@ void FNodeBuilder::BuildTree() {
 	CreateSubsectorsForReal();
 }
 
-uint32_t FNodeBuilder::CreateNode(uint32_t set, unsigned int count, zdbsp_I16F16 bbox[4]) {
-	zdbsp_NodeFxp node;
+uint32_t FNodeBuilder::CreateNode(uint32_t set, unsigned int count, znbx_I16F16 bbox[4]) {
+	znbx_NodeFxp node;
 	int skip, selstat;
 	uint32_t splitseg;
 
@@ -115,7 +115,7 @@ uint32_t FNodeBuilder::CreateNode(uint32_t set, unsigned int count, zdbsp_I16F16
 	}
 }
 
-uint32_t FNodeBuilder::CreateSubsector(uint32_t set, zdbsp_I16F16 bbox[4]) {
+uint32_t FNodeBuilder::CreateSubsector(uint32_t set, znbx_I16F16 bbox[4]) {
 	int ssnum, count;
 
 	bbox[BOXTOP] = bbox[BOXRIGHT] = INT_MIN;
@@ -175,7 +175,7 @@ void FNodeBuilder::CreateSubsectorsForReal() {
 	unsigned int i;
 
 	for (i = 0; i < SubsectorSets.Size(); ++i) {
-		zdbsp_SubsectorEx sub;
+		znbx_SubsectorEx sub;
 		uint32_t set = SubsectorSets[i];
 
 		sub.first_line = (uint32_t)SegList.Size();
@@ -261,7 +261,7 @@ int STACK_ARGS FNodeBuilder::SortSegs(const void* a, const void* b) {
 // a splitter is synthesized, and true is returned to continue processing
 // down this branch of the tree.
 
-bool FNodeBuilder::CheckSubsector(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg) {
+bool FNodeBuilder::CheckSubsector(uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg) {
 	int sec;
 	uint32_t seg;
 
@@ -315,7 +315,7 @@ bool FNodeBuilder::CheckSubsector(uint32_t set, zdbsp_NodeFxp& node, uint32_t& s
 // When creating GL nodes, we need to check for segs with the same start and
 // end vertices and split them into two subsectors.
 
-bool FNodeBuilder::CheckSubsectorOverlappingSegs(uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg) {
+bool FNodeBuilder::CheckSubsectorOverlappingSegs(uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg) {
 	int v1, v2;
 	uint32_t seg1, seg2;
 
@@ -352,7 +352,7 @@ bool FNodeBuilder::CheckSubsectorOverlappingSegs(uint32_t set, zdbsp_NodeFxp& no
 // seg in front of the splitter is partnered with a new miniseg on
 // the back so that the back will have two segs.
 
-bool FNodeBuilder::ShoveSegBehind(uint32_t set, zdbsp_NodeFxp& node, uint32_t seg, uint32_t mate) {
+bool FNodeBuilder::ShoveSegBehind(uint32_t set, znbx_NodeFxp& node, uint32_t seg, uint32_t mate) {
 	SetNodeFromSeg(node, &Segs[seg]);
 	HackSeg = seg;
 	HackMate = mate;
@@ -373,7 +373,7 @@ bool FNodeBuilder::ShoveSegBehind(uint32_t set, zdbsp_NodeFxp& node, uint32_t se
 // this set is a convex region. A result of -1 means that there were possible
 // splitters, but they all split segs we want to keep intact.
 int FNodeBuilder::SelectSplitter(
-	uint32_t set, zdbsp_NodeFxp& node, uint32_t& splitseg, int step, bool nosplit
+	uint32_t set, znbx_NodeFxp& node, uint32_t& splitseg, int step, bool nosplit
 ) {
 	int stepleft;
 	int bestvalue;
@@ -453,7 +453,7 @@ int FNodeBuilder::SelectSplitter(
 // true. A score of 0 means that the splitter does not split any of the segs
 // in the set.
 
-int FNodeBuilder::Heuristic(zdbsp_NodeFxp& node, uint32_t set, bool honorNoSplit) {
+int FNodeBuilder::Heuristic(znbx_NodeFxp& node, uint32_t set, bool honorNoSplit) {
 	// Set the initial score above 0 so that near vertex anti-weighting is less likely to produce a
 	// negative score.
 	int score = 1000000;
@@ -656,7 +656,7 @@ int FNodeBuilder::Heuristic(zdbsp_NodeFxp& node, uint32_t set, bool honorNoSplit
 
 void FNodeBuilder::DoGLSegSplit(
 	uint32_t set,
-	zdbsp_NodeFxp& node,
+	znbx_NodeFxp& node,
 	uint32_t splitseg,
 	uint32_t& outset0,
 	uint32_t& outset1,
@@ -703,7 +703,7 @@ void FNodeBuilder::DoGLSegSplit(
 
 void FNodeBuilder::SplitSegs(
 	uint32_t set,
-	zdbsp_NodeFxp& node,
+	znbx_NodeFxp& node,
 	uint32_t splitseg,
 	uint32_t& outset0,
 	uint32_t& outset1,
@@ -758,8 +758,8 @@ void FNodeBuilder::SplitSegs(
 			frac = InterceptVector(node, *seg);
 			newvert.x = Vertices[seg->v1].x;
 			newvert.y = Vertices[seg->v1].y;
-			newvert.x += zdbsp_I16F16(frac * (double(Vertices[seg->v2].x) - newvert.x));
-			newvert.y += zdbsp_I16F16(frac * (double(Vertices[seg->v2].y) - newvert.y));
+			newvert.x += znbx_I16F16(frac * (double(Vertices[seg->v2].x) - newvert.x));
+			newvert.y += znbx_I16F16(frac * (double(Vertices[seg->v2].y) - newvert.y));
 			vertnum = VertexMap->SelectVertexClose(newvert);
 
 			if (vertnum != (unsigned int)seg->v1 && vertnum != (unsigned int)seg->v2) {
@@ -850,7 +850,7 @@ void FNodeBuilder::SplitSegs(
 	count1 = _count1;
 }
 
-void FNodeBuilder::SetNodeFromSeg(zdbsp_NodeFxp& node, const FPrivSeg* pseg) const {
+void FNodeBuilder::SetNodeFromSeg(znbx_NodeFxp& node, const FPrivSeg* pseg) const {
 	if (pseg->planenum >= 0) {
 		FSimpleLine* pline = &Planes[pseg->planenum];
 		node.x = pline->x;
@@ -874,7 +874,7 @@ uint32_t FNodeBuilder::SplitSeg(uint32_t segnum, int splitvert, int v1InFront) {
 	dx = double(Vertices[splitvert].x - Vertices[newseg.v1].x);
 	dy = double(Vertices[splitvert].y - Vertices[newseg.v1].y);
 	if (v1InFront > 0) {
-		newseg.offset += zdbsp_I16F16(sqrt(dx * dx + dy * dy));
+		newseg.offset += znbx_I16F16(sqrt(dx * dx + dy * dy));
 
 		newseg.v1 = splitvert;
 		Segs[segnum].v2 = splitvert;
@@ -890,7 +890,7 @@ uint32_t FNodeBuilder::SplitSeg(uint32_t segnum, int splitvert, int v1InFront) {
 		Segs[segnum].nextforvert2 = Vertices[splitvert].segs2;
 		Vertices[splitvert].segs2 = segnum;
 	} else {
-		Segs[segnum].offset += zdbsp_I16F16(sqrt(dx * dx + dy * dy));
+		Segs[segnum].offset += znbx_I16F16(sqrt(dx * dx + dy * dy));
 
 		Segs[segnum].v1 = splitvert;
 		newseg.v2 = splitvert;
@@ -952,7 +952,7 @@ void FNodeBuilder::RemoveSegFromVert2(uint32_t segnum, int vertnum) {
 	}
 }
 
-double FNodeBuilder::InterceptVector(const zdbsp_NodeFxp& splitter, const FPrivSeg& seg) {
+double FNodeBuilder::InterceptVector(const znbx_NodeFxp& splitter, const FPrivSeg& seg) {
 	double v2x = (double)Vertices[seg.v1].x;
 	double v2y = (double)Vertices[seg.v1].y;
 	double v2dx = (double)Vertices[seg.v2].x - v2x;

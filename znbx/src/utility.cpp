@@ -31,7 +31,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 static const int PO_LINE_START = 1;
 static const int PO_LINE_EXPLICIT = 5;
 
-#ifdef ZDBSP_DEBUG_VERBOSE
+#ifdef ZNBX_DEBUG_VERBOSE
 #define D(x) x
 #else
 #define D(x) \
@@ -39,7 +39,7 @@ static const int PO_LINE_EXPLICIT = 5;
 	} while (0)
 #endif
 
-#ifdef ZDBSP_DEBUG_VERBOSE
+#ifdef ZNBX_DEBUG_VERBOSE
 #define P(x) x
 #define Printf printf
 #else
@@ -48,7 +48,7 @@ static const int PO_LINE_EXPLICIT = 5;
 	} while (0)
 #endif
 
-void FNodeBuilder::FindUsedVertices(zdbsp_VertexEx* oldverts, int max) {
+void FNodeBuilder::FindUsedVertices(znbx_VertexEx* oldverts, int max) {
 	int* map = new int[max];
 	int i;
 	FPrivVert newvert;
@@ -165,11 +165,11 @@ void FNodeBuilder::GroupSegPlanes() {
 
 	for (i = planenum = 0; i < (int)Segs.Size(); ++i) {
 		FPrivSeg* seg = &Segs[i];
-		zdbsp_I16F16 x1 = Vertices[seg->v1].x;
-		zdbsp_I16F16 y1 = Vertices[seg->v1].y;
-		zdbsp_I16F16 x2 = Vertices[seg->v2].x;
-		zdbsp_I16F16 y2 = Vertices[seg->v2].y;
-		zdbsp_Angle ang = PointToAngle(x2 - x1, y2 - y1);
+		znbx_I16F16 x1 = Vertices[seg->v1].x;
+		znbx_I16F16 y1 = Vertices[seg->v1].y;
+		znbx_I16F16 x2 = Vertices[seg->v2].x;
+		znbx_I16F16 y2 = Vertices[seg->v2].y;
+		znbx_Angle ang = PointToAngle(x2 - x1, y2 - y1);
 
 		if (ang >= 1u << 31)
 			ang += 1u << 31;
@@ -177,10 +177,10 @@ void FNodeBuilder::GroupSegPlanes() {
 		FPrivSeg* check = buckets[ang >>= 31 - bucketbits];
 
 		while (check != NULL) {
-			zdbsp_I16F16 cx1 = Vertices[check->v1].x;
-			zdbsp_I16F16 cy1 = Vertices[check->v1].y;
-			zdbsp_I16F16 cdx = Vertices[check->v2].x - cx1;
-			zdbsp_I16F16 cdy = Vertices[check->v2].y - cy1;
+			znbx_I16F16 cx1 = Vertices[check->v1].x;
+			znbx_I16F16 cy1 = Vertices[check->v1].y;
+			znbx_I16F16 cdx = Vertices[check->v2].x - cx1;
+			znbx_I16F16 cdy = Vertices[check->v2].y - cy1;
 			if (PointOnSide(x1, y1, cx1, cy1, cdx, cdy) == 0 &&
 				PointOnSide(x2, y2, cx1, cy1, cdx, cdy) == 0) {
 				break;
@@ -234,7 +234,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 
 	for (unsigned int i = 0; i < spots.Size(); ++i) {
 		FPolyStart* spot = &spots[i];
-		zdbsp_I16F16 bbox[4];
+		znbx_I16F16 bbox[4];
 
 		if (GetPolyExtents(spot->polynum, bbox)) {
 			FPolyStart* anchor;
@@ -248,8 +248,8 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 			}
 
 			if (j < anchors.Size()) {
-				zdbsp_VertexFxp mid;
-				zdbsp_VertexFxp center;
+				znbx_VertexFxp mid;
+				znbx_VertexFxp center;
 
 				mid.x = bbox[BOXLEFT] + (bbox[BOXRIGHT] - bbox[BOXLEFT]) / 2;
 				mid.y = bbox[BOXBOTTOM] + (bbox[BOXTOP] - bbox[BOXBOTTOM]) / 2;
@@ -259,7 +259,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 
 				// Scan right for the seg closest to the polyobject's center after it
 				// gets moved to its start spot.
-				zdbsp_I16F16 closestdist = FIXED_MAX;
+				znbx_I16F16 closestdist = FIXED_MAX;
 				uint32_t closestseg = 0;
 
 				P(Printf(
@@ -271,7 +271,7 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 					FPrivSeg* seg = &Segs[j];
 					FPrivVert* v1 = &Vertices[seg->v1];
 					FPrivVert* v2 = &Vertices[seg->v2];
-					zdbsp_I16F16 dy = v2->y - v1->y;
+					znbx_I16F16 dy = v2->y - v1->y;
 
 					if (dy == 0) { // Horizontal, so skip it
 						continue;
@@ -281,12 +281,12 @@ void FNodeBuilder::FindPolyContainers(TArray<FPolyStart>& spots, TArray<FPolySta
 						continue;
 					}
 
-					zdbsp_I16F16 dx = v2->x - v1->x;
+					znbx_I16F16 dx = v2->x - v1->x;
 
 					if (PointOnSide(center.x, center.y, v1->x, v1->y, dx, dy) <= 0) {
-						zdbsp_I16F16 t = DivScale30(center.y - v1->y, dy);
-						zdbsp_I16F16 sx = v1->x + MulScale30(dx, t);
-						zdbsp_I16F16 dist = sx - spot->x;
+						znbx_I16F16 t = DivScale30(center.y - v1->y, dy);
+						znbx_I16F16 sx = v1->x + MulScale30(dx, t);
+						znbx_I16F16 dist = sx - spot->x;
 
 						if (dist < closestdist && dist >= 0) {
 							closestdist = dist;
@@ -328,15 +328,15 @@ int FNodeBuilder::MarkLoop(uint32_t firstseg, int loopnum) {
 
 		uint32_t bestseg = UINT_MAX;
 		uint32_t tryseg = Vertices[s1->v2].segs;
-		zdbsp_Angle bestang = ANGLE_MAX;
-		zdbsp_Angle ang1 = s1->angle;
+		znbx_Angle bestang = ANGLE_MAX;
+		znbx_Angle ang1 = s1->angle;
 
 		while (tryseg != UINT_MAX) {
 			FPrivSeg* s2 = &Segs[tryseg];
 
 			if (s2->frontsector == sec) {
-				zdbsp_Angle ang2 = s2->angle + ANGLE_180;
-				zdbsp_Angle angdiff = ang2 - ang1;
+				znbx_Angle ang2 = s2->angle + ANGLE_180;
+				znbx_Angle angdiff = ang2 - ang1;
 
 				if (angdiff < bestang && angdiff > 0) {
 					bestang = angdiff;
@@ -354,7 +354,7 @@ int FNodeBuilder::MarkLoop(uint32_t firstseg, int loopnum) {
 
 // Find the bounding box for a specific polyobject.
 
-bool FNodeBuilder::GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]) {
+bool FNodeBuilder::GetPolyExtents(int polynum, znbx_I16F16 bbox[4]) {
 	unsigned int i;
 
 	bbox[BOXLEFT] = bbox[BOXBOTTOM] = FIXED_MAX;
@@ -369,7 +369,7 @@ bool FNodeBuilder::GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]) {
 	}
 
 	if (i < Segs.Size()) {
-		zdbsp_VertexFxp start;
+		znbx_VertexFxp start;
 		unsigned int vert;
 		unsigned int count =
 			Segs.Size(); // to prevent endless loops. Stop when this reaches the number of segs.
@@ -402,7 +402,7 @@ bool FNodeBuilder::GetPolyExtents(int polynum, zdbsp_I16F16 bbox[4]) {
 	return found;
 }
 
-void FNodeBuilder::AddSegToBBox(zdbsp_I16F16 bbox[4], const FPrivSeg* seg) {
+void FNodeBuilder::AddSegToBBox(znbx_I16F16 bbox[4], const FPrivSeg* seg) {
 	FPrivVert* v1 = &Vertices[seg->v1];
 	FPrivVert* v2 = &Vertices[seg->v2];
 
@@ -426,7 +426,7 @@ void FNodeBuilder::AddSegToBBox(zdbsp_I16F16 bbox[4], const FPrivSeg* seg) {
 }
 
 FNodeBuilder::FVertexMap::FVertexMap(
-	FNodeBuilder& builder, zdbsp_I16F16 minx, zdbsp_I16F16 miny, zdbsp_I16F16 maxx, zdbsp_I16F16 maxy
+	FNodeBuilder& builder, znbx_I16F16 minx, znbx_I16F16 miny, znbx_I16F16 maxx, znbx_I16F16 maxy
 )
 	: MyBuilder(builder) {
 	MinX = minx;
@@ -488,10 +488,10 @@ int FNodeBuilder::FVertexMap::InsertVertex(FNodeBuilder::FPrivVert& vert) {
 	// If a vertex is near a block boundary, then it will be inserted on
 	// both sides of the boundary so that SelectVertexClose can find
 	// it by checking in only one block.
-	zdbsp_I16F16 minx = MAX(MinX, vert.x - VERTEX_EPSILON);
-	zdbsp_I16F16 maxx = MIN(MaxX, vert.x + VERTEX_EPSILON);
-	zdbsp_I16F16 miny = MAX(MinY, vert.y - VERTEX_EPSILON);
-	zdbsp_I16F16 maxy = MIN(MaxY, vert.y + VERTEX_EPSILON);
+	znbx_I16F16 minx = MAX(MinX, vert.x - VERTEX_EPSILON);
+	znbx_I16F16 maxx = MIN(MaxX, vert.x + VERTEX_EPSILON);
+	znbx_I16F16 miny = MAX(MinY, vert.y - VERTEX_EPSILON);
+	znbx_I16F16 maxy = MIN(MaxY, vert.y + VERTEX_EPSILON);
 
 	int blk[4] = { GetBlock(minx, miny), GetBlock(maxx, miny), GetBlock(minx, maxy),
 				   GetBlock(maxx, maxy) };

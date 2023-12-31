@@ -13,7 +13,7 @@
 #include "doomdata.hpp"
 #include "tarray.hpp"
 #include "nodebuild.hpp"
-#include "zdbsp.h"
+#include "znbx.h"
 
 class ZLibOut {
 public:
@@ -24,7 +24,7 @@ public:
 	ZLibOut& operator<<(uint16_t);
 	ZLibOut& operator<<(int16_t);
 	ZLibOut& operator<<(uint32_t);
-	ZLibOut& operator<<(zdbsp_I16F16);
+	ZLibOut& operator<<(znbx_I16F16);
 	void Write(uint8_t* data, int len);
 
 private:
@@ -72,11 +72,11 @@ class FProcessor {
 	DELETE_COPIERS(FProcessor)
 
 public:
-	FProcessor(zdbsp_Level, bool extended);
-	FProcessor(zdbsp_LevelUdmf);
+	FProcessor(znbx_Level, bool extended);
+	FProcessor(znbx_LevelUdmf);
 
-	void Process(const zdbsp_NodeConfig* config);
-	zdbsp_NodeVersion get_node_version() const;
+	void Process(const znbx_NodeConfig* config);
+	znbx_NodeVersion get_node_version() const;
 
 	bool build_nodes = true, build_gl_nodes = false;
 	bool conform_nodes = false, gl_only = false;
@@ -84,8 +84,8 @@ public:
 	bool write_comments = false, v5gl = false;
 	bool compress_nodes = false, compress_gl_nodes = false, force_compression = false;
 
-	zdbsp_RejectMode reject_mode = ZDBSP_ERM_DONTTOUCH;
-	zdbsp_BlockmapMode blockmap_mode = ZDBSP_EBM_REBUILD;
+	znbx_RejectMode reject_mode = ZNBX_ERM_DONTTOUCH;
+	znbx_BlockmapMode blockmap_mode = ZNBX_EBM_REBUILD;
 
 	const FLevel& get_level() const {
 		return this->Level;
@@ -94,24 +94,24 @@ public:
 private:
 	explicit FProcessor();
 
-	void load_lines(zdbsp_SliceU8);
-	void load_lines_ext(zdbsp_SliceU8);
-	void load_sectors(zdbsp_SliceU8);
-	void load_sides(zdbsp_SliceU8);
-	void load_things(zdbsp_SliceU8);
-	void load_things_ext(zdbsp_SliceU8);
-	void load_vertices(zdbsp_SliceU8);
+	void load_lines(znbx_SliceU8);
+	void load_lines_ext(znbx_SliceU8);
+	void load_sectors(znbx_SliceU8);
+	void load_sides(znbx_SliceU8);
+	void load_things(znbx_SliceU8);
+	void load_things_ext(znbx_SliceU8);
+	void load_vertices(znbx_SliceU8);
 
 	void finish_load();
 
 	void get_poly_spots();
 
-	zdbsp_NodeEx* NodesToEx(const zdbsp_NodeRaw* nodes, int count);
-	zdbsp_SubsectorEx* SubsectorsToEx(const zdbsp_SubsectorRaw* ssec, int count);
-	zdbsp_SegGlEx* SegGLsToEx(const zdbsp_SegGl* segs, int count);
+	znbx_NodeEx* NodesToEx(const znbx_NodeRaw* nodes, int count);
+	znbx_SubsectorEx* SubsectorsToEx(const znbx_SubsectorRaw* ssec, int count);
+	znbx_SegGlEx* SegGLsToEx(const znbx_SegGl* segs, int count);
 
 	uint8_t* fix_reject(const uint8_t* oldreject);
-	bool CheckForFracSplitters(const zdbsp_NodeEx* nodes, int count) const;
+	bool CheckForFracSplitters(const znbx_NodeEx* nodes, int count) const;
 
 	void WriteLines(FWadWriter& out);
 	void WriteVertices(FWadWriter& out, int count);
@@ -132,28 +132,28 @@ private:
 	void WriteBSPZ(FWadWriter& out, const char* label);
 	void WriteGLBSPZ(FWadWriter& out, const char* label);
 
-	void WriteVerticesZ(ZLibOut& out, const zdbsp_VertexEx* verts, int orgverts, int newverts);
-	void WriteSubsectorsZ(ZLibOut& out, const zdbsp_SubsectorEx* subs, int numsubs);
-	void WriteSegsZ(ZLibOut& out, const zdbsp_SegEx* segs, int numsegs);
-	void WriteGLSegsZ(ZLibOut& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
-	void WriteNodesZ(ZLibOut& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever);
+	void WriteVerticesZ(ZLibOut& out, const znbx_VertexEx* verts, int orgverts, int newverts);
+	void WriteSubsectorsZ(ZLibOut& out, const znbx_SubsectorEx* subs, int numsubs);
+	void WriteSegsZ(ZLibOut& out, const znbx_SegEx* segs, int numsegs);
+	void WriteGLSegsZ(ZLibOut& out, const znbx_SegGlEx* segs, int numsegs, int nodever);
+	void WriteNodesZ(ZLibOut& out, const znbx_NodeEx* nodes, int numnodes, int nodever);
 
 	void WriteBSPX(FWadWriter& out, const char* label);
 	void WriteGLBSPX(FWadWriter& out, const char* label);
 
-	void WriteVerticesX(FWadWriter& out, const zdbsp_VertexEx* verts, int orgverts, int newverts);
-	void WriteSubsectorsX(FWadWriter& out, const zdbsp_SubsectorEx* subs, int numsubs);
-	void WriteSegsX(FWadWriter& out, const zdbsp_SegEx* segs, int numsegs);
-	void WriteGLSegsX(FWadWriter& out, const zdbsp_SegGlEx* segs, int numsegs, int nodever);
-	void WriteNodesX(FWadWriter& out, const zdbsp_NodeEx* nodes, int numnodes, int nodever);
+	void WriteVerticesX(FWadWriter& out, const znbx_VertexEx* verts, int orgverts, int newverts);
+	void WriteSubsectorsX(FWadWriter& out, const znbx_SubsectorEx* subs, int numsubs);
+	void WriteSegsX(FWadWriter& out, const znbx_SegEx* segs, int numsegs);
+	void WriteGLSegsX(FWadWriter& out, const znbx_SegGlEx* segs, int numsegs, int nodever);
+	void WriteNodesX(FWadWriter& out, const znbx_NodeEx* nodes, int numnodes, int nodever);
 
-	void WriteNodes2(FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count)
+	void WriteNodes2(FWadWriter& out, const char* name, const znbx_NodeEx* zaNodes, int count)
 		const;
-	void WriteSSectors2(FWadWriter& out, const char* name, const zdbsp_SubsectorEx* zaSubs, int count)
+	void WriteSSectors2(FWadWriter& out, const char* name, const znbx_SubsectorEx* zaSubs, int count)
 		const;
-	void WriteNodes5(FWadWriter& out, const char* name, const zdbsp_NodeEx* zaNodes, int count)
+	void WriteNodes5(FWadWriter& out, const char* name, const znbx_NodeEx* zaNodes, int count)
 		const;
-	void WriteSSectors5(FWadWriter& out, const char* name, const zdbsp_SubsectorEx* zaSubs, int count)
+	void WriteSSectors5(FWadWriter& out, const char* name, const znbx_SubsectorEx* zaSubs, int count)
 		const;
 
 	const char* ParseKey(const char*& value);
@@ -162,15 +162,15 @@ private:
 	void ParseLinedef(IntLineDef* ld);
 	void ParseSidedef(IntSideDef* sd);
 	void ParseSector(IntSector* sec);
-	void ParseVertex(zdbsp_VertexEx* vt, IntVertex* vtp);
+	void ParseVertex(znbx_VertexEx* vt, IntVertex* vtp);
 	void ParseMapProperties();
-	void ParseTextMap(zdbsp_SliceU8);
+	void ParseTextMap(znbx_SliceU8);
 
 	int CheckInt(const char* key);
 	double CheckFloat(const char* key);
-	zdbsp_I16F16 CheckFixed(const char* key);
+	znbx_I16F16 CheckFixed(const char* key);
 
-	void WriteProps(FWadWriter& out, TArray<zdbsp_UdmfKey>& props);
+	void WriteProps(FWadWriter& out, TArray<znbx_UdmfKey>& props);
 	void WriteIntProp(FWadWriter& out, const char* key, int value);
 	void WriteThingUDMF(FWadWriter& out, IntThing* th, int num);
 	void WriteLinedefUDMF(FWadWriter& out, IntLineDef* ld, int num);
@@ -187,7 +187,7 @@ private:
 
 	bool is_extended = false;
 	bool is_udmf = false;
-	zdbsp_NodeVersion node_version = ZDBSP_NODEVERS_UNKNOWN;
+	znbx_NodeVersion node_version = ZNBX_NODEVERS_UNKNOWN;
 
 	Scanner scanner;
 	StringBuffer stbuf;

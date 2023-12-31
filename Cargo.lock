@@ -4962,7 +4962,7 @@ dependencies = [
  "regex",
  "serde",
  "viletech-utils",
- "zdbsp-sys",
+ "znbx-sys",
 ]
 
 [[package]]
@@ -6553,17 +6553,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zdbsp-sys"
-version = "0.0.0"
-dependencies = [
- "bindgen",
- "cc",
- "criterion",
- "md5",
- "wadload",
-]
-
-[[package]]
 name = "zerocopy"
 version = "0.7.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6611,6 +6600,17 @@ dependencies = [
  "byteorder",
  "bytesize",
  "thiserror",
+]
+
+[[package]]
+name = "znbx-sys"
+version = "0.0.0"
+dependencies = [
+ "bindgen",
+ "cc",
+ "criterion",
+ "md5",
+ "wadload",
 ]
 
 [[package]]

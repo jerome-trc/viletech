@@ -34,7 +34,7 @@ struct IntSideDef {
 
 	int sector;
 
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 };
 
 struct MapLineDef {
@@ -63,7 +63,7 @@ struct IntLineDef {
 	int args[5];
 	uint32_t sidenum[2];
 
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 };
 
 struct MapSector {
@@ -83,7 +83,7 @@ struct IntSector {
 	// empty is enough
 	MapSector data;
 
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 };
 
 #define NF_SUBSECTOR 0x8000
@@ -91,8 +91,8 @@ struct IntSector {
 
 struct IntThing {
 	unsigned short thingid;
-	zdbsp_I16F16 x; // full precision coordinates for UDMF support
-	zdbsp_I16F16 y;
+	znbx_I16F16 x; // full precision coordinates for UDMF support
+	znbx_I16F16 y;
 	// everything else is not needed or has no extended form in UDMF
 	short z;
 	short angle;
@@ -101,42 +101,42 @@ struct IntThing {
 	char special;
 	char args[5];
 
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 };
 
 struct IntVertex {
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 };
 
 struct FLevel {
 	FLevel();
 	~FLevel();
 
-	zdbsp_VertexEx* Vertices;
+	znbx_VertexEx* Vertices;
 	int32_t NumVertices;
 	TArray<IntVertex> VertexProps;
 	TArray<IntSideDef> Sides;
 	TArray<IntLineDef> Lines;
 	TArray<IntSector> Sectors;
 	TArray<IntThing> Things;
-	zdbsp_SubsectorEx* Subsectors;
+	znbx_SubsectorEx* Subsectors;
 	int32_t NumSubsectors;
-	zdbsp_SegEx* Segs;
+	znbx_SegEx* Segs;
 	int32_t NumSegs;
-	zdbsp_NodeEx* Nodes;
+	znbx_NodeEx* Nodes;
 	int32_t NumNodes;
 	uint16_t* Blockmap;
 	int32_t BlockmapSize;
 	uint8_t* Reject;
 	int32_t RejectSize;
 
-	zdbsp_SubsectorEx* GLSubsectors;
+	znbx_SubsectorEx* GLSubsectors;
 	int32_t NumGLSubsectors;
-	zdbsp_SegGlEx* GLSegs;
+	znbx_SegGlEx* GLSegs;
 	int32_t NumGLSegs;
-	zdbsp_NodeEx* GLNodes;
+	znbx_NodeEx* GLNodes;
 	int32_t NumGLNodes;
-	zdbsp_VertexEx* GLVertices;
+	znbx_VertexEx* GLVertices;
 	int32_t NumGLVertices;
 	uint8_t* GLPVS;
 	int32_t GLPVSSize;
@@ -146,9 +146,9 @@ struct FLevel {
 	uint32_t* OrgSectorMap;
 	int NumOrgSectors;
 
-	zdbsp_I16F16 MinX, MinY, MaxX, MaxY;
+	znbx_I16F16 MinX, MinY, MaxX, MaxY;
 
-	TArray<zdbsp_UdmfKey> props;
+	TArray<znbx_UdmfKey> props;
 
 	void find_map_bounds();
 	void remove_extra_lines();

@@ -1,12 +1,12 @@
 [package]
-name = "zdbsp-sys"
+name = "znbx-sys"
 version = "0.0.0"
 edition.workspace = true
 
 authors = ["jerome-trc"]
 categories = ["game-development"]
-description = "FFI bindings to a forked ZDBSP"
-homepage = "https://github.com/jerome-trc/viletech/tree/master/zdbsp"
+description = "FFI bindings to a fork of ZDBSP"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/znbx"
 keywords = ["doom", "gamedev"]
 publish = false
 repository.workspace = true

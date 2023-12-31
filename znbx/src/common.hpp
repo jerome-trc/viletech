@@ -25,7 +25,7 @@ typedef __int32 int32_t;
 #define strnicmp strncasecmp
 #endif
 
-#include "zdbsp.h"
+#include "znbx.h"
 
 #define FIXED_MAX INT_MAX
 #define FIXED_MIN INT_MIN
@@ -34,37 +34,37 @@ typedef __int32 int32_t;
 
 static_assert(UINT_MAX == 0xffffffff);
 
-[[nodiscard]] inline zdbsp_Angle PointToAngle(zdbsp_I16F16 x, zdbsp_I16F16 y) {
+[[nodiscard]] inline znbx_Angle PointToAngle(znbx_I16F16 x, znbx_I16F16 y) {
 	double ang = atan2(double(y), double(x));
 	const double rad2bam = double(1 << 30) / M_PI;
 	double dbam = ang * rad2bam;
 	// Convert to signed first since negative double to unsigned is undefined.
-	return zdbsp_Angle(int(dbam)) << 1;
+	return znbx_Angle(int(dbam)) << 1;
 }
 
 static const uint16_t NO_MAP_INDEX = 0xffff;
 static const uint32_t NO_INDEX = 0xffffffff;
-static const zdbsp_Angle ANGLE_MAX = 0xffffffff;
-static const zdbsp_Angle ANGLE_180 = (1u << 31);
-static const zdbsp_Angle ANGLE_EPSILON = 5000;
+static const znbx_Angle ANGLE_MAX = 0xffffffff;
+static const znbx_Angle ANGLE_180 = (1u << 31);
+static const znbx_Angle ANGLE_EPSILON = 5000;
 
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
 
 #pragma warning(disable : 4035)
 
-inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
+inline znbx_I16F16 Scale(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c) {
 	__asm mov eax, a __asm mov ecx, c __asm imul b __asm idiv ecx
 }
 
-inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+inline znbx_I16F16 DivScale30(znbx_I16F16 a, znbx_I16F16 b) {
 	__asm mov edx, a __asm sar edx, 2 __asm mov eax, a __asm shl eax, 30 __asm idiv b
 }
 
-inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+inline znbx_I16F16 MulScale30(znbx_I16F16 a, znbx_I16F16 b) {
 	__asm mov eax, a __asm imul b __asm shrd eax, edx, 30
 }
 
-inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
+inline znbx_I16F16 DMulScale32(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c, znbx_I16F16 d) {
 	__asm mov eax, a __asm imul b __asm mov ebx, eax __asm mov eax, c __asm mov esi,
 		edx __asm imul d __asm add eax, ebx __asm adc edx, esi __asm mov eax, edx
 }
@@ -74,8 +74,8 @@ inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, 
 #elif defined(__GNUC__) && defined(__i386__)
 
 #ifdef __clang__
-inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
-	zdbsp_I16F16 result, dummy;
+inline znbx_I16F16 Scale(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c) {
+	znbx_I16F16 result, dummy;
 
 	asm volatile("imull %3\n\t"
 				 "idivl %4"
@@ -86,8 +86,8 @@ inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
 	return result;
 }
 
-inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
-	zdbsp_I16F16 result, dummy;
+inline znbx_I16F16 DivScale30(znbx_I16F16 a, znbx_I16F16 b) {
+	znbx_I16F16 result, dummy;
 	asm volatile("idivl %4"
 				 : "=a"(result), "=d"(dummy)
 				 : "a"(a << 30), "d"(a >> 2), "r"(b)
@@ -95,8 +95,8 @@ inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
 	return result;
 }
 #else
-inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
-	zdbsp_I16F16 result, dummy;
+inline znbx_I16F16 Scale(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c) {
+	znbx_I16F16 result, dummy;
 
 	asm volatile("imull %3\n\t"
 				 "idivl %4"
@@ -107,8 +107,8 @@ inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
 	return result;
 }
 
-inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
-	zdbsp_I16F16 result, dummy;
+inline znbx_I16F16 DivScale30(znbx_I16F16 a, znbx_I16F16 b) {
+	znbx_I16F16 result, dummy;
 	asm volatile("idivl %4"
 				 : "=a,a"(result), "=d,d"(dummy)
 				 : "a,a"(a << 30), "d,d"(a >> 2), "r,m"(b)
@@ -117,38 +117,38 @@ inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
 }
 #endif
 
-inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
+inline znbx_I16F16 MulScale30(znbx_I16F16 a, znbx_I16F16 b) {
 	return ((int64_t)a * b) >> 30;
 }
 
-inline zdbsp_I16F16 DMulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
+inline znbx_I16F16 DMulScale30(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c, znbx_I16F16 d) {
 	return (((int64_t)a * b) + ((int64_t)c * d)) >> 30;
 }
 
-inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
+inline znbx_I16F16 DMulScale32(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c, znbx_I16F16 d) {
 	return (((int64_t)a * b) + ((int64_t)c * d)) >> 32;
 }
 
 #else
 
-inline zdbsp_I16F16 Scale(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c) {
-	return (zdbsp_I16F16)(double(a) * double(b) / double(c));
+inline znbx_I16F16 Scale(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c) {
+	return (znbx_I16F16)(double(a) * double(b) / double(c));
 }
 
-inline zdbsp_I16F16 DivScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
-	return (zdbsp_I16F16)(double(a) / double(b) * double(1 << 30));
+inline znbx_I16F16 DivScale30(znbx_I16F16 a, znbx_I16F16 b) {
+	return (znbx_I16F16)(double(a) / double(b) * double(1 << 30));
 }
 
-inline zdbsp_I16F16 MulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b) {
-	return (zdbsp_I16F16)(double(a) * double(b) / double(1 << 30));
+inline znbx_I16F16 MulScale30(znbx_I16F16 a, znbx_I16F16 b) {
+	return (znbx_I16F16)(double(a) * double(b) / double(1 << 30));
 }
 
-inline zdbsp_I16F16 DMulScale30(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
-	return (zdbsp_I16F16)((double(a) * double(b) + double(c) * double(d)) / double(1 << 30));
+inline znbx_I16F16 DMulScale30(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c, znbx_I16F16 d) {
+	return (znbx_I16F16)((double(a) * double(b) + double(c) * double(d)) / double(1 << 30));
 }
 
-inline zdbsp_I16F16 DMulScale32(zdbsp_I16F16 a, zdbsp_I16F16 b, zdbsp_I16F16 c, zdbsp_I16F16 d) {
-	return (zdbsp_I16F16)((double(a) * double(b) + double(c) * double(d)) / 4294967296.0);
+inline znbx_I16F16 DMulScale32(znbx_I16F16 a, znbx_I16F16 b, znbx_I16F16 c, znbx_I16F16 d) {
+	return (znbx_I16F16)((double(a) * double(b) + double(c) * double(d)) / 4294967296.0);
 }
 
 #endif
