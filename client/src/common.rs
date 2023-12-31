@@ -1,11 +1,13 @@
 use bevy::{
-	app::AppExit, ecs::system::SystemParam, input::mouse::MouseMotion, prelude::*,
-	window::ApplicationLifetime, winit::WinitWindows,
+	ecs::system::{SystemParam, SystemState},
+	input::mouse::MouseMotion,
+	prelude::*,
+	window::ApplicationLifetime,
+	winit::WinitWindows,
 };
 use bevy_egui::{systems::InputEvents, EguiContexts};
 use viletech::{
 	audio::AudioCore,
-	console::Console,
 	image,
 	vfs::{self, VPath},
 	VirtualFs,
@@ -13,7 +15,7 @@ use viletech::{
 
 use crate::{
 	ccmd,
-	dgui::{self, DevGui},
+	dgui::{self, Console, DevGui},
 };
 
 #[derive(SystemParam)]
@@ -28,36 +30,39 @@ pub(crate) struct InputParam<'w, 's> {
 pub(crate) struct ClientCommon<'w, 's> {
 	pub(crate) vfs: ResMut<'w, VirtualFs>,
 	pub(crate) _input: InputParam<'w, 's>,
-	pub(crate) audio: ResMut<'w, AudioCore>,
-	pub(crate) console: ResMut<'w, Console<ccmd::Command>>,
+	pub(crate) _audio: ResMut<'w, AudioCore>,
+	pub(crate) _console: ResMut<'w, Console>,
 	pub(crate) egui: EguiContexts<'w, 's>,
 }
 
 #[derive(Event, Debug, Clone)]
 pub(crate) struct NewWindow(pub(crate) Entity);
 
-pub(crate) fn update(
-	mut cmds: Commands,
-	mut core: ClientCommon,
-	mut exit: EventWriter<AppExit>,
-	mut new_windows: EventReader<NewWindow>,
-	mut app_events: EventReader<ApplicationLifetime>,
-	winits: NonSend<WinitWindows>,
-) {
-	core.audio.update();
+pub(crate) fn update(world: &mut World) {
+	loop {
+		let mut console = world.get_resource_mut::<Console>().unwrap();
 
-	while let Some(req) = core.console.requests.pop_front() {
+		let Some(req) = console.requests.pop_front() else {
+			break;
+		};
+
 		match req {
 			ccmd::Request::Callback(func) => {
-				(func)(&mut core);
-			}
-			ccmd::Request::Exit => {
-				exit.send(AppExit);
-				return;
+				(func)(world);
 			}
 			ccmd::Request::None => {}
 		}
 	}
+
+	let mut sys: SystemState<(
+		Commands,
+		ClientCommon,
+		EventReader<NewWindow>,
+		EventReader<ApplicationLifetime>,
+		NonSend<WinitWindows>,
+	)> = SystemState::new(world);
+
+	let (mut cmds, core, mut new_windows, mut app_events, winits) = sys.get_mut(world);
 
 	for new_window in new_windows.read() {
 		dgui::add_to_window(cmds.entity(new_window.0));
@@ -77,7 +82,7 @@ pub(crate) fn update(
 
 pub(crate) fn pre_update(
 	windows: Query<(&Window, &DevGui)>,
-	mut console: ResMut<Console<ccmd::Command>>,
+	mut console: ResMut<Console>,
 	input: InputParam,
 ) {
 	if !windows

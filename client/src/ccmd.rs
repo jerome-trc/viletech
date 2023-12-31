@@ -2,6 +2,7 @@
 
 use std::env;
 
+use bevy::{app::AppExit, ecs::system::SystemState, prelude::*};
 use indoc::formatdoc;
 use viletech::{
 	console::MessageKind,
@@ -9,19 +10,17 @@ use viletech::{
 	tracing::{error, info},
 };
 
-use crate::common::ClientCommon;
+use crate::dgui::Console;
 
 pub(crate) enum Request {
 	None,
-	Exit,
-	Callback(Box<dyn 'static + Fn(&mut ClientCommon) + Send + Sync>),
+	Callback(Box<dyn 'static + Fn(&mut World) + Send + Sync>),
 }
 
 impl std::fmt::Debug for Request {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::None => write!(f, "None"),
-			Self::Exit => write!(f, "Exit"),
 			Self::Callback(_) => f.debug_tuple("Callback").finish(),
 		}
 	}
@@ -63,21 +62,28 @@ the alias' associated string is expanded into the output, if that alias exists."
 	let alias = args[1].to_string();
 
 	if args.len() == 2 {
-		return req_callback(move |core| match core.console.find_alias(&alias) {
-			Some(a) => {
-				info!("{}", a.expanded);
-			}
-			None => {
-				info!("No existing alias: {}", alias);
+		return req_callback(move |eworld| {
+			let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+			let console = sys.get_mut(eworld);
+
+			match console.find_alias(&alias) {
+				Some(a) => {
+					info!("{}", a.expanded);
+				}
+				None => {
+					info!("No existing alias: {}", alias);
+				}
 			}
 		});
 	}
 
 	let string = args.concat(2);
 
-	req_callback(move |core| {
+	req_callback(move |eworld| {
 		info!("Alias registered: {}\r\nExpands to: {}", alias, &string);
-		core.console.register_alias(alias.clone(), string.clone());
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let mut console = sys.get_mut(eworld);
+		console.register_alias(alias.clone(), string.clone());
 	})
 }
 
@@ -117,8 +123,10 @@ pub(crate) fn ccmd_clear(args: CommandArgs) -> Request {
 		return req_console_write_help("Clears the console's message history.");
 	}
 
-	req_callback(|core| {
-		core.console.clear_message_history(true, true, true);
+	req_callback(|eworld| {
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let mut console = sys.get_mut(eworld);
+		console.clear_message_history(true, true, true);
 	})
 }
 
@@ -127,7 +135,11 @@ pub(crate) fn ccmd_exit(args: CommandArgs) -> Request {
 		return req_console_write_help("Instantly closes the client.");
 	}
 
-	Request::Exit
+	req_callback(|eworld| {
+		let mut sys: SystemState<EventWriter<AppExit>> = SystemState::new(eworld);
+		let mut exit = sys.get_mut(eworld);
+		exit.send(AppExit);
+	})
 }
 
 /// Clears the console's history of submitted input strings.
@@ -136,9 +148,11 @@ pub(crate) fn ccmd_hclear(args: CommandArgs) -> Request {
 		return req_console_write_help("Clear's the console's history of submitted input strings.");
 	}
 
-	req_callback(|core| {
+	req_callback(|eworld| {
 		info!("Clearing history of submitted input strings.");
-		core.console.clear_input_history();
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let mut console = sys.get_mut(eworld);
+		console.clear_input_history();
 	})
 }
 
@@ -155,30 +169,38 @@ pub(crate) fn ccmd_help(args: CommandArgs) -> Request {
 	}
 
 	if args.name_only() {
-		return req_callback(|core| {
-			let cap = core.console.all_commands().map(|cmd| cmd.0.len()).sum();
+		return req_callback(|eworld| {
+			let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+			let mut console = sys.get_mut(eworld);
+
+			let cap = console.all_commands().map(|cmd| cmd.0.len()).sum();
 			let mut string = String::with_capacity(cap);
 
 			string.push_str("All available commands:");
 
-			for command in core.console.all_commands() {
+			for command in console.all_commands() {
 				string.push('\r');
 				string.push('\n');
 				string.push_str(command.0);
 			}
 
-			core.console.write(string, MessageKind::Help);
+			console.write(string, MessageKind::Help);
 		});
 	}
 
 	let key = args[1].to_string();
 
-	req_callback(move |core| match core.console.find_command(&key) {
-		Some(cmd) => {
-			(cmd.func)(terminal::CommandArgs::new(vec![&key, "--help"]));
-		}
-		None => {
-			info!("No command found by name: {}", key);
+	req_callback(move |eworld| {
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let console = sys.get_mut(eworld);
+
+		match console.find_command(&key) {
+			Some(cmd) => {
+				(cmd.func)(terminal::CommandArgs::new(vec![&key, "--help"]));
+			}
+			None => {
+				info!("No command found by name: {}", key);
+			}
 		}
 	})
 }
@@ -212,8 +234,10 @@ VileTech Client {c_vers}
 fn req_console_write_invalidopt(opt: &str) -> Request {
 	let msg = format!("Unknown option: `{opt}`");
 
-	Request::Callback(Box::new(move |core| {
-		core.console.write(msg.clone(), MessageKind::Help);
+	Request::Callback(Box::new(move |eworld| {
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let mut console = sys.get_mut(eworld);
+		console.write(msg.clone(), MessageKind::Help);
 	}))
 }
 
@@ -221,12 +245,14 @@ fn req_console_write_invalidopt(opt: &str) -> Request {
 fn req_console_write_help(message: impl Into<String>) -> Request {
 	let message = message.into();
 
-	Request::Callback(Box::new(move |core| {
-		core.console.write(message.clone(), MessageKind::Help);
+	Request::Callback(Box::new(move |eworld| {
+		let mut sys: SystemState<ResMut<Console>> = SystemState::new(eworld);
+		let mut console = sys.get_mut(eworld);
+		console.write(message.clone(), MessageKind::Help);
 	}))
 }
 
 #[must_use]
-fn req_callback<F: 'static + Fn(&mut ClientCommon) + Send + Sync>(callback: F) -> Request {
+fn req_callback<F: 'static + Fn(&mut World) + Send + Sync>(callback: F) -> Request {
 	Request::Callback(Box::new(callback))
 }
