@@ -193,8 +193,10 @@ impl FrontendMenu {
 
 		let load_order_empty = self.load_order().is_empty();
 
+		ui.label("Start");
+
 		let btn_start = ui.add_enabled_ui(!load_order_empty, |ui| {
-			let btn_start = ui.button("Start Game");
+			let btn_start = ui.button("Game");
 
 			if btn_start.clicked() {
 				ret = Outcome::StartGame;
