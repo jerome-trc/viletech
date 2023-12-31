@@ -1,0 +1,15 @@
+[package]
+name = "zmsx"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "Rust wrapper around ZMSX"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/zmsx-rs"
+keywords = ["doom", "gamedev", "midi"]
+publish = false
+repository.workspace = true
+
+[build-dependencies]
+sys = { package = "zmsx-sys", path = "../zmsx-sys" }

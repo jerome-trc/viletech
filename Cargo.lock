@@ -1575,6 +1575,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmake"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6611,6 +6620,21 @@ dependencies = [
  "byteorder",
  "bytesize",
  "thiserror",
+]
+
+[[package]]
+name = "zmsx"
+version = "0.0.0"
+dependencies = [
+ "zmsx-sys",
+]
+
+[[package]]
+name = "zmsx-sys"
+version = "0.0.0"
+dependencies = [
+ "bindgen",
+ "cmake",
 ]
 
 [[package]]

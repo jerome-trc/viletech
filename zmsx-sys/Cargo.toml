@@ -1,0 +1,16 @@
+[package]
+name = "zmsx-sys"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "Generated FFI bindings to ZMSX"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/zmsx-sys"
+keywords = ["doom", "gamedev", "midi"]
+publish = false
+repository.workspace = true
+
+[build-dependencies]
+bindgen.workspace = true
+cmake.workspace = true

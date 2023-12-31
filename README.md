@@ -63,6 +63,10 @@ Beware that this project:
 
 [wadload](/wadload/README.md) contains functionality for reading and writing files in the "Where's All the Data" (WAD) file format native to Doom.
 
+### /zmsx
+
+[ZMSX](/zmsx/README.md) (ZMuSic eXperiments) is a fork of the ZMusic library, accompanied by automatically-generated Rust FFI bindings and a safe Rust wrapper.
+
 ## Licensing, Attribution
 
 A complete list of attributions and other third-party licensing information can be found [here](/ATTRIB.md).
