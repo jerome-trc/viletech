@@ -2,7 +2,15 @@
 
 use std::env;
 
-use bevy::{app::AppExit, ecs::system::SystemState, prelude::*};
+use bevy::{
+	app::AppExit,
+	ecs::system::SystemState,
+	prelude::*,
+	render::{
+		renderer::RenderDevice,
+		settings::{WgpuFeatures, WgpuLimits},
+	},
+};
 use indoc::formatdoc;
 use viletech::{
 	console::MessageKind,
@@ -225,6 +233,92 @@ VileTech Client {c_vers}
 	info!("{msg}");
 
 	Request::None
+}
+
+/// Prints information about the WGPU render device's features and limits.
+pub(crate) fn ccmd_wgpudiag(args: CommandArgs) -> Request {
+	if args.help_requested() {
+		return req_console_write_help(formatdoc! {
+			"Print information about the WGPU render device's features and limits.
+
+			Usage: {} [options]
+
+			Options:
+				-d, --default
+					Also print the set of limits guaranteed to work on all modern backends.
+				-l, --downlevel
+					Also print the set of limits guaranteed to work on \"downlevel\"
+					backends such as OpenGL and D3D11.
+				-w, --webgl2
+					Also print the set of limits low enough to support running
+					in a brower using WebGL2.",
+			args.command_name(),
+		});
+	}
+
+	let default = args.has_any_option(&["-d", "--default"]);
+	let downlevel = args.has_any_option(&["-l", "--downlevel"]);
+	let webgl2 = args.has_any_option(&["-w", "--webgl2"]);
+
+	fn print_limits(limits: WgpuLimits, header: &'static str) {
+		let msg = formatdoc! {"
+			{header}:
+				Max. 2D texture width and height: {tex2d_dim}
+				Max. push constant size: {pushconst}
+				Max. samplers per shader stage: {samplers}
+				Max. sampled textures per shader stage: {sampled_tex}
+				Max. texture array layers: {tex_arr_layers}
+				Max. vertex attributes: {vattrs}",
+			tex2d_dim = limits.max_texture_dimension_2d,
+			pushconst = limits.max_push_constant_size,
+			tex_arr_layers = limits.max_texture_array_layers,
+			samplers = limits.max_samplers_per_shader_stage,
+			sampled_tex = limits.max_sampled_textures_per_shader_stage,
+			vattrs = limits.max_vertex_attributes,
+		};
+
+		info!("{msg}");
+	}
+
+	req_callback(move |eworld| {
+		let mut sys: SystemState<Res<RenderDevice>> = SystemState::new(eworld);
+		let rdev = sys.get_mut(eworld);
+
+		let feats = rdev.features();
+
+		let msg = formatdoc! {"
+			Current WGPU render device features:
+				Multiview
+				PolygonMode::Line: {f_linemode}
+				PolygonMode::Point: {f_pointmode}
+				Push constants: {f_pushconsts}",
+			f_linemode = feats.contains(WgpuFeatures::POLYGON_MODE_LINE),
+			f_pointmode = feats.contains(WgpuFeatures::POLYGON_MODE_POINT),
+			f_pushconsts = feats.contains(WgpuFeatures::PUSH_CONSTANTS),
+		};
+
+		info!("{msg}");
+
+		print_limits(rdev.limits(), "Current WGPU render device limits");
+
+		if default {
+			print_limits(WgpuLimits::default(), "Default WGPU render device limits");
+		}
+
+		if downlevel {
+			print_limits(
+				WgpuLimits::downlevel_defaults(),
+				"Downlevel WGPU render device limits",
+			);
+		}
+
+		if webgl2 {
+			print_limits(
+				WgpuLimits::downlevel_webgl2_defaults(),
+				"WebGL2 render device limits",
+			);
+		}
+	})
 }
 
 // Helpers /////////////////////////////////////////////////////////////////////

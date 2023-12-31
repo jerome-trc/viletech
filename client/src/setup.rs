@@ -165,6 +165,14 @@ pub(crate) fn console(receiver: Receiver<console::Message>) -> Console<ccmd::Com
 		true,
 	);
 
+	console.register_command(
+		"wgpudiag",
+		ccmd::Command {
+			func: ccmd::ccmd_wgpudiag,
+		},
+		true,
+	);
+
 	console.register_alias("quit".to_string(), "exit".to_string());
 
 	console
