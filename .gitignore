@@ -64,4 +64,7 @@ doc
 # flamegraph-rs output
 **/flamegraph.svg
 
+# These get emitted to provide context to IDEs and language servers.
+**/compile_commands.json
+
 /temp
