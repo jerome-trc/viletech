@@ -1,14 +1,17 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	for path in RERUN_IF_CHANGED {
-		println!("cargo:rerun-if-changed={path}");
+	let base = Path::new(env!("CARGO_WORKSPACE_DIR")).join("znbx");
+
+	for rel in RERUN_IF_CHANGED {
+		let path = base.join(rel);
+		println!("cargo:rerun-if-changed={}", path.display());
 	}
 
 	let mut ccbuild = cc::Build::new();
 
 	ccbuild
-		.includes(&["include", "src"])
+		.includes(&[base.join("include"), base.join("src")])
 		.cpp(true)
 		.flag_if_supported("-Wall")
 		.flag_if_supported("-Wextra")
@@ -19,18 +22,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.flag_if_supported("/Gy") // function-level linking
 		.flag_if_supported("/GR-") // disable RTTI
 		.files(&[
-			"src/blockmapbuilder.cpp",
-			"src/classify.cpp",
-			"src/events.cpp",
-			"src/extract.cpp",
-			"src/gl.cpp",
-			"src/nodebuild.cpp",
-			"src/processor.cpp",
-			"src/processor_udmf.cpp",
-			"src/sc_man.cpp",
-			"src/utility.cpp",
-			"src/wad.cpp",
-			"src/znbx.cpp",
+			base.join("src/blockmapbuilder.cpp"),
+			base.join("src/classify.cpp"),
+			base.join("src/events.cpp"),
+			base.join("src/extract.cpp"),
+			base.join("src/gl.cpp"),
+			base.join("src/nodebuild.cpp"),
+			base.join("src/processor.cpp"),
+			base.join("src/processor_udmf.cpp"),
+			base.join("src/sc_man.cpp"),
+			base.join("src/utility.cpp"),
+			base.join("src/wad.cpp"),
+			base.join("src/znbx.cpp"),
 		]);
 
 	if std::env::var("CARGO_FEATURE_XVERBOSE").is_ok() {
@@ -40,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	ccbuild.compile("znbx");
 
 	bindgen::Builder::default()
-		.header("include/znbx.h")
+		.header(base.join("include/znbx.h").to_string_lossy())
 		.allowlist_item("^znbx_.+")
 		.parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
 		.generate()?
