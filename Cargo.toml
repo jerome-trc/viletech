@@ -12,6 +12,7 @@ members = [
 	"vfs",
 	"vilify",
 	"wadload",
+	"zdfs-sys",
 	"znbx-sys",
 ]
 default-members = ["client"]
@@ -122,6 +123,7 @@ zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 bindgen = "0.69.1"
 cbindgen = "0.26.0"
 cc = { version = "1.0.83", features = ["parallel"] }
+cmake = "0.1.50"
 # Developer only
 criterion = "0.5.1"
 md5 = "0.7.0"

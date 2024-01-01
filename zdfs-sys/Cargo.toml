@@ -1,0 +1,16 @@
+[package]
+name = "zdfs-sys"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "Generated FFI bindings to ZDFS"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/zdfs-sys"
+keywords = ["doom", "gamedev"]
+publish = false
+repository.workspace = true
+
+[build-dependencies]
+bindgen.workspace = true
+cmake.workspace = true
