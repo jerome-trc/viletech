@@ -7,6 +7,7 @@ use crate::table::Table;
 
 /// "Dynamic value", used across HiLith.
 #[derive(Debug, Clone, Copy)]
+#[repr(C)]
 pub enum DynVal<'rt> {
 	Null,
 	Bool(bool),
@@ -67,3 +68,9 @@ impl std::hash::Hash for DynVal<'_> {
 		}
 	}
 }
+
+const _ASSERT_DYNVAL_SIZE: () = {
+	if std::mem::size_of::<DynVal>() != 16 {
+		panic!();
+	}
+};
