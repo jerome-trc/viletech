@@ -6553,6 +6553,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "zacs-sys"
+version = "0.0.0"
+dependencies = [
+ "bindgen",
+ "cc",
+]
+
+[[package]]
 name = "zerocopy"
 version = "0.7.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"

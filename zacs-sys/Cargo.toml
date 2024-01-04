@@ -1,0 +1,16 @@
+[package]
+name = "zacs-sys"
+version = "0.0.0"
+edition.workspace = true
+
+authors = ["jerome-trc"]
+categories = ["game-development"]
+description = "FFI bindings to GZDoom's ACS bytecode reader"
+homepage = "https://github.com/jerome-trc/viletech/tree/master/zacs-sys"
+keywords = ["doom", "gamedev"]
+publish = false
+repository.workspace = true
+
+[build-dependencies]
+bindgen.workspace = true
+cc.workspace = true

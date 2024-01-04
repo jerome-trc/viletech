@@ -12,6 +12,7 @@ members = [
 	"vfs",
 	"vilify",
 	"wadload",
+	"zacs-sys",
 	"znbx-sys",
 ]
 default-members = ["client"]
