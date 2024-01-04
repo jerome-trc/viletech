@@ -26,6 +26,7 @@ pub(crate) mod lines;
 pub mod ast;
 pub mod dynval;
 pub mod parse;
+pub mod rt;
 pub mod syntax;
 pub mod table;
 

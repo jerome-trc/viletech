@@ -34,6 +34,8 @@ backtrace = "0.3.69"
 cee-scape = "0.1.6"
 gc-arena = "0.4.0"
 nohash-hasher = "0.2.0"
+send_wrapper = "0.6.0"
+slotmap.workspace = true
 
 [[bench]]
 name = "bench"

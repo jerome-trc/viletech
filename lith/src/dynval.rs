@@ -19,6 +19,11 @@ pub enum DynVal<'rt> {
 
 impl DynVal<'_> {
 	#[must_use]
+	pub fn is_null(&self) -> bool {
+		matches!(self, Self::Null)
+	}
+
+	#[must_use]
 	pub fn type_name(&self) -> &'static str {
 		match self {
 			Self::Null => "null",
