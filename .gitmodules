@@ -1,0 +1,3 @@
+[submodule "znbx"]
+	path = znbx
+	url = https://github.com/jerome-trc/znbx.git
