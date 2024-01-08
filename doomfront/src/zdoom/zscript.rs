@@ -16,3 +16,9 @@ pub type ParseTree = crate::ParseTree<Syntax>;
 pub type SyntaxNode = rowan::SyntaxNode<Syntax>;
 pub type SyntaxToken = rowan::SyntaxToken<Syntax>;
 pub type SyntaxElem = rowan::SyntaxElement<Syntax>;
+
+/// A regular expression pattern that can be used for finding a [version directive]
+/// at the beginning of a ZScript include tree's root translation unit.
+///
+/// [version directive]: Syntax::VersionDirective
+pub const VERSION_REGEX: &str = "(?i)version[\0- ]*\"([0-9]+\\.[0-9]+(\\.[0-9]+)?)\"";
