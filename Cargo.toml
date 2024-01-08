@@ -1,21 +1,14 @@
 [workspace]
 members = [
-	"cli",
-	"client",
 	"doomfront",
-	"engine",
-	"lith",
 	"mus2midi",
-	"server",
 	"subterra",
 	"utils",
 	"vfs",
-	"vilify",
 	"wadload",
 	"znbx-sys",
 ]
-default-members = ["client"]
-# Resolver version 2 is needed for WGPU and Bevy.
+default-members = ["doomfront"]
 resolver = "2"
 
 [workspace.package]
