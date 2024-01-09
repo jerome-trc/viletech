@@ -45,8 +45,7 @@ Cpp11BracedListStyle: false
 DerivePointerAlignment: false
 EmptyLineBeforeAccessModifier: LogicalBlock
 FixNamespaceComments: true
-# TODO: (Rat) how badly would this break the build if enabled?
-# IncludeBlocks: Regroup
+IncludeBlocks: Regroup
 IndentCaseLabels: false
 IndentGotoLabels: false
 IndentWrappedFunctionNames: true
@@ -55,7 +54,7 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left
 SortUsingDeclarations: true
-SortIncludes: false # TODO: (Rat) how badly would this break the build if `true`?
+SortIncludes: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: false
