@@ -62,7 +62,29 @@ fn expr_bin_smoke() {
 		|green| ast::BinExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_bin,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
+		},
+	);
+}
+
+#[test]
+fn expr_bin_regions() {
+	const SAMPLE: &str = r"
+2
+#region
++
+#endregion
+2";
+
+	const EXPECTED: &str = SAMPLE;
+
+	harness(
+		SAMPLE.trim(),
+		parse::expr,
+		|green| ast::BinExpr::cast(SyntaxNode::new_root(green)).unwrap(),
+		expr_bin,
+		|formatted| {
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -78,7 +100,7 @@ fn expr_postfix_smoke() {
 		|green| ast::PostfixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_postfix,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -94,7 +116,7 @@ fn expr_postfix_comment() {
 		|green| ast::PostfixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_postfix,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -110,7 +132,7 @@ fn expr_prefix_smoke() {
 		|green| ast::PrefixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_prefix,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -126,7 +148,7 @@ fn expr_prefix_comment() {
 		|green| ast::PrefixExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_prefix,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -142,7 +164,7 @@ fn expr_ternary_smoke() {
 		|green| ast::TernaryExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_ternary,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }
@@ -158,7 +180,7 @@ fn expr_ternary_comments() {
 		|green| ast::TernaryExpr::cast(SyntaxNode::new_root(green)).unwrap(),
 		expr_ternary,
 		|formatted| {
-			assert_text_eq(EXPECTED, formatted);
+			assert_text_eq(EXPECTED.trim(), formatted);
 		},
 	);
 }

@@ -29,35 +29,36 @@ pub fn expr(f: &mut AutoFormatter, ast: ast::Expr) -> GreenElement {
 #[must_use]
 pub fn expr_bin(f: &mut AutoFormatter, ast: ast::BinExpr) -> GreenNode {
 	let mut children = vec![];
-
-	let operator = ast.operator().0;
+	let mut on_newline = false;
 
 	for elem in ast.syntax().children_with_tokens() {
 		match elem {
-			NodeOrToken::Node(node) => {
-				let is_rhs = ast.syntax().last_child().is_some_and(|c| c == node);
-
-				if let Some(e) = ast::Expr::cast(node) {
-					children.push(expr(f, e));
-				}
-
-				if !is_rhs {
-					children.push(f.ctx.space());
-				}
-			}
 			NodeOrToken::Token(token) => {
 				if token.kind() == Syntax::Whitespace {
 					continue;
 				}
 
-				let mut space_needed = false;
-				space_needed |= token.kind() == Syntax::Comment;
-				space_needed |= token.index() == operator.index();
+				let need_newline = matches!(token.kind(), Syntax::RegionStart | Syntax::RegionEnd);
+
+				if need_newline {
+					children.push(super::newline(f));
+				} else if !on_newline {
+					children.push(f.ctx.space());
+				}
 
 				children.push(token.green().to_owned().into());
 
-				if space_needed {
+				on_newline = need_newline;
+			}
+			NodeOrToken::Node(node) => {
+				if !on_newline && node.prev_sibling_or_token().is_some() {
 					children.push(f.ctx.space());
+				}
+
+				if let Some(e) = ast::Expr::cast(node.clone()) {
+					children.push(expr(f, e));
+				} else {
+					children.push(node.green().into_owned().into());
 				}
 			}
 		}
