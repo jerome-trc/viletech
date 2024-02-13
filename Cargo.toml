@@ -112,7 +112,7 @@ walkdir = "2.3.2"
 winit = "0.28.1"
 zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 # Build only
-bindgen = "0.69.1"
+bindgen = "0.69.4"
 cbindgen = "0.26.0"
 cc = { version = "1.0.83", features = ["parallel"] }
 # Developer only
