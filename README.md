@@ -15,8 +15,9 @@ Beware that this project:
 
 ## Contents
 
-- `/client` contains the code for the RatBoom executable, the stopgap until the proper VileTech Engine can be forked from [GZDoom](https://github.com/ZDoom/gzdoom) or [VKDoom](https://github.com/dpjudas/VkDoom).
+- `/client` contains the code for the RatBoom executable (in Nim), the stopgap until the proper VileTech Engine can be forked from [GZDoom](https://github.com/ZDoom/gzdoom) or [VKDoom](https://github.com/dpjudas/VkDoom).
 - `/crates` contains Rust libraries associated with this project.
+- `/engine` is the [dsda-doom](https://github.com/kraflab/dsda-doom) source which gets compiled into a static library for consumption by the client.
 
 ## Licensing, Attribution
 
