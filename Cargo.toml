@@ -1,14 +1,6 @@
 [workspace]
-members = [
-	"doomfront",
-	"mus2midi",
-	"subterra",
-	"utils",
-	"vfs",
-	"wadload",
-	"znbx-sys",
-]
-default-members = ["doomfront"]
+members = ["crates/mus2midi", "crates/wadload"]
+default-members = ["crates/wadload"]
 resolver = "2"
 
 [workspace.package]
@@ -59,20 +51,20 @@ formatx = "0.2.1"
 # Same version as specified by `bevy_math`. Specified here
 # to add the `approx`, `mint`, and `debug-glam-assert` feature flags.
 glam = { version = "0.24.0", features = [
-	"approx",
-	"bytemuck",
-	"mint",
-	"serde",
-	"debug-glam-assert",
+    "approx",
+    "bytemuck",
+    "mint",
+    "serde",
+    "debug-glam-assert",
 ] }
 globset = "0.4.10"
 home = "0.5.5"
 im = "15.1.0"
 image = { version = "0.24.6", default-features = false, features = [
-	"dds",
-	"jpeg",
-	"png",
-	"tga",
+    "dds",
+    "jpeg",
+    "png",
+    "tga",
 ] }
 indexmap = { version = "1.9.3", features = ["rayon", "serde"] }
 indoc = "2.0.0"
@@ -82,8 +74,8 @@ logos = "0.13.0"
 # Must be compatible with `nodi`.
 midly = "0.5.2"
 nanorand = { version = "0.7.0", default-features = false, features = [
-	"std",
-	"wyrand",
+    "std",
+    "wyrand",
 ] }
 nodi = "0.19.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }

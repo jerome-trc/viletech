@@ -22,6 +22,9 @@ Session.vim
 # Build-generated files ########################################################
 /debug/
 /target/
+/nimcache/
+/nimdoc/
+/testresults/
 
 # Sample data ##################################################################
 
@@ -42,8 +45,11 @@ Session.vim
 
 # Miscellaneous ################################################################
 
-# Generated rustdoc
-doc
+# https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
+/Cargo.lock
+
+# Generated documentation (rustdoc, Doxygen)
+/docs
 
 # Runtime logs
 *.log
@@ -63,5 +69,3 @@ doc
 
 # flamegraph-rs output
 **/flamegraph.svg
-
-/temp
