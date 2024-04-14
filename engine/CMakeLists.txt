@@ -36,6 +36,9 @@ set(X_VCPKG_APPLOCAL_DEPS_INSTALL TRUE)
 
 project("ratboom" VERSION 0.27.5)
 
+# For language servers/IDEs that rely on compile_commands.json.
+set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
+
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
