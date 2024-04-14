@@ -30,16 +30,14 @@ function(get_supported_warnings outvar)
 
   set(_warnings
       "-Wall"
+	  "-Wextra"
+	  "-Wconversion"
+	  "-Wpedantic"
       "-Wwrite-strings"
       "-Wundef"
       "-Wtype-limits"
       "-Wcast-qual"
-      "-Wpointer-arith"
-      "-Wno-unused-function"
-      "-Wno-switch"
-      "-Wno-sign-compare"
-      "-Wno-format-truncation"
-      "-Wno-missing-field-initializers")
+      "-Wpointer-arith")
   check_flags_list("${_warnings}" "_supported_warnings")
 
   # The following warnings do not apply to C++ and should be treated separately
