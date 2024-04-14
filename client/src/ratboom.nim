@@ -6,6 +6,7 @@ from std/paths import Path
 from std/strformat import `&`
 import std/times
 
+import platform
 import stdx
 
 const libPath = when defined(release):
