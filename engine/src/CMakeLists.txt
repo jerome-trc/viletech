@@ -524,7 +524,7 @@ function(AddGameExecutable TARGET SOURCES)
         endif()
     endif()
 
-    add_executable(${TARGET} WIN32 ${SOURCES})
+    add_library(${TARGET} STATIC ${SOURCES})
 
     target_compile_options(${TARGET} PRIVATE
         ${SUPPORTED_WARNINGS}
@@ -628,4 +628,4 @@ function(AddGameExecutable TARGET SOURCES)
     )
 endfunction()
 
-AddGameExecutable(dsda-doom "${DSDA_SOURCES}")
+AddGameExecutable(ratboom "${DSDA_SOURCES}")
