@@ -1,3 +1,6 @@
 [submodule "znbx"]
 	path = depend/znbx
 	url = https://github.com/jerome-trc/znbx.git
+[submodule "zdfs"]
+	path = depend/zdfs
+	url = https://github.com/jerome-trc/zdfs.git
