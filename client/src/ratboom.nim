@@ -6,7 +6,7 @@ from std/paths import Path
 from std/strformat import `&`
 import std/times
 
-import platform, stdx, wasmtime
+import core, platform, stdx, wasmtime
 
 const libPath = when defined(release):
     "../build/src/Release/libratboom.a"
@@ -28,10 +28,22 @@ proc dsdaMain(
 ): cint {.importc.}
 
 let startTime = getTime()
+var cx = Core()
+let ccx: ref CCore = cx
+
+cx.wasm = initWasmEngine()
+assert(cx.wasm != nil)
 
 var clArgs = commandLineParams()
 clArgs.insert(os.getAppFileName(), 0)
+
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
+var ccxPtr: ptr core.CCore = nil
+
+for field in fields(ccx[]):
+    ccxPtr = cast[ptr core.CCore](field.addr)
+    break
+
 let ret = dsdaMain(paramCount().cint + 1, argv)
 
 let uptime = startTime.elapsed().hoursMinsSecs()
