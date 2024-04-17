@@ -4,7 +4,7 @@ from std/parseopt import initOptParser, getopt
 from std/os import nil
 from std/paths import Path
 from std/strformat import `&`
-import std/times
+import std/[random, times]
 
 import core, platform, stdx, wasmtime
 
@@ -28,7 +28,10 @@ proc dsdaMain(
     argv: cstringArray
 ): cint {.importc.}
 
+# Actual code starts here ######################################################
+
 let startTime = getTime()
+randomize()
 var cx = initCore()
 
 var clArgs = commandLineParams()
