@@ -31,7 +31,7 @@ let startTime = getTime()
 var cx = Core()
 let ccx: ref CCore = cx
 
-cx.wasm = initWasmEngine()
+cx.wasm = WasmEngine.init()
 assert(cx.wasm != nil)
 
 var clArgs = commandLineParams()

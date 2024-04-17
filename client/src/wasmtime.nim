@@ -1,7 +1,23 @@
-const wasm = "<wasm.h>"
+## Nim wrapper around the C API to the Wasmtime crate.
 
-type
-    WasmEngineObj* {.header: wasm, importc: "wasm_engine_t".} = object
-    WasmEngine* = ptr WasmEngineObj
+import wasmtime/[
+    context,
+    engine,
+    error,
+    extern,
+    instance,
+    module,
+    store,
+    trap,
+    value]
 
-proc initWasmEngine*(): WasmEngine {.importc: "wasm_engine_new".}
+export
+    context,
+    engine,
+    error,
+    extern,
+    instance,
+    module,
+    store,
+    trap,
+    value
