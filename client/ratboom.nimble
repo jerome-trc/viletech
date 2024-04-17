@@ -2,7 +2,7 @@ version = "0.0.0"
 author = "jerome-trc"
 description = "Personalized Doom source port forked from dsda-doom"
 license = "Apache 2.0 OR MIT"
-bin = @["src/ratboom"]
+bin = @["src/main"]
 skipDirs = @["tests"]
 
 requires "nim == 2.0.2"
@@ -51,7 +51,7 @@ proc build(release: static[bool], skipCmake: bool) =
     else:
         exec(&"/usr/bin/cmake --build ../build --config {outDir} --target all --")
 
-    cmd &= "cpp ./src/ratboom.nim"
+    cmd &= "cpp ./src/main.nim"
     exec(cmd)
 
 
