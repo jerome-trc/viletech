@@ -23,28 +23,19 @@ const projectDir* {.strdefine.} = "."
     ## i.e. `viletech/client`.
 
 proc dsdaMain(
+    ccx: ptr CCore,
     argc: cint,
     argv: cstringArray
 ): cint {.importc.}
 
 let startTime = getTime()
-var cx = Core()
-let ccx: ref CCore = cx
-
-cx.wasm = WasmEngine.init()
-assert(cx.wasm != nil)
+var cx = initCore()
 
 var clArgs = commandLineParams()
 clArgs.insert(os.getAppFileName(), 0)
 
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
-var ccxPtr: ptr core.CCore = nil
-
-for field in fields(ccx[]):
-    ccxPtr = cast[ptr core.CCore](field.addr)
-    break
-
-let ret = dsdaMain(paramCount().cint + 1, argv)
+let ret = dsdaMain(cx.ccorePtr(), paramCount().cint + 1, argv)
 
 let uptime = startTime.elapsed().hoursMinsSecs()
 echo(&"Engine uptime: {uptime.hours:02}:{uptime.mins:02}:{uptime.secs:02}")

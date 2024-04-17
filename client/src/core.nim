@@ -13,7 +13,7 @@ type
         commercial
         retail
         indeterminate
-    Core* = ref object of CCore
+    Core* = object of CCore
         ## Permeates the code base with state that is practically "global".
         loadOrder*: seq[Path]
     CCore* {.exportc.} = object of RootObj
@@ -24,5 +24,22 @@ type
         saved_gametick*: int32 = -1
         wasm*: WasmEngine = nil
 
+proc initCore*(): Core =
+    var cx = Core()
+    cx.wasm = WasmEngine.init()
+    assert(cx.wasm != nil)
+    return cx
+
+proc ccorePtr*(cx: var Core): ptr CCore =
+    let cxPtr: ptr Core = cx.addr
+    let ccx: ptr CCore = cxPtr
+    var ccxPtr: ptr CCore = nil
+
+    for field in fields(ccx[]):
+        ccxPtr = cast[ptr CCore](field.addr)
+        break
+
+    return ccxPtr
+
 proc `destroy=`*(this: Core) =
-    discard
+    this.wasm.delete()
