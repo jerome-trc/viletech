@@ -5,7 +5,7 @@ license = "Apache 2.0 OR MIT"
 bin = @["src/main"]
 skipDirs = @["tests"]
 
-requires "nim == 2.0.2"
+requires "nim == 2.0.4"
 
 import std/cmdline
 import std/strformat
