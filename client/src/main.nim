@@ -1,10 +1,8 @@
 from std/cmdline import commandLineParams, paramCount
 from std/envvars import getEnv
-from std/parseopt import initOptParser, getopt
 from std/os import nil
-from std/paths import Path
 from std/strformat import `&`
-import std/[random, times]
+import std/[parseopt, random, times]
 
 import core, platform, stdx, wasmtime
 
@@ -32,11 +30,34 @@ proc dsdaMain(
 
 let startTime = getTime()
 randomize()
-var cx = initCore()
 
 var clArgs = commandLineParams()
-clArgs.insert(os.getAppFileName(), 0)
+var optParser = initOptParser(clArgs)
 
+while true:
+    optParser.next()
+    case optParser.kind
+    of cmdArgument: discard
+    of cmdLongOption:
+        if optParser.key == "" and optParser.val == "":
+            break
+    of cmdShortOption: discard
+    of cmdEnd: break
+
+# Everything after `--`. Not sure what to do with these yet...
+
+while true:
+    optParser.next()
+    echo(&"{optParser.kind} {optParser.key} {optParser.val}")
+    case optParser.kind
+    of cmdArgument: discard
+    of cmdLongOption: discard
+    of cmdShortOption: discard
+    of cmdEnd: break
+
+var cx = initCore()
+
+clArgs.insert(os.getAppFileName(), 0)
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
 let ret = dsdaMain(cx.ccorePtr(), paramCount().cint + 1, argv)
 
