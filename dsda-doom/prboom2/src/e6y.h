@@ -106,6 +106,7 @@ int G_ReloadLevel(void);
 int G_GotoNextLevel(void);
 
 void M_ChangeSkyMode(void);
+void M_ChangeMaxViewPitch(void);
 
 void M_ChangeFOV(void);
 

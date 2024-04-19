@@ -43,7 +43,6 @@
 #include "i_capture.h"
 #include "e6y.h"
 
-#include "dsda/aim.h"
 #include "dsda/build.h"
 #include "dsda/configuration.h"
 #include "dsda/pause.h"
@@ -128,7 +127,7 @@ void R_InterpolateView(player_t *player, fixed_t frac)
 
       player->prev_viewz = player->viewz;
       player->prev_viewangle = player->mo->angle;
-      player->prev_viewpitch = dsda_PlayerPitch(player);
+      player->prev_viewpitch = P_PlayerPitch(player);
 
       P_ResetWalkcam();
     }
@@ -154,7 +153,7 @@ void R_InterpolateView(player_t *player, fixed_t frac)
     else
     {
       viewangle = player->prev_viewangle + FixedMul (frac, R_SmoothPlaying_Get(player) - player->prev_viewangle);
-      viewpitch = player->prev_viewpitch + FixedMul (frac, dsda_PlayerPitch(player) - player->prev_viewpitch);
+      viewpitch = player->prev_viewpitch + FixedMul (frac, P_PlayerPitch(player) - player->prev_viewpitch);
     }
   }
   else
@@ -179,7 +178,7 @@ void R_InterpolateView(player_t *player, fixed_t frac)
     else
     {
       viewangle = R_SmoothPlaying_Get(player);
-      viewpitch = dsda_PlayerPitch(player);
+      viewpitch = P_PlayerPitch(player);
     }
   }
 

@@ -52,7 +52,6 @@
 
 #include "dsda.h"
 #include "dsda/destructible.h"
-#include "dsda/excmd.h"
 #include "dsda/map_format.h"
 #include "dsda/mapinfo.h"
 
@@ -2275,72 +2274,28 @@ dboolean PTR_ShootTraverse (intercept_t* in)
     // hit line
     // position a bit closer
 
-    if (dsda_FreeAim())
-    {
-      int64_t real_z;
-      int side = P_PointOnLineSide(trace.x, trace.y, li);
-      sector_t *sec = side ? li->backsector : li->frontsector;
-
-      real_z = (int64_t) shootz + FixedMul64(aimslope, FixedMul(in->frac, attackrange));
-      z = real_z > INT_MAX ? INT_MAX :
-          real_z < INT_MIN ? INT_MIN :
-          real_z;
-
-      if (sec && sec->floorheight > z)
-      {
-        fixed_t dist;
-
-        if (sec->floorpic == skyflatnum)
-          return false;
-
-        z = sec->floorheight;
-        dist = FixedDiv(z - shootz, aimslope);
-        frac = FixedDiv(dist, attackrange);
-      }
-      else if (sec && sec->ceilingheight < z)
-      {
-        fixed_t dist;
-
-        if (sec->ceilingpic == skyflatnum)
-          return false;
-
-        // puff spawn height is +/- (255 << 10)
-        z = sec->ceilingheight - mobjinfo[MT_PUFF].height - (255 << 10);
-        dist = FixedDiv(z - shootz, aimslope);
-        frac = FixedDiv(dist, attackrange);
-      }
-      else
-      {
-        frac = in->frac - FixedDiv(4 * FRACUNIT, attackrange);
-        z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
-      }
-    }
-    else
-    {
-      frac = in->frac - FixedDiv(4 * FRACUNIT, attackrange);
-      z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
-
-      if (li->frontsector->ceilingpic == skyflatnum)
-      {
-        // don't shoot the sky!
-
-        if (z > li->frontsector->ceilingheight)
-          return false;
-
-        // it's a sky hack wall
-
-        if  (li->backsector && li->backsector->ceilingpic == skyflatnum)
-
-          // fix bullet-eaters -- killough:
-          // WARNING: Almost all demos will lose sync without this
-          // demo_compatibility flag check!!! killough 1/18/98
-          if (demo_compatibility || li->backsector->ceilingheight < z)
-            return false;
-      }
-    }
-
+    frac = in->frac - FixedDiv (4*FRACUNIT,attackrange);
     x = trace.x + FixedMul (trace.dx, frac);
     y = trace.y + FixedMul (trace.dy, frac);
+    z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
+
+    if (li->frontsector->ceilingpic == skyflatnum)
+    {
+      // don't shoot the sky!
+
+      if (z > li->frontsector->ceilingheight)
+        return false;
+
+      // it's a sky hack wall
+
+      if  (li->backsector && li->backsector->ceilingpic == skyflatnum)
+
+        // fix bullet-eaters -- killough:
+        // WARNING: Almost all demos will lose sync without this
+        // demo_compatibility flag check!!! killough 1/18/98
+        if (demo_compatibility || li->backsector->ceilingheight < z)
+          return false;
+    }
 
     if (li->health)
     {
@@ -2696,12 +2651,19 @@ void P_UseLines (player_t*  player)
 // RADIUS ATTACK
 //
 
-bomb_t bomb;
+//e6y static
+mobj_t *bombsource, *bombspot;
+//e6y static
+int bombdamage;
+int bombdistance;
+
+// hexen
+dboolean DamageSource;
 
 //
 // PIT_RadiusAttack
-// "bomb.source" is the creature
-// that caused the explosion at "bomb.spot".
+// "bombsource" is the creature
+// that caused the explosion at "bombspot".
 //
 
 static dboolean P_SplashImmune(mobj_t *target, mobj_t *spot)
@@ -2717,10 +2679,10 @@ int P_SplashDamage(fixed_t dist)
 
   // [XA] independent damage/distance calculation.
   //      same formula as eternity; thanks Quas :P
-  if (!hexen && bomb.damage == bomb.distance)
-    damage = bomb.damage - dist;
+  if (!hexen && bombdamage == bombdistance)
+    damage = bombdamage - dist;
   else
-    damage = (bomb.damage * (bomb.distance - dist) / bomb.distance) + 1;
+    damage = (bombdamage * (bombdistance - dist) / bombdistance) + 1;
 
   return damage;
 }
@@ -2739,16 +2701,16 @@ dboolean PIT_RadiusAttack (mobj_t* thing)
   if (!(thing->flags & (MF_SHOOTABLE | MF_BOUNCES)))
     return true;
 
-  if (P_SplashImmune(thing, bomb.spot))
+  if (P_SplashImmune(thing, bombspot))
     return true;
 
   if (hexen)
   {
-    if (!(bomb.flags & BF_DAMAGESOURCE) && thing == bomb.source)
+    if (!DamageSource && thing == bombsource)
     {                           // don't damage the source of the explosion
       return true;
     }
-    if (D_abs((thing->z - bomb.spot->z) >> FRACBITS) > 2 * bomb.distance)
+    if (D_abs((thing->z - bombspot->z) >> FRACBITS) > 2 * bombdistance)
     {                           // too high/low
       return true;
     }
@@ -2761,56 +2723,26 @@ dboolean PIT_RadiusAttack (mobj_t* thing)
     // killough 8/10/98: allow grenades to hurt anyone, unless
     // fired by Cyberdemons, in which case it won't hurt Cybers.
 
-    if (bomb.spot->flags & MF_BOUNCES ?
-        thing->type == MT_CYBORG && bomb.source->type == MT_CYBORG :
+    if (bombspot->flags & MF_BOUNCES ?
+        thing->type == MT_CYBORG && bombsource->type == MT_CYBORG :
         thing->flags2 & (MF2_NORADIUSDMG | MF2_BOSS) &&
-        !(bomb.spot->flags2 & MF2_FORCERADIUSDMG))
+        !(bombspot->flags2 & MF2_FORCERADIUSDMG))
       return true;
   }
 
-  dx = D_abs(thing->x - bomb.spot->x);
-  dy = D_abs(thing->y - bomb.spot->y);
+  dx = D_abs(thing->x - bombspot->x);
+  dy = D_abs(thing->y - bombspot->y);
 
-  dist = dx > dy ? dx : dy;
+  dist = dx>dy ? dx : dy;
+  dist = (dist - thing->radius) >> FRACBITS;
 
-  if (map_info.flags & MI_EXPLODE_IN_3D &&
-      (bomb.spot->z < thing->z || bomb.spot->z >= thing->z + thing->height))
-  {
-    fixed_t dz;
+  if (dist < 0)
+    dist = 0;
 
-    if (bomb.spot->z > thing->z)
-    {
-      dz = bomb.spot->z - thing->z - thing->height;
-    }
-    else
-    {
-      dz = thing->z - bomb.spot->z;
-    }
-
-    if (dist <= thing->radius)
-    {
-      dist = dz;
-    }
-    else
-    {
-      dist -= thing->radius;
-      dist = P_AproxDistance(dist, dz);
-    }
-  }
-  else
-  {
-    dist -= thing->radius;
-
-    if (dist < 0)
-      dist = 0;
-  }
-
-  dist >>= FRACBITS;
-
-  if (dist >= bomb.distance)
+  if (dist >= bombdistance)
     return true;  // out of range
 
-  if ( P_CheckSight (thing, bomb.spot) )
+  if ( P_CheckSight (thing, bombspot) )
   {
     // must be in direct path
 
@@ -2821,22 +2753,7 @@ dboolean PIT_RadiusAttack (mobj_t* thing)
       damage >>= 2;
     }
 
-    P_DamageMobj (thing, bomb.spot, bomb.source, damage);
-
-    if (map_info.flags & MI_VERTICAL_EXPLOSION_THRUST && !(bomb.flags & BF_HORIZONTAL))
-    {
-      fixed_t thrust;
-      fixed_t dxy, dz;
-      angle_t an;
-
-      dxy = P_AproxDistance(dx, dy);
-      dz = thing->z + thing->height / 2 - bomb.spot->z;
-      an = R_PointToAngle2(0, 0, dxy, dz);
-
-      thrust = damage * (FRACUNIT >> 3) * g_thrust_factor / thing->info->mass;
-
-      thing->momz += FixedMul(thrust, finesine[an >> ANGLETOFINESHIFT]);
-    }
+    P_DamageMobj (thing, bombspot, bombsource, damage);
   }
 
   return true;
@@ -2846,7 +2763,7 @@ dboolean PIT_RadiusAttack (mobj_t* thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t* spot,mobj_t* source, int damage, int distance, int flags)
+void P_RadiusAttack(mobj_t* spot,mobj_t* source, int damage, int distance, dboolean damageSource)
 {
   int x;
   int y;
@@ -2863,20 +2780,18 @@ void P_RadiusAttack(mobj_t* spot,mobj_t* source, int damage, int distance, int f
   yl = P_GetSafeBlockY(spot->y - dist - bmaporgy);
   xh = P_GetSafeBlockX(spot->x + dist - bmaporgx);
   xl = P_GetSafeBlockX(spot->x - dist - bmaporgx);
-
-  bomb.spot = spot;
+  bombspot = spot;
   if (heretic && spot->type == HERETIC_MT_POD && spot->target)
   {
-    bomb.source = spot->target;
+    bombsource = spot->target;
   }
   else
   {
-    bomb.source = source;
+    bombsource = source;
   }
-  bomb.damage = damage;
-  bomb.distance = distance;
-  bomb.flags = flags;
-
+  bombdamage = damage;
+  bombdistance = distance;
+  DamageSource = damageSource;
   for (y=yl ; y<=yh ; y++)
     for (x=xl ; x<=xh ; x++)
       P_BlockThingsIterator (x, y, PIT_RadiusAttack );

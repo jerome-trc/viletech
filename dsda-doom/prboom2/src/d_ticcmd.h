@@ -40,7 +40,6 @@ typedef struct {
   byte actions;
   byte save_slot;
   byte load_slot;
-  signed short look;
 } excmd_t;
 
 /* The data sampled per tick (single player)

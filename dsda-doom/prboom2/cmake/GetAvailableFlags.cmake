@@ -30,21 +30,18 @@ function(get_supported_warnings outvar)
 
   set(_warnings
       "-Wall"
+	  "-Wextra"
+	  "-Wconversion"
+	  "-Wpedantic"
       "-Wwrite-strings"
       "-Wundef"
       "-Wtype-limits"
       "-Wcast-qual"
-      "-Wpointer-arith"
-      "-Wno-unused-function"
-      "-Wno-switch"
-      "-Wno-sign-compare"
-      "-Wno-format-truncation"
-      "-Wno-missing-field-initializers")
+      "-Wpointer-arith")
   check_flags_list("${_warnings}" "_supported_warnings")
 
   # The following warnings do not apply to C++ and should be treated separately
-  set(_c_only_warnings "-Wabsolute-value" "-Wno-pointer-sign"
-                       "-Wdeclaration-after-statement" "-Wbad-function-cast")
+  set(_c_only_warnings "-Wabsolute-value" "-Wno-pointer-sign" "-Wbad-function-cast")
   check_flags_list("${_c_only_warnings}" "_supported_c_warnings")
   foreach(_c_warning IN LISTS _supported_c_warnings)
     list(APPEND _supported_warnings $<$<COMPILE_LANGUAGE:C>:${_c_warning}>)

@@ -55,9 +55,7 @@
 #include "e6y.h"//e6y
 
 #include "dsda.h"
-#include "dsda/aim.h"
 #include "dsda/ambient.h"
-#include "dsda/excmd.h"
 #include "dsda/map_format.h"
 #include "dsda/mapinfo.h"
 #include "dsda/settings.h"
@@ -2891,34 +2889,61 @@ mobj_t* P_SpawnMissile(mobj_t* source,mobj_t* dest,mobjtype_t type)
 mobj_t* P_SpawnPlayerMissile(mobj_t* source, mobjtype_t type)
 {
   mobj_t *th;
-  fixed_t x, y, z;
-  aim_t aim;
+  fixed_t x, y, z, slope = 0;
 
   // see which target is to be aimed at
-  dsda_PlayerAim(source, source->angle, &aim, mbf_features ? MF_FRIEND : 0);
+
+  angle_t an = source->angle;
+
+  // killough 7/19/98: autoaiming was not in original beta
+  if (comperr(comperr_freeaim))
+    slope = finetangent[(ANG90 - source->pitch) >> ANGLETOFINESHIFT];
+  else
+  {
+    // killough 8/2/98: prefer autoaiming at enemies
+    uint64_t mask = mbf_features ? MF_FRIEND : 0;
+
+    do
+    {
+      slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, mask);
+      if (!linetarget)
+        slope = P_AimLineAttack(source, an += 1 << 26, 16 * 64 * FRACUNIT, mask);
+      if (!linetarget)
+        slope = P_AimLineAttack(source, an -= 2 << 26, 16 * 64 * FRACUNIT, mask);
+      if (!linetarget) {
+        an = source->angle;
+        slope = 0;
+
+        if (raven) slope = ((source->player->lookdir) << FRACBITS) / 173;
+      }
+    }
+    while (mask && (mask=0, !linetarget));  // killough 8/2/98
+  }
 
   x = source->x;
   y = source->y;
 
   if (!raven)
   {
-    z = source->z + 4 * 8 * FRACUNIT + aim.z_offset;
+    z = source->z + 4 * 8 * FRACUNIT;
   }
   else
   {
     if (type == HEXEN_MT_LIGHTNING_FLOOR)
     {
       z = ONFLOORZ;
-      aim.slope = 0;
+      slope = 0;
     }
     else if (type == HEXEN_MT_LIGHTNING_CEILING)
     {
       z = ONCEILINGZ;
-      aim.slope = 0;
+      slope = 0;
     }
     else
     {
-      z = source->z + 4 * 8 * FRACUNIT + aim.z_offset;
+      z = source->z + 4 * 8 * FRACUNIT;
+
+      z += ((source->player->lookdir) << FRACBITS) / 173;
 
       if (hexen)
       {
@@ -2938,23 +2963,10 @@ mobj_t* P_SpawnPlayerMissile(mobj_t* source, mobjtype_t type)
     S_StartMobjSound(th, th->info->seesound);
 
   P_SetTarget(&th->target, source);
-  th->angle = aim.angle;
-
-  if (dsda_FreeAim())
-  {
-    fixed_t horizontal_speed;
-
-    horizontal_speed = FixedMul(th->info->speed, finecosine[source->pitch >> ANGLETOFINESHIFT]);
-    th->momx = FixedMul(horizontal_speed, finecosine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momy = FixedMul(horizontal_speed, finesine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momz = FixedMul(th->info->speed, -finesine[source->pitch >> ANGLETOFINESHIFT]);
-  }
-  else
-  {
-    th->momx = FixedMul(th->info->speed, finecosine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momy = FixedMul(th->info->speed, finesine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momz = FixedMul(th->info->speed, aim.slope);
-  }
+  th->angle = an;
+  th->momx = FixedMul(th->info->speed, finecosine[an>>ANGLETOFINESHIFT]);
+  th->momy = FixedMul(th->info->speed, finesine[an>>ANGLETOFINESHIFT]);
+  th->momz = FixedMul(th->info->speed, slope);
 
   if (hexen)
   {
@@ -3247,17 +3259,33 @@ dboolean P_SeekerMissile(mobj_t * actor, mobj_t ** seekTarget, angle_t thresh, a
 mobj_t *P_SPMAngle(mobj_t * source, mobjtype_t type, angle_t angle)
 {
     mobj_t *th;
-    fixed_t x, y, z;
-    aim_t aim;
+    angle_t an;
+    fixed_t x, y, z, slope;
 
     //
     // see which target is to be aimed at
     //
-    dsda_PlayerAim(source, angle, &aim, 0);
-
+    an = angle;
+    slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+    if (!linetarget)
+    {
+        an += 1 << 26;
+        slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+        if (!linetarget)
+        {
+            an -= 2 << 26;
+            slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+        }
+        if (!linetarget)
+        {
+            an = angle;
+            slope = ((source->player->lookdir) << FRACBITS) / 173;
+        }
+    }
     x = source->x;
     y = source->y;
-    z = source->z + 4 * 8 * FRACUNIT + aim.z_offset;
+    z = source->z + 4 * 8 * FRACUNIT +
+        ((source->player->lookdir) << FRACBITS) / 173;
     if (hexen)
     {
         z -= source->floorclip;
@@ -3272,10 +3300,10 @@ mobj_t *P_SPMAngle(mobj_t * source, mobjtype_t type, angle_t angle)
         S_StartMobjSound(th, th->info->seesound);
     }
     P_SetTarget(&th->target, source);
-    th->angle = aim.angle;
-    th->momx = FixedMul(th->info->speed, finecosine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momy = FixedMul(th->info->speed, finesine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momz = FixedMul(th->info->speed, aim.slope);
+    th->angle = an;
+    th->momx = FixedMul(th->info->speed, finecosine[an >> ANGLETOFINESHIFT]);
+    th->momy = FixedMul(th->info->speed, finesine[an >> ANGLETOFINESHIFT]);
+    th->momz = FixedMul(th->info->speed, slope);
     return (P_CheckMissileSpawn(th) ? th : NULL);
 }
 
@@ -3557,21 +3585,37 @@ mobj_t *P_SPMAngleXYZ(mobj_t * source, fixed_t x, fixed_t y,
                       fixed_t z, mobjtype_t type, angle_t angle)
 {
     mobj_t *th;
-    aim_t aim;
+    angle_t an;
+    fixed_t slope;
 
     //
     // see which target is to be aimed at
     //
-    dsda_PlayerAim(source, angle, &aim, 0);
-
-    z += 4 * 8 * FRACUNIT + aim.z_offset;
+    an = angle;
+    slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+    if (!linetarget)
+    {
+        an += 1 << 26;
+        slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+        if (!linetarget)
+        {
+            an -= 2 << 26;
+            slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, 0);
+        }
+        if (!linetarget)
+        {
+            an = angle;
+            slope = ((source->player->lookdir) << FRACBITS) / 173;
+        }
+    }
+    z += 4 * 8 * FRACUNIT + ((source->player->lookdir) << FRACBITS) / 173;
     z -= source->floorclip;
     th = P_SpawnMobj(x, y, z, type);
     P_SetTarget(&th->target, source);
-    th->angle = aim.angle;
-    th->momx = FixedMul(th->info->speed, finecosine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momy = FixedMul(th->info->speed, finesine[aim.angle >> ANGLETOFINESHIFT]);
-    th->momz = FixedMul(th->info->speed, aim.slope);
+    th->angle = an;
+    th->momx = FixedMul(th->info->speed, finecosine[an >> ANGLETOFINESHIFT]);
+    th->momy = FixedMul(th->info->speed, finesine[an >> ANGLETOFINESHIFT]);
+    th->momz = FixedMul(th->info->speed, slope);
     return (P_CheckMissileSpawn(th) ? th : NULL);
 }
 

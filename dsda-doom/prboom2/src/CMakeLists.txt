@@ -11,8 +11,6 @@ set(COMMON_SRC
     doomtype.h
     dsda.c
     dsda.h
-    dsda/aim.c
-    dsda/aim.h
     dsda/ambient.cpp
     dsda/ambient.h
     dsda/analysis.c
@@ -526,7 +524,7 @@ function(AddGameExecutable TARGET SOURCES)
         endif()
     endif()
 
-    add_executable(${TARGET} WIN32 ${SOURCES})
+    add_library(${TARGET} STATIC ${SOURCES})
 
     target_compile_options(${TARGET} PRIVATE
         ${SUPPORTED_WARNINGS}
@@ -561,7 +559,6 @@ function(AddGameExecutable TARGET SOURCES)
     set_target_properties(${TARGET} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${DSDA_OUTPUT_PATH}
         INTERPROCEDURAL_OPTIMIZATION ${ENABLE_LTO}
-        C_STANDARD 99
     )
 
     if(HAVE_LIBSDL2_IMAGE)
@@ -630,4 +627,4 @@ function(AddGameExecutable TARGET SOURCES)
     )
 endfunction()
 
-AddGameExecutable(dsda-doom "${DSDA_SOURCES}")
+AddGameExecutable(ratboom "${DSDA_SOURCES}")
