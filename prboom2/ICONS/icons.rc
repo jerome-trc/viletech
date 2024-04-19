@@ -1,0 +1,13 @@
+#include "winresrc.h"
+#include "config.h"
+
+#define IDI_ICON1 101
+
+/* IDC_STATIC is documented in winuser.h, but not defined. */
+#ifndef IDC_STATIC
+#define IDC_STATIC (-1)
+#endif
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON    DISCARDABLE     "dsda-doom.ico"

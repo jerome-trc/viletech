@@ -1,0 +1,27 @@
+/prboom2/ICONS/icons.aps
+/prboom2/release
+/build*
+/release*
+
+# spec files
+analysis.txt
+levelstat.txt
+/spec/support/wads/*
+!/spec/support/wads/analysis_test.wad
+
+# macOS
+.DS_Store
+
+# vcpkg
+vcpkg_installed
+
+# Visual Studio
+/.vs/**
+!/.vs/CMakeWorkspaceSettings.json
+out
+CMakeSettings.json
+CMakeUserPresets.json
+
+# Visual Studio Code
+/.vscode/**
+!/.vscode/extension.json
