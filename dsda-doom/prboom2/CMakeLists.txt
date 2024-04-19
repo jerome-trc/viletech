@@ -39,6 +39,11 @@ project("dsda-doom" VERSION 0.27.5)
 # For language servers/IDEs that rely on compile_commands.json.
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED YES)
+
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
