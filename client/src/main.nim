@@ -4,7 +4,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import core, platform, stdx, wasmtime
+import core, fixed, platform, stdx, wasmtime
 
 const libPath = when defined(release):
     "../build/src/Release/libratboom.a"
