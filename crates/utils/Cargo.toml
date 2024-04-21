@@ -23,7 +23,6 @@ bytemuck.workspace = true
 byteorder.workspace = true
 fixed.workspace = true
 glam.workspace = true
-home.workspace = true
 serde = { workspace = true, optional = true }
 smartstring.workspace = true
 triomphe.workspace = true
