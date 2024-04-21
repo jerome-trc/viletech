@@ -15,6 +15,7 @@ pub mod macros;
 pub mod path;
 pub mod pushvec;
 pub mod rstring;
+#[cfg(not(target_family = "wasm"))]
 pub mod simd;
 #[cfg(feature = "sparseset")]
 pub mod sparseset;
