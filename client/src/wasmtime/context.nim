@@ -1,4 +1,4 @@
-import error, extern, store, trap, value
+import error, extern, store, trap, value, wasi
 
 const hFunc = "<wasmtime/func.h>"
 const hStore = "<wasmtime/store.h>"
@@ -9,6 +9,9 @@ type
 
 proc context*(store: WasmtimeStore): WasmtimeContext
     {.header: hStore, importc: "wasmtime_store_context".}
+
+proc setWasi*(this: WasmtimeContext, wasi: WasiConfig): WasmtimeError
+    {.header: hStore, importc: "wasmtime_context_set_wasi".}
 
 proc funcCall*(
     this: WasmtimeContext,

@@ -5,19 +5,25 @@ import wasmtime/[
     engine,
     error,
     extern,
+    function,
     instance,
+    linker,
     module,
     store,
     trap,
-    value]
+    value,
+    wasi]
 
 export
     context,
     engine,
     error,
     extern,
+    function,
     instance,
+    linker,
     module,
     store,
     trap,
-    value
+    value,
+    wasi
