@@ -2,8 +2,6 @@
 
 from std/paths import Path
 
-import wasmtime
-
 const baseScreenWidth*: int = 320
 
 type
@@ -22,13 +20,11 @@ type
             ## It's not critical that this is always the first field,
             ## but please try to leave it that way.
         saved_gametick*: int32 = -1
-        wasm*: WasmEngine = nil
 
-proc initCore*(): Core =
+proc init*(_: typedesc[Core]): Core =
     var cx = Core()
-    cx.wasm = WasmEngine.init()
-    assert(cx.wasm != nil)
     return cx
+
 
 proc ccorePtr*(cx: var Core): ptr CCore =
     let cxPtr: ptr Core = cx.addr
@@ -41,5 +37,6 @@ proc ccorePtr*(cx: var Core): ptr CCore =
 
     return ccxPtr
 
+
 proc `destroy=`*(this: Core) =
-    this.wasm.delete()
+    discard
