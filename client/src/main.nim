@@ -4,7 +4,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import core, fixed, platform, stdx, wasmtime
+import core, fixed, platform, stdx
 
 const libPath = when defined(release):
     "../build/src/Release/libratboom.a"
@@ -48,14 +48,13 @@ while true:
 
 while true:
     optParser.next()
-    echo(&"{optParser.kind} {optParser.key} {optParser.val}")
     case optParser.kind
     of cmdArgument: discard
     of cmdLongOption: discard
     of cmdShortOption: discard
     of cmdEnd: break
 
-var cx = initCore()
+var cx = Core.init()
 
 clArgs.insert(os.getAppFileName(), 0)
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
