@@ -69,3 +69,8 @@ Session.vim
 
 # flamegraph-rs output
 **/flamegraph.svg
+
+# Clone https://github.com/jerome-trc/nimtie.git and add these two symlinks
+# to make NimSuggest happy, and facilitate easier NimTie development.
+/client/src/nimtie.nim
+/client/src/nimtie
