@@ -6,6 +6,7 @@ bin = @["src/main"]
 skipDirs = @["tests"]
 
 requires "nim == 2.0.4"
+requires "https://github.com/jerome-trc/nimtie#7f07eee1"
 
 import std/cmdline
 import std/strformat
