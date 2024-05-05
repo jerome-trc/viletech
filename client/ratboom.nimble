@@ -13,9 +13,9 @@ import std/strformat
 
 let pwd = getEnv("PWD")
 
-proc build(release: static[bool], skipCmake: bool) =
+proc build(release: static[bool], skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
-    var cmd = &"nim {libDirs} --cincludes:../engine/src "
+    var cmd = &"nim {libDirs} --cincludes:../../engine/src "
 
     for clib in [
         "dumb",
@@ -47,10 +47,10 @@ proc build(release: static[bool], skipCmake: bool) =
     else:
         cmd &= &"-o:../build/{outDir}/ratboom "
 
-    if skipCmake:
-        echo("Skipping CMake build...")
+    if skipDsda:
+        echo("Skipping compilation of dsda-doom static library.")
     else:
-        exec(&"/usr/bin/cmake --build ../build --config {outDir} --target all --")
+        exec(&"cmake --build ../build --config {outDir} --target all --")
 
     cmd &= "cpp ./src/main.nim"
     exec(cmd)
@@ -58,12 +58,14 @@ proc build(release: static[bool], skipCmake: bool) =
 
 task dbg, "Build Debug Executable":
     let params = commandLineParams()
-    build(release = false, skipCmake = "--skip-cmake" in params)
+    let skipDsda = "--skip:dsda" in params
+    build(release = false, skipDsda)
 
 
 task rel, "Build Release Executable":
     let params = commandLineParams()
-    build(release = true, skipCmake = "--skip-cmake" in params)
+    let skipDsda = "--skip:dsda" in params
+    build(release = true, skipDsda)
 
 
 task test, "Run Demo Tests":
