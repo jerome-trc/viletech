@@ -1,21 +1,18 @@
 from std/cmdline import commandLineParams, paramCount
-from std/envvars import getEnv
 from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import core, exports, fixed, platform, stdx
+import core, exports, fixed, imports, platform, stdx
 
-const libPath = when defined(release):
+{.passc: "-I./src".}
+
+const dsdaLibPath = when defined(release):
     "../build/src/Release/libratboom.a"
 else:
     "../build/src/Debug/libratboom.a"
 
-{.link: libPath.}
-{.passc: "-I./src".}
-
-{.link: getEnv("VTEC_WASMTIME_DIR") & "/target/release/libwasmtime.a".}
-{.passc: "-isystem " & getEnv("VTEC_WASMTIME_DIR") & "/crates/c-api/include".}
+{.link: dsdaLibPath.}
 
 const projectDir* {.strdefine.} = "."
     ## i.e. `viletech/client`.
