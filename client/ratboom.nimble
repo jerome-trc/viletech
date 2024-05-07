@@ -37,7 +37,7 @@ proc build(release: static[bool], skipDsda: bool) =
 
     when release:
         const outDir = "Release"
-        cmd &= "--nimcache:../nimcache/release -d:release "
+        cmd &= "--nimcache:../nimcache/release -d:release -d:strip "
     else:
         const outDir = "Debug"
         cmd &= "--nimcache:../nimcache/debug --debuginfo --linedir:on "
