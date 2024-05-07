@@ -1157,13 +1157,11 @@ void I_SetWindowCaption(void)
 }
 
 void I_SetWindowIcon(void) {
-  const uint8_t* n_windowIcon(int32_t * size);
-
   static SDL_Surface* surface = NULL;
 
   if (!surface) {
 	int32_t size = -1;
-	const uint8_t* bytes = n_windowIcon(&size);
+	const uint8_t* bytes = vt_windowIcon(&size);
 	assert(bytes != NULL);
 	SDL_RWops* rwop = SDL_RWFromConstMem((const void*)bytes, size);
 	assert(rwop != NULL);

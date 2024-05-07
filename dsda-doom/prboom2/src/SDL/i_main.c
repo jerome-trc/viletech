@@ -34,6 +34,8 @@
  *-----------------------------------------------------------------------------
  */
 
+#include <assert.h>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -83,6 +85,8 @@
 #include "dsda/time.h"
 #include "dsda/wad_stats.h"
 #include "dsda/zipfile.h"
+
+#include "viletech.nim.h"
 
 /* Most of the following has been rewritten by Lee Killough
  *
@@ -262,8 +266,10 @@ void I_SetProcessPriority(void)
   }
 }
 
-int dsdaMain(void* cx, int argc, char **argv)
+int dsdaMain(CCore* cx, int argc, char **argv)
 {
+    assert(cx->savedGametick == -1); // Sanity check...
+
   dsda_ParseCommandLineArgs(argc, argv);
 
   if (dsda_Flag(dsda_arg_verbose))
