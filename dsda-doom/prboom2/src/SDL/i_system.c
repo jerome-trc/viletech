@@ -38,17 +38,17 @@
 #include <windows.h>
 #endif
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#include "SDL.h"
+
 #include <ctype.h>
-#include <time.h>
+#include <errno.h>
 #include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <errno.h>
-
-#include "SDL.h"
+#include <time.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -62,77 +62,69 @@
 #include <io.h>
 #endif
 
-#include "lprintf.h"
-#include "m_file.h"
-#include "doomtype.h"
-#include "doomdef.h"
 #include "d_player.h"
-#include "m_fixed.h"
-#include "r_fps.h"
+#include "doomdef.h"
+#include "doomtype.h"
 #include "e6y.h"
 #include "i_system.h"
+#include "lprintf.h"
+#include "m_file.h"
+#include "m_fixed.h"
+#include "r_fps.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "z_zone.h"
-
 #include "dsda/settings.h"
 #include "dsda/signal_context.h"
 #include "dsda/time.h"
+#include "z_zone.h"
 
-void I_uSleep(unsigned long usecs)
-{
-    SDL_Delay(usecs/1000);
+void I_uSleep(unsigned long usecs) {
+	SDL_Delay(usecs / 1000);
 }
 
 static dboolean InDisplay = false;
 static int saved_gametic = -1;
 dboolean realframe = false;
 
-dboolean I_StartDisplay(void)
-{
-  if (InDisplay)
-    return false;
+dboolean I_StartDisplay(void) {
+	if (InDisplay)
+		return false;
 
-  realframe = (!movement_smooth) || (gametic > saved_gametic);
+	realframe = (!movement_smooth) || (gametic > saved_gametic);
 
-  if (realframe)
-    saved_gametic = gametic;
+	if (realframe)
+		saved_gametic = gametic;
 
-  InDisplay = true;
-  DSDA_ADD_CONTEXT(sf_display);
-  return true;
+	InDisplay = true;
+	DSDA_ADD_CONTEXT(sf_display);
+	return true;
 }
 
-void I_EndDisplay(void)
-{
-  InDisplay = false;
-  DSDA_REMOVE_CONTEXT(sf_display);
+void I_EndDisplay(void) {
+	InDisplay = false;
+	DSDA_REMOVE_CONTEXT(sf_display);
 }
 
 int interpolation_method;
-fixed_t I_GetTimeFrac (void)
-{
-  fixed_t frac;
+fixed_t I_GetTimeFrac(void) {
+	fixed_t frac;
 
-  if (!movement_smooth)
-  {
-    frac = FRACUNIT;
-  }
-  else
-  {
-    unsigned long long tic_time;
-    const double tics_per_usec = TICRATE / 1000000.0f;
+	if (!movement_smooth) {
+		frac = FRACUNIT;
+	} else {
+		unsigned long long tic_time;
+		const double tics_per_usec = TICRATE / 1000000.0f;
 
-    tic_time = dsda_TickElapsedTime();
+		tic_time = dsda_TickElapsedTime();
 
-    frac = (fixed_t) (tic_time * FRACUNIT * tics_per_usec);
-    frac = BETWEEN(0, FRACUNIT, frac);
-  }
+		frac = (fixed_t)(tic_time * FRACUNIT * tics_per_usec);
+		frac = BETWEEN(0, FRACUNIT, frac);
+	}
 
-  return frac;
+	return frac;
 }
 
 /*
@@ -140,32 +132,31 @@ fixed_t I_GetTimeFrac (void)
  *
  * CPhipps - extracted from G_ReloadDefaults because it is O/S based
  */
-unsigned long I_GetRandomTimeSeed(void)
-{
-  return (unsigned long)time(NULL);
+unsigned long I_GetRandomTimeSeed(void) {
+	return (unsigned long)time(NULL);
 }
 
 /* cphipps - I_GetVersionString
  * Returns a version string in the given buffer
  */
-const char* I_GetVersionString(char* buf, size_t sz)
-{
-  snprintf(buf,sz,"%s v%s (https://github.com/kraflab/dsda-doom/)",PACKAGE_NAME,PACKAGE_VERSION);
-  return buf;
+const char* I_GetVersionString(char* buf, size_t sz) {
+	snprintf(
+		buf, sz, "%s v%s (https://github.com/kraflab/dsda-doom/)", PACKAGE_NAME, PACKAGE_VERSION
+	);
+	return buf;
 }
 
 /* cphipps - I_SigString
  * Returns a string describing a signal number
  */
-const char* I_SigString(char* buf, size_t sz, int signum)
-{
+const char* I_SigString(char* buf, size_t sz, int signum) {
 #ifdef HAVE_STRSIGNAL
-  if (strsignal(signum) && strlen(strsignal(signum)) < sz)
-    strcpy(buf,strsignal(signum));
-  else
+	if (strsignal(signum) && strlen(strsignal(signum)) < sz)
+		strcpy(buf, strsignal(signum));
+	else
 #endif
-  snprintf(buf,sz,"signal %d",signum);
-  return buf;
+		snprintf(buf, sz, "signal %d", signum);
+	return buf;
 }
 
 /*
@@ -174,17 +165,17 @@ const char* I_SigString(char* buf, size_t sz, int signum)
  * cph 2001/11/18 - wrapper for read(2) which handles partial reads and aborts
  * on error.
  */
-void I_Read(int fd, void* vbuf, size_t sz)
-{
-  unsigned char* buf = (unsigned char*)vbuf;
+void I_Read(int fd, void* vbuf, size_t sz) {
+	unsigned char* buf = (unsigned char*)vbuf;
 
-  while (sz) {
-    int rc = read(fd,buf,sz);
-    if (rc <= 0) {
-      I_Error("I_Read: read failed: %s", rc ? strerror(errno) : "EOF");
-    }
-    sz -= rc; buf += rc;
-  }
+	while (sz) {
+		int rc = read(fd, buf, sz);
+		if (rc <= 0) {
+			I_Error("I_Read: read failed: %s", rc ? strerror(errno) : "EOF");
+		}
+		sz -= rc;
+		buf += rc;
+	}
 }
 
 /*
@@ -193,124 +184,115 @@ void I_Read(int fd, void* vbuf, size_t sz)
  * Return length of an open file.
  */
 
-int I_Filelength(int handle)
-{
-  struct stat   fileinfo;
-  if (fstat(handle,&fileinfo) == -1)
-    I_Error("I_Filelength: %s",strerror(errno));
-  return fileinfo.st_size;
+int I_Filelength(int handle) {
+	struct stat fileinfo;
+	if (fstat(handle, &fileinfo) == -1)
+		I_Error("I_Filelength: %s", strerror(errno));
+	return fileinfo.st_size;
 }
 
 // Return the path where the executable lies -- Lee Killough
 // proff_fs 2002-07-04 - moved to i_system
 #ifdef _WIN32
 
-void I_SwitchToWindow(HWND hwnd)
-{
-  typedef BOOL (WINAPI *TSwitchToThisWindow) (HWND wnd, BOOL restore);
-  static TSwitchToThisWindow SwitchToThisWindow = NULL;
+void I_SwitchToWindow(HWND hwnd) {
+	typedef BOOL(WINAPI * TSwitchToThisWindow)(HWND wnd, BOOL restore);
+	static TSwitchToThisWindow SwitchToThisWindow = NULL;
 
-  if (!SwitchToThisWindow)
-    SwitchToThisWindow = (TSwitchToThisWindow)GetProcAddress(GetModuleHandle("user32.dll"), "SwitchToThisWindow");
+	if (!SwitchToThisWindow)
+		SwitchToThisWindow = (TSwitchToThisWindow
+		)GetProcAddress(GetModuleHandle("user32.dll"), "SwitchToThisWindow");
 
-  if (SwitchToThisWindow)
-  {
-    HWND hwndLastActive = GetLastActivePopup(hwnd);
+	if (SwitchToThisWindow) {
+		HWND hwndLastActive = GetLastActivePopup(hwnd);
 
-    if (IsWindowVisible(hwndLastActive))
-      hwnd = hwndLastActive;
+		if (IsWindowVisible(hwndLastActive))
+			hwnd = hwndLastActive;
 
-    SetForegroundWindow(hwnd);
-    Sleep(100);
-    SwitchToThisWindow(hwnd, TRUE);
-  }
+		SetForegroundWindow(hwnd);
+		Sleep(100);
+		SwitchToThisWindow(hwnd, TRUE);
+	}
 }
 
-const char *I_DoomExeDir(void)
-{
-  extern char **dsda_argv;
+const char* I_DoomExeDir(void) {
+	extern char** dsda_argv;
 
-  static const char current_dir_dummy[] = {"."}; // proff - rem extra slash 8/21/03
-  static char *base;
-  if (!base)        // cache multiple requests
-    {
-      size_t len = strlen(*dsda_argv);
-      char *p = (base = (char*)Z_Malloc(len+1)) + len - 1;
-      strcpy(base,*dsda_argv);
-      while (p > base && *p!='/' && *p!='\\')
-        *p--=0;
-      if (*p=='/' || *p=='\\')
-        *p--=0;
-      if (strlen(base) < 2 || !M_WriteAccess(base))
-      {
-        Z_Free(base);
-        base = (char*)Z_Malloc(1024);
-        if (!M_getcwd(base, 1024) || !M_WriteAccess(base))
-          strcpy(base, current_dir_dummy);
-      }
-    }
-  return base;
+	static const char current_dir_dummy[] = { "." }; // proff - rem extra slash 8/21/03
+	static char* base;
+	if (!base) // cache multiple requests
+	{
+		size_t len = strlen(*dsda_argv);
+		char* p = (base = (char*)Z_Malloc(len + 1)) + len - 1;
+		strcpy(base, *dsda_argv);
+		while (p > base && *p != '/' && *p != '\\')
+			*p-- = 0;
+		if (*p == '/' || *p == '\\')
+			*p-- = 0;
+		if (strlen(base) < 2 || !M_WriteAccess(base)) {
+			Z_Free(base);
+			base = (char*)Z_Malloc(1024);
+			if (!M_getcwd(base, 1024) || !M_WriteAccess(base))
+				strcpy(base, current_dir_dummy);
+		}
+	}
+	return base;
 }
 
-const char* I_GetTempDir(void)
-{
-  static const char* tmp_path;
+const char* I_GetTempDir(void) {
+	static const char* tmp_path;
 
-  if (!tmp_path)
-  {
-    wchar_t wpath[PATH_MAX];
-    DWORD result;
+	if (!tmp_path) {
+		wchar_t wpath[PATH_MAX];
+		DWORD result;
 
-    result = GetTempPathW(PATH_MAX, wpath);
+		result = GetTempPathW(PATH_MAX, wpath);
 
-    if (result == 0 || result > MAX_PATH)
-      I_Error("I_GetTempDir: GetTempPathW failed");
-    else
-      tmp_path = ConvertWideToUtf8(wpath);
-  }
+		if (result == 0 || result > MAX_PATH)
+			I_Error("I_GetTempDir: GetTempPathW failed");
+		else
+			tmp_path = ConvertWideToUtf8(wpath);
+	}
 
-  return tmp_path;
+	return tmp_path;
 }
 
 #elif defined(AMIGA)
 
-const char *I_DoomExeDir(void)
-{
-  return "PROGDIR:";
+const char* I_DoomExeDir(void) {
+	return "PROGDIR:";
 }
 
-const char* I_GetTempDir(void)
-{
-  return "PROGDIR:";
+const char* I_GetTempDir(void) {
+	return "PROGDIR:";
 }
 
 #else
 // cph - V.Aguilar (5/30/99) suggested return ~/.lxdoom/, creating
 //  if non-existant
 // cph 2006/07/23 - give prboom+ its own dir
-static const char prboom_dir[] = {"/.rat-boom"}; // Mead rem extra slash 8/21/03
+static const char prboom_dir[] = { "/.rat-boom" }; // Mead rem extra slash 8/21/03
 
-const char *I_DoomExeDir(void)
-{
-  static char *base;
-  if (!base)        // cache multiple requests
-  {
-    char *home = M_getenv("HOME");
-    size_t len = strlen(home);
+const char* I_DoomExeDir(void) {
+	static char* base;
+	if (!base) // cache multiple requests
+	{
+		char* home = M_getenv("HOME");
+		size_t len = strlen(home);
 
-    base = Z_Malloc(len + strlen(prboom_dir) + 1);
-    strcpy(base, home);
-    // I've had trouble with trailing slashes before...
-    if (base[len-1] == '/') base[len-1] = 0;
-    strcat(base, prboom_dir);
-    M_MakeDir(base, true); // Make sure it exists
-  }
-  return base;
+		base = Z_Malloc(len + strlen(prboom_dir) + 1);
+		strcpy(base, home);
+		// I've had trouble with trailing slashes before...
+		if (base[len - 1] == '/')
+			base[len - 1] = 0;
+		strcat(base, prboom_dir);
+		M_MakeDir(base, true); // Make sure it exists
+	}
+	return base;
 }
 
-const char *I_GetTempDir(void)
-{
-  return "/tmp";
+const char* I_GetTempDir(void) {
+	return "/tmp";
 }
 
 #endif
@@ -321,25 +303,24 @@ const char *I_GetTempDir(void)
  * cphipps - simple test for trailing slash on dir names
  */
 
-dboolean HasTrailingSlash(const char* dn)
-{
-  return ( (dn[strlen(dn)-1] == '/')
+dboolean HasTrailingSlash(const char* dn) {
+	return (
+		(dn[strlen(dn) - 1] == '/')
 #if defined(_WIN32)
-        || (dn[strlen(dn)-1] == '\\')
+		|| (dn[strlen(dn) - 1] == '\\')
 #endif
 #if defined(AMIGA)
-        || (dn[strlen(dn)-1] == ':')
+		|| (dn[strlen(dn) - 1] == ':')
 #endif
-          );
+	);
 }
 
-static const char *I_GetBasePath(void)
-{
-  static char *executable_dir;
-  /* SDL_GetBasePath is an expensive call */
-  if (!executable_dir)
-    executable_dir = SDL_GetBasePath();
-  return executable_dir;
+static const char* I_GetBasePath(void) {
+	static char* executable_dir;
+	/* SDL_GetBasePath is an expensive call */
+	if (!executable_dir)
+		executable_dir = SDL_GetBasePath();
+	return executable_dir;
 }
 
 /*
@@ -359,15 +340,14 @@ static const char *I_GetBasePath(void)
 #define PATH_SEPARATOR ':'
 #endif
 
-char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic)
-{
-  // lookup table of directories to search
-  static struct {
-    const char *dir; // directory
-    const char *sub; // subdirectory
-    const char *env; // environment variable
-    const char *(*func)(void); // for I_DoomExeDir
-  } search0[] = {
+char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic) {
+	// lookup table of directories to search
+	static struct {
+		const char* dir; // directory
+		const char* sub; // subdirectory
+		const char* env; // environment variable
+		const char* (*func)(void); // for I_DoomExeDir
+	} search0[] = {
     {NULL, NULL, NULL, I_DoomExeDir}, // config directory
     {NULL}, // current working directory
     {NULL, NULL, "DOOMWADDIR"}, // run-time $DOOMWADDIR
@@ -382,171 +362,156 @@ char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic)
     {"/usr/share/doom"},
   }, *search;
 
-  static size_t num_search;
-  size_t  i;
-  size_t  pl;
+	static size_t num_search;
+	size_t i;
+	size_t pl;
 
-  static char static_p[PATH_MAX];
-  char * dinamic_p = NULL;
-  char *p = (isStatic ? static_p : dinamic_p);
+	static char static_p[PATH_MAX];
+	char* dinamic_p = NULL;
+	char* p = (isStatic ? static_p : dinamic_p);
 
-  if (!wfname)
-    return NULL;
+	if (!wfname)
+		return NULL;
 
-  if (!num_search)
-  {
-    char *dwp;
+	if (!num_search) {
+		char* dwp;
 
-    // initialize with the static lookup table
-    num_search = sizeof(search0)/sizeof(*search0);
-    search = Z_Malloc(num_search * sizeof(*search));
-    memcpy(search, search0, num_search * sizeof(*search));
+		// initialize with the static lookup table
+		num_search = sizeof(search0) / sizeof(*search0);
+		search = Z_Malloc(num_search * sizeof(*search));
+		memcpy(search, search0, num_search * sizeof(*search));
 
-    // add each directory from the $DOOMWADPATH environment variable
-    if ((dwp = M_getenv("DOOMWADPATH")))
-    {
-      char *left, *ptr, *dup_dwp;
+		// add each directory from the $DOOMWADPATH environment variable
+		if ((dwp = M_getenv("DOOMWADPATH"))) {
+			char *left, *ptr, *dup_dwp;
 
-      dup_dwp = Z_Strdup(dwp);
-      left = dup_dwp;
+			dup_dwp = Z_Strdup(dwp);
+			left = dup_dwp;
 
-      for (;;)
-      {
-          ptr = strchr(left, PATH_SEPARATOR);
-          if (ptr != NULL)
-          {
-              *ptr = '\0';
+			for (;;) {
+				ptr = strchr(left, PATH_SEPARATOR);
+				if (ptr != NULL) {
+					*ptr = '\0';
 
-              num_search++;
-              search = Z_Realloc(search, num_search * sizeof(*search));
-              memset(&search[num_search-1], 0, sizeof(*search));
-              search[num_search-1].dir = Z_Strdup(left);
+					num_search++;
+					search = Z_Realloc(search, num_search * sizeof(*search));
+					memset(&search[num_search - 1], 0, sizeof(*search));
+					search[num_search - 1].dir = Z_Strdup(left);
 
-              left = ptr + 1;
-          }
-          else
-          {
-              break;
-          }
-      }
+					left = ptr + 1;
+				} else {
+					break;
+				}
+			}
 
-      num_search++;
-      search = Z_Realloc(search, num_search * sizeof(*search));
-      memset(&search[num_search-1], 0, sizeof(*search));
-      search[num_search-1].dir = Z_Strdup(left);
+			num_search++;
+			search = Z_Realloc(search, num_search * sizeof(*search));
+			memset(&search[num_search - 1], 0, sizeof(*search));
+			search[num_search - 1].dir = Z_Strdup(left);
 
-      Z_Free(dup_dwp);
-    }
-  }
+			Z_Free(dup_dwp);
+		}
+	}
 
-  /* Precalculate a length we will need in the loop */
-  pl = strlen(wfname) + (ext ? strlen(ext) : 0) + 4;
+	/* Precalculate a length we will need in the loop */
+	pl = strlen(wfname) + (ext ? strlen(ext) : 0) + 4;
 
-  for (i = 0; i < num_search; i++) {
-    const char  * d = NULL;
-    const char  * s = NULL;
-    /* Each entry in the switch sets d to the directory to look in,
-     * and optionally s to a subdirectory of d */
-    // switch replaced with lookup table
-    if (search[i].env) {
-      if (!(d = M_getenv(search[i].env)))
-        continue;
-    } else if (search[i].func)
-      d = search[i].func();
-    else
-      d = search[i].dir;
-    s = search[i].sub;
+	for (i = 0; i < num_search; i++) {
+		const char* d = NULL;
+		const char* s = NULL;
+		/* Each entry in the switch sets d to the directory to look in,
+		 * and optionally s to a subdirectory of d */
+		// switch replaced with lookup table
+		if (search[i].env) {
+			if (!(d = M_getenv(search[i].env)))
+				continue;
+		} else if (search[i].func)
+			d = search[i].func();
+		else
+			d = search[i].dir;
+		s = search[i].sub;
 
-    if (!isStatic)
-      p = (char*)Z_Malloc((d ? strlen(d) : 0) + (s ? strlen(s) : 0) + pl);
-    sprintf(p, "%s%s%s%s%s", d ? d : "", (d && !HasTrailingSlash(d)) ? "/" : "",
-                             s ? s : "", (s && !HasTrailingSlash(s)) ? "/" : "",
-                             wfname);
+		if (!isStatic)
+			p = (char*)Z_Malloc((d ? strlen(d) : 0) + (s ? strlen(s) : 0) + pl);
+		sprintf(
+			p, "%s%s%s%s%s", d ? d : "", (d && !HasTrailingSlash(d)) ? "/" : "", s ? s : "",
+			(s && !HasTrailingSlash(s)) ? "/" : "", wfname
+		);
 
-    if (ext && !M_FileExists(p))
-      strcat(p, ext);
-    if (M_FileExists(p)) {
-      if (!isStatic)
-        lprintf(LO_DEBUG, " found %s\n", p);
-      return p;
-    }
-    if (!isStatic)
-      Z_Free(p);
-  }
-  return NULL;
+		if (ext && !M_FileExists(p))
+			strcat(p, ext);
+		if (M_FileExists(p)) {
+			if (!isStatic)
+				lprintf(LO_DEBUG, " found %s\n", p);
+			return p;
+		}
+		if (!isStatic)
+			Z_Free(p);
+	}
+	return NULL;
 }
 
 char* I_RequireFile(const char* wfname, const char* ext) {
-  char* result = I_FindFileInternal(wfname, ext, false);
+	char* result = I_FindFileInternal(wfname, ext, false);
 
-  if (!result)
-    I_Error("Unable to find required file \"%s\"", wfname);
+	if (!result)
+		I_Error("Unable to find required file \"%s\"", wfname);
 
-  return result;
+	return result;
 }
 
-char* I_FindFile(const char* wfname, const char* ext)
-{
-  return I_FindFileInternal(wfname, ext, false);
+char* I_FindFile(const char* wfname, const char* ext) {
+	return I_FindFileInternal(wfname, ext, false);
 }
 
-const char* I_FindFile2(const char* wfname, const char* ext)
-{
-  return (const char*) I_FindFileInternal(wfname, ext, true);
+const char* I_FindFile2(const char* wfname, const char* ext) {
+	return (const char*)I_FindFileInternal(wfname, ext, true);
 }
 
-char* I_RequireAnyFile(const char* wfname, const char** ext)
-{
-  char* result = NULL;
+char* I_RequireAnyFile(const char* wfname, const char** ext) {
+	char* result = NULL;
 
-  for (; *ext; ext++)
-  {
-    result = I_FindFile(wfname, *ext);
-    if (result)
-      return result;
-  }
+	for (; *ext; ext++) {
+		result = I_FindFile(wfname, *ext);
+		if (result)
+			return result;
+	}
 
-  I_Error("Unable to find required file \"%s\"", wfname);
+	I_Error("Unable to find required file \"%s\"", wfname);
 }
 
-char* I_RequireWad(const char* wfname)
-{
-  return I_RequireFile(wfname, ".wad");
+char* I_RequireWad(const char* wfname) {
+	return I_RequireFile(wfname, ".wad");
 }
 
-char* I_FindWad(const char* wfname)
-{
-  return I_FindFile(wfname, ".wad");
+char* I_FindWad(const char* wfname) {
+	return I_FindFile(wfname, ".wad");
 }
 
-char* I_RequireDeh(const char* wfname)
-{
-  char* result;
+char* I_RequireDeh(const char* wfname) {
+	char* result;
 
-  result = I_FindFile(wfname, ".bex");
-  if (result)
-    return result;
+	result = I_FindFile(wfname, ".bex");
+	if (result)
+		return result;
 
-  return I_RequireFile(wfname, ".deh");
+	return I_RequireFile(wfname, ".deh");
 }
 
-char* I_FindDeh(const char* wfname)
-{
-  char* result;
+char* I_FindDeh(const char* wfname) {
+	char* result;
 
-  result = I_FindFile(wfname, ".bex");
-  if (result)
-    return result;
+	result = I_FindFile(wfname, ".bex");
+	if (result)
+		return result;
 
-  return I_FindFile(wfname, ".deh");
+	return I_FindFile(wfname, ".deh");
 }
 
-char* I_RequireZip(const char* wfname)
-{
-  return I_RequireFile(wfname, ".zip");
+char* I_RequireZip(const char* wfname) {
+	return I_RequireFile(wfname, ".zip");
 }
 
-char* I_FindZip(const char* wfname)
-{
-  return I_FindFile(wfname, ".zip");
+char* I_FindZip(const char* wfname) {
+	return I_FindFile(wfname, ".zip");
 }
