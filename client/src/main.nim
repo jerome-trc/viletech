@@ -52,10 +52,11 @@ while true:
     of cmdEnd: break
 
 var cx = Core.init()
+cx.c.core = cx.addr
 
 clArgs.insert(os.getAppFileName(), 0)
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
-let ret = dsdaMain(cx.ccorePtr(), paramCount().cint + 1, argv)
+let ret = dsdaMain(cx.c.addr, paramCount().cint + 1, argv)
 
 let uptime = startTime.elapsed().hoursMinsSecs()
 echo(&"Engine uptime: {uptime.hours:02}:{uptime.mins:02}:{uptime.secs:02}")
