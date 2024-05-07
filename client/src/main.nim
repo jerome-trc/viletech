@@ -37,7 +37,7 @@ while true:
     of cmdArgument: discard
     of cmdLongOption:
         if optParser.key == "" and optParser.val == "":
-            break
+            break # `--`
     of cmdShortOption: discard
     of cmdEnd: break
 
