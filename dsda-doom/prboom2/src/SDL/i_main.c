@@ -338,6 +338,6 @@ int dsdaMain(CCore* cx, int argc, char **argv)
   /* cphipps - call to video specific startup code */
   I_PreInitGraphics();
 
-  D_DoomMain ();
+  D_DoomMain(cx);
   return 0;
 }

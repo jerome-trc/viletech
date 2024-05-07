@@ -120,6 +120,12 @@
 
 #include "i_glob.h"
 
+#if defined(_WIN32)
+#define DYNLIB_EXT ".dll"
+#else
+#define DYNLIB_EXT ".so"
+#endif
+
 static void D_PageDrawer(void);
 
 // jff 1/24/98 add new versions of these variables to remember command line
@@ -1627,7 +1633,7 @@ static void EvaluateDoomVerStr(void)
 // CPhipps - the old contents of D_DoomMain, but moved out of the main
 //  line of execution so its stack space can be freed
 
-static void D_DoomMainSetup(void)
+static void D_DoomMainSetup(CCore* cx)
 {
   int p;
   dsda_arg_t *arg;
@@ -1781,6 +1787,10 @@ static void D_DoomMainSetup(void)
 
         D_AddFile(file, source_pwad);
       }
+      else if (dsda_HasFileExt(file_name, DYNLIB_EXT))
+      {
+        vt_addDynLib(cx, file_name);
+      }
       else
       {
         I_Error("File type \"%s\" is not supported", dsda_FileExtension(file_name));
@@ -1795,6 +1805,7 @@ static void D_DoomMainSetup(void)
     D_AutoloadPWadDir();
 
   D_InitFakeNetGame();
+  vt_loadDynLibs(cx);
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "W_Init: Init WADfiles.\n");
@@ -2000,9 +2011,9 @@ static void D_DoomMainSetup(void)
 // D_DoomMain
 //
 
-void D_DoomMain(void)
+void D_DoomMain(CCore* cx)
 {
-  D_DoomMainSetup(); // CPhipps - setup out of main execution stack
+  D_DoomMainSetup(cx); // CPhipps - setup out of main execution stack
 
   D_DoomLoop ();  // never returns
 }

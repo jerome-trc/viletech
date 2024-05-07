@@ -1,11 +1,19 @@
 when defined(nimHasUsed):
     {.used.}
 
-from std/paths import Path
+import std/[dynlib, paths]
 
 import nimtie, nimtie/config
 
 import core, platform
+
+const afterIncludes = """
+struct _NimString;
+typedef struct _NimString Path;
+
+typedef struct Core Core;
+typedef void* LibHandle;
+"""
 
 const cfg = Config(
     directory: "../build",
@@ -13,7 +21,7 @@ const cfg = Config(
     header: "/// @file\n/// @brief Auto-generated on " & gorge("date") & ".\n\n",
     targets: {Target.c},
     c: CConfig(
-        afterIncludes: "struct _NimString;\ntypedef struct _NimString Path;\n\n",
+        afterIncludes: afterIncludes,
         cxxCompat: true,
         pragmaOnce: true,
         procPrefix: "vt_",
@@ -28,8 +36,12 @@ exportObject(cfg, CCore):
     discard
 
 exportProcs(cfg):
-    windowIcon
     addDynLib
+    loadDynLibs
+    windowIcon
+
+exportSeq(cfg, seq[LibHandle]):
+    discard
 
 exportSeq(cfg, seq[Path]):
     discard

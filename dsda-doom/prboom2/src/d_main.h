@@ -38,6 +38,8 @@
 #include "d_event.h"
 #include "w_wad.h"
 
+#include "viletech.nim.h"
+
 /* CPhipps - removed wadfiles[] stuff to w_wad.h */
 
 //jff 1/24/98 make command line copies of play modes available
@@ -64,7 +66,7 @@ void D_DoAdvanceDemo (void);
 void D_Display(fixed_t frac);
 void D_PageTicker(void);
 void D_StartTitle(void);
-void D_DoomMain(void);
+void D_DoomMain(CCore*);
 void D_AddFile (const char *file, wad_source_t source);
 
 void AddIWAD(const char *iwad);
