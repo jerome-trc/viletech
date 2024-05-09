@@ -41,8 +41,9 @@
 #include <SDL_opengl.h>
 
 #include "doomtype.h"
-#include "v_video.h"
 #include "SDL.h"
+
+#include "viletech.nim.h"
 
 extern SDL_Window *sdl_window;
 extern SDL_Renderer *sdl_renderer;
@@ -55,7 +56,7 @@ void I_PreInitGraphics(void); /* CPhipps - do stuff immediately on start */
 void I_InitScreenResolution(void); /* init resolution */
 void I_SetWindowCaption(void); /* Set the window caption */
 void I_SetWindowIcon(void); /* Set the application icon */
-void I_InitGraphics (void);
+void I_InitGraphics(CCore*);
 void I_UpdateVideoMode(void);
 void I_ShutdownGraphics(void);
 
@@ -78,7 +79,7 @@ unsigned char *I_GrabScreen (void);
  * Quick syncronous operations are performed here.
  * Can call D_PostEvent.
  */
-void I_StartTic (void);
+void I_StartTic (CCore*);
 
 /* I_StartFrame
  * Called by D_DoomLoop,

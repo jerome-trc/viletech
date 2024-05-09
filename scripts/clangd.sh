@@ -8,5 +8,6 @@ echo "---" > ./nimcache/.clangd
 echo "CompileFlags:" >> ./nimcache/.clangd
 echo "  Add: [" >> ./nimcache/.clangd
 echo "    '-isystem$NIM_DIR/lib'," >> ./nimcache/.clangd
+echo "    '-isystem../depend/imgui'," >> ./nimcache/.clangd
 echo "  ]" >> ./nimcache/.clangd
 echo "..." >> ./nimcache/.clangd

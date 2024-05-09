@@ -51,12 +51,6 @@
 #include "v_video.h"
 #include "lprintf.h"
 #include "st_stuff.h"
-#include "i_main.h"
-#include "i_system.h"
-#include "i_video.h"
-#include "g_game.h"
-#include "smooth.h"
-#include "r_fps.h"
 #include <math.h>
 #include "e6y.h"//e6y
 #include "xs_Float.h"
@@ -992,12 +986,8 @@ static void R_RenderBSPNodes(void)
   }
 }
 
-//
-// R_RenderView
-//
-
-void R_RenderPlayerView (player_t* player)
-{
+/// @fn R_RenderPlayerView
+void R_RenderPlayerView(CCore* cx, player_t* player) {
   r_frame_count++;
 
   DSDA_ADD_CONTEXT(sf_setup_frame);
@@ -1015,7 +1005,7 @@ void R_RenderPlayerView (player_t* player)
   R_InitDrawScene();
   DSDA_REMOVE_CONTEXT(sf_init_scene);
 
-  FakeNetUpdate();
+  FakeNetUpdate(cx);
 
   if (V_IsOpenGLMode()) {
     DSDA_ADD_CONTEXT(sf_gl_frustum);
@@ -1027,7 +1017,7 @@ void R_RenderPlayerView (player_t* player)
   R_RenderBSPNodes();
   DSDA_REMOVE_CONTEXT(sf_bsp_nodes);
 
-  FakeNetUpdate();
+  FakeNetUpdate(cx);
 
   if (V_IsSoftwareMode())
   {
@@ -1040,7 +1030,7 @@ void R_RenderPlayerView (player_t* player)
   R_ResetColumnBuffer();
   DSDA_REMOVE_CONTEXT(sf_reset_column_buffer);
 
-  FakeNetUpdate();
+  FakeNetUpdate(cx);
 
   if (V_IsSoftwareMode()) {
     DSDA_ADD_CONTEXT(sf_draw_masked);
@@ -1049,11 +1039,11 @@ void R_RenderPlayerView (player_t* player)
     DSDA_REMOVE_CONTEXT(sf_draw_masked);
   }
 
-  FakeNetUpdate();
+  FakeNetUpdate(cx);
 
   if (V_IsOpenGLMode() && !automap_on) {
     DSDA_ADD_CONTEXT(sf_draw_scene);
-    gld_DrawScene(player);
+    gld_DrawScene(cx, player);
     gld_EndDrawScene();
     DSDA_REMOVE_CONTEXT(sf_draw_scene);
   }

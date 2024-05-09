@@ -5,7 +5,7 @@ import std/[dynlib, paths]
 
 import nimtie, nimtie/config
 
-import core, platform
+import core, devgui, platform
 
 const afterIncludes = """
 struct _NimString;
@@ -13,6 +13,9 @@ typedef struct _NimString Path;
 
 typedef struct Core Core;
 typedef void* LibHandle;
+typedef union SdlEvent SdlEvent;
+typedef struct SdlWindow SdlWindow;
+
 """
 
 const cfg = Config(
@@ -37,7 +40,13 @@ exportObject(cfg, CCore):
 
 exportProcs(cfg):
     addDynLib
+    dguiDraw
+    dguiFrameBegin
+    dguiFrameFinish
+    dguiFrameDraw
+    dguiSetup
     loadDynLibs
+    processEvent
     windowIcon
 
 exportSeq(cfg, seq[LibHandle]):

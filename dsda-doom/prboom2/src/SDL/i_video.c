@@ -291,7 +291,7 @@ int I_SDLtoDoomMouseState(Uint32 buttonstate)
       ;
 }
 
-static void I_GetEvent(void)
+static void I_GetEvent(CCore* cx)
 {
   event_t event;
 
@@ -300,6 +300,8 @@ static void I_GetEvent(void)
 
 while (SDL_PollEvent(Event))
 {
+    vt_processEvent(cx, (SdlEvent*)Event);
+
   switch (Event->type) {
   case SDL_KEYDOWN:
 #ifdef __APPLE__
@@ -415,13 +417,10 @@ while (SDL_PollEvent(Event))
 }
 }
 
-//
-// I_StartTic
-//
-
-void I_StartTic (void)
+/// @fn I_StartTic
+void I_StartTic(CCore* cx)
 {
-  I_GetEvent();
+  I_GetEvent(cx);
 
   if (dsda_AllowMouse())
     I_ReadMouse();
@@ -430,12 +429,8 @@ void I_StartTic (void)
     dsda_PollGameController();
 }
 
-//
-// I_StartFrame
-//
-void I_StartFrame (void)
-{
-}
+/// @fn I_StartFrame
+void I_StartFrame(void) { }
 
 static void I_FlushMousePosition(void)
 {
@@ -1173,9 +1168,9 @@ void I_SetWindowIcon(void) {
   }
 }
 
-void I_InitGraphics(void)
+void I_InitGraphics(CCore* cx)
 {
-  static int    firsttime=1;
+  static int firsttime = 1;
 
   if (firsttime)
   {
@@ -1186,6 +1181,8 @@ void I_InitGraphics(void)
 
     /* Set the video mode */
     I_UpdateVideoMode();
+
+    vt_dguiSetup(cx, (SdlWindow*)sdl_window, sdl_glcontext);
 
     //e6y: setup the window title
     I_SetWindowCaption();

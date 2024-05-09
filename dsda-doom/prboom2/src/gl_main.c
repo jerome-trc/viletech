@@ -2506,8 +2506,10 @@ void gld_DrawProjectedWalls(GLDrawItemType itemtype)
   }
 }
 
-void gld_DrawScene(player_t *player)
+void gld_DrawScene(CCore* cx, player_t *player)
 {
+    (void)player;
+
   int i;
 
   glEnable(GL_ALPHA_TEST);
@@ -2756,4 +2758,6 @@ void gld_DrawScene(player_t *player)
   glDisableClientState(GL_COLOR_ARRAY);
 
   glsl_PopMainShader();
+
+  vt_dguiFrameDraw(cx);
 }

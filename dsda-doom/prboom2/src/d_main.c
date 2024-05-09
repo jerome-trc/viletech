@@ -35,11 +35,10 @@
  *-----------------------------------------------------------------------------
  */
 
+#include "viletech.nim.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-#include "SDL_timer.h"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -53,7 +52,6 @@
 #include "doomtype.h"
 #include "doomstat.h"
 #include "d_net.h"
-#include "dstrings.h"
 #include "sounds.h"
 #include "z_zone.h"
 #include "w_wad.h"
@@ -62,11 +60,9 @@
 #include "f_finale.h"
 #include "f_wipe.h"
 #include "m_file.h"
-#include "m_misc.h"
 #include "m_menu.h"
 #include "i_main.h"
 #include "i_system.h"
-#include "i_sound.h"
 #include "i_video.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -347,8 +343,7 @@ void D_MustFillBackScreen(void)
   must_fill_back_screen = true;
 }
 
-void D_Display (fixed_t frac)
-{
+void D_Display(CCore* cx, fixed_t frac) {
   static dboolean isborderstate        = false;
   static dboolean borderwillneedredraw = false;
   static gamestate_t oldgamestate = -1;
@@ -465,7 +460,7 @@ void D_Display (fixed_t frac)
     R_InterpolateView(&players[displayplayer], frac);
 
     DSDA_ADD_CONTEXT(sf_player_view);
-    R_RenderPlayerView(&players[displayplayer]);
+    R_RenderPlayerView(cx, &players[displayplayer]);
     DSDA_REMOVE_CONTEXT(sf_player_view);
 
     dsda_UpdateRenderStats();
@@ -504,9 +499,9 @@ void D_Display (fixed_t frac)
   }
 
   // menus go directly to the screen
-  M_Drawer();          // menu is drawn even on top of everything
+  M_Drawer(); // menu is drawn even on top of everything
 
-  FakeNetUpdate();     // send out any new accumulation
+  FakeNetUpdate(cx);     // send out any new accumulation
 
   HU_DrawDemoProgress(true); //e6y
 
@@ -530,18 +525,15 @@ void D_Display (fixed_t frac)
   I_EndDisplay();
 }
 
-//
-//  D_DoomLoop()
-//
-// Not a globally visible function,
-//  just included for source reference,
-//  called by D_DoomMain, never exits.
-// Manages timing and IO,
-//  calls all ?_Responder, ?_Ticker, and ?_Drawer,
-//  calls I_GetTime, I_StartFrame, and I_StartTic
-//
-
-static void D_DoomLoop(void)
+/// @fn D_DoomLoop
+///
+/// Not a globally visible function,
+///  just included for source reference,
+///  called by D_DoomMain, never exits.
+/// Manages timing and IO,
+///  calls all ?_Responder, ?_Ticker, and ?_Drawer,
+///  calls I_GetTime, I_StartFrame, and I_StartTic
+static void D_DoomLoop(CCore* cx)
 {
   if (dsda_IntConfig(dsda_config_startup_delay_ms) > 0)
     I_uSleep(dsda_IntConfig(dsda_config_startup_delay_ms) * 1000);
@@ -558,7 +550,7 @@ static void D_DoomLoop(void)
     // process one or more tics
     if (singletics)
     {
-      I_StartTic ();
+      I_StartTic (cx);
       G_BuildTiccmd (&local_cmds[consoleplayer][maketic%BACKUPTICS]);
       if (advancedemo)
         D_DoAdvanceDemo ();
@@ -568,11 +560,15 @@ static void D_DoomLoop(void)
       maketic++;
     }
     else
-      TryRunTics (); // will run at least one tic
+      TryRunTics(cx); // will run at least one tic
 
     // killough 3/16/98: change consoleplayer to displayplayer
     if (players[displayplayer].mo) // cph 2002/08/10
       S_UpdateSounds();// move positional sounds
+
+    vt_dguiFrameBegin(cx);
+    vt_dguiDraw(cx);
+    vt_dguiFrameFinish(cx);
 
     // Update display, next frame, with current state.
     if (!movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate)
@@ -593,7 +589,7 @@ static void D_DoomLoop(void)
             I_QueueFrameCapture();
           }
 
-          D_Display(cap_frac);
+          D_Display(cx, cap_frac);
 
           isExtraDDisplay = false;
           cap_frac += cap_step;
@@ -602,7 +598,7 @@ static void D_DoomLoop(void)
       }
       else
       {
-        D_Display(-1);
+        D_Display(cx, -1);
       }
     }
   }
@@ -627,9 +623,7 @@ void D_PageTicker(void)
     D_AdvanceDemo();
 }
 
-//
-// D_PageDrawer
-//
+/// @fn D_PageDrawer
 static void D_PageDrawer(void)
 {
   if (raven)
@@ -1395,7 +1389,7 @@ static void LoadZIPsAtPath(const char *path, wad_source_t source, deh_queue_t *d
     I_EndGlob(glob);
 }
 
-static const char *D_AutoLoadGameBase()
+static const char *D_AutoLoadGameBase(void)
 {
   return hexen ? "hexen-all" :
          heretic ? "heretic-all" :
@@ -1406,7 +1400,7 @@ static const char *D_AutoLoadGameBase()
 
 // auto-loading of .wad files.
 
-void D_AutoloadIWadDir()
+void D_AutoloadIWadDir(void)
 {
   char *autoload_dir;
 
@@ -1429,7 +1423,7 @@ void D_AutoloadIWadDir()
   Z_Free(autoload_dir);
 }
 
-static void D_AutoloadPWadDir()
+static void D_AutoloadPWadDir(void)
 {
   int i;
 
@@ -1449,7 +1443,7 @@ static void D_AutoloadPWadDir()
 
 // auto-loading of .deh files.
 
-static void D_AutoloadDehIWadDir()
+static void D_AutoloadDehIWadDir(void)
 {
   char *autoload_dir;
 
@@ -1472,7 +1466,7 @@ static void D_AutoloadDehIWadDir()
   Z_Free(autoload_dir);
 }
 
-static void D_AutoloadDehPWadDir()
+static void D_AutoloadDehPWadDir(void)
 {
   int i;
   for (i = 0; i < numwadfiles; ++i)
@@ -1964,7 +1958,7 @@ static void D_DoomMainSetup(CCore* cx)
   dsda_InitFont();
 
   if (!(dsda_Flag(dsda_arg_nodraw) && dsda_Flag(dsda_arg_nosound)))
-    I_InitGraphics();
+    I_InitGraphics(cx);
 
   // NSM
   arg = dsda_Arg(dsda_arg_viddump);
@@ -2014,6 +2008,5 @@ static void D_DoomMainSetup(CCore* cx)
 void D_DoomMain(CCore* cx)
 {
   D_DoomMainSetup(cx); // CPhipps - setup out of main execution stack
-
-  D_DoomLoop ();  // never returns
+  D_DoomLoop(cx);  // never returns
 }

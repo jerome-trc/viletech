@@ -47,17 +47,14 @@
 #include "doomtype.h"
 #include "doomstat.h"
 #include "d_net.h"
-#include "z_zone.h"
 
 #include "d_main.h"
 #include "g_game.h"
 #include "m_menu.h"
 
 #include "i_system.h"
-#include "i_main.h"
 #include "i_video.h"
 #include "r_fps.h"
-#include "lprintf.h"
 #include "e6y.h"
 
 #include "dsda/args.h"
@@ -82,7 +79,7 @@ void D_InitFakeNetGame (void)
     playeringame[i] = false;
 }
 
-void FakeNetUpdate(void)
+void FakeNetUpdate(CCore* cx)
 {
   static int lastmadetic;
 
@@ -94,7 +91,7 @@ void FakeNetUpdate(void)
     lastmadetic += newtics;
 
     while (newtics--) {
-      I_StartTic();
+      I_StartTic(cx);
       if (maketic - gametic > BACKUPTICS/2) break;
 
       // e6y
@@ -111,14 +108,14 @@ void FakeNetUpdate(void)
 // Implicitly tracked whenever we check the current tick
 int ms_to_next_tick;
 
-void TryRunTics (void)
+void TryRunTics(CCore* cx)
 {
   int runtics;
   int entertime = dsda_GetTick();
 
   // Wait for tics to run
   while (1) {
-    FakeNetUpdate();
+    FakeNetUpdate(cx);
     runtics = maketic - gametic;
     if (!runtics) {
       if (!movement_smooth) {
@@ -134,7 +131,7 @@ void TryRunTics (void)
         if (movement_smooth && gamestate==wipegamestate)
         {
           isExtraDDisplay = true;
-          D_Display(-1);
+          D_Display(cx, -1);
           isExtraDDisplay = false;
         }
       }
@@ -147,6 +144,6 @@ void TryRunTics (void)
     M_Ticker ();
     G_Ticker ();
     gametic++;
-    FakeNetUpdate();
+    FakeNetUpdate(cx);
   }
 }

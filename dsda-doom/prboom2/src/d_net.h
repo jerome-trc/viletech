@@ -34,15 +34,15 @@
 #ifndef __D_NET__
 #define __D_NET__
 
-#include "d_player.h"
+#include "viletech.nim.h"
 
-// Create any new ticcmds
-void FakeNetUpdate (void);
+/// Create any new ticcmds.
+void FakeNetUpdate(CCore*);
 
-//? how many ticks to run?
-void TryRunTics (void);
+/// How many ticks to run?
+void TryRunTics(CCore*);
 
-// CPhipps - move to header file
-void D_InitFakeNetGame (void); // This does the setup
+/// This does the setup.
+void D_InitFakeNetGame(void);
 
 #endif

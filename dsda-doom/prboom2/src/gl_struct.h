@@ -36,6 +36,12 @@
 
 #include <SDL_opengl.h>
 
+#include "doomtype.h"
+#include "d_player.h"
+#include "r_defs.h"
+
+#include "viletech.nim.h"
+
 extern dboolean use_gl_nodes;
 
 typedef enum {
@@ -60,8 +66,8 @@ extern dboolean gl_ui_lightmode_indexed;
 extern dboolean gl_automap_lightmode_indexed;
 void gld_FlushTextures(void);
 
-void gld_InitVertexData();
-void gld_CleanVertexData();
+void gld_InitVertexData(void);
+void gld_CleanVertexData(void);
 void gld_UpdateSplitData(sector_t *sector);
 
 void gld_Init(int width, int height);
@@ -99,15 +105,15 @@ void gld_CleanMemory(void);
 void gld_CleanStaticMemory(void);
 void gld_PreprocessLevel(void);
 
-void gld_Set2DMode();
+void gld_Set2DMode(void);
 void gld_InitDrawScene(void);
 void gld_StartDrawScene(void);
 void gld_AddPlane(int subsectornum, visplane_t *floor, visplane_t *ceiling);
 void gld_AddWall(seg_t *seg);
 void gld_ProjectSprite(mobj_t* thing, int lightlevel);
-void gld_DrawScene(player_t *player);
+void gld_DrawScene(CCore*, player_t *player);
 void gld_EndDrawScene(void);
-void gld_Finish();
+void gld_Finish(void);
 
 // wipe
 int gld_wipe_doMelt(int ticks, int *y_lookup);

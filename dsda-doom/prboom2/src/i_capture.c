@@ -39,6 +39,7 @@
 #include "m_file.h"
 #include "i_system.h"
 #include "i_capture.h"
+#include "z_zone.h"
 
 #include "dsda/configuration.h"
 
@@ -415,7 +416,6 @@ static int my_popen3 (pipeinfo_t *p)
 
   Z_Free (puser);
   return 0;
-
 }
 
 

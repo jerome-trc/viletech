@@ -37,6 +37,8 @@
 #include "d_player.h"
 #include "r_data.h"
 
+#include "viletech.nim.h"
+
 extern int r_frame_count;
 
 //
@@ -143,10 +145,14 @@ angle_t R_PointToPseudoAngle(fixed_t x, fixed_t y);
 //
 
 void R_ResetColorMap(void);
-void R_RenderPlayerView(player_t *player);   // Called by G_Drawer.
-void R_Init(void);                           // Called by startup code.
-void R_SetViewSize(void);              // Called by M_Responder.
-void R_ExecuteSetViewSize(void);             // cph - called by D_Display to complete a view resize
+/// Called by G_Drawer.
+void R_RenderPlayerView(CCore*, player_t*);
+/// Called by startup code.
+void R_Init(void);
+/// Called by M_Responder.
+void R_SetViewSize(void);
+/// called by D_Display to complete a view resize
+void R_ExecuteSetViewSize(void);
 dboolean R_FullView(void);
 dboolean R_PartialView(void);
 dboolean R_StatusBarVisible(void);
