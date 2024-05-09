@@ -3,7 +3,7 @@
 import std/[dynlib, files]
 from std/paths import Path
 
-import plugin
+import imgui, plugin
 
 const baseScreenWidth*: int = 320
 
@@ -16,7 +16,8 @@ type
         indeterminate
     Core* {.byref.} = object
         ## Permeates the code base with state that is practically "global".
-        loadOrder*: seq[Path]
+        loadOrder*: seq[Path] = @[]
+        imguiCtx*: ptr ImGuiContext = nil
         c*: CCore
     CCore* {.byref, exportc.} = object
         ## The parts of `Core` that are FFI-safe.

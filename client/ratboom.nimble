@@ -15,7 +15,7 @@ let pwd = getEnv("PWD")
 
 proc build(release: static[bool], skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
-    var cmd = &"nim {libDirs} --cincludes:../../engine/src "
+    var cmd = &"nim {libDirs} --cincludes:../../engine/src --cincludes:../../depend/imgui "
 
     for clib in [
         "dumb",
