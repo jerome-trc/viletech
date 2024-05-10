@@ -3,19 +3,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import core, exports, fixed, imports, platform, stdx
-
-{.passc: "-I./src".}
-
-const dsdaLibPath = when defined(release):
-    "../build/src/Release/libratboom.a"
-else:
-    "../build/src/Debug/libratboom.a"
-
-{.link: dsdaLibPath.}
-
-const projectDir* {.strdefine.} = "."
-    ## i.e. `viletech/client`.
+import compile, core, exports, fixed, imports, platform, stdx
 
 proc dsdaMain(
     ccx: ptr CCore,

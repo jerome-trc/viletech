@@ -6,14 +6,13 @@ bin = @["src/main"]
 skipDirs = @["tests"]
 
 requires "nim == 2.0.4"
+requires "checksums == 0.1.0"
 requires "https://github.com/jerome-trc/nimtie#c24b804"
 
-import std/cmdline
-import std/strformat
+import std/[cmdline, strformat]
+import checksums/md5
 
-let pwd = getEnv("PWD")
-
-proc build(release: static[bool], skipDsda: bool) =
+proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
     var cmd = &"nim {libDirs} --cincludes:../../engine/src --cincludes:../../depend/imgui "
 
@@ -37,35 +36,53 @@ proc build(release: static[bool], skipDsda: bool) =
 
     when release:
         const outDir = "Release"
-        cmd &= "--nimcache:../nimcache/release -d:release -d:strip -d:lto "
+        cmd &= &"--nimcache:../nimcache/release -d:release -d:strip -d:lto "
     else:
         const outDir = "Debug"
-        cmd &= "--nimcache:../nimcache/debug --debuginfo --linedir:on "
+        cmd &= &"--nimcache:../nimcache/debug --debuginfo --linedir:on "
 
-    when defined(windows):
-        cmd &= &"-o:../build/{outDir}/ratboom.exe "
-    else:
-        cmd &= &"-o:../build/{outDir}/ratboom "
+    let exeName = toExe("ratboom")
+    cmd &= &"-o:../build/{outDir}/{exeName} "
+
+    if checkOnly:
+        cmd &= "--compileOnly:on -d:checkOnly "
 
     if skipDsda:
         echo("Skipping compilation of dsda-doom static library.")
     else:
         exec(&"cmake --build ../build --config {outDir} --target all --")
 
-    cmd &= "cpp ./src/main.nim"
+    cmd &= &"cpp -d:projectDir:{getCurrentDir()} ./src/main.nim"
     exec(cmd)
+
+    # If the generated C header isn't different from the last run, don't copy it
+    # so as not to cause Ninja cache invalidation and force a rebuild of dsda-doom.
+    if "../build/viletech.nim.h".fileExists():
+        let prevBindings = staticRead("../build/viletech.nim.h")
+        let prevCksum = toMD5(prevBindings)
+        let newBindings = staticRead("../nimcache/viletech.nim.h")
+        let newCksum = toMD5(newBindings)
+
+        if prevCksum != newCksum:
+            cpFile("../nimcache/viletech.nim.h", "../build/viletech.nim.h")
+    else:
+        cpFile("../nimcache/viletech.nim.h", "../build/viletech.nim.h")
 
 
 task dbg, "Build Debug Executable":
     let params = commandLineParams()
     let skipDsda = "--skip:dsda" in params
-    build(release = false, skipDsda)
+    build(release = false, checkOnly = false, skipDsda)
 
 
 task rel, "Build Release Executable":
     let params = commandLineParams()
-    let skipDsda = "--skip:dsda" in params
-    build(release = true, skipDsda)
+    build(release = true, checkOnly = false, false)
+
+
+task semchk, "Compiler Check":
+    let params = commandLineParams()
+    build(release = false, checkOnly = true, true)
 
 
 task test, "Run Demo Tests":
