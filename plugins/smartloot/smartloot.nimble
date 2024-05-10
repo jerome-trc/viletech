@@ -22,10 +22,8 @@ proc build(release: static[bool]) =
         cmd &= "--nimcache:../../nimcache/plugins/smartloot/release "
         cmd &= "--debuginfo --linedir:on "
 
-    when defined(windows):
-        cmd &= &"-o:../build/{outDir}/smartloot.dll "
-    else:
-        cmd &= &"-o:../../build/{outDir}/smartloot.so "
+    let libName = toDll("smartloot")
+    cmd &= &"-o:../../build/{outDir}/{libName} "
 
     cmd &= "c ./src/lib.nim"
     exec(cmd)

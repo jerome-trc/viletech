@@ -18,10 +18,16 @@ typedef struct SdlWindow SdlWindow;
 
 """
 
+const header = """
+/// @file
+/// @brief Auto-generated C bindings to client functions. Do not edit.
+
+"""
+
 const cfg = Config(
-    directory: "../build",
+    directory: "../nimcache",
     filename: "viletech.nim",
-    header: "/// @file\n/// @brief Auto-generated on " & gorge("date") & ".\n\n",
+    header: header,
     targets: {Target.c},
     c: CConfig(
         afterIncludes: afterIncludes,
@@ -55,4 +61,5 @@ exportSeq(cfg, seq[LibHandle]):
 exportSeq(cfg, seq[Path]):
     discard
 
-writeFiles(cfg)
+when not defined(checkOnly):
+    writeFiles(cfg)
