@@ -21,7 +21,6 @@
 #include "i_main.h"
 #include "i_sound.h"
 #include "s_sound.h"
-#include "smooth.h"
 #include "v_video.h"
 #include "gl_struct.h"
 
@@ -85,7 +84,7 @@ void dsda_EnterSkipMode(void) {
     dsda_ApplyPauseMode(PAUSE_BUILDMODE);
 }
 
-void dsda_ExitSkipMode(void) {
+void dsda_ExitSkipMode(CCore* cx) {
   skip_mode = false;
 
   dsda_ResetSkipSettings();
@@ -104,11 +103,11 @@ void dsda_ExitSkipMode(void) {
   S_RestartMusic();
 
   if (V_IsOpenGLMode())
-    gld_PreprocessLevel();
+    gld_PreprocessLevel(cx);
 }
 
-void dsda_ToggleSkipMode(void) {
-  dsda_SkipMode() ? dsda_ExitSkipMode() : dsda_EnterSkipMode();
+void dsda_ToggleSkipMode(CCore* cx) {
+  dsda_SkipMode() ? dsda_ExitSkipMode(cx) : dsda_EnterSkipMode();
 }
 
 void dsda_SkipToNextMap(void) {
@@ -126,9 +125,9 @@ void dsda_SkipToLogicTic(int tic) {
   dsda_EnterSkipMode();
 }
 
-void dsda_EvaluateSkipModeGTicker(void) {
+void dsda_EvaluateSkipModeGTicker(CCore* cx) {
   if (dsda_SkipMode() && skip_until_logictic && skip_until_logictic <= true_logictic)
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 }
 
 void dsda_EvaluateSkipModeInitNew(void) {
@@ -136,7 +135,7 @@ void dsda_EvaluateSkipModeInitNew(void) {
     demo_warp_reached = true;
 }
 
-void dsda_EvaluateSkipModeBuildTiccmd(void) {
+void dsda_EvaluateSkipModeBuildTiccmd(CCore* cx) {
   if (dsda_SkipMode() && gametic > 0)
     if (
       (
@@ -153,15 +152,15 @@ void dsda_EvaluateSkipModeBuildTiccmd(void) {
         demo_warp_reached && gametic - levelstarttic > demo_skiptics
       )
     )
-      dsda_ExitSkipMode();
+      dsda_ExitSkipMode(cx);
 }
 
-void dsda_EvaluateSkipModeDoCompleted(void) {
+void dsda_EvaluateSkipModeDoCompleted(CCore* cx) {
   if (dsda_SkipMode() && (skip_until_end_of_map || demo_warp_reached))
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 }
 
-void dsda_EvaluateSkipModeDoTeleportNewMap(void) {
+void dsda_EvaluateSkipModeDoTeleportNewMap(CCore* cx) {
   if (dsda_SkipMode()) {
     static int firstmap = 1;
 
@@ -173,13 +172,13 @@ void dsda_EvaluateSkipModeDoTeleportNewMap(void) {
       );
 
     if (demo_warp_reached && demo_skiptics == 0 && !firstmap)
-      dsda_ExitSkipMode();
+      dsda_ExitSkipMode(cx);
 
     firstmap = 0;
   }
 }
 
-void dsda_EvaluateSkipModeDoWorldDone(void) {
+void dsda_EvaluateSkipModeDoWorldDone(CCore* cx) {
   if (dsda_SkipMode()) {
     static int firstmap = 1;
 
@@ -191,15 +190,15 @@ void dsda_EvaluateSkipModeDoWorldDone(void) {
       );
 
     if (demo_warp_reached && demo_skiptics == 0 && !firstmap)
-      dsda_ExitSkipMode();
+      dsda_ExitSkipMode(cx);
 
     firstmap = 0;
   }
 }
 
-void dsda_EvaluateSkipModeCheckDemoStatus(void) {
+void dsda_EvaluateSkipModeCheckDemoStatus(CCore* cx) {
   if (dsda_SkipMode() && (skip_until_end_of_map || skip_until_next_map))
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 }
 
 void dsda_HandleSkip(void) {

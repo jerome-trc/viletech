@@ -107,8 +107,8 @@ static void ApplyWindowResize(SDL_Event *resize_event);
 static void ActivateMouse(void);
 static void DeactivateMouse(void);
 //static int AccelerateMouse(int val);
-static void I_ReadMouse(void);
-static dboolean MouseShouldBeGrabbed();
+static void I_ReadMouse(CCore*);
+static dboolean MouseShouldBeGrabbed(CCore*);
 static void UpdateFocus(void);
 
 extern const int gl_colorbuffer_bits;
@@ -338,14 +338,14 @@ while (SDL_PollEvent(Event))
 #endif
     event.type = ev_keydown;
     event.data1.i = I_TranslateKey(&Event->key.keysym);
-    D_PostEvent(&event);
+    D_PostEvent(cx, &event);
     break;
 
   case SDL_KEYUP:
   {
     event.type = ev_keyup;
     event.data1.i = I_TranslateKey(&Event->key.keysym);
-    D_PostEvent(&event);
+    D_PostEvent(cx, &event);
   }
   break;
 
@@ -355,7 +355,7 @@ while (SDL_PollEvent(Event))
   {
     event.type = ev_mouse;
     event.data1.i = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
-    D_PostEvent(&event);
+    D_PostEvent(cx, &event);
   }
   break;
 
@@ -367,20 +367,20 @@ while (SDL_PollEvent(Event))
       event.data1.i = KEYD_MWHEELUP;
 
       event.type = ev_keydown;
-      D_PostEvent(&event);
+      D_PostEvent(cx, &event);
 
       event.type = ev_keyup;
-      D_PostEvent(&event);
+      D_PostEvent(cx, &event);
     }
     else if (Event->wheel.y < 0)
     {
       event.data1.i = KEYD_MWHEELDOWN;
 
       event.type = ev_keydown;
-      D_PostEvent(&event);
+      D_PostEvent(cx, &event);
 
       event.type = ev_keyup;
-      D_PostEvent(&event);
+      D_PostEvent(cx, &event);
     }
   }
   break;
@@ -388,7 +388,7 @@ while (SDL_PollEvent(Event))
   case SDL_TEXTINPUT:
     event.type = ev_text;
     event.text = Event->text.text;
-    D_PostEvent(&event);
+    D_PostEvent(cx, &event);
     break;
 
   case SDL_WINDOWEVENT:
@@ -423,10 +423,10 @@ void I_StartTic(CCore* cx)
   I_GetEvent(cx);
 
   if (dsda_AllowMouse())
-    I_ReadMouse();
+    I_ReadMouse(cx);
 
   if (dsda_AllowGameController())
-    dsda_PollGameController();
+    dsda_PollGameController(cx);
 }
 
 /// @fn I_StartFrame
@@ -568,10 +568,10 @@ void I_HandleCapture(void)
 static int newpal = 0;
 #define NO_PALETTE_CHANGE 1000
 
-void I_FinishUpdate (void)
+void I_FinishUpdate(CCore* cx)
 {
   //e6y: new mouse code
-  UpdateGrab();
+  UpdateGrab(cx);
 
 #ifdef MONITOR_VISIBILITY
   //!!if (!(SDL_GetAppState()&SDL_APPACTIVE)) {
@@ -649,6 +649,8 @@ void I_SetPalette (int pal)
 
 static void I_ShutdownSDL(void)
 {
+    vt_dguiShutdown();
+
   if (sdl_glcontext) SDL_GL_DeleteContext(sdl_glcontext);
   if (screen) SDL_FreeSurface(screen);
   if (buffer) SDL_FreeSurface(buffer);
@@ -1195,7 +1197,7 @@ void I_InitGraphics(CCore* cx)
 
     //e6y: new mouse code
     UpdateFocus();
-    UpdateGrab();
+    UpdateGrab(cx);
   }
 }
 
@@ -1504,7 +1506,7 @@ static void CorrectMouseStutter(int *x, int *y)
 //
 // This is to combine all mouse movement for a tic into one mouse
 // motion event.
-static void I_ReadMouse(void)
+static void I_ReadMouse(CCore* cx)
 {
   if (!mouse_enabled)
     return;
@@ -1523,13 +1525,16 @@ static void I_ReadMouse(void)
       event.data1.i = x;
       event.data2.i = -y;
 
-      D_PostEvent(&event);
+      D_PostEvent(cx, &event);
     }
   }
 }
 
-static dboolean MouseShouldBeGrabbed(void)
+static dboolean MouseShouldBeGrabbed(CCore* cx)
 {
+    if (vt_dguiNeedsMouse(cx))
+        return false;
+
     if (fastdemo)
         return false;
 
@@ -1595,12 +1600,12 @@ static void UpdateFocus(void)
   //    screenvisible = (state & SDL_APPACTIVE) != 0;
 }
 
-void UpdateGrab(void)
+void UpdateGrab(CCore* cx)
 {
   static dboolean currently_grabbed = false;
   dboolean grab;
 
-  grab = MouseShouldBeGrabbed();
+  grab = MouseShouldBeGrabbed(cx);
 
   if (grab && !currently_grabbed)
   {

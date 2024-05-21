@@ -18,6 +18,8 @@
 #ifndef __DSDA_GAME_CONTROLLER__
 #define __DSDA_GAME_CONTROLLER__
 
+#include "viletech.nim.h"
+
 // Must match SDL
 typedef enum {
   DSDA_CONTROLLER_BUTTON_A,
@@ -47,7 +49,7 @@ typedef enum {
 } dsda_game_controller_button_t;
 
 const char* dsda_GameControllerButtonName(int button);
-void dsda_PollGameController(void);
+void dsda_PollGameController(CCore*);
 void dsda_InitGameController(void);
 
 #endif

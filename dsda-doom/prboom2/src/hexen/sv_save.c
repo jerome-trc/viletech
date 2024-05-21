@@ -1904,10 +1904,10 @@ void SV_SaveMap(void)
     SV_WriteLong(ASEG_END);
 }
 
-void SV_LoadMap(void)
+void SV_LoadMap(CCore* cx)
 {
     // Load a base level
-    G_InitNew(gameskill, gameepisode, gamemap, false);
+    G_InitNew(cx, gameskill, gameepisode, gamemap, false);
 
     // Remove all thinkers
     RemoveAllThinkers();
@@ -1934,7 +1934,7 @@ void SV_LoadMap(void)
     Z_Free(MobjList);
 }
 
-void SV_MapTeleport(int map, int position)
+void SV_MapTeleport(CCore* cx, int map, int position)
 {
     int i;
     int j;
@@ -1986,12 +1986,12 @@ void SV_MapTeleport(int map, int position)
 
     if (!deathmatch && MapArchiveExists(gamemap))
     {                           // Unarchive map
-        SV_LoadMap();
+        SV_LoadMap(cx);
         P_MapStart();
     }
     else
     {                           // New map
-        G_InitNew(gameskill, gameepisode, gamemap, false);
+        G_InitNew(cx, gameskill, gameepisode, gamemap, false);
 
         P_MapStart();
 

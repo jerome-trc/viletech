@@ -479,7 +479,7 @@ static void cheat_behold()
 }
 
 // 'clev' change-level cheat
-static void cheat_clev(char buf[3])
+static void cheat_clev(CCore* cx, char buf[3])
 {
   int epsd, map;
 
@@ -498,7 +498,7 @@ static void cheat_clev(char buf[3])
   {
     dsda_AddMessage(s_STSTR_CLEV);
 
-    G_DeferedInitNew(gameskill, epsd, map);
+    G_DeferedInitNew(cx, gameskill, epsd, map);
   }
 }
 
@@ -1180,9 +1180,9 @@ static void cheat_chicken(void)
 
 #include "hexen/p_acs.h"
 
-static void cheat_init(void)
+static void cheat_init(CCore* cx)
 {
-  if (dsda_ResolveINIT())
+  if (dsda_ResolveINIT(cx))
   {
     P_SetMessage(plyr, "LEVEL WARP", true);
   }

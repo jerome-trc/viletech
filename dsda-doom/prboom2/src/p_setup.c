@@ -3618,8 +3618,11 @@ void P_MustRebuildBlockmap(void)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-void P_SetupLevel(int episode, int map, int playermask, int skill)
+void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
 {
+    (void)playermask;
+    (void)skill;
+
   int   i;
   char  lumpname[9];
   int   lumpnum;
@@ -3894,7 +3897,7 @@ void P_SetupLevel(int episode, int map, int playermask, int skill)
     if (!dsda_SkipMode())
     {
       // proff 11/99: calculate all OpenGL specific tables etc.
-      gld_PreprocessLevel();
+      gld_PreprocessLevel(cx);
     }
   }
 

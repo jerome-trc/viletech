@@ -35,7 +35,6 @@
 #define _GL_INTERN_H
 
 #include "v_video.h"
-#include "xs_Float.h"
 
 #define MAXCOORD (32767.0f / MAP_COEFF)
 
@@ -369,7 +368,7 @@ void gld_InitColormapTextures(dboolean fullbright);
 void gld_InitFuzzTexture(void);
 int gld_GetTexDimension(int value);
 void gld_SetIndexedPalette(int palette_index);
-void gld_Precache(void);
+void gld_Precache(CCore* cx);
 
 void SetFrameTextureMode(void);
 
@@ -389,9 +388,9 @@ int gld_BuildTexture(GLTexture *gltexture, void *data, dboolean readonly, int wi
 GLuint CaptureScreenAsTexID(void);
 
 //progress
-void gld_ProgressUpdate(const char * text, int progress, int total);
+void gld_ProgressUpdate(CCore* cx, const char* text, int progress, int total);
 int gld_ProgressStart(void);
-int gld_ProgressEnd(void);
+int gld_ProgressEnd(CCore* cx);
 
 //FBO
 extern GLuint glSceneImageFBOTexID;

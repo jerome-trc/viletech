@@ -23,6 +23,8 @@
 #include "dsda/mapinfo.h"
 #include "dsda/utility.h"
 
+#include "viletech.nim.h"
+
 int dsda_HexenNameToMap(int* found, const char* name, int* episode, int* map);
 int dsda_HexenFirstMap(int* episode, int* map);
 int dsda_HexenNewGameMap(int* episode, int* map);
@@ -34,7 +36,7 @@ void dsda_HexenUpdateMapInfo(void);
 void dsda_HexenUpdateLastMapInfo(void);
 void dsda_HexenUpdateNextMapInfo(void);
 int dsda_HexenResolveCLEV(int* clev, int* episode, int* map);
-int dsda_HexenResolveINIT(int* init);
+int dsda_HexenResolveINIT(CCore*, int* init);
 int dsda_HexenMusicIndexToLumpNum(int* lump, int music_index);
 int dsda_HexenMapMusic(int* music_index, int* music_lump);
 int dsda_HexenIntermissionMusic(int* music_index, int* music_lump);

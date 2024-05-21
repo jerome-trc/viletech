@@ -211,8 +211,8 @@ static void dsda_CopyBFResult(bf_t* bf, int depth) {
     memset(&bf_result[i], 0, sizeof(ticcmd_t) * (MAX_BF_DEPTH - i));
 }
 
-static void dsda_RestoreBFKeyFrame(int frame) {
-  dsda_RestoreKeyFrame(&brute_force[frame].key_frame, true);
+static void dsda_RestoreBFKeyFrame(CCore* cx, int frame) {
+  dsda_RestoreKeyFrame(cx, &brute_force[frame].key_frame, true);
 }
 
 static void dsda_StoreBFKeyFrame(int frame) {
@@ -240,23 +240,23 @@ dboolean dsda_BruteForceEnded(void) {
   return brute_force_ended;
 }
 
-static void dsda_EndBF(int result) {
+static void dsda_EndBF(CCore* cx, int result) {
   brute_force_ended = true;
 
   lprintf(LO_INFO, "Brute force complete (%s)!\n", bf_result_text[result]);
   dsda_PrintBFProgress();
 
   if (bf_nomonsters)
-    dsda_RestoreKeyFrame(&nomo_key_frame, true);
+    dsda_RestoreKeyFrame(cx, &nomo_key_frame, true);
   else
-    dsda_RestoreBFKeyFrame(0);
+    dsda_RestoreBFKeyFrame(cx, 0);
 
   bf_mode = false;
 
   if (result == BF_SUCCESS)
     dsda_QueueBuildCommands(bf_result, bf_depth);
   else
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 }
 
 static fixed_t dsda_BFAttribute(int attribute) {
@@ -646,7 +646,7 @@ dboolean dsda_StartBruteForce(int depth) {
   return true;
 }
 
-void dsda_UpdateBruteForce(void) {
+void dsda_UpdateBruteForce(CCore* cx) {
   int frame;
 
   frame = true_logictic - bf_logictic;
@@ -658,13 +658,13 @@ void dsda_UpdateBruteForce(void) {
     frame = dsda_AdvanceBruteForce();
 
     if (frame >= 0)
-      dsda_RestoreBFKeyFrame(frame);
+      dsda_RestoreBFKeyFrame(cx, frame);
   }
   else
     dsda_StoreBFKeyFrame(frame);
 }
 
-void dsda_EvaluateBruteForce(void) {
+void dsda_EvaluateBruteForce(CCore* cx) {
   if (true_logictic - bf_logictic != bf_depth)
     return;
 
@@ -672,13 +672,13 @@ void dsda_EvaluateBruteForce(void) {
 
   if (dsda_BFConditionsReached()) {
     dsda_CopyBFResult(brute_force, bf_depth);
-    dsda_EndBF(BF_SUCCESS);
+    dsda_EndBF(cx, BF_SUCCESS);
   }
   else if (bf_volume >= bf_volume_max) {
     if (bf_target.enabled && bf_target.evaluated)
-      dsda_EndBF(BF_SUCCESS);
+      dsda_EndBF(cx, BF_SUCCESS);
     else
-      dsda_EndBF(BF_FAILURE);
+      dsda_EndBF(cx, BF_FAILURE);
   }
 }
 

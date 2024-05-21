@@ -99,7 +99,7 @@ void FakeNetUpdate(CCore* cx)
       // after change of game_speed.
       if (maketic - gametic && gametic <= force_singletics_to && dsda_GameSpeed() < 200) break;
 
-      G_BuildTiccmd(&local_cmds[0][maketic%BACKUPTICS]);
+      G_BuildTiccmd(cx, &local_cmds[0][maketic % BACKUPTICS]);
       maketic++;
     }
   }
@@ -140,9 +140,10 @@ void TryRunTics(CCore* cx)
 
   while (runtics--) {
     if (advancedemo)
-      D_DoAdvanceDemo ();
-    M_Ticker ();
-    G_Ticker ();
+      D_DoAdvanceDemo();
+
+    M_Ticker();
+    G_Ticker(cx);
     gametic++;
     FakeNetUpdate(cx);
   }

@@ -70,10 +70,10 @@
 
 #include <SDL_opengl.h>
 #include <math.h>
-#include "v_video.h"
-#include "gl_intern.h"
+
 #include "r_main.h"
 #include "e6y.h"
+#include "xs_Float.h"
 
 float frustum[6][4];
 

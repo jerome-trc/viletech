@@ -48,7 +48,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "SDL.h"
 #ifdef _WIN32
 #include <SDL_syswm.h>
 #endif
@@ -58,34 +57,23 @@
 #include "doomtype.h"
 #include "doomstat.h"
 #include "d_main.h"
-#include "s_sound.h"
 #include "i_system.h"
-#include "i_main.h"
-#include "i_sound.h"
-#include "m_menu.h"
 #include "lprintf.h"
 #include "m_file.h"
-#include "i_system.h"
-#include "p_maputl.h"
 #include "p_map.h"
-#include "p_setup.h"
 #include "i_video.h"
-#include "info.h"
 #include "r_main.h"
-#include "r_things.h"
 #include "r_sky.h"
 #include "am_map.h"
 #include "dsda.h"
 #include "dsda/settings.h"
 #include "gl_struct.h"
-#include "gl_intern.h"
 #include "g_game.h"
 #include "d_deh.h"
 #include "e6y.h"
 #include "m_file.h"
 
 #include "dsda/args.h"
-#include "dsda/map_format.h"
 #include "dsda/mapinfo.h"
 #include "dsda/playback.h"
 #include "dsda/skip.h"
@@ -206,7 +194,7 @@ void e6y_InitCommandLine(void)
   M_ChangeShorttics();
 }
 
-int G_ReloadLevel(void)
+int G_ReloadLevel(CCore* cx)
 {
   int result = false;
 
@@ -214,22 +202,22 @@ int G_ReloadLevel(void)
       allow_incompatibility &&
       !menuactive)
   {
-    G_DeferedInitNew(gameskill, gameepisode, gamemap);
+    G_DeferedInitNew(cx, gameskill, gameepisode, gamemap);
     result = true;
   }
 
   if (demoplayback)
   {
-    dsda_RestartPlayback();
+    dsda_RestartPlayback(cx);
     result = true;
   }
 
-  dsda_WatchLevelReload(&result);
+  dsda_WatchLevelReload(cx, &result);
 
   return result;
 }
 
-int G_GotoNextLevel(void)
+int G_GotoNextLevel(CCore* cx)
 {
   int epsd, map;
   int changed = false;
@@ -240,7 +228,7 @@ int G_GotoNextLevel(void)
     allow_incompatibility &&
     !menuactive)
   {
-    G_DeferedInitNew(gameskill, epsd, map);
+    G_DeferedInitNew(cx, gameskill, epsd, map);
     changed = true;
   }
 
@@ -287,9 +275,9 @@ void M_ChangeMaxViewPitch(void)
   CheckPitch(&viewpitch);
 }
 
-void M_ChangeScreenMultipleFactor(void)
+void M_ChangeScreenMultipleFactor(CCore* cx)
 {
-  V_ChangeScreenResolution();
+  V_ChangeScreenResolution(cx);
 }
 
 dboolean HaveMouseLook(void)
@@ -442,11 +430,11 @@ int numlevels = 0;
 int levels_max = 0;
 timetable_t *stats = NULL;
 
-void e6y_G_DoCompleted(void)
+void e6y_G_DoCompleted(CCore* cx)
 {
   int i;
 
-  dsda_EvaluateSkipModeDoCompleted();
+  dsda_EvaluateSkipModeDoCompleted(cx);
 
   if(!stats_level)
     return;

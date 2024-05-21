@@ -17,29 +17,30 @@
 
 #include "d_event.h"
 #include "d_ticcmd.h"
-#include "tables.h"
+
+#include "viletech.nim.h"
 
 dboolean dsda_AllowBuilding(void);
 dboolean dsda_BuildMode(void);
 void dsda_QueueBuildCommands(ticcmd_t* cmds, int depth);
 dboolean dsda_BuildPlayback(void);
 void dsda_CopyBuildCmd(ticcmd_t* cmd);
-void dsda_ReadBuildCmd(ticcmd_t* cmd);
+void dsda_ReadBuildCmd(CCore*, ticcmd_t* cmd);
 void dsda_EnterBuildMode(void);
 void dsda_RefreshBuildMode(void);
-dboolean dsda_BuildResponder(event_t *ev);
+dboolean dsda_BuildResponder(CCore*, event_t*);
 void dsda_ToggleBuildTurbo(void);
 dboolean dsda_AdvanceFrame(void);
-dboolean dsda_BuildMF(int x);
-dboolean dsda_BuildMB(int x);
-dboolean dsda_BuildSR(int x);
-dboolean dsda_BuildSL(int x);
-dboolean dsda_BuildTR(int x);
-dboolean dsda_BuildTL(int x);
-dboolean dsda_BuildFU(int x);
-dboolean dsda_BuildFD(int x);
-dboolean dsda_BuildFC(void);
-dboolean dsda_BuildLU(int x);
-dboolean dsda_BuildLD(int x);
-dboolean dsda_BuildLC(void);
-dboolean dsda_BuildUA(int x);
+dboolean dsda_BuildMF(CCore*, int x);
+dboolean dsda_BuildMB(CCore*, int x);
+dboolean dsda_BuildSR(CCore*, int x);
+dboolean dsda_BuildSL(CCore*, int x);
+dboolean dsda_BuildTR(CCore*, int x);
+dboolean dsda_BuildTL(CCore*, int x);
+dboolean dsda_BuildFU(CCore*,  int x);
+dboolean dsda_BuildFD(CCore*, int x);
+dboolean dsda_BuildFC(CCore*);
+dboolean dsda_BuildLU(CCore*, int x);
+dboolean dsda_BuildLD(CCore*, int x);
+dboolean dsda_BuildLC(CCore*);
+dboolean dsda_BuildUA(CCore*, int x);

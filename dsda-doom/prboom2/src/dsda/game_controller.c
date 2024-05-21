@@ -93,7 +93,7 @@ static float dsda_AxisValue(axis_t* axis) {
   return (float) value * axis->sensitivity / (32768 - axis->deadzone);
 }
 
-static void dsda_PollLeftStick(void) {
+static void dsda_PollLeftStick(CCore* cx) {
   event_t ev;
 
   ev.type = swap_analogs ? ev_look_analog : ev_move_analog;
@@ -101,10 +101,10 @@ static void dsda_PollLeftStick(void) {
   ev.data2.f = -dsda_AxisValue(&left_analog_y);
 
   if (ev.data1.f || ev.data2.f)
-    D_PostEvent(&ev);
+    D_PostEvent(cx, &ev);
 }
 
-static void dsda_PollRightStick(void) {
+static void dsda_PollRightStick(CCore* cx) {
   event_t ev;
 
   ev.type = swap_analogs ? ev_move_analog : ev_look_analog;
@@ -112,7 +112,7 @@ static void dsda_PollRightStick(void) {
   ev.data2.f = -dsda_AxisValue(&right_analog_y);
 
   if (ev.data1.f || ev.data2.f)
-    D_PostEvent(&ev);
+    D_PostEvent(cx, &ev);
 }
 
 static inline int PollButton(dsda_game_controller_button_t button)
@@ -122,7 +122,7 @@ static inline int PollButton(dsda_game_controller_button_t button)
 }
 
 
-static void dsda_PollButtons(void) {
+static void dsda_PollButtons(CCore* cx) {
   event_t ev;
   float trigger;
 
@@ -157,16 +157,16 @@ static void dsda_PollButtons(void) {
   if (trigger)
     ev.data1.i |= (1 << DSDA_CONTROLLER_BUTTON_TRIGGERRIGHT);
 
-  D_PostEvent(&ev);
+  D_PostEvent(cx, &ev);
 }
 
-void dsda_PollGameController(void) {
+void dsda_PollGameController(CCore* cx) {
   if (!game_controller)
     return;
 
-  dsda_PollLeftStick();
-  dsda_PollRightStick();
-  dsda_PollButtons();
+  dsda_PollLeftStick(cx);
+  dsda_PollRightStick(cx);
+  dsda_PollButtons(cx);
 }
 
 void dsda_InitGameControllerParameters(void) {

@@ -48,18 +48,18 @@ static char* playback_filename;
 dboolean demoplayback;
 dboolean userdemo;
 
-void dsda_RestartPlayback(void) {
-  G_StartDemoPlayback(playback_origin_p, playback_length, playback_behaviour);
+void dsda_RestartPlayback(CCore* cx) {
+  G_StartDemoPlayback(cx, playback_origin_p, playback_length, playback_behaviour);
 }
 
-dboolean dsda_JumpToLogicTic(int tic) {
+dboolean dsda_JumpToLogicTic(CCore* cx, int tic) {
   if (tic < 0)
     return false;
 
   if (tic > true_logictic)
     dsda_SkipToLogicTic(tic);
   else if (tic < true_logictic) {
-    if (!dsda_RestoreClosestKeyFrame(tic))
+    if (!dsda_RestoreClosestKeyFrame(cx, tic))
       return false;
 
     if (tic != true_logictic)
@@ -69,11 +69,11 @@ dboolean dsda_JumpToLogicTic(int tic) {
   return true;
 }
 
-dboolean dsda_JumpToLogicTicFrom(int tic, int from_tic) {
+dboolean dsda_JumpToLogicTicFrom(CCore* cx, int tic, int from_tic) {
   if (tic < 0 || tic > true_logictic)
     return false;
 
-  if (!dsda_RestoreClosestKeyFrame(from_tic))
+  if (!dsda_RestoreClosestKeyFrame(cx, from_tic))
     return false;
 
   if (tic != true_logictic)
@@ -86,7 +86,7 @@ const char* dsda_PlaybackName(void) {
   return playback_name;
 }
 
-void dsda_ExecutePlaybackOptions(void) {
+void dsda_ExecutePlaybackOptions(CCore* cx) {
   if (playdemo_arg)
   {
     G_DeferedPlayDemo(playback_name);
@@ -114,7 +114,7 @@ void dsda_ExecutePlaybackOptions(void) {
   }
   else if (recordfromto_arg) {
     userdemo = true;
-    G_ContinueDemo(playback_name);
+    G_ContinueDemo(cx, playback_name);
   }
 }
 
@@ -218,12 +218,12 @@ static dboolean dsda_EndOfPlaybackStream(void) {
          playback_p + dsda_BytesPerTic() > playback_origin_p + playback_length;
 }
 
-void dsda_JoinDemo(ticcmd_t* cmd) {
+void dsda_JoinDemo(CCore* cx, ticcmd_t* cmd) {
   if (!demoplayback)
     return;
 
   if (dsda_SkipMode())
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 
   if (demorecording)
     dsda_WriteQueueToDemo(playback_p, playback_length - (playback_p - playback_origin_p));
@@ -238,7 +238,7 @@ void dsda_JoinDemo(ticcmd_t* cmd) {
   dsda_MergeExDemoFeatures();
 }
 
-void dsda_TryPlaybackOneTick(ticcmd_t* cmd) {
+void dsda_TryPlaybackOneTick(CCore* cx, ticcmd_t* cmd) {
   dboolean ended = false;
 
   if (!playback_p)
@@ -254,10 +254,10 @@ void dsda_TryPlaybackOneTick(ticcmd_t* cmd) {
 
   if (ended) {
     if (playback_behaviour & PLAYBACK_JOIN_ON_END)
-      dsda_JoinDemo(cmd);
+      dsda_JoinDemo(cx, cmd);
     else
-      G_CheckDemoStatus();
+      G_CheckDemoStatus(cx);
   }
   else if (dsda_InputActive(dsda_input_join_demo) || dsda_InputJoyBActive(dsda_input_use))
-    dsda_JoinDemo(cmd);
+    dsda_JoinDemo(cx, cmd);
 }

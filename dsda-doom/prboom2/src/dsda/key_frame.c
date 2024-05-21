@@ -252,7 +252,7 @@ void dsda_StoreKeyFrame(dsda_key_frame_t* key_frame, byte complete, byte export)
 }
 
 // Stripped down version of G_DoLoadGame
-void dsda_RestoreKeyFrame(dsda_key_frame_t* key_frame, dboolean skip_wipe) {
+void dsda_RestoreKeyFrame(CCore* cx, dsda_key_frame_t* key_frame, dboolean skip_wipe) {
   void G_AfterLoad(void);
 
   byte complete;
@@ -278,7 +278,7 @@ void dsda_RestoreKeyFrame(dsda_key_frame_t* key_frame, dboolean skip_wipe) {
   // Restore state of demo recording buffer
   dsda_RestoreDemoData(complete);
 
-  dsda_UnArchiveAll();
+  dsda_UnArchiveAll(cx);
 
   dsda_RestoreCommandHistory();
 
@@ -301,11 +301,11 @@ void dsda_StoreQuickKeyFrame(void) {
   dsda_StoreKeyFrame(&quick_kf, true, true);
 }
 
-void dsda_RestoreQuickKeyFrame(void) {
-  dsda_RestoreKeyFrame(&quick_kf, false);
+void dsda_RestoreQuickKeyFrame(CCore* cx) {
+  dsda_RestoreKeyFrame(cx, &quick_kf, false);
 }
 
-dboolean dsda_RestoreClosestKeyFrame(int tic) {
+dboolean dsda_RestoreClosestKeyFrame(CCore* cx, int tic) {
   dsda_key_frame_t* key_frame;
 
   key_frame = dsda_ClosestKeyFrame(tic);
@@ -313,12 +313,12 @@ dboolean dsda_RestoreClosestKeyFrame(int tic) {
   if (!key_frame)
     return false;
 
-  dsda_RestoreKeyFrame(key_frame, true);
+  dsda_RestoreKeyFrame(cx, key_frame, true);
 
   return true;
 }
 
-void dsda_RestoreKeyFrameFile(const char* name) {
+void dsda_RestoreKeyFrameFile(CCore* cx, const char* name) {
   char *filename;
   dsda_key_frame_t key_frame = { 0 };
 
@@ -326,27 +326,27 @@ void dsda_RestoreKeyFrameFile(const char* name) {
   M_ReadFile(filename, &key_frame.buffer);
   Z_Free(filename);
 
-  dsda_RestoreKeyFrame(&key_frame, false);
+  dsda_RestoreKeyFrame(cx, &key_frame, false);
   Z_Free(key_frame.buffer);
 }
 
-void dsda_ContinueKeyFrame(void) {
+void dsda_ContinueKeyFrame(CCore* cx) {
   dsda_arg_t* arg;
 
   arg = dsda_Arg(dsda_arg_from_key_frame);
   if (arg->found) {
-    dsda_RestoreKeyFrameFile(arg->value.v_string);
+    dsda_RestoreKeyFrameFile(cx, arg->value.v_string);
   }
 }
 
-void dsda_RewindAutoKeyFrame(void) {
+void dsda_RewindAutoKeyFrame(CCore* cx) {
   auto_kf_t* load_kf;
 
   load_kf = last_auto_kf;
   dsda_RewindKF(&load_kf);
 
   if (load_kf)
-    dsda_RestoreKeyFrame(&load_kf->kf, true);
+    dsda_RestoreKeyFrame(cx, &load_kf->kf, true);
   else
     doom_printf("No key frame found"); // rewind past the depth limit
 }

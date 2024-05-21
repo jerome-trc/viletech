@@ -391,14 +391,14 @@ static void dsda_SetExtraDemoHeaderFlag(byte flag) {
   *header_p |= flag;
 }
 
-dboolean dsda_StartDemoSegment(const char* demo_name) {
+dboolean dsda_StartDemoSegment(CCore* cx, const char* demo_name) {
   if (demorecording)
     return false;
 
   dsda_UpdateFlag(dsda_arg_dsdademo, true);
   dsda_SetDemoBaseName(demo_name);
   dsda_InitDemoRecording();
-  G_BeginRecording();
+  G_BeginRecording(cx);
   dsda_SetExtraDemoHeaderFlag(DF_FROM_KEYFRAME);
 
   {
@@ -416,7 +416,7 @@ dboolean dsda_StartDemoSegment(const char* demo_name) {
   return true;
 }
 
-const byte* dsda_EvaluateDemoStartPoint(const byte* demo_p) {
+const byte* dsda_EvaluateDemoStartPoint(CCore* cx, const byte* demo_p) {
   if (dsda_demo_version && dsda_demo_header_data.flags & DF_FROM_KEYFRAME) {
     dsda_key_frame_t key_frame;
     union
@@ -432,7 +432,7 @@ const byte* dsda_EvaluateDemoStartPoint(const byte* demo_p) {
 
     key_frame.buffer = u.b;
 
-    dsda_RestoreKeyFrame(&key_frame, false);
+    dsda_RestoreKeyFrame(cx, &key_frame, false);
     demo_p += key_frame.buffer_length;
   }
 
@@ -832,11 +832,11 @@ int dsda_DemoTicsCount(const byte* p, const byte* demobuffer, int demolength) {
   return count / demo_playerscount;
 }
 
-const byte* dsda_DemoMarkerPosition(byte* buffer, size_t file_size) {
+const byte* dsda_DemoMarkerPosition(CCore* cx, byte* buffer, size_t file_size) {
   const byte* p;
 
   // read demo header
-  p = G_ReadDemoHeaderEx(buffer, file_size, RDH_SKIP_HEADER);
+  p = G_ReadDemoHeaderEx(cx, buffer, file_size, RDH_SKIP_HEADER);
 
   if (dsda_demo_version) {
     p = (const byte*) (buffer + dsda_demo_header_data.end_marker_location);

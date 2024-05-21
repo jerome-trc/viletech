@@ -19,9 +19,7 @@
 #include <string.h>
 
 #include "doomstat.h"
-#include "m_misc.h"
 
-#include "dsda/args.h"
 #include "dsda/episode.h"
 #include "dsda/map_format.h"
 #include "dsda/mapinfo/doom.h"
@@ -272,13 +270,13 @@ int dsda_ResolveCLEV(int* episode, int* map) {
   return clev;
 }
 
-int dsda_ResolveINIT(void) {
+int dsda_ResolveINIT(CCore* cx) {
   int init;
 
   if (dsda_DoomResolveINIT(&init))
     return init;
 
-  if (dsda_HexenResolveINIT(&init))
+  if (dsda_HexenResolveINIT(cx, &init))
     return init;
 
   if (dsda_UResolveINIT(&init))

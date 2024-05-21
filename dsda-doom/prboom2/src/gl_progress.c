@@ -38,7 +38,6 @@
 #include "gl_intern.h"
 #include "i_video.h"
 #include "hu_lib.h"
-#include "hu_stuff.h"
 
 #include "dsda/font.h"
 #include "dsda/utility.h"
@@ -93,12 +92,12 @@ int gld_ProgressRestoreScreen(void)
   return false;
 }
 
-int gld_ProgressEnd(void)
+int gld_ProgressEnd(CCore* cx)
 {
   if (progress_texid != 0)
   {
     gld_ProgressRestoreScreen();
-    I_FinishUpdate();
+    I_FinishUpdate(cx);
     gld_ProgressRestoreScreen();
     glDeleteTextures(1, &progress_texid);
     progress_texid = 0;
@@ -123,7 +122,7 @@ static void gld_InitProgressUpdate(void)
   );
 }
 
-void gld_ProgressUpdate(const char * text, int progress, int total)
+void gld_ProgressUpdate(CCore* cx, const char* text, int progress, int total)
 {
   int len;
   static char last_text[32] = {0};
@@ -164,5 +163,5 @@ void gld_ProgressUpdate(const char * text, int progress, int total)
     V_FillRect(0, 2, SCREENHEIGHT - 3, len - 4, 2, 31);
   }
 
-  I_FinishUpdate();
+  I_FinishUpdate(cx);
 }

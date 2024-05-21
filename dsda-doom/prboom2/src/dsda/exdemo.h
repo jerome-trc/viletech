@@ -20,9 +20,11 @@
 
 #include "doomtype.h"
 
+#include "viletech.nim.h"
+
 int dsda_IsExDemoSigned(void);
 void dsda_MergeExDemoFeatures(void);
-void dsda_LoadExDemo(const char* filename);
+void dsda_LoadExDemo(CCore*, const char* filename);
 int dsda_CopyExDemo(const byte** buffer, int* length);
 void dsda_WriteExDemoFooter(void);
 

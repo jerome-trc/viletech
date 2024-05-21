@@ -1023,7 +1023,7 @@ static void gld_PreprocessSegs(void)
   }
 }
 
-void gld_PreprocessLevel(void)
+void gld_PreprocessLevel(CCore* cx)
 {
   // e6y: speedup of level reloading
   // Do not preprocess GL data twice for same level
@@ -1054,7 +1054,7 @@ void gld_PreprocessLevel(void)
     }
     Z_Free(subsectorloops);
 
-    gld_Precache();
+    gld_Precache(cx);
     gld_PreprocessSectors();
     gld_PreprocessFakeSectors();
     gld_PreprocessSegs();
@@ -1074,7 +1074,7 @@ void gld_PreprocessLevel(void)
   rendermarker = 0;
 
   gld_ResetLastTexture();
-  gld_ResetTexturedAutomap();
+  gld_ResetTexturedAutomap(cx);
 
   gld_FreeDrawInfo();
 

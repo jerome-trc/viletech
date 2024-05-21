@@ -1451,7 +1451,7 @@ static void CalcHitsCount(const byte *hitlist, int size, int *hit, int*hitcount)
   }
 }
 
-void gld_Precache(void)
+void gld_Precache(CCore* cx)
 {
   int i;
   byte *hitlist;
@@ -1507,7 +1507,7 @@ void gld_Precache(void)
   for (i = numflats; --i >= 0; )
     if (hitlist[i])
     {
-      gld_ProgressUpdate("Loading Flats...", ++hit, hitcount);
+      gld_ProgressUpdate(cx, "Loading Flats...", ++hit, hitcount);
       gltexture = gld_RegisterFlat(i, true, true);
       if (gltexture)
       {
@@ -1571,7 +1571,7 @@ void gld_Precache(void)
   for (i = numtextures; --i >= 0; )
     if (hitlist[i])
     {
-      gld_ProgressUpdate("Loading Textures...", ++hit, hitcount);
+      gld_ProgressUpdate(cx, "Loading Textures...", ++hit, hitcount);
       gltexture = gld_RegisterTexture(i, i != skytexture, false, true, false);
       if (gltexture)
       {
@@ -1610,7 +1610,7 @@ void gld_Precache(void)
             int k = 7;
             do
             {
-              gld_ProgressUpdate("Loading Sprites...", ++hit, hitcount);
+              gld_ProgressUpdate(cx, "Loading Sprites...", ++hit, hitcount);
               gltexture = gld_RegisterPatch(firstspritelump + sflump[k], CR_LIMIT, true, true);
               if (gltexture)
               {
@@ -1622,7 +1622,7 @@ void gld_Precache(void)
       }
   Z_Free(hitlist);
 
-  gld_ProgressEnd();
+  gld_ProgressEnd(cx);
 
   gld_InitFBO();
 

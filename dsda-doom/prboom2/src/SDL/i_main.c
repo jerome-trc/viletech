@@ -201,12 +201,15 @@ void I_SafeExit(int rc)
   exit(rc);
 }
 
-static void I_EssentialQuit (void)
+static CCore* s_cx = NULL;
+
+static void I_EssentialQuit(void)
 {
   if (demorecording)
   {
-    G_CheckDemoStatus();
+    G_CheckDemoStatus(s_cx);
   }
+
   dsda_ExportTextFile();
   dsda_WriteAnalysis();
   dsda_WriteSplits();
@@ -317,8 +320,11 @@ int dsdaMain(CCore* cx, int argc, char **argv)
      left in an unstable state.
   */
 
+    s_cx = cx;
+
   I_AtExit(I_EssentialQuit, true, "I_EssentialQuit", exit_priority_first);
   I_AtExit(I_Quit, false, "I_Quit", exit_priority_last);
+
 #ifndef PRBOOM_DEBUG
   if (!dsda_Flag(dsda_arg_sigsegv))
   {

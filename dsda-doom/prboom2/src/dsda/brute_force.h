@@ -15,7 +15,11 @@
 //	DSDA Brute Force
 //
 
+#include "d_ticcmd.h"
 #include "doomtype.h"
+#include "m_fixed.h"
+
+#include "viletech.nim.h"
 
 typedef enum {
   dsda_bf_x,
@@ -109,6 +113,6 @@ int dsda_AddBruteForceFrame(int i,
                             byte buttons);
 void dsda_BruteForceWithoutMonsters(void);
 void dsda_BruteForceWithMonsters(void);
-void dsda_UpdateBruteForce(void);
-void dsda_EvaluateBruteForce(void);
+void dsda_UpdateBruteForce(CCore*);
+void dsda_EvaluateBruteForce(CCore*);
 void dsda_CopyBruteForceCommand(ticcmd_t* cmd);

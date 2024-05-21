@@ -82,94 +82,94 @@ static signed char minStrafeLeft(void) {
   return allow_turbo ? -128 : -strafe50();
 }
 
-void dsda_ChangeBuildCommand(void) {
+void dsda_ChangeBuildCommand(CCore* cx) {
   if (demoplayback)
-    dsda_JoinDemo(NULL);
+    dsda_JoinDemo(cx, NULL);
 
   replace_source = true;
   build_cmd_tic = true_logictic - 1;
-  dsda_JumpToLogicTicFrom(true_logictic, true_logictic - 1);
+  dsda_JumpToLogicTicFrom(cx, true_logictic, true_logictic - 1);
 }
 
-dboolean dsda_BuildMF(int x) {
+dboolean dsda_BuildMF(CCore* cx, int x) {
   if (x < 0 || x > 127)
     return false;
 
   build_cmd.forwardmove = x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildMB(int x) {
+dboolean dsda_BuildMB(CCore* cx, int x) {
   if (x < 0 || x > 127)
     return false;
 
   build_cmd.forwardmove = -x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildSR(int x) {
+dboolean dsda_BuildSR(CCore* cx, int x) {
   if (x < 0 || x > 127)
     return false;
 
   build_cmd.sidemove = x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildSL(int x) {
+dboolean dsda_BuildSL(CCore* cx, int x) {
   if (x < 0 || x > 128)
     return false;
 
   build_cmd.sidemove = -x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildTR(int x) {
+dboolean dsda_BuildTR(CCore* cx, int x) {
   if (x < 0 || x > 128)
     return false;
 
   build_cmd.angleturn = (-x << 8);
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildTL(int x) {
+dboolean dsda_BuildTL(CCore* cx, int x) {
   if (x < 0 || x > 127)
     return false;
 
   build_cmd.angleturn = (x << 8);
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildFU(int x) {
+dboolean dsda_BuildFU(CCore* cx, int x) {
   if (x < 0 || x > 7)
     return false;
 
   build_cmd.lookfly &= 0x0f;
   build_cmd.lookfly |= (x << 4);
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildFD(int x) {
+dboolean dsda_BuildFD(CCore* cx, int x) {
   if (x < 0 || x > 7)
     return false;
 
@@ -179,33 +179,33 @@ dboolean dsda_BuildFD(int x) {
   build_cmd.lookfly &= 0x0f;
   build_cmd.lookfly |= (x << 4);
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildFC(void) {
+dboolean dsda_BuildFC(CCore* cx) {
   build_cmd.lookfly &= 0x0f;
   build_cmd.lookfly |= 0x80;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildLU(int x) {
+dboolean dsda_BuildLU(CCore* cx, int x) {
   if (x < 0 || x > 7)
     return false;
 
   build_cmd.lookfly &= 0xf0;
   build_cmd.lookfly |= x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildLD(int x) {
+dboolean dsda_BuildLD(CCore* cx, int x) {
   if (x < 0 || x > 7)
     return false;
 
@@ -215,32 +215,32 @@ dboolean dsda_BuildLD(int x) {
   build_cmd.lookfly &= 0xf0;
   build_cmd.lookfly |= x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildLC(void) {
+dboolean dsda_BuildLC(CCore* cx) {
   build_cmd.lookfly &= 0xf0;
   build_cmd.lookfly |= 0x08;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-dboolean dsda_BuildUA(int x) {
+dboolean dsda_BuildUA(CCore* cx, int x) {
   if (x < 0 || x > (heretic ? 10 : 15))
     return false;
 
   build_cmd.arti = x;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 
   return true;
 }
 
-static void buildForward(void) {
+static void buildForward(CCore* cx) {
   if (allow_turbo) {
     if (build_cmd.forwardmove == 127)
       build_cmd.forwardmove = 0;
@@ -256,10 +256,10 @@ static void buildForward(void) {
       build_cmd.forwardmove = forward50();
   }
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildBackward(void) {
+static void buildBackward(CCore* cx) {
   if (allow_turbo) {
     if (build_cmd.forwardmove == -127)
       build_cmd.forwardmove = 0;
@@ -275,24 +275,24 @@ static void buildBackward(void) {
       build_cmd.forwardmove = -forward50();
   }
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildFineForward(void) {
+static void buildFineForward(CCore* cx) {
   if (build_cmd.forwardmove < maxForward())
     ++build_cmd.forwardmove;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildFineBackward(void) {
+static void buildFineBackward(CCore* cx) {
   if (build_cmd.forwardmove > minBackward())
     --build_cmd.forwardmove;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildStrafeRight(void) {
+static void buildStrafeRight(CCore* cx) {
   if (allow_turbo) {
     if (build_cmd.sidemove == 127)
       build_cmd.sidemove = 0;
@@ -308,10 +308,10 @@ static void buildStrafeRight(void) {
       build_cmd.sidemove = strafe50();
   }
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildStrafeLeft(void) {
+static void buildStrafeLeft(CCore* cx) {
   if (allow_turbo) {
     if (build_cmd.sidemove == -128)
       build_cmd.sidemove = 0;
@@ -327,48 +327,48 @@ static void buildStrafeLeft(void) {
       build_cmd.sidemove = -strafe50();
   }
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildFineStrafeRight(void) {
+static void buildFineStrafeRight(CCore* cx) {
   if (build_cmd.sidemove < maxStrafeRight())
     ++build_cmd.sidemove;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildFineStrafeLeft(void) {
+static void buildFineStrafeLeft(CCore* cx) {
   if (build_cmd.sidemove > minStrafeLeft())
     --build_cmd.sidemove;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildTurnRight(void) {
+static void buildTurnRight(CCore* cx) {
   build_cmd.angleturn -= shortTic();
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildTurnLeft(void) {
+static void buildTurnLeft(CCore* cx) {
   build_cmd.angleturn += shortTic();
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildUse(void) {
+static void buildUse(CCore* cx) {
   build_cmd.buttons ^= BT_USE;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildFire(void) {
+static void buildFire(CCore* cx) {
   build_cmd.buttons ^= BT_ATTACK;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
-static void buildWeapon(int weapon) {
+static void buildWeapon(CCore* cx, int weapon) {
   int cmdweapon;
 
   cmdweapon = weapon << BT_WEAPONSHIFT;
@@ -382,7 +382,7 @@ static void buildWeapon(int weapon) {
   if (build_cmd.buttons & BT_CHANGE)
     build_cmd.buttons |= cmdweapon;
 
-  dsda_ChangeBuildCommand();
+  dsda_ChangeBuildCommand(cx);
 }
 
 static void resetCmd(void) {
@@ -408,12 +408,12 @@ void dsda_QueueBuildCommands(ticcmd_t* cmds, int depth) {
   memcpy(cmd_queue.cmds, cmds, depth * sizeof(*cmds));
 }
 
-static void dsda_PopCommandQueue(ticcmd_t* cmd) {
+static void dsda_PopCommandQueue(CCore* cx, ticcmd_t* cmd) {
   *cmd = cmd_queue.cmds[cmd_queue.original_depth - cmd_queue.depth];
   --cmd_queue.depth;
 
   if (!cmd_queue.depth)
-    dsda_ExitSkipMode();
+    dsda_ExitSkipMode(cx);
 }
 
 dboolean dsda_BuildPlayback(void) {
@@ -424,9 +424,9 @@ void dsda_CopyBuildCmd(ticcmd_t* cmd) {
   *cmd = build_cmd;
 }
 
-void dsda_ReadBuildCmd(ticcmd_t* cmd) {
+void dsda_ReadBuildCmd(CCore* cx, ticcmd_t* cmd) {
   if (cmd_queue.depth)
-    dsda_PopCommandQueue(cmd);
+    dsda_PopCommandQueue(cx, cmd);
   else if (dsda_BruteForce())
     dsda_CopyBruteForceCommand(cmd);
   else if (true_logictic == build_cmd_tic) {
@@ -480,7 +480,9 @@ void dsda_RefreshBuildMode(void) {
   }
 }
 
-dboolean dsda_BuildResponder(event_t* ev) {
+dboolean dsda_BuildResponder(CCore* cx, event_t* ev) {
+    (void)ev;
+
   if (!dsda_AllowBuilding())
     return false;
 
@@ -502,7 +504,7 @@ dboolean dsda_BuildResponder(event_t* ev) {
     if (!replace_source) {
       build_cmd = overwritten_cmd;
 
-      dsda_ChangeBuildCommand();
+      dsda_ChangeBuildCommand(cx);
       replace_source = false;
     }
 
@@ -548,7 +550,7 @@ dboolean dsda_BuildResponder(event_t* ev) {
       overwritten_logictic = true_logictic - 2;
       replace_source = false;
 
-      dsda_JumpToLogicTic(true_logictic - 1);
+      dsda_JumpToLogicTic(cx, true_logictic - 1);
     }
 
     return true;
@@ -561,134 +563,134 @@ dboolean dsda_BuildResponder(event_t* ev) {
   }
 
   if (dsda_InputActivated(dsda_input_build_forward)) {
-    buildForward();
+    buildForward(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_backward)) {
-    buildBackward();
+    buildBackward(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_fine_forward)) {
-    buildFineForward();
+    buildFineForward(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_fine_backward)) {
-    buildFineBackward();
+    buildFineBackward(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_strafe_right)) {
-    buildStrafeRight();
+    buildStrafeRight(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_strafe_left)) {
-    buildStrafeLeft();
+    buildStrafeLeft(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_fine_strafe_right)) {
-    buildFineStrafeRight();
+    buildFineStrafeRight(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_fine_strafe_left)) {
-    buildFineStrafeLeft();
+    buildFineStrafeLeft(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_turn_right)) {
-    buildTurnRight();
+    buildTurnRight(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_turn_left)) {
-    buildTurnLeft();
+    buildTurnLeft(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_use)) {
-    buildUse();
+    buildUse(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_fire)) {
-    buildFire();
+    buildFire(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon1)) {
-    buildWeapon(0);
+    buildWeapon(cx, 0);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon2)) {
-    buildWeapon(1);
+    buildWeapon(cx, 1);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon3)) {
-    buildWeapon(2);
+    buildWeapon(cx, 2);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon4)) {
-    buildWeapon(3);
+    buildWeapon(cx, 3);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon5)) {
-    buildWeapon(4);
+    buildWeapon(cx, 4);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon6)) {
-    buildWeapon(5);
+    buildWeapon(cx, 5);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon7)) {
-    buildWeapon(6);
+    buildWeapon(cx, 6);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon8)) {
-    buildWeapon(7);
+    buildWeapon(cx, 7);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_weapon9)) {
     if (!demo_compatibility && gamemode == commercial)
-      buildWeapon(8);
+      buildWeapon(cx, 8);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_join_demo))
-    dsda_JoinDemo(NULL);
+    dsda_JoinDemo(cx, NULL);
 
   return false;
 }

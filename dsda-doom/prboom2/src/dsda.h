@@ -23,6 +23,8 @@
 #include "d_player.h"
 #include "r_defs.h"
 
+#include "viletech.nim.h"
+
 typedef struct {
   int m, s, t;
 } dsda_level_time_t;
@@ -74,9 +76,9 @@ void dsda_WatchNewLevel(void);
 void dsda_WatchLevelCompletion(void);
 void dsda_WatchWeaponFire(weapontype_t weapon);
 void dsda_WatchSecret(void);
-void dsda_WatchDeferredInitNew(int skill, int episode, int map);
-void dsda_WatchNewGame(void);
-void dsda_WatchLevelReload(int* reloaded);
+void dsda_WatchDeferredInitNew(CCore*, int skill, int episode, int map);
+void dsda_WatchNewGame(CCore*);
+void dsda_WatchLevelReload(CCore*, int* reloaded);
 void dsda_WatchLineActivation(line_t* line, mobj_t* mo);
 void dsda_WatchPTickCompleted(void);
 

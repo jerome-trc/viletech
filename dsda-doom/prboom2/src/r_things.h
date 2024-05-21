@@ -35,6 +35,7 @@
 #define __R_THINGS__
 
 #include "r_draw.h"
+#include "r_patch.h"
 
 #define MINZ        (FRACUNIT*4)
 

@@ -22,6 +22,8 @@
 
 #include "dsda/utility.h"
 
+#include "viletech.nim.h"
+
 #define WI_SHOW_NEXT_LOC      0x01
 #define WI_SHOW_NEXT_DONE     0x02
 #define WI_SHOW_NEXT_EPISODAL 0x04
@@ -74,7 +76,7 @@ dboolean dsda_FinaleShortcut(void);
 void dsda_UpdateLastMapInfo(void);
 void dsda_UpdateNextMapInfo(void);
 int dsda_ResolveCLEV(int* episode, int* map);
-int dsda_ResolveINIT(void);
+int dsda_ResolveINIT(CCore*);
 int dsda_MusicIndexToLumpNum(int music_index);
 void dsda_MapMusic(int* music_index, int* music_lump);
 void dsda_IntermissionMusic(int* music_index, int* music_lump);

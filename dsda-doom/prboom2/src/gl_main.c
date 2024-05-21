@@ -257,9 +257,10 @@ static int C_DECL dicmp_visible_subsectors_by_pic(const void *a, const void *b)
 }
 
 static int visible_subsectors_count_prev = -1;
-void gld_ResetTexturedAutomap(void)
-{
-  visible_subsectors_count_prev = -1;
+
+void gld_ResetTexturedAutomap(CCore* cx) {
+    (void)cx;
+    visible_subsectors_count_prev = -1;
 }
 
 static int map_textured_trans;

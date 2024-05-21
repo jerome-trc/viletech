@@ -52,7 +52,7 @@ extern dboolean nosfxparm;
 extern dboolean nomusicparm;
 
 // Called by IO functions when input is detected.
-void D_PostEvent(event_t* ev);
+void D_PostEvent(CCore*, event_t* ev);
 
 // Demo stuff
 extern dboolean advancedemo;

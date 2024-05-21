@@ -35,6 +35,7 @@
  *-----------------------------------------------------------------------------
  */
 
+#include "gl_struct.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -287,7 +288,7 @@ int RebornPosition;
 
 leave_data_t leave_data;
 
-void G_DoTeleportNewMap(void);
+void G_DoTeleportNewMap(CCore*);
 static void Hexen_G_DoReborn(int playernum);
 // end hexen
 
@@ -493,7 +494,7 @@ static void G_ConvertAnalogMotion(int speed, int *forward, int *side)
   }
 }
 
-void G_BuildTiccmd(ticcmd_t* cmd)
+void G_BuildTiccmd(CCore* cx, ticcmd_t* cmd)
 {
   int strafe;
   int bstrafe;
@@ -509,7 +510,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   strict_input = dsda_StrictMode();
 
   G_SetSpeed(false);
-  dsda_EvaluateSkipModeBuildTiccmd();
+  dsda_EvaluateSkipModeBuildTiccmd(cx);
 
   memset(cmd, 0, sizeof(*cmd));
 
@@ -1144,11 +1145,8 @@ static void G_ResetInventory(player_t *p)
   G_SetInitialInventory(p);
 }
 
-//
-// G_DoLoadLevel
-//
-
-static void G_DoLoadLevel (void)
+/// @fn G_DoLoadLevel
+static void G_DoLoadLevel(CCore* cx)
 {
   int i;
 
@@ -1226,7 +1224,7 @@ static void G_DoLoadLevel (void)
   if (map_format.sndseq)
     SN_StopAllSequences();
 
-  P_SetupLevel (gameepisode, gamemap, 0, gameskill);
+  P_SetupLevel(cx, gameepisode, gamemap, 0, gameskill);
   if (!demoplayback) // Don't switch views if playing a demo
     displayplayer = consoleplayer;    // view the guy you are playing
   gameaction = ga_nothing;
@@ -1273,13 +1271,9 @@ static void G_DoLoadLevel (void)
   }
 }
 
-//
-// G_Responder
-// Get info needed to make ticcmd_ts for the players.
-//
-
-dboolean G_Responder (event_t* ev)
-{
+/// @fn G_Responder
+/// Get info needed to make ticcmd_ts for the players.
+dboolean G_Responder(CCore* cx, event_t* ev) {
   if (
     gamestate == GS_LEVEL && (
       HU_Responder(ev) ||
@@ -1333,7 +1327,7 @@ dboolean G_Responder (event_t* ev)
   if (gamestate == GS_FINALE && F_Responder(ev))
     return true;  // finale ate the event
 
-  if (dsda_BuildResponder(ev))
+  if (dsda_BuildResponder(cx, ev))
     return true;
 
   // If the next/previous weapon keys are pressed, set the next_weapon
@@ -1421,13 +1415,7 @@ dboolean G_Responder (event_t* ev)
   return false;
 }
 
-//
-// G_Ticker
-// Make ticcmd_ts for the players.
-//
-
-void G_Ticker (void)
-{
+void G_Ticker(CCore* cx) {
   int i;
   int entry_leveltime;
   int pause_mask;
@@ -1458,35 +1446,35 @@ void G_Ticker (void)
         if (!hexen)
           for (i = 0; i < g_maxplayers; i++)
             players[i].playerstate = PST_REBORN;
-        G_DoLoadLevel();
+        G_DoLoadLevel(cx);
         break;
       case ga_newgame:
-        G_DoNewGame();
+        G_DoNewGame(cx);
         break;
       case ga_loadgame:
-        G_DoLoadGame();
+        G_DoLoadGame(cx);
         break;
       case ga_playdemo:
-        G_DoPlayDemo();
+        G_DoPlayDemo(cx);
         break;
       case ga_completed:
-        G_DoCompleted();
+        G_DoCompleted(cx);
         break;
       case ga_victory:
         F_StartFinale();
         break;
       case ga_worlddone:
-        G_DoWorldDone();
+        G_DoWorldDone(cx);
         break;
       case ga_leavemap:
-        G_DoTeleportNewMap();
+        G_DoTeleportNewMap(cx);
         break;
       case ga_nothing:
         break;
     }
   }
 
-  dsda_EvaluateSkipModeGTicker();
+  dsda_EvaluateSkipModeGTicker(cx);
 
   if (!dsda_SkipMode() && gamestate == GS_LEVEL)
   {
@@ -1495,12 +1483,12 @@ void G_Ticker (void)
 
       arg = dsda_Arg(dsda_arg_command);
       if (arg->found)
-        dsda_InterpretConsoleCommands(arg->value.v_string, false, true);
+        dsda_InterpretConsoleCommands(cx, arg->value.v_string, false, true);
     END_ONCE
   }
 
   if (dsda_BruteForce())
-    dsda_EvaluateBruteForce();
+    dsda_EvaluateBruteForce(cx);
 
   if (dsda_BuildMode())
     dsda_RefreshBuildMode();
@@ -1529,7 +1517,7 @@ void G_Ticker (void)
 
     if (dsda_BruteForce())
     {
-      dsda_UpdateBruteForce();
+      dsda_UpdateBruteForce(cx);
       dsda_RemovePauseMode(PAUSE_BUILDMODE);
     }
 
@@ -1542,13 +1530,13 @@ void G_Ticker (void)
         memcpy(cmd, &local_cmds[i][buf], sizeof *cmd);
 
         if (dsda_BuildMode())
-          dsda_ReadBuildCmd(cmd);
+          dsda_ReadBuildCmd(cx, cmd);
 
         if (dsda_PendingJoin())
           dsda_JoinDemoCmd(cmd);
 
         if (demoplayback)
-          dsda_TryPlaybackOneTick(cmd);
+          dsda_TryPlaybackOneTick(cx, cmd);
 
         if (demorecording)
           G_WriteDemoTiccmd(cmd);
@@ -2101,12 +2089,8 @@ void G_SecretExitLevel(int position)
   dsda_UpdateLeaveData(0, position, 0, 0);
 }
 
-//
-// G_DoCompleted
-//
-
-void G_DoCompleted (void)
-{
+/// @fn G_DoCompleted
+void G_DoCompleted(CCore* cx) {
   int i;
   int completed_behaviour;
 
@@ -2126,7 +2110,7 @@ void G_DoCompleted (void)
 
   AM_Stop(false);
 
-  e6y_G_DoCompleted();
+  e6y_G_DoCompleted(cx);
   dsda_WatchLevelCompletion();
 
   wminfo.nextep = wminfo.epsd = gameepisode -1;
@@ -2231,15 +2215,15 @@ void G_WorldDone (void)
   }
 }
 
-void G_DoWorldDone (void)
+void G_DoWorldDone(CCore* cx)
 {
   idmusnum = -1;             //jff 3/17/98 allow new level's music to be loaded
   gamestate = GS_LEVEL;
   dsda_UpdateGameMap(wminfo.nextep + 1, wminfo.next + 1);
-  G_DoLoadLevel();
+  G_DoLoadLevel(cx);
   gameaction = ga_nothing;
   AM_clearMarks();           //jff 4/12/98 clear any marks on the automap
-  dsda_EvaluateSkipModeDoWorldDone();
+  dsda_EvaluateSkipModeDoWorldDone(cx);
 }
 
 extern dboolean setsizeneeded;
@@ -2351,7 +2335,7 @@ const char * comp_lev_str[MAX_COMPATIBILITY_LEVEL] =
 //
 //==========================================================================
 
-void RecalculateDrawnSubsectors(void)
+void RecalculateDrawnSubsectors(CCore* cx)
 {
   int i, j;
 
@@ -2368,10 +2352,10 @@ void RecalculateDrawnSubsectors(void)
     }
   }
 
-  gld_ResetTexturedAutomap();
+  gld_ResetTexturedAutomap(cx);
 }
 
-void G_AfterLoad(void)
+void G_AfterLoad(CCore* cx)
 {
   extern int BorderNeedRefresh;
 
@@ -2380,7 +2364,7 @@ void G_AfterLoad(void)
   R_ActivateSectorInterpolations(); //e6y
   R_SmoothPlaying_Reset(NULL); // e6y
 
-  RecalculateDrawnSubsectors();
+  RecalculateDrawnSubsectors(cx);
 
   if (hexen)
   {
@@ -2401,7 +2385,7 @@ void G_AfterLoad(void)
   ST_Start();
 }
 
-void G_DoLoadGame(void)
+void G_DoLoadGame(CCore* cx)
 {
   int  length;
   // CPhipps - do savegame filename stuff here
@@ -2462,12 +2446,12 @@ void G_DoLoadGame(void)
   save_p += strlen((char*) save_p) + 1;
 
   // dearchive all the modifications
-  dsda_UnArchiveAll();
+  dsda_UnArchiveAll(cx);
 
   if (*save_p != 0xe6)
     I_Error ("G_DoLoadGame: Bad savegame");
 
-  G_AfterLoad();
+  G_AfterLoad(cx);
 
   P_FreeSaveBuffer();
 }
@@ -2563,14 +2547,14 @@ static int     d_skill;
 static int     d_episode;
 static int     d_map;
 
-void G_DeferedInitNew(int skill, int episode, int map)
+void G_DeferedInitNew(CCore* cx, int skill, int episode, int map)
 {
   d_skill = skill;
   d_episode = episode;
   d_map = map;
   gameaction = ga_newgame;
 
-  dsda_WatchDeferredInitNew(skill, episode, map);
+  dsda_WatchDeferredInitNew(cx, skill, episode, map);
 }
 
 /* cph -
@@ -2805,7 +2789,7 @@ void G_ReloadDefaults(void)
   rngseed += I_GetRandomTimeSeed() + gametic; // CPhipps
 }
 
-void G_DoNewGame (void)
+void G_DoNewGame(CCore* cx)
 {
   int realMap = d_map;
   int realEpisode = d_episode;
@@ -2820,10 +2804,10 @@ void G_DoNewGame (void)
   dsda_NewGameMap(&realEpisode, &realMap);
   dsda_ResetLeaveData();
 
-  G_InitNew (d_skill, realEpisode, realMap, true);
+  G_InitNew(cx, d_skill, realEpisode, realMap, true);
   gameaction = ga_nothing;
 
-  dsda_WatchNewGame();
+  dsda_WatchNewGame(cx);
 
   //jff 4/26/98 wake up the status bar in case were coming out of a DM demo
   ST_Start();
@@ -2908,15 +2892,13 @@ int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap)
   return !strcmp(mapuname, lumpname);
 }
 
-//
-// G_InitNew
-// Can be called by the startup code or the menu task,
-// consoleplayer, displayplayer, playeringame[] should be set.
-//
 
 extern int EpiCustom;
 
-void G_InitNew(int skill, int episode, int map, dboolean prepare)
+/// @fn G_InitNew
+/// Can be called by the startup code or the menu task,
+/// consoleplayer, displayplayer, playeringame[] should be set.
+void G_InitNew(CCore* cx, int skill, int episode, int map, dboolean prepare)
 {
   int i;
 
@@ -3036,7 +3018,7 @@ void G_InitNew(int skill, int episode, int map, dboolean prepare)
 
   dsda_InitSky();
 
-  G_DoLoadLevel ();
+  G_DoLoadLevel(cx);
 }
 
 //
@@ -3306,7 +3288,7 @@ const byte *G_ReadOptions(const byte *demo_p)
   return target;
 }
 
-void G_BeginRecording (void)
+void G_BeginRecording(CCore* cx)
 {
   int i;
   byte *demostart, *demo_p;
@@ -3479,7 +3461,7 @@ void G_BeginRecording (void)
   dsda_EvaluateBytesPerTic();
 
   dsda_WriteToDemo(demostart, demo_p - demostart);
-  dsda_ContinueKeyFrame();
+  dsda_ContinueKeyFrame(cx);
   dsda_ResetSplits();
 
   Z_Free(demostart);
@@ -3525,7 +3507,7 @@ static dboolean CheckForOverrun(const byte *start_p, const byte *current_p, size
   return false;
 }
 
-const byte* G_ReadDemoHeaderEx(const byte *demo_p, size_t size, unsigned int params)
+const byte* G_ReadDemoHeaderEx(CCore* cx, const byte *demo_p, size_t size, unsigned int params)
 {
   int skill;
   int i, episode = 1, map = 0;
@@ -3840,8 +3822,8 @@ const byte* G_ReadDemoHeaderEx(const byte *demo_p, size_t size, unsigned int par
 
   if (!(params & RDH_SKIP_HEADER))
   {
-    G_InitNew(skill, episode, map, true);
-    demo_p = dsda_EvaluateDemoStartPoint(demo_p);
+    G_InitNew(cx, skill, episode, map, true);
+    demo_p = dsda_EvaluateDemoStartPoint(cx, demo_p);
   }
 
   for (i = 0; i < g_maxplayers; i++)         // killough 4/24/98
@@ -3879,12 +3861,12 @@ const byte* G_ReadDemoHeaderEx(const byte *demo_p, size_t size, unsigned int par
   return demo_p;
 }
 
-void G_StartDemoPlayback(const byte *buffer, int length, int behaviour)
+void G_StartDemoPlayback(CCore* cx, const byte *buffer, int length, int behaviour)
 {
   const byte *demo_p;
 
   dsda_InitDemoPlayback();
-  demo_p = G_ReadDemoHeaderEx(demobuffer, demolength, RDH_SAFE);
+  demo_p = G_ReadDemoHeaderEx(cx, demobuffer, demolength, RDH_SAFE);
   dsda_AttachPlaybackStream(demo_p, demolength, behaviour);
 
   R_SmoothPlaying_Reset(NULL); // e6y
@@ -3927,11 +3909,11 @@ static int LoadDemo(const char *name, const byte **buffer, int *length)
 }
 
 
-void G_DoPlayDemo(void)
+void G_DoPlayDemo(CCore* cx)
 {
   if (LoadDemo(defdemoname, &demobuffer, &demolength))
   {
-    G_StartDemoPlayback(demobuffer, demolength, PLAYBACK_NORMAL);
+    G_StartDemoPlayback(cx, demobuffer, demolength, PLAYBACK_NORMAL);
 
     if (dsda_Flag(dsda_arg_track_playback))
       dsda_ResetSplits();
@@ -3961,9 +3943,8 @@ void G_DoPlayDemo(void)
  * Called after a death or level completion to allow demos to be cleaned up
  * Returns true if a new demo loop action will take place
  */
-dboolean G_CheckDemoStatus (void)
-{
-  dsda_EvaluateSkipModeCheckDemoStatus();
+dboolean G_CheckDemoStatus(CCore* cx) {
+  dsda_EvaluateSkipModeCheckDemoStatus(cx);
 
   if (demorecording)
   {
@@ -4167,14 +4148,14 @@ void P_SyncWalkcam(dboolean sync_coords, dboolean sync_sight)
 }
 
 //e6y
-void G_ContinueDemo(const char *playback_name)
+void G_ContinueDemo(CCore* cx, const char *playback_name)
 {
   if (LoadDemo(playback_name, &demobuffer, &demolength))
   {
-    G_StartDemoPlayback(demobuffer, demolength, PLAYBACK_JOIN_ON_END);
+    G_StartDemoPlayback(cx, demobuffer, demolength, PLAYBACK_JOIN_ON_END);
 
     dsda_InitDemoRecording();
-    G_BeginRecording();
+    G_BeginRecording(cx);
   }
 }
 
@@ -4272,13 +4253,13 @@ void G_Completed(int map, int position, int flags, angle_t angle)
     dsda_UpdateLeaveData(map, position, flags, angle);
 }
 
-void G_DoTeleportNewMap(void)
+void G_DoTeleportNewMap(CCore* cx)
 {
-    SV_MapTeleport(leave_data.map, leave_data.position);
+    SV_MapTeleport(cx, leave_data.map, leave_data.position);
     gamestate = GS_LEVEL;
     gameaction = ga_nothing;
     RebornPosition = leave_data.position;
-    dsda_EvaluateSkipModeDoTeleportNewMap();
+    dsda_EvaluateSkipModeDoTeleportNewMap(cx);
 }
 
 void Hexen_G_DoReborn(int playernum)

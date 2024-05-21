@@ -3,40 +3,56 @@
 import core, imgui
 
 proc dguiSetup*(
-    this: var CCore,
+    self: var CCore,
     window: ptr SdlWindow,
     sdlGlCtx: pointer,
 ) {.exportc: "vt_$1".} =
-    this.core.imguiCtx = createImGuiContext(nil)
+    self.core.dgui.imguiCtx = createImGuiContext(nil)
 
     var io = ImGuiIO.get()
-    io.configFlags.incl(ImGuiConfigFlag.navEnableKeyboard)
+    io.configFlags += ImGuiConfigFlags.navEnableKeyboard
 
     discard imGuiSdl2OpenGlSetup(window, sdlGlCtx)
     discard imGuiOpenGl3Setup(nil)
     imGuiStyleColorsDark(nil)
 
 
-proc dguiFrameBegin*(this: var CCore) {.exportc: "vt_$1".} =
+proc dguiShutdown*() {.exportc: "vt_$1".} =
+    imGuiOpenGl3Shutdown()
+    imGuiSdl2Shutdown()
+    destroyImGuiContext()
+
+
+proc dguiFrameBegin*(self: var CCore) {.exportc: "vt_$1".} =
     imGuiOpenGl3NewFrame()
     imGuiSdl2NewFrame()
     newImGuiFrame()
 
 
-proc dguiDraw*(this: var CCore) {.exportc: "vt_$1".} =
+proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
     showImGuiMetricsWindow(nil)
 
-    discard beginImGuiWindow(cstring"Console")
+    if not beginImGuiWindow(cstring"Console", self.core.dgui.consoleOpen.addr, ImGuiWindowFlags.none):
+        endImGuiWindow()
+        return
+
+    if imGuiButton(cstring"Submit"):
+        return
+
     endImGuiWindow()
 
 
-proc dguiFrameFinish*(this: var CCore) {.exportc: "vt_$1".} =
+proc dguiFrameFinish*(self: var CCore) {.exportc: "vt_$1".} =
     imGuiRender()
 
 
-proc dguiFrameDraw*(this: var CCore) {.exportc: "vt_$1".} =
+proc dguiFrameDraw*(self: var CCore) {.exportc: "vt_$1".} =
     ImDrawData.get().render()
 
 
-proc processEvent*(this: var CCore, event: ptr SdlEvent) {.exportc: "vt_$1".} =
+proc dguiNeedsMouse*(self: var CCore): bool {.exportc: "vt_$1".} =
+    self.core.dgui.consoleOpen
+
+
+proc processEvent*(self: var CCore, event: ptr SdlEvent) {.exportc: "vt_$1".} =
     event.process()

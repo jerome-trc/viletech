@@ -100,7 +100,7 @@ static void dsda_ArchiveContext(void) {
   P_SAVE_X(true_logictic_value);
 }
 
-static void dsda_UnArchiveContext(void) {
+static void dsda_UnArchiveContext(CCore* cx) {
   int i;
   int epi, map;
   int boom_logictic_value;
@@ -127,7 +127,7 @@ static void dsda_UnArchiveContext(void) {
 
   P_LOAD_X(leave_data);
 
-  G_InitNew(gameskill, gameepisode, gamemap, false);
+  G_InitNew(cx, gameskill, gameepisode, gamemap, false);
 
   P_LOAD_X(map_info.default_colormap);
 
@@ -162,8 +162,8 @@ void dsda_ArchiveAll(void) {
   dsda_ArchiveInternal();
 }
 
-void dsda_UnArchiveAll(void) {
-  dsda_UnArchiveContext();
+void dsda_UnArchiveAll(CCore* cx) {
+  dsda_UnArchiveContext(cx);
 
   P_MapStart();
   P_UnArchiveACS();

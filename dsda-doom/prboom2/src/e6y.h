@@ -26,8 +26,6 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
- * DESCRIPTION:
- *
  *-----------------------------------------------------------------------------
  */
 
@@ -36,7 +34,11 @@
 
 #include <stdarg.h>
 
-#include "hu_lib.h"
+#include "doomdef.h"
+#include "m_fixed.h"
+#include "tables.h"
+
+#include "viletech.nim.h"
 
 #define GL_COMBINE_ARB                    0x8570
 #define GL_RGB_SCALE_ARB                  0x8573
@@ -89,11 +91,11 @@ extern float skyUpShift;
 extern float skyXShift;
 extern float skyYShift;
 
-void ParamsMatchingCheck();
+void ParamsMatchingCheck(void);
 void e6y_HandleSkip(void);
 void e6y_InitCommandLine(void);
 
-void P_WalkTicker ();
+void P_WalkTicker(void);
 void P_SyncWalkcam(dboolean sync_coords, dboolean sync_sight);
 void P_ResetWalkcam(void);
 
@@ -102,8 +104,8 @@ void e6y_I_uSleep(unsigned long usecs);
 void G_SkipDemoStop(void);
 void G_SkipDemoStartCheck(void);
 void G_SkipDemoCheck(void);
-int G_ReloadLevel(void);
-int G_GotoNextLevel(void);
+int G_ReloadLevel(CCore*);
+int G_GotoNextLevel(CCore*);
 
 void M_ChangeSkyMode(void);
 void M_ChangeMaxViewPitch(void);
@@ -111,7 +113,7 @@ void M_ChangeMaxViewPitch(void);
 void M_ChangeFOV(void);
 
 void M_ChangeSpeed(void);
-void M_ChangeScreenMultipleFactor(void);
+void M_ChangeScreenMultipleFactor(CCore*);
 void M_ChangeInterlacedScanning(void);
 void M_MouseMLook(int choice);
 void M_MouseAccel(int choice);
@@ -195,7 +197,7 @@ const char* WINError(void);
 extern int stats_level;
 extern int stroller;
 
-void e6y_G_DoCompleted(void);
+void e6y_G_DoCompleted(CCore* cx);
 void e6y_WriteStats(void);
 
 void e6y_G_DoTeleportNewMap(void);

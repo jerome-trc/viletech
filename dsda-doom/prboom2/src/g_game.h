@@ -1,7 +1,6 @@
 /* Emacs style mode select   -*- C -*-
  *-----------------------------------------------------------------------------
  *
- *
  *  PrBoom: a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
@@ -37,56 +36,58 @@
 #include "d_ticcmd.h"
 #include "tables.h"
 
-//
-// GAME
-//
+#include "viletech.nim.h"
 
-#define DEMOMARKER    0x80
+#define DEMOMARKER 0x80
 
-dboolean G_Responder(event_t *ev);
-dboolean G_CheckDemoStatus(void);
+dboolean G_Responder(CCore*, event_t *ev);
+dboolean G_CheckDemoStatus(CCore*);
 void G_DeathMatchSpawnPlayer(int playernum);
-void G_InitNew(int skill, int episode, int map, dboolean prepare);
-void G_DeferedInitNew(int skill, int episode, int map);
+void G_InitNew(CCore*, int skill, int episode, int map, dboolean prepare);
+void G_DeferedInitNew(CCore*, int skill, int episode, int map);
 void G_DeferedPlayDemo(const char *demo); // CPhipps - const
 void G_LoadGame(int slot); // killough 5/15/98
 void G_ForcedLoadGame(void);           // killough 5/15/98: forced loadgames
-void G_DoLoadGame(void);
+void G_DoLoadGame(CCore*);
 void G_SaveGame(int slot, const char *description); // Called by M_Responder.
-void G_BeginRecording(void);
+void G_BeginRecording(CCore*);
 void G_ExitLevel(int position);
 void G_SecretExitLevel(int position);
 void G_WorldDone(void);
 void G_EndGame(void); /* cph - make m_menu.c call a G_* function for this */
-void G_Ticker(void);
+
+/// @fn G_Ticker
+/// Make ticcmd_ts for the players.
+void G_Ticker(CCore*);
+
 void G_ReloadDefaults(void);     // killough 3/1/98: loads game defaults
 void G_RefreshFastMonsters(void); // killough 4/10/98: sets -fast parameters
-void G_DoNewGame(void);
+void G_DoNewGame(CCore*);
 void G_DoReborn(int playernum);
-void G_StartDemoPlayback(const byte *buffer, int length, int behaviour);
-void G_DoPlayDemo(void);
-void G_DoCompleted(void);
+void G_StartDemoPlayback(CCore*, const byte *buffer, int length, int behaviour);
+void G_DoPlayDemo(CCore*);
+void G_DoCompleted(CCore*);
 void G_WriteDemoTiccmd(ticcmd_t *cmd);
-void G_DoWorldDone(void);
+void G_DoWorldDone(CCore*);
 void G_Compatibility(void);
 const byte *G_ReadOptions(const byte *demo_p);   /* killough 3/1/98 - cph: const byte* */
 byte *G_WriteOptions(byte *demo_p);        // killough 3/1/98
 void G_PlayerReborn(int player);
 void G_DoVictory(void);
-void G_BuildTiccmd (ticcmd_t* cmd); // CPhipps - move decl to header
+void G_BuildTiccmd(CCore*, ticcmd_t* cmd); // CPhipps - move decl to header
 void G_ReadOneTick(ticcmd_t* cmd, const byte **data_p);
 void G_ChangedPlayerColour(int pn, int cl); // CPhipps - On-the-fly player colour changing
 void G_MakeSpecialEvent(buttoncode_t bc, ...); /* cph - new event stuff */
 int G_ValidateMapName(const char *mapname, int *pEpi, int *pMap);
 
 //e6y
-void G_ContinueDemo(const char *playback_name);
+void G_ContinueDemo(CCore*, const char *playback_name);
 void G_SetSpeed(dboolean force);
 
 //e6y
 #define RDH_SAFE 0x00000001
 #define RDH_SKIP_HEADER 0x00000002
-const byte* G_ReadDemoHeaderEx(const byte* demo_p, size_t size, unsigned int params);
+const byte* G_ReadDemoHeaderEx(CCore* cx, const byte* demo_p, size_t size, unsigned int params);
 void G_CalculateDemoParams(const byte *demo_p);
 
 // killough 1/18/98: Doom-style printf;   killough 4/25/98: add gcc attributes

@@ -17,18 +17,20 @@
 
 #include "doomtype.h"
 
+#include "viletech.nim.h"
+
 dboolean dsda_SkipMode(void);
 void dsda_EnterSkipMode(void);
-void dsda_ExitSkipMode(void);
-void dsda_ToggleSkipMode(void);
+void dsda_ExitSkipMode(CCore*);
+void dsda_ToggleSkipMode(CCore*);
 void dsda_SkipToNextMap(void);
 void dsda_SkipToEndOfMap(void);
 void dsda_SkipToLogicTic(int tic);
-void dsda_EvaluateSkipModeGTicker(void);
+void dsda_EvaluateSkipModeGTicker(CCore*);
 void dsda_EvaluateSkipModeInitNew(void);
-void dsda_EvaluateSkipModeBuildTiccmd(void);
-void dsda_EvaluateSkipModeDoCompleted(void);
-void dsda_EvaluateSkipModeDoTeleportNewMap(void);
-void dsda_EvaluateSkipModeDoWorldDone(void);
-void dsda_EvaluateSkipModeCheckDemoStatus(void);
+void dsda_EvaluateSkipModeBuildTiccmd(CCore*);
+void dsda_EvaluateSkipModeDoCompleted(CCore*);
+void dsda_EvaluateSkipModeDoTeleportNewMap(CCore*);
+void dsda_EvaluateSkipModeDoWorldDone(CCore*);
+void dsda_EvaluateSkipModeCheckDemoStatus(CCore*);
 void dsda_HandleSkip(void);

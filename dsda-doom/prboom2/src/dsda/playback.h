@@ -15,15 +15,18 @@
 //	DSDA Playback
 //
 
+#include "d_ticcmd.h"
 #include "doomtype.h"
+
+#include "viletech.nim.h"
 
 #define PLAYBACK_NORMAL      0
 #define PLAYBACK_JOIN_ON_END 1
 
-void dsda_RestartPlayback(void);
-dboolean dsda_JumpToLogicTic(int tic);
-dboolean dsda_JumpToLogicTicFrom(int tic, int from_tic);
-void dsda_ExecutePlaybackOptions(void);
+void dsda_RestartPlayback(CCore*);
+dboolean dsda_JumpToLogicTic(CCore*, int tic);
+dboolean dsda_JumpToLogicTicFrom(CCore*, int tic, int from_tic);
+void dsda_ExecutePlaybackOptions(CCore*);
 const char* dsda_ParsePlaybackOptions(void);
 const char* dsda_PlaybackName(void);
 void dsda_ClearPlaybackStream(void);
@@ -32,5 +35,5 @@ void dsda_AttachPlaybackStream(const byte* demo_p, int length, int behaviour);
 int dsda_PlaybackTics(void);
 void dsda_StorePlaybackPosition(void);
 void dsda_RestorePlaybackPosition(void);
-void dsda_JoinDemo(ticcmd_t* cmd);
-void dsda_TryPlaybackOneTick(ticcmd_t* cmd);
+void dsda_JoinDemo(CCore*, ticcmd_t* cmd);
+void dsda_TryPlaybackOneTick(CCore*, ticcmd_t* cmd);

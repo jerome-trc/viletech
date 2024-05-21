@@ -225,13 +225,13 @@ int dsda_HexenResolveCLEV(int* clev, int* episode, int* map) {
 
 dboolean partial_reset = false;
 
-int dsda_HexenResolveINIT(int* init) {
+int dsda_HexenResolveINIT(CCore* cx, int* init) {
   if (!hexen)
     return false;
 
   partial_reset = true;
 
-  G_DeferedInitNew(gameskill, gameepisode, CurrentMap->warpTrans);
+  G_DeferedInitNew(cx, gameskill, gameepisode, CurrentMap->warpTrans);
 
   *init = true;
 

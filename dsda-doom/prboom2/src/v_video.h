@@ -42,6 +42,8 @@
 // Needed because we are refering to patches.
 #include "r_data.h"
 
+#include "viletech.nim.h"
+
 //
 // VIDEO
 //
@@ -220,7 +222,7 @@ void V_SetPlayPal(int playpal_index);
 
 // Alt-Enter: fullscreen <-> windowed
 void V_ToggleFullscreen(void);
-void V_ChangeScreenResolution(void);
+void V_ChangeScreenResolution(CCore*);
 
 // CPhipps - function to plot a pixel
 

@@ -18,8 +18,12 @@
 #ifndef __DSDA_SAVE__
 #define __DSDA_SAVE__
 
+#include "doomtype.h"
+
+#include "viletech.nim.h"
+
 void dsda_ArchiveAll(void);
-void dsda_UnArchiveAll(void);
+void dsda_UnArchiveAll(CCore*);
 void dsda_InitSaveDir(void);
 char* dsda_SaveGameName(int slot, dboolean via_excmd);
 void dsda_ResetDemoSaveSlots(void);

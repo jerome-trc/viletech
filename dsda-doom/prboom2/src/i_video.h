@@ -67,7 +67,7 @@ void I_QueueFrameCapture(void);
 void I_QueueScreenshot(void);
 void I_HandleCapture(void);
 
-void I_FinishUpdate (void);
+void I_FinishUpdate(CCore*);
 
 int I_ScreenShot (const char *fname);
 // NSM expose lower level screen data grab for vidcap
@@ -100,6 +100,6 @@ extern int renderW;		// resolution scaling
 extern int renderH;		// - DTIED
 
 extern dboolean window_focused;
-void UpdateGrab(void);
+void UpdateGrab(CCore*);
 
 #endif

@@ -35,6 +35,7 @@
  *-----------------------------------------------------------------------------
  */
 
+#include "dsda/font.h"
 #include "viletech.nim.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -191,8 +192,7 @@ const int nstandard_iwads = sizeof standard_iwads/sizeof*standard_iwads;
  * cph - in the true spirit of the Boom source, let the
  *  short ciruit operator madness begin!
  */
-
-void D_PostEvent(event_t *ev)
+void D_PostEvent(CCore* cx, event_t *ev)
 {
   dsda_InputTrackEvent(ev);
 
@@ -217,10 +217,10 @@ void D_PostEvent(event_t *ev)
     }
   }
 
-  if (M_Responder(ev))
+  if (M_Responder(cx, ev))
     dsda_InputFlushTick(); // If the menu used the event, make it invisible
   else
-    G_Responder(ev);
+    G_Responder(cx, ev);
 }
 
 //
@@ -230,7 +230,7 @@ void D_PostEvent(event_t *ev)
 // The screens to wipe between are already stored, this just does the timing
 // and screen updating
 
-static void D_Wipe(void)
+static void D_Wipe(CCore* cx)
 {
   dboolean done;
   int wipestart;
@@ -282,14 +282,14 @@ static void D_Wipe(void)
       dsda_GLEndMeltRenderTexture();
     }
 
-    M_Drawer();                   // menu is drawn even on top of wipes
+    M_Drawer(); // menu is drawn even on top of wipes
 
     if (capturing_video && !dsda_SkipMode() && cap_wipescreen)
     {
       I_QueueFrameCapture();
     }
 
-    I_FinishUpdate();             // page flip or blit buffer
+    I_FinishUpdate(cx); // page flip or blit buffer
   }
   while (!done);
 
@@ -354,13 +354,14 @@ void D_Display(CCore* cx, fixed_t frac) {
   if (dsda_SkipMode())
   {
     if (HU_DrawDemoProgress(false))
-      I_FinishUpdate();
+      I_FinishUpdate(cx);
+
     if (!dsda_InputActive(dsda_input_use))
       return;
 
     if (V_IsOpenGLMode())
     {
-      gld_PreprocessLevel();
+      gld_PreprocessLevel(cx);
     }
   }
 
@@ -507,11 +508,11 @@ void D_Display(CCore* cx, fixed_t frac) {
 
   // normal update
   if (!wipe)
-    I_FinishUpdate ();              // page flip or blit buffer
+    I_FinishUpdate(cx);              // page flip or blit buffer
   else {
     // wipe update
     wipe_EndScreen();
-    D_Wipe();
+    D_Wipe(cx);
   }
 
   // e6y
@@ -550,12 +551,14 @@ static void D_DoomLoop(CCore* cx)
     // process one or more tics
     if (singletics)
     {
-      I_StartTic (cx);
-      G_BuildTiccmd (&local_cmds[consoleplayer][maketic%BACKUPTICS]);
+      I_StartTic(cx);
+      G_BuildTiccmd(cx, &local_cmds[consoleplayer][maketic % BACKUPTICS]);
+
       if (advancedemo)
-        D_DoAdvanceDemo ();
-      M_Ticker ();
-      G_Ticker ();
+        D_DoAdvanceDemo();
+
+      M_Ticker();
+      G_Ticker(cx);
       gametic++;
       maketic++;
     }
@@ -1532,7 +1535,7 @@ static void HandleClass(void)
   randomclass = dsda_Flag(dsda_arg_randclass);
 }
 
-static void HandlePlayback(void)
+static void HandlePlayback(CCore* cx)
 {
   const char* file;
 
@@ -1541,7 +1544,7 @@ static void HandlePlayback(void)
   if (!file)
     return;
 
-  dsda_LoadExDemo(file);
+  dsda_LoadExDemo(cx, file);
 }
 
 const char* doomverstr = "Unknown";
@@ -1733,7 +1736,7 @@ static void D_DoomMainSetup(CCore* cx)
 
   D_AddFile(port_wad_file, source_auto_load);
 
-  HandlePlayback(); // must come before autoload: may detect iwad in footer
+  HandlePlayback(cx); // must come before autoload: may detect iwad in footer
 
   EvaluateDoomVerStr(); // must come after HandlePlayback (may change iwad)
 
@@ -1981,15 +1984,15 @@ static void D_DoomMainSetup(CCore* cx)
     dsda_InitDemoRecording();
   }
 
-  dsda_ExecutePlaybackOptions();
+  dsda_ExecutePlaybackOptions(cx);
 
   if (!userdemo)
   {
     if (autostart || netgame)
     {
-      G_InitNew(startskill, startepisode, startmap, true);
+      G_InitNew(cx, startskill, startepisode, startmap, true);
       if (demorecording)
-        G_BeginRecording();
+        G_BeginRecording(cx);
     }
     else
       D_StartTitle();                 // start up intro loop

@@ -456,7 +456,7 @@ static void DemoEx_AddPort(wadtbl_t* wadtbl) {
                    (const byte*) PACKAGE_STRING, strlen(PACKAGE_STRING));
 }
 
-static void PartitionDemo(const char* filename) {
+static void PartitionDemo(CCore* cx, const char* filename) {
   size_t file_size;
 
   file_size = M_ReadFile(filename, &exdemo.demo);
@@ -464,7 +464,7 @@ static void PartitionDemo(const char* filename) {
   if (file_size > 0) {
     const byte* p;
 
-    p = dsda_DemoMarkerPosition(exdemo.demo, file_size);
+    p = dsda_DemoMarkerPosition(cx, exdemo.demo, file_size);
 
     if (p) {
       //skip DEMOMARKER
@@ -526,8 +526,8 @@ void dsda_WriteExDemoFooter(void) {
   FreePWADTable(&demoex);
 }
 
-void dsda_LoadExDemo(const char* filename) {
-  PartitionDemo(filename);
+void dsda_LoadExDemo(CCore* cx, const char* filename) {
+  PartitionDemo(cx, filename);
 
   if (exdemo.footer)
   {

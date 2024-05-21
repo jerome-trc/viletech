@@ -1387,13 +1387,13 @@ void V_ToggleFullscreen(void)
   dsda_UpdateIntConfig(dsda_config_use_fullscreen, !desired_fullscreen, true);
 }
 
-void V_ChangeScreenResolution(void)
+void V_ChangeScreenResolution(CCore* cx)
 {
   I_UpdateVideoMode();
 
   if (V_IsOpenGLMode())
   {
-    gld_PreprocessLevel();
+    gld_PreprocessLevel(cx);
   }
 }
 

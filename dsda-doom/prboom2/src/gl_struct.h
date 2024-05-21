@@ -103,7 +103,7 @@ unsigned char *gld_ReadScreen(void);
 
 void gld_CleanMemory(void);
 void gld_CleanStaticMemory(void);
-void gld_PreprocessLevel(void);
+void gld_PreprocessLevel(CCore*);
 
 void gld_Set2DMode(void);
 void gld_InitDrawScene(void);
@@ -139,7 +139,7 @@ void gld_MultisamplingInit(void);
 void gld_MultisamplingSet(void);
 
 void gld_ProcessTexturedMap(void);
-void gld_ResetTexturedAutomap(void);
+void gld_ResetTexturedAutomap(CCore*);
 void gld_MapDrawSubsectors(player_t *plr, int fx, int fy, fixed_t mx, fixed_t my, int fw, int fh, fixed_t scale);
 
 void gld_Init8InGLMode(void);

@@ -231,7 +231,7 @@ int mapcolor_me;    // cph
 //
 void M_NewGame(int choice);
 void M_Episode(int choice);
-void M_ChooseSkill(int choice);
+void M_ChooseSkill(CCore*, int choice);
 void M_LoadGame(int choice);
 void M_SaveGame(int choice);
 void M_Options(int choice);
@@ -307,9 +307,9 @@ void M_General(int);      // killough 10/98
 void M_DrawGeneral(void); // killough 10/98
 void M_LevelTable(int);
 void M_DrawLevelTable(void);
-void M_ChangeFullScreen(void);
-void M_ChangeVideoMode(void);
-void M_ChangeUseGLSurface(void);
+void M_ChangeFullScreen(CCore*);
+void M_ChangeVideoMode(CCore*);
+void M_ChangeUseGLSurface(CCore*);
 void M_ChangeApplyPalette(void);
 
 menu_t SkillDef;                                              // phares 5/04/98
@@ -676,7 +676,7 @@ void M_NewGame(int choice)
 
 static int chosen_skill;
 
-static void M_FinishGameSelection(void)
+static void M_FinishGameSelection(CCore* cx)
 {
   int episode, map;
 
@@ -691,7 +691,7 @@ static void M_FinishGameSelection(void)
     map = 1;
   }
 
-  G_DeferedInitNew(chosen_skill, episode, map);
+  G_DeferedInitNew(cx, chosen_skill, episode, map);
 
   if (hexen)
     SB_SetClassData();
@@ -700,15 +700,15 @@ static void M_FinishGameSelection(void)
 }
 
 // CPhipps - static
-static void M_VerifySkill(dboolean affirmative)
+static void M_VerifySkill(CCore* cx, dboolean affirmative)
 {
   if (!affirmative)
     return;
 
-  M_FinishGameSelection();
+  M_FinishGameSelection(cx);
 }
 
-void M_ChooseSkill(int choice)
+void M_ChooseSkill(CCore* cx, int choice)
 {
   extern skill_info_t *skill_infos;
 
@@ -728,7 +728,7 @@ void M_ChooseSkill(int choice)
     return;
   }
 
-  M_FinishGameSelection();
+  M_FinishGameSelection(cx);
 }
 
 /////////////////////////////
@@ -1334,14 +1334,14 @@ void M_QuickLoad(void)
 // M_EndGame
 //
 
-static void M_EndGameResponse(dboolean affirmative)
+static void M_EndGameResponse(CCore* cx, dboolean affirmative)
 {
   if (!affirmative)
     return;
 
   // killough 5/26/98: make endgame quit if recording or playing back demo
   if (demorecording || userplayback)
-    G_CheckDemoStatus();
+    G_CheckDemoStatus(cx);
 
   currentMenu->lastOn = itemOn;
   M_ClearMenus ();
@@ -3073,25 +3073,25 @@ setup_menu_t tas_settings[] = {
 };
 
 // To (un)set fullscreen video after menu changes
-void M_ChangeFullScreen(void)
+void M_ChangeFullScreen(CCore* cx)
 {
   I_UpdateVideoMode();
 
   if (V_IsOpenGLMode())
   {
-    gld_PreprocessLevel();
+    gld_PreprocessLevel(cx);
   }
 }
 
-void M_ChangeVideoMode(void)
+void M_ChangeVideoMode(CCore* cx)
 {
-  V_ChangeScreenResolution();
+  V_ChangeScreenResolution(cx);
   M_ChangeMaxViewPitch();
 }
 
-void M_ChangeUseGLSurface(void)
+void M_ChangeUseGLSurface(CCore* cx)
 {
-  V_ChangeScreenResolution();
+  V_ChangeScreenResolution(cx);
 }
 
 void M_ChangeDemoSmoothTurns(void)
@@ -4503,7 +4503,7 @@ static dboolean M_StringResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-static dboolean M_LevelTableResponder(int ch, int action, event_t* ev)
+static dboolean M_LevelTableResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   if (action == MENU_ENTER)
   {
@@ -4519,7 +4519,7 @@ static dboolean M_LevelTableResponder(int ch, int action, event_t* ev)
 
     skill = in_game ? gameskill : startskill;
 
-    G_DeferedInitNew(skill, map->episode, map->map);
+    G_DeferedInitNew(cx, skill, map->episode, map->map);
 
     M_LeaveSetupMenu();
     M_ClearMenus();
@@ -4849,7 +4849,7 @@ static dboolean M_SetupNavigationResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-static dboolean M_SetupResponder(int ch, int action, event_t* ev)
+static dboolean M_SetupResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   if (M_SetupCommonSelectResponder(ch, action, ev))
     return true;
@@ -4872,7 +4872,7 @@ static dboolean M_SetupResponder(int ch, int action, event_t* ev)
       return true;
 
   if (level_table_active)
-    if (M_LevelTableResponder(ch, action, ev))
+    if (M_LevelTableResponder(cx, ch, action, ev))
       return true;
 
   // Not changing any items on the Setup screens. See if we're
@@ -4883,7 +4883,7 @@ static dboolean M_SetupResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-dboolean M_Responder (event_t* ev) {
+dboolean M_Responder(CCore* cx, event_t* ev) {
   int    ch, action;
   int    i;
   static int joywait   = 0;
@@ -4962,7 +4962,7 @@ dboolean M_Responder (event_t* ev) {
     }
     else if (action != MENU_NULL)
     {
-      dsda_UpdateConsole(action);
+      dsda_UpdateConsole(cx, action);
       return true;
     }
     else if (ch != MENU_NULL)
@@ -5151,7 +5151,7 @@ dboolean M_Responder (event_t* ev) {
 
       for (i = 0; i < CONSOLE_SCRIPT_COUNT; ++i)
         if (dsda_InputActivated(dsda_input_script_0 + i)) {
-          dsda_ExecuteConsoleScript(i);
+          dsda_ExecuteConsoleScript(cx, i);
 
           return true;
         }
@@ -5222,14 +5222,14 @@ dboolean M_Responder (event_t* ev) {
       }
       else
       {
-        if (G_GotoNextLevel())
+        if (G_GotoNextLevel(cx))
           return true;
       }
     }
 
     if (dsda_InputActivated(dsda_input_restart))
     {
-      if (G_ReloadLevel())
+      if (G_ReloadLevel(cx))
         return true;
     }
 
@@ -5246,7 +5246,7 @@ dboolean M_Responder (event_t* ev) {
     {
       if (userplayback)
       {
-        dsda_ToggleSkipMode();
+        dsda_ToggleSkipMode(cx);
         return true;
       }
     }
@@ -5263,13 +5263,13 @@ dboolean M_Responder (event_t* ev) {
 
     if (dsda_InputActivated(dsda_input_restore_quick_key_frame))
     {
-      if (!dsda_StrictMode()) dsda_RestoreQuickKeyFrame();
+      if (!dsda_StrictMode()) dsda_RestoreQuickKeyFrame(cx);
       return true;
     }
 
     if (dsda_InputActivated(dsda_input_rewind))
     {
-      if (!dsda_StrictMode()) dsda_RewindAutoKeyFrame();
+      if (!dsda_StrictMode()) dsda_RewindAutoKeyFrame(cx);
       return true;
     }
 
@@ -5363,7 +5363,7 @@ dboolean M_Responder (event_t* ev) {
   }
 
   if (setup_active)
-    if (M_SetupResponder(ch, action, ev))
+    if (M_SetupResponder(cx, ch, action, ev))
       return true;
 
   // From here on, these navigation keys are used on the BIG FONT menus

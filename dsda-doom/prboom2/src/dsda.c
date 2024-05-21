@@ -31,7 +31,6 @@
 #include "dsda/args.h"
 #include "dsda/build.h"
 #include "dsda/demo.h"
-#include "dsda/exhud.h"
 #include "dsda/features.h"
 #include "dsda/ghost.h"
 #include "dsda/key_frame.h"
@@ -539,7 +538,11 @@ static void dsda_ResetTracking(void) {
   dsda_pacifist_note_shown = false;
 }
 
-void dsda_WatchDeferredInitNew(int skill, int episode, int map) {
+void dsda_WatchDeferredInitNew(CCore* cx, int skill, int episode, int map) {
+  (void)skill;
+  (void)episode;
+  (void)map;
+
   if (!demorecording) return;
 
   ++dsda_session_attempts;
@@ -548,7 +551,7 @@ void dsda_WatchDeferredInitNew(int skill, int episode, int map) {
   dsda_QueueQuickstart();
 
   dsda_ResetRevealMap();
-  G_CheckDemoStatus();
+  G_CheckDemoStatus(cx);
 
   dsda_last_gamemap = 0;
   dsda_last_leveltime = 0;
@@ -560,17 +563,17 @@ void dsda_WatchDeferredInitNew(int skill, int episode, int map) {
   true_basetic = gametic;
 }
 
-void dsda_WatchNewGame(void) {
+void dsda_WatchNewGame(CCore* cx) {
   if (!demorecording) return;
 
-  G_BeginRecording();
+  G_BeginRecording(cx);
 }
 
-void dsda_WatchLevelReload(int* reloaded) {
+void dsda_WatchLevelReload(CCore* cx, int* reloaded) {
   extern int startmap;
 
   if (!demorecording || *reloaded) return;
 
-  G_DeferedInitNew(gameskill, gameepisode, startmap);
+  G_DeferedInitNew(cx, gameskill, gameepisode, startmap);
   *reloaded = 1;
 }
