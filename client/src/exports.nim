@@ -50,7 +50,9 @@ exportProcs(cfg):
     dguiFrameBegin
     dguiFrameFinish
     dguiFrameDraw
+    dguiNeedsMouse
     dguiSetup
+    dguiShutdown
     loadDynLibs
     processEvent
     windowIcon

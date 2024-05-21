@@ -17,7 +17,7 @@ type
     Core* {.byref.} = object
         ## Permeates the code base with state that is practically "global".
         loadOrder*: seq[Path] = @[]
-        imguiCtx*: ptr ImGuiContext = nil
+        dgui*: DGuiCore
         c*: CCore
     CCore* {.byref, exportc.} = object
         ## The parts of `Core` that are FFI-safe.
@@ -29,6 +29,11 @@ type
         dynLibPaths*: seq[Path] = @[]
         dynLibs*: seq[LibHandle] = @[]
         savedGametick*: int32 = -1
+    DGuiCore* = object
+        imguiCtx*: ptr ImGuiContext = nil
+        metricsWindow*: bool = false
+        consoleOpen*: bool = false
+        consoleBuf*: string = ""
 
 proc init*(_: typedesc[Core]): Core =
     var cx = Core()
@@ -65,7 +70,7 @@ proc unloadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =
 
 # Accessors ####################################################################
 
-proc flavor*(this: Core): Flavor {.inline.} = this.c.flavor
+proc flavor*(self: Core): Flavor {.inline.} = self.c.flavor
 
-proc `destroy=`*(this: Core) =
+proc `destroy=`*(self: Core) =
     discard

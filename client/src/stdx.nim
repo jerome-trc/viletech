@@ -2,6 +2,9 @@
 
 import std/times
 
+proc clear*[T](s: seq[T]) =
+    s.delete(0..(s.len - 1))
+
 type HoursMinSecs* = tuple[hours: int64, mins: int64, secs: int64]
     ## Note that minutes and seconds are both remainders, not totals.
 
@@ -24,3 +27,25 @@ proc toCstring*(str: string): cstring =
         offs[] = c
 
     return cast[cstring](a)
+
+
+template bitFlags*(enumT: typedesc[enum], underlying: typedesc[SomeInteger]) =
+    static:
+        assert(sizeof(enumT) == sizeof(underlying))
+
+    proc `+`*(a, b: enumT): enumT =
+        cast[enumT](cast[underlying](a) or cast[underlying](b))
+
+    proc `+=`*(a: var enumT, b: enumT) =
+        a = a + b
+
+    proc `-`*(a, b: enumT): enumT =
+        cast[enumT](cast[underlying](a) and (not cast[underlying](b)))
+
+    proc `-=`*(a: var enumT, b: enumT) =
+        a = a - b
+
+    proc `in`*(a, b: enumT): bool =
+        let aU = cast[underlying](a)
+        let bU = cast[underlying](b)
+        return (aU and bU) != 0

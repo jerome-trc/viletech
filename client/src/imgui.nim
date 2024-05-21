@@ -1,5 +1,7 @@
 ## Compiles ImGui 1.90.5 (231cbee) and wraps its C++ API.
 
+import stdx
+
 const includePathFlags = staticExec("pkg-config --cflags-only-I sdl2")
 
 {.compile("../../depend/imgui/imgui_demo.cpp", includePathFlags).}
@@ -14,10 +16,10 @@ const hImGui = "<imgui.h>"
 const hImGuiImplOpenGl3 = "<imgui_impl_opengl3.h>"
 const hImGuiImplSdl2 = "<imgui_impl_sdl2.h>"
 
-type ImGuiConfigFlag* {.
+type ImGuiConfigFlags* {.
     pure,
     size: sizeof(cint),
-    importcpp: "ImGuiConfigFlags_",
+    importcpp: "ImGuiConfigFlags",
     header: hImGui,
 .} = enum
     navEnableKeyboard = 1 shl 0
@@ -26,40 +28,46 @@ type ImGuiConfigFlag* {.
     navNoCaptureKeyboard = 1 shl 3
     noMouse = 1 shl 4
     noMouseCursorChange = 1 shl 5
-type ImGuiConfigFlags* = set[ImGuiConfigFlag]
+bitFlags(ImGuiConfigFlags, cint)
 
-static: assert(sizeof(ImGuiConfigFlags) == 4)
-
-type ImGuiWindowFlag* {.
+type ImGuiInputTextFlags* {.
     pure,
     size: sizeof(cint),
-    importcpp: "ImGuiWindowFlags_",
+    importcpp: "ImGuiInputTextFlags",
     header: hImGui,
 .} = enum
+    none = 0
+
+type ImGuiWindowFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiWindowFlags",
+    header: hImGui,
+.} = enum
+    none = 0
     noTitleBar = 1 shl 0
     noResize = 1 shl 1
     noMove = 1 shl 2
     noScrollbar = 1 shl 3
     noScrollWithMouse = 1 shl 4
     noCollapse = 1 shl 5
-    nlwaysAutoResize = 1 shl 6
+    alwaysAutoResize = 1 shl 6
     noBackground = 1 shl 7
     noSavedSettings = 1 shl 8
     noMouseInputs = 1 shl 9
-    nenuBar = 1 shl 10
-    norizontalScrollbar = 1 shl 11
+    menuBar = 1 shl 10
+    horizontalScrollbar = 1 shl 11
     noFocusOnAppearing = 1 shl 12
     noBringToFrontOnFocus = 1 shl 13
-    nlwaysVerticalScrollbar = 1 shl 14
-    nlwaysHorizontalScrollbar = 1 shl 15
+    alwaysVerticalScrollbar = 1 shl 14
+    alwaysHorizontalScrollbar = 1 shl 15
     noNavInputs = 1 shl 16
-    # TODO: a custom flag set type for these remaining bits.
-    # noNavFocus = 1 shl 17
-    # nnsavedDocument = 1 shl 18
-    # noNav = 1 shl 19
-    # noDecoration = 1 shl 20
-    # noInputs = 1 shl 21
-type ImGuiWindowFlags* = set[ImGuiWindowFlag]
+    noNavFocus = 1 shl 17
+    unsavedDocument = 1 shl 18
+    noNav = 1 shl 19
+    noDecoration = 1 shl 20
+    noInputs = 1 shl 21
+bitFlags(ImGuiWindowFlags, cint)
 
 type ImGuiContext* {.
     importcpp: "ImGuiContext",
@@ -67,22 +75,30 @@ type ImGuiContext* {.
     incompleteStruct,
 .} = object
 
+type ImGuiInputTextCallbackData* {.
+    importcpp: "ImGuiInputTextCallbackData",
+    header: hImGui,
+    incompleteStruct,
+.} = object
+    ctx* {.importcpp: "Ctx".}: ptr ImGuiContext
+
+type ImGuiInputTextCallback* {.
+    importcpp: "ImGuiInputTextCallback",
+    header: hImGui,
+.} = proc(data: ptr ImGuiInputTextCallbackData): cint
+
 type ImGuiIO* {.
     importcpp: "ImGuiIO",
     header: hImGui,
     incompleteStruct,
 .} = object
-    ConfigFlags: ImGuiConfigFlags
+    configFlags* {.importcpp: "ConfigFlags".}: ImGuiConfigFlags
 
 type ImGuiStyle* {.
     importcpp: "ImGuiStyle",
     header: hImGui,
     incompleteStruct,
 .} = object
-
-proc configFlags*(this: var ImGuiIO): var ImGuiConfigFlags {.inline.} =
-    this.ConfigFlags
-
 
 type ImDrawData* {.
     importcpp: "ImDrawData",
@@ -95,6 +111,9 @@ type ImFontAtlas* {.
     header: hImGui,
     incompleteStruct,
 .} = object
+
+type ImVec2* {.importcpp: "ImVec2", header: hImGui.} = object
+    x*, y*: float32 = 0.0.float32
 
 type SdlEvent* {.
     importc: "SDL_Event",
@@ -115,10 +134,13 @@ proc createImGuiContext*(sharedFontAtlas: ptr ImFontAtlas): ptr ImGuiContext
     {.importcpp: "ImGui::CreateContext(@)", header: hImGui.}
 
 proc currentImGuiContext*(): ptr ImGuiContext
-    {.importcpp: "ImGui::GetCurrentContext(@)".}
+    {.importcpp: "ImGui::GetCurrentContext(@)", header: hImGui.}
+
+proc destroyImGuiContext*(ctx: ptr ImGuiContext = nil)
+    {.importcpp: "ImGui::DestroyContext(@)", header: hImGui.}
 
 proc setImGuiContext*(ctx: ptr ImGuiContext)
-    {.importcpp: "ImGui::SetCurrentContext(@)".}
+    {.importcpp: "ImGui::SetCurrentContext(@)", header: hImGui.}
 
 # Main #########################################################################
 
@@ -128,7 +150,7 @@ proc get*(_: typedesc[ImDrawData]): ptr ImDrawData
 proc get*(_: typedesc[ImGuiIO]): var ImGuiIO
     {.importcpp: "ImGui::GetIO(@)", header: hImGui.}
 
-proc render*(this: ptr ImDrawData)
+proc render*(self: ptr ImDrawData)
     {.importcpp: "ImGui_ImplOpenGL3_RenderDrawData(@)", header: hImGuiImplOpenGl3.}
 
 proc newImGuiFrame*()
@@ -158,11 +180,61 @@ proc imGuiStyleColorsDark*(dst: ptr ImGuiStyle = nil)
 
 # Windows ######################################################################
 
-proc beginImGuiWindow*(name: cstring, pOpen: ptr bool = nil, flags: ImGuiWindowFlags = {}): bool
+proc beginImGuiWindow*(
+    name: cstring,
+    pOpen: ptr bool = nil,
+    flags: ImGuiWindowFlags = ImGuiWindowFlags.none
+): bool
     {.importcpp: "ImGui::Begin(@)", header: hImGui.}
 
 proc endImGuiWindow*()
     {.importcpp: "ImGui::End(@)", header: hImGui.}
+
+# Other layout functions #######################################################
+
+proc imGuiAlignTextToFramePadding*()
+    {.importcpp: "ImGui::AlignTextToFramePadding(@)", header: hImGui.}
+
+proc imGuiBeginGroup*()
+    {.importcpp: "ImGui::BeginGroup(@)", header: hImGui.}
+
+proc imGuiEndGroup*()
+    {.importcpp: "ImGui::EndGroup(@)", header: hImGui.}
+
+proc imGuiIndent*(indentW: float32 = 0.0)
+    {.importcpp: "ImGui::Indent(@)", header: hImGui.}
+
+proc imGuiNewLine*()
+    {.importcpp: "ImGui::NewLine(@)", header: hImGui.}
+
+proc imGuiSameLine*(offsetFromStartX: float32 = 0.0, spacing: float32 = -1.0)
+    {.importcpp: "ImGui::SameLine(@)", header: hImGui.}
+
+proc imGuiSeparator*()
+    {.importcpp: "ImGui::Separator(@)", header: hImGui.}
+
+proc imGuiSpacing*()
+    {.importcpp: "ImGui::Spacing(@)", header: hImGui.}
+
+proc imGuiUnindent*(indentW: float32 = 0.0)
+    {.importcpp: "ImGui::Unindent(@)", header: hImGui.}
+
+# Widgets: main ################################################################
+
+proc imGuiButton*(label: cstring, size: ImVec2 = ImVec2()): bool
+    {.importcpp: "ImGui::Button(@)", header: hImGui.}
+
+# Widgets: input with keyboard #################################################
+
+proc imGuiInputText*(
+    label: cstring,
+    buf: ptr char,
+    bufSize: csize_t,
+    flags: void,
+    callback: ImGuiInputTextCallback = nil,
+    userData: pointer = nil,
+): bool
+    {.importcpp: "ImGui::InputText(@)", header: hImGui.}
 
 # OpenGL3 backend ##############################################################
 
@@ -172,6 +244,9 @@ proc imGuiOpenGl3Setup*(glslVersion: cstring = nil): bool
 proc imGuiOpenGl3NewFrame*()
     {.importcpp: "ImGui_ImplOpenGL3_NewFrame(@)", header: hImGuiImplOpenGl3.}
 
+proc imGuiOpenGl3Shutdown*()
+    {.importcpp: "ImGui_ImplOpenGL3_Shutdown", header: hImGuiImplOpenGl3.}
+
 # SDL2 backend #################################################################
 
 proc imGuiSdl2NewFrame*()
@@ -180,5 +255,8 @@ proc imGuiSdl2NewFrame*()
 proc imGuiSdl2OpenGlSetup*(window: ptr SdlWindow, sdlGlContext: pointer): bool
     {.importcpp: "ImGui_ImplSDL2_InitForOpenGL(@)", header: hImGuiImplSdl2.}
 
-proc process*(this: ptr SdlEvent)
+proc imGuiSdl2Shutdown*()
+    {.importcpp: "ImGui_ImplSDL2_Shutdown(@)", header: hImGuiImplSdl2.}
+
+proc process*(self: ptr SdlEvent)
     {.importcpp: "ImGui_ImplSDL2_ProcessEvent(@)", header: hImGuiImplSdl2.}
