@@ -1547,6 +1547,10 @@ static dboolean MouseShouldBeGrabbed(CCore* cx)
   if (!window_focused)
     return false;
 
+  // when menu is active or game is paused, release the mouse
+  if (menuactive || dsda_Paused())
+    return false;
+
   // always grab the mouse when full screen (dont want to
   // see the mouse pointer)
   if (desired_fullscreen)
@@ -1560,10 +1564,6 @@ static dboolean MouseShouldBeGrabbed(CCore* cx)
   // and menu is not active
   if (walkcamera.type)
     return (demoplayback && gamestate == GS_LEVEL && !menuactive);
-
-  // when menu is active or game is paused, release the mouse
-  if (menuactive || dsda_Paused())
-    return false;
 
   // only grab mouse when playing levels (but not demos)
   return !demoplayback;
