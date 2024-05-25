@@ -15,6 +15,7 @@
 //	DSDA Wad Stats
 //
 
+#include <errno.h>
 #include <stdio.h>
 
 #include "doomstat.h"
@@ -213,8 +214,8 @@ void M_RememberWadStats(void)
 }
 
 void dsda_SaveWadStats(void) {
-  const char* path;
-  FILE* file;
+  const char* path = NULL;
+  FILE* file = NULL;
   int i;
 
   if (forget_wad_stats)
@@ -224,18 +225,27 @@ void dsda_SaveWadStats(void) {
     return;
 
   path = dsda_WadStatsPath();
-
   file = M_OpenFile(path, "wb");
-  if (!file)
-    lprintf(LO_WARN, "dsda_SaveWadStats: Failed to save wad stats file \"%s\".", path);
+
+  if (!file) {
+#if defined(__unix__)
+    lprintf(
+        LO_WARN,
+        "%s: Failed to save wad stats file \"%s\" (error %i).",
+        __func__,
+        path,
+        errno
+    );
+#else
+    lprintf(LO_WARN, "%s: Failed to save wad stats file \"%s\".", __func__, path);
+#endif
+  }
 
   fprintf(file, "%d\n", current_version);
   fprintf(file, "%d\n", wad_stats.total_kills);
 
   for (i = 0; i < wad_stats.map_count; ++i) {
-    map_stats_t* ms;
-
-    ms = &wad_stats.maps[i];
+    map_stats_t* ms = &wad_stats.maps[i];
     fprintf(file, "%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
             ms->lump, ms->episode, ms->map,
             ms->best_skill, ms->best_time, ms->best_max_time, ms->best_sk5_time,

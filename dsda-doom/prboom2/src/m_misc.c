@@ -692,9 +692,9 @@ void M_LoadDefaults (void)
   else
   {
     const char* exedir = I_DoomExeDir();
-    int len = snprintf(NULL, 0, "%s/dsda-doom.cfg", exedir);
+    int len = snprintf(NULL, 0, "%s/ratboom.cfg", exedir);
     defaultfile = Z_Malloc(len + 1);
-    snprintf(defaultfile, len + 1, "%s/dsda-doom.cfg", exedir);
+    snprintf(defaultfile, len + 1, "%s/ratboom.cfg", exedir);
   }
 
   lprintf(LO_DEBUG, " default file: %s\n", defaultfile);
