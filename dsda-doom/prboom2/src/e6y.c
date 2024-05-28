@@ -766,9 +766,9 @@ int GetFullPath(const char* FileName, const char* ext, char *Buffer, size_t Buff
       M_getcwd(dir, sizeof(dir));
       break;
     case 1:
-      if (!M_getenv("DOOMWADDIR"))
+      if (!M_getenv("VTEC_WAD_DIR"))
         continue;
-      strcpy(dir, M_getenv("DOOMWADDIR"));
+      strcpy(dir, M_getenv("VTEC_WAD_DIR"));
       break;
     case 2:
       strcpy(dir, I_DoomExeDir());

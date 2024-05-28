@@ -1113,7 +1113,7 @@ static dboolean FileMatchesIWAD(const char *name)
 // 3) or a filename, which must be found in one of the standard places:
 //   a) current dir,
 //   b) exe dir
-//   c) $DOOMWADDIR
+//   c) $VTEC_WAD_DIR
 //   d) or $HOME
 //
 // jff 4/19/98 rewritten to use a more advanced search algorithm
@@ -1895,7 +1895,7 @@ static void D_DoomMainSetup(CCore* cx)
 
     // e6y
     // reorganization of the code for looking for bex/deh patches
-    // in all standard dirs (%DOOMWADDIR%, etc)
+    // in all standard dirs (%VTEC_WAD_DIR%, etc)
     for (i = 0; i < arg->count; ++i)
     {
       char *file = NULL;
