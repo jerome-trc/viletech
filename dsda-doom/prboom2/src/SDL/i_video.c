@@ -637,31 +637,27 @@ void I_FinishUpdate(CCore* cx)
 // I_ScreenShot - moved to i_sshot.c
 //
 
-//
-// I_SetPalette
-//
-void I_SetPalette (int pal)
-{
-  newpal = pal;
+/// @fn I_SetPalette
+void I_SetPalette(int pal) {
+    newpal = pal;
 }
 
-// I_PreInitGraphics
+static void I_ShutdownSDL(void) {
+    if (!(dsda_Flag(dsda_arg_nodraw)))
+        vt_dguiShutdown();
 
-static void I_ShutdownSDL(void)
-{
-    vt_dguiShutdown();
+    if (sdl_glcontext) SDL_GL_DeleteContext(sdl_glcontext);
+    if (screen) SDL_FreeSurface(screen);
+    if (buffer) SDL_FreeSurface(buffer);
+    if (sdl_texture) SDL_DestroyTexture(sdl_texture);
+    if (sdl_renderer) SDL_DestroyRenderer(sdl_renderer);
+    if (sdl_window) SDL_DestroyWindow(sdl_window);
 
-  if (sdl_glcontext) SDL_GL_DeleteContext(sdl_glcontext);
-  if (screen) SDL_FreeSurface(screen);
-  if (buffer) SDL_FreeSurface(buffer);
-  if (sdl_texture) SDL_DestroyTexture(sdl_texture);
-  if (sdl_renderer) SDL_DestroyRenderer(sdl_renderer);
-  if (sdl_window) SDL_DestroyWindow(sdl_window);
-
-  SDL_Quit();
-  return;
+    SDL_Quit();
+    return;
 }
 
+/// @fn I_PreInitGraphics
 void I_PreInitGraphics(void)
 {
   int p;

@@ -569,9 +569,11 @@ static void D_DoomLoop(CCore* cx)
     if (players[displayplayer].mo) // cph 2002/08/10
       S_UpdateSounds();// move positional sounds
 
-    vt_dguiFrameBegin(cx);
-    vt_dguiDraw(cx);
-    vt_dguiFrameFinish(cx);
+    if (!(dsda_Flag(dsda_arg_nodraw))) {
+        vt_dguiFrameBegin(cx);
+        vt_dguiDraw(cx);
+        vt_dguiFrameFinish(cx);
+    }
 
     // Update display, next frame, with current state.
     if (!movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate)
