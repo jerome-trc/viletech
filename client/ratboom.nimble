@@ -39,7 +39,7 @@ proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
         cmd &= &"--nimcache:../nimcache/release -d:release -d:strip -d:lto "
     else:
         const outDir = "Debug"
-        cmd &= &"--nimcache:../nimcache/debug --debuginfo --linedir:on "
+        cmd &= &"--nimcache:../nimcache/debug --debuginfo --lineDir:on "
 
     let exeName = toExe("ratboom")
     cmd &= &"-o:../build/{outDir}/{exeName} "

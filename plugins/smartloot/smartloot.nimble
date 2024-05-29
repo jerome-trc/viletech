@@ -20,7 +20,7 @@ proc build(release: static[bool]) =
     else:
         const outDir = "Debug"
         cmd &= "--nimcache:../../nimcache/plugins/smartloot/release "
-        cmd &= "--debuginfo --linedir:on "
+        cmd &= "--debuginfo --lineDir:on "
 
     let libName = toDll("smartloot")
     cmd &= &"-o:../../build/{outDir}/{libName} "
