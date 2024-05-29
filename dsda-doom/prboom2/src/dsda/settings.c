@@ -180,6 +180,10 @@ dboolean dsda_SwitchWhenAmmoRunsOut(void) {
   return dsda_IntConfig(dsda_config_switch_when_ammo_runs_out);
 }
 
+dboolean dsda_SwitchWhenBerserk(void) {
+  return dsda_IntConfig(dsda_config_berserk_switch);
+}
+
 dboolean dsda_SkipQuitPrompt(void) {
   return dsda_IntConfig(dsda_config_skip_quit_prompt);
 }

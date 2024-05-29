@@ -15,6 +15,7 @@
 //	DSDA Config
 //
 
+#include <assert.h>
 #include <string.h>
 
 #include "am_map.h"
@@ -1220,6 +1221,10 @@ dsda_config_t dsda_config[dsda_config_count] = {
     "announce_map", dsda_config_announce_map,
     CONF_BOOL(0),
   },
+  [dsda_config_berserk_switch] = {
+    "berserk_switch", dsda_config_berserk_switch,
+    CONF_BOOL(1),
+  },
 };
 
 static void dsda_PersistIntConfig(dsda_config_t* conf) {
@@ -1528,9 +1533,12 @@ char* dsda_ConfigSummary(const char* name) {
 int dsda_ConfigIDByName(const char* name) {
   int i;
 
-  for (i = 1; i < dsda_config_count; ++i)
+  for (i = 1; i < dsda_config_count; ++i) {
+    assert(dsda_config[i].name != NULL);
+
     if (!strcmp(name, dsda_config[i].name))
       return i;
+  }
 
   return 0;
 }

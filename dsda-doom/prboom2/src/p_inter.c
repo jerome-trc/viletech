@@ -56,6 +56,7 @@
 #include "dsda/map_format.h"
 #include "dsda/mapinfo.h"
 #include "dsda/messenger.h"
+#include "dsda/settings.h"
 #include "dsda/skill_info.h"
 
 #include "heretic/def.h"
@@ -627,8 +628,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
       if (!P_GivePower (player, pw_strength))
         return;
       dsda_AddPlayerMessage(s_GOTBERSERK, player);
-      if (player->readyweapon != wp_fist)
-        player->pendingweapon = wp_fist;
+
+        bool switch_to_fist = player->readyweapon != wp_fist;
+
+        if (!dsda_SwitchWhenBerserk())
+            switch_to_fist = false;
+
+        if (demoplayback)
+            switch_to_fist = true;
+
+        if (switch_to_fist)
+            player->pendingweapon = wp_fist;
+
       sound = sfx_getpow;
       break;
 

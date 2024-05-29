@@ -3052,6 +3052,7 @@ setup_menu_t demo_settings[] = {
   { "Casual Play Settings", S_SKIP | S_TITLE, m_null, G_X},
   { "Allow Jumping", S_YESNO, m_conf, G_X, dsda_config_allow_jumping },
   { "OpenGL Show Health Bars", S_YESNO, m_conf, G_X, dsda_config_gl_health_bar },
+  { "Berserk Switches Weapon", S_YESNO, m_conf, G_X, dsda_config_berserk_switch },
 
   PREV_PAGE(mapping_settings),
   NEXT_PAGE(tas_settings),
