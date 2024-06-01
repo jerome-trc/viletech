@@ -22,24 +22,24 @@
 
 #include "heretic/dstrings.h"
 
-static void Heretic_D_DrawTitle(const char *_x)
+static void Heretic_D_DrawTitle(CCore* cx, const char *_x)
 {
-  D_SetPage("TITLE", 210, heretic_mus_titl);
+  D_SetPage(cx, "TITLE", 210, heretic_mus_titl);
 }
 
-static void Heretic_D_DrawTitle2(const char *_x)
+static void Heretic_D_DrawTitle2(CCore* cx, const char *_x)
 {
-  D_SetPage("TITLE", 140, 0);
+  D_SetPage(cx, "TITLE", 140, 0);
 }
 
-static void Heretic_D_DrawCredits(const char *_x)
+static void Heretic_D_DrawCredits(CCore* cx, const char *_x)
 {
-  D_SetPage("CREDIT", 200, 0);
+  D_SetPage(cx, "CREDIT", 200, 0);
 }
 
-static void Heretic_D_DrawOrder(const char *_x)
+static void Heretic_D_DrawOrder(CCore* cx, const char *_x)
 {
-  D_SetPage("ORDER", 200, 0);
+  D_SetPage(cx, "ORDER", 200, 0);
 }
 
 const demostate_t heretic_demostates[][4] =
@@ -94,9 +94,9 @@ const demostate_t heretic_demostates[][4] =
   },
 
   {
-    {NULL},
-    {NULL},
-    {NULL},
-    {NULL},
+    {NULL, NULL },
+    {NULL, NULL },
+    {NULL, NULL },
+    {NULL, NULL },
   }
 };

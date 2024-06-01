@@ -18,20 +18,20 @@
 #include "g_game.h"
 #include "d_main.h"
 
-static void Hexen_D_DrawTitle(const char *_x)
+static void Hexen_D_DrawTitle(CCore* cx, const char *_x)
 {
-  D_SetPage("TITLE", 280, 0);
-  S_StartSongName("hexen", true);
+  D_SetPage(cx, "TITLE", 280, 0);
+  S_StartSongName(cx, "hexen", true);
 }
 
-static void Hexen_D_DrawTitle2(const char *_x)
+static void Hexen_D_DrawTitle2(CCore* cx, const char *_x)
 {
-  D_SetPage("TITLE", 210, 0);
+  D_SetPage(cx, "TITLE", 210, 0);
 }
 
-static void Hexen_D_DrawCredits(const char *_x)
+static void Hexen_D_DrawCredits(CCore* cx, const char *_x)
 {
-  D_SetPage("CREDIT", 200, 0);
+  D_SetPage(cx, "CREDIT", 200, 0);
 }
 
 const demostate_t hexen_demostates[][4] =
@@ -86,9 +86,9 @@ const demostate_t hexen_demostates[][4] =
   },
 
   {
-    {NULL},
-    {NULL},
-    {NULL},
-    {NULL},
+    {NULL, NULL },
+    {NULL, NULL },
+    {NULL, NULL },
+    {NULL, NULL },
   }
 };

@@ -27,8 +27,8 @@
 
 #include "p_things.h"
 
-static dboolean ActivateThing(mobj_t * mobj);
-static dboolean DeactivateThing(mobj_t * mobj);
+static dboolean ActivateThing(CCore*, mobj_t*);
+static dboolean DeactivateThing(CCore*, mobj_t*);
 
 mobjtype_t TranslateThingType[] = {
     HEXEN_MT_MAPSPOT,                 // T_NONE
@@ -142,7 +142,7 @@ mobjtype_t TranslateThingType[] = {
     HEXEN_MT_WRAITHFX2                // T_SPARK_DRIP
 };
 
-dboolean EV_ThingProjectile(byte * args, dboolean gravity)
+dboolean EV_ThingProjectile(CCore* cx, byte * args, dboolean gravity)
 {
     int tid;
     angle_t angle;
@@ -185,7 +185,7 @@ dboolean EV_ThingProjectile(byte * args, dboolean gravity)
             newMobj->flags &= ~MF_NOGRAVITY;
             newMobj->flags2 |= MF2_LOGRAV;
         }
-        if (P_CheckMissileSpawn(newMobj) == true)
+        if (P_CheckMissileSpawn(cx, newMobj) == true)
         {
             success = true;
         }
@@ -193,7 +193,7 @@ dboolean EV_ThingProjectile(byte * args, dboolean gravity)
     return success;
 }
 
-dboolean EV_ThingSpawn(byte * args, dboolean fog)
+dboolean EV_ThingSpawn(CCore* cx, byte * args, dboolean fog)
 {
     int tid;
     angle_t angle;
@@ -225,9 +225,9 @@ dboolean EV_ThingSpawn(byte * args, dboolean fog)
             z = mobj->z;
         }
         newMobj = P_SpawnMobj(mobj->x, mobj->y, z, moType);
-        if (P_TestMobjLocation(newMobj) == false)
+        if (P_TestMobjLocation(cx, newMobj) == false)
         {                       // Didn't fit
-            P_RemoveMobj(newMobj);
+            P_RemoveMobj(cx, newMobj);
         }
         else
         {
@@ -249,7 +249,7 @@ dboolean EV_ThingSpawn(byte * args, dboolean fog)
     return success;
 }
 
-dboolean EV_ThingActivate(int tid)
+dboolean EV_ThingActivate(CCore* cx, int tid)
 {
     mobj_t *mobj;
     int searcher;
@@ -259,7 +259,7 @@ dboolean EV_ThingActivate(int tid)
     searcher = -1;
     while ((mobj = P_FindMobjFromTID(tid, &searcher)) != NULL)
     {
-        if (ActivateThing(mobj) == true)
+        if (ActivateThing(cx, mobj) == true)
         {
             success = true;
         }
@@ -267,7 +267,7 @@ dboolean EV_ThingActivate(int tid)
     return success;
 }
 
-dboolean EV_ThingDeactivate(int tid)
+dboolean EV_ThingDeactivate(CCore* cx, int tid)
 {
     mobj_t *mobj;
     int searcher;
@@ -277,7 +277,7 @@ dboolean EV_ThingDeactivate(int tid)
     searcher = -1;
     while ((mobj = P_FindMobjFromTID(tid, &searcher)) != NULL)
     {
-        if (DeactivateThing(mobj) == true)
+        if (DeactivateThing(cx, mobj) == true)
         {
             success = true;
         }
@@ -285,7 +285,7 @@ dboolean EV_ThingDeactivate(int tid)
     return success;
 }
 
-dboolean EV_ThingRemove(int tid)
+dboolean EV_ThingRemove(CCore* cx, int tid)
 {
     mobj_t *mobj;
     int searcher;
@@ -297,16 +297,16 @@ dboolean EV_ThingRemove(int tid)
     {
         if (mobj->type == HEXEN_MT_BRIDGE)
         {
-            A_BridgeRemove(mobj);
+            A_BridgeRemove(cx, mobj);
             return true;
         }
-        P_RemoveMobj(mobj);
+        P_RemoveMobj(cx, mobj);
         success = true;
     }
     return success;
 }
 
-dboolean EV_ThingDestroy(int tid)
+dboolean EV_ThingDestroy(CCore* cx, int tid)
 {
     mobj_t *mobj;
     int searcher;
@@ -318,14 +318,14 @@ dboolean EV_ThingDestroy(int tid)
     {
         if (mobj->flags & MF_SHOOTABLE)
         {
-            P_DamageMobj(mobj, NULL, NULL, 10000);
+            P_DamageMobj(cx, mobj, NULL, NULL, 10000);
             success = true;
         }
     }
     return success;
 }
 
-static dboolean ActivateThing(mobj_t * mobj)
+static dboolean ActivateThing(CCore* cx, mobj_t * mobj)
 {
     if (mobj->flags & MF_COUNTKILL)
     {                           // Monster
@@ -341,19 +341,19 @@ static dboolean ActivateThing(mobj_t * mobj)
     {
         case HEXEN_MT_ZTWINEDTORCH:
         case HEXEN_MT_ZTWINEDTORCH_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZTWINEDTORCH_1);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZTWINEDTORCH_1);
             S_StartMobjSound(mobj, hexen_sfx_ignite);
             break;
         case HEXEN_MT_ZWALLTORCH:
         case HEXEN_MT_ZWALLTORCH_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZWALLTORCH1);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZWALLTORCH1);
             S_StartMobjSound(mobj, hexen_sfx_ignite);
             break;
         case HEXEN_MT_ZGEMPEDESTAL:
-            P_SetMobjState(mobj, HEXEN_S_ZGEMPEDESTAL2);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZGEMPEDESTAL2);
             break;
         case HEXEN_MT_ZWINGEDSTATUENOSKULL:
-            P_SetMobjState(mobj, HEXEN_S_ZWINGEDSTATUENOSKULL2);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZWINGEDSTATUENOSKULL2);
             break;
         case HEXEN_MT_THRUSTFLOOR_UP:
         case HEXEN_MT_THRUSTFLOOR_DOWN:
@@ -362,37 +362,37 @@ static dboolean ActivateThing(mobj_t * mobj)
                 S_StartMobjSound(mobj, hexen_sfx_thrustspike_lower);
                 mobj->flags2 &= ~MF2_DONTDRAW;
                 if (mobj->special_args[1])
-                    P_SetMobjState(mobj, HEXEN_S_BTHRUSTRAISE1);
+                    P_SetMobjState(cx, mobj, HEXEN_S_BTHRUSTRAISE1);
                 else
-                    P_SetMobjState(mobj, HEXEN_S_THRUSTRAISE1);
+                    P_SetMobjState(cx, mobj, HEXEN_S_THRUSTRAISE1);
             }
             break;
         case HEXEN_MT_ZFIREBULL:
         case HEXEN_MT_ZFIREBULL_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZFIREBULL_BIRTH);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZFIREBULL_BIRTH);
             S_StartMobjSound(mobj, hexen_sfx_ignite);
             break;
         case HEXEN_MT_ZBELL:
             if (mobj->health > 0)
             {
-                P_DamageMobj(mobj, NULL, NULL, 10);     // 'ring' the bell
+                P_DamageMobj(cx, mobj, NULL, NULL, 10); // 'ring' the bell
             }
             break;
         case HEXEN_MT_ZCAULDRON:
         case HEXEN_MT_ZCAULDRON_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZCAULDRON1);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZCAULDRON1);
             S_StartMobjSound(mobj, hexen_sfx_ignite);
             break;
         case HEXEN_MT_FLAME_SMALL:
             S_StartMobjSound(mobj, hexen_sfx_ignite);
-            P_SetMobjState(mobj, HEXEN_S_FLAME_SMALL1);
+            P_SetMobjState(cx, mobj, HEXEN_S_FLAME_SMALL1);
             break;
         case HEXEN_MT_FLAME_LARGE:
             S_StartMobjSound(mobj, hexen_sfx_ignite);
-            P_SetMobjState(mobj, HEXEN_S_FLAME_LARGE1);
+            P_SetMobjState(cx, mobj, HEXEN_S_FLAME_LARGE1);
             break;
         case HEXEN_MT_BAT_SPAWNER:
-            P_SetMobjState(mobj, HEXEN_S_SPAWNBATS1);
+            P_SetMobjState(cx, mobj, HEXEN_S_SPAWNBATS1);
             break;
         default:
             return false;
@@ -401,7 +401,7 @@ static dboolean ActivateThing(mobj_t * mobj)
     return true;
 }
 
-static dboolean DeactivateThing(mobj_t * mobj)
+static dboolean DeactivateThing(CCore* cx, mobj_t * mobj)
 {
     if (mobj->flags & MF_COUNTKILL)
     {                           // Monster
@@ -417,11 +417,11 @@ static dboolean DeactivateThing(mobj_t * mobj)
     {
         case HEXEN_MT_ZTWINEDTORCH:
         case HEXEN_MT_ZTWINEDTORCH_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZTWINEDTORCH_UNLIT);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZTWINEDTORCH_UNLIT);
             break;
         case HEXEN_MT_ZWALLTORCH:
         case HEXEN_MT_ZWALLTORCH_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZWALLTORCH_U);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZWALLTORCH_U);
             break;
         case HEXEN_MT_THRUSTFLOOR_UP:
         case HEXEN_MT_THRUSTFLOOR_DOWN:
@@ -429,27 +429,27 @@ static dboolean DeactivateThing(mobj_t * mobj)
             {
                 S_StartMobjSound(mobj, hexen_sfx_thrustspike_raise);
                 if (mobj->special_args[1])
-                    P_SetMobjState(mobj, HEXEN_S_BTHRUSTLOWER);
+                    P_SetMobjState(cx, mobj, HEXEN_S_BTHRUSTLOWER);
                 else
-                    P_SetMobjState(mobj, HEXEN_S_THRUSTLOWER);
+                    P_SetMobjState(cx, mobj, HEXEN_S_THRUSTLOWER);
             }
             break;
         case HEXEN_MT_ZFIREBULL:
         case HEXEN_MT_ZFIREBULL_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZFIREBULL_DEATH);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZFIREBULL_DEATH);
             break;
         case HEXEN_MT_ZCAULDRON:
         case HEXEN_MT_ZCAULDRON_UNLIT:
-            P_SetMobjState(mobj, HEXEN_S_ZCAULDRON_U);
+            P_SetMobjState(cx, mobj, HEXEN_S_ZCAULDRON_U);
             break;
         case HEXEN_MT_FLAME_SMALL:
-            P_SetMobjState(mobj, HEXEN_S_FLAME_SDORM1);
+            P_SetMobjState(cx, mobj, HEXEN_S_FLAME_SDORM1);
             break;
         case HEXEN_MT_FLAME_LARGE:
-            P_SetMobjState(mobj, HEXEN_S_FLAME_LDORM1);
+            P_SetMobjState(cx, mobj, HEXEN_S_FLAME_LDORM1);
             break;
         case HEXEN_MT_BAT_SPAWNER:
-            P_SetMobjState(mobj, HEXEN_S_SPAWNBATS_OFF);
+            P_SetMobjState(cx, mobj, HEXEN_S_SPAWNBATS_OFF);
             break;
         default:
             return false;

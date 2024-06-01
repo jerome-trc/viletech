@@ -37,6 +37,8 @@
 #include "d_player.h"
 #include "p_mobj.h"
 
+#include "viletech.nim.h"
+
 /* Ty 03/09/98 Moved to an int in p_inter.c for deh and externalization */
 #define MAXHEALTH maxhealth
 
@@ -46,9 +48,9 @@
 #define BASETHRESHOLD   (100)
 
 dboolean P_GivePower(player_t *, int);
-void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher);
-void P_DamageMobj(mobj_t *target,mobj_t *inflictor,mobj_t *source,int damage);
-void P_HealMobj(mobj_t *mo, int num);
+void P_TouchSpecialThing(CCore*, mobj_t *special, mobj_t *toucher);
+void P_DamageMobj(CCore*, mobj_t* target, mobj_t* inflictor, mobj_t* source, int);
+void P_HealMobj(mobj_t*, int);
 int P_PlayerHealthIncrease(int value);
 
 /* killough 5/2/98: moved from d_deh.c, g_game.c, m_misc.c, others: */
@@ -79,29 +81,29 @@ extern int maxammo[], clipammo[];
 
 extern int GetWeaponAmmo[NUMWEAPONS];
 
-dboolean P_GiveBody(player_t * player, int num);
-void P_SetMessage(player_t * player, const char *message, dboolean ultmsg);
-dboolean P_GiveArtifact(player_t * player, artitype_t arti, mobj_t * mo);
-dboolean Heretic_P_GiveWeapon(player_t * player, weapontype_t weapon);
-void P_SetDormantArtifact(mobj_t * arti);
-void P_HideSpecialThing(mobj_t * thing);
-dboolean P_ChickenMorphPlayer(player_t * player);
-dboolean P_ChickenMorph(mobj_t * target);
-void P_TouchWhirlwind(mobj_t * target);
-void P_MinotaurSlam(mobj_t * source, mobj_t * target);
-dboolean P_AutoUseChaosDevice(player_t * player);
-void P_AutoUseHealth(player_t * player, int saveHealth);
+dboolean P_GiveBody(player_t*, int num);
+void P_SetMessage(player_t*, const char*, dboolean ultmsg);
+dboolean P_GiveArtifact(player_t*, artitype_t, mobj_t*);
+dboolean Heretic_P_GiveWeapon(player_t*, weapontype_t);
+void P_SetDormantArtifact(CCore*, mobj_t*);
+void P_HideSpecialThing(CCore*, mobj_t*);
+dboolean P_ChickenMorphPlayer(CCore*, player_t*);
+dboolean P_ChickenMorph(CCore*, mobj_t*);
+void P_TouchWhirlwind(CCore*, mobj_t*);
+void P_MinotaurSlam(CCore*, mobj_t * source, mobj_t * target);
+dboolean P_AutoUseChaosDevice(CCore*, player_t*);
+void P_AutoUseHealth(player_t*, int saveHealth);
 
 // hexen
 
 #define MAXMORPHHEALTH 30
 
-void P_SetYellowMessage(player_t * player, const char *message, dboolean ultmsg);
-void P_FallingDamage(player_t * player);
-void P_PoisonPlayer(player_t * player, mobj_t * poisoner, int poison);
-void P_PoisonDamage(player_t * player, mobj_t * source, int damage, dboolean playPainSound);
-dboolean P_GiveMana(player_t * player, manatype_t mana, int count);
-dboolean Hexen_P_GiveArmor(player_t *player, armortype_t armortype, int amount);
-dboolean P_MorphPlayer(player_t * player);
+void P_SetYellowMessage(player_t*, const char*, dboolean ultmsg);
+void P_FallingDamage(CCore*, player_t*);
+void P_PoisonPlayer(player_t*, mobj_t * poisoner, int poison);
+void P_PoisonDamage(CCore*, player_t*, mobj_t * source, int damage, dboolean playPainSound);
+dboolean P_GiveMana(player_t*, manatype_t, int count);
+dboolean Hexen_P_GiveArmor(player_t*, armortype_t, int amount);
+dboolean P_MorphPlayer(CCore*, player_t*);
 
 #endif

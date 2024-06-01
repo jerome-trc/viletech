@@ -257,7 +257,7 @@ static const char* dsda_ReadOption(char* buf, size_t size, options_lump_t* lump)
   return lump->data;
 }
 
-void dsda_ParseOptionsLump(void) {
+void dsda_ParseOptionsLump(CCore* cx) {
   options_lump_t lump;
   char buf[OPTIONS_LINE_LENGTH];
   char key[OPTIONS_LINE_LENGTH];
@@ -290,7 +290,7 @@ void dsda_ParseOptionsLump(void) {
           parsed_option_list[i].value = BETWEEN(option_list[i].min, option_list[i].max, value);
         }
         else
-          dsda_UpdateIntConfig(option_list[i].config_key, value, false);
+          dsda_UpdateIntConfig(cx, option_list[i].config_key, value, false);
 
         lprintf(LO_INFO, "dsda_LumpOptions: %s = %d\n", key, value);
 

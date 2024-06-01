@@ -56,7 +56,7 @@ extern musicinfo_t *mus_playing;
 extern musinfo_t musinfo;
 
 void S_ParseMusInfo(const char *mapid);
-void MusInfoThinker(mobj_t *thing);
-void T_MAPMusic(void);
+void MusInfoThinker(mobj_t*);
+void T_MAPMusic(CCore*);
 
 #endif

@@ -74,7 +74,7 @@ typedef struct
 {
   void (*load_vertexes)(int lump);
   void (*load_sectors)(int lump);
-  void (*load_things)(int lump);
+  void (*load_things)(CCore*, int lump);
   void (*load_linedefs)(int lump);
   void (*allocate_sidedefs)(int lump);
   void (*load_sidedefs)(int lump);

@@ -593,7 +593,7 @@ void dsda_BruteForceWithMonsters(void) {
   bf_nomonsters = false;
 }
 
-dboolean dsda_StartBruteForce(int depth) {
+dboolean dsda_StartBruteForce(CCore* cx, int depth) {
   int i;
 
   if (!dsda_BuildMode()) {
@@ -636,10 +636,10 @@ dboolean dsda_StartBruteForce(int depth) {
   if (bf_nomonsters) {
     lprintf(LO_INFO, "Warning: ignoring monsters! The result may desync with monsters!\n");
     dsda_StoreKeyFrame(&nomo_key_frame, true, false);
-    P_RemoveMonsters();
+    P_RemoveMonsters(cx);
   }
 
-  dsda_EnterSkipMode();
+  dsda_EnterSkipMode(cx);
 
   dsda_StartTimer(dsda_timer_brute_force);
 

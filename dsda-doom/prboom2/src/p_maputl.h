@@ -36,12 +36,14 @@
 
 #include "r_defs.h"
 
+#include "viletech.nim.h"
+
 /* mapblocks are used to check movement against lines and things */
 #define MAPBLOCKUNITS   128
-#define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
-#define MAPBLOCKSHIFT   (FRACBITS+7)
-#define MAPBMASK        (MAPBLOCKSIZE-1)
-#define MAPBTOFRAC      (MAPBLOCKSHIFT-FRACBITS)
+#define MAPBLOCKSIZE    (MAPBLOCKUNITS * FRACUNIT)
+#define MAPBLOCKSHIFT   (FRACBITS + 7)
+#define MAPBMASK        (MAPBLOCKSIZE - 1)
+#define MAPBTOFRAC      (MAPBLOCKSHIFT - FRACBITS)
 
 #define PT_ADDLINES     1
 #define PT_ADDTHINGS    2
@@ -75,7 +77,7 @@ typedef struct {
   } d;
 } intercept_t;
 
-typedef dboolean (*traverser_t)(intercept_t *in);
+typedef dboolean (*traverser_t)(CCore*, intercept_t*);
 
 fixed_t CONSTFUNC P_AproxDistance (fixed_t dx, fixed_t dy);
 
@@ -100,11 +102,11 @@ void check_intercept(void);
 void    P_LineOpening (const line_t *linedef, const mobj_t *actor);
 void    P_UnsetThingPosition(mobj_t *thing);
 void    P_SetThingPosition(mobj_t *thing);
-dboolean P_BlockLinesIterator (int x, int y, dboolean func(line_t *));
+dboolean P_BlockLinesIterator(CCore* cx, int x, int y, dboolean func(CCore*, line_t *));
 dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t *));
-dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *));
-dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
-                       int flags, dboolean trav(intercept_t *));
+dboolean P_BlockThingsIterator(CCore*, int x, int y, dboolean func(CCore*, mobj_t*));
+dboolean P_PathTraverse(CCore*, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
+                       int flags, dboolean trav(CCore*, intercept_t *));
 
 angle_t P_PointToAngle(fixed_t xo, fixed_t yo, fixed_t x, fixed_t y);
 mobj_t *P_RoughTargetSearch(mobj_t *mo, angle_t fov, int distance);

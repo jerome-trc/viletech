@@ -672,7 +672,7 @@ static dboolean console_DemoStop(CCore* cx, const char* command, const char* arg
     return false;
 
   G_CheckDemoStatus(cx);
-  dsda_UpdateStrictMode();
+  dsda_UpdateStrictMode(cx);
 
   return true;
 }
@@ -1212,7 +1212,7 @@ static dboolean console_BruteForceStart(CCore* cx, const char* command, const ch
     Z_Free(conditions);
   }
 
-  return dsda_StartBruteForce(depth);
+  return dsda_StartBruteForce(cx, depth);
 }
 
 static dboolean console_BuildTurbo(CCore* cx, const char* command, const char* args) {
@@ -1361,7 +1361,7 @@ static dboolean console_Check(CCore* cx, const char* command, const char* args) 
   return false;
 }
 
-static dboolean console_ChangeConfig(const char* command, const char* args, dboolean persist) {
+static dboolean console_ChangeConfig(CCore* cx, const char* command, const char* args, dboolean persist) {
   (void)command;
 
   char name[CONSOLE_ENTRY_SIZE];
@@ -1379,12 +1379,12 @@ static dboolean console_ChangeConfig(const char* command, const char* args, dboo
         int value_int;
 
         if (sscanf(value_string, "%d", &value_int)) {
-          dsda_UpdateIntConfig(id, value_int, persist);
+          dsda_UpdateIntConfig(cx, id, value_int, persist);
           return true;
         }
       }
       else {
-        dsda_UpdateStringConfig(id, value_string, persist);
+        dsda_UpdateStringConfig(cx, id, value_string, persist);
         return true;
       }
     }
@@ -1395,15 +1395,15 @@ static dboolean console_ChangeConfig(const char* command, const char* args, dboo
 
 static dboolean console_Assign(CCore* cx, const char* command, const char* args) {
   (void)cx;
-  return console_ChangeConfig(command, args, false);
+  return console_ChangeConfig(cx, command, args, false);
 }
 
 static dboolean console_Update(CCore* cx, const char* command, const char* args) {
   (void)cx;
-  return console_ChangeConfig(command, args, true);
+  return console_ChangeConfig(cx, command, args, true);
 }
 
-static dboolean console_ToggleConfig(const char* command, const char* args, dboolean persist) {
+static dboolean console_ToggleConfig(CCore* cx, const char* command, const char* args, dboolean persist) {
   (void)command;
 
   char name[CONSOLE_ENTRY_SIZE];
@@ -1417,7 +1417,7 @@ static dboolean console_ToggleConfig(const char* command, const char* args, dboo
 
       config_type = dsda_ConfigType(id);
       if (config_type == dsda_config_int) {
-        dsda_ToggleConfig(id, persist);
+        dsda_ToggleConfig(cx, id, persist);
         return true;
       }
     }
@@ -1428,12 +1428,12 @@ static dboolean console_ToggleConfig(const char* command, const char* args, dboo
 
 static dboolean console_ToggleAssign(CCore* cx, const char* command, const char* args) {
   (void)cx;
-  return console_ToggleConfig(command, args, false);
+  return console_ToggleConfig(cx, command, args, false);
 }
 
 static dboolean console_ToggleUpdate(CCore* cx, const char* command, const char* args) {
     (void)cx;
-    return console_ToggleConfig(command, args, true);
+    return console_ToggleConfig(cx, command, args, true);
 }
 
 static dboolean console_ConfigForget(CCore* cx, const char* command, const char* args) {
@@ -1489,7 +1489,7 @@ static dboolean console_FreeTextUpdate(CCore* cx, const char* command, const cha
   (void)command;
   (void)args;
 
-  dsda_UpdateStringConfig(dsda_config_free_text, args, true);
+  dsda_UpdateStringConfig(cx, dsda_config_free_text, args, true);
 
   return true;
 }
@@ -1499,17 +1499,17 @@ static dboolean console_FreeTextClear(CCore* cx, const char* command, const char
   (void)command;
   (void)args;
 
-  dsda_UpdateStringConfig(dsda_config_free_text, "", true);
+  dsda_UpdateStringConfig(cx, dsda_config_free_text, "", true);
 
   return true;
 }
 
-static dboolean console_SetMobjState(mobj_t* mobj, statenum_t state) {
+static dboolean console_SetMobjState(CCore* cx, mobj_t* mobj, statenum_t state) {
   if (!state)
     return false;
 
   P_MapStart();
-  P_SetMobjState(mobj, state);
+  P_SetMobjState(cx, mobj, state);
   P_MapEnd();
 
   return true;
@@ -1552,9 +1552,9 @@ static dboolean console_TargetSpawn(CCore* cx, const char* command, const char* 
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->spawnstate);
+  return target && console_SetMobjState(cx, target, target->info->spawnstate);
 }
 
 static dboolean console_TargetSee(CCore* cx, const char* command, const char* args) {
@@ -1564,9 +1564,9 @@ static dboolean console_TargetSee(CCore* cx, const char* command, const char* ar
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->seestate);
+  return target && console_SetMobjState(cx, target, target->info->seestate);
 }
 
 static dboolean console_TargetPain(CCore* cx, const char* command, const char* args) {
@@ -1576,9 +1576,9 @@ static dboolean console_TargetPain(CCore* cx, const char* command, const char* a
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->painstate);
+  return target && console_SetMobjState(cx, target, target->info->painstate);
 }
 
 static dboolean console_TargetMelee(CCore* cx, const char* command, const char* args) {
@@ -1588,9 +1588,9 @@ static dboolean console_TargetMelee(CCore* cx, const char* command, const char* 
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->meleestate);
+  return target && console_SetMobjState(cx, target, target->info->meleestate);
 }
 
 static dboolean console_TargetMissile(CCore* cx, const char* command, const char* args) {
@@ -1600,9 +1600,9 @@ static dboolean console_TargetMissile(CCore* cx, const char* command, const char
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->missilestate);
+  return target && console_SetMobjState(cx, target, target->info->missilestate);
 }
 
 static dboolean console_TargetDeath(CCore* cx, const char* command, const char* args) {
@@ -1612,9 +1612,9 @@ static dboolean console_TargetDeath(CCore* cx, const char* command, const char* 
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->deathstate);
+  return target && console_SetMobjState(cx, target, target->info->deathstate);
 }
 
 static dboolean console_TargetXDeath(CCore* cx, const char* command, const char* args) {
@@ -1624,9 +1624,9 @@ static dboolean console_TargetXDeath(CCore* cx, const char* command, const char*
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->xdeathstate);
+  return target && console_SetMobjState(cx, target, target->info->xdeathstate);
 }
 
 static dboolean console_TargetRaise(CCore* cx, const char* command, const char* args) {
@@ -1636,9 +1636,9 @@ static dboolean console_TargetRaise(CCore* cx, const char* command, const char* 
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, target->info->raisestate);
+  return target && console_SetMobjState(cx, target, target->info->raisestate);
 }
 
 static dboolean console_TargetSetState(CCore* cx, const char* command, const char* args) {
@@ -1651,9 +1651,9 @@ static dboolean console_TargetSetState(CCore* cx, const char* command, const cha
   if (sscanf(args, "%d", &state) != 1 || state < 0 || state >= num_states)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
-  return target && console_SetMobjState(target, state);
+  return target && console_SetMobjState(cx, target, state);
 }
 
 static dboolean console_TargetSetHealth(CCore* cx, const char* command, const char* args) {
@@ -1666,7 +1666,7 @@ static dboolean console_TargetSetHealth(CCore* cx, const char* command, const ch
   if (sscanf(args, "%i", &health) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   if (!target)
     return false;
@@ -1691,7 +1691,7 @@ static dboolean console_TargetMove(CCore* cx, const char* command, const char* a
   x <<= FRACBITS;
   y <<= FRACBITS;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   return console_MoveMobj(target, x, y);
 }
@@ -1707,7 +1707,7 @@ static dboolean console_TargetSetTarget(CCore* cx, const char* command, const ch
   if (sscanf(args, "%d", &new_target_index) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
   new_target = dsda_FindMobj(new_target_index);
 
   return console_SetTarget(target, new_target);
@@ -1720,7 +1720,7 @@ static dboolean console_TargetTargetPlayer(CCore* cx, const char* command, const
 
   mobj_t* target;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   return console_SetTarget(target, target_player.mo);
 }
@@ -1735,7 +1735,7 @@ static dboolean console_TargetActivateLine(CCore* cx, const char* command, const
   if (sscanf(args, "%i", &id) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   return console_ActivateLine(target, id, false);
 }
@@ -1751,7 +1751,7 @@ static dboolean console_TargetAddFlags(CCore* cx, const char* command, const cha
   if (sscanf(args, "%s", flag_str) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   if (!target)
     return false;
@@ -1775,7 +1775,7 @@ static dboolean console_TargetRemoveFlags(CCore* cx, const char* command, const 
   if (sscanf(args, "%s", flag_str) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   if (!target)
     return false;
@@ -1799,7 +1799,7 @@ static dboolean console_TargetSetFlags(CCore* cx, const char* command, const cha
   if (sscanf(args, "%s", flag_str) != 1)
     return false;
 
-  target = HU_Target();
+  target = HU_Target(cx);
 
   if (!target)
     return false;
@@ -1824,7 +1824,7 @@ static dboolean console_MobjSpawn(CCore* cx, const char* command, const char* ar
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->spawnstate);
+  return target && console_SetMobjState(cx, target, target->info->spawnstate);
 }
 
 static dboolean console_MobjSee(CCore* cx, const char* command, const char* args) {
@@ -1839,7 +1839,7 @@ static dboolean console_MobjSee(CCore* cx, const char* command, const char* args
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->seestate);
+  return target && console_SetMobjState(cx, target, target->info->seestate);
 }
 
 static dboolean console_MobjPain(CCore* cx, const char* command, const char* args) {
@@ -1854,7 +1854,7 @@ static dboolean console_MobjPain(CCore* cx, const char* command, const char* arg
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->painstate);
+  return target && console_SetMobjState(cx, target, target->info->painstate);
 }
 
 static dboolean console_MobjMelee(CCore* cx, const char* command, const char* args) {
@@ -1869,7 +1869,7 @@ static dboolean console_MobjMelee(CCore* cx, const char* command, const char* ar
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->meleestate);
+  return target && console_SetMobjState(cx, target, target->info->meleestate);
 }
 
 static dboolean console_MobjMissile(CCore* cx, const char* command, const char* args) {
@@ -1884,7 +1884,7 @@ static dboolean console_MobjMissile(CCore* cx, const char* command, const char* 
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->missilestate);
+  return target && console_SetMobjState(cx, target, target->info->missilestate);
 }
 
 static dboolean console_MobjDeath(CCore* cx, const char* command, const char* args) {
@@ -1899,7 +1899,7 @@ static dboolean console_MobjDeath(CCore* cx, const char* command, const char* ar
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->deathstate);
+  return target && console_SetMobjState(cx, target, target->info->deathstate);
 }
 
 static dboolean console_MobjXDeath(CCore* cx, const char* command, const char* args) {
@@ -1914,7 +1914,7 @@ static dboolean console_MobjXDeath(CCore* cx, const char* command, const char* a
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->xdeathstate);
+  return target && console_SetMobjState(cx, target, target->info->xdeathstate);
 }
 
 static dboolean console_MobjRaise(CCore* cx, const char* command, const char* args) {
@@ -1929,7 +1929,7 @@ static dboolean console_MobjRaise(CCore* cx, const char* command, const char* ar
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, target->info->raisestate);
+  return target && console_SetMobjState(cx, target, target->info->raisestate);
 }
 
 static dboolean console_MobjSetState(CCore* cx, const char* command, const char* args) {
@@ -1945,7 +1945,7 @@ static dboolean console_MobjSetState(CCore* cx, const char* command, const char*
 
   target = dsda_FindMobj(index);
 
-  return target && console_SetMobjState(target, state);
+  return target && console_SetMobjState(cx, target, state);
 }
 
 static dboolean console_MobjSetHealth(CCore* cx, const char* command, const char* args) {
@@ -2666,8 +2666,8 @@ static dboolean console_MusicRestart(CCore* cx, const char* command, const char*
   (void)command;
   (void)args;
 
-  S_StopMusic();
-  S_RestartMusic();
+  S_StopMusic(cx);
+  S_RestartMusic(cx);
 
   return true;
 }

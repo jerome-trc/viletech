@@ -439,7 +439,7 @@ void dsda_ReadBuildCmd(CCore* cx, ticcmd_t* cmd) {
   dsda_JoinDemoCmd(cmd);
 }
 
-void dsda_EnterBuildMode(void) {
+void dsda_EnterBuildMode(CCore* cx) {
   dsda_TrackFeature(uf_build);
 
   if (!demorecording) {
@@ -455,14 +455,14 @@ void dsda_EnterBuildMode(void) {
   build_mode = true;
   dsda_ApplyPauseMode(PAUSE_BUILDMODE);
 
-  dsda_RefreshExHudCommandDisplay();
+  dsda_RefreshExHudCommandDisplay(cx);
 }
 
-void dsda_ExitBuildMode(void) {
+void dsda_ExitBuildMode(CCore* cx) {
   build_mode = false;
   dsda_RemovePauseMode(PAUSE_BUILDMODE);
 
-  dsda_RefreshExHudCommandDisplay();
+  dsda_RefreshExHudCommandDisplay(cx);
 }
 
 void dsda_RefreshBuildMode(void) {
@@ -488,9 +488,9 @@ dboolean dsda_BuildResponder(CCore* cx, event_t* ev) {
 
   if (dsda_InputActivated(dsda_input_build)) {
     if (dsda_BuildMode())
-      dsda_ExitBuildMode();
+      dsda_ExitBuildMode(cx);
     else
-      dsda_EnterBuildMode();
+      dsda_EnterBuildMode(cx);
 
     return true;
   }

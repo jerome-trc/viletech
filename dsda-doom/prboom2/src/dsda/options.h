@@ -18,6 +18,10 @@
 #ifndef __DSDA_OPTIONS__
 #define __DSDA_OPTIONS__
 
+#include "doomtype.h"
+
+#include "viletech.nim.h"
+
 typedef struct dsda_options {
   int weapon_recoil;
   int monsters_remember;
@@ -64,7 +68,7 @@ typedef struct dsda_options {
   int comp_reservedlineflag;
 } dsda_options_t;
 
-void dsda_ParseOptionsLump(void);
+void dsda_ParseOptionsLump(CCore*);
 const dsda_options_t* dsda_Options(void);
 int dsda_GameOptionSize(void);
 byte* dsda_WriteOptions21(byte* demo_p);

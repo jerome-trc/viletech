@@ -1382,14 +1382,14 @@ int V_BestColor(const unsigned char *palette, int r, int g, int b)
 }
 
 // Alt-Enter: fullscreen <-> windowed
-void V_ToggleFullscreen(void)
+void V_ToggleFullscreen(CCore* cx)
 {
-  dsda_UpdateIntConfig(dsda_config_use_fullscreen, !desired_fullscreen, true);
+  dsda_UpdateIntConfig(cx, dsda_config_use_fullscreen, !desired_fullscreen, true);
 }
 
 void V_ChangeScreenResolution(CCore* cx)
 {
-  I_UpdateVideoMode();
+  I_UpdateVideoMode(cx);
 
   if (V_IsOpenGLMode())
   {

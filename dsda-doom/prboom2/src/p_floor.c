@@ -33,6 +33,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "doomstat.h"
+#include "gl_struct.h"
 #include "r_main.h"
 #include "p_map.h"
 #include "p_spec.h"
@@ -42,6 +43,7 @@
 #include "lprintf.h"
 #include "g_overflow.h"
 #include "e6y.h"//e6y
+#include "v_video.h"
 
 #include "dsda/id_list.h"
 #include "dsda/map_format.h"
@@ -70,36 +72,35 @@
 //  pastdest - plane moved normally and is now at destination height
 //  crushed - plane encountered an obstacle, is holding until removed
 //
-result_e T_MoveFloorPlane
-( sector_t*     sector,
-  fixed_t       speed,
-  fixed_t       dest,
-  int           crush,
-  int           direction,
-  dboolean      hexencrush )
-{
-  dboolean       flag;
-  fixed_t       lastpos;
-  fixed_t       destheight; //jff 02/04/98 used to keep floors from moving thru each other
+result_e T_MoveFloorPlane(
+	CCore* cx,
+	sector_t* sector,
+	fixed_t speed,
+	fixed_t dest,
+	int crush,
+	int direction,
+	dboolean hexencrush
+) {
+	dboolean flag;
+	fixed_t lastpos;
+	fixed_t destheight; // jff 02/04/98 used to keep floors from moving thru each other
 
-  if (V_IsOpenGLMode())
-  {
-    gld_UpdateSplitData(sector);
-  }
+	if (V_IsOpenGLMode()) {
+		gld_UpdateSplitData(sector);
+	}
 
-  switch(direction)
-  {
+	switch (direction) {
     case -1:
       // Moving a floor down
       if (sector->floorheight - speed < dest)
       {
         lastpos = sector->floorheight;
         sector->floorheight = dest;
-        flag = P_CheckSector(sector,crush); //jff 3/19/98 use faster chk
+        flag = P_CheckSector(cx, sector, crush); //jff 3/19/98 use faster chk
         if (flag == true)
         {
           sector->floorheight =lastpos;
-          P_CheckSector(sector,crush);      //jff 3/19/98 use faster chk
+          P_CheckSector(cx, sector, crush);      //jff 3/19/98 use faster chk
         }
         return pastdest;
       }
@@ -107,13 +108,13 @@ result_e T_MoveFloorPlane
       {
         lastpos = sector->floorheight;
         sector->floorheight -= speed;
-        flag = P_CheckSector(sector,crush); //jff 3/19/98 use faster chk
+        flag = P_CheckSector(cx, sector, crush); //jff 3/19/98 use faster chk
         /* cph - make more compatible with original Doom, by
          *  reintroducing this code. This means floors can't lower
          *  if objects are stuck in the ceiling */
         if ((flag == true) && comp[comp_floors]) {
           sector->floorheight = lastpos;
-          P_ChangeSector(sector,crush);
+          P_ChangeSector(cx, sector, crush);
           return crushed;
         }
       }
@@ -129,11 +130,11 @@ result_e T_MoveFloorPlane
       {
         lastpos = sector->floorheight;
         sector->floorheight = destheight;
-        flag = P_CheckSector(sector,crush); //jff 3/19/98 use faster chk
+        flag = P_CheckSector(cx, sector, crush); //jff 3/19/98 use faster chk
         if (flag == true)
         {
           sector->floorheight = lastpos;
-          P_CheckSector(sector,crush);      //jff 3/19/98 use faster chk
+          P_CheckSector(cx, sector, crush);      //jff 3/19/98 use faster chk
         }
         return pastdest;
       }
@@ -142,7 +143,7 @@ result_e T_MoveFloorPlane
         // crushing is possible
         lastpos = sector->floorheight;
         sector->floorheight += speed;
-        flag = P_CheckSector(sector,crush); //jff 3/19/98 use faster chk
+        flag = P_CheckSector(cx, sector, crush); //jff 3/19/98 use faster chk
         if (flag == true)
         {
           /* jff 1/25/98 fix floor crusher */
@@ -159,7 +160,7 @@ result_e T_MoveFloorPlane
               return crushed;
           }
           sector->floorheight = lastpos;
-          P_CheckSector(sector,crush);      //jff 3/19/98 use faster chk
+          P_CheckSector(cx, sector, crush);      //jff 3/19/98 use faster chk
           return crushed;
         }
       }
@@ -182,7 +183,7 @@ result_e T_MoveFloorPlane
 // jff 02/08/98 all cases with labels beginning with gen added to support
 // generalized line type behaviors.
 
-void T_MoveCompatibleFloor(floormove_t * floor)
+void T_MoveCompatibleFloor(CCore* cx, floormove_t * floor)
 {
   result_e      res;
 
@@ -212,6 +213,7 @@ void T_MoveCompatibleFloor(floormove_t * floor)
 
   res = T_MoveFloorPlane
   (
+    cx,
     floor->sector,
     floor->speed,
     floor->floordestheight,
@@ -319,7 +321,7 @@ void T_MoveCompatibleFloor(floormove_t * floor)
   }
 }
 
-void T_MoveHexenFloor(floormove_t * floor)
+void T_MoveHexenFloor(CCore* cx, floormove_t * floor)
 {
     result_e res;
 
@@ -345,7 +347,7 @@ void T_MoveHexenFloor(floormove_t * floor)
         return;
     }
 
-    res = T_MoveFloorPlane(floor->sector, floor->speed,
+    res = T_MoveFloorPlane(cx, floor->sector, floor->speed,
                            floor->floordestheight, floor->crush,
                            floor->direction, true);
 
@@ -381,7 +383,7 @@ void T_MoveHexenFloor(floormove_t * floor)
     }
 }
 
-void T_MoveFloor(floormove_t* floor)
+void T_MoveFloor(CCore* cx, floormove_t* floor)
 {
   map_format.t_move_floor(floor);
 }
@@ -398,7 +400,7 @@ void T_MoveFloor(floormove_t* floor)
 //
 // jff 02/22/98 added to support parallel floor/ceiling motion
 //
-void T_MoveElevator(elevator_t* elevator)
+void T_MoveElevator(CCore* cx, elevator_t* elevator)
 {
   result_e      res;
 
@@ -406,6 +408,7 @@ void T_MoveElevator(elevator_t* elevator)
   {
     res = T_MoveCeilingPlane      //jff 4/7/98 reverse order of ceiling/floor
     (
+        cx,
       elevator->sector,
       elevator->speed,
       elevator->ceilingdestheight,
@@ -416,6 +419,7 @@ void T_MoveElevator(elevator_t* elevator)
     if (res==ok || res==pastdest) // jff 4/7/98 don't move ceil if blocked
       T_MoveFloorPlane
       (
+        cx,
         elevator->sector,
         elevator->speed,
         elevator->floordestheight,
@@ -428,6 +432,7 @@ void T_MoveElevator(elevator_t* elevator)
   {
     res = T_MoveFloorPlane        //jff 4/7/98 reverse order of ceiling/floor
     (
+        cx,
       elevator->sector,
       elevator->speed,
       elevator->floordestheight,
@@ -438,6 +443,7 @@ void T_MoveElevator(elevator_t* elevator)
     if (res==ok || res==pastdest) // jff 4/7/98 don't move floor if blocked
       T_MoveCeilingPlane
       (
+        cx,
         elevator->sector,
         elevator->speed,
         elevator->ceilingdestheight,
@@ -1964,16 +1970,16 @@ int Hexen_EV_BuildStairs(line_t * line, byte * args, int direction, stairs_e sta
     return (1);
 }
 
-void T_BuildHexenPillar(pillar_t * pillar)
+void T_BuildHexenPillar(CCore* cx, pillar_t * pillar)
 {
     result_e res1;
     result_e res2;
 
     // First, raise the floor
-    res1 = T_MoveFloorPlane(pillar->sector, pillar->floorSpeed, pillar->floordest,
+    res1 = T_MoveFloorPlane(cx, pillar->sector, pillar->floorSpeed, pillar->floordest,
                             pillar->crush, pillar->direction, true);
     // Then, lower the ceiling
-    res2 = T_MoveCeilingPlane(pillar->sector, pillar->ceilingSpeed, pillar->ceilingdest,
+    res2 = T_MoveCeilingPlane(cx, pillar->sector, pillar->ceilingSpeed, pillar->ceilingdest,
                               pillar->crush, -pillar->direction, true);
     if (res1 == pastdest && res2 == pastdest)
     {
@@ -1984,7 +1990,7 @@ void T_BuildHexenPillar(pillar_t * pillar)
     }
 }
 
-void T_BuildZDoomPillar(pillar_t * pillar)
+void T_BuildZDoomPillar(CCore* cx, pillar_t * pillar)
 {
   result_e res1, res2;
   fixed_t oldfloorheight, oldceilingheight;
@@ -1993,11 +1999,11 @@ void T_BuildZDoomPillar(pillar_t * pillar)
   oldceilingheight = pillar->sector->ceilingheight;
 
   res1 = !pillar->floorSpeed ? pastdest :
-         T_MoveFloorPlane(pillar->sector, pillar->floorSpeed, pillar->floordest,
+         T_MoveFloorPlane(cx, pillar->sector, pillar->floorSpeed, pillar->floordest,
                           pillar->crush, pillar->direction, pillar->hexencrush);
 
   res2 = !pillar->ceilingSpeed ? pastdest :
-         T_MoveCeilingPlane(pillar->sector, pillar->ceilingSpeed, pillar->ceilingdest,
+         T_MoveCeilingPlane(cx, pillar->sector, pillar->ceilingSpeed, pillar->ceilingdest,
                             pillar->crush, -pillar->direction, pillar->hexencrush);
 
   if (!(leveltime & 7))
@@ -2016,13 +2022,13 @@ void T_BuildZDoomPillar(pillar_t * pillar)
   {
     if (res1 == crushed)
     {
-      T_MoveFloorPlane(pillar->sector, pillar->floorSpeed, oldfloorheight,
+      T_MoveFloorPlane(cx, pillar->sector, pillar->floorSpeed, oldfloorheight,
                        NO_CRUSH, -1, pillar->hexencrush);
     }
 
     if (res2 == crushed)
     {
-      T_MoveCeilingPlane(pillar->sector, pillar->ceilingSpeed, oldceilingheight,
+      T_MoveCeilingPlane(cx, pillar->sector, pillar->ceilingSpeed, oldceilingheight,
                          NO_CRUSH, 1, pillar->hexencrush);
     }
   }
@@ -2331,7 +2337,7 @@ int EV_FloorCrushStop(line_t * line, byte * args)
 
 extern fixed_t FloatBobOffsets[64];
 
-static void T_PlaneWaggle(planeWaggle_t * waggle, fixed_t * planeheight, void ** planedata)
+static void T_PlaneWaggle(CCore* cx, planeWaggle_t * waggle, fixed_t * planeheight, void ** planedata)
 {
   switch (waggle->state)
   {
@@ -2346,7 +2352,7 @@ static void T_PlaneWaggle(planeWaggle_t * waggle, fixed_t * planeheight, void **
       if ((waggle->scale -= waggle->scaleDelta) <= 0)
       { // Remove
         (*planeheight) = waggle->originalHeight;
-        P_ChangeSector(waggle->sector, true);
+        P_ChangeSector(cx, waggle->sector, true);
         (*planedata) = NULL;
         P_TagFinished(waggle->sector->tag);
         P_RemoveThinker(&waggle->thinker);
@@ -2366,17 +2372,17 @@ static void T_PlaneWaggle(planeWaggle_t * waggle, fixed_t * planeheight, void **
   waggle->accumulator += waggle->accDelta;
   (*planeheight) = waggle->originalHeight +
                    FixedMul(FloatBobOffsets[(waggle->accumulator >> FRACBITS) & 63], waggle->scale);
-  P_ChangeSector(waggle->sector, true);
+  P_ChangeSector(cx, waggle->sector, true);
 }
 
-void T_FloorWaggle(planeWaggle_t * waggle)
+void T_FloorWaggle(CCore* cx, planeWaggle_t * waggle)
 {
-  T_PlaneWaggle(waggle, &waggle->sector->floorheight, &waggle->sector->floordata);
+  T_PlaneWaggle(cx, waggle, &waggle->sector->floorheight, &waggle->sector->floordata);
 }
 
-void T_CeilingWaggle(planeWaggle_t * waggle)
+void T_CeilingWaggle(CCore* cx, planeWaggle_t * waggle)
 {
-  T_PlaneWaggle(waggle, &waggle->sector->ceilingheight, &waggle->sector->ceilingdata);
+  T_PlaneWaggle(cx, waggle, &waggle->sector->ceilingheight, &waggle->sector->ceilingdata);
 }
 
 static void P_SpawnPlaneWaggle(sector_t *sector, int height, int speed,

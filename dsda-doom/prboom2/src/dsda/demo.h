@@ -34,7 +34,7 @@ int dsda_BytesPerTic(void);
 int dsda_DemoTic(void);
 void dsda_EvaluateBytesPerTic(void);
 void dsda_RestoreCommandHistory(void);
-void dsda_InitDemoRecording(void);
+void dsda_InitDemoRecording(CCore*);
 void dsda_WriteToDemo(const void* buffer, size_t length);
 void dsda_WriteQueueToDemo(const void* buffer, size_t length);
 void dsda_WriteTicToDemo(const void* buffer, size_t length);

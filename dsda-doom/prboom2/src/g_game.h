@@ -42,28 +42,28 @@
 
 dboolean G_Responder(CCore*, event_t *ev);
 dboolean G_CheckDemoStatus(CCore*);
-void G_DeathMatchSpawnPlayer(int playernum);
+void G_DeathMatchSpawnPlayer(CCore*, int playernum);
 void G_InitNew(CCore*, int skill, int episode, int map, dboolean prepare);
 void G_DeferedInitNew(CCore*, int skill, int episode, int map);
-void G_DeferedPlayDemo(const char *demo); // CPhipps - const
+void G_DeferedPlayDemo(CCore*, const char *demo); // CPhipps - const
 void G_LoadGame(int slot); // killough 5/15/98
-void G_ForcedLoadGame(void);           // killough 5/15/98: forced loadgames
+void G_ForcedLoadGame(void);  // killough 5/15/98: forced loadgames
 void G_DoLoadGame(CCore*);
 void G_SaveGame(int slot, const char *description); // Called by M_Responder.
 void G_BeginRecording(CCore*);
 void G_ExitLevel(int position);
 void G_SecretExitLevel(int position);
-void G_WorldDone(void);
+void G_WorldDone(CCore*);
 void G_EndGame(void); /* cph - make m_menu.c call a G_* function for this */
 
 /// @fn G_Ticker
 /// Make ticcmd_ts for the players.
 void G_Ticker(CCore*);
 
-void G_ReloadDefaults(void);     // killough 3/1/98: loads game defaults
+void G_ReloadDefaults(void); // killough 3/1/98: loads game defaults
 void G_RefreshFastMonsters(void); // killough 4/10/98: sets -fast parameters
 void G_DoNewGame(CCore*);
-void G_DoReborn(int playernum);
+void G_DoReborn(CCore*, int playernum);
 void G_StartDemoPlayback(CCore*, const byte *buffer, int length, int behaviour);
 void G_DoPlayDemo(CCore*);
 void G_DoCompleted(CCore*);

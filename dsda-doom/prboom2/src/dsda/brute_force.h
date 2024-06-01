@@ -104,7 +104,7 @@ void dsda_SetBruteForceTarget(dsda_bf_attribute_t attribute,
 void dsda_AddMiscBruteForceCondition(dsda_bf_attribute_t attribute, fixed_t value);
 void dsda_AddBruteForceCondition(dsda_bf_attribute_t attribute,
                                  dsda_bf_operator_t operator, fixed_t value);
-dboolean dsda_StartBruteForce(int depth);
+dboolean dsda_StartBruteForce(CCore*, int depth);
 int dsda_KeepBruteForceFrame(int i);
 int dsda_AddBruteForceFrame(int i,
                             int forwardmove_min, int forwardmove_max,

@@ -38,13 +38,13 @@
 int dsda_tas;
 int dsda_skip_next_wipe;
 
-void dsda_InitSettings(void) {
+void dsda_InitSettings(CCore* cx) {
   void G_UpdateMouseSensitivity(void);
   void dsda_InitQuickstartCache(void);
   void dsda_InitParallelSFXFilter(void);
   void gld_ResetAutomapTransparency(void);
 
-  dsda_UpdateStrictMode();
+  dsda_UpdateStrictMode(cx);
   G_UpdateMouseSensitivity();
   dsda_InitQuickstartCache();
   dsda_InitParallelSFXFilter();
@@ -276,8 +276,8 @@ int dsda_GameSpeed(void) {
   return dsda_IntConfig(dsda_config_game_speed);
 }
 
-void dsda_UpdateGameSpeed(int value) {
-  dsda_UpdateIntConfig(dsda_config_game_speed, value, true);
+void dsda_UpdateGameSpeed(CCore* cx, int value) {
+  dsda_UpdateIntConfig(cx, dsda_config_game_speed, value, true);
 }
 
 void dsda_SkipNextWipe(void) {

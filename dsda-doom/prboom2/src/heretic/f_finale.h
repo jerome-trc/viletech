@@ -20,9 +20,11 @@
 
 #include "d_event.h"
 
+#include "viletech.nim.h"
+
 dboolean Heretic_F_Responder(event_t * event);
 void Heretic_F_Drawer(void);
 void Heretic_F_Ticker(void);
-void Heretic_F_StartFinale(void);
+void Heretic_F_StartFinale(CCore*);
 
 #endif

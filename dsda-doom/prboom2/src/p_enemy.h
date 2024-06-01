@@ -38,6 +38,8 @@
 
 #include "p_mobj.h"
 
+#include "viletech.nim.h"
+
 void P_NoiseAlert (mobj_t *target, mobj_t *emmiter);
 void P_SpawnBrainTargets(void); /* killough 3/26/98: spawn icon landings */
 dboolean P_CheckBossDeath(mobj_t *mo);
@@ -54,115 +56,115 @@ extern struct brain_s {         /* killough 3/26/98: global state of boss brain 
 // allows more extensive changes (see d_deh.c)
 
 // Doesn't work with g++, needs actionf_p1
-void A_Explode(mobj_t *);
-void A_Pain(mobj_t *);
-void A_PlayerScream(mobj_t *);
-void A_Fall(mobj_t *);
-void A_XScream(mobj_t *);
-void A_Look(mobj_t *);
-void A_Chase(mobj_t *);
-void A_FaceTarget(mobj_t *);
-void A_PosAttack(mobj_t *);
-void A_Scream(mobj_t *);
-void A_SPosAttack(mobj_t *);
-void A_VileChase(mobj_t *);
-void A_VileStart(mobj_t *);
-void A_VileTarget(mobj_t *);
-void A_VileAttack(mobj_t *);
-void A_StartFire(mobj_t *);
-void A_Fire(mobj_t *);
-void A_FireCrackle(mobj_t *);
-void A_Tracer(mobj_t *);
-void A_SkelWhoosh(mobj_t *);
-void A_SkelFist(mobj_t *);
-void A_SkelMissile(mobj_t *);
-void A_FatRaise(mobj_t *);
-void A_FatAttack1(mobj_t *);
-void A_FatAttack2(mobj_t *);
-void A_FatAttack3(mobj_t *);
-void A_BossDeath(mobj_t *);
-void A_CPosAttack(mobj_t *);
-void A_CPosRefire(mobj_t *);
-void A_TroopAttack(mobj_t *);
-void A_SargAttack(mobj_t *);
-void A_HeadAttack(mobj_t *);
-void A_BruisAttack(mobj_t *);
-void A_SkullAttack(mobj_t *);
-void A_Metal(mobj_t *);
-void A_SpidRefire(mobj_t *);
-void A_BabyMetal(mobj_t *);
-void A_BspiAttack(mobj_t *);
-void A_Hoof(mobj_t *);
-void A_CyberAttack(mobj_t *);
-void A_PainAttack(mobj_t *);
-void A_PainDie(mobj_t *);
-void A_KeenDie(mobj_t *);
-void A_BrainPain(mobj_t *);
-void A_BrainScream(mobj_t *);
-void A_BrainDie(mobj_t *);
-void A_BrainAwake(mobj_t *);
-void A_BrainSpit(mobj_t *);
-void A_SpawnSound(mobj_t *);
-void A_SpawnFly(mobj_t *);
-void A_BrainExplode(mobj_t *);
-void A_Die(mobj_t *);
-void A_Detonate(mobj_t *);        /* killough 8/9/98: detonate a bomb or other device */
-void A_Mushroom(mobj_t *);        /* killough 10/98: mushroom effect */
-void A_Spawn(mobj_t *);           // killough 11/98
-void A_Turn(mobj_t *);            // killough 11/98
-void A_Face(mobj_t *);            // killough 11/98
-void A_Scratch(mobj_t *);         // killough 11/98
-void A_PlaySound(mobj_t *);       // killough 11/98
-void A_RandomJump(mobj_t *);      // killough 11/98
-void A_LineEffect(mobj_t *);      // killough 11/98
+void A_Explode(CCore*, mobj_t *);
+void A_Pain(CCore*, mobj_t *);
+void A_PlayerScream(CCore*, mobj_t *);
+void A_Fall(CCore*, mobj_t *);
+void A_XScream(CCore*, mobj_t *);
+void A_Look(CCore*, mobj_t *);
+void A_Chase(CCore*, mobj_t *);
+void A_FaceTarget(CCore*, mobj_t *);
+void A_PosAttack(CCore*, mobj_t *);
+void A_Scream(CCore*, mobj_t *);
+void A_SPosAttack(CCore*, mobj_t *);
+void A_VileChase(CCore*, mobj_t *);
+void A_VileStart(CCore*, mobj_t *);
+void A_VileTarget(CCore*, mobj_t *);
+void A_VileAttack(CCore*, mobj_t *);
+void A_StartFire(CCore*, mobj_t *);
+void A_Fire(CCore*, mobj_t *);
+void A_FireCrackle(CCore*, mobj_t *);
+void A_Tracer(CCore*, mobj_t *);
+void A_SkelWhoosh(CCore*, mobj_t *);
+void A_SkelFist(CCore*, mobj_t *);
+void A_SkelMissile(CCore*, mobj_t *);
+void A_FatRaise(CCore*, mobj_t *);
+void A_FatAttack1(CCore*, mobj_t *);
+void A_FatAttack2(CCore*, mobj_t *);
+void A_FatAttack3(CCore*, mobj_t *);
+void A_BossDeath(CCore*, mobj_t *);
+void A_CPosAttack(CCore*, mobj_t *);
+void A_CPosRefire(CCore*, mobj_t *);
+void A_TroopAttack(CCore*, mobj_t *);
+void A_SargAttack(CCore*, mobj_t *);
+void A_HeadAttack(CCore*, mobj_t *);
+void A_BruisAttack(CCore*, mobj_t *);
+void A_SkullAttack(CCore*, mobj_t *);
+void A_Metal(CCore*, mobj_t *);
+void A_SpidRefire(CCore*, mobj_t *);
+void A_BabyMetal(CCore*, mobj_t *);
+void A_BspiAttack(CCore*, mobj_t *);
+void A_Hoof(CCore*, mobj_t *);
+void A_CyberAttack(CCore*, mobj_t *);
+void A_PainAttack(CCore*, mobj_t *);
+void A_PainDie(CCore*, mobj_t *);
+void A_KeenDie(CCore*, mobj_t *);
+void A_BrainPain(CCore*, mobj_t *);
+void A_BrainScream(CCore*, mobj_t *);
+void A_BrainDie(CCore*, mobj_t *);
+void A_BrainAwake(CCore*, mobj_t *);
+void A_BrainSpit(CCore*, mobj_t *);
+void A_SpawnSound(CCore*, mobj_t *);
+void A_SpawnFly(CCore*, mobj_t *);
+void A_BrainExplode(CCore*, mobj_t *);
+void A_Die(CCore*, mobj_t *);
+void A_Detonate(CCore*, mobj_t *);        /* killough 8/9/98: detonate a bomb or other device */
+void A_Mushroom(CCore*, mobj_t *);        /* killough 10/98: mushroom effect */
+void A_Spawn(CCore*, mobj_t *);           // killough 11/98
+void A_Turn(CCore*, mobj_t *);            // killough 11/98
+void A_Face(CCore*, mobj_t *);            // killough 11/98
+void A_Scratch(CCore*, mobj_t *);         // killough 11/98
+void A_PlaySound(CCore*, mobj_t *);       // killough 11/98
+void A_RandomJump(CCore*, mobj_t *);      // killough 11/98
+void A_LineEffect(CCore*, mobj_t *);      // killough 11/98
 
-void A_BetaSkullAttack(mobj_t *); // killough 10/98: beta lost souls attacked different
-void A_Stop(mobj_t *);
+void A_BetaSkullAttack(CCore*, mobj_t*); // killough 10/98: beta lost souls attacked different
+void A_Stop(CCore*, mobj_t*);
 
-void A_SkullPop(mobj_t *);
+void A_SkullPop(CCore*, mobj_t*);
 
 // [XA] New mbf21 codepointers
 
-void A_SpawnObject(mobj_t *);
-void A_MonsterProjectile(mobj_t *);
-void A_MonsterBulletAttack(mobj_t *);
-void A_MonsterMeleeAttack(mobj_t *);
-void A_RadiusDamage(mobj_t *);
-void A_NoiseAlert(mobj_t *);
-void A_HealChase(mobj_t *);
-void A_SeekTracer(mobj_t *);
-void A_FindTracer(mobj_t *);
-void A_ClearTracer(mobj_t *);
-void A_JumpIfHealthBelow(mobj_t *);
-void A_JumpIfTargetInSight(mobj_t *);
-void A_JumpIfTargetCloser(mobj_t *);
-void A_JumpIfTracerInSight(mobj_t *);
-void A_JumpIfTracerCloser(mobj_t *);
-void A_JumpIfFlagsSet(mobj_t *);
-void A_AddFlags(mobj_t *);
-void A_RemoveFlags(mobj_t *);
+void A_SpawnObject(CCore*, mobj_t*);
+void A_MonsterProjectile(CCore*, mobj_t*);
+void A_MonsterBulletAttack(CCore*, mobj_t*);
+void A_MonsterMeleeAttack(CCore*, mobj_t*);
+void A_RadiusDamage(CCore*, mobj_t*);
+void A_NoiseAlert(CCore*, mobj_t*);
+void A_HealChase(CCore*, mobj_t*);
+void A_SeekTracer(CCore*, mobj_t*);
+void A_FindTracer(CCore*, mobj_t*);
+void A_ClearTracer(CCore*, mobj_t*);
+void A_JumpIfHealthBelow(CCore*, mobj_t*);
+void A_JumpIfTargetInSight(CCore*, mobj_t*);
+void A_JumpIfTargetCloser(CCore*, mobj_t*);
+void A_JumpIfTracerInSight(CCore*, mobj_t*);
+void A_JumpIfTracerCloser(CCore*, mobj_t*);
+void A_JumpIfFlagsSet(CCore*, mobj_t*);
+void A_AddFlags(CCore*, mobj_t*);
+void A_RemoveFlags(CCore*, mobj_t*);
 
 // heretic
 
-void A_UnHideThing(mobj_t * actor);
+void A_UnHideThing(CCore*, mobj_t*);
 void P_InitMonsters(void);
 void P_AddBossSpot(fixed_t x, fixed_t y, angle_t angle);
-void P_Massacre(void);
-void P_DSparilTeleport(mobj_t * actor);
-void Heretic_A_BossDeath(mobj_t * actor);
-dboolean Heretic_P_LookForMonsters(mobj_t * actor);
-dboolean Raven_P_LookForPlayers(mobj_t * actor, dboolean allaround);
+void P_Massacre(CCore*);
+void P_DSparilTeleport(CCore*, mobj_t*);
+void Heretic_A_BossDeath(CCore*, mobj_t*);
+dboolean Heretic_P_LookForMonsters(mobj_t*);
+dboolean Raven_P_LookForPlayers(mobj_t*, dboolean allaround);
 
 // hexen
 
-void P_InitCreatureCorpseQueue(dboolean corpseScan);
-void A_DeQueueCorpse(mobj_t * actor);
-dboolean A_RaiseMobj(mobj_t * actor);
-dboolean A_SinkMobj(mobj_t * actor);
-void A_NoBlocking(mobj_t * actor);
+void P_InitCreatureCorpseQueue(CCore*, dboolean corpseScan);
+void A_DeQueueCorpse(CCore*, mobj_t*);
+dboolean A_RaiseMobj(CCore*, mobj_t*);
+dboolean A_SinkMobj(CCore*, mobj_t*);
+void A_NoBlocking(CCore*, mobj_t*);
 
 // zdoom
 
-dboolean P_RaiseThing(mobj_t *corpse, mobj_t *raiser);
+dboolean P_RaiseThing(CCore*, mobj_t *corpse, mobj_t *raiser);
 
 #endif // __P_ENEMY__

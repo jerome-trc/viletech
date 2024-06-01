@@ -137,7 +137,7 @@ void MusInfoThinker(mobj_t *thing)
   }
 }
 
-void T_MAPMusic(void)
+void T_MAPMusic(CCore* cx)
 {
   if (musinfo.tics < 0 || !musinfo.mapthing)
   {
@@ -160,7 +160,7 @@ void T_MAPMusic(void)
 
         if (lumpnum >= 0 && lumpnum < numlumps)
         {
-          S_ChangeMusInfoMusic(lumpnum, true);
+          S_ChangeMusInfoMusic(cx, lumpnum, true);
         }
       }
 

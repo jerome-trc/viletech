@@ -22,6 +22,8 @@
 
 #include "doomtype.h"
 
+#include "viletech.nim.h"
+
 typedef enum {
   dsda_config_none,
   dsda_config_game_speed,
@@ -284,7 +286,7 @@ typedef enum {
   dsda_config_string,
 } dsda_config_type_t;
 
-void dsda_UpdateStrictMode(void);
+void dsda_UpdateStrictMode(CCore*);
 void dsda_TrackConfigFeatures(void);
 void dsda_RevertIntConfig(dsda_config_identifier_t id);
 int dsda_MaxConfigLength(void);
@@ -292,12 +294,12 @@ void dsda_InitConfig(void);
 dboolean dsda_ReadConfig(const char* name, const char* string_param, int int_param);
 void dsda_WriteConfig(dsda_config_identifier_t id, int key_length, FILE* file);
 void dsda_ApplyAdHocConfiguration(void);
-int dsda_ToggleConfig(dsda_config_identifier_t id, dboolean persist);
-int dsda_IncrementIntConfig(dsda_config_identifier_t id, dboolean persist);
-int dsda_DecrementIntConfig(dsda_config_identifier_t id, dboolean persist);
-int dsda_CycleConfig(dsda_config_identifier_t id, dboolean persist);
-int dsda_UpdateIntConfig(dsda_config_identifier_t id, int value, dboolean persist);
-const char* dsda_UpdateStringConfig(dsda_config_identifier_t id, const char* value, dboolean persist);
+int dsda_ToggleConfig(CCore*, dsda_config_identifier_t id, dboolean persist);
+int dsda_IncrementIntConfig(CCore*, dsda_config_identifier_t id, dboolean persist);
+int dsda_DecrementIntConfig(CCore*, dsda_config_identifier_t id, dboolean persist);
+int dsda_CycleConfig(CCore*, dsda_config_identifier_t id, dboolean persist);
+int dsda_UpdateIntConfig(CCore*, dsda_config_identifier_t id, int value, dboolean persist);
+const char* dsda_UpdateStringConfig(CCore*, dsda_config_identifier_t id, const char* value, dboolean persist);
 int dsda_IntConfig(dsda_config_identifier_t id);
 int dsda_PersistentIntConfig(dsda_config_identifier_t id);
 int dsda_TransientIntConfig(dsda_config_identifier_t id);

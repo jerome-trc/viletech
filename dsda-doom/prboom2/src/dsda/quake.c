@@ -38,7 +38,7 @@ void dsda_UpdateQuakeIntensity(int player_num, int intensity) {
   localQuakeHappening[player_num] = intensity;
 }
 
-void dsda_UpdateQuake(quake_t* quake) {
+void dsda_UpdateQuake(CCore* cx, quake_t* quake) {
   int i;
 
   for (i = 0; i < g_maxplayers; ++i) {
@@ -60,7 +60,7 @@ void dsda_UpdateQuake(quake_t* quake) {
       angle_t an;
 
       if (P_Random(pr_hexen) < 50)
-        P_DamageMobj(mo, NULL, NULL, HITDICE(1));
+        P_DamageMobj(cx, mo, NULL, NULL, HITDICE(1));
 
       an = P_Random(pr_hexen) << 24;
       P_ThrustMobj(mo, an, quake->intensity << (FRACBITS - 1));

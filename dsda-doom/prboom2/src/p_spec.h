@@ -36,6 +36,8 @@
 #include "r_defs.h"
 #include "d_player.h"
 
+#include "viletech.nim.h"
+
 //      Define values for map objects
 #define MO_TELEPORTMAN  14
 
@@ -1072,41 +1074,32 @@ void T_Glow
 // p_plats
 
 void T_PlatRaise
-( plat_t* plat );
+( CCore*, plat_t* );
 
 // p_doors
 
 void T_VerticalDoor
-( vldoor_t* door );
+( CCore*, vldoor_t* );
 
 // p_ceilng
 
 void T_MoveCeiling
-( ceiling_t* ceiling );
+( ceiling_t* );
 
 // p_floor
 
-result_e T_MoveFloorPlane
-( sector_t* sector,
-  fixed_t speed,
-  fixed_t dest,
-  int crush,
-  int direction,
-  dboolean hexencrush );
+result_e T_MoveFloorPlane(
+	CCore*, sector_t*, fixed_t speed, fixed_t dest, int crush, int direction, dboolean hexencrush
+);
 
-void T_MoveFloor
-( floormove_t* floor );
-
-void T_MoveElevator
-( elevator_t* elevator );
+void T_MoveFloor(CCore*, floormove_t*);
+void T_MoveElevator(CCore*, elevator_t*);
 
 // p_spec
 
-void T_Friction
-( friction_t * );    // phares 3/12/98: friction thinker
+void T_Friction(friction_t*);    // phares 3/12/98: friction thinker
 
-void T_Pusher
-( pusher_t * );      // phares 3/20/98: Push thinker
+void T_Pusher(CCore*, pusher_t*);      // phares 3/20/98: Push thinker
 
 ////////////////////////////////////////////////////////////////
 //
@@ -1117,12 +1110,7 @@ void T_Pusher
 // p_telept
 
 // killough 1/31/98: Add silent line teleporter
-int EV_SilentLineTeleport
-( line_t* line,
-  int side,
-  mobj_t* thing,
-  int tag,
-  dboolean reverse);
+int EV_SilentLineTeleport(CCore*, line_t* line, int side, mobj_t* thing, int tag, dboolean reverse);
 
 // p_floor
 
@@ -1141,13 +1129,9 @@ int EV_DoFloor
 
 // p_ceilng
 
-result_e T_MoveCeilingPlane
-( sector_t* sector,
-  fixed_t speed,
-  fixed_t dest,
-  int crush,
-  int direction,
-  dboolean hexencrush );
+result_e T_MoveCeilingPlane(
+	CCore*, sector_t*, fixed_t speed, fixed_t dest, int crush, int direction, dboolean hexencrush
+);
 
 int EV_DoCeiling
 ( line_t* line,
@@ -1332,7 +1316,7 @@ extern int *TerrainTypes;
 void P_InitAmbientSound(void);
 void P_AmbientSound(void);
 void P_AddAmbientSfx(int sequence);
-dboolean P_Teleport(mobj_t * thing, fixed_t x, fixed_t y, angle_t angle, dboolean useFog);
+dboolean P_Teleport(CCore*, mobj_t *, fixed_t x, fixed_t y, angle_t angle, dboolean useFog);
 dboolean Heretic_P_UseSpecialLine(mobj_t * thing, line_t * line, int side, dboolean bossaction);
 void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing);
 
@@ -1388,7 +1372,7 @@ int Hexen_EV_DoCeiling(line_t * line, byte * arg, ceiling_e type);
 
 // p_telept
 
-dboolean EV_HexenTeleport(int tid, mobj_t * thing, dboolean fog);
+dboolean EV_HexenTeleport(CCore* cx, int tid, mobj_t *, dboolean fog);
 
 // p_doors
 
@@ -1446,8 +1430,8 @@ void T_BuildPillar(pillar_t * pillar);
 int EV_BuildPillar(line_t * line, byte * args, int crush);
 int EV_OpenPillar(line_t * line, byte * args);
 int EV_FloorCrushStop(line_t * line, byte * args);
-void T_FloorWaggle(planeWaggle_t * waggle);
-void T_CeilingWaggle(planeWaggle_t * waggle);
+void T_FloorWaggle(CCore*, planeWaggle_t *);
+void T_CeilingWaggle(CCore*, planeWaggle_t *);
 dboolean EV_StartFloorWaggle(int tag, int height, int speed, int offset, int timer);
 
 // p_plats
@@ -1468,14 +1452,14 @@ typedef struct {
 
 void dsda_ResetQuakes(void);
 void dsda_UpdateQuakeIntensity(int player_num, int intensity);
-void dsda_UpdateQuake(quake_t* quake);
+void dsda_UpdateQuake(CCore*, quake_t*);
 void dsda_SpawnQuake(mobj_t* location, int intensity, int duration,
                      int damage_radius, int tremor_radius);
 
 //
 
-dboolean P_ActivateLine(line_t * line, mobj_t * mo, int side, line_activation_t activationType);
-void P_PlayerOnSpecialFlat(player_t * player, int floorType);
+dboolean P_ActivateLine(line_t*, mobj_t*, int side, line_activation_t);
+void P_PlayerOnSpecialFlat(CCore*, player_t*, int floorType);
 line_t *P_FindLine(int lineTag, int *searchPosition);
 
 dboolean P_IsSpecialSector(sector_t *sector);
@@ -1655,14 +1639,14 @@ void EV_StartLightFlickering(int tag, short upper, short lower);
 void EV_StartZDoomLightStrobing(int tag, int upper, int lower, int brighttime, int darktime);
 void EV_StartZDoomLightStrobingDoom(int tag, int brighttime, int darktime);
 void EV_StopLightEffect(int tag);
-void T_ZDoom_Glow(zdoom_glow_t *g);
-void T_ZDoom_Flicker(zdoom_flicker_t *g);
+void T_ZDoom_Glow(zdoom_glow_t*);
+void T_ZDoom_Flicker(zdoom_flicker_t*);
 int P_ConvertHexenCrush(int crush);
 void P_ResolveFrictionFactor(fixed_t friction_factor, sector_t *sec);
 
-int EV_TeleportGroup(short group_tid, mobj_t *thing, short source_tid, short dest_tid,
+int EV_TeleportGroup(CCore*, short group_tid, mobj_t *thing, short source_tid, short dest_tid,
                      dboolean move_source, dboolean fog);
-int EV_TeleportInSector(int tag, short source_tid, short dest_tid,
+int EV_TeleportInSector(CCore*, int tag, short source_tid, short dest_tid,
                         dboolean fog, short group_tid);
 
 #define NO_CRUSH -1

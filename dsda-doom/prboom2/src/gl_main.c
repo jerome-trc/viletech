@@ -123,7 +123,7 @@ const int gl_colorbuffer_bits = 32;
 const int gl_depthbuffer_bits = 24;
 int gl_render_multisampling;
 
-void gld_MultisamplingInit(void)
+void gld_MultisamplingInit(CCore* cx)
 {
   gl_render_multisampling = dsda_IntConfig(dsda_config_gl_render_multisampling);
   gl_render_multisampling -= (gl_render_multisampling % 2);

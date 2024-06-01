@@ -627,13 +627,13 @@ void AM_SetMapCenter(fixed_t x, fixed_t y)
 //
 // Passed nothing, returns nothing
 //
-static void AM_changeWindowLoc(void)
+static void AM_changeWindowLoc(CCore* cx)
 {
   fixed_t incx, incy;
 
   if (m_paninc.x || m_paninc.y)
   {
-    dsda_UpdateIntConfig(dsda_config_automap_follow, false, true);
+    dsda_UpdateIntConfig(cx, dsda_config_automap_follow, false, true);
   }
 
   if (movement_smooth)
@@ -730,10 +730,7 @@ void AM_SetPosition(void)
 //
 // Affects the automap global variables
 // Status bar is notified that the automap has been entered
-// Passed nothing, returns nothing
-//
-static void AM_initVariables(void)
-{
+static void AM_initVariables(CCore* cx) {
   int pnum;
 
   if (hexen)
@@ -764,7 +761,7 @@ static void AM_initVariables(void)
   m_x = (plr->mo->x >> FRACTOMAPBITS) - m_w/2;//e6y
   m_y = (plr->mo->y >> FRACTOMAPBITS) - m_h/2;//e6y
   AM_Ticker();
-  AM_changeWindowLoc();
+  AM_changeWindowLoc(cx);
 
   AM_SetColors();
 
@@ -839,32 +836,24 @@ void AM_ExchangeScales(int full_automap, int *last_full_automap)
   *last_full_automap = full_automap;
 }
 
-//
 // AM_Stop()
 //
 // Cease automap operations, unload patches, notify status bar
-//
-// Passed nothing, returns nothing
-//
-void AM_Stop (dboolean minimap)
+void AM_Stop(CCore* cx, dboolean minimap)
 {
   automap_active = false;
 
   if (minimap && dsda_ShowMinimap())
-    AM_Start(false);
+    AM_Start(cx, false);
 }
 
-//
 // AM_Start()
 //
 // Start up automap operations,
 //  if a new level, or game start, (re)initialize level variables
 //  init map variables
 //  load mark patches
-//
-// Passed nothing, returns nothing
-//
-void AM_Start(dboolean full_automap)
+void AM_Start(CCore* cx, dboolean full_automap)
 {
   static int lastlevel = -1, lastepisode = -1;
   static int last_full_automap;
@@ -886,7 +875,7 @@ void AM_Start(dboolean full_automap)
 
   AM_ExchangeScales(full_automap, &last_full_automap);
 
-  AM_initVariables();
+  AM_initVariables(cx);
 }
 
 //
@@ -924,23 +913,21 @@ static void AM_maxOutWindowScale(void)
 //
 // Passed an input event, returns true if its handled
 //
-dboolean AM_Responder
-( event_t*  ev )
-{
+dboolean AM_Responder(CCore* cx, event_t* ev) {
   static int bigstate=0;
 
   if (!automap_input)
   {
     if (dsda_InputActivated(dsda_input_map))
     {
-      AM_Start(true);
+      AM_Start(cx, true);
       return true;
     }
   }
   else if (dsda_InputActivated(dsda_input_map))
   {
     bigstate = 0;
-    AM_Stop(true);
+    AM_Stop(cx, true);
 
     return true;
   }
@@ -1035,14 +1022,14 @@ dboolean AM_Responder
   }
   else if (dsda_InputActivated(dsda_input_map_follow))
   {
-    dsda_ToggleConfig(dsda_config_automap_follow, true);
+    dsda_ToggleConfig(cx, dsda_config_automap_follow, true);
     dsda_AddMessage(automap_follow ? s_AMSTR_FOLLOWON : s_AMSTR_FOLLOWOFF);
 
     return true;
   }
   else if (dsda_InputActivated(dsda_input_map_grid))
   {
-    dsda_ToggleConfig(dsda_config_automap_grid, true);
+    dsda_ToggleConfig(cx, dsda_config_automap_grid, true);
     dsda_AddMessage(automap_grid ? s_AMSTR_GRIDON : s_AMSTR_GRIDOFF);
 
     return true;
@@ -1065,14 +1052,14 @@ dboolean AM_Responder
   }
   else if (dsda_InputActivated(dsda_input_map_rotate))
   {
-    dsda_ToggleConfig(dsda_config_automap_rotate, true);
+    dsda_ToggleConfig(cx, dsda_config_automap_rotate, true);
     dsda_AddMessage(automap_rotate ? s_AMSTR_ROTATEON : s_AMSTR_ROTATEOFF);
 
     return true;
   }
   else if (dsda_InputActivated(dsda_input_map_overlay))
   {
-    dsda_ToggleConfig(dsda_config_automap_overlay, true);
+    dsda_ToggleConfig(cx, dsda_config_automap_overlay, true);
     AM_SetPosition();
     AM_activateNewScale();
 
@@ -1080,7 +1067,7 @@ dboolean AM_Responder
   }
   else if (dsda_InputActivated(dsda_input_map_textured))
   {
-    dsda_ToggleConfig(dsda_config_map_textured, true);
+    dsda_ToggleConfig(cx, dsda_config_map_textured, true);
     dsda_AddMessage(map_textured ? s_AMSTR_TEXTUREDON : s_AMSTR_TEXTUREDOFF);
 
     return true;
@@ -2460,8 +2447,10 @@ static void AM_drawCrosshair(int color)
   V_DrawLine(&line, color);
 }
 
-void M_ChangeMapTextured(void)
+void M_ChangeMapTextured(CCore* cx)
 {
+    (void)cx;
+
   map_textured = dsda_IntConfig(dsda_config_map_textured);
 
   if (in_game && gamestate == GS_LEVEL && V_IsOpenGLMode())
@@ -2470,8 +2459,10 @@ void M_ChangeMapTextured(void)
   }
 }
 
-void M_ChangeMapMultisamling(void)
+void M_ChangeMapMultisampling(CCore* cx)
 {
+    (void)cx;
+
   map_use_multisampling = dsda_IntConfig(dsda_config_map_use_multisamling);
 
   if (!raven && map_use_multisampling && V_IsSoftwareMode())
@@ -2531,15 +2522,10 @@ static void AM_setFrameVariables(void)
   am_frame.precise = (V_IsOpenGLMode());
 }
 
-//
-// AM_Drawer()
-//
-// Draws the entire automap
-//
-// Passed nothing, returns nothing
-//
-
-void AM_Drawer (dboolean minimap)
+/// @fn AM_Drawer
+///
+/// Draws the entire automap
+void AM_Drawer(CCore* cx, dboolean minimap)
 {
   if (!automap_active && !minimap)
     return;
@@ -2555,7 +2541,7 @@ void AM_Drawer (dboolean minimap)
 
   // Change x,y location
   if (m_paninc.x || m_paninc.y)
-    AM_changeWindowLoc();
+    AM_changeWindowLoc(cx);
 
   AM_setFrameVariables();
 

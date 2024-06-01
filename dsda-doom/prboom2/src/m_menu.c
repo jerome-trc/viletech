@@ -47,8 +47,6 @@
 
 #include <stdio.h>
 
-#include "SDL.h"
-
 #include "doomdef.h"
 #include "doomstat.h"
 #include "dstrings.h"
@@ -56,19 +54,14 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "r_main.h"
-#include "hu_stuff.h"
-#include "st_stuff.h"
 #include "g_game.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_menu.h"
 #include "d_deh.h"
 #include "m_file.h"
-#include "m_misc.h"
-#include "lprintf.h"
 #include "am_map.h"
 #include "i_main.h"
-#include "i_system.h"
 #include "i_video.h"
 #include "i_sound.h"
 #include "smooth.h"
@@ -79,7 +72,6 @@
 #include "e6y.h"//e6y
 
 #include "dsda/episode.h"
-#include "dsda/exhud.h"
 #include "dsda/features.h"
 #include "dsda/font.h"
 #include "dsda/game_controller.h"
@@ -95,7 +87,6 @@
 #include "dsda/skip.h"
 #include "dsda/time.h"
 #include "dsda/console.h"
-#include "dsda/stretch.h"
 #include "dsda/text_color.h"
 #include "dsda/utility.h"
 #include "dsda/wad_stats.h"
@@ -169,6 +160,7 @@ extern int g_menu_font_spacing;
 int hide_setup=1; // killough 5/15/98
 
 #define QUICKSAVESLOT 255
+#define NO_COLOR 0
 
 int messageToPrint;  // 1 = message to be printed
 
@@ -229,29 +221,29 @@ int mapcolor_me;    // cph
 //
 // PROTOTYPES
 //
-void M_NewGame(int choice);
-void M_Episode(int choice);
+void M_NewGame(CCore*, int choice);
+void M_Episode(CCore*, int choice);
 void M_ChooseSkill(CCore*, int choice);
-void M_LoadGame(int choice);
-void M_SaveGame(int choice);
-void M_Options(int choice);
+void M_LoadGame(CCore*, int choice);
+void M_SaveGame(CCore*, int choice);
+void M_Options(CCore*, int choice);
 void M_EndGame(int choice);
-void M_ReadThis(int choice);
-void M_ReadThis2(int choice);
-void M_QuitDOOM(int choice);
+void M_ReadThis(CCore*, int choice);
+void M_ReadThis2(CCore*, int choice);
+void M_QuitDOOM(CCore*, int choice);
 
 void M_ChangeSensitivity(int choice);
-void M_SfxVol(int choice);
-void M_MusicVol(int choice);
+void M_SfxVol(CCore*, int choice);
+void M_MusicVol(CCore*, int choice);
 /* void M_ChangeDetail(int choice);  unused -- killough */
-void M_SizeDisplay(int choice);
+void M_SizeDisplay(CCore*, int choice);
 void M_StartGame(int choice);
-void M_Sound(int choice);
+void M_Sound(CCore*, int choice);
 
-void M_FinishReadThis(int choice);
-void M_FinishHelp(int choice);            // killough 10/98
-void M_LoadSelect(int choice);
-void M_SaveSelect(int choice);
+void M_FinishReadThis(CCore*, int choice);
+void M_FinishHelp(CCore*, int choice);            // killough 10/98
+void M_LoadSelect(CCore*, int choice);
+void M_SaveSelect(CCore*, int choice);
 void M_ReadSaveStrings(void);
 void M_QuickSave(void);
 void M_QuickLoad(void);
@@ -285,12 +277,12 @@ void M_ClearMenus (void);
 // prototypes added to support Setup Menus and Extended HELP screens
 
 int  M_GetKeyString(int,int);
-void M_KeyBindings(int choice);
-void M_Weapons(int);
-void M_StatusBar(int);
-void M_Automap(int);
+void M_KeyBindings(CCore*, int choice);
+void M_Weapons(CCore*, int);
+void M_StatusBar(CCore*, int);
+void M_Automap(CCore*, int);
 void M_InitExtendedHelp(void);
-void M_ExtHelpNextScreen(int);
+void M_ExtHelpNextScreen(CCore*, int);
 void M_ExtHelp(int);
 static int M_GetPixelWidth(const char*);
 void M_DrawKeybnd(void);
@@ -303,9 +295,9 @@ void M_DrawExtHelp(void);
 void M_DrawAutoMap(void);
 void M_ChangeDemoSmoothTurns(void);
 void M_ChangeTextureParams(void);
-void M_General(int);      // killough 10/98
+void M_General(CCore*, int); // killough 10/98
 void M_DrawGeneral(void); // killough 10/98
-void M_LevelTable(int);
+void M_LevelTable(CCore*, int);
 void M_DrawLevelTable(void);
 void M_ChangeFullScreen(CCore*);
 void M_ChangeVideoMode(CCore*);
@@ -422,12 +414,12 @@ enum
 
 menuitem_t MainMenu[]=
 {
-  {1,"M_NGAME", M_NewGame, 'n', "NEW GAME"},
-  {1,"M_OPTION",M_Options, 'o', "OPTIONS"},
-  {1,"M_LOADG", M_LoadGame,'l', "LOAD GAME"},
-  {1,"M_SAVEG", M_SaveGame,'s', "SAVE GAME"},
-  {1,"M_RDTHIS",M_ReadThis,'r', "READ THIS"},
-  {1,"M_QUITG", M_QuitDOOM,'q', "QUIT GAME"}
+  {1,"M_NGAME", M_NewGame, 'n', "NEW GAME", NO_COLOR },
+  {1,"M_OPTION",M_Options, 'o', "OPTIONS", NO_COLOR },
+  {1,"M_LOADG", M_LoadGame,'l', "LOAD GAME", NO_COLOR },
+  {1,"M_SAVEG", M_SaveGame,'s', "SAVE GAME", NO_COLOR },
+  {1,"M_RDTHIS",M_ReadThis,'r', "READ THIS", NO_COLOR },
+  {1,"M_QUITG", M_QuitDOOM,'q', "QUIT GAME", NO_COLOR }
 };
 
 menu_t MainDef =
@@ -446,7 +438,10 @@ menu_t MainDef =
 
 void M_DrawMainMenu(void)
 {
-  if (raven) return MN_DrawMainMenu();
+  if (raven) {
+    MN_DrawMainMenu();
+    return;
+  }
 
   // CPhipps - patch drawing updated
   V_DrawNamePatch(94, 2, 0, "M_DOOM", CR_DEFAULT, VPT_STRETCH);
@@ -483,17 +478,17 @@ enum               // killough 10/98
 
 menuitem_t ReadMenu1[] =
 {
-  {1,"",M_ReadThis2,0}
+  {1,"",M_ReadThis2,0, NULL, 0 }
 };
 
 menuitem_t ReadMenu2[]=
 {
-  {1,"",M_FinishReadThis,0}
+  {1,"",M_FinishReadThis,0, NULL, 0 }
 };
 
 menuitem_t HelpMenu[]=    // killough 10/98
 {
-  {1,"",M_FinishHelp,0}
+  {1,"",M_FinishHelp,0, NULL, 0 }
 };
 
 menu_t ReadDef1 =
@@ -504,7 +499,8 @@ menu_t ReadDef1 =
   M_DrawReadThis1,
   330,175,
   //280,185,              // killough 2/21/98: fix help screens
-  0
+  0,
+  0,
 };
 
 menu_t ReadDef2 =
@@ -514,7 +510,8 @@ menu_t ReadDef2 =
   ReadMenu2,
   M_DrawReadThis2,
   330,175,
-  0
+  0,
+  0,
 };
 
 menu_t HelpDef =           // killough 10/98
@@ -524,30 +521,32 @@ menu_t HelpDef =           // killough 10/98
   HelpMenu,
   M_DrawHelp,
   330,175,
-  0
+  0,
+  0,
 };
 
-//
-// M_ReadThis
-//
-
-void M_ReadThis(int choice)
-{
+void M_ReadThis(CCore* cx, int choice) {
+  (void)cx;
+  (void)choice;
   M_SetupNextMenu(&ReadDef1);
 }
 
-void M_ReadThis2(int choice)
-{
+void M_ReadThis2(CCore* cx, int choice) {
+  (void)cx;
+  (void)choice;
   M_SetupNextMenu(&ReadDef2);
 }
 
-void M_FinishReadThis(int choice)
-{
+void M_FinishReadThis(CCore* cx, int choice) {
+  (void)cx;
+  (void)choice;
   M_SetupNextMenu(&MainDef);
 }
 
-void M_FinishHelp(int choice)        // killough 10/98
+void M_FinishHelp(CCore* cx, int choice) // killough 10/98
 {
+  (void)cx;
+  (void)choice;
   M_SetupNextMenu(&MainDef);
 }
 
@@ -614,7 +613,7 @@ void M_DrawEpisode(void)
   V_DrawNamePatch(54, EpiDef.y - 25, 0, "M_EPISOD", CR_DEFAULT, VPT_STRETCH);
 }
 
-void M_Episode(int choice)
+void M_Episode(CCore* cx, int choice)
 {
   if (gamemode == shareware && choice && !episodes[choice].vanilla) {
     M_StartMessage(s_SWSTRING, NULL, false); // Ty 03/27/98 - externalized
@@ -651,15 +650,20 @@ menu_t SkillDef =
 
 void M_DrawSkillMenu(void)
 {
-  if (raven) return MN_DrawSkillMenu();
+    if (raven) {
+        MN_DrawSkillMenu();
+        return;
+    }
 
   // CPhipps - patch drawing updated
   V_DrawNamePatch(96, 14, 0, "M_NEWG", CR_DEFAULT, VPT_STRETCH);
   V_DrawNamePatch(54, 38, 0, "M_SKILL",CR_DEFAULT, VPT_STRETCH);
 }
 
-void M_NewGame(int choice)
+void M_NewGame(CCore* cx, int choice)
 {
+    (void)choice;
+
   if (demorecording) {  /* killough 5/26/98: exclude during demo recordings */
     M_StartMessage("you can't start a new game\n"
        "while recording a demo!\n\n"PRESSKEY,
@@ -760,14 +764,14 @@ char save_page_string[SAVE_PAGE_STRING_SIZE];
 
 menuitem_t LoadMenue[]=
 {
-  {1,"", M_LoadSelect,'1'},
-  {1,"", M_LoadSelect,'2'},
-  {1,"", M_LoadSelect,'3'},
-  {1,"", M_LoadSelect,'4'},
-  {1,"", M_LoadSelect,'5'},
-  {1,"", M_LoadSelect,'6'},
-  {1,"", M_LoadSelect,'7'}, //jff 3/15/98 extend number of slots
-  {1,"", M_LoadSelect,'8'},
+  {1,"", M_LoadSelect,'1', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'2', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'3', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'4', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'5', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'6', NULL, NO_COLOR },
+  {1,"", M_LoadSelect,'7', NULL, NO_COLOR }, //jff 3/15/98 extend number of slots
+  {1,"", M_LoadSelect,'8', NULL, NO_COLOR },
 };
 
 menu_t LoadDef =
@@ -847,8 +851,10 @@ void M_DrawSaveLoadBorder(int x,int y)
 // User wants to load this game
 //
 
-void M_LoadSelect(int choice)
+void M_LoadSelect(CCore* cx, int choice)
 {
+    (void)cx;
+
   if (!dsda_AllowMenuLoad(choice + save_page * g_menu_save_page_size))
   {
     M_StartMessage(
@@ -890,8 +896,10 @@ void M_ForcedLoadGame(const char *msg)
 // Selected from DOOM menu
 //
 
-void M_LoadGame (int choice)
+void M_LoadGame(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   delete_verify = false;
 
   if (!dsda_AllowAnyMenuLoad())
@@ -916,14 +924,14 @@ void M_LoadGame (int choice)
 
 menuitem_t SaveMenu[]=
 {
-  {1,"", M_SaveSelect,'1'},
-  {1,"", M_SaveSelect,'2'},
-  {1,"", M_SaveSelect,'3'},
-  {1,"", M_SaveSelect,'4'},
-  {1,"", M_SaveSelect,'5'},
-  {1,"", M_SaveSelect,'6'},
-  {1,"", M_SaveSelect,'7'}, //jff 3/15/98 extend number of slots
-  {1,"", M_SaveSelect,'8'},
+  {1,"", M_SaveSelect,'1', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'2', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'3', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'4', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'5', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'6', NULL, NO_COLOR },
+  {1,"", M_SaveSelect,'7', NULL, NO_COLOR }, //jff 3/15/98 extend number of slots
+  {1,"", M_SaveSelect,'8', NULL, NO_COLOR },
 };
 
 menu_t SaveDef =
@@ -1034,8 +1042,9 @@ static inline dboolean IsMapName(char *str)
     return false;
 }
 
-void M_SaveSelect(int choice)
+void M_SaveSelect(CCore* cx, int choice)
 {
+    (void)cx;
   // we are going to be intercepting all chars
   saveStringEnter = 1;
 
@@ -1053,8 +1062,11 @@ void M_SaveSelect(int choice)
 //
 // Selected from DOOM menu
 //
-void M_SaveGame (int choice)
+void M_SaveGame(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
+
   delete_verify = false;
 
   if (gamestate != GS_LEVEL)
@@ -1087,13 +1099,13 @@ enum
 
 menuitem_t OptionsMenu[]=
 {
-  { 1, "M_GENERL", M_General, 'g', "GENERAL" }, // killough 10/98
-  { 1, "M_KEYBND", M_KeyBindings,'k', "KEY BINDINGS" },
-  { 1, "M_WEAP", M_Weapons, 'w', "WEAPONS" },
-  { 1, "M_STAT", M_StatusBar, 's', "STATUS BAR / HUD" },
-  { 1, "M_AUTO", M_Automap, 'a', "AUTOMAP" },
-  { 1, "M_SVOL", M_Sound, 's', "SOUND VOLUME" },
-  { 1, "M_LVLTBL", M_LevelTable, 's', "LEVEL TABLE" },
+  { 1, "M_GENERL", M_General, 'g', "GENERAL", NO_COLOR }, // killough 10/98
+  { 1, "M_KEYBND", M_KeyBindings,'k', "KEY BINDINGS", NO_COLOR },
+  { 1, "M_WEAP", M_Weapons, 'w', "WEAPONS", NO_COLOR },
+  { 1, "M_STAT", M_StatusBar, 's', "STATUS BAR / HUD", NO_COLOR },
+  { 1, "M_AUTO", M_Automap, 'a', "AUTOMAP", NO_COLOR },
+  { 1, "M_SVOL", M_Sound, 's', "SOUND VOLUME", NO_COLOR },
+  { 1, "M_LVLTBL", M_LevelTable, 's', "LEVEL TABLE", NO_COLOR },
 };
 
 menu_t OptionsDef =
@@ -1119,8 +1131,10 @@ void M_DrawOptions(void)
   V_DrawNamePatch(108, 15, 0, "M_OPTTTL", CR_DEFAULT, VPT_STRETCH);
 }
 
-void M_Options(int choice)
+void M_Options(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_SetupNextMenu(&OptionsDef);
 }
 
@@ -1161,7 +1175,7 @@ static void M_QuitResponse(dboolean affirmative)
   I_SafeExit(0); // killough
 }
 
-void M_QuitDOOM(int choice)
+void M_QuitDOOM(CCore* cx, int choice)
 {
   static char endstring[160];
 
@@ -1222,7 +1236,10 @@ menu_t SoundDef =
 
 void M_DrawSound(void)
 {
-  if (raven) return MN_DrawSound();
+  if (raven) {
+    MN_DrawSound();
+    return;
+  }
 
   // CPhipps - patch drawing updated
   V_DrawNamePatch(60, 38, 0, "M_SVOL", CR_DEFAULT, VPT_STRETCH);
@@ -1232,45 +1249,47 @@ void M_DrawSound(void)
   M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(music_vol+1),16,snd_MusicVolume);
 }
 
-void M_Sound(int choice)
+void M_Sound(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_SetupNextMenu(&SoundDef);
 }
 
-void M_SfxVol(int choice)
+void M_SfxVol(CCore* cx, int choice)
 {
   switch(choice)
   {
     case 0:
       if (dsda_IntConfig(dsda_config_sfx_volume) > 0)
-        dsda_DecrementIntConfig(dsda_config_sfx_volume, true);
+        dsda_DecrementIntConfig(cx, dsda_config_sfx_volume, true);
       break;
     case 1:
-      dsda_IncrementIntConfig(dsda_config_sfx_volume, true);
+      dsda_IncrementIntConfig(cx, dsda_config_sfx_volume, true);
       break;
   }
 
   // Unmute the sfx if we are adjusting the volume
   if (dsda_MuteSfx())
-    dsda_ToggleConfig(dsda_config_mute_sfx, true);
+    dsda_ToggleConfig(cx, dsda_config_mute_sfx, true);
 }
 
-void M_MusicVol(int choice)
+void M_MusicVol(CCore* cx, int choice)
 {
   switch(choice)
   {
     case 0:
       if (dsda_IntConfig(dsda_config_music_volume) > 0)
-        dsda_DecrementIntConfig(dsda_config_music_volume, true);
+        dsda_DecrementIntConfig(cx, dsda_config_music_volume, true);
       break;
     case 1:
-      dsda_IncrementIntConfig(dsda_config_music_volume, true);
+      dsda_IncrementIntConfig(cx, dsda_config_music_volume, true);
       break;
   }
 
   // Unmute the music if we are adjusting the volume
   if (dsda_MuteMusic())
-    dsda_ToggleConfig(dsda_config_mute_music, true);
+    dsda_ToggleConfig(cx, dsda_config_mute_music, true);
 }
 
 /////////////////////////////
@@ -1375,28 +1394,28 @@ void M_ChangeMessages(void)
 // hud_displayed is toggled by + or = in fullscreen
 // hud_displayed is cleared by -
 
-void M_SizeDisplay(int choice)
+void M_SizeDisplay(CCore* cx, int choice)
 {
   switch(choice) {
     case 0:
       if (R_FullView())
-        dsda_DecrementIntConfig(dsda_config_screenblocks, true);
+        dsda_DecrementIntConfig(cx, dsda_config_screenblocks, true);
       break;
     case 1:
       if (R_PartialView())
-        dsda_IncrementIntConfig(dsda_config_screenblocks, true);
+        dsda_IncrementIntConfig(cx, dsda_config_screenblocks, true);
       else
-        dsda_ToggleConfig(dsda_config_hud_displayed, true);
+        dsda_ToggleConfig(cx, dsda_config_hud_displayed, true);
       break;
     case 2:
       if (R_PartialView()) {
-        dsda_UpdateIntConfig(dsda_config_screenblocks, 11, true);
-        dsda_UpdateIntConfig(dsda_config_hud_displayed, true, true);
+        dsda_UpdateIntConfig(cx, dsda_config_screenblocks, 11, true);
+        dsda_UpdateIntConfig(cx, dsda_config_hud_displayed, true, true);
       }
       else {
-        dsda_ToggleConfig(dsda_config_hud_displayed, true);
+        dsda_ToggleConfig(cx, dsda_config_hud_displayed, true);
         if (dsda_IntConfig(dsda_config_hud_displayed))
-          dsda_DecrementIntConfig(dsda_config_screenblocks, true);
+          dsda_DecrementIntConfig(cx, dsda_config_screenblocks, true);
       }
       break;
   }
@@ -1502,9 +1521,7 @@ static char menu_buffer[MENU_BUFFER_SIZE];
 //
 // M_DoNothing does just that: nothing. Just a placeholder.
 
-static void M_DoNothing(int choice)
-{
-}
+static void M_DoNothing(CCore* cx, int choice) { (void)cx; (void)choice; }
 
 /////////////////////////////
 //
@@ -2480,8 +2497,10 @@ setup_menu_t build_keys_settings2[] = {
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_KeyBindings(int choice)
+void M_KeyBindings(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_EnterSetup(&KeybndDef, &set_keybnd_active, keys_settings[0]);
 }
 
@@ -2547,8 +2566,10 @@ setup_menu_t weap_settings1[] =  // Weapons Settings screen
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_Weapons(int choice)
+void M_Weapons(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_EnterSetup(&WeaponDef, &set_weapon_active, weap_settings[0]);
 }
 
@@ -2634,8 +2655,10 @@ setup_menu_t stat_settings2[] =
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_StatusBar(int choice)
+void M_StatusBar(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_EnterSetup(&StatusHUDDef, &set_status_active, stat_settings[0]);
 }
 
@@ -2756,8 +2779,10 @@ setup_menu_t auto_settings3[] =  // 3nd AutoMap Settings screen
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_Automap(int choice)
+void M_Automap(CCore* cx, int choice)
 {
+    (void)cx;
+    (void)choice;
   M_EnterSetup(&AutoMapDef, &set_auto_active, auto_settings[0]);
 }
 
@@ -3076,7 +3101,7 @@ setup_menu_t tas_settings[] = {
 // To (un)set fullscreen video after menu changes
 void M_ChangeFullScreen(CCore* cx)
 {
-  I_UpdateVideoMode();
+  I_UpdateVideoMode(cx);
 
   if (V_IsOpenGLMode())
   {
@@ -3104,7 +3129,7 @@ void M_ChangeDemoSmoothTurns(void)
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_General(int choice)
+void M_General(CCore* cx, int choice)
 {
   M_EnterSetup(&GeneralDef, &set_general_active, gen_settings[0]);
 }
@@ -3636,7 +3661,7 @@ static void M_BuildLevelTable(void)
   INSERT_FINAL_LEVEL_TABLE_ENTRY
 }
 
-void M_LevelTable(int choice)
+void M_LevelTable(CCore* cx, int choice)
 {
   M_BuildLevelTable();
   M_EnterSetup(&LevelTableDef, &level_table_active, level_table_page[0]);
@@ -3717,7 +3742,7 @@ menu_t ExtHelpDef =
 // M_ExtHelpNextScreen establishes the number of the next HELP screen in
 // the series.
 
-void M_ExtHelpNextScreen(int choice)
+void M_ExtHelpNextScreen(CCore* cx, int choice)
 {
   choice = 0;
   if (++extended_help_index > extended_help_count)
@@ -4162,7 +4187,7 @@ static toggle_input_t toggle_inputs[] = {
   { -1 }
 };
 
-static void M_HandleToggles(void)
+static void M_HandleToggles(CCore* cx)
 {
   toggle_input_t* toggle;
 
@@ -4174,7 +4199,7 @@ static void M_HandleToggles(void)
     {
       int value;
 
-      value = dsda_ToggleConfig(toggle->config_id, toggle->persist);
+      value = dsda_ToggleConfig(cx, toggle->config_id, toggle->persist);
       doom_printf("%s %s", toggle->message, value ? toggle->invert_message ? "off" : "on"
                                                   : toggle->invert_message ? "on"  : "off");
 
@@ -4344,7 +4369,7 @@ static dboolean M_KeyBndResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-static dboolean M_WeaponResponder(int ch, int action, event_t* ev)
+static dboolean M_WeaponResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   // changing an entry
   if (setup_select)
@@ -4368,11 +4393,11 @@ static dboolean M_WeaponResponder(int ch, int action, event_t* ev)
         if (ptr2->m_flags & S_WEAP && ptr1 != ptr2 &&
             dsda_PersistentIntConfig(ptr2->config_id) == ch)
         {
-          dsda_UpdateIntConfig(ptr2->config_id, old_value, true);
+          dsda_UpdateIntConfig(cx, ptr2->config_id, old_value, true);
           break;
         }
 
-      dsda_UpdateIntConfig(ptr1->config_id, ch, true);
+      dsda_UpdateIntConfig(cx, ptr1->config_id, ch, true);
     }
 
     M_SelectDone(ptr1);       // phares 4/17/98
@@ -4382,7 +4407,7 @@ static dboolean M_WeaponResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-static dboolean M_AutoResponder(int ch, int action, event_t* ev)
+static dboolean M_AutoResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   // changing an entry
   if (setup_select)
@@ -4423,7 +4448,7 @@ static dboolean M_AutoResponder(int ch, int action, event_t* ev)
     {
       setup_menu_t *ptr1 = current_setup_menu + set_menu_itemon;
 
-      dsda_UpdateIntConfig(ptr1->config_id, color_palette_x + 16 * color_palette_y, true);
+      dsda_UpdateIntConfig(cx, ptr1->config_id, color_palette_x + 16 * color_palette_y, true);
       M_SelectDone(ptr1);                         // phares 4/17/98
       colorbox_active = false;
       return true;
@@ -4433,7 +4458,7 @@ static dboolean M_AutoResponder(int ch, int action, event_t* ev)
   return false;
 }
 
-static dboolean M_StringResponder(int ch, int action, event_t* ev)
+static dboolean M_StringResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   // changing an entry
   if (setup_select)
@@ -4471,7 +4496,7 @@ static dboolean M_StringResponder(int ch, int action, event_t* ev)
       }
       else if ((action == MENU_ENTER) || (action == MENU_ESCAPE))
       {
-        dsda_UpdateStringConfig(ptr1->config_id, entry_string_index, true);
+        dsda_UpdateStringConfig(cx, ptr1->config_id, entry_string_index, true);
         M_SelectDone(ptr1);   // phares 4/17/98
       }
 
@@ -4532,7 +4557,7 @@ static dboolean M_LevelTableResponder(CCore* cx, int ch, int action, event_t* ev
   return false;
 }
 
-static dboolean M_SetupCommonSelectResponder(int ch, int action, event_t* ev)
+static dboolean M_SetupCommonSelectResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   // changing an entry
   if (setup_select)
@@ -4549,7 +4574,7 @@ static dboolean M_SetupCommonSelectResponder(int ch, int action, event_t* ev)
     if (ptr1->m_flags & S_YESNO) // yes or no setting?
     {
       if (action == MENU_ENTER) {
-        dsda_ToggleConfig(ptr1->config_id, true);
+        dsda_ToggleConfig(cx, ptr1->config_id, true);
       }
       M_SelectDone(ptr1);                           // phares 4/17/98
       return true;
@@ -4570,7 +4595,7 @@ static dboolean M_SetupCommonSelectResponder(int ch, int action, event_t* ev)
             gather_buffer[gather_count] = 0;
             value = atoi(gather_buffer);  // Integer value
 
-            dsda_UpdateIntConfig(ptr1->config_id, value, true);
+            dsda_UpdateIntConfig(cx, ptr1->config_id, value, true);
           }
           M_SelectDone(ptr1);     // phares 4/17/98
           setup_gather = false; // finished gathering keys
@@ -4657,11 +4682,11 @@ static dboolean M_SetupCommonSelectResponder(int ch, int action, event_t* ev)
       else if (action == MENU_ENTER) {
         if (ptr1->m_flags & S_STR)
         {
-          dsda_UpdateStringConfig(ptr1->config_id, entry_string_index, true);
+          dsda_UpdateStringConfig(cx, ptr1->config_id, entry_string_index, true);
         }
         else
         {
-          dsda_UpdateIntConfig(ptr1->config_id, choice_value, true);
+          dsda_UpdateIntConfig(cx, ptr1->config_id, choice_value, true);
         }
         M_SelectDone(ptr1);                           // phares 4/17/98
       }
@@ -4852,7 +4877,7 @@ static dboolean M_SetupNavigationResponder(int ch, int action, event_t* ev)
 
 static dboolean M_SetupResponder(CCore* cx, int ch, int action, event_t* ev)
 {
-  if (M_SetupCommonSelectResponder(ch, action, ev))
+  if (M_SetupCommonSelectResponder(cx, ch, action, ev))
     return true;
 
   if (set_keybnd_active) // on a key binding setup screen
@@ -4860,16 +4885,16 @@ static dboolean M_SetupResponder(CCore* cx, int ch, int action, event_t* ev)
       return true;
 
   if (set_weapon_active) // on the weapons setup screen
-    if (M_WeaponResponder(ch, action, ev))
+    if (M_WeaponResponder(cx, ch, action, ev))
       return true;
 
   if (set_auto_active) // on the automap setup screen
-    if (M_AutoResponder(ch, action, ev))
+    if (M_AutoResponder(cx, ch, action, ev))
       return true;
 
   // killough 10/98: consolidate handling into one place:
   if (set_general_active || set_status_active)
-    if (M_StringResponder(ch, action, ev))
+    if (M_StringResponder(cx, ch, action, ev))
       return true;
 
   if (level_table_active)
@@ -5090,7 +5115,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       M_StartControlPanel();
       S_StartVoidSound(g_sfx_swtchn);
-      M_SaveGame(0);
+      M_SaveGame(cx, 0);
       return true;
     }
 
@@ -5098,7 +5123,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       M_StartControlPanel();
       S_StartVoidSound(g_sfx_swtchn);
-      M_LoadGame(0);
+      M_LoadGame(cx, 0);
       return true;
     }
 
@@ -5136,7 +5161,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       if (!dsda_SkipQuitPrompt())
         S_StartVoidSound(g_sfx_swtchn);
-      M_QuitDOOM(0);
+      M_QuitDOOM(cx, 0);
       return true;
     }
 
@@ -5162,7 +5187,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_gamma))
     {
 //e6y
-      dsda_CycleConfig(dsda_config_usegamma, true);
+      dsda_CycleConfig(cx, dsda_config_usegamma, true);
       dsda_AddMessage(usegamma == 0 ? s_GAMMALVL0 :
                       usegamma == 1 ? s_GAMMALVL1 :
                       usegamma == 2 ? s_GAMMALVL2 :
@@ -5175,7 +5200,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       if (automap_active)
         return false;
-      M_SizeDisplay(0);
+      M_SizeDisplay(cx, 0);
       S_StartVoidSound(g_sfx_stnmov);
       return true;
     }
@@ -5184,7 +5209,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {                                   // jff 2/23/98
       if (automap_active)               // allow
         return false;                   // key_hud==key_zoomin
-      M_SizeDisplay(1);                                             //  ^
+      M_SizeDisplay(cx, 1);                                             //  ^
       S_StartVoidSound(g_sfx_stnmov);                              //  |
       return true;                                                  // phares
     }
@@ -5193,7 +5218,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_speed_default) && !dsda_StrictMode())
     {
       int value = StepwiseSum(dsda_GameSpeed(), 0, 3, 10000, 100);
-      dsda_UpdateGameSpeed(value);
+      dsda_UpdateGameSpeed(cx, value);
       doom_printf("Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
@@ -5201,7 +5226,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_speed_up) && !dsda_StrictMode())
     {
       int value = StepwiseSum(dsda_GameSpeed(), 1, 3, 10000, 100);
-      dsda_UpdateGameSpeed(value);
+      dsda_UpdateGameSpeed(cx, value);
       doom_printf("Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
@@ -5209,7 +5234,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_speed_down) && !dsda_StrictMode())
     {
       int value = StepwiseSum(dsda_GameSpeed(), -1, 3, 10000, 100);
-      dsda_UpdateGameSpeed(value);
+      dsda_UpdateGameSpeed(cx, value);
       doom_printf("Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
@@ -5218,7 +5243,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       if (userplayback && !dsda_SkipMode())
       {
-        dsda_SkipToNextMap();
+        dsda_SkipToNextMap(cx);
         return true;
       }
       else
@@ -5238,7 +5263,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       if (userplayback && !dsda_SkipMode())
       {
-        dsda_SkipToEndOfMap();
+        dsda_SkipToEndOfMap(cx);
         return true;
       }
     }
@@ -5276,7 +5301,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
 
     if (dsda_InputActivated(dsda_input_cycle_profile))
     {
-      int value = dsda_CycleConfig(dsda_config_input_profile, true);
+      int value = dsda_CycleConfig(cx, dsda_config_input_profile, true);
       doom_printf("Input Profile %d", value);
       S_StartVoidSound(g_sfx_swtchn);
       return true;
@@ -5309,20 +5334,20 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
       if (dsda_InputActivated(dsda_input_showalive) && !dsda_StrictMode())
       {
         const char* const show_alive_message[3] = { "off", "(mode 1) on", "(mode 2) on" };
-        int show_alive = dsda_CycleConfig(dsda_config_show_alive_monsters, false);
+        int show_alive = dsda_CycleConfig(cx, dsda_config_show_alive_monsters, false);
 
         if (show_alive >= 0 && show_alive < 3)
           doom_printf("Show Alive Monsters %s", show_alive_message[show_alive]);
       }
     }
 
-    M_HandleToggles();
+    M_HandleToggles(cx);
 
     if (dsda_InputActivated(dsda_input_hud))   // heads-up mode
     {
       if (automap_active)              // jff 2/22/98
         return false;                  // HUD mode control
-      M_SizeDisplay(2);
+      M_SizeDisplay(cx, 2);
       return true;
     }
   }
@@ -5404,7 +5429,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
         currentMenu->menuitems[itemOn].status == 2)
     {
       S_StartVoidSound(g_sfx_stnmov);
-      currentMenu->menuitems[itemOn].routine(0);
+      currentMenu->menuitems[itemOn].routine(cx, 0);
     }
     return true;
   }
@@ -5415,7 +5440,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
         currentMenu->menuitems[itemOn].status == 2)
     {
       S_StartVoidSound(g_sfx_stnmov);
-      currentMenu->menuitems[itemOn].routine(1);
+      currentMenu->menuitems[itemOn].routine(cx, 1);
     }
     return true;
   }
@@ -5428,12 +5453,12 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
       currentMenu->lastOn = itemOn;
       if (currentMenu->menuitems[itemOn].status == 2)
       {
-        currentMenu->menuitems[itemOn].routine(1);   // right arrow
+        currentMenu->menuitems[itemOn].routine(cx, 1);   // right arrow
         S_StartVoidSound(g_sfx_stnmov);
       }
       else
       {
-        currentMenu->menuitems[itemOn].routine(itemOn);
+        currentMenu->menuitems[itemOn].routine(cx, itemOn);
         S_StartVoidSound(g_sfx_pistol);
       }
     }
@@ -6011,10 +6036,8 @@ void M_InitHelpScreen(void)
   }
 }
 
-//
-// M_Init
-//
-void M_Init(void)
+/// @fn M_Init
+void M_Init(CCore* cx)
 {
   if (raven) MN_Init();
 
@@ -6071,15 +6094,10 @@ void M_Init(void)
 
   M_ChangeDemoSmoothTurns();
 
-  M_ChangeMapTextured();
-  M_ChangeMapMultisamling();
+  M_ChangeMapTextured(cx);
+  M_ChangeMapMultisampling(cx);
 
-  M_ChangeStretch();
+  M_ChangeStretch(cx);
 
-  M_ChangeMIDIPlayer();
+  M_ChangeMIDIPlayer(cx);
 }
-
-//
-// End of General Routines
-//
-/////////////////////////////////////////////////////////////////////////////

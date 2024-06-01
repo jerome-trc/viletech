@@ -148,11 +148,11 @@ void R_ResetColorMap(void);
 /// Called by G_Drawer.
 void R_RenderPlayerView(CCore*, player_t*);
 /// Called by startup code.
-void R_Init(void);
+void R_Init(CCore*);
 /// Called by M_Responder.
-void R_SetViewSize(void);
+void R_SetViewSize(CCore*);
 /// called by D_Display to complete a view resize
-void R_ExecuteSetViewSize(void);
+void R_ExecuteSetViewSize(CCore*);
 dboolean R_FullView(void);
 dboolean R_PartialView(void);
 dboolean R_StatusBarVisible(void);

@@ -612,7 +612,7 @@ static void dsda_ResetOffsets(void) {
       dsda_UpdateExTextOffset(i, container->y_offset[i]);
 }
 
-static void dsda_RefreshHUD(void) {
+static void dsda_RefreshHUD(CCore* cx) {
   if (!dsda_HUDActive())
     return;
 
@@ -621,21 +621,21 @@ static void dsda_RefreshHUD(void) {
   if (dsda_show_render_stats)
     dsda_TurnComponentOn(exhud_render_stats);
 
-  dsda_RefreshExHudFPS();
-  dsda_RefreshExHudMinimap();
-  dsda_RefreshExHudLevelSplits();
-  dsda_RefreshExHudCoordinateDisplay();
-  dsda_RefreshExHudCommandDisplay();
-  dsda_RefreshMapCoordinates();
-  dsda_RefreshMapTotals();
-  dsda_RefreshMapTime();
-  dsda_RefreshMapTitle();
+  dsda_RefreshExHudFPS(cx);
+  dsda_RefreshExHudMinimap(cx);
+  dsda_RefreshExHudLevelSplits(cx);
+  dsda_RefreshExHudCoordinateDisplay(cx);
+  dsda_RefreshExHudCommandDisplay(cx);
+  dsda_RefreshMapCoordinates(cx);
+  dsda_RefreshMapTotals(cx);
+  dsda_RefreshMapTime(cx);
+  dsda_RefreshMapTitle(cx);
 
   if (in_game && gamestate == GS_LEVEL)
     dsda_UpdateExHud();
 }
 
-void dsda_InitExHud(void) {
+void dsda_InitExHud(CCore* cx) {
   dsda_ResetActiveHUD();
 
   if (dsda_HideHUD())
@@ -643,7 +643,7 @@ void dsda_InitExHud(void) {
 
   dsda_LoadHUDConfig();
   dsda_UpdateActiveHUD();
-  dsda_RefreshHUD();
+  dsda_RefreshHUD(cx);
 }
 
 static void dsda_UpdateComponents(exhud_component_t* update_components) {
@@ -755,11 +755,15 @@ static void dsda_BasicMapRefresh(dboolean (*show_component)(void), exhud_compone
   components = old_components;
 }
 
-void dsda_RefreshExHudFPS(void) {
+void dsda_RefreshExHudFPS(CCore* cx) {
+    (void)cx;
+
   dsda_BasicRefresh(dsda_ShowFPS, exhud_fps);
 }
 
-void dsda_RefreshExHudMinimap(void) {
+void dsda_RefreshExHudMinimap(CCore* cx) {
+    (void)cx;
+
   if (!dsda_HUDActive())
     return;
 
@@ -771,17 +775,20 @@ void dsda_RefreshExHudMinimap(void) {
       components[exhud_minimap].update(components[exhud_minimap].data);
 
     if (in_game && gamestate == GS_LEVEL)
-      AM_Start(false);
+      AM_Start(cx, false);
   }
   else
     dsda_TurnComponentOff(exhud_minimap);
 }
 
-void dsda_RefreshExHudLevelSplits(void) {
+void dsda_RefreshExHudLevelSplits(CCore* cx) {
+    (void)cx;
   dsda_BasicRefresh(dsda_ShowLevelSplits, exhud_level_splits);
 }
 
-void dsda_RefreshExHudCoordinateDisplay(void) {
+void dsda_RefreshExHudCoordinateDisplay(CCore* cx) {
+    (void)cx;
+
   if (!dsda_HUDActive())
     return;
 
@@ -795,22 +802,27 @@ void dsda_RefreshExHudCoordinateDisplay(void) {
   }
 }
 
-void dsda_RefreshExHudCommandDisplay(void) {
+void dsda_RefreshExHudCommandDisplay(CCore* cx) {
+    (void)cx;
   dsda_BasicRefresh(dsda_CommandDisplay, exhud_command_display);
 }
 
-void dsda_RefreshMapCoordinates(void) {
+void dsda_RefreshMapCoordinates(CCore* cx) {
+    (void)cx;
   dsda_BasicMapRefresh(dsda_MapCoordinates, exhud_map_coordinates);
 }
 
-void dsda_RefreshMapTotals(void) {
+void dsda_RefreshMapTotals(CCore* cx) {
+    (void)cx;
   dsda_BasicMapRefresh(dsda_MapTotals, exhud_map_totals);
 }
 
-void dsda_RefreshMapTime(void) {
+void dsda_RefreshMapTime(CCore* cx) {
+    (void)cx;
   dsda_BasicMapRefresh(dsda_MapTime, exhud_map_time);
 }
 
-void dsda_RefreshMapTitle(void) {
+void dsda_RefreshMapTitle(CCore* cx) {
+    (void)cx;
   dsda_BasicMapRefresh(dsda_MapTitle, exhud_map_title);
 }

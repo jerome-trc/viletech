@@ -61,7 +61,7 @@ typedef struct {
   int* int_binding;
   int flags;
   int strict_value;
-  void (*onUpdate)(void);
+  void (*onUpdate)(CCore*);
   dsda_config_value_t transient_value;
   dsda_config_value_t persistent_value;
 } dsda_config_t;
@@ -89,48 +89,48 @@ extern int sts_pct_always_gray;
 extern int sts_traditional_keys;
 extern int full_sounds;
 
-void I_Init2(void);
-void M_ChangeDemoSmoothTurns(void);
-void M_ChangeSkyMode(void);
-void M_ChangeMessages(void);
-void S_ResetSfxVolume(void);
-void I_ResetMusicVolume(void);
-void M_ChangeAllowFog(void);
+void AccelChanging(CCore*);
+void AM_InitParams(CCore*);
+void deh_changeCompTranslucency(CCore*);
+void dsda_InitCommandHistory(CCore*);
+void dsda_InitExHud(CCore*);
+void dsda_InitGameController(CCore*);
+void dsda_InitGameControllerParameters(CCore*);
+void dsda_InitKeyFrame(CCore*);
+void dsda_InitParallelSFXFilter(CCore*);
+void dsda_InitQuickstartCache(CCore*);
+void dsda_ResetAirControl(CCore*);
+void dsda_SetupStretchParams(CCore*);
+void dsda_UpdateFreeText(CCore*);
+void G_UpdateMouseSensitivity(CCore*);
+void gld_MultisamplingInit(CCore*);
+void gld_ResetAutomapTransparency(CCore*);
 void gld_ResetShadowParameters(void);
-void gld_MultisamplingInit(void);
-void M_ChangeFOV(void);
-void I_InitMouse(void);
-void AccelChanging(void);
-void G_UpdateMouseSensitivity(void);
-void dsda_InitGameController(void);
-void M_ChangeSpeed(void);
-void M_ChangeShorttics(void);
-void I_InitSoundParams(void);
-void S_Init(void);
-void M_ChangeMIDIPlayer(void);
-void HU_InitCrosshair(void);
-void HU_InitThresholds(void);
-void dsda_InitKeyFrame(void);
-void dsda_SetupStretchParams(void);
-void dsda_InitCommandHistory(void);
-void dsda_InitQuickstartCache(void);
-void dsda_InitParallelSFXFilter(void);
-void M_ChangeMapMultisamling(void);
-void M_ChangeMapTextured(void);
-void AM_InitParams(void);
-void gld_ResetAutomapTransparency(void);
-void M_ChangeVideoMode(void);
-void M_ChangeUncappedFrameRate(void);
-void M_ChangeFullScreen(void);
-void R_SetViewSize(void);
-void M_ChangeApplyPalette(void);
-void M_ChangeStretch(void);
-void M_ChangeAspectRatio(void);
-void deh_changeCompTranslucency(void);
-void dsda_InitGameControllerParameters(void);
-void dsda_InitExHud(void);
-void dsda_UpdateFreeText(void);
-void dsda_ResetAirControl(void);
+void HU_InitCrosshair(CCore*);
+void HU_InitThresholds(CCore*);
+void I_Init2(CCore*);
+void I_InitMouse(CCore*);
+void I_InitSoundParams(CCore*);
+void I_ResetMusicVolume(CCore*);
+void M_ChangeAllowFog(void);
+void M_ChangeApplyPalette(CCore*);
+void M_ChangeAspectRatio(CCore*);
+void M_ChangeDemoSmoothTurns(CCore*);
+void M_ChangeFOV(CCore*);
+void M_ChangeFullScreen(CCore*);
+void M_ChangeMapMultisampling(CCore*);
+void M_ChangeMapTextured(CCore*);
+void M_ChangeMessages(CCore*);
+void M_ChangeMIDIPlayer(CCore*);
+void M_ChangeShorttics(CCore*);
+void M_ChangeSkyMode(CCore*);
+void M_ChangeSpeed(CCore*);
+void M_ChangeStretch(CCore*);
+void M_ChangeUncappedFrameRate(CCore*);
+void M_ChangeVideoMode(CCore*);
+void R_SetViewSize(CCore*);
+void S_Init(CCore*);
+void S_ResetSfxVolume(CCore*);
 
 void dsda_TrackConfigFeatures(void) {
   if (!demorecording)
@@ -200,17 +200,17 @@ void dsda_TrackConfigFeatures(void) {
 // TODO: migrate all kinds of stuff from M_Init
 
 // TODO: automatically go through strict list
-void dsda_UpdateStrictMode(void) {
-  I_Init2(); // side effect of realtic clock rate
-  M_ChangeSpeed(); // side effect of always sr50
-  dsda_InitKeyFrame();
-  M_ChangeSkyMode(); // affected by mouselook setting
-  HU_InitCrosshair();
-  M_ChangeApplyPalette();
-  M_ChangeMapTextured();
-  dsda_RefreshExHudCoordinateDisplay();
-  dsda_RefreshExHudCommandDisplay();
-  dsda_RefreshExHudMinimap();
+void dsda_UpdateStrictMode(CCore* cx) {
+  I_Init2(cx); // side effect of realtic clock rate
+  M_ChangeSpeed(cx); // side effect of always sr50
+  dsda_InitKeyFrame(cx);
+  M_ChangeSkyMode(cx); // affected by mouselook setting
+  HU_InitCrosshair(cx);
+  M_ChangeApplyPalette(cx);
+  M_ChangeMapTextured(cx);
+  dsda_RefreshExHudCoordinateDisplay(cx);
+  dsda_RefreshExHudCommandDisplay(cx);
+  dsda_RefreshExHudMinimap(cx);
   dsda_TrackConfigFeatures();
 }
 
@@ -1032,7 +1032,7 @@ dsda_config_t dsda_config[dsda_config_count] = {
   },
   [dsda_config_map_use_multisamling] = {
     "map_use_multisampling", dsda_config_map_use_multisamling,
-    CONF_BOOL(0), NULL, NOT_STRICT, M_ChangeMapMultisamling
+    CONF_BOOL(0), NULL, NOT_STRICT, M_ChangeMapMultisampling
   },
   [dsda_config_map_textured] = {
     "map_textured", dsda_config_map_textured,
@@ -1398,19 +1398,19 @@ void dsda_ApplyAdHocConfiguration(void) {
     dsda_ReadConfig("game_speed", NULL, arg->value.v_int);
 }
 
-int dsda_ToggleConfig(dsda_config_identifier_t id, dboolean persist) {
-  return dsda_UpdateIntConfig(id, !dsda_config[id].transient_value.v_int, persist);
+int dsda_ToggleConfig(CCore* cx, dsda_config_identifier_t id, dboolean persist) {
+  return dsda_UpdateIntConfig(cx, id, !dsda_config[id].transient_value.v_int, persist);
 }
 
-int dsda_IncrementIntConfig(dsda_config_identifier_t id, dboolean persist) {
-  return dsda_UpdateIntConfig(id, dsda_config[id].transient_value.v_int + 1, persist);
+int dsda_IncrementIntConfig(CCore* cx, dsda_config_identifier_t id, dboolean persist) {
+  return dsda_UpdateIntConfig(cx, id, dsda_config[id].transient_value.v_int + 1, persist);
 }
 
-int dsda_DecrementIntConfig(dsda_config_identifier_t id, dboolean persist) {
-  return dsda_UpdateIntConfig(id, dsda_config[id].transient_value.v_int - 1, persist);
+int dsda_DecrementIntConfig(CCore* cx, dsda_config_identifier_t id, dboolean persist) {
+  return dsda_UpdateIntConfig(cx, id, dsda_config[id].transient_value.v_int - 1, persist);
 }
 
-int dsda_CycleConfig(dsda_config_identifier_t id, dboolean persist) {
+int dsda_CycleConfig(CCore* cx, dsda_config_identifier_t id, dboolean persist) {
   int value;
 
   value = dsda_config[id].transient_value.v_int + 1;
@@ -1418,10 +1418,10 @@ int dsda_CycleConfig(dsda_config_identifier_t id, dboolean persist) {
   if (value > dsda_config[id].upper_limit)
     value = dsda_config[id].lower_limit;
 
-  return dsda_UpdateIntConfig(id, value, persist);
+  return dsda_UpdateIntConfig(cx, id, value, persist);
 }
 
-int dsda_UpdateIntConfig(dsda_config_identifier_t id, int value, dboolean persist) {
+int dsda_UpdateIntConfig(CCore* cx, dsda_config_identifier_t id, int value, dboolean persist) {
   dsda_config[id].transient_value.v_int = value;
 
   dsda_ConstrainIntConfig(&dsda_config[id]);
@@ -1432,7 +1432,7 @@ int dsda_UpdateIntConfig(dsda_config_identifier_t id, int value, dboolean persis
   dsda_PropagateIntConfig(&dsda_config[id]);
 
   if (dsda_config[id].onUpdate)
-    dsda_config[id].onUpdate();
+    dsda_config[id].onUpdate(cx);
 
   if (dsda_config[id].flags & CONF_FEATURE)
     dsda_TrackConfigFeatures();
@@ -1440,7 +1440,7 @@ int dsda_UpdateIntConfig(dsda_config_identifier_t id, int value, dboolean persis
   return dsda_IntConfig(id);
 }
 
-const char* dsda_UpdateStringConfig(dsda_config_identifier_t id, const char* value, dboolean persist) {
+const char* dsda_UpdateStringConfig(CCore* cx, dsda_config_identifier_t id, const char* value, dboolean persist) {
   if (dsda_config[id].transient_value.v_string)
     Z_Free(dsda_config[id].transient_value.v_string);
 
@@ -1450,7 +1450,7 @@ const char* dsda_UpdateStringConfig(dsda_config_identifier_t id, const char* val
     dsda_PersistStringConfig(&dsda_config[id]);
 
   if (dsda_config[id].onUpdate)
-    dsda_config[id].onUpdate();
+    dsda_config[id].onUpdate(cx);
 
   return dsda_StringConfig(id);
 }

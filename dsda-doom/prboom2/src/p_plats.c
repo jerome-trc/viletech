@@ -60,7 +60,7 @@ platlist_t *activeplats;       // killough 2/14/98: made global again
 // jff 02/08/98 all cases with labels beginning with gen added to support
 // generalized line type behaviors.
 
-void T_CompatiblePlatRaise(plat_t * plat)
+void T_CompatiblePlatRaise(CCore* cx, plat_t * plat)
 {
   result_e      res;
 
@@ -68,7 +68,7 @@ void T_CompatiblePlatRaise(plat_t * plat)
   switch(plat->status)
   {
     case up: // plat moving up
-      res = T_MoveFloorPlane(plat->sector, plat->speed, plat->high, plat->crush, 1, false);
+      res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->high, plat->crush, 1, false);
 
       if (heretic && !(leveltime & 31))
       {
@@ -139,7 +139,7 @@ void T_CompatiblePlatRaise(plat_t * plat)
       break;
 
     case down: // plat moving down
-      res = T_MoveFloorPlane(plat->sector, plat->speed, plat->low, NO_CRUSH, -1, false);
+      res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->low, NO_CRUSH, -1, false);
 
       // handle reaching end of down stroke
       if (res == pastdest)
@@ -198,14 +198,14 @@ void T_CompatiblePlatRaise(plat_t * plat)
   }
 }
 
-void T_ZDoomPlatRaise(plat_t * plat)
+void T_ZDoomPlatRaise(CCore* cx, plat_t * plat)
 {
   result_e res;
 
   switch (plat->status)
   {
     case up:
-      res = T_MoveFloorPlane(plat->sector, plat->speed, plat->high, plat->crush, 1, false);
+      res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->high, plat->crush, 1, false);
 
       // if a pure raise type, make the plat moving sound
       if (plat->type == platUpByValueStay
@@ -254,7 +254,7 @@ void T_ZDoomPlatRaise(plat_t * plat)
       }
       break;
     case down:
-      res = T_MoveFloorPlane(plat->sector, plat->speed, plat->low, NO_CRUSH, -1, false);
+      res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->low, NO_CRUSH, -1, false);
 
       if (res == pastdest)
       {
@@ -320,7 +320,7 @@ void T_ZDoomPlatRaise(plat_t * plat)
   }
 }
 
-void T_PlatRaise(plat_t * plat)
+void T_PlatRaise(CCore* cx, plat_t * plat)
 {
   map_format.t_plat_raise(plat);
 }
@@ -752,14 +752,14 @@ void P_RemoveAllActivePlats(void)
 
 // hexen
 
-void T_HexenPlatRaise(plat_t * plat)
+void T_HexenPlatRaise(CCore* cx, plat_t * plat)
 {
     result_e res;
 
     switch (plat->status)
     {
         case up:
-            res = T_MoveFloorPlane(plat->sector, plat->speed, plat->high, plat->crush, 1, true);
+            res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->high, plat->crush, 1, true);
             if (res == crushed && plat->crush == NO_CRUSH)
             {
                 plat->count = plat->wait;
@@ -784,7 +784,7 @@ void T_HexenPlatRaise(plat_t * plat)
             }
             break;
         case down:
-            res = T_MoveFloorPlane(plat->sector, plat->speed, plat->low, NO_CRUSH, -1, true);
+            res = T_MoveFloorPlane(cx, plat->sector, plat->speed, plat->low, NO_CRUSH, -1, true);
             if (res == pastdest)
             {
                 plat->count = plat->wait;

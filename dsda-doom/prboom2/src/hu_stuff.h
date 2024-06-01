@@ -34,22 +34,22 @@
 #define __HU_STUFF_H__
 
 #include "d_event.h"
-#include "d_think.h"
 #include "p_mobj.h"
-#include "r_defs.h"
+
+#include "viletech.nim.h"
 
 #define HU_MSGTIMEOUT   (4*TICRATE)
 
 #define HU_CROSSHAIRS	8
 
-void HU_Start(void);
+void HU_Start(CCore*);
 
-dboolean HU_Responder(event_t* ev);
+dboolean HU_Responder(event_t*);
 
 void HU_Ticker(void);
-void HU_Drawer(void);
+void HU_Drawer(CCore*);
 
-mobj_t *HU_Target(void);
+mobj_t *HU_Target(CCore*);
 
 int SetCustomMessage(int plr, const char *msg, int ticks, int sfx);
 

@@ -647,7 +647,7 @@ void M_SaveDefaults (void)
 
 #define CFG_BUFFERMAX 32000
 
-void M_LoadDefaults (void)
+void M_LoadDefaults(CCore* cx)
 {
   int   i;
   int   len;
@@ -800,7 +800,7 @@ void M_LoadDefaults (void)
 
   dsda_ApplyAdHocConfiguration();
 
-  dsda_InitSettings();
+  dsda_InitSettings(cx);
 
   //e6y: Check on existence of dsda-doom.wad
   port_wad_file = I_RequireFile(WAD_DATA, "");

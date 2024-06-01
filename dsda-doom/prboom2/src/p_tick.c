@@ -152,7 +152,7 @@ static thinker_t *currentthinker;
 // that the next step in P_RunThinkers() will get its successor.
 //
 
-void P_RemoveThinkerDelayed(thinker_t *thinker)
+void P_RemoveThinkerDelayed(CCore* cx, thinker_t *thinker)
 {
   if (!thinker->references)
     {
@@ -248,7 +248,7 @@ void P_SetTarget(mobj_t **mop, mobj_t *targ)
 // external and using P_RemoveThinkerDelayed() implicitly.
 //
 
-static void P_RunThinkers (void)
+static void P_RunThinkers(CCore* cx)
 {
   for (currentthinker = thinkercap.next;
        currentthinker != &thinkercap;
@@ -257,12 +257,12 @@ static void P_RunThinkers (void)
     if (newthinkerpresent)
       R_ActivateThinkerInterpolations(currentthinker);
     if (currentthinker->function)
-      currentthinker->function(currentthinker);
+      currentthinker->function(cx, currentthinker);
   }
   newthinkerpresent = false;
 
   // Dedicated thinkers
-  T_MAPMusic();
+  T_MAPMusic(cx);
 }
 
 void P_CleanThinkers (void)
@@ -276,7 +276,7 @@ void P_CleanThinkers (void)
   }
 }
 
-static void P_FrozenTicker (void)
+static void P_FrozenTicker (CCore* cx)
 {
   int i;
 
@@ -289,11 +289,11 @@ static void P_FrozenTicker (void)
 
     for (i = 0; i < g_maxplayers; i++)
       if (playeringame[i])
-        P_PlayerThink(&players[i]);
+        P_PlayerThink(cx, &players[i]);
 
     for (i = 0; i < g_maxplayers; i++)
       if (playeringame[i])
-        P_MobjThinker(players[i].mo);
+        P_MobjThinker(cx, players[i].mo);
 
     for (th = thinkercap.next; th != &thinkercap; th = th->next)
       if (th->function == P_MobjThinker ||
@@ -313,11 +313,8 @@ static void P_FrozenTicker (void)
   P_MapEnd();
 }
 
-//
-// P_Ticker
-//
-
-void P_Ticker (void)
+/// @fn P_Ticker
+void P_Ticker (CCore* cx)
 {
   int i;
 
@@ -340,7 +337,7 @@ void P_Ticker (void)
 
   if (dsda_FrozenMode())
   {
-    P_FrozenTicker();
+    P_FrozenTicker(cx);
   }
   else
   {
@@ -350,9 +347,9 @@ void P_Ticker (void)
     if (gamestate == GS_LEVEL)
       for (i = 0; i < g_maxplayers; i++)
         if (playeringame[i])
-          P_PlayerThink(&players[i]);
+          P_PlayerThink(cx, &players[i]);
 
-    P_RunThinkers();
+    P_RunThinkers(cx);
     P_UpdateSpecials();
     P_AnimateSurfaces();
     P_RespawnSpecials();

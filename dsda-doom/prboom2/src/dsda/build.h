@@ -26,7 +26,7 @@ void dsda_QueueBuildCommands(ticcmd_t* cmds, int depth);
 dboolean dsda_BuildPlayback(void);
 void dsda_CopyBuildCmd(ticcmd_t* cmd);
 void dsda_ReadBuildCmd(CCore*, ticcmd_t* cmd);
-void dsda_EnterBuildMode(void);
+void dsda_EnterBuildMode(CCore*);
 void dsda_RefreshBuildMode(void);
 dboolean dsda_BuildResponder(CCore*, event_t*);
 void dsda_ToggleBuildTurbo(void);

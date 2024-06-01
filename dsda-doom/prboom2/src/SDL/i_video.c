@@ -325,7 +325,7 @@ while (SDL_PollEvent(Event))
       // Switch windowed<->fullscreen if pressed Alt-Enter
       else if (Event->key.keysym.sym == SDLK_RETURN)
       {
-        V_ToggleFullscreen();
+        V_ToggleFullscreen(cx);
         break;
       }
       // Immediately exit on Alt+F4 ("Boss Key")
@@ -1178,7 +1178,7 @@ void I_InitGraphics(CCore* cx)
     lprintf(LO_DEBUG, "I_InitGraphics: %dx%d\n", SCREENWIDTH, SCREENHEIGHT);
 
     /* Set the video mode */
-    I_UpdateVideoMode();
+    I_UpdateVideoMode(cx);
 
     vt_dguiSetup(cx, (SdlWindow*)sdl_window, sdl_glcontext);
 
@@ -1197,7 +1197,7 @@ void I_InitGraphics(CCore* cx)
   }
 }
 
-void I_UpdateVideoMode(void)
+void I_UpdateVideoMode(CCore* cx)
 {
   int init_flags = SDL_WINDOW_ALLOW_HIGHDPI;
   int screen_multiply;
@@ -1281,7 +1281,7 @@ void I_UpdateVideoMode(void)
     SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, 8 );
 
     //e6y: anti-aliasing
-    gld_MultisamplingInit();
+    gld_MultisamplingInit(cx);
 
     sdl_window = SDL_CreateWindow(
       PACKAGE_NAME " " PACKAGE_VERSION,
@@ -1399,7 +1399,7 @@ void I_UpdateVideoMode(void)
 
   // e6y: wide-res
   // Need some initialisations before level precache
-  R_ExecuteSetViewSize();
+  R_ExecuteSetViewSize(cx);
 
   V_SetPalette(0);
   I_UploadNewPalette(0, true);

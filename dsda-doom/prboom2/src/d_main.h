@@ -57,7 +57,7 @@ void D_PostEvent(CCore*, event_t* ev);
 // Demo stuff
 extern dboolean advancedemo;
 void D_AdvanceDemo(void);
-void D_DoAdvanceDemo (void);
+void D_DoAdvanceDemo(CCore*);
 
 //
 // BASE LEVEL
@@ -75,10 +75,10 @@ extern const char *port_wad_file;
 
 typedef struct
 {
-  void (*func)(const char *);
+  void (*func)(CCore*, const char *);
   const char *name;
 } demostate_t;
 
-void D_SetPage(const char* name, int tics, int music);
+void D_SetPage(CCore*, const char* name, int tics, int music);
 
 #endif

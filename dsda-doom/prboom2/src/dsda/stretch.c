@@ -17,7 +17,6 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
-#include "hu_stuff.h"
 #include "r_main.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -205,7 +204,9 @@ static void InitStretchParam(stretch_param_t* offsets, int stretch, enum patch_t
     offsets->deltay1 = 0;
 }
 
-void dsda_SetupStretchParams(void) {
+void dsda_SetupStretchParams(CCore* cx) {
+    (void)cx;
+
   int i, k;
 
   EvaluateExTextScale();

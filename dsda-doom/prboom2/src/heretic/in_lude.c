@@ -51,7 +51,7 @@ typedef enum
     DEATHMATCH
 } gametype_t;
 
-static void IN_WaitStop(void);
+static void IN_WaitStop(CCore*);
 static void IN_Stop(void);
 static void IN_CheckForSkip(void);
 static void IN_InitStats(void);
@@ -215,13 +215,8 @@ static void IN_InitVariables(wbstartstruct_t* wbstartstruct)
   finalintermission = (prevmap == 8);
 }
 
-//========================================================================
-//
-// IN_Start
-//
-//========================================================================
-
-void IN_Start(wbstartstruct_t* wbstartstruct)
+/// @fn IN_Start
+void IN_Start(CCore* cx, wbstartstruct_t* wbstartstruct)
 {
     V_SetPalette(0);
     IN_InitVariables(wbstartstruct);
@@ -232,8 +227,8 @@ void IN_Start(wbstartstruct_t* wbstartstruct)
     skipintermission = false;
     intertime = 0;
     oldintertime = 0;
-    AM_Stop(false);
-    S_ChangeMusic(heretic_mus_intr, true);
+    AM_Stop(cx, false);
+    S_ChangeMusic(cx, heretic_mus_intr, true);
 }
 
 //========================================================================
@@ -242,12 +237,12 @@ void IN_Start(wbstartstruct_t* wbstartstruct)
 //
 //========================================================================
 
-void IN_WaitStop(void)
+void IN_WaitStop(CCore* cx)
 {
     if (!--cnt)
     {
         IN_Stop();
-        G_WorldDone();
+        G_WorldDone(cx);
     }
 }
 
@@ -375,7 +370,7 @@ void IN_InitStats(void)
 //
 //========================================================================
 
-void IN_Ticker(void)
+void IN_Ticker(CCore* cx)
 {
     if (!intermission)
     {
@@ -383,7 +378,7 @@ void IN_Ticker(void)
     }
     if (interstate == 3)
     {
-        IN_WaitStop();
+        IN_WaitStop(cx);
         return;
     }
     IN_CheckForSkip();
@@ -396,7 +391,7 @@ void IN_Ticker(void)
         if (interstate >= 1 && finalintermission)
         {
             IN_Stop();
-            G_WorldDone();
+            G_WorldDone(cx);
             return;
         }
 
@@ -438,7 +433,7 @@ void IN_Ticker(void)
         else if (finalintermission)
         {
             IN_Stop();
-            G_WorldDone();
+            G_WorldDone(cx);
             return;
         }
         else if (interstate < 2 && gameepisode < 4)

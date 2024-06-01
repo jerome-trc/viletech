@@ -19,6 +19,8 @@
 
 #include "r_defs.h"
 
+#include "viletech.nim.h"
+
 typedef enum
 {
     PODOOR_NONE,
@@ -52,15 +54,15 @@ typedef struct
     dboolean close;
 } polydoor_t;
 
-void T_PolyDoor(polydoor_t * pd);
-void T_RotatePoly(polyevent_t * pe);
+void T_PolyDoor(CCore*, polydoor_t * pd);
+void T_RotatePoly(CCore*, polyevent_t * pe);
 dboolean EV_RotatePoly(line_t * line, byte * args, int direction, dboolean overRide);
-void T_MovePoly(polyevent_t * pe);
+void T_MovePoly(CCore*, polyevent_t * pe);
 dboolean EV_MovePoly(line_t * line, byte * args, dboolean timesEight, dboolean overRide);
 dboolean EV_OpenPolyDoor(line_t * line, byte * args, podoortype_t type);
 
-dboolean PO_MovePolyobj(int num, int x, int y);
-dboolean PO_RotatePolyobj(int num, angle_t angle);
+dboolean PO_MovePolyobj(CCore*, int num, int x, int y);
+dboolean PO_RotatePolyobj(CCore*, int num, angle_t angle);
 dboolean PO_Detect(int doomednum);
 void PO_Init(int lump);
 dboolean PO_Busy(int polyobj);

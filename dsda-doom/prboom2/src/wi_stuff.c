@@ -1018,13 +1018,12 @@ static void WI_drawTimeStats(int cnt_time, int cnt_total_time, int cnt_par)
 // Args:    none
 // Returns: void
 //
-void WI_updateNoState(void)
+void WI_updateNoState(CCore* cx)
 {
-
   WI_updateAnimatedBack();
 
   if (!--cnt)
-    G_WorldDone();
+    G_WorldDone(cx);
 }
 
 static dboolean    snl_pointeron = false;
@@ -1036,7 +1035,7 @@ static dboolean    snl_pointeron = false;
 // Args:    none
 // Returns: void
 //
-void WI_initShowNextLoc(void)
+void WI_initShowNextLoc(CCore* cx)
 {
   int behaviour;
 
@@ -1044,7 +1043,7 @@ void WI_initShowNextLoc(void)
 
   if (behaviour & WI_SHOW_NEXT_DONE)
   {
-    G_WorldDone();
+    G_WorldDone(cx);
     return;
   }
 
@@ -1265,7 +1264,7 @@ void WI_endDeathmatchStats(void)
 // Args:    none
 // Returns: void
 //
-void WI_updateDeathmatchStats(void)
+void WI_updateDeathmatchStats(CCore* cx)
 {
   int   i;
   int   j;
@@ -1351,7 +1350,7 @@ void WI_updateDeathmatchStats(void)
       if ( gamemode == commercial)
         WI_initNoState();
       else
-        WI_initShowNextLoc();
+        WI_initShowNextLoc(cx);
     }
   }
   else if (dm_state & 1)
@@ -1511,7 +1510,7 @@ void WI_initNetgameStats(void)
 // Returns: void
 // Comment: This stuff sure is complicated for what it does
 //
-void WI_updateNetgameStats(void)
+void WI_updateNetgameStats(CCore* cx)
 {
   int   i;
   int   fsum;
@@ -1651,7 +1650,7 @@ void WI_updateNetgameStats(void)
       if ( gamemode == commercial )
         WI_initNoState();
       else
-        WI_initShowNextLoc();
+        WI_initShowNextLoc(cx);
     }
   }
   else if (ng_state & 1)
@@ -1773,7 +1772,7 @@ void WI_initStats(void)
 // Args:    none
 // Returns: void
 //
-void WI_updateStats(void)
+void WI_updateStats(CCore* cx)
 {
   //e6y
   static dboolean play_early_explosion = true;
@@ -1895,7 +1894,7 @@ void WI_updateStats(void)
       if (gamemode == commercial)
         WI_initNoState();
       else
-        WI_initShowNextLoc();
+        WI_initShowNextLoc(cx);
     }
   }
   else if (sp_state & 1)
@@ -1992,9 +1991,9 @@ void WI_checkForAccelerate(void)
 // Args:    none
 // Returns: void
 //
-void WI_Ticker(void)
+void WI_Ticker(CCore* cx)
 {
-  if (heretic) return IN_Ticker();
+  if (heretic) return IN_Ticker(cx);
   if (hexen) return Hexen_IN_Ticker();
 
   // counter for general background animation
@@ -2009,11 +2008,11 @@ void WI_Ticker(void)
 
     if (muslump >= 0)
     {
-      S_ChangeMusInfoMusic(muslump, true);
+      S_ChangeMusInfoMusic(cx, muslump, true);
     }
     else
     {
-      S_ChangeMusic(mnum, true);
+      S_ChangeMusic(cx, mnum, true);
     }
   }
 
@@ -2022,9 +2021,9 @@ void WI_Ticker(void)
   switch (state)
   {
     case StatCount:
-         if (deathmatch) WI_updateDeathmatchStats();
-         else if (netgame) WI_updateNetgameStats();
-         else WI_updateStats();
+         if (deathmatch) WI_updateDeathmatchStats(cx);
+         else if (netgame) WI_updateNetgameStats(cx);
+         else WI_updateStats(cx);
          break;
 
     case ShowNextLoc:
@@ -2032,7 +2031,7 @@ void WI_Ticker(void)
          break;
 
     case NoState:
-         WI_updateNoState();
+         WI_updateNoState(cx);
          break;
   }
 }
@@ -2173,10 +2172,10 @@ void WI_initVariables(wbstartstruct_t* wbstartstruct)
 //          intermission data
 // Returns: void
 //
-void WI_Start(wbstartstruct_t* wbstartstruct)
+void WI_Start(CCore* cx, wbstartstruct_t* wbstartstruct)
 {
-  if (heretic) return IN_Start(wbstartstruct);
-  if (hexen) return Hexen_IN_Start(wbstartstruct);
+  if (heretic) return IN_Start(cx, wbstartstruct);
+  if (hexen) return Hexen_IN_Start(cx, wbstartstruct);
 
   WI_initVariables(wbstartstruct);
   WI_loadData();

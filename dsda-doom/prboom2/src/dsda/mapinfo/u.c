@@ -227,7 +227,7 @@ int dsda_UStartFinale(void) {
   return true;
 }
 
-int dsda_UFTicker(void) {
+int dsda_UFTicker(CCore* cx) {
   void WI_checkForAccelerate(void);
   float Get_TextSpeed(void);
 
@@ -264,7 +264,7 @@ int dsda_UFTicker(void) {
   if (next_level) {
     if (gamemapinfo->endpic[0] && (strcmp(gamemapinfo->endpic, "-") != 0)) {
       if (!stricmp(gamemapinfo->endpic, "$CAST")) {
-        F_StartCast(NULL, NULL, true);
+        F_StartCast(cx, NULL, NULL, true);
         return false; // let go of finale ownership
       }
       else {
@@ -272,7 +272,7 @@ int dsda_UFTicker(void) {
         finalestage = 1;
         wipegamestate = -1; // force a wipe
         if (!stricmp(gamemapinfo->endpic, "$BUNNY"))
-          F_StartScroll(NULL, NULL, NULL, true);
+          F_StartScroll(cx, NULL, NULL, NULL, true);
         else if (!stricmp(gamemapinfo->endpic, "!"))
           return false; // let go of finale ownership
       }

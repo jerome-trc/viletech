@@ -20,12 +20,12 @@
 #include "viletech.nim.h"
 
 dboolean dsda_SkipMode(void);
-void dsda_EnterSkipMode(void);
+void dsda_EnterSkipMode(CCore*);
 void dsda_ExitSkipMode(CCore*);
 void dsda_ToggleSkipMode(CCore*);
-void dsda_SkipToNextMap(void);
-void dsda_SkipToEndOfMap(void);
-void dsda_SkipToLogicTic(int tic);
+void dsda_SkipToNextMap(CCore*);
+void dsda_SkipToEndOfMap(CCore*);
+void dsda_SkipToLogicTic(CCore*, int tic);
 void dsda_EvaluateSkipModeGTicker(CCore*);
 void dsda_EvaluateSkipModeInitNew(void);
 void dsda_EvaluateSkipModeBuildTiccmd(CCore*);
@@ -33,4 +33,4 @@ void dsda_EvaluateSkipModeDoCompleted(CCore*);
 void dsda_EvaluateSkipModeDoTeleportNewMap(CCore*);
 void dsda_EvaluateSkipModeDoWorldDone(CCore*);
 void dsda_EvaluateSkipModeCheckDemoStatus(CCore*);
-void dsda_HandleSkip(void);
+void dsda_HandleSkip(CCore*);

@@ -38,6 +38,8 @@
 #include "p_mobj.h"
 #include "r_defs.h"
 
+#include "viletech.nim.h"
+
 #define MAX_CHANNELS 32
 
 //
@@ -45,7 +47,7 @@
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(void);
+void S_Init(CCore*);
 
 // Kills all sounds
 void S_Stop(void);
@@ -55,7 +57,7 @@ void S_Stop(void);
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_Start(void);
+void S_Start(CCore*);
 
 //
 // Start sound for thing at <origin>
@@ -90,20 +92,20 @@ extern int full_sounds;
 void S_UnlinkSound(void *origin);
 
 // Start music using <music_id> from sounds.h
-void S_StartMusic(int music_id);
+void S_StartMusic(CCore*, int music_id);
 
 // Start music using <music_id> from sounds.h, and set whether looping
-void S_ChangeMusic(int music_id, int looping);
-void S_ChangeMusInfoMusic(int lumpnum, int looping);
-dboolean S_ChangeMusicByName(const char *name, dboolean looping);
-void S_RestartMusic(void);
+void S_ChangeMusic(CCore*, int music_id, int looping);
+void S_ChangeMusInfoMusic(CCore*, int lumpnum, int looping);
+dboolean S_ChangeMusicByName(CCore*, const char *name, dboolean looping);
+void S_RestartMusic(CCore*);
 
 // Stops the music fer sure.
-void S_StopMusic(void);
+void S_StopMusic(CCore*);
 
 // Stop and resume music, during game PAUSE.
 void S_PauseSound(void);
-void S_ResumeSound(void);
+void S_ResumeSound(CCore*);
 
 void S_AdjustAttenuation(float attenuation);
 void S_AdjustVolume(float volume);
@@ -130,7 +132,7 @@ void S_StartAmbientSound(void *origin, int sound_id, int volume);
 
 // hexen
 
-void S_StartSongName(const char *songLump, dboolean loop);
+void S_StartSongName(CCore*, const char *songLump, dboolean loop);
 dboolean S_GetSoundPlayingInfo(void * mobj, int sound_id);
 int S_GetSoundID(const char *name);
 

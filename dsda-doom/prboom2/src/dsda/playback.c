@@ -57,13 +57,13 @@ dboolean dsda_JumpToLogicTic(CCore* cx, int tic) {
     return false;
 
   if (tic > true_logictic)
-    dsda_SkipToLogicTic(tic);
+    dsda_SkipToLogicTic(cx, tic);
   else if (tic < true_logictic) {
     if (!dsda_RestoreClosestKeyFrame(cx, tic))
       return false;
 
     if (tic != true_logictic)
-      dsda_SkipToLogicTic(tic);
+      dsda_SkipToLogicTic(cx, tic);
   }
 
   return true;
@@ -77,7 +77,7 @@ dboolean dsda_JumpToLogicTicFrom(CCore* cx, int tic, int from_tic) {
     return false;
 
   if (tic != true_logictic)
-    dsda_SkipToLogicTic(tic);
+    dsda_SkipToLogicTic(cx, tic);
 
   return true;
 }
@@ -89,25 +89,25 @@ const char* dsda_PlaybackName(void) {
 void dsda_ExecutePlaybackOptions(CCore* cx) {
   if (playdemo_arg)
   {
-    G_DeferedPlayDemo(playback_name);
+    G_DeferedPlayDemo(cx, playback_name);
     userdemo = true;
   }
   else if (playlump_arg) {
     if (W_CheckNumForName(playback_name) == LUMP_NOT_FOUND)
       I_Error("Unable to find required internal demo lump \"%s\"", playback_name);
 
-    G_DeferedPlayDemo(playback_name);
+    G_DeferedPlayDemo(cx, playback_name);
     userdemo = true;
   }
   else if (fastdemo_arg) {
-    G_DeferedPlayDemo(playback_name);
+    G_DeferedPlayDemo(cx, playback_name);
     fastdemo = true;
     timingdemo = true;
     userdemo = true;
   }
   else if (timedemo_arg)
   {
-    G_DeferedPlayDemo(playback_name);
+    G_DeferedPlayDemo(cx, playback_name);
     singletics = true;
     timingdemo = true;
     userdemo = true;

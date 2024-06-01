@@ -372,9 +372,9 @@ void dsda_StartFinale(void) {
   finale_owner = finale_owner_legacy;
 }
 
-int dsda_FTicker(void) {
+int dsda_FTicker(CCore* cx) {
   if (finale_owner == finale_owner_doom) {
-    if (!dsda_DoomFTicker())
+    if (!dsda_DoomFTicker(cx))
       finale_owner = finale_owner_legacy;
 
     return true;
@@ -388,7 +388,7 @@ int dsda_FTicker(void) {
   }
 
   if (finale_owner == finale_owner_u) {
-    if (!dsda_UFTicker())
+    if (!dsda_UFTicker(cx))
       finale_owner = finale_owner_legacy;
 
     return true;

@@ -140,7 +140,7 @@ void TryRunTics(CCore* cx)
 
   while (runtics--) {
     if (advancedemo)
-      D_DoAdvanceDemo();
+      D_DoAdvanceDemo(cx);
 
     M_Ticker();
     G_Ticker(cx);

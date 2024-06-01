@@ -38,33 +38,33 @@
 
 #include "d_player.h"
 
-void P_PlayerThink(player_t *player);
-void P_CalcHeight(player_t *player);
-void P_DeathThink(player_t *player);
-void P_MovePlayer(player_t *player);
-void P_ForwardThrust(player_t *player, angle_t angle, fixed_t move);
-void P_Thrust(player_t *player, angle_t angle, fixed_t move);
+void P_PlayerThink(CCore*, player_t*);
+void P_CalcHeight(player_t*);
+void P_DeathThink(player_t*);
+void P_MovePlayer(CCore*, player_t*);
+void P_ForwardThrust(player_t*, angle_t angle, fixed_t move);
+void P_Thrust(player_t*, angle_t angle, fixed_t move);
 
-void P_SetPitch(player_t *player);
+void P_SetPitch(player_t*);
 
 // heretic
 
-int P_GetPlayerNum(player_t * player);
-void P_PlayerRemoveArtifact(player_t * player, int slot);
-void P_PlayerUseArtifact(player_t * player, artitype_t arti);
-void P_PlayerNextArtifact(player_t * player);
-dboolean P_UseArtifact(player_t * player, artitype_t arti);
-void P_ChickenPlayerThink(player_t * player);
-dboolean P_UndoPlayerChicken(player_t * player);
-void Raven_P_MovePlayer(player_t * player);
+int P_GetPlayerNum(player_t*);
+void P_PlayerRemoveArtifact(player_t*, int slot);
+void P_PlayerUseArtifact(CCore*, player_t*, artitype_t);
+void P_PlayerNextArtifact(player_t*);
+dboolean P_UseArtifact(CCore*, player_t*, artitype_t);
+void P_ChickenPlayerThink(CCore*, player_t*);
+dboolean P_UndoPlayerChicken(CCore*, player_t*);
+void Raven_P_MovePlayer(CCore*, player_t*);
 
 // hexen
 
-void ResetBlasted(mobj_t * mo);
-void P_TeleportOther(mobj_t * victim);
-dboolean P_UndoPlayerMorph(player_t * player);
-void P_MorphPlayerThink(player_t * player);
+void ResetBlasted(mobj_t*);
+void P_TeleportOther(CCore*, mobj_t*);
+dboolean P_UndoPlayerMorph(CCore*, player_t*);
+void P_MorphPlayerThink(player_t*);
 
-void P_PlayerEndFlight(player_t * player);
+void P_PlayerEndFlight(player_t*);
 
 #endif  /* __P_USER__ */

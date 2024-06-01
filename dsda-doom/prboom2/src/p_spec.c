@@ -1499,7 +1499,6 @@ dboolean PUREFUNC P_IsSecret(const sector_t *sec)
   return (sec->flags & SECF_SECRET) != 0;
 }
 
-
 //
 // P_WasSecret()
 //
@@ -1556,7 +1555,7 @@ void P_CrossHexenSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bos
 //  crossed. Change is qualified by demo_compatibility.
 //
 // CPhipps - take a line_t pointer instead of a line number, as in MBF
-void P_CrossCompatibleSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction)
+void P_CrossCompatibleSpecialLine(CCore* cx, line_t *line, int side, mobj_t *thing, dboolean bossaction)
 {
   int ok;
 
@@ -2273,24 +2272,24 @@ void P_CrossCompatibleSpecialLine(line_t *line, int side, mobj_t *thing, dboolea
 
           case 243: //jff 3/6/98 make fit within DCK's 256 linedef types
             // killough 2/16/98: W1 silent teleporter (linedef-linedef kind)
-            if (EV_SilentLineTeleport(line, side, thing, line->tag, false))
+            if (EV_SilentLineTeleport(cx, line, side, thing, line->tag, false))
               line->special = 0;
             break;
 
           case 262: //jff 4/14/98 add silent line-line reversed
-            if (EV_SilentLineTeleport(line, side, thing, line->tag, true))
+            if (EV_SilentLineTeleport(cx, line, side, thing, line->tag, true))
               line->special = 0;
             break;
 
           case 264: //jff 4/14/98 add monster-only silent line-line reversed
             if (!thing->player &&
-                EV_SilentLineTeleport(line, side, thing, line->tag, true))
+                EV_SilentLineTeleport(cx, line, side, thing, line->tag, true))
               line->special = 0;
             break;
 
           case 266: //jff 4/14/98 add monster-only silent line-line
             if (!thing->player &&
-                EV_SilentLineTeleport(line, side, thing, line->tag, false))
+                EV_SilentLineTeleport(cx, line, side, thing, line->tag, false))
               line->special = 0;
             break;
 
@@ -2438,21 +2437,21 @@ void P_CrossCompatibleSpecialLine(line_t *line, int side, mobj_t *thing, dboolea
 
           case 244: //jff 3/6/98 make fit within DCK's 256 linedef types
             // killough 2/16/98: WR silent teleporter (linedef-linedef kind)
-            EV_SilentLineTeleport(line, side, thing, line->tag, false);
+            EV_SilentLineTeleport(cx, line, side, thing, line->tag, false);
             break;
 
           case 263: //jff 4/14/98 add silent line-line reversed
-            EV_SilentLineTeleport(line, side, thing, line->tag, true);
+            EV_SilentLineTeleport(cx, line, side, thing, line->tag, true);
             break;
 
           case 265: //jff 4/14/98 add monster-only silent line-line reversed
             if (!thing->player)
-              EV_SilentLineTeleport(line, side, thing, line->tag, true);
+              EV_SilentLineTeleport(cx, line, side, thing, line->tag, true);
             break;
 
           case 267: //jff 4/14/98 add monster-only silent line-line
             if (!thing->player)
-              EV_SilentLineTeleport(line, side, thing, line->tag, false);
+              EV_SilentLineTeleport(cx, line, side, thing, line->tag, false);
             break;
 
           case 269: //jff 4/14/98 add monster-only silent
@@ -2680,44 +2679,44 @@ void P_ShootHexenSpecialLine(mobj_t *thing, line_t *line)
   P_ActivateLine(line, thing, 0, SPAC_IMPACT);
 }
 
-static void P_ApplySectorDamage(player_t *player, int damage, int leak)
+static void P_ApplySectorDamage(CCore* cx, player_t *player, int damage, int leak)
 {
   if (!player->powers[pw_ironfeet] || (leak && P_Random(pr_slimehurt) < leak))
     if (!(leveltime & 0x1f))
-      P_DamageMobj(player->mo, NULL, NULL, damage);
+      P_DamageMobj(cx, player->mo, NULL, NULL, damage);
 }
 
-static void P_ApplySectorDamageEndLevel(player_t *player)
+static void P_ApplySectorDamageEndLevel(CCore* cx, player_t *player)
 {
   if (comp[comp_god])
     player->cheats &= ~CF_GODMODE;
 
   if (!(leveltime & 0x1f))
-    P_DamageMobj(player->mo, NULL, NULL, 20);
+    P_DamageMobj(cx, player->mo, NULL, NULL, 20);
 
   if (player->health <= 10)
     G_ExitLevel(0);
 }
 
-static void P_ApplyGeneralizedSectorDamage(player_t *player, int bits)
+static void P_ApplyGeneralizedSectorDamage(CCore* cx, player_t *player, int bits)
 {
   switch (bits & 3)
   {
     case 0:
       break;
     case 1:
-      P_ApplySectorDamage(player, 5, 0);
+      P_ApplySectorDamage(cx, player, 5, 0);
       break;
     case 2:
-      P_ApplySectorDamage(player, 10, 0);
+      P_ApplySectorDamage(cx, player, 10, 0);
       break;
     case 3:
-      P_ApplySectorDamage(player, 20, 5);
+      P_ApplySectorDamage(cx, player, 20, 5);
       break;
   }
 }
 
-void P_PlayerInCompatibleSector(player_t *player, sector_t *sector)
+void P_PlayerInCompatibleSector(CCore* cx, player_t *player, sector_t *sector)
 {
   //jff add if to handle old vs generalized types
   if (sector->special < 32) // regular sector specials
@@ -2725,20 +2724,20 @@ void P_PlayerInCompatibleSector(player_t *player, sector_t *sector)
     switch (sector->special)
     {
       case 5:
-        P_ApplySectorDamage(player, 10, 0);
+        P_ApplySectorDamage(cx, player, 10, 0);
         break;
       case 7:
-        P_ApplySectorDamage(player, 5, 0);
+        P_ApplySectorDamage(cx, player, 5, 0);
         break;
       case 16:
       case 4:
-        P_ApplySectorDamage(player, 20, 5);
+        P_ApplySectorDamage(cx, player, 20, 5);
         break;
       case 9:
         P_CollectSecretVanilla(sector, player);
         break;
       case 11:
-        P_ApplySectorDamageEndLevel(player);
+        P_ApplySectorDamageEndLevel(cx, player);
         break;
       default:
         break;
@@ -2754,28 +2753,28 @@ void P_PlayerInCompatibleSector(player_t *player, sector_t *sector)
       {
         case 0:
           if (!player->powers[pw_invulnerability] && !player->powers[pw_ironfeet])
-            P_DamageMobj(player->mo, NULL, NULL, 10000);
+            P_DamageMobj(cx, player->mo, NULL, NULL, 10000);
           break;
         case 1:
-          P_DamageMobj(player->mo, NULL, NULL, 10000);
+          P_DamageMobj(cx, player->mo, NULL, NULL, 10000);
           break;
         case 2:
           for (i = 0; i < g_maxplayers; i++)
             if (playeringame[i])
-              P_DamageMobj(players[i].mo, NULL, NULL, 10000);
+              P_DamageMobj(cx, players[i].mo, NULL, NULL, 10000);
           G_ExitLevel(0);
           break;
         case 3:
           for (i = 0; i < g_maxplayers; i++)
             if (playeringame[i])
-              P_DamageMobj(players[i].mo, NULL, NULL, 10000);
+              P_DamageMobj(cx, players[i].mo, NULL, NULL, 10000);
           G_SecretExitLevel(0);
           break;
       }
     }
     else
     {
-      P_ApplyGeneralizedSectorDamage(player, (sector->special & DAMAGE_MASK) >> DAMAGE_SHIFT);
+      P_ApplyGeneralizedSectorDamage(cx, player, (sector->special & DAMAGE_MASK) >> DAMAGE_SHIFT);
     }
   }
 
@@ -2785,7 +2784,7 @@ void P_PlayerInCompatibleSector(player_t *player, sector_t *sector)
   }
 }
 
-void P_PlayerInZDoomSector(player_t *player, sector_t *sector)
+void P_PlayerInZDoomSector(CCore* cx, player_t *player, sector_t *sector)
 {
   static const int heretic_carry[5] = {
     2048 * 5,
@@ -2823,7 +2822,7 @@ void P_PlayerInZDoomSector(player_t *player, sector_t *sector)
       {
         if (leveltime % sector->damage.interval == 0)
         {
-          P_DamageMobj(player->mo, NULL, NULL, sector->damage.amount);
+          P_DamageMobj(cx, player->mo, NULL, NULL, sector->damage.amount);
 
           if (sector->flags & SECF_ENDLEVEL && player->health <= 10)
           {
@@ -2964,7 +2963,7 @@ void P_PlayerInSpecialSector (player_t* player)
   map_format.player_in_special_sector(player, sector);
 }
 
-dboolean P_MobjInCompatibleSector(mobj_t *mobj)
+dboolean P_MobjInCompatibleSector(CCore* cx, mobj_t *mobj)
 {
   if (mbf21)
   {
@@ -2978,7 +2977,7 @@ dboolean P_MobjInCompatibleSector(mobj_t *mobj)
       !(mobj->flags & MF_FLOAT)
     )
     {
-      P_DamageMobj(mobj, NULL, NULL, 10000);
+      P_DamageMobj(cx, mobj, NULL, NULL, 10000);
 
       // must have been removed
       if (mobj->thinker.function != P_MobjThinker)
@@ -4309,7 +4308,7 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t* source, int affec
 
 pusher_t* tmpusher; // pusher structure for blockmap searches
 
-static dboolean PIT_PushThing(mobj_t* thing)
+static dboolean PIT_PushThing(CCore* cx, mobj_t* thing)
 {
   /* killough 10/98: made more general */
   if (!mbf_features ?
@@ -4364,7 +4363,7 @@ static dboolean PIT_PushThing(mobj_t* thing)
 // the effect.
 //
 
-void T_Pusher(pusher_t *p)
+void T_Pusher(CCore* cx, pusher_t *p)
 {
     sector_t *sec;
     mobj_t   *thing;
@@ -4418,7 +4417,7 @@ void T_Pusher(pusher_t *p)
         yh = P_GetSafeBlockY(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
         for (bx=xl ; bx<=xh ; bx++)
             for (by=yl ; by<=yh ; by++)
-                P_BlockThingsIterator(bx,by,PIT_PushThing);
+                P_BlockThingsIterator(cx, bx,by,PIT_PushThing);
         return;
         }
 
@@ -5145,7 +5144,7 @@ void P_CrossHereticSpecialLine(line_t * line, int side, mobj_t * thing, dboolean
     }
 }
 
-void P_PlayerInHereticSector(player_t * player, sector_t * sector)
+void P_PlayerInHereticSector(CCore* cx, player_t * player, sector_t * sector)
 {
     static int pushTab[5] = {
         2048 * 5,
@@ -5160,29 +5159,29 @@ void P_PlayerInHereticSector(player_t * player, sector_t * sector)
         case 7:                // Damage_Sludge
             if (!(leveltime & 31))
             {
-                P_DamageMobj(player->mo, NULL, NULL, 4);
+                P_DamageMobj(cx, player->mo, NULL, NULL, 4);
             }
             break;
         case 5:                // Damage_LavaWimpy
             if (!(leveltime & 15))
             {
-                P_DamageMobj(player->mo, &LavaInflictor, NULL, 5);
-                P_HitFloor(player->mo);
+                P_DamageMobj(cx, player->mo, &LavaInflictor, NULL, 5);
+                P_HitFloor(cx, player->mo);
             }
             break;
         case 16:               // Damage_LavaHefty
             if (!(leveltime & 15))
             {
-                P_DamageMobj(player->mo, &LavaInflictor, NULL, 8);
-                P_HitFloor(player->mo);
+                P_DamageMobj(cx, player->mo, &LavaInflictor, NULL, 8);
+                P_HitFloor(cx, player->mo);
             }
             break;
         case 4:                // Scroll_EastLavaDamage
             P_Thrust(player, 0, 2048 * 28);
             if (!(leveltime & 15))
             {
-                P_DamageMobj(player->mo, &LavaInflictor, NULL, 5);
-                P_HitFloor(player->mo);
+                P_DamageMobj(cx, player->mo, &LavaInflictor, NULL, 5);
+                P_HitFloor(cx, player->mo);
             }
             break;
         case 9:                // SecretArea
@@ -5279,7 +5278,7 @@ static struct
 } TaggedLines[MAX_TAGGED_LINES];
 static int TaggedLineCount;
 
-void P_PlayerOnSpecialFlat(player_t * player, int floorType)
+void P_PlayerOnSpecialFlat(CCore* cx, player_t * player, int floorType)
 {
     if (player->mo->z != player->mo->floorz)
     {                           // Player is not touching the floor
@@ -5290,7 +5289,7 @@ void P_PlayerOnSpecialFlat(player_t * player, int floorType)
         case FLOOR_LAVA:
             if (!(leveltime & 31))
             {
-                P_DamageMobj(player->mo, &LavaInflictor, NULL, 10);
+                P_DamageMobj(cx, player->mo, &LavaInflictor, NULL, 10);
                 S_StartMobjSound(player->mo, hexen_sfx_lava_sizzle);
             }
             break;
@@ -5358,7 +5357,7 @@ static dboolean CheckedLockedDoor(mobj_t * mo, byte lock)
     return true;
 }
 
-dboolean EV_LineSearchForPuzzleItem(line_t * line, byte * args, mobj_t * mo)
+dboolean EV_LineSearchForPuzzleItem(CCore* cx, line_t * line, byte * args, mobj_t * mo)
 {
     player_t *player;
     int i;
@@ -5381,7 +5380,7 @@ dboolean EV_LineSearchForPuzzleItem(line_t * line, byte * args, mobj_t * mo)
         if (type == line->special_args[0])
         {
             // A puzzle item was found for the line
-            if (P_UseArtifact(player, arti))
+            if (P_UseArtifact(cx, player, arti))
             {
                 // A puzzle item was found for the line
                 P_PlayerRemoveArtifact(player, i);
@@ -5750,7 +5749,7 @@ static angle_t P_ArgToAngle(angle_t arg)
   return arg * (ANG180 / 128);
 }
 
-dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int side, mobj_t * mo)
+dboolean P_ExecuteZDoomLineSpecial(CCore* cx, int special, int * args, line_t * line, int side, mobj_t * mo)
 {
   dboolean buttonSuccess = false;
 
@@ -6987,7 +6986,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
     case zl_force_field:
       if (mo)
       {
-        P_DamageMobj(mo, NULL, NULL, 16);
+        P_DamageMobj(cx, mo, NULL, NULL, 16);
         P_ThrustMobj(mo, ANG180 + mo->angle, 2048 * 250);
       }
       buttonSuccess = 1;
@@ -7153,7 +7152,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
 
         if (target && dest)
         {
-          buttonSuccess = P_MoveThing(target, dest->x, dest->y, dest->z, args[2] ? false : true);
+          buttonSuccess = P_MoveThing(cx, target, dest->x, dest->y, dest->z, args[2] ? false : true);
         }
       }
       break;
@@ -7173,10 +7172,10 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
       }
       break;
     case zl_teleport_group:
-      buttonSuccess = EV_TeleportGroup(args[0], mo, args[1], args[2], args[3], args[4]);
+      buttonSuccess = EV_TeleportGroup(cx, args[0], mo, args[1], args[2], args[3], args[4]);
       break;
     case zl_teleport_in_sector:
-      buttonSuccess = EV_TeleportInSector(args[0], args[1], args[2], args[3], args[4]);
+      buttonSuccess = EV_TeleportInSector(cx, args[0], args[1], args[2], args[3], args[4]);
       break;
     case zl_teleport:
       {
@@ -7234,13 +7233,13 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
         map_format.ev_teleport(args[0], args[1], line, side, mo, 0);
         if (mo->health >= 0 && mo->info->painstate)
         {
-          P_SetMobjState(mo, mo->info->painstate);
+          P_SetMobjState(cx, mo, mo->info->painstate);
         }
         buttonSuccess = 1;
       }
       break;
     case zl_teleport_line:
-      buttonSuccess = EV_SilentLineTeleport(line, side, mo, args[1], args[2]);
+      buttonSuccess = EV_SilentLineTeleport(cx, line, side, mo, args[1], args[2]);
       break;
     case zl_light_raise_by_value:
       EV_LightChange(args[0], args[1]);
@@ -7304,28 +7303,28 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
       break;
     case zl_thing_spawn:
       buttonSuccess =
-        P_SpawnThing(args[0], mo, args[1], P_ArgToAngle(args[2]), true, args[3]);
+        P_SpawnThing(cx, args[0], mo, args[1], P_ArgToAngle(args[2]), true, args[3]);
       break;
     case zl_thing_spawn_no_fog:
       buttonSuccess =
-        P_SpawnThing(args[0], mo, args[1], P_ArgToAngle(args[2]), false, args[3]);
+        P_SpawnThing(cx, args[0], mo, args[1], P_ArgToAngle(args[2]), false, args[3]);
       break;
     case zl_thing_spawn_facing:
       buttonSuccess =
-        P_SpawnThing(args[0], mo, args[1], ANGLE_MAX, args[2] ? false : true, args[3]);
+        P_SpawnThing(cx, args[0], mo, args[1], ANGLE_MAX, args[2] ? false : true, args[3]);
       break;
     case zl_thing_projectile:
-      buttonSuccess = P_SpawnProjectile(args[0], mo, args[1], P_ArgToAngle(args[2]),
+      buttonSuccess = P_SpawnProjectile(cx, args[0], mo, args[1], P_ArgToAngle(args[2]),
                                         P_ArgToSpeed(args[3]), P_ArgToSpeed(args[4]),
                                         0, NULL, 0, 0);
       break;
     case zl_thing_projectile_gravity:
-      buttonSuccess = P_SpawnProjectile(args[0], mo, args[1], P_ArgToAngle(args[2]),
+      buttonSuccess = P_SpawnProjectile(cx, args[0], mo, args[1], P_ArgToAngle(args[2]),
                                         P_ArgToSpeed(args[3]), P_ArgToSpeed(args[4]),
                                         0, NULL, 1, 0);
       break;
     case zl_thing_projectile_aimed:
-      buttonSuccess = P_SpawnProjectile(args[0], mo, args[1], 0,
+      buttonSuccess = P_SpawnProjectile(cx, args[0], mo, args[1], 0,
                                         P_ArgToSpeed(args[2]), 0,
                                         args[3], mo, 0, args[4]);
       break;
@@ -7335,7 +7334,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
       //   but the calculations easily go out of bounds (dot products).
       // Needs a different implementation, or 64 bit fixed point conversions
       // Falling back on the default aimed behaviour for now
-      buttonSuccess = P_SpawnProjectile(args[0], mo, args[1], 0,
+      buttonSuccess = P_SpawnProjectile(cx, args[0], mo, args[1], 0,
                                         P_ArgToSpeed(args[2]), 0,
                                         args[3], mo, 0, args[4]);
       break;
@@ -7463,7 +7462,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
 
               if (!(hater->flags2 & MF2_DORMANT))
               {
-                P_SetMobjState(hater, hater->info->seestate);
+                P_SetMobjState(cx, hater, hater->info->seestate);
               }
             }
           }
@@ -7483,7 +7482,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
             if (target->flags & MF_COUNTKILL)
               dsda_WatchKill(&players[consoleplayer], target);
 
-            P_RemoveMobj(target);
+            P_RemoveMobj(cx, target);
           }
         }
       }
@@ -7573,7 +7572,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
         dsda_ResetThingIDSearch(&search);
         while ((target = dsda_FindMobjFromThingIDOrMobj(args[0], mo, &search)))
         {
-          buttonSuccess |= P_RaiseThing(target, NULL);
+          buttonSuccess |= P_RaiseThing(cx, target, NULL);
         }
       }
     	break;
@@ -7586,7 +7585,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
         }
         else
         {
-          P_DamageMobj(mo, NULL, NULL, args[0] ? args[0] : 10000);
+          P_DamageMobj(cx, mo, NULL, NULL, args[0] ? args[0] : 10000);
         }
         buttonSuccess = 1;
       }
@@ -7603,7 +7602,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
           {
             if (args[1] > 0)
             {
-              P_DamageMobj(target, NULL, mo, args[1]);
+              P_DamageMobj(cx, target, NULL, mo, args[1]);
             }
             else
             {
@@ -7617,7 +7616,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
     case zl_thing_destroy:
       if (!args[0] && !args[2])
       {
-        P_Massacre();
+        P_Massacre(cx);
       }
       else if (!args[0])
       {
@@ -7638,7 +7637,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
             n = n->m_snext;
 
             if (target->flags & MF_SHOOTABLE)
-              P_DamageMobj(target, NULL, mo, args[1] ? 10000 : target->health);
+              P_DamageMobj(cx, target, NULL, mo, args[1] ? 10000 : target->health);
           }
         }
       }
@@ -7654,7 +7653,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
             target->flags & MF_SHOOTABLE &&
             (!args[2] || target->subsector->sector->tag == args[2])
           )
-            P_DamageMobj(target, NULL, mo, args[1] ? 10000 : target->health);
+            P_DamageMobj(cx, target, NULL, mo, args[1] ? 10000 : target->health);
         }
       }
       buttonSuccess = 1;
@@ -7683,7 +7682,7 @@ dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int s
   return buttonSuccess;
 }
 
-dboolean P_ExecuteHexenLineSpecial(int special, int * special_args, line_t * line, int side, mobj_t * mo)
+dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, line_t * line, int side, mobj_t * mo)
 {
     byte args[5];
     dboolean buttonSuccess = false;
@@ -7849,13 +7848,13 @@ dboolean P_ExecuteHexenLineSpecial(int special, int * special_args, line_t * lin
         case 70:               // Teleport
             if (side == 0)
             {                   // Only teleport when crossing the front side of a line
-                buttonSuccess = EV_HexenTeleport(args[0], mo, true);
+                buttonSuccess = EV_HexenTeleport(cx, args[0], mo, true);
             }
             break;
         case 71:               // Teleport, no fog
             if (side == 0)
             {                   // Only teleport when crossing the front side of a line
-                buttonSuccess = EV_HexenTeleport(args[0], mo, false);
+                buttonSuccess = EV_HexenTeleport(cx, args[0], mo, false);
             }
             break;
         case 72:               // Thrust Mobj
@@ -7869,11 +7868,11 @@ dboolean P_ExecuteHexenLineSpecial(int special, int * special_args, line_t * lin
         case 73:               // Damage Mobj
             if (args[0])
             {
-                P_DamageMobj(mo, NULL, NULL, args[0]);
+                P_DamageMobj(cx, mo, NULL, NULL, args[0]);
             }
             else
             {                   // If arg1 is zero, then guarantee a kill
-                P_DamageMobj(mo, NULL, NULL, 10000);
+                P_DamageMobj(cx, mo, NULL, NULL, 10000);
             }
             buttonSuccess = 1;
             break;
@@ -7967,31 +7966,31 @@ dboolean P_ExecuteHexenLineSpecial(int special, int * special_args, line_t * lin
             buttonSuccess = A_LocalQuake(args, mo);
             break;
         case 129:              // UsePuzzleItem
-            buttonSuccess = EV_LineSearchForPuzzleItem(line, args, mo);
+            buttonSuccess = EV_LineSearchForPuzzleItem(cx, line, args, mo);
             break;
         case 130:              // Thing_Activate
-            buttonSuccess = EV_ThingActivate(args[0]);
+            buttonSuccess = EV_ThingActivate(cx, args[0]);
             break;
         case 131:              // Thing_Deactivate
-            buttonSuccess = EV_ThingDeactivate(args[0]);
+            buttonSuccess = EV_ThingDeactivate(cx, args[0]);
             break;
         case 132:              // Thing_Remove
-            buttonSuccess = EV_ThingRemove(args[0]);
+            buttonSuccess = EV_ThingRemove(cx, args[0]);
             break;
         case 133:              // Thing_Destroy
-            buttonSuccess = EV_ThingDestroy(args[0]);
+            buttonSuccess = EV_ThingDestroy(cx, args[0]);
             break;
         case 134:              // Thing_Projectile
-            buttonSuccess = EV_ThingProjectile(args, 0);
+            buttonSuccess = EV_ThingProjectile(cx, args, 0);
             break;
         case 135:              // Thing_Spawn
-            buttonSuccess = EV_ThingSpawn(args, 1);
+            buttonSuccess = EV_ThingSpawn(cx, args, 1);
             break;
         case 136:              // Thing_ProjectileGravity
-            buttonSuccess = EV_ThingProjectile(args, 1);
+            buttonSuccess = EV_ThingProjectile(cx, args, 1);
             break;
         case 137:              // Thing_SpawnNoFog
-            buttonSuccess = EV_ThingSpawn(args, 0);
+            buttonSuccess = EV_ThingSpawn(cx, args, 0);
             break;
         case 138:              // Floor_Waggle
             buttonSuccess = EV_StartFloorWaggle(args[0], args[1],

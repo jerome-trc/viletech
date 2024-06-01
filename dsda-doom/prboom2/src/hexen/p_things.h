@@ -19,12 +19,14 @@
 
 #include "info.h"
 
-dboolean EV_ThingProjectile(byte * args, dboolean gravity);
-dboolean EV_ThingSpawn(byte * args, dboolean fog);
-dboolean EV_ThingActivate(int tid);
-dboolean EV_ThingDeactivate(int tid);
-dboolean EV_ThingRemove(int tid);
-dboolean EV_ThingDestroy(int tid);
+#include "viletech.nim.h"
+
+dboolean EV_ThingProjectile(CCore*, byte * args, dboolean gravity);
+dboolean EV_ThingSpawn(CCore*, byte * args, dboolean fog);
+dboolean EV_ThingActivate(CCore*, int tid);
+dboolean EV_ThingDeactivate(CCore*, int tid);
+dboolean EV_ThingRemove(CCore*, int tid);
+dboolean EV_ThingDestroy(CCore*, int tid);
 
 extern mobjtype_t TranslateThingType[];
 

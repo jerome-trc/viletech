@@ -920,10 +920,10 @@ static const void *music_handle = NULL;
 
 static void *mus2mid_conversion_data = NULL;
 
-void I_ShutdownMusic(void)
+void I_ShutdownMusic(CCore* cx)
 {
   int i;
-  S_StopMusic ();
+  S_StopMusic(cx);
 
   for (i = 0; music_players[i]; i++)
   {
@@ -938,6 +938,11 @@ void I_ShutdownMusic(void)
   }
 }
 
+void shutdownMusicAtExit(void) {
+    extern CCore* g_cx;
+    I_ShutdownMusic(g_cx);
+}
+
 void I_InitMusic(void)
 {
   int i;
@@ -947,14 +952,16 @@ void I_InitMusic(void)
   for (i = 0; music_players[i]; i++)
     music_player_was_init[i] = music_players[i]->init (snd_samplerate);
 
-  I_AtExit(I_ShutdownMusic, true, "I_ShutdownMusic", exit_priority_normal);
+  I_AtExit(shutdownMusicAtExit, true, "I_ShutdownMusic", exit_priority_normal);
 }
 
 // Derived value (not saved, accounts for muted music)
 static int music_volume;
 
-void I_ResetMusicVolume(void)
+void I_ResetMusicVolume(CCore* cx)
 {
+    (void)cx;
+
   snd_MusicVolume = dsda_IntConfig(dsda_config_music_volume);
 
   if (nomusicparm)
@@ -975,7 +982,7 @@ void I_ResetMusicVolume(void)
   }
 }
 
-void I_PlaySong(int handle, int looping)
+void I_PlaySong(CCore* cx, int handle, int looping)
 {
   if (registered_non_rw)
   {
@@ -988,7 +995,7 @@ void I_PlaySong(int handle, int looping)
     Mix_PlayMusic(music[handle], looping ? -1 : 0);
 
     // haleyjd 10/28/05: make sure volume settings remain consistent
-    I_ResetMusicVolume();
+    I_ResetMusicVolume(cx);
   }
 }
 
@@ -1019,7 +1026,7 @@ void I_PauseSong (int handle)
   // Default - let music continue
 }
 
-void I_ResumeSong (int handle)
+void I_ResumeSong(CCore* cx, int handle)
 {
   if (registered_non_rw)
   {
@@ -1029,7 +1036,7 @@ void I_ResumeSong (int handle)
 
   switch (dsda_IntConfig(dsda_config_mus_pause_opt)) {
     case 0:
-        I_PlaySong(handle,1);
+        I_PlaySong(cx, handle, 1);
       break;
     case 1:
       switch (Mix_GetMusicType(NULL))
@@ -1332,7 +1339,7 @@ static void UpdateMusic (void *buff, unsigned nsamp)
   music_players[current_player]->render (buff, nsamp);
 }
 
-void M_ChangeMIDIPlayer(void)
+void M_ChangeMIDIPlayer(CCore* cx)
 {
   snd_midiplayer = dsda_StringConfig(dsda_config_snd_midiplayer);
 
@@ -1355,6 +1362,6 @@ void M_ChangeMIDIPlayer(void)
     strcpy(music_player_order[5], PLAYER_OPL);
   }
 
-  S_StopMusic();
-  S_RestartMusic();
+  S_StopMusic(cx);
+  S_RestartMusic(cx);
 }

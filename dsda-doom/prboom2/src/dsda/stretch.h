@@ -62,7 +62,7 @@ extern int patches_scalex;
 extern int patches_scaley;
 
 stretch_param_t* dsda_StretchParams(int flags);
-void dsda_SetupStretchParams(void);
+void dsda_SetupStretchParams(CCore*);
 void dsda_EvaluatePatchScale(void);
 
 #endif

@@ -43,7 +43,7 @@
 void M_ScreenShot (void);
 void M_DoScreenShot (const char*); // cph
 
-void M_LoadDefaults (void);
+void M_LoadDefaults (CCore*);
 void M_SaveDefaults (void);
 
 dboolean M_StringCopy(char *dest, const char *src, size_t dest_size);

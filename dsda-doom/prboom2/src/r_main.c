@@ -485,7 +485,7 @@ static void R_InitLightTables (void)
 dboolean setsizeneeded;
 static int setblocks;
 
-void R_SetViewSize(void)
+void R_SetViewSize(CCore* cx)
 {
   setsizeneeded = true;
   setblocks = dsda_IntConfig(dsda_config_screenblocks);
@@ -623,11 +623,8 @@ void R_BuildModelViewMatrix(void)
   m[15] = m[3] * x + m[7] * y + m[11] * z + m[15];
 }
 
-//
-// R_ExecuteSetViewSize
-//
-
-void R_ExecuteSetViewSize (void)
+/// @fn R_ExecuteSetViewSize
+void R_ExecuteSetViewSize (CCore* cx)
 {
   int i;
   int cheight;
@@ -677,7 +674,7 @@ void R_ExecuteSetViewSize (void)
   // e6y: this is a precalculated value for more precise flats drawing (see R_MapPlane)
   viewfocratio = projectiony / wide_centerx;
 
-  dsda_SetupStretchParams();
+  dsda_SetupStretchParams(cx);
 
   R_InitBuffer (SCREENWIDTH, viewheight);
 
@@ -745,16 +742,12 @@ void R_ExecuteSetViewSize (void)
   if (V_IsOpenGLMode())
     dsda_GLSetRenderViewportParams();
 
-  dsda_InitExHud();
+  dsda_InitExHud(cx);
   dsda_BeginRenderStats();
 }
 
-//
-// R_Init
-//
-
-void R_Init (void)
-{
+/// @fn R_Init
+void R_Init(CCore* cx) {
   // CPhipps - R_DrawColumn isn't constant anymore, so must
   //  initialise in code
   // current column draw function
@@ -762,7 +755,7 @@ void R_Init (void)
   R_LoadTrigTables();
   lprintf(LO_DEBUG, "\nR_InitData: ");
   R_InitData();
-  R_SetViewSize();
+  R_SetViewSize(cx);
   lprintf(LO_DEBUG, "\nR_Init: R_InitPlanes ");
   R_InitPlanes();
   lprintf(LO_DEBUG, "R_InitLightTables ");

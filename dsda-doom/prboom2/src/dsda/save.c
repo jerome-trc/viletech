@@ -170,13 +170,13 @@ void dsda_UnArchiveAll(CCore* cx) {
   P_UnArchivePlayers();
   P_UnArchiveWorld();
   P_UnArchivePolyobjs();
-  P_UnArchiveThinkers();
+  P_UnArchiveThinkers(cx);
   P_UnArchiveScripts();
   P_UnArchiveSounds();
   P_UnArchiveAmbientSound();
   P_UnArchiveMisc();
   P_UnArchiveRNG();
-  P_UnArchiveMap();
+  P_UnArchiveMap(cx);
   P_MapEnd();
 
   dsda_UnArchiveInternal();

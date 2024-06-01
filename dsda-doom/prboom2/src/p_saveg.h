@@ -35,6 +35,7 @@
 #define __P_SAVEG__
 
 #include "doomtype.h"
+#include "viletech.nim.h"
 
 #define SAVEVERSION 5
 
@@ -53,11 +54,11 @@ void P_UnArchiveRNG(void);
 
 /* 2/21/98 killough: add automap info to savegame */
 void P_ArchiveMap(void);
-void P_UnArchiveMap(void);
+void P_UnArchiveMap(CCore*);
 
 // dsda - fix save / load synchronization
 void P_ArchiveThinkers(void);
-void P_UnArchiveThinkers(void);
+void P_UnArchiveThinkers(CCore*);
 
 extern byte *save_p;
 extern byte* savebuffer;

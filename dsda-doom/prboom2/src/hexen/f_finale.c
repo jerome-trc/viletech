@@ -46,7 +46,7 @@ static char *FinaleText;
 // static fixed_t *PaletteDelta;
 // static byte *RealPalette;
 
-void Hexen_F_StartFinale(void)
+void Hexen_F_StartFinale(CCore* cx)
 {
     gameaction = ga_nothing;
     gamestate = GS_FINALE;
@@ -60,7 +60,7 @@ void Hexen_F_StartFinale(void)
     FontABaseLump = W_GetNumForName("FONTA_S") + 1;
     InitializeFade(1);
 
-    S_StartSongName("hall", false);     // don't loop the song
+    S_StartSongName(cx, "hall", false);     // don't loop the song
 }
 
 dboolean Hexen_F_Responder(event_t * event)
@@ -68,7 +68,7 @@ dboolean Hexen_F_Responder(event_t * event)
     return false;
 }
 
-void Hexen_F_Ticker(void)
+void Hexen_F_Ticker(CCore* cx)
 {
     FinaleCount++;
     if (FinaleStage < 5 && FinaleCount >= FinaleEndCount)
@@ -84,7 +84,7 @@ void Hexen_F_Ticker(void)
                 FinaleText = GetFinaleText(1);
                 FinaleEndCount = strlen(FinaleText) * TEXTSPEED + TEXTWAIT;
                 FinaleLumpName = "FINALE2";
-                S_StartSongName("orb", false);
+                S_StartSongName(cx, "orb", false);
                 break;
             case 3:            // Pic 2 -- Fade out
                 FinaleEndCount = 70;
@@ -96,7 +96,7 @@ void Hexen_F_Ticker(void)
                 FinaleEndCount = 71;
                 DeInitializeFade();
                 InitializeFade(1);
-                S_StartSongName("chess", true);
+                S_StartSongName(cx, "chess", true);
                 break;
             case 5:            // Pic 3 , Text 3
                 FinaleText = GetFinaleText(2);

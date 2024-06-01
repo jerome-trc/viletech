@@ -41,14 +41,14 @@
 
 static polyobj_t *GetPolyobj(int polyNum);
 static int GetPolyobjMirror(int poly);
-static void ThrustMobj(mobj_t * mobj, seg_t * seg, polyobj_t * po);
-static void UpdateSegBBox(seg_t * seg, polyobj_t * po);
+static void ThrustMobj(CCore*, mobj_t*, seg_t*, polyobj_t*);
+static void UpdateSegBBox(seg_t*, polyobj_t*);
 static void RotatePt(int an, fixed_t * x, fixed_t * y, fixed_t startSpotX, fixed_t startSpotY);
-void UnLinkPolyobj(polyobj_t * po);
-void LinkPolyobj(polyobj_t * po);
-static dboolean CheckMobjBlocking(seg_t * seg, polyobj_t * po);
+void UnLinkPolyobj(polyobj_t*);
+void LinkPolyobj(polyobj_t*);
+static dboolean CheckMobjBlocking(CCore*, seg_t*, polyobj_t*);
 static void InitBlockMap(void);
-static void IterFindPolySegs(int x, int y, seg_t ** segList);
+static void IterFindPolySegs(int x, int y, seg_t**);
 static void SpawnPolyobj(int index, int tag, dboolean crush, dboolean hurt);
 static void TranslateToStartSpot(int tag, int originX, int originY);
 
@@ -136,11 +136,11 @@ dboolean EV_StopPoly(int polyNum)
   return false;
 }
 
-void T_RotatePoly(polyevent_t * pe)
+void T_RotatePoly(CCore* cx, polyevent_t * pe)
 {
     int absSpeed;
 
-    if (PO_RotatePolyobj(pe->polyobj, pe->speed))
+    if (PO_RotatePolyobj(cx, pe->polyobj, pe->speed))
     {
         absSpeed = abs(pe->speed);
 
@@ -251,11 +251,11 @@ dboolean EV_RotatePoly(line_t * line, byte * args, int direction, dboolean overR
     return EV_RotateZDoomPoly(line, args[0], args[1], args[2], direction, overRide);
 }
 
-void T_MovePoly(polyevent_t * pe)
+void T_MovePoly(CCore* cx, polyevent_t * pe)
 {
     int absSpeed;
 
-    if (PO_MovePolyobj(pe->polyobj, pe->xSpeed, pe->ySpeed))
+    if (PO_MovePolyobj(cx, pe->polyobj, pe->xSpeed, pe->ySpeed))
     {
         absSpeed = abs(pe->speed);
         pe->dist -= absSpeed;
@@ -381,7 +381,7 @@ dboolean EV_MovePoly(line_t * line, byte * args, dboolean timesEight, dboolean o
     return EV_MoveZDoomPoly(line, args[0], args[1], args[2], args[3], timesEight, overRide);
 }
 
-void T_PolyDoor(polydoor_t * pd)
+void T_PolyDoor(CCore* cx, polydoor_t * pd)
 {
     int absSpeed;
     polyobj_t *poly;
@@ -399,7 +399,7 @@ void T_PolyDoor(polydoor_t * pd)
     switch (pd->type)
     {
         case PODOOR_SLIDE:
-            if (PO_MovePolyobj(pd->polyobj, pd->xSpeed, pd->ySpeed))
+            if (PO_MovePolyobj(cx, pd->polyobj, pd->xSpeed, pd->ySpeed))
             {
                 absSpeed = abs(pd->speed);
                 pd->dist -= absSpeed;
@@ -449,7 +449,7 @@ void T_PolyDoor(polydoor_t * pd)
             }
             break;
         case PODOOR_SWING:
-            if (PO_RotatePolyobj(pd->polyobj, pd->speed))
+            if (PO_RotatePolyobj(cx, pd->polyobj, pd->speed))
             {
                 absSpeed = abs(pd->speed);
                 if (pd->dist == -1)
@@ -625,7 +625,7 @@ static int GetPolyobjMirror(int poly)
     return 0;
 }
 
-static void ThrustMobj(mobj_t * mobj, seg_t * seg, polyobj_t * po)
+static void ThrustMobj(CCore* cx, mobj_t * mobj, seg_t * seg, polyobj_t * po)
 {
     int thrustAngle;
     int thrustX;
@@ -671,9 +671,9 @@ static void ThrustMobj(mobj_t * mobj, seg_t * seg, polyobj_t * po)
     mobj->momy += thrustY;
     if (po->crush)
     {
-        if (po->hurt || !P_CheckPosition(mobj, mobj->x + thrustX, mobj->y + thrustY))
+        if (po->hurt || !P_CheckPosition(cx, mobj, mobj->x + thrustX, mobj->y + thrustY))
         {
-            P_DamageMobj(mobj, NULL, NULL, 3);
+            P_DamageMobj(cx, mobj, NULL, NULL, 3);
         }
     }
 }
@@ -773,7 +773,7 @@ static void UpdateSegBBox(seg_t * seg, polyobj_t * po)
     }
 }
 
-dboolean PO_MovePolyobj(int num, int x, int y)
+dboolean PO_MovePolyobj(CCore* cx, int num, int x, int y)
 {
     int count;
     seg_t **segList;
@@ -822,7 +822,7 @@ dboolean PO_MovePolyobj(int num, int x, int y)
     segList = po->segs;
     for (count = po->numsegs; count; count--, segList++)
     {
-        if (CheckMobjBlocking(*segList, po))
+        if (CheckMobjBlocking(cx, *segList, po))
         {
             blocked = true;
         }
@@ -889,7 +889,7 @@ static void RotatePt(int an, fixed_t * x, fixed_t * y, fixed_t startSpotX,
     *y = (gyt + gxt) + startSpotY;
 }
 
-dboolean PO_RotatePolyobj(int num, angle_t angle)
+dboolean PO_RotatePolyobj(CCore* cx, int num, angle_t angle)
 {
     int count;
     seg_t **segList;
@@ -926,7 +926,7 @@ dboolean PO_RotatePolyobj(int num, angle_t angle)
     validcount++;
     for (count = po->numsegs; count; count--, segList++)
     {
-        if (CheckMobjBlocking(*segList, po))
+        if (CheckMobjBlocking(cx, *segList, po))
         {
             blocked = true;
         }
@@ -1077,7 +1077,7 @@ void LinkPolyobj(polyobj_t * po)
     }
 }
 
-static dboolean CheckMobjBlocking(seg_t * seg, polyobj_t * po)
+static dboolean CheckMobjBlocking(CCore* cx, seg_t * seg, polyobj_t * po)
 {
     mobj_t *mobj;
     int i, j;
@@ -1128,7 +1128,7 @@ static dboolean CheckMobjBlocking(seg_t * seg, polyobj_t * po)
                     {
                         continue;
                     }
-                    ThrustMobj(mobj, seg, po);
+                    ThrustMobj(cx, mobj, seg, po);
                     blocked = true;
                 }
             }

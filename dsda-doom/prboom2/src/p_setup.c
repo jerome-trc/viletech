@@ -1547,7 +1547,7 @@ static int C_DECL dicmp_sprite_by_pos(const void *a, const void *b)
  * changes like byte order reversals. Take a copy to edit.
  */
 
-static void P_PostProcessThings(int mobjcount, mobj_t **mobjlist)
+static void P_PostProcessThings(CCore* cx, int mobjcount, mobj_t **mobjlist)
 {
   int i;
 
@@ -1558,7 +1558,7 @@ static void P_PostProcessThings(int mobjcount, mobj_t **mobjlist)
 
   if (hexen)
   {
-    P_InitCreatureCorpseQueue(false);   // false = do NOT scan for corpses
+    P_InitCreatureCorpseQueue(cx, false);   // false = do NOT scan for corpses
   }
 
   if (V_IsOpenGLMode())
@@ -1597,7 +1597,7 @@ static void P_PostProcessThings(int mobjcount, mobj_t **mobjlist)
   Z_Free(mobjlist);
 }
 
-static void P_PostProcessMapThing(mapthing_t *mt, int i, int *mobjcount, mobj_t **mobjlist)
+static void P_PostProcessMapThing(CCore* cx, mapthing_t *mt, int i, int *mobjcount, mobj_t **mobjlist)
 {
   mobj_t *mobj;
 
@@ -1611,14 +1611,14 @@ static void P_PostProcessMapThing(mapthing_t *mt, int i, int *mobjcount, mobj_t 
     mt->type = 3004;
 
   // Do spawn all other stuff.
-  mobj = P_SpawnMapThing(mt, i);
+  mobj = P_SpawnMapThing(cx, mt, i);
   if (mobj && mobj->info->speed == 0) {
     mobjlist[*mobjcount] = mobj;
     *mobjcount += 1;
   }
 }
 
-static void P_LoadThings(int lump)
+static void P_LoadThings(CCore* cx, int lump)
 {
   int  i, numthings;
   int mobjcount;
@@ -1693,13 +1693,13 @@ static void P_LoadThings(int lump)
     if (mt.options & MTF_HARD)
       mt.options |= MTF_SKILL4 | MTF_SKILL5;
 
-    P_PostProcessMapThing(&mt, i, &mobjcount, mobjlist);
+    P_PostProcessMapThing(cx, &mt, i, &mobjcount, mobjlist);
   }
 
-  P_PostProcessThings(mobjcount, mobjlist);
+  P_PostProcessThings(cx, mobjcount, mobjlist);
 }
 
-static void P_LoadUDMFThings(int lump)
+static void P_LoadUDMFThings(CCore* cx, int lump)
 {
   int i, numthings;
   int mobjcount;
@@ -1796,10 +1796,10 @@ static void P_LoadUDMFThings(int lump)
     if (dmt->flags & UDMF_TF_COUNTSECRET)
       mt.options |= MTF_COUNTSECRET;
 
-    P_PostProcessMapThing(&mt, i, &mobjcount, mobjlist);
+    P_PostProcessMapThing(cx, &mt, i, &mobjcount, mobjlist);
   }
 
-  P_PostProcessThings(mobjcount, mobjlist);
+  P_PostProcessThings(cx, mobjcount, mobjlist);
 }
 
 //
@@ -3658,7 +3658,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
   }
 
   // Make sure all sounds are stopped before Z_FreeTag.
-  S_Start();
+  S_Start(cx);
 
   Z_FreeLevel();
 
@@ -3825,7 +3825,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
     PO_ResetBlockMap(true);
   }
 
-  map_loader.load_things(level_components.things);
+  map_loader.load_things(cx, level_components.things);
 
   if (map_format.polyobjs)
   {
@@ -3849,7 +3849,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
       if (playeringame[i])
         {
           players[i].mo = NULL; // not needed? - done before P_LoadThings
-          G_DeathMatchSpawnPlayer(i);
+          G_DeathMatchSpawnPlayer(cx, i);
         }
   }
   else // if !deathmatch, check all necessary player starts actually exist
@@ -3918,7 +3918,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
 
   if (dsda_ShowMinimap())
   {
-    AM_Start(false);
+    AM_Start(cx, false);
   }
 }
 

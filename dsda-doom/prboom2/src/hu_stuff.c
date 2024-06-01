@@ -208,26 +208,26 @@ void SetCrosshairTarget(void)
   }
 }
 
-mobj_t *HU_Target(void)
+mobj_t *HU_Target(CCore* cx)
 {
   angle_t an = plr->mo->angle;
 
   // intercepts overflow guard
   overflows_enabled = false;
-  P_AimLineAttack(plr->mo, an, 16*64*FRACUNIT, 0);
+  P_AimLineAttack(cx, plr->mo, an, 16 * 64 * FRACUNIT, 0);
   if (plr->readyweapon == wp_missile || plr->readyweapon == wp_plasma || plr->readyweapon == wp_bfg)
   {
     if (!linetarget)
-      P_AimLineAttack(plr->mo, an += 1<<26, 16*64*FRACUNIT, 0);
+      P_AimLineAttack(cx, plr->mo, an += 1 << 26, 16 * 64 * FRACUNIT, 0);
     if (!linetarget)
-      P_AimLineAttack(plr->mo, an -= 2<<26, 16*64*FRACUNIT, 0);
+      P_AimLineAttack(cx, plr->mo, an -= 2 << 26, 16 * 64 * FRACUNIT, 0);
   }
   overflows_enabled = true;
 
   return linetarget;
 }
 
-void HU_DrawCrosshair(void)
+void HU_DrawCrosshair(CCore* cx)
 {
   int cm;
 
@@ -256,7 +256,7 @@ void HU_DrawCrosshair(void)
   {
     mobj_t *target;
 
-    target = HU_Target();
+    target = HU_Target(cx);
 
     if (target && !(target->flags & MF_SHADOW))
     {
@@ -341,7 +341,7 @@ void HU_AnnounceMap(void)
 //
 // Passed nothing, returns nothing
 //
-void HU_Start(void)
+void HU_Start(CCore* cx)
 {
   HU_InitThresholds();
   HU_InitPlayer();
@@ -349,7 +349,7 @@ void HU_Start(void)
   HU_FetchTitle();
   HU_InitCrosshair();
 
-  dsda_InitExHud();
+  dsda_InitExHud(cx);
 
   HU_AnnounceMap();
 }
@@ -361,7 +361,7 @@ void HU_Start(void)
 //
 // Passed nothing, returns nothing
 //
-void HU_Drawer(void)
+void HU_Drawer(CCore* cx)
 {
   // don't draw anything if there's a fullscreen menu up
   if (menuactive == mnact_full)
@@ -369,7 +369,7 @@ void HU_Drawer(void)
 
   V_BeginUIDraw();
 
-  HU_DrawCrosshair();
+  HU_DrawCrosshair(cx);
 
   dsda_DrawExHud();
 

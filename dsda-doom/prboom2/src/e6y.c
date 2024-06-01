@@ -302,18 +302,18 @@ float gl_render_fovratio;
 float gl_render_fovy = FOV90;
 float gl_render_multiplier;
 
-void M_ChangeAspectRatio(void)
+void M_ChangeAspectRatio(CCore* cx)
 {
   M_ChangeFOV();
 
-  R_SetViewSize();
+  R_SetViewSize(cx);
 }
 
-void M_ChangeStretch(void)
+void M_ChangeStretch(CCore* cx)
 {
   render_stretch_hud = dsda_IntConfig(dsda_config_render_stretch_hud);
 
-  R_SetViewSize();
+  R_SetViewSize(cx);
 }
 
 void M_ChangeFOV(void)

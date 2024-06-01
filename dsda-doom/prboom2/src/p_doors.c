@@ -65,7 +65,7 @@
 // jff 02/08/98 all cases with labels beginning with gen added to support
 // generalized line type behaviors.
 
-void T_VerticalCompatibleDoor(vldoor_t *door)
+void T_VerticalCompatibleDoor(CCore* cx, vldoor_t *door)
 {
   result_e  res;
 
@@ -137,6 +137,7 @@ void T_VerticalCompatibleDoor(vldoor_t *door)
       // Door is moving down
       res = T_MoveCeilingPlane
             (
+                cx,
               door->sector,
               door->speed,
               door->sector->floorheight,
@@ -253,6 +254,7 @@ void T_VerticalCompatibleDoor(vldoor_t *door)
       // Door is moving up
       res = T_MoveCeilingPlane
             (
+                cx,
               door->sector,
               door->speed,
               door->topheight,
@@ -328,7 +330,7 @@ void T_VerticalCompatibleDoor(vldoor_t *door)
   }
 }
 
-void T_VerticalHexenDoor(vldoor_t *door)
+void T_VerticalHexenDoor(CCore* cx, vldoor_t *door)
 {
   result_e res;
 
@@ -366,7 +368,7 @@ void T_VerticalHexenDoor(vldoor_t *door)
       }
       break;
     case -1:               // DOWN
-      res = T_MoveCeilingPlane(door->sector, door->speed,
+      res = T_MoveCeilingPlane(cx, door->sector, door->speed,
                                door->sector->floorheight, NO_CRUSH,
                                door->direction, true);
       if (res == pastdest)
@@ -401,7 +403,7 @@ void T_VerticalHexenDoor(vldoor_t *door)
       }
       break;
     case 1:                // UP
-      res = T_MoveCeilingPlane(door->sector, door->speed,
+      res = T_MoveCeilingPlane(cx, door->sector, door->speed,
                                door->topheight, NO_CRUSH, door->direction, true);
       if (res == pastdest)
       {
@@ -427,7 +429,7 @@ void T_VerticalHexenDoor(vldoor_t *door)
 }
 
 
-void T_VerticalDoor (vldoor_t* door)
+void T_VerticalDoor (CCore* cx, vldoor_t* door)
 {
   map_format.t_vertical_door(door);
 }

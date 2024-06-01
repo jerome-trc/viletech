@@ -20,9 +20,11 @@
 
 #include "doomtype.h"
 
+#include "viletech.nim.h"
+
 #define UNSPECIFIED_COMPLEVEL -2
 
-void dsda_InitSettings(void);
+void dsda_InitSettings(CCore*);
 int dsda_CompatibilityLevel(void);
 void dsda_SetTas(void);
 dboolean dsda_ViewBob(void);
@@ -65,7 +67,7 @@ int dsda_CycleShowAliveMonsters(void);
 int dsda_RevealAutomap(void);
 void dsda_ResetRevealMap(void);
 int dsda_GameSpeed(void);
-void dsda_UpdateGameSpeed(int value);
+void dsda_UpdateGameSpeed(CCore*, int value);
 int dsda_AutoKeyFrameInterval(void);
 int dsda_AutoKeyFrameDepth(void);
 void dsda_SkipNextWipe(void);

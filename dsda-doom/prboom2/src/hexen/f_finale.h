@@ -19,10 +19,11 @@
 #define __HEXEN_F_FINALE__
 
 #include "d_event.h"
+#include "viletech.nim.h"
 
-dboolean Hexen_F_Responder(event_t * event);
+dboolean Hexen_F_Responder(event_t* event);
 void Hexen_F_Drawer(void);
-void Hexen_F_Ticker(void);
-void Hexen_F_StartFinale(void);
+void Hexen_F_Ticker(CCore*);
+void Hexen_F_StartFinale(CCore*);
 
 #endif

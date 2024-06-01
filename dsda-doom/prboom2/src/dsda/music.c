@@ -135,11 +135,11 @@ void dsda_UnArchiveMusic(void) {
   P_LOAD_X(music_queue);
 }
 
-dboolean dsda_StartQueuedMusic(void) {
+dboolean dsda_StartQueuedMusic(CCore* cx) {
   if (music_queue == -1)
     return false;
 
-  S_ChangeMusInfoMusic(music_queue, true);
+  S_ChangeMusInfoMusic(cx, music_queue, true);
   music_queue = -1;
 
   return true;

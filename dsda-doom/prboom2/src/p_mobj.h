@@ -443,20 +443,20 @@ int P_MobjSpawnHealth(const mobj_t* mobj);
 mobj_t* P_SubstNullMobj (mobj_t* th);
 void    P_RespawnSpecials(void);
 mobj_t  *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
-void    P_RemoveMobj(mobj_t *th);
-dboolean P_SetMobjState(mobj_t *mobj, statenum_t state);
-void    P_MobjThinker(mobj_t *mobj);
-void    P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
-void    P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage, mobj_t *bleeder);
-mobj_t  *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
-mobj_t  *P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
+void    P_RemoveMobj(CCore*, mobj_t*);
+dboolean P_SetMobjState(CCore*, mobj_t*, statenum_t);
+void    P_MobjThinker(CCore*, mobj_t*);
+void    P_SpawnPuff(CCore*, fixed_t x, fixed_t y, fixed_t z);
+void    P_SpawnBlood(CCore*, fixed_t x, fixed_t y, fixed_t z, int damage, mobj_t *bleeder);
+mobj_t  *P_SpawnMissile(CCore*, mobj_t *source, mobj_t *dest, mobjtype_t);
+mobj_t  *P_SpawnPlayerMissile(CCore*, mobj_t *source, mobjtype_t type);
 dboolean P_IsDoomnumAllowed(int doomnum);
-mobj_t* P_SpawnMapThing (const mapthing_t*  mthing, int index);
-void    P_SpawnPlayer(int n, const mapthing_t *mthing);
-dboolean P_CheckMissileSpawn(mobj_t*);  // killough 8/2/98
-void    P_ExplodeMissile(mobj_t*);    // killough
+mobj_t* P_SpawnMapThing (CCore*, const mapthing_t*, int index);
+void    P_SpawnPlayer(int n, const mapthing_t*);
+dboolean P_CheckMissileSpawn(CCore*, mobj_t*); // killough 8/2/98
+void    P_ExplodeMissile(CCore*, mobj_t*); // killough
 
-void P_RemoveMonsters(void);
+void P_RemoveMonsters(CCore*);
 
 // heretic
 
@@ -535,40 +535,40 @@ void P_RemoveMonsters(void);
 
 extern mobj_t* MissileMobj;
 
-void P_BlasterMobjThinker(mobj_t * mobj);
-mobj_t *P_SpawnMissileAngle(mobj_t * source, mobjtype_t type, angle_t angle, fixed_t momz);
-dboolean P_SetMobjStateNF(mobj_t * mobj, statenum_t state);
+void P_BlasterMobjThinker(CCore*, mobj_t*);
+mobj_t *P_SpawnMissileAngle(CCore*, mobj_t * source, mobjtype_t type, angle_t angle, fixed_t momz);
+dboolean P_SetMobjStateNF(CCore*, mobj_t*, statenum_t);
 void P_ThrustMobj(mobj_t * mo, angle_t angle, fixed_t move);
 dboolean P_SeekerMissile(mobj_t * actor, mobj_t ** seekTarget, angle_t thresh, angle_t turnMax, dboolean seekcenter);
-mobj_t *P_SPMAngle(mobj_t * source, mobjtype_t type, angle_t angle);
-int P_HitFloor(mobj_t * thing);
+mobj_t *P_SPMAngle(CCore*, mobj_t * source, mobjtype_t type, angle_t angle);
+int P_HitFloor(CCore* cx, mobj_t*);
 int P_GetThingFloorType(mobj_t * thing);
 int P_FaceMobj(mobj_t * source, mobj_t * target, angle_t * delta);
 void P_BloodSplatter(fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
 void P_RipperBlood(mobj_t * mo, mobj_t * bleeder);
-dboolean Raven_P_SetMobjState(mobj_t * mobj, statenum_t state);
-void P_FloorBounceMissile(mobj_t * mo);
+dboolean Raven_P_SetMobjState(CCore*, mobj_t*, statenum_t);
+void P_FloorBounceMissile(CCore*, mobj_t*);
 void Raven_P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
 
 // hexen
 
-mobj_t *P_SpawnMissileXYZ(fixed_t x, fixed_t y, fixed_t z,
-                          mobj_t * source, mobj_t * dest, mobjtype_t type);
-mobj_t *P_SpawnMissileAngleSpeed(mobj_t * source, mobjtype_t type,
+mobj_t *P_SpawnMissileXYZ(CCore*, fixed_t x, fixed_t y, fixed_t z,
+                          mobj_t * source, mobj_t * dest, mobjtype_t);
+mobj_t *P_SpawnMissileAngleSpeed(CCore*, mobj_t * source, mobjtype_t type,
                                  angle_t angle, fixed_t momz, fixed_t speed);
-mobj_t *P_SPMAngleXYZ(mobj_t * source, fixed_t x, fixed_t y,
+mobj_t *P_SPMAngleXYZ(CCore*, mobj_t * source, fixed_t x, fixed_t y,
                       fixed_t z, mobjtype_t type, angle_t angle);
-mobj_t *P_SpawnKoraxMissile(fixed_t x, fixed_t y, fixed_t z,
-                            mobj_t * source, mobj_t * dest, mobjtype_t type);
+mobj_t *P_SpawnKoraxMissile(CCore*, fixed_t x, fixed_t y, fixed_t z,
+                            mobj_t * source, mobj_t * dest, mobjtype_t);
 mobj_t *P_FindMobjFromTID(short tid, int *searchPosition);
 void P_BloodSplatter2(fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
 
 // zdoom
 
 fixed_t P_MobjGravity(mobj_t* mo);
-dboolean P_SpawnThing(short thing_id, mobj_t *source, int type,
+dboolean P_SpawnThing(CCore*, short thing_id, mobj_t *source, int type,
                       angle_t angle, dboolean fog, short new_thing_id);
-dboolean P_SpawnProjectile(short thing_id, mobj_t *source, int spawn_num, angle_t angle,
+dboolean P_SpawnProjectile(CCore*, short thing_id, mobj_t *source, int spawn_num, angle_t angle,
 	                         fixed_t speed, fixed_t vspeed, short dest_id, mobj_t *forcedest,
                            int gravity, short new_thing_id);
 

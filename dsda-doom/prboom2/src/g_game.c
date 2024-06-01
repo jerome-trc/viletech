@@ -289,7 +289,7 @@ int RebornPosition;
 leave_data_t leave_data;
 
 void G_DoTeleportNewMap(CCore*);
-static void Hexen_G_DoReborn(int playernum);
+static void Hexen_G_DoReborn(CCore*, int playernum);
 // end hexen
 
 typedef enum
@@ -1238,15 +1238,15 @@ static void G_DoLoadLevel(CCore* cx)
   dsda_ResetExCmdQueue();
 
   if (dsda_BuildMode() || dsda_StartInBuildMode())
-    dsda_EnterBuildMode();
+    dsda_EnterBuildMode(cx);
 
   // killough 5/13/98: in case netdemo has consoleplayer other than green
   ST_Start();
-  HU_Start();
+  HU_Start(cx);
 
   // The border texture can change between maps, which must queue a backscreen fill
   {
-    void D_MustFillBackScreen();
+    void D_MustFillBackScreen(void);
 
     static int old_grnrock = -1;
 
@@ -1278,7 +1278,7 @@ dboolean G_Responder(CCore* cx, event_t* ev) {
     gamestate == GS_LEVEL && (
       HU_Responder(ev) ||
       ST_Responder(ev) ||
-      AM_Responder(ev)
+      AM_Responder(cx, ev)
     )
   ) return true;
 
@@ -1296,7 +1296,7 @@ dboolean G_Responder(CCore* cx, event_t* ev) {
     while (!playeringame[displayplayer] && displayplayer!=consoleplayer);
 
     ST_Start();    // killough 3/7/98: switch status bar views too
-    HU_Start();
+    HU_Start(cx);
     S_UpdateSounds();
     R_ActivateSectorInterpolations();
     R_SmoothPlaying_Reset(NULL);
@@ -1319,7 +1319,7 @@ dboolean G_Responder(CCore* cx, event_t* ev) {
       if (dsda_Paused())
         S_PauseSound();
       else
-        S_ResumeSound();
+        S_ResumeSound(cx);
       return true;
     }
   }
@@ -1433,7 +1433,7 @@ void G_Ticker(CCore* cx) {
   // do player reborns if needed
   for (i = 0; i < g_maxplayers; i++)
     if (playeringame[i] && players[i].playerstate == PST_REBORN)
-      G_DoReborn(i);
+      G_DoReborn(cx, i);
   P_MapEnd();
 
   // do things to change the game state
@@ -1461,7 +1461,7 @@ void G_Ticker(CCore* cx) {
         G_DoCompleted(cx);
         break;
       case ga_victory:
-        F_StartFinale();
+        F_StartFinale(cx);
         break;
       case ga_worlddone:
         G_DoWorldDone(cx);
@@ -1560,7 +1560,7 @@ void G_Ticker(CCore* cx) {
               if (dsda_Paused())
                 S_PauseSound();
               else
-                S_ResumeSound();
+                S_ResumeSound(cx);
               break;
           }
           if (!raven) players[i].cmd.buttons = 0;
@@ -1632,7 +1632,7 @@ void G_Ticker(CCore* cx) {
   switch (gamestate)
   {
     case GS_LEVEL:
-      P_Ticker();
+      P_Ticker(cx);
       P_WalkTicker();
       mlooky = 0;
       AM_Ticker();
@@ -1641,11 +1641,11 @@ void G_Ticker(CCore* cx) {
       break;
 
     case GS_INTERMISSION:
-      WI_Ticker();
+      WI_Ticker(cx);
       break;
 
     case GS_FINALE:
-      F_Ticker();
+      F_Ticker(cx);
       break;
 
     case GS_DEMOSCREEN:
@@ -1710,7 +1710,7 @@ static void G_FinishLevelBehaviour(finish_level_behaviour_t *flb, player_t *p)
   flb->remove_cards = (!hexen || different_cluster);
 }
 
-static void G_PlayerFinishLevel(int player)
+static void G_PlayerFinishLevel(CCore* cx, int player)
 {
   int i;
   player_t *p = &players[player];
@@ -1734,7 +1734,7 @@ static void G_PlayerFinishLevel(int player)
       if (hexen)
         p->powers[pw_flight] = 0;
 
-      P_PlayerUseArtifact(p, flb.use_flight_artifact);
+      P_PlayerUseArtifact(cx, p, flb.use_flight_artifact);
     }
   }
 
@@ -1866,7 +1866,7 @@ void G_PlayerReborn (int player)
 // because something is occupying it
 //
 
-static dboolean G_CheckSpot(int playernum, mapthing_t *mthing)
+static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
 {
   fixed_t     x,y;
   subsector_t *ss;
@@ -1890,7 +1890,7 @@ static dboolean G_CheckSpot(int playernum, mapthing_t *mthing)
     mobj_t *mo;
 
     players[playernum].mo->flags2 &= ~MF2_PASSMOBJ;
-    if (!P_CheckPosition(players[playernum].mo, x, y))
+    if (!P_CheckPosition(cx, players[playernum].mo, x, y))
     {
       players[playernum].mo->flags2 |= MF2_PASSMOBJ;
       return false;
@@ -1918,7 +1918,7 @@ static dboolean G_CheckSpot(int playernum, mapthing_t *mthing)
   //    return false;
 
   players[playernum].mo->flags |=  MF_SOLID;
-  i = P_CheckPosition(players[playernum].mo, x, y);
+  i = P_CheckPosition(cx, players[playernum].mo, x, y);
   players[playernum].mo->flags &= ~MF_SOLID;
   if (!i)
     return false;
@@ -1979,7 +1979,7 @@ static dboolean G_CheckSpot(int playernum, mapthing_t *mthing)
 // Spawns a player at one of the random death match spots
 // called at level load and each death
 //
-void G_DeathMatchSpawnPlayer (int playernum)
+void G_DeathMatchSpawnPlayer (CCore* cx, int playernum)
 {
   int j, selections = deathmatch_p - deathmatchstarts;
 
@@ -1990,7 +1990,7 @@ void G_DeathMatchSpawnPlayer (int playernum)
   for (j=0 ; j<20 ; j++)
     {
       int i = P_Random(pr_dmspawn) % selections;
-      if (G_CheckSpot (playernum, &deathmatchstarts[i]) )
+      if (G_CheckSpot (cx, playernum, &deathmatchstarts[i]) )
         {
           deathmatchstarts[i].type = playernum+1;
           P_SpawnPlayer (playernum, &deathmatchstarts[i]);
@@ -2002,16 +2002,15 @@ void G_DeathMatchSpawnPlayer (int playernum)
   P_SpawnPlayer (playernum, &playerstarts[0][playernum]);
 }
 
-//
-// G_DoReborn
-//
-
-void G_DoReborn (int playernum)
+/// @fn G_DoReborn
+void G_DoReborn (CCore* cx, int playernum)
 {
   dsda_WatchReborn(playernum);
 
-  if (hexen)
-    return Hexen_G_DoReborn(playernum);
+  if (hexen) {
+    Hexen_G_DoReborn(cx, playernum);
+    return;
+  }
 
   if (!netgame && !(map_info.flags & MI_ALLOW_RESPAWN) && !(skill_info.flags & SI_PLAYER_RESPAWN))
     gameaction = ga_loadlevel;      // reload the level from scratch
@@ -2025,11 +2024,11 @@ void G_DoReborn (int playernum)
       // spawn at random spot if in death match
       if (deathmatch)
         {
-          G_DeathMatchSpawnPlayer (playernum);
+          G_DeathMatchSpawnPlayer (cx, playernum);
           return;
         }
 
-      if (G_CheckSpot (playernum, &playerstarts[0][playernum]) )
+      if (G_CheckSpot (cx, playernum, &playerstarts[0][playernum]) )
         {
           P_SpawnPlayer (playernum, &playerstarts[0][playernum]);
           return;
@@ -2038,7 +2037,7 @@ void G_DoReborn (int playernum)
       // try to spawn at one of the other players spots
       for (i = 0; i < g_maxplayers; i++)
         {
-          if (G_CheckSpot (playernum, &playerstarts[0][i]) )
+          if (G_CheckSpot (cx, playernum, &playerstarts[0][i]) )
             {
               P_SpawnPlayer (playernum, &playerstarts[0][i]);
               return;
@@ -2106,9 +2105,9 @@ void G_DoCompleted(CCore* cx) {
 
   for (i = 0; i < g_maxplayers; i++)
     if (playeringame[i])
-      G_PlayerFinishLevel(i);        // take away cards and stuff
+      G_PlayerFinishLevel(cx, i); // take away cards and stuff
 
-  AM_Stop(false);
+  AM_Stop(cx, false);
 
   e6y_G_DoCompleted(cx);
   dsda_WatchLevelCompletion();
@@ -2156,11 +2155,11 @@ void G_DoCompleted(CCore* cx) {
 
   if (!(map_info.flags & MI_INTERMISSION))
   {
-    G_WorldDone();
+    G_WorldDone(cx);
   }
   else
   {
-    WI_Start (&wminfo);
+    WI_Start(cx, &wminfo);
   }
 }
 
@@ -2168,7 +2167,7 @@ void G_DoCompleted(CCore* cx) {
 // G_WorldDone
 //
 
-void G_WorldDone (void)
+void G_WorldDone (CCore* cx)
 {
   int done_behaviour;
 
@@ -2209,7 +2208,7 @@ void G_WorldDone (void)
 
   if (done_behaviour & WD_START_FINALE)
   {
-    F_StartFinale();
+    F_StartFinale(cx);
 
     return;
   }
@@ -2377,7 +2376,7 @@ void G_AfterLoad(CCore* cx)
   }
 
   if (setsizeneeded)
-    R_ExecuteSetViewSize ();
+    R_ExecuteSetViewSize(cx);
 
   R_FillBackScreen ();
 
@@ -2919,7 +2918,7 @@ void G_InitNew(CCore* cx, int skill, int episode, int map, dboolean prepare)
   if (dsda_Paused())
   {
     dsda_ResetPauseMode();
-    S_ResumeSound();
+    S_ResumeSound(cx);
   }
 
   if (episode < 1)
@@ -3467,13 +3466,9 @@ void G_BeginRecording(CCore* cx)
   Z_Free(demostart);
 }
 
-//
-// G_PlayDemo
-//
-
 static const char *defdemoname;
 
-void G_DeferedPlayDemo (const char* name)
+void G_DeferedPlayDemo(CCore* cx, const char* name)
 {
   defdemoname = name;
   gameaction = ga_playdemo;
@@ -4154,7 +4149,7 @@ void G_ContinueDemo(CCore* cx, const char *playback_name)
   {
     G_StartDemoPlayback(cx, demobuffer, demolength, PLAYBACK_JOIN_ON_END);
 
-    dsda_InitDemoRecording();
+    dsda_InitDemoRecording(cx);
     G_BeginRecording(cx);
   }
 }
@@ -4262,7 +4257,7 @@ void G_DoTeleportNewMap(CCore* cx)
     dsda_EvaluateSkipModeDoTeleportNewMap(cx);
 }
 
-void Hexen_G_DoReborn(int playernum)
+void Hexen_G_DoReborn(CCore* cx, int playernum)
 {
     int i;
     dboolean oldWeaponowned[HEXEN_NUMWEAPONS];
@@ -4281,7 +4276,7 @@ void Hexen_G_DoReborn(int playernum)
 
         if (deathmatch)
         {                       // Spawn at random spot if in death match
-            G_DeathMatchSpawnPlayer(playernum);
+            G_DeathMatchSpawnPlayer(cx, playernum);
             return;
         }
 
@@ -4295,7 +4290,7 @@ void Hexen_G_DoReborn(int playernum)
         }
 
         foundSpot = false;
-        if (G_CheckSpot(playernum, &playerstarts[RebornPosition][playernum]))
+        if (G_CheckSpot(cx, playernum, &playerstarts[RebornPosition][playernum]))
         {                       // Appropriate player start spot is open
             P_SpawnPlayer(playernum, &playerstarts[RebornPosition][playernum]);
             foundSpot = true;
@@ -4305,7 +4300,7 @@ void Hexen_G_DoReborn(int playernum)
             // Try to spawn at one of the other player start spots
             for (i = 0; i < g_maxplayers; i++)
             {
-                if (G_CheckSpot(playernum, &playerstarts[RebornPosition][i]))
+                if (G_CheckSpot(cx, playernum, &playerstarts[RebornPosition][i]))
                 {               // Found an open start spot
 
                     // Fake as other player

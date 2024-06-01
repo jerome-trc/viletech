@@ -51,20 +51,16 @@
 
 #include <errno.h>
 
-#include "doomdef.h"
 #include "d_main.h"
-#include "m_fixed.h"
 #include "i_system.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "lprintf.h"
-#include "m_random.h"
 #include "doomstat.h"
 #include "g_game.h"
 #include "m_misc.h"
 #include "i_sound.h"
 #include "i_main.h"
-#include "r_fps.h"
 #include "lprintf.h"
 
 #include <signal.h>
@@ -73,12 +69,10 @@
 
 #include "e6y.h"
 
-#include "dsda.h"
 #include "dsda/args.h"
 #include "dsda/analysis.h"
 #include "dsda/args.h"
 #include "dsda/endoom.h"
-#include "dsda/settings.h"
 #include "dsda/signal_context.h"
 #include "dsda/split_tracker.h"
 #include "dsda/text_file.h"
@@ -87,6 +81,9 @@
 #include "dsda/zipfile.h"
 
 #include "viletech.nim.h"
+
+/// Only for use by exit handlers.
+CCore* g_cx = NULL;
 
 /* Most of the following has been rewritten by Lee Killough
  *
@@ -201,13 +198,11 @@ void I_SafeExit(int rc)
   exit(rc);
 }
 
-static CCore* s_cx = NULL;
-
 static void I_EssentialQuit(void)
 {
   if (demorecording)
   {
-    G_CheckDemoStatus(s_cx);
+    G_CheckDemoStatus(g_cx);
   }
 
   dsda_ExportTextFile();
@@ -298,7 +293,7 @@ int dsdaMain(CCore* cx, int argc, char **argv)
   // init subsystems
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "M_LoadDefaults: Load system defaults.\n");
-  M_LoadDefaults();              // load before initing other systems
+  M_LoadDefaults(cx); // load before initing other systems
   lprintf(LO_DEBUG, "\n");
 
   /* Version info */
@@ -320,7 +315,7 @@ int dsdaMain(CCore* cx, int argc, char **argv)
      left in an unstable state.
   */
 
-    s_cx = cx;
+    g_cx = cx;
 
   I_AtExit(I_EssentialQuit, true, "I_EssentialQuit", exit_priority_first);
   I_AtExit(I_Quit, false, "I_Quit", exit_priority_last);

@@ -135,7 +135,7 @@ sector_t* GetBestBleedSector(sector_t* source, enum bleedtype type);
 void gld_DrawMapLines(void);
 
 //multisampling
-void gld_MultisamplingInit(void);
+void gld_MultisamplingInit(CCore*);
 void gld_MultisamplingSet(void);
 
 void gld_ProcessTexturedMap(void);

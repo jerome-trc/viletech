@@ -266,7 +266,7 @@ void dsda_MarkCompatibilityLevelUnspecified(void) {
   compatibility_level_unspecified = true;
 }
 
-void dsda_InitDemoRecording(void) {
+void dsda_InitDemoRecording(CCore* cx) {
   static dboolean demo_key_frame_initialized;
 
   if (compatibility_level_unspecified)
@@ -285,7 +285,7 @@ void dsda_InitDemoRecording(void) {
 
   // prboom+ has already cached its settings (with demorecording == false)
   // we need to reset things here to satisfy strict mode
-  dsda_InitSettings();
+  dsda_InitSettings(cx);
 
   dsda_LiftInputRestrictions();
   dsda_ResetFeatures();
@@ -397,7 +397,7 @@ dboolean dsda_StartDemoSegment(CCore* cx, const char* demo_name) {
 
   dsda_UpdateFlag(dsda_arg_dsdademo, true);
   dsda_SetDemoBaseName(demo_name);
-  dsda_InitDemoRecording();
+  dsda_InitDemoRecording(cx);
   G_BeginRecording(cx);
   dsda_SetExtraDemoHeaderFlag(DF_FROM_KEYFRAME);
 
@@ -411,7 +411,7 @@ dboolean dsda_StartDemoSegment(CCore* cx, const char* demo_name) {
     Z_Free(key_frame.buffer);
   }
 
-  dsda_UpdateStrictMode();
+  dsda_UpdateStrictMode(cx);
 
   return true;
 }

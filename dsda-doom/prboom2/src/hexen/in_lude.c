@@ -19,13 +19,9 @@
 #include "d_event.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "i_system.h"
-#include "i_video.h"
 #include "v_video.h"
 #include "lprintf.h"
 #include "w_wad.h"
-#include "g_game.h"
-#include "p_setup.h"
 
 #include "dsda/exhud.h"
 #include "dsda/mapinfo.h"
@@ -51,7 +47,7 @@ static void WaitStop(void);
 static void Stop(void);
 static void LoadPics(void);
 static void CheckForSkip(void);
-static void InitStats(void);
+static void InitStats(CCore*);
 static void DrDeathTally(void);
 static void DrNumber(int val, int x, int y, int wrapThresh);
 static void DrNumberBold(int val, int x, int y, int wrapThresh);
@@ -75,16 +71,18 @@ static char *HubText;
 
 extern dboolean BorderNeedRefresh;
 
-void Hexen_IN_Start(wbstartstruct_t* wbstartstruct)
+void Hexen_IN_Start(CCore* cx, wbstartstruct_t* wbstartstruct)
 {
+    (void)wbstartstruct;
+
     V_SetPalette(0);
-    InitStats();
+    InitStats(cx);
     LoadPics();
     intermission = true;
     interstate = 0;
     skipintermission = false;
     intertime = 0;
-    AM_Stop(false);
+    AM_Stop(cx, false);
     SN_StopAllSequences();
 }
 
@@ -112,7 +110,7 @@ static const char *ClusMsgLumpNames[] = {
     "clus5msg"
 };
 
-static void InitStats(void)
+static void InitStats(CCore* cx)
 {
     int i;
     int j;
@@ -144,7 +142,7 @@ static void InitStats(void)
                 ClusterMessage[msgSize] = '\0';    // Append terminator
                 HubText = ClusterMessage;
                 HubCount = strlen(HubText) * TEXTSPEED + TEXTWAIT;
-                S_StartSongName("hub", true);
+                S_StartSongName(cx, "hub", true);
             }
         }
     }
@@ -185,7 +183,7 @@ static void InitStats(void)
         {                       // don't do the slaughter stuff if everyone is equal
             slaughterboy = 0;
         }
-        S_StartSongName("hub", true);
+        S_StartSongName(cx, "hub", true);
     }
 }
 

@@ -221,7 +221,7 @@ void V_SetPalette(int pal);
 void V_SetPlayPal(int playpal_index);
 
 // Alt-Enter: fullscreen <-> windowed
-void V_ToggleFullscreen(void);
+void V_ToggleFullscreen(CCore*);
 void V_ChangeScreenResolution(CCore*);
 
 // CPhipps - function to plot a pixel

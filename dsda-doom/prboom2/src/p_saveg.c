@@ -465,12 +465,12 @@ void P_ArchiveMap(void)
   }
 }
 
-void P_UnArchiveMap(void)
+void P_UnArchiveMap(CCore* cx)
 {
   P_LOAD_X(automap_active);
 
   if (automap_active)
-    AM_Start(true);
+    AM_Start(cx, true);
 
   P_LOAD_X(markpointnum);
 
@@ -1139,7 +1139,7 @@ void P_ArchiveThinkers(void) {
 
 // dsda - fix save / load synchronization
 // merges P_UnArchiveThinkers & P_UnArchiveSpecials
-void P_UnArchiveThinkers(void) {
+void P_UnArchiveThinkers(CCore* cx) {
   thinker_t *th;
   mobj_t    **mobj_p;    // killough 2/14/98: Translation table
   int    mobj_count;        // killough 2/14/98: size of or index into table
@@ -1156,8 +1156,8 @@ void P_UnArchiveThinkers(void) {
     thinker_t *next = th->next;
     if (P_IsMobjThinker(th))
     {
-      P_RemoveMobj ((mobj_t *) th);
-      P_RemoveThinkerDelayed(th); // fix mobj leak
+      P_RemoveMobj(cx, (mobj_t *) th);
+      P_RemoveThinkerDelayed(cx, th); // fix mobj leak
     }
     else
       Z_Free (th);
@@ -1722,7 +1722,7 @@ void P_UnArchiveThinkers(void) {
 
   if (hexen)
   {
-    P_InitCreatureCorpseQueue(true);    // true = scan for corpses
+    P_InitCreatureCorpseQueue(cx, true);    // true = scan for corpses
   }
 
   // killough 3/26/98: Spawn icon landings:

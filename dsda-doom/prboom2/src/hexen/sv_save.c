@@ -85,7 +85,7 @@ typedef struct
     think_t thinkerFunc;
     void (*writeFunc)();
     void (*readFunc)();
-    void (*restoreFunc) ();
+    void (*restoreFunc)();
     size_t size;
 } thinkInfo_t;
 
@@ -1435,7 +1435,7 @@ static void ArchiveMobjs(void)
     }
 }
 
-static void UnarchiveMobjs(void)
+static void UnarchiveMobjs(CCore* cx)
 {
     int i;
     mobj_t *mobj;
@@ -1484,7 +1484,7 @@ static void UnarchiveMobjs(void)
         mobj->thinker.references = references;
     }
     map_format.build_mobj_thing_id_list();
-    P_InitCreatureCorpseQueue(true);    // true = scan for corpses
+    P_InitCreatureCorpseQueue(cx, true); // true = scan for corpses
 }
 
 static void RestoreFloorWaggle(planeWaggle_t *th)
@@ -1518,7 +1518,6 @@ static void RestoreMoveCeiling(ceiling_t *ceiling)
     ceiling->sector->ceilingdata = T_MoveCeiling;
     P_AddActiveCeiling(ceiling);
 }
-
 
 static thinkInfo_t ThinkerInfo[] = {
     {
@@ -1732,7 +1731,7 @@ static void UnarchiveMisc(void)
     }
 }
 
-static void RemoveAllThinkers(void)
+static void RemoveAllThinkers(CCore* cx)
 {
     thinker_t *thinker;
     thinker_t *nextThinker;
@@ -1743,8 +1742,8 @@ static void RemoveAllThinkers(void)
         nextThinker = thinker->next;
         if (SV_IsMobjThinker(thinker))
         {
-            P_RemoveMobj((mobj_t *) thinker);
-            P_RemoveThinkerDelayed(thinker); // fix mobj leak
+            P_RemoveMobj(cx, (mobj_t *) thinker);
+            P_RemoveThinkerDelayed(cx, thinker); // fix mobj leak
         }
         else
         {
@@ -1854,7 +1853,7 @@ static void ArchivePolyobjs(void)
     }
 }
 
-static void UnarchivePolyobjs(void)
+static void UnarchivePolyobjs(CCore* cx)
 {
     int i;
     fixed_t deltaX;
@@ -1871,10 +1870,10 @@ static void UnarchivePolyobjs(void)
         {
             I_Error("UnarchivePolyobjs: Invalid polyobj tag");
         }
-        PO_RotatePolyobj(polyobjs[i].tag, (angle_t) SV_ReadLong());
+        PO_RotatePolyobj(cx, polyobjs[i].tag, (angle_t) SV_ReadLong());
         deltaX = SV_ReadLong() - polyobjs[i].startSpot.x;
         deltaY = SV_ReadLong() - polyobjs[i].startSpot.y;
-        PO_MovePolyobj(polyobjs[i].tag, deltaX, deltaY);
+        PO_MovePolyobj(cx, polyobjs[i].tag, deltaX, deltaY);
     }
 }
 
@@ -1910,7 +1909,7 @@ void SV_LoadMap(CCore* cx)
     G_InitNew(cx, gameskill, gameepisode, gamemap, false);
 
     // Remove all thinkers
-    RemoveAllThinkers();
+    RemoveAllThinkers(cx);
 
     // Initialize the input buffer
     SV_OpenRead(gamemap);
@@ -1921,8 +1920,8 @@ void SV_LoadMap(CCore* cx)
     leveltime = SV_ReadLong();
 
     UnarchiveWorld();
-    UnarchivePolyobjs();
-    UnarchiveMobjs();
+    UnarchivePolyobjs(cx);
+    UnarchiveMobjs(cx);
     UnarchiveThinkers();
     UnarchiveScripts();
     UnarchiveSounds();
@@ -2000,7 +1999,7 @@ void SV_MapTeleport(CCore* cx, int map, int position)
         {
             if (playeringame[i])
             {
-                P_RemoveMobj(players[i].mo);
+                P_RemoveMobj(cx, players[i].mo);
             }
         }
     }
@@ -2042,8 +2041,8 @@ void SV_MapTeleport(CCore* cx, int map, int position)
                                playerstarts[0][i].y, 0,
                                HEXEN_MT_PLAYER_FIGHTER);
             players[i].mo = mobj;
-            G_DeathMatchSpawnPlayer(i);
-            P_RemoveMobj(mobj);
+            G_DeathMatchSpawnPlayer(cx, i);
+            P_RemoveMobj(cx, mobj);
         }
         else
         {
@@ -2093,7 +2092,7 @@ void SV_MapTeleport(CCore* cx, int map, int position)
     {
         if (playeringame[i])
         {
-            P_TeleportMove(players[i].mo, players[i].mo->x, players[i].mo->y, false);
+            P_TeleportMove(cx, players[i].mo, players[i].mo->x, players[i].mo->y, false);
         }
     }
 

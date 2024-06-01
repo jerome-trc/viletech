@@ -453,7 +453,7 @@ void P_SetThingPosition(mobj_t *thing)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t*))
+dboolean P_BlockLinesIterator(CCore* cx, int x, int y, dboolean func(CCore*, line_t*))
 {
   int        offset;
   const int  *list;   // killough 3/1/98: for removal of blockmap limit
@@ -485,7 +485,7 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t*))
               continue;
             }
             (*tempSeg)->linedef->validcount = validcount;
-            if (!func((*tempSeg)->linedef))
+            if (!func(cx, (*tempSeg)->linedef))
             {
               return false;
             }
@@ -519,7 +519,7 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t*))
       if (ld->validcount == validcount)
         continue;       // line has already been checked
       ld->validcount = validcount;
-      if (!func(ld))
+      if (!func(cx, ld))
         return false;
     }
   return true;  // everything was checked
@@ -607,12 +607,12 @@ dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t*))
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t*))
+dboolean P_BlockThingsIterator(CCore* cx, int x, int y, dboolean func(CCore*, mobj_t*))
 {
   mobj_t *mobj;
   if (!(x<0 || y<0 || x>=bmapwidth || y>=bmapheight))
     for (mobj = blocklinks[y*bmapwidth+x]; mobj; mobj = mobj->bnext)
-      if (!func(mobj))
+      if (!func(cx, mobj))
         return false;
   return true;
 }
@@ -649,7 +649,7 @@ divline_t trace;
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean PIT_AddLineIntercepts(line_t *ld)
+dboolean PIT_AddLineIntercepts(CCore* cx, line_t *ld)
 {
   int       s1;
   int       s2;
@@ -695,7 +695,7 @@ dboolean PIT_AddLineIntercepts(line_t *ld)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean PIT_AddThingIntercepts(mobj_t *thing)
+dboolean PIT_AddThingIntercepts(CCore* cx, mobj_t *thing)
 {
   fixed_t   x1, y1;
   fixed_t   x2, y2;
@@ -753,7 +753,7 @@ dboolean PIT_AddThingIntercepts(mobj_t *thing)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
+dboolean P_TraverseIntercepts(CCore* cx, traverser_t func, fixed_t maxfrac)
 {
   intercept_t *in = NULL;
   int count = intercept_p - intercepts;
@@ -766,7 +766,7 @@ dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
           dist = (in=scan)->frac;
       if (dist > maxfrac)
         return true;    // checked everything in range
-      if (!func(in))
+      if (!func(cx, in))
         return false;           // don't bother going farther
       in->frac = INT_MAX;
     }
@@ -782,8 +782,8 @@ dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
-                       int flags, dboolean trav(intercept_t *))
+dboolean P_PathTraverse(CCore* cx, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
+                       int flags, dboolean trav(CCore*, intercept_t *))
 {
   fixed_t xt1, yt1;
   fixed_t xt2, yt2;
@@ -901,11 +901,11 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
   for (count = 0; count < 64; count++)
     {
       if (flags & PT_ADDLINES)
-        if (!P_BlockLinesIterator(mapx, mapy,PIT_AddLineIntercepts))
+        if (!P_BlockLinesIterator(cx, mapx, mapy, PIT_AddLineIntercepts))
           return false; // early out
 
       if (flags & PT_ADDTHINGS)
-        if (!P_BlockThingsIterator(mapx, mapy,PIT_AddThingIntercepts))
+        if (!P_BlockThingsIterator(cx, mapx, mapy, PIT_AddThingIntercepts))
           return false; // early out
 
       if (mapx == xt2 && mapy == yt2)
@@ -925,7 +925,7 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
     }
 
   // go through the sorted list
-  return P_TraverseIntercepts(trav, FRACUNIT);
+  return P_TraverseIntercepts(cx, trav, FRACUNIT);
 }
 
 //

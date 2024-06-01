@@ -39,6 +39,8 @@
 #include "sounds.h"
 #include "doomtype.h"
 
+#include "viletech.nim.h"
+
 #define SNDSERV
 #undef SNDINTR
 
@@ -96,11 +98,11 @@ void I_ResampleStream (void *dest, unsigned nsamp, void (*proc) (void *dest, uns
 extern char music_player_order[][200];
 
 void I_InitMusic(void);
-void I_ShutdownMusic(void);
+void I_ShutdownMusic(CCore*);
 
 // PAUSE game handling.
 void I_PauseSong(int handle);
-void I_ResumeSong(int handle);
+void I_ResumeSong(CCore*, int handle);
 
 // Registers a song handle to song data.
 int I_RegisterSong(const void *data, size_t len);
@@ -109,7 +111,7 @@ int I_RegisterSong(const void *data, size_t len);
 //  plays a song, and when the song is done,
 //  starts playing it again in an endless loop.
 // Horrible thing to do, considering.
-void I_PlaySong(int handle, int looping);
+void I_PlaySong(CCore*, int handle, int looping);
 
 // Stops a song over 3 seconds.
 void I_StopSong(int handle);
@@ -132,6 +134,6 @@ typedef enum
 
 extern const char *midiplayers[];
 
-void M_ChangeMIDIPlayer(void);
+void M_ChangeMIDIPlayer(CCore*);
 
 #endif

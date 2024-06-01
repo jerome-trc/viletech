@@ -47,7 +47,7 @@ static int FontABaseLump;
 =======================
 */
 
-void Heretic_F_StartFinale(void)
+void Heretic_F_StartFinale(CCore* cx)
 {
   gameaction = ga_nothing;
   gamestate = GS_FINALE;
@@ -80,7 +80,7 @@ void Heretic_F_StartFinale(void)
   finalestage = 0;
   finalecount = 0;
   FontABaseLump = W_GetNumForName("FONTA_S") + 1;
-  S_ChangeMusic(heretic_mus_cptd, true);
+  S_ChangeMusic(cx, heretic_mus_cptd, true);
 }
 
 dboolean F_BlockingInput(void)

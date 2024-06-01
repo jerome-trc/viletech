@@ -31,26 +31,32 @@
  *
  *-----------------------------------------------------------------------------*/
 
-
 #ifndef __F_FINALE__
 #define __F_FINALE__
 
-#include "doomtype.h"
 #include "d_event.h"
+#include "doomtype.h"
+#include "viletech.nim.h"
 
 /* Called by main loop. */
-dboolean F_Responder (event_t* ev);
+dboolean F_Responder(event_t* ev);
 
 /* Called by main loop. */
-void F_Ticker (void);
+void F_Ticker(CCore*);
 
 /* Called by main loop. */
-void F_Drawer (void);
+void F_Drawer(void);
 
-void F_StartFinale (void);
-void F_StartCast (const char* background, const char* music, dboolean loop_music);
-void F_StartScroll (const char* right, const char* left, const char* music, dboolean loop_music);
-void F_StartPostFinale (void);
+void F_StartFinale(CCore*);
+void F_StartCast(CCore*, const char* background, const char* music, dboolean loop_music);
+void F_StartScroll(
+	CCore* cx,
+	const char* right,
+	const char* left,
+	const char* music,
+	dboolean loop_music
+);
+void F_StartPostFinale(void);
 dboolean F_BlockingInput(void);
 
 #endif

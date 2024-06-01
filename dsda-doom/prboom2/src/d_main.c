@@ -250,7 +250,7 @@ static void D_Wipe(CCore* cx)
   if (dsda_GameSpeed() != 100 && dsda_WipeAtFullSpeed())
   {
     old_game_speed = dsda_GameSpeed();
-    dsda_UpdateGameSpeed(100);
+    dsda_UpdateGameSpeed(cx, 100);
   }
 
   wipestart = dsda_GetTick() - 1;
@@ -295,7 +295,7 @@ static void D_Wipe(CCore* cx)
 
   if (old_game_speed)
   {
-    dsda_UpdateGameSpeed(old_game_speed);
+    dsda_UpdateGameSpeed(cx, old_game_speed);
   }
 
   force_singletics_to = gametic + BACKUPTICS;
@@ -373,7 +373,7 @@ void D_Display(CCore* cx, fixed_t frac) {
     return;
 
   if (setsizeneeded) {               // change the view size if needed
-    R_ExecuteSetViewSize();
+    R_ExecuteSetViewSize(cx);
     oldgamestate = -1;            // force background redraw
   }
 
@@ -473,7 +473,7 @@ void D_Display(CCore* cx, fixed_t frac) {
 
     if (automap_active)
     {
-      AM_Drawer(false);
+      AM_Drawer(cx, false);
     }
 
     R_RestoreInterpolations();
@@ -487,7 +487,7 @@ void D_Display(CCore* cx, fixed_t frac) {
       R_DrawViewBorder();
 
     DSDA_ADD_CONTEXT(sf_hud);
-    HU_Drawer();
+    HU_Drawer(cx);
     DSDA_REMOVE_CONTEXT(sf_hud);
   }
 
@@ -555,7 +555,7 @@ static void D_DoomLoop(CCore* cx)
       G_BuildTiccmd(cx, &local_cmds[consoleplayer][maketic % BACKUPTICS]);
 
       if (advancedemo)
-        D_DoAdvanceDemo();
+        D_DoAdvanceDemo(cx);
 
       M_Ticker();
       G_Ticker(cx);
@@ -667,7 +667,7 @@ void D_AdvanceDemo (void)
  * cphipps 10/99: constness fixes
  */
 
-static void D_SetPageName(const char *name)
+static void D_SetPageName(CCore* cx, const char *name)
 {
   if ((bfgedition) && name && !strncmp(name,"TITLEPIC",8))
     pagename = "DMENUPIC";
@@ -675,25 +675,25 @@ static void D_SetPageName(const char *name)
     pagename = name;
 }
 
-void D_SetPage(const char* name, int tics, int music)
+void D_SetPage(CCore* cx, const char* name, int tics, int music)
 {
   if (music)
-    S_StartMusic(music);
+    S_StartMusic(cx, music);
 
   if (tics)
     pagetic = tics;
 
-  D_SetPageName(name);
+  D_SetPageName(cx, name);
 }
 
-static void D_DrawTitle1(const char *name)
+static void D_DrawTitle1(CCore* cx, const char *name)
 {
-  D_SetPage(name, TICRATE * 170 / 35, mus_intro);
+  D_SetPage(cx, name, TICRATE * 170 / 35, mus_intro);
 }
 
-static void D_DrawTitle2(const char *name)
+static void D_DrawTitle2(CCore* cx, const char *name)
 {
-  D_SetPage(name, 0, mus_dm2ttl);
+  D_SetPage(cx, name, 0, mus_dm2ttl);
 }
 
 /* killough 11/98: tabulate demo sequences
@@ -775,7 +775,7 @@ const demostate_t doom_demostates[][4] =
  * killough 11/98: made table-driven
  */
 
-void D_DoAdvanceDemo(void)
+void D_DoAdvanceDemo(CCore* cx)
 {
   players[consoleplayer].playerstate = PST_LIVE;  /* not reborn */
   advancedemo = false;
@@ -794,7 +794,7 @@ void D_DoAdvanceDemo(void)
   if (demosequence == 6 && gamemode == commercial && !W_LumpNameExists("demo4"))
     demosequence = 0;
 
-  demostates[demosequence][gamemode].func(demostates[demosequence][gamemode].name);
+  demostates[demosequence][gamemode].func(cx, demostates[demosequence][gamemode].name);
 }
 
 //
@@ -1825,7 +1825,7 @@ static void D_DoomMainSetup(CCore* cx)
   }
 
   lprintf(LO_DEBUG, "G_ReloadDefaults: Checking OPTIONS.\n");
-  dsda_ParseOptionsLump();
+  dsda_ParseOptionsLump(cx);
   G_ReloadDefaults();
 
   // e6y
@@ -1923,7 +1923,7 @@ static void D_DoomMainSetup(CCore* cx)
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "M_Init: Init miscellaneous info.\n");
-  M_Init();
+  M_Init(cx);
 
   dsda_LoadSndInfo();
 
@@ -1934,7 +1934,7 @@ static void D_DoomMainSetup(CCore* cx)
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "R_Init: Init DOOM refresh daemon - ");
-  R_Init();
+  R_Init(cx);
 
   dsda_LoadWadPreferences();
   dsda_LoadMapInfo();
@@ -1948,7 +1948,7 @@ static void D_DoomMainSetup(CCore* cx)
   HandleWarp();
 
   // Must be after HandleWarp
-  dsda_HandleSkip();
+  dsda_HandleSkip(cx);
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "I_Init: Setting up machine state.\n");
@@ -1956,7 +1956,7 @@ static void D_DoomMainSetup(CCore* cx)
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "S_Init: Setting up sound.\n");
-  S_Init();
+  S_Init(cx);
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "dsda_InitFont: Loading the hud fonts.\n");
@@ -1983,7 +1983,7 @@ static void D_DoomMainSetup(CCore* cx)
   {
     autostart = true;
     dsda_SetDemoBaseName(arg->value.v_string);
-    dsda_InitDemoRecording();
+    dsda_InitDemoRecording(cx);
   }
 
   dsda_ExecutePlaybackOptions(cx);

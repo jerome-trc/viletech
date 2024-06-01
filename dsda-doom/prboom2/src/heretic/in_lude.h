@@ -13,21 +13,16 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-/*
-========================
-=
-= IN_lude.h
-=
-========================
-*/
 
 #ifndef __IN_LUDE__
 #define __IN_LUDE__
 
-#include "doomdef.h"
+#include "d_player.h"
 
-void IN_Ticker(void);
+#include "viletech.nim.h"
+
+void IN_Ticker(CCore*);
 void IN_Drawer(void);
-void IN_Start(wbstartstruct_t* wbstartstruct);
+void IN_Start(CCore*, wbstartstruct_t*);
 
 #endif

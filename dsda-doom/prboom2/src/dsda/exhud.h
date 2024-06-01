@@ -18,19 +18,21 @@
 #ifndef __DSDA_EXHUD__
 #define __DSDA_EXHUD__
 
-void dsda_InitExHud(void);
+#include "viletech.nim.h"
+
+void dsda_InitExHud(CCore*);
 void dsda_UpdateExHud(void);
 void dsda_DrawExHud(void);
 void dsda_DrawExIntermission(void);
 void dsda_ToggleRenderStats(void);
-void dsda_RefreshExHudFPS(void);
-void dsda_RefreshExHudMinimap(void);
-void dsda_RefreshExHudLevelSplits(void);
-void dsda_RefreshExHudCoordinateDisplay(void);
-void dsda_RefreshExHudCommandDisplay(void);
-void dsda_RefreshMapCoordinates(void);
-void dsda_RefreshMapTotals(void);
-void dsda_RefreshMapTime(void);
-void dsda_RefreshMapTitle(void);
+void dsda_RefreshExHudFPS(CCore*);
+void dsda_RefreshExHudMinimap(CCore*);
+void dsda_RefreshExHudLevelSplits(CCore*);
+void dsda_RefreshExHudCoordinateDisplay(CCore*);
+void dsda_RefreshExHudCommandDisplay(CCore*);
+void dsda_RefreshMapCoordinates(CCore*);
+void dsda_RefreshMapTotals(CCore*);
+void dsda_RefreshMapTime(CCore*);
+void dsda_RefreshMapTitle(CCore*);
 
 #endif

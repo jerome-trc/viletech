@@ -67,7 +67,7 @@ static void dsda_ResetSkipSettings(void) {
   nomusicparm = old_nomusicparm;
 }
 
-void dsda_EnterSkipMode(void) {
+void dsda_EnterSkipMode(CCore* cx) {
   extern void M_ClearMenus(void);
 
   dsda_TrackFeature(uf_skip);
@@ -77,7 +77,7 @@ void dsda_EnterSkipMode(void) {
   M_ClearMenus();
   dsda_ApplySkipSettings();
   dsda_ResetPauseMode();
-  S_StopMusic();
+  S_StopMusic(cx);
   I_Init2();
 
   if (dsda_BuildMode())
@@ -99,30 +99,30 @@ void dsda_ExitSkipMode(CCore* cx) {
 
   I_Init2();
   I_InitSound();
-  S_Init();
-  S_RestartMusic();
+  S_Init(cx);
+  S_RestartMusic(cx);
 
   if (V_IsOpenGLMode())
     gld_PreprocessLevel(cx);
 }
 
 void dsda_ToggleSkipMode(CCore* cx) {
-  dsda_SkipMode() ? dsda_ExitSkipMode(cx) : dsda_EnterSkipMode();
+  dsda_SkipMode() ? dsda_ExitSkipMode(cx) : dsda_EnterSkipMode(cx);
 }
 
-void dsda_SkipToNextMap(void) {
+void dsda_SkipToNextMap(CCore* cx) {
   skip_until_next_map = true;
-  dsda_EnterSkipMode();
+  dsda_EnterSkipMode(cx);
 }
 
-void dsda_SkipToEndOfMap(void) {
+void dsda_SkipToEndOfMap(CCore* cx) {
   skip_until_end_of_map = true;
-  dsda_EnterSkipMode();
+  dsda_EnterSkipMode(cx);
 }
 
-void dsda_SkipToLogicTic(int tic) {
+void dsda_SkipToLogicTic(CCore* cx, int tic) {
   skip_until_logictic = tic;
-  dsda_EnterSkipMode();
+  dsda_EnterSkipMode(cx);
 }
 
 void dsda_EvaluateSkipModeGTicker(CCore* cx) {
@@ -201,7 +201,7 @@ void dsda_EvaluateSkipModeCheckDemoStatus(CCore* cx) {
     dsda_ExitSkipMode(cx);
 }
 
-void dsda_HandleSkip(void) {
+void dsda_HandleSkip(CCore* cx) {
   extern int warpmap;
   extern int warpepisode;
 
@@ -225,6 +225,6 @@ void dsda_HandleSkip(void) {
     skip_until_map = warpmap;
     skip_until_episode = warpepisode;
 
-    dsda_EnterSkipMode();
+    dsda_EnterSkipMode(cx);
   }
 }

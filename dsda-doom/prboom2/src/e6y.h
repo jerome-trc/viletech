@@ -75,8 +75,8 @@ extern float gl_render_ratio;
 extern float gl_render_fovratio;
 extern float gl_render_fovy;
 extern float gl_render_multiplier;
-void M_ChangeAspectRatio(void);
-void M_ChangeStretch(void);
+void M_ChangeAspectRatio(CCore*);
+void M_ChangeStretch(CCore*);
 
 extern camera_t walkcamera;
 

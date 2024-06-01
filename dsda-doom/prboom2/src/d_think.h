@@ -36,6 +36,10 @@
 #ifndef __D_THINK__
 #define __D_THINK__
 
+#include "viletech.nim.h"
+
+struct mobj_s;
+
 /*
  * Experimental stuff.
  * To compile this as "ANSI C with classes"
@@ -46,7 +50,7 @@
 typedef  void (*actionf_t)();
 
 //e6y: for boom's friction code
-typedef  void (*actionf_v)();
+typedef  void (*actionf_v)(void);
 typedef  void (*actionf_p1)( void* );
 typedef  void (*actionf_p2)( void*, void* );
 

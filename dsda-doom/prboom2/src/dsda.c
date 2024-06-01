@@ -557,7 +557,7 @@ void dsda_WatchDeferredInitNew(CCore* cx, int skill, int episode, int map) {
   dsda_last_leveltime = 0;
   dsda_any_map_completed = false;
 
-  dsda_InitDemoRecording();
+  dsda_InitDemoRecording(cx);
 
   boom_basetic = gametic;
   true_basetic = gametic;

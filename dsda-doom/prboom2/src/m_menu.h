@@ -64,7 +64,7 @@ void M_Drawer (void);
 // Called by D_DoomMain,
 // loads the config file.
 
-void M_Init (void);
+void M_Init(CCore*);
 
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
@@ -135,7 +135,7 @@ typedef struct
   // choice = menu item #.
   // if status = 2,
   //   choice=0:leftarrow,1:rightarrow
-  void  (*routine)(int choice);
+  void  (*routine)(CCore*, int choice);
   char  alphaKey; // hotkey in menu
   const char *alttext;
   int color;

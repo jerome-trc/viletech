@@ -374,12 +374,15 @@ void P_SetPitch(player_t *player)
 //
 // killough 10/98: simplified
 
-void P_MovePlayer (player_t* player)
+void P_MovePlayer(CCore* cx, player_t* player)
 {
   ticcmd_t *cmd;
   mobj_t *mo;
 
-  if (raven) return Raven_P_MovePlayer(player);
+  if (raven) {
+    Raven_P_MovePlayer(cx, player);
+    return;
+  }
 
   cmd = &player->cmd;
   mo = player->mo;
@@ -453,7 +456,7 @@ void P_MovePlayer (player_t* player)
         }
       }
       if (mo->state == states+S_PLAY)
-        P_SetMobjState(mo,S_PLAY_RUN1);
+        P_SetMobjState(cx, mo, S_PLAY_RUN1);
     }
 }
 
@@ -620,7 +623,7 @@ void P_PlayerEndFlight(player_t * player)
 
 void P_MorphPlayerThink(player_t * player);
 
-void P_PlayerThink (player_t* player)
+void P_PlayerThink (CCore* cx, player_t* player)
 {
   ticcmd_t*    cmd;
   weapontype_t newweapon;
@@ -666,7 +669,7 @@ void P_PlayerThink (player_t* player)
 
   if (player->chickenTics)
   {
-    P_ChickenPlayerThink(player);
+    P_ChickenPlayerThink(cx, player);
   }
 
   if (player->jumpTics)
@@ -687,7 +690,7 @@ void P_PlayerThink (player_t* player)
     player->mo->reactiontime--;
   else
   {
-    P_MovePlayer(player);
+    P_MovePlayer(cx, player);
 
     if (hexen)
     {
@@ -751,7 +754,7 @@ void P_PlayerThink (player_t* player)
   {
     if ((floorType = P_GetThingFloorType(player->mo)) != FLOOR_SOLID)
     {
-      P_PlayerOnSpecialFlat(player, floorType);
+      P_PlayerOnSpecialFlat(cx, player, floorType);
     }
 
     switch (player->pclass)
@@ -804,7 +807,7 @@ void P_PlayerThink (player_t* player)
       }
       else if (cmd->arti & AFLAG_SUICIDE)
       {
-        P_DamageMobj(player->mo, NULL, NULL, 10000);
+        P_DamageMobj(cx, player->mo, NULL, NULL, 10000);
       }
       if (cmd->arti == NUMARTIFACTS)
       {                       // use one of each artifact (except puzzle artifacts)
@@ -812,12 +815,12 @@ void P_PlayerThink (player_t* player)
 
         for (i = 1; i < hexen_arti_firstpuzzitem; i++)
         {
-          P_PlayerUseArtifact(player, i);
+          P_PlayerUseArtifact(cx, player, i);
         }
       }
       else
       {
-        P_PlayerUseArtifact(player, cmd->arti & AFLAG_MASK);
+        P_PlayerUseArtifact(cx, player, cmd->arti & AFLAG_MASK);
       }
     }
   }
@@ -831,7 +834,7 @@ void P_PlayerThink (player_t* player)
       }
       else
       {
-        P_PlayerUseArtifact(player, cmd->arti);
+        P_PlayerUseArtifact(cx, player, cmd->arti);
       }
     }
   }
@@ -909,7 +912,7 @@ void P_PlayerThink (player_t* player)
   {
     if (!player->usedown)
     {
-      P_UseLines(player);
+      P_UseLines(cx, player);
       player->usedown = true;
     }
   }
@@ -925,7 +928,7 @@ void P_PlayerThink (player_t* player)
     }
     if (!--player->chickenTics)
     {                       // Attempt to undo the chicken
-      P_UndoPlayerChicken(player);
+      P_UndoPlayerChicken(cx, player);
     }
   }
 
@@ -934,7 +937,7 @@ void P_PlayerThink (player_t* player)
   {
     if (!--player->morphTics)
     {                       // Attempt to undo the pig
-      P_UndoPlayerMorph(player);
+      P_UndoPlayerMorph(cx, player);
     }
   }
 
@@ -1052,7 +1055,7 @@ void P_PlayerThink (player_t* player)
   {
     player->hazardcount--;
     if (!(leveltime % player->hazardinterval) && player->hazardcount > 16 * TICRATE)
-      P_DamageMobj(player->mo, NULL, NULL, 5);
+      P_DamageMobj(cx, player->mo, NULL, NULL, 5);
   }
 
   if (player->poisoncount && !(leveltime & 15))
@@ -1062,7 +1065,7 @@ void P_PlayerThink (player_t* player)
     {
       player->poisoncount = 0;
     }
-    P_PoisonDamage(player, player->poisoner, 1, true);
+    P_PoisonDamage(cx, player, player->poisoner, 1, true);
   }
 
   // Handling colormaps.
@@ -1149,7 +1152,7 @@ int P_GetPlayerNum(player_t * player)
     return (0);
 }
 
-dboolean P_UndoPlayerChicken(player_t * player)
+dboolean P_UndoPlayerChicken(CCore* cx, player_t * player)
 {
     mobj_t *fog;
     mobj_t *mo;
@@ -1171,11 +1174,11 @@ dboolean P_UndoPlayerChicken(player_t * player)
     weapon = pmo->special1.i;
     oldFlags = pmo->flags;
     oldFlags2 = pmo->flags2;
-    P_SetMobjState(pmo, HERETIC_S_FREETARGMOBJ);
+    P_SetMobjState(cx, pmo, HERETIC_S_FREETARGMOBJ);
     mo = P_SpawnMobj(x, y, z, g_mt_player);
-    if (P_TestMobjLocation(mo) == false)
+    if (P_TestMobjLocation(cx, mo) == false)
     {                           // Didn't fit
-        P_RemoveMobj(mo);
+        P_RemoveMobj(cx, mo);
         mo = P_SpawnMobj(x, y, z, HERETIC_MT_CHICPLAYER);
         mo->angle = angle;
         mo->health = player->health;
@@ -1212,7 +1215,7 @@ dboolean P_UndoPlayerChicken(player_t * player)
     return (true);
 }
 
-void P_ArtiTele(player_t * player)
+void P_ArtiTele(CCore* cx, player_t * player)
 {
     int i;
     int selections;
@@ -1234,10 +1237,10 @@ void P_ArtiTele(player_t * player)
         destY = playerstarts[0][0].y;
         destAngle = ANG45 * (playerstarts[0][0].angle / 45);
     }
-    P_Teleport(player->mo, destX, destY, destAngle, true);
+    P_Teleport(cx, player->mo, destX, destY, destAngle, true);
     if (player->morphTics)
     {                           // Teleporting away will undo any morph effects (pig)
-      P_UndoPlayerMorph(player);
+      P_UndoPlayerMorph(cx, player);
     }
     if (heretic)
       S_StartVoidSound(heretic_sfx_wpnup);      // Full volume laugh
@@ -1309,7 +1312,7 @@ void P_PlayerRemoveArtifact(player_t * player, int slot)
     }
 }
 
-void P_PlayerUseArtifact(player_t * player, artitype_t arti)
+void P_PlayerUseArtifact(CCore* cx, player_t * player, artitype_t arti)
 {
     int i;
 
@@ -1317,7 +1320,7 @@ void P_PlayerUseArtifact(player_t * player, artitype_t arti)
     {
         if (player->inventory[i].type == arti)
         {                       // Found match - try to use
-            if (P_UseArtifact(player, arti))
+            if (P_UseArtifact(cx, player, arti))
             {                   // Artifact was used - remove it from inventory
                 P_PlayerRemoveArtifact(player, i);
                 if (player == &players[consoleplayer])
@@ -1349,14 +1352,14 @@ void P_PlayerUseArtifact(player_t * player, artitype_t arti)
     }
 }
 
-static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti);
+static dboolean Hexen_P_UseArtifact(CCore*, player_t*, artitype_t);
 
-dboolean P_UseArtifact(player_t * player, artitype_t arti)
+dboolean P_UseArtifact(CCore* cx, player_t * player, artitype_t arti)
 {
     mobj_t *mo;
     angle_t angle;
 
-    if (hexen) return Hexen_P_UseArtifact(player, arti);
+    if (hexen) return Hexen_P_UseArtifact(cx, player, arti);
 
     switch (arti)
     {
@@ -1387,9 +1390,9 @@ dboolean P_UseArtifact(player_t * player, artitype_t arti)
         case arti_tomeofpower:
             if (player->chickenTics)
             {                   // Attempt to undo chicken
-                if (P_UndoPlayerChicken(player) == false)
+                if (P_UndoPlayerChicken(cx, player) == false)
                 {               // Failed
-                    P_DamageMobj(player->mo, NULL, NULL, 10000);
+                    P_DamageMobj(cx, player->mo, NULL, NULL, 10000);
                 }
                 else
                 {               // Succeeded
@@ -1438,11 +1441,11 @@ dboolean P_UseArtifact(player_t * player, artitype_t arti)
             break;
         case arti_egg:
             mo = player->mo;
-            P_SpawnPlayerMissile(mo, HERETIC_MT_EGGFX);
-            P_SPMAngle(mo, HERETIC_MT_EGGFX, mo->angle - (ANG45 / 6));
-            P_SPMAngle(mo, HERETIC_MT_EGGFX, mo->angle + (ANG45 / 6));
-            P_SPMAngle(mo, HERETIC_MT_EGGFX, mo->angle - (ANG45 / 3));
-            P_SPMAngle(mo, HERETIC_MT_EGGFX, mo->angle + (ANG45 / 3));
+            P_SpawnPlayerMissile(cx, mo, HERETIC_MT_EGGFX);
+            P_SPMAngle(cx, mo, HERETIC_MT_EGGFX, mo->angle - (ANG45 / 6));
+            P_SPMAngle(cx, mo, HERETIC_MT_EGGFX, mo->angle + (ANG45 / 6));
+            P_SPMAngle(cx, mo, HERETIC_MT_EGGFX, mo->angle - (ANG45 / 3));
+            P_SPMAngle(cx, mo, HERETIC_MT_EGGFX, mo->angle + (ANG45 / 3));
             break;
         case arti_fly:
             if (!P_GivePower(player, pw_flight))
@@ -1451,7 +1454,7 @@ dboolean P_UseArtifact(player_t * player, artitype_t arti)
             }
             break;
         case arti_teleport:
-            P_ArtiTele(player);
+            P_ArtiTele(cx, player);
             break;
         default:
             return (false);
@@ -1459,7 +1462,7 @@ dboolean P_UseArtifact(player_t * player, artitype_t arti)
     return (true);
 }
 
-void Raven_P_MovePlayer(player_t * player)
+void Raven_P_MovePlayer(CCore* cx, player_t * player)
 {
     int look;
     int fly;
@@ -1508,14 +1511,14 @@ void Raven_P_MovePlayer(player_t * player)
         {
             if (player->mo->state == &states[HERETIC_S_CHICPLAY])
             {
-                P_SetMobjState(player->mo, HERETIC_S_CHICPLAY_RUN1);
+                P_SetMobjState(cx, player->mo, HERETIC_S_CHICPLAY_RUN1);
             }
         }
         else
         {
             if (player->mo->state == &states[pclass[player->pclass].normal_state])
             {
-                P_SetMobjState(player->mo, pclass[player->pclass].run_state);
+                P_SetMobjState(cx, player->mo, pclass[player->pclass].run_state);
             }
         }
     }
@@ -1584,7 +1587,7 @@ void Raven_P_MovePlayer(player_t * player)
     }
     else if (fly > 0)
     {
-        P_PlayerUseArtifact(player, g_arti_fly);
+        P_PlayerUseArtifact(cx, player, g_arti_fly);
     }
     if (player->mo->flags2 & MF2_FLY)
     {
@@ -1596,7 +1599,7 @@ void Raven_P_MovePlayer(player_t * player)
     }
 }
 
-void P_ChickenPlayerThink(player_t * player)
+void P_ChickenPlayerThink(CCore* cx, player_t * player)
 {
     mobj_t *pmo;
 
@@ -1616,7 +1619,7 @@ void P_ChickenPlayerThink(player_t * player)
     if ((pmo->z <= pmo->floorz) && (P_Random(pr_heretic) < 32))
     {                           // Jump and noise
         pmo->momz += FRACUNIT;
-        P_SetMobjState(pmo, HERETIC_S_CHICPLAY_PAIN);
+        P_SetMobjState(cx, pmo, HERETIC_S_CHICPLAY_PAIN);
         return;
     }
     if (P_Random(pr_heretic) < 48)
@@ -1816,7 +1819,7 @@ void P_MorphPlayerThink(player_t * player)
     }
 }
 
-dboolean P_UndoPlayerMorph(player_t * player)
+dboolean P_UndoPlayerMorph(CCore* cx, player_t * player)
 {
     mobj_t *fog;
     mobj_t *mo;
@@ -1840,7 +1843,7 @@ dboolean P_UndoPlayerMorph(player_t * player)
     oldFlags = pmo->flags;
     oldFlags2 = pmo->flags2;
     oldBeast = pmo->type;
-    P_SetMobjState(pmo, HEXEN_S_FREETARGMOBJ);
+    P_SetMobjState(cx, pmo, HEXEN_S_FREETARGMOBJ);
     playerNum = P_GetPlayerNum(player);
     switch (PlayerClass[playerNum])
     {
@@ -1858,9 +1861,9 @@ dboolean P_UndoPlayerMorph(player_t * player)
                     player->pclass);
             return false;
     }
-    if (P_TestMobjLocation(mo) == false)
+    if (P_TestMobjLocation(cx, mo) == false)
     {                           // Didn't fit
-        P_RemoveMobj(mo);
+        P_RemoveMobj(cx, mo);
         mo = P_SpawnMobj(x, y, z, oldBeast);
         mo->angle = angle;
         mo->health = player->health;
@@ -1909,11 +1912,11 @@ dboolean P_UndoPlayerMorph(player_t * player)
     return (true);
 }
 
-void P_ArtiTeleportOther(player_t * player)
+void P_ArtiTeleportOther(CCore* cx, player_t * player)
 {
     mobj_t *mo;
 
-    mo = P_SpawnPlayerMissile(player->mo, HEXEN_MT_TELOTHER_FX1);
+    mo = P_SpawnPlayerMissile(cx, player->mo, HEXEN_MT_TELOTHER_FX1);
     if (mo)
     {
         P_SetTarget(&mo->target, player->mo);
@@ -1921,7 +1924,7 @@ void P_ArtiTeleportOther(player_t * player)
 }
 
 
-void P_TeleportToPlayerStarts(mobj_t * victim)
+void P_TeleportToPlayerStarts(CCore* cx, mobj_t * victim)
 {
     int i, selections = 0;
     fixed_t destX, destY;
@@ -1937,10 +1940,10 @@ void P_TeleportToPlayerStarts(mobj_t * victim)
     destX = playerstarts[0][i].x;
     destY = playerstarts[0][i].y;
     destAngle = ANG45 * (playerstarts[0][i].angle / 45);
-    P_Teleport(victim, destX, destY, destAngle, true);
+    P_Teleport(cx, victim, destX, destY, destAngle, true);
 }
 
-void P_TeleportToDeathmatchStarts(mobj_t * victim)
+void P_TeleportToDeathmatchStarts(CCore* cx, mobj_t * victim)
 {
     int i, selections;
     fixed_t destX, destY;
@@ -1953,22 +1956,22 @@ void P_TeleportToDeathmatchStarts(mobj_t * victim)
         destX = deathmatchstarts[i].x;
         destY = deathmatchstarts[i].y;
         destAngle = ANG45 * (deathmatchstarts[i].angle / 45);
-        P_Teleport(victim, destX, destY, destAngle, true);
+        P_Teleport(cx, victim, destX, destY, destAngle, true);
     }
     else
     {
-        P_TeleportToPlayerStarts(victim);
+        P_TeleportToPlayerStarts(cx, victim);
     }
 }
 
-void P_TeleportOther(mobj_t * victim)
+void P_TeleportOther(CCore* cx, mobj_t * victim)
 {
     if (victim->player)
     {
         if (deathmatch)
-            P_TeleportToDeathmatchStarts(victim);
+            P_TeleportToDeathmatchStarts(cx, victim);
         else
-            P_TeleportToPlayerStarts(victim);
+            P_TeleportToPlayerStarts(cx, victim);
     }
     else
     {
@@ -1981,7 +1984,7 @@ void P_TeleportOther(mobj_t * victim)
         }
 
         // Send all monsters to deathmatch spots
-        P_TeleportToDeathmatchStarts(victim);
+        P_TeleportToDeathmatchStarts(cx, victim);
     }
 }
 
@@ -2052,7 +2055,7 @@ dboolean P_HealRadius(player_t * player)
     return (effective);
 }
 
-static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
+static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t arti)
 {
     mobj_t *mo;
     angle_t angle;
@@ -2093,11 +2096,11 @@ static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
             break;
         case hexen_arti_egg:
             mo = player->mo;
-            P_SpawnPlayerMissile(mo, HEXEN_MT_EGGFX);
-            P_SPMAngle(mo, HEXEN_MT_EGGFX, mo->angle - (ANG45 / 6));
-            P_SPMAngle(mo, HEXEN_MT_EGGFX, mo->angle + (ANG45 / 6));
-            P_SPMAngle(mo, HEXEN_MT_EGGFX, mo->angle - (ANG45 / 3));
-            P_SPMAngle(mo, HEXEN_MT_EGGFX, mo->angle + (ANG45 / 3));
+            P_SpawnPlayerMissile(cx, mo, HEXEN_MT_EGGFX);
+            P_SPMAngle(cx, mo, HEXEN_MT_EGGFX, mo->angle - (ANG45 / 6));
+            P_SPMAngle(cx, mo, HEXEN_MT_EGGFX, mo->angle + (ANG45 / 6));
+            P_SPMAngle(cx, mo, HEXEN_MT_EGGFX, mo->angle - (ANG45 / 3));
+            P_SPMAngle(cx, mo, HEXEN_MT_EGGFX, mo->angle + (ANG45 / 3));
             break;
         case hexen_arti_fly:
             if (!P_GivePower(player, pw_flight))
@@ -2110,7 +2113,7 @@ static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
             }
             break;
         case hexen_arti_summon:
-            mo = P_SpawnPlayerMissile(player->mo, HEXEN_MT_SUMMON_FX);
+            mo = P_SpawnPlayerMissile(cx, player->mo, HEXEN_MT_SUMMON_FX);
             if (mo)
             {
                 P_SetTarget(&mo->target, player->mo);
@@ -2119,10 +2122,10 @@ static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
             }
             break;
         case hexen_arti_teleport:
-            P_ArtiTele(player);
+            P_ArtiTele(cx, player);
             break;
         case hexen_arti_teleportother:
-            P_ArtiTeleportOther(player);
+            P_ArtiTeleportOther(cx, player);
             break;
         case hexen_arti_poisonbag:
             angle = player->mo->angle >> ANGLETOFINESHIFT;
@@ -2165,7 +2168,7 @@ static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
                     mo->momy += player->mo->momy >> 1;
                     P_SetTarget(&mo->target, player->mo);
                     mo->tics -= P_Random(pr_hexen) & 3;
-                    P_CheckMissileSpawn(mo);
+                    P_CheckMissileSpawn(cx, mo);
                 }
             }
             break;
@@ -2222,7 +2225,7 @@ static dboolean Hexen_P_UseArtifact(player_t * player, artitype_t arti)
         case hexen_arti_puzzgear2:
         case hexen_arti_puzzgear3:
         case hexen_arti_puzzgear4:
-            if (P_UsePuzzleItem(player, arti - hexen_arti_firstpuzzitem))
+            if (P_UsePuzzleItem(cx, player, arti - hexen_arti_firstpuzzitem))
             {
                 return true;
             }

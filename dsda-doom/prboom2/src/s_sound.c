@@ -161,7 +161,7 @@ void S_ResetSfxVolume(void)
 //  allocates channel buffer, sets S_sfx lookup.
 //
 
-void S_Init(void)
+void S_Init(CCore* cx)
 {
   idmusnum = -1; //jff 3/17/98 insure idmus number is blank
 
@@ -248,13 +248,10 @@ void S_Stop(void)
         S_StopChannel(cnum);
 }
 
-//
 // Per level startup code.
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
-//
-
-void S_Start(void)
+void S_Start(CCore* cx)
 {
   int mnum;
   int muslump;
@@ -276,13 +273,13 @@ void S_Start(void)
 
   if (musinfo.items[0] != -1)
   {
-    if (!dsda_StartQueuedMusic())
-      S_ChangeMusInfoMusic(musinfo.items[0], true);
+    if (!dsda_StartQueuedMusic(cx))
+      S_ChangeMusInfoMusic(cx, musinfo.items[0], true);
   }
   else
   {
-    if (!dsda_StartQueuedMusic())
-      S_ChangeMusic(mnum, true);
+    if (!dsda_StartQueuedMusic(cx))
+      S_ChangeMusic(cx, mnum, true);
   }
 }
 
@@ -546,7 +543,7 @@ void S_PauseSound(void)
     }
 }
 
-void S_ResumeSound(void)
+void S_ResumeSound(CCore* cx)
 {
   //jff 1/22/98 return if music is not enabled
   if (nomusicparm)
@@ -554,7 +551,7 @@ void S_ResumeSound(void)
 
   if (mus_playing && mus_paused)
     {
-      I_ResumeSong(mus_playing->handle);
+      I_ResumeSong(cx, mus_playing->handle);
       mus_paused = false;
     }
 }
@@ -621,28 +618,27 @@ void S_UpdateSounds(void)
   }
 }
 
-// Starts some music with the music id found in sounds.h.
-//
-void S_StartMusic(int m_id)
+/// Starts some music with the music id found in sounds.h.
+void S_StartMusic(CCore* cx, int m_id)
 {
-  S_ChangeMusic(m_id, false);
+  S_ChangeMusic(cx, m_id, false);
 }
 
-dboolean S_ChangeMusicByName(const char *name, dboolean looping)
+dboolean S_ChangeMusicByName(CCore* cx, const char *name, dboolean looping)
 {
   int lump = W_CheckNumForName(name);
 
   if (lump == LUMP_NOT_FOUND)
   {
-    S_StopMusic();
+    S_StopMusic(cx);
     return false;
   }
 
-  S_ChangeMusInfoMusic(lump, looping);
+  S_ChangeMusInfoMusic(cx, lump, looping);
   return true;
 }
 
-void S_ChangeMusic(int musicnum, int looping)
+void S_ChangeMusic(CCore* cx, int musicnum, int looping)
 {
   musicinfo_t *music;
 
@@ -664,7 +660,7 @@ void S_ChangeMusic(int musicnum, int looping)
     return;
 
   // shutdown old music
-  S_StopMusic();
+  S_StopMusic(cx);
 
   // get lumpnum if necessary
   if (!music->lumpnum)
@@ -675,7 +671,7 @@ void S_ChangeMusic(int musicnum, int looping)
   music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
   // play it
-  I_PlaySong(music->handle, looping);
+  I_PlaySong(cx, music->handle, looping);
 
   mus_playing = music;
 
@@ -689,22 +685,22 @@ void S_ChangeMusic(int musicnum, int looping)
   }
 }
 
-void S_RestartMusic(void)
+void S_RestartMusic(CCore* cx)
 {
   if (musinfo.current_item != -1)
   {
-    S_ChangeMusInfoMusic(musinfo.current_item, true);
+    S_ChangeMusInfoMusic(cx, musinfo.current_item, true);
   }
   else
   {
     if (musicnum_current > mus_None && musicnum_current < num_music)
     {
-      S_ChangeMusic(musicnum_current, true);
+      S_ChangeMusic(cx, musicnum_current, true);
     }
   }
 }
 
-void S_ChangeMusInfoMusic(int lumpnum, int looping)
+void S_ChangeMusInfoMusic(CCore* cx, int lumpnum, int looping)
 {
   musicinfo_t *music;
 
@@ -727,7 +723,7 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     return;
 
   // shutdown old music
-  S_StopMusic();
+  S_StopMusic(cx);
 
   // save lumpnum
   music->lumpnum = lumpnum;
@@ -737,14 +733,14 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
   music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
   // play it
-  I_PlaySong(music->handle, looping);
+  I_PlaySong(cx, music->handle, looping);
 
   mus_playing = music;
 
   musinfo.current_item = lumpnum;
 }
 
-void S_StopMusic(void)
+void S_StopMusic(CCore* cx)
 {
   //jff 1/22/98 return if music is not enabled
   if (nomusicparm)
@@ -753,7 +749,7 @@ void S_StopMusic(void)
   if (mus_playing)
     {
       if (mus_paused)
-        I_ResumeSong(mus_playing->handle);
+        I_ResumeSong(cx, mus_playing->handle);
 
       I_StopSong(mus_playing->handle);
       I_UnRegisterSong(mus_playing->handle);
@@ -1336,7 +1332,7 @@ int S_GetSoundID(const char *name)
     return 0;
 }
 
-void S_StartSongName(const char *songLump, dboolean loop)
+void S_StartSongName(CCore* cx, const char *songLump, dboolean loop)
 {
     int musicnum;
 
@@ -1363,5 +1359,5 @@ void S_StartSongName(const char *songLump, dboolean loop)
         break;
     }
 
-    S_ChangeMusic(musicnum, loop);
+    S_ChangeMusic(cx, musicnum, loop);
 }

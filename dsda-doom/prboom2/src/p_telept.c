@@ -160,7 +160,7 @@ static mobj_t* P_TeleportDestination(short thing_id, int tag)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-static int P_TeleportToDestination(mobj_t *destination, line_t *line, mobj_t *thing, int flags)
+static int P_TeleportToDestination(CCore* cx, mobj_t *destination, line_t *line, mobj_t *thing, int flags)
 {
   fixed_t oldx = thing->x;
   fixed_t oldy = thing->y;
@@ -191,7 +191,7 @@ static int P_TeleportToDestination(mobj_t *destination, line_t *line, mobj_t *th
   if (player && player->mo != thing)
     player = NULL;
 
-  if (!P_TeleportMove(thing, destination->x, destination->y, false)) /* killough 8/9/98 */
+  if (!P_TeleportMove(cx, thing, destination->x, destination->y, false)) /* killough 8/9/98 */
     return 0;
 
   if (flags & (TELF_ROTATEBOOM | TELF_ROTATEBOOMINVERSE))
@@ -289,7 +289,7 @@ static int P_TeleportToDestination(mobj_t *destination, line_t *line, mobj_t *th
   return 1;
 }
 
-int EV_TeleportGroup(short group_tid, mobj_t *thing, short source_tid, short dest_tid,
+int EV_TeleportGroup(CCore* cx, short group_tid, mobj_t *thing, short source_tid, short dest_tid,
                      dboolean move_source, dboolean fog)
 {
   int result = 0;
@@ -330,12 +330,12 @@ int EV_TeleportGroup(short group_tid, mobj_t *thing, short source_tid, short des
       target_dest.angle = target->angle;
       target_dest.type = dest->type;
 
-      result |= P_TeleportToDestination(&target_dest, NULL, target, flags);
+      result |= P_TeleportToDestination(cx, &target_dest, NULL, target, flags);
     }
 
     if (result && move_source)
     {
-      P_TeleportToDestination(dest, NULL, source, TELF_KEEPORIENTATION);
+      P_TeleportToDestination(cx, dest, NULL, source, TELF_KEEPORIENTATION);
       source->angle = dest->angle;
     }
   }
@@ -343,7 +343,7 @@ int EV_TeleportGroup(short group_tid, mobj_t *thing, short source_tid, short des
   return result;
 }
 
-int EV_TeleportInSector(int tag, short source_tid, short dest_tid,
+int EV_TeleportInSector(CCore* cx, int tag, short source_tid, short dest_tid,
                         dboolean fog, short group_tid)
 {
   int result = 0;
@@ -392,7 +392,7 @@ int EV_TeleportInSector(int tag, short source_tid, short dest_tid,
         target_dest.angle = target->angle;
         target_dest.type = dest->type;
 
-        result |= P_TeleportToDestination(&target_dest, NULL, target, flags);
+        result |= P_TeleportToDestination(cx, &target_dest, NULL, target, flags);
       }
     }
   }
@@ -400,7 +400,7 @@ int EV_TeleportInSector(int tag, short source_tid, short dest_tid,
   return result;
 }
 
-int EV_CompatibleTeleport(short thing_id, int tag, line_t *line, int side, mobj_t *thing, int flags)
+int EV_CompatibleTeleport(CCore* cx, short thing_id, int tag, line_t *line, int side, mobj_t *thing, int flags)
 {
   mobj_t *m;
 
@@ -412,7 +412,7 @@ int EV_CompatibleTeleport(short thing_id, int tag, line_t *line, int side, mobj_
 
   if ((m = P_TeleportDestination(thing_id, tag)) != NULL)
   {
-    return P_TeleportToDestination(m, line, thing, flags);
+    return P_TeleportToDestination(cx, m, line, thing, flags);
   }
 
   return 0;
@@ -428,7 +428,7 @@ int EV_CompatibleTeleport(short thing_id, int tag, line_t *line, int side, mobj_
 // maximum fixed_t units to move object to avoid hiccups
 #define FUDGEFACTOR 10
 
-int EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing,
+int EV_SilentLineTeleport(CCore* cx, line_t *line, int side, mobj_t *thing,
                           int tag, dboolean reverse)
 {
   const int *i;
@@ -508,7 +508,7 @@ int EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing,
             x += (l->dy < 0) != side ? -1 : 1;
 
         // Attempt to teleport, aborting if blocked
-        if (!P_TeleportMove(thing, x, y, false)) /* killough 8/9/98 */
+        if (!P_TeleportMove(cx, thing, x, y, false)) /* killough 8/9/98 */
           return 0;
 
         // e6y
@@ -561,7 +561,7 @@ int EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing,
 
 #include "heretic/def.h"
 
-dboolean P_Teleport(mobj_t * thing, fixed_t x, fixed_t y, angle_t angle, dboolean useFog)
+dboolean P_Teleport(CCore* cx, mobj_t * thing, fixed_t x, fixed_t y, angle_t angle, dboolean useFog)
 {
     fixed_t oldx;
     fixed_t oldy;
@@ -576,7 +576,7 @@ dboolean P_Teleport(mobj_t * thing, fixed_t x, fixed_t y, angle_t angle, dboolea
     oldy = thing->y;
     oldz = thing->z;
     aboveFloor = thing->z - thing->floorz;
-    if (!P_TeleportMove(thing, x, y, false))
+    if (!P_TeleportMove(cx, thing, x, y, false))
     {
         return (false);
     }
@@ -680,7 +680,7 @@ dboolean P_Teleport(mobj_t * thing, fixed_t x, fixed_t y, angle_t angle, dboolea
     return (true);
 }
 
-int EV_HereticTeleport(short thing_id, int tag, line_t * line, int side, mobj_t * thing, int flags)
+int EV_HereticTeleport(CCore* cx, short thing_id, int tag, line_t * line, int side, mobj_t * thing, int flags)
 {
     int i;
     mobj_t *m;
@@ -716,7 +716,7 @@ int EV_HereticTeleport(short thing_id, int tag, line_t * line, int side, mobj_t 
                 {               // Wrong sector
                     continue;
                 }
-                return (P_Teleport(thing, m->x, m->y, m->angle, true));
+                return (P_Teleport(cx, thing, m->x, m->y, m->angle, true));
             }
         }
     }
@@ -728,7 +728,7 @@ int EV_HereticTeleport(short thing_id, int tag, line_t * line, int side, mobj_t 
 #include "m_random.h"
 #include "lprintf.h"
 
-dboolean EV_HexenTeleport(int tid, mobj_t * thing, dboolean fog)
+dboolean EV_HexenTeleport(CCore* cx, int tid, mobj_t * thing, dboolean fog)
 {
     int i;
     int count;
@@ -765,5 +765,5 @@ dboolean EV_HexenTeleport(int tid, mobj_t * thing, dboolean fog)
     {
         I_Error("Can't find teleport mapspot\n");
     }
-    return P_Teleport(thing, mo->x, mo->y, mo->angle, fog);
+    return P_Teleport(cx, thing, mo->x, mo->y, mo->angle, fog);
 }

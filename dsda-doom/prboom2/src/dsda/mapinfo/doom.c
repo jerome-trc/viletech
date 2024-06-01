@@ -347,7 +347,7 @@ int dsda_DoomStartFinale(void) {
   return true;
 }
 
-int dsda_DoomFTicker(void) {
+int dsda_DoomFTicker(CCore* cx) {
   void WI_checkForAccelerate(void);
   float Get_TextSpeed(void);
 
@@ -385,11 +385,11 @@ int dsda_DoomFTicker(void) {
   if (next_level) {
     if (end_data) {
       if (end_data->end == dmi_end_game_cast) {
-        F_StartCast(end_data->end_pic, end_data->music, end_data->loop_music);
+        F_StartCast(cx, end_data->end_pic, end_data->music, end_data->loop_music);
         return false; // let go of finale ownership
       }
       else if (end_data->end == dmi_end_game_scroll) {
-        F_StartScroll(end_data->end_pic, end_data->end_pic_b,
+        F_StartScroll(cx, end_data->end_pic, end_data->end_pic_b,
                       end_data->music, end_data->loop_music);
         return true; // keep finale ownership (legacy has game assumptions)
       }
