@@ -1,6 +1,6 @@
 ---
 BasedOnStyle: Microsoft
-ColumnLimit: 100
+ColumnLimit: 90
 IndentWidth: 4
 TabWidth: 4
 ---
@@ -12,6 +12,7 @@ AlignConsecutiveDeclarations: false
 AlignConsecutiveMacros: false
 AlignEscapedNewlines: Left
 AlignTrailingComments: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
