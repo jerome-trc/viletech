@@ -3,7 +3,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import compile, core, exports, fixed, imports, platform, stdx
+import compile, core, exports, fixed, gamemode, imports, platform, stdx
 
 proc dsdaMain(
     ccx: ptr CCore,
@@ -38,6 +38,8 @@ while true:
     of cmdLongOption: discard
     of cmdShortOption: discard
     of cmdEnd: break
+
+gameModeStart()
 
 var cx = Core.init()
 cx.c.core = cx.addr
