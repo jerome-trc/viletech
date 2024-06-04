@@ -2988,18 +2988,24 @@ dboolean P_MobjInCompatibleSector(CCore* cx, mobj_t *mobj)
   return false;
 }
 
-dboolean P_MobjInHereticSector(mobj_t *mobj)
+dboolean P_MobjInHereticSector(CCore* cx, mobj_t *mobj)
 {
+    (void)cx;
+    (void)mobj;
   return false;
 }
 
-dboolean P_MobjInHexenSector(mobj_t *mobj)
+dboolean P_MobjInHexenSector(CCore* cx, mobj_t *mobj)
 {
+    (void)cx;
+    (void)mobj;
   return false;
 }
 
-dboolean P_MobjInZDoomSector(mobj_t *mobj)
+dboolean P_MobjInZDoomSector(CCore* cx, mobj_t *mobj)
 {
+    (void)cx;
+    (void)mobj;
   return false;
 }
 

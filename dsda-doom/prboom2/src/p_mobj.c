@@ -1387,7 +1387,7 @@ void P_MobjThinker (CCore* cx, mobj_t* mobj)
       mobj->intflags &= ~MIF_FALLING, mobj->gear = 0;  // Reset torque
   }
 
-  if (map_format.mobj_in_special_sector(mobj))
+  if (map_format.mobj_in_special_sector(cx, mobj))
     return;
 
   // cycle through states,

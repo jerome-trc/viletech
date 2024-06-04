@@ -242,10 +242,10 @@ extern void P_TranslateCompatibleLineFlags(unsigned int *, line_activation_t *);
 extern void P_ApplyCompatibleSectorMovementSpecial(mobj_t *, int);
 extern void P_ApplyHereticSectorMovementSpecial(mobj_t *, int);
 
-extern dboolean P_MobjInCompatibleSector(mobj_t *);
-extern dboolean P_MobjInHereticSector(mobj_t *);
-extern dboolean P_MobjInHexenSector(mobj_t *);
-extern dboolean P_MobjInZDoomSector(mobj_t *);
+extern dboolean P_MobjInCompatibleSector(CCore*, mobj_t *);
+extern dboolean P_MobjInHereticSector(CCore*, mobj_t *);
+extern dboolean P_MobjInHexenSector(CCore*, mobj_t *);
+extern dboolean P_MobjInZDoomSector(CCore*, mobj_t *);
 
 extern void P_CompatiblePlayerThrust(player_t* player, angle_t angle, fixed_t move);
 extern void P_HereticPlayerThrust(player_t* player, angle_t angle, fixed_t move);
