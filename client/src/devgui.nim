@@ -54,5 +54,5 @@ proc dguiNeedsMouse*(self: var CCore): bool {.exportc: "vt_$1".} =
     self.core.dgui.consoleOpen
 
 
-proc processEvent*(self: var CCore, event: ptr SdlEvent) {.exportc: "vt_$1".} =
-    event.process()
+proc processEvent*(self: var CCore, event: ptr SdlEvent): bool {.exportc: "vt_$1".} =
+    return event.process()
