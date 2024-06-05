@@ -1,6 +1,7 @@
 when defined(nimHasUsed):
     {.used.}
 
+{.passc: "-I../build".}
 {.passc: "-I./src".}
 
 const dsdaLibPath = when defined(release):
