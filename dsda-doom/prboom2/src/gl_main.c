@@ -2759,6 +2759,4 @@ void gld_DrawScene(CCore* cx, player_t *player)
   glDisableClientState(GL_COLOR_ARRAY);
 
   glsl_PopMainShader();
-
-  vt_dguiFrameDraw(cx);
 }

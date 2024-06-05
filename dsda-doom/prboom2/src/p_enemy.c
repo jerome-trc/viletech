@@ -2582,8 +2582,7 @@ dboolean P_CheckBossDeath(mobj_t *mo)
   if (i == g_maxplayers)
     return false; // no one left alive, so do not end game
 
-  // scan the remaining thinkers to see
-  // if all bosses are dead
+  // scan the remaining thinkers to see if all bosses are dead
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     if (th->function == P_MobjThinker) {
       mobj_t* mo2 = (mobj_t*) th;
@@ -2602,7 +2601,7 @@ void A_BossDeath(CCore* cx, mobj_t *mo)
   // heretic_note: probably we can adopt the clean heretic style and merge
   if (heretic) return Heretic_A_BossDeath(cx, mo);
 
-  if (dsda_BossAction(mo))
+  if (dsda_BossAction(cx, mo))
   {
     return;
   }
@@ -2763,20 +2762,20 @@ void A_BabyMetal(CCore* cx, mobj_t *mo)
   A_Chase(cx, mo);
 }
 
-void A_OpenShotgun2(player_t *player, pspdef_t *psp)
+void A_OpenShotgun2(CCore* cx, player_t *player, pspdef_t *psp)
 {
   S_StartMobjSound(player->mo, sfx_dbopn);
 }
 
-void A_LoadShotgun2(player_t *player, pspdef_t *psp)
+void A_LoadShotgun2(CCore* cx, player_t *player, pspdef_t *psp)
 {
   S_StartMobjSound(player->mo, sfx_dbload);
 }
 
-void A_CloseShotgun2(player_t *player, pspdef_t *psp)
+void A_CloseShotgun2(CCore* cx, player_t *player, pspdef_t *psp)
 {
   S_StartMobjSound(player->mo, sfx_dbcls);
-  A_ReFire(player,psp);
+  A_ReFire(cx, player, psp);
 }
 
 // killough 2/7/98: Remove limit on icon landings:
@@ -3153,7 +3152,7 @@ void A_LineEffect(CCore* cx, mobj_t *mo)
     return;
   junk.tag = (short)mo->state->misc2;
   if (!P_UseSpecialLine(mo, &junk, 0, false))
-    map_format.cross_special_line(&junk, 0, mo, false);
+    map_format.cross_special_line(cx, &junk, 0, mo, false);
   mo->state->misc1 = junk.special;
   mo->player = oldplayer;
 }

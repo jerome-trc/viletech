@@ -451,11 +451,9 @@ static void ST_refreshBackground(void)
 }
 
 
-// Respond to keyboard input events,
-//  intercept cheats.
-dboolean ST_Responder(event_t *ev)
-{
-  return M_CheatResponder(ev);
+// Respond to keyboard input events, intercept cheats.
+dboolean ST_Responder(CCore* cx, event_t *ev) {
+  return M_CheatResponder(cx, ev);
 }
 
 static int ST_calcPainOffset(void)

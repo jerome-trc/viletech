@@ -88,7 +88,7 @@ int dsda_ConsoleHeight(void) {
   return console_height;
 }
 
-static void dsda_DrawConsole(void) {
+static void dsda_DrawConsole(CCore* cx) {
   console_height = V_FillHeightVPT(0, 0, 16, 0, CONSOLE_TEXT_FLAGS);
   HUlib_drawTextLine(&hu_console_prompt, false);
   HUlib_drawTextLine(&hu_console_message, false);
@@ -204,13 +204,13 @@ static dboolean console_LevelSecretExit(CCore* cx, const char* command, const ch
   return true;
 }
 
-static dboolean console_ActivateLine(mobj_t* mobj, int id, dboolean bossaction) {
+static dboolean console_ActivateLine(CCore* cx, mobj_t* mobj, int id, dboolean bossaction) {
   if (!mobj || id < 0 || id >= numlines)
     return false;
 
   P_MapStart();
   P_UseSpecialLine(mobj, &lines[id], 0, bossaction);
-  map_format.cross_special_line(&lines[id], 0, mobj, bossaction);
+  map_format.cross_special_line(cx, &lines[id], 0, mobj, bossaction);
   map_format.shoot_special_line(mobj, &lines[id]);
   P_MapEnd();
 
@@ -218,7 +218,6 @@ static dboolean console_ActivateLine(mobj_t* mobj, int id, dboolean bossaction) 
 }
 
 static dboolean console_PlayerActivateLine(CCore* cx, const char* command, const char* args) {
-  (void)cx;
   (void)command;
 
   int id;
@@ -226,7 +225,7 @@ static dboolean console_PlayerActivateLine(CCore* cx, const char* command, const
   if (sscanf(args, "%i", &id) != 1)
     return false;
 
-  return console_ActivateLine(target_player.mo, id, false);
+  return console_ActivateLine(cx, target_player.mo, id, false);
 }
 
 static dboolean console_PlayerSetHealth(CCore* cx, const char* command, const char* args) {
@@ -481,7 +480,7 @@ static dboolean console_PlayerRemovePower(CCore* cx, const char* command, const 
           && (target_player.psprites[ps_weapon].state
               != &states[HERETIC_S_PHOENIXUP]))
       {
-        P_SetPsprite(&target_player, ps_weapon, HERETIC_S_PHOENIXREADY);
+        P_SetPsprite(cx, &target_player, ps_weapon, HERETIC_S_PHOENIXREADY);
         target_player.ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
         target_player.refire = 0;
       }
@@ -1239,7 +1238,7 @@ static dboolean console_Exit(CCore* cx, const char* command, const char* args) {
 
 static dboolean console_BasicCheat(CCore* cx, const char* command, const char* args) {
   (void)cx;
-  return M_CheatEntered(command, args);
+  return M_CheatEntered(cx, command, args);
 }
 
 static dboolean console_IDDT(CCore* cx, const char* command, const char* args) {
@@ -1726,7 +1725,6 @@ static dboolean console_TargetTargetPlayer(CCore* cx, const char* command, const
 }
 
 static dboolean console_TargetActivateLine(CCore* cx, const char* command, const char* args) {
-  (void)cx;
   (void)command;
 
   int id;
@@ -1737,7 +1735,7 @@ static dboolean console_TargetActivateLine(CCore* cx, const char* command, const
 
   target = HU_Target(cx);
 
-  return console_ActivateLine(target, id, false);
+  return console_ActivateLine(cx, target, id, false);
 }
 
 static dboolean console_TargetAddFlags(CCore* cx, const char* command, const char* args) {
@@ -2024,7 +2022,6 @@ static dboolean console_MobjTargetPlayer(CCore* cx, const char* command, const c
 }
 
 static dboolean console_MobjActivateLine(CCore* cx, const char* command, const char* args) {
-  (void)cx;
   (void)command;
 
   int id;
@@ -2036,7 +2033,7 @@ static dboolean console_MobjActivateLine(CCore* cx, const char* command, const c
 
   target = dsda_FindMobj(index);
 
-  return console_ActivateLine(target, id, false);
+  return console_ActivateLine(cx, target, id, false);
 }
 
 static dboolean console_MobjAddFlags(CCore* cx, const char* command, const char* args) {
@@ -2115,7 +2112,6 @@ static dboolean console_MobjSetFlags(CCore* cx, const char* command, const char*
 }
 
 static dboolean console_BossActivateLine(CCore* cx, const char* command, const char* args) {
-  (void)cx;
   (void)command;
 
   int id;
@@ -2127,7 +2123,7 @@ static dboolean console_BossActivateLine(CCore* cx, const char* command, const c
 
   target = dsda_FindMobj(index);
 
-  return console_ActivateLine(target, id, true);
+  return console_ActivateLine(cx, target, id, true);
 }
 
 static dboolean console_Spawn(CCore* cx, const char* command, const char* args) {

@@ -136,8 +136,9 @@ dboolean EV_StopPoly(int polyNum)
   return false;
 }
 
-void T_RotatePoly(CCore* cx, polyevent_t * pe)
+void T_RotatePoly(CCore* cx, void* v)
 {
+    polyevent_t* pe = v;
     int absSpeed;
 
     if (PO_RotatePolyobj(cx, pe->polyobj, pe->speed))
@@ -251,8 +252,9 @@ dboolean EV_RotatePoly(line_t * line, byte * args, int direction, dboolean overR
     return EV_RotateZDoomPoly(line, args[0], args[1], args[2], direction, overRide);
 }
 
-void T_MovePoly(CCore* cx, polyevent_t * pe)
+void T_MovePoly(CCore* cx, void* v)
 {
+    polyevent_t * pe = (polyevent_t*)v;
     int absSpeed;
 
     if (PO_MovePolyobj(cx, pe->polyobj, pe->xSpeed, pe->ySpeed))
@@ -381,8 +383,9 @@ dboolean EV_MovePoly(line_t * line, byte * args, dboolean timesEight, dboolean o
     return EV_MoveZDoomPoly(line, args[0], args[1], args[2], args[3], timesEight, overRide);
 }
 
-void T_PolyDoor(CCore* cx, polydoor_t * pd)
+void T_PolyDoor(CCore* cx, void* v)
 {
+    polydoor_t* pd = (polydoor_t*)v;
     int absSpeed;
     polyobj_t *poly;
 

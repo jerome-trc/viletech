@@ -40,7 +40,7 @@
 
 void P_PlayerThink(CCore*, player_t*);
 void P_CalcHeight(player_t*);
-void P_DeathThink(player_t*);
+void P_DeathThink(CCore*, player_t*);
 void P_MovePlayer(CCore*, player_t*);
 void P_ForwardThrust(player_t*, angle_t angle, fixed_t move);
 void P_Thrust(player_t*, angle_t angle, fixed_t move);

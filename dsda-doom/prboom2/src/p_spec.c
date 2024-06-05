@@ -2949,7 +2949,7 @@ void P_PlayerInZDoomSector(CCore* cx, player_t *player, sector_t *sector)
 // Changed to ignore sector types the engine does not recognize
 //
 
-void P_PlayerInSpecialSector (player_t* player)
+void P_PlayerInSpecialSector (CCore* cx, player_t* player)
 {
   sector_t*   sector;
 
@@ -2960,7 +2960,7 @@ void P_PlayerInSpecialSector (player_t* player)
   if (player->mo->z != sector->floorheight)
     return;
 
-  map_format.player_in_special_sector(player, sector);
+  map_format.player_in_special_sector(cx, player, sector);
 }
 
 dboolean P_MobjInCompatibleSector(CCore* cx, mobj_t *mobj)
@@ -5622,7 +5622,7 @@ dboolean P_ActivateLine(line_t * line, mobj_t * mo, int side, line_activation_t 
   return true;
 }
 
-void P_PlayerInHexenSector(player_t * player, sector_t * sector)
+void P_PlayerInHexenSector(CCore* cx, player_t * player, sector_t * sector)
 {
     static int pushTab[3] = {
         2048 * 5,

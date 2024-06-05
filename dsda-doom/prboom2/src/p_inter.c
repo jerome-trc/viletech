@@ -977,7 +977,7 @@ static void P_KillMobj(CCore* cx, mobj_t *source, mobj_t *target)
     target->player->powers[pw_weaponlevel2] = 0;
 
     target->player->playerstate = PST_DEAD;
-    P_DropWeapon (target->player);
+    P_DropWeapon(cx, target->player);
 
     // heretic
     if (target->flags2 & MF2_FIREDAMAGE)
@@ -2441,7 +2441,7 @@ dboolean P_ChickenMorphPlayer(CCore* cx, player_t * player)
         chicken->flags2 |= MF2_FLY;
     }
     player->chickenTics = CHICKENTICS;
-    P_ActivateBeak(player);
+    P_ActivateBeak(cx, player);
     return (true);
 }
 
@@ -2731,7 +2731,7 @@ void P_PoisonDamage(CCore* cx, player_t * player, mobj_t * source, int damage,
     }
 }
 
-dboolean P_GiveMana(player_t * player, manatype_t mana, int count)
+dboolean P_GiveMana(CCore* cx, player_t * player, manatype_t mana, int count)
 {
     int prevMana;
 
@@ -2761,7 +2761,7 @@ dboolean P_GiveMana(player_t * player, manatype_t mana, int count)
     if (player->pclass == PCLASS_FIGHTER && player->readyweapon == wp_second
         && mana == MANA_1 && prevMana <= 0)
     {
-        P_SetPsprite(player, ps_weapon, HEXEN_S_FAXEREADY_G);
+        P_SetPsprite(cx, player, ps_weapon, HEXEN_S_FAXEREADY_G);
     }
     return (true);
 }
@@ -2826,14 +2826,14 @@ void TryPickupWeapon(CCore* cx, player_t * player, pclass_t weaponClass,
         }
         if (weaponType == wp_second)
         {
-            if (!P_GiveMana(player, MANA_1, 25))
+            if (!P_GiveMana(cx, player, MANA_1, 25))
             {
                 return;
             }
         }
         else
         {
-            if (!P_GiveMana(player, MANA_2, 25))
+            if (!P_GiveMana(cx, player, MANA_2, 25))
             {
                 return;
             }
@@ -2848,11 +2848,11 @@ void TryPickupWeapon(CCore* cx, player_t * player, pclass_t weaponClass,
         player->weaponowned[weaponType] = true;
         if (weaponType == wp_second)
         {
-            P_GiveMana(player, MANA_1, 25);
+            P_GiveMana(cx, player, MANA_1, 25);
         }
         else
         {
-            P_GiveMana(player, MANA_2, 25);
+            P_GiveMana(cx, player, MANA_2, 25);
         }
         player->pendingweapon = weaponType;
         remove = false;
@@ -2861,11 +2861,11 @@ void TryPickupWeapon(CCore* cx, player_t * player, pclass_t weaponClass,
     {                           // Deathmatch or single player game
         if (weaponType == wp_second)
         {
-            gaveMana = P_GiveMana(player, MANA_1, 25);
+            gaveMana = P_GiveMana(cx, player, MANA_1, 25);
         }
         else
         {
-            gaveMana = P_GiveMana(player, MANA_2, 25);
+            gaveMana = P_GiveMana(cx, player, MANA_2, 25);
         }
         if (player->weaponowned[weaponType])
         {
@@ -2950,8 +2950,8 @@ static void TryPickupWeaponPiece(CCore* cx, player_t * player, pclass_t matchCla
             return;
         }
         checkAssembled = false;
-        gaveMana = P_GiveMana(player, MANA_1, 20) +
-            P_GiveMana(player, MANA_2, 20);
+        gaveMana = P_GiveMana(cx, player, MANA_1, 20) +
+            P_GiveMana(cx, player, MANA_2, 20);
         if (!gaveMana)
         {                       // Didn't need the mana, so don't pick it up
             return;
@@ -2964,14 +2964,14 @@ static void TryPickupWeaponPiece(CCore* cx, player_t * player, pclass_t matchCla
             return;
         }
         pieceValue = pieceValueTrans[pieceValue];
-        P_GiveMana(player, MANA_1, 20);
-        P_GiveMana(player, MANA_2, 20);
+        P_GiveMana(cx, player, MANA_1, 20);
+        P_GiveMana(cx, player, MANA_2, 20);
         remove = false;
     }
     else
     {                           // Deathmatch or single player game
-        gaveMana = P_GiveMana(player, MANA_1, 20) +
-            P_GiveMana(player, MANA_2, 20);
+        gaveMana = P_GiveMana(cx, player, MANA_1, 20) +
+            P_GiveMana(cx, player, MANA_2, 20);
         if (player->pieces & pieceValue)
         {                       // Already has the piece, check if mana needed
             if (!gaveMana)
@@ -3342,30 +3342,30 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
 
             // Mana
         case HEXEN_SPR_MAN1:
-            if (!P_GiveMana(player, MANA_1, 15))
+            if (!P_GiveMana(cx, player, MANA_1, 15))
             {
                 return;
             }
             P_SetMessage(player, TXT_MANA_1, false);
             break;
         case HEXEN_SPR_MAN2:
-            if (!P_GiveMana(player, MANA_2, 15))
+            if (!P_GiveMana(cx, player, MANA_2, 15))
             {
                 return;
             }
             P_SetMessage(player, TXT_MANA_2, false);
             break;
         case HEXEN_SPR_MAN3:         // Double Mana Dodecahedron
-            if (!P_GiveMana(player, MANA_1, 20))
+            if (!P_GiveMana(cx, player, MANA_1, 20))
             {
-                if (!P_GiveMana(player, MANA_2, 20))
+                if (!P_GiveMana(cx, player, MANA_2, 20))
                 {
                     return;
                 }
             }
             else
             {
-                P_GiveMana(player, MANA_2, 20);
+                P_GiveMana(cx, player, MANA_2, 20);
             }
             P_SetMessage(player, TXT_MANA_BOTH, false);
             break;
@@ -3529,7 +3529,7 @@ dboolean P_MorphPlayer(CCore* cx, player_t * player)
         beastMo->flags2 |= MF2_FLY;
     }
     player->morphTics = MORPHTICS;
-    P_ActivateMorphWeapon(player);
+    P_ActivateMorphWeapon(cx, player);
     return (true);
 }
 

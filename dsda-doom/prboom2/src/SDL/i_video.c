@@ -1528,14 +1528,10 @@ static void I_ReadMouse(CCore* cx)
 
 static dboolean MouseShouldBeGrabbed(CCore* cx)
 {
-    if (vt_dguiNeedsMouse(cx))
-        return false;
-
-    if (fastdemo)
+    if (vt_dguiNeedsMouse(cx) || fastdemo)
         return false;
 
   // never grab the mouse when in screensaver mode
-
   //if (screensaver_mode)
   //    return false;
 

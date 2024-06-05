@@ -42,7 +42,7 @@ int dsda_UInterMusic(int* music_index, int* music_lump);
 int dsda_UStartFinale(void);
 int dsda_UFTicker(CCore*);
 void dsda_UFDrawer(void);
-int dsda_UBossAction(mobj_t* mo);
+int dsda_UBossAction(CCore*, mobj_t*);
 int dsda_UMapLumpName(const char** name, int episode, int map);
 int dsda_UMapAuthor(const char** author);
 int dsda_UHUTitle(dsda_string_t* str);

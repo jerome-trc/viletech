@@ -36,6 +36,8 @@
 
 #include "d_event.h"
 
+#include "viletech.nim.h"
+
 #define CHEAT(cheat, deh_cheat, when, func, arg, repeatable) \
   { cheat, deh_cheat, when, func, arg, repeatable, 0, 0, 0, 0, 0, "" }
 
@@ -54,7 +56,7 @@ typedef struct cheatseq_s {
   const char *	cheat;
   const char *const deh_cheat;
   const cheat_when_t when;
-  void (*const func)();
+  void (*const func)(CCore*, void*);
   const int arg;
   const int repeatable;
   uint64_t code, mask;
@@ -68,10 +70,10 @@ typedef struct cheatseq_s {
 
 extern cheatseq_t cheat[];
 
-void M_CheatGod(void);
+void M_CheatGod(CCore*);
 void M_CheatNoClip(void);
 void M_CheatIDDT(void);
-dboolean M_CheatResponder(event_t *ev);
-dboolean M_CheatEntered(const char* element, const char* value);
+dboolean M_CheatResponder(CCore*, event_t*);
+dboolean M_CheatEntered(CCore*, const char* element, const char* value);
 
 #endif

@@ -20,9 +20,6 @@
 #include "p_spec.h"
 #include "r_main.h"
 #include "r_state.h"
-#include "w_wad.h"
-
-#include "dsda/args.h"
 
 #include "map_format.h"
 
@@ -188,10 +185,10 @@ static void dsda_MigrateMobjInfo(void) {
 extern void P_SpawnCompatibleSectorSpecial(sector_t *sector, int i);
 extern void P_SpawnZDoomSectorSpecial(sector_t *sector, int i);
 
-extern void P_PlayerInCompatibleSector(player_t *player, sector_t *sector);
-extern void P_PlayerInZDoomSector(player_t *player, sector_t *sector);
-extern void P_PlayerInHereticSector(player_t * player, sector_t * sector);
-extern void P_PlayerInHexenSector(player_t * player, sector_t * sector);
+extern void P_PlayerInCompatibleSector(CCore*, player_t*, sector_t*);
+extern void P_PlayerInZDoomSector(CCore*, player_t*, sector_t*);
+extern void P_PlayerInHereticSector(CCore*, player_t*, sector_t*);
+extern void P_PlayerInHexenSector(CCore*, player_t*, sector_t*);
 
 extern void P_SpawnCompatibleScroller(line_t *l, int i);
 extern void P_SpawnZDoomScroller(line_t *l, int i);
@@ -205,10 +202,10 @@ extern void P_SpawnZDoomPusher(line_t *l);
 extern void P_SpawnCompatibleExtra(line_t *l, int i);
 extern void P_SpawnZDoomExtra(line_t *l, int i);
 
-extern void P_CrossCompatibleSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction);
-extern void P_CrossZDoomSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction);
-extern void P_CrossHereticSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction);
-extern void P_CrossHexenSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction);
+extern void P_CrossCompatibleSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+extern void P_CrossZDoomSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+extern void P_CrossHereticSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+extern void P_CrossHexenSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
 
 extern void P_ShootCompatibleSpecialLine(mobj_t *thing, line_t *line);
 extern void P_ShootHexenSpecialLine(mobj_t *thing, line_t *line);
@@ -282,8 +279,8 @@ void dsda_AddMobjThingID(mobj_t* mo, short thing_id);
 void P_RemoveMobjFromTIDList(mobj_t * mobj);
 void dsda_RemoveMobjThingID(mobj_t* mo);
 
-void P_IterateCompatibleSpecHit(mobj_t *thing, fixed_t oldx, fixed_t oldy);
-void P_IterateZDoomSpecHit(mobj_t *thing, fixed_t oldx, fixed_t oldy);
+void P_IterateCompatibleSpecHit(CCore*, mobj_t*, fixed_t oldx, fixed_t oldy);
+void P_IterateZDoomSpecHit(CCore*, mobj_t*, fixed_t oldx, fixed_t oldy);
 
 static const map_format_t zdoom_map_format = {
   .zdoom = true,

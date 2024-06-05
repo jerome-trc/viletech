@@ -61,7 +61,7 @@ void ST_SetScaledWidth(void);
 //
 
 // Called by main loop.
-dboolean ST_Responder(event_t* ev);
+dboolean ST_Responder(CCore*, event_t*);
 
 // Called by main loop.
 void ST_Ticker(void);

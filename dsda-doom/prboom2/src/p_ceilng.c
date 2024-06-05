@@ -412,35 +412,28 @@ void T_MoveHexenCeiling(CCore* cx, ceiling_t * ceiling)
     }
 }
 
-void T_MoveCeiling (ceiling_t * ceiling)
-{
-  map_format.t_move_ceiling(ceiling);
+void T_MoveCeiling(CCore* cx, void* v) {
+    ceiling_t * ceiling = v;
+    map_format.t_move_ceiling(ceiling);
 }
 
-
-//
 // EV_DoCeiling
 //
 // Move a ceiling up/down or start a crusher
 //
 // Passed the linedef activating the function and the type of function desired
 // returns true if a thinker started
-//
-int EV_DoCeiling
-( line_t* line,
-  ceiling_e type )
-{
-  const int *id_p;
-  int   rtn;
-  sector_t* sec;
-  ceiling_t*  ceiling;
+int EV_DoCeiling(line_t* line, ceiling_e type) {
+	const int* id_p;
+	int rtn;
+	sector_t* sec;
+	ceiling_t* ceiling;
 
-  rtn = 0;
+	rtn = 0;
 
-  // Reactivate in-stasis ceilings...for certain types.
-  // This restarts a crusher after it has been stopped
-  switch(type)
-  {
+	// Reactivate in-stasis ceilings...for certain types.
+	// This restarts a crusher after it has been stopped
+	switch (type) {
     case fastCrushAndRaise:
     case silentCrushAndRaise:
     case crushAndRaise:

@@ -830,7 +830,7 @@ void G_BuildTiccmd(CCore* cx, ticcmd_t* cmd)
       (
         !demo_compatibility &&
         players[consoleplayer].attackdown && // killough
-        !P_CheckAmmo(&players[consoleplayer]) &&
+        !P_CheckAmmo(cx, &players[consoleplayer]) &&
         (
           (
             (
@@ -1277,7 +1277,7 @@ dboolean G_Responder(CCore* cx, event_t* ev) {
   if (
     gamestate == GS_LEVEL && (
       HU_Responder(ev) ||
-      ST_Responder(ev) ||
+      ST_Responder(cx, ev) ||
       AM_Responder(cx, ev)
     )
   ) return true;
@@ -1587,7 +1587,7 @@ void G_Ticker(CCore* cx) {
 
           if (ex->actions & XC_GOD)
           {
-            M_CheatGod();
+            M_CheatGod(cx);
           }
 
           if (ex->actions & XC_NOCLIP)
@@ -1993,13 +1993,13 @@ void G_DeathMatchSpawnPlayer (CCore* cx, int playernum)
       if (G_CheckSpot (cx, playernum, &deathmatchstarts[i]) )
         {
           deathmatchstarts[i].type = playernum+1;
-          P_SpawnPlayer (playernum, &deathmatchstarts[i]);
+          P_SpawnPlayer (cx, playernum, &deathmatchstarts[i]);
           return;
         }
     }
 
   // no good spot, so the player will probably get stuck
-  P_SpawnPlayer (playernum, &playerstarts[0][playernum]);
+  P_SpawnPlayer (cx, playernum, &playerstarts[0][playernum]);
 }
 
 /// @fn G_DoReborn
@@ -2030,7 +2030,7 @@ void G_DoReborn (CCore* cx, int playernum)
 
       if (G_CheckSpot (cx, playernum, &playerstarts[0][playernum]) )
         {
-          P_SpawnPlayer (playernum, &playerstarts[0][playernum]);
+          P_SpawnPlayer (cx, playernum, &playerstarts[0][playernum]);
           return;
         }
 
@@ -2039,12 +2039,12 @@ void G_DoReborn (CCore* cx, int playernum)
         {
           if (G_CheckSpot (cx, playernum, &playerstarts[0][i]) )
             {
-              P_SpawnPlayer (playernum, &playerstarts[0][i]);
+              P_SpawnPlayer (cx, playernum, &playerstarts[0][i]);
               return;
             }
           // he's going to be inside something.  Too bad.
         }
-      P_SpawnPlayer (playernum, &playerstarts[0][playernum]);
+      P_SpawnPlayer (cx, playernum, &playerstarts[0][playernum]);
     }
 }
 
@@ -4292,7 +4292,7 @@ void Hexen_G_DoReborn(CCore* cx, int playernum)
         foundSpot = false;
         if (G_CheckSpot(cx, playernum, &playerstarts[RebornPosition][playernum]))
         {                       // Appropriate player start spot is open
-            P_SpawnPlayer(playernum, &playerstarts[RebornPosition][playernum]);
+            P_SpawnPlayer(cx, playernum, &playerstarts[RebornPosition][playernum]);
             foundSpot = true;
         }
         else
@@ -4305,7 +4305,7 @@ void Hexen_G_DoReborn(CCore* cx, int playernum)
 
                     // Fake as other player
                     playerstarts[RebornPosition][i].type = playernum + 1;
-                    P_SpawnPlayer(playernum, &playerstarts[RebornPosition][i]);
+                    P_SpawnPlayer(cx, playernum, &playerstarts[RebornPosition][i]);
 
                     // Restore proper player type
                     playerstarts[RebornPosition][i].type = i + 1;
@@ -4318,7 +4318,7 @@ void Hexen_G_DoReborn(CCore* cx, int playernum)
 
         if (foundSpot == false)
         {                       // Player's going to be inside something
-            P_SpawnPlayer(playernum, &playerstarts[RebornPosition][playernum]);
+            P_SpawnPlayer(cx, playernum, &playerstarts[RebornPosition][playernum]);
         }
 
         // Restore keys and weapons

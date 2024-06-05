@@ -578,12 +578,10 @@ void R_DrawViewBorder(void)
   }
 }
 
-void R_SetFuzzPos(int fp)
-{
+void R_SetFuzzPos(int fp) {
   fuzzpos = fp;
 }
 
-int R_GetFuzzPos()
-{
+int R_GetFuzzPos(void) {
   return fuzzpos;
 }

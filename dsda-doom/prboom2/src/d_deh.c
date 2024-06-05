@@ -39,6 +39,7 @@
 #include "doomtype.h"
 #include "doomstat.h"
 #include "d_deh.h"
+#include "p_pspr.h"
 #include "sounds.h"
 #include "info.h"
 #include "m_cheat.h"
@@ -1388,7 +1389,7 @@ static const char *deh_misc[] = // CPhipps - static const*
 // FRAME nnn = PointerMnemonic
 
 typedef struct {
-  actionf_t cptr;  // actual pointer to the subroutine
+  void* cptr;  // actual pointer to the subroutine
   const char *lookup;  // mnemonic lookup string to be specified in BEX
   // CPhipps - const*
   short argcount;  // [XA] number of mbf21 args this action uses, if any

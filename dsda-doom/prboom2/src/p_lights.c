@@ -56,8 +56,9 @@
 // Passed a fireflicker_t structure containing light levels and timing
 // Returns nothing
 //
-void T_FireFlicker (fireflicker_t* flick)
+void T_FireFlicker(CCore* cx, void* v)
 {
+    fireflicker_t* flick = v;
   int amount;
 
   if (--flick->count)
@@ -81,8 +82,10 @@ void T_FireFlicker (fireflicker_t* flick)
 // Passed a lightflash_t structure containing light levels and timing
 // Returns nothing
 //
-void T_LightFlash (lightflash_t* flash)
+void T_LightFlash(CCore* cx, void* v)
 {
+    lightflash_t* flash = v;
+
   if (--flash->count)
     return;
 
@@ -107,8 +110,10 @@ void T_LightFlash (lightflash_t* flash)
 // Passed a strobe_t structure containing light levels and timing
 // Returns nothing
 //
-void T_StrobeFlash (strobe_t*   flash)
+void T_StrobeFlash(CCore* cx, void* v)
 {
+    strobe_t* flash = v;
+
   if (--flash->count)
     return;
 
@@ -133,8 +138,10 @@ void T_StrobeFlash (strobe_t*   flash)
 // Returns nothing
 //
 
-void T_Glow(glow_t* g)
+void T_Glow(CCore* cx, void* v)
 {
+    glow_t* g = v;
+
   switch(g->direction)
   {
     case -1:
@@ -503,8 +510,10 @@ void EV_LightSetMaxNeighbor(int tag)
   }
 }
 
-void T_ZDoom_Glow(zdoom_glow_t *g)
+void T_ZDoom_Glow(CCore* cx, void* v)
 {
+    zdoom_glow_t* g = v;
+
   if (g->tics++ >= g->maxtics)
   {
     if (g->oneshot)
@@ -593,8 +602,10 @@ void EV_StartLightGlowing(int tag, short upper, short lower, short tics)
   }
 }
 
-void T_ZDoom_Flicker(zdoom_flicker_t *g)
+void T_ZDoom_Flicker(CCore* cx, void* v)
 {
+    zdoom_flicker_t *g = v;
+
   if (g->count)
   {
     g->count--;
@@ -725,8 +736,10 @@ void EV_StopLightEffect(int tag)
 
 // hexen
 
-void T_Light(light_t * light)
+void T_Light(CCore* cx, void* v)
 {
+    light_t * light = v;
+
     if (light->count)
     {
         light->count--;
@@ -924,8 +937,9 @@ static int PhaseTable[64] = {
     32, 32, 48, 64, 80, 96, 112, 128
 };
 
-void T_Phase(phase_t * phase)
+void T_Phase(CCore* cx, void* v)
 {
+    phase_t * phase = v;
     phase->index = (phase->index + 1) & 63;
     phase->sector->lightlevel = phase->base + PhaseTable[phase->index];
 }

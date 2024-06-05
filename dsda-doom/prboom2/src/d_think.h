@@ -47,12 +47,12 @@ struct mobj_s;
  *  action functions cleanly.
  */
 // killough 11/98: convert back to C instead of C++
-typedef  void (*actionf_t)();
+typedef void (*actionf_t)(CCore*, void*);
 
 //e6y: for boom's friction code
-typedef  void (*actionf_v)(void);
-typedef  void (*actionf_p1)( void* );
-typedef  void (*actionf_p2)( void*, void* );
+typedef void (*actionf_v)(void);
+typedef void (*actionf_p1)(void*);
+typedef void (*actionf_p2)(void*, void*);
 
 /* Note: In d_deh.c you will find references to these
  * wherever code pointers and function handlers exist

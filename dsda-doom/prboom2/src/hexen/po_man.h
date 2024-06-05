@@ -54,10 +54,10 @@ typedef struct
     dboolean close;
 } polydoor_t;
 
-void T_PolyDoor(CCore*, polydoor_t * pd);
-void T_RotatePoly(CCore*, polyevent_t * pe);
+void T_PolyDoor(CCore*, void* /* polydoor_t */);
+void T_RotatePoly(CCore*, void* /* polyevent_t */);
 dboolean EV_RotatePoly(line_t * line, byte * args, int direction, dboolean overRide);
-void T_MovePoly(CCore*, polyevent_t * pe);
+void T_MovePoly(CCore*, void* /* polyevent_t */);
 dboolean EV_MovePoly(line_t * line, byte * args, dboolean timesEight, dboolean overRide);
 dboolean EV_OpenPolyDoor(line_t * line, byte * args, podoortype_t type);
 

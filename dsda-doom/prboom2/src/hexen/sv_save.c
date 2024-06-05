@@ -2046,7 +2046,7 @@ void SV_MapTeleport(CCore* cx, int map, int position)
         }
         else
         {
-            P_SpawnPlayer(i, &playerstarts[position][i]);
+            P_SpawnPlayer(cx, i, &playerstarts[position][i]);
         }
 
         if (playerWasReborn && netgame && !deathmatch)

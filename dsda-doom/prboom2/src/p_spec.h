@@ -1058,42 +1058,41 @@ void P_ChangeSwitchTexture
 
 // p_lights
 
-void T_LightFlash
-( lightflash_t* flash );
+void T_LightFlash(CCore*, void* /* lightflash_t */);
 
-void T_StrobeFlash
-( strobe_t* flash );
+void T_StrobeFlash(CCore*, void* /* strobe_t */);
 
 // jff 8/8/98 add missing thinker for flicker
-void T_FireFlicker
-( fireflicker_t* flick );
+void T_FireFlicker(CCore*, void* /* fireflicker_t */);
 
-void T_Glow
-( glow_t* g );
+void T_Glow(CCore*, void* /* glow_t */);
 
 // p_plats
 
-void T_PlatRaise
-( CCore*, plat_t* );
+void T_PlatRaise(CCore*, void* /* plat_t */);
 
 // p_doors
 
-void T_VerticalDoor
-( CCore*, vldoor_t* );
+void T_VerticalDoor(CCore*, void* /* vldoor_t */);
 
 // p_ceilng
 
-void T_MoveCeiling
-( ceiling_t* );
+void T_MoveCeiling(CCore*, void* /* ceiling_t */);
 
 // p_floor
 
 result_e T_MoveFloorPlane(
-	CCore*, sector_t*, fixed_t speed, fixed_t dest, int crush, int direction, dboolean hexencrush
+	CCore*,
+	sector_t*,
+	fixed_t speed,
+	fixed_t dest,
+	int crush,
+	int direction,
+	dboolean hexencrush
 );
 
-void T_MoveFloor(CCore*, floormove_t*);
-void T_MoveElevator(CCore*, elevator_t*);
+void T_MoveFloor(CCore*, void*);
+void T_MoveElevator(CCore*, void*);
 
 // p_spec
 
@@ -1240,16 +1239,12 @@ dboolean P_UseSpecialLine
   int   side,
 	dboolean noplayercheck);
 
-void P_PlayerInSpecialSector
-( player_t* player );
+void P_PlayerInSpecialSector(CCore*, player_t*);
 
 // p_lights
 
-void P_SpawnFireFlicker
-( sector_t* sector );
-
-void P_SpawnLightFlash
-( sector_t* sector );
+void P_SpawnFireFlicker(sector_t*);
+void P_SpawnLightFlash(sector_t*);
 
 void P_SpawnStrobeFlash
 ( sector_t* sector,
@@ -1359,8 +1354,8 @@ typedef struct
 #define LIGHT_SEQUENCE          3
 #define LIGHT_SEQUENCE_ALT      4
 
-void T_Phase(phase_t * phase);
-void T_Light(light_t * light);
+void T_Phase(CCore*, void* /* phase_t */);
+void T_Light(CCore*, void* /* light_t */);
 void P_SpawnPhasedLight(sector_t * sector, int base, int index);
 void P_SpawnLightSequence(sector_t * sector, int indexStep);
 dboolean EV_SpawnLight(line_t * line, byte * arg, lighttype_t type);
@@ -1426,12 +1421,12 @@ typedef enum
 int Hexen_EV_DoFloor(line_t * line, byte * args, floor_e floortype);
 int EV_DoFloorAndCeiling(line_t * line, byte * args, dboolean raise);
 int Hexen_EV_BuildStairs(line_t * line, byte * args, int direction, stairs_e stairsType);
-void T_BuildPillar(pillar_t * pillar);
+void T_BuildPillar(CCore*, void* /* pillar_t */);
 int EV_BuildPillar(line_t * line, byte * args, int crush);
 int EV_OpenPillar(line_t * line, byte * args);
 int EV_FloorCrushStop(line_t * line, byte * args);
-void T_FloorWaggle(CCore*, planeWaggle_t *);
-void T_CeilingWaggle(CCore*, planeWaggle_t *);
+void T_FloorWaggle(CCore*, void* /* planeWaggle_t */);
+void T_CeilingWaggle(CCore*, void* /* planeWaggle_t */);
 dboolean EV_StartFloorWaggle(int tag, int height, int speed, int offset, int timer);
 
 // p_plats
@@ -1639,8 +1634,8 @@ void EV_StartLightFlickering(int tag, short upper, short lower);
 void EV_StartZDoomLightStrobing(int tag, int upper, int lower, int brighttime, int darktime);
 void EV_StartZDoomLightStrobingDoom(int tag, int brighttime, int darktime);
 void EV_StopLightEffect(int tag);
-void T_ZDoom_Glow(zdoom_glow_t*);
-void T_ZDoom_Flicker(zdoom_flicker_t*);
+void T_ZDoom_Glow(CCore*, void* /* zdoom_glow_t */);
+void T_ZDoom_Flicker(CCore*, void* /* zdoom_flicker_t */);
 int P_ConvertHexenCrush(int crush);
 void P_ResolveFrictionFactor(fixed_t friction_factor, sector_t *sec);
 

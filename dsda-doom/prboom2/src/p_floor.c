@@ -383,9 +383,9 @@ void T_MoveHexenFloor(CCore* cx, floormove_t * floor)
     }
 }
 
-void T_MoveFloor(CCore* cx, floormove_t* floor)
-{
-  map_format.t_move_floor(floor);
+void T_MoveFloor(CCore* cx, void* v) {
+    floormove_t* floor = v;
+    map_format.t_move_floor(floor);
 }
 
 //
@@ -400,11 +400,12 @@ void T_MoveFloor(CCore* cx, floormove_t* floor)
 //
 // jff 02/22/98 added to support parallel floor/ceiling motion
 //
-void T_MoveElevator(CCore* cx, elevator_t* elevator)
+void T_MoveElevator(CCore* cx, void* v)
 {
-  result_e      res;
+    elevator_t* elevator = v;
+    result_e res;
 
-  if (elevator->direction<0)      // moving down
+  if (elevator->direction < 0)      // moving down
   {
     res = T_MoveCeilingPlane      //jff 4/7/98 reverse order of ceiling/floor
     (
@@ -2034,8 +2035,9 @@ void T_BuildZDoomPillar(CCore* cx, pillar_t * pillar)
   }
 }
 
-void T_BuildPillar(pillar_t * pillar)
+void T_BuildPillar(CCore* cx, void* v)
 {
+    pillar_t* pillar = v;
   map_format.t_build_pillar(pillar);
 }
 
@@ -2375,13 +2377,15 @@ static void T_PlaneWaggle(CCore* cx, planeWaggle_t * waggle, fixed_t * planeheig
   P_ChangeSector(cx, waggle->sector, true);
 }
 
-void T_FloorWaggle(CCore* cx, planeWaggle_t * waggle)
+void T_FloorWaggle(CCore* cx, void* v)
 {
+    planeWaggle_t* waggle = v;
   T_PlaneWaggle(cx, waggle, &waggle->sector->floorheight, &waggle->sector->floordata);
 }
 
-void T_CeilingWaggle(CCore* cx, planeWaggle_t * waggle)
+void T_CeilingWaggle(CCore* cx, void* v)
 {
+    planeWaggle_t* waggle = v;
   T_PlaneWaggle(cx, waggle, &waggle->sector->ceilingheight, &waggle->sector->ceilingdata);
 }
 

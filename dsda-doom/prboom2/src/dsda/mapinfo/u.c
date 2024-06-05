@@ -302,7 +302,7 @@ void dsda_UFDrawer(void) {
 // numbossactions == 0 means to use the defaults.
 // numbossactions == -1 means to do nothing.
 // positive values mean to check the list of boss actions and run all that apply.
-int dsda_UBossAction(mobj_t* mo) {
+int dsda_UBossAction(CCore* cx, mobj_t* mo) {
   int i;
   line_t junk;
 
@@ -333,7 +333,7 @@ int dsda_UBossAction(mobj_t* mo) {
 
       // use special semantics for line activation to block problem types.
       if (!P_UseSpecialLine(mo, &junk, 0, true))
-        map_format.cross_special_line(&junk, 0, mo, true);
+        map_format.cross_special_line(cx, &junk, 0, mo, true);
     }
   }
 

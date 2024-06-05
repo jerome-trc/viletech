@@ -31,6 +31,7 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#include "d_think.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "m_random.h"
@@ -119,8 +120,10 @@ dboolean P_SetMobjState(CCore* cx, mobj_t* mobj, statenum_t state)
     // Modified handling.
     // Call action functions when the state is set
 
-    if (st->action)
-      st->action(mobj);
+    if (st->action) {
+        actionf_t action = st->action;
+        action(cx, mobj);
+    }
 
     seenstate[state] = 1 + st->nextstate;   // killough 4/9/98
 
@@ -1249,8 +1252,10 @@ fixed_t FloatBobOffsets[64] = {
 
 static void PlayerLandedOnThing(CCore*, mobj_t * mo, mobj_t * onmobj, fixed_t gravity);
 
-void P_MobjThinker (CCore* cx, mobj_t* mobj)
+void P_MobjThinker(CCore* cx, void* v)
 {
+    mobj_t* mobj = v;
+
   // killough 11/98:
   // removed old code which looked at target references
   // (we use pointer reference counting now)
@@ -1945,7 +1950,7 @@ void P_RemoveMonsters(CCore* cx)
       P_RemoveMobj(cx, mobj);
   }
 
-  P_CleanThinkers();
+  P_CleanThinkers(cx);
 }
 
 //
@@ -2018,7 +2023,7 @@ void P_RespawnSpecials (void)
 
 extern byte playernumtotrans[MAX_MAXPLAYERS];
 
-void P_SpawnPlayer (int n, const mapthing_t* mthing)
+void P_SpawnPlayer(CCore* cx, int n, const mapthing_t* mthing)
 {
   player_t* p;
   fixed_t   x;
@@ -2139,7 +2144,7 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   // setup gun psprite
 
-  P_SetupPsprites (p);
+  P_SetupPsprites(cx, p);
 
   // give all cards in death match mode
 
@@ -2292,7 +2297,7 @@ static dboolean P_ShouldSpawnMapThing(int options)
   return true;
 }
 
-void P_TrySpawnPlayer(const mapthing_t *mthing, int player)
+void P_TrySpawnPlayer(CCore* cx, const mapthing_t *mthing, int player)
 {
   mapthing_t *player_start;
 
@@ -2307,7 +2312,7 @@ void P_TrySpawnPlayer(const mapthing_t *mthing, int player)
   player_start->options = 1;
 
   if (P_ShouldSpawnPlayer(mthing))
-    P_SpawnPlayer(player, player_start);
+    P_SpawnPlayer(cx, player, player_start);
 }
 
 static int P_TypeToPlayer(int type)
@@ -2446,7 +2451,7 @@ mobj_t* P_SpawnMapThing (CCore* cx, const mapthing_t* mthing, int index)
       goto spawnit;
     }
 
-    P_TrySpawnPlayer(mthing, player);
+    P_TrySpawnPlayer(cx, mthing, player);
 
     return NULL;
   }
@@ -2997,8 +3002,10 @@ mobj_t* P_SpawnPlayerMissile(CCore* cx, mobj_t* source, mobjtype_t type)
 mobjtype_t PuffType;
 mobj_t *MissileMobj;
 
-void P_BlasterMobjThinker(CCore* cx, mobj_t * mobj)
+void P_BlasterMobjThinker(CCore* cx, void* v)
 {
+    mobj_t* mobj = v;
+
     int i;
     fixed_t xfrac;
     fixed_t yfrac;
@@ -3411,9 +3418,10 @@ dboolean Raven_P_SetMobjState(CCore* cx,mobj_t * mobj, statenum_t state)
     mobj->tics = st->tics;
     mobj->sprite = st->sprite;
     mobj->frame = st->frame;
-    if (st->action)
-    {                           // Call action function
-        st->action(mobj);
+
+    if (st->action) {
+        actionf_t action = st->action;
+        action(cx, mobj);
     }
     return (true);
 }

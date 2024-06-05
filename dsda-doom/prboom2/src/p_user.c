@@ -68,8 +68,7 @@
 //
 
 // 16 pixels of bob
-
-#define MAXBOB  0x100000
+#define MAXBOB 0x100000
 
 dboolean onground; // whether player is on ground or in air
 
@@ -460,20 +459,17 @@ void P_MovePlayer(CCore* cx, player_t* player)
     }
 }
 
-#define ANG5 (ANG90/18)
+#define ANG5 (ANG90 / 18)
 
-//
 // P_DeathThink
 // Fall on your face when dying.
 // Decrease POV height to floor height.
-//
-
-void P_DeathThink (player_t* player)
+void P_DeathThink(CCore* cx, player_t* player)
 {
   angle_t angle;
   angle_t delta;
 
-  P_MovePsprites(player);
+  P_MovePsprites(cx, player);
 
   // fall to the ground
 
@@ -663,7 +659,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
 
   if (player->playerstate == PST_DEAD)
   {
-    P_DeathThink(player);
+    P_DeathThink(cx, player);
     return;
   }
 
@@ -748,7 +744,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
   // going to affect you, like painful floors.
 
   if (P_IsSpecialSector(player->mo->subsector->sector))
-    P_PlayerInSpecialSector(player);
+    P_PlayerInSpecialSector(cx, player);
 
   if (hexen)
   {
@@ -942,7 +938,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
   }
 
   // cycle psprites
-  P_MovePsprites (player);
+  P_MovePsprites(cx, player);
 
   // Counters, time dependent power ups.
 
@@ -1033,7 +1029,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
           && (player->psprites[ps_weapon].state
               != &states[HERETIC_S_PHOENIXUP]))
       {
-        P_SetPsprite(player, ps_weapon, HERETIC_S_PHOENIXREADY);
+        P_SetPsprite(cx, player, ps_weapon, HERETIC_S_PHOENIXREADY);
         player->ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
         player->refire = 0;
       }
@@ -1211,7 +1207,7 @@ dboolean P_UndoPlayerChicken(CCore* cx, player_t * player)
     fog = P_SpawnMobj(x + 20 * finecosine[angle],
                       y + 20 * finesine[angle], z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
     S_StartMobjSound(fog, heretic_sfx_telept);
-    P_PostChickenWeapon(player, weapon);
+    P_PostChickenWeapon(cx, player, weapon);
     return (true);
 }
 
@@ -1408,11 +1404,11 @@ dboolean P_UseArtifact(CCore* cx, player_t * player, artitype_t arti)
                 }
                 if (player->readyweapon == wp_staff)
                 {
-                    P_SetPsprite(player, ps_weapon, HERETIC_S_STAFFREADY2_1);
+                    P_SetPsprite(cx, player, ps_weapon, HERETIC_S_STAFFREADY2_1);
                 }
                 else if (player->readyweapon == wp_gauntlets)
                 {
-                    P_SetPsprite(player, ps_weapon, HERETIC_S_GAUNTLETREADY2_1);
+                    P_SetPsprite(cx, player, ps_weapon, HERETIC_S_GAUNTLETREADY2_1);
                 }
             }
             break;
@@ -1908,7 +1904,7 @@ dboolean P_UndoPlayerMorph(CCore* cx, player_t * player)
     fog = P_SpawnMobj(x + 20 * finecosine[angle],
                       y + 20 * finesine[angle], z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
     S_StartMobjSound(fog, hexen_sfx_teleport);
-    P_PostMorphWeapon(player, weapon);
+    P_PostMorphWeapon(cx, player, weapon);
     return (true);
 }
 
@@ -1988,10 +1984,10 @@ void P_TeleportOther(CCore* cx, mobj_t * victim)
     }
 }
 
-#define HEAL_RADIUS_DIST	255*FRACUNIT
+#define HEAL_RADIUS_DIST (255 * FRACUNIT)
 
 // Do class specific effect for everyone in radius
-dboolean P_HealRadius(player_t * player)
+dboolean P_HealRadius(CCore* cx, player_t * player)
 {
     mobj_t *mo;
     mobj_t *pmo = player->mo;
@@ -2040,8 +2036,8 @@ dboolean P_HealRadius(player_t * player)
                 break;
             case PCLASS_MAGE:  // Radius mana boost
                 amount = 50 + (P_Random(pr_hexen) % 50);
-                if ((P_GiveMana(mo->player, MANA_1, amount)) ||
-                    (P_GiveMana(mo->player, MANA_2, amount)))
+                if ((P_GiveMana(cx, mo->player, MANA_1, amount)) ||
+                    (P_GiveMana(cx, mo->player, MANA_2, amount)))
                 {
                     effective = true;
                     S_StartMobjSound(mo, hexen_sfx_mysticincant);
@@ -2083,7 +2079,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             break;
         case hexen_arti_healingradius:
-            if (!P_HealRadius(player))
+            if (!P_HealRadius(cx, player))
             {
                 return (false);
             }
@@ -2179,9 +2175,9 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             break;
         case hexen_arti_boostmana:
-            if (!P_GiveMana(player, MANA_1, MAX_MANA))
+            if (!P_GiveMana(cx, player, MANA_1, MAX_MANA))
             {
-                if (!P_GiveMana(player, MANA_2, MAX_MANA))
+                if (!P_GiveMana(cx, player, MANA_2, MAX_MANA))
                 {
                     return false;
                 }
@@ -2189,7 +2185,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             else
             {
-                P_GiveMana(player, MANA_2, MAX_MANA);
+                P_GiveMana(cx, player, MANA_2, MAX_MANA);
             }
             break;
         case hexen_arti_boostarmor:

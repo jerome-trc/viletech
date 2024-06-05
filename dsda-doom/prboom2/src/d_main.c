@@ -282,7 +282,7 @@ static void D_Wipe(CCore* cx)
       dsda_GLEndMeltRenderTexture();
     }
 
-    M_Drawer(); // menu is drawn even on top of wipes
+    M_Drawer(cx); // menu is drawn even on top of wipes
 
     if (capturing_video && !dsda_SkipMode() && cap_wipescreen)
     {
@@ -500,7 +500,9 @@ void D_Display(CCore* cx, fixed_t frac) {
   }
 
   // menus go directly to the screen
-  M_Drawer(); // menu is drawn even on top of everything
+  M_Drawer(cx); // menu is drawn even on top of everything
+
+  vt_dguiFrameDraw(cx);
 
   FakeNetUpdate(cx);     // send out any new accumulation
 

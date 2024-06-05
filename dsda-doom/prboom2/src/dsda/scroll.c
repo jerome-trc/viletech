@@ -144,44 +144,53 @@ static void dsda_UpdateControlScroller(control_scroll_t* s) {
   }
 }
 
-void dsda_UpdateControlSideScroller(control_scroll_t* s) {
-  dsda_UpdateControlScroller(s);
-  dsda_UpdateSideScrollerPosition(&s->scroll, s->vdx, s->vdy);
+void dsda_UpdateControlSideScroller(CCore* cx, void* v) {
+    control_scroll_t* s = v;
+    dsda_UpdateControlScroller(s);
+    dsda_UpdateSideScrollerPosition(&s->scroll, s->vdx, s->vdy);
 }
 
-void dsda_UpdateSideScroller(scroll_t* s) {
-  dsda_UpdateSideScrollerPosition(s, s->dx, s->dy);
+void dsda_UpdateSideScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    dsda_UpdateSideScrollerPosition(s, s->dx, s->dy);
 }
 
-void dsda_UpdateControlFloorScroller(control_scroll_t* s) {
-  dsda_UpdateControlScroller(s);
-  dsda_UpdateFloorScrollerPosition(&s->scroll, s->vdx, s->vdy);
+void dsda_UpdateControlFloorScroller(CCore* cx, void* v) {
+    control_scroll_t* s = v;
+    dsda_UpdateControlScroller(s);
+    dsda_UpdateFloorScrollerPosition(&s->scroll, s->vdx, s->vdy);
 }
 
-void dsda_UpdateFloorScroller(scroll_t* s) {
-  dsda_UpdateFloorScrollerPosition(s, s->dx, s->dy);
+void dsda_UpdateFloorScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    dsda_UpdateFloorScrollerPosition(s, s->dx, s->dy);
 }
 
-void dsda_UpdateControlCeilingScroller(control_scroll_t* s) {
-  dsda_UpdateControlScroller(s);
-  dsda_UpdateCeilingScrollerPosition(&s->scroll, s->vdx, s->vdy);
+void dsda_UpdateControlCeilingScroller(CCore* cx, void* v) {
+    control_scroll_t* s = v;
+    dsda_UpdateControlScroller(s);
+    dsda_UpdateCeilingScrollerPosition(&s->scroll, s->vdx, s->vdy);
 }
 
-void dsda_UpdateCeilingScroller(scroll_t* s) {
-  dsda_UpdateCeilingScrollerPosition(s, s->dx, s->dy);
+void dsda_UpdateCeilingScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    dsda_UpdateCeilingScrollerPosition(s, s->dx, s->dy);
 }
 
-void dsda_UpdateControlFloorCarryScroller(control_scroll_t* s) {
-  dsda_UpdateControlScroller(s);
-  dsda_UpdateFloorCarryScrollerPosition(&s->scroll, s->vdx, s->vdy);
+void dsda_UpdateControlFloorCarryScroller(CCore* cx, void* v) {
+    control_scroll_t* s = v;
+    dsda_UpdateControlScroller(s);
+    dsda_UpdateFloorCarryScrollerPosition(&s->scroll, s->vdx, s->vdy);
 }
 
-void dsda_UpdateFloorCarryScroller(scroll_t* s) {
-  dsda_UpdateFloorScrollerPosition(s, s->dx, s->dy);
+void dsda_UpdateFloorCarryScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    dsda_UpdateFloorScrollerPosition(s, s->dx, s->dy);
 }
 
-void dsda_UpdateZDoomFloorScroller(scroll_t* s) {
-  sector_t* sec;
+void dsda_UpdateZDoomFloorScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    sector_t* sec;
 
   if (!s->dx && !s->dy)
     return;
@@ -240,8 +249,9 @@ void dsda_UpdateZDoomFloorScroller(scroll_t* s) {
   }
 }
 
-void dsda_UpdateZDoomCeilingScroller(scroll_t* s) {
-  sector_t* sec;
+void dsda_UpdateZDoomCeilingScroller(CCore* cx, void* v) {
+    scroll_t* s = v;
+    sector_t* sec;
 
   if (!s->dx && !s->dy)
     return;
@@ -292,7 +302,8 @@ void dsda_UpdateZDoomCeilingScroller(scroll_t* s) {
   }
 }
 
-void dsda_UpdateThruster(scroll_t* s) {
+void dsda_UpdateThruster(CCore* cx, void* v) {
+    scroll_t* s = v;
   sector_t* sec;
   msecnode_t* node;
   mobj_t* thing;

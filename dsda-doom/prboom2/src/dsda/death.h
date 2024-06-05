@@ -18,6 +18,8 @@
 #ifndef __DSDA_DEMO__
 #define __DSDA_DEMO__
 
+#include "d_player.h"
+
 void dsda_DeathUse(player_t* player);
 
 #endif

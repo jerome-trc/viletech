@@ -59,7 +59,7 @@ void M_Ticker (void);
 // Called by main loop,
 // draws the menus directly into the screen buffer.
 
-void M_Drawer (void);
+void M_Drawer (CCore*);
 
 // Called by D_DoomMain,
 // loads the config file.
@@ -148,7 +148,7 @@ typedef struct menu_s
   short           numitems;     // # of menu items
   struct menu_s*  prevMenu;     // previous menu
   menuitem_t*     menuitems;    // menu items
-  void            (*routine)(); // draw routine
+  void            (*routine)(CCore*); // draw routine
   short           x;
   short           y;            // x,y of menu
   short           lastOn;       // last item user was on in menu

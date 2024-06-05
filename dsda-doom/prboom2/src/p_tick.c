@@ -141,19 +141,18 @@ void P_AddThinker(thinker_t* thinker)
 
 static thinker_t *currentthinker;
 
-//
-// P_RemoveThinkerDelayed()
-//
-// Called automatically as part of the thinker loop in P_RunThinkers(),
-// on nodes which are pending deletion.
-//
-// If this thinker has no more pointers referencing it indirectly,
-// remove it, and set currentthinker to one node preceeding it, so
-// that the next step in P_RunThinkers() will get its successor.
-//
-
-void P_RemoveThinkerDelayed(CCore* cx, thinker_t *thinker)
+/// @fn P_RemoveThinkerDelayed
+///
+/// Called automatically as part of the thinker loop in P_RunThinkers(),
+/// on nodes which are pending deletion.
+///
+/// If this thinker has no more pointers referencing it indirectly,
+/// remove it, and set currentthinker to one node preceeding it, so
+/// that the next step in P_RunThinkers() will get its successor.
+void P_RemoveThinkerDelayed(CCore* cx, void *t)
 {
+    thinker_t* thinker = (thinker_t*)t;
+
   if (!thinker->references)
     {
       { /* Remove from main thinker list */
@@ -265,14 +264,14 @@ static void P_RunThinkers(CCore* cx)
   T_MAPMusic(cx);
 }
 
-void P_CleanThinkers (void)
+void P_CleanThinkers(CCore* cx)
 {
   for (currentthinker = thinkercap.next;
        currentthinker != &thinkercap;
        currentthinker = currentthinker->next)
   {
     if (currentthinker->function == P_RemoveThinkerDelayed)
-      currentthinker->function(currentthinker);
+      currentthinker->function(cx, currentthinker);
   }
 }
 

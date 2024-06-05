@@ -19,6 +19,7 @@
 #define __DSDA_SCROLL__
 
 #include "d_think.h"
+#include "m_fixed.h"
 
 #define SCROLL_TOP    0x01
 #define SCROLL_MID    0x02
@@ -58,17 +59,17 @@ typedef struct {
   int accel;
 } control_scroll_t;
 
-void dsda_UpdateControlSideScroller(control_scroll_t* s);
-void dsda_UpdateSideScroller(scroll_t* s);
-void dsda_UpdateControlFloorScroller(control_scroll_t* s);
-void dsda_UpdateFloorScroller(scroll_t* s);
-void dsda_UpdateControlCeilingScroller(control_scroll_t* s);
-void dsda_UpdateCeilingScroller(scroll_t* s);
-void dsda_UpdateControlFloorCarryScroller(control_scroll_t* s);
-void dsda_UpdateFloorCarryScroller(scroll_t* s);
-void dsda_UpdateZDoomFloorScroller(scroll_t* s);
-void dsda_UpdateZDoomCeilingScroller(scroll_t* s);
-void dsda_UpdateThruster(scroll_t* s);
+void dsda_UpdateControlSideScroller(CCore*, void* /* control_scroll_t */);
+void dsda_UpdateSideScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateControlFloorScroller(CCore*, void* /* control_scroll_t */);
+void dsda_UpdateFloorScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateControlCeilingScroller(CCore*, void* /* control_scroll_t */);
+void dsda_UpdateCeilingScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateControlFloorCarryScroller(CCore*, void* /* control_scroll_t */);
+void dsda_UpdateFloorCarryScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateZDoomFloorScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateZDoomCeilingScroller(CCore*, void* /* scroll_t */);
+void dsda_UpdateThruster(CCore*, void* /* scroll_t */);
 
 void dsda_AddSideScroller(fixed_t dx, fixed_t dy, int affectee, int flags);
 void dsda_AddControlSideScroller(fixed_t dx, fixed_t dy,

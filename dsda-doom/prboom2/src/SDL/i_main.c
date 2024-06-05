@@ -109,8 +109,7 @@ int signal_context;
 
 static volatile sig_atomic_t interrupted = 0;
 
-dboolean I_Interrupted(void)
-{
+dboolean I_Interrupted(void) {
   return interrupted;
 }
 
@@ -131,9 +130,9 @@ static void I_SignalHandler(int s)
           buf, signal_context);
 }
 
-static void I_IntHandler(int s)
-{
-  interrupted = 1;
+static void I_IntHandler(int s) {
+    (void)s;
+    interrupted = 1;
 }
 
 static void PrintVer(void)

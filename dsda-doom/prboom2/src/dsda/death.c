@@ -16,7 +16,6 @@
 //
 
 #include "doomstat.h"
-#include "d_player.h"
 #include "v_video.h"
 
 #include "dsda/configuration.h"

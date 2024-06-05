@@ -1395,18 +1395,18 @@ void P_CheckZDoomImpact(CCore* cx, mobj_t *thing)
   }
 }
 
-void P_IterateCompatibleSpecHit(mobj_t *thing, fixed_t oldx, fixed_t oldy)
+void P_IterateCompatibleSpecHit(CCore* cx, mobj_t *thing, fixed_t oldx, fixed_t oldy)
 {
   while (numspechit--)
     if (spechit[numspechit]->special)  // see if the line was crossed
     {
       int oldside = P_PointOnLineSide(oldx, oldy, spechit[numspechit]);
       if (oldside != P_PointOnLineSide(thing->x, thing->y, spechit[numspechit]))
-        map_format.cross_special_line(spechit[numspechit], oldside, thing, false);
+        map_format.cross_special_line(cx, spechit[numspechit], oldside, thing, false);
     }
 }
 
-void P_IterateZDoomSpecHit(mobj_t *thing, fixed_t oldx, fixed_t oldy)
+void P_IterateZDoomSpecHit(CCore* cx, mobj_t *thing, fixed_t oldx, fixed_t oldy)
 {
   // In hexen format, crossing a special line can trigger a missile spawn,
   //   which will trigger a check that resets numspechit.
@@ -1418,7 +1418,7 @@ void P_IterateZDoomSpecHit(mobj_t *thing, fixed_t oldx, fixed_t oldy)
     {
       int oldside = P_PointOnLineSide(oldx, oldy, spechit[tempnumspechit]);
       if (oldside != P_PointOnLineSide(thing->x, thing->y, spechit[tempnumspechit]))
-        map_format.cross_special_line(spechit[tempnumspechit], oldside, thing, false);
+        map_format.cross_special_line(cx, spechit[tempnumspechit], oldside, thing, false);
     }
 }
 
@@ -1605,7 +1605,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
 
   if (!(thing->flags & (MF_TELEPORT | MF_NOCLIP)))
   {
-    map_format.iterate_spechit(thing, oldx, oldy);
+    map_format.iterate_spechit(cx, thing, oldx, oldy);
   }
 
   return true;
@@ -3838,7 +3838,7 @@ static dboolean Hexen_P_TryMove(CCore* cx, mobj_t* thing, fixed_t x, fixed_t y)
             {
                 if (ld->special)
                 {
-                    map_format.cross_special_line(ld, oldside, thing, false);
+                    map_format.cross_special_line(cx, ld, oldside, thing, false);
                 }
             }
         }

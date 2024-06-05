@@ -445,14 +445,14 @@ void    P_RespawnSpecials(void);
 mobj_t  *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 void    P_RemoveMobj(CCore*, mobj_t*);
 dboolean P_SetMobjState(CCore*, mobj_t*, statenum_t);
-void    P_MobjThinker(CCore*, mobj_t*);
+void    P_MobjThinker(CCore*, void*);
 void    P_SpawnPuff(CCore*, fixed_t x, fixed_t y, fixed_t z);
 void    P_SpawnBlood(CCore*, fixed_t x, fixed_t y, fixed_t z, int damage, mobj_t *bleeder);
 mobj_t  *P_SpawnMissile(CCore*, mobj_t *source, mobj_t *dest, mobjtype_t);
 mobj_t  *P_SpawnPlayerMissile(CCore*, mobj_t *source, mobjtype_t type);
 dboolean P_IsDoomnumAllowed(int doomnum);
 mobj_t* P_SpawnMapThing (CCore*, const mapthing_t*, int index);
-void    P_SpawnPlayer(int n, const mapthing_t*);
+void    P_SpawnPlayer(CCore*, int n, const mapthing_t*);
 dboolean P_CheckMissileSpawn(CCore*, mobj_t*); // killough 8/2/98
 void    P_ExplodeMissile(CCore*, mobj_t*); // killough
 
@@ -535,7 +535,7 @@ void P_RemoveMonsters(CCore*);
 
 extern mobj_t* MissileMobj;
 
-void P_BlasterMobjThinker(CCore*, mobj_t*);
+void P_BlasterMobjThinker(CCore*, void*);
 mobj_t *P_SpawnMissileAngle(CCore*, mobj_t * source, mobjtype_t type, angle_t angle, fixed_t momz);
 dboolean P_SetMobjStateNF(CCore*, mobj_t*, statenum_t);
 void P_ThrustMobj(mobj_t * mo, angle_t angle, fixed_t move);

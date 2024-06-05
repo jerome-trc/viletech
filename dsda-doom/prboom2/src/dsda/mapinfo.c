@@ -421,14 +421,14 @@ int dsda_FDrawer(void) {
   return false;
 }
 
-int dsda_BossAction(mobj_t* mo) {
+int dsda_BossAction(CCore* cx, mobj_t* mo) {
   if (dsda_DoomBossAction(mo))
     return true;
 
   if (dsda_HexenBossAction(mo))
     return true;
 
-  if (dsda_UBossAction(mo))
+  if (dsda_UBossAction(cx, mo))
     return true;
 
   dsda_LegacyBossAction(mo);

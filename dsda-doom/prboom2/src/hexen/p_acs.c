@@ -639,8 +639,9 @@ void P_ACSInitNewGame(void)
     memset(ACSStore, 0, sizeof(ACSStore));
 }
 
-void T_InterpretACS(acs_t * script)
+void T_InterpretACS(CCore* cx, void* v)
 {
+    acs_t* script = v;
     int cmd;
     int action;
 

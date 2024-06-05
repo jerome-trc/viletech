@@ -44,7 +44,7 @@ void P_Ticker(CCore*);
 void P_InitThinkers(void);
 void P_AddThinker(thinker_t*);
 void P_RemoveThinker(thinker_t*);
-void P_RemoveThinkerDelayed(CCore*, thinker_t*);    // killough 4/25/98
+void P_RemoveThinkerDelayed(CCore*, void*);    // killough 4/25/98
 
 void P_UpdateThinker(thinker_t*);   // killough 8/29/98
 
@@ -69,6 +69,6 @@ extern thinker_t thinkerclasscap[];
 /* cph 2002/01/13 - iterator for thinker lists */
 thinker_t* P_NextThinker(thinker_t*, th_class);
 
-void P_CleanThinkers(void);
+void P_CleanThinkers(CCore*);
 
 #endif

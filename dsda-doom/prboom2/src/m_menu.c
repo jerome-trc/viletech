@@ -241,23 +241,23 @@ void M_StartGame(int choice);
 void M_Sound(CCore*, int choice);
 
 void M_FinishReadThis(CCore*, int choice);
-void M_FinishHelp(CCore*, int choice);            // killough 10/98
+void M_FinishHelp(CCore*, int choice); // killough 10/98
 void M_LoadSelect(CCore*, int choice);
 void M_SaveSelect(CCore*, int choice);
 void M_ReadSaveStrings(void);
 void M_QuickSave(void);
 void M_QuickLoad(void);
 
-void M_DrawMainMenu(void);
-void M_DrawReadThis1(void);
-void M_DrawReadThis2(void);
-void M_DrawSkillMenu(void);
-void M_DrawEpisode(void);
-void M_DrawOptions(void);
-void M_DrawSound(void);
-void M_DrawLoad(void);
-void M_DrawSave(void);
-void M_DrawHelp (void);                                     // phares 5/04/98
+void M_DrawMainMenu(CCore*);
+void M_DrawReadThis1(CCore*);
+void M_DrawReadThis2(CCore*);
+void M_DrawSkillMenu(CCore*);
+void M_DrawEpisode(CCore*);
+void M_DrawOptions(CCore*);
+void M_DrawSound(CCore*);
+void M_DrawLoad(CCore*);
+void M_DrawSave(CCore*);
+void M_DrawHelp(CCore*); // phares 5/04/98
 
 void M_DrawSaveLoadBorder(int x,int y);
 void M_DrawThermo(int x,int y,int thermWidth,int thermDot);
@@ -285,20 +285,20 @@ void M_InitExtendedHelp(void);
 void M_ExtHelpNextScreen(CCore*, int);
 void M_ExtHelp(int);
 static int M_GetPixelWidth(const char*);
-void M_DrawKeybnd(void);
-void M_DrawWeapons(void);
+void M_DrawKeybnd(CCore*);
+void M_DrawWeapons(CCore*);
 static void M_DrawString(int cx, int cy, int color, const char* ch);
 static void M_DrawMenuString(int,int,int);
 static void M_DrawStringCentered(int,int,int,const char*);
-void M_DrawStatusHUD(void);
+void M_DrawStatusHUD(CCore*);
 void M_DrawExtHelp(void);
-void M_DrawAutoMap(void);
+void M_DrawAutoMap(CCore*);
 void M_ChangeDemoSmoothTurns(void);
 void M_ChangeTextureParams(void);
 void M_General(CCore*, int); // killough 10/98
-void M_DrawGeneral(void); // killough 10/98
+void M_DrawGeneral(CCore*); // killough 10/98
 void M_LevelTable(CCore*, int);
-void M_DrawLevelTable(void);
+void M_DrawLevelTable(CCore*);
 void M_ChangeFullScreen(CCore*);
 void M_ChangeVideoMode(CCore*);
 void M_ChangeUseGLSurface(CCore*);
@@ -436,7 +436,7 @@ menu_t MainDef =
 // M_DrawMainMenu
 //
 
-void M_DrawMainMenu(void)
+void M_DrawMainMenu(CCore* cx)
 {
   if (raven) {
     MN_DrawMainMenu();
@@ -556,7 +556,7 @@ void M_FinishHelp(CCore* cx, int choice) // killough 10/98
 //
 // killough 10/98: updated with new screens
 
-void M_DrawReadThis1(void)
+void M_DrawReadThis1(CCore* cx)
 {
   inhelpscreens = true;
   if (hexen)
@@ -578,7 +578,7 @@ void M_DrawReadThis1(void)
 //
 // killough 10/98: updated with new screens
 
-void M_DrawReadThis2(void)
+void M_DrawReadThis2(CCore* cx)
 {
   inhelpscreens = true;
   M_DrawCredits();
@@ -605,7 +605,7 @@ menu_t EpiDef =
 
 static int chosen_episode;
 
-void M_DrawEpisode(void)
+void M_DrawEpisode(CCore* cx)
 {
   if (raven) return MN_DrawEpisode();
 
@@ -648,7 +648,7 @@ menu_t SkillDef =
 // M_NewGame
 //
 
-void M_DrawSkillMenu(void)
+void M_DrawSkillMenu(CCore* cx)
 {
     if (raven) {
         MN_DrawSkillMenu();
@@ -808,7 +808,7 @@ static void M_DeleteGame(int slot)
 // M_LoadGame & Cie.
 //
 
-void M_DrawLoad(void)
+void M_DrawLoad(CCore* cx)
 {
   int i;
 
@@ -984,7 +984,7 @@ void M_ReadSaveStrings(void)
 //
 //  M_SaveGame & Cie.
 //
-void M_DrawSave(void)
+void M_DrawSave(CCore* cx)
 {
   int i;
 
@@ -1122,7 +1122,7 @@ menu_t OptionsDef =
 // M_Options
 //
 
-void M_DrawOptions(void)
+void M_DrawOptions(CCore* cx)
 {
   if (raven) return MN_DrawOptions();
 
@@ -1234,7 +1234,7 @@ menu_t SoundDef =
 // Change Sfx & Music volumes
 //
 
-void M_DrawSound(void)
+void M_DrawSound(CCore* cx)
 {
   if (raven) {
     MN_DrawSound();
@@ -2507,7 +2507,7 @@ void M_KeyBindings(CCore* cx, int choice)
 // The drawing part of the Key Bindings Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawKeybnd(void)
+void M_DrawKeybnd(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -2577,7 +2577,7 @@ void M_Weapons(CCore* cx, int choice)
 // The drawing part of the Weapons Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawWeapons(void)
+void M_DrawWeapons(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -2665,7 +2665,7 @@ void M_StatusBar(CCore* cx, int choice)
 // The drawing part of the Status Bar / HUD Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawStatusHUD(void)
+void M_DrawStatusHUD(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -2821,7 +2821,7 @@ static void M_DrawColPal(void)
 // The drawing part of the Automap Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawAutoMap(void)
+void M_DrawAutoMap(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -3137,7 +3137,7 @@ void M_General(CCore* cx, int choice)
 // The drawing part of the General Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawGeneral(void)
+void M_DrawGeneral(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -3667,7 +3667,7 @@ void M_LevelTable(CCore* cx, int choice)
   M_EnterSetup(&LevelTableDef, &level_table_active, level_table_page[0]);
 }
 
-void M_DrawLevelTable(void)
+void M_DrawLevelTable(CCore* cx)
 {
   M_ChangeMenu(NULL, mnact_full);
 
@@ -4061,7 +4061,7 @@ static void M_DrawStringCentered(int cx, int cy, int color, const char* ch)
 //
 // This displays the help screen
 
-void M_DrawHelp (void)
+void M_DrawHelp (CCore* cx)
 {
   const int helplump = W_CheckNumForName("HELP");
 
@@ -5650,7 +5650,7 @@ void M_StartControlPanel (void)
 // killough 9/29/98: Significantly reformatted source
 //
 
-void M_Drawer (void)
+void M_Drawer (CCore* cx)
 {
   V_BeginUIDraw();
 
@@ -5697,7 +5697,7 @@ void M_Drawer (void)
     M_ChangeMenu(NULL, mnact_float);
 
     if (currentMenu->routine)
-      currentMenu->routine();     // call Draw routine
+      currentMenu->routine(cx);     // call Draw routine
 
     if (raven)
     {

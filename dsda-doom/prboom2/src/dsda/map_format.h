@@ -42,13 +42,13 @@ typedef struct {
   short generalized_mask;
   line_activation_t switch_activation;
   void (*init_sector_special)(sector_t*, int);
-  void (*player_in_special_sector)(player_t*, sector_t*);
+  void (*player_in_special_sector)(CCore*, player_t*, sector_t*);
   dboolean (*mobj_in_special_sector)(CCore*, mobj_t*);
   void (*spawn_scroller)(line_t*, int);
   void (*spawn_friction)(line_t*);
   void (*spawn_pusher)(line_t*);
   void (*spawn_extra)(line_t*, int);
-  void (*cross_special_line)(line_t *, int, mobj_t *, dboolean);
+  void (*cross_special_line)(CCore*, line_t *, int, mobj_t *, dboolean);
   void (*shoot_special_line)(mobj_t *, line_t *);
   dboolean (*test_activate_line)(line_t *, mobj_t *, int, line_activation_t);
   dboolean (*execute_line_special)(int, int *, line_t *, int, mobj_t *);
@@ -68,7 +68,7 @@ typedef struct {
   void (*build_mobj_thing_id_list)(void);
   void (*add_mobj_thing_id)(mobj_t *, short);
   void (*remove_mobj_thing_id)(mobj_t *);
-  void (*iterate_spechit)(mobj_t *, fixed_t, fixed_t);
+  void (*iterate_spechit)(CCore*, mobj_t *, fixed_t, fixed_t);
   int (*point_on_side)(fixed_t, fixed_t, const node_t *);
   int (*point_on_seg_side)(fixed_t, fixed_t, const seg_t *);
   int (*point_on_line_side)(fixed_t, fixed_t, const line_t *);

@@ -84,7 +84,7 @@ void dsda_InterMusic(int* music_index, int* music_lump);
 void dsda_StartFinale(void);
 int dsda_FTicker(CCore*);
 int dsda_FDrawer(void);
-int dsda_BossAction(mobj_t* mo);
+int dsda_BossAction(CCore*, mobj_t*);
 const char* dsda_MapLumpName(int episode, int map);
 const char* dsda_MapAuthor(void);
 void dsda_HUTitle(dsda_string_t* str);

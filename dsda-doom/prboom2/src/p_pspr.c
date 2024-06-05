@@ -88,16 +88,16 @@ static const int recoil_values[] = {    // phares
 // P_SetPsprite
 //
 
-void P_SetPsprite(player_t *player, int position, statenum_t stnum)
+void P_SetPsprite(CCore* cx, player_t *player, int position, statenum_t stnum)
 {
-  P_SetPspritePtr(player, &player->psprites[position], stnum);
+  P_SetPspritePtr(cx, player, &player->psprites[position], stnum);
 }
 
 //
 // P_SetPspritePtr
 //
 
-void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
+void P_SetPspritePtr(CCore* cx, player_t *player, pspdef_t *psp, statenum_t stnum)
 {
   do
   {
@@ -136,9 +136,11 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
     // Modified handling.
     if (state->action)
     {
-      state->action(player, psp);
-      if (!psp->state)
-        break;
+        PSprAction action = state->action;
+        action(cx, player, psp);
+
+        if (!psp->state)
+            break;
     }
     stnum = psp->state->nextstate;
   }
@@ -152,7 +154,7 @@ void P_SetPspritePtr(player_t *player, pspdef_t *psp, statenum_t stnum)
 // Uses player
 //
 
-static void P_BringUpWeapon(player_t *player)
+static void P_BringUpWeapon(CCore* cx, player_t *player)
 {
   statenum_t newstate;
 
@@ -191,7 +193,7 @@ static void P_BringUpWeapon(player_t *player)
   player->psprites[ps_weapon].sy =
     mbf_features ? WEAPONBOTTOM + FRACUNIT * 2 : WEAPONBOTTOM;
 
-  P_SetPsprite(player, ps_weapon, newstate);
+  P_SetPsprite(cx, player, ps_weapon, newstate);
 }
 
 // The first set is where the weapon preferences from             // killough,
@@ -382,16 +384,16 @@ int P_AmmoPercent(player_t *player, int weapon)
 // (only in demo_compatibility mode -- killough 3/22/98)
 //
 
-static dboolean Heretic_P_CheckAmmo(struct player_s * player);
-static dboolean P_CheckMana(player_t * player);
+static dboolean Heretic_P_CheckAmmo(CCore*, struct player_s*);
+static dboolean P_CheckMana(CCore*, player_t*);
 
-dboolean P_CheckAmmo(player_t *player)
+dboolean P_CheckAmmo(CCore* cx, player_t *player)
 {
   ammotype_t ammo;
   int count;  // Regular
 
-  if (heretic) return Heretic_P_CheckAmmo(player);
-  if (hexen) return P_CheckMana(player);
+  if (heretic) return Heretic_P_CheckAmmo(cx, player);
+  if (hexen) return P_CheckMana(cx, player);
 
   ammo = weaponinfo[player->readyweapon].ammo;
   if (mbf21)
@@ -422,7 +424,7 @@ dboolean P_CheckAmmo(player_t *player)
     {
       player->pendingweapon = P_SwitchWeapon(player);      // phares
       // Now set appropriate weapon overlay.
-      P_SetPsprite(player,ps_weapon,weaponinfo[player->readyweapon].downstate);
+      P_SetPsprite(cx, player, ps_weapon,weaponinfo[player->readyweapon].downstate);
     }
 
   return false;
@@ -468,7 +470,7 @@ static void P_FireWeapon(CCore* cx, player_t *player)
 {
   statenum_t newstate;
 
-  if (!P_CheckAmmo(player))
+  if (!P_CheckAmmo(cx, player))
     return;
 
   dsda_WatchWeaponFire(player->readyweapon);
@@ -503,7 +505,7 @@ static void P_FireWeapon(CCore* cx, player_t *player)
     newstate = weaponinfo[player->readyweapon].atkstate;
   }
 
-  P_SetPsprite(player, ps_weapon, newstate);
+  P_SetPsprite(cx, player, ps_weapon, newstate);
   if (hexen || !(weaponinfo[player->readyweapon].flags & WPF_SILENT))
     P_NoiseAlert(player->mo, player->mo);
 
@@ -522,7 +524,7 @@ static void P_FireWeapon(CCore* cx, player_t *player)
 // Player died, so put the weapon away.
 //
 
-void P_DropWeapon(player_t *player)
+void P_DropWeapon(CCore* cx, player_t *player)
 {
   statenum_t newstate;
   if (player->powers[pw_weaponlevel2])
@@ -537,7 +539,7 @@ void P_DropWeapon(player_t *player)
   {
     newstate = weaponinfo[player->readyweapon].downstate;
   }
-  P_SetPsprite(player, ps_weapon, newstate);
+  P_SetPsprite(cx, player, ps_weapon, newstate);
 }
 
 //
@@ -554,7 +556,7 @@ void A_WeaponReady(CCore* cx, player_t *player, pspdef_t *psp)
 
   if (player->chickenTics)
   {                           // Change to the chicken beak
-      P_ActivateBeak(player);
+      P_ActivateBeak(cx, player);
       return;
   }
 
@@ -593,7 +595,7 @@ void A_WeaponReady(CCore* cx, player_t *player, pspdef_t *psp)
       newstate = hexen_weaponinfo[player->readyweapon][player->pclass].downstate;
     else
       newstate = weaponinfo[player->readyweapon].downstate;
-    P_SetPsprite(player, ps_weapon, newstate);
+    P_SetPsprite(cx, player, ps_weapon, newstate);
     return;
   }
 
@@ -648,24 +650,24 @@ void A_ReFire(CCore* cx, player_t *player, pspdef_t *psp)
   else
     {
       player->refire = 0;
-      P_CheckAmmo(player);
+      P_CheckAmmo(cx, player);
     }
 }
 
 dboolean boom_weapon_state_injection;
 
-void A_CheckReload(player_t *player, pspdef_t *psp)
+void A_CheckReload(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_CheckReload", player);
 
-  if (!P_CheckAmmo(player) && compatibility_level >= prboom_4_compatibility) {
+  if (!P_CheckAmmo(cx, player) && compatibility_level >= prboom_4_compatibility) {
     /* cph 2002/08/08 - In old Doom, P_CheckAmmo would start the weapon lowering
      * immediately. This was lost in Boom when the weapon switching logic was
      * rewritten. But we must tell Doom that we don't need to complete the
      * reload frames for the weapon here. G_BuildTiccmd will set ->pendingweapon
      * for us later on. */
     boom_weapon_state_injection = true;
-    P_SetPsprite(player,ps_weapon,weaponinfo[player->readyweapon].downstate);
+    P_SetPsprite(cx, player,ps_weapon,weaponinfo[player->readyweapon].downstate);
   }
 }
 
@@ -675,7 +677,7 @@ void A_CheckReload(player_t *player, pspdef_t *psp)
 //  and changes weapon at bottom.
 //
 
-void A_Lower(player_t *player, pspdef_t *psp)
+void A_Lower(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_Lower", player);
 
@@ -704,20 +706,20 @@ void A_Lower(player_t *player, pspdef_t *psp)
 
   if (!player->health)
   {      // Player is dead, so keep the weapon off screen.
-    P_SetPsprite(player,  ps_weapon, g_s_null);
+    P_SetPsprite(cx, player,  ps_weapon, g_s_null);
     return;
   }
 
   player->readyweapon = player->pendingweapon;
 
-  P_BringUpWeapon(player);
+  P_BringUpWeapon(cx, player);
 }
 
 //
 // A_Raise
 //
 
-void A_Raise(player_t *player, pspdef_t *psp)
+void A_Raise(CCore* cx, player_t *player, pspdef_t *psp)
 {
   statenum_t newstate;
 
@@ -750,7 +752,7 @@ void A_Raise(player_t *player, pspdef_t *psp)
   else
     newstate = weaponinfo[player->readyweapon].readystate;
 
-  P_SetPsprite(player, ps_weapon, newstate);
+  P_SetPsprite(cx, player, ps_weapon, newstate);
 }
 
 
@@ -761,9 +763,9 @@ void A_Raise(player_t *player, pspdef_t *psp)
 // muzzle flash, rather than the pressing of the trigger.
 // The BFG delay caused this to be necessary.
 
-static void A_FireSomething(player_t* player,int adder)
+static void A_FireSomething(CCore* cx, player_t* player,int adder)
 {
-  P_SetPsprite(player, ps_flash,
+  P_SetPsprite(cx, player, ps_flash,
                weaponinfo[player->readyweapon].flashstate+adder);
 
   // killough 3/27/98: prevent recoil in no-clipping mode
@@ -783,7 +785,7 @@ void A_GunFlash(CCore* cx, player_t *player, pspdef_t *psp)
 
   P_SetMobjState(cx, player->mo, S_PLAY_ATK2);
 
-  A_FireSomething(player,0);                                      // phares
+  A_FireSomething(cx, player, 0); // phares
 }
 
 //
@@ -989,7 +991,7 @@ void A_FirePlasma(CCore* cx, player_t *player, pspdef_t *psp)
 
   P_SubtractAmmo(player, 1);
 
-  A_FireSomething(player,P_Random(pr_plasma)&1);              // phares
+  A_FireSomething(cx, player, P_Random(pr_plasma) & 1); // phares
   P_SpawnPlayerMissile(cx, player->mo, MT_PLASMA);
 }
 
@@ -1052,7 +1054,7 @@ void A_FirePistol(CCore* cx, player_t *player, pspdef_t *psp)
   P_SetMobjState(cx, player->mo, S_PLAY_ATK2);
   P_SubtractAmmo(player, 1);
 
-  A_FireSomething(player,0);                                      // phares
+  A_FireSomething(cx, player, 0); // phares
   P_BulletSlope(cx, player->mo);
   P_GunShot(cx, player->mo, !player->refire);
 }
@@ -1072,7 +1074,7 @@ void A_FireShotgun(CCore* cx, player_t *player, pspdef_t *psp)
 
   P_SubtractAmmo(player, 1);
 
-  A_FireSomething(player,0);                                      // phares
+  A_FireSomething(cx, player, 0);                                      // phares
 
   P_BulletSlope(cx, player->mo);
 
@@ -1094,7 +1096,7 @@ void A_FireShotgun2(CCore* cx, player_t *player, pspdef_t *psp)
   P_SetMobjState(cx, player->mo, S_PLAY_ATK2);
   P_SubtractAmmo(player, 2);
 
-  A_FireSomething(player,0);                                      // phares
+  A_FireSomething(cx, player, 0);                                      // phares
 
   P_BulletSlope(cx, player->mo);
 
@@ -1130,14 +1132,14 @@ void A_FireCGun(CCore* cx, player_t *player, pspdef_t *psp)
   P_SetMobjState(cx, player->mo, S_PLAY_ATK2);
   P_SubtractAmmo(player, 1);
 
-  A_FireSomething(player,psp->state - &states[S_CHAIN1]);           // phares
+  A_FireSomething(cx, player, psp->state - &states[S_CHAIN1]); // phares
 
   P_BulletSlope(cx, player->mo);
 
   P_GunShot(cx, player->mo, !player->refire);
 }
 
-void A_Light0(player_t *player, pspdef_t *psp)
+void A_Light0(CCore* cx, player_t *player, pspdef_t *psp)
 {
     (void)psp;
 
@@ -1146,7 +1148,7 @@ void A_Light0(player_t *player, pspdef_t *psp)
   player->extralight = 0;
 }
 
-void A_Light1 (player_t *player, pspdef_t *psp)
+void A_Light1(CCore* cx, player_t *player, pspdef_t *psp)
 {
     (void)psp;
 
@@ -1155,7 +1157,7 @@ void A_Light1 (player_t *player, pspdef_t *psp)
   player->extralight = 1;
 }
 
-void A_Light2 (player_t *player, pspdef_t *psp)
+void A_Light2 (CCore* cx, player_t *player, pspdef_t *psp)
 {
     (void)psp;
 
@@ -1169,7 +1171,7 @@ void A_Light2 (player_t *player, pspdef_t *psp)
 // Spawn a BFG explosion on every monster in view
 //
 
-void A_BFGSpray(CCore* cx, mobj_t *mo)
+void A_BFGSpray(CCore* cx, player_t* player, mobj_t *mo)
 {
   int i;
 
@@ -1203,7 +1205,7 @@ void A_BFGSpray(CCore* cx, mobj_t *mo)
 // A_BFGsound
 //
 
-void A_BFGsound(player_t *player, pspdef_t *psp)
+void A_BFGsound(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_BFGsound", player);
 
@@ -1368,7 +1370,7 @@ void A_WeaponMeleeAttack(CCore* cx, player_t *player, pspdef_t *psp)
 //   args[0]: ID of sound to play
 //   args[1]: If 1, play sound at full volume (may be useful in DM?)
 //
-void A_WeaponSound(player_t *player, pspdef_t *psp)
+void A_WeaponSound(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_WeaponSound", player);
 
@@ -1382,7 +1384,7 @@ void A_WeaponSound(player_t *player, pspdef_t *psp)
 // A_WeaponAlert
 // Alerts monsters to the player's presence. Handy when combined with WPF_SILENT.
 //
-void A_WeaponAlert(player_t *player, pspdef_t *psp)
+void A_WeaponAlert(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_WeaponAlert", player);
 
@@ -1399,7 +1401,7 @@ void A_WeaponAlert(player_t *player, pspdef_t *psp)
 //   args[0]: State number
 //   args[1]: Chance, out of 255, to make the jump
 //
-void A_WeaponJump(player_t *player, pspdef_t *psp)
+void A_WeaponJump(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_WeaponJump", player);
 
@@ -1407,7 +1409,7 @@ void A_WeaponJump(player_t *player, pspdef_t *psp)
     return;
 
   if (P_Random(pr_mbf21) < psp->state->args[1])
-    P_SetPspritePtr(player, psp, psp->state->args[0]);
+    P_SetPspritePtr(cx, player, psp, psp->state->args[0]);
 }
 
 //
@@ -1415,7 +1417,7 @@ void A_WeaponJump(player_t *player, pspdef_t *psp)
 // Subtracts ammo from the player's "inventory". 'Nuff said.
 //   args[0]: Amount of ammo to consume. If zero, use the weapon's ammo-per-shot amount.
 //
-void A_ConsumeAmmo(player_t *player, pspdef_t *psp)
+void A_ConsumeAmmo(CCore* cx, player_t *player, pspdef_t *psp)
 {
   int amount;
   ammotype_t type;
@@ -1450,7 +1452,7 @@ void A_ConsumeAmmo(player_t *player, pspdef_t *psp)
 //   args[0]: State to jump to
 //   args[1]: Minimum required ammo to NOT jump. If zero, use the weapon's ammo-per-shot amount.
 //
-void A_CheckAmmo(player_t *player, pspdef_t *psp)
+void A_CheckAmmo(CCore* cx, player_t *player, pspdef_t *psp)
 {
   int amount;
   ammotype_t type;
@@ -1470,7 +1472,7 @@ void A_CheckAmmo(player_t *player, pspdef_t *psp)
     amount = weaponinfo[player->readyweapon].ammopershot;
 
   if (player->ammo[type] < amount)
-    P_SetPspritePtr(player, psp, psp->state->args[0]);
+    P_SetPspritePtr(cx, player, psp, psp->state->args[0]);
 }
 
 //
@@ -1479,17 +1481,17 @@ void A_CheckAmmo(player_t *player, pspdef_t *psp)
 //   args[0]: State to jump to
 //   args[1]: If nonzero, skip the ammo check
 //
-void A_RefireTo(player_t *player, pspdef_t *psp)
+void A_RefireTo(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_RefireTo", player);
 
   if (!mbf21 || !psp->state)
     return;
 
-  if ((psp->state->args[1] || P_CheckAmmo(player))
+  if ((psp->state->args[1] || P_CheckAmmo(cx, player))
   &&  (player->cmd.buttons & BT_ATTACK)
   &&  (player->pendingweapon == wp_nochange && player->health))
-    P_SetPspritePtr(player, psp, psp->state->args[0]);
+    P_SetPspritePtr(cx, player, psp, psp->state->args[0]);
 }
 
 //
@@ -1508,7 +1510,7 @@ void A_GunFlashTo(CCore* cx, player_t *player, pspdef_t *psp)
   if(!psp->state->args[1])
     P_SetMobjState(cx, player->mo, S_PLAY_ATK2);
 
-  P_SetPsprite(player, ps_flash, psp->state->args[0]);
+  P_SetPsprite(cx, player, ps_flash, psp->state->args[0]);
 }
 
 //
@@ -1516,7 +1518,7 @@ void A_GunFlashTo(CCore* cx, player_t *player, pspdef_t *psp)
 // Called at start of level for each player.
 //
 
-void P_SetupPsprites(player_t *player)
+void P_SetupPsprites(CCore* cx, player_t *player)
 {
   int i;
 
@@ -1526,7 +1528,7 @@ void P_SetupPsprites(player_t *player)
 
   // spawn the gun
   player->pendingweapon = player->readyweapon;
-  P_BringUpWeapon(player);
+  P_BringUpWeapon(cx, player);
 }
 
 //
@@ -1534,7 +1536,7 @@ void P_SetupPsprites(player_t *player)
 // Called every tic by player thinking routine.
 //
 
-void P_MovePsprites(player_t *player)
+void P_MovePsprites(CCore* cx, player_t *player)
 {
   pspdef_t *psp = player->psprites;
   int i;
@@ -1545,7 +1547,7 @@ void P_MovePsprites(player_t *player)
 
   for (i=0; i<NUMPSPRITES; i++, psp++)
     if (psp->state && psp->tics != -1 && !--psp->tics)
-      P_SetPsprite(player, i, psp->state->nextstate);
+      P_SetPsprite(cx, player, i, psp->state->nextstate);
 
   player->psprites[ps_flash].sx = player->psprites[ps_weapon].sx;
   player->psprites[ps_flash].sy = player->psprites[ps_weapon].sy;
@@ -1577,11 +1579,11 @@ void A_BeakReady(CCore* cx, player_t * player, pspdef_t * psp)
         P_SetMobjState(cx, player->mo, HERETIC_S_CHICPLAY_ATK1);
         if (player->powers[pw_weaponlevel2])
         {
-            P_SetPsprite(player, ps_weapon, HERETIC_S_BEAKATK2_1);
+            P_SetPsprite(cx, player, ps_weapon, HERETIC_S_BEAKATK2_1);
         }
         else
         {
-            P_SetPsprite(player, ps_weapon, HERETIC_S_BEAKATK1_1);
+            P_SetPsprite(cx, player, ps_weapon, HERETIC_S_BEAKATK1_1);
         }
         P_NoiseAlert(player->mo, player->mo);
     }
@@ -1595,10 +1597,10 @@ void A_BeakReady(CCore* cx, player_t * player, pspdef_t * psp)
     }
 }
 
-void A_BeakRaise(player_t * player, pspdef_t * psp)
+void A_BeakRaise(CCore* cx, player_t * player, pspdef_t * psp)
 {
     psp->sy = WEAPONTOP;
-    P_SetPsprite(player, ps_weapon,
+    P_SetPsprite(cx, player, ps_weapon,
                  wpnlev1info[player->readyweapon].readystate);
 }
 
@@ -2281,7 +2283,7 @@ void A_FirePhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
 
     if (--player->flamecount == 0)
     {                           // Out of flame
-        P_SetPsprite(player, ps_weapon, HERETIC_S_PHOENIXATK2_4);
+        P_SetPsprite(cx, player, ps_weapon, HERETIC_S_PHOENIXATK2_4);
         player->refire = 0;
         return;
     }
@@ -2419,24 +2421,25 @@ void P_RepositionMace(mobj_t * mo)
     P_SetThingPosition(mo);
 }
 
-void P_ActivateBeak(player_t * player)
+void P_ActivateBeak(CCore* cx, player_t * player)
 {
     player->pendingweapon = wp_nochange;
     player->readyweapon = wp_beak;
     player->psprites[ps_weapon].sy = WEAPONTOP;
-    P_SetPsprite(player, ps_weapon, HERETIC_S_BEAKREADY);
+    P_SetPsprite(cx, player, ps_weapon, HERETIC_S_BEAKREADY);
 }
 
-void P_PostChickenWeapon(player_t * player, weapontype_t weapon)
+void P_PostChickenWeapon(CCore* cx, player_t * player, weapontype_t weapon)
 {
-    if (weapon == wp_beak)
-    {                           // Should never happen
+    if (weapon == wp_beak) {
+        // Should never happen
         weapon = wp_staff;
     }
+
     player->pendingweapon = wp_nochange;
     player->readyweapon = weapon;
     player->psprites[ps_weapon].sy = WEAPONBOTTOM;
-    P_SetPsprite(player, ps_weapon, wpnlev1info[weapon].upstate);
+    P_SetPsprite(cx, player, ps_weapon, wpnlev1info[weapon].upstate);
 }
 
 void P_UpdateBeak(player_t * player, pspdef_t * psp)
@@ -2444,7 +2447,7 @@ void P_UpdateBeak(player_t * player, pspdef_t * psp)
     psp->sy = WEAPONTOP + (player->chickenPeck << (FRACBITS - 1));
 }
 
-static dboolean Heretic_P_CheckAmmo(player_t * player)
+static dboolean Heretic_P_CheckAmmo(CCore* cx, player_t * player)
 {
     ammotype_t ammo;
     weaponinfo_t *checkweaponinfo;
@@ -2508,12 +2511,12 @@ static dboolean Heretic_P_CheckAmmo(player_t * player)
     while (player->pendingweapon == wp_nochange);
     if (player->powers[pw_weaponlevel2])
     {
-        P_SetPsprite(player, ps_weapon,
+        P_SetPsprite(cx, player, ps_weapon,
                      wpnlev2info[player->readyweapon].downstate);
     }
     else
     {
-        P_SetPsprite(player, ps_weapon,
+        P_SetPsprite(cx, player, ps_weapon,
                      wpnlev1info[player->readyweapon].downstate);
     }
     return (false);
@@ -2593,24 +2596,24 @@ void P_SetPspriteNF(player_t * player, int position, statenum_t stnum)
     while (!psp->tics);         // An initial state of 0 could cycle through.
 }
 
-void P_ActivateMorphWeapon(player_t * player)
+void P_ActivateMorphWeapon(CCore* cx, player_t * player)
 {
     player->pendingweapon = wp_nochange;
     player->psprites[ps_weapon].sy = WEAPONTOP;
     player->readyweapon = wp_first;     // Snout is the first weapon
-    P_SetPsprite(player, ps_weapon, HEXEN_S_SNOUTREADY);
+    P_SetPsprite(cx, player, ps_weapon, HEXEN_S_SNOUTREADY);
 }
 
-void P_PostMorphWeapon(player_t * player, weapontype_t weapon)
+void P_PostMorphWeapon(CCore* cx, player_t * player, weapontype_t weapon)
 {
     player->pendingweapon = wp_nochange;
     player->readyweapon = weapon;
     player->psprites[ps_weapon].sy = WEAPONBOTTOM;
-    P_SetPsprite(player, ps_weapon,
+    P_SetPsprite(cx, player, ps_weapon,
                  hexen_weaponinfo[weapon][player->pclass].upstate);
 }
 
-static dboolean P_CheckMana(player_t * player)
+static dboolean P_CheckMana(CCore* cx, player_t * player)
 {
     manatype_t mana;
     int count;
@@ -2654,7 +2657,7 @@ static dboolean P_CheckMana(player_t * player)
         player->pendingweapon = wp_first;
     }
 
-    P_SetPsprite(player, ps_weapon,
+    P_SetPsprite(cx, player, ps_weapon,
                  hexen_weaponinfo[player->readyweapon][player->pclass].downstate);
     return (false);
 }
@@ -3203,7 +3206,7 @@ void A_FPunchAttack(CCore* cx, player_t * player, pspdef_t * psp)
     if (pmo->special1.i == 3)
     {
         pmo->special1.i = 0;
-        P_SetPsprite(player, ps_weapon, HEXEN_S_PUNCHATK2_1);
+        P_SetPsprite(cx, player, ps_weapon, HEXEN_S_PUNCHATK2_1);
         S_StartMobjSound(pmo, hexen_sfx_fighter_grunt);
     }
     return;
@@ -3280,7 +3283,7 @@ void A_FAxeAttack(CCore* cx, player_t * player, pspdef_t * psp)
             WeaponManaUse[player->pclass][player->readyweapon];
         if (player->ammo[MANA_1] <= 0)
         {
-            P_SetPsprite(player, ps_weapon, HEXEN_S_FAXEATK_5);
+            P_SetPsprite(cx, player, ps_weapon, HEXEN_S_FAXEATK_5);
         }
     }
     return;
@@ -3353,7 +3356,7 @@ void A_CStaffCheck(CCore* cx, player_t * player, pspdef_t * psp)
                 newLife = player->health + (damage >> 3);
                 newLife = newLife > 100 ? 100 : newLife;
                 pmo->health = player->health = newLife;
-                P_SetPsprite(player, ps_weapon, HEXEN_S_CSTAFFATK2_1);
+                P_SetPsprite(cx, player, ps_weapon, HEXEN_S_CSTAFFATK2_1);
             }
             player->ammo[MANA_1] -=
                 WeaponManaUse[player->pclass][player->readyweapon];
@@ -3371,7 +3374,7 @@ void A_CStaffCheck(CCore* cx, player_t * player, pspdef_t * psp)
                 newLife = player->health + (damage >> 4);
                 newLife = newLife > 100 ? 100 : newLife;
                 pmo->health = player->health = newLife;
-                P_SetPsprite(player, ps_weapon, HEXEN_S_CSTAFFATK2_1);
+                P_SetPsprite(cx, player, ps_weapon, HEXEN_S_CSTAFFATK2_1);
             }
             player->ammo[MANA_1] -=
                 WeaponManaUse[player->pclass][player->readyweapon];
@@ -3423,11 +3426,11 @@ void A_CStaffInitBlink(player_t * player, pspdef_t * psp)
     player->mo->special1.i = (P_Random(pr_hexen) >> 1) + 20;
 }
 
-void A_CStaffCheckBlink(player_t * player, pspdef_t * psp)
+void A_CStaffCheckBlink(CCore* cx, player_t * player, pspdef_t * psp)
 {
     if (!--player->mo->special1.i)
     {
-        P_SetPsprite(player, ps_weapon, HEXEN_S_CSTAFFBLINK1);
+        P_SetPsprite(cx, player, ps_weapon, HEXEN_S_CSTAFFBLINK1);
         player->mo->special1.i = (P_Random(pr_hexen) + 50) >> 2;
     }
 }
