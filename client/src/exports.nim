@@ -8,6 +8,8 @@ import nimtie, nimtie/config
 import core, devgui, platform
 
 const afterIncludes = """
+#ifndef NIMBASE_H // If included by Nim, don't expand to anything.
+
 struct _NimString;
 typedef struct _NimString Path;
 
@@ -29,6 +31,7 @@ const cfg = Config(
     filename: "viletech.nim",
     header: header,
     targets: {Target.c},
+    trailer: "\n#endif // ifndef NIMBASE_H\n",
     c: CConfig(
         afterIncludes: afterIncludes,
         cxxCompat: true,
@@ -53,6 +56,7 @@ exportProcs(cfg):
     dguiNeedsMouse
     dguiSetup
     dguiShutdown
+    dguiToggle
     loadDynLibs
     processEvent
     windowIcon
