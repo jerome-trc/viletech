@@ -3,7 +3,7 @@
 import std/[dynlib, files]
 from std/paths import Path
 
-import imgui, plugin
+import console, imgui, plugin
 
 const baseScreenWidth*: int = 320
 
@@ -14,13 +14,16 @@ type
         commercial
         retail
         indeterminate
+    DevGui* {.pure, size: sizeof(cint).} = enum
+        console
+        vfs
     Core* {.byref.} = object
         ## Permeates the code base with state that is practically "global".
         loadOrder*: seq[Path] = @[]
         dgui*: DGuiCore
         c*: CCore
     CCore* {.byref, exportc.} = object
-        ## The parts of `Core` that are FFI-safe.
+        ## The parts of `Core` that can be safely exposed to C.
         core*: ptr Core = nil ## \
             ## Enable functions called from C to access the rest of the core.
         flavor*: Flavor = Flavor.indeterminate ## \
@@ -31,9 +34,10 @@ type
         savedGametick*: int32 = -1
     DGuiCore* = object
         imguiCtx*: ptr ImGuiContext = nil
+        open*: bool = when defined(release): false else: true
         metricsWindow*: bool = false
-        consoleOpen*: bool = false
-        consoleBuf*: string = ""
+        left*, right*: DevGui
+        console*: Console
 
 proc init*(_: typedesc[Core]): Core =
     var cx = Core()

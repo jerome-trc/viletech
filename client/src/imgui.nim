@@ -153,6 +153,9 @@ type ImGuiIO* {.
 .} = object
     configFlags* {.importcpp: "ConfigFlags".}: ImGuiConfigFlags
     displayFramebufferScale* {.importcpp: "DisplayFramebufferScale".}: ImVec2
+    wantCaptureMouse* {.importcpp: "WantCaptureMouse".}: bool
+    wantCaptureKeyboard* {.importcpp: "WantCaptureKeyboard".}: bool
+    wantTextInput* {.importcpp: "WantTextInput".}: bool
 
 type ImGuiStyle* {.
     importcpp: "ImGuiStyle",
@@ -254,24 +257,44 @@ proc imGuiStyleColorsDark*(dst: ptr ImGuiStyle = nil)
 
 # Windows ######################################################################
 
-proc beginImGuiWindow*(
+proc imGuiBeginWindow*(
     name: cstring,
     pOpen: ptr bool = nil,
     flags: ImGuiWindowFlags = ImGuiWindowFlags.none
 ): bool
     {.importcpp: "ImGui::Begin(@)", header: hImGui.}
 
-proc endImGuiWindow*()
+proc imGuiEndWindow*()
     {.importcpp: "ImGui::End(@)", header: hImGui.}
+
+# Window utilities #############################################################
+
+proc imGuiGetWindowPos*(): ImVec2
+    {.importcpp: "ImGui::GetWindowPos(@)", header: hImGui}
+
+proc imGuiGetWindowSize*(): ImVec2
+    {.importcpp: "ImGui::GetWindowSize(@)", header: hImGui}
+
+proc imGuiGetWindowWidth*(): float32
+    {.importcpp: "ImGui::GetWindowWidth(@)", header: hImGui}
+
+proc imGuiGetWindowHeight*(): float32
+    {.importcpp: "ImGui::GetWindowHeight(@)", header: hImGui}
 
 # Window manipulation ##########################################################
 
-proc imguiSetNextWindowPos*(
+proc imGuiSetNextWindowPos*(
     pos {.byref.}: ImVec2,
-    cond {.byref.}: ImGuiCond = ImGuiCond.none,
+    cond: ImGuiCond = ImGuiCond.none,
     pivot {.byref.}: ImVec2 = ImVec2(x: 0.0, y: 0.0),
 )
     {.importcpp: "ImGui::SetNextWindowPos(@)", header: hImGui.}
+
+proc imGuiSetNextWindowSize*(
+    size {.byref.}: ImVec2,
+    cond: ImGuiCond = ImGuiCond.none
+)
+    {.importcpp: "ImGui::SetNextWindowSize(@)", header: hImGui.}
 
 # Other layout functions #######################################################
 

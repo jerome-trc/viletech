@@ -53,10 +53,12 @@ exportProcs(cfg):
     dguiFrameBegin
     dguiFrameFinish
     dguiFrameDraw
-    dguiNeedsMouse
+    dguiIsOpen
     dguiSetup
     dguiShutdown
     dguiToggle
+    dguiWantsKeyboard
+    dguiWantsMouse
     loadDynLibs
     processEvent
     windowIcon

@@ -32,6 +32,7 @@
  *-----------------------------------------------------------------------------
  */
 
+#include "viletech.nim.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -336,13 +337,18 @@ while (SDL_PollEvent(Event))
       }
     }
 #endif
+    if (vt_dguiWantsKeyboard(cx))
+        break;
+
     event.type = ev_keydown;
     event.data1.i = I_TranslateKey(&Event->key.keysym);
     D_PostEvent(cx, &event);
     break;
 
-  case SDL_KEYUP:
-  {
+  case SDL_KEYUP: {
+    if (vt_dguiWantsKeyboard(cx))
+        break;
+
     event.type = ev_keyup;
     event.data1.i = I_TranslateKey(&Event->key.keysym);
     D_PostEvent(cx, &event);
@@ -351,12 +357,15 @@ while (SDL_PollEvent(Event))
 
   case SDL_MOUSEBUTTONDOWN:
   case SDL_MOUSEBUTTONUP:
-  if (mouse_enabled && window_focused)
-  {
-    event.type = ev_mouse;
-    event.data1.i = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
-    D_PostEvent(cx, &event);
-  }
+    if (vt_dguiWantsMouse(cx))
+        break;
+
+    if (mouse_enabled && window_focused)
+    {
+        event.type = ev_mouse;
+        event.data1.i = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
+        D_PostEvent(cx, &event);
+    }
   break;
 
   case SDL_MOUSEWHEEL:
@@ -1528,7 +1537,7 @@ static void I_ReadMouse(CCore* cx)
 
 static dboolean MouseShouldBeGrabbed(CCore* cx)
 {
-    if (vt_dguiNeedsMouse(cx) || fastdemo)
+    if (vt_dguiIsOpen(cx) || fastdemo)
         return false;
 
   // never grab the mouse when in screensaver mode

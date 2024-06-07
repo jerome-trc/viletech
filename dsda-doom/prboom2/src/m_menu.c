@@ -35,6 +35,7 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#include "viletech.nim.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -87,6 +88,7 @@
 #include "dsda/skip.h"
 #include "dsda/time.h"
 #include "dsda/console.h"
+#include "dsda/pause.h"
 #include "dsda/text_color.h"
 #include "dsda/utility.h"
 #include "dsda/wad_stats.h"
@@ -5165,21 +5167,21 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
       return true;
     }
 
-    if (dsda_InputActivated(dsda_input_console))
-    {
-      if (dsda_OpenConsole())
+    if (dsda_InputActivated(dsda_input_console)) {
+        if (vt_dguiToggle(cx))
+            dsda_ApplyPauseMode(PAUSE_COMMAND);
+        else
+            dsda_RemovePauseMode(PAUSE_COMMAND);
+
         S_StartVoidSound(g_sfx_swtchn);
-      return true;
+        return true;
     }
 
-    {
-      int i;
-
-      for (i = 0; i < CONSOLE_SCRIPT_COUNT; ++i)
+    for (int i = 0; i < CONSOLE_SCRIPT_COUNT; ++i) {
         if (dsda_InputActivated(dsda_input_script_0 + i)) {
-          dsda_ExecuteConsoleScript(cx, i);
+            dsda_ExecuteConsoleScript(cx, i);
 
-          return true;
+            return true;
         }
     }
 
