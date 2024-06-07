@@ -1,6 +1,6 @@
 ## Abstractions over ImGui.
 
-import core, imgui
+import console, core, imgui
 
 proc dguiSetup*(
     self: var CCore,
@@ -30,16 +30,57 @@ proc dguiFrameBegin*(self: var CCore) {.exportc: "vt_$1".} =
 
 
 proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
-    showImGuiMetricsWindow(nil)
-
-    if not beginImGuiWindow(cstring"Console", self.core.dgui.consoleOpen.addr, ImGuiWindowFlags.none):
-        endImGuiWindow()
+    if not self.core.dgui.open:
         return
 
-    if imGuiButton(cstring"Submit"):
+    if not imGuiBeginMainMenuBar():
         return
 
-    endImGuiWindow()
+    block:
+        defer: imGuiEndMainMenuBar()
+
+        imGuiTextUnformatted("Developer Tools")
+        imGuiSeparator()
+
+        if imGuiMenuItem(cstring"Close"):
+            self.core.dgui.open = false
+
+        if imGuiMenuItem(cstring"ImGui Metrics"):
+            self.core.dgui.metricsWindow = not self.core.dgui.metricsWindow
+
+        let items = [
+            cstring"Console",
+            cstring"VFS",
+        ]
+
+        if imGuiCombo(
+            cstring"Left",
+            cast[ptr cint](self.core.dgui.left.addr),
+            cast[ptr cstring](items.addr),
+            items.len.cint
+        ):
+            discard
+
+        if imGuiCombo(
+            cstring"Right",
+            cast[ptr cint](self.core.dgui.right.addr),
+            cast[ptr cstring](items.addr),
+            items.len.cint
+        ):
+            discard
+
+        let menuBarHeight = imGuiGetWindowHeight()
+
+        case self.core.dgui.left:
+        of DevGui.console: self.core.dgui.console.draw(menuBarHeight)
+        of DevGui.vfs: discard
+
+        case self.core.dgui.right:
+        of DevGui.console: discard
+        of DevGui.vfs: discard
+
+    if self.core.dgui.metricsWindow:
+        showImGuiMetricsWindow(nil)
 
 
 proc dguiFrameFinish*(self: var CCore) {.exportc: "vt_$1".} =
@@ -50,8 +91,22 @@ proc dguiFrameDraw*(self: var CCore) {.exportc: "vt_$1".} =
     ImDrawData.get().render()
 
 
-proc dguiNeedsMouse*(self: var CCore): bool {.exportc: "vt_$1".} =
-    self.core.dgui.consoleOpen
+proc dguiToggle*(self: var CCore): bool {.exportc: "vt_$1".} =
+    ## Returns `true` if the developer GUI is open after the toggle.
+    self.core.dgui.open = not self.core.dgui.open
+    return self.core.dgui.open
+
+
+proc dguiIsOpen*(self: var CCore): bool {.exportc: "vt_$1".} =
+    self.core.dgui.open
+
+
+proc dguiWantsKeyboard*(self: var CCore): bool {.exportc: "vt_$1".} =
+    ImGuiIO.get().wantCaptureKeyboard
+
+
+proc dguiWantsMouse*(self: var CCore): bool {.exportc: "vt_$1".} =
+    ImGuiIO.get().wantCaptureMouse
 
 
 proc processEvent*(self: var CCore, event: ptr SdlEvent): bool {.exportc: "vt_$1".} =
