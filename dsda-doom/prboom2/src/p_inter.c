@@ -625,23 +625,24 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       break;
 
     case SPR_PSTR:
-      if (!P_GivePower (player, pw_strength))
-        return;
-      dsda_AddPlayerMessage(s_GOTBERSERK, player);
+        if (!P_GivePower (player, pw_strength))
+            return;
+
+        dsda_AddPlayerMessage(s_GOTBERSERK, player);
 
         bool switch_to_fist = player->readyweapon != wp_fist;
 
         if (!dsda_SwitchWhenBerserk())
             switch_to_fist = false;
 
-        if (demoplayback)
+        if (demoplayback || demorecording)
             switch_to_fist = true;
 
         if (switch_to_fist)
             player->pendingweapon = wp_fist;
 
-      sound = sfx_getpow;
-      break;
+        sound = sfx_getpow;
+        break;
 
     case SPR_PINS:
       if (!P_GivePower (player, pw_invisibility))
