@@ -39,6 +39,8 @@ proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
         cmd &= &"--nimcache:../nimcache/release -d:release -d:strip -d:lto "
     else:
         const outDir = "Debug"
+        # https://github.com/nim-lang/Nim/issues/22824
+        # cmd &= "--hotCodeReloading:on -d:nimDebugDlOpen --mm:refc "
         cmd &= &"--nimcache:../nimcache/debug --debuginfo --lineDir:on "
 
     let exeName = toExe("ratboom")
