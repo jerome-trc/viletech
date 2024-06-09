@@ -49,6 +49,7 @@ exportObject(cfg, CCore):
 
 exportProcs(cfg):
     addDynLib
+    addConsoleToast
     dguiDraw
     dguiFrameBegin
     dguiFrameFinish

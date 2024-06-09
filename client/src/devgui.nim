@@ -1,6 +1,6 @@
 ## Abstractions over ImGui.
 
-import console, core, imgui
+import core, devgui/[console, vfs], imgui
 
 proc dguiSetup*(
     self: var CCore,
@@ -26,7 +26,7 @@ proc dguiShutdown*() {.exportc: "vt_$1".} =
 proc dguiFrameBegin*(self: var CCore) {.exportc: "vt_$1".} =
     imGuiOpenGl3NewFrame()
     imGuiSdl2NewFrame()
-    newImGuiFrame()
+    imGuiNewFrame()
 
 
 proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
@@ -48,10 +48,15 @@ proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
         if imGuiMenuItem(cstring"ImGui Metrics"):
             self.core.dgui.metricsWindow = not self.core.dgui.metricsWindow
 
+        let vp = imGuiGetMainViewport()
+
         let items = [
             cstring"Console",
+            cstring"Nim Playground",
             cstring"VFS",
         ]
+
+        imGuiPushItemWidth(vp.size.x * 0.15)
 
         if imGuiCombo(
             cstring"Left",
@@ -59,7 +64,11 @@ proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
             cast[ptr cstring](items.addr),
             items.len.cint
         ):
-            discard
+            # ImGui misbehaves if both sides of the developer GUI draw the same tool.
+            if self.core.dgui.left == self.core.dgui.right:
+                for i in DevGui.items:
+                    if self.core.dgui.left != i:
+                        self.core.dgui.right = i
 
         if imGuiCombo(
             cstring"Right",
@@ -67,20 +76,27 @@ proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
             cast[ptr cstring](items.addr),
             items.len.cint
         ):
-            discard
+            if self.core.dgui.left == self.core.dgui.right:
+                for i in DevGui.items:
+                    if self.core.dgui.right != i:
+                        self.core.dgui.left = i
+
+        imGuiPopItemWidth()
 
         let menuBarHeight = imGuiGetWindowHeight()
 
         case self.core.dgui.left:
-        of DevGui.console: self.core.dgui.console.draw(menuBarHeight)
-        of DevGui.vfs: discard
+        of DevGui.console: self.core.dgui.console.draw(true, menuBarHeight)
+        of DevGui.playground: discard
+        of DevGui.vfs: vfs.draw(false, menuBarHeight)
 
         case self.core.dgui.right:
-        of DevGui.console: discard
-        of DevGui.vfs: discard
+        of DevGui.console: self.core.dgui.console.draw(false, menuBarHeight)
+        of DevGui.playground: discard
+        of DevGui.vfs: vfs.draw(false, menuBarHeight)
 
     if self.core.dgui.metricsWindow:
-        showImGuiMetricsWindow(nil)
+        imGuiShowMetricsWindow(nil)
 
 
 proc dguiFrameFinish*(self: var CCore) {.exportc: "vt_$1".} =
