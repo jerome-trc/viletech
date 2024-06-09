@@ -2,7 +2,7 @@ version = "0.0.0"
 author = "jerome-trc"
 description = "Personalized Doom source port forked from dsda-doom"
 license = "Apache 2.0 OR MIT"
-bin = @["src/main"]
+bin = @["ratboom"]
 skipDirs = @["tests"]
 
 requires "nim == 2.0.4"
@@ -14,7 +14,7 @@ import checksums/md5
 
 proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
-    var cmd = &"nim {libDirs} --cincludes:../../engine/src --cincludes:../../depend/imgui "
+    var cmd = &"nim {libDirs} --cincludes:../engine/src --cincludes:../depend/imgui "
 
     for clib in [
         "dumb",
@@ -54,7 +54,7 @@ proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
     else:
         exec(&"cmake --build ../build --config {outDir} --target all --")
 
-    cmd &= &"cpp -d:projectDir:{getCurrentDir()} ./src/main.nim"
+    cmd &= &"cpp -d:projectDir:{getCurrentDir()} ./ratboom.nim"
     exec(cmd)
 
     # If the generated C header isn't different from the last run, don't copy it
