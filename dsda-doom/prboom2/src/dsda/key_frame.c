@@ -218,7 +218,7 @@ void dsda_ExportKeyFrame(byte* buffer, int length) {
 }
 
 // Stripped down version of G_DoSaveGame
-void dsda_StoreKeyFrame(dsda_key_frame_t* key_frame, byte complete, byte export) {
+void dsda_StoreKeyFrame(CCore* cx, dsda_key_frame_t* key_frame, byte complete, byte export) {
   key_frame->game_tic_count = true_logictic;
 
   P_InitSaveBuffer();
@@ -247,7 +247,7 @@ void dsda_StoreKeyFrame(dsda_key_frame_t* key_frame, byte complete, byte export)
     if (demorecording && export)
       dsda_ExportKeyFrame(key_frame->buffer, key_frame->buffer_length);
 
-    doom_printf("Stored key frame");
+    doom_printf(cx, "Stored key frame");
   }
 }
 
@@ -258,7 +258,7 @@ void dsda_RestoreKeyFrame(CCore* cx, dsda_key_frame_t* key_frame, dboolean skip_
   byte complete;
 
   if (key_frame->buffer == NULL) {
-    doom_printf("No key frame found");
+    doom_printf(cx, "No key frame found");
     return;
   }
 
@@ -290,15 +290,15 @@ void dsda_RestoreKeyFrame(CCore* cx, dsda_key_frame_t* key_frame, dboolean skip_
 
   dsda_ResolveParentKF(key_frame);
 
-  doom_printf("Restored key frame");
+  doom_printf(cx, "Restored key frame");
 }
 
-void dsda_StoreTempKeyFrame(void) {
-  dsda_StoreKeyFrame(&temp_kf, true, true);
+void dsda_StoreTempKeyFrame(CCore* cx) {
+  dsda_StoreKeyFrame(cx, &temp_kf, true, true);
 }
 
-void dsda_StoreQuickKeyFrame(void) {
-  dsda_StoreKeyFrame(&quick_kf, true, true);
+void dsda_StoreQuickKeyFrame(CCore* cx) {
+  dsda_StoreKeyFrame(cx, &quick_kf, true, true);
 }
 
 void dsda_RestoreQuickKeyFrame(CCore* cx) {
@@ -348,7 +348,7 @@ void dsda_RewindAutoKeyFrame(CCore* cx) {
   if (load_kf)
     dsda_RestoreKeyFrame(cx, &load_kf->kf, true);
   else
-    doom_printf("No key frame found"); // rewind past the depth limit
+    doom_printf(cx, "No key frame found"); // rewind past the depth limit
 }
 
 void dsda_ResetAutoKeyFrameTimeout(void) {
@@ -356,7 +356,7 @@ void dsda_ResetAutoKeyFrameTimeout(void) {
   auto_kf_timeout_count = 0;
 }
 
-void dsda_UpdateAutoKeyFrames(void) {
+void dsda_UpdateAutoKeyFrames(CCore* cx) {
   int key_frame_index;
   int current_time;
   int interval_tics;
@@ -392,7 +392,7 @@ void dsda_UpdateAutoKeyFrames(void) {
       unsigned long long elapsed_time;
 
       dsda_StartTimer(dsda_timer_key_frame);
-      dsda_StoreKeyFrame(current_key_frame, false, false);
+      dsda_StoreKeyFrame(cx, current_key_frame, false, false);
       elapsed_time = dsda_ElapsedTimeMS(dsda_timer_key_frame);
 
       if (autoKeyFrameTimeout()) {
@@ -401,7 +401,7 @@ void dsda_UpdateAutoKeyFrames(void) {
 
           if (auto_kf_timeout_count > TIMEOUT_LIMIT) {
             auto_kf_timed_out = true;
-            doom_printf("Slow key framing: rewind disabled");
+            doom_printf(cx, "Slow key framing: rewind disabled");
           }
         }
         else

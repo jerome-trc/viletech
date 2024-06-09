@@ -71,7 +71,7 @@ typedef struct cheatseq_s {
 extern cheatseq_t cheat[];
 
 void M_CheatGod(CCore*);
-void M_CheatNoClip(void);
+void M_CheatNoClip(CCore*);
 void M_CheatIDDT(void);
 dboolean M_CheatResponder(CCore*, event_t*);
 dboolean M_CheatEntered(CCore*, const char* element, const char* value);

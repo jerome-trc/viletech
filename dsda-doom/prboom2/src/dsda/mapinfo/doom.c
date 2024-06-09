@@ -207,7 +207,7 @@ void dsda_DoomUpdateNextMapInfo(void) {
     next_cluster = NULL;
 }
 
-int dsda_DoomResolveCLEV(int* clev, int* episode, int* map) {
+int dsda_DoomResolveCLEV(CCore* cx, int* clev, int* episode, int* map) {
   const doom_mapinfo_map_t* entry;
   int level_num;
 
@@ -224,7 +224,7 @@ int dsda_DoomResolveCLEV(int* clev, int* episode, int* map) {
   if (!entry || !W_LumpNameExists(entry->lump_name)) {
     *clev = false;
 
-    doom_printf("IDCLEV target not found: %d", level_num);
+    doom_printf(cx, "IDCLEV target not found: %d", level_num);
   }
   else {
     *clev = true;

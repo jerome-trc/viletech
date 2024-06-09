@@ -33,7 +33,7 @@ int dsda_DoomSkipDrawShowNextLoc(int* skip);
 void dsda_DoomUpdateMapInfo(void);
 void dsda_DoomUpdateLastMapInfo(void);
 void dsda_DoomUpdateNextMapInfo(void);
-int dsda_DoomResolveCLEV(int* clev, int* episode, int* map);
+int dsda_DoomResolveCLEV(CCore*, int* clev, int* episode, int* map);
 int dsda_DoomResolveINIT(int* init);
 int dsda_DoomMusicIndexToLumpNum(int* lump, int music_index);
 int dsda_DoomMapMusic(int* music_index, int* music_lump);

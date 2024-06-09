@@ -222,7 +222,7 @@ static int P_TeleportToDestination(CCore* cx, mobj_t *destination, line_t *line,
   if (flags & TELF_SOURCEFOG)
   {
     // spawn teleport fog and emit sound at source
-    S_StartMobjSound(P_SpawnMobj(oldx, oldy, oldz, MT_TFOG), sfx_telept);
+    S_StartMobjSound(P_SpawnMobj(cx, oldx, oldy, oldz, MT_TFOG), sfx_telept);
   }
 
   if (flags & TELF_DESTFOG)
@@ -230,6 +230,7 @@ static int P_TeleportToDestination(CCore* cx, mobj_t *destination, line_t *line,
     // spawn teleport fog and emit sound at destination
     S_StartMobjSound(
       P_SpawnMobj(
+        cx,
         destination->x + 20 * finecosine[destination->angle >> ANGLETOFINESHIFT],
         destination->y + 20 * finesine[destination->angle >> ANGLETOFINESHIFT],
         thing->z, MT_TFOG
@@ -618,10 +619,10 @@ dboolean P_Teleport(CCore* cx, mobj_t * thing, fixed_t x, fixed_t y, angle_t ang
     if (useFog)
     {
         fogDelta = thing->flags & MF_MISSILE ? 0 : TELEFOGHEIGHT;
-        fog = P_SpawnMobj(oldx, oldy, oldz + fogDelta, g_mt_tfog);
+        fog = P_SpawnMobj(cx, oldx, oldy, oldz + fogDelta, g_mt_tfog);
         S_StartMobjSound(fog, g_sfx_telept);
         an = angle >> ANGLETOFINESHIFT;
-        fog = P_SpawnMobj(x + 20 * finecosine[an],
+        fog = P_SpawnMobj(cx, x + 20 * finecosine[an],
                           y + 20 * finesine[an], thing->z + fogDelta, g_mt_tfog);
         S_StartMobjSound(fog, g_sfx_telept);
         if (thing->player &&

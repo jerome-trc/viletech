@@ -3,7 +3,7 @@
 import std/[dynlib, files]
 from std/paths import Path
 
-import console, imgui, plugin
+import devgui/console, imgui, plugin
 
 const baseScreenWidth*: int = 320
 
@@ -16,6 +16,7 @@ type
         indeterminate
     DevGui* {.pure, size: sizeof(cint).} = enum
         console
+        playground
         vfs
     Core* {.byref.} = object
         ## Permeates the code base with state that is practically "global".
@@ -26,9 +27,7 @@ type
         ## The parts of `Core` that can be safely exposed to C.
         core*: ptr Core = nil ## \
             ## Enable functions called from C to access the rest of the core.
-        flavor*: Flavor = Flavor.indeterminate ## \
-            ## It's not critical that this is always the first field,
-            ## but please try to leave it that way.
+        flavor*: Flavor = Flavor.indeterminate
         dynLibPaths*: seq[Path] = @[]
         dynLibs*: seq[LibHandle] = @[]
         savedGametick*: int32 = -1
@@ -36,7 +35,8 @@ type
         imguiCtx*: ptr ImGuiContext = nil
         open*: bool = when defined(release): false else: true
         metricsWindow*: bool = false
-        left*, right*: DevGui
+        left*: DevGui = DevGui.console
+        right*: DevGui = DevGui.vfs
         console*: Console
 
 proc init*(_: typedesc[Core]): Core =
@@ -66,6 +66,10 @@ proc loadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =
             continue
 
         onEngineInit()
+
+
+proc addConsoleToast*(self: var CCore, msg: cstring) {.exportc: "vt_$1".} =
+    self.core.dgui.console.addToast($msg)
 
 
 proc unloadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =

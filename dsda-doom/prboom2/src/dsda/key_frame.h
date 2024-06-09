@@ -43,18 +43,18 @@ typedef struct auto_kf_s {
   struct auto_kf_s* next;
 } auto_kf_t;
 
-void dsda_StoreKeyFrame(dsda_key_frame_t* key_frame, byte complete, byte export);
-void dsda_RestoreKeyFrame(CCore*, dsda_key_frame_t* key_frame, dboolean skip_wipe);
+void dsda_StoreKeyFrame(CCore*, dsda_key_frame_t*, byte complete, byte export);
+void dsda_RestoreKeyFrame(CCore*, dsda_key_frame_t*, dboolean skip_wipe);
 void dsda_InitKeyFrame(void);
 void dsda_ContinueKeyFrame(CCore*);
 int dsda_KeyFrameRestored(void);
-void dsda_StoreTempKeyFrame(void);
-void dsda_StoreQuickKeyFrame(void);
+void dsda_StoreTempKeyFrame(CCore*);
+void dsda_StoreQuickKeyFrame(CCore*);
 void dsda_RestoreQuickKeyFrame(CCore*);
 dboolean dsda_RestoreClosestKeyFrame(CCore*, int tic);
 void dsda_RewindAutoKeyFrame(CCore*);
 void dsda_ResetAutoKeyFrameTimeout(void);
-void dsda_UpdateAutoKeyFrames(void);
+void dsda_UpdateAutoKeyFrames(CCore*);
 void dsda_ForgetAutoKeyFrames(void);
 
 #endif

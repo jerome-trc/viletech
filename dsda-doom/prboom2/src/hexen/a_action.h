@@ -22,8 +22,8 @@
 
 extern int localQuakeHappening[MAX_MAXPLAYERS];
 
-dboolean A_LocalQuake(byte* args, mobj_t* victim);
-void P_SpawnDirt(mobj_t*, fixed_t radius);
+dboolean A_LocalQuake(CCore*, byte* args, mobj_t* victim);
+void P_SpawnDirt(CCore*, mobj_t*, fixed_t radius);
 void A_BridgeRemove(CCore*, mobj_t*);
 
 #endif

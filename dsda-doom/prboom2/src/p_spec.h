@@ -1020,12 +1020,9 @@ sector_t* getNextSector
 ( line_t* line,
   sector_t* sec );
 
-int P_CheckTag
-(line_t *line); // jff 2/27/98
+int P_CheckTag(line_t*); // jff 2/27/98
 
-dboolean P_CanUnlockGenDoor
-( line_t* line,
-  player_t* player);
+dboolean P_CanUnlockGenDoor(CCore*, line_t*, player_t*);
 
 dboolean PUREFUNC P_PlaneActive(const sector_t *sec);
 dboolean PUREFUNC P_CeilingActive(const sector_t *sec);
@@ -1096,9 +1093,8 @@ void T_MoveElevator(CCore*, void*);
 
 // p_spec
 
-void T_Friction(friction_t*);    // phares 3/12/98: friction thinker
-
-void T_Pusher(CCore*, pusher_t*);      // phares 3/20/98: Push thinker
+void T_Friction(CCore*, void* /* friction_t */); // phares 3/12/98: friction thinker
+void T_Pusher(CCore*, void* /* pusher_t */); // phares 3/20/98: Push thinker
 
 ////////////////////////////////////////////////////////////////
 //
@@ -1141,18 +1137,13 @@ int EV_CeilingCrushStop
 
 // p_doors
 
-int EV_VerticalDoor
-( line_t* line,
-  mobj_t* thing );
+int EV_VerticalDoor(CCore*, line_t*, mobj_t*);
 
 int EV_DoDoor
 ( line_t* line,
   vldoor_e type );
 
-int EV_DoLockedDoor
-( line_t* line,
-  vldoor_e type,
-  mobj_t* thing );
+int EV_DoLockedDoor(CCore*, line_t*, vldoor_e, mobj_t*);
 
 // p_lights
 
@@ -1233,11 +1224,7 @@ void P_UpdateSpecials
 ( void );
 
 // when needed
-dboolean P_UseSpecialLine
-( mobj_t* thing,
-  line_t* line,
-  int   side,
-	dboolean noplayercheck);
+dboolean P_UseSpecialLine(CCore*, mobj_t*, line_t*, int side, dboolean noplayercheck);
 
 void P_PlayerInSpecialSector(CCore*, player_t*);
 
@@ -1312,8 +1299,8 @@ void P_InitAmbientSound(void);
 void P_AmbientSound(void);
 void P_AddAmbientSfx(int sequence);
 dboolean P_Teleport(CCore*, mobj_t *, fixed_t x, fixed_t y, angle_t angle, dboolean useFog);
-dboolean Heretic_P_UseSpecialLine(mobj_t * thing, line_t * line, int side, dboolean bossaction);
-void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing);
+dboolean Heretic_P_UseSpecialLine(CCore*, mobj_t*, line_t*, int side, dboolean bossaction);
+void Heretic_EV_VerticalDoor(CCore*, line_t*, mobj_t*);
 
 // hexen
 
@@ -1447,13 +1434,11 @@ typedef struct {
 
 void dsda_ResetQuakes(void);
 void dsda_UpdateQuakeIntensity(int player_num, int intensity);
-void dsda_UpdateQuake(CCore*, quake_t*);
+void dsda_UpdateQuake(CCore*, void* /* quake_t */);
 void dsda_SpawnQuake(mobj_t* location, int intensity, int duration,
                      int damage_radius, int tremor_radius);
 
-//
-
-dboolean P_ActivateLine(line_t*, mobj_t*, int side, line_activation_t);
+dboolean P_ActivateLine(CCore*, line_t*, mobj_t*, int side, line_activation_t);
 void P_PlayerOnSpecialFlat(CCore*, player_t*, int floorType);
 line_t *P_FindLine(int lineTag, int *searchPosition);
 
@@ -1601,9 +1586,9 @@ typedef enum {
 
 void P_AddMobjSecret(mobj_t *mobj);
 void P_PlayerCollectSecret(player_t *player);
-dboolean P_CheckKeys(mobj_t *mo, zdoom_lock_t lock, dboolean legacy);
+dboolean P_CheckKeys(CCore*, mobj_t*, zdoom_lock_t, dboolean legacy);
 dboolean P_CheckSwitchRange(line_t *line, mobj_t *mo, int sideno);
-int EV_DoZDoomDoor(vldoor_e type, line_t *line, mobj_t *mo, int tag, fixed_t speed, int topwait,
+int EV_DoZDoomDoor(CCore*, vldoor_e type, line_t *line, mobj_t *mo, int tag, fixed_t speed, int topwait,
                    zdoom_lock_t lock, int lightTag, dboolean boomgen, int topcountdown);
 int EV_DoZDoomFloor(floor_e floortype, line_t *line, int tag, fixed_t speed, fixed_t height,
                    int crush, int change, dboolean hexencrush, dboolean hereticlower);

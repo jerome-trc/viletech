@@ -377,9 +377,9 @@ void P_UnsetThingPosition (mobj_t *thing)
 //
 // killough 5/3/98: reformatted, cleaned up
 
-void P_SetThingPosition(mobj_t *thing)
-{                                                      // link into subsector
-  subsector_t *ss = thing->subsector = R_PointInSubsector(thing->x, thing->y);
+void P_SetThingPosition(CCore* cx, mobj_t *thing) {
+    // link into subsector
+    subsector_t *ss = thing->subsector = R_PointInSubsector(thing->x, thing->y);
   if (!(thing->flags & MF_NOSECTOR))
     {
       // invisible things don't go into the sector links
@@ -407,7 +407,7 @@ void P_SetThingPosition(mobj_t *thing)
       // at sector_t->touching_thinglist) are broken. When a node is
       // added, new sector links are created.
 
-      P_CreateSecNodeList(thing,thing->x,thing->y);
+      P_CreateSecNodeList(cx, thing, thing->x, thing->y);
       thing->touching_sectorlist = sector_list; // Attach to Thing's mobj_t
       sector_list = NULL; // clear for next time
     }
@@ -530,7 +530,7 @@ dboolean P_BlockLinesIterator(CCore* cx, int x, int y, dboolean func(CCore*, lin
 // incremented at the correct time. The bug is exposed in MBF.
 // Under most cases, this is irrelevant, but sometimes it matters.
 // Ripper projectiles in mbf21, heretic, and hexen require decoupling.
-dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t*))
+dboolean P_BlockLinesIterator2(CCore* cx, int x, int y, dboolean func(CCore*, line_t*))
 {
   int        offset;
   const int  *list;   // killough 3/1/98: for removal of blockmap limit
@@ -562,7 +562,7 @@ dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t*))
               continue;
             }
             (*tempSeg)->linedef->validcount2 = validcount2;
-            if (!func((*tempSeg)->linedef))
+            if (!func(cx, (*tempSeg)->linedef))
             {
               return false;
             }
@@ -596,7 +596,7 @@ dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t*))
       if (ld->validcount2 == validcount2)
         continue;       // line has already been checked
       ld->validcount2 = validcount2;
-      if (!func(ld))
+      if (!func(cx, ld))
         return false;
     }
   return true;  // everything was checked

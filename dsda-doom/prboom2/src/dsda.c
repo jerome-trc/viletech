@@ -20,12 +20,10 @@
 #include <stdio.h>
 
 #include "doomstat.h"
-#include "p_inter.h"
 #include "p_tick.h"
 #include "g_game.h"
 #include "sounds.h"
 #include "s_sound.h"
-#include "am_map.h"
 
 #include "dsda/analysis.h"
 #include "dsda/args.h"
@@ -189,9 +187,9 @@ int dsda_SessionAttempts(void) {
   return dsda_session_attempts;
 }
 
-void dsda_DisplayNotifications(void) {
+void dsda_DisplayNotifications(CCore* cx) {
   if (dsda_ShowDemoAttempts() && dsda_session_attempts > dsda_shown_attempt) {
-    doom_printf("Attempt %d / %d", dsda_session_attempts, dsda_DemoAttempts());
+    doom_printf(cx, "Attempt %d / %d", dsda_session_attempts, dsda_DemoAttempts());
 
     dsda_shown_attempt = dsda_session_attempts;
   }
@@ -415,7 +413,7 @@ void dsda_WatchCommand(void) {
   dsda_ExportGhostFrame();
 }
 
-void dsda_WatchLedgeImpact(mobj_t* thing, int target_z) {
+void dsda_WatchLedgeImpact(CCore* cx, mobj_t* thing, int target_z) {
   static int old_gametic;
 
   if (
@@ -428,6 +426,7 @@ void dsda_WatchLedgeImpact(mobj_t* thing, int target_z) {
 
     if (dsda_CoordinateDisplay())
       doom_printf(
+        cx,
         "Missed ledge by %d\n",
         ((target_z - thing->z) >> FRACBITS) - 24
       );
@@ -441,8 +440,8 @@ void dsda_WatchBeforeLevelSetup(void) {
   dsda_max_kill_requirement = 0;
 }
 
-void dsda_WatchAfterLevelSetup(void) {
-  dsda_SpawnGhost();
+void dsda_WatchAfterLevelSetup(CCore* cx) {
+  dsda_SpawnGhost(cx);
   dsda_ResetTrackers();
   dsda_ResetLineActivationTracker();
   dsda_WadStatsEnterMap();

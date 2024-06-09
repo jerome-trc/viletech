@@ -441,8 +441,8 @@ extern int iquetail;
 
 int P_MobjSpawnHealth(const mobj_t* mobj);
 mobj_t* P_SubstNullMobj (mobj_t* th);
-void    P_RespawnSpecials(void);
-mobj_t  *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
+void    P_RespawnSpecials(CCore*);
+mobj_t  *P_SpawnMobj(CCore*, fixed_t x, fixed_t y, fixed_t z, mobjtype_t);
 void    P_RemoveMobj(CCore*, mobj_t*);
 dboolean P_SetMobjState(CCore*, mobj_t*, statenum_t);
 void    P_MobjThinker(CCore*, void*);
@@ -544,11 +544,11 @@ mobj_t *P_SPMAngle(CCore*, mobj_t * source, mobjtype_t type, angle_t angle);
 int P_HitFloor(CCore* cx, mobj_t*);
 int P_GetThingFloorType(mobj_t * thing);
 int P_FaceMobj(mobj_t * source, mobj_t * target, angle_t * delta);
-void P_BloodSplatter(fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
-void P_RipperBlood(mobj_t * mo, mobj_t * bleeder);
+void P_BloodSplatter(CCore*, fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
+void P_RipperBlood(CCore*, mobj_t * mo, mobj_t * bleeder);
 dboolean Raven_P_SetMobjState(CCore*, mobj_t*, statenum_t);
 void P_FloorBounceMissile(CCore*, mobj_t*);
-void Raven_P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
+void Raven_P_SpawnPuff(CCore*, fixed_t x, fixed_t y, fixed_t z);
 
 // hexen
 
@@ -561,7 +561,7 @@ mobj_t *P_SPMAngleXYZ(CCore*, mobj_t * source, fixed_t x, fixed_t y,
 mobj_t *P_SpawnKoraxMissile(CCore*, fixed_t x, fixed_t y, fixed_t z,
                             mobj_t * source, mobj_t * dest, mobjtype_t);
 mobj_t *P_FindMobjFromTID(short tid, int *searchPosition);
-void P_BloodSplatter2(fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
+void P_BloodSplatter2(CCore*, fixed_t x, fixed_t y, fixed_t z, mobj_t * originator);
 
 // zdoom
 

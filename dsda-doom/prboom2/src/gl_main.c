@@ -154,7 +154,7 @@ void gld_MultisamplingSet(void)
   }
 }
 
-void gld_Init(int width, int height)
+void gld_Init(CCore* cx, int width, int height)
 {
   GLfloat params[4]={0.0f,0.0f,1.0f,0.0f};
 
@@ -219,7 +219,7 @@ void gld_Init(int width, int height)
   //e6y
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-  gld_Finish();
+  gld_Finish(cx);
   glClear(GL_COLOR_BUFFER_BIT);
   glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
 
@@ -926,10 +926,10 @@ void gld_InitDrawScene(void)
   gld_ResetDrawInfo();
 }
 
-void gld_Finish(void)
+void gld_Finish(CCore* cx)
 {
   gld_Set2DMode();
-  I_HandleCapture();
+  I_HandleCapture(cx);
   SDL_GL_SwapWindow(sdl_window);
 }
 

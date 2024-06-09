@@ -331,18 +331,18 @@ dboolean P_MoveThing(CCore* cx, mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, 
   if (P_TestMobjLocation(cx, thing))
   {
     P_UnsetThingPosition(thing);
-    P_SetThingPosition(thing);
+    P_SetThingPosition(cx, thing);
 
     if (fog)
     {
       mobj_t *telefog;
 
-      telefog = P_SpawnMobj(oldx,
+      telefog = P_SpawnMobj(cx, oldx,
                             oldy,
                             oldfloorz + g_telefog_height,
                             g_mt_tfog);
       S_StartMobjSound(telefog, g_sfx_telept);
-      telefog = P_SpawnMobj(thing->x,
+      telefog = P_SpawnMobj(cx, thing->x,
                             thing->y,
                             thing->floorz + g_telefog_height,
                             g_mt_tfog);
@@ -368,7 +368,7 @@ dboolean P_MoveThing(CCore* cx, mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, 
   }
 }
 
-void P_UnqualifiedMove(mobj_t *thing, fixed_t x, fixed_t y)
+void P_UnqualifiedMove(CCore* cx, mobj_t *thing, fixed_t x, fixed_t y)
 {
   subsector_t *subsector;
 
@@ -378,7 +378,7 @@ void P_UnqualifiedMove(mobj_t *thing, fixed_t x, fixed_t y)
   subsector = R_PointInSubsector(thing->x, thing->y);
   thing->z = thing->floorz = subsector->sector->floorheight;
   thing->ceilingz = subsector->sector->ceilingheight;
-  P_SetThingPosition(thing);
+  P_SetThingPosition(cx, thing);
 }
 
 /// @fn P_TeleportMove
@@ -449,7 +449,7 @@ dboolean P_TeleportMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y, dboolean b
   thing->x = x;
   thing->y = y;
 
-  P_SetThingPosition (thing);
+  P_SetThingPosition(cx, thing);
 
   thing->PrevX = x;
   thing->PrevY = y;
@@ -534,7 +534,7 @@ static void CheckForDamageSpecial(line_t *line, mobj_t *mo)
   dsda_DamageLinedef(line, mo->target, damage);
 }
 
-static void CheckForPushSpecial(line_t * line, int side, mobj_t * mobj);
+static void CheckForPushSpecial(CCore*, line_t*, int side, mobj_t*);
 
 static // killough 3/26/98: make static
 dboolean PIT_CheckLine(CCore* cx, line_t* ld)
@@ -579,7 +579,7 @@ dboolean PIT_CheckLine(CCore* cx, line_t* ld)
       {
         P_DamageMobj(cx, tmthing, NULL, NULL, tmthing->info->mass >> 5);
       }
-      CheckForPushSpecial(ld, 0, tmthing);
+      CheckForPushSpecial(cx, ld, 0, tmthing);
       CheckForDamageSpecial(ld, tmthing);
     }
     blockline = ld;
@@ -612,7 +612,7 @@ dboolean PIT_CheckLine(CCore* cx, line_t* ld)
           {
             P_DamageMobj(cx, tmthing, NULL, NULL, tmthing->info->mass >> 5);
           }
-          CheckForPushSpecial(ld, 0, tmthing);
+          CheckForPushSpecial(cx, ld, 0, tmthing);
           CheckForDamageSpecial(ld, tmthing);
         }
         return tmunstuck && !untouched(ld);  // killough 8/1/98: allow escape
@@ -833,7 +833,7 @@ static dboolean PIT_CheckThing(CCore* cx, mobj_t *thing) // killough 3/26/98: ma
             P_DamageMobj(cx, thing, tmthing, tmthing->target, damage);
             if (P_Random(pr_hexen) < 128)
             {
-              P_SpawnMobj(tmthing->x, tmthing->y, tmthing->z,
+              P_SpawnMobj(cx, tmthing->x, tmthing->y, tmthing->z,
                           HEXEN_MT_HOLY_PUFF);
               S_StartMobjSound(tmthing, hexen_sfx_spirit_attack);
               if (thing->flags & MF_COUNTKILL && P_Random(pr_hexen) < 128
@@ -1080,7 +1080,7 @@ static dboolean PIT_CheckThing(CCore* cx, mobj_t *thing) // killough 3/26/98: ma
             !(thing->flags2 & MF2_REFLECTIVE) &&
             !(thing->flags2 & MF2_INVULNERABLE))
         {                   // Ok to spawn some blood
-          P_RipperBlood(tmthing, thing);
+          P_RipperBlood(cx, tmthing, thing);
         }
         if (heretic) S_StartMobjSound(tmthing, heretic_sfx_ripslop);
         damage = ((P_Random(pr_heretic) & 3) + 2) * tmthing->damage;
@@ -1122,7 +1122,7 @@ static dboolean PIT_CheckThing(CCore* cx, mobj_t *thing) // killough 3/26/98: ma
       P_Random(pr_heretic) < 192
     )
     {
-      P_BloodSplatter(tmthing->x, tmthing->y, tmthing->z, thing);
+      P_BloodSplatter(cx, tmthing->x, tmthing->y, tmthing->z, thing);
     }
     if (!raven || damage)
       P_DamageMobj(cx, thing, tmthing, tmthing->target, damage);
@@ -1389,7 +1389,7 @@ void P_CheckZDoomImpact(CCore* cx, mobj_t *thing)
       // see if the line was crossed
       ld = spechit[i];
       side = P_PointOnLineSide(thing->x, thing->y, ld);
-      CheckForPushSpecial(ld, side, thing);
+      CheckForPushSpecial(cx, ld, side, thing);
       CheckForDamageSpecial(ld, tmthing);
     }
   }
@@ -1500,7 +1500,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
       tmfloorz - thing->z > 24*FRACUNIT
     )
     {
-      dsda_WatchLedgeImpact(thing, tmfloorz);
+      dsda_WatchLedgeImpact(cx, thing, tmfloorz);
 
       map_format.check_impact(thing);
       return tmunstuck
@@ -1579,7 +1579,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
   // the move is ok,
   // so unlink from the old position and link into the new position
 
-  P_UnsetThingPosition (thing);
+  P_UnsetThingPosition(thing);
 
   oldx = thing->x;
   oldy = thing->y;
@@ -1589,7 +1589,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
   thing->x = x;
   thing->y = y;
 
-  P_SetThingPosition (thing);
+  P_SetThingPosition(cx, thing);
 
   if (thing->flags2 & MF2_FOOTCLIP
       && P_GetThingFloorType(thing) != FLOOR_SOLID)
@@ -2348,7 +2348,7 @@ dboolean PTR_ShootTraverse (CCore* cx, intercept_t* in)
   if (heretic && PuffType == HERETIC_MT_BLASTERPUFF1)
   {                           // Make blaster big puff
     mobj_t* mo;
-    mo = P_SpawnMobj(x, y, z, HERETIC_MT_BLASTERPUFF2);
+    mo = P_SpawnMobj(cx, x, y, z, HERETIC_MT_BLASTERPUFF2);
     S_StartMobjSound(mo, heretic_sfx_blshit);
   }
   else
@@ -2369,11 +2369,11 @@ dboolean PTR_ShootTraverse (CCore* cx, intercept_t* in)
     {
       if (PuffType == HEXEN_MT_AXEPUFF || PuffType == HEXEN_MT_AXEPUFF_GLOW)
       {
-        P_BloodSplatter2(x, y, z, in->d.thing);
+        P_BloodSplatter2(cx, x, y, z, in->d.thing);
       }
       if (P_Random(pr_heretic) < 192)
       {
-        P_BloodSplatter(x, y, z, in->d.thing);
+        P_BloodSplatter(cx, x, y, z, in->d.thing);
       }
     }
 
@@ -2579,7 +2579,7 @@ dboolean PTR_UseTraverse (CCore* cx, intercept_t* in)
 
   //  return false;   // don't use back side
 
-  P_UseSpecialLine (usething, in->d.line, side, false);
+  P_UseSpecialLine (cx, usething, in->d.line, side, false);
 
   //WAS can't use for than one special line in a row
   //jff 3/21/98 NOW multiple use allowed with enabling line flag
@@ -2896,7 +2896,7 @@ dboolean PIT_ChangeSector(CCore* cx, mobj_t* thing)
     )
     {
       // spray blood in a random direction
-      mo = P_SpawnMobj (thing->x,
+      mo = P_SpawnMobj (cx, thing->x,
                         thing->y,
                         thing->z + thing->height / 2, g_mt_blood);
       mo->color = thing->info->bloodcolor;
@@ -3197,7 +3197,7 @@ void P_DelSeclist(msecnode_t* node)
 // at this location, so don't bother with checking impassable or
 // blocking lines.
 
-dboolean PIT_GetSectors(line_t* ld)
+dboolean PIT_GetSectors(CCore* cx, line_t* ld)
 {
   if (tmbbox[BOXRIGHT]  <= ld->bbox[BOXLEFT]   ||
       tmbbox[BOXLEFT]   >= ld->bbox[BOXRIGHT]  ||
@@ -3238,7 +3238,7 @@ dboolean PIT_GetSectors(line_t* ld)
 // P_CreateSecNodeList alters/creates the sector_list that shows what sectors
 // the object resides in.
 
-void P_CreateSecNodeList(mobj_t* thing,fixed_t x,fixed_t y)
+void P_CreateSecNodeList(CCore* cx, mobj_t* thing, fixed_t x, fixed_t y)
 {
   int xl;
   int xh;
@@ -3281,7 +3281,7 @@ void P_CreateSecNodeList(mobj_t* thing,fixed_t x,fixed_t y)
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
-      P_BlockLinesIterator2(bx,by,PIT_GetSectors);
+      P_BlockLinesIterator2(cx, bx, by, PIT_GetSectors);
 
   // Add the sector of the (x,y) point to sector_list.
 
@@ -3697,13 +3697,13 @@ void PIT_ThrustSpike(CCore* cx, mobj_t * actor)
             P_BlockThingsIterator(cx, bx, by, PIT_ThrustStompThing);
 }
 
-static void CheckForPushSpecial(line_t * line, int side, mobj_t * mobj)
+static void CheckForPushSpecial(CCore* cx, line_t * line, int side, mobj_t * mobj)
 {
     if (line->special)
     {
         if (mobj->flags2 & MF2_PUSHWALL)
         {
-            P_ActivateLine(line, mobj, side, SPAC_PUSH);
+            P_ActivateLine(cx, line, mobj, side, SPAC_PUSH);
         }
         else if (mobj->flags2 & MF2_IMPACT)
         {
@@ -3711,11 +3711,11 @@ static void CheckForPushSpecial(line_t * line, int side, mobj_t * mobj)
                 !(mobj->flags & MF_MISSILE) ||
                 !mobj->target)
             {
-              P_ActivateLine(line, mobj, side, SPAC_IMPACT);
+              P_ActivateLine(cx, line, mobj, side, SPAC_IMPACT);
             }
             else
             {
-              P_ActivateLine(line, mobj->target, side, SPAC_IMPACT);
+              P_ActivateLine(cx, line, mobj->target, side, SPAC_IMPACT);
             }
         }
     }
@@ -3807,7 +3807,7 @@ static dboolean Hexen_P_TryMove(CCore* cx, mobj_t* thing, fixed_t x, fixed_t y)
     thing->x = x;
     thing->y = y;
 
-    P_SetThingPosition(thing);
+    P_SetThingPosition(cx, thing);
 
     if (thing->flags2 & MF2_FOOTCLIP)
     {
@@ -3861,7 +3861,7 @@ static dboolean Hexen_P_TryMove(CCore* cx, mobj_t* thing, fixed_t x, fixed_t y)
             // see if the line was crossed
             ld = spechit[numSpecHitTemp];
             side = P_PointOnLineSide(thing->x, thing->y, ld);
-            CheckForPushSpecial(ld, side, thing);
+            CheckForPushSpecial(cx, ld, side, thing);
         }
     }
     return false;
@@ -3928,7 +3928,7 @@ dboolean PTR_PuzzleItemTraverse(CCore* cx, intercept_t * in)
         args[1] = in->d.line->special_args[3];
         args[2] = in->d.line->special_args[4];
 
-        P_StartACS(in->d.line->special_args[1], 0, args, PuzzleItemUser, in->d.line, 0);
+        P_StartACS(cx, in->d.line->special_args[1], 0, args, PuzzleItemUser, in->d.line, 0);
         in->d.line->special = 0;
         PuzzleActivated = true;
         return false;           // Stop searching
@@ -3948,7 +3948,7 @@ dboolean PTR_PuzzleItemTraverse(CCore* cx, intercept_t * in)
     args[1] = mobj->special_args[3];
     args[2] = mobj->special_args[4];
 
-    P_StartACS(mobj->special_args[1], 0, args, PuzzleItemUser, NULL, 0);
+    P_StartACS(cx, mobj->special_args[1], 0, args, PuzzleItemUser, NULL, 0);
     mobj->special = 0;
     PuzzleActivated = true;
     return false;               // Stop searching

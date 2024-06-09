@@ -87,7 +87,7 @@ void dsda_ResetHealthGroups(void) {
   memset(health_group_hash, 0, HEALTH_GROUP_HASH_MAX * sizeof(*health_group_hash));
 }
 
-static void dsda_DamageHealthGroup(int id, mobj_t* source, int damage) {
+static void dsda_DamageHealthGroup(CCore* cx, int id, mobj_t* source, int damage) {
   int i;
   health_group_t* group;
 
@@ -101,27 +101,27 @@ static void dsda_DamageHealthGroup(int id, mobj_t* source, int damage) {
 
     line = &lines[group->line_ids[i]];
     line->health = group->health;
-    P_ActivateLine(line, source, 0, SPAC_DAMAGE | (line->health ? 0 : SPAC_DEATH));
+    P_ActivateLine(cx, line, source, 0, SPAC_DAMAGE | (line->health ? 0 : SPAC_DEATH));
   }
 }
 
-void dsda_DamageLinedef(line_t* line, mobj_t* source, int damage) {
+void dsda_DamageLinedef(CCore* cx, line_t* line, mobj_t* source, int damage) {
   if (damage <= 0)
     return;
 
   if (line->healthgroup) {
-    dsda_DamageHealthGroup(line->healthgroup, source, damage);
+    dsda_DamageHealthGroup(cx, line->healthgroup, source, damage);
   }
   else {
     line->health -= damage;
     if (line->health < 0)
       line->health = 0;
 
-    P_ActivateLine(line, source, 0, SPAC_DAMAGE | (line->health ? 0 : SPAC_DEATH));
+    P_ActivateLine(cx, line, source, 0, SPAC_DAMAGE | (line->health ? 0 : SPAC_DEATH));
   }
 }
 
-static dboolean dsda_RadiusAttackLine(line_t *line) {
+static dboolean dsda_RadiusAttackLine(CCore* cx, line_t *line) {
   fixed_t dist;
   mobj_t target;
   sector_t* frontsector;
@@ -203,13 +203,13 @@ static dboolean dsda_RadiusAttackLine(line_t *line) {
 
     damage = P_SplashDamage(dist);
 
-    dsda_DamageLinedef(line, bombsource, damage);
+    dsda_DamageLinedef(cx, line, bombsource, damage);
   }
 
   return true;
 }
 
-void dsda_RadiusAttackDestructibles(int xl, int xh, int yl, int yh) {
+void dsda_RadiusAttackDestructibles(CCore* cx, int xl, int xh, int yl, int yh) {
   int x, y;
 
   // avoid collision with nested P_BlockLinesIterator
@@ -217,5 +217,5 @@ void dsda_RadiusAttackDestructibles(int xl, int xh, int yl, int yh) {
 
   for (y = yl; y <= yh; ++y)
     for (x = xl; x <= xh; ++x)
-      P_BlockLinesIterator2(x, y, dsda_RadiusAttackLine);
+      P_BlockLinesIterator2(cx, x, y, dsda_RadiusAttackLine);
 }

@@ -19,7 +19,13 @@ const hImGuiImplSdl2 = "<imgui_impl_sdl2.h>"
 {.emit: """
 /*INCLUDESECTION*/
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#define IMGUI_DISABLE_OBSOLETE_KEYIO
 """.}
+
+type
+    ImWchar32* = cuint
+    ImWchar16* = cushort
+    ImWchar* = ImWchar16
 
 type ImGuiCond* {.
     pure,
@@ -33,6 +39,23 @@ type ImGuiCond* {.
     firstUseEver = 1 shl 2
     appearing = 1 shl 3
 bitFlags(ImGuiCond, cint)
+
+type ImGuiChildFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiChildFlags",
+    header: hImGui,
+.} = enum
+    none = 0
+    border = 1 shl 0
+    alwaysUseWindowPadding = 1 shl 1
+    resizeX = 1 shl 2
+    resizeY = 1 shl 3
+    autoResizeX = 1 shl 4
+    autoResizeY = 1 shl 5
+    alwaysAutoResize = 1 shl 6
+    frameStyle = 1 shl 7
+bitFlags(ImGuiChildFlags, cint)
 
 type ImGuiConfigFlags* {.
     pure,
@@ -76,6 +99,40 @@ type ImGuiInputTextFlags* {.
     callbackResize = 1 shl 18
     callbackEdit = 1 shl 19
     escapeClearsAll = 1 shl 20
+bitFlags(ImGuiInputTextFlags, cint)
+
+type ImGuiKey* {.
+    size: sizeof(cint),
+    importcpp: "ImGuiKey",
+    header: hImGui,
+.} = enum
+    imkeyNone = 0
+    imkeyTab = 512
+    imkeyLeftArrow
+    imkeyRightArrow
+    imkeyUpArrow
+    imkeyDownArrow
+    imkeyPageUp
+    imkeyPageDown
+    imkeyHome
+    imkeyEnd
+    imkeyInsert
+    imkeyDelete
+    imkeyBackspace
+    imkeySpace
+    imkeyEnter
+    imkeyEscape
+    imkeyLeftCtrl, imkeyLeftShift, imkeyLeftAlt, imkeyLeftSuper
+    imkeyRightCtrl, imkeyRightShift, imkeyRightAlt, imkeyRightSuper
+    imkeyMenu
+    imkey0, imkey1, imkey2, imkey3, imkey4, imkey5, imkey6, imkey7, imkey8, imkey9,
+    imkeyA, imkeyB, imkeyC, imkeyD, imkeyE, imkeyF, imkeyG, imkeyH, imkeyI, imkeyJ
+    imkeyK, imkeyL, imkeyM, imkeyN, imkeyO, imkeyP, imkeyQ, imkeyR, imkeyS, imkeyT
+    imkeyU, imkeyV, imkeyW, imkeyX, imkeyY, imkeyZ
+    imkeyF1, imkeyF2, imkeyF3, imkeyF4, imkeyF5, imkeyF6
+    imkeyF7, imkeyF8, imkeyF9, imkeyF10, imkeyF11, imkeyF12
+    imkeyF13, imkeyF14, imkeyF15, imkeyF16, imkeyF17, imkeyF18
+    imkeyF19, imkeyF20, imkeyF21, imkeyF22, imkeyF23, imkeyF24
 
 type ImGuiWindowFlags* {.
     pure,
@@ -140,11 +197,23 @@ type ImGuiInputTextCallbackData* {.
     incompleteStruct,
 .} = object
     ctx* {.importcpp: "Ctx".}: ptr ImGuiContext
+    eventFlag* {.importcpp: "EventFlag".}: ImGuiInputTextFlags
+    flags* {.importcpp: "Flags".}: ImGuiInputTextFlags
+    userData* {.importcpp: "UserData".}: pointer
+    eventChar* {.importcpp: "EventChar".}: ImWchar
+    eventKey* {.importcpp: "EventKey".}: ImGuiKey
+    buf* {.importcpp: "Buf".}: cstring
+    bufTextLen* {.importcpp: "BufTextLen".}: cint
+    bufSize* {.importcpp: "BufSize".}: cint
+    bufDirty* {.importcpp: "BufDirty".}: bool
+    cursorPos* {.importcpp: "CursorPos".}: cint
+    selectionStart* {.importcpp: "SelectionStart".}: cint
+    selectionEnd* {.importcpp: "SelectionEnd".}: cint
 
 type ImGuiInputTextCallback* {.
     importcpp: "ImGuiInputTextCallback",
     header: hImGui,
-.} = proc(data: ptr ImGuiInputTextCallbackData): cint {.cdecl.}
+.} = proc(data: ptr ImGuiInputTextCallbackData): cint {.noconv.}
 
 type ImGuiIO* {.
     importcpp: "ImGuiIO",
@@ -157,11 +226,38 @@ type ImGuiIO* {.
     wantCaptureKeyboard* {.importcpp: "WantCaptureKeyboard".}: bool
     wantTextInput* {.importcpp: "WantTextInput".}: bool
 
+type ImGuiListClipper* {.
+    importcpp: "ImGuiListClipper",
+    header: hImGui,
+    incompleteStruct,
+.} = object
+    displayStart* {.importcpp: "DisplayStart".}: cint
+    displayEnd* {.importcpp: "DisplayEnd".}: cint
+    itemsCount* {.importcpp: "ItemsCount".}: cint
+    itemsHeight* {.importcpp: "ItemsHeight".}: float32
+    startPosY* {.importcpp: "StartPosY".}: float32
+
+proc init*(_: typedesc[ImGuiListClipper]): ImGuiListClipper
+    {.importcpp: "ImGuiListClipper(@)", constructor, header: hImGui.}
+
+proc begin*(self: var ImGuiListClipper, itemsCount: cint, itemsHeight: float32 = -1.0)
+    {.importcpp: "#.Begin(@)", header: hImGui.}
+
+proc `end`*(self: var ImGuiListClipper)
+    {.importcpp: "#.End(@)", header: hImGui.}
+
+proc step*(self: var ImGuiListClipper): bool
+    {.importcpp: "#.Step(@)", header: hImGui.}
+
 type ImGuiStyle* {.
     importcpp: "ImGuiStyle",
     header: hImGui,
     incompleteStruct,
 .} = object
+    alpha* {.importcpp: "Alpha".}: float32
+    disabledAlpha* {.importcpp: "DisabledAlpha".}: float32
+    itemSpacing* {.importcpp: "ItemSpacing".}: ImVec2
+    itemInnerSpacing* {.importcpp: "ItemInnerSpacing".}: ImVec2
 
 type ImGuiViewport* {.
     importcpp: "ImGuiViewport",
@@ -221,34 +317,58 @@ proc setImGuiContext*(ctx: ptr ImGuiContext)
 
 # Main #########################################################################
 
-proc get*(_: typedesc[ImDrawData]): ptr ImDrawData
-    {.importcpp: "ImGui::GetDrawData(@)", header: hImGui.}
-
 proc get*(_: typedesc[ImGuiIO]): var ImGuiIO
     {.importcpp: "ImGui::GetIO(@)", header: hImGui.}
+
+proc get*(_: typedesc[ImGuiStyle]): var ImGuiStyle
+    {.importcpp: "ImGui::GetStyle(@)", header: hImGui.}
 
 proc render*(self: ptr ImDrawData)
     {.importcpp: "ImGui_ImplOpenGL3_RenderDrawData(@)", header: hImGuiImplOpenGl3.}
 
-proc newImGuiFrame*()
+proc imGuiNewFrame*()
     {.importcpp: "ImGui::NewFrame(@)", header: hImGui.}
 
-proc endImGuiFrame*()
+proc imGuiEndFrame*()
     {.importcpp: "ImGui::EndFrame(@)", header: hImGui.}
 
 proc imGuiRender*()
     {.importcpp: "ImGui::Render(@)", header: hImGui.}
 
+proc get*(_: typedesc[ImDrawData]): ptr ImDrawData
+    {.importcpp: "ImGui::GetDrawData(@)", header: hImGui.}
+
 # Demo, debug, information #####################################################
 
-proc getImGuiVersion*(): cstring
-    {.importcpp: "ImGui::GetVersion(@)", header: hImGui.}
+proc imGuiShowDemoWindow*(pOpen: ptr bool = nil)
+    {.importcpp: "ImGui::ShowDemoWindow(@)", header: hImGui.}
 
-proc showImGuiMetricsWindow*(pOpen: ptr bool = nil)
+proc imGuiShowMetricsWindow*(pOpen: ptr bool = nil)
     {.importcpp: "ImGui::ShowMetricsWindow(@)", header: hImGui.}
 
-proc showImGuiUserGuide*()
+proc imGuiShowDebugLogWindow*(pOpen: ptr bool = nil)
+    {.importcpp: "ImGui::ShowDebugLogWindow(@)", header: hImGui.}
+
+proc imGuiShowIdStackToolWindow*(pOpen: ptr bool = nil)
+    {.importcpp: "ImGui::ShowIDStackToolWindow(@)", header: hImGui.}
+
+proc imGuiShowAboutWindow*(pOpen: ptr bool = nil)
+    {.importcpp: "ImGui::ShowAboutWindow(@)", header: hImGui.}
+
+proc imGuiShowStyleEditor*(reference: ptr ImGuiStyle = nil)
+    {.importcpp: "ImGui::ShowStyleEditor(@)", header: hImGui.}
+
+proc imGuiShowStyleSelector*(label: cstring): bool
+    {.importcpp: "ImGui::ShowStyleSelector(@)", header: hImGui.}
+
+proc imGuiShowFontSelector*(label: cstring)
+    {.importcpp: "ImGui::ShowFontSelector(@)", header: hImGui.}
+
+proc imGuiShowUserGuide*()
     {.importcpp: "ImGui::ShowUserGuide(@)", header: hImGui.}
+
+proc imGuiVersion*(): cstring
+    {.importcpp: "ImGui::GetVersion(@)", header: hImGui.}
 
 # Styles #######################################################################
 
@@ -266,6 +386,19 @@ proc imGuiBeginWindow*(
 
 proc imGuiEndWindow*()
     {.importcpp: "ImGui::End(@)", header: hImGui.}
+
+# Child windows ################################################################
+
+proc imGuiBeginChild*(
+    strId: cstring,
+    size {.byref.}: ImVec2 = ImVec2(x: 0.0, y: 0.0),
+    childFlags: ImGuiChildFlags = ImGuiChildFlags.none,
+    windowFlags: ImGuiWindowFlags = ImGuiWindowFlags.none,
+): bool
+    {.importcpp: "ImGui::BeginChild(@)", header: hImGui.}
+
+proc imGuiEndChild*()
+    {.importcpp: "ImGui::EndChild(@)", header: hImGui}
 
 # Window utilities #############################################################
 
@@ -296,10 +429,48 @@ proc imGuiSetNextWindowSize*(
 )
     {.importcpp: "ImGui::SetNextWindowSize(@)", header: hImGui.}
 
+# Parameter stacks (current window) ############################################
+
+proc imGuiPushItemWidth*(width: float32)
+    {.importcpp: "ImGui::PushItemWidth(@)", header: hImGui.}
+
+proc imGuiPopItemWidth*()
+    {.importcpp: "ImGui::PopItemWidth(@)", header: hImGui.}
+
+proc imGuiSetNextItemWidth*(width: float32)
+    {.importcpp: "ImGui::SetNextItemWidth(@)", header: hImGui}
+
+proc imGuiCalcItemWidth*(): float32
+    {.importcpp: "ImGui::CalcItemWidth(@)", header: hImGui.}
+
+proc imGuiPushTextWrapPos*(wrapLocalPosX: float32)
+    {.importcpp: "ImGui::PushTextWrapPos(@)", header: hImGui.}
+
+proc imGuiPopTextWrapPos*()
+    {.importcpp: "ImGui::PopTextWrapPos(@)", header: hImGui.}
+
 # Other layout functions #######################################################
 
-proc imGuiAlignTextToFramePadding*()
-    {.importcpp: "ImGui::AlignTextToFramePadding(@)", header: hImGui.}
+proc imGuiSeparator*()
+    {.importcpp: "ImGui::Separator(@)", header: hImGui.}
+
+proc imGuiSameLine*(offsetFromStartX: float32 = 0.0, spacing: float32 = -1.0)
+    {.importcpp: "ImGui::SameLine(@)", header: hImGui.}
+
+proc imGuiNewLine*()
+    {.importcpp: "ImGui::NewLine(@)", header: hImGui.}
+
+proc imGuiSpacing*()
+    {.importcpp: "ImGui::Spacing(@)", header: hImGui.}
+
+proc imGuiDummy*(size: var ImVec2)
+    {.importcpp: "ImGui::Dummy(@)", header: hImGui.}
+
+proc imGuiIndent*(indentW: float32 = 0.0)
+    {.importcpp: "ImGui::Indent(@)", header: hImGui.}
+
+proc imGuiUnindent*(indentW: float32 = 0.0)
+    {.importcpp: "ImGui::Unindent(@)", header: hImGui.}
 
 proc imGuiBeginGroup*()
     {.importcpp: "ImGui::BeginGroup(@)", header: hImGui.}
@@ -307,23 +478,20 @@ proc imGuiBeginGroup*()
 proc imGuiEndGroup*()
     {.importcpp: "ImGui::EndGroup(@)", header: hImGui.}
 
-proc imGuiIndent*(indentW: float32 = 0.0)
-    {.importcpp: "ImGui::Indent(@)", header: hImGui.}
+proc imGuiAlignTextToFramePadding*()
+    {.importcpp: "ImGui::AlignTextToFramePadding(@)", header: hImGui.}
 
-proc imGuiNewLine*()
-    {.importcpp: "ImGui::NewLine(@)", header: hImGui.}
+proc imGuiGetTextLineHeight*(): float32
+    {.importcpp: "ImGui::GetTextLineHeight(@)", header: hImGui.}
 
-proc imGuiSameLine*(offsetFromStartX: float32 = 0.0, spacing: float32 = -1.0)
-    {.importcpp: "ImGui::SameLine(@)", header: hImGui.}
+proc imGuiGetTextLineHeightWithSpacing*(): float32
+    {.importcpp: "ImGui::GetTextLineHeightWithSpacing(@)", header: hImGui.}
 
-proc imGuiSeparator*()
-    {.importcpp: "ImGui::Separator(@)", header: hImGui.}
+proc imGuiGetFrameHeight*(): float32
+    {.importcpp: "ImGui::GetFrameHeight(@)", header: hImGui.}
 
-proc imGuiSpacing*()
-    {.importcpp: "ImGui::Spacing(@)", header: hImGui.}
-
-proc imGuiUnindent*(indentW: float32 = 0.0)
-    {.importcpp: "ImGui::Unindent(@)", header: hImGui.}
+proc imGuiGetFrameHeightWithSpacing*(): float32
+    {.importcpp: "ImGui::GetFrameHeightWithSpacing(@)", header: hImGui.}
 
 # Widgets: text ################################################################
 
@@ -419,9 +587,14 @@ proc imGuiEndTooltip*()
 proc imGuiBeginItemTooltip*(): bool
     {.importcpp: "ImGui::BeginItemTooltip(@)", header: hImGui.}
 
+# Focus, activation ############################################################
+
+proc imGuiSetItemDefaultFocus*(): void
+    {.importcpp: "ImGui::SetItemDefaultFocus(@)", header: hImGui.}
+
 # Viewports ####################################################################
 
-proc imguiGetMainViewport*(): ptr ImGuiViewport
+proc imGuiGetMainViewport*(): ptr ImGuiViewport
     {.importcpp: "ImGui::GetMainViewport", header: hImGui.}
 
 # OpenGL3 backend ##############################################################

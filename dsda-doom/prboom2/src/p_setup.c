@@ -3839,7 +3839,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
 
   if (heretic)
   {
-    P_CloseWeapons();
+    P_CloseWeapons(cx);
   }
 
   // if deathmatch, randomly spawn the active players
@@ -3877,11 +3877,11 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
   // set up world state
   P_SpawnSpecials();
 
-  dsda_WatchAfterLevelSetup();
+  dsda_WatchAfterLevelSetup(cx);
 
   P_MapEnd();
 
-  dsda_HandleMapPreferences();
+  dsda_HandleMapPreferences(cx);
 
   dsda_ApplyFadeTable();
 

@@ -697,7 +697,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
         mobj_t *speedMo;
         int playerNum;
 
-        speedMo = P_SpawnMobj(pmo->x, pmo->y, pmo->z, HEXEN_MT_PLAYER_SPEED);
+        speedMo = P_SpawnMobj(cx, pmo->x, pmo->y, pmo->z, HEXEN_MT_PLAYER_SPEED);
         if (speedMo)
         {
           speedMo->angle = pmo->angle;
@@ -1171,11 +1171,11 @@ dboolean P_UndoPlayerChicken(CCore* cx, player_t * player)
     oldFlags = pmo->flags;
     oldFlags2 = pmo->flags2;
     P_SetMobjState(cx, pmo, HERETIC_S_FREETARGMOBJ);
-    mo = P_SpawnMobj(x, y, z, g_mt_player);
+    mo = P_SpawnMobj(cx, x, y, z, g_mt_player);
     if (P_TestMobjLocation(cx, mo) == false)
     {                           // Didn't fit
         P_RemoveMobj(cx, mo);
-        mo = P_SpawnMobj(x, y, z, HERETIC_MT_CHICPLAYER);
+        mo = P_SpawnMobj(cx, x, y, z, HERETIC_MT_CHICPLAYER);
         mo->angle = angle;
         mo->health = player->health;
         mo->special1.i = weapon;
@@ -1204,7 +1204,7 @@ dboolean P_UndoPlayerChicken(CCore* cx, player_t * player)
     player->health = mo->health = MAXHEALTH;
     player->mo = mo;
     angle >>= ANGLETOFINESHIFT;
-    fog = P_SpawnMobj(x + 20 * finecosine[angle],
+    fog = P_SpawnMobj(cx, x + 20 * finecosine[angle],
                       y + 20 * finesine[angle], z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
     S_StartMobjSound(fog, heretic_sfx_telept);
     P_PostChickenWeapon(cx, player, weapon);
@@ -1428,7 +1428,7 @@ dboolean P_UseArtifact(CCore* cx, player_t * player, artitype_t arti)
             //   (player->mo->flags2 & (MF2_FEETARECLIPPED != 0)),
             // Which simplifies to:
             //   (player->mo->flags2 & 1),
-            mo = P_SpawnMobj(player->mo->x + 24 * finecosine[angle],
+            mo = P_SpawnMobj(cx, player->mo->x + 24 * finecosine[angle],
                              player->mo->y + 24 * finesine[angle],
                              player->mo->z -
                              15 * FRACUNIT * (player->mo->flags2 & 1),
@@ -1639,7 +1639,7 @@ void ResetBlasted(mobj_t * mo)
     }
 }
 
-void P_BlastMobj(mobj_t * source, mobj_t * victim, fixed_t strength)
+void P_BlastMobj(CCore* cx, mobj_t * source, mobj_t * victim, fixed_t strength)
 {
     angle_t angle, ang;
     mobj_t *mo;
@@ -1697,7 +1697,7 @@ void P_BlastMobj(mobj_t * source, mobj_t * victim, fixed_t strength)
         x = victim->x + FixedMul(victim->radius + FRACUNIT, finecosine[ang]);
         y = victim->y + FixedMul(victim->radius + FRACUNIT, finesine[ang]);
         z = victim->z - victim->floorclip + (victim->height >> 1);
-        mo = P_SpawnMobj(x, y, z, HEXEN_MT_BLASTEFFECT);
+        mo = P_SpawnMobj(cx, x, y, z, HEXEN_MT_BLASTEFFECT);
         if (mo)
         {
             mo->momx = victim->momx;
@@ -1726,7 +1726,7 @@ void P_BlastMobj(mobj_t * source, mobj_t * victim, fixed_t strength)
 }
 
 // Blast all mobj things away
-void P_BlastRadius(player_t * player)
+void P_BlastRadius(CCore* cx, player_t * player)
 {
     mobj_t *mo;
     mobj_t *pmo = player->mo;
@@ -1783,7 +1783,7 @@ void P_BlastRadius(player_t * player)
         {                       // Out of range
             continue;
         }
-        P_BlastMobj(pmo, mo, BLAST_FULLSTRENGTH);
+        P_BlastMobj(cx, pmo, mo, BLAST_FULLSTRENGTH);
     }
 }
 
@@ -1844,13 +1844,13 @@ dboolean P_UndoPlayerMorph(CCore* cx, player_t * player)
     switch (PlayerClass[playerNum])
     {
         case PCLASS_FIGHTER:
-            mo = P_SpawnMobj(x, y, z, HEXEN_MT_PLAYER_FIGHTER);
+            mo = P_SpawnMobj(cx, x, y, z, HEXEN_MT_PLAYER_FIGHTER);
             break;
         case PCLASS_CLERIC:
-            mo = P_SpawnMobj(x, y, z, HEXEN_MT_PLAYER_CLERIC);
+            mo = P_SpawnMobj(cx, x, y, z, HEXEN_MT_PLAYER_CLERIC);
             break;
         case PCLASS_MAGE:
-            mo = P_SpawnMobj(x, y, z, HEXEN_MT_PLAYER_MAGE);
+            mo = P_SpawnMobj(cx, x, y, z, HEXEN_MT_PLAYER_MAGE);
             break;
         default:
             I_Error("P_UndoPlayerMorph:  Unknown player class %d\n",
@@ -1860,7 +1860,7 @@ dboolean P_UndoPlayerMorph(CCore* cx, player_t * player)
     if (P_TestMobjLocation(cx, mo) == false)
     {                           // Didn't fit
         P_RemoveMobj(cx, mo);
-        mo = P_SpawnMobj(x, y, z, oldBeast);
+        mo = P_SpawnMobj(cx, x, y, z, oldBeast);
         mo->angle = angle;
         mo->health = player->health;
         mo->special1.i = weapon;
@@ -1901,7 +1901,7 @@ dboolean P_UndoPlayerMorph(CCore* cx, player_t * player)
     player->mo = mo;
     player->pclass = PlayerClass[playerNum];
     angle >>= ANGLETOFINESHIFT;
-    fog = P_SpawnMobj(x + 20 * finecosine[angle],
+    fog = P_SpawnMobj(cx, x + 20 * finecosine[angle],
                       y + 20 * finesine[angle], z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
     S_StartMobjSound(fog, hexen_sfx_teleport);
     P_PostMorphWeapon(cx, player, weapon);
@@ -2127,7 +2127,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             angle = player->mo->angle >> ANGLETOFINESHIFT;
             if (player->pclass == PCLASS_CLERIC)
             {
-                mo = P_SpawnMobj(player->mo->x + 16 * finecosine[angle],
+                mo = P_SpawnMobj(cx, player->mo->x + 16 * finecosine[angle],
                                  player->mo->y + 24 * finesine[angle],
                                  player->mo->z - player->mo->floorclip +
                                  8 * FRACUNIT, HEXEN_MT_POISONBAG);
@@ -2138,7 +2138,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             else if (player->pclass == PCLASS_MAGE)
             {
-                mo = P_SpawnMobj(player->mo->x + 16 * finecosine[angle],
+                mo = P_SpawnMobj(cx, player->mo->x + 16 * finecosine[angle],
                                  player->mo->y + 24 * finesine[angle],
                                  player->mo->z - player->mo->floorclip +
                                  8 * FRACUNIT, HEXEN_MT_FIREBOMB);
@@ -2149,7 +2149,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             else                // PCLASS_FIGHTER, obviously (also pig, not so obviously)
             {
-                mo = P_SpawnMobj(player->mo->x, player->mo->y,
+                mo = P_SpawnMobj(cx, player->mo->x, player->mo->y,
                                  player->mo->z - player->mo->floorclip +
                                  35 * FRACUNIT, HEXEN_MT_THROWINGBOMB);
                 if (mo)
@@ -2201,7 +2201,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             break;
         case hexen_arti_blastradius:
-            P_BlastRadius(player);
+            P_BlastRadius(cx, player);
             break;
 
         case hexen_arti_puzzskull:
@@ -2227,7 +2227,7 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
             }
             else
             {
-                P_SetYellowMessage(player, TXT_USEPUZZLEFAILED, false);
+                P_SetYellowMessage(cx, player, TXT_USEPUZZLEFAILED, false);
                 return false;
             }
             break;

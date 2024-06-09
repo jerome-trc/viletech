@@ -92,7 +92,7 @@ void G_CalculateDemoParams(const byte *demo_p);
 
 // killough 1/18/98: Doom-style printf;   killough 4/25/98: add gcc attributes
 // CPhipps - renames to doom_printf to avoid name collision with glibc
-void doom_printf(const char *, ...) __attribute__((format(printf,1,2)));
+void doom_printf(CCore*, const char *, ...) __attribute__((format(printf,2,3)));
 
 // killough 5/2/98: moved from m_misc.c:
 
@@ -127,6 +127,6 @@ extern int pistolstart;
 
 // hexen
 
-void G_Completed(int map, int position, int flags, angle_t angle);
+void G_Completed(CCore*, int map, int position, int flags, angle_t angle);
 
 #endif

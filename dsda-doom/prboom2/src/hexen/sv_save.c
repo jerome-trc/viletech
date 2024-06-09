@@ -1473,7 +1473,7 @@ static void UnarchiveMobjs(CCore* cx)
           continue;
         }
 
-        P_SetThingPosition(mobj);
+        P_SetThingPosition(cx, mobj);
         mobj->floorz = mobj->subsector->sector->floorheight;
         mobj->ceilingz = mobj->subsector->sector->ceilingheight;
 
@@ -2037,7 +2037,7 @@ void SV_MapTeleport(CCore* cx, int map, int position)
         if (deathmatch)
         {
             memset(players[i].frags, 0, sizeof(players[i].frags));
-            mobj = P_SpawnMobj(playerstarts[0][i].x,
+            mobj = P_SpawnMobj(cx, playerstarts[0][i].x,
                                playerstarts[0][i].y, 0,
                                HEXEN_MT_PLAYER_FIGHTER);
             players[i].mo = mobj;
@@ -2103,7 +2103,7 @@ void SV_MapTeleport(CCore* cx, int map, int position)
     // Launch waiting scripts
     if (!deathmatch)
     {
-        P_CheckACSStore();
+        P_CheckACSStore(cx);
     }
 
     P_MapEnd();

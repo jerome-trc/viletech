@@ -253,10 +253,10 @@ void dsda_UpdateNextMapInfo(void) {
   dsda_LegacyUpdateNextMapInfo();
 }
 
-int dsda_ResolveCLEV(int* episode, int* map) {
+int dsda_ResolveCLEV(CCore* cx, int* episode, int* map) {
   int clev;
 
-  if (dsda_DoomResolveCLEV(&clev, episode, map))
+  if (dsda_DoomResolveCLEV(cx, &clev, episode, map))
     return clev;
 
   if (dsda_HexenResolveCLEV(&clev, episode, map))

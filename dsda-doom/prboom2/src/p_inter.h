@@ -82,7 +82,7 @@ extern int maxammo[], clipammo[];
 extern int GetWeaponAmmo[NUMWEAPONS];
 
 dboolean P_GiveBody(player_t*, int num);
-void P_SetMessage(player_t*, const char*, dboolean ultmsg);
+void P_SetMessage(CCore*, player_t*, const char*, dboolean ultmsg);
 dboolean P_GiveArtifact(player_t*, artitype_t, mobj_t*);
 dboolean Heretic_P_GiveWeapon(player_t*, weapontype_t);
 void P_SetDormantArtifact(CCore*, mobj_t*);
@@ -98,7 +98,7 @@ void P_AutoUseHealth(player_t*, int saveHealth);
 
 #define MAXMORPHHEALTH 30
 
-void P_SetYellowMessage(player_t*, const char*, dboolean ultmsg);
+void P_SetYellowMessage(CCore*, player_t*, const char*, dboolean ultmsg);
 void P_FallingDamage(CCore*, player_t*);
 void P_PoisonPlayer(player_t*, mobj_t * poisoner, int poison);
 void P_PoisonDamage(CCore*, player_t*, mobj_t * source, int damage, dboolean playPainSound);

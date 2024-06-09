@@ -970,7 +970,7 @@ void A_FireOldBFG(CCore* cx, player_t *player, pspdef_t *psp)
       an2 += tantoangle[slope >> DBITS];
     }
 
-    th = P_SpawnMobj(mo->x, mo->y, mo->z + 62*FRACUNIT - player->psprites[ps_weapon].sy, type);
+    th = P_SpawnMobj(cx, mo->x, mo->y, mo->z + 62*FRACUNIT - player->psprites[ps_weapon].sy, type);
     P_SetTarget(&th->target, mo);
     th->angle = an1;
     th->momx = finecosine[an1>>ANGLETOFINESHIFT] * 25;
@@ -1191,7 +1191,7 @@ void A_BFGSpray(CCore* cx, player_t* player, mobj_t *mo)
       if (!linetarget)
         continue;
 
-      P_SpawnMobj(linetarget->x, linetarget->y,
+      P_SpawnMobj(cx, linetarget->x, linetarget->y,
                   linetarget->z + (linetarget->height>>2), MT_EXTRABFG);
 
       for (damage = j = 0; j < 15; j++)
@@ -1798,7 +1798,7 @@ void A_FireMacePL1B(CCore* cx, player_t * player, pspdef_t * psp)
     //   (pmo->flags2 & (MF2_FEETARECLIPPED != 0))
     // Which simplifies to:
     //   (pmo->flags2 & 1)
-    ball = P_SpawnMobj(pmo->x, pmo->y, pmo->z + 28 * FRACUNIT
+    ball = P_SpawnMobj(cx, pmo->x, pmo->y, pmo->z + 28 * FRACUNIT
                        - FOOTCLIPSIZE * (pmo->flags2 & 1), HERETIC_MT_MACEFX2);
 
     ball->momz = 2 * FRACUNIT + ((player->lookdir) << (FRACBITS - 5));
@@ -1905,7 +1905,7 @@ void A_MaceBallImpact2(CCore* cx, mobj_t * ball)
         ball->momz = (ball->momz * 192) >> 8;
         P_SetMobjState(cx, ball, ball->info->spawnstate);
 
-        tiny = P_SpawnMobj(ball->x, ball->y, ball->z, HERETIC_MT_MACEFX3);
+        tiny = P_SpawnMobj(cx, ball->x, ball->y, ball->z, HERETIC_MT_MACEFX3);
         angle = ball->angle + ANG90;
         P_SetTarget(&tiny->target, ball->target);
         tiny->angle = angle;
@@ -1917,7 +1917,7 @@ void A_MaceBallImpact2(CCore* cx, mobj_t * ball)
         tiny->momz = ball->momz;
         P_CheckMissileSpawn(cx, tiny);
 
-        tiny = P_SpawnMobj(ball->x, ball->y, ball->z, HERETIC_MT_MACEFX3);
+        tiny = P_SpawnMobj(cx, ball->x, ball->y, ball->z, HERETIC_MT_MACEFX3);
         angle = ball->angle - ANG90;
         P_SetTarget(&tiny->target, ball->target);
         tiny->angle = angle;
@@ -2022,7 +2022,7 @@ void A_SpawnRippers(CCore* cx, mobj_t* actor)
 
     for (i = 0; i < 8; i++)
     {
-        ripper = P_SpawnMobj(actor->x, actor->y, actor->z, HERETIC_MT_RIPPER);
+        ripper = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HERETIC_MT_RIPPER);
         angle = i * ANG45;
         P_SetTarget(&ripper->target, actor->target);
         ripper->angle = angle;
@@ -2058,13 +2058,13 @@ void A_FireCrossbowPL2(CCore* cx, player_t * player, pspdef_t * psp)
     P_SPMAngle(cx, pmo, HERETIC_MT_CRBOWFX3, pmo->angle + (ANG45 / 5));
 }
 
-void A_BoltSpark(mobj_t * bolt)
+void A_BoltSpark(CCore* cx, mobj_t * bolt)
 {
     mobj_t *spark;
 
     if (P_Random(pr_heretic) > 50)
     {
-        spark = P_SpawnMobj(bolt->x, bolt->y, bolt->z, HERETIC_MT_CRBOWFX4);
+        spark = P_SpawnMobj(cx, bolt->x, bolt->y, bolt->z, HERETIC_MT_CRBOWFX4);
         spark->x += P_SubRandom() << 10;
         spark->y += P_SubRandom() << 10;
     }
@@ -2197,7 +2197,7 @@ void A_SkullRodStorm(CCore* cx, mobj_t* actor)
     }
     x = actor->x + ((P_Random(pr_heretic) & 127) - 64) * FRACUNIT;
     y = actor->y + ((P_Random(pr_heretic) & 127) - 64) * FRACUNIT;
-    mo = P_SpawnMobj(x, y, ONCEILINGZ, HERETIC_MT_RAINPLR1 + actor->special2.i);
+    mo = P_SpawnMobj(cx, x, y, ONCEILINGZ, HERETIC_MT_RAINPLR1 + actor->special2.i);
     P_SetTarget(&mo->target, actor->target);
     mo->momx = 1;               // Force collision detection
     mo->momz = -mo->info->speed;
@@ -2246,13 +2246,13 @@ void A_PhoenixPuff(CCore* cx, mobj_t* actor)
     angle_t angle;
 
     P_SeekerMissile(actor, &actor->special1.m, ANG1_X * 5, ANG1_X * 10, false);
-    puff = P_SpawnMobj(actor->x, actor->y, actor->z, HERETIC_MT_PHOENIXPUFF);
+    puff = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HERETIC_MT_PHOENIXPUFF);
     angle = actor->angle + ANG90;
     angle >>= ANGLETOFINESHIFT;
     puff->momx = FixedMul((fixed_t)(FRACUNIT * 1.3), finecosine[angle]);
     puff->momy = FixedMul((fixed_t)(FRACUNIT * 1.3), finesine[angle]);
     puff->momz = 0;
-    puff = P_SpawnMobj(actor->x, actor->y, actor->z, HERETIC_MT_PHOENIXPUFF);
+    puff = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HERETIC_MT_PHOENIXPUFF);
     angle = actor->angle - ANG90;
     angle >>= ANGLETOFINESHIFT;
     puff->momx = FixedMul((fixed_t)(FRACUNIT * 1.3), finecosine[angle]);
@@ -2297,7 +2297,7 @@ void A_FirePhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
         z -= FOOTCLIPSIZE;
     }
     slope = ((player->lookdir) << FRACBITS) / 173 + (FRACUNIT / 10);
-    mo = P_SpawnMobj(x, y, z, HERETIC_MT_PHOENIXFX2);
+    mo = P_SpawnMobj(cx, x, y, z, HERETIC_MT_PHOENIXFX2);
     P_SetTarget(&mo->target, pmo);
     mo->angle = angle;
     mo->momx = pmo->momx + FixedMul(mo->info->speed,
@@ -2406,7 +2406,7 @@ void A_GauntletAttack(CCore* cx, player_t * player, pspdef_t * psp)
     R_SmoothPlaying_Reset(player); // e6y
 }
 
-void P_RepositionMace(mobj_t * mo)
+void P_RepositionMace(CCore* cx, mobj_t * mo)
 {
     int spot;
     subsector_t *ss;
@@ -2418,7 +2418,7 @@ void P_RepositionMace(mobj_t * mo)
     ss = R_PointInSubsector(mo->x, mo->y);
     mo->z = mo->floorz = ss->sector->floorheight;
     mo->ceilingz = ss->sector->ceilingheight;
-    P_SetThingPosition(mo);
+    P_SetThingPosition(cx, mo);
 }
 
 void P_ActivateBeak(CCore* cx, player_t * player)
@@ -2538,7 +2538,7 @@ void P_AddMaceSpot(const mapthing_t * mthing)
     MaceSpotCount++;
 }
 
-void P_CloseWeapons(void)
+void P_CloseWeapons(CCore* cx)
 {
     int spot;
 
@@ -2551,7 +2551,7 @@ void P_CloseWeapons(void)
         return;
     }
     spot = P_Random(pr_heretic) % MaceSpotCount;
-    P_SpawnMobj(MaceSpots[spot].x, MaceSpots[spot].y, ONFLOORZ, HERETIC_MT_WMACE);
+    P_SpawnMobj(cx, MaceSpots[spot].x, MaceSpots[spot].y, ONFLOORZ, HERETIC_MT_WMACE);
 }
 
 // hexen
@@ -2828,7 +2828,7 @@ void A_FSwordFlames(CCore* cx, mobj_t* actor)
         r1 = P_Random(pr_hexen);
         r2 = P_Random(pr_hexen);
         r3 = P_Random(pr_hexen);
-        P_SpawnMobj(actor->x + ((r3 - 128) << 12), actor->y
+        P_SpawnMobj(cx, actor->x + ((r3 - 128) << 12), actor->y
                     + ((r2 - 128) << 12),
                     actor->z + ((r1 - 128) << 11), HEXEN_MT_FSWORD_FLAME);
     }
@@ -2937,7 +2937,7 @@ void A_LightningZap(CCore* cx, mobj_t* actor)
     }
     r1 = P_Random(pr_hexen);
     r2 = P_Random(pr_hexen);
-    mo = P_SpawnMobj(actor->x + ((r2 - 128) * actor->radius / 256),
+    mo = P_SpawnMobj(cx, actor->x + ((r2 - 128) * actor->radius / 256),
                      actor->y + ((r1 - 128) * actor->radius / 256),
                      actor->z + deltaZ, HEXEN_MT_LIGHTNING_ZAP);
     if (mo)
@@ -3013,7 +3013,7 @@ void A_LastZap(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_LIGHTNING_ZAP);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_LIGHTNING_ZAP);
     if (mo)
     {
         P_SetMobjState(cx, mo, HEXEN_S_LIGHTNING_ZAP_X1);
@@ -3477,7 +3477,7 @@ void A_CFlameMissile(CCore* cx, mobj_t* actor)
         for (i = 0; i < 4; i++)
         {
             an = (i * ANG45) >> ANGLETOFINESHIFT;
-            mo = P_SpawnMobj(BlockingMobj->x + FixedMul(dist, finecosine[an]),
+            mo = P_SpawnMobj(cx, BlockingMobj->x + FixedMul(dist, finecosine[an]),
                              BlockingMobj->y + FixedMul(dist, finesine[an]),
                              BlockingMobj->z + 5 * FRACUNIT, HEXEN_MT_CIRCLEFLAME);
             if (mo)
@@ -3489,7 +3489,7 @@ void A_CFlameMissile(CCore* cx, mobj_t* actor)
                 mo->momy = mo->special2.i = FixedMul(FLAMESPEED, finesine[an]);
                 mo->tics -= P_Random(pr_hexen) & 3;
             }
-            mo = P_SpawnMobj(BlockingMobj->x - FixedMul(dist, finecosine[an]),
+            mo = P_SpawnMobj(cx, BlockingMobj->x - FixedMul(dist, finecosine[an]),
                              BlockingMobj->y - FixedMul(dist, finesine[an]),
                              BlockingMobj->z + 5 * FRACUNIT, HEXEN_MT_CIRCLEFLAME);
             if (mo)
@@ -3534,7 +3534,7 @@ void A_CHolyAttack2(CCore* cx, mobj_t* actor)
 
     for (j = 0; j < 4; j++)
     {
-        mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_HOLY_FX);
+        mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_HOLY_FX);
         if (!mo)
         {
             continue;
@@ -3572,11 +3572,11 @@ void A_CHolyAttack2(CCore* cx, mobj_t* actor)
             mo->flags |= MF_NOCLIP | MF_SKULLFLY;
             mo->flags &= ~MF_MISSILE;
         }
-        tail = P_SpawnMobj(mo->x, mo->y, mo->z, HEXEN_MT_HOLY_TAIL);
+        tail = P_SpawnMobj(cx, mo->x, mo->y, mo->z, HEXEN_MT_HOLY_TAIL);
         P_SetTarget(&tail->special2.m, mo);      // parent
         for (i = 1; i < 3; i++)
         {
-            next = P_SpawnMobj(mo->x, mo->y, mo->z, HEXEN_MT_HOLY_TAIL);
+            next = P_SpawnMobj(cx, mo->x, mo->y, mo->z, HEXEN_MT_HOLY_TAIL);
             P_SetMobjState(cx, next, next->info->spawnstate + 1);
             P_SetTarget(&tail->special1.m, next);
             tail = next;
@@ -3853,7 +3853,7 @@ void A_CHolyCheckScream(CCore* cx, mobj_t * actor)
 
 void A_CHolySpawnPuff(CCore* cx, mobj_t* actor)
 {
-    P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_HOLY_MISSILE_PUFF);
+    P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_HOLY_MISSILE_PUFF);
 }
 
 #define SHARDSPAWN_LEFT  1

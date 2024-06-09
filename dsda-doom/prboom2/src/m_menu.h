@@ -167,9 +167,9 @@ typedef struct menu_s
 #define MENU_ESCAPE    -8
 #define MENU_CLEAR     -9
 
-void M_SetupNextMenu(menu_t *menudef);
+void M_SetupNextMenu(menu_t*);
 void M_DrawDelVerify(void);
-void M_ChangeMessages(void);
+void M_ChangeMessages(CCore*);
 
 extern dboolean delete_verify;
 

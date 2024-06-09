@@ -405,7 +405,7 @@ dboolean dsda_StartDemoSegment(CCore* cx, const char* demo_name) {
     dsda_key_frame_t key_frame;
 
     memset(&key_frame, 0, sizeof(key_frame));
-    dsda_StoreKeyFrame(&key_frame, false, false);
+    dsda_StoreKeyFrame(cx, &key_frame, false, false);
     dsda_WriteToDemo(&key_frame.buffer_length, sizeof(key_frame.buffer_length));
     dsda_WriteToDemo(key_frame.buffer, key_frame.buffer_length);
     Z_Free(key_frame.buffer);

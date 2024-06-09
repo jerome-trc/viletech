@@ -215,8 +215,8 @@ static void dsda_RestoreBFKeyFrame(CCore* cx, int frame) {
   dsda_RestoreKeyFrame(cx, &brute_force[frame].key_frame, true);
 }
 
-static void dsda_StoreBFKeyFrame(int frame) {
-  dsda_StoreKeyFrame(&brute_force[frame].key_frame, true, false);
+static void dsda_StoreBFKeyFrame(CCore* cx, int frame) {
+  dsda_StoreKeyFrame(cx, &brute_force[frame].key_frame, true, false);
 }
 
 static void dsda_PrintBFProgress(void) {
@@ -635,7 +635,7 @@ dboolean dsda_StartBruteForce(CCore* cx, int depth) {
 
   if (bf_nomonsters) {
     lprintf(LO_INFO, "Warning: ignoring monsters! The result may desync with monsters!\n");
-    dsda_StoreKeyFrame(&nomo_key_frame, true, false);
+    dsda_StoreKeyFrame(cx, &nomo_key_frame, true, false);
     P_RemoveMonsters(cx);
   }
 
@@ -661,7 +661,7 @@ void dsda_UpdateBruteForce(CCore* cx) {
       dsda_RestoreBFKeyFrame(cx, frame);
   }
   else
-    dsda_StoreBFKeyFrame(frame);
+    dsda_StoreBFKeyFrame(cx, frame);
 }
 
 void dsda_EvaluateBruteForce(CCore* cx) {

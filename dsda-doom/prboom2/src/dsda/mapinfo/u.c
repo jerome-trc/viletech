@@ -21,10 +21,7 @@
 #include "lprintf.h"
 #include "p_enemy.h"
 #include "p_spec.h"
-#include "p_tick.h"
 #include "r_state.h"
-#include "s_sound.h"
-#include "sounds.h"
 #include "umapinfo.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -332,7 +329,7 @@ int dsda_UBossAction(CCore* cx, mobj_t* mo) {
       junk.tag = (short) gamemapinfo->bossactions[i].tag;
 
       // use special semantics for line activation to block problem types.
-      if (!P_UseSpecialLine(mo, &junk, 0, true))
+      if (!P_UseSpecialLine(cx, mo, &junk, 0, true))
         map_format.cross_special_line(cx, &junk, 0, mo, true);
     }
   }

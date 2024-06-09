@@ -40,7 +40,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "lprintf.h"
-#include "e6y.h"//e6y
+#include "e6y.h" // e6y
 
 #include "dsda.h"
 #include "dsda/map_format.h"
@@ -405,12 +405,7 @@ int GetPairForSwitchTexture(side_t *side)
 // Returns true if a thinker was created
 //
 dboolean
-P_UseSpecialLine
-( mobj_t*       thing,
-  line_t*       line,
-  int           side,
-  dboolean		bossaction)
-{
+P_UseSpecialLine(CCore* cx, mobj_t* thing, line_t* line, int side, dboolean bossaction) {
   dsda_WatchLineActivation(line, thing);
 
   if (map_format.hexen)
@@ -419,13 +414,13 @@ P_UseSpecialLine
     {
       if (line->activation & SPAC_USEBACK)
       {
-        return P_ActivateLine(line, thing, side, SPAC_USEBACK);
+        return P_ActivateLine(cx, line, thing, side, SPAC_USEBACK);
       }
 
       return false;
     }
 
-    return P_ActivateLine(line, thing, side, SPAC_USE);
+    return P_ActivateLine(cx, line, thing, side, SPAC_USE);
   }
 
   // e6y
@@ -434,7 +429,7 @@ P_UseSpecialLine
     if (side) //jff 6/1/98 fix inadvertent deletion of side test
       return false;
 
-  if (heretic) return Heretic_P_UseSpecialLine(thing, line, side, bossaction);
+  if (heretic) return Heretic_P_UseSpecialLine(cx, thing, line, side, bossaction);
 
   //jff 02/04/98 add check here for generalized floor/ceil mover
   if (!demo_compatibility)
@@ -483,7 +478,7 @@ P_UseSpecialLine
     {
       if (!thing->player || bossaction)
         return false;   // monsters disallowed from unlocking doors
-      if (!P_CanUnlockGenDoor(line,thing->player))
+      if (!P_CanUnlockGenDoor(cx, line, thing->player))
         return false;
       if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
@@ -617,7 +612,7 @@ P_UseSpecialLine
 
     case 117:           // Blazing door raise
     case 118:           // Blazing door open
-      EV_VerticalDoor (line, thing);
+      EV_VerticalDoor(cx, line, thing);
       break;
 
     // Switches (non-retriggerable)
@@ -793,7 +788,7 @@ P_UseSpecialLine
       // BlzOpenDoor RED
     case 137:
       // BlzOpenDoor YELLOW
-      if (EV_DoLockedDoor (line,blazeOpen,thing))
+      if (EV_DoLockedDoor(cx, line, blazeOpen, thing))
         P_ChangeSwitchTexture(line,0);
       break;
 
@@ -1354,7 +1349,7 @@ P_UseSpecialLine
       // BlzOpenDoor RED
     case 136:
       // BlzOpenDoor YELLOW
-      if (EV_DoLockedDoor (line,blazeOpen,thing))
+      if (EV_DoLockedDoor(cx, line, blazeOpen, thing))
         P_ChangeSwitchTexture(line,1);
       break;
 
@@ -1375,7 +1370,7 @@ P_UseSpecialLine
 
 // heretic
 
-dboolean Heretic_P_UseSpecialLine(mobj_t * thing, line_t * line, int side, dboolean bossaction)
+dboolean Heretic_P_UseSpecialLine(CCore* cx, mobj_t * thing, line_t * line, int side, dboolean bossaction)
 {
     // This condition never reached in heretic
     if (side || bossaction) return false;
@@ -1416,7 +1411,7 @@ dboolean Heretic_P_UseSpecialLine(mobj_t * thing, line_t * line, int side, dbool
         case 32:               // Blue locked door open
         case 33:               // Red locked door open
         case 34:               // Yellow locked door open
-            EV_VerticalDoor(line, thing);
+            EV_VerticalDoor(cx, line, thing);
             break;
             //===============================================
             //      SWITCHES

@@ -542,7 +542,7 @@ void G_BuildTiccmd(CCore* cx, ticcmd_t* cmd)
   {
     if (!strafe) {
       if (strict_input)
-        doom_printf("180 key disabled by strict mode");
+        doom_printf(cx, "180 key disabled by strict mode");
       else
         cmd->angleturn += QUICKREVERSE;
     }
@@ -1276,7 +1276,7 @@ static void G_DoLoadLevel(CCore* cx)
 dboolean G_Responder(CCore* cx, event_t* ev) {
   if (
     gamestate == GS_LEVEL && (
-      HU_Responder(ev) ||
+      HU_Responder(cx, ev) ||
       ST_Responder(cx, ev) ||
       AM_Responder(cx, ev)
     )
@@ -1513,7 +1513,7 @@ void G_Ticker(CCore* cx) {
   else {
     int buf = gametic % BACKUPTICS;
 
-    dsda_UpdateAutoKeyFrames();
+    dsda_UpdateAutoKeyFrames(cx);
 
     if (dsda_BruteForce())
     {
@@ -1592,7 +1592,7 @@ void G_Ticker(CCore* cx) {
 
           if (ex->actions & XC_NOCLIP)
           {
-            M_CheatNoClip();
+            M_CheatNoClip(cx);
           }
         }
       }
@@ -1606,7 +1606,7 @@ void G_Ticker(CCore* cx) {
         inventory = false;
     }
 
-    dsda_DisplayNotifications();
+    dsda_DisplayNotifications(cx);
   }
 
   // cph - if the gamestate changed, we may need to clean up the old gamestate
@@ -1901,7 +1901,7 @@ static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
     ss = R_PointInSubsector(x, y);
     an = ((unsigned) ANG45 * (mthing->angle / 45)) >> ANGLETOFINESHIFT;
 
-    mo = P_SpawnMobj(x + 20 * finecosine[an], y + 20 * finesine[an],
+    mo = P_SpawnMobj(cx, x + 20 * finecosine[an], y + 20 * finesine[an],
                      ss->sector->floorheight + TELEFOGHEIGHT, g_mt_tfog);
 
     if (players[consoleplayer].viewz != 1)
@@ -1965,7 +1965,7 @@ static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
       default:  I_Error("G_CheckSpot: unexpected angle %d\n",an);
       }
 
-    mo = P_SpawnMobj(x+20*xa, y+20*ya, ss->sector->floorheight, MT_TFOG);
+    mo = P_SpawnMobj(cx, x + 20 * xa, y + 20 * ya, ss->sector->floorheight, MT_TFOG);
 
     if (players[consoleplayer].viewz != 1)
       S_StartMobjSound(mo, sfx_telept);  // don't start sound on first frame
@@ -3985,7 +3985,7 @@ dboolean G_CheckDemoStatus(CCore* cx) {
 #define MAX_MESSAGE_SIZE 1024
 
 // CPhipps - renamed to doom_printf to avoid name collision with glibc
-void doom_printf(const char *s, ...)
+void doom_printf(CCore* cx, const char *s, ...)
 {
   static char msg[MAX_MESSAGE_SIZE];
   va_list v;
@@ -3993,11 +3993,11 @@ void doom_printf(const char *s, ...)
   vsnprintf(msg,sizeof(msg),s,v);   /* print message in buffer */
   va_end(v);
 
-  dsda_AddMessage(msg);
+  dsda_AddMessage(cx, msg);
 }
 
 //e6y
-void P_WalkTicker()
+void P_WalkTicker(void)
 {
   int strafe;
   int speed;
@@ -4234,11 +4234,11 @@ static dboolean InventoryMoveRight(void)
 
 // hexen
 
-void G_Completed(int map, int position, int flags, angle_t angle)
+void G_Completed(CCore* cx, int map, int position, int flags, angle_t angle)
 {
     if (hexen && gamemode == shareware && map > 4)
     {
-        P_SetMessage(&players[consoleplayer], "ACCESS DENIED -- DEMO", true);
+        P_SetMessage(cx, &players[consoleplayer], "ACCESS DENIED -- DEMO", true);
         S_StartVoidSound(hexen_sfx_chat);
         return;
     }

@@ -395,6 +395,9 @@ while (SDL_PollEvent(Event))
   break;
 
   case SDL_TEXTINPUT:
+    if (vt_dguiWantsKeyboard(cx))
+        break;
+
     event.type = ev_text;
     event.text = Event->text.text;
     D_PostEvent(cx, &event);
@@ -556,7 +559,7 @@ void I_QueueScreenshot(void)
   queue_screenshot = true;
 }
 
-void I_HandleCapture(void)
+void I_HandleCapture(CCore* cx)
 {
   if (queue_frame_capture)
   {
@@ -566,7 +569,7 @@ void I_HandleCapture(void)
 
   if (queue_screenshot)
   {
-    M_ScreenShot();
+    M_ScreenShot(cx);
     queue_screenshot = false;
   }
 }
@@ -590,7 +593,7 @@ void I_FinishUpdate(CCore* cx)
 
   if (V_IsOpenGLMode()) {
     // proff 04/05/2000: swap OpenGL buffers
-    gld_Finish();
+    gld_Finish(cx);
     return;
   }
 
@@ -636,7 +639,7 @@ void I_FinishUpdate(CCore* cx)
 
   SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, NULL);
 
-  I_HandleCapture();
+  I_HandleCapture(cx);
 
   // Draw!
   SDL_RenderPresent(sdl_renderer);
@@ -1191,6 +1194,10 @@ void I_InitGraphics(CCore* cx)
 
     vt_dguiSetup(cx, (SdlWindow*)sdl_window, sdl_glcontext);
 
+    if (vt_dguiIsOpen(cx)) {
+        SDL_StartTextInput();
+    }
+
     //e6y: setup the window title
     I_SetWindowCaption();
 
@@ -1446,7 +1453,7 @@ void I_UpdateVideoMode(CCore* cx)
     SDL_GL_GetAttribute( SDL_GL_STENCIL_SIZE, &temp );
     lprintf(LO_DEBUG, "    SDL_GL_STENCIL_SIZE: %i\n",temp);
 
-    gld_Init(SCREENWIDTH, SCREENHEIGHT);
+    gld_Init(cx, SCREENWIDTH, SCREENHEIGHT);
   }
 
   ST_SetResolution();

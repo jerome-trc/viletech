@@ -462,8 +462,14 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
   int      sound;
   fixed_t  delta = special->z - toucher->z;
 
-  if (heretic) return Heretic_P_TouchSpecialThing(cx, special, toucher);
-  if (hexen) return Hexen_P_TouchSpecialThing(cx, special, toucher);
+  if (heretic) {
+    Heretic_P_TouchSpecialThing(cx, special, toucher);
+    return;
+  }
+  if (hexen) {
+    Hexen_P_TouchSpecialThing(cx, special, toucher);
+    return;
+  }
 
   if (delta > toucher->height || delta < -8 * FRACUNIT)
     return;        // out of reach
@@ -483,13 +489,13 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
     case SPR_ARM1:
       if (!P_GiveArmor (player, green_armor_class))
         return;
-      dsda_AddPlayerMessage(s_GOTARMOR, player);
+      dsda_AddPlayerMessage(cx, s_GOTARMOR, player);
       break;
 
     case SPR_ARM2:
       if (!P_GiveArmor (player, blue_armor_class))
         return;
-      dsda_AddPlayerMessage(s_GOTMEGA, player);
+      dsda_AddPlayerMessage(cx, s_GOTMEGA, player);
       break;
 
         // bonus items
@@ -499,7 +505,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       if (player->health > (maxhealthbonus))//e6y
         player->health = (maxhealthbonus);//e6y
       player->mo->health = player->health;
-      dsda_AddPlayerMessage(s_GOTHTHBONUS, player);
+      dsda_AddPlayerMessage(cx, s_GOTHTHBONUS, player);
       break;
 
     case SPR_BON2:
@@ -521,7 +527,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         player->armortype =
          ((!demo_compatibility || prboom_comp[PC_APPLY_GREEN_ARMOR_CLASS_TO_ARMOR_BONUSES].state) ?
           green_armor_class : 1);
-      dsda_AddPlayerMessage(s_GOTARMBONUS, player);
+      dsda_AddPlayerMessage(cx, s_GOTARMBONUS, player);
       break;
 
     case SPR_SOUL:
@@ -529,7 +535,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       if (player->health > max_soul)
         player->health = max_soul;
       player->mo->health = player->health;
-      dsda_AddPlayerMessage(s_GOTSUPER, player);
+      dsda_AddPlayerMessage(cx, s_GOTSUPER, player);
       sound = sfx_getpow;
       break;
 
@@ -544,7 +550,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       P_GiveArmor (player,
          ((!demo_compatibility || prboom_comp[PC_APPLY_BLUE_ARMOR_CLASS_TO_MEGASPHERE].state) ?
           blue_armor_class : 2));
-      dsda_AddPlayerMessage(s_GOTMSPHERE, player);
+      dsda_AddPlayerMessage(cx, s_GOTMSPHERE, player);
       sound = sfx_getpow;
       break;
 
@@ -552,7 +558,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         // leave cards for everyone
     case SPR_BKEY:
       if (!player->cards[it_bluecard])
-        dsda_AddPlayerMessage(s_GOTBLUECARD, player);
+        dsda_AddPlayerMessage(cx, s_GOTBLUECARD, player);
       P_GiveCard (player, it_bluecard);
       if (!netgame)
         break;
@@ -560,7 +566,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
     case SPR_YKEY:
       if (!player->cards[it_yellowcard])
-        dsda_AddPlayerMessage(s_GOTYELWCARD, player);
+        dsda_AddPlayerMessage(cx, s_GOTYELWCARD, player);
       P_GiveCard (player, it_yellowcard);
       if (!netgame)
         break;
@@ -568,7 +574,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
     case SPR_RKEY:
       if (!player->cards[it_redcard])
-        dsda_AddPlayerMessage(s_GOTREDCARD, player);
+        dsda_AddPlayerMessage(cx, s_GOTREDCARD, player);
       P_GiveCard (player, it_redcard);
       if (!netgame)
         break;
@@ -576,7 +582,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
     case SPR_BSKU:
       if (!player->cards[it_blueskull])
-        dsda_AddPlayerMessage(s_GOTBLUESKUL, player);
+        dsda_AddPlayerMessage(cx, s_GOTBLUESKUL, player);
       P_GiveCard (player, it_blueskull);
       if (!netgame)
         break;
@@ -584,7 +590,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
     case SPR_YSKU:
       if (!player->cards[it_yellowskull])
-        dsda_AddPlayerMessage(s_GOTYELWSKUL, player);
+        dsda_AddPlayerMessage(cx, s_GOTYELWSKUL, player);
       P_GiveCard (player, it_yellowskull);
       if (!netgame)
         break;
@@ -592,7 +598,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
     case SPR_RSKU:
       if (!player->cards[it_redskull])
-        dsda_AddPlayerMessage(s_GOTREDSKULL, player);
+        dsda_AddPlayerMessage(cx, s_GOTREDSKULL, player);
       P_GiveCard (player, it_redskull);
       if (!netgame)
         break;
@@ -602,7 +608,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
     case SPR_STIM:
       if (!P_GiveBody (player, 10))
         return;
-      dsda_AddPlayerMessage(s_GOTSTIM, player);
+      dsda_AddPlayerMessage(cx, s_GOTSTIM, player);
       break;
 
     case SPR_MEDI:
@@ -610,9 +616,9 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         return;
 
       if (player->health < 50) // cph - 25 + the 25 just added, thanks to Quasar for reporting this bug
-        dsda_AddPlayerMessage(s_GOTMEDINEED, player);
+        dsda_AddPlayerMessage(cx, s_GOTMEDINEED, player);
       else
-        dsda_AddPlayerMessage(s_GOTMEDIKIT, player);
+        dsda_AddPlayerMessage(cx, s_GOTMEDIKIT, player);
       break;
 
 
@@ -620,7 +626,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
     case SPR_PINV:
       if (!P_GivePower (player, pw_invulnerability))
         return;
-      dsda_AddPlayerMessage(s_GOTINVUL, player);
+      dsda_AddPlayerMessage(cx, s_GOTINVUL, player);
       sound = sfx_getpow;
       break;
 
@@ -628,7 +634,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         if (!P_GivePower (player, pw_strength))
             return;
 
-        dsda_AddPlayerMessage(s_GOTBERSERK, player);
+        dsda_AddPlayerMessage(cx, s_GOTBERSERK, player);
 
         bool switch_to_fist = player->readyweapon != wp_fist;
 
@@ -647,28 +653,28 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
     case SPR_PINS:
       if (!P_GivePower (player, pw_invisibility))
         return;
-      dsda_AddPlayerMessage(s_GOTINVIS, player);
+      dsda_AddPlayerMessage(cx, s_GOTINVIS, player);
       sound = sfx_getpow;
       break;
 
     case SPR_SUIT:
       if (!P_GivePower (player, pw_ironfeet))
         return;
-      dsda_AddPlayerMessage(s_GOTSUIT, player);
+      dsda_AddPlayerMessage(cx, s_GOTSUIT, player);
       sound = sfx_getpow;
       break;
 
     case SPR_PMAP:
       if (!P_GivePower (player, pw_allmap))
         return;
-      dsda_AddPlayerMessage(s_GOTMAP, player);
+      dsda_AddPlayerMessage(cx, s_GOTMAP, player);
       sound = sfx_getpow;
       break;
 
     case SPR_PVIS:
       if (!P_GivePower (player, pw_infrared))
         return;
-      dsda_AddPlayerMessage(s_GOTVISOR, player);
+      dsda_AddPlayerMessage(cx, s_GOTVISOR, player);
       sound = sfx_getpow;
       break;
 
@@ -684,49 +690,49 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
           if (!P_GiveAmmo (player,am_clip,1))
             return;
         }
-      dsda_AddPlayerMessage(s_GOTCLIP, player);
+      dsda_AddPlayerMessage(cx, s_GOTCLIP, player);
       break;
 
     case SPR_AMMO:
       if (!P_GiveAmmo (player, am_clip,5))
         return;
-      dsda_AddPlayerMessage(s_GOTCLIPBOX, player);
+      dsda_AddPlayerMessage(cx, s_GOTCLIPBOX, player);
       break;
 
     case SPR_ROCK:
       if (!P_GiveAmmo (player, am_misl,1))
         return;
-      dsda_AddPlayerMessage(s_GOTROCKET, player);
+      dsda_AddPlayerMessage(cx, s_GOTROCKET, player);
       break;
 
     case SPR_BROK:
       if (!P_GiveAmmo (player, am_misl,5))
         return;
-      dsda_AddPlayerMessage(s_GOTROCKBOX, player);
+      dsda_AddPlayerMessage(cx, s_GOTROCKBOX, player);
       break;
 
     case SPR_CELL:
       if (!P_GiveAmmo (player, am_cell,1))
         return;
-      dsda_AddPlayerMessage(s_GOTCELL, player);
+      dsda_AddPlayerMessage(cx, s_GOTCELL, player);
       break;
 
     case SPR_CELP:
       if (!P_GiveAmmo (player, am_cell,5))
         return;
-      dsda_AddPlayerMessage(s_GOTCELLBOX, player);
+      dsda_AddPlayerMessage(cx, s_GOTCELLBOX, player);
       break;
 
     case SPR_SHEL:
       if (!P_GiveAmmo (player, am_shell,1))
         return;
-      dsda_AddPlayerMessage(s_GOTSHELLS, player);
+      dsda_AddPlayerMessage(cx, s_GOTSHELLS, player);
       break;
 
     case SPR_SBOX:
       if (!P_GiveAmmo (player, am_shell,5))
         return;
-      dsda_AddPlayerMessage(s_GOTSHELLBOX, player);
+      dsda_AddPlayerMessage(cx, s_GOTSHELLBOX, player);
       break;
 
     case SPR_BPAK:
@@ -738,56 +744,56 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         }
       for (i=0 ; i<NUMAMMO ; i++)
         P_GiveAmmo (player, i, 1);
-      dsda_AddPlayerMessage(s_GOTBACKPACK, player);
+      dsda_AddPlayerMessage(cx, s_GOTBACKPACK, player);
       break;
 
         // weapons
     case SPR_BFUG:
       if (!P_GiveWeapon (player, wp_bfg, false) )
         return;
-      dsda_AddPlayerMessage(s_GOTBFG9000, player);
+      dsda_AddPlayerMessage(cx, s_GOTBFG9000, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_MGUN:
       if (!P_GiveWeapon (player, wp_chaingun, (special->flags&MF_DROPPED)!=0) )
         return;
-      dsda_AddPlayerMessage(s_GOTCHAINGUN, player);
+      dsda_AddPlayerMessage(cx, s_GOTCHAINGUN, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_CSAW:
       if (!P_GiveWeapon (player, wp_chainsaw, false) )
         return;
-      dsda_AddPlayerMessage(s_GOTCHAINSAW, player);
+      dsda_AddPlayerMessage(cx, s_GOTCHAINSAW, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_LAUN:
       if (!P_GiveWeapon (player, wp_missile, false) )
         return;
-      dsda_AddPlayerMessage(s_GOTLAUNCHER, player);
+      dsda_AddPlayerMessage(cx, s_GOTLAUNCHER, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_PLAS:
       if (!P_GiveWeapon (player, wp_plasma, false) )
         return;
-      dsda_AddPlayerMessage(s_GOTPLASMA, player);
+      dsda_AddPlayerMessage(cx, s_GOTPLASMA, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_SHOT:
       if (!P_GiveWeapon (player, wp_shotgun, (special->flags&MF_DROPPED)!=0 ) )
         return;
-      dsda_AddPlayerMessage(s_GOTSHOTGUN, player);
+      dsda_AddPlayerMessage(cx, s_GOTSHOTGUN, player);
       sound = sfx_wpnup;
       break;
 
     case SPR_SGN2:
       if (!P_GiveWeapon(player, wp_supershotgun, (special->flags&MF_DROPPED)!=0))
         return;
-      dsda_AddPlayerMessage(s_GOTSHOTGUN2, player);
+      dsda_AddPlayerMessage(cx, s_GOTSHOTGUN2, player);
       sound = sfx_wpnup;
       break;
 
@@ -866,7 +872,7 @@ static void P_KillMobj(CCore* cx, mobj_t *source, mobj_t *target)
         if (hexen && target->type == HEXEN_MT_SORCBOSS)
         {
             byte dummyArgs[3] = {0, 0, 0};
-            P_StartACS(target->special, 0, dummyArgs, target, NULL, 0);
+            P_StartACS(cx, target->special, 0, dummyArgs, target, NULL, 0);
         }
         else
         {
@@ -1182,7 +1188,7 @@ static void P_KillMobj(CCore* cx, mobj_t *source, mobj_t *target)
   }
   else return;
 
-  mo = P_SpawnMobj (target->x,target->y,ONFLOORZ, item);
+  mo = P_SpawnMobj (cx, target->x,target->y,ONFLOORZ, item);
   mo->flags |= MF_DROPPED;    // special versions of items
 
   if (target->momx == 0 && target->momy == 0)
@@ -1832,7 +1838,7 @@ void A_RestoreSpecialThing1(CCore* cx, mobj_t * thing)
 {
     if (thing->type == HERETIC_MT_WMACE)
     {                           // Do random mace placement
-        P_RepositionMace(thing);
+        P_RepositionMace(cx, thing);
     }
     thing->flags2 &= ~MF2_DONTDRAW;
     S_StartMobjSound(thing, g_sfx_respawn);
@@ -1846,9 +1852,9 @@ void A_RestoreSpecialThing2(CCore* cx, mobj_t * thing)
 
 // heretic
 
-void P_SetMessage(player_t * player, const char *message, dboolean ultmsg)
+void P_SetMessage(CCore* cx, player_t * player, const char *message, dboolean ultmsg)
 {
-    dsda_AddPlayerMessage(message, player);
+    dsda_AddPlayerMessage(cx, message, player);
     player->yellowMessage = false;
 }
 
@@ -1879,21 +1885,21 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_ITEMHEALTH, false);
+            P_SetMessage(cx, player, HERETIC_TXT_ITEMHEALTH, false);
             break;
         case HERETIC_SPR_SHLD:         // Item_Shield1
             if (!P_GiveArmor(player, 1))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_ITEMSHIELD1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_ITEMSHIELD1, false);
             break;
         case HERETIC_SPR_SHD2:         // Item_Shield2
             if (!P_GiveArmor(player, 2))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_ITEMSHIELD2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_ITEMSHIELD2, false);
             break;
         case HERETIC_SPR_BAGH:         // Item_BagOfHolding
             if (!player->backpack)
@@ -1909,21 +1915,21 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             P_GiveAmmo(player, am_crossbow, AMMO_CBOW_WIMPY);
             P_GiveAmmo(player, am_skullrod, AMMO_SKRD_WIMPY);
             P_GiveAmmo(player, am_phoenixrod, AMMO_PHRD_WIMPY);
-            P_SetMessage(player, HERETIC_TXT_ITEMBAGOFHOLDING, false);
+            P_SetMessage(cx, player, HERETIC_TXT_ITEMBAGOFHOLDING, false);
             break;
         case HERETIC_SPR_SPMP:         // Item_SuperMap
             if (!P_GivePower(player, pw_allmap))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_ITEMSUPERMAP, false);
+            P_SetMessage(cx, player, HERETIC_TXT_ITEMSUPERMAP, false);
             break;
 
             // Keys
         case HERETIC_SPR_BKYY:         // Key_Blue
             if (!player->cards[key_blue])
             {
-                P_SetMessage(player, HERETIC_TXT_GOTBLUEKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_GOTBLUEKEY, false);
             }
             P_GiveCard(player, key_blue);
             sound = heretic_sfx_keyup;
@@ -1935,7 +1941,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
         case HERETIC_SPR_CKYY:         // Key_Yellow
             if (!player->cards[key_yellow])
             {
-                P_SetMessage(player, HERETIC_TXT_GOTYELLOWKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_GOTYELLOWKEY, false);
             }
             sound = heretic_sfx_keyup;
             P_GiveCard(player, key_yellow);
@@ -1947,7 +1953,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
         case HERETIC_SPR_AKYY:         // Key_Green
             if (!player->cards[key_green])
             {
-                P_SetMessage(player, HERETIC_TXT_GOTGREENKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_GOTGREENKEY, false);
             }
             sound = heretic_sfx_keyup;
             P_GiveCard(player, key_green);
@@ -1961,70 +1967,70 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
         case HERETIC_SPR_PTN2:         // Arti_HealingPotion
             if (P_GiveArtifact(player, arti_health, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIHEALTH, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIHEALTH, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_SOAR:         // Arti_Fly
             if (P_GiveArtifact(player, arti_fly, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIFLY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIFLY, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_INVU:         // Arti_Invulnerability
             if (P_GiveArtifact(player, arti_invulnerability, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIINVULNERABILITY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIINVULNERABILITY, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_PWBK:         // Arti_TomeOfPower
             if (P_GiveArtifact(player, arti_tomeofpower, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTITOMEOFPOWER, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTITOMEOFPOWER, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_INVS:         // Arti_Invisibility
             if (P_GiveArtifact(player, arti_invisibility, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIINVISIBILITY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIINVISIBILITY, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_EGGC:         // Arti_Egg
             if (P_GiveArtifact(player, arti_egg, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIEGG, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIEGG, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_SPHL:         // Arti_SuperHealth
             if (P_GiveArtifact(player, arti_superhealth, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTISUPERHEALTH, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTISUPERHEALTH, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_TRCH:         // Arti_Torch
             if (P_GiveArtifact(player, arti_torch, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTITORCH, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTITORCH, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_FBMB:         // Arti_FireBomb
             if (P_GiveArtifact(player, arti_firebomb, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTIFIREBOMB, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTIFIREBOMB, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
         case HERETIC_SPR_ATLP:         // Arti_Teleport
             if (P_GiveArtifact(player, arti_teleport, special))
             {
-                P_SetMessage(player, HERETIC_TXT_ARTITELEPORT, false);
+                P_SetMessage(cx, player, HERETIC_TXT_ARTITELEPORT, false);
                 P_SetDormantArtifact(cx, special);
             }
             return;
@@ -2035,84 +2041,84 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOGOLDWAND1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOGOLDWAND1, false);
             break;
         case HERETIC_SPR_AMG2:         // Ammo_GoldWandHefty
             if (!P_GiveAmmo(player, am_goldwand, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOGOLDWAND2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOGOLDWAND2, false);
             break;
         case HERETIC_SPR_AMM1:         // Ammo_MaceWimpy
             if (!P_GiveAmmo(player, am_mace, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOMACE1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOMACE1, false);
             break;
         case HERETIC_SPR_AMM2:         // Ammo_MaceHefty
             if (!P_GiveAmmo(player, am_mace, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOMACE2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOMACE2, false);
             break;
         case HERETIC_SPR_AMC1:         // Ammo_CrossbowWimpy
             if (!P_GiveAmmo(player, am_crossbow, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOCROSSBOW1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOCROSSBOW1, false);
             break;
         case HERETIC_SPR_AMC2:         // Ammo_CrossbowHefty
             if (!P_GiveAmmo(player, am_crossbow, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOCROSSBOW2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOCROSSBOW2, false);
             break;
         case HERETIC_SPR_AMB1:         // Ammo_BlasterWimpy
             if (!P_GiveAmmo(player, am_blaster, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOBLASTER1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOBLASTER1, false);
             break;
         case HERETIC_SPR_AMB2:         // Ammo_BlasterHefty
             if (!P_GiveAmmo(player, am_blaster, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOBLASTER2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOBLASTER2, false);
             break;
         case HERETIC_SPR_AMS1:         // Ammo_SkullRodWimpy
             if (!P_GiveAmmo(player, am_skullrod, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOSKULLROD1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOSKULLROD1, false);
             break;
         case HERETIC_SPR_AMS2:         // Ammo_SkullRodHefty
             if (!P_GiveAmmo(player, am_skullrod, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOSKULLROD2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOSKULLROD2, false);
             break;
         case HERETIC_SPR_AMP1:         // Ammo_PhoenixRodWimpy
             if (!P_GiveAmmo(player, am_phoenixrod, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOPHOENIXROD1, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOPHOENIXROD1, false);
             break;
         case HERETIC_SPR_AMP2:         // Ammo_PhoenixRodHefty
             if (!P_GiveAmmo(player, am_phoenixrod, special->health))
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_AMMOPHOENIXROD2, false);
+            P_SetMessage(cx, player, HERETIC_TXT_AMMOPHOENIXROD2, false);
             break;
 
             // Weapons
@@ -2121,7 +2127,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNMACE, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNMACE, false);
             sound = heretic_sfx_wpnup;
             break;
         case HERETIC_SPR_WBOW:         // Weapon_Crossbow
@@ -2129,7 +2135,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNCROSSBOW, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNCROSSBOW, false);
             sound = heretic_sfx_wpnup;
             break;
         case HERETIC_SPR_WBLS:         // Weapon_Blaster
@@ -2137,7 +2143,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNBLASTER, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNBLASTER, false);
             sound = heretic_sfx_wpnup;
             break;
         case HERETIC_SPR_WSKL:         // Weapon_SkullRod
@@ -2145,7 +2151,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNSKULLROD, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNSKULLROD, false);
             sound = heretic_sfx_wpnup;
             break;
         case HERETIC_SPR_WPHX:         // Weapon_PhoenixRod
@@ -2153,7 +2159,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNPHOENIXROD, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNPHOENIXROD, false);
             sound = heretic_sfx_wpnup;
             break;
         case HERETIC_SPR_WGNT:         // Weapon_Gauntlets
@@ -2161,7 +2167,7 @@ static void Heretic_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * to
             {
                 return;
             }
-            P_SetMessage(player, HERETIC_TXT_WPNGAUNTLETS, false);
+            P_SetMessage(cx, player, HERETIC_TXT_WPNGAUNTLETS, false);
             sound = heretic_sfx_wpnup;
             break;
         default:
@@ -2426,9 +2432,9 @@ dboolean P_ChickenMorphPlayer(CCore* cx, player_t * player)
     angle = pmo->angle;
     oldFlags2 = pmo->flags2;
     P_SetMobjState(cx, pmo, HERETIC_S_FREETARGMOBJ);
-    fog = P_SpawnMobj(x, y, z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
+    fog = P_SpawnMobj(cx, x, y, z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
     S_StartMobjSound(fog, heretic_sfx_telept);
-    chicken = P_SpawnMobj(x, y, z, HERETIC_MT_CHICPLAYER);
+    chicken = P_SpawnMobj(cx, x, y, z, HERETIC_MT_CHICPLAYER);
     chicken->special1.i = player->readyweapon;
     chicken->angle = angle;
     chicken->player = player;
@@ -2482,9 +2488,9 @@ dboolean P_ChickenMorph(CCore* cx, mobj_t * actor)
     ghost = actor->flags & MF_SHADOW;
     target = actor->target;
     P_SetMobjState(cx, actor, HERETIC_S_FREETARGMOBJ);
-    fog = P_SpawnMobj(x, y, z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
+    fog = P_SpawnMobj(cx, x, y, z + TELEFOGHEIGHT, HERETIC_MT_TFOG);
     S_StartMobjSound(fog, heretic_sfx_telept);
-    chicken = P_SpawnMobj(x, y, z, HERETIC_MT_CHICKEN);
+    chicken = P_SpawnMobj(cx, x, y, z, HERETIC_MT_CHICKEN);
     chicken->special2.i = moType;
     chicken->special1.i = CHICKENTICS + P_Random(pr_heretic);
     chicken->flags |= ghost;
@@ -2804,9 +2810,9 @@ dboolean Hexen_P_GiveArmor(player_t * player, armortype_t armortype, int amount)
     return true;
 }
 
-void P_SetYellowMessage(player_t * player, const char *message, dboolean ultmsg)
+void P_SetYellowMessage(CCore* cx, player_t * player, const char *message, dboolean ultmsg)
 {
-    dsda_AddPlayerMessage(message, player);
+    dsda_AddPlayerMessage(cx, message, player);
     player->yellowMessage = true;
 }
 
@@ -2887,7 +2893,7 @@ void TryPickupWeapon(CCore* cx, player_t * player, pclass_t weaponClass,
         }
     }
 
-    P_SetMessage(player, message, false);
+    P_SetMessage(cx, player, message, false);
     if (weapon->special)
     {
         map_format.execute_line_special(weapon->special, weapon->special_args, NULL, 0, player->mo);
@@ -3020,13 +3026,13 @@ static void TryPickupWeaponPiece(CCore* cx, player_t * player, pclass_t matchCla
 
     if (gaveWeapon)
     {
-        P_SetMessage(player, fourthWeaponText[matchClass], false);
+        P_SetMessage(cx, player, fourthWeaponText[matchClass], false);
         // Play the build-sound full volume for all players
         S_StartVoidSound(hexen_sfx_weapon_build);
     }
     else
     {
-        P_SetMessage(player, weaponPieceText[matchClass], false);
+        P_SetMessage(cx, player, weaponPieceText[matchClass], false);
         if (player == &players[consoleplayer])
         {
             S_StartVoidSound(hexen_sfx_pickup_weapon);
@@ -3129,12 +3135,12 @@ static void TryPickupArtifact(CCore* cx, player_t * player, artitype_t artifactT
         {
             SetDormantArtifact(cx, artifact);
             S_StartMobjSound(artifact, hexen_sfx_pickup_artifact);
-            P_SetMessage(player, artifactMessages[artifactType], false);
+            P_SetMessage(cx, player, artifactMessages[artifactType], false);
         }
         else
         {                       // Puzzle item
             S_StartVoidSound(hexen_sfx_pickup_item);
-            P_SetMessage(player, artifactMessages[artifactType], true);
+            P_SetMessage(cx, player, artifactMessages[artifactType], true);
             if (!netgame || deathmatch)
             {                   // Remove puzzle items if not cooperative netplay
                 P_RemoveMobj(cx, artifact);
@@ -3170,35 +3176,35 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
             {
                 return;
             }
-            P_SetMessage(player, TXT_ITEMHEALTH, false);
+            P_SetMessage(cx, player, TXT_ITEMHEALTH, false);
             break;
         case HEXEN_SPR_ARM1:
             if (!Hexen_P_GiveArmor(player, ARMOR_ARMOR, -1))
             {
                 return;
             }
-            P_SetMessage(player, TXT_ARMOR1, false);
+            P_SetMessage(cx, player, TXT_ARMOR1, false);
             break;
         case HEXEN_SPR_ARM2:
             if (!Hexen_P_GiveArmor(player, ARMOR_SHIELD, -1))
             {
                 return;
             }
-            P_SetMessage(player, TXT_ARMOR2, false);
+            P_SetMessage(cx, player, TXT_ARMOR2, false);
             break;
         case HEXEN_SPR_ARM3:
             if (!Hexen_P_GiveArmor(player, ARMOR_HELMET, -1))
             {
                 return;
             }
-            P_SetMessage(player, TXT_ARMOR3, false);
+            P_SetMessage(cx, player, TXT_ARMOR3, false);
             break;
         case HEXEN_SPR_ARM4:
             if (!Hexen_P_GiveArmor(player, ARMOR_AMULET, -1))
             {
                 return;
             }
-            P_SetMessage(player, TXT_ARMOR4, false);
+            P_SetMessage(cx, player, TXT_ARMOR4, false);
             break;
 
             // Keys
@@ -3217,7 +3223,7 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
             {
                 return;
             }
-            P_SetMessage(player, TextKeyMessages[special->sprite - HEXEN_SPR_KEY1],
+            P_SetMessage(cx, player, TextKeyMessages[special->sprite - HEXEN_SPR_KEY1],
                          true);
             sound = hexen_sfx_pickup_key;
 
@@ -3347,14 +3353,14 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
             {
                 return;
             }
-            P_SetMessage(player, TXT_MANA_1, false);
+            P_SetMessage(cx, player, TXT_MANA_1, false);
             break;
         case HEXEN_SPR_MAN2:
             if (!P_GiveMana(cx, player, MANA_2, 15))
             {
                 return;
             }
-            P_SetMessage(player, TXT_MANA_2, false);
+            P_SetMessage(cx, player, TXT_MANA_2, false);
             break;
         case HEXEN_SPR_MAN3:         // Double Mana Dodecahedron
             if (!P_GiveMana(cx, player, MANA_1, 20))
@@ -3368,7 +3374,7 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
             {
                 P_GiveMana(cx, player, MANA_2, 20);
             }
-            P_SetMessage(player, TXT_MANA_BOTH, false);
+            P_SetMessage(cx, player, TXT_MANA_BOTH, false);
             break;
 
             // 2nd and 3rd Mage Weapons
@@ -3515,9 +3521,9 @@ dboolean P_MorphPlayer(CCore* cx, player_t * player)
     angle = pmo->angle;
     oldFlags2 = pmo->flags2;
     P_SetMobjState(cx, pmo, HEXEN_S_FREETARGMOBJ);
-    fog = P_SpawnMobj(x, y, z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
+    fog = P_SpawnMobj(cx, x, y, z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
     S_StartMobjSound(fog, hexen_sfx_teleport);
-    beastMo = P_SpawnMobj(x, y, z, HEXEN_MT_PIGPLAYER);
+    beastMo = P_SpawnMobj(cx, x, y, z, HEXEN_MT_PIGPLAYER);
     beastMo->special1.i = player->readyweapon;
     beastMo->angle = angle;
     beastMo->player = player;
@@ -3568,9 +3574,9 @@ static dboolean P_MorphMonster(CCore* cx, mobj_t * actor)
     z = oldMonster.z;
     map_format.remove_mobj_thing_id(actor);
     P_SetMobjState(cx, actor, HEXEN_S_FREETARGMOBJ);
-    fog = P_SpawnMobj(x, y, z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
+    fog = P_SpawnMobj(cx, x, y, z + TELEFOGHEIGHT, HEXEN_MT_TFOG);
     S_StartMobjSound(fog, hexen_sfx_teleport);
-    monster = P_SpawnMobj(x, y, z, HEXEN_MT_PIG);
+    monster = P_SpawnMobj(cx, x, y, z, HEXEN_MT_PIG);
     monster->special2.i = moType;
     monster->special1.i = MORPHTICS + P_Random(pr_hexen);
     monster->flags |= (oldMonster.flags & MF_SHADOW);

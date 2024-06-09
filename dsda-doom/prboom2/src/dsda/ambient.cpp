@@ -51,7 +51,9 @@ static int dsda_AmbientWaitTime(ambient_sfx_t* amb_sfx) {
   return amb_sfx->min_tics + M_Random() * (amb_sfx->max_tics - amb_sfx->min_tics) / 255;
 }
 
-void dsda_UpdateAmbientSource(ambient_source_t* source) {
+void dsda_UpdateAmbientSource(CCore* cx, void* v) {
+  auto source = (ambient_source_t*)v;
+
   if (source->wait_tics > 0) {
     --source->wait_tics;
     return;
@@ -104,7 +106,7 @@ void dsda_SpawnAmbientSource(mobj_t* mobj) {
   source->data = *data;
   source->data.sound_name = NULL;
   source->wait_tics = dsda_AmbientWaitTime(data);
-  source->thinker.function = (think_t) dsda_UpdateAmbientSource;
+  source->thinker.function = (think_t)dsda_UpdateAmbientSource;
   P_AddThinker(&source->thinker);
 }
 

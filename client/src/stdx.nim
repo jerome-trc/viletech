@@ -19,6 +19,10 @@ proc hoursMinsSecs*(duration: Duration): HoursMinSecs =
     return (hours, mins, secs)
 
 
+proc cStr*(str: var string): cstring =
+    return cast[cstring](str[0].addr)
+
+
 proc toCstring*(str: string): cstring =
     let a = cast[ptr char](allocShared(str.len + 1))
 

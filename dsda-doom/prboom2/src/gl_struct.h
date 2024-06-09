@@ -70,7 +70,7 @@ void gld_InitVertexData(void);
 void gld_CleanVertexData(void);
 void gld_UpdateSplitData(sector_t *sector);
 
-void gld_Init(int width, int height);
+void gld_Init(CCore*, int width, int height);
 void gld_InitCommandLine(void);
 
 void gld_BeginUIDraw(void);
@@ -113,7 +113,7 @@ void gld_AddWall(seg_t *seg);
 void gld_ProjectSprite(mobj_t* thing, int lightlevel);
 void gld_DrawScene(CCore*, player_t *player);
 void gld_EndDrawScene(void);
-void gld_Finish(void);
+void gld_Finish(CCore*);
 
 // wipe
 int gld_wipe_doMelt(int ticks, int *y_lookup);

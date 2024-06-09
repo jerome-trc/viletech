@@ -40,11 +40,11 @@
 #include "dsda/configuration.h"
 #include "dsda/input.h"
 
-void M_ScreenShot (void);
-void M_DoScreenShot (const char*); // cph
+void M_ScreenShot(CCore*);
+void M_DoScreenShot(CCore*, const char*); // cph
 
-void M_LoadDefaults (CCore*);
-void M_SaveDefaults (void);
+void M_LoadDefaults(CCore*);
+void M_SaveDefaults(void);
 
 dboolean M_StringCopy(char *dest, const char *src, size_t dest_size);
 dboolean M_StringConcat(char *dest, const char *src, size_t dest_size);

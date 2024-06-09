@@ -1631,7 +1631,7 @@ void P_UnArchiveThinkers(CCore* cx) {
           else
             mobj->tranmap = NULL;
 
-          P_SetThingPosition (mobj);
+          P_SetThingPosition (cx, mobj);
 
           // killough 2/28/98:
           // Fix for falling down into a wall after savegame loaded:

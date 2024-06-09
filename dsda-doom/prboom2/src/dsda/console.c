@@ -209,7 +209,7 @@ static dboolean console_ActivateLine(CCore* cx, mobj_t* mobj, int id, dboolean b
     return false;
 
   P_MapStart();
-  P_UseSpecialLine(mobj, &lines[id], 0, bossaction);
+  P_UseSpecialLine(cx, mobj, &lines[id], 0, bossaction);
   map_format.cross_special_line(cx, &lines[id], 0, mobj, bossaction);
   map_format.shoot_special_line(mobj, &lines[id]);
   P_MapEnd();
@@ -716,7 +716,7 @@ static dboolean console_GameDescribe(CCore* cx, const char* command, const char*
                           respawnparm ? "-respawn " : "",
                           fastparm ? "-fast" : "");
 
-  dsda_AddAlert(str.string);
+  dsda_AddAlert(cx, str.string);
 
   dsda_FreeString(&str);
 
@@ -1514,12 +1514,12 @@ static dboolean console_SetMobjState(CCore* cx, mobj_t* mobj, statenum_t state) 
   return true;
 }
 
-static dboolean console_MoveMobj(mobj_t* mobj, fixed_t x, fixed_t y) {
+static dboolean console_MoveMobj(CCore* cx, mobj_t* mobj, fixed_t x, fixed_t y) {
   if (!mobj)
     return false;
 
   P_MapStart();
-  P_UnqualifiedMove(mobj, x, y);
+  P_UnqualifiedMove(cx, mobj, x, y);
   P_MapEnd();
 
   return true;
@@ -1535,12 +1535,12 @@ static dboolean console_SetTarget(mobj_t* mobj, mobj_t* target) {
   return true;
 }
 
-static void console_SetMobjFlags(mobj_t* mobj, uint64_t flags, uint64_t flags2) {
+static void console_SetMobjFlags(CCore* cx, mobj_t* mobj, uint64_t flags, uint64_t flags2) {
   P_MapStart();
   P_UnsetThingPosition(mobj);
   mobj->flags = flags;
   mobj->flags2 = flags2;
-  P_SetThingPosition(mobj);
+  P_SetThingPosition(cx, mobj);
   P_MapEnd();
 }
 
@@ -1692,7 +1692,7 @@ static dboolean console_TargetMove(CCore* cx, const char* command, const char* a
 
   target = HU_Target(cx);
 
-  return console_MoveMobj(target, x, y);
+  return console_MoveMobj(cx, target, x, y);
 }
 
 static dboolean console_TargetSetTarget(CCore* cx, const char* command, const char* args) {
@@ -1757,7 +1757,7 @@ static dboolean console_TargetAddFlags(CCore* cx, const char* command, const cha
   flags = target->flags | deh_stringToMobjFlags(flag_str);
   flags2 = target->flags2 | deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -1781,7 +1781,7 @@ static dboolean console_TargetRemoveFlags(CCore* cx, const char* command, const 
   flags = target->flags & ~deh_stringToMobjFlags(flag_str);
   flags2 = target->flags2 & ~deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -1805,7 +1805,7 @@ static dboolean console_TargetSetFlags(CCore* cx, const char* command, const cha
   flags = deh_stringToMobjFlags(flag_str);
   flags2 = deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -1985,7 +1985,7 @@ static dboolean console_MobjMove(CCore* cx, const char* command, const char* arg
 
   target = dsda_FindMobj(index);
 
-  return console_MoveMobj(target, x, y);
+  return console_MoveMobj(cx, target, x, y);
 }
 
 static dboolean console_MobjSetTarget(CCore* cx, const char* command, const char* args) {
@@ -2056,7 +2056,7 @@ static dboolean console_MobjAddFlags(CCore* cx, const char* command, const char*
   flags = target->flags | deh_stringToMobjFlags(flag_str);
   flags2 = target->flags2 | deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -2081,7 +2081,7 @@ static dboolean console_MobjRemoveFlags(CCore* cx, const char* command, const ch
   flags = target->flags & ~deh_stringToMobjFlags(flag_str);
   flags2 = target->flags2 & ~deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -2106,7 +2106,7 @@ static dboolean console_MobjSetFlags(CCore* cx, const char* command, const char*
   flags = deh_stringToMobjFlags(flag_str);
   flags2 = deh_stringToMBF21MobjFlags(flag_str);
 
-  console_SetMobjFlags(target, flags, flags2);
+  console_SetMobjFlags(cx, target, flags, flags2);
 
   return true;
 }
@@ -2145,7 +2145,7 @@ static dboolean console_Spawn(CCore* cx, const char* command, const char* args) 
   if (type == DEH_INDEX_NOT_FOUND)
     return false;
 
-  return P_SpawnMobj(x, y, z, type) != NULL;
+  return P_SpawnMobj(cx, x, y, z, type) != NULL;
 }
 
 static dboolean console_StateSetTics(CCore* cx, const char* command, const char* args) {
@@ -3129,10 +3129,10 @@ void dsda_ExecuteConsoleScript(CCore* cx, int i) {
 
   for (line = 0; dsda_console_script_lines[i][line]; ++line)
     if (!console_ScriptRunLine(cx, dsda_console_script_lines[i][line])) {
-      doom_printf("Script %d failed", i);
+      doom_printf(cx, "Script %d failed", i);
 
       return;
     }
 
-  doom_printf("Script %d executed", i);
+  doom_printf(cx, "Script %d executed", i);
 }

@@ -65,7 +65,7 @@ void I_SetPalette(int pal); /* CPhipps - pass down palette number */
 
 void I_QueueFrameCapture(void);
 void I_QueueScreenshot(void);
-void I_HandleCapture(void);
+void I_HandleCapture(CCore*);
 
 void I_FinishUpdate(CCore*);
 

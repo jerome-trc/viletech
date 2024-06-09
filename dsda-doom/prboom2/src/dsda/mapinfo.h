@@ -75,7 +75,7 @@ void dsda_UpdateLeaveData(int map, int position, int flags, angle_t angle);
 dboolean dsda_FinaleShortcut(void);
 void dsda_UpdateLastMapInfo(void);
 void dsda_UpdateNextMapInfo(void);
-int dsda_ResolveCLEV(int* episode, int* map);
+int dsda_ResolveCLEV(CCore*, int* episode, int* map);
 int dsda_ResolveINIT(CCore*);
 int dsda_MusicIndexToLumpNum(int music_index);
 void dsda_MapMusic(int* music_index, int* music_lump);

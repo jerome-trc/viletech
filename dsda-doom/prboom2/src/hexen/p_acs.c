@@ -74,108 +74,108 @@ static int Pop(void);
 static int Top(void);
 static void Drop(void);
 
-static int CmdNOP(void);
-static int CmdTerminate(void);
-static int CmdSuspend(void);
-static int CmdPushNumber(void);
-static int CmdLSpec1(void);
-static int CmdLSpec2(void);
-static int CmdLSpec3(void);
-static int CmdLSpec4(void);
-static int CmdLSpec5(void);
-static int CmdLSpec1Direct(void);
-static int CmdLSpec2Direct(void);
-static int CmdLSpec3Direct(void);
-static int CmdLSpec4Direct(void);
-static int CmdLSpec5Direct(void);
-static int CmdAdd(void);
-static int CmdSubtract(void);
-static int CmdMultiply(void);
-static int CmdDivide(void);
-static int CmdModulus(void);
-static int CmdEQ(void);
-static int CmdNE(void);
-static int CmdLT(void);
-static int CmdGT(void);
-static int CmdLE(void);
-static int CmdGE(void);
-static int CmdAssignScriptVar(void);
-static int CmdAssignMapVar(void);
-static int CmdAssignWorldVar(void);
-static int CmdPushScriptVar(void);
-static int CmdPushMapVar(void);
-static int CmdPushWorldVar(void);
-static int CmdAddScriptVar(void);
-static int CmdAddMapVar(void);
-static int CmdAddWorldVar(void);
-static int CmdSubScriptVar(void);
-static int CmdSubMapVar(void);
-static int CmdSubWorldVar(void);
-static int CmdMulScriptVar(void);
-static int CmdMulMapVar(void);
-static int CmdMulWorldVar(void);
-static int CmdDivScriptVar(void);
-static int CmdDivMapVar(void);
-static int CmdDivWorldVar(void);
-static int CmdModScriptVar(void);
-static int CmdModMapVar(void);
-static int CmdModWorldVar(void);
-static int CmdIncScriptVar(void);
-static int CmdIncMapVar(void);
-static int CmdIncWorldVar(void);
-static int CmdDecScriptVar(void);
-static int CmdDecMapVar(void);
-static int CmdDecWorldVar(void);
-static int CmdGoto(void);
-static int CmdIfGoto(void);
-static int CmdDrop(void);
-static int CmdDelay(void);
-static int CmdDelayDirect(void);
-static int CmdRandom(void);
-static int CmdRandomDirect(void);
-static int CmdThingCount(void);
-static int CmdThingCountDirect(void);
-static int CmdTagWait(void);
-static int CmdTagWaitDirect(void);
-static int CmdPolyWait(void);
-static int CmdPolyWaitDirect(void);
-static int CmdChangeFloor(void);
-static int CmdChangeFloorDirect(void);
-static int CmdChangeCeiling(void);
-static int CmdChangeCeilingDirect(void);
-static int CmdRestart(void);
-static int CmdAndLogical(void);
-static int CmdOrLogical(void);
-static int CmdAndBitwise(void);
-static int CmdOrBitwise(void);
-static int CmdEorBitwise(void);
-static int CmdNegateLogical(void);
-static int CmdLShift(void);
-static int CmdRShift(void);
-static int CmdUnaryMinus(void);
-static int CmdIfNotGoto(void);
-static int CmdLineSide(void);
-static int CmdScriptWait(void);
-static int CmdScriptWaitDirect(void);
-static int CmdClearLineSpecial(void);
-static int CmdCaseGoto(void);
-static int CmdBeginPrint(void);
-static int CmdEndPrint(void);
-static int CmdPrintString(void);
-static int CmdPrintNumber(void);
-static int CmdPrintCharacter(void);
-static int CmdPlayerCount(void);
-static int CmdGameType(void);
-static int CmdGameSkill(void);
-static int CmdTimer(void);
-static int CmdSectorSound(void);
-static int CmdAmbientSound(void);
-static int CmdSoundSequence(void);
-static int CmdSetLineTexture(void);
-static int CmdSetLineBlocking(void);
-static int CmdSetLineSpecial(void);
-static int CmdThingSound(void);
-static int CmdEndPrintBold(void);
+static int CmdNOP(CCore*);
+static int CmdTerminate(CCore*);
+static int CmdSuspend(CCore*);
+static int CmdPushNumber(CCore*);
+static int CmdLSpec1(CCore*);
+static int CmdLSpec2(CCore*);
+static int CmdLSpec3(CCore*);
+static int CmdLSpec4(CCore*);
+static int CmdLSpec5(CCore*);
+static int CmdLSpec1Direct(CCore*);
+static int CmdLSpec2Direct(CCore*);
+static int CmdLSpec3Direct(CCore*);
+static int CmdLSpec4Direct(CCore*);
+static int CmdLSpec5Direct(CCore*);
+static int CmdAdd(CCore*);
+static int CmdSubtract(CCore*);
+static int CmdMultiply(CCore*);
+static int CmdDivide(CCore*);
+static int CmdModulus(CCore*);
+static int CmdEQ(CCore*);
+static int CmdNE(CCore*);
+static int CmdLT(CCore*);
+static int CmdGT(CCore*);
+static int CmdLE(CCore*);
+static int CmdGE(CCore*);
+static int CmdAssignScriptVar(CCore*);
+static int CmdAssignMapVar(CCore*);
+static int CmdAssignWorldVar(CCore*);
+static int CmdPushScriptVar(CCore*);
+static int CmdPushMapVar(CCore*);
+static int CmdPushWorldVar(CCore*);
+static int CmdAddScriptVar(CCore*);
+static int CmdAddMapVar(CCore*);
+static int CmdAddWorldVar(CCore*);
+static int CmdSubScriptVar(CCore*);
+static int CmdSubMapVar(CCore*);
+static int CmdSubWorldVar(CCore*);
+static int CmdMulScriptVar(CCore*);
+static int CmdMulMapVar(CCore*);
+static int CmdMulWorldVar(CCore*);
+static int CmdDivScriptVar(CCore*);
+static int CmdDivMapVar(CCore*);
+static int CmdDivWorldVar(CCore*);
+static int CmdModScriptVar(CCore*);
+static int CmdModMapVar(CCore*);
+static int CmdModWorldVar(CCore*);
+static int CmdIncScriptVar(CCore*);
+static int CmdIncMapVar(CCore*);
+static int CmdIncWorldVar(CCore*);
+static int CmdDecScriptVar(CCore*);
+static int CmdDecMapVar(CCore*);
+static int CmdDecWorldVar(CCore*);
+static int CmdGoto(CCore*);
+static int CmdIfGoto(CCore*);
+static int CmdDrop(CCore*);
+static int CmdDelay(CCore*);
+static int CmdDelayDirect(CCore*);
+static int CmdRandom(CCore*);
+static int CmdRandomDirect(CCore*);
+static int CmdThingCount(CCore*);
+static int CmdThingCountDirect(CCore*);
+static int CmdTagWait(CCore*);
+static int CmdTagWaitDirect(CCore*);
+static int CmdPolyWait(CCore*);
+static int CmdPolyWaitDirect(CCore*);
+static int CmdChangeFloor(CCore*);
+static int CmdChangeFloorDirect(CCore*);
+static int CmdChangeCeiling(CCore*);
+static int CmdChangeCeilingDirect(CCore*);
+static int CmdRestart(CCore*);
+static int CmdAndLogical(CCore*);
+static int CmdOrLogical(CCore*);
+static int CmdAndBitwise(CCore*);
+static int CmdOrBitwise(CCore*);
+static int CmdEorBitwise(CCore*);
+static int CmdNegateLogical(CCore*);
+static int CmdLShift(CCore*);
+static int CmdRShift(CCore*);
+static int CmdUnaryMinus(CCore*);
+static int CmdIfNotGoto(CCore*);
+static int CmdLineSide(CCore*);
+static int CmdScriptWait(CCore*);
+static int CmdScriptWaitDirect(CCore*);
+static int CmdClearLineSpecial(CCore*);
+static int CmdCaseGoto(CCore*);
+static int CmdBeginPrint(CCore*);
+static int CmdEndPrint(CCore*);
+static int CmdPrintString(CCore*);
+static int CmdPrintNumber(CCore*);
+static int CmdPrintCharacter(CCore*);
+static int CmdPlayerCount(CCore*);
+static int CmdGameType(CCore*);
+static int CmdGameSkill(CCore*);
+static int CmdTimer(CCore*);
+static int CmdSectorSound(CCore*);
+static int CmdAmbientSound(CCore*);
+static int CmdSoundSequence(CCore*);
+static int CmdSetLineTexture(CCore*);
+static int CmdSetLineBlocking(CCore*);
+static int CmdSetLineSpecial(CCore*);
+static int CmdThingSound(CCore*);
+static int CmdEndPrintBold(CCore*);
 
 static void ThingCount(int type, int tid);
 
@@ -196,7 +196,7 @@ static const char **ACStrings;
 static char PrintBuffer[PRINT_BUFFER_SIZE];
 static acs_t *NewScript;
 
-static int (*PCodeCmds[]) (void) =
+static int (*PCodeCmds[]) (CCore*) =
 {
         CmdNOP,
         CmdTerminate,
@@ -461,7 +461,7 @@ static void StartOpenACS(int number, int infoIndex, int offset)
     P_AddThinker(&script->thinker);
 }
 
-void P_CheckACSStore(void)
+void P_CheckACSStore(CCore* cx)
 {
     acsstore_t *store;
 
@@ -469,7 +469,7 @@ void P_CheckACSStore(void)
     {
         if (store->map == gamemap)
         {
-            P_StartACS(store->script, 0, store->args, NULL, NULL, 0);
+            P_StartACS(cx, store->script, 0, store->args, NULL, NULL, 0);
             if (NewScript)
             {
                 NewScript->delayCount = 35;
@@ -481,7 +481,7 @@ void P_CheckACSStore(void)
 
 static char ErrorMsg[128];
 
-dboolean P_StartACS(int number, int map, byte * args, mobj_t * activator,
+dboolean P_StartACS(CCore* cx, int number, int map, byte * args, mobj_t * activator,
                    line_t * line, int side)
 {
     int i;
@@ -499,7 +499,7 @@ dboolean P_StartACS(int number, int map, byte * args, mobj_t * activator,
     {                           // Script not found
         //I_Error("P_StartACS: Unknown script number %d", number);
         snprintf(ErrorMsg, sizeof(ErrorMsg), "P_STARTACS ERROR: UNKNOWN SCRIPT %d", number);
-        P_SetMessage(&players[consoleplayer], ErrorMsg, true);
+        P_SetMessage(cx, &players[consoleplayer], ErrorMsg, true);
     }
     statePtr = &ACSInfo[infoIndex].state;
     if (*statePtr == ASTE_SUSPENDED)
@@ -563,7 +563,7 @@ static dboolean AddToACSStore(int map, int number, byte * args)
     return true;
 }
 
-dboolean P_StartLockedACS(line_t * line, byte * args, mobj_t * mo, int side)
+dboolean P_StartLockedACS(CCore* cx, line_t * line, byte * args, mobj_t * mo, int side)
 {
     int i;
     int lock;
@@ -573,27 +573,28 @@ dboolean P_StartLockedACS(line_t * line, byte * args, mobj_t * mo, int side)
     extern char LockedBuffer[80];
 
     lock = args[4];
-    if (!mo->player)
-    {
+
+    if (!mo->player) {
         return false;
     }
-    if (lock)
-    {
-        if (!mo->player->cards[lock - 1])
-        {
+
+    if (lock) {
+        if (!mo->player->cards[lock - 1]) {
             snprintf(LockedBuffer, sizeof(LockedBuffer),
                      "YOU NEED THE %s\n", TextKeyMessages[lock - 1]);
-            P_SetMessage(mo->player, LockedBuffer, true);
+            P_SetMessage(cx, mo->player, LockedBuffer, true);
             S_StartMobjSound(mo, hexen_sfx_door_locked);
             return false;
         }
     }
-    for (i = 0; i < 4; i++)
-    {
+
+    for (i = 0; i < 4; i++) {
         newArgs[i] = args[i];
     }
+
     newArgs[4] = 0;
-    return P_StartACS(newArgs[0], newArgs[1], &newArgs[2], mo, line, side);
+
+    return P_StartACS(cx, newArgs[0], newArgs[1], &newArgs[2], mo, line, side);
 }
 
 dboolean P_TerminateACS(int number, int map)
@@ -676,7 +677,7 @@ void T_InterpretACS(CCore* cx, void* v)
                   "invalid ACS instruction %d (maybe this WAD is designed "
                   "for an advanced source port and is not vanilla "
                   "compatible)", cmd);
-        action = PCodeCmds[cmd]();
+        action = PCodeCmds[cmd](cx);
     } while (action == SCRIPT_CONTINUE);
 
     ACScript->ip = PCodeOffset;
@@ -803,29 +804,31 @@ static void Drop(void)
     ACScript->stackPtr--;
 }
 
-static int CmdNOP(void)
+static int CmdNOP(CCore* cx)
 {
+    (void)cx;
     return SCRIPT_CONTINUE;
 }
 
-static int CmdTerminate(void)
+static int CmdTerminate(CCore* cx)
 {
+    (void)cx;
     return SCRIPT_TERMINATE;
 }
 
-static int CmdSuspend(void)
+static int CmdSuspend(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].state = ASTE_SUSPENDED;
     return SCRIPT_STOP;
 }
 
-static int CmdPushNumber(void)
+static int CmdPushNumber(CCore* cx)
 {
     Push(ReadCodeInt());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec1(void)
+static int CmdLSpec1(CCore* cx)
 {
     int special;
 
@@ -836,7 +839,7 @@ static int CmdLSpec1(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec2(void)
+static int CmdLSpec2(CCore* cx)
 {
     int special;
 
@@ -848,7 +851,7 @@ static int CmdLSpec2(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec3(void)
+static int CmdLSpec3(CCore* cx)
 {
     int special;
 
@@ -861,7 +864,7 @@ static int CmdLSpec3(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec4(void)
+static int CmdLSpec4(CCore* cx)
 {
     int special;
 
@@ -875,7 +878,7 @@ static int CmdLSpec4(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec5(void)
+static int CmdLSpec5(CCore* cx)
 {
     int special;
 
@@ -890,7 +893,7 @@ static int CmdLSpec5(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec1Direct(void)
+static int CmdLSpec1Direct(CCore* cx)
 {
     int special;
 
@@ -901,7 +904,7 @@ static int CmdLSpec1Direct(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec2Direct(void)
+static int CmdLSpec2Direct(CCore* cx)
 {
     int special;
 
@@ -913,7 +916,7 @@ static int CmdLSpec2Direct(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec3Direct(void)
+static int CmdLSpec3Direct(CCore* cx)
 {
     int special;
 
@@ -926,7 +929,7 @@ static int CmdLSpec3Direct(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec4Direct(void)
+static int CmdLSpec4Direct(CCore* cx)
 {
     int special;
 
@@ -940,7 +943,7 @@ static int CmdLSpec4Direct(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLSpec5Direct(void)
+static int CmdLSpec5Direct(CCore* cx)
 {
     int special;
 
@@ -955,13 +958,13 @@ static int CmdLSpec5Direct(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAdd(void)
+static int CmdAdd(CCore* cx)
 {
     Push(Pop() + Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSubtract(void)
+static int CmdSubtract(CCore* cx)
 {
     int operand2;
 
@@ -970,13 +973,13 @@ static int CmdSubtract(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdMultiply(void)
+static int CmdMultiply(CCore* cx)
 {
     Push(Pop() * Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDivide(void)
+static int CmdDivide(CCore* cx)
 {
     int operand2;
 
@@ -985,7 +988,7 @@ static int CmdDivide(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdModulus(void)
+static int CmdModulus(CCore* cx)
 {
     int operand2;
 
@@ -994,19 +997,19 @@ static int CmdModulus(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdEQ(void)
+static int CmdEQ(CCore* cx)
 {
     Push(Pop() == Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdNE(void)
+static int CmdNE(CCore* cx)
 {
     Push(Pop() != Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLT(void)
+static int CmdLT(CCore* cx)
 {
     int operand2;
 
@@ -1015,7 +1018,7 @@ static int CmdLT(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdGT(void)
+static int CmdGT(CCore* cx)
 {
     int operand2;
 
@@ -1024,7 +1027,7 @@ static int CmdGT(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLE(void)
+static int CmdLE(CCore* cx)
 {
     int operand2;
 
@@ -1033,7 +1036,7 @@ static int CmdLE(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdGE(void)
+static int CmdGE(CCore* cx)
 {
     int operand2;
 
@@ -1042,175 +1045,175 @@ static int CmdGE(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAssignScriptVar(void)
+static int CmdAssignScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] = Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAssignMapVar(void)
+static int CmdAssignMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] = Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAssignWorldVar(void)
+static int CmdAssignWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] = Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPushScriptVar(void)
+static int CmdPushScriptVar(CCore* cx)
 {
     Push(ACScript->vars[ReadScriptVar()]);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPushMapVar(void)
+static int CmdPushMapVar(CCore* cx)
 {
     Push(MapVars[ReadMapVar()]);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPushWorldVar(void)
+static int CmdPushWorldVar(CCore* cx)
 {
     Push(WorldVars[ReadWorldVar()]);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAddScriptVar(void)
+static int CmdAddScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] += Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAddMapVar(void)
+static int CmdAddMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] += Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAddWorldVar(void)
+static int CmdAddWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] += Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSubScriptVar(void)
+static int CmdSubScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] -= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSubMapVar(void)
+static int CmdSubMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] -= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSubWorldVar(void)
+static int CmdSubWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] -= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdMulScriptVar(void)
+static int CmdMulScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] *= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdMulMapVar(void)
+static int CmdMulMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] *= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdMulWorldVar(void)
+static int CmdMulWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] *= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDivScriptVar(void)
+static int CmdDivScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] /= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDivMapVar(void)
+static int CmdDivMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] /= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDivWorldVar(void)
+static int CmdDivWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] /= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdModScriptVar(void)
+static int CmdModScriptVar(CCore* cx)
 {
     ACScript->vars[ReadScriptVar()] %= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdModMapVar(void)
+static int CmdModMapVar(CCore* cx)
 {
     MapVars[ReadMapVar()] %= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdModWorldVar(void)
+static int CmdModWorldVar(CCore* cx)
 {
     WorldVars[ReadWorldVar()] %= Pop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdIncScriptVar(void)
+static int CmdIncScriptVar(CCore* cx)
 {
     ++ACScript->vars[ReadScriptVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdIncMapVar(void)
+static int CmdIncMapVar(CCore* cx)
 {
     ++MapVars[ReadMapVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdIncWorldVar(void)
+static int CmdIncWorldVar(CCore* cx)
 {
     ++WorldVars[ReadWorldVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDecScriptVar(void)
+static int CmdDecScriptVar(CCore* cx)
 {
     --ACScript->vars[ReadScriptVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDecMapVar(void)
+static int CmdDecMapVar(CCore* cx)
 {
     --MapVars[ReadMapVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDecWorldVar(void)
+static int CmdDecWorldVar(CCore* cx)
 {
     --WorldVars[ReadWorldVar()];
     return SCRIPT_CONTINUE;
 }
 
-static int CmdGoto(void)
+static int CmdGoto(CCore* cx)
 {
     PCodeOffset = ReadOffset();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdIfGoto(void)
+static int CmdIfGoto(CCore* cx)
 {
     int offset;
 
@@ -1223,25 +1226,25 @@ static int CmdIfGoto(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDrop(void)
+static int CmdDrop(CCore* cx)
 {
     Drop();
     return SCRIPT_CONTINUE;
 }
 
-static int CmdDelay(void)
+static int CmdDelay(CCore* cx)
 {
     ACScript->delayCount = Pop();
     return SCRIPT_STOP;
 }
 
-static int CmdDelayDirect(void)
+static int CmdDelayDirect(CCore* cx)
 {
     ACScript->delayCount = ReadCodeInt();
     return SCRIPT_STOP;
 }
 
-static int CmdRandom(void)
+static int CmdRandom(CCore* cx)
 {
     int low;
     int high;
@@ -1252,7 +1255,7 @@ static int CmdRandom(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdRandomDirect(void)
+static int CmdRandomDirect(CCore* cx)
 {
     int low;
     int high;
@@ -1263,7 +1266,7 @@ static int CmdRandomDirect(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdThingCount(void)
+static int CmdThingCount(CCore* cx)
 {
     int tid;
 
@@ -1272,7 +1275,7 @@ static int CmdThingCount(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdThingCountDirect(void)
+static int CmdThingCountDirect(CCore* cx)
 {
     int type;
 
@@ -1338,35 +1341,35 @@ static void ThingCount(int type, int tid)
     Push(count);
 }
 
-static int CmdTagWait(void)
+static int CmdTagWait(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = Pop();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORTAG;
     return SCRIPT_STOP;
 }
 
-static int CmdTagWaitDirect(void)
+static int CmdTagWaitDirect(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = ReadCodeInt();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORTAG;
     return SCRIPT_STOP;
 }
 
-static int CmdPolyWait(void)
+static int CmdPolyWait(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = Pop();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORPOLY;
     return SCRIPT_STOP;
 }
 
-static int CmdPolyWaitDirect(void)
+static int CmdPolyWaitDirect(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = ReadCodeInt();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORPOLY;
     return SCRIPT_STOP;
 }
 
-static int CmdChangeFloor(void)
+static int CmdChangeFloor(CCore* cx)
 {
     int tag;
     int flat;
@@ -1381,7 +1384,7 @@ static int CmdChangeFloor(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdChangeFloorDirect(void)
+static int CmdChangeFloorDirect(CCore* cx)
 {
     int tag;
     int flat;
@@ -1396,7 +1399,7 @@ static int CmdChangeFloorDirect(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdChangeCeiling(void)
+static int CmdChangeCeiling(CCore* cx)
 {
     int tag;
     int flat;
@@ -1411,7 +1414,7 @@ static int CmdChangeCeiling(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdChangeCeilingDirect(void)
+static int CmdChangeCeilingDirect(CCore* cx)
 {
     int tag;
     int flat;
@@ -1426,49 +1429,49 @@ static int CmdChangeCeilingDirect(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdRestart(void)
+static int CmdRestart(CCore* cx)
 {
     PCodeOffset = ACSInfo[ACScript->infoIndex].offset;
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAndLogical(void)
+static int CmdAndLogical(CCore* cx)
 {
     Push(Pop() && Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdOrLogical(void)
+static int CmdOrLogical(CCore* cx)
 {
     Push(Pop() || Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAndBitwise(void)
+static int CmdAndBitwise(CCore* cx)
 {
     Push(Pop() & Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdOrBitwise(void)
+static int CmdOrBitwise(CCore* cx)
 {
     Push(Pop() | Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdEorBitwise(void)
+static int CmdEorBitwise(CCore* cx)
 {
     Push(Pop() ^ Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdNegateLogical(void)
+static int CmdNegateLogical(CCore* cx)
 {
     Push(!Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLShift(void)
+static int CmdLShift(CCore* cx)
 {
     int operand2;
 
@@ -1477,7 +1480,7 @@ static int CmdLShift(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdRShift(void)
+static int CmdRShift(CCore* cx)
 {
     int operand2;
 
@@ -1486,13 +1489,13 @@ static int CmdRShift(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdUnaryMinus(void)
+static int CmdUnaryMinus(CCore* cx)
 {
     Push(-Pop());
     return SCRIPT_CONTINUE;
 }
 
-static int CmdIfNotGoto(void)
+static int CmdIfNotGoto(CCore* cx)
 {
     int offset;
 
@@ -1505,27 +1508,27 @@ static int CmdIfNotGoto(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdLineSide(void)
+static int CmdLineSide(CCore* cx)
 {
     Push(ACScript->side);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdScriptWait(void)
+static int CmdScriptWait(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = Pop();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORSCRIPT;
     return SCRIPT_STOP;
 }
 
-static int CmdScriptWaitDirect(void)
+static int CmdScriptWaitDirect(CCore* cx)
 {
     ACSInfo[ACScript->infoIndex].waitValue = ReadCodeInt();
     ACSInfo[ACScript->infoIndex].state = ASTE_WAITINGFORSCRIPT;
     return SCRIPT_STOP;
 }
 
-static int CmdClearLineSpecial(void)
+static int CmdClearLineSpecial(CCore* cx)
 {
     if (ACScript->line)
     {
@@ -1534,7 +1537,7 @@ static int CmdClearLineSpecial(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdCaseGoto(void)
+static int CmdCaseGoto(CCore* cx)
 {
     int value;
     int offset;
@@ -1551,13 +1554,13 @@ static int CmdCaseGoto(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdBeginPrint(void)
+static int CmdBeginPrint(CCore* cx)
 {
     *PrintBuffer = 0;
     return SCRIPT_CONTINUE;
 }
 
-static int CmdEndPrint(void)
+static int CmdEndPrint(CCore* cx)
 {
     player_t *player;
 
@@ -1569,11 +1572,11 @@ static int CmdEndPrint(void)
     {
         player = &players[consoleplayer];
     }
-    P_SetMessage(player, PrintBuffer, true);
+    P_SetMessage(cx, player, PrintBuffer, true);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdEndPrintBold(void)
+static int CmdEndPrintBold(CCore* cx)
 {
     int i;
 
@@ -1581,19 +1584,19 @@ static int CmdEndPrintBold(void)
     {
         if (playeringame[i])
         {
-            P_SetYellowMessage(&players[i], PrintBuffer, true);
+            P_SetYellowMessage(cx, &players[i], PrintBuffer, true);
         }
     }
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPrintString(void)
+static int CmdPrintString(CCore* cx)
 {
     M_StringConcat(PrintBuffer, StringLookup(Pop()), sizeof(PrintBuffer));
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPrintNumber(void)
+static int CmdPrintNumber(CCore* cx)
 {
     char tempStr[16];
 
@@ -1602,7 +1605,7 @@ static int CmdPrintNumber(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPrintCharacter(void)
+static int CmdPrintCharacter(CCore* cx)
 {
     char tempStr[2];
 
@@ -1613,7 +1616,7 @@ static int CmdPrintCharacter(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdPlayerCount(void)
+static int CmdPlayerCount(CCore* cx)
 {
     int i;
     int count;
@@ -1627,7 +1630,7 @@ static int CmdPlayerCount(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdGameType(void)
+static int CmdGameType(CCore* cx)
 {
     int gametype;
 
@@ -1647,19 +1650,19 @@ static int CmdGameType(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdGameSkill(void)
+static int CmdGameSkill(CCore* cx)
 {
     Push(gameskill);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdTimer(void)
+static int CmdTimer(CCore* cx)
 {
     Push(leveltime);
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSectorSound(void)
+static int CmdSectorSound(CCore* cx)
 {
     int volume;
     mobj_t *mobj;
@@ -1674,7 +1677,7 @@ static int CmdSectorSound(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdThingSound(void)
+static int CmdThingSound(CCore* cx)
 {
     int tid;
     int sound;
@@ -1693,7 +1696,7 @@ static int CmdThingSound(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdAmbientSound(void)
+static int CmdAmbientSound(CCore* cx)
 {
     int volume;
 
@@ -1702,7 +1705,7 @@ static int CmdAmbientSound(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSoundSequence(void)
+static int CmdSoundSequence(CCore* cx)
 {
     mobj_t *mobj;
 
@@ -1715,7 +1718,7 @@ static int CmdSoundSequence(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSetLineTexture(void)
+static int CmdSetLineTexture(CCore* cx)
 {
     line_t *line;
     int lineTag;
@@ -1747,7 +1750,7 @@ static int CmdSetLineTexture(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSetLineBlocking(void)
+static int CmdSetLineBlocking(CCore* cx)
 {
     line_t *line;
     int lineTag;
@@ -1764,7 +1767,7 @@ static int CmdSetLineBlocking(void)
     return SCRIPT_CONTINUE;
 }
 
-static int CmdSetLineSpecial(void)
+static int CmdSetLineSpecial(CCore* cx)
 {
     line_t *line;
     int lineTag;

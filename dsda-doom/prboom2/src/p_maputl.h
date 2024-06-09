@@ -99,11 +99,11 @@ extern int (*P_PointOnDivlineSide)(fixed_t x, fixed_t y, const divline_t *line);
 
 void check_intercept(void);
 
-void    P_LineOpening (const line_t *linedef, const mobj_t *actor);
-void    P_UnsetThingPosition(mobj_t *thing);
-void    P_SetThingPosition(mobj_t *thing);
+void    P_LineOpening (const line_t*, const mobj_t*);
+void    P_UnsetThingPosition(mobj_t*);
+void    P_SetThingPosition(CCore*, mobj_t*);
 dboolean P_BlockLinesIterator(CCore* cx, int x, int y, dboolean func(CCore*, line_t *));
-dboolean P_BlockLinesIterator2(int x, int y, dboolean func(line_t *));
+dboolean P_BlockLinesIterator2(CCore*, int x, int y, dboolean func(CCore*, line_t*));
 dboolean P_BlockThingsIterator(CCore*, int x, int y, dboolean func(CCore*, mobj_t*));
 dboolean P_PathTraverse(CCore*, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
                        int flags, dboolean trav(CCore*, intercept_t *));

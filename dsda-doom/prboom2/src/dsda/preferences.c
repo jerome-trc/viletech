@@ -73,24 +73,24 @@ void dsda_LoadWadPreferences(void) {
   Z_Free(lump);
 }
 
-static void dsda_HandleWadPreferences(void) {
+static void dsda_HandleWadPreferences(CCore* cx) {
   DO_ONCE
     if (wad_preferences.opengl && V_IsSoftwareMode())
-      dsda_AddAlert("This wad may have rendering errors\nin software mode!");
+      dsda_AddAlert(cx, "This wad may have rendering errors\nin software mode!");
 
     if (wad_preferences.software && V_IsOpenGLMode())
-      dsda_AddAlert("This wad may have rendering errors\nin opengl mode!");
+      dsda_AddAlert(cx, "This wad may have rendering errors\nin opengl mode!");
   END_ONCE
 }
 
-void dsda_HandleMapPreferences(void) {
-  dsda_HandleWadPreferences();
+void dsda_HandleMapPreferences(CCore* cx) {
+  dsda_HandleWadPreferences(cx);
 
   if (map_preferences.opengl && V_IsSoftwareMode())
-    dsda_AddAlert("This level may have rendering errors\nin software mode!");
+    dsda_AddAlert(cx, "This level may have rendering errors\nin software mode!");
 
   if (map_preferences.software && V_IsOpenGLMode())
-    dsda_AddAlert("This level may have rendering errors\nin opengl mode!");
+    dsda_AddAlert(cx, "This level may have rendering errors\nin opengl mode!");
 
   memset(&map_preferences, 0, sizeof(map_preferences));
 }

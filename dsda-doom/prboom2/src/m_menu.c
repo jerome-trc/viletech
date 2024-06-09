@@ -35,7 +35,7 @@
  *
  *-----------------------------------------------------------------------------*/
 
-#include "viletech.nim.h"
+#include <SDL_keyboard.h>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -95,6 +95,8 @@
 
 #include "heretic/mn_menu.h"
 #include "heretic/sb_bar.h"
+
+#include "viletech.nim.h"
 
 /****************************
  *
@@ -247,8 +249,8 @@ void M_FinishHelp(CCore*, int choice); // killough 10/98
 void M_LoadSelect(CCore*, int choice);
 void M_SaveSelect(CCore*, int choice);
 void M_ReadSaveStrings(void);
-void M_QuickSave(void);
-void M_QuickLoad(void);
+void M_QuickSave(CCore*);
+void M_QuickLoad(CCore*);
 
 void M_DrawMainMenu(CCore*);
 void M_DrawReadThis1(CCore*);
@@ -1126,7 +1128,10 @@ menu_t OptionsDef =
 
 void M_DrawOptions(CCore* cx)
 {
-  if (raven) return MN_DrawOptions();
+  if (raven) {
+    MN_DrawOptions();
+    return;
+  }
 
   // CPhipps - patch drawing updated
   // proff/nicolas 09/20/98 -- changed for hi-res
@@ -1299,21 +1304,17 @@ void M_MusicVol(CCore* cx, int choice)
 //    M_QuickSave
 //
 
-void M_QuickSave(void)
+void M_QuickSave(CCore* cx)
 {
   if (gamestate != GS_LEVEL)
     return;
 
   G_SaveGame(QUICKSAVESLOT, "quicksave");
-  doom_printf("quicksave");
+  doom_printf(cx, "quicksave");
 }
 
-/////////////////////////////
-//
-// M_QuickLoad
-//
-
-void M_QuickLoad(void)
+/// @fn M_QuickLoad
+void M_QuickLoad(CCore* cx)
 {
   char *name;
 
@@ -1340,11 +1341,11 @@ void M_QuickLoad(void)
   if (M_FileExists(name))
   {
     G_LoadGame(QUICKSAVESLOT);
-    doom_printf("quickload");
+    doom_printf(cx, "quickload");
   }
   else
   {
-    doom_printf("no save file");
+    doom_printf(cx, "no save file");
   }
 
   Z_Free(name);
@@ -1379,12 +1380,12 @@ void M_EndGame(int choice)
   M_StartMessage(s_ENDGAME,M_EndGameResponse,true); // Ty 03/27/98 - externalized
 }
 
-void M_ChangeMessages(void)
+void M_ChangeMessages(CCore* cx)
 {
   if (!dsda_ShowMessages())
-    dsda_AddUnblockableMessage(s_MSGOFF);
+    dsda_AddUnblockableMessage(cx, s_MSGOFF);
   else
-    dsda_AddMessage(s_MSGON);
+    dsda_AddMessage(cx, s_MSGON);
 }
 
 /////////////////////////////
@@ -5141,7 +5142,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_quicksave))
     {
       S_StartVoidSound(g_sfx_swtchn);
-      M_QuickSave();
+      M_QuickSave(cx);
       return true;
     }
 
@@ -5155,7 +5156,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_quickload))
     {
       S_StartVoidSound(g_sfx_swtchn);
-      M_QuickLoad();
+      M_QuickLoad(cx);
       return true;
     }
 
@@ -5168,10 +5169,13 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     }
 
     if (dsda_InputActivated(dsda_input_console)) {
-        if (vt_dguiToggle(cx))
+        if (vt_dguiToggle(cx)) {
             dsda_ApplyPauseMode(PAUSE_COMMAND);
-        else
+            SDL_StartTextInput();
+        } else {
             dsda_RemovePauseMode(PAUSE_COMMAND);
+            SDL_StopTextInput();
+        }
 
         S_StartVoidSound(g_sfx_swtchn);
         return true;
@@ -5190,7 +5194,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
 //e6y
       dsda_CycleConfig(cx, dsda_config_usegamma, true);
-      dsda_AddMessage(usegamma == 0 ? s_GAMMALVL0 :
+      dsda_AddMessage(cx, usegamma == 0 ? s_GAMMALVL0 :
                       usegamma == 1 ? s_GAMMALVL1 :
                       usegamma == 2 ? s_GAMMALVL2 :
                       usegamma == 3 ? s_GAMMALVL3 :
@@ -5221,7 +5225,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       int value = StepwiseSum(dsda_GameSpeed(), 0, 3, 10000, 100);
       dsda_UpdateGameSpeed(cx, value);
-      doom_printf("Game Speed %d", value);
+      doom_printf(cx, "Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
     }
@@ -5229,7 +5233,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       int value = StepwiseSum(dsda_GameSpeed(), 1, 3, 10000, 100);
       dsda_UpdateGameSpeed(cx, value);
-      doom_printf("Game Speed %d", value);
+      doom_printf(cx, "Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
     }
@@ -5237,7 +5241,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       int value = StepwiseSum(dsda_GameSpeed(), -1, 3, 10000, 100);
       dsda_UpdateGameSpeed(cx, value);
-      doom_printf("Game Speed %d", value);
+      doom_printf(cx, "Game Speed %d", value);
       // Don't eat the keypress in this case.
       // return true;
     }
@@ -5285,7 +5289,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
         gamestate == GS_LEVEL &&
         gameaction == ga_nothing &&
         !dsda_StrictMode()
-      ) dsda_StoreQuickKeyFrame();
+      ) dsda_StoreQuickKeyFrame(cx);
       return true;
     }
 
@@ -5304,7 +5308,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_cycle_profile))
     {
       int value = dsda_CycleConfig(cx, dsda_config_input_profile, true);
-      doom_printf("Input Profile %d", value);
+      doom_printf(cx, "Input Profile %d", value);
       S_StartVoidSound(g_sfx_swtchn);
       return true;
     }
@@ -5312,7 +5316,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_cycle_palette))
     {
       dsda_CyclePlayPal();
-      doom_printf("Palette %s", dsda_PlayPalData()->lump_name);
+      doom_printf(cx, "Palette %s", dsda_PlayPalData()->lump_name);
       S_StartVoidSound(g_sfx_swtchn);
       return true;
     }

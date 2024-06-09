@@ -821,10 +821,10 @@ void M_LoadDefaults(CCore* cx)
 // M_DoScreenShot
 // Takes a screenshot into the names file
 
-void M_DoScreenShot (const char* fname)
+void M_DoScreenShot(CCore* cx, const char* fname)
 {
   if (I_ScreenShot(fname) != 0)
-    doom_printf("M_ScreenShot: Error writing screenshot\n");
+    doom_printf(cx, "M_ScreenShot: Error writing screenshot\n");
 }
 
 #ifndef SCREENSHOT_DIR
@@ -873,7 +873,7 @@ const char* M_CheckWritableDir(const char *dir)
   return result;
 }
 
-void M_ScreenShot(void)
+void M_ScreenShot(CCore* cx)
 {
   static int shot;
   char       *lbmname = NULL;
@@ -908,14 +908,14 @@ void M_ScreenShot(void)
     if (!M_FileExists(lbmname))
     {
       S_StartVoidSound(gamemode==commercial ? sfx_radio : sfx_tink);
-      M_DoScreenShot(lbmname); // cph
+      M_DoScreenShot(cx, lbmname); // cph
       success = 1;
     }
     Z_Free(lbmname);
     if (success) return;
   }
 
-  doom_printf ("M_ScreenShot: Couldn't create screenshot");
+  doom_printf(cx, "M_ScreenShot: Couldn't create screenshot");
   return;
 }
 

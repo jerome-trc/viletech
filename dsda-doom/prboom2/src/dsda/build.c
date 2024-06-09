@@ -444,7 +444,7 @@ void dsda_EnterBuildMode(CCore* cx) {
 
   if (!demorecording) {
     if (!build_mode)
-      dsda_StoreTempKeyFrame();
+      dsda_StoreTempKeyFrame(cx);
 
     advance_frame = true;
   }
@@ -533,14 +533,14 @@ dboolean dsda_BuildResponder(CCore* cx, event_t* ev) {
     overwritten_logictic = true_logictic;
 
     if (!demorecording)
-      dsda_StoreTempKeyFrame();
+      dsda_StoreTempKeyFrame(cx);
 
     return true;
   }
 
   if (dsda_InputActivated(dsda_input_build_reverse_frame)) {
     if (!demorecording) {
-      doom_printf("Cannot reverse outside demo");
+      doom_printf(cx, "Cannot reverse outside demo");
       return true;
     }
 

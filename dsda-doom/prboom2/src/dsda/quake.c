@@ -38,8 +38,9 @@ void dsda_UpdateQuakeIntensity(int player_num, int intensity) {
   localQuakeHappening[player_num] = intensity;
 }
 
-void dsda_UpdateQuake(CCore* cx, quake_t* quake) {
-  int i;
+void dsda_UpdateQuake(CCore* cx, void* v) {
+    quake_t* quake = v;
+    int i;
 
   for (i = 0; i < g_maxplayers; ++i) {
     mobj_t* mo;

@@ -18,13 +18,15 @@
 #ifndef __DSDA_MESSAGE__
 #define __DSDA_MESSAGE__
 
-void dsda_AddPlayerAlert(const char* str, player_t* player);
-void dsda_AddAlert(const char* str);
-void dsda_AddPlayerMessage(const char* str, player_t* player);
-void dsda_AddMessage(const char* str);
-void dsda_AddUnblockableMessage(const char* str);
+#include "d_player.h"
+
+void dsda_AddPlayerAlert(CCore*, const char* str, player_t*);
+void dsda_AddAlert(CCore*, const char* str);
+void dsda_AddPlayerMessage(CCore*, const char* str, player_t*);
+void dsda_AddMessage(CCore*, const char* str);
+void dsda_AddUnblockableMessage(CCore*, const char* str);
 void dsda_UpdateMessenger(void);
 void dsda_InitMessenger(void);
-void dsda_ReplayMessage(void);
+void dsda_ReplayMessage(CCore*);
 
 #endif

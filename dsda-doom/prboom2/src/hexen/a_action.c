@@ -109,7 +109,7 @@ void A_PotteryExplode(CCore* cx, mobj_t* actor)
 
     for (i = (P_Random(pr_hexen) & 3) + 3; i; i--)
     {
-        mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_POTTERYBIT1);
+        mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_POTTERYBIT1);
         P_SetMobjState(cx, mo, mo->info->spawnstate + (P_Random(pr_hexen) % 5));
         mo->momz = ((P_Random(pr_hexen) & 7) + 5) * (3 * FRACUNIT / 4);
         mo->momx = P_SubRandom() << (FRACBITS - 6);
@@ -122,7 +122,7 @@ void A_PotteryExplode(CCore* cx, mobj_t* actor)
             || !(mobjinfo[TranslateThingType[actor->special_args[0]]].
                  flags & MF_COUNTKILL))
         {                       // Only spawn monsters if not -nomonsters
-            P_SpawnMobj(actor->x, actor->y, actor->z,
+            P_SpawnMobj(cx, actor->x, actor->y, actor->z,
                         TranslateThingType[actor->special_args[0]]);
         }
     }
@@ -174,7 +174,7 @@ void A_PotteryCheck(CCore* cx, mobj_t* actor)
     }
 }
 
-void P_SpawnDirt(mobj_t * actor, fixed_t radius)
+void P_SpawnDirt(CCore* cx, mobj_t * actor, fixed_t radius)
 {
     fixed_t x, y, z;
     int dtype = 0;
@@ -206,7 +206,7 @@ void P_SpawnDirt(mobj_t * actor, fixed_t radius)
             dtype = HEXEN_MT_DIRT6;
             break;
     }
-    mo = P_SpawnMobj(x, y, z, dtype);
+    mo = P_SpawnMobj(cx, x, y, z, dtype);
     if (mo)
     {
         mo->momz = P_Random(pr_hexen) << 10;
@@ -219,7 +219,7 @@ void A_CorpseBloodDrip(CCore* cx, mobj_t* actor)
     {
         return;
     }
-    P_SpawnMobj(actor->x, actor->y, actor->z + actor->height / 2,
+    P_SpawnMobj(cx, actor->x, actor->y, actor->z + actor->height / 2,
                 HEXEN_MT_CORPSEBLOODDRIP);
 }
 
@@ -230,14 +230,14 @@ void A_CorpseExplode(CCore* cx, mobj_t* actor)
 
     for (i = (P_Random(pr_hexen) & 3) + 3; i; i--)
     {
-        mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_CORPSEBIT);
+        mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_CORPSEBIT);
         P_SetMobjState(cx, mo, mo->info->spawnstate + (P_Random(pr_hexen) % 3));
         mo->momz = ((P_Random(pr_hexen) & 7) + 5) * (3 * FRACUNIT / 4);
         mo->momx = P_SubRandom() << (FRACBITS - 6);
         mo->momy = P_SubRandom() << (FRACBITS - 6);
     }
     // Spawn a skull
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_CORPSEBIT);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_CORPSEBIT);
     P_SetMobjState(cx, mo, HEXEN_S_CORPSEBIT_4);
     if (mo)
     {
@@ -264,7 +264,7 @@ void A_LeafSpawn(CCore* cx, mobj_t* actor)
         fixed_t y = actor->y + (P_SubRandom() << 14);
         fixed_t x = actor->x + (P_SubRandom() << 14);
 
-        mo = P_SpawnMobj(x, y, z, type);
+        mo = P_SpawnMobj(cx, x, y, z, type);
         if (mo)
         {
             P_ThrustMobj(mo, actor->angle, (P_Random(pr_hexen) << 9) + 3 * FRACUNIT);
@@ -333,15 +333,15 @@ void A_BridgeInit(CCore* ctx, mobj_t* actor)
     actor->special1.i = 0;
 
     // Spawn triad into world
-    ball1 = P_SpawnMobj(cx, cy, cz, HEXEN_MT_BRIDGEBALL);
+    ball1 = P_SpawnMobj(ctx, cx, cy, cz, HEXEN_MT_BRIDGEBALL);
     ball1->special_args[0] = startangle;
     P_SetTarget(&ball1->target, actor);
 
-    ball2 = P_SpawnMobj(cx, cy, cz, HEXEN_MT_BRIDGEBALL);
+    ball2 = P_SpawnMobj(ctx, cx, cy, cz, HEXEN_MT_BRIDGEBALL);
     ball2->special_args[0] = (startangle + 85) & 255;
     P_SetTarget(&ball2->target, actor);
 
-    ball3 = P_SpawnMobj(cx, cy, cz, HEXEN_MT_BRIDGEBALL);
+    ball3 = P_SpawnMobj(ctx, cx, cy, cz, HEXEN_MT_BRIDGEBALL);
     ball3->special_args[0] = (startangle + 170) & 255;
     P_SetTarget(&ball3->target, actor);
 
@@ -383,13 +383,13 @@ void A_Summon(CCore* cx, mobj_t * actor)
     mobj_t *mo;
     mobj_t *master;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_MINOTAUR);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_MINOTAUR);
     if (mo)
     {
         if (P_TestMobjLocation(cx, mo) == false || !actor->special1.m)
         {                       // Didn't fit - change back to artifact
             P_SetMobjState(cx, mo, HEXEN_S_NULL);
-            mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_SUMMONMAULATOR);
+            mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_SUMMONMAULATOR);
             if (mo)
                 mo->flags |= MF_DROPPED;
             return;
@@ -412,7 +412,7 @@ void A_Summon(CCore* cx, mobj_t * actor)
         }
 
         // Make smoke puff
-        P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_MNTRSMOKE);
+        P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_MNTRSMOKE);
         S_StartMobjSound(actor, hexen_sfx_maulator_active);
     }
 }
@@ -443,13 +443,13 @@ void A_FogSpawn(CCore* cx, mobj_t* actor)
     switch (P_Random(pr_hexen) % 3)
     {
         case 0:
-            mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHS);
+            mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHS);
             break;
         case 1:
-            mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHM);
+            mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHM);
             break;
         case 2:
-            mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHL);
+            mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_FOGPATCHL);
             break;
     }
 
@@ -501,7 +501,7 @@ void A_PoisonBagInit(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z + 28 * FRACUNIT,
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z + 28 * FRACUNIT,
                      HEXEN_MT_POISONCLOUD);
     if (!mo)
     {
@@ -572,7 +572,7 @@ void A_CheckThrowBomb(CCore* cx, mobj_t* actor)
 //
 //===========================================================================
 
-dboolean A_LocalQuake(byte * args, mobj_t * actor)
+dboolean A_LocalQuake(CCore* cx, byte * args, mobj_t * actor)
 {
     mobj_t *focus, *target;
     int lastfound = 0;
@@ -584,7 +584,7 @@ dboolean A_LocalQuake(byte * args, mobj_t * actor)
         target = P_FindMobjFromTID(args[4], &lastfound);
         if (target)
         {
-            focus = P_SpawnMobj(target->x,
+            focus = P_SpawnMobj(cx, target->x,
                                 target->y, target->z, HEXEN_MT_QUAKE_FOCUS);
             if (focus)
             {
@@ -658,7 +658,7 @@ void A_TeloSpawnA(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX2);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX2);
     if (mo)
     {
         mo->special1.i = TELEPORT_LIFE;   // Lifetime countdown
@@ -674,7 +674,7 @@ void A_TeloSpawnB(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX3);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX3);
     if (mo)
     {
         mo->special1.i = TELEPORT_LIFE;   // Lifetime countdown
@@ -690,7 +690,7 @@ void A_TeloSpawnC(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX4);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX4);
     if (mo)
     {
         mo->special1.i = TELEPORT_LIFE;   // Lifetime countdown
@@ -706,7 +706,7 @@ void A_TeloSpawnD(CCore* cx, mobj_t* actor)
 {
     mobj_t *mo;
 
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX5);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_TELOTHER_FX5);
     if (mo)
     {
         mo->special1.i = TELEPORT_LIFE;   // Lifetime countdown
@@ -755,7 +755,7 @@ void A_ThrustInitDn(CCore* cx, mobj_t* actor)
     actor->floorclip = actor->info->height;
     actor->flags = 0;
     actor->flags2 = MF2_NOTELEPORT | MF2_FOOTCLIP | MF2_DONTDRAW;
-    mo = P_SpawnMobj(actor->x, actor->y, actor->z, HEXEN_MT_DIRTCLUMP);
+    mo = P_SpawnMobj(cx, actor->x, actor->y, actor->z, HEXEN_MT_DIRTCLUMP);
     P_SetTarget(&actor->special1.m, mo);
 }
 
@@ -780,7 +780,7 @@ void A_ThrustRaise(CCore* cx, mobj_t* actor)
 
     // Spawn some dirt
     if (P_Random(pr_hexen) < 40)
-        P_SpawnDirt(actor, actor->radius);
+        P_SpawnDirt(cx, actor, actor->radius);
     actor->special2.i++;          // Increase raise speed
 }
 
@@ -819,7 +819,7 @@ void A_SoAExplode(CCore* cx, mobj_t* actor)
         r1 = P_Random(pr_hexen);
         r2 = P_Random(pr_hexen);
         r3 = P_Random(pr_hexen);
-        mo = P_SpawnMobj(actor->x + ((r3 - 128) << 12),
+        mo = P_SpawnMobj(cx, actor->x + ((r3 - 128) << 12),
                          actor->y + ((r2 - 128) << 12),
                          actor->z + (r1 * actor->height / 256),
                          HEXEN_MT_ZARMORCHUNK);
@@ -837,7 +837,7 @@ void A_SoAExplode(CCore* cx, mobj_t* actor)
                  flags & MF_COUNTKILL))
 #endif
         {                       // Only spawn monsters if not -nomonsters
-            P_SpawnMobj(actor->x, actor->y, actor->z,
+            P_SpawnMobj(cx,actor->x, actor->y, actor->z,
                         TranslateThingType[actor->special_args[0]]);
         }
     }
@@ -847,12 +847,14 @@ void A_SoAExplode(CCore* cx, mobj_t* actor)
 
 void A_BellReset1(CCore* cx, mobj_t* actor)
 {
+    (void)cx;
     actor->flags |= MF_NOGRAVITY;
     actor->height <<= 2;
 }
 
 void A_BellReset2(CCore* cx, mobj_t* actor)
 {
+    (void)cx;
     actor->flags |= MF_SHOOTABLE;
     actor->flags &= ~MF_CORPSE;
     actor->health = 5;

@@ -447,11 +447,7 @@ void T_VerticalDoor(CCore* cx, void* v) {
 // and the thing that activated the line
 // Returns true if a thinker created
 //
-int EV_DoLockedDoor
-( line_t* line,
-  vldoor_e  type,
-  mobj_t* thing )
-{
+int EV_DoLockedDoor(CCore* cx, line_t* line, vldoor_e type, mobj_t* thing) {
   player_t* p;
 
   // only players can open locked doors
@@ -466,7 +462,7 @@ int EV_DoLockedDoor
     case 133:
       if (!p->cards[it_bluecard] && !p->cards[it_blueskull])
       {
-        dsda_AddPlayerMessage(s_PD_BLUEO, p);
+        dsda_AddPlayerMessage(cx, s_PD_BLUEO, p);
         S_StartMobjSound(p->mo,sfx_oof);         // killough 3/20/98
         return 0;
       }
@@ -476,7 +472,7 @@ int EV_DoLockedDoor
     case 135:
       if (!p->cards[it_redcard] && !p->cards[it_redskull])
       {
-        dsda_AddPlayerMessage(s_PD_REDO, p);
+        dsda_AddPlayerMessage(cx, s_PD_REDO, p);
         S_StartMobjSound(p->mo,sfx_oof);         // killough 3/20/98
         return 0;
       }
@@ -486,7 +482,7 @@ int EV_DoLockedDoor
     case 137:
       if (!p->cards[it_yellowcard] && !p->cards[it_yellowskull])
       {
-        dsda_AddPlayerMessage(s_PD_YELLOWO, p);
+        dsda_AddPlayerMessage(cx, s_PD_YELLOWO, p);
         S_StartMobjSound(p->mo,sfx_oof);         // killough 3/20/98
         return 0;
       }
@@ -610,16 +606,13 @@ int EV_DoDoor
 //
 // jff 2/12/98 added int return value, fixed all returns
 //
-int EV_VerticalDoor
-( line_t* line,
-  mobj_t* thing )
-{
+int EV_VerticalDoor(CCore* cx, line_t* line, mobj_t* thing) {
   player_t* player;
   sector_t* sec;
   vldoor_t* door;
 
   // heretic_note: I don't see where the return value is used...keeping heretic signature
-  if (heretic) { Heretic_EV_VerticalDoor(line, thing); return 0; }
+  if (heretic) { Heretic_EV_VerticalDoor(cx, line, thing); return 0; }
 
   //  Check for locks
   player = thing->player;
@@ -632,7 +625,7 @@ int EV_VerticalDoor
         return 0;
       if (!player->cards[it_bluecard] && !player->cards[it_blueskull])
       {
-          dsda_AddPlayerMessage(s_PD_BLUEK, player);
+          dsda_AddPlayerMessage(cx, s_PD_BLUEK, player);
           S_StartMobjSound(player->mo,sfx_oof);     // killough 3/20/98
           return 0;
       }
@@ -644,7 +637,7 @@ int EV_VerticalDoor
           return 0;
       if (!player->cards[it_yellowcard] && !player->cards[it_yellowskull])
       {
-          dsda_AddPlayerMessage(s_PD_YELLOWK, player);
+          dsda_AddPlayerMessage(cx, s_PD_YELLOWK, player);
           S_StartMobjSound(player->mo,sfx_oof);     // killough 3/20/98
           return 0;
       }
@@ -656,7 +649,7 @@ int EV_VerticalDoor
           return 0;
       if (!player->cards[it_redcard] && !player->cards[it_redskull])
       {
-          dsda_AddPlayerMessage(s_PD_REDK, player);
+          dsda_AddPlayerMessage(cx, s_PD_REDK, player);
           S_StartMobjSound(player->mo,sfx_oof);     // killough 3/20/98
           return 0;
       }
@@ -882,7 +875,7 @@ void P_SpawnDoorRaiseIn5Mins
 #include "p_inter.h"
 #include "heretic/dstrings.h"
 
-void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing)
+void Heretic_EV_VerticalDoor(CCore* cx, line_t * line, mobj_t * thing)
 {
     player_t *player;
     sector_t *sec;
@@ -904,7 +897,7 @@ void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing)
             }
             if (!player->cards[key_blue])
             {
-                P_SetMessage(player, HERETIC_TXT_NEEDBLUEKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_NEEDBLUEKEY, false);
                 S_StartVoidSound(heretic_sfx_plroof);
                 return;
             }
@@ -917,7 +910,7 @@ void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing)
             }
             if (!player->cards[key_yellow])
             {
-                P_SetMessage(player, HERETIC_TXT_NEEDYELLOWKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_NEEDYELLOWKEY, false);
                 S_StartVoidSound(heretic_sfx_plroof);
                 return;
             }
@@ -930,7 +923,7 @@ void Heretic_EV_VerticalDoor(line_t * line, mobj_t * thing)
             }
             if (!player->cards[key_green])
             {
-                P_SetMessage(player, HERETIC_TXT_NEEDGREENKEY, false);
+                P_SetMessage(cx, player, HERETIC_TXT_NEEDGREENKEY, false);
                 S_StartVoidSound(heretic_sfx_plroof);
                 return;
             }
@@ -1061,7 +1054,7 @@ static void P_SpawnZDoomDoor(sector_t *sec, vldoor_e type, line_t *line, fixed_t
   }
 }
 
-int EV_DoZDoomDoor(vldoor_e type, line_t *line, mobj_t *mo, int tag, fixed_t speed, int topwait,
+int EV_DoZDoomDoor(CCore* cx, vldoor_e type, line_t *line, mobj_t *mo, int tag, fixed_t speed, int topwait,
                    zdoom_lock_t lock, int lightTag, dboolean boomgen, int topcountdown)
 {
   sector_t *sec;
@@ -1069,7 +1062,7 @@ int EV_DoZDoomDoor(vldoor_e type, line_t *line, mobj_t *mo, int tag, fixed_t spe
 
   speed *= FRACUNIT / 8;
 
-  if (lock && !P_CheckKeys(mo, lock, true))
+  if (lock && !P_CheckKeys(cx, mo, lock, true))
     return 0;
 
   if (!tag)

@@ -216,7 +216,7 @@ void dsda_ExportGhostFrame(void) {
 }
 
 // Stripped down version of P_SpawnMobj
-void dsda_SpawnGhost(void) {
+void dsda_SpawnGhost(CCore* cx) {
   mobj_t* mobj;
   state_t* ghost_state;
   int ghost_i;
@@ -265,7 +265,7 @@ void dsda_SpawnGhost(void) {
     mobj->frame  = ghost_state->frame;
     mobj->touching_sectorlist = NULL;
 
-    P_SetThingPosition(mobj);
+    P_SetThingPosition(cx, mobj);
 
     mobj->dropoffz =
     mobj->floorz   = mobj->subsector->sector->floorheight;
@@ -290,7 +290,7 @@ void dsda_SpawnGhost(void) {
   }
 }
 
-void dsda_UpdateGhosts(void* _void) {
+void dsda_UpdateGhosts(CCore* cx, void* _void) {
   dsda_ghost_t* ghost;
   mobj_t* mobj;
   int ghost_i;
@@ -341,6 +341,6 @@ void dsda_UpdateGhosts(void* _void) {
     mobj->sprite = ghost->frame.sprite;
     mobj->frame = ghost->frame.frame;
 
-    P_SetThingPosition(mobj);
+    P_SetThingPosition(cx, mobj);
   }
 }

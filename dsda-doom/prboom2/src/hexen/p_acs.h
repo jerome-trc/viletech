@@ -72,15 +72,15 @@ typedef struct
 } acsstore_t;
 
 void P_LoadACScripts(int lump);
-dboolean P_StartACS(int number, int map, byte * args, mobj_t * activator, line_t * line, int side);
-dboolean P_StartLockedACS(line_t * line, byte * args, mobj_t * mo, int side);
+dboolean P_StartACS(CCore*, int number, int map, byte * args, mobj_t * activator, line_t * line, int side);
+dboolean P_StartLockedACS(CCore*, line_t * line, byte * args, mobj_t * mo, int side);
 dboolean P_TerminateACS(int number, int map);
 dboolean P_SuspendACS(int number, int map);
 void T_InterpretACS(CCore*, void* /* acs_t */);
 void P_TagFinished(int tag);
 void P_PolyobjFinished(int po);
 void P_ACSInitNewGame(void);
-void P_CheckACSStore(void);
+void P_CheckACSStore(CCore*);
 void CheckACSPresent(int number);
 
 extern int ACScriptCount;

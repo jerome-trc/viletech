@@ -38,13 +38,13 @@
 
 #include "viletech.nim.h"
 
-#define HU_MSGTIMEOUT   (4*TICRATE)
+#define HU_MSGTIMEOUT (4 * TICRATE)
 
-#define HU_CROSSHAIRS	8
+#define HU_CROSSHAIRS 8
 
 void HU_Start(CCore*);
 
-dboolean HU_Responder(event_t*);
+dboolean HU_Responder(CCore*, event_t*);
 
 void HU_Ticker(void);
 void HU_Drawer(CCore*);

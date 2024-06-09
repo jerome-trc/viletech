@@ -71,8 +71,10 @@ static void dsda_AppendMessage(message_t* message) {
   }
 }
 
-static void dsda_QueueMessage(const char* str, message_priority_t priority) {
+static void dsda_QueueMessage(CCore* cx, const char* str, message_priority_t priority) {
   message_t* new_message;
+
+  vt_addConsoleToast(cx, str);
 
   if (current_message) {
     if (current_message->priority < priority)
@@ -97,27 +99,27 @@ static void dsda_QueueMessage(const char* str, message_priority_t priority) {
   dsda_AppendMessage(new_message);
 }
 
-void dsda_AddPlayerAlert(const char* str, player_t* player) {
+void dsda_AddPlayerAlert(CCore* cx, const char* str, player_t* player) {
   if (player == &players[displayplayer])
-    dsda_QueueMessage(str, message_alert);
+    dsda_QueueMessage(cx, str, message_alert);
 }
 
-void dsda_AddAlert(const char* str) {
-  dsda_QueueMessage(str, message_alert);
+void dsda_AddAlert(CCore* cx, const char* str) {
+  dsda_QueueMessage(cx, str, message_alert);
 }
 
-void dsda_AddPlayerMessage(const char* str, player_t* player) {
+void dsda_AddPlayerMessage(CCore* cx, const char* str, player_t* player) {
   if (dsda_ShowMessages() && player == &players[displayplayer])
-    dsda_QueueMessage(str, message_normal);
+    dsda_QueueMessage(cx, str, message_normal);
 }
 
-void dsda_AddMessage(const char* str) {
+void dsda_AddMessage(CCore* cx, const char* str) {
   if (dsda_ShowMessages())
-    dsda_QueueMessage(str, message_normal);
+    dsda_QueueMessage(cx, str, message_normal);
 }
 
-void dsda_AddUnblockableMessage(const char* str) {
-  dsda_QueueMessage(str, message_normal);
+void dsda_AddUnblockableMessage(CCore* cx, const char* str) {
+  dsda_QueueMessage(cx, str, message_normal);
 }
 
 void dsda_UpdateMessenger(void) {
@@ -140,10 +142,10 @@ void dsda_InitMessenger(void) {
   last_message = NULL;
 }
 
-void dsda_ReplayMessage(void) {
+void dsda_ReplayMessage(CCore* cx) {
   if (last_message) {
     dsda_ClearMessages();
-    dsda_QueueMessage(last_message->str, last_message->priority);
+    dsda_QueueMessage(cx, last_message->str, last_message->priority);
   }
 }
 

@@ -58,8 +58,8 @@
 dboolean P_TryMove(CCore*, mobj_t*, fixed_t x, fixed_t y, dboolean dropoff);
 
 // killough 8/9/98: extra argument for telefragging
-dboolean P_TeleportMove(CCore*, mobj_t *thing, fixed_t x, fixed_t y,dboolean boss);
-void    P_UnqualifiedMove(mobj_t *thing, fixed_t x, fixed_t y);
+dboolean P_TeleportMove(CCore*, mobj_t*, fixed_t x, fixed_t y,dboolean boss);
+void    P_UnqualifiedMove(CCore*, mobj_t*, fixed_t x, fixed_t y);
 void    P_SlideMove(CCore*, mobj_t*);
 dboolean P_CheckSight(mobj_t *t1, mobj_t *t2);
 dboolean P_CheckFov(mobj_t *t1, mobj_t *t2, angle_t fov);
@@ -93,7 +93,7 @@ dboolean P_ChangeSector(CCore*, sector_t*, int crunch);
 dboolean P_CheckSector(CCore*, sector_t*, int crunch);
 void    P_DelSeclist(msecnode_t*); // phares 3/16/98
 void    P_FreeSecNodeList(void); // sf
-void    P_CreateSecNodeList(mobj_t*, fixed_t, fixed_t); // phares 3/14/98
+void    P_CreateSecNodeList(CCore*, mobj_t*, fixed_t, fixed_t); // phares 3/14/98
 dboolean Check_Sides(CCore*, mobj_t *, int, int); // phares
 
 int     P_GetMoveFactor(mobj_t *mo, int *friction); // killough 8/28/98

@@ -300,7 +300,7 @@ void HU_DrawCrosshair(CCore* cx)
   }
 }
 
-void HU_AnnounceMap(void)
+void HU_AnnounceMap(CCore* cx)
 {
   if (dsda_IntConfig(dsda_config_announce_map))
   {
@@ -320,12 +320,12 @@ void HU_AnnounceMap(void)
         dsda_string_t message;
 
         dsda_StringPrintF(&message, "%s by %s", hud_title.string, author);
-        dsda_AddAlert(message.string);
+        dsda_AddAlert(cx, message.string);
         dsda_FreeString(&message);
       }
       else
       {
-        dsda_AddAlert(hud_title.string);
+        dsda_AddAlert(cx, hud_title.string);
       }
     }
   }
@@ -351,7 +351,7 @@ void HU_Start(CCore* cx)
 
   dsda_InitExHud(cx);
 
-  HU_AnnounceMap();
+  HU_AnnounceMap(cx);
 }
 
 //
@@ -432,11 +432,11 @@ void HU_Ticker(void)
 //
 // Passed the event to respond to, returns true if the event was handled
 //
-dboolean HU_Responder(event_t *ev)
+dboolean HU_Responder(CCore* cx, event_t *ev)
 {
   if (dsda_InputActivated(dsda_input_repeat_message)) // phares
   {
-    dsda_ReplayMessage();
+    dsda_ReplayMessage(cx);
 
     return true;
   }

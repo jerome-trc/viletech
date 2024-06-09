@@ -351,7 +351,7 @@ void P_Ticker (CCore* cx)
     P_RunThinkers(cx);
     P_UpdateSpecials();
     P_AnimateSurfaces();
-    P_RespawnSpecials();
+    P_RespawnSpecials(cx);
     P_AmbientSound();
 
     P_MapEnd();

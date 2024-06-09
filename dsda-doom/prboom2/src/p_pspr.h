@@ -143,13 +143,13 @@ void A_GunFlashTo(CCore*, struct player_s*, pspdef_t*);
 
 // heretic
 
-void P_RepositionMace(mobj_t * mo);
-void P_ActivateBeak(CCore*, struct player_s * player);
+void P_RepositionMace(CCore*, mobj_t*);
+void P_ActivateBeak(CCore*, struct player_s*);
 void P_PostChickenWeapon(CCore*, struct player_s *, weapontype_t);
 void P_SetPsprite(CCore*, struct player_s *, int position, statenum_t);
 void P_SetPspritePtr(CCore*, struct player_s*, pspdef_t*, statenum_t);
 void P_OpenWeapons(void);
-void P_CloseWeapons(void);
+void P_CloseWeapons(CCore*);
 void P_AddMaceSpot(const mapthing_t * mthing);
 void P_UpdateBeak(struct player_s*, pspdef_t*);
 

@@ -44,7 +44,6 @@
 #include "p_tick.h"
 #include "p_setup.h"
 #include "m_random.h"
-#include "d_englsh.h"
 #include "w_wad.h"
 #include "r_main.h"
 #include "p_maputl.h"
@@ -924,10 +923,7 @@ int P_FindMinSurroundingLight
 // jff 02/05/98 routine added to test for unlockability of
 //  generalized locked doors
 //
-dboolean P_CanUnlockGenDoor
-( line_t* line,
-  player_t* player)
-{
+dboolean P_CanUnlockGenDoor(CCore* cx, line_t* line, player_t* player) {
   // does this line special distinguish between skulls and keys?
   int skulliscard = (line->special & LockedNKeys)>>LockedNKeysShift;
 
@@ -945,7 +941,7 @@ dboolean P_CanUnlockGenDoor
         !player->cards[it_yellowskull]
       )
       {
-        dsda_AddPlayerMessage(s_PD_ANY, player);
+        dsda_AddPlayerMessage(cx, s_PD_ANY, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -957,7 +953,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_redskull])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_REDK : s_PD_REDC, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_REDK : s_PD_REDC, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -969,7 +965,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_blueskull])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_BLUEK : s_PD_BLUEC, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_BLUEK : s_PD_BLUEC, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -981,7 +977,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_yellowskull])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_YELLOWK : s_PD_YELLOWC, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_YELLOWK : s_PD_YELLOWC, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -993,7 +989,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_redcard])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_REDK : s_PD_REDS, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_REDK : s_PD_REDS, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1005,7 +1001,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_bluecard])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_BLUEK : s_PD_BLUES, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_BLUEK : s_PD_BLUES, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1017,7 +1013,7 @@ dboolean P_CanUnlockGenDoor
         (!skulliscard || !player->cards[it_yellowcard])
       )
       {
-        dsda_AddPlayerMessage(skulliscard ? s_PD_YELLOWK : s_PD_YELLOWS, player);
+        dsda_AddPlayerMessage(cx, skulliscard ? s_PD_YELLOWK : s_PD_YELLOWS, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1036,7 +1032,7 @@ dboolean P_CanUnlockGenDoor
         )
       )
       {
-        dsda_AddPlayerMessage(s_PD_ALL6, player);
+        dsda_AddPlayerMessage(cx, s_PD_ALL6, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1060,7 +1056,7 @@ dboolean P_CanUnlockGenDoor
         )
       )
       {
-        dsda_AddPlayerMessage(s_PD_ALL3, player);
+        dsda_AddPlayerMessage(cx, s_PD_ALL3, player);
         S_StartMobjSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1069,7 +1065,7 @@ dboolean P_CanUnlockGenDoor
   return true;
 }
 
-dboolean P_CheckKeys(mobj_t *mo, zdoom_lock_t lock, dboolean legacy)
+dboolean P_CheckKeys(CCore* cx, mobj_t *mo, zdoom_lock_t lock, dboolean legacy)
 {
   player_t *player;
   const char *message = NULL;
@@ -1207,7 +1203,7 @@ dboolean P_CheckKeys(mobj_t *mo, zdoom_lock_t lock, dboolean legacy)
 
   if (message)
   {
-    dsda_AddPlayerMessage(message, player);
+    dsda_AddPlayerMessage(cx, message, player);
   }
 
   if (sfx != sfx_None)
@@ -1518,19 +1514,19 @@ dboolean PUREFUNC P_RevealedSecret(const sector_t *sec)
   return P_WasSecret(sec) && !P_IsSecret(sec);
 }
 
-void P_CrossHexenSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction)
+void P_CrossHexenSpecialLine(CCore* cx, line_t *line, int side, mobj_t *thing, dboolean bossaction)
 {
   if (thing->player)
   {
-    P_ActivateLine(line, thing, side, SPAC_CROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_CROSS);
   }
   else if (thing->flags2 & MF2_MCROSS)
   {
-    P_ActivateLine(line, thing, side, SPAC_MCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_MCROSS);
   }
   else if (thing->flags2 & MF2_PCROSS)
   {
-    P_ActivateLine(line, thing, side, SPAC_PCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_PCROSS);
   }
 }
 
@@ -1641,7 +1637,7 @@ void P_CrossCompatibleSpecialLine(CCore* cx, line_t *line, int side, mobj_t *thi
         return;                     // monsters disallowed from unlocking doors
       if (((line->special&TriggerType)==WalkOnce) || ((line->special&TriggerType)==WalkMany))
       { //jff 4/1/98 check for being a walk type before reporting door type
-        if (!P_CanUnlockGenDoor(line,thing->player))
+        if (!P_CanUnlockGenDoor(cx, line, thing->player))
           return;
       }
       else
@@ -2465,29 +2461,29 @@ void P_CrossCompatibleSpecialLine(CCore* cx, line_t *line, int side, mobj_t *thi
   }
 }
 
-void P_CrossZDoomSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bossaction)
+void P_CrossZDoomSpecialLine(CCore* cx, line_t *line, int side, mobj_t *thing, dboolean bossaction)
 {
   if (thing->player)
   {
-    P_ActivateLine(line, thing, side, SPAC_CROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_CROSS);
   }
   else if (thing->flags2 & MF2_MCROSS)
   {
-    P_ActivateLine(line, thing, side, SPAC_MCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_MCROSS);
   }
   else if (thing->flags2 & MF2_PCROSS)
   {
-    P_ActivateLine(line, thing, side, SPAC_PCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_PCROSS);
   }
   else if (line->special == zl_teleport ||
            line->special == zl_teleport_no_fog ||
            line->special == zl_teleport_line)
   { // [RH] Just a little hack for BOOM compatibility
-    P_ActivateLine(line, thing, side, SPAC_MCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_MCROSS);
   }
   else
   {
-    P_ActivateLine(line, thing, side, SPAC_ANYCROSS);
+    P_ActivateLine(cx, line, thing, side, SPAC_ANYCROSS);
   }
 }
 
@@ -2502,7 +2498,7 @@ void P_CrossZDoomSpecialLine(line_t *line, int side, mobj_t *thing, dboolean bos
 // impacted. Change is qualified by demo_compatibility.
 //
 
-void P_ShootCompatibleSpecialLine(mobj_t *thing, line_t *line)
+void P_ShootCompatibleSpecialLine(CCore* cx, mobj_t *thing, line_t *line)
 {
   //jff 02/04/98 add check here for generalized linedef
   if (!demo_compatibility)
@@ -2554,7 +2550,7 @@ void P_ShootCompatibleSpecialLine(mobj_t *thing, line_t *line)
         return;   // monsters disallowed from unlocking doors
       if (((line->special&TriggerType)==GunOnce) || ((line->special&TriggerType)==GunMany))
       { //jff 4/1/98 check for being a gun type before reporting door type
-        if (!P_CanUnlockGenDoor(line,thing->player))
+        if (!P_CanUnlockGenDoor(cx, line, thing->player))
           return;
       }
       else
@@ -2674,9 +2670,9 @@ void P_ShootCompatibleSpecialLine(mobj_t *thing, line_t *line)
   }
 }
 
-void P_ShootHexenSpecialLine(mobj_t *thing, line_t *line)
+void P_ShootHexenSpecialLine(CCore* cx, mobj_t *thing, line_t *line)
 {
-  P_ActivateLine(line, thing, 0, SPAC_IMPACT);
+  P_ActivateLine(cx, line, thing, 0, SPAC_IMPACT);
 }
 
 static void P_ApplySectorDamage(CCore* cx, player_t *player, int damage, int leak)
@@ -4009,7 +4005,7 @@ static void Add_Friction(int friction, int movefactor, int affectee)
 {
     friction_t *f = Z_MallocLevel(sizeof *f);
 
-    f->thinker.function/*.acp1*/ = /*(actionf_p1) */T_Friction;
+    f->thinker.function /*.acp1*/ = /*(actionf_p1) */ T_Friction;
     f->friction = friction;
     f->movefactor = movefactor;
     f->affectee = affectee;
@@ -4023,8 +4019,9 @@ static void Add_Friction(int friction, int movefactor, int affectee)
 // more friction should be applied. The amount applied is proportional to
 // the length of the controlling linedef.
 
-void T_Friction(friction_t *f)
+void T_Friction(CCore* cx, void* v)
 {
+    friction_t* f = v;
     sector_t *sec;
     mobj_t   *thing;
     msecnode_t* node;
@@ -4293,12 +4290,11 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t* source, int affec
     p->x_mag = x_mag>>FRACBITS;
     p->y_mag = y_mag>>FRACBITS;
     p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
-    if (source) // point source exist?
-        {
+    if (source) { // point source exist?
         p->radius = (p->magnitude)<<(FRACBITS+1); // where force goes to zero
         p->x = p->source->x;
         p->y = p->source->y;
-        }
+    }
     p->affectee = affectee;
     P_AddThinker(&p->thinker);
 }
@@ -4369,8 +4365,8 @@ static dboolean PIT_PushThing(CCore* cx, mobj_t* thing)
 // the effect.
 //
 
-void T_Pusher(CCore* cx, pusher_t *p)
-{
+void T_Pusher(CCore* cx, void* v) {
+    pusher_t* p = v;
     sector_t *sec;
     mobj_t   *thing;
     msecnode_t* node;
@@ -5340,7 +5336,7 @@ dboolean EV_SectorSoundChange(byte * args)
 
 char LockedBuffer[80];
 
-static dboolean CheckedLockedDoor(mobj_t * mo, byte lock)
+static dboolean CheckedLockedDoor(CCore* cx, mobj_t * mo, byte lock)
 {
     extern char *TextKeyMessages[11];
 
@@ -5356,7 +5352,7 @@ static dboolean CheckedLockedDoor(mobj_t * mo, byte lock)
     {
         snprintf(LockedBuffer, sizeof(LockedBuffer),
                  "YOU NEED THE %s\n", TextKeyMessages[lock - 1]);
-        P_SetMessage(mo->player, LockedBuffer, true);
+        P_SetMessage(cx, mo->player, LockedBuffer, true);
         S_StartMobjSound(mo, hexen_sfx_door_locked);
         return false;
     }
@@ -5568,7 +5564,7 @@ dboolean P_TestActivateHexenLine(line_t *line, mobj_t *mo, int side, line_activa
   return true;
 }
 
-dboolean P_ActivateLine(line_t * line, mobj_t * mo, int side, line_activation_t activationType)
+dboolean P_ActivateLine(CCore* cx, line_t * line, mobj_t * mo, int side, line_activation_t activationType)
 {
   dboolean repeat;
   dboolean buttonSuccess;
@@ -5598,7 +5594,7 @@ dboolean P_ActivateLine(line_t * line, mobj_t * mo, int side, line_activation_t 
         legacy = false;
     }
 
-    if (!P_CheckKeys(mo, line->locknumber, legacy))
+    if (!P_CheckKeys(cx, mo, line->locknumber, legacy))
     {
       return false;
     }
@@ -5762,31 +5758,31 @@ dboolean P_ExecuteZDoomLineSpecial(CCore* cx, int special, int * args, line_t * 
   switch (special)
   {
     case zl_door_close:
-      buttonSuccess = EV_DoZDoomDoor(closeDoor, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, closeDoor, line, mo, args[0],
                                      args[1], 0, 0, args[2], false, 0);
       break;
     case zl_door_open:
-      buttonSuccess = EV_DoZDoomDoor(openDoor, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, openDoor, line, mo, args[0],
                                     args[1], 0, 0, args[2], false, 0);
       break;
     case zl_door_raise:
-      buttonSuccess = EV_DoZDoomDoor(normal, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, normal, line, mo, args[0],
                                     args[1], args[2], 0, args[3], false, 0);
       break;
     case zl_door_locked_raise:
-      buttonSuccess = EV_DoZDoomDoor(args[2] ? normal : openDoor, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, args[2] ? normal : openDoor, line, mo, args[0],
                                      args[1], args[2], args[3], args[4], false, 0);
       break;
     case zl_door_close_wait_open:
-      buttonSuccess = EV_DoZDoomDoor(genCdO, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, genCdO, line, mo, args[0],
                                      args[1], args[2] * 35 / 8, 0, args[3], false, 0);
       break;
     case zl_door_wait_raise:
-      buttonSuccess = EV_DoZDoomDoor(waitRaiseDoor, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, waitRaiseDoor, line, mo, args[0],
                                      args[1], args[2], 0, args[4], false, args[3]);
       break;
     case zl_door_wait_close:
-      buttonSuccess = EV_DoZDoomDoor(waitCloseDoor, line, mo, args[0],
+      buttonSuccess = EV_DoZDoomDoor(cx, waitCloseDoor, line, mo, args[0],
                                      args[1], 0, 0, args[3], false, args[2]);
       break;
     case zl_generic_door:
@@ -5828,7 +5824,7 @@ dboolean P_ExecuteZDoomLineSpecial(CCore* cx, int special, int * args, line_t * 
           lightTag = 0;
         }
 
-        buttonSuccess = EV_DoZDoomDoor(type, line, mo, tag, args[1],
+        buttonSuccess = EV_DoZDoomDoor(cx, type, line, mo, tag, args[1],
                                        args[3] * 35 / 8, args[4], lightTag, boomgen, 0);
       }
       break;
@@ -7038,14 +7034,14 @@ dboolean P_ExecuteZDoomLineSpecial(CCore* cx, int special, int * args, line_t * 
         flags = args[2] ? LF_SET_ANGLE : 0;
 
         // TODO: this crashes if the map doesn't exist (gzdoom does a no-op)
-        G_Completed(args[0], args[1], flags, mo->angle);
+        G_Completed(cx, args[0], args[1], flags, mo->angle);
         buttonSuccess = 1;
       }
       break;
     case zl_teleport_end_game:
       if (!side)
       {
-        G_Completed(LEAVE_VICTORY, LEAVE_VICTORY, 0, 0);
+        G_Completed(cx, LEAVE_VICTORY, LEAVE_VICTORY, 0, 0);
         buttonSuccess = 1;
       }
       break;
@@ -7741,7 +7737,7 @@ dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, l
             }
             break;
         case 13:               // Door Locked_Raise
-            if (CheckedLockedDoor(mo, args[3]))
+            if (CheckedLockedDoor(cx, mo, args[3]))
             {
                 if (!args[0])
                 {
@@ -7887,7 +7883,7 @@ dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, l
             {                   // Only teleport when crossing the front side of a line
                 if (!(mo && mo->player && mo->player->playerstate == PST_DEAD)) // Players must be alive to teleport
                 {
-                    G_Completed(args[0], args[1], 0, 0);
+                    G_Completed(cx, args[0], args[1], 0, 0);
                     buttonSuccess = true;
                 }
             }
@@ -7900,18 +7896,18 @@ dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, l
                     buttonSuccess = true;
                     if (deathmatch)
                     {           // Winning in deathmatch just goes back to map 1
-                        G_Completed(1, 0, 0, 0);
+                        G_Completed(cx, 1, 0, 0, 0);
                     }
                     else
                     {           // Starts the Finale
-                        G_Completed(LEAVE_VICTORY, LEAVE_VICTORY, 0, 0);
+                        G_Completed(cx, LEAVE_VICTORY, LEAVE_VICTORY, 0, 0);
                     }
                 }
             }
             break;
         case 80:               // ACS_Execute
             buttonSuccess =
-                P_StartACS(args[0], args[1], &args[2], mo, line, side);
+                P_StartACS(cx, args[0], args[1], &args[2], mo, line, side);
             break;
         case 81:               // ACS_Suspend
             buttonSuccess = P_SuspendACS(args[0], args[1]);
@@ -7920,7 +7916,7 @@ dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, l
             buttonSuccess = P_TerminateACS(args[0], args[1]);
             break;
         case 83:               // ACS_LockedExecute
-            buttonSuccess = P_StartLockedACS(line, args, mo, side);
+            buttonSuccess = P_StartLockedACS(cx, line, args, mo, side);
             break;
         case 90:               // Poly Rotate Left Override
             buttonSuccess = EV_RotatePoly(line, args, 1, true);
@@ -7969,7 +7965,7 @@ dboolean P_ExecuteHexenLineSpecial(CCore* cx, int special, int * special_args, l
             buttonSuccess = EV_SpawnLight(line, args, LITE_STROBE);
             break;
         case 120:              // Quake Tremor
-            buttonSuccess = A_LocalQuake(args, mo);
+            buttonSuccess = A_LocalQuake(cx, args, mo);
             break;
         case 129:              // UsePuzzleItem
             buttonSuccess = EV_LineSearchForPuzzleItem(cx, line, args, mo);

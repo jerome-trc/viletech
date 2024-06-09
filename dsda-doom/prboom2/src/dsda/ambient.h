@@ -40,8 +40,8 @@ typedef struct {
   int wait_tics;
 } ambient_source_t;
 
-void dsda_UpdateAmbientSource(ambient_source_t* source);
-void dsda_SpawnAmbientSource(mobj_t* mobj);
+void dsda_UpdateAmbientSource(CCore*, void* /* ambient_source_t */);
+void dsda_SpawnAmbientSource(mobj_t*);
 void dsda_LoadAmbientSndInfo(void);
 
 #ifdef __cplusplus
