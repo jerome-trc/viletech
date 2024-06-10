@@ -13,10 +13,13 @@ const afterIncludes = """
 struct _NimString;
 typedef struct _NimString Path;
 
+typedef struct ecs_world_t ecs_world_t;
+
 typedef struct Core Core;
 typedef void* LibHandle;
 typedef union SdlEvent SdlEvent;
 typedef struct SdlWindow SdlWindow;
+typedef ecs_world_t* World;
 
 """
 
