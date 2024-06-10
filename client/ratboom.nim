@@ -41,11 +41,11 @@ while true:
 
 gameModeStart()
 
-var cx = Core.init()
-cx.c.core = cx.addr
-
 clArgs.insert(os.getAppFileName(), 0)
 let argv = clArgs.toOpenArray(0, paramCount()).allocCStringArray()
+var cx = Core.init(argv)
+cx.c.core = cx.addr
+
 let ret = dsdaMain(cx.c.addr, paramCount().cint + 1, argv)
 
 let uptime = startTime.elapsed().hoursMinsSecs()

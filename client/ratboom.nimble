@@ -6,7 +6,7 @@ bin = @["ratboom"]
 skipDirs = @["tests"]
 
 requires "nim == 2.0.4"
-requires "checksums == 0.1.0"
+requires "checksums == 0.1.0" # Only used in this file.
 requires "https://github.com/jerome-trc/nimtie#c24b804"
 
 import std/[cmdline, strformat]
@@ -14,7 +14,8 @@ import checksums/md5
 
 proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
-    var cmd = &"nim {libDirs} --cincludes:../engine/src --cincludes:../depend/imgui "
+    var cmd = &"nim {libDirs} --cincludes:../engine/src "
+    cmd &= "--cincludes:../depend/imgui --cincludes:../depend/flecs "
 
     for clib in [
         "dumb",

@@ -1,9 +1,9 @@
 ## Permeates the code base with state that is practically "global".
 
-import std/[dynlib, files]
+import std/[cmdline, dynlib, files]
 from std/paths import Path
 
-import devgui/console, imgui, plugin
+import devgui/console, flecs, imgui, plugin
 
 const baseScreenWidth*: int = 320
 
@@ -31,6 +31,7 @@ type
         dynLibPaths*: seq[Path] = @[]
         dynLibs*: seq[LibHandle] = @[]
         savedGametick*: int32 = -1
+        world*: World
     DGuiCore* = object
         imguiCtx*: ptr ImGuiContext = nil
         open*: bool = when defined(release): false else: true
@@ -39,8 +40,9 @@ type
         right*: DevGui = DevGui.vfs
         console*: Console
 
-proc init*(_: typedesc[Core]): Core =
+proc init*(_: typedesc[Core], argv: cstringArray): Core =
     var cx = Core()
+    cx.c.world = World.initWithArgs(paramCount().cint + 1, argv)
     return cx
 
 
@@ -78,7 +80,11 @@ proc unloadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =
 
 # Accessors ####################################################################
 
-proc flavor*(self: Core): Flavor {.inline.} = self.c.flavor
+proc flavor*(self {.byref.}: Core): Flavor {.inline.} = self.c.flavor
+proc dynLibPaths*(self: var Core): var seq[Path] = self.c.dynLibPaths
+proc dynLibs*(self: var Core): var seq[LibHandle] {.inline.} = self.c.dynLibs
+proc savedGametick*(self {.byref.}: Core): int32 {.inline.} = self.c.savedGametick
+proc world*(self {.byref.}: Core): World {.inline.} = self.c.world
 
 proc `destroy=`*(self: Core) =
-    discard
+    assert(self.world.reset() == 0)
