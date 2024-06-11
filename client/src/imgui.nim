@@ -27,6 +27,66 @@ type
     ImWchar16* = cushort
     ImWchar* = ImWchar16
 
+type ImGuiCol* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiCol_",
+    header: hImGui,
+.} = enum
+    text
+    textDisabled
+    windowBg
+    childBg
+    popupBg
+    border
+    borderShadow
+    frameBg
+    frameBgHovered
+    frameBgActive
+    titleBg
+    titleBgActive
+    titleBgCollapsed
+    menuBarBg
+    scrollbarBg
+    scrollbarGrab
+    scrollbarGrabHovered
+    scrollbarGrabActive
+    checkMark
+    sliderGrab
+    sliderGrabActive
+    button
+    buttonHovered
+    buttonActive
+    header
+    headerHovered
+    headerActive
+    separator
+    separatorHovered
+    separatorActive
+    resizeGrip
+    resizeGripHovered
+    resizeGripActive
+    tab
+    tabHovered
+    tabActive
+    tabUnfocused
+    tabUnfocusedActive
+    plotLines
+    plotLinesHovered
+    plotHistogram
+    plotHistogramHovered
+    tableHeaderBg
+    tableBorderStrong
+    tableBorderLight
+    tableRowBg
+    tableRowBgAlt
+    textSelectedBg
+    dragDropTarget
+    navHighlight
+    navWindowingHighlight
+    navWindowingDimBg
+    modalWindowDimBg
+
 type ImGuiCond* {.
     pure,
     size: sizeof(cint),
@@ -184,6 +244,9 @@ bitFlags(ImGuiComboFlags, cint)
 
 type ImVec2* {.importcpp: "ImVec2", header: hImGui.} = object
     x*, y*: float32 = 0.0.float32
+
+type ImVec4* {.importcpp: "ImVec4", header: hImGui.} = object
+    x*, y*, z*, w*: float32 = 0.0.float32
 
 type ImGuiContext* {.
     importcpp: "ImGuiContext",
@@ -429,6 +492,17 @@ proc imGuiSetNextWindowSize*(
 )
     {.importcpp: "ImGui::SetNextWindowSize(@)", header: hImGui.}
 
+# Parameter stacks (shared) ####################################################
+
+proc imGuiPushStyleColor*(idx: ImGuiCol, col: cuint)
+    {.importcpp: "ImGui::PushStyleColor(@)", header: hImGui.}
+
+proc imGuiPushStyleColor*(idx: ImGuiCol, col {.byref.}: ImVec4)
+    {.importcpp: "ImGui::PushStyleColor(@)", header: hImGui.}
+
+proc imGuiPopStyleColor*(count: cint = 1)
+    {.importcpp: "ImGui::PopStyleColor(@)", header: hImGui.}
+
 # Parameter stacks (current window) ############################################
 
 proc imGuiPushItemWidth*(width: float32)
@@ -589,7 +663,7 @@ proc imGuiBeginItemTooltip*(): bool
 
 # Focus, activation ############################################################
 
-proc imGuiSetItemDefaultFocus*(): void
+proc imGuiSetItemDefaultFocus*()
     {.importcpp: "ImGui::SetItemDefaultFocus(@)", header: hImGui.}
 
 # Viewports ####################################################################

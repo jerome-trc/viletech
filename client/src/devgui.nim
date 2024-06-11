@@ -37,7 +37,10 @@ proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
         return
 
     block:
-        defer: imGuiEndMainMenuBar()
+        imGuiPushStyleColor(ImGuiCol.menuBarBg, ImVec4(w: 0.66))
+        imGuiPushStyleColor(ImGuiCol.windowBg, ImVec4(w: 0.66))
+
+        defer: imGuiPopStyleColor(2); imGuiEndMainMenuBar()
 
         imGuiTextUnformatted("Developer Tools")
         imGuiSeparator()
