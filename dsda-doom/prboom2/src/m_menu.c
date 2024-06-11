@@ -52,6 +52,7 @@
 #include "doomstat.h"
 #include "dstrings.h"
 #include "d_main.h"
+#include "d_player.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "r_main.h"
@@ -1299,18 +1300,19 @@ void M_MusicVol(CCore* cx, int choice)
     dsda_ToggleConfig(cx, dsda_config_mute_music, true);
 }
 
-/////////////////////////////
-//
-//    M_QuickSave
-//
+void M_QuickSave(CCore* cx) {
+    if (gamestate != GS_LEVEL) {
+        return;
+    }
 
-void M_QuickSave(CCore* cx)
-{
-  if (gamestate != GS_LEVEL)
-    return;
+	if (players[consoleplayer].playerstate == PST_DEAD ||
+		players[consoleplayer].health <= 0) {
+		doom_printf(cx, "cannot quicksave while dead");
+		return;
+	}
 
-  G_SaveGame(QUICKSAVESLOT, "quicksave");
-  doom_printf(cx, "quicksave");
+	G_SaveGame(QUICKSAVESLOT, "quicksave");
+    doom_printf(cx, "quicksave");
 }
 
 /// @fn M_QuickLoad
