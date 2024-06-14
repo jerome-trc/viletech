@@ -1,6 +1,11 @@
 ## Helpers which could reasonably be a part of the standard library.
 
-import std/times
+import std/[strformat, times]
+
+proc offset*[T](self: ptr T, count: int): ptr T =
+    let p = cast[uint](self)
+    return cast[ptr T](p + (count * sizeof(T)).uint)
+
 
 proc clear*[T](s: seq[T]) =
     s.delete(0..(s.len - 1))
@@ -19,8 +24,32 @@ proc hoursMinsSecs*(duration: Duration): HoursMinSecs =
     return (hours, mins, secs)
 
 
-proc cStr*(str: var string): cstring =
+proc cStr*(str {.byref.}: string): cstring =
     return cast[cstring](str[0].addr)
+
+
+proc subdivideBytes*(size: int): string =
+    if size == 0:
+        return "0 B"
+
+    var s = size.float
+    var unit = "B"
+
+    if s > 1024.0:
+        s /= 1024.0
+        unit = "KB"
+    else:
+        return &"{s:.2f} {unit}"
+
+    if s > 1024.0:
+        s /= 1024.0
+        unit = "MB"
+
+    if s > 1024.0:
+        s /= 1024.0
+        unit = "GB"
+
+    return &"{s:.2f} {unit}"
 
 
 proc toCstring*(str: string): cstring =
@@ -53,3 +82,27 @@ template bitFlags*(enumT: typedesc[enum], underlying: typedesc[SomeInteger]) =
         let aU = cast[underlying](a)
         let bU = cast[underlying](b)
         return (aU and bU) != 0
+
+#[
+
+macro bitFlags2*(name: untyped, public, pure: static[bool], body: untyped) =
+    var ret = nnkStmtList.newTree()
+    var fields: seq[NimNode] = @[]
+    var prevFlags = initTable[string]()
+
+    for i, section in body:
+        var f = new newNimNode(nnkEnumFieldDef)
+        f.add(section)
+
+        if section.kind == nnkIdent:
+            f.add(newIntLitNode(1 shl i))
+        elif section.kind == nnkAsgn:
+            echo section.treeRepr
+
+        fields.add(f)
+
+    ret.add(newEnum(name, fields, public, pure))
+    echo ret.toStrLit
+    return ret
+
+]#

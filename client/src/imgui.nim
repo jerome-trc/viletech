@@ -26,6 +26,9 @@ type
     ImWchar32* = cuint
     ImWchar16* = cushort
     ImWchar* = ImWchar16
+    ImGuiId* = distinct cuint
+
+proc `==`*(lhs, rhs: ImGuiId): bool {.borrow.}
 
 type ImGuiCol* {.
     pure,
@@ -193,6 +196,134 @@ type ImGuiKey* {.
     imkeyF7, imkeyF8, imkeyF9, imkeyF10, imkeyF11, imkeyF12
     imkeyF13, imkeyF14, imkeyF15, imkeyF16, imkeyF17, imkeyF18
     imkeyF19, imkeyF20, imkeyF21, imkeyF22, imkeyF23, imkeyF24
+
+type ImGuiMouseButton* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiMouseButton",
+    header: hImGui,
+.} = enum
+    left = 0
+    right = 1
+    middle = 2
+
+type ImGuiPopupFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiPopupFlags",
+    header: hImGui,
+.} = enum
+    none = 0
+    mouseButtonRight = 1
+    mouseButtonMiddle = 2
+    noReopen = 1 shl 5
+    noOpenOverExistingPopup = 1 shl 7
+    noOpenOverItems = 1 shl 8
+    anyPopupId = 1 shl 10
+    anyPopupLevel = 1 shl 11
+bitFlags(ImGuiPopupFlags, cint)
+
+proc mouseButtonLeft*(_: typedesc[ImGuiPopupFlags]): ImGuiPopupFlags {.inline.} =
+    ImGuiPopupFlags.none
+
+proc anyPopup*(_: typedesc[ImGuiPopupFlags]): ImGuiPopupFlags {.inline.} =
+    ImGuiPopupFlags.anyPopupId + ImGuiPopupFlags.anyPopupLevel
+
+type ImGuiTableFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiTableFlags",
+    header: hImGui,
+.} = enum
+    none = 0
+    resizable = 1 shl 0
+    reorderable = 1 shl 1
+    hideable = 1 shl 2
+    sortable = 1 shl 3
+    noSavedSettings = 1 shl 4
+    contextMenuInBody = 1 shl 5
+    rowBg = 1 shl 6
+    bordersInnerH = 1 shl 7
+    bordersOuterH = 1 shl 8
+    bordersInnerV = 1 shl 9
+    bordersOuterV = 1 shl 10
+    noBordersInBody = 1 shl 11
+    noBordersInBodyUntilResize = 1 shl 12
+    sizingFixedFit = 1 shl 13
+    sizingFixedSame = 2 shl 13
+    sizingStretchProp = 3 shl 13
+    sizingStretchSame = 4 shl 13
+    noHostExtendX = 1 shl 16
+    noHostExtendY = 1 shl 17
+    noKeepColumnsVisible = 1 shl 18
+    preciseWidths = 1 shl 19
+    noClip = 1 shl 20
+    padOuterX = 1 shl 21
+    noPadOuteX = 1 shl 22
+    noPadInnerX = 1 shl 23
+    scrollX = 1 shl 24
+    scrollY = 1 shl 25
+    sortMulti = 1 shl 26
+    sortTristate = 1 shl 27
+    highlightHoveredColumn = 1 shl 28
+bitFlags(ImGuiTableFlags, cint)
+
+proc bordersH*(_: typedesc[ImGuiTableFlags]): ImGuiTableFlags {.inline.} =
+    ImGuiTableFlags.bordersInnerH + ImGuiTableFlags.bordersOuterH
+
+proc bordersV*(_: typedesc[ImGuiTableFlags]): ImGuiTableFlags {.inline.} =
+    ImGuiTableFlags.bordersInnerV + ImGuiTableFlags.bordersOuterV
+
+proc bordersInner*(_: typedesc[ImGuiTableFlags]): ImGuiTableFlags {.inline.} =
+    ImGuiTableFlags.bordersInnerH + ImGuiTableFlags.bordersInnerV
+
+proc bordersOuter*(_: typedesc[ImGuiTableFlags]): ImGuiTableFlags {.inline.} =
+    ImGuiTableFlags.bordersOuterH + ImGuiTableFlags.bordersOuterV
+
+proc borders*(_: typedesc[ImGuiTableFlags]): ImGuiTableFlags {.inline.} =
+    ImGuiTableFlags.bordersInner + ImGuiTableFlags.bordersOuter
+
+type ImGuiTableColumnFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiTableColumnFlags",
+    header: hImGui,
+.} = enum
+    none = 0
+    disabled = 1 shl 0
+    defaultHide = 1 shl 1
+    defaultSort = 1 shl 2
+    widthStretch = 1 shl 3
+    widthFixed = 1 shl 4
+    noResize = 1 shl 5
+    noReorder = 1 shl 6
+    noHide = 1 shl 7
+    noClip = 1 shl 8
+    noSort = 1 shl 9
+    noSortAscending = 1 shl 10
+    noSortDescending = 1 shl 11
+    noHeaderLabel = 1 shl 12
+    noHeaderWidth = 1 shl 13
+    preferSortAscending = 1 shl 14
+    preferSortDescending = 1 shl 15
+    indentEnable = 1 shl 16
+    indentDisable = 1 shl 17
+    angledHeader = 1 shl 18
+    isEnabled = 1 shl 24
+    isVisible = 1 shl 25
+    isSorted = 1 shl 26
+    isHovered = 1 shl 27
+bitFlags(ImGuiTableColumnFlags, cint)
+
+type ImGuiTableRowFlags* {.
+    pure,
+    size: sizeof(cint),
+    importcpp: "ImGuiTableRowFlags",
+    header: hImGui,
+.} = enum
+    none = 0
+    headers = 1 shl 0
+bitFlags(ImGuiTableRowFlags, cint)
 
 type ImGuiWindowFlags* {.
     pure,
@@ -661,10 +792,108 @@ proc imGuiEndTooltip*()
 proc imGuiBeginItemTooltip*(): bool
     {.importcpp: "ImGui::BeginItemTooltip(@)", header: hImGui.}
 
+# Popups, modals ###############################################################
+
+proc imGuiBeginPopup*(
+    strId: cstring,
+    flags: ImGuiWindowFlags = ImGuiWindowFlags.none
+): bool
+    {.importcpp: "ImGui::BeginPopup(@)", header: hImGui.}
+
+proc imGuiBeginPopupModal*(
+    name: cstring,
+    pOpen: ptr bool = nil,
+    flags: ImGuiWindowFlags = ImGuiWindowFlags.none,
+): bool
+    {.importcpp: "ImGui::BeginPopupModal(@)", header: hImGui.}
+
+proc imGuiEndPopup*()
+    {.importcpp: "ImGui::EndPopup(@)", header: hImGui.}
+
+# Popups: open + begin combined function helpers ###############################
+
+proc imGuiBeginPopupContextItem*(
+    strId: cstring = nil,
+    popupFlags = ImGuiPopupFlags.mouseButtonRight,
+): bool
+    {.importcpp: "ImGui::BeginPopupContextItem(@)", header: hImGui.}
+
+proc imGuiBeginPopupContextWindow*(
+    strId: cstring = nil,
+    popupFlags = ImGuiPopupFlags.mouseButtonRight,
+): bool
+    {.importcpp: "ImGui::BeginPopupContextWindow(@)", header: hImGui.}
+
+proc imGuiBeginPopupContextVoid*(
+    strId: cstring = nil,
+    popupFlags = ImGuiPopupFlags.mouseButtonRight,
+): bool
+    {.importcpp: "ImGui::BeginPopupContextVoid(@)", header: hImGui.}
+
+# Popups: query functions ######################################################
+
+proc imGuiIsPopupOpen*(strId: cstring, flags: ImGuiPopupFlags = ImGuiPopupFlags.none): bool
+    {.importcpp: "ImGui::IsPopupOpen(@)", header: hImGui.}
+
+# Tables #######################################################################
+
+proc imGuiBeginTable*(
+    strId: cstring,
+    numColumns: cint,
+    flags: ImGuiTableFlags = ImGuiTableFlags.none,
+    outerSize {.byref.}: ImVec2 = ImVec2(),
+    innerWidth: float32 = 0.0
+): bool
+    {.importcpp: "ImGui::BeginTable(@)", header: hImgui.}
+
+proc imGuiEndTable*()
+    {.importcpp: "ImGui::EndTable(@)", header: hImGui.}
+
+proc imGuiTableNextRow*(
+    rowFlags: ImGuiTableRowFlags = ImGuiTableRowFlags.none,
+    minRowHeight: float32 = 0.0,
+)
+    {.importcpp: "ImGui::TableNextRow(@)", header: hImGui.}
+
+proc imGuiTableNextColumn*(): bool
+    {.importcpp: "ImGui::TableNextColumn(@)", header: hImGui.}
+
+proc imGuiTableSetColumnIndex*(columnN: cint): bool
+    {.importcpp: "ImGui::TableSetColumnIndex(@)", header: hImGui.}
+
+# Tables: headers and columns declaration ######################################
+
+proc imGuiTableSetupColumn*(
+    label: cstring,
+    flags: ImGuiTableColumnFlags = ImGuiTableColumnFlags.none,
+    initWidthOrHeight: float32 = 0.0,
+    userId: ImGuiId = 0.ImGuiId,
+)
+    {.importcpp: "ImGui::TableSetupColumn(@)", header: hImGui.}
+
+proc imGuiTableHeader*(label: cstring)
+    {.importcpp: "ImGui::TableHeader(@)", header: hImGui.}
+
+proc imGuiTableHeadersRow*()
+    {.importcpp: "ImGui::TableHeadersRow(@)", header: hImGui.}
+
+proc imGuiTableAngledHeadersRow*()
+    {.importcpp: "ImGui::TableAngledHeadersRow(@)", header: hImGui.}
+
 # Focus, activation ############################################################
 
 proc imGuiSetItemDefaultFocus*()
     {.importcpp: "ImGui::SetItemDefaultFocus(@)", header: hImGui.}
+
+# Overlapping mode #############################################################
+
+proc imGuiSetNextItemAllowOverlap*()
+    {.importcpp: "ImGui::SetNextItemAllowOverlap(@)", header: hImGui.}
+
+# Item/widget utilities and query functions ####################################
+
+proc imGuiIsItemClicked*(mouseBtn: ImGuiMouseButton = ImGuiMouseButton.left): bool
+    {.importcpp: "ImGui::IsItemClicked(@)" header: hImGui.}
 
 # Viewports ####################################################################
 
