@@ -4,12 +4,14 @@ import ../[imgui, stdx]
 
 type
     HistoryKind {.pure.} = enum
-        toast
+        log
         submission
+        toast
     HistoryItem = object
         case discrim: HistoryKind
-        of toast: toast: string
+        of log: log: string
         of submission: submission: string
+        of toast: toast: string
     Console* = object
         inputBuf: array[256, char]
         history: Deque[HistoryItem]
@@ -53,15 +55,17 @@ proc draw*(self: var Console, left: bool, menuBarHeight: float32) =
         clipper.begin(self.history.len.cint)
 
         while clipper.step():
-            for i in countup(clipper.displayStart, clipper.displayEnd - 1):
+            for i in clipper.displayStart ..< clipper.displayEnd:
                 case self.history[i].discrim:
-                of HistoryKind.toast:
-                    imGuiTextUnformatted(self.history[i].toast.cStr())
+                of HistoryKind.log:
+                    imGuiTextUnformatted(self.history[i].log.cStr())
                 of HistoryKind.submission:
                     imGuiTextUnformatted(self.history[i].submission.cStr())
+                of HistoryKind.toast:
+                    imGuiTextUnformatted(self.history[i].toast.cStr())
 
     if imGuiInputText(
-        cstring"##inputBuf",
+        cstring"##console.inputBuf",
         self.inputBuf[0].addr,
         self.inputBuf.len.csize_t,
         flags =
@@ -78,6 +82,11 @@ proc draw*(self: var Console, left: bool, menuBarHeight: float32) =
         self.submit()
 
     imGuiSetItemDefaultFocus()
+
+
+proc log*(self: var Console, msg: string) =
+    echo(msg)
+    self.addToHistory(HistoryItem(discrim: HistoryKind.log, log: msg))
 
 
 proc addToast*(self: var Console, msg: string) =

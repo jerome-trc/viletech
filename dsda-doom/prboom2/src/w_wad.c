@@ -33,6 +33,7 @@
  */
 
 // use config.h if autoconf made one -- josh
+#include "v_video.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -44,16 +45,12 @@
 #include <io.h>
 #endif
 
-#include "doomstat.h"
-#include "d_net.h"
 #include "doomtype.h"
 #include "i_system.h"
 #include "m_file.h"
-#include "r_main.h"
 
 #include "w_wad.h"
 #include "lprintf.h"
-#include "e6y.h"
 
 #include "dsda/utility.h"
 

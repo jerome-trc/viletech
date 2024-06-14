@@ -47,7 +47,7 @@ struct mobj_s;
  *  action functions cleanly.
  */
 // killough 11/98: convert back to C instead of C++
-typedef void (*actionf_t)(CCore*, void*);
+typedef void (*actionf_t)(struct CCore*, void*);
 
 //e6y: for boom's friction code
 typedef void (*actionf_v)(void);

@@ -31,7 +31,6 @@
  *
  *-----------------------------------------------------------------------------*/
 
-
 #ifndef __W_WAD__
 #define __W_WAD__
 
@@ -87,6 +86,10 @@ typedef struct {
   wad_source_t src;
   int handle;
 } wadfile_info_t;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 extern wadfile_info_t *wadfiles;
 
@@ -176,4 +179,8 @@ unsigned W_LumpNameHash(const char *s);           // killough 1/31/98
 void W_HashLumps(void);                           // cph 2001/07/07 - made public
 int W_LumpNumInPortWad(int lump);
 
+#if defined(__cplusplus)
+}
 #endif
+
+#endif // ifndef __W_WAD__

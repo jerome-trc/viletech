@@ -42,6 +42,10 @@
 
 #define MAX_CHANNELS 32
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 //
 // Initializes sound stuff, including volume
 // Sets channels, SFX and music volume,
@@ -135,5 +139,9 @@ void S_StartAmbientSound(void *origin, int sound_id, int volume);
 void S_StartSongName(CCore*, const char *songLump, dboolean loop);
 dboolean S_GetSoundPlayingInfo(void * mobj, int sound_id);
 int S_GetSoundID(const char *name);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif
