@@ -3,7 +3,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import src/[compile, core, exports, fixed, gamemode, imports, platform, stdx]
+import src/[compile, core, exports, gamemode, stdx]
 
 proc dsdaMain(
     ccx: ptr CCore,
