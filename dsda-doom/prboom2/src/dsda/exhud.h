@@ -22,8 +22,8 @@
 
 void dsda_InitExHud(CCore*);
 void dsda_UpdateExHud(void);
-void dsda_DrawExHud(void);
-void dsda_DrawExIntermission(void);
+void dsda_DrawExHud(CCore*);
+void dsda_DrawExIntermission(CCore*);
 void dsda_ToggleRenderStats(void);
 void dsda_RefreshExHudFPS(CCore*);
 void dsda_RefreshExHudMinimap(CCore*);

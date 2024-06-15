@@ -235,7 +235,7 @@ void dsda_LegacyUpdateNextMapInfo(void) {
   // nothing to do right now
 }
 
-static int dsda_CannotCLEV(int episode, int map) {
+static int dsda_CannotCLEV(CCore* cx, int episode, int map) {
   char* next;
 
   if (
@@ -250,15 +250,15 @@ static int dsda_CannotCLEV(int episode, int map) {
   // Catch invalid maps
   next = VANILLA_MAP_LUMP_NAME(episode, map);
   if (!W_LumpNameExists(next)) {
-    doom_printf("IDCLEV target not found: %s", next);
+    doom_printf(cx, "IDCLEV target not found: %s", next);
     return true;
   }
 
   return false;
 }
 
-int dsda_LegacyResolveCLEV(int* clev, int* episode, int* map) {
-  if (dsda_CannotCLEV(*episode, *map))
+int dsda_LegacyResolveCLEV(CCore* cx, int* clev, int* episode, int* map) {
+  if (dsda_CannotCLEV(cx, *episode, *map))
     *clev = false;
   else {
     if (gamemission == chex)

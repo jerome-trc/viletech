@@ -979,7 +979,7 @@ void WI_initNoState(void)
 //
 // cph - pulled from WI_drawStats below
 
-static void WI_drawTimeStats(int cnt_time, int cnt_total_time, int cnt_par)
+static void WI_drawTimeStats(CCore* cx, int cnt_time, int cnt_total_time, int cnt_par)
 {
   V_DrawNamePatch(SP_TIMEX, SP_TIMEY, FB, time1, CR_DEFAULT, VPT_STRETCH);
   WI_drawTime(320/2 - SP_TIMEX, SP_TIMEY, cnt_time);
@@ -1009,7 +1009,7 @@ static void WI_drawTimeStats(int cnt_time, int cnt_total_time, int cnt_par)
     }
   }
 
-  dsda_DrawExIntermission();
+  dsda_DrawExIntermission(cx);
 }
 
 // ====================================================================
@@ -1672,7 +1672,7 @@ void WI_updateNetgameStats(CCore* cx)
 //
 // proff/nicolas 09/20/98 -- changed for hi-res
 // CPhipps - patch drawing updated
-void WI_drawNetgameStats(void)
+void WI_drawNetgameStats(CCore* cx)
 {
   int   i;
   int   x;
@@ -1737,7 +1737,7 @@ void WI_drawNetgameStats(void)
 
   if (y <= SP_TIMEY)
     // cph - show times in coop on the entering screen
-    WI_drawTimeStats(plrs[me].stime / TICRATE, wbs->totaltimes / TICRATE, wbs->partime / TICRATE);
+    WI_drawTimeStats(cx, plrs[me].stime / TICRATE, wbs->totaltimes / TICRATE, wbs->partime / TICRATE);
 }
 
 static int  sp_state;
@@ -1916,7 +1916,7 @@ void WI_updateStats(CCore* cx)
 //
 // proff/nicolas 09/20/98 -- changed for hi-res
 // CPhipps - patch drawing updated
-void WI_drawStats(void)
+void WI_drawStats(CCore* cx)
 {
   // line height
   int lh;
@@ -1942,7 +1942,7 @@ void WI_drawStats(void)
   if (cnt_secret)
     WI_drawPercent(320 - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
-  WI_drawTimeStats(cnt_time, cnt_total_time, cnt_par);
+  WI_drawTimeStats(cx, cnt_time, cnt_total_time, cnt_par);
 }
 
 // ====================================================================
@@ -2097,10 +2097,17 @@ void WI_loadData(void)
 // Args:    none
 // Returns: void
 //
-void WI_Drawer (void)
+void WI_Drawer(CCore* cx)
 {
-  if (heretic) return IN_Drawer();
-  if (hexen) return Hexen_IN_Drawer();
+  if (heretic) {
+    IN_Drawer(cx);
+    return;
+  }
+
+  if (hexen) {
+    Hexen_IN_Drawer(cx);
+    return;
+  }
 
   switch (state)
   {
@@ -2108,9 +2115,9 @@ void WI_Drawer (void)
          if (deathmatch)
            WI_drawDeathmatchStats();
          else if (netgame)
-           WI_drawNetgameStats();
+           WI_drawNetgameStats(cx);
          else
-           WI_drawStats();
+           WI_drawStats(cx);
          break;
 
     case ShowNextLoc:

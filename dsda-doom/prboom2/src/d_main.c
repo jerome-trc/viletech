@@ -399,7 +399,7 @@ void D_Display(CCore* cx, fixed_t frac) {
     V_BeginUIDraw();
     switch (gamestate) {
     case GS_INTERMISSION:
-      WI_Drawer();
+      WI_Drawer(cx);
       break;
     case GS_FINALE:
       F_Drawer();

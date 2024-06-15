@@ -22,7 +22,7 @@
 #include "viletech.nim.h"
 
 void IN_Ticker(CCore*);
-void IN_Drawer(void);
+void IN_Drawer(CCore*);
 void IN_Start(CCore*, wbstartstruct_t*);
 
 #endif

@@ -55,7 +55,7 @@ void dsda_UpdateLineDisplayHC(void* data) {
   }
 }
 
-void dsda_DrawLineDisplayHC(void* data) {
+void dsda_DrawLineDisplayHC(CCore* cx, void* data) {
   int i;
 
   local = data;

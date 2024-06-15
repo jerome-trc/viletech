@@ -288,7 +288,7 @@ void M_StatusBar(CCore*, int);
 void M_Automap(CCore*, int);
 void M_InitExtendedHelp(void);
 void M_ExtHelpNextScreen(CCore*, int);
-void M_ExtHelp(int);
+void M_ExtHelp(CCore*, int);
 static int M_GetPixelWidth(const char*);
 void M_DrawKeybnd(CCore*);
 void M_DrawWeapons(CCore*);
@@ -296,7 +296,7 @@ static void M_DrawString(int cx, int cy, int color, const char* ch);
 static void M_DrawMenuString(int,int,int);
 static void M_DrawStringCentered(int,int,int,const char*);
 void M_DrawStatusHUD(CCore*);
-void M_DrawExtHelp(void);
+void M_DrawExtHelp(CCore*);
 void M_DrawAutoMap(CCore*);
 void M_ChangeDemoSmoothTurns(void);
 void M_ChangeTextureParams(void);
@@ -1016,18 +1016,14 @@ void M_DrawSave(CCore* cx)
     M_DrawDelVerify();
 }
 
-//
 // M_Responder calls this when user is finished
-//
-static void M_DoSave(int slot)
+static void M_DoSave(CCore* cx, int slot)
 {
-  G_SaveGame(slot + save_page * g_menu_save_page_size, savegamestrings[slot]);
+  G_SaveGame(cx, slot + save_page * g_menu_save_page_size, savegamestrings[slot]);
   M_ClearMenus();
 }
 
-//
 // User wants to save. Start string input for M_Responder
-//
 static inline dboolean IsMapName(char *str)
 {
     if (strlen(str) == 4 &&
@@ -1311,7 +1307,7 @@ void M_QuickSave(CCore* cx) {
 		return;
 	}
 
-	G_SaveGame(QUICKSAVESLOT, "quicksave");
+	G_SaveGame(cx, QUICKSAVESLOT, "quicksave");
     doom_printf(cx, "quicksave");
 }
 
@@ -3802,7 +3798,7 @@ void M_InitExtendedHelp(void)
 
 // Initialization for the extended HELP screens.
 
-void M_ExtHelp(int choice)
+void M_ExtHelp(CCore* cx, int choice)
 {
   choice = 0;
   extended_help_index = 1; // Start with first extended help screen
@@ -3811,7 +3807,7 @@ void M_ExtHelp(int choice)
 
 // Initialize the drawing part of the extended HELP screens.
 
-void M_DrawExtHelp(void)
+void M_DrawExtHelp(CCore* cx)
 {
   char namebfr[10] = { "HELPnn" }; // CPhipps - make it local & writable
 
@@ -4205,7 +4201,7 @@ static void M_HandleToggles(CCore* cx)
       int value;
 
       value = dsda_ToggleConfig(cx, toggle->config_id, toggle->persist);
-      doom_printf("%s %s", toggle->message, value ? toggle->invert_message ? "off" : "on"
+      doom_printf(cx, "%s %s", toggle->message, value ? toggle->invert_message ? "off" : "on"
                                                   : toggle->invert_message ? "on"  : "off");
 
       if (toggle->play_sound && dsda_IntConfig(dsda_config_movement_toggle_sfx))
@@ -5027,7 +5023,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     {
       saveStringEnter = 0;
       if (savegamestrings[saveSlot][0])
-        M_DoSave(saveSlot);
+        M_DoSave(cx, saveSlot);
     }
     else if (ch > 0)
     {
@@ -5345,7 +5341,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
         int show_alive = dsda_CycleConfig(cx, dsda_config_show_alive_monsters, false);
 
         if (show_alive >= 0 && show_alive < 3)
-          doom_printf("Show Alive Monsters %s", show_alive_message[show_alive]);
+          doom_printf(cx, "Show Alive Monsters %s", show_alive_message[show_alive]);
       }
     }
 

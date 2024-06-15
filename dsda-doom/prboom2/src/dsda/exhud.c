@@ -39,7 +39,7 @@
 typedef struct {
   void (*init)(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
   void (*update)(void* data);
-  void (*draw)(void* data);
+  void (*draw)(CCore*, void* data);
   const char* name;
   const int default_vpt;
   const dboolean strict;
@@ -672,7 +672,7 @@ void dsda_UpdateExHud(void) {
   dsda_UpdateComponents(components);
 }
 
-static void dsda_DrawComponents(exhud_component_t* draw_components) {
+static void dsda_DrawComponents(CCore* cx, exhud_component_t* draw_components) {
   int i;
 
   for (i = 0; i < exhud_component_count; ++i)
@@ -681,25 +681,25 @@ static void dsda_DrawComponents(exhud_component_t* draw_components) {
       !draw_components[i].not_level &&
       (!draw_components[i].strict || !dsda_StrictMode())
     )
-      draw_components[i].draw(draw_components[i].data);
+      draw_components[i].draw(cx, draw_components[i].data);
 }
 
 int global_patch_top_offset;
 
-void dsda_DrawExHud(void) {
+void dsda_DrawExHud(CCore* cx) {
   global_patch_top_offset = M_ConsoleOpen() ? dsda_ConsoleHeight() : 0;
 
   if (automap_on) {
     if (containers[hud_map].loaded)
-      dsda_DrawComponents(containers[hud_map].components);
+      dsda_DrawComponents(cx, containers[hud_map].components);
   }
   else if (dsda_HUDActive())
-    dsda_DrawComponents(components);
+    dsda_DrawComponents(cx, components);
 
   global_patch_top_offset = 0;
 }
 
-void dsda_DrawExIntermission(void) {
+void dsda_DrawExIntermission(CCore* cx) {
   int i;
 
   if (!dsda_HUDActive())
@@ -711,7 +711,7 @@ void dsda_DrawExIntermission(void) {
       components[i].intermission &&
       (!components[i].strict || !dsda_StrictMode())
     )
-      components[i].draw(components[i].data);
+      components[i].draw(cx, components[i].data);
 }
 
 void dsda_ToggleRenderStats(void) {

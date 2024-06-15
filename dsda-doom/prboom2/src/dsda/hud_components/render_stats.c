@@ -91,7 +91,7 @@ void dsda_UpdateRenderStatsHC(void* data) {
   dsda_RefreshHudText(&local->component[1]);
 }
 
-void dsda_DrawRenderStatsHC(void* data) {
+void dsda_DrawRenderStatsHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component[0]);

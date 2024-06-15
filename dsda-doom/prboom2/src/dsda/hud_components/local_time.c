@@ -54,7 +54,7 @@ void dsda_UpdateLocalTimeHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawLocalTimeHC(void* data) {
+void dsda_DrawLocalTimeHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

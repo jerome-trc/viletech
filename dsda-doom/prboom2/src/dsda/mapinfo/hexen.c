@@ -205,7 +205,7 @@ void dsda_HexenUpdateNextMapInfo(void) {
   // TODO
 }
 
-int dsda_HexenResolveCLEV(int* clev, int* episode, int* map) {
+int dsda_HexenResolveCLEV(CCore* cx, int* clev, int* episode, int* map) {
   char* next;
 
   if (!hexen)
@@ -214,7 +214,7 @@ int dsda_HexenResolveCLEV(int* clev, int* episode, int* map) {
   // Catch invalid maps
   next = VANILLA_MAP_LUMP_NAME(*episode, P_TranslateMap(*map));
   if (!W_LumpNameExists(next)) {
-    doom_printf("IDCLEV target not found: %s", next);
+    doom_printf(cx, "IDCLEV target not found: %s", next);
     *clev = false;
   }
   else

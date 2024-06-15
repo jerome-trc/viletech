@@ -114,7 +114,7 @@ void dsda_UpdateWeaponTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawWeaponTextHC(void* data) {
+void dsda_DrawWeaponTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

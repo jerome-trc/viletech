@@ -36,7 +36,7 @@ void dsda_UpdateBigArtifactHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigArtifactHC(void* data) {
+void dsda_DrawBigArtifactHC(CCore* cx, void* data) {
   extern void DrawArtifact(int x, int y, int vpt);
 
   local = data;

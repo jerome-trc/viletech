@@ -96,7 +96,7 @@ void dsda_UpdateBigHealthHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigHealthHC(void* data) {
+void dsda_DrawBigHealthHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

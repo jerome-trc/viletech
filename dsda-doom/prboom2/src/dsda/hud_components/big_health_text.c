@@ -60,7 +60,7 @@ void dsda_UpdateBigHealthTextHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigHealthTextHC(void* data) {
+void dsda_DrawBigHealthTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

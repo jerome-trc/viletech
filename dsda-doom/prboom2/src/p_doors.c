@@ -429,7 +429,7 @@ void T_VerticalHexenDoor(CCore* cx, vldoor_t *door)
 }
 
 void T_VerticalDoor(CCore* cx, void* v) {
-    map_format.t_vertical_door((vldoor_t*)v);
+    map_format.t_vertical_door(cx, (vldoor_t*)v);
 }
 
 ///////////////////////////////////////////////////////////////

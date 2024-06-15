@@ -254,9 +254,9 @@ typedef void (*V_PlotPixelWu_f)(int scrn, int x, int y, byte color, int weight);
 extern V_PlotPixelWu_f V_PlotPixelWu;
 
 void V_AllocScreen(screeninfo_t *scrn);
-void V_AllocScreens();
+void V_AllocScreens(void);
 void V_FreeScreen(screeninfo_t *scrn);
-void V_FreeScreens();
+void V_FreeScreens(void);
 
 const unsigned char* V_GetPlaypal(void);
 void V_FreePlaypal(void);

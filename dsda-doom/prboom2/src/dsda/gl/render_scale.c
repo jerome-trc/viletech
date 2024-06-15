@@ -45,7 +45,7 @@ void dsda_GLGetSDLWindowSize(SDL_Window* sdl_window) {
   SDL_GL_GetDrawableSize(sdl_window, &gl_window_width, &gl_window_height);
 }
 
-void dsda_GLSetRenderViewportParams() {
+void dsda_GLSetRenderViewportParams(void) {
   float viewport_aspect;
 
   viewport_aspect = (float)SCREENWIDTH / (float)SCREENHEIGHT;
@@ -83,15 +83,15 @@ void dsda_GLSetRenderViewportParams() {
   }
 }
 
-void dsda_GLSetRenderViewport() {
+void dsda_GLSetRenderViewport(void) {
   glViewport(gl_viewport_x, gl_viewport_y, gl_viewport_width, gl_viewport_height);
 }
 
-void dsda_GLSetRenderViewportScissor() {
+void dsda_GLSetRenderViewportScissor(void) {
   glScissor(gl_viewport_x, gl_viewport_y, gl_viewport_width, gl_viewport_height);
 }
 
-void dsda_GLSetRenderSceneScissor() {
+void dsda_GLSetRenderSceneScissor(void) {
   glScissor(gl_viewport_x,
             gl_viewport_y + gl_statusbar_height,
             gl_scene_width, gl_scene_height);
@@ -105,7 +105,7 @@ void dsda_GLSetScreenSpaceScissor(int x, int y, int w, int h)
             h * gl_scale_y);
 }
 
-void dsda_GLUpdateStatusBarVisible() {
+void dsda_GLUpdateStatusBarVisible(void) {
   int saved_visible;
   int current_visible;
 
@@ -118,7 +118,7 @@ void dsda_GLUpdateStatusBarVisible() {
   }
 }
 
-void dsda_GLLetterboxClear() {
+void dsda_GLLetterboxClear(void) {
   if (!gl_letterbox_clear_required)
     return;
 
@@ -141,7 +141,7 @@ void dsda_GLLetterboxClear() {
   dsda_GLSetRenderViewportScissor();
 }
 
-void dsda_GLStartMeltRenderTexture() {
+void dsda_GLStartMeltRenderTexture(void) {
   if (!SceneInTexture)
     return;
 
@@ -152,7 +152,7 @@ void dsda_GLStartMeltRenderTexture() {
   glScissor(0, 0, SCREENWIDTH, SCREENHEIGHT);
 }
 
-void dsda_GLEndMeltRenderTexture() {
+void dsda_GLEndMeltRenderTexture(void) {
   if (!SceneInTexture)
     return;
 
@@ -176,7 +176,7 @@ void dsda_GLEndMeltRenderTexture() {
   glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 }
 
-void dsda_GLFullscreenOrtho2D() {
+void dsda_GLFullscreenOrtho2D(void) {
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   glMatrixMode(GL_PROJECTION);

@@ -211,7 +211,7 @@ static dboolean console_ActivateLine(CCore* cx, mobj_t* mobj, int id, dboolean b
   P_MapStart();
   P_UseSpecialLine(cx, mobj, &lines[id], 0, bossaction);
   map_format.cross_special_line(cx, &lines[id], 0, mobj, bossaction);
-  map_format.shoot_special_line(mobj, &lines[id]);
+  map_format.shoot_special_line(cx, mobj, &lines[id]);
   P_MapEnd();
 
   return true;

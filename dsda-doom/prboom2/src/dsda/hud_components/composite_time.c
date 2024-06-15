@@ -93,7 +93,7 @@ void dsda_UpdateCompositeTimeHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawCompositeTimeHC(void* data) {
+void dsda_DrawCompositeTimeHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

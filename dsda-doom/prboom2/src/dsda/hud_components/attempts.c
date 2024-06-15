@@ -55,7 +55,7 @@ void dsda_UpdateAttemptsHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawAttemptsHC(void* data) {
+void dsda_DrawAttemptsHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

@@ -207,8 +207,8 @@ extern void P_CrossZDoomSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean
 extern void P_CrossHereticSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
 extern void P_CrossHexenSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
 
-extern void P_ShootCompatibleSpecialLine(mobj_t *thing, line_t *line);
-extern void P_ShootHexenSpecialLine(mobj_t *thing, line_t *line);
+extern void P_ShootCompatibleSpecialLine(CCore*, mobj_t*, line_t*);
+extern void P_ShootHexenSpecialLine(CCore*, mobj_t*, line_t*);
 
 extern dboolean P_TestActivateZDoomLine(line_t *line, mobj_t *mo, int side, line_activation_t activationType);
 extern dboolean P_TestActivateHexenLine(line_t *line, mobj_t *mo, int side, line_activation_t activationType);
@@ -244,31 +244,61 @@ extern dboolean P_MobjInHereticSector(CCore*, mobj_t *);
 extern dboolean P_MobjInHexenSector(CCore*, mobj_t *);
 extern dboolean P_MobjInZDoomSector(CCore*, mobj_t *);
 
-extern void P_CompatiblePlayerThrust(player_t* player, angle_t angle, fixed_t move);
-extern void P_HereticPlayerThrust(player_t* player, angle_t angle, fixed_t move);
-extern void P_HexenPlayerThrust(player_t* player, angle_t angle, fixed_t move);
+extern void P_CompatiblePlayerThrust(player_t*, angle_t angle, fixed_t move);
+extern void P_HereticPlayerThrust(player_t*, angle_t angle, fixed_t move);
+extern void P_HexenPlayerThrust(player_t*, angle_t angle, fixed_t move);
 
-extern dboolean P_ExecuteZDoomLineSpecial(int special, int * args, line_t * line, int side, mobj_t * mo);
-extern dboolean P_ExecuteHexenLineSpecial(int special, int * args, line_t * line, int side, mobj_t * mo);
+extern dboolean P_ExecuteZDoomLineSpecial(
+	CCore*,
+	int special,
+	int* args,
+	line_t* line,
+	int side,
+	mobj_t* mo
+);
+extern dboolean P_ExecuteHexenLineSpecial(
+	CCore*,
+	int special,
+	int* args,
+	line_t* line,
+	int side,
+	mobj_t* mo
+);
 
-extern void T_VerticalCompatibleDoor(vldoor_t *door);
-extern void T_VerticalHexenDoor(vldoor_t *door);
+extern void T_VerticalCompatibleDoor(CCore*, vldoor_t*);
+extern void T_VerticalHexenDoor(CCore*, vldoor_t*);
 
 extern void T_MoveCompatibleFloor(floormove_t *);
 extern void T_MoveHexenFloor(floormove_t *);
 
-void T_MoveCompatibleCeiling(ceiling_t * ceiling);
-void T_MoveHexenCeiling(ceiling_t * ceiling);
+void T_MoveCompatibleCeiling(ceiling_t*);
+void T_MoveHexenCeiling(ceiling_t*);
 
-int EV_CompatibleTeleport(short thing_id, int tag, line_t *line, int side, mobj_t *thing, int flags);
-int EV_HereticTeleport(short thing_id, int tag, line_t * line, int side, mobj_t * thing, int flags);
+int EV_CompatibleTeleport(
+	CCore*,
+	short thing_id,
+	int tag,
+	line_t* line,
+	int side,
+	mobj_t* thing,
+	int flags
+);
+int EV_HereticTeleport(
+	CCore*,
+	short thing_id,
+	int tag,
+	line_t* line,
+	int side,
+	mobj_t* thing,
+	int flags
+);
 
-void T_BuildHexenPillar(pillar_t * pillar);
-void T_BuildZDoomPillar(pillar_t * pillar);
+void T_BuildHexenPillar(pillar_t*);
+void T_BuildZDoomPillar(pillar_t*);
 
-void T_CompatiblePlatRaise(plat_t * plat);
-void T_HexenPlatRaise(plat_t * plat);
-void T_ZDoomPlatRaise(plat_t * plat);
+void T_CompatiblePlatRaise(plat_t*);
+void T_HexenPlatRaise(plat_t*);
+void T_ZDoomPlatRaise(plat_t*);
 
 void P_CreateTIDList(void);
 void dsda_BuildMobjThingIDList(void);

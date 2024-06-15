@@ -53,7 +53,7 @@ void dsda_UpdateMapCoordinatesHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawMapCoordinatesHC(void* data) {
+void dsda_DrawMapCoordinatesHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

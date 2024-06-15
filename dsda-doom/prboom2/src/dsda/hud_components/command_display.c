@@ -241,7 +241,7 @@ static void dsda_DrawCommandDisplayLine(dsda_text_t* component, int offset) {
   dsda_DrawBasicText(component);
 }
 
-void dsda_DrawCommandDisplayHC(void* data) {
+void dsda_DrawCommandDisplayHC(CCore* cx, void* data) {
   int i;
   int offset = 0;
   dsda_command_display_t* command = current_command;

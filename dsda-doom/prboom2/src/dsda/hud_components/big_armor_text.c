@@ -70,7 +70,7 @@ void dsda_UpdateBigArmorTextHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigArmorTextHC(void* data) {
+void dsda_DrawBigArmorTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

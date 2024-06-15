@@ -62,7 +62,7 @@ void dsda_UpdateSpeedTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawSpeedTextHC(void* data) {
+void dsda_DrawSpeedTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

@@ -74,10 +74,8 @@
 #include "config.h"
 #endif
 
-#include "gl_opengl.h"
 
 #include "z_zone.h"
-#include "v_video.h"
 #include "gl_intern.h"
 #include "r_main.h"
 
@@ -282,7 +280,7 @@ static void AddToSplitBySector(vertexsplit_info_t *vi, splitsbysector_t *splitsb
 //
 //
 //==========================================================================
-void gld_InitVertexData()
+void gld_InitVertexData(void)
 {
   int i, j, k;
   int vertexes_count, gl_vertexsplit_size, pos;
@@ -408,12 +406,7 @@ void gld_UpdateSplitData(sector_t *sector)
   }
 }
 
-//==========================================================================
-//
-//
-//
-//==========================================================================
-void gld_CleanVertexData()
+void gld_CleanVertexData(void)
 {
   if (gl_vertexsplit)
   {

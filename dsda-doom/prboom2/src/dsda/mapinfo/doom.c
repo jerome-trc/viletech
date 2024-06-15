@@ -420,7 +420,7 @@ void dsda_DoomFDrawer(void) {
   }
 }
 
-int dsda_DoomBossAction(mobj_t* mo) {
+int dsda_DoomBossAction(CCore* cx, mobj_t* mo) {
   int i;
 
   if (!current_map)
@@ -442,6 +442,7 @@ int dsda_DoomBossAction(mobj_t* mo) {
   for (i = 0; i < current_map->num_special_actions; ++i)
     if (current_map->special_actions[i].monster_type == mo->type)
       map_format.execute_line_special(
+        cx,
         current_map->special_actions[i].action_special,
         current_map->special_actions[i].special_args,
         NULL, 0, mo

@@ -18,8 +18,10 @@
 #ifndef __DSDA_HUD_COMPONENT_BIG_ARMOR_TEXT__
 #define __DSDA_HUD_COMPONENT_BIG_ARMOR_TEXT__
 
+struct CCore;
+
 void dsda_InitBigArmorTextHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateBigArmorTextHC(void* data);
-void dsda_DrawBigArmorTextHC(void* data);
+void dsda_DrawBigArmorTextHC(struct CCore*, void* data);
 
 #endif

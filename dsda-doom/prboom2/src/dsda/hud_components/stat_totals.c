@@ -177,7 +177,7 @@ void dsda_UpdateStatTotalsHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawStatTotalsHC(void* data) {
+void dsda_DrawStatTotalsHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

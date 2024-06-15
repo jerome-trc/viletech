@@ -134,7 +134,7 @@ void dsda_UpdateAmmoTextHC(void* data) {
   }
 }
 
-void dsda_DrawAmmoTextHC(void* data) {
+void dsda_DrawAmmoTextHC(CCore* cx, void* data) {
   int i;
 
   local = data;

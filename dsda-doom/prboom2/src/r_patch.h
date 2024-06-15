@@ -103,8 +103,8 @@ const rcolumn_t *R_GetPatchColumnClamped(const rpatch_t *patch, int columnIndex)
 const rcolumn_t *R_GetPatchColumn(const rpatch_t *patch, int columnIndex);
 
 
-void R_InitPatches();
-void R_UpdatePlayPal();
-void R_FlushAllPatches();
+void R_InitPatches(void);
+void R_UpdatePlayPal(void);
+void R_FlushAllPatches(void);
 
 #endif

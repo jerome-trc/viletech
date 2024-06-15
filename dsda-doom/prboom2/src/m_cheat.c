@@ -1,7 +1,6 @@
 /* Emacs style mode select   -*- C -*-
  *-----------------------------------------------------------------------------
  *
- *
  *  PrBoom: a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
@@ -42,7 +41,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "p_map.h"
-#include "d_deh.h"  // Ty 03/27/98 - externalized strings
+#include "d_deh.h" // Ty 03/27/98 - externalized strings
 /* cph 2006/07/23 - needs direct access to thinkercap */
 #include "p_tick.h"
 #include "p_user.h"
@@ -61,7 +60,7 @@
 #include "dsda/settings.h"
 #include "dsda/skill_info.h"
 
-#define plyr (players+consoleplayer)     /* the console player */
+#define plyr (players + consoleplayer) // the console player
 
 //-----------------------------------------------------------------------------
 //
@@ -240,8 +239,7 @@ cheatseq_t cheat[] = {
   CHEAT("mapsco", NULL, cht_always, cheat_ddt, 0, true),
   CHEAT("deliverance", NULL, not_demo, cheat_chicken, 0, false),
 
-  // end-of-list marker
-  {NULL}
+  {NULL} // end-of-list marker
 };
 
 //-----------------------------------------------------------------------------
@@ -531,7 +529,7 @@ static void cheat_comp(CCore* cx, void* v)
   else
   {
     G_Compatibility(); // this is missing options checking
-    doom_printf("%s", comp_lev_str[compatibility_level]);
+    doom_printf(cx, "%s", comp_lev_str[compatibility_level]);
   }
 }
 
@@ -1050,7 +1048,7 @@ dboolean M_CheatResponder(CCore* cx, event_t *ev)
     if (dsda_InputActivated(cheat_i->input))
     {
       if (M_CheatAllowed(cheat_i->when))
-        cheat_i->func(cheat_i->arg);
+        cheat_i->func(cx, cheat_i->arg);
 
       return true;
     }

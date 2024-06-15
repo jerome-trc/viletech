@@ -64,7 +64,7 @@ void dsda_UpdateSecretMessageHC(void* data) {
     HUlib_setTextXCenter(&local->component.text);
 }
 
-void dsda_DrawSecretMessageHC(void* data) {
+void dsda_DrawSecretMessageHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

@@ -67,7 +67,7 @@ static int dsda_time_use;
 static int dsda_time_secrets;
 
 dboolean dsda_IsWeapon(mobj_t* thing);
-void dsda_DisplayNotification(const char* msg);
+void dsda_DisplayNotification(CCore*, const char* msg);
 void dsda_ResetMapVariables(void);
 
 dboolean dsda_ILComplete(void) {
@@ -196,14 +196,14 @@ void dsda_DisplayNotifications(CCore* cx) {
 
   if (!dsda_pacifist && dsda_track_pacifist && !dsda_pacifist_note_shown) {
     dsda_pacifist_note_shown = true;
-    dsda_DisplayNotification("Not pacifist!");
+    dsda_DisplayNotification(cx, "Not pacifist!");
   }
 
   if (dsda_100k_on_map && dsda_track_100k && !dsda_100k_note_shown) {
     dsda_TrackFeature(uf_100k);
 
     dsda_100k_note_shown = true;
-    dsda_DisplayNotification("100K achieved!");
+    dsda_DisplayNotification(cx, "100K achieved!");
   }
 }
 
@@ -221,13 +221,13 @@ void dsda_DecomposeMovieTime(dsda_movie_time_t* total_time) {
   total_time->s = (totalleveltimes % (60 * 35)) / 35;
 }
 
-void dsda_DisplayNotification(const char* msg) {
+void dsda_DisplayNotification(CCore* cx, const char* msg) {
   S_StartVoidSound(gamemode == commercial ? sfx_radio : sfx_itmbk);
-  doom_printf("%s", msg);
+  doom_printf(cx, "%s", msg);
 }
 
 void dsda_WatchReborn(int playernum) {
-  dsda_reborn = true;
+    dsda_reborn = true;
 }
 
 void dsda_WatchCard(card_t card) {
@@ -376,7 +376,7 @@ void dsda_WatchIconSpawn(mobj_t* spawned) {
     --dsda_max_kill_requirement;
 }
 
-int dsda_MaxKillRequirement() {
+int dsda_MaxKillRequirement(void) {
   return dsda_max_kill_requirement;
 }
 

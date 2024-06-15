@@ -667,8 +667,7 @@ void gld_FillPatch(int lump, int x, int y, int width, int height, enum patch_tra
 // [XA] some UI functions may run before fullcolormap has
 // been initialized, since that's is done in SetupFrame;
 // use colormaps[0] as a fallback in such a case.
-const lighttable_t *gld_GetActiveColormap()
-{
+const lighttable_t *gld_GetActiveColormap(void) {
   if (V_IsAutomapLightmodeIndexed())
     return colormaps[0];
   else if (fixedcolormap)
@@ -763,8 +762,7 @@ void gld_StartFuzz(int sprite, float ratio)
             (float)color.b/255.0f);
 }
 
-void gld_EndFuzz()
-{
+void gld_EndFuzz(void) {
   glsl_PopFuzzShader();
 }
 

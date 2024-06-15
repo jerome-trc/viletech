@@ -141,7 +141,7 @@ void dsda_UpdateKeysHC(void* data) {
   local = data;
 }
 
-void dsda_DrawKeysHC(void* data) {
+void dsda_DrawKeysHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

@@ -314,7 +314,7 @@ static int G_CarryDouble(double_carry_t c, double value)
   return truncated_result;
 }
 
-static void G_DoSaveGame(dboolean via_cmd);
+static void G_DoSaveGame(CCore*, dboolean via_cmd);
 
 //
 // G_BuildTiccmd
@@ -1573,7 +1573,7 @@ void G_Ticker(CCore* cx) {
           if (ex->actions & XC_SAVE)
           {
             savegameslot = ex->save_slot;
-            G_DoSaveGame(true);
+            G_DoSaveGame(cx, true);
           }
 
           if (ex->actions & XC_LOAD)
@@ -2461,7 +2461,7 @@ void G_DoLoadGame(CCore* cx)
 // Description is a 24 byte text string
 //
 
-void G_SaveGame(int slot, const char *description)
+void G_SaveGame(CCore* cx, int slot, const char *description)
 {
   strcpy(savedescription, description);
 
@@ -2472,11 +2472,11 @@ void G_SaveGame(int slot, const char *description)
   else
   {
     savegameslot = slot;
-    G_DoSaveGame(false);
+    G_DoSaveGame(cx, false);
   }
 }
 
-static void G_DoSaveGame(dboolean via_cmd)
+static void G_DoSaveGame(CCore* cx, dboolean via_cmd)
 {
   char *name;
   char *description;
@@ -2523,7 +2523,7 @@ static void G_DoSaveGame(dboolean via_cmd)
 
   P_SAVE_BYTE(0xe6);   // consistency marker
 
-  doom_printf( "%s", M_WriteFile(name, savebuffer, save_p - savebuffer)
+  doom_printf(cx, "%s", M_WriteFile(name, savebuffer, save_p - savebuffer)
          ? s_GGSAVED /* Ty - externalised */
          : "Game save failed!"); // CPhipps - not externalised
 

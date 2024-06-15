@@ -37,7 +37,6 @@
 // #include "v_video.h"
 
 #include "d_player.h"
-#include "doomdef.h"
 
 // States for the intermission
 
@@ -53,7 +52,7 @@ void WI_Ticker(CCore*);
 
 // Called by main loop,
 // draws the intermission directly into the screen buffer.
-void WI_Drawer(void);
+void WI_Drawer(CCore*);
 
 // Setup for an intermission screen.
 void WI_Start(CCore*, wbstartstruct_t*);

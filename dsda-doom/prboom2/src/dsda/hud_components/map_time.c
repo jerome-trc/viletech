@@ -74,7 +74,7 @@ void dsda_UpdateMapTimeHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawMapTimeHC(void* data) {
+void dsda_DrawMapTimeHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

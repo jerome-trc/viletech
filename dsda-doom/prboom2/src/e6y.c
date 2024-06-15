@@ -135,8 +135,7 @@ const char* WINError(void)
  * in some cases. Added checks to prevent this.
  * Example: dsda-doom.exe -record mydemo -playdemo demoname
  */
-void ParamsMatchingCheck()
-{
+void ParamsMatchingCheck(void) {
   dboolean recording_attempt =
     dsda_Flag(dsda_arg_record) ||
     dsda_Flag(dsda_arg_recordfromto);

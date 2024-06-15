@@ -72,7 +72,7 @@ void dsda_UpdateArmorTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawArmorTextHC(void* data) {
+void dsda_DrawArmorTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

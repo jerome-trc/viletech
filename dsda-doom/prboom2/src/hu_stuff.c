@@ -368,11 +368,8 @@ void HU_Drawer(CCore* cx)
     return;
 
   V_BeginUIDraw();
-
   HU_DrawCrosshair(cx);
-
-  dsda_DrawExHud();
-
+  dsda_DrawExHud(cx);
   V_EndUIDraw();
 }
 

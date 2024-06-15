@@ -138,7 +138,7 @@ void dsda_UpdateLevelSplitsHC(void* data) {
   local = data;
 }
 
-void dsda_DrawLevelSplitsHC(void* data) {
+void dsda_DrawLevelSplitsHC(CCore* cx, void* data) {
   dsda_split_t* split;
 
   local = data;

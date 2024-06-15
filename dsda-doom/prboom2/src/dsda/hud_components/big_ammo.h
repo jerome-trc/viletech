@@ -18,8 +18,10 @@
 #ifndef __DSDA_HUD_COMPONENT_BIG_AMMO__
 #define __DSDA_HUD_COMPONENT_BIG_AMMO__
 
+struct CCore;
+
 void dsda_InitBigAmmoHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateBigAmmoHC(void* data);
-void dsda_DrawBigAmmoHC(void* data);
+void dsda_DrawBigAmmoHC(struct CCore*, void* data);
 
 #endif

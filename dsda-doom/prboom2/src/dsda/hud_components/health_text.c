@@ -56,7 +56,7 @@ void dsda_UpdateHealthTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawHealthTextHC(void* data) {
+void dsda_DrawHealthTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

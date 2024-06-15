@@ -1357,7 +1357,7 @@ void P_CheckCompatibleImpact(mobj_t *thing) {
     (void) thing; // nothing in doom
 }
 
-void P_CheckHereticImpact(mobj_t *thing)
+void P_CheckHereticImpact(CCore* cx, mobj_t *thing)
 {
   int i;
 
@@ -1368,7 +1368,7 @@ void P_CheckHereticImpact(mobj_t *thing)
 
   for (i = numspechit - 1; i >= 0; i--)
   {
-    map_format.shoot_special_line(thing->target, spechit[i]);
+    map_format.shoot_special_line(cx, thing->target, spechit[i]);
   }
 }
 
@@ -2243,7 +2243,7 @@ dboolean PTR_ShootTraverse (CCore* cx, intercept_t* in)
     line_t *li = in->d.line;
 
     if (li->special)
-      map_format.shoot_special_line(shootthing, li);
+      map_format.shoot_special_line(cx, shootthing, li);
 
     if (li->flags & ML_TWOSIDED &&
         !(li->flags & (ML_BLOCKEVERYTHING | ML_BLOCKHITSCAN)))

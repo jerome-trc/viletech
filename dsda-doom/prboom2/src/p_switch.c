@@ -924,7 +924,7 @@ P_UseSpecialLine(CCore* cx, mobj_t* thing, line_t* line, int side, dboolean boss
           case 174:
             // Teleport
             // 174 S1  Teleport(side,thing)
-            if (map_format.ev_teleport(0, line->tag,line,side,thing,TELF_VANILLA))
+            if (map_format.ev_teleport(cx, 0, line->tag,line,side,thing,TELF_VANILLA))
               P_ChangeSwitchTexture(line,0);
             break;
 
@@ -959,7 +959,7 @@ P_UseSpecialLine(CCore* cx, mobj_t* thing, line_t* line, int side, dboolean boss
           case 209:
             // killough 1/31/98: silent teleporter
             //jff 209 S1 SilentTeleport
-            if (map_format.ev_teleport(0, line->tag, line, side, thing, TELF_SILENT))
+            if (map_format.ev_teleport(cx, 0, line->tag, line, side, thing, TELF_SILENT))
               P_ChangeSwitchTexture(line,0);
             break;
 
@@ -1142,7 +1142,7 @@ P_UseSpecialLine(CCore* cx, mobj_t* thing, line_t* line, int side, dboolean boss
           case 195:
             // Teleport
             // 195 SR  Teleport(side,thing)
-            if (map_format.ev_teleport(0, line->tag,line,side,thing,TELF_VANILLA))
+            if (map_format.ev_teleport(cx, 0, line->tag,line,side,thing,TELF_VANILLA))
               P_ChangeSwitchTexture(line,1);
             break;
 
@@ -1170,7 +1170,7 @@ P_UseSpecialLine(CCore* cx, mobj_t* thing, line_t* line, int side, dboolean boss
           case 210:
             // killough 1/31/98: silent teleporter
             //jff 210 SR SilentTeleport
-            if (map_format.ev_teleport(0, line->tag, line, side, thing, TELF_SILENT))
+            if (map_format.ev_teleport(cx, 0, line->tag, line, side, thing, TELF_SILENT))
               P_ChangeSwitchTexture(line,1);
             break;
 

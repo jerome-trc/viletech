@@ -803,7 +803,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
   if (special->special)
   {
-    map_format.execute_line_special(special->special, special->special_args, NULL, 0, player->mo);
+    map_format.execute_line_special(cx, special->special, special->special_args, NULL, 0, player->mo);
     special->special = 0;
   }
 
@@ -877,6 +877,7 @@ static void P_KillMobj(CCore* cx, mobj_t *source, mobj_t *target)
         else
         {
             map_format.execute_line_special(
+                cx,
               target->special, target->special_args, NULL, 0,
               map_info.flags & MI_ACTIVATE_OWN_DEATH_SPECIALS ? target : source
             );
@@ -2896,7 +2897,7 @@ void TryPickupWeapon(CCore* cx, player_t * player, pclass_t weaponClass,
     P_SetMessage(cx, player, message, false);
     if (weapon->special)
     {
-        map_format.execute_line_special(weapon->special, weapon->special_args, NULL, 0, player->mo);
+        map_format.execute_line_special(cx, weapon->special, weapon->special_args, NULL, 0, player->mo);
         weapon->special = 0;
     }
 
@@ -2992,7 +2993,7 @@ static void TryPickupWeaponPiece(CCore* cx, player_t * player, pclass_t matchCla
     // Pick up the weapon piece
     if (pieceMobj->special)
     {
-        map_format.execute_line_special(pieceMobj->special, pieceMobj->special_args, NULL, 0, player->mo);
+        map_format.execute_line_special(cx, pieceMobj->special, pieceMobj->special_args, NULL, 0, player->mo);
         pieceMobj->special = 0;
     }
     if (remove)
@@ -3127,7 +3128,7 @@ static void TryPickupArtifact(CCore* cx, player_t * player, artitype_t artifactT
     {
         if (artifact->special)
         {
-            map_format.execute_line_special(artifact->special, artifact->special_args, NULL, 0, NULL);
+            map_format.execute_line_special(cx, artifact->special, artifact->special_args, NULL, 0, NULL);
             artifact->special = 0;
         }
         player->bonuscount += BONUSADD;
@@ -3231,14 +3232,14 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
             // get removed for coop netplay
             if (special->special)
             {
-                map_format.execute_line_special(special->special, special->special_args, NULL, 0, toucher);
+                map_format.execute_line_special(cx, special->special, special->special_args, NULL, 0, toucher);
                 special->special = 0;
             }
 
-            if (!netgame)
-            {                   // Only remove keys in single player game
-                break;
+            if (!netgame) {
+                break; // Only remove keys in single player game
             }
+
             player->bonuscount += BONUSADD;
             if (player == &players[consoleplayer])
             {
@@ -3441,7 +3442,7 @@ static void Hexen_P_TouchSpecialThing(CCore* cx, mobj_t * special, mobj_t * touc
     }
     if (special->special)
     {
-        map_format.execute_line_special(special->special, special->special_args, NULL, 0, toucher);
+        map_format.execute_line_special(cx, special->special, special->special_args, NULL, 0, toucher);
         special->special = 0;
     }
     if (deathmatch && respawn && !(special->flags & MF_DROPPED))

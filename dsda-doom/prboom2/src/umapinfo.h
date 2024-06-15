@@ -20,6 +20,8 @@
 #ifndef __UMAPINFO_H
 #define __UMAPINFO_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -70,7 +72,7 @@ typedef void (*umapinfo_errorfunc)(const char *fmt, ...);	// this must not retur
 extern struct MapList Maps;
 
 int ParseUMapInfo(const unsigned char *buffer, size_t length, umapinfo_errorfunc err);
-void FreeMapList();
+void FreeMapList(void);
 struct MapProperty *FindProperty(struct MapEntry *map, const char *name);
 
 #ifdef __cplusplus

@@ -22,7 +22,7 @@
 #include "viletech.nim.h"
 
 void Hexen_IN_Ticker(void);
-void Hexen_IN_Drawer(void);
+void Hexen_IN_Drawer(CCore*);
 void Hexen_IN_Start(CCore* cx, wbstartstruct_t*);
 
 #endif

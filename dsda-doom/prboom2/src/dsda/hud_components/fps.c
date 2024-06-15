@@ -52,7 +52,7 @@ void dsda_UpdateFPSHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawFPSHC(void* data) {
+void dsda_DrawFPSHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

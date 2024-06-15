@@ -2281,14 +2281,12 @@ void P_PostProcessCompatibleLineSpecial(line_t *ld)
   }
 }
 
-void P_PostProcessHereticLineSpecial(line_t *ld)
-{
-  // nothing in heretic
+void P_PostProcessHereticLineSpecial(line_t *ld) {
+    (void)ld; // nothing in heretic
 }
 
-void P_PostProcessHexenLineSpecial(line_t *ld)
-{
-  // nothing in hexen
+void P_PostProcessHexenLineSpecial(line_t *ld) {
+    (void)ld; // nothing in hexen
 }
 
 void P_PostProcessZDoomLineSpecial(line_t *ld)
@@ -3371,7 +3369,7 @@ static void P_VerifyLevelComponents(int lumpnum)
   }
 }
 
-static void P_UpdateMapFormat()
+static void P_UpdateMapFormat(void)
 {
   if (udmf_map)
   {

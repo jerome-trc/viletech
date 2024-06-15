@@ -1975,7 +1975,7 @@ void P_TeleportOther(CCore* cx, mobj_t * victim)
         if (victim->flags & MF_COUNTKILL && victim->special)
         {
             map_format.remove_mobj_thing_id(victim);
-            map_format.execute_line_special(victim->special, victim->special_args, NULL, 0, victim);
+            map_format.execute_line_special(cx, victim->special, victim->special_args, NULL, 0, victim);
             victim->special = 0;
         }
 

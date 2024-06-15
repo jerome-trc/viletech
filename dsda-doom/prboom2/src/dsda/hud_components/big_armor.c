@@ -105,7 +105,7 @@ void dsda_UpdateBigArmorHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigArmorHC(void* data) {
+void dsda_DrawBigArmorHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

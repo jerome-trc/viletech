@@ -7207,7 +7207,7 @@ void A_FreezeDeath(CCore* cx, mobj_t* actor)
     else if (actor->flags & MF_COUNTKILL && actor->special)
     {
         // Initiate monster death actions.
-        map_format.execute_line_special(actor->special, actor->special_args, NULL, 0, actor);
+        map_format.execute_line_special(cx, actor->special, actor->special_args, NULL, 0, actor);
     }
 }
 

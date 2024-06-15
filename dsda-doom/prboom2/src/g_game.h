@@ -49,7 +49,7 @@ void G_DeferedPlayDemo(CCore*, const char *demo); // CPhipps - const
 void G_LoadGame(int slot); // killough 5/15/98
 void G_ForcedLoadGame(void);  // killough 5/15/98: forced loadgames
 void G_DoLoadGame(CCore*);
-void G_SaveGame(int slot, const char *description); // Called by M_Responder.
+void G_SaveGame(CCore*, int slot, const char *description); // Called by M_Responder.
 void G_BeginRecording(CCore*);
 void G_ExitLevel(int position);
 void G_SecretExitLevel(int position);

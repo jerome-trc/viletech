@@ -118,7 +118,7 @@ void dsda_UpdateFreeTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawFreeTextHC(void* data) {
+void dsda_DrawFreeTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

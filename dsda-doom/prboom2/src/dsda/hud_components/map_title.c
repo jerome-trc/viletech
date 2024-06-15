@@ -51,7 +51,7 @@ void dsda_UpdateMapTitleHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawMapTitleHC(void* data) {
+void dsda_DrawMapTitleHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

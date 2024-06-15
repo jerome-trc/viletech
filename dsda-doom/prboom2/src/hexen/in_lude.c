@@ -271,7 +271,7 @@ static void CheckForSkip(void)
     }
 }
 
-void Hexen_IN_Drawer(void)
+void Hexen_IN_Drawer(CCore* cx)
 {
     if (!intermission)
     {
@@ -290,7 +290,7 @@ void Hexen_IN_Drawer(void)
         {
             DrawHubText();
         }
-        dsda_DrawExIntermission();
+        dsda_DrawExIntermission(cx);
     }
     else
     {

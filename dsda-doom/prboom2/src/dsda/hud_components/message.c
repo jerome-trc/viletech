@@ -64,7 +64,7 @@ void dsda_UpdateMessageHC(void* data) {
     HUlib_setTextXCenter(&local->component.text);
 }
 
-void dsda_DrawMessageHC(void* data) {
+void dsda_DrawMessageHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

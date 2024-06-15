@@ -18,8 +18,10 @@
 #ifndef __DSDA_HUD_COMPONENT_ATTEMPTS__
 #define __DSDA_HUD_COMPONENT_ATTEMPTS__
 
+struct CCore;
+
 void dsda_InitAttemptsHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateAttemptsHC(void* data);
-void dsda_DrawAttemptsHC(void* data);
+void dsda_DrawAttemptsHC(struct CCore*, void* data);
 
 #endif

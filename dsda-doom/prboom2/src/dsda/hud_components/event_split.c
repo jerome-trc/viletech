@@ -92,7 +92,7 @@ void dsda_UpdateEventSplitHC(void* data) {
       --dsda_split_state[i].delay;
 }
 
-void dsda_DrawEventSplitHC(void* data) {
+void dsda_DrawEventSplitHC(CCore* cx, void* data) {
   local = data;
 
   if (ticks > 0)

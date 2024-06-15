@@ -148,7 +148,7 @@ void dsda_UpdateMapTotalsHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawMapTotalsHC(void* data) {
+void dsda_DrawMapTotalsHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

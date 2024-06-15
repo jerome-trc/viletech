@@ -18,8 +18,10 @@
 #ifndef __DSDA_HUD_COMPONENT_MAP_TIME__
 #define __DSDA_HUD_COMPONENT_MAP_TIME__
 
+struct CCore;
+
 void dsda_InitMapTimeHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateMapTimeHC(void* data);
-void dsda_DrawMapTimeHC(void* data);
+void dsda_DrawMapTimeHC(struct CCore*, void* data);
 
 #endif

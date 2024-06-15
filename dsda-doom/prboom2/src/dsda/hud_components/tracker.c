@@ -77,7 +77,7 @@ void dsda_UpdateTrackerHC(void* data) {
   }
 }
 
-void dsda_DrawTrackerHC(void* data) {
+void dsda_DrawTrackerHC(CCore* cx, void* data) {
   int i;
 
   local = data;

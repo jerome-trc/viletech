@@ -259,13 +259,13 @@ int dsda_ResolveCLEV(CCore* cx, int* episode, int* map) {
   if (dsda_DoomResolveCLEV(cx, &clev, episode, map))
     return clev;
 
-  if (dsda_HexenResolveCLEV(&clev, episode, map))
+  if (dsda_HexenResolveCLEV(cx, &clev, episode, map))
     return clev;
 
   if (dsda_UResolveCLEV(&clev, episode, map))
     return clev;
 
-  dsda_LegacyResolveCLEV(&clev, episode, map);
+  dsda_LegacyResolveCLEV(cx, &clev, episode, map);
 
   return clev;
 }
@@ -422,7 +422,7 @@ int dsda_FDrawer(void) {
 }
 
 int dsda_BossAction(CCore* cx, mobj_t* mo) {
-  if (dsda_DoomBossAction(mo))
+  if (dsda_DoomBossAction(cx, mo))
     return true;
 
   if (dsda_HexenBossAction(mo))

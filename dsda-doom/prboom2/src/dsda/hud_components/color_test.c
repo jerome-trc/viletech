@@ -78,10 +78,10 @@ void dsda_InitColorTestHC(int x_offset, int y_offset, int vpt, int* args, int ar
 }
 
 void dsda_UpdateColorTestHC(void* data) {
-  // nothing to do
+  (void)data; // nothing to do
 }
 
-void dsda_DrawColorTestHC(void* data) {
+void dsda_DrawColorTestHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

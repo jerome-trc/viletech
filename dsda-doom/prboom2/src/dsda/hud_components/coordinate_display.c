@@ -203,7 +203,7 @@ void dsda_UpdateCoordinateDisplayHC(void* data) {
   dsda_RefreshHudText(&local->dsda_dy_display);
 }
 
-void dsda_DrawCoordinateDisplayHC(void* data) {
+void dsda_DrawCoordinateDisplayHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->dsda_x_display);

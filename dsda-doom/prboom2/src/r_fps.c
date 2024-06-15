@@ -39,15 +39,14 @@
 #include "p_spec.h"
 #include "smooth.h"
 #include "r_fps.h"
-#include "i_system.h"
 #include "i_capture.h"
 #include "e6y.h"
+#include "gl_struct.h"
 
 #include "dsda/build.h"
 #include "dsda/configuration.h"
 #include "dsda/pause.h"
 #include "dsda/scroll.h"
-#include "dsda/settings.h"
 
 #include "hexen/a_action.h"
 
@@ -220,8 +219,7 @@ void R_InterpolateView(player_t *player, fixed_t frac)
   }
 }
 
-void R_ResetViewInterpolation ()
-{
+void R_ResetViewInterpolation(void) {
   NoInterpolateView = true;
 }
 
@@ -327,8 +325,7 @@ static void R_DoAnInterpolation (int i, fixed_t smoothratio)
   }
 }
 
-void R_UpdateInterpolations()
-{
+void R_UpdateInterpolations(void) {
   int i;
   if (!movement_smooth)
     return;
@@ -509,7 +506,7 @@ void R_RestoreInterpolations(void)
   }
 }
 
-void R_ActivateSectorInterpolations()
+void R_ActivateSectorInterpolations(void)
 {
   int i;
   sector_t     *sec;

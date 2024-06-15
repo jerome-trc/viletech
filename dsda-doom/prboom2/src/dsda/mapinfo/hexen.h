@@ -35,7 +35,7 @@ int dsda_HexenSkipDrawShowNextLoc(int* skip);
 void dsda_HexenUpdateMapInfo(void);
 void dsda_HexenUpdateLastMapInfo(void);
 void dsda_HexenUpdateNextMapInfo(void);
-int dsda_HexenResolveCLEV(int* clev, int* episode, int* map);
+int dsda_HexenResolveCLEV(CCore*, int* clev, int* episode, int* map);
 int dsda_HexenResolveINIT(CCore*, int* init);
 int dsda_HexenMusicIndexToLumpNum(int* lump, int music_index);
 int dsda_HexenMapMusic(int* music_index, int* music_lump);

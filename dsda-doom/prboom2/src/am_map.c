@@ -1038,7 +1038,7 @@ dboolean AM_Responder(CCore* cx, event_t* ev) {
   {
     /* Ty 03/27/98 - *not* externalized
      * cph 2001/11/20 - use doom_printf so we don't have our own buffer */
-    doom_printf("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+    doom_printf(cx, "%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
     if (!raven) AM_addMark();
 
     return true;

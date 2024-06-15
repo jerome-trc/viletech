@@ -83,9 +83,9 @@ typedef struct
 {
     thinkClass_t tClass;
     think_t thinkerFunc;
-    void (*writeFunc)();
-    void (*readFunc)();
-    void (*restoreFunc)();
+    void (*writeFunc)(CCore*, void*);
+    void (*readFunc)(CCore*, void*);
+    void (*restoreFunc)(CCore*, void*);
     size_t size;
 } thinkInfo_t;
 
@@ -579,8 +579,9 @@ static void StreamOut_mobj_t(mobj_t *str)
     }
 }
 
-static void StreamIn_floormove_t(floormove_t *str)
+static void StreamIn_floormove_t(CCore* cx, void* v)
 {
+    floormove_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -637,8 +638,9 @@ static void StreamIn_floormove_t(floormove_t *str)
     str->textureChange = SV_ReadByte();
 }
 
-static void StreamOut_floormove_t(floormove_t *str)
+static void StreamOut_floormove_t(CCore* cx, void* v)
 {
+    floormove_t *str = v;
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -692,8 +694,8 @@ static void StreamOut_floormove_t(floormove_t *str)
     SV_WriteByte(str->textureChange);
 }
 
-static void StreamIn_plat_t(plat_t *str)
-{
+static void StreamIn_plat_t(CCore* cx, void* v) {
+    plat_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -731,8 +733,8 @@ static void StreamIn_plat_t(plat_t *str)
     str->type = SV_ReadLong();
 }
 
-static void StreamOut_plat_t(plat_t *str)
-{
+static void StreamOut_plat_t(CCore* cx, void* v) {
+    plat_t *str = v;
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -767,8 +769,8 @@ static void StreamOut_plat_t(plat_t *str)
     SV_WriteLong(str->type);
 }
 
-static void StreamIn_ceiling_t(ceiling_t *str)
-{
+static void StreamIn_ceiling_t(CCore* cx, void* v) {
+    ceiling_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -798,8 +800,9 @@ static void StreamIn_ceiling_t(ceiling_t *str)
     str->olddirection = SV_ReadLong();
 }
 
-static void StreamOut_ceiling_t(ceiling_t *str)
-{
+static void StreamOut_ceiling_t(CCore* cx, void* v) {
+    ceiling_t *str = v;
+
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -826,8 +829,8 @@ static void StreamOut_ceiling_t(ceiling_t *str)
     SV_WriteLong(str->olddirection);
 }
 
-static void StreamIn_light_t(light_t *str)
-{
+static void StreamIn_light_t(CCore* cx, void* v) {
+    light_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -853,8 +856,8 @@ static void StreamIn_light_t(light_t *str)
     str->count = SV_ReadLong();
 }
 
-static void StreamOut_light_t(light_t *str)
-{
+static void StreamOut_light_t(CCore* cx, void* v) {
+    light_t *str = v;
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -877,8 +880,8 @@ static void StreamOut_light_t(light_t *str)
     SV_WriteLong(str->count);
 }
 
-static void StreamIn_vldoor_t(vldoor_t *str)
-{
+static void StreamIn_vldoor_t(CCore* cx, void* v) {
+    vldoor_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -904,8 +907,10 @@ static void StreamIn_vldoor_t(vldoor_t *str)
     str->topcountdown = SV_ReadLong();
 }
 
-static void StreamOut_vldoor_t(vldoor_t *str)
+static void StreamOut_vldoor_t(CCore* cx, void* v)
 {
+    vldoor_t *str = v;
+
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -928,8 +933,8 @@ static void StreamOut_vldoor_t(vldoor_t *str)
     SV_WriteLong(str->topcountdown);
 }
 
-static void StreamIn_phase_t(phase_t *str)
-{
+static void StreamIn_phase_t(CCore* cx, void* v) {
+    phase_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -943,8 +948,9 @@ static void StreamIn_phase_t(phase_t *str)
     str->base = SV_ReadLong();
 }
 
-static void StreamOut_phase_t(phase_t *str)
-{
+static void StreamOut_phase_t(CCore* cx, void* v) {
+    phase_t* str = v;
+
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -955,8 +961,8 @@ static void StreamOut_phase_t(phase_t *str)
     SV_WriteLong(str->base);
 }
 
-static void StreamIn_acs_t(acs_t *str)
-{
+static void StreamIn_acs_t(CCore* cx, void* v) {
+    acs_t *str = v;
     int i;
 
     // mobj_t *activator;
@@ -1005,8 +1011,9 @@ static void StreamIn_acs_t(acs_t *str)
     str->ip = SV_ReadLong();
 }
 
-static void StreamOut_acs_t(acs_t *str)
+static void StreamOut_acs_t(CCore* cx, void* v)
 {
+    acs_t *str = v;
     int i;
 
     // mobj_t *activator;
@@ -1053,8 +1060,8 @@ static void StreamOut_acs_t(acs_t *str)
     SV_WriteLong(str->ip);
 }
 
-static void StreamIn_polyevent_t(polyevent_t *str)
-{
+static void StreamIn_polyevent_t(CCore* cx, void* v) {
+    polyevent_t *str = v;
     // int polyobj;
     str->polyobj = SV_ReadLong();
 
@@ -1074,8 +1081,8 @@ static void StreamIn_polyevent_t(polyevent_t *str)
     str->ySpeed = SV_ReadLong();
 }
 
-static void StreamOut_polyevent_t(polyevent_t *str)
-{
+static void StreamOut_polyevent_t(CCore* cx, void* v) {
+    polyevent_t *str = v;
     // int polyobj;
     SV_WriteLong(str->polyobj);
 
@@ -1095,8 +1102,8 @@ static void StreamOut_polyevent_t(polyevent_t *str)
     SV_WriteLong(str->ySpeed);
 }
 
-static void StreamIn_pillar_t(pillar_t *str)
-{
+static void StreamIn_pillar_t(CCore* cx, void* v) {
+    pillar_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -1122,8 +1129,9 @@ static void StreamIn_pillar_t(pillar_t *str)
     str->crush = SV_ReadLong();
 }
 
-static void StreamOut_pillar_t(pillar_t *str)
-{
+static void StreamOut_pillar_t(CCore* cx, void* v) {
+    pillar_t *str = v;
+
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -1146,8 +1154,9 @@ static void StreamOut_pillar_t(pillar_t *str)
     SV_WriteLong(str->crush);
 }
 
-static void StreamIn_polydoor_t(polydoor_t *str)
-{
+static void StreamIn_polydoor_t(CCore* cx, void* v) {
+    polydoor_t *str = v;
+
     // int polyobj;
     str->polyobj = SV_ReadLong();
 
@@ -1180,8 +1189,8 @@ static void StreamIn_polydoor_t(polydoor_t *str)
     str->close = SV_ReadLong();
 }
 
-static void StreamOut_polydoor_t(polydoor_t *str)
-{
+static void StreamOut_polydoor_t(CCore* cx, void* v) {
+    polydoor_t *str = v;
     // int polyobj;
     SV_WriteLong(str->polyobj);
 
@@ -1214,8 +1223,8 @@ static void StreamOut_polydoor_t(polydoor_t *str)
     SV_WriteLong(str->close);
 }
 
-static void StreamIn_planeWaggle_t(planeWaggle_t *str)
-{
+static void StreamIn_planeWaggle_t(CCore* cx, void* v) {
+    planeWaggle_t *str = v;
     int i;
 
     // sector_t *sector;
@@ -1247,8 +1256,9 @@ static void StreamIn_planeWaggle_t(planeWaggle_t *str)
     str->state = SV_ReadLong();
 }
 
-static void StreamOut_planeWaggle_t(planeWaggle_t *str)
-{
+static void StreamOut_planeWaggle_t(CCore* cx, void* v) {
+    planeWaggle_t *str = v;
+
     // sector_t *sector;
     SV_WriteLong(str->sector - sectors);
 
@@ -1487,34 +1497,38 @@ static void UnarchiveMobjs(CCore* cx)
     P_InitCreatureCorpseQueue(cx, true); // true = scan for corpses
 }
 
-static void RestoreFloorWaggle(planeWaggle_t *th)
-{
-  th->sector->floordata = th->thinker.function;
+static void RestoreFloorWaggle(CCore* cx, void* v) {
+    (void)cx;
+    planeWaggle_t *th = v;
+    th->sector->floordata = th->thinker.function;
 }
 
-static void RestoreBuildPillar(pillar_t *th)
-{
-  th->sector->floordata = th->thinker.function;
+static void RestoreBuildPillar(CCore* cx, void* v) {
+    (void)cx;
+    pillar_t *th = v;
+    th->sector->floordata = th->thinker.function;
 }
 
-static void RestoreVerticalDoor(vldoor_t *th)
-{
-  th->sector->ceilingdata = th->thinker.function;
+static void RestoreVerticalDoor(CCore* cx, void* v) {
+    (void)cx;
+    vldoor_t *th = v;
+    th->sector->ceilingdata = th->thinker.function;
 }
 
-static void RestoreMoveFloor(floormove_t *th)
-{
-  th->sector->floordata = th->thinker.function;
+static void RestoreMoveFloor(CCore* cx, void* v) {
+    (void)cx;
+    floormove_t *th;
+    th->sector->floordata = th->thinker.function;
 }
 
-static void RestorePlatRaise(plat_t *plat)
-{
+static void RestorePlatRaise(CCore* cx, void* v) {
+    plat_t *plat = v;
     plat->sector->floordata = T_PlatRaise;
     P_AddActivePlat(plat);
 }
 
-static void RestoreMoveCeiling(ceiling_t *ceiling)
-{
+static void RestoreMoveCeiling(CCore* cx, void* v) {
+    ceiling_t *ceiling = v;
     ceiling->sector->ceilingdata = T_MoveCeiling;
     P_AddActiveCeiling(ceiling);
 }
@@ -1619,7 +1633,7 @@ static thinkInfo_t ThinkerInfo[] = {
     { TC_NULL, NULL, NULL, NULL, NULL, 0 },
 };
 
-static void ArchiveThinkers(void)
+static void ArchiveThinkers(CCore* cx)
 {
     thinker_t *thinker;
     thinkInfo_t *info;
@@ -1633,7 +1647,7 @@ static void ArchiveThinkers(void)
             if (thinker->function == info->thinkerFunc)
             {
                 SV_WriteByte(info->tClass);
-                info->writeFunc(thinker);
+                info->writeFunc(cx, thinker);
                 break;
             }
         }
@@ -1642,7 +1656,7 @@ static void ArchiveThinkers(void)
     SV_WriteByte(TC_NULL);
 }
 
-static void UnarchiveThinkers(void)
+static void UnarchiveThinkers(CCore* cx)
 {
     int tClass;
     thinker_t *thinker;
@@ -1657,12 +1671,13 @@ static void UnarchiveThinkers(void)
             {
                 thinker = Z_MallocLevel(info->size);
                 memset(thinker, 0, info->size);
-                info->readFunc(thinker);
+                info->readFunc(cx, thinker);
                 thinker->function = info->thinkerFunc;
-                if (info->restoreFunc)
-                {
-                    info->restoreFunc(thinker);
+
+                if (info->restoreFunc) {
+                    info->restoreFunc(cx, thinker);
                 }
+
                 P_AddThinker(thinker);
                 break;
             }
@@ -1877,7 +1892,7 @@ static void UnarchivePolyobjs(CCore* cx)
     }
 }
 
-void SV_SaveMap(void)
+void SV_SaveMap(CCore* cx)
 {
     // Initialize the output buffer
     SV_OpenWrite(gamemap);
@@ -1894,7 +1909,7 @@ void SV_SaveMap(void)
     ArchiveWorld();
     ArchivePolyobjs();
     ArchiveMobjs();
-    ArchiveThinkers();
+    ArchiveThinkers(cx);
     ArchiveScripts();
     ArchiveSounds();
     ArchiveMisc();
@@ -1922,7 +1937,7 @@ void SV_LoadMap(CCore* cx)
     UnarchiveWorld();
     UnarchivePolyobjs(cx);
     UnarchiveMobjs(cx);
-    UnarchiveThinkers();
+    UnarchiveThinkers(cx);
     UnarchiveScripts();
     UnarchiveSounds();
     UnarchiveMisc();
@@ -1956,11 +1971,11 @@ void SV_MapTeleport(CCore* cx, int map, int position)
     if (!deathmatch)
     {
         if (dsda_MapCluster(gamemap) == dsda_MapCluster(map))
-        {                       // Same cluster - save map without saving player mobjs
-            SV_SaveMap();
+        { // Same cluster - save map without saving player mobjs
+            SV_SaveMap(cx);
         }
         else
-        {                       // Entering new cluster - clear map archive
+        { // Entering new cluster - clear map archive
             SV_Init();
         }
     }

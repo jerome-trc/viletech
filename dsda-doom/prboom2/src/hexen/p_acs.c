@@ -834,7 +834,7 @@ static int CmdLSpec1(CCore* cx)
 
     special = ReadCodeInt();
     SpecArgs[0] = Pop();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -846,7 +846,7 @@ static int CmdLSpec2(CCore* cx)
     special = ReadCodeInt();
     SpecArgs[1] = Pop();
     SpecArgs[0] = Pop();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -859,7 +859,7 @@ static int CmdLSpec3(CCore* cx)
     SpecArgs[2] = Pop();
     SpecArgs[1] = Pop();
     SpecArgs[0] = Pop();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -873,7 +873,7 @@ static int CmdLSpec4(CCore* cx)
     SpecArgs[2] = Pop();
     SpecArgs[1] = Pop();
     SpecArgs[0] = Pop();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -888,7 +888,7 @@ static int CmdLSpec5(CCore* cx)
     SpecArgs[2] = Pop();
     SpecArgs[1] = Pop();
     SpecArgs[0] = Pop();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -899,7 +899,7 @@ static int CmdLSpec1Direct(CCore* cx)
 
     special = ReadCodeInt();
     SpecArgs[0] = ReadCodeInt();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -911,7 +911,7 @@ static int CmdLSpec2Direct(CCore* cx)
     special = ReadCodeInt();
     SpecArgs[0] = ReadCodeInt();
     SpecArgs[1] = ReadCodeInt();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -924,7 +924,7 @@ static int CmdLSpec3Direct(CCore* cx)
     SpecArgs[0] = ReadCodeInt();
     SpecArgs[1] = ReadCodeInt();
     SpecArgs[2] = ReadCodeInt();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -938,7 +938,7 @@ static int CmdLSpec4Direct(CCore* cx)
     SpecArgs[1] = ReadCodeInt();
     SpecArgs[2] = ReadCodeInt();
     SpecArgs[3] = ReadCodeInt();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }
@@ -953,7 +953,7 @@ static int CmdLSpec5Direct(CCore* cx)
     SpecArgs[2] = ReadCodeInt();
     SpecArgs[3] = ReadCodeInt();
     SpecArgs[4] = ReadCodeInt();
-    map_format.execute_line_special(special, SpecArgs, ACScript->line,
+    map_format.execute_line_special(cx, special, SpecArgs, ACScript->line,
                                     ACScript->side, ACScript->activator);
     return SCRIPT_CONTINUE;
 }

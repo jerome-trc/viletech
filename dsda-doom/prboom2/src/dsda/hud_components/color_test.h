@@ -18,8 +18,10 @@
 #ifndef __DSDA_HUD_COMPONENT_COLOR_TEST__
 #define __DSDA_HUD_COMPONENT_COLOR_TEST__
 
+struct CCore;
+
 void dsda_InitColorTestHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateColorTestHC(void* data);
-void dsda_DrawColorTestHC(void* data);
+void dsda_DrawColorTestHC(struct CCore*, void* data);
 
 #endif

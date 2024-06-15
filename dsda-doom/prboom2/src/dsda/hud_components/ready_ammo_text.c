@@ -66,7 +66,7 @@ void dsda_UpdateReadyAmmoTextHC(void* data) {
   dsda_RefreshHudText(&local->component);
 }
 
-void dsda_DrawReadyAmmoTextHC(void* data) {
+void dsda_DrawReadyAmmoTextHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawBasicText(&local->component);

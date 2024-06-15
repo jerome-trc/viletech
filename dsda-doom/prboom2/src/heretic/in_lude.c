@@ -58,7 +58,7 @@ static void IN_InitStats(void);
 static void IN_DrawOldLevel(void);
 static void IN_DrawYAH(void);
 static void IN_DrawStatBack(void);
-static void IN_DrawSingleStats(void);
+static void IN_DrawSingleStats(CCore*);
 static void IN_DrawCoopStats(void);
 static void IN_DrawDMStats(void);
 static void IN_DrawNumber(int val, int x, int y, int digits);
@@ -494,13 +494,8 @@ void IN_CheckForSkip(void)
     }
 }
 
-//========================================================================
-//
-// IN_Drawer
-//
-//========================================================================
-
-void IN_Drawer(void)
+/// @fn IN_Drawer
+void IN_Drawer(CCore* cx)
 {
     static int oldinterstate;
 
@@ -526,7 +521,7 @@ void IN_Drawer(void)
             switch (gametype)
             {
                 case SINGLE:
-                    IN_DrawSingleStats();
+                    IN_DrawSingleStats(cx);
                     break;
                 case COOPERATIVE:
                     IN_DrawCoopStats();
@@ -655,13 +650,8 @@ void IN_DrawYAH(void)
     }
 }
 
-//========================================================================
-//
-// IN_DrawSingleStats
-//
-//========================================================================
-
-void IN_DrawSingleStats(void)
+/// @fn IN_DrawSingleStats
+void IN_DrawSingleStats(CCore* cx)
 {
     const char *prev_level_name = NameForMap(prevmap);
     const char *next_level_name = NameForMap(nextmap);
@@ -684,7 +674,7 @@ void IN_DrawSingleStats(void)
     x = 160 - MN_TextAWidth("FINISHED") / 2;
     MN_DrTextA("FINISHED", x, 25);
 
-    dsda_DrawExIntermission();
+    dsda_DrawExIntermission(cx);
 
     if (intertime < 30)
     {

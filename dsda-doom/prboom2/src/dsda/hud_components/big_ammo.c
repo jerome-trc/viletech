@@ -73,7 +73,7 @@ void dsda_UpdateBigAmmoHC(void* data) {
   local = data;
 }
 
-void dsda_DrawBigAmmoHC(void* data) {
+void dsda_DrawBigAmmoHC(CCore* cx, void* data) {
   local = data;
 
   dsda_DrawComponent();

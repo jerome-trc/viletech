@@ -33,7 +33,7 @@ int dsda_LegacySkipDrawShowNextLoc(int* skip);
 void dsda_LegacyUpdateMapInfo(void);
 void dsda_LegacyUpdateLastMapInfo(void);
 void dsda_LegacyUpdateNextMapInfo(void);
-int dsda_LegacyResolveCLEV(int* clev, int* episode, int* map);
+int dsda_LegacyResolveCLEV(CCore*, int* clev, int* episode, int* map);
 int dsda_LegacyResolveINIT(int* init);
 int dsda_LegacyMusicIndexToLumpNum(int* lump, int music_index);
 int dsda_LegacyMapMusic(int* music_index, int* music_lump);
