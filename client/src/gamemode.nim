@@ -22,10 +22,6 @@ type
         of sFailed: discard
         of sInit: symTable: SymTable
 
-{.emit: """
-#define nimlf_(n, file) FR_.line = n; FR_.filename = file;
-""".} # Work around what appears to be a Nim compiler bug.
-
 var state {.global.}: StateCase = StateCase(discrim: sUninit)
 
 when defined(linux):
