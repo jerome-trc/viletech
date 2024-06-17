@@ -3,6 +3,8 @@
 
 // Useful utility functions
 
+#include <stddef.h>
+
 #ifdef __GNUC__
 #define ATTR(x) __attribute__(x)
 #else
