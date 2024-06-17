@@ -1,6 +1,6 @@
 ## Permeates the code base with state that is practically "global".
 
-import std/[cmdline, dynlib, files]
+import std/[cmdline, dynlib, files, re]
 from std/paths import Path
 
 import devgui/console, flecs, imgui, plugin
@@ -14,10 +14,6 @@ type
         commercial
         retail
         indeterminate
-    DevGui* {.pure, size: sizeof(cint).} = enum
-        console
-        playground
-        vfs
     Core* {.byref.} = object
         ## Permeates the code base with state that is practically "global".
         loadOrder*: seq[Path] = @[]
@@ -32,6 +28,11 @@ type
         dynLibs*: seq[LibHandle] = @[]
         savedGametick*: int32 = -1
         world*: World
+    # Developer GUI ############################################################
+    DevGui* {.pure, size: sizeof(cint).} = enum
+        console
+        playground
+        vfs
     DGuiCore* = object
         imguiCtx*: ptr ImGuiContext = nil
         open*: bool = when defined(release): false else: true
@@ -39,10 +40,15 @@ type
         left*: DevGui = DevGui.console
         right*: DevGui = DevGui.vfs
         console*: Console
+        vfs*: VfsGui
+    VfsGui* = object
+        filterBuf*: array[256, char]
+        filter*: Regex
 
 proc init*(_: typedesc[Core], argv: cstringArray): Core =
     var cx = Core()
     cx.c.world = World.initWithArgs(paramCount().cint + 1, argv)
+    cx.dgui.vfs.filter = re("", {reIgnoreCase, reStudy})
     return cx
 
 
