@@ -5,7 +5,7 @@ license = "Apache 2.0 OR MIT"
 bin = @["ratboom"]
 skipDirs = @["tests"]
 
-requires "nim == 2.0.4"
+requires "nim == 2.0.6"
 requires "checksums == 0.1.0" # Only used in this file.
 requires "https://github.com/jerome-trc/nimtie#c24b804"
 
