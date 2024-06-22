@@ -28,7 +28,7 @@
 extern menu_t dsda_ConsoleDef;
 
 int dsda_ConsoleHeight(void);
-dboolean dsda_OpenConsole(void);
+dboolean dsda_OpenConsole(CCore*);
 void dsda_UpdateConsoleText(char* text);
 void dsda_UpdateConsole(CCore*, int action);
 void dsda_ExecuteConsoleScript(CCore*, int i);

@@ -128,7 +128,7 @@ static void dsda_ResetConsoleEntry(void) {
   dsda_UpdateConsoleDisplay();
 }
 
-dboolean dsda_OpenConsole(void) {
+dboolean dsda_OpenConsole(CCore* cx) {
   static dboolean firsttime = true;
 
   if (gamestate != GS_LEVEL)
@@ -161,8 +161,8 @@ dboolean dsda_OpenConsole(void) {
 
   dsda_TrackFeature(uf_console);
 
-  M_StartControlPanel();
-  M_SetupNextMenu(&dsda_ConsoleDef);
+  M_StartControlPanel(cx);
+  M_SetupNextMenu(cx, &dsda_ConsoleDef);
   dsda_ResetConsoleEntry();
 
   return true;

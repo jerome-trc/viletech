@@ -1,9 +1,9 @@
 ## Permeates the code base with state that is practically "global".
 
-import std/[cmdline, dynlib, files, re]
+import std/[cmdline, deques, dynlib, files, re]
 from std/paths import Path
 
-import devgui/console, flecs, imgui, plugin
+import flecs, imgui, plugin
 
 const baseScreenWidth*: int = 320
 
@@ -41,6 +41,19 @@ type
         right*: DevGui = DevGui.vfs
         console*: Console
         vfs*: VfsGui
+    ConsoleHistoryKind* {.pure.} = enum
+        log
+        submission
+        toast
+    ConsoleHistoryItem* = object
+        case discrim*: ConsoleHistoryKind
+        of log: log*: string
+        of submission: submission*: string
+        of toast: toast*: string
+    Console* = object
+        inputBuf*: array[256, char]
+        history*: Deque[ConsoleHistoryItem]
+        inputHistory*: Deque[string]
     VfsGui* = object
         filterBuf*: array[256, char]
         filter*: Regex
@@ -76,19 +89,30 @@ proc loadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =
         onEngineInit()
 
 
-proc addConsoleToast*(self: var CCore, msg: cstring) {.exportc: "vt_$1".} =
-    self.core.dgui.console.addToast($msg)
-
-
 proc unloadDynLibs*(cx: var CCore) {.exportc: "vt_$1".} =
     for dylib in cx.dynLibs:
         unloadLib(dylib)
 
+
+proc addToHistory*(self: var Console, item: sink ConsoleHistoryItem) =
+    if self.history.len > 1024:
+        self.history.popFirst()
+
+    self.history.addLast(item)
+
+
+proc log*(self: var Console, msg: string) =
+    echo(msg)
+    self.addToHistory(ConsoleHistoryItem(discrim: ConsoleHistoryKind.log, log: msg))
+
+
 # Accessors ####################################################################
 
-proc flavor*(self {.byref.}: Core): Flavor {.inline.} = self.c.flavor
+proc console*(self: var Core): var Console {.inline.} = self.dgui.console
 proc dynLibPaths*(self: var Core): var seq[Path] = self.c.dynLibPaths
 proc dynLibs*(self: var Core): var seq[LibHandle] {.inline.} = self.c.dynLibs
+
+proc flavor*(self {.byref.}: Core): Flavor {.inline.} = self.c.flavor
 proc savedGametick*(self {.byref.}: Core): int32 {.inline.} = self.c.savedGametick
 proc world*(self {.byref.}: Core): World {.inline.} = self.c.world
 

@@ -232,7 +232,7 @@ void M_ChooseSkill(CCore*, int choice);
 void M_LoadGame(CCore*, int choice);
 void M_SaveGame(CCore*, int choice);
 void M_Options(CCore*, int choice);
-void M_EndGame(int choice);
+void M_EndGame(CCore*, int choice);
 void M_ReadThis(CCore*, int choice);
 void M_ReadThis2(CCore*, int choice);
 void M_QuitDOOM(CCore*, int choice);
@@ -273,10 +273,10 @@ int  M_StringWidth(const char *string);
 int  M_StringHeight(const char *string);
 void M_DrawTitle(int x, int y, const char *patch, int cm,
                  const char *alttext, int altcm);
-void M_StartMessage(const char *string,void *routine,dboolean input);
-void M_StopMessage(void);
-void M_ChangeMenu(menu_t *menu, menuactive_t mnact);
-void M_ClearMenus (void);
+void M_StartMessage(CCore*, const char *string,void *routine,dboolean input);
+void M_StopMessage(CCore*);
+void M_ChangeMenu(CCore*, menu_t*, menuactive_t);
+void M_ClearMenus(CCore*);
 
 // phares 3/30/98
 // prototypes added to support Setup Menus and Extended HELP screens
@@ -533,26 +533,26 @@ menu_t HelpDef =           // killough 10/98
 void M_ReadThis(CCore* cx, int choice) {
   (void)cx;
   (void)choice;
-  M_SetupNextMenu(&ReadDef1);
+  M_SetupNextMenu(cx, &ReadDef1);
 }
 
 void M_ReadThis2(CCore* cx, int choice) {
   (void)cx;
   (void)choice;
-  M_SetupNextMenu(&ReadDef2);
+  M_SetupNextMenu(cx, &ReadDef2);
 }
 
 void M_FinishReadThis(CCore* cx, int choice) {
   (void)cx;
   (void)choice;
-  M_SetupNextMenu(&MainDef);
+  M_SetupNextMenu(cx, &MainDef);
 }
 
 void M_FinishHelp(CCore* cx, int choice) // killough 10/98
 {
   (void)cx;
   (void)choice;
-  M_SetupNextMenu(&MainDef);
+  M_SetupNextMenu(cx, &MainDef);
 }
 
 //
@@ -621,8 +621,8 @@ void M_DrawEpisode(CCore* cx)
 void M_Episode(CCore* cx, int choice)
 {
   if (gamemode == shareware && choice && !episodes[choice].vanilla) {
-    M_StartMessage(s_SWSTRING, NULL, false); // Ty 03/27/98 - externalized
-    M_SetupNextMenu(&ReadDef1);
+    M_StartMessage(cx, s_SWSTRING, NULL, false); // Ty 03/27/98 - externalized
+    M_SetupNextMenu(cx, &ReadDef1);
     return;
   }
 
@@ -631,7 +631,7 @@ void M_Episode(CCore* cx, int choice)
   if (hexen) // hack hexen class as "episode menu"
     MN_UpdateClass(chosen_episode);
 
-  M_SetupNextMenu(&SkillDef);
+  M_SetupNextMenu(cx, &SkillDef);
 }
 
 /////////////////////////////
@@ -670,7 +670,9 @@ void M_NewGame(CCore* cx, int choice)
     (void)choice;
 
   if (demorecording) {  /* killough 5/26/98: exclude during demo recordings */
-    M_StartMessage("you can't start a new game\n"
+    M_StartMessage(
+        cx,
+        "you can't start a new game\n"
        "while recording a demo!\n\n"PRESSKEY,
        NULL, false); // killough 5/26/98: not externalized
     return;
@@ -678,9 +680,9 @@ void M_NewGame(CCore* cx, int choice)
 
   // Chex Quest disabled the episode select screen, as did Doom II.
   if (num_episodes <= 1 && !hexen)
-    M_SetupNextMenu(&SkillDef);
+    M_SetupNextMenu(cx, &SkillDef);
   else
-    M_SetupNextMenu(&EpiDef);
+    M_SetupNextMenu(cx, &EpiDef);
 }
 
 static int chosen_skill;
@@ -705,7 +707,7 @@ static void M_FinishGameSelection(CCore* cx)
   if (hexen)
     SB_SetClassData();
 
-  M_ClearMenus();
+  M_ClearMenus(cx);
 }
 
 // CPhipps - static
@@ -732,7 +734,7 @@ void M_ChooseSkill(CCore* cx, int choice)
     else
       message = s_NIGHTMARE; // Ty 03/27/98 - externalized
 
-    M_StartMessage(message, M_VerifySkill, true);
+    M_StartMessage(cx, message, M_VerifySkill, true);
 
     return;
   }
@@ -863,6 +865,7 @@ void M_LoadSelect(CCore* cx, int choice)
   if (!dsda_AllowMenuLoad(choice + save_page * g_menu_save_page_size))
   {
     M_StartMessage(
+        cx,
       "you can't load this game\n"
       "under these conditions!\n\n"PRESSKEY,
       NULL, false); // killough 5/26/98: not externalized
@@ -874,7 +877,7 @@ void M_LoadSelect(CCore* cx, int choice)
 
   // killough 3/16/98, 5/15/98: add slot, cmd
   G_LoadGame(choice + save_page * g_menu_save_page_size);
-  M_ClearMenus();
+  M_ClearMenus(cx);
 }
 
 //
@@ -883,18 +886,17 @@ void M_LoadSelect(CCore* cx, int choice)
 
 static char *forced_loadgame_message;
 
-static void M_VerifyForcedLoadGame(int ch)
+static void M_VerifyForcedLoadGame(CCore* cx, int ch)
 {
   if (ch=='y')
     G_ForcedLoadGame();
   Z_Free(forced_loadgame_message);    // free the message Z_Strdup()'ed below
-  M_ClearMenus();
+  M_ClearMenus(cx);
 }
 
-void M_ForcedLoadGame(const char *msg)
-{
-  forced_loadgame_message = Z_Strdup(msg); // Z_Free()'d above
-  M_StartMessage(forced_loadgame_message, M_VerifyForcedLoadGame, true);
+void M_ForcedLoadGame(CCore* cx, const char *msg) {
+    forced_loadgame_message = Z_Strdup(msg); // Z_Free()'d above
+    M_StartMessage(cx, forced_loadgame_message, M_VerifyForcedLoadGame, true);
 }
 
 //
@@ -910,13 +912,14 @@ void M_LoadGame(CCore* cx, int choice)
   if (!dsda_AllowAnyMenuLoad())
   {
     M_StartMessage(
+        cx,
       "you can't load a game\n"
       "under these conditions!\n\n"PRESSKEY,
       NULL, false); // killough 5/26/98: not externalized
     return;
   }
 
-  M_SetupNextMenu(&LoadDef);
+  M_SetupNextMenu(cx, &LoadDef);
   M_ReadSaveStrings();
 }
 
@@ -1020,7 +1023,7 @@ void M_DrawSave(CCore* cx)
 static void M_DoSave(CCore* cx, int slot)
 {
   G_SaveGame(cx, slot + save_page * g_menu_save_page_size, savegamestrings[slot]);
-  M_ClearMenus();
+  M_ClearMenus(cx);
 }
 
 // User wants to save. Start string input for M_Responder
@@ -1073,7 +1076,7 @@ void M_SaveGame(CCore* cx, int choice)
   if (gamestate != GS_LEVEL)
     return;
 
-  M_SetupNextMenu(&SaveDef);
+  M_SetupNextMenu(cx, &SaveDef);
   M_ReadSaveStrings();
 }
 
@@ -1135,11 +1138,9 @@ void M_DrawOptions(CCore* cx)
   V_DrawNamePatch(108, 15, 0, "M_OPTTTL", CR_DEFAULT, VPT_STRETCH);
 }
 
-void M_Options(CCore* cx, int choice)
-{
-    (void)cx;
+void M_Options(CCore* cx, int choice) {
     (void)choice;
-  M_SetupNextMenu(&OptionsDef);
+    M_SetupNextMenu(cx, &OptionsDef);
 }
 
 /////////////////////////////
@@ -1194,7 +1195,7 @@ void M_QuitDOOM(CCore* cx, int choice)
   if (dsda_SkipQuitPrompt())
     M_QuitResponse(true);
   else
-    M_StartMessage(endstring,M_QuitResponse,true);
+    M_StartMessage(cx, endstring, M_QuitResponse, true);
 }
 
 /////////////////////////////
@@ -1253,11 +1254,10 @@ void M_DrawSound(CCore* cx)
   M_DrawThermo(SoundDef.x,SoundDef.y+LINEHEIGHT*(music_vol+1),16,snd_MusicVolume);
 }
 
-void M_Sound(CCore* cx, int choice)
-{
+void M_Sound(CCore* cx, int choice) {
     (void)cx;
     (void)choice;
-  M_SetupNextMenu(&SoundDef);
+    M_SetupNextMenu(cx, &SoundDef);
 }
 
 void M_SfxVol(CCore* cx, int choice)
@@ -1319,6 +1319,7 @@ void M_QuickLoad(CCore* cx)
   if (!dsda_AllowAnyMenuLoad())
   {
     M_StartMessage(
+        cx,
       "you can't load a game\n"
       "under these conditions!\n\n"PRESSKEY,
       NULL, false); // killough 5/26/98: not externalized
@@ -1328,6 +1329,7 @@ void M_QuickLoad(CCore* cx)
   if (!dsda_AllowMenuLoad(QUICKSAVESLOT))
   {
     M_StartMessage(
+        cx,
       "you can't load this game\n"
       "under these conditions!\n\n"PRESSKEY,
       NULL, false); // killough 5/26/98: not externalized
@@ -1364,18 +1366,17 @@ static void M_EndGameResponse(CCore* cx, dboolean affirmative)
     G_CheckDemoStatus(cx);
 
   currentMenu->lastOn = itemOn;
-  M_ClearMenus ();
-  D_StartTitle ();
+  M_ClearMenus(cx);
+  D_StartTitle();
 }
 
-void M_EndGame(int choice)
-{
-  if (netgame)
-    {
-    M_StartMessage(s_NETEND,NULL,false); // Ty 03/27/98 - externalized
-    return;
+void M_EndGame(CCore* cx, int choice) {
+    if (netgame) {
+        M_StartMessage(cx, s_NETEND, NULL, false); // Ty 03/27/98 - externalized
+        return;
     }
-  M_StartMessage(s_ENDGAME,M_EndGameResponse,true); // Ty 03/27/98 - externalized
+
+    M_StartMessage(cx, s_ENDGAME,M_EndGameResponse,true); // Ty 03/27/98 - externalized
 }
 
 void M_ChangeMessages(CCore* cx)
@@ -2088,9 +2089,9 @@ static void M_DrawInstructions(void)
 
 #define DEFAULT_LIST_Y (INSTRUCTION_Y + 1.5 * menu_font->line_height)
 
-static void M_EnterSetup(menu_t *menu, dboolean *setup_flag, setup_menu_t *setup_menu)
+static void M_EnterSetup(CCore* cx, menu_t *menu, dboolean *setup_flag, setup_menu_t *setup_menu)
 {
-  M_SetupNextMenu(menu);
+  M_SetupNextMenu(cx, menu);
 
   setup_active = true;
   *setup_flag = true;
@@ -2498,11 +2499,9 @@ setup_menu_t build_keys_settings2[] = {
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_KeyBindings(CCore* cx, int choice)
-{
-    (void)cx;
+void M_KeyBindings(CCore* cx, int choice) {
     (void)choice;
-  M_EnterSetup(&KeybndDef, &set_keybnd_active, keys_settings[0]);
+    M_EnterSetup(cx, &KeybndDef, &set_keybnd_active, keys_settings[0]);
 }
 
 // The drawing part of the Key Bindings Setup initialization. Draw the
@@ -2510,7 +2509,7 @@ void M_KeyBindings(CCore* cx, int choice)
 
 void M_DrawKeybnd(CCore* cx)
 {
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   // Set up the Key Binding screen
 
@@ -2567,20 +2566,17 @@ setup_menu_t weap_settings1[] =  // Weapons Settings screen
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_Weapons(CCore* cx, int choice)
-{
-    (void)cx;
+void M_Weapons(CCore* cx, int choice) {
     (void)choice;
-  M_EnterSetup(&WeaponDef, &set_weapon_active, weap_settings[0]);
+    M_EnterSetup(cx, &WeaponDef, &set_weapon_active, weap_settings[0]);
 }
 
 
 // The drawing part of the Weapons Setup initialization. Draw the
 // background, title, instruction line, and items.
 
-void M_DrawWeapons(CCore* cx)
-{
-  M_ChangeMenu(NULL, mnact_full);
+void M_DrawWeapons(CCore* cx) {
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   M_DrawBackground(g_menu_flat, 0); // Draw background
 
@@ -2656,11 +2652,9 @@ setup_menu_t stat_settings2[] =
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_StatusBar(CCore* cx, int choice)
-{
-    (void)cx;
+void M_StatusBar(CCore* cx, int choice) {
     (void)choice;
-  M_EnterSetup(&StatusHUDDef, &set_status_active, stat_settings[0]);
+    M_EnterSetup(cx, &StatusHUDDef, &set_status_active, stat_settings[0]);
 }
 
 // The drawing part of the Status Bar / HUD Setup initialization. Draw the
@@ -2668,7 +2662,7 @@ void M_StatusBar(CCore* cx, int choice)
 
 void M_DrawStatusHUD(CCore* cx)
 {
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   M_DrawBackground(g_menu_flat, 0); // Draw background
 
@@ -2780,11 +2774,9 @@ setup_menu_t auto_settings3[] =  // 3nd AutoMap Settings screen
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_Automap(CCore* cx, int choice)
-{
-    (void)cx;
+void M_Automap(CCore* cx, int choice) {
     (void)choice;
-  M_EnterSetup(&AutoMapDef, &set_auto_active, auto_settings[0]);
+    M_EnterSetup(cx, &AutoMapDef, &set_auto_active, auto_settings[0]);
 }
 
 // Data used by the color palette that is displayed for the player to
@@ -2824,7 +2816,7 @@ static void M_DrawColPal(void)
 
 void M_DrawAutoMap(CCore* cx)
 {
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   M_DrawBackground(g_menu_flat, 0); // Draw background
 
@@ -3130,9 +3122,9 @@ void M_ChangeDemoSmoothTurns(void)
 // locate the first item on the screen where the cursor is allowed to
 // land.
 
-void M_General(CCore* cx, int choice)
-{
-  M_EnterSetup(&GeneralDef, &set_general_active, gen_settings[0]);
+void M_General(CCore* cx, int choice) {
+    (void)choice;
+    M_EnterSetup(cx, &GeneralDef, &set_general_active, gen_settings[0]);
 }
 
 // The drawing part of the General Setup initialization. Draw the
@@ -3140,7 +3132,7 @@ void M_General(CCore* cx, int choice)
 
 void M_DrawGeneral(CCore* cx)
 {
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   M_DrawBackground(g_menu_flat, 0); // Draw background
 
@@ -3662,15 +3654,14 @@ static void M_BuildLevelTable(void)
   INSERT_FINAL_LEVEL_TABLE_ENTRY
 }
 
-void M_LevelTable(CCore* cx, int choice)
-{
+void M_LevelTable(CCore* cx, int choice) {
   M_BuildLevelTable();
-  M_EnterSetup(&LevelTableDef, &level_table_active, level_table_page[0]);
+  M_EnterSetup(cx, &LevelTableDef, &level_table_active, level_table_page[0]);
 }
 
 void M_DrawLevelTable(CCore* cx)
 {
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   M_DrawBackground(g_menu_flat, 0);
 
@@ -3752,7 +3743,7 @@ void M_ExtHelpNextScreen(CCore* cx, int choice)
       // when finished with extended help screens, return to Main Menu
 
       extended_help_index = 1;
-      M_SetupNextMenu(&MainDef);
+      M_SetupNextMenu(cx, &MainDef);
     }
 }
 
@@ -3798,11 +3789,10 @@ void M_InitExtendedHelp(void)
 
 // Initialization for the extended HELP screens.
 
-void M_ExtHelp(CCore* cx, int choice)
-{
-  choice = 0;
-  extended_help_index = 1; // Start with first extended help screen
-  M_SetupNextMenu(&ExtHelpDef);
+void M_ExtHelp(CCore* cx, int choice) {
+    choice = 0;
+    extended_help_index = 1; // Start with first extended help screen
+    M_SetupNextMenu(cx, &ExtHelpDef);
 }
 
 // Initialize the drawing part of the extended HELP screens.
@@ -4066,7 +4056,7 @@ void M_DrawHelp (CCore* cx)
 {
   const int helplump = W_CheckNumForName("HELP");
 
-  M_ChangeMenu(NULL, mnact_full);
+  M_ChangeMenu(cx, NULL, mnact_full);
 
   if (helplump != LUMP_NOT_FOUND && lumpinfo[helplump].source != source_iwad)
   {
@@ -4549,7 +4539,7 @@ static dboolean M_LevelTableResponder(CCore* cx, int ch, int action, event_t* ev
     G_DeferedInitNew(cx, skill, map->episode, map->map);
 
     M_LeaveSetupMenu();
-    M_ClearMenus();
+    M_ClearMenus(cx);
     S_StartVoidSound(g_sfx_swtchx);
 
     return true;
@@ -4698,7 +4688,7 @@ static dboolean M_SetupCommonSelectResponder(CCore* cx, int ch, int action, even
   return false;
 }
 
-static dboolean M_SetupNavigationResponder(int ch, int action, event_t* ev)
+static dboolean M_SetupNavigationResponder(CCore* cx, int ch, int action, event_t* ev)
 {
   setup_menu_t* ptr1 = current_setup_menu + set_menu_itemon;
   setup_menu_t* ptr2 = NULL;
@@ -4817,11 +4807,11 @@ static dboolean M_SetupNavigationResponder(int ch, int action, event_t* ev)
   {
     M_LeaveSetupMenu();
     if (action == MENU_ESCAPE) // Clear all menus
-      M_ClearMenus();
+      M_ClearMenus(cx);
     else // MENU_BACKSPACE = return to Setup Menu
       if (currentMenu->prevMenu)
       {
-        M_ChangeMenu(currentMenu->prevMenu, mnact_nochange);
+        M_ChangeMenu(cx, currentMenu->prevMenu, mnact_nochange);
         itemOn = currentMenu->lastOn;
         S_StartVoidSound(g_sfx_swtchn);
       }
@@ -4904,7 +4894,7 @@ static dboolean M_SetupResponder(CCore* cx, int ch, int action, event_t* ev)
 
   // Not changing any items on the Setup screens. See if we're
   // navigating the Setup menus or selecting an item to change.
-  if (M_SetupNavigationResponder(ch, action, ev))
+  if (M_SetupNavigationResponder(cx, ch, action, ev))
     return true;
 
   return false;
@@ -5079,12 +5069,12 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
         return false;
     }
 
-    M_ChangeMenu(NULL, messageLastMenuActive);
+    M_ChangeMenu(cx, NULL, messageLastMenuActive);
     messageToPrint = 0;
     if (messageRoutine)
       messageRoutine(affirmative);
 
-    M_ChangeMenu(NULL, mnact_inactive);
+    M_ChangeMenu(cx, NULL, mnact_inactive);
     S_StartVoidSound(g_sfx_swtchx);
     return true;
   }
@@ -5101,11 +5091,11 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
 
   // If there is no active menu displayed...
 
-  if (!menuactive) {                                           // phares
-    if (ch == KEYD_F1)                                         //  V
+  if (!menuactive) { // phares
+    if (ch == KEYD_F1) //  V
     {
-      M_StartControlPanel ();
-      M_ChangeMenu(&HelpDef, mnact_nochange);
+      M_StartControlPanel(cx);
+      M_ChangeMenu(cx, &HelpDef, mnact_nochange);
 
       itemOn = 0;
       S_StartVoidSound(g_sfx_swtchn);
@@ -5114,7 +5104,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
 
     if (dsda_InputActivated(dsda_input_savegame))
     {
-      M_StartControlPanel();
+      M_StartControlPanel(cx);
       S_StartVoidSound(g_sfx_swtchn);
       M_SaveGame(cx, 0);
       return true;
@@ -5122,7 +5112,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
 
     if (dsda_InputActivated(dsda_input_loadgame))
     {
-      M_StartControlPanel();
+      M_StartControlPanel(cx);
       S_StartVoidSound(g_sfx_swtchn);
       M_LoadGame(cx, 0);
       return true;
@@ -5130,8 +5120,8 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
 
     if (dsda_InputActivated(dsda_input_soundvolume))
     {
-      M_StartControlPanel ();
-      M_ChangeMenu(&SoundDef, mnact_nochange);
+      M_StartControlPanel(cx);
+      M_ChangeMenu(cx, &SoundDef, mnact_nochange);
       itemOn = sfx_vol;
       S_StartVoidSound(g_sfx_swtchn);
       return true;
@@ -5147,7 +5137,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     if (dsda_InputActivated(dsda_input_endgame))
     {
       S_StartVoidSound(g_sfx_swtchn);
-      M_EndGame(0);
+      M_EndGame(cx, 0);
       return true;
     }
 
@@ -5361,7 +5351,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
   {
     if (ch == KEYD_ESCAPE || action == MENU_ESCAPE) // phares
     {
-      M_StartControlPanel ();
+      M_StartControlPanel(cx);
       S_StartVoidSound(g_sfx_swtchn);
       return true;
     }
@@ -5474,7 +5464,7 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
   if (action == MENU_ESCAPE)                           // phares 3/7/98
   {
     currentMenu->lastOn = itemOn;
-    M_ClearMenus ();
+    M_ClearMenus(cx);
     S_StartVoidSound(g_sfx_swtchx);
     return true;
   }
@@ -5495,18 +5485,18 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
       {
         if (--extended_help_index == 0)
         {
-          M_ChangeMenu(currentMenu->prevMenu, mnact_nochange);
+          M_ChangeMenu(cx, currentMenu->prevMenu, mnact_nochange);
           extended_help_index = 1; // reset
         }
       }
       else
-        M_ChangeMenu(currentMenu->prevMenu, mnact_nochange);
+        M_ChangeMenu(cx, currentMenu->prevMenu, mnact_nochange);
       itemOn = currentMenu->lastOn;
       S_StartVoidSound(g_sfx_swtchn);
     }
     else
     {
-      M_ClearMenus();
+      M_ClearMenus(cx);
       S_StartVoidSound(g_sfx_swtchx);
     }
     return true;
@@ -5630,7 +5620,7 @@ static void M_InitializeEpisodeMenu(void)
     SkillDef.prevMenu = &MainDef;
 }
 
-void M_StartControlPanel (void)
+void M_StartControlPanel(CCore* cx)
 {
   // intro might call this repeatedly
 
@@ -5642,8 +5632,8 @@ void M_StartControlPanel (void)
     M_InitializeEpisodeMenu();
   END_ONCE
 
-  M_ChangeMenu(&MainDef, mnact_float);
-  itemOn = currentMenu->lastOn;   // JDC
+  M_ChangeMenu(cx, &MainDef, mnact_float);
+  itemOn = currentMenu->lastOn; // JDC
 }
 
 //
@@ -5698,7 +5688,7 @@ void M_Drawer (CCore* cx)
     int x, y, max, i;
     int lumps_missing;
 
-    M_ChangeMenu(NULL, mnact_float);
+    M_ChangeMenu(cx, NULL, mnact_float);
 
     if (currentMenu->routine)
       currentMenu->routine(cx);     // call Draw routine
@@ -5756,7 +5746,7 @@ void M_Drawer (CCore* cx)
   V_EndUIDraw();
 }
 
-void M_ChangeMenu(menu_t *menudef, menuactive_t mnact)
+void M_ChangeMenu(CCore* cx, menu_t *menudef, menuactive_t mnact)
 {
   if (menudef)
     currentMenu = menudef;
@@ -5768,11 +5758,16 @@ void M_ChangeMenu(menu_t *menudef, menuactive_t mnact)
     dsda_TrackFeature(uf_menu);
 
   if (SDL_IsTextInputActive()) {
-    if (!(currentMenu && currentMenu->flags & MENUF_TEXTINPUT))
+    bool needTextInput = currentMenu != NULL;
+    needTextInput = needTextInput && currentMenu->flags & MENUF_TEXTINPUT;
+    needTextInput = needTextInput || vt_dguiIsOpen(cx);
+
+    if (!needTextInput) {
       SDL_StopTextInput();
-  }
-  else if (currentMenu && currentMenu->flags & MENUF_TEXTINPUT)
+    }
+  } else if (currentMenu && currentMenu->flags & MENUF_TEXTINPUT) {
     SDL_StartTextInput();
+  }
 }
 
 //
@@ -5780,9 +5775,9 @@ void M_ChangeMenu(menu_t *menudef, menuactive_t mnact)
 //
 // Called when leaving the menu screens for the real world
 
-void M_ClearMenus (void)
+void M_ClearMenus(CCore* cx)
 {
-  M_ChangeMenu(&MainDef, mnact_inactive);
+  M_ChangeMenu(cx, &MainDef, mnact_inactive);
 
   BorderNeedRefresh = true;
 }
@@ -5790,9 +5785,9 @@ void M_ClearMenus (void)
 //
 // M_SetupNextMenu
 //
-void M_SetupNextMenu(menu_t *menudef)
+void M_SetupNextMenu(CCore* cx, menu_t *menudef)
 {
-  M_ChangeMenu(menudef, mnact_nochange);
+  M_ChangeMenu(cx, menudef, mnact_nochange);
   itemOn = currentMenu->lastOn;
 
   BorderNeedRefresh = true;
@@ -5819,20 +5814,20 @@ void M_Ticker (void)
 // Message Routines
 //
 
-void M_StartMessage (const char* string,void* routine,dboolean input)
+void M_StartMessage(CCore* cx, const char* string,void* routine,dboolean input)
 {
   messageLastMenuActive = menuactive;
   messageToPrint = 1;
   messageString = string;
   messageRoutine = routine;
   messageNeedsInput = input;
-  M_ChangeMenu(NULL, mnact_float);
+  M_ChangeMenu(cx, NULL, mnact_float);
   return;
 }
 
-void M_StopMessage(void)
+void M_StopMessage(CCore* cx)
 {
-  M_ChangeMenu(NULL, messageLastMenuActive);
+  M_ChangeMenu(cx, NULL, messageLastMenuActive);
   messageToPrint = 0;
 }
 
@@ -6048,7 +6043,7 @@ void M_Init(CCore* cx)
   M_LoadTextColors();
   M_LoadMenuFont();
 
-  M_ChangeMenu(&MainDef, mnact_inactive);
+  M_ChangeMenu(cx, &MainDef, mnact_inactive);
   itemOn = currentMenu->lastOn;
   whichSkull = 0;
   skullAnimCounter = 10;

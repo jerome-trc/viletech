@@ -5,7 +5,7 @@ import std/[dynlib, paths]
 
 import nimtie, nimtie/config
 
-import core, devgui, platform
+import core, devgui, devgui/console, platform
 
 const afterIncludes = """
 #ifndef NIMBASE_H // If included by Nim, don't expand to anything.

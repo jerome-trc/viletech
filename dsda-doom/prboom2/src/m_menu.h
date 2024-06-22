@@ -69,9 +69,9 @@ void M_Init(CCore*);
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
 
-void M_StartControlPanel (void);
+void M_StartControlPanel(CCore*);
 
-void M_ForcedLoadGame(const char *msg); // killough 5/15/98: forced loadgames
+void M_ForcedLoadGame(CCore*, const char *msg); // killough 5/15/98: forced loadgames
 
 void M_ResetMenu(void);      // killough 11/98: reset main menu ordering
 
@@ -167,7 +167,7 @@ typedef struct menu_s
 #define MENU_ESCAPE    -8
 #define MENU_CLEAR     -9
 
-void M_SetupNextMenu(menu_t*);
+void M_SetupNextMenu(CCore*, menu_t*);
 void M_DrawDelVerify(void);
 void M_ChangeMessages(CCore*);
 

@@ -25,15 +25,15 @@ type OutputLevels* {.size: sizeof(cint).} = enum
     outlvDebug = 8,
 
 proc lprintf*(lvl: OutputLevels, fmt: cstring)
-    {.importc: "lprintf", varargs, cdecl.}
+    {.importc: "lprintf", varargs, cdecl, sideEffect.}
 
 proc iWarn*(error: cstring)
-    {.header: hLPrintF, importc: "I_Warn", varargs, cdecl.}
+    {.header: hLPrintF, importc: "I_Warn", varargs, cdecl, sideEffect.}
 
 # Sound ########################################################################
 
 proc changeMusicByName*(cx: ptr CCore, name: cstring, looping: DBool): DBool
-    {.importc: "S_ChangeMusicByName", header: hSSound.}
+    {.importc: "S_ChangeMusicByName", header: hSSound, sideEffect.}
 
 # WAD I/O ######################################################################
 
@@ -149,3 +149,8 @@ proc `.bytes[]`*(self {.byref.}: Lump, i: Natural): byte =
 
 
 proc len*(self {.byref.}: Lump): int = self.info.size
+
+# Not declared in any header ###################################################
+
+proc clearMenus*()
+    {.importc: "M_ClearMenus", sideEffect.}

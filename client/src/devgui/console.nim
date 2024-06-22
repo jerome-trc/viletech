@@ -1,27 +1,23 @@
-import std/deques
+import std/[deques, parseopt, tables, unicode]
 
-import ../[imgui, stdx]
+import ../[core, imgui, stdx]
+
+import ccmds
 
 type
-    HistoryKind {.pure.} = enum
-        log
-        submission
-        toast
-    HistoryItem = object
-        case discrim: HistoryKind
-        of log: log: string
-        of submission: submission: string
-        of toast: toast: string
-    Console* = object
-        inputBuf: array[256, char]
-        history: Deque[HistoryItem]
-        inputHistory: Deque[string]
+    HistoryKind = ConsoleHistoryKind
+    HistoryItem = ConsoleHistoryItem
 
-proc addToHistory(self: var Console, item: sink HistoryItem)
+const commands = {
+    "exit": (cmd: "exit", fn: ccmdExit),
+    "music.play": (cmd: "music.play", fn: ccmdMusicPlay),
+    "quit": (cmd: "quit", fn: ccmdExit),
+}.toTable
+
 proc inputTextCallback(data: ptr ImGuiInputTextCallbackData): cint {.noconv.}
-proc submit(self: var Console)
+proc submit(self: var Core)
 
-proc draw*(self: var Console, left: bool, menuBarHeight: float32) =
+proc draw*(self: var Core, left: bool, menuBarHeight: float32) =
     let vp = imGuiGetMainViewport()
 
     if left:
@@ -52,22 +48,22 @@ proc draw*(self: var Console, left: bool, menuBarHeight: float32) =
         defer: imGuiEndChild()
 
         var clipper = ImGuiListClipper.init()
-        clipper.begin(self.history.len.cint)
+        clipper.begin(self.console.history.len.cint)
 
         while clipper.step():
             for i in clipper.displayStart ..< clipper.displayEnd:
-                case self.history[i].discrim:
+                case self.console.history[i].discrim:
                 of HistoryKind.log:
-                    imGuiTextUnformatted(self.history[i].log.cStr())
+                    imGuiTextUnformatted(self.console.history[i].log.cStr())
                 of HistoryKind.submission:
-                    imGuiTextUnformatted(self.history[i].submission.cStr())
+                    imGuiTextUnformatted(self.console.history[i].submission.cStr())
                 of HistoryKind.toast:
-                    imGuiTextUnformatted(self.history[i].toast.cStr())
+                    imGuiTextUnformatted(self.console.history[i].toast.cStr())
 
     if imGuiInputText(
         cstring"##console.inputBuf",
-        self.inputBuf[0].addr,
-        self.inputBuf.len.csize_t,
+        self.console.inputBuf[0].addr,
+        self.console.inputBuf.len.csize_t,
         flags =
             ImGuiInputTextFlags.callbackCompletion +
             ImGuiInputTextFlags.callbackHistory +
@@ -84,37 +80,49 @@ proc draw*(self: var Console, left: bool, menuBarHeight: float32) =
     imGuiSetItemDefaultFocus()
 
 
-proc log*(self: var Console, msg: string) =
-    echo(msg)
-    self.addToHistory(HistoryItem(discrim: HistoryKind.log, log: msg))
-
-
-proc addToast*(self: var Console, msg: string) =
-    self.addToHistory(HistoryItem(discrim: HistoryKind.toast, toast: msg))
+proc addConsoleToast*(self: var CCore, msg: cstring) {.exportc: "vt_$1".} =
+    self.core[].console.addToHistory(HistoryItem(discrim: HistoryKind.toast, toast: $msg))
 
 
 # Internal #####################################################################
-
-proc addToHistory(self: var Console, item: sink HistoryItem) =
-    if self.history.len > 1024:
-        self.history.popFirst()
-
-    self.history.addLast(item)
-
 
 proc inputTextCallback(data: ptr ImGuiInputTextCallbackData): cint {.noconv.} =
     echo($data.eventFlag)
     return 0
 
 
-proc submit(self: var Console) =
-    let submission = $cast[cstring](self.inputBuf[0].addr)
+proc submit(self: var Core) =
+    let submission = $cast[cstring](self.console.inputBuf[0].addr)
 
-    if self.inputHistory.len > 256:
-        self.inputHistory.popFirst()
+    if submission.len < 1:
+        echo("$")
+        return
 
-    self.inputHistory.addLast(submission)
+    if self.console.inputHistory.len > 256:
+        self.console.inputHistory.popFirst()
+
+    if self.console.inputHistory.len < 1 or self.console.inputHistory.peekLast != submission:
+        self.console.inputHistory.addLast(submission)
+
+    defer: self.console.inputBuf = default(typeof(self.console.inputBuf))
     let logged = "$ " & submission
     echo(logged)
-    self.addToHistory(HistoryItem(discrim: HistoryKind.submission, submission: logged))
-    self.inputBuf = default(typeof(self.inputBuf))
+    self.console.addToHistory(
+        HistoryItem(discrim: HistoryKind.submission, submission: logged)
+    )
+
+    let halves = submission.split(maxsplit = 1)
+    let cmdName = halves[0]
+
+    let ccmd = try:
+        commands[cmdName]
+    except:
+        self.console.log(cmdName & ": command not found")
+        return
+
+    var args = if halves.len >= 2:
+        initOptParser(halves[1])
+    else:
+        initOptParser("")
+
+    ccmd.fn(self, args)

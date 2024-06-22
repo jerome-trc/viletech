@@ -2313,10 +2313,9 @@ void G_LoadGame(int slot)
 // killough 5/15/98:
 // Consistency Error when attempting to load savegame.
 
-static void G_LoadGameErr(const char *msg)
-{
-  P_FreeSaveBuffer();
-  M_ForcedLoadGame(msg);             // Print message asking for 'Y' to force
+static void G_LoadGameErr(CCore* cx, const char *msg) {
+    P_FreeSaveBuffer();
+    M_ForcedLoadGame(cx, msg); // Print message asking for 'Y' to force
 }
 
 const char * comp_lev_str[MAX_COMPATIBILITY_LEVEL] =
@@ -2414,7 +2413,7 @@ void G_DoLoadGame(CCore* cx)
 
   P_LOAD_X(saveversion);
   if (saveversion != SAVEVERSION && !forced_loadgame) {
-    G_LoadGameErr("Unrecognised savegame version!\nAre you sure? (y/n) ");
+    G_LoadGameErr(cx, "Unrecognised savegame version!\nAre you sure? (y/n) ");
     return;
   }
 
@@ -2434,7 +2433,7 @@ void G_DoLoadGame(CCore* cx)
         strcat(strcat(msg, "Wads expected:\n\n"), (char *) save_p);
       strcat(msg, "\nAre you sure?");
 
-      G_LoadGameErr(msg);
+      G_LoadGameErr(cx, msg);
 
       Z_Free(msg);
 
