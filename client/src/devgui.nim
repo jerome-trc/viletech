@@ -89,12 +89,12 @@ proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
         let menuBarHeight = imGuiGetWindowHeight()
 
         case self.core.dgui.left:
-        of DevGui.console: self.core.dgui.console.draw(true, menuBarHeight)
+        of DevGui.console: console.draw(self.core[], left = true, menuBarHeight)
         of DevGui.playground: discard
         of DevGui.vfs: vfs.draw(self.core[], false, menuBarHeight)
 
         case self.core.dgui.right:
-        of DevGui.console: self.core.dgui.console.draw(false, menuBarHeight)
+        of DevGui.console: console.draw(self.core[], left = false, menuBarHeight)
         of DevGui.playground: discard
         of DevGui.vfs: vfs.draw(self.core[], false, menuBarHeight)
 
