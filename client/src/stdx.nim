@@ -2,20 +2,8 @@
 
 import std/[strformat, times]
 
-proc offset*[T](self: ptr T, count: int): ptr T =
-    let p = cast[uint](self)
-    return cast[ptr T](p + (count * sizeof(T)).uint)
-
-
-proc clear*[T](s: seq[T]) =
-    s.delete(0..(s.len - 1))
-
 type HoursMinSecs* = tuple[hours: int64, mins: int64, secs: int64]
     ## Note that minutes and seconds are both remainders, not totals.
-
-proc elapsed*(time: Time): Duration =
-    getTime() - time
-
 
 proc hoursMinsSecs*(duration: Duration): HoursMinSecs =
     let mins = (duration.inSeconds() / 60).int64
@@ -24,8 +12,33 @@ proc hoursMinsSecs*(duration: Duration): HoursMinSecs =
     return (hours, mins, secs)
 
 
+proc clear*[T](s: seq[T]) =
+    s.delete(0..(s.len - 1))
+
+
 proc cStr*(str {.byref.}: string): cstring =
     return cast[cstring](str[0].addr)
+
+
+proc elapsed*(time: Time): Duration =
+    getTime() - time
+
+
+proc isEmpty*[T](sequence: seq[T]): bool =
+    sequence.len() == 0
+
+
+proc isEmpty*(str: string): bool =
+    str.len() == 0
+
+
+proc isEmpty*[TOpenArray: openArray | varargs](arr: TOpenArray): bool =
+    arr.len() == 0
+
+
+proc offset*[T](self: ptr T, count: int): ptr T =
+    let p = cast[uint](self)
+    return cast[ptr T](p + (count * sizeof(T)).uint)
 
 
 proc subdivideBytes*(size: int): string =
