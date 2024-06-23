@@ -6,6 +6,7 @@ import core, stdx
 
 const hLPrintF = "lprintf.h"
 const hSSound = "s_sound.h"
+const hISystem = "i_system.h"
 const hWWad = "w_wad.h"
 
 type DBool* = distinct cint
@@ -34,6 +35,11 @@ proc iWarn*(error: cstring)
 
 proc changeMusicByName*(cx: ptr CCore, name: cstring, looping: DBool): DBool
     {.importc: "S_ChangeMusicByName", header: hSSound, sideEffect.}
+
+# System #######################################################################
+
+proc doomExeDir*(): cstring
+    {.importc: "I_DoomExeDir", header: hISystem, cdecl, sideEffect.}
 
 # WAD I/O ######################################################################
 

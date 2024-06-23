@@ -3,7 +3,7 @@ from std/os import nil
 from std/strformat import `&`
 import std/[parseopt, random, times]
 
-import src/[compile, core, exports, gamemode, stdx]
+import src/[compile, core, exports, gamemode, platform, stdx]
 
 proc dsdaMain(
     ccx: ptr CCore,
@@ -13,7 +13,7 @@ proc dsdaMain(
 
 # Actual code starts here ######################################################
 
-let startTime = getTime()
+startTime = getTime()
 randomize()
 
 var clArgs = commandLineParams()
