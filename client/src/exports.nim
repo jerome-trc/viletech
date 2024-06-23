@@ -65,6 +65,7 @@ exportProcs(cfg):
     dguiWantsMouse
     loadDynLibs
     processEvent
+    writeEngineTime
     windowIcon
 
 exportSeq(cfg, seq[LibHandle]):

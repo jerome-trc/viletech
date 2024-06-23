@@ -49,6 +49,10 @@
 #define    R_OK    4    /* Check for read permission */
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 extern int interpolation_method;
 extern int ms_to_next_tick;
 dboolean I_StartDisplay(void);
@@ -114,5 +118,9 @@ typedef enum
 typedef void (*atexit_func_t)(void);
 void I_AtExit(atexit_func_t func, dboolean run_if_error,
               const char* name, exit_priority_t priority);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif
