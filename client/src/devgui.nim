@@ -1,6 +1,6 @@
 ## Abstractions over ImGui.
 
-import core, devgui/[console, vfs], imgui
+import core, devgui/[console, vfs], imgui, imports, sdl2
 
 proc dguiSetup*(
     self: var CCore,
@@ -31,6 +31,9 @@ proc dguiFrameBegin*(self: var CCore) {.exportc: "vt_$1".} =
 
 proc dguiDraw*(self: var CCore) {.exportc: "vt_$1".} =
     if not self.core.dgui.open:
+        return
+
+    if SdlWindowFlags.minimized in sdlWindow.getFlags:
         return
 
     if not imGuiBeginMainMenuBar():

@@ -2,11 +2,12 @@
 
 import std/options
 
-import core, stdx
+import core, sdl2, stdx
 
 const hLPrintF = "lprintf.h"
 const hSSound = "s_sound.h"
 const hISystem = "i_system.h"
+const hIVideo = "i_video.h"
 const hWWad = "w_wad.h"
 
 type DBool* = distinct cint
@@ -155,6 +156,11 @@ proc `.bytes[]`*(self {.byref.}: Lump, i: Natural): byte =
 
 
 proc len*(self {.byref.}: Lump): int = self.info.size
+
+# Video ########################################################################
+
+var
+    sdlWindow* {.global, importc: "sdl_window", header: hIVideo.}: ptr SdlWindow
 
 # Not declared in any header ###################################################
 

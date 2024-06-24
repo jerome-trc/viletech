@@ -115,7 +115,7 @@ static void UpdateFocus(void);
 extern const int gl_colorbuffer_bits;
 extern const int gl_depthbuffer_bits;
 
-extern void M_QuitDOOM(int choice);
+extern void M_QuitDOOM(CCore*, int choice);
 int desired_fullscreen;
 int exclusive_fullscreen;
 SDL_Surface *screen;
@@ -421,7 +421,7 @@ while (SDL_PollEvent(Event))
 
   case SDL_QUIT:
     S_StartVoidSound(sfx_swtchn);
-    M_QuitDOOM(0);
+    M_QuitDOOM(cx, 0);
 
   default:
     break;

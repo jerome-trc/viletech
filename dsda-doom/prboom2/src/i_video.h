@@ -56,8 +56,8 @@ void I_PreInitGraphics(void); /* CPhipps - do stuff immediately on start */
 void I_InitScreenResolution(void); /* init resolution */
 void I_SetWindowCaption(void); /* Set the window caption */
 void I_SetWindowIcon(void); /* Set the application icon */
-void I_InitGraphics(CCore*);
-void I_UpdateVideoMode(CCore*);
+void I_InitGraphics(struct CCore*);
+void I_UpdateVideoMode(struct CCore*);
 void I_ShutdownGraphics(void);
 
 /* Takes full 8 bit values. */
@@ -65,9 +65,9 @@ void I_SetPalette(int pal); /* CPhipps - pass down palette number */
 
 void I_QueueFrameCapture(void);
 void I_QueueScreenshot(void);
-void I_HandleCapture(CCore*);
+void I_HandleCapture(struct CCore*);
 
-void I_FinishUpdate(CCore*);
+void I_FinishUpdate(struct CCore*);
 
 int I_ScreenShot (const char *fname);
 // NSM expose lower level screen data grab for vidcap
@@ -79,7 +79,7 @@ unsigned char *I_GrabScreen (void);
  * Quick syncronous operations are performed here.
  * Can call D_PostEvent.
  */
-void I_StartTic (CCore*);
+void I_StartTic (struct CCore*);
 
 /* I_StartFrame
  * Called by D_DoomLoop,
@@ -100,6 +100,6 @@ extern int renderW;		// resolution scaling
 extern int renderH;		// - DTIED
 
 extern dboolean window_focused;
-void UpdateGrab(CCore*);
+void UpdateGrab(struct CCore*);
 
 #endif

@@ -15,6 +15,8 @@ typedef struct _NimString Path;
 
 typedef struct ecs_world_t ecs_world_t;
 
+struct CCore;
+
 typedef struct Core Core;
 typedef void* LibHandle;
 typedef union SdlEvent SdlEvent;
