@@ -151,7 +151,7 @@ unsigned long I_GetRandomTimeSeed(void) {
  */
 const char* I_GetVersionString(char* buf, size_t sz) {
 	snprintf(
-		buf, sz, "%s v%s (https://github.com/kraflab/dsda-doom/)", PACKAGE_NAME, PACKAGE_VERSION
+		buf, sz, "%s v%s (https://github.com/jerome-trc/viletech/)", PACKAGE_NAME, PACKAGE_VERSION
 	);
 	return buf;
 }
