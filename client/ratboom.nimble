@@ -14,8 +14,11 @@ import checksums/md5
 
 proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
     let libDirs = getEnv("VTEC_LIB_DIRS")
+    let sdl2cfg = staticExec("pkg-config --cflags-only-I sdl2")
+
     var cmd = &"nim {libDirs} --cincludes:../engine/src "
     cmd &= "--cincludes:../depend/imgui --cincludes:../depend/flecs "
+    cmd &= &"--passC:'{sdl2cfg}' "
 
     for clib in [
         "dumb",

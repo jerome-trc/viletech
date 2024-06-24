@@ -1,6 +1,6 @@
 ## Compiles ImGui 1.90.5 (231cbee) and wraps its C++ API.
 
-import stdx
+import sdl2, stdx
 
 const includePathFlags = staticExec("pkg-config --cflags-only-I sdl2")
 
@@ -479,19 +479,6 @@ type ImDrawData* {.
 type ImFontAtlas* {.
     importcpp: "ImFontAtlas",
     header: hImGui,
-    incompleteStruct,
-.} = object
-
-type SdlEvent* {.
-    importc: "SDL_Event",
-    header: hImGuiImplSdl2,
-    union,
-    incompleteStruct,
-.} = object
-
-type SdlWindow* {.
-    importc: "SDL_Window",
-    header: hImGuiImplSdl2,
     incompleteStruct,
 .} = object
 
