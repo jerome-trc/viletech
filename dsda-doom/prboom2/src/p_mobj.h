@@ -248,6 +248,9 @@ enum {
   MIF_FAKE = 32, // Not a real thing, transient (e.g., for cheats)
 };
 
+typedef uint64_t ecs_id_t;
+typedef ecs_id_t ecs_entity_t;
+
 // heretic
 typedef struct
 {
@@ -408,6 +411,7 @@ typedef struct mobj_s
     // misc
     byte color;
     const byte* tranmap;
+	ecs_entity_t entity;
 
     // SEE WARNING ABOVE ABOUT POINTER FIELDS!!!
 } mobj_t;
