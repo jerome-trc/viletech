@@ -22,14 +22,13 @@ Session.vim
 # Build-generated files ########################################################
 /debug/
 /target/
-/nimcache/
-/nimdoc/
-/testresults/
+/.zig-cache/
+/zig-out/
 
 # Sample data ##################################################################
 
 # Anything here is useful to have around but too big to track,
-# or keeping it remotely would violate copyright law
+# or keeping it remotely would violate copyright law.
 
 *.[Ii][Ww][Aa][Dd]
 *.[Pp][Ww][Aa][Dd]
