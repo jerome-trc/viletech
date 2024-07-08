@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const zdfs = @import("../depend/build.zdfs.zig");
+
 pub fn build(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -12,6 +14,11 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
+
+    exe.linkLibC();
+    exe.linkLibCpp();
+
+    zdfs.build(b, exe);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
