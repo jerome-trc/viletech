@@ -13,6 +13,10 @@ import std/[cmdline, strformat]
 import checksums/md5
 
 proc build(release: static[bool], checkOnly: bool, skipDsda: bool) =
+    # For "bootstrapping" after purging the CMake build directory.
+    if "../nimcache/viletech.nim.h".fileExists() and not "../build/viletech.nim.h".fileExists():
+        cpFile("../nimcache/viletech.nim.h", "../build/viletech.nim.h")
+
     let libDirs = getEnv("VTEC_LIB_DIRS")
     let sdl2cfg = staticExec("pkg-config --cflags-only-I sdl2")
 
