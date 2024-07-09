@@ -105,6 +105,9 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
         "unicode.cpp",
         "wad.cpp",
         "whres.cpp",
+        "zdfs.h.cpp",
         "zip.cpp",
     } });
+
+    compile.addIncludePath(b.path("depend/zdfs/include"));
 }

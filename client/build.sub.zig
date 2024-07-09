@@ -8,36 +8,28 @@ pub fn build(
     optimize: std.builtin.OptimizeMode,
     test_step: *std.Build.Step,
 ) void {
+    var options = b.addOptions();
+    // TODO: retrieve version stored in build.zig.zon.
+    options.addOption([]const u8, "version", "0.0.0");
+    options.addOption([]const u8, "commit", b.run(&[_][]const u8{
+        "git",
+        "rev-parse",
+        "HEAD",
+    }));
+
     const exe = b.addExecutable(.{
         .name = "viletech",
         .root_source_file = b.path("client/src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    common(b, exe, options);
 
-    exe.linkLibC();
-    exe.linkLibCpp();
-
-    zdfs.build(b, exe);
-
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
     b.installArtifact(exe);
 
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
     const run_cmd = b.addRunArtifact(exe);
-
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
     run_cmd.step.dependOn(b.getInstallStep());
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
@@ -48,13 +40,11 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
+    common(b, exe_check, options);
 
     const check = b.step("check", "Semantic check for ZLS");
     check.dependOn(&exe_check.step);
 
-    // This creates a build step. It will be visible in the `zig build --help` menu,
-    // and can be selected like this: `zig build run`
-    // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
@@ -66,4 +56,16 @@ pub fn build(
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     test_step.dependOn(&run_exe_unit_tests.step);
+}
+
+fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step.Options) void {
+    const zig_args = b.dependency("zig-args", .{});
+
+    compile.linkLibC();
+    compile.linkLibCpp();
+
+    compile.root_module.addImport("zig-args", zig_args.module("args"));
+    compile.root_module.addOptions("meta", meta);
+
+    zdfs.build(b, compile);
 }

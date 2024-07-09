@@ -1,19 +1,47 @@
 const std = @import("std");
+const log = std.log.scoped(.viletech);
+const meta = @import("meta");
+
+const args = @import("zig-args");
+
+const Core = @import("Core.zig");
+
+const Params = struct {
+    help: bool = false,
+    version: bool = false,
+
+    pub const shorthands = .{
+        .h = "help",
+        .V = "version",
+    };
+
+    pub const meta = .{
+        .usage_summary = "[options...]",
+        .option_docs = .{
+            .help = "Print this usage information and then exit",
+            .version = "Print version/compile information and then exit",
+        },
+    };
+};
+
+const Verbs = union(enum) {};
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var cx = try Core.init();
+    defer cx.deinit();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const opts = try args.parseWithVerbForCurrentProcess(Params, Verbs, std.heap.page_allocator, .print);
+    defer opts.deinit();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    if (opts.options.help) {
+        try args.printHelp(Params, "viletech", cx.stdout_file);
+        return;
+    }
 
-    try bw.flush(); // don't forget to flush!
+    if (opts.options.version) {
+        try cx.println("{s} {s}", .{ meta.version, meta.commit });
+        return;
+    }
 }
 
 test "simple test" {
