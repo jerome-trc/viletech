@@ -5,6 +5,7 @@ const meta = @import("meta");
 const args = @import("zig-args");
 
 const Core = @import("Core.zig");
+const gamemode = @import("gamemode.zig");
 
 const Params = struct {
     help: bool = false,
@@ -42,11 +43,6 @@ pub fn main() !void {
         try cx.println("{s} {s}", .{ meta.version, meta.commit });
         return;
     }
-}
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    gamemode.start();
 }
