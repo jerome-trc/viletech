@@ -18,6 +18,9 @@ proc dguiSetup*(
 
 
 proc dguiShutdown*() {.exportc: "vt_$1".} =
+    if currentImGuiContext() == nil:
+        return
+
     imGuiOpenGl3Shutdown()
     imGuiSdl2Shutdown()
     destroyImGuiContext()
