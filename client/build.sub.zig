@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const cimgui = @import("../depend/build.cimgui.zig");
 const zdfs = @import("../depend/build.zdfs.zig");
 
 pub fn build(
@@ -67,5 +68,6 @@ fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step
     compile.root_module.addImport("zig-args", zig_args.module("args"));
     compile.root_module.addOptions("meta", meta);
 
+    cimgui.build(b, compile);
     zdfs.build(b, compile);
 }

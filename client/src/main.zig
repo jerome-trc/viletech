@@ -8,6 +8,13 @@ const Core = @import("Core.zig");
 const gamemode = @import("gamemode.zig");
 
 pub const c = @cImport({
+    @cDefine("CIMGUI_USE_SDL2", {});
+    @cDefine("CIMGUI_DEFINE_ENUMS_AND_STRUCTS", {});
+    @cInclude("cimgui.h");
+    @cInclude("cimgui_impl.h");
+    @cUndef("CIMGUI_USE_SDL2");
+    @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
+
     @cInclude("zdfs/zdfs.h");
 });
 
