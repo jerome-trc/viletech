@@ -7,6 +7,10 @@ const args = @import("zig-args");
 const Core = @import("Core.zig");
 const gamemode = @import("gamemode.zig");
 
+pub const c = @cImport({
+    @cInclude("zdfs/zdfs.h");
+});
+
 const Params = struct {
     help: bool = false,
     version: bool = false,

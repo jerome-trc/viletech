@@ -1,12 +1,12 @@
 const std = @import("std");
 
-const c = @import("c.zig").c;
+const zdfs = @import("zdfs.zig");
 
 const Self = @This();
 const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
 
 allo: std.mem.Allocator,
-fs: *c.zdfs_FileSys,
+fs: zdfs.VirtualFs,
 
 stderr_file: std.fs.File.Writer,
 stderr_bw: StreamWriter,
@@ -19,7 +19,7 @@ pub fn init() !Self {
 
     return .{
         .allo = std.heap.c_allocator,
-        .fs = c.zdfs_fs_new() orelse return error.FileSysInitNull,
+        .fs = try zdfs.VirtualFs.init(),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
@@ -31,7 +31,7 @@ pub fn deinit(self: *Self) void {
     self.stdout_bw.flush() catch {};
     self.stderr_bw.flush() catch {};
 
-    c.zdfs_fs_free(self.fs);
+    self.fs.deinit();
 }
 
 pub fn eprintln(self: *Self, comptime format: []const u8, args: anytype) !void {
