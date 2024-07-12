@@ -3,8 +3,10 @@ const log = std.log.scoped(.viletech);
 const meta = @import("meta");
 
 const args = @import("zig-args");
+const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
+const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
 
 pub const c = @cImport({
@@ -56,4 +58,69 @@ pub fn main() !void {
     }
 
     gamemode.start();
+
+    try sdl.init(.{
+        .video = true,
+        .events = true,
+        .audio = true,
+    });
+    defer sdl.quit();
+
+    var window = try sdl.createWindow(
+        "",
+        .{ .centered = {} },
+        .{ .centered = {} },
+        640,
+        480,
+        .{
+            .vis = .shown,
+        },
+    );
+    defer window.destroy();
+
+    var renderer = try sdl.createRenderer(window, null, .{ .accelerated = true });
+    defer renderer.destroy();
+
+    const im_ctx = c.igCreateContext(null) orelse return;
+    defer c.igDestroyContext(im_ctx);
+
+    const im_io = c.igGetIO();
+    im_io.*.ConfigFlags |= c.ImGuiConfigFlags_NavEnableKeyboard;
+
+    _ = imgui.implSdl2.initForSdlRenderer(window, renderer);
+    defer imgui.implSdl2.shutdown();
+    _ = imgui.implSdlRenderer2.init(renderer);
+    defer imgui.implSdlRenderer2.shutdown();
+
+    c.igStyleColorsDark(null);
+
+    outer: while (true) {
+        while (sdl.pollNativeEvent()) |native_event| {
+            _ = imgui.implSdl2.processEvent(@ptrCast(&native_event));
+
+            switch (sdl.Event.from(native_event)) {
+                .quit => break :outer,
+                else => {},
+            }
+        }
+
+        imgui.implSdlRenderer2.newFrame();
+        imgui.implSdl2.newFrame();
+        c.igNewFrame();
+
+        var b = true;
+        c.igShowDemoWindow(&b);
+
+        c.igRender();
+
+        renderer.setScale(
+            im_io.*.DisplayFramebufferScale.x,
+            im_io.*.DisplayFramebufferScale.y,
+        ) catch {};
+
+        try renderer.setColorRGB(0x00, 0x00, 0x00);
+        try renderer.clear();
+        imgui.implSdlRenderer2.renderDrawData(c.igGetDrawData(), renderer);
+        renderer.present();
+    }
 }

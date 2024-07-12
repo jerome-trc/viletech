@@ -11,6 +11,8 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
         .root = b.path("depend/imgui"),
         .flags = &cxx_flags,
         .files = &[_][]const u8{
+            "imgui_impl_sdl2.cpp",
+            "imgui_impl_sdlrenderer2.cpp",
             "cimgui.cpp",
             "imgui_demo.cpp",
             "imgui_draw.cpp",

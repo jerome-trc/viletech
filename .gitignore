@@ -68,3 +68,6 @@ Session.vim
 
 # flamegraph-rs output
 **/flamegraph.svg
+
+# ImGui user data
+imgui.ini
