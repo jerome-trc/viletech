@@ -12,9 +12,9 @@
         "build.zig",
         "build.zig.zon",
         "src",
-		"LICENSE",
-		"LICENSE-APACHE",
-		"LICENSE-MIT",
-		"README.md",
+        "LICENSE",
+        "LICENSE-APACHE",
+        "LICENSE-MIT",
+        "README.md",
     },
 }
