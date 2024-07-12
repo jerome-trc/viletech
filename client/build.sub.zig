@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const cimgui = @import("../depend/build.cimgui.zig");
+const sdl = @import("../depend/build.sdl.zig");
 const zdfs = @import("../depend/build.zdfs.zig");
 
 pub fn build(
@@ -60,14 +61,17 @@ pub fn build(
 }
 
 fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step.Options) void {
+    const sdl_sdk = sdl.init(b, null);
     const zig_args = b.dependency("zig-args", .{});
 
     compile.linkLibC();
     compile.linkLibCpp();
 
-    compile.root_module.addImport("zig-args", zig_args.module("args"));
-    compile.root_module.addOptions("meta", meta);
-
     cimgui.build(b, compile);
+    sdl_sdk.link(compile, .static);
     zdfs.build(b, compile);
+
+    compile.root_module.addOptions("meta", meta);
+    compile.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
+    compile.root_module.addImport("zig-args", zig_args.module("args"));
 }
