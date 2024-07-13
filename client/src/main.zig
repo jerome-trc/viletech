@@ -7,6 +7,7 @@ const args = @import("zig-args");
 const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
+const devgui = @import("devgui.zig");
 const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
 const platform = @import("platform.zig");
@@ -97,7 +98,7 @@ pub fn main() !void {
 
         for (cx.displays.items) |*display| {
             display.newFrame();
-            c.igShowDemoWindow(null);
+            devgui.draw(&cx, display);
             try display.finishFrame(imgui_io);
         }
     }

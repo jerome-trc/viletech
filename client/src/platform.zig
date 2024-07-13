@@ -1,5 +1,6 @@
 //! Calls into SDL2 to process events, present frames, and manage audio.
 
+const builtin = @import("builtin");
 const std = @import("std");
 const log = std.log.scoped(.platform);
 const meta = @import("meta");
@@ -8,6 +9,7 @@ const c = @import("root").c;
 const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
+const devgui = @import("devgui.zig");
 const imgui = @import("imgui.zig");
 
 const window_icon = @embedFile("viletech.png");
@@ -19,6 +21,19 @@ pub const Display = struct {
     window: sdl.Window,
     renderer: sdl.Renderer,
     im_ctx: *imgui.Context,
+    dgui: struct {
+        open: bool,
+
+        left: devgui.State,
+        right: devgui.State,
+
+        demo_window: bool = false,
+        metrics_window: bool = false,
+        debug_log: bool = false,
+        id_stack_tool_window: bool = false,
+        about_window: bool = false,
+        user_guide: bool = false,
+    },
 
     pub fn init() !Self {
         const window = try sdl.createWindow(
@@ -54,6 +69,7 @@ pub const Display = struct {
             .window = window,
             .renderer = renderer,
             .im_ctx = im_ctx,
+            .dgui = .{ .open = builtin.mode == .Debug, .left = .console, .right = .vfs },
         };
     }
 
