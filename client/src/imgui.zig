@@ -2,9 +2,16 @@
 
 const std = @import("std");
 
+const c = @import("root").c;
 const sdl = @import("sdl2");
 
-const c = @import("root").c;
+const platform = @import("platform.zig");
+
+pub const Error = error{
+    ContextCreateFail,
+};
+
+pub const Context = c.ImGuiContext;
 
 pub const implSdl2 = struct {
     pub fn initForSdlRenderer(window: sdl.Window, renderer: sdl.Renderer) bool {

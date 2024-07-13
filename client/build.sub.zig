@@ -73,5 +73,6 @@ fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step
 
     compile.root_module.addOptions("meta", meta);
     compile.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
+    compile.linkSystemLibrary("sdl2_image");
     compile.root_module.addImport("zig-args", zig_args.module("args"));
 }

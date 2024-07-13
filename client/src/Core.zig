@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const Prng = @import("Prng.zig");
+const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
 
 const Self = @This();
@@ -65,19 +66,22 @@ stderr_bw: StreamWriter,
 stdout_file: std.fs.File.Writer,
 stdout_bw: StreamWriter,
 
+displays: std.ArrayList(platform.Display),
+
 scene: Scene,
 
 pub fn init() !Self {
     const stderr_file = std.io.getStdErr().writer();
     const stdout_file = std.io.getStdOut().writer();
 
-    return .{
+    return Self{
         .allo = std.heap.c_allocator,
         .fs = try zdfs.VirtualFs.init(),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
+        .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
         .scene = Scene{ .frontend = .{} },
     };
 }
