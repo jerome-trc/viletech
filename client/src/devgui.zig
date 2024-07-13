@@ -1,7 +1,11 @@
 //! Abstractions over ImGui for assembling the developer GUI menu bar and windows.
 
+const std = @import("std");
+const log = std.log.scoped(.devgui);
+
 const c = @import("root").c;
 
+const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const Display = @import("platform.zig").Display;
 
@@ -57,13 +61,16 @@ pub fn draw(cx: *Core, display: *Display) void {
         c.igTextUnformatted("Developer Tools", null);
         c.igSeparator();
 
-        if (c.igMenuItem_Bool("Close", null, false, false)) {
+        if (c.igMenuItem_Bool("Close", null, false, true)) {
             display.dgui.open = false;
         }
 
-        if (c.igGetMainViewport()) |vp| {
-            c.igPushItemWidth(vp.*.Size.x * 0.15);
-        }
+        const mainvp = c.igGetMainViewport() orelse {
+            reportErrClipperCtor.call();
+            return;
+        };
+
+        c.igPushItemWidth(mainvp.*.Size.x * 0.15);
 
         const items = [2][*c]const u8{
             "Console",
@@ -95,13 +102,16 @@ pub fn draw(cx: *Core, display: *Display) void {
             }
         }
 
+        c.igPopItemWidth();
+        const menu_bar_height = c.igGetWindowHeight();
+
         switch (display.dgui.left) {
-            .console => {}, // TODO
+            .console => Console.draw(cx, true, menu_bar_height),
             .vfs => {}, // TODO
         }
 
         switch (display.dgui.right) {
-            .console => {}, // TODO
+            .console => Console.draw(cx, false, menu_bar_height),
             .vfs => {}, // TODO
         }
 
@@ -114,9 +124,17 @@ pub fn draw(cx: *Core, display: *Display) void {
             _ = c.igCheckbox("Metrics", &display.dgui.metrics_window);
             _ = c.igCheckbox("User Guide", &display.dgui.user_guide);
         }
-
-        c.igPopItemWidth();
     }
+}
 
-    _ = cx;
+pub var reportErrGetMainViewport = std.once(doReportErrGetMainViewport);
+
+fn doReportErrGetMainViewport() void {
+    log.err("`igGetMainViewport` failed", .{});
+}
+
+pub var reportErrClipperCtor = std.once(doReportErrClipperCtor);
+
+fn doReportErrClipperCtor() void {
+    log.err("`ImGuiListClipper::ImGuiListClipper` failed", .{});
 }

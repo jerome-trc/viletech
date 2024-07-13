@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Console = @import("devgui/Console.zig");
 const Prng = @import("Prng.zig");
 const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
@@ -67,7 +68,9 @@ stdout_file: std.fs.File.Writer,
 stdout_bw: StreamWriter,
 
 displays: std.ArrayList(platform.Display),
+console: Console,
 
+exit: bool,
 scene: Scene,
 
 pub fn init() !Self {
@@ -82,6 +85,8 @@ pub fn init() !Self {
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
         .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
+        .console = try Console.init(),
+        .exit = false,
         .scene = Scene{ .frontend = .{} },
     };
 }
@@ -91,6 +96,8 @@ pub fn deinit(self: *Self) void {
     self.stderr_bw.flush() catch {};
 
     self.fs.deinit();
+    self.displays.deinit();
+    self.console.deinit();
 }
 
 pub fn eprintln(self: *Self, comptime format: []const u8, args: anytype) !void {

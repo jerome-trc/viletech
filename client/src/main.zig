@@ -101,5 +101,9 @@ pub fn main() !void {
             devgui.draw(&cx, display);
             try display.finishFrame(imgui_io);
         }
+
+        if (cx.exit) {
+            break :outer;
+        }
     }
 }
