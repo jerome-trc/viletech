@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const log = std.log.scoped(.main);
 const meta = @import("meta");
@@ -9,6 +10,12 @@ const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
 const platform = @import("platform.zig");
+
+comptime {
+    if (builtin.mode == .ReleaseFast or builtin.mode == .ReleaseSmall) {
+        @compileError("ReleaseFast and ReleaseSmall builds are currently unsupported");
+    }
+}
 
 pub const c = @cImport({
     @cDefine("CIMGUI_USE_SDL2", {});
