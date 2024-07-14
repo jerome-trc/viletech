@@ -126,7 +126,7 @@ prnd_index: usize,
 pub fn init(cx: *const Core, hexen: bool) Self {
     return Self{
         .cx = cx,
-        .table = if (hexen) rndtable_hexen else rndtable_doom,
+        .table = if (hexen) &rndtable_hexen else &rndtable_doom,
         .seeds = SeedArray.initFill((1993 * 2 + 1) * 69069),
         .rnd_index = 0,
         .prnd_index = 0,
@@ -134,9 +134,10 @@ pub fn init(cx: *const Core, hexen: bool) Self {
 }
 
 pub fn get(self: *Self, class: RngClass) i32 {
+    var cls = class;
     var compat: usize = undefined;
 
-    if (class == .misc) {
+    if (cls == .misc) {
         self.prnd_index = (self.prnd_index + 1) & 255;
         compat = self.prnd_index;
     } else {
@@ -146,22 +147,22 @@ pub fn get(self: *Self, class: RngClass) i32 {
 
     var boom: u32 = undefined;
 
-    if ((class != .misc) and (self.cx.scene.game.demo_insurance == 0)) {
-        class = .all_in_one;
+    if ((cls != .misc) and (self.cx.scene.game.demo_insurance == 0)) {
+        cls = .all_in_one;
     }
 
-    boom = self.seeds.get(class);
-    self.seeds.set(class, boom * 166452 + 221297 + @intFromEnum(class) * 2);
+    boom = self.seeds.get(cls);
+    self.seeds.set(cls, boom * 166452 + 221297 + @intFromEnum(cls) * 2);
 
-    if (self.cx.demo_compat()) {
-        return self.rnd_index[compat];
+    if (self.cx.demoCompat()) {
+        return self.table[compat];
     }
 
     boom >>= 20;
 
-    if (self.cx.demo_insurance != 0) {
-        boom += self.cx.boom_logictic() * 7;
+    if (self.cx.scene.game.demo_insurance != 0) {
+        boom += std.math.lossyCast(u32, self.cx.boomLogicTick()) * 7;
     }
 
-    return boom & 255;
+    return @bitCast(boom & 255);
 }

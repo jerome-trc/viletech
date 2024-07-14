@@ -3,7 +3,7 @@
 const std = @import("std");
 const log = std.log.scoped(.devgui);
 
-const c = @import("root").c;
+const c = @import("main.zig").c;
 
 const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");

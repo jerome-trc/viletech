@@ -55,6 +55,7 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
+    common(b, exe_unit_tests, options);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     test_step.dependOn(&run_exe_unit_tests.step);

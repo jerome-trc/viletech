@@ -2,7 +2,7 @@
 
 const std = @import("std");
 
-const c = @import("root").c;
+const c = @import("main.zig").c;
 const sdl = @import("sdl2");
 
 const platform = @import("platform.zig");

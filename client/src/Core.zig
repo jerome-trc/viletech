@@ -1,42 +1,13 @@
 const std = @import("std");
 
 const Console = @import("devgui/Console.zig");
+const game = @import("game.zig");
 const Prng = @import("Prng.zig");
 const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
 
 const Self = @This();
 const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
-
-pub const GameTick = i32;
-
-pub const Compat = enum {
-    doomV1p2,
-    doomV1p666,
-    doom2V1p9,
-    ultDoom,
-    finalDoom,
-    dosDoom,
-    tasDoom,
-    boomCompat,
-    boomV2p01,
-    boomV2p02,
-    lxDoom1,
-    mbf,
-    prboom1,
-    prboom2,
-    prboom3,
-    prboom4,
-    prboom5,
-    prboom6,
-    placeholder18,
-    placeholder19,
-    placeholder20,
-    mbf21,
-
-    const boom = @This().boomV2p01;
-    const best = @This().mbf21;
-};
 
 /// An untagged union is used here on the assumption that the engine is compiled
 /// in ReleaseSafe mode. Thus most code can easily get at any field without worrying
@@ -47,15 +18,15 @@ pub const Scene = union {
     },
     /// Includes menus.
     game: struct {
-        compat: Compat,
-        game_tick: GameTick,
-        boom_basetick: GameTick,
-        true_basetick: GameTick,
-        /// In game ticks.
-        level_time: GameTick,
+        compat: game.Compat,
+        demo_insurance: u8,
+        boom_basetick: game.Tick,
+        game_tick: game.Tick,
+        level_time: game.Tick,
         /// Sum of intermission times in game ticks at second resolution.
-        level_times_total: GameTick,
+        level_times_total: game.Tick,
         prng: Prng,
+        true_basetick: game.Tick,
     },
 };
 
@@ -110,14 +81,14 @@ pub fn println(self: *Self, comptime format: []const u8, args: anytype) !void {
     try self.stdout_bw.flush();
 }
 
-pub fn boom_compat(self: *const Self) bool {
-    return @intFromEnum(self.scene.game.compat) <= @intFromEnum(Compat.boomCompat);
+pub fn boomCompat(self: *const Self) bool {
+    return @intFromEnum(self.scene.game.compat) <= @intFromEnum(game.Compat.boom_compat);
 }
 
-pub fn demo_compat(self: *const Self) bool {
-    return @intFromEnum(self.scene.game.compat) < @intFromEnum(Compat.boomCompat);
+pub fn demoCompat(self: *const Self) bool {
+    return @intFromEnum(self.scene.game.compat) < @intFromEnum(game.Compat.boom_compat);
 }
 
-pub fn boom_logictic(self: *const Self) GameTick {
-    self.scene.game.game_tick - self.scene.game.boom_basetick;
+pub fn boomLogicTick(self: *const Self) game.Tick {
+    return self.scene.game.game_tick - self.scene.game.boom_basetick;
 }

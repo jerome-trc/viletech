@@ -5,7 +5,7 @@ const std = @import("std");
 const log = std.log.scoped(.platform);
 const meta = @import("meta");
 
-const c = @import("root").c;
+const c = @import("main.zig").c;
 const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
