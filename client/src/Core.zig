@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Console = @import("devgui/Console.zig");
 const game = @import("game.zig");
-const Prng = @import("Prng.zig");
+const BoomRng = @import("BoomRng.zig");
 const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
 
@@ -25,7 +25,7 @@ pub const Scene = union {
         level_time: game.Tick,
         /// Sum of intermission times in game ticks at second resolution.
         level_times_total: game.Tick,
-        prng: Prng,
+        boomrng: BoomRng,
         true_basetick: game.Tick,
     },
 };
