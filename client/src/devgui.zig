@@ -4,6 +4,7 @@ const std = @import("std");
 const log = std.log.scoped(.devgui);
 
 const c = @import("main.zig").c;
+const sdl = @import("sdl2");
 
 const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
@@ -16,6 +17,12 @@ pub const State = enum(c_int) {
 
 pub fn draw(cx: *Core, display: *Display) void {
     if (!display.dgui.open) {
+        return;
+    }
+
+    const window_flags = sdl.c.SDL_GetWindowFlags(display.window.ptr);
+
+    if ((window_flags & sdl.c.SDL_WINDOW_MINIMIZED) != 0) {
         return;
     }
 
