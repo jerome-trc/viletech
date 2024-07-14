@@ -1,6 +1,14 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
+pub fn build(b: *std.Build, compile: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    var lib = b.addStaticLibrary(.{
+        .name = "zdfs",
+        .target = target,
+        .optimize = optimize,
+    });
+    lib.linkLibC();
+    lib.linkLibCpp();
+
     const compile_flags = [_][]const u8{
         "-Dstricmp=strcasecmp",
         "-Dstrnicmp=strncasecmp",
@@ -25,7 +33,7 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
     const c_flags = compile_flags ++ [_][]const u8{"--std=c17"};
     const cxx_flags = compile_flags ++ [_][]const u8{"--std=c++20"};
 
-    compile.addCSourceFiles(.{ .root = b.path("depend/zdfs/bzip2"), .flags = &c_flags, .files = &[_][]const u8{
+    lib.addCSourceFiles(.{ .root = b.path("depend/zdfs/bzip2"), .flags = &c_flags, .files = &[_][]const u8{
         "blocksort.c",
         "bzlib.c",
         "compress.c",
@@ -35,7 +43,7 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
         "randtable.c",
     } });
 
-    compile.addCSourceFiles(.{ .root = b.path("depend/zdfs/lzma/C"), .flags = &c_flags, .files = &[_][]const u8{
+    lib.addCSourceFiles(.{ .root = b.path("depend/zdfs/lzma/C"), .flags = &c_flags, .files = &[_][]const u8{
         "7zAlloc.c",
         "7zArcIn.c",
         "7zBuf2.c",
@@ -80,11 +88,11 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
         "XzIn.c",
     } });
 
-    compile.addCSourceFiles(.{ .root = b.path("depend/zdfs/miniz"), .flags = &c_flags, .files = &[_][]const u8{"miniz.c"} });
+    lib.addCSourceFiles(.{ .root = b.path("depend/zdfs/miniz"), .flags = &c_flags, .files = &[_][]const u8{"miniz.c"} });
 
-    compile.addCSourceFiles(.{ .root = b.path("depend/zdfs/utf8proc"), .flags = &c_flags, .files = &[_][]const u8{"utf8proc.c"} });
+    lib.addCSourceFiles(.{ .root = b.path("depend/zdfs/utf8proc"), .flags = &c_flags, .files = &[_][]const u8{"utf8proc.c"} });
 
-    compile.addCSourceFiles(.{ .root = b.path("depend/zdfs/src"), .flags = &cxx_flags, .files = &[_][]const u8{
+    lib.addCSourceFiles(.{ .root = b.path("depend/zdfs/src"), .flags = &cxx_flags, .files = &[_][]const u8{
         "7z.cpp",
         "ancientzip.cpp",
         "critsec.cpp",
@@ -109,5 +117,6 @@ pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
         "zip.cpp",
     } });
 
+    compile.linkLibrary(lib);
     compile.addIncludePath(b.path("depend/zdfs/include"));
 }

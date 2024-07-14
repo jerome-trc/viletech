@@ -25,7 +25,7 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
-    common(b, exe, options);
+    common(b, exe, options, target, optimize);
 
     b.installArtifact(exe);
 
@@ -42,7 +42,7 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
-    common(b, exe_check, options);
+    common(b, exe_check, options, target, optimize);
 
     const check = b.step("check", "Semantic check for ZLS");
     check.dependOn(&exe_check.step);
@@ -55,13 +55,13 @@ pub fn build(
         .target = target,
         .optimize = optimize,
     });
-    common(b, exe_unit_tests, options);
+    common(b, exe_unit_tests, options, target, optimize);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     test_step.dependOn(&run_exe_unit_tests.step);
 }
 
-fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step.Options) void {
+fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step.Options, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     const sdl_sdk = sdl.init(b, null);
     const zig_args = b.dependency("zig-args", .{});
 
@@ -70,7 +70,7 @@ fn common(b: *std.Build, compile: *std.Build.Step.Compile, meta: *std.Build.Step
 
     cimgui.build(b, compile);
     sdl_sdk.link(compile, .static);
-    zdfs.build(b, compile);
+    zdfs.build(b, compile, target, optimize);
 
     compile.root_module.addOptions("meta", meta);
     compile.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
