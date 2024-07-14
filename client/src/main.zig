@@ -50,6 +50,8 @@ const Params = struct {
 const Verbs = union(enum) {};
 
 pub fn main() !void {
+    const start_time = try std.time.Instant.now();
+
     var cx = try Core.init();
     defer cx.deinit();
 
@@ -91,7 +93,7 @@ pub fn main() !void {
 
             switch (sdl.Event.from(native_event)) {
                 .quit => break :outer,
-                .window => |event| if (platform.onWindowEvent(&cx, event)) return else {},
+                .window => |event| if (platform.onWindowEvent(&cx, event)) break :outer else {},
                 else => {},
             }
         }
@@ -106,4 +108,34 @@ pub fn main() !void {
             break :outer;
         }
     }
+
+    const end_time = try std.time.Instant.now();
+    const duration = HhMmSs.fromNs(end_time.since(start_time));
+
+    // In my experience, runtime duration is a good thing to have in a bug report.
+    log.info("Engine uptime: {:0>2}:{:0>2}:{:0>2}", .{
+        duration.hours,
+        duration.minutes,
+        duration.seconds,
+    });
 }
+
+/// Hours, minutes, and seconds.
+const HhMmSs = struct {
+    hours: u64,
+    minutes: u64,
+    seconds: u64,
+
+    fn fromNs(nanos: u64) @This() {
+        const microsecs = nanos / std.time.ns_per_us;
+        const millisecs = microsecs / std.time.us_per_ms;
+        var secs = millisecs / std.time.ms_per_s;
+        var mins = secs / std.time.s_per_min;
+        const hours = mins / 60;
+
+        secs -= (mins * 60);
+        mins -= (hours * 60);
+
+        return .{ .hours = hours, .minutes = mins, .seconds = secs };
+    }
+};
