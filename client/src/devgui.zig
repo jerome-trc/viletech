@@ -9,6 +9,7 @@ const sdl = @import("sdl2");
 const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const Display = @import("platform.zig").Display;
+const imgui = @import("imgui.zig");
 
 pub const State = enum(c_int) {
     console,
@@ -73,7 +74,7 @@ pub fn draw(cx: *Core, display: *Display) void {
         }
 
         const mainvp = c.igGetMainViewport() orelse {
-            reportErrClipperCtor.call();
+            imgui.reportErrClipperCtor.call();
             return;
         };
 
@@ -132,16 +133,4 @@ pub fn draw(cx: *Core, display: *Display) void {
             _ = c.igCheckbox("User Guide", &display.dgui.user_guide);
         }
     }
-}
-
-pub var reportErrGetMainViewport = std.once(doReportErrGetMainViewport);
-
-fn doReportErrGetMainViewport() void {
-    log.err("`igGetMainViewport` failed", .{});
-}
-
-pub var reportErrClipperCtor = std.once(doReportErrClipperCtor);
-
-fn doReportErrClipperCtor() void {
-    log.err("`ImGuiListClipper::ImGuiListClipper` failed", .{});
 }

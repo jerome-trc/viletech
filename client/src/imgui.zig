@@ -1,6 +1,7 @@
 //! Wrapper around cImGui's API for more ergonomic use by Zig code.
 
 const std = @import("std");
+const log = std.log.scoped(.imgui);
 
 const c = @import("main.zig").c;
 const sdl = @import("sdl2");
@@ -8,6 +9,7 @@ const sdl = @import("sdl2");
 const platform = @import("platform.zig");
 
 pub const Error = error{
+    ClipperInitFail,
     ContextCreateFail,
 };
 
@@ -48,3 +50,96 @@ pub const implSdlRenderer2 = struct {
         c.ImGui_ImplSDLRenderer2_Shutdown();
     }
 };
+
+pub const Clipper = packed struct {
+    const Self = @This();
+
+    ptr: [*c]c.ImGuiListClipper,
+
+    pub fn init() !Self {
+        return Self{ .ptr = c.ImGuiListClipper_ImGuiListClipper() orelse return error.ClipperInitFail };
+    }
+
+    pub fn deinit(self: Self) void {
+        c.ImGuiListClipper_destroy(self.ptr);
+    }
+
+    pub fn begin(self: Self, num_items: usize, items_height: f32) void {
+        c.ImGuiListClipper_Begin(
+            self.ptr,
+            std.math.lossyCast(c_int, num_items),
+            items_height,
+        );
+    }
+
+    pub fn step(self: Self) bool {
+        return c.ImGuiListClipper_Step(self.ptr);
+    }
+
+    pub fn displayStart(self: Self) usize {
+        return @intCast(self.ptr.*.DisplayStart);
+    }
+
+    pub fn displayEnd(self: Self) usize {
+        return @intCast(self.ptr.*.DisplayEnd);
+    }
+};
+
+pub fn inputText(
+    label: [*:0]const u8,
+    buf: [:0]u8,
+    flags: InputTextFlags,
+    callback: c.ImGuiInputTextCallback,
+    user_data: ?*anyopaque,
+) bool {
+    return c.igInputText(
+        label,
+        @ptrCast(buf.ptr),
+        buf.len,
+        @bitCast(flags),
+        callback,
+        user_data,
+    );
+}
+
+pub const InputTextFlags = packed struct(i32) {
+    chars_decimal: bool = false,
+    chars_hexadecimal: bool = false,
+    chars_scientific: bool = false,
+    chars_uppercase: bool = false,
+    chars_no_blank: bool = false,
+    allow_tab_input: bool = false,
+    enter_returns_true: bool = false,
+    escape_clears_all: bool = false,
+    ctrl_enter_for_new_line: bool = false,
+    read_only: bool = false,
+    password: bool = false,
+    always_overwrite: bool = false,
+    auto_select_all: bool = false,
+    parse_empty_ref_val: bool = false,
+    display_empty_ref_val: bool = false,
+    no_horizontal_scroll: bool = false,
+    no_undo_redo: bool = false,
+    callback_completion: bool = false,
+    callback_history: bool = false,
+    callback_always: bool = false,
+    callback_char_filter: bool = false,
+    callback_resize: bool = false,
+    callback_edit: bool = false,
+
+    _padding: u9 = 0,
+};
+
+// One-off error reporting /////////////////////////////////////////////////////
+
+pub var reportErrGetMainViewport = std.once(doReportErrGetMainViewport);
+
+fn doReportErrGetMainViewport() void {
+    log.err("`igGetMainViewport` failed", .{});
+}
+
+pub var reportErrClipperCtor = std.once(doReportErrClipperCtor);
+
+fn doReportErrClipperCtor() void {
+    log.err("`ImGuiListClipper::ImGuiListClipper` failed", .{});
+}

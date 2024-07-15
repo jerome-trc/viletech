@@ -7,6 +7,7 @@ const ccmds = @import("ccmds.zig");
 const Core = @import("../Core.zig");
 const Deque = @import("../deque.zig").Deque;
 const devgui = @import("../devgui.zig");
+const imgui = @import("../imgui.zig");
 
 const Self = @This();
 
@@ -58,7 +59,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
     var self = &cx.console;
 
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
-        devgui.reportErrGetMainViewport.call();
+        imgui.reportErrGetMainViewport.call();
         return;
     };
 
@@ -85,16 +86,15 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
         }, c.ImGuiChildFlags_None, c.ImGuiWindowFlags_HorizontalScrollbar)) {
             defer c.igEndChild();
 
-            const clipper = c.ImGuiListClipper_ImGuiListClipper() orelse {
-                devgui.reportErrClipperCtor.call();
+            const clipper = imgui.Clipper.init() catch {
+                imgui.reportErrClipperCtor.call();
                 break :scroll;
             };
+            defer clipper.deinit();
+            clipper.begin(self.history.len(), -1.0);
 
-            defer c.ImGuiListClipper_destroy(clipper);
-            c.ImGuiListClipper_Begin(clipper, std.math.lossyCast(c_int, self.history.len()), -1.0);
-
-            while (c.ImGuiListClipper_Step(clipper)) {
-                for (std.math.lossyCast(usize, clipper.*.DisplayStart)..std.math.lossyCast(usize, clipper.*.DisplayEnd)) |i| {
+            while (clipper.step()) {
+                for (clipper.displayStart()..clipper.displayEnd()) |i| {
                     switch ((self.history.get(i) orelse unreachable).*) {
                         HistoryItem.info => |str| {
                             c.igTextUnformatted(str.ptr, str.ptr + str.len);
@@ -111,18 +111,11 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
         }
     }
 
-    const input_text_flags = comptime c.ImGuiInputTextFlags_CallbackCompletion |
-        c.ImGuiInputTextFlags_CallbackHistory |
-        c.ImGuiInputTextFlags_EnterReturnsTrue;
-
-    if (c.igInputText(
-        "##console.input",
-        &self.input_buf,
-        self.input_buf.len,
-        input_text_flags,
-        inputTextCallback,
-        null,
-    )) {
+    if (imgui.inputText("##console.input", self.inputBufSlice(), .{
+        .callback_completion = true,
+        .callback_history = true,
+        .enter_returns_true = true,
+    }, inputTextCallback, null)) {
         submit(cx);
     }
 
@@ -219,6 +212,10 @@ fn submit(cx: *Core) void {
         logInfo(cx, "{s}: command not found", .{cmd_name});
         return;
     }
+}
+
+fn inputBufSlice(self: *Self) [:0]u8 {
+    return self.input_buf[0..(@sizeOf(@TypeOf(self.input_buf)) - 1) :0];
 }
 
 var reportConsoleArgParseFail = std.once(doReportConsoleArgParseFail);
