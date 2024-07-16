@@ -53,21 +53,25 @@ const Verbs = union(enum) {};
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
 
-    var cx = try Core.init();
-    defer cx.deinit();
-
     const opts = try args.parseWithVerbForCurrentProcess(Params, Verbs, std.heap.page_allocator, .print);
     defer opts.deinit();
 
     if (opts.options.help) {
-        try args.printHelp(Params, "viletech", cx.stdout_file);
+        try args.printHelp(Params, "viletech", std.io.getStdOut().writer());
         return;
     }
 
     if (opts.options.version) {
-        try cx.println("{s} {s}", .{ meta.version, meta.commit });
+        const stdout_file = std.io.getStdOut().writer();
+        var stdout_bw = std.io.bufferedWriter(stdout_file);
+
+        try stdout_bw.writer().print("{s} {s}", .{ meta.version, meta.commit });
+        try stdout_bw.flush();
         return;
     }
+
+    var cx = try Core.init();
+    defer cx.deinit();
 
     gamemode.start();
 
