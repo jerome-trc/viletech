@@ -1,4 +1,6 @@
+const builtin = @import("builtin");
 const std = @import("std");
+const log = std.log.scoped(.frontend);
 
 const c = @import("main.zig").c;
 
@@ -18,6 +20,7 @@ pub const Outcome = enum {
 };
 
 pub const Item = struct {
+    /// Will always be absolute.
     path: [:0]const u8,
     enabled: bool,
 };
@@ -76,7 +79,7 @@ pub fn draw(cx: *Core) Outcome {
                         c.ImGuiWindowFlags_None,
                     )) {
                         defer c.igEndPopup();
-                        // TODO: force console open, write a message to it.
+                        // TODO: full message has to be allocated somewhere...
                         imgui.textUnformatted("File does not exist: ");
                     }
 
@@ -120,6 +123,8 @@ pub fn draw(cx: *Core) Outcome {
                 0,
             );
 
+            var popupShown = false;
+
             for (0.., self.load_order.items) |i, *item| {
                 c.igTableNextRow(c.ImGuiTableRowFlags_None, 0.0);
 
@@ -130,6 +135,18 @@ pub fn draw(cx: *Core) Outcome {
                 } else {
                     const basename = std.fs.path.basename(item.path);
                     _ = c.igCheckbox(@ptrCast(basename), &item.enabled);
+                }
+
+                if (!popupShown and c.igBeginPopupContextItem(
+                    "loadorder.popup",
+                    c.ImGuiPopupFlags_MouseButtonRight,
+                )) {
+                    defer c.igEndPopup();
+                    popupShown = true;
+
+                    if (c.igButton("Show in File Explorer", .{ .x = 0.0, .y = 0.0 })) {
+                        openDirInFileExplorer(self, item.path) catch {};
+                    }
                 }
 
                 c.igSetItemTooltip("Enabled");
@@ -226,4 +243,31 @@ pub fn draw(cx: *Core) Outcome {
     c.igEndChild();
 
     return Outcome.none;
+}
+
+fn openDirInFileExplorer(self: *Self, path: []const u8) !void {
+    var dir = path;
+    const dirOpenOpts = .{ .no_follow = true };
+
+    // Try to open `path` as a directory. If this fails, it's probably a WAD or
+    // similar, so try to open the directory it's in.
+    _ = std.fs.openDirAbsolute(dir, dirOpenOpts) catch {
+        dir = std.fs.path.dirname(path) orelse {
+            log.err("Failed to get directory of path: {s}", .{path});
+            return;
+        };
+
+        _ = std.fs.openDirAbsolute(dir, dirOpenOpts) catch {
+            log.err("Failed to open directory: {s}", .{dir});
+            return;
+        };
+    };
+
+    switch (builtin.os.tag) {
+        .linux => {
+            var proc = std.process.Child.init(&[_][]const u8{ "xdg-open", dir }, self.allo);
+            _ = try proc.spawnAndWait();
+        },
+        else => @compileError("unsupported OS"),
+    }
 }
