@@ -3,8 +3,7 @@ const std = @import("std");
 
 const Console = @import("devgui/Console.zig");
 const Frontend = @import("Frontend.zig");
-const game = @import("game.zig");
-const BoomRng = @import("BoomRng.zig");
+const Game = @import("Game.zig");
 const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
 
@@ -25,17 +24,7 @@ pub const SceneTag = enum {
 pub const Scene = union {
     frontend: Frontend,
     /// Includes menus.
-    game: struct {
-        compat: game.Compat,
-        demo_insurance: u8,
-        boom_basetick: game.Tick,
-        game_tick: game.Tick,
-        level_time: game.Tick,
-        /// Sum of intermission times in game ticks at second resolution.
-        level_times_total: game.Tick,
-        boomrng: BoomRng,
-        true_basetick: game.Tick,
-    },
+    game: Game,
 };
 
 allo: ?DebugAllocator,
@@ -112,13 +101,13 @@ pub fn println(self: *Self, comptime format: []const u8, args: anytype) !void {
 }
 
 pub fn boomCompat(self: *const Self) bool {
-    return @intFromEnum(self.scene.game.compat) <= @intFromEnum(game.Compat.boom_compat);
+    return @intFromEnum(self.scene.game.compat) <= @intFromEnum(Game.Compat.boom_compat);
 }
 
 pub fn demoCompat(self: *const Self) bool {
-    return @intFromEnum(self.scene.game.compat) < @intFromEnum(game.Compat.boom_compat);
+    return @intFromEnum(self.scene.game.compat) < @intFromEnum(Game.Compat.boom_compat);
 }
 
-pub fn boomLogicTick(self: *const Self) game.Tick {
+pub fn boomLogicTick(self: *const Self) Game.Tick {
     return self.scene.game.game_tick - self.scene.game.boom_basetick;
 }

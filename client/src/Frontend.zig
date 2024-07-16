@@ -5,7 +5,7 @@ const log = std.log.scoped(.frontend);
 const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
-const game = @import("game.zig");
+const Game = @import("Game.zig");
 const imgui = @import("imgui.zig");
 
 const Self = @This();
@@ -27,7 +27,7 @@ pub const Item = struct {
 
 allo: std.mem.Allocator,
 absolute_paths: bool,
-game_rules: game.Rules,
+game_rules: Game.Rules,
 load_order: ItemArray,
 modal_open: bool,
 
@@ -35,7 +35,7 @@ pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
         .allo = allocator,
         .absolute_paths = false,
-        .game_rules = game.Rules{ .compat = game.Compat.mbf21, .skill = .l4 },
+        .game_rules = Game.Rules{ .compat = Game.Compat.mbf21, .skill = .l4 },
         .load_order = ItemArray.init(allocator),
         .modal_open = false,
     };
@@ -222,8 +222,8 @@ pub fn draw(cx: *Core) Outcome {
             )) {
                 defer c.igEndCombo();
 
-                inline for (std.meta.fields(game.Compat)) |compat| {
-                    const e: game.Compat = @enumFromInt(compat.value);
+                inline for (std.meta.fields(Game.Compat)) |compat| {
+                    const e: Game.Compat = @enumFromInt(compat.value);
                     const name = e.prettyName();
 
                     if (name.len != 0) {

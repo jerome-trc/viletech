@@ -1,5 +1,7 @@
 //! Symbols fundamental to the "Doom the game" but not the engine's plumbing.
 
+const BoomRng = @import("BoomRng.zig");
+
 pub const Compat = enum {
     doom_v1_2,
     doom_v1_666,
@@ -80,3 +82,12 @@ pub const Rules = struct {
     compat: Compat,
     skill: Skill,
 };
+
+demo_insurance: u8,
+boom_basetick: Tick,
+game_tick: Tick,
+level_time: Tick,
+/// Sum of intermission times in game ticks at second resolution.
+level_times_total: Tick,
+boomrng: BoomRng,
+true_basetick: Tick,
