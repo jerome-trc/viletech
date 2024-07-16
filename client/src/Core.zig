@@ -67,7 +67,7 @@ pub fn init() !Self {
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
         .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
-        .console = try Console.init(),
+        .console = try Console.init(allo),
         .scene_tag = .frontend,
         .scene = Scene{ .frontend = try Frontend.init(allo) },
     };
@@ -89,10 +89,7 @@ pub fn deinit(self: *Self) void {
 
     if (self.allo) |*allo| {
         _ = allo.detectLeaks();
-
-        if (allo.deinit() == .leak) {
-            std.debug.print("Memory leaks detected...", .{});
-        }
+        _ = allo.deinit();
     }
 }
 

@@ -38,15 +38,17 @@ comptime {
     }
 }
 
+allo: std.mem.Allocator,
 input_buf: [256]u8,
 history: Deque(HistoryItem),
 prev_inputs: Deque([]const u8),
 
-pub fn init() !Self {
+pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
+        .allo = allocator,
         .input_buf = [_]u8{0} ** 256,
-        .history = try Deque(HistoryItem).init(std.heap.c_allocator),
-        .prev_inputs = try Deque([]const u8).init(std.heap.c_allocator),
+        .history = try Deque(HistoryItem).init(allocator),
+        .prev_inputs = try Deque([]const u8).init(allocator),
     };
 }
 
@@ -130,28 +132,28 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
 
 pub fn logHelp(self: *Self, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
-    const p = std.fmt.allocPrint(std.heap.c_allocator, format, args) catch return;
+    const p = std.fmt.allocPrint(self.allo, format, args) catch return;
     self.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logInfo(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(std.heap.c_allocator, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logSubmission(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(std.heap.c_allocator, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .submission = p }) catch return;
 }
 
 pub fn logToast(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(std.heap.c_allocator, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .toast = p }) catch return;
 }
 
@@ -176,11 +178,11 @@ fn submit(cx: *Core) void {
 
     if (self.prev_inputs.len() > 256) {
         const s = self.prev_inputs.popFront() orelse unreachable;
-        std.heap.c_allocator.free(s);
+        self.allo.free(s);
     }
 
     if (self.prev_inputs.len() < 1 or !std.mem.eql(u8, self.prev_inputs.back().?.*, submission)) {
-        if (std.fmt.allocPrint(std.heap.c_allocator, "{s}", .{submission})) |p| {
+        if (std.fmt.allocPrint(self.allo, "{s}", .{submission})) |p| {
             self.prev_inputs.pushBack(p) catch {
                 reportConsoleInputSaveFail.call();
             };
@@ -201,7 +203,7 @@ fn submit(cx: *Core) void {
     if (commands.get(cmd_name)) |*cmd| {
         const arg_str = submission[cmd_name.len..];
 
-        var args = CommandArgs.init(std.heap.c_allocator, arg_str) catch {
+        var args = CommandArgs.init(self.allo, arg_str) catch {
             reportConsoleArgParseFail.call();
             return;
         };
