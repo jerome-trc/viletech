@@ -246,22 +246,26 @@ pub fn draw(cx: *Core) Outcome {
 }
 
 fn openDirInFileExplorer(self: *Self, path: []const u8) !void {
+    var d: std.fs.Dir = undefined;
     var dir = path;
     const dirOpenOpts = .{ .no_follow = true };
 
     // Try to open `path` as a directory. If this fails, it's probably a WAD or
     // similar, so try to open the directory it's in.
-    _ = std.fs.openDirAbsolute(dir, dirOpenOpts) catch {
+    d = std.fs.openDirAbsolute(dir, dirOpenOpts) catch blk: {
         dir = std.fs.path.dirname(path) orelse {
             log.err("Failed to get directory of path: {s}", .{path});
             return;
         };
 
-        _ = std.fs.openDirAbsolute(dir, dirOpenOpts) catch {
+        d = std.fs.openDirAbsolute(dir, dirOpenOpts) catch {
             log.err("Failed to open directory: {s}", .{dir});
             return;
         };
+        break :blk d;
     };
+
+    d.close();
 
     switch (builtin.os.tag) {
         .linux => {
