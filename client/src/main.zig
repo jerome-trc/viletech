@@ -73,6 +73,12 @@ pub fn main() !void {
     var cx = try Core.init();
     defer cx.deinit();
 
+    try cx.eprintln(
+        \\VileTech is released under the GNU General Public License v3.0.
+        \\You are welcome to redistribute it under certain conditions.
+        \\It comes with ABSOLUTELY NO WARRANTY. See the file LICENSE for details.
+    , .{});
+
     gamemode.start();
 
     try sdl.init(.{
