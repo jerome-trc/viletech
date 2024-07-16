@@ -85,6 +85,14 @@ pub const Clipper = packed struct {
     }
 };
 
+pub const Vec2 = extern struct { x: f32 = 0.0, y: f32 = 0.0 };
+
+pub fn contentRegionAvail() Vec2 {
+    var ret: Vec2 = .{};
+    c.igGetContentRegionAvail(@ptrCast(&ret));
+    return ret;
+}
+
 pub fn inputText(
     label: [*:0]const u8,
     buf: [:0]u8,
@@ -129,6 +137,27 @@ pub const InputTextFlags = packed struct(i32) {
 
     _padding: u9 = 0,
 };
+
+pub fn pushStyleCompact() void {
+    const style = c.igGetStyle();
+
+    c.igPushStyleVar_Vec2(c.ImGuiStyleVar_FramePadding, .{
+        .x = style.*.FramePadding.x,
+        .y = @round(style.*.FramePadding.y * 0.6),
+    });
+    c.igPushStyleVar_Vec2(c.ImGuiStyleVar_ItemSpacing, .{
+        .x = style.*.ItemSpacing.x,
+        .y = @round(style.*.ItemSpacing.y * 0.6),
+    });
+}
+
+pub fn popStyleCompact() void {
+    c.igPopStyleVar(2);
+}
+
+pub fn textUnformatted(text: []const u8) void {
+    c.igTextUnformatted(text.ptr, text.ptr + text.len);
+}
 
 // One-off error reporting /////////////////////////////////////////////////////
 

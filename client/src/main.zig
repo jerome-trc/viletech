@@ -8,6 +8,7 @@ const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
 const devgui = @import("devgui.zig");
+const Frontend = @import("Frontend.zig");
 const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
 const platform = @import("platform.zig");
@@ -94,17 +95,35 @@ pub fn main() !void {
             switch (sdl.Event.from(native_event)) {
                 .quit => break :outer,
                 .window => |event| if (platform.onWindowEvent(&cx, event)) break :outer else {},
+                .drop_file => |event| {
+                    if (cx.scene_tag == .frontend and event.windowID == 1) {
+                        try cx.scene.frontend.addToLoadOrder(std.mem.sliceTo(event.file, 0));
+                    }
+                },
                 else => {},
             }
         }
 
-        for (cx.displays.items) |*display| {
+        for (0.., cx.displays.items) |i, *display| {
             display.newFrame();
+
+            if (i == 0) {
+                switch (cx.scene_tag) {
+                    .frontend => switch (Frontend.draw(&cx)) {
+                        .exit => break :outer,
+                        .none => {},
+                        .start_game => {}, // TODO
+                    },
+                    .game => {},
+                    .exit => {},
+                }
+            }
+
             devgui.draw(&cx, display);
             try display.finishFrame(imgui_io);
         }
 
-        if (cx.exit) {
+        if (cx.scene_tag == .exit) {
             break :outer;
         }
     }

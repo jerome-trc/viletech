@@ -1,6 +1,8 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 const Console = @import("devgui/Console.zig");
+const Frontend = @import("Frontend.zig");
 const game = @import("game.zig");
 const BoomRng = @import("BoomRng.zig");
 const platform = @import("platform.zig");
@@ -9,13 +11,19 @@ const zdfs = @import("zdfs.zig");
 const Self = @This();
 const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
 
+const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
+
+pub const SceneTag = enum {
+    exit,
+    frontend,
+    game,
+};
+
 /// An untagged union is used here on the assumption that the engine is compiled
 /// in ReleaseSafe mode. Thus most code can easily get at any field without worrying
 /// about UB, while hot paths can locally disable safety.
 pub const Scene = union {
-    frontend: struct {
-        // ???
-    },
+    frontend: Frontend,
     /// Includes menus.
     game: struct {
         compat: game.Compat,
@@ -30,7 +38,7 @@ pub const Scene = union {
     },
 };
 
-allo: std.mem.Allocator,
+allo: ?DebugAllocator,
 fs: zdfs.VirtualFs,
 
 stderr_file: std.fs.File.Writer,
@@ -41,15 +49,18 @@ stdout_bw: StreamWriter,
 displays: std.ArrayList(platform.Display),
 console: Console,
 
-exit: bool,
+scene_tag: SceneTag,
 scene: Scene,
 
 pub fn init() !Self {
     const stderr_file = std.io.getStdErr().writer();
     const stdout_file = std.io.getStdOut().writer();
 
+    var gpa: ?DebugAllocator = if (builtin.mode == .Debug) DebugAllocator{} else null;
+    const allo = if (gpa) |*g| g.allocator() else std.heap.c_allocator;
+
     return Self{
-        .allo = std.heap.c_allocator,
+        .allo = gpa,
         .fs = try zdfs.VirtualFs.init(),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
@@ -57,8 +68,8 @@ pub fn init() !Self {
         .stdout_bw = std.io.bufferedWriter(stdout_file),
         .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
         .console = try Console.init(),
-        .exit = false,
-        .scene = Scene{ .frontend = .{} },
+        .scene_tag = .frontend,
+        .scene = Scene{ .frontend = try Frontend.init(allo) },
     };
 }
 
@@ -69,6 +80,28 @@ pub fn deinit(self: *Self) void {
     self.fs.deinit();
     self.displays.deinit();
     self.console.deinit();
+
+    switch (self.scene_tag) {
+        .exit => {},
+        .frontend => self.scene.frontend.deinit(),
+        .game => {},
+    }
+
+    if (self.allo) |*allo| {
+        _ = allo.detectLeaks();
+
+        if (allo.deinit() == .leak) {
+            std.debug.print("Memory leaks detected...", .{});
+        }
+    }
+}
+
+pub fn allocator(self: *const Self) std.mem.Allocator {
+    if (self.allo) |a| {
+        return a.allocator();
+    } else {
+        return std.heap.c_allocator;
+    }
 }
 
 pub fn eprintln(self: *Self, comptime format: []const u8, args: anytype) !void {
