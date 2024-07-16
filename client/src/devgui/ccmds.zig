@@ -43,5 +43,5 @@ pub fn exit(cx: *Core, cmd: *const Console.Command, args: *Console.CommandArgs) 
     }
 
     Console.logInfo(cx, "Will exit after this engine cycle finishes.", .{});
-    cx.scene_tag = .exit;
+    cx.transition = .exit;
 }

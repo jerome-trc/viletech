@@ -1,6 +1,15 @@
 //! Symbols fundamental to the "Doom the game" but not the engine's plumbing.
 
+const builtin = @import("builtin");
+const std = @import("std");
+
 const BoomRng = @import("BoomRng.zig");
+const Core = @import("Core.zig");
+const Frontend = @import("Frontend.zig");
+const Path = @import("stdx.zig").Path;
+const plugin = @import("plugin.zig");
+
+const Self = @This();
 
 pub const Compat = enum {
     doom_v1_2,
@@ -83,11 +92,76 @@ pub const Rules = struct {
     skill: Skill,
 };
 
-demo_insurance: u8,
+const dynlib_ext = switch (builtin.os.tag) {
+    .linux => ".so",
+    .windows => ".dll",
+    else => @compileError("unsupported OS"),
+};
+
+cx: *const Core,
+
+plugin: struct {
+    libs: std.ArrayList(std.DynLib),
+    /// Paths are owned by this structure and null-terminated for ImGui's benefit.
+    paths: std.ArrayList([:0]const u8),
+},
+
+boomrng: BoomRng,
 boom_basetick: Tick,
+demo_insurance: u8,
 game_tick: Tick,
 level_time: Tick,
 /// Sum of intermission times in game ticks at second resolution.
 level_times_total: Tick,
-boomrng: BoomRng,
 true_basetick: Tick,
+
+pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
+    var self = Self{
+        .cx = cx,
+        .plugin = .{
+            .libs = std.ArrayList(std.DynLib).init(cx.allocator()),
+            .paths = std.ArrayList(Path).init(cx.allocator()),
+        },
+        .boomrng = BoomRng.init(cx, false),
+        .boom_basetick = 0,
+        .demo_insurance = 0,
+        .game_tick = 0,
+        .level_time = 0,
+        .level_times_total = 0,
+        .true_basetick = 0,
+    };
+
+    for (load_order) |item| {
+        if (!item.enabled) {
+            continue;
+        }
+
+        const path = item.path;
+
+        if (std.ascii.eqlIgnoreCase(std.fs.path.extension(path), dynlib_ext)) {
+            try self.plugin.paths.append(try cx.allocator().dupeZ(u8, path));
+            var dynlib = try std.DynLib.open(path);
+
+            if (dynlib.lookup(plugin.OnGameStart, "onGameStart")) |func| {
+                func(cx);
+            }
+
+            try self.plugin.libs.append(dynlib);
+        }
+    }
+
+    return self;
+}
+
+pub fn deinit(self: *Self, cx: *Core) void {
+    for (self.plugin.libs.items) |*dynlib| {
+        if (dynlib.lookup(plugin.OnGameClose, "onGameClose")) |func| {
+            func(cx);
+        }
+
+        dynlib.close();
+    }
+
+    self.plugin.libs.deinit();
+    self.plugin.paths.deinit();
+}

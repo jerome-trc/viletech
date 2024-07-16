@@ -7,6 +7,7 @@ const c = @import("main.zig").c;
 const Core = @import("Core.zig");
 const Game = @import("Game.zig");
 const imgui = @import("imgui.zig");
+const Path = @import("stdx.zig").Path;
 
 const Self = @This();
 
@@ -21,7 +22,7 @@ pub const Outcome = enum {
 
 pub const Item = struct {
     /// Will always be absolute.
-    path: [:0]const u8,
+    path: Path,
     enabled: bool,
 };
 

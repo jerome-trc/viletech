@@ -4,6 +4,7 @@ const std = @import("std");
 const Console = @import("devgui/Console.zig");
 const Frontend = @import("Frontend.zig");
 const Game = @import("Game.zig");
+const Path = @import("stdx.zig").Path;
 const platform = @import("platform.zig");
 const zdfs = @import("zdfs.zig");
 
@@ -13,7 +14,6 @@ const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
 const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
 
 pub const SceneTag = enum {
-    exit,
     frontend,
     game,
 };
@@ -25,6 +25,15 @@ pub const Scene = union {
     frontend: Frontend,
     /// Includes menus.
     game: Game,
+};
+
+pub const Transition = union(enum) {
+    none,
+    exit,
+    frontend,
+    game: struct {
+        load_order: std.ArrayList(Frontend.Item).Slice,
+    },
 };
 
 allo: ?DebugAllocator,
@@ -40,6 +49,7 @@ console: Console,
 
 scene_tag: SceneTag,
 scene: Scene,
+transition: Transition,
 
 pub fn init() !Self {
     const stderr_file = std.io.getStdErr().writer();
@@ -59,6 +69,7 @@ pub fn init() !Self {
         .console = try Console.init(allo),
         .scene_tag = .frontend,
         .scene = Scene{ .frontend = try Frontend.init(allo) },
+        .transition = .none,
     };
 }
 
@@ -71,7 +82,6 @@ pub fn deinit(self: *Self) void {
     self.console.deinit();
 
     switch (self.scene_tag) {
-        .exit => {},
         .frontend => self.scene.frontend.deinit(),
         .game => {},
     }
@@ -82,8 +92,8 @@ pub fn deinit(self: *Self) void {
     }
 }
 
-pub fn allocator(self: *const Self) std.mem.Allocator {
-    if (self.allo) |a| {
+pub fn allocator(self: *Self) std.mem.Allocator {
+    if (self.allo) |*a| {
         return a.allocator();
     } else {
         return std.heap.c_allocator;
@@ -98,6 +108,13 @@ pub fn eprintln(self: *Self, comptime format: []const u8, args: anytype) !void {
 pub fn println(self: *Self, comptime format: []const u8, args: anytype) !void {
     try self.stdout_bw.writer().print(format ++ "\n", args);
     try self.stdout_bw.flush();
+}
+
+pub fn deinitScene(self: *Self) void {
+    switch (self.scene_tag) {
+        .frontend => self.scene.frontend.deinit(),
+        .game => self.scene.game.deinit(self),
+    }
 }
 
 pub fn boomCompat(self: *const Self) bool {

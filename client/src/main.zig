@@ -8,6 +8,7 @@ const sdl = @import("sdl2");
 
 const Core = @import("Core.zig");
 const devgui = @import("devgui.zig");
+const Game = @import("Game.zig");
 const Frontend = @import("Frontend.zig");
 const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
@@ -122,10 +123,13 @@ pub fn main() !void {
                     .frontend => switch (Frontend.draw(&cx)) {
                         .exit => break :outer,
                         .none => {},
-                        .start_game => {}, // TODO
+                        .start_game => cx.transition = Core.Transition{
+                            .game = .{
+                                .load_order = try cx.scene.frontend.load_order.toOwnedSlice(),
+                            },
+                        },
                     },
                     .game => {},
-                    .exit => {},
                 }
             }
 
@@ -133,8 +137,17 @@ pub fn main() !void {
             try display.finishFrame(imgui_io);
         }
 
-        if (cx.scene_tag == .exit) {
-            break :outer;
+        switch (cx.transition) {
+            .none => {},
+            .exit => break :outer,
+            .frontend => {
+                cx.deinitScene();
+                cx.scene = Core.Scene{ .frontend = try Frontend.init(cx.allocator()) };
+            },
+            .game => |t| {
+                cx.deinitScene();
+                cx.scene = Core.Scene{ .game = try Game.init(&cx, t.load_order) };
+            },
         }
     }
 
