@@ -28,6 +28,8 @@ pub const c = @cImport({
     @cUndef("CIMGUI_USE_SDL2");
     @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
 
+    @cInclude("flecs.h");
+
     @cInclude("zdfs/zdfs.h");
 });
 

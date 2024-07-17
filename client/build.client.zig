@@ -1,9 +1,5 @@
 const std = @import("std");
 
-const cimgui = @import("../depend/build.cimgui.zig");
-const sdl = @import("../depend/build.sdl.zig");
-const zdfs = @import("../depend/build.zdfs.zig");
-
 pub fn build(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -92,9 +88,10 @@ fn commonDependencies(
 
             c.linkSystemLibrary("sdl2_image");
 
-            cimgui.link(b, c);
+            @import("../depend/build.cimgui.zig").link(b, c);
+            @import("../depend/build.flecs.zig").link(b, c);
             sdl_sdk.link(c, .static);
-            zdfs.link(b, c, target, optimize);
+            @import("../depend/build.zdfs.zig").link(b, c, target, optimize);
 
             c.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
             c.root_module.addImport("zig-args", zig_args.module("args"));
@@ -110,6 +107,7 @@ fn commonDependencies(
 
             m.addIncludePath(b.path("depend/imgui"));
             m.addIncludePath(b.path("depend/zdfs/include"));
+            m.addSystemIncludePath(b.path("depend/flecs"));
 
             m.addImport("sdl2", sdl_sdk.getWrapperModule());
             m.addImport("zig-args", zig_args.module("args"));
