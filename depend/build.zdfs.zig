@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build, compile: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     var lib = b.addStaticLibrary(.{
         .name = "zdfs",
         .target = target,

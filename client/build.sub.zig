@@ -92,9 +92,9 @@ fn commonDependencies(
 
             c.linkSystemLibrary("sdl2_image");
 
-            cimgui.build(b, c);
+            cimgui.link(b, c);
             sdl_sdk.link(c, .static);
-            zdfs.build(b, c, target, optimize);
+            zdfs.link(b, c, target, optimize);
 
             c.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
             c.root_module.addImport("zig-args", zig_args.module("args"));

@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub fn build(b: *std.Build, compile: *std.Build.Step.Compile) void {
+pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
     const cxx_flags = if (builtin.os.tag == .windows)
         [_][]const u8{ "--std=c++20", "-DIMGUI_IMPL_API=extern \"C\" __declspec(dllexport)" }
     else
