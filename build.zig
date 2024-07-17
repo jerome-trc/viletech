@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const client = @import("client/build.sub.zig");
-const mus2mid = @import("libs/mus2mid/build.sub.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -12,7 +11,7 @@ pub fn build(b: *std.Build) void {
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
 
-    mus2mid.build(b, target, optimize, test_step);
+    @import("libs/subterra/build.sub.zig").build(b, target, optimize, test_step);
 
     const engine = client.build(b, target, optimize, test_step);
 
