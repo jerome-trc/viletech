@@ -53,6 +53,7 @@ const Verbs = union(enum) {};
 
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
+    std.log.debug("***** DEBUG BUILD *****", .{});
 
     const opts = try args.parseWithVerbForCurrentProcess(Params, Verbs, std.heap.page_allocator, .print);
     defer opts.deinit();

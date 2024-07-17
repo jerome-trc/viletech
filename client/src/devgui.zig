@@ -1,5 +1,6 @@
 //! Abstractions over ImGui for assembling the developer GUI menu bar and windows.
 
+const builtin = @import("builtin");
 const std = @import("std");
 const log = std.log.scoped(.devgui);
 
@@ -123,6 +124,8 @@ pub fn draw(cx: *Core, display: *Display) void {
             .vfs => {}, // TODO
         }
 
+        c.igPushItemWidth(mainvp.*.Size.x * 0.15);
+
         if (c.igBeginCombo("ImGui", "Metrics, etc...", 0)) {
             defer c.igEndCombo();
             _ = c.igCheckbox("About", &display.dgui.about_window);
@@ -131,6 +134,13 @@ pub fn draw(cx: *Core, display: *Display) void {
             _ = c.igCheckbox("ID Stack Tool", &display.dgui.id_stack_tool_window);
             _ = c.igCheckbox("Metrics", &display.dgui.metrics_window);
             _ = c.igCheckbox("User Guide", &display.dgui.user_guide);
+        }
+
+        c.igPopItemWidth();
+
+        if (builtin.mode == .Debug) {
+            c.igSeparator();
+            imgui.textUnformatted("DEBUG BUILD");
         }
     }
 }
