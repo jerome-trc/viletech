@@ -2,5 +2,5 @@
 
 const Core = @import("Core.zig");
 
-pub const OnGameStart = *const fn (*Core) void;
-pub const OnGameClose = *const fn (*Core) void;
+pub const OnGameStart = *const fn (*Core) callconv(.C) void;
+pub const OnGameClose = *const fn (*Core) callconv(.C) void;

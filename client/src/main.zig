@@ -143,10 +143,14 @@ pub fn main() !void {
             .frontend => {
                 cx.deinitScene();
                 cx.scene = Core.Scene{ .frontend = try Frontend.init(cx.allocator()) };
+                cx.scene_tag = .frontend;
+                cx.transition = .none;
             },
             .game => |t| {
                 cx.deinitScene();
                 cx.scene = Core.Scene{ .game = try Game.init(&cx, t.load_order) };
+                cx.scene_tag = .game;
+                cx.transition = .none;
             },
         }
     }

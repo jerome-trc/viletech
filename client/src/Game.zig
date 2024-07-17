@@ -98,7 +98,7 @@ const dynlib_ext = switch (builtin.os.tag) {
     else => @compileError("unsupported OS"),
 };
 
-cx: *const Core,
+cx: *Core,
 
 plugin: struct {
     libs: std.ArrayList(std.DynLib),
@@ -141,6 +141,7 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
         if (std.ascii.eqlIgnoreCase(std.fs.path.extension(path), dynlib_ext)) {
             try self.plugin.paths.append(try cx.allocator().dupeZ(u8, path));
             var dynlib = try std.DynLib.open(path);
+            std.log.info("Loaded plugin: {s}", .{path});
 
             if (dynlib.lookup(plugin.OnGameStart, "onGameStart")) |func| {
                 func(cx);
@@ -160,6 +161,10 @@ pub fn deinit(self: *Self, cx: *Core) void {
         }
 
         dynlib.close();
+    }
+
+    for (self.plugin.paths.items) |path| {
+        self.cx.allocator().free(path);
     }
 
     self.plugin.libs.deinit();
