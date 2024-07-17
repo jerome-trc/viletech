@@ -143,7 +143,7 @@ pub fn main() !void {
             .exit => break :outer,
             .frontend => {
                 cx.deinitScene();
-                cx.scene = Core.Scene{ .frontend = try Frontend.init(cx.allocator()) };
+                cx.scene = Core.Scene{ .frontend = try Frontend.init(cx.alloc) };
                 cx.scene_tag = .frontend;
                 cx.transition = .none;
             },

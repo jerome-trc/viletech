@@ -98,8 +98,6 @@ const dynlib_ext = switch (builtin.os.tag) {
     else => @compileError("unsupported OS"),
 };
 
-cx: *Core,
-
 plugin: struct {
     libs: std.ArrayList(std.DynLib),
     /// Paths are owned by this structure and null-terminated for ImGui's benefit.
@@ -108,6 +106,7 @@ plugin: struct {
 
 boomrng: BoomRng,
 boom_basetick: Tick,
+compat: Compat,
 demo_insurance: u8,
 game_tick: Tick,
 level_time: Tick,
@@ -117,13 +116,13 @@ true_basetick: Tick,
 
 pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
     var self = Self{
-        .cx = cx,
         .plugin = .{
-            .libs = std.ArrayList(std.DynLib).init(cx.allocator()),
-            .paths = std.ArrayList(Path).init(cx.allocator()),
+            .libs = std.ArrayList(std.DynLib).init(cx.alloc),
+            .paths = std.ArrayList(Path).init(cx.alloc),
         },
-        .boomrng = BoomRng.init(cx, false),
+        .boomrng = BoomRng.init(false),
         .boom_basetick = 0,
+        .compat = .mbf21,
         .demo_insurance = 0,
         .game_tick = 0,
         .level_time = 0,
@@ -139,7 +138,7 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
         const path = item.path;
 
         if (std.ascii.eqlIgnoreCase(std.fs.path.extension(path), dynlib_ext)) {
-            try self.plugin.paths.append(try cx.allocator().dupeZ(u8, path));
+            try self.plugin.paths.append(try cx.alloc.dupeZ(u8, path));
             var dynlib = try std.DynLib.open(path);
             std.log.info("Loaded plugin: {s}", .{path});
 
@@ -164,7 +163,7 @@ pub fn deinit(self: *Self, cx: *Core) void {
     }
 
     for (self.plugin.paths.items) |path| {
-        self.cx.allocator().free(path);
+        cx.alloc.free(path);
     }
 
     self.plugin.libs.deinit();

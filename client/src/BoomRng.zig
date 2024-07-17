@@ -117,15 +117,13 @@ const RngClass = enum {
 
 const SeedArray = std.EnumArray(RngClass, u32);
 
-cx: *const Core,
 table: []const u8,
 seeds: SeedArray,
 rnd_index: usize,
 prnd_index: usize,
 
-pub fn init(cx: *const Core, hexen: bool) Self {
+pub fn init(hexen: bool) Self {
     return Self{
-        .cx = cx,
         .table = if (hexen) &rndtable_hexen else &rndtable_doom,
         .seeds = SeedArray.initFill((1993 * 2 + 1) * 69069),
         .rnd_index = 0,
@@ -133,7 +131,7 @@ pub fn init(cx: *const Core, hexen: bool) Self {
     };
 }
 
-pub fn get(self: *Self, class: RngClass) i32 {
+pub fn get(self: *Self, cx: *const Core, class: RngClass) i32 {
     var cls = class;
     var compat: usize = undefined;
 
@@ -147,21 +145,21 @@ pub fn get(self: *Self, class: RngClass) i32 {
 
     var boom: u32 = undefined;
 
-    if ((cls != .misc) and (self.cx.scene.game.demo_insurance == 0)) {
+    if ((cls != .misc) and (cx.scene.game.demo_insurance == 0)) {
         cls = .all_in_one;
     }
 
     boom = self.seeds.get(cls);
     self.seeds.set(cls, boom * 166452 + 221297 + @intFromEnum(cls) * 2);
 
-    if (self.cx.demoCompat()) {
+    if (cx.demoCompat()) {
         return self.table[compat];
     }
 
     boom >>= 20;
 
-    if (self.cx.scene.game.demo_insurance != 0) {
-        boom += std.math.lossyCast(u32, self.cx.boomLogicTick()) * 7;
+    if (cx.scene.game.demo_insurance != 0) {
+        boom += std.math.lossyCast(u32, cx.boomLogicTick()) * 7;
     }
 
     return @bitCast(boom & 255);

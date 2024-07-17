@@ -36,7 +36,10 @@ pub const Transition = union(enum) {
     },
 };
 
-allo: ?DebugAllocator,
+/// Only non-null in debug builds for detecting leaks.
+gpa: ?DebugAllocator,
+alloc: std.mem.Allocator,
+
 fs: zdfs.VirtualFs,
 
 stderr_file: std.fs.File.Writer,
@@ -56,19 +59,20 @@ pub fn init() !Self {
     const stdout_file = std.io.getStdOut().writer();
 
     var gpa: ?DebugAllocator = if (builtin.mode == .Debug) DebugAllocator{} else null;
-    const allo = if (gpa) |*g| g.allocator() else std.heap.c_allocator;
+    const alloc = if (gpa) |*g| g.allocator() else std.heap.c_allocator;
 
     return Self{
-        .allo = gpa,
+        .gpa = gpa,
+        .alloc = alloc,
         .fs = try zdfs.VirtualFs.init(),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
         .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
-        .console = try Console.init(allo),
+        .console = try Console.init(alloc),
         .scene_tag = .frontend,
-        .scene = Scene{ .frontend = try Frontend.init(allo) },
+        .scene = Scene{ .frontend = try Frontend.init(alloc) },
         .transition = .none,
     };
 }
@@ -86,17 +90,9 @@ pub fn deinit(self: *Self) void {
         .game => {},
     }
 
-    if (self.allo) |*allo| {
-        _ = allo.detectLeaks();
-        _ = allo.deinit();
-    }
-}
-
-pub fn allocator(self: *Self) std.mem.Allocator {
-    if (self.allo) |*a| {
-        return a.allocator();
-    } else {
-        return std.heap.c_allocator;
+    if (self.gpa) |*gpa| {
+        _ = gpa.detectLeaks();
+        _ = gpa.deinit();
     }
 }
 
