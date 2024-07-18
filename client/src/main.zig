@@ -87,10 +87,12 @@ pub fn main() !void {
     defer cx.deinit() catch {};
 
     try cx.eprintln(
+        \\VileTech Engine {s} (https://github.com/jerome-trc/viletech)
+        \\
         \\VileTech is released under the GNU General Public License v3.0.
         \\You are welcome to redistribute it under certain conditions.
         \\It comes with ABSOLUTELY NO WARRANTY. See the file LICENSE for details.
-    , .{});
+    , .{meta.version});
 
     gamemode.start();
 
