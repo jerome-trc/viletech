@@ -84,7 +84,7 @@ pub fn main() !void {
     }
 
     var cx = try Core.init(if (builtin.mode == .Debug) &gpa else null);
-    defer cx.deinit();
+    defer cx.deinit() catch {};
 
     try cx.eprintln(
         \\VileTech is released under the GNU General Public License v3.0.

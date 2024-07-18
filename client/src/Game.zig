@@ -104,7 +104,7 @@ const dynlib_ext = switch (builtin.os.tag) {
 plugin: struct {
     libs: std.ArrayList(std.DynLib),
     /// Paths are owned by this structure and null-terminated for ImGui's benefit.
-    paths: std.ArrayList([:0]const u8),
+    paths: std.ArrayList(Path),
 },
 
 boomrng: BoomRng,
@@ -155,8 +155,11 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
 
             try self.plugin.libs.append(dynlib);
         }
+
+        cx.alloc.free(item.path);
     }
 
+    cx.alloc.free(load_order);
     return self;
 }
 

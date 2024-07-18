@@ -75,7 +75,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
     };
 }
 
-pub fn deinit(self: *Self) void {
+pub fn deinit(self: *Self) !void {
     self.stdout_bw.flush() catch {};
     self.stderr_bw.flush() catch {};
 
@@ -83,10 +83,7 @@ pub fn deinit(self: *Self) void {
     self.displays.deinit();
     self.console.deinit();
 
-    switch (self.scene_tag) {
-        .frontend => self.scene.frontend.deinit(),
-        .game => {},
-    }
+    try self.deinitScene();
 
     if (self.gpa) |gpa| {
         _ = gpa.detectLeaks();

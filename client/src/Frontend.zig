@@ -43,6 +43,10 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
+    for (self.load_order.items) |item| {
+        self.allo.free(item.path);
+    }
+
     self.load_order.deinit();
 }
 
