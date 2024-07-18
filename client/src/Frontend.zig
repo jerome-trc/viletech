@@ -26,11 +26,17 @@ pub const Item = struct {
     enabled: bool,
 };
 
+const Modal = union(enum) {
+    none,
+    /// Path is allocated in `load_order`.
+    missing_file: Path,
+};
+
 allo: std.mem.Allocator,
 absolute_paths: bool,
 game_rules: Game.Rules,
 load_order: ItemArray,
-modal_open: bool,
+modal: Modal,
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
@@ -38,7 +44,7 @@ pub fn init(allocator: std.mem.Allocator) !Self {
         .absolute_paths = false,
         .game_rules = Game.Rules{ .compat = Game.Compat.mbf21, .skill = .l4 },
         .load_order = ItemArray.init(allocator),
-        .modal_open = false,
+        .modal = .none,
     };
 }
 
@@ -60,6 +66,30 @@ pub fn addToLoadOrder(self: *Self, path: []const u8) !void {
 pub fn draw(cx: *Core) Outcome {
     var self = &cx.scene.frontend;
 
+    switch (self.modal) {
+        .none => {},
+        .missing_file => |path| {
+            var modal_open = true;
+
+            if (!c.igIsPopupOpen_Str("Error##frontend.modal", c.ImGuiPopupFlags_None)) {
+                c.igOpenPopup_Str("Error##frontend.modal", c.ImGuiPopupFlags_None);
+            }
+
+            if (c.igBeginPopupModal(
+                "Error##frontend.modal",
+                &modal_open,
+                c.ImGuiWindowFlags_None,
+            )) {
+                defer c.igEndPopup();
+                c.igText("File does not exist:\n%s", path.ptr);
+            }
+
+            if (!modal_open) {
+                self.modal = .none;
+            }
+        },
+    }
+
     if (!c.igBegin("Launcher", null, c.ImGuiWindowFlags_MenuBar)) {
         return Outcome.none;
     }
@@ -78,16 +108,7 @@ pub fn draw(cx: *Core) Outcome {
             // Check to make sure all files in load order exist.
             for (self.load_order.items) |*item| {
                 if (std.fs.accessAbsoluteZ(item.path, .{})) |_| {} else |_| {
-                    if (c.igBeginPopupModal(
-                        "Error",
-                        &self.modal_open,
-                        c.ImGuiWindowFlags_None,
-                    )) {
-                        defer c.igEndPopup();
-                        // TODO: full message has to be allocated somewhere...
-                        imgui.textUnformatted("File does not exist: ");
-                    }
-
+                    self.modal = Modal{ .missing_file = item.path };
                     return Outcome.none;
                 }
             }
