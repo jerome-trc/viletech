@@ -8,7 +8,7 @@ const plugin = viletech.plugin;
 
 export fn onGameStart(cx: *Core) void {
     _ = cx;
-    std.log.info("SmartLoot initialized successfully.", .{});
+    log.info("SmartLoot initialized successfully.", .{});
 }
 
 comptime {

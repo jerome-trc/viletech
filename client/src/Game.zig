@@ -2,6 +2,7 @@
 
 const builtin = @import("builtin");
 const std = @import("std");
+const log = std.log.scoped(.game);
 
 const actor = @import("sim/actor.zig");
 const BoomRng = @import("BoomRng.zig");
@@ -146,7 +147,7 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
         if (std.ascii.eqlIgnoreCase(std.fs.path.extension(path), dynlib_ext)) {
             try self.plugin.paths.append(try cx.alloc.dupeZ(u8, path));
             var dynlib = try std.DynLib.open(path);
-            std.log.info("Loaded plugin: {s}", .{path});
+            log.info("Loaded plugin: {s}", .{path});
 
             if (dynlib.lookup(plugin.OnGameStart, "onGameStart")) |func| {
                 func(cx);
