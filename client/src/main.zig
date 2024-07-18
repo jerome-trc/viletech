@@ -72,7 +72,18 @@ pub fn main() !void {
         return;
     }
 
-    var cx = try Core.init();
+    var gpa: if (builtin.mode == .Debug) Core.DebugAllocator else void = undefined;
+    var core_alloc: std.mem.Allocator = undefined;
+
+    if (builtin.mode == .Debug) {
+        gpa = Core.DebugAllocator{};
+        core_alloc = gpa.allocator();
+    } else {
+        gpa = {};
+        core_alloc = std.heap.c_allocator;
+    }
+
+    var cx = try Core.init(if (builtin.mode == .Debug) &gpa else null);
     defer cx.deinit();
 
     try cx.eprintln(

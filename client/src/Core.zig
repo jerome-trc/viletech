@@ -11,7 +11,7 @@ const zdfs = @import("zdfs.zig");
 const Self = @This();
 const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
 
-const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
+pub const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
 
 pub const SceneTag = enum {
     frontend,
@@ -36,8 +36,7 @@ pub const Transition = union(enum) {
     },
 };
 
-/// Only non-null in debug builds for detecting leaks.
-gpa: ?DebugAllocator,
+gpa: ?*DebugAllocator,
 alloc: std.mem.Allocator,
 
 fs: zdfs.VirtualFs,
@@ -54,12 +53,11 @@ scene_tag: SceneTag,
 scene: Scene,
 transition: Transition,
 
-pub fn init() !Self {
+pub fn init(gpa: ?*DebugAllocator) !Self {
     const stderr_file = std.io.getStdErr().writer();
     const stdout_file = std.io.getStdOut().writer();
 
-    var gpa: ?DebugAllocator = if (builtin.mode == .Debug) DebugAllocator{} else null;
-    const alloc = if (gpa) |*g| g.allocator() else std.heap.c_allocator;
+    const alloc = if (gpa) |g| g.allocator() else std.heap.c_allocator;
 
     return Self{
         .gpa = gpa,
@@ -69,7 +67,7 @@ pub fn init() !Self {
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
-        .displays = std.ArrayList(platform.Display).init(std.heap.c_allocator),
+        .displays = std.ArrayList(platform.Display).init(alloc),
         .console = try Console.init(alloc),
         .scene_tag = .frontend,
         .scene = Scene{ .frontend = try Frontend.init(alloc) },
@@ -90,7 +88,7 @@ pub fn deinit(self: *Self) void {
         .game => {},
     }
 
-    if (self.gpa) |*gpa| {
+    if (self.gpa) |gpa| {
         _ = gpa.detectLeaks();
         _ = gpa.deinit();
     }
@@ -111,6 +109,10 @@ pub fn deinitScene(self: *Self) !void {
         .frontend => self.scene.frontend.deinit(),
         .game => try self.scene.game.deinit(self),
     }
+}
+
+pub fn allocator(self: *Self) std.mem.Allocator {
+    return if (builtin.mode == .Debug) self.gpa.allocator() else std.heap.c_allocator;
 }
 
 pub fn boomCompat(self: *const Self) bool {
