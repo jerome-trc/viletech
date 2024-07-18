@@ -105,8 +105,8 @@ fn commonDependencies(
                 .use_pkg_config = .yes,
             });
 
-            m.addIncludePath(b.path("depend/imgui"));
-            m.addIncludePath(b.path("depend/zdfs/include"));
+            m.addSystemIncludePath(b.path("depend/imgui"));
+            m.addSystemIncludePath(b.path("depend/zdfs/include"));
             m.addSystemIncludePath(b.path("depend/flecs"));
 
             m.addImport("sdl2", sdl_sdk.getWrapperModule());

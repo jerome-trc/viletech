@@ -22,5 +22,5 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
         },
     });
 
-    compile.addIncludePath(b.path("depend/imgui"));
+    compile.addSystemIncludePath(b.path("depend/imgui"));
 }

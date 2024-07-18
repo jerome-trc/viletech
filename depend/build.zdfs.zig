@@ -118,5 +118,5 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, target: std.Build.R
     } });
 
     compile.linkLibrary(lib);
-    compile.addIncludePath(b.path("depend/zdfs/include"));
+    compile.addSystemIncludePath(b.path("depend/zdfs/include"));
 }
