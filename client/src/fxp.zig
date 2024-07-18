@@ -63,8 +63,8 @@ pub fn Fxp(comptime fracbits: u8) type {
     };
 }
 
-const I16F16 = Fxp(16);
-const I32F32 = Fxp(32);
+pub const I16F16 = Fxp(16);
+pub const I32F32 = Fxp(32);
 
 test "fixed-point division" {
     const lhs = I16F16.from_bits(40239104);

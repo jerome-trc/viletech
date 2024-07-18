@@ -106,10 +106,10 @@ pub fn println(self: *Self, comptime format: []const u8, args: anytype) !void {
     try self.stdout_bw.flush();
 }
 
-pub fn deinitScene(self: *Self) void {
+pub fn deinitScene(self: *Self) !void {
     switch (self.scene_tag) {
         .frontend => self.scene.frontend.deinit(),
-        .game => self.scene.game.deinit(self),
+        .game => try self.scene.game.deinit(self),
     }
 }
 

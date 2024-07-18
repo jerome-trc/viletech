@@ -3,8 +3,10 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+const actor = @import("sim/actor.zig");
 const BoomRng = @import("BoomRng.zig");
 const Core = @import("Core.zig");
+const flecs = @import("flecs.zig");
 const Frontend = @import("Frontend.zig");
 const Path = @import("stdx.zig").Path;
 const plugin = @import("plugin.zig");
@@ -113,6 +115,7 @@ level_time: Tick,
 /// Sum of intermission times in game ticks at second resolution.
 level_times_total: Tick,
 true_basetick: Tick,
+world: flecs.World,
 
 pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
     var self = Self{
@@ -128,7 +131,10 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
         .level_time = 0,
         .level_times_total = 0,
         .true_basetick = 0,
+        .world = try flecs.World.init(),
     };
+
+    self.world.defineComponent(actor.Space) catch unreachable;
 
     for (load_order) |item| {
         if (!item.enabled) {
@@ -153,7 +159,7 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
     return self;
 }
 
-pub fn deinit(self: *Self, cx: *Core) void {
+pub fn deinit(self: *Self, cx: *Core) !void {
     for (self.plugin.libs.items) |*dynlib| {
         if (dynlib.lookup(plugin.OnGameClose, "onGameClose")) |func| {
             func(cx);
@@ -168,4 +174,5 @@ pub fn deinit(self: *Self, cx: *Core) void {
 
     self.plugin.libs.deinit();
     self.plugin.paths.deinit();
+    try self.world.deinit();
 }

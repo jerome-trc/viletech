@@ -28,8 +28,6 @@ pub const c = @cImport({
     @cUndef("CIMGUI_USE_SDL2");
     @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
 
-    @cInclude("flecs.h");
-
     @cInclude("zdfs/zdfs.h");
 });
 
@@ -144,13 +142,13 @@ pub fn main() !void {
             .none => {},
             .exit => break :outer,
             .frontend => {
-                cx.deinitScene();
+                try cx.deinitScene();
                 cx.scene = Core.Scene{ .frontend = try Frontend.init(cx.alloc) };
                 cx.scene_tag = .frontend;
                 cx.transition = .none;
             },
             .game => |t| {
-                cx.deinitScene();
+                try cx.deinitScene();
                 cx.scene = Core.Scene{ .game = try Game.init(&cx, t.load_order) };
                 cx.scene_tag = .game;
                 cx.transition = .none;
