@@ -19,6 +19,7 @@ pub const CommandArgs = std.process.ArgIteratorGeneral(.{
 pub const Command = struct {
     name: []const u8,
     func: *const fn (*Core, *const Command, *CommandArgs) void,
+    summary: []const u8,
 };
 
 const HistoryItem = union(enum) {
@@ -27,25 +28,48 @@ const HistoryItem = union(enum) {
     toast: []const u8,
 };
 
-const commands = std.StaticStringMap(Command).initComptime(.{
-    .{ "exit", Command{ .name = "exit", .func = &ccmds.exit } },
-    .{ "quit", Command{ .name = "quit", .func = &ccmds.exit } },
+pub const commands = std.StaticStringMap(Command).initComptime(.{
+    .{ "exit", Command{
+        .name = "exit",
+        .func = &ccmds.exit,
+        .summary = "Close the engine",
+    } },
+    .{ "help", Command{
+        .name = "help",
+        .func = &ccmds.help,
+        .summary = "Print a list of all commands",
+    } },
+    .{ "plugin", Command{
+        .name = "plugin",
+        .func = &ccmds.plugin,
+        .summary = "Inspect and manipulate plugins",
+    } },
+    .{ "quit", Command{
+        .name = "quit",
+        .func = &ccmds.exit,
+        .summary = "Close the engine",
+    } },
 });
 
-comptime {
+pub const cmd_name_max_len: usize = blk: {
+    var max_name_len: usize = 0;
+
     for (commands.keys(), commands.values()) |k, v| {
         std.debug.assert(std.mem.eql(u8, k, v.name));
+        max_name_len = @max(max_name_len, k.len);
     }
-}
 
-allo: std.mem.Allocator,
+    break :blk max_name_len;
+};
+
+alloc: std.mem.Allocator,
 input_buf: [256]u8,
 history: Deque(HistoryItem),
 prev_inputs: Deque([]const u8),
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
-        .allo = allocator,
+        .alloc = allocator,
         .input_buf = [_]u8{0} ** 256,
         .history = try Deque(HistoryItem).init(allocator),
         .prev_inputs = try Deque([]const u8).init(allocator),
@@ -53,7 +77,23 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
+    while (true) {
+        const h = self.history.popFront() orelse break;
+
+        switch (h) {
+            .info => |s| self.alloc.free(s),
+            .submission => |s| self.alloc.free(s),
+            .toast => |s| self.alloc.free(s),
+        }
+    }
+
     self.history.deinit();
+
+    while (true) {
+        const p = self.prev_inputs.popFront() orelse break;
+        self.alloc.free(p);
+    }
+
     self.prev_inputs.deinit();
 }
 
@@ -118,13 +158,13 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
         .callback_history = true,
         .enter_returns_true = true,
     }, inputTextCallback, null)) {
-        submit(cx);
+        submitCommands(cx);
     }
 
     c.igSameLine(0.0, -1.0);
 
     if (c.igButton("Submit", .{ .x = 0.0, .y = 0.0 })) {
-        submit(cx);
+        submitCommands(cx);
     }
 
     c.igSetItemDefaultFocus();
@@ -132,28 +172,28 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
 
 pub fn logHelp(self: *Self, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
-    const p = std.fmt.allocPrint(self.allo, format, args) catch return;
+    const p = std.fmt.allocPrint(self.alloc, format, args) catch return;
     self.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logInfo(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logSubmission(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .submission = p }) catch return;
 }
 
 pub fn logToast(cx: *Core, comptime format: []const u8, args: anytype) void {
     errdefer reportConsoleHistoryFail.call();
     cx.eprintln(format, args) catch return;
-    const p = std.fmt.allocPrint(cx.console.allo, format, args) catch return;
+    const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .toast = p }) catch return;
 }
 
@@ -167,7 +207,7 @@ fn inputTextCallback(data: [*c]c.ImGuiInputTextCallbackData) callconv(.C) c_int 
     return 0;
 }
 
-fn submit(cx: *Core) void {
+fn submitCommands(cx: *Core) void {
     var self = &cx.console;
     const submission = std.mem.sliceTo(&self.input_buf, 0);
 
@@ -178,11 +218,11 @@ fn submit(cx: *Core) void {
 
     if (self.prev_inputs.len() > 256) {
         const s = self.prev_inputs.popFront() orelse unreachable;
-        self.allo.free(s);
+        self.alloc.free(s);
     }
 
     if (self.prev_inputs.len() < 1 or !std.mem.eql(u8, self.prev_inputs.back().?.*, submission)) {
-        if (std.fmt.allocPrint(self.allo, "{s}", .{submission})) |p| {
+        if (std.fmt.allocPrint(self.alloc, "{s}", .{submission})) |p| {
             self.prev_inputs.pushBack(p) catch {
                 reportConsoleInputSaveFail.call();
             };
@@ -193,17 +233,27 @@ fn submit(cx: *Core) void {
 
     defer self.input_buf = [_]u8{0} ** @typeInfo(@TypeOf(self.input_buf)).Array.len;
     logSubmission(cx, "$ {s}", .{submission});
-    var tokens = std.mem.tokenizeAny(u8, submission, " \t\n\r");
+    var parts = std.mem.tokenizeScalar(u8, submission, ';');
+
+    while (true) {
+        const part = parts.next() orelse break;
+        submitCommand(cx, part);
+    }
+}
+
+fn submitCommand(cx: *Core, command: []const u8) void {
+    const self = &cx.console;
+    var tokens = std.mem.tokenizeAny(u8, command, " \t\n\r");
 
     const cmd_name = tokens.next() orelse {
-        logSubmission(cx, "$ {s}", .{submission});
+        logSubmission(cx, "$ {s}", .{command});
         return;
     };
 
     if (commands.get(cmd_name)) |*cmd| {
-        const arg_str = submission[cmd_name.len..];
+        const arg_str = command[cmd_name.len..];
 
-        var args = CommandArgs.init(self.allo, arg_str) catch {
+        var args = CommandArgs.init(self.alloc, arg_str) catch {
             reportConsoleArgParseFail.call();
             return;
         };

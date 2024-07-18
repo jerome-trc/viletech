@@ -45,3 +45,18 @@ pub fn exit(cx: *Core, cmd: *const Console.Command, args: *Console.CommandArgs) 
     Console.logInfo(cx, "Will exit after this engine cycle finishes.", .{});
     cx.transition = .exit;
 }
+
+pub fn help(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
+    const cmd_name_max_len = std.fmt.comptimePrint("{}", .{Console.cmd_name_max_len});
+    const cmd_fmt = comptime "{s: <" ++ cmd_name_max_len ++ "} : {s}";
+
+    Console.logInfo(cx, "All commands:", .{});
+
+    for (Console.commands.values()) |cmd| {
+        Console.logInfo(cx, cmd_fmt, .{ cmd.name, cmd.summary });
+    }
+}
+
+pub fn plugin(_: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
+    // TODO
+}
