@@ -13,6 +13,7 @@ const Frontend = @import("Frontend.zig");
 const imgui = @import("imgui.zig");
 const gamemode = @import("gamemode.zig");
 const platform = @import("platform.zig");
+const zdfs = @import("zdfs.zig");
 
 comptime {
     if (builtin.mode == .ReleaseFast or builtin.mode == .ReleaseSmall) {
@@ -84,6 +85,7 @@ pub fn main() !void {
     }
 
     var cx = try Core.init(if (builtin.mode == .Debug) &gpa else null);
+    zdfs.setMainThread();
     defer cx.deinit() catch {};
 
     try cx.eprintln(

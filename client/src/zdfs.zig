@@ -5,27 +5,43 @@ const log = std.log.scoped(.zdfs);
 
 const c = @import("main.zig").c;
 
+const stdx = @import("stdx.zig");
+
+pub fn setMainThread() void {
+    c.zdfs_set_main_thread();
+}
+
 pub const VirtualFs = packed struct {
     const Self = @This();
 
-    inner: *c.zdfs_FileSys,
+    ptr: *c.zdfs_FileSys,
 
-    pub fn init() !Self {
+    pub fn init() Error!Self {
         return Self{
-            .inner = c.zdfs_fs_new(messageCallback) orelse return error.FileSysInitNull,
+            .ptr = c.zdfs_fs_new(messageCallback) orelse return Error.FileSysInitNull,
         };
     }
 
     pub fn deinit(self: Self) void {
-        c.zdfs_fs_free(self.inner);
+        c.zdfs_fs_free(self.ptr);
+    }
+
+    pub fn mount(self: Self, path: stdx.Path) Error!void {
+        if (!c.zdfs_fs_mount(self.ptr, path)) return Error.MountFail;
     }
 };
 
 pub const Error = error{
     FileSysInitNull,
+    MountFail,
 };
 
-extern "C" fn snprintf(buffer: [*c]u8, bufsz: usize, format: [*c]const u8, ...) c_int;
+extern "C" fn vsnprintf(
+    buffer: [*c]u8,
+    bufsz: usize,
+    format: [*c]const u8,
+    [*c]std.builtin.VaList,
+) c_int;
 
 threadlocal var msg_cb_buf = [_]u8{0} ** 1024;
 
@@ -33,7 +49,7 @@ fn messageCallback(level: c.zdfs_MessageLevel, fmt: [*c]const u8, ...) callconv(
     var args = @cVaStart();
     defer @cVaEnd(&args);
 
-    const written = snprintf(&msg_cb_buf, msg_cb_buf.len, fmt, args);
+    const written = vsnprintf(&msg_cb_buf, msg_cb_buf.len, fmt, &args);
 
     if (written < 0) {
         log.err("ZDFS message callback failed due to encoding error.", .{});
@@ -53,9 +69,7 @@ fn messageCallback(level: c.zdfs_MessageLevel, fmt: [*c]const u8, ...) callconv(
         c.zdfs_msglevel_debugwarn, c.zdfs_msglevel_debugnotify => {
             log.debug("{s}", .{&msg_cb_buf});
         },
-        else => {
-            return 0;
-        },
+        else => return 0,
     }
 
     return written;

@@ -154,9 +154,11 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
             }
 
             try self.plugin.libs.append(dynlib);
+            continue;
         }
 
-        cx.alloc.free(item.path);
+        try cx.fs.mount(path);
+        cx.alloc.free(path);
     }
 
     cx.alloc.free(load_order);
