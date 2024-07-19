@@ -7,6 +7,20 @@ const argparse = @import("zig-args");
 const Core = @import("../Core.zig");
 const Console = @import("Console.zig");
 
+pub fn clear(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
+    var self = &cx.console;
+
+    while (true) {
+        const h = self.history.popFront() orelse break;
+
+        switch (h) {
+            .info => |s| self.alloc.free(s),
+            .submission => |s| self.alloc.free(s),
+            .toast => |s| self.alloc.free(s),
+        }
+    }
+}
+
 pub fn exit(cx: *Core, cmd: *const Console.Command, args: *Console.CommandArgs) void {
     const Args = struct {
         help: bool = false,

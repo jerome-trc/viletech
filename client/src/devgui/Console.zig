@@ -29,6 +29,11 @@ const HistoryItem = union(enum) {
 };
 
 pub const commands = std.StaticStringMap(Command).initComptime(.{
+    .{ "clear", Command{
+        .name = "clear",
+        .func = &ccmds.clear,
+        .summary = "Clear the message log",
+    } },
     .{ "exit", Command{
         .name = "exit",
         .func = &ccmds.exit,
