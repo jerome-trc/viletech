@@ -7,6 +7,8 @@ const c = @import("main.zig").c;
 
 const stdx = @import("stdx.zig");
 
+pub const LumpNum = i32;
+
 pub fn setMainThread() void {
     c.zdfs_set_main_thread();
 }
@@ -26,8 +28,31 @@ pub const VirtualFs = packed struct {
         c.zdfs_fs_free(self.ptr);
     }
 
+    pub fn entryLen(self: Self, num: LumpNum) ?usize {
+        var exists = false;
+        const ret = c.zdfs_fs_entry_len(self.ptr, num, &exists);
+        return if (exists) ret else null;
+    }
+
+    pub fn entryShortName(self: Self, num: LumpNum) ?[:0]const u8 {
+        const cstr = c.zdfs_fs_entry_shortname(self.ptr, num);
+        return if (cstr != null) std.mem.sliceTo(cstr, 0) else null;
+    }
+
+    pub fn initHashChains(self: Self) void {
+        c.zdfs_fs_init_hash_chains(self.ptr);
+    }
+
     pub fn mount(self: Self, path: stdx.Path) Error!void {
         if (!c.zdfs_fs_mount(self.ptr, path)) return Error.MountFail;
+    }
+
+    pub fn numEntries(self: Self) usize {
+        return c.zdfs_fs_num_entries(self.ptr);
+    }
+
+    pub fn numFiles(self: Self) usize {
+        return c.zdfs_fs_num_files(self.ptr);
     }
 };
 

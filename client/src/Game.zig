@@ -161,6 +161,8 @@ pub fn init(cx: *Core, load_order: []Frontend.Item) !Self {
         cx.alloc.free(path);
     }
 
+    cx.fs.initHashChains();
+
     cx.alloc.free(load_order);
     return self;
 }

@@ -6,6 +6,7 @@ const Frontend = @import("Frontend.zig");
 const Game = @import("Game.zig");
 const Path = @import("stdx.zig").Path;
 const platform = @import("platform.zig");
+const VfsGui = @import("devgui/VfsGui.zig");
 const zdfs = @import("zdfs.zig");
 
 const Self = @This();
@@ -48,6 +49,7 @@ stdout_bw: StreamWriter,
 
 displays: std.ArrayList(platform.Display),
 console: Console,
+vfsgui: VfsGui,
 
 scene_tag: SceneTag,
 scene: Scene,
@@ -69,6 +71,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
         .stdout_bw = std.io.bufferedWriter(stdout_file),
         .displays = std.ArrayList(platform.Display).init(alloc),
         .console = try Console.init(alloc),
+        .vfsgui = VfsGui.init(),
         .scene_tag = .frontend,
         .scene = Scene{ .frontend = try Frontend.init(alloc) },
         .transition = .none,

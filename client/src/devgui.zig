@@ -11,6 +11,7 @@ const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const Display = @import("platform.zig").Display;
 const imgui = @import("imgui.zig");
+const VfsGui = @import("devgui/VfsGui.zig");
 
 pub const State = enum(c_int) {
     console,
@@ -116,12 +117,12 @@ pub fn draw(cx: *Core, display: *Display) void {
 
         switch (display.dgui.left) {
             .console => Console.draw(cx, true, menu_bar_height),
-            .vfs => {}, // TODO
+            .vfs => VfsGui.draw(cx, true, menu_bar_height),
         }
 
         switch (display.dgui.right) {
             .console => Console.draw(cx, false, menu_bar_height),
-            .vfs => {}, // TODO
+            .vfs => VfsGui.draw(cx, false, menu_bar_height),
         }
 
         c.igPushItemWidth(mainvp.*.Size.x * 0.15);
