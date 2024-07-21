@@ -92,6 +92,7 @@ fn commonDependencies(
             @import("../depend/build.flecs.zig").link(b, c);
             sdl_sdk.link(c, .static);
             @import("../depend/build.zdfs.zig").link(b, c, target, optimize);
+            @import("../depend/build.zmsx.zig").link(b, c, target, optimize);
 
             c.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
             c.root_module.addImport("zig-args", zig_args.module("args"));
@@ -105,9 +106,10 @@ fn commonDependencies(
                 .use_pkg_config = .yes,
             });
 
+            m.addSystemIncludePath(b.path("depend/flecs"));
             m.addSystemIncludePath(b.path("depend/imgui"));
             m.addSystemIncludePath(b.path("depend/zdfs/include"));
-            m.addSystemIncludePath(b.path("depend/flecs"));
+            m.addSystemIncludePath(b.path("depend/zmsx/include"));
 
             m.addImport("sdl2", sdl_sdk.getWrapperModule());
             m.addImport("zig-args", zig_args.module("args"));
