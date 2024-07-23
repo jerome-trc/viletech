@@ -36,6 +36,8 @@
 #ifndef __I_MAIN__
 #define __I_MAIN__
 
+#include "doomtype.h"
+
 void I_Init(void);
 void I_Init2(void);
 dboolean I_Interrupted(void);
