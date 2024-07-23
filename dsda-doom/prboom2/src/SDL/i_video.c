@@ -1166,7 +1166,7 @@ void I_SetWindowIcon(void) {
 
   if (!surface) {
 	int32_t size = -1;
-	const uint8_t* bytes = vt_windowIcon(&size);
+	const uint8_t* bytes = windowIcon(&size);
 	assert(bytes != NULL);
 	SDL_RWops* rwop = SDL_RWFromConstMem((const void*)bytes, size);
 	assert(rwop != NULL);

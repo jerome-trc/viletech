@@ -524,7 +524,7 @@ function(AddGameExecutable TARGET SOURCES)
         endif()
     endif()
 
-    add_library(${TARGET} STATIC ${SOURCES})
+    add_executable(${TARGET} WIN32 ${SOURCES})
 
     target_compile_options(${TARGET} PRIVATE
         ${SUPPORTED_WARNINGS}
@@ -625,6 +625,21 @@ function(AddGameExecutable TARGET SOURCES)
         ${OPENGL_gl_LIBRARY}
         ${OPENGL_glu_LIBRARY}
     )
+
+    if(WIN32)
+		target_link_libraries(
+			ratboom PRIVATE
+			debug "${CMAKE_SOURCE_DIR}/../../zig-out/dbg/lib/ratboomzig.lib"
+			optimized "${CMAKE_SOURCE_DIR}/../../zig-out/rel/lib/ratboomzig.lib"
+			ws2_32 userenv advapi32
+		)
+	else()
+		target_link_libraries(
+			ratboom PRIVATE
+			debug "${CMAKE_SOURCE_DIR}/../../zig-out/dbg/lib/libratboomzig.a"
+			optimized "${CMAKE_SOURCE_DIR}/../../zig-out/rel/lib/libratboomzig.a"
+		)
+	endif()
 endfunction()
 
 AddGameExecutable(ratboom "${DSDA_SOURCES}")

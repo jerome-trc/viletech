@@ -266,7 +266,7 @@ void I_SetProcessPriority(void)
 
 int dsdaMain(CCore* cx, int argc, char **argv)
 {
-    assert(cx->savedGametick == -1); // Sanity check...
+    assert(cx->saved_gametick == -1); // Sanity check...
 
   dsda_ParseCommandLineArgs(argc, argv);
 
@@ -341,4 +341,10 @@ int dsdaMain(CCore* cx, int argc, char **argv)
 
   D_DoomMain(cx);
   return 0;
+}
+
+int main(int argc, char* argv[]) {
+    int zigMain(int argc, char* argv[]);
+
+    return zigMain(argc, argv);
 }
