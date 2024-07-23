@@ -36,7 +36,7 @@
 
 #include "p_mobj.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 void P_SetupLevel(CCore*, int episode, int map, int playermask, int skill);
 void P_Init(void);               /* Called by startup code. */

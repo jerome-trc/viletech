@@ -19,7 +19,7 @@
 
 #include "d_player.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 void Hexen_IN_Ticker(void);
 void Hexen_IN_Drawer(CCore*);

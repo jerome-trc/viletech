@@ -97,7 +97,7 @@
 #include "heretic/mn_menu.h"
 #include "heretic/sb_bar.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /****************************
  *

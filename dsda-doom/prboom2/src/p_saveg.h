@@ -35,7 +35,7 @@
 #define __P_SAVEG__
 
 #include "doomtype.h"
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define SAVEVERSION 5
 

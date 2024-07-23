@@ -38,7 +38,7 @@
 
 #include "dsda/configuration.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 //
 // MENUS

@@ -37,7 +37,7 @@
 #include "d_player.h"
 #include "r_data.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 extern int r_frame_count;
 

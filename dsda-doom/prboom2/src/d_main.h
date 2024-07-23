@@ -38,7 +38,7 @@
 #include "d_event.h"
 #include "w_wad.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /* CPhipps - removed wadfiles[] stuff to w_wad.h */
 

@@ -20,7 +20,7 @@
 
 #include "d_event.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 dboolean Heretic_F_Responder(event_t * event);
 void Heretic_F_Drawer(void);

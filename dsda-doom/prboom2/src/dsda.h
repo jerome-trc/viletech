@@ -23,7 +23,7 @@
 #include "d_player.h"
 #include "r_defs.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 typedef struct {
   int m, s, t;

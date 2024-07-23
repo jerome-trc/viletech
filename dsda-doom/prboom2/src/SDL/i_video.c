@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------
  */
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

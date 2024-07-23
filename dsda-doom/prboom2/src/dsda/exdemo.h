@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 int dsda_IsExDemoSigned(void);
 void dsda_MergeExDemoFeatures(void);

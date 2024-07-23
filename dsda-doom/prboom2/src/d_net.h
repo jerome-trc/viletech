@@ -34,7 +34,7 @@
 #ifndef __D_NET__
 #define __D_NET__
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /// Create any new ticcmds.
 void FakeNetUpdate(CCore*);

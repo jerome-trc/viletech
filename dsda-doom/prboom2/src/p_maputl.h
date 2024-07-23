@@ -36,7 +36,7 @@
 
 #include "r_defs.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /* mapblocks are used to check movement against lines and things */
 #define MAPBLOCKUNITS   128

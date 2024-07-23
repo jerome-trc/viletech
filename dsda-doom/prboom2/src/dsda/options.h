@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 typedef struct dsda_options {
   int weapon_recoil;

@@ -18,7 +18,7 @@
 #ifndef __DSDA_EXHUD__
 #define __DSDA_EXHUD__
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 void dsda_InitExHud(CCore*);
 void dsda_UpdateExHud(void);

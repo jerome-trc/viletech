@@ -80,7 +80,7 @@
 #include "dsda/wad_stats.h"
 #include "dsda/zipfile.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /// Only for use by exit handlers.
 CCore* g_cx = NULL;

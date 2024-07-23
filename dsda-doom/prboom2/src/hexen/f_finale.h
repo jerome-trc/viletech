@@ -19,7 +19,7 @@
 #define __HEXEN_F_FINALE__
 
 #include "d_event.h"
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 dboolean Hexen_F_Responder(event_t* event);
 void Hexen_F_Drawer(void);

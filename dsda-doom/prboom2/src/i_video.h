@@ -43,7 +43,7 @@
 #include "doomtype.h"
 #include "SDL.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 extern SDL_Window *sdl_window;
 extern SDL_Renderer *sdl_renderer;

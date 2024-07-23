@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 void dsda_ArchiveAll(void);
 void dsda_UnArchiveAll(CCore*);

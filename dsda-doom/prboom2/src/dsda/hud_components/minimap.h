@@ -18,7 +18,7 @@
 #ifndef __DSDA_HUD_COMPONENT_MINIMAP__
 #define __DSDA_HUD_COMPONENT_MINIMAP__
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 void dsda_InitMinimapHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateMinimapHC(void* data);

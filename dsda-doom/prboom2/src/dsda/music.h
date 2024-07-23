@@ -20,7 +20,7 @@
 
 #include "sounds.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 int dsda_GetDehMusicIndex(const char* key, size_t length);
 int dsda_GetOriginalMusicIndex(const char* key);

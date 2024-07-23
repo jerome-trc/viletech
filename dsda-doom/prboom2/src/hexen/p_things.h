@@ -19,7 +19,7 @@
 
 #include "info.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 dboolean EV_ThingProjectile(CCore*, byte * args, dboolean gravity);
 dboolean EV_ThingSpawn(CCore*, byte * args, dboolean fog);

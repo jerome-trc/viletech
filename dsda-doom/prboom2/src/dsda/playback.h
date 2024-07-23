@@ -18,7 +18,7 @@
 #include "d_ticcmd.h"
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define PLAYBACK_NORMAL      0
 #define PLAYBACK_JOIN_ON_END 1

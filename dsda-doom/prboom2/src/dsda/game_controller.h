@@ -18,7 +18,7 @@
 #ifndef __DSDA_GAME_CONTROLLER__
 #define __DSDA_GAME_CONTROLLER__
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 // Must match SDL
 typedef enum {

@@ -22,7 +22,7 @@
 
 #include "dsda/utility.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define WI_SHOW_NEXT_LOC      0x01
 #define WI_SHOW_NEXT_DONE     0x02

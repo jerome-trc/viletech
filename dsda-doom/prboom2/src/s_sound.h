@@ -38,7 +38,7 @@
 #include "p_mobj.h"
 #include "r_defs.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define MAX_CHANNELS 32
 

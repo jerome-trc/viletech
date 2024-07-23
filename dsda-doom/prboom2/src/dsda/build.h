@@ -18,7 +18,7 @@
 #include "d_event.h"
 #include "d_ticcmd.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 dboolean dsda_AllowBuilding(void);
 dboolean dsda_BuildMode(void);

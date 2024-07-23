@@ -22,7 +22,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 typedef enum {
   dsda_config_none,

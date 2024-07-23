@@ -36,7 +36,7 @@
 
 #include "d_event.h"
 #include "doomtype.h"
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 /* Called by main loop. */
 dboolean F_Responder(event_t* ev);

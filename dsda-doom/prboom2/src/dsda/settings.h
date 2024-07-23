@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define UNSPECIFIED_COMPLEVEL -2
 

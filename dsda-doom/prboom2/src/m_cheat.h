@@ -36,7 +36,7 @@
 
 #include "d_event.h"
 
-#include "viletech.nim.h"
+#include "viletech.zig.h"
 
 #define CHEAT(cheat, deh_cheat, when, func, arg, repeatable) \
   { cheat, deh_cheat, when, func, arg, repeatable, 0, 0, 0, 0, 0, "" }
