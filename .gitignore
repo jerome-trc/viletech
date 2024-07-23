@@ -25,6 +25,8 @@ Session.vim
 /nimcache/
 /nimdoc/
 /testresults/
+/.zig-cache
+/zig-out
 
 # Sample data ##################################################################
 
