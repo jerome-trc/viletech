@@ -18,4 +18,20 @@ pub fn build(b: *std.Build) void {
     lib.pie = true;
 
     b.installArtifact(lib);
+
+    const lib_check = b.addStaticLibrary(.{
+        .name = "ratboomzig",
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("client/src/main.zig"),
+    });
+
+    lib_check.linkLibC();
+    lib_check.linkLibCpp();
+    lib_check.addIncludePath(b.path("dsda-doom/prboom2/src"));
+    lib_check.bundle_compiler_rt = true;
+    lib_check.pie = true;
+
+    const check = b.step("check", "Semantic check for ZLS");
+    check.dependOn(&lib_check.step);
 }
