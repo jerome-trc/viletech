@@ -85,7 +85,7 @@ include(CMakeDependentOption)
 cmake_dependent_option(ENABLE_LTO "Use link-time optimisation" OFF "HAVE_LTO" OFF)
 
 if(DEFINED MOLD_PATH)
-    set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -fuse-ld=${MOLD_PATH}")
+    set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -fuse-ld=mold")
 endif()
 
 set(PACKAGE_NAME "${PROJECT_NAME}")
