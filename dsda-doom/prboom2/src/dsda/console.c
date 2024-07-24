@@ -168,24 +168,6 @@ dboolean dsda_OpenConsole(CCore* cx) {
   return true;
 }
 
-static dboolean console_LevelExit(CCore* cx, const char* command, const char* args) {
-  (void)cx;
-  (void)command;
-
-  void G_ExitLevel(int position);
-
-  int position = 0;
-
-  if (hexen)
-    return false;
-
-  sscanf(args, "%d", &position);
-
-  G_ExitLevel(position);
-
-  return true;
-}
-
 static dboolean console_LevelSecretExit(CCore* cx, const char* command, const char* args) {
   (void)cx;
   (void)command;
@@ -2714,7 +2696,6 @@ static console_command_entry_t console_commands[] = {
 
   { "music.restart", console_MusicRestart, CF_ALWAYS },
 
-  { "level.exit", console_LevelExit, CF_NEVER },
   { "level.secret_exit", console_LevelSecretExit, CF_NEVER },
 
   { "script.run", console_ScriptRun, CF_ALWAYS },
