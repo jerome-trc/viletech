@@ -1166,13 +1166,8 @@ void A_Light2 (CCore* cx, player_t *player, pspdef_t *psp)
   player->extralight = 2;
 }
 
-//
-// A_BFGSpray
-// Spawn a BFG explosion on every monster in view
-//
-
-void A_BFGSpray(CCore* cx, player_t* player, mobj_t *mo)
-{
+/// Spawn a BFG explosion on every monster in view.
+void A_BFGSpray(CCore* cx, mobj_t *mo) {
   int i;
 
   for (i=0 ; i<40 ; i++)  // offset angles from its attack angle

@@ -102,7 +102,7 @@ void P_MovePsprites(CCore*, struct player_s *curplayer);
 void P_DropWeapon(CCore*, struct player_s *player);
 int P_AmmoPercent(struct player_s *player, int weapon);
 
-void A_BFGSpray(CCore*, struct player_s*, mobj_t*);
+void A_BFGSpray(CCore*, mobj_t*);
 
 void A_BFGsound(CCore*, struct player_s*, pspdef_t*);
 void A_CheckReload(CCore*, struct player_s*, pspdef_t*);
