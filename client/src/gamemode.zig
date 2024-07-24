@@ -1,5 +1,5 @@
 //! Mach's gamemode module (2a7e604).
-//! Used under the MIT License. See mach.mit.txt.
+//! Used under the MIT License. See `/legal/mach.mit.txt`.
 
 const std = @import("std");
 const builtin = @import("builtin");

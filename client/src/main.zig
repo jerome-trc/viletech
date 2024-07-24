@@ -32,18 +32,19 @@ extern "C" fn dsdaMain(
 export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
     gamemode.start();
 
-    var cx = Core{
-        .c = Core.C{
-            .core = undefined,
-            .devgui_open = if (builtin.mode == .Debug) true else false,
-            .imgui_ctx = undefined,
-            .saved_gametick = -1,
-        },
-        .dgui = Core.DevGui{
-            .left = devgui.State.console,
-            .right = devgui.State.vfs,
-        },
-    };
+    var gpa: if (builtin.mode == .Debug) Core.DebugAllocator else void = undefined;
+    var core_alloc: std.mem.Allocator = undefined;
+
+    if (builtin.mode == .Debug) {
+        gpa = Core.DebugAllocator{};
+        core_alloc = gpa.allocator();
+    } else {
+        gpa = {};
+        core_alloc = std.heap.c_allocator;
+    }
+
+    var cx = Core.init(if (builtin.mode == .Debug) &gpa else null) catch return 1;
+    defer cx.deinit();
 
     cx.c.core = &cx;
     return dsdaMain(&cx.c, argc, argv);

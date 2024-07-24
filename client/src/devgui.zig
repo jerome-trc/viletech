@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 
 const c = @import("main.zig").c;
 
+const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
 
@@ -103,15 +104,15 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
     }
 
     c.igPopItemWidth();
-    // const menu_bar_height = c.igGetWindowHeight();
+    const menu_bar_height = c.igGetWindowHeight();
 
     switch (cx.dgui.left) {
-        .console => {}, // Console.draw(cx, true, menu_bar_height),
+        .console => Console.draw(cx, true, menu_bar_height),
         .vfs => {}, // VfsGui.draw(cx, true, menu_bar_height),
     }
 
     switch (cx.dgui.right) {
-        .console => {}, // Console.draw(cx, false, menu_bar_height),
+        .console => Console.draw(cx, false, menu_bar_height),
         .vfs => {}, // VfsGui.draw(cx, false, menu_bar_height),
     }
 
