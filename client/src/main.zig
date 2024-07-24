@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Core = @import("Core.zig");
 const gamemode = @import("gamemode.zig");
 
 pub const c = @cImport({
@@ -15,15 +16,6 @@ pub const c = @cImport({
     @cUndef("CIMGUI_USE_SDL2");
     @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
 });
-
-pub const Core = struct {
-    pub const C = struct {
-        core: *Core,
-        saved_gametick: i32,
-    };
-
-    c: C,
-};
 
 extern "C" fn dsdaMain(
     ccx: *Core.C,
