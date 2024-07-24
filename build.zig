@@ -42,10 +42,13 @@ fn commonDependencies(
     _: std.Build.ResolvedTarget,
     _: std.builtin.OptimizeMode,
 ) void {
+    const zig_args = b.dependency("zig-args", .{});
+
     compile.linkLibC();
     compile.linkLibCpp();
     compile.addIncludePath(b.path("dsda-doom/prboom2/src"));
     compile.bundle_compiler_rt = true;
     compile.pie = true;
     @import("depend/build.cimgui.zig").link(b, compile);
+    compile.root_module.addImport("zig-args", zig_args.module("args"));
 }
