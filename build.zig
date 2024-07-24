@@ -46,6 +46,7 @@ fn commonDependencies(
 
     compile.linkLibC();
     compile.linkLibCpp();
+    compile.addIncludePath(b.path("build"));
     compile.addIncludePath(b.path("dsda-doom/prboom2/src"));
     compile.bundle_compiler_rt = true;
     compile.pie = true;

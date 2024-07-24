@@ -71,6 +71,35 @@ pub fn help(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void 
     }
 }
 
+pub fn levelExit(cx: *Core, _: *const Console.Command, args: *Console.CommandArgs) void {
+    if (c.hexen != 0) {
+        Console.logInfo(cx, "`level.exit` cannot be used with Hexen.", .{});
+        return;
+    }
+
+    if (c.gamestate != c.GS_LEVEL) {
+        Console.logInfo(cx, "`level.exit` only works when in a level.", .{});
+        return;
+    }
+
+    var position: c_int = 0;
+
+    const Params = struct {};
+
+    const opts = argparse.parse(Params, args, std.heap.c_allocator, .print) catch |err| {
+        Console.logInfo(cx, "Failed to parse arguments: {s}", .{@errorName(err)});
+        return;
+    };
+
+    defer opts.deinit();
+
+    for (opts.positionals) |pos| {
+        position = std.fmt.parseInt(c_int, pos, 10) catch continue;
+    }
+
+    c.G_ExitLevel(position);
+}
+
 pub fn pistolstartHold(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
     if (c.pistolstart == c.pistolstart_off) {
         Console.logInfo(cx, "Pistol start is disabled; this command does nothing.", .{});

@@ -7,6 +7,8 @@ const gamemode = @import("gamemode.zig");
 
 pub const c = @cImport({
     @cDefine("RATBOOM_ZIG", {});
+    @cInclude("doomdef.h");
+    @cInclude("doomstat.h");
     @cInclude("g_game.h");
     @cInclude("i_main.h");
     @cInclude("i_system.h");
