@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const gamemode = @import("gamemode.zig");
+
 pub const c = @cImport({
     @cDefine("RATBOOM_ZIG", {});
     @cInclude("i_main.h");
@@ -23,6 +25,8 @@ extern "C" fn dsdaMain(
 ) c_int;
 
 export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
+    gamemode.start();
+
     var cx = Core{
         .c = Core.C{
             .core = undefined,
