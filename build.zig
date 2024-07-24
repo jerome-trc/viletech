@@ -10,13 +10,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("client/src/main.zig"),
     });
-
-    lib.linkLibC();
-    lib.linkLibCpp();
-    lib.addIncludePath(b.path("dsda-doom/prboom2/src"));
-    lib.bundle_compiler_rt = true;
-    lib.pie = true;
-
+    commonDependencies(b, lib, target, optimize);
     b.installArtifact(lib);
 
     const lib_check = b.addStaticLibrary(.{
@@ -25,12 +19,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("client/src/main.zig"),
     });
-
-    lib_check.linkLibC();
-    lib_check.linkLibCpp();
-    lib_check.addIncludePath(b.path("dsda-doom/prboom2/src"));
-    lib_check.bundle_compiler_rt = true;
-    lib_check.pie = true;
+    commonDependencies(b, lib_check, target, optimize);
 
     const check = b.step("check", "Semantic check for ZLS");
     check.dependOn(&lib_check.step);
@@ -43,12 +32,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    demotest.linkLibC();
-    demotest.linkLibCpp();
-    demotest.addIncludePath(b.path("dsda-doom/prboom2/src"));
-    demotest.bundle_compiler_rt = true;
-    demotest.pie = true;
-
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
+}
+
+fn commonDependencies(
+    b: *std.Build,
+    compile: *std.Build.Step.Compile,
+    _: std.Build.ResolvedTarget,
+    _: std.builtin.OptimizeMode,
+) void {
+    compile.linkLibC();
+    compile.linkLibCpp();
+    compile.addIncludePath(b.path("dsda-doom/prboom2/src"));
+    compile.bundle_compiler_rt = true;
+    compile.pie = true;
+    @import("depend/build.cimgui.zig").link(b, compile);
 }
