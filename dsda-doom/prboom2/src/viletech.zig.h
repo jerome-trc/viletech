@@ -22,7 +22,7 @@ typedef struct CCore {
 
 static inline void vt_addDynLib(CCore* cx, char* path) {}
 
-static inline void vt_addConsoleToast(CCore* self, char* msg) {}
+void addConsoleToast(CCore*, const char*);
 
 void dguiLayout(CCore*);
 

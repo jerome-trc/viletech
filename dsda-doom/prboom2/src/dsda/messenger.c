@@ -74,7 +74,7 @@ static void dsda_AppendMessage(message_t* message) {
 static void dsda_QueueMessage(CCore* cx, const char* str, message_priority_t priority) {
   message_t* new_message;
 
-  vt_addConsoleToast(cx, str);
+  addConsoleToast(cx, str);
 
   if (current_message) {
     if (current_message->priority < priority)
