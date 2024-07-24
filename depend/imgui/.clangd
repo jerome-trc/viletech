@@ -1,9 +1,0 @@
----
-CompileFlags:
-  Add: [
-    '-DCIMGUI_API=extern "C"',
-    '-DCIMGUI_USE_SDL2',
-    '-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS',
-    '-isystem/usr/local/include/SDL2',
-  ]
-...
