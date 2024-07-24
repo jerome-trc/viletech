@@ -194,3 +194,15 @@ pub fn wantsKeyboard(_: *Core.C) callconv(.C) bool {
 pub fn wantsMouse(_: *Core.C) callconv(.C) bool {
     return c.igGetIO().*.WantCaptureMouse;
 }
+
+comptime {
+    @export(frameBegin, .{ .name = "dguiFrameBegin" });
+    @export(frameDraw, .{ .name = "dguiFrameDraw" });
+    @export(frameFinish, .{ .name = "dguiFrameFinish" });
+    @export(layout, .{ .name = "dguiLayout" });
+    @export(processEvent, .{ .name = "dguiProcessEvent" });
+    @export(setup, .{ .name = "dguiSetup" });
+    @export(shutdown, .{ .name = "dguiShutdown" });
+    @export(wantsKeyboard, .{ .name = "dguiWantsKeyboard" });
+    @export(wantsMouse, .{ .name = "dguiWantsMouse" });
+}
