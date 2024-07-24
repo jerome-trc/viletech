@@ -49,6 +49,11 @@ pub const commands = std.StaticStringMap(Command).initComptime(.{
         .func = &ccmds.plugin,
         .summary = "Inspect and manipulate plugins",
     } },
+    .{ "pistolstart.hold", Command{
+        .name = "pistolstart.hold",
+        .func = &ccmds.pistolstartHold,
+        .summary = "Disable -pistolstart for one level transition",
+    } },
     .{ "quit", Command{
         .name = "quit",
         .func = &ccmds.exit,

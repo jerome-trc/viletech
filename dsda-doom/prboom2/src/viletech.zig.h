@@ -49,4 +49,8 @@ static inline void vt_writeEngineTime(void) {}
 /// Retrieve embedded window icon data.
 const uint8_t* windowIcon(int32_t* size);
 
-#endif // if !defined(RATBOOM_ZIG)
+#else // if !defined(RATBOOM_ZIG)
+
+typedef struct CCore CCore;
+
+#endif

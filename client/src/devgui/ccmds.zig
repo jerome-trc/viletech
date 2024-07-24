@@ -71,6 +71,16 @@ pub fn help(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void 
     }
 }
 
+pub fn pistolstartHold(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
+    if (c.pistolstart == c.pistolstart_off) {
+        Console.logInfo(cx, "Pistol start is disabled; this command does nothing.", .{});
+        return;
+    }
+
+    c.pistolstart = c.pistolstart_held;
+    Console.logInfo(cx, "Pistol start temporarily disabled for the next level transition only.", .{});
+}
+
 pub fn plugin(_: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
     // TODO
 }

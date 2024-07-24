@@ -191,7 +191,7 @@ dboolean coop_spawns;
 int shorttics;
 
 // automatic pistol start when advancing from one level to the next
-int pistolstart;
+PistolStart pistolstart = pistolstart_on;
 
 //
 // controls (have defaults)
@@ -1194,26 +1194,22 @@ static void G_DoLoadLevel(CCore* cx)
   }
 
   // automatic pistol start when advancing from one level to the next
-  if (pistolstart)
-  {
-    if (allow_incompatibility)
-    {
-      G_PlayerReborn(0);
+    if (pistolstart == pistolstart_held) {
+        pistolstart = pistolstart_on;
+    } else if (pistolstart == pistolstart_on) {
+        if (allow_incompatibility) {
+            G_PlayerReborn(0);
+        } else if (reelplayback) {
+            // no-op - silently ignore pistolstart when playing demo from the
+            // demo reel
+        } else {
+            const char message[] = "The -pistolstart option is not supported"
+                                    " for demos and\n"
+                                    " network play.";
+            demorecording = false;
+            I_Error(message);
+        }
     }
-    else if (reelplayback)
-    {
-      // no-op - silently ignore pistolstart when playing demo from the
-      // demo reel
-    }
-    else
-    {
-      const char message[] = "The -pistolstart option is not supported"
-                             " for demos and\n"
-                             " network play.";
-      demorecording = false;
-      I_Error(message);
-    }
-  }
 
   // initialize the msecnode_t freelist.                     phares 3/25/98
   // any nodes in the freelist are gone by now, cleared

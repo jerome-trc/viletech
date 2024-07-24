@@ -122,8 +122,14 @@ extern const char * comp_lev_str[];
 extern int shorttics;
 extern int longtics;
 
+typedef enum PistolStart {
+    pistolstart_off,
+    pistolstart_on,
+    pistolstart_held,
+} PistolStart;
+
 // automatic pistol start when advancing from one level to the next
-extern int pistolstart;
+extern PistolStart pistolstart;
 
 // hexen
 

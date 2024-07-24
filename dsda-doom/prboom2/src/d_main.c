@@ -1733,7 +1733,9 @@ static void D_DoomMainSetup(CCore* cx)
   e6y_InitCommandLine();
 
   // Automatic pistol start when advancing from one level to the next.
-  pistolstart = dsda_Flag(dsda_arg_pistolstart);
+  if (dsda_Flag(dsda_arg_pistolstart)) {
+    pistolstart = pistolstart_on;
+  }
 
   // CPhipps - autoloading of wads
   autoload = !dsda_Flag(dsda_arg_noautoload);
