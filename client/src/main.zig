@@ -56,15 +56,3 @@ export fn windowIcon(size: *i32) [*]const u8 {
     size.* = bytes.len;
     return bytes;
 }
-
-comptime {
-    @export(devgui.frameBegin, .{ .name = "dguiFrameBegin" });
-    @export(devgui.frameDraw, .{ .name = "dguiFrameDraw" });
-    @export(devgui.frameFinish, .{ .name = "dguiFrameFinish" });
-    @export(devgui.layout, .{ .name = "dguiLayout" });
-    @export(devgui.processEvent, .{ .name = "dguiProcessEvent" });
-    @export(devgui.setup, .{ .name = "dguiSetup" });
-    @export(devgui.shutdown, .{ .name = "dguiShutdown" });
-    @export(devgui.wantsKeyboard, .{ .name = "dguiWantsKeyboard" });
-    @export(devgui.wantsMouse, .{ .name = "dguiWantsMouse" });
-}
