@@ -1,20 +1,22 @@
 #pragma once
 
+#include <SDL_events.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#if !defined(RATBOOM_ZIG) // If included by Zig, don't expand to anything.
+#include <SDL.h>
 
-typedef struct Core Core;
-typedef void* LibHandle;
-typedef union SdlEvent SdlEvent;
-typedef struct SdlWindow SdlWindow;
+#if !defined(RATBOOM_ZIG) // If included by Zig, don't expand to anything.
 
 typedef int32_t GameTick;
 
+typedef struct Core Core;
+
 typedef struct CCore {
     Core* core;
+    bool devgui_open;
+    void* imgui_ctx;
     GameTick saved_gametick;
 } CCore;
 
@@ -22,40 +24,25 @@ static inline void vt_addDynLib(CCore* cx, char* path) {}
 
 static inline void vt_addConsoleToast(CCore* self, char* msg) {}
 
-static inline void vt_dguiDraw(CCore* self) {}
+void dguiLayout(CCore*);
 
-static inline void vt_dguiFrameBegin(CCore* self) {}
+void dguiFrameBegin(CCore*);
 
-static inline void vt_dguiFrameFinish(CCore* self) {}
+void dguiFrameFinish(CCore*);
 
-static inline void vt_dguiFrameDraw(CCore* self) {}
+void dguiFrameDraw(CCore*);
 
-static inline bool vt_dguiIsOpen(CCore* self) {
-    return false;
-}
+void dguiSetup(CCore*, SDL_Window*, void* sdl_gl_ctx);
 
-static inline void vt_dguiSetup(CCore* self, SdlWindow* window, void* sdlGlCtx) {}
+void dguiShutdown(void);
 
-static inline void vt_dguiShutdown(void) {}
+bool dguiWantsKeyboard(CCore*);
 
-/// Returns `true` if the developer GUI is open after the toggle.
-static inline bool vt_dguiToggle(CCore* self) {
-    return false;
-}
-
-static inline bool vt_dguiWantsKeyboard(CCore* self) {
-    return false;
-}
-
-static inline bool vt_dguiWantsMouse(CCore* self) {
-    return false;
-}
+bool dguiWantsMouse(CCore*);
 
 static inline void vt_loadDynLibs(CCore* cx) {}
 
-static inline bool vt_processEvent(CCore* self, SdlEvent* event) {
-    return false;
-}
+bool dguiProcessEvent(CCore*, SDL_Event*);
 
 static inline void vt_writeEngineTime(void) {}
 

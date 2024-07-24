@@ -5157,7 +5157,9 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     }
 
     if (dsda_InputActivated(dsda_input_console)) {
-        if (vt_dguiToggle(cx)) {
+        cx->devgui_open = !cx->devgui_open;
+
+        if (cx->devgui_open) {
             dsda_ApplyPauseMode(PAUSE_COMMAND);
             SDL_StartTextInput();
         } else {
@@ -5760,7 +5762,7 @@ void M_ChangeMenu(CCore* cx, menu_t *menudef, menuactive_t mnact)
   if (SDL_IsTextInputActive()) {
     bool needTextInput = currentMenu != NULL;
     needTextInput = needTextInput && currentMenu->flags & MENUF_TEXTINPUT;
-    needTextInput = needTextInput || vt_dguiIsOpen(cx);
+    needTextInput = needTextInput || cx->devgui_open;
 
     if (!needTextInput) {
       SDL_StopTextInput();

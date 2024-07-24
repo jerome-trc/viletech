@@ -502,7 +502,7 @@ void D_Display(CCore* cx, fixed_t frac) {
   // menus go directly to the screen
   M_Drawer(cx); // menu is drawn even on top of everything
 
-  vt_dguiFrameDraw(cx);
+  dguiFrameDraw(cx);
 
   FakeNetUpdate(cx);     // send out any new accumulation
 
@@ -572,9 +572,9 @@ static void D_DoomLoop(CCore* cx)
       S_UpdateSounds();// move positional sounds
 
     if (!(dsda_Flag(dsda_arg_nodraw))) {
-        vt_dguiFrameBegin(cx);
-        vt_dguiDraw(cx);
-        vt_dguiFrameFinish(cx);
+        dguiFrameBegin(cx);
+        dguiLayout(cx);
+        dguiFrameFinish(cx);
     }
 
     // Update display, next frame, with current state.

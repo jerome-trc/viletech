@@ -71,15 +71,4 @@ CIMGUI_API void ImGui_ImplSDL2_NewFrame(void);
 CIMGUI_API bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
 CIMGUI_API void ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode,struct _SDL_GameController** manual_gamepads_array,int manual_gamepads_count);
 
-CIMGUI_API bool ImGui_ImplSDLRenderer2_Init(SDL_Renderer* renderer);
-CIMGUI_API void ImGui_ImplSDLRenderer2_Shutdown(void);
-CIMGUI_API void ImGui_ImplSDLRenderer2_NewFrame(void);
-CIMGUI_API void ImGui_ImplSDLRenderer2_RenderDrawData(struct ImDrawData* draw_data, SDL_Renderer* renderer);
-
-// Called by Init/NewFrame/Shutdown
-CIMGUI_API bool ImGui_ImplSDLRenderer2_CreateFontsTexture(void);
-CIMGUI_API void ImGui_ImplSDLRenderer2_DestroyFontsTexture(void);
-CIMGUI_API bool ImGui_ImplSDLRenderer2_CreateDeviceObjects(void);
-CIMGUI_API void ImGui_ImplSDLRenderer2_DestroyDeviceObjects(void);
-
 #endif

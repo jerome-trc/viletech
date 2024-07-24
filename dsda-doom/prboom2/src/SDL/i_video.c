@@ -301,7 +301,7 @@ static void I_GetEvent(CCore* cx)
 
 while (SDL_PollEvent(Event))
 {
-    vt_processEvent(cx, (SdlEvent*)Event);
+    dguiProcessEvent(cx, Event);
 
   switch (Event->type) {
   case SDL_KEYDOWN:
@@ -337,7 +337,7 @@ while (SDL_PollEvent(Event))
       }
     }
 #endif
-    if (vt_dguiWantsKeyboard(cx))
+    if (dguiWantsKeyboard(cx))
         break;
 
     event.type = ev_keydown;
@@ -346,7 +346,7 @@ while (SDL_PollEvent(Event))
     break;
 
   case SDL_KEYUP: {
-    if (vt_dguiWantsKeyboard(cx))
+    if (dguiWantsKeyboard(cx))
         break;
 
     event.type = ev_keyup;
@@ -357,8 +357,9 @@ while (SDL_PollEvent(Event))
 
   case SDL_MOUSEBUTTONDOWN:
   case SDL_MOUSEBUTTONUP:
-    if (vt_dguiWantsMouse(cx))
+    if (dguiWantsMouse(cx)) {
         break;
+    }
 
     if (mouse_enabled && window_focused)
     {
@@ -395,7 +396,7 @@ while (SDL_PollEvent(Event))
   break;
 
   case SDL_TEXTINPUT:
-    if (vt_dguiWantsKeyboard(cx))
+    if (dguiWantsKeyboard(cx))
         break;
 
     event.type = ev_text;
@@ -656,7 +657,7 @@ void I_SetPalette(int pal) {
 
 static void I_ShutdownSDL(void) {
     if (!(dsda_Flag(dsda_arg_nodraw)))
-        vt_dguiShutdown();
+        dguiShutdown();
 
     if (sdl_glcontext) SDL_GL_DeleteContext(sdl_glcontext);
     if (screen) SDL_FreeSurface(screen);
@@ -1192,9 +1193,9 @@ void I_InitGraphics(CCore* cx)
     /* Set the video mode */
     I_UpdateVideoMode(cx);
 
-    vt_dguiSetup(cx, (SdlWindow*)sdl_window, sdl_glcontext);
+    dguiSetup(cx, sdl_window, sdl_glcontext);
 
-    if (vt_dguiIsOpen(cx)) {
+    if (cx->devgui_open) {
         SDL_StartTextInput();
     }
 
@@ -1544,8 +1545,9 @@ static void I_ReadMouse(CCore* cx)
 
 static dboolean MouseShouldBeGrabbed(CCore* cx)
 {
-    if (vt_dguiIsOpen(cx) || fastdemo)
+    if (cx->devgui_open || fastdemo) {
         return false;
+    }
 
   // never grab the mouse when in screensaver mode
   //if (screensaver_mode)
