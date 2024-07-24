@@ -13,6 +13,8 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
 
         while (iter.next()) |flag| {
             const f = std.mem.trim(u8, flag, " \n\r\t");
+            const dir = std.mem.trim(u8, f, "-I");
+            compile.addSystemIncludePath(.{ .cwd_relative = dir });
 
             cxx_flags = std.mem.concat(
                 b.allocator,
@@ -27,7 +29,7 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
         .flags = cxx_flags,
         .files = &[_][]const u8{
             "imgui_impl_sdl2.cpp",
-            "imgui_impl_sdlrenderer2.cpp",
+            "imgui_impl_opengl3.cpp",
             "cimgui.cpp",
             "imgui_demo.cpp",
             "imgui_draw.cpp",

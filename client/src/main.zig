@@ -1,20 +1,26 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 const Core = @import("Core.zig");
+const devgui = @import("devgui.zig");
 const gamemode = @import("gamemode.zig");
 
 pub const c = @cImport({
     @cDefine("RATBOOM_ZIG", {});
     @cInclude("i_main.h");
     @cInclude("i_system.h");
+    @cInclude("i_video.h");
+    @cInclude("lprintf.h");
     @cUndef("RATBOOM_ZIG");
 
-    @cDefine("CIMGUI_USE_SDL2", {});
     @cDefine("CIMGUI_DEFINE_ENUMS_AND_STRUCTS", {});
+    @cDefine("CIMGUI_USE_OPENGL3", {});
+    @cDefine("CIMGUI_USE_SDL2", {});
     @cInclude("cimgui.h");
     @cInclude("cimgui_impl.h");
-    @cUndef("CIMGUI_USE_SDL2");
     @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
+    @cUndef("CIMGUI_USE_OPENGL3");
+    @cUndef("CIMGUI_USE_SDL2");
 });
 
 extern "C" fn dsdaMain(
@@ -29,7 +35,13 @@ export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
     var cx = Core{
         .c = Core.C{
             .core = undefined,
+            .devgui_open = if (builtin.mode == .Debug) true else false,
+            .imgui_ctx = undefined,
             .saved_gametick = -1,
+        },
+        .dgui = Core.DevGui{
+            .left = devgui.State.console,
+            .right = devgui.State.vfs,
         },
     };
 
@@ -41,4 +53,16 @@ export fn windowIcon(size: *i32) [*]const u8 {
     const bytes = @embedFile("viletech.png");
     size.* = bytes.len;
     return bytes;
+}
+
+comptime {
+    @export(devgui.frameBegin, .{ .name = "dguiFrameBegin" });
+    @export(devgui.frameDraw, .{ .name = "dguiFrameDraw" });
+    @export(devgui.frameFinish, .{ .name = "dguiFrameFinish" });
+    @export(devgui.layout, .{ .name = "dguiLayout" });
+    @export(devgui.processEvent, .{ .name = "dguiProcessEvent" });
+    @export(devgui.setup, .{ .name = "dguiSetup" });
+    @export(devgui.shutdown, .{ .name = "dguiShutdown" });
+    @export(devgui.wantsKeyboard, .{ .name = "dguiWantsKeyboard" });
+    @export(devgui.wantsMouse, .{ .name = "dguiWantsMouse" });
 }
