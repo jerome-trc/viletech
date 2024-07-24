@@ -7,6 +7,13 @@ pub const c = @cImport({
     @cInclude("i_main.h");
     @cInclude("i_system.h");
     @cUndef("RATBOOM_ZIG");
+
+    @cDefine("CIMGUI_USE_SDL2", {});
+    @cDefine("CIMGUI_DEFINE_ENUMS_AND_STRUCTS", {});
+    @cInclude("cimgui.h");
+    @cInclude("cimgui_impl.h");
+    @cUndef("CIMGUI_USE_SDL2");
+    @cUndef("CIMGUI_DEFINE_ENUMS_AND_STRUCTS");
 });
 
 pub const Core = struct {
