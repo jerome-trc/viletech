@@ -207,6 +207,10 @@ pub fn logToast(cx: *Core, comptime format: []const u8, args: anytype) void {
     cx.console.history.pushBack(HistoryItem{ .toast = p }) catch return;
 }
 
+fn cToast(ccx: *Core.C, msg: [*:0]const u8) callconv(.C) void {
+    logToast(ccx.core, "{s}", .{msg});
+}
+
 /// Allows the console to fulfill the interface of a writer like stdout.
 pub fn print(self: *Self, comptime format: []const u8, args: anytype) !void {
     self.logHelp(format, args);
@@ -296,4 +300,8 @@ var reportConsoleInputSaveFail = std.once(doReportConsoleInputSaveFail);
 
 fn doReportConsoleInputSaveFail() void {
     log.err("Failed to add to console input history", .{});
+}
+
+comptime {
+    @export(cToast, .{ .name = "addConsoleToast" });
 }
