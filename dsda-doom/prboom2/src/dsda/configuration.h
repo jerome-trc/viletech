@@ -277,6 +277,7 @@ typedef enum {
   dsda_config_ansi_endoom,
   dsda_config_announce_map,
   dsda_config_berserk_switch,
+  dsda_config_mark_seen_items,
 
   dsda_config_count,
 } dsda_config_identifier_t;

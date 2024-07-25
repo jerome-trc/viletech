@@ -56,6 +56,8 @@
 #include "m_misc.h"
 #include "m_bbox.h"
 #include "d_main.h"
+#include "gl_struct.h"
+#include "p_mobj.h"
 
 #include "dsda/input.h"
 #include "dsda/map_format.h"
@@ -1812,7 +1814,7 @@ static void AM_drawLineCharacter
   }
 }
 
-INLINE static void AM_GetMobjPosition(mobj_t *mo, mpoint_t *p, angle_t *angle)
+INLINE static void AM_GetMobjPosition(const mobj_t *mo, mpoint_t *p, angle_t *angle)
 {
   if (R_ViewInterpolation())
   {
@@ -1901,7 +1903,7 @@ static void AM_drawPlayers(void)
   }
 }
 
-static void AM_ProcessNiceThing(mobj_t* mobj, angle_t angle, fixed_t x, fixed_t y)
+static void AM_ProcessNiceThing(const mobj_t* mobj, angle_t angle, fixed_t x, fixed_t y)
 {
   const float shadow_scale_factor = 1.3f;
   angle_t ang;
@@ -2098,7 +2100,6 @@ static void AM_DrawNiceThings(void)
   }
 
   // walls
-  if (dsda_RevealAutomap() == 2)
   {
     // for all sectors
     for (i = 0; i < numsectors; i++)
@@ -2107,21 +2108,31 @@ static void AM_DrawNiceThings(void)
         (sectors[i].bbox[BOXLEFT] > am_frame.bbox[BOXRIGHT] ||
         sectors[i].bbox[BOXRIGHT] < am_frame.bbox[BOXLEFT] ||
         sectors[i].bbox[BOXBOTTOM] > am_frame.bbox[BOXTOP] ||
-        sectors[i].bbox[BOXTOP] < am_frame.bbox[BOXBOTTOM]))
-      {
+        sectors[i].bbox[BOXTOP] < am_frame.bbox[BOXBOTTOM]
+        )) {
         continue;
       }
 
       t = sectors[i].thinglist;
-      while (t) // for all things in that sector
-      {
-        if (!t->player)
-        {
-          AM_GetMobjPosition(t, &p, &angle);
-          if (automap_rotate)
-            AM_rotatePoint(&p);
-          AM_ProcessNiceThing(t, angle, p.x, p.y);
+
+      while (t) { // for all things in that sector
+        if (dsda_RevealAutomap() != 2 && !(t->flags2 & MF2_SEEN)) {
+            t = t->snext;
+            continue;
         }
+
+        if (t->player != NULL) {
+            t = t->snext; // Player marker has already been drawn.
+            continue;
+        }
+
+        AM_GetMobjPosition(t, &p, &angle);
+
+        if (automap_rotate) {
+            AM_rotatePoint(&p);
+        }
+
+        AM_ProcessNiceThing(t, angle, p.x, p.y);
         t = t->snext;
       }
     }
@@ -2520,6 +2531,20 @@ static void AM_setFrameVariables(void)
   }
 
   am_frame.precise = (V_IsOpenGLMode());
+}
+
+void AM_mark_items(const subsector_t* subsect) {
+    for (mobj_t* actor = subsect->sector->thinglist; actor != NULL; actor = actor->snext) {
+        if (actor->subsector != subsect) {
+            continue;
+        }
+
+        if (!(actor->flags & MF_SPECIAL)) {
+            continue;
+        }
+
+        actor->flags2 |= MF2_SEEN;
+    }
 }
 
 /// @fn AM_Drawer

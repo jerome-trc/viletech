@@ -240,12 +240,12 @@
 // (some degree of opaqueness is good, to avoid compatibility woes)
 
 enum {
-  MIF_FALLING = 1,      // Object is falling
-  MIF_ARMED = 2,        // Object is armed (for MF_TOUCHY objects)
-  MIF_SCROLLING = 4,    // Object is affected by scroller / pusher / puller
-  MIF_PLAYER_DAMAGED_BARREL = 8,
-  MIF_SPAWNED_BY_ICON = 16,
-  MIF_FAKE = 32, // Not a real thing, transient (e.g., for cheats)
+    MIF_FALLING = 1,      // Object is falling
+    MIF_ARMED = 2,        // Object is armed (for MF_TOUCHY objects)
+    MIF_SCROLLING = 4,    // Object is affected by scroller / pusher / puller
+    MIF_PLAYER_DAMAGED_BARREL = 8,
+    MIF_SPAWNED_BY_ICON = 16,
+    MIF_FAKE = 32, // Not a real thing, transient (e.g., for cheats)
 };
 
 typedef uint64_t ecs_id_t;
@@ -523,6 +523,8 @@ void P_RemoveMonsters(CCore*);
 // zdoom
 #define MF2_CANUSEWALLS       0x0002000000000000ull // can activate use lines
 #define MF2_COUNTSECRET       0x0004000000000000ull // picking up counts as a secret
+
+#define MF2_SEEN              0x0008000000000000ull // item gets automap marker
 
 #define AMMO_GWND_WIMPY 10
 #define AMMO_GWND_HEFTY 50

@@ -184,6 +184,10 @@ dboolean dsda_SwitchWhenBerserk(void) {
   return dsda_IntConfig(dsda_config_berserk_switch);
 }
 
+dboolean dsda_MarkSeenItems(void) {
+    return dsda_IntConfig(dsda_config_mark_seen_items);
+}
+
 dboolean dsda_SkipQuitPrompt(void) {
   return dsda_IntConfig(dsda_config_skip_quit_prompt);
 }

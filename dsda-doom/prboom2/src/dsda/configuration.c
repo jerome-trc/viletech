@@ -1225,6 +1225,10 @@ dsda_config_t dsda_config[dsda_config_count] = {
     "berserk_switch", dsda_config_berserk_switch,
     CONF_BOOL(1),
   },
+  [dsda_config_mark_seen_items] = {
+    "mark_seen_items", dsda_config_mark_seen_items,
+    CONF_BOOL(1),
+  },
 };
 
 static void dsda_PersistIntConfig(dsda_config_t* conf) {
