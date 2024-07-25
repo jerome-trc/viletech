@@ -62,8 +62,8 @@ pub const Display = struct {
         const im_ctx = c.igCreateContext(null) orelse return error.ContextCreateFail;
         c.igSetCurrentContext(im_ctx);
 
-        _ = imgui.implSdl2.initForSdlRenderer(window, renderer);
-        _ = imgui.implSdlRenderer2.init(renderer);
+        _ = imgui.impl_sdl2.initForSdlRenderer(window, renderer);
+        _ = imgui.impl_sdlrenderer2.init(renderer);
 
         return Self{
             .window = window,
@@ -75,8 +75,8 @@ pub const Display = struct {
 
     pub fn deinit(self: *Self) void {
         c.igSetCurrentContext(self.im_ctx);
-        imgui.implSdl2.shutdown();
-        imgui.implSdlRenderer2.shutdown();
+        imgui.impl_sdl2.shutdown();
+        imgui.impl_sdlrenderer2.shutdown();
         c.igDestroyContext(self.im_ctx);
         self.renderer.destroy();
         self.window.destroy();
@@ -93,8 +93,8 @@ pub const Display = struct {
 
     pub fn newFrame(self: *Self) void {
         c.igSetCurrentContext(self.im_ctx);
-        imgui.implSdlRenderer2.newFrame();
-        imgui.implSdl2.newFrame();
+        imgui.impl_sdlrenderer2.newFrame();
+        imgui.impl_sdl2.newFrame();
         c.igNewFrame();
     }
 
@@ -108,7 +108,7 @@ pub const Display = struct {
 
         try self.renderer.setColorRGB(0x00, 0x00, 0x00);
         try self.renderer.clear();
-        imgui.implSdlRenderer2.renderDrawData(c.igGetDrawData(), self.renderer);
+        imgui.impl_sdlrenderer2.renderDrawData(c.igGetDrawData(), self.renderer);
         self.renderer.present();
     }
 };

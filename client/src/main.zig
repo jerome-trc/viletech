@@ -117,7 +117,7 @@ pub fn main() !void {
 
     outer: while (true) {
         while (sdl.pollNativeEvent()) |native_event| {
-            _ = imgui.implSdl2.processEvent(@ptrCast(&native_event));
+            _ = imgui.impl_sdl2.processEvent(@ptrCast(&native_event));
 
             switch (sdl.Event.from(native_event)) {
                 .quit => break :outer,

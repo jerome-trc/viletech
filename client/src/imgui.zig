@@ -15,7 +15,7 @@ pub const Error = error{
 
 pub const Context = c.ImGuiContext;
 
-pub const implSdl2 = struct {
+pub const impl_sdl2 = struct {
     pub fn initForSdlRenderer(window: sdl.Window, renderer: sdl.Renderer) bool {
         return c.ImGui_ImplSDL2_InitForSDLRenderer(@ptrCast(window.ptr), @ptrCast(renderer.ptr));
     }
@@ -33,7 +33,7 @@ pub const implSdl2 = struct {
     }
 };
 
-pub const implSdlRenderer2 = struct {
+pub const impl_sdlrenderer2 = struct {
     pub fn init(renderer: sdl.Renderer) bool {
         return c.ImGui_ImplSDLRenderer2_Init(@ptrCast(renderer.ptr));
     }
