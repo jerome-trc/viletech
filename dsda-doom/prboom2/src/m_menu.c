@@ -1122,10 +1122,6 @@ menu_t OptionsDef =
   0
 };
 
-//
-// M_Options
-//
-
 void M_DrawOptions(CCore* cx)
 {
   if (raven) {
@@ -2838,6 +2834,7 @@ void M_DrawAutoMap(CCore* cx)
 
 setup_menu_t audiovideo_settings[], mouse_settings[], controller_settings[], misc_settings[];
 setup_menu_t display_settings[], mapping_settings[], demo_settings[], tas_settings[];
+setup_menu_t ratboom_settings[];
 
 setup_menu_t* gen_settings[] =
 {
@@ -3070,8 +3067,6 @@ setup_menu_t demo_settings[] = {
   { "Casual Play Settings", S_SKIP | S_TITLE, m_null, G_X},
   { "Allow Jumping", S_YESNO, m_conf, G_X, dsda_config_allow_jumping },
   { "OpenGL Show Health Bars", S_YESNO, m_conf, G_X, dsda_config_gl_health_bar },
-  { "Berserk Switches Weapon", S_YESNO, m_conf, G_X, dsda_config_berserk_switch },
-  { "Seen Items Get Map Markers", S_YESNO, m_conf, G_X, dsda_config_mark_seen_items },
 
   PREV_PAGE(mapping_settings),
   NEXT_PAGE(tas_settings),
@@ -3089,7 +3084,17 @@ setup_menu_t tas_settings[] = {
   { "Strafe50 On Turns", S_YESNO, m_conf, G_X, dsda_config_movement_strafe50onturns },
 
   PREV_PAGE(demo_settings),
+  NEXT_PAGE(ratboom_settings),
   FINAL_ENTRY
+};
+
+setup_menu_t ratboom_settings[] = {
+    { "RatBoom-Specific Settings", S_SKIP | S_TITLE, m_null, G_X},
+    { "Berserk Switches Weapon", S_YESNO, m_conf, G_X, dsda_config_berserk_switch },
+    { "Seen Items Get Map Markers", S_YESNO, m_conf, G_X, dsda_config_mark_seen_items },
+
+    PREV_PAGE(tas_settings),
+    FINAL_ENTRY
 };
 
 // To (un)set fullscreen video after menu changes
