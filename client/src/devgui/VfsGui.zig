@@ -91,14 +91,14 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
                 defer l += 1;
 
                 const lmp: zdfs.LumpNum = @intCast(l);
-                const entryName = cx.fs.entryShortName(lmp).?;
+                const entry_name = cx.fs.entryShortName(lmp).?;
 
                 const filter = std.mem.sliceTo(&self.filter_buf, 0);
 
                 const filter_find = if (self.filter_case_sensitive)
-                    std.ascii.indexOfIgnoreCase(entryName, filter)
+                    std.mem.indexOf(u8, entry_name, filter)
                 else
-                    std.mem.indexOf(u8, entryName, filter);
+                    std.ascii.indexOfIgnoreCase(entry_name, filter);
 
                 if (filter_find) |_| {} else if (filter.len < 1) {} else {
                     continue;
@@ -108,7 +108,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
                 defer i += 1;
 
                 _ = c.igTableSetColumnIndex(0);
-                imgui.textUnformatted(entryName);
+                imgui.textUnformatted(entry_name);
 
                 _ = c.igTableSetColumnIndex(1);
 
