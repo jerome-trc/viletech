@@ -5,6 +5,7 @@ const c = @import("main.zig").c;
 
 const Console = @import("devgui/Console.zig");
 const devgui = @import("devgui.zig");
+const VfsGui = @import("devgui/VfsGui.zig");
 
 const Self = @This();
 pub const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
@@ -38,6 +39,7 @@ stderr_file: std.fs.File.Writer,
 stderr_bw: StreamWriter,
 stdout_file: std.fs.File.Writer,
 stdout_bw: StreamWriter,
+vfsgui: VfsGui,
 
 pub fn init(gpa: ?*DebugAllocator) !Self {
     const alloc = if (gpa) |g| g.allocator() else std.heap.c_allocator;
@@ -63,6 +65,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
         .stdout_bw = std.io.bufferedWriter(stdout_file),
+        .vfsgui = VfsGui.init(),
     };
 }
 

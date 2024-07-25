@@ -354,7 +354,7 @@ unsigned W_LumpNameHash(const char *s)
 // W_FindNumFromName, an iterative version of W_CheckNumForName
 // returns list of lump numbers for a given name (latest first)
 //
-int W_FindNumFromName2(const char *name, int li_namespace, int i)
+LumpNum W_FindNumFromName2(const char *name, int li_namespace, LumpNum i)
 {
   // Hash function maps the name to one of possibly numlump chains.
   // It has been tuned so that the average chain length never exceeds 2.
@@ -391,18 +391,18 @@ int W_FindNumFromName2(const char *name, int li_namespace, int i)
 
 void W_HashLumps(void)
 {
-  int i;
+  LumpNum i;
 
-  for (i=0; i<numlumps; i++)
+  for (i = 0; i < numlumps; i++)
     lumpinfo[i].index = LUMP_NOT_FOUND;         // mark slots empty
 
   // Insert nodes to the beginning of each chain, in first-to-last
   // lump order, so that the last lump of a given name appears first
   // in any chain, observing pwad ordering rules. killough
 
-  for (i=0; i<numlumps; i++)
+    for (i = 0; i < numlumps; i++)
     {                                           // hash function:
-      int j = W_LumpNameHash(lumpinfo[i].name) % (unsigned) numlumps;
+      LumpNum j = W_LumpNameHash(lumpinfo[i].name) % (unsigned) numlumps;
       lumpinfo[i].next = lumpinfo[j].index;     // Prepend to list
       lumpinfo[j].index = i;
     }
