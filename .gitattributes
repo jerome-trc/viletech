@@ -10,10 +10,9 @@
 *.h text eol=lf
 *.hpp text eol=lf
 *.md text eol=lf
-*.nim text eol=lf
-*.nimble text eol=lf
 *.rs text eol=lf
 *.svg text eol=lf
 *.toml text eol=lf
 *.txt text eol=lf
 *.wgsl text eol=lf
+*.zig text eol=lf
