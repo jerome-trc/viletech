@@ -48,6 +48,8 @@
 #include "g_game.h"
 #include "p_tick.h"
 #include "g_overflow.h"
+#include "am_map.h"
+
 #include "e6y.h"//e6y
 
 #include "dsda.h"
@@ -309,7 +311,7 @@ int P_GetMoveFactor(mobj_t *mo, int *frictionp)
 
 dboolean P_MoveThing(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean fog)
 {
-  subsector_t *newsubsec;
+  sector_t *newsec;
   fixed_t oldx, oldy, oldz;
   fixed_t oldfloorz, oldceilingz, olddropoffz;
 
@@ -320,13 +322,13 @@ dboolean P_MoveThing(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean fo
   oldceilingz = thing->ceilingz;
   olddropoffz = thing->dropoffz;
 
-  newsubsec = R_PointInSubsector(x, y);
+  newsec = R_PointInSector(x, y);
 
   thing->x = x;
   thing->y = y;
   thing->z = z;
-  thing->floorz = newsubsec->sector->floorheight;
-  thing->ceilingz = newsubsec->sector->ceilingheight;
+  thing->floorz = newsec->floorheight;
+  thing->ceilingz = newsec->ceilingheight;
   thing->dropoffz = thing->floorz;
 
   if (P_TestMobjLocation(thing))
@@ -371,14 +373,14 @@ dboolean P_MoveThing(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean fo
 
 void P_UnqualifiedMove(mobj_t *thing, fixed_t x, fixed_t y)
 {
-  subsector_t *subsector;
+  sector_t *sector;
 
   P_UnsetThingPosition(thing);
   thing->x = x;
   thing->y = y;
-  subsector = R_PointInSubsector(thing->x, thing->y);
-  thing->z = thing->floorz = subsector->sector->floorheight;
-  thing->ceilingz = subsector->sector->ceilingheight;
+  sector = R_PointInSector(thing->x, thing->y);
+  thing->z = thing->floorz = sector->floorheight;
+  thing->ceilingz = sector->ceilingheight;
   P_SetThingPosition(thing);
 }
 
@@ -395,7 +397,7 @@ dboolean P_TeleportMove (mobj_t* thing,fixed_t x,fixed_t y, dboolean boss)
   int     bx;
   int     by;
 
-  subsector_t*  newsubsec;
+  sector_t*  newsec;
 
   /* killough 8/9/98: make telefragging more consistent, preserve compatibility */
   telefrag = !raven &&
@@ -414,17 +416,17 @@ dboolean P_TeleportMove (mobj_t* thing,fixed_t x,fixed_t y, dboolean boss)
   tmbbox[BOXRIGHT] = x + tmthing->radius;
   tmbbox[BOXLEFT] = x - tmthing->radius;
 
-  newsubsec = R_PointInSubsector (x,y);
+  newsec = R_PointInSector (x,y);
   ceilingline = NULL;
 
-  // The base floor/ceiling is from the subsector
+  // The base floor/ceiling is from the sector
   // that contains the point.
   // Any contacted lines the step closer together
   // will adjust them.
 
-  tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-  tmceilingz = newsubsec->sector->ceilingheight;
-  tmfloorpic = newsubsec->sector->floorpic;
+  tmfloorz = tmdropoffz = newsec->floorheight;
+  tmceilingz = newsec->ceilingheight;
+  tmfloorpic = newsec->floorpic;
 
   validcount++;
   numspechit = 0;
@@ -1266,7 +1268,7 @@ dboolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
   int     yh;
   int     bx;
   int     by;
-  subsector_t*  newsubsec;
+  sector_t*  newsec;
 
   tmthing = thing;
   tmflags = thing->flags;
@@ -1279,7 +1281,7 @@ dboolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
   tmbbox[BOXRIGHT] = x + tmthing->radius;
   tmbbox[BOXLEFT] = x - tmthing->radius;
 
-  newsubsec = R_PointInSubsector (x,y);
+  newsec = R_PointInSector (x,y);
   floorline = blockline = ceilingline = NULL; // killough 8/1/98
 
   // Whether object can get out of a sticky situation:
@@ -1287,14 +1289,14 @@ dboolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
     thing->player->mo == thing &&       /* not voodoo dolls */
     mbf_features; /* not under old demos */
 
-  // The base floor / ceiling is from the subsector
+  // The base floor / ceiling is from the sector
   // that contains the point.
   // Any contacted lines the step closer together
   // will adjust them.
 
-  tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-  tmceilingz = newsubsec->sector->ceilingheight;
-  tmfloorpic = newsubsec->sector->floorpic;
+  tmfloorz = tmdropoffz = newsec->floorheight;
+  tmceilingz = newsec->ceilingheight;
+  tmfloorpic = newsec->floorpic;
   validcount++;
   numspechit = 0;
 
@@ -1348,6 +1350,72 @@ dboolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
   return true;
 }
 
+void P_AdjustZLimits(mobj_t *thing)
+{
+  int xl, xh;
+  int yl, yh;
+  int bx, by;
+  fixed_t bbox[4];
+
+  bbox[BOXTOP] = thing->y + thing->radius;
+  bbox[BOXBOTTOM] = thing->y - thing->radius;
+  bbox[BOXRIGHT] = thing->x + thing->radius;
+  bbox[BOXLEFT] = thing->x - thing->radius;
+
+  validcount++;
+
+  xl = P_GetSafeBlockX(bbox[BOXLEFT] - bmaporgx);
+  xh = P_GetSafeBlockX(bbox[BOXRIGHT] - bmaporgx);
+  yl = P_GetSafeBlockY(bbox[BOXBOTTOM] - bmaporgy);
+  yh = P_GetSafeBlockY(bbox[BOXTOP] - bmaporgy);
+
+  for (bx = xl; bx <= xh; ++bx)
+    for (by = yl; by <= yh; ++by)
+    {
+      int offset;
+      const int *list;
+
+      if (bx < 0 || by < 0 || bx >= bmapwidth || by >= bmapheight)
+        continue;
+
+      offset = by * bmapwidth + bx;
+      offset = *(blockmap + offset);
+      list = blockmaplump + offset;
+
+      if (skipblstart)
+        list++;
+
+      for (; *list != -1; list++)
+      {
+        line_t *ld;
+
+        ld = &lines[*list];
+        if (ld->validcount == validcount)
+          continue; // line has already been checked
+        ld->validcount = validcount;
+
+        if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT]
+            || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+            || bbox[BOXTOP] <= ld->bbox[BOXBOTTOM]
+            || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+          continue; // didn't hit it
+
+        if (P_BoxOnLineSide(bbox, ld) != -1)
+          continue; // didn't hit it
+
+        if (!ld->backsector || !ld->frontsector || !(ld->flags & ML_3DMIDTEX))
+          continue; // not relevant
+
+        P_LineOpening(ld, thing);
+
+        if (line_opening.bottom > thing->floorz)
+          thing->floorz = line_opening.bottom;
+
+        if (line_opening.top < thing->ceilingz)
+          thing->ceilingz = line_opening.top;
+      }
+    }
+}
 
 //
 // P_TryMove
@@ -1432,6 +1500,12 @@ dboolean P_TryMove(mobj_t* thing,fixed_t x,fixed_t y,
 {
   fixed_t oldx;
   fixed_t oldy;
+
+  if (map_trail_mode == map_trail_mode_include_collisions &&
+      thing->player && thing->player->mo == thing)
+  {
+    AM_updatePlayerTrail(x, y);
+  }
 
   if (hexen) return Hexen_P_TryMove(thing, x, y);
 
@@ -1604,6 +1678,12 @@ dboolean P_TryMove(mobj_t* thing,fixed_t x,fixed_t y,
   else if (thing->flags2 & MF2_FEETARECLIPPED)
   {
     thing->flags2 &= ~MF2_FEETARECLIPPED;
+  }
+
+  if (map_trail_mode == map_trail_mode_ignore_collisions &&
+      thing->player && thing->player->mo == thing)
+  {
+    AM_updatePlayerTrail(x, y);
   }
 
   // if any special lines were hit, do the effect
@@ -3484,7 +3564,7 @@ dboolean PIT_CheckOnmobjZ(mobj_t * thing)
 mobj_t *P_CheckOnmobj(mobj_t * thing)
 {
     int xl, xh, yl, yh, bx, by;
-    subsector_t *newsubsec;
+    sector_t *newsec;
     fixed_t x;
     fixed_t y;
     mobj_t oldmo;
@@ -3504,16 +3584,16 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
     tmbbox[BOXRIGHT] = x + tmthing->radius;
     tmbbox[BOXLEFT] = x - tmthing->radius;
 
-    newsubsec = R_PointInSubsector(x, y);
+    newsec = R_PointInSector(x, y);
     ceilingline = NULL;
 
 //
 // the base floor / ceiling is from the subsector that contains the
 // point.  Any contacted lines the step closer together will adjust them
 //
-    tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-    tmceilingz = newsubsec->sector->ceilingheight;
-    tmfloorpic = newsubsec->sector->floorpic;
+    tmfloorz = tmdropoffz = newsec->floorheight;
+    tmceilingz = newsec->ceilingheight;
+    tmfloorpic = newsec->floorpic;
 
     validcount++;
     numspechit = 0;

@@ -713,7 +713,10 @@ void A_Lower(player_t *player, pspdef_t *psp)
     return;
   }
 
-  player->readyweapon = player->pendingweapon;
+  if (player->pendingweapon < NUMWEAPONS || !mbf21)
+  {
+    player->readyweapon = player->pendingweapon;
+  }
 
   P_BringUpWeapon(player);
 }
@@ -1013,7 +1016,7 @@ static void P_BulletSlope(mobj_t *mo)
 {
   aim_t aim;
 
-  dsda_PlayerAim(mo, mo->angle, &aim, mbf_features ? MF_FRIEND : 0);
+  dsda_PlayerAimBad(mo, mo->angle, &aim, mbf_features ? MF_FRIEND : 0);
 
   bulletslope = aim.slope;
 }
@@ -2403,15 +2406,15 @@ void A_GauntletAttack(player_t * player, pspdef_t * psp)
 void P_RepositionMace(mobj_t * mo)
 {
     int spot;
-    subsector_t *ss;
+    sector_t *sec;
 
     P_UnsetThingPosition(mo);
     spot = P_Random(pr_heretic) % MaceSpotCount;
     mo->x = MaceSpots[spot].x;
     mo->y = MaceSpots[spot].y;
-    ss = R_PointInSubsector(mo->x, mo->y);
-    mo->z = mo->floorz = ss->sector->floorheight;
-    mo->ceilingz = ss->sector->ceilingheight;
+    sec = R_PointInSector(mo->x, mo->y);
+    mo->z = mo->floorz = sec->floorheight;
+    mo->ceilingz = sec->ceilingheight;
     P_SetThingPosition(mo);
 }
 
