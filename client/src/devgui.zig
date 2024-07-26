@@ -70,7 +70,7 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
     }
 
     const mainvp = c.igGetMainViewport() orelse {
-        imgui.reportErrClipperCtor.call();
+        imgui.report_err_get_main_viewport.call();
         return;
     };
 

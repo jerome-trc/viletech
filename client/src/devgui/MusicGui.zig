@@ -103,7 +103,7 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
     const self = &cx.musicgui;
 
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
-        imgui.reportErrGetMainViewport.call();
+        imgui.report_err_get_main_viewport.call();
         return;
     };
 
