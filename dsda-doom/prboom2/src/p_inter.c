@@ -31,6 +31,8 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#include <assert.h>
+
 #include "doomstat.h"
 #include "dstrings.h"
 #include "m_random.h"
@@ -499,60 +501,108 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       break;
 
         // bonus items
-    case SPR_BON1:
-      // can go over 100%
-      player->health += P_PlayerHealthIncrease(1);
-      if (player->health > (maxhealthbonus))//e6y
-        player->health = (maxhealthbonus);//e6y
-      player->mo->health = player->health;
-      dsda_AddPlayerMessage(cx, s_GOTHTHBONUS, player);
-      break;
+    case SPR_BON1: {
+        if (dsda_ItemWasteMitigation() && player->health >= maxhealthbonus)
+            return; // (Rat)
 
-    case SPR_BON2:
-      // can go over 100%
-      player->armorpoints[ARMOR_ARMOR] += P_PlayerArmorIncrease(1);
-      // e6y
-      // Doom 1.2 does not do check of armor points on overflow.
-      // If you set the "IDKFA Armor" to MAX_INT (DWORD at 0x00064B5A -> FFFFFF7F)
-      // and pick up one or more armor bonuses, your armor becomes negative
-      // and you will die after reception of any damage since this moment.
-      // It happens because the taken health damage depends from armor points
-      // if they are present and becomes equal to very large value in this case
-      if (player->armorpoints[ARMOR_ARMOR] > max_armor && compatibility_level != doom_12_compatibility)
-        player->armorpoints[ARMOR_ARMOR] = max_armor;
-      // e6y
-      // We always give armor type 1 for the armor bonuses;
-      // dehacked only affects the GreenArmor.
-      if (!player->armortype)
-        player->armortype =
-         ((!demo_compatibility || prboom_comp[PC_APPLY_GREEN_ARMOR_CLASS_TO_ARMOR_BONUSES].state) ?
-          green_armor_class : 1);
-      dsda_AddPlayerMessage(cx, s_GOTARMBONUS, player);
-      break;
+        // can go over 100%
+        player->health += P_PlayerHealthIncrease(1);
+        if (player->health > (maxhealthbonus))//e6y
+            player->health = (maxhealthbonus);//e6y
+        player->mo->health = player->health;
+        dsda_AddPlayerMessage(cx, s_GOTHTHBONUS, player);
+        break;
+    }
+    case SPR_BON2: {
+        if (dsda_ItemWasteMitigation() && player->armorpoints[ARMOR_ARMOR] >= max_armor)
+            return; // (Rat)
 
-    case SPR_SOUL:
-      player->health += P_PlayerHealthIncrease(soul_health);
-      if (player->health > max_soul)
-        player->health = max_soul;
-      player->mo->health = player->health;
-      dsda_AddPlayerMessage(cx, s_GOTSUPER, player);
-      sound = sfx_getpow;
-      break;
+        // can go over 100%
+        player->armorpoints[ARMOR_ARMOR] += P_PlayerArmorIncrease(1);
+        // e6y
+        // Doom 1.2 does not do check of armor points on overflow.
+        // If you set the "IDKFA Armor" to MAX_INT (DWORD at 0x00064B5A -> FFFFFF7F)
+        // and pick up one or more armor bonuses, your armor becomes negative
+        // and you will die after reception of any damage since this moment.
+        // It happens because the taken health damage depends from armor points
+        // if they are present and becomes equal to very large value in this case
+        if (player->armorpoints[ARMOR_ARMOR] > max_armor && compatibility_level != doom_12_compatibility)
+            player->armorpoints[ARMOR_ARMOR] = max_armor;
+        // e6y
+        // We always give armor type 1 for the armor bonuses;
+        // dehacked only affects the GreenArmor.
+        if (!player->armortype)
+            player->armortype =
+            ((!demo_compatibility || prboom_comp[PC_APPLY_GREEN_ARMOR_CLASS_TO_ARMOR_BONUSES].state) ?
+            green_armor_class : 1);
+        dsda_AddPlayerMessage(cx, s_GOTARMBONUS, player);
+        break;
+    }
+    case SPR_SOUL: {
+        int diff = (player->health - max_soul) + soul_health;
 
-    case SPR_MEGA:
-      if (gamemode != commercial)
-        return;
-      player->health = mega_health;
-      player->mo->health = player->health;
-      // e6y
-      // We always give armor type 2 for the megasphere;
-      // dehacked only affects the MegaArmor.
-      P_GiveArmor (player,
-         ((!demo_compatibility || prboom_comp[PC_APPLY_BLUE_ARMOR_CLASS_TO_MEGASPHERE].state) ?
-          blue_armor_class : 2));
-      dsda_AddPlayerMessage(cx, s_GOTMSPHERE, player);
-      sound = sfx_getpow;
-      break;
+        if (diff < 0)
+            diff = 0;
+
+        player->health += P_PlayerHealthIncrease(soul_health);
+
+        if (player->health > max_soul)
+            player->health = max_soul;
+
+        player->mo->health = player->health;
+
+        if (dsda_ItemWasteMitigation()) {
+            // (Rat) Spawn health bonuses to offset any wasted health.
+            while (diff >= 1) {
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC2);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff -= 1;
+            }
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTSUPER, player);
+        sound = sfx_getpow;
+        break;
+    }
+    case SPR_MEGA: {
+        if (gamemode != commercial)
+            return;
+
+        int diff_health = MAX(0, (player->health - mega_health) + mega_health);
+        int diff_armor = MAX(0, (player->armorpoints[ARMOR_ARMOR] - 200) + 200);
+
+        player->health = mega_health;
+        player->mo->health = player->health;
+
+        if (dsda_ItemWasteMitigation()) {
+            // (Rat) Spawn health and armor bonuses to offset any waste.
+            while (diff_health >= 1) {
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC2);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff_health -= 1;
+            }
+
+            while (diff_armor >= 1) {
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC3);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff_armor -= 1;
+            }
+        }
+
+        // e6y
+        // We always give armor type 2 for the megasphere;
+        // dehacked only affects the MegaArmor.
+        P_GiveArmor (player,
+            ((!demo_compatibility || prboom_comp[PC_APPLY_BLUE_ARMOR_CLASS_TO_MEGASPHERE].state) ?
+            blue_armor_class : 2));
+
+        dsda_AddPlayerMessage(cx, s_GOTMSPHERE, player);
+        sound = sfx_getpow;
+        break;
+    }
 
         // cards
         // leave cards for everyone
@@ -605,22 +655,54 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       return;
 
       // medikits, heals
-    case SPR_STIM:
-      if (!P_GiveBody (player, 10))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTSTIM, player);
-      break;
+    case SPR_STIM: {
+        int diff = MAX(0, (player->health - 100) + 10);
 
-    case SPR_MEDI:
-      if (!P_GiveBody (player, 25))
-        return;
+        if (!P_GiveBody (player, 10))
+            return;
 
-      if (player->health < 50) // cph - 25 + the 25 just added, thanks to Quasar for reporting this bug
-        dsda_AddPlayerMessage(cx, s_GOTMEDINEED, player);
-      else
-        dsda_AddPlayerMessage(cx, s_GOTMEDIKIT, player);
-      break;
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= 1) {
+                // (Rat) Spawn health bonuses to offset any wasted health.
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC2);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff -= 1;
+            }
+        }
 
+        dsda_AddPlayerMessage(cx, s_GOTSTIM, player);
+        break;
+    }
+    case SPR_MEDI: {
+        int diff = MAX(0, (player->health - 100) + 25);
+
+        if (!P_GiveBody (player, 25))
+            return;
+
+        if (player->health < 50) // cph - 25 + the 25 just added, thanks to Quasar for reporting this bug
+            dsda_AddPlayerMessage(cx, s_GOTMEDINEED, player);
+        else
+            dsda_AddPlayerMessage(cx, s_GOTMEDIKIT, player);
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= 10) {
+                // (Rat) Spawn stimpacks to offset any wasted health.
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC10);
+                diff -= 10;
+            }
+
+            while (diff >= 1) {
+                // (Rat) Spawn health bonuses to offset any wasted health.
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC2);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff -= 1;
+            }
+        }
+
+        break;
+    }
 
       // power ups
     case SPR_PINV:
@@ -630,9 +712,27 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       sound = sfx_getpow;
       break;
 
-    case SPR_PSTR:
+    case SPR_PSTR: {
+        int diff = MAX(0, (player->health - 100) + 100);
+
         if (!P_GivePower (player, pw_strength))
             return;
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= 10) {
+                // (Rat) Spawn stimpacks to offset any wasted health.
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC10);
+                diff -= 10;
+            }
+
+            while (diff >= 1) {
+                // (Rat) Spawn health bonuses to offset any wasted health.
+                mobj_t* mo = P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC2);
+                assert(mo != NULL);
+                mo->flags &= ~MF_COUNTITEM;
+                diff -= 1;
+            }
+        }
 
         dsda_AddPlayerMessage(cx, s_GOTBERSERK, player);
 
@@ -649,6 +749,7 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
 
         sound = sfx_getpow;
         break;
+    }
 
     case SPR_PINS:
       if (!P_GivePower (player, pw_invisibility))
@@ -693,23 +794,48 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       dsda_AddPlayerMessage(cx, s_GOTCLIP, player);
       break;
 
-    case SPR_AMMO:
-      if (!P_GiveAmmo (player, am_clip,5))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTCLIPBOX, player);
-      break;
+    case SPR_AMMO: {
+        int c = clipammo[am_clip];
+        int diff = (player->ammo[am_clip] - player->maxammo[am_clip]) + (c * 5);
+        diff = MAX(diff, 0);
 
+        if (!P_GiveAmmo (player, am_clip,5))
+            return;
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= c) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_CLIP);
+                diff -= c;
+            }
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTCLIPBOX, player);
+        break;
+    }
     case SPR_ROCK:
       if (!P_GiveAmmo (player, am_misl,1))
         return;
       dsda_AddPlayerMessage(cx, s_GOTROCKET, player);
       break;
 
-    case SPR_BROK:
-      if (!P_GiveAmmo (player, am_misl,5))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTROCKBOX, player);
-      break;
+    case SPR_BROK: {
+        int c = clipammo[am_misl];
+        int diff = (player->ammo[am_misl] - player->maxammo[am_misl]) + (c * 5);
+        diff = MAX(diff, 0);
+
+        if (!P_GiveAmmo (player, am_misl,5))
+            return;
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= c) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC18);
+                diff -= c;
+            }
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTROCKBOX, player);
+        break;
+    }
 
     case SPR_CELL:
       if (!P_GiveAmmo (player, am_cell,1))
@@ -717,11 +843,24 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       dsda_AddPlayerMessage(cx, s_GOTCELL, player);
       break;
 
-    case SPR_CELP:
-      if (!P_GiveAmmo (player, am_cell,5))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTCELLBOX, player);
-      break;
+    case SPR_CELP: {
+        int c = clipammo[am_cell];
+        int diff = (player->ammo[am_cell] - player->maxammo[am_cell]) + (c * 5);
+        diff = MAX(diff, 0);
+
+        if (!P_GiveAmmo (player, am_cell,5))
+            return;
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= c) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC20);
+                diff -= c;
+            }
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTCELLBOX, player);
+        break;
+    }
 
     case SPR_SHEL:
       if (!P_GiveAmmo (player, am_shell,1))
@@ -729,76 +868,142 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
       dsda_AddPlayerMessage(cx, s_GOTSHELLS, player);
       break;
 
-    case SPR_SBOX:
-      if (!P_GiveAmmo (player, am_shell,5))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTSHELLBOX, player);
-      break;
+    case SPR_SBOX: {
+        int c = clipammo[am_shell];
+        int diff = (player->ammo[am_shell] - player->maxammo[am_shell]) + (c * 5);
+        diff = MAX(diff, 0);
 
-    case SPR_BPAK:
-      if (!player->backpack)
-        {
-          for (i=0 ; i<NUMAMMO ; i++)
-            player->maxammo[i] *= 2;
-          player->backpack = true;
+        if (!P_GiveAmmo (player, am_shell,5))
+            return;
+
+        if (dsda_ItemWasteMitigation()) {
+            while (diff >= c) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC22);
+                diff -= c;
+            }
         }
-      for (i=0 ; i<NUMAMMO ; i++)
-        P_GiveAmmo (player, i, 1);
-      dsda_AddPlayerMessage(cx, s_GOTBACKPACK, player);
-      break;
+
+        dsda_AddPlayerMessage(cx, s_GOTSHELLBOX, player);
+        break;
+    }
+
+    case SPR_BPAK: {
+        if (!player->backpack) {
+            for (i = 0; i < NUMAMMO; i++) {
+                player->maxammo[i] *= 2;
+            }
+
+            player->backpack = true;
+        } else if (dsda_ItemWasteMitigation()) {
+            if (player->ammo[am_clip] >= player->maxammo[am_clip]) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_CLIP);
+            }
+
+            if (player->ammo[am_shell] >= player->maxammo[am_shell]) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC22);
+            }
+
+            if (player->ammo[am_cell] >= player->maxammo[am_cell]) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC20);
+            }
+
+            if (player->ammo[am_misl] >= player->maxammo[am_misl]) {
+                P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC18);
+            }
+        }
+
+        for (i = 0; i < NUMAMMO; i++) {
+            P_GiveAmmo(player, i, 1);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTBACKPACK, player);
+        break;
+    }
 
         // weapons
     case SPR_BFUG:
-      if (!P_GiveWeapon (player, wp_bfg, false) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTBFG9000, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_bfg, false) )
+            return;
+
+        if (dsda_ItemWasteMitigation() && player->ammo[am_cell] >= player->maxammo[am_cell]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC20);
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC20);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTBFG9000, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_MGUN:
-      if (!P_GiveWeapon (player, wp_chaingun, (special->flags&MF_DROPPED)!=0) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTCHAINGUN, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_chaingun, (special->flags&MF_DROPPED)!=0) )
+            return;
+
+        if (dsda_ItemWasteMitigation() && player->ammo[am_clip] >= player->maxammo[am_clip]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_CLIP);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTCHAINGUN, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_CSAW:
-      if (!P_GiveWeapon (player, wp_chainsaw, false) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTCHAINSAW, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_chainsaw, false) )
+            return;
+
+        dsda_AddPlayerMessage(cx, s_GOTCHAINSAW, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_LAUN:
-      if (!P_GiveWeapon (player, wp_missile, false) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTLAUNCHER, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_missile, false) )
+            return;
+
+        if (dsda_ItemWasteMitigation() && player->ammo[am_misl] >= player->maxammo[am_misl]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC18);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTLAUNCHER, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_PLAS:
-      if (!P_GiveWeapon (player, wp_plasma, false) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTPLASMA, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_plasma, false) )
+            return;
+
+        if (dsda_ItemWasteMitigation() && player->ammo[am_cell] >= player->maxammo[am_cell]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC20);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTPLASMA, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_SHOT:
-      if (!P_GiveWeapon (player, wp_shotgun, (special->flags&MF_DROPPED)!=0 ) )
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTSHOTGUN, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon (player, wp_shotgun, (special->flags&MF_DROPPED)!=0 ) )
+            return;
+
+        if (dsda_ItemWasteMitigation() && player->ammo[am_shell] >= player->maxammo[am_shell]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC22);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTSHOTGUN, player);
+        sound = sfx_wpnup;
+        break;
 
     case SPR_SGN2:
-      if (!P_GiveWeapon(player, wp_supershotgun, (special->flags&MF_DROPPED)!=0))
-        return;
-      dsda_AddPlayerMessage(cx, s_GOTSHOTGUN2, player);
-      sound = sfx_wpnup;
-      break;
+        if (!P_GiveWeapon(player, wp_supershotgun, (special->flags&MF_DROPPED)!=0))
+            return;
 
-    default:
-      I_Error ("P_SpecialThing: Unknown gettable thing");
+        if (dsda_ItemWasteMitigation() && player->ammo[am_shell] >= player->maxammo[am_shell]) {
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC22);
+            P_SpawnMobj(cx, special->x, special->y, special->z, MT_MISC22);
+        }
+
+        dsda_AddPlayerMessage(cx, s_GOTSHOTGUN2, player);
+        sound = sfx_wpnup;
+        break;
+
+    default: I_Error("P_SpecialThing: Unknown gettable thing");
     }
 
   if (special->special)

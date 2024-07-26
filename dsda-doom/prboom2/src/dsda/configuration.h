@@ -276,8 +276,10 @@ typedef enum {
   dsda_config_invert_analog_look,
   dsda_config_ansi_endoom,
   dsda_config_announce_map,
+  // RatBoom-specific //////////////////////////////////////////////////////////
   dsda_config_berserk_switch,
   dsda_config_mark_seen_items,
+  dsda_config_item_waste_mitigation,
 
   dsda_config_count,
 } dsda_config_identifier_t;

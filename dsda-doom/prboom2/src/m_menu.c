@@ -35,6 +35,7 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#include "dsda/configuration.h"
 #include <SDL_keyboard.h>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -3092,6 +3093,7 @@ setup_menu_t ratboom_settings[] = {
     { "RatBoom-Specific Settings", S_SKIP | S_TITLE, m_null, G_X},
     { "Berserk Switches Weapon", S_YESNO, m_conf, G_X, dsda_config_berserk_switch },
     { "Seen Items Get Map Markers", S_YESNO, m_conf, G_X, dsda_config_mark_seen_items },
+    { "Item Waste Mitigation", S_YESNO, m_conf, G_X, dsda_config_item_waste_mitigation },
 
     PREV_PAGE(tas_settings),
     FINAL_ENTRY

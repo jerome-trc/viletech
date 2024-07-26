@@ -180,14 +180,6 @@ dboolean dsda_SwitchWhenAmmoRunsOut(void) {
   return dsda_IntConfig(dsda_config_switch_when_ammo_runs_out);
 }
 
-dboolean dsda_SwitchWhenBerserk(void) {
-  return dsda_IntConfig(dsda_config_berserk_switch);
-}
-
-dboolean dsda_MarkSeenItems(void) {
-    return dsda_IntConfig(dsda_config_mark_seen_items);
-}
-
 dboolean dsda_SkipQuitPrompt(void) {
   return dsda_IntConfig(dsda_config_skip_quit_prompt);
 }
@@ -335,4 +327,22 @@ void dsda_WatchMouseEvent(void) {
 void dsda_LiftInputRestrictions(void) {
   game_controller_used = false;
   mouse_used = false;
+}
+
+// RatBoom-specific ////////////////////////////////////////////////////////////
+
+dboolean dsda_SwitchWhenBerserk(void) {
+  return dsda_IntConfig(dsda_config_berserk_switch);
+}
+
+dboolean dsda_MarkSeenItems(void) {
+    return dsda_IntConfig(dsda_config_mark_seen_items);
+}
+
+dboolean dsda_ItemWasteMitigation(void) {
+    if (demoplayback || demorecording) {
+        return false;
+    }
+
+    return dsda_IntConfig(dsda_config_item_waste_mitigation);
 }

@@ -42,8 +42,6 @@ dboolean dsda_AlwaysSR50(void);
 dboolean dsda_HideHorns(void);
 dboolean dsda_HideWeapon(void);
 dboolean dsda_SwitchWhenAmmoRunsOut(void);
-dboolean dsda_SwitchWhenBerserk(void);
-dboolean dsda_MarkSeenItems(void);
 dboolean dsda_SkipQuitPrompt(void);
 dboolean dsda_TrackSplits(void);
 dboolean dsda_ShowSplitData(void);
@@ -63,6 +61,7 @@ dboolean dsda_BonusPalette(void);
 dboolean dsda_PowerPalette(void);
 dboolean dsda_RenderWipeScreen(void);
 dboolean dsda_WipeAtFullSpeed(void);
+
 int dsda_ShowAliveMonsters(void);
 int dsda_CycleShowAliveMonsters(void);
 int dsda_RevealAutomap(void);
@@ -80,5 +79,11 @@ dboolean dsda_AllowMouse(void);
 void dsda_WatchGameControllerEvent(void);
 void dsda_WatchMouseEvent(void);
 void dsda_LiftInputRestrictions(void);
+
+// RatBoom-specific ////////////////////////////////////////////////////////////
+
+dboolean dsda_SwitchWhenBerserk(void);
+dboolean dsda_MarkSeenItems(void);
+dboolean dsda_ItemWasteMitigation(void);
 
 #endif

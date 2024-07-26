@@ -1221,12 +1221,17 @@ dsda_config_t dsda_config[dsda_config_count] = {
     "announce_map", dsda_config_announce_map,
     CONF_BOOL(0),
   },
+  // RatBoom-specific //////////////////////////////////////////////////////////
   [dsda_config_berserk_switch] = {
     "berserk_switch", dsda_config_berserk_switch,
     CONF_BOOL(1),
   },
   [dsda_config_mark_seen_items] = {
     "mark_seen_items", dsda_config_mark_seen_items,
+    CONF_BOOL(1),
+  },
+  [dsda_config_item_waste_mitigation] = {
+    "item_waste_mitigation", dsda_config_item_waste_mitigation,
     CONF_BOOL(1),
   },
 };
