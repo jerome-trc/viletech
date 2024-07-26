@@ -741,9 +741,6 @@ void P_TouchSpecialThing(CCore* cx, mobj_t *special, mobj_t *toucher)
         if (!dsda_SwitchWhenBerserk())
             switch_to_fist = false;
 
-        if (demoplayback || demorecording)
-            switch_to_fist = true;
-
         if (switch_to_fist)
             player->pendingweapon = wp_fist;
 

@@ -332,7 +332,11 @@ void dsda_LiftInputRestrictions(void) {
 // RatBoom-specific ////////////////////////////////////////////////////////////
 
 dboolean dsda_SwitchWhenBerserk(void) {
-  return dsda_IntConfig(dsda_config_berserk_switch);
+    if (demoplayback || demorecording) {
+        return true;
+    }
+
+    return dsda_IntConfig(dsda_config_berserk_switch);
 }
 
 dboolean dsda_MarkSeenItems(void) {
