@@ -161,14 +161,14 @@ pub fn textUnformatted(text: []const u8) void {
 
 // One-off error reporting /////////////////////////////////////////////////////
 
-pub var reportErrGetMainViewport = std.once(doReportErrGetMainViewport);
+pub var report_err_get_main_viewport = std.once(reportErrGetMainViewport);
 
-fn doReportErrGetMainViewport() void {
+fn reportErrGetMainViewport() void {
     log.err("`igGetMainViewport` failed", .{});
 }
 
-pub var reportErrClipperCtor = std.once(doReportErrClipperCtor);
+pub var report_err_clipper_ctor = std.once(reportErrClipperCtor);
 
-fn doReportErrClipperCtor() void {
+fn reportErrClipperCtor() void {
     log.err("`ImGuiListClipper::ImGuiListClipper` failed", .{});
 }

@@ -134,7 +134,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
             defer c.igEndChild();
 
             const clipper = imgui.Clipper.init() catch {
-                imgui.reportErrClipperCtor.call();
+                imgui.report_err_clipper_ctor.call();
                 break :scroll;
             };
             defer clipper.deinit();

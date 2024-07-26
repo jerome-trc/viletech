@@ -76,7 +76,7 @@ pub fn draw(cx: *Core, display: *Display) void {
         }
 
         const mainvp = c.igGetMainViewport() orelse {
-            imgui.reportErrClipperCtor.call();
+            imgui.report_err_get_main_viewport.call();
             return;
         };
 

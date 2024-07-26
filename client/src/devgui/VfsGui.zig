@@ -77,7 +77,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
         const num_entries = cx.fs.numEntries();
 
         const clipper = imgui.Clipper.init() catch {
-            imgui.reportErrClipperCtor.call();
+            imgui.report_err_clipper_ctor.call();
             break :scroll;
         };
         defer clipper.deinit();
