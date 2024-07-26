@@ -163,6 +163,7 @@ int     W_LumpLength(LumpNum);
 int     W_SafeLumpLength(LumpNum);
 const char *W_LumpName(LumpNum);
 void    W_ReadLump(LumpNum, void *dest);
+void W_ReadLumpN(LumpNum, void* dest, size_t bytes);
 char*   W_ReadLumpToString(LumpNum);
 // CPhipps - modified for 'new' lump locking
 const void* W_SafeLumpByNum(LumpNum);

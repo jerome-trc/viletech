@@ -6,6 +6,7 @@ const c = @import("../main.zig").c;
 
 const Core = @import("../Core.zig");
 const imgui = @import("../imgui.zig");
+const stdx = @import("../stdx.zig");
 
 const Self = @This();
 
@@ -82,6 +83,8 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
         defer clipper.deinit();
         clipper.begin(num_entries, 16.0);
 
+        var popup_shown = false;
+
         while (clipper.step()) {
             var i = clipper.displayStart();
             var l = i;
@@ -108,6 +111,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
 
                 _ = c.igTableSetColumnIndex(0);
                 imgui.textUnformatted(entryName);
+                tryContextMenu(cx, &popup_shown, lmp);
 
                 _ = c.igTableSetColumnIndex(1);
 
@@ -147,4 +151,38 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
 
 fn filterBufSlice(self: *Self) [:0]u8 {
     return self.filter_buf[0..(@sizeOf(@TypeOf(self.filter_buf)) - 1) :0];
+}
+
+fn tryContextMenu(cx: *Core, popup_shown: *bool, lump: c.LumpNum) void {
+    if (!c.igBeginPopupContextItem("##vfs.context", c.ImGuiPopupFlags_MouseButtonRight)) {
+        return;
+    }
+
+    defer c.igEndPopup();
+    const lump_len = c.W_LumpLength(lump);
+
+    if (popup_shown.* or lump_len <= 0) {
+        return;
+    }
+
+    popup_shown.* = true;
+
+    if (lump_len < 4) {
+        return;
+    }
+
+    var magic4: [4]u8 = undefined;
+    c.W_ReadLumpN(lump, &magic4, 4);
+    const magic = std.mem.bytesToValue(u32, &magic4);
+
+    var is_music = false;
+    is_music = is_music or (magic == stdx.asciiId('M', 'U', 'S', 0x1A));
+    is_music = is_music or (magic == stdx.asciiId('M', 'T', 'h', 'd'));
+    is_music = is_music or (magic == stdx.asciiId('R', 'I', 'F', 'F'));
+    is_music = is_music or (magic == stdx.asciiId('M', 'I', 'D', 'S'));
+    // TODO: whatever raw formats dsda-doom supports.
+
+    if (is_music and c.igButton("Play Music", .{ .x = 0.0, .y = 0.0 })) {
+        c.S_ChangeMusInfoMusic(@ptrCast(&cx.c), lump, @intFromBool(true));
+    }
 }

@@ -543,7 +543,7 @@ const char *W_LumpName(int lump)
 //  which must be >= W_LumpLength().
 //
 
-void W_ReadLump(int lump, void *dest)
+void W_ReadLump(LumpNum lump, void *dest)
 {
   lumpinfo_t *l = lumpinfo + lump;
 
@@ -558,6 +558,20 @@ void W_ReadLump(int lump, void *dest)
         lseek(l->wadfile->handle, l->position, SEEK_SET);
         I_Read(l->wadfile->handle, dest, l->size);
       }
+    }
+}
+
+void W_ReadLumpN(LumpNum lump, void* dest, size_t bytes) {
+    lumpinfo_t *l = lumpinfo + lump;
+
+#ifdef RANGECHECK
+  if (lump >= numlumps)
+    I_Error ("W_ReadLumpN: %i >= numlumps",lump);
+#endif
+
+    if (l->wadfile) {
+        lseek(l->wadfile->handle, l->position, SEEK_SET);
+        I_Read(l->wadfile->handle, dest, bytes);
     }
 }
 
