@@ -1142,7 +1142,7 @@ static void P_NightmareRespawn(mobj_t* mobj)
   fixed_t      x;
   fixed_t      y;
   fixed_t      z;
-  subsector_t* ss;
+  sector_t*    sec;
   mobj_t*      mo;
   mapthing_t*  mthing;
 
@@ -1185,9 +1185,9 @@ static void P_NightmareRespawn(mobj_t* mobj)
 
   // spawn a teleport fog at the new spot
 
-  ss = R_PointInSubsector (x,y);
+  sec = R_PointInSector (x,y);
 
-  mo = P_SpawnMobj (x, y, ss->sector->floorheight + g_telefog_height, g_mt_tfog);
+  mo = P_SpawnMobj (x, y, sec->floorheight + g_telefog_height, g_mt_tfog);
 
   S_StartSound (mo, g_sfx_telept);
 
@@ -1963,7 +1963,7 @@ void P_RespawnSpecials (void)
   fixed_t       x;
   fixed_t       y;
   fixed_t       z;
-  subsector_t*  ss;
+  sector_t*     sec;
   mobj_t*       mo;
   mapthing_t*   mthing;
   int           i;
@@ -1990,8 +1990,8 @@ void P_RespawnSpecials (void)
 
   // spawn a teleport fog at the new spot
 
-  ss = R_PointInSubsector (x,y);
-  mo = P_SpawnMobj (x, y, ss->sector->floorheight , MT_IFOG);
+  sec = R_PointInSector (x,y);
+  mo = P_SpawnMobj (x, y, sec->floorheight , MT_IFOG);
   S_StartSound (mo, sfx_itmbk);
 
   // find which type to spawn
@@ -2097,6 +2097,9 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   if (map_info.flags & MI_USE_PLAYER_START_Z)
     mobj->z += mthing->height;
+
+  if (map_format.zdoom)
+    P_AdjustZLimits(mobj);
 
   // set color translations for player sprites
   if (hexen)
@@ -2480,9 +2483,9 @@ mobj_t* P_SpawnMapThing (const mapthing_t* mthing, int index)
   {
     if (mthing->type >= 1400 && mthing->type < 1410)
     {
-      R_PointInSubsector(
+      R_PointInSector(
         mthing->x, mthing->y
-      )->sector->seqType = mthing->type - 1400;
+      )->seqType = mthing->type - 1400;
       return NULL;
     }
   }
@@ -2612,6 +2615,10 @@ spawnit:
     {
       mobj->z -= mthing->height;
     }
+
+    if (map_format.zdoom)
+      P_AdjustZLimits(mobj);
+
     mobj->tid = mthing->tid;
     mobj->special = mthing->special;
     mobj->special_args[0] = mthing->special_args[0];

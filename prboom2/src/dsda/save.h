@@ -21,6 +21,7 @@
 void dsda_ArchiveAll(void);
 void dsda_UnArchiveAll(void);
 void dsda_InitSaveDir(void);
+char* dsda_SaveDir(void);
 char* dsda_SaveGameName(int slot, dboolean via_excmd);
 void dsda_ResetDemoSaveSlots(void);
 void dsda_SetLastLoadSlot(int slot);
@@ -29,5 +30,6 @@ int dsda_LastSaveSlot(void);
 void dsda_ResetLastSaveSlot(void);
 int dsda_AllowMenuLoad(int slot);
 int dsda_AllowAnyMenuLoad(void);
+void dsda_UpdateAutoSaves(void);
 
 #endif
