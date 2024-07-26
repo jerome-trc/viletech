@@ -1814,6 +1814,8 @@ static void D_DoomMainSetup(CCore* cx)
   lprintf(LO_DEBUG, "W_Init: Init WADfiles.\n");
   W_Init(); // CPhipps - handling of wadfiles init changed
 
+  populateMusicPlayer(cx);
+
   if (hexen)
   {
     if (!W_LumpNameExists("MAP05"))

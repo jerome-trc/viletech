@@ -5,10 +5,12 @@ const c = @import("main.zig").c;
 const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
+const MusicGui = @import("devgui/MusicGui.zig");
 const VfsGui = @import("devgui/VfsGui.zig");
 
 pub const State = enum(c_int) {
     console,
+    music,
     vfs,
 };
 
@@ -74,8 +76,9 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
 
     c.igPushItemWidth(mainvp.*.Size.x * 0.15);
 
-    const items = [2][*c]const u8{
+    const items = [_][*:0]const u8{
         "Console",
+        "Music",
         "VFS",
     };
 
@@ -109,11 +112,13 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
 
     switch (cx.dgui.left) {
         .console => Console.draw(cx, true, menu_bar_height),
+        .music => MusicGui.layout(cx, true, menu_bar_height),
         .vfs => VfsGui.draw(cx, true, menu_bar_height),
     }
 
     switch (cx.dgui.right) {
         .console => Console.draw(cx, false, menu_bar_height),
+        .music => MusicGui.layout(cx, false, menu_bar_height),
         .vfs => VfsGui.draw(cx, false, menu_bar_height),
     }
 

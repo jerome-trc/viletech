@@ -14,6 +14,7 @@ pub const c = @cImport({
     @cInclude("i_system.h");
     @cInclude("i_video.h");
     @cInclude("lprintf.h");
+    @cInclude("s_sound.h");
     @cInclude("w_wad.h");
     @cUndef("RATBOOM_ZIG");
 

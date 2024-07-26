@@ -44,6 +44,8 @@ static inline void vt_loadDynLibs(CCore* cx) {}
 
 bool dguiProcessEvent(CCore*, SDL_Event*);
 
+void populateMusicPlayer(CCore*);
+
 static inline void vt_writeEngineTime(void) {}
 
 /// Retrieve embedded window icon data.

@@ -5,6 +5,7 @@ const c = @import("main.zig").c;
 
 const Console = @import("devgui/Console.zig");
 const devgui = @import("devgui.zig");
+const MusicGui = @import("devgui/MusicGui.zig");
 const VfsGui = @import("devgui/VfsGui.zig");
 
 const Self = @This();
@@ -35,6 +36,7 @@ alloc: std.mem.Allocator,
 console: Console,
 dgui: DevGui,
 gpa: ?*DebugAllocator,
+musicgui: MusicGui,
 stderr_file: std.fs.File.Writer,
 stderr_bw: StreamWriter,
 stdout_file: std.fs.File.Writer,
@@ -61,6 +63,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
             .right = devgui.State.vfs,
         },
         .gpa = gpa,
+        .musicgui = MusicGui.init(alloc),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
