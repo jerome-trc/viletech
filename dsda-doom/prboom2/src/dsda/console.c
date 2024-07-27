@@ -67,7 +67,7 @@
 #define CF_ALWAYS (CF_DEMO|CF_STRICT)
 
 typedef struct console_entry_s {
-  char text[CONSOLE_ENTRY_SIZE + 1];
+  char text[CONSOLE_ENTRY_SIZE];
   struct console_entry_s* prev;
   struct console_entry_s* next;
 } console_entry_t;
@@ -75,7 +75,7 @@ typedef struct console_entry_s {
 static console_entry_t* console_history_head;
 static console_entry_t* console_entry;
 static int console_entry_index;
-static char console_message[CONSOLE_ENTRY_SIZE + 3] = { ' ', ' ' };
+static char console_message[CONSOLE_ENTRY_SIZE + 2] = { ' ', ' ' };
 static char* console_message_entry = console_message + 2;
 static hu_textline_t hu_console_prompt;
 static hu_textline_t hu_console_message;
@@ -226,10 +226,13 @@ static dboolean console_PlayerSetHealth(CCore* cx, const char* command, const ch
   return false;
 }
 
-static dboolean console_PlayerSetArmor(CCore* cx, const char* command, const char* args) {
-    (void)cx;
-    (void)command;
+static dboolean console_PlayerKill(CCore* cx, const char* command, const char* args) {
+  P_DamageMobj(cx, target_player.mo, NULL, NULL, 10000);
 
+  return true;
+}
+
+static dboolean console_PlayerSetArmor(CCore* cx, const char* command, const char* args) {
   int arg_count;
   int armorpoints, armortype;
 
@@ -1134,6 +1137,18 @@ static dboolean console_BruteForceStart(CCore* cx, const char* command, const ch
           return false;
 
         dsda_AddMiscBruteForceCondition(dsda_bf_have_item, attr_i);
+      }
+      else if (sscanf(conditions[i], " lack %3[a-zA-Z]", attr_s) == 1) {
+        int attr_i;
+
+        for (attr_i = 0; attr_i < dsda_bf_item_max; ++attr_i)
+          if (!strcmp(attr_s, dsda_bf_item_names[attr_i]))
+            break;
+
+        if (attr_i == dsda_bf_item_max)
+          return false;
+
+        dsda_AddMiscBruteForceCondition(dsda_bf_lack_item, attr_i);
       }
       else if (sscanf(conditions[i], " %3[a-zA-Z] %4[a-zA-Z><!=] %i", attr_s, oper_s, &value) == 3) {
         int attr_i, oper_i;
@@ -2693,6 +2708,7 @@ static console_command_entry_t console_commands[] = {
   { "player.set_vx", console_PlayerSetVX, CF_NEVER },
   { "player.set_vy", console_PlayerSetVY, CF_NEVER },
   { "player.set_vz", console_PlayerSetVZ, CF_NEVER },
+  { "player.kill", console_PlayerKill, CF_NEVER },
 
   { "music.restart", console_MusicRestart, CF_ALWAYS },
 
@@ -2922,7 +2938,7 @@ static console_command_entry_t console_commands[] = {
 };
 
 static void dsda_AddConsoleMessage(const char* message) {
-  strncpy(console_message_entry, message, CONSOLE_ENTRY_SIZE);
+  strncpy(console_message_entry, message, CONSOLE_ENTRY_SIZE - 1);
 }
 
 static dboolean dsda_AuthorizeCommand(console_command_entry_t* entry) {
@@ -3009,11 +3025,11 @@ void dsda_UpdateConsoleText(char* text) {
     if (text[i] < 32 || text[i] > 126)
       continue;
 
-    for (shift_i = strlen(console_entry->text); shift_i > console_entry_index; --shift_i)
+    for (shift_i = strlen(console_entry->text) - 1; shift_i > console_entry_index; --shift_i)
       console_entry->text[shift_i] = console_entry->text[shift_i - 1];
 
     console_entry->text[console_entry_index] = tolower(text[i]);
-    if (console_entry_index < CONSOLE_ENTRY_SIZE)
+    if (console_entry_index < CONSOLE_ENTRY_SIZE - 2)
       ++console_entry_index;
   }
 

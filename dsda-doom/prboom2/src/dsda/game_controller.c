@@ -121,10 +121,12 @@ static inline int PollButton(dsda_game_controller_button_t button)
   return SDL_GameControllerGetButton(game_controller, (SDL_GameControllerButton) button) << button;
 }
 
-
-static void dsda_PollButtons(CCore* cx) {
+void dsda_PollGameControllerButtons(CCore* cx) {
   event_t ev;
   float trigger;
+
+  if (!game_controller)
+    return;
 
   ev.type = ev_joystick;
   ev.data1.i = PollButton(DSDA_CONTROLLER_BUTTON_A) |
@@ -164,9 +166,9 @@ void dsda_PollGameController(CCore* cx) {
   if (!game_controller)
     return;
 
+  dsda_PollGameControllerButtons(cx);
   dsda_PollLeftStick(cx);
   dsda_PollRightStick(cx);
-  dsda_PollButtons(cx);
 }
 
 void dsda_InitGameControllerParameters(void) {

@@ -878,6 +878,8 @@ void CheckIWAD(const char *iwadname,GameMode_t *gmode,dboolean *hassec)
   if (M_ReadAccess(iwadname))
   {
     int ud=0,rg=0,sw=0,cm=0,sc=0,hx=0;
+    dboolean dmenupic = false;
+    dboolean large_titlepic = false;
     FILE* fp;
 
     // Identify IWAD correctly
@@ -937,7 +939,9 @@ void CheckIWAD(const char *iwadname,GameMode_t *gmode,dboolean *hassec)
           }
 
           if (!strncmp(fileinfo[length].name,"DMENUPIC",8))
-            bfgedition++;
+            dmenupic = true;
+          if (!strncmp(fileinfo[length].name,"TITLEPIC",8) && fileinfo[length].size > 68168)
+            large_titlepic = true;
           if (!strncmp(fileinfo[length].name,"HACX",4))
             hx++;
         }
@@ -949,6 +953,10 @@ void CheckIWAD(const char *iwadname,GameMode_t *gmode,dboolean *hassec)
     }
     else // error from open call
       I_Error("CheckIWAD: Can't open IWAD %s", iwadname);
+
+    // unity iwad has dmenupic and a large titlepic
+    if (dmenupic && !large_titlepic)
+      bfgedition++;
 
     // Determine game mode from levels present
     // Must be a full set for whichever mode is present
@@ -1225,10 +1233,10 @@ static char *GetAutoloadDir(const char *iwadname, dboolean createdir)
 
     if (autoload_path == NULL)
     {
-        const char* exedir = I_DoomExeDir();
-        len = snprintf(NULL, 0, "%s/autoload", exedir);
+        const char* configdir = I_ConfigDir();
+        len = snprintf(NULL, 0, "%s/autoload", configdir);
         autoload_path = Z_Malloc(len+1);
-        snprintf(autoload_path, len+1, "%s/autoload", exedir);
+        snprintf(autoload_path, len+1, "%s/autoload", configdir);
     }
 
     M_MakeDir(autoload_path, false);

@@ -234,6 +234,24 @@ int G_GotoNextLevel(CCore* cx)
   return changed;
 }
 
+int G_GotoPrevLevel(CCore* cx)
+{
+  int epsd, map;
+  int changed = false;
+
+  dsda_PrevMap(&epsd, &map);
+
+  if ((gamestate == GS_LEVEL) &&
+    allow_incompatibility &&
+    !menuactive)
+  {
+    G_DeferedInitNew(cx, gameskill, epsd, map);
+    changed = true;
+  }
+
+  return changed;
+}
+
 void M_ChangeSpeed(void)
 {
   G_SetSpeed(true);
@@ -743,9 +761,9 @@ int HU_DrawDemoProgress(int force)
 
   prev_len = len;
 
-  V_FillRect(0, 0, SCREENHEIGHT - 4, len - 0, 4, 4);
+  V_FillRect(0, 0, SCREENHEIGHT - 4, len - 0, 4, playpal_white);
   if (len > 4)
-    V_FillRect(0, 2, SCREENHEIGHT - 3, len - 4, 2, 0);
+    V_FillRect(0, 2, SCREENHEIGHT - 3, len - 4, 2, playpal_black);
 
   return true;
 }
@@ -770,7 +788,7 @@ int GetFullPath(const char* FileName, const char* ext, char *Buffer, size_t Buff
       strcpy(dir, M_getenv("VTEC_WAD_DIR"));
       break;
     case 2:
-      strcpy(dir, I_DoomExeDir());
+      strcpy(dir, I_ConfigDir());
       break;
     }
 

@@ -1421,9 +1421,9 @@ void G_Ticker(CCore* cx) {
   entry_leveltime = leveltime;
 
   // CPhipps - player colour changing
-  if (!demoplayback && mapcolor_plyr[consoleplayer] != mapcolor_me) {
+  if (!demoplayback && mapcolor.plyr[consoleplayer] != mapcolor.me) {
     // Changed my multiplayer colour - Inform the whole game
-    G_ChangedPlayerColour(consoleplayer, mapcolor_me);
+    G_ChangedPlayerColour(consoleplayer, mapcolor.me);
   }
   P_MapStart();
   // do player reborns if needed
@@ -1510,6 +1510,7 @@ void G_Ticker(CCore* cx) {
     int buf = gametic % BACKUPTICS;
 
     dsda_UpdateAutoKeyFrames(cx);
+    dsda_UpdateAutoSaves();
 
     if (dsda_BruteForce())
     {
@@ -1784,7 +1785,7 @@ void G_ChangedPlayerColour(int pn, int cl)
 
   if (!netgame) return;
 
-  mapcolor_plyr[pn] = cl;
+  mapcolor.plyr[pn] = cl;
 
   // Rebuild colour translation tables accordingly
   R_InitTranslationTables();
@@ -1865,7 +1866,7 @@ void G_PlayerReborn (int player)
 static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
 {
   fixed_t     x,y;
-  subsector_t *ss;
+  sector_t *sec;
   int         i;
 
   if (!players[playernum].mo)
@@ -1894,11 +1895,11 @@ static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
     players[playernum].mo->flags2 |= MF2_PASSMOBJ;
 
     // spawn a teleport fog
-    ss = R_PointInSubsector(x, y);
+    sec = R_PointInSector(x, y);
     an = ((unsigned) ANG45 * (mthing->angle / 45)) >> ANGLETOFINESHIFT;
 
     mo = P_SpawnMobj(cx, x + 20 * finecosine[an], y + 20 * finesine[an],
-                     ss->sector->floorheight + TELEFOGHEIGHT, g_mt_tfog);
+                     sec->floorheight + TELEFOGHEIGHT, g_mt_tfog);
 
     if (players[consoleplayer].viewz != 1)
       S_StartMobjSound(mo, g_sfx_telept);   // don't start sound on first frame
@@ -1926,7 +1927,7 @@ static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
   }
 
   // spawn a teleport fog
-  ss = R_PointInSubsector (x,y);
+  sec = R_PointInSector (x,y);
   { // Teleport fog at respawn point
     fixed_t xa,ya;
     int an;
@@ -1961,7 +1962,7 @@ static dboolean G_CheckSpot(CCore* cx, int playernum, mapthing_t *mthing)
       default:  I_Error("G_CheckSpot: unexpected angle %d\n",an);
       }
 
-    mo = P_SpawnMobj(cx, x + 20 * xa, y + 20 * ya, ss->sector->floorheight, MT_TFOG);
+    mo = P_SpawnMobj(cx, x + 20 * xa, y + 20 * ya, sec->floorheight, MT_TFOG);
 
     if (players[consoleplayer].viewz != 1)
       S_StartMobjSound(mo, sfx_telept);  // don't start sound on first frame
@@ -2217,7 +2218,7 @@ void G_DoWorldDone(CCore* cx)
   dsda_UpdateGameMap(wminfo.nextep + 1, wminfo.next + 1);
   G_DoLoadLevel(cx);
   gameaction = ga_nothing;
-  AM_clearMarks();           //jff 4/12/98 clear any marks on the automap
+  AM_clearMarks(cx);           //jff 4/12/98 clear any marks on the automap
   dsda_EvaluateSkipModeDoWorldDone(cx);
 }
 
@@ -3008,7 +3009,7 @@ void G_InitNew(CCore* cx, int skill, int episode, int map, dboolean prepare)
   dsda_EvaluateSkipModeInitNew();
 
   //jff 4/16/98 force marks on automap cleared every new level start
-  AM_clearMarks();
+  AM_clearMarks(cx);
 
   dsda_InitSky();
 
@@ -4097,8 +4098,8 @@ void P_WalkTicker(void)
         finesine[(walkcamera.angle - ANG90) >> ANGLETOFINESHIFT]);
 
   {
-    subsector_t *subsec = R_PointInSubsector (walkcamera.x, walkcamera.y);
-    walkcamera.z = subsec->sector->floorheight + 41 * FRACUNIT;
+    sector_t *sec = R_PointInSector (walkcamera.x, walkcamera.y);
+    walkcamera.z = sec->floorheight + 41 * FRACUNIT;
   }
 
   G_ResetMotion();

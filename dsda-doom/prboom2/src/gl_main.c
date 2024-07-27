@@ -95,8 +95,6 @@ const int tran_filter_pct = 66;
 GLfloat gl_texture_filter_anisotropic;
 
 extern int gld_paletteIndex;
-extern int playpal_black;
-extern int playpal_white;
 
 //sprites
 const float gl_spriteclip_threshold_f = 10.f / MAP_COEFF;
@@ -1048,10 +1046,6 @@ void gld_EndDrawScene(void)
   glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT);
   gld_Set2DMode();
 
-  glsl_PushMainShader();
-  R_DrawPlayerSprites();
-  glsl_PopMainShader();
-
   // e6y
   // Effect of invulnerability uses a colormap instead of hard-coding now
   // See nuts.wad
@@ -1089,6 +1083,10 @@ void gld_EndDrawScene(void)
 
     glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
   }
+
+  glsl_PushMainShader();
+  R_DrawPlayerSprites();
+  glsl_PopMainShader();
 
   glColor3f(1.0f,1.0f,1.0f);
   glDisable(GL_SCISSOR_TEST);
@@ -1604,7 +1602,8 @@ bottomtexture:
       wall.ybottom=-MAXCOORD*2;
       if (
           (backsector->ceilingheight==backsector->floorheight) &&
-          (backsector->floorpic==skyflatnum)
+          (backsector->floorpic==skyflatnum) &&
+          (bottomtexture == NO_TEXTURE)
          )
       {
         wall.ytop=(float)backsector->floorheight/MAP_SCALE;

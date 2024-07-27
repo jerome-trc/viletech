@@ -138,5 +138,6 @@ void PIT_ThrustSpike(CCore*, mobj_t*);
 
 dboolean P_MoveThing(CCore*, mobj_t*, fixed_t x, fixed_t y, fixed_t z, dboolean fog);
 int P_SplashDamage(fixed_t dist);
+void P_AdjustZLimits(mobj_t *thing);
 
 #endif // __P_MAP__

@@ -48,6 +48,10 @@
 #include "dsda.h"
 #include "v_video.h"
 
+#include "dsda.h"
+#include "dsda/aim.h"
+#include "dsda/excmd.h"
+
 #define LOWERSPEED   (FRACUNIT * 6)
 #define RAISESPEED   (FRACUNIT * 6)
 #define WEAPONBOTTOM (FRACUNIT * 128)
@@ -710,7 +714,10 @@ void A_Lower(CCore* cx, player_t *player, pspdef_t *psp)
     return;
   }
 
-  player->readyweapon = player->pendingweapon;
+  if (player->pendingweapon < NUMWEAPONS || !mbf21)
+  {
+    player->readyweapon = player->pendingweapon;
+  }
 
   P_BringUpWeapon(cx, player);
 }
@@ -995,38 +1002,14 @@ void A_FirePlasma(CCore* cx, player_t *player, pspdef_t *psp)
   P_SpawnPlayerMissile(cx, player->mo, MT_PLASMA);
 }
 
-//
-// P_BulletSlope
-// Sets a slope so a near miss is at aproximately
-// the height of the intended target
-//
-
 //e6y static
 fixed_t bulletslope;
 
-static void P_BulletSlope(CCore* cx, mobj_t *mo)
-{
-  angle_t an = mo->angle;    // see which target is to be aimed at
-
-  if (comperr(comperr_freeaim))
-    bulletslope = finetangent[(ANG90 - mo->pitch) >> ANGLETOFINESHIFT];
-  else
-  {
-    /* killough 8/2/98: make autoaiming prefer enemies */
-    uint64_t mask = mbf_features ? MF_FRIEND : 0;
-
-    do
-    {
-      bulletslope = P_AimLineAttack(cx, mo, an, 16*64*FRACUNIT, mask);
-      if (!linetarget)
-        bulletslope = P_AimLineAttack(cx, mo, an += 1<<26, 16*64*FRACUNIT, mask);
-      if (!linetarget)
-        bulletslope = P_AimLineAttack(cx, mo, an -= 2<<26, 16*64*FRACUNIT, mask);
-      if (heretic && !linetarget)
-        bulletslope = (mo->player->lookdir << FRACBITS) / 173;
-    }
-    while (mask && (mask=0, !linetarget));  /* killough 8/2/98 */
-  }
+/// Sets a slope so a near miss is at aproximately the height of the intended target
+static void P_BulletSlope(CCore* cx, mobj_t *mo) {
+    aim_t aim;
+    dsda_PlayerAimBad(cx, mo, mo->angle, &aim, mbf_features ? MF_FRIEND : 0);
+    bulletslope = aim.slope;
 }
 
 /// @fn P_GunShot
@@ -2404,15 +2387,15 @@ void A_GauntletAttack(CCore* cx, player_t * player, pspdef_t * psp)
 void P_RepositionMace(CCore* cx, mobj_t * mo)
 {
     int spot;
-    subsector_t *ss;
+    sector_t *sec;
 
     P_UnsetThingPosition(mo);
     spot = P_Random(pr_heretic) % MaceSpotCount;
     mo->x = MaceSpots[spot].x;
     mo->y = MaceSpots[spot].y;
-    ss = R_PointInSubsector(mo->x, mo->y);
-    mo->z = mo->floorz = ss->sector->floorheight;
-    mo->ceilingz = ss->sector->ceilingheight;
+    sec = R_PointInSector(mo->x, mo->y);
+    mo->z = mo->floorz = sec->floorheight;
+    mo->ceilingz = sec->ceilingheight;
     P_SetThingPosition(cx, mo);
 }
 

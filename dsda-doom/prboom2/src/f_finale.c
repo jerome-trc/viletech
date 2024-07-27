@@ -740,13 +740,28 @@ static void F_StartScrollMusic(CCore* cx, const char* music, dboolean loop_music
   }
 }
 
-void F_StartScroll (CCore* cx, const char* right, const char* left, const char* music, dboolean loop_music)
-{
+static dboolean end_patches_exist;
+
+void F_StartScroll(
+	CCore* cx,
+	const char* right,
+	const char* left,
+	const char* music,
+	dboolean loop_music
+) {
   wipegamestate = -1; // force a wipe
   scrollpic1 = right ? right : pfub1;
   scrollpic2 = left ? left : pfub2;
   finalecount = 0;
   finalestage = 1;
+
+  end_patches_exist = W_CheckNumForName("END0") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END1") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END2") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END3") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END4") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END5") != LUMP_NOT_FOUND &&
+                      W_CheckNumForName("END6") != LUMP_NOT_FOUND;
 
   F_StartScrollMusic(cx, music, loop_music);
 }
@@ -793,7 +808,7 @@ void F_BunnyScroll (void)
       V_ClearBorder();
   }
 
-  if (gamemode == commercial)
+  if (!end_patches_exist)
     return;
 
   if (finalecount < 1130)

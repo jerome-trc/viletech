@@ -1746,6 +1746,20 @@ static void P_LoadUDMFThings(CCore* cx, int lump)
       }
     }
 
+    if (mt.special == zl_music_change_song)
+    {
+      if (dmt->arg0str)
+        mt.special_args[0] = W_CheckNumForName(dmt->arg0str);
+      else
+        mt.special_args[0] = LUMP_NOT_FOUND;
+
+      if (mt.special_args[0] == LUMP_NOT_FOUND)
+      {
+        lprintf(LO_WARN, "Unknown song lump in thing %d action.\n", i);
+        mt.special = 0;
+      }
+    }
+
     if (dmt->flags & UDMF_TF_SKILL1)
       mt.options |= MTF_SKILL1;
 
@@ -2119,6 +2133,20 @@ static void P_LoadUDMFLineDefs(int lump)
       }
     }
 
+    if (ld->special == zl_music_change_song)
+    {
+      if (mld->arg0str)
+        ld->special_args[0] = W_CheckNumForName(mld->arg0str);
+      else
+        ld->special_args[0] = LUMP_NOT_FOUND;
+
+      if (ld->special_args[0] == LUMP_NOT_FOUND)
+      {
+        lprintf(LO_WARN, "Unknown song lump in line %d action.\n", i);
+        ld->special = 0;
+      }
+    }
+
     if (mld->flags & UDMF_ML_PLAYERCROSS)
       ld->activation |= SPAC_CROSS;
 
@@ -2309,7 +2337,7 @@ void P_PostProcessZDoomLineSpecial(line_t *ld)
       }
       else
       {
-        for (id_p = dsda_FindLinesFromID(ld->special_args[0]); *id_p >= 0; id_p++)
+        FIND_LINES(id_p, ld->special_args[0])
         {
           lines[*id_p].tranmap = dsda_TranMap(dsda_FloatToPercent(alpha));
           lines[*id_p].alpha = alpha;

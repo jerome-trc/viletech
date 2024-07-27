@@ -805,7 +805,7 @@ void P_PlayerThink (CCore* cx, player_t* player)
       {
         P_DamageMobj(cx, player->mo, NULL, NULL, 10000);
       }
-      if (cmd->arti == NUMARTIFACTS)
+      if (cmd->arti == HEXEN_NUMARTIFACTS)
       {                       // use one of each artifact (except puzzle artifacts)
         int i;
 

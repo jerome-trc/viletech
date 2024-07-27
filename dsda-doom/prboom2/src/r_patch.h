@@ -107,4 +107,7 @@ void R_InitPatches(void);
 void R_UpdatePlayPal(void);
 void R_FlushAllPatches(void);
 
+extern int playpal_black;
+extern int playpal_white;
+
 #endif

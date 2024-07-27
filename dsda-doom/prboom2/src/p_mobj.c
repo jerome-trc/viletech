@@ -1143,7 +1143,7 @@ static void P_NightmareRespawn(CCore* cx, mobj_t* mobj)
   fixed_t      x;
   fixed_t      y;
   fixed_t      z;
-  subsector_t* ss;
+  sector_t*    sec;
   mobj_t*      mo;
   mapthing_t*  mthing;
 
@@ -1169,28 +1169,28 @@ static void P_NightmareRespawn(CCore* cx, mobj_t* mobj)
 
   // something is occupying its position?
 
-  if (!P_CheckPosition (cx, mobj, x, y) )
+  if (!P_CheckPosition(cx, mobj, x, y) )
     return; // no respwan
 
   // spawn a teleport fog at old spot
   // because of removal of the body?
 
-  mo = P_SpawnMobj (cx, mobj->x,
+  mo = P_SpawnMobj(cx, mobj->x,
                     mobj->y,
                     mobj->subsector->sector->floorheight + g_telefog_height,
                     g_mt_tfog);
 
   // initiate teleport sound
 
-  S_StartSound (mo, g_sfx_telept);
+  S_StartSound(mo, g_sfx_telept);
 
   // spawn a teleport fog at the new spot
 
-  ss = R_PointInSubsector (x,y);
+  sec = R_PointInSector(x,y);
 
-  mo = P_SpawnMobj (cx, x, y, ss->sector->floorheight + g_telefog_height, g_mt_tfog);
+  mo = P_SpawnMobj(cx, x, y, sec->floorheight + g_telefog_height, g_mt_tfog);
 
-  S_StartSound (mo, g_sfx_telept);
+  S_StartSound(mo, g_sfx_telept);
 
   // spawn the new monster
 
@@ -1957,7 +1957,7 @@ void P_RespawnSpecials(CCore* cx)
   fixed_t       x;
   fixed_t       y;
   fixed_t       z;
-  subsector_t*  ss;
+  sector_t*     sec;
   mobj_t*       mo;
   mapthing_t*   mthing;
   int           i;
@@ -1984,9 +1984,9 @@ void P_RespawnSpecials(CCore* cx)
 
   // spawn a teleport fog at the new spot
 
-  ss = R_PointInSubsector (x,y);
-  mo = P_SpawnMobj(cx, x, y, ss->sector->floorheight , MT_IFOG);
-  S_StartSound (mo, sfx_itmbk);
+  sec = R_PointInSector(x,y);
+  mo = P_SpawnMobj(cx, x, y, sec->floorheight , MT_IFOG);
+  S_StartSound(mo, sfx_itmbk);
 
   // find which type to spawn
 
@@ -2091,6 +2091,9 @@ void P_SpawnPlayer(CCore* cx, int n, const mapthing_t* mthing)
 
   if (map_info.flags & MI_USE_PLAYER_START_Z)
     mobj->z += mthing->height;
+
+  if (map_format.zdoom)
+    P_AdjustZLimits(mobj);
 
   // set color translations for player sprites
   if (hexen)
@@ -2474,9 +2477,9 @@ mobj_t* P_SpawnMapThing (CCore* cx, const mapthing_t* mthing, int index)
   {
     if (mthing->type >= 1400 && mthing->type < 1410)
     {
-      R_PointInSubsector(
+      R_PointInSector(
         mthing->x, mthing->y
-      )->sector->seqType = mthing->type - 1400;
+      )->seqType = mthing->type - 1400;
       return NULL;
     }
   }
@@ -2606,6 +2609,10 @@ spawnit:
     {
       mobj->z -= mthing->height;
     }
+
+    if (map_format.zdoom)
+      P_AdjustZLimits(mobj);
+
     mobj->tid = mthing->tid;
     mobj->special = mthing->special;
     mobj->special_args[0] = mthing->special_args[0];

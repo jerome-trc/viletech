@@ -106,6 +106,7 @@ void G_SkipDemoStartCheck(void);
 void G_SkipDemoCheck(void);
 int G_ReloadLevel(CCore*);
 int G_GotoNextLevel(CCore*);
+int G_GotoPrevLevel(CCore*);
 
 void M_ChangeSkyMode(void);
 void M_ChangeMaxViewPitch(void);

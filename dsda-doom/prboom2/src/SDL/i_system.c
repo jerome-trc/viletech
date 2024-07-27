@@ -80,6 +80,7 @@
 #include "dsda/signal_context.h"
 #include "dsda/time.h"
 #include "z_zone.h"
+#include "dsda/utility.h"
 
 void I_uSleep(unsigned long usecs) {
 	SDL_Delay(usecs / 1000);
@@ -225,28 +226,34 @@ void I_SwitchToWindow(HWND hwnd) {
 	}
 }
 
-const char* I_DoomExeDir(void) {
-	extern char** dsda_argv;
+const char *I_ConfigDir(void)
+{
+  return I_ExeDir();
+}
 
-	static const char current_dir_dummy[] = { "." }; // proff - rem extra slash 8/21/03
-	static char* base;
-	if (!base) // cache multiple requests
-	{
-		size_t len = strlen(*dsda_argv);
-		char* p = (base = (char*)Z_Malloc(len + 1)) + len - 1;
-		strcpy(base, *dsda_argv);
-		while (p > base && *p != '/' && *p != '\\')
-			*p-- = 0;
-		if (*p == '/' || *p == '\\')
-			*p-- = 0;
-		if (strlen(base) < 2 || !M_WriteAccess(base)) {
-			Z_Free(base);
-			base = (char*)Z_Malloc(1024);
-			if (!M_getcwd(base, 1024) || !M_WriteAccess(base))
-				strcpy(base, current_dir_dummy);
-		}
-	}
-	return base;
+const char *I_ExeDir(void)
+{
+  extern char **dsda_argv;
+
+  static char *base;
+  if (!base)        // cache multiple requests
+    {
+      size_t len = strlen(*dsda_argv);
+      char *p = (base = (char*)Z_Malloc(len+1)) + len - 1;
+      strcpy(base,*dsda_argv);
+      while (p > base && *p!='/' && *p!='\\')
+        *p--=0;
+      if (*p=='/' || *p=='\\')
+        *p--=0;
+      if (strlen(base) < 2 || !M_WriteAccess(base))
+      {
+        Z_Free(base);
+        base = (char*)Z_Malloc(1024);
+        if (!M_getcwd(base, 1024) || !M_WriteAccess(base))
+          strcpy(base, ".");
+      }
+    }
+  return base;
 }
 
 const char* I_GetTempDir(void) {
@@ -269,8 +276,14 @@ const char* I_GetTempDir(void) {
 
 #elif defined(AMIGA)
 
-const char* I_DoomExeDir(void) {
-	return "PROGDIR:";
+const char *I_ConfigDir(void)
+{
+  return "PROGDIR:";
+}
+
+const char *I_ExeDir(void)
+{
+  return "PROGDIR:";
 }
 
 const char* I_GetTempDir(void) {
@@ -281,24 +294,62 @@ const char* I_GetTempDir(void) {
 // cph - V.Aguilar (5/30/99) suggested return ~/.lxdoom/, creating
 //  if non-existant
 // cph 2006/07/23 - give prboom+ its own dir
-static const char prboom_dir[] = { "/.rat-boom" }; // Mead rem extra slash 8/21/03
+static const char prboom_dir[] = { "/.ratboom" }; // Mead rem extra slash 8/21/03
 
-const char* I_DoomExeDir(void) {
-	static char* base;
-	if (!base) // cache multiple requests
-	{
-		char* home = M_getenv("HOME");
-		size_t len = strlen(home);
+const char *I_ConfigDir(void)
+{
+  static char *base;
 
-		base = Z_Malloc(len + strlen(prboom_dir) + 1);
-		strcpy(base, home);
-		// I've had trouble with trailing slashes before...
-		if (base[len - 1] == '/')
-			base[len - 1] = 0;
-		strcat(base, prboom_dir);
-		M_MakeDir(base, true); // Make sure it exists
-	}
-	return base;
+  if (!base)
+  {
+    char *home = M_getenv("HOME");
+
+    // First, try legacy directory.
+    base = dsda_ConcatDir(home, ".dsda-doom");
+    if (access(base, F_OK) != 0)
+    {
+      // Legacy directory is not accessible. Use XDG directory.
+      char *xdg_data_home;
+
+      Z_Free(base);
+
+      xdg_data_home = M_getenv("XDG_DATA_HOME");
+      if (xdg_data_home)
+        base = dsda_ConcatDir(xdg_data_home, "ratboom");
+      else
+        // $XDG_DATA_HOME should be $HOME/.local/share if not defined.
+        base = dsda_ConcatDir(home, ".local/share/ratboom");
+    }
+
+    M_MakeDir(base, true); // Make sure it exists
+  }
+
+  return base;
+}
+
+const char *I_ExeDir(void)
+{
+  extern char **dsda_argv;
+
+  static char *base;
+  if (!base)        // cache multiple requests
+    {
+      size_t len = strlen(*dsda_argv);
+      char *p = (base = (char*)Z_Malloc(len+1)) + len - 1;
+      strcpy(base,*dsda_argv);
+      while (p > base && *p!='/' && *p!='\\')
+        *p--=0;
+      if (*p=='/' || *p=='\\')
+        *p--=0;
+      if (strlen(base) < 2 || !M_WriteAccess(base))
+      {
+        Z_Free(base);
+        base = (char*)Z_Malloc(1024);
+        if (!M_getcwd(base, 1024) || !M_WriteAccess(base))
+          strcpy(base, ".");
+      }
+    }
+  return base;
 }
 
 const char* I_GetTempDir(void) {
@@ -350,15 +401,19 @@ static const char* I_GetBasePath(void) {
 #define PATH_SEPARATOR ':'
 #endif
 
-char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic) {
-	// lookup table of directories to search
-	static struct {
-		const char* dir; // directory
-		const char* sub; // subdirectory
-		const char* env; // environment variable
-		const char* (*func)(void); // for I_DoomExeDir
-	} search0[] = {
-    {NULL, NULL, NULL, I_DoomExeDir}, // config directory
+char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic)
+{
+  // lookup table of directories to search
+  static struct {
+    const char *dir; // directory
+    const char *sub; // subdirectory
+    const char *env; // environment variable
+    const char *(*func)(void); // for functions that return the directory
+  } search0[] = {
+    {NULL, NULL, NULL, I_ExeDir}, // executable directory
+#ifndef _WIN32
+    {NULL, NULL, NULL, I_ConfigDir}, // config and autoload directory. on windows, this is the same as I_ExeDir
+#endif
     {NULL}, // current working directory
     {NULL, NULL, "VTEC_WAD_DIR"}, // run-time $VTEC_WAD_DIR
     {VTEC_WAD_DIR}, // build-time configured VTEC_WAD_DIR

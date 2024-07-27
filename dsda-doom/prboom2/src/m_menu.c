@@ -36,6 +36,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsda/configuration.h"
+#include "i_system.h"
 #include <SDL_keyboard.h>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -64,6 +65,7 @@
 #include "d_deh.h"
 #include "m_file.h"
 #include "am_map.h"
+#include "i_glob.h"
 #include "i_main.h"
 #include "i_video.h"
 #include "i_sound.h"
@@ -217,13 +219,6 @@ const char skullName[2][/*8*/9] = {"M_SKULL1","M_SKULL2"};
 
 menu_t* currentMenu; // current menudef
 
-// phares 3/30/98
-// externs added for setup menus
-
-int mapcolor_me;    // cph
-
-// end of externs added for setup menus
-
 //
 // PROTOTYPES
 //
@@ -338,18 +333,18 @@ const char shiftxform[] =
   '&', // shift-7
   '*', // shift-8
   '(', // shift-9
-  ':',
+  ';',
   ':', // shift-;
   '<',
   '+', // shift-=
   '>', '?', '@',
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
   'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '[', // shift-[
-  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
-  ']', // shift-]
+  '{', // shift-[
+  '|', // shift-backslash
+  '}', // shift-]
   '"', '_',
-  '\'', // shift-`
+  '~', // shift-`
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
   'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
   '{', '|', '}', '~', 127
@@ -990,6 +985,68 @@ void M_ReadSaveStrings(void)
   snprintf(save_page_string, SAVE_PAGE_STRING_SIZE, "PAGE %d/%d", save_page + 1, save_page_limit);
 }
 
+#define SLOT_SCAN_MAX 112
+
+int M_AutoSaveSlot(const char *target_name)
+{
+  char name_in_file[SAVESTRINGSIZE];
+  char slots[SLOT_SCAN_MAX] = { 0 };
+  int return_slot = -1;
+  glob_t *glob;
+  FILE *fp;
+  const char *file_name;
+
+  glob = I_StartGlob(dsda_SaveDir(), "*savegame*.dsg", 0);
+  while (return_slot < 0)
+  {
+    file_name = I_NextGlob(glob);
+    if (!file_name)
+      break;
+
+    fp = M_OpenFile(file_name, "rb");
+    if (fp)
+    {
+      int slot;
+
+      if (sscanf(dsda_BaseName(file_name), "%*[^0-9]%d.dsg", &slot))
+      {
+        if (slot < SLOT_SCAN_MAX)
+          slots[slot] = 1;
+
+        if (fread(name_in_file, SAVESTRINGSIZE, 1, fp) && !strcmp(name_in_file, target_name))
+        {
+          return_slot = slot;
+          slots[slot] = 0;
+        }
+      }
+
+      fclose(fp);
+    }
+  }
+
+  I_EndGlob(glob);
+
+  if (return_slot < 0)
+    return_slot = strnlen(slots, SLOT_SCAN_MAX);
+
+  if (slots[return_slot] == 1)
+    return_slot = -1;
+
+  return return_slot;
+}
+
+void M_AutoSave(CCore* cx)
+{
+  int slot;
+  char target_name[SAVESTRINGSIZE];
+
+  snprintf(target_name, SAVESTRINGSIZE, "auto-%s", dsda_MapLumpName(gameepisode, gamemap));
+
+  slot = M_AutoSaveSlot(target_name);
+  G_SaveGame(cx, slot, target_name);
+  doom_printf(cx, "autosave");
+}
+
 //
 //  M_SaveGame & Cie.
 //
@@ -1172,6 +1229,27 @@ static void M_QuitResponse(dboolean affirmative)
 {
   if (!affirmative)
     return;
+
+  if (!netgame // killough 12/98
+      && !nosfxparm
+      && dsda_IntConfig(dsda_config_quit_sounds))
+  {
+    int i;
+
+    if (gamemode == commercial)
+      S_StartVoidSound(quitsounds2[(gametic>>2)&7]);
+    else
+      S_StartVoidSound(quitsounds[(gametic>>2)&7]);
+
+    // wait till all sounds stopped or 3 seconds are over
+    i = 30;
+    while (i > 0) {
+      I_uSleep(100000); // CPhipps - don't thrash cpu in this loop
+      if (!I_AnySoundStillPlaying())
+        break;
+      i--;
+    }
+  }
 
   //e6y: I_SafeExit instead of exit - prevent recursive exits
   I_SafeExit(0); // killough
@@ -2216,6 +2294,7 @@ setup_menu_t keys_settings2[] =  // Key Binding screen strings
   {"LOAD"        ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_loadgame},
   {"QUICKSAVE"   ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_quicksave},
   {"QUICKLOAD"   ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_quickload},
+  {"LEVEL TABLE" ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_level_table},
   {"END GAME"    ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_endgame},
   {"QUIT"        ,S_INPUT     ,m_scrn,KB_X,0,dsda_input_quit},
 
@@ -2264,6 +2343,7 @@ setup_menu_t keys_settings4[] =  // Key Binding screen strings
   {"ROTATE"     ,S_INPUT     ,m_map ,KB_X,0,dsda_input_map_rotate},
   {"OVERLAY"    ,S_INPUT     ,m_map ,KB_X,0,dsda_input_map_overlay},
   {"TEXTURED"   ,S_INPUT     ,m_map ,KB_X,0,dsda_input_map_textured},
+  { "HIGHLIGHT BY TAG", S_INPUT, m_map, KB_X, 0, dsda_input_map_highlight_by_tag },
 
   PREV_PAGE(keys_settings3),
   NEXT_PAGE(keys_settings5),
@@ -2288,6 +2368,7 @@ setup_menu_t keys_settings5[] =  // Key Binding screen strings
   {"MISC"                 ,S_SKIP|S_TITLE,m_null,KB_X},
   {"RESTART CURRENT MAP"  ,S_INPUT   ,m_scrn,KB_X,0,dsda_input_restart},
   {"NEXT LEVEL"           ,S_INPUT   ,m_scrn,KB_X,0,dsda_input_nextlevel},
+  {"PREVIOUS LEVEL"       ,S_INPUT   ,m_scrn,KB_X,0,dsda_input_prevlevel},
   {"Show Alive Monsters"  ,S_INPUT   ,m_scrn,KB_X,0,dsda_input_showalive},
 
   PREV_PAGE(keys_settings4),
@@ -2698,6 +2779,14 @@ static const char *map_things_appearance_list[] =
   NULL
 };
 
+static const char *map_trail_mode_list[] =
+{
+  "off",
+  "ignore collisions",
+  "include collisions",
+  NULL
+};
+
 setup_menu_t auto_settings1[] =  // 1st AutoMap Settings screen
 {
   { "Automap Components", S_SKIP | S_TITLE, m_null, AU_X},
@@ -2724,8 +2813,15 @@ setup_menu_t auto_settings1[] =  // 1st AutoMap Settings screen
   FINAL_ENTRY
 };
 
+#define AU_X2 180
+
 setup_menu_t auto_settings2[] =  // 2st AutoMap Settings screen
 {
+  { "Tools", S_SKIP | S_TITLE, m_null, AU_X2},
+  { "Player Trail Mode", S_CHOICE, m_conf, AU_X2, dsda_config_map_trail_mode, 0, map_trail_mode_list },
+  { "Player Trail Size", S_NUM, m_conf, AU_X2, dsda_config_map_trail_size },
+  EMPTY_LINE,
+  EMPTY_LINE,
   {"background", S_COLOR, m_conf, AU_X, dsda_config_mapcolor_back},
   {"grid lines", S_COLOR, m_conf, AU_X, dsda_config_mapcolor_grid},
   {"normal 1s wall", S_COLOR, m_conf,AU_X, dsda_config_mapcolor_wall},
@@ -2761,6 +2857,9 @@ setup_menu_t auto_settings3[] =  // 3nd AutoMap Settings screen
   {"your colour in multiplayer"     ,S_COLOR ,m_conf,AU_X, dsda_config_mapcolor_me},
   EMPTY_LINE,
   {"friends"                        ,S_COLOR ,m_conf,AU_X, dsda_config_mapcolor_frnd},        // killough 8/8/98
+  EMPTY_LINE,
+  {"player trail 1"     ,S_COLOR ,m_conf,AU_X, dsda_config_mapcolor_trail_1},
+  {"player trail 2"     ,S_COLOR ,m_conf,AU_X, dsda_config_mapcolor_trail_2},
 
   PREV_PAGE(auto_settings2),
   FINAL_ENTRY
@@ -2990,6 +3089,7 @@ setup_menu_t misc_settings[] = {
   { "Rewind Interval (s)", S_NUM, m_conf, G_X, dsda_config_auto_key_frame_interval },
   { "Rewind Depth", S_NUM, m_conf, G_X, dsda_config_auto_key_frame_depth },
   { "Rewind Timeout (ms)", S_NUM, m_conf, G_X, dsda_config_auto_key_frame_timeout },
+  { "Autosave On Level Start", S_YESNO, m_conf, G_X, dsda_config_auto_save },
   { "Organize My Save Files", S_YESNO, m_conf, G_X, dsda_config_organized_saves },
   { "Skip Quit Prompt", S_YESNO, m_conf, G_X, dsda_config_skip_quit_prompt },
   { "Death Use Action", S_CHOICE, m_conf, G_X, dsda_config_death_use_action, 0, death_use_strings },
@@ -3577,7 +3677,7 @@ static void M_BuildLevelTable(void)
   level_table_page[page][base_i].m_x = 162;
   ++base_i;
 
-  if (wad_stats_summary.completed_count == wad_stats.map_count)
+  if (wad_stats_summary.completed_count)
     dsda_StringPrintF(&m_text, "%d", wad_stats_summary.best_skill);
   else
     dsda_StringPrintF(&m_text, "-");
@@ -3589,7 +3689,7 @@ static void M_BuildLevelTable(void)
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
   dsda_StringPrintF(&m_text, "%d / ", wad_stats_summary.best_kills);
-  if (wad_stats_summary.completed_count == wad_stats.map_count)
+  if (wad_stats_summary.completed_count)
     dsda_StringCatF(&m_text, "%d", wad_stats_summary.max_kills);
   else
     dsda_StringCat(&m_text, "-");
@@ -3601,7 +3701,7 @@ static void M_BuildLevelTable(void)
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
   dsda_StringPrintF(&m_text, "%d / ", wad_stats_summary.best_items);
-  if (wad_stats_summary.completed_count == wad_stats.map_count)
+  if (wad_stats_summary.completed_count)
     dsda_StringCatF(&m_text, "%d", wad_stats_summary.max_items);
   else
     dsda_StringCat(&m_text, "-");
@@ -3613,7 +3713,7 @@ static void M_BuildLevelTable(void)
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
   dsda_StringPrintF(&m_text, "%d / ", wad_stats_summary.best_secrets);
-  if (wad_stats_summary.completed_count == wad_stats.map_count)
+  if (wad_stats_summary.completed_count)
     dsda_StringCatF(&m_text, "%d", wad_stats_summary.max_secrets);
   else
     dsda_StringCat(&m_text, "-");
@@ -3624,7 +3724,7 @@ static void M_BuildLevelTable(void)
 
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
-  if (wad_stats_summary.timed_count == wad_stats.map_count)
+  if (wad_stats_summary.timed_count)
     M_PrintTime(&m_text, wad_stats_summary.best_time);
   else
     dsda_StringPrintF(&m_text, "- : --");
@@ -3635,7 +3735,7 @@ static void M_BuildLevelTable(void)
 
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
-  if (wad_stats_summary.max_timed_count == wad_stats.map_count)
+  if (wad_stats_summary.max_timed_count)
     M_PrintTime(&m_text, wad_stats_summary.best_max_time);
   else
     dsda_StringPrintF(&m_text, "- : --");
@@ -3646,7 +3746,7 @@ static void M_BuildLevelTable(void)
 
   INSERT_LEVEL_TABLE_EMPTY_LINE
 
-  if (wad_stats_summary.sk5_timed_count == wad_stats.map_count)
+  if (wad_stats_summary.sk5_timed_count)
     M_PrintTime(&m_text, wad_stats_summary.best_sk5_time);
   else
     dsda_StringPrintF(&m_text, "- : --");
@@ -4908,497 +5008,304 @@ static dboolean M_SetupResponder(CCore* cx, int ch, int action, event_t* ev)
   return false;
 }
 
-dboolean M_Responder(CCore* cx, event_t* ev) {
-  int    ch, action;
-  int    i;
-  static int joywait   = 0;
-  static int mousewait = 0;
+static dboolean M_InactiveMenuResponder(CCore* cx, int ch, int action, event_t* ev)
+{
+  if (ch == KEYD_F1)                                         // phares
+  {
+    M_StartControlPanel(cx);
+    M_ChangeMenu(cx, &HelpDef, mnact_nochange);
 
-  ch = MENU_NULL; // will be changed to a legit char if we're going to use it here
-  action = MENU_NULL; // differentiate between action caused by a binding and input ch
-
-  // Process joystick input
-
-  if (ev->type == ev_joystick) {
-    if (ev->data1.i && joywait < dsda_GetTick())
-    {
-      ch = 0; // meaningless, just to get you past the check for -1
-      joywait = dsda_GetTick() + 5;
-    }
-  }
-  else if (ev->type == ev_mouse) {
-    if (ev->data1.i && mousewait < dsda_GetTick())
-    {
-      ch = 0; // meaningless, just to get you past the check for -1
-      mousewait = dsda_GetTick() + 15;
-    }
-  }
-  else if (ev->type == ev_keydown)
-  {
-    ch = ev->data1.i;
-                                  // phares 4/11/98:
-    if (ch == KEYD_RSHIFT)        // For string processing, need
-      shiftdown = true;           // to know when shift key is up or
-  }                               // down so you can get at the !,#,
-  else if (ev->type == ev_keyup)  // etc. keys. Keydowns are allowed
-  {                               // past this point, but keyups aren't
-    if (ev->data1.i == KEYD_RSHIFT) // so we need to note the difference
-      shiftdown = false;          // here using the 'shiftdown' dboolean.
-  }
-
-  if (dsda_InputActivated(dsda_input_menu_left))
-  {
-    action = MENU_LEFT;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_right))
-  {
-    action = MENU_RIGHT;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_up))
-  {
-    action = MENU_UP;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_down))
-  {
-    action = MENU_DOWN;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_backspace))
-  {
-    action = MENU_BACKSPACE;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_enter))
-  {
-    action = MENU_ENTER;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_escape))
-  {
-    action = MENU_ESCAPE;
-  }
-  else if (dsda_InputActivated(dsda_input_menu_clear))
-  {
-    action = MENU_CLEAR;
-  }
-
-  if (M_ConsoleOpen() && action != MENU_ESCAPE)
-  {
-    if (ev->type == ev_text) {
-      dsda_UpdateConsoleText(ev->text);
-      return true;
-    }
-    else if (action != MENU_NULL)
-    {
-      dsda_UpdateConsole(cx, action);
-      return true;
-    }
-    else if (ch != MENU_NULL)
-      return true;
-  }
-
-  // Save Game string input
-
-  if (saveStringEnter && (ch != MENU_NULL || action != MENU_NULL)) {
-    if (action == MENU_BACKSPACE)                            // phares 3/7/98
-    {
-      if (saveCharIndex > 0)
-      {
-        if (!strcmp(savegamestrings[saveSlot], dsda_MapLumpName(gameepisode, gamemap)))
-        {
-          saveCharIndex = 0;
-        }
-        else
-        {
-          saveCharIndex--;
-        }
-        savegamestrings[saveSlot][saveCharIndex] = 0;
-      }
-    }
-    else if (action == MENU_ESCAPE)                    // phares 3/7/98
-    {
-      saveStringEnter = 0;
-      strcpy(&savegamestrings[saveSlot][0],saveOldString);
-    }
-    else if (action == MENU_ENTER)                     // phares 3/7/98
-    {
-      saveStringEnter = 0;
-      if (savegamestrings[saveSlot][0])
-        M_DoSave(cx, saveSlot);
-    }
-    else if (ch > 0)
-    {
-      ch = toupper(ch);
-      if (ch >= 32 && ch <= 127 &&
-          saveCharIndex < SAVESTRINGSIZE-1 &&
-          M_StringWidth(savegamestrings[saveSlot]) < (SAVESTRINGSIZE-2)*8)
-      {
-        savegamestrings[saveSlot][saveCharIndex++] = ch;
-        savegamestrings[saveSlot][saveCharIndex] = 0;
-      }
-    }
+    itemOn = 0;
+    S_StartVoidSound(g_sfx_swtchn);
     return true;
   }
 
-  if (
-    menuactive &&
-    (currentMenu == &LoadDef || currentMenu == &SaveDef) &&
-    !saveStringEnter
-  )
+  if (dsda_InputActivated(dsda_input_savegame))
   {
-    int diff = 0;
-
-    if (action == MENU_LEFT)
-      diff = -1;
-    else if (action == MENU_RIGHT)
-      diff = 1;
-
-    if (diff)
-    {
-      save_page += diff;
-      if (save_page < 0)
-        save_page = save_page_limit - 1;
-      else if (save_page >= save_page_limit)
-        save_page = 0;
-
-      M_ReadSaveStrings();
-    }
-  }
-
-  // Take care of any messages that need input
-
-  if (messageToPrint && ch != MENU_NULL) {
-    dboolean affirmative = false;
-
-    if (messageNeedsInput == true)
-    { // phares
-      if (ch == 'y' || (!ch && action == MENU_ENTER))
-        affirmative = true;
-      else if (ch == ' ' || ch == KEYD_ESCAPE || ch == 'n' || (!ch && action == MENU_BACKSPACE))
-        affirmative = false;
-      else
-        return false;
-    }
-
-    M_ChangeMenu(cx, NULL, messageLastMenuActive);
-    messageToPrint = 0;
-    if (messageRoutine)
-      messageRoutine(affirmative);
-
-    M_ChangeMenu(cx, NULL, mnact_inactive);
-    S_StartVoidSound(g_sfx_swtchx);
+    M_StartControlPanel(cx);
+    S_StartVoidSound(g_sfx_swtchn);
+    M_SaveGame(cx, 0);
     return true;
   }
 
-  // killough 2/22/98: add support for screenshot key:
-  if (dsda_InputActivated(dsda_input_screenshot))
+  if (dsda_InputActivated(dsda_input_loadgame))
   {
-    I_QueueScreenshot();
-    // Don't eat the keypress in this case. See sf bug #1843280.
+    M_StartControlPanel(cx);
+    S_StartVoidSound(g_sfx_swtchn);
+    M_LoadGame(cx, 0);
+    return true;
   }
 
-  if (heretic && F_BlockingInput())
-    return false;
+  if (dsda_InputActivated(dsda_input_level_table))
+  {
+    M_StartControlPanel(cx);
+    S_StartVoidSound(g_sfx_swtchn);
+    M_LevelTable(cx, 0);
+    return true;
+  }
 
-  // If there is no active menu displayed...
+  if (dsda_InputActivated(dsda_input_soundvolume))
+  {
+    M_StartControlPanel(cx);
+    M_ChangeMenu(cx, &SoundDef, mnact_nochange);
+    itemOn = sfx_vol;
+    S_StartVoidSound(g_sfx_swtchn);
+    return true;
+  }
 
-  if (!menuactive) { // phares
-    if (ch == KEYD_F1) //  V
-    {
-      M_StartControlPanel(cx);
-      M_ChangeMenu(cx, &HelpDef, mnact_nochange);
+  if (dsda_InputActivated(dsda_input_quicksave))
+  {
+    S_StartVoidSound(g_sfx_swtchn);
+    M_QuickSave(cx);
+    return true;
+  }
 
-      itemOn = 0;
+  if (dsda_InputActivated(dsda_input_endgame))
+  {
+    S_StartVoidSound(g_sfx_swtchn);
+    M_EndGame(cx, 0);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_quickload))
+  {
+    S_StartVoidSound(g_sfx_swtchn);
+    M_QuickLoad(cx);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_quit))
+  {
+    if (!dsda_SkipQuitPrompt())
       S_StartVoidSound(g_sfx_swtchn);
-      return true;
-    }
+    M_QuitDOOM(cx, 0);
+    return true;
+  }
 
-    if (dsda_InputActivated(dsda_input_savegame))
-    {
-      M_StartControlPanel(cx);
+  if (dsda_InputActivated(dsda_input_console))
+  {
+    if (dsda_OpenConsole(cx))
       S_StartVoidSound(g_sfx_swtchn);
-      M_SaveGame(cx, 0);
-      return true;
-    }
+    return true;
+  }
 
-    if (dsda_InputActivated(dsda_input_loadgame))
-    {
-      M_StartControlPanel(cx);
-      S_StartVoidSound(g_sfx_swtchn);
-      M_LoadGame(cx, 0);
-      return true;
-    }
+  {
+    int i;
 
-    if (dsda_InputActivated(dsda_input_soundvolume))
-    {
-      M_StartControlPanel(cx);
-      M_ChangeMenu(cx, &SoundDef, mnact_nochange);
-      itemOn = sfx_vol;
-      S_StartVoidSound(g_sfx_swtchn);
-      return true;
-    }
+    for (i = 0; i < CONSOLE_SCRIPT_COUNT; ++i)
+      if (dsda_InputActivated(dsda_input_script_0 + i)) {
+        dsda_ExecuteConsoleScript(cx, i);
 
-    if (dsda_InputActivated(dsda_input_quicksave))
-    {
-      S_StartVoidSound(g_sfx_swtchn);
-      M_QuickSave(cx);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_endgame))
-    {
-      S_StartVoidSound(g_sfx_swtchn);
-      M_EndGame(cx, 0);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_quickload))
-    {
-      S_StartVoidSound(g_sfx_swtchn);
-      M_QuickLoad(cx);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_quit))
-    {
-      if (!dsda_SkipQuitPrompt())
-        S_StartVoidSound(g_sfx_swtchn);
-      M_QuitDOOM(cx, 0);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_console)) {
-        cx->devgui_open = !cx->devgui_open;
-
-        if (cx->devgui_open) {
-            dsda_ApplyPauseMode(PAUSE_COMMAND);
-            SDL_StartTextInput();
-        } else {
-            dsda_RemovePauseMode(PAUSE_COMMAND);
-            SDL_StopTextInput();
-        }
-
-        S_StartVoidSound(g_sfx_swtchn);
         return true;
-    }
+      }
+  }
 
-    for (int i = 0; i < CONSOLE_SCRIPT_COUNT; ++i) {
-        if (dsda_InputActivated(dsda_input_script_0 + i)) {
-            dsda_ExecuteConsoleScript(cx, i);
-
-            return true;
-        }
-    }
-
-    // Toggle gamma
-    if (dsda_InputActivated(dsda_input_gamma))
-    {
-//e6y
-      dsda_CycleConfig(cx, dsda_config_usegamma, true);
-      dsda_AddMessage(cx, usegamma == 0 ? s_GAMMALVL0 :
-                      usegamma == 1 ? s_GAMMALVL1 :
-                      usegamma == 2 ? s_GAMMALVL2 :
-                      usegamma == 3 ? s_GAMMALVL3 :
-                      s_GAMMALVL4);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_zoomout))
-    {
-      if (automap_active)
-        return false;
-      M_SizeDisplay(cx, 0);
-      S_StartVoidSound(g_sfx_stnmov);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_zoomin))
-    {                                   // jff 2/23/98
-      if (automap_active)               // allow
-        return false;                   // key_hud==key_zoomin
-      M_SizeDisplay(cx, 1);                                             //  ^
-      S_StartVoidSound(g_sfx_stnmov);                              //  |
-      return true;                                                  // phares
-    }
-
+  // Toggle gamma
+  if (dsda_InputActivated(dsda_input_gamma))
+  {
     //e6y
-    if (dsda_InputActivated(dsda_input_speed_default) && !dsda_StrictMode())
+    dsda_CycleConfig(cx, dsda_config_usegamma, true);
+    dsda_AddMessage(cx, usegamma == 0 ? s_GAMMALVL0 :
+                    usegamma == 1 ? s_GAMMALVL1 :
+                    usegamma == 2 ? s_GAMMALVL2 :
+                    usegamma == 3 ? s_GAMMALVL3 :
+                    s_GAMMALVL4);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_zoomout))
+  {
+    if (automap_active)
+      return false;
+    M_SizeDisplay(cx, 0);
+    S_StartVoidSound(g_sfx_stnmov);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_zoomin))
+  {                                   // jff 2/23/98
+    if (automap_active)               // allow
+      return false;                   // key_hud==key_zoomin
+    M_SizeDisplay(cx, 1);
+    S_StartVoidSound(g_sfx_stnmov);
+    return true;
+  }
+
+  //e6y
+  if (dsda_InputActivated(dsda_input_speed_default) && !dsda_StrictMode())
+  {
+    int value = StepwiseSum(dsda_GameSpeed(), 0, 3, 10000, 100);
+    dsda_UpdateGameSpeed(cx, value);
+    doom_printf(cx, "Game Speed %d", value);
+    // Don't eat the keypress in this case.
+    // return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_speed_up) && !dsda_StrictMode())
+  {
+    int value = StepwiseSum(dsda_GameSpeed(), 1, 3, 10000, 100);
+    dsda_UpdateGameSpeed(cx, value);
+    doom_printf(cx, "Game Speed %d", value);
+    // Don't eat the keypress in this case.
+    // return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_speed_down) && !dsda_StrictMode())
+  {
+    int value = StepwiseSum(dsda_GameSpeed(), -1, 3, 10000, 100);
+    dsda_UpdateGameSpeed(cx, value);
+    doom_printf(cx, "Game Speed %d", value);
+    // Don't eat the keypress in this case.
+    // return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_nextlevel))
+  {
+    if (userplayback && !dsda_SkipMode())
     {
-      int value = StepwiseSum(dsda_GameSpeed(), 0, 3, 10000, 100);
-      dsda_UpdateGameSpeed(cx, value);
-      doom_printf(cx, "Game Speed %d", value);
-      // Don't eat the keypress in this case.
-      // return true;
+      dsda_SkipToNextMap(cx);
+      return true;
     }
-    if (dsda_InputActivated(dsda_input_speed_up) && !dsda_StrictMode())
+    else
     {
-      int value = StepwiseSum(dsda_GameSpeed(), 1, 3, 10000, 100);
-      dsda_UpdateGameSpeed(cx, value);
-      doom_printf(cx, "Game Speed %d", value);
-      // Don't eat the keypress in this case.
-      // return true;
-    }
-    if (dsda_InputActivated(dsda_input_speed_down) && !dsda_StrictMode())
-    {
-      int value = StepwiseSum(dsda_GameSpeed(), -1, 3, 10000, 100);
-      dsda_UpdateGameSpeed(cx, value);
-      doom_printf(cx, "Game Speed %d", value);
-      // Don't eat the keypress in this case.
-      // return true;
-    }
-    if (dsda_InputActivated(dsda_input_nextlevel))
-    {
-      if (userplayback && !dsda_SkipMode())
-      {
-        dsda_SkipToNextMap(cx);
+      if (G_GotoNextLevel(cx))
         return true;
-      }
-      else
-      {
-        if (G_GotoNextLevel(cx))
-          return true;
-      }
     }
+  }
 
-    if (dsda_InputActivated(dsda_input_restart))
-    {
-      if (G_ReloadLevel(cx))
+  if (dsda_InputActivated(dsda_input_prevlevel))
+  {
+    if (G_GotoPrevLevel(cx))
         return true;
-    }
+  }
 
-    if (dsda_InputActivated(dsda_input_demo_endlevel))
-    {
-      if (userplayback && !dsda_SkipMode())
-      {
-        dsda_SkipToEndOfMap(cx);
-        return true;
-      }
-    }
-
-    if (dsda_InputActivated(dsda_input_demo_skip))
-    {
-      if (userplayback)
-      {
-        dsda_ToggleSkipMode(cx);
-        return true;
-      }
-    }
-
-    if (dsda_InputActivated(dsda_input_store_quick_key_frame))
-    {
-      if (
-        gamestate == GS_LEVEL &&
-        gameaction == ga_nothing &&
-        !dsda_StrictMode()
-      ) dsda_StoreQuickKeyFrame(cx);
+  if (dsda_InputActivated(dsda_input_restart))
+  {
+    if (G_ReloadLevel(cx))
       return true;
-    }
+  }
 
-    if (dsda_InputActivated(dsda_input_restore_quick_key_frame))
+  if (dsda_InputActivated(dsda_input_demo_endlevel))
+  {
+    if (userplayback && !dsda_SkipMode())
     {
-      if (!dsda_StrictMode()) dsda_RestoreQuickKeyFrame(cx);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_rewind))
-    {
-      if (!dsda_StrictMode()) dsda_RewindAutoKeyFrame(cx);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_cycle_profile))
-    {
-      int value = dsda_CycleConfig(cx, dsda_config_input_profile, true);
-      doom_printf(cx, "Input Profile %d", value);
-      S_StartVoidSound(g_sfx_swtchn);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_cycle_palette))
-    {
-      dsda_CyclePlayPal();
-      doom_printf(cx, "Palette %s", dsda_PlayPalData()->lump_name);
-      S_StartVoidSound(g_sfx_swtchn);
-      return true;
-    }
-
-    if (dsda_InputActivated(dsda_input_walkcamera))
-    {
-      if (demoplayback && gamestate == GS_LEVEL)
-      {
-        walkcamera.type = (walkcamera.type+1)%3;
-        P_SyncWalkcam (true, (walkcamera.type!=2));
-        R_ResetViewInterpolation ();
-        if (walkcamera.type==0)
-          R_SmoothPlaying_Reset(NULL);
-        // Don't eat the keypress in this case.
-        // return true;
-      }
-    }
-
-    if (V_IsOpenGLMode())
-    {
-      if (dsda_InputActivated(dsda_input_showalive) && !dsda_StrictMode())
-      {
-        const char* const show_alive_message[3] = { "off", "(mode 1) on", "(mode 2) on" };
-        int show_alive = dsda_CycleConfig(cx, dsda_config_show_alive_monsters, false);
-
-        if (show_alive >= 0 && show_alive < 3)
-          doom_printf(cx, "Show Alive Monsters %s", show_alive_message[show_alive]);
-      }
-    }
-
-    M_HandleToggles(cx);
-
-    if (dsda_InputActivated(dsda_input_hud))   // heads-up mode
-    {
-      if (automap_active)              // jff 2/22/98
-        return false;                  // HUD mode control
-      M_SizeDisplay(cx, 2);
+      dsda_SkipToEndOfMap(cx);
       return true;
     }
   }
+
+  if (dsda_InputActivated(dsda_input_demo_skip))
+  {
+    if (userplayback)
+    {
+      dsda_ToggleSkipMode(cx);
+      return true;
+    }
+  }
+
+  if (dsda_InputActivated(dsda_input_store_quick_key_frame))
+  {
+    if (
+      gamestate == GS_LEVEL &&
+      gameaction == ga_nothing &&
+      !dsda_StrictMode()
+    ) dsda_StoreQuickKeyFrame(cx);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_restore_quick_key_frame))
+  {
+    if (!dsda_StrictMode()) dsda_RestoreQuickKeyFrame(cx);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_rewind))
+  {
+    if (!dsda_StrictMode()) dsda_RewindAutoKeyFrame(cx);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_cycle_profile))
+  {
+    int value = dsda_CycleConfig(cx, dsda_config_input_profile, true);
+    doom_printf(cx, "Input Profile %d", value);
+    S_StartVoidSound(g_sfx_swtchn);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_cycle_palette))
+  {
+    dsda_CyclePlayPal();
+    doom_printf("Palette %s", dsda_PlayPalData()->lump_name);
+    S_StartVoidSound(g_sfx_swtchn);
+    return true;
+  }
+
+  if (dsda_InputActivated(dsda_input_walkcamera))
+  {
+    if (demoplayback && gamestate == GS_LEVEL)
+    {
+      walkcamera.type = (walkcamera.type+1)%3;
+      P_SyncWalkcam (true, (walkcamera.type!=2));
+      R_ResetViewInterpolation ();
+      if (walkcamera.type==0)
+        R_SmoothPlaying_Reset(NULL);
+      // Don't eat the keypress in this case.
+      // return true;
+    }
+  }
+
+  if (V_IsOpenGLMode())
+  {
+    if (dsda_InputActivated(dsda_input_showalive) && !dsda_StrictMode())
+    {
+      const char* const show_alive_message[3] = { "off", "(mode 1) on", "(mode 2) on" };
+      int show_alive = dsda_CycleConfig(cx, dsda_config_show_alive_monsters, false);
+
+      if (show_alive >= 0 && show_alive < 3)
+        doom_printf("Show Alive Monsters %s", show_alive_message[show_alive]);
+    }
+  }
+
+  M_HandleToggles(cx);
+
+  if (dsda_InputActivated(dsda_input_hud))   // heads-up mode
+  {
+    if (automap_active)              // jff 2/22/98
+      return false;                  // HUD mode control
+    M_SizeDisplay(cx, 2);
+    return true;
+  }
+
   // Pop-up Main menu?
-
-  if (!menuactive)
+  if (ch == KEYD_ESCAPE || action == MENU_ESCAPE) // phares
   {
-    if (ch == KEYD_ESCAPE || action == MENU_ESCAPE) // phares
-    {
-      M_StartControlPanel(cx);
-      S_StartVoidSound(g_sfx_swtchn);
-      return true;
-    }
-    return false;
+    M_StartControlPanel(cx);
+    S_StartVoidSound(g_sfx_swtchn);
+    return true;
   }
 
-  if (ch == MENU_NULL)
-    return false; // we can't use the event here
+  return false;
+}
 
-  // [FG] delete a savegame
+typedef enum {
+  confirmation_null = -1,
+  confirmation_no = 0,
+  confirmation_yes = 1,
+} confirmation_t;
 
-  if (currentMenu == &LoadDef || currentMenu == &SaveDef)
-  {
-    if (delete_verify)
-    {
-      if (toupper(ch) == 'Y')
-      {
-        M_DeleteGame(itemOn);
-        S_StartVoidSound(g_sfx_itemup);
-        delete_verify = false;
-      }
-      else if (toupper(ch) == 'N')
-      {
-        S_StartVoidSound(g_sfx_itemup);
-        delete_verify = false;
-      }
-      return true;
-    }
-  }
+static confirmation_t M_EventToConfirmation(int ch, int action, event_t* ev)
+{
+  if (ch == 'y' || (!ch && action == MENU_ENTER))
+    return confirmation_yes;
+  else if (ch == ' ' || ch == KEYD_ESCAPE || ch == 'n' || (!ch && action == MENU_BACKSPACE))
+    return confirmation_no;
+  else
+    return confirmation_null;
+}
 
-  if (setup_active)
-    if (M_SetupResponder(cx, ch, action, ev))
-      return true;
-
-  // From here on, these navigation keys are used on the BIG FONT menus
-  // like the Main Menu.
-
+static dboolean M_MainNavigationResponder(CCore* cx, int ch, int action, event_t* ev)
+{
   if (action == MENU_DOWN)                             // phares 3/7/98
   {
     do
@@ -5511,40 +5418,286 @@ dboolean M_Responder(CCore* cx, event_t* ev) {
     }
     return true;
   }
-  else if (action == MENU_CLEAR) // [FG] delete a savegame
-  {
-    if (currentMenu == &LoadDef || currentMenu == &SaveDef)
-    {
-      if (LoadMenue[itemOn].status)
-      {
-        S_StartVoidSound(g_sfx_itemup);
-        currentMenu->lastOn = itemOn;
-        delete_verify = true;
-        return true;
-      }
-      else
-      {
-        S_StartVoidSound(g_sfx_oof);
-      }
-    }
-  }
   else
   {
+    int i;
+
     for (i = itemOn + 1; i < currentMenu->numitems; i++)
-      if (currentMenu->menuitems[i].alphaKey == ch)
+      if (ch && currentMenu->menuitems[i].alphaKey == ch)
       {
         itemOn = i;
         S_StartVoidSound(g_sfx_menu);
         return true;
       }
+
     for (i = 0; i <= itemOn; i++)
-      if (currentMenu->menuitems[i].alphaKey == ch)
+      if (ch && currentMenu->menuitems[i].alphaKey == ch)
       {
         itemOn = i;
         S_StartVoidSound(g_sfx_menu);
         return true;
       }
   }
+
+  return false;
+}
+
+static dboolean M_ConsoleResponder(CCore* cx, int ch, int action, event_t* ev)
+{
+  if (ev->type == ev_text)
+  {
+    dsda_UpdateConsoleText(ev->text);
+    return true;
+  }
+  else if (action != MENU_NULL)
+  {
+    dsda_UpdateConsole(cx, action);
+    return true;
+  }
+  else if (ch != MENU_NULL)
+    return true;
+
+  return false;
+}
+
+static dboolean M_SaveResponder(CCore* cx, int ch, int action, event_t* ev)
+{
+  if (delete_verify) // [FG] delete a savegame
+  {
+    switch (M_EventToConfirmation(ch, action, ev))
+    {
+      case confirmation_yes:
+        M_DeleteGame(itemOn);
+        S_StartVoidSound(g_sfx_itemup);
+        delete_verify = false;
+        break;
+      case confirmation_no:
+        S_StartVoidSound(g_sfx_itemup);
+        delete_verify = false;
+        break;
+      case confirmation_null:
+        break;
+    }
+
+    return true;
+  }
+
+  if (saveStringEnter && (ch != MENU_NULL || action != MENU_NULL))
+  {
+    if (action == MENU_BACKSPACE)                            // phares 3/7/98
+    {
+      if (saveCharIndex > 0)
+      {
+        if (!strcmp(savegamestrings[saveSlot], dsda_MapLumpName(gameepisode, gamemap)))
+        {
+          saveCharIndex = 0;
+        }
+        else
+        {
+          saveCharIndex--;
+        }
+        savegamestrings[saveSlot][saveCharIndex] = 0;
+      }
+    }
+    else if (action == MENU_ESCAPE)                    // phares 3/7/98
+    {
+      saveStringEnter = 0;
+      strcpy(&savegamestrings[saveSlot][0],saveOldString);
+    }
+    else if (action == MENU_ENTER)                     // phares 3/7/98
+    {
+      saveStringEnter = 0;
+      if (savegamestrings[saveSlot][0])
+        M_DoSave(cx, saveSlot);
+    }
+    else if (ch > 0)
+    {
+      if (ch >= 32 && ch <= 127 &&
+          saveCharIndex < SAVESTRINGSIZE-1 &&
+          M_StringWidth(savegamestrings[saveSlot]) < (SAVESTRINGSIZE-2)*8)
+      {
+        if (!raven && shiftdown)
+          ch = shiftxform[ch];
+        else
+          ch = toupper(ch);
+
+        savegamestrings[saveSlot][saveCharIndex++] = ch;
+        savegamestrings[saveSlot][saveCharIndex] = 0;
+      }
+    }
+
+    return true;
+  }
+  else if (!saveStringEnter)
+  {
+    int diff = 0;
+
+    if (action == MENU_LEFT)
+      diff = -1;
+    else if (action == MENU_RIGHT)
+      diff = 1;
+
+    if (diff)
+    {
+      save_page += diff;
+      if (save_page < 0)
+        save_page = save_page_limit - 1;
+      else if (save_page >= save_page_limit)
+        save_page = 0;
+
+      M_ReadSaveStrings();
+    }
+  }
+
+  if (action == MENU_CLEAR) // [FG] delete a savegame
+  {
+    if (LoadMenue[itemOn].status)
+    {
+      S_StartVoidSound(g_sfx_itemup);
+      currentMenu->lastOn = itemOn;
+      delete_verify = true;
+      return true;
+    }
+    else
+    {
+      S_StartVoidSound(g_sfx_oof);
+    }
+  }
+
+  return false;
+}
+
+static dboolean M_MessageResponder(CCore* cx, int ch, int action, event_t* ev)
+{
+  dboolean confirmation = false;
+
+  if (messageNeedsInput)
+  { // phares
+    confirmation = M_EventToConfirmation(ch, action, ev);
+    if (confirmation == confirmation_null)
+      return true;
+  }
+
+  M_ChangeMenu(cx, NULL, messageLastMenuActive);
+  messageToPrint = 0;
+  if (messageRoutine)
+    messageRoutine(confirmation);
+
+  M_ChangeMenu(cx, NULL, mnact_inactive);
+  S_StartVoidSound(g_sfx_swtchx);
+  return true;
+}
+
+int M_EventToCharacter(event_t* ev)
+{
+  if (ev->type == ev_joystick)
+  {
+    return MENU_NULL;
+  }
+  else if (ev->type == ev_mouse)
+  {
+    return MENU_NULL;
+  }
+  else if (ev->type == ev_keydown)
+  {
+    if (ev->data1.i == KEYD_RSHIFT) // phares 4/11/98
+      shiftdown = true;
+
+    return ev->data1.i;
+  }
+  else if (ev->type == ev_keyup)
+  {
+    if (ev->data1.i == KEYD_RSHIFT) // phares 4/11/98
+      shiftdown = false;
+  }
+
+  return MENU_NULL;
+}
+
+int M_CurrentAction(void)
+{
+  if (dsda_InputActivated(dsda_input_menu_left))
+  {
+    return MENU_LEFT;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_right))
+  {
+    return MENU_RIGHT;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_up))
+  {
+    return MENU_UP;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_down))
+  {
+    return MENU_DOWN;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_backspace))
+  {
+    return MENU_BACKSPACE;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_enter))
+  {
+    return MENU_ENTER;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_escape))
+  {
+    return MENU_ESCAPE;
+  }
+  else if (dsda_InputActivated(dsda_input_menu_clear))
+  {
+    return MENU_CLEAR;
+  }
+
+  return MENU_NULL;
+}
+
+dboolean M_Responder(CCore* cx, event_t* ev) {
+  int ch, action;
+
+  ch = M_EventToCharacter(ev);
+  action = M_CurrentAction();
+
+  if (M_ConsoleOpen() && action != MENU_ESCAPE)
+    if (M_ConsoleResponder(cx, ch, action, ev))
+      return true;
+
+  if (currentMenu == &LoadDef || currentMenu == &SaveDef)
+    if (M_SaveResponder(cx, ch, action, ev))
+      return true;
+
+  if (messageToPrint && ch != MENU_NULL)
+    if (M_MessageResponder(cx, ch, action, ev))
+      return true;
+
+  // killough 2/22/98: add support for screenshot key:
+  // Don't eat the keypress in this case. See sf bug #1843280.
+  if (dsda_InputActivated(dsda_input_screenshot))
+    I_QueueScreenshot();
+
+  if (heretic && F_BlockingInput())
+    return false;
+
+  if (!menuactive)
+  {
+    if (M_InactiveMenuResponder(cx, ch, action, ev))
+      return true;
+
+    return false;
+  }
+
+  if (ch == MENU_NULL && action == MENU_NULL)
+    return false; // we can't use the event here
+
+  if (setup_active)
+    if (M_SetupResponder(cx, ch, action, ev))
+      return true;
+
+  // From here on, these navigation keys are used on the BIG FONT menus
+  // like the Main Menu.
+  if (M_MainNavigationResponder(cx, ch, action, ev))
+    return true;
+
   return false;
 }
 
