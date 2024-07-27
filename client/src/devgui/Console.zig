@@ -106,7 +106,7 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
     var self = &cx.console;
 
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
-        imgui.reportErrGetMainViewport.call();
+        imgui.report_err_get_main_viewport.call();
         return;
     };
 
