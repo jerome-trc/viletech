@@ -31,7 +31,7 @@ pub fn Fxp(fracbits: comptime_int) type {
         }
 
         pub fn add(lhs: Self, rhs: Self) Self {
-            return .{ .inner = lhs.inner + rhs.inner };
+            return .{ .inner = lhs.inner +% rhs.inner };
         }
 
         pub fn div(lhs: Self, rhs: Self) Self {
@@ -63,7 +63,7 @@ pub fn Fxp(fracbits: comptime_int) type {
         }
 
         pub fn sub(lhs: Self, rhs: Self) Self {
-            return .{ .inner = lhs.inner - rhs.inner };
+            return .{ .inner = lhs.inner -% rhs.inner };
         }
     };
 }
