@@ -28,6 +28,8 @@ pub const c = @cImport({
     @cUndef("CIMGUI_USE_SDL2");
 });
 
+pub const std_options = std.Options{ .logFn = logFn };
+
 extern "C" fn dsdaMain(
     ccx: *Core.C,
     argc: c_int,
@@ -51,8 +53,37 @@ export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
     var cx = Core.init(if (builtin.mode == .Debug) &gpa else null) catch return 1;
     defer cx.deinit();
 
+    if (builtin.mode == .Debug) {
+        std.log.scoped(.ratboom).info("*** DEBUG BUILD ***", .{});
+    }
+
     cx.c.core = &cx;
     return dsdaMain(&cx.c, argc, argv);
+}
+
+fn logFn(
+    comptime message_level: std.log.Level,
+    comptime scope: @TypeOf(.enum_literal),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const Console = @import("devgui/Console.zig");
+
+    blk: {
+        const level_txt = comptime message_level.asText();
+        const prefix2 = if (scope == .default) ": " else "(" ++ @tagName(scope) ++ "): ";
+        const msg = std.fmt.allocPrint(
+            Console.std_log.allocator,
+            level_txt ++ prefix2 ++ format,
+            args,
+        ) catch break :blk;
+
+        Console.std_log_mutex.lock();
+        defer Console.std_log_mutex.unlock();
+        Console.std_log.pushBack(msg) catch {};
+    }
+
+    std.log.defaultLog(message_level, scope, format, args);
 }
 
 export fn windowIcon(size: *i32) [*]const u8 {
