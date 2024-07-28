@@ -201,27 +201,27 @@ pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
 }
 
 pub fn logHelp(self: *Self, comptime format: []const u8, args: anytype) void {
-    errdefer reportConsoleHistoryFail.call();
+    errdefer report_console_history_fail.call();
     const p = std.fmt.allocPrint(self.alloc, format, args) catch return;
     self.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logInfo(cx: *Core, comptime format: []const u8, args: anytype) void {
-    errdefer reportConsoleHistoryFail.call();
+    errdefer report_console_history_fail.call();
     cx.eprintln(format, args) catch return;
     const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .info = p }) catch return;
 }
 
 pub fn logSubmission(cx: *Core, comptime format: []const u8, args: anytype) void {
-    errdefer reportConsoleHistoryFail.call();
+    errdefer report_console_history_fail.call();
     cx.eprintln(format, args) catch return;
     const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .submission = p }) catch return;
 }
 
 pub fn logToast(cx: *Core, comptime format: []const u8, args: anytype) void {
-    errdefer reportConsoleHistoryFail.call();
+    errdefer report_console_history_fail.call();
     cx.eprintln(format, args) catch return;
     const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .toast = p }) catch return;
@@ -258,10 +258,10 @@ fn submitCommands(cx: *Core) void {
     if (self.prev_inputs.len() < 1 or !std.mem.eql(u8, self.prev_inputs.back().?.*, submission)) {
         if (std.fmt.allocPrint(self.alloc, "{s}", .{submission})) |p| {
             self.prev_inputs.pushBack(p) catch {
-                reportConsoleInputSaveFail.call();
+                console_input_save_fail.call();
             };
         } else |_| {
-            reportConsoleHistoryFail.call();
+            report_console_history_fail.call();
         }
     }
 
@@ -288,7 +288,7 @@ fn submitCommand(cx: *Core, command: []const u8) void {
         const arg_str = command[cmd_name.len..];
 
         var args = CommandArgs.init(self.alloc, arg_str) catch {
-            reportConsoleArgParseFail.call();
+            report_console_arg_parse_fail.call();
             return;
         };
 
@@ -309,21 +309,21 @@ fn initStdLogQueue() void {
         c.I_Error("Failed to initialize log-to-console queue: %s", @errorName(err).ptr);
 }
 
-var reportConsoleArgParseFail = std.once(doReportConsoleArgParseFail);
+var report_console_arg_parse_fail = std.once(reportConsoleArgParseFail);
 
-fn doReportConsoleArgParseFail() void {
+fn reportConsoleArgParseFail() void {
     log.err("Failed to allocate console argument iterator", .{});
 }
 
-var reportConsoleHistoryFail = std.once(doReportConsoleHistoryFail);
+var report_console_history_fail = std.once(reportConsoleHistoryFail);
 
-fn doReportConsoleHistoryFail() void {
+fn reportConsoleHistoryFail() void {
     log.err("Failed to add to console history", .{});
 }
 
-var reportConsoleInputSaveFail = std.once(doReportConsoleInputSaveFail);
+var console_input_save_fail = std.once(consoleInputSaveFail);
 
-fn doReportConsoleInputSaveFail() void {
+fn consoleInputSaveFail() void {
     log.err("Failed to add to console input history", .{});
 }
 
