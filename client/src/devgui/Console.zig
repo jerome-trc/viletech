@@ -77,12 +77,18 @@ pub const cmd_name_max_len: usize = blk: {
     break :blk max_name_len;
 };
 
+pub var std_log: Deque([]const u8) = undefined;
+pub var std_log_mutex: std.Thread.Mutex = .{};
+var std_log_init = std.once(initStdLogQueue);
+
 alloc: std.mem.Allocator,
 input_buf: [256]u8,
 history: Deque(HistoryItem),
 prev_inputs: Deque([]const u8),
 
 pub fn init(allocator: std.mem.Allocator) !Self {
+    std_log_init.call();
+
     return Self{
         .alloc = allocator,
         .input_buf = [_]u8{0} ** 256,
@@ -114,6 +120,15 @@ pub fn deinit(self: *Self) void {
 
 pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
     var self = &cx.console;
+
+    {
+        std_log_mutex.lock();
+        defer std_log_mutex.unlock();
+
+        while (std_log.popFront()) |l| {
+            self.history.pushBack(HistoryItem{ .info = l }) catch {};
+        }
+    }
 
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
         imgui.report_err_get_main_viewport.call();
@@ -287,6 +302,11 @@ fn submitCommand(cx: *Core, command: []const u8) void {
 
 fn inputBufSlice(self: *Self) [:0]u8 {
     return self.input_buf[0..(@sizeOf(@TypeOf(self.input_buf)) - 1) :0];
+}
+
+fn initStdLogQueue() void {
+    std_log = Deque([]const u8).init(std.heap.c_allocator) catch |err|
+        c.I_Error("Failed to initialize log-to-console queue: %s", @errorName(err).ptr);
 }
 
 var reportConsoleArgParseFail = std.once(doReportConsoleArgParseFail);
