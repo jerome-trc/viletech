@@ -34,6 +34,26 @@ pub fn build(b: *std.Build) void {
 
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
+
+    const module = b.addModule("ratboom", .{
+        .root_source_file = b.path("client/src/plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    module.addIncludePath(b.path("build"));
+    module.addIncludePath(b.path("dsda-doom/prboom2/src"));
+    @import("depend/build.cimgui.zig").moduleLink(b, module);
+    module.addImport("zig-args", b.dependency("zig-args", .{}).module("args"));
+
+    const fd4rb = b.addSharedLibrary(.{
+        .name = "fd4rb",
+        .root_source_file = b.path("plugins/fd4rb/src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    commonDependencies(b, fd4rb, target, optimize);
+    fd4rb.root_module.addImport("ratboom", module);
+    b.installArtifact(fd4rb);
 }
 
 fn commonDependencies(
@@ -48,8 +68,12 @@ fn commonDependencies(
     compile.linkLibCpp();
     compile.addIncludePath(b.path("build"));
     compile.addIncludePath(b.path("dsda-doom/prboom2/src"));
-    compile.bundle_compiler_rt = true;
-    compile.pie = true;
+
+    if (compile.kind == .lib and compile.linkage != .dynamic) {
+        compile.bundle_compiler_rt = true;
+        compile.pie = true;
+    }
+
     @import("depend/build.cimgui.zig").link(b, compile);
     compile.root_module.addImport("zig-args", zig_args.module("args"));
 }

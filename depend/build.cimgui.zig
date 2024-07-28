@@ -41,3 +41,18 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
 
     compile.addSystemIncludePath(b.path("depend/imgui"));
 }
+
+pub fn moduleLink(b: *std.Build, module: *std.Build.Module) void {
+    if (builtin.os.tag != .windows) {
+        const flags = b.run(&[_][]const u8{ "pkg-config", "--cflags-only-I", "sdl2" });
+        var iter = std.mem.splitScalar(u8, flags, ' ');
+
+        while (iter.next()) |flag| {
+            const f = std.mem.trim(u8, flag, " \n\r\t");
+            const dir = std.mem.trim(u8, f, "-I");
+            module.addSystemIncludePath(.{ .cwd_relative = dir });
+        }
+    }
+
+    module.addSystemIncludePath(b.path("depend/imgui"));
+}
