@@ -1800,7 +1800,7 @@ static void D_DoomMainSetup(CCore* cx)
       }
       else if (dsda_HasFileExt(file_name, DYNLIB_EXT))
       {
-        vt_addDynLib(cx, file_name);
+        addPlugin(cx, file_name);
       }
       else
       {
@@ -1816,7 +1816,7 @@ static void D_DoomMainSetup(CCore* cx)
     D_AutoloadPWadDir();
 
   D_InitFakeNetGame();
-  vt_loadDynLibs(cx);
+  loadPlugins(cx);
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_DEBUG, "W_Init: Init WADfiles.\n");

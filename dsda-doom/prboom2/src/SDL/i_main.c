@@ -208,7 +208,6 @@ static void I_EssentialQuit(void)
   dsda_WriteAnalysis();
   dsda_WriteSplits();
   dsda_SaveWadStats();
-  vt_writeEngineTime();
   // We need to close out all wad handles/memory mappings before we can remove
   // temporary wads on Windows
   // Read Endoom before dumping the wads!
@@ -264,8 +263,7 @@ void I_SetProcessPriority(void)
   }
 }
 
-int dsdaMain(CCore* cx, int argc, char **argv)
-{
+int dsdaMain(CCore* cx, int argc, char **argv) {
     assert(cx->saved_gametick == -1); // Sanity check...
 
   dsda_ParseCommandLineArgs(argc, argv);

@@ -20,7 +20,7 @@ typedef struct CCore {
     GameTick saved_gametick;
 } CCore;
 
-static inline void vt_addDynLib(CCore* cx, char* path) {}
+// Developer GUI ///////////////////////////////////////////////////////////////
 
 void addConsoleToast(CCore*, const char*);
 
@@ -40,16 +40,20 @@ bool dguiWantsKeyboard(CCore*);
 
 bool dguiWantsMouse(CCore*);
 
-static inline void vt_loadDynLibs(CCore* cx) {}
-
 bool dguiProcessEvent(CCore*, SDL_Event*);
 
 void populateMusicPlayer(CCore*);
 
-static inline void vt_writeEngineTime(void) {}
+// Platform ////////////////////////////////////////////////////////////////////
 
 /// Retrieve embedded window icon data.
 const uint8_t* windowIcon(int32_t* size);
+
+// Plugin //////////////////////////////////////////////////////////////////////
+
+void addPlugin(CCore* cx, const char* path);
+
+void loadPlugins(CCore*);
 
 #else // if !defined(RATBOOM_ZIG)
 
