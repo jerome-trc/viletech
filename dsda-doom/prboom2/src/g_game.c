@@ -191,7 +191,7 @@ dboolean coop_spawns;
 int shorttics;
 
 // automatic pistol start when advancing from one level to the next
-PistolStart pistolstart = pistolstart_on;
+PistolStart pistolstart = pistolstart_off;
 
 //
 // controls (have defaults)
