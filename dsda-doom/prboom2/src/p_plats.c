@@ -322,7 +322,7 @@ void T_ZDoomPlatRaise(CCore* cx, plat_t * plat)
 
 void T_PlatRaise(CCore* cx, void* v) {
     plat_t* plat = v;
-  map_format.t_plat_raise(plat);
+    map_format.t_plat_raise(cx, plat);
 }
 
 

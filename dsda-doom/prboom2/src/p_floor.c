@@ -385,7 +385,7 @@ void T_MoveHexenFloor(CCore* cx, floormove_t * floor)
 
 void T_MoveFloor(CCore* cx, void* v) {
     floormove_t* floor = v;
-    map_format.t_move_floor(floor);
+    map_format.t_move_floor(cx, floor);
 }
 
 //
@@ -2038,7 +2038,7 @@ void T_BuildZDoomPillar(CCore* cx, pillar_t * pillar)
 void T_BuildPillar(CCore* cx, void* v)
 {
     pillar_t* pillar = v;
-  map_format.t_build_pillar(pillar);
+  map_format.t_build_pillar(cx, pillar);
 }
 
 void P_SpawnZDoomPillar(sector_t *sec, pillar_e type, fixed_t speed,

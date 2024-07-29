@@ -414,7 +414,7 @@ void T_MoveHexenCeiling(CCore* cx, ceiling_t * ceiling)
 
 void T_MoveCeiling(CCore* cx, void* v) {
     ceiling_t * ceiling = v;
-    map_format.t_move_ceiling(ceiling);
+    map_format.t_move_ceiling(cx, ceiling);
 }
 
 // EV_DoCeiling

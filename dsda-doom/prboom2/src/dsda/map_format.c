@@ -268,11 +268,11 @@ extern dboolean P_ExecuteHexenLineSpecial(
 extern void T_VerticalCompatibleDoor(CCore*, vldoor_t*);
 extern void T_VerticalHexenDoor(CCore*, vldoor_t*);
 
-extern void T_MoveCompatibleFloor(floormove_t *);
-extern void T_MoveHexenFloor(floormove_t *);
+extern void T_MoveCompatibleFloor(CCore*, floormove_t *);
+extern void T_MoveHexenFloor(CCore*, floormove_t *);
 
-void T_MoveCompatibleCeiling(ceiling_t*);
-void T_MoveHexenCeiling(ceiling_t*);
+void T_MoveCompatibleCeiling(CCore*, ceiling_t*);
+void T_MoveHexenCeiling(CCore*, ceiling_t*);
 
 int EV_CompatibleTeleport(
 	CCore*,
@@ -293,12 +293,12 @@ int EV_HereticTeleport(
 	int flags
 );
 
-void T_BuildHexenPillar(pillar_t*);
-void T_BuildZDoomPillar(pillar_t*);
+void T_BuildHexenPillar(CCore*, pillar_t*);
+void T_BuildZDoomPillar(CCore*, pillar_t*);
 
-void T_CompatiblePlatRaise(plat_t*);
-void T_HexenPlatRaise(plat_t*);
-void T_ZDoomPlatRaise(plat_t*);
+void T_CompatiblePlatRaise(CCore*, plat_t*);
+void T_HexenPlatRaise(CCore*, plat_t*);
+void T_ZDoomPlatRaise(CCore*, plat_t*);
 
 void P_CreateTIDList(void);
 void dsda_BuildMobjThingIDList(void);

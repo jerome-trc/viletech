@@ -59,10 +59,10 @@ typedef struct {
   void (*translate_line_flags)(unsigned int *, line_activation_t *);
   void (*apply_sector_movement_special)(mobj_t *, int);
   void (*t_vertical_door)(CCore*, vldoor_t *);
-  void (*t_move_floor)(floormove_t *);
-  void (*t_move_ceiling)(ceiling_t *);
-  void (*t_build_pillar)(pillar_t *);
-  void (*t_plat_raise)(plat_t *);
+  void (*t_move_floor)(CCore*, floormove_t *);
+  void (*t_move_ceiling)(CCore*, ceiling_t *);
+  void (*t_build_pillar)(CCore*, pillar_t *);
+  void (*t_plat_raise)(CCore*, plat_t *);
   int (*ev_teleport)(CCore*, short, int, line_t *, int, mobj_t *, int);
   void (*player_thrust)(player_t* player, angle_t angle, fixed_t move);
   void (*build_mobj_thing_id_list)(void);
