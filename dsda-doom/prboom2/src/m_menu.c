@@ -5084,8 +5084,17 @@ static dboolean M_InactiveMenuResponder(CCore* cx, int ch, int action, event_t* 
 
   if (dsda_InputActivated(dsda_input_console))
   {
-    if (dsda_OpenConsole(cx))
-      S_StartVoidSound(g_sfx_swtchn);
+    cx->devgui_open = !cx->devgui_open;
+
+    if (cx->devgui_open) {
+        dsda_ApplyPauseMode(PAUSE_COMMAND);
+        SDL_StartTextInput();
+    } else {
+        dsda_RemovePauseMode(PAUSE_COMMAND);
+        SDL_StopTextInput();
+    }
+
+    S_StartVoidSound(g_sfx_swtchn);
     return true;
   }
 
