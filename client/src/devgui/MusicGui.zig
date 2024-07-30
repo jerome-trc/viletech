@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = std.log.scoped(.dj);
 
 const c = @import("../main.zig").c;
 
@@ -32,14 +33,40 @@ pub fn init(alloc: std.mem.Allocator) Self {
 }
 
 pub fn deinit(self: *Self) void {
-    _ = self.alloc.reset(.free_all);
+    self.alloc.deinit();
 }
 
 pub fn populate(self: *Self) std.mem.Allocator.Error!void {
-    var arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
-    defer _ = arena.deinit();
+    const start_time = std.time.Instant.now();
 
     var lmp_num: c.LumpNum = 0;
+    var map_arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
+    defer _ = map_arena.deinit();
+    var map = std.StringHashMap(c.LumpNum).init(map_arena.allocator());
+    defer map.deinit();
+
+    while (lmp_num < c.numlumps) {
+        defer lmp_num += 1;
+
+        const lmp = &c.lumpinfo[std.math.lossyCast(usize, lmp_num)];
+        const lmp_name = lmp.name[0..8];
+
+        if (lmp_name[0] != 'D' or
+            lmp_name[1] != 'J' or
+            !std.ascii.isDigit(lmp_name[2]) or
+            !std.ascii.isDigit(lmp_name[3]) or
+            !std.ascii.isDigit(lmp_name[4]) or
+            !std.ascii.isDigit(lmp_name[5]))
+        {
+            continue;
+        }
+
+        try map.put(try map_arena.allocator().dupe(u8, lmp_name[0..6]), lmp_num);
+    }
+
+    lmp_num = 0;
+    var arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
+    defer _ = arena.deinit();
 
     while (lmp_num < c.numlumps) {
         defer lmp_num += 1;
@@ -70,7 +97,6 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
 
         while (iter.next()) |line| {
             var parts = std.mem.splitSequence(u8, line, "__");
-            lmp_num += 1;
             defer ii += 1;
 
             const title = parts.next() orelse {
@@ -78,6 +104,20 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
             };
             const artist = parts.next() orelse {
                 c.I_Error("DSKJOCKY lump %i is missing an artist at line %lu", lmp_num, ii);
+            };
+            const mus_lmp = parts.next() orelse {
+                c.I_Error("DSKJOCKY lump %i is missing a lump name at line %lu", lmp_num, ii);
+            };
+            const mus_lmp_trimmed = std.mem.trim(u8, mus_lmp, " \r\n\t");
+
+            const resolved = map.get(mus_lmp_trimmed) orelse {
+                c.I_Error(
+                    "DSKJOCKY lump %i, line %lu lump name (%.*s) was not found",
+                    lmp_num,
+                    ii,
+                    mus_lmp.len,
+                    mus_lmp_trimmed.ptr,
+                );
             };
 
             try new_coll.songs.append(Song{
@@ -91,12 +131,17 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
                     title,
                     " \r\n\t",
                 )),
-                .lump = lmp_num,
+                .lump = resolved,
             });
         }
 
         try self.collections.append(new_coll);
     }
+
+    if (start_time) |t| {
+        const now = std.time.Instant.now() catch unreachable;
+        log.info("Music GUI populated in {}ms", .{now.since(t) / 1000 / 1000});
+    } else |_| {}
 }
 
 pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
