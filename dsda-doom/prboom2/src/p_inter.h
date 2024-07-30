@@ -47,9 +47,24 @@
 /* follow a player exlusively for 3 seconds */
 #define BASETHRESHOLD   (100)
 
+enum {
+    adf_none = 0,
+    adf_painless = 1 << 0,
+};
+typedef int ActorDamageFlags;
+
+typedef struct ActorDamageParams {
+    mobj_t* target;
+    mobj_t* inflictor;
+    mobj_t* source;
+    int damage;
+    ActorDamageFlags flags;
+} ActorDamageParams;
+
 dboolean P_GivePower(player_t *, int);
 void P_TouchSpecialThing(CCore*, mobj_t *special, mobj_t *toucher);
 void P_DamageMobj(CCore*, mobj_t* target, mobj_t* inflictor, mobj_t* source, int);
+void P_DamageMobj2(CCore* cx, ActorDamageParams args);
 void P_HealMobj(mobj_t*, int);
 int P_PlayerHealthIncrease(int value);
 

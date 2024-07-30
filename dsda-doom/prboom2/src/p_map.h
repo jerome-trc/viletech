@@ -54,6 +54,26 @@
 //e6y
 #define STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE -2
 
+enum {
+    laf_none = 0,
+    laf_painless = 1 << 0,
+};
+typedef int LineAttackFlags;
+
+typedef struct LineAttackParams {
+    mobj_t* t1;
+    angle_t angle;
+    fixed_t distance, slope;
+    int damage;
+    LineAttackFlags flags;
+} LineAttackParams;
+
+typedef struct
+{
+  msecnode_t *node;
+  sector_t *sector;
+} mobj_in_sector_t;
+
 // killough 3/15/98: add fourth argument to P_TryMove
 dboolean P_TryMove(CCore*, mobj_t*, fixed_t x, fixed_t y, dboolean dropoff);
 
@@ -74,16 +94,26 @@ dboolean P_CrossSubsector_PrBoom(int num);
 // killough 8/2/98: add 'mask' argument to prevent friends autoaiming at others
 fixed_t P_AimLineAttack(CCore*, mobj_t *t1,angle_t angle,fixed_t distance, uint64_t mask);
 
-void    P_LineAttack(CCore*, mobj_t *t1, angle_t angle, fixed_t distance,
-                     fixed_t slope, int damage );
-void P_RadiusAttack(CCore* cx, mobj_t *spot, mobj_t *source, int damage, int distance, dboolean damageSource);
-dboolean P_CheckPosition(CCore*, mobj_t*, fixed_t x, fixed_t y);
+void P_LineAttack(
+	CCore*,
+	mobj_t* t1,
+	angle_t angle,
+	fixed_t distance,
+	fixed_t slope,
+	int damage
+);
+void P_LineAttack2(CCore* cx, LineAttackParams args);
 
-typedef struct
-{
-  msecnode_t *node;
-  sector_t *sector;
-} mobj_in_sector_t;
+void P_RadiusAttack(
+	CCore* cx,
+	mobj_t* spot,
+	mobj_t* source,
+	int damage,
+	int distance,
+	dboolean damageSource
+);
+
+dboolean P_CheckPosition(CCore*, mobj_t*, fixed_t x, fixed_t y);
 
 void P_InitSectorSearch(mobj_in_sector_t*, sector_t*);
 mobj_t *P_FindMobjInSector(mobj_in_sector_t*);

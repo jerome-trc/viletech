@@ -78,6 +78,7 @@ typedef struct {
 } intercept_t;
 
 typedef dboolean (*traverser_t)(CCore*, intercept_t*);
+typedef dboolean (*traverser2_t)(CCore*, intercept_t*, void*);
 
 fixed_t CONSTFUNC P_AproxDistance (fixed_t dx, fixed_t dy);
 
@@ -105,8 +106,27 @@ void    P_SetThingPosition(CCore*, mobj_t*);
 dboolean P_BlockLinesIterator(CCore* cx, int x, int y, dboolean func(CCore*, line_t *));
 dboolean P_BlockLinesIterator2(CCore*, int x, int y, dboolean func(CCore*, line_t*));
 dboolean P_BlockThingsIterator(CCore*, int x, int y, dboolean func(CCore*, mobj_t*));
-dboolean P_PathTraverse(CCore*, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2,
-                       int flags, dboolean trav(CCore*, intercept_t *));
+
+dboolean P_PathTraverse(
+	CCore*,
+	fixed_t x1,
+	fixed_t y1,
+	fixed_t x2,
+	fixed_t y2,
+	int flags,
+	dboolean trav(CCore*, intercept_t*)
+);
+
+dboolean P_PathTraverse2(
+	CCore* cx,
+	fixed_t x1,
+	fixed_t y1,
+	fixed_t x2,
+	fixed_t y2,
+	int flags,
+	dboolean trav(CCore*, intercept_t*, void*),
+    void* udat
+);
 
 angle_t P_PointToAngle(fixed_t xo, fixed_t yo, fixed_t x, fixed_t y);
 mobj_t *P_RoughTargetSearch(mobj_t *mo, angle_t fov, int distance);

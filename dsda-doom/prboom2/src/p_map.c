@@ -674,10 +674,6 @@ dboolean PIT_CheckLine(CCore* cx, line_t* ld)
   return true;
 }
 
-//
-// PIT_CheckThing
-//
-
 static dboolean P_ProjectileImmune(mobj_t *target, mobj_t *source)
 {
   return
@@ -2472,6 +2468,178 @@ dboolean PTR_ShootTraverse (CCore* cx, intercept_t* in)
   return false;
 }
 
+dboolean PTR_ShootTraverse2(CCore* cx, intercept_t* in, void* udat)
+{
+  fixed_t x;
+  fixed_t y;
+  fixed_t z;
+  fixed_t frac;
+
+  mobj_t* th;
+
+  fixed_t slope;
+  fixed_t dist;
+  fixed_t thingtopslope;
+  fixed_t thingbottomslope;
+
+  if (in->isaline)
+  {
+    line_t *li = in->d.line;
+
+    if (li->special)
+      map_format.shoot_special_line(cx, shootthing, li);
+
+    if (li->flags & ML_TWOSIDED &&
+        !(li->flags & (ML_BLOCKEVERYTHING | ML_BLOCKHITSCAN)))
+    {  // crosses a two sided (really 2s) line
+      P_LineOpening (li, NULL);
+      dist = FixedMul(attackrange, in->frac);
+
+      // killough 11/98: simplify
+
+      // e6y: emulation of missed back side on two-sided lines.
+      // backsector can be NULL if overrun_missedbackside_emulate is 1
+      if (!li->backsector)
+      {
+        if ((slope = FixedDiv(line_opening.bottom - shootz , dist)) <= aimslope &&
+            (slope = FixedDiv(line_opening.top - shootz , dist)) >= aimslope)
+          return true;      // shot continues
+      }
+      else
+        if ((li->frontsector->floorheight==li->backsector->floorheight ||
+             (slope = FixedDiv(line_opening.bottom - shootz , dist)) <= aimslope) &&
+            (li->frontsector->ceilingheight==li->backsector->ceilingheight ||
+             (slope = FixedDiv (line_opening.top - shootz , dist)) >= aimslope))
+          return true;      // shot continues
+    }
+
+    // hit line
+    // position a bit closer
+
+    frac = in->frac - FixedDiv (4*FRACUNIT,attackrange);
+    x = trace.x + FixedMul (trace.dx, frac);
+    y = trace.y + FixedMul (trace.dy, frac);
+    z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
+
+    if (li->frontsector->ceilingpic == skyflatnum)
+    {
+      // don't shoot the sky!
+
+      if (z > li->frontsector->ceilingheight)
+        return false;
+
+      // it's a sky hack wall
+
+      if  (li->backsector && li->backsector->ceilingpic == skyflatnum)
+
+        // fix bullet-eaters -- killough:
+        // WARNING: Almost all demos will lose sync without this
+        // demo_compatibility flag check!!! killough 1/18/98
+        if (demo_compatibility || li->backsector->ceilingheight < z)
+          return false;
+    }
+
+    if (li->health)
+    {
+      dsda_DamageLinedef(li, shootthing, la_damage);
+    }
+
+    // Spawn bullet puffs.
+
+    P_SpawnPuff(cx, x, y, z);
+
+    // don't go any farther
+
+    return false;
+  }
+
+  // shoot a thing
+
+  th = in->d.thing;
+  if (th == shootthing)
+    return true;  // can't shoot self
+
+  if (!(th->flags&MF_SHOOTABLE))
+    return true;  // corpse or something
+
+  if (heretic && th->flags & MF_SHADOW && shootthing->player->readyweapon == wp_staff)
+    return true;
+
+  // check angles to see if the thing can be aimed at
+
+  dist = FixedMul (attackrange, in->frac);
+  thingtopslope = FixedDiv (th->z+th->height - shootz , dist);
+
+  if (thingtopslope < aimslope)
+    return true;  // shot over the thing
+
+  thingbottomslope = FixedDiv (th->z - shootz, dist);
+
+  if (thingbottomslope > aimslope)
+    return true;  // shot under the thing
+
+  // hit thing
+  // position a bit closer
+
+  frac = in->frac - FixedDiv (10*FRACUNIT,attackrange);
+
+  x = trace.x + FixedMul (trace.dx, frac);
+  y = trace.y + FixedMul (trace.dy, frac);
+  z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
+
+  // Spawn bullet puffs or blod spots,
+  // depending on target type.
+  if (heretic && PuffType == HERETIC_MT_BLASTERPUFF1)
+  {                           // Make blaster big puff
+    mobj_t* mo;
+    mo = P_SpawnMobj(cx, x, y, z, HERETIC_MT_BLASTERPUFF2);
+    S_StartMobjSound(mo, heretic_sfx_blshit);
+  }
+  else
+  {
+    if (raven || in->d.thing->flags & MF_NOBLOOD)
+      P_SpawnPuff (cx, x,y,z);
+    else
+      P_SpawnBlood (cx, x,y,z, la_damage, th);
+  }
+
+  if (la_damage)
+  {
+    if (
+      raven &&
+      !(in->d.thing->flags & MF_NOBLOOD) &&
+      !(in->d.thing->flags2 & MF2_INVULNERABLE)
+    )
+    {
+      if (PuffType == HEXEN_MT_AXEPUFF || PuffType == HEXEN_MT_AXEPUFF_GLOW)
+      {
+        P_BloodSplatter2(cx, x, y, z, in->d.thing);
+      }
+      if (P_Random(pr_heretic) < 192)
+      {
+        P_BloodSplatter(cx, x, y, z, in->d.thing);
+      }
+    }
+
+    ActorDamageParams dmg_args = *(ActorDamageParams*)udat;
+    dmg_args.target = th;
+    dmg_args.source = shootthing;
+    dmg_args.damage = la_damage;
+
+    if (hexen && PuffType == HEXEN_MT_FLAMEPUFF2) {
+        // Cleric FlameStrike does fire damage
+        extern mobj_t LavaInflictor;
+        dmg_args.inflictor = &LavaInflictor;
+        P_DamageMobj2(cx, dmg_args);
+    } else {
+        dmg_args.inflictor = shootthing;
+        P_DamageMobj2(cx, dmg_args);
+    }
+  }
+
+  // don't go any farther
+  return false;
+}
 
 //
 // P_AimLineAttack
@@ -2509,60 +2677,77 @@ fixed_t P_AimLineAttack(CCore* cx, mobj_t* t1,angle_t angle,fixed_t distance, ui
   return 0;
 }
 
-
 //
 // P_LineAttack
 // If damage == 0, it is just a test trace
 // that will leave linetarget set.
 //
+void P_LineAttack(
+	CCore* cx,
+	mobj_t* t1,
+	angle_t angle,
+	fixed_t distance,
+	fixed_t slope,
+	int damage
+) {
+    P_LineAttack2(cx, (LineAttackParams){
+        .t1 = t1,
+        .angle = angle,
+        .distance = distance,
+        .slope = slope,
+        .damage = damage,
+        .flags = laf_none,
+    });
+}
 
-void P_LineAttack(CCore* cx, mobj_t* t1, angle_t angle, fixed_t distance, fixed_t slope,
-                  int damage)
-{
+void P_LineAttack2(CCore* cx, LineAttackParams args) {
   fixed_t x2;
   fixed_t y2;
 
-  angle >>= ANGLETOFINESHIFT;
-  shootthing = t1;
-  la_damage = damage;
-  x2 = t1->x + (distance>>FRACBITS)*finecosine[angle];
-  y2 = t1->y + (distance>>FRACBITS)*finesine[angle];
-  shootz = t1->z + (t1->height>>1) + 8*FRACUNIT;
-  if (hexen)
-  {
-    shootz -= t1->floorclip;
-  }
-  else if (t1->flags2 & MF2_FEETARECLIPPED)
-  {
+  args.angle >>= ANGLETOFINESHIFT;
+  shootthing = args.t1;
+  la_damage = args.damage;
+  x2 = args.t1->x + (args.distance>>FRACBITS)*finecosine[args.angle];
+  y2 = args.t1->y + (args.distance>>FRACBITS)*finesine[args.angle];
+  shootz = args.t1->z + (args.t1->height>>1) + 8*FRACUNIT;
+
+  if (hexen) {
+    shootz -= args.t1->floorclip;
+  } else if (args.t1->flags2 & MF2_FEETARECLIPPED) {
     shootz -= FOOTCLIPSIZE;
   }
-  attackrange = distance;
-  aimslope = slope;
 
-  if (P_PathTraverse(cx, t1->x,t1->y, x2, y2, PT_ADDLINES | PT_ADDTHINGS, PTR_ShootTraverse))
-  {
-    if (hexen)
-    {
-      switch (PuffType)
-      {
-        case HEXEN_MT_PUNCHPUFF:
-          S_StartMobjSound(t1, hexen_sfx_fighter_punch_miss);
-          break;
-        case HEXEN_MT_HAMMERPUFF:
-        case HEXEN_MT_AXEPUFF:
-        case HEXEN_MT_AXEPUFF_GLOW:
-          S_StartMobjSound(t1, hexen_sfx_fighter_hammer_miss);
-          break;
-        case HEXEN_MT_FLAMEPUFF:
-          P_SpawnPuff(cx, x2, y2, shootz + FixedMul(slope, distance));
-          break;
-        default:
-          break;
-      }
-    }
+  attackrange = args.distance;
+  aimslope = args.slope;
+
+  ActorDamageParams dmg_args = {0};
+
+  if (args.flags & laf_painless) {
+    dmg_args.flags |= adf_painless;
   }
-}
 
+    if (P_PathTraverse2(
+        cx, args.t1->x, args.t1->y, x2, y2, PT_ADDLINES | PT_ADDTHINGS,
+        PTR_ShootTraverse2, &dmg_args
+    )) {
+        if (hexen) {
+            switch (PuffType) {
+            case HEXEN_MT_PUNCHPUFF:
+                S_StartMobjSound(args.t1, hexen_sfx_fighter_punch_miss);
+                break;
+            case HEXEN_MT_HAMMERPUFF:
+            case HEXEN_MT_AXEPUFF:
+            case HEXEN_MT_AXEPUFF_GLOW:
+                S_StartMobjSound(args.t1, hexen_sfx_fighter_hammer_miss);
+                break;
+            case HEXEN_MT_FLAMEPUFF:
+                P_SpawnPuff(cx, x2, y2, shootz + FixedMul(args.slope, args.distance));
+                break;
+            default: break;
+            }
+        }
+    }
+}
 
 //
 // USE LINES

@@ -1421,8 +1421,31 @@ static dboolean P_InfightingImmune(mobj_t *target, mobj_t *source)
 
 static dboolean P_MorphMonster(CCore*, mobj_t*);
 
-void P_DamageMobj(CCore* cx, mobj_t *target, mobj_t *inflictor, mobj_t *source, int damage)
-{
+void P_DamageMobj(
+	CCore* cx,
+	mobj_t* target,
+	mobj_t* inflictor,
+	mobj_t* source,
+	int damage
+) {
+  P_DamageMobj2(
+	  cx,
+	  (ActorDamageParams) {
+		  .target = target,
+		  .inflictor = inflictor,
+		  .source = source,
+		  .damage = damage,
+          .flags = adf_none,
+	  }
+  );
+}
+
+void P_DamageMobj2(CCore* cx, ActorDamageParams args) {
+	mobj_t* target = args.target;
+    mobj_t* inflictor = args.inflictor;
+    mobj_t* source = args.source;
+    int damage = args.damage;
+
   player_t *player;
   dboolean justhit = false;          /* killough 11/98 */
 

@@ -11,6 +11,8 @@
 
 typedef int32_t GameTick;
 
+struct player_s;
+struct pspdef_s;
 typedef struct Core Core;
 
 typedef struct CCore {
@@ -19,6 +21,12 @@ typedef struct CCore {
     void* imgui_ctx;
     GameTick saved_gametick;
 } CCore;
+
+// DeHackEd action pointers ////////////////////////////////////////////////////
+
+void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BurstShotgunCheckVent(CCore*, struct player_s*, struct pspdef_s*);
 
 // Developer GUI ///////////////////////////////////////////////////////////////
 
