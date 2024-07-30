@@ -54,6 +54,18 @@ pub fn build(b: *std.Build) void {
     commonDependencies(b, fd4rb, target, optimize);
     fd4rb.root_module.addImport("ratboom", module);
     b.installArtifact(fd4rb);
+
+    const fd4rb_decohack = b.addSystemCommand(&[_][]const u8{
+        "decohack",
+        "--budget",
+        "plugins/fd4rb/decohack/burst-shotgun.dh",
+        "-s",
+        "zig-out/fd4rb.wad",
+        "-o",
+        "zig-out/fd4rb.wad",
+    });
+    fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/burst-shotgun.dh"));
+    fd4rb.step.dependOn(&fd4rb_decohack.step);
 }
 
 fn commonDependencies(
