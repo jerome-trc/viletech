@@ -41,6 +41,7 @@
 #include <stdlib.h>
 
 #include "doomtype.h"
+#include "preproc.h"
 
 /*
  * Fixed point, 32bit as 16.16.
@@ -80,12 +81,12 @@ typedef unsigned int ufixed_t;
 /* CPhipps - made __inline__ to inline, as specified in the gcc docs
  * Also made const */
 
-inline static CONSTFUNC fixed_t FixedMul(fixed_t a, fixed_t b) {
+_U_ inline static CONSTFUNC fixed_t FixedMul(fixed_t a, fixed_t b) {
   return (fixed_t)((int64_t) a * b >> FRACBITS);
 }
 
 /// Fixed point division.
-static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b) {
+_U_ static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b) {
   return (D_abs(a) >> 14) >= D_abs(b) ? ((a ^ b) >> 31) ^ INT_MAX
 									  : (fixed_t)(((int64_t)a << FRACBITS) / b);
 }
@@ -93,7 +94,7 @@ static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b) {
 /// CPhipps -
 /// FixedMod - returns a % b, guaranteeing 0 <= a < b
 /// (notice that the C standard for % does not guarantee this)
-inline static CONSTFUNC fixed_t FixedMod(fixed_t a, fixed_t b) {
+_U_ inline static CONSTFUNC fixed_t FixedMod(fixed_t a, fixed_t b) {
   if (b & (b - 1)) {
 	  fixed_t r = a % b;
 	  return ((r < 0) ? r + b : r);
@@ -101,7 +102,7 @@ inline static CONSTFUNC fixed_t FixedMod(fixed_t a, fixed_t b) {
 	  return (a & (b - 1));
 }
 
-static CONSTFUNC fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
+_U_ static CONSTFUNC fixed_t Scale(fixed_t a, fixed_t b, fixed_t c) {
   return (fixed_t)(((int64_t)a * b) / c);
 }
 
