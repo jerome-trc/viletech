@@ -667,7 +667,7 @@ static const byte* dsda_ReadDSDADemoHeader(const byte* demo_p, const byte* heade
   if (*demo_p++ != 0x1d)
     return NULL;
 
-  if (strncmp((const char *) demo_p, "DSDA", 4) != 0)
+  if (strncmp((const char *) demo_p, "RAT?", 4) != 0)
     return NULL;
 
   demo_p += 4;
@@ -767,10 +767,10 @@ void dsda_WriteDSDADemoHeader(byte** p) {
 
   // signature
   *demo_p++ = 0x1d;
-  *demo_p++ = 'D';
-  *demo_p++ = 'S';
-  *demo_p++ = 'D';
+  *demo_p++ = 'R';
   *demo_p++ = 'A';
+  *demo_p++ = 'T';
+  *demo_p++ = '?';
   *demo_p++ = 0xe6;
 
   *demo_p++ = DSDA_DEMO_VERSION;
