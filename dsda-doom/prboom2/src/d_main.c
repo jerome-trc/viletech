@@ -1947,7 +1947,7 @@ static void D_DoomMainSetup(CCore* cx)
   }
 
   //jff 9/3/98 use logical output routine
-  lprintf(LO_DEBUG, "R_Init: Init DOOM refresh daemon - ");
+  lprintf(LO_DEBUG, "R_Init: Init DOOM refresh loop");
   R_Init(cx);
 
   dsda_LoadWadPreferences();

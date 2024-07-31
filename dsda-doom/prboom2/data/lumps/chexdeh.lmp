@@ -1,15 +1,15 @@
 Patch File for DeHackEd v3.0
 
-# 
+#
 # This is a dehacked patch for emulating the chex.exe executable that
 # comes with Chex Quest.  It is generated from automatic scripts used
-# to compare chex.exe with Final Doom's doom2.exe.  The purpose of 
+# to compare chex.exe with Final Doom's doom2.exe.  The purpose of
 # this patch is to allow Chex Quest to be played accurately with
 # source ports; it will not work with Vanilla Doom and DOS dehacked,
 # as some of the string and cheat replacements are longer than is
 # possible with dehacked.
 #
-# Because of the limitations of dehacked, it is not possible to 
+# Because of the limitations of dehacked, it is not possible to
 # completely emulate chex.exe merely with a dehacked patch.  Although
 # this patch takes care of the majority of the changes necessary, the
 # following changes are also necessary to accurately emulate chex.deh:
@@ -19,7 +19,7 @@ Patch File for DeHackEd v3.0
 #  * The episode selection screen should not be displayed.
 #  * The level warp cheat should always warp to episode 1.
 #  * The automap should show the level name for the episode 1 level,
-#    eg. the displayed level name for E2M3 is the level name for 
+#    eg. the displayed level name for E2M3 is the level name for
 #        E1M3.
 #
 #    Simon Howard (fraggle)
@@ -36,7 +36,7 @@ Patch format = 6
 
 Text 46 47
 are you sure you want to
-quit this great game?Don't give up now...do 
+quit this great game?Don't give up now...do
 you still wish to quit?
 
 Text 49 38
@@ -75,7 +75,7 @@ need your help!
 
 Text 46 47
 are you sure you want to
-quit this great game?Don't give up now...do 
+quit this great game?Don't give up now...do
 you still wish to quit?
 
 Text 49 38
@@ -84,7 +84,7 @@ then, thou hast lost an eighth!please don't leave, we
 need your help!
 
 Text 72 38
-don't go now, there's a 
+don't go now, there's a
 dimensional shambler waiting
 at the dos prompt!please don't leave, we
 need your help!
@@ -95,7 +95,7 @@ to your boring programs.please don't leave, we
 need your help!
 
 Text 53 38
-if i were your boss, i'd 
+if i were your boss, i'd
  deathmatch ya in a minute!please don't leave, we
 need your help!
 
@@ -338,7 +338,7 @@ collapses, an inverted Gate forms and
 sucks down the shards of the last
 prototype Accelerator, not to mention the
 few remaining demons.  You're done. Hell
-has gone back to pounding bad dead folks 
+has gone back to pounding bad dead folks
 instead of good live ones.  Remember to
 tell your grandkids to put a rocket
 launcher in your coffin. If you go to Hell
@@ -395,8 +395,8 @@ Text 385 9
 Suddenly, all is silent, from one horizon
 to the other. The agonizing echo of Hell
 fades away, the nightmare sky turns to
-blue, the heaps of monster corpses start 
-to evaporate along with the evil stench 
+blue, the heaps of monster corpses start
+to evaporate along with the evil stench
 that filled the air. Jeeze, maybe you've
 done it. Have you really won?
 
@@ -436,16 +436,16 @@ Text 13 13
 BARON OF HELLTHE FLEMBRANE
 
 Text 81 70
-                         The Ultimate DOOM Startup v%i.%i                                                 Chex(R) Quest Startup                        
+                         The Ultimate DOOM Startup v%i.%i                                                 Chex(R) Quest Startup
 
 Text 80 59
-                   DOOM 2: Plutonia Experiment v%i.%i                                              Chex(R) Quest                           
+                   DOOM 2: Plutonia Experiment v%i.%i                                              Chex(R) Quest
 
 Text 78 61
-                     DOOM 2: TNT - Evilution v%i.%i                                                Chex(R) Quest                           
+                     DOOM 2: TNT - Evilution v%i.%i                                                Chex(R) Quest
 
 Text 80 65
-                         DOOM 2: Hell on Earth v%i.%i                                                    Chex(R) Quest                           
+                         DOOM 2: Hell on Earth v%i.%i                                                    Chex(R) Quest
 
 Text 55 55
 
@@ -481,7 +481,7 @@ Text 265 0
 
 
 Text 35 44
-R_Init: Init DOOM refresh daemon - R_Init: Init Chex(R) Quest refresh daemon - 
+R_Init: Init DOOM refresh loop R_Init: Init Chex(R) Quest refresh loop
 
 Text 25 25
 c:\doomdata\doomsav%c.dsgc:\doomdata\chexsav%c.dsg
@@ -771,7 +771,7 @@ Duration = 3
 Frame 538
 Duration = 3
 
-Frame 539 
+Frame 539
 Duration = 0
 
 Thing 2 (Zombieman)
