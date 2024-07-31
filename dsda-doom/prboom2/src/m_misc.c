@@ -366,6 +366,12 @@ cfg_def_t cfg_defs[] =
 
   SETTING_HEADING("Input settings"),
   MIGRATED_SETTING(dsda_config_input_profile),
+
+  SETTING_HEADING("Ratboom-Specific settings"),
+  MIGRATED_SETTING(dsda_config_berserk_switch),
+  MIGRATED_SETTING(dsda_config_item_waste_mitigation),
+  MIGRATED_SETTING(dsda_config_mark_seen_items),
+  MIGRATED_SETTING(dsda_config_new_weapon_switch),
 };
 
 cfg_input_def_t input_defs[] = {
