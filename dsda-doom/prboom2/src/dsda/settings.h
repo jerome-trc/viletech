@@ -83,6 +83,7 @@ void dsda_LiftInputRestrictions(void);
 // RatBoom-specific ////////////////////////////////////////////////////////////
 
 dboolean dsda_SwitchWhenBerserk(void);
+dboolean dsda_NewWeaponSwitch(void);
 dboolean dsda_MarkSeenItems(void);
 dboolean dsda_ItemWasteMitigation(void);
 

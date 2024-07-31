@@ -339,14 +339,22 @@ dboolean dsda_SwitchWhenBerserk(void) {
     return dsda_IntConfig(dsda_config_berserk_switch);
 }
 
-dboolean dsda_MarkSeenItems(void) {
-    return dsda_IntConfig(dsda_config_mark_seen_items);
-}
-
 dboolean dsda_ItemWasteMitigation(void) {
     if (demoplayback || demorecording) {
         return false;
     }
 
     return dsda_IntConfig(dsda_config_item_waste_mitigation);
+}
+
+dboolean dsda_MarkSeenItems(void) {
+    return dsda_IntConfig(dsda_config_mark_seen_items);
+}
+
+dboolean dsda_NewWeaponSwitch(void) {
+    if (demoplayback || demorecording) {
+        return true;
+    }
+
+    return dsda_IntConfig(dsda_config_new_weapon_switch);
 }

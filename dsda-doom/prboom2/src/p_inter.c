@@ -242,8 +242,7 @@ dboolean P_GiveWeapon(player_t *player, weapontype_t weapon, dboolean dropped)
 
   if (heretic) return Heretic_P_GiveWeapon(player, weapon);
 
-  if (netgame && deathmatch!=2 && !dropped)
-    {
+    if (netgame && deathmatch!=2 && !dropped) {
       // leave placed weapons forever on net games
       if (player->weaponowned[weapon])
         return false;
@@ -253,7 +252,6 @@ dboolean P_GiveWeapon(player_t *player, weapontype_t weapon, dboolean dropped)
 
       P_GiveAmmo(player, weaponinfo[weapon].ammo, deathmatch ? 5 : 2);
 
-      player->pendingweapon = weapon;
       /* cph 20028/10 - for old-school DM addicts, allow old behavior
        * where only consoleplayer's pickup sounds are heard */
       // displayplayer, not consoleplayer, for viewing multiplayer demos
@@ -264,23 +262,25 @@ dboolean P_GiveWeapon(player_t *player, weapontype_t weapon, dboolean dropped)
       return false;
     }
 
-  if (weaponinfo[weapon].ammo != am_noammo)
-    {
-      // give one clip with a dropped weapon,
-      // two clips with a found weapon
-      gaveammo = P_GiveAmmo (player, weaponinfo[weapon].ammo, dropped ? 1 : 2);
+    if (weaponinfo[weapon].ammo != am_noammo) {
+        // give one clip with a dropped weapon,
+        // two clips with a found weapon
+        gaveammo = P_GiveAmmo (player, weaponinfo[weapon].ammo, dropped ? 1 : 2);
+    } else {
+        gaveammo = false;
     }
-  else
-    gaveammo = false;
 
-  if (player->weaponowned[weapon])
-    gaveweapon = false;
-  else
-    {
-      gaveweapon = true;
-      player->weaponowned[weapon] = true;
-      player->pendingweapon = weapon;
+    if (player->weaponowned[weapon]) {
+            gaveweapon = false;
+    } else {
+        gaveweapon = true;
+        player->weaponowned[weapon] = true;
+
+        if (dsda_NewWeaponSwitch()) {
+            player->pendingweapon = weapon;
+        }
     }
+
   return gaveweapon || gaveammo;
 }
 

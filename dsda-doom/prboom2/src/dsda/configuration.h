@@ -284,8 +284,9 @@ typedef enum {
   dsda_config_announce_map,
   // RatBoom-specific //////////////////////////////////////////////////////////
   dsda_config_berserk_switch,
-  dsda_config_mark_seen_items,
   dsda_config_item_waste_mitigation,
+  dsda_config_mark_seen_items,
+  dsda_config_new_weapon_switch,
 
   dsda_config_count,
 } dsda_config_identifier_t;
