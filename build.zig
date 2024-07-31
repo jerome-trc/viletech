@@ -29,8 +29,11 @@ pub fn build(b: *std.Build) void {
     const demotest = b.addTest(.{
         .root_source_file = b.path("demotest/main.zig"),
         .target = target,
-        .optimize = optimize,
+        // Always use -Doptimize=ReleaseSafe,
+        // since we want the demotest to run as quickly as possible.
+        .optimize = .ReleaseSafe,
     });
+    demotest.step.dependOn(&lib.step);
 
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
