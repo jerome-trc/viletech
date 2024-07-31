@@ -20,7 +20,7 @@ pub fn init() Self {
     };
 }
 
-pub fn draw(cx: *Core, left: bool, menu_bar_height: f32) void {
+pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
     var self = &cx.vfsgui;
 
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
