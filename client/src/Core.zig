@@ -92,7 +92,7 @@ pub fn deinit(self: *Self) void {
     self.plugin.paths.deinit();
 
     self.console.deinit();
-    c.igDestroyContext(self.c.imgui_ctx);
+    // ImGui context has already been destroyed by a call from C.
 
     if (self.gpa) |gpa| {
         _ = gpa.detectLeaks();
@@ -134,6 +134,10 @@ fn addPlugin(self: *Self, path: [:0]const u8) std.mem.Allocator.Error!void {
     try self.plugin.paths.append(path);
 }
 
+fn deinitC(ccx: *C) callconv(.C) void {
+    ccx.core.deinit();
+}
+
 fn addPluginC(ccx: *C, path: [*:0]const u8) callconv(.C) void {
     const p = ccx.core.alloc.dupeZ(u8, std.mem.sliceTo(path, 0)) catch
         c.I_Error("Plugin path registration failed: out of memory");
@@ -147,6 +151,7 @@ fn loadPluginsC(ccx: *C) callconv(.C) void {
 }
 
 comptime {
+    @export(deinitC, .{ .name = "coreDeinit" });
     @export(addPluginC, .{ .name = "addPlugin" });
     @export(loadPluginsC, .{ .name = "loadPlugins" });
 }
