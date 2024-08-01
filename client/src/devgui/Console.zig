@@ -24,6 +24,7 @@ pub const Command = struct {
 
 const HistoryItem = union(enum) {
     info: []const u8,
+    stdlog: []const u8,
     submission: []const u8,
     toast: []const u8,
 };
@@ -81,6 +82,7 @@ pub var std_log: Deque([]const u8) = undefined;
 pub var std_log_mutex: std.Thread.Mutex = .{};
 var std_log_init = std.once(initStdLogQueue);
 
+/// This is backed by either a GPA or `std.heap.c_allocator`.
 alloc: std.mem.Allocator,
 input_buf: [256]u8,
 history: Deque(HistoryItem),
@@ -98,11 +100,10 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
-    while (true) {
-        const h = self.history.popFront() orelse break;
-
+    while (self.history.popFront()) |h| {
         switch (h) {
             .info => |s| self.alloc.free(s),
+            .stdlog => |s| std.heap.c_allocator.free(s),
             .submission => |s| self.alloc.free(s),
             .toast => |s| self.alloc.free(s),
         }
@@ -110,8 +111,7 @@ pub fn deinit(self: *Self) void {
 
     self.history.deinit();
 
-    while (true) {
-        const p = self.prev_inputs.popFront() orelse break;
+    while (self.prev_inputs.popFront()) |p| {
         self.alloc.free(p);
     }
 
@@ -126,7 +126,7 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
         defer std_log_mutex.unlock();
 
         while (std_log.popFront()) |l| {
-            self.history.pushBack(HistoryItem{ .info = l }) catch {};
+            self.history.pushBack(HistoryItem{ .stdlog = l }) catch {};
         }
     }
 
@@ -169,6 +169,9 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
                 for (clipper.displayStart()..clipper.displayEnd()) |i| {
                     switch ((self.history.get(i) orelse unreachable).*) {
                         HistoryItem.info => |str| {
+                            c.igTextUnformatted(str.ptr, str.ptr + str.len);
+                        },
+                        HistoryItem.stdlog => |str| {
                             c.igTextUnformatted(str.ptr, str.ptr + str.len);
                         },
                         HistoryItem.submission => |str| {

@@ -22,6 +22,8 @@ typedef struct CCore {
     GameTick saved_gametick;
 } CCore;
 
+void coreDeinit(CCore*);
+
 // DeHackEd action pointers ////////////////////////////////////////////////////
 
 void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);

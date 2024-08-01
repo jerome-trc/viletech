@@ -197,6 +197,10 @@ void I_SafeExit(int rc)
   exit(rc);
 }
 
+static void I_CoreDeinit(void) {
+    coreDeinit(g_cx);
+}
+
 static void I_EssentialQuit(void)
 {
   if (demorecording)
@@ -315,6 +319,7 @@ int dsdaMain(CCore* cx, int argc, char **argv) {
 
     g_cx = cx;
 
+    I_AtExit(I_CoreDeinit, true, "I_CoreDeinit", exit_priority_last);
   I_AtExit(I_EssentialQuit, true, "I_EssentialQuit", exit_priority_first);
   I_AtExit(I_Quit, false, "I_Quit", exit_priority_last);
 
