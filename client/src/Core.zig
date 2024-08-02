@@ -94,12 +94,20 @@ pub fn deinit(self: *Self) !void {
     }
 }
 
-pub fn eprintln(self: *Self, comptime format: []const u8, args: anytype) !void {
+pub fn eprintln(
+    self: *Self,
+    comptime format: []const u8,
+    args: anytype,
+) StreamWriter.Error!void {
     try self.stderr_bw.writer().print(format ++ "\n", args);
     try self.stderr_bw.flush();
 }
 
-pub fn println(self: *Self, comptime format: []const u8, args: anytype) !void {
+pub fn println(
+    self: *Self,
+    comptime format: []const u8,
+    args: anytype,
+) StreamWriter.Error!void {
     try self.stdout_bw.writer().print(format ++ "\n", args);
     try self.stdout_bw.flush();
 }

@@ -6,6 +6,7 @@ const meta = @import("meta");
 const args = @import("zig-args");
 const sdl = @import("sdl2");
 
+const Converter = @import("Converter.zig");
 const Core = @import("Core.zig");
 const devgui = @import("devgui.zig");
 const Game = @import("Game.zig");
@@ -42,7 +43,7 @@ const Params = struct {
     };
 
     pub const meta = .{
-        .usage_summary = "[options...]",
+        .usage_summary = "[options...] [conv] [options...]",
         .option_docs = .{
             .help = "Print this usage information and then exit",
             .version = "Print version/compile information and then exit",
@@ -50,18 +51,29 @@ const Params = struct {
     };
 };
 
-const Verbs = union(enum) {};
+const Verbs = union(enum) {
+    conv: Converter.Args,
+};
 
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
     std.log.debug("***** DEBUG BUILD *****", .{});
 
-    const opts = try args.parseWithVerbForCurrentProcess(Params, Verbs, std.heap.page_allocator, .print);
+    const opts = try args.parseWithVerbForCurrentProcess(Params, Verbs, std.heap.page_allocator, .print,);
     defer opts.deinit();
 
     if (opts.options.help) {
-        try args.printHelp(Params, "viletech", std.io.getStdOut().writer());
-        return;
+        if (opts.verb) |verb| {
+            switch (verb) {
+                .conv => {
+                    try args.printHelp(Converter.Args, "viletech", std.io.getStdOut().writer());
+                    return;
+                },
+            }
+        } else {
+            try args.printHelp(Params, "viletech", std.io.getStdOut().writer());
+            return;
+        }
     }
 
     if (opts.options.version) {
@@ -71,6 +83,12 @@ pub fn main() !void {
         try stdout_bw.writer().print("{s} {s}", .{ meta.version, meta.commit });
         try stdout_bw.flush();
         return;
+    }
+
+    if (opts.verb) |verb| {
+        switch (verb) {
+            .conv => |o| return Converter.run(o),
+        }
     }
 
     var gpa: if (builtin.mode == .Debug) Core.DebugAllocator else void = undefined;

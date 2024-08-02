@@ -1,11 +1,8 @@
 const std = @import("std");
 
-pub fn build(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    test_step: *std.Build.Step,
-) *std.Build.Module {
+const Context = @import("../build.zig").Context;
+
+pub fn build(b: *std.Build, ctx: *const Context) *std.Build.Module {
     var options = b.addOptions();
     // TODO: retrieve version stored in build.zig.zon.
     options.addOption([]const u8, "version", "0.0.0");
@@ -17,18 +14,18 @@ pub fn build(
 
     const engine = b.addModule("viletech-engine", .{
         .root_source_file = b.path("client/src/root.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = ctx.target,
+        .optimize = ctx.optimize,
     });
-    commonDependencies(b, options, target, optimize, .{ .module = engine });
+    commonDependencies(b, ctx, options, .{ .module = engine });
 
     const exe = b.addExecutable(.{
         .name = "viletech",
         .root_source_file = b.path("client/src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = ctx.target,
+        .optimize = ctx.optimize,
     });
-    commonDependencies(b, options, target, optimize, .{ .compile = exe });
+    commonDependencies(b, ctx, options, .{ .compile = exe });
 
     b.installArtifact(exe);
 
@@ -42,10 +39,10 @@ pub fn build(
     const exe_check = b.addExecutable(.{
         .name = "viletech",
         .root_source_file = b.path("client/src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = ctx.target,
+        .optimize = ctx.optimize,
     });
-    commonDependencies(b, options, target, optimize, .{ .compile = exe_check });
+    commonDependencies(b, ctx, options, .{ .compile = exe_check });
 
     const check = b.step("check", "Semantic check for ZLS");
     check.dependOn(&exe_check.step);
@@ -55,22 +52,21 @@ pub fn build(
 
     const exe_unit_tests = b.addTest(.{
         .root_source_file = b.path("client/src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = ctx.target,
+        .optimize = ctx.optimize,
     });
-    commonDependencies(b, options, target, optimize, .{ .compile = exe_unit_tests });
+    commonDependencies(b, ctx, options, .{ .compile = exe_unit_tests });
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-    test_step.dependOn(&run_exe_unit_tests.step);
+    ctx.test_step.dependOn(&run_exe_unit_tests.step);
 
     return engine;
 }
 
 fn commonDependencies(
     b: *std.Build,
+    ctx: *const Context,
     meta: *std.Build.Step.Options,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
     artifact: union(enum) {
         compile: *std.Build.Step.Compile,
         module: *std.Build.Module,
@@ -91,11 +87,13 @@ fn commonDependencies(
             @import("../depend/build.cimgui.zig").link(b, c);
             @import("../depend/build.flecs.zig").link(b, c);
             sdl_sdk.link(c, .static);
-            @import("../depend/build.zdfs.zig").link(b, c, target, optimize);
-            @import("../depend/build.zmsx.zig").link(b, c, target, optimize);
+            @import("../depend/build.zdfs.zig").link(b, c, ctx.target, ctx.optimize);
+            @import("../depend/build.zmsx.zig").link(b, c, ctx.target, ctx.optimize);
 
             c.root_module.addImport("sdl2", sdl_sdk.getWrapperModule());
             c.root_module.addImport("zig-args", zig_args.module("args"));
+
+            c.root_module.addImport("subterra", ctx.subterra.?);
         },
         .module => |m| {
             m.addOptions("meta", meta);
