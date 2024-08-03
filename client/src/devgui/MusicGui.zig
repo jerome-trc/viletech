@@ -41,7 +41,7 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
 
     var lmp_num: c.LumpNum = 0;
     var map_arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
-    defer _ = map_arena.deinit();
+    defer map_arena.deinit();
     var map = std.StringHashMap(c.LumpNum).init(map_arena.allocator());
     defer map.deinit();
 
@@ -112,10 +112,10 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
 
             const resolved = map.get(mus_lmp_trimmed) orelse {
                 c.I_Error(
-                    "DSKJOCKY lump %i, line %lu lump name (%.*s) was not found",
+                    "DSKJOCKY lump %i, line %lu lump name `%.*s` was not found",
                     lmp_num,
                     ii,
-                    mus_lmp.len,
+                    mus_lmp_trimmed.len,
                     mus_lmp_trimmed.ptr,
                 );
             };
@@ -234,7 +234,6 @@ fn numSongs(self: *const Self) usize {
 }
 
 export fn populateMusicPlayer(ccx: *Core.C) void {
-    ccx.core.musicgui.populate() catch {
+    ccx.core.musicgui.populate() catch
         c.I_Error("Music player population failed: out of memory");
-    };
 }

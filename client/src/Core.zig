@@ -89,9 +89,15 @@ pub fn deinit(self: *Self) void {
 
     self.unloadPlugins();
     self.plugin.dynlibs.deinit();
+
+    for (self.plugin.paths.items) |p| {
+        self.alloc.free(p);
+    }
+
     self.plugin.paths.deinit();
 
     self.console.deinit();
+    self.musicgui.deinit();
     // ImGui context has already been destroyed by a call from C.
 
     if (self.gpa) |gpa| {
