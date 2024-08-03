@@ -291,40 +291,27 @@ const char* I_GetTempDir(void) {
 }
 
 #else
-// cph - V.Aguilar (5/30/99) suggested return ~/.lxdoom/, creating
-//  if non-existant
-// cph 2006/07/23 - give prboom+ its own dir
-static const char prboom_dir[] = { "/.ratboom" }; // Mead rem extra slash 8/21/03
 
-const char *I_ConfigDir(void)
-{
-  static char *base;
+const char* I_ConfigDir(void) {
+	static char* base;
 
-  if (!base)
-  {
-    char *home = M_getenv("HOME");
+	if (!base) {
+		char* home = M_getenv("HOME");
 
-    // First, try legacy directory.
-    base = dsda_ConcatDir(home, ".dsda-doom");
-    if (access(base, F_OK) != 0)
-    {
-      // Legacy directory is not accessible. Use XDG directory.
-      char *xdg_data_home;
+		char* xdg_data_home;
+		xdg_data_home = M_getenv("XDG_DATA_HOME");
 
-      Z_Free(base);
+		if (xdg_data_home) {
+			base = dsda_ConcatDir(xdg_data_home, "ratboom");
+		} else {
+			// $XDG_DATA_HOME should be $HOME/.local/share if not defined.
+			base = dsda_ConcatDir(home, ".local/share/ratboom");
+		}
 
-      xdg_data_home = M_getenv("XDG_DATA_HOME");
-      if (xdg_data_home)
-        base = dsda_ConcatDir(xdg_data_home, "ratboom");
-      else
-        // $XDG_DATA_HOME should be $HOME/.local/share if not defined.
-        base = dsda_ConcatDir(home, ".local/share/ratboom");
-    }
+		M_MakeDir(base, true); // Make sure it exists
+	}
 
-    M_MakeDir(base, true); // Make sure it exists
-  }
-
-  return base;
+	return base;
 }
 
 const char *I_ExeDir(void)
