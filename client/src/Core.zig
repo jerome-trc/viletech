@@ -44,6 +44,7 @@ plugin: struct {
     dynlibs: std.ArrayList(std.DynLib),
     paths: std.ArrayList(Path),
 },
+prefs: std.StringHashMap(plugin.Pref),
 stderr_file: std.fs.File.Writer,
 stderr_bw: StreamWriter,
 stdout_file: std.fs.File.Writer,
@@ -75,6 +76,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
             .dynlibs = std.ArrayList(std.DynLib).init(alloc),
             .paths = std.ArrayList(Path).init(alloc),
         },
+        .prefs = std.StringHashMap(plugin.Pref).init(alloc),
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
@@ -95,6 +97,7 @@ pub fn deinit(self: *Self) void {
     }
 
     self.plugin.paths.deinit();
+    self.prefs.deinit();
 
     self.console.deinit();
     self.musicgui.deinit();
@@ -122,8 +125,8 @@ fn loadPlugins(self: *Self) std.DynLib.Error!void {
         log.info("Loaded plugin: {s}", .{path});
         try self.plugin.dynlibs.append(dynlib);
 
-        if (dynlib.lookup(plugin.OnLoad, "onLoad")) |func| {
-            func(plugin.PCore{ .ptr = self });
+        if (dynlib.lookup(plugin.OnLoad, "onLoad")) |onLoad| {
+            onLoad(plugin.PCore{ .prefs = &self.prefs });
         }
     }
 }
@@ -138,6 +141,87 @@ fn unloadPlugins(self: *Self) void {
 
 fn addPlugin(self: *Self, path: [:0]const u8) std.mem.Allocator.Error!void {
     try self.plugin.paths.append(path);
+}
+
+pub fn registerPref(self: *Self, pref_v: []const u8) std.mem.Allocator.Error!void {
+    var split = std.mem.splitScalar(u8, pref_v, ':');
+
+    const part0 = split.next().?;
+
+    const part1 = split.next() orelse {
+        try self.prefs.put(part0, plugin.Pref{ .boolean = true });
+        return;
+    };
+
+    if (split.next()) |part2| {
+        if (std.ascii.eqlIgnoreCase(part1, "bool")) {
+            const val = if (std.ascii.eqlIgnoreCase(part2, "true"))
+                true
+            else if (std.ascii.eqlIgnoreCase(part2, "false"))
+                false
+            else
+                c.I_Error(
+                    "Failed to parse `%.*s` value `%.*s` as a boolean",
+                    part0.len,
+                    part0.ptr,
+                    part1.len,
+                    part1.ptr,
+                );
+
+            try self.prefs.put(part0, plugin.Pref{ .boolean = val });
+        } else if (std.ascii.eqlIgnoreCase(part1, "float")) {
+            const val = std.fmt.parseFloat(f64, part2) catch |err| {
+                c.I_Error(
+                    "Failed to parse `%.*s` value `%.*s` as an int (%s)",
+                    part0.len,
+                    part0.ptr,
+                    part2.len,
+                    part2.ptr,
+                    @errorName(err).ptr,
+                );
+            };
+
+            try self.prefs.put(part0, plugin.Pref{ .float = val });
+        } else if (std.ascii.eqlIgnoreCase(part1, "int")) {
+            const val = std.fmt.parseInt(i64, part2, 10) catch |err|
+                c.I_Error(
+                "Failed to parse `%.*s` value `%.*s` as an int (%s)",
+                part0.len,
+                part0.ptr,
+                part2.len,
+                part2.ptr,
+                @errorName(err).ptr,
+            );
+
+            try self.prefs.put(part0, plugin.Pref{ .int = val });
+        } else if (std.ascii.eqlIgnoreCase(part1, "string")) {
+            try self.prefs.put(part0, plugin.Pref{ .string = part2 });
+        } else {
+            c.I_Error("Unknown pref. type: `%.*s`", part1.len, part1.ptr);
+        }
+    } else {
+        if (std.fmt.parseFloat(f64, part1)) |val| {
+            try self.prefs.put(part0, plugin.Pref{ .float = val });
+            return;
+        } else |_| {}
+
+        if (std.fmt.parseInt(i64, part1, 10)) |val| {
+            try self.prefs.put(part0, plugin.Pref{ .int = val });
+            return;
+        } else |_| {}
+
+        if (std.ascii.eqlIgnoreCase(part1, "true")) {
+            try self.prefs.put(part0, plugin.Pref{ .boolean = true });
+            return;
+        }
+
+        if (std.ascii.eqlIgnoreCase(part1, "false")) {
+            try self.prefs.put(part0, plugin.Pref{ .boolean = false });
+            return;
+        }
+
+        try self.prefs.put(part0, plugin.Pref{ .string = part1 });
+    }
 }
 
 fn deinitC(ccx: *C) callconv(.C) void {

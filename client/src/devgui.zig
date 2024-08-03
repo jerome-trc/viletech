@@ -1,4 +1,5 @@
 const builtin = @import("builtin");
+const std = @import("std");
 
 const c = @import("main.zig").c;
 
@@ -6,11 +7,13 @@ const Console = @import("devgui/Console.zig");
 const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
 const MusicGui = @import("devgui/MusicGui.zig");
+const PrefGui = @import("devgui/PrefGui.zig");
 const VfsGui = @import("devgui/VfsGui.zig");
 
 pub const State = enum(c_int) {
     console,
     music,
+    prefs,
     vfs,
 };
 
@@ -79,8 +82,11 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
     const items = [_][*:0]const u8{
         "Console",
         "Music",
+        "Prefs",
         "VFS",
     };
+
+    comptime std.debug.assert(items.len == std.enums.values(State).len);
 
     if (c.igCombo_Str_arr("Left", @ptrCast(&cx.dgui.left), &items, items.len, -1)) {
         // ImGui misbehaves if both sides of the developer GUI draw the same tool.
@@ -113,12 +119,14 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
     switch (cx.dgui.left) {
         .console => Console.layout(cx, true, menu_bar_height),
         .music => MusicGui.layout(cx, true, menu_bar_height),
+        .prefs => PrefGui.layout(cx, true, menu_bar_height),
         .vfs => VfsGui.layout(cx, true, menu_bar_height),
     }
 
     switch (cx.dgui.right) {
         .console => Console.layout(cx, false, menu_bar_height),
         .music => MusicGui.layout(cx, false, menu_bar_height),
+        .prefs => PrefGui.layout(cx, false, menu_bar_height),
         .vfs => VfsGui.layout(cx, false, menu_bar_height),
     }
 
