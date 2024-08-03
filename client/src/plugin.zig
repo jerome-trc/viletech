@@ -4,6 +4,8 @@ const std = @import("std");
 
 pub const PCore = extern struct {
     prefs: *const std.StringHashMap(Pref),
+    /// `true` if the user is playing Heretic or Hexen.
+    raven: bool,
 };
 
 /// Preferences are a generalized system for passing configuration to plugins

@@ -6,7 +6,12 @@ const log = std.log.scoped(.fd4rb);
 const ratboom = @import("ratboom");
 const PCore = ratboom.PCore;
 
-export fn onLoad(_: PCore) void {
+export fn onLoad(pcx: PCore) void {
+    if (pcx.raven) {
+        log.info("Won't initialize due to Heretic or Hexen.", .{});
+        return;
+    }
+
     log.info("Initialized successfully.", .{});
 }
 
