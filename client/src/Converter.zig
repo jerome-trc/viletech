@@ -31,14 +31,14 @@ const full_help_text = blk: {
 pub const Args = struct {
     in: []const u8 = "",
     out: []const u8 = "",
-    in_format: []const u8 = "",
-    out_format: []const u8 = "",
+    @"in-format": []const u8 = "",
+    @"out-format": []const u8 = "",
 
     pub const shorthands = .{
         .i = "in",
         .o = "out",
-        .I = "in_format",
-        .O = "out_format",
+        .I = "in-format",
+        .O = "out-format",
     };
 
     pub const meta = .{
@@ -47,8 +47,8 @@ pub const Args = struct {
         .option_docs = .{
             .in = "Input file (- for stdin)",
             .out = "Output file (- for stdout)",
-            .in_format = "Input file format (omit to try heuristics)",
-            .out_format = "Output file format (omit to try heuristics)",
+            .@"in-format" = "Input file format (omit to try heuristics)",
+            .@"out-format" = "Output file format (omit to try heuristics)",
         },
     };
 };
@@ -157,11 +157,11 @@ pub fn run(args: Args) !void {
     var unknown_formats = false;
 
     for (std.enums.values(ContentId)) |c_id| {
-        if (std.ascii.eqlIgnoreCase(args.in_format, @tagName(c_id))) {
+        if (std.ascii.eqlIgnoreCase(args.@"in-format", @tagName(c_id))) {
             in_format = c_id;
         }
 
-        if (std.ascii.eqlIgnoreCase(args.out_format, @tagName(c_id))) {
+        if (std.ascii.eqlIgnoreCase(args.@"out-format", @tagName(c_id))) {
             out_format = c_id;
         }
     }
