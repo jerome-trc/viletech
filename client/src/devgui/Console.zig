@@ -82,9 +82,7 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
-    while (true) {
-        const h = self.history.popFront() orelse break;
-
+    while (self.history.popFront()) |h| {
         switch (h) {
             .info => |s| self.alloc.free(s),
             .submission => |s| self.alloc.free(s),
@@ -94,8 +92,7 @@ pub fn deinit(self: *Self) void {
 
     self.history.deinit();
 
-    while (true) {
-        const p = self.prev_inputs.popFront() orelse break;
+    while (self.prev_inputs.popFront()) |p| {
         self.alloc.free(p);
     }
 
@@ -240,8 +237,7 @@ fn submitCommands(cx: *Core) void {
     logSubmission(cx, "$ {s}", .{submission});
     var parts = std.mem.tokenizeScalar(u8, submission, ';');
 
-    while (true) {
-        const part = parts.next() orelse break;
+    while (parts.next()) |part| {
         submitCommand(cx, part);
     }
 }

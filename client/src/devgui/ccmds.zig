@@ -10,9 +10,7 @@ const Console = @import("Console.zig");
 pub fn clear(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
     var self = &cx.console;
 
-    while (true) {
-        const h = self.history.popFront() orelse break;
-
+    while (self.history.popFront()) |h| {
         switch (h) {
             .info => |s| self.alloc.free(s),
             .submission => |s| self.alloc.free(s),
