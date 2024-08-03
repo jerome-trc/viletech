@@ -24,6 +24,8 @@ typedef struct CCore {
 
 void coreDeinit(CCore*);
 
+void registerPref(CCore*, const char* pref_v);
+
 // DeHackEd action pointers ////////////////////////////////////////////////////
 
 void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);

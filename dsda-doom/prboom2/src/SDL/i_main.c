@@ -270,7 +270,7 @@ void I_SetProcessPriority(void)
 int dsdaMain(CCore* cx, int argc, char **argv) {
     assert(cx->saved_gametick == -1); // Sanity check...
 
-  dsda_ParseCommandLineArgs(argc, argv);
+  dsda_ParseCommandLineArgs(cx, argc, argv);
 
   if (dsda_Flag(dsda_arg_verbose))
     I_EnableVerboseLogging();

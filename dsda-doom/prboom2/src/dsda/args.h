@@ -20,6 +20,8 @@
 
 #include "doomtype.h"
 
+struct CCore;
+
 typedef enum {
   dsda_arg_help,
   dsda_arg_iwad,
@@ -163,7 +165,7 @@ typedef struct {
   } value;
 } dsda_arg_t;
 
-void dsda_ParseCommandLineArgs(int argc, char** argv);
+void dsda_ParseCommandLineArgs(struct CCore*, int argc, char** argv);
 dsda_arg_t* dsda_Arg(dsda_arg_identifier_t id);
 dboolean dsda_Flag(dsda_arg_identifier_t id);
 int dsda_SimpleIntArg(dsda_arg_identifier_t id);

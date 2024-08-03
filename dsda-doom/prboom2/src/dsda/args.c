@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "lprintf.h"
+#include "viletech.zig.h"
 #include "z_zone.h"
 
 #include "dsda/args.h"
@@ -816,7 +817,19 @@ static void dsda_ParseArg(arg_config_t* config, dsda_arg_t* arg, int argv_i) {
   }
 }
 
-void dsda_ParseCommandLineArgs(int argc, char** argv) {
+static bool IsPref(const char* arg) {
+    size_t arglen = strlen(arg);
+
+    if (arglen < 6) {
+        return false;
+    }
+
+    return
+        arg[0] == '-' && arg[1] == '-' && arg[2] == 'p' &&
+        arg[3] == 'r' && arg[4] == 'e' && arg[5] == 'f';
+}
+
+void dsda_ParseCommandLineArgs(CCore* cx, int argc, char** argv) {
   int i;
   int argv_i;
   arg_config_t* config;
@@ -831,6 +844,16 @@ void dsda_ParseCommandLineArgs(int argc, char** argv) {
     is_integer = sscanf(dsda_argv[argv_i], "%d", &x);
 
     if (dsda_argv[argv_i][0] == '-' && !is_integer) {
+        if (IsPref(dsda_argv[argv_i])) {
+            if (argv_i == (dsda_argc - 1)) {
+                I_Error("`--pref` parameter expects a following string");
+            } else {
+                registerPref(cx, dsda_argv[argv_i + 1]);
+            }
+
+            continue;
+        }
+
       for (i = 0; i < dsda_arg_count; ++i) {
         config = &arg_config[i];
 
