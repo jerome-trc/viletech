@@ -126,7 +126,10 @@ fn loadPlugins(self: *Self) std.DynLib.Error!void {
         try self.plugin.dynlibs.append(dynlib);
 
         if (dynlib.lookup(plugin.OnLoad, "onLoad")) |onLoad| {
-            onLoad(plugin.PCore{ .prefs = &self.prefs });
+            onLoad(plugin.PCore{
+                .prefs = &self.prefs,
+                .raven = c.raven != 0,
+            });
         }
     }
 }
