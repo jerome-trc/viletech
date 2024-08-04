@@ -1,4 +1,4 @@
-//! DeHackEd action functions.
+//! Action functions for use by DeHackEd.
 
 const std = @import("std");
 
@@ -6,14 +6,15 @@ const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
 
-const inventory_burstshotgun: usize = 0;
+const invslot_plut_pistol: usize = 0;
+const invslot_tnt_ssg: usize = 1;
 
 fn burstShotgunCheckVent(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
-    player.inventory[inventory_burstshotgun].count += 1;
+    player.inventory[invslot_tnt_ssg].count += 1;
 
-    if (player.inventory[inventory_burstshotgun].count >= 4) {
+    if (player.inventory[invslot_tnt_ssg].count >= 4) {
         const state = std.math.lossyCast(c.statenum_t, psp.state.*.args[0]);
-        player.inventory[inventory_burstshotgun].count = 0;
+        player.inventory[invslot_tnt_ssg].count = 0;
         c.P_SetPspritePtr(@ptrCast(ccx), player, psp, state);
     }
 }
@@ -55,6 +56,16 @@ fn burstShotgunFire(ccx: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(
             .damage = damage,
             .flags = c.laf_painless,
         });
+    }
+}
+
+fn revolverCheckReload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    player.inventory[invslot_plut_pistol].count += 1;
+
+    if (player.inventory[invslot_plut_pistol].count >= 6) {
+        const state = std.math.lossyCast(c.statenum_t, psp.state.*.args[0]);
+        player.inventory[invslot_plut_pistol].count = 0;
+        c.P_SetPspritePtr(@ptrCast(ccx), player, psp, state);
     }
 }
 

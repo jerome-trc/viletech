@@ -100,8 +100,3 @@ export fn windowIcon(size: *i32) [*]const u8 {
     size.* = bytes.len;
     return bytes;
 }
-
-comptime {
-    @export(deh.burstShotgunCheckVent, .{ .name = "A_BurstShotgunCheckVent" });
-    @export(deh.burstShotgunFire, .{ .name = "A_BurstShotgunFire" });
-}
