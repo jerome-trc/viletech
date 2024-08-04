@@ -61,13 +61,15 @@ pub fn build(b: *std.Build) void {
     const fd4rb_decohack = b.addSystemCommand(&[_][]const u8{
         "decohack",
         "--budget",
-        "plugins/fd4rb/decohack/burst-shotgun.dh",
         "-s",
         "zig-out/fd4rb.wad",
         "-o",
         "zig-out/fd4rb.wad",
+        "plugins/fd4rb/decohack/burst-shotgun.dh",
+        "plugins/fd4rb/decohack/revolver.dh",
     });
     fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/burst-shotgun.dh"));
+    fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/revolver.dh"));
     fd4rb.step.dependOn(&fd4rb_decohack.step);
 }
 
