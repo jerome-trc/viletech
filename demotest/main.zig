@@ -4,162 +4,162 @@ const std = @import("std");
 
 test "doom2 map 4 nm speed by Vile" {
     try runDemo(.{ .demo = "nm04-036.lmp" });
-    try expectAnalysis("skill", "5");
-    try expectAnalysis("respawn", "0");
-    try expectAnalysis("fast", "0");
+    try expectAnalysis("nm04-036", "skill", "5");
+    try expectAnalysis("nm04-036", "respawn", "0");
+    try expectAnalysis("nm04-036", "fast", "0");
 }
 
 test "doom2 map 1 uv speed by Thomas Pilger" {
     try runDemo(.{ .demo = "lv01-005.lmp" });
-    try expectAnalysis("skill", "4");
-    try expectAnalysis("nomonsters", "0");
-    try expectAnalysis("100k", "0");
-    try expectAnalysis("100s", "0");
+    try expectAnalysis("lv01-005", "skill", "4");
+    try expectAnalysis("lv01-005", "nomonsters", "0");
+    try expectAnalysis("lv01-005", "100k", "0");
+    try expectAnalysis("lv01-005", "100s", "0");
 }
 
 test "doom2 map 1 nomonsters by depr4vity" {
     try runDemo(.{ .demo = "lv01o497.lmp" });
-    try expectAnalysis("nomonsters", "1");
+    try expectAnalysis("lv01o497", "nomonsters", "1");
 }
 
 test "doom2 map 2 uv respawn by Looper" {
     try runDemo(.{ .demo = "re02-107.lmp" });
-    try expectAnalysis("respawn", "1");
+    try expectAnalysis("re02-107", "respawn", "1");
 }
 
 test "doom2 map 4 uv fast by Radek Pecka" {
     try runDemo(.{ .demo = "fa04-109.lmp" });
-    try expectAnalysis("fast", "1");
+    try expectAnalysis("fa04-109", "fast", "1");
 }
 
 test "doom2 map 1 uv max by Xit Vono" {
     try runDemo(.{ .demo = "lv01-039.lmp" });
-    try expectAnalysis("100k", "1");
-    try expectAnalysis("tyson_weapons", "0");
-    try expectAnalysis("turbo", "0");
+    try expectAnalysis("lv01-039", "100k", "1");
+    try expectAnalysis("lv01-039", "tyson_weapons", "0");
+    try expectAnalysis("lv01-039", "turbo", "0");
 }
 
 test "doom2 episode 1 nm100s in 11:56 by JCD" {
     try runDemo(.{ .demo = "1156ns01.lmp" });
-    try expectAnalysis("100s", "1");
+    try expectAnalysis("1156ns01", "100s", "1");
 }
 
 test "doom2 ep 3 max in 26:54 by Vile" {
     try runDemo(.{ .demo = "lve3-2654.lmp" });
-    try expectAnalysis("missed_monsters", "0");
-    try expectAnalysis("missed_secrets", "1");
+    try expectAnalysis("lve3-2654", "missed_monsters", "0");
+    try expectAnalysis("lve3-2654", "missed_secrets", "1");
 }
 
 test "pacifist, barrel chain" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "barrel_chain.lmp" });
-    try expectAnalysis("pacifist", "0");
+    try expectAnalysis("barrel_chain", "pacifist", "0");
 }
 
 test "pacifist, barrel assist" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "barrel_assist.lmp" });
-    try expectAnalysis("pacifist", "0");
+    try expectAnalysis("barrel_assist", "pacifist", "0");
 }
 
 test "pacifist, player shoots Keen" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "keen.lmp" });
-    try expectAnalysis("pacifist", "0");
+    try expectAnalysis("keen", "pacifist", "0");
 }
 
 test "pacifist, player shoots Romero" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "romero.lmp" });
-    try expectAnalysis("pacifist", "0");
+    try expectAnalysis("romero", "pacifist", "0");
 }
 
 test "pacifist, splash damage" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "splash.lmp" });
-    try expectAnalysis("pacifist", "0");
+    try expectAnalysis("splash", "pacifist", "0");
 }
 
 test "pacifist, telefrag" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "telefrag.lmp" });
-    try expectAnalysis("pacifist", "1");
+    try expectAnalysis("telefrag", "pacifist", "1");
 }
 
 test "pacifist, player shoots voodoo doll" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "voodoo.lmp" });
-    try expectAnalysis("pacifist", "1");
+    try expectAnalysis("voodoo", "pacifist", "1");
 }
 
 test "doom2 map 8 stroller by 4shockblast" {
     try runDemo(.{ .demo = "lv08str037.lmp" });
-    try expectAnalysis("stroller", "1");
+    try expectAnalysis("lv08str037", "stroller", "1");
 }
 
 test "doom2 map 8 pacifist by 4shockblast" {
     try runDemo(.{ .demo = "pa08-020.lmp" });
-    try expectAnalysis("stroller", "0");
+    try expectAnalysis("pa08-020", "stroller", "0");
 }
 
 test "reality, player takes enemy damage" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "damage.lmp" });
-    try expectAnalysis("reality", "0");
-    try expectAnalysis("almost_reality", "0");
+    try expectAnalysis("damage", "reality", "0");
+    try expectAnalysis("damage", "almost_reality", "0");
 }
 
 test "reality, player takes nukage damage" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "nukage.lmp" });
-    try expectAnalysis("reality", "0");
-    try expectAnalysis("almost_reality", "1");
+    try expectAnalysis("nukage", "reality", "0");
+    try expectAnalysis("nukage", "almost_reality", "1");
 }
 
 test "reality, player takes crusher damage" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "crusher.lmp" });
-    try expectAnalysis("reality", "0");
-    try expectAnalysis("almost_reality", "0");
+    try expectAnalysis("crusher", "reality", "0");
+    try expectAnalysis("crusher", "almost_reality", "0");
 }
 
 test "reality, player takes no damage" {
     try runDemo(.{ .pwad = "analysis_test.wad", .demo = "reality.lmp" });
-    try expectAnalysis("reality", "1");
-    try expectAnalysis("almost_reality", "0");
+    try expectAnalysis("reality", "reality", "1");
+    try expectAnalysis("reality", "almost_reality", "0");
 }
 
 test "doom2 map 1 tyson by j4rio" {
     try runDemo(.{ .demo = "lv01t040.lmp" });
-    try expectAnalysis("tyson_weapons", "1");
-    try expectAnalysis("weapon_collector", "0");
+    try expectAnalysis("lv01t040", "tyson_weapons", "1");
+    try expectAnalysis("lv01t040", "weapon_collector", "0");
 }
 
 test "doom2 done turbo quicker by 4shockblast" {
     try runDemo(.{ .demo = "d2dtqr.lmp" });
-    try expectAnalysis("turbo", "1");
+    try expectAnalysis("d2dtqr", "turbo", "1");
 }
 
 test "doom2 map 1 collector by hokis" {
     try runDemo(.{ .demo = "cl01-022.lmp" });
-    try expectAnalysis("weapon_collector", "1");
+    try expectAnalysis("cl01-022", "weapon_collector", "1");
 }
 
 // Sync ////////////////////////////////////////////////////////////////////////
 
 test "doom2 30uv in 17:55 by Looper" {
     try runDemo(.{ .demo = "30uv1755.lmp" });
-    try expectTotalTime("17:55");
+    try expectTotalTime("30uv1755", "17:55");
 }
 
 test "doom2 20 uv max in 2:22 by termrork & kOeGy (a)" {
     try runDemo(.{ .demo = "cm20k222.lmp" });
-    try expectTotalTime("2:22");
+    try expectTotalTime("cm20k222", "2:22");
 }
 
 test "doom2 20 uv max in 2:22 by termrork & kOeGy (b)" {
     try runDemo(.{ .demo = "cm20t222.lmp" });
-    try expectTotalTime("2:22");
+    try expectTotalTime("cm20t222", "2:22");
 }
 
 test "rush 12 uv max in 21:14 by Ancalagon" {
     try runDemo(.{ .pwad = "rush.wad", .demo = "ru12-2114.lmp" });
-    try expectTotalTime("21:14");
+    try expectTotalTime("ru12-2114", "21:14");
 }
 
 test "valiant e1 uv speed in 5:13 by Krankdud" {
     try runDemo(.{ .pwad = "Valiant.wad", .demo = "vae1-513.lmp" });
-    try expectTotalTime("5:13");
+    try expectTotalTime("vae1-513", "5:13");
 }
 
 // TODO: Heretic and Hexen tests, after I've bought both.
@@ -221,9 +221,12 @@ fn runDemo(args: struct {
     alloc.free(result.stderr);
 }
 
-fn expectAnalysis(key: []const u8, val: []const u8) !void {
+fn expectAnalysis(demoname: []const u8, key: []const u8, val: []const u8) !void {
+    const path = try std.fmt.allocPrint(alloc, "build/analysis.{s}.txt", .{demoname});
+    defer alloc.free(path);
+
     var line_buf: [1024]u8 = undefined;
-    var line_iter = try readLines("build/analysis.txt", &line_buf, .{});
+    var line_iter = try readLines(path, &line_buf, .{});
     defer line_iter.deinit();
 
     while (try line_iter.next()) |line| {
@@ -234,9 +237,12 @@ fn expectAnalysis(key: []const u8, val: []const u8) !void {
     }
 }
 
-fn expectTotalTime(val: []const u8) !void {
+fn expectTotalTime(demoname: []const u8, val: []const u8) !void {
+    const path = try std.fmt.allocPrint(alloc, "build/levelstat.{s}.txt", .{demoname});
+    defer alloc.free(path);
+
     var line_buf: [1024]u8 = undefined;
-    var line_iter = try readLines("build/levelstat.txt", &line_buf, .{});
+    var line_iter = try readLines(path, &line_buf, .{});
     defer line_iter.deinit();
 
     var lines = std.ArrayList([]const u8).init(std.testing.allocator);
