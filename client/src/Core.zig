@@ -70,7 +70,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
         .console = try Console.init(alloc),
         .dgui = Self.DevGui{
             .left = devgui.State.console,
-            .right = devgui.State.vfs,
+            .right = devgui.State.music,
         },
         .gpa = gpa,
         .musicgui = MusicGui.init(alloc),
