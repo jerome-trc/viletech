@@ -11,6 +11,8 @@ comptime {
     @export(deh.burstShotgunCheckVent, .{ .name = "A_BurstShotgunCheckVent" });
     @export(deh.burstShotgunFire, .{ .name = "A_BurstShotgunFire" });
     @export(deh.revolverCheckReload, .{ .name = "A_RevolverCheckReload" });
+
+    @export(deh.weaponSoundRandom, .{ .name = "A_WeaponSoundRandom" });
 }
 
 export fn registerPref(ccx: *Core.C, pref_vz: [*:0]const u8) void {

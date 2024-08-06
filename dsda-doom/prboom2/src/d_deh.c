@@ -1530,7 +1530,9 @@ static const deh_bexptr deh_bexptrs[] = // CPhipps - static const
   {A_RefireTo,            "A_RefireTo", 2},
   {A_GunFlashTo,          "A_GunFlashTo", 2},
 
-  // RatBoom ///////////////////////////////////////////////////////////////////
+    // RatBoom ///////////////////////////////////////////////////////////////////
+    {A_WeaponSoundRandom,         "A_WeaponSoundRandom", 5},
+
     {A_BurstShotgunFire, "A_BurstShotgunFire", 0},
     {A_BurstShotgunCheckVent, "A_BurstShotgunCheckVent", 1},
     {A_RevolverCheckReload, "A_RevolverCheckReload", 1},
