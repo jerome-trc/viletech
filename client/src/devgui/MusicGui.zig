@@ -234,6 +234,6 @@ fn numSongs(self: *const Self) usize {
 }
 
 export fn populateMusicPlayer(ccx: *Core.C) void {
-    ccx.core.musicgui.populate() catch
+    ccx.core().musicgui.populate() catch
         c.I_Error("Music player population failed: out of memory");
 }

@@ -16,7 +16,6 @@ struct pspdef_s;
 typedef struct Core Core;
 
 typedef struct CCore {
-    Core* core;
     bool devgui_open;
     void* imgui_ctx;
     GameTick saved_gametick;
