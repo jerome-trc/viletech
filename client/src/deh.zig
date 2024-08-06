@@ -9,6 +9,8 @@ const Core = @import("Core.zig");
 const invslot_plut_pistol: usize = 0;
 const invslot_tnt_ssg: usize = 1;
 
+// FD4RB ///////////////////////////////////////////////////////////////////////
+
 fn burstShotgunCheckVent(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
     player.inventory[invslot_tnt_ssg].count += 1;
 
@@ -67,6 +69,19 @@ fn revolverCheckReload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) call
         player.inventory[invslot_plut_pistol].count = 0;
         c.P_SetPspritePtr(@ptrCast(ccx), player, psp, state);
     }
+}
+
+// Generic /////////////////////////////////////////////////////////////////////
+
+fn weaponSoundRandom(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    const play_globally = psp.state.*.args[4] != 0;
+    const which = std.math.lossyCast(usize, boomrngRange(c.pr_mbf21, 0, 3));
+    const sfx_id = std.math.lossyCast(c_int, psp.state.*.args[which]);
+    c.S_StartMobjSound(if (play_globally) null else player.mo, sfx_id);
+}
+
+fn boomrngRange(rng_class: c.pr_class_t, min_inclusive: c_int, max_inclusive: c_int) c_int {
+    return @rem(c.P_Random(rng_class), max_inclusive) + min_inclusive;
 }
 
 // Details /////////////////////////////////////////////////////////////////////
