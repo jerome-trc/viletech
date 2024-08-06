@@ -16,10 +16,13 @@ pub const DebugAllocator = std.heap.GeneralPurposeAllocator(.{});
 const StreamWriter = std.io.BufferedWriter(4096, std.fs.File.Writer);
 
 pub const C = extern struct {
-    core: *Self,
     devgui_open: bool,
     imgui_ctx: *c.ImGuiContext,
     saved_gametick: i32,
+
+    pub fn core(ccx: *C) *Self {
+        return @fieldParentPtr("c", ccx);
+    }
 };
 
 pub const DevGui = struct {
@@ -59,7 +62,6 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
 
     return Self{
         .c = Self.C{
-            .core = undefined,
             .devgui_open = if (builtin.mode == .Debug) true else false,
             .imgui_ctx = undefined,
             .saved_gametick = -1,
@@ -228,18 +230,18 @@ pub fn registerPref(self: *Self, pref_v: []const u8) std.mem.Allocator.Error!voi
 }
 
 fn deinitC(ccx: *C) callconv(.C) void {
-    ccx.core.deinit();
+    ccx.core().deinit();
 }
 
 fn addPluginC(ccx: *C, path: [*:0]const u8) callconv(.C) void {
-    const p = ccx.core.alloc.dupeZ(u8, std.mem.sliceTo(path, 0)) catch
+    const p = ccx.core().alloc.dupeZ(u8, std.mem.sliceTo(path, 0)) catch
         c.I_Error("Plugin path registration failed: out of memory");
-    ccx.core.addPlugin(p) catch
+    ccx.core().addPlugin(p) catch
         c.I_Error("Plugin path registration failed: out of memory");
 }
 
 fn loadPluginsC(ccx: *C) callconv(.C) void {
-    ccx.core.loadPlugins() catch |err|
+    ccx.core().loadPlugins() catch |err|
         c.I_Error("Plugin load failed: %s", @errorName(err).ptr);
 }
 

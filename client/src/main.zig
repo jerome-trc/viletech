@@ -66,7 +66,6 @@ export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
         std.log.scoped(.ratboom).info("*** DEBUG BUILD ***", .{});
     }
 
-    cx.c.core = &cx;
     return dsdaMain(&cx.c, argc, argv);
 }
 
