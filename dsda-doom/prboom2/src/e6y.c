@@ -515,11 +515,21 @@ void e6y_WriteStats(void)
   tmpdata_t *all;
   size_t allkills_len=0, allitems_len=0, allsecrets_len=0;
 
-  f = M_OpenFile("levelstat.txt", "wb");
+    char filename[256];
+    size_t demo_filepfx_len = 0;
+    const char* demo_filepfx = pathStem(dsda_PlaybackName(), &demo_filepfx_len);
+    snprintf(
+        filename,
+        sizeof(filename),
+        "levelstat.%.*s.txt",
+        (int)demo_filepfx_len,
+        demo_filepfx
+    );
+    f = M_OpenFile(filename, "wb");
 
   if (f == NULL)
   {
-    lprintf(LO_ERROR, "Unable to open levelstat.txt for writing\n");
+    lprintf(LO_ERROR, "Unable to open %s for writing\n", filename);
     return;
   }
 

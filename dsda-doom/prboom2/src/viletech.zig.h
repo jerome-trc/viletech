@@ -25,6 +25,9 @@ void coreDeinit(CCore*);
 
 void registerPref(CCore*, const char* pref_v);
 
+/// The returned pointer is not null-terminated!
+const char* pathStem(const char* path, size_t* out_len);
+
 // DeHackEd action pointers ////////////////////////////////////////////////////
 
 void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);

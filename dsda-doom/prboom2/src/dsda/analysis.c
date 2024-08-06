@@ -20,6 +20,7 @@
 
 #include "dsda/excmd.h"
 #include "dsda/exdemo.h"
+#include "dsda/playback.h"
 #include "dsda/settings.h"
 
 #include "analysis.h"
@@ -79,12 +80,22 @@ void dsda_WriteAnalysis(void) {
 
   if (!dsda_analysis) return;
 
-  fstream = M_OpenFile("analysis.txt", "w");
+    char filename[256];
+    size_t demo_filepfx_len = 0;
+    const char* demo_filepfx = pathStem(dsda_PlaybackName(), &demo_filepfx_len);
+    snprintf(
+        filename,
+        sizeof(filename),
+        "analysis.%.*s.txt",
+        (int)demo_filepfx_len,
+        demo_filepfx
+    );
+    fstream = M_OpenFile(filename, "w");
 
-  if (fstream == NULL) {
-    fprintf(stderr, "Unable to open analysis.txt for writing!\n");
-    return;
-  }
+    if (fstream == NULL) {
+        fprintf(stderr, "Unable to open %s for writing\n", filename);
+        return;
+    }
 
   category = dsda_DetectCategory();
   is_signed = dsda_IsExDemoSigned();
