@@ -74,14 +74,31 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
             0,
         );
 
-        const num_entries = std.math.lossyCast(usize, c.numlumps);
+        var num_lumps_filtered: usize = 0;
+        const filter = std.mem.sliceTo(&self.filter_buf, 0);
+
+        for (0..std.math.lossyCast(usize, c.numlumps)) |i| {
+            const lmp: c.LumpNum = @intCast(i);
+            const entry_name = std.mem.sliceTo(c.W_LumpName(lmp).?, 0);
+
+            const filter_find = if (self.filter_case_sensitive)
+                std.mem.indexOf(u8, entry_name, filter)
+            else
+                std.ascii.indexOfIgnoreCase(entry_name, filter);
+
+            if (filter_find) |_| {} else if (filter.len < 1) {} else {
+                continue;
+            }
+
+            num_lumps_filtered += 1;
+        }
 
         const clipper = imgui.Clipper.init() catch {
             imgui.report_err_clipper_ctor.call();
             break :scroll;
         };
         defer clipper.deinit();
-        clipper.begin(num_entries, 16.0);
+        clipper.begin(num_lumps_filtered, 16.0);
 
         var popup_shown = false;
 
@@ -89,18 +106,16 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
             var i = clipper.displayStart();
             var l = i;
 
-            while ((i < clipper.displayEnd()) and (l < num_entries)) {
+            while ((i < clipper.displayEnd()) and (l < c.numlumps)) {
                 defer l += 1;
 
                 const lmp: c.LumpNum = @intCast(l);
-                const entryName = std.mem.sliceTo(c.W_LumpName(lmp).?, 0);
-
-                const filter = std.mem.sliceTo(&self.filter_buf, 0);
+                const entry_name = std.mem.sliceTo(c.W_LumpName(lmp).?, 0);
 
                 const filter_find = if (self.filter_case_sensitive)
-                    std.mem.indexOf(u8, entryName, filter)
+                    std.mem.indexOf(u8, entry_name, filter)
                 else
-                    std.ascii.indexOfIgnoreCase(entryName, filter);
+                    std.ascii.indexOfIgnoreCase(entry_name, filter);
 
                 if (filter_find) |_| {} else if (filter.len < 1) {} else {
                     continue;
@@ -110,7 +125,7 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
                 defer i += 1;
 
                 _ = c.igTableSetColumnIndex(0);
-                imgui.textUnformatted(entryName);
+                imgui.textUnformatted(entry_name);
                 tryContextMenu(cx, &popup_shown, lmp);
 
                 _ = c.igTableSetColumnIndex(1);

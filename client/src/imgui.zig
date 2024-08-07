@@ -80,6 +80,10 @@ pub const Clipper = packed struct {
     pub fn displayEnd(self: Self) usize {
         return @intCast(self.ptr.*.DisplayEnd);
     }
+
+    pub fn includeItem(self: Self, index: usize) void {
+        c.ImGuiListClipper_IncludeItemByIndex(self.ptr, std.math.lossyCast(c_int, index));
+    }
 };
 
 pub const Vec2 = extern struct { x: f32 = 0.0, y: f32 = 0.0 };
