@@ -48,6 +48,8 @@
 #include "dsda.h"
 #include "v_video.h"
 
+#include "heretic/p_action.h"
+
 #include "dsda.h"
 #include "dsda/aim.h"
 #include "dsda/excmd.h"
@@ -675,12 +677,7 @@ void A_CheckReload(CCore* cx, player_t *player, pspdef_t *psp)
   }
 }
 
-//
-// A_Lower
-// Lowers current weapon,
-//  and changes weapon at bottom.
-//
-
+/// Lowers current weapon, and changes weapon at bottom.
 void A_Lower(CCore* cx, player_t *player, pspdef_t *psp)
 {
   CHECK_WEAPON_CODEPOINTER("A_Lower", player);
@@ -2241,18 +2238,22 @@ void A_PhoenixPuff(CCore* cx, mobj_t* actor)
 // This function was present in the Heretic 1.0 executable for the
 // removed "secondary phoenix flash" object (MT_PHOENIXFX_REMOVED).
 // The purpose of this object is unknown, as is this function.
-void A_RemovedPhoenixFunc(mobj_t *actor) {
+void A_RemovedPhoenixFunc(CCore* cx, mobj_t *actor) {
+    (void)cx;
     (void)actor;
 }
 
-void A_InitPhoenixPL2(player_t * player, pspdef_t * psp)
+void A_InitPhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)cx;
     (void)psp;
     player->flamecount = FLAME_THROWER_TICS;
 }
 
 void A_FirePhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)psp;
+
     mobj_t *mo;
     mobj_t *pmo;
     angle_t angle;
@@ -2290,18 +2291,22 @@ void A_FirePhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
     P_CheckMissileSpawn(cx, mo);
 }
 
-void A_ShutdownPhoenixPL2(player_t * player, pspdef_t * psp)
+void A_ShutdownPhoenixPL2(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)cx;
+    (void)psp;
     player->ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
 }
 
 void A_FlameEnd(CCore* cx, mobj_t* actor)
 {
+    (void)cx;
     actor->momz += (fixed_t)(1.5 * FRACUNIT);
 }
 
-void A_FloatPuff(mobj_t * puff)
+void A_FloatPuff(CCore* cx, mobj_t * puff)
 {
+    (void)cx;
     puff->momz += (fixed_t)(1.8 * FRACUNIT);
 }
 
@@ -3046,7 +3051,7 @@ void A_MStaffAttack(CCore* cx, player_t * player, pspdef_t * psp)
     }
 }
 
-void A_MStaffPalette(player_t * player, pspdef_t * psp)
+void A_MStaffPalette(CCore* cx, player_t * player, pspdef_t * psp)
 {
     int pal;
 
@@ -3122,6 +3127,8 @@ void A_MStaffAttack2(CCore* cx, mobj_t* actor)
 
 void A_FPunchAttack(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)psp;
+
     angle_t angle;
     int damage;
     int slope;
@@ -3399,8 +3406,9 @@ void A_CStaffMissileSlither(CCore* cx, mobj_t * actor)
     actor->special2.i = weaveXY;
 }
 
-void A_CStaffInitBlink(player_t * player, pspdef_t * psp)
+void A_CStaffInitBlink(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)psp;
     player->mo->special1.i = (P_Random(pr_hexen) >> 1) + 20;
 }
 
@@ -3578,8 +3586,10 @@ void A_CHolyAttack(CCore* cx, player_t * player, pspdef_t * psp)
     S_StartMobjSound(player->mo, hexen_sfx_choly_fire);
 }
 
-void A_CHolyPalette(player_t * player, pspdef_t * psp)
+void A_CHolyPalette(CCore* cx, player_t * player, pspdef_t * psp)
 {
+    (void)cx;
+
     int pal;
 
     if (player == &players[consoleplayer])

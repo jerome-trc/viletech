@@ -3108,7 +3108,7 @@ void P_BlasterMobjThinker(CCore* cx, void* v)
     }
 }
 
-void A_ContMobjSound(mobj_t * actor)
+void A_ContMobjSound(CCore* cx, mobj_t * actor)
 {
     switch (actor->type)
     {

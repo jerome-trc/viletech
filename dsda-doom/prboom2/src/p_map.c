@@ -1416,7 +1416,8 @@ void P_AdjustZLimits(mobj_t *thing)
 
 static dboolean Hexen_P_TryMove(CCore*, mobj_t*, fixed_t x, fixed_t y);
 
-void P_CheckCompatibleImpact(mobj_t *thing) {
+void P_CheckCompatibleImpact(CCore* cx, mobj_t *thing) {
+    (void) cx;
     (void) thing; // nothing in doom
 }
 
@@ -1504,7 +1505,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
   if (!P_CheckPosition(cx, thing, x, y))
   {                           // Solid wall or thing
     if (heretic || !BlockingMobj || BlockingMobj->player || !thing->player)
-      map_format.check_impact(thing);
+      map_format.check_impact(cx, thing);
     return false;
   }
 
@@ -1540,7 +1541,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
       )
     )
     {
-      map_format.check_impact(thing);
+      map_format.check_impact(cx, thing);
       return tmunstuck
         && !(ceilingline && untouched(ceilingline))
         && !(  floorline && untouched(  floorline));
@@ -1551,14 +1552,14 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
       if (thing->z + thing->height > tmceilingz)
       {
         thing->momz = -8 * FRACUNIT;
-        map_format.check_impact(thing);
+        map_format.check_impact(cx, thing);
         return false;
       }
       else if (thing->z < tmfloorz
                && tmfloorz - tmdropoffz > 24 * FRACUNIT)
       {
         thing->momz = 8 * FRACUNIT;
-        map_format.check_impact(thing);
+        map_format.check_impact(cx, thing);
         return false;
       }
     }
@@ -1571,7 +1572,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
     {
       dsda_WatchLedgeImpact(cx, thing, tmfloorz);
 
-      map_format.check_impact(thing);
+      map_format.check_impact(cx, thing);
       return tmunstuck
         && !(ceilingline && untouched(ceilingline))
         && !(  floorline && untouched(  floorline));
@@ -1579,7 +1580,7 @@ dboolean P_TryMove(CCore* cx, mobj_t* thing,fixed_t x,fixed_t y,
 
     if (heretic && tmfloorz > thing->z)
     {
-      map_format.check_impact(thing);
+      map_format.check_impact(cx, thing);
     }
 
     /* killough 3/15/98: Allow certain objects to drop off

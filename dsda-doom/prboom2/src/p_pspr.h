@@ -159,4 +159,25 @@ void P_SetPspriteNF(struct player_s*, int position, statenum_t);
 void P_PostMorphWeapon(CCore*, struct player_s*, weapontype_t);
 void P_ActivateMorphWeapon(CCore*, struct player_s*);
 
+void A_FPunchAttack(CCore*, struct player_s*, pspdef_t*);
+void A_FAxeAttack(CCore*, struct player_s*, pspdef_t*);
+void A_FHammerThrow(CCore*, struct player_s*, pspdef_t*);
+void A_FHammerAttack(CCore*, struct player_s*, pspdef_t*);
+void A_CHolyPalette(CCore*, struct player_s*, pspdef_t*);
+void A_CHolyAttack(CCore*, struct player_s*, pspdef_t*);
+void A_MStaffPalette(CCore*, struct player_s*, pspdef_t*);
+void A_SnoutAttack(CCore*, struct player_s*, pspdef_t*);
+void A_FSwordAttack(CCore*, struct player_s*, pspdef_t*);
+void A_CMaceAttack(CCore*, struct player_s*, pspdef_t*);
+void A_CStaffInitBlink(CCore*, struct player_s*, pspdef_t*);
+void A_CStaffCheckBlink(CCore*, struct player_s*, pspdef_t*);
+void A_CStaffCheck(CCore*, struct player_s*, pspdef_t*);
+void A_CStaffAttack(CCore*, struct player_s*, pspdef_t*);
+void A_CFlameAttack(CCore*, struct player_s*, pspdef_t*);
+void A_MWandAttack(CCore*, struct player_s*, pspdef_t*);
+void A_LightningReady(CCore*, struct player_s*, pspdef_t*);
+void A_MLightningAttack(CCore*, struct player_s*, pspdef_t*);
+void A_MStaffAttack(CCore*, struct player_s*, pspdef_t*);
+void A_FireConePL1(CCore*, struct player_s*, pspdef_t*);
+
 #endif

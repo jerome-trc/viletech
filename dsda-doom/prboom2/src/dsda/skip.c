@@ -23,6 +23,7 @@
 #include "s_sound.h"
 #include "v_video.h"
 #include "gl_struct.h"
+#include "m_menu.h"
 
 #include "dsda/args.h"
 #include "dsda/build.h"
@@ -68,13 +69,11 @@ static void dsda_ResetSkipSettings(void) {
 }
 
 void dsda_EnterSkipMode(CCore* cx) {
-  extern void M_ClearMenus(void);
-
   dsda_TrackFeature(uf_skip);
 
   skip_mode = true;
 
-  M_ClearMenus();
+  M_ClearMenus(cx);
   dsda_ApplySkipSettings();
   dsda_ResetPauseMode();
   S_StopMusic(cx);

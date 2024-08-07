@@ -170,4 +170,8 @@ dboolean P_MoveThing(CCore*, mobj_t*, fixed_t x, fixed_t y, fixed_t z, dboolean 
 int P_SplashDamage(fixed_t dist);
 void P_AdjustZLimits(mobj_t *thing);
 
+void P_CheckCompatibleImpact(CCore*, mobj_t *);
+void P_CheckHereticImpact(CCore*, mobj_t *);
+void P_CheckZDoomImpact(CCore*, mobj_t *);
+
 #endif // __P_MAP__

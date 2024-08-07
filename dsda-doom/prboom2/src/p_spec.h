@@ -1642,4 +1642,35 @@ int EV_TeleportInSector(CCore*, int tag, short source_tid, short dest_tid,
 #define TELF_VANILLA (TELF_SOURCEFOG|TELF_DESTFOG)
 #define TELF_SILENT (TELF_KEEPORIENTATION|TELF_ROTATEBOOM|TELF_KEEPHEIGHT)
 
+void P_PlayerInCompatibleSector(CCore*, player_t*, sector_t*);
+void P_PlayerInZDoomSector(CCore*, player_t*, sector_t*);
+void P_PlayerInHereticSector(CCore*, player_t*, sector_t*);
+void P_PlayerInHexenSector(CCore*, player_t*, sector_t*);
+
+void P_ShootCompatibleSpecialLine(CCore*, mobj_t*, line_t*);
+void P_ShootHexenSpecialLine(CCore*, mobj_t*, line_t*);
+
+dboolean P_TestActivateZDoomLine(line_t*, mobj_t*, int side, line_activation_t);
+dboolean P_TestActivateHexenLine(line_t*, mobj_t*, int side, line_activation_t);
+
+void P_CrossCompatibleSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+void P_CrossZDoomSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+void P_CrossHereticSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+void P_CrossHexenSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
+
+void P_SpawnCompatibleSectorSpecial(sector_t *sector, int i);
+void P_SpawnZDoomSectorSpecial(sector_t *sector, int i);
+
+void P_SpawnCompatibleScroller(line_t *l, int i);
+void P_SpawnZDoomScroller(line_t *l, int i);
+
+void P_SpawnCompatibleFriction(line_t *l);
+void P_SpawnZDoomFriction(line_t *l);
+
+void P_SpawnCompatiblePusher(line_t *l);
+void P_SpawnZDoomPusher(line_t *l);
+
+void P_SpawnCompatibleExtra(line_t *l, int i);
+void P_SpawnZDoomExtra(line_t *l, int i);
+
 #endif

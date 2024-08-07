@@ -12,11 +12,13 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
+
 #include "p_mobj.h"
 #include "p_action.h"
 #include "sounds.h"
 #include "info.h"
+#include "p_pspr.h"
+#include "p_enemy.h"
 
 const char *heretic_sprnames[HERETIC_NUMSPRITES + 1] = {
     "IMPX","ACLO","PTN1","SHLD","SHD2","BAGH","SPMP","INVS","PTN2","SOAR",

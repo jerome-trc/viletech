@@ -34,6 +34,7 @@
 #include "doomstat.h"
 #include "am_map.h"
 #include "g_game.h"
+#include "p_enemy.h"
 #include "p_inter.h"
 #include "p_tick.h"
 #include "m_cheat.h"
@@ -562,7 +563,6 @@ static void cheat_massacre(CCore* cx, void* v) // jff 2/01/98 kill all monsters
 
   int killcount=0;
   thinker_t *currentthinker = NULL;
-  extern void A_PainDie(mobj_t *);
 
   // killough 7/20/98: kill friendly monsters only if no others to kill
   uint64_t mask = MF_FRIEND;
@@ -581,7 +581,7 @@ static void cheat_massacre(CCore* cx, void* v) // jff 2/01/98 kill all monsters
           }
         if (((mobj_t *) currentthinker)->type == MT_PAIN)
           {
-            A_PainDie((mobj_t *) currentthinker);    // killough 2/8/98
+            A_PainDie(cx, (mobj_t *) currentthinker); // killough 2/8/98
             P_SetMobjState (cx, (mobj_t *) currentthinker, S_PAIN_DIE6);
           }
       }

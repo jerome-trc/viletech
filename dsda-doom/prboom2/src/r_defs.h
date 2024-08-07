@@ -227,7 +227,7 @@ typedef struct sector_s
 #define SF_LIGHTABSOLUTEMID    0x0100
 #define SF_LIGHTABSOLUTEBOTTOM 0x0200
 
-typedef struct
+typedef struct side_s
 {
   fixed_t textureoffset; // add this to the calculated texture column
   fixed_t rowoffset;     // add this to the calculated texture top

@@ -2237,8 +2237,8 @@ static dboolean Hexen_P_UseArtifact(CCore* cx, player_t * player, artitype_t art
     return true;
 }
 
-void A_SpeedFade(mobj_t * actor)
-{
+void A_SpeedFade(CCore* cx, mobj_t * actor) {
+    (void)cx;
     actor->flags |= MF_SHADOW;
     actor->flags &= ~MF_ALTSHADOW;
     actor->sprite = actor->target->sprite;

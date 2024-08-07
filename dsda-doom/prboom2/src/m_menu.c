@@ -272,7 +272,6 @@ void M_DrawTitle(int x, int y, const char *patch, int cm,
 void M_StartMessage(CCore*, const char *string,void *routine,dboolean input);
 void M_StopMessage(CCore*);
 void M_ChangeMenu(CCore*, menu_t*, menuactive_t);
-void M_ClearMenus(CCore*);
 
 // phares 3/30/98
 // prototypes added to support Setup Menus and Extended HELP screens

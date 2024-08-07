@@ -4693,7 +4693,7 @@ void A_MakePod(CCore* cx, mobj_t* actor)
     return;
 }
 
-void A_ESound(mobj_t * mo)
+void A_ESound(CCore* cx, mobj_t * mo)
 {
     int sound = heretic_sfx_None;
 
@@ -4711,6 +4711,7 @@ void A_ESound(mobj_t * mo)
         default:
             break;
     }
+
     S_StartMobjSound(mo, sound);
 }
 
@@ -4854,8 +4855,10 @@ void A_CheckBurnGone(CCore* cx, mobj_t* actor)
     }
 }
 
-void A_FreeTargMobj(mobj_t * mo)
+void A_FreeTargMobj(CCore* cx, mobj_t * mo)
 {
+    (void)cx;
+
     mo->momx = mo->momy = mo->momz = 0;
     mo->z = mo->ceilingz + 4 * FRACUNIT;
     mo->flags &= ~(MF_SHOOTABLE | MF_FLOAT | MF_SKULLFLY | MF_SOLID);
@@ -4864,11 +4867,10 @@ void A_FreeTargMobj(mobj_t * mo)
     mo->player = NULL;
 
     // hexen_note: can we do this in heretic too?
-    if (hexen)
-    {
-      mo->flags &= ~(MF_COUNTKILL);
-      mo->flags2 |= MF2_DONTDRAW;
-      mo->health = -1000;         // Don't resurrect
+    if (hexen) {
+        mo->flags &= ~(MF_COUNTKILL);
+        mo->flags2 |= MF2_DONTDRAW;
+        mo->health = -1000; // Don't resurrect
     }
 }
 

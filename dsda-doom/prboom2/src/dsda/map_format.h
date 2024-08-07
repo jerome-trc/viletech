@@ -55,7 +55,7 @@ typedef struct {
   void (*post_process_line_special)(line_t *);
   void (*post_process_sidedef_special)(side_t *, const mapsidedef_t *, sector_t *, int);
   void (*animate_surfaces)(void);
-  void (*check_impact)(mobj_t *);
+  void (*check_impact)(CCore*, mobj_t *);
   void (*translate_line_flags)(unsigned int *, line_activation_t *);
   void (*apply_sector_movement_special)(mobj_t *, int);
   void (*t_vertical_door)(CCore*, vldoor_t *);

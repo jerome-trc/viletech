@@ -38,6 +38,10 @@
 
 #include "viletech.zig.h"
 
+struct line_s;
+struct sector_s;
+struct side_s;
+
 void P_SetupLevel(CCore*, int episode, int map, int playermask, int skill);
 void P_Init(void);               /* Called by startup code. */
 
@@ -84,5 +88,14 @@ typedef struct
 
 extern map_loader_t map_loader;
 
+void P_PostProcessCompatibleLineSpecial(struct line_s*);
+void P_PostProcessHereticLineSpecial(struct line_s*);
+void P_PostProcessHexenLineSpecial(struct line_s*);
+void P_PostProcessZDoomLineSpecial(struct line_s*);
+
+void P_PostProcessCompatibleSidedefSpecial(struct side_s*, const mapsidedef_t*, struct sector_s*, int i);
+void P_PostProcessHereticSidedefSpecial(struct side_s*, const mapsidedef_t*, struct sector_s*, int i);
+void P_PostProcessHexenSidedefSpecial(struct side_s*, const mapsidedef_t*, struct sector_s*, int i);
+void P_PostProcessZDoomSidedefSpecial(struct side_s*, const mapsidedef_t*, struct sector_s*, int i);
 
 #endif

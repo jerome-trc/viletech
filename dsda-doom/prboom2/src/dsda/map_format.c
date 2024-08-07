@@ -20,6 +20,8 @@
 #include "p_spec.h"
 #include "r_main.h"
 #include "r_state.h"
+#include "p_setup.h"
+#include "p_map.h"
 
 #include "map_format.h"
 
@@ -182,55 +184,10 @@ static void dsda_MigrateMobjInfo(void) {
   }
 }
 
-extern void P_SpawnCompatibleSectorSpecial(sector_t *sector, int i);
-extern void P_SpawnZDoomSectorSpecial(sector_t *sector, int i);
-
-extern void P_PlayerInCompatibleSector(CCore*, player_t*, sector_t*);
-extern void P_PlayerInZDoomSector(CCore*, player_t*, sector_t*);
-extern void P_PlayerInHereticSector(CCore*, player_t*, sector_t*);
-extern void P_PlayerInHexenSector(CCore*, player_t*, sector_t*);
-
-extern void P_SpawnCompatibleScroller(line_t *l, int i);
-extern void P_SpawnZDoomScroller(line_t *l, int i);
-
-extern void P_SpawnCompatibleFriction(line_t *l);
-extern void P_SpawnZDoomFriction(line_t *l);
-
-extern void P_SpawnCompatiblePusher(line_t *l);
-extern void P_SpawnZDoomPusher(line_t *l);
-
-extern void P_SpawnCompatibleExtra(line_t *l, int i);
-extern void P_SpawnZDoomExtra(line_t *l, int i);
-
-extern void P_CrossCompatibleSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
-extern void P_CrossZDoomSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
-extern void P_CrossHereticSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
-extern void P_CrossHexenSpecialLine(CCore*, line_t*, int side, mobj_t*, dboolean bossaction);
-
-extern void P_ShootCompatibleSpecialLine(CCore*, mobj_t*, line_t*);
-extern void P_ShootHexenSpecialLine(CCore*, mobj_t*, line_t*);
-
-extern dboolean P_TestActivateZDoomLine(line_t *line, mobj_t *mo, int side, line_activation_t activationType);
-extern dboolean P_TestActivateHexenLine(line_t *line, mobj_t *mo, int side, line_activation_t activationType);
-
-extern void P_PostProcessCompatibleLineSpecial(line_t *ld);
-extern void P_PostProcessHereticLineSpecial(line_t *ld);
-extern void P_PostProcessHexenLineSpecial(line_t *ld);
-extern void P_PostProcessZDoomLineSpecial(line_t *ld);
-
-extern void P_PostProcessCompatibleSidedefSpecial(side_t *sd, const mapsidedef_t *msd, sector_t *sec, int i);
-extern void P_PostProcessHereticSidedefSpecial(side_t *sd, const mapsidedef_t *msd, sector_t *sec, int i);
-extern void P_PostProcessHexenSidedefSpecial(side_t *sd, const mapsidedef_t *msd, sector_t *sec, int i);
-extern void P_PostProcessZDoomSidedefSpecial(side_t *sd, const mapsidedef_t *msd, sector_t *sec, int i);
-
 extern void P_AnimateCompatibleSurfaces(void);
 extern void P_AnimateHereticSurfaces(void);
 extern void P_AnimateHexenSurfaces(void);
 extern void P_AnimateZDoomSurfaces(void);
-
-extern void P_CheckCompatibleImpact(mobj_t *);
-extern void P_CheckHereticImpact(mobj_t *);
-extern void P_CheckZDoomImpact(mobj_t *);
 
 extern void P_TranslateHexenLineFlags(unsigned int *, line_activation_t *);
 extern void P_TranslateZDoomLineFlags(unsigned int *, line_activation_t *);

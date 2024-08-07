@@ -174,5 +174,6 @@ void M_ChangeMessages(CCore*);
 extern dboolean delete_verify;
 
 dboolean M_ConsoleOpen(void);
+void M_ClearMenus(CCore*);
 
 #endif

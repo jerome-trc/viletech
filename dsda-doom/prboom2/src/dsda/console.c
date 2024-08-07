@@ -1221,18 +1221,6 @@ static dboolean console_BuildTurbo(CCore* cx, const char* command, const char* a
   return true;
 }
 
-static dboolean console_Exit(CCore* cx, const char* command, const char* args) {
-  extern void M_ClearMenus(void);
-
-    (void)cx;
-    (void)command;
-    (void)args;
-
-  M_ClearMenus();
-
-  return true;
-}
-
 static dboolean console_BasicCheat(CCore* cx, const char* command, const char* args) {
   (void)cx;
   return M_CheatEntered(cx, command, args);
@@ -2931,9 +2919,6 @@ static console_command_entry_t console_commands[] = {
   { "visit", console_BasicCheat, CF_DEMO },
   { "puke", console_BasicCheat, CF_DEMO },
 
-  // exit
-  { "exit", console_Exit, CF_ALWAYS },
-  { "quit", console_Exit, CF_ALWAYS },
   { NULL }
 };
 
