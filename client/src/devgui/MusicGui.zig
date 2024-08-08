@@ -22,13 +22,23 @@ const Song = struct {
 
 alloc: std.heap.ArenaAllocator,
 collections: std.ArrayList(Collection),
+prng: std.Random.Pcg,
 
 pub fn init(alloc: std.mem.Allocator) Self {
     var arena = std.heap.ArenaAllocator.init(alloc);
 
+    const rng_seed = if (std.time.Instant.now()) |now|
+        if (@TypeOf(now.timestamp) == std.posix.timespec)
+            now.timestamp.tv_nsec
+        else
+            now.timestamp
+    else |_|
+        0;
+
     return Self{
         .alloc = arena,
         .collections = std.ArrayList(Collection).init(arena.allocator()),
+        .prng = std.Random.Pcg.init(@intCast(rng_seed)),
     };
 }
 
@@ -170,14 +180,55 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
     if (!c.igBegin(
         "Music",
         null,
-        c.ImGuiWindowFlags_NoTitleBar | c.ImGuiWindowFlags_NoResize,
+        c.ImGuiWindowFlags_NoTitleBar |
+            c.ImGuiWindowFlags_NoResize |
+            c.ImGuiWindowFlags_MenuBar,
     )) return;
 
     defer c.igEnd();
 
+    if (c.igBeginMenuBar()) {
+        if (c.igButton("Stop", .{ .x = 0.0, .y = 0.0 })) {
+            c.S_StopMusic(@ptrCast(&cx.c));
+        }
+
+        if (c.igButton("Restart", .{ .x = 0.0, .y = 0.0 })) {
+            c.S_StopMusic(@ptrCast(&cx.c));
+            c.S_RestartMusic(@ptrCast(&cx.c));
+        }
+
+        if (c.igButton("Play Random", .{ .x = 0.0, .y = 0.0 })) {
+            const coll_i = self.prng.random().intRangeAtMost(
+                usize,
+                0,
+                self.collections.items.len - 1,
+            );
+            const coll = &self.collections.items[coll_i];
+            const song_i = self.prng.random().intRangeAtMost(
+                usize,
+                0,
+                coll.songs.items.len - 1,
+            );
+            const song = &coll.songs.items[song_i];
+            c.S_ChangeMusInfoMusic(@ptrCast(&cx.c), song.lump, @intFromBool(true));
+        }
+
+        defer c.igEndMenuBar();
+    }
+
     for (self.collections.items, 0..) |coll, i| {
         if (!c.igTreeNode_Str(coll.name)) continue;
         defer c.igTreePop();
+
+        if (c.igButton("Play Random", .{ .x = 0.0, .y = 0.0 })) {
+            const song_i = self.prng.random().intRangeAtMost(
+                usize,
+                0,
+                coll.songs.items.len - 1,
+            );
+            const song = &coll.songs.items[song_i];
+            c.S_ChangeMusInfoMusic(@ptrCast(&cx.c), song.lump, @intFromBool(true));
+        }
 
         var buf: [64]u8 = undefined;
         var fba = std.heap.FixedBufferAllocator.init(&buf);
