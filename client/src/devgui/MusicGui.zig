@@ -22,6 +22,8 @@ const Song = struct {
 
 alloc: std.heap.ArenaAllocator,
 collections: std.ArrayList(Collection),
+filter_buf: [256]u8,
+filter_case_sensitive: bool,
 prng: std.Random.Pcg,
 
 pub fn init(alloc: std.mem.Allocator) Self {
@@ -39,6 +41,8 @@ pub fn init(alloc: std.mem.Allocator) Self {
         .alloc = arena,
         .collections = std.ArrayList(Collection).init(arena.allocator()),
         .prng = std.Random.Pcg.init(@intCast(rng_seed)),
+        .filter_buf = [_]u8{0} ** 256,
+        .filter_case_sensitive = false,
     };
 }
 
@@ -206,6 +210,8 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
     defer c.igEnd();
 
     if (c.igBeginMenuBar()) {
+        defer c.igEndMenuBar();
+
         if (c.igButton("Stop", .{ .x = 0.0, .y = 0.0 })) {
             c.S_StopMusic(@ptrCast(&cx.c));
         }
@@ -231,8 +237,18 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
             c.S_ChangeMusInfoMusic(@ptrCast(&cx.c), song.lump, @intFromBool(true));
         }
 
-        defer c.igEndMenuBar();
+        if (imgui.inputText("Filter##vfsgui.filter", self.filterBufSlice(), .{}, null, null)) {}
+        c.igSameLine(0.0, -1.0);
+        _ = c.igCheckbox("aA##vfsgui.filter_case_sensitive", &self.filter_case_sensitive);
+
+        if (self.filter_case_sensitive) {
+            c.igSetItemTooltip("Filtering: Case Sensitively");
+        } else {
+            c.igSetItemTooltip("Filtering: Case Insensitively");
+        }
     }
+
+    const filter = std.mem.sliceTo(&self.filter_buf, 0);
 
     for (self.collections.items, 0..) |coll, i| {
         if (!c.igTreeNode_Str(coll.name)) continue;
@@ -278,6 +294,20 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
         );
 
         for (coll.songs.items) |song| {
+            if (filter.len > 0) {
+                const filt_title = if (self.filter_case_sensitive)
+                    std.mem.indexOf(u8, song.title, filter)
+                else
+                    std.ascii.indexOfIgnoreCase(song.title, filter);
+
+                const filt_artist = if (self.filter_case_sensitive)
+                    std.mem.indexOf(u8, song.artist, filter)
+                else
+                    std.ascii.indexOfIgnoreCase(song.artist, filter);
+
+                if (filt_title) |_| {} else if (filt_artist) |_| {} else continue;
+            }
+
             c.igTableNextRow(c.ImGuiTableRowFlags_None, 0.0);
             _ = c.igTableSetColumnIndex(0);
 
@@ -300,6 +330,10 @@ fn numSongs(self: *const Self) usize {
     }
 
     return ret;
+}
+
+fn filterBufSlice(self: *Self) [:0]u8 {
+    return self.filter_buf[0..(@sizeOf(@TypeOf(self.filter_buf)) - 1) :0];
 }
 
 export fn populateMusicPlayer(ccx: *Core.C) void {
