@@ -71,6 +71,11 @@ pub fn build(b: *std.Build) void {
     fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/burst-shotgun.dh"));
     fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/revolver.dh"));
     fd4rb.step.dependOn(&fd4rb_decohack.step);
+
+    if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
+        const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
+        @import("tunetech").djwad(b.allocator, dir) catch unreachable;
+    } else |_| {}
 }
 
 fn commonDependencies(
