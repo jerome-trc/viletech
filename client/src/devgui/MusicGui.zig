@@ -106,24 +106,42 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
         var ii: usize = 0;
 
         while (iter.next()) |line| {
+            if (line.len == 0) break;
+
             var parts = std.mem.splitSequence(u8, line, "__");
             defer ii += 1;
 
             const title = parts.next() orelse {
-                c.I_Error("DSKJOCKY lump %i is missing a song title at line %lu", lmp_num, ii);
+                c.I_Error(
+                    "DSKJOCKY lump \"%.*s\" is missing a song title at line %lu",
+                    new_coll.name.len,
+                    new_coll.name.ptr,
+                    ii,
+                );
             };
             const artist = parts.next() orelse {
-                c.I_Error("DSKJOCKY lump %i is missing an artist at line %lu", lmp_num, ii);
+                c.I_Error(
+                    "DSKJOCKY lump \"%.*s\" is missing an artist at line %lu",
+                    new_coll.name.len,
+                    new_coll.name.ptr,
+                    ii,
+                );
             };
             const mus_lmp = parts.next() orelse {
-                c.I_Error("DSKJOCKY lump %i is missing a lump name at line %lu", lmp_num, ii);
+                c.I_Error(
+                    "DSKJOCKY lump \"%.*s\" is missing a lump name at line %lu",
+                    new_coll.name.len,
+                    new_coll.name.ptr,
+                    ii,
+                );
             };
             const mus_lmp_trimmed = std.mem.trim(u8, mus_lmp, " \r\n\t");
 
             const resolved = map.get(mus_lmp_trimmed) orelse {
                 c.I_Error(
-                    "DSKJOCKY lump %i, line %lu lump name `%.*s` was not found",
-                    lmp_num,
+                    "DSKJOCKY lump \"%.*s\", line %lu lump name `%.*s` was not found",
+                    new_coll.name.len,
+                    new_coll.name.ptr,
                     ii,
                     mus_lmp_trimmed.len,
                     mus_lmp_trimmed.ptr,
