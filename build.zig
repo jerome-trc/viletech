@@ -64,7 +64,7 @@ pub fn build(b: *std.Build) void {
         "-s",
         "zig-out/fd4rb.wad",
         "-o",
-        "zig-out/fd4rb.wad",
+        "zig-out/fd4rb.deh",
         "plugins/fd4rb/decohack/burst-shotgun.dh",
         "plugins/fd4rb/decohack/revolver.dh",
     });
@@ -76,6 +76,20 @@ pub fn build(b: *std.Build) void {
         const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
     } else |_| {}
+
+    const vilebuild = b.addExecutable(.{
+        .name = "vilebuild",
+        .root_source_file = b.path("vilebuild/main.zig"),
+        .target = target,
+        .optimize = .Debug,
+    });
+    vilebuild.linkLibC();
+    b.installArtifact(vilebuild);
+
+    const dehpp = b.addRunArtifact(vilebuild);
+    dehpp.step.dependOn(&fd4rb_decohack.step);
+    dehpp.addFileInput(b.path("zig-out/fd4rb.deh"));
+    fd4rb.step.dependOn(&dehpp.step);
 }
 
 fn commonDependencies(
