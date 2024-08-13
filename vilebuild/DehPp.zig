@@ -31,6 +31,8 @@ const actions_with_state_args = std.StaticStringMap(State).initComptime(.{
     .{ "RefireTo", State{ .inc_arg1 = true } },
     .{ "GunFlashTo", State{ .inc_arg1 = true } },
     // RatBoom-specific ////////////////////////////////////////////////////////
+    .{ "BorstalShotgunCheckOverloaded", State{ .inc_arg1 = true } },
+    .{ "BorstalShotgunCheckReload", State{ .inc_arg1 = true } },
     .{ "BurstShotgunCheckVent", State{ .inc_arg1 = true } },
     .{ "RevolverCheckReload", State{ .inc_arg1 = true } },
 });
@@ -40,9 +42,9 @@ arena: std.heap.ArenaAllocator,
 pub fn run() !void {
     var cwd = std.fs.cwd();
 
-    var in_file = try cwd.openFile("zig-out/fd4rb.deh", .{});
+    var in_file = try cwd.openFile(".zig-cache/fd4rb/fd4rb.deh", .{});
     defer in_file.close();
-    var out_file = try cwd.createFile("zig-out/fd4rb.out.deh", .{});
+    var out_file = try cwd.createFile(".zig-cache/fd4rb/fd4rb.out.deh", .{});
     defer out_file.close();
 
     var self = Self{

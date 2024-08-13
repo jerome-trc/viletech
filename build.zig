@@ -48,6 +48,8 @@ pub fn build(b: *std.Build) void {
     @import("depend/build.cimgui.zig").moduleLink(b, module);
     module.addImport("zig-args", b.dependency("zig-args", .{}).module("args"));
 
+    std.fs.cwd().makePath(".zig-cache/fd4rb") catch unreachable;
+
     const fd4rb = b.addSharedLibrary(.{
         .name = "fd4rb",
         .root_source_file = b.path("plugins/fd4rb/src/root.zig"),
@@ -62,14 +64,22 @@ pub fn build(b: *std.Build) void {
         "decohack",
         "--budget",
         "-s",
-        "zig-out/fd4rb.wad",
+        ".zig-cache/fd4rb/fd4rb.dh",
         "-o",
-        "zig-out/fd4rb.deh",
+        ".zig-cache/fd4rb/fd4rb.deh",
+        "plugins/fd4rb/decohack/borstal-shotgun.dh",
         "plugins/fd4rb/decohack/burst-shotgun.dh",
         "plugins/fd4rb/decohack/revolver.dh",
     });
-    fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/burst-shotgun.dh"));
-    fd4rb_decohack.addFileInput(b.path("plugins/fd4rb/decohack/revolver.dh"));
+
+    for ([_][]const u8{
+        "plugins/fd4rb/decohack/borstal-shotgun.dh",
+        "plugins/fd4rb/decohack/burst-shotgun.dh",
+        "plugins/fd4rb/decohack/revolver.dh",
+    }) |p| {
+        fd4rb_decohack.addFileInput(b.path(p));
+    }
+
     fd4rb.step.dependOn(&fd4rb_decohack.step);
 
     if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
@@ -88,7 +98,7 @@ pub fn build(b: *std.Build) void {
 
     const dehpp = b.addRunArtifact(vilebuild);
     dehpp.step.dependOn(&fd4rb_decohack.step);
-    dehpp.addFileInput(b.path("zig-out/fd4rb.deh"));
+    dehpp.addFileInput(b.path(".zig-cache/fd4rb/fd4rb.deh"));
     fd4rb.step.dependOn(&dehpp.step);
 }
 
