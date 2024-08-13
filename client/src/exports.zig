@@ -8,6 +8,12 @@ const Core = @import("Core.zig");
 const deh = @import("deh.zig");
 
 comptime {
+    @export(deh.borstalShotgunCheckOverload, .{ .name = "A_BorstalShotgunCheckOverloaded" });
+    @export(deh.borstalShotgunCheckReload, .{ .name = "A_BorstalShotgunCheckReload" });
+    @export(deh.borstalShotgunClearOverload, .{ .name = "A_BorstalShotgunClearOverload" });
+    @export(deh.borstalShotgunDischarge, .{ .name = "A_BorstalShotgunDischarge" });
+    @export(deh.borstalShotgunOverload, .{ .name = "A_BorstalShotgunOverload" });
+    @export(deh.borstalShotgunReload, .{ .name = "A_BorstalShotgunReload" });
     @export(deh.burstShotgunCheckVent, .{ .name = "A_BurstShotgunCheckVent" });
     @export(deh.burstShotgunFire, .{ .name = "A_BurstShotgunFire" });
     @export(deh.revolverCheckReload, .{ .name = "A_RevolverCheckReload" });

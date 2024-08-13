@@ -1533,6 +1533,12 @@ static const deh_bexptr deh_bexptrs[] = // CPhipps - static const
     // RatBoom ///////////////////////////////////////////////////////////////////
     {A_WeaponSoundRandom,         "A_WeaponSoundRandom", 5},
 
+    {A_BorstalShotgunCheckOverloaded, "A_BorstalShotgunCheckOverloaded", 1},
+    {A_BorstalShotgunCheckReload, "A_BorstalShotgunCheckReload", 2},
+    {A_BorstalShotgunClearOverload, "A_BorstalShotgunClearOverload", 0},
+    {A_BorstalShotgunOverload, "A_BorstalShotgunOverload", 0},
+    {A_BorstalShotgunReload, "A_BorstalShotgunReload", 0},
+    {A_BorstalShotgunDischarge, "A_BorstalShotgunDischarge", 0},
     {A_BurstShotgunFire, "A_BurstShotgunFire", 0},
     {A_BurstShotgunCheckVent, "A_BurstShotgunCheckVent", 1},
     {A_RevolverCheckReload, "A_RevolverCheckReload", 1},

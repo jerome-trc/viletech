@@ -6,10 +6,51 @@ const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
 
-const invslot_plut_pistol: usize = 0;
-const invslot_tnt_ssg: usize = 1;
+const invslot_hellbound_shotgun_overload: usize = 0;
+const invslot_hellbound_shotgun_shots: usize = invslot_hellbound_shotgun_overload + 1;
+const invslot_plut_pistol: usize = invslot_hellbound_shotgun_shots + 1;
+const invslot_tnt_ssg: usize = invslot_plut_pistol + 1;
 
 // FD4RB ///////////////////////////////////////////////////////////////////////
+
+fn borstalShotgunCheckOverload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    if (player.inventory[invslot_hellbound_shotgun_overload].count >= 1) {
+        const state = std.math.lossyCast(c.statenum_t, psp.state.*.args[0]);
+        c.P_SetPspritePtr(@ptrCast(ccx), player, psp, state);
+    }
+}
+
+fn borstalShotgunCheckReload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    const arg1 = psp.state.*.args[1];
+    const thresh: c_longlong = if (arg1 == 0) 3 else arg1;
+
+    if (player.inventory[invslot_hellbound_shotgun_shots].count >= thresh) {
+        const state = std.math.lossyCast(c.statenum_t, psp.state.*.args[0]);
+        c.P_SetPspritePtr(@ptrCast(ccx), player, psp, state);
+    }
+}
+
+fn borstalShotgunDischarge(_: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
+    if (player.inventory[invslot_hellbound_shotgun_shots].count < 3) {
+        player.inventory[invslot_hellbound_shotgun_shots].count += 1;
+    }
+}
+
+fn borstalShotgunClearOverload(_: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
+    const i = @max(player.inventory[invslot_hellbound_shotgun_overload].count - 1, 0);
+    player.inventory[invslot_hellbound_shotgun_overload].count = i;
+}
+
+fn borstalShotgunOverload(_: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
+    if (player.inventory[invslot_hellbound_shotgun_overload].count < 1) {
+        player.inventory[invslot_hellbound_shotgun_overload].count += 1;
+    }
+}
+
+fn borstalShotgunReload(_: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
+    const i = @max(player.inventory[invslot_hellbound_shotgun_shots].count - 1, 0);
+    player.inventory[invslot_hellbound_shotgun_shots].count = i;
+}
 
 fn burstShotgunCheckVent(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
     player.inventory[invslot_tnt_ssg].count += 1;

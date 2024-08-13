@@ -1,0 +1,95 @@
+#include <dsdhacked>
+
+custom weapon pointer mbf21 A_BorstalShotgunCheckOverloaded(state)
+custom weapon pointer mbf21 A_BorstalShotgunCheckReload(state, uint)
+custom weapon pointer mbf21 A_BorstalShotgunClearOverload()
+custom weapon pointer mbf21 A_BorstalShotgunDischarge()
+custom weapon pointer mbf21 A_BorstalShotgunOverload()
+custom weapon pointer mbf21 A_BorstalShotgunReload()
+
+strings {
+	GOTSHOTGUN "You got the borstal shotgun!"
+}
+
+weapon 2 "fd4b_BorstalShotgun" {
+    ammotype 1
+    ammopershot 1
+
+    states {
+        Ready:
+            HSHT A 1 A_WeaponReady
+            loop
+        Deselect:
+            TNT1 A 0 A_BorstalShotgunClearOverload
+            HSHT A 1 A_Lower
+            loop
+        Select:
+            HSHT A 1 A_Raise
+            loop
+        Dryfire:
+            HSHT A 6 A_WeaponSound("DRYFR1", 0)
+            goto Ready
+        Fire:
+            TNT1 A 0 A_CheckAmmo("Dryfire", 1)
+            HSHT N 1 {
+                A_BorstalShotgunDischarge
+                A_ConsumeAmmo(1)
+                A_GunFlash
+                A_WeaponSound("HSHTF1", 0)
+                A_WeaponBulletAttack(4.0, 0.5, 10, 5, 3)
+            }
+            HSHT NOOPQRSTUV 1
+            TNT1 A 0 A_BorstalShotgunCheckReload("GonnaReloadNothingery", 0)
+            TNT1 A 0 A_ReFire
+            TNT1 A 0 A_CheckAmmo("CannotReload", 1)
+            TNT1 A 0 A_BorstalShotgunCheckReload("GonnaReloadAmmoery", 1)
+            goto Ready
+        CannotReload:
+            TNT1 A 0
+            goto GonnaReload
+        GonnaReload:
+            HSHT ABCDE 1 A_WeaponReady
+            goto KeepReloading
+        GonnaReloadNothingery:
+            TNT1 A 0 A_BorstalShotgunOverload
+            HSHT ABCDE 1
+            goto KeepReloading
+        GonnaReloadAmmoery:
+            HSHT A 1 A_Refire
+            HSHT B 1 A_ReFireTo("RefireB")
+            HSHT C 1 A_ReFireTo("RefireC")
+            HSHT D 1 A_ReFireTo("RefireD")
+            HSHT E 1 A_ReFireTo("RefireE")
+            goto KeepReloading
+        KeepReloading:
+            HSHT F 1 A_WeaponSound("HSHTPM", 0)
+            HSHT GHIJKLM 1
+            TNT1 A 0 A_BorstalShotgunReload
+            HSHT LKJIHGF 1
+            HSHT A 0 A_BorstalShotgunCheckOverloaded("CheckReload")
+            HSHT A 0 A_ReFireTo("ReloadEnd")
+            goto CheckReload
+        CheckReload:
+            HSHT A 0 A_BorstalShotgunCheckReload("KeepReloading", 1)
+            goto ReloadEnd
+        ReloadEnd:
+            HSHT E 1 A_BorstalShotgunClearOverload
+            HSHT DCB 1
+            HSHT A 0 A_ReFire
+            goto Ready
+        RefireE:
+            HSHT D 1
+        RefireD:
+            HSHT C 1
+        RefireC:
+            HSHT B 1
+        RefireB:
+            HSHT A 1
+            goto Fire
+        Flash:
+            TNT1 A 2 A_Light1
+            TNT1 A 2 A_Light2
+            TNT1 A 0 A_Light0
+            goto LightDone
+    }
+}

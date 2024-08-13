@@ -30,6 +30,18 @@ const char* pathStem(const char* path, size_t* out_len);
 
 // DeHackEd action pointers ////////////////////////////////////////////////////
 
+void A_BorstalShotgunCheckOverloaded(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BorstalShotgunCheckReload(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BorstalShotgunClearOverload(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BorstalShotgunOverload(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BorstalShotgunReload(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_BorstalShotgunDischarge(CCore*, struct player_s*, struct pspdef_s*);
+
 void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);
 
 void A_BurstShotgunCheckVent(CCore*, struct player_s*, struct pspdef_s*);
