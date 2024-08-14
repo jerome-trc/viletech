@@ -70,12 +70,14 @@ pub fn build(b: *std.Build) void {
         "plugins/fd4rb/decohack/borstal-shotgun.dh",
         "plugins/fd4rb/decohack/burst-shotgun.dh",
         "plugins/fd4rb/decohack/revolver.dh",
+        "plugins/fd4rb/decohack/tornado-battery.dh",
     });
 
     for ([_][]const u8{
         "plugins/fd4rb/decohack/borstal-shotgun.dh",
         "plugins/fd4rb/decohack/burst-shotgun.dh",
         "plugins/fd4rb/decohack/revolver.dh",
+        "plugins/fd4rb/decohack/tornado-battery.dh",
     }) |p| {
         fd4rb_decohack.addFileInput(b.path(p));
     }
