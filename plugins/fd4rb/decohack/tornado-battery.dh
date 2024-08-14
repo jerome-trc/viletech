@@ -4,6 +4,11 @@ strings {
     GOTCHAINGUN "You got the tornado battery!"
 }
 
+ammo 0 {
+	max 350
+	pickup 18
+}
+
 weapon 3 "fd4rb_TornadoBattery" {
     ammotype 0
     ammopershot 1
