@@ -162,7 +162,35 @@ test "valiant e1 uv speed in 5:13 by Krankdud" {
     try expectTotalTime("vae1-513", "5:13");
 }
 
-// TODO: Heretic and Hexen tests, after I've bought both.
+test "e1 sm max in 52:40 by JCD" {
+    try runDemo(.{ .iwad = "DOOM.WAD", .pwad = "HERETIC.WAD", .demo = "h1m-5240.lmp" });
+    try expectTotalTime("h1m-5240", "52:40");
+}
+
+test "e2 sm max in 67:02 by JCD" {
+    try runDemo(.{ .iwad = "DOOM.WAD", .pwad = "HERETIC.WAD", .demo = "h2ma6702.lmp" });
+    try expectTotalTime("h2ma6702", "67:02");
+}
+
+test "e3 sm max in 62:48 by JCD" {
+    try runDemo(.{ .iwad = "DOOM.WAD", .pwad = "HERETIC.WAD", .demo = "h3ma6248.lmp" });
+    try expectTotalTime("h3ma6248", "62:48");
+}
+
+test "e4 sm speed in 10:55 by veovis" {
+    try runDemo(.{ .iwad = "DOOM.WAD", .pwad = "HERETIC.WAD", .demo = "h4sp1055.lmp" });
+    try expectTotalTime("h4sp1055", "10:55");
+}
+
+test "e5 sm speed in 12:57 by veovis" {
+    try runDemo(.{ .iwad = "DOOM.WAD", .pwad = "HERETIC.WAD", .demo = "h5sp1257.lmp" });
+    try expectTotalTime("h5sp1257", "12:57");
+}
+
+test "e1 sk4 max in 45:37 by PVS" {
+    try runDemo(.{ .iwad = "HEXEN.WAD", .pwad = "Valiant.wad", .demo = "me1c4537.lmp" });
+    try expectTotalTime("me1c4537", "45:37");
+}
 
 // Details /////////////////////////////////////////////////////////////////////
 
@@ -173,26 +201,16 @@ fn runDemo(args: struct {
     pwad: []const u8 = "",
     iwad: []const u8 = "DOOM2.WAD",
 }) !void {
-    const pwad_str = try std.fmt.allocPrint(alloc, "../.temp/pwads/{s}", .{args.pwad});
+    const pwad_str = if (std.mem.eql(u8, args.pwad, "HERETIC.WAD"))
+        try std.fmt.allocPrint(alloc, "../.temp/iwads/{s}", .{args.pwad})
+    else
+        try std.fmt.allocPrint(alloc, "../.temp/pwads/{s}", .{args.pwad});
     defer alloc.free(pwad_str);
     const iwad_str = try std.fmt.allocPrint(alloc, "../.temp/iwads/{s}", .{args.iwad});
     defer alloc.free(iwad_str);
     const demo_str = try std.fmt.allocPrint(alloc, "../sample/demos/{s}", .{args.demo});
     defer alloc.free(demo_str);
 
-    const argv_pwad = [_][]const u8{
-        "Release/ratboom",
-        "-nosound",
-        "-nodraw",
-        "-levelstat",
-        "-analysis",
-        "-iwad",
-        iwad_str,
-        "-file",
-        pwad_str,
-        "-fastdemo",
-        demo_str,
-    };
     const argv_no_pwad = [_][]const u8{
         "Release/ratboom",
         "-nosound",
@@ -204,8 +222,18 @@ fn runDemo(args: struct {
         "-fastdemo",
         demo_str,
     };
+    const argv_pwad = argv_no_pwad ++ [_][]const u8{ "-file", pwad_str };
+    const argv_heretic = argv_pwad ++ [_][]const u8{"-heretic"};
+    const argv_hexen = argv_pwad ++ [_][]const u8{"-hexen"};
 
-    const argv = if (args.pwad.len == 0) argv_no_pwad[0..] else argv_pwad[0..];
+    const argv = if (args.pwad.len == 0)
+        argv_no_pwad[0..]
+    else if (std.mem.eql(u8, args.pwad, "HERETIC.WAD"))
+        argv_heretic[0..]
+    else if (std.mem.eql(u8, args.iwad, "HEXEN.WAD"))
+        argv_hexen[0..]
+    else
+        argv_pwad[0..];
 
     const result = std.process.Child.run(.{
         .allocator = alloc,
