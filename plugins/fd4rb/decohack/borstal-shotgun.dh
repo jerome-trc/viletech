@@ -11,7 +11,7 @@ strings {
 	GOTSHOTGUN "You got the borstal shotgun!"
 }
 
-weapon 2 "fd4b_BorstalShotgun" {
+weapon 2 "fd4rb_BorstalShotgun" {
     ammotype 1
     ammopershot 1
 

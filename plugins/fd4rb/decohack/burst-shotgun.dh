@@ -13,7 +13,7 @@ ammo 1 {
 	pickup 6
 }
 
-weapon 8 "fd4b_BurstShotgun" {
+weapon 8 "fd4rb_BurstShotgun" {
     ammotype 1
     ammopershot 1
 
