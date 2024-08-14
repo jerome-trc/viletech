@@ -166,10 +166,11 @@ pub fn run() !void {
 
         if (std.mem.eql(u8, part0, "Args1")) {
             _ = parts.next().?; // `=`
-            const num_str = parts.next().?;
-            const num = try std.fmt.parseInt(u32, num_str, 10);
 
             if (states.get(prev_frame)) |state| {
+                const num_str = parts.next().?;
+                const num = try std.fmt.parseInt(u32, num_str, 10);
+
                 if (state.inc_arg1) {
                     try std.fmt.format(out_writer, "Args1 = {}", .{num + 10_000});
                     continue;
