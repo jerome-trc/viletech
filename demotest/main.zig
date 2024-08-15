@@ -188,7 +188,7 @@ test "e5 sm speed in 12:57 by veovis" {
 }
 
 test "e1 sk4 max in 45:37 by PVS" {
-    try runDemo(.{ .iwad = "HEXEN.WAD", .pwad = "Valiant.wad", .demo = "me1c4537.lmp" });
+    try runDemo(.{ .iwad = "HEXEN.WAD", .demo = "me1c4537.lmp" });
     try expectTotalTime("me1c4537", "45:37");
 }
 
