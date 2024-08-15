@@ -114,6 +114,13 @@ fn revolverCheckReload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) call
 
 // Generic /////////////////////////////////////////////////////////////////////
 
+fn weaponSoundLoop(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    const sfx_id = std.math.lossyCast(c_int, psp.state.*.args[0]);
+    const play_globally = psp.state.*.args[1] != 0;
+    const timeout = std.math.lossyCast(c_int, psp.state.*.args[2]);
+    c.S_LoopMobjSound(if (play_globally) null else player.mo, sfx_id, timeout);
+}
+
 fn weaponSoundRandom(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
     const play_globally = psp.state.*.args[4] != 0;
     const which = std.math.lossyCast(usize, boomrngRange(c.pr_mbf21, 0, 3));
