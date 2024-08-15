@@ -1,5 +1,8 @@
 #include <dsdhacked>
 
+// Parameters: sound effect ID, whether to play globally, timeout.
+custom weapon pointer mbf21 A_WeaponSoundLoop(sound, bool, int)
+
 strings {
     GOTCHAINGUN "You got the tornado battery!"
 }
@@ -32,11 +35,10 @@ weapon 3 "fd4rb_TornadoBattery" {
         StartBarrelLeft:
             VCHG B 1 bright {
                 A_GunFlash
-                A_WeaponSound("VCHGFL", 0)
+                A_WeaponSoundLoop("VCHGFL", 0, 0x7FFFFFFF)
                 A_ConsumeAmmo(1)
                 A_WeaponBulletAttack(2.0, 0.0, 1, 11, 1)
             }
-            VCHG B 1 bright
             VCHG C 1
             TNT1 A 0 {
                 A_CheckAmmo("FinalBarrelLeftToMiddle", 2)
@@ -49,7 +51,7 @@ weapon 3 "fd4rb_TornadoBattery" {
             }
             VCHG E 1
             TNT1 A 0 A_CheckAmmo("FinalBarrelMiddleToRight", 2)
-            TNT1 A 0 A_ReFireTo("SequenceThree")
+            TNT1 A 0 A_ReFireTo("StartBurstEnd")
             goto FinalBarrelLeftToMiddle
         StartBurstEnd:
             VCHG F 1 bright {
@@ -69,7 +71,7 @@ weapon 3 "fd4rb_TornadoBattery" {
             }
             VCHG E 1
             TNT1 A 0 A_CheckAmmo("FinalBarrelMiddleToLeft", 2)
-            TNT1 A 0 A_ReFireTo("SequenceThree")
+            TNT1 A 0 A_ReFireTo("SequenceTwoSecond")
             goto FinalBarrelMiddleToLeft
         SequenceTwoSecond:
             VCHG L 1 bright {

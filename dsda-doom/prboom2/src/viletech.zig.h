@@ -48,6 +48,8 @@ void A_BurstShotgunCheckVent(CCore*, struct player_s*, struct pspdef_s*);
 
 void A_RevolverCheckReload(CCore*, struct player_s*, struct pspdef_s*);
 
+void A_WeaponSoundLoop(CCore*, struct player_s*, struct pspdef_s*);
+
 void A_WeaponSoundRandom(CCore*, struct player_s*, struct pspdef_s*);
 
 // Developer GUI ///////////////////////////////////////////////////////////////
