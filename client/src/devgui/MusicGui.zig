@@ -20,15 +20,13 @@ const Song = struct {
     lump: c.LumpNum,
 };
 
-alloc: std.heap.ArenaAllocator,
-collections: std.ArrayList(Collection),
+arena: std.heap.ArenaAllocator,
+collections: std.ArrayListUnmanaged(Collection),
 filter_buf: [256]u8,
 filter_case_sensitive: bool,
 prng: std.Random.Pcg,
 
 pub fn init(alloc: std.mem.Allocator) Self {
-    var arena = std.heap.ArenaAllocator.init(alloc);
-
     const rng_seed = if (std.time.Instant.now()) |now|
         if (@TypeOf(now.timestamp) == std.posix.timespec)
             now.timestamp.tv_nsec
@@ -38,8 +36,8 @@ pub fn init(alloc: std.mem.Allocator) Self {
         0;
 
     return Self{
-        .alloc = arena,
-        .collections = std.ArrayList(Collection).init(arena.allocator()),
+        .arena = std.heap.ArenaAllocator.init(alloc),
+        .collections = std.ArrayListUnmanaged(Collection){},
         .prng = std.Random.Pcg.init(@intCast(rng_seed)),
         .filter_buf = [_]u8{0} ** 256,
         .filter_case_sensitive = false,
@@ -47,14 +45,14 @@ pub fn init(alloc: std.mem.Allocator) Self {
 }
 
 pub fn deinit(self: *Self) void {
-    self.alloc.deinit();
+    self.arena.deinit();
 }
 
 pub fn populate(self: *Self) std.mem.Allocator.Error!void {
     const start_time = std.time.Instant.now();
 
     var lmp_num: c.LumpNum = 0;
-    var map_arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
+    var map_arena = std.heap.ArenaAllocator.init(self.arena.child_allocator);
     defer map_arena.deinit();
     var map = std.StringHashMap(c.LumpNum).init(map_arena.allocator());
     defer map.deinit();
@@ -79,7 +77,7 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
     }
 
     lmp_num = 0;
-    var arena = std.heap.ArenaAllocator.init(self.alloc.child_allocator);
+    var arena = std.heap.ArenaAllocator.init(self.arena.child_allocator);
     defer _ = arena.deinit();
 
     while (lmp_num < c.numlumps) {
@@ -103,8 +101,8 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
         };
 
         var new_coll = Collection{
-            .name = try self.alloc.allocator().dupeZ(u8, coll_name),
-            .songs = std.ArrayList(Song).init(self.alloc.allocator()),
+            .name = try self.arena.allocator().dupeZ(u8, coll_name),
+            .songs = std.ArrayList(Song).init(self.arena.allocator()),
         };
 
         var ii: usize = 0;
@@ -153,12 +151,12 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
             };
 
             try new_coll.songs.append(Song{
-                .artist = try self.alloc.allocator().dupeZ(u8, std.mem.trim(
+                .artist = try self.arena.allocator().dupeZ(u8, std.mem.trim(
                     u8,
                     artist,
                     " \r\n\t",
                 )),
-                .title = try self.alloc.allocator().dupeZ(u8, std.mem.trim(
+                .title = try self.arena.allocator().dupeZ(u8, std.mem.trim(
                     u8,
                     title,
                     " \r\n\t",
@@ -167,7 +165,7 @@ pub fn populate(self: *Self) std.mem.Allocator.Error!void {
             });
         }
 
-        try self.collections.append(new_coll);
+        try self.collections.append(self.arena.allocator(), new_coll);
     }
 
     if (start_time) |t| {
