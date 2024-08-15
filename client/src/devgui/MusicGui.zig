@@ -333,8 +333,3 @@ fn numSongs(self: *const Self) usize {
 fn filterBufSlice(self: *Self) [:0]u8 {
     return self.filter_buf[0..(@sizeOf(@TypeOf(self.filter_buf)) - 1) :0];
 }
-
-export fn populateMusicPlayer(ccx: *Core.C) void {
-    ccx.core().musicgui.populate() catch
-        c.I_Error("Music player population failed: out of memory");
-}

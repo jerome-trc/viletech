@@ -93,9 +93,3 @@ fn logFn(
 
     std.log.defaultLog(message_level, scope, format, args);
 }
-
-export fn windowIcon(size: *i32) [*]const u8 {
-    const bytes = @embedFile("viletech.png");
-    size.* = bytes.len;
-    return bytes;
-}

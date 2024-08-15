@@ -6,6 +6,7 @@ const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
 const deh = @import("deh.zig");
+const devgui = @import("devgui.zig");
 
 comptime {
     @export(deh.borstalShotgunCheckOverload, .{ .name = "A_BorstalShotgunCheckOverloaded" });
@@ -20,6 +21,16 @@ comptime {
 
     @export(deh.weaponSoundLoop, .{ .name = "A_WeaponSoundLoop" });
     @export(deh.weaponSoundRandom, .{ .name = "A_WeaponSoundRandom" });
+
+    @export(devgui.frameBegin, .{ .name = "dguiFrameBegin" });
+    @export(devgui.frameDraw, .{ .name = "dguiFrameDraw" });
+    @export(devgui.frameFinish, .{ .name = "dguiFrameFinish" });
+    @export(devgui.layout, .{ .name = "dguiLayout" });
+    @export(devgui.processEvent, .{ .name = "dguiProcessEvent" });
+    @export(devgui.setup, .{ .name = "dguiSetup" });
+    @export(devgui.shutdown, .{ .name = "dguiShutdown" });
+    @export(devgui.wantsKeyboard, .{ .name = "dguiWantsKeyboard" });
+    @export(devgui.wantsMouse, .{ .name = "dguiWantsMouse" });
 }
 
 export fn pathStem(path: [*:0]const u8, out_len: *usize) [*]const u8 {
@@ -29,7 +40,18 @@ export fn pathStem(path: [*:0]const u8, out_len: *usize) [*]const u8 {
     return ret.ptr;
 }
 
+export fn populateMusicPlayer(ccx: *Core.C) void {
+    ccx.core().musicgui.populate() catch
+        c.I_Error("Music player population failed: out of memory");
+}
+
 export fn registerPref(ccx: *Core.C, pref_vz: [*:0]const u8) void {
     ccx.core().registerPref(std.mem.sliceTo(pref_vz, 0)) catch
         c.I_Error("Failed to register a preference: out of memory");
+}
+
+export fn windowIcon(size: *i32) [*]const u8 {
+    const bytes = @embedFile("viletech.png");
+    size.* = bytes.len;
+    return bytes;
 }
