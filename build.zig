@@ -1,5 +1,13 @@
 const std = @import("std");
 
+pub const Context = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    test_step: *std.Build.Step,
+    // Libraries
+    subterra: ?*std.Build.Module,
+};
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -102,6 +110,16 @@ pub fn build(b: *std.Build) void {
     dehpp.step.dependOn(&fd4rb_decohack.step);
     dehpp.addFileInput(b.path(".zig-cache/fd4rb/fd4rb.deh"));
     fd4rb.step.dependOn(&dehpp.step);
+
+    var ctx = Context{
+        .target = target,
+        .optimize = optimize,
+        .test_step = b.step("test", "Run unit tests"),
+
+        .subterra = null,
+    };
+
+    ctx.subterra = @import("libs/subterra/build.subterra.zig").build(b, &ctx);
 }
 
 fn commonDependencies(
