@@ -2,10 +2,7 @@ const std = @import("std");
 
 const Context = @import("../../build.zig").Context;
 
-pub fn build(
-    b: *std.Build,
-    ctx: *const Context,
-) *std.Build.Module {
+pub fn build(b: *std.Build, ctx: *const Context) *std.Build.Module {
     const mod = b.addModule("subterra", .{
         .root_source_file = b.path("libs/subterra/src/root.zig"),
     });
