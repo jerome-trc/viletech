@@ -1,0 +1,3 @@
+/iwads/*
+/pwads/*
+!/pwads/analysis_test.wad
