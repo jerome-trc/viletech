@@ -33,6 +33,18 @@ comptime {
     @export(devgui.wantsMouse, .{ .name = "dguiWantsMouse" });
 }
 
+export fn loadLevel(ccx: *Core.C) void {
+    const log = std.log.scoped(.game);
+    const start_time = std.time.Instant.now();
+
+    c.G_DoLoadLevel(@ptrCast(ccx));
+
+    if (start_time) |t| {
+        const now = std.time.Instant.now() catch unreachable;
+        log.info("Level loaded in {}ms.", .{now.since(t) / std.time.ns_per_ms});
+    } else |_| {}
+}
+
 export fn pathStem(path: [*:0]const u8, out_len: *usize) [*]const u8 {
     const slice = std.mem.sliceTo(path, 0);
     const ret = std.fs.path.stem(slice);
