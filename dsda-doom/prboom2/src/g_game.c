@@ -1146,8 +1146,7 @@ static void G_ResetInventory(player_t *p)
 }
 
 /// @fn G_DoLoadLevel
-static void G_DoLoadLevel(CCore* cx)
-{
+void G_DoLoadLevel(CCore* cx) {
   int i;
 
   // Set the sky map.
@@ -1442,7 +1441,7 @@ void G_Ticker(CCore* cx) {
         if (!hexen)
           for (i = 0; i < g_maxplayers; i++)
             players[i].playerstate = PST_REBORN;
-        G_DoLoadLevel(cx);
+        loadLevel(cx);
         break;
       case ga_newgame:
         G_DoNewGame(cx);
@@ -2216,7 +2215,7 @@ void G_DoWorldDone(CCore* cx)
   idmusnum = -1;             //jff 3/17/98 allow new level's music to be loaded
   gamestate = GS_LEVEL;
   dsda_UpdateGameMap(wminfo.nextep + 1, wminfo.next + 1);
-  G_DoLoadLevel(cx);
+  loadLevel(cx);
   gameaction = ga_nothing;
   AM_clearMarks(cx);           //jff 4/12/98 clear any marks on the automap
   dsda_EvaluateSkipModeDoWorldDone(cx);
@@ -3013,7 +3012,7 @@ void G_InitNew(CCore* cx, int skill, int episode, int map, dboolean prepare)
 
   dsda_InitSky();
 
-  G_DoLoadLevel(cx);
+  loadLevel(cx);
 }
 
 //
