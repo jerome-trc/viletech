@@ -202,11 +202,11 @@ fn runDemo(args: struct {
     iwad: []const u8 = "DOOM2.WAD",
 }) !void {
     const pwad_str = if (std.mem.eql(u8, args.pwad, "HERETIC.WAD"))
-        try std.fmt.allocPrint(alloc, "../.temp/iwads/{s}", .{args.pwad})
+        try std.fmt.allocPrint(alloc, "../sample/iwads/{s}", .{args.pwad})
     else
-        try std.fmt.allocPrint(alloc, "../.temp/pwads/{s}", .{args.pwad});
+        try std.fmt.allocPrint(alloc, "../sample/pwads/{s}", .{args.pwad});
     defer alloc.free(pwad_str);
-    const iwad_str = try std.fmt.allocPrint(alloc, "../.temp/iwads/{s}", .{args.iwad});
+    const iwad_str = try std.fmt.allocPrint(alloc, "../sample/iwads/{s}", .{args.iwad});
     defer alloc.free(iwad_str);
     const demo_str = try std.fmt.allocPrint(alloc, "../sample/demos/{s}", .{args.demo});
     defer alloc.free(demo_str);
