@@ -3014,8 +3014,8 @@ static void P_LoadBlockMap (int lump)
     // http://www.doomworld.com/idgames/index.php?id=12935
     if (!P_VerifyBlockMap(count))
     {
-      lprintf(LO_INFO, "P_LoadBlockMap: erroneous BLOCKMAP lump may cause crashes.\n");
-      lprintf(LO_INFO, "P_LoadBlockMap: use \"-blockmap\" command line switch for rebuilding\n");
+      lprintf(LO_INFO, "%s: erroneous BLOCKMAP lump may cause crashes.\n", __func__);
+      lprintf(LO_INFO, "%s: use \"-blockmap\" command line switch for rebuilding\n", __func__);
     }
   }
 
@@ -3034,10 +3034,10 @@ static void P_LoadBlockMap (int lump)
   if (blockmapxneg != -257 || blockmapyneg != -257)
   {
     lprintf(LO_WARN,
-      "P_LoadBlockMap: This map uses a large blockmap which may cause no-clipping bugs. "
+      "%s: This map uses a large blockmap which may cause no-clipping bugs. "
       "Toggle the \"Fix clipping problems in large levels\" option "
       "in the \"Compatibility with common mapping errors\" menu in order to activate a fix. "
-      "That fix won't be applied during demo playback or recording.\n");
+      "That fix won't be applied during demo playback or recording.\n", __func__);
   }
 }
 
