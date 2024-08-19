@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 const std = @import("std");
+const log = std.log.scoped(.logtest);
 
 const c = @import("main.zig").c;
 
@@ -140,6 +141,13 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
         _ = c.igCheckbox("ID Stack Tool", &cx.dgui.id_stack_tool_window);
         _ = c.igCheckbox("Metrics", &cx.dgui.metrics_window);
         _ = c.igCheckbox("User Guide", &cx.dgui.user_guide);
+
+        if (c.igButton("Log Test", .{ .x = 0.0, .y = 0.0 })) {
+            log.info("The quick brown fox jumped over the lazy dog 1234567890 times", .{});
+            log.warn("The quick brown fox jumped over the lazy dog 1234567890 times", .{});
+            log.err("The quick brown fox jumped over the lazy dog 1234567890 times", .{});
+            log.debug("The quick brown fox jumped over the lazy dog 1234567890 times", .{});
+        }
     }
 
     c.igPopItemWidth();

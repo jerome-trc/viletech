@@ -169,16 +169,33 @@ pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
                 for (clipper.displayStart()..clipper.displayEnd()) |i| {
                     switch ((self.history.get(i) orelse unreachable).*) {
                         HistoryItem.info => |str| {
-                            c.igTextUnformatted(str.ptr, str.ptr + str.len);
+                            // Light green
+                            const color = .{ .x = 0.8, .y = 1.0, .z = 0.7, .w = 1.0 };
+                            c.igTextColored(color, "%.*s", str.len, str.ptr);
                         },
                         HistoryItem.stdlog => |str| {
-                            c.igTextUnformatted(str.ptr, str.ptr + str.len);
+                            const color: c.ImVec4 = if (std.mem.startsWith(u8, str, "info("))
+                                .{ .x = 0.7, .y = 1.0, .z = 1.0, .w = 1.0 } // Light blue
+                            else if (std.mem.startsWith(u8, str, "warning("))
+                                .{ .x = 1.0, .y = 1.0, .z = 0.1, .w = 1.0 } // Yellow
+                            else if (std.mem.startsWith(u8, str, "error("))
+                                .{ .x = 1.0, .y = 0.1, .z = 0.1, .w = 1.0 } // Red
+                            else if (std.mem.startsWith(u8, str, "debug("))
+                                .{ .x = 1.0, .y = 0.1, .z = 0.7, .w = 1.0 } // Pink
+                            else
+                                .{ .x = 0.7, .y = 0.1, .z = 1.0, .w = 1.0 }; // Purple
+
+                            c.igTextColored(color, "%.*s", str.len, str.ptr);
                         },
                         HistoryItem.submission => |str| {
-                            c.igTextUnformatted(str.ptr, str.ptr + str.len);
+                            // Light grey
+                            const color = .{ .x = 0.7, .y = 0.7, .z = 0.7, .w = 1.0 };
+                            c.igTextColored(color, "%.*s", str.len, str.ptr);
                         },
                         HistoryItem.toast => |str| {
-                            c.igTextUnformatted(str.ptr, str.ptr + str.len);
+                            // White
+                            const color = .{ .x = 1.0, .y = 1.0, .z = 1.0, .w = 1.0 };
+                            c.igTextColored(color, "%.*s", str.len, str.ptr);
                         },
                     }
                 }
