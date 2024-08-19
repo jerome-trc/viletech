@@ -111,15 +111,9 @@ pub fn build(b: *std.Build) void {
     dehpp.addFileInput(b.path(".zig-cache/fd4rb/fd4rb.deh"));
     fd4rb.step.dependOn(&dehpp.step);
 
-    var ctx = Context{
-        .target = target,
-        .optimize = optimize,
-        .test_step = b.step("test", "Run unit tests"),
-
-        .subterra = null,
-    };
-
-    ctx.subterra = @import("libs/subterra/build.subterra.zig").build(b, &ctx);
+    const test_step = b.step("test", "Run unit test suite");
+    subterra.tests(b, target, optimize, test_step);
+    wadload.tests(b, target, optimize, test_step);
 }
 
 fn commonDependencies(
@@ -143,3 +137,57 @@ fn commonDependencies(
     @import("depend/build.cimgui.zig").link(b, compile);
     compile.root_module.addImport("zig-args", zig_args.module("args"));
 }
+
+pub const subterra = struct {
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        compile.root_module.addImport(
+            name orelse "subterra",
+            b.addModule("subterra", .{
+                .root_source_file = b.path("libs/subterra/src/root.zig"),
+            }),
+        );
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/subterra/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
+pub const wadload = struct {
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        compile.root_module.addImport(
+            name orelse "wadload",
+            b.addModule("wadload", .{
+                .root_source_file = b.path("libs/wadload/src/root.zig"),
+            }),
+        );
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/wadload/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
