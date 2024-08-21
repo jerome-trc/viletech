@@ -17,7 +17,7 @@ Beware that this project:
 
 - `/client` contains the code for a Zig static library.
 - `/crates` contains Rust libraries associated with this project.
-- `/engine` is the [dsda-doom](https://github.com/kraflab/dsda-doom) source which consumes the static library built in `/client`.
+- `/dsda-doom` is the [dsda-doom](https://github.com/kraflab/dsda-doom) source which consumes the static library built in `/client`.
 
 ## Licensing, Attribution
 
