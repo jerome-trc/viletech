@@ -24,6 +24,26 @@ test "asciiId" {
     try std.testing.expectEqual(1684558925, id);
 }
 
+/// Hours, minutes, and seconds.
+pub const HhMmSs = struct {
+    hours: u64,
+    minutes: u64,
+    seconds: u64,
+
+    pub fn fromNs(nanos: u64) @This() {
+        const microsecs = nanos / std.time.ns_per_us;
+        const millisecs = microsecs / std.time.us_per_ms;
+        var secs = millisecs / std.time.ms_per_s;
+        var mins = secs / std.time.s_per_min;
+        const hours = mins / 60;
+
+        secs -= (mins * 60);
+        mins -= (hours * 60);
+
+        return .{ .hours = hours, .minutes = mins, .seconds = secs };
+    }
+};
+
 /// Exactly the same as `std.StringHashMap` but for NUL-terminated strings.
 pub fn ZStringHashMap(V: type) type {
     return std.HashMap(

@@ -48,13 +48,14 @@ plugin: struct {
     paths: std.ArrayList(Path),
 },
 prefs: std.StringHashMap(plugin.Pref),
+start_time: ?std.time.Instant,
 stderr_file: std.fs.File.Writer,
 stderr_bw: StreamWriter,
 stdout_file: std.fs.File.Writer,
 stdout_bw: StreamWriter,
 vfsgui: VfsGui,
 
-pub fn init(gpa: ?*DebugAllocator) !Self {
+pub fn init(gpa: ?*DebugAllocator, start_time: ?std.time.Instant) !Self {
     const alloc = if (gpa) |g| g.allocator() else std.heap.c_allocator;
 
     const stderr_file = std.io.getStdErr().writer();
@@ -79,6 +80,7 @@ pub fn init(gpa: ?*DebugAllocator) !Self {
             .paths = std.ArrayList(Path).init(alloc),
         },
         .prefs = std.StringHashMap(plugin.Pref).init(alloc),
+        .start_time = start_time,
         .stderr_file = stderr_file,
         .stderr_bw = std.io.bufferedWriter(stderr_file),
         .stdout_file = stdout_file,
