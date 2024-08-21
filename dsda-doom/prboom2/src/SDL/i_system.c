@@ -72,10 +72,6 @@
 #include "m_fixed.h"
 #include "r_fps.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dsda/settings.h"
 #include "dsda/signal_context.h"
 #include "dsda/time.h"
