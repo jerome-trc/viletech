@@ -5245,7 +5245,7 @@ static dboolean M_InactiveMenuResponder(CCore* cx, int ch, int action, event_t* 
   if (dsda_InputActivated(dsda_input_cycle_palette))
   {
     dsda_CyclePlayPal();
-    doom_printf("Palette %s", dsda_PlayPalData()->lump_name);
+    doom_printf(cx, "Palette %s", dsda_PlayPalData()->lump_name);
     S_StartVoidSound(g_sfx_swtchn);
     return true;
   }
@@ -5272,7 +5272,7 @@ static dboolean M_InactiveMenuResponder(CCore* cx, int ch, int action, event_t* 
       int show_alive = dsda_CycleConfig(cx, dsda_config_show_alive_monsters, false);
 
       if (show_alive >= 0 && show_alive < 3)
-        doom_printf("Show Alive Monsters %s", show_alive_message[show_alive]);
+        doom_printf(cx, "Show Alive Monsters %s", show_alive_message[show_alive]);
     }
   }
 
