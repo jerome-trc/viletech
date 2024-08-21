@@ -112,3 +112,8 @@ pub fn pistolstartHold(cx: *Core, _: *const Console.Command, _: *Console.Command
 pub fn plugin(_: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
     // TODO
 }
+
+pub fn version(cx: *Core, _: *const Console.Command, _: *Console.CommandArgs) void {
+    const meta = @import("meta");
+    Console.logInfo(cx, "{s} UTC {s}", .{ meta.compile_timestamp, meta.commit });
+}

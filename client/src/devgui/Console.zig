@@ -65,6 +65,11 @@ pub const commands = std.StaticStringMap(Command).initComptime(.{
         .func = &ccmds.exit,
         .summary = "Close the engine",
     } },
+    .{ "version", Command{
+        .name = "version",
+        .func = &ccmds.version,
+        .summary = "Prints various engine version metadata",
+    } },
 });
 
 pub const cmd_name_max_len: usize = blk: {

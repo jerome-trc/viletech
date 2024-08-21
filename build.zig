@@ -12,12 +12,27 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const DateTime = @import("depend/datetime.zig").DateTime;
+    const metainfo = b.addOptions();
+
+    var compile_timestamp_buf: [64]u8 = undefined;
+    const compile_timestamp = std.fmt.bufPrint(
+        compile_timestamp_buf[0..],
+        "{}",
+        .{DateTime.now()},
+    ) catch unreachable;
+    metainfo.addOption([]const u8, "compile_timestamp", compile_timestamp);
+
+    const commit_hash = b.run(&[_][]const u8{ "git", "rev-parse", "HEAD" });
+    metainfo.addOption([]const u8, "commit", commit_hash);
+
     const lib = b.addStaticLibrary(.{
         .name = "ratboomzig",
         .target = target,
         .optimize = optimize,
         .root_source_file = b.path("client/src/main.zig"),
     });
+    lib.root_module.addOptions("meta", metainfo);
     commonDependencies(b, lib, target, optimize);
     b.installArtifact(lib);
 
@@ -27,6 +42,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("client/src/main.zig"),
     });
+    lib_check.root_module.addOptions("meta", metainfo);
     commonDependencies(b, lib_check, target, optimize);
 
     const check = b.step("check", "Semantic check for ZLS");
