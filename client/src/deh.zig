@@ -63,8 +63,8 @@ fn burstShotgunCheckVent(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) ca
 }
 
 fn burstShotgunFire(ccx: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
-    const hspread: c.fixed_t = 6;
-    const vspread: c.fixed_t = 4;
+    const hspread: c.fixed_t = 6 << 16;
+    const vspread: c.fixed_t = 4 << 16;
     const damagebase: c_int = 3;
     const damagemod: c_int = 3;
     const bulletslope = bulletSlope(ccx, player.mo);
