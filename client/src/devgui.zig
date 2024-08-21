@@ -9,6 +9,7 @@ const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
 const MusicGui = @import("devgui/MusicGui.zig");
 const PrefGui = @import("devgui/PrefGui.zig");
+const stdx = @import("stdx.zig");
 const VfsGui = @import("devgui/VfsGui.zig");
 
 pub const State = enum(c_int) {
@@ -151,6 +152,20 @@ pub fn layout(ccx: *Core.C) callconv(.C) void {
     }
 
     c.igPopItemWidth();
+
+    if (cx.start_time) |start_time| blk: {
+        c.igSeparator();
+        const now = std.time.Instant.now() catch break :blk;
+        const runtime_elapsed = stdx.HhMmSs.fromNs(now.since(start_time));
+        var buf: [12]u8 = undefined;
+        imgui.textUnformatted(std.fmt.bufPrint(buf[0..], "{:0>2}:{:0>2}:{:0>2}", .{
+            runtime_elapsed.hours,
+            runtime_elapsed.minutes,
+            runtime_elapsed.seconds,
+        }) catch break :blk);
+
+        c.igSetItemTooltip("Engine Uptime");
+    }
 
     if (builtin.mode == .Debug) {
         c.igSeparator();
