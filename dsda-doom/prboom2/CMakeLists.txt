@@ -34,7 +34,7 @@ endif()
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(X_VCPKG_APPLOCAL_DEPS_INSTALL TRUE)
 
-project("ratboom" VERSION 0.27.5)
+project("ratboom" VERSION 0.0.0)
 
 # For language servers/IDEs that rely on compile_commands.json.
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
