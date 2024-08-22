@@ -49,6 +49,8 @@ pub fn DirIterator(Reader: type) type {
         current: usize,
         /// Never mutate this, but feel free to read it.
         stream_pos: u64,
+        /// Never mutate this, but feel free to read it.
+        dir_offs: usize,
 
         pub fn init(reader: Reader) !Self {
             const header = try Header.read(reader);
@@ -58,6 +60,7 @@ pub fn DirIterator(Reader: type) type {
                 .kind = header.kind,
                 .len = @intCast(header.lump_count),
                 .current = 0,
+                .dir_offs = header.dir_offs,
                 .stream_pos = header.dir_offs,
             };
         }
@@ -91,6 +94,17 @@ pub fn DirIterator(Reader: type) type {
                 .start = offs,
                 .end = offs + size,
             };
+        }
+
+        /// If successful, the following call to `next` will yield the entry at `entry_num`.
+        pub fn jumpTo(self: *Self, entry_num: usize) !void {
+            if (entry_num > self.len) {
+                return error.InvalidJump;
+            }
+
+            self.current = entry_num;
+            self.stream_pos = self.dir_offs + (entry_num * dir_entry_size);
+            try self.reader.seekTo(self.stream_pos);
         }
     };
 }
@@ -134,6 +148,8 @@ pub fn LumpIterator(Reader: type) type {
             return Self{ .inner = try DirIterator(Reader).init(reader) };
         }
 
+        /// The returned entry's `data` field is owned by `alloc`, and must be
+        /// freed by the caller.
         pub fn next(self: *Self, alloc: std.mem.Allocator) anyerror!?Entry {
             const entry = try self.inner.next() orelse return null;
             try self.inner.reader.seekTo(entry.start);
@@ -154,6 +170,11 @@ pub fn LumpIterator(Reader: type) type {
         pub fn nextNoAlloc(self: *Self) anyerror!?Parent.Entry {
             return self.inner.next();
         }
+
+        /// If successful, the following call to `next` will yield the entry at `entry_num`.
+        pub fn jumpTo(self: *Self, entry_num: usize) !void {
+            try self.inner.jumpTo(entry_num);
+        }
     };
 }
 
@@ -161,7 +182,7 @@ const dir_entry_size: usize = 16;
 
 const Header = struct {
     kind: Kind,
-    dir_offs: u64,
+    dir_offs: u32,
     lump_count: i32,
 
     /// Expects `reader` to support:
@@ -242,6 +263,7 @@ pub const IterError = error{
     InvalidEntryCount,
     /// Can be raised when trying to read a header.
     InvalidDirOffset,
+    InvalidJump,
     /// Can be raised when trying to read a header.
     InvalidMagic,
     LumpTrunc,
@@ -295,4 +317,14 @@ test "Readers, smoke" {
     );
 
     try std.testing.expectEqual(null, try iter.nextNoAlloc());
+
+    try iter.jumpTo(1);
+    const things = (try iter.next(std.testing.allocator)).?;
+    defer std.testing.allocator.free(things.data);
+
+    try std.testing.expectEqual(1620, things.data.len);
+    try std.testing.expectEqualStrings("THINGS", things.name());
+
+    const linedefs = (try iter.nextNoAlloc()).?;
+    try std.testing.expectEqualStrings("LINEDEFS", linedefs.name());
 }
