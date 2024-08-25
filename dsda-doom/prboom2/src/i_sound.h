@@ -39,7 +39,7 @@
 #include "sounds.h"
 #include "doomtype.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define SNDSERV
 #undef SNDINTR

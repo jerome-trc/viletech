@@ -37,7 +37,7 @@
 #include "r_defs.h"
 #include "d_player.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define USERANGE        (64*FRACUNIT)
 #define MELEERANGE      (64*FRACUNIT)

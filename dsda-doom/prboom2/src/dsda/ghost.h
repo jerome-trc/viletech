@@ -18,7 +18,7 @@
 #ifndef __DSDA_GHOST__
 #define __DSDA_GHOST__
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 void dsda_InitGhostExport(const char* name);
 void dsda_InitGhostImport(const char** ghost_names, int count);

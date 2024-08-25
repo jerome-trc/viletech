@@ -18,7 +18,7 @@
 #ifndef __DSDA_HUD_COMPONENT_AMMO_TEXT__
 #define __DSDA_HUD_COMPONENT_AMMO_TEXT__
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 void dsda_InitAmmoTextHC(int x_offset, int y_offset, int vpt_flags, int* args, int arg_count, void** data);
 void dsda_UpdateAmmoTextHC(void* data);

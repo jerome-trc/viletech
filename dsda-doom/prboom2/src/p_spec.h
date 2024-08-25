@@ -36,7 +36,7 @@
 #include "r_defs.h"
 #include "d_player.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 //      Define values for map objects
 #define MO_TELEPORTMAN  14

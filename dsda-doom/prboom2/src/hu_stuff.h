@@ -36,7 +36,7 @@
 #include "d_event.h"
 #include "p_mobj.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define HU_MSGTIMEOUT (4 * TICRATE)
 

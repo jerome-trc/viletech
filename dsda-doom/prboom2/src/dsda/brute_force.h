@@ -19,7 +19,7 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 typedef enum {
   dsda_bf_x,

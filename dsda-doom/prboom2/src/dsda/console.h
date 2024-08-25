@@ -21,7 +21,7 @@
 #include "doomtype.h"
 #include "m_menu.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define CONSOLE_SCRIPT_COUNT 10
 

@@ -32,7 +32,6 @@
  *-----------------------------------------------------------------------------
  */
 
-#include "viletech.zig.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -96,6 +95,9 @@
 #include "dsda/settings.h"
 #include "dsda/time.h"
 #include "dsda/gl/render_scale.h"
+
+#include "viletech/core.h"
+#include "viletech/devgui.h"
 
 //e6y: new mouse code
 static SDL_Cursor* cursors[2] = {NULL, NULL};

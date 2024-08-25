@@ -19,7 +19,7 @@
 #include <string.h>
 
 #include "lprintf.h"
-#include "viletech.zig.h"
+#include "viletech/core.h"
 #include "z_zone.h"
 
 #include "dsda/args.h"

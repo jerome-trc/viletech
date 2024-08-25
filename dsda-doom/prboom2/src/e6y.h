@@ -38,7 +38,7 @@
 #include "m_fixed.h"
 #include "tables.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define GL_COMBINE_ARB                    0x8570
 #define GL_RGB_SCALE_ARB                  0x8573

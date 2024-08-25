@@ -79,6 +79,8 @@
 #include "dsda/skip.h"
 #include "dsda/stretch.h"
 
+#include "viletech/stdx.h"
+
 dboolean wasWiped = false;
 
 int secretfound;

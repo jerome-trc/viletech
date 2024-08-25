@@ -36,7 +36,7 @@
 
 #include "p_mobj.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 struct line_s;
 struct sector_s;

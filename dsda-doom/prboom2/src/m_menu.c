@@ -100,7 +100,7 @@
 #include "heretic/mn_menu.h"
 #include "heretic/sb_bar.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 /****************************
  *

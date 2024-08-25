@@ -17,7 +17,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 dboolean dsda_SkipMode(void);
 void dsda_EnterSkipMode(CCore*);

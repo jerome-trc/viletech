@@ -23,7 +23,7 @@
 #include "dsda/mapinfo.h"
 #include "dsda/utility.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 int dsda_HexenNameToMap(int* found, const char* name, int* episode, int* map);
 int dsda_HexenFirstMap(int* episode, int* map);

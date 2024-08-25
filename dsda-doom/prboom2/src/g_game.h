@@ -36,7 +36,7 @@
 #include "d_ticcmd.h"
 #include "tables.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 #define DEMOMARKER 0x80
 

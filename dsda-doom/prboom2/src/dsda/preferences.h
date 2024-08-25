@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 void dsda_LoadWadPreferences(void);
 void dsda_HandleMapPreferences(CCore*);

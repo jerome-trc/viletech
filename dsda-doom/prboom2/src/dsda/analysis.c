@@ -25,6 +25,8 @@
 
 #include "analysis.h"
 
+#include "viletech/stdx.h"
+
 int dsda_analysis;
 
 dboolean dsda_pacifist = true;

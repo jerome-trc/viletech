@@ -19,7 +19,7 @@
 
 #include "r_defs.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 typedef enum
 {

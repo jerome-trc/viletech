@@ -65,6 +65,8 @@
 #include "dsda/state.h"
 #include "dsda/utility.h"
 
+#include "viletech/deh.h"
+
 #define TRUE 1
 #define FALSE 0
 

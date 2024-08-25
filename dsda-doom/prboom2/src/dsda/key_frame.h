@@ -20,7 +20,7 @@
 
 #include "doomtype.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 struct auto_kf_s;
 

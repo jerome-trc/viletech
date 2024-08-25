@@ -17,7 +17,7 @@
 #ifndef __HEXEN_SV_SAVE__
 #define __HEXEN_SV_SAVE__
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 void SV_Init(void);
 void SV_MapTeleport(CCore*, int map, int position);

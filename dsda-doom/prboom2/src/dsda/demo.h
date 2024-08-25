@@ -22,7 +22,7 @@
 
 #include "dsda/utility.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 const char* dsda_DemoNameBase(void);
 void dsda_SetDemoBaseName(const char* name);

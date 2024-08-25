@@ -36,7 +36,7 @@
 #ifndef __D_THINK__
 #define __D_THINK__
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 struct mobj_s;
 

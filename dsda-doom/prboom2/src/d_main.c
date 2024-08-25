@@ -35,8 +35,6 @@
  *-----------------------------------------------------------------------------
  */
 
-#include "dsda/font.h"
-#include "viletech.zig.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -106,6 +104,7 @@
 #include "dsda/wad_stats.h"
 #include "dsda/zipfile.h"
 #include "dsda/gl/render_scale.h"
+#include "dsda/font.h"
 
 #include "heretic/mn_menu.h"
 #include "heretic/sb_bar.h"
@@ -116,6 +115,9 @@
 #include "i_capture.h"
 
 #include "i_glob.h"
+
+#include "viletech/core.h"
+#include "viletech/devgui.h"
 
 #if defined(_WIN32)
 #define DYNLIB_EXT ".dll"

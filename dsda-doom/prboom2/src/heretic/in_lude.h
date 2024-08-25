@@ -19,7 +19,7 @@
 
 #include "d_player.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 void IN_Ticker(CCore*);
 void IN_Drawer(CCore*);

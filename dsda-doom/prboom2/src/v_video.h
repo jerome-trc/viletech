@@ -42,7 +42,7 @@
 // Needed because we are refering to patches.
 #include "r_data.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 //
 // VIDEO

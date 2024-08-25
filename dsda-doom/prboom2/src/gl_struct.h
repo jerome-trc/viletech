@@ -40,7 +40,7 @@
 #include "d_player.h"
 #include "r_defs.h"
 
-#include "viletech.zig.h"
+#include "viletech/core.h"
 
 extern dboolean use_gl_nodes;
 
