@@ -37,6 +37,8 @@ pub fn frameFinish(_: *Core.C) callconv(.C) void {
 pub fn layout(ccx: *Core.C) callconv(.C) void {
     var cx = ccx.core();
 
+    cx.console.feedFromStdLog();
+
     if (!ccx.devgui_open) {
         return;
     }
