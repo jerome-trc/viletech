@@ -19,6 +19,9 @@ comptime {
     @export(deh.burstShotgunFire, .{ .name = "A_BurstShotgunFire" });
     @export(deh.revolverCheckReload, .{ .name = "A_RevolverCheckReload" });
 
+    @export(deh.clearRefire, .{ .name = "A_ClearRefire" });
+    @export(deh.light, .{ .name = "A_Light" });
+    @export(deh.lightRandomRange, .{ .name = "A_LightRandomRange" });
     @export(deh.weaponSoundLoop, .{ .name = "A_WeaponSoundLoop" });
     @export(deh.weaponSoundRandom, .{ .name = "A_WeaponSoundRandom" });
 
