@@ -126,15 +126,6 @@ pub fn deinit(self: *Self) void {
 pub fn layout(cx: *Core, left: bool, menu_bar_height: f32) void {
     var self = &cx.console;
 
-    {
-        std_log_mutex.lock();
-        defer std_log_mutex.unlock();
-
-        while (std_log.popFront()) |l| {
-            self.history.pushBack(HistoryItem{ .stdlog = l }) catch {};
-        }
-    }
-
     const vp_size = if (c.igGetMainViewport()) |vp| vp.*.Size else {
         imgui.report_err_get_main_viewport.call();
         return;
@@ -250,6 +241,15 @@ pub fn logToast(cx: *Core, comptime format: []const u8, args: anytype) void {
     cx.eprintln(format, args) catch return;
     const p = std.fmt.allocPrint(cx.console.alloc, format, args) catch return;
     cx.console.history.pushBack(HistoryItem{ .toast = p }) catch return;
+}
+
+pub fn feedFromStdLog(self: *Self) void {
+    std_log_mutex.lock();
+    defer std_log_mutex.unlock();
+
+    while (std_log.popFront()) |l| {
+        self.history.pushBack(HistoryItem{ .stdlog = l }) catch {};
+    }
 }
 
 fn cToast(ccx: *Core.C, msg: [*:0]const u8) callconv(.C) void {
