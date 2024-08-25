@@ -1,8 +1,5 @@
 #include <dsdhacked>
 
-// Parameters: sound effect ID, whether to play globally, timeout.
-custom weapon pointer mbf21 A_WeaponSoundLoop(sound, bool, int)
-
 strings {
     GOTCHAINGUN "You got the tornado battery!"
 }

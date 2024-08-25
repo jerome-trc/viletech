@@ -5,6 +5,10 @@ const std = @import("std");
 const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
+const I16F16 = @import("fxp.zig").I16F16;
+
+const ang90: c.angle_t = 0x40000000;
+const angle_to_fine_shift: c_uint = 19;
 
 const invslot_hellbound_shotgun_overload: usize = 0;
 const invslot_hellbound_shotgun_shots: usize = invslot_hellbound_shotgun_overload + 1;
@@ -114,6 +118,20 @@ fn revolverCheckReload(ccx: *Core.C, player: *c.player_t, psp: *c.pspdef_t) call
 
 // Generic /////////////////////////////////////////////////////////////////////
 
+fn clearRefire(_: *Core.C, player: *c.player_t, _: *c.pspdef_t) callconv(.C) void {
+    player.refire = 0;
+}
+
+fn light(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    player.extralight = std.math.lossyCast(c_int, psp.state.*.args[0]);
+}
+
+fn lightRandomRange(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
+    const min_incl = std.math.lossyCast(c_int, psp.state.*.args[0]);
+    const max_incl = std.math.lossyCast(c_int, psp.state.*.args[1]);
+    player.extralight = boomrngRange(c.pr_mbf21, min_incl, max_incl);
+}
+
 fn weaponSoundLoop(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv(.C) void {
     const sfx_id = std.math.lossyCast(c_int, psp.state.*.args[0]);
     const play_globally = psp.state.*.args[1] != 0;
@@ -128,11 +146,25 @@ fn weaponSoundRandom(_: *Core.C, player: *c.player_t, psp: *c.pspdef_t) callconv
     c.S_StartMobjSound(if (play_globally) null else player.mo, sfx_id);
 }
 
+// Details /////////////////////////////////////////////////////////////////////
+
+fn angleToSlope(a: c_int) I16F16 {
+    const ang90s: c_int = @intCast(ang90);
+    const angle_to_fine_shift_s: c_int = @intCast(angle_to_fine_shift);
+
+    const ret = if (a > ang90s)
+        c.finetangent[0]
+    else if (-a > ang90s)
+        c.finetangent[c.FINEANGLES / 2 - 1]
+    else
+        c.finetangent[@intCast((ang90s - a) >> angle_to_fine_shift_s)];
+
+    return I16F16.fromBits(ret);
+}
+
 fn boomrngRange(rng_class: c.pr_class_t, min_inclusive: c_int, max_inclusive: c_int) c_int {
     return @rem(c.P_Random(rng_class), max_inclusive) + min_inclusive;
 }
-
-// Details /////////////////////////////////////////////////////////////////////
 
 fn bulletSlope(ccx: *Core.C, actor: *c.mobj_t) c.fixed_t {
     var aim: c.aim_t = undefined;
@@ -142,4 +174,16 @@ fn bulletSlope(ccx: *Core.C, actor: *c.mobj_t) c.fixed_t {
     const bulletslope = @extern(*c.fixed_t, .{ .name = "bulletslope" });
     bulletslope.* = aim.slope;
     return bulletslope.*;
+}
+
+fn degToSlope(a: I16F16) I16F16 {
+    if (a.inner >= 0)
+        return angleToSlope(@intCast(fixedToAngle(a)))
+    else
+        return angleToSlope(-@as(c_int, @intCast(fixedToAngle(a.neg()))));
+}
+
+fn fixedToAngle(a: I16F16) c.angle_t {
+    const a64: u64 = @intCast(a.inner);
+    return @truncate(a64 * (0x20000000 / 45) >> I16F16.frac_bits);
 }

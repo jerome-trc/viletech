@@ -1,0 +1,13 @@
+#include <dsdhacked>
+
+custom weapon pointer mbf21 A_ClearRefire()
+
+custom weapon pointer mbf21 A_LightRandomRange(uint, uint)
+
+custom weapon pointer mbf21 A_WeaponProjectileSpread(
+    thingmissile, anglefixed, anglefixed, fixed, fixed)
+
+// Parameters: sound effect ID, whether to play globally, timeout.
+custom weapon pointer mbf21 A_WeaponSoundLoop(sound, bool, int)
+
+custom weapon pointer mbf21 A_WeaponSoundRandom(sound, sound, sound, sound, bool)

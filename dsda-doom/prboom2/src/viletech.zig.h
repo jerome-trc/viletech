@@ -28,7 +28,21 @@ void registerPref(CCore*, const char* pref_v);
 /// The returned pointer is not null-terminated!
 const char* pathStem(const char* path, size_t* out_len);
 
-// DeHackEd action pointers ////////////////////////////////////////////////////
+// DeHackEd action pointers, general ///////////////////////////////////////////
+
+void A_ClearRefire(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_Light(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_LightRandomRange(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_WeaponProjectileSpread(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_WeaponSoundLoop(CCore*, struct player_s*, struct pspdef_s*);
+
+void A_WeaponSoundRandom(CCore*, struct player_s*, struct pspdef_s*);
+
+// DeHackEd action pointers, FD4RB /////////////////////////////////////////////
 
 void A_BorstalShotgunCheckOverloaded(CCore*, struct player_s*, struct pspdef_s*);
 
@@ -47,10 +61,6 @@ void A_BurstShotgunFire(CCore*, struct player_s*, struct pspdef_s*);
 void A_BurstShotgunCheckVent(CCore*, struct player_s*, struct pspdef_s*);
 
 void A_RevolverCheckReload(CCore*, struct player_s*, struct pspdef_s*);
-
-void A_WeaponSoundLoop(CCore*, struct player_s*, struct pspdef_s*);
-
-void A_WeaponSoundRandom(CCore*, struct player_s*, struct pspdef_s*);
 
 // Developer GUI ///////////////////////////////////////////////////////////////
 

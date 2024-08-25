@@ -2,7 +2,6 @@
 
 custom weapon pointer mbf21 A_BurstShotgunFire()
 custom weapon pointer mbf21 A_BurstShotgunCheckVent(state)
-custom weapon pointer mbf21 A_WeaponSoundRandom(sound, sound, sound, sound, bool)
 
 strings {
 	GOTSHOTGUN2 "You got the burst shotgun!"

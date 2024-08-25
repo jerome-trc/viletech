@@ -33,6 +33,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "doomstat.h"
+#include "info.h"
 #include "r_main.h"
 #include "p_map.h"
 #include "p_inter.h"
@@ -1241,6 +1242,49 @@ void A_WeaponProjectile(CCore* cx, player_t *player, pspdef_t *psp)
   // so player seeker missiles prioritizing the
   // baddie the player is actually aiming at. ;)
   P_SetTarget(&mo->tracer, linetarget);
+}
+
+void A_WeaponProjectileSpread(CCore* cx, player_t *player, pspdef_t *psp) {
+    int an;
+
+    CHECK_WEAPON_CODEPOINTER(__FUNC__, player);
+
+    if (!mbf21 || !psp->state || !psp->state->args[0]) {
+        return;
+    }
+
+    mobjtype_t type = psp->state->args[0] - 1;
+    mobj_t* mo = P_SpawnPlayerMissile(cx, player->mo, type);
+
+    if (!mo) { return; }
+
+    const fixed_t hspread = psp->state->args[1];
+    const fixed_t vspread = psp->state->args[2];
+    const fixed_t spawnofs_xy = psp->state->args[3];
+    const fixed_t spawnofs_z = psp->state->args[4];
+
+    // adjust angle
+    mo->angle += P_RandomHitscanAngle(pr_mbf21, hspread);
+    an = mo->angle >> ANGLETOFINESHIFT;
+    mo->momx = FixedMul(mo->info->speed, finecosine[an]);
+    mo->momy = FixedMul(mo->info->speed, finesine[an]);
+
+    // adjust pitch (approximated, using Doom's ye olde
+    // finetangent table; same method as autoaim)
+    const fixed_t slope = P_RandomHitscanSlope(pr_mbf21, vspread);
+    mo->momz += FixedMul(mo->info->speed, slope);
+    // mo->momz += FixedMul(mo->info->speed, DegToSlope(0));
+
+    // adjust position
+    an = (player->mo->angle - ANG90) >> ANGLETOFINESHIFT;
+    mo->x += FixedMul(spawnofs_xy, finecosine[an]);
+    mo->y += FixedMul(spawnofs_xy, finesine[an]);
+    mo->z += spawnofs_z;
+
+    // set tracer to the player's autoaim target,
+    // so player seeker missiles prioritizing the
+    // baddie the player is actually aiming at. ;)
+    P_SetTarget(&mo->tracer, linetarget);
 }
 
 //

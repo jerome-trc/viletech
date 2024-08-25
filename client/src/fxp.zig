@@ -14,8 +14,8 @@ pub fn Fxp(fracbits: comptime_int) type {
     return packed struct {
         const Self = @This();
 
-        const frac_bits = fracbits;
-        const frac_unit = 1 << frac_bits;
+        pub const frac_bits = fracbits;
+        pub const frac_unit = 1 << frac_bits;
 
         inner: Backing,
 
@@ -73,6 +73,10 @@ pub fn Fxp(fracbits: comptime_int) type {
 
         pub fn sub(lhs: Self, rhs: Self) Self {
             return .{ .inner = lhs.inner -% rhs.inner };
+        }
+
+        pub fn neg(self: Self) Self {
+            return .{ .inner = -self.inner };
         }
     };
 }

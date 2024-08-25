@@ -22,6 +22,7 @@ pub const c = @cImport({
     @cInclude("lprintf.h");
     @cInclude("m_random.h");
     @cInclude("p_map.h");
+    @cInclude("p_tick.h");
     @cInclude("s_sound.h");
     @cInclude("w_wad.h");
     @cInclude("dsda/aim.h");

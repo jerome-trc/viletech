@@ -84,6 +84,16 @@ pub fn build(b: *std.Build) void {
     fd4rb.root_module.addImport("ratboom", module);
     b.installArtifact(fd4rb);
 
+    const fd4rb_decohack_sources = [_][]const u8{
+        "plugins/fd4rb/decohack/common.dh",
+
+        "plugins/fd4rb/decohack/borstal-shotgun.dh",
+        "plugins/fd4rb/decohack/burst-shotgun.dh",
+        "plugins/fd4rb/decohack/plasma-vulcan.dh",
+        "plugins/fd4rb/decohack/revolver.dh",
+        "plugins/fd4rb/decohack/tornado-battery.dh",
+    };
+
     const fd4rb_decohack = b.addSystemCommand(&[_][]const u8{
         "decohack",
         "--budget",
@@ -91,18 +101,9 @@ pub fn build(b: *std.Build) void {
         ".zig-cache/fd4rb/fd4rb.dh",
         "-o",
         ".zig-cache/fd4rb/fd4rb.deh",
-        "plugins/fd4rb/decohack/borstal-shotgun.dh",
-        "plugins/fd4rb/decohack/burst-shotgun.dh",
-        "plugins/fd4rb/decohack/revolver.dh",
-        "plugins/fd4rb/decohack/tornado-battery.dh",
-    });
+    } ++ fd4rb_decohack_sources);
 
-    for ([_][]const u8{
-        "plugins/fd4rb/decohack/borstal-shotgun.dh",
-        "plugins/fd4rb/decohack/burst-shotgun.dh",
-        "plugins/fd4rb/decohack/revolver.dh",
-        "plugins/fd4rb/decohack/tornado-battery.dh",
-    }) |p| {
+    for (fd4rb_decohack_sources) |p| {
         fd4rb_decohack.addFileInput(b.path(p));
     }
 

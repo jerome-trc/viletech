@@ -340,7 +340,7 @@ void S_StartSoundAtVolume(void *origin_p, int sfx_id, int volume, int loop_timeo
 
   // check for bogus sound #
   if (sfx_id < 1 || sfx_id > num_sfx)
-    I_Error("S_StartSoundAtVolume: Bad sfx #: %d", sfx_id);
+    I_Error("%s: Bad sfx #: %d", __FUNCTION__, sfx_id);
 
   sfx = &S_sfx[sfx_id];
 

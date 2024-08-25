@@ -155,6 +155,24 @@ pub fn run() !void {
             continue;
         }
 
+        if (std.mem.eql(u8, part0, "Initial")) {
+            _ = parts.next().?; // `frame`
+            _ = parts.next().?; // `=`
+            const num_str = parts.next().?;
+            const num = try std.fmt.parseInt(u32, num_str, 10);
+            try std.fmt.format(out_writer, "Initial frame = {}", .{num + 10_000});
+            continue;
+        }
+
+        if (std.mem.eql(u8, part0, "Death")) {
+            _ = parts.next().?; // `frame`
+            _ = parts.next().?; // `=`
+            const num_str = parts.next().?;
+            const num = try std.fmt.parseInt(u32, num_str, 10);
+            try std.fmt.format(out_writer, "Death frame = {}", .{num + 10_000});
+            continue;
+        }
+
         if (std.mem.eql(u8, part0, "FRAME")) {
             const num_str = parts.next().?;
             const num = try std.fmt.parseInt(u32, num_str, 10);
