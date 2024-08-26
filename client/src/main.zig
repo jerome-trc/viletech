@@ -46,7 +46,7 @@ extern "C" fn dsdaMain(
     argv: [*][*:0]u8,
 ) c_int;
 
-export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
+pub fn main() !void {
     const start_time = std.time.Instant.now() catch null;
     gamemode.start();
 
@@ -61,17 +61,18 @@ export fn zigMain(argc: c_int, argv: [*][*:0]u8) c_int {
         core_alloc = std.heap.c_allocator;
     }
 
-    var cx = Core.init(
+    var cx = try Core.init(
         if (builtin.mode == .Debug) &gpa else null,
         start_time,
-    ) catch return 1;
+    );
     defer cx.deinit();
 
     if (builtin.mode == .Debug) {
         std.log.scoped(.ratboom).info("*** DEBUG BUILD ***", .{});
     }
 
-    return dsdaMain(&cx.c, argc, argv);
+    _ = dsdaMain(&cx.c, @intCast(std.os.argv.len), std.os.argv.ptr);
+    unreachable;
 }
 
 fn logFn(
