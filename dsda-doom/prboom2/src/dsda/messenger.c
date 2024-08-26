@@ -23,6 +23,8 @@
 
 #include "messenger.h"
 
+#include "viletech/devgui.h"
+
 // hexen_note: use FONTAY_S for yellow messages (new font, y_message, etc)
 
 #define MESSAGE_LIFETIME 140

@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "viletech/posix.h"
+
 #if !defined(RATBOOM_ZIG) // If included by Zig, don't expand to anything.
 
 typedef int32_t GameTick;

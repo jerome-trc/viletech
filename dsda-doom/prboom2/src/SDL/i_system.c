@@ -400,7 +400,7 @@ char* I_FindFileInternal(const char* wfname, const char* ext, dboolean isStatic)
     {NULL}, // current working directory
     {NULL, NULL, "VTEC_WAD_DIR"}, // run-time $VTEC_WAD_DIR
     {VTEC_WAD_DIR}, // build-time configured VTEC_WAD_DIR
-    {DSDA_ABSOLUTE_PWAD_PATH}, // build-time configured absolute path to dsda-doom.wad
+    {VTEC_ABSOLUTE_PWAD_PATH}, // build-time configured absolute path to dsda-doom.wad
     {NULL, NULL, NULL, I_GetBasePath}, // search the base path provided by SDL
     {NULL, "doom", "HOME"}, // ~/doom
     {NULL, NULL, "HOME"}, // ~

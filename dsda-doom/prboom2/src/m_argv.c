@@ -37,6 +37,8 @@
 
 #include "m_argv.h"
 
+#include "viletech/posix.h"
+
 //
 // M_CheckParmEx
 // Checks for the given parameter in the given params list.

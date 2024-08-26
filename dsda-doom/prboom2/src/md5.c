@@ -75,8 +75,11 @@ MD5Update(struct MD5Context *ctx, md5byte const *buf, unsigned len)
 
         t = 64 - (t & 0x3f);    /* Space available in ctx->in (at least 1) */
         if (t > len) {
+            if (buf != NULL) {
                 memcpy((md5byte *)ctx->in + 64 - t, buf, len);
-                return;
+            }
+
+            return;
         }
         /* First chunk is an odd size */
         memcpy((md5byte *)ctx->in + 64 - t, buf, t);

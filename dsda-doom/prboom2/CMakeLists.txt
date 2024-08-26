@@ -186,9 +186,9 @@ set(VTEC_PWAD_DIR "${DEFAULT_WAD_DIR}" CACHE STRING "Path to install RatBoom int
 set(VTEC_WAD_DIR "${CMAKE_INSTALL_PREFIX}/${DEFAULT_WAD_DIR}" CACHE PATH "Path to look for WAD files.")
 
 if(IS_ABSOLUTE "${VTEC_PWAD_DIR}")
-    set(DSDA_ABSOLUTE_PWAD_PATH "${VTEC_PWAD_DIR}")
+    set(VTEC_ABSOLUTE_PWAD_PATH "${VTEC_PWAD_DIR}")
 else()
-    set(DSDA_ABSOLUTE_PWAD_PATH "${CMAKE_INSTALL_PREFIX}/${VTEC_PWAD_DIR}")
+    set(VTEC_ABSOLUTE_PWAD_PATH "${CMAKE_INSTALL_PREFIX}/${VTEC_PWAD_DIR}")
 endif()
 
 option(SIMPLECHECKS "Enable checks which only impose significant overhead if a posible error is detected" ON)

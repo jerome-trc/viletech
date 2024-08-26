@@ -345,9 +345,3 @@ int dsdaMain(CCore* cx, int argc, char **argv) {
   D_DoomMain(cx);
   return 0;
 }
-
-int main(int argc, char* argv[]) {
-    int zigMain(int argc, char* argv[]);
-
-    return zigMain(argc, argv);
-}

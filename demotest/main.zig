@@ -212,7 +212,7 @@ fn runDemo(args: struct {
     defer alloc.free(demo_str);
 
     const argv_no_pwad = [_][]const u8{
-        "Release/ratboom",
+        "rel/bin/ratboom",
         "-nosound",
         "-nodraw",
         "-levelstat",
@@ -238,7 +238,7 @@ fn runDemo(args: struct {
     const result = std.process.Child.run(.{
         .allocator = alloc,
         .argv = argv,
-        .cwd = "build",
+        .cwd = "zig-out",
     }) catch |err| {
         std.debug.print("Command failed: {s}\n", .{argv});
         std.debug.print("Details: {}\n", .{err});

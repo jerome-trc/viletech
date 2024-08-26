@@ -7,7 +7,7 @@ pub fn link(b: *std.Build, compile: *std.Build.Step.Compile) void {
     else
         &[_][]const u8{ "--std=c++20", "-DIMGUI_IMPL_API=extern \"C\"" };
 
-    if (builtin.os.tag != .windows) {
+    if (false) {
         const flags = b.run(&[_][]const u8{ "pkg-config", "--cflags-only-I", "sdl2" });
         var iter = std.mem.splitScalar(u8, flags, ' ');
 

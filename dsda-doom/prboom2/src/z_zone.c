@@ -123,6 +123,8 @@ static void *Z_MallocTag(size_t size, int tag)
 
 void Z_Free(void *p)
 {
+    if (p == NULL) { return; }
+
   memblock_t *block = (memblock_t *)((char *) p - HEADER_SIZE);
 
   if (!p)
