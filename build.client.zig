@@ -365,8 +365,12 @@ fn setupExe(
         .flags = cxx_flags,
     });
 
+    const alsa_or_not = if (builtin.os.tag == .linux)
+        [_][]const u8{"alsa"}
+    else
+        [_][]const u8{};
+
     for ([_][]const u8{
-        "alsa",
         // "dumb",
         "fluidsynth",
         "GL",
@@ -382,7 +386,7 @@ fn setupExe(
         "vorbisfile",
         "z",
         "zip",
-    }) |libname| {
+    } ++ alsa_or_not) |libname| {
         exe.linkSystemLibrary2(libname, .{
             .needed = true,
             .preferred_link_mode = .static,
