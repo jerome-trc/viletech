@@ -154,6 +154,7 @@ void MN_UpdateClass(int choice)
       SkillDef.menuitems[3].alttext = "WARLOCK";
       SkillDef.menuitems[4].alttext = "ARCHIMAGE";
       break;
+    default: break;
   }
 }
 

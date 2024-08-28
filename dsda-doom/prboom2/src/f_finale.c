@@ -240,6 +240,7 @@ void F_StartFinale (CCore* cx)
                        (gamemission == pack_plut) ? s_P4TEXT : s_C4TEXT;
         }
         break;
+    default: break;
     }
   }
 

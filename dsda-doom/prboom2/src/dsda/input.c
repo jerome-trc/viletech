@@ -96,6 +96,7 @@ void dsda_InputTrackEvent(event_t* ev) {
     case ev_joystick:
       dsda_InputTrackButtons(joybuttons, MAX_JOY_BUTTONS, ev);
       break;
+    default: break;
   }
 }
 
@@ -148,6 +149,7 @@ void dsda_InputTrackGameEvent(event_t* ev) {
     case ev_joystick:
       dsda_InputTrackGameButtons(joybuttons, MAX_JOY_BUTTONS, ev);
       break;
+    default: break;
   }
 }
 

@@ -62,6 +62,8 @@
 #include "dsda/stretch.h"
 #include "dsda/text_color.h"
 
+#include "viletech/stdx.h"
+
 // DWF 2012-05-10
 // SetRatio sets the following global variables based on window geometry and
 // user preferences. The integer ratio is hardly used anymore, so further
@@ -835,6 +837,7 @@ void V_InitMode(video_mode_t mode) {
       V_DrawLineWu = WRAP_gld_DrawLine;
       current_videomode = VID_MODEGL;
       break;
+    case VID_MODEMAX: UNREACHABLE;
   }
 }
 

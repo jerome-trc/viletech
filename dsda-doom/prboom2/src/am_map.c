@@ -1830,6 +1830,8 @@ static void AM_drawWalls(void)
       case ams_unseen:
         AM_drawMline(&l, mapcolor_p->unsn);
         continue;
+
+    default: break;
     }
   }
 }
