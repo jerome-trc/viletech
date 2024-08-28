@@ -2,7 +2,7 @@ ICONS/Makefile.am eol=lf
 ICONS/prboom-plus.bash -text
 ICONS/prboom-plus.desktop -text
 ICONS/prboom-plus.exe.manifest -text
-ICONS/dsda-doom.ico -text
+ICONS/viletech.ico -text
 Makefile.am eol=lf
 VisualC6/Doom.dsp eol=crlf
 VisualC6/Doom.dsw eol=crlf

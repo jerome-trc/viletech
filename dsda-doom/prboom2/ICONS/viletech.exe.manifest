@@ -4,10 +4,10 @@
 <assemblyIdentity
     version="1.0.0.0"
     processorArchitecture="*"
-    name="dsda-doom.dsda-doom.dsda-doom"
+    name="viletech.viletech.viletech"
     type="win32"
 />
-<description>DSDA-Doom</description>
+<description>VileTech</description>
 <dependency>
     <dependentAssembly>
         <assemblyIdentity

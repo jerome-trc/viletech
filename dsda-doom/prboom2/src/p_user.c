@@ -86,9 +86,9 @@ fixed_t P_PlayerSpeed(player_t* player)
   return (fixed_t) (sqrt(vx * vx + vy * vy) * FRACUNIT);
 }
 
-angle_t P_PlayerPitch(player_t* player)
-{
-  return player->mo->pitch - (angle_t)(player->lookdir * ANG1 / M_PI);
+angle_t P_PlayerPitch(player_t* player) {
+    // FIXME: UBSan reports occasional integer divide-by-zero here.
+    return player->mo->pitch - (angle_t)(player->lookdir * ANG1 / M_PI);
 }
 
 //

@@ -490,6 +490,7 @@ static void createPatch(int id) {
     }
 
     // setup the column's data
+    // FIXME: UBSan reports `patch->columns` is sometimes misaligned here.
     patch->columns[x].pixels = patch->pixels + (x*patch->height) + 0;
     patch->columns[x].numPosts = numPostsInColumn[x];
     patch->columns[x].posts = patch->posts + numPostsUsedSoFar;

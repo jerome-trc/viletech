@@ -10,4 +10,4 @@
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON    DISCARDABLE     "dsda-doom.ico"
+IDI_ICON1               ICON    DISCARDABLE     "viletech.ico"
