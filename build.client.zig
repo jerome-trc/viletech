@@ -1,6 +1,8 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+const ccdb = @import("ccdb.zig");
+
 pub fn build(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -39,6 +41,10 @@ pub fn build(
     setupExe(b, exe_check, cfg_hdr, metainfo);
     b.installArtifact(exe);
     check.dependOn(&exe_check.step);
+
+    ccdb.createStep(b, "ccdb", .{
+        .targets = &[1]*std.Build.Step.Compile{exe},
+    });
 
     return exe;
 }
