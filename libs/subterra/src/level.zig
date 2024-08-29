@@ -93,7 +93,7 @@ pub fn LineDef(game: Game) type {
         _pad: FlagPad,
     };
 
-    return struct {
+    return extern struct {
         pub const Self = @This();
         pub const Flags = FlagT;
 
