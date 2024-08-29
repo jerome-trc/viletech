@@ -1,3 +1,4 @@
+pub const gfx = @import("gfx.zig");
 pub const level = @import("level.zig");
 pub const mus = @import("mus.zig");
 
@@ -11,5 +12,7 @@ pub const Game = enum {
 };
 
 test {
-    @import("std").testing.refAllDecls(level);
+    const std = @import("std");
+    std.testing.refAllDecls(gfx);
+    std.testing.refAllDecls(level);
 }
