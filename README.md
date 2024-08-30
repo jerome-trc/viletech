@@ -16,7 +16,7 @@ Beware that this project:
 ## Contents
 
 - `/assets` contains non-code resources used by executable artifacts at runtime.
-- `/client` contains the code for Zig executable.
+- `/client` contains the code for a Zig executable.
 - `/crates` contains Rust libraries associated with this project.
 - `/depend` contains Git subtrees and submodules from other projects.
 - `/doc` contains documentation for developers.
