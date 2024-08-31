@@ -6,8 +6,11 @@ pub const Game = enum {
     boom, // Not a game per se...
     doom,
     doom64,
+    doom64ex,
+    doom64_2020,
     heretic,
     hexen,
+    mbf, // Also not a game...
     strife,
 };
 
