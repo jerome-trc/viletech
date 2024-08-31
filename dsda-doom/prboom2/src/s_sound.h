@@ -140,6 +140,8 @@ void S_StartSongName(CCore*, const char *songLump, dboolean loop);
 dboolean S_GetSoundPlayingInfo(void * mobj, int sound_id);
 int S_GetSoundID(const char *name);
 
+void S_ResetVolume(CCore*);
+
 #if defined(__cplusplus)
 }
 #endif

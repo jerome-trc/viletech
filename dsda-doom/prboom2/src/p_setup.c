@@ -3687,10 +3687,7 @@ void P_SetupLevel(CCore* cx, int episode, int map, int playermask, int skill)
     }
 
   // Must process musinfo to get default track before calling S_Start
-  if (gamemode != shareware)
-  {
-    S_ParseMusInfo(lumpname);
-  }
+  S_ParseMusInfo(lumpname);
 
   // Make sure all sounds are stopped before Z_FreeTag.
   S_Start(cx);

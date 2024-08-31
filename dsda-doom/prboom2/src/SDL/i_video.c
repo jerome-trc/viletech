@@ -112,7 +112,7 @@ static void DeactivateMouse(void);
 //static int AccelerateMouse(int val);
 static void I_ReadMouse(CCore*);
 static dboolean MouseShouldBeGrabbed(CCore*);
-static void UpdateFocus(void);
+static void UpdateFocus(CCore*);
 
 extern const int gl_colorbuffer_bits;
 extern const int gl_depthbuffer_bits;
@@ -275,6 +275,11 @@ static int I_TranslateKey(SDL_Keysym* key)
 
 }
 
+dboolean I_WindowFocused(void)
+{
+  return window_focused;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // Main input code
 
@@ -418,7 +423,7 @@ static void I_GetEvent(CCore* cx)
           {
           case SDL_WINDOWEVENT_FOCUS_GAINED:
           case SDL_WINDOWEVENT_FOCUS_LOST:
-            UpdateFocus();
+            UpdateFocus(cx);
             break;
           case SDL_WINDOWEVENT_SIZE_CHANGED:
             ApplyWindowResize(Event);
@@ -1216,7 +1221,7 @@ void I_InitGraphics(CCore* cx)
     I_InitInputs();
 
     //e6y: new mouse code
-    UpdateFocus();
+    UpdateFocus(cx);
     UpdateGrab(cx);
   }
 }
@@ -1591,7 +1596,7 @@ static dboolean MouseShouldBeGrabbed(CCore* cx)
 // We try to make ourselves be well-behaved: the grab on the mouse
 // is removed if we lose focus (such as a popup window appearing),
 // and we dont move the mouse around if we aren't focused either.
-static void UpdateFocus(void)
+static void UpdateFocus(CCore* cx)
 {
   Uint32 flags = 0;
 
@@ -1613,8 +1618,7 @@ static void UpdateFocus(void)
     V_TouchPalette();
   }
 
-  // Should the screen be grabbed?
-  //    screenvisible = (state & SDL_APPACTIVE) != 0;
+  S_ResetVolume(cx);
 }
 
 void UpdateGrab(CCore* cx)

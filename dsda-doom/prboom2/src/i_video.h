@@ -100,6 +100,7 @@ extern int renderW;		// resolution scaling
 extern int renderH;		// - DTIED
 
 extern dboolean window_focused;
-void UpdateGrab(struct CCore*);
+dboolean I_WindowFocused(void);
+void UpdateGrab(CCore*);
 
 #endif

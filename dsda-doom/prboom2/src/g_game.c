@@ -85,6 +85,7 @@
 #include "smooth.h"
 #include "r_fps.h"
 #include "e6y.h"//e6y
+#include "v_video.h"
 
 #include "dsda.h"
 #include "dsda/args.h"
@@ -795,6 +796,32 @@ void G_BuildTiccmd(CCore* cx, ticcmd_t* cmd)
     }
   }
 
+  if (players[consoleplayer].mo && players[consoleplayer].mo->pitch && !dsda_MouseLook())
+    dsda_QueueExCmdLook(XC_LOOK_RESET);
+
+  if (dsda_AllowFreeLook())
+  {
+    short look;
+
+    look = mlooky;
+
+    if (look)
+    {
+      if (players[consoleplayer].mo && !V_IsOpenGLMode())
+      {
+        int target_look = players[consoleplayer].mo->pitch + (look << 16);
+
+        if (target_look < (int) raven_angle_up_limit)
+          look = (raven_angle_up_limit - players[consoleplayer].mo->pitch) >> 16;
+
+        if (target_look > (int) raven_angle_down_limit)
+          look = (raven_angle_down_limit - players[consoleplayer].mo->pitch) >> 16;
+      }
+
+      dsda_QueueExCmdLook(look);
+    }
+  }
+
   if (dsda_InputActive(dsda_input_fire))
     cmd->buttons |= BT_ATTACK;
 
@@ -1198,15 +1225,6 @@ void G_DoLoadLevel(CCore* cx) {
     } else if (pistolstart == pistolstart_on) {
         if (allow_incompatibility) {
             G_PlayerReborn(0);
-        } else if (reelplayback) {
-            // no-op - silently ignore pistolstart when playing demo from the
-            // demo reel
-        } else {
-            const char message[] = "The -pistolstart option is not supported"
-                                    " for demos and\n"
-                                    " network play.";
-            demorecording = false;
-            I_Error(message);
         }
     }
 

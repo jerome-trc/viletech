@@ -156,6 +156,14 @@ void S_ResetSfxVolume(void)
     sfx_volume = snd_SfxVolume;
 }
 
+void S_ResetVolume(CCore* cx)
+{
+  void I_ResetMusicVolume(void);
+
+  S_ResetSfxVolume();
+  I_ResetMusicVolume();
+}
+
 // Initializes sound stuff, including volume
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
@@ -312,9 +320,6 @@ void S_StartSoundAtVolume(void *origin_p, int sfx_id, int volume, int loop_timeo
   origin = (mobj_t *) origin_p;
   listener = GetSoundListener();
 
-  if (origin == NULL)
-    origin = listener;
-
   //jff 1/22/98 return if sound is not enabled
   if (nosfxparm)
     return;
@@ -357,7 +362,7 @@ void S_StartSoundAtVolume(void *origin_p, int sfx_id, int volume, int loop_timeo
   // Check to see if it is audible, modify the params
   // killough 3/7/98, 4/25/98: code rearranged slightly
 
-  if (origin == listener) {
+  if (!origin || origin == listener) {
     params.separation = NORM_SEP;
     params.volume *= 8;
     params.priority *= 10;
@@ -1246,7 +1251,11 @@ void S_StartAmbientSound(void *_origin, int sound_id, int volume)
 
   sfx = &S_sfx[sound_id];
 
-  params.volume = (volume * (sfx_volume + 1) * 8) >> 7;
+  if (sfx_volume > 0)
+    params.volume = (volume * (sfx_volume + 1) * 8) >> 7;
+  else
+    params.volume = 0;
+
   params.pitch = (byte) (NORM_PITCH - (M_Random() & 3) + (M_Random() & 3));
   params.priority = 1; // super low priority
   params.separation = 128;
