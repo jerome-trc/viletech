@@ -268,6 +268,11 @@ static int I_TranslateKey(SDL_Keysym* key)
 
 }
 
+dboolean I_WindowFocused(void)
+{
+  return window_focused;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // Main input code
 
@@ -1600,8 +1605,7 @@ static void UpdateFocus(void)
     V_TouchPalette();
   }
 
-  // Should the screen be grabbed?
-  //    screenvisible = (state & SDL_APPACTIVE) != 0;
+  S_ResetVolume();
 }
 
 void UpdateGrab(void)
