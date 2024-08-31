@@ -293,6 +293,8 @@ void SB_Init(void)
 
     // [FG] support widescreen status bar backgrounds
     ST_SetScaledWidth();
+
+    ST_LoadTextColors();
 }
 
 //---------------------------------------------------------------------------
@@ -994,6 +996,11 @@ static void Hexen_SB_Init(void)
         LumpKILLS = W_GetNumForName("KILLS");
     }
     SB_SetClassData();
+
+    // [FG] support widescreen status bar backgrounds
+    ST_SetScaledWidth();
+
+    ST_LoadTextColors();
 }
 
 void SB_SetClassData(void)

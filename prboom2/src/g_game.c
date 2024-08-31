@@ -190,9 +190,6 @@ dboolean coop_spawns;
 // but without having to be recording every time.
 int shorttics;
 
-// automatic pistol start when advancing from one level to the next
-int pistolstart;
-
 //
 // controls (have defaults)
 //
@@ -806,7 +803,7 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 
     if (look)
     {
-      if (!V_IsOpenGLMode())
+      if (players[consoleplayer].mo && !V_IsOpenGLMode())
       {
         int target_look = players[consoleplayer].mo->pitch + (look << 16);
 
@@ -1223,26 +1220,9 @@ static void G_DoLoadLevel (void)
   }
 
   // automatic pistol start when advancing from one level to the next
-  if (pistolstart)
-  {
+  if (dsda_Flag(dsda_arg_pistolstart) || dsda_IntConfig(dsda_config_pistol_start))
     if (allow_incompatibility)
-    {
       G_PlayerReborn(0);
-    }
-    else if (reelplayback)
-    {
-      // no-op - silently ignore pistolstart when playing demo from the
-      // demo reel
-    }
-    else
-    {
-      const char message[] = "The -pistolstart option is not supported"
-                             " for demos and\n"
-                             " network play.";
-      demorecording = false;
-      I_Error(message);
-    }
-  }
 
   // initialize the msecnode_t freelist.                     phares 3/25/98
   // any nodes in the freelist are gone by now, cleared

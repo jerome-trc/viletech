@@ -1328,7 +1328,7 @@ void M_SfxVol(int choice)
   }
 
   // Unmute the sfx if we are adjusting the volume
-  if (dsda_MuteSfx())
+  if (dsda_IntConfig(dsda_config_mute_sfx))
     dsda_ToggleConfig(dsda_config_mute_sfx, true);
 }
 
@@ -1346,7 +1346,7 @@ void M_MusicVol(int choice)
   }
 
   // Unmute the music if we are adjusting the volume
-  if (dsda_MuteMusic())
+  if (dsda_IntConfig(dsda_config_mute_music))
     dsda_ToggleConfig(dsda_config_mute_music, true);
 }
 
@@ -3009,6 +3009,7 @@ setup_menu_t audiovideo_settings[] = {
   { "Enable v1.1 Pitch Effects", S_YESNO, m_conf, G_X, dsda_config_pitched_sounds },
   { "Disable Sound Cutoffs", S_YESNO, m_conf, G_X, dsda_config_full_sounds },
   { "Preferred MIDI player", S_CHOICE | S_STR, m_conf, G_X, dsda_config_snd_midiplayer, 0, midiplayers },
+  { "Mute Audio When Out of Focus", S_YESNO, m_conf, G_X, dsda_config_mute_unfocused_window },
 
   NEXT_PAGE(mouse_settings),
   FINAL_ENTRY
@@ -3144,10 +3145,14 @@ setup_menu_t demo_settings[] = {
   { "Smooth Demo Playback", S_YESNO, m_conf, G_X, dsda_config_demo_smoothturns },
   { "Smooth Demo Playback Factor", S_NUM, m_conf, G_X, dsda_config_demo_smoothturnsfactor },
   { "Show Precise Intermission Time", S_YESNO,  m_conf, G_X, dsda_config_show_level_splits },
-  EMPTY_LINE,
   { "Organize Failed Demos", S_YESNO,  m_conf, G_X, dsda_config_organize_failed_demos },
   EMPTY_LINE,
   { "Casual Play Settings", S_SKIP | S_TITLE, m_null, G_X},
+  { "Automatic Pistol Start", S_YESNO, m_conf, G_X, dsda_config_pistol_start },
+  { "Respawn Monsters", S_YESNO, m_conf, G_X, dsda_config_respawn_monsters },
+  { "Fast Monsters", S_YESNO, m_conf, G_X, dsda_config_fast_monsters },
+  { "No Monsters", S_YESNO, m_conf, G_X, dsda_config_no_monsters },
+  { "Coop Spawns", S_YESNO, m_conf, G_X, dsda_config_coop_spawns },
   { "Allow Jumping", S_YESNO, m_conf, G_X, dsda_config_allow_jumping },
   { "OpenGL Show Health Bars", S_YESNO, m_conf, G_X, dsda_config_gl_health_bar },
 
@@ -4681,7 +4686,7 @@ static dboolean M_SetupCommonSelectResponder(int ch, int action, event_t* ev)
         if (gather_count >= MAXGATHER)
           return true;
 
-        if (!isdigit(ch) && ch != '-')
+        if (!isdigit((unsigned char) ch) && ch != '-')
           return true; // ignore
 
         /* killough 10/98: character-based numerical input */
@@ -5564,11 +5569,31 @@ int M_EventToCharacter(event_t* ev)
 {
   if (ev->type == ev_joystick)
   {
-    return MENU_NULL;
+    if (ev->data1.i)
+    {
+      static int wait;
+
+      if (wait < dsda_GetTick())
+      {
+        wait = dsda_GetTick() + 5;
+
+        return 0; // lets the input reach the binding responder
+      }
+    }
   }
   else if (ev->type == ev_mouse)
   {
-    return MENU_NULL;
+    if (ev->data1.i)
+    {
+      static int wait;
+
+      if (wait < dsda_GetTick())
+      {
+        wait = dsda_GetTick() + 5;
+
+        return 0; // lets the input reach the binding responder
+      }
+    }
   }
   else if (ev->type == ev_keydown)
   {
