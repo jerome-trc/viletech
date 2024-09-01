@@ -1,4 +1,7 @@
 const std = @import("std");
+const cfg = @import("cfg");
+
+const install_dir = std.fs.path.basename(cfg.install_prefix);
 
 // Analysis ////////////////////////////////////////////////////////////////////
 
@@ -212,7 +215,7 @@ fn runDemo(args: struct {
     defer alloc.free(demo_str);
 
     const argv_no_pwad = [_][]const u8{
-        "rel/bin/ratboom",
+        install_dir ++ "/bin/ratboom",
         "-nosound",
         "-nodraw",
         "-levelstat",
