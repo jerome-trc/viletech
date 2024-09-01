@@ -250,7 +250,7 @@ fn runDemo(args: struct {
 }
 
 fn expectAnalysis(demoname: []const u8, key: []const u8, val: []const u8) !void {
-    const path = try std.fmt.allocPrint(alloc, "build/analysis.{s}.txt", .{demoname});
+    const path = try std.fmt.allocPrint(alloc, "zig-out/analysis.{s}.txt", .{demoname});
     defer alloc.free(path);
 
     var line_buf: [1024]u8 = undefined;
@@ -266,7 +266,7 @@ fn expectAnalysis(demoname: []const u8, key: []const u8, val: []const u8) !void 
 }
 
 fn expectTotalTime(demoname: []const u8, val: []const u8) !void {
-    const path = try std.fmt.allocPrint(alloc, "build/levelstat.{s}.txt", .{demoname});
+    const path = try std.fmt.allocPrint(alloc, "zig-out/levelstat.{s}.txt", .{demoname});
     defer alloc.free(path);
 
     var line_buf: [1024]u8 = undefined;
@@ -286,9 +286,12 @@ fn expectTotalTime(demoname: []const u8, val: []const u8) !void {
         lines.items[lines.items.len - 1];
 
     var parts = std.mem.splitScalar(u8, last_line, ' ');
-    _ = parts.next().?;
-    _ = parts.next().?;
-    _ = parts.next().?;
+    _ = parts.next().?; // e.g. MAP01 or E1M1
+    _ = parts.next().?; // -
+    const part2 = parts.next().?; // May be level time, may be empty.
+
+    if (part2.len == 0) _ = parts.next().?;
+
     const part3 = std.mem.trim(u8, parts.next().?, "()");
     try std.testing.expectEqualStrings(val, part3);
 }
