@@ -98,88 +98,15 @@ pub fn build(b: *std.Build) void {
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
 
-    std.fs.cwd().makePath(".zig-cache/fd4rb") catch unreachable;
-
-    // const fd4rb = b.addSharedLibrary(.{
-    //     .name = "fd4rb",
-    //     .root_source_file = b.path("plugins/fd4rb/src/root.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // commonDependencies(b, fd4rb, target, optimize);
-    // fd4rb.root_module.addImport("ratboom", module);
-    // b.installArtifact(fd4rb);
-
-    const fd4rb_decohack_sources = [_][]const u8{
-        "plugins/fd4rb/decohack/common.dh",
-
-        "plugins/fd4rb/decohack/borstal-shotgun.dh",
-        "plugins/fd4rb/decohack/burst-shotgun.dh",
-        "plugins/fd4rb/decohack/plasma-vulcan.dh",
-        "plugins/fd4rb/decohack/revolver.dh",
-        "plugins/fd4rb/decohack/tornado-battery.dh",
-    };
-
-    const fd4rb_decohack = b.addSystemCommand(&[_][]const u8{
-        "decohack",
-        "--budget",
-        "-s",
-        ".zig-cache/fd4rb/fd4rb.dh",
-        "-o",
-        ".zig-cache/fd4rb/fd4rb.deh",
-    } ++ fd4rb_decohack_sources);
-
-    for (fd4rb_decohack_sources) |p| {
-        fd4rb_decohack.addFileInput(b.path(p));
-    }
-
-    exe.step.dependOn(&fd4rb_decohack.step);
+    const test_step = b.step("test", "Run unit test suite");
+    subterra.tests(b, target, optimize, test_step);
+    wadload.tests(b, target, optimize, test_step);
 
     if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
         const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
     } else |_| {}
-
-    const vilebuild = b.addExecutable(.{
-        .name = "vilebuild",
-        .root_source_file = b.path("vilebuild/main.zig"),
-        .target = target,
-        .optimize = .Debug,
-    });
-    vilebuild.linkLibC();
-    b.installArtifact(vilebuild);
-
-    const dehpp = b.addRunArtifact(vilebuild);
-    dehpp.step.dependOn(&fd4rb_decohack.step);
-    dehpp.addFileInput(b.path(".zig-cache/fd4rb/fd4rb.deh"));
-    exe.step.dependOn(&dehpp.step);
-
-    const test_step = b.step("test", "Run unit test suite");
-    subterra.tests(b, target, optimize, test_step);
-    wadload.tests(b, target, optimize, test_step);
 }
-
-// fn commonDependencies(
-//     b: *std.Build,
-//     compile: *std.Build.Step.Compile,
-//     _: std.Build.ResolvedTarget,
-//     _: std.builtin.OptimizeMode,
-// ) void {
-//     const zig_args = b.dependency("zig-args", .{});
-
-//     compile.linkLibC();
-//     compile.linkLibCpp();
-//     compile.addIncludePath(b.path("build"));
-//     compile.addIncludePath(b.path("dsda-doom/prboom2/src"));
-
-//     if (compile.kind == .lib and compile.linkage != .dynamic) {
-//         compile.bundle_compiler_rt = true;
-//         compile.pie = true;
-//     }
-
-//     @import("depend/build.cimgui.zig").link(b, compile);
-//     compile.root_module.addImport("zig-args", zig_args.module("args"));
-// }
 
 pub const subterra = struct {
     pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
