@@ -109,6 +109,7 @@ fn setupExe(
     exe.addCSourceFiles(.{
         .root = b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
+            "dsda/aim.c",
             "MUSIC/dumbplayer.c",
             "MUSIC/flplayer.c",
             "MUSIC/madplayer.c",
@@ -241,7 +242,6 @@ fn setupExe(
             "doomdef.c",
             "doomstat.c",
             "dsda.c",
-            "dsda/aim.c",
             "dsda/analysis.c",
             "dsda/args.c",
             "dsda/brute_force.c",
