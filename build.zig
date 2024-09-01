@@ -91,6 +91,10 @@ pub fn build(b: *std.Build) void {
     });
     demotest.step.dependOn(&exe.step);
 
+    const demotest_in = b.addOptions();
+    demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);
+    demotest.root_module.addOptions("cfg", demotest_in);
+
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
 
