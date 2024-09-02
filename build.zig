@@ -102,6 +102,10 @@ pub fn build(b: *std.Build) void {
     subterra.tests(b, target, optimize, test_step);
     wadload.tests(b, target, optimize, test_step);
 
+    const doc_step = b.step("doc", "Generate documentation");
+    subterra.doc(b, target, optimize, doc_step);
+    wadload.doc(b, target, optimize, doc_step);
+
     if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
         const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
@@ -116,6 +120,28 @@ pub const subterra = struct {
                 .root_source_file = b.path("libs/subterra/src/root.zig"),
             }),
         );
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "subterra",
+            .root_source_file = b.path("libs/subterra/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "subterra",
+        });
+
+        doc_step.dependOn(&install_docs.step);
     }
 
     fn tests(
@@ -143,6 +169,28 @@ pub const wadload = struct {
                 .root_source_file = b.path("libs/wadload/src/root.zig"),
             }),
         );
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "wadload",
+            .root_source_file = b.path("libs/wadload/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "wadload",
+        });
+
+        doc_step.dependOn(&install_docs.step);
     }
 
     fn tests(
