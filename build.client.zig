@@ -106,10 +106,18 @@ fn setupExe(
         &[2][]const []const u8{ c_flags, &[1][]const u8{"-fno-sanitize=undefined"} },
     ) catch unreachable;
 
+    const cxx_flags_no_ubsan = std.mem.concat(
+        b.allocator,
+        []const u8,
+        &[2][]const []const u8{ cxx_flags, &[1][]const u8{"-fno-sanitize=undefined"} },
+    ) catch unreachable;
+
     exe.addCSourceFiles(.{
         .root = b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
             "dsda/aim.c",
+            "dsda/exdemo.c",
+            "dsda/scroll.c",
             "MUSIC/dumbplayer.c",
             "MUSIC/flplayer.c",
             "MUSIC/madplayer.c",
@@ -258,7 +266,6 @@ fn setupExe(
             "dsda/endoom.c",
             "dsda/episode.c",
             "dsda/excmd.c",
-            "dsda/exdemo.c",
             "dsda/exhud.c",
             "dsda/features.c",
             "dsda/font.c",
@@ -332,7 +339,6 @@ fn setupExe(
             "dsda/quake.c",
             "dsda/render_stats.c",
             "dsda/save.c",
-            "dsda/scroll.c",
             "dsda/settings.c",
             "dsda/sfx.c",
             "dsda/skill_info.c",
@@ -365,10 +371,17 @@ fn setupExe(
             "dsda/ambient.cpp",
             "dsda/mapinfo/doom/parser.cpp",
             "dsda/udmf.cpp",
-            "scanner.cpp",
             "umapinfo.cpp",
         },
         .flags = cxx_flags,
+    });
+
+    exe.addCSourceFiles(.{
+        .root = b.path("dsda-doom/prboom2/src"),
+        .files = &[_][]const u8{
+            "scanner.cpp",
+        },
+        .flags = cxx_flags_no_ubsan,
     });
 
     const alsa_or_not = if (builtin.os.tag == .linux)

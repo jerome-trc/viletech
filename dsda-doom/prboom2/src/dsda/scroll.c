@@ -62,6 +62,7 @@ static void dsda_UpdateFloorScrollerPosition(scroll_t* s, fixed_t dx, fixed_t dy
 
   sec = sectors + s->affectee;
   sec->floor_xoffs += dx;
+  // FIXME: UBSan reports occasional i32 underflow here.
   sec->floor_yoffs += dy;
 }
 
