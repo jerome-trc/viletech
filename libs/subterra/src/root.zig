@@ -1,6 +1,13 @@
+const things = @import("things.zig");
+const vertexes = @import("vertexes.zig");
+
+pub const ednums = things.ednums;
 pub const gfx = @import("gfx.zig");
-pub const level = @import("level.zig");
+pub const LineDef = @import("linedefs.zig").LineDef;
 pub const mus = @import("mus.zig");
+pub const Node = @import("nodes.zig").Node;
+pub const Thing = things.Thing;
+pub const Vertex = vertexes.Vertex;
 
 pub const Game = enum {
     boom, // Not a game per se...
@@ -14,8 +21,12 @@ pub const Game = enum {
     strife,
 };
 
+/// See <https://zdoom.org/wiki/Editor_number>.
+pub const EditorNum = u16;
+
+// A two-dimensional position with signed 16-bit precision, used for deserializing levels.
+pub const Pos16 = struct { x: i16, y: i16 };
+
 test {
-    const std = @import("std");
-    std.testing.refAllDecls(gfx);
-    std.testing.refAllDecls(level);
+    @import("std").testing.refAllDecls(@This());
 }
