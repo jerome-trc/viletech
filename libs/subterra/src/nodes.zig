@@ -1,9 +1,6 @@
 const std = @import("std");
 
-const Pos16 = if (@import("builtin").is_test)
-    @import("root.zig").Pos16
-else
-    @import("root").Pos16;
+const Pos16 = @import("root.zig").Pos16;
 
 /// See <https://doomwiki.org/wiki/Node>.
 /// These are cast directly from the bytes of a WAD's lump; it is recommended you

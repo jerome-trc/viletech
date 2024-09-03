@@ -1,9 +1,6 @@
 const std = @import("std");
 
-const root = if (@import("builtin").is_test)
-    @import("root.zig")
-else
-    @import("root");
+const root = @import("root.zig");
 
 const EditorNum = root.EditorNum;
 const Game = root.Game;

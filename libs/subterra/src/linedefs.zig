@@ -1,9 +1,6 @@
 const std = @import("std");
 
-const Game = if (@import("builtin").is_test)
-    @import("root.zig").Game
-else
-    @import("root").Game;
+const Game = @import("root.zig").Game;
 
 /// See <https://doomwiki.org/wiki/Linedef>.
 /// These are cast directly from the bytes of a WAD's lump; it is recommended you
