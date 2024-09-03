@@ -73,22 +73,23 @@ pub fn LineDef(game: Game) type {
     };
 
     return extern struct {
-        pub const Self = @This();
         pub const Flags = FlagT;
+
+        const Self = @This();
 
         /// A possible value for `special`.
         pub const pobj_line_start: u16 = 1;
         /// A possible value for `special`.
         pub const pobj_line_explicit: u16 = 5;
 
-        v_start: u16,
-        v_end: u16,
-        flags: Flags,
-        special: u16,
-        tag: u16,
-        args: if (game == .hexen) [5]u8 else void,
-        right: u16,
-        left: u16,
+        _v_start: u16,
+        _v_end: u16,
+        _flags: Flags,
+        _special: u16,
+        _tag: u16,
+        _args: if (game == .hexen) [5]u8 else void,
+        _right: u16,
+        _left: u16,
 
         /// Caller guarantees that `bytes.len` is divisible by `@sizeOf(@This())`.
         pub fn fromBytes(bytes: []align(@alignOf(Self)) const u8) []const Self {
@@ -112,35 +113,35 @@ pub fn LineDef(game: Game) type {
 
         /// To be used as an index into a slice of [`Vertex`].
         pub fn vertexStart(self: *const Self) u16 {
-            return std.mem.littleToNative(u16, self.v_start);
+            return std.mem.littleToNative(u16, self._v_start);
         }
 
         /// To be used as an index into a slice of [`Vertex`].
         pub fn vertexEnd(self: *const Self) u16 {
-            return std.mem.littleToNative(u16, self.v_end);
+            return std.mem.littleToNative(u16, self._v_end);
         }
 
         pub fn flagBits(self: *const Self) FlagInt {
-            return @bitCast(self.flags);
+            return @bitCast(self._flags);
         }
 
         pub fn actionSpecial(self: *const Self) u16 {
-            return std.mem.littleToNative(u16, self.special);
+            return std.mem.littleToNative(u16, self._special);
         }
 
         pub fn sectorTag(self: *const Self) u16 {
-            return std.mem.littleToNative(u16, self.tag);
+            return std.mem.littleToNative(u16, self._tag);
         }
 
         /// a.k.a. the linedef's "front". To be used as an index into a slice of [`SideDef`].
         pub fn rightSide(self: *const Self) u16 {
-            return std.mem.littleToNative(u16, self.right);
+            return std.mem.littleToNative(u16, self._right);
         }
 
         /// a.k.a. the linedef's "back". To be used as an index into a slice of [`SideDef`].
         /// Returns `null` if the LE bytes of this value match the bit pattern `0xFFFF`.
         pub fn leftSide(self: *const Self) ?u16 {
-            return switch (std.mem.littleToNative(u16, self.left)) {
+            return switch (std.mem.littleToNative(u16, self._left)) {
                 0xFFFF => null,
                 else => |s| s,
             };

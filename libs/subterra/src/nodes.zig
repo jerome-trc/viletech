@@ -20,56 +20,56 @@ pub const Node = extern struct {
         subnode: usize,
     };
 
-    x: i16,
-    y: i16,
-    delta_x: i16,
-    delta_y: i16,
-    aabb_r: Aabb,
-    aabb_l: Aabb,
-    child_r: i16,
-    child_l: i16,
+    _x: i16,
+    _y: i16,
+    _delta_x: i16,
+    _delta_y: i16,
+    _aabb_r: Aabb,
+    _aabb_l: Aabb,
+    _child_r: i16,
+    _child_l: i16,
 
     pub fn segStart(self: *const Node) Pos16 {
         return Pos16{
-            .x = std.mem.littleToNative(i16, self.x),
-            .y = std.mem.littleToNative(i16, self.y),
+            .x = std.mem.littleToNative(i16, self._x),
+            .y = std.mem.littleToNative(i16, self._y),
         };
     }
 
     pub fn segDelta(self: *const Node) Pos16 {
         return Pos16{
-            .x = std.mem.littleToNative(i16, self.delta_x),
-            .y = std.mem.littleToNative(i16, self.delta_y),
+            .x = std.mem.littleToNative(i16, self._delta_x),
+            .y = std.mem.littleToNative(i16, self._delta_y),
         };
     }
 
     pub fn segEnd(self: *const Node) Pos16 {
         return Pos16{
-            .x = std.mem.littleToNative(i16, self.x) + std.mem.littleToNative(i16, self.delta_x),
-            .y = std.mem.littleToNative(i16, self.y) + std.mem.littleToNative(i16, self.delta_y),
+            .x = std.mem.littleToNative(i16, self._x) + std.mem.littleToNative(i16, self._delta_x),
+            .y = std.mem.littleToNative(i16, self._y) + std.mem.littleToNative(i16, self._delta_y),
         };
     }
 
     pub fn aabbL(self: *const Node) Aabb {
         return Aabb{
-            .top = std.mem.littleToNative(i16, self.aabb_l.top),
-            .bottom = std.mem.littleToNative(i16, self.aabb_l.bottom),
-            .left = std.mem.littleToNative(i16, self.aabb_l.left),
-            .right = std.mem.littleToNative(i16, self.aabb_l.right),
+            .top = std.mem.littleToNative(i16, self._aabb_l.top),
+            .bottom = std.mem.littleToNative(i16, self._aabb_l.bottom),
+            .left = std.mem.littleToNative(i16, self._aabb_l.left),
+            .right = std.mem.littleToNative(i16, self._aabb_l.right),
         };
     }
 
     pub fn aabbR(self: *const Node) Aabb {
         return Aabb{
-            .top = std.mem.littleToNative(i16, self.aabb_r.top),
-            .bottom = std.mem.littleToNative(i16, self.aabb_r.bottom),
-            .left = std.mem.littleToNative(i16, self.aabb_r.left),
-            .right = std.mem.littleToNative(i16, self.aabb_r.right),
+            .top = std.mem.littleToNative(i16, self._aabb_r.top),
+            .bottom = std.mem.littleToNative(i16, self._aabb_r.bottom),
+            .left = std.mem.littleToNative(i16, self._aabb_r.left),
+            .right = std.mem.littleToNative(i16, self._aabb_r.right),
         };
     }
 
     pub fn childLeft(self: *const Node) Child {
-        const child = std.mem.littleToNative(i16, self.child_l);
+        const child = std.mem.littleToNative(i16, self._child_l);
 
         return if (child < 0)
             Child{ .subsector = @intCast(child & 0x7FFF) }
@@ -78,7 +78,7 @@ pub const Node = extern struct {
     }
 
     pub fn childRight(self: *const Node) Child {
-        const child = std.mem.littleToNative(i16, self.child_r);
+        const child = std.mem.littleToNative(i16, self._child_r);
 
         return if (child < 0)
             Child{ .subsector = @intCast(child & 0x7FFF) }
