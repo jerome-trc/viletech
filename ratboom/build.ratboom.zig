@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const ccdb = @import("ccdb.zig");
+const root = @import("../build.zig");
 
 pub fn build(
     b: *std.Build,
@@ -12,7 +12,7 @@ pub fn build(
 ) *std.Build.Step.Compile {
     var metainfo = b.addOptions();
 
-    const DateTime = @import("depend/datetime.zig").DateTime;
+    const DateTime = root.datetime.DateTime;
     var compile_timestamp_buf: [64]u8 = undefined;
     const compile_timestamp = std.fmt.bufPrint(
         compile_timestamp_buf[0..],
@@ -28,13 +28,13 @@ pub fn build(
         .name = "ratboom",
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("client/src/main.zig"),
+        .root_source_file = b.path("ratboom/src/main.zig"),
     });
     const exe_check = b.addExecutable(.{
         .name = "ratboom",
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("client/src/main.zig"),
+        .root_source_file = b.path("ratboom/src/main.zig"),
     });
 
     setupExe(b, exe, cfg_hdr, metainfo);
@@ -42,7 +42,7 @@ pub fn build(
     b.installArtifact(exe);
     check.dependOn(&exe_check.step);
 
-    ccdb.createStep(b, "ccdb", .{
+    root.ccdb.createStep(b, "ccdb", .{
         .targets = &[1]*std.Build.Step.Compile{exe},
     });
 
@@ -413,7 +413,7 @@ fn setupExe(
         });
     }
 
-    @import("depend/build.cimgui.zig").link(b, exe);
+    root.cimgui.link(b, exe);
 
     const zig_args = b.dependency("zig-args", .{});
     exe.root_module.addImport("zig-args", zig_args.module("args"));

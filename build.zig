@@ -1,6 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+pub const ccdb = @import("depend/ccdb.zig");
+pub const cimgui = @import("depend/build.cimgui.zig");
+pub const datetime = @import("depend/datetime.zig");
+
 pub const Context = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -76,9 +80,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const check = b.step("check", "Semantic check for ZLS");
-    const exe = @import("build.client.zig").build(b, target, optimize, check, cfg_hdr);
-    const datawad = @import("build.data.zig").data(b, target, cfg_hdr);
-    exe.step.dependOn(&datawad.step);
+    const ratboom = @import("ratboom/build.ratboom.zig").build(b, target, optimize, check, cfg_hdr);
+    const datawad = @import("ratboom/build.data.zig").data(b, target, cfg_hdr);
+    ratboom.step.dependOn(&datawad.step);
 
     const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
 
@@ -89,7 +93,7 @@ pub fn build(b: *std.Build) void {
         // since we want the demotest to run as quickly as possible.
         .optimize = .ReleaseSafe,
     });
-    demotest.step.dependOn(&exe.step);
+    demotest.step.dependOn(&ratboom.step);
 
     const demotest_in = b.addOptions();
     demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);
