@@ -1,3 +1,4 @@
+const segs = @import("segs.zig");
 const things = @import("things.zig");
 const vertexes = @import("vertexes.zig");
 
@@ -6,6 +7,12 @@ pub const gfx = @import("gfx.zig");
 pub const LineDef = @import("linedefs.zig").LineDef;
 pub const mus = @import("mus.zig");
 pub const Node = @import("nodes.zig").Node;
+pub const Seg = segs.Seg;
+pub const SegGl = segs.SegGl;
+pub const SegGlVersion = segs.SegGlVersion;
+pub const SegGl1 = segs.SegGl(.v1);
+pub const SegGl3 = segs.SegGl(.v3);
+pub const SegGl5 = segs.SegGl(.v5);
 pub const Thing = things.Thing;
 pub const Vertex = vertexes.Vertex;
 
