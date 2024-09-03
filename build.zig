@@ -5,14 +5,6 @@ pub const ccdb = @import("depend/ccdb.zig");
 pub const cimgui = @import("depend/build.cimgui.zig");
 pub const datetime = @import("depend/datetime.zig");
 
-pub const Context = struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    test_step: *std.Build.Step,
-    // Libraries
-    subterra: ?*std.Build.Module,
-};
-
 pub fn build(b: *std.Build) void {
     const posix_like = switch (builtin.os.tag) {
         .linux => true,
