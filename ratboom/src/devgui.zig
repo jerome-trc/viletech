@@ -9,7 +9,7 @@ const Core = @import("Core.zig");
 const imgui = @import("imgui.zig");
 const MusicGui = @import("devgui/MusicGui.zig");
 const PrefGui = @import("devgui/PrefGui.zig");
-const stdx = @import("stdx.zig");
+const stdx = @import("viletech").stdx;
 const VfsGui = @import("devgui/VfsGui.zig");
 
 pub const State = enum(c_int) {

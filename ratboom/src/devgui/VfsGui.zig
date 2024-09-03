@@ -6,7 +6,7 @@ const c = @import("../main.zig").c;
 
 const Core = @import("../Core.zig");
 const imgui = @import("../imgui.zig");
-const stdx = @import("../stdx.zig");
+const stdx = @import("viletech").stdx;
 
 const Self = @This();
 

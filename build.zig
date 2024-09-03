@@ -106,7 +106,58 @@ pub fn build(b: *std.Build) void {
         const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
     } else |_| {}
+
+    @import("client/build.client.zig").build(b, target, optimize);
 }
+
+pub const engine = struct {
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        compile.root_module.addImport(
+            name orelse "viletech",
+            b.addModule("viletech", .{
+                .root_source_file = b.path("engine/src/root.zig"),
+            }),
+        );
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "viletech",
+            .root_source_file = b.path("engine/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "viletech",
+        });
+
+        doc_step.dependOn(&install_docs.step);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("engine/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
 
 pub const subterra = struct {
     pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {

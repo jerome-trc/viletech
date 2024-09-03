@@ -417,4 +417,6 @@ fn setupExe(
 
     const zig_args = b.dependency("zig-args", .{});
     exe.root_module.addImport("zig-args", zig_args.module("args"));
+
+    root.engine.link(b, exe, null);
 }

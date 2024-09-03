@@ -8,7 +8,7 @@ const Console = @import("devgui/Console.zig");
 const devgui = @import("devgui.zig");
 const MusicGui = @import("devgui/MusicGui.zig");
 const VfsGui = @import("devgui/VfsGui.zig");
-const Path = @import("stdx.zig").Path;
+const Path = @import("viletech").stdx.Path;
 const plugin = @import("plugin.zig");
 
 const Self = @This();
