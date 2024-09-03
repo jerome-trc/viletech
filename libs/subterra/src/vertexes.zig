@@ -7,8 +7,8 @@ const Pos16 = @import("root.zig").Pos16;
 /// use the attached methods rather than accessing fields, since the methods
 /// ensure that conversion from little to native endianness is performed.
 pub const Vertex = extern struct {
-    x: i16,
-    y: i16,
+    _x: i16,
+    _y: i16,
 
     /// Caller guarantees that `bytes.len` is divisible by `@sizeOf(@This())`.
     pub fn fromBytes(bytes: []align(@alignOf(Vertex)) const u8) []const Vertex {
@@ -35,16 +35,16 @@ pub const Vertex = extern struct {
         var max = Pos16{ .x = 0, .y = 0 };
 
         for (verts) |vert| {
-            if (vert.x < min.x) {
-                min.x = vert.x;
-            } else if (vert.x > max.x) {
-                max.x = vert.x;
+            if (vert._x < min.x) {
+                min.x = vert._x;
+            } else if (vert._x > max.x) {
+                max.x = vert._x;
             }
 
-            if (vert.y < min.y) {
-                min.y = vert.y;
-            } else if (vert.y > max.y) {
-                max.y = vert.y;
+            if (vert._y < min.y) {
+                min.y = vert._y;
+            } else if (vert._y > max.y) {
+                max.y = vert._y;
             }
         }
 
@@ -53,8 +53,8 @@ pub const Vertex = extern struct {
 
     pub fn position(self: *const Vertex) Pos16 {
         return Pos16{
-            .x = std.mem.littleToNative(i16, self.x),
-            .y = std.mem.littleToNative(i16, self.y),
+            .x = std.mem.littleToNative(i16, self._x),
+            .y = std.mem.littleToNative(i16, self._y),
         };
     }
 };
