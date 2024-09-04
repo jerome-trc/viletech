@@ -18,7 +18,9 @@ pub fn build(
     exe.root_module.addImport("zig-args", zig_args.module("args"));
 
     root.engine.link(b, exe, null);
-    root.subterra.link(b, exe, null);
+    root.subterra.link(b, exe, .{
+        .znbx = .source,
+    });
     root.wadload.link(b, exe, null);
 
     b.installArtifact(exe);

@@ -94,8 +94,14 @@ pub fn build(b: *std.Build) void {
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
 
+    const no_test = b.option(
+        []const []const u8,
+        "no-test",
+        "Extra features to skip unit testing",
+    );
+
     const test_step = b.step("test", "Run unit test suite");
-    subterra.tests(b, target, optimize, test_step);
+    subterra.tests(b, target, optimize, test_step, no_test);
     wadload.tests(b, target, optimize, test_step);
 
     const doc_step = b.step("doc", "Generate documentation");
@@ -160,13 +166,43 @@ pub const engine = struct {
 };
 
 pub const subterra = struct {
-    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
-        compile.root_module.addImport(
-            name orelse "subterra",
-            b.addModule("subterra", .{
-                .root_source_file = b.path("libs/subterra/src/root.zig"),
-            }),
-        );
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
+        name: []const u8 = "subterra",
+        znbx: union(enum) {
+            off: void,
+            staticlib: struct {
+                target: std.Build.ResolvedTarget,
+                optimize: std.builtin.OptimizeMode,
+            },
+            source: void,
+        },
+    }) void {
+        const module = b.addModule("subterra", .{
+            .root_source_file = b.path("libs/subterra/src/root.zig"),
+        });
+
+        const opts = b.addOptions();
+        opts.addOption(bool, "znbx", config.znbx != .off);
+        compile.root_module.addOptions("cfg", opts);
+
+        compile.root_module.addImport(config.name, module);
+
+        switch (config.znbx) {
+            .off => {},
+            .staticlib => |tgt_and_opt| {
+                const znbx = b.addStaticLibrary(.{
+                    .name = "znbx",
+                    .target = tgt_and_opt.target,
+                    .optimize = tgt_and_opt.optimize,
+                });
+
+                linkZnbx(b, znbx);
+                compile.linkLibrary(znbx);
+            },
+            .source => {
+                linkZnbx(b, compile);
+            },
+        }
     }
 
     fn doc(
@@ -196,6 +232,7 @@ pub const subterra = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        maybe_no_test: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/subterra/src/root.zig"),
@@ -203,8 +240,66 @@ pub const subterra = struct {
             .optimize = optimize,
         });
 
+        var znbx = true;
+
+        if (maybe_no_test) |no_test| {
+            for (no_test) |s| {
+                if (std.mem.eql(u8, s, "znbx")) {
+                    znbx = false;
+                }
+            }
+        }
+
+        const opts = b.addOptions();
+        opts.addOption(bool, "znbx", znbx);
+        unit_tests.root_module.addOptions("cfg", opts);
+
+        if (znbx) {
+            linkZnbx(b, unit_tests);
+        }
+
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
+    }
+
+    fn linkZnbx(b: *std.Build, compile: *std.Build.Step.Compile) void {
+        if (!compile.is_linking_libc) {
+            compile.linkLibC();
+        }
+
+        if (!compile.is_linking_libcpp) {
+            compile.linkLibCpp();
+        }
+
+        compile.linkSystemLibrary2("z", .{
+            .preferred_link_mode = .static,
+        });
+
+        compile.addSystemIncludePath(b.path("depend/znbx/include"));
+
+        compile.addCSourceFiles(.{
+            .root = b.path("depend/znbx"),
+            .flags = &[_][]const u8{
+                "--std=c++17",
+                "-Idepend/znbx/include",
+                "-Idepend/znbx/src",
+                "-fno-sanitize=undefined",
+            },
+            .files = &[_][]const u8{
+                "src/blockmapbuilder.cpp",
+                "src/classify.cpp",
+                "src/events.cpp",
+                "src/extract.cpp",
+                "src/gl.cpp",
+                "src/nodebuild.cpp",
+                "src/processor_udmf.cpp",
+                "src/processor.cpp",
+                "src/sc_man.cpp",
+                "src/utility.cpp",
+                "src/wad.cpp",
+                "src/znbx.cpp",
+            },
+        });
     }
 };
 
