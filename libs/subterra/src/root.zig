@@ -5,6 +5,7 @@ const ssectors = @import("ssectors.zig");
 const things = @import("things.zig");
 const vertexes = @import("vertexes.zig");
 
+pub const Blockmap = @import("Blockmap.zig");
 pub const ednums = things.ednums;
 pub const gfx = @import("gfx.zig");
 pub const LineDef = @import("linedefs.zig").LineDef;
