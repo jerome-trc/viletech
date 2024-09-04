@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const segs = @import("segs.zig");
+const sidedefs = @import("sidedefs.zig");
 const ssectors = @import("ssectors.zig");
 const things = @import("things.zig");
 const vertexes = @import("vertexes.zig");
@@ -17,6 +18,8 @@ pub const Seg = segs.Seg;
 pub const SegGl1 = segs.SegGl(.v1);
 pub const SegGl3 = segs.SegGl(.v3);
 pub const SegGl5 = segs.SegGl(.v5);
+pub const SideDef = sidedefs.SideDef(.doom);
+pub const SideDef64 = sidedefs.SideDef(.doom64);
 pub const Subsector = ssectors.Subsector(u16);
 pub const SubsectorGl = ssectors.Subsector(u32);
 pub const Thing = things.Thing;
