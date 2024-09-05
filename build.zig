@@ -94,14 +94,14 @@ pub fn build(b: *std.Build) void {
     const run_demotest = b.addRunArtifact(demotest);
     demotest_step.dependOn(&run_demotest.step);
 
-    const no_test = b.option(
+    const testx = b.option(
         []const []const u8,
-        "no-test",
-        "Extra features to skip unit testing",
+        "testx",
+        "Extra features to test",
     );
 
     const test_step = b.step("test", "Run unit test suite");
-    subterra.tests(b, target, optimize, test_step, no_test);
+    subterra.tests(b, target, optimize, test_step, testx);
     wadload.tests(b, target, optimize, test_step);
 
     const doc_step = b.step("doc", "Generate documentation");
@@ -232,7 +232,7 @@ pub const subterra = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        maybe_no_test: ?[]const []const u8,
+        o_testx: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/subterra/src/root.zig"),
@@ -240,17 +240,21 @@ pub const subterra = struct {
             .optimize = optimize,
         });
 
-        var znbx = true;
+        var znbx = false;
+        var genmidi: []const u8 = "";
 
-        if (maybe_no_test) |no_test| {
-            for (no_test) |s| {
+        if (o_testx) |testx| {
+            for (testx) |s| {
                 if (std.mem.eql(u8, s, "znbx")) {
-                    znbx = false;
+                    znbx = true;
+                } else if (std.mem.eql(u8, std.fs.path.stem(s), "GENMIDI")) {
+                    genmidi = s;
                 }
             }
         }
 
         const opts = b.addOptions();
+        opts.addOption([]const u8, "genmidi_sample", genmidi);
         opts.addOption(bool, "znbx", znbx);
         unit_tests.root_module.addOptions("cfg", opts);
 

@@ -10,6 +10,7 @@ const vertexes = @import("vertexes.zig");
 pub const Blockmap = @import("Blockmap.zig");
 pub const DmxSound = sound.Dmx;
 pub const ednums = things.ednums;
+pub const genmidi = @import("genmidi.zig");
 pub const gfx = @import("gfx.zig");
 pub const hashes = @import("hashes.zig");
 pub const LineDef = @import("linedefs.zig").LineDef;
