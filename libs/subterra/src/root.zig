@@ -2,11 +2,13 @@ const std = @import("std");
 
 const segs = @import("segs.zig");
 const sidedefs = @import("sidedefs.zig");
+const sound = @import("sound.zig");
 const ssectors = @import("ssectors.zig");
 const things = @import("things.zig");
 const vertexes = @import("vertexes.zig");
 
 pub const Blockmap = @import("Blockmap.zig");
+pub const DmxSound = sound.Dmx;
 pub const ednums = things.ednums;
 pub const gfx = @import("gfx.zig");
 pub const LineDef = @import("linedefs.zig").LineDef;
@@ -20,6 +22,7 @@ pub const SegGl3 = segs.SegGl(.v3);
 pub const SegGl5 = segs.SegGl(.v5);
 pub const SideDef = sidedefs.SideDef(.doom);
 pub const SideDef64 = sidedefs.SideDef(.doom64);
+pub const SpeakerSound = sound.Speaker;
 pub const Subsector = ssectors.Subsector(u16);
 pub const SubsectorGl = ssectors.Subsector(u32);
 pub const Thing = things.Thing;
