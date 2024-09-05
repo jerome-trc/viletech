@@ -8,6 +8,7 @@ const things = @import("things.zig");
 const vertexes = @import("vertexes.zig");
 
 pub const Blockmap = @import("Blockmap.zig");
+pub const DmxGus = @import("DmxGus.zig");
 pub const DmxSound = sound.Dmx;
 pub const ednums = things.ednums;
 pub const genmidi = @import("genmidi.zig");
