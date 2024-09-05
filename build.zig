@@ -240,20 +240,24 @@ pub const subterra = struct {
             .optimize = optimize,
         });
 
-        var znbx = false;
+        var dmxgus: []const u8 = "";
         var genmidi: []const u8 = "";
+        var znbx = false;
 
         if (o_testx) |testx| {
             for (testx) |s| {
-                if (std.mem.eql(u8, s, "znbx")) {
-                    znbx = true;
-                } else if (std.mem.eql(u8, std.fs.path.stem(s), "GENMIDI")) {
+                if (std.mem.eql(u8, std.fs.path.stem(s), "GENMIDI")) {
                     genmidi = s;
+                } else if (std.mem.eql(u8, std.fs.path.stem(s), "DMXGUS")) {
+                    dmxgus = s;
+                } else if (std.mem.eql(u8, s, "znbx")) {
+                    znbx = true;
                 }
             }
         }
 
         const opts = b.addOptions();
+        opts.addOption([]const u8, "dmxgus_sample", dmxgus);
         opts.addOption([]const u8, "genmidi_sample", genmidi);
         opts.addOption(bool, "znbx", znbx);
         unit_tests.root_module.addOptions("cfg", opts);
