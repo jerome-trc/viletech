@@ -11,6 +11,7 @@ pub const Blockmap = @import("Blockmap.zig");
 pub const DmxSound = sound.Dmx;
 pub const ednums = things.ednums;
 pub const gfx = @import("gfx.zig");
+pub const hashes = @import("hashes.zig");
 pub const LineDef = @import("linedefs.zig").LineDef;
 pub const mus = @import("mus.zig");
 pub const Node = @import("nodes.zig").Node;
