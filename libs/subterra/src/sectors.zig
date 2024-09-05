@@ -1,5 +1,9 @@
 const std = @import("std");
 
+/// See <https://doomwiki.org/wiki/Sector>.
+/// These are cast directly from the bytes of a WAD's lump; it is recommended you
+/// use the attached methods rather than accessing fields, since the methods
+/// ensure that conversion from little to native endianness is performed.
 pub const Sector = extern struct {
     _height_floor: i16,
     _height_ceil: i16,
