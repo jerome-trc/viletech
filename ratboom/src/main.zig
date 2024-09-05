@@ -5,7 +5,7 @@ const Core = @import("Core.zig");
 const deh = @import("deh.zig");
 const devgui = @import("devgui.zig");
 const exports = @import("exports.zig");
-const gamemode = @import("gamemode.zig");
+const gamemode = @import("viletech").gamemode;
 
 comptime {
     std.testing.refAllDeclsRecursive(exports);
