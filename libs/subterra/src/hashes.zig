@@ -10,6 +10,8 @@ pub const Checksums = struct {
     sha1: [20]u8,
 };
 
+// DOOM1.WAD ///////////////////////////////////////////////////////////////////
+
 /// https://doomwiki.org/wiki/DOOM1.WAD
 pub const doom1_v1_0 = Checksums{
     .name = "DOOM1.WAD",
@@ -18,6 +20,7 @@ pub const doom1_v1_0 = Checksums{
     .sha1 = @bitCast(@as(u160, 0xfc0359e191bd257b3507863ae412ef3250515866)),
 };
 
+/// https://doomwiki.org/wiki/DOOM1.WAD
 pub const doom1_1993_12_15 = Checksums{
     .name = "DOOM1.WAD",
     .crc32 = 0x289f4d3f,
@@ -97,7 +100,55 @@ pub const doom1_v1_9 = Checksums{
     .sha1 = @bitCast(@as(u160, 0x5b2e249b9c5133ec987b3ea77596381dc0d6bc1d)),
 };
 
+// TNT.WAD /////////////////////////////////////////////////////////////////////
+
+/// https://doomwiki.org/wiki/TNT.WAD
+pub const tnt_v1_9 = Checksums{
+    .name = "TNT.WAD",
+    .crc32 = 0x903dcc27,
+    .md5 = @bitCast(@as(u128, 0x4e158d9953c79ccf97bd0663244cc6b6)),
+    .sha1 = @bitCast(@as(u160, 0x9fbc66aedef7fe3bae0986cdb9323d2b8db4c9d3)),
+};
+
+/// https://doomwiki.org/wiki/TNT.WAD
+pub const tnt_anthology = Checksums{
+    .name = "TNT.WAD",
+    .crc32 = 0xd4bb05c0,
+    .md5 = @bitCast(@as(u128, 0x1d39e405bf6ee3df69a8d2646c8d5c49)),
+    .sha1 = @bitCast(@as(u160, 0x4a65c8b960225505187c36040b41a40b152f8f3e)),
+};
+
+/// https://doomwiki.org/wiki/TNT.WAD
+pub const tnt_psn = Checksums{
+    .name = "TNT.WAD",
+    .crc32 = 0x7f572c1f,
+    .md5 = @bitCast(@as(u128, 0xbe626c12b7c9d94b1dfb9c327566b4ff)),
+    .sha1 = @bitCast(@as(u160, 0x139e26d801a64b404b8d898defca10227a61867b)),
+};
+
+/// https://doomwiki.org/wiki/TNT.WAD
+pub const tnt_kex = Checksums{
+    .name = "TNT.WAD",
+    .crc32 = 0x15f18ddb,
+    .md5 = @bitCast(@as(u128, 0x8974e3117ed4a1839c752d5e11ab1b7b)),
+    .sha1 = @bitCast(@as(u160, 0x9820e2a3035f0cdd87f69a7d57c59a7a267c9409)),
+};
+
 pub const all = [_]Checksums{
     doom1_v1_0,
+    doom1_1993_12_15,
+    doom1_v1_1,
+    doom1_v1_2,
+    doom1_v1_25,
+    doom1_v1_4,
+    doom1_v1_5,
+    doom1_v1_6,
+    doom1_v1_666,
+    doom1_v1_8,
     doom1_v1_9,
+
+    tnt_v1_9,
+    tnt_anthology,
+    tnt_psn,
+    tnt_kex,
 };
