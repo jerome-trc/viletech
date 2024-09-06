@@ -257,8 +257,8 @@ pub fn FVec(fracbits: comptime_int, len: comptime_int) type {
     };
 }
 
-const Fx16Vec2 = FVec(16, 2);
-const Fx16Vec3 = FVec(16, 3);
+pub const Fx16Vec2 = FVec(16, 2);
+pub const Fx16Vec3 = FVec(16, 3);
 
 test "fixed-point division" {
     const lhs = I16F16.fromBits(40239104);

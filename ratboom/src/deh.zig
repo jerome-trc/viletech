@@ -5,7 +5,7 @@ const std = @import("std");
 const c = @import("main.zig").c;
 
 const Core = @import("Core.zig");
-const I16F16 = @import("fxp.zig").I16F16;
+const I16F16 = @import("viletech").I16F16;
 
 const ang90: c.angle_t = 0x40000000;
 const angle_to_fine_shift: c_uint = 19;
