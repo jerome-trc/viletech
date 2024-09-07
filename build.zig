@@ -101,10 +101,12 @@ pub fn build(b: *std.Build) void {
     );
 
     const test_step = b.step("test", "Run unit test suite");
+    engine.tests(b, target, optimize, test_step);
     subterra.tests(b, target, optimize, test_step, testx);
     wadload.tests(b, target, optimize, test_step);
 
     const doc_step = b.step("doc", "Generate documentation");
+    engine.doc(b, target, optimize, doc_step);
     subterra.doc(b, target, optimize, doc_step);
     wadload.doc(b, target, optimize, doc_step);
 
