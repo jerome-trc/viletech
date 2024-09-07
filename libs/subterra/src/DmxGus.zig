@@ -63,6 +63,10 @@ pub const Iterator = struct {
             .patch_name = std.mem.trim(u8, patch_name, " \t\r"),
         };
     }
+
+    pub fn reset(self: *Iterator) void {
+        self.inner.reset();
+    }
 };
 
 patch_num: u8,
