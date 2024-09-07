@@ -1,12 +1,14 @@
 const std = @import("std");
 const log = std.log.scoped(.main);
+const meta = @import("meta");
 
 const args = @import("zig-args");
 const HhMmSs = @import("viletech").stdx.HhMmSs;
 
+const Converter = @import("Converter.zig");
+
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
-    log.debug("***** DEBUG BUILD *****", .{});
 
     const opts = try args.parseWithVerbForCurrentProcess(
         Params,
@@ -17,11 +19,42 @@ pub fn main() !void {
     defer opts.deinit();
 
     if (opts.options.help) {
-        if (opts.verb) |_| {
-            // Soon!
+        if (opts.verb) |verb| {
+            switch (verb) {
+                .conv => {
+                    try args.printHelp(Converter.Args, "viletech", std.io.getStdOut().writer());
+                    return;
+                },
+                .diff => @panic("not yet implemented"),
+                .find => @panic("not yet implemented"),
+                .prune => @panic("not yet implemented"),
+            }
         } else {
             try args.printHelp(Params, "viletech", std.io.getStdOut().writer());
             return;
+        }
+    }
+
+    if (opts.options.version) {
+        const stdout_file = std.io.getStdOut().writer();
+        var stdout_bw = std.io.bufferedWriter(stdout_file);
+
+        try stdout_bw.writer().print("{s}{s}", .{
+            meta.commit,
+            meta.compile_timestamp,
+        });
+        try stdout_bw.flush();
+        return;
+    }
+
+    log.debug("***** DEBUG BUILD *****", .{});
+
+    if (opts.verb) |verb| {
+        switch (verb) {
+            .conv => |o| return Converter.run(o),
+            .diff => @panic("not yet implemented"),
+            .find => @panic("not yet implemented"),
+            .prune => @panic("not yet implemented"),
         }
     }
 
@@ -47,7 +80,7 @@ const Params = struct {
     };
 
     pub const meta = .{
-        .usage_summary = "[options...]",
+        .usage_summary = "[options...] [conv|diff|find|prune] [options...]",
         .option_docs = .{
             .help = "Print this usage information and then exit",
             .version = "Print version/compile information and then exit",
@@ -55,4 +88,9 @@ const Params = struct {
     };
 };
 
-const Verbs = union(enum) {};
+const Verbs = union(enum) {
+    conv: Converter.Args,
+    diff: void,
+    find: void,
+    prune: void,
+};
