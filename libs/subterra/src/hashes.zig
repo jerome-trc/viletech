@@ -100,6 +100,24 @@ pub const doom1_v1_9 = Checksums{
     .sha1 = @bitCast(@as(u160, 0x5b2e249b9c5133ec987b3ea77596381dc0d6bc1d)),
 };
 
+// NERVE.WAD ///////////////////////////////////////////////////////////////////
+
+/// https://doomwiki.org/wiki/NERVE.WAD
+pub const nerve = Checksums{
+    .name = "NERVE.WAD",
+    .crc32 = 0xad7f9292,
+    .md5 = @bitCast(@as(u128, 0x967d5ae23daf45196212ae1b605da3b0)),
+    .sha1 = @bitCast(@as(u160, 0x3451288383fb16e196f273d9f85d58c1fda97bf4)),
+};
+
+/// https://doomwiki.org/wiki/NERVE.WAD
+pub const nerve_kex = Checksums{
+    .name = "NERVE.WAD",
+    .crc32 = 0x07d9faab,
+    .md5 = @bitCast(@as(u128, 0x23422eb42833ac7b0dd59c0c7ae18a6f)),
+    .sha1 = @bitCast(@as(u160, 0x4522eaec7a13aac24b456e29520e99ac879e6989)),
+};
+
 // TNT.WAD /////////////////////////////////////////////////////////////////////
 
 /// https://doomwiki.org/wiki/TNT.WAD
