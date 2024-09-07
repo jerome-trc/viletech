@@ -38,6 +38,7 @@ pub fn build(
         .znbx = .source,
     });
     root.wadload.link(b, exe, null);
+    root.zmsx.link(b, exe, target, optimize);
 
     b.installArtifact(exe);
 

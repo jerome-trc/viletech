@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 pub const ccdb = @import("depend/ccdb.zig");
 pub const cimgui = @import("depend/build.cimgui.zig");
 pub const datetime = @import("depend/datetime.zig");
+pub const zmsx = @import("depend/build.zmsx.zig");
 
 pub fn build(b: *std.Build) void {
     const posix_like = switch (builtin.os.tag) {
