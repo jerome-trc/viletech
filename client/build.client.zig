@@ -14,6 +14,22 @@ pub fn build(
         .optimize = optimize,
     });
 
+    var metainfo = b.addOptions();
+
+    const DateTime = root.datetime.DateTime;
+    var compile_timestamp_buf: [64]u8 = undefined;
+    const compile_timestamp = std.fmt.bufPrint(
+        compile_timestamp_buf[0..],
+        "{}",
+        .{DateTime.now()},
+    ) catch unreachable;
+    metainfo.addOption([]const u8, "compile_timestamp", compile_timestamp);
+
+    const commit_hash = b.run(&[_][]const u8{ "git", "rev-parse", "HEAD" });
+    metainfo.addOption([]const u8, "commit", commit_hash);
+
+    exe.root_module.addOptions("meta", metainfo);
+
     const zig_args = b.dependency("zig-args", .{});
     exe.root_module.addImport("zig-args", zig_args.module("args"));
 
