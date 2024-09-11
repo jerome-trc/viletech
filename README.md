@@ -17,7 +17,7 @@ Beware that this project:
 
 - `/assets` contains non-code resources used by executable artifacts at runtime.
 - `/crates` contains Rust libraries associated with this project.
-- `/depend` contains Git subtrees and submodules from other projects.
+- `/depend` contains files, Git subtrees and submodules from other projects.
 - `/doc` contains documentation for developers.
 - `/dsda-doom` is the [dsda-doom](https://github.com/kraflab/dsda-doom) source, all of which is compiled into RatBoom.
 - `/legal` contains license information for outside code.
