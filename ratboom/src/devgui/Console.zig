@@ -5,7 +5,7 @@ const c = @import("../main.zig").c;
 
 const ccmds = @import("ccmds.zig");
 const Core = @import("../Core.zig");
-const Deque = @import("../deque.zig").Deque;
+const Deque = @import("deque").Deque;
 const devgui = @import("../devgui.zig");
 const imgui = @import("../imgui.zig");
 

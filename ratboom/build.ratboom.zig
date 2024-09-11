@@ -37,6 +37,10 @@ pub fn build(
         .root_source_file = b.path("ratboom/src/main.zig"),
     });
 
+    const deque = b.createModule(.{ .root_source_file = b.path("depend/deque.zig") });
+    exe.root_module.addImport("deque", deque);
+    exe_check.root_module.addImport("deque", deque);
+
     setupExe(b, exe, cfg_hdr, metainfo);
     setupExe(b, exe_check, cfg_hdr, metainfo);
     b.installArtifact(exe);

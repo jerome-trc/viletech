@@ -103,11 +103,13 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit test suite");
     engine.tests(b, target, optimize, test_step);
+    doomparse.tests(b, target, optimize, test_step);
     subterra.tests(b, target, optimize, test_step, testx);
     wadload.tests(b, target, optimize, test_step);
 
     const doc_step = b.step("doc", "Generate documentation");
     engine.doc(b, target, optimize, doc_step);
+    doomparse.doc(b, target, optimize, doc_step);
     subterra.doc(b, target, optimize, doc_step);
     wadload.doc(b, target, optimize, doc_step);
 
@@ -159,6 +161,60 @@ pub const engine = struct {
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("engine/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
+// Libraries ///////////////////////////////////////////////////////////////////
+
+pub const doomparse = struct {
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        const module = b.addModule("doomparse", .{
+            .root_source_file = b.path("libs/doomparse/src/root.zig"),
+        });
+
+        module.addImport("deque", b.addModule("deque", .{
+            .root_source_file = b.path("depend/deque.zig"),
+        }));
+
+        compile.root_module.addImport(name orelse "doomparse", module);
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "doomparse",
+            .root_source_file = b.path("libs/doomparse/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "doomparse",
+        });
+
+        doc_step.dependOn(&install_docs.step);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/doomparse/src/root.zig"),
             .target = target,
             .optimize = optimize,
         });
