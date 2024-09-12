@@ -284,6 +284,7 @@ pub const Error = error{
 } || std.fmt.ParseIntError;
 
 const State = struct {
+    line: []const u8,
     lines: *std.mem.SplitIterator(u8, .scalar),
     parts: *std.mem.SplitIterator(u8, .any),
 };
@@ -413,12 +414,13 @@ fn processThing(state: *State, context: anytype) Error!void {
 
     const ix_str = state.parts.next() orelse return error.ThingMissingNum;
     const ix = try std.fmt.parseInt(i32, ix_str, 0);
+    var lparen_split = std.mem.splitScalar(u8, state.line, '(');
+    _ = lparen_split.next();
 
-    var thing_key: ?[]const u8 = null;
-
-    if (state.parts.next()) |part2| {
-        thing_key = std.mem.trim(u8, part2, "() \t");
-    }
+    const thing_key = if (lparen_split.next()) |after_lparen|
+        std.mem.trimRight(u8, after_lparen, ") \t")
+    else
+        null;
 
     if (std.meta.hasMethod(Context, "onThingStart")) {
         context.onThingStart(ix, thing_key) catch return error.User;
@@ -477,7 +479,7 @@ pub const TestContext = struct {
 
     pub fn onThingStart(_: *TestContext, index: i32, key: ?[]const u8) anyerror!void {
         try std.testing.expectEqual(1337, index);
-        try std.testing.expectEqualStrings("DearOnion", key.?);
+        try std.testing.expectEqualStrings("Dear Onion", key.?);
     }
 
     pub fn perThingProp(_: *TestContext, key: []const u8, val: []const u8) anyerror!void {
