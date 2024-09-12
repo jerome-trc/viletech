@@ -115,6 +115,12 @@ const RngClass = enum {
 
 const SeedArray = std.EnumArray(RngClass, u32);
 
+pub const Context = struct {
+    boom_compat: bool,
+    boom_logic_tick: i32,
+    demo_insurance: u8,
+};
+
 table: []const u8,
 seeds: SeedArray,
 rnd_index: usize,
@@ -129,7 +135,7 @@ pub fn init(hexen: bool) Self {
     };
 }
 
-pub fn get(self: *Self, cx: anytype, class: RngClass) i32 {
+pub fn get(self: *Self, cx: Context, class: RngClass) i32 {
     var cls = class;
     var compat: usize = undefined;
 
