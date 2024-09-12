@@ -78,6 +78,8 @@ pub const ContentId = enum {
     javascript, // Likely UDBScript...
     /// See <https://en.wikipedia.org/wiki/JPEG>.
     jpeg,
+    /// See <https://en.wikipedia.org/wiki/JPEG_XL>.
+    jpeg_xl,
     /// See <https://en.wikipedia.org/wiki/JSON>.
     json,
     /// See <https://zdoom.org/wiki/KEYCONF>.
@@ -156,6 +158,8 @@ pub const ContentId = enum {
     voxeldef,
     /// An informal standard for level pack metadata.
     wadinfo,
+    /// See <https://en.wikipedia.org/wiki/WebP>.
+    webp,
     /// See <https://www.w3.org/TR/WGSL/>.
     wgsl,
     /// See <https://zdoom.org/wiki/X11R6RGB>.
@@ -253,11 +257,13 @@ pub const ContentId = enum {
         .{ ".jpg", .jpeg },
         .{ ".js", .javascript },
         .{ ".json", .json },
+        .{ ".jxl", .jpeg_xl },
         .{ ".md", .markdown },
         .{ ".mid", .midi },
         .{ ".mus", .dmx_mus },
         .{ ".txt", .plain_text },
         .{ ".vert", .glsl },
+        .{ ".webp", .webp },
         .{ ".wgsl", .wgsl },
         .{ ".zs", .zscript },
         .{ ".zsc", .zscript },
