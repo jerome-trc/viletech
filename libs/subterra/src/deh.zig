@@ -2,10 +2,6 @@
 
 const std = @import("std");
 
-pub const CodeptrStart = fn (anytype) void;
-pub const CodeptrPer = fn (anytype, frame: i32, name: []const u8) void;
-pub const CodeptrEnd = fn (anytype) void;
-
 pub const SoundsStart = fn (anytype) void;
 pub const SoundsPer = fn (anytype, key: i32, val: []const u8) void;
 pub const SoundsEnd = fn (anytype) void;
@@ -40,7 +36,11 @@ pub fn parse(text: []const u8, context: anytype) Error!void {
         blk: {
             inline for (handlers) |handler| {
                 if (std.ascii.startsWithIgnoreCase(part0, handler.part0)) {
-                    var state = State{ .lines = &lines, .parts = &parts };
+                    var state = State{
+                        .line = line_trimmed,
+                        .lines = &lines,
+                        .parts = &parts,
+                    };
                     try handler.func(&state, context);
                     break :blk;
                 }
@@ -269,6 +269,7 @@ pub const WeaponBits = packed struct(u64) {
 };
 
 pub const Error = error{
+    CodeptrMalformed,
     DoomVersionMalformed,
     DoomVersionMissingValue,
     EmptyBitName,
@@ -327,8 +328,39 @@ fn processCheat(_: *State, _: anytype) Error!void {
     @panic("not yet implemented");
 }
 
-fn processCodeptr(_: *State, _: anytype) Error!void {
-    @panic("not yet implemented");
+fn processCodeptr(state: *State, context: anytype) Error!void {
+    const Context = @TypeOf(context);
+
+    if (std.meta.hasMethod(Context, "onCodeptrStart")) {
+        context.onCodeptrStart() catch return error.User;
+    }
+
+    if (std.meta.hasMethod(Context, "perCodeptr")) {
+        while (state.lines.next()) |line| {
+            if (line.len == 0) break;
+
+            var parts = std.mem.splitScalar(u8, line, '=');
+
+            const index_str = std.mem.trim(
+                u8,
+                std.mem.trimLeft(u8, parts.next() orelse return error.CodeptrMalformed, "fFrRaAmMeE "),
+                " \t",
+            );
+            const name = std.mem.trim(
+                u8,
+                parts.next() orelse return error.CodeptrMalformed,
+                " \t#",
+            );
+
+            if (std.mem.startsWith(u8, index_str, "#")) continue;
+            const index = try std.fmt.parseInt(i32, index_str, 0);
+            context.perCodeptr(index, name) catch return error.User;
+        }
+    }
+
+    if (std.meta.hasMethod(Context, "onCodeptrEnd")) {
+        context.onCodeptrEnd() catch return error.User;
+    }
 }
 
 fn processDoomVersion(state: *State, context: anytype) Error!void {
@@ -461,9 +493,21 @@ fn processWeapon(_: *State, _: anytype) Error!void {
 /// checks for on its `context` parameter. All are optional, and it will also
 /// never check for any fields or non-method declarations.
 pub const TestContext = struct {
+    const BlockSeen = struct {
+        start: bool = false,
+        innards: bool = false,
+        end: bool = false,
+
+        fn all(self: BlockSeen) bool {
+            return self.start and self.innards and self.end;
+        }
+    };
+
     seen_doom_version: bool = false,
     seen_patch_format: bool = false,
-    seen_thing: bool = false,
+
+    seen_codeptr: BlockSeen = .{},
+    seen_thing: BlockSeen = .{},
 
     pub fn doomVersion(self: *TestContext, val: []const u8) anyerror!void {
         self.seen_doom_version = true;
@@ -477,12 +521,35 @@ pub const TestContext = struct {
         try std.testing.expectEqual(6, int);
     }
 
-    pub fn onThingStart(_: *TestContext, index: i32, key: ?[]const u8) anyerror!void {
+    // [CODEPTR] ///////////////////////////////////////////////////////////////
+
+    pub fn onCodeptrStart(self: *TestContext) anyerror!void {
+        self.seen_codeptr.start = true;
+    }
+
+    pub fn perCodeptr(self: *TestContext, frame: i32, name: []const u8) anyerror!void {
+        self.seen_codeptr.innards = true;
+
+        try std.testing.expectEqual(1131, frame);
+        try std.testing.expectEqualStrings("Braachsel", name);
+    }
+
+    pub fn onCodeptrEnd(self: *TestContext) anyerror!void {
+        self.seen_codeptr.end = true;
+    }
+
+    // Things //////////////////////////////////////////////////////////////////
+
+    pub fn onThingStart(self: *TestContext, index: i32, key: ?[]const u8) anyerror!void {
+        self.seen_thing.start = true;
+
         try std.testing.expectEqual(1337, index);
         try std.testing.expectEqualStrings("Dear Onion", key.?);
     }
 
-    pub fn perThingProp(_: *TestContext, key: []const u8, val: []const u8) anyerror!void {
+    pub fn perThingProp(self: *TestContext, key: []const u8, val: []const u8) anyerror!void {
+        self.seen_thing.innards = true;
+
         if (std.mem.eql(u8, key, "ID #")) {
             try std.testing.expectEqualStrings("3008", val);
         } else if (std.mem.eql(u8, key, "Hit points")) {
@@ -503,7 +570,7 @@ pub const TestContext = struct {
     }
 
     pub fn onThingEnd(self: *TestContext) anyerror!void {
-        self.seen_thing = true;
+        self.seen_thing.end = true;
     }
 };
 
@@ -536,7 +603,7 @@ test "smoke" {
         \\Ammo per shot = 10
         \\Carousel icon = ECHOES
         \\
-        \\Ammo 2 (Nuisances Unknown)
+        \\Ammo 2 (      Nuisances Unknown)
         \\Max ammo = 150
         \\Per ammo = 10
         \\
@@ -561,5 +628,6 @@ test "smoke" {
     try parse(sample, &context);
     try std.testing.expect(context.seen_doom_version);
     try std.testing.expect(context.seen_patch_format);
-    try std.testing.expect(context.seen_thing);
+    try std.testing.expect(context.seen_codeptr.all());
+    try std.testing.expect(context.seen_thing.all());
 }
