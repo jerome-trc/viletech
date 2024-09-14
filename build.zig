@@ -113,6 +113,9 @@ pub fn build(b: *std.Build) void {
     subterra.doc(b, target, optimize, doc_step);
     wadload.doc(b, target, optimize, doc_step);
 
+    const re2_step = b.step("re2", "Run all re2zig lexer generators");
+    subterra.generateUdmfLexer(b, re2_step);
+
     if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
         const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
@@ -367,6 +370,26 @@ pub const subterra = struct {
                 "src/znbx.cpp",
             },
         });
+    }
+
+    fn generateUdmfLexer(b: *std.Build, re2_step: *std.Build.Step) void {
+        const run = b.addSystemCommand(&[_][]const u8{
+            "re2zig",
+            "--lang",
+            "zig",
+            "--api",
+            "default",
+            "-i",
+            "--loop-switch",
+            "--case-ranges",
+            "-W",
+            "libs/subterra/src/UdmfLexer.zig.re",
+            "-o",
+            "libs/subterra/src/UdmfLexer.zig",
+        });
+
+        run.addFileInput(b.path("libs/subterra/src/UdmfLexer.zig.re"));
+        re2_step.dependOn(&run.step);
     }
 };
 

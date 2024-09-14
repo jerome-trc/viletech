@@ -30,6 +30,7 @@ pub const SpeakerSound = sound.Speaker;
 pub const Subsector = ssectors.Subsector(u16);
 pub const SubsectorGl = ssectors.Subsector(u32);
 pub const Thing = things.Thing;
+pub const udmf = @import("udmf.zig");
 pub const Vertex = vertexes.Vertex;
 
 pub const Game = enum {
