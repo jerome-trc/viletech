@@ -1,5 +1,6 @@
 .{
     .name = "ratboom",
+    // This version is only for the client, not the libraries herein.
     .version = "0.0.0",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{

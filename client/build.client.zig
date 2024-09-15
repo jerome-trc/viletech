@@ -26,7 +26,8 @@ pub fn build(
     metainfo.addOption([]const u8, "compile_timestamp", compile_timestamp);
 
     const commit_hash = b.run(&[_][]const u8{ "git", "rev-parse", "HEAD" });
-    metainfo.addOption([]const u8, "commit", commit_hash);
+    metainfo.addOption([]const u8, "commit", std.mem.trim(u8, commit_hash, " \n\r\t"));
+    metainfo.addOption([]const u8, "version", root.packageVersion());
 
     exe.root_module.addOptions("meta", metainfo);
 

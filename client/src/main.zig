@@ -39,7 +39,8 @@ pub fn main() !void {
         const stdout_file = std.io.getStdOut().writer();
         var stdout_bw = std.io.bufferedWriter(stdout_file);
 
-        try stdout_bw.writer().print("{s}{s}", .{
+        try stdout_bw.writer().print("{s}\n{s}\n{s}\n", .{
+            meta.version,
             meta.commit,
             meta.compile_timestamp,
         });

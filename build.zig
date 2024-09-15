@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+pub const zon = @embedFile("build.zig.zon");
+
 pub const ccdb = @import("depend/ccdb.zig");
 pub const cimgui = @import("depend/build.cimgui.zig");
 pub const datetime = @import("depend/datetime.zig");
@@ -37,7 +39,6 @@ pub fn build(b: *std.Build) void {
         .PACKAGE_NAME = "ratboom",
         .PACKAGE_TARNAME = "ratboom",
         .WAD_DATA = "ratboom.wad",
-        // TODO: read from build.zig.zon?
         .PACKAGE_VERSION = "0.0.0",
         .PACKAGE_STRING = "ratboom 0.0.0",
 
@@ -441,3 +442,9 @@ pub const wadload = struct {
         test_step.dependOn(&run_unit_tests.step);
     }
 };
+pub fn packageVersion() []const u8 {
+    const zon_vers_start = std.mem.indexOf(u8, zon, ".version = ").?;
+    const zon_vers_end = std.mem.indexOfPos(u8, zon, zon_vers_start, ",").?;
+    const zon_vers_kvp = zon[zon_vers_start..zon_vers_end];
+    return std.mem.trim(u8, zon_vers_kvp, ".version =\"");
+}
