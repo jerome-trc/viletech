@@ -94,7 +94,7 @@ pub fn FVec(fracbits: comptime_int, len: comptime_int) type {
     };
 
     switch (len) {
-        2, 3, 4 => {},
+        2...4 => {},
         else => @compileError("`len` must be 2, 3, or 4"),
     }
 
