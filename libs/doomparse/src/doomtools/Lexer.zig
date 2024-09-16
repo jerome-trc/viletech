@@ -28,7 +28,7 @@ fn isDelimiterStart(cp: u21) bool {
 /// <https://docs.oracle.com/javase/8/docs/api/java/lang/Character.html#isDigit-char->.
 fn isJavaDigit(cp: u21) bool {
     switch (cp) {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => true,
+        '0'...'9' => true,
         // TODO: every other Unicode digit Java acknowledges.
         // Zig standard library doesn't offer any facilities for this yet.
         else => false,
@@ -45,17 +45,7 @@ fn isJavaWhitespace(cp: u21) bool {
         '\u{0020}',
         '\u{00A0}',
         '\u{1680}',
-        '\u{2000}',
-        '\u{2001}',
-        '\u{2002}',
-        '\u{2003}',
-        '\u{2004}',
-        '\u{2005}',
-        '\u{2006}',
-        '\u{2007}',
-        '\u{2008}',
-        '\u{2009}',
-        '\u{200A}',
+        '\u{2000}'...'\u{200A}',
         '\u{202F}',
         '\u{205F}',
         '\u{3000}',
