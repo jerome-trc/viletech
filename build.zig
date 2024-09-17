@@ -107,12 +107,14 @@ pub fn build(b: *std.Build) void {
     doomparse.tests(b, target, optimize, test_step);
     subterra.tests(b, target, optimize, test_step, testx);
     wadload.tests(b, target, optimize, test_step);
+    zbcx.tests(b, target, optimize, test_step);
 
     const doc_step = b.step("doc", "Generate documentation");
     engine.doc(b, target, optimize, doc_step);
     doomparse.doc(b, target, optimize, doc_step);
     subterra.doc(b, target, optimize, doc_step);
     wadload.doc(b, target, optimize, doc_step);
+    zbcx.doc(b, target, optimize, doc_step);
 
     const re2_step = b.step("re2", "Run all re2zig lexer generators");
     subterra.generateUdmfLexer(b, re2_step);
@@ -442,6 +444,76 @@ pub const wadload = struct {
         test_step.dependOn(&run_unit_tests.step);
     }
 };
+
+pub const zbcx = struct {
+    const c = @import("depend/build.zbcx.zig");
+
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
+        name: []const u8 = "zbcx",
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+    }) void {
+        c.link(b, compile, config.target, config.optimize);
+
+        const module = b.addModule("zbcx", .{
+            .root_source_file = b.path("libs/zbcx/src/root.zig"),
+        });
+
+        module.addSystemIncludePath(b.path("depend/zbcx/src"));
+
+        compile.root_module.addImport(config.name, module);
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "zbcx",
+            .root_source_file = b.path("libs/zbcx/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        c.link(b, dummy, target, optimize);
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "zbcx",
+        });
+
+        doc_step.dependOn(&install_docs.step);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/zbcx/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const sample = b.createModule(.{
+            .root_source_file = b.path("depend/sample.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        unit_tests.root_module.addImport("sample", sample);
+
+        c.link(b, unit_tests, target, optimize);
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
 pub fn packageVersion() []const u8 {
     const zon_vers_start = std.mem.indexOf(u8, zon, ".version = ").?;
     const zon_vers_end = std.mem.indexOfPos(u8, zon, zon_vers_start, ",").?;
