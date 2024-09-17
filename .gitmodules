@@ -7,3 +7,6 @@
 [submodule "depend/zmsx"]
 	path = depend/zmsx
 	url = https://github.com/jerome-trc/zmsx.git
+[submodule "depend/zbcx"]
+	path = depend/zbcx
+	url = https://github.com/jerome-trc/zbcx.git
