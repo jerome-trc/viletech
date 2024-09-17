@@ -136,6 +136,8 @@ pub const ContentId = enum {
     sndseq,
     /// See <https://doomwiki.org/wiki/Subsector>.
     ssectors,
+    /// See <https://en.wikipedia.org/wiki/SVG>.
+    svg,
     /// See <https://doomwiki.org/wiki/SWITCHES>.
     switches,
     /// See <https://zdoom.org/wiki/TERRAIN>.
@@ -261,6 +263,7 @@ pub const ContentId = enum {
         .{ ".md", .markdown },
         .{ ".mid", .midi },
         .{ ".mus", .dmx_mus },
+        .{ ".svg", .svg },
         .{ ".txt", .plain_text },
         .{ ".vert", .glsl },
         .{ ".webp", .webp },
@@ -339,6 +342,7 @@ pub const ContentId = enum {
             .sndinfo => "ZDoom sound config.",
             .sndseq => "ZDoom sound sequence",
             .ssectors => "Map subsectors",
+            .svg => "Graphic (SVG)",
             .switches => "Boom switches",
             .terrain => "ZDoom terrain config.",
             .textcolo => "Font colors",
