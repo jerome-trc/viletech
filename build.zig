@@ -25,24 +25,6 @@ pub fn build(b: *std.Build) void {
     const zig_args = b.dependency("zig-args", .{});
 
     const check = b.step("check", "Semantic check for ZLS");
-    const ratboom = @import("ratboom/build.ratboom.zig").build(b, target, optimize, check);
-    const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
-
-    const demotest = b.addTest(.{
-        .root_source_file = b.path("demotest/main.zig"),
-        .target = target,
-        // Always use -Doptimize=ReleaseSafe,
-        // since we want the demotest to run as quickly as possible.
-        .optimize = .ReleaseSafe,
-    });
-    demotest.step.dependOn(&ratboom.step);
-
-    const demotest_in = b.addOptions();
-    demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);
-    demotest.root_module.addOptions("cfg", demotest_in);
-
-    const run_demotest = b.addRunArtifact(demotest);
-    demotest_step.dependOn(&run_demotest.step);
 
     const testx = b.option(
         []const []const u8,
@@ -82,6 +64,35 @@ pub fn build(b: *std.Build) void {
         .zig_args = zig_args.module("args"),
     };
     client_builder.build();
+
+    var ratboom_builder = @import("ratboom/Builder.zig"){
+        .b = b,
+        .target = target,
+        .optimize = optimize,
+        .check = check,
+        .assets = assets,
+        .deque = deque,
+        .zig_args = zig_args.module("args"),
+    };
+    const ratboom = ratboom_builder.build();
+
+    const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
+
+    const demotest = b.addTest(.{
+        .root_source_file = b.path("demotest/main.zig"),
+        .target = target,
+        // Always use -Doptimize=ReleaseSafe,
+        // since we want the demotest to run as quickly as possible.
+        .optimize = .ReleaseSafe,
+    });
+    demotest.step.dependOn(&ratboom.step);
+
+    const demotest_in = b.addOptions();
+    demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);
+    demotest.root_module.addOptions("cfg", demotest_in);
+
+    const run_demotest = b.addRunArtifact(demotest);
+    demotest_step.dependOn(&run_demotest.step);
 }
 
 pub const engine = struct {
