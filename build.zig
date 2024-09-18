@@ -459,8 +459,6 @@ pub const zbcx = struct {
             .root_source_file = b.path("libs/zbcx/src/root.zig"),
         });
 
-        module.addSystemIncludePath(b.path("depend/zbcx/src"));
-
         compile.root_module.addImport(config.name, module);
     }
 
