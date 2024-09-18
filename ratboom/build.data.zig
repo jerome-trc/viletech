@@ -1,3 +1,7 @@
+//! An adaption of
+//! https://github.com/kraflab/dsda-doom/blob/master/prboom2/data/CMakeLists.txt
+//! from CMake to the Zig build system.
+
 const std = @import("std");
 
 pub fn data(

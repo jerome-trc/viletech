@@ -8,8 +8,9 @@ pub fn build(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     check: *std.Build.Step,
-    cfg_hdr: *std.Build.Step.ConfigHeader,
 ) *std.Build.Step.Compile {
+    const cfg_hdr = configHeader(b);
+    const datawad = @import("build.data.zig").data(b, target, cfg_hdr);
     var metainfo = b.addOptions();
 
     const DateTime = root.datetime.DateTime;
@@ -50,6 +51,7 @@ pub fn build(
         .targets = &[1]*std.Build.Step.Compile{exe},
     });
 
+    exe.step.dependOn(&datawad.step);
     return exe;
 }
 
@@ -423,4 +425,68 @@ fn setupExe(
     exe.root_module.addImport("zig-args", zig_args.module("args"));
 
     root.engine.link(b, exe, null);
+}
+
+fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
+    const posix_like = switch (builtin.os.tag) {
+        .linux => true,
+        .windows => false,
+        else => @compileError("not yet supported"),
+    };
+
+    const wad_dir = if (posix_like)
+        "/usr/local/share/games/doom"
+    else
+        ".";
+
+    const simplechecks = b.option(
+        bool,
+        "simplecheck",
+        "Enable checks which only impose significant overhead if a posible error is detected",
+    ) orelse true;
+
+    const rangecheck = b.option(
+        bool,
+        "rangecheck",
+        "Enable extra bounds checks in dsda-doom code",
+    ) orelse false;
+
+    return b.addConfigHeader(.{
+        .style = .{ .cmake = b.path("dsda-doom/prboom2/cmake/config.h.cin") },
+        .include_path = ".zig-cache/config.h",
+    }, .{
+        .PACKAGE_NAME = "ratboom",
+        .PACKAGE_TARNAME = "ratboom",
+        .WAD_DATA = "ratboom.wad",
+        .PACKAGE_VERSION = "0.0.0",
+        .PACKAGE_STRING = "ratboom 0.0.0",
+
+        .VTEC_WAD_DIR = wad_dir,
+        .VTEC_ABSOLUTE_PWAD_PATH = wad_dir,
+
+        .WORDS_BIGENDIAN = builtin.cpu.arch.endian() == .big,
+
+        .HAVE_GETOPT = posix_like,
+        .HAVE_MMAP = posix_like,
+        .HAVE_CREATE_FILE_MAPPING = false,
+        .HAVE_STRSIGNAL = posix_like,
+        .HAVE_MKSTEMP = posix_like,
+
+        .HAVE_SYS_WAIT_H = posix_like,
+        .HAVE_UNISTD_H = posix_like,
+        .HAVE_ASM_BYTEORDER_H = posix_like,
+        .HAVE_DIRENT_H = posix_like,
+
+        .HAVE_LIBSDL2_IMAGE = true,
+        .HAVE_LIBSDL2_MIXER = false,
+
+        .HAVE_LIBDUMB = false,
+        .HAVE_LIBFLUIDSYNTH = true,
+        .HAVE_LIBMAD = true,
+        .HAVE_LIBPORTMIDI = false,
+        .HAVE_LIBVORBISFILE = true,
+
+        .SIMPLECHECKS = simplechecks,
+        .RANGECHECK = rangecheck,
+    });
 }

@@ -9,75 +9,11 @@ pub const datetime = @import("depend/datetime.zig");
 pub const zmsx = @import("depend/build.zmsx.zig");
 
 pub fn build(b: *std.Build) void {
-    const posix_like = switch (builtin.os.tag) {
-        .linux => true,
-        .windows => false,
-        else => @compileError("not yet supported"),
-    };
-
-    const wad_dir = if (posix_like)
-        "/usr/local/share/games/doom"
-    else
-        ".";
-
-    const simplechecks = b.option(
-        bool,
-        "simplecheck",
-        "Enable checks which only impose significant overhead if a posible error is detected",
-    ) orelse true;
-
-    const rangecheck = b.option(
-        bool,
-        "rangecheck",
-        "Enable extra bounds checks in dsda-doom code",
-    ) orelse false;
-
-    const cfg_hdr = b.addConfigHeader(.{
-        .style = .{ .cmake = b.path("dsda-doom/prboom2/cmake/config.h.cin") },
-        .include_path = ".zig-cache/config.h",
-    }, .{
-        .PACKAGE_NAME = "ratboom",
-        .PACKAGE_TARNAME = "ratboom",
-        .WAD_DATA = "ratboom.wad",
-        .PACKAGE_VERSION = "0.0.0",
-        .PACKAGE_STRING = "ratboom 0.0.0",
-
-        .VTEC_WAD_DIR = wad_dir,
-        .VTEC_ABSOLUTE_PWAD_PATH = wad_dir,
-
-        .WORDS_BIGENDIAN = builtin.cpu.arch.endian() == .big,
-
-        .HAVE_GETOPT = posix_like,
-        .HAVE_MMAP = posix_like,
-        .HAVE_CREATE_FILE_MAPPING = false,
-        .HAVE_STRSIGNAL = posix_like,
-        .HAVE_MKSTEMP = posix_like,
-
-        .HAVE_SYS_WAIT_H = posix_like,
-        .HAVE_UNISTD_H = posix_like,
-        .HAVE_ASM_BYTEORDER_H = posix_like,
-        .HAVE_DIRENT_H = posix_like,
-
-        .HAVE_LIBSDL2_IMAGE = true,
-        .HAVE_LIBSDL2_MIXER = false,
-
-        .HAVE_LIBDUMB = false,
-        .HAVE_LIBFLUIDSYNTH = true,
-        .HAVE_LIBMAD = true,
-        .HAVE_LIBPORTMIDI = false,
-        .HAVE_LIBVORBISFILE = true,
-
-        .SIMPLECHECKS = simplechecks,
-        .RANGECHECK = rangecheck,
-    });
-
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const check = b.step("check", "Semantic check for ZLS");
-    const ratboom = @import("ratboom/build.ratboom.zig").build(b, target, optimize, check, cfg_hdr);
-    const datawad = @import("ratboom/build.data.zig").data(b, target, cfg_hdr);
-    ratboom.step.dependOn(&datawad.step);
 
+    const check = b.step("check", "Semantic check for ZLS");
+    const ratboom = @import("ratboom/build.ratboom.zig").build(b, target, optimize, check);
     const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
 
     const demotest = b.addTest(.{
