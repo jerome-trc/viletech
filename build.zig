@@ -439,7 +439,7 @@ pub const zbcx = struct {
             .target = target,
             .optimize = optimize,
         });
-        unit_tests.root_module.addImport("sample", sample);
+        unit_tests.root_module.addImport("depsample", sample);
 
         c.link(b, unit_tests, target, optimize);
 

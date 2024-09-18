@@ -10,7 +10,7 @@ const c = @cImport({
 // in Zig is better than in C by a wide margin.
 
 test "compilation, smoke" {
-    const sample = @import("sample");
+    const sample = @import("depsample");
 
     const Context = struct {
         const io_vtable = c.zbcx_IoVtable{
