@@ -3,15 +3,33 @@ const std = @import("std");
 
 const root = @import("../build.zig");
 
-pub fn build(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    check: *std.Build.Step,
-) *std.Build.Step.Compile {
-    const cfg_hdr = configHeader(b);
-    const datawad = @import("build.data.zig").data(b, target, cfg_hdr);
-    var metainfo = b.addOptions();
+const Self = @This();
+
+b: *std.Build,
+target: std.Build.ResolvedTarget,
+optimize: std.builtin.OptimizeMode,
+check: *std.Build.Step,
+
+assets: *std.Build.Module,
+deque: *std.Build.Module,
+zig_args: *std.Build.Module,
+
+pub fn build(self: *Self) *std.Build.Step.Compile {
+    const cfg_hdr = configHeader(self.b);
+
+    const exe_options = std.Build.ExecutableOptions{
+        .name = "ratboom",
+        .root_source_file = self.b.path("ratboom/src/main.zig"),
+        .target = self.target,
+        .optimize = self.optimize,
+    };
+
+    const exe = self.b.addExecutable(exe_options);
+    const exe_check = self.b.addExecutable(exe_options);
+    self.exeCommon(exe, cfg_hdr);
+    self.exeCommon(exe_check, cfg_hdr);
+
+    var metainfo = self.b.addOptions();
 
     const DateTime = root.datetime.DateTime;
     var compile_timestamp_buf: [64]u8 = undefined;
@@ -22,54 +40,36 @@ pub fn build(
     ) catch unreachable;
     metainfo.addOption([]const u8, "compile_timestamp", compile_timestamp);
 
-    const commit_hash = b.run(&[_][]const u8{ "git", "rev-parse", "HEAD" });
+    const commit_hash = self.b.run(&[_][]const u8{ "git", "rev-parse", "HEAD" });
     metainfo.addOption([]const u8, "commit", std.mem.trim(u8, commit_hash, " \n\r\t"));
 
-    const exe = b.addExecutable(.{
-        .name = "ratboom",
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("ratboom/src/main.zig"),
-    });
-    const exe_check = b.addExecutable(.{
-        .name = "ratboom",
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("ratboom/src/main.zig"),
-    });
+    exe.root_module.addOptions("meta", metainfo);
+    exe_check.root_module.addOptions("meta", metainfo);
 
-    const deque = b.createModule(.{ .root_source_file = b.path("depend/deque.zig") });
-    exe.root_module.addImport("deque", deque);
-    exe_check.root_module.addImport("deque", deque);
+    const datawad = @import("build.data.zig").data(self.b, self.target, cfg_hdr);
+    exe.step.dependOn(&datawad.step);
 
-    setupExe(b, exe, cfg_hdr, metainfo);
-    setupExe(b, exe_check, cfg_hdr, metainfo);
-    b.installArtifact(exe);
-    check.dependOn(&exe_check.step);
-
-    root.ccdb.createStep(b, "ccdb", .{
+    root.ccdb.createStep(self.b, "ccdb", .{
         .targets = &[1]*std.Build.Step.Compile{exe},
     });
 
-    exe.step.dependOn(&datawad.step);
+    self.b.installArtifact(exe);
     return exe;
 }
 
-fn setupExe(
-    b: *std.Build,
+fn exeCommon(
+    self: *Self,
     exe: *std.Build.Step.Compile,
     cfg_hdr: *std.Build.Step.ConfigHeader,
-    metainfo: *std.Build.Step.Options,
 ) void {
     exe.root_module.addConfigHeader(cfg_hdr);
     exe.step.dependOn(&cfg_hdr.step);
-    exe.root_module.addOptions("meta", metainfo);
+
+    exe.addIncludePath(self.b.path("dsda-doom/prboom2/src"));
+    exe.addIncludePath(cfg_hdr.getOutput().dirname());
 
     exe.linkLibC();
     exe.linkLibCpp();
-
-    exe.addIncludePath(b.path("dsda-doom/prboom2/src"));
-    exe.addIncludePath(cfg_hdr.getOutput().dirname());
 
     const common_flags = [_][]const u8{
         "-ffast-math",
@@ -86,20 +86,20 @@ fn setupExe(
     var cxx_flags: []const []const u8 = ([_][]const u8{"--std=c++20"} ++ common_flags)[0..];
 
     {
-        const flags = b.run(&[_][]const u8{ "pkg-config", "--cflags-only-I", "sdl2" });
+        const flags = self.b.run(&[_][]const u8{ "pkg-config", "--cflags-only-I", "sdl2" });
         var iter = std.mem.splitScalar(u8, flags, ' ');
 
         while (iter.next()) |flag| {
             const f = std.mem.trim(u8, flag, " \n\r\t");
 
             c_flags = std.mem.concat(
-                b.allocator,
+                self.b.allocator,
                 []const u8,
                 &[2][]const []const u8{ c_flags, &[1][]const u8{f} },
             ) catch unreachable;
 
             cxx_flags = std.mem.concat(
-                b.allocator,
+                self.b.allocator,
                 []const u8,
                 &[2][]const []const u8{ cxx_flags, &[1][]const u8{f} },
             ) catch unreachable;
@@ -107,19 +107,19 @@ fn setupExe(
     }
 
     const c_flags_no_ubsan = std.mem.concat(
-        b.allocator,
+        self.b.allocator,
         []const u8,
         &[2][]const []const u8{ c_flags, &[1][]const u8{"-fno-sanitize=undefined"} },
     ) catch unreachable;
 
     const cxx_flags_no_ubsan = std.mem.concat(
-        b.allocator,
+        self.b.allocator,
         []const u8,
         &[2][]const []const u8{ cxx_flags, &[1][]const u8{"-fno-sanitize=undefined"} },
     ) catch unreachable;
 
     exe.addCSourceFiles(.{
-        .root = b.path("dsda-doom/prboom2/src"),
+        .root = self.b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
             "dsda/aim.c",
             "dsda/exdemo.c",
@@ -250,7 +250,7 @@ fn setupExe(
     });
 
     exe.addCSourceFiles(.{
-        .root = b.path("dsda-doom/prboom2/src"),
+        .root = self.b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
             "am_map.c",
             "doomdef.c",
@@ -372,7 +372,7 @@ fn setupExe(
     });
 
     exe.addCSourceFiles(.{
-        .root = b.path("dsda-doom/prboom2/src"),
+        .root = self.b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
             "dsda/ambient.cpp",
             "dsda/mapinfo/doom/parser.cpp",
@@ -383,7 +383,7 @@ fn setupExe(
     });
 
     exe.addCSourceFiles(.{
-        .root = b.path("dsda-doom/prboom2/src"),
+        .root = self.b.path("dsda-doom/prboom2/src"),
         .files = &[_][]const u8{
             "scanner.cpp",
         },
@@ -419,12 +419,12 @@ fn setupExe(
         });
     }
 
-    root.cimgui.link(b, exe);
+    root.cimgui.link(self.b, exe);
+    root.engine.link(self.b, exe, null);
 
-    const zig_args = b.dependency("zig-args", .{});
-    exe.root_module.addImport("zig-args", zig_args.module("args"));
-
-    root.engine.link(b, exe, null);
+    exe.root_module.addImport("assets", self.assets);
+    exe.root_module.addImport("deque", self.deque);
+    exe.root_module.addImport("zig-args", self.zig_args);
 }
 
 fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
