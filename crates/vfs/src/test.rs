@@ -124,7 +124,7 @@ fn sample_vfs() -> Option<VirtualFs> {
 	}
 
 	{
-		let basedata = base.join("../assets/viletech");
+		let basedata = base.join("../assets");
 		vfs.mount(&basedata, VPath::new("viletech")).unwrap();
 	}
 
