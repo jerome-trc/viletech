@@ -66,7 +66,7 @@ export fn registerPref(ccx: *Core.C, pref_vz: [*:0]const u8) void {
 }
 
 export fn windowIcon(size: *i32) [*]const u8 {
-    const bytes = @embedFile("viletech.png");
+    const bytes = @import("assets").viletech_png;
     size.* = bytes.len;
     return bytes;
 }
