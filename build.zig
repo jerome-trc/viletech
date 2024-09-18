@@ -12,6 +12,18 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const assets = b.createModule(.{
+        .root_source_file = b.path("assets/assets.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const deque = b.createModule(.{
+        .root_source_file = b.path("depend/deque.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const zig_args = b.dependency("zig-args", .{});
+
     const check = b.step("check", "Semantic check for ZLS");
     const ratboom = @import("ratboom/build.ratboom.zig").build(b, target, optimize, check);
     const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
@@ -60,7 +72,16 @@ pub fn build(b: *std.Build) void {
         @import("tunetech").djwad(b.allocator, dir) catch unreachable;
     } else |_| {}
 
-    @import("client/build.client.zig").build(b, target, optimize);
+    var client_builder = @import("client/Builder.zig"){
+        .b = b,
+        .target = target,
+        .optimize = optimize,
+        .check = check,
+        .assets = assets,
+        .deque = deque,
+        .zig_args = zig_args.module("args"),
+    };
+    client_builder.build();
 }
 
 pub const engine = struct {
