@@ -383,8 +383,42 @@ fn processDoomVersion(state: *State, context: anytype) Error!void {
     context.doomVersion(val) catch return error.User;
 }
 
-fn processFrame(_: *State, _: anytype) Error!void {
-    @panic("not yet implemented");
+fn processFrame(state: *State, context: anytype) Error!void {
+    const Context = @TypeOf(context);
+
+    const ix_str = state.parts.next() orelse return error.ThingMissingNum;
+    const ix = try std.fmt.parseInt(i32, ix_str, 0);
+
+    if (std.meta.hasMethod(Context, "onFrameStart")) {
+        context.onFrameStart(ix) catch return error.User;
+    }
+
+    if (std.meta.hasMethod(Context, "perFrameProp")) {
+        while (state.lines.next()) |line| {
+            if (line.len == 0) break;
+
+            var prop_parts = std.mem.splitScalar(u8, line, '=');
+
+            const key = std.mem.trim(
+                u8,
+                prop_parts.next() orelse return error.ThingPropMalformed,
+                " \t",
+            );
+            const val = std.mem.trim(
+                u8,
+                prop_parts.next() orelse return error.ThingPropMalformed,
+                " \t#",
+            );
+
+            if (std.mem.startsWith(u8, key, "#")) continue;
+
+            context.perFrameProp(key, val) catch return error.User;
+        }
+    }
+
+    if (std.meta.hasMethod(Context, "onFrameEnd")) {
+        context.onFrameEnd() catch return error.User;
+    }
 }
 
 fn processHelper(_: *State, _: anytype) Error!void {
@@ -555,6 +589,7 @@ pub const TestContext = struct {
     seen_patch_format: bool = false,
 
     seen_codeptr: BlockSeen = .{},
+    seen_frame: BlockSeen = .{},
     seen_pars: BlockSeen = .{},
     seen_thing: BlockSeen = .{},
 
@@ -568,6 +603,32 @@ pub const TestContext = struct {
         self.seen_patch_format = true;
         const int = try std.fmt.parseInt(i32, val, 10);
         try std.testing.expectEqual(6, int);
+    }
+
+    // Frame ///////////////////////////////////////////////////////////////////
+
+    pub fn onFrameStart(self: *TestContext, index: i32) anyerror!void {
+        self.seen_frame.start = true;
+        try std.testing.expectEqual(1100, index);
+    }
+
+    pub fn perFrameProp(self: *TestContext, key: []const u8, val: []const u8) anyerror!void {
+        self.seen_frame.innards = true;
+
+        if (std.mem.eql(u8, key, "Duration")) {
+            try std.testing.expectEqualStrings("-1", val);
+        } else if (std.mem.eql(u8, key, "Sprite number")) {
+            try std.testing.expectEqualStrings("245", val);
+        } else if (std.mem.eql(u8, key, "Next frame")) {
+            try std.testing.expectEqualStrings("0", val);
+        } else {
+            std.debug.print("unexpected key: {s}\n", .{key});
+            return error.TestUnexpectedResult;
+        }
+    }
+
+    pub fn onFrameEnd(self: *TestContext) anyerror!void {
+        self.seen_frame.end = true;
     }
 
     // [CODEPTR] ///////////////////////////////////////////////////////////////
@@ -703,8 +764,11 @@ test "smoke" {
     var context = TestContext{};
 
     try parse(sample, &context);
-    // try std.testing.expect(context.seen_doom_version);
-    // try std.testing.expect(context.seen_patch_format);
-    // try std.testing.expect(context.seen_codeptr.all());
-    // try std.testing.expect(context.seen_thing.all());
+    try std.testing.expect(context.seen_doom_version);
+    try std.testing.expect(context.seen_patch_format);
+
+    try std.testing.expect(context.seen_codeptr.all());
+    try std.testing.expect(context.seen_frame.all());
+    try std.testing.expect(context.seen_pars.all());
+    try std.testing.expect(context.seen_thing.all());
 }
