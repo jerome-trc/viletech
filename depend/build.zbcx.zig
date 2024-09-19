@@ -6,6 +6,13 @@ pub fn link(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) void {
+    var symln_buf: [4096]u8 = [_]u8{0} ** 4096;
+
+    const root = if (std.fs.cwd().readLink("depend/zbcx.ln", symln_buf[0..])) |_|
+        "depend/zbcx.ln"
+    else |_|
+        "depend/zbcx";
+
     var lib = b.addStaticLibrary(.{
         .name = "zbcx",
         .target = target,
@@ -15,21 +22,21 @@ pub fn link(
     lib.linkLibC();
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zbcx"),
+        .root = b.path(root),
         .flags = &[_][]const u8{
             "--std=c99",
             "-I",
-            "depend/zbcx/include",
+            b.pathJoin(&[_][]const u8{ root, "include" }),
             "-I",
-            "depend/zbcx/src",
+            b.pathJoin(&[_][]const u8{ root, "src" }),
             "-I",
-            "depend/zbcx/src/cache",
+            b.pathJoin(&[_][]const u8{ root, "src/cache" }),
             "-I",
-            "depend/zbcx/src/codegen",
+            b.pathJoin(&[_][]const u8{ root, "src/codegen" }),
             "-I",
-            "depend/zbcx/src/parse",
+            b.pathJoin(&[_][]const u8{ root, "src/parse" }),
             "-I",
-            "depend/zbcx/src/semantic",
+            b.pathJoin(&[_][]const u8{ root, "src/semantic" }),
             // TODO: some load-bearing UB here still. Slowly move files off this flag.
             "-fno-sanitize=undefined",
         },
@@ -76,7 +83,7 @@ pub fn link(
         },
     });
 
-    compile.addSystemIncludePath(b.path("depend/zbcx/include"));
+    compile.addSystemIncludePath(b.path(b.pathJoin(&[_][]const u8{ root, "include" })));
 
     compile.linkLibrary(lib);
 }
