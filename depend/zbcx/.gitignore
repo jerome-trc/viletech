@@ -1,4 +1,38 @@
+# File system ##################################################################
+.DS_Store
+desktop.ini
 
+# Text editor/IDE ##############################################################
+/.vs/**
+!/.vs/CMakeWorkspaceSettings.json
+.atomignore
+*.swp
+*.swo
+Session.vim
+.cproject
+.idea
+*.iml
+/.vscode/**
+!/.vscode/extension.json
+.VSCodeCounter
+.project
+.favorites.json
+.settings/
+
+# Build artifacts ##############################################################
+/build
+/builddir
+/doxy
 *.o
 *.exe
-build/
+
+# Miscellaneous ################################################################
+
+# Used to provide context to clang-based tooling.
+**/compile_commands.json
+
+# perf output
+**/*perf.data*
+
+# not-perf output
+*.nperf
