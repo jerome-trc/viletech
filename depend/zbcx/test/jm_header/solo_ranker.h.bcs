@@ -1,0 +1,15 @@
+#ifndef TEST_JMHEADER_SOLORANKER_H
+#define TEST_JMHEADER_SOLORANKER_H
+
+#linklibrary "solorank"
+
+// ==========================================================================
+strict namespace Jm.SoloRanker {
+// ==========================================================================
+
+extern void Finish();
+extern str GetHsAuthorName();
+
+}
+
+#endif

@@ -1,0 +1,17 @@
+#ifndef TEST_JMHEADER_TIMER_H
+#define TEST_JMHEADER_TIMER_H
+
+#linklibrary "timer"
+
+// ==========================================================================
+strict namespace Jm.Timer {
+// ==========================================================================
+
+extern void Run();
+extern void SetPar( str par );
+extern void ShowTime( int time );
+extern int GetTics();
+
+}
+
+#endif

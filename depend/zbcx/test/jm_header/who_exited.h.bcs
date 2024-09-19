@@ -1,0 +1,15 @@
+#ifndef TEST_JMHEADER_WHOEXITED_H
+#define TEST_JMHEADER_WHOEXITED_H
+
+#linklibrary "whoexit"
+
+// ==========================================================================
+strict namespace Jm.WhoExited {
+// ==========================================================================
+
+extern void Show();
+extern void ShowAndExit();
+
+}
+
+#endif

@@ -1,0 +1,93 @@
+#include "zcommon.h"
+
+// ==========================================================================
+strict namespace {
+// ==========================================================================
+
+script "Main" open {
+   using ListTest;
+   auto list = ListCreate();
+   foreach ( auto ch; "abcde" ) {
+      auto node = ListCreateNode( ch );
+      ListAppend( list, node );
+   }
+   ListDetach( list, list.head.next );
+   ListDetach( list, list.tail );
+   Print( s: "Size: ", i: list.size );
+   auto node = list.head;
+   while ( node ) {
+      Print( s: "node=", c: node.value );
+      node = node.next;
+   }
+}
+
+}
+
+// ==========================================================================
+strict namespace ListTest {
+// ==========================================================================
+
+struct ListT {
+   struct NodeT {
+      NodeT? next;
+      int value;
+   }? head, tail;
+   int size;
+};
+
+ListT& ListCreate() {
+   static auto allocated = false;
+   static ListT list;
+   assert ( ! allocated, "List already allocated" );
+   allocated = true;
+   return list;
+}
+
+void ListAppend( ListT& list, NodeT& node ) {
+   if ( list.head ) {
+      list.tail.next = node;
+   }
+   else {
+      list.head = node;
+   }
+   list.tail = node;
+   ++list.size;
+}
+
+NodeT& ListCreateNode( int value ) {
+   static auto numAllocated = 0;
+   static NodeT availableNodes[ 10 ];
+   assert ( numAllocated < availableNodes.length(),
+      "No more free nodes available" );
+   auto node = availableNodes[ numAllocated ];
+   node.value = value;
+   ++numAllocated;
+   return node;
+}
+
+void ListDetach( ListT& list, NodeT? targetNode ) {
+   if ( targetNode == list.head ) {
+      list.head = list.head.next;
+      if ( targetNode == list.tail ) {
+         list.tail = null;
+      }
+   }
+   else if ( targetNode == list.tail ) {
+      auto node = list.head;
+      while ( node.next && node.next != targetNode ) {
+         node = node.next;
+      }
+      node.next = null;
+      list.tail = node;
+   }
+   else {
+      auto node = list.head;
+      while ( node.next && node.next != targetNode ) {
+         node = node.next;
+      }
+      node.next = node.next.next;
+   }
+   --list.size;
+}
+
+}

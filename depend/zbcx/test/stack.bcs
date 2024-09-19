@@ -1,0 +1,87 @@
+#include "zcommon.h"
+
+// ==========================================================================
+strict namespace {
+// ==========================================================================
+
+script "Main" open {
+   using StackTest;
+   auto stack = StackCreate();
+   StackPush( stack, "123" );
+   StackPush( stack, "321" );
+   StackPush( stack, "789" );
+   Print( s: StackPop( stack ) );
+   StackPush( stack, "666" );
+   Print( s: StackPop( stack ) );
+   Print( s: StackPop( stack ) );
+   Print( s: StackPop( stack ) );
+}
+
+}
+
+// ==========================================================================
+strict namespace StackTest {
+// ==========================================================================
+
+struct NodeT {
+   NodeT? next;
+   str value;
+};
+
+struct StackT {
+   NodeT? top;
+};
+
+StackT& StackCreate() {
+   static auto allocated = false;
+   static StackT stack;
+   assert ( ! allocated, "Stack already allocated" );
+   allocated = true;
+   return stack;
+}
+
+void StackPush( StackT& stack, str value ) {
+   auto node = AllocateFreeNode( value );
+   node.next = stack.top;
+   stack.top = node;
+}
+
+// Both allocates and frees a node.
+private NodeT? AllocateFreeNode( str value, NodeT? freeNode = null ) {
+   static struct {
+      NodeT node;
+      bool allocated;
+   } table[ 10 ];
+   // Free a node.
+   if ( freeNode ) {
+      foreach ( auto entry; table ) {
+         if ( entry.node == freeNode ) {
+            entry.allocated = false;
+            return null;
+         }
+      }
+      assert ( 0 );
+   }
+   // Allocate a node.
+   else {
+      foreach ( auto entry; table ) {
+         if ( ! entry.allocated ) {
+            entry.allocated = true;
+            auto node = entry.node;
+            node.value = value;
+            return node;
+         }
+      }
+      assert ( 0, "No more free nodes available" );
+   }
+}
+
+str StackPop( StackT& stack ) {
+   assert ( stack.top );
+   auto node = stack.top;
+   stack.top = stack.top.next;
+   AllocateFreeNode( "", node );
+   return node.value;
+}
+
+}
