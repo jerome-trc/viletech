@@ -1,0 +1,19 @@
+#ifndef TEST_JMHEADER_CLIENT_H
+#define TEST_JMHEADER_CLIENT_H
+
+#linklibrary "client"
+
+// ==========================================================================
+strict namespace Jm.Client {
+// ==========================================================================
+
+extern int GetNumber();
+// Executes client-side script for player with given player number.
+extern void Execute( int player, int number );
+// Same as ClientExecute(), but allows including script arguments. Currently,
+// only one script argument is supported.
+extern void ExecuteArg( int player, int number, int arg1 );
+
+}
+
+#endif
