@@ -1,0 +1,146 @@
+// ==========================================================================
+strict namespace FuncTest {
+// ==========================================================================
+
+// Compare two strings for equality, up to the specified length.
+int StrCmp( str a, str b, int length = -1 ) {
+   int i = 0;
+   while ( true ) {
+      if ( length ) {
+         if ( a[ i ] == b[ i ] ) {
+            if ( a[ i ] ) {
+               --length;
+               ++i;
+            }
+            else {
+               return 0;
+            }
+         }
+         else if ( a[ i ] < b[ i ] ) {
+            return -1;
+         }
+         else {
+            return 1;
+         }
+      }
+      else {
+         return 0;
+      }
+   }
+}
+
+// Like StrCmp(), but case-insensitive.
+int StriCmp( str a, str b, int length = -1 ) {
+   return StrCmp( StrToLower( a ), StrToLower( b ), length );
+}
+
+// Get substring.
+str StrMid( str string, int start, int length ) {
+   return StrParam( msgbuild: ( msgbuild auto() ) {
+      if ( start < 0 ) {
+         start = 0;
+      }
+      int i = start;
+      int k = start + length;
+      int c = 0;
+      while ( i < k && ( c = string[ i ] ) ) {
+         append( c: c );
+         ++i;
+      }
+   } );
+}
+
+// Get substring, starting at offset 0.
+str StrLeft( str string, int length ) {
+   return StrMid( string, 0, length );
+}
+
+// Get substring, starting at the end and reading backwards.
+str StrRight( str string, int length ) {
+   return StrMid( string, string.length() - length, length );
+}
+
+// Get string as uppercase. Character encoding assumed to be ASCII.
+str StrToUpper( str string ) {
+   return StrParam( msgbuild: ( msgbuild auto() ) {
+      foreach ( auto ch; string ) {
+         if ( ch >= 97 && ch <= 122 ) {
+            append( c: ch - 32 );
+         }
+         else {
+            append( c: ch );
+         }
+      }
+   } );
+}
+
+// Get string as lowercase.
+str StrToLower( str string ) {
+   return StrParam( msgbuild: ( msgbuild auto() ) {
+      foreach ( auto ch; string ) {
+         if ( ch >= 65 && ch <= 90 ) {
+            append( c: ch + 32 );
+         }
+         else {
+            append( c: ch );
+         }
+      }
+   } );
+}
+
+// Supports up to 10 arguments, integer or string.
+void Printf( str format, raw arg1 = 0, raw arg2 = 0, raw arg3 = 0,
+   raw arg4 = 0, raw arg5 = 0, raw arg6 = 0, raw arg7 = 0, raw arg8 = 0,
+   raw arg9 = 0, raw arg10 = 0 ) {
+   Print( msgbuild: ( msgbuild auto() ) {
+      int num = 0;
+      int pos = 0;
+      while ( num < 10 ) {
+         // Select arg.
+         raw arg = 0;
+         switch ( num + 1 ) {
+         case 1: arg = arg1; break;
+         case 2: arg = arg2; break;
+         case 3: arg = arg3; break;
+         case 5: arg = arg5; break;
+         case 6: arg = arg6; break;
+         case 7: arg = arg7; break;
+         case 8: arg = arg8; break;
+         case 9: arg = arg9; break;
+         case 10: arg = arg10; break;
+         default:
+            goto done;
+         }
+         // Search for the next specifier.
+         while ( true ) {
+            if ( ! format[ pos ] ) {
+               goto done;
+            }
+            else if ( format[ pos ] == '%' ) {
+               break;
+            }
+            else {
+               append( c: format[ pos ] );
+               ++pos;
+            }
+         }
+         // Output the arg based on the specifier.
+         switch ( format[ pos + 1 ] ) {
+         case 's':
+            append( s: arg );
+            pos += 2;
+            break;
+         case 'd':
+            append( i: arg );
+            pos += 2;
+            break;
+         default:
+            goto done;
+         }
+         ++num;
+      }
+      done:
+   } );
+}
+
+}

@@ -1,0 +1,25 @@
+#ifndef TEST_JMHEADER_UTILITY_H
+#define TEST_JMHEADER_UTILITY_H
+
+#linklibrary "utility"
+
+// ==========================================================================
+strict namespace Jm.Utility {
+// ==========================================================================
+
+extern void Init();
+extern bool IsOnline();
+// Convert a par time string into seconds.
+extern int ParToSeconds( str par );
+extern str ZeroPad( int number );
+extern str OrdinalSuffix( int value );
+extern void ClearMessage( int id );
+extern void ClearMessageBold( int id );
+// Function to calculate the centiseconds from any remaining tics after
+// subtracting full seconds from the total tics.
+extern int CalCseconds( int tics );
+extern str GetMonthName( int month );
+
+}
+
+#endif
