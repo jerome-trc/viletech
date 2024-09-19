@@ -7,6 +7,13 @@ pub fn link(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) void {
+    var symln_buf: [4096]u8 = [_]u8{0} ** 4096;
+
+    const root = if (std.fs.cwd().readLink("depend/zmsx.ln", symln_buf[0..])) |_|
+        "depend/zmsx.ln"
+    else |_|
+        "depend/zmsx";
+
     var lib = b.addStaticLibrary(.{
         .name = "zmsx",
         .target = target,
@@ -21,27 +28,27 @@ pub fn link(
 
     var src_flags: []const []const u8 = &(fast_math ++ stricmp ++ strnicmp ++ [_][]const u8{
         "-I",
-        "depend/zmsx/source",
+        b.pathJoin(&[_][]const u8{ root, "source" }),
         "-I",
-        "depend/zmsx/source/zmsx",
+        b.pathJoin(&[_][]const u8{ root, "source/zmsx" }),
         "-I",
-        "depend/zmsx/include",
+        b.pathJoin(&[_][]const u8{ root, "include" }),
         "-isystem",
-        "depend/zmsx/thirdparty/adlmidi",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/adlmidi" }),
         "-isystem",
-        "depend/zmsx/thirdparty/game-music-emu",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/game-music-emu" }),
         "-isystem",
-        "depend/zmsx/thirdparty/miniz",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/miniz" }),
         "-isystem",
-        "depend/zmsx/thirdparty/oplsynth",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/oplsynth" }),
         "-isystem",
-        "depend/zmsx/thirdparty/opnmidi",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/opnmidi" }),
         "-isystem",
-        "depend/zmsx/thirdparty/timidity",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/timidity" }),
         "-isystem",
-        "depend/zmsx/thirdparty/timidityplus",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/timidityplus" }),
         "-isystem",
-        "depend/zmsx/thirdparty/wildmidi",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/wildmidi" }),
         "-DHAVE_SNDFILE",
     });
 
@@ -59,7 +66,7 @@ pub fn link(
     }
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/source"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "source" })),
         .flags = src_flags,
         .files = &[_][]const u8{
             "loader/i_module.cpp",
@@ -98,10 +105,10 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/adlmidi"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/adlmidi" })),
         .flags = &(fast_math ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/adlmidi",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/adlmidi" }),
             "-DADLMIDI_DISABLE_MIDI_SEQUENCER",
         }),
         .files = &[_][]const u8{
@@ -124,10 +131,10 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/dumb"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/dumb" })),
         .flags = &(fast_math ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/dumb/include",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/dumb/include" }),
             // "-msse",
             "-DNEED_ITOA=1",
         }),
@@ -219,17 +226,17 @@ pub fn link(
         },
     });
 
-    fluidsynth(b, compile, lib);
+    fluidsynth(b, compile, lib, root);
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/game-music-emu/gme"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/game-music-emu/gme" })),
         .flags = &(fast_math ++ [_][]const u8{
             "-fomit-frame-pointer",
             "-fwrapv",
             "-I",
-            "depend/zmsx/thirdparty/game-music-emu/gme",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/game-music-emu/gme" }),
             "-isystem",
-            "depend/zmsx/thirdparty/miniz",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/miniz" }),
             "-DHAVE_ZLIB_H",
         }),
         .files = &[_][]const u8{
@@ -249,18 +256,18 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/miniz"),
-        .flags = &[_][]const u8{ "-I", "depend/zmsx/thirdparty/miniz" },
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/miniz" })),
+        .flags = &[_][]const u8{ "-I", b.pathJoin(&[_][]const u8{ root, "thirdparty/miniz" }) },
         .files = &[_][]const u8{"miniz.c"},
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/oplsynth"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/oplsynth" })),
         .flags = &(fast_math ++ stricmp ++ strnicmp ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/oplsynth",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/oplsynth" }),
             "-I",
-            "depend/zmsx/thirdparty/oplsynth/oplsynth",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/oplsynth/oplsynth" }),
             "-fomit-frame-pointer",
         }),
         .files = &[_][]const u8{
@@ -275,10 +282,10 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/opnmidi"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/opnmidi" })),
         .flags = &(fast_math ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/opnmidi",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/opnmidi" }),
             "-DOPNMIDI_DISABLE_MIDI_SEQUENCER",
             "-DOPNMIDI_DISABLE_GX_EMULATOR",
         }),
@@ -316,12 +323,12 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/timidity"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/timidity" })),
         .flags = &(fast_math ++ stricmp ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/timidity",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/timidity" }),
             "-I",
-            "depend/zmsx/thirdparty/timidity/timidity",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/timidity/timidity" }),
         }),
         .files = &[_][]const u8{
             "common.cpp",
@@ -337,12 +344,12 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/timidityplus"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/timidityplus" })),
         .flags = &(fast_math ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/timidityplus",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/timidityplus" }),
             "-I",
-            "depend/zmsx/thirdparty/timidityplus/timiditypp",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/timidityplus/timiditypp" }),
         }),
         .files = &[_][]const u8{
             "fft4g.cpp",
@@ -370,12 +377,12 @@ pub fn link(
     });
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/wildmidi"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/wildmidi" })),
         .flags = &(fast_math ++ stricmp ++ strnicmp ++ [_][]const u8{
             "-I",
-            "depend/zmsx/thirdparty/wildmidi",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/wildmidi" }),
             "-I",
-            "depend/zmsx/thirdparty/wildmidi/wildmidi",
+            b.pathJoin(&[_][]const u8{ root, "thirdparty/wildmidi/wildmidi" }),
             "-fomit-frame-pointer",
         }),
         .files = &[_][]const u8{
@@ -394,37 +401,38 @@ pub fn link(
     });
 
     compile.linkLibrary(lib);
-    compile.addSystemIncludePath(b.path("depend/zmsx/include"));
+    compile.addSystemIncludePath(b.path(b.pathJoin(&[_][]const u8{ root, "include" })));
 }
 
 fn fluidsynth(
     b: *std.Build,
     compile: *std.Build.Step.Compile,
     lib: *std.Build.Step.Compile,
+    root: []const u8,
 ) void {
     var fluidsynth_flags: []const []const u8 = &[_][]const u8{
         "-I",
-        "depend/zmsx/source/decoder",
+        b.pathJoin(&[_][]const u8{ root, "source/decoder" }),
         "-I",
-        "depend/zmsx/thirdparty",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/include",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/include" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/drivers",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/drivers" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/synth",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/synth" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/rvoice",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/rvoice" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/midi",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/midi" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/utils",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/utils" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/sfloader",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/sfloader" }),
         "-I",
-        "depend/zmsx/thirdparty/fluidsynth/src/bindings",
+        b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src/bindings" }),
     };
 
     if (builtin.os.tag != .windows) {
@@ -443,7 +451,7 @@ fn fluidsynth(
     }
 
     lib.addCSourceFiles(.{
-        .root = b.path("depend/zmsx/thirdparty/fluidsynth/src"),
+        .root = b.path(b.pathJoin(&[_][]const u8{ root, "thirdparty/fluidsynth/src" })),
         .flags = fluidsynth_flags,
         .files = &[_][]const u8{
             "utils/fluid_conv.c",

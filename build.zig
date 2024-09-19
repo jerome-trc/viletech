@@ -304,6 +304,13 @@ pub const subterra = struct {
     }
 
     fn linkZnbx(b: *std.Build, compile: *std.Build.Step.Compile) void {
+        var symln_buf: [4096]u8 = [_]u8{0} ** 4096;
+
+        const root = if (std.fs.cwd().readLink("depend/znbx.ln", symln_buf[0..])) |_|
+            "depend/znbx.ln"
+        else |_|
+            "depend/znbx";
+
         if (!compile.is_linking_libc) {
             compile.linkLibC();
         }
@@ -316,14 +323,16 @@ pub const subterra = struct {
             .preferred_link_mode = .static,
         });
 
-        compile.addSystemIncludePath(b.path("depend/znbx/include"));
+        compile.addSystemIncludePath(b.path(b.pathJoin(&[_][]const u8{ root, "include" })));
 
         compile.addCSourceFiles(.{
-            .root = b.path("depend/znbx"),
+            .root = b.path(root),
             .flags = &[_][]const u8{
                 "--std=c++17",
-                "-Idepend/znbx/include",
-                "-Idepend/znbx/src",
+                "-I",
+                b.pathJoin(&[_][]const u8{ root, "include" }),
+                "-I",
+                b.pathJoin(&[_][]const u8{ root, "src" }),
                 "-fno-sanitize=undefined",
             },
             .files = &[_][]const u8{
