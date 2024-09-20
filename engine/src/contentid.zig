@@ -193,6 +193,8 @@ pub const ContentId = enum {
         .{ "dmxgus", .dmxgus },
         .{ "dmxgusc", .dmxgus },
         .{ "emapinfo", .emapinfo },
+        .{ "emenus", .edf },
+        .{ "estrings", .edf },
         .{ "endoom", .ansi_text },
         .{ "fontdefs", .fontdefs },
         .{ "fsglobal", .fsglobal },
