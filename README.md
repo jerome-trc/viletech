@@ -24,6 +24,28 @@ Beware that this project:
 - `/libs` contains Zig libraries associated with this project.
 - `/ratboom` is a Zig-executable-based fork of dsda-doom, personalized for my own usage as a stopgap.
 
+## Developer Guide
+
+### Git Subtrees
+
+```bash
+git remote add -f zbcx https://github.com/jerome-trc/zbcx.git
+git fetch zbcx master
+git subtree pull --prefix depend/zbcx zbcx master squash
+
+git remote add -f zdfs https://github.com/jerome-trc/zdfs.git
+git fetch zdfs master
+git subtree pull --prefix depend/zdfs zdfs master squash
+
+git remote add -f zmsx https://github.com/jerome-trc/zmsx.git
+git fetch zmsx master
+git subtree pull --prefix depend/zmsx zmsx master squash
+
+git remote add -f znbx https://github.com/jerome-trc/znbx.git
+git fetch znbx master
+git subtree pull --prefix depend/znbx znbx master squash
+```
+
 ## Licensing, Attribution
 
 A complete list of attributions and other third-party licensing information can be found [here](/ATTRIB.md).
