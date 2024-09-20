@@ -1,3 +1,6 @@
+// Any code herein taken from the "infer" crate is used under the MIT License.
+// See `/legal/infer.txt`.
+
 const std = @import("std");
 
 /// A tag for a file or archive entry representing the result of heuristics used
@@ -54,6 +57,8 @@ pub const ContentId = enum {
     edf,
     /// Eternity Map Information. See <https://eternity.youfailit.net/wiki/EMAPINFO>.
     emapinfo,
+    /// See <https://en.wikipedia.org/wiki/FLAC>.
+    flac,
     /// A 64-by-64 texture for floors and ceilings. See <https://doomwiki.org/wiki/Flat>.
     flat,
     /// See <https://zdoom.org/wiki/FONTDEFS>.
@@ -250,6 +255,7 @@ pub const ContentId = enum {
         .{ ".deh", .dehacked },
         .{ ".dh", .decohack },
         .{ ".edf", .edf },
+        .{ ".flac", .flac },
         .{ ".frag", .glsl },
         .{ ".glsl", .glsl },
         .{ ".hlsl", .hlsl },
@@ -299,10 +305,11 @@ pub const ContentId = enum {
             .dehacked_bex => "DeH. Boom EXtended",
             .demo => "Demo",
             .demoloop => "ID24 Demo-loop config.",
-            .dmx_mus => "DMX MUS audio",
+            .dmx_mus => "Audio (DMX MUS)",
             .dmxgus => "DMX GUS config.",
             .edf => "Eternity definitions",
             .emapinfo => "Eternity map info.",
+            .flac => "Audio (FLAC)",
             .flat => "Graphic (Flat)",
             .fontdefs => "ZDoom font config.",
             .fsglobal => "Global FraggleScript",
@@ -325,7 +332,7 @@ pub const ContentId = enum {
             .map_marker => "Map marker",
             .markdown => "Markdown",
             .marker => "Marker",
-            .midi => "MIDI audio",
+            .midi => "Audio (MIDI)",
             .musinfo => "ZDoom music config.",
             .modeldef => "ZDoom model config.",
             .nodes => "Map BSP nodes",
@@ -363,6 +370,11 @@ pub const ContentId = enum {
             .zmapinfo => "ZDoom map info",
             .zscript => "ZScript",
         };
+    }
+
+    /// https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#49-52
+    pub fn isFlac(buf: []const u8) bool {
+        return buf.len > 3 and std.mem.eql(u8, buf[0..4], "\x66\x4c\x61\x43");
     }
 };
 
