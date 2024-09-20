@@ -49,11 +49,17 @@ pub fn build(self: *Self) *std.Build.Step.Compile {
     const datawad = @import("build.data.zig").data(self.b, self.target, cfg_hdr);
     exe.step.dependOn(&datawad.step);
 
+    self.b.installArtifact(exe);
+
+    // Some tools (e.g. zig translate-c) require access to config.h. Put it in a
+    // convenient location so there's no need to dig through the .zig-cache.
+    const install_cfgh = self.b.addInstallHeaderFile(cfg_hdr.getOutput(), "./config.h");
+    exe.step.dependOn(&install_cfgh.step);
+
     root.ccdb.createStep(self.b, "ccdb", .{
         .targets = &[1]*std.Build.Step.Compile{exe},
     });
 
-    self.b.installArtifact(exe);
     return exe;
 }
 
