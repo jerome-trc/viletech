@@ -2,10 +2,6 @@
 
 const std = @import("std");
 
-pub const SoundsStart = fn (anytype) void;
-pub const SoundsPer = fn (anytype, key: i32, val: []const u8) void;
-pub const SoundsEnd = fn (anytype) void;
-
 pub const SpritesStart = fn (anytype) void;
 pub const SpritesPer = fn (anytype, key: i32, val: []const u8) void;
 pub const SpritesEnd = fn (anytype) void;
@@ -284,6 +280,7 @@ pub const Error = error{
     UnknownThingMnemonic,
     UnknownTopLevel,
     User,
+    SoundsMalformed,
     ThingMissingNum,
     ThingPropMalformed,
     WeaponMissingNum,
@@ -504,8 +501,39 @@ fn processSound(_: *State, _: anytype) Error!void {
     @panic("not yet implemented");
 }
 
-fn processSounds(_: *State, _: anytype) Error!void {
-    @panic("not yet implemented");
+fn processSounds(state: *State, context: anytype) Error!void {
+    const Context = @TypeOf(context);
+
+    if (std.meta.hasMethod(Context, "onSoundsStart")) {
+        context.onSoundsStart() catch return error.User;
+    }
+
+    if (std.meta.hasMethod(Context, "perSounds")) {
+        while (state.lines.next()) |line| {
+            if (line.len == 0) break;
+
+            var parts = std.mem.splitScalar(u8, line, '=');
+
+            const index_str = std.mem.trim(
+                u8,
+                std.mem.trimLeft(u8, parts.next() orelse return error.SoundsMalformed, " \t"),
+                " \t",
+            );
+            const name = std.mem.trim(
+                u8,
+                parts.next() orelse return error.SoundsMalformed,
+                " \t#",
+            );
+
+            if (std.mem.startsWith(u8, index_str, "#")) continue;
+            const index = try std.fmt.parseInt(i32, index_str, 0);
+            context.perSounds(index, name) catch return error.User;
+        }
+    }
+
+    if (std.meta.hasMethod(Context, "onSoundsEnd")) {
+        context.onSoundsEnd() catch return error.User;
+    }
 }
 
 fn processSprite(_: *State, _: anytype) Error!void {
@@ -639,6 +667,7 @@ pub const TestContext = struct {
     seen_codeptr: BlockSeen = .{},
     seen_frame: BlockSeen = .{},
     seen_pars: BlockSeen = .{},
+    seen_sounds: BlockSeen = .{},
     seen_thing: BlockSeen = .{},
     seen_weapon: BlockSeen = .{},
 
@@ -722,6 +751,23 @@ pub const TestContext = struct {
 
     pub fn onParsEnd(self: *TestContext) anyerror!void {
         self.seen_pars.end = true;
+    }
+
+    // [SOUNDS] ////////////////////////////////////////////////////////////////
+
+    pub fn onSoundsStart(self: *TestContext) anyerror!void {
+        self.seen_sounds.start = true;
+    }
+
+    pub fn perSounds(self: *TestContext, num: i32, name: []const u8) anyerror!void {
+        self.seen_sounds.innards = true;
+
+        try std.testing.expectEqual(709, num);
+        try std.testing.expectEqualStrings("UNSTOP", name);
+    }
+
+    pub fn onSoundsEnd(self: *TestContext) anyerror!void {
+        self.seen_sounds.end = true;
     }
 
     // Things //////////////////////////////////////////////////////////////////
@@ -840,6 +886,7 @@ test "smoke" {
     try std.testing.expect(context.seen_codeptr.all());
     try std.testing.expect(context.seen_frame.all());
     try std.testing.expect(context.seen_pars.all());
+    try std.testing.expect(context.seen_sounds.all());
     try std.testing.expect(context.seen_thing.all());
     try std.testing.expect(context.seen_weapon.all());
 }
