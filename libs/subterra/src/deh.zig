@@ -285,8 +285,9 @@ pub const Error = error{
     UnknownTopLevel,
     User,
     ThingMissingNum,
-    ThingKeyMalformed,
     ThingPropMalformed,
+    WeaponMissingNum,
+    WeaponPropMalformed,
 } || std.fmt.ParseIntError;
 
 const State = struct {
@@ -567,8 +568,55 @@ fn processThing(state: *State, context: anytype) Error!void {
     }
 }
 
-fn processWeapon(_: *State, _: anytype) Error!void {
-    @panic("not yet implemented");
+fn processWeapon(state: *State, context: anytype) Error!void {
+    const Context = @TypeOf(context);
+
+    const ix_str = state.parts.next() orelse return error.WeaponMissingNum;
+    const ix = try std.fmt.parseInt(i32, ix_str, 0);
+
+    const o_lparen = std.mem.indexOf(u8, state.line, "(");
+    const o_rparen = std.mem.lastIndexOf(u8, state.line, ")");
+
+    const weapon_key = if (o_lparen) |lparen| blk: {
+        if (lparen + 1 >= state.line.len) {
+            break :blk null;
+        }
+
+        if (o_rparen) |rparen|
+            break :blk std.mem.trim(u8, state.line[(lparen + 1)..rparen], " \t")
+        else
+            break :blk null;
+    } else null;
+
+    if (std.meta.hasMethod(Context, "onWeaponStart")) {
+        context.onWeaponStart(ix, weapon_key) catch return error.User;
+    }
+
+    if (std.meta.hasMethod(Context, "perWeaponProp")) {
+        while (state.lines.next()) |line| {
+            if (line.len == 0) break;
+            var prop_parts = std.mem.splitScalar(u8, line, '=');
+
+            const key = std.mem.trim(
+                u8,
+                prop_parts.next() orelse return error.WeaponPropMalformed,
+                " \t",
+            );
+            const val = std.mem.trim(
+                u8,
+                prop_parts.next() orelse return error.WeaponPropMalformed,
+                " \t#",
+            );
+
+            if (std.mem.startsWith(u8, key, "#")) continue;
+
+            context.perWeaponProp(key, val) catch return error.User;
+        }
+    }
+
+    if (std.meta.hasMethod(Context, "onWeaponEnd")) {
+        context.onWeaponEnd() catch return error.User;
+    }
 }
 
 /// This is deliberately public to act as a demonstration of what methods [`parse`]
@@ -592,6 +640,7 @@ pub const TestContext = struct {
     seen_frame: BlockSeen = .{},
     seen_pars: BlockSeen = .{},
     seen_thing: BlockSeen = .{},
+    seen_weapon: BlockSeen = .{},
 
     pub fn doomVersion(self: *TestContext, val: []const u8) anyerror!void {
         self.seen_doom_version = true;
@@ -709,6 +758,32 @@ pub const TestContext = struct {
     pub fn onThingEnd(self: *TestContext) anyerror!void {
         self.seen_thing.end = true;
     }
+
+    // Weapons /////////////////////////////////////////////////////////////////
+
+    pub fn onWeaponStart(self: *TestContext, index: i32, key: ?[]const u8) anyerror!void {
+        self.seen_weapon.start = true;
+
+        try std.testing.expectEqual(6, index);
+        try std.testing.expectEqualStrings("Aranea Imperatrix (Spider Empress)", key.?);
+    }
+
+    pub fn perWeaponProp(self: *TestContext, key: []const u8, val: []const u8) anyerror!void {
+        self.seen_weapon.innards = true;
+
+        if (std.mem.eql(u8, key, "Deselect frame")) {
+            try std.testing.expectEqualStrings("1453", val);
+        } else if (std.mem.eql(u8, key, "Carousel icon")) {
+            try std.testing.expectEqualStrings("ECHOES", val);
+        } else {
+            std.debug.print("unexpected key: {s}\n", .{key});
+            return error.TestUnexpectedResult;
+        }
+    }
+
+    pub fn onWeaponEnd(self: *TestContext) anyerror!void {
+        self.seen_weapon.end = true;
+    }
 };
 
 test "smoke" {
@@ -733,11 +808,6 @@ test "smoke" {
         \\
         \\Weapon 6 ( Aranea Imperatrix (Spider Empress) )
         \\Deselect frame = 1453
-        \\Select frame = 1452
-        \\Bobbing frame = 1451
-        \\Shooting frame = 1454
-        \\Firing frame = 1549
-        \\Ammo per shot = 10
         \\Carousel icon = ECHOES
         \\
         \\Ammo 2 (      Nuisances Unknown)
@@ -771,4 +841,5 @@ test "smoke" {
     try std.testing.expect(context.seen_frame.all());
     try std.testing.expect(context.seen_pars.all());
     try std.testing.expect(context.seen_thing.all());
+    try std.testing.expect(context.seen_weapon.all());
 }
