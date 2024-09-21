@@ -215,7 +215,7 @@ fn runDemo(args: struct {
     defer alloc.free(demo_str);
 
     const argv_no_pwad = [_][]const u8{
-        install_dir ++ "/bin/ratboom",
+        install_dir ++ "/bin/viletech",
         "-nosound",
         "-nodraw",
         "-levelstat",

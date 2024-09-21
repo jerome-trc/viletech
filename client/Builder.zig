@@ -13,7 +13,7 @@ assets: *std.Build.Module,
 deque: *std.Build.Module,
 zig_args: *std.Build.Module,
 
-pub fn build(self: *Self) void {
+pub fn build(self: *Self) *std.Build.Step.Compile {
     const exe_options = std.Build.ExecutableOptions{
         .name = "viletech",
         .root_source_file = self.b.path("client/src/main.zig"),
@@ -57,6 +57,8 @@ pub fn build(self: *Self) void {
     run_step.dependOn(&run_cmd.step);
 
     self.check.dependOn(&exe_check.step);
+
+    return exe;
 }
 
 fn exeCommon(self: *Self, exe: *std.Build.Step.Compile) void {

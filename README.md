@@ -19,10 +19,8 @@ Beware that this project:
 - `/crates` contains Rust libraries associated with this project.
 - `/depend` contains files, Git subtrees and submodules from other projects.
 - `/doc` contains documentation for developers.
-- `/dsda-doom` is the [dsda-doom](https://github.com/kraflab/dsda-doom) source, all of which is compiled into RatBoom.
 - `/legal` contains license information for outside code.
 - `/libs` contains Zig libraries associated with this project.
-- `/ratboom` is a Zig-executable-based fork of dsda-doom, personalized for my own usage as a stopgap.
 
 ## Developer Guide
 
