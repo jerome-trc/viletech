@@ -105,6 +105,8 @@ pub const ContentId = enum {
     marker,
     /// See <https://doomwiki.org/wiki/MIDI>.
     midi,
+    /// See <https://en.wikipedia.org/wiki/MP3>.
+    mp3,
     /// See <https://zdoom.org/wiki/MODELDEF>.
     modeldef,
     /// See <https://doomwiki.org/wiki/MUSINFO>.
@@ -270,6 +272,7 @@ pub const ContentId = enum {
         .{ ".jxl", .jpeg_xl },
         .{ ".md", .markdown },
         .{ ".mid", .midi },
+        .{ ".mp3", .mp3 },
         .{ ".mus", .dmx_mus },
         .{ ".svg", .svg },
         .{ ".txt", .plain_text },
@@ -333,8 +336,9 @@ pub const ContentId = enum {
             .markdown => "Markdown",
             .marker => "Marker",
             .midi => "Audio (MIDI)",
-            .musinfo => "ZDoom music config.",
             .modeldef => "ZDoom model config.",
+            .mp3 => "Audio (MP3)",
+            .musinfo => "ZDoom music config.",
             .nodes => "Map BSP nodes",
             .palvers => "ZDoom palette versioning",
             .picture => "Graphic (picture)",
@@ -372,9 +376,16 @@ pub const ContentId = enum {
         };
     }
 
-    /// https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#49-52
     pub fn isFlac(buf: []const u8) bool {
+        // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#49-52
         return buf.len > 3 and std.mem.eql(u8, buf[0..4], "\x66\x4c\x61\x43");
+    }
+
+    pub fn isMp3(buf: []const u8) bool {
+        // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#7-12
+        return buf.len > 2 and ((buf[0] == 0x49 and buf[1] == 0x44 and buf[2] == 0x33) // ID3v2
+        // Final bit (has crc32) may be or may not be set.
+        || (buf[0] == 0xFF and buf[1] == 0xFB));
     }
 };
 
