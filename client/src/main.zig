@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const log = std.log.scoped(.main);
 const meta = @import("meta");
@@ -11,6 +12,10 @@ const MainAllocator = if (builtin.mode == .Debug)
     std.heap.GeneralPurposeAllocator(.{})
 else
     void;
+
+fn onArgError(err: args.Error) anyerror!void {
+    try std.io.getStdErr().writer().print("{s}.\nSee `viletech --help`.\n", .{err});
+}
 
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
@@ -30,12 +35,12 @@ pub fn main() !void {
         main_alloc = std.heap.page_allocator;
     }
 
-    const opts = try args.parseWithVerbForCurrentProcess(
+    const opts = args.parseWithVerbForCurrentProcess(
         Params,
         Verbs,
         main_alloc,
-        .print,
-    );
+        .{ .forward = onArgError },
+    ) catch std.process.exit(1); // Don't spew an error trace at the end user.
     defer opts.deinit();
 
     if (opts.options.help) {
