@@ -7,13 +7,33 @@ const HhMmSs = @import("viletech").stdx.HhMmSs;
 
 const Converter = @import("Converter.zig");
 
+const MainAllocator = if (builtin.mode == .Debug)
+    std.heap.GeneralPurposeAllocator(.{})
+else
+    void;
+
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
+    log.debug("***** DEBUG BUILD *****", .{});
+
+    var gpa: MainAllocator = undefined;
+    var main_alloc: std.mem.Allocator = undefined;
+
+    if (builtin.mode == .Debug) {
+        gpa = MainAllocator{};
+        main_alloc = gpa.allocator(); // For leak checking.
+    } else if (builtin.link_libc) {
+        gpa = {};
+        main_alloc = std.heap.c_allocator;
+    } else {
+        gpa = {};
+        main_alloc = std.heap.page_allocator;
+    }
 
     const opts = try args.parseWithVerbForCurrentProcess(
         Params,
         Verbs,
-        std.heap.page_allocator,
+        main_alloc,
         .print,
     );
     defer opts.deinit();
@@ -47,8 +67,6 @@ pub fn main() !void {
         try stdout_bw.flush();
         return;
     }
-
-    log.debug("***** DEBUG BUILD *****", .{});
 
     if (opts.verb) |verb| {
         switch (verb) {
