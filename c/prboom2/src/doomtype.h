@@ -39,6 +39,8 @@
 #include "config.h"
 #endif
 
+#include "viletech/posix.h"
+
 #include <stdbool.h>
 typedef int dboolean;
 

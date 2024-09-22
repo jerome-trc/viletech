@@ -1046,6 +1046,8 @@ static Bit16s OPL3_ClipSample(Bit32s sample)
     return (Bit16s)sample;
 }
 
+#if 0 // Due to the presence of ZMSX, these are duplicate definitions.
+
 void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
 {
     Bit8u ii;
@@ -1385,3 +1387,5 @@ void OPL3_GenerateStream(opl3_chip *chip, Bit16s *sndptr, Bit32u numsamples)
         sndptr += 2;
     }
 }
+
+#endif // if 0

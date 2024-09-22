@@ -17,9 +17,19 @@ fn onArgError(err: args.Error) anyerror!void {
     try std.io.getStdErr().writer().print("{s}.\nSee `viletech --help`.\n", .{err});
 }
 
+extern "C" fn dsdaMain(argc: c_int, argv: [*][*:0]u8) c_int;
+
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
     log.debug("***** DEBUG BUILD *****", .{});
+
+    for (std.os.argv) |arg| {
+        // Temporary hack until C-side argument parsing is revised or excised.
+        if (std.mem.eql(u8, std.mem.sliceTo(arg, 0), "-iwad")) {
+            _ = dsdaMain(@intCast(std.os.argv.len), std.os.argv.ptr);
+            unreachable;
+        }
+    }
 
     var gpa: MainAllocator = undefined;
     var main_alloc: std.mem.Allocator = undefined;
@@ -118,3 +128,20 @@ const Verbs = union(enum) {
     find: void,
     prune: void,
 };
+
+// Functions C needs for now ///////////////////////////////////////////////////
+
+const SliceU8 = extern struct {
+    ptr: [*]const u8,
+    len: usize,
+};
+
+export fn pathStem(path: [*:0]const u8) SliceU8 {
+    const ret = std.fs.path.stem(std.mem.sliceTo(path, 0));
+    return SliceU8{ .ptr = ret.ptr, .len = ret.len };
+}
+
+export fn windowIcon() SliceU8 {
+    const bytes = @import("assets").viletech_png;
+    return SliceU8{ .ptr = bytes.ptr, .len = bytes.len };
+}
