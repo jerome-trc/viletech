@@ -90,12 +90,6 @@
  * cphipps - much made static
  */
 
-void I_Init(void)
-{
-  dsda_ResetTimeFunctions(fastdemo);
-  I_InitSound();
-}
-
 //e6y
 void I_Init2(void)
 {

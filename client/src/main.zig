@@ -129,6 +129,25 @@ const Verbs = union(enum) {
     prune: void,
 };
 
+fn refAllDeclsRecursive(comptime T: type) void {
+    for (@import("std").meta.declarations(T)) |decl| {
+        if (@TypeOf(@field(T, decl.name)) == type) {
+            switch (@typeInfo(@field(T, decl.name))) {
+                .Struct, .Enum, .Union, .Opaque => refAllDeclsRecursive(@field(T, decl.name)),
+                else => {},
+            }
+        }
+        _ = &@field(T, decl.name);
+    }
+}
+
+comptime {
+    // Crappy hack without which symbols don't end up in binary.
+    // Alternatively could use `@export` but that would make this
+    // already-very-tedious process even more tedious.
+    refAllDeclsRecursive(@import("c.zig"));
+}
+
 // Functions C needs for now ///////////////////////////////////////////////////
 
 const SliceU8 = extern struct {
