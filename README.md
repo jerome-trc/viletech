@@ -16,11 +16,15 @@ Beware that this project:
 ## Contents
 
 - `/assets` contains non-code resources used by executable artifacts at runtime.
+- `/c` contains the C component of the VileTech Engine - inherited from [dsda-doom](https://github.com/kraflab/dsda-doom) - pending translation to Zig.
+- `/client` contains the code for the VileTech engine's Zig executable.
 - `/crates` contains Rust libraries associated with this project.
+- `/demotest` is a suite of integration tests for ensuring that the VileTech Engine is capable of running [demos](https://doomwiki.org/wiki/Demo) with perfect accuracy.
 - `/depend` contains files, Git subtrees and submodules from other projects.
 - `/doc` contains documentation for developers.
 - `/legal` contains license information for outside code.
 - `/libs` contains Zig libraries associated with this project.
+- `/sample` contains data used for automated testing.
 
 ## Developer Guide
 
