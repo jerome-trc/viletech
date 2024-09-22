@@ -63,7 +63,7 @@ pub fn build(b: *std.Build) void {
         .deque = deque,
         .zig_args = zig_args.module("args"),
     };
-    const client = client_builder.build();
+    _ = client_builder.build();
 
     const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
 
@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
         // since we want the demotest to run as quickly as possible.
         .optimize = .ReleaseSafe,
     });
-    demotest.step.dependOn(&client.step);
+    demotest.step.dependOn(b.getInstallStep());
 
     const demotest_in = b.addOptions();
     demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);

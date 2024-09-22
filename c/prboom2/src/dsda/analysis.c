@@ -15,12 +15,16 @@
 //	DSDA Analysis
 //
 
+#include <assert.h>
+
 #include "doomstat.h"
 #include "m_file.h"
 
 #include "dsda/excmd.h"
 #include "dsda/exdemo.h"
+#include "dsda/playback.h"
 #include "dsda/settings.h"
+#include "viletech/stdx.h"
 
 #include "analysis.h"
 
@@ -79,12 +83,23 @@ void dsda_WriteAnalysis(void) {
 
   if (!dsda_analysis) return;
 
-  fstream = M_OpenFile("analysis.txt", "w");
+    char filename[256];
+    const SliceU8 demo_filepfx = pathStem(dsda_PlaybackName());
+    assert(demo_filepfx.ptr != NULL);
+    assert(demo_filepfx.len > 0);
 
-  if (fstream == NULL) {
-    fprintf(stderr, "Unable to open analysis.txt for writing!\n");
-    return;
-  }
+    snprintf(
+        filename,
+        sizeof(filename),
+        "analysis.%.*s.txt",
+        (int)demo_filepfx.len,
+        demo_filepfx.ptr
+    );
+    fstream = M_OpenFile(filename, "w");
+    if (fstream == NULL) {
+        fprintf(stderr, "Unable to open %s for writing\n", filename);
+        return;
+    }
 
   category = dsda_DetectCategory();
   is_signed = dsda_IsExDemoSigned();

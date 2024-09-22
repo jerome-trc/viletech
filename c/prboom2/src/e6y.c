@@ -44,6 +44,7 @@
 #include <string.h>
 #include <math.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -90,6 +91,8 @@
 #include "dsda/playback.h"
 #include "dsda/skip.h"
 #include "dsda/stretch.h"
+
+#include "viletech/stdx.h"
 
 dboolean wasWiped = false;
 
@@ -512,13 +515,24 @@ void e6y_WriteStats(void)
   tmpdata_t *all;
   size_t allkills_len=0, allitems_len=0, allsecrets_len=0;
 
-  f = M_OpenFile("levelstat.txt", "wb");
+    char filename[256];
+    const SliceU8 demo_filepfx = pathStem(dsda_PlaybackName());
+    assert(demo_filepfx.ptr != NULL);
+    assert(demo_filepfx.len > 0);
 
-  if (f == NULL)
-  {
-    lprintf(LO_ERROR, "Unable to open levelstat.txt for writing\n");
-    return;
-  }
+    snprintf(
+        filename,
+        sizeof(filename),
+        "levelstat.%.*s.txt",
+        (int)demo_filepfx.len,
+        demo_filepfx.ptr
+    );
+    f = M_OpenFile(filename, "wb");
+
+    if (f == NULL) {
+        lprintf(LO_ERROR, "Unable to open %s for writing\n", filename);
+        return;
+    }
 
   all = Z_Malloc(sizeof(*all) * numlevels);
   memset(&max, 0, sizeof(timetable_t));
