@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=VileTech
+Comment=Doom 1/2 engine
+Icon=viletech
+TryExec=viletech
+Exec=viletech %F
+Categories=Game;ActionGame;
+MimeType=application/x-doom-wad;
+Keywords=first;person;shooter;doom;boom;mbf;prboom;viletech;

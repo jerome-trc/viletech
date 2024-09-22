@@ -1,0 +1,34 @@
+#cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"
+#cmakedefine PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+#cmakedefine WAD_DATA "@WAD_DATA@"
+#cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
+#cmakedefine PACKAGE_STRING "@PACKAGE_STRING@"
+
+#cmakedefine VTEC_WAD_DIR "@VTEC_WAD_DIR@"
+#cmakedefine VTEC_ABSOLUTE_PWAD_PATH "@VTEC_ABSOLUTE_PWAD_PATH@"
+
+#cmakedefine WORDS_BIGENDIAN
+
+#cmakedefine HAVE_GETOPT
+#cmakedefine HAVE_MMAP
+#cmakedefine HAVE_CREATE_FILE_MAPPING
+#cmakedefine HAVE_STRSIGNAL
+#cmakedefine HAVE_MKSTEMP
+
+#cmakedefine HAVE_SYS_WAIT_H
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_ASM_BYTEORDER_H
+#cmakedefine HAVE_DIRENT_H
+
+#cmakedefine HAVE_LIBSDL2_IMAGE
+#cmakedefine HAVE_LIBSDL2_MIXER
+
+#cmakedefine HAVE_LIBMAD
+#cmakedefine HAVE_LIBFLUIDSYNTH
+#cmakedefine HAVE_LIBDUMB
+#cmakedefine HAVE_LIBVORBISFILE
+#cmakedefine HAVE_LIBPORTMIDI
+
+#cmakedefine SIMPLECHECKS
+
+#cmakedefine RANGECHECK
