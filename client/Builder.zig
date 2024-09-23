@@ -274,6 +274,7 @@ fn exeCommon(
             "f_wipe.c",
             "g_game.c",
             "g_overflow.c",
+            "gl_texture.c",
             "hu_lib.c",
             "hu_stuff.c",
             "i_capture.c",
@@ -394,7 +395,6 @@ fn exeCommon(
             "gl_progress.c",
             "gl_shader.c",
             "gl_sky.c",
-            "gl_texture.c",
             "gl_vertex.c",
             "gl_wipe.c",
         },
@@ -513,6 +513,7 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
         .HAVE_ASM_BYTEORDER_H = posix_like,
         .HAVE_DIRENT_H = posix_like,
 
+        // TODO: detection for these. Is it possible to do better than just pkg-config?
         .HAVE_LIBSDL2_IMAGE = true,
         .HAVE_LIBSDL2_MIXER = false,
 
