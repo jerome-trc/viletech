@@ -9,7 +9,7 @@ pub fn data(
     target: std.Build.ResolvedTarget,
     cfg_hdr: *std.Build.Step.ConfigHeader,
 ) *std.Build.Step.Run {
-    const base_path = "c/prboom2/data/";
+    const base_path = "c/data/";
     const rdatawad = b.addExecutable(.{
         .name = "rdatawad",
         .root_source_file = null,
@@ -384,10 +384,7 @@ pub fn data(
         base_path ++ "lumps/m_mark.lmp",
     };
 
-    ret.addArgs(&[_][]const u8{
-        "-I",
-        "c/prboom2/data",
-    });
+    ret.addArgs(&[_][]const u8{ "-I", "c/data" });
 
     ret.addArg("-palette");
     ret.addFileArg(b.path(base_path ++ "palette.rgb"));

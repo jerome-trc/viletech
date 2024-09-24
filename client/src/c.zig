@@ -12,7 +12,7 @@
 // 1. Pass the file to `zig translate-c`.
 // 2. From the output, extract the function and its static dependencies.
 // (Remember to make the latter globally-visible and fix up C-side references.)
-// 3. Move remaining dependencies from C to consts.zig, funcs.zig, structs.zig, and vars.zig.
+// 3. Move remaining dependencies from C to one of the declaration files e.g. vars.zig.
 // 4. Run demo-test suite to ensure no regressions have taken place.
 
 pub const i_main = @import("c/i_main.c.zig");

@@ -84,7 +84,7 @@ fn exeCommon(
     exe.root_module.addConfigHeader(cfg_hdr);
     exe.step.dependOn(&cfg_hdr.step);
 
-    exe.addIncludePath(self.b.path("c/prboom2/src"));
+    exe.addIncludePath(self.b.path("c/src"));
     exe.addIncludePath(cfg_hdr.getOutput().dirname());
 
     exe.linkLibC();
@@ -104,7 +104,7 @@ fn exeCommon(
         "-I",
         "build",
         "-I",
-        "c/prboom2/src",
+        "c/src",
         "-DHAVE_CONFIG_H",
         "-Dstricmp=strcasecmp",
         "-Dstrnicmp=strncasecmp",
@@ -147,7 +147,7 @@ fn exeCommon(
     ) catch unreachable;
 
     exe.addCSourceFiles(.{
-        .root = self.b.path("c/prboom2/src"),
+        .root = self.b.path("c/src"),
         .files = &[_][]const u8{
             "dsda/aim.c",
             "dsda/analysis.c",
@@ -340,7 +340,7 @@ fn exeCommon(
     });
 
     exe.addCSourceFiles(.{
-        .root = self.b.path("c/prboom2/src"),
+        .root = self.b.path("c/src"),
         .files = &[_][]const u8{
             "dsda/hud_components/ammo_text.c",
             "dsda/hud_components/armor_text.c",
@@ -404,7 +404,7 @@ fn exeCommon(
     });
 
     exe.addCSourceFile(.{
-        .file = self.b.path("c/prboom2/src/p_tick.c"),
+        .file = self.b.path("c/src/p_tick.c"),
         // Don't build this file as C99 or it miscompiles during Clang optimizations.
         // Only seems to appear during the "e1 sk4 max in 45:37 by PVS" demotest,
         // likely related to prototype-less C function pointers.
@@ -412,7 +412,7 @@ fn exeCommon(
     });
 
     exe.addCSourceFiles(.{
-        .root = self.b.path("c/prboom2/src"),
+        .root = self.b.path("c/src"),
         .files = &[_][]const u8{
             "dsda/ambient.cpp",
             "dsda/mapinfo/doom/parser.cpp",
@@ -423,7 +423,7 @@ fn exeCommon(
     });
 
     exe.addCSourceFiles(.{
-        .root = self.b.path("c/prboom2/src"),
+        .root = self.b.path("c/src"),
         .files = &[_][]const u8{
             "scanner.cpp",
         },
@@ -488,7 +488,7 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
     ) orelse false;
 
     return b.addConfigHeader(.{
-        .style = .{ .cmake = b.path("c/prboom2/cmake/config.h.cin") },
+        .style = .{ .cmake = b.path("c/cmake/config.h.cin") },
         .include_path = ".zig-cache/config.h",
     }, .{
         .PACKAGE_NAME = "viletech",

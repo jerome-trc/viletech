@@ -1,4 +1,4 @@
-//! Declarations for variables that are still C-side.
+//! Global variables pending migration into `Core`.
 
 const dboolean = c_int;
 
