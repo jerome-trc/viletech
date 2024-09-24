@@ -2,6 +2,8 @@
 
 const std = @import("std");
 
+const GameTick = @import("root.zig").GameTick;
+
 const Self = @This();
 
 const rndtable_doom: [256]u8 = .{
@@ -45,7 +47,9 @@ const rndtable_hexen: [256]u8 = .{
     23,  25,  48,  218, 120, 147, 208, 36,  226, 223, 193, 238, 157, 204, 146, 31,
 };
 
-const RngClass = enum {
+const SeedArray = std.EnumArray(Class, u32);
+
+pub const Class = enum(u8) {
     skullfly,
     damage,
     crush,
@@ -111,14 +115,44 @@ const RngClass = enum {
     heretic,
     mbf21,
     hexen,
+    std_random,
 };
 
-const SeedArray = std.EnumArray(RngClass, u32);
-
 pub const Context = struct {
-    boom_compat: bool,
+    demo_compat: bool,
     boom_logic_tick: i32,
     demo_insurance: u8,
+};
+
+pub const Generic = struct {
+    inner: *Self,
+    cx: Context,
+
+    pub fn random(self: *@This()) std.Random {
+        return std.Random.init(self, fill);
+    }
+
+    pub fn fill(self: *@This(), buf: []u8) void {
+        var i: usize = 0;
+        const aligned_len = buf.len - (buf.len & 3);
+
+        while (i < aligned_len) : (i += 4) {
+            var n = self.inner.get(self.cx, .std_random);
+            comptime var j: usize = 0;
+            inline while (j < 4) : (j += 1) {
+                buf[i + j] = @as(u8, @truncate(n));
+                n >>= 8;
+            }
+        }
+
+        if (i != buf.len) {
+            var n = self.inner.get(self.cx, .std_random);
+            while (i < buf.len) : (i += 1) {
+                buf[i] = @as(u8, @truncate(n));
+                n >>= 8;
+            }
+        }
+    }
 };
 
 table: []const u8,
@@ -127,15 +161,25 @@ rnd_index: usize,
 prnd_index: usize,
 
 pub fn init(hexen: bool) Self {
-    return Self{
+    var ret = Self{
         .table = if (hexen) &rndtable_hexen else &rndtable_doom,
-        .seeds = SeedArray.initFill((1993 * 2 + 1) * 69069),
+        .seeds = SeedArray.initUndefined(),
         .rnd_index = 0,
         .prnd_index = 0,
     };
+
+    var base_seed: u32 = 1993 * 2 + 1;
+    var seeds = ret.seeds.iterator();
+
+    while (seeds.next()) |seed| {
+        base_seed *%= 69069;
+        seed.value.* = base_seed;
+    }
+
+    return ret;
 }
 
-pub fn get(self: *Self, cx: Context, class: RngClass) i32 {
+pub fn get(self: *Self, cx: Context, class: Class) u32 {
     var cls = class;
     var compat: usize = undefined;
 
@@ -147,14 +191,16 @@ pub fn get(self: *Self, cx: Context, class: RngClass) i32 {
         compat = self.rnd_index;
     }
 
-    var boom: u32 = undefined;
-
     if ((cls != .misc) and (cx.demo_insurance == 0)) {
         cls = .all_in_one;
     }
 
-    boom = self.seeds.get(cls);
-    self.seeds.set(cls, boom * 166452 + 221297 + @intFromEnum(cls) * 2);
+    var boom = self.seeds.get(cls);
+    var new_seed = boom;
+    new_seed *%= 1664525;
+    new_seed +%= 221297;
+    new_seed +%= (@intFromEnum(cls) *% 2);
+    self.seeds.set(cls, new_seed);
 
     if (cx.demo_compat) {
         return self.table[compat];
@@ -166,5 +212,57 @@ pub fn get(self: *Self, cx: Context, class: RngClass) i32 {
         boom += std.math.lossyCast(u32, cx.boom_logic_tick) * 7;
     }
 
-    return @bitCast(boom & 255);
+    return boom & 255;
+}
+
+pub fn getI(self: *Self, cx: Context, class: Class) i32 {
+    return @bitCast(self.get(cx, class));
+}
+
+pub fn generic(self: *Self, cx: Context) Generic {
+    return Generic{ .inner = self, .cx = cx };
+}
+
+pub fn useDoomRng(self: *Self) void {
+    self.table = &rndtable_doom;
+}
+
+pub fn useHexenRng(self: *Self) void {
+    self.table = &rndtable_hexen;
+}
+
+pub fn sub(self: *Self) i32 {
+    const ret = self.get(.heretic);
+    return ret - self.get(.heretic);
+}
+
+test "accuracy" {
+    const cx = Context{
+        .demo_compat = false,
+        .boom_logic_tick = 0,
+        .demo_insurance = 0,
+    };
+
+    var boomrng = Self.init(false);
+    try std.testing.expectEqual(36, boomrng.get(cx, .mbf21));
+    try std.testing.expectEqual(10, boomrng.get(cx, .mbf21));
+    try std.testing.expectEqual(193, boomrng.get(cx, .mbf21));
+    try std.testing.expectEqual(98, boomrng.get(cx, .mbf21));
+    try std.testing.expectEqual(219, boomrng.get(cx, .mbf21));
+}
+
+test "accuracy, std.Random" {
+    const cx = Context{
+        .demo_compat = false,
+        .boom_logic_tick = 0,
+        .demo_insurance = 0,
+    };
+
+    var boomrng = Self.init(false);
+    var gen = boomrng.generic(cx);
+    try std.testing.expectEqual(36, gen.random().int(u8));
+    try std.testing.expectEqual(10, gen.random().int(u8));
+    try std.testing.expectEqual(193, gen.random().int(u8));
+    try std.testing.expectEqual(98, gen.random().int(u8));
+    try std.testing.expectEqual(219, gen.random().int(u8));
 }

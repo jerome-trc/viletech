@@ -16,6 +16,8 @@ pub const FVec = fxp.FVec;
 pub const Fx16Vec2 = fxp.Fx16Vec2;
 pub const Fx16Vec3 = fxp.Fx16Vec3;
 
+pub const GameTick = i32;
+
 test {
     @import("std").testing.refAllDecls(@This());
 }
