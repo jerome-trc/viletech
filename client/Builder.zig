@@ -494,8 +494,8 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
         .PACKAGE_NAME = "viletech",
         .PACKAGE_TARNAME = "viletech",
         .WAD_DATA = "viletech.wad",
-        .PACKAGE_VERSION = "0.0.0",
-        .PACKAGE_STRING = "viletech 0.0.0",
+        .PACKAGE_VERSION = root.packageVersion(),
+        .PACKAGE_STRING = "viletech " ++ comptime root.packageVersion(),
 
         .VTEC_WAD_DIR = wad_dir,
         .VTEC_ABSOLUTE_PWAD_PATH = wad_dir,
