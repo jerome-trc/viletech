@@ -384,6 +384,25 @@ pub const ContentId = enum {
         };
     }
 
+    pub fn isAcsBytecode(buf: []const u8) bool {
+        // Any behaviors smaller than 32 bytes cannot possibly contain anything useful.
+        // (16 bytes for a completely empty behavior + 12 bytes for one script header
+        //  + 4 bytes for `PCD_TERMINATE` for an old-style object. A new-style object
+        // has 24 bytes if it is completely empty. An empty SPTR chunk adds 8 bytes.)
+        if (buf.len < 32) {
+            return false;
+        }
+
+        if (!std.mem.eql(u8, buf[0..3], "ACS")) {
+            return false;
+        }
+
+        return switch (buf[3]) {
+            0, 'E', 'e' => true,
+            else => false,
+        };
+    }
+
     pub fn isFlac(buf: []const u8) bool {
         // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#49-52
         return buf.len > 3 and std.mem.eql(u8, buf[0..4], "\x66\x4c\x61\x43");
