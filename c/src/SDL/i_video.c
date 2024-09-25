@@ -1554,6 +1554,10 @@ static void I_ReadMouse(void)
 
 static dboolean MouseShouldBeGrabbed(void)
 {
+    if (fastdemo) {
+        return false;
+    }
+
   // never grab the mouse when in screensaver mode
 
   //if (screensaver_mode)
