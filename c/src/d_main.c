@@ -1939,7 +1939,7 @@ static void D_DoomMainSetup(void)
   }
 
   //jff 9/3/98 use logical output routine
-  lprintf(LO_DEBUG, "R_Init: Init DOOM refresh daemon - ");
+  lprintf(LO_DEBUG, "R_Init: Init DOOM refresh loop");
   R_Init();
 
   dsda_LoadWadPreferences();
