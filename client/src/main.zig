@@ -8,8 +8,10 @@ const HhMmSs = viletech.stdx.HhMmSs;
 const viletech = @import("viletech");
 
 const Converter = @import("Converter.zig");
+const Core = @import("Core.zig");
+const Frontend = @import("Frontend.zig");
 
-const MainAllocator = if (builtin.mode == .Debug)
+pub const MainAllocator = if (builtin.mode == .Debug)
     std.heap.GeneralPurposeAllocator(.{})
 else
     void;
@@ -97,6 +99,44 @@ pub fn main() !void {
 
     if (opts.options.gamemode.isOn() and !std.process.hasEnvVarConstant("VTEC_GAMEMODE_OFF")) {
         viletech.gamemode.start();
+    }
+
+    var cx = try Core.init(main_alloc);
+    defer cx.deinit() catch |err| {
+        log.err("Core de-initialization failed: {}", .{err});
+        std.process.exit(255);
+    };
+
+    outer: while (true) {
+        switch (cx.transition) {
+            .entry_to_frontend => {
+                cx.scene = Core.Scene{ .frontend = Frontend.init(&cx) };
+            },
+            .frontend_to_doom => {
+                const front = cx.scene.frontend;
+                cx.scene = Core.Scene{ .doom = try front.doomArgs() };
+            },
+            .frontend_to_exit => {},
+            .none, .frontend_to_editor, .frontend_to_hellblood => unreachable,
+        }
+
+        cx.transition = .none;
+
+        switch (cx.scene) {
+            .doom => |*argv| {
+                try argv.append(null);
+                _ = dsdaMain(@intCast(argv.items.len), @ptrCast(argv.items.ptr));
+                unreachable;
+            },
+            .frontend => |*front| {
+                while (cx.transition == .none) {
+                    front.ui();
+                }
+            },
+            .editor, .hellblood => unreachable, // Soon!
+            .entry => unreachable,
+            .exit => break :outer,
+        }
     }
 
     const end_time = try std.time.Instant.now();
