@@ -25,6 +25,10 @@ pub const ContentId = enum {
     behavior,
     /// See <https://doomwiki.org/wiki/Blockmap>.
     blockmap,
+    /// See <https://en.wikipedia.org/wiki/C_(programming_language)>.
+    c,
+    /// See <https://en.wikipedia.org/wiki/C_(programming_language)>.
+    c_header,
     /// See <https://doomwiki.org/wiki/COLORMAP>.
     colormap,
     /// See <https://doomwiki.org/wiki/COMPLVL>.
@@ -253,6 +257,7 @@ pub const ContentId = enum {
     ).initComptime(.{
         .{ ".acs", .acs },
         .{ ".bex", .dehacked_bex },
+        .{ ".c", .c },
         .{ ".dec", .decorate },
         .{ ".deh", .dehacked },
         .{ ".dh", .decohack },
@@ -260,6 +265,7 @@ pub const ContentId = enum {
         .{ ".flac", .flac },
         .{ ".frag", .glsl },
         .{ ".glsl", .glsl },
+        .{ ".h", .c_header },
         .{ ".hlsl", .hlsl },
         .{ ".jfi", .jpeg },
         .{ ".jfif", .jpeg },
@@ -296,6 +302,8 @@ pub const ContentId = enum {
             .ansi_text => "ANSI text",
             .behavior => "ACS map scripts",
             .blockmap => "Blockmap data",
+            .c => "C source",
+            .c_header => "C header",
             .colormap => "Colormap",
             .complvl => "Compatibility hint",
             .cvarinfo => "CVar defs",
