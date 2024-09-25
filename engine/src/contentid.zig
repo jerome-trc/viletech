@@ -169,6 +169,8 @@ pub const ContentId = enum {
     vertexes,
     /// See <https://zdoom.org/wiki/VOXELDEF>.
     voxeldef,
+    /// See <https://doomwiki.org/wiki/WAD>.
+    wad,
     /// An informal standard for level pack metadata.
     wadinfo,
     /// See <https://en.wikipedia.org/wiki/WebP>.
@@ -283,6 +285,7 @@ pub const ContentId = enum {
         .{ ".svg", .svg },
         .{ ".txt", .plain_text },
         .{ ".vert", .glsl },
+        .{ ".wad", .wad },
         .{ ".webp", .webp },
         .{ ".wgsl", .wgsl },
         .{ ".zs", .zscript },
@@ -374,6 +377,7 @@ pub const ContentId = enum {
             .umapinfo => "Universal map info",
             .vertexes => "Map vertices",
             .voxeldef => "ZDoom voxel config.",
+            .wad => "WAD",
             .wadinfo => "WAD metadata",
             .webp => "Graphic (WebP)",
             .wgsl => "WebGPU shader",
@@ -417,6 +421,41 @@ pub const ContentId = enum {
         // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#7-12
         if (buf.len <= 2) return false;
         return std.mem.eql(u8, buf[0..3], "\x49\x44\x33") or std.mem.eql(u8, buf[0..2], "\xff\xfb");
+    }
+
+    pub fn isWad(buf: []const u8) bool {
+        const dir_entry_size: usize = comptime 16;
+
+        if (buf.len < 12) return false;
+
+        if (!std.mem.eql(u8, buf[0..4], "PWAD") and !std.mem.eql(u8, buf[0..4], "IWAD"))
+            return false;
+
+        const lump_count = std.mem.readInt(i32, buf.buffer[4..8], .little);
+
+        if (lump_count < 0) return false;
+
+        const dir_offs = std.mem.readInt(i32, buf.buffer[8..12], .little);
+
+        if (dir_offs < 0) return false;
+
+        const expected_dir_len = std.math.mul(
+            usize,
+            @as(usize, @intCast(lump_count)),
+            dir_entry_size,
+        ) catch {
+            return false;
+        };
+        const expected_data_len = std.math.add(
+            usize,
+            @as(usize, @intCast(dir_offs)),
+            expected_dir_len,
+        ) catch {
+            return false;
+        };
+
+        _ = expected_data_len;
+        return true;
     }
 };
 
