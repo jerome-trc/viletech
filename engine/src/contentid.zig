@@ -389,6 +389,11 @@ pub const ContentId = enum {
         return buf.len > 3 and std.mem.eql(u8, buf[0..4], "\x66\x4c\x61\x43");
     }
 
+    pub fn isMidi(buf: []const u8) bool {
+        // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#2-4
+        return buf.len > 3 and std.mem.eql(u8, buf[0..4], "\x4d\x54\x68\x64");
+    }
+
     pub fn isMp3(buf: []const u8) bool {
         // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#7-12
         if (buf.len <= 2) return false;
