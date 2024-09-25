@@ -35,6 +35,7 @@
 #include <math.h>
 #include <zlib.h>
 
+#include "d_main.h"
 #include "doomstat.h"
 #include "m_bbox.h"
 #include "g_game.h"
@@ -3675,6 +3676,15 @@ void P_SetupLevel(int episode, int map, int playermask, int skill)
   // find map name
   snprintf(lumpname, sizeof(lumpname), "%s", dsda_MapLumpName(episode, map));
   lumpnum = W_GetNumForName(lumpname);
+
+    lumpnum = W_CheckNumForName(lumpname);
+
+    if (lumpnum == LUMP_NOT_FOUND) {
+        // e.g. trying to go from MAP33 to a non-existent MAP34.
+        D_StartTitle();
+        gamestate = GS_DEMOSCREEN;
+        return;
+    }
 
   // Must process musinfo to get default track before calling S_Start
   S_ParseMusInfo(lumpname);
