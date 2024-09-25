@@ -6,6 +6,7 @@ pub const zon = @embedFile("build.zig.zon");
 pub const ccdb = @import("depend/ccdb.zig");
 pub const cimgui = @import("depend/build.cimgui.zig");
 pub const datetime = @import("depend/datetime.zig");
+pub const Sdl = @import("sdl");
 pub const zmsx = @import("depend/build.zmsx.zig");
 
 pub fn build(b: *std.Build) void {
@@ -56,6 +57,7 @@ pub fn build(b: *std.Build) void {
         .check = check,
         .assets = assets,
         .deque = deque,
+        .sdl = Sdl.init(b, null, null),
         .zig_args = zig_args.module("args"),
     };
     _ = client_builder.build();

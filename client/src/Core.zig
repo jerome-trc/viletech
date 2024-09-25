@@ -11,7 +11,6 @@ const Self = @This();
 
 pub const Scene = union(enum) {
     entry: void,
-    exit: void,
     frontend: Frontend,
     /// Attached are arguments to pass to the C code (for now).
     doom: std.ArrayList(?[*:0]u8),

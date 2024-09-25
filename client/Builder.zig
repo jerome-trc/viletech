@@ -12,6 +12,7 @@ check: *std.Build.Step,
 
 assets: *std.Build.Module,
 deque: *std.Build.Module,
+sdl: *root.Sdl,
 zig_args: *std.Build.Module,
 
 pub fn build(self: *Self) *std.Build.Step.Compile {
@@ -90,14 +91,16 @@ fn exeCommon(
     exe.linkLibC();
     exe.linkLibCpp();
 
-    exe.root_module.addImport("assets", self.assets);
-    exe.root_module.addImport("deque", self.deque);
-    exe.root_module.addImport("zig-args", self.zig_args);
-
     root.engine.link(self.b, exe, null);
     root.subterra.link(self.b, exe, .{ .znbx = .source });
     root.wadload.link(self.b, exe, null);
+    self.sdl.link(exe, .static, .SDL2);
     root.zmsx.link(self.b, exe, exe.root_module.resolved_target.?, exe.root_module.optimize.?);
+
+    exe.root_module.addImport("assets", self.assets);
+    exe.root_module.addImport("deque", self.deque);
+    exe.root_module.addImport("sdl", self.sdl.getWrapperModule());
+    exe.root_module.addImport("zig-args", self.zig_args);
 
     const common_flags = [_][]const u8{
         "-ffast-math",

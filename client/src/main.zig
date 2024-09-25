@@ -5,6 +5,7 @@ const meta = @import("meta");
 
 const args = @import("zig-args");
 const HhMmSs = viletech.stdx.HhMmSs;
+const sdl = @import("sdl");
 const viletech = @import("viletech");
 
 const Converter = @import("Converter.zig");
@@ -107,6 +108,9 @@ pub fn main() !void {
         std.process.exit(255);
     };
 
+    try sdl.init(.{ .video = true });
+    defer sdl.quit();
+
     outer: while (true) {
         switch (cx.transition) {
             .entry_to_frontend => {
@@ -116,7 +120,7 @@ pub fn main() !void {
                 const front = cx.scene.frontend;
                 cx.scene = Core.Scene{ .doom = try front.doomArgs() };
             },
-            .frontend_to_exit => {},
+            .frontend_to_exit => break :outer,
             .none, .frontend_to_editor, .frontend_to_hellblood => unreachable,
         }
 
@@ -124,6 +128,7 @@ pub fn main() !void {
 
         switch (cx.scene) {
             .doom => |*argv| {
+                sdl.quit();
                 try argv.append(null);
                 _ = dsdaMain(@intCast(argv.items.len), @ptrCast(argv.items.ptr));
                 unreachable;
@@ -135,7 +140,6 @@ pub fn main() !void {
             },
             .editor, .hellblood => unreachable, // Soon!
             .entry => unreachable,
-            .exit => break :outer,
         }
     }
 
