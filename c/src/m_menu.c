@@ -1350,13 +1350,14 @@ void M_MusicVol(int choice)
     dsda_ToggleConfig(dsda_config_mute_music, true);
 }
 
-/////////////////////////////
-//
-//    M_QuickSave
-//
-
 void M_QuickSave(void)
 {
+    if (players[consoleplayer].playerstate == PST_DEAD ||
+		players[consoleplayer].health <= 0) {
+		doom_printf("cannot quicksave while dead");
+		return;
+	}
+
   if (gamestate != GS_LEVEL)
     return;
 
