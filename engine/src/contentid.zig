@@ -391,9 +391,8 @@ pub const ContentId = enum {
 
     pub fn isMp3(buf: []const u8) bool {
         // https://docs.rs/infer/0.16.0/src/infer/matchers/audio.rs.html#7-12
-        return buf.len > 2 and ((buf[0] == 0x49 and buf[1] == 0x44 and buf[2] == 0x33) // ID3v2
-        // Final bit (has crc32) may be or may not be set.
-        || (buf[0] == 0xFF and buf[1] == 0xFB));
+        if (buf.len <= 2) return false;
+        return std.mem.eql(u8, buf[0..3], "\x49\x44\x33") or std.mem.eql(u8, buf[0..2], "\xff\xfb");
     }
 };
 
