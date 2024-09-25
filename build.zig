@@ -78,6 +78,7 @@ pub fn build(b: *std.Build) void {
     demotest.root_module.addOptions("cfg", demotest_in);
 
     const run_demotest = b.addRunArtifact(demotest);
+    run_demotest.has_side_effects = true;
     demotest_step.dependOn(&run_demotest.step);
 }
 
