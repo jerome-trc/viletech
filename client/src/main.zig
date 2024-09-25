@@ -4,7 +4,8 @@ const log = std.log.scoped(.main);
 const meta = @import("meta");
 
 const args = @import("zig-args");
-const HhMmSs = @import("viletech").stdx.HhMmSs;
+const HhMmSs = viletech.stdx.HhMmSs;
+const viletech = @import("viletech");
 
 const Converter = @import("Converter.zig");
 
@@ -92,6 +93,10 @@ pub fn main() !void {
         }
     }
 
+    if (opts.options.gamemode.isOn() and !std.process.hasEnvVarConstant("VTEC_GAMEMODE_OFF")) {
+        viletech.gamemode.start();
+    }
+
     const end_time = try std.time.Instant.now();
     const duration = HhMmSs.fromNs(end_time.since(start_time));
 
@@ -105,12 +110,32 @@ pub fn main() !void {
 }
 
 const Params = struct {
+    const Boolean = enum {
+        false,
+        no,
+        off,
+
+        true,
+        yes,
+        on,
+
+        fn isOn(self: Boolean) bool {
+            return switch (self) {
+                .true, .yes, .on => true,
+                else => false,
+            };
+        }
+    };
+
     help: bool = false,
     version: bool = false,
+
+    gamemode: Boolean = .true,
 
     pub const shorthands = .{
         .h = "help",
         .V = "version",
+        .G = "gamemode",
     };
 
     pub const meta = .{
@@ -118,6 +143,8 @@ const Params = struct {
         .option_docs = .{
             .help = "Print this usage information and then exit",
             .version = "Print version/compile information and then exit",
+
+            .gamemode = "`on` by default. `off` disables libgamemode (Linux only)",
         },
     };
 };
