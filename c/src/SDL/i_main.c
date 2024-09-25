@@ -256,7 +256,7 @@ void I_SetProcessPriority(void)
   }
 }
 
-int dsdaMain(int argc, char **argv)
+int cMain(int argc, char **argv)
 {
   dsda_ParseCommandLineArgs(argc, argv);
 

@@ -21,7 +21,7 @@ fn onArgError(err: args.Error) anyerror!void {
     try std.io.getStdErr().writer().print("{s}.\nSee `viletech --help`.\n", .{err});
 }
 
-extern "C" fn dsdaMain(argc: c_int, argv: [*][*:0]u8) c_int;
+extern "C" fn cMain(argc: c_int, argv: [*][*:0]u8) noreturn;
 
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
@@ -30,7 +30,7 @@ pub fn main() !void {
     for (std.os.argv) |arg| {
         // Temporary hack until C-side argument parsing is revised or excised.
         if (std.mem.eql(u8, std.mem.sliceTo(arg, 0), "-iwad")) {
-            _ = dsdaMain(@intCast(std.os.argv.len), std.os.argv.ptr);
+            _ = cMain(@intCast(std.os.argv.len), std.os.argv.ptr);
             unreachable;
         }
     }
@@ -130,7 +130,7 @@ pub fn main() !void {
             .doom => |*argv| {
                 sdl.quit();
                 try argv.append(null);
-                _ = dsdaMain(@intCast(argv.items.len), @ptrCast(argv.items.ptr));
+                _ = cMain(@intCast(argv.items.len), @ptrCast(argv.items.ptr));
                 unreachable;
             },
             .frontend => |*front| {
