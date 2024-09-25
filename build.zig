@@ -49,11 +49,6 @@ pub fn build(b: *std.Build) void {
     const re2_step = b.step("re2", "Run all re2zig lexer generators");
     subterra.generateUdmfLexer(b, re2_step);
 
-    if (std.process.getEnvVarOwned(b.allocator, "DJWAD_DIR")) |path| {
-        const dir = std.fs.openDirAbsolute(path, .{}) catch unreachable;
-        @import("tunetech").djwad(b.allocator, dir) catch unreachable;
-    } else |_| {}
-
     var client_builder = @import("client/Builder.zig"){
         .b = b,
         .target = target,

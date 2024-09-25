@@ -8,10 +8,6 @@
             .url = "git+https://github.com/ikskuh/zig-args#03af1b6c5bfda9646a562c861055024daed5b238",
             .hash = "1220904d2fdcd970dd0d216211d092eb3ef6da01117163cc9393ab845a1d66c029d9",
         },
-        .tunetech = .{
-            .url = "../tunetech",
-            .hash = "1220780944e9287607fc63c74fae542c2d36f8d6985bdd2b0b40bef19f92cb068423",
-        },
     },
     .paths = .{
         "build.zig",
