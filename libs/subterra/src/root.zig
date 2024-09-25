@@ -51,6 +51,40 @@ pub const EditorNum = u16;
 /// A two-dimensional position with signed 16-bit precision, used for deserializing levels.
 pub const Pos16 = struct { x: i16, y: i16 };
 
+pub const level = struct {
+    /// See [`Vertex.bounds`].
+    pub const Bounds = struct {
+        min: Pos16,
+        max: Pos16,
+    };
+
+    pub fn bounds(verts: []const Vertex) Bounds {
+        var min = Pos16{ .x = 0, .y = 0 };
+        var max = Pos16{ .x = 0, .y = 0 };
+
+        for (verts) |vert| {
+            if (vert._x < min.x) {
+                min.x = vert._x;
+            } else if (vert._x > max.x) {
+                max.x = vert._x;
+            }
+
+            if (vert._y < min.y) {
+                min.y = vert._y;
+            } else if (vert._y > max.y) {
+                max.y = vert._y;
+            }
+        }
+
+        return Bounds{ .min = min, .max = max };
+    }
+
+    pub fn center(verts: []const Vertex) Pos16 {
+        const b = bounds(verts);
+        return Pos16{ .x = (b.min.x + b.max.y) / 2, .y = (b.min.y + b.max.y) / 2 };
+    }
+};
+
 /// See <https://glbsp.sourceforge.net/specs.php#Marker>.
 pub const GlLevelMarker = struct {
     pub const Error = error{
@@ -79,7 +113,7 @@ pub const GlLevelMarker = struct {
 
         var builder: ?[]const u8 = null;
         var checksum: ?[]const u8 = null;
-        var level: ?[]const u8 = null;
+        var lvl: ?[]const u8 = null;
         var time: ?[]const u8 = null;
         var last_field: ?*?[]const u8 = null;
 
@@ -99,8 +133,8 @@ pub const GlLevelMarker = struct {
                 last_field = &checksum;
                 checksum = try alloc.dupe(u8, val);
             } else if (std.mem.eql(u8, key, "LEVEL")) {
-                last_field = &level;
-                level = try alloc.dupe(u8, val);
+                last_field = &lvl;
+                lvl = try alloc.dupe(u8, val);
             } else if (std.mem.eql(u8, key, "TIME")) {
                 last_field = &time;
                 time = try alloc.dupe(u8, val);
@@ -113,7 +147,7 @@ pub const GlLevelMarker = struct {
         }
 
         return GlLevelMarker{
-            .level = level,
+            .level = lvl,
             .builder = builder,
             .time = time,
             .checksum = checksum,
@@ -124,7 +158,7 @@ pub const GlLevelMarker = struct {
     pub fn deinit(self: *const GlLevelMarker, alloc: std.mem.Allocator) void {
         if (self.builder) |builder| alloc.free(builder);
         if (self.checksum) |checksum| alloc.free(checksum);
-        if (self.level) |level| alloc.free(level);
+        if (self.level) |lvl| alloc.free(lvl);
         if (self.time) |time| alloc.free(time);
     }
 

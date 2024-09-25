@@ -30,39 +30,12 @@ pub const Vertex = extern struct {
         return std.mem.bytesAsSlice(Vertex, bytes[0..(count * @sizeOf(Vertex))]);
     }
 
-    pub fn bounds(verts: []const Vertex) Bounds {
-        var min = Pos16{ .x = 0, .y = 0 };
-        var max = Pos16{ .x = 0, .y = 0 };
-
-        for (verts) |vert| {
-            if (vert._x < min.x) {
-                min.x = vert._x;
-            } else if (vert._x > max.x) {
-                max.x = vert._x;
-            }
-
-            if (vert._y < min.y) {
-                min.y = vert._y;
-            } else if (vert._y > max.y) {
-                max.y = vert._y;
-            }
-        }
-
-        return Bounds{ .min = min, .max = max };
-    }
-
     pub fn position(self: *const Vertex) Pos16 {
         return Pos16{
             .x = std.mem.littleToNative(i16, self._x),
             .y = std.mem.littleToNative(i16, self._y),
         };
     }
-};
-
-/// See [`Vertex.bounds`].
-pub const Bounds = struct {
-    min: Pos16,
-    max: Pos16,
 };
 
 test "VERTEXES, fromBytes" {
