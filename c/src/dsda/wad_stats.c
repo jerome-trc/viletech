@@ -15,6 +15,7 @@
 //	DSDA Wad Stats
 //
 
+#include <errno.h>
 #include <stdio.h>
 
 #include "doomstat.h"
@@ -114,11 +115,10 @@ static void dsda_CreateWadStats(void) {
 
     {
       int episode, map;
-      map_stats_t* ms;
 
       map_count += 1;
       dsda_EnsureMapCount(map_count);
-      ms = &wad_stats.maps[map_count - 1];
+      map_stats_t* ms = &wad_stats.maps[map_count - 1];
       memset(ms, 0, sizeof(*wad_stats.maps));
 
       strcpy(ms->lump, map_name);
@@ -226,8 +226,20 @@ void dsda_SaveWadStats(void) {
   path = dsda_WadStatsPath();
 
   file = M_OpenFile(path, "wb");
-  if (!file)
-    lprintf(LO_WARN, "dsda_SaveWadStats: Failed to save wad stats file \"%s\".", path);
+
+  if (!file) {
+  #if defined(__unix__)
+    lprintf(
+        LO_WARN,
+        "%s: Failed to save wad stats file \"%s\" (error %i).",
+        __func__,
+        path,
+        errno
+    );
+#else
+    lprintf(LO_WARN, "%s: Failed to save wad stats file \"%s\".", __func__, path);
+#endif
+  }
 
   fprintf(file, "%d\n", current_version);
   fprintf(file, "%d\n", wad_stats.total_kills);

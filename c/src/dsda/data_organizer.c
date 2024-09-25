@@ -33,8 +33,8 @@
 
 #include "data_organizer.h"
 
-#define DATA_DIR_LIMIT 9
-static const char* dsda_data_root = "dsda_doom_data";
+#define DATA_DIR_LIMIT 2
+static const char* dsda_data_root = "data";
 static char* dsda_data_dir_strings[DATA_DIR_LIMIT];
 static char* dsda_base_data_dir;
 static char* dsda_wad_data_dir;
@@ -123,11 +123,27 @@ static void dsda_InitWadDataDir(void) {
 
   dsda_InitString(&str, dsda_base_data_dir);
 
-  for (i = 0; i < DATA_DIR_LIMIT; ++i)
-    if (dsda_data_dir_strings[i]) {
-      dsda_StringCatF(&str, "/%s", dsda_data_dir_strings[i]);
-      M_MakeDir(str.string, true);
+  for (i = 0; i < DATA_DIR_LIMIT; ++i) {
+    if (!dsda_data_dir_strings[i]) {
+        continue;
     }
+
+    for (size_t cix = 0; cix < strlen(dsda_data_dir_strings[i]); ++cix) {
+        switch (dsda_data_dir_strings[i][cix]) {
+            case ' ': case '\t': case '\n': case '\r':
+            case '#': case '^': case '[': case ']': case '|':
+            case '\\': case '/': case ':':
+            {
+                dsda_data_dir_strings[i][cix] = '-';
+                continue;
+            }
+            default: continue;
+        }
+    }
+
+    dsda_StringCatF(&str, "/%s", dsda_data_dir_strings[i]);
+    M_MakeDir(str.string, true);
+  }
 
   dsda_wad_data_dir = str.string;
 
