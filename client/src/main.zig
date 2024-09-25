@@ -46,6 +46,8 @@ pub fn main() !void {
         main_alloc = std.heap.page_allocator;
     }
 
+    defer _ = if (builtin.mode == .Debug) gpa.deinit();
+
     const opts = args.parseWithVerbForCurrentProcess(
         Params,
         Verbs,
