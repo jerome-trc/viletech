@@ -7,7 +7,7 @@ pub fn link(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) void {
-    var symln_buf: [4096]u8 = [_]u8{0} ** 4096;
+    var symln_buf = [1]u8{0} ** std.c.PATH_MAX;
 
     const root = if (std.fs.cwd().readLink("depend/zmsx.ln", symln_buf[0..])) |_|
         "depend/zmsx.ln"

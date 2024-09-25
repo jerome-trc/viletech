@@ -290,7 +290,7 @@ pub const subterra = struct {
     }
 
     fn linkZnbx(b: *std.Build, compile: *std.Build.Step.Compile) void {
-        var symln_buf: [4096]u8 = [_]u8{0} ** 4096;
+        var symln_buf = [1]u8{0} ** std.c.PATH_MAX;
 
         const root = if (std.fs.cwd().readLink("depend/znbx.ln", symln_buf[0..])) |_|
             "depend/znbx.ln"
