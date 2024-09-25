@@ -1171,8 +1171,6 @@ void I_SetWindowCaption(void)
 // Set the application icon
 //
 
-#include "icon.c"
-
 void I_SetWindowIcon(void)
 {
     /// Retrieve embedded window icon data.
