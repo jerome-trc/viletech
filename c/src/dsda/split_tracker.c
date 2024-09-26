@@ -277,7 +277,9 @@ void dsda_RecordSplit(void) {
 }
 
 dsda_split_t* dsda_CurrentSplit(void) {
-  if (!dsda_ShowSplitData()) return NULL;
+  if (!dsda_ShowSplitData() || dsda_splits == NULL) {
+    return NULL;
+  }
 
   return &dsda_splits[current_split];
 }
