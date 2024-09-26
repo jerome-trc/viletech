@@ -79,14 +79,19 @@ int dsda_TranslateDehMobjIndex(int index) {
 }
 
 dsda_deh_mobjinfo_t dsda_GetDehMobjInfo(int index) {
-  dsda_deh_mobjinfo_t deh_mobjinfo;
+    dsda_deh_mobjinfo_t deh_mobjinfo;
 
-  dsda_EnsureCapacity(index);
+    dsda_EnsureCapacity(index);
 
-  deh_mobjinfo.info = &mobjinfo[index];
-  deh_mobjinfo.edited_bits = &edited_mobjinfo_bits[index];
+    deh_mobjinfo.info = &mobjinfo[index];
 
-  return deh_mobjinfo;
+    if (edited_mobjinfo_bits == NULL) {
+        deh_mobjinfo.edited_bits = NULL;
+    } else {
+        deh_mobjinfo.edited_bits = &edited_mobjinfo_bits[index];
+    }
+
+    return deh_mobjinfo;
 }
 
 void dsda_InitializeMobjInfo(int zero, int max, int count) {
