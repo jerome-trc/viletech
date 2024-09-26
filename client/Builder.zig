@@ -540,7 +540,7 @@ fn configHeader(self: *Self) *std.Build.Step.ConfigHeader {
     ) orelse false;
 
     return self.b.addConfigHeader(.{
-        .style = .{ .cmake = self.b.path("c/cmake/config.h.cin") },
+        .style = .{ .cmake = self.b.path("c/config.h.cin") },
         .include_path = ".zig-cache/config.h",
     }, .{
         .PACKAGE_NAME = "viletech",
