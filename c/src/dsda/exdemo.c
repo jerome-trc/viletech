@@ -65,7 +65,9 @@ static const filelump_t* DemoEx_LumpForName(const char* name, const wadinfo_t* h
   const byte* buffer;
 
   buffer = (const byte*) header;
+  // FIXME: UBSan reports occasional pointer mis-alignment here.
   lump_info = (const filelump_t*)(buffer + header->infotableofs);
+
   for (i = 0; i < header->numlumps; i++, lump_info++)
     if (!strncmp(lump_info->name, name, 8))
       return lump_info;

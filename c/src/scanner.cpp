@@ -193,6 +193,7 @@ void Scanner::ExpandState()
 	SetString(&string, nextState.string, -1);
 	number = nextState.number;
 	decimal = nextState.decimal;
+    // FIXME: UBSan reports occasional non-0-or-1 boolean here.
 	boolean = nextState.boolean;
 	token = nextState.token;
 	tokenLine = nextState.tokenLine;
