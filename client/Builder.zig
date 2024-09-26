@@ -10,13 +10,20 @@ target: std.Build.ResolvedTarget,
 optimize: std.builtin.OptimizeMode,
 check: *std.Build.Step,
 
+libdumb: bool,
+libfluidsynth: bool,
+libsdlimage: bool,
+libmad: bool,
+libportmidi: bool,
+libvorbisfile: bool,
+
 assets: *std.Build.Module,
 deque: *std.Build.Module,
 sdl: *root.Sdl,
 zig_args: *std.Build.Module,
 
 pub fn build(self: *Self) *std.Build.Step.Compile {
-    const cfg_hdr = configHeader(self.b);
+    const cfg_hdr = configHeader(self);
 
     const exe_options = std.Build.ExecutableOptions{
         .name = "viletech",
@@ -439,22 +446,14 @@ fn exeCommon(
         [_][]const u8{};
 
     for ([_][]const u8{
-        // "dumb",
         "flac",
-        "fluidsynth",
         "GL",
         "GLU",
-        "mad",
         "ogg",
         "opus",
-        // "portmidi",
         "SDL2-2.0",
-        "SDL2_image",
         "SDL2_mixer",
         "sndfile",
-        "vorbis",
-        "vorbisenc",
-        "vorbisfile",
         "z",
         "zip",
     } ++ alsa_or_not) |libname| {
@@ -464,9 +463,59 @@ fn exeCommon(
             .use_pkg_config = .yes,
         });
     }
+
+    if (self.libdumb) {
+        exe.linkSystemLibrary2("dumb", .{
+            .needed = true,
+            .preferred_link_mode = .static,
+            .use_pkg_config = .yes,
+        });
+    }
+
+    if (self.libfluidsynth) {
+        exe.linkSystemLibrary2("fluidsynth", .{
+            .needed = true,
+            .preferred_link_mode = .static,
+            .use_pkg_config = .yes,
+        });
+    }
+
+    if (self.libmad) {
+        exe.linkSystemLibrary2("mad", .{
+            .needed = true,
+            .preferred_link_mode = .static,
+            .use_pkg_config = .yes,
+        });
+    }
+
+    if (self.libportmidi) {
+        exe.linkSystemLibrary2("portmidi", .{
+            .needed = true,
+            .preferred_link_mode = .dynamic,
+            .use_pkg_config = .yes,
+        });
+    }
+
+    if (self.libsdlimage) {
+        exe.linkSystemLibrary2("SDL2_image", .{
+            .needed = true,
+            .preferred_link_mode = .static,
+            .use_pkg_config = .yes,
+        });
+    }
+
+    if (self.libvorbisfile) {
+        for ([_][]const u8{ "vorbis", "vorbisenc", "vorbisfile" }) |libname| {
+            exe.linkSystemLibrary2(libname, .{
+                .needed = true,
+                .preferred_link_mode = .static,
+                .use_pkg_config = .yes,
+            });
+        }
+    }
 }
 
-fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
+fn configHeader(self: *Self) *std.Build.Step.ConfigHeader {
     const posix_like = switch (builtin.os.tag) {
         .linux => true,
         .windows => false,
@@ -478,20 +527,20 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
     else
         ".";
 
-    const simplechecks = b.option(
+    const simplechecks = self.b.option(
         bool,
         "simplecheck",
         "Enable checks which only impose significant overhead if a posible error is detected",
     ) orelse true;
 
-    const rangecheck = b.option(
+    const rangecheck = self.b.option(
         bool,
         "rangecheck",
         "Enable extra bounds checks in C code",
     ) orelse false;
 
-    return b.addConfigHeader(.{
-        .style = .{ .cmake = b.path("c/cmake/config.h.cin") },
+    return self.b.addConfigHeader(.{
+        .style = .{ .cmake = self.b.path("c/cmake/config.h.cin") },
         .include_path = ".zig-cache/config.h",
     }, .{
         .PACKAGE_NAME = "viletech",
@@ -507,7 +556,7 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
 
         .HAVE_GETOPT = posix_like,
         .HAVE_MMAP = posix_like,
-        .HAVE_CREATE_FILE_MAPPING = false,
+        .HAVE_CREATE_FILE_MAPPING = builtin.os.tag == .windows,
         .HAVE_STRSIGNAL = posix_like,
         .HAVE_MKSTEMP = posix_like,
 
@@ -517,14 +566,14 @@ fn configHeader(b: *std.Build) *std.Build.Step.ConfigHeader {
         .HAVE_DIRENT_H = posix_like,
 
         // TODO: detection for these. Is it possible to do better than just pkg-config?
-        .HAVE_LIBSDL2_IMAGE = true,
-        .HAVE_LIBSDL2_MIXER = false,
+        .HAVE_LIBSDL2_IMAGE = self.libsdlimage,
+        .HAVE_LIBSDL2_MIXER = true,
 
-        .HAVE_LIBDUMB = false,
-        .HAVE_LIBFLUIDSYNTH = true,
-        .HAVE_LIBMAD = true,
-        .HAVE_LIBPORTMIDI = false,
-        .HAVE_LIBVORBISFILE = true,
+        .HAVE_LIBDUMB = self.libdumb,
+        .HAVE_LIBFLUIDSYNTH = self.libfluidsynth,
+        .HAVE_LIBMAD = self.libmad,
+        .HAVE_LIBPORTMIDI = self.libportmidi,
+        .HAVE_LIBVORBISFILE = self.libvorbisfile,
 
         .SIMPLECHECKS = simplechecks,
         .RANGECHECK = rangecheck,

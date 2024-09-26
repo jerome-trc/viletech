@@ -55,6 +55,20 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .check = check,
+
+        .libdumb = b.option(bool, "dumb", "Use libDUMB if available") orelse
+            true,
+        .libfluidsynth = b.option(bool, "fluidsynth", "Use libfluidsynth if available") orelse
+            true,
+        .libsdlimage = b.option(bool, "image", "Use libsdlimage if available") orelse
+            true,
+        .libmad = b.option(bool, "mad", "Use libmad if available") orelse
+            true,
+        .libportmidi = b.option(bool, "portmidi", "Use libportmidi if available") orelse
+            true,
+        .libvorbisfile = b.option(bool, "vorbisfile", "Use libvorbisfile if available") orelse
+            true,
+
         .assets = assets,
         .deque = deque,
         .sdl = Sdl.init(b, null, null),
