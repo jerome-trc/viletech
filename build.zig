@@ -74,18 +74,19 @@ pub fn build(b: *std.Build) void {
         .sdl = Sdl.init(b, null, null),
         .zig_args = zig_args.module("args"),
     };
-    _ = client_builder.build();
+    const client = client_builder.build();
 
     const demotest_step = b.step("demotest", "Run demo accuracy regression tests");
 
     const demotest = b.addTest(.{
         .root_source_file = b.path("demotest/main.zig"),
         .target = target,
-        // Always use -Doptimize=ReleaseSafe,
-        // since we want the demotest to run as quickly as possible.
-        .optimize = .ReleaseSafe,
+        // Optimization level of the client gets decided by what user passes to
+        // `-D`. Don't optimize the unit test binary, since it just takes more
+        // time and has no benefit.
+        .optimize = .Debug,
     });
-    demotest.step.dependOn(b.getInstallStep());
+    demotest.step.dependOn(&client.step);
 
     const demotest_in = b.addOptions();
     demotest_in.addOption([]const u8, "install_prefix", b.install_prefix);
