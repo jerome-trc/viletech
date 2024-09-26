@@ -489,8 +489,11 @@ static void dsda_ParseDoomMapInfoMapBlock(Scanner &scanner, doom_mapinfo_map_t &
   map.special_actions = (doom_mapinfo_special_action_t *) Z_Realloc(
     map.special_actions, map.num_special_actions * sizeof(*map.special_actions)
   );
-  memcpy(map.special_actions, &special_actions[0],
-         map.num_special_actions * sizeof(*map.special_actions));
+
+    if (special_actions.size() > 0) {
+        memcpy(map.special_actions, &special_actions[0],
+                map.num_special_actions * sizeof(*map.special_actions));
+    }
 }
 
 static void dsda_ParseDoomMapInfoMap(Scanner &scanner) {
