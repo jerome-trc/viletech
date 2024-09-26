@@ -72,10 +72,6 @@
 #include "e6y.h"
 #include "i_system.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "z_zone.h"
 
 #include "dsda/settings.h"
