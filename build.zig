@@ -50,6 +50,8 @@ pub fn build(b: *std.Build) void {
     const re2_step = b.step("re2", "Run all re2zig lexer generators");
     subterra.generateUdmfLexer(b, re2_step);
 
+    doomparse.impl.createStep(b);
+
     var client_builder = @import("client/Builder.zig"){
         .b = b,
         .target = target,
@@ -149,14 +151,35 @@ pub const engine = struct {
 // Libraries ///////////////////////////////////////////////////////////////////
 
 pub const doomparse = struct {
+    const impl = @import("libs/doomparse/build.doomparse.zig");
+
     pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        const tree_sitter = b.lazyDependency("tree-sitter", .{}).?;
+
         const module = b.addModule("doomparse", .{
             .root_source_file = b.path("libs/doomparse/src/root.zig"),
         });
 
-        module.addImport("deque", b.addModule("deque", .{
+        compile.root_module.addImport("deque", b.addModule("deque", .{
             .root_source_file = b.path("depend/deque.zig"),
         }));
+
+        module.addCSourceFile(.{
+            .file = tree_sitter.path("lib/src/lib.c"),
+            .flags = &[_][]const u8{"--std=c11"},
+        });
+
+        module.addCSourceFiles(.{
+            .root = b.path("libs/doomparse/src"),
+            .flags = &[_][]const u8{},
+            .files = &[_][]const u8{
+                "doomtools/wadmerge/parser.c",
+            },
+        });
+
+        module.addSystemIncludePath(tree_sitter.path("lib/include"));
+        module.addSystemIncludePath(tree_sitter.path("lib/src"));
+        module.addSystemIncludePath(b.path("libs/doomparse/src"));
 
         compile.root_module.addImport(name orelse "doomparse", module);
     }
@@ -194,6 +217,10 @@ pub const doomparse = struct {
             .target = target,
             .optimize = optimize,
         });
+
+        unit_tests.linkLibC();
+
+        link(b, unit_tests, null);
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);

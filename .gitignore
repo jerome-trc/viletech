@@ -73,3 +73,11 @@ Session.vim
 # modify one of those local copies and test it in this repository without having
 # to make a commit there first and then pull it to the subtree.
 depend/*.ln
+
+# DoomParse leverages Tree-sitter in a way that is not strictly intended.
+/libs/doomparse/src/**/node_modules/
+/libs/doomparse/src/**/bindings/
+/libs/doomparse/src/**/package.json
+/libs/doomparse/src/**/package-lock.json
+/libs/doomparse/src/**/src/node-types.json
+/libs/doomparse/src/**/src/parser.c
