@@ -15,11 +15,11 @@ line_beginning: bool,
 if_stack: Deque(bool),
 macros: std.StringHashMapUnmanaged([]const u8),
 
-pub fn init(alloc: std.mem.Allocator) !Self {
+pub fn init(alloc: std.mem.Allocator, text: []const u8) !Self {
     return Self{
-        .lexer = try Lexer.init(),
+        .lexer = try Lexer.init(text),
         .line_beginning = true,
-        .if_stack = Deque(bool).init(alloc),
+        .if_stack = try Deque(bool).init(alloc),
         .macros = std.StringHashMapUnmanaged([]const u8){},
     };
 }
@@ -43,5 +43,6 @@ test "smoke" {
         \\
     ;
 
-    _ = try Self.init(std.testing.allocator, sample);
+    var preproc = try Self.init(std.testing.allocator, sample);
+    defer preproc.deinit();
 }
