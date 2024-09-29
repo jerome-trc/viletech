@@ -348,10 +348,5 @@ pub extern fn ts_set_allocator(
     new_free: ?*const fn (?*anyopaque) callconv(.C) void,
 ) void;
 
-pub const __STDBOOL_H = "";
-pub const __bool_true_false_are_defined = @as(c_int, 1);
-pub const @"bool" = bool;
-pub const @"true" = @as(c_int, 1);
-pub const @"false" = @as(c_int, 0);
 pub const TREE_SITTER_LANGUAGE_VERSION = @as(c_int, 14);
 pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION = @as(c_int, 13);
