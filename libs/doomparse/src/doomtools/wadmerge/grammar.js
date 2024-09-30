@@ -3,46 +3,75 @@
 module.exports = grammar({
     name: 'wadmerge',
 
-    extras: $ => [/[^\r\n]/],
+    // https://docs.oracle.com/javase/8/docs/api/java/lang/Character.html#isWhitespace-char-
+    // https://en.wikipedia.org/wiki/Whitespace_character#Unicode
+    extras: $ => [
+        /[ \t\v\f]/,
+        /[\u001C-\u001F\u2000-\u2006\u2008-\u200a]/,
+        /[\u0085\u1680\u2028\u2029\u205F\u3000]/,
+    ],
+
+    word: $ => $._ident,
 
     rules: {
-        source_file: $ => seq(repeat(seq($._newline, optional($._line)))),
+        source_file: $ => seq(
+            optional($._line),
+            repeat(seq($._newline, optional($._line)))
+        ),
 
         _line: $ => choice(
-            $.create_statement,
-            $.echo_statement,
-            $.end_statement,
+            $.clear_command,
+            $.create_command,
+            $.echo_command,
+            $.end_command,
             $.line_comment,
         ),
 
-        create_statement: $ =>
-            seq(caseInsensitive('create'), $.symbol, /[^\r\n]*/),
+        clear_command: $ =>
+            seq(caseInsensitive('clear'), field('symbol', $.symbol), $._trailer),
 
-        echo_statement: $ =>
+        create_command: $ =>
+            seq(
+                caseInsensitive('create'),
+                field('symbol', $.symbol),
+                optional(field('iwad_qual', caseInsensitive('iwad'))),
+                repeat($._trailer),
+            ),
+
+        echo_command: $ =>
             seq(
                 caseInsensitive('echo'),
-                token.immediate(repeat(/[ \t]/)),
-                alias(/[^\r\n]*/, $.echo_text)
+                token.immediate(/[ \t\u000B\u001C-\u001F]/),
+                alias(repeat(/[^\s]+/), $.echo_text)
             ),
 
-        end_statement: _ =>
-            caseInsensitive('end'),
+        end_command: $ =>
+            seq(caseInsensitive('end'), repeat($._trailer)),
 
         symbol: $ =>
-            choice(
-                token(
-                    seq(
-                        '"',
-                        repeat(/[^"\\\r\n]+/),
-                        token.immediate('"')
-                    ), // i.e. string literal
-                ),
-                /[^"\s]+/,
+            choice($._string_literal, $._ident),
+
+        _ident: _ =>
+            /[^"\s]+/,
+
+        _string_literal: _ =>
+            token(
+                seq(
+                    '"',
+                    repeat(choice(
+                      /[^\\"]/,
+                      /\\./
+                    )),
+                    '"'
+                ), // i.e. string literal
             ),
 
-        line_comment: $ => token(seq('#', /[^\r\n]+/)),
+        _trailer: _ =>
+            /[^\s]+/,
 
-        _newline: $ => choice('\n', '\r\n', '\r'),
+        line_comment: _ => token(seq('#', /[^\r\n]+/)),
+
+        _newline: _ => choice('\n', '\r\n', '\r'),
     }
 });
 
