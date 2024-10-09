@@ -27,18 +27,24 @@ pub fn build(b: *std.Build) void {
 
     const check = b.step("check", "Semantic check for ZLS");
 
-    const testx = b.option(
+    const o_testx = b.option(
         []const []const u8,
         "testx",
         "Extra features to test",
     );
 
+    const o_test_filters = b.option(
+        []const []const u8,
+        "test-filters",
+        "Which subset of unit tests should be run",
+    );
+
     const test_step = b.step("test", "Run unit test suite");
-    engine.tests(b, target, optimize, test_step);
-    doomparse.tests(b, target, optimize, test_step);
-    subterra.tests(b, target, optimize, test_step, testx);
-    wadload.tests(b, target, optimize, test_step);
-    zbcx.tests(b, target, optimize, test_step);
+    engine.tests(b, target, optimize, test_step, o_test_filters);
+    doomparse.tests(b, target, optimize, test_step, o_test_filters);
+    subterra.tests(b, target, optimize, test_step, o_test_filters, o_testx);
+    wadload.tests(b, target, optimize, test_step, o_test_filters);
+    zbcx.tests(b, target, optimize, test_step, o_test_filters);
 
     const doc_step = b.step("doc", "Generate documentation");
     engine.doc(b, target, optimize, doc_step);
@@ -134,12 +140,17 @@ pub const engine = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("engine/src/root.zig"),
             .target = target,
             .optimize = optimize,
         });
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -188,6 +199,7 @@ pub const doomparse = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/doomparse/src/root.zig"),
@@ -198,6 +210,10 @@ pub const doomparse = struct {
         unit_tests.root_module.addImport("deque", b.addModule("deque", .{
             .root_source_file = b.path("depend/deque.zig"),
         }));
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -271,6 +287,7 @@ pub const subterra = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
         o_testx: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
@@ -278,6 +295,10 @@ pub const subterra = struct {
             .target = target,
             .optimize = optimize,
         });
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
 
         var dmxgus: []const u8 = "";
         var genmidi: []const u8 = "";
@@ -416,12 +437,17 @@ pub const wadload = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/wadload/src/root.zig"),
             .target = target,
             .optimize = optimize,
         });
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -474,6 +500,7 @@ pub const zbcx = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/zbcx/src/root.zig"),
@@ -489,6 +516,10 @@ pub const zbcx = struct {
         unit_tests.root_module.addImport("depsample", sample);
 
         c.link(b, unit_tests, target, optimize);
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
