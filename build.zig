@@ -195,6 +195,10 @@ pub const doomparse = struct {
             .optimize = optimize,
         });
 
+        unit_tests.root_module.addImport("deque", b.addModule("deque", .{
+            .root_source_file = b.path("depend/deque.zig"),
+        }));
+
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
     }
