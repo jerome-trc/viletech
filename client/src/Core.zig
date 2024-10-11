@@ -9,6 +9,11 @@ const Frontend = @import("Frontend.zig");
 
 const Self = @This();
 
+comptime {
+    // Don't smash the stack on a standard Windows thread.
+    std.debug.assert(@sizeOf(Self) < (1024 * 1024));
+}
+
 pub const Scene = union(enum) {
     entry: void,
     frontend: Frontend,
