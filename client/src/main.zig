@@ -18,22 +18,12 @@ else
     void;
 
 fn onArgError(err: args.Error) anyerror!void {
-    try std.io.getStdErr().writer().print("{s}.\nSee `viletech --help`.\n", .{err});
+    try std.io.getStdErr().writer().print("{s}\nSee `viletech --help`.\n", .{err});
 }
-
-extern "C" fn cMain(argc: c_int, argv: [*][*:0]u8) noreturn;
 
 pub fn main() !void {
     const start_time = try std.time.Instant.now();
     log.debug("***** DEBUG BUILD *****", .{});
-
-    for (std.os.argv) |arg| {
-        // Temporary hack until C-side argument parsing is revised or excised.
-        if (std.mem.eql(u8, std.mem.sliceTo(arg, 0), "-iwad")) {
-            _ = cMain(@intCast(std.os.argv.len), std.os.argv.ptr);
-            unreachable;
-        }
-    }
 
     var gpa: MainAllocator = undefined;
     var main_alloc: std.mem.Allocator = undefined;
@@ -130,7 +120,7 @@ pub fn main() !void {
             .doom => |*argv| {
                 sdl.quit();
                 try argv.append(null);
-                _ = cMain(@intCast(argv.items.len), @ptrCast(argv.items.ptr));
+                // Soon!
                 unreachable;
             },
             .frontend => |*front| {
@@ -201,39 +191,3 @@ const Verbs = union(enum) {
     find: void,
     prune: void,
 };
-
-fn refAllDeclsRecursive(comptime T: type) void {
-    for (@import("std").meta.declarations(T)) |decl| {
-        if (@TypeOf(@field(T, decl.name)) == type) {
-            switch (@typeInfo(@field(T, decl.name))) {
-                .Struct, .Enum, .Union, .Opaque => refAllDeclsRecursive(@field(T, decl.name)),
-                else => {},
-            }
-        }
-        _ = &@field(T, decl.name);
-    }
-}
-
-comptime {
-    // Crappy hack without which symbols don't end up in binary.
-    // Alternatively could use `@export` but that would make this
-    // already-very-tedious process even more tedious.
-    refAllDeclsRecursive(@import("c.zig"));
-}
-
-// Functions C needs for now ///////////////////////////////////////////////////
-
-const SliceU8 = extern struct {
-    ptr: [*]const u8,
-    len: usize,
-};
-
-export fn pathStem(path: [*:0]const u8) SliceU8 {
-    const ret = std.fs.path.stem(std.mem.sliceTo(path, 0));
-    return SliceU8{ .ptr = ret.ptr, .len = ret.len };
-}
-
-export fn windowIcon() SliceU8 {
-    const bytes = @import("assets").viletech_png;
-    return SliceU8{ .ptr = bytes.ptr, .len = bytes.len };
-}
