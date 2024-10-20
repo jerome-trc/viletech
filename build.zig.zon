@@ -12,6 +12,10 @@
             .url = "git+https://github.com/ikskuh/SDL.zig#fac81ec499cfd64da7b846de27f6db4a0d4943bf",
             .hash = "12206c3d312175cf6a1bf1e8247ace5ac49ed8be80a94d8857d7d41fd7d1aee7ac4b",
         },
+        .bgfx = .{
+            .url = "git+https://github.com/bkaradzic/bgfx#dd4199bcb37426326e0e31419e99c10701e96c58",
+            .hash = "1220ffe97391bd51bde10d91fbe5356ffa6c5f0c4c1acc73ddecc1b6ede53162cef3",
+        },
     },
     .paths = .{
         "assets",
