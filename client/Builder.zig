@@ -77,7 +77,10 @@ fn exeCommon(self: *Self, exe: *std.Build.Step.Compile) void {
     root.subterra.link(self.b, exe, .{ .znbx = .source });
     root.wadload.link(self.b, exe, null);
     self.sdl.link(exe, .static, .SDL2);
-    root.zmsx.link(self.b, exe, exe.root_module.resolved_target.?, exe.root_module.optimize.?);
+    root.zmsx.link(self.b, exe, .{
+        .target = exe.root_module.resolved_target.?,
+        .optimize = exe.root_module.optimize.?,
+    });
 
     exe.root_module.addImport("assets", self.assets);
     exe.root_module.addImport("deque", self.deque);

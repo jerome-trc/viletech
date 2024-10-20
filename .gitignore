@@ -71,5 +71,5 @@ Session.vim
 
 # For using symlinks to point to local copies of dependencies. This way, you can
 # modify one of those local copies and test it in this repository without having
-# to make a commit there first and then pull it to the subtree.
+# to make a commit there first and then update the build.zig.zon.
 depend/*.ln

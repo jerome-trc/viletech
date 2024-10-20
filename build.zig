@@ -7,7 +7,6 @@ pub const ccdb = @import("depend/ccdb.zig");
 pub const cimgui = @import("depend/build.cimgui.zig");
 pub const datetime = @import("depend/datetime.zig");
 pub const Sdl = @import("sdl");
-pub const zmsx = @import("depend/build.zmsx.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -45,6 +44,7 @@ pub fn build(b: *std.Build) void {
     subterra.tests(b, target, optimize, test_step, o_test_filters, o_testx);
     wadload.tests(b, target, optimize, test_step, o_test_filters);
     zbcx.tests(b, target, optimize, test_step, o_test_filters);
+    zmsx.tests(b, target, optimize, test_step, o_test_filters);
 
     const doc_step = b.step("doc", "Generate documentation");
     engine.doc(b, target, optimize, doc_step);
@@ -514,6 +514,47 @@ pub const zbcx = struct {
             .optimize = optimize,
         });
         unit_tests.root_module.addImport("depsample", sample);
+
+        c.link(b, unit_tests, target, optimize);
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
+pub const zmsx = struct {
+    const c = @import("depend/build.zmsx.zig");
+
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
+        name: []const u8 = "zmsx",
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+    }) void {
+        c.link(b, compile, config.target, config.optimize);
+
+        const module = b.addModule("zmsx", .{
+            .root_source_file = b.path("libs/zmsx/src/root.zig"),
+        });
+
+        compile.root_module.addImport(config.name, module);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/zmsx/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
 
         c.link(b, unit_tests, target, optimize);
 

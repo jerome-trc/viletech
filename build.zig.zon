@@ -4,6 +4,8 @@
     .version = "0.0.0",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
+        .zmsx = .{ .path = "depend/zmsx.ln" },
+
         .@"zig-args" = .{
             .url = "git+https://github.com/ikskuh/zig-args#03af1b6c5bfda9646a562c861055024daed5b238",
             .hash = "1220904d2fdcd970dd0d216211d092eb3ef6da01117163cc9393ab845a1d66c029d9",
