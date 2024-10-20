@@ -180,7 +180,10 @@ const Params = struct {
             .help = "Print this usage information and then exit",
             .version = "Print version/compile information and then exit",
 
-            .gamemode = "`on` by default. `off` disables libgamemode (Linux only)",
+            .gamemode = if (builtin.os.tag == .linux)
+                "`on` by default. `off` disables libgamemode"
+            else
+                "Linux-only; this does nothing on your operating system",
         },
     };
 };
