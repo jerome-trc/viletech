@@ -38,10 +38,6 @@ git subtree pull --prefix depend/zbcx zbcx master squash
 git remote add -f zdfs https://github.com/jerome-trc/zdfs.git
 git fetch zdfs master
 git subtree pull --prefix depend/zdfs zdfs master squash
-
-git remote add -f znbx https://github.com/jerome-trc/znbx.git
-git fetch znbx master
-git subtree pull --prefix depend/znbx znbx master squash
 ```
 
 ## Licensing, Attribution

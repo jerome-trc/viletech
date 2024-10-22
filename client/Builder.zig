@@ -74,7 +74,7 @@ fn exeCommon(self: *Self, exe: *std.Build.Step.Compile) void {
     exe.linkLibCpp();
 
     root.engine.link(self.b, exe, null);
-    root.subterra.link(self.b, exe, .{ .znbx = .source });
+    root.subterra.link(self.b, exe, .{ .znbx = true });
     root.wadload.link(self.b, exe, null);
     self.sdl.link(exe, .static, .SDL2);
     root.zmsx.link(self.b, exe, .{

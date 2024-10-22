@@ -223,41 +223,23 @@ pub const doomparse = struct {
 pub const subterra = struct {
     pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
         name: []const u8 = "subterra",
-        znbx: union(enum) {
-            off: void,
-            staticlib: struct {
-                target: std.Build.ResolvedTarget,
-                optimize: std.builtin.OptimizeMode,
-            },
-            source: void,
-        },
+        znbx: bool,
     }) void {
         const module = b.addModule("subterra", .{
             .root_source_file = b.path("libs/subterra/src/root.zig"),
         });
 
         const opts = b.addOptions();
-        opts.addOption(bool, "znbx", config.znbx != .off);
+        opts.addOption(bool, "znbx", config.znbx);
         compile.root_module.addOptions("cfg", opts);
 
         compile.root_module.addImport(config.name, module);
 
-        switch (config.znbx) {
-            .off => {},
-            .staticlib => |tgt_and_opt| {
-                const znbx = b.addStaticLibrary(.{
-                    .name = "znbx",
-                    .target = tgt_and_opt.target,
-                    .optimize = tgt_and_opt.optimize,
-                });
-
-                linkZnbx(b, znbx);
-                compile.linkLibrary(znbx);
-            },
-            .source => {
-                linkZnbx(b, compile);
-            },
-        }
+        if (config.znbx) znbx.link(b, compile, .{
+            .name = "znbx",
+            .target = compile.root_module.resolved_target.?,
+            .optimize = compile.root_module.optimize.?,
+        });
     }
 
     fn doc(
@@ -302,7 +284,7 @@ pub const subterra = struct {
 
         var dmxgus: []const u8 = "";
         var genmidi: []const u8 = "";
-        var znbx = false;
+        var test_znbx = false;
 
         if (o_testx) |testx| {
             for (testx) |s| {
@@ -311,7 +293,7 @@ pub const subterra = struct {
                 } else if (std.mem.eql(u8, std.fs.path.stem(s), "DMXGUS")) {
                     dmxgus = s;
                 } else if (std.mem.eql(u8, s, "znbx")) {
-                    znbx = true;
+                    test_znbx = true;
                 }
             }
         }
@@ -319,64 +301,19 @@ pub const subterra = struct {
         const opts = b.addOptions();
         opts.addOption([]const u8, "dmxgus_sample", dmxgus);
         opts.addOption([]const u8, "genmidi_sample", genmidi);
-        opts.addOption(bool, "znbx", znbx);
+        opts.addOption(bool, "znbx", test_znbx);
         unit_tests.root_module.addOptions("cfg", opts);
 
-        if (znbx) {
-            linkZnbx(b, unit_tests);
+        if (test_znbx) {
+            znbx.link(b, unit_tests, .{
+                .name = "znbx",
+                .target = target,
+                .optimize = optimize,
+            });
         }
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
-    }
-
-    fn linkZnbx(b: *std.Build, compile: *std.Build.Step.Compile) void {
-        var symln_buf = [1]u8{0} ** std.c.PATH_MAX;
-
-        const root = if (std.fs.cwd().readLink("depend/znbx.ln", symln_buf[0..])) |_|
-            "depend/znbx.ln"
-        else |_|
-            "depend/znbx";
-
-        if (!compile.is_linking_libc) {
-            compile.linkLibC();
-        }
-
-        if (!compile.is_linking_libcpp) {
-            compile.linkLibCpp();
-        }
-
-        compile.linkSystemLibrary2("z", .{
-            .preferred_link_mode = .static,
-        });
-
-        compile.addSystemIncludePath(b.path(b.pathJoin(&[_][]const u8{ root, "include" })));
-
-        compile.addCSourceFiles(.{
-            .root = b.path(root),
-            .flags = &[_][]const u8{
-                "--std=c++17",
-                "-I",
-                b.pathJoin(&[_][]const u8{ root, "include" }),
-                "-I",
-                b.pathJoin(&[_][]const u8{ root, "src" }),
-                "-fno-sanitize=undefined",
-            },
-            .files = &[_][]const u8{
-                "src/blockmapbuilder.cpp",
-                "src/classify.cpp",
-                "src/events.cpp",
-                "src/extract.cpp",
-                "src/gl.cpp",
-                "src/nodebuild.cpp",
-                "src/processor_udmf.cpp",
-                "src/processor.cpp",
-                "src/sc_man.cpp",
-                "src/utility.cpp",
-                "src/wad.cpp",
-                "src/znbx.cpp",
-            },
-        });
     }
 
     fn generateUdmfLexer(b: *std.Build, re2_step: *std.Build.Step) void {
@@ -564,6 +501,18 @@ pub const zmsx = struct {
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
+pub const znbx = struct {
+    const c = @import("depend/build.znbx.zig");
+
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
+        name: []const u8 = "znbx",
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+    }) void {
+        c.link(b, compile, config.target, config.optimize);
     }
 };
 
