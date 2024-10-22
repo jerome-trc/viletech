@@ -31,10 +31,6 @@ Beware that this project:
 ### Git Subtrees
 
 ```bash
-git remote add -f zbcx https://github.com/jerome-trc/zbcx.git
-git fetch zbcx master
-git subtree pull --prefix depend/zbcx zbcx master squash
-
 git remote add -f zdfs https://github.com/jerome-trc/zdfs.git
 git fetch zdfs master
 git subtree pull --prefix depend/zdfs zdfs master squash

@@ -10,7 +10,11 @@ const c = @cImport({
 // in Zig is better than in C by a wide margin.
 
 test "compilation, smoke" {
-    const sample = @import("depsample");
+    const sample = struct {
+        const stack = @embedFile("zbcx/test/stack.bcs");
+        const zcommon = @embedFile("zbcx/lib/zcommon.bcs");
+        const zcommon_h = @embedFile("zbcx/lib/zcommon.h.bcs");
+    };
 
     const Context = struct {
         const io_vtable = c.zbcx_IoVtable{
@@ -167,9 +171,9 @@ test "compilation, smoke" {
 
     var context = Context{
         .cur_file = "",
-        .in_stack = std.io.fixedBufferStream(sample.zbcx.stack),
-        .in_zcommon = std.io.fixedBufferStream(sample.zbcx.zcommon),
-        .in_zcommon_h = std.io.fixedBufferStream(sample.zbcx.zcommon_h),
+        .in_stack = std.io.fixedBufferStream(sample.stack),
+        .in_zcommon = std.io.fixedBufferStream(sample.zcommon),
+        .in_zcommon_h = std.io.fixedBufferStream(sample.zcommon_h),
         .output = std.ArrayList(u8).init(std.testing.allocator),
     };
     defer context.output.deinit();

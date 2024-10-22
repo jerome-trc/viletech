@@ -439,18 +439,26 @@ pub const zbcx = struct {
         test_step: *std.Build.Step,
         o_filters: ?[]const []const u8,
     ) void {
+        const dep = b.dependency("zbcx", .{});
+
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/zbcx/src/root.zig"),
             .target = target,
             .optimize = optimize,
         });
 
-        const sample = b.createModule(.{
-            .root_source_file = b.path("depend/sample.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-        unit_tests.root_module.addImport("depsample", sample);
+        unit_tests.root_module.addAnonymousImport(
+            "zbcx/test/stack.bcs",
+            .{ .root_source_file = dep.path("test/stack.bcs") },
+        );
+        unit_tests.root_module.addAnonymousImport(
+            "zbcx/lib/zcommon.bcs",
+            .{ .root_source_file = dep.path("lib/zcommon.bcs") },
+        );
+        unit_tests.root_module.addAnonymousImport(
+            "zbcx/lib/zcommon.h.bcs",
+            .{ .root_source_file = dep.path("lib/zcommon.h.bcs") },
+        );
 
         c.link(b, unit_tests, target, optimize);
 
