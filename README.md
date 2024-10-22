@@ -26,15 +26,13 @@ Beware that this project:
 - `/libs` contains Zig libraries associated with this project.
 - `/sample` contains data used for automated testing.
 
+<!--
+
 ## Developer Guide
 
-### Git Subtrees
+TODO
 
-```bash
-git remote add -f zdfs https://github.com/jerome-trc/zdfs.git
-git fetch zdfs master
-git subtree pull --prefix depend/zdfs zdfs master squash
-```
+-->
 
 ## Licensing, Attribution
 

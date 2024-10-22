@@ -44,6 +44,7 @@ pub fn build(b: *std.Build) void {
     subterra.tests(b, target, optimize, test_step, o_test_filters, o_testx);
     wadload.tests(b, target, optimize, test_step, o_test_filters);
     zbcx.tests(b, target, optimize, test_step, o_test_filters);
+    zdfs.tests(b, target, optimize, test_step, o_test_filters);
     zmsx.tests(b, target, optimize, test_step, o_test_filters);
 
     const doc_step = b.step("doc", "Generate documentation");
@@ -52,6 +53,7 @@ pub fn build(b: *std.Build) void {
     subterra.doc(b, target, optimize, doc_step);
     wadload.doc(b, target, optimize, doc_step);
     zbcx.doc(b, target, optimize, doc_step);
+    zdfs.doc(b, target, optimize, doc_step);
 
     const re2_step = b.step("re2", "Run all re2zig lexer generators");
     subterra.generateUdmfLexer(b, re2_step);
@@ -459,6 +461,71 @@ pub const zbcx = struct {
             "zbcx/lib/zcommon.h.bcs",
             .{ .root_source_file = dep.path("lib/zcommon.h.bcs") },
         );
+
+        c.link(b, unit_tests, target, optimize);
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+};
+
+pub const zdfs = struct {
+    const c = @import("depend/build.zdfs.zig");
+
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, config: struct {
+        name: []const u8 = "zdfs",
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+    }) void {
+        c.link(b, compile, config.target, config.optimize);
+
+        const module = b.addModule("zdfs", .{
+            .root_source_file = b.path("libs/zdfs/src/root.zig"),
+        });
+
+        compile.root_module.addImport(config.name, module);
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "zdfs",
+            .root_source_file = b.path("libs/zdfs/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        c.link(b, dummy, target, optimize);
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "zdfs",
+        });
+
+        doc_step.dependOn(&install_docs.step);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/zdfs/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
 
         c.link(b, unit_tests, target, optimize);
 

@@ -5,6 +5,7 @@
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
         .zbcx = .{ .path = "depend/zbcx.ln" },
+        .zdfs = .{ .path = "depend/zdfs.ln" },
         .zmsx = .{ .path = "depend/zmsx.ln" },
         .znbx = .{ .path = "depend/znbx.ln" },
 
