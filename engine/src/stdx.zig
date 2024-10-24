@@ -8,7 +8,9 @@ pub const b_per_mb = b_per_kb * 1024;
 pub const b_per_gb = b_per_mb * 1024;
 
 /// Provides disambiguation.
-pub const Path = [:0]const u8;
+pub const Path = []const u8;
+/// Provides disambiguation.
+pub const PathZ = [:0]const u8;
 
 /// Packs 4 `u8`s into one `u32`. For use in checking magic numbers.
 pub fn asciiId(b0: u8, b1: u8, b2: u8, b3: u8) u32 {
