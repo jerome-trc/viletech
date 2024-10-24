@@ -128,7 +128,7 @@ pub fn LumpIterator(Reader: type) type {
             /// The byte position relative to byte 0 of the file that the entry's
             /// data ends at.
             end: usize,
-            data: []const u8,
+            data: []u8,
 
             pub fn name(self: *const Entry) []const u8 {
                 return std.mem.sliceTo(self.name_raw[0..], 0);
