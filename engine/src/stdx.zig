@@ -3,6 +3,10 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+pub const b_per_kb = 1024;
+pub const b_per_mb = b_per_kb * 1024;
+pub const b_per_gb = b_per_mb * 1024;
+
 /// Provides disambiguation.
 pub const Path = [:0]const u8;
 
