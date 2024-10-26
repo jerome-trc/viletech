@@ -26,27 +26,27 @@ pub fn build(b: *std.Build) void {
 
     const check = b.step("check", "Semantic check for ZLS");
 
-    const o_testx = b.option(
+    const testx = b.option(
         []const []const u8,
         "testx",
         "Extra features to test",
-    );
+    ) orelse &[0][]const u8{};
 
-    const o_test_filters = b.option(
+    const test_filters = b.option(
         []const []const u8,
         "test-filters",
         "Which subset of unit tests should be run",
-    );
+    ) orelse &[0][]const u8{};
 
     const test_step = b.step("test", "Run unit test suite");
-    engine.tests(b, target, optimize, test_step, o_test_filters);
-    doomparse.tests(b, target, optimize, test_step, o_test_filters);
-    subterra.tests(b, target, optimize, test_step, o_test_filters, o_testx);
-    vilefs.tests(b, target, optimize, test_step, o_test_filters);
-    wadload.tests(b, target, optimize, test_step, o_test_filters);
-    zbcx.tests(b, target, optimize, test_step, o_test_filters);
-    zdfs.tests(b, target, optimize, test_step, o_test_filters);
-    zmsx.tests(b, target, optimize, test_step, o_test_filters);
+    engine.tests(b, target, optimize, test_step, test_filters);
+    doomparse.tests(b, target, optimize, test_step, test_filters);
+    subterra.tests(b, target, optimize, test_step, test_filters, testx);
+    vilefs.tests(b, target, optimize, test_step, test_filters);
+    wadload.tests(b, target, optimize, test_step, test_filters);
+    zbcx.tests(b, target, optimize, test_step, test_filters);
+    zdfs.tests(b, target, optimize, test_step, test_filters);
+    zmsx.tests(b, target, optimize, test_step, test_filters);
 
     const doc_step = b.step("doc", "Generate documentation");
     engine.doc(b, target, optimize, doc_step);
@@ -143,7 +143,7 @@ pub const engine = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("engine/src/root.zig"),
@@ -151,9 +151,7 @@ pub const engine = struct {
             .optimize = optimize,
         });
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -202,7 +200,7 @@ pub const doomparse = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/doomparse/src/root.zig"),
@@ -214,9 +212,7 @@ pub const doomparse = struct {
             .root_source_file = b.path("depend/deque.zig"),
         }));
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -272,8 +268,8 @@ pub const subterra = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
-        o_testx: ?[]const []const u8,
+        filters: []const []const u8,
+        testx: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/subterra/src/root.zig"),
@@ -281,23 +277,19 @@ pub const subterra = struct {
             .optimize = optimize,
         });
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         var dmxgus: []const u8 = "";
         var genmidi: []const u8 = "";
         var test_znbx = false;
 
-        if (o_testx) |testx| {
-            for (testx) |s| {
-                if (std.mem.eql(u8, std.fs.path.stem(s), "GENMIDI")) {
-                    genmidi = s;
-                } else if (std.mem.eql(u8, std.fs.path.stem(s), "DMXGUS")) {
-                    dmxgus = s;
-                } else if (std.mem.eql(u8, s, "znbx")) {
-                    test_znbx = true;
-                }
+        for (testx) |s| {
+            if (std.mem.eql(u8, std.fs.path.stem(s), "GENMIDI")) {
+                genmidi = s;
+            } else if (std.mem.eql(u8, std.fs.path.stem(s), "DMXGUS")) {
+                dmxgus = s;
+            } else if (std.mem.eql(u8, s, "znbx")) {
+                test_znbx = true;
             }
         }
 
@@ -356,7 +348,7 @@ pub const vilefs = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/vilefs/src/root.zig"),
@@ -366,9 +358,7 @@ pub const vilefs = struct {
 
         unit_tests.root_module.addImport("wadload", wadload.module(b, null));
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -440,7 +430,7 @@ pub const wadload = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/wadload/src/root.zig"),
@@ -448,9 +438,7 @@ pub const wadload = struct {
             .optimize = optimize,
         });
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -503,7 +491,7 @@ pub const zbcx = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const dep = b.dependency("zbcx", .{});
 
@@ -528,9 +516,7 @@ pub const zbcx = struct {
 
         c.link(b, unit_tests, target, optimize);
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -583,7 +569,7 @@ pub const zdfs = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/zdfs/src/root.zig"),
@@ -593,9 +579,7 @@ pub const zdfs = struct {
 
         c.link(b, unit_tests, target, optimize);
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
@@ -624,7 +608,7 @@ pub const zmsx = struct {
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         test_step: *std.Build.Step,
-        o_filters: ?[]const []const u8,
+        filters: []const []const u8,
     ) void {
         const unit_tests = b.addTest(.{
             .root_source_file = b.path("libs/zmsx/src/root.zig"),
@@ -634,9 +618,7 @@ pub const zmsx = struct {
 
         c.link(b, unit_tests, target, optimize);
 
-        if (o_filters) |filters| {
-            unit_tests.filters = filters;
-        }
+        unit_tests.filters = filters;
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
