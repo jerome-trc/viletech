@@ -42,6 +42,7 @@ pub fn build(b: *std.Build) void {
     engine.tests(b, target, optimize, test_step, o_test_filters);
     doomparse.tests(b, target, optimize, test_step, o_test_filters);
     subterra.tests(b, target, optimize, test_step, o_test_filters, o_testx);
+    vilefs.tests(b, target, optimize, test_step, o_test_filters);
     wadload.tests(b, target, optimize, test_step, o_test_filters);
     zbcx.tests(b, target, optimize, test_step, o_test_filters);
     zdfs.tests(b, target, optimize, test_step, o_test_filters);
@@ -339,6 +340,63 @@ pub const subterra = struct {
     }
 };
 
+pub const vilefs = struct {
+    pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
+        const module = b.addModule("vilefs", .{
+            .root_source_file = b.path("libs/vilefs/src/root.zig"),
+        });
+
+        module.addImport("wadload", wadload.module(b, null));
+
+        compile.root_module.addImport(name orelse "vilefs", module);
+    }
+
+    fn tests(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        test_step: *std.Build.Step,
+        o_filters: ?[]const []const u8,
+    ) void {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("libs/vilefs/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        unit_tests.root_module.addImport("wadload", wadload.module(b, null));
+
+        if (o_filters) |filters| {
+            unit_tests.filters = filters;
+        }
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        test_step.dependOn(&run_unit_tests.step);
+    }
+
+    fn doc(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        doc_step: *std.Build.Step,
+    ) void {
+        const dummy = b.addStaticLibrary(.{
+            .name = "vilefs",
+            .root_source_file = b.path("libs/vilefs/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = dummy.getEmittedDocs(),
+            .install_dir = .{ .custom = "docs" },
+            .install_subdir = "vilefs",
+        });
+
+        doc_step.dependOn(&install_docs.step);
+    }
+};
+
 pub const wadload = struct {
     pub fn link(b: *std.Build, compile: *std.Build.Step.Compile, name: ?[]const u8) void {
         compile.root_module.addImport(
@@ -347,6 +405,12 @@ pub const wadload = struct {
                 .root_source_file = b.path("libs/wadload/src/root.zig"),
             }),
         );
+    }
+
+    pub fn module(b: *std.Build, name: ?[]const u8) *std.Build.Module {
+        return b.addModule(name orelse "wadload", .{
+            .root_source_file = b.path("libs/wadload/src/root.zig"),
+        });
     }
 
     fn doc(
