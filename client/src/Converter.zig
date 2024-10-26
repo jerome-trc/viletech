@@ -186,7 +186,7 @@ pub fn run(args: Args) !void {
     inline for (conversions) |conv| {
         if (in_format == conv.from and out_format == conv.to) {
             try self.eprintln(
-                \\Attemption conversion...
+                \\Attempting conversion...
                 \\    from: {s}
                 \\    to:   {s}
             , .{ in_format.prettyName(), out_format.prettyName() });
