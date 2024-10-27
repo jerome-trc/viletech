@@ -126,7 +126,7 @@ pub const ThingBits = packed struct(u64) {
     pub fn parse(comptime compat: BitParseCompat, prop_val: []const u8) Error!ThingBits {
         const eql = comptime switch (compat) {
             .none => std.static_string_map.defaultEql,
-            .boom => std.ascii.eqlIgnoreCase,
+            .boom => std.static_string_map.eqlAsciiIgnoreCase,
         };
 
         const delimiters = comptime switch (compat) {
@@ -229,8 +229,8 @@ pub const WeaponBits = packed struct(u64) {
 
     pub fn parse(comptime compat: BitParseCompat, prop_val: []const u8) Error!WeaponBits {
         const eql = comptime switch (compat) {
-            .none => std.mem.eql,
-            .boom => std.ascii.eqlIgnoreCase,
+            .none => std.static_string_map.defaultEql,
+            .boom => std.static_string_map.eqlAsciiIgnoreCase,
         };
 
         const delimiters = comptime switch (compat) {
