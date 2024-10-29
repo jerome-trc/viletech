@@ -22,87 +22,11 @@ lto = "thin"
 strip = false
 
 [workspace.dependencies]
-ariadne = "0.3.0"
 arrayvec = { version = "0.7.2", features = ["serde"] }
-bevy = { version = "0.12.0", default-features = false }
-bevy_egui = "0.23.0"
-bevy_quinnet = "0.6.0"
-bitflags = "2.3.1"
-bitvec = { version = "1.0.1", features = ["serde"] }
-bumpalo = "3.14.0"
 bytemuck = { version = "1.13.0", features = ["derive"] }
 byteorder = "1.4.3"
-clap = { version = "4.4.11", features = ["derive"] }
-# Same version as `kira`. Specified here since it's needed by MIDI code.
-cpal = "0.15.1"
-cranelift = "0.102.1"
-cranelift-jit = "0.102.1"
-cranelift-module = "0.102.1"
-cranelift-interpreter = "0.102.1"
-crossbeam = "0.8.2"
-dashmap = { version = "5.4.0", features = ["rayon", "serde"] }
-earcutr = "0.4.3"
-# Must be compatible with `bevy_egui`.
-egui = "0.23.0"
-egui_extras = "0.23.0"
-fixed = "1.23.1"
-fluidlite = "0.2.1"
-formatx = "0.2.1"
-# Same version as specified by `bevy_math`. Specified here
-# to add the `approx`, `mint`, and `debug-glam-assert` feature flags.
-glam = { version = "0.24.0", features = [
-    "approx",
-    "bytemuck",
-    "mint",
-    "serde",
-    "debug-glam-assert",
-] }
-globset = "0.4.10"
-home = "0.5.5"
-im = "15.1.0"
-image = { version = "0.24.6", default-features = false, features = [
-    "dds",
-    "jpeg",
-    "png",
-    "tga",
-] }
-indexmap = { version = "1.9.3", features = ["rayon", "serde"] }
-indoc = "2.0.0"
-itertools = "0.10.5"
-kira = "0.8.3"
-logos = "0.13.0"
-# Must be compatible with `nodi`.
 midly = "0.5.2"
-nanorand = { version = "0.7.0", default-features = false, features = [
-    "std",
-    "wyrand",
-] }
-nodi = "0.19.2"
-parking_lot = { version = "0.12.1", features = ["arc_lock"] }
-petgraph = { version = "0.6.4", default-features = false }
-raw-cpuid = "11.0.1"
-rayon = "1.8.0"
-regex = "1.9.5"
-rfd = "0.12.1"
-rowan = "0.15.15"
-rustc-hash = "1.0.1"
 serde = { version = "1.0.163", features = ["derive"] }
-sha3 = "0.10.8"
-slotmap = { version = "1.0.6", features = ["serde"] }
-smallvec = { version = "1.10.0", features = ["const_generics", "const_new"] }
-smartstring = { version = "1.0.1", features = ["serde"] }
-time = { version = "0.3.20", features = ["formatting", "serde"] }
-toml = "0.7.4"
-tracing = "0.1.37"
-tracing-appender = "0.2.2"
-tracing-log = "0.1.3"
-tracing-subscriber = "0.3.16"
-triomphe = "0.1.8"
-unicode-ident = "1.0.6"
-walkdir = "2.3.2"
-# Must be compatible with `bevy_winit`.
-winit = "0.28.1"
-zip = { git = "https://github.com/mcandre/zip.git", rev = "79dba4b6" }
 # Build only
 bindgen = "0.69.4"
 cbindgen = "0.26.0"
