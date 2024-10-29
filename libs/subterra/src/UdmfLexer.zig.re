@@ -4,14 +4,21 @@
 // This is tracked as part of the Git repository so that building the rest of
 // VileTech does not require a user to have the latest bleeding edge of re2zig.
 
+// TODO: apply fuzzing when 0.14.0 lands, investigate places where runtime safety
+// can be soundly disabled for performance gains.
+
 %{
     re2c:define:YYCTYPE = u8;
     re2c:yyfill:enable = 0;
+    re2c:eof = 0;
+    re2c:api = custom;
+    re2c:api:style = free-form;
 
-    re2c:define:YYCURSOR = "self.yycursor";
-    re2c:define:YYINPUT = "self.yyinput";
-    re2c:define:YYLIMIT = "self.yylimit";
-    re2c:define:YYMARKER = "self.yymarker";
+    re2c:define:YYLESSTHAN = "self.yycursor >= self.yylimit";
+    re2c:define:YYPEEK = "if (self.yycursor < self.yylimit) self.yyinput[self.yycursor] else 0";
+    re2c:define:YYSKIP = "self.yycursor += 1;";
+    re2c:define:YYBACKUP = "self.yymarker = self.yycursor;";
+    re2c:define:YYRESTORE = "self.yycursor = self.yymarker;";
 %}
 
 const std = @import("std");
@@ -19,18 +26,18 @@ const udmf = @import("udmf.zig");
 
 const Self = @This();
 
-yyinput: [:0]const u8,
+yyinput: []const u8,
 yycursor: usize,
 yymarker: usize,
 yylimit: usize,
 pos: usize,
 
-pub fn init(textmap: [:0]const u8) Self {
+pub fn init(textmap: []const u8) Self {
     return Self{
         .yyinput = textmap,
         .yycursor = 0,
         .yymarker = 0,
-        .yylimit = textmap.len - 1,
+        .yylimit = textmap.len,
         .pos = 0,
     };
 }
@@ -83,7 +90,8 @@ pub fn next(self: *Self) ?udmf.Token {
                 continue :outer;
             }
 
-            * { return null; }
+            * { return self.token(.unknown); }
+            $ { return null; }
         */
     }
 }
