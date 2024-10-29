@@ -110,7 +110,7 @@ pub fn parse<S: Sink>(source: &str, sink_ctx: S::Context) -> Result<S, Error> {
 						Token::KwLineDef,
 						Token::KwSector,
 						Token::KwSideDef,
-						Token::KwSector,
+						Token::KwThing,
 						Token::KwVertex,
 					],
 				});
