@@ -216,18 +216,19 @@ fn runDemo(args: struct {
 
     const argv_no_pwad = [_][]const u8{
         install_dir ++ "/bin/viletech",
-        "-nosound",
-        "-nodraw",
-        "-levelstat",
-        "-analysis",
-        "-iwad",
+        "doom",
+        "--sound=off",
+        "--draw=off",
+        "--levelstat",
+        "--analysis",
+        "--iwad",
         iwad_str,
-        "-fastdemo",
+        "--fastdemo",
         demo_str,
     };
-    const argv_pwad = argv_no_pwad ++ [_][]const u8{ "-file", pwad_str };
-    const argv_heretic = argv_pwad ++ [_][]const u8{"-heretic"};
-    const argv_hexen = argv_pwad ++ [_][]const u8{"-hexen"};
+    const argv_pwad = argv_no_pwad ++ [_][]const u8{ "--", pwad_str };
+    const argv_heretic = argv_pwad ++ [_][]const u8{"--heretic"};
+    const argv_hexen = argv_pwad ++ [_][]const u8{"--hexen"};
 
     const argv = if (args.pwad.len == 0)
         argv_no_pwad[0..]
